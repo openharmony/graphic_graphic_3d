@@ -132,6 +132,7 @@ IComponentManager* ICameraComponentManagerInstance(IEcs& ecs)
 
 void ICameraComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<CameraComponentManager*>(instance);
+    static_cast<CameraComponentManager*>(instance)->~CameraComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

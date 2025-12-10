@@ -63,6 +63,24 @@ static inline float distance(const Vec2& v0, const Vec2& v1)
     return Magnitude(v1 - v0);
 }
 
+/** Return squared distance of two vector2's */
+static inline float Distance2(const Vec2& v0, const Vec2& v1)
+{
+    return SqrMagnitude(v1 - v0);
+}
+
+/** Return a reflected vector2 given incident and normal vectors */
+static inline Vec2 Reflect(const Vec2& i, const Vec2& n)
+{
+    return i - 2.0f * Dot(n, i) * n;
+}
+
+/** Return scaled value of vector2 */
+static inline Vec2 Scale(Vec2 const& v, float desiredLength)
+{
+    return v * desiredLength / Magnitude(v);
+}
+
 /** Return two component min of vector2's */
 static constexpr inline Vec2 min(const Vec2& lhs, const Vec2& rhs)
 {
@@ -111,6 +129,12 @@ static inline Vec2 RotateCCW(const Vec2& value, float angle)
     const float s = Math::sin(angle);
     const float c = Math::cos(angle);
     return Vec2(value.x * c + value.y * s, value.y * c - value.x * s);
+}
+
+/** Return angle between two vector2's in radians */
+static inline float Angle(const Vec2& a, const Vec2& b)
+{
+    return acos(Dot(a, b) / (Magnitude(a) * Magnitude(b)));
 }
 
 /** Return intersection of two Vec2 start points and direction vectors. Returns boolean flag indicating if the vectors
@@ -176,6 +200,12 @@ static inline float Magnitude(const Vec3& vec)
     return Math::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
 
+/** Return distance between vector3's */
+static inline float distance(const Vec3& v0, const Vec3& v1)
+{
+    return Magnitude(v1 - v0);
+}
+
 /** Return squared distance of two vector3's */
 static inline float Distance2(const Vec3& v0, const Vec3& v1)
 {
@@ -191,6 +221,34 @@ static inline Vec3 Normalize(const Vec3& value)
     } else {
         return Vec3(0.0f, 0.0f, 0.0f);
     }
+}
+
+/** Return a reflected vector3 given an incident and normal vectors */
+static inline Vec3 Reflect(const Vec3& i, const Vec3& n)
+{
+    return i - 2.0f * Dot(n, i) * n;
+}
+
+/** Return angle between two vector3's in radians */
+static inline float Angle(const Vec3& a, const Vec3& b)
+{
+    return acos(Dot(a, b) / (Magnitude(a) * Magnitude(b)));
+}
+
+/** Return a projected vector3 of a onto b */
+static inline Vec3 Project(const Vec3& a, const Vec3& b)
+{
+    const Vec3 nB = Normalize(b);
+    return nB * Dot(a, nB);
+}
+
+/** Constructs an orthonormal basis tangent to the normal returning them in b1 and b2 parameters */
+static inline void OrthoNormalBasis(const Vec3& n, Vec3& b1, Vec3& b2)
+{
+    // Make sure z-axis not paralell to normal to avoid zero vector when applying cross product.
+    Vec3 h = abs(n.z) < 0.999f ? Vec3(0.0f, 0.0f, 1.0f) : Vec3(1.0f, 0.0f, 0.0f);
+    b1 = Normalize(Cross(h, n));
+    b2 = Normalize(Cross(n, b1));
 }
 
 /** Return three component min of vector3's */
@@ -218,10 +276,51 @@ static inline constexpr Vec3 Combine(Vec3 const& a, Vec3 const& b, float ascl, f
 }
 
 // Vector4
+
+/** Return magnitude of vector4's */
+static inline float Magnitude(const Vec4& vec)
+{
+    return Math::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
+}
+
+/** Return distance between vector4's */
+static inline float distance(const Vec4& v0, const Vec4& v1)
+{
+    return Magnitude(v1 - v0);
+}
 /** Return squared magnitude of vector4 */
 static inline constexpr float SqrMagnitude(const Vec4& vec)
 {
     return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w;
+}
+
+/** Return squared distance of two vector4's */
+static inline float Distance2(const Vec4& v0, const Vec4& v1)
+{
+    return SqrMagnitude(v1 - v0);
+}
+
+/** Return normalized vector4 (if magnitude is not larger than epsilon, returns zero vector) */
+static inline Vec4 Normalize(const Vec4& value)
+{
+    const float mag = Magnitude(value);
+    if (mag > Math::EPSILON) {
+        return value / mag;
+    } else {
+        return Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
+}
+
+/** Return two component max of vector4's */
+static constexpr inline Vec4 max(const Vec4& lhs, const Vec4& rhs)
+{
+    return Vec4(max(lhs.x, rhs.x), max(lhs.y, rhs.y), max(lhs.z, rhs.z), max(lhs.w, rhs.w));
+}
+
+/** Return two component min of vector4's */
+static constexpr inline Vec4 min(const Vec4& lhs, const Vec4& rhs)
+{
+    return Vec4(min(lhs.x, rhs.x), min(lhs.y, rhs.y), min(lhs.z, rhs.z), min(lhs.w, rhs.w));
 }
 
 /** Linearly interpolate between v1 and v2 vector4's by value t */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -64,7 +64,7 @@ FontData::~FontData()
     FT_Done_Size(sizeData_);
 }
 
-FontSize FontData::GetSize()
+FontSize FontData::GetSize() const
 {
     return sizeData_->metrics.y_ppem;
 }
@@ -106,7 +106,8 @@ Math::Vec2 FontData::MeasureString(const string_view string)
             maxAscent = glyph->yMax;
         }
     }
-    return { FontDefs::FTPosToFloat(penX), FontDefs::Int16ToFloat(maxAscent - maxDescent) };
+    return { FontDefs::FTPosToFloat(penX),
+        FontDefs::Int16ToFloat(int16_t(Math::clamp(maxAscent - maxDescent, int(INT16_MIN), int(INT16_MAX)))) };
 }
 
 FontMetrics FontData::GetMetrics()
@@ -134,7 +135,7 @@ FontMetrics FontData::GetMetrics()
     uint32_t xIndex = faceData->GetGlyphIndex('x');
     if (xIndex) {
         GlyphMetrics glyphMetrics = GetGlyphMetrics(xIndex);
-        fontMetrics.x_height = glyphMetrics.top - glyphMetrics.bottom; // verify this value
+        fontMetrics.x_height = glyphMetrics.top - glyphMetrics.bottom; // FIXME: verify this value
     } else {
         // double check what to do if 'x' char is not found in face
         fontMetrics.x_height = -fontMetrics.ascent;
@@ -228,10 +229,13 @@ GlyphInfo FontData::GetGlyphInfo(uint32_t glyphIndex)
 const FontDefs::Glyph* FontData::GetOrCreateCachedGlyph(uint32_t glyphIndex)
 {
     std::shared_lock readerLock(mutex_);
+
     auto glyphPos = glyphCache_.find(glyphIndex);
+
     if (glyphPos != glyphCache_.end()) {
         return &glyphPos->second;
     }
+
     readerLock.unlock();
     return UpdateGlyph(glyphIndex);
 }

@@ -46,6 +46,8 @@ struct SubmitDependencies {
     uint32_t waitSemaphoreCount { 0u };
     // render node indices or actual render command context indices (depending on the use context)
     uint32_t waitSemaphoreNodeIndices[PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS] {};
+    // render node graph index to wait for. Used for multi-queue ownership sync across rng
+    uint32_t waitSemaphoreRenderNodeGraphIndex { ~0U };
     // wait for acquired swapchain image
     bool waitForSwapchainAcquireSignal { false };
 };

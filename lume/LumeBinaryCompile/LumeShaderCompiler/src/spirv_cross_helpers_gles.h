@@ -29,8 +29,8 @@ namespace Gles {
 class CoreCompiler final : public spirv_cross::CompilerGLSL {
 public:
     CoreCompiler(const uint32_t* ir, size_t wordCount);
-    ~CoreCompiler() = default;
-    const std::vector<spirv_cross::SPIRConstant> GetConstants() const;
+    ~CoreCompiler() override = default;
+    std::vector<spirv_cross::SPIRConstant> GetConstants() const;
     const spirv_cross::ParsedIR& GetIr() const;
 };
 
@@ -41,7 +41,7 @@ void ReflectPushConstants(spirv_cross::Compiler& compiler, const spirv_cross::Sh
 void ConvertSpecConstToConstant(spirv_cross::CompilerGLSL& compiler, const char* name);
 
 // Converts constant declaration to uniform. (actually only works on spec constants)
-void ConvertConstantToUniform(const spirv_cross::CompilerGLSL& compiler, std::string& source, const char* name);
+void ConvertConstantToUniform(const CoreCompiler& compiler, std::string& source, const char* name);
 
 void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, uint32_t value);
 

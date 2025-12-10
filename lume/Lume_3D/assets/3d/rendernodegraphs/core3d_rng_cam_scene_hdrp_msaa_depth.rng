@@ -198,7 +198,7 @@
                     "colorAttachmentIndices": [ 1 ],
                     "resolveAttachmentIndices": [ 2 ],
                     "depthResolveAttachmentIndex": 3,
-                    "depthResolveModeFlagBit": "sample_zero"
+                    "depthResolveModeFlags": "sample_zero"
                 }
             }
         }

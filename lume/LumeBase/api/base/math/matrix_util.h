@@ -929,6 +929,190 @@ static inline bool HasRotation(Mat4X4 const& m)
     return (m.x.y != 0.f || m.x.z != 0.f || m.y.x != 0.f || m.y.z != 0.f || m.z.x != 0.f || m.z.y != 0.f);
 }
 
+/** Extract eigem vectprs using eigen values of the matrix. Returns Mat3X3 potentially containing 3 eigen vectors. Zero
+ * vectors in the matrix are not valid eigen vectors */
+static inline Mat3X3 ExtractEigenvectors(const Mat3X3& mat, const Vec3& eigenValues)
+{
+    // Matrix layout
+    // [0] [3] [6]
+    // [1] [4] [7]
+    // [2] [5] [8]
+
+    Mat3X3 outVectors = Mat3X3(0.0f);
+
+    constexpr float eps = 1e-6f;
+
+    for (size_t i = 0; i < 3; i++) {
+        const float l = eigenValues[i];
+
+        // A - Lambda * IdentityMatrix
+        Mat3X3 m = mat;
+        m.data[0] -= l;
+        m.data[4] -= l;
+        m.data[8] -= l;
+
+        const Vec3 row1 = Vec3(m.data[0], m.data[3], m.data[6]);
+        const Vec3 row2 = Vec3(m.data[1], m.data[4], m.data[7]);
+        const Vec3 row3 = Vec3(m.data[2], m.data[5], m.data[8]);
+        Vec3 candidate = Cross(row1, row2);
+
+        if (SqrMagnitude(candidate) < eps) {
+            candidate = Cross(row1, row3);
+        }
+
+        if (SqrMagnitude(candidate) < eps) {
+            candidate = Cross(row2, row3);
+        }
+
+        if (SqrMagnitude(candidate) > eps) {
+            outVectors[i] = Normalize(candidate);
+        } else {
+            outVectors[i] = Vec3(0.0f);
+        }
+    }
+
+    return outVectors;
+}
+
+/** Extract eigen values from any 3x3 matrix analytically, prone to floating point errors */
+static inline Vec3 EigenvalueDecompositionAnalytical(const Mat3X3& m)
+{
+    // Matrix layout
+    // [0] [3] [6]
+    // [1] [4] [7]
+    // [2] [5] [8]
+
+    // Analytical solution to det(A - Lambda * I) = 0
+    // We get a cubic: x^3 + ax^2 + bx + c = 0, where
+    // a = -([0] + [4] + [8])
+    // b = [0]*[4] + [0]*[8] + [4]*[8] - [0]*[7] - [3]*[1] - [6]*[2]
+    // c = -det(m)
+
+    const float a = -(m.data[0] + m.data[4] + m.data[8]);
+    const float b = m.data[0] * m.data[4] + m.data[0] * m.data[8] + m.data[4] * m.data[8] - m.data[0] * m.data[7] -
+                    m.data[3] * m.data[1] - m.data[6] * m.data[2];
+
+    float det = m.x.x * (m.y.y * m.z.z - m.z.y * m.y.z) - m.x.y * (m.y.x * m.z.z - m.y.z * m.z.x) +
+                m.x.z * (m.y.x * m.z.y - m.y.y * m.z.x);
+
+    const float c = -det;
+
+    // Cardano's method
+    // x^3 + ax^2 + bx + c = 0
+    // Substitute x = y - (a/3.0) -> y^3 + py + q = 0, where p = b - (a^2)/3, q = (2a^3)/27 - (ab)/3 + c
+
+    const float p = b - (a * a) / 3.0f;
+    const float q = (2 * (a * a * a)) / 27.0f - (a * b) / 3.0f + c;
+
+    // Discriminant = (q^2)/4 + (p^3)/27
+    const float D = (q * q) / 4.0f + (p * p * p) / 27.0f;
+
+    // If init to 0.0f, it can be an actual root, so init to nan
+    Vec3 roots = Vec3(NAN);
+
+    constexpr float eps = 1e-6f;
+
+    // One real root
+    if (D > 0.0f) {
+        const float u = Math::cbrt(-q / 2.0f + Math::sqrt(D));
+        const float v = Math::cbrt(-q / 2.0f - Math::sqrt(D));
+        const float y = u + v;
+        roots.x = y - a / 3.0f;
+    }
+    // All real roots, atleast 2 roots are equal
+    else if (Math::abs(D) < eps) {
+        // Triple root if p = 0 & q = 0
+        if (Math::abs(p) < eps && Math::abs(q) < eps) {
+            roots.x = -a / 3.0f;
+        } else {
+            const float u = Math::cbrt(-q / 2.0f);
+            const float y1 = 2.0f * u;
+            const float y2 = -u;
+
+            roots.x = y1 - a / 3.0f;
+            roots.y = y2 - a / 3.0f;
+        }
+    } else // D < 0.0f, Distinct real roots
+    {
+        const float r = Math::sqrt(-((p * p * p) / 27.0f));
+        // const float theta = Math::acos(-(q / (2.0f * Math::sqrt(r))));
+        // clamp acos input to the function's domain [1.0f, 1.0f] to avoid nan
+        const float theta = Math::acos(Math::clamp(-(q / (2.0f * Math::sqrt(r))), -1.0f, 1.0f));
+
+        const float k = 2.0f * Math::sqrt(-p / 3.0f);
+        const float y1 = k * Math::cos(theta / 3.0f);
+        const float y2 = k * Math::cos((theta + 2.0f * Math::PI) / 3.0f);
+        const float y3 = k * Math::cos((theta + 4.0f * Math::PI) / 3.0f);
+
+        roots.x = y1 - a / 3.0f;
+        roots.y = y2 - a / 3.0f;
+        roots.z = y3 - a / 3.0f;
+    }
+
+    return roots;
+}
+
+/** Return an outer product matrix of two vectors */
+static inline Mat4X4 OuterProduct(const Vec4& u, const Vec4& v)
+{
+    // Matrix layout
+    // [00] [04] [08] [12]
+    // [01] [05] [09] [13]
+    // [02] [06] [10] [14]
+    // [03] [07] [11] [15]
+    return Mat4X4(
+        Vec4 {
+            u.x * v.x, // m[0]
+            u.y * v.x, // m[1]
+            u.z * v.x, // m[2]
+            u.w * v.x  // m[3]
+        },
+        Vec4 {
+            u.x * v.y, // m[4]
+            u.y * v.y, // m[5]
+            u.z * v.y, // m[6]
+            u.w * v.y  // m[7]
+        },
+        Vec4 {
+            u.x * v.z, // m[8]
+            u.y * v.z, // m[9]
+            u.z * v.z, // m[10]
+            u.w * v.z  // m[11]
+        },
+        Vec4 {
+            u.x * v.w, // m[12]
+            u.y * v.w, // m[13]
+            u.z * v.w, // m[14]
+            u.w * v.w  // m[15]
+        });
+}
+
+/** Return an outer product matrix of two vectors */
+static inline Mat3X3 OuterProduct(const Vec3& u, const Vec3& v)
+{
+    // Matrix layout
+    // [0] [3] [6]
+    // [1] [4] [7]
+    // [2] [5] [8]
+
+    return Mat3X3(
+        Vec3 {
+            u.x * v.x, // [0]
+            u.y * v.x, // [1]
+            u.z * v.x, // [2]
+        },
+        Vec3 {
+            u.x * v.y, // [3]
+            u.y * v.y, // [4]
+            u.z * v.y, // [5]
+        },
+        Vec3 {
+            u.x * v.z, // [6]
+            u.y * v.z, // [7]
+            u.z * v.z  // [8]
+        });
+}
+
 /** @} */
 } // namespace Math
 BASE_END_NAMESPACE()

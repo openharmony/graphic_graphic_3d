@@ -31,6 +31,8 @@
 #include <meta/api/animation.h>
 #include <meta/api/iteration.h>
 
+#include "scene/api/effect.h"
+
 SCENE_BEGIN_NAMESPACE()
 
 class Scene;
@@ -76,6 +78,14 @@ struct TextResourceParameters : public SceneResourceParameters {
 };
 
 /**
+ * @brief The EffectResourceParameters class defines Effect creation specific parameters.
+ */
+struct EffectResourceParameters : public SceneResourceParameters {
+    /// Class id of the underlying render effect.
+    META_NS::ObjectId effectClassId {};
+};
+
+/**
  * @brief RenderContextResourceFactory can be used to instantiate new RenderContext specific resources (shared between
  *        all scenes using the same RenderContext).
  */
@@ -97,8 +107,9 @@ public:
     /// Creates a new material with given parameters.
     META_API_ASYNC auto CreateMaterial(const MaterialResourceParameters& params)
     {
+        auto classId = params.type == MaterialType::OCCLUSION ? ClassId::OcclusionMaterial : ClassId::Material;
         auto f = CallScene([&](auto& scene) {
-            return scene.CreateObject(ClassId::Material).Then([params](const META_NS::IObject::Ptr& object) {
+            return scene.CreateObject(classId).Then([params](const META_NS::IObject::Ptr& object) {
                 auto material = interface_pointer_cast<IMaterial>(object);
                 if (material) {
                     SetValue(material->Type(), params.type);
@@ -149,6 +160,10 @@ protected:
         auto scene = scene_.lock();
         return scene ? fn(*scene) : decltype(fn(*scene)) {};
     }
+    auto GetScene() const
+    {
+        return scene_.lock();
+    }
 
 private:
     IScene::WeakPtr scene_;
@@ -194,6 +209,16 @@ public:
     META_API_ASYNC auto CreateTextNode(const TextResourceParameters& params)
     {
         return CallCreateNode<Text3D, CallType>(params, ClassId::TextNode);
+    }
+    /// Create a new Effect object
+    META_API_ASYNC auto CreateEffect(const EffectResourceParameters& params)
+    {
+        auto p = interface_pointer_cast<IEffect>(::META_NS::CreateObjectInstance(::SCENE_NS::ClassId::Effect));
+        auto f = p ? p->InitializeEffect(GetScene(), params.effectClassId).Then([p](bool success) {
+            return success ? p : nullptr;
+        })
+                   : Future<IEffect::Ptr> {};
+        return Internal::UnwrapFuture<CallType, Effect>(BASE_NS::move(f));
     }
 
 private:
@@ -291,9 +316,20 @@ public:
      */
     META_API_ASYNC auto RemoveNode(Node& node)
     {
-        auto ret = META_INTERFACE_OBJECT_ASYNC_CALL_PTR(bool, RemoveNode(node.GetPtr<INode>()));
+        auto n = node.GetPtr<INode>();
         node.Release();
-        return ret;
+        return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(bool, RemoveNode(BASE_NS::move(n)));
+    }
+    /**
+     * @brief Removes the object from the scene.
+     * @see IScene::RemoveObject
+     * @param object The object to remove. The Object object is unitinialized as a result of this call.
+     */
+    META_API_ASYNC auto RemoveObject(META_NS::Object& object, IScene::RemoveObjectOptions options = {})
+    {
+        auto o = object.GetPtr();
+        object.Release();
+        return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(bool, RemoveObject(BASE_NS::move(o), options));
     }
     /// @see IScene::GetCaemras
     META_API_ASYNC auto GetCameras() const
@@ -398,11 +434,29 @@ public:
     META_API_ASYNC auto FindNode(
         BASE_NS::string_view name, META_NS::TraversalType traversalType = META_NS::TraversalType::FULL_HIERARCHY) const
     {
-        auto f = META_INTERFACE_OBJECT_CALL_PTR(GetRootNode())
-                     .Then([name = BASE_NS::string(name), traversalType](const INode::Ptr& node) -> INode::Ptr {
-                         return Node(Internal::FindNode(node, name, traversalType));
-                     });
-        return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
+        ::SCENE_NS::IScene::FindNamedNodeParams params;
+        params.name = name;
+        params.maxCount = 1;
+        params.traversalType = traversalType;
+        return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(Node, FindNamedNode(params));
+    }
+    /**
+     * @brief Finds all occurrences of a child node with given name from this node's hierarchy.
+     * @note  If the full path is known, it is more efficient to call Scene::GetNode
+     * @param name Name of the node to find.
+     * @param maxCount Maximum number of nodes to return. If value is 0, all matches are returned.
+     * @param traversalType Can be used to control how the scene is traversed, or to limit finding only immediate
+     *        children by specifying TraversalType::NO_HIERARCHY.
+     * @return The first node matching the parameters or an invalid node in case of failure.
+     */
+    META_API_ASYNC auto FindNodes(BASE_NS::string_view name, size_t maxCount,
+        META_NS::TraversalType traversalType = META_NS::TraversalType::FULL_HIERARCHY) const
+    {
+        ::SCENE_NS::IScene::FindNamedNodeParams params;
+        params.name = name;
+        params.maxCount = maxCount;
+        params.traversalType = traversalType;
+        return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(META_NS::Internal::ArrayCast<Node>, FindNamedNodes(params));
     }
     /**
      * @brief Finds an animation from the scene.

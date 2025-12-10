@@ -12,6 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#ifndef WATER_RIPPLE_COMMON_H
+#define WATER_RIPPLE_COMMON_H
+
 #include "render/shaders/common/render_compatibility_common.h"
 
 #ifdef VULKAN
@@ -62,4 +66,5 @@ struct DefaultWaterRippleDataStruct {
     vec2 innerOutterRadius { 0.97f, 1.0f };
 };
 
-#endif
+#endif // VULKAN
+#endif // WATER_RIPPLE_COMMON_H

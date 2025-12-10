@@ -24,6 +24,8 @@
 #include <meta/ext/serialization/common_value_serializers.h>
 #include <meta/interface/detail/any.h>
 
+#include "resource/node_instantiator.h"
+
 SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
@@ -142,6 +144,16 @@ void RegisterSerializers()
             }
             return false;
         });
+    META_NS::RegisterSerializer<SerNodeHierarchy>(
+        data,
+        [](auto&, const SerNodeHierarchy& v) {
+            META_NS::ISerNode::Ptr n(v.nodes, const_cast<META_NS::ISerNode*>(v.nodes.get()));
+            return n;
+        },
+        [](auto&, const META_NS::ISerNode::ConstPtr& node, SerNodeHierarchy& out) {
+            out.nodes = node;
+            return true;
+        });
 }
 
 void UnRegisterSerializers()
@@ -149,6 +161,8 @@ void UnRegisterSerializers()
     auto& data = META_NS::GetObjectRegistry().GetGlobalSerializationData();
     META_NS::UnregisterSerializer<RenderSort>(data);
     META_NS::UnregisterSerializer<ColorFormat>(data);
+    META_NS::UnregisterSerializer<ImageLoadInfo>(data);
+    META_NS::UnregisterSerializer<SerNodeHierarchy>(data);
 }
 
 } // namespace Internal

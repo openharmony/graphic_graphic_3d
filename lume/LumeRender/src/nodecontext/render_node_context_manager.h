@@ -77,6 +77,7 @@ public:
     IRenderNodeGpuResourceManager& GetGpuResourceManager() override;
 
     INodeContextDescriptorSetManager& GetDescriptorSetManager() override;
+    const INodeContextDescriptorSetManager& GetDescriptorSetManager() const override;
     INodeContextPsoManager& GetPsoManager() override;
     IRenderNodeGraphShareManager& GetRenderNodeGraphShareManager() override;
 

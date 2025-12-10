@@ -168,7 +168,8 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteFrame(IRenderCommandList& cmdLi
         environmentUbo_ = renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
             stores_.dataStoreNameScene.c_str() + DefaultMaterialSceneConstants::SCENE_ENVIRONMENT_DATA_BUFFER_NAME);
         if (RenderHandleUtil::IsValid(environmentUbo_)) {
-            for (uint32_t idx = 0U; idx < static_cast<uint32_t>(renderEnvironments.size()); ++idx) {
+            const auto envs = static_cast<uint32_t>(BASE_NS::Math::min(renderEnvironments.size(), allEnvSets_.size()));
+            for (uint32_t idx = 0U; idx < envs; ++idx) {
                 const auto& ref = renderEnvironments[idx];
                 if (ref.multiEnvCount != 0U) {
                     ExecuteSingleEnvironment(cmdList, renderEnvironments, idx);

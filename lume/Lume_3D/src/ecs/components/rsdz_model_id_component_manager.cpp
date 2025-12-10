@@ -69,6 +69,7 @@ IComponentManager* IRSDZModelIdComponentManagerInstance(IEcs& ecs)
 
 void IRSDZModelIdComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<RSDZModelIdComponentManager*>(instance);
+    static_cast<RSDZModelIdComponentManager*>(instance)->~RSDZModelIdComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

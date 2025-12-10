@@ -1,0 +1,994 @@
+#version 460 core
+
+#include "3d/shaders/common/3d_dm_structures_common.h"
+#include "3d/shaders/common/3d_dm_target_packing_common.h"
+#include "render/shaders/common/render_color_conversion_common.h"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+#define USE_CIRRUS false
+
+// disable set 1 and 2
+// Set 0: global descriptor sets (mainly for camera matrices)
+#define CORE3D_ENVIRONMENT_FRAG_LAYOUT
+#include "3d/shaders/common/3d_dm_frag_layout_common.h"
+
+// Needs to match the values defined in weather_component.h
+#define CLOUD_OPTIMIZATION_ADAPTIVE_STEP_SIZE (1 << 0)
+#define CLOUD_OPTIMIZATION_DYNAMIC_LOD_LIGHTING (1 << 1)
+
+struct settings {
+    vec4 params[16];
+};
+
+// Set 1: Cloud shader inputs
+layout(set = 1, binding = 0) uniform sampler uSampler; // linear, clamp
+layout(set = 1, binding = 1) uniform samplerCube uCubemapSampler;
+
+layout(set = 1, binding = 2) uniform sampler uSamplerCube;     // linear, mip nearest, repeat
+layout(set = 1, binding = 3) uniform texture3D cloud;          // lowFrequencyTex_ (LowFrequency.ktx)
+layout(set = 1, binding = 4) uniform texture3D worley32;       // highFrequencyTex_ (HighFerequency.ktx)
+layout(set = 1, binding = 5) uniform texture2D uTurbulenceTex; // curlnoiseTex_
+layout(set = 1, binding = 6) uniform sampler uSamplerWeather;  // linear, mip nearest, border color
+layout(set = 1, binding = 7) uniform texture2D uCirrusTex;     // cirrusTex_
+layout(set = 1, binding = 8) uniform texture2D weatherTex;
+layout(set = 1, binding = 9, std140) uniform u
+{
+    settings uParams;
+};
+
+// Output textures
+// Set 2: Cloud shader output textures
+layout(set = 2, binding = 0, rgba8) uniform image2D cloudColorWrite;
+layout(set = 2, binding = 1, rgba8) uniform image2D historyColorRead;
+
+layout(set = 2, binding = 2, r16f) uniform image2D cloudDepthWrite;
+layout(set = 2, binding = 3, r16f) uniform image2D historyDepthRead;
+
+struct PushConstantStruct {
+    vec4 params;
+};
+
+layout(push_constant, std430) uniform uPushConstant
+{
+    PushConstantStruct uPc;
+};
+
+uint CloudOptimizationFlags()
+{
+    return uint(uParams.params[7].w);
+}
+
+float Time()
+{
+    return uPc.params.x;
+}
+
+vec2 Resolution()
+{
+    return uPc.params.zw;
+}
+
+float Coverage()
+{
+    return clamp(uParams.params[0].w, 0.0, 100.0);
+}
+
+vec3 SunDir()
+{
+    return uParams.params[1].xyz;
+}
+
+float CloudTopOffset()
+{
+    return uParams.params[1].w;
+}
+
+float EarthRadius()
+{
+    return max(0, uParams.params[2].x);
+}
+
+float InnerRadius()
+{
+    return max(0, uParams.params[2].y);
+}
+
+float OuterRadius()
+{
+    return max(0, uParams.params[2].z);
+}
+
+float Crispiness()
+{
+    return clamp(uParams.params[2].w, 0.0, 200.0);
+}
+
+float CloudType()
+{
+    return clamp(uParams.params[3].x, 0.0, 1.0);
+}
+
+uint FrameIndex()
+{
+    return floatBitsToUint(uPc.params.y);
+}
+
+float HorizonFogHeight()
+{
+    return uParams.params[6].x;
+}
+
+float HorizonFogFalloff()
+{
+    return max(0.001, uParams.params[6].w);
+}
+
+float Curliness()
+{
+    return uParams.params[4].y;
+}
+
+float NumSamples()
+{
+    return uParams.params[4].z;
+}
+
+float CloudSpeed()
+{
+    return uParams.params[5].x;
+}
+
+float DensityFactor()
+{
+    return max(0, uParams.params[5].y);
+}
+
+float AmbientIntensity()
+{
+    return clamp(uParams.params[5].z, 0.1, 10.0);
+}
+
+float Softness()
+{
+    return clamp(uParams.params[5].w, 0.001, 10.0);
+}
+
+float WeatherScale()
+{
+    return max(uParams.params[6].y, 0.0);
+}
+
+float DirectLightIntensity()
+{
+    return max(uParams.params[6].z, 0.0);
+}
+
+vec3 WindDirection()
+{
+    return normalize(uParams.params[7].xyz);
+}
+
+vec3 TopAmbientColor()
+{
+    return clamp(uParams.params[8].xyz, vec3(0), vec3(10.0));
+}
+
+vec3 BottomAmbientColor()
+{
+    return clamp(uParams.params[9].xyz * 20.0f * uParams.params[9].w, vec3(0), vec3(10.0));
+}
+
+vec4 AmbientHueColorSunset()
+{
+    return clamp(uParams.params[10], vec4(0), vec4(10.0));
+}
+
+vec4 DirectHueColorSunset()
+{
+    return clamp(uParams.params[11], vec4(0), vec4(10.0));
+}
+
+vec4 SunGlareColorDay()
+{
+    return clamp(uParams.params[12], vec4(0), vec4(10.0));
+}
+
+vec4 SunGlareColorDaySunset()
+{
+    return clamp(uParams.params[13], vec4(0), vec4(10.0));
+}
+
+// --- Night / Moon controls
+float AmbientIntensityNight()
+{
+    return max(uParams.params[4].x, 0.0);
+}
+
+float DirectLightIntensityNight()
+{
+    return max(uParams.params[4].w, 0.0);
+}
+
+vec3 NightTopAmbientColor()
+{
+    return clamp(uParams.params[0].xyz, vec3(0), vec3(10.0));
+}
+
+vec3 NightBottomAmbientColor()
+{
+    return clamp(uParams.params[3].yzw, vec3(0), vec3(10.0));
+}
+
+vec3 MoonBaseColor()
+{
+    return clamp(uParams.params[15].xyz, vec3(0), vec3(10.0));
+}
+
+vec4 MoonGlareColor()
+{
+    return clamp(uParams.params[14], vec4(0), vec4(10.0));
+}
+
+float MoonPhase()
+{
+    return 1.0;
+}
+
+float dummy()
+{
+    return uParams.params[15].w;
+}
+
+// Cone sampling random offsets
+vec3 noiseKernel[6u] = vec3[](vec3(0.38051305, 0.92453449, -0.02111345), vec3(-0.50625799, -0.03590792, -0.86163418),
+    vec3(-0.32509218, -0.94557439, 0.01428793), vec3(0.09026238, -0.27376545, 0.95755165),
+    vec3(0.28128598, 0.42443639, -0.86065785), vec3(-0.16852403, 0.14748697, 0.97460106));
+
+// Cloud types height density gradients
+#define STRATUS_GRADIENT vec4(0.0, 0.1, 0.2, 0.3)
+#define STRATOCUMULUS_GRADIENT vec4(0.02, 0.2, 0.48, 0.625)
+#define CUMULUS_GRADIENT vec4(0.00, 0.1625, 0.88, 0.98)
+
+#define CLOUDS_MIN_TRANSMITTANCE 1e-2
+#define CLOUDS_TRANSMITTANCE_THRESHOLD 1.0 - CLOUDS_MIN_TRANSMITTANCE
+const float inv4Pi = 0.07957747154594766788;
+
+float HG(float sundotrd, float g)
+{
+    float gg = g * g;
+    return (1. - gg) / pow(1. + gg - 2. * g * sundotrd, 1.5);
+}
+
+bool IntersectCubeMap(vec3 o, vec3 d, out vec3 minT, out vec3 maxT)
+{
+    vec3 cubeMin = vec3(-0.5, -0.5, -0.5);
+    vec3 cubeMax = vec3(0.5, 1 + cubeMin.y, 0.5);
+
+    // compute intersection of ray with all six bbox planes
+    vec3 invR = 1.0 / d;
+    vec3 tbot = invR * (cubeMin - o);
+    vec3 ttop = invR * (cubeMax - o);
+    // re-order intersections to find smallest and largest on each axis
+    vec3 tmin = min(ttop, tbot);
+    vec3 tmax = max(ttop, tbot);
+    // find the largest tmin and the smallest tmax
+    vec2 t0 = max(tmin.xx, tmin.yz);
+    float tnear = max(t0.x, t0.y);
+    t0 = min(tmax.xx, tmax.yz);
+    float tfar = min(t0.x, t0.y);
+
+    // check for hit
+    bool hit;
+    if ((tnear > tfar) || tfar < 0.0)
+        hit = false;
+    else
+        hit = true;
+
+    minT = tnear < 0.0 ? o : o + d * tnear; // if we are inside the bb, start point is cam pos
+    maxT = o + d * tfar;
+
+    return hit;
+}
+
+vec2 GetRaySphereIntersect(vec3 ro, vec3 rd, float radius, vec3 sphereCenter)
+{
+    vec3 L = ro - sphereCenter;
+    float a = dot(rd, rd);
+    float b = 2.0 * dot(rd, L);
+    float c = dot(L, L) - (radius * radius);
+
+    float discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0.0) {
+        return vec2(-1.0, -1.0);
+    }
+
+    float sqrtD = sqrt(discriminant);
+    float invA = 1.0 / (2.0 * a);
+
+    float t_near = (-b - sqrtD) * invA;
+    float t_far = (-b + sqrtD) * invA;
+
+    return vec2(t_near, t_far);
+}
+
+vec3 GetSun(const vec3 d, float powExp)
+{
+    float sun = clamp(dot(SunDir(), d), 0.0, 1.0);
+    vec3 col = 0.8 * vec3(1.0, .6, 0.1) * pow(sun, powExp);
+    return col;
+}
+
+#define SATURATE(x) clamp(x, 0.0, 1.0)
+
+float GetHeightFraction(vec3 inPos, float innerRadius, float outerRadius, vec3 sphereCenter)
+{
+    return (length(inPos - sphereCenter) - innerRadius) / (outerRadius - innerRadius);
+}
+
+float Remap(float originalValue, float originalMin, float originalMax, float newMin, float newMax)
+{
+    return newMin + (((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin));
+}
+
+vec2 GetSphericalUV(vec3 p, vec3 sphereCenter)
+{
+    vec3 dirVector = normalize(p - sphereCenter);
+    return (dirVector.xz + 1.0) / 2.0;
+}
+
+float GetDensityForCloud(float heightFraction, float cloudType)
+{
+    float stratusFactor = 1.0 - clamp(cloudType * 2.0, 0.0, 1.0);
+    float stratoCumulusFactor = 1.0 - abs(cloudType - 0.5) * 2.0;
+    float cumulusFactor = clamp(cloudType - 0.5, 0.0, 1.0) * 2.0;
+
+    vec4 baseGradient = stratusFactor * STRATUS_GRADIENT + stratoCumulusFactor * STRATOCUMULUS_GRADIENT +
+                        cumulusFactor * CUMULUS_GRADIENT;
+
+    // gradicent computation (see Siggraph 2017 Nubis-Decima talk)
+    // return Remap(heightFraction, baseGradient.x, baseGradient.y, 0.0, 1.0) * Remap(heightFraction, baseGradient.z,
+    // baseGradient.w, 1.0, 0.0);
+    return smoothstep(baseGradient.x, baseGradient.y, heightFraction) -
+           smoothstep(baseGradient.z, baseGradient.w, heightFraction);
+}
+
+float Luminance(vec3 c)
+{
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+float SampleCloudDensity(vec3 p, bool expensive, float lod, float innerRadius, float outerRadius, vec3 sphereCenter)
+{
+    float heightFraction = GetHeightFraction(p, innerRadius, outerRadius, sphereCenter);
+    vec3 animation = heightFraction * WindDirection() * CloudTopOffset() + WindDirection() * Time() * CloudSpeed();
+    p += animation;
+    vec2 uv = GetSphericalUV(p, sphereCenter) * WeatherScale();
+    if (heightFraction < 0.0 || heightFraction > 1.0) {
+        return 0.0;
+    }
+    vec3 weather_data = texture(sampler2D(weatherTex, uSamplerWeather), uv).rgb;
+    float cloud_coverage = clamp(weather_data.r * Coverage(), 0.0, 1.0);
+    if (cloud_coverage < 0.01) {
+        return 0.0;
+    }
+
+    float shell = (outerRadius - innerRadius);
+    vec3 q = (p - sphereCenter) / shell;
+
+    vec3 pBase = q * Crispiness();
+    vec3 pDetail = q * 0.25 * Curliness();
+
+    vec4 low_frequency_noise = textureLod(sampler3D(cloud, uSamplerCube), pBase, lod /*lod*/);
+
+    float lowFreqFBM = dot(low_frequency_noise.gba, vec3(0.625, 0.25, 0.125));
+    float base_cloud = Remap(low_frequency_noise.r, -(1.0 - lowFreqFBM), 1., 0.0, 1.0);
+
+    float cloud_type = clamp(weather_data.g * CloudType(), 0.0, 1.0);
+    float density = GetDensityForCloud(heightFraction, cloud_type);
+
+    base_cloud *= (density / (heightFraction + +1e-6));
+
+    float base_cloud_with_coverage = Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
+    base_cloud_with_coverage *= cloud_coverage;
+
+    if (expensive) {
+        vec3 erodeCloudNoise = textureLod(sampler3D(worley32, uSamplerCube), pDetail, lod).rgb;
+        float highFreqFBM = dot(erodeCloudNoise.rgb, vec3(0.625, 0.25, 0.125));
+
+        highFreqFBM = pow(highFreqFBM, 2.6);
+        float highFreqNoiseModifier = mix(highFreqFBM, 1.0 - highFreqFBM, clamp(heightFraction * 10.0, 0.0, 1.0));
+
+        base_cloud_with_coverage = base_cloud_with_coverage - highFreqNoiseModifier * (1.0 - base_cloud_with_coverage);
+    }
+
+    float final_density = clamp(base_cloud_with_coverage, 0.0, 1.0);
+    final_density = pow(final_density, Softness());
+    return final_density;
+}
+
+// This is an experimental but more accurate version of sampling the clouds
+// This will not be used for now because it's not as fast.
+float SampleCloudDensityCorrected(
+    vec3 p, bool expensive, float lod, float innerRadius, float outerRadius, vec3 sphereCenter)
+{
+    float heightFraction = GetHeightFraction(p, innerRadius, outerRadius, sphereCenter);
+    vec3 animation = heightFraction * WindDirection() * CloudTopOffset() + WindDirection() * Time() * CloudSpeed();
+    p += animation;
+    vec2 uv = GetSphericalUV(p, sphereCenter) * WeatherScale();
+    if (heightFraction < 0.0 || heightFraction > 1.0) {
+        return 0.0;
+    }
+    vec3 weather_data = texture(sampler2D(weatherTex, uSamplerWeather), uv).rgb;
+    float cloud_coverage = clamp(weather_data.r * Coverage(), 0.0, 1.0);
+
+    float shell = (outerRadius - innerRadius);
+    vec3 q = (p - sphereCenter) / shell;
+
+    vec3 pBase = q * Crispiness();
+    vec3 pDetail = q * 0.25 * Curliness();
+
+    vec4 low_frequency_noise = textureLod(sampler3D(cloud, uSamplerCube), q * Crispiness(), lod /*lod*/);
+
+    float lowFreqFBM = dot(low_frequency_noise.gba, vec3(0.625, 0.25, 0.125));
+    float base_cloud = low_frequency_noise.r; // Remap(low_frequency_noise.r, lowFreqFBM, 1.0, 0.0, 1.0);
+
+    float cloud_type = clamp(weather_data.g * CloudType(), 0.0, 1.0);
+    float density = GetDensityForCloud(heightFraction, cloud_type);
+
+    base_cloud *= density;
+
+    float base_cloud_with_coverage = Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
+
+    if (expensive) {
+        vec3 erodeCloudNoise = textureLod(sampler3D(worley32, uSamplerCube), q * Curliness(), lod).rgb;
+        float highFreqFBM = dot(erodeCloudNoise.rgb, vec3(0.625, 0.25, 0.125));
+        float highFreqNoiseModifier =
+            mix(highFreqFBM, 1.0 - highFreqFBM, clamp(heightFraction * 10.0, 0.0, 1.0)) * dummy();
+        base_cloud_with_coverage *= highFreqNoiseModifier;
+    }
+    float final_density = clamp(base_cloud_with_coverage, 0.0, 1.0);
+    return final_density;
+}
+
+float SampleCloudMaskCheap(vec3 p, float innerRadius, float outerRadius, vec3 sphereCenter)
+{
+    float heightFraction = GetHeightFraction(p, innerRadius, outerRadius, sphereCenter);
+    if (heightFraction <= 0.0 || heightFraction >= 1.0)
+        return 0.0;
+
+    vec3 animation = heightFraction * WindDirection() * CloudTopOffset() + WindDirection() * Time() * CloudSpeed();
+    p += animation;
+
+    vec2 uv = GetSphericalUV(p, sphereCenter) * WeatherScale();
+    vec3 weather_data = texture(sampler2D(weatherTex, uSamplerWeather), uv).rgb;
+
+    float coverage = clamp(weather_data.r * Coverage(), 0.0, 1.0);
+    if (coverage < 0.01)
+        return 0.0;
+
+    float cloud_type = clamp(weather_data.g * CloudType(), 0.0, 1.0);
+    float hGrad = GetDensityForCloud(heightFraction, cloud_type);
+
+    float base = clamp(hGrad, 0.0, 1.0);
+
+    float mask = coverage * base;
+    mask = pow(clamp(mask, 0.0, 1.0), Softness());
+    return mask;
+}
+
+float Beer(float d)
+{
+    return exp(-d);
+}
+
+float Powder(float density, float lightDotView)
+{
+    // lightDotView is the cosine of the angle between the light and view vectors
+    float f = 1.0 - exp(-density * 2.0);
+    // The mix function applies this effect most strongly at glancing angles (rim lighting)
+    return mix(1.0, f, clamp(-lightDotView * 0.5 + 0.5, 0.0, 1.0));
+}
+
+float Phase(vec3 inLightVec, vec3 inViewVec, float g)
+{
+    float costheta = dot(inLightVec, inViewVec) / length(inLightVec) / length(inViewVec);
+    return HG(costheta, g);
+}
+
+float RaymarchToLight(vec3 o, float stepSize, vec3 lightDir, float originalDensity, float lightDotEye,
+    float innerRadius, float outerRadius, vec3 sphereCenter, float densityFactor)
+{
+    vec3 startPos = o;
+    float ds = stepSize;
+    vec3 rayStep = lightDir * ds;
+    const float CONE_STEP = 1.0 / 6.0;
+    float coneRadius = 1.0;
+    float density = 0.0;
+    vec3 pos;
+
+    float T = 1.0;
+    float angle = (FrameIndex() % 15u) * 2.39996323; // golden angle in radians
+    mat3 R = mat3(cos(angle), 0, sin(angle), 0, 1, 0, -sin(angle), 0, cos(angle));
+    uint cloudFlags = CloudOptimizationFlags();
+
+    for (int i = 0; i < 6; i++) {
+        vec3 k = R * noiseKernel[i];
+
+        pos = startPos + coneRadius * k * float(i);
+        float lod = 0.0f;
+        if ((cloudFlags & CLOUD_OPTIMIZATION_DYNAMIC_LOD_LIGHTING) == CLOUD_OPTIMIZATION_DYNAMIC_LOD_LIGHTING) {
+            lod = i;
+        }
+        float heightFraction = GetHeightFraction(pos, innerRadius, outerRadius, sphereCenter);
+        if (heightFraction >= 0 && heightFraction <= 1.0) {
+            float cloudDensity = SampleCloudDensity(pos, density > 0.3, lod, innerRadius, outerRadius, sphereCenter);
+            if (cloudDensity > 0.0) {
+                float optical_depth_step = cloudDensity * densityFactor * ds;
+                T *= exp(-optical_depth_step);
+
+                density += cloudDensity;
+            }
+        }
+
+        if (T < 0.01)
+            return 0.0;
+        startPos += rayStep;
+        coneRadius += CONE_STEP;
+    }
+
+    return T;
+}
+
+float SunsetPivot()
+{
+    return 0.06;
+}
+
+float SunsetWidth()
+{
+    return 0.55;
+}
+
+float SunsetBlend(float sunY)
+{
+    float p = SunsetPivot(), w = SunsetWidth();
+    float day01 = smoothstep(p - w, p + w, sunY);
+    return 1.0 - day01;
+}
+
+vec3 ApplyTint(vec3 base, vec4 tint)
+{
+    vec3 t = base * tint.rgb;
+    float y = max(1e-5, Luminance(base));
+    float ty = max(1e-5, Luminance(t));
+    t *= (y / ty);
+    return mix(base, t, clamp(tint.a, 0.0, 1.0));
+}
+
+#define BAYER_FACTOR 1.0 / 16.0
+float bayerFilter[16u] = float[](0.0 * BAYER_FACTOR, 8.0 * BAYER_FACTOR, 2.0 * BAYER_FACTOR, 10.0 * BAYER_FACTOR,
+    12.0 * BAYER_FACTOR, 4.0 * BAYER_FACTOR, 14.0 * BAYER_FACTOR, 6.0 * BAYER_FACTOR, 3.0 * BAYER_FACTOR,
+    11.0 * BAYER_FACTOR, 1.0 * BAYER_FACTOR, 9.0 * BAYER_FACTOR, 15.0 * BAYER_FACTOR, 7.0 * BAYER_FACTOR,
+    13.0 * BAYER_FACTOR, 5.0 * BAYER_FACTOR);
+
+vec4 RaymarchToCloud(vec3 startPos, vec3 endPos, vec3 bg, out vec4 cloudPos, float innerRadius, float outerRadius,
+    vec3 sphereCenter, vec3 cameraPos)
+{
+    vec3 path = endPos - startPos;
+    float len = length(path);
+    // If the ray has no length (e.g. intersection failed), exit early.
+    if (len < 1.0) {
+        cloudPos = vec4(0.0);
+        return vec4(0, 0, 0, 0.0);
+    }
+    float cameraDist = length(startPos - cameraPos);
+    int nSteps = int(NumSamples());
+
+    float ds = len / nSteps;
+    vec3 dir = path / len;
+
+    const float near_step_size = 180.0;
+    const float far_step_size_offset = 60.0;
+    const float step_adjust_distance = 2750.0;
+    float t = 0.0;
+
+    vec4 col = vec4(0.0);
+    uvec2 fragCoord = gl_GlobalInvocationID.xy;
+    int a = int(fragCoord.x) % 4;
+    int b = int(fragCoord.y) % 4;
+    int patternIdx = (a ^ (b << 2) ^ int(FrameIndex())) & 15;
+
+    float jitter = bayerFilter[patternIdx];
+    float jitter_centered = jitter - 0.5;
+    float jitter_scaled = jitter_centered * 3;
+
+    vec3 pos = startPos;
+    float density = 0.0;
+    cloudPos = vec4(0.0);
+
+    float sunElev01 = smoothstep(-0.15, 0.35, SunDir().y);
+    float sunset01 = SunsetBlend(SunDir().y);
+
+    // Night factor: 0 by day, 1 at night (soft around horizon)
+    float night01 = 1.0 - smoothstep(-0.02, 0.02, SunDir().y);
+
+    // How visible is the moon (above horizon and by phase)
+    float moonUp = smoothstep(-0.05, 0.05, -SunDir().y);
+    float moonVis = night01 * moonUp * mix(0.2, 1.0, clamp(MoonPhase(), 0.0, 1.0));
+
+    float lambertUp = max(0.0, SunDir().y);
+    float bounceDay = max(0.30, mix(0.55, 1.0, sunElev01) * lambertUp);
+    float bounce = mix(bounceDay, 0.3, night01);
+
+    // -------- Ambient Light calculations ------------
+    float dayScale = 0.50;
+    float sunsetScale = 1.50;
+    vec3 dayTop = TopAmbientColor();
+    vec3 dayBottom = BottomAmbientColor() * mix(dayScale, sunsetScale, sunset01) * bounce;
+
+    vec3 nightTopC = NightTopAmbientColor();
+    vec3 nightBottomC = NightBottomAmbientColor() * 0.3;
+
+    vec3 finalCloudColorTop = mix(dayTop, nightTopC, night01);
+    vec3 finalCloudColorBottom = mix(dayBottom, nightBottomC, night01);
+
+    vec4 ambTintColor = AmbientHueColorSunset();
+    vec4 ambTint = vec4(ambTintColor.rgb, ambTintColor.a * (1.0 - night01) * clamp(sunset01, 0.0, 1.0));
+    finalCloudColorBottom = ApplyTint(finalCloudColorBottom, vec4(ambTint.rgb, ambTint.a * 0.6));
+    finalCloudColorTop = ApplyTint(finalCloudColorTop, ambTint);
+
+    vec3 sunColor = vec3(1.0, 1.0, 0.98);
+    vec3 moonColor = MoonBaseColor();
+
+    vec4 dirTintColor = DirectHueColorSunset();
+    vec4 dirTint = vec4(dirTintColor.xyz, clamp(dirTintColor.a * (1.0 - night01) * sunset01, 0.0, 1.0));
+
+    vec3 baseLightColor = mix(sunColor, moonColor, night01);
+    vec3 finalLightColor = ApplyTint(baseLightColor, dirTint);
+
+    float directIntensity = mix(DirectLightIntensity(), DirectLightIntensityNight() * moonVis, night01);
+    float ambientIntensity = mix(AmbientIntensity(), AmbientIntensityNight(), night01);
+
+    const float MAX_MARCH_STEPS = NumSamples();
+
+    vec3 L = (night01 < 0.5) ? SunDir() : -SunDir(); // MoonDir == -SunDir
+
+    uint cloudFlags = CloudOptimizationFlags();
+
+    float lightDotEye = dot(L, dir);
+    float T = 1.0;
+    float sigma_ds = 0.0;
+    bool entered = false;
+    for (int i = 0; i < int(MAX_MARCH_STEPS); ++i) {
+        // distance-based step (Nubis)
+        pos = startPos + dir * t;
+        float stepSize = ds;
+        if ((cloudFlags & CLOUD_OPTIMIZATION_ADAPTIVE_STEP_SIZE) == CLOUD_OPTIMIZATION_ADAPTIVE_STEP_SIZE) {
+            stepSize = near_step_size + (far_step_size_offset * length(pos - cameraPos)) / step_adjust_distance;
+        }
+        float step_jitter = jitter_centered * stepSize;
+        pos = startPos + dir * (t + step_jitter);
+        // Get the density sample for this position
+        float density_sample = SampleCloudDensity(pos, true, i / 16, innerRadius, outerRadius, sphereCenter);
+        if (density_sample > 0.) {
+            float height = GetHeightFraction(pos, innerRadius, outerRadius, sphereCenter);
+
+            vec3 animation = height * WindDirection() * CloudTopOffset() + WindDirection() * Time() * CloudSpeed();
+            vec2 uv = GetSphericalUV(pos + animation, sphereCenter) * WeatherScale();
+
+            float densityFactor = texture(sampler2D(weatherTex, uSamplerWeather), uv).b * DensityFactor();
+            if (!entered) {
+                cloudPos = vec4(pos, 1.0);
+                entered = true;
+            }
+            vec3 ambientLight = mix(finalCloudColorBottom, finalCloudColorTop, height);
+            vec3 ambientContribution = ambientLight * ambientIntensity;
+
+            //---------- Direct Light calculations -------------
+            float lightTransmittance = RaymarchToLight(
+                pos, stepSize, L, density_sample, lightDotEye, innerRadius, outerRadius, sphereCenter, densityFactor);
+
+            float g = 0.6;
+            // Silver lining intensity can be exposed as a parameter
+            float phase = mix(HG(lightDotEye, -0.1), HG(lightDotEye, 0.15), clamp(lightDotEye * 0.5 + 0.5, 0.0, 1.0));
+            float powderTerm = Powder(density_sample, lightDotEye);
+
+            vec3 directContribution = finalLightColor * phase * lightTransmittance * powderTerm * directIntensity;
+
+            // final color
+            vec3 S = directContribution + ambientContribution;
+
+            sigma_ds = -densityFactor * stepSize;
+            float dTrans = exp(density_sample * sigma_ds);
+            vec3 Sint = (S - S * dTrans);
+            col.rgb += T * Sint;
+            T *= dTrans;
+        }
+
+        if (T <= CLOUDS_MIN_TRANSMITTANCE || t >= len)
+            break;
+
+        t += stepSize;
+    }
+    if (USE_CIRRUS) {
+        vec3 up_vector = normalize(endPos - sphereCenter);
+        float view_angle_dot = dot(dir, up_vector);
+        float cirrus_weight = smoothstep(0.0, 0.4, view_angle_dot);
+
+        cirrus_weight *= smoothstep(0.0, 0.1, SunDir().y);
+
+        if (cirrus_weight > 0.0) {
+            vec2 spherical_uv = GetSphericalUV(endPos, sphereCenter) * WeatherScale();
+            vec2 motion = vec2(CloudSpeed() * Time() * 0.0001, 0.0);
+            float cirrus_sample1 = texture(sampler2D(uCirrusTex, uSamplerWeather), spherical_uv * 0.25 + motion).r;
+            float cirrus_sample2 = texture(sampler2D(uCirrusTex, uSamplerWeather), spherical_uv * 0.5 + motion * 0.5).r;
+            float cirrus_density = clamp(cirrus_sample1 * cirrus_sample2 * 1.5, 0.0, 1.0);
+
+            float cos_theta = dot(dir, -SunDir());
+            float cirrus_g = 0.5;
+            float phase = HG(cos_theta, cirrus_g);
+
+            float direct_brightness = 20.0;
+            vec3 cirrus_direct_light = sunColor * phase * direct_brightness;
+            vec3 cirrus_ambient_light = finalCloudColorTop * AmbientIntensity();
+
+            vec3 cirrus_lit_color = (cirrus_direct_light + cirrus_ambient_light) * cirrus_density;
+            float cirrus_transmission = mix(1.0, 0.25, cirrus_density);
+            col.rgb += mix(vec3(0), T * cirrus_lit_color * cirrus_weight, T);
+
+            T *= mix(1.0, cirrus_transmission * 1.5, cirrus_weight);
+        }
+    }
+
+    col.a = 1.0 - T;
+    return col;
+}
+
+vec3 ComputeClipSpaceCoord(uvec2 fragCoord)
+{
+    vec2 ray_nds = 2.0 * vec2(fragCoord.xy) / Resolution() - 1.0;
+    return vec3(ray_nds, 1.0);
+}
+
+vec4 ComputeFog(
+    in vec3 startFog, in vec3 cameraPosition, in vec3 sphereCenter, in vec3 worldDir, float sphereOuterRadius)
+{
+    float sunY = SunDir().y;
+    float night01 = 1.0 - smoothstep(-0.02, 0.02, sunY);
+
+    float sunElev01 = smoothstep(-0.15, 0.35, sunY);
+    float lambertUp = max(0.0, sunY);
+    float bounceDay = max(0.35, mix(0.6, 1.0, sunElev01) * lambertUp);
+    float bounce = mix(bounceDay, 0.3, night01);
+
+    float dist = length(startFog - cameraPosition);
+    float radius = max(1e-3, (cameraPosition.y - sphereCenter.y));
+    float fogAmount = 1.0 - exp(-dist * (dist / radius) * 0.0005);
+
+    vec3 up = normalize(cameraPosition - sphereCenter);
+    float dCam = length(cameraPosition - sphereCenter);
+    float cosH = -sqrt(max(0.0, 1.0 - (sphereOuterRadius * sphereOuterRadius) / (dCam * dCam)));
+
+    float elev = dot(worldDir, up);
+    float rel = elev - cosH;
+
+    float sunset01 = SunsetBlend(sunY);
+    float sunsetMasked = sunset01 * (1.0 - night01);
+
+    const float band = 0.09 * HorizonFogHeight();
+    float horizonBand = smoothstep(-band, 0.0, rel) * (1.0 - smoothstep(0.0, band, rel));
+
+    float horizonGamma = HorizonFogFalloff();
+    horizonBand = pow(clamp(horizonBand, 0.0, 1.0), horizonGamma);
+
+    float fogA = clamp(fogAmount * mix(1.0, 1.1, sunsetMasked), 0.0, 1.0) * horizonBand;
+
+    // Hard-coded bluish color for horizon fog
+    vec3 blueBase = vec3(0.478, 0.612, 0.729);
+    vec3 nightCol = vec3(0.53, 0.61, 0.82);
+    vec3 daySunset = mix(blueBase, AmbientHueColorSunset().rgb, sunsetMasked);
+    vec3 fogColor = mix(daySunset, nightCol, night01) * bounce;
+
+    return vec4(fogColor, fogA);
+}
+
+vec3 ComputeGlare(in vec3 startPos, in vec3 endPos)
+{
+    float sunElevMask = smoothstep(0.02, 0.08, SunDir().y);
+    float moonElevMask = smoothstep(0.03, 0.12, -SunDir().y);
+    float night01 = 1.0 - smoothstep(-0.02, 0.02, SunDir().y);
+
+    float moonPhaseVis = clamp(MoonPhase(), 0.0, 1.0);
+    float moonVis = night01 * moonElevMask * mix(0.2, 1.0, moonPhaseVis);
+
+    vec3 segDir = normalize(endPos - startPos);
+
+    float sunAmt = clamp(dot(SunDir(), segDir), 0.0, 1.0);
+    vec3 sunCol = mix(SunGlareColorDaySunset().rgb * SunGlareColorDaySunset().a,
+        SunGlareColorDay().rgb * SunGlareColorDay().a, SunDir().y);
+
+    float sunExp = mix(28.0, 36.0, sunElevMask);
+    vec3 sunGlare = sunCol * pow(sunAmt, sunExp) * sunElevMask * (1.0 - night01);
+
+    float moonAmt = clamp(dot(-SunDir(), segDir), 0.0, 1.0);
+    vec3 moonCol = MoonGlareColor().rgb * MoonGlareColor().a;
+
+    float moonExp = mix(18.0, 26.0, moonElevMask);
+    vec3 moonGlare = moonCol * pow(moonAmt, moonExp) * moonVis;
+
+    vec3 glare = moonGlare + sunGlare;
+    return glare;
+}
+
+void main()
+{
+    ivec2 fragCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (Coverage() < 0.01 || DensityFactor() < 1e-4) {
+        imageStore(cloudColorWrite, fragCoord, vec4(0));
+        imageStore(cloudDepthWrite, fragCoord, vec4(0));
+        return;
+    }
+    vec4 fragColor_v, cloudDistance_v;
+    const uint cameraIdx = uGeneralData.indices.x;
+    vec3 cameraPosition = vec3(uCameras[cameraIdx].viewInv[3].xyz);
+
+    float EARTH_RADIUS = EarthRadius();
+    float sphereOuterRadius = OuterRadius();
+    float sphereInnerRadius = InnerRadius();
+    float SPHERE_INNER_RADIUS = (EARTH_RADIUS + sphereInnerRadius);
+    float SPHERE_OUTER_RADIUS = (SPHERE_INNER_RADIUS + sphereOuterRadius);
+    float SPHERE_DELTA = SPHERE_OUTER_RADIUS - SPHERE_INNER_RADIUS;
+    vec3 sphereCenter = vec3(0.0, -EARTH_RADIUS, 0.0);
+
+    // compute ray direction
+    vec4 ray_clip = vec4(ComputeClipSpaceCoord(fragCoord), 1.0);
+    vec4 ray_view = uCameras[cameraIdx].projInv * ray_clip;
+    ray_view = vec4(ray_view.xy, -1.0, 0.0);
+    vec3 worldDir = normalize((uCameras[cameraIdx].viewInv * ray_view).xyz);
+
+    // compute background color
+    vec3 stub, cubeMapEndPos;
+    IntersectCubeMap(vec3(0.0, 0.0, 0.0), worldDir, stub, cubeMapEndPos);
+
+    vec4 bg = textureLod(uCubemapSampler, worldDir, 0);
+    // --- Night sky fallback when cubemap is black ---
+    float night01 = 1.0 - smoothstep(-0.02, 0.02, SunDir().y);
+    float bgLum = Luminance(bg.rgb);
+
+    if (night01 > 0.5 && bgLum < 1e-4) {
+        float up01 = clamp(cubeMapEndPos.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 nightHorizon = vec3(0.020, 0.030, 0.060);
+        vec3 nightZenith = vec3(0.060, 0.085, 0.120);
+        bg.rgb = mix(nightHorizon, nightZenith, smoothstep(0.0, 1.0, up01));
+        bg.a = 1.0;
+    }
+    //------------- Sphere Intersection and Ray marching -------------
+    vec3 startPos, endPos;
+    vec2 t_outer = GetRaySphereIntersect(cameraPosition, worldDir, SPHERE_OUTER_RADIUS, sphereCenter);
+    vec2 t_planet = GetRaySphereIntersect(cameraPosition, worldDir, EARTH_RADIUS, sphereCenter);
+    bool shouldMarch = true;
+
+    if (t_outer.x < 0.0 && t_outer.y < 0.0) {
+        shouldMarch = false;
+
+    } else if (t_planet.x > 0.0 && t_outer.x > t_planet.x) {
+        shouldMarch = false;
+    }
+
+    else if (worldDir.y < 0.0) {
+        shouldMarch = false;
+    }
+
+    if (!shouldMarch) {
+        startPos = endPos = cameraPosition;
+    } else {
+        vec2 t_inner = GetRaySphereIntersect(cameraPosition, worldDir, SPHERE_INNER_RADIUS, sphereCenter);
+
+        float t_start = max(0.0, t_outer.x);
+        float t_end = t_outer.y;
+
+        if (t_inner.x < 0.0 && t_inner.y > 0.0) {
+            t_start = max(t_start, t_inner.y);
+        }
+
+        if (t_planet.x > 0.0) {
+            t_end = min(t_end, t_planet.x);
+        }
+        startPos = cameraPosition + worldDir * t_start;
+        endPos = cameraPosition + worldDir * t_end;
+
+        if (t_end <= t_start) {
+            startPos = endPos = cameraPosition;
+        }
+    }
+
+    vec4 v = vec4(0.0);
+
+    fragColor_v = bg;
+
+    v = RaymarchToCloud(startPos, endPos, bg.rgb, cloudDistance_v, SPHERE_INNER_RADIUS, SPHERE_OUTER_RADIUS,
+        sphereCenter, cameraPosition);
+
+    const float CLOUD_FAR_PLANE = 800000.0;
+    float curDepth = 1.0; // Default to the far plane (sky)
+
+    if (cloudDistance_v.w > 0.001) {
+        curDepth = distance(cameraPosition, cloudDistance_v.xyz) / CLOUD_FAR_PLANE;
+    }
+
+    vec3 startFog;
+    float camR = length(cameraPosition - sphereCenter);
+    // Calculate horizon fog start position
+    if (camR < SPHERE_INNER_RADIUS) {
+        vec2 t_inner = GetRaySphereIntersect(cameraPosition, worldDir, SPHERE_INNER_RADIUS, sphereCenter);
+        float t_exitInner = t_inner.y;
+        startFog = (t_exitInner > 0.0) ? (cameraPosition + worldDir * t_exitInner) : cameraPosition;
+    } else if (camR < SPHERE_OUTER_RADIUS) {
+        vec2 t_inner = GetRaySphereIntersect(cameraPosition, worldDir, SPHERE_INNER_RADIUS, sphereCenter);
+        float t_hitInner = (t_inner.x > 0.0) ? t_inner.x : ((t_inner.y > 0.0) ? t_inner.y : -1.0);
+        startFog = (t_hitInner > 0.0) ? (cameraPosition + worldDir * t_hitInner) : startPos;
+    } else {
+        vec2 t_outer = GetRaySphereIntersect(cameraPosition, worldDir, SPHERE_OUTER_RADIUS, sphereCenter);
+        float t_firstOuter = (t_outer.x > 0.0) ? t_outer.x : ((t_outer.y > 0.0) ? t_outer.y : -1.0);
+        startFog = (t_firstOuter > 0.0) ? (cameraPosition + worldDir * t_firstOuter) : cameraPosition;
+    }
+    //------------ Horizon Fog and Sun and Moon glare --------
+    vec4 horizonFog = ComputeFog(startFog, cameraPosition, sphereCenter, worldDir, SPHERE_OUTER_RADIUS);
+    //  Add sun and moon glare to clouds
+    vec3 glare = ComputeGlare(startPos, endPos);
+
+    v.rgb += glare * v.a;
+    vec3 fogColor = horizonFog.rgb;
+    float fogA = horizonFog.a;
+    vec3 fogOverClouds_rgb = v.rgb * (1.0 - fogA) + fogColor * fogA;
+    float fogOverClouds_a = clamp(v.a + fogA * (1.0 - v.a), 0.0, 1.0);
+    vec3 col = bg.rgb * (1.0 - fogOverClouds_a) + fogOverClouds_rgb;
+
+    fragColor_v.rgb = col;
+    fragColor_v.a = fogOverClouds_a;
+
+    //----------- Reprojection and Accumulation -------------
+    vec2 jitteredUV = (vec2(fragCoord) + 0.5) / Resolution();
+    vec4 clipNear = vec4(jitteredUV * 2.0 - 1.0, 0.0, 1.0);
+    vec4 clipFar = vec4(jitteredUV * 2.0 - 1.0, 1.0, 1.0);
+
+    mat4 VPInvCurr = uCameras[cameraIdx].viewProjInv;
+    vec4 wsF4 = VPInvCurr * clipFar;
+    wsF4 /= wsF4.w;
+
+    vec3 camPos = vec3(uCameras[cameraIdx].viewInv[3].xyz);
+    vec3 dir = normalize(wsF4.xyz - camPos);
+    const float FIXED_T = 200000.0;
+    vec3 worldPosStable = camPos + dir * FIXED_T;
+
+    vec4 clipPrev = uCameras[cameraIdx].viewProjPrevFrame * vec4(worldPosStable, 1.0);
+    vec2 uvPrev = clipPrev.xy / clipPrev.w * 0.5 + 0.5;
+    bool reproOK = all(greaterThanEqual(uvPrev, vec2(0.0))) && all(lessThanEqual(uvPrev, vec2(1.0)));
+
+    ivec2 prevPix = ivec2(clamp(uvPrev * Resolution(), vec2(0.0), Resolution() - vec2(1.0)));
+    vec4 histCol = imageLoad(historyColorRead, prevPix);
+    float histD = imageLoad(historyDepthRead, prevPix).r;
+
+    float velocity = length(uvPrev - jitteredUV);
+    float pxMotion = velocity * min(Resolution().x, Resolution().y);
+
+    // float lumNow = Luminance(fragColor_v.rgb);
+    // float lumHist = Luminance(histCol.rgb);
+    // float lumDev = abs(lumNow - lumHist) / max(max(lumNow, lumHist), 0.04);
+
+    bool validHist = reproOK;
+    float windMotion01 = clamp(CloudSpeed() / 6000.0, 0.0, 0.8);
+
+    float wDyn = clamp(0.1 + pxMotion + windMotion01, 0.1, 1.0);
+
+    float w = validHist ? wDyn : 1.0;
+    // History can be NAN because of wrong sampling location
+    if (isnan(histD)) {
+        histD = 0.0;
+    }
+    vec4 outCol = mix(histCol, fragColor_v, w);
+    float outD = mix(histD, curDepth, w);
+
+    imageStore(cloudColorWrite, fragCoord, outCol);
+    imageStore(cloudDepthWrite, fragCoord, vec4(outD, 0, 0, 0));
+}

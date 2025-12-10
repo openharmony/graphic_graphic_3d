@@ -5,8 +5,11 @@
 // includes
 #include "render/shaders/common/render_compatibility_common.h"
 
-// sets
-#include "3d/shaders/common/3d_dm_env_frag_layout_common.h"
+// disable set 1 and 2
+#define CORE3D_ENVIRONMENT_FRAG_LAYOUT
+#include "3d/shaders/common/3d_dm_frag_layout_common.h"
+#include "3d/shaders/common/3d_dm_structures_common.h"
+#include "render/shaders/common/render_compatibility_common.h"
 
 // in / out
 

@@ -1,0 +1,184 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeScene"
+
+# Options
+RENDER_BUILD_GLES = true
+RENDER_BUILD_VULKAN = true
+
+#
+# LumeScene API test config
+#
+
+#
+# Unit tests scene api config 
+#
+config("lume_scene_test_config") {
+
+  # Only targets in the current buildfile ("private")
+  visibility = [":*"]
+  
+  # Required flags
+  cflags = [
+    "-Wno-overloaded-virtual",
+  ]
+
+  # Unit test defines
+  defines = [
+    "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/LumeScene/test_data/\"",
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1"
+    ]
+  }
+
+  defines += [
+    "CORE_DYNAMIC=1"
+  ]
+}
+
+# ohos_unittest
+ohos_unittest("lume_scene_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_ECS_HELPER_PATH}:lume_engine_ecshelper_config",
+    "${LUME_META_PATH}:lume_meta_api_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_SCENE_PATH}:lume_scene_api_config",
+    "${LUME_PNG_PATH}:lume_png_api",
+    "${LUME_JPG_PATH}:lume_jpg_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_LUME3DTEXT_PATH}:lume_3dtext_api",
+
+    "${LUME_BASE_PATH}:lume_unit_test_config",
+    ":lume_scene_test_config"
+  ]
+
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src",
+  ]
+
+  # Src
+  sources = [
+    "common/load_lib.cpp",
+    "common/test_runner_ohos_system.cpp",
+
+    # API
+    "api_unit_test/src/api/effect_test.cpp",
+    "api_unit_test/src/api/scene_api_test.cpp",
+    "api_unit_test/src/api/scene_import_test.cpp",
+
+    # Component
+    "api_unit_test/src/component/animation_component_test.cpp",
+    "api_unit_test/src/component/camera_component_test.cpp",
+    "api_unit_test/src/component/environment_component_test.cpp",
+    "api_unit_test/src/component/generic_component_test.cpp",
+    "api_unit_test/src/component/layer_component_test.cpp",
+    "api_unit_test/src/component/light_component_test.cpp",
+    "api_unit_test/src/component/material_component_test.cpp",
+    "api_unit_test/src/component/mesh_component_test.cpp",
+    "api_unit_test/src/component/node_component_test.cpp",
+    "api_unit_test/src/component/postprocess_component_test.cpp",
+    "api_unit_test/src/component/text_component_test.cpp",
+    "api_unit_test/src/component/transform_component_test.cpp",
+
+    # Core
+    "api_unit_test/src/core/animation_test.cpp",
+    "api_unit_test/src/core/create_object_test.cpp",
+    "api_unit_test/src/core/ecs_object_test.cpp",
+    "api_unit_test/src/core/image_test.cpp",
+    "api_unit_test/src/core/postprocess_test.cpp",
+    "api_unit_test/src/core/render_configuration_test.cpp",
+
+    # Mesh
+    "api_unit_test/src/mesh/material_test.cpp",
+    "api_unit_test/src/mesh/mesh_test.cpp",
+    "api_unit_test/src/mesh/shader_test.cpp",
+
+    # Node
+    "api_unit_test/src/node/camera_node_test.cpp",
+    "api_unit_test/src/node/mesh_node_test.cpp",
+    "api_unit_test/src/node/new_node_type_test.cpp",
+    "api_unit_test/src/node/node_startable_test.cpp",
+    "api_unit_test/src/node/node_test.cpp",
+    "api_unit_test/src/node/text_node_test.cpp",
+
+    # Scene
+    "api_unit_test/src/scene/scene_ser_compat_test.cpp",
+    "api_unit_test/src/scene/scene_serialisation_test.cpp",
+    "api_unit_test/src/scene/scene_test.cpp",
+  ]
+
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gmock",
+    "googletest:gtest"
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
+  # Deps
+  deps = [
+    "${LUME_ECS_HELPER_PATH}:libAGPEcshelper", # no shared lib!
+  ]
+
+  # Test data
+  resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeScene/test/unittest/assets/ohos_test.xml"
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+    testonly = true
+    deps = [ 
+        ":lume_scene_api_test",
+    ]
+}

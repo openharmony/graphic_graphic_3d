@@ -12,53 +12,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef LUME_ELF_32_H
 #define LUME_ELF_32_H
+
 #include "elf_common.h"
 
 #define ELF32_ST_VISIBILITY(o) ((o)&0x3)
 
-typedef uint32_t Elf32_Addr;
-typedef uint32_t Elf32_Off;
-typedef uint16_t Elf32_Half;
-typedef uint32_t Elf32_Word;
+using Elf32_Addr = uint32_t;
+using Elf32_Off = uint32_t;
+using Elf32_Half = uint16_t;
+using Elf32_Word = uint32_t;
 
-typedef struct {
-    ElfIdent e_ident = { 0x7f, 'E', 'L', 'F', ELFCLASS32, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE };
-    Elf32_Half e_type;
-    Elf32_Half e_machine;
-    Elf32_Word e_version;
-    Elf32_Addr e_entry;
-    Elf32_Off e_phoff;
-    Elf32_Off e_shoff;
-    Elf32_Word e_flags;
-    Elf32_Half e_ehsize;
-    Elf32_Half e_phentsize;
-    Elf32_Half e_phnum;
-    Elf32_Half e_shentsize;
-    Elf32_Half e_shnum;
-    Elf32_Half e_shstrndx;
-} Elf32_Ehdr;
+struct Elf32_Ehdr {
+    ElfIdent ident = { 0x7f, 'E', 'L', 'F', ELFCLASS32, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE };
+    Elf32_Half type;
+    Elf32_Half machine;
+    Elf32_Word version;
+    Elf32_Addr entry;
+    Elf32_Off phoff;
+    Elf32_Off shoff;
+    Elf32_Word flags;
+    Elf32_Half ehsize;
+    Elf32_Half phentsize;
+    Elf32_Half phnum;
+    Elf32_Half shentsize;
+    Elf32_Half shnum;
+    Elf32_Half shstrndx;
+};
 
-typedef struct elf32_shdr {
-    Elf32_Word sh_name;
-    Elf32_Word sh_type;
-    Elf32_Word sh_flags;
-    Elf32_Addr sh_addr;
-    Elf32_Off sh_offset;
-    Elf32_Word sh_size;
-    Elf32_Word sh_link;
-    Elf32_Word sh_info;
-    Elf32_Word sh_addralign;
-    Elf32_Word sh_entsize;
-} Elf32_Shdr;
+struct Elf32_Shdr {
+    Elf32_Word name;
+    Elf32_Word type;
+    Elf32_Word flags;
+    Elf32_Addr addr;
+    Elf32_Off offset;
+    Elf32_Word size;
+    Elf32_Word link;
+    Elf32_Word info;
+    Elf32_Word addralign;
+    Elf32_Word entsize;
+};
 
-typedef struct {
-    Elf32_Word st_name;
-    Elf32_Addr st_value;
-    Elf32_Word st_size;
-    unsigned char st_info;
-    unsigned char st_other;
-    Elf32_Half st_shndx;
-} Elf32_Sym;
-#endif
+struct Elf32_Sym {
+    Elf32_Word name;
+    Elf32_Addr value;
+    Elf32_Word size;
+    unsigned char info;
+    unsigned char other;
+    Elf32_Half shndx;
+};
+
+#endif // LUME_ELF_32_H

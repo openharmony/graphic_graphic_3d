@@ -41,7 +41,7 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxDrawBuffers = */ 8,
 
     /*.maxVertexUniformVectors = */ 256,
-    /*.maxVaryingVectors = */ 15,       // From OpenGLES 3.1 table 6.44.
+    /*.maxVaryingVectors = */ 15, // From OpenGLES 3.1 table 6.44.
     /*.maxFragmentUniformVectors = */ 256,
     /*.maxVertexOutputVectors = */ 16,  // maxVertexOutputComponents / 4
     /*.maxFragmentInputVectors = */ 15, // maxFragmentInputComponents / 4
@@ -141,7 +141,7 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /* .maxDualSourceDrawBuffersEXT = */ 1,
     // This is the glslang TLimits structure.
     // It defines whether or not the following features are enabled.
-    // We want them to all be enabled.
+    // We want them to all be enabled.z
     /*.limits = */
     {
         /*.nonInductiveForLoops = */ 1,

@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <base/containers/unique_ptr.h>
 #include <base/namespace.h>
 #include <core/namespace.h>
 #include <core/property/intf_property_api.h>
@@ -58,7 +59,7 @@ protected:
 
 private:
     const IPropertyApi* owner_ { nullptr };
-    BlockType* data_ { nullptr };
+    BASE_NS::unique_ptr<BlockType, void (*)(BlockType*)> data_ { nullptr };
     BASE_NS::array_view<const Property> componentMetadata_;
     uint64_t typeHash_ { 0 };
     uint32_t generationCount_ { 0 };

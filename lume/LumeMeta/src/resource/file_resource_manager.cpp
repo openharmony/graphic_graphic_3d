@@ -13,6 +13,11 @@
  * limitations under the License.
  */
 
+// disabled exceptions for msvc iomanip
+#ifndef __OHOS__
+#define _HAS_EXCEPTIONS 0
+#endif
+
 #include "file_resource_manager.h"
 
 #include <iomanip>
@@ -25,6 +30,7 @@
 #include <meta/interface/resource/intf_resource.h>
 
 #include "memfile.h"
+#include "resource_group_handle.h"
 
 META_BEGIN_NAMESPACE()
 
@@ -105,7 +111,8 @@ BASE_NS::vector<CORE_NS::IResourceType::Ptr> FileResourceManager::GetResourceTyp
     }
     return res;
 }
-CORE_NS::ResourceId FileResourceManager::ReadHeader(const std::string& line)
+CORE_NS::ResourceId FileResourceManager::ReadHeader(
+    const std::string& line, BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy)
 {
     std::istringstream in(line);
     std::string name;
@@ -127,10 +134,15 @@ CORE_NS::ResourceId FileResourceManager::ReadHeader(const std::string& line)
     if (in >> opt) {
         data->optionData = BASE_NS::Base64Decode(opt.c_str());
     }
-    resources_[data->id.group][data->id.name] = data;
+    auto& v = resources_[data->id.group][data->id.name];
+    if (v && v->object) {
+        destroy.push_back(v->object);
+    }
+    v = data;
     return data->id;
 }
-bool FileResourceManager::ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE_NS::ResourceId>& result)
+bool FileResourceManager::ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE_NS::ResourceId>& result,
+    BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy)
 {
     std::string vec;
     vec.resize(file.GetLength());
@@ -139,7 +151,7 @@ bool FileResourceManager::ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE
     std::string line;
     while (std::getline(ss, line)) {
         if (!line.empty() && line[0] != '#') {
-            auto res = ReadHeader(line);
+            auto res = ReadHeader(line, destroy);
             if (!res.IsValid()) {
                 return false;
             }
@@ -150,6 +162,7 @@ bool FileResourceManager::ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE
 }
 FileResourceManager::Result FileResourceManager::Import(BASE_NS::string_view url)
 {
+    BASE_NS::vector<CORE_NS::IResource::Ptr> destroy;
     BASE_NS::vector<CORE_NS::ResourceId> result;
     {
         std::unique_lock lock { mutex_ };
@@ -158,7 +171,7 @@ FileResourceManager::Result FileResourceManager::Import(BASE_NS::string_view url
             CORE_LOG_W("Failed to open resource manager file: %s", BASE_NS::string(url).c_str());
             return Result::FILE_NOT_FOUND;
         }
-        if (!ReadHeaders(*f, result)) {
+        if (!ReadHeaders(*f, result, destroy)) {
             return Result::INVALID_FILE;
         }
     }
@@ -273,8 +286,8 @@ FileResourceManager::Result FileResourceManager::SaveResourceData(const Resource
     }
     if (!r.path.empty()) {
         MemFile data;
-        if (!it->second->SaveResource(r.object, CORE_NS::IResourceType::StorageInfo{nullptr, &data, r.id, r.path,
-                                                                                    GetSelf<IResourceManager>()})) {
+        if (!it->second->SaveResource(r.object,
+                CORE_NS::IResourceType::StorageInfo { nullptr, &data, r.id, r.path, GetSelf<IResourceManager>() })) {
             CORE_LOG_W("Failed to save resource: %s", r.id.ToString().c_str());
             return Result::EXPORT_FAILURE;
         }
@@ -298,8 +311,8 @@ bool FileResourceManager::UpdateOptions(ResourceData& r)
             return false;
         }
         MemFile opts;
-        if (!it->second->SaveResource(r.object, CORE_NS::IResourceType::StorageInfo{&opts, nullptr, r.id, r.path,
-                                                                                    GetSelf<IResourceManager>()})) {
+        if (!it->second->SaveResource(r.object,
+                CORE_NS::IResourceType::StorageInfo { &opts, nullptr, r.id, r.path, GetSelf<IResourceManager>() })) {
             CORE_LOG_W("Failed to save resource options");
             return false;
         }
@@ -337,6 +350,7 @@ bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource)
 }
 bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource, BASE_NS::string_view path)
 {
+    CORE_NS::IResource::Ptr res;
     {
         std::unique_lock lock { mutex_ };
         auto it = types_.find(resource->GetResourceType());
@@ -352,13 +366,17 @@ bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource, B
         d.id = id;
         d.path = path;
         MemFile opts;
-        if (!it->second->SaveResource(resource, CORE_NS::IResourceType::StorageInfo{&opts, nullptr, d.id, d.path,
-                                                                                    GetSelf<IResourceManager>()})) {
+        if (!it->second->SaveResource(resource,
+                CORE_NS::IResourceType::StorageInfo { &opts, nullptr, d.id, d.path, GetSelf<IResourceManager>() })) {
             CORE_LOG_W("Failed to save resource options");
             return false;
         }
         d.optionData = opts.Data();
-        resources_[id.group][id.name] = BASE_NS::make_shared<ResourceData>(BASE_NS::move(d));
+        auto& v = resources_[id.group][id.name];
+        if (v) {
+            res = v->object;
+        }
+        v = BASE_NS::make_shared<ResourceData>(BASE_NS::move(d));
     }
     Notify({ resource->GetResourceId() }, IResourceListener::EventType::ADDED);
     return true;
@@ -366,6 +384,7 @@ bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource, B
 bool FileResourceManager::AddResource(const CORE_NS::ResourceId& id, const CORE_NS::ResourceType& type,
     BASE_NS::string_view path, const CORE_NS::IResourceOptions::ConstPtr& options)
 {
+    CORE_NS::IResource::Ptr res;
     {
         std::unique_lock lock { mutex_ };
         auto it = types_.find(type);
@@ -379,10 +398,14 @@ bool FileResourceManager::AddResource(const CORE_NS::ResourceId& id, const CORE_
         d.path = path;
         if (options) {
             MemFile opts;
-            options->Save(opts, GetSelf<IResourceManager>());
+            options->Save(opts, GetSelf<IResourceManager>(), {});
             d.optionData = opts.Data();
         }
-        resources_[id.group][id.name] = BASE_NS::make_shared<ResourceData>(BASE_NS::move(d));
+        auto& v = resources_[id.group][id.name];
+        if (v) {
+            res = v->object;
+        }
+        v = BASE_NS::make_shared<ResourceData>(BASE_NS::move(d));
     }
     Notify({ id }, IResourceListener::EventType::ADDED);
     return true;
@@ -448,9 +471,10 @@ bool FileResourceManager::RenameResource(const CORE_NS::ResourceId& id, const CO
 }
 bool FileResourceManager::PurgeResource(const CORE_NS::ResourceId& id)
 {
+    CORE_NS::IResource::Ptr obj;
     std::unique_lock lock { mutex_ };
     if (auto res = FindResource(id)) {
-        res->object = nullptr;
+        std::swap(obj, res->object);
         return true;
     }
     CORE_LOG_W("No such resource: %s", id.ToString().c_str());
@@ -458,11 +482,19 @@ bool FileResourceManager::PurgeResource(const CORE_NS::ResourceId& id)
 }
 bool FileResourceManager::RemoveResource(const CORE_NS::ResourceId& id)
 {
+    CORE_NS::IResource::Ptr obj;
     bool res = false;
     {
         std::unique_lock lock { mutex_ };
-        auto git = resources_.find(id.group);
-        res = git != resources_.end() && git->second.erase(id.name) == 1;
+        if (auto git = resources_.find(id.group); git != resources_.end()) {
+            if (auto it = git->second.find(id.name); it != git->second.end()) {
+                if (it->second) {
+                    obj = it->second->object;
+                }
+                git->second.erase(it);
+                res = true;
+            }
+        }
     }
     if (res) {
         Notify({ id }, IResourceListener::EventType::REMOVED);
@@ -471,12 +503,14 @@ bool FileResourceManager::RemoveResource(const CORE_NS::ResourceId& id)
 }
 size_t FileResourceManager::PurgeGroup(BASE_NS::string_view group)
 {
+    BASE_NS::vector<CORE_NS::IResource::Ptr> objs;
     size_t count = 0;
     std::unique_lock lock { mutex_ };
     auto git = resources_.find(group);
     if (git != resources_.end()) {
         for (auto it = git->second.begin(); it != git->second.end(); ++it) {
             if (it->second->object) {
+                objs.push_back(it->second->object);
                 it->second->object = nullptr;
                 ++count;
             }
@@ -487,6 +521,7 @@ size_t FileResourceManager::PurgeGroup(BASE_NS::string_view group)
 bool FileResourceManager::RemoveGroup(BASE_NS::string_view group)
 {
     bool res = false;
+    BASE_NS::vector<CORE_NS::IResource::Ptr> objs;
     BASE_NS::vector<CORE_NS::ResourceId> result;
     {
         std::unique_lock lock { mutex_ };
@@ -494,10 +529,12 @@ bool FileResourceManager::RemoveGroup(BASE_NS::string_view group)
         res = it != resources_.end();
         if (res) {
             for (auto&& g : it->second) {
+                objs.push_back(g.second->object);
                 result.push_back(g.second->id);
             }
             resources_.erase(it);
         }
+        ownedGroups_.erase(group);
     }
     if (res) {
         Notify(result, IResourceListener::EventType::REMOVED);
@@ -506,13 +543,16 @@ bool FileResourceManager::RemoveGroup(BASE_NS::string_view group)
 }
 void FileResourceManager::RemoveAllResources()
 {
+    BASE_NS::vector<CORE_NS::IResource::Ptr> objs;
     BASE_NS::vector<CORE_NS::ResourceId> result;
     {
         std::unique_lock lock { mutex_ };
         for (auto&& g : resources_) {
             for (auto&& v : g.second) {
+                objs.push_back(v.second->object);
                 result.push_back(v.second->id);
             }
+            ownedGroups_.erase(g.first);
         }
         resources_.clear();
     }
@@ -579,7 +619,7 @@ CORE_NS::IResource::Ptr FileResourceManager::ConstructResource(
         }
     }
 
-    if (resObj) {
+    if (res && resObj) {
         std::unique_lock lock { mutex_ };
         if (res->object) {
             resObj = res->object;
@@ -588,6 +628,45 @@ CORE_NS::IResource::Ptr FileResourceManager::ConstructResource(
         }
     }
     return resObj;
+}
+
+IResourceGroupHandle::Ptr FileResourceManager::GetGroupHandle(BASE_NS::string_view group)
+{
+    IResourceGroupHandle::Ptr res;
+    std::unique_lock lock { mutex_ };
+    auto it = ownedGroups_.find(group);
+    if (it != ownedGroups_.end()) {
+        res = it->second.lock();
+    }
+    if (!res) {
+        res = BASE_NS::make_shared<ResourceGroupHandle>(GetSelf<CORE_NS::IResourceManager>(), BASE_NS::string(group));
+        ownedGroups_[group] = res;
+    }
+    return res;
+}
+
+uint32_t FileResourceManager::GetAliveCount(
+    const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const
+{
+    return FindAliveResources(selection).size();
+}
+
+BASE_NS::vector<CORE_NS::IResource::Ptr> FileResourceManager::FindAliveResources(
+    const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const
+{
+    BASE_NS::vector<CORE_NS::IResource::Ptr> res;
+    std::shared_lock lock { mutex_ };
+    for (auto&& g : resources_) {
+        for (auto&& v : g.second) {
+            auto& r = *v.second;
+            if (ResourceMatches(selection, r.id)) {
+                if (r.object) {
+                    res.push_back(r.object);
+                }
+            }
+        }
+    }
+    return res;
 }
 
 META_END_NAMESPACE()

@@ -51,6 +51,8 @@ public:
     }
 };
 
+class IExporterState;
+
 /// Interface that used to export objects inside object's export function
 class IExportContext : public IExportFunctions {
     META_INTERFACE(IExportFunctions, IExportContext, "a669af8b-58af-4468-ab64-4a38fcc80bf1")
@@ -78,9 +80,7 @@ public:
     }
 
     /// Get the context in which we are exporting, this is the IExporter typically
-    virtual CORE_NS::IInterface* Context() const = 0;
-    /// Get user set context object
-    virtual META_NS::IObject::Ptr UserContext() const = 0;
+    virtual IExporterState& Context() const = 0;
     /// Substitute serialisation of the current object with given node (all exports for this object are discarded)
     virtual ReturnError SubstituteThis(ISerNode::Ptr) = 0;
     /// Get Metadata

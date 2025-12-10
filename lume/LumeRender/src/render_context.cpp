@@ -161,18 +161,19 @@ vector<refcnt_ptr<IRenderDataStore>> CreateDefaultRenderDataStores(
     return dataStores;
 }
 
-void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
+void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
-    defaultGpuResources.push_back(gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_BUFFER,
+    defResources.resources.push_back(gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_BUFFER,
         GpuBufferDesc { CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
                             CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
                             CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                             CORE_BUFFER_USAGE_INDEX_BUFFER_BIT | CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                             CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
             (CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT), 0u, 1024u }));
+    defResources.defGpuBuffer = defResources.resources.back().GetHandle();
 }
 
-void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
+void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
     // NOTE: render context color space settings do not affect these
     // Pure black and white are used
@@ -188,16 +189,18 @@ void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
     constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
     constexpr const uint32_t rgbData[4u] = { 0x0, 0x0, 0x0, 0x0 };
     const auto rgbDataView = array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeOfUint32 * countof(rgbData));
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE, desc, rgbDataView));
+    defResources.defGpuImage = defResources.resources.back().GetHandle();
+
     constexpr const uint32_t rgbDataWhite[4u] = { 0xFFFFffff, 0xFFFFffff, 0xFFFFffff, 0xFFFFffff };
     const auto rgbDataViewWhite =
         array_view(reinterpret_cast<const uint8_t*>(rgbDataWhite), sizeOfUint32 * countof(rgbDataWhite));
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE_WHITE, desc, rgbDataViewWhite));
 }
 
-void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
+void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
     {
         // hard-coded default backbuffer
@@ -222,7 +225,7 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
         };
         auto& gpuResourceMgrImpl = static_cast<GpuResourceManager&>(gpuResourceMgr);
         // create as a swapchain image to get correct handle flags for fast check-up for additional processing
-        defaultGpuResources.push_back(gpuResourceMgrImpl.CreateSwapchainImage(
+        defResources.resources.push_back(gpuResourceMgrImpl.CreateSwapchainImage(
             {}, DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));
     }
     {
@@ -245,14 +248,25 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, vector<RenderHand
             SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
             {},
         };
-        defaultGpuResources.push_back(
+        defResources.resources.push_back(
             gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER_DEPTH, desc));
     }
 }
 
-void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHandleReference>& defaultGpuResources)
+void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_SAMPLER,
+        GpuSamplerDesc {
+            Filter::CORE_FILTER_NEAREST,                                 // magFilter
+            Filter::CORE_FILTER_NEAREST,                                 // minFilter
+            Filter::CORE_FILTER_NEAREST,                                 // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        }));
+    defResources.defGpuSampler = defResources.resources.back().GetHandle();
+
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_NEAREST_REPEAT,
             GpuSamplerDesc {
                 Filter::CORE_FILTER_NEAREST,                          // magFilter
@@ -262,7 +276,7 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
                 SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeV
                 SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeW
             }));
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_NEAREST_CLAMP,
             GpuSamplerDesc {
                 Filter::CORE_FILTER_NEAREST,                                 // magFilter
@@ -273,7 +287,7 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
                 SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
             }));
 
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_REPEAT,
             GpuSamplerDesc {
                 Filter::CORE_FILTER_LINEAR,                           // magFilter
@@ -283,7 +297,7 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
                 SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeV
                 SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeW
             }));
-    defaultGpuResources.push_back(
+    defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_CLAMP,
             GpuSamplerDesc {
                 Filter::CORE_FILTER_LINEAR,                                  // magFilter
@@ -304,7 +318,7 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
     };
     linearMipmapRepeat.minLod = 0.0f;
     linearMipmapRepeat.maxLod = 32.0f;
-    defaultGpuResources.push_back(gpuResourceMgr.Create(
+    defResources.resources.push_back(gpuResourceMgr.Create(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT, linearMipmapRepeat));
     GpuSamplerDesc linearMipmapClamp {
         Filter::CORE_FILTER_LINEAR,                                  // magFilter
@@ -316,7 +330,7 @@ void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, vector<RenderHan
     };
     linearMipmapClamp.minLod = 0.0f;
     linearMipmapClamp.maxLod = 32.0f;
-    defaultGpuResources.push_back(gpuResourceMgr.Create(
+    defResources.resources.push_back(gpuResourceMgr.Create(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP, linearMipmapClamp));
 }
 
@@ -380,7 +394,7 @@ RenderContext::~RenderContext()
 
     WritePipelineCacheInternal(false);
 
-    defaultGpuResources_.clear();
+    defaultGpuResources_ = {};
     renderer_.reset();
     renderNodeGraphMgr_.reset();
     renderDataStoreMgr_.reset();
@@ -422,6 +436,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
             IShaderManager::ShaderFilePathDesc desc;
             desc.shaderPath = "rendershaders://";
             desc.pipelineLayoutPath = "renderpipelinelayouts://";
+            desc.vertexInputDeclarationPath = "rendervertexinputdeclarations://";
             // NOTE: does not have states and vids
             shaderMgr.LoadShaderFiles(desc);
         }
@@ -457,6 +472,9 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         CreateDefaultTextures(gpuResourceMgr, defaultGpuResources_);
         CreateDefaultTargets(gpuResourceMgr, defaultGpuResources_);
         CreateDefaultSamplers(gpuResourceMgr, defaultGpuResources_);
+        ((GpuResourceManager&)gpuResourceMgr)
+            .SetDefaultResources({ defaultGpuResources_.defGpuBuffer, defaultGpuResources_.defGpuImage,
+                defaultGpuResources_.defGpuSampler });
 
         device_->Deactivate();
 
@@ -478,6 +496,7 @@ IDevice& RenderContext::GetDevice() const
 {
     if (!device_) {
         PLUGIN_LOG_E("Render Init not called or result was not success");
+        std::abort();
     }
     return *device_;
 }
@@ -486,6 +505,7 @@ IRenderer& RenderContext::GetRenderer() const
 {
     if (!renderer_) {
         PLUGIN_LOG_E("Render Init not called or result was not success");
+        std::abort();
     }
     return *renderer_;
 }
@@ -494,6 +514,7 @@ IRenderDataStoreManager& RenderContext::GetRenderDataStoreManager() const
 {
     if (!renderDataStoreMgr_) {
         PLUGIN_LOG_E("Render Init not called or result was not success");
+        std::abort();
     }
     return *renderDataStoreMgr_;
 }
@@ -502,6 +523,7 @@ IRenderNodeGraphManager& RenderContext::GetRenderNodeGraphManager() const
 {
     if (!renderNodeGraphMgr_) {
         PLUGIN_LOG_E("Render Init not called or result was not success");
+        std::abort();
     }
     return *renderNodeGraphMgr_;
 }
@@ -510,6 +532,7 @@ IRenderUtil& RenderContext::GetRenderUtil() const
 {
     if (!renderUtil_) {
         PLUGIN_LOG_E("Render Init not called or result was not success");
+        std::abort();
     }
     return *renderUtil_;
 }

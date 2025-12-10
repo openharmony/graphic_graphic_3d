@@ -58,12 +58,12 @@ public:
      * 3. If the are is non-default, apply to output target or create the sized output target
      */
     struct RenderAreaRequest {
-        /* Render are, used as explained abofe */
+        /* Render are, used as explained above */
         RENDER_NS::RenderPassDesc::RenderArea area;
     };
     /** Set render area request
      * 1. If output given, non-default values affect the area
-     * 2. If no output given, creates an output intermadiate target for given size.
+     * 2. If no output given, creates an output intermediate target for given size.
      */
     virtual void SetRenderAreaRequest(const RenderAreaRequest& renderAreaRequest) = 0;
 
@@ -81,14 +81,12 @@ public:
      */
     virtual IRenderNode::ExecuteFlags GetExecuteFlags() const = 0;
 
-    /** Sequential, called when the actual render node is initialized or rest are being done.
-     * Note: Init can get called multiple times during runtime. The node must
-     * invalidate any changed state/ handles and assume it starts from scratch.
-     * This is called and evaluated during rendering.
-     * @param postProcess IRenderPostProcess implementation where the input properties come from.
+    /** Sequential, called when the actual render node is initialized or reset.
+     * Note: Init can get called multiple times during runtime. The node must invalidate any changed state/ handles and
+     * assume it starts from scratch. This is called and evaluated during rendering.
      * @param renderNodeContextMgr Provides access to needed managers.
      */
-    virtual void Init(const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr) = 0;
+    virtual void InitNode(IRenderNodeContextManager& renderNodeContextMgr) = 0;
 
     /** Sequential, called before ExecuteFrame every frame by the actual render node.
      * Create/destroy gpu resources here if needed. Descriptor sets should be created here as well.
@@ -96,7 +94,7 @@ public:
      * IRenderNodeGpuResourceManager keeps track of created resources, just store the handle references.
      * This is called and evaluated during rendering.
      */
-    virtual void PreExecute() = 0;
+    virtual void PreExecuteFrame() = 0;
 
     /** Parallel, called every frame by the actual post process handling render node.
      * Should make sure internally if the effect should be applied.
@@ -104,7 +102,7 @@ public:
      * This is called and evaluated during rendering.
      * @param cmdList Render command list for rendering/compute calls.
      */
-    virtual void Execute(IRenderCommandList& cmdList) = 0;
+    virtual void ExecuteFrame(IRenderCommandList& cmdList) = 0;
 
 protected:
     IRenderPostProcessNode() = default;

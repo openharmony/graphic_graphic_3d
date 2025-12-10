@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef META_SRC_RESOURCE_TYPES_BITMAP_TYPE_H
-#define META_SRC_RESOURCE_TYPES_BITMAP_TYPE_H
+#ifndef SCENE_SRC_RESOURCE_TYPES_BITMAP_TYPE_H
+#define SCENE_SRC_RESOURCE_TYPES_BITMAP_TYPE_H
 
 #include <scene/base/namespace.h>
 #include <scene/interface/intf_image.h>

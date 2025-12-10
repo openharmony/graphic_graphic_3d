@@ -69,6 +69,7 @@ void StartableObjectController::Destroy()
     InvalidateTickables();
     SetTarget({}, {});
     observer_.reset();
+    Super::Destroy();
 }
 
 bool StartableObjectController::SetStartableQueueId(

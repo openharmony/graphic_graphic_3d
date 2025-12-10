@@ -16,7 +16,7 @@
 #ifndef API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H
 #define API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H
 
-#ifdef __OHOS_PLATFORM__
+#ifdef __OHOS__
 #include <memory>
 #include <platform/common/core/os/extensions_create_info.h>
 
@@ -49,6 +49,6 @@ struct PlatformCreateInfo {
 };
 CORE_END_NAMESPACE()
 
-#endif // __OHOS_PLATFORM__
+#endif // __OHOS__
 
 #endif // API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H

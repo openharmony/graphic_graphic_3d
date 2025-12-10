@@ -15,7 +15,9 @@
 #ifndef META_API_OBJECT_NAME_H
 #define META_API_OBJECT_NAME_H
 
+#include <meta/api/util.h>
 #include <meta/base/interface_traits.h>
+#include <meta/interface/builtin_objects.h>
 #include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_container.h>
 #include <meta/interface/intf_named.h>

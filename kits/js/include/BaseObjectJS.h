@@ -22,6 +22,20 @@
 
 #include "TrueRootObject.h"
 
+#if ENABLE_DIAGNOSTICS
+void DestroyBridge(void* ptr);
+void DisposeBridge(void* ptr);
+void FinalizeBridge(void* ptr);
+void AddBridge(const BASE_NS::string_view& type, NapiApi::Object js);
+void DumpBridges();
+#else
+#define DestroyBridge(ptr)
+#define DisposeBridge(ptr)
+#define FinalizeBridge(ptr)
+#define AddBridge(type, js)
+#define DumpBridges()
+#endif
+
 // tasks execute in the engine/render thread.
 static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
 
@@ -29,6 +43,14 @@ static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c28
 static constexpr BASE_NS::Uid JS_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
 
 class BaseObject : public TrueRootObject {
+public:
+    static constexpr uint32_t ID = 0xD00DCAFE;
+    virtual void* GetInstanceImpl(uint32_t id) override {
+        if (id == BaseObject::ID) {
+            return static_cast<BaseObject*>(this);
+        }
+        return TrueRootObject::GetInstanceImpl(id);
+    }
 protected:
     bool disposed_ { false };
     virtual ~BaseObject() {}

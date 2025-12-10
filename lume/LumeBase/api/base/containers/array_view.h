@@ -66,7 +66,7 @@ public:
     template<class U = T, class = enable_if_t<is_const_v<U>>>
     constexpr array_view(std::initializer_list<T> container) noexcept : array_view(container.begin(), container.end())
     {}
-    ~array_view() = default;
+
     constexpr size_type size() const noexcept
     {
         return size_;

@@ -15,7 +15,11 @@
 
 #include "meta_object_lib.h"
 
+#if defined(META_USE_SHARED_MUTEX)
 #include <shared_mutex>
+#else
+#include <mutex>
+#endif
 
 #include <meta/interface/animation/builtin_animations.h>
 
@@ -24,8 +28,12 @@ META_BEGIN_NAMESPACE()
 using CORE_NS::MutexHandle;
 using CORE_NS::MutexType;
 
+#if defined(META_USE_SHARED_MUTEX)
 // std::mutex on vc2017 is 80 bytes and much slower than std::shared_mutex
 using InternalMutexType = std::shared_mutex;
+#else
+using InternalMutexType = std::mutex;
+#endif
 
 constexpr bool USE_IN_PLACE_MUTEX =
     sizeof(InternalMutexType) <= sizeof(MutexHandle::storage) && alignof(InternalMutexType) <= alignof(MutexHandle);

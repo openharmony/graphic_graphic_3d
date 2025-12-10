@@ -23,6 +23,7 @@ CORE_END_NAMESPACE()
 
 #include <scene/ext/intf_ecs_context.h>
 
+#include <3d/ecs/components/render_handle_component.h>
 #include <core/property/property_handle_util.h>
 
 #include "material_component.h"
@@ -64,21 +65,12 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
                         break;
                     }
                 }
-                // add the default types. (incorrect .shader declarations may make them active anyway. so we MUST keep
-                // them)
+                // Add the default types.
+                // Incorrect .shader declarations may make them active anyway, so we must keep them
                 info.count = CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT;
                 info.slots.resize(CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT);
-                const char *const names[] = {"BASE_COLOR",
-                    "NORMAL",
-                    "MATERIAL",
-                    "EMISSIVE",
-                    "AO",
-                    "CLEARCOAT",
-                    "CLEARCOAT_ROUGHNESS",
-                    "CLEARCOAT_NORMAL",
-                    "SHEEN",
-                    "TRANSMISSION",
-                    "SPECULAR"};
+                const char* const names[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE", "AO", "CLEARCOAT",
+                    "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
                 for (int index = 0; index < CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT; index++) {
                     ActiveTextureSlotInfo::TextureSlot ts;
                     ts.name = names[index];
@@ -97,6 +89,42 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
         }
     }
     return info;
+}
+
+bool MaterialComponent::UpdateMetadata()
+{
+    auto ecso = GetEcsObject();
+    auto scene = GetInternalScene();
+    META_NS::Property<CORE3D_NS::MaterialComponent::Shader> p { GetProperty(
+        "MaterialShader", META_NS::MetadataQuery::EXISTING) };
+
+    if (!ecso || !scene || !p) {
+        return false;
+    }
+    auto rhman = static_cast<CORE3D_NS::IRenderHandleComponentManager*>(
+        scene->GetEcsContext().FindComponent<CORE3D_NS::RenderHandleComponent>());
+    if (!rhman) {
+        return false;
+    }
+
+    auto currentShader = rhman->GetRenderHandleReference(p->GetValue().shader);
+
+    auto& sman = scene->GetRenderContext().GetDevice().GetShaderManager();
+    auto frameIndex = currentShader ? sman.GetFrameIndex(currentShader) : uint64_t {};
+
+    bool changed = cachedShader_.shader != currentShader.GetHandle() || cachedShader_.frameIndex != frameIndex;
+    if (changed) {
+        cachedShader_ = { currentShader.GetHandle(), frameIndex };
+
+        auto& ecsc = scene->GetEcsContext();
+        if (auto m = static_cast<CORE3D_NS::IMaterialComponentManager*>(
+                ecsc.FindComponent<CORE3D_NS::MaterialComponent>())) {
+            auto entity = ecso->GetEntity();
+            // take and release the write lock to material component so that the metadata is updated
+            auto lock = m->Write(entity);
+        }
+    }
+    return changed;
 }
 
 SCENE_END_NAMESPACE()

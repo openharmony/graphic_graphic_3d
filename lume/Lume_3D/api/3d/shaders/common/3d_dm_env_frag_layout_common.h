@@ -37,6 +37,7 @@ layout(set = 0, binding = 2, std140) uniform uEnvironmentStructDataArray
 layout(set = 3, binding = 0) uniform sampler2D uImgSampler;
 layout(set = 3, binding = 1) uniform samplerCube uImgCubeSampler;
 layout(set = 3, binding = 2) uniform samplerCube uImgCubeSamplerBlender;
+layout(set = 3, binding = 3) uniform sampler2D uImgTLutSampler;
 
 layout(constant_id = CORE_DM_CONSTANT_ID_ENV_TYPE) const uint CORE_DEFAULT_ENV_TYPE = 0;
 

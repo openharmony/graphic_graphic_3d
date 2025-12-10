@@ -1,0 +1,178 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "render/shaders/common/render_post_process_structs_common.h"
+
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D aerialPerspectiveOut;
+layout(set = 0, binding = 1) uniform sampler2D transmittanceLut;
+layout(set = 0, binding = 2) uniform sampler2D multipleScatteringLut;
+
+#include "common/sky_view_common.h"
+
+const uint MAX_SLICE_DEPTH = 32;
+
+layout(set = 0, binding = 3, std140) uniform AerialPerspectiveBuffer
+{
+    vec4 sunDirElevation;
+    vec3 frustumA;
+    float maxDistance;
+    vec3 frustumB;
+    float worldScale;
+    vec3 frustumC;
+    float _padding0;
+    vec3 frustumD;
+    float _padding1;
+    vec3 cameraPosition;
+    float _padding2;
+    vec3 rayleighScatteringBase;
+    float mieAbsorptionBase;
+    vec3 ozoneAbsorptionBase;
+    float mieScatteringBase;
+    mat4 shadowViewProj;
+} params;
+
+layout(set = 0, binding = 4) uniform sampler2D shadowMap;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main() {
+    ivec2 atlasDim = imageSize(aerialPerspectiveOut);
+
+    AtmosphericConfig atmosphericConfig;
+    atmosphericConfig.rayleighScatteringBase = params.rayleighScatteringBase.xyz;
+    atmosphericConfig.ozoneAbsorptionBase = params.ozoneAbsorptionBase.xyz;
+    atmosphericConfig.mieAbsorptionBase = params.mieAbsorptionBase;
+    atmosphericConfig.mieScatteringBase = params.mieScatteringBase;
+
+    const int TILES_X = 8;
+    const int TILES_Y = 4;
+    const int TILE_SIZE_X = atlasDim.x / TILES_X;
+    const int TILE_SIZE_Y = atlasDim.y / TILES_Y;
+
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy); 
+
+    if (coord.x >= atlasDim.x || coord.y >= atlasDim.y) {
+        return;
+    }
+    int tileX = coord.x / TILE_SIZE_X;
+    int tileY = coord.y / TILE_SIZE_Y;
+
+    int localX = coord.x % TILE_SIZE_X;
+    int localY = coord.y % TILE_SIZE_Y;
+
+    float u = (localX + 0.5) / float(TILE_SIZE_X);
+    float v = (localY + 0.5) / float(TILE_SIZE_Y);
+
+    vec3 actualCameraPos = params.cameraPosition;
+    float actualHeight = length(actualCameraPos);
+    float scaledHeight = GROUND_RADIUS_KM + actualHeight;
+    vec3 viewPos = vec3(0.0, scaledHeight, 0.0);
+
+    vec3 rayDir = normalize(mix(
+        mix(params.frustumA, params.frustumB, u),
+        mix(params.frustumC, params.frustumD, u),
+        v));
+
+    vec3 sunDir = params.sunDirElevation.xyz;
+
+    vec2 atmos_intercept = RayIntersectSphere2D(viewPos, rayDir, ATMOSPHERE_RADIUS_KM);
+    float terra_intercept = RayIntersectSphere(viewPos, rayDir, GROUND_RADIUS_KM);
+
+    float mindist = 0.0;
+    float maxdist = atmos_intercept.y;
+    if (terra_intercept > 0.0) {
+        maxdist = terra_intercept;
+    }
+
+    if (length(viewPos) > ATMOSPHERE_RADIUS_KM && atmos_intercept.x < 0.0) {
+        imageStore(aerialPerspectiveOut, coord, vec4(0.0, 0.0, 0.0, 1.0));
+        return; 
+    }
+
+    vec3 pos = viewPos + mindist * rayDir;
+
+    float cosTheta = dot(rayDir, sunDir);
+
+    float miePhaseValue = GetMiePhase(cosTheta);
+    float rayleighPhaseValue = GetRayleighPhase(-cosTheta);
+
+    ivec2 transmittanceDim = textureSize(transmittanceLut, 0);
+    ivec2 multipleScatteringDim = textureSize(multipleScatteringLut, 0);
+
+    float sliceDepth = (CAMERA_HEIGHT_SCALE*params.maxDistance) / float(MAX_SLICE_DEPTH);
+
+    vec3 sumSigmaT = vec3(0.0);
+    vec3 inScatter = vec3(0.0);
+
+    float rand = fract(sin(dot(vec2(u, v), vec2(12.9898, 78.233) * 2.0)) * 43758.5453);
+
+    float tBeg = 0.0;
+    float halfSliceDepth = 0.5 * sliceDepth;
+    float tEnd = min(halfSliceDepth, maxdist - mindist);
+
+    for (int z = 0; z < int(MAX_SLICE_DEPTH); z++) {
+        float segmentLength = tEnd - tBeg;
+
+        if (segmentLength > 0.0) {
+            // March within this slice
+            for (int i = 0; i < AERIAL_PER_SLICE_MARCH_COUNT; i++) {
+                float newT = tBeg + ((float(i) + 0.3) / float(AERIAL_PER_SLICE_MARCH_COUNT)) * segmentLength;
+                float dt = segmentLength / float(AERIAL_PER_SLICE_MARCH_COUNT);
+
+                float midT = mix(newT, newT + dt, rand);
+                vec3 newPos = pos + newT * rayDir;
+
+                vec3 rayleighScattering = vec3(0.0);
+                vec3 extinction = vec3(0.0);
+                float mieScattering = 0.0;
+                GetScatteringValues(newPos, atmosphericConfig, rayleighScattering, mieScattering, extinction);
+                extinction = max(extinction, vec3(1e-6));
+
+                vec3 sampleTransmittance = exp(-dt * extinction);
+
+                bool inShadow = false;
+                if (RayIntersectSphere(newPos, -sunDir, GROUND_RADIUS_KM) > 0.0) {
+                    vec3 shadowPos = params.cameraPosition + rayDir * midT / (CAMERA_HEIGHT_SCALE * params.worldScale);
+                    vec4 shadowClip = params.shadowViewProj * vec4(shadowPos, 1.0);
+                    vec2 shadowNDC = shadowClip.xy / shadowClip.w;
+                    vec2 shadowUV = vec2(0.5, 0.5) + vec2(0.5, 0.5) * shadowNDC;
+
+                    if (shadowUV.x >= 0.0 && shadowUV.x <= 1.0 && shadowUV.y >= 0.0 && shadowUV.y <= 1.0) {
+                        float rayZ = shadowClip.z / shadowClip.w;
+                        float smZ = texture(shadowMap, shadowUV).r;
+                        inShadow = rayZ > smZ;
+                    } else {
+                        inShadow = false;
+                    }
+                } else {
+                    inShadow = true;
+                }
+
+                vec3 sunTransmittance = vec3(0.0);
+                if (!inShadow) {
+                    sunTransmittance = GetValFromTransmittanceLUT(transmittanceDim, newPos, sunDir);
+                }
+
+                vec3 psiMS = GetValFromMultipleScatteringLUT(multipleScatteringDim, newPos, sunDir);
+
+                vec3 rayleighInScattering = rayleighScattering * (rayleighPhaseValue * sunTransmittance + psiMS);
+                vec3 mieInScattering = mieScattering * (miePhaseValue * sunTransmittance + psiMS);
+                vec3 inScatSample = (rayleighInScattering + mieInScattering);
+
+                vec3 scatteringIntegral = (inScatSample - inScatSample * sampleTransmittance) / extinction;
+
+                inScatter += scatteringIntegral * exp(-sumSigmaT);
+                sumSigmaT += dt * extinction;
+            }
+        }
+
+        float transmittanceLum = dot(exp(-sumSigmaT), vec3(0.2126, 0.7152, 0.0722));
+        int dstX = localX + (z % TILES_X) * TILE_SIZE_X;
+        int dstY = localY + (z / TILES_X) * TILE_SIZE_Y;
+        imageStore(aerialPerspectiveOut, ivec2(dstX, dstY), vec4(inScatter, transmittanceLum));
+
+        tBeg = tEnd;
+        tEnd = min(tEnd + sliceDepth, maxdist - mindist);
+    }
+}

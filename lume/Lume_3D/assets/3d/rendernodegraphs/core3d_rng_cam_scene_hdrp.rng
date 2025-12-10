@@ -28,6 +28,10 @@
         {
             "name": "history_next",
             "nodeName": "CUSTOM_RN_CAM_CTRL"
+        },
+        {
+            "name": "camera",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
         }
     ],
     "nodes": [

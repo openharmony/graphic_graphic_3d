@@ -40,7 +40,7 @@ struct PipelineLayout;
  *
  * One should use normal descriptor sets and use ResetAndReserve when one needs more sets.
  *
- * There is a possiblity to use one frame descriptor sets which do not need reserving.
+ * There is a possibility to use one frame descriptor sets which do not need reserving.
  * The methods CreateOneFrameXXX creates a descriptor set which is valid for current frame.
  * This could be used with user inputs where one cannot pre-calculate the need of descriptors properly.
  */

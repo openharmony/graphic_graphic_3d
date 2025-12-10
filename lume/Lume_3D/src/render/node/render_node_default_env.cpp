@@ -64,41 +64,17 @@ static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffU };
 static constexpr uint32_t FIXED_CUSTOM_SET3 { 3U };
 static constexpr uint32_t FIXED_CUSTOM_SET1 { 1U };
 
-struct FrameGlobalDescriptorSets {
-    RenderHandle set0;
-    bool valid = false;
-};
-
-FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(
-    IRenderNodeContextManager* rncm, const SceneRenderDataStores& stores, const string& cameraName)
-{
-    FrameGlobalDescriptorSets fgds;
-    if (rncm) {
-        // re-fetch global descriptor sets every frame
-        const INodeContextDescriptorSetManager& dsMgr = rncm->GetDescriptorSetManager();
-        const string_view us = stores.dataStoreNameScene;
-        fgds.set0 = dsMgr.GetGlobalDescriptorSet(
-            us + DefaultMaterialMaterialConstants::MATERIAL_SET0_GLOBAL_DESCRIPTOR_SET_PREFIX_NAME + cameraName);
-        fgds.valid = RenderHandleUtil::IsValid(fgds.set0);
-        if (!fgds.valid) {
-            CORE_LOG_ONCE_E("core3d_global_descriptor_set_env_all_issues",
-                "Global descriptor set 0 for default material not "
-                "found (RenderNodeDefaultCameraController needed)");
-        }
-    }
-    return fgds;
-}
-
 struct InputEnvironmentDataHandles {
     RenderHandle cubeHandle;
     RenderHandle cubeBlenderHandle;
     RenderHandle texHandle;
+    RenderHandle tlutTexHandle;
     float lodLevel { 0.0f };
 };
 
 InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefaultCamera& dsCamera,
-    IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderNodeDefaultEnv::DefaultImages& defaultImages,
-    const RenderCamera& cam)
+    const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderNodeDefaultEnv::DefaultImages& defaultImages,
+    const RenderCamera& cam, const string_view us, const string_view camName, const uint64_t camId)
 {
     InputEnvironmentDataHandles iedh;
     iedh.texHandle = defaultImages.texHandle;
@@ -137,6 +113,19 @@ InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefa
         }
         iedh.lodLevel = env.envMapLodLevel;
     }
+    if (env.backgroundType == RenderCamera::Environment::BG_TYPE_SKY) {
+        // fetch the sky view LUT by camera naming
+        const string fullCameraName = camName + '_' + to_hex(camId);
+        const string skyViewLutName = us + DefaultMaterialCameraConstants::CAMERA_SKY_LUT_PREFIX_NAME + fullCameraName;
+        iedh.texHandle = gpuResourceMgr.GetImageHandle(skyViewLutName);
+
+        const string transmittanceLutName =
+            us + DefaultMaterialCameraConstants::CAMERA_TRANSMITTANCE_LUT_PREFIX_NAME + fullCameraName;
+        iedh.tlutTexHandle = gpuResourceMgr.GetImageHandle(transmittanceLutName);
+    } else {
+        iedh.tlutTexHandle = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE_WHITE");
+    }
+
     return iedh;
 }
 } // namespace
@@ -202,8 +191,9 @@ void RenderNodeDefaultEnv::ExecuteFrame(IRenderCommandList& cmdList)
 
     cmdList.BeginRenderPass(renderPass_.renderPassDesc, renderPass_.subpassStartIndex, renderPass_.subpassDesc);
 
-    if (dataStoreCamera && currentScene_.camera.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
-        if (currentScene_.camera.layerMask & currentScene_.camera.environment.layerMask) {
+    const auto& cam = currentScene_.camData.camera;
+    if (dataStoreCamera && cam.environment.backgroundType != RenderCamera::Environment::BG_TYPE_NONE) {
+        if (cam.layerMask & cam.environment.layerMask) {
             UpdatePostProcessConfiguration();
             RenderData(*dataStoreCamera, cmdList);
         }
@@ -215,12 +205,12 @@ void RenderNodeDefaultEnv::ExecuteFrame(IRenderCommandList& cmdList)
 void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCamera, IRenderCommandList& cmdList)
 {
     // re-fetch global descriptor sets every frame
-    FrameGlobalDescriptorSets fgds = GetFrameGlobalDescriptorSets(renderNodeContextMgr_, stores_, cameraName_);
+    RenderNodeSceneUtil::FrameGlobalDescriptorSets fgds =
+        RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_, stores_, cameraName_,
+            RenderNodeSceneUtil::FrameGlobalDescriptorSetFlagBits::GLOBAL_SET_0);
     if (!fgds.valid) {
         return;
     }
-
-    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
     cmdList.SetDynamicStateViewport(currentScene_.viewportDesc);
     cmdList.SetDynamicStateScissor(currentScene_.scissorDesc);
@@ -230,27 +220,32 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
                             CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
     }
 
-    const RenderCamera::Environment& renderEnv = currentScene_.camera.environment;
+    const auto& cam = currentScene_.camData.camera;
+    const RenderCamera::Environment& renderEnv = cam.environment;
     // sky or basic default
     const RenderHandle defaultShader = (renderEnv.backgroundType == RenderCamera::Environment::BG_TYPE_SKY)
                                            ? defaultSkyShader_
                                            : defaultShaderData_.shader;
     const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : defaultShader;
+    const RenderHandle stateHandle = renderEnv.graphicsState ? renderEnv.graphicsState.GetHandle() : RenderHandle {};
     // check for pso changes
     if ((renderEnv.backgroundType != currentBgType_) || (currShaderData_.shader.id != shaderHandle.id) ||
+        (currShaderData_.state.id != stateHandle.id) ||
         (currentCameraShaderFlags_ != currentScene_.cameraShaderFlags) ||
         (!RenderHandleUtil::IsValid(currShaderData_.pso))) {
-        currentBgType_ = currentScene_.camera.environment.backgroundType;
+        currentBgType_ = cam.environment.backgroundType;
         currentCameraShaderFlags_ = currentScene_.cameraShaderFlags;
-        currShaderData_ = GetPso(shaderHandle, currentBgType_, currentRenderPPConfiguration_);
+        currShaderData_ = GetPso(shaderHandle, stateHandle, currentBgType_, currentRenderPPConfiguration_);
     }
 
     cmdList.BindPipeline(currShaderData_.pso);
     cmdList.BindDescriptorSet(0U, fgds.set0);
 
     if ((!currShaderData_.customSet) && builtInSet3_) {
+        const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const auto envDataHandles =
-            GetEnvironmentDataHandles(dsCamera, gpuResourceMgr, defaultImages_, currentScene_.camera);
+            GetEnvironmentDataHandles(dsCamera, gpuResourceMgr, defaultImages_, currentScene_.camData.camera,
+                stores_.dataStoreNameScene, jsonInputs_.customCameraName, jsonInputs_.customCameraId);
         // set 1, bind combined image samplers
         auto& binder = *builtInSet3_;
         {
@@ -258,6 +253,7 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
             binder.BindImage(bindingIndex++, envDataHandles.texHandle, cubemapSampler);
             binder.BindImage(bindingIndex++, envDataHandles.cubeHandle, cubemapSampler);
             binder.BindImage(bindingIndex++, envDataHandles.cubeBlenderHandle, cubemapSampler);
+            binder.BindImage(bindingIndex++, envDataHandles.tlutTexHandle, cubemapSampler);
         }
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
         cmdList.BindDescriptorSet(FIXED_CUSTOM_SET3, binder.GetDescriptorSetHandle());
@@ -360,36 +356,27 @@ void RenderNodeDefaultEnv::UpdateCurrentScene(
     renderPass_ = rngRenderPass_;
 
     const auto scene = dataStoreScene.GetScene();
-    bool hasCustomCamera = false;
-    bool isNamedCamera = false; // NOTE: legacy support will be removed
-    uint32_t cameraIdx = scene.cameraIndex;
-    if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
-        cameraIdx = dataStoreCamera.GetCameraIndex(jsonInputs_.customCameraId);
-        hasCustomCamera = true;
-    } else if (!(jsonInputs_.customCameraName.empty())) {
-        cameraIdx = dataStoreCamera.GetCameraIndex(jsonInputs_.customCameraName);
-        hasCustomCamera = true;
-        isNamedCamera = true;
-    }
-
-    if (const auto cameras = dataStoreCamera.GetCameras(); cameraIdx < (uint32_t)cameras.size()) {
-        // store current frame camera
-        currentScene_.camera = cameras[cameraIdx];
-    }
+    currentScene_.camData = RenderNodeSceneUtil::GetSceneCameraData(
+        dataStoreScene, dataStoreCamera, jsonInputs_.customCameraId, jsonInputs_.customCameraName);
+    const auto& cam = currentScene_.camData.camera;
+    const bool legacyCamera =
+        currentScene_.camData.flags & SceneRenderCameraDataFlagBits::SCENE_CAMERA_DATA_FLAG_LEGACY_MAIN_BIT;
 
     // renderpass needs to be valid (created in init)
-    if (hasCustomCamera) {
+    if (!legacyCamera) {
         // uses camera based clear-setup
-        RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(currentScene_.camera, isNamedCamera, renderPass_);
+        const bool isNamedCamera =
+            (currentScene_.camData.flags == SceneRenderCameraDataFlagBits::SCENE_CAMERA_DATA_FLAG_NAMED_BIT);
+        RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(cam, isNamedCamera, renderPass_);
     } else {
-        RenderNodeSceneUtil::UpdateRenderPassFromCamera(currentScene_.camera, renderPass_);
+        RenderNodeSceneUtil::UpdateRenderPassFromCamera(cam, renderPass_);
     }
-    currentScene_.viewportDesc = RenderNodeSceneUtil::CreateViewportFromCamera(currentScene_.camera);
-    currentScene_.scissorDesc = RenderNodeSceneUtil::CreateScissorFromCamera(currentScene_.camera);
+    currentScene_.viewportDesc = RenderNodeSceneUtil::CreateViewportFromCamera(cam);
+    currentScene_.scissorDesc = RenderNodeSceneUtil::CreateScissorFromCamera(cam);
     currentScene_.viewportDesc.minDepth = 1.0f;
     currentScene_.viewportDesc.maxDepth = 1.0f;
 
-    currentScene_.cameraShaderFlags = currentScene_.camera.shaderFlags;
+    currentScene_.cameraShaderFlags = cam.shaderFlags;
     // remove fog explicitly if render node graph input and/or default render slot usage states so
     if (jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DISABLE_FOG_BIT) {
         currentScene_.cameraShaderFlags &= (~RenderCamera::ShaderFlagBits::CAMERA_SHADER_FOG_BIT);
@@ -399,7 +386,7 @@ void RenderNodeDefaultEnv::UpdateCurrentScene(
 }
 
 RenderNodeDefaultEnv::ShaderData RenderNodeDefaultEnv::GetPso(const RenderHandle shaderHandle,
-    const RenderCamera::Environment::BackgroundType bgType,
+    const RenderHandle stateHandle, const RenderCamera::Environment::BackgroundType bgType,
     const RenderPostProcessConfiguration& renderPostProcessConfiguration)
 {
     ShaderData sd;
@@ -431,7 +418,10 @@ RenderNodeDefaultEnv::ShaderData RenderNodeDefaultEnv::GetPso(const RenderHandle
         // need to use the default as the set 0 is default material pipeline set
         RenderHandle plHandle = defaultShaderData_.pl;
 
-        const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderHandle);
+        RenderHandle gfxHandle = stateHandle;
+        if (RenderHandleUtil::GetHandleType(stateHandle) != RenderHandleType::GRAPHICS_STATE) {
+            gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderHandle);
+        }
         // flag that we need additional custom resource bindings
         if (!((shaderHandle == defaultShaderData_.shader) || (shaderHandle == defaultSkyShader_))) {
             plHandle = shaderMgr.GetPipelineLayoutHandleByShaderHandle(shaderHandle);

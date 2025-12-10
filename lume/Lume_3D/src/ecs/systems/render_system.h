@@ -30,8 +30,6 @@
 #include <render/namespace.h>
 #include <render/resource_handle.h>
 
-#include "property/property_handle.h"
-
 BASE_BEGIN_NAMESPACE()
 namespace Math {
 class Mat4X4;
@@ -45,6 +43,7 @@ CORE_END_NAMESPACE()
 RENDER_BEGIN_NAMESPACE()
 class IShaderManager;
 class IRenderContext;
+class IRenderDataStoreRenderPostProcesses;
 struct PostProcessConfiguration;
 RENDER_END_NAMESPACE()
 
@@ -52,6 +51,7 @@ CORE3D_BEGIN_NAMESPACE()
 class IDynamicEnvironmentBlenderComponentManager;
 class IEnvironmentComponentManager;
 class IFogComponentManager;
+class IGraphicsStateComponentManager;
 class IRenderHandleComponentManager;
 class INameComponentManager;
 class INodeComponentManager;
@@ -62,6 +62,7 @@ class ICameraComponentManager;
 class ILayerComponentManager;
 class ILightComponentManager;
 class IJointMatricesComponentManager;
+class ISkinComponentManager;
 class IMaterialComponentManager;
 class IMeshComponentManager;
 class ISkinJointsComponentManager;
@@ -69,6 +70,7 @@ class IPlanarReflectionComponentManager;
 class IPreviousJointMatricesComponentManager;
 class IPostProcessComponentManager;
 class IPostProcessConfigurationComponentManager;
+class IPostProcessEffectComponentManager;
 class IUriComponentManager;
 class IRenderDataStoreDefaultCamera;
 class IRenderDataStoreDefaultLight;
@@ -92,7 +94,7 @@ struct WorldMatrixComponent;
 struct LightComponent;
 struct MinAndMax;
 
-class RenderSystem final : public IRenderSystem {
+class RenderSystem final : public IRenderSystem, CORE_NS::IEcs::ComponentListener {
 public:
     explicit RenderSystem(CORE_NS::IEcs& ecs);
     ~RenderSystem() override;
@@ -134,6 +136,8 @@ public:
         SingleShaderData opaque;
         SingleShaderData blend;
         SingleShaderData depth;
+        CORE_NS::EntityReference gfxStateOcclusionMaterial;
+        CORE_NS::EntityReference gfxStateOcclusionEnvironment;
     };
     struct CameraRenderNodeGraphs {
         // camera
@@ -162,21 +166,14 @@ private:
         const JointMatricesComponent* const jointMatricesComponent { nullptr };
         const PreviousJointMatricesComponent* const prevJointMatricesComponent { nullptr };
     };
+    void OnComponentEvent(EventType type, const CORE_NS::IComponentManager& componentManager,
+        BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
     void SetDataStorePointers(RENDER_NS::IRenderDataStoreManager& manager);
     // returns the instance's valid scene component
     RenderConfigurationComponent GetRenderConfigurationComponent();
     CORE_NS::Entity ProcessScene(const RenderConfigurationComponent& sc);
-    void ProcessMesh(const RenderMeshData rmd, const SkinProcessData& spd);
-    void ProcessMesh(
-        BASE_NS::array_view<const RenderMeshData> rmd, const RenderMeshBatchData rmbd, const SkinProcessData& spd);
-    void ProcessRenderMeshComponentBatch(
-        uint32_t sceneId, const CORE_NS::Entity renderMeshBatch, const CORE_NS::ComponentQuery::ResultRow* row);
-    void ProcessRenderMeshAutomaticBatch(
-        uint32_t sceneId, BASE_NS::array_view<const CORE_NS::Entity> renderMeshComponents);
-    void ProcessSingleRenderMesh(uint32_t sceneId, CORE_NS::Entity renderMeshComponent);
     void ProcessRenderables();
-    void ProcessRenderMeshBatchComponentRenderables();
     void ProcessEnvironments(const RenderConfigurationComponent& sceneComponent);
     void ProcessCameras(const RenderConfigurationComponent& sceneComponent, const CORE_NS::Entity& mainCameraEntity,
         RenderScene& renderScene);
@@ -186,19 +183,13 @@ private:
     void ProcessReflection(const CORE_NS::ComponentQuery::ResultRow& row,
         const PlanarReflectionComponent& reflComponent, const RenderCamera& camera, BASE_NS::Math::UVec2 targetRes);
     void ProcessReflections(const RenderScene& renderScene);
-    void ProcessPostProcesses();
+    void ProcessPostProcesses(const CORE_NS::Entity& mainCameraEntity);
+    void ProcessPostProcessComponents(const CORE_NS::Entity& mainCameraEntity);
+    void ProcessPostProcessConfigurationComponents();
+    void ProcessPostProcessEffectComponents();
     void RecalculatePostProcesses(BASE_NS::string_view name, RENDER_NS::PostProcessConfiguration& ppConfig);
     void FetchFullScene();
-    void EvaluateFrameObjectFlags();
-    // calculates min max from all submeshes and does min max for inout
-    struct BatchIndices {
-        uint32_t submeshIndex { ~0u };
-        uint32_t batchStartIndex { ~0u };
-        uint32_t batchEndIndex { ~0u };
-    };
-    // with submeshIndex == ~0u processes all submeshes
-    void CombineBatchWorldMinAndMax(const BatchDataVector& batchData, const BatchIndices& batchIndices,
-        const MeshComponent& mesh, MinAndMax& mam) const;
+    void EvaluateRenderDataStoreOutput();
 
     void ProcessRenderNodeGraphs(const RenderConfigurationComponent& renderConfig, const RenderScene& renderScene);
     void DestroyRenderDataStores();
@@ -210,6 +201,12 @@ private:
         const CORE_NS::Entity& entity, const BASE_NS::Math::Mat4X4& view, const BASE_NS::Math::Mat4X4& proj);
     BASE_NS::vector<RenderCamera> GetMultiviewCameras(const RenderCamera& renderCamera);
 
+    void HandleMaterialEvents() noexcept;
+    void HandleMeshEvents() noexcept;
+    void HandleGraphicsStateEvents() noexcept;
+    void UpdateMaterialProperties();
+    void UpdateSingleMaterial(CORE_NS::Entity matEntity, const MaterialComponent* materialHandle);
+
     bool active_ = true;
     CORE_NS::IEcs& ecs_;
 
@@ -219,6 +216,7 @@ private:
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultLight> dsLight_;
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultMaterial> dsMaterial_;
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultScene> dsScene_;
+    BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreRenderPostProcesses> dsRenderPostProcesses_;
     RENDER_NS::IShaderManager* shaderMgr_ = nullptr;
     RENDER_NS::IGpuResourceManager* gpuResourceMgr_ = nullptr;
     CORE_NS::IFrustumUtil* frustumUtil_ = nullptr;
@@ -241,11 +239,15 @@ private:
     ILayerComponentManager* layerMgr_ = nullptr;
     IDynamicEnvironmentBlenderComponentManager* dynamicEnvBlendMgr_ = nullptr;
 
+    ISkinComponentManager* skinMgr_ = nullptr;
     IJointMatricesComponentManager* jointMatricesMgr_ = nullptr;
     IPreviousJointMatricesComponentManager* prevJointMatricesMgr_ = nullptr;
 
     IPostProcessComponentManager* postProcessMgr_ = nullptr;
     IPostProcessConfigurationComponentManager* postProcessConfigMgr_ = nullptr;
+    IPostProcessEffectComponentManager* postProcessEffectMgr_ = nullptr;
+
+    IGraphicsStateComponentManager* graphicsStateMgr_ = nullptr;
 
     uint32_t renderConfigurationGeneration_ = 0;
     uint32_t cameraGeneration_ = 0;
@@ -255,6 +257,22 @@ private:
     uint32_t fogGeneration_ = 0;
     uint32_t postprocessGeneration_ = 0;
     uint32_t postprocessConfigurationGeneration_ = 0;
+    uint32_t postprocessEffectGeneration_ = 0;
+
+    uint32_t jointGeneration_ = 0U;
+    uint32_t layerGeneration_ = 0U;
+    uint32_t nodeGeneration_ = 0U;
+    uint32_t renderMeshGeneration_ = 0U;
+    uint32_t worldMatrixGeneration_ = 0U;
+    uint32_t materialGeneration_ = 0U;
+    uint32_t meshGeneration_ = 0U;
+
+    BASE_NS::vector<CORE_NS::Entity> graphicsStateModifiedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> materialModifiedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> materialDestroyedEvents_;
+
+    BASE_NS::vector<CORE_NS::Entity> meshModifiedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> meshDestroyedEvents_;
 
     IPicking* picking_ = nullptr;
 
@@ -267,6 +285,7 @@ private:
     CORE_NS::ComponentQuery lightQuery_;
     CORE_NS::ComponentQuery renderableQuery_;
     CORE_NS::ComponentQuery reflectionsQuery_;
+    CORE_NS::ComponentQuery cameraQuery_;
     uint32_t reflectionMaxMipBlur_ { 0U };
 
     BASE_NS::Math::Vec3 sceneBoundingSpherePosition_ { 0.0f, 0.0f, 0.0f };
@@ -336,6 +355,12 @@ private:
 
     // store default shader data for default materials in this ECS
     DefaultMaterialShaderData dmShaderData_;
+
+    // book-keeping for reflection planes
+    struct ReflectionPlaneData {
+        CORE_NS::Entity material;
+    };
+    BASE_NS::unordered_map<CORE_NS::Entity, ReflectionPlaneData> reflectionPlanes_;
 };
 CORE3D_END_NAMESPACE()
 

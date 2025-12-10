@@ -37,12 +37,8 @@ public:
 
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
-    void ExecuteFrame(IRenderCommandList& cmdList) override {};
-    ExecuteFlags GetExecuteFlags() const override
-    {
-        // no work in execute
-        return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
-    }
+    void ExecuteFrame(IRenderCommandList& cmdList) override;
+    ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "9942031e-c80c-4d38-ae08-65555592b4df" };
@@ -79,6 +75,11 @@ private:
     BASE_NS::vector<Names> names_;
     BASE_NS::vector<GpuImageDesc> descs_;
     BASE_NS::vector<RenderHandleReference> resourceHandles_;
+    struct ClearImage {
+        RenderHandle handle;
+        ClearColorValue value {};
+    };
+    BASE_NS::vector<ClearImage> clearImages_;
 
     BASE_NS::vector<RenderHandle> dependencyHandles_;
     BASE_NS::vector<DependencyList> dependencyList_;

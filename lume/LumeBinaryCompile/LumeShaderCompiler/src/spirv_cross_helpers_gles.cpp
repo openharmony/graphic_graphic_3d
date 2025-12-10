@@ -15,13 +15,13 @@
 
 #include "spirv_cross_helpers_gles.h"
 
-#include <cmath>
 #include <glcorearb.h>
+
 namespace Gles {
 namespace {
-constexpr const GLenum UINT_TYPES[5][5] = { { 0, 0, 0, 0, 0 }, { 0, GL_UNSIGNED_INT, 0, 0, 0 },
+constexpr GLenum UINT_TYPES[5][5] = { { 0, 0, 0, 0, 0 }, { 0, GL_UNSIGNED_INT, 0, 0, 0 },
     { 0, GL_UNSIGNED_INT_VEC2, 0, 0, 0 }, { 0, GL_UNSIGNED_INT_VEC3, 0, 0, 0 }, { 0, GL_UNSIGNED_INT_VEC4, 0, 0, 0 } };
-constexpr const GLenum FLOAT_TYPES[5][5] = {
+constexpr GLenum FLOAT_TYPES[5][5] = {
     { 0, 0, 0, 0, 0 },
     { 0, GL_FLOAT, 0, 0, 0 },
     { 0, GL_FLOAT_VEC2, GL_FLOAT_MAT2, GL_FLOAT_MAT3x2, GL_FLOAT_MAT4x2 },
@@ -35,10 +35,11 @@ constexpr T Max(T&& lhs, T&& rhs)
     return lhs > rhs ? std::forward<T>(lhs) : std::forward<T>(rhs);
 }
 
-static const spirv_cross::SPIRConstant invalid {};
+const spirv_cross::SPIRConstant invalid{};
 
-constexpr const int32_t NOT_FOUND = -1;
-constexpr const int32_t INVALID_MATCH = -2;
+constexpr int32_t NOT_FOUND = -1;
+constexpr int32_t INVALID_MATCH = -2;
+
 int32_t FindConstant(const std::vector<PushConstantReflection>& reflections, const PushConstantReflection& reflection)
 {
     for (size_t i = 0; i < reflections.size(); i++) {
@@ -62,15 +63,15 @@ int32_t FindConstant(const std::vector<PushConstantReflection>& reflections, con
             if (reflection.matrixStride != reflections[i].matrixStride) {
                 return INVALID_MATCH;
             }
-            return (int32_t)i;
+            return static_cast<int32_t>(i);
         }
     }
     return NOT_FOUND;
 }
 
-const spirv_cross::SPIRConstant& ConstByName(const spirv_cross::CompilerGLSL& compiler, const char* name)
+const spirv_cross::SPIRConstant& ConstByName(const CoreCompiler& compiler, const char* name)
 {
-    const auto& specInfo = ((CoreCompiler&)compiler).GetConstants();
+    const auto& specInfo = compiler.GetConstants();
     for (auto& c : specInfo) {
         const auto& opName = compiler.get_name(c.self);
         if (opName == name) {
@@ -96,9 +97,9 @@ const spirv_cross::SPIRConstant& SpecConstByName(const spirv_cross::CompilerGLSL
 } // namespace
 
 // inherit from CompilerGLSL to have better access
-CoreCompiler::CoreCompiler(const uint32_t* ir, size_t wordCount) : CompilerGLSL(ir, wordCount) {}
+CoreCompiler::CoreCompiler(const uint32_t* ir, const size_t wordCount) : CompilerGLSL(ir, wordCount) {}
 
-const std::vector<spirv_cross::SPIRConstant> CoreCompiler::GetConstants() const
+std::vector<spirv_cross::SPIRConstant> CoreCompiler::GetConstants() const
 {
     std::vector<spirv_cross::SPIRConstant> consts;
     ir.for_each_typed_id<spirv_cross::SPIRConstant>(
@@ -112,30 +113,26 @@ const spirv_cross::ParsedIR& CoreCompiler::GetIr() const
 }
 
 void ReflectPushConstants(spirv_cross::Compiler& compiler, const spirv_cross::ShaderResources& resources,
-    std::vector<PushConstantReflection>& reflections, ShaderStageFlags stage)
+    std::vector<PushConstantReflection>& reflections, const ShaderStageFlags stage)
 {
     static constexpr std::string_view pcName = "CORE_PC_00";
     static constexpr auto nameBaseSize = pcName.size() - 2U; // length without the 2 digits
-    char ids[64];
-    int id = 0;
+    unsigned int id = 0;
     // There can be only one push_constant_buffer, but since spirv-cross has prepared for this to be relaxed, we will
     // too.
-    Gles::PushConstantReflection base {};
+    Gles::PushConstantReflection base{};
     base.stage = stage;
     base.name = pcName;
     for (auto& remap : resources.push_constant_buffers) {
         const auto& blockType = compiler.get_type(remap.base_type_id);
         (void)(blockType);
-        auto ret = snprintf(ids, sizeof(ids), "%d", id);
-        if (ret < 0) {
-            return;
-        }
+
         base.name.resize(nameBaseSize);
-        base.name.append(ids);
+        base.name.append(std::to_string(id));
         compiler.set_name(remap.id, base.name);
         assert((blockType.basetype == spirv_cross::SPIRType::Struct) && "Push constant is not a struct!");
         ProcessStruct(compiler, base, remap.base_type_id, reflections);
-        id++;
+        ++id;
     }
 }
 
@@ -149,8 +146,8 @@ void ConvertSpecConstToConstant(spirv_cross::CompilerGLSL& compiler, const char*
     compiler.unset_decoration(c.self, spv::Decoration::DecorationSpecId);
 }
 
-// Converts constant declaration to uniform. (actually only works on spec constants)
-void ConvertConstantToUniform(const spirv_cross::CompilerGLSL& compiler, std::string& source, const char* name)
+/// Converts constant declaration to uniform. (actually only works on spec constants)
+void ConvertConstantToUniform(const CoreCompiler& compiler, std::string& source, const char* name)
 {
     static constexpr std::string_view constBool = "const bool ";
     static constexpr std::string_view constUint = "const uint ";
@@ -177,46 +174,43 @@ void ConvertConstantToUniform(const spirv_cross::CompilerGLSL& compiler, std::st
     } else {
         assert(false && "Unhandled specialization constant type");
     }
-    // We expect spirv_cross to generate them with certain pattern..
+    // We expect spirv_cross to generate them with certain pattern...
     tmp += name;
     tmp += equals;
     const auto p = source.find(tmp);
     if (p != std::string::npos) {
         // found it, change it. (changes const to uniform)
-        auto bi = source.begin() + (int64_t)p;
+        auto bi = source.begin() + static_cast<int64_t>(p);
         auto ei = bi + 6;
         source.replace(bi, ei, "uniform ");
 
-        // remove the initializer..
+        // remove the initializer...
         const auto p2 = source.find('=', p);
         const auto p3 = source.find(';', p);
         if ((p2 != std::string::npos) && (p3 != std::string::npos)) {
             if (p2 < p3) {
                 // should be correct (tm)
-                bi = source.begin() + (int64_t)p2;
-                ei = source.begin() + (int64_t)p3;
+                bi = source.begin() + static_cast<int64_t>(p2);
+                ei = source.begin() + static_cast<int64_t>(p3);
                 source.erase(bi, ei);
             }
         }
     }
 }
 
-void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, uint32_t value)
+void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, const uint32_t value)
 {
     const auto& vc = SpecConstByName(compiler, name);
-    if (vc.self != invalid.self) {
-        const uint32_t constantId = compiler.get_decoration(vc.self, spv::Decoration::DecorationSpecId);
-        char buf[1024];
-        auto ret = snprintf(buf, sizeof(buf), "#define SPIRV_CROSS_CONSTANT_ID_%u %uu", constantId, value);
-        if (ret < 0) {
-            return;
-        }
-        compiler.add_header_line(buf);
+    if (vc.self == invalid.self) {
+        return;
     }
+    const auto constantId = compiler.get_decoration(vc.self, spv::Decoration::DecorationSpecId);
+    compiler.add_header_line(
+        "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(constantId) + " " + std::to_string(value) + "u");
 }
 
-void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base, uint32_t structTypeId,
-    std::vector<PushConstantReflection>& reflections)
+void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base, // NOLINT(*-no-recursion)
+    const uint32_t structTypeId, std::vector<PushConstantReflection>& reflections)
 {
     const auto& structType = compiler.get_type(structTypeId);
     reflections.reserve(reflections.size() + structType.member_types.size());
@@ -225,7 +219,7 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
         const auto& memberType = compiler.get_type(memberTypeId);
         const auto& name = compiler.get_member_name(structTypeId, bi);
 
-        PushConstantReflection t { base.stage, INVALID_LOCATION, 0u, {},
+        PushConstantReflection t{ base.stage, INVALID_LOCATION, 0u, {},
             base.offset + compiler.type_struct_member_offset(structType, bi),
             compiler.get_declared_struct_member_size(structType, bi), 0u, 0u, 0u };
         t.name.reserve(base.name.size() + 1U + name.size());
@@ -243,40 +237,13 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
             t.matrixStride = compiler.type_struct_member_matrix_stride(structType, bi);
         }
 
-        switch (memberType.basetype) {
-            case spirv_cross::SPIRType::Struct:
-                ProcessStruct(compiler, t, memberTypeId, reflections);
-                continue;
-                break;
-            case spirv_cross::SPIRType::UInt:
-                t.type = UINT_TYPES[memberType.vecsize][memberType.columns];
-                break;
-            case spirv_cross::SPIRType::Float:
-                t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
-                break;
-
-            case spirv_cross::SPIRType::Unknown:
-            case spirv_cross::SPIRType::Void:
-            case spirv_cross::SPIRType::Boolean:
-            case spirv_cross::SPIRType::SByte:
-            case spirv_cross::SPIRType::UByte:
-            case spirv_cross::SPIRType::Short:
-            case spirv_cross::SPIRType::UShort:
-            case spirv_cross::SPIRType::Int:
-            case spirv_cross::SPIRType::Int64:
-            case spirv_cross::SPIRType::UInt64:
-            case spirv_cross::SPIRType::AtomicCounter:
-            case spirv_cross::SPIRType::Half:
-            case spirv_cross::SPIRType::Double:
-            case spirv_cross::SPIRType::Image:
-            case spirv_cross::SPIRType::SampledImage:
-            case spirv_cross::SPIRType::Sampler:
-            case spirv_cross::SPIRType::AccelerationStructure:
-            case spirv_cross::SPIRType::RayQuery:
-            case spirv_cross::SPIRType::ControlPointArray:
-            case spirv_cross::SPIRType::Interpolant:
-            case spirv_cross::SPIRType::Char:
-                break;
+        if (memberType.basetype == spirv_cross::SPIRType::UInt) {
+            t.type = UINT_TYPES[memberType.vecsize][memberType.columns];
+        } else if (memberType.basetype == spirv_cross::SPIRType::Float) {
+            t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
+        } else if (memberType.basetype == spirv_cross::SPIRType::Struct) {
+            ProcessStruct(compiler, t, memberTypeId, reflections);
+            continue;
         }
         assert((t.type != 0) && "Unhandled Type!");
         const int32_t res = FindConstant(reflections, t);

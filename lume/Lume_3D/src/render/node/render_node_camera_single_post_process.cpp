@@ -74,6 +74,8 @@ uint32_t GetPostProcessFlag(const string_view ppName)
         return PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLOOM_BIT;
     } else if (ppName == PostProcessConstants::POST_PROCESS_NAMES[PostProcessConstants::RENDER_BLUR]) {
         return PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT;
+    } else if (ppName == PostProcessConstants::POST_PROCESS_NAMES[PostProcessConstants::RENDER_UPSCALER_BIT]) {
+        return PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_UPSCALE_BIT;
     } else {
         return 0;
     }

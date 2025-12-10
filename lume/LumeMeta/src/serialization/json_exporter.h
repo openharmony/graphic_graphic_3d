@@ -16,7 +16,7 @@
 #ifndef META_SRC_SERIALIZATION_JSON_EXPORTER_H
 #define META_SRC_SERIALIZATION_JSON_EXPORTER_H
 
-#include "base_object.h"
+#include "../base_object.h"
 #include "exporter.h"
 
 META_BEGIN_NAMESPACE()
@@ -25,8 +25,8 @@ namespace Serialization {
 class JsonExporter : public IntroduceInterfaces<BaseObject, IFileExporter> {
     META_OBJECT(JsonExporter, ClassId::JsonExporter, IntroduceInterfaces)
 public:
-    ReturnError Export(CORE_NS::IFile& output, const IObject::ConstPtr& object) override;
-    ISerNode::Ptr Export(const IObject::ConstPtr& object) override;
+    ReturnError Export(CORE_NS::IFile& output, const IObject::ConstPtr& object, ExportOptions options) override;
+    ISerNode::Ptr Export(const IObject::ConstPtr& object, ExportOptions options) override;
     void SetInstanceIdMapping(BASE_NS::unordered_map<InstanceId, InstanceId>) override;
     void SetResourceManager(CORE_NS::IResourceManager::Ptr) override;
     void SetUserContext(IObject::Ptr) override;

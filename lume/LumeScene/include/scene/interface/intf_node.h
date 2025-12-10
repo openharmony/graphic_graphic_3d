@@ -43,7 +43,29 @@ public:
     virtual Future<bool> AddChild(const INode::Ptr& child, size_t index = -1) = 0;
     virtual Future<bool> RemoveChild(const INode::Ptr&) = 0;
 
+    /**
+     * @brief Make a deep clone of this node
+     * @param nodeName Name of the cloned node, if empty, automatically generated
+     * @param parent Parent node of the cloned node, if nullptr, the parent of the original node is used
+     * @return Cloned node
+     */
+    virtual Future<INode::Ptr> Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent) = 0;
+    Future<INode::Ptr> Clone(BASE_NS::string_view nodeName = {})
+    {
+        return Clone(nodeName, nullptr);
+    }
+
     virtual BASE_NS::shared_ptr<IScene> GetScene() const = 0;
+
+    /**
+     * @brief Returns a unique name for a child node based on a name.
+     * @param name The name to get a unique version of.
+     * @note The returned name is unique while the future is being processed. It is up to the caller to make sure the
+     *       Node's child hierarchy is not changed before the unique name is used by the caller.
+     * @return If a child of given name does not exist, returns the name as is. If a child of the same name already
+     *         exists, name is appended the next available numerical increment.
+     */
+    virtual Future<BASE_NS::string> GetUniqueChildName(BASE_NS::string_view name) const = 0;
 };
 
 META_REGISTER_CLASS(Node, "4e5561d1-0313-4922-b91a-816f388efbbf", META_NS::ObjectCategoryBits::NO_CATEGORY)

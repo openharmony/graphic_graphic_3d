@@ -26,7 +26,7 @@
 
 #include <base/containers/string.h>
 
-#include "TrueRootObject.h"
+#include "../TrueRootObject.h"
 #include "env.h"
 #include "value.h"
 
@@ -70,6 +70,7 @@ public:
     }
 
     napi_value Get(const BASE_NS::string_view name);
+    napi_value Invoke(const BASE_NS::string_view memberFuncName, const JsFuncArgs& args);
 
     template<typename type>
     void Set(const BASE_NS::string_view name, NapiApi::Value<type> value)

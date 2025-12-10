@@ -13,35 +13,33 @@
  * limitations under the License.
  */
 
-#ifndef META_SRC_RESOURCE_TYPES_MATERIAL_TYPE_H
-#define META_SRC_RESOURCE_TYPES_MATERIAL_TYPE_H
+#ifndef SCENE_SRC_RESOURCE_TYPES_MATERIAL_TYPE_H
+#define SCENE_SRC_RESOURCE_TYPES_MATERIAL_TYPE_H
 
-#include <scene/base/namespace.h>
 #include <scene/interface/intf_material.h>
-#include <scene/interface/intf_render_context.h>
-#include <scene/interface/resource/types.h>
 
-#include <core/resources/intf_resource_manager.h>
-
-#include <meta/ext/implementation_macros.h>
-#include <meta/ext/object.h>
-#include <meta/ext/resource/resource.h>
+#include "resource_type_base.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class MaterialResourceType : public META_NS::IntroduceInterfaces<META_NS::BaseObject, CORE_NS::IResourceType> {
+class MaterialResourceType : public META_NS::IntroduceInterfaces<ResourceTypeBase> {
     META_OBJECT(MaterialResourceType, ClassId::MaterialResource, IntroduceInterfaces)
 public:
-    bool Build(const META_NS::IMetadata::Ptr&) override;
+    MaterialResourceType() : Super(ClassId::MaterialResource) {}
 
-    BASE_NS::string GetResourceName() const override;
-    BASE_NS::Uid GetResourceType() const override;
     CORE_NS::IResource::Ptr LoadResource(const StorageInfo&) const override;
     bool SaveResource(const CORE_NS::IResource::ConstPtr&, const StorageInfo&) const override;
     bool ReloadResource(const StorageInfo&, const CORE_NS::IResource::Ptr&) const override;
+};
 
-private:
-    IRenderContext::WeakPtr context_;
+class OcclusionMaterialResourceType : public META_NS::IntroduceInterfaces<ResourceTypeBase> {
+    META_OBJECT(OcclusionMaterialResourceType, ClassId::OcclusionMaterialResource, IntroduceInterfaces)
+public:
+    OcclusionMaterialResourceType() : Super(ClassId::OcclusionMaterialResource) {}
+
+    CORE_NS::IResource::Ptr LoadResource(const StorageInfo&) const override;
+    bool SaveResource(const CORE_NS::IResource::ConstPtr&, const StorageInfo&) const override;
+    bool ReloadResource(const StorageInfo&, const CORE_NS::IResource::Ptr&) const override;
 };
 
 SCENE_END_NAMESPACE()

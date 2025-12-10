@@ -146,15 +146,11 @@ SuitableQueueVk FindSuitableQueue(
     const vector<VkQueueFamilyProperties>& queueFamilyProperties, const QueueProperties& queueProperties)
 {
     for (uint32_t idx = 0; idx < queueFamilyProperties.size(); ++idx) {
-        if (queueProperties.explicitFlags) {
-            if (queueFamilyProperties[idx].queueFlags != queueProperties.requiredFlags) {
-                continue;
-            }
-        } else {
-            if ((queueFamilyProperties[idx].queueFlags & queueProperties.requiredFlags) !=
-                queueProperties.requiredFlags) {
-                continue;
-            }
+        if (!(queueFamilyProperties[idx].queueFlags & queueProperties.requiredFlags)) {
+            continue;
+        }
+        if (queueFamilyProperties[idx].queueFlags & queueProperties.negativeFlags) {
+            continue;
         }
 
         return { idx, queueFamilyProperties[idx].queueCount };
@@ -264,7 +260,7 @@ InstanceWrapper CreateFunctionsVk::CreateInstance(const VersionInfo& engineInfo,
 
     vector<const char*> extensions = { VK_KHR_SURFACE_EXTENSION_NAME, GetPlatformSurfaceName() };
 #ifdef __APPLE__
-    extensions.push_back("VK_KHR_portability_enumeration");
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     if (debugExtension) {

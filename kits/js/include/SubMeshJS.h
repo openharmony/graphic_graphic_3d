@@ -20,13 +20,13 @@
 #include "BaseObjectJS.h"
 #include "Vec3Proxy.h"
 
-class SubMeshJS : public BaseObject {
+class SubMeshJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 50;
     static void Init(napi_env env, napi_value exports);
     SubMeshJS(napi_env, napi_callback_info);
     ~SubMeshJS() override;
-    virtual void* GetInstanceImpl(uint32_t) override;
+    void* GetInstanceImpl(uint32_t) override;
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
@@ -40,9 +40,9 @@ private:
     void SetMaterial(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     BASE_NS::unique_ptr<Vec3Proxy> aabbMin_, aabbMax_;
-    NapiApi::WeakRef scene_;
+    NapiApi::WeakObjectRef scene_;
 
-    NapiApi::WeakRef parentMesh_;
+    NapiApi::WeakObjectRef parentMesh_;
     uint32_t indexInParent_ { 0 };
 };
 #endif

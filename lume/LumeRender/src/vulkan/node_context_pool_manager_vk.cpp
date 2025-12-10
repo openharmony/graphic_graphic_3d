@@ -264,10 +264,12 @@ ContextCommandPoolVk CreateContextCommandPool(
         &commandBufferAllocateInfo,                     // pAllocateInfo
         &ctxPool.commandBuffer.commandBuffer));         // pCommandBuffers
 
-    VALIDATE_VK_RESULT(vkCreateSemaphore(device, // device
-        &semaphoreCreateInfo,                    // pCreateInfo
-        nullptr,                                 // pAllocator
-        &ctxPool.commandBuffer.semaphore));      // pSemaphore
+    for (uint32_t semIdx = 0U; semIdx < BASE_NS::countof(ctxPool.commandBuffer.semaphores); ++semIdx) {
+        VALIDATE_VK_RESULT(vkCreateSemaphore(device,     // device
+            &semaphoreCreateInfo,                        // pCreateInfo
+            nullptr,                                     // pAllocator
+            &ctxPool.commandBuffer.semaphores[semIdx])); // pSemaphore
+    }
 
     return ctxPool;
 }
@@ -303,10 +305,12 @@ NodeContextPoolManagerVk::~NodeContextPoolManagerVk()
 
     auto DestroyContextCommandPool = [](const auto& device, const auto& commandPools) {
         for (auto& cmdPoolRef : commandPools) {
-            if (cmdPoolRef.commandBuffer.semaphore) {
-                vkDestroySemaphore(device,              // device
-                    cmdPoolRef.commandBuffer.semaphore, // semaphore
-                    nullptr);                           // pAllocator
+            for (uint32_t semIdx = 0U; semIdx < BASE_NS::countof(cmdPoolRef.commandBuffer.semaphores); ++semIdx) {
+                if (const VkSemaphore semaphore = cmdPoolRef.commandBuffer.semaphores[semIdx]; semaphore) {
+                    vkDestroySemaphore(device, // device
+                        semaphore,             // semaphore
+                        nullptr);              // pAllocator
+                }
             }
             if (cmdPoolRef.commandPool) {
                 vkDestroyCommandPool(device, // device
@@ -360,7 +364,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                 VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_cmd_buf");
         }
-        // deferred creation
+        // NOTE: deferred creation
         for (const auto& cmdPoolRef : commandSecondaryPools_) {
             GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                 VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_secondary_cmd_buf");
@@ -368,7 +372,9 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
     }
 #endif
 
-    bufferingIndex_ = (bufferingIndex_ + 1) % (uint32_t)commandPools_.size();
+    bufferingIndex_ = (bufferingIndex_ + 1U) % (uint32_t)commandPools_.size();
+    auto& semaphoreIdxRef = commandPools_[bufferingIndex_].commandBuffer.semaphoreIdx;
+    semaphoreIdxRef = (semaphoreIdxRef + 1U) % LowLevelCommandBufferVk::SEMAPHORE_BUFFERING_COUNT;
 
     constexpr uint64_t additionalFrameCount { 2u };
     const auto minAge = device_.GetCommandBufferingCount() + additionalFrameCount;
@@ -524,6 +530,26 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
     }
 
     return renderPassData;
+}
+
+uint64_t NodeContextPoolManagerVk::HashRenderPass(const RenderCommandBeginRenderPass& beginRenderPass)
+{
+    const auto& renderPassDesc = beginRenderPass.renderPassDesc;
+    const auto& renderArea = renderPassDesc.renderArea;
+    uint64_t rpHash = 0;
+    for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
+        HashCombine(rpHash, renderPassDesc.attachments[idx].layer);
+        HashCombine(rpHash, renderPassDesc.attachments[idx].mipLevel);
+        HashCombine(rpHash, renderPassDesc.attachmentHandles[idx]);
+    }
+    HashCombine(rpHash, renderArea.extentWidth);
+    HashCombine(rpHash, renderArea.extentHeight);
+    HashCombine(rpHash, renderArea.offsetX);
+    HashCombine(rpHash, renderArea.offsetY);
+
+    HashCombine(rpHash, renderPassDesc.subpassCount);
+    HashCombine(rpHash, static_cast<uint32_t>(renderPassDesc.subpassContents));
+    return rpHash;
 }
 
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))

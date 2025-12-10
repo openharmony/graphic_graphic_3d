@@ -74,7 +74,7 @@ public:
     using Ptr = BASE_NS::refcnt_ptr<IRenderBackendPositionCommand>;
 
     /** ExecuteBackendCommand method to be implemented
-     * @device IDevice, low level device accessable through device.GetLowLevelDevice()
+     * @device IDevice, low level device accessible through device.GetLowLevelDevice()
      */
     virtual void ExecuteBackendCommand(const IDevice& device) = 0;
 
@@ -461,7 +461,7 @@ public:
      */
     virtual void SetDynamicStateStencilReference(const StencilFaceFlags faceMask, const uint32_t reference) = 0;
 
-    /** Set dynamic state fragmend shading rate.
+    /** Set dynamic state fragment shading rate.
      * @param fragmentSize Fragment size, pipeline fragment shading rate. (Valid values 1, 2, 4)
      * @param combinerOps Combiner operations
      */

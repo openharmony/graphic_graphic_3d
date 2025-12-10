@@ -109,6 +109,9 @@ void StrongRef::Reset()
     }
     if (cnt == 0) {
         // that was the last reference.
+#ifdef __OHOS_PLATFORM__
+        napi_reference_ref(env_, ref_, &cnt);
+#endif
         napi_delete_reference(env_, ref_);
     }
     env_ = nullptr;

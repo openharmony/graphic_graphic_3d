@@ -101,7 +101,7 @@ bool FilterError(
 {
     if (source == GL_DEBUG_SOURCE_OTHER) {
         if (type == GL_DEBUG_TYPE_PERFORMANCE) {
-            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647: max of uint32
+            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647: message id
                 /*  Ignore the following warning that Adreno drivers seem to spam.
                 source: GL_DEBUG_SOURCE_OTHER
                 type: GL_DEBUG_TYPE_PERFORMANCE
@@ -226,7 +226,7 @@ bool StringToUInt(string_view string, EGLint& value)
 {
     value = 0;
     for (auto digit : string) {
-        value *= 10; // 10: decimalism
+        value *= 10; // 10: decimal base
         if ((digit >= '0') && (digit <= '9')) {
             value += digit - '0';
         } else {
@@ -592,9 +592,8 @@ uint32_t EGLState::MinorVersion() const
     return plat_.minorVersion;
 }
 
-void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
+BASE_NS::vector<EGLint> EGLState::BuildConfigAttributes(const BackendExtraGLES* backendConfig)
 {
-    EGLint num_configs;
     // construct attribute list dynamically
     vector<EGLint> attributes;
     const size_t ATTRIBUTE_RESERVE = 16;       // reserve 16 attributes
@@ -619,9 +618,9 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
     }
     addAttribute(EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     addAttribute(EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    addAttribute(EGL_RED_SIZE, 8); // 8: attribute index
-    addAttribute(EGL_GREEN_SIZE, 8); // 8: attribute index
-    addAttribute(EGL_BLUE_SIZE, 8); // 8: attribute index
+    addAttribute(EGL_RED_SIZE, 8);   // 8: bits per component
+    addAttribute(EGL_GREEN_SIZE, 8); // 8: bits per component
+    addAttribute(EGL_BLUE_SIZE, 8);  // 8: bits per component
     addAttribute(EGL_CONFIG_CAVEAT, EGL_NONE);
     if (backendConfig) {
         if (backendConfig->MSAASamples > 1) {
@@ -634,11 +633,32 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
         PLUGIN_LOG_I("Samples:%d Alpha:%d Depth:%d Stencil:%d", backendConfig->MSAASamples, backendConfig->alphaBits,
             backendConfig->depthBits, backendConfig->stencilBits);
     } else {
-        addAttribute(EGL_ALPHA_SIZE, 8); // 8: attribute index
+        addAttribute(EGL_ALPHA_SIZE, 8); // 8: bits per component
     }
     addAttribute(EGL_NONE, EGL_NONE); // terminate list
+    return attributes;
+}
+
+void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
+{
+    EGLint num_configs;
+    vector<EGLint> attributes = BuildConfigAttributes(backendConfig);
     eglChooseConfig(plat_.display, attributes.data(), &plat_.config, 1, &num_configs);
-    CHECK_EGL_ERROR();
+    CHECK_EGL_ERROR2();
+
+    // Check if config exists, otherwise try headless config without EGL_WINDOW_BIT.
+    if (num_configs == 0) {
+        PLUGIN_LOG_E("eglChooseConfig: No configuration found.");
+        // 6th integer has the attribute for EGL_SURFACE_TYPE.
+        attributes[5u] = EGL_PBUFFER_BIT;
+        eglChooseConfig(plat_.display, attributes.data(), &plat_.config, 1, &num_configs);
+        CHECK_EGL_ERROR();
+
+        if (num_configs > 0) {
+            PLUGIN_LOG_W("eglChooseConfig: Using headless config.");
+        }
+    }
+
 #if RENDER_GL_DEBUG
     PLUGIN_LOG_I("eglChooseConfig returned:");
     DumpEGLConfig(plat_.display, plat_.config);
@@ -682,8 +702,9 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
     if (backendConfig) {
         sharedContext = backendConfig->sharedContext;
     }
+    const EGLConfig cfg = hasConfiglessExt_ ? EGL_NO_CONFIG_KHR : plat_.config;
     PLUGIN_LOG_I("Creating new context in DeviceGLES, using shared context: %d", static_cast<bool>(sharedContext));
-    plat_.context = eglCreateContext(plat_.display, plat_.config, sharedContext, context_attributes.data());
+    plat_.context = eglCreateContext(plat_.display, cfg, sharedContext, context_attributes.data());
     CHECK_EGL_ERROR();
 
     if (plat_.context == EGL_NO_CONTEXT) {
@@ -728,10 +749,10 @@ bool EGLState::VerifyVersion()
         eglQueryContext(plat_.display, plat_.context, EGL_CONTEXT_MINOR_VERSION_KHR, &glMinor);
     }
 
-    if (glMajor < 3) { // 3: egl version
+    if (glMajor < 3) { // 3: gl version
         fail = true;
-    } else if (glMajor == 3) { // 3: egl version
-        if (glMinor < 2) { // 2: egl version
+    } else if (glMajor == 3) { // 3: gl version
+        if (glMinor < 2) {     // 2: gl version
             // We do NOT support 3.0 or 3.1
             fail = true;
         }
@@ -749,6 +770,96 @@ bool EGLState::VerifyVersion()
         dummyContext_.display = EGL_NO_DISPLAY;
     }
     return !fail;
+}
+
+enum class DesiredOutput { SDR_LINEAR, SDR_SRGB, HDR_1010102, HDR_SCRGB_F16 };
+
+struct BackbufferReq {
+    bool needDefaultDepthStencil = false;
+    int minDepthBits = 0;
+    int minStencilBits = 0;
+    int msaaSamples = 0;
+};
+
+static EGLConfig TryChoose(EGLDisplay dpy, const EGLint* attrs)
+{
+    EGLConfig cfg = EGL_NO_CONFIG_KHR;
+    EGLint n = 0;
+    if (eglChooseConfig(dpy, attrs, &cfg, 1, &n) && n > 0)
+        return cfg;
+    return EGL_NO_CONFIG_KHR;
+}
+
+static void Add(BASE_NS::vector<EGLint>& a, EGLint k, EGLint v)
+{
+    a.push_back(k);
+    a.push_back(v);
+}
+
+static EGLConfig TryPattern(EGLDisplay dpy, const BackbufferReq& req, int r, int g, int b, int aBits, int depthBits,
+    int stencilBits, bool wantFloatComponents, int msaaSamples)
+{
+    BASE_NS::vector<EGLint> at;
+    Add(at, EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
+    Add(at, EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
+    Add(at, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT); // or ES2 fallback if needed
+
+    Add(at, EGL_RED_SIZE, r);
+    Add(at, EGL_GREEN_SIZE, g);
+    Add(at, EGL_BLUE_SIZE, b);
+    Add(at, EGL_ALPHA_SIZE, aBits);
+
+    if (req.needDefaultDepthStencil) {
+        Add(at, EGL_DEPTH_SIZE, depthBits);
+        if (stencilBits > 0)
+            Add(at, EGL_STENCIL_SIZE, stencilBits);
+    }
+
+#ifdef EGL_COLOR_COMPONENT_TYPE_EXT
+    if (wantFloatComponents) {
+        // Requires EGL_EXT_pixel_format_float
+        Add(at, EGL_COLOR_COMPONENT_TYPE_EXT, EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT);
+    }
+#endif
+
+    Add(at, EGL_CONFIG_CAVEAT, EGL_NONE);
+    if (msaaSamples > 1) {
+        Add(at, EGL_SAMPLES, (EGLint)msaaSamples);
+        Add(at, EGL_SAMPLE_BUFFERS, 1);
+    }
+    at.push_back(EGL_NONE);
+    at.push_back(EGL_NONE);
+
+    return TryChoose(dpy, at.data());
+}
+
+EGLConfig PickFirstWindowConfig(EGLDisplay dpy, const BackbufferReq& req, DesiredOutput desired,
+    bool havePixelFloatExt /* EGL_EXT_pixel_format_float */)
+{
+    switch (desired) {
+        case DesiredOutput::HDR_SCRGB_F16:
+            if (havePixelFloatExt) {
+                if (auto c = TryPattern(
+                        dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples))
+                    return c;
+            }
+        case DesiredOutput::HDR_1010102: {
+            // 10:10:10:2
+            if (auto c =
+                    TryPattern(dpy, req, 10, 10, 10, 2, req.minDepthBits, req.minStencilBits, false, req.msaaSamples))
+                return c;
+        }
+        case DesiredOutput::SDR_SRGB:
+        case DesiredOutput::SDR_LINEAR: {
+            // Prefer 8:8:8:8
+            if (auto c =
+                    TryPattern(dpy, req, 8, 8, 8, 8, req.minDepthBits, req.minStencilBits, false, req.msaaSamples)) {
+                return c;
+            }
+            break;
+        }
+    }
+    return EGL_NO_CONFIG_KHR;
 }
 
 bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
@@ -807,15 +918,12 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
     HandleExtensions();
 
     plat_.hasColorSpaceExt = hasColorSpaceExt_ = HasExtension("EGL_KHR_gl_colorspace");
-    // NOTE: "EGL_KHR_no_config_context" and "EGL_KHR_surfaceless_context" is technically working, but disabled for now.
-    hasConfiglessExt_ = false;
-    hasSurfacelessExt_ = false;
-    plat_.config = EGL_NO_CONFIG_KHR;
+    hasConfiglessExt_ = HasExtension("EGL_KHR_no_config_context");
+    hasSurfacelessExt_ = HasExtension("EGL_KHR_surfaceless_context");
+    // we need a config for the context..
     if (!hasConfiglessExt_) {
-        // we need a config for the context..
         ChooseConfiguration(backendConfig);
     }
-
     if (appContext) {
         // use applications context
         PLUGIN_LOG_I("Using application context in DeviceGLES");
@@ -845,6 +953,9 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
 #if RENDER_GL_DEBUG
         DumpEGLSurface(plat_.display, dummySurface_);
 #endif
+    } else {
+        // Surfaceless path
+        dummySurface_ = EGL_NO_SURFACE;
     }
 
     dummyContext_.context = plat_.context;
@@ -866,11 +977,7 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
 
 void EGLState::GlInitialize()
 {
-#define getter(a, b)                                \
-    b = reinterpret_cast<a>(eglGetProcAddress(#b)); \
-    if (!b) {                                       \
-        PLUGIN_LOG_E("Missing %s\n", #b);           \
-    }
+#define getter(a, b) b = reinterpret_cast<a>(eglGetProcAddress(#b))
 
 #define declare(a, b) getter(a, b)
 // NOTE: intentional re-include of gl_functions.h
@@ -878,14 +985,16 @@ void EGLState::GlInitialize()
 #include "gles/gl_functions.h"
 // NOTE: intentional re-include of egl_functions.h
 #define declare(a, b) getter(a, b)
+#define declare_plat(a, b) ((void)0)
 #undef EGL_FUNCTIONS_H
 #include "gles/egl_functions.h"
-    if (!HasExtension("EGL_ANDROID_get_native_client_buffer")) {
-        eglGetNativeClientBufferANDROID = nullptr;
-    }
+    PlatformInitialize();
+
     if (!HasExtension("EGL_KHR_image_base")) {
         eglCreateImageKHR = nullptr;
         eglDestroyImageKHR = nullptr;
+        PLUGIN_LOG_E("Missing eglCreateImageKHR");
+        PLUGIN_LOG_E("Missing eglDestroyImageKHR");
     }
 
     plat_.deviceName = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
@@ -1033,24 +1142,65 @@ void* EGLState::ErrorFilter() const
     return reinterpret_cast<void*>(FilterError);
 }
 
-uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t /* instance */, bool isSrgb) const noexcept
+void EGLState::EnsureConfigSelected(uint32_t flags) const noexcept
+{
+    if (plat_.config == EGL_NO_CONFIG_KHR) {
+        DesiredOutput desired;
+        if ((flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT)) {
+            if ((flags & SwapchainFlagBits::CORE_SWAPCHAIN_HDR_BIT)) {
+                desired = DesiredOutput::HDR_1010102;
+            } else {
+                desired = DesiredOutput::SDR_SRGB;
+            }
+        } else {
+            if ((flags & SwapchainFlagBits::CORE_SWAPCHAIN_HDR_BIT)) {
+                desired = DesiredOutput::HDR_SCRGB_F16;
+            } else {
+                desired = DesiredOutput::SDR_LINEAR;
+            }
+        }
+        if (plat_.config == EGL_NO_CONFIG_KHR) {
+            BackbufferReq req {};
+            req.needDefaultDepthStencil = flags & SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT;
+            req.minDepthBits = 24;
+            req.minStencilBits = 8;
+            req.msaaSamples = 0;
+            const bool havePixelFloat = HasExtension("EGL_EXT_pixel_format_float");
+            const_cast<EGLState*>(this)->plat_.config =
+                PickFirstWindowConfig(plat_.display, req, desired, havePixelFloat);
+            if (plat_.config == EGL_NO_CONFIG_KHR) {
+                PLUGIN_LOG_E("No matching EGLConfig for requested output");
+            }
+        }
+    }
+}
+
+uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t /* instance */, uint32_t flags) const noexcept
 {
     // Check if sRGB colorspace is supported by EGL.
     const bool isSurfaceColorspaceSupported = IsSurfaceColorspaceSupported(plat_);
-
+    EnsureConfigSelected(flags);
     EGLint attribsSrgb[] = { EGL_NONE, EGL_NONE, EGL_NONE };
     if (isSurfaceColorspaceSupported) {
         if (IsVersionGreaterOrEqual(1, 5)) { // 1, 5: egl version
             attribsSrgb[0] = EGL_GL_COLORSPACE;
-            attribsSrgb[1] = isSrgb ? EGL_GL_COLORSPACE_SRGB : EGL_GL_COLORSPACE_LINEAR;
+            attribsSrgb[1] = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT) ? EGL_GL_COLORSPACE_SRGB
+                                                                                  : EGL_GL_COLORSPACE_LINEAR;
         } else if (hasColorSpaceExt_) {
             attribsSrgb[0] = EGL_GL_COLORSPACE_KHR;
-            attribsSrgb[1] = isSrgb ? EGL_GL_COLORSPACE_SRGB_KHR : EGL_GL_COLORSPACE_LINEAR_KHR;
+            attribsSrgb[1] = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT) ? EGL_GL_COLORSPACE_SRGB_KHR
+                                                                                  : EGL_GL_COLORSPACE_LINEAR_KHR;
         }
     }
     // depending on the platform EGLNativeWindowType may be a pointer, uintptr_t or khronos_uintptr_t or....
     EGLNativeWindowType eglWindow = reinterpret_cast<EGLNativeWindowType>(reinterpret_cast<void*>(window));
-
+    // Check if config is headless only
+    GLint surfaceBits = 0;
+    if (EGL_TRUE == eglGetConfigAttrib(plat_.display, plat_.config, EGL_SURFACE_TYPE, &surfaceBits)) {
+        if (!(surfaceBits & EGL_WINDOW_BIT)) {
+            PLUGIN_LOG_E("EGL config is headless: EGL_WINDOW_BIT missing from config attribute EGL_SURFACE_TYPE.");
+        }
+    }
     EGLSurface eglSurface = eglCreateWindowSurface(
         plat_.display, plat_.config, eglWindow, isSurfaceColorspaceSupported ? attribsSrgb : nullptr);
     if (eglSurface == EGL_NO_SURFACE) {

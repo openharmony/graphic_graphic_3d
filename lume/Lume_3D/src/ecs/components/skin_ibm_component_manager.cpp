@@ -68,6 +68,7 @@ IComponentManager* ISkinIbmComponentManagerInstance(IEcs& ecs)
 
 void ISkinIbmComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<SkinIbmComponentManager*>(instance);
+    static_cast<SkinIbmComponentManager*>(instance)->~SkinIbmComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

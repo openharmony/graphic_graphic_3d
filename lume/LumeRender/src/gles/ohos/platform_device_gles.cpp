@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
+#if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
 #include <external_window.h>
+#else
+#include <native_window/external_window.h>
+#endif
 
 #include "gles/device_gles.h"
 #include "gles/egl_functions.h"
@@ -54,6 +58,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
                 eglCreateImageKHR(dsp, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, nativeWindowBufferPtr, attrs);
             if (!eglImage) {
                 PLUGIN_LOG_E("eglCreateImageKHR failed %d", eglGetError());
+                OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
                 return {};
             }
             GpuImageDesc finalDesc = GetImageDescFromHwBufferDesc(tmp.platformHwBuffer);
@@ -100,6 +105,7 @@ BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecific
         auto nativeWindowBufferPtr = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(nativeBufferPtr);
         if (!nativeWindowBufferPtr) {
             PLUGIN_LOG_E("OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer failed %d", eglGetError());
+            OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
             return {};
         }
 

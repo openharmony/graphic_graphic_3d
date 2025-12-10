@@ -41,12 +41,10 @@ bool Image::SetRenderHandle(RENDER_NS::RenderHandleReference handle)
     }
 
     RENDER_NS::GpuImageDesc desc;
-    context
-        ->AddTask([&] {
-            auto& resources = context->GetRenderer()->GetDevice().GetGpuResourceManager();
-            desc = resources.GetImageDescriptor(handle);
-        })
-        .Wait();
+    context->RunDirectlyOrInTask([&] {
+        auto& resources = context->GetRenderer()->GetDevice().GetGpuResourceManager();
+        desc = resources.GetImageDescriptor(handle);
+    });
 
     // todo: notify in right queue
     Size()->SetValue({ desc.width, desc.height });

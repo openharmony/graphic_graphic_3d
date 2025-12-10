@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -80,16 +80,16 @@ struct Glyph {
 
 using GlyphCache = BASE_NS::unordered_map<uint32_t, FontDefs::Glyph>;
 
-constexpr uint32_t ATLAS_SIZE = 2048; // 2048 : param
+constexpr uint32_t ATLAS_SIZE = 2048;
 
 constexpr int ATLAS_ERROR = -1;
 constexpr int ATLAS_OK = 0;
 constexpr int ATLAS_RESET = 1;
 
 constexpr uint8_t BORDER_WIDTH = 1u;
-constexpr uint8_t BORDER_WIDTH_X2 = 2u * BORDER_WIDTH; // 2 : param
+constexpr uint8_t BORDER_WIDTH_X2 = 2u * BORDER_WIDTH;
 
-constexpr const int GLYPH_FIT_THRESHOLD = 4; // 4 : thd
+constexpr const int GLYPH_FIT_THRESHOLD = 4;
 
 inline uint64_t rshift_u64(uint64_t val, uint8_t bits)
 {
@@ -113,12 +113,15 @@ inline uint32_t lshift_u32(uint32_t val, uint8_t bits)
 
 inline int32_t rshift_i32(int32_t val, uint8_t bits)
 {
-    return val >> bits;
+    if (val < 0) {
+        return ~int32_t(~uint32_t(val) >> bits);
+    }
+    return int32_t(uint32_t(val) >> bits);
 }
 
 inline int32_t lshift_i32(int32_t val, uint8_t bits)
 {
-    return val << bits;
+    return int32_t(uint32_t(val) << bits);
 }
 
 inline uint16_t lshift_u16(uint16_t val, uint8_t bits)
@@ -128,33 +131,33 @@ inline uint16_t lshift_u16(uint16_t val, uint8_t bits)
 
 inline uint8_t GetStrength(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 48) & UINT8_MAX; // 48 : param
+    return rshift_u64(glyphKey, 48) & UINT8_MAX;
 }
 
 inline uint8_t GetSkewX(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 56) & UINT8_MAX; // 56 : param
+    return rshift_u64(glyphKey, 56) & UINT8_MAX;
 }
 
 inline int32_t IntToFp26(int32_t val)
 {
     // convert to 26.6 fractional pixels values used by freetype library
-    return lshift_i32(val, 6); // 6 : param
+    return lshift_i32(val, 6);
 }
 
 inline int32_t Fp26ToInt(int32_t val)
 {
     // convert from 26.6 fractional pixels values used by freetype library
-    return rshift_i32(val, 6); // 6 : param
+    return rshift_i32(val, 6);
 }
 // font size in pixel
 inline uint64_t MakeGlyphKey(float size, uint32_t idx)
 {
-    return (static_cast<uint64_t>(size) << 32) | idx; // 32 : param
+    return (static_cast<uint64_t>(size) << 32) | idx;
 }
 
 // FT_Pos is a 26.6 fixed point value, 2^6 = 64
-constexpr float FLOAT_DIV = 64.f; // 64.f ；param
+constexpr float FLOAT_DIV = 64.f;
 
 inline int32_t FloatToFTPos(float x)
 {
@@ -168,7 +171,7 @@ inline float FTPosToFloat(int32_t x)
 
 // 13.3 fixed point value, 2^3 = 8
 // valid range is -4096.0...4,095.875
-constexpr float FLOAT16_DIV = 8.f; // 8.0 : param
+constexpr float FLOAT16_DIV = 8.f;
 
 inline float Int16ToFloat(int16_t x)
 {

@@ -50,11 +50,15 @@ public:
 protected:
     bool AttachEngineProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override
     {
-        return object_->AttachProperty(p, path).GetResult();
+        return object_ ? object_->AttachProperty(p, path).GetResult() : false;
     }
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override
     {
         return AttachEngineProperty(p, path);
+    }
+    META_NS::IProperty::Ptr CreateProperty(BASE_NS::string_view path)
+    {
+        return object_ ? object_->CreateProperty(path).GetResult() : META_NS::IProperty::Ptr {};
     }
 
 protected:

@@ -21,22 +21,46 @@
 #include "QuatProxy.h"
 #include "SceneResourceImpl.h"
 #include "Vec3Proxy.h"
+
+class NodeImpl;
+
+class NodeContainerJS {
+public:
+    static void Init(napi_env env, napi_value exports);
+    NodeContainerJS(napi_env, napi_callback_info);
+    virtual ~NodeContainerJS();
+
+private:
+    NodeImpl* GetNode();
+    napi_value GetCount(NapiApi::FunctionContext<>& ctx);
+    napi_value GetChild(NapiApi::FunctionContext<uint32_t>& ctx);
+
+    napi_value ClearChildren(NapiApi::FunctionContext<>& ctx);
+    napi_value InsertChildAfter(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
+    napi_value AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value RemoveChild(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    NapiApi::WeakObjectRef node_;
+    NapiApi::WeakObjectRef scene_;
+};
+
 class NodeImpl : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 2;
-    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5 };
+    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5, CUSTOM = 255 };
 
     static void RegisterEnums(NapiApi::Object exports);
 
     bool IsAttached() const;
     virtual void Attached(bool attached);
 
+    void* GetInstanceImpl(uint32_t id) override;
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);
     NodeImpl(NodeType type);
     virtual ~NodeImpl();
 
-    void* GetInstanceImpl(uint32_t id);
+    napi_value SetNodeTypeInternal(NapiApi::FunctionContext<uint32_t>& fc);
     napi_value GetNodeType(NapiApi::FunctionContext<>& fc);
 
     napi_value GetNodeName(NapiApi::FunctionContext<>& fc);
@@ -69,6 +93,7 @@ protected:
     napi_value GetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t>& ctx);
     napi_value SetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t, bool>& ctx);
 
+public:
     napi_value GetCount(NapiApi::FunctionContext<>& ctx);
     napi_value GetChild(NapiApi::FunctionContext<uint32_t>& ctx);
 
@@ -83,5 +108,9 @@ private:
     BASE_NS::unique_ptr<Vec3Proxy> posProxy_ { nullptr };
     BASE_NS::unique_ptr<Vec3Proxy> sclProxy_ { nullptr };
     BASE_NS::unique_ptr<QuatProxy> rotProxy_ { nullptr };
+    NapiApi::StrongRef children_;
 };
+
+void CleanupNode(TrueRootObject* bo, bool isAttached);
+
 #endif

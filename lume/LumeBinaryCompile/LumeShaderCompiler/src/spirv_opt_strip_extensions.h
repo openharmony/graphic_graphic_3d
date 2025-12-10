@@ -20,20 +20,17 @@
 #include "source/opt/module.h"
 #include "source/opt/pass.h"
 
-namespace spvtools {
+namespace spvtools::opt {
 
-namespace opt {
-
-class StripPreprocessorDebugInfoPass : public Pass {
+class StripPreprocessorDebugInfoPass final : public Pass {
 public:
-    const char* name() const override
+    [[nodiscard]] const char* name() const override
     {
         return "strip-preprocessor-debug";
     }
     Status Process() override;
 };
 
-} // namespace opt
-} // namespace spvtools
+} // namespace spvtools::opt
 
-#endif // SOURCE_OPT_STRIP_DEBUG_INFO_PASS_H_
+#endif // SOURCE_OPT_STRIP_PREPROCESSOR_DEBUG_INFO_PASS_H_

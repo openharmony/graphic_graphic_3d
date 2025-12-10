@@ -13,6 +13,9 @@
  * limitations under the License.
  */
 
+#ifndef CORE3D_ECS_SYSTEMS_WEATHER_SYSTEM_H
+#define CORE3D_ECS_SYSTEMS_WEATHER_SYSTEM_H
+
 #include <ComponentTools/component_query.h>
 
 #include <3d/ecs/systems/intf_weather_system.h>
@@ -44,6 +47,9 @@ class IWaterRippleComponentManager;
 class ICameraComponentManager;
 class IEnvironmentComponentManager;
 class IWeatherComponentManager;
+class IPlanarReflectionComponentManager;
+class ILayerComponentManager;
+
 CORE3D_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -56,6 +62,9 @@ public:
         CORE_NS::EntityReference rippleTextures[2];
         CORE_NS::EntityReference rippleVelocityTextures[2];
         CORE_NS::EntityReference rippleArgsBufferHandle;
+
+        BASE_NS::Math::Vec3 prevPlanePos { 0.0f, 0.0f, 0.0f };
+        uint32_t currentTextureIndex { 0U };
     };
 
     WeatherSystem(CORE_NS::IEcs& ecs);
@@ -84,14 +93,15 @@ public:
 
 private:
     void ProcessWaterRipples();
-    void UpdateCloudMaterial(CORE_NS::Entity camEntity);
+    void UpdateCloudMaterial(uint32_t index);
+    void DestorySimulationResources(CORE_NS::Entity planeEntity);
 
     bool active_ { true };
     CORE_NS::IEcs& ecs_;
-    RENDER_NS::IRenderContext* renderContext_;
-    CORE3D_NS::IGraphicsContext* graphicsContext_;
-    RENDER_NS::IGpuResourceManager* gpuResourceManager_;
-    RENDER_NS::IRenderDataStoreManager* renderDataStoreManager_;
+    RENDER_NS::IRenderContext* renderContext_ { nullptr };
+    CORE3D_NS::IGraphicsContext* graphicsContext_ { nullptr };
+    RENDER_NS::IGpuResourceManager* gpuResourceManager_ { nullptr };
+    RENDER_NS::IRenderDataStoreManager* renderDataStoreManager_ { nullptr };
 
     CORE_NS::ComponentQuery query_;
 
@@ -104,12 +114,21 @@ private:
     CORE3D_NS::ICameraComponentManager& camManager_;
     CORE3D_NS::IEnvironmentComponentManager& envManager_;
     CORE3D_NS::IWeatherComponentManager& weatherManager_;
+    CORE3D_NS::ILayerComponentManager& layerManager_;
 
-    IWaterRippleComponentManager& rippleComponentManager_;
+    CORE3D_NS::IWaterRippleComponentManager& rippleComponentManager_;
+
+    // To track the water planes
+    CORE3D_NS::IPlanarReflectionComponentManager& planarReflectionManager_;
+    CORE_NS::ComponentQuery waterPlaneQuery_;
+
     uint32_t weatherGeneration_ {};
-    BASE_NS::Math::Vec3 prevPlanePos_;
-    BASE_NS::vector<BASE_NS::pair<CORE_NS::Entity, BASE_NS::Math::UVec2>> newRippleToAdd_;
     BASE_NS::unordered_map<CORE_NS::Entity, RipplePlaneResources> handleResources_;
+    uint32_t cameraCount_ { 0U };
+    BASE_NS::vector<float> screenPercentages_;
+    bool cloudWasEnabled_ { true };
+
+    BASE_NS::vector<uint64_t> initializedPlaneIds_;
 
     BASE_NS::refcnt_ptr<RenderDataStoreWeather> dataStoreWeather_;
 
@@ -118,28 +137,32 @@ private:
         CORE_NS::Entity matEntity;
     };
 
-    ObjectAndMaterial waterEffectsPlane;
     CORE_NS::Entity GetMaterialEntity(const CORE_NS::Entity& entity);
     RipplePlaneResources GetOrCreateSimulationResources(const CORE_NS::Entity& entity);
 
     struct CloudData {
-        CORE_NS::Entity renderMeshEntity;
-        CORE_NS::EntityReference matEntity;
-        CORE_NS::EntityReference meshEntity;
+        BASE_NS::vector<CORE_NS::Entity> renderMeshEntity;
+        BASE_NS::vector<CORE_NS::EntityReference> meshEntity;
+        BASE_NS::vector<CORE_NS::EntityReference> matPerCamera;
 
         // will be stored to material
-        CORE_NS::EntityReference cloudTexture;
-        CORE_NS::EntityReference cloudPrevTexture;
+        BASE_NS::vector<CORE_NS::EntityReference> cloudTexture;
+        BASE_NS::vector<CORE_NS::EntityReference> cloudPrevTexture;
+        BASE_NS::vector<CORE_NS::EntityReference> cloudDepthTexture;
+        BASE_NS::vector<CORE_NS::EntityReference> cloudPrevDepthTexture;
 
-        RENDER_NS::RenderHandleReference cloudTexHandle;
-        RENDER_NS::RenderHandleReference cloudPrevTexHandle;
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> cloudTexHandles;
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> cloudPrevTexHandles;
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> cloudDepthTexHandle;
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> cloudPrevDepthTexHandle;
 
         RENDER_NS::GpuImageDesc gpuImageDesc {
             RENDER_NS::ImageType::CORE_IMAGE_TYPE_2D,
             RENDER_NS::ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            BASE_NS::Format::BASE_FORMAT_R16G16B16A16_SFLOAT,
+            BASE_NS::Format::BASE_FORMAT_R8G8B8A8_UNORM,
             RENDER_NS::ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
-            RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+            RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_STORAGE_BIT |
+                RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT |
                 RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT,
             RENDER_NS::MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             0U,
@@ -160,3 +183,5 @@ private:
     CloudData cloudMatData_;
 };
 CORE3D_END_NAMESPACE()
+
+#endif // CORE3D_ECS_SYSTEMS_WEATHER_SYSTEM_H

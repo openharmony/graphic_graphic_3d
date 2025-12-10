@@ -1,0 +1,44 @@
+{
+    "name": "config",
+    "version": 1.0,
+    "postProcessConfiguration": {
+        "enableFlags": "",
+        "bloomConfiguration": {
+            "bloomType": "",
+            "bloomQualityType": "",
+            "thresholdHard": 2.0,
+            "thresholdSoft": 1.0,
+            "amountCoefficient": 0.25,
+            "dirtMaskCoefficient": 0.01,
+            "useCompute": false
+        },
+        "vignetteConfiguration": {
+            "coefficient": 0,
+            "power": 0
+        },
+        "colorFringeConfiguration": {
+            "distanceCoefficient": 0,
+            "coefficient": 0
+        },
+        "tonemapConfiguration": {
+            "tonemapType": "",
+            "exposure": 0
+        },
+        "ditherConfiguration": {
+            "ditherType": ""
+        },
+        "blurConfiguration": {
+            "blurType": "",
+            "blurQualityType": "",
+            "filterSize": 0,
+            "maxMipLevel": 0
+        },
+        "colorConversionConfiguration": {
+            "conversionFunctionType": ""
+        },
+        "FxaaConfiguration": {
+            "sharpness": "",
+            "quality": ""
+        }
+    }
+}

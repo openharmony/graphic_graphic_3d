@@ -42,6 +42,9 @@ struct DefaultEngineGpuResourceConstants {
     /** Default GPU buffer, 1024 bytes */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_BUFFER { "CORE_DEFAULT_GPU_BUFFER" };
 
+    /** Default GPU sampler, nearest clamp */
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_SAMPLER { "CORE_DEFAULT_GPU_SAMPLER" };
+
     /** Default sampler, nearest repeat */
     static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_NEAREST_REPEAT {
         "CORE_DEFAULT_SAMPLER_NEAREST_REPEAT"
@@ -74,8 +77,6 @@ struct DefaultDebugConstants {
 };
 
 struct DeviceConstants {
-    static constexpr uint32_t MAX_SWAPCHAIN_COUNT { 8U };
-
     static constexpr uint32_t MIN_BUFFERING_COUNT { 2U };
     /** definitely a bit high number, prefer e.g. 3. */
     static constexpr uint32_t MAX_BUFFERING_COUNT { 6U };

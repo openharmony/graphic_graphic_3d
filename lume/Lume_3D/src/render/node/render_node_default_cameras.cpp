@@ -296,11 +296,19 @@ void RenderNodeDefaultCameras::AddCameras(const IRenderDataStoreDefaultCamera* d
             CloneData(dat->frustumPlanes, CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4), frustum.planes,
                 Frustum::PLANE_COUNT * sizeof(Math::Vec4));
         }
-
         // padding
-        dat->counts = { currCamera.environment.multiEnvCount, 0U, 0U, 0U };
+        dat->counts = { currCamera.environment.multiEnvCount,
+            (currCamera.flags & RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT)
+                ? CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION
+                : 0U,
+            0U, 0U };
         dat->pad0 = { 0U, 0U, 0U, 0U };
-        dat->matPad0 = ZERO_MATRIX_4X4;
+        // for environment
+        if (currCamera.flags & RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT) {
+            dat->envProjInv = Math::Inverse(currCamera.matrices.envProj);
+        } else {
+            dat->envProjInv = ZERO_MATRIX_4X4;
+        }
         dat->matPad1 = ZERO_MATRIX_4X4;
     }
 }
@@ -446,6 +454,8 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
             Math::UVec4(id.x, id.y, layer.x, layer.y),
             {},
             multiEnvIndices,
+            {},
+            {},
             {},
             {},
         };

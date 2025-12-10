@@ -18,6 +18,7 @@
 
 #include <scene/ext/ecs_lazy_property.h>
 #include <scene/ext/scene_property.h>
+#include <scene/ext/util.h>
 
 #include <3d/ecs/components/post_process_component.h>
 
@@ -51,11 +52,13 @@ public:
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override
     {
-        if (p && p->GetName() == "Enabled") {
-            auto i = interface_cast<META_NS::IStackProperty>(p);
-            return flags_ && i &&
-                   i->PushValue(
-                       META_NS::IValue::Ptr(new ConvertingValue<PPEffectEnabledConverter<PPBit>>(flags_, { flags_ })));
+        if (!p) {
+            return false;
+        }
+        if (p->GetName() == "Enabled") {
+            return flags_ &&
+                   PushPropertyValue(p, META_NS::IValue::Ptr {
+                                            new ConvertingValue<PPEffectEnabledConverter<PPBit>>(flags_, { flags_ }) });
         }
         return this->AttachEngineProperty(p, GetPropertyPath(path));
     }

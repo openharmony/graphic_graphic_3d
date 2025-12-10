@@ -335,9 +335,82 @@ void RenderNodeExecution(RenderNodeExecutionParameters& params)
     params.queue->Execute();
 }
 
+void ReMapWaitSemaphores(RenderCommandContext& ref, const RenderNodeContextData& nodeContextRef,
+    array_view<const uint32_t> nodeIdxToRenderCommandContextIdx)
+{
+    for (uint32_t waitIdx = 0; waitIdx < ref.submitDepencies.waitSemaphoreCount; ++waitIdx) {
+        const uint32_t currRenderNodeIdx = nodeContextRef.submitInfo.waitSemaphoreNodeIndices[waitIdx];
+        ref.submitDepencies.waitSemaphoreNodeIndices[waitIdx] = nodeIdxToRenderCommandContextIdx[currRenderNodeIdx];
+    }
+}
+
 // Helper for Renderer::ExecuteRenderBackend
-void IterateRenderBackendNodeGraphNodeStores(const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores,
-    const bool multiQueueEnabled, RenderCommandFrameData& rcfd)
+void IterateRenderBackendNodeGraphNodeStoresMultiQueue(
+    const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores, RenderCommandFrameData& rcfd)
+{
+    // keep track of each rng's last render node idx in render command context, so we can sync new rng's with that
+    // render node
+    vector<uint32_t> rngLastRenderNodeIdx;
+    rngLastRenderNodeIdx.reserve(renderNodeGraphNodeStores.size());
+    vector<uint32_t> nodeIdxToRenderCommandContextIdx;
+    for (const RenderNodeGraphNodeStore* nodeStore : renderNodeGraphNodeStores) {
+        if (!nodeStore) {
+            continue;
+        }
+
+        const auto multiQueuePatchBeginIdx = (uint32_t)rcfd.renderCommandContexts.size();
+
+        nodeIdxToRenderCommandContextIdx.clear();
+        nodeIdxToRenderCommandContextIdx.resize(nodeStore->renderNodeContextData.size());
+
+        for (size_t nodeIdx = 0; nodeIdx < nodeStore->renderNodeContextData.size(); ++nodeIdx) {
+            const auto& ref = nodeStore->renderNodeContextData[nodeIdx];
+            if (!ref.renderCommandList->HasValidRenderCommands()) {
+                continue;
+            }
+            const auto backendNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
+            nodeIdxToRenderCommandContextIdx[(uint32_t)nodeIdx] = backendNodeIdx;
+            // get final backend node index of the first render node which uses the swapchain image
+            if ((rcfd.firstSwapchainNodeIdx > backendNodeIdx) && (ref.submitInfo.waitForSwapchainAcquireSignal)) {
+                rcfd.firstSwapchainNodeIdx = backendNodeIdx;
+            }
+            rcfd.renderCommandContexts.push_back(
+                { ref.renderBackendNode, ref.renderCommandList.get(), ref.renderBarrierList.get(),
+                    ref.nodeContextPsoMgr.get(), ref.nodeContextDescriptorSetMgr.get(), ref.nodeContextPoolMgr.get(),
+                    (uint32_t)nodeIdx, ref.submitInfo, nodeStore->renderNodeData[nodeIdx].fullName });
+        }
+
+        // patch correct render command context indices
+        const uint32_t rccSize = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
+        rngLastRenderNodeIdx.push_back(rccSize > 0U ? rccSize - 1U : 0U); // avoid underflow
+
+        for (auto& ref : array_view(rcfd.renderCommandContexts.data() + multiQueuePatchBeginIdx,
+                 rcfd.renderCommandContexts.data() + rccSize)) {
+            const auto& nodeContextRef = nodeStore->renderNodeContextData[ref.renderGraphRenderNodeIndex];
+
+            ref.submitDepencies.signalSemaphore = nodeContextRef.submitInfo.signalSemaphore;
+            ref.submitDepencies.waitSemaphoreCount = nodeContextRef.submitInfo.waitSemaphoreCount;
+            ReMapWaitSemaphores(ref, nodeContextRef, nodeIdxToRenderCommandContextIdx);
+
+            // Handles inter-rendernodegraph multi queue sync, all the rngs submitted to be rendered
+            // by RenderFrame(...) get put into renderCommandContexts array and in the backend
+            // waitSemaphoreNodeIndices index into that array
+            const uint32_t rngWait = nodeContextRef.submitInfo.waitSemaphoreRenderNodeGraphIndex;
+            if (rngWait < rngLastRenderNodeIdx.size()) {
+                const uint32_t waitIdx = ref.submitDepencies.waitSemaphoreCount++;
+                if (waitIdx < PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS) {
+                    ref.submitDepencies.waitSemaphoreNodeIndices[waitIdx] = rngLastRenderNodeIdx[rngWait];
+                } else {
+                    PLUGIN_LOG_E("multi-queue sync may work incorrectly, wait semaphore count exceeded (%u)",
+                        PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS);
+                }
+            }
+        }
+    }
+}
+
+void IterateRenderBackendNodeGraphNodeStores(
+    const array_view<RenderNodeGraphNodeStore*>& renderNodeGraphNodeStores, RenderCommandFrameData& rcfd)
 {
     for (const RenderNodeGraphNodeStore* nodeStore : renderNodeGraphNodeStores) {
         PLUGIN_ASSERT(nodeStore);
@@ -345,50 +418,23 @@ void IterateRenderBackendNodeGraphNodeStores(const array_view<RenderNodeGraphNod
             continue;
         }
 
-        unordered_map<uint32_t, uint32_t> nodeIdxToRenderCommandContextIdx;
-        const auto multiQueuePatchBeginIdx = (uint32_t)rcfd.renderCommandContexts.size();
-        uint32_t multiQueuePatchCount = 0;
-        if (multiQueueEnabled) {
-            nodeIdxToRenderCommandContextIdx.reserve(nodeStore->renderNodeContextData.size());
-        }
-
         for (size_t nodeIdx = 0; nodeIdx < nodeStore->renderNodeContextData.size(); ++nodeIdx) {
             const auto& ref = nodeStore->renderNodeContextData[nodeIdx];
             PLUGIN_ASSERT((ref.renderCommandList != nullptr) && (ref.renderBarrierList != nullptr) &&
                           (ref.nodeContextPsoMgr != nullptr) && (ref.nodeContextPoolMgr != nullptr));
             const bool valid = (ref.renderCommandList->HasValidRenderCommands());
-            if (valid) {
-                if (multiQueueEnabled) {
-                    nodeIdxToRenderCommandContextIdx[(uint32_t)nodeIdx] = (uint32_t)rcfd.renderCommandContexts.size();
-                    multiQueuePatchCount++;
-                }
-                // get final backend node index of the first render node which uses the swapchain image
-                const auto backendNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
-                if ((rcfd.firstSwapchainNodeIdx > backendNodeIdx) && (ref.submitInfo.waitForSwapchainAcquireSignal)) {
-                    rcfd.firstSwapchainNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
-                }
-                rcfd.renderCommandContexts.push_back({ ref.renderBackendNode, ref.renderCommandList.get(),
-                    ref.renderBarrierList.get(), ref.nodeContextPsoMgr.get(), ref.nodeContextDescriptorSetMgr.get(),
-                    ref.nodeContextPoolMgr.get(), (uint32_t)nodeIdx, ref.submitInfo,
-                    nodeStore->renderNodeData[nodeIdx].fullName });
+            if (!valid) {
+                continue;
             }
-        }
-
-        if (multiQueueEnabled) { // patch correct render command context indices
-            for (uint32_t idx = multiQueuePatchBeginIdx; idx < multiQueuePatchCount; ++idx) {
-                auto& ref = rcfd.renderCommandContexts[idx];
-                const auto& nodeContextRef = nodeStore->renderNodeContextData[ref.renderGraphRenderNodeIndex];
-
-                ref.submitDepencies.signalSemaphore = nodeContextRef.submitInfo.signalSemaphore;
-                ref.submitDepencies.waitSemaphoreCount = nodeContextRef.submitInfo.waitSemaphoreCount;
-                for (uint32_t waitIdx = 0; waitIdx < ref.submitDepencies.waitSemaphoreCount; ++waitIdx) {
-                    const uint32_t currRenderNodeIdx = nodeContextRef.submitInfo.waitSemaphoreNodeIndices[waitIdx];
-                    PLUGIN_ASSERT(nodeIdxToRenderCommandContextIdx.count(currRenderNodeIdx) == 1);
-
-                    ref.submitDepencies.waitSemaphoreNodeIndices[waitIdx] =
-                        nodeIdxToRenderCommandContextIdx[currRenderNodeIdx];
-                }
+            // get final backend node index of the first render node which uses the swapchain image
+            const auto backendNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
+            if ((rcfd.firstSwapchainNodeIdx > backendNodeIdx) && (ref.submitInfo.waitForSwapchainAcquireSignal)) {
+                rcfd.firstSwapchainNodeIdx = static_cast<uint32_t>(rcfd.renderCommandContexts.size());
             }
+            rcfd.renderCommandContexts.push_back(
+                { ref.renderBackendNode, ref.renderCommandList.get(), ref.renderBarrierList.get(),
+                    ref.nodeContextPsoMgr.get(), ref.nodeContextDescriptorSetMgr.get(), ref.nodeContextPoolMgr.get(),
+                    (uint32_t)nodeIdx, ref.submitInfo, nodeStore->renderNodeData[nodeIdx].fullName });
         }
     }
 }
@@ -407,41 +453,48 @@ inline int64_t GetTimeStampNow()
 }
 
 void CreateDefaultRenderNodeGraphs(const Device& device, RenderNodeGraphManager& rngMgr,
-    RenderHandleReference& defaultStaging, RenderHandleReference& defaultEndFrameStaging)
+    RenderHandleReference& defaultStaging, RenderHandleReference& defaultEndFrameStaging,
+    RenderHandleReference& defaultQueueTransfer)
 {
-    {
-        RenderNodeGraphDesc rngd;
-        {
-            RenderNodeDesc rnd;
-            rnd.typeName = "CORE_RN_STAGING";
-            rnd.nodeName = "CORE_RN_STAGING_I";
-            rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
-            rngd.nodes.push_back(move(rnd));
-        }
+    RenderNodeGraphDesc rngd;
+    RenderNodeDesc rnd;
+    rnd.typeName = "CORE_RN_QUEUE_TRANSFER";
+    rnd.nodeName = "CORE_RN_QUEUE_TRANSFER_GRAPHICS";
+    rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
+    rngd.nodes.push_back(move(rnd));
+
+    rnd.nodeName = "CORE_RN_QUEUE_TRANSFER_COMPUTE";
+    rnd.description.queue = { GpuQueue::QueueType::COMPUTE, 0u };
+    rngd.nodes.push_back(move(rnd));
+
+    defaultQueueTransfer = rngMgr.Create(
+        IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd, "CORE_RNG_QUEUE_TRANSFER");
+
+    rngd.nodes.clear();
+
+    rnd.typeName = "CORE_RN_STAGING";
+    rnd.nodeName = "CORE_RN_STAGING_I";
+    rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
+    rngd.nodes.push_back(move(rnd));
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-        if (device.GetBackendType() == DeviceBackendType::VULKAN) {
-            RenderNodeDesc rnd;
-            rnd.typeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
-            rnd.nodeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING_I";
-            rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
-            rngd.nodes.push_back(move(rnd));
-        }
+    if (device.GetBackendType() == DeviceBackendType::VULKAN) {
+        rnd.typeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
+        rnd.nodeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING_I";
+        rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
+        rngd.nodes.push_back(move(rnd));
+    }
 #endif
-        defaultStaging =
-            rngMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd);
-    }
-    {
-        RenderNodeGraphDesc rngd;
-        {
-            RenderNodeDesc rnd;
-            rnd.typeName = "CORE_RN_END_FRAME_STAGING";
-            rnd.nodeName = "CORE_RN_END_FRAME_STAGING_I";
-            rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
-            rngd.nodes.push_back(move(rnd));
-        }
-        defaultEndFrameStaging =
-            rngMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd);
-    }
+    defaultStaging = rngMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd);
+
+    rngd.nodes.clear();
+
+    rnd.typeName = "CORE_RN_END_FRAME_STAGING";
+    rnd.nodeName = "CORE_RN_END_FRAME_STAGING_I";
+    rnd.description.queue = { GpuQueue::QueueType::GRAPHICS, 0u };
+    rngd.nodes.push_back(move(rnd));
+
+    defaultEndFrameStaging =
+        rngMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngd);
 }
 } // namespace
 
@@ -487,7 +540,8 @@ Renderer::Renderer(IRenderContext& context)
     renderFrameSync_ = device_.CreateRenderFrameSync();
     rngGlobalShareDataMgr_ = make_unique<RenderNodeGraphGlobalShareDataManager>();
 
-    CreateDefaultRenderNodeGraphs(device_, renderNodeGraphMgr_, defaultStagingRng_, defaultEndFrameStagingRng_);
+    CreateDefaultRenderNodeGraphs(
+        device_, renderNodeGraphMgr_, defaultStagingRng_, defaultEndFrameStagingRng_, defaultQueueTransfer_);
 
     dsStaging_ = static_cast<IRenderDataStoreDefaultStaging*>(
         renderDataStoreMgr_.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING).get());
@@ -676,8 +730,8 @@ void Renderer::RenderFrameImpl(const array_view<const RenderHandle> renderNodeGr
         return; // possible lost device with frame fence
     }
 
-    // gpu resource allocation and deallocation
-    gpuResourceMgr_.HandlePendingAllocations(true);
+    // gpu resource allocation (no deallocation that references stay during frame)
+    gpuResourceMgr_.HandlePendingAllocations(false);
 
     device_.Deactivate();
 
@@ -730,8 +784,11 @@ void Renderer::RenderFrameBackendImpl()
     rcfd.renderFrameUtil = &(static_cast<RenderFrameUtil&>(renderContext_.GetRenderUtil().GetRenderFrameUtil()));
     rcfd.renderCommandContexts.reserve(allRenderNodeCount);
 
-    const bool multiQueueEnabled = (device_.GetGpuQueueCount() > 1u);
-    IterateRenderBackendNodeGraphNodeStores(rngNodeStores, multiQueueEnabled, rcfd);
+    if (device_.GetGpuQueueCount() < 2U) {
+        IterateRenderBackendNodeGraphNodeStores(rngNodeStores, rcfd);
+    } else {
+        IterateRenderBackendNodeGraphNodeStoresMultiQueue(rngNodeStores, rcfd);
+    }
 
     // NOTE: by node graph name
     // NOTE: deprecate this
@@ -922,9 +979,9 @@ void Renderer::ExecuteRenderNodes(const array_view<RenderNodeGraphNodeStore*> re
     // lock staging data for this frame
     // NOTE: should be done with double buffering earlier
     gpuResourceMgr_.LockFrameStagingData();
-    // final gpu resource allocation and deallocation before render node execute
+    // final gpu resource allocation before render node execute (destruction not allowed)
     device_.Activate();
-    gpuResourceMgr_.HandlePendingAllocations(true);
+    gpuResourceMgr_.HandlePendingAllocations(false);
     gpuResourceMgr_.MapRenderTimeGpuBuffers();
     device_.Deactivate();
 
@@ -1004,8 +1061,9 @@ IRenderer::RenderStatus Renderer::GetFrameStatus() const
 void Renderer::FillRngInputs(
     const array_view<const RenderHandle> renderNodeGraphInputList, vector<RenderHandle>& rngInputs)
 {
-    constexpr size_t defaultRenderNodeGraphCount = 2;
+    constexpr size_t defaultRenderNodeGraphCount = 3;
     rngInputs.reserve(renderNodeGraphInputList.size() + defaultRenderNodeGraphCount);
+    rngInputs.push_back(defaultQueueTransfer_.GetHandle());
     rngInputs.push_back(defaultStagingRng_.GetHandle());
     rngInputs.append(renderNodeGraphInputList.begin().ptr(), renderNodeGraphInputList.end().ptr());
     rngInputs.push_back(defaultEndFrameStagingRng_.GetHandle());

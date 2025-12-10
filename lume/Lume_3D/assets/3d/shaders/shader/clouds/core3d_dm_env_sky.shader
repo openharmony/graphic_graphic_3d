@@ -5,7 +5,6 @@
     },
     "vert": "3dshaders://shader/core3d_dm_env.vert.spv",
     "frag": "3dshaders://shader/clouds/core3d_dm_env_sky.frag.spv",
-    "pipelineLayout": "3dpipelinelayouts://post_clouds.shaderpl",
     "state": {
         "depthStencilState": {
             "enableDepthTest": true,

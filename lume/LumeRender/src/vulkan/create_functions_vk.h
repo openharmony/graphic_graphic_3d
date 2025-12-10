@@ -50,9 +50,9 @@ struct DeviceWrapper {
 
 struct QueueProperties {
     VkQueueFlags requiredFlags { 0 };
+    VkQueueFlags negativeFlags { 0 };
     uint32_t count { 0 };
     float priority { 1.0f };
-    bool explicitFlags { false };
     bool canPresent { false };
 };
 

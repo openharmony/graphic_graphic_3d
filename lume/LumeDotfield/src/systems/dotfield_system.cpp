@@ -294,12 +294,12 @@ void DotfieldSystem::OnComponentEvent(
                         auto& submesh = meshHandle->submeshes.emplace_back();
                         submesh.material = entity;
                         submesh.aabbMin = { -10.f, -10.f, -10.f };
-                        submesh.aabbMax = { 10.f, 10.f, 10.f };
+                        submesh.aabbMin = { 10.f, 10.f, 10.f };
                         submesh.instanceCount = prim.size.x * prim.size.y;
                         submesh.vertexCount = 1;
 
                         meshHandle->aabbMin = { -10.f, -10.f, -10.f };
-                        meshHandle->aabbMax = { 10.f, 10.f, 10.f };
+                        meshHandle->aabbMin = { 10.f, 10.f, 10.f };
                     }
 
                     renderMeshManager_->Create(entity);

@@ -40,6 +40,8 @@ public:
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Vec3, Scale)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Quat, Rotation)
 
+    BASE_NS::Math::Mat4X4 GetTransformMatrix() const override;
+
 public:
     BASE_NS::string GetName() const override;
 };

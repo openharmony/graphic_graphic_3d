@@ -46,7 +46,9 @@ struct GpuImagePlatformDataGL final : public GpuImagePlatformData {
     uint32_t renderBuffer; // For render targets... (can not be sampled or used in compute)
     uintptr_t eglImage;    // For creating image from EGLImage
     uintptr_t hwBuffer;    // For creating image from AHardwareBuffer
-    uint32_t mipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t baseMipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t maxMipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t mipCount { 1u };
 };
 
 class GpuImageGLES final : public GpuImage {

@@ -1,0 +1,303 @@
+#version 320 es
+#define SPIRV_CROSS_CONSTANT_ID_256 1u
+precision highp float;
+precision highp int;
+
+struct DefaultMaterialGeneralDataStruct
+{
+    uvec4 indices;
+    vec4 viewportSizeInvViewportSize;
+    vec4 sceneTimingData;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_256
+#define SPIRV_CROSS_CONSTANT_ID_256 0u
+#endif
+const uint CORE_BACKEND_TYPE = SPIRV_CROSS_CONSTANT_ID_256;
+uniform float CORE_FLIP_NDC ;
+
+struct DefaultCameraMatrixStruct
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 viewInv;
+    mat4 projInv;
+    mat4 viewProjInv;
+    mat4 viewPrevFrame;
+    mat4 projPrevFrame;
+    mat4 viewProjPrevFrame;
+    mat4 shadowViewProj;
+    mat4 shadowViewProjInv;
+    vec4 jitter;
+    vec4 jitterPrevFrame;
+    uvec4 indices;
+    uvec4 multiViewIndices;
+    vec4 frustumPlanes[6];
+    uvec4 counts;
+    uvec4 pad0;
+    mat4 matPad0;
+    mat4 matPad1;
+};
+
+struct DefaultMaterialEnvironmentStruct
+{
+    vec4 indirectSpecularColorFactor;
+    vec4 indirectDiffuseColorFactor;
+    vec4 envMapColorFactor;
+    vec4 values;
+    vec4 blendFactor;
+    mat4 envRotation;
+    uvec4 indices;
+    vec4 shIndirectCoefficients[9];
+    vec4 pad0;
+};
+
+struct DefaultMaterialFogStruct
+{
+    uvec4 indices;
+    vec4 firstLayer;
+    vec4 secondLayer;
+    vec4 baseFactors;
+    vec4 inscatteringColor;
+    vec4 envMapFactor;
+    vec4 additionalFactor;
+};
+
+struct DefaultMaterialSingleLightStruct
+{
+    vec4 pos;
+    vec4 dir;
+    vec4 color;
+    vec4 spotLightParams;
+    vec4 shadowFactors;
+    vec4 additionalFactor;
+    uvec4 flags;
+    uvec4 indices;
+};
+
+struct DefaultMaterialLightStruct
+{
+    uint directionalLightBeginIndex;
+    uint directionalLightCount;
+    uint pointLightBeginIndex;
+    uint pointLightCount;
+    uint spotLightBeginIndex;
+    uint spotLightCount;
+    uint pad0;
+    uint pad1;
+    uvec4 clusterSizes;
+    vec4 clusterFactors;
+    vec4 atlasSizeInvSize;
+    vec4 additionalFactors;
+    DefaultMaterialSingleLightStruct lights[64];
+};
+
+struct GlobalPostProcessStruct
+{
+    uvec4 flags;
+    vec4 renderTimings;
+    vec4 factors[14];
+    vec4 userFactors[16];
+};
+
+struct DefaultMaterialLightClusterData
+{
+    uint count;
+    uint lightIndices[15];
+};
+
+struct DefaultMaterialSingleMeshStruct
+{
+    mat4 world;
+    mat4 normalWorld;
+    mat4 prevWorld;
+    uvec4 indices;
+    uvec4 layers;
+    uvec4 customData[2];
+};
+
+struct DefaultMaterialMeshStruct
+{
+    DefaultMaterialSingleMeshStruct mesh[64];
+};
+
+struct DefaultMaterialSkinStruct
+{
+    mat4 jointMatrices[256];
+};
+
+struct DefaultMaterialSingleMaterialStruct
+{
+    vec4 factors[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialMaterialStruct
+{
+    DefaultMaterialSingleMaterialStruct material[64];
+};
+
+struct DefaultMaterialTransformSingleMaterialStruct
+{
+    uvec4 _packed[15];
+    uvec4 indices;
+};
+
+struct DefaultMaterialTransformMaterialStruct
+{
+    DefaultMaterialTransformSingleMaterialStruct material[64];
+};
+
+struct DefaultMaterialSingleUserMaterialStruct
+{
+    uvec4 userData[16];
+};
+
+struct DefaultMaterialUserMaterialStruct
+{
+    DefaultMaterialSingleUserMaterialStruct material[64];
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0u
+#endif
+const uint CORE_MATERIAL_TYPE = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 0u
+#endif
+const uint CORE_MATERIAL_FLAGS = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 0u
+#endif
+const uint CORE_LIGHTING_FLAGS = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 0u
+#endif
+const uint CORE_POST_PROCESS_FLAGS = SPIRV_CROSS_CONSTANT_ID_3;
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 0u
+#endif
+const uint CORE_CAMERA_FLAGS = SPIRV_CROSS_CONSTANT_ID_4;
+
+layout(std140) uniform s0_b1
+{
+    DefaultMaterialGeneralDataStruct uGeneralData;
+} _s0_b1;
+
+layout(location = 0) out vec4 outColor;
+
+void ElapsedTimeBlock(out float totalTimeInSeconds)
+{
+    totalTimeInSeconds = _s0_b1.uGeneralData.sceneTimingData.z;
+}
+
+void ColorVec3Block(float x, float y, float z, out vec3 outVec)
+{
+    outVec = vec3(x, y, z);
+}
+
+void MultiplyBlock(float x, float m, out float result)
+{
+    result = x * m;
+}
+
+void MultiplyBlock(vec3 x, vec3 m, out vec3 result)
+{
+    result = x * m;
+}
+
+void SinBlock(float x, out float result)
+{
+    result = sin(x);
+}
+
+void ASinBlock(float x, out float result)
+{
+    result = asin(x);
+}
+
+void DivideBlock(float x, float d, out float result)
+{
+    result = x / d;
+    if (d == 0.0)
+    {
+        result = 0.0;
+    }
+}
+
+void SubtractBlock(float x, float m, out float result)
+{
+    result = x - m;
+}
+
+void ClampBlock(float x, float minVal, float maxVal, out float out_)
+{
+    out_ = clamp(x, minVal, maxVal);
+}
+
+void OutputColorBlock(vec4 color)
+{
+    outColor = color;
+    vec4 _68 = outColor;
+    float _74 = outColor.w;
+    vec3 _80 = clamp(_68.xyz * _74, vec3(0.0), vec3(64512.0));
+    outColor.x = _80.x;
+    outColor.y = _80.y;
+    outColor.z = _80.z;
+}
+
+void main()
+{
+    float param;
+    ElapsedTimeBlock(param);
+    float v1 = param;
+    float param_1 = 18.0;
+    float param_2 = 24.0;
+    float param_3 = 36.0;
+    vec3 param_4;
+    ColorVec3Block(param_1, param_2, param_3, param_4);
+    vec3 v2 = param_4;
+    float param_5 = v1;
+    float param_6 = 3.1400001049041748046875;
+    float param_7;
+    MultiplyBlock(param_5, param_6, param_7);
+    float v3 = param_7;
+    vec3 param_8 = v2;
+    vec3 param_9 = vec3(0.3400000035762786865234375);
+    vec3 param_10;
+    MultiplyBlock(param_8, param_9, param_10);
+    vec3 v4 = param_10;
+    float param_11 = v3;
+    float param_12 = 0.3300000131130218505859375;
+    float param_13;
+    MultiplyBlock(param_11, param_12, param_13);
+    float v5 = param_13;
+    float param_14 = v5;
+    float param_15;
+    SinBlock(param_14, param_15);
+    float v6 = param_15;
+    float param_16 = v6;
+    float param_17;
+    ASinBlock(param_16, param_17);
+    float v7 = param_17;
+    float param_18 = v7;
+    float param_19 = 1.57000005245208740234375;
+    float param_20;
+    DivideBlock(param_18, param_19, param_20);
+    float v8 = param_20;
+    float param_21 = v8;
+    float param_22 = 0.300000011920928955078125;
+    float param_23;
+    SubtractBlock(param_21, param_22, param_23);
+    float v9 = param_23;
+    float param_24 = v9;
+    float param_25 = 0.0;
+    float param_26 = 1.0;
+    float param_27;
+    ClampBlock(param_24, param_25, param_26, param_27);
+    float v10 = param_27;
+    vec4 param_28 = vec4(v4.x, v4.y, v4.z, v10);
+    OutputColorBlock(param_28);
+}
+

@@ -29,45 +29,18 @@ class RenderContext : public META_NS::IntroduceInterfaces<META_NS::BaseObject, I
     META_OBJECT(RenderContext, ClassId::RenderContext, IntroduceInterfaces)
 public:
     bool Initialize(BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, META_NS::ITaskQueue::Ptr rq,
-        META_NS::ITaskQueue::Ptr aq, CORE_NS::IResourceManager::Ptr r) override
-    {
-        bool result = !rcontext;
-        if (result) {
-            rcontext = BASE_NS::move(rc);
-            renderQ = BASE_NS::move(rq);
-            appQ = BASE_NS::move(aq);
-            res = BASE_NS::move(r);
-        }
-        return result;
-    }
-    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> GetRenderer() const override
-    {
-        return rcontext;
-    }
-    META_NS::ITaskQueue::Ptr GetRenderQueue() const override
-    {
-        return renderQ;
-    }
-    META_NS::ITaskQueue::Ptr GetApplicationQueue() const override
-    {
-        return appQ;
-    }
-    CORE_NS::IResourceManager::Ptr GetResources() const override
-    {
-        return res;
-    }
+        META_NS::ITaskQueue::Ptr aq, CORE_NS::IResourceManager::Ptr r) override;
+    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> GetRenderer() const override;
+    META_NS::ITaskQueue::Ptr GetRenderQueue() const override;
+    META_NS::ITaskQueue::Ptr GetApplicationQueue() const override;
+    CORE_NS::IResourceManager::Ptr GetResources() const override;
+    Counters GetCounters() const override;
 
 protected: // IApplicationContextProvider
-    IApplicationContext::ConstPtr GetApplicationContext() const override
-    {
-        return context_.lock();
-    }
+    IApplicationContext::ConstPtr GetApplicationContext() const override;
 
 protected: // IApplicationContextSetter
-    void SetApplicationContext(const IApplicationContext::ConstPtr& context) override
-    {
-        context_ = context;
-    }
+    void SetApplicationContext(const IApplicationContext::ConstPtr& context) override;
 
 private:
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rcontext;

@@ -19,6 +19,7 @@
 #include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_scene.h>
 
+#include "JsObjectCache.h"
 #include "SceneJS.h"
 
 MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
@@ -35,8 +36,10 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
 
     scene_ = ctx.Arg<0>().valueOrDefault();
     // Add the dispose hook to scene so that the MeshResourceJS is disposed when scene is disposed.
-    if (const auto sceneJS = scene_.GetObject().GetJsWrapper<SceneJS>()) {
+    if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
         sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), ctx.This());
+    } else if (const auto renderContextJS = scene_.GetJsWrapper<RenderContextJS>()) {
+        renderContextJS->GetResources()->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), ctx.This());
     }
 
     auto resourceParams = NapiApi::Object { ctx.Arg<1>() };
@@ -61,13 +64,19 @@ void MeshResourceJS::Init(napi_env env, napi_value exports)
 
 void* MeshResourceJS::GetInstanceImpl(uint32_t id)
 {
-    return (id == MeshResourceJS::ID) ? this : SceneResourceImpl::GetInstanceImpl(id);
+    if (id == MeshResourceJS::ID) {
+        return static_cast<MeshResourceJS*>(this);
+    }
+    if (auto ret = SceneResourceImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
-SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh()
+SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh(const SCENE_NS::IScene::Ptr& scene)
 {
-    auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>();
     if (!scene || !geometryDefinition_) {
+        CORE_LOG_E("Trying to create Scene mesh without scene");
         return {};
     }
 
@@ -77,19 +86,24 @@ SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh()
     return geometryDefinition_->CreateMesh(meshCreator, meshConfig);
 }
 
-void MeshResourceJS::DisposeNative(void* scene)
+void MeshResourceJS::DisposeNative(void* /*scene*/)
 {
     if (disposed_) {
         return;
     }
     disposed_ = true;
-    if (auto node = interface_pointer_cast<SCENE_NS::IMeshResource>(GetNativeObject())) {
+    if (auto native = GetNativeObject<META_NS::IObject>()) {
+        DetachJsObj(native, "_JSW");
         UnsetNativeObject();
     }
     geometryDefinition_.reset();
 
-    if (auto* sceneJS = static_cast<SceneJS*>(scene)) {
+    if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
         sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    }
+
+    if (const auto renderContextJS = scene_.GetJsWrapper<RenderContextJS>()) {
+        renderContextJS->GetResources()->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     scene_.Reset();
@@ -97,6 +111,6 @@ void MeshResourceJS::DisposeNative(void* scene)
 
 void MeshResourceJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

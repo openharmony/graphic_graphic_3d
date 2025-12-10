@@ -59,7 +59,8 @@ class ObjectResourceOptions
     META_OBJECT(ObjectResourceOptions, ClassId::ObjectResourceOptions, IntroduceInterfaces)
 public:
     bool Load(CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) override;
-    bool Save(CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&) const override;
+    bool Save(
+        CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) const override;
 
     void SetBaseResource(CORE_NS::ResourceId id) override
     {

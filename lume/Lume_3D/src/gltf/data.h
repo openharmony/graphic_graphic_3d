@@ -85,6 +85,10 @@ struct Assets {
     // true then KHR_mesh_quantization extension required. this expands the valid attribute componentTypes.
     bool quantization { false };
 #endif
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+    // true then EXT_meshopt_compression extension required.
+    bool meshCompression { false };
+#endif
 };
 
 // Implementation of outside-world GLTF data interface.

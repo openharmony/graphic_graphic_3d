@@ -69,6 +69,7 @@ IComponentManager* IPreviousJointMatricesComponentManagerInstance(IEcs& ecs)
 
 void IPreviousJointMatricesComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<PreviousJointMatricesComponentManager*>(instance);
+    static_cast<PreviousJointMatricesComponentManager*>(instance)->~PreviousJointMatricesComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

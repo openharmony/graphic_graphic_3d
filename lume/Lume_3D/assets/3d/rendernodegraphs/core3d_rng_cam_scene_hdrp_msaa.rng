@@ -12,6 +12,10 @@
         {
             "name": "color",
             "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "camera",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
         }
     ],
     "nodes": [

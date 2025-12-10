@@ -103,6 +103,11 @@ INodeContextDescriptorSetManager& RenderNodeContextManager::GetDescriptorSetMana
     return descriptorSetMgr_;
 }
 
+const INodeContextDescriptorSetManager& RenderNodeContextManager::GetDescriptorSetManager() const
+{
+    return descriptorSetMgr_;
+}
+
 INodeContextPsoManager& RenderNodeContextManager::GetPsoManager()
 {
     return psoMgr_;

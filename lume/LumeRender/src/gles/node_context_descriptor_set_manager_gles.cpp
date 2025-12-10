@@ -222,6 +222,7 @@ void DescriptorSetManagerGles::CreateDescriptorSets(const uint32_t arrayIndex, c
     const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
 {
     PLUGIN_ASSERT((arrayIndex < descriptorSets_.size()) && (descriptorSets_[arrayIndex]));
+    PLUGIN_ASSERT(descriptorSets_[arrayIndex]);
     PLUGIN_ASSERT(descriptorSets_[arrayIndex]->data.size() == descriptorSetCount);
     if ((arrayIndex < descriptorSets_.size()) && (descriptorSets_[arrayIndex])) {
         resources_.resize(descriptorSets_.size());

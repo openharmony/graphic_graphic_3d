@@ -25,10 +25,6 @@ class IColorFringe : public IPostProcessEffect {
     META_INTERFACE(IPostProcessEffect, IColorFringe, "8b95f17a-6c31-4fc5-b63e-f0034c1ecc7e")
 public:
     /**
-     * @brief Color fringe coefficient.
-     */
-    META_PROPERTY(float, Coefficient)
-    /**
      * @brief Color fringe distance coefficient.
      */
     META_PROPERTY(float, DistanceCoefficient)

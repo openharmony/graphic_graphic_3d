@@ -203,6 +203,7 @@ bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)
             string dataFileUri = uri.substr(0, ext) + ".bin";
             auto dataFile = fileManager_.CreateFile(dataFileUri);
             if (!dataFile) {
+                return false;
             }
             dataFile->Write(buffer->data.data(), buffer->data.size());
             if (auto const path = dataFileUri.rfind('/'); path != string::npos) {

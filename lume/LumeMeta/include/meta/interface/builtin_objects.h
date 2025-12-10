@@ -119,6 +119,8 @@ META_REGISTER_CLASS(DebugOutput, "cfb42445-363f-40d2-a231-1623b8028392", ObjectC
 META_REGISTER_CLASS(JsonOutput, "dd4f3444-bc9d-436b-90c7-312793dc38f2", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(JsonInput, "0b4587d2-af0d-4c67-bd6b-0386fa2de094", ObjectCategoryBits::NO_CATEGORY)
 
+META_REGISTER_CLASS(RefUriBuilder, "df6b7b4a-5cd2-431d-8a55-d2753b9f8e1b", ObjectCategoryBits::NO_CATEGORY)
+
 META_REGISTER_CLASS(RootNode, "776bd8ab-a135-4108-bae3-233ce615b900", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(NilNode, "776bd8ab-a135-4108-bae3-233ce615b901", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ObjectNode, "776bd8ab-a135-4108-bae3-233ce615b902", ObjectCategoryBits::NO_CATEGORY)
@@ -131,6 +133,7 @@ META_REGISTER_CLASS(DoubleNode, "776bd8ab-a135-4108-bae3-233ce615b909", ObjectCa
 META_REGISTER_CLASS(StringNode, "776bd8ab-a135-4108-bae3-233ce615b90a", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(RefNode, "776bd8ab-a135-4108-bae3-233ce615b90b", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(MetaMigrateV1, "6a6cddfc-3788-4948-8d04-6acca3d120fb", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(KeepAlive, "f745f1f6-14fc-410a-9d60-969623653684", ObjectCategoryBits::NO_CATEGORY)
 
 META_REGISTER_CLASS(Bind, "27513ec5-8415-4491-b3f4-51205936cc5d", ObjectCategoryBits::NO_CATEGORY)
 
@@ -143,6 +146,8 @@ META_REGISTER_CLASS(EngineInputPropertyManager, "10a81469-07c2-4cab-b8a5-3249e41
 META_REGISTER_CLASS(FileResourceManager, "ac0475e4-7f9d-4762-8c2a-1cfcc6a9b061", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ObjectResource, "22d5ef8e-d625-4563-927f-435a460c3c90", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ObjectResourceType, "8f9a3b1c-a4a1-4c68-b386-3eb9ac3c8e66", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ObjectTemplate, "a2dc0dfc-8575-49f5-bd7f-ab82ad68b9b6", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ObjectTemplateType, "ab7477e7-5595-439b-8af5-aca9fd5d3024", ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ResourcePlaceholder, "a83cf98c-1c51-4666-bed2-a806e9a69dbb", ObjectCategoryBits::NO_CATEGORY)
 
 META_END_NAMESPACE()

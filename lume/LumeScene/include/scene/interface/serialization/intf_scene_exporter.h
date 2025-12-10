@@ -30,6 +30,7 @@ class ISceneExporter : public CORE_NS::IInterface {
 public:
     virtual META_NS::ReturnError ExportScene(CORE_NS::IFile&, const IScene::ConstPtr&) = 0;
     virtual META_NS::ReturnError ExportNode(CORE_NS::IFile&, const INode::ConstPtr&) = 0;
+    virtual META_NS::IObject::Ptr ExportNode(const INode::ConstPtr&) = 0;
 };
 
 META_REGISTER_CLASS(SceneExporter, "07ec649c-4c24-45a7-bb2d-131d40e40c42", META_NS::ObjectCategoryBits::NO_CATEGORY)

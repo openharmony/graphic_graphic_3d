@@ -41,8 +41,9 @@ public:
      */
     META_PROPERTY(BASE_NS::Math::Quat, Rotation)
     /**
-     * @brief Enable node in 3D scene.
+     * @brief Returns the transform matrix.
      */
+    virtual BASE_NS::Math::Mat4X4 GetTransformMatrix() const = 0;
 };
 
 SCENE_END_NAMESPACE()

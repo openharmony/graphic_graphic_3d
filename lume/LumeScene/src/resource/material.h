@@ -23,22 +23,21 @@
 #include <scene/interface/resource/types.h>
 
 #include <meta/api/property/property_event_handler.h>
-#include <meta/api/resource/derived_from_resource.h>
+#include <meta/api/resource/derived_from_template.h>
+#include <meta/api/resource/resource_template_access.h>
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "component/material_component.h"
+#include "../component/material_component.h"
 #include "render_resource.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class Material : public META_NS::IntroduceInterfaces<META_NS::DerivedFromResource, NamedSceneObject, IMaterial,
-                     ICreateEntity, META_NS::Resource> {
+class Material : public META_NS::IntroduceInterfaces<META_NS::DerivedFromTemplate, NamedSceneObject, IMaterial,
+                     IRenderSort, ICreateEntity, META_NS::Resource> {
     META_OBJECT(Material, ClassId::Material, IntroduceInterfaces)
 
 public:
-    Material() : Super(ClassId::MaterialResourceTemplate) {}
-
     bool SetEcsObject(const IEcsObject::Ptr&) override;
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 
@@ -48,6 +47,10 @@ public:
     META_STATIC_FORWARDED_PROPERTY_DATA(IMaterial, float, AlphaCutoff)
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IMaterial, IShader::Ptr, MaterialShader, "MaterialComponent.materialShader")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IMaterial, IShader::Ptr, DepthShader, "MaterialComponent.depthShader")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(
+        IRenderSort, uint8_t, RenderSortLayer, "MaterialComponent.renderSort.renderSortLayer")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(
+        IRenderSort, uint8_t, RenderSortLayerOrder, "MaterialComponent.renderSort.renderSortLayerOrder")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IMaterial, SCENE_NS::RenderSort, RenderSort, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IMaterial, SCENE_NS::LightingFlags, LightingFlags, "")
     SCENE_STATIC_DYNINIT_ARRAY_PROPERTY_DATA(IMaterial, ITexture::Ptr, Textures, "")
@@ -58,6 +61,8 @@ public:
     META_FORWARD_PROPERTY(float, AlphaCutoff, material_->AlphaCutoff())
     META_IMPLEMENT_PROPERTY(IShader::Ptr, MaterialShader)
     META_IMPLEMENT_PROPERTY(IShader::Ptr, DepthShader)
+    META_IMPLEMENT_PROPERTY(uint8_t, RenderSortLayer)
+    META_IMPLEMENT_PROPERTY(uint8_t, RenderSortLayerOrder)
     META_IMPLEMENT_PROPERTY(SCENE_NS::RenderSort, RenderSort)
     META_IMPLEMENT_PROPERTY(SCENE_NS::LightingFlags, LightingFlags)
     META_IMPLEMENT_READONLY_ARRAY_PROPERTY(ITexture::Ptr, Textures)
@@ -72,12 +77,12 @@ public:
     {
         return ClassId::MaterialResource.Id().ToUid();
     }
-
-    bool SetResource(const CORE_NS::IResource::Ptr& p) override;
-    CORE_NS::IResource::Ptr CreateResource() const override;
+    META_NS::ObjectId GetDefaultAccess() const override
+    {
+        return ClassId::MaterialTemplateAccess;
+    }
 
 private:
-    Future<bool> UpdateTextures(const META_NS::IProperty::Ptr& p);
     bool ConstructTextures(const META_NS::IProperty::Ptr& p);
     bool UpdateTextureNames(
         const BASE_NS::vector<ITexture::Ptr>& textures, const IInternalMaterial::ActiveTextureSlotInfo& tsi);
@@ -87,16 +92,28 @@ private:
      * @return True if succeeded, false otherwise.
      */
     bool SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>* synced_values) const;
-    void CopyTextureData(const META_NS::IProperty::ConstPtr& p);
-
-    Future<bool> UpdateCustoms(const META_NS::IProperty::Ptr& p);
     bool UpdateCustomProperties(const META_NS::IProperty::Ptr&);
+
+    void InitTextures(const META_NS::IProperty::Ptr& p);
+    void InitCustoms(const META_NS::IProperty::Ptr& p);
+    void UpdateMetadata();
 
 private:
     IInternalMaterial::Ptr material_;
-    std::atomic<bool> textureSyncScheduled_ {};
-    std::atomic<bool> customsSyncScheduled_ {};
+    std::atomic<bool> metadataUpdateScheduled_ {};
     META_NS::PropertyChangedEventHandler shaderChanged_;
+};
+
+class MaterialTemplateAccess
+    : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
+    META_OBJECT(MaterialTemplateAccess, ClassId::MaterialTemplateAccess, IntroduceInterfaces)
+public:
+    MaterialTemplateAccess() : Super(ClassId::Material, ClassId::MaterialResourceTemplate) {}
+
+    CORE_NS::IResource::Ptr CreateEmptyTemplate() const override;
+    CORE_NS::IResource::Ptr CreateTemplateFromResource(const CORE_NS::IResource::ConstPtr& resource) const override;
+    bool SetValuesFromTemplate(
+        const CORE_NS::IResource::ConstPtr& templ, const CORE_NS::IResource::Ptr& resource) const override;
 };
 
 SCENE_END_NAMESPACE()

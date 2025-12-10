@@ -96,7 +96,7 @@ void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* thre
         BASE_NS::vector<IThreadPool::IResult::Ptr> mergeResults;
         BASE_NS::vector<std::pair<RandomIt, RandomIt>> newPartitions;
 
-        for (size_t ii = 0; ii + 1 < partitions.size(); ii += 2) { // 2: step
+        for (size_t ii = 0U; ii + 1U < partitions.size(); ii += 2U) {
             const auto begin1 = partitions[ii].first;
             const auto end1 = partitions[ii].second;
             const auto begin2 = partitions[ii + 1].first;
@@ -110,7 +110,7 @@ void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* thre
             newPartitions.push_back({ begin1, end2 });
         }
 
-        if (partitions.size() % 2 == 1) { // 2: step
+        if (partitions.size() % 2U == 1U) {
             newPartitions.push_back(partitions.back());
         }
 

@@ -70,6 +70,7 @@ IComponentManager* ISkinJointsComponentManagerInstance(IEcs& ecs)
 
 void ISkinJointsComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<SkinJointsComponentManager*>(instance);
+    static_cast<SkinJointsComponentManager*>(instance)->~SkinJointsComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

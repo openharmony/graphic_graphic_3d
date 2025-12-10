@@ -66,6 +66,7 @@ IComponentManager* ILayerComponentManagerInstance(IEcs& ecs)
 
 void ILayerComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<LayerComponentManager*>(instance);
+    static_cast<LayerComponentManager*>(instance)->~LayerComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

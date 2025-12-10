@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,10 +17,10 @@
 
 #include <algorithm>
 
+#include <core/log.h>
+
 #include "face_data.h"
 #include "font_manager.h"
-
-#include <core/log.h>
 
 FONT_BEGIN_NAMESPACE()
 FontBuffer::FontBuffer(FontManager* fontMgr, const uint64_t hash, BASE_NS::array_view<const uint8_t> bytes)
@@ -60,7 +60,7 @@ std::shared_ptr<FaceData> FontBuffer::CreateFace(long index)
     auto face = std::make_shared<FaceData>(shared_from_this(), ftFace);
 
     faces_.push_back(face);
-    CORE_LOG_N("create FaceData");
+    CORE_LOG_N("create FaceData %p", this);
     return face;
 }
 

@@ -55,14 +55,20 @@ public:
  * @brief Internal handle for core engine property
  */
 struct EnginePropertyHandle {
+    // If manager is set, then the property handle is returned via given entity from the manager
     CORE_NS::IComponentManager* manager {};
     CORE_NS::Entity entity;
     // in case the property path contains IPropertyHandle*, we need to keep pointer to the most
     // recent value having such handle, so that we are able to update the handle properly
     IValue::Ptr parentValue;
+    // Optional direct property handle
+    CORE_NS::IPropertyHandle* handle {};
 
     CORE_NS::IPropertyHandle* Handle() const
     {
+        if (handle) {
+            return handle;
+        }
         if (parentValue) {
             return GetValue<CORE_NS::IPropertyHandle*>(parentValue->GetValue());
         }
@@ -71,7 +77,7 @@ struct EnginePropertyHandle {
 
     explicit operator bool() const
     {
-        return (manager && CORE_NS::EntityUtil::IsValid(entity)) || parentValue;
+        return handle || (manager && CORE_NS::EntityUtil::IsValid(entity)) || parentValue;
     }
 };
 

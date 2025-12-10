@@ -21,6 +21,7 @@
 #include <deque>
 #include <thread>
 
+// need notice
 #include <base/containers/array_view.h>
 #include <base/containers/atomics.h>
 #include <base/containers/iterator.h>
@@ -49,6 +50,8 @@ using BASE_NS::unique_ptr;
 using BASE_NS::Math::max;
 
 namespace {
+constexpr uint32_t RES_TYPE_EXT_ENGINE_SET_QOS = 10028;
+
 #ifdef PLATFORM_HAS_JAVA
 /** RAII class for handling thread setup/release. */
 class JavaThreadContext final {
@@ -189,9 +192,8 @@ public:
                 {
                     std::lock_guard lock(mutex_);
                     for (const ITask* dep : dependencies) {
-                        if (auto pos = std::find_if(
-                                q_.cbegin(), q_.cend(),
-                                [dep](const BASE_NS::shared_ptr<Task> &task) { return task && (*task == dep); });
+                        if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                                [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                             pos != q_.cend()) {
                             deps.push_back(*pos);
                         }
@@ -228,9 +230,8 @@ public:
             {
                 std::lock_guard lock(mutex_);
                 for (const ITask* dep : dependencies) {
-                    if (auto pos = std::find_if(
-                            q_.cbegin(), q_.cend(),
-                            [dep](const BASE_NS::shared_ptr<Task> &task) { return task && (*task == dep); });
+                    if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                            [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                         pos != q_.cend()) {
                         deps.push_back(*pos);
                     }
@@ -405,6 +406,8 @@ private:
         JavaThreadContext javaContext;
 #endif
 
+// need notice
+
         while (true) {
             // Function to process.
             BASE_NS::shared_ptr<Task> task;
@@ -419,6 +422,7 @@ private:
             }
             // If there was no task it means we are stopping and thread can exit.
             if (!task) {
+            // need notice
                 return;
             }
 
@@ -432,18 +436,16 @@ private:
                 std::lock_guard lock(mutex_);
                 // After running the task remove it from the queue. Any dependent tasks will see their weak_ptr expire
                 // idicating that the dependency has been completed.
-                if (auto pos = std::find_if(
-                        q_.cbegin(), q_.cend(),
-                        [&task](const BASE_NS::shared_ptr<Task> &queuedTask) { return queuedTask == task; });
+                if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                        [&task](const BASE_NS::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
                     pos != q_.cend()) {
                     q_.erase(pos);
                 }
                 task.reset();
 
                 // Get next function.
-                if (auto pos =
-                        std::find_if(std::begin(q_), std::end(q_),
-                                     [](const BASE_NS::shared_ptr<Task> &task) { return (task) && (task->CanRun()); });
+                if (auto pos = std::find_if(std::begin(q_), std::end(q_),
+                        [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
                     pos != std::end(q_)) {
                     task = *pos;
                     task->running_ = true;

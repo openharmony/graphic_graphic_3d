@@ -21,6 +21,7 @@
 #include <core/plugin/intf_class_factory.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -35,13 +36,13 @@
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/property/property_types.h>
+#include <render/render_data_structures.h>
 
 #include "datastore/render_data_store_pod.h"
 #include "datastore/render_data_store_post_process.h"
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "postprocesses/render_post_process_blur.h"
-#include "render_post_process_dof.h"
+#include "render_post_process_blur_node.h"
 #include "util/log.h"
 
 // shaders
@@ -52,6 +53,14 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
+DATA_TYPE_METADATA(RENDER_NS::DofConfiguration, MEMBER_PROPERTY(focusPoint, "Focust Point", 0),
+    MEMBER_PROPERTY(focusRange, "Focus Range", 0), MEMBER_PROPERTY(nearTransitionRange, "Near Transition Range", 0),
+    MEMBER_PROPERTY(farTransitionRange, "Far Transition Range", 0), MEMBER_PROPERTY(nearBlur, "Near Blur", 0),
+    MEMBER_PROPERTY(farBlur, "Far Blur", 0), MEMBER_PROPERTY(nearPlane, "Near Plane", 0),
+    MEMBER_PROPERTY(farPlane, "Far Plane", 0))
+
+DATA_TYPE_METADATA(RenderPostProcessDofNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(dofConfiguration, "DOF Configuration", 0))
 DATA_TYPE_METADATA(
     RenderPostProcessDofNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0), MEMBER_PROPERTY(depth, "depth", 0))
 DATA_TYPE_METADATA(RenderPostProcessDofNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
@@ -85,14 +94,25 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
         gpuResourceMgr.UnmapBuffer(handle);
     }
 }
+void FillTmpImageDesc(GpuImageDesc& desc)
+{
+    desc.imageType = CORE_IMAGE_TYPE_2D;
+    desc.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
+    desc.engineCreationFlags = EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
+                               EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
+    desc.usageFlags =
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT;
+    // don't want this multisampled even if the final output would be.
+    desc.sampleCountFlags = SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT;
+    desc.layerCount = 1U;
+    desc.mipCount = 1U;
+}
 } // namespace
 
 RenderPostProcessDofNode::RenderPostProcessDofNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessDofNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessDofNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessDofNode::GetRenderInputProperties()
@@ -120,27 +140,19 @@ IRenderNode::ExecuteFlags RenderPostProcessDofNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessDofNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessDofNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
+    psos_ = {};
 
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
-        auto CreatePostProcessInterface = [&](const auto uid, auto& pp, auto& ppNode) {
-            if (pp = CreateInstance<IRenderPostProcess>(*renderClassFactory, uid); pp) {
-                ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, pp->GetRenderPostProcessNodeUid());
-            }
+        auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
+            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
-        CreatePostProcessInterface(
-            RenderPostProcessBlur::UID, ppRenderBlurInterface_.postProcess, ppRenderBlurInterface_.postProcessNode);
-
-        CreatePostProcessInterface(RenderPostProcessBlur::UID, ppRenderNearBlurInterface_.postProcess,
-            ppRenderNearBlurInterface_.postProcessNode);
-        CreatePostProcessInterface(RenderPostProcessBlur::UID, ppRenderFarBlurInterface_.postProcess,
-            ppRenderFarBlurInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessBlurNode::UID, ppRenderNearBlurInterface_.postProcessNode);
+        CreatePostProcessInterface(RenderPostProcessBlurNode::UID, ppRenderFarBlurInterface_.postProcessNode);
     }
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -155,40 +167,40 @@ void RenderPostProcessDofNode::Init(
     dofBlurShaderData_ = shaderMgr.GetShaderDataByShaderName(DOF_BLUR_SHADER_NAME);
 
     const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
-    RENDER_NS::DescriptorCounts blurDescriptorCounts =
-        renderNodeUtil.GetDescriptorCounts(dofBlurShaderData_.pipelineLayoutData);
-    descriptorCounts_ = renderNodeUtil.GetDescriptorCounts(dofShaderData_.pipelineLayoutData);
-    descriptorCounts_.counts.insert(
-        descriptorCounts_.counts.end(), blurDescriptorCounts.counts.begin(), blurDescriptorCounts.counts.end());
-    descriptorCounts_.counts.insert(descriptorCounts_.counts.end(),
-        ppRenderNearBlurInterface_.postProcessNode->GetRenderDescriptorCounts().counts.begin(),
-        ppRenderNearBlurInterface_.postProcessNode->GetRenderDescriptorCounts().counts.end());
-    descriptorCounts_.counts.insert(descriptorCounts_.counts.end(),
-        ppRenderFarBlurInterface_.postProcessNode->GetRenderDescriptorCounts().counts.begin(),
-        ppRenderFarBlurInterface_.postProcessNode->GetRenderDescriptorCounts().counts.end());
+    auto dofDescriptorCounts = renderNodeUtil.GetDescriptorCounts(dofShaderData_.pipelineLayoutData);
+    auto dofBlurDescriptorCounts = renderNodeUtil.GetDescriptorCounts(dofBlurShaderData_.pipelineLayoutData);
+    if (!ppRenderNearBlurInterface_.postProcessNode || !ppRenderFarBlurInterface_.postProcessNode) {
+        return;
+    }
+    auto nearBlurDescriptorCounts = ppRenderNearBlurInterface_.postProcessNode->GetRenderDescriptorCounts();
+    auto farBlurDescriptorCounts = ppRenderFarBlurInterface_.postProcessNode->GetRenderDescriptorCounts();
+    descriptorCounts_.counts.clear();
+    descriptorCounts_.counts.reserve(dofDescriptorCounts.counts.size() + dofBlurDescriptorCounts.counts.size() +
+                                     nearBlurDescriptorCounts.counts.size() + farBlurDescriptorCounts.counts.size());
+    descriptorCounts_.counts.append(dofDescriptorCounts.counts.cbegin(), dofDescriptorCounts.counts.cend());
+    descriptorCounts_.counts.append(dofBlurDescriptorCounts.counts.cbegin(), dofBlurDescriptorCounts.counts.cend());
+    descriptorCounts_.counts.append(nearBlurDescriptorCounts.counts.cbegin(), nearBlurDescriptorCounts.counts.cend());
+    descriptorCounts_.counts.append(farBlurDescriptorCounts.counts.cbegin(), farBlurDescriptorCounts.counts.cend());
 
-    if (ppRenderNearBlurInterface_.postProcessNode) {
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderNearBlurInterface_.postProcess);
-        pp.propertiesData.blurShaderType =
-            RenderPostProcessBlurNode::BlurShaderType::BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT;
-        ppRenderNearBlurInterface_.postProcessNode->Init(
-            ppRenderNearBlurInterface_.postProcess, *renderNodeContextMgr_);
-    }
-    if (ppRenderFarBlurInterface_.postProcessNode) {
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderFarBlurInterface_.postProcess);
-        pp.propertiesData.blurShaderType =
-            RenderPostProcessBlurNode::BlurShaderType::BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT;
-        ppRenderFarBlurInterface_.postProcessNode->Init(ppRenderFarBlurInterface_.postProcess, *renderNodeContextMgr_);
-    }
+    auto& ppNear = static_cast<RenderPostProcessBlurNode&>(*ppRenderNearBlurInterface_.postProcessNode);
+    ppNear.propertiesData.blurShaderType =
+        RenderPostProcessBlurNode::BlurShaderType::BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT;
+    ppRenderNearBlurInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
+
+    auto& ppFar = static_cast<RenderPostProcessBlurNode&>(*ppRenderFarBlurInterface_.postProcessNode);
+    ppFar.propertiesData.blurShaderType = RenderPostProcessBlurNode::BlurShaderType::BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT;
+    ppRenderFarBlurInterface_.postProcessNode->InitNode(*renderNodeContextMgr_);
+
+    binders_.dofBinder.reset();
+    binders_.dofBlurBinder.reset();
 
     valid_ = true;
 }
 
-void RenderPostProcessDofNode::PreExecute()
+void RenderPostProcessDofNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_ &&
-        (ppRenderNearBlurInterface_.postProcessNode && ppRenderFarBlurInterface_.postProcessNode)) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_ && (ppRenderNearBlurInterface_.postProcessNode && ppRenderFarBlurInterface_.postProcessNode)) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessDofNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessDofNode::EffectProperties)) {
@@ -198,25 +210,52 @@ void RenderPostProcessDofNode::PreExecute()
         effectProperties_.enabled = false;
     }
 
-    if (ppRenderNearBlurInterface_.postProcessNode && ppRenderNearBlurInterface_.postProcess) {
-        // copy properties to new property post process
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderNearBlurInterface_.postProcess);
-        pp.propertiesData.enabled = true;
-
-        RenderPostProcessBlurNode& ppNode =
-            static_cast<RenderPostProcessBlurNode&>(*ppRenderNearBlurInterface_.postProcessNode);
-        ppNode.nodeInputsData.input = effectProperties_.nearMip;
-        ppNode.PreExecute();
+    const auto nearMips = static_cast<uint32_t>(Math::ceilToInt(effectProperties_.dofConfiguration.nearBlur));
+    const auto farMips = static_cast<uint32_t>(Math::ceilToInt(effectProperties_.dofConfiguration.farBlur));
+    const bool mipCountChanged = (nearMips != ti_.mipCount[0U]) || (farMips != ti_.mipCount[1U]);
+    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    const GpuImageDesc outputDesc = gpuResourceMgr.GetImageDescriptor(nodeOutputsData.output.handle);
+    const bool sizeChanged = (ti_.targetSize.x != outputDesc.width) || (ti_.targetSize.y != outputDesc.height);
+    if (sizeChanged) {
+        ti_.targetSize.x = Math::max(1U, outputDesc.width);
+        ti_.targetSize.y = Math::max(1U, outputDesc.height);
     }
-    if (ppRenderFarBlurInterface_.postProcessNode && ppRenderFarBlurInterface_.postProcess) {
-        // copy properties to new property post process
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderFarBlurInterface_.postProcess);
-        pp.propertiesData.enabled = true;
+    if ((!ti_.mipImages[0U]) || mipCountChanged || sizeChanged) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary mip image re-created (size:%ux%u)", outputDesc.width,
+            outputDesc.height);
+#endif
+        GpuImageDesc tmpDesc = outputDesc;
+        FillTmpImageDesc(tmpDesc);
+        tmpDesc.mipCount = nearMips;
+        ti_.mipCount[0U] = nearMips;
+        ti_.mipImages[0U] = gpuResourceMgr.Create(ti_.mipImages[0U], tmpDesc);
+        tmpDesc.mipCount = farMips;
+        ti_.mipCount[1U] = farMips;
+        ti_.mipImages[1U] = gpuResourceMgr.Create(ti_.mipImages[1U], tmpDesc);
+        ti_.mipImageCount = 2U;
+    }
 
-        RenderPostProcessBlurNode& ppNode =
-            static_cast<RenderPostProcessBlurNode&>(*ppRenderFarBlurInterface_.postProcessNode);
-        ppNode.nodeInputsData.input = effectProperties_.farMip;
-        ppNode.PreExecute();
+    if (ppRenderNearBlurInterface_.postProcessNode) {
+        // copy properties to new property post process
+        auto& ppNode = static_cast<RenderPostProcessBlurNode&>(*ppRenderNearBlurInterface_.postProcessNode);
+        ppNode.propertiesData.enabled = true;
+        ppNode.propertiesData.blurConfiguration.maxMipLevel =
+            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.nearBlur));
+
+        ppNode.nodeInputsData.input.handle = ti_.mipImages[0U].GetHandle();
+        ppNode.PreExecuteFrame();
+    }
+
+    if (ppRenderFarBlurInterface_.postProcessNode) {
+        // copy properties to new property post process
+        auto& ppNode = static_cast<RenderPostProcessBlurNode&>(*ppRenderFarBlurInterface_.postProcessNode);
+        ppNode.propertiesData.enabled = true;
+        ppNode.propertiesData.blurConfiguration.maxMipLevel =
+            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.farBlur));
+
+        ppNode.nodeInputsData.input.handle = ti_.mipImages[1U].GetHandle();
+        ppNode.PreExecuteFrame();
     }
 }
 
@@ -252,18 +291,25 @@ BASE_NS::Math::Vec4 RenderPostProcessDofNode::GetFactorDof() const
 
 BASE_NS::Math::Vec4 RenderPostProcessDofNode::GetFactorDof2() const
 {
-    return { effectProperties_.dofConfiguration.nearBlur, effectProperties_.dofConfiguration.farBlur,
+    return { effectProperties_.dofConfiguration.nearBlur - 1, effectProperties_.dofConfiguration.farBlur - 1,
         effectProperties_.dofConfiguration.nearPlane, effectProperties_.dofConfiguration.farPlane };
 }
 
-void RenderPostProcessDofNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessDofNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderDoF", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
     CheckDescriptorSetNeed();
 
     // NOTE: updates set 0 for dof
     ExecuteDofBlur(cmdList);
+
+    if (ppRenderNearBlurInterface_.postProcessNode) {
+        ppRenderNearBlurInterface_.postProcessNode->ExecuteFrame(cmdList);
+    }
+    if (ppRenderFarBlurInterface_.postProcessNode) {
+        ppRenderFarBlurInterface_.postProcessNode->ExecuteFrame(cmdList);
+    }
+
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderDoF", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
     auto renderPass = CreateRenderPass(nodeOutputsData.output.handle);
     if (!RenderHandleUtil::IsValid(psos_.dofPso)) {
@@ -284,8 +330,8 @@ void RenderPostProcessDofNode::Execute(IRenderCommandList& cmdList)
         BindableImage input = nodeInputsData.input;
         input.samplerHandle = samplers_.mipLinear;
         binder.BindImage(binding, input);
-        binder.BindImage(++binding, effectProperties_.mipImages[0U].GetHandle(), samplers_.mipLinear);
-        binder.BindImage(++binding, effectProperties_.mipImages[1U].GetHandle(), samplers_.mipLinear);
+        binder.BindImage(++binding, ti_.mipImages[0U].GetHandle(), samplers_.mipLinear);
+        binder.BindImage(++binding, ti_.mipImages[1U].GetHandle(), samplers_.mipLinear);
         BindableImage depth = nodeInputsData.depth;
         depth.samplerHandle = samplers_.nearest;
         binder.BindImage(++binding, depth);
@@ -312,15 +358,17 @@ void RenderPostProcessDofNode::Execute(IRenderCommandList& cmdList)
 
 void RenderPostProcessDofNode::ExecuteDofBlur(IRenderCommandList& cmdList)
 {
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderDoFSplit", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
     RenderPass rp;
     {
-        const GpuImageDesc desc = renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(
-            effectProperties_.mipImages[0U].GetHandle());
+        const GpuImageDesc desc =
+            renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(ti_.mipImages[0U].GetHandle());
         rp.renderPassDesc.attachmentCount = 2u;
-        rp.renderPassDesc.attachmentHandles[0u] = effectProperties_.mipImages[0U].GetHandle();
+        rp.renderPassDesc.attachmentHandles[0u] = ti_.mipImages[0U].GetHandle();
         rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
         rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-        rp.renderPassDesc.attachmentHandles[1u] = effectProperties_.mipImages[1U].GetHandle();
+        rp.renderPassDesc.attachmentHandles[1u] = ti_.mipImages[1U].GetHandle();
         rp.renderPassDesc.attachments[1u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
         rp.renderPassDesc.attachments[1u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
@@ -375,18 +423,6 @@ void RenderPostProcessDofNode::ExecuteDofBlur(IRenderCommandList& cmdList)
 
     cmdList.Draw(3u, 1u, 0u, 0u);
     cmdList.EndRenderPass();
-    if (ppRenderNearBlurInterface_.postProcessNode && ppRenderNearBlurInterface_.postProcess) {
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderNearBlurInterface_.postProcess);
-        pp.propertiesData.blurConfiguration.maxMipLevel =
-            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.nearBlur));
-        ppRenderNearBlurInterface_.postProcessNode->Execute(cmdList);
-    }
-    if (ppRenderFarBlurInterface_.postProcessNode && ppRenderFarBlurInterface_.postProcess) {
-        RenderPostProcessBlur& pp = static_cast<RenderPostProcessBlur&>(*ppRenderFarBlurInterface_.postProcess);
-        pp.propertiesData.blurConfiguration.maxMipLevel =
-            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.farBlur));
-        ppRenderFarBlurInterface_.postProcessNode->Execute(cmdList);
-    }
 }
 
 void RenderPostProcessDofNode::CheckDescriptorSetNeed()

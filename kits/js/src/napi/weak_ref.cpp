@@ -14,6 +14,7 @@
  */
 
 #include "weak_ref.h"
+#include "JsObjectCache.h"
 
 namespace NapiApi {
 
@@ -49,6 +50,7 @@ WeakRef::WeakRef(napi_env env, napi_value obj)
 NapiApi::WeakRef& WeakRef::operator=(const NapiApi::WeakRef& ref)
 {
     if (&ref != this) {
+        Reset();
         if (!ref.IsEmpty()) {
             napi_status stat;
             // unh just create a new one..
@@ -61,10 +63,13 @@ NapiApi::WeakRef& WeakRef::operator=(const NapiApi::WeakRef& ref)
 
 NapiApi::WeakRef& WeakRef::operator=(NapiApi::WeakRef&& ref) noexcept
 {
-    env_ = ref.env_;
-    ref_ = ref.ref_;
-    ref.env_ = nullptr;
-    ref.ref_ = nullptr;
+    if (&ref != this) {
+        Reset();
+        env_ = ref.env_;
+        ref_ = ref.ref_;
+        ref.env_ = nullptr;
+        ref.ref_ = nullptr;
+    }
     return *this;
 }
 
@@ -76,6 +81,10 @@ WeakRef::~WeakRef()
 void WeakRef::Reset()
 {
     if (env_ && ref_) {
+#ifdef __OHOS_PLATFORM__
+        uint32_t result{};
+        napi_reference_ref(env_, ref_, &result);
+#endif
         napi_delete_reference(env_, ref_);
     }
     env_ = nullptr;
@@ -114,6 +123,14 @@ NapiApi::Object WeakRef::GetObject() const
         return NapiApi::Object(env_, value);
     }
     return {};
+}
+
+NapiApi::Object WeakObjectRef::GetNapiObject(BASE_NS::string_view name) const
+{
+    if (auto obj = GetObject<META_NS::IObject>()) {
+        return FetchJsObj(obj, name);
+    }
+    return napiObject_.GetObject();
 }
 
 } // namespace NapiApi

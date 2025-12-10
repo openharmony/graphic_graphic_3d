@@ -70,6 +70,7 @@ private:
     RENDER_NS::RenderNodeGraphDesc rngdDeferred_;
 
     RENDER_NS::RenderNodeGraphDesc rngdPostProcess_;
+    RENDER_NS::RenderNodeGraphDesc rngdPostProcessEffects_;
 };
 CORE3D_END_NAMESPACE()
 

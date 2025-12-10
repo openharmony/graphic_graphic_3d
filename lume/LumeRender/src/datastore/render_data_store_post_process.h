@@ -147,8 +147,15 @@ public:
 
     static inline BASE_NS::Math::Vec4 GetFactorFringe(const PostProcessConfiguration& input)
     {
-        return { input.colorFringeConfiguration.coefficient, input.colorFringeConfiguration.distanceCoefficient, 0.0f,
-            0.0f };
+        // coefficient is deprecated and not exposed as a property. to be compatible with old behavior multiply
+        // coefficient with distanceCoefficient as x and set y to 1. this way old shader instances can still do x * y.
+        return { input.colorFringeConfiguration.coefficient * input.colorFringeConfiguration.distanceCoefficient, 1.0f,
+            0.0f, 0.0f };
+    }
+
+    static inline BASE_NS::Math::Vec4 GetFactorUpscaler(const PostProcessConfiguration& input)
+    {
+        return { 0.0f, 0.0f, 0.0f, static_cast<float>(input.upscaleConfiguration.ratio) };
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorBlur(const PostProcessConfiguration& input)

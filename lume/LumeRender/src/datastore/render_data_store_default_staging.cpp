@@ -199,7 +199,7 @@ void RenderDataStoreDefaultStaging::CopyDataToImage(const array_view<const uint8
         // create staging buffer
         const GpuBufferDesc stagingBufferDesc =
             GpuResourceManager::GetStagingBufferDesc(static_cast<uint32_t>(dat.size_bytes()));
-        const RenderHandleReference& stagingBufferHandle = gpuResourceMgr_.Create(stagingBufferDesc);
+        const RenderHandleReference stagingBufferHandle = gpuResourceMgr_.Create(stagingBufferDesc);
 
         std::lock_guard<std::mutex> lock(mutex_);
 

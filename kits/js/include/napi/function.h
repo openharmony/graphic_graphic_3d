@@ -31,12 +31,15 @@ class Object;
 // The args that will be passed to JavaScript functions (including constructors).
 struct JsFuncArgs {
     JsFuncArgs() : argc(0), argv(nullptr) {}
+    JsFuncArgs(napi_value single) : argc(1), argv(&singleStorage), singleStorage(single) {}
+    JsFuncArgs(size_t argc, napi_value* argv) : argc(argc), argv(argv) {}
     template<size_t N>
     JsFuncArgs(napi_value (&argv)[N]) : argc(N), argv(argv)
     {}
 
-    uint32_t argc;
+    size_t argc;
     napi_value* argv;
+    napi_value singleStorage { nullptr };
 };
 
 class Function {
@@ -48,7 +51,7 @@ public:
     NapiApi::Env Env() const;
     napi_env GetEnv() const;
 
-    napi_value Invoke(const NapiApi::Object& thisJS, size_t argc = 0, napi_value* argv = nullptr) const;
+    napi_value Invoke(const NapiApi::Object& thisJS, const JsFuncArgs& args = {}) const;
 
     bool IsDefined();
     bool IsNull();

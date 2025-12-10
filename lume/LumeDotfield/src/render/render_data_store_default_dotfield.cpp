@@ -90,10 +90,10 @@ array_view<RenderDataDefaultDotfield::DotfieldPrimitive> RenderDataStoreDefaultD
     return { primitives_.data(), primitives_.size() };
 }
 
-array_view<const RenderDataDefaultDotfield::DotfieldPrimitive> RenderDataStoreDefaultDotfield::GetDotfieldPrimitives()
-    const
+array_view<const RenderDataDefaultDotfield::DotfieldPrimitive>
+RenderDataStoreDefaultDotfield::GetDotfieldPrimitives() const
 {
-    return {primitives_.data(), primitives_.size()};
+    return { primitives_.data(), primitives_.size() };
 }
 
 void RenderDataStoreDefaultDotfield::RemoveDotfieldPrimitive(const Entity& entity)

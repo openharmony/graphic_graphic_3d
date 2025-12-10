@@ -68,16 +68,16 @@ protected:
         // Called by final on JS thread.
         Release();
     }
-    napi_threadsafe_function termfun { nullptr };
+    napi_threadsafe_function termfun {nullptr};
 };
 
-class AnimationJS : public BaseObject, public SceneResourceImpl {
+class AnimationJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 70;
     static void Init(napi_env env, napi_value exports);
     AnimationJS(napi_env, napi_callback_info);
     ~AnimationJS() override;
-    virtual void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t id) override;
 
 private:
     napi_value GetSpeed(NapiApi::FunctionContext<>& ctx);
@@ -102,17 +102,18 @@ private:
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
 
-    META_NS::IEvent::Token OnFinishedToken_ { 0 };
-    META_NS::IEvent::Token OnStartedToken_ { 0 };
+    META_NS::IEvent::Token OnFinishedToken_ {0};
+    META_NS::IEvent::Token OnStartedToken_ {0};
 
-    // we don't actually own these two, as lifetime is controlled by napi_threadsafe_function
-    ThreadSafeCallback* OnStartedCB_ { nullptr };
-    ThreadSafeCallback* OnFinishedCB_ { nullptr };
+    // we don't own these two, the lifetime is controlled by napi_threadsafe_function
+    ThreadSafeCallback* OnStartedCB_ {nullptr};
+    ThreadSafeCallback* OnFinishedCB_ {nullptr};
     META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
 #define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 0
 #if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED==1)
     META_NS::IProperty::Ptr completed_;
 #endif
     META_NS::Event<META_NS::IEvent> OnCompletedEvent_;
+    void InitOnComplete();
 };
 #endif

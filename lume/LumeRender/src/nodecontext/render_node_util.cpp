@@ -360,9 +360,6 @@ RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration
     const PostProcessConfiguration& input) const
 {
     RenderPostProcessConfiguration output;
-    std::fill(output.factors, output.factors + PostProcessConfiguration::INDEX_FACTOR_COUNT,
-        Math::Vec4 { 0.0f, 0.0f, 0.0f, 0.0f });
-
     output.flags = { input.enableFlags, 0, 0, 0 };
     output.renderTimings = renderNodeContextMgr_.GetRenderNodeGraphData().renderingConfiguration.renderTimings;
     output.factors[PostProcessConfiguration::INDEX_TONEMAP] = PostProcessConversionHelper::GetFactorTonemap(input);

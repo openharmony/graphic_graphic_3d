@@ -34,8 +34,13 @@ class GpuResourceManager;
 struct RenderCommandBeginRenderPass;
 
 struct LowLevelCommandBufferVk {
+    // more semaphores for rotation, e.g for cases where swapchain is used and does not acquire the next index normally
+    // the amount is excessive, but basically would need different semaphores per swapchain if not having extra
+    static constexpr uint32_t SEMAPHORE_BUFFERING_COUNT { 3U };
+
     VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
-    VkSemaphore semaphore { VK_NULL_HANDLE };
+    VkSemaphore semaphores[SEMAPHORE_BUFFERING_COUNT] { VK_NULL_HANDLE, VK_NULL_HANDLE };
+    uint32_t semaphoreIdx { 0U };
 };
 
 struct ContextCommandPoolVk {
@@ -72,6 +77,7 @@ public:
     const ContextCommandPoolVk& GetContextSecondaryCommandPool() const;
 
     LowLevelRenderPassDataVk GetRenderPassData(const RenderCommandBeginRenderPass& beginRenderPass);
+    static uint64_t HashRenderPass(const RenderCommandBeginRenderPass& beginRenderPass);
 
 private:
     Device& device_;

@@ -68,6 +68,7 @@ IComponentManager* IFogComponentManagerInstance(IEcs& ecs)
 
 void IFogComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<FogComponentManager*>(instance);
+    static_cast<FogComponentManager*>(instance)->~FogComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

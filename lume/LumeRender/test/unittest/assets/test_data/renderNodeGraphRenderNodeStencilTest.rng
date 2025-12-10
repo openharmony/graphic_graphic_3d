@@ -1,0 +1,38 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeDepthStencil",
+            "nodeName": "RenderNodeDepthStencil",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "clearColor": [0.5, 0.5, 0.5, 1.0],
+                        "name": "OutputImage"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "dont_care",
+                        "stencilLoadOp": "clear",
+                        "stencilStoreOp": "store",
+                        "clearDepth": [1.0, 4],
+                        "name": "DepthImage"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0],
+                    "depthAttachmentIndex": 1
+                }
+            }
+        }
+    ]
+}

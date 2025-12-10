@@ -24,7 +24,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class CameraNode : public META_NS::IntroduceInterfaces<Node, ICamera, ICreateEntity, ICameraRayCast> {
+class CameraNode : public META_NS::IntroduceInterfaces<Node, ICamera, ICameraEffect, ICreateEntity, ICameraRayCast,
+                       ICameraMatrixAccessor> {
     META_OBJECT(CameraNode, SCENE_NS::ClassId::CameraNode, IntroduceInterfaces)
 
 public:
@@ -48,9 +49,12 @@ public:
     META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, BASE_NS::Math::Vec4, ClearColor)
     META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, float, ClearDepth)
     META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, IPostProcess::Ptr, PostProcess)
-    META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, uint64_t, LayerMask)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, uint64_t, CameraLayerMask)
     META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, ColorFormat, ColorTargetCustomization)
     META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, BASE_NS::Math::Mat4X4, CustomProjectionMatrix)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, CameraSampleCount, MSAASampleCount)
+    META_STATIC_FORWARDED_ARRAY_PROPERTY_DATA(ICameraEffect, IEffect::Ptr, Effects)
+    META_STATIC_FORWARDED_PROPERTY_DATA(ICamera, float, DownsamplePercentage)
     META_END_STATIC_DATA()
 
     SCENE_USE_COMPONENT_PROPERTY(float, FoV, "CameraComponent")
@@ -72,9 +76,12 @@ public:
     SCENE_USE_COMPONENT_PROPERTY(BASE_NS::Math::Vec4, ClearColor, "CameraComponent")
     SCENE_USE_COMPONENT_PROPERTY(float, ClearDepth, "CameraComponent")
     SCENE_USE_COMPONENT_PROPERTY(IPostProcess::Ptr, PostProcess, "CameraComponent")
-    SCENE_USE_COMPONENT_PROPERTY(uint64_t, LayerMask, "CameraComponent")
+    SCENE_USE_COMPONENT_PROPERTY(uint64_t, CameraLayerMask, "CameraComponent")
     SCENE_USE_COMPONENT_PROPERTY(ColorFormat, ColorTargetCustomization, "CameraComponent")
     SCENE_USE_COMPONENT_PROPERTY(BASE_NS::Math::Mat4X4, CustomProjectionMatrix, "CameraComponent")
+    SCENE_USE_COMPONENT_PROPERTY(CameraSampleCount, MSAASampleCount, "CameraComponent")
+    SCENE_USE_COMPONENT_PROPERTY(float, DownsamplePercentage, "CameraComponent")
+    META_FORWARD_ARRAY_PROPERTY(IEffect::Ptr, Effects, GetEffectsProperty())
 
     Future<bool> SetActive(bool active = true) override;
     bool IsActive() const override;
@@ -83,6 +90,9 @@ public:
     bool SetEcsObject(const IEcsObject::Ptr&) override;
 
     void SendInputEvent(PointerEvent& event) override;
+
+    BASE_NS::Math::Mat4X4 GetProjectionMatrix() const override;
+    BASE_NS::Math::Mat4X4 GetViewMatrix() const override;
 
 public:
     Future<NodeHits> CastRay(const BASE_NS::Math::Vec2& pos, const RayCastOptions& options) const override;
@@ -95,7 +105,16 @@ public:
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
 
 private:
+    BASE_NS::Math::Mat4X4 GetOrthoProjectionMatrix() const;
+    BASE_NS::Math::Mat4X4 GetPerspectiveProjectionMatrix() const;
+    BASE_NS::Math::Mat4X4 GetFrustumProjectionMatrix() const;
+    float GetAspectRatio() const;
+
+    META_NS::ArrayProperty<IEffect::Ptr> GetEffectsProperty() const;
+    ICameraEffect::Ptr GetEffectComponent(META_NS::MetadataQuery flag = META_NS::MetadataQuery::EXISTING) const;
+
     ICamera::Ptr camera_;
+    mutable META_NS::IProperty::WeakPtr effects_;
 };
 
 SCENE_END_NAMESPACE()

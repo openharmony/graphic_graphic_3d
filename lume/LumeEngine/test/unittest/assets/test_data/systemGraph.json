@@ -1,0 +1,34 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "systemgraph"
+    },
+    "systems": [
+        {
+            "typeName": "TestSystem",
+            "properties": {
+                "prop 1":true,
+                "prop 2":"a",
+                "prop 3":16,
+                "prop 4":428,
+                "prop 5":-89464451,
+                "prop 6":54841647987,
+                "prop 7":16875646545,
+                "prop 8":42848468545,
+                "prop 9":54985165187,
+                "prop 10":9875465421,
+                "prop 11":465651.465465498,
+                "prop 12":54649879,
+                "prop 13":[1,2],
+                "prop 14":[1,2,3],
+                "prop 15":[1,2,3,4],
+                "prop 16":[1,2,3,4],
+                "prop 17":54615.4685464,
+                "prop 18":"t",
+                "prop 19":[true, false],
+                "prop 20":"ab",
+                "prop 21":"ab"
+            }
+        }
+     ]
+}

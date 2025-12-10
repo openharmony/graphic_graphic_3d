@@ -55,3 +55,4 @@ ohos_static_library("libAGPEcshelper") {
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
+

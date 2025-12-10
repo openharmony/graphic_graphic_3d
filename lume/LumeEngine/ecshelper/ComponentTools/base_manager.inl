@@ -14,6 +14,9 @@
  */
 
 #include <core/log.h>
+#ifndef NDEBUG
+#include <base/containers/atomics.h>
+#endif
 
 CORE_BEGIN_NAMESPACE()
 namespace {
@@ -481,13 +484,10 @@ template<typename ComponentType, typename BaseClass>
 BaseManager<ComponentType, BaseClass>::BaseComponentHandle::BaseComponentHandle(BaseComponentHandle&& other) noexcept
     :
 #ifndef NDEBUG
-    rLocked_(other.rLocked_.exchange(0U)),
-    wLocked_(BASE_NS::exchange(other.wLocked_, false)),
+      rLocked_(BASE_NS::exchange(other.rLocked_, 0U)), wLocked_(BASE_NS::exchange(other.wLocked_, false)),
 #endif
-    manager_(other.manager_),
-    generation_(BASE_NS::exchange(other.generation_, 0U)),
-    entity_(BASE_NS::exchange(other.entity_, {})),
-    data_(BASE_NS::exchange(other.data_, {}))
+      manager_(other.manager_), generation_(BASE_NS::exchange(other.generation_, 0U)),
+      entity_(BASE_NS::exchange(other.entity_, {})), data_(BASE_NS::exchange(other.data_, {}))
 {
 #ifndef NDEBUG
     CORE_ASSERT((rLocked_ == 0U) && !wLocked_);
@@ -502,7 +502,7 @@ BaseManager<ComponentType, BaseClass>::BaseComponentHandle::operator=(BaseCompon
         CORE_ASSERT(manager_ == other.manager_);
 #ifndef NDEBUG
         CORE_ASSERT((other.rLocked_ == 0U) && !other.wLocked_);
-        rLocked_ = other.rLocked_.exchange(0U);
+        rLocked_ = BASE_NS::exchange(other.rLocked_, 0U);
         wLocked_ = BASE_NS::exchange(other.wLocked_, false);
 #endif
         generation_ = BASE_NS::exchange(other.generation_, 0U);
@@ -530,7 +530,7 @@ const void* BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RLock() 
     CORE_ASSERT(manager_);
 #ifndef NDEBUG
     CORE_ASSERT(!wLocked_);
-    ++rLocked_;
+    BASE_NS::AtomicIncrementRelaxed(&rLocked_);
 #endif
     return &data_;
 }
@@ -541,7 +541,7 @@ void BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RUnlock() const
     CORE_ASSERT(manager_);
 #ifndef NDEBUG
     CORE_ASSERT(rLocked_ > 0U);
-    --rLocked_;
+    BASE_NS::AtomicDecrementRelaxed(&rLocked_);
 #endif
 }
 

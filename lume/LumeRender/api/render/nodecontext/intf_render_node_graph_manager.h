@@ -95,6 +95,23 @@ struct RenderNodeGraphResourceInfo {
     BASE_NS::vector<RenderHandleReference> outputResources;
 };
 
+struct RenderNodeDependency {
+    enum class Position {
+        /** Node will be after the first instance of matching typeName */
+        AFTER_FIRST,
+        /** Node will be after the last instance of matching typeName */
+        AFTER_LAST,
+        /** Node will be before the first instance of matching typeName */
+        BEFORE_FIRST,
+        /** Node will be before the last instance of matching typeName */
+        BEFORE_LAST,
+    };
+    /** Type name */
+    RenderDataConstants::RenderDataFixedString typeName;
+    /** Position relative the node with matching type */
+    Position position;
+};
+
 /** Interface class to hold all render node graphs and their data.
  *
  * Internally synchronized.
@@ -161,7 +178,7 @@ public:
     /** Insert new render node to dynamic render node graph to a position.
      * @param handle Handle of a render node graph.
      * @param renderNodeDesc Description of render node.
-     * @pos renderNodeName Instance name of render node to insert before.
+     * @param renderNodeName Instance name of render node to insert before.
      */
     virtual void InsertBeforeRenderNode(const RenderHandleReference& handle, const RenderNodeDesc& renderNodeDesc,
         const BASE_NS::string_view renderNodeName) = 0;
@@ -169,7 +186,7 @@ public:
     /** Insert new render node to dynamic render node graph to a position.
      * @param handle Handle of a render node graph.
      * @param renderNodeDesc Description of render node.
-     * @pos renderNodeName Instance name of render node to insert after.
+     * @param renderNodeName Instance name of render node to insert after.
      */
     virtual void InsertAfterRenderNode(const RenderHandleReference& handle, const RenderNodeDesc& renderNodeDesc,
         const BASE_NS::string_view renderNodeName) = 0;
@@ -199,7 +216,7 @@ public:
         const BASE_NS::array_view<const RenderHandleReference> inputs,
         const BASE_NS::array_view<const RenderHandleReference> outputs) = 0;
 
-    /** Get render node graph resource info. Returns the handles set through SetRnederNodeGraphResources.
+    /** Get render node graph resource info. Returns the handles set through SetRenderNodeGraphResources.
      * @param handle Handle of a render node graph.
      * @return RenderNodeGraphResourceInfo Render node graph resources.
      */
@@ -217,6 +234,26 @@ public:
     /** Access to render node graph loader.
      */
     virtual IRenderNodeGraphLoader& GetRenderNodeGraphLoader() = 0;
+
+    /** Add a request to insert a render node into dynamic render node graphs based on dependency information.
+     * If there was a request with the same typeName and nodeName, this request will replace the previous request.
+     * @param renderNodeDesc Description of render node.
+     * @param position Instance name of render node to insert after.
+     */
+    virtual void AddRenderNodeInsertion(
+        const RenderNodeDesc& renderNodeDesc, BASE_NS::array_view<const RenderNodeDependency> position) = 0;
+
+    /** Remove a request to insert a render node into dynamic render node graphs based on dependency information.
+     * typeName and nodeName are used for identifying a request.
+     * @param renderNodeDesc Description of render node.
+     */
+    virtual void RemoveRenderNodeInsertion(const RenderNodeDesc& renderNodeDesc) = 0;
+
+    /** Patch render node graph descriptor based on the known requests made with AddRenderNodeInsertion.
+     * @param desc Render node graph descriptor
+     * @return Updated render node graph descriptor.
+     */
+    virtual RenderNodeGraphDesc PatchRenderNodeGraph(const RenderNodeGraphDesc& desc) const = 0;
 
 protected:
     IRenderNodeGraphManager() = default;

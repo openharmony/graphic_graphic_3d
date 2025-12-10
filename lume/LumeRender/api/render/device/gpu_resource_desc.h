@@ -288,7 +288,7 @@ using EngineAccelerationStructureCreationFlags = uint32_t;
  * Dynamic ring buffer updates offsets automatically when buffer is mapped and descriptor set is updated.
  *
  * CORE_ENGINE_BUFFER_CREATION_SINGLE_SHOT_STAGING, tells memory allocator that this resource can be forget after this
- * frame Engine internally flags staging buffers with this flag, Do not use if you cannot guarentee that the gpu buffer
+ * frame Engine internally flags staging buffers with this flag, Do not use if you cannot guarantee that the gpu buffer
  * is destroyed immediately
  *
  * CORE_ENGINE_BUFFER_CREATION_ENABLE_MEMORY_OPTIMIZATIONS, can enable some memory optimizations.

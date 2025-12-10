@@ -25,6 +25,8 @@
 #include "RenderContextJS.h"
 #include "SamplerJS.h"
 #include "nodejstaskqueue.h"
+#include "EffectJS.h"
+#include "RenderConfigurationJS.h"
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
 
 #include <meta/api/make_callback.h>
@@ -52,6 +54,7 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #include <render/intf_render_context.h>
 
 #ifdef __SCENE_ADAPTER__
+#include <parameters.h>
 #include "3d_widget_adapter_log.h"
 #include "scene_adapter/scene_adapter.h"
 #endif
@@ -65,80 +68,17 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/node_component.h>
 
+#include "lume_trace.h"
 #include "nodejstaskqueue.h"
 
-// fix names to match "ye olde" implementation
-// the bug that unnamed nodes stops hierarchy creation also still exists, works around that issue too.
-void Fixnames(SCENE_NS::IScene::Ptr scene)
-{
-    struct rr {
-        uint32_t id_ = 1;
-        // not actual tree, but map of entities, and their children.
-        BASE_NS::unordered_map<CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>> tree;
-        BASE_NS::vector<CORE_NS::Entity> roots;
-        CORE3D_NS::INodeComponentManager* cm;
-        CORE3D_NS::INameComponentManager* nm;
-        rr(SCENE_NS::IScene::Ptr scene)
-        {
-            CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
-            cm = CORE_NS::GetManager<CORE3D_NS::INodeComponentManager>(*ecs);
-            nm = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*ecs);
-            fix();
-        }
-        void scan()
-        {
-            const auto count = cm->GetComponentCount();
-            // collect nodes and their children.
-            tree.reserve(cm->GetComponentCount());
-            for (auto i = 0; i < count; i++) {
-                auto enti = cm->GetEntity(i);
-                // add node to our list. (if not yet added)
-                tree.insert({ enti, {} });
-                auto parent = cm->Get(i).parent;
-                if (CORE_NS::EntityUtil::IsValid(parent)) {
-                    tree[parent].push_back(enti);
-                } else {
-                    // no parent, so it's a "root"
-                    roots.push_back(enti);
-                }
-            }
-        }
-        void recurse(CORE_NS::Entity id)
-        {
-            CORE3D_NS::NameComponent c = nm->Get(id);
-            if (c.name.empty()) {
-                // create a name for unnamed node.
-                c.name = "Unnamed Node ";
-                c.name += BASE_NS::to_string(id_++);
-                nm->Set(id, c);
-            }
-            for (auto c : tree[id]) {
-                recurse(c);
-            }
-        }
-        void fix()
-        {
-            scan();
-            for (auto i : roots) {
-                id_ = 1;
-                /*// force root node name to match legacy by default.
-                CORE3D_NS::NameComponent c;
-                c.name = "rootNode_";
-                nm->Set(i, c);*/
-                for (auto c : tree[i]) {
-                    recurse(c);
-                }
-            }
-        }
-    } r(scene);
-}
-// LEGACY COMPATIBILITY end
+#include "napi/value.h"
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 
 void SceneJS::Init(napi_env env, napi_value exports)
 {
+    LUME_TRACE_FUNC()
     using namespace NapiApi;
     auto loadFun = [](napi_env e, napi_callback_info cb) -> napi_value {
         FunctionContext<> fc(e, cb);
@@ -168,7 +108,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::Dispose>("destroy"),
 
         // SceneResourceFactory methods
-        Method<FunctionContext<>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
+        Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
         Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
@@ -179,11 +119,15 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateSampler>("createSampler"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
+        Method<FunctionContext<Object>, SceneJS, &SceneJS::CreateEffect>("createEffect"),
 
         Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
                &SceneJS::ImportNode>("importNode"),
         Method<NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>, SceneJS,
                &SceneJS::ImportScene>("importScene"),
+
+        Method<FunctionContext<NapiApi::Object, NapiApi::Object, BASE_NS::string>, SceneJS,
+               &SceneJS::CloneNode>("cloneNode"),
 
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::RenderFrame>("renderFrame"),
 
@@ -192,6 +136,8 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<FunctionContext<Object, BASE_NS::string>, SceneJS, &SceneJS::CreateComponent>("createComponent"),
         Method<FunctionContext<Object, BASE_NS::string>, SceneJS, &SceneJS::GetComponent>("getComponent"),
         Method<FunctionContext<>, SceneJS, &SceneJS::GetRenderContext>("getRenderContext"),
+
+        GetProperty<Object, SceneJS, &SceneJS::GetRenderConfiguration>("renderConfiguration"),
     };
 
     napi_value func;
@@ -209,6 +155,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
 
 void SceneJS::RegisterEnums(NapiApi::Object exports)
 {
+    LUME_TRACE_FUNC()
     napi_value v;
     NapiApi::Object en(exports.GetEnv());
 
@@ -224,148 +171,79 @@ void SceneJS::RegisterEnums(NapiApi::Object exports)
 
 napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
 {
-    const auto env = ctx.Env();
-    auto promise = Promise(env);
+    LUME_TRACE_FUNC()
+    auto renderContext = NapiApi::Object(ctx.GetEnv(), RenderContextJS::GetDefaultContext(ctx.GetEnv()));
+    NapiApi::Function f(ctx.GetEnv(), renderContext.Get("createScene"));
+    napi_value param = {};
 
-    // A SceneJS instance keeps a NodeJS task queue acquired, but we're in a static method creating a SceneJS.
-    // Acquire the JS queue before invoking the JS task. Release it only after the scene is created (in the JS task).
-    const auto jsQ = GetOrCreateNodeTaskQueue(env);
-    auto queueRefCount = interface_cast<INodeJSTaskQueue>(jsQ);
-    if (queueRefCount) {
-        queueRefCount->Acquire();
-    } else {
-        return promise.Reject("Error creating a JS task queue");
+    size_t n = 1;
+    auto status = napi_get_cb_info(ctx.GetEnv(), ctx.GetInfo(), &n, &param, nullptr, nullptr);
+    if (status != napi_ok) {
+        n = 0;
     }
-
-    BASE_NS::string uri = ExtractUri(ctx);
-    if (uri.empty()) {
-        uri = "scene://empty";
-    }
-    // make sure slashes are correct.. *eh*
-    for (;;) {
-        auto t = uri.find_first_of('\\');
-        if (t == BASE_NS::string::npos) {
-            break;
-        }
-        uri[t] = '/';
-    }
-
-    auto massageScene = [](SCENE_NS::IScene::Ptr scene) -> SCENE_NS::IScene::Ptr {
-        if (!scene || !scene->RenderConfiguration()->GetValue()) {
-            return {};
-        }
-
-        // Make sure there's a valid root node
-        scene->GetInternalScene()->GetEcsContext().CreateUnnamedRootNode();
-
-        // LEGACY COMPATIBILITY start
-        Fixnames(scene);
-        // LEGACY COMPATIBILITY end
-        auto& obr = META_NS::GetObjectRegistry();
-        AddScene(&obr, scene);
-        return scene;
-    };
-
-    auto convertToJs = [promise, queueRefCount = BASE_NS::move(queueRefCount)](SCENE_NS::IScene::Ptr scene) mutable {
-        if (!scene) {
-            promise.Reject("Scene creation failed");
-            return;
-        }
-
-        const auto env = promise.Env();
-        auto jsscene = CreateFromNativeInstance(env, scene, PtrType::STRONG, {});
-        const auto sceneJs = jsscene.GetJsWrapper<SceneJS>();
-        sceneJs->renderMan_ =
-            scene->CreateObject<SCENE_NS::IRenderResourceManager>(SCENE_NS::ClassId::RenderResourceManager).GetResult();
-
-        auto curenv = jsscene.Get<NapiApi::Object>("environment");
-        if (curenv.IsUndefinedOrNull()) {
-            // setup default env
-            NapiApi::Object argsIn(env);
-            argsIn.Set("name", "DefaultEnv");
-
-            auto res = sceneJs->CreateEnvironment(jsscene, argsIn);
-            res.Set("backgroundType", NapiApi::Value<uint32_t>(env, 1)); // image.. but with null.
-            jsscene.Set("environment", res);
-        }
-        for (auto&& c : scene->GetCameras().GetResult()) {
-            c->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline::FORWARD);
-            c->ColorTargetCustomization()->SetValue(
-                { SCENE_NS::ColorFormat { BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT } });
-        }
-
-        const auto result = jsscene.ToNapiValue();
-
-#ifdef __SCENE_ADAPTER__
-        // set SceneAdapter
-        auto sceneAdapter = std::make_shared<OHOS::Render3D::SceneAdapter>();
-        sceneAdapter->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
-        sceneJs->scene_ = sceneAdapter;
-#endif
-        promise.Resolve(result);
-        queueRefCount->Release();
-    };
-
-    auto sceneManager = CreateSceneManager(uri);
-    if (!sceneManager) {
-        return promise.Reject("Creating scene manager failed");
-    }
-
-    auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
-    /* REMOVED DUE TO SCENE API CHANGE
-    if (uri.ends_with(".scene2")) {
-        const auto scene = SCENE_NS::LoadScene(sceneManager->GetContext(), uri);
-        META_NS::AddFutureTaskOrRunDirectly(engineQ, [=]() {
-            return massageScene(scene);
-        }).Then(BASE_NS::move(convertToJs), jsQ);
-    } else {*/
-        sceneManager->CreateScene(uri).Then(BASE_NS::move(massageScene), engineQ).Then(BASE_NS::move(convertToJs), jsQ);
-    //}
-    return promise;
-}
-
-SCENE_NS::ISceneManager::Ptr SceneJS::CreateSceneManager(BASE_NS::string_view uri)
-{
-    auto& objRegistry = META_NS::GetObjectRegistry();
-    auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
-
-    if (uri.ends_with(".scene2")) {
-        const auto renderContext = SCENE_NS::GetBuildArg<SCENE_NS::IRenderContext::Ptr>(objContext, "RenderContext");
-        if (!renderContext || !renderContext->GetRenderer()) {
-            LOG_E("Unable to configure file resource manager for loading scene files: render context missing");
-            return {};
-        }
-        auto& fileManager = renderContext->GetRenderer()->GetEngine().GetFileManager();
-        fileManager.RegisterPath("project", ExtractPathToProject(uri), true);
-    }
-
-    return objRegistry.Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, objContext);
-}
-
-BASE_NS::string_view SceneJS::ExtractPathToProject(BASE_NS::string_view uri)
-{
-    // Assume the scene file is in a folder that is at the root of the project.
-    // ExtractPathToProject("schema://path/to/PROJECT/assets/default.scene2") == "schema://path/to/PROJECT"
-    const auto secondToLastSlashPos = uri.find_last_of('/', uri.find_last_of('/') - 1);
-    return uri.substr(0, secondToLastSlashPos);
+    return renderContext.Invoke("createScene", { n, &param });
 }
 
 napi_value SceneJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     DisposeNative(nullptr);
+    return {};
+}
+
+void FreeResources(META_NS::IObject::Ptr me)
+{
+    if (auto nativeScene = interface_pointer_cast<SCENE_NS::IScene>(me)) {
+        auto r = nativeScene->RenderConfiguration()->GetValue();
+        if (r) {
+            r->Environment()->SetValue(nullptr);
+            r.reset();
+        }
+        if (auto res = interface_pointer_cast<CORE_NS::IResource>(BASE_NS::move(nativeScene))) {
+            auto id = res->GetResourceId();
+            if (id.IsValid()) {
+                auto& objRegistry = META_NS::GetObjectRegistry();
+                auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
+                if (const auto renderContext =
+                        SCENE_NS::GetBuildArg<SCENE_NS::IRenderContext::Ptr>(objContext, "RenderContext")) {
+                    if (auto resources = renderContext->GetResources()) {
+                        resources->RemoveGroup(id.group);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Release the js task queue.
+void ReleaseJsTaskQueue()
+{
+    auto tq = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
+    if (auto p = interface_cast<INodeJSTaskQueue>(tq)) {
+        p->Release();
+        // check if we can safely de-init here also.
+        if (p->IsReleased()) {
+            // destroy and unregister the queue.
+            DeinitNodeTaskQueue();
+        }
+    }
+}
+
+void SceneJS::DisposeNative(void*)
+{
+    LUME_TRACE_FUNC()
 #ifdef __SCENE_ADAPTER__
     if (scene_) {
         scene_->Deinit();
     }
+    scene_.reset();
 #endif
-    return {};
-}
-void SceneJS::DisposeNative(void*)
-{
     if (!disposed_) {
         disposed_ = true;
-        LOG_V("SCENE_JS::DisposeNative");
-
+        DisposeBridge(this);
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         NapiApi::Object scen(env_);
         napi_value tmp;
         napi_create_external(
@@ -376,102 +254,51 @@ void SceneJS::DisposeNative(void*)
             nullptr, &tmp);
         scen.Set("SceneJS", tmp);
         napi_value scene = scen.ToNapiValue();
-
         // dispose active environment
         if (auto env = environmentJS_.GetObject()) {
             NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
             if (func) {
-                func.Invoke(env, 1, &scene);
+                func.Invoke(env, { scene });
             }
         }
         environmentJS_.Reset();
-
-        // dispose all cameras/env/etcs.
-        while (!strongDisposables_.empty()) {
-            auto it = strongDisposables_.begin();
-            auto token = it->first;
-            auto obj = it->second.GetObject();
-            if (obj) {
-                // "detaching" the nodes let's the destroy/dispose method release fully.
-                auto isNode = static_cast<NodeImpl*>(obj.GetRoot()->GetInstanceImpl(NodeImpl::ID));
-                if (isNode && isNode->IsAttached()) {
-                    // it's a node, and it's attached. so detach.
-                    isNode->Attached(false);
-                }
-                auto size = strongDisposables_.size();
-                NapiApi::Function func = obj.Get<NapiApi::Function>("destroy");
-                if (func) {
-                    func.Invoke(obj, 1, &scene);
-                }
-
-                if (size == strongDisposables_.size()) {
-                    LOG_E("Dispose function didn't dispose.");
-                    strongDisposables_.erase(strongDisposables_.begin());
-                }
-            } else {
-                strongDisposables_.erase(strongDisposables_.begin());
-            }
+        if (strongDisposables_.size() || disposables_.size()) {
+            resources_->Dispose(env_, strongDisposables_, disposables_, this);
+            strongDisposables_.clear();
+            disposables_.clear();
         }
-
-        // dispose
-        while (!disposables_.empty()) {
-            auto env = disposables_.begin()->second.GetObject();
-            if (env) {
-                auto size = disposables_.size();
-                NapiApi::Function func = env.Get<NapiApi::Function>("destroy");
-                if (func) {
-                    func.Invoke(env, 1, &scene);
-                }
-                if (size == disposables_.size()) {
-                    LOG_E("Weak ref dispose function didn't dispose.");
-                    disposables_.erase(disposables_.begin());
-                }
-            } else {
-                disposables_.erase(disposables_.begin());
-            }
-        }
-
-        if (auto nativeScene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject())) {
-            UnsetNativeObject();
-
-            auto r = nativeScene->RenderConfiguration()->GetValue();
-            if (r) {
-                r->Environment()->SetValue(nullptr);
-                r.reset();
-            }
-        }
+        FreeResources(GetNativeObject());
+        UnsetNativeObject();
         FlushScenes();
-
-        // Release the js task queue.
-        auto tq = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
-        if (auto p = interface_cast<INodeJSTaskQueue>(tq)) {
-            p->Release();
-            // check if we can safely de-init here also.
-            if (p->IsReleased()) {
-                // destroy and unregister the queue.
-                DeinitNodeTaskQueue();
-            }
-        }
-
+        ReleaseJsTaskQueue();
         resources_.reset();
         renderContextJS_.Reset();
+        if (auto bmjs = renderConfiguration_.GetObject()) {
+            bmjs.Invoke("destroy", {});
+        }
+        renderConfiguration_.Reset();
     }
 }
 void* SceneJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == SceneJS::ID)
-        return this;
-    return nullptr;
+    LUME_TRACE_FUNC()
+    if (id == SceneJS::ID) {
+        return static_cast<SceneJS*>(this);
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void SceneJS::Finalize(napi_env env)
 {
+    LUME_TRACE_FUNC()
     DisposeNative(nullptr);
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
 napi_value SceneJS::CreateNode(
     const NapiApi::FunctionContext<>& variableCtx, BASE_NS::string_view jsClassName, META_NS::ObjectId classId)
 {
+    LUME_TRACE_FUNC()
     // Take only the first arg of the variable-length context.
     auto ctx = NapiApi::FunctionContext<NapiApi::Object> { variableCtx.GetEnv(), variableCtx.GetInfo(),
         NapiApi::ArgCount::PARTIAL };
@@ -501,24 +328,9 @@ napi_value SceneJS::CreateNode(
     return promise;
 }
 
-void SceneJS::AddScene(META_NS::IObjectRegistry* obr, SCENE_NS::IScene::Ptr scene)
-{
-    if (!obr) {
-        return;
-    }
-    auto params = interface_pointer_cast<META_NS::IMetadata>(obr->GetDefaultObjectContext());
-    if (!params) {
-        return;
-    }
-    auto duh = params->GetArrayProperty<IntfWeakPtr>("Scenes");
-    if (!duh) {
-        return;
-    }
-    duh->AddValue(interface_pointer_cast<CORE_NS::IInterface>(scene));
-}
-
 SceneJS::SceneJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
+    LUME_TRACE_FUNC()
     LOG_V("SceneJS ++");
 
     // Acquire the js task queue. (make sure that as long as we have a scene, the nodejstaskqueue is useable)
@@ -529,6 +341,7 @@ SceneJS::SceneJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
     env_ = e; // store..
 
     NapiApi::FunctionContext<NapiApi::Object> fromJs(e, i);
+    AddBridge("SceneJS",fromJs.This());
     if (fromJs) {
         if (auto obj = fromJs.Arg<0>().valueOrDefault()) {
             if (obj.GetJsWrapper<RenderContextJS>()) {
@@ -559,6 +372,7 @@ SceneJS::SceneJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
 void SceneJS::FlushScenes()
 {
+    LUME_TRACE_FUNC()
     ExecSyncTask([]() {
         auto& obr = META_NS::GetObjectRegistry();
         if (auto params = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext())) {
@@ -578,68 +392,82 @@ void SceneJS::FlushScenes()
 }
 SceneJS::~SceneJS()
 {
+    LUME_TRACE_FUNC()
     LOG_V("SceneJS --");
     DisposeNative(nullptr);
     // flush all null scene objects here too.
     FlushScenes();
+    DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
     }
 }
-
 napi_value SceneJS::GetNode(NapiApi::FunctionContext<>& ctx)
 {
-    // verify that path starts from "correct root" and then let the root node handle the rest.
+    LUME_TRACE_FUNC()
+    const auto env = ctx.GetEnv();
+    const auto info = ctx.GetInfo();
     NapiApi::Object meJs(ctx.This());
-    NapiApi::Object root = meJs.Get<NapiApi::Object>("root");
-    BASE_NS::string rootName = root.Get<BASE_NS::string>("name");
-    NapiApi::Function func = root.Get<NapiApi::Function>("getNodeByPath");
-    BASE_NS::string path = "";
-    NapiApi::FunctionContext<BASE_NS::string> params(ctx);
-    if (params) {
-        path = params.Arg<0>();
-    } else {
-        NapiApi::FunctionContext<BASE_NS::string, uint32_t> paramsWithType(ctx);
-        if (paramsWithType) {
-            path = paramsWithType.Arg<0>();
-            // currently ignore the type
-        }
-    }
-    if (path.empty() || (path == BASE_NS::string_view("/")) || (path == rootName)) {
-        // empty or '/' or "exact rootnodename". so return root
-        return root.ToNapiValue();
-    }
 
+    BASE_NS::string path;
+    uint32_t exceptNodeType = 0;
+    if (auto newCtx = NapiApi::FunctionContext<BASE_NS::string>{ env, info }) {
+        path = newCtx.Arg<0>();
+    } else if (auto newCtx = NapiApi::FunctionContext<BASE_NS::string, uint32_t>{ env, info }) {
+        path = newCtx.Arg<0>();
+        exceptNodeType = newCtx.Arg<1>();
+    } else {
+        LOG_E("Invalid args given to getNodeByPath");
+        return ctx.GetNull();
+    }
+    auto root = root_.GetNapiObject();
+    if (!root) {
+        root = meJs.Get<NapiApi::Object>("root");
+    }
     // remove the "root nodes name", if given (make sure it also matches though..)
-    auto pos = 0;
+    size_t pos = 0;
     if (path[0] != '/') {
         pos = path.find('/', 0);
         BASE_NS::string_view step = path.substr(0, pos);
-        if (!step.empty() && (step != rootName)) {
+        if (!step.empty() && (step != rootName_)) {
             // root not matching
+            CORE_LOG_E("Root not matching, path is %s", path.c_str());
             return ctx.GetNull();
         }
     }
+    // verify that path starts from "correct root" and then let the root node handle the rest.
     if (pos != BASE_NS::string_view::npos) {
         path = path.substr(pos + 1);
     }
-
-    if (path.empty()) {
-        // after removing the root node name
-        // nothing left in path, so return root.
-        return root.ToNapiValue();
+    if (path.empty() || (path == BASE_NS::string_view("/"))) {
+        // empty or '/'. so return root
+        return root_.GetValue();
     }
+    NapiApi::Function func = root.Get<NapiApi::Function>("getNodeByPath");
 
-    napi_value newpath = ctx.GetString(path);
-    if (newpath) {
-        return func.Invoke(root, 1, &newpath);
+    if (auto newpath = ctx.GetString(path)) {
+        napi_value node = func.Invoke(root, { newpath });
+        if (exceptNodeType == 0) {  // the nodeType parameter is not provided
+            return node;
+        } else {
+            NapiApi::Object nodeObj(env, node);
+            uint32_t nodeType = nodeObj.Get<uint32_t>("nodeType");
+            return nodeType == exceptNodeType ? node : ctx.GetNull();
+        }
     }
+    CORE_LOG_E("Napi path is null, path is %s", path.c_str());
     return ctx.GetNull();
 }
 napi_value SceneJS::GetRoot(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
+    if (root_.GetNapiObject()) {
+        return root_.GetValue();
+    }
+
     if (auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject())) {
         SCENE_NS::INode::Ptr root = scene->GetRootNode().GetResult();
+        rootPath_ = root->GetPath().GetResult();
 
         NapiApi::StrongRef sceneRef { ctx.This() };
         if (!sceneRef.GetObject().GetNative<SCENE_NS::IScene>()) {
@@ -648,19 +476,23 @@ napi_value SceneJS::GetRoot(NapiApi::FunctionContext<>& ctx)
 
         NapiApi::Object argJS(ctx.GetEnv());
         napi_value args[] = { sceneRef.GetObject().ToNapiValue(), argJS.ToNapiValue() };
-
-        // Store a weak ref, as these are owned by the scene.
-        auto js = CreateFromNativeInstance(ctx.GetEnv(), root, PtrType::WEAK, args);
-        if (auto node = js.GetJsWrapper<NodeImpl>()) {
-            node->Attached(true);
+        {
+            LUME_TRACE("create root")
+            // Store a weak ref, as these are owned by the scene.
+            root_ = CreateFromNativeInstance(ctx.GetEnv(), root, PtrType::WEAK, args);
+            if (auto node = root_.GetJsWrapper<NodeImpl>()) {
+                node->Attached(true);
+            }
+            rootName_ = root_.GetNapiObject().Get<BASE_NS::string>("name");
+            return root_.GetValue();
         }
-        return js.ToNapiValue();
     }
     return ctx.GetUndefined();
 }
 
 napi_value SceneJS::GetEnvironment(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     if (auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject())) {
         SCENE_NS::IEnvironment::Ptr environment;
         auto rc = scene->RenderConfiguration()->GetValue();
@@ -686,6 +518,7 @@ napi_value SceneJS::GetEnvironment(NapiApi::FunctionContext<>& ctx)
 
 void SceneJS::SetEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     NapiApi::Object envObj = ctx.Arg<0>();
     if (!envObj) {
         return;
@@ -711,27 +544,38 @@ void SceneJS::SetEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
 napi_value SceneJS::GetResourceFactory(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     // just return this. as scene is the factory also.
     return ctx.This().ToNapiValue();
 }
 NapiApi::Object SceneJS::CreateEnvironment(NapiApi::Object scene, NapiApi::Object argsIn)
 {
+    LUME_TRACE_FUNC()
     napi_env env = scene.GetEnv();
     napi_value args[] = { scene.ToNapiValue(), argsIn.ToNapiValue() };
-    auto nativeScene = scene.GetNative<SCENE_NS::IScene>();
-    auto nativeEnv = nativeScene->CreateObject(SCENE_NS::ClassId::Environment).GetResult();
-    return CreateFromNativeInstance(env, nativeEnv, PtrType::STRONG, args);
+    if (auto nativeScene = scene.GetNative<SCENE_NS::IScene>()) {
+        if (auto nativeEnv = nativeScene->CreateObject(SCENE_NS::ClassId::Environment).GetResult()) {
+            return CreateFromNativeInstance(env, nativeEnv, PtrType::STRONG, args);
+        }
+    }
+    return {};
 }
 
 napi_value SceneJS::CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     const auto env = ctx.GetEnv();
-    napi_value args[] = { ctx.This().ToNapiValue(), ctx.Arg<0>().ToNapiValue() };
-    return Promise(env).Resolve(CreateEnvironment(ctx.This(), ctx.Arg<0>()).ToNapiValue());
+    auto promise = Promise(env);
+    auto res = CreateEnvironment(ctx.This(), ctx.Arg<0>());
+    if (res) {
+        return promise.Resolve(res.ToNapiValue());
+    }
+    return promise.Reject("Invalid Scene");
 }
 
 napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
 {
+    LUME_TRACE_FUNC()
     const auto env = vCtx.GetEnv();
     const auto info = vCtx.GetInfo();
     auto promise = Promise(env);
@@ -760,8 +604,6 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         pipeline = NapiApi::Value<uint32_t>(env, renderPipelineJs);
     }
 
-    // Don't create the camera asynchronously. There's a race condition, and we need to deactivate it immediately.
-    // Otherwise we get tons of render validation issues.
     auto deactivateCamera = [](SCENE_NS::ICamera::Ptr camera) {
         if (camera) {
             camera->SetActive(false);
@@ -769,9 +611,9 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         return camera;
     };
     auto convertToJs = [promise, pipeline, sceneRef = NapiApi::StrongRef { sceneJs },
-                           sceneNodeParamRef = NapiApi::StrongRef { sceneNodeParams },
-                           cameraParamRef = NapiApi::StrongRef { cameraParams }](
-                           SCENE_NS::ICamera::Ptr camera) mutable {
+                        sceneNodeParamRef = NapiApi::StrongRef { sceneNodeParams },
+                        cameraParamRef = NapiApi::StrongRef { cameraParams }](
+                        SCENE_NS::ICamera::Ptr camera) mutable {
         if (!camera) {
             promise.Reject("Camera creation failed");
             return;
@@ -779,12 +621,10 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         const auto env = promise.Env();
         camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
         camera->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline(pipeline));
+        camera->PostProcess()->SetValue(nullptr);
         napi_value args[] = { sceneRef.GetValue(), sceneNodeParamRef.GetValue() };
         // Store a weak ref, as these are owned by the scene.
         auto result = CreateFromNativeInstance(env, camera, PtrType::WEAK, args);
-        napi_value napiNull;
-        napi_get_null(env, &napiNull);
-        result.Set("postProcess", napiNull); // not bound to anything...
         if (auto node = result.GetJsWrapper<NodeImpl>()) {
             node->Attached(true);
         }
@@ -806,6 +646,7 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
 
 void SceneJS::ApplyCameraParameters(NapiApi::Object& params, NapiApi::Object& cameraJs)
 {
+    LUME_TRACE_FUNC()
     if (const auto value = params.Get<bool>("msaa"); value.IsValid()) {
         cameraJs.Set<bool>("msaa", value);
     }
@@ -819,6 +660,7 @@ void SceneJS::ApplyCameraParameters(NapiApi::Object& params, NapiApi::Object& ca
 
 napi_value SceneJS::CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx)
 {
+    LUME_TRACE_FUNC()
     uint32_t lightType = ctx.Arg<1>();
     BASE_NS::string ctorName;
     if (lightType == BaseLight::DIRECTIONAL) {
@@ -835,16 +677,19 @@ napi_value SceneJS::CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32
 
 napi_value SceneJS::CreateNode(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     return CreateNode(ctx, "Node", SCENE_NS::ClassId::Node);
 }
 
 napi_value SceneJS::CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     return CreateNode(ctx, "TextNode", SCENE_NS::ClassId::TextNode);
 }
 
 napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx)
 {
+    LUME_TRACE_FUNC()
     const auto env = ctx.GetEnv();
     auto promise = Promise(env);
     uint32_t type = ctx.Arg<1>();
@@ -860,8 +705,6 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
             META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::CUSTOM);
         } else if (type == BaseMaterial::UNLIT) {
             META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::UNLIT);
-        } else if (type == BaseMaterial::UNLIT_SHADOW_ALPHA) {
-            META_NS::SetValue(material->Type(), SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
         }
         napi_value args[] = { sceneRef.GetValue(), paramRef.GetValue() };
         const auto result = CreateFromNativeInstance(env, material, PtrType::STRONG, args);
@@ -869,17 +712,21 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
     };
 
     const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
-    scene->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::Material).Then(BASE_NS::move(convertToJs), jsQ);
+    const auto classId = type == BaseMaterial::MaterialType::OCCLUSION ? SCENE_NS::ClassId::OcclusionMaterial
+                                                                       : SCENE_NS::ClassId::Material;
+    scene->CreateObject<SCENE_NS::IMaterial>(classId).Then(BASE_NS::move(convertToJs), jsQ);
     return promise;
 }
 
 napi_value SceneJS::CreateScene(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     return Load(ctx);
 }
 
 napi_value SceneJS::ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     BASE_NS::string name = ctx.Arg<0>();
     NapiApi::Object nnode = ctx.Arg<1>();
     NapiApi::Object nparent = ctx.Arg<2>();
@@ -919,11 +766,14 @@ napi_value SceneJS::ImportNode(NapiApi::FunctionContext<BASE_NS::string, NapiApi
 
 napi_value SceneJS::ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiApi::Object, NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     BASE_NS::string name = ctx.Arg<0>();
     NapiApi::Object nextScene = ctx.Arg<1>();
     NapiApi::Object nparent = ctx.Arg<2>();
     auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
     if (!nextScene || !scene) {
+        CORE_LOG_E("SceneJS::ImportScene %s nextScene or scene is null: nextScene[%s], scene[%s]",
+            name.c_str(), nextScene ? "true" : "false", scene ? "true" : "false");
         return ctx.GetNull();
     }
 
@@ -942,13 +792,19 @@ napi_value SceneJS::ImportScene(NapiApi::FunctionContext<BASE_NS::string, NapiAp
         NapiApi::Object argJS(ctx.GetEnv());
         napi_value args[] = { sceneRef.GetObject().ToNapiValue(), argJS.ToNapiValue() };
         // Store a weak ref, as these are owned by the scene.
-        return CreateFromNativeInstance(ctx.GetEnv(), result, PtrType::WEAK, args).ToNapiValue();
+        auto res = CreateFromNativeInstance(ctx.GetEnv(), result, PtrType::WEAK, args);
+        if (auto node = res.GetJsWrapper<NodeImpl>()) {
+            node->Attached(true);
+        }
+        return res.ToNapiValue();
     }
+    CORE_LOG_E("SceneJS::ImportScene %s import is null", name.c_str());
     return ctx.GetNull();
 }
 
 napi_value SceneJS::GetRenderMode(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
     if (!scene) {
         return ctx.GetUndefined();
@@ -957,6 +813,7 @@ napi_value SceneJS::GetRenderMode(NapiApi::FunctionContext<>& ctx)
 }
 void SceneJS::SetRenderMode(NapiApi::FunctionContext<uint32_t>& ctx)
 {
+    LUME_TRACE_FUNC()
     auto scene = interface_cast<SCENE_NS::IScene>(GetNativeObject());
     if (!scene) {
         return;
@@ -970,6 +827,7 @@ void SceneJS::SetRenderMode(NapiApi::FunctionContext<uint32_t>& ctx)
 
 napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     if (ctx.ArgCount() > 1) {
         CORE_LOG_E("render frame %d", __LINE__);
         return ctx.GetBoolean(false);
@@ -1014,6 +872,7 @@ napi_value SceneJS::RenderFrame(NapiApi::FunctionContext<>& ctx)
 
 napi_value SceneJS::CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_NS::string>& ctx)
 {
+    LUME_TRACE_FUNC()
     auto env = ctx.GetEnv();
     auto promise = Promise(env);
     if (ctx.ArgCount() > 2) { // 2: arg num
@@ -1025,7 +884,6 @@ napi_value SceneJS::CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BA
     if (!scene || !nnode || name.empty()) {
         return promise.Reject("Invalid parameters given");
     }
-    
     auto node = nnode.GetNative<SCENE_NS::INode>();
     if (auto comp = scene->CreateComponent(node, name).GetResult()) {
         NapiApi::Env env(ctx.GetEnv());
@@ -1040,6 +898,7 @@ napi_value SceneJS::CreateComponent(NapiApi::FunctionContext<NapiApi::Object, BA
 
 napi_value SceneJS::GetComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_NS::string>& ctx)
 {
+    LUME_TRACE_FUNC()
     if (ctx.ArgCount() > 2) { // 2: arg num
         return ctx.GetNull();
     }
@@ -1064,32 +923,51 @@ napi_value SceneJS::GetComponent(NapiApi::FunctionContext<NapiApi::Object, BASE_
 
 napi_value SceneJS::GetRenderContext(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     return renderContextJS_.GetValue();
+}
+
+napi_value SceneJS::GetRenderConfiguration(NapiApi::FunctionContext<>& ctx)
+{
+    LUME_TRACE_FUNC() 
+
+    if (!renderConfiguration_.IsEmpty()) {
+        return renderConfiguration_.GetValue();
+    }
+
+    BASE_NS::unique_ptr<RenderConfiguration> rc;
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
+    if (!scene) {
+        return ctx.GetUndefined();
+    }
+
+    if (auto ptr = META_NS::GetValue(scene->RenderConfiguration())) {
+        rc = BASE_NS::make_unique<RenderConfiguration>();
+        rc->SetFrom(ctx.GetEnv(), BASE_NS::move(ptr));
+    }
+
+    NapiApi::Env env(ctx.GetEnv());
+    NapiApi::Object obj(env);
+    renderConfiguration_ = BASE_NS::move(rc->Wrap(obj));
+    rc.release(); // renderConfiguration_ owns the ptr now
+    return renderConfiguration_.GetValue();
 }
 
 napi_value SceneJS::CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
 {
-    auto env = ctx.GetEnv();
-    auto promise = Promise(env);
-    auto geometry = GeometryDefinition::GeometryDefinition::FromJs(ctx.Arg<1>());
-    if (!geometry) {
-        return promise.Reject("Invalid geometry definition given");
+    LUME_TRACE_FUNC()
+    if (auto renderContext = renderContextJS_.GetObject()) {
+        napi_value params[] = { ctx.Arg<0>().ToNapiValue(), ctx.Arg<1>().ToNapiValue() };
+        return renderContext.Invoke("createMesh", params);
     }
 
-    // Piggyback the native geometry definition inside the resource param. Need to ditch smart pointers for the ride.
-    napi_value geometryNapiValue;
-    napi_create_external(ctx.Env(), geometry.release(), nullptr, nullptr, &geometryNapiValue);
-    NapiApi::Object resourceParams = ctx.Arg<0>();
-    resourceParams.Set("GeometryDefinition", geometryNapiValue);
-
-    napi_value args[] = { ctx.This().ToNapiValue(), resourceParams.ToNapiValue() };
-    const auto meshResource = META_NS::GetObjectRegistry().Create(SCENE_NS::ClassId::MeshResource);
-    const auto result = CreateFromNativeInstance(env, meshResource, PtrType::STRONG, args);
-    return promise.Resolve(result.ToNapiValue());
+    auto promise = Promise(ctx.GetEnv());
+    return promise.Reject("No render context to create a mesh.");
 }
 
 napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     const auto env = ctx.GetEnv();
     auto promise = Promise(env);
 
@@ -1108,10 +986,13 @@ napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, Nap
     // We don't use futures here, but rather just GetResult everything immediately.
     // Otherwise there's a race condition for a deadlock.
     auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
+    if (!scene) {
+        return promise.Reject("Invalid scene");
+    }
     const auto path = ExtractNodePath(params);
     auto meshNode = scene->CreateNode(path, SCENE_NS::ClassId::MeshNode).GetResult();
     if (auto access = interface_pointer_cast<SCENE_NS::IMeshAccess>(meshNode)) {
-        const auto mesh = meshResourceJs->CreateMesh();
+        const auto mesh = meshResourceJs->CreateMesh(scene);
         access->SetMesh(mesh).GetResult();
         napi_value args[] = { sceneJs.ToNapiValue(), params.ToNapiValue() };
         // Store a weak ref, as these are owned by the scene.
@@ -1126,43 +1007,13 @@ napi_value SceneJS::CreateGeometry(NapiApi::FunctionContext<NapiApi::Object, Nap
 
 napi_value SceneJS::CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    const auto env = ctx.GetEnv();
-    auto promise = Promise(env);
-    NapiApi::Object resourceParams = ctx.Arg<0>();
-    if (!resourceParams) {
-        return promise.Reject("Invalid scene resource shader parameters given");
+    LUME_TRACE_FUNC()
+    if (auto renderContext = renderContextJS_.GetObject()) {
+        return renderContext.Invoke("createShader", ctx.Arg<0>().ToNapiValue());
     }
 
-    auto uri = ExtractUri(resourceParams.Get<NapiApi::Object>("uri"));
-    if (uri.empty()) {
-        auto u = resourceParams.Get<BASE_NS::string>("uri");
-        uri = ExtractUri(u);
-    }
-
-    if (uri.empty()) {
-        return promise.Reject("Invalid scene resource Shader parameters given");
-    }
-
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
-    auto convertToJs = [promise, uri, sceneRef = NapiApi::StrongRef(ctx.This()),
-                           paramRef = NapiApi::StrongRef(resourceParams)](SCENE_NS::IShader::Ptr shader) mutable {
-        if (!shader) {
-            CORE_LOG_E("Fail to load shader but do not return %s", uri.c_str());
-        }
-        const auto env = promise.Env();
-        napi_value args[] = { sceneRef.GetValue(), paramRef.GetValue() };
-        NapiApi::Object parms(env, args[1]);
-
-        napi_value null;
-        napi_get_null(env, &null);
-        parms.Set("Material", null); // not bound to anything...
-        const auto result = CreateFromNativeInstance(env, shader, PtrType::STRONG, args);
-        promise.Resolve(result.ToNapiValue());
-    };
-
-    auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
-    renderMan_->LoadShader(uri).Then(BASE_NS::move(convertToJs), jsQ);
-    return promise;
+    auto promise = Promise(ctx.GetEnv());
+    return promise.Reject("No render context to create a shader.");
 }
 
 // To pass LoadResult between tasks with Future::Then.
@@ -1170,24 +1021,53 @@ META_TYPE(BASE_NS::shared_ptr<CORE_NS::IImageLoaderManager::LoadResult>);
 
 napi_value SceneJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    if (!renderContextJS_.IsEmpty()) {
-        if (auto context = renderContextJS_.GetObject().GetJsWrapper<RenderContextJS>()) {
-            NapiApi::Function f(ctx.GetEnv(), renderContextJS_.GetObject().Get("createImage"));
-            auto param = ctx.Arg<0>().ToNapiValue();
-            return f.Invoke(renderContextJS_.GetObject(), 1, &param);
-        }
+    LUME_TRACE_FUNC()
+    if (auto renderContext = renderContextJS_.GetObject()) {
+        return renderContext.Invoke("createImage", ctx.Arg<0>().ToNapiValue());
     }
-
-    return ctx.GetUndefined();
+    auto promise = Promise(ctx.GetEnv());
+    return promise.Reject("No render context to create an image.");
 }
 
 napi_value SceneJS::CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
+    LUME_TRACE_FUNC()
     return Promise(ctx.GetEnv()).Resolve(SamplerJS::CreateRawJsObject(ctx.GetEnv()));
+}
+
+napi_value SceneJS::CreateEffect(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    const auto env = ctx.GetEnv();
+    auto promise = Promise(env);
+    const auto sceneJs = ctx.This();
+    auto scene = sceneJs.GetNative<SCENE_NS::IScene>();
+    if (!scene) {
+        return promise.Reject("Invalid scene");
+    }
+
+    auto params = NapiApi::Object { ctx.Arg<0>() };
+    BASE_NS::string id = params.Get<BASE_NS::string>("effectId");
+    if (!BASE_NS::IsUidString(id)) {
+        return promise.Reject("Invalid effect id");
+    }
+    if (auto effectClassId = BASE_NS::StringToUid(id); effectClassId != BASE_NS::Uid {}) {
+        const auto effect = EffectJS::CreateEffectInstance();
+        if (!(effect && effect->InitializeEffect(scene, effectClassId).GetResult())) {
+            return promise.Reject("Failed to instantiate Effect");
+        }
+        NapiApi::Object argJS(env);
+        NapiApi::WeakRef sceneRef { ctx.This() };
+        napi_value args[] = { sceneRef.GetValue(), argJS.ToNapiValue() };
+        // Strong ref as nobody else owns the effect object at this point 
+        const auto result = CreateFromNativeInstance(env, "Effect", effect, PtrType::STRONG, args);
+        return promise.Resolve(result.ToNapiValue());
+    }
+    return promise.Reject("Geometry node creation failed. Is the given node path unique and valid?");
 }
 
 napi_value SceneJS::GetAnimations(NapiApi::FunctionContext<>& ctx)
 {
+    LUME_TRACE_FUNC()
     auto scene = ctx.This().GetNative<SCENE_NS::IScene>();
     if (!scene) {
         return ctx.GetUndefined();
@@ -1211,28 +1091,77 @@ napi_value SceneJS::GetAnimations(NapiApi::FunctionContext<>& ctx)
     return tmp;
 }
 
+napi_value SceneJS::CloneNode(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, BASE_NS::string>& ctx)
+{
+    auto scene = ctx.This().GetNative<SCENE_NS::IScene>();
+    if (!scene) {
+        return ctx.GetUndefined();
+    }
+
+    auto arg0 = ctx.Arg<0>();
+    auto arg1 = ctx.Arg<1>();
+    BASE_NS::string name = ctx.Arg<2>();
+    if (arg1.IsUndefinedOrNull()) {
+        // okay. Invalid arg error?
+        return ctx.GetUndefined();
+    }
+    NapiApi::Object nobj = arg0;
+    NapiApi::Object pnobj = arg1;
+
+    if(auto parentNode = pnobj.GetNative<SCENE_NS::INode>()) {
+        if (auto n  = nobj.GetNative<SCENE_NS::INode>()) {
+            auto node = n->Clone(name, parentNode).GetResult();
+            if (!node) {
+                return ctx.GetNull();
+            }
+            const auto env = ctx.GetEnv();
+            auto argJS = NapiApi::Object { env };
+            napi_value args[] = { ctx.This().ToNapiValue(), argJS.ToNapiValue() };
+            // These are owned by the scene, so store only weak reference.
+            auto js = CreateFromNativeInstance(env, node, PtrType::WEAK, args);
+            if (js.GetJsWrapper<NodeImpl>()) {
+                js.GetJsWrapper<NodeImpl>()->Attached(true);
+                return js.ToNapiValue();
+            }
+        }
+    }
+    return ctx.GetNull();
+}
+
 void SceneJS::DisposeHook(uintptr_t token, NapiApi::Object obj)
 {
-    disposables_[token] = { obj };
+    LUME_TRACE_FUNC()
+    disposables_.push_back(token);
+    resources_->DisposeHook(token, obj);
 }
 void SceneJS::ReleaseDispose(uintptr_t token)
 {
-    auto it = disposables_.find(token);
-    if (it != disposables_.end()) {
-        it->second.Reset();
-        disposables_.erase(it->first);
+    LUME_TRACE_FUNC()
+    for (auto ite = disposables_.cbegin();
+        ite != disposables_.cend(); ite++ ) {
+        if (*ite == token) {
+            resources_->ReleaseDispose(token);
+            disposables_.erase(ite);
+            return;
+        }
     }
 }
 
 void SceneJS::StrongDisposeHook(uintptr_t token, NapiApi::Object obj)
 {
-    strongDisposables_[token] = NapiApi::StrongRef(obj);
+    LUME_TRACE_FUNC()
+    strongDisposables_.push_back(token);
+    resources_->StrongDisposeHook(token, obj);
 }
 void SceneJS::ReleaseStrongDispose(uintptr_t token)
 {
-    auto it = strongDisposables_.find(token);
-    if (it != strongDisposables_.end()) {
-        it->second.Reset();
-        strongDisposables_.erase(it->first);
+    LUME_TRACE_FUNC()
+    for (auto ite = strongDisposables_.cbegin();
+        ite != strongDisposables_.cend(); ite++ ) {
+        if (*ite == token) {
+            resources_->ReleaseStrongDispose(token);
+            strongDisposables_.erase(ite);
+            return;
+        }
     }
 }

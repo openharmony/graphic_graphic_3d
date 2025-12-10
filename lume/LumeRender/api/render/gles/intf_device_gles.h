@@ -156,7 +156,7 @@ struct DevicePropertiesGLES {
     int32_t shaderStorageBufferOffsetAlignment;
 
     // ES32
-    float  minSampleShadingValue;
+    float minSampleShadingValue;
     int32_t maxDebugGroupStackDepth;
     int32_t maxDebugLoggedMessages;
     int32_t maxDebugMessageLength;

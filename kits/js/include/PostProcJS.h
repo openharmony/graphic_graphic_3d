@@ -19,7 +19,7 @@
 #include "BaseObjectJS.h"
 #include "ObjectProxy.h"
 
-class PostProcJS : public BaseObject {
+class PostProcJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 20;
     static void Init(napi_env env, napi_value exports);
@@ -47,7 +47,7 @@ private:
     void SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr colorFringe);
 
     NapiApi::StrongRef toneMap_; // We own the tonemap.
-    NapiApi::WeakRef camera_;    // The camera owns us.
+    NapiApi::WeakObjectRef camera_;    // The camera owns us.
     NapiApi::StrongRef bloom_;   // We own the bloom.
     ObjectProxy vignetteProxy_;
     ObjectProxy colorFringeProxy_;

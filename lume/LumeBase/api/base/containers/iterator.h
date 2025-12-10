@@ -49,7 +49,6 @@ public:
     using pointer = typename T::const_pointer;
     using reference = typename T::const_reference;
     constexpr const_iterator() noexcept = default;
-    ~const_iterator() = default;
     constexpr explicit const_iterator(const pointer ptr) noexcept : it_ { ptr } {}
     constexpr const_iterator(const base_iterator& other) noexcept : it_ { other.ptr() } {}
     constexpr const_iterator& operator++() noexcept
@@ -149,7 +148,6 @@ public:
     using pointer = typename T::pointer;
     using reference = typename T::reference;
     constexpr iterator() noexcept = default;
-    ~iterator() = default;
     constexpr explicit iterator(const pointer ptr) noexcept : it_ { ptr } {}
     constexpr iterator& operator++() noexcept
     {
@@ -262,9 +260,11 @@ public:
     using reference = typename Iter::reference;
 
     constexpr reverse_iterator() = default;
-    ~reverse_iterator() = default;
     constexpr explicit reverse_iterator(iterator_type it) noexcept : it_(it) {}
-    constexpr reverse_iterator(const reverse_iterator& other) noexcept : it_(other.base()) {}
+    constexpr reverse_iterator(const reverse_iterator& other) noexcept = default;
+    constexpr reverse_iterator& operator=(const reverse_iterator& other) noexcept = default;
+    constexpr reverse_iterator(reverse_iterator&& other) noexcept = default;
+    constexpr reverse_iterator& operator=(reverse_iterator&& other) noexcept = default;
     template<class U>
     constexpr reverse_iterator& operator=(const reverse_iterator<U>& other)
     {

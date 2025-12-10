@@ -87,8 +87,9 @@ void DestroyPlugin(PluginToken token)
     fileManager.UnregisterFilesystem(ROFS);
 #endif
 
-    auto& registry = *state->engine_.GetInterface<IClassRegister>();
-    registry.UnregisterInterfaceType(state->interfaceInfo_);
+    if (auto registry = state->engine_.GetInterface<IClassRegister>()) {
+        registry->UnregisterInterfaceType(state->interfaceInfo_);
+    }
 
     delete state;
 }

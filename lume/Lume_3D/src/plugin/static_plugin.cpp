@@ -36,6 +36,7 @@
 #include <3d/ecs/components/planar_reflection_component.h>
 #include <3d/ecs/components/post_process_component.h>
 #include <3d/ecs/components/post_process_configuration_component.h>
+#include <3d/ecs/components/post_process_effect_component.h>
 #include <3d/ecs/components/reflection_probe_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
@@ -76,8 +77,8 @@
 #include "render/node/render_node_create_default_camera_gpu_images.h"
 #include "render/node/render_node_default_camera_controller.h"
 #include "render/node/render_node_default_camera_post_process_controller.h"
+#include "render/node/render_node_default_camera_post_process_interface_controller.h"
 #include "render/node/render_node_default_cameras.h"
-#include "render/node/render_node_default_depth_render_slot.h"
 #include "render/node/render_node_default_env.h"
 #include "render/node/render_node_default_environment_blender.h"
 #include "render/node/render_node_default_lights.h"
@@ -153,6 +154,7 @@ MANAGER(FOG_COMPONENT_TYPE_INFO, IFogComponentManager);
 MANAGER(RENDER_HANDLE_COMPONENT_TYPE_INFO, IRenderHandleComponentManager);
 MANAGER(POST_PROCESS_COMPONENT_TYPE_INFO, IPostProcessComponentManager);
 MANAGER(POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, IPostProcessConfigurationComponentManager);
+MANAGER(POST_PROCESS_EFFECT_COMPONENT_TYPE_INFO, IPostProcessEffectComponentManager);
 MANAGER(LAYER_COMPONENT_TYPE_INFO, ILayerComponentManager);
 MANAGER(RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, IRenderMeshBatchComponentManager);
 MANAGER(PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO, IPreviousJointMatricesComponentManager);
@@ -175,14 +177,8 @@ constexpr Uid NODE_SYSTEM_R_DEPS[] = { NAME_COMPONENT_TYPE_INFO.uid, TRANSFORM_C
 // Render preprocessor system dependencies.
 constexpr Uid RENDER_PREPROCESSOR_SYSTEM_RW_DEPS[] = { RENDER_HANDLE_COMPONENT_TYPE_INFO.uid };
 constexpr Uid RENDER_PREPROCESSOR_SYSTEM_R_DEPS[] = {
-    JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
-    LAYER_COMPONENT_TYPE_INFO.uid,
     MATERIAL_COMPONENT_TYPE_INFO.uid,
     MESH_COMPONENT_TYPE_INFO.uid,
-    NODE_COMPONENT_TYPE_INFO.uid,
-    RENDER_MESH_COMPONENT_TYPE_INFO.uid,
-    SKIN_COMPONENT_TYPE_INFO.uid,
-    WORLD_MATRIX_COMPONENT_TYPE_INFO.uid,
     GRAPHICS_STATE_COMPONENT_TYPE_INFO.uid,
 };
 
@@ -207,11 +203,13 @@ constexpr Uid RENDER_SYSTEM_R_DEPS[] = {
     JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
     POST_PROCESS_COMPONENT_TYPE_INFO.uid,
     POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
+    POST_PROCESS_EFFECT_COMPONENT_TYPE_INFO.uid,
     LAYER_COMPONENT_TYPE_INFO.uid,
     RENDER_MESH_BATCH_COMPONENT_TYPE_INFO.uid,
     PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO.uid,
     REFLECTION_PROBE_COMPONENT_TYPE_INFO.uid,
     DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO.uid,
+    SKIN_COMPONENT_TYPE_INFO.uid,
 };
 
 // Animation system dependencies.
@@ -253,18 +251,11 @@ constexpr Uid MORPHING_SYSTEM_R_DEPS[] = {
 };
 
 // Weather system dependencies.
-constexpr Uid WEATHER_SYSTEM_RW_DEPS[] = {
-    RENDER_HANDLE_COMPONENT_TYPE_INFO.uid,
-    MESH_COMPONENT_TYPE_INFO.uid,
-    RENDER_MESH_COMPONENT_TYPE_INFO.uid,
-    MATERIAL_COMPONENT_TYPE_INFO.uid,
-    TRANSFORM_COMPONENT_TYPE_INFO.uid,
-    RENDER_CONFIGURATION_COMPONENT_TYPE_INFO.uid,
-    CAMERA_COMPONENT_TYPE_INFO.uid,
-    ENVIRONMENT_COMPONENT_TYPE_INFO.uid,
-    WATER_RIPPLE_COMPONENT_TYPE_INFO.uid,
-    WEATHER_COMPONENT_TYPE_INFO.uid,
-};
+constexpr Uid WEATHER_SYSTEM_RW_DEPS[] = { RENDER_HANDLE_COMPONENT_TYPE_INFO.uid, MESH_COMPONENT_TYPE_INFO.uid,
+    RENDER_MESH_COMPONENT_TYPE_INFO.uid, MATERIAL_COMPONENT_TYPE_INFO.uid, TRANSFORM_COMPONENT_TYPE_INFO.uid,
+    RENDER_CONFIGURATION_COMPONENT_TYPE_INFO.uid, CAMERA_COMPONENT_TYPE_INFO.uid, ENVIRONMENT_COMPONENT_TYPE_INFO.uid,
+    WATER_RIPPLE_COMPONENT_TYPE_INFO.uid, WEATHER_COMPONENT_TYPE_INFO.uid, PLANAR_REFLECTION_COMPONENT_TYPE_INFO.uid,
+    LAYER_COMPONENT_TYPE_INFO.uid };
 
 constexpr Uid WEATHER_SYSTEM_R_DEPS[] = {
     WATER_RIPPLE_COMPONENT_TYPE_INFO.uid,
@@ -282,10 +273,11 @@ constexpr ComponentManagerTypeInfo CORE_COMPONENT_TYPE_INFOS[] = { CAMERA_COMPON
     SKIN_IBM_COMPONENT_TYPE_INFO, ANIMATION_COMPONENT_TYPE_INFO, ANIMATION_INPUT_COMPONENT_TYPE_INFO,
     ANIMATION_OUTPUT_COMPONENT_TYPE_INFO, ANIMATION_STATE_COMPONENT_TYPE_INFO, ANIMATION_TRACK_COMPONENT_TYPE_INFO,
     ENVIRONMENT_COMPONENT_TYPE_INFO, FOG_COMPONENT_TYPE_INFO, RENDER_HANDLE_COMPONENT_TYPE_INFO,
-    POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO, LAYER_COMPONENT_TYPE_INFO,
-    RENDER_MESH_BATCH_COMPONENT_TYPE_INFO, PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO,
-    REFLECTION_PROBE_COMPONENT_TYPE_INFO, DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO,
-    GRAPHICS_STATE_COMPONENT_TYPE_INFO, WATER_RIPPLE_COMPONENT_TYPE_INFO, WEATHER_COMPONENT_TYPE_INFO };
+    POST_PROCESS_COMPONENT_TYPE_INFO, POST_PROCESS_CONFIGURATION_COMPONENT_TYPE_INFO,
+    POST_PROCESS_EFFECT_COMPONENT_TYPE_INFO, LAYER_COMPONENT_TYPE_INFO, RENDER_MESH_BATCH_COMPONENT_TYPE_INFO,
+    PREV_JOINT_MATRICES_COMPONENT_TYPE_INFO, REFLECTION_PROBE_COMPONENT_TYPE_INFO,
+    DYNAMIC_ENVIRONMENT_BLENDER_COMPONENT_TYPE_INFO, GRAPHICS_STATE_COMPONENT_TYPE_INFO,
+    WATER_RIPPLE_COMPONENT_TYPE_INFO, WEATHER_COMPONENT_TYPE_INFO };
 } // namespace
 
 SYSTEM(ANIMATION_SYSTEM_TYPE_INFO, IAnimationSystem, ANIMATION_SYSTEM_RW_DEPS, ANIMATION_SYSTEM_R_DEPS, {},
@@ -345,7 +337,6 @@ constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     FillRenderNodeTypeInfo<RenderNodeDefaultCameraController>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultCameraPostProcessController>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultCameras>(),
-    FillRenderNodeTypeInfo<RenderNodeDefaultDepthRenderSlot>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultEnv>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultLights>(),
     FillRenderNodeTypeInfo<RenderNodeDefaultMaterialDeferredShading>(),
@@ -358,6 +349,7 @@ constexpr RenderNodeTypeInfo CORE_RENDER_NODE_TYPE_INFOS[] = {
     FillRenderNodeTypeInfo<RenderNodeDefaultEnvironmentBlender>(),
     FillRenderNodeTypeInfo<RenderNodeCameraWeather>(),
     FillRenderNodeTypeInfo<RenderNodeWeatherSimulation>(),
+    FillRenderNodeTypeInfo<RenderNodeDefaultCameraPostProcessInterfaceController>(),
 };
 } // namespace
 

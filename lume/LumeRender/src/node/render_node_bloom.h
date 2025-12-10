@@ -71,7 +71,6 @@ private:
     RenderNodeHandles::InputResources inputResources_;
 
     struct PostProcessInterfaces {
-        IRenderPostProcess::Ptr postProcess;
         IRenderPostProcessNode::Ptr postProcessNode;
     };
     PostProcessInterfaces ppRenderBloomInterface_;

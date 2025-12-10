@@ -15,6 +15,8 @@
 
 #include "render_node_default_shadow_render_slot.h"
 
+#include <3d/implementation_uids.h>
+#include <3d/intf_graphics_context.h>
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <3d/render/intf_render_data_store_default_light.h>
@@ -26,10 +28,12 @@
 #include <base/math/vector_util.h>
 #include <core/log.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
+#include <render/intf_render_context.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
@@ -164,6 +168,19 @@ FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(
 void RenderNodeDefaultShadowRenderSlot::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    // get flags
+    bindlessEnabled_ = false;
+    IRenderContext& renderContext = renderNodeContextMgr_->GetRenderContext();
+    if (auto* renderContextClassRegister = renderContext.GetInterface<CORE_NS::IClassRegister>()) {
+        if (auto* graphicsContext =
+                CORE_NS::GetInstance<IGraphicsContext>(*renderContextClassRegister, UID_GRAPHICS_CONTEXT)) {
+            const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_BINDLESS_PIPELINES_BIT) {
+                bindlessEnabled_ = true;
+            }
+        }
+    }
+
     ParseRenderNodeInputs();
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
@@ -409,7 +426,12 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
         bindSets[bindSetCount++] = { fgds.set1, dynamicOffsets };
 
         // update material descriptor set
-        if ((!initialBindDone) || ((currMaterialIndex != currSubmesh.indices.materialIndex) && hasSet2ImageData)) {
+        if (bindlessEnabled_) {
+            if (!initialBindDone) {
+                bindSets[bindSetCount++] = { fgds.set2Default, {} };
+            }
+        } else if ((!initialBindDone) ||
+                   ((currMaterialIndex != currSubmesh.indices.materialIndex) && hasSet2ImageData)) {
             currMaterialIndex = currSubmesh.indices.materialIndex;
             // safety check for global material sets
             const RenderHandle set2Handle =
@@ -468,7 +490,9 @@ void RenderNodeDefaultShadowRenderSlot::CreateDefaultShaderData()
     currentScene_.scissorDesc = renderNodeUtil.CreateDefaultScissor(renderPass_);
 
     allShaderData_.defaultPlHandle =
-        shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_DEPTH);
+        bindlessEnabled_
+            ? shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_DEPTH_BINDLESS)
+            : shaderMgr.GetPipelineLayoutHandle(DefaultMaterialShaderConstants::PIPELINE_LAYOUT_DEPTH);
     allShaderData_.defaultPipelineLayout = shaderMgr.GetPipelineLayout(allShaderData_.defaultPlHandle);
     allShaderData_.defaultVidHandle =
         shaderMgr.GetVertexInputDeclarationHandle(DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_DEPTH);
@@ -766,10 +790,24 @@ void RenderNodeDefaultShadowRenderSlot::ParseRenderNodeInputs()
         jsonInputs_.nodeFlags = 0;
     }
 
-    jsonInputs_.renderSlotId =
-        renderNodeContextMgr_->GetShaderManager().GetRenderSlotId(parserUtil.GetStringValue(jsonVal, "renderSlot"));
-    jsonInputs_.renderSlotVsmId =
-        renderNodeContextMgr_->GetShaderManager().GetRenderSlotId(parserUtil.GetStringValue(jsonVal, "renderSlotVsm"));
+    string rsSlot = parserUtil.GetStringValue(jsonVal, "renderSlot");
+    string rsSlotVsm = parserUtil.GetStringValue(jsonVal, "renderSlotVsm");
+    // with bindless the default render slots are switched
+    if (bindlessEnabled_) {
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        CORE_LOG_I("Switching to bindless variants of default material render slots (node:%s)",
+            renderNodeContextMgr_->GetNodeName().data());
+#endif
+        if (rsSlot == DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH) {
+            rsSlot = DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_BINDLESS;
+        }
+        if (rsSlotVsm == DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM) {
+            rsSlotVsm = DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM_BINDLESS;
+        }
+    }
+    jsonInputs_.renderSlotId = renderNodeContextMgr_->GetShaderManager().GetRenderSlotId(rsSlot);
+    jsonInputs_.renderSlotVsmId = renderNodeContextMgr_->GetShaderManager().GetRenderSlotId(rsSlotVsm);
+
     if (jsonInputs_.renderSlotVsmId == ~0u) {
         jsonInputs_.renderSlotVsmId = jsonInputs_.renderSlotId;
 #if (CORE3D_VALIDATION_ENABLED == 1)

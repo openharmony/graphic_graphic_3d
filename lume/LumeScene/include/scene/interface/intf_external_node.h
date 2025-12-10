@@ -18,18 +18,24 @@
 
 #include <scene/base/types.h>
 
-#include <core/resources/intf_resource.h>
+#include <core/ecs/entity.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 /**
- * @brief Attachment to mark that current node is imported from external scene
+ * @brief Attachment to mark that current node and its children are imported from external scene
  */
 class IExternalNode : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IExternalNode, "33b69e97-4ffa-465d-8126-d7c54165aef6")
 public:
     virtual CORE_NS::ResourceId GetResourceId() const = 0;
     virtual void SetResourceId(CORE_NS::ResourceId id) = 0;
+    virtual void SetAddedEntities(BASE_NS::vector<CORE_NS::Entity>) = 0;
+    virtual BASE_NS::vector<CORE_NS::Entity> GetAddedEntities() const = 0;
+    virtual void Activate() = 0;
+    virtual void Deactivate() = 0;
+    virtual void SetSubresourceGroup(BASE_NS::string_view group) = 0;
+    virtual BASE_NS::string GetSubresourceGroup() const = 0;
 };
 
 META_REGISTER_CLASS(ExternalNode, "b26e734e-c4ec-48bc-b845-d9feb6dd5de8", META_NS::ObjectCategoryBits::NO_CATEGORY)

@@ -226,8 +226,8 @@ void Logger::RemoveOutput(uint64_t id)
     std::lock_guard<std::mutex> guard(loggerMutex_);
 
     outputs_.erase(std::remove_if(outputs_.begin(), outputs_.end(),
-                                  [id](const auto &output) { return reinterpret_cast<uint64_t>(output.get()) == id; }),
-                   outputs_.end());
+                       [id](const auto& output) { return reinterpret_cast<uint64_t>(output.get()) == id; }),
+        outputs_.end());
 }
 
 const IInterface* Logger::GetInterface(const Uid& uid) const

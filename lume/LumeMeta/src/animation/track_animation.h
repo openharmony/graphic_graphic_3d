@@ -25,8 +25,8 @@ META_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-class TrackAnimation final : public IntroduceInterfaces<BasePropertyAnimationFwd<ITimedAnimation>, ITrackAnimation,
-                                 IStartableAnimation, ISerializable> {
+class TrackAnimation final
+    : public IntroduceInterfaces<BasePropertyAnimationFwd<ITimedAnimation>, ITrackAnimation, IStartableAnimation> {
     META_OBJECT(TrackAnimation, META_NS::ClassId::TrackAnimation, IntroduceInterfaces)
 public:
     bool Build(const IMetadata::Ptr& data) override;
@@ -69,6 +69,11 @@ public: // IModifier
     TrackAnimationState& GetState() noexcept override
     {
         return state_;
+    }
+
+    META_NS::ObjectId GetDefaultAccess() const override
+    {
+        return ClassId::TrackAnimationTemplateAccess;
     }
 
 protected: // IAnimationInternal

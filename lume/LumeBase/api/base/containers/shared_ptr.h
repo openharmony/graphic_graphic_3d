@@ -270,7 +270,7 @@ public:
     }
     explicit operator bool() const noexcept
     {
-        return get();
+        return get() != nullptr;
     }
     bool operator==(const shared_ptr& other) const noexcept
     {

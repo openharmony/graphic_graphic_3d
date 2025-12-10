@@ -28,9 +28,9 @@ namespace Serialization {
 
 JsonImporter::JsonImporter() : transformations_ { CreateShared<MetaMigrateV1>() } {}
 
-IObject::Ptr JsonImporter::Import(const ISerNode::ConstPtr& tree)
+IObject::Ptr JsonImporter::Import(const ISerNode::ConstPtr& tree, ImportOptions opts)
 {
-    return imp_.Import(tree);
+    return imp_.Import(tree, BASE_NS::move(opts));
 }
 
 ISerNode::Ptr JsonImporter::ImportAsTree(CORE_NS::IFile& input)
@@ -48,10 +48,10 @@ ISerNode::Ptr JsonImporter::ImportAsTree(CORE_NS::IFile& input)
     return tree;
 }
 
-IObject::Ptr JsonImporter::Import(CORE_NS::IFile& input)
+IObject::Ptr JsonImporter::Import(CORE_NS::IFile& input, ImportOptions opts)
 {
     if (auto tree = ImportAsTree(input)) {
-        return Import(tree);
+        return Import(tree, BASE_NS::move(opts));
     }
     return nullptr;
 }
@@ -110,6 +110,9 @@ SerMetadata JsonImporter::GetMetadata() const
 {
     return imp_.GetMetadata();
 }
-
+void JsonImporter::ResolveDeferred()
+{
+    imp_.ResolveDeferred();
+}
 } // namespace Serialization
 META_END_NAMESPACE()

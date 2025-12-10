@@ -75,7 +75,8 @@ private:
     template<typename Fn>
     auto AddTask(const IInternalScene::Ptr& is, Fn&& fn, const META_NS::ITaskQueue::Ptr& queue)
     {
-        return is ? is->AddTask(BASE_NS::forward<Fn>(fn), queue) : Future<META_NS::PlainType_t<decltype(fn())>> {};
+        return is ? is->AddTaskOrRunDirectly(BASE_NS::forward<Fn>(fn), queue)
+                  : Future<META_NS::PlainType_t<decltype(fn())>> {};
     }
 };
 

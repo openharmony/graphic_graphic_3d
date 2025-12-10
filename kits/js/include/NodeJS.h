@@ -19,12 +19,12 @@
 #include "BaseObjectJS.h"
 #include "NodeImpl.h"
 
-class NodeJS : public BaseObject, NodeImpl {
+class NodeJS final : public BaseObject, NodeImpl {
 public:
     static constexpr uint32_t ID = 130;
     static void Init(napi_env env, napi_value exports);
     NodeJS(napi_env, napi_callback_info);
-    ~NodeJS()override;
+    ~NodeJS() override;
     void* GetInstanceImpl(uint32_t) override;
 
 private:

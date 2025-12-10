@@ -16,7 +16,7 @@
 #ifndef SCENE_INTERFACE_IMESHRESOURCE_H
 #define SCENE_INTERFACE_IMESHRESOURCE_H
 
-#include <core/plugin/intf_interface.h>
+#include <scene/base/types.h>
 
 SCENE_BEGIN_NAMESPACE()
 

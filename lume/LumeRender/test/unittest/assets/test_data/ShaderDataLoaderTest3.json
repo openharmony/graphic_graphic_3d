@@ -1,0 +1,43 @@
+{
+    "compatibility_info" : { "version" : "23.00", "type" : "shadr" },
+    "name": "shader0",
+    "baseShader": "Base"
+    "shaders": [
+        {
+            "variantName": "variant0",
+            "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
+            "frag": "rendershaders://shader/GfxBackBufferRenderNodeTest.frag.spv",
+            "state": {
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": 4
+                        }
+                    ]
+                }
+            },        
+            "materialMetadata": {
+                "name": "material",
+                "size": 128
+            }
+        },
+        {
+            "variantName": "variant1",
+            "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
+            "frag": "rendershaders://shader/GfxBackBufferRenderNodeTest.frag.spv",
+            "state": {
+                "colorBlendState": {
+                    "colorAttachments": [
+                        {
+                            "colorWriteMask": "r_bit|g_bit|b_bit|a_bit"
+                        }
+                    ]
+                }
+            },        
+            "materialMetadata": {
+                "name": "material",
+                "size": 128
+            }
+        }
+    ]
+}

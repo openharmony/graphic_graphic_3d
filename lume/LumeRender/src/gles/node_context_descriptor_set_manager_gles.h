@@ -28,7 +28,7 @@ RENDER_BEGIN_NAMESPACE()
 class GpuImageGLES;
 
 namespace Gles {
-inline constexpr uint32_t EXTERNAL_BIT = 0x8000000;
+static constexpr uint32_t EXTERNAL_BIT = 0x8000000;
 
 struct BufferType {
     uint32_t bufferId;

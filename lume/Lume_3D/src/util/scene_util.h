@@ -66,6 +66,8 @@ public:
     };
 
     void CreateReflectionPlaneComponent(CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity) override;
+    void CreateReflectionPlaneComponent(
+        CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity, PlanarReflectionComponent::Flags flags) override;
 
     IAnimationPlayback* RetargetSkinAnimation(CORE_NS::IEcs& ecs, CORE_NS::Entity targetEntity,
         CORE_NS::Entity sourceEntity, CORE_NS::Entity animationEntity) const override;
@@ -84,10 +86,15 @@ public:
     CORE_NS::EntityReference CreateReflectionProbe(
         CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const override;
 
-    CORE_NS::Entity Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity, const CORE_NS::IEcs& source,
-        CORE_NS::Entity sourceEntity) const override;
+    ISceneUtil::ClonedEntities Clone(CORE_NS::IEcs& destination, CORE_NS::Entity parentEntity,
+        const CORE_NS::IEcs& source, CORE_NS::Entity sourceEntity) const override;
+
+    ISceneUtil::ClonedEntities Clone(
+        CORE_NS::IEcs& source, CORE_NS::Entity sourceEntity, CORE_NS::Entity parentEntity) const override;
 
     BASE_NS::vector<CORE_NS::Entity> Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source) const override;
+    ISceneUtil::PartialClonedEntities Clone(CORE_NS::IEcs& destination, const CORE_NS::IEcs& source,
+        BASE_NS::unordered_map<CORE_NS::Entity, MappedEntity> srcToDst) const override;
 
     bool IsSphereInsideCameraFrustum(const CORE_NS::IEcs& ecs, CORE_NS::Entity cameraEntity, BASE_NS::Math::Vec3 center,
         float radius) const override;

@@ -1,0 +1,101 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "Image1",
+                    "dependencyImageName": "Image0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d_array",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | transfer_dst | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1,
+                    "clearColor": [ 0, 0, 0, 0 ]
+                },
+                {
+                    "name": "Image2",
+                    "dependencyImageName": "Image0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration2",
+                    "imageType": "2d",
+                    "imageViewType": "2d_array",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1
+                },
+                {
+                    "name": "Image3",
+                    "dependencyImageName": "Image0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration3",
+                    "imageType": "2d",
+                    "imageViewType": "2d_array",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1
+                },
+                {
+                    "name": "Image4",
+                    "dependencyImageName": "NonExistingImage",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration4",
+                    "imageType": "2d",
+                    "imageViewType": "2d_array",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "transfer_dst",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1,
+                    "shadingRateTexelSize": [2, 2]
+                },
+                {
+                    "name": "Image5",
+                    "dependencyImageName": "Image0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration5",
+                    "imageType": "2d",
+                    "imageViewType": "2d_array",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "color_attachment",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 4,
+                    "height": 4,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages2",
+            "gpuImageDescs": []
+        }
+    ]
+}

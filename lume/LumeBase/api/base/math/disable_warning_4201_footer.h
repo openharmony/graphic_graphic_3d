@@ -19,6 +19,7 @@
 // We use headers instead of macros because # cannot be used within macros
 // NOTE: warning C4201: nonstandard extension used: nameless struct/union
 #if _MSC_VER
+#pragma warning(disable : 5031)
 #pragma warning(pop)
 #elif defined(__clang__)
 #pragma clang diagnostic pop

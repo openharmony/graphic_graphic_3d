@@ -34,6 +34,7 @@ RENDER_END_NAMESPACE()
 CORE3D_BEGIN_NAMESPACE()
 class IRenderDataStoreDefaultMaterial;
 class IRenderDataStoreDefaultCamera;
+class IRenderDataStoreDefaultScene;
 
 struct SceneRenderDataStores {
     // render data store scene name can be used as prefix for 3D scene resource names
@@ -79,6 +80,24 @@ struct SceneCameraBufferHandles {
 struct SceneCameraImageHandles {
     /* Camera radiance cubemap handle */
     RENDER_NS::RenderHandle radianceCubemap;
+};
+
+enum SceneRenderCameraDataFlagBits : uint32_t {
+    /* Default scene camera (legacy render node graphs without camera setup nor render node injection) */
+    SCENE_CAMERA_DATA_FLAG_LEGACY_MAIN_BIT = (1 << 0),
+    /* Named camera */
+    SCENE_CAMERA_DATA_FLAG_NAMED_BIT = (1 << 1),
+};
+/** Container for scene camera flag bits */
+using SceneRenderCameraDataFlags = uint32_t;
+
+struct SceneRenderCameraData {
+    /* Selected camera index */
+    uint32_t cameraIdx { ~0U };
+    /* Additional processing for flags */
+    SceneRenderCameraDataFlags flags { 0U };
+    /* Render camera */
+    RenderCamera camera;
 };
 
 /**
@@ -195,6 +214,16 @@ public:
     virtual SceneCameraImageHandles GetSceneCameraImageHandles(
         RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
         const BASE_NS::string_view cameraName, const RenderCamera& camera) = 0;
+
+    /** Get scene camera data on cameraId and cameraName.
+     * @param dataStoreScene Data store for scene.
+     * @param dataStoreCamera Data store for camera.
+     * @param cameraId ID of the the current camera. (Priority over the name)
+     * @param cameraName Name of the current camera.
+     */
+    virtual SceneRenderCameraData GetSceneCameraData(const IRenderDataStoreDefaultScene& dataStoreScene,
+        const IRenderDataStoreDefaultCamera& dataStoreCamera, const uint64_t cameraId,
+        const BASE_NS::string_view cameraName) = 0;
 
 protected:
     IRenderNodeSceneUtil() = default;

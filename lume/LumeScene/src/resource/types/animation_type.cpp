@@ -15,37 +15,35 @@
 
 #include "animation_type.h"
 
-#include <scene/ext/util.h>
+#include <scene/ext/intf_internal_scene.h>
+#include <scene/interface/intf_scene.h>
+
+#include <meta/api/metadata_util.h>
+
+#include "../util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-bool AnimationResourceType::Build(const META_NS::IMetadata::Ptr& d)
+CORE_NS::IResource::Ptr AnimationResourceType::LoadResource(const StorageInfo& s) const
 {
-    bool res = Super::Build(d);
-    if (res) {
-        auto context = GetInterfaceBuildArg<IRenderContext>(d, "RenderContext");
-        if (!context) {
-            CORE_LOG_E("Invalid arguments to construct AnimationResourceType");
-            return false;
-        }
-        context_ = context;
+    auto scene = interface_pointer_cast<IScene>(s.context);
+    if (!scene) {
+        CORE_LOG_W("missing context, cannot load animation resource");
+        return nullptr;
+    }
+    auto is = scene->GetInternalScene();
+    CORE_NS::IResource::Ptr res =
+        is->RunDirectlyOrInTask([&]() { return interface_pointer_cast<CORE_NS::IResource>(is->FindAnimation(s.id)); });
+    if (res && s.options) {
+        ApplyObjectResourceOptions(s.id, res, *s.options, s.self, s.context);
     }
     return res;
 }
-BASE_NS::string AnimationResourceType::GetResourceName() const
-{
-    return "AnimationResource";
-}
-BASE_NS::Uid AnimationResourceType::GetResourceType() const
-{
-    return ClassId::AnimationResource.Id().ToUid();
-}
-CORE_NS::IResource::Ptr AnimationResourceType::LoadResource(const StorageInfo& s) const
-{
-    return nullptr;
-}
 bool AnimationResourceType::SaveResource(const CORE_NS::IResource::ConstPtr& p, const StorageInfo& s) const
 {
+    if (s.options) {
+        CreateObjectResourceOptions(p, s.self, *s.options);
+    }
     return true;
 }
 bool AnimationResourceType::ReloadResource(const StorageInfo& s, const CORE_NS::IResource::Ptr&) const

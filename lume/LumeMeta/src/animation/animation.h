@@ -16,13 +16,15 @@
 #define META_SRC_ANIMATION_H
 
 #include <meta/api/make_callback.h>
+#include <meta/api/resource/derived_from_template.h>
 #include <meta/ext/event_util.h>
+#include <meta/ext/resource/resource.h>
 #include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/animation/intf_animation.h>
 #include <meta/interface/intf_containable.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
-#include "object.h"
+#include "../object.h"
 #include "animation_state.h"
 #include "staggered_animation_state.h"
 
@@ -34,18 +36,37 @@ namespace Internal {
  * @brief A base class which can be used by generic animation implementations.
  */
 template<class BaseAnimationInterface>
-class BaseAnimationFwd : public IntroduceInterfaces<MetaObject, BaseAnimationInterface, INotifyOnChange, IAttachment,
-                             IContainable, IMutableContainable, IAnimationInternal> {
+class BaseAnimationFwd
+    : public IntroduceInterfaces<DerivedFromTemplate, MetaObject, BaseAnimationInterface, INotifyOnChange, IAttachment,
+          IContainable, IMutableContainable, IAnimationInternal, Resource> {
     static_assert(BASE_NS::is_convertible_v<BaseAnimationInterface*, IAnimation*>,
         "BaseAnimationInterface of BaseAnimationFwd must inherit from IAnimation");
 
-    using MyBase = IntroduceInterfaces<MetaObject, BaseAnimationInterface, INotifyOnChange, IAttachment, IContainable,
-        IMutableContainable, IAnimationInternal>;
-    META_OBJECT_NO_CLASSINFO(BaseAnimationFwd, MyBase)
+    using MyBase = IntroduceInterfaces<DerivedFromTemplate, MetaObject, BaseAnimationInterface, INotifyOnChange,
+        IAttachment, IContainable, IMutableContainable, IAnimationInternal, Resource>;
 
+    META_OBJECT_NO_CLASSINFO(BaseAnimationFwd, MyBase)
 protected:
     BaseAnimationFwd() = default;
     ~BaseAnimationFwd() override = default;
+
+    CORE_NS::ResourceType GetResourceType() const override
+    {
+        return ClassId::AnimationResource.Id().ToUid();
+    }
+
+    // Serialise animation always as normal if no resource id is set
+    ReturnError Export(IExportContext& c) const override
+    {
+        if (this->GetResourceId().IsValid() && this->SerialiseAsResourceId(c)) {
+            return this->ExportResourceId(c);
+        }
+        return Serializer(c) & AutoSerialize();
+    }
+    ReturnError Import(IImportContext& c) override
+    {
+        return Serializer(c) & AutoSerialize();
+    }
 
 protected: // IObject
     BASE_NS::string GetName() const override
@@ -422,6 +443,7 @@ protected:
     struct TargetProperty {
         IProperty::Ptr property;
         IStackProperty::Ptr stack;
+        /* NOLINTNEXTLINE(*-explicit-constructor) */
         operator bool() const noexcept
         {
             return property && stack;

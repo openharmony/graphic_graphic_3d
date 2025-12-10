@@ -30,8 +30,7 @@ SCENE_BEGIN_NAMESPACE()
 
 META_REGISTER_CLASS(CameraComponent, "db677290-7776-419d-8883-f1c6387740b1", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class CameraComponent
-    : public META_NS::IntroduceInterfaces<Component, ICamera, IInternalCamera, ICameraRayCast, META_NS::IAttachable> {
+class CameraComponent : public META_NS::IntroduceInterfaces<Component, ICamera, IInternalCamera, ICameraRayCast> {
     META_OBJECT(CameraComponent, ClassId::CameraComponent, IntroduceInterfaces)
 
 public:
@@ -54,13 +53,15 @@ public:
     SCENE_STATIC_PROPERTY_DATA(ICamera, BASE_NS::Math::UVec2, RenderTargetSize, "CameraComponent.renderResolution")
     SCENE_STATIC_PROPERTY_DATA(ICamera, BASE_NS::Math::Vec4, ClearColor, "CameraComponent.clearColorValue")
     SCENE_STATIC_PROPERTY_DATA(ICamera, float, ClearDepth, "CameraComponent.clearDepthValue")
-    SCENE_STATIC_PROPERTY_DATA(ICamera, uint64_t, LayerMask, "CameraComponent.layerMask")
+    SCENE_STATIC_PROPERTY_DATA(ICamera, uint64_t, CameraLayerMask, "CameraComponent.layerMask")
     SCENE_STATIC_PROPERTY_DATA(
         ICamera, BASE_NS::Math::Mat4X4, CustomProjectionMatrix, "CameraComponent.customProjectionMatrix")
+    SCENE_STATIC_PROPERTY_DATA(ICamera, CameraSampleCount, MSAASampleCount, "CameraComponent.msaaSampleCount")
 
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(ICamera, IPostProcess::Ptr, PostProcess, "CameraComponent.postProcess")
     SCENE_STATIC_DYNINIT_ARRAY_PROPERTY_DATA(
         ICamera, ColorFormat, ColorTargetCustomization, "CameraComponent.colorTargetCustomization")
+    SCENE_STATIC_PROPERTY_DATA(ICamera, float, DownsamplePercentage, "CameraComponent.screenPercentage")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(float, FoV)
@@ -81,11 +82,13 @@ public:
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec2, RenderTargetSize)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Vec4, ClearColor)
     META_IMPLEMENT_PROPERTY(float, ClearDepth)
-    META_IMPLEMENT_PROPERTY(uint64_t, LayerMask)
+    META_IMPLEMENT_PROPERTY(uint64_t, CameraLayerMask)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Mat4X4, CustomProjectionMatrix)
+    META_IMPLEMENT_PROPERTY(CameraSampleCount, MSAASampleCount)
 
     META_IMPLEMENT_PROPERTY(IPostProcess::Ptr, PostProcess)
     META_IMPLEMENT_PROPERTY(ColorFormat, ColorTargetCustomization)
+    META_IMPLEMENT_PROPERTY(float, DownsamplePercentage)
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 
@@ -111,6 +114,8 @@ public:
     bool Detaching(const IAttach::Ptr& target) override;
 
 private:
+    void UpdateEffects(META_NS::ArrayProperty<IEffect::Ptr>& prop);
+
     META_NS::EventHandler bitmapHandler_;
     IRenderTarget::Ptr renderTarget_;
     META_NS::FindCache<IInputReceiver> inputReceivers_;

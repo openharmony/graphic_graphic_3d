@@ -23,7 +23,9 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class Component : public META_NS::IntroduceInterfaces<EcsLazyProperty, IComponent> {
+class Component : public META_NS::IntroduceInterfaces<EcsLazyProperty, IComponent, META_NS::IAttachable> {
+    using Super = IntroduceInterfaces;
+
 public:
     bool PopulateAllProperties() override
     {
@@ -35,8 +37,28 @@ public:
         return populated_;
     }
 
+    IObject::Ptr Resolve(const META_NS::RefUri& uri) const override
+    {
+        if (uri == META_NS::RefUri::ParentUri()) {
+            return interface_pointer_cast<IObject>(parent_);
+        }
+        return Super::Resolve(uri);
+    }
+
+    bool Attaching(const IAttach::Ptr& target, const IObject::Ptr& dataContext) override
+    {
+        parent_ = target;
+        return true;
+    }
+    bool Detaching(const IAttach::Ptr& target) override
+    {
+        parent_.reset();
+        return true;
+    }
+
 private:
     bool populated_ {};
+    IAttach::WeakPtr parent_;
 };
 
 inline META_NS::IProperty::ConstPtr GetComponentProperty(

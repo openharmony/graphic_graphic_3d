@@ -1,6 +1,6 @@
 {
     "compatibility_info" : { "version" : "22.00", "type" : "shader" },
-    "vert": "rendershaders://shader/fullscreen_triangle_mv.vert.spv",
+    "vert": "3dshaders://shader/core3d_dm_camera_cubemap_blender.vert.spv",
     "frag": "3dshaders://shader/core3d_dm_camera_cubemap_blender.frag.spv",
     "state": {
         "rasterizationState": {

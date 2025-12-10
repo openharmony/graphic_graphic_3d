@@ -16,6 +16,7 @@
 #ifndef SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H
 #define SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H
 
+#include "3d/shaders/common/3d_dm_area_lighting_common.h"
 #include "3d/shaders/common/3d_dm_brdf_common.h"
 #include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
 #include "3d/shaders/common/3d_dm_shadowing_common.h"
@@ -422,6 +423,25 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
             color += CalculateLight(currLightIdx, materialDiffuseBRDF, L, NoL, sd, materialFlags) * attenuation;
         }
     }
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_RECT_ENABLED_BIT) == CORE_LIGHTING_RECT_ENABLED_BIT) {
+        const uint rectLightCount = uLightData.rectLightCount;
+        const uint rectLightBeginIndex = uLightData.rectLightBeginIndex;
+
+        for (uint rectIdx = 0; rectIdx < rectLightCount; ++rectIdx) {
+            const uint currLightIdx = rectLightBeginIndex + rectIdx;
+
+            const vec3 pointToLight = uLightData.lights[currLightIdx].pos.xyz - sd.pos.xyz;
+            const float dist = length(pointToLight);
+            const vec3 L = pointToLight / dist;
+            const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+            const float range = uLightData.lights[currLightIdx].dir.w;
+            const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+            // NOTE: could check for NoL > 0.0 and NoV > 0.0
+            color += CalculateRectAreaLight(
+                         currLightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                     attenuation;
+        }
+    }
 
     return color;
 }
@@ -514,7 +534,25 @@ vec3 CalculateLighting(
                 CalculateLight(currLightIdx, materialDiffuseBRDF, L, NoL, sd, ccsv, ssv, materialFlags) * attenuation;
         }
     }
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_RECT_ENABLED_BIT) == CORE_LIGHTING_RECT_ENABLED_BIT) {
+        const uint rectLightCount = uLightData.rectLightCount;
+        const uint rectLightBeginIndex = uLightData.rectLightBeginIndex;
 
+        for (uint rectIdx = 0; rectIdx < rectLightCount; ++rectIdx) {
+            const uint currLightIdx = rectLightBeginIndex + rectIdx;
+
+            const vec3 pointToLight = uLightData.lights[currLightIdx].pos.xyz - sd.pos.xyz;
+            const float dist = length(pointToLight);
+            const vec3 L = pointToLight / dist;
+            const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+            const float range = uLightData.lights[currLightIdx].dir.w;
+            const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+            // NOTE: could check for NoL > 0.0 and NoV > 0.0
+            color += CalculateRectAreaLight(
+                         currLightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                     attenuation;
+        }
+    }
     return color;
 }
 
@@ -659,6 +697,25 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
                      attenuation;
         }
     }
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_RECT_ENABLED_BIT) == CORE_LIGHTING_RECT_ENABLED_BIT) {
+        const uint rectLightCount = uLightData.rectLightCount;
+        const uint rectLightBeginIndex = uLightData.rectLightBeginIndex;
+
+        for (uint rectIdx = 0; rectIdx < rectLightCount; ++rectIdx) {
+            const uint currLightIdx = rectLightBeginIndex + rectIdx;
+
+            const vec3 pointToLight = uLightData.lights[currLightIdx].pos.xyz - sd.pos.xyz;
+            const float dist = length(pointToLight);
+            const vec3 L = pointToLight / dist;
+            const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+            const float range = uLightData.lights[currLightIdx].dir.w;
+            const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+            // NOTE: could check for NoL > 0.0 and NoV > 0.0
+            color += CalculateRectAreaLight(
+                         currLightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                     attenuation;
+        }
+    }
 
     return color;
 }
@@ -783,7 +840,25 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
             color += CalculateLight(currLightIdx, materialDiffuseBRDF, L, NoL, sd, sssv, materialFlags) * attenuation;
         }
     }
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_RECT_ENABLED_BIT) == CORE_LIGHTING_RECT_ENABLED_BIT) {
+        const uint rectLightCount = uLightData.rectLightCount;
+        const uint rectLightBeginIndex = uLightData.rectLightBeginIndex;
 
+        for (uint rectIdx = 0; rectIdx < rectLightCount; ++rectIdx) {
+            const uint currLightIdx = rectLightBeginIndex + rectIdx;
+
+            const vec3 pointToLight = uLightData.lights[currLightIdx].pos.xyz - sd.pos.xyz;
+            const float dist = length(pointToLight);
+            const vec3 L = pointToLight / dist;
+            const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+            const float range = uLightData.lights[currLightIdx].dir.w;
+            const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+            // NOTE: could check for NoL > 0.0 and NoV > 0.0
+            color += CalculateRectAreaLight(
+                         currLightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                     attenuation;
+        }
+    }
     return color;
 }
 
@@ -966,6 +1041,39 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
                 const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
                 // NOTE: could check for NoL > 0.0 and NoV > 0.0
                 color += CalculateLightInplace(lightIdx, materialDiffuseBRDF, L, NoL, sd, ccsv, ssv) * attenuation;
+            }
+        }
+    }
+
+    // rect lights
+    if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_RECT_ENABLED_BIT) == CORE_LIGHTING_RECT_ENABLED_BIT) {
+        const uint rectLightCount = uLightData.rectLightCount;
+        const uint rectLightBeginIndex = uLightData.rectLightBeginIndex;
+
+#if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
+        for (uint cLightIdx = 0; cLightIdx < cluster.count; cLightIdx++) {
+            const uint lightIdx = cluster.lightIndices[cLightIdx];
+#else
+        for (uint rectIdx = 0; rectIdx < rectLightCount; ++rectIdx) {
+            const uint lightIdx = rectLightBeginIndex + rectIdx;
+
+#endif
+
+            if (lightIdx >= rectLightBeginIndex && lightIdx < rectLightBeginIndex + rectLightCount) {
+                if (!CheckLightLayerMask(lightIdx, sd.layers)) {
+                    continue;
+                }
+
+                const vec3 pointToLight = uLightData.lights[lightIdx].pos.xyz - sd.pos.xyz;
+                const float dist = length(pointToLight);
+                const vec3 L = pointToLight / dist;
+                const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
+                const float range = uLightData.lights[lightIdx].dir.w;
+                const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+                // NOTE: could check for NoL > 0.0 and NoV > 0.0
+                color += CalculateRectAreaLight(
+                             lightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                         attenuation;
             }
         }
     }

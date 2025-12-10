@@ -19,6 +19,7 @@
 #include <base/containers/unordered_map.h>
 
 #include "napi_api.h"
+class SceneJS;
 
 class DisposeContainer {
 public:
@@ -28,7 +29,8 @@ public:
     void StrongDisposeHook(uintptr_t token, NapiApi::Object obj);
     void ReleaseStrongDispose(uintptr_t token);
 
-    void DisposeAll(napi_env env);
+    void Dispose(napi_env env, BASE_NS::array_view<const uintptr_t> strongs,
+        BASE_NS::array_view<const uintptr_t> weaks, SceneJS* scene = 0);
 
 private:
     BASE_NS::unordered_map<uintptr_t, NapiApi::StrongRef> strongDisposables_;

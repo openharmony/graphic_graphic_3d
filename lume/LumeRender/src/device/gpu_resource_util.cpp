@@ -67,7 +67,7 @@ void DebugBufferName(const IDevice& device, const GpuBuffer& buffer, const BASE_
     }
 #endif
 #if RENDER_HAS_GLES_BACKEND || RENDER_HAS_GL_BACKEND
-    if (backendType == DeviceBackendType::OPENGL) {
+    if ((backendType == DeviceBackendType::OPENGL) || (backendType == DeviceBackendType::OPENGLES)) {
         DebugBufferNameGLES(device, buffer, name);
     }
 #endif
@@ -82,7 +82,7 @@ void DebugImageName(const IDevice& device, const GpuImage& image, const BASE_NS:
     }
 #endif
 #if RENDER_HAS_GLES_BACKEND || RENDER_HAS_GL_BACKEND
-    if (backendType == DeviceBackendType::OPENGL) {
+    if ((backendType == DeviceBackendType::OPENGL) || (backendType == DeviceBackendType::OPENGLES)) {
         DebugImageNameGLES(device, image, name);
     }
 #endif
@@ -97,7 +97,7 @@ void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, const BA
     }
 #endif
 #if RENDER_HAS_GLES_BACKEND || RENDER_HAS_GL_BACKEND
-    if (backendType == DeviceBackendType::OPENGL) {
+    if ((backendType == DeviceBackendType::OPENGL) || (backendType == DeviceBackendType::OPENGLES)) {
         DebugSamplerNameGLES(device, sampler, name);
     }
 #endif

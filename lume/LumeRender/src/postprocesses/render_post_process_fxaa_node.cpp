@@ -20,6 +20,7 @@
 #include <base/math/vector.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -38,7 +39,6 @@
 #include "datastore/render_data_store_post_process.h"
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "render_post_process_fxaa.h"
 #include "util/log.h"
 
 // shaders
@@ -49,6 +49,17 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
+ENUM_TYPE_METADATA(
+    FxaaConfiguration::Sharpness, ENUM_VALUE(SOFT, "Soft"), ENUM_VALUE(MEDIUM, "Medium"), ENUM_VALUE(SHARP, "Sharp"))
+
+ENUM_TYPE_METADATA(
+    FxaaConfiguration::Quality, ENUM_VALUE(LOW, "Low"), ENUM_VALUE(MEDIUM, "Medium"), ENUM_VALUE(HIGH, "High"))
+
+DATA_TYPE_METADATA(
+    FxaaConfiguration, MEMBER_PROPERTY(sharpness, "Sharpness", 0), MEMBER_PROPERTY(quality, "Quality", 0))
+
+DATA_TYPE_METADATA(RenderPostProcessFxaaNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(targetSize, "Target Size", 0), MEMBER_PROPERTY(fxaaConfiguration, "FXAA Configuration", 0))
 DATA_TYPE_METADATA(RenderPostProcessFxaaNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
 DATA_TYPE_METADATA(RenderPostProcessFxaaNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
 CORE_END_NAMESPACE()
@@ -61,11 +72,9 @@ constexpr string_view FXAA_SHADER_NAME = "rendershaders://shader/fullscreen_fxaa
 } // namespace
 
 RenderPostProcessFxaaNode::RenderPostProcessFxaaNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessFxaaNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessFxaaNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessFxaaNode::GetRenderInputProperties()
@@ -93,11 +102,10 @@ IRenderNode::ExecuteFlags RenderPostProcessFxaaNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessFxaaNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessFxaaNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
+    pso_ = {};
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     samplerHandle_ =
@@ -109,13 +117,15 @@ void RenderPostProcessFxaaNode::Init(
     const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     descriptorCounts_ = renderNodeUtil.GetDescriptorCounts(shaderData_.pipelineLayoutData);
 
+    fxaaBinder_.reset();
+
     valid_ = true;
 }
 
-void RenderPostProcessFxaaNode::PreExecute()
+void RenderPostProcessFxaaNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessFxaaNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessFxaaNode::EffectProperties)) {
@@ -150,7 +160,7 @@ BASE_NS::Math::Vec4 RenderPostProcessFxaaNode::GetFactorFxaa() const
         static_cast<float>(effectProperties_.fxaaConfiguration.quality), 0.0f, 0.0f };
 }
 
-void RenderPostProcessFxaaNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessFxaaNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
     CheckDescriptorSetNeed();
 

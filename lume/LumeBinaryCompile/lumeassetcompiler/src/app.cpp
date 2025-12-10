@@ -138,11 +138,10 @@ bool AddDirectory(const std::string& path, const std::string& outpath)
         }
         return strcmp(lhs.d_name, rhs.d_name) < 0;
     });
-    for (auto& pDirent1 : entries) {
-        if (pDirent1.d_type == DT_DIR) {
-            AddDirectory(p + pDirent1.d_name, op + pDirent1.d_name);
-
-        } else if (!AddFile(p + pDirent1.d_name, op + pDirent1.d_name)) {
+    for (const auto& dirEntry : entries) {
+        if (dirEntry.d_type == DT_DIR) {
+            AddDirectory(p + dirEntry.d_name, op + dirEntry.d_name);
+        } else if (!AddFile(p + dirEntry.d_name, op + dirEntry.d_name)) {
             return false;
         }
     }
@@ -205,13 +204,13 @@ template<typename T>
 void FillCoffHead(T& obj, bool x64)
 {
     // fill coff header.
-    obj.coffHead.Machine = (!x64) ? IMAGE_FILE_MACHINE_I386 : IMAGE_FILE_MACHINE_AMD64;
-    obj.coffHead.NumberOfSections = sizeof(obj.sections) / sizeof(IMAGE_SECTION_HEADER);
-    obj.coffHead.TimeDateStamp = 0; // duh.
-    obj.coffHead.PointerToSymbolTable = offsetof(T, symtab);
-    obj.coffHead.NumberOfSymbols = sizeof(obj.symtab) / sizeof(IMAGE_SYMBOL);
-    obj.coffHead.SizeOfOptionalHeader = 0;
-    obj.coffHead.Characteristics = 0; // if x86 use IMAGE_FILE_32BIT_MACHINE ?
+    obj.coffHead.machine = (!x64) ? IMAGE_FILE_MACHINE_I386 : IMAGE_FILE_MACHINE_AMD64;
+    obj.coffHead.numberOfSections = sizeof(obj.sections) / sizeof(IMAGE_SECTION_HEADER);
+    obj.coffHead.timeDateStamp = 0; // duh.
+    obj.coffHead.pointerToSymbolTable = offsetof(T, symtab);
+    obj.coffHead.numberOfSymbols = sizeof(obj.symtab) / sizeof(IMAGE_SYMBOL);
+    obj.coffHead.sizeOfOptionalHeader = 0;
+    obj.coffHead.characteristics = 0; // if x86 use IMAGE_FILE_32BIT_MACHINE ?
 }
 
 template<typename T>
@@ -223,11 +222,11 @@ size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
         t += g_dataName;
         std::string t2 = "_";
         t2 += g_sizeName;
-        obj.symtab[1].N.Name.Long = stringtable.addString(t);
-        obj.symtab[0].N.Name.Long = stringtable.addString(t2);
+        obj.symtab[1].n.name.Long = stringtable.addString(t);
+        obj.symtab[0].n.name.Long = stringtable.addString(t2);
     } else {
-        obj.symtab[1].N.Name.Long = stringtable.addString(g_dataName);
-        obj.symtab[0].N.Name.Long = stringtable.addString(g_sizeName);
+        obj.symtab[1].n.name.Long = stringtable.addString(g_dataName);
+        obj.symtab[0].n.name.Long = stringtable.addString(g_sizeName);
     }
 
     const uint32_t stringTableSize = uint32_t(stringtable.GetOffset());
@@ -240,28 +239,28 @@ void FillCoffSectionAndSymtable(
     T& obj, size_t stringTableSize, const size_t sizeOfSection, const std::string& secname, bool x64)
 {
     // fill the section.
-    secname.copy(reinterpret_cast<char*>(obj.sections[0].Name), sizeof(obj.sections[0].Name));
-    obj.sections[0].Misc.VirtualSize = 0;
-    obj.sections[0].VirtualAddress = 0;
-    obj.sections[0].SizeOfRawData = uint32_t(sizeOfSection); // sizeof the data on disk.
-    obj.sections[0].PointerToRawData = static_cast<uint32_t>(
+    secname.copy(reinterpret_cast<char*>(obj.sections[0].name), sizeof(obj.sections[0].name));
+    obj.sections[0].misc.virtualSize = 0;
+    obj.sections[0].virtualAddress = 0;
+    obj.sections[0].sizeOfRawData = uint32_t(sizeOfSection); // sizeof the data on disk.
+    obj.sections[0].pointerToRawData = static_cast<uint32_t>(
         ((sizeof(T) + stringTableSize + 3) / 4) * 4); // DWORD align the data directly after the headers..
-    obj.sections[0].PointerToLinenumbers = 0;
-    obj.sections[0].NumberOfRelocations = 0;
-    obj.sections[0].NumberOfLinenumbers = 0;
-    obj.sections[0].Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ;
+    obj.sections[0].pointerToLinenumbers = 0;
+    obj.sections[0].numberOfRelocations = 0;
+    obj.sections[0].numberOfLinenumbers = 0;
+    obj.sections[0].characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ;
     // fill symbols
-    obj.symtab[1].Value = uint32_t(sizeof(uint64_t));
-    obj.symtab[1].SectionNumber = 1; // first section.. (one based)
-    obj.symtab[1].Type = IMAGE_SYM_TYPE_CHAR | (IMAGE_SYM_DTYPE_ARRAY << 8);
-    obj.symtab[1].StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
-    obj.symtab[1].NumberOfAuxSymbols = 0;
+    obj.symtab[1].value = uint32_t(sizeof(uint64_t));
+    obj.symtab[1].sectionNumber = 1; // first section.. (one based)
+    obj.symtab[1].type = IMAGE_SYM_TYPE_CHAR | (IMAGE_SYM_DTYPE_ARRAY << 8);
+    obj.symtab[1].storageClass = IMAGE_SYM_CLASS_EXTERNAL;
+    obj.symtab[1].numberOfAuxSymbols = 0;
 
-    obj.symtab[0].Value = uint32_t(0u);
-    obj.symtab[0].SectionNumber = 1; // first section.. (one based)
-    // obj.symtab[0].Type = IMAGE_SYM_TYPE_UINT;  //(just use IMAGE_SYM_TYPE_NULL like mstools?)
-    obj.symtab[0].StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
-    obj.symtab[0].NumberOfAuxSymbols = 0;
+    obj.symtab[0].value = uint32_t(0u);
+    obj.symtab[0].sectionNumber = 1; // first section.. (one based)
+    // obj.symtab[0].type = IMAGE_SYM_TYPE_UINT;  //(just use IMAGE_SYM_TYPE_NULL like mstools?)
+    obj.symtab[0].storageClass = IMAGE_SYM_CLASS_EXTERNAL;
+    obj.symtab[0].numberOfAuxSymbols = 0;
 }
 
 bool WriteObj(const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data, bool x64)
@@ -287,7 +286,7 @@ bool WriteObj(const std::string& fname, const std::string& secname, size_t sizeO
     // write sections..
     size_t p = ftell(d);
     uint32_t pad = 0;
-    size_t padcount = obj.sections[0].PointerToRawData - p;
+    size_t padcount = obj.sections[0].pointerToRawData - p;
     fwrite(&pad, padcount, 1u, d);
     fwrite(data, sizeOfSection, 1u, d);
     fclose(d);
@@ -310,39 +309,39 @@ struct Elf64Bit {
 template<class Type>
 void FillElfHead(Type& o, uint8_t arch)
 {
-    o.head.e_type = ET_REL;
-    o.head.e_machine = arch; // machine id..
-    o.head.e_version = EV_CURRENT;
-    o.head.e_ehsize = sizeof(o.head);
-    o.head.e_shentsize = sizeof(o.sections[0]);
-    o.head.e_shnum = sizeof(o.sections) / sizeof(o.sections[0]);
-    o.head.e_shoff = sizeof(o.head);
-    o.head.e_shstrndx = 1;
+    o.head.type = ET_REL;
+    o.head.machine = arch; // machine id..
+    o.head.version = EV_CURRENT;
+    o.head.ehsize = sizeof(o.head);
+    o.head.shentsize = sizeof(o.sections[0]);
+    o.head.shnum = sizeof(o.sections) / sizeof(o.sections[0]);
+    o.head.shoff = sizeof(o.head);
+    o.head.shstrndx = 1;
 }
 
 template<class Type>
 void FillElfSectionAndSymbtable(Type& o, uint8_t arch, StringTable& stringtable, size_t sizeOfData)
 {
     // create symbols
-    o.symbs[2].st_name = stringtable.addString(g_dataName); // ?BinaryDataForReadOnlyFileSystem@@3PADA");
-    o.symbs[2].st_value = sizeof(uint64_t);
-    o.symbs[2].st_size = static_cast<Elf32_Word>(sizeOfData);
-    o.symbs[2].st_info = o.symbs[1].st_info = ELF_ST_INFO(STB_GLOBAL, STT_OBJECT);
-    o.symbs[2].st_other = o.symbs[1].st_other = STV_HIDDEN;
-    o.symbs[2].st_shndx = o.symbs[1].st_shndx = 3;
+    o.symbs[2].name = stringtable.addString(g_dataName); // ?BinaryDataForReadOnlyFileSystem@@3PADA");
+    o.symbs[2].value = sizeof(uint64_t);
+    o.symbs[2].size = static_cast<Elf32_Word>(sizeOfData);
+    o.symbs[2].info = o.symbs[1].info = ELF_ST_INFO(STB_GLOBAL, STT_OBJECT);
+    o.symbs[2].other = o.symbs[1].other = STV_HIDDEN;
+    o.symbs[2].shndx = o.symbs[1].shndx = 3;
 
-    o.symbs[1].st_name = stringtable.addString(g_sizeName);
-    o.symbs[1].st_value = 0;
-    o.symbs[1].st_size = sizeof(uint64_t);
+    o.symbs[1].name = stringtable.addString(g_sizeName);
+    o.symbs[1].value = 0;
+    o.symbs[1].size = sizeof(uint64_t);
 
-    o.sections[2].sh_name = stringtable.addString(".symtab");
-    o.sections[2].sh_type = SHT_SYMTAB;
-    o.sections[2].sh_offset = offsetof(Type, symbs); // sizeof(o) + sizeOfSection + stringtable_size;
-    o.sections[2].sh_addralign = 8;
-    o.sections[2].sh_size = sizeof(o.symbs);
-    o.sections[2].sh_entsize = sizeof(o.symbs[0]);
-    o.sections[2].sh_link = 1;
-    o.sections[2].sh_info = 1; // index of first non-local symbol.
+    o.sections[2].name = stringtable.addString(".symtab");
+    o.sections[2].type = SHT_SYMTAB;
+    o.sections[2].offset = offsetof(Type, symbs); // sizeof(o) + sizeOfSection + stringtable_size;
+    o.sections[2].addralign = 8;
+    o.sections[2].size = sizeof(o.symbs);
+    o.sections[2].entsize = sizeof(o.symbs[0]);
+    o.sections[2].link = 1;
+    o.sections[2].info = 1; // index of first non-local symbol.
 }
 
 template<class Type>
@@ -351,18 +350,18 @@ void FillElfSection(Type& o, uint8_t arch, const std::string& secname, StringTab
     std::string tmp = ".rodata.";
     tmp += secname;
 
-    o.sections[3].sh_name = stringtable.addString(tmp.data());
-    o.sections[3].sh_type = SHT_PROGBITS;
-    o.sections[3].sh_flags = SHF_ALLOC | SHF_MERGE;
-    o.sections[3].sh_offset = sizeof(o);
-    o.sections[3].sh_addralign = 8;
-    o.sections[3].sh_size = static_cast<Elf32_Word>(sizeOfSection);
+    o.sections[3].name = stringtable.addString(tmp.data());
+    o.sections[3].type = SHT_PROGBITS;
+    o.sections[3].flags = SHF_ALLOC | SHF_MERGE;
+    o.sections[3].offset = sizeof(o);
+    o.sections[3].addralign = 8;
+    o.sections[3].size = static_cast<Elf32_Word>(sizeOfSection);
 
-    o.sections[1].sh_name = stringtable.addString(".strtab");
-    o.sections[1].sh_type = SHT_STRTAB;
-    o.sections[1].sh_offset = static_cast<Elf32_Off>(sizeof(o) + sizeOfSection);
-    o.sections[1].sh_addralign = 1;
-    o.sections[1].sh_size = static_cast<Elf32_Word>(stringtable.GetOffset());
+    o.sections[1].name = stringtable.addString(".strtab");
+    o.sections[1].type = SHT_STRTAB;
+    o.sections[1].offset = static_cast<Elf32_Off>(sizeof(o) + sizeOfSection);
+    o.sections[1].addralign = 1;
+    o.sections[1].size = static_cast<Elf32_Word>(stringtable.GetOffset());
 }
 
 template<class Type>
@@ -388,7 +387,7 @@ bool WriteElf(uint8_t arch, const std::string& fname, const std::string& secname
     }
     fwrite(&o, sizeof(o), 1, e);
     fwrite(data, sizeOfSection, 1, e);
-    fwrite(stringtable.table, size_t(o.sections[1].sh_size), 1, e);
+    fwrite(stringtable.table, size_t(o.sections[1].size), 1, e);
     fclose(e);
     return true;
 }
@@ -401,7 +400,7 @@ size_t GetAligned(size_t offset, size_t alignment)
 
 auto MachoHeader()
 {
-    fat_header fathdr;
+    FatHeader fathdr;
     fathdr.magic = FAT_CIGAM;
     fathdr.nfat_arch = platform_htonl(2); // big-endian values in fat header
     return fathdr;
@@ -410,17 +409,17 @@ auto MachoHeader()
 auto MachoArchs(uint32_t fatAlignmentPowerOfTwo)
 {
     using namespace std;
-    fat_arch archs[]{
+    FatArch archs[]{
         {
-            static_cast<cpu_type_t>(platform_htonl(CPU_TYPE_X86_64)),
-            static_cast<cpu_subtype_t>(platform_htonl(CPU_SUBTYPE_X86_64_ALL)),
+            static_cast<CpuType>(platform_htonl(CPU_TYPE_X86_64)),
+            static_cast<CpuSubtype>(platform_htonl(CPU_SUBTYPE_X86_64_ALL)),
             0, // offset
             0, // size of data
             platform_htonl(fatAlignmentPowerOfTwo),
         },
         {
-            static_cast<cpu_type_t>(platform_htonl(CPU_TYPE_ARM64)),
-            static_cast<cpu_subtype_t>(platform_htonl(CPU_SUBTYPE_ARM64_ALL)),
+            static_cast<CpuType>(platform_htonl(CPU_TYPE_ARM64)),
+            static_cast<CpuSubtype>(platform_htonl(CPU_SUBTYPE_ARM64_ALL)),
             0, // offset,
             0, // size of data
             platform_htonl(fatAlignmentPowerOfTwo),
@@ -432,13 +431,12 @@ auto MachoArchs(uint32_t fatAlignmentPowerOfTwo)
 
 auto MachoX64Header()
 {
-    mach_header_64 x64_header = {
-        MH_MAGIC_64, static_cast<cpu_type_t>(CPU_TYPE_X86_64), static_cast<cpu_subtype_t>(CPU_SUBTYPE_X86_64_ALL),
-        MH_OBJECT,
-        2,                                                                        // ncmds
-        sizeof(segment_command_64) + sizeof(section_64) + sizeof(symtab_command), // sizeofcmds
-        0,                                                                        // flags
-        0                                                                         // reserved
+    MachHeader64 x64_header = {
+        MH_MAGIC_64, static_cast<CpuType>(CPU_TYPE_X86_64), static_cast<CpuSubtype>(CPU_SUBTYPE_X86_64_ALL), MH_OBJECT,
+        2,                                                                    // ncmds
+        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand), // sizeofcmds
+        0,                                                                    // flags
+        0                                                                     // reserved
     };
 
     return x64_header;
@@ -446,13 +444,12 @@ auto MachoX64Header()
 
 auto MachoARM64Header()
 {
-    mach_header_64 arm64_header = {
-        MH_MAGIC_64, static_cast<cpu_type_t>(CPU_TYPE_ARM64), static_cast<cpu_subtype_t>(CPU_SUBTYPE_ARM64_ALL),
-        MH_OBJECT,
-        2,                                                                        // ncmds
-        sizeof(segment_command_64) + sizeof(section_64) + sizeof(symtab_command), // sizeofcmds
-        0,                                                                        // flags
-        0                                                                         // reserved
+    MachHeader64 arm64_header = {
+        MH_MAGIC_64, static_cast<CpuType>(CPU_TYPE_ARM64), static_cast<CpuSubtype>(CPU_SUBTYPE_ARM64_ALL), MH_OBJECT,
+        2,                                                                    // ncmds
+        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand), // sizeofcmds
+        0,                                                                    // flags
+        0                                                                     // reserved
     };
 
     return arm64_header;
@@ -460,8 +457,8 @@ auto MachoARM64Header()
 
 auto MachoSegmentCommand64(size_t& sizeOfSection)
 {
-    segment_command_64 data_seg = {
-        LC_SEGMENT_64, sizeof(data_seg) + sizeof(section_64),
+    SegmentCommand64 data_seg = {
+        LC_SEGMENT_64, sizeof(data_seg) + sizeof(Section64),
         "",                       // for object files name is empty
         0,                        // vmaddress
         (sizeOfSection + 7) & ~7, // vmsize aligned to 8 bytes
@@ -478,7 +475,7 @@ auto MachoSegmentCommand64(size_t& sizeOfSection)
 
 auto MachoDataSection(size_t& sizeOfSection)
 {
-    section_64 data_sect = {
+    Section64 data_sect = {
         "__const", "__DATA",
         0,             // addr
         sizeOfSection, // vmsize aligned to 8 bytes
@@ -496,7 +493,7 @@ auto MachoDataSection(size_t& sizeOfSection)
 
 auto MachoSymbolTable(uint32_t& string_size)
 {
-    symtab_command symtab = {
+    SymtabCommand symtab = {
         LC_SYMTAB, sizeof(symtab),
         0,           // symoff
         2,           // nsyms
@@ -510,7 +507,7 @@ auto MachoSymbolTable(uint32_t& string_size)
 auto MachoList(std::string& sizeName)
 {
     using namespace std;
-    nlist_64 ret[]{
+    Nlist64 ret[]{
         {
             1, // first string
             N_EXT | N_SECT,
@@ -540,7 +537,7 @@ struct MachoPaddingInfo {
     uint32_t padding1;
 };
 
-auto MachoUpdate(fat_header& fathdr, fat_arch* archs, uint32_t fatAlignment, size_t fpos)
+auto MachoUpdate(FatHeader& fathdr, FatArch* archs, uint32_t fatAlignment, size_t fpos)
 {
     const uint32_t sliceOffset0 = static_cast<uint32_t>(sizeof(fathdr) + sizeof(archs)); // initial headers
     const uint32_t sliceOffsetAligned0 = static_cast<uint32_t>(GetAligned(sliceOffset0, fatAlignment));
@@ -561,27 +558,27 @@ auto MachoUpdate(fat_header& fathdr, fat_arch* archs, uint32_t fatAlignment, siz
 }
 
 struct Macho {
-    fat_header fathdr;
-    std::array<fat_arch, 2> archs; // 2: size
-    mach_header_64 x64_header;
-    mach_header_64 arm64_header;
-    segment_command_64 data_seg;
-    section_64 data_sect;
-    symtab_command symtab;
-    std::array<nlist_64, 2> syms; // 2: size
+    FatHeader fathdr;
+    std::array<FatArch, 2> archs;
+    MachHeader64 x64Header;
+    MachHeader64 arm64Header;
+    SegmentCommand64 dataSeg;
+    Section64 dataSect;
+    SymtabCommand symtab;
+    std::array<Nlist64, 2> syms;
 };
 
 template<typename T1>
 void MachoWriteArchitechtureData(size_t padding, size_t sizeOfSection, size_t sectionAlign, const std::string& dataName,
-    const std::string& sizeName, const void* data, const T1& sect, const mach_header_64& header, FILE* e)
+    const std::string& sizeName, const void* data, const T1& sect, const MachHeader64& header, FILE* e)
 {
     for (size_t i = 0; i < padding; i++) {
         fputc(0, e);
     }
 
     fwrite(&header, sizeof(header), 1, e);
-    fwrite(&sect.data_seg, sizeof(sect.data_seg), 1, e);
-    fwrite(&sect.data_sect, sizeof(sect.data_sect), 1, e);
+    fwrite(&sect.dataSeg, sizeof(sect.dataSeg), 1, e);
+    fwrite(&sect.dataSect, sizeof(sect.dataSect), 1, e);
     fwrite(&sect.symtab, sizeof(sect.symtab), 1, e);
     fwrite(data, sizeOfSection, 1, e);
     for (size_t i = 0; i < sectionAlign; i++) {
@@ -607,9 +604,9 @@ bool MachoWriteFile(const std::string& fname, const T1& sect, const MachoPadding
     fwrite(&sect.fathdr, sizeof(sect.fathdr), 1, e);
     fwrite(&sect.archs, sizeof(sect.archs), 1, e);
     MachoWriteArchitechtureData(
-        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.x64_header, e);
+        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.x64Header, e);
     MachoWriteArchitechtureData(
-        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.arm64_header, e);
+        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.arm64Header, e);
     for (uint32_t i = 0; i < endPadding; i++) {
         fputc(0, e);
     }
@@ -646,9 +643,9 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
     // "file" offsets are actually relative to the architecture header
     size_t fpos = 0, sizeOfSection = sizeOfData + sizeof(uint64_t);
 
-    sect.x64_header = MachoX64Header(), sect.arm64_header = MachoARM64Header();
-    sect.data_seg = MachoSegmentCommand64(sizeOfSection);
-    sect.data_sect = MachoDataSection(sizeOfSection);
+    sect.x64Header = MachoX64Header(), sect.arm64Header = MachoARM64Header();
+    sect.dataSeg = MachoSegmentCommand64(sizeOfSection);
+    sect.dataSect = MachoDataSection(sizeOfSection);
 
     std::string dataName = PrefixUnderscore(g_dataName), sizeName = PrefixUnderscore(g_sizeName);
 
@@ -657,9 +654,9 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
 
     sect.symtab = MachoSymbolTable(string_size);
 
-    fpos += sizeof(sect.x64_header) + sizeof(sect.data_seg) + sizeof(sect.data_sect) + sizeof(sect.symtab);
+    fpos += sizeof(sect.x64Header) + sizeof(sect.dataSeg) + sizeof(sect.dataSect) + sizeof(sect.symtab);
 
-    sect.data_seg.fileoff = sect.data_sect.offset = static_cast<uint32_t>(fpos);
+    sect.dataSeg.fileOff = sect.dataSect.offset = static_cast<uint32_t>(fpos);
     fpos += sizeOfSection;
 
     size_t sectionAlign = CalculateAlignment(fpos, 8);
@@ -692,7 +689,7 @@ enum Arch : uint32_t {
 };
 enum Plat : uint32_t {
     WINDOWS = (1 << 4),
-    PLATFORM_AD = (1 << 5),
+    ANDROID = (1 << 5),
     MAC = (1 << 6),
 };
 
@@ -702,14 +699,15 @@ constexpr uint32_t PlatformSet()
 }
 
 constexpr std::pair<std::string_view, uint32_t> PLATFORMS[] = {
-    { "-linux", PLATFORM_AD | PlatformSet() },
+    { "-linux", ANDROID | PlatformSet() },
+    { "-android", ANDROID | PlatformSet() },
     { "-windows", WINDOWS | PlatformSet() },
     { "-mac", MAC | PlatformSet() },
     { "-x86", BUILD_X86 },
-    { "-x86_64", PLATFORM_AD | BUILD_X64 },
+    { "-x86_64", ANDROID | BUILD_X64 },
     { "-x64", WINDOWS | BUILD_X64 },
-    { "-armeabi-v7a", PLATFORM_AD | BUILD_V7 | PlatformSet() },
-    { "-arm64-v8a", PLATFORM_AD | BUILD_V8 | PlatformSet() },
+    { "-armeabi-v7a", ANDROID | BUILD_V7 | PlatformSet() },
+    { "-arm64-v8a", ANDROID | BUILD_V8 | PlatformSet() },
 };
 
 void ParseExtensions(std::string_view exts, std::vector<std::string_view>& extensions)
@@ -724,6 +722,10 @@ void ParseExtensions(std::string_view exts, std::vector<std::string_view>& exten
 
 int ParseArcAndPlat(uint32_t& arcAndPlat, const int argc, char* argv[])
 {
+    if (argc <= 1) {
+        return -1;
+    }
+
     arcAndPlat = argv[1][0] == '-' ? 0u : arcAndPlat;
 
     int baseArg = 0;
@@ -759,7 +761,7 @@ int ParseArcAndPlat(uint32_t& arcAndPlat, const int argc, char* argv[])
         }
     }
 
-    arcAndPlat |= (platset ? 0 : (WINDOWS | PLATFORM_AD | MAC));
+    arcAndPlat |= (platset ? 0 : (WINDOWS | ANDROID | MAC));
     return baseArg;
 }
 } // namespace
@@ -771,7 +773,7 @@ int app_main(int argc, char* argv[])
         return -1;
     }
 
-    uint32_t arcAndPlat = (BUILD_X86 | BUILD_X64 | BUILD_V7 | BUILD_V8) | (WINDOWS | PLATFORM_AD | MAC);
+    uint32_t arcAndPlat = (BUILD_X86 | BUILD_X64 | BUILD_V7 | BUILD_V8) | (WINDOWS | ANDROID | MAC);
     int baseArg = ParseArcAndPlat(arcAndPlat, argc, argv);
     if (baseArg < 0) {
         return -1;
@@ -847,7 +849,7 @@ int app_main(int argc, char* argv[])
         }
     }
     // Create .elf (.o)
-    if (arcAndPlat & PLATFORM_AD) {
+    if (arcAndPlat & ANDROID) {
         if (arcAndPlat & BUILD_V7) {
             if (!WriteElf<Elf32Bit>(EM_ARM, o32Name, secName, sizeOfData, data.get())) {
                 return -1;

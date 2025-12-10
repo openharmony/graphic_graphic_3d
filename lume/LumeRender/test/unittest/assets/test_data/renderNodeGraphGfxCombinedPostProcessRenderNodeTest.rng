@@ -1,0 +1,232 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "OutputImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | mipCount",
+                    "dependencySizeScale": 0.5,
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 256,
+                    "height": 256,
+                    "depth": 1
+                },
+                {
+                    "name": "OutputImage1",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | mipCount",
+                    "dependencySizeScale": 0.5,
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 256,
+                    "height": 256,
+                    "depth": 1
+                },
+                {
+                    "name": "HistoryImage0",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                },
+                {
+                    "name": "HistoryImage1",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                },
+                {
+                    "name": "DepthImage0",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "d24_unorm_s8_uint",
+                    "imageTiling": "optimal",
+                    "usageFlags": "depth_stencil_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "RenderNodeCombinedPostProcess",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "PostProcessDataStore",
+                "configurationName": "PostProcessConfiguration"
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "usageName": "color",
+                        "name": "InputImage0",
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 0
+                    },
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "usageName": "history",
+                        "name": "HistoryImage0"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 2,
+                        "usageName": "history_next",
+                        "name": "HistoryImage1"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "OutputImage0"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "RenderNodeCombinedPostProcess3",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "PostProcessDataStore",
+                "configurationName": "PostProcessConfiguration"
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "usageName": "color",
+                        "name": "InputImage0"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "usageName": "depth",
+                        "name": "HistoryImage0"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "usageName": "velocity_normal",
+                        "name": "HistoryImage0"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "OutputImage1"
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "CORE_RN_COMBINED_POST_PROCESS",
+            "nodeName": "RenderNodeCombinedPostProcess4",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "PostProcessDataStore",
+                "configurationName": "PostProcessConfiguration"
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "usageName": "color",
+                        "name": "OutputImage1"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "usageName": "history",
+                        "name": "HistoryImage0"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 2,
+                        "usageName": "history_next",
+                        "name": "HistoryImage1"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 3,
+                        "usageName": "depth",
+                        "name": "DepthImage0"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "OutputImage1"
+                    }
+                ]
+            }
+        }
+    ]
+}

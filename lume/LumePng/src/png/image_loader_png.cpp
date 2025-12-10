@@ -175,7 +175,7 @@ public:
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
     {
-        return array_view<const SubImageDesc>(&imageBuffer_, 1);
+        return array_view<const SubImageDesc>(imageBuffer_);
     }
 
     static constexpr Format ResolveFormat(uint32_t loadFlags, uint32_t componentCount, bool is16bpc) noexcept
@@ -248,6 +248,37 @@ public:
         };
     }
 
+    static void Handle3DTexture(PNGImage* image, BASE_NS::unique_ptr<uint8_t[]>& imageBytes, uint32_t sliceWidth,
+        uint32_t sliceHeight, uint32_t depth, uint32_t bitsPerPixel)
+    {
+        const uint32_t oldImageWidth = image->imageDesc_.width;
+        const uint32_t oldImageHeight = image->imageDesc_.height;
+        const uint32_t tileCountX = oldImageWidth / sliceWidth;
+        const uint8_t* orgimageBytes = reinterpret_cast<uint8_t*>(imageBytes.get());
+        const size_t imageSizeInBytes = image->imageDesc_.width * image->imageDesc_.height * (bitsPerPixel / 8);
+        uint8_t* sorted3dBytes = new uint8_t[imageSizeInBytes];
+        const uint32_t sizeOfPixelInBytes = bitsPerPixel / 8;
+        const uint32_t totalSizeOfOneTile = sliceHeight * sliceWidth * sizeOfPixelInBytes;
+        for (uint32_t y = 0; y < oldImageHeight; ++y) {
+            for (uint32_t x = 0; x < oldImageWidth; ++x) {
+                const uint32_t currentTileX = x / sliceWidth;
+                const uint32_t currentTileY = y / sliceHeight;
+                const uint32_t currentSlice = currentTileY * tileCountX + currentTileX;
+                uint32_t* dest = reinterpret_cast<uint32_t*>(
+                    &sorted3dBytes[(currentSlice * totalSizeOfOneTile) +
+                                   (((y % sliceHeight) * sliceWidth) + (x % sliceWidth)) * sizeOfPixelInBytes]);
+                *dest =
+                    *reinterpret_cast<const uint32_t*>(&orgimageBytes[((y * oldImageWidth) + x) * sizeOfPixelInBytes]);
+            }
+        }
+        image->imageBytes_.reset(sorted3dBytes);
+        image->imageDesc_.width = sliceWidth;
+        image->imageDesc_.height = sliceHeight;
+        image->imageDesc_.depth = depth;
+        image->imageDesc_.imageViewType = IImageContainer::ImageViewType::VIEW_TYPE_3D;
+        image->imageDesc_.imageType = IImageContainer::ImageType::TYPE_3D;
+    }
+
     static IImageLoaderManager::LoadResult CreateImage(BASE_NS::unique_ptr<uint8_t[]> imageBytes, uint32_t imageWidth,
         uint32_t imageHeight, uint32_t componentCount, uint32_t loadFlags, bool is16bpc) noexcept
     {
@@ -275,7 +306,8 @@ public:
         image->imageBytes_ = BASE_NS::move(imageBytes);
         image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
 
-        image->imageBuffer_ = SubImageDesc {
+        image->imageBuffer_.resize(1);
+        image->imageBuffer_.front() = SubImageDesc {
             0,           // uint32_t bufferOffset
             imageWidth,  // uint32_t bufferRowLength
             imageHeight, // uint32_t bufferImageHeight
@@ -287,6 +319,65 @@ public:
             static_cast<uint32_t>(imageHeight),
             1,
         };
+
+        return ResultSuccess(BASE_NS::move(image));
+    }
+
+    static IImageLoaderManager::LoadResult CreateImage(BASE_NS::unique_ptr<uint8_t[]> imageBytes, uint32_t imageWidth,
+        uint32_t imageHeight, uint32_t componentCount, uint32_t loadFlags, bool is16bpc, uint32_t sliceWidth,
+        uint32_t sliceHeight, uint32_t depth) noexcept
+    {
+        auto image = PNGImage::Ptr(new PNGImage);
+        if (!image) {
+            return ResultFailure("Loading image failed.");
+        }
+        const uint32_t bytesPerComponent = is16bpc ? 2u : 1u;
+
+        // Premultiply alpha if requested.
+        bool isPremultiplied = false;
+        if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
+            if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA) != 0) {
+                const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
+                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()), imageWidth, imageHeight,
+                    componentCount, bytesPerComponent, forceLinear);
+            }
+        }
+
+        const Format format = ResolveFormat(loadFlags, componentCount, is16bpc);
+        const uint32_t bitsPerPixel = bytesPerComponent * componentCount * 8u;
+        const bool generateMips = (loadFlags & IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS) != 0;
+        image->imageDesc_ =
+            ResolveImageDesc(format, imageWidth, imageHeight, bitsPerPixel, generateMips, isPremultiplied);
+
+        // Handling 3d textures
+        if (depth > 1) {
+            Handle3DTexture(image.get(), imageBytes, sliceWidth, sliceHeight, depth, bitsPerPixel);
+        } else {
+            image->imageBytes_ = BASE_NS::move(imageBytes);
+        }
+
+        image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
+
+        image->imageBuffer_.resize(depth);
+
+        if (depth == 1) {
+            sliceWidth = imageWidth;
+            sliceHeight = imageHeight;
+        }
+        for (uint32_t i = 0; i < depth; i++) {
+            image->imageBuffer_[i] = SubImageDesc {
+                0,           // uint32_t bufferOffset
+                sliceWidth,  // uint32_t bufferRowLength
+                sliceHeight, // uint32_t bufferImageHeight
+
+                0, // uint32_t mipLevel
+                1, // uint32_t layerCount
+
+                static_cast<uint32_t>(sliceWidth),
+                static_cast<uint32_t>(sliceHeight),
+                depth,
+            };
+        }
 
         return ResultSuccess(BASE_NS::move(image));
     }
@@ -371,7 +462,7 @@ public:
         // guaranteed that stack is cleaned up with longjmp, so have the big buffer pointer and pointers to start of
         // each row available here, and we can call reset() to release memory if something fails.
         BASE_NS::unique_ptr<uint8_t[]> image;
-        BASE_NS::unique_ptr<png_byte* []> rows;
+        BASE_NS::unique_ptr<png_byte*[]> rows;
         if (setjmp(png_jmpbuf(png))) {
             rows.reset();
             image.reset();
@@ -399,7 +490,7 @@ public:
             height = png_get_image_height(png, info);
             channels = png_get_channels(png, info);
             is16bpc = png_get_bit_depth(png, info) == 16; // 16: index
-            if (channels <= 0 || channels > 4) { // 0: invalid channel num, 4: RGBA
+            if (channels <= 0 || channels > 4) {          // 0: invalid channel num, 4: RGBA
                 png_destroy_read_struct(&png, &info, nullptr);
                 return ResultFailure("Invalid number of color channels.");
             }
@@ -413,7 +504,7 @@ public:
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
             image = BASE_NS::make_unique<uint8_t[]>(imageSize);
-            rows = BASE_NS::make_unique<png_byte* []>(height);
+            rows = BASE_NS::make_unique<png_byte*[]>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();
             if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {
@@ -436,6 +527,98 @@ public:
         return CreateImage(BASE_NS::move(image), width, height, channels, loadFlags, is16bpc);
     }
 
+    static IImageLoaderManager::LoadResult Load(
+        array_view<const uint8_t> imageFileBytes, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount) noexcept
+    {
+        if (imageFileBytes.empty()) {
+            return ResultFailure("Input data must not be null.");
+        }
+
+        png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if (!png) {
+            png_destroy_read_struct(&png, nullptr, nullptr);
+            return ResultFailure("Initialization failed.");
+        }
+        png_infop info = png_create_info_struct(png);
+        if (!info) {
+            png_destroy_read_struct(&png, nullptr, nullptr);
+            return ResultFailure("Initialization failed.");
+        }
+
+        // libpng uses longjmp for error handling. execution will jump to this if statement on error. it's not
+        // guaranteed that stack is cleaned up with longjmp, so have the big buffer pointer and pointers to start of
+        // each row available here, and we can call reset() to release memory if something fails.
+        BASE_NS::unique_ptr<uint8_t[]> image;
+        BASE_NS::unique_ptr<png_byte*[]> rows;
+        if (setjmp(png_jmpbuf(png))) {
+            rows.reset();
+            image.reset();
+            png_destroy_read_struct(&png, &info, nullptr);
+            return ResultFailure("Decoding failed.");
+        }
+
+        // libpng will now call ReadData when it needs data.
+        png_set_read_fn(png, &imageFileBytes, ReadData);
+
+        // first ask for the image information.
+        png_read_info(png, info);
+        auto width = png_get_image_width(png, info);
+        auto height = png_get_image_height(png, info);
+        auto channels = png_get_channels(png, info);
+        auto is16bpc = png_get_bit_depth(png, info) == 16;
+
+        if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) !=
+            IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) {
+            // ask libpng to do possible conversions according to loadFlags.
+            UpdateColorType(png, info, loadFlags);
+
+            // update the image information in case some conversions will be done.
+            width = png_get_image_width(png, info);
+            height = png_get_image_height(png, info);
+            channels = png_get_channels(png, info);
+            is16bpc = png_get_bit_depth(png, info) == 16; // 16: index
+            if (channels <= 0 || channels > 4) {          // 0: invalid channel num, 4: RGBA
+                png_destroy_read_struct(&png, &info, nullptr);
+                return ResultFailure("Invalid number of color channels.");
+            }
+
+            const size_t imageSize = width * height * channels;
+            if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
+                png_destroy_read_struct(&png, &info, nullptr);
+                return ResultFailure("Image too large.");
+            }
+            // allocate space for the whole image and and array of row pointers. libpng writes data to each row pointer.
+            // alternative would be to use a different api which writes only one row and feed it the correct address
+            // every time.
+            image = BASE_NS::make_unique<uint8_t[]>(imageSize);
+            rows = BASE_NS::make_unique<png_byte*[]>(height);
+            // fill rows depending on should there be a vertical flip or not.
+            auto row = rows.get();
+            if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {
+                for (auto i = 0U; i < height; ++i) {
+                    *row++ = image.get() + ((height - 1) - i) * (width * channels);
+                }
+            } else {
+                for (auto i = 0U; i < height; ++i) {
+                    *row++ = image.get() + i * (width * channels);
+                }
+            }
+
+            // ask libpng to devoce the whole image.
+            png_read_image(png, rows.get());
+            png_read_end(png, info);
+        }
+        png_destroy_read_struct(&png, &info, nullptr);
+
+        uint32_t sliceWidth = width / rowCount;
+        uint32_t sliceHeight = height / columnCount;
+        uint32_t depth = rowCount * columnCount;
+
+        // Success. Populate the image info and image data object.
+        return CreateImage(
+            BASE_NS::move(image), width, height, channels, loadFlags, is16bpc, sliceWidth, sliceHeight, depth);
+    }
+
 protected:
     void Destroy() override
     {
@@ -444,7 +627,7 @@ protected:
 
 private:
     ImageDesc imageDesc_;
-    SubImageDesc imageBuffer_;
+    BASE_NS::vector<SubImageDesc> imageBuffer_;
 
     BASE_NS::unique_ptr<uint8_t[]> imageBytes_;
     size_t imageBytesLength_ = 0;
@@ -468,6 +651,25 @@ public:
         }
 
         return PNGImage::Load(array_view<const uint8_t>(buffer.get(), static_cast<size_t>(byteLength)), loadFlags);
+    }
+
+    IImageLoaderManager::LoadResult Load(
+        IFile& file, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount) const override
+    {
+        const uint64_t byteLength = file.GetLength();
+        if (byteLength > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
+            return ResultFailure("File too big.");
+        }
+
+        // Read the file to a buffer.
+        unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(static_cast<size_t>(byteLength));
+        const uint64_t read = file.Read(buffer.get(), byteLength);
+        if (read != byteLength) {
+            return ResultFailure("Reading file failed.");
+        }
+
+        return PNGImage::Load(
+            array_view<const uint8_t>(buffer.get(), static_cast<size_t>(byteLength)), loadFlags, rowCount, columnCount);
     }
 
     IImageLoaderManager::LoadResult Load(array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) const override

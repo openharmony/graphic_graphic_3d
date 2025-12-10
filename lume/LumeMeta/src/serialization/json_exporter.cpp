@@ -22,9 +22,9 @@
 META_BEGIN_NAMESPACE()
 namespace Serialization {
 
-ReturnError JsonExporter::Export(CORE_NS::IFile& output, const IObject::ConstPtr& object)
+ReturnError JsonExporter::Export(CORE_NS::IFile& output, const IObject::ConstPtr& object, ExportOptions options)
 {
-    auto tree = Export(object);
+    auto tree = Export(object, options);
     if (!tree) {
         return GenericError::FAIL;
     }
@@ -36,9 +36,9 @@ ReturnError JsonExporter::Export(CORE_NS::IFile& output, const IObject::ConstPtr
     output.Write(json.c_str(), json.size());
     return GenericError::SUCCESS;
 }
-ISerNode::Ptr JsonExporter::Export(const IObject::ConstPtr& object)
+ISerNode::Ptr JsonExporter::Export(const IObject::ConstPtr& object, ExportOptions options)
 {
-    return exp_.Export(object);
+    return exp_.Export(object, options);
 }
 void JsonExporter::SetInstanceIdMapping(BASE_NS::unordered_map<InstanceId, InstanceId> map)
 {

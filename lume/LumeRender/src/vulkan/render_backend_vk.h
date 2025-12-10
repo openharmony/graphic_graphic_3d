@@ -152,6 +152,8 @@ private:
 
     void RenderProcessCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
+    uint64_t ProcessSecondaryCommandList(RenderCommandFrameData& renderCommandFrameData, uint32_t cmdBufferIdx,
+        BASE_NS::vector<uint64_t>& afterIdentifiers, uint64_t secondaryIdx);
     void RenderProcessSubmitCommandLists(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
     void RenderSingleCommandList(RenderCommandContext& renderCommandCtx, uint32_t cmdBufIdx,

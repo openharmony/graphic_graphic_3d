@@ -59,6 +59,10 @@ public:
              * Enables render side to handle TLAS
              */
             ENABLE_ACCELERATION_STRUCTURES_BIT = (1U << 0U),
+            /** Explicitly enable experimental bindless
+             * Enables bindless default material pipelines
+             */
+            ENABLE_BINDLESS_PIPELINES_BIT = (1U << 1U),
         };
         /** Container for create info flag bits */
         using CreateInfoFlags = uint32_t;

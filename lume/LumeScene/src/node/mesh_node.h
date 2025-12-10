@@ -19,8 +19,8 @@
 #include <scene/ext/intf_create_entity.h>
 #include <scene/interface/intf_mesh.h>
 
-#include "component/mesh_component.h"
-#include "mesh/mesh.h"
+#include "../component/mesh_component.h"
+#include "../mesh/mesh.h"
 #include "node.h"
 
 SCENE_BEGIN_NAMESPACE()

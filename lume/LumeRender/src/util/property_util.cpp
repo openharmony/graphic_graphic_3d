@@ -348,35 +348,35 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     static_assert(sizeof(float) == sizeof(uint32_t) && sizeof(float) == sizeof(int32_t));
     switch (propertyType) {
         case PropertyType::FLOAT_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::UINT32_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::INT32_T:
-            [[fallthrough]];
+            [[fallthrough]]; // float
         case PropertyType::BOOL_T:
             align = sizeof(float);
             break;
         case PropertyType::VEC2_T:
-            [[fallthrough]];
+            [[fallthrough]]; // two float
         case PropertyType::UVEC2_T:
-            [[fallthrough]];
+            [[fallthrough]]; // two float
         case PropertyType::IVEC2_T:
             align = sizeof(float) * 2U;
             break;
         case PropertyType::VEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::UVEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::IVEC3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::VEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::UVEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::IVEC4_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::MAT3X3_T:
-            [[fallthrough]];
+            [[fallthrough]]; // four float
         case PropertyType::MAT4X4_T:
             align = sizeof(float) * 4U;
             break;
@@ -395,6 +395,10 @@ inline void SafeFromJsonValue(const json::value* value, T& val)
 void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl& propertyType, const json::value* value,
     CustomPropertyPodContainer& customProperties, const size_t offset)
 {
+    if (value == nullptr) {
+        CORE_LOG_E("json value is nullptr");
+        return;
+    }
     if (propertyType == PropertyType::VEC4_T) {
         Math::Vec4 val;
         SafeFromJsonValue(value, val);
@@ -432,22 +436,22 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
         SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
     } else if (propertyType == PropertyType::FLOAT_T) {
-        float val;
+        float val {};
         SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
     } else if (propertyType == PropertyType::UINT32_T) {
-        uint32_t val;
+        uint32_t val {};
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
+        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t) });
     } else if (propertyType == PropertyType::INT32_T) {
-        int32_t val;
+        int32_t val {};
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
+        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(int32_t) });
     } else if (propertyType == PropertyType::BOOL_T) {
-        bool tmpVal;
+        bool tmpVal {};
         SafeFromJsonValue(value, tmpVal);
         uint32_t val = tmpVal;
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
+        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t) });
     } else if (propertyType == PropertyType::MAT3X3_T) {
         Math::Mat3X3 val;
         SafeFromJsonValue(value, val);

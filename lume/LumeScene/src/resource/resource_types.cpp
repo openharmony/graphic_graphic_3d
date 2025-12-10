@@ -15,9 +15,12 @@
 
 #include "resource_types.h"
 
+#include <scene/interface/intf_scene.h>
 #include <scene/interface/resource/types.h>
 
+#include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/resource/intf_object_resource.h>
+#include <meta/interface/serialization/intf_refuri_builder.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -37,9 +40,21 @@ void RegisterResourceTypes(const CORE_NS::IResourceManager::Ptr& res, const META
     res->AddResourceType(
         META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::MaterialResource, params));
     res->AddResourceType(
+        META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::OcclusionMaterialResource, params));
+    res->AddResourceType(
         META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::PostProcessResource, params));
     res->AddResourceType(
         META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::AnimationResource, params));
+
+    res->AddResourceType(
+        META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(META_NS::ClassId::ObjectTemplateType));
+
+    auto metaAnim =
+        META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(META_NS::ClassId::AnimationResourceType, params);
+    if (auto i = interface_cast<META_NS::IRefUriBuilderAnchorType>(metaAnim)) {
+        i->AddAnchorType(ClassId::Scene.Id());
+    }
+    res->AddResourceType(metaAnim);
 
     if (auto env = META_NS::GetObjectRegistry().Create<META_NS::IObjectResource>(
             META_NS::ClassId::ObjectResourceType, params)) {

@@ -46,7 +46,8 @@ class ObjectRegistry final : public IObjectRegistry,
                              public ITaskQueueRegistry,
                              public IPropertyRegister,
                              public IGlobalSerializationData,
-                             public IEngineData {
+                             public IEngineData,
+                             public IObjectUtil {
 public:
     META_NO_COPY_MOVE(ObjectRegistry)
 
@@ -91,6 +92,7 @@ public:
     bool IsAnyRegistered(const ObjectId& id) const override;
     void RegisterAny(BASE_NS::shared_ptr<AnyBuilder> builder) override;
     void UnregisterAny(const ObjectId& id) override;
+    BASE_NS::vector<ObjectId> GetAllRegisteredAnyTypes() const override;
 
     // Interpolators
     void RegisterInterpolator(TypeId propertyTypeUid, BASE_NS::Uid interpolatorClassUid) override;
@@ -112,9 +114,16 @@ public:
     void RegisterInternalValueAccess(const CORE_NS::PropertyTypeDecl& type, IEngineInternalValueAccess::Ptr) override;
     void UnregisterInternalValueAccess(const CORE_NS::PropertyTypeDecl& type) override;
     IEngineData& GetEngineData() override;
+    BASE_NS::vector<CORE_NS::PropertyTypeDecl> GetAllRegisteredValueAccess() const override;
 
     IObject::Ptr DefaultResolveObject(const IObjectInstance::Ptr& base, const RefUri& uri) const override;
     IMetadata::Ptr ConstructObjectDataContainer() override;
+
+protected: // IObjectUtil
+    BASE_NS::string GetUniqueName(
+        BASE_NS::string_view name, BASE_NS::array_view<BASE_NS::string_view> names) const override;
+
+    IObjectUtil& GetObjectUtil() override;
 
 protected:
     void Ref() override;

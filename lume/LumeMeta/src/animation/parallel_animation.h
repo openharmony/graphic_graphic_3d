@@ -32,6 +32,11 @@ public:
 
     bool Build(const IMetadata::Ptr& data) override;
 
+    META_NS::ObjectId GetDefaultAccess() const override
+    {
+        return ClassId::ParallelAnimationTemplateAccess;
+    }
+
 private:
     AnimationState::AnimationStateParams GetParams() override;
     void Evaluate() override;

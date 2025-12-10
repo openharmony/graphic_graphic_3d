@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
-
+// need notice
 #include <base/containers/fixed_string.h>
 #include <base/util/base64_decode.h>
 #include <core/io/intf_file_manager.h>
@@ -63,6 +63,7 @@ vector<uint8_t> Read(Accessor const& accessor)
     const uint32_t componentCount = GetComponentsCount(accessor.type);
     const uint32_t elementSize = componentCount * componentByteSize;
     const uint32_t count = accessor.count;
+    // need notice
     if (!accessor.bufferView->data) {
         return {};
     }
@@ -569,9 +570,9 @@ string_view GetAnimationInterpolation(AnimationInterpolation interpolation)
         case AnimationInterpolation::STEP:
             return "STEP";
         default:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as LINEAR
         case AnimationInterpolation::INVALID:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as LINEAR
         case AnimationInterpolation::LINEAR:
             return "LINEAR";
         case AnimationInterpolation::SPLINE:
@@ -583,7 +584,7 @@ string_view GetAnimationPath(AnimationPath path)
 {
     switch (path) {
         default:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as INVALID
         case AnimationPath::INVALID:
             CORE_LOG_W("invalid animation path %d", static_cast<int>(path));
             return "translation";
@@ -1034,6 +1035,11 @@ BufferLoadResult LoadBuffers(const Data* data, IFileManager& fileManager)
     // Load data to all buffers.
     for (const auto& buffer : data->buffers) {
         if (buffer && buffer->data.empty()) {
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+            if (data->meshCompression && (data->defaultResourcesOffset < 0) && buffer->uri.empty()) {
+                continue;
+            }
+#endif
             result = LoadBuffer(*data, *buffer, fileManager);
             if (!result.success) {
                 return result;

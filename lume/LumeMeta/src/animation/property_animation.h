@@ -40,6 +40,11 @@ public: // IModifier
     EvaluationResult ProcessOnGet(IAny& value) override;
     EvaluationResult ProcessOnSet(IAny& value, const IAny& current) override;
 
+    META_NS::ObjectId GetDefaultAccess() const override
+    {
+        return ClassId::PropertyAnimationTemplateAccess;
+    }
+
 private:
     void OnAnimationStateChanged(const IAnimationInternal::AnimationStateChangedInfo& info) override;
     void Evaluate() override;

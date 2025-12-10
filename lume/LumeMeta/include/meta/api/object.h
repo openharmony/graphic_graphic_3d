@@ -203,7 +203,7 @@ public:
     }
     auto Remove(const IObject::Ptr& child)
     {
-        return META_INTERFACE_OBJECT_CALL_PTR(Add(child));
+        return META_INTERFACE_OBJECT_CALL_PTR(Remove(child));
     }
     auto Move(IContainer::SizeType fromIndex, IContainer::SizeType toIndex)
     {

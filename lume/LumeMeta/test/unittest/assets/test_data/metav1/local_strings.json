@@ -1,0 +1,49 @@
+{
+	"$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+	"$name": "Object",
+	"$instanceId": "000007f3-d1c5-40dc-3863-40e050822899",
+	"strings": {
+		"$classId": "60cefa36-e9f3-b9c4-5072-6f7065727479",
+		"valueObject": {
+			"$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+			"$name": "Object",
+			"$instanceId": "000007f3-d1c3-4444-b6b1-bb2f8c47a0fa",
+			"en": {
+				"$classId": "60cefa36-e9f3-b9c4-5072-6f7065727479",
+				"valueObject": {
+					"$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+					"$name": "Object",
+					"$instanceId": "000007f3-d1c2-9030-4847-3d23e08e8fca",
+					"Text1": {
+						"$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+						"value": "Text"
+					}
+				}
+			},
+			"fi": {
+				"$classId": "60cefa36-e9f3-b9c4-5072-6f7065727479",
+				"valueObject": {
+					"$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+					"$name": "Object",
+					"$instanceId": "000007f3-d1c3-c1a8-811f-1b47d180afd7",
+					"Text1": {
+						"$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+						"value": "Teksti"
+					}
+				}
+			},
+			"zh": {
+				"$classId": "60cefa36-e9f3-b9c4-5072-6f7065727479",
+				"valueObject": {
+					"$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+					"$name": "Object",
+					"$instanceId": "000007f3-d1c4-81d8-c0e0-57e235a1c50a",
+					"Text1": {
+						"$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+						"value": "文本"
+					}
+				}
+			}
+		}
+	}
+}

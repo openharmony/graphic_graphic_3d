@@ -20,6 +20,7 @@
 #include <base/math/vector.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -37,7 +38,6 @@
 #include "datastore/render_data_store_pod.h"
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "render_post_process_bloom.h"
 #include "util/log.h"
 
 // shaders
@@ -48,8 +48,25 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
-DATA_TYPE_METADATA(RenderPostProcessBloomNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
-DATA_TYPE_METADATA(RenderPostProcessBloomNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
+ENUM_TYPE_METADATA(RENDER_NS::BloomConfiguration::BloomQualityType, ENUM_VALUE(QUALITY_TYPE_LOW, "Low Quality"),
+    ENUM_VALUE(QUALITY_TYPE_NORMAL, "Normal Quality"), ENUM_VALUE(QUALITY_TYPE_HIGH, "High Quality"))
+
+ENUM_TYPE_METADATA(RENDER_NS::BloomConfiguration::BloomType, ENUM_VALUE(TYPE_NORMAL, "Normal"),
+    ENUM_VALUE(TYPE_HORIZONTAL, "Horizontal"), ENUM_VALUE(TYPE_VERTICAL, "Vertical"),
+    ENUM_VALUE(TYPE_BILATERAL, "Bilateral"))
+
+DATA_TYPE_METADATA(RENDER_NS::BloomConfiguration, MEMBER_PROPERTY(bloomType, "Type", 0),
+    MEMBER_PROPERTY(bloomQualityType, "Quality", 0), MEMBER_PROPERTY(thresholdHard, "Hard Threshold", 0),
+    MEMBER_PROPERTY(thresholdSoft, "Soft Threshold", 0), MEMBER_PROPERTY(amountCoefficient, "Amount Coefficient", 0),
+    MEMBER_PROPERTY(dirtMaskCoefficient, "Dist Mask Coefficient", 0), MEMBER_PROPERTY(scatter, "Scatter", 0),
+    MEMBER_PROPERTY(scaleFactor, "Scale Factor", 0), MEMBER_PROPERTY(dirtMaskImage, "Dirt Mask Image", 0),
+    MEMBER_PROPERTY(useCompute, "Use Compute", CORE_NS::PropertyFlags::IS_HIDDEN))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBloomNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(bloomConfiguration, "Bloom Configuration", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBloomNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
+DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessBloomNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
 CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
@@ -58,11 +75,9 @@ constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT
 } // namespace
 
 RenderPostProcessBloomNode::RenderPostProcessBloomNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessBloomNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessBloomNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessBloomNode::GetRenderInputProperties()
@@ -81,11 +96,10 @@ void RenderPostProcessBloomNode::SetRenderAreaRequest(const RenderAreaRequest& r
     renderAreaRequest_ = renderAreaRequest;
 }
 
-void RenderPostProcessBloomNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessBloomNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
+    psos_ = {};
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     samplerHandle_ = gpuResourceMgr.Create(samplerHandle_,
@@ -98,13 +112,22 @@ void RenderPostProcessBloomNode::Init(
             SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
         });
 
+    binders_.downscaleAndThreshold.reset();
+    for (auto& binder : binders_.downscale) {
+        binder.reset();
+    }
+    for (auto& binder : binders_.upscale) {
+        binder.reset();
+    }
+    binders_.combine.reset();
+
     valid_ = true;
 }
 
-void RenderPostProcessBloomNode::PreExecute()
+void RenderPostProcessBloomNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessBloomNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessBloomNode::EffectProperties)) {
@@ -122,7 +145,7 @@ void RenderPostProcessBloomNode::PreExecute()
     }
 }
 
-void RenderPostProcessBloomNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessBloomNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
     // NOTE: need to be run even when not enabled when using render node
     if (!valid_) {
@@ -164,7 +187,7 @@ void RenderPostProcessBloomNode::Execute(IRenderCommandList& cmdList)
     scaleFactor = Math::max(0.01f, scaleFactor);
     const auto fTexCount = static_cast<float>(targets_.tex1.size());
     frameScaleMaxCount_ = static_cast<size_t>(Math::min(fTexCount, fTexCount * scaleFactor));
-    frameScaleMaxCount_ = Math::max(frameScaleMaxCount_, size_t(2)); // 2: frame count
+    frameScaleMaxCount_ = Math::max(frameScaleMaxCount_, size_t(2U));
 
     if (effectProperties_.bloomConfiguration.useCompute) {
         ComputeBloom(cmdList);
@@ -318,7 +341,7 @@ void RenderPostProcessBloomNode::ComputeDownscale(const PushConstant& pc, IRende
     cmdList.BindPipeline(psos_.downscale);
     const ShaderThreadGroup tgs = psos_.downscaleTGS;
 
-    for (size_t i = 1; i < frameScaleMaxCount_; ++i) {
+    for (size_t i = 1U; i < frameScaleMaxCount_; ++i) {
         {
             auto& binder = *binders_.downscale[i];
             const RenderHandle setHandle = binder.GetDescriptorSetHandle();
@@ -350,10 +373,15 @@ void RenderPostProcessBloomNode::ComputeDownscale(const PushConstant& pc, IRende
 
 void RenderPostProcessBloomNode::ComputeUpscale(const PushConstant& pc, IRenderCommandList& cmdList)
 {
+    if (frameScaleMaxCount_ < 1U) {
+        // This should never happen as frameScaleMaxCount_ is max(count, 2)
+        return;
+    }
+
     cmdList.BindPipeline(psos_.upscale);
     const ShaderThreadGroup tgs = psos_.upscaleTGS;
 
-    for (size_t i = frameScaleMaxCount_ - 1; i != 0; --i) {
+    for (size_t i = frameScaleMaxCount_ - 1U; i != 0; --i) {
         {
             auto& binder = *binders_.upscale[i];
             const RenderHandle setHandle = binder.GetDescriptorSetHandle();
@@ -481,7 +509,7 @@ void RenderPostProcessBloomNode::RenderDownscale(
     LocalPostProcessPushConstantStruct uPc;
     uPc.factor = bloomParameters_;
 
-    for (size_t idx = 1; idx < frameScaleMaxCount_; ++idx) {
+    for (size_t idx = 1U; idx < frameScaleMaxCount_; ++idx) {
         const auto targetSize = targets_.tex1Size[idx];
         const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
         const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
@@ -519,16 +547,17 @@ void RenderPostProcessBloomNode::RenderDownscale(
 void RenderPostProcessBloomNode::RenderUpscale(
     RenderPass& renderPass, const PushConstant& pc, IRenderCommandList& cmdList)
 {
+    if (frameScaleMaxCount_ < 1U) {
+        // This should never happen as frameScaleMaxCount_ is max(count, 2)
+        return;
+    }
     RenderPass renderPassUpscale = renderPass;
     renderPassUpscale.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPassUpscale.renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
 
     PLUGIN_ASSERT(targets_.tex1.size() == targets_.tex2.size());
-    RenderHandle input;
-    if (frameScaleMaxCount_ >= 1) {
-        input = targets_.tex1[frameScaleMaxCount_ - 1].GetHandle();
-    }
-    for (size_t idx = frameScaleMaxCount_ - 1; idx != 0; --idx) {
+    RenderHandle input = targets_.tex1[frameScaleMaxCount_ - 1].GetHandle();
+    for (size_t idx = frameScaleMaxCount_ - 1U; idx != 0U; --idx) {
         const auto targetSize = targets_.tex1Size[idx - 1];
         const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
         const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };

@@ -28,12 +28,20 @@
 
 META_BEGIN_NAMESPACE()
 
+struct ImportOptions {
+    bool manualDeferredResolve {};
+};
+
 /// Interface to import serialisation hierarchy as object
 class IImporter : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IImporter, "b3fd4c55-109d-4a44-895c-8568541238ac")
 public:
     /// Import serialisation tree as object
-    virtual IObject::Ptr Import(const ISerNode::ConstPtr& tree) = 0;
+    virtual IObject::Ptr Import(const ISerNode::ConstPtr& tree, ImportOptions) = 0;
+    IObject::Ptr Import(const ISerNode::ConstPtr& tree)
+    {
+        return Import(tree, {});
+    }
     /**
      * Get mapping from the actual instance id to serialised instance id
      * (key is actual instance id, value is serialised)
@@ -51,14 +59,23 @@ public:
      * Get metadata after importing
      */
     virtual SerMetadata GetMetadata() const = 0;
+    /**
+     * Do manual later resolving
+     */
+    virtual void ResolveDeferred() = 0;
 };
 
 /// Interface to import objects from file
 class IFileImporter : public IImporter {
     META_INTERFACE(IImporter, IFileImporter, "97d96540-675c-48e0-8895-202bf8b9bf69")
 public:
+    using IImporter::Import;
     /// Import given input file as object
-    virtual IObject::Ptr Import(CORE_NS::IFile& input) = 0;
+    virtual IObject::Ptr Import(CORE_NS::IFile& input, ImportOptions opts) = 0;
+    IObject::Ptr Import(CORE_NS::IFile& input)
+    {
+        return Import(input, {});
+    }
     /// Import given input file as serialisation tree
     virtual ISerNode::Ptr ImportAsTree(CORE_NS::IFile& input) = 0;
     /// Get transformations that are set for this importer

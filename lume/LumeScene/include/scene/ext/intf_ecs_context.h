@@ -46,8 +46,6 @@ public:
     virtual CORE_NS::Entity GetRootEntity() const = 0;
     virtual CORE_NS::Entity GetParent(CORE_NS::Entity ent) const = 0;
     virtual CORE_NS::EntityReference GetRenderHandleEntity(const RENDER_NS::RenderHandleReference& handle) = 0;
-
-    virtual bool IsNodeEntity(CORE_NS::Entity ent) const = 0;
     virtual bool RemoveEntity(CORE_NS::Entity ent) = 0;
 };
 

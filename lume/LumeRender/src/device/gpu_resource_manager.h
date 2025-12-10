@@ -92,6 +92,8 @@ struct StagingCopyStruct {
     /** Optional format for scaling */
     BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
 
+    /** Staging buffer index. */
+    uint32_t stagingBufferIndex { 0U };
     /** Staging buffer byteoffset. */
     uint32_t stagingBufferByteOffset { 0U };
     /** Staging buffer bytesize. */
@@ -147,9 +149,10 @@ struct StagingConsumeStruct {
     ScalingImageDataStruct scalingImageData;
 
     /** Staging buffer */
-    RenderHandle stagingBuffer;
-    /** Staging buffer byte size */
-    uint32_t stagingByteSize { 0U };
+    BASE_NS::vector<RenderHandle> stagingBuffers;
+
+    /** Staging buffer byte size for each staging buffer */
+    BASE_NS::vector<uint32_t> stagingByteSizes {};
 };
 
 /** Per frame work loop:
@@ -329,6 +332,7 @@ public:
     void WaitForIdleAndDestroyGpuResources() override;
 
     EngineResourceHandle GetGpuHandle(const RenderHandle& clientHandle) const;
+    EngineResourceHandle GetGpuHandleNoValidation(const RenderHandle& clientHandle) const;
 
     GpuBuffer* GetBuffer(const RenderHandle& gpuHandle) const;
     GpuImage* GetImage(const RenderHandle& gpuHandle) const;
@@ -384,6 +388,10 @@ public:
     BASE_NS::vector<RenderHandle> GetRawImageHandles() const;
     BASE_NS::vector<RenderHandle> GetRawSamplerHandles() const;
 
+    void GetRawBufferHandles(const BufferHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const;
+    void GetRawImageHandles(const ImageHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const;
+    void GetRawSamplerHandles(const SamplerHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const;
+
     void SetDefaultGpuBufferCreationFlags(BufferUsageFlags usageFlags) override;
     void SetDefaultGpuImageCreationFlags(ImageUsageFlags usageFlags) override;
 
@@ -403,6 +411,8 @@ public:
     RenderHandle ReserveRenderTimeGpuBuffer(uint32_t byteSize);
     IRenderNodeGpuResourceManager::MappedGpuBufferData AcquireRenderTimeGpuBuffer(RenderHandle handle) const;
 
+    void ReserveSpaceForStaging(uint32_t byteSize);
+
     enum class RenderTimeState : uint8_t {
         UNDEFINED = 0,
         RENDER_PRE_EXECUTE = 1,
@@ -410,6 +420,17 @@ public:
         RENDER_BACKEND = 3,
     };
     void SetState(RenderTimeState rts);
+
+    struct DefaultResources {
+        RenderHandle bufferHandle;
+        RenderHandle imageHandle;
+        RenderHandle samplerHandle;
+    };
+    void SetDefaultResources(const DefaultResources& defaultResources);
+
+    uint32_t GetBufferCount() const override;
+    uint32_t GetImageCount() const override;
+    uint32_t GetSamplerCount() const override;
 
 private:
     Device& device_;
@@ -571,6 +592,9 @@ private:
     static bool HasNamedResource(const PerManagerStore& store, BASE_NS::string_view name);
 
     static EngineResourceHandle GetGpuHandle(const PerManagerStore& store, const RenderHandle& clientHandle);
+    // descriptor set management update can return false e.g. if someone creates resource in ExecuteFrame (render node)
+    static EngineResourceHandle GetGpuHandleNoValidation(
+        const PerManagerStore& store, const RenderHandle& clientHandle);
 
     // destroydHandle store needs to be locked, staging locked inside and bufferstore if not already locked
     void RemoveStagingOperations(const OperationDescription& destroyAlloc);
@@ -630,6 +654,8 @@ private:
     RenderTimeReservedGpuBuffer renderTimeReservedGpuBuffer_;
 
     RenderTimeState renderTimeState_ { RenderTimeState::UNDEFINED };
+
+    DefaultResources defaultResources_;
 
     // ogl object name tagging not supported ATM
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -700,6 +726,13 @@ public:
     BASE_NS::vector<RenderHandle> GetImageHandles() const override;
     BASE_NS::vector<RenderHandle> GetSamplerHandles() const override;
 
+    void GetBufferHandles(
+        const IGpuResourceManager::BufferHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const override;
+    void GetImageHandles(
+        const IGpuResourceManager::ImageHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const override;
+    void GetSamplerHandles(
+        const IGpuResourceManager::SamplerHandleInfo& info, BASE_NS::vector<RenderHandle>& handles) const override;
+
     IGpuResourceCache& GetGpuResourceCache() const override;
 
     ImageAspectFlags GetImageAspectFlags(const RenderHandle& handle) const override;
@@ -713,6 +746,10 @@ public:
 
     RenderHandle ReserveGpuBuffer(uint32_t byteSize) override;
     MappedGpuBufferData AcquireGpubuffer(RenderHandle handle) override;
+
+    uint32_t GetBufferCount() const override;
+    uint32_t GetImageCount() const override;
+    uint32_t GetSamplerCount() const override;
 
 private:
     GpuResourceManager& gpuResourceMgr_;

@@ -74,6 +74,27 @@ class IShaderState : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IShaderState, "44b20afb-4e96-41de-a765-df9dd07799de")
 public:
     virtual bool SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::RenderHandleReference graphics) = 0;
+
+    /// Override blending options
+    struct ColorBlendOptions {
+        bool enableBlend {};
+    };
+    /// Override depth options
+    struct DepthStencilOptions {
+        bool enableDepthWrite {};
+        bool enableDepthTest {};
+    };
+    struct RasterizationOptions {};
+
+    /**
+     * @brief Set override options for the shader, overriding the values set in .shader file.
+     * @param colorOptions Color blend options or nullptr to use Blend property value to decide. If colorOptions is set,
+     *        Blend property has no effect.
+     * @param depthOptions Depth options or nullptr to use defaults based on blend mode/shader.
+     * @param rasterizationOptions Reserved for future usage.
+     */
+    virtual void SetShaderStateOverride(const ColorBlendOptions* colorOptions, const DepthStencilOptions* depthOptions,
+        const RasterizationOptions* rasterizationOptions = nullptr) = 0;
 };
 
 META_REGISTER_CLASS(Shader, "56d686b8-7a33-4608-b12a-1a170381bcfd", META_NS::ObjectCategoryBits::NO_CATEGORY)

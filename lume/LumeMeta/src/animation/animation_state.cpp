@@ -286,7 +286,7 @@ bool AnimationState::SetState(IAnimationInternal::AnimationTargetState state)
                 state_.ResetLastTick();
                 break;
             case AnimationTargetState::FINISHED:
-                [[fallthrough]];
+                [[fallthrough]]; // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 ResetClock();
                 break;

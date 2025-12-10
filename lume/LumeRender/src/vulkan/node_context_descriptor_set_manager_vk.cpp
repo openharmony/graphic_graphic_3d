@@ -321,7 +321,8 @@ const LowLevelDescriptorSetVk* GetDescriptorSetFunc(const CpuDescriptorSet& cpuD
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (!descriptorSetData.additionalPlatformSet.descriptorSet) {
                 PLUGIN_LOG_ONCE_E(debugName.c_str() + to_string(handle.id) + "_dsnu0",
-                    "RENDER_VALIDATION: descriptor set not updated (handle:%" PRIx64 ")", handle.id);
+                    "RENDER_VALIDATION: descriptor set not updated (name:%s) (handle:%" PRIx64 ")", debugName.c_str(),
+                    handle.id);
             }
 #endif
             set = &descriptorSetData.additionalPlatformSet;
@@ -330,7 +331,8 @@ const LowLevelDescriptorSetVk* GetDescriptorSetFunc(const CpuDescriptorSet& cpuD
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (!descriptorSetData.bufferingSet[bufferingIndex].descriptorSet) {
                 PLUGIN_LOG_ONCE_E(debugName.c_str() + to_string(handle.id) + "_dsn1",
-                    "RENDER_VALIDATION: descriptor set not updated (handle:%" PRIx64 ")", handle.id);
+                    "RENDER_VALIDATION: descriptor set not updated (name:%s) (handle:%" PRIx64 ")", debugName.c_str(),
+                    handle.id);
             }
 #endif
             set = &descriptorSetData.bufferingSet[bufferingIndex];
@@ -427,12 +429,30 @@ void DescriptorSetManagerVk::BeginBackendFrame()
             continue;
         }
         bool destroyDescriptorSets = true;
+        bool hasOneFrameDescriptorSets = false;
         // if we have any descriptor sets in use we do not destroy the pool
         for (auto& ref : descriptorSetBase->data) {
             if (ref.renderHandleReference.GetRefCount() > 1) {
                 destroyDescriptorSets = false;
             }
+            if (ref.cpuDescriptorSet.hasPlatformConversionBindings) {
+                hasOneFrameDescriptorSets = true;
+            }
             ref.frameWriteLocked = false;
+        }
+
+        // additional platform descriptor pool needs to be destroyed every frame
+        if ((!destroyDescriptorSets) && descriptorPool.additionalPlatformDescriptorPool) {
+            if (descriptorPool.additionalPlatformDescriptorPool) {
+                PendingDeallocations pd;
+                // pd.descriptorPool.descriptorPool ignored
+                // pd.descriptorPool.descriptorSets ignored
+                // only removing the platform descriptor pool
+                pd.descriptorPool.additionalPlatformDescriptorPool =
+                    exchange(descriptorPool.additionalPlatformDescriptorPool, VK_NULL_HANDLE);
+                pd.frameIndex = device_.GetFrameCount();
+                pendingDeallocations_.push_back(move(pd));
+            }
         }
 
         // destroy or create pool
@@ -470,6 +490,30 @@ void DescriptorSetManagerVk::BeginBackendFrame()
                         CreatePoolFunc(vkDevice_, descriptorSetCount * bufferingCount_, descriptorPoolSizes_);
                 }
             }
+            descriptorPoolSizes_.clear();
+        }
+
+        // create one frame platform descriptor pool
+        if ((!destroyDescriptorSets) && hasOneFrameDescriptorSets) {
+            // all the the descriptor sets have the same amount of data
+            if ((!descriptorSetBase->data.empty()) && (!descriptorPool.descriptorSets.empty())) {
+                // NOTE: we reserve the max amount at the moment
+                // could be calculated when descriptor sets updated and allocate only the needed amount
+                descriptorPoolSizes_.clear();
+                descriptorPoolSizes_.reserve(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+                const auto descriptorSetCount = static_cast<uint32_t>(descriptorPool.descriptorSets.size());
+                for (const auto& bindRef : descriptorSetBase->data[0U].cpuDescriptorSet.bindings) {
+                    const auto& bind = bindRef.binding;
+                    descriptorPoolSizes_.push_back(VkDescriptorPoolSize { (VkDescriptorType)bind.descriptorType,
+                        bind.descriptorCount * descriptorSetCount * bufferingCount_ });
+                }
+                if (!descriptorPoolSizes_.empty()) {
+                    // no buffering
+                    descriptorPool.additionalPlatformDescriptorPool =
+                        CreatePoolFunc(vkDevice_, descriptorSetCount * 1U, descriptorPoolSizes_);
+                }
+                descriptorPoolSizes_.clear();
+            }
         }
     }
 }
@@ -478,6 +522,7 @@ void DescriptorSetManagerVk::CreateDescriptorSets(const uint32_t arrayIndex, con
     const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
 {
     PLUGIN_ASSERT((arrayIndex < descriptorSets_.size()) && (descriptorSets_[arrayIndex]));
+    PLUGIN_ASSERT(descriptorSets_[arrayIndex]);
     PLUGIN_ASSERT(descriptorSets_[arrayIndex]->data.size() == descriptorSetCount);
     if ((arrayIndex < descriptorSets_.size()) && (descriptorSets_[arrayIndex])) {
         // resize based on cpu descriptor sets
@@ -684,20 +729,6 @@ void NodeContextDescriptorSetManagerVk::BeginFrame()
 
     ClearDescriptorSetWriteData();
 
-    // clear aged descriptor pools
-    if (!pendingDeallocations_.empty()) {
-        // this is normally empty or only has single item
-        const auto minAge = device_.GetCommandBufferingCount() + 1;
-        const auto ageLimit = (device_.GetFrameCount() < minAge) ? 0 : (device_.GetFrameCount() - minAge);
-
-        auto oldRes = std::partition(pendingDeallocations_.begin(), pendingDeallocations_.end(),
-            [ageLimit](auto const& pd) { return pd.frameIndex >= ageLimit; });
-
-        std::for_each(
-            oldRes, pendingDeallocations_.end(), [this](auto& res) { DestroyPoolFunc(vkDevice_, res.descriptorPool); });
-        pendingDeallocations_.erase(oldRes, pendingDeallocations_.end());
-    }
-
     oneFrameDescriptorNeed_ = {};
     auto& oneFrameDescriptorPool = descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME];
     if (oneFrameDescriptorPool.descriptorPool || oneFrameDescriptorPool.additionalPlatformDescriptorPool) {
@@ -745,10 +776,25 @@ void NodeContextDescriptorSetManagerVk::BeginFrame()
 
 void NodeContextDescriptorSetManagerVk::BeginBackendFrame()
 {
+    // clear aged descriptor pools
+    if (!pendingDeallocations_.empty()) {
+        // this is normally empty or only has single item
+        const auto minAge = device_.GetCommandBufferingCount() + 1;
+        const auto ageLimit = (device_.GetFrameCount() < minAge) ? 0 : (device_.GetFrameCount() - minAge);
+
+        auto oldRes = std::partition(pendingDeallocations_.begin(), pendingDeallocations_.end(),
+            [ageLimit](auto const& pd) { return pd.frameIndex >= ageLimit; });
+
+        std::for_each(
+            oldRes, pendingDeallocations_.end(), [this](auto& res) { DestroyPoolFunc(vkDevice_, res.descriptorPool); });
+        pendingDeallocations_.erase(oldRes, pendingDeallocations_.end());
+    }
+
     // resize vector data
     ResizeDescriptorSetWriteData();
 
     // reserve descriptors for descriptors sets that need platform special formats for one frame
+    // NOTE: calculate these when UpdateDescriptorSets is called and processed
     if (hasPlatformConversionBindings_) {
         const auto& cpuDescriptorSets = cpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_STATIC];
         uint32_t descriptorSetCount = 0u;
@@ -942,6 +988,11 @@ bool NodeContextDescriptorSetManagerVk::UpdateDescriptorSetGpuHandle(const Rende
     uint32_t descSetIdx = GetCpuDescriptorSetIndex(handle);
     PLUGIN_ASSERT(descSetIdx != ~0U);
     PLUGIN_ASSERT(descSetIdx < DESCRIPTOR_SET_INDEX_TYPE_COUNT);
+#if (RENDER_VALIDATION_ENABLED == 1)
+    if ((descSetIdx >= BASE_NS::countof(cpuDescriptorSets_)) || (descSetIdx >= BASE_NS::countof(descriptorPool_))) {
+        return false;
+    }
+#endif
     auto& cpuDescriptorSets = cpuDescriptorSets_[descSetIdx];
     auto& descriptorPool = descriptorPool_[descSetIdx];
     const uint32_t bufferingCount = (descSetIdx == DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME) ? 1u : bufferingCount_;

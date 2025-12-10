@@ -24,7 +24,10 @@
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_texture.h>
+
 #include <render/intf_render_context.h>
+
+#include "JsObjectCache.h"
 
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
@@ -135,6 +138,9 @@ void SamplerJS::DisposeNative(void*)
     if (!disposed_) {
         disposed_ = true;
         LOG_V("SamplerJS::DisposeNative");
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
         UnsetNativeObject();
     }
 }
@@ -145,9 +151,10 @@ void SamplerJS::Finalize(napi_env env)
 }
 void* SamplerJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == SamplerJS::ID)
-        return this;
-    return nullptr;
+    if (id == SamplerJS::ID) {
+        return static_cast<SamplerJS*>(this);
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
 napi_value SamplerJS::CreateRawJsObject(napi_env env)

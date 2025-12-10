@@ -36,6 +36,7 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
         DITHER_BIT = (1 << 2),
         COLOR_CONVERSION_BIT = (1 << 3),
         COLOR_FRINGE_BIT = (1 << 4),
+        UPSCALE_BIT = (1 << 5),
         BLUR_BIT = (1 << 8),
         BLOOM_BIT = (1 << 9),
         FXAA_BIT = (1 << 10),
@@ -106,6 +107,10 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
      */
     DEFINE_PROPERTY(
         RENDER_NS::LensFlareConfiguration, lensFlareConfiguration, "Lens Flare Configuration", 0, ARRAY_VALUE())
+
+    /** Lens flare configuration.
+     */
+    DEFINE_PROPERTY(RENDER_NS::UpscaleConfiguration, upscaleConfiguration, "Upscale Configuration", 0, ARRAY_VALUE())
 
 END_COMPONENT(IPostProcessComponentManager, PostProcessComponent, "a2c647e7-9c66-4565-af3b-3acc75b3718f")
 #if !defined(IMPLEMENT_MANAGER)

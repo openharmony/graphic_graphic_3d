@@ -18,7 +18,9 @@
 
 #include <cstdint>
 
+#include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
+#include <base/containers/pair.h>
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unordered_map.h>
@@ -147,6 +149,32 @@ public:
         /** Event color. 0xRRGGBB */
         uint32_t color;
     };
+
+    using CounterPair = BASE_NS::pair<BASE_NS::string_view, int64_t>;
+    using CounterPairView = BASE_NS::array_view<CounterPair>;
+    using ConstCounterPairView = BASE_NS::array_view<const CounterPair>;
+    /** NOTE: string */
+    using CounterPairVector = BASE_NS::vector<BASE_NS::pair<BASE_NS::string, int64_t>>;
+
+    /** Get requested counters. By default gets the current.
+     * Heavy method, do not call every frame, only when collecting data.
+     * @param A given data set with pair< name, value>.
+     */
+    virtual void GetSelectedCounters(CounterPairView data) const = 0;
+
+    struct ComparisonData {
+        /** Zero means valid */
+        uint32_t flags { 0U };
+        /** Listed error counters with lhs - rhs value
+         * The vector is empty when the flags are zero
+         */
+        CounterPairVector errorCounters;
+    };
+    /** Get requested counters. By default gets the current.
+     * Heavy method, do not call every frame, only when collecting data.
+     * @param A given data set with pair< name, value>.
+     */
+    virtual ComparisonData CompareCounters(ConstCounterPairView lhs, ConstCounterPairView rhs) const = 0;
 
 protected:
     IPerformanceDataManager() = default;

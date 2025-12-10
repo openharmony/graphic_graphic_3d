@@ -68,6 +68,7 @@ CORE_NS::IComponentManager* IUriComponentManagerInstance(IEcs& ecs)
 
 void IUriComponentManagerDestroy(CORE_NS::IComponentManager* instance)
 {
-    delete static_cast<UriComponentManager*>(instance);
+    static_cast<UriComponentManager*>(instance)->~UriComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

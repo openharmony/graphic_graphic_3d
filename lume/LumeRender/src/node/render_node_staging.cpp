@@ -15,9 +15,10 @@
 
 #include "render_node_staging.h"
 
-#include <algorithm>
 #include <cinttypes>
 
+#include <base/containers/vector.h>
+#include <base/math/mathf.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/namespace.h>
@@ -49,17 +50,18 @@ void CopyHostDirectlyToBuffer(
         const uint8_t* baseDstDataEnd = baseDstDataBegin + bufferDesc.byteSize;
 
         const auto* baseSrcDataBegin = static_cast<const uint8_t*>(ref.stagingData.data());
-        const uint32_t bufferBeginIndex = ref.beginIndex;
-        const uint32_t bufferEndIndex = bufferBeginIndex + ref.count;
-        for (uint32_t bufferIdx = bufferBeginIndex; bufferIdx < bufferEndIndex; ++bufferIdx) {
-            PLUGIN_ASSERT(bufferIdx < stagingConsumeStruct.bufferCopies.size());
+        const size_t bufferBeginIndex = Math::min(stagingConsumeStruct.bufferCopies.size(), size_t(ref.beginIndex));
+        const size_t bufferEndIndex = Math::min(stagingConsumeStruct.bufferCopies.size(), bufferBeginIndex + ref.count);
+        for (size_t bufferIdx = bufferBeginIndex; bufferIdx < bufferEndIndex; ++bufferIdx) {
             const BufferCopy& currBufferCopy = stagingConsumeStruct.bufferCopies[bufferIdx];
-            uint8_t* dstData = baseDstDataBegin + currBufferCopy.dstOffset;
+            const size_t dstOffset = Math::min(bufferDesc.byteSize, currBufferCopy.dstOffset);
+            uint8_t* dstData = baseDstDataBegin + dstOffset;
             const uint8_t* srcPtr = nullptr;
             size_t srcSize = 0;
             if (ref.dataType == StagingCopyStruct::DataType::DATA_TYPE_VECTOR) {
-                srcPtr = baseSrcDataBegin + currBufferCopy.srcOffset;
-                srcSize = currBufferCopy.size;
+                const size_t srcOffset = Math::min(ref.stagingData.size(), size_t(currBufferCopy.srcOffset));
+                srcPtr = baseSrcDataBegin + srcOffset;
+                srcSize = Math::min(ref.stagingData.size() - srcOffset, size_t(currBufferCopy.size));
             }
             if ((srcPtr) && (srcSize > 0)) {
                 PLUGIN_ASSERT(bufferDesc.byteSize >= srcSize);
@@ -76,22 +78,21 @@ void CopyHostDirectlyToBuffer(
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const StagingDirectDataCopyConsumeStruct& stagingData)
 {
     for (const auto& ref : stagingData.dataCopies) {
-        uint8_t* data = static_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ref.dstHandle.GetHandle()));
-        if (!data) {
+        uint8_t* dstPtr = static_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ref.dstHandle.GetHandle()));
+        if (!dstPtr) {
             PLUGIN_LOG_E("staging: dstHandle %" PRIu64, ref.dstHandle.GetHandle().id);
             return;
         }
-        const size_t dstOffset = ref.bufferCopy.dstOffset;
-        data += dstOffset;
-        auto const& bufferDesc = gpuResourceMgr.GetBufferDescriptor(ref.dstHandle.GetHandle());
-        const uint8_t* srcPtr = ref.data.data() + ref.bufferCopy.srcOffset;
-        const size_t copySize =
-            std::min(ref.data.size() - size_t(ref.bufferCopy.srcOffset), size_t(ref.bufferCopy.size));
-        if ((srcPtr) && (copySize > 0)) {
-            PLUGIN_ASSERT((size_t(bufferDesc.byteSize) - dstOffset) >= copySize);
-            if (!CloneData(data, bufferDesc.byteSize - dstOffset, srcPtr, copySize)) {
-                PLUGIN_LOG_E("Copying of staging data failed");
-            }
+        const auto& bufferDesc = gpuResourceMgr.GetBufferDescriptor(ref.dstHandle.GetHandle());
+
+        const size_t dstOffset = Math::min(bufferDesc.byteSize, ref.bufferCopy.dstOffset);
+        dstPtr += dstOffset;
+
+        const size_t srcOffset = Math::min(ref.data.size(), size_t(ref.bufferCopy.srcOffset));
+        const uint8_t* srcPtr = ref.data.data() + srcOffset;
+
+        if (!CloneData(dstPtr, bufferDesc.byteSize - dstOffset, srcPtr, ref.data.size() - srcOffset)) {
+            PLUGIN_LOG_E("Copying of staging data failed");
         }
         gpuResourceMgr.UnmapBuffer(ref.dstHandle.GetHandle());
     }
@@ -150,14 +151,24 @@ void RenderNodeStaging::ExecuteFrame(IRenderCommandList& cmdList)
 
     // memcpy to staging
     const StagingConsumeStruct staging = gpuResourceMgrImpl.ConsumeStagingData();
-    if (RenderHandleUtil::IsValid(staging.stagingBuffer) && (staging.stagingByteSize > 0)) {
-        if (auto* dataPtr = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(staging.stagingBuffer)); dataPtr) {
-            RenderStaging::StagingMappedBuffer smb { staging.stagingBuffer, dataPtr, staging.stagingByteSize };
-            renderStaging.CopyHostToStaging(staging, smb);
+    vector<RenderStaging::StagingMappedBuffer> mappedBuffers(staging.stagingBuffers.size());
 
-            gpuResourceMgr.UnmapBuffer(staging.stagingBuffer);
+    for (uint32_t i = 0; i < staging.stagingBuffers.size(); i++) {
+        RenderHandle buffer = staging.stagingBuffers[i];
+        uint32_t size = staging.stagingByteSizes[i];
+
+        if (RenderHandleUtil::IsValid(buffer) && (size)) {
+            if (auto* dataPtr = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(buffer)); dataPtr) {
+                mappedBuffers[i] = { buffer, dataPtr, size };
+            }
         }
     }
+    renderStaging.CopyHostToStaging(staging, mappedBuffers);
+
+    for (auto& buffer : mappedBuffers) {
+        gpuResourceMgr.UnmapBuffer(buffer.handle);
+    }
+
     renderStaging.CopyHostToStaging(gpuResourceMgr, renderDataStoreStaging);
     // direct memcpy
     CopyHostDirectlyToBuffer(gpuResourceMgr, staging);

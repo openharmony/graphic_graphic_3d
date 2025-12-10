@@ -1,0 +1,84 @@
+{
+    "pushConstant": {
+        "size": 300,
+        "shaderStageFlags": "fragment_bit | vertex_bit | compute_bit"
+    },
+    "descriptorSetLayouts": [
+        {
+            "set": 0,
+            "bindings": [
+              {
+                "binding": 0,
+                "descriptorType": "sampler",
+                "descriptorCount": 1,
+                "shaderStageFlags": "fragment_bit | compute_bit"
+              },
+              {
+                "binding": 1,
+                "descriptorType": "combined_image_sampler",
+                "descriptorCount": 2,
+                "shaderStageFlags": "fragment_bit | compute_bit"
+              },
+              {
+                "binding": 2,
+                "descriptorType": "sampled_image",
+                "descriptorCount": 3,
+                "shaderStageFlags": "fragment_bit | compute_bit"
+              },
+              {
+                "binding": 3,
+                "descriptorType": "storage_image",
+                "descriptorCount": 4,
+                "shaderStageFlags": "fragment_bit | compute_bit"
+              }
+            ]
+        },
+        {
+            "set": 1,
+            "bindings": [
+              {
+                "binding": 0,
+                "descriptorType": "uniform_texel_buffer",
+                "descriptorCount": 1,
+                "shaderStageFlags": "vertex_bit"
+              },
+              {
+                "binding": 1,
+                "descriptorType": "storage_texel_buffer",
+                "descriptorCount": 2,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              },
+              {
+                "binding": 2,
+                "descriptorType": "uniform_buffer",
+                "descriptorCount": 3,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              },
+              {
+                "binding": 3,
+                "descriptorType": "storage_buffer",
+                "descriptorCount": 4,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              },
+              {
+                "binding": 4,
+                "descriptorType": "uniform_buffer_dynamic",
+                "descriptorCount": 5,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              },
+              {
+                "binding": 5,
+                "descriptorType": "storage_buffer_dynamic",
+                "descriptorCount": 6,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              },
+              {
+                "binding": 6,
+                "descriptorType": "acceleration_structure",
+                "descriptorCount": 7,
+                "shaderStageFlags": "vertex_bit | compute_bit"
+              }
+            ]
+        }
+    ]
+}

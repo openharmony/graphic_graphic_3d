@@ -26,6 +26,7 @@
 
 #include <render/intf_render_context.h>
 
+#include "JsObjectCache.h"
 #include "SceneJS.h"
 
 using namespace SCENE_NS;
@@ -39,6 +40,9 @@ void MorpherJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "Morpher", NAPI_AUTO_LENGTH, BaseObject::ctor<MorpherJS>(),
         nullptr, props.size(), props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -58,6 +62,9 @@ void MorpherJS::DisposeNative(void* scene)
     if (!disposed_) {
         disposed_ = true;
         LOG_V("MorpherJS::DisposeNative");
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSWMorpher");
+        }
 
         /// destroy the target object.
         if (!targets_.IsEmpty()) {
@@ -83,13 +90,13 @@ void MorpherJS::DisposeNative(void* scene)
 void* MorpherJS::GetInstanceImpl(uint32_t id)
 {
     if (id == MorpherJS::ID) {
-        return this;
+        return static_cast<MorpherJS*>(this);
     }
-    return nullptr;
+    return BaseObject::GetInstanceImpl(id);
 }
 void MorpherJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }
 MorpherJS::MorpherJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
@@ -140,7 +147,7 @@ void MorpherJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr&
         if (name.empty()) {
             name = "key_" + BASE_NS::to_string(i);
         }
-        auto proxt = PropertyToArrayProxy(scene_.GetObject(), targets, morphWeights, i);
+        auto proxt = PropertyToArrayProxy(scene_.GetNapiObject(), targets, morphWeights, i);
         if (proxt) {
             auto res = proxies_.insert_or_assign(name, proxt);
             targetProps.push_back(CreateArrayProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));

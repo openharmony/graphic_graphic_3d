@@ -16,6 +16,7 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
   CORE3D_EMBEDDED_ASSETS_ENABLED=true
+  CORE3D_USE_MESHOPTIMIZER=true
   CORE3D_ROFS = "rofs3D"
 }
 
@@ -41,7 +42,7 @@ config("lume_3d_config") {
     "CORE3D_DEV_ENABLED=${CORE_DEV_ENABLED}",
     "CORE3D_PUBLIC=__attribute__((visibility(\"default\")))",
     "CORE_USE_COMPILER_GENERATED_STATIC_LIST=1",
-    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }"
+    "CORE_STATIC_PLUGIN_HEADER=${CORE_STATIC_PLUGIN_HEADER }",
   ]
 
   if (LUME_OHOS_BUILD) {
@@ -53,6 +54,12 @@ config("lume_3d_config") {
   if (CORE3D_EMBEDDED_ASSETS_ENABLED) {
     defines += [
       "CORE3D_EMBEDDED_ASSETS_ENABLED=1",
+    ]
+  }
+
+  if (CORE3D_USE_MESHOPTIMIZER) {
+    defines += [
+      "GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION=1",
     ]
   }
 
@@ -100,6 +107,7 @@ ohos_source_set("lume_3d_src") {
     "src/ecs/components/planar_reflection_component_manager.cpp",
     "src/ecs/components/post_process_component_manager.cpp",
     "src/ecs/components/post_process_configuration_component_manager.cpp",
+    "src/ecs/components/post_process_effect_component_manager.cpp",
     "src/ecs/components/previous_joint_matrices_component.h",
     "src/ecs/components/previous_joint_matrices_component_manager.cpp",
     "src/ecs/components/reflection_probe_component_manager.cpp",
@@ -149,8 +157,6 @@ ohos_source_set("lume_3d_src") {
     "src/graphics_context.cpp",
     "src/graphics_context.h",
     "src/plugin/static_plugin.cpp",
-    "src/property/property_handle.cpp",
-    "src/property/property_handle.h",
     "src/render/datastore/render_data_store_default_camera.cpp",
     "src/render/datastore/render_data_store_default_camera.h",
     "src/render/datastore/render_data_store_default_light.cpp",
@@ -177,8 +183,8 @@ ohos_source_set("lume_3d_src") {
     "src/render/node/render_node_default_camera_controller.h",
     "src/render/node/render_node_default_camera_post_process_controller.cpp",
     "src/render/node/render_node_default_camera_post_process_controller.h",
-    "src/render/node/render_node_default_depth_render_slot.cpp",
-    "src/render/node/render_node_default_depth_render_slot.h",
+    "src/render/node/render_node_default_camera_post_process_interface_controller.cpp",
+    "src/render/node/render_node_default_camera_post_process_interface_controller.h",
     "src/render/node/render_node_default_env.cpp",
     "src/render/node/render_node_default_env.h",
     "src/render/node/render_node_default_environment_blender.cpp",
@@ -224,11 +230,12 @@ ohos_source_set("lume_3d_src") {
     "src/util/uri_lookup.h",
   ]
   deps = [ "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper" ]
-  
+
   external_deps = [
     "c_utils:utils",
     "vulkan-headers:vulkan_headers",
     "vulkan-loader:vulkan_loader",
+
   ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
@@ -268,7 +275,7 @@ lume_rofs("lume_3d_rofs")
     output_obj = "${CORE3D_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${CORE3D_ROFS}_x64.o"
   }
 
@@ -308,7 +315,7 @@ source_set("lume_3d_rofs_obj") {
     output_obj = "${CORE3D_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x86_64") {
     output_obj = "${CORE3D_ROFS}_x64.o"
   }
 
@@ -324,6 +331,7 @@ ohos_shared_library("AGP3DApi") {
   public_configs = [
     ":lume_3d_api",
   ]
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

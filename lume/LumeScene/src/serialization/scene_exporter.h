@@ -31,9 +31,7 @@ class SceneExporter : public META_NS::IntroduceInterfaces<META_NS::MetaObject, I
 public:
     META_NS::ReturnError ExportScene(CORE_NS::IFile&, const IScene::ConstPtr&) override;
     META_NS::ReturnError ExportNode(CORE_NS::IFile&, const INode::ConstPtr&) override;
-
-private:
-    META_NS::IMetadata::Ptr md_;
+    META_NS::IObject::Ptr ExportNode(const INode::ConstPtr&) override;
 };
 
 SCENE_END_NAMESPACE()

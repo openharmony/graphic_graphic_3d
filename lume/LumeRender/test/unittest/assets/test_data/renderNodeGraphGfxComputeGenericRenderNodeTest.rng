@@ -1,0 +1,147 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuBuffers",
+            "nodeName": "RenderNodeCreateGpuBuffers",
+            "gpuBufferDescs": [
+                {
+                    "name": "OutputBuffer0",
+                    "usageFlags": "transfer_src | storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "byteSize": 32
+                },
+                {
+                    "name": "OutputBuffer1",
+                    "usageFlags": "transfer_src | storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "byteSize": 32
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeComputeGeneric",
+            "nodeName": "RenderNodeComputeGeneric",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "pushConstants"
+            },
+            "renderDataStoreShaderSpecialization": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "computeConfig"
+            },
+            "shader": "rendershaders://computeshader/GfxComputeGenericRenderNodeTest.shader",
+            "resources": {
+                "buffers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 1
+                    },
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "OutputBuffer0"
+                    }
+                ]
+            },
+            "dispatchResources": {
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 0
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeComputeGeneric",
+            "nodeName": "RenderNodeComputeGeneric2",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "pushConstants"
+            },
+            "renderDataStoreShaderSpecialization": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "computeConfig2"
+            },
+            "shader": "rendershaders://computeshader/GfxComputeGenericRenderNodeTest.shader",
+            "resources": {
+                "buffers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 1
+                    },
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "OutputBuffer1"
+                    }
+                ]
+            },
+            "dispatchResources": {
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 0
+                    }
+                ]
+            }
+        },
+        {
+            "typeName": "RenderNodeComputeGeneric",
+            "nodeName": "RenderNodeComputeGeneric3",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "pushConstants"
+            },
+            "renderDataStoreShaderSpecialization": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "dataStore",
+                "configurationName": "computeConfig2"
+            },
+            "shader": "NonExistingShader",
+            "resources": {
+                "buffers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "resourceLocation": "from_render_graph_input",
+                        "resourceIndex": 1
+                    },
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "OutputBuffer1"
+                    }
+                ]
+            },
+            "dispatchResources": {}
+        }
+    ]
+}

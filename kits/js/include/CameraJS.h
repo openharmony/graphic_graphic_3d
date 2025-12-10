@@ -26,14 +26,15 @@
 #include "ColorProxy.h"
 #include "NodeImpl.h"
 
-class CameraJS : public BaseObject, public NodeImpl {
+class CameraJS final : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 80;
     static void Init(napi_env env, napi_value exports);
     static void RegisterEnums(NapiApi::Object exports);
+
     CameraJS(napi_env, napi_callback_info);
     ~CameraJS() override;
-    virtual void* GetInstanceImpl(uint32_t) override;
+    void* GetInstanceImpl(uint32_t) override;
 
     META_NS::IObject::Ptr CreateObject(const META_NS::ClassInfo&);
     void ReleaseObject(const META_NS::IObject::Ptr&);
@@ -67,6 +68,8 @@ private:
     napi_value GetColor(NapiApi::FunctionContext<>& ctx);
     void SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
+    napi_value GetEffects(NapiApi::FunctionContext<>& ctx);
+
     napi_value WorldToScreen(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     enum class ProjectionDirection { WORLD_TO_SCREEN, SCREEN_TO_WORLD };
@@ -74,6 +77,9 @@ private:
     napi_value ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     napi_value Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
+
+    napi_value GetProjectionMatrix(NapiApi::FunctionContext<>& ctx);
+    napi_value GetViewMatrix(NapiApi::FunctionContext<>& ctx);
 
     template<typename CoordType>
     struct RaycastResources {
@@ -89,6 +95,7 @@ private:
 
     BASE_NS::unique_ptr<ColorProxy> clearColor_;
     NapiApi::StrongRef postProc_;
+    NapiApi::StrongRef effects_;
 
     BASE_NS::unordered_map<uintptr_t, META_NS::IObject::Ptr> resources_;
 

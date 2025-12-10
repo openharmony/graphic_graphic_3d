@@ -16,6 +16,7 @@
 
 #include <scene/interface/intf_scene.h>
 
+#include "JsObjectCache.h"
 #include "ParamParsing.h"
 #include "RenderContextJS.h"
 #include "SceneJS.h"
@@ -49,18 +50,21 @@ void ImageJS::DisposeNative(void *sc)
     if (!disposed_) {
         disposed_ = true;
         LOG_V("ImageJS::DisposeNative");
-
-        if (sc && resources_) {
-            resources_->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-
-            if (BASE_NS::string uri = ExtractUri(uri_.GetObject()); !uri.empty()) {
+        DestroyBridge(this);
+        if (resources_) {
+            auto uri = ExtractUri(uri_.GetObject());
+            LOG_V("#### dispoose uri: %s", uri.c_str());
+            if (!uri.empty()) {
                 ExecSyncTask([uri, resources = resources_]() -> META_NS::IAny::Ptr {
                     if (resources) {
                         resources->StoreBitmap(uri, nullptr);
                     }
                     return {};
                 });
+            } else {
+                LOG_V("### No uri for image resource when disposing");
             }
+            resources_->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         UnsetNativeObject();
@@ -68,15 +72,20 @@ void ImageJS::DisposeNative(void *sc)
         resources_.reset();
     }
 }
-void *ImageJS::GetInstanceImpl(uint32_t id)
+void* ImageJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == ImageJS::ID)
-        return this;
-    return SceneResourceImpl::GetInstanceImpl(id);
+    if (id == ImageJS::ID) {
+        return static_cast<ImageJS*>(this);
+    }
+    if (auto ret = SceneResourceImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 void ImageJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    FinalizeBridge(this);
+    DisposeNative(nullptr);
     BaseObject::Finalize(env);
 }
 
@@ -85,59 +94,62 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
     NapiApi::Object renderContext = fromJs.Arg<0>(); // access to owning context...
-    scene_ = { renderContext };
-    if (!scene_.GetObject().GetJsWrapper<RenderContextJS>()) {
-        LOG_F("Invalid render context for ImageJS");
-    }
-
-    if (const auto renderContextJs = renderContext.GetJsWrapper<RenderContextJS>()) {
-        resources_ = renderContextJs->GetResources();
-        if (resources_) {
-            resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+    // This is awkward (and unfair to base class)
+    scene_ = renderContext;
+    // Not sure if using a render context here and scene elsewhere is optimal solution in a long run
+    if (!renderContext.GetJsWrapper<RenderContextJS>()) {
+        CORE_LOG_V("### Not RenderContext");
+        if (renderContext.GetJsWrapper<SceneJS>()) {
+            LOG_V("### Render Context is scene");
+            if (NapiApi::Function func = renderContext.Get<NapiApi::Function>("getRenderContext")){
+                if (auto rc = NapiApi::Object(e, func.Invoke(renderContext, {}))) {
+                    scene_ = rc;
+                    LOG_V("### remapped render context to scene_");
+                }
+            }
+        } else {
+            LOG_F("Invalid render context for ImageJS");
         }
     }
+    NapiApi::Object args = fromJs.Arg<1>();
+    if (args.Get("uri")) {
+        SetUri(args);
+    } else {
+        LOG_E("### building image without uri");
+    }
 
-    if (!GetNativeObject<SCENE_NS::IBitmap>()) {
+    if (auto bitmap = GetNativeObject<SCENE_NS::IBitmap>()) {
+        auto uri = ExtractUri(uri_.GetObject());
+        LOG_V("### uri: %s", uri.c_str());
+	    if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
+            if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
+                auto prop = META_NS::ConstructProperty<BASE_NS::string>(
+                    "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
+                m->AddProperty(prop);
+            } else {
+                LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
+            }
+        }
+        if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
+            resources_ = renderContextJs->GetResources();
+            if (resources_) {
+                resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+                resources_->StoreBitmap(uri, BASE_NS::move(bitmap));
+            } else {
+                LOG_E("Cannot finish creating an image: no resources");
+                assert(false);
+                return;
+            }
+        }
+    } else {
         LOG_E("Cannot finish creating an image: Native image object missing");
         assert(false);
         return;
     }
-
-    NapiApi::Object args = fromJs.Arg<1>();
-    if (auto prm = args.Get("uri")) {
-        NapiApi::Object resType = args.Get<NapiApi::Object>("uri");
-        BASE_NS::string uriType = args.Get<BASE_NS::string>("uri");
-        BASE_NS::string uri = ExtractUri(uriType);
-        if (uri.empty()) {
-            uri = ExtractUri(resType);
-        }
-        if (!uri.empty()) {
-            if (!resType) {
-                // raw string then.. make it  "resource" / "rawfile" if possible.
-                if (uri.find("OhosRawFile://") == 0) {
-                    // we can only convert "OhosRawFile://" type uris back to "resource" objects.
-                    NapiApi::Env env(e);
-                    napi_value global;
-                    napi_get_global(env, &global);
-                    NapiApi::Object g(env, global);
-                    napi_value func = g.Get("$rawfile");
-                    NapiApi::Function f(env, func);
-                    if (f) {
-                        BASE_NS::string noschema(uri.substr(14)); // 14: length
-                        napi_value arg = env.GetString(noschema);
-                        napi_value res = f.Invoke(g, 1, &arg);
-                        SetUri(NapiApi::StrongRef(env, res));
-                    }
-                }
-            } else {
-                SetUri(NapiApi::StrongRef(resType));
-            }
-        }
-    }
-
     if (const auto name = ExtractName(args); !name.empty()) {
         meJs.Set("name", name);
     }
+    AddBridge("ImageJS", meJs);
 }
 
 ImageJS::~ImageJS()
@@ -145,7 +157,7 @@ ImageJS::~ImageJS()
     DisposeNative(nullptr);
 }
 
-napi_value ImageJS::GetWidth(NapiApi::FunctionContext<> &ctx)
+napi_value ImageJS::GetWidth(NapiApi::FunctionContext<>& ctx)
 {
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
@@ -157,7 +169,7 @@ napi_value ImageJS::GetWidth(NapiApi::FunctionContext<> &ctx)
     return ctx.GetNumber(width);
 }
 
-napi_value ImageJS::GetHeight(NapiApi::FunctionContext<> &ctx)
+napi_value ImageJS::GetHeight(NapiApi::FunctionContext<>& ctx)
 {
     if (!validateSceneRef()) {
         return ctx.GetUndefined();

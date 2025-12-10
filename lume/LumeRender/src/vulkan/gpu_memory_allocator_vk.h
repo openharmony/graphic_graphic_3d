@@ -19,7 +19,7 @@
 // vulkan_core must be before vk_mem_alloc
 // clang-format off
 #include <vulkan/vulkan_core.h>
-#ifdef __OHOS__
+#if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
 #ifdef USE_M133_SKIA
 #include <third_party/externals/vulkanmemoryallocator/include/vk_mem_alloc.h>
 #else

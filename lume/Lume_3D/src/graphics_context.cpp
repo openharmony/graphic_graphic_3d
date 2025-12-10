@@ -205,11 +205,6 @@ extern const void* const BINARY_DATA_FOR_3D[];
 extern const uint64_t SIZE_OF_DATA_FOR_3D;
 }
 
-array_view<const RenderDataStoreTypeInfo> GetRenderDataStores3D();
-array_view<const RenderNodeTypeInfo> GetRenderNodes3D();
-array_view<const ComponentManagerTypeInfo> GetComponentManagers3D();
-array_view<const SystemTypeInfo> GetSystems3D();
-
 struct Agp3DPluginState {
     IRenderContext& renderContext;
     unique_ptr<GraphicsContext> context;
@@ -591,9 +586,10 @@ void DestroyPlugin3D(PluginToken token)
         fileManager.UnregisterPath(RENDER_DATA_PATHS[idx].protocol, RENDER_DATA_PATHS[idx].uri);
     }
 
-    auto& registry = *state->renderContext.GetInterface<IClassRegister>();
-    for (const auto& info : state->interfaces) {
-        registry.UnregisterInterfaceType(info);
+    if (auto registry = state->renderContext.GetInterface<IClassRegister>()) {
+        for (const auto& info : state->interfaces) {
+            registry->UnregisterInterfaceType(info);
+        }
     }
 
     delete state;

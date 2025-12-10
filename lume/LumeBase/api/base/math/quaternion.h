@@ -73,8 +73,6 @@ public:
             w * quat.w - x * quat.x - y * quat.y - z * quat.z);
     } // Add
 
-    inline ~Quat() = default;
-
     /** Divide quaternion by float */
     inline constexpr Quat operator/(float d) const
     {

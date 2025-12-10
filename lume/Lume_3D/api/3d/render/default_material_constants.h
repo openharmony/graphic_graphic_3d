@@ -117,12 +117,29 @@ struct DefaultMaterialShaderConstants {
     /** Default environment render slot */
     static constexpr const BASE_NS::string_view RENDER_SLOT_FORWARD_ENVIRONMENT { "CORE3D_RS_DM_ENV" };
 
+    /** Default opaque bindless render slots. Forward opaque. */
+    static constexpr const BASE_NS::string_view RENDER_SLOT_FORWARD_OPAQUE_BINDLESS { "CORE3D_RS_DM_FW_OPAQUE_BL" };
+    /** Default translucent bindless render slots. Forward translucent. */
+    static constexpr const BASE_NS::string_view RENDER_SLOT_FORWARD_TRANSLUCENT_BINDLESS {
+        "CORE3D_RS_DM_FW_TRANSLUCENT_BL"
+    };
+    /** Default render slot for bindless depth-only rendering. Handles PCF shadows and states */
+    static constexpr const BASE_NS::string_view RENDER_SLOT_DEPTH_BINDLESS { "CORE3D_RS_DM_DEPTH_BL" };
+
+    /** VSM shadow render slot with color buffer target for bindless depth-only rendering. */
+    static constexpr const BASE_NS::string_view RENDER_SLOT_DEPTH_VSM_BINDLESS { "CORE3D_RS_DM_DEPTH_VSM_BL" };
+
     /** Default forward vertex input declaration */
     static constexpr const BASE_NS::string_view VERTEX_INPUT_DECLARATION_FORWARD {
         "3dvertexinputdeclarations://core3d_dm_fw.shadervid"
     };
     /** Default forward pipeline layout */
     static constexpr const BASE_NS::string_view PIPELINE_LAYOUT_FORWARD { "3dpipelinelayouts://core3d_dm_fw.shaderpl" };
+
+    /** Default forward bindless pipeline layout */
+    static constexpr const BASE_NS::string_view PIPELINE_LAYOUT_FORWARD_BINDLESS {
+        "3dpipelinelayouts://core3d_dm_fw_bl.shaderpl"
+    };
 
     /** Default depth vertex input declaration */
     static constexpr const BASE_NS::string_view VERTEX_INPUT_DECLARATION_DEPTH {
@@ -131,6 +148,11 @@ struct DefaultMaterialShaderConstants {
     /** Default depth pipeline layout */
     static constexpr const BASE_NS::string_view PIPELINE_LAYOUT_DEPTH {
         "3dpipelinelayouts://core3d_dm_depth.shaderpl"
+    };
+
+    /** Default depth pipeline layout for bindless */
+    static constexpr const BASE_NS::string_view PIPELINE_LAYOUT_DEPTH_BINDLESS {
+        "3dpipelinelayouts://core3d_dm_depth_bl.shaderpl"
     };
 
     /** Default environment pipeline layout */
@@ -188,10 +210,15 @@ struct DefaultMaterialCameraConstants {
         "CORE3D_DM_CAM_LIGHT_CLUSTER_BUF_"
     };
 
-    /** Camera color buffer prefix (often combined with scene name + prefix name + to_hex(camera id))
+    /** Camera color buffer prefix
+     * fullCameraName = cameraName + '_' + to_hex(cameraId)
+     * (Often combined with scene name + prefix name + fullCameraName)
      * For example: RenderDataStoreDefaultSceneCORE3D_CAMERA_DEPTH_40000000D
      */
     static constexpr const BASE_NS::string_view CAMERA_COLOR_PREFIX_NAME { "CORE3D_CAMERA_COLOR_" };
+
+    static constexpr const BASE_NS::string_view CAMERA_COLOR_UPSCALED_PREFIX_NAME { "CORE3D_CAMERA_COLOR_UPSCALED_" };
+
     /** Camera depth buffer prefix  (often combined with scene name + to_hex(camera id)) */
     static constexpr const BASE_NS::string_view CAMERA_DEPTH_PREFIX_NAME { "CORE3D_CAMERA_DEPTH_" };
 
@@ -204,6 +231,32 @@ struct DefaultMaterialCameraConstants {
     /** Default reflection camera post process name (often combined with default name + post process id) */
     static constexpr const BASE_NS::string_view CAMERA_REFLECTION_POST_PROCESS_PREFIX_NAME {
         "CORE3D_POST_PROCESS_REFLECTION_CAM"
+    };
+    /** Default camera post process name (often combined with default name + post process id) */
+    static constexpr const BASE_NS::string_view CAMERA_POST_PROCESS_EFFECT_PREFIX_NAME {
+        "CORE3D_POST_PROCESS_EFFECT_CAM"
+    };
+
+    /** Camera sky lut buffer prefix (often combined with scene name + prefix name + to_hex(camera id))
+     * fullCameraName = cameraName + '_' + to_hex(cameraId)
+     * (Often combined with scene name + prefix name + fullCameraName)
+     */
+    static constexpr const BASE_NS::string_view CAMERA_SKY_LUT_PREFIX_NAME { "CORE3D_CAMERA_SKY_LUT_" };
+
+    /** Camera transmittance lut buffer prefix (often combined with scene name + prefix name + to_hex(camera id))
+     * fullCameraName = cameraName + '_' + to_hex(cameraId)
+     * (Often combined with scene name + prefix name + fullCameraName)
+     */
+    static constexpr const BASE_NS::string_view CAMERA_TRANSMITTANCE_LUT_PREFIX_NAME {
+        "CORE3D_CAMERA_TRANSMITTANCE_LUT_"
+    };
+
+    /** Camera aerial perspective lut buffer prefix (often combined with scene name + prefix name + to_hex(camera id))
+     * fullCameraName = cameraName + '_' + to_hex(cameraId)
+     * (Often combined with scene name + prefix name + fullCameraName)
+     */
+    static constexpr const BASE_NS::string_view CAMERA_AERIAL_PERSPECTIVE_LUT_PREFIX_NAME {
+        "CORE3D_CAMERA_AERIAL_PERSPECTIVE_LUT_"
     };
 
     /** Default mip count for reflection plane */
@@ -259,13 +312,20 @@ struct DefaultMaterialGpuResourceConstants {
 
 /** Default material render node share constants */
 struct DefaultMaterialRenderNodeConstants {
-    /** Render node default camera controller output name for depth */
+    /** Render node default camera controller output name */
+    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_BUFFER { "camera" };
+
+    /** Render node default camera controller output name */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_OUTPUT { "output" };
 
     /** Render node default camera controller output name for depth */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_DEPTH { "depth" };
     /** Render node default camera controller output name for color */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_COLOR { "color" };
+
+    /** Render node default camera controller output name for color upscaled*/
+    static constexpr const BASE_NS::string_view CORE_DM_CAMERA_COLOR_UPSCALED { "color_upscaled" };
+
     /** Render node default camera controller output name for depth msaa */
     static constexpr const BASE_NS::string_view CORE_DM_CAMERA_DEPTH_MSAA { "depth_msaa" };
     /** Render node default camera controller output name for color msaa */

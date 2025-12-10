@@ -52,8 +52,6 @@ public:
     virtual Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, const META_NS::IEngineValue::Ptr&) = 0;
 
     virtual Future<bool> SetActive(bool active) = 0;
-
-    virtual void SyncProperties() = 0;
 };
 
 SCENE_END_NAMESPACE()

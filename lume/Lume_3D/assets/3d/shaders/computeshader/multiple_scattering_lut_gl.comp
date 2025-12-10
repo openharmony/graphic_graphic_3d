@@ -1,0 +1,96 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// Based on Buffer B of https://www.shadertoy.com/view/slSXRW
+
+#include "render/shaders/common/render_compatibility_common.h"
+
+layout(set = 0, binding = 0, rgba16f) uniform image2D multiScatteringOut;
+layout(set = 0, binding = 1) uniform sampler2D transmittanceLut;
+
+// Define after the images
+#include "common/multiscattering_common.h"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct PushConstantLocalStruct {
+    vec4 rayleighScatteringBase; // .w = mieAbsorptionBase
+    vec4 ozoneAbsorptionBase; // .w = mieScatteringBase
+};
+
+layout(push_constant, std430) uniform uPostProcessPushConstant
+{
+    PushConstantLocalStruct uPc;
+};
+
+shared uvec3 s_workgroupLumTotal;
+shared uvec3 s_workgroupFmsTotal;
+
+void main() {
+    // Each workgroup computes one output pixel.
+    // gl_WorkGroupID.xy gives the coordinates of the current workgroup.
+    const ivec2 uv = ivec2(gl_WorkGroupID.xy);
+    const ivec2 imageDim = imageSize(multiScatteringOut);
+
+    AtmosphericConfig atmosphericConfig;
+    atmosphericConfig.rayleighScatteringBase = uPc.rayleighScatteringBase.xyz;
+    atmosphericConfig.mieAbsorptionBase = uPc.rayleighScatteringBase.w;
+    atmosphericConfig.ozoneAbsorptionBase = uPc.ozoneAbsorptionBase.xyz;
+    atmosphericConfig.mieScatteringBase = uPc.ozoneAbsorptionBase.w;
+    
+    if (any(greaterThanEqual(uv, imageDim))) {
+        return;
+    }
+
+    if (gl_LocalInvocationID.x == 0 && gl_LocalInvocationID.y == 0) {
+        s_workgroupLumTotal = uvec3(0u);
+        s_workgroupFmsTotal = uvec3(0u);
+    }
+
+    float u = float(uv.x + 0.5) / float(imageDim.x);
+    float v = float(uv.y + 0.5) / float(imageDim.y);
+    
+    float sunCosTheta = 2.0*u - 1.0;
+    float sunTheta = safeacos(sunCosTheta);
+    
+    float height = mix(GROUND_RADIUS_KM + CAMERA_HEIGHT_SCALE, ATMOSPHERE_RADIUS_KM, v);
+    
+    vec3 pos = vec3(0.0, height, 0.0);
+    vec3 sunDir = normalize(vec3(0.0, sunCosTheta, -sin(sunTheta)));
+
+    const int totalSamples = SQRT_SAMPLES * SQRT_SAMPLES; // 64
+    const int numThreadsInWorkGroup = int(gl_WorkGroupSize.x * gl_WorkGroupSize.y); // 64
+    const int localIndex = int(gl_LocalInvocationIndex);
+
+    vec3 currentThreadLum = vec3(0.0);
+    vec3 currentThreadFms = vec3(0.0);
+
+    GetMulScattValues(pos, sunDir, currentThreadLum, currentThreadFms, totalSamples, numThreadsInWorkGroup, localIndex, atmosphericConfig);
+
+    uvec3 currentThreadFmsUint = Vec3ToScaledUvec3(currentThreadFms);
+    uvec3 currentThreadLumUint = Vec3ToScaledUvec3(currentThreadLum);
+
+    atomicAdd(s_workgroupFmsTotal.x, currentThreadFmsUint.x);
+    atomicAdd(s_workgroupFmsTotal.y, currentThreadFmsUint.y);
+    atomicAdd(s_workgroupFmsTotal.z, currentThreadFmsUint.z);
+
+    atomicAdd(s_workgroupLumTotal.x, currentThreadLumUint.x);
+    atomicAdd(s_workgroupLumTotal.y, currentThreadLumUint.y);
+    atomicAdd(s_workgroupLumTotal.z, currentThreadLumUint.z);
+
+    barrier();
+
+    // One thread writes to the texture
+    if (gl_LocalInvocationID.x == 0 && gl_LocalInvocationID.y == 0) {
+        float invSamples = 1.0 / float(totalSamples);
+        
+        vec3 lumResult = ScaledUvec3ToVec3(s_workgroupLumTotal) * invSamples;
+        vec3 f_msResult = ScaledUvec3ToVec3(s_workgroupFmsTotal) * invSamples;
+
+        // Equation 10 from the paper
+        vec3 psi = lumResult / max(1.0 - f_msResult, 1e-6);
+
+        imageStore(multiScatteringOut, uv, vec4(psi, 1.0));
+    }
+}

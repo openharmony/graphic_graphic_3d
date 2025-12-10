@@ -25,8 +25,16 @@ using namespace RENDER_NS;
 
 CORE3D_BEGIN_NAMESPACE()
 RenderDataStoreWeather::RenderDataStoreWeather(const IRenderContext& renderContext, const BASE_NS::string_view name)
-    : name_(name), renderContex_(renderContext)
+    : name_(name)
 {}
+
+void RenderDataStoreWeather::PreRender()
+{
+    // update groundColor.w to be the current index (0 or 1). RenderNodeCameraWeather flips the read and write targets
+    // based on this as well as core3d_dm_env_sky.
+    settings_.groundColor.w = *reinterpret_cast<const float*>(&targetIndex_);
+    targetIndex_ = targetIndex_ ^ 1;
+}
 
 void RenderDataStoreWeather::PostRender()
 {
@@ -51,9 +59,9 @@ RenderDataStoreWeather::WeatherSettings RenderDataStoreWeather::GetWeatherSettin
     return settings_;
 }
 
-void RenderDataStoreWeather::SetWaterEffect(uint64_t id, Math::Vec2 offset)
+void RenderDataStoreWeather::SetWaterEffect(const WaterEffectData& waterEffectData)
 {
-    waterEffectData_.push_back({ id, offset });
+    waterEffectData_.push_back(waterEffectData);
 }
 
 array_view<const RenderDataStoreWeather::WaterEffectData> RenderDataStoreWeather::GetWaterEffectData() const

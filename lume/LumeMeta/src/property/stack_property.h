@@ -66,6 +66,18 @@ public:
 
     void EvaluateAndStore() override;
 
+    void SetSelf(IProperty::Ptr self) override
+    {
+        Super::SetSelf(self);
+        onChangedCallback_ = META_NS::MakeCallbackSafe<META_NS::IOnChanged>(
+            [this](const auto& self) {
+                if (self) {
+                    InternalOnChanged();
+                }
+            },
+            self);
+    }
+
 protected:
     AnyReturnValue TryToSetToValue(const IAny& v, IValue::Ptr& value);
     AnyReturnValue SetValueInValueStack(const IAny& value);

@@ -78,6 +78,7 @@ IComponentManager* IAnimationTrackComponentManagerInstance(IEcs& ecs)
 
 void IAnimationTrackComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<AnimationTrackComponentManager*>(instance);
+    static_cast<AnimationTrackComponentManager*>(instance)->~AnimationTrackComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

@@ -45,24 +45,53 @@ META_BEGIN_NAMESPACE()
 constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS = ObjectFlagBitsValue { ObjectFlagBits::SERIALIZE };
 constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS_NO_SER = ObjectFlagBitsValue { ObjectFlagBits::NONE };
 
+namespace Internal {
+
+inline IAny::Ptr AnyFromValue(Internal::MetaValue* def)
+{
+    return def ? def() : IAny::Ptr {};
+}
+
+inline BASE_NS::shared_ptr<CORE_NS::IInterface> ConstructMetadata(
+    const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d, BASE_NS::shared_ptr<CORE_NS::IInterface>&& ret)
+{
+    if (auto ctor = interface_cast<IMetadataOwner>(owner); ctor && ret) {
+        ctor->OnMetadataConstructed(d, *ret);
+    }
+    return BASE_NS::move(ret);
+}
+
+inline BASE_NS::shared_ptr<CORE_NS::IInterface> CreatePropertyConstructorObject(
+    const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d, IProperty::Ptr&& ret)
+{
+    return ConstructMetadata(owner, d, BASE_NS::move(ret));
+}
+
+inline BASE_NS::shared_ptr<CORE_NS::IInterface> CreateEventConstructorObject(
+    const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d, IEvent::Ptr&& ret)
+{
+    return ConstructMetadata(owner, d, BASE_NS::move(ret));
+}
+
+inline BASE_NS::shared_ptr<CORE_NS::IInterface> CreateFunctionConstructorObject(
+    const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d, IFunction::Ptr&& ret)
+{
+    return ConstructMetadata(owner, d, BASE_NS::move(ret));
+}
+
+} // namespace Internal
+
 template<typename Type>
 IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue* def, ObjectFlagBitsValue flags)
 {
     flags |= ObjectFlagBits::NATIVE;
-    IAny::Ptr value;
-    if (def) {
-        value = def();
-    }
+    auto value = Internal::AnyFromValue(def);
     if constexpr (BASE_NS::is_array_v<Type>) {
-        if (value) {
-            return META_NS::ConstructArrayPropertyAny<BASE_NS::remove_extent_t<Type>>(name, *value, flags);
-        }
-        return META_NS::ConstructArrayProperty<BASE_NS::remove_extent_t<Type>>(name, {}, flags);
+        return value ? META_NS::ConstructArrayPropertyAny<BASE_NS::remove_extent_t<Type>>(name, *value, flags)
+                     : META_NS::ConstructArrayProperty<BASE_NS::remove_extent_t<Type>>(name, {}, flags);
     } else {
-        if (value) {
-            return META_NS::ConstructPropertyAny<Type>(name, *value, flags);
-        }
-        return META_NS::ConstructProperty<Type>(name, {}, flags);
+        return value ? META_NS::ConstructPropertyAny<Type>(name, *value, flags)
+                     : META_NS::ConstructProperty<Type>(name, {}, flags);
     }
 }
 
@@ -70,14 +99,8 @@ template<typename Type, uint64_t Flags>
 Internal::MetadataCtor* CreatePropertyConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        auto ret = interface_pointer_cast<CORE_NS::IInterface>(
-            META_NS::CreatePropertyImpl<Type>(d.name, d.runtimeValue, ObjectFlagBitsValue(Flags)));
-        if (ret) {
-            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
-                ctor->OnMetadataConstructed(d, *ret);
-            }
-        }
-        return ret;
+        return Internal::CreatePropertyConstructorObject(owner, d,
+            BASE_NS::move(META_NS::CreatePropertyImpl<Type>(d.name, d.runtimeValue, ObjectFlagBitsValue(Flags))));
     };
 }
 
@@ -85,13 +108,7 @@ template<typename Type>
 Internal::MetadataCtor* CreateEventConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        auto ret = interface_pointer_cast<CORE_NS::IInterface>(CreateShared<EventImpl<Type>>(d.name));
-        if (ret) {
-            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
-                ctor->OnMetadataConstructed(d, *ret);
-            }
-        }
-        return ret;
+        return Internal::CreateEventConstructorObject(owner, d, BASE_NS::move(CreateShared<EventImpl<Type>>(d.name)));
     };
 }
 
@@ -99,14 +116,8 @@ template<typename Interface, auto MemFun>
 Internal::MetadataCtor* CreateFunctionConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        auto ret = interface_pointer_cast<CORE_NS::IInterface>(
-            CreateFunction(d.name, interface_pointer_cast<Interface>(owner), MemFun, d.runtimeValue));
-        if (ret) {
-            if (auto ctor = interface_cast<IMetadataOwner>(owner)) {
-                ctor->OnMetadataConstructed(d, *ret);
-            }
-        }
-        return ret;
+        return Internal::CreateFunctionConstructorObject(owner, d,
+            BASE_NS::move(CreateFunction(d.name, interface_pointer_cast<Interface>(owner), MemFun, d.runtimeValue)));
     };
 }
 
@@ -126,13 +137,21 @@ inline const StaticObjectMetadata* GetAggregateMetadata(const ObjectId& id)
     return f ? f->GetClassStaticMetadata() : nullptr;
 }
 
+constexpr StaticObjectMetadata CreateStaticMetadataObject(const ClassInfo* classInfo,
+    const StaticObjectMetadata* baseclass, const StaticObjectMetadata* aggregate, const StaticMetadata* metadata,
+    const size_t size)
+{
+    bool baseDataSame = size && baseclass && metadata == baseclass->metadata;
+    return StaticObjectMetadata { classInfo, baseclass, aggregate, baseDataSame ? nullptr : metadata,
+        baseDataSame ? 0 : size };
+}
+
 template<typename Type, typename Base, typename Data>
 inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticObjectMetadata* base,
     const ClassInfo* classInfo, const StaticObjectMetadata* aggregate)
 {
     size_t size = META_NS::MetadataArraySize(data);
-    bool baseDataSame = size && base && data == base->metadata;
-    return StaticObjectMetadata { classInfo, base, aggregate, baseDataSame ? nullptr : data, baseDataSame ? 0 : size };
+    return CreateStaticMetadataObject(classInfo, base, aggregate, data, size);
 }
 
 template<typename T>

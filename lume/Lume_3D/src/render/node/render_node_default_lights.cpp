@@ -124,27 +124,28 @@ void RenderNodeDefaultLights::ExecuteFrame(IRenderCommandList& cmdList)
             auto* singleLightStruct =
                 reinterpret_cast<DefaultMaterialSingleLightStruct*>(data + RenderLightHelper::LIGHT_LIST_OFFSET);
             for (const auto& sortData : sortedFlags) {
-                using UsageFlagBits = RenderLight::LightUsageFlagBits;
-                if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
-                    lightCounts.directionalLightCount++;
-                } else if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT) {
-                    lightCounts.pointLightCount++;
-                } else if (sortData.lightUsageFlags & UsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT) {
-                    lightCounts.spotLightCount++;
-                }
-
+                RenderLightHelper::EvaluateLightCounts(sortData.lightUsageFlags, lightCounts);
                 RenderLightHelper::CopySingleLight(lights[sortData.index], shadowCount, singleLightStruct++);
             }
 
             DefaultMaterialLightStruct* lightStruct = reinterpret_cast<DefaultMaterialLightStruct*>(data);
-            lightStruct->directionalLightBeginIndex = 0;
+            uint32_t currLightCount = 0U;
+
+            lightStruct->directionalLightBeginIndex = 0U;
             lightStruct->directionalLightCount = lightCounts.directionalLightCount;
-            lightStruct->pointLightBeginIndex = lightCounts.directionalLightCount;
+            currLightCount += lightCounts.directionalLightCount;
+
+            lightStruct->pointLightBeginIndex = currLightCount;
             lightStruct->pointLightCount = lightCounts.pointLightCount;
-            lightStruct->spotLightBeginIndex = lightCounts.directionalLightCount + lightCounts.pointLightCount;
+            currLightCount += lightCounts.pointLightCount;
+
+            lightStruct->spotLightBeginIndex = currLightCount;
             lightStruct->spotLightCount = lightCounts.spotLightCount;
-            lightStruct->pad0 = 0;
-            lightStruct->pad1 = 0;
+            currLightCount += lightCounts.spotLightCount;
+
+            lightStruct->rectLightBeginIndex = currLightCount;
+            lightStruct->rectLightCount = lightCounts.rectLightCount;
+
             lightStruct->clusterSizes = Math::UVec4(0, 0, 0, 0);
             lightStruct->clusterFactors = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
             lightStruct->atlasSizeInvSize = shadowAtlasSizeInvSize;

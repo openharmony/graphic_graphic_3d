@@ -119,6 +119,15 @@ public:
     {
         return CallPtr<IAttach>([&](auto& p) { return p.Attach(modifier); });
     }
+    /**
+     * @brief Query modifiers attached to the animation.
+     * @return A list of modifiers that implement the given interface.
+     */
+    template<typename Interface = META_NS::IAnimationModifier>
+    BASE_NS::vector<typename Interface::Ptr> GetModifiers() const
+    {
+        return CallPtr<IAttach>([](auto& p) { return p.template GetAttachments<Interface>(); });
+    }
 };
 
 /**

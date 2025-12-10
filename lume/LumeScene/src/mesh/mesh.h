@@ -27,11 +27,12 @@
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/intf_owner.h>
 
-#include "component/mesh_component.h"
+#include "../component/mesh_component.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-class Mesh : public META_NS::IntroduceInterfaces<NamedSceneObject, IMesh, ICreateEntity, CORE_NS::IResource> {
+class Mesh : public META_NS::IntroduceInterfaces<NamedSceneObject, IMesh, ICreateEntity, CORE_NS::IResource,
+                 IMaterialOverride> {
     META_OBJECT(Mesh, ClassId::Mesh, IntroduceInterfaces)
 public:
     void Destroy() override;
@@ -45,6 +46,9 @@ public:
     META_FORWARD_READONLY_PROPERTY(BASE_NS::Math::Vec3, AABBMin, mesh_->AABBMin())
     META_FORWARD_READONLY_PROPERTY(BASE_NS::Math::Vec3, AABBMax, mesh_->AABBMax())
     META_IMPLEMENT_READONLY_ARRAY_PROPERTY(ISubMesh::Ptr, SubMeshes)
+
+    void SetMaterialOverride(const IMaterial::Ptr& material) override;
+    IMaterial::Ptr GetMaterialOverride() const override;
 
 public:
     bool SetEcsObject(const IEcsObject::Ptr&) override;
@@ -70,12 +74,14 @@ private:
     void RecalculateAABB();
     bool UpdateSubmeshes(META_NS::ArrayProperty<ISubMesh::Ptr> prop);
     void RefreshSubmeshes(const BASE_NS::vector<ISubMesh::Ptr>& subs);
+    META_NS::ArrayProperty<ISubMesh::Ptr> GetSubmeshesOrNull();
 
 protected:
     mutable std::mutex mutex_;
     CORE_NS::EntityReference meshEntity_;
     IInternalMesh::Ptr mesh_;
     META_NS::EventHandler submeshEvent_;
+    IMaterial::Ptr overrideMaterial_;
 };
 
 SCENE_END_NAMESPACE()

@@ -27,12 +27,23 @@
 
 META_BEGIN_NAMESPACE()
 
+class IRefUriBuilder;
+
+struct ExportOptions {
+    bool useRelativeRefuriIfContextSet { true };
+    IRefUriBuilder* refUriBuilder {};
+};
+
 /// Exporter interface to turn object hierarchy to serialisation node hierarchy
 class IExporter : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IExporter, "409223b1-c8ca-4033-8a18-b28aff6bb50c")
 public:
     /// Export object hierarchy to serialisation node tree
-    virtual ISerNode::Ptr Export(const IObject::ConstPtr& object) = 0;
+    virtual ISerNode::Ptr Export(const IObject::ConstPtr& object, ExportOptions options) = 0;
+    ISerNode::Ptr Export(const IObject::ConstPtr& object)
+    {
+        return Export(object, {});
+    }
     /**
      * Set mapping from the actual instance id to serialised instance id
      * (key is actual instance id, value is serialised)
@@ -56,8 +67,13 @@ public:
 class IFileExporter : public IExporter {
     META_INTERFACE(IExporter, IFileExporter, "e3575e71-ff5b-4a8c-838b-c7886f5689cf")
 public:
+    using IExporter::Export;
     /// Export object hierarchy to given output file
-    virtual ReturnError Export(CORE_NS::IFile& output, const IObject::ConstPtr& object) = 0;
+    virtual ReturnError Export(CORE_NS::IFile& output, const IObject::ConstPtr& object, ExportOptions options) = 0;
+    ReturnError Export(CORE_NS::IFile& output, const IObject::ConstPtr& object)
+    {
+        return Export(output, object, {});
+    }
 };
 
 META_END_NAMESPACE()

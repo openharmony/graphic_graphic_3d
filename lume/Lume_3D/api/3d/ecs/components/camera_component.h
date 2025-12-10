@@ -130,6 +130,10 @@ BEGIN_COMPONENT(ICameraComponentManager, CameraComponent)
         SAMPLE_COUNT_8 = 8U,
     };
 #endif
+
+    /** Downsample percentage (relative to render resolution).
+     */
+    DEFINE_PROPERTY(float, screenPercentage, "Downsample Percentage", 0, 1.0f)
     /** Projection type of the camera.
      */
     DEFINE_PROPERTY(Projection, projection, "Projection", 0, VALUE(Projection::PERSPECTIVE))

@@ -101,11 +101,9 @@ public:
                 }
             }
         } else {
-            if (META_NS::IsCompatible(any, TYPE_ID, CompatibilityDirection::GET)) {
-                Type value;
-                if (any.GetValue(value)) {
-                    return InternalSetValue(value);
-                }
+            Type value;
+            if (any.GetValue(value)) {
+                return InternalSetValue(value);
             }
         }
         return AnyReturn::FAIL;
@@ -265,7 +263,7 @@ public:
             *static_cast<ArrayType*>(data) = InternalGetValue();
             return AnyReturn::SUCCESS;
         }
-        if (IsValidArrayArgs(id, data)) {
+        if (IsValidArrayArgs(id, data, size)) {
             auto& value = InternalGetValue();
             const auto valueSize = value.size() * sizeof(Type); /*NOLINT(bugprone-sizeof-expression)*/
             if (size >= valueSize) {
@@ -280,7 +278,7 @@ public:
         if (IsValidVectorArgs(id, data, size)) {
             return InternalSetValue(*static_cast<const ArrayType*>(data));
         }
-        if (IsValidArrayArgs(id, data)) {
+        if (IsValidArrayArgs(id, data, size)) {
             auto p = static_cast<const Type*>(data);
             return InternalSetValue(
                 BASE_NS::vector<Type>(p, p + size / sizeof(Type))); /*NOLINT(bugprone-sizeof-expression)*/
@@ -289,11 +287,9 @@ public:
     }
     AnyReturnValue CopyFrom(const IAny& any) override
     {
-        if (META_NS::IsCompatible(any, TYPE_ID, CompatibilityDirection::GET)) {
-            ArrayType value;
-            if (any.GetValue(value)) {
-                return InternalSetValue(value);
-            }
+        ArrayType value;
+        if (any.GetValue(value)) {
+            return InternalSetValue(value);
         }
         return AnyReturn::FAIL;
     }
@@ -340,9 +336,9 @@ private:
     {
         return data && sizeof(ArrayType) == size && uid == VECTOR_TYPE_ID;
     }
-    static constexpr bool IsValidArrayArgs(const TypeId& uid, const void* data)
+    static constexpr bool IsValidArrayArgs(const TypeId& uid, const void* data, size_t size)
     {
-        return data && uid == ARRAY_TYPE_ID;
+        return data && size >= sizeof(Type) && uid == ARRAY_TYPE_ID;
     }
 };
 

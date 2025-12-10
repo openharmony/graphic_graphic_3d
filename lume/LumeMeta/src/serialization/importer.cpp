@@ -70,32 +70,42 @@ bool Importer::IsRegisteredObjectOrPropertyType(const ObjectId& oid) const
     return IsRegisteredObjectType(oid) || registry_.GetPropertyRegister().IsPropertyRegistered(oid);
 }
 
-IObject::Ptr Importer::Import(const ISerNode::ConstPtr& tree)
+IObject::Ptr Importer::Import(const ISerNode::ConstPtr& tree, ImportOptions opts)
 {
     IObject::Ptr object;
     if (auto root = interface_cast<IRootNode>(tree)) {
         metadata_ = root->GetMetadata();
         object = ImportObject(root->GetObject());
-        if (object) {
-            // resolve deferred ref uris
-            for (auto&& d : deferred_) {
-                if (auto obj = interface_pointer_cast<CORE_NS::IInterface>(ImportRef(d.uri))) {
-                    d.target->SetValue(obj);
-                } else {
-                    CORE_LOG_W("Failed to resolve deferred ref uri");
-                }
-            }
-            // execute finalizes
-            for (auto&& f : finalizes_) {
-                if (!f->Finalize(*this)) {
-                    CORE_LOG_W("Failed to finalize imported object");
-                }
-            }
+    } else {
+        object = ImportObject(tree);
+    }
+    if (object) {
+        if (!opts.manualDeferredResolve) {
+            ResolveDeferred();
         }
     } else {
-        CORE_LOG_W("Invalid serialisation tree, expected root node");
+        deferred_.clear();
+        finalizes_.clear();
     }
     return object;
+}
+
+void Importer::ResolveDeferred()
+{
+    // resolve deferred ref uris
+    for (auto&& d : deferred_) {
+        if (auto obj = interface_pointer_cast<CORE_NS::IInterface>(ImportRef(d.uri))) {
+            d.target->SetValue(obj);
+        } else {
+            CORE_LOG_W("Failed to resolve deferred ref uri");
+        }
+    }
+    // execute finalizes
+    for (auto&& f : finalizes_) {
+        if (!f->Finalize(*this)) {
+            CORE_LOG_W("Failed to finalize imported object");
+        }
+    }
 }
 
 IObject::Ptr Importer::GetReferencedObject(const InstanceId& uid) const
@@ -110,16 +120,23 @@ IObject::Ptr Importer::GetReferencedObject(const InstanceId& uid) const
 
 IObject::Ptr Importer::ImportRef(const RefUri& ref)
 {
-    if (ref.BaseObjectUid() == BASE_NS::Uid {}) {
+    auto uri = ref;
+    IObjectInstance::Ptr instance;
+    if (ref.StartsFromRoot()) {
+        instance = interface_pointer_cast<IObjectInstance>(GetUserContext());
+        uri.SetStartsFromRoot(false);
+    } else if (ref.BaseObjectUid().IsValid()) {
+        instance = interface_pointer_cast<IObjectInstance>(GetReferencedObject(ref.BaseObjectUid()));
+        uri.SetBaseObjectUid({});
+    } else {
         // for now we only support anchored references, relative references requires to know the current object
         CORE_LOG_W("Missing base object for ref uri [%s]", ref.ToString().c_str());
         return nullptr;
     }
-    if (auto obj = interface_pointer_cast<IObjectInstance>(GetReferencedObject(ref.BaseObjectUid()))) {
-        auto uri = ref.RelativeUri();
+    if (instance) {
         // interpret all uris as absolute, pointing to the exact thing they say
         uri.SetAbsoluteInterpretation(true);
-        if (auto ret = obj->Resolve(uri)) {
+        if (auto ret = instance->Resolve(uri)) {
             return ret;
         }
     }

@@ -91,6 +91,10 @@ GLenum GetTarget(GLenum type, uint32_t layer, uint32_t sampleCount)
         PLUGIN_ASSERT_MSG(sampleCount == 1, "Cubemap texture can't have MSAA");
         return GetCubeMapTarget(type, layer);
     }
+    if (type == GL_TEXTURE_3D) {
+        PLUGIN_ASSERT_MSG(sampleCount == 1, "3D texture can't have MSAA");
+        return GL_TEXTURE_3D;
+    }
     PLUGIN_ASSERT_MSG(false, "Unhandled type in getTarget! %x", type);
     return GL_NONE;
 }
@@ -849,6 +853,10 @@ void RenderBackendGLES::Render(
     StartFrameTimers(renderCommandFrameData);
     commonCpuTimers_.execute.Begin();
 #endif
+
+    // Patch multi renderpasses if any
+    PatchSecondaryMultiRenderPasses(renderCommandFrameData);
+
     // global begin backend frame
     auto& descriptorSetMgr = (DescriptorSetManagerGles&)device_.GetDescriptorSetManager();
     descriptorSetMgr.BeginBackendFrame();
@@ -1493,6 +1501,7 @@ void RenderBackendGLES::RenderCommandBeginRenderPass(const RenderCommandWithType
     switch (renderCmd.beginType) {
         case RenderPassBeginType::RENDER_PASS_BEGIN: {
             ++inRenderpass_;
+            currentSubPass_ = 0;
             PLUGIN_ASSERT_MSG(inRenderpass_ == 1, "RenderBackendGLES beginrenderpass mInRenderpass %u", inRenderpass_);
             activeRenderPass_ = renderCmd; // Store this because we need it later (in NextRenderPass)
 
@@ -1509,9 +1518,6 @@ void RenderBackendGLES::RenderCommandBeginRenderPass(const RenderCommandWithType
                 --inRenderpass_;
                 return;
             }
-            PLUGIN_ASSERT_MSG(
-                activeRenderPass_.subpassStartIndex == 0, "activeRenderPass_.subpassStartIndex != 0 not handled!");
-            currentSubPass_ = 0;
             // find first and last use, clear clearflags. (this could be cached in the lowlewel classes)
             for (uint32_t i = 0; i < rpd.attachmentCount; i++) {
                 attachmentCleared_[i] = false;
@@ -1522,7 +1528,7 @@ void RenderBackendGLES::RenderCommandBeginRenderPass(const RenderCommandWithType
                     static_cast<const GpuImageGLES*>(gpuResourceMgr_.GetImage(rpd.attachmentHandles[i]));
             }
             ScanPasses(rpd);
-            DoSubPass(0);
+            DoSubPass(activeRenderPass_.subpassStartIndex);
 #if (RENDER_PERF_ENABLED == 1)
             ++perfCounters_.renderPassCount;
 #endif
@@ -1644,38 +1650,37 @@ uint32_t RenderBackendGLES::ResolveMSAA(const RenderPassDesc& rpd, const RenderP
             static_cast<GLint>(currentFrameBuffer_->height), mask, GL_NEAREST);
     } else {
         // Layers need to be resolved one by one. Create temporary FBOs and go through the layers.
-        GLuint frameBuffers[2U]; // 2: buffer size
-        glGenFramebuffers(2, frameBuffers); // 2: buffer size
+        GLuint frameBuffers[2U];            // 2: framebuffer count
+        glGenFramebuffers(2, frameBuffers); // 2: framebuffer count
         device_.BindReadFrameBuffer(frameBuffers[0U]);
         device_.BindWriteFrameBuffer(frameBuffers[1U]);
 
-        const auto& srcImage =
+        const auto* srcImage =
             gpuResourceMgr_.GetImage(rpd.attachmentHandles[currentSubPass.colorAttachmentIndices[0U]]);
-        if (srcImage == nullptr) {
-            return GL_FRAMEBUFFER;
-        }
-        const auto& srcPlat = static_cast<const GpuImagePlatformDataGL&>(srcImage->GetBasePlatformData());
-        const auto& dstImage =
+        const auto* dstImage =
             gpuResourceMgr_.GetImage(rpd.attachmentHandles[currentSubPass.resolveAttachmentIndices[0U]]);
-        if (dstImage == nullptr) {
-            return GL_FRAMEBUFFER;
-        }
-        const auto& dstPlat = static_cast<const GpuImagePlatformDataGL&>(dstImage->GetBasePlatformData());
-        auto viewMask = currentSubPass.viewMask;
-        auto layer = 0;
-        while (viewMask) {
-            glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcPlat.image, 0, layer);
-            glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstPlat.image, 0, layer);
+        if (srcImage && dstImage) {
+            const auto& srcPlat = static_cast<const GpuImagePlatformDataGL&>(srcImage->GetBasePlatformData());
+            const auto& dstPlat = static_cast<const GpuImagePlatformDataGL&>(dstImage->GetBasePlatformData());
 
-            glBlitFramebuffer(0, 0, static_cast<GLint>(currentFrameBuffer_->width),
-                static_cast<GLint>(currentFrameBuffer_->height), 0, 0, static_cast<GLint>(currentFrameBuffer_->width),
-                static_cast<GLint>(currentFrameBuffer_->height), mask, GL_NEAREST);
-            viewMask >>= 1U;
-            ++layer;
-        }
-        glDeleteFramebuffers(2, frameBuffers); // 2: buffer size
+            auto viewMask = currentSubPass.viewMask;
+            auto layer = 0;
+            while (viewMask) {
+                glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcPlat.image, 0, layer);
+                glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstPlat.image, 0, layer);
 
-        // invalidation exepcts to find the actual FBOs
+                glBlitFramebuffer(0, 0, static_cast<GLint>(currentFrameBuffer_->width),
+                    static_cast<GLint>(currentFrameBuffer_->height), 0, 0,
+                    static_cast<GLint>(currentFrameBuffer_->width), static_cast<GLint>(currentFrameBuffer_->height),
+                    mask, GL_NEAREST);
+                viewMask >>= 1U;
+                ++layer;
+            }
+        }
+
+        glDeleteFramebuffers(2, frameBuffers); // 2: framebuffer count
+
+        // invalidation expects to find the actual FBOs
         device_.BindReadFrameBuffer(currentFrameBuffer_->fbos[currentSubPass_].fbo);
         device_.BindWriteFrameBuffer(currentFrameBuffer_->fbos[currentSubPass_].resolve);
     }
@@ -1787,12 +1792,29 @@ void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
         const GLenum srcType = GetTarget(srcPlat.type, layer, srcSampleCount);
         const GLenum dstType = GetTarget(dstPlat.type, layer, dstSampleCount);
         // glFramebufferTextureLayer for array textures....
-        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, srcPlat.image, srcMipLevel);
-        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstType, dstPlat.image, dstMipLevel);
-        DoBlit(renderCmd.filter, { src.mipLevel, srcRect[0], srcRect[1], srcDesc.height },
-            { dst.mipLevel, dstRect[0], dstRect[1], dstDesc.height });
-        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, 0, 0);
-        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstType, 0, 0);
+        if (srcType == GL_TEXTURE_3D) {
+            const auto srcDepth = GLint(srcRect[1U].depth - srcRect[0U].depth);
+            const auto dstDepth = GLint(dstRect[1U].depth - dstRect[0U].depth);
+            const auto srcStep = GLint(Math::round(float(srcDepth) / float(dstDepth)));
+            const auto dstStep = GLint(Math::round(float(dstDepth) / float(srcDepth)));
+            for (GLint depth = 0; depth < Math::min(srcDepth, dstDepth); ++depth) {
+                glFramebufferTextureLayer(
+                    GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcPlat.image, srcMipLevel, depth * srcStep);
+                glFramebufferTextureLayer(
+                    GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstPlat.image, dstMipLevel, depth * dstStep);
+                DoBlit(renderCmd.filter, { src.mipLevel, srcRect[0], srcRect[1], srcDesc.height },
+                    { dst.mipLevel, dstRect[0], dstRect[1], dstDesc.height });
+            }
+            glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 0, 0, 0);
+            glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 0, 0, 0);
+        } else {
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, srcPlat.image, srcMipLevel);
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstType, dstPlat.image, dstMipLevel);
+            DoBlit(renderCmd.filter, { src.mipLevel, srcRect[0], srcRect[1], srcDesc.height },
+                { dst.mipLevel, dstRect[0], dstRect[1], dstDesc.height });
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, 0, 0);
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstType, 0, 0);
+        }
     }
 }
 
@@ -2082,8 +2104,8 @@ void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithT
     std::copy(renderCmd.descriptorSetHandles + renderCmd.firstSet, renderCmd.descriptorSetHandles + lastSet,
         descriptorSetHandles_ + renderCmd.firstSet);
     auto* dst = descriptorSetDynamicOffsets_ + renderCmd.firstSet;
-    for (const auto &src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
-                                      renderCmd.descriptorSetDynamicOffsets + lastSet)) {
+    for (const auto& src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
+             renderCmd.descriptorSetDynamicOffsets + lastSet)) {
         dst->dynamicOffsetCount = src.dynamicOffsetCount;
         std::copy(src.dynamicOffsets, src.dynamicOffsets + src.dynamicOffsetCount, dst->dynamicOffsets);
         ++dst;
@@ -2178,6 +2200,70 @@ void RenderBackendGLES::SetPushConstants(uint32_t program, const array_view<Gles
             consts[i].matrix_stride; */
             SetPushConstant(program, pc, &renderCmd.data[offs]);
         }
+    }
+}
+
+void ExtractSubpassDescs(RenderCommandFrameData& rcfd, uint32_t rcIdx, uint32_t rcCount, uint32_t rpBeginCmdIndex,
+    vector<RenderPassSubpassDesc>& subpassDescs, uint64_t& rpHash)
+{
+    // The following rcCount render command lists contain the subpasses
+    for (uint32_t subpass = 0U; subpass < rcCount; subpass++) {
+        const uint32_t cmdIdx = rcIdx + subpass;
+        auto& rc = rcfd.renderCommandContexts[cmdIdx].renderCommandList;
+        const auto& mrp = rc->GetMultiRenderCommandListData();
+        const auto cmds = rc->GetRenderCommands();
+        if (mrp.rpBeginCmdIndex >= cmds.size()) {
+            continue;
+        }
+
+        const auto& rpBeginInfo = *static_cast<struct RenderCommandBeginRenderPass*>(cmds[rpBeginCmdIndex].rc);
+        // Extract the subpasses
+        subpassDescs[rpBeginInfo.subpassStartIndex] = rpBeginInfo.subpasses[rpBeginInfo.subpassStartIndex];
+#if RENDER_VALIDATION_ENABLED
+        if (subpass == 0) {
+            rpHash = NodeContextPoolManagerGLES::HashRenderPass(rpBeginInfo);
+        } else {
+            const uint64_t currHash = NodeContextPoolManagerGLES::HashRenderPass(rpBeginInfo);
+            if (rpHash != currHash) {
+                PLUGIN_LOG_E("Attempting to use secondary command buffers, but renderpasses aren't compatible across "
+                             "command lists. Make sure they have identical properties.");
+            }
+        }
+#endif
+    }
+}
+
+void PatchAllSubpasses(RenderCommandFrameData& rcfd, uint32_t rcIdx, uint32_t rcCount, uint32_t rpBeginCmdIndex,
+    const vector<RenderPassSubpassDesc>& subpassDescs)
+{
+    // Patch all the subpasses
+    for (uint32_t subpass = 0; subpass < rcCount; subpass++) {
+        uint32_t currentIdx = rcIdx + subpass;
+        auto& rc = rcfd.renderCommandContexts[currentIdx].renderCommandList;
+        const auto& mrp = rc->GetMultiRenderCommandListData();
+        const auto cmds = rc->GetRenderCommands();
+        if (mrp.rpBarrierCmdIndex < cmds.size()) {
+            auto& rpBeginInfo = *static_cast<struct RenderCommandBeginRenderPass*>(cmds[rpBeginCmdIndex].rc);
+            CloneData(rpBeginInfo.subpasses.data(), rpBeginInfo.subpasses.size_bytes(), subpassDescs.data(),
+                subpassDescs.size_in_bytes());
+        }
+    }
+}
+
+void RenderBackendGLES::PatchSecondaryMultiRenderPasses(RenderCommandFrameData& rcfd)
+{
+    for (uint32_t rcIdx = 0; rcIdx < rcfd.renderCommandContexts.size();) {
+        auto& rcc = rcfd.renderCommandContexts[rcIdx];
+        const auto& mrpData = rcc.renderCommandList->GetMultiRenderCommandListData();
+        const uint32_t rcCount = mrpData.subpassCount;
+        uint64_t rpHash = 0;
+        if (mrpData.secondaryCmdLists && rcCount > 1) {
+            vector<RenderPassSubpassDesc> subpassDescs(rcCount);
+            ExtractSubpassDescs(rcfd, rcIdx, rcCount, mrpData.rpBeginCmdIndex, subpassDescs, rpHash);
+            PatchAllSubpasses(rcfd, rcIdx, rcCount, mrpData.rpBeginCmdIndex, subpassDescs);
+        }
+        // Skip all the processed command lists with subpasses
+        rcIdx += rcCount;
     }
 }
 
@@ -2482,17 +2568,15 @@ void RenderBackendGLES::BindTexture(array_view<const Gles::Bind::Resource> resou
                 }
 #endif
                 device_.BindTexture(textureUnit, plat.type, plat.image);
+                uint32_t highestLevel = plat.mipCount ? (plat.mipCount - 1) : 0u;
                 // NOTE: the last setting is active, can not have different miplevels bound from single
                 // resource.
                 // Check and update (if needed) the forced miplevel.
-                if (plat.mipLevel != imgType.mipLevel) {
+                if (plat.baseMipLevel != baseLevel || plat.maxMipLevel != highestLevel) {
                     // NOTE: we are actually modifying the texture object bound above
-                    const_cast<GpuImagePlatformDataGL&>(plat).mipLevel = imgType.mipLevel;
-                    // either force the defined mip level or use defaults.
-                    const auto maxLevel = static_cast<GLint>(
-                        (plat.mipLevel != PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS) ? plat.mipLevel : 1000U);
-                    glTexParameteri(plat.type, GL_TEXTURE_BASE_LEVEL, static_cast<GLint>(baseLevel));
-                    glTexParameteri(plat.type, GL_TEXTURE_MAX_LEVEL, maxLevel);
+                    device_.SetMipLevels(textureUnit, baseLevel, highestLevel, plat.type);
+                    const_cast<GpuImagePlatformDataGL&>(plat).baseMipLevel = baseLevel;
+                    const_cast<GpuImagePlatformDataGL&>(plat).maxMipLevel = highestLevel;
                 }
             }
         }

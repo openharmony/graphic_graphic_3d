@@ -16,19 +16,28 @@
 #ifndef SCENE_SRC_MESH_SUBMESH_H
 #define SCENE_SRC_MESH_SUBMESH_H
 
+#include <scene/ext/component.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_shader.h>
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 
-#include "component/mesh_component.h"
-#include "util_interfaces.h"
+#include "../util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 
+class ISubMeshInternal : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ISubMeshInternal, "3ed7de72-52b3-426b-96d6-cb2bdd6620d0")
+public:
+    /// Inform submesh about material override. Must be called in engine thread
+    virtual void SetMaterialOverride(const IMaterial::Ptr& material) = 0;
+    /// Returns the material override set with SetMaterialOverride(). Can be called from any thread.
+    virtual IMaterial::Ptr GetMaterialOverride() const = 0;
+};
+
 class SubMesh : public META_NS::IntroduceInterfaces<EcsLazyProperty, ArrayElementIndex, META_NS::INotifyOnChange,
-                    META_NS::INamed, META_NS::IPropertyOwner, ISubMesh> {
+                    META_NS::INamed, META_NS::IPropertyOwner, ISubMesh, ISubMeshInternal> {
     META_OBJECT(SubMesh, ClassId::SubMesh, IntroduceInterfaces)
 
 public:
@@ -44,6 +53,7 @@ public:
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Vec3, AABBMin)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Vec3, AABBMax)
 
+    bool SetEcsObject(const IEcsObject::Ptr& ecso) override;
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
     void OnPropertyChanged(const META_NS::IProperty&) override;
 
@@ -57,9 +67,18 @@ public:
         return event_;
     }
 
+public: // ISubMeshInternal
+    void SetMaterialOverride(const IMaterial::Ptr& material) override;
+    IMaterial::Ptr GetMaterialOverride() const override;
+
 private:
     BASE_NS::shared_ptr<META_NS::EventImpl<META_NS::IOnChanged>> event_ { new META_NS::EventImpl<META_NS::IOnChanged>(
         "OnChanged") };
+
+    IInternalScene::Ptr GetScene() const;
+
+    META_NS::IAny::Ptr overrideAny_;
+    IMaterial::WeakPtr overrideMaterial_; // Override material set to Mesh
 };
 
 SCENE_END_NAMESPACE()

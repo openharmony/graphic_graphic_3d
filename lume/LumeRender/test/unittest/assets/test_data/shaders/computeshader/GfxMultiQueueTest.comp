@@ -1,0 +1,27 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// specialization
+
+// includes
+#include "render/shaders/common/render_compatibility_common.h"
+
+// sets
+
+layout(set = 0, binding = 0, rgba16f) uniform image2D testImage;
+
+
+
+layout(push_constant) uniform PushConstant
+{
+    vec4 color;
+};
+
+// NOTE: Not sane local sizes for real work (we inpurpose use this)
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+    vec4 inColor = imageLoad(testImage, ivec2(gl_GlobalInvocationID.xy));
+    imageStore(testImage, ivec2(gl_GlobalInvocationID.xy), inColor + color);
+}

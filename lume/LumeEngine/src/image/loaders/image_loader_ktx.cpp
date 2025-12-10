@@ -159,8 +159,7 @@ IImageContainer::ImageViewType GetImageViewType(const KtxHeader& header, IImageC
             case IImageContainer::ImageType::TYPE_2D:
                 return IImageContainer::ImageViewType::VIEW_TYPE_2D_ARRAY;
             case IImageContainer::ImageType::TYPE_3D:
-                // 3d arrays are not supported.
-                [[fallthrough]];
+                [[fallthrough]]; // 3d arrays are not supported.
             case IImageContainer::ImageType::TYPE_MAX_ENUM:
                 return IImageContainer::ImageViewType::VIEW_TYPE_MAX_ENUM;
         }

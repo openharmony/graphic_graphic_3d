@@ -300,7 +300,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             (surfaceCapabilities.maxImageCount == 0)
                 ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
                 : (Math::min(surfaceCapabilities.maxImageCount,
-                             Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+                      Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
         PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
         const VkSurfaceTransformFlagsKHR swapchainTransform =

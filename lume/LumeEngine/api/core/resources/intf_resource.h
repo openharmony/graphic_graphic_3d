@@ -145,7 +145,7 @@ public:
     using ConstWeakPtr = BASE_NS::weak_ptr<const IResourceOptions>;
 
     virtual bool Load(IFile& options, const ResourceManagerPtr&, const ResourceContextPtr&) = 0;
-    virtual bool Save(IFile& options, const ResourceManagerPtr&) const = 0;
+    virtual bool Save(IFile& options, const ResourceManagerPtr&, const ResourceContextPtr&) const = 0;
 
 protected:
     IResourceOptions() = default;

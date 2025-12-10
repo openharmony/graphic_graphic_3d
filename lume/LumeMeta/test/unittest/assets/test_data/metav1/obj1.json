@@ -1,0 +1,14 @@
+{
+    "$meta": {
+        "version": "1.0"
+    },
+    "$root": {
+        "$classId": "b2377edc-27ec-4aa1-b071-636d78db63e2",
+        "$name": "Object",
+        "$instanceId": "0000ed3e-2c82-aed0-0501-bd9672f70b40",
+        "Test": {
+            "$classId": "60cefa36-e9f3-b9c4-5072-6f7065727479",
+            "defaultValue": null
+        }
+    }
+}

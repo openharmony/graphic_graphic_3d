@@ -1,0 +1,12 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "NonExistingType",
+            "nodeName": "NodeName"
+        }
+    ]
+}

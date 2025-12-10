@@ -47,7 +47,7 @@ namespace {
 } // namespace
 namespace {
 constexpr size_t MEMORY_ALIGNMENT { 64 };
-constexpr bool ENABLE_RT { true };
+constexpr uint32_t BATCH_COUNT { 64U };
 
 static constexpr uint32_t MATERIAL_TYPE_SHIFT { 28u };
 static constexpr uint32_t MATERIAL_TYPE_MASK { 0xF0000000u };
@@ -61,38 +61,134 @@ static constexpr uint32_t COMBINED_GPU_INSTANCING_REMOVAL { ~(
 
 static constexpr RenderDataDefaultMaterial::AllMaterialUniforms INIT_ALL_MATERIAL_UNIFORMS {};
 
-static constexpr float FMAX_VAL_AABB { std::numeric_limits<float>::max() };
-
 static constexpr string_view DS_ACCELERATION_STRUCTURE { "RenderDataStoreDefaultAccelerationStructureStaging" };
 
-struct MinAndMax {
-    BASE_NS::Math::Vec3 minAABB { FMAX_VAL_AABB, FMAX_VAL_AABB, FMAX_VAL_AABB };
-    BASE_NS::Math::Vec3 maxAABB { -FMAX_VAL_AABB, -FMAX_VAL_AABB, -FMAX_VAL_AABB };
-};
+void GetDefaultMaterialGpuResources(
+    const IGpuResourceManager& gpuResourceMgr, RenderDataStoreDefaultMaterial::MaterialHandleResourceIndices& defMat)
+{
+    defMat.images[MaterialComponent::TextureIndex::BASE_COLOR] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_BASE_COLOR)
+            .GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::NORMAL] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_NORMAL).GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::MATERIAL] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_MATERIAL).GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::EMISSIVE] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_EMISSIVE).GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::AO] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_AO).GetHandle());
 
-static constexpr RenderMeshBatchData DEFAULT_RENDER_MESH_BATCH_DATA {};
+    defMat.images[MaterialComponent::TextureIndex::CLEARCOAT] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT)
+            .GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_ROUGHNESS)
+            .GetHandle());
+    defMat.images[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_CLEARCOAT_NORMAL)
+            .GetHandle());
+
+    defMat.images[MaterialComponent::TextureIndex::SHEEN] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SHEEN).GetHandle());
+
+    defMat.images[MaterialComponent::TextureIndex::TRANSMISSION] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_TRANSMISSION)
+            .GetHandle());
+
+    defMat.images[MaterialComponent::TextureIndex::SPECULAR] = RenderHandleUtil::GetIndex(
+        gpuResourceMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_MATERIAL_SPECULAR).GetHandle());
+
+    const RenderHandle samplerHandle =
+        gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT").GetHandle();
+    for (uint32_t idx = 0; idx < countof(defMat.samplers); ++idx) {
+        defMat.samplers[idx] = RenderHandleUtil::GetIndex(samplerHandle);
+    }
+}
 
 inline void HashCombine32Bit(uint32_t& seed, const uint32_t v)
 {
     constexpr const uint32_t goldenRatio = 0x9e3779b9;
     constexpr const uint32_t rotl = 6U;
     constexpr const uint32_t rotr = 2U;
-    seed ^= hash(v) + goldenRatio + (seed << rotl) + (seed >> rotr);
+    seed ^= uint32_t(v) + goldenRatio + (seed << rotl) + (seed >> rotr);
+}
+
+inline bool IsShadowCaster(
+    const uint32_t index, const array_view<const RenderDataStoreDefaultMaterial::MaterialDataContainer> data)
+{
+    if (index < data.size()) {
+        const auto& mat = data[index];
+        return ((mat.md.renderMaterialFlags & RENDER_MATERIAL_SHADOW_CASTER_BIT) > 0) ? true : false;
+    }
+    return false;
+}
+
+RenderMinAndMax GetWorldAABB(const Math::Mat4X4& world, const RenderMinAndMax& aabb)
+{
+    // Based on https://gist.github.com/cmf028/81e8d3907035640ee0e3fdd69ada543f
+    const auto center = (aabb.minAabb + aabb.maxAabb) * 0.5f;
+    const auto extents = aabb.maxAabb - center;
+
+    const auto centerW = Math::MultiplyPoint3X4(world, center);
+
+    Math::Mat3X3 absWorld;
+    for (auto i = 0U; i < countof(absWorld.base); ++i) {
+        absWorld.base[i].x = Math::abs(world.base[i].x);
+        absWorld.base[i].y = Math::abs(world.base[i].y);
+        absWorld.base[i].z = Math::abs(world.base[i].z);
+    }
+
+    const auto extentsW = absWorld * extents;
+
+    return RenderMinAndMax { centerW - extentsW, centerW + extentsW };
+}
+
+// extent scene shadow bounds
+void ExtentShadowSceneBounds(const bool shadowCaster, const RenderMinAndMax& aabb,
+    RenderDataStoreDefaultMaterial::SceneBoundingVolumeHelper& helper)
+{
+    // the mesh aabb will have default value if all the submeshes were skipped. in the default value min > max.
+    // meshes which don't cast shadows are also skipped from the scene bounds.
+    if (shadowCaster && (aabb.minAabb.x <= aabb.maxAabb.x)) {
+        helper.sumOfSubmeshPoints += (aabb.minAabb + aabb.maxAabb) / 2.f;
+        helper.aabb.minAabb = Math::min(helper.aabb.minAabb, aabb.minAabb);
+        helper.aabb.maxAabb = Math::max(helper.aabb.maxAabb, aabb.maxAabb);
+        ++helper.submeshCount;
+    }
+}
+
+// this should happen as the final step after all the render meshes are processed
+RenderBoundingSphere CalculateFinalSceneBoundingSphere(
+    const RenderDataStoreDefaultMaterial::SceneBoundingVolumeHelper& helper)
+{
+    RenderBoundingSphere sphere;
+    if (helper.submeshCount == 0) {
+        sphere.radius = 0.0f;
+        sphere.center = Math::Vec3(0.0f, 0.0f, 0.0f);
+    } else {
+        const auto boundingSpherePosition = helper.sumOfSubmeshPoints / static_cast<float>(helper.submeshCount);
+
+        const float radMin = Math::Magnitude(boundingSpherePosition - helper.aabb.minAabb);
+        const float radMax = Math::Magnitude(helper.aabb.maxAabb - boundingSpherePosition);
+        const float boundingSphereRadius = Math::max(radMin, radMax);
+
+        // use exact values
+        sphere.radius = boundingSphereRadius;
+        sphere.center = boundingSpherePosition;
+    }
+    return sphere;
 }
 
 inline constexpr RenderDataDefaultMaterial::MaterialHandles ConvertMaterialHandleReferences(
-    const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& inputHandles,
-    vector<RenderHandleReference>& references)
+    const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& inputHandles)
 {
     RenderDataDefaultMaterial::MaterialHandles mh;
     for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT; ++idx) {
         if (inputHandles.images[idx]) {
             mh.images[idx] = inputHandles.images[idx].GetHandle();
-            references.push_back(inputHandles.images[idx]);
         }
         if (inputHandles.samplers[idx]) {
             mh.samplers[idx] = inputHandles.samplers[idx].GetHandle();
-            references.push_back(inputHandles.samplers[idx]);
         }
     }
     return mh;
@@ -111,19 +207,16 @@ inline constexpr uint16_t GetRenderSortLayerHash(const RenderSubmesh& submesh)
     }
 }
 
-RenderSubmeshBuffers ConvertRenderSubmeshBuffers(
-    const RenderSubmeshBuffersWithHandleReference& buffers, vector<RenderHandleReference>& handleReferences)
+RenderSubmeshBuffers ConvertRenderSubmeshBuffers(const RenderSubmeshBuffersWithHandleReference& buffers)
 {
     // convert and add references
     RenderSubmeshBuffers rsb;
     const auto& ib = buffers.indexBuffer;
     if (ib.bufferHandle) {
-        handleReferences.push_back(ib.bufferHandle);
         rsb.indexBuffer = { ib.bufferHandle.GetHandle(), ib.bufferOffset, ib.byteSize, ib.indexType };
     }
     const auto& iargs = buffers.indirectArgsBuffer;
     if (iargs.bufferHandle) {
-        handleReferences.push_back(iargs.bufferHandle);
         rsb.indirectArgsBuffer = { iargs.bufferHandle.GetHandle(), iargs.bufferOffset, iargs.byteSize };
     }
     const RenderHandle safetyBuffer = buffers.vertexBuffers[0U].bufferHandle.GetHandle();
@@ -133,9 +226,6 @@ RenderSubmeshBuffers ConvertRenderSubmeshBuffers(
         // add safety handles to invalid buffers
         if (vb.bufferHandle) {
             const RenderHandle currHandle = vb.bufferHandle.GetHandle();
-            if (currHandle != prevHandle) {
-                handleReferences.push_back(vb.bufferHandle);
-            }
             rsb.vertexBuffers[idx] = { currHandle, vb.bufferOffset, vb.byteSize };
         } else {
             rsb.vertexBuffers[idx] = { safetyBuffer, 0U, 0U };
@@ -150,18 +240,15 @@ RenderSubmeshBuffers ConvertRenderSubmeshBuffers(
     return rsb;
 }
 
-RenderSubmesh ConvertRenderSubmeshInput(
-    const RenderSubmeshWithHandleReference& input, vector<RenderHandleReference>& references)
+RenderSubmesh ConvertRenderSubmeshInput(const RenderSubmeshWithHandleReference& input)
 {
     RenderSubmeshBuffers rsb;
     const auto& ib = input.buffers.indexBuffer;
     if (ib.bufferHandle) {
-        references.push_back(ib.bufferHandle);
         rsb.indexBuffer = { ib.bufferHandle.GetHandle(), ib.bufferOffset, ib.byteSize, ib.indexType };
     }
     const auto& iargs = input.buffers.indirectArgsBuffer;
     if (iargs.bufferHandle) {
-        references.push_back(iargs.bufferHandle);
         rsb.indirectArgsBuffer = { iargs.bufferHandle.GetHandle(), iargs.bufferOffset, iargs.byteSize };
     }
     const RenderHandle safetyBuffer = input.buffers.vertexBuffers[0U].bufferHandle.GetHandle();
@@ -171,10 +258,6 @@ RenderSubmesh ConvertRenderSubmeshInput(
         // add safety handles to invalid buffers
         if (vb.bufferHandle) {
             rsb.vertexBuffers[idx] = { vb.bufferHandle.GetHandle(), vb.bufferOffset, vb.byteSize };
-            // often we have the same buffer (GPU resource)
-            if (rsb.vertexBuffers[idx].bufferHandle != prevHandle) {
-                references.push_back(vb.bufferHandle);
-            }
         } else {
             rsb.vertexBuffers[idx] = { safetyBuffer, 0U, 0U };
         }
@@ -235,6 +318,9 @@ void ExtentRenderMaterialFlagsForComplexity(const RenderMaterialType materialTyp
                        : RENDER_MATERIAL_BASIC_BIT;
         }
     } else {
+        if (materialType == RenderMaterialType::OCCLUSION) {
+            rmf |= RENDER_MATERIAL_OCCLUSION_BIT;
+        }
         rmf |= ((rmf & complexMask) > 0) ? RENDER_MATERIAL_COMPLEX_BIT : RENDER_MATERIAL_BASIC_BIT;
     }
 }
@@ -281,20 +367,57 @@ void* AllocateMatrixMemory(RenderDataStoreDefaultMaterial::LinearAllocatorStruct
     }
 }
 
-Math::Mat4X4* AllocateMatrices(RenderDataStoreDefaultMaterial::LinearAllocatorStruct& allocator, const size_t count)
+inline Math::Mat4X4* AllocateMatrices(
+    RenderDataStoreDefaultMaterial::LinearAllocatorStruct& allocator, const size_t count)
 {
     const size_t byteSize = count * sizeof(Math::Mat4X4);
     return static_cast<Math::Mat4X4*>(AllocateMatrixMemory(allocator, byteSize));
 }
 
-RenderDataDefaultMaterial::AllMaterialUniforms MaterialUniformsPackedFromInput(
-    const RenderDataDefaultMaterial::InputMaterialUniforms& input)
+inline void FillBindlessIndices(const RenderDataStoreDefaultMaterial::MaterialHandleResourceIndices& defValues,
+    const RenderDataDefaultMaterial::MaterialHandles& handles, RenderDataDefaultMaterial::AllMaterialUniforms& uniforms)
+{
+    constexpr size_t floatCount =
+        ((RenderDataDefaultMaterial::MATERIAL_FACTOR_UNIFORM_VEC4_COUNT * sizeof(Math::Vec4)) -
+            (RenderDataDefaultMaterial::MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT * sizeof(Math::Vec4))) /
+        sizeof(float);
+    // should be 3 times a Vec4 -> 12 textures maximum
+    CORE_STATIC_ASSERT(static_cast<uint32_t>(floatCount) == (3U * 4U));
+    // interpret data as unsigned integers (shader needs to use floatBitsToUint)
+    auto indexList = array_view<uint32_t>(
+        reinterpret_cast<uint32_t*>(
+            &(uniforms.factors.factors[RenderDataDefaultMaterial::MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT].x)),
+        floatCount);
+    CORE_STATIC_ASSERT(RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT <= floatCount);
+    // NOTE: packs in one uint texture idx and sampler idx
+    for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT; ++idx) {
+        const RenderHandle& iHandle = handles.images[idx];
+        const RenderHandle& sHandle = handles.samplers[idx];
+        const uint32_t imgIdx =
+            (RenderHandleUtil::IsValid(iHandle)) ? RenderHandleUtil::GetIndex(iHandle) : defValues.images[idx];
+        const uint32_t smpIdx =
+            (RenderHandleUtil::IsValid(sHandle)) ? RenderHandleUtil::GetIndex(sHandle) : defValues.samplers[idx];
+        // the packing needs to match 3d_dm_structures_common.h
+        indexList[idx] =
+            (smpIdx << RenderDataDefaultMaterial::MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT) | (imgIdx & 0xffff);
+    }
+}
+
+RenderDataDefaultMaterial::AllMaterialUniforms MaterialUniformsPackedFromInput(const bool bindlessEnabled,
+    const RenderDataDefaultMaterial::InputMaterialUniforms& input,
+    const RenderDataDefaultMaterial::MaterialHandles& handles,
+    const RenderDataStoreDefaultMaterial::MaterialHandleResourceIndices& defValues)
 {
     RenderDataDefaultMaterial::AllMaterialUniforms amu = INIT_ALL_MATERIAL_UNIFORMS;
     // premultiplication needs to be handled already with some factors like baseColor
     for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT; ++idx) {
         amu.factors.factors[idx] = input.textureData[idx].factor;
     }
+    // fill the texture indices for bindless
+    if (bindlessEnabled) {
+        FillBindlessIndices(defValues, handles, amu);
+    }
+
     uint32_t transformBits = 0;
     {
         constexpr auto supportedMaterials = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT;
@@ -349,28 +472,12 @@ RenderDataDefaultMaterial::AllMaterialUniforms MaterialUniformsPackedFromInput(
     return amu;
 }
 
-RenderSubmeshBounds GetSubmeshBounds(const RenderMeshAabbData renderMeshAabbData,
-    const RenderMeshSkinData& meshSkinData, const RenderMeshBatchData renderMeshBatchData, const uint32_t submeshIdx,
-    const bool useJoints, const uint32_t batchCount)
+RenderSubmeshBounds GetSubmeshBounds(const RenderMinAndMax aabb)
 {
-    RenderMinAndMax mam = [&]() {
-        if (useJoints) {
-            return meshSkinData.aabb;
-        } else if (submeshIdx < renderMeshAabbData.submeshAabb.size()) {
-            return renderMeshAabbData.submeshAabb[submeshIdx];
-        } else {
-            // NOTE: there should always be data
-            return renderMeshAabbData.aabb;
-        }
-    }();
-    if (batchCount > 0) {
-        mam.minAabb = Math::min(mam.minAabb, renderMeshBatchData.aabb.minAabb);
-        mam.maxAabb = Math::max(mam.maxAabb, renderMeshBatchData.aabb.maxAabb);
-    }
     RenderSubmeshBounds bounds;
-    bounds.worldCenter = (mam.minAabb + mam.maxAabb) * 0.5f;
-    bounds.worldRadius = Math::sqrt(
-        Math::max(Math::Distance2(bounds.worldCenter, mam.minAabb), Math::Distance2(bounds.worldCenter, mam.maxAabb)));
+    bounds.worldCenter = (aabb.minAabb + aabb.maxAabb) * 0.5f;
+    bounds.worldRadius = Math::sqrt(Math::max(
+        Math::Distance2(bounds.worldCenter, aabb.minAabb), Math::Distance2(bounds.worldCenter, aabb.maxAabb)));
     return bounds;
 }
 
@@ -479,6 +586,21 @@ void FillMaterialDefaultRenderSlotData(const IShaderManager& shaderMgr,
     }
     CORE_ASSERT(renderSlotData.count <= RenderDataStoreDefaultMaterial::SHADER_DEFAULT_RENDER_SLOT_COUNT);
 }
+
+bool GetMeshAllowInstancing(const RenderDataStoreDefaultMaterial::MeshDataContainer& meshData,
+    const array_view<const RenderDataStoreDefaultMaterial::MaterialDataContainer> matData)
+{
+    bool allowInstancing = true;
+    for (const auto& submesh : meshData.submeshes) {
+        if ((submesh.sd.materialIndex < matData.size()) &&
+            (matData[submesh.sd.materialIndex].md.renderMaterialFlags & RENDER_MATERIAL_GPU_INSTANCING_BIT)) {
+            allowInstancing = allowInstancing && true;
+        } else {
+            allowInstancing = false;
+        }
+    }
+    return allowInstancing;
+}
 } // namespace
 
 RenderDataStoreDefaultMaterial::RenderDataStoreDefaultMaterial(
@@ -494,22 +616,28 @@ RenderDataStoreDefaultMaterial::RenderDataStoreDefaultMaterial(
     matData_.materialIdToIndex.insert_or_assign(0xFFFFffff, materialIndex);
     matData_.materialIdToIndex.insert_or_assign(0xFFFFFFFFffffffff, materialIndex);
 
-    // get flags for rt
-    if constexpr (ENABLE_RT) {
-        CORE_NS::IClassRegister *cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
-        if (cr) {
-            IGraphicsContext* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(
-                *cr, UID_GRAPHICS_CONTEXT);
-            if (graphicsContext) {
-                const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
-                if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
-                    rtEnabled_ = true;
-                }
+    // get flags for rt and bindless
+    if (auto* cr = renderContext.GetInterface<CORE_NS::IClassRegister>()) {
+        if (auto* graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(*cr, UID_GRAPHICS_CONTEXT)) {
+            const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
+            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
+                rtEnabled_ = true;
             }
-        } else {
-            CORE_LOG_E("get null ClassRegister");
+            if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_BINDLESS_PIPELINES_BIT) {
+                bindlessEnabled_ = true;
+            }
         }
     }
+
+    if (bindlessEnabled_) {
+        GetDefaultMaterialGpuResources(gpuResourceMgr_, bindlessResourceIndices_);
+    }
+}
+
+void RenderDataStoreDefaultMaterial::PreRender()
+{
+    // make sure that data is submitted
+    SubmitFrameMeshData();
 }
 
 void RenderDataStoreDefaultMaterial::PostRender()
@@ -523,25 +651,31 @@ void RenderDataStoreDefaultMaterial::Clear()
     // this could be further optimized to know if clear has already been called
 
     renderFrameObjectInfo_ = {};
-
-    // release references
-    handleReferences_.clear();
+    shadowBoundingVolume_ = {};
 
     meshData_.frameMeshData.clear();
     meshData_.frameSubmeshes.clear();
+    meshData_.frameSkinIndices.clear();
     meshData_.frameJointMatrixIndices.clear();
     meshData_.frameSubmeshMaterialFlags.clear();
     meshData_.frameMeshBlasInstanceData.clear();
-    for (auto& meshRef : meshData_.data) {
-        meshRef.frameReferenced = false; // clear for this frame processing
-    }
 
     // NOTE: material data is not cleared automatically anymore
     // we keep the data but update the resource references if data is used
     // separate destroy
     {
+        // resize the frame indices to match the material count
         matData_.frameIndices.clear();
-        matData_.idHashToFrameIndex.clear();
+        matData_.frameIndices.resize(matData_.data.size());
+        matData_.baseMaterialCount = static_cast<uint32_t>(matData_.frameIndices.size());
+        canUpdateBaseMaterialCount_ = true;
+        // make sure that the base material indices are alive and well
+        const size_t frameMatCount = matData_.frameIndices.size();
+        for (size_t idx = 0; idx < matData_.baseMaterialCount; ++idx) {
+            if (idx < frameMatCount) {
+                matData_.frameIndices[idx] = static_cast<uint32_t>(idx);
+            }
+        }
 
 #if (CORE3D_VALIDATION_ENABLED == 1)
         vector<uint32_t> noIdRemoval;
@@ -549,7 +683,6 @@ void RenderDataStoreDefaultMaterial::Clear()
         // check that we have id of material (if not, then it's a single frame (usually) debug material
         for (size_t idx = 0; idx < matData_.data.size(); ++idx) {
             auto& matRef = matData_.data[idx];
-            matRef.frameReferenced = false;
             if (matRef.noId) {
                 DestroyMaterialByIndex(static_cast<uint32_t>(idx), matData_);
 #if (CORE3D_VALIDATION_ENABLED == 1)
@@ -652,21 +785,45 @@ void RenderDataStoreDefaultMaterial::DestroyMeshData(const uint64_t id)
 
 void RenderDataStoreDefaultMaterial::GetDefaultRenderSlots()
 {
+    // NOTE: one should be able to set the masks for custom render slots
+    // one option would be to support a base render slot in shader manager for additional slots
+    // the base render slot should then be used for fetching slot data
+
     materialRenderSlots_.defaultOpaqueRenderSlot =
         shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
     materialRenderSlots_.opaqueMask = (1ull << uint64_t(materialRenderSlots_.defaultOpaqueRenderSlot));
+    // add deferred opaque mask to fetch the opaque render slot meshes if in use
     materialRenderSlots_.opaqueMask |=
         (1ull << uint64_t(shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_DEFERRED_OPAQUE)));
+    if (bindlessEnabled_) {
+        // add bindless opaque mask to fetch the opaque render slot meshes if in use
+        materialRenderSlots_.opaqueMask |= (1ull << uint64_t(shaderMgr_.GetRenderSlotId(
+                                                DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE_BINDLESS)));
+    }
 
     materialRenderSlots_.defaultTranslucentRenderSlot =
         shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
     materialRenderSlots_.translucentMask = (1ull << uint64_t(materialRenderSlots_.defaultTranslucentRenderSlot));
+    if (bindlessEnabled_) {
+        // add bindless translucent mask to fetch the translucent render slot meshes if in use
+        materialRenderSlots_.translucentMask |=
+            (1ull << uint64_t(
+                 shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT_BINDLESS)));
+    }
 
     materialRenderSlots_.defaultDepthRenderSlot =
         shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH);
     materialRenderSlots_.depthMask = (1ull << uint64_t(materialRenderSlots_.defaultDepthRenderSlot));
+    // add VSM depth to fetch the same depth render slot meshes
     materialRenderSlots_.depthMask |=
         (1ull << uint64_t(shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM)));
+    if (bindlessEnabled_) {
+        // add bindless translucent mask to fetch the translucent render slot meshes if in use
+        materialRenderSlots_.depthMask |=
+            (1ull << uint64_t(shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_BINDLESS)));
+        materialRenderSlots_.depthMask |= (1ull << uint64_t(shaderMgr_.GetRenderSlotId(
+                                               DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM_BINDLESS)));
+    }
 }
 
 uint32_t RenderDataStoreDefaultMaterial::AddMaterialDataImpl(const uint32_t matIndex,
@@ -683,8 +840,9 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialDataImpl(const uint32_t matI
     if ((materialIndex == ~0U) && (matData_.availableIndices.empty())) {
         // totally new indices and material
         materialIndex = static_cast<uint32_t>(matData_.allUniforms.size());
-        matData_.handles.push_back(ConvertMaterialHandleReferences(materialHandles, handleReferences_));
-        matData_.allUniforms.push_back(MaterialUniformsPackedFromInput(materialUniforms));
+        matData_.handles.push_back(ConvertMaterialHandleReferences(materialHandles));
+        matData_.allUniforms.push_back(MaterialUniformsPackedFromInput(
+            bindlessEnabled_, materialUniforms, matData_.handles.back(), bindlessResourceIndices_));
         matData_.customPropertyData.push_back({});
         matData_.customResourceData.push_back({});
         matData_.data.push_back({});
@@ -698,17 +856,24 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialDataImpl(const uint32_t matI
             CORE_ASSERT(true);
             return ~0U;
         }
-        matData_.handles[materialIndex] = ConvertMaterialHandleReferences(materialHandles, handleReferences_);
-        matData_.allUniforms[materialIndex] = MaterialUniformsPackedFromInput(materialUniforms);
+        matData_.handles[materialIndex] = ConvertMaterialHandleReferences(materialHandles);
+        matData_.allUniforms[materialIndex] = MaterialUniformsPackedFromInput(
+            bindlessEnabled_, materialUniforms, matData_.handles[materialIndex], bindlessResourceIndices_);
         matData_.customPropertyData[materialIndex].data.clear();
         matData_.customResourceData[materialIndex] = {};
+    }
+    const bool canUpdateFrameIndices = (matData_.data.size() < matData_.frameIndices.size());
+    if (canUpdateBaseMaterialCount_ && canUpdateFrameIndices) {
+        matData_.frameIndices.resize(matData_.data.size());
+        // add base material count to see if frame indices are up-to-date
+        matData_.baseMaterialCount = static_cast<uint32_t>(matData_.frameIndices.size());
+    } else {
+        canUpdateBaseMaterialCount_ = false;
     }
 
     // NOTE: when material is added/updated, we need to keep the handle reference
     // the user might not have local references
 
-    // not referenced yet this frame for rendering (false)
-    matData_.data[materialIndex].frameReferenced = false;
     matData_.data[materialIndex].noId = false;
     auto& currMaterialData = matData_.data[materialIndex].md;
     currMaterialData = materialData;
@@ -732,9 +897,6 @@ uint32_t RenderDataStoreDefaultMaterial::AddMaterialDataImpl(const uint32_t matI
             RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT);
         for (uint32_t idx = 0; idx < maxCount; ++idx) {
             if (customResourceData[idx]) {
-                // NOTE: when material is added/updated, we need to keep the handle reference
-                // the user might not have local references
-                handleReferences_.push_back(customResourceData[idx]);
                 dataRef.resourceHandles[dataRef.resourceHandleCount++] = customResourceData[idx].GetHandle();
             }
         }
@@ -785,57 +947,33 @@ uint32_t RenderDataStoreDefaultMaterial::UpdateMaterialData(const uint64_t id,
 }
 
 RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(
-    const uint64_t id, const uint32_t instanceCount)
+    const uint32_t index, const uint32_t instanceCount)
 {
-    // we expect the material to be in data
-#if (CORE3D_VALIDATION_ENABLED == 1)
-    if (const auto iter = matData_.materialIdToIndex.find(id); iter == matData_.materialIdToIndex.cend()) {
-        const string name = string("AddFrameMaterialData" + BASE_NS::to_hex(id));
-        CORE_LOG_ONCE_W(name, "AddFrameMaterialData id not updated prior add");
-    }
-#endif
-    // NOTE: we need to update the reference counts for rendering time
-    // material resource references are not kept alive when just updating the materials
-    // with this approach the resources can be destroyed during the application time
-
-    const uint64_t searchId = HashMaterialId(id, static_cast<uint32_t>(instanceCount));
-    if (const auto iter = matData_.idHashToFrameIndex.find(searchId); iter != matData_.idHashToFrameIndex.cend()) {
-        if (iter->second < static_cast<uint32_t>(matData_.frameIndices.size())) {
-            // these have been already updated with reference counts, just return the indices
-            return { matData_.frameIndices[iter->second], iter->second };
+    if (index < matData_.data.size()) {
+        // regular material without instances can use direct index
+        if ((instanceCount == 1U) && (index < matData_.frameIndices.size()) &&
+            (matData_.frameIndices[index] == index)) {
+            // update material types for this frame
+            UpdateFrameMaterialResourceReferences(index);
+            return RenderFrameMaterialIndices { index, index };
+        } else {
+            // append instance count amount
+            const uint32_t frameMaterialOffset = static_cast<uint32_t>(matData_.frameIndices.size());
+            matData_.frameIndices.append(instanceCount, index); // add material index
+            // update material types for this frame
+            UpdateFrameMaterialResourceReferences(index);
+            return { index, frameMaterialOffset };
         }
-    } else if (const auto matIter = matData_.materialIdToIndex.find(id); matIter != matData_.materialIdToIndex.cend()) {
-        // append instance count amount
-        const uint32_t frameMaterialOffset = static_cast<uint32_t>(matData_.frameIndices.size());
-        matData_.idHashToFrameIndex.insert_or_assign(searchId, frameMaterialOffset);
-        RenderFrameMaterialIndices rfmi { matIter->second, frameMaterialOffset };
-        matData_.frameIndices.append(instanceCount, matIter->second); // add material index
-
-        // update reference counts for this frame if needed
-        UpdateFrameMaterialResourceReferences(matIter->second);
-
-        return rfmi;
+    } else {
+// we expect the material to be in data
+#if (CORE3D_VALIDATION_ENABLED == 1)
+        {
+            const string name = string("AddFrameMaterialData") + BASE_NS::to_string(index);
+            CORE_LOG_ONCE_W(name, "AddFrameMaterialData index of material (idx=%u) not updated prior add", index);
+        }
+#endif
     }
     return {};
-}
-
-RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(const uint64_t id)
-{
-    return AddFrameMaterialData(id, 1U);
-}
-
-RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(
-    const BASE_NS::array_view<const uint64_t> ids)
-{
-    if (!ids.empty()) {
-        RenderFrameMaterialIndices rfmi = AddFrameMaterialData(ids[0U], 1U);
-        for (size_t idx = 1; idx < ids.size(); ++idx) {
-            AddFrameMaterialData(ids[idx], 1U);
-        }
-        return rfmi;
-    } else {
-        return {};
-    }
 }
 
 RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(
@@ -845,6 +983,7 @@ RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(
     const BASE_NS::array_view<const uint8_t> customPropertyData,
     const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings)
 {
+    // DEPRECATED support, needs to work for compatibility
     // NOTE: this data is added as is
     // cannot be retrieved with id or anything
     // mostly used for some debug meshes etc.
@@ -876,45 +1015,321 @@ void RenderDataStoreDefaultMaterial::UpdateFrameMaterialResourceReferences(const
     CORE_ASSERT(matData_.data.size() == matData_.handles.size());
     CORE_ASSERT(matData_.data.size() == matData_.customResourceData.size());
     if (materialIndex < static_cast<uint32_t>(matData_.handles.size())) {
-        auto& matDataRef = matData_.data[materialIndex];
-        if (!matDataRef.frameReferenced) {
-            // add references
-            matDataRef.frameReferenced = true;
-            const auto& handles = matData_.handles[materialIndex];
-            // NOTE: access to GPU resource manager is locking behaviour
-            // this can be evaluated further and possibly add array_view for get to get all with a one lock
-            for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT; ++idx) {
-                if (RenderHandleUtil::IsValid(handles.images[idx])) {
-                    handleReferences_.push_back(gpuResourceMgr_.Get(handles.images[idx]));
-                }
-                if (RenderHandleUtil::IsValid(handles.samplers[idx])) {
-                    handleReferences_.push_back(gpuResourceMgr_.Get(handles.samplers[idx]));
-                }
+        const auto& matDataRef = matData_.data[materialIndex];
+        // update render frame object info
+        renderFrameObjectInfo_.renderMaterialFlags |= matDataRef.md.renderMaterialFlags;
+    }
+}
+
+void RenderDataStoreDefaultMaterial::SubmitFrameMeshData()
+{
+    if (!frameMeshDataSubmitted_) {
+        frameMeshDataSubmitted_ = true;
+
+        // make sure that the base material indices are alive and well
+        const size_t frameMatCount = matData_.frameIndices.size();
+        for (size_t idx = 0; idx < matData_.baseMaterialCount; ++idx) {
+            if (idx < frameMatCount) {
+                matData_.frameIndices[idx] = static_cast<uint32_t>(idx);
             }
-            const auto& customHandles = matData_.customResourceData[materialIndex];
-            for (uint32_t idx = 0; idx < RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT; ++idx) {
-                if (RenderHandleUtil::IsValid(customHandles.resourceHandles[idx])) {
-                    handleReferences_.push_back(gpuResourceMgr_.Get(customHandles.resourceHandles[idx]));
-                }
-            }
-            // update render frame object info
-            renderFrameObjectInfo_.renderMaterialFlags |= matDataRef.md.renderMaterialFlags;
         }
+
+        // NOTES:
+        // 1. When using skinning the skinning AABB is the mesh AABB and submesh AABB calculations are irrelevant
+        // 2. Full mesh AABB is currently irrelevant, it could be used in the future for coarse culling
+        // e.g. for full levels, or coarse culling with some extra room for ray tracing of TLASes
+
+        auto ProcessMeshBatchData = [&](const bool instancing, const bool materialInstancing,
+                                        MeshDataContainer& meshDataContainer,
+                                        array_view<RenderMeshBatchDataContainer> batchData) {
+            const uint32_t fullBatchCount = static_cast<uint32_t>(batchData.size());
+            uint32_t fullBatchCounter = 0U;
+            uint32_t batchIndex = 0U;
+            uint32_t baseRenderMeshIndex = 0U;
+            bool shadowCaster = false;
+            // forced aabb used with skinning, with basic types submesh based aabb is used for batch submit
+            RenderMinAndMax forcedAabb {};
+            if (fullBatchCount > 0) {
+                materialFrameOffsets_.clear();
+                // the submesh size in here is always the same
+                submeshAabbs_.clear();
+                submeshAabbs_.resize(meshDataContainer.submeshes.size());
+            }
+            for (const auto& batchMeshRef : batchData) {
+                const auto& rmd = batchMeshRef.rmd;
+                const uint32_t skinJointIndex = batchMeshRef.skinIndex;
+
+                const bool useJoints = (skinJointIndex != RenderSceneDataConstants::INVALID_INDEX);
+                const RenderSubmeshFlags rsAndFlags =
+                    useJoints ? 0xFFFFffff : (~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT);
+                const RenderSubmeshFlags rsOrFlags = (Math::Determinant(rmd.world) < 0.0f)
+                                                         ? RenderSubmeshFlagBits::RENDER_SUBMESH_INVERSE_WINDING_BIT
+                                                         : 0U;
+                // forced aabb used with skinning
+                if (useJoints) {
+                    // NOTE: already in world space
+                    forcedAabb.minAabb = Math::min(forcedAabb.minAabb, batchMeshRef.forcedAabb.minAabb);
+                    forcedAabb.maxAabb = Math::max(forcedAabb.maxAabb, batchMeshRef.forcedAabb.maxAabb);
+                }
+
+                // NOTE: When object is skinned we use the mesh bounding box for all the submeshes because currently
+                // there is no way to know here which joints affect one specific renderSubmesh.
+
+                if (batchIndex == 0) {
+                    baseRenderMeshIndex = static_cast<uint32_t>(meshData_.frameMeshData.size());
+                }
+                MeshDataContainer* rmbcMesh = nullptr;
+                if (materialInstancing && (batchMeshRef.rmcBatchMeshIndex < meshData_.data.size())) {
+                    rmbcMesh = &meshData_.data[batchMeshRef.rmcBatchMeshIndex];
+                }
+                meshData_.frameMeshData.push_back(rmd);
+
+                uint32_t currMatBatchCount = 1U;
+                if (materialInstancing) {
+                    // calculate before fullBatchCounter is increased by one
+                    currMatBatchCount = uint32_t(fullBatchCount) - uint32_t(fullBatchCounter);
+                    if (currMatBatchCount > BATCH_COUNT) {
+                        currMatBatchCount = BATCH_COUNT;
+                    }
+                }
+                // NOTE: only when batch ends process the submesh with instance count
+                fullBatchCounter++;
+                // without instancing the submitBatch is always on
+                const bool submitBatch =
+                    (!instancing) || ((batchIndex == BATCH_COUNT - 1) || (fullBatchCounter == fullBatchCount));
+                // process submeshes for rendering
+                for (uint32_t submeshIdx = 0; submeshIdx < meshDataContainer.submeshes.size(); ++submeshIdx) {
+                    CORE_ASSERT(meshData_.frameSubmeshes.size() == meshData_.frameSubmeshMaterialFlags.size());
+
+                    if (!useJoints) {
+                        const auto& submesh = meshDataContainer.submeshes[submeshIdx];
+
+                        CORE_ASSERT(submeshIdx < submeshAabbs_.size());
+                        auto& sAabb = submeshAabbs_[submeshIdx];
+                        const RenderMinAndMax rmam = GetWorldAABB(rmd.world, submesh.sd.aabb);
+                        sAabb.minAabb = Math::min(sAabb.minAabb, rmam.minAabb);
+                        sAabb.maxAabb = Math::max(sAabb.maxAabb, rmam.maxAabb);
+                    }
+                    if (batchIndex == 0) {
+                        auto& submesh = meshDataContainer.submeshes[submeshIdx];
+                        RenderFrameMaterialIndices matIndices =
+                            AddFrameMaterialData(submesh.sd.materialIndex, currMatBatchCount);
+                        materialFrameOffsets_.push_back(matIndices.frameOffset);
+                        shadowCaster = IsShadowCaster(matIndices.index, matData_.data);
+                    }
+                    if (submitBatch) {
+                        const uint32_t submeshFrameIndex = static_cast<uint32_t>(meshData_.frameSubmeshes.size());
+                        meshData_.frameSubmeshes.push_back({});
+                        auto& rs = meshData_.frameSubmeshes.back();
+
+                        auto& submesh = meshDataContainer.submeshes[submeshIdx];
+
+                        const RenderMinAndMax finalAabb = (useJoints) ? forcedAabb : submeshAabbs_[submeshIdx];
+                        rs.bounds = GetSubmeshBounds(finalAabb);
+
+                        rs.buffers = submesh.sd.buffers;
+                        rs.drawCommand = submesh.sd.drawCommand;
+                        rs.drawCommand.instanceCount = rs.drawCommand.instanceCount + batchIndex;
+                        rs.submeshFlags = (submesh.sd.submeshFlags & rsAndFlags) | rsOrFlags;
+
+                        rs.layers.layerMask = rmd.layerMask;
+                        rs.layers.sceneId = static_cast<uint32_t>(rmd.sceneId); // ID is originally 32 bit.
+                        rs.layers.meshRenderSortLayer = submesh.sd.meshRenderSortLayer;
+                        rs.layers.meshRenderSortLayerOrder = submesh.sd.meshRenderSortLayerOrder;
+
+                        const uint32_t baseMaterialFrameOffset =
+                            (submeshIdx < static_cast<uint32_t>(materialFrameOffsets_.size()))
+                                ? materialFrameOffsets_[submeshIdx]
+                                : 0U;
+                        const uint32_t materialIndex =
+                            (baseMaterialFrameOffset < static_cast<uint32_t>(matData_.frameIndices.size()))
+                                ? matData_.frameIndices[baseMaterialFrameOffset]
+                                : 0U;
+                        rs.indices = { rmd.id, meshDataContainer.md.meshId, submeshFrameIndex, baseRenderMeshIndex,
+                            skinJointIndex, materialIndex, baseMaterialFrameOffset };
+
+                        CORE_ASSERT(materialIndex < matData_.data.size());
+                        rs.renderSubmeshMaterialFlags = (submesh.sd.renderSubmeshMaterialFlags);
+                        rs.renderSubmeshMaterialFlags |=
+                            materialInstancing ? RENDER_MATERIAL_GPU_INSTANCING_MATERIAL_BIT : 0U;
+                        const auto& matData = matData_.data[materialIndex].md;
+                        PatchRenderMaterialSortLayers(matData, rs.layers);
+
+                        const auto& matRenderSlotData = matData_.renderSlotData[materialIndex];
+                        FillSubmeshImpl({ matRenderSlotData.data, matRenderSlotData.count }, submeshFrameIndex, rs);
+
+                        // add additional materials
+                        for (uint32_t mIdx = submesh.sd.additionalMaterialOffset;
+                             mIdx < submesh.sd.additionalMaterialCount; ++mIdx) {
+                            if (mIdx < meshDataContainer.submeshAdditionalMaterials.size()) {
+                                const uint32_t addSubmeshFrameIndex =
+                                    static_cast<uint32_t>(meshData_.frameSubmeshes.size());
+                                meshData_.frameSubmeshes.push_back(rs); // start with the current setup
+                                auto& addRs = meshData_.frameSubmeshes.back();
+                                AddFrameRenderMeshDataAdditionalMaterial(
+                                    meshDataContainer.submeshAdditionalMaterials[mIdx], addSubmeshFrameIndex, addRs);
+                            }
+                        }
+
+                        // add bounds to shadow casters
+                        ExtentShadowSceneBounds(shadowCaster, finalAabb, shadowBoundingVolume_);
+                    }
+                    // add instanced materials from the correct mesh
+                    if (materialInstancing) {
+                        // material offset for submesh
+                        const uint32_t baseFrameOffset =
+                            (submeshIdx < static_cast<uint32_t>(materialFrameOffsets_.size()))
+                                ? materialFrameOffsets_[submeshIdx]
+                                : 0U;
+                        uint32_t matIndex = 0U;
+                        if (rmbcMesh && (submeshIdx < rmbcMesh->submeshes.size())) {
+                            const auto& currSubmesh = rmbcMesh->submeshes[submeshIdx];
+                            matIndex = currSubmesh.sd.materialIndex;
+                        }
+                        AddFrameMaterialInstanceData(matIndex, baseFrameOffset, batchIndex);
+                    }
+                }
+                if (submitBatch) {
+                    // reset
+                    shadowCaster = false;
+                    batchIndex = 0;
+                    baseRenderMeshIndex = 0;
+                    forcedAabb = {};
+                    materialFrameOffsets_.clear();
+                    // the submesh size in here is always the same
+                    submeshAabbs_.clear();
+                    submeshAabbs_.resize(meshDataContainer.submeshes.size());
+                } else {
+                    batchIndex++;
+                }
+            }
+        };
+
+        for (auto& meshDataRef : meshData_.data) {
+            if (meshDataRef.batchComponentFrameMeshData.empty() && meshDataRef.batchFrameMeshData.empty() &&
+                meshDataRef.frameMeshData.empty()) {
+                continue;
+            }
+            // NOTE: would not be needed if doing direct submesh GPU instancing
+            const bool allowInstancing = GetMeshAllowInstancing(meshDataRef, matData_.data);
+
+            // process both, automatic batching and render mesh batch component data
+            if (!meshDataRef.batchComponentFrameMeshData.empty()) {
+                ProcessMeshBatchData(allowInstancing, true, meshDataRef, meshDataRef.batchComponentFrameMeshData);
+                meshDataRef.batchComponentFrameMeshData.clear();
+            }
+            if (!meshDataRef.batchFrameMeshData.empty()) {
+                ProcessMeshBatchData(allowInstancing, false, meshDataRef, meshDataRef.batchFrameMeshData);
+                meshDataRef.batchFrameMeshData.clear();
+            }
+            // process non patchable frame mesh data
+            if (!meshDataRef.frameMeshData.empty()) {
+                ProcessMeshBatchData(false, false, meshDataRef, meshDataRef.frameMeshData);
+                meshDataRef.frameMeshData.clear();
+            }
+        }
+        // update shadow caster bounds
+        renderFrameObjectInfo_.shadowCasterBoundingSphere = CalculateFinalSceneBoundingSphere(shadowBoundingVolume_);
     }
 }
 
 uint32_t RenderDataStoreDefaultMaterial::AddMeshData(const RenderMeshData& meshData)
 {
-    // DEPRECATED support
+    frameMeshDataSubmitted_ = false;
+    // DEPRECATED support, needs to work for compatibility
     const uint32_t renderMeshIdx = static_cast<uint32_t>(meshData_.frameMeshData.size());
     meshData_.frameMeshData.push_back(meshData);
     return renderMeshIdx;
 }
 
-void RenderDataStoreDefaultMaterial::AddFrameRenderMeshDataAdditionalMaterial(
-    const uint64_t matId, const uint32_t submeshFrameIndex, RenderSubmesh& renderSubmesh)
+void RenderDataStoreDefaultMaterial::AddFrameRenderMeshData(
+    const RenderMeshData& meshData, const RenderMeshSkinData& meshSkinData, const RenderMeshBatchData& batchData)
 {
-    RenderFrameMaterialIndices matIndices = GetCertainMaterialIndices(AddFrameMaterialData(matId, 1U), matData_);
+    frameMeshDataSubmitted_ = false;
+
+    // with real render mesh batch component we need the actual mesh where batching happens
+    const bool isRmbc = (batchData.meshId != RenderSceneDataConstants::INVALID_ID) &&
+                        (batchData.renderMeshId != RenderSceneDataConstants::INVALID_ID);
+    const uint64_t meshId = isRmbc ? batchData.meshId : meshData.meshId;
+    const uint64_t batchDataMeshId = isRmbc ? meshData.meshId : RenderSceneDataConstants::INVALID_ID;
+    if (auto iter = meshData_.meshIdToIndex.find(meshId); iter != meshData_.meshIdToIndex.end()) {
+        CORE_ASSERT(iter->second < meshData_.data.size());
+        if (iter->second < meshData_.data.size()) {
+            auto& mesh = meshData_.data[iter->second];
+            // full mesh instancing checked later
+            bool allowInstancing = true;
+
+            if (rtEnabled_) {
+                // update for tlas update
+                UpdateFrameMeshBlasInstanceData(mesh, meshData.world);
+            }
+
+            const uint32_t skinJointIndex = AddFrameSkinJointMatricesImpl(
+                meshSkinData.id, meshSkinData.skinJointMatrices, meshSkinData.prevSkinJointMatrices);
+            // if joint matrices were stored and instancing is allowed check are there instances with a index. this
+            // means the skin instance is different (potentially different joint matrices). skinning
+            // supports only one UBO range of joint data and currently does not check sharing of data
+            if (skinJointIndex != RenderSceneDataConstants::INVALID_INDEX) {
+                const array_view<const RenderMeshBatchDataContainer> batchDataContainer =
+                    (isRmbc) ? mesh.batchComponentFrameMeshData : mesh.batchFrameMeshData;
+
+                allowInstancing = std::none_of(batchDataContainer.cbegin(), batchDataContainer.cend(),
+                    [skinJointIndex](
+                        const RenderMeshBatchDataContainer& data) { return data.skinIndex != skinJointIndex; });
+            }
+            if (allowInstancing) {
+                const auto& world = meshData.world;
+                // negative scale requires a different graphics state and assuming most of the content
+                // doesn't have negative scaling we'll just use separate draws for inverted meshes instead
+                // of instanced draws. negative scaling factor can be determined by checking is the
+                // determinant of the 3x3 sub-matrix negative.
+                const float determinant = world.x.x * (world.y.y * world.z.z - world.z.y * world.y.z) -
+                                          world.x.y * (world.y.x * world.z.z - world.y.z * world.z.x) +
+                                          world.x.z * (world.y.x * world.z.y - world.y.y * world.z.x);
+                if (determinant < 0.f) {
+                    allowInstancing = false;
+                }
+            }
+            uint32_t rmbcMeshIdx = RenderSceneDataConstants::INVALID_INDEX;
+            if (!allowInstancing) {
+                mesh.frameMeshData.push_back({ meshData, rmbcMeshIdx, skinJointIndex, meshSkinData.aabb });
+            } else {
+                if (isRmbc) {
+                    if (const auto rmbcIter = meshData_.meshIdToIndex.find(batchDataMeshId);
+                        rmbcIter != meshData_.meshIdToIndex.cend()) {
+                        rmbcMeshIdx = rmbcIter->second;
+                    }
+                    mesh.batchComponentFrameMeshData.push_back(
+                        { meshData, rmbcMeshIdx, skinJointIndex, meshSkinData.aabb });
+                } else {
+                    mesh.batchFrameMeshData.push_back({ meshData, rmbcMeshIdx, skinJointIndex, meshSkinData.aabb });
+                }
+            }
+        }
+    }
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    if (!meshData_.meshIdToIndex.contains(meshData.meshId)) {
+        const string str = string("AddFrameRenderMeshData_") + to_string(meshData.meshId);
+        CORE_LOG_ONCE_W(str, "CORE3D_VALIDATION: Mesh id not found for render mesh");
+    }
+#endif
+}
+
+void RenderDataStoreDefaultMaterial::AddFrameRenderMeshData(
+    const RenderMeshData& meshData, const RenderMeshSkinData& meshSkinData)
+{
+    AddFrameRenderMeshData(meshData, meshSkinData, {});
+}
+
+void RenderDataStoreDefaultMaterial::AddFrameRenderMeshData(const RenderMeshData& meshData)
+{
+    AddFrameRenderMeshData(meshData, {}, {});
+}
+
+void RenderDataStoreDefaultMaterial::AddFrameRenderMeshDataAdditionalMaterial(
+    const uint32_t matIndex, const uint32_t submeshFrameIndex, RenderSubmesh& renderSubmesh)
+{
+    RenderFrameMaterialIndices matIndices = GetCertainMaterialIndices(AddFrameMaterialData(matIndex, 1U), matData_);
     renderSubmesh.indices.materialIndex = matIndices.index;
     renderSubmesh.indices.materialFrameOffset = matIndices.frameOffset;
     const auto& matData = matData_.data[matIndices.index].md;
@@ -922,236 +1337,6 @@ void RenderDataStoreDefaultMaterial::AddFrameRenderMeshDataAdditionalMaterial(
 
     const auto& matRenderSlotData = matData_.renderSlotData[matIndices.index];
     FillSubmeshImpl({ matRenderSlotData.data, matRenderSlotData.count }, submeshFrameIndex, renderSubmesh);
-}
-
-void RenderDataStoreDefaultMaterial::AddFrameRenderMeshDataImpl(const RenderMeshData& meshData,
-    const RenderMeshAabbData& meshAabbData, const RenderMeshSkinData& meshSkinData,
-    const RenderMeshBatchData& batchData, const uint32_t batchCount)
-{
-    // full render mesh process data
-    if (auto iter = meshData_.meshIdToIndex.find(meshData.meshId); iter != meshData_.meshIdToIndex.end()) {
-        CORE_ASSERT(iter->second < meshData_.data.size());
-        if (iter->second < meshData_.data.size()) {
-            auto& mesh = meshData_.data[iter->second];
-
-            if constexpr (ENABLE_RT) {
-                if (rtEnabled_) {
-                    // update for tlas update
-                    UpdateFrameMeshBlasInstanceData(mesh, meshData.world);
-                }
-            }
-
-            const bool frameReferenced = mesh.frameReferenced;
-            mesh.frameReferenced = true; // mark for referenced this frame
-
-            const uint32_t skinJointIndex =
-                AddFrameSkinJointMatricesImpl(meshSkinData.skinJointMatrices, meshSkinData.prevSkinJointMatrices);
-            const bool useJoints = (skinJointIndex != RenderSceneDataConstants::INVALID_INDEX);
-            const RenderSubmeshFlags rsAndFlags =
-                useJoints ? 0xFFFFffff : (~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT);
-            const RenderSubmeshFlags rsOrFlags = (Math::Determinant(meshData.world) < 0.0f)
-                                                     ? RenderSubmeshFlagBits::RENDER_SUBMESH_INVERSE_WINDING_BIT
-                                                     : 0U;
-
-            // NOTE: When object is skinned we use the mesh bounding box for all the submeshes because currently
-            // there is no way to know here which joints affect one specific renderSubmesh.
-
-            const uint32_t renderMeshIdx = static_cast<uint32_t>(meshData_.frameMeshData.size());
-            meshData_.frameMeshData.push_back(meshData);
-            // process submeshes for rendering
-            for (uint32_t submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx) {
-                CORE_ASSERT(meshData_.frameSubmeshes.size() == meshData_.frameSubmeshMaterialFlags.size());
-
-                const uint32_t submeshFrameIndex = static_cast<uint32_t>(meshData_.frameSubmeshes.size());
-                meshData_.frameSubmeshes.push_back({});
-                auto& rs = meshData_.frameSubmeshes.back();
-
-                auto& submesh = mesh.submeshes[submeshIdx];
-                submesh.frameReferenced = frameReferenced; // process if needed
-                UpdateFrameMeshResourceReferences(submesh);
-
-                rs.bounds = GetSubmeshBounds(meshAabbData, meshSkinData, batchData, submeshIdx, useJoints, batchCount);
-                rs.buffers = submesh.sd.buffers;
-                rs.drawCommand = submesh.sd.drawCommand;
-                rs.submeshFlags = (submesh.sd.submeshFlags & rsAndFlags) | rsOrFlags;
-
-                rs.layers.layerMask = meshData.layerMask;
-                rs.layers.sceneId = static_cast<uint32_t>(meshData.sceneId); // ID is originally 32 bit.
-                rs.layers.meshRenderSortLayer = submesh.sd.meshRenderSortLayer;
-                rs.layers.meshRenderSortLayerOrder = submesh.sd.meshRenderSortLayerOrder;
-
-                const uint32_t matInstanceCount = (batchCount > 0) ? rs.drawCommand.instanceCount : 1U;
-                RenderFrameMaterialIndices matIndices =
-                    GetCertainMaterialIndices(AddFrameMaterialData(submesh.sd.material, matInstanceCount), matData_);
-                rs.indices = { meshData.id, mesh.md.meshId, submeshFrameIndex, renderMeshIdx, skinJointIndex,
-                    matIndices.index, matIndices.frameOffset };
-
-                rs.renderSubmeshMaterialFlags = (submesh.sd.renderSubmeshMaterialFlags | batchData.materialFlags);
-                const auto& matData = matData_.data[matIndices.index].md;
-                PatchRenderMaterialSortLayers(matData, rs.layers);
-
-                const auto& matRenderSlotData = matData_.renderSlotData[matIndices.index];
-                FillSubmeshImpl({ matRenderSlotData.data, matRenderSlotData.count }, submeshFrameIndex, rs);
-
-                // add additional materials
-                for (uint32_t mIdx = submesh.sd.additionalMaterialOffset; mIdx < submesh.sd.additionalMaterialCount;
-                     ++mIdx) {
-                    if (mIdx < mesh.submeshAdditionalMaterials.size()) {
-                        const uint32_t addSubmeshFrameIndex = static_cast<uint32_t>(meshData_.frameSubmeshes.size());
-                        meshData_.frameSubmeshes.push_back(rs); // start with the current setup
-                        auto& addRs = meshData_.frameSubmeshes.back();
-                        AddFrameRenderMeshDataAdditionalMaterial(
-                            mesh.submeshAdditionalMaterials[mIdx], addSubmeshFrameIndex, addRs);
-                    }
-                }
-            }
-        }
-    }
-#if (CORE3D_VALIDATION_ENABLED == 1)
-    if (!meshData_.meshIdToIndex.contains(meshData.meshId)) {
-        const string str = string("AddFrameRenderMeshDataImpl_") + to_string(meshData.meshId);
-        CORE_LOG_ONCE_W(str, "CORE3D_VALIDATION: Mesh id not found for render mesh");
-    }
-#endif
-}
-
-void RenderDataStoreDefaultMaterial::AddFrameRenderMeshData(const array_view<const RenderMeshData> meshData,
-    const RenderMeshAabbData& meshAabbData, const RenderMeshSkinData& meshSkinData,
-    const RenderMeshBatchData& batchData)
-{
-    bool initialProcess = true;
-    uint32_t batchIndex = 0;
-    const uint32_t batchCount = (static_cast<uint32_t>(meshData.size()) - 1);
-    for (const auto& meshDataRef : meshData) {
-        if (auto iter = meshData_.meshIdToIndex.find(meshDataRef.meshId); iter != meshData_.meshIdToIndex.end()) {
-            CORE_ASSERT(iter->second < meshData_.data.size());
-            if (iter->second < meshData_.data.size()) {
-                auto& mesh = meshData_.data[iter->second];
-
-                if constexpr (ENABLE_RT) {
-                    if (rtEnabled_) {
-                        // update for tlas update
-                        UpdateFrameMeshBlasInstanceData(mesh, meshDataRef.world);
-                    }
-                }
-                const bool frameReferenced = mesh.frameReferenced;
-                mesh.frameReferenced = true; // mark for referenced this frame
-                uint32_t skinJointIndex = ~0U;
-                RenderSubmeshFlags rsAndFlags = 0U;
-                RenderSubmeshFlags rsOrFlags = 0U;
-                bool useJoints = false;
-                if (initialProcess) {
-                    materialFrameOffsets_.clear();
-                    materialFrameOffsets_.reserve(mesh.submeshes.size());
-                    skinJointIndex = AddFrameSkinJointMatricesImpl(
-                        meshSkinData.skinJointMatrices, meshSkinData.prevSkinJointMatrices);
-                    useJoints = (skinJointIndex != RenderSceneDataConstants::INVALID_INDEX);
-                    rsAndFlags = useJoints ? 0xFFFFffff : (~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT);
-                    rsOrFlags = (Math::Determinant(meshDataRef.world) < 0.0f)
-                                    ? RenderSubmeshFlagBits::RENDER_SUBMESH_INVERSE_WINDING_BIT
-                                    : 0U;
-                }
-                // NOTE: When object is skinned we use the mesh bounding box for all the submeshes because currently
-                // there is no way to know here which joints affect one specific renderSubmesh.
-
-                const uint32_t renderMeshIdx = static_cast<uint32_t>(meshData_.frameMeshData.size());
-                meshData_.frameMeshData.push_back(meshDataRef);
-                for (uint32_t submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx) {
-                    CORE_ASSERT(meshData_.frameSubmeshes.size() == meshData_.frameSubmeshMaterialFlags.size());
-                    auto& submesh = mesh.submeshes[submeshIdx];
-                    submesh.frameReferenced = frameReferenced; // process if needed
-                    UpdateFrameMeshResourceReferences(submesh);
-
-                    if (initialProcess) {
-                        const uint32_t submeshFrameIndex = static_cast<uint32_t>(meshData_.frameSubmeshes.size());
-                        meshData_.frameSubmeshes.push_back({});
-                        auto& rs = meshData_.frameSubmeshes.back();
-
-                        rs.bounds =
-                            GetSubmeshBounds(meshAabbData, meshSkinData, batchData, submeshIdx, useJoints, batchCount);
-                        rs.buffers = submesh.sd.buffers;
-                        rs.drawCommand = submesh.sd.drawCommand;
-                        // additional batch instance counts
-                        rs.drawCommand.instanceCount += batchCount;
-                        rs.submeshFlags = (submesh.sd.submeshFlags & rsAndFlags) | rsOrFlags;
-                        rs.renderSubmeshMaterialFlags =
-                            (submesh.sd.renderSubmeshMaterialFlags | batchData.materialFlags);
-
-                        rs.layers.layerMask = meshDataRef.layerMask;
-                        rs.layers.sceneId = static_cast<uint32_t>(meshDataRef.sceneId); // ID is originally 32 bit.
-                        rs.layers.meshRenderSortLayer = submesh.sd.meshRenderSortLayer;
-                        rs.layers.meshRenderSortLayerOrder = submesh.sd.meshRenderSortLayerOrder;
-
-                        const uint32_t matInstanceCount = (batchCount > 0) ? rs.drawCommand.instanceCount : 1U;
-                        RenderFrameMaterialIndices matIndices = GetCertainMaterialIndices(
-                            AddFrameMaterialData(submesh.sd.material, matInstanceCount), matData_);
-                        // add for the batch materials
-                        materialFrameOffsets_.push_back(matIndices.frameOffset);
-                        rs.indices = { meshDataRef.id, mesh.md.meshId, submeshFrameIndex, renderMeshIdx, skinJointIndex,
-                            matIndices.index, matIndices.frameOffset };
-
-                        const auto& matData = matData_.data[matIndices.index].md;
-                        PatchRenderMaterialSortLayers(matData, rs.layers);
-
-                        const auto& matRenderSlotData = matData_.renderSlotData[matIndices.index];
-                        FillSubmeshImpl({ matRenderSlotData.data, matRenderSlotData.count }, submeshFrameIndex, rs);
-
-                        // add additional materials
-                        for (uint32_t mIdx = submesh.sd.additionalMaterialOffset;
-                             mIdx < submesh.sd.additionalMaterialCount; ++mIdx) {
-                            if (mIdx < mesh.submeshAdditionalMaterials.size()) {
-                                const uint32_t addSubmeshFrameIndex =
-                                    static_cast<uint32_t>(meshData_.frameSubmeshes.size());
-                                meshData_.frameSubmeshes.push_back(rs); // start with the current setup
-                                auto& addRs = meshData_.frameSubmeshes.back();
-                                AddFrameRenderMeshDataAdditionalMaterial(
-                                    mesh.submeshAdditionalMaterials[mIdx], addSubmeshFrameIndex, addRs);
-                            }
-                        }
-                    } else {
-                        // material offset for submesh
-                        const uint32_t baseFrameOffset =
-                            (submeshIdx < static_cast<uint32_t>(materialFrameOffsets_.size()))
-                                ? materialFrameOffsets_[submeshIdx]
-                                : 0U;
-                        const uint32_t matIndex = GetMaterialIndex(submesh.sd.material);
-                        AddFrameMaterialInstanceData(matIndex, baseFrameOffset, batchIndex);
-                    }
-                }
-            }
-        }
-        // next batch index for submesh for offsets etc.
-        batchIndex++;
-        initialProcess = false;
-    }
-}
-
-void RenderDataStoreDefaultMaterial::AddFrameRenderMeshData(
-    const RenderMeshData& meshData, const RenderMeshAabbData& meshAabbData, const RenderMeshSkinData& meshSkinData)
-{
-    AddFrameRenderMeshDataImpl(meshData, meshAabbData, meshSkinData, DEFAULT_RENDER_MESH_BATCH_DATA, 0U);
-}
-
-void RenderDataStoreDefaultMaterial::UpdateFrameMeshResourceReferences(SubmeshDataContainer& submeshDataRef)
-{
-    if (!submeshDataRef.frameReferenced) {
-        // add references
-        submeshDataRef.frameReferenced = true;
-        // NOTE: access to GPU resource manager is locking behaviour
-        // this can be evaluated further and possibly add array_view for get to get all with a one lock
-        auto AddValidReference = [&](const RenderHandle& handle) {
-            if (RenderHandleUtil::IsValid(handle)) {
-                handleReferences_.push_back(gpuResourceMgr_.Get(handle));
-            }
-        };
-        AddValidReference(submeshDataRef.sd.buffers.indexBuffer.bufferHandle);
-        AddValidReference(submeshDataRef.sd.buffers.indirectArgsBuffer.bufferHandle);
-        const uint32_t vertexBufferCount = Math::min(
-            submeshDataRef.sd.buffers.vertexBufferCount, RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
-        for (uint32_t idx = 0; idx < vertexBufferCount; ++idx) {
-            AddValidReference(submeshDataRef.sd.buffers.vertexBuffers[idx].bufferHandle);
-        }
-    }
 }
 
 void RenderDataStoreDefaultMaterial::UpdateMeshData(const uint64_t id, const MeshDataWithHandleReference& meshData)
@@ -1182,26 +1367,25 @@ void RenderDataStoreDefaultMaterial::UpdateMeshData(const uint64_t id, const Mes
         const size_t baseAdditionalMaterialCount = data.submeshAdditionalMaterials.size();
         data.submeshAdditionalMaterials.clear();
         data.submeshes.clear();
-
-        data.frameReferenced = true; // submeshes referenced for this frame below
+        data.batchFrameMeshData.clear();
 
         data.md.meshId = meshData.meshId;
-        // NOTE: no aabb data
+        data.md.aabb = { meshData.aabbMin, meshData.aabbMax };
         data.submeshes.resize(meshData.submeshes.size());
         data.submeshAdditionalMaterials.reserve(baseAdditionalMaterialCount);
         for (size_t smIdx = 0; smIdx < data.submeshes.size(); ++smIdx) {
             const auto& readRef = meshData.submeshes[smIdx];
             auto& writeRef = data.submeshes[smIdx];
-            // NOTE: no AABB
+            writeRef.sd.aabb = { readRef.aabbMin, readRef.aabbMax };
             writeRef.sd.submeshFlags = readRef.submeshFlags;
             writeRef.sd.renderSubmeshMaterialFlags = 0U;
             writeRef.sd.drawCommand = readRef.drawCommand;
 
-            // adds references for this frame
-            writeRef.sd.buffers = ConvertRenderSubmeshBuffers(readRef.buffers, handleReferences_);
-            writeRef.frameReferenced = true;
+            writeRef.sd.buffers = ConvertRenderSubmeshBuffers(readRef.buffers);
 
             writeRef.sd.material = readRef.materialId;
+            writeRef.sd.materialIndex = GetMaterialIndex(writeRef.sd.material);
+
             writeRef.sd.meshRenderSortLayer = readRef.meshRenderSortLayer;
             writeRef.sd.meshRenderSortLayerOrder = readRef.meshRenderSortLayerOrder;
 
@@ -1211,13 +1395,20 @@ void RenderDataStoreDefaultMaterial::UpdateMeshData(const uint64_t id, const Mes
                     data.submeshAdditionalMaterials.size() + readRef.additionalMaterials.size());
                 writeRef.sd.additionalMaterialCount = static_cast<uint32_t>(data.submeshAdditionalMaterials.size()) -
                                                       writeRef.sd.additionalMaterialOffset;
+
+                // fill additional materials
+                for (uint32_t addMatIdx = 0; addMatIdx < writeRef.sd.additionalMaterialCount; ++addMatIdx) {
+                    const uint32_t matOffset = writeRef.sd.additionalMaterialOffset + addMatIdx;
+                    CORE_ASSERT(matOffset < data.submeshAdditionalMaterials.size());
+                    CORE_ASSERT(addMatIdx < readRef.additionalMaterials.size());
+                    const uint32_t matIdx = GetMaterialIndex(readRef.additionalMaterials[addMatIdx]);
+                    data.submeshAdditionalMaterials[matOffset] = GetCertainMaterialIndex(matIdx, matData_);
+                }
             }
         }
 
-        if constexpr (ENABLE_RT) {
-            if (rtEnabled_) {
-                UpdateMeshBlasData(data);
-            }
+        if (rtEnabled_) {
+            UpdateMeshBlasData(data);
         }
     }
 }
@@ -1307,13 +1498,21 @@ void RenderDataStoreDefaultMaterial::UpdateFrameMeshBlasInstanceData(
     meshData_.frameMeshBlasInstanceData.push_back(asInstance);
 }
 
-uint32_t RenderDataStoreDefaultMaterial::AddFrameSkinJointMatricesImpl(
+uint32_t RenderDataStoreDefaultMaterial::AddFrameSkinJointMatricesImpl(const uint64_t id,
     const array_view<const Math::Mat4X4> skinJointMatrices, const array_view<const Math::Mat4X4> prevSkinJointMatrices)
 {
+    uint32_t skinJointIndex = RenderSceneDataConstants::INVALID_INDEX;
+    if (id == RenderSceneDataConstants::INVALID_INDEX) {
+        return skinJointIndex;
+    }
+    if (auto pos = std::find_if(meshData_.frameSkinIndices.cbegin(), meshData_.frameSkinIndices.cend(),
+            [id](const pair<uint64_t, uint32_t> val) { return val.first == id; });
+        pos != meshData_.frameSkinIndices.cend()) {
+        return pos->second;
+    }
     // check max supported joint count
     const uint32_t jointCount =
         std::min(RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT, static_cast<uint32_t>(skinJointMatrices.size()));
-    uint32_t skinJointIndex = RenderSceneDataConstants::INVALID_INDEX;
     if (jointCount > 0) {
         const uint32_t byteSize = sizeof(Math::Mat4X4) * jointCount;
         const uint32_t fullJointCount = jointCount * 2u;
@@ -1330,12 +1529,14 @@ uint32_t RenderDataStoreDefaultMaterial::AddFrameSkinJointMatricesImpl(
         skinJointIndex = static_cast<uint32_t>(meshData_.frameJointMatrixIndices.size());
         meshData_.frameJointMatrixIndices.push_back(
             RenderDataDefaultMaterial::JointMatrixData { jointMatrixData, fullJointCount });
+        meshData_.frameSkinIndices.emplace_back(id, skinJointIndex);
     }
     return skinJointIndex;
 }
 
 void RenderDataStoreDefaultMaterial::AddSubmesh(const RenderSubmeshWithHandleReference& submesh)
 {
+    // DEPRECATED support, needs to work for compatibility
     const uint32_t materialIndex = GetCertainMaterialIndex(submesh.indices.materialIndex, matData_);
     if (materialIndex < static_cast<uint32_t>(matData_.data.size())) {
         CORE_ASSERT(matData_.data.size() == matData_.renderSlotData.size());
@@ -1352,7 +1553,7 @@ void RenderDataStoreDefaultMaterial::AddSubmesh(const RenderSubmeshWithHandleRef
     ValidateSubmesh(submesh);
 #endif
     const uint32_t submeshIndex = static_cast<uint32_t>(meshData_.frameSubmeshes.size());
-    meshData_.frameSubmeshes.push_back(ConvertRenderSubmeshInput(submesh, handleReferences_));
+    meshData_.frameSubmeshes.push_back(ConvertRenderSubmeshInput(submesh));
     auto& currSubmesh = meshData_.frameSubmeshes.back();
 
     FillSubmeshImpl(renderSlotAndShaders, submeshIndex, currSubmesh);
@@ -1419,10 +1620,8 @@ void RenderDataStoreDefaultMaterial::FillSubmeshImpl(
         // id generation does not matter to us, because this is per frame
         uint32_t renderSortHash = submesh.indices.materialIndex;
         HashCombine32Bit(renderSortHash, renderHash);
-        // custom camera id for camera material effect
-        const uint32_t cameraId = perMatData.customCameraId;
         dataRef.materialData.push_back({ slotRef.shader.GetHandle(), slotRef.graphicsState.GetHandle(),
-            submeshRenderMaterialFlags, cameraId, renderSortHash, renderSortLayerHash });
+            submeshRenderMaterialFlags, renderSortHash, renderSortLayerHash });
 
         dataRef.objectCounts.submeshCount++;
         if (submesh.indices.skinJointIndex != RenderSceneDataConstants::INVALID_INDEX) {
@@ -1479,7 +1678,12 @@ uint32_t RenderDataStoreDefaultMaterial::GetRenderSlotIdFromMasks(const uint32_t
 array_view<const uint32_t> RenderDataStoreDefaultMaterial::GetSlotSubmeshIndices(const uint32_t renderSlotId) const
 {
     const uint32_t rsId = GetRenderSlotIdFromMasks(renderSlotId);
-    if (const auto iter = slotToSubmeshIndices_.find(rsId); iter != slotToSubmeshIndices_.cend()) {
+
+    auto iter = slotToSubmeshIndices_.end();
+    if (iter = slotToSubmeshIndices_.find(renderSlotId); iter != slotToSubmeshIndices_.cend()) {
+        const auto& slotRef = iter->second;
+        return slotRef.indices;
+    } else if (iter = slotToSubmeshIndices_.find(rsId); iter != slotToSubmeshIndices_.cend()) {
         const auto& slotRef = iter->second;
         return slotRef.indices;
     } else {
@@ -1491,7 +1695,12 @@ array_view<const RenderDataDefaultMaterial::SlotMaterialData>
 RenderDataStoreDefaultMaterial::GetSlotSubmeshMaterialData(const uint32_t renderSlotId) const
 {
     const uint32_t rsId = GetRenderSlotIdFromMasks(renderSlotId);
-    if (const auto iter = slotToSubmeshIndices_.find(rsId); iter != slotToSubmeshIndices_.cend()) {
+
+    auto iter = slotToSubmeshIndices_.end();
+    if (iter = slotToSubmeshIndices_.find(renderSlotId); iter != slotToSubmeshIndices_.cend()) {
+        const auto& slotRef = iter->second;
+        return slotRef.materialData;
+    } else if (iter = slotToSubmeshIndices_.find(rsId); iter != slotToSubmeshIndices_.cend()) {
         const auto& slotRef = iter->second;
         return slotRef.materialData;
     } else {

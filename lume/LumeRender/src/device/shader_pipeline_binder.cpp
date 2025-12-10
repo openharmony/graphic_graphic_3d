@@ -413,9 +413,12 @@ void ShaderPipelineBinder::BindBuffers(
                 const uint32_t idx = setResources.bindingToIndex[binding];
                 if ((idx < setResources.bindings.size()) && (setResources.bindings[idx].type == type)) {
                     const uint32_t resIdx = setResources.bindings[idx].resIdx;
+                    const uint32_t descCount = setResources.bindings[idx].descriptorCount;
                     if (resIdx < setResources.buffers.size()) {
                         validBinding = true;
-                        setResources.buffers[resIdx] = resources[0];
+                        for (uint32_t i = 0; i < resources.size() && i < descCount; i++) {
+                            setResources.buffers[resIdx + i] = resources[i];
+                        }
                     }
                 }
             }
@@ -478,9 +481,12 @@ void ShaderPipelineBinder::BindImages(
                 const uint32_t idx = setResources.bindingToIndex[binding];
                 if ((idx < setResources.bindings.size()) && (setResources.bindings[idx].type == type)) {
                     const uint32_t resIdx = setResources.bindings[idx].resIdx;
+                    const uint32_t descCount = setResources.bindings[idx].descriptorCount;
                     if (resIdx < setResources.images.size()) {
                         validBinding = true;
-                        setResources.images[resIdx] = resources[0U];
+                        for (uint32_t i = 0; i < resources.size() && i < descCount; i++) {
+                            setResources.images[resIdx + i] = resources[i];
+                        }
                     }
                 }
             }
@@ -540,9 +546,12 @@ void ShaderPipelineBinder::BindSamplers(
                 const uint32_t idx = setResources.bindingToIndex[binding];
                 if ((idx < setResources.bindings.size()) && (setResources.bindings[idx].type == type)) {
                     const uint32_t resIdx = setResources.bindings[idx].resIdx;
+                    const uint32_t descCount = setResources.bindings[idx].descriptorCount;
                     if (resIdx < setResources.samplers.size()) {
                         validBinding = true;
-                        setResources.samplers[resIdx] = resources[0U];
+                        for (uint32_t i = 0; i < resources.size() && i < descCount; i++) {
+                            setResources.samplers[resIdx + i] = resources[i];
+                        }
                     }
                 }
             }
@@ -701,8 +710,8 @@ void ShaderPipelineBinder::BindPropertyBindings()
                     break;
                 }
                 case PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T: {
-                    BindSampler(sb.set, sb.binding,
-                                bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
+                    BindSampler(
+                        sb.set, sb.binding, bindingProperties->GetValue<BindableSamplerWithHandleReference>(idx));
                     break;
                 }
                 default: {

@@ -15,6 +15,7 @@
 
 #include "NodeJS.h"
 
+#include "JsObjectCache.h"
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_scene.h>
 
@@ -29,6 +30,9 @@ void NodeJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "Node", NAPI_AUTO_LENGTH, BaseObject::ctor<NodeJS>(), nullptr,
         node_props.size(), node_props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -51,15 +55,16 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(No
     {
         // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
         NapiApi::Object meJs(fromJs.This());
+        AddBridge("NodeJS", meJs);
         NapiApi::Object scene = fromJs.Arg<0>();
         if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
-            sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
         }
     }
 
     // java script call.. with arguments
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>();
+    auto scn = scene_.GetObject<SCENE_NS::IScene>();
     if (scn == nullptr) {
         // hmm..
         LOG_F("Invalid scene for NodeJS!");
@@ -79,12 +84,17 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(No
 NodeJS::~NodeJS()
 {
     LOG_V("NodeJS --");
+    DestroyBridge(this);
 }
 void* NodeJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == NodeJS::ID)
-        return this;
-    return NodeImpl::GetInstanceImpl(id);
+    if (id == NodeJS::ID) {
+        return static_cast<NodeJS*>(this);
+    }
+    if (auto ret = NodeImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
 void NodeJS::DisposeNative(void* sc)
@@ -92,24 +102,22 @@ void NodeJS::DisposeNative(void* sc)
     if (!disposed_) {
         LOG_V("NodeJS::DisposeNative");
         disposed_ = true;
+        DisposeBridge(this);
+        if (auto node = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(node,"_JSW");
+        }
 
         if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
-        if (!IsAttached()) {
-            if (auto node = interface_pointer_cast<SCENE_NS::INode>(GetNativeObject())) {
-                if (auto scene = node->GetScene()) {
-                    scene->RemoveNode(BASE_NS::move(node)).Wait();
-                }
-            }
-        }
-        UnsetNativeObject();
+        CleanupNode(this, IsAttached());
         scene_.Reset();
     }
 }
 void NodeJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    FinalizeBridge(this);
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }

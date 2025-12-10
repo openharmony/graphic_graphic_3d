@@ -25,6 +25,8 @@
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
+#include <meta/interface/resource/intf_owned_resource_groups.h>
+#include <meta/interface/resource/intf_resource_query.h>
 
 META_BEGIN_NAMESPACE()
 
@@ -32,7 +34,8 @@ struct ResourceData : CORE_NS::ResourceInfo {
     CORE_NS::IResource::Ptr object;
 };
 
-class FileResourceManager : public IntroduceInterfaces<MetaObject, CORE_NS::IResourceManager> {
+class FileResourceManager
+    : public IntroduceInterfaces<MetaObject, CORE_NS::IResourceManager, IOwnedResourceGroups, IResourceQuery> {
     META_OBJECT(FileResourceManager, ClassId::FileResourceManager, IntroduceInterfaces)
 public:
     FileResourceManager();
@@ -73,12 +76,19 @@ public:
 
     void SetFileManager(CORE_NS::IFileManager::Ptr fileManager) override;
 
+    IResourceGroupHandle::Ptr GetGroupHandle(BASE_NS::string_view group) override;
+
+    uint32_t GetAliveCount(const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const override;
+    BASE_NS::vector<CORE_NS::IResource::Ptr> FindAliveResources(
+        const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const override;
+
 private:
     CORE_NS::IResource::Ptr ConstructResource(
         const CORE_NS::ResourceId& id, const BASE_NS::shared_ptr<CORE_NS::IInterface>& context);
     Result SaveResourceData(const ResourceData& r);
-    CORE_NS::ResourceId ReadHeader(const std::string& line);
-    bool ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE_NS::ResourceId>& result);
+    CORE_NS::ResourceId ReadHeader(const std::string& line, BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy);
+    bool ReadHeaders(CORE_NS::IFile& file, BASE_NS::vector<CORE_NS::ResourceId>& result,
+        BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy);
     BASE_NS::shared_ptr<ResourceData> FindResource(const CORE_NS::ResourceId& id);
     bool UpdateOptions(ResourceData& r);
     void Notify(const BASE_NS::vector<CORE_NS::ResourceId>& id, IResourceListener::EventType type);
@@ -91,6 +101,7 @@ private:
     CORE_NS::IFileManager::Ptr fileManager_;
     mutable std::shared_mutex listenerMutex_;
     BASE_NS::vector<IResourceListener::WeakPtr> listeners_;
+    BASE_NS::unordered_map<BASE_NS::string, IResourceGroupHandle::WeakPtr> ownedGroups_;
 };
 
 META_END_NAMESPACE()

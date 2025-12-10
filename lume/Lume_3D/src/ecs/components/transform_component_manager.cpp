@@ -68,6 +68,7 @@ IComponentManager* ITransformComponentManagerInstance(IEcs& ecs)
 
 void ITransformComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<TransformComponentManager*>(instance);
+    static_cast<TransformComponentManager*>(instance)->~TransformComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

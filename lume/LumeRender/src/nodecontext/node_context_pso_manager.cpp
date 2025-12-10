@@ -222,12 +222,23 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
 #endif
 
         // store needed data for render backend pso creation
+        PipelineLayout pl;
+        pl.pushConstant.shaderStageFlags = pipelineLayout.pushConstant.shaderStageFlags;
+        pl.pushConstant.byteSize = pipelineLayout.pushConstant.byteSize;
+        auto dst = std::begin(pl.descriptorSetLayouts);
+        for (const auto& set : pipelineLayout.descriptorSetLayouts) {
+            dst->set = set.set;
+            // this is done to avoid copying the vector's allocator.
+            dst->bindings.append(set.bindings.begin(), set.bindings.end());
+            ++dst;
+        }
+
         ShaderSpecializationConstantDataWrapper ssw {
             vector<ShaderSpecialization::Constant>(
                 shaderSpecialization.constants.begin(), shaderSpecialization.constants.end()),
             vector<uint32_t>(shaderSpecialization.data.begin(), shaderSpecialization.data.end()),
         };
-        cache.psoCreationData.push_back({ shaderHandle, pipelineLayout, move(ssw) });
+        cache.psoCreationData.push_back({ shaderHandle, move(pl), move(ssw) });
     } else {
         psoHandle = iter->second;
     }
@@ -272,6 +283,8 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
     auto& cache = graphicsPipelineStateCache_;
     uint64_t cGfxHash = 0;
     if ((!RenderHandleUtil::IsValid(graphicsState)) && customGraphicsState) {
+        // the hash for pso cache will include shader handle which implies renderSlotId so not neccessary to include
+        // renderSlotId in the state hash.
         cGfxHash = shaderMgr_.HashGraphicsState(*customGraphicsState);
     }
     const uint64_t hash = HashGraphicsShader(shader, graphicsState, dynamicStates, shaderSpecialization, cGfxHash);

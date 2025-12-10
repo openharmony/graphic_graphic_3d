@@ -18,6 +18,7 @@
 
 #include <cfloat>
 #include <cstdint>
+#include <limits>
 
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/render/default_material_constants.h>
@@ -152,7 +153,7 @@ struct RenderMeshData {
     /** layer mask. */
     uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
     /** scene ID */
-    uint64_t sceneId { 0U };
+    uint32_t sceneId { 0U };
 
     /** Custom data. */
     BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT] {};
@@ -161,8 +162,9 @@ struct RenderMeshData {
 /** Render min and max AABB
  */
 struct RenderMinAndMax {
-    BASE_NS::Math::Vec3 minAabb { FLT_MAX, FLT_MAX, FLT_MAX };
-    BASE_NS::Math::Vec3 maxAabb { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+#define CORE_FMAX std::numeric_limits<float>::max()
+    BASE_NS::Math::Vec3 minAabb { CORE_FMAX, CORE_FMAX, CORE_FMAX };
+    BASE_NS::Math::Vec3 maxAabb { -CORE_FMAX, -CORE_FMAX, -CORE_FMAX };
 #undef CORE_FMAX
 };
 
@@ -224,6 +226,18 @@ enum RenderMaterialFlagBits : uint32_t {
      * Spesializes the shader, and therefore needs to be setup
      */
     RENDER_MATERIAL_GPU_INSTANCING_MATERIAL_BIT = (1 << 15),
+    /** Camera effect which is not view frustum culled by the default pipeline
+     */
+    RENDER_MATERIAL_CAMERA_EFFECT_BIT = (1 << 16),
+
+    /** Defines whether to use the specular factor (alpha channel) from the specular texture */
+    RENDER_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT = (1 << 17),
+    /** Defines whether to use the specular color (rgb channels) from the specular texture */
+    RENDER_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT = (1 << 18),
+    /** Defines whether this material will receive irradiance indirect light */
+    RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT = (1 << 19),
+    /** Defines whether this material is an occlusion material */
+    RENDER_MATERIAL_OCCLUSION_BIT = (1 << 20),
 };
 /** Container for material flag bits */
 using RenderMaterialFlags = uint32_t;
@@ -249,6 +263,10 @@ enum class RenderMaterialType : uint8_t {
      * Note: that base color is always automatically pre-multiplied in all cases
      */
     CUSTOM_COMPLEX = 5,
+    /** Occlusion material. Occlusion material is invisible, but also blocks objects that are
+     * behind it from being visible.
+     */
+    OCCLUSION = 6,
 };
 
 /** The rendering submesh specialization flag bits
@@ -278,17 +296,28 @@ enum RenderExtraRenderingFlagBits : uint32_t {
 /** Container for extra material rendering flag bits */
 using RenderExtraRenderingFlags = uint32_t;
 
+struct RenderBoundingSphere {
+    /** Center of the sphere */
+    BASE_NS::Math::Vec3 center { 0.0f, 0.0f, 0.0f };
+    /** Radius of the sphere */
+    float radius { 0.0f };
+};
+
 /** Additional info for processed render mesh data */
 struct RenderFrameObjectInfo {
     /** Render material flags from processing */
     RenderMaterialFlags renderMaterialFlags { 0U };
+    /** Shadow caster bounding sphere */
+    RenderBoundingSphere shadowCasterBoundingSphere;
 };
 
 /** Render mesh batch data
  */
 struct RenderMeshBatchData {
-    /** AABB */
-    RenderMinAndMax aabb;
+    /** Render mesh id */
+    uint64_t renderMeshId { RenderSceneDataConstants::INVALID_ID };
+    /** Mesh id, needs to match actual mesh id of the batch component render mesh id */
+    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
     /** Additional material flags. */
     RenderMaterialFlags materialFlags { 0U };
 };
@@ -305,7 +334,9 @@ struct RenderMeshAabbData {
 /** Render mesh skin data
  */
 struct RenderMeshSkinData {
-    /** AABB */
+    /** Skin id */
+    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    /** AABB in world space already */
     RenderMinAndMax aabb;
     /** Skin joint matrices */
     BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices;
@@ -499,6 +530,10 @@ struct RenderLight {
         LIGHT_USAGE_SPOT_LIGHT_BIT = (1 << 2),
         /** Shadow light bit */
         LIGHT_USAGE_SHADOW_LIGHT_BIT = (1 << 3),
+        /** Rect light bit */
+        LIGHT_USAGE_RECT_LIGHT_BIT = (1 << 4),
+        /** Area light two sided bit */
+        LIGHT_USAGE_TWO_SIDED_LIGHT_BIT = (1 << 5),
     };
     /** Light usage flags */
     using LightUsageFlags = uint32_t;
@@ -511,12 +546,14 @@ struct RenderLight {
 
     /** Position */
     BASE_NS::Math::Vec4 pos { 0.0f, 0.0f, 0.0f, 0.0f };
-    /** Direction */
+    /** Direction (for rect light x-dir with baked width, and width in .w) */
     BASE_NS::Math::Vec4 dir { 0.0f, 0.0f, 0.0f, 0.0f };
     /** Color, w is intensity */
     BASE_NS::Math::Vec4 color { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    /* Spot light params. .x = angleScale, .y = angleOffset, .z = innerAngle, .w = outerAngle */
+    /* Spot light params. .x = angleScale, .y = angleOffset, .z = innerAngle, .w = outerAngle
+     * For rect light .xyz = y dir with baked height, .w = height
+     */
     BASE_NS::Math::Vec4 spotLightParams { 0.0f, 0.0f, 0.0f, 0.0f };
     /* Point and spot params. */
     float range { 0.0f };
@@ -570,17 +607,22 @@ struct RenderCamera {
         CAMERA_FLAG_CUSTOM_TARGETS_BIT = (1 << 13),
         /** Multi-view camera */
         CAMERA_FLAG_MULTI_VIEW_ONLY_BIT = (1 << 14),
-        /** Not in use (1 << 15) */
+        /** Separate projection matrix for environment */
+        CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT = (1 << 15),
         /** Allow reflection */
         CAMERA_FLAG_ALLOW_REFLECTION_BIT = (1 << 16),
         /** Automatic cubemap target camera */
         CAMERA_FLAG_CUBEMAP_BIT = (1 << 17),
+        /** Use list of IRenderPostProcess instead of fixed built-in. */
+        CAMERA_FLAG_POST_PROCESS_EFFECTS_BIT = (1 << 18),
     };
     using Flags = uint32_t;
 
     enum ShaderFlagBits : uint32_t {
         /** Fog enabled in the shader. Changed based on render slots and rendering types. */
         CAMERA_SHADER_FOG_BIT = (1 << 0),
+        /** Camera velocity computation enabled in the shader. */
+        CAMERA_SHADER_VELOCITY_OUT_BIT = (1 << 1),
     };
     using ShaderFlags = uint32_t;
 
@@ -613,6 +655,9 @@ struct RenderCamera {
         BASE_NS::Math::Mat4X4 viewPrevFrame;
         /** Previous projection matrix */
         BASE_NS::Math::Mat4X4 projPrevFrame;
+
+        /** Environment projection matrix */
+        BASE_NS::Math::Mat4X4 envProj;
     };
 
     /** Environment setup */
@@ -682,6 +727,7 @@ struct RenderCamera {
         /** invalid handles if not given */
         RENDER_NS::RenderHandleReference customResourceHandles[RenderSceneDataConstants::MAX_ENV_CUSTOM_RESOURCE_COUNT];
 
+        RENDER_NS::RenderHandleReference graphicsState;
         /** Blended environment count. */
         uint32_t multiEnvCount { 0U };
         /** 64bit environment id of environments. */
@@ -737,6 +783,9 @@ struct RenderCamera {
     /** Render resolution */
     BASE_NS::Math::UVec2 renderResolution { 0u, 0u };
 
+    /** Downsample percentage of camera resolution */
+    float screenPercentage { 1.0f };
+
     /** Z near value */
     float zNear { 0.0f };
     /** Z far value */
@@ -757,6 +806,8 @@ struct RenderCamera {
 
     /** Which scene the camera belongs to. */
     uint32_t sceneId { 0U };
+    /** For reflection cameras ID of the mesh showing the reflection. */
+    uint32_t reflectionId { 0U };
 
     /** Flags for camera render pipeline */
     RenderPipelineType renderPipelineType { RenderPipelineType::FORWARD };
@@ -823,6 +874,12 @@ struct RenderCamera {
 
 /** Render scene */
 struct RenderScene {
+    /** Flags for scene rendering*/
+    enum RenderSceneFlagBits : uint32_t {
+        SCENE_FLAG_WEATHER_BIT = (1 << 0),
+    };
+    using Flags = uint32_t;
+
     /** Unique id. */
     uint64_t id { RenderSceneDataConstants::INVALID_ID };
     /** Unique scene name (If name is empty a default id/name is created with index) */
@@ -855,9 +912,11 @@ struct RenderScene {
     float totalTime { 0u };
     /** Real delta tick time in milliseconds */
     float deltaTime { 0u };
+
     /** Render scene frame index */
     uint32_t frameIndex { 0u };
-
+    /** Scene flags*/
+    Flags flags { 0u };
     /** Custom render node graph file from scene component */
     BASE_NS::string customRenderNodeGraphFile;
     /** Custom post scene render node graph file from scene component */
@@ -869,7 +928,6 @@ struct SlotSubmeshIndex {
 
     uint32_t sortLayerKey { 0 };
     uint64_t sortKey { 0 };
-    uint32_t renderMaterialSortHash { 0 };
     RENDER_NS::RenderHandle shaderHandle;
     RENDER_NS::RenderHandle gfxStateHandle;
 };

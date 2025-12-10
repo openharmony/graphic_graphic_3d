@@ -1,0 +1,192 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/cmaa2_common.h"
+
+layout(set = 0, binding = 0, std140) uniform uShaderData {
+    ShaderDataStruct shaderData;
+};
+
+layout(set = 0, binding = 1) uniform sampler2D uColorSampler;
+
+layout(set = 0, binding = 2, r8ui) uniform writeonly uimage2D uEdgesImage;
+
+layout(set = 0, binding = 3, std430) buffer ShapeCandidatesBuffer {
+    uint shapeCandidates[];
+};
+
+layout(set = 0, binding = 4, std430) buffer ControlBuffer {
+    ControlBufferStruct controlBuffer;
+};
+
+// 2x2 edge blocks
+shared uvec2 sharedPackedEdges[CMAA2_CS_INPUT_KERNEL_SIZE_X * CMAA2_CS_INPUT_KERNEL_SIZE_Y];
+
+CORE_RELAXEDP vec2 EdgeLuma(const int xx, const int yy, const CORE_RELAXEDP float pixelLumas[8u]) {
+    return vec2(abs(pixelLumas[xx + yy * 3u] - pixelLumas[xx + 1u + yy * 3u]), abs(pixelLumas[xx + yy * 3u] - pixelLumas[xx + (yy + 1u) * 3u]));
+}
+
+CORE_RELAXEDP float LocalContrastV(const int xx, const int yy, const CORE_RELAXEDP vec2 neighbors[3u][3u]) {
+    return max(neighbors[xx + 1][yy].y, neighbors[xx + 1][yy + 1].y) * CMAA2_LOCAL_CONTRAST_ADAPTATION_AMOUNT;
+}
+
+CORE_RELAXEDP float LocalContrastH(const int xx, const int yy, const CORE_RELAXEDP vec2 neighbors[3u][3u]) {
+    return max(neighbors[xx][yy + 1u].x, neighbors[xx + 1u][yy + 1u].x)* CMAA2_LOCAL_CONTRAST_ADAPTATION_AMOUNT;
+}
+
+layout(local_size_x = CMAA2_CS_INPUT_KERNEL_SIZE_X, local_size_y = CMAA2_CS_INPUT_KERNEL_SIZE_Y, local_size_z = 1) in;
+void main() {
+    const ivec2 pixelPos = (ivec2(gl_WorkGroupID.xy) * ivec2(CMAA2_CS_OUTPUT_KERNEL_SIZE_X, CMAA2_CS_OUTPUT_KERNEL_SIZE_Y) + ivec2(gl_LocalInvocationID.xy) - ivec2(1, 1)) * 2;
+
+    const ivec2 qeOffsets[4u] = ivec2[4u](ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1));
+    const uint rowStride2x2 = CMAA2_CS_INPUT_KERNEL_SIZE_X;
+    const uint centerAddr2x2 = gl_LocalInvocationID.x + gl_LocalInvocationID.y * rowStride2x2;
+    const float edgeThreshold = shaderData.edgeThreshold;
+
+    const bool inOutputKernel = !any(bvec4(
+        gl_LocalInvocationID.x == (CMAA2_CS_INPUT_KERNEL_SIZE_X - 1),
+        gl_LocalInvocationID.x == 0,
+        gl_LocalInvocationID.y == (CMAA2_CS_INPUT_KERNEL_SIZE_Y - 1),
+        gl_LocalInvocationID.y == 0));
+
+    uvec4 outEdges = uvec4(0);
+
+    // edge detection
+    CORE_RELAXEDP float pixelLumas[8u];
+    ivec2 texSize = textureSize(uColorSampler, 0);
+    
+    for (uint ii = 0; ii < 8u; ii++) {
+        const ivec2 offset = ivec2(ii % 3, ii / 3);
+        const vec3 color = texelFetch(uColorSampler, pixelPos + offset, 0).rgb;
+        pixelLumas[ii] = RgbToLuma(color);
+    }
+
+    const CORE_RELAXEDP vec2 qe0 = EdgeLuma(0, 0, pixelLumas);
+    const CORE_RELAXEDP vec2 qe1 = EdgeLuma(1, 0, pixelLumas);
+    const CORE_RELAXEDP vec2 qe2 = EdgeLuma(0, 1, pixelLumas);
+    const CORE_RELAXEDP vec2 qe3 = EdgeLuma(1, 1, pixelLumas);
+
+    sharedPackedEdges[centerAddr2x2] = uvec2(PackEdges4(vec4(qe0.x, qe1.x, qe2.x, qe3.x)), PackEdges4(vec4(qe0.y, qe1.y, qe2.y, qe3.y)));
+    barrier();
+
+    if (inOutputKernel) {
+        // neighboring edges from shared memory
+        const uvec2 topPackedEdges = sharedPackedEdges[centerAddr2x2 - rowStride2x2];
+        const uvec2 leftPackedEdges = sharedPackedEdges[centerAddr2x2 - 1u];
+
+        CORE_RELAXEDP vec2 topRow = UnpackEdges4(topPackedEdges.y).zw;
+        CORE_RELAXEDP vec2 leftColumn = UnpackEdges4(leftPackedEdges.x).yw;
+
+        #if CMAA2_SKIP_WEAK_EDGES
+            // skip if no significant edges
+            const CORE_RELAXEDP vec2 maxLocalEdge = max(max(qe0, qe1), max(qe2, qe3));
+            const bool hasSignificantEdge = any(greaterThan(maxLocalEdge, vec2(edgeThreshold * 0.5f))) ||
+                                            any(greaterThan(topRow, vec2(edgeThreshold * 0.5f))) ||
+                                            any(greaterThan(leftColumn, vec2(edgeThreshold * 0.5f)));
+
+            if (!hasSignificantEdge) {
+                imageStore(uEdgesImage, ivec2(pixelPos.x / 2, pixelPos.y), uvec4(0));
+                imageStore(uEdgesImage, ivec2(pixelPos.x / 2, pixelPos.y + 1), uvec4(0));
+                return;
+            }
+        #endif
+
+        bool someNonZeroEdges = any(greaterThan(vec4(qe0, qe1) + vec4(qe2, qe3) + vec4(topRow, leftColumn), vec4(0.0f)));
+
+        if (someNonZeroEdges) {
+            CORE_RELAXEDP vec4 ce[4u];
+
+            // local contrast adaptation
+            {
+                CORE_RELAXEDP vec2 neighbors[3u][3u];
+                uvec2 valPacked;
+
+                // top
+                valPacked = sharedPackedEdges[centerAddr2x2 - rowStride2x2 - 1];
+                neighbors[0u][0u] = vec2(UnpackEdges4(valPacked.x).w, UnpackEdges4(valPacked.y).w);
+
+                valPacked = sharedPackedEdges[centerAddr2x2 - rowStride2x2];
+                const CORE_RELAXEDP vec4 topV = UnpackEdges4(valPacked.x);
+                const CORE_RELAXEDP vec4 topH = UnpackEdges4(valPacked.y);
+                neighbors[1u][0u] = vec2(topV.z, topH.z);
+                neighbors[2u][0u] = vec2(topV.w, topH.w);
+
+                // middle
+                valPacked = sharedPackedEdges[centerAddr2x2 - 1u];
+                const CORE_RELAXEDP vec4 leftV = UnpackEdges4(valPacked.x);
+                const CORE_RELAXEDP vec4 leftH = UnpackEdges4(valPacked.y);
+                neighbors[0u][1u] = vec2(leftV.y, leftH.y);
+                neighbors[0u][2u] = vec2(leftV.w, leftH.w);
+
+                // bottom
+                valPacked = sharedPackedEdges[centerAddr2x2 + rowStride2x2];
+                const CORE_RELAXEDP vec4 botV = UnpackEdges4(valPacked.x);
+                const CORE_RELAXEDP vec4 botH = UnpackEdges4(valPacked.y);
+                neighbors[1u][2u] = vec2(botV.x, botH.x);
+                neighbors[2u][2u] = vec2(botV.z, botH.z);
+
+                neighbors[1u][0u].y = topRow[0u];
+                neighbors[2u][0u].y = topRow[1u];
+                neighbors[0u][1u].x = leftColumn[0u];
+                neighbors[0u][2u].x = leftColumn[1u];
+                neighbors[1u][1u] = qe0;
+                neighbors[2u][1u] = qe1;
+                neighbors[1u][2u] = qe2;
+                neighbors[2u][2u] = qe3;
+
+                // top edges, from neighbor above
+                topRow[0u] = (topRow[0u] - LocalContrastH(0, -1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                topRow[1u] = (topRow[1u] - LocalContrastH(1, -1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+
+                // left edges, from neighbor left
+                leftColumn[0u] = (leftColumn[0u] - LocalContrastV(-1, 0, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                leftColumn[1u] = (leftColumn[1u] - LocalContrastV(-1, 1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+
+                // center quad edges
+                ce[0u].x = (qe0.x - LocalContrastV(0, 0, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[0u].y = (qe0.y - LocalContrastH(0, 0, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[1u].x = (qe1.x - LocalContrastV(1, 0, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[1u].y = (qe1.y - LocalContrastH(1, 0, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[2u].x = (qe2.x - LocalContrastV(0, 1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[2u].y = (qe2.y - LocalContrastH(0, 1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[3u].x = (qe3.x - LocalContrastV(1, 1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+                ce[3u].y = (qe3.y - LocalContrastH(1, 1, neighbors)) > edgeThreshold ? 1.0f : 0.0f;
+            }
+
+            // left edges
+            ce[0u].z = leftColumn[0u];
+            ce[1u].z = ce[0u].x;
+            ce[2u].z = leftColumn[1u];
+            ce[3u].z = ce[2u].x;
+
+            // top edges
+            ce[0u].w = topRow[0u];
+            ce[1u].w = topRow[1u];
+            ce[2u].w = ce[0u].y;
+            ce[3u].w = ce[1u].y;
+
+            // shape candidates
+            for (uint ii = 0u; ii < 4u; ii++) {
+                const ivec2 localPixelPos = pixelPos + qeOffsets[ii];
+                const CORE_RELAXEDP vec4 edges = ce[ii];
+
+                // L-shapes, U-shapes, Z-shapes
+                const CORE_RELAXEDP float edgeSum = edges.x * edges.y + edges.y * edges.z + edges.z * edges.w + edges.w * edges.x;
+
+                if (edgeSum > 0.0f) {
+                    const uint counterIndex = atomicAdd(controlBuffer.shapeCandidateCount, 1u);
+                    shapeCandidates[counterIndex] = (uint(localPixelPos.x) << 18u) | uint(localPixelPos.y);
+                }
+
+                outEdges[ii] = PackEdgesBinary(edges);
+            }
+        }
+    }
+
+    // write edges
+    if (inOutputKernel) {
+        imageStore(uEdgesImage, ivec2(pixelPos.x / 2, pixelPos.y), uvec4((outEdges[1] << 4u) | outEdges[0]));
+        imageStore(uEdgesImage, ivec2(pixelPos.x / 2, pixelPos.y + 1), uvec4((outEdges[3] << 4u) | outEdges[2u]));
+    }
+}

@@ -116,8 +116,7 @@ RENDER_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "depth_stencil_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, "transient_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "input_attachment" },
-        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
-            "fragment_shading_rate_attachment" },
+        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT, "fragment_shading_rate_attachment" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
@@ -179,8 +178,7 @@ RENDER_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT, "indirect" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT, "shader_binding_table" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, "shader_device_address" },
-        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,
-            "acceleration_structure_build_input_read_only" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, "acceleration_structure_build_input_read_only" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT, "acceleration_structure_storage" },
     })
 
@@ -201,8 +199,7 @@ RENDER_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
         { RenderNodeGraphResourceLocationType::FROM_RENDER_GRAPH_OUTPUT, "from_render_graph_output" },
         { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_OUTPUT, "from_previous_render_node_output" },
         { RenderNodeGraphResourceLocationType::FROM_NAMED_RENDER_NODE_OUTPUT, "from_named_render_node_output" },
-        { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT,
-            "from_previous_render_node_graph_output" },
+        { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT, "from_previous_render_node_graph_output" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,
@@ -240,44 +237,59 @@ inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInp
     SafeGetJsonValue(jsonData, "layer", context.error, context.data.layer);
 }
 
+inline bool ParseClearValue(const json::value& jsonData, ClearValue& clearValue, BASE_NS::string& contextError)
+{
+    bool valid = false;
+    if (auto const pos = jsonData.find("clearColor"); pos) {
+        if (pos->is_array() && pos->array_.size() == 4) { // 4: array size, rgba
+            FromJson(*pos, clearValue.color.float32);
+            valid = true;
+        } else {
+            const auto asString = to_string(*pos);
+            contextError +=
+                "clearColor must be an array of length 4 : (" + string_view(asString.data(), asString.size()) + ")\n";
+            valid = false;
+        }
+    }
+    if (auto const pos = jsonData.find("clearDepth"); pos) {
+        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size, depth and stencil
+            if (pos->array_[0].is_number()) {
+                clearValue.depthStencil.depth = pos->array_[0].as_number<float>();
+                valid = true;
+            } else {
+                const auto asString = to_string(*pos);
+                contextError += "depthAttachment.clearValue[0] must be a float: (" +
+                                string_view(asString.data(), asString.size()) + ")\n";
+                valid = false;
+            }
+
+            if (pos->array_[1].is_number()) {
+                clearValue.depthStencil.stencil = pos->array_[1].as_number<uint32_t>();
+            } else {
+                const auto asString = to_string(*pos);
+                contextError += "depthAttachment.clearValue[1] must be an uint: (" +
+                                string_view(asString.data(), asString.size()) + ")\n";
+                valid = false;
+            }
+        } else {
+            const auto asString = to_string(*pos);
+            contextError += "Failed to read depthAttachment.clearValue, invalid datatype: (" +
+                            string_view(asString.data(), asString.size()) + ")\n";
+            valid = false;
+        }
+    }
+    return valid;
+}
+
 inline void FromJson(const json::value& jsonData, JsonContext<RenderNodeGraphInputs::Attachment>& context)
 {
     SafeGetJsonEnum(jsonData, "loadOp", context.error, context.data.loadOp);
     SafeGetJsonEnum(jsonData, "storeOp", context.error, context.data.storeOp);
     SafeGetJsonEnum(jsonData, "stencilLoadOp", context.error, context.data.stencilLoadOp);
     SafeGetJsonEnum(jsonData, "stencilStoreOp", context.error, context.data.stencilStoreOp);
-    if (auto const pos = jsonData.find("clearColor"); pos) {
-        if (pos->is_array() && pos->array_.size() == 4) { // 4: array size
-            FromJson(*pos, context.data.clearValue.color.float32);
-        } else {
-            const auto asString = to_string(*pos);
-            context.error +=
-                "clearColor must be an array of length 4 : (" + string_view(asString.data(), asString.size()) + ")\n";
-        }
-    }
-    if (auto const pos = jsonData.find("clearDepth"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size
-            if (pos->array_[0].is_number()) {
-                context.data.clearValue.depthStencil.depth = pos->array_[0].as_number<float>();
-            } else {
-                const auto asString = to_string(*pos);
-                context.error += "depthAttachment.clearValue[0] must be a float: (" +
-                                 string_view(asString.data(), asString.size()) + ")\n";
-            }
 
-            if (pos->array_[1].is_number()) {
-                context.data.clearValue.depthStencil.stencil = pos->array_[1].as_number<uint32_t>();
-            } else {
-                const auto asString = to_string(*pos);
-                context.error += "depthAttachment.clearValue[1] must be an uint: (" +
-                                 string_view(asString.data(), asString.size()) + ")\n";
-            }
-        } else {
-            const auto asString = to_string(*pos);
-            context.error += "Failed to read depthAttachment.clearValue, invalid datatype: (" +
-                             string_view(asString.data(), asString.size()) + ")\n";
-        }
-    }
+    ParseClearValue(jsonData, context.data.clearValue, context.error);
+
     SafeGetJsonValue(jsonData, "name", context.error, context.data.name);
     SafeGetJsonEnum(jsonData, "resourceLocation", context.error, context.data.resourceLocation);
     SafeGetJsonValue(jsonData, "resourceIndex", context.error, context.data.resourceIndex);
@@ -316,8 +328,10 @@ inline void FromJson(
         jsonData, "dependencyFlags", context.error, context.data.dependencyFlags);
     SafeGetJsonValue(jsonData, "dependencySizeScale", context.error, context.data.dependencySizeScale);
 
+    context.data.clearWhenCreated = ParseClearValue(jsonData, context.data.clearValue, context.error);
+
     if (auto const pos = jsonData.find("shadingRateTexelSize"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size
+        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size, width and height
             if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
                 context.data.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 context.data.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
@@ -463,7 +477,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
         SafetyCheckRenderPassVectors(renderPass);
 
         if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
-            if ((pos->is_array() && pos->array_.size() == 2) && // 2: size
+            if ((pos->is_array() && pos->array_.size() == 2) && // 2: array size, width and height
                 (pos->array_[0].is_number() && pos->array_[1u].is_number())) {
                 renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();

@@ -19,7 +19,9 @@
 #include <base/math/matrix_util.h>
 #include <core/log.h>
 #include <core/property/property_handle_util.h>
+#include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/nodecontext/intf_node_context_descriptor_set_manager.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
@@ -30,7 +32,6 @@
 #include <render/property/property_types.h>
 
 #include "default_engine_constants.h"
-#include "postprocesses/render_post_process_flare.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -38,6 +39,9 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
+DATA_TYPE_METADATA(RenderPostProcessFlareNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(flarePos, "Flare Position", 0), MEMBER_PROPERTY(intensity, "Effect Intensity", 0))
+
 DATA_TYPE_METADATA(RenderPostProcessFlareNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0))
 DATA_TYPE_METADATA(RenderPostProcessFlareNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
 CORE_END_NAMESPACE()
@@ -57,11 +61,9 @@ RenderPassDesc::RenderArea GetImageRenderArea(
 } // namespace
 
 RenderPostProcessFlareNode::RenderPostProcessFlareNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessFlareNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessFlareNode::GetRenderInputProperties()
@@ -85,14 +87,12 @@ void RenderPostProcessFlareNode::SetRenderAreaRequest(const RenderAreaRequest& r
     renderAreaRequest_ = renderAreaRequest;
 }
 
-void RenderPostProcessFlareNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessFlareNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     // clear
     pipelineData_ = {};
 
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
 
     // default inputs
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -114,10 +114,10 @@ void RenderPostProcessFlareNode::Init(
     valid_ = true;
 }
 
-void RenderPostProcessFlareNode::PreExecute()
+void RenderPostProcessFlareNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessFlareNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessFlareNode::EffectProperties)) {
@@ -142,7 +142,7 @@ IRenderNode::ExecuteFlags RenderPostProcessFlareNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessFlareNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessFlareNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
     CORE_ASSERT(effectProperties_.enabled);
 

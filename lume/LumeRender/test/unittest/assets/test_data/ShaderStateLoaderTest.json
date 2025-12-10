@@ -1,0 +1,54 @@
+{
+    "variantName": "variant0",
+    "state": {
+        "inputAssembly": {
+            "enablePrimtiveRestart": false,
+            "primitiveTopology": "triangle_list"
+        },
+        "rasterizationState": {
+            "enableDepthClamp": true,
+            "enableDepthBias": true,
+            "enableRasterizerDiscard": true,
+            "polygonMode": "fill",
+            "cullModeFlags": "front | back",
+            "frontFace": "counter_clockwise",
+            "depthBiasConstantFactor": 0.01,
+            "depthBiasClamp": 0.99,
+            "depthBiasSlopeFactor": 0.25,
+            "lineWidth": 1.0
+        },
+        "depthStencilState": {
+            "enableDepthTest": true,
+            "enableDepthWrite": true,
+            "enableDepthBoundsTest": true,
+            "enableStencilTest": true,
+            "minDepthBounds": 0.0,
+            "maxDepthBounds": 1.0,
+            "depthCompareOp": "less_or_equal",
+            "frontStencilOpState": {
+                "failOp": "increment_and_clamp",
+                "passOp": "replace",
+                "depthFailOp": "invert",
+                "compareOp": "always",
+                "compareMask": "",
+                "writeMask": "",
+                "reference": ""
+            },
+            "backStencilOpState": {
+                "failOp": "increment_and_clamp",
+                "passOp": "replace",
+                "depthFailOp": "invert",
+                "compareOp": "always",
+                "compareMask": "",
+                "writeMask": "",
+                "reference": ""
+            }
+        },
+        "colorBlendState": {
+            "enableLogicOp": true,
+            "logicOp": "xor",
+            "colorBlendConstants": [1.0, 0.0, 0.4, 1.0],
+            "colorAttachments": []
+        }
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -71,14 +71,6 @@ FontData* Font::GetData()
 BASE_NS::array_view<uint8_t> Font::GetFontData()
 {
     return faceData_->fontBuffer_->bytes_;
-}
-
-void Font::DrawGlyphs(BASE_NS::array_view<const GlyphInfo> glyphs, const FontDefs::RenderData& renderData)
-{
-}
-
-void Font::DrawString(const BASE_NS::string_view string, const FontDefs::RenderData& renderData)
-{
 }
 
 BASE_NS::Math::Vec2 Font::MeasureString(const BASE_NS::string_view string)

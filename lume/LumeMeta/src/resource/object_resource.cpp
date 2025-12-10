@@ -19,6 +19,7 @@
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/serialization/intf_exporter.h>
+#include <meta/interface/serialization/intf_exporter_state.h>
 #include <meta/interface/serialization/intf_importer.h>
 
 #include "resource_placeholder.h"
@@ -35,7 +36,7 @@ void ObjectResource::SetResourceType(const ObjectId& id)
 }
 ReturnError ObjectResource::Export(IExportContext& c) const
 {
-    if (SerialiseAsResourceId(c) && c.UserContext() != GetSelf()) {
+    if (SerialiseAsResourceId(c) && c.Context().GetUserContext() != GetSelf()) {
         if (!type_.IsValid()) {
             CORE_LOG_W("Invalid resource type");
             return GenericError::FAIL;
@@ -63,15 +64,11 @@ CORE_NS::IResource::Ptr ObjectResourceType::LoadResource(const StorageInfo& s) c
     if (s.payload) {
         if (auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter)) {
             importer->SetResourceManager(s.self);
-            auto obj = interface_pointer_cast<CORE_NS::IResource>(importer->Import(*s.payload));
-            if (!obj || obj->GetResourceType() != type_.ToUid()) {
+            res = interface_pointer_cast<CORE_NS::IResource>(importer->Import(*s.payload));
+            if (!res || res->GetResourceType() != type_.ToUid()) {
                 CORE_LOG_W("Invalid resource");
                 return nullptr;
             }
-            if (auto i = interface_cast<CORE_NS::ISetResourceId>(obj)) {
-                i->SetResourceId(s.id);
-            }
-            res = interface_pointer_cast<CORE_NS::IResource>(obj);
         }
     }
     return res;
@@ -80,8 +77,7 @@ bool ObjectResourceType::SaveResource(const CORE_NS::IResource::ConstPtr& p, con
 {
     bool res = true;
     if (s.payload) {
-        auto i = interface_cast<CORE_NS::IResource>(p);
-        if (!i || i->GetResourceType() != type_.ToUid()) {
+        if (!p || p->GetResourceType() != type_.ToUid()) {
             CORE_LOG_W("Invalid resource");
             return false;
         }
@@ -126,7 +122,8 @@ bool ObjectResourceOptions::Load(
     }
     return res;
 }
-bool ObjectResourceOptions::Save(CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rman) const
+bool ObjectResourceOptions::Save(
+    CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rman, const CORE_NS::ResourceContextPtr&) const
 {
     bool res = false;
     if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {

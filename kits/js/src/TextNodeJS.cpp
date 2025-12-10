@@ -25,8 +25,9 @@
 
 #include <render/implementation_uids.h>
 
-#include "SceneJS.h"
+#include "JsObjectCache.h"
 #include "ParamParsing.h"
+#include "SceneJS.h"
 
 namespace {
 void PrintFontsFromNode(const SCENE_NS::INode::Ptr& someNode)
@@ -128,7 +129,7 @@ TextNodeJS::TextNodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), Nod
 
     // java script call.. with arguments
     scene_ = fromJs.Arg<0>().valueOrDefault();
-    auto scn = scene_.GetObject().GetNative<SCENE_NS::IScene>();
+    auto scn = scene_.GetObject<SCENE_NS::IScene>();
     if (scn == nullptr) {
         // hmm..
         LOG_F("Invalid scene for TextNodeJS!");
@@ -153,9 +154,13 @@ TextNodeJS::~TextNodeJS()
 
 void* TextNodeJS::GetInstanceImpl(uint32_t id)
 {
-    if (id == TextNodeJS::ID)
-        return this;
-    return NodeImpl::GetInstanceImpl(id);
+    if (id == TextNodeJS::ID) {
+        return static_cast<TextNodeJS*>(this);
+    }
+    if (auto ret = NodeImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
 void TextNodeJS::DisposeNative(void* sc)
@@ -163,17 +168,21 @@ void TextNodeJS::DisposeNative(void* sc)
     if (!disposed_) {
         LOG_V("TextNodeJS::DisposeNative");
         disposed_ = true;
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
 
         if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
             sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
+        CleanupNode(this, IsAttached());
         scene_.Reset();
     }
 }
 
 void TextNodeJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }
 
@@ -188,7 +197,7 @@ napi_value TextNodeJS::GetText(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("TextNodeJS::GetText NodeImpl not a text node!");
+        LOG_E("NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -230,7 +239,7 @@ napi_value TextNodeJS::GetFont(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("TextNodeJS::GetFont NodeImpl not a text node!");
+        LOG_E("NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -264,7 +273,7 @@ napi_value TextNodeJS::GetColor(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("TextNodeJS::GetColor NodeImpl not a text node!");
+        LOG_E("NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 
@@ -285,7 +294,7 @@ void TextNodeJS::SetColor(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("TextNodeJS::SetColor NodeImpl not a text node!");
+        LOG_E("NodeImpl not a text node!");
         return;
     }
 
@@ -306,7 +315,7 @@ napi_value TextNodeJS::GetFontSize(NapiApi::FunctionContext<>& ctx)
     auto node = interface_pointer_cast<SCENE_NS::INode>(native);
     auto text = interface_pointer_cast<SCENE_NS::IText>(native);
     if (!node || !text) {
-        LOG_E("TextNodeJS::GetFontSize NodeImpl not a text node!");
+        LOG_E("NodeImpl not a text node!");
         return ctx.GetUndefined();
     }
 

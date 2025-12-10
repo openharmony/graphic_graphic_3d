@@ -20,6 +20,7 @@
 #include <base/math/vector.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
@@ -34,7 +35,6 @@
 
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "render_post_process_taa.h"
 #include "util/log.h"
 
 // shaders
@@ -45,6 +45,19 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
+ENUM_TYPE_METADATA(TaaConfiguration::Sharpness, ENUM_VALUE(SOFT, "Soft Sharpness"),
+    ENUM_VALUE(MEDIUM, "Medium Sharpness"), ENUM_VALUE(SHARP, "Sharp Sharpness"))
+
+ENUM_TYPE_METADATA(TaaConfiguration::Quality, ENUM_VALUE(LOW, "Low Quality"), ENUM_VALUE(MEDIUM, "Medium Quality"),
+    ENUM_VALUE(HIGH, "High Quality"))
+
+DATA_TYPE_METADATA(TaaConfiguration, MEMBER_PROPERTY(sharpness, "Sharpness", 0), MEMBER_PROPERTY(quality, "Quality", 0),
+    MEMBER_PROPERTY(useBicubic, "Use Bicubic", 0), MEMBER_PROPERTY(useVarianceClipping, "Use Variance Clipping", 0),
+    MEMBER_PROPERTY(useyCoCG, "Use yCoCG", 0), MEMBER_PROPERTY(ignoreBicubicEdges, "Ignore Bicubic Edges", 0))
+
+DATA_TYPE_METADATA(RenderPostProcessTaaNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(taaConfiguration, "TAA Configuration", 0))
+
 DATA_TYPE_METADATA(RenderPostProcessTaaNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0),
     MEMBER_PROPERTY(depth, "depth", 0), MEMBER_PROPERTY(velocity, "velocity", 0),
     MEMBER_PROPERTY(history, "history", 0))
@@ -58,11 +71,9 @@ constexpr string_view TAA_SHADER_NAME = "rendershaders://shader/fullscreen_taa.s
 } // namespace
 
 RenderPostProcessTaaNode::RenderPostProcessTaaNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessTaaNode::NodeInputs>::properties)),
-      outputProperties_(
-          &nodeOutputsData, array_view(PropertyType::DataType<RenderPostProcessTaaNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessTaaNode::GetRenderInputProperties()
@@ -90,11 +101,10 @@ IRenderNode::ExecuteFlags RenderPostProcessTaaNode::GetExecuteFlags() const
     }
 }
 
-void RenderPostProcessTaaNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessTaaNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
+    pso_ = {};
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     samplerHandle_ =
@@ -106,13 +116,15 @@ void RenderPostProcessTaaNode::Init(
     const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     descriptorCounts_ = renderNodeUtil.GetDescriptorCounts(shaderData_.pipelineLayoutData);
 
+    taaBinder_.reset();
+
     valid_ = true;
 }
 
-void RenderPostProcessTaaNode::PreExecute()
+void RenderPostProcessTaaNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessTaaNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessTaaNode::EffectProperties)) {
@@ -165,7 +177,7 @@ BASE_NS::Math::Vec4 RenderPostProcessTaaNode::GetFactorTaa() const
         static_cast<float>(effectProperties_.taaConfiguration.quality), vcb, alpha };
 }
 
-void RenderPostProcessTaaNode::Execute(IRenderCommandList& cmdList)
+void RenderPostProcessTaaNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
     CheckDescriptorSetNeed();
 

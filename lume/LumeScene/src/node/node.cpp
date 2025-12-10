@@ -18,12 +18,16 @@
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_application_context.h>
+#include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_scene_manager.h>
+
+#include <base/math/matrix_util.h>
 
 #include <meta/api/object_name.h>
 #include <meta/base/interface_utils.h>
+#include <meta/interface/resource/intf_owned_resource_groups.h>
 
-#include "core/ecs.h"
+#include "../core/ecs.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -37,16 +41,6 @@ void Node::Destroy()
     if (startableHandler_) {
         startableHandler_->StopAll(GetAttachmentContainer(false));
         startableHandler_.reset();
-    }
-    if (!imported_.empty()) {
-        if (auto s = GetInternalScene()) {
-            auto& ecs = s->GetEcsContext();
-            for (auto&& ent : imported_) {
-                if (!ecs.IsNodeEntity(ent)) { // Nodes are handled by the hierarchy so don't delete those here?
-                    ecs.RemoveEntity(ent);
-                }
-            }
-        }
     }
     Super::Destroy();
 }
@@ -62,7 +56,7 @@ IScene::Ptr Node::GetScene() const
 Future<INode::Ptr> Node::GetParent(NodeTag) const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=] {
+        return s->AddTaskOrRunDirectly([=] {
             auto ent = s->GetEcsContext().GetParent(GetEntity());
             return CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
         });
@@ -109,7 +103,7 @@ bool Node::Detach(const IObject::Ptr& attachment)
 Future<BASE_NS::vector<INode::Ptr>> Node::GetChildren() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=] { return s->GetChildren(object_); });
+        return s->AddTaskOrRunDirectly([=] { return s->GetChildren(object_); });
     }
     return {};
 }
@@ -117,16 +111,39 @@ Future<BASE_NS::vector<INode::Ptr>> Node::GetChildren() const
 Future<bool> Node::RemoveChild(const INode::Ptr& child)
 {
     if (auto s = GetInternalScene()) {
-        if (auto ecsobj = interface_pointer_cast<IEcsObjectAccess>(child)) {
-            return s->AddTask([=] { return s->RemoveChild(object_, ecsobj->GetEcsObject()); });
-        }
+        return s->AddTaskOrRunDirectly([=] { return s->RemoveChild(object_, child); });
     }
     return {};
 }
 Future<bool> Node::AddChild(const INode::Ptr& child, size_t index)
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=] { return s->AddChild(object_, child, index); });
+        return s->AddTaskOrRunDirectly([=] { return s->AddChild(object_, child, index); });
+    }
+    return {};
+}
+Future<INode::Ptr> Node::Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent)
+{
+    if (auto s = GetInternalScene()) {
+        return s->AddTaskOrRunDirectly([=, name = BASE_NS::string(nodeName)]() mutable {
+            IEcsObject::Ptr parentObj = nullptr;
+            if (auto i = interface_cast<IEcsObjectAccess>(parent)) {
+                parentObj = i->GetEcsObject();
+            }
+            if (name.empty()) {
+                auto p = parent ? parent : GetParent().GetResult();
+                if (p) {
+                    name = p->GetUniqueChildName(GetName()).GetResult();
+                }
+            }
+            auto res = CloneAsChild(*object_, parentObj);
+            auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+            if (auto named = interface_cast<META_NS::INamed>(node)) {
+                named->Name()->SetValue(name);
+                SyncPropertyDirect(s, named->Name()).GetResult();
+            }
+            return node;
+        });
     }
     return {};
 }
@@ -137,9 +154,40 @@ BASE_NS::string Node::GetName() const
 Future<BASE_NS::string> Node::GetPath() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=] { return object_->GetPath(); });
+        return s->AddTaskOrRunDirectly([=] { return object_->GetPath(); });
     }
     return {};
+}
+
+BASE_NS::Math::Mat4X4 Node::GetTransformMatrix() const
+{
+    return BASE_NS::Math::Trs(
+        META_ACCESS_PROPERTY_VALUE(Position), META_ACCESS_PROPERTY_VALUE(Rotation), META_ACCESS_PROPERTY_VALUE(Scale));
+}
+
+static CORE_NS::IResourceManager::Ptr GetResources(INode& node)
+{
+    if (auto s = node.GetScene()) {
+        if (auto is = s->GetInternalScene()) {
+            if (auto c = is->GetContext()) {
+                return c->GetResources();
+            }
+        }
+    }
+    return nullptr;
+}
+
+static void AddExternalNodeAttachment(
+    INode& node, BASE_NS::vector<CORE_NS::Entity> entities, const CORE_NS::ResourceId& id, BASE_NS::string_view group)
+{
+    if (auto ext = META_NS::GetObjectRegistry().Create<IExternalNode>(ClassId::ExternalNode)) {
+        if (auto att = interface_cast<META_NS::IAttach>(&node)) {
+            ext->SetResourceId(id);
+            ext->SetAddedEntities(BASE_NS::move(entities));
+            ext->SetSubresourceGroup(group);
+            att->Attach(ext);
+        }
+    }
 }
 
 Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
@@ -157,32 +205,67 @@ Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
     }
     if (eobj) {
         if (auto s = GetInternalScene()) {
-            return s->AddTask([=] {
-                auto ent = CopyExternalAsChild(*object_, *eobj);
-                return CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
+            return s->AddTaskOrRunDirectly([=] {
+                auto res = CopyExternalAsChild(*object_, *eobj);
+                auto n = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+                if (n && s->GetOptions().createResources) {
+                    if (auto resource = interface_pointer_cast<CORE_NS::IResource>(node->GetScene())) {
+                        AddExternalNodeAttachment(*n, BASE_NS::move(res.newEntities), resource->GetResourceId(), "");
+                    }
+                }
+                return n;
             });
         }
     }
     return {};
 }
 
-Future<INode::Ptr> Node::ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName)
+Future<INode::Ptr> Node::ImportChildScene(
+    const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup)
 {
+    if (scene == GetScene()) {
+        CORE_LOG_E("Cannot import scene into itself.");
+        return {};
+    }
     if (auto s = GetInternalScene(); s && scene) {
         if (scene != GetScene()) {
-            return s->AddTask([=, name = BASE_NS::string(nodeName)] {
-                BASE_NS::vector<CORE_NS::Entity> imported;
-                auto ent = CopyExternalAsChild(*object_, *scene, imported);
-                auto node = CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
-                if (auto named = interface_cast<META_NS::INamed>(node)) {
-                    named->Name()->SetValue(name);
-                    SyncProperty(s, named->Name());
+            for (auto&& child : GetChildren().GetResult()) {
+                auto name = child->GetName();
+                if (name == nodeName) {
+                    CORE_LOG_W("Removing duplicate when importing %s", name.c_str());
+                    GetScene()->RemoveNode(BASE_NS::move(child)).Wait();
+                    break;
                 }
-                if (auto import = interface_cast<INodeImport>(node)) {
-                    import->TrackImportedEntities(imported);
-                }
-                return node;
-            });
+            }
+            return s->AddTaskOrRunDirectly(
+                [=, name = BASE_NS::string(nodeName), rgroup = BASE_NS::string(resourceGroup)] {
+                    auto res = CopyExternalAsChild(*object_, *scene, rgroup);
+                    auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+                    if (auto named = interface_cast<META_NS::INamed>(node)) {
+                        named->Name()->SetValue(name);
+                        SyncPropertyDirect(s, named->Name()).GetResult();
+                    }
+                    if (node && s->GetOptions().createResources) {
+                        META_NS::IResourceGroupHandle::Ptr handle;
+                        if (!res.resourceGroup.empty()) {
+                            if (auto c = s->GetContext()) {
+                                if (auto i = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
+                                    handle = i->GetGroupHandle(res.resourceGroup);
+                                    auto bundle = s->GetResourceGroups();
+                                    if (!bundle.GetHandle(res.resourceGroup)) {
+                                        bundle.PushGroupHandleToBack(handle);
+                                        s->SetResourceGroups(BASE_NS::move(bundle));
+                                    }
+                                }
+                            }
+                        }
+                        if (auto resource = interface_pointer_cast<CORE_NS::IResource>(scene)) {
+                            AddExternalNodeAttachment(
+                                *node, BASE_NS::move(res.newEntities), resource->GetResourceId(), res.resourceGroup);
+                        }
+                    }
+                    return node;
+                });
         }
         CORE_LOG_E("Cannot import a scene into itself.");
     }
@@ -192,17 +275,38 @@ Future<INode::Ptr> Node::ImportChildScene(const IScene::ConstPtr& scene, BASE_NS
 Future<INode::Ptr> Node::ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName)
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=, uri = BASE_NS::string(uri), name = BASE_NS::string(nodeName)] {
+        return s->AddTaskOrRunDirectly([=, uri = BASE_NS::string(uri), name = BASE_NS::string(nodeName)] {
             if (auto provider = interface_cast<IApplicationContextProvider>(s)) {
                 if (auto appContext = provider->GetApplicationContext()) {
                     if (auto manager = appContext->GetSceneManager()) {
                         auto scene = manager->CreateScene(uri, s->GetOptions()).GetResult();
-                        return ImportChildScene(scene, name).GetResult();
+                        return ImportChildScene(scene, name, "").GetResult();
                     }
                 }
             }
             return INode::Ptr {};
         });
+    }
+    return {};
+}
+
+Future<INode::Ptr> Node::ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ)
+{
+    if (templ) {
+        if (auto s = GetInternalScene()) {
+            return s->AddTaskOrRunDirectly([=] {
+                auto node = interface_pointer_cast<INode>(
+                    templ->Instantiate(interface_pointer_cast<CORE_NS::IInterface>(GetSelf())));
+                if (node && s->GetOptions().createResources) {
+                    if (auto res = interface_pointer_cast<CORE_NS::IResource>(templ)) {
+                        // entities?
+                        // group handling?
+                        AddExternalNodeAttachment(*node, {}, res->GetResourceId(), {});
+                    }
+                }
+                return node;
+            });
+        }
     }
     return {};
 }
@@ -310,12 +414,10 @@ bool Node::Insert(SizeType index, const META_NS::IObject::Ptr& object)
 bool Node::Remove(SizeType index)
 {
     if (auto s = GetInternalScene()) {
-        return s
-            ->AddTask([&] {
-                auto obj = GetAt(index);
-                return obj && Remove(obj);
-            })
-            .GetResult();
+        return s->RunDirectlyOrInTask([&] {
+            auto obj = GetAt(index);
+            return obj && Remove(obj);
+        });
     }
     return false;
 }
@@ -328,83 +430,84 @@ bool Node::Remove(const META_NS::IObject::Ptr& child)
 }
 bool Node::Move(SizeType fromIndex, SizeType toIndex)
 {
-    if (auto s = object_->GetScene()) {
-        return s
-            ->AddTask([&] {
-                auto obj = GetAt(fromIndex);
-                return Move(obj, toIndex);
-            })
-            .GetResult();
+    if (auto s = GetInternalScene()) {
+        return s->RunDirectlyOrInTask([&] {
+            auto obj = GetAt(fromIndex);
+            return Move(obj, toIndex);
+        });
     }
     return false;
 }
 bool Node::Move(const META_NS::IObject::Ptr& child, SizeType toIndex)
 {
-    if (auto s = object_->GetScene()) {
-        return s->AddTask([&] { return child && Remove(child) && Insert(toIndex, child); }).GetResult();
+    if (auto s = GetInternalScene()) {
+        return s->RunDirectlyOrInTask([&] { return child && Remove(child) && Insert(toIndex, child); });
     }
     return false;
 }
 bool Node::Replace(const META_NS::IObject::Ptr& child, const META_NS::IObject::Ptr& replaceWith, bool addAlways)
 {
-    if (auto s = object_->GetScene()) {
-        return s
-            ->AddTask([&] {
-                auto vec = GetAll();
-                size_t index = 0;
-                for (; index < vec.size(); ++index) {
-                    if (vec[index] == child) {
-                        break;
-                    }
+    if (auto s = GetInternalScene()) {
+        return s->RunDirectlyOrInTask([&] {
+            auto vec = GetAll();
+            size_t index = 0;
+            for (; index < vec.size(); ++index) {
+                if (vec[index] == child) {
+                    break;
                 }
-                if (index == vec.size()) {
-                    if (addAlways) {
-                        Add(replaceWith);
-                        return true;
-                    }
-                    return false;
+            }
+            if (index == vec.size()) {
+                if (addAlways) {
+                    Add(replaceWith);
+                    return true;
                 }
-                return Remove(index) && Insert(index, replaceWith);
-            })
-            .GetResult();
+                return false;
+            }
+            return Remove(index) && Insert(index, replaceWith);
+        });
     }
     return false;
 }
 void Node::RemoveAll()
 {
-    if (auto s = object_->GetScene()) {
-        s->AddTask([&] {
-             for (auto&& c : GetAll()) {
-                 Remove(c);
-             }
-         }).Wait();
+    if (auto s = GetInternalScene()) {
+        s->RunDirectlyOrInTask([&] {
+            for (auto&& c : GetAll()) {
+                Remove(c);
+            }
+        });
     }
 }
 bool Node::IsAncestorOf(const META_NS::IObject::ConstPtr& object) const
 {
-    if (auto s = object_->GetScene()) {
-        return s
-            ->AddTask([&] {
-                auto node = interface_pointer_cast<INode>(object);
-                auto self = GetSelf<INode>();
-                do {
-                    if (node == self) {
-                        return true;
-                    }
-                    if (node) {
-                        node = node->GetParent().GetResult();
-                    }
-                } while (node);
-                return false;
-            })
-            .GetResult();
+    if (auto s = GetInternalScene()) {
+        return s->RunDirectlyOrInTask([&] {
+            auto node = interface_pointer_cast<INode>(object);
+            auto self = GetSelf<INode>();
+            do {
+                if (node == self) {
+                    return true;
+                }
+                if (node) {
+                    node = node->GetParent().GetResult();
+                }
+            } while (node);
+            return false;
+        });
     }
     return false;
 }
 
 META_NS::IObject::Ptr Node::GetParent(ContainableTag) const
 {
-    return interface_pointer_cast<META_NS::IObject>(GetParent(NodeTag {}).GetResult());
+    META_NS::IObject::Ptr res;
+    if (auto s = GetInternalScene()) {
+        res = interface_pointer_cast<META_NS::IObject>(GetParent(NodeTag {}).GetResult());
+        if (!res && GetEntity() == s->GetEcsContext().GetRootEntity()) {
+            res = interface_pointer_cast<META_NS::IObject>(GetScene());
+        }
+    }
+    return res;
 }
 
 // --- IContainer
@@ -412,8 +515,8 @@ META_NS::IObject::Ptr Node::GetParent(ContainableTag) const
 void Node::OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i)
 {
     if (BASE_NS::string_view("OnContainerChanged") == m.name) {
-        if (auto s = object_->GetScene()) {
-            s->AddTask([&] { s->ListenNodeChanges(true); }).Wait();
+        if (auto s = GetInternalScene()) {
+            s->RunDirectlyOrInTask([&] { s->ListenNodeChanges(true); });
         }
     }
 }
@@ -421,7 +524,7 @@ void Node::OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInt
 void Node::OnChildChanged(META_NS::ContainerChangeType type, const INode::Ptr& child, size_t index)
 {
     if (auto event = GetEvent("OnContainerChanged", META_NS::MetadataQuery::EXISTING)) {
-        if (auto s = object_->GetScene()) {
+        if (auto s = GetInternalScene()) {
             META_NS::ChildChangedInfo info { type, interface_pointer_cast<META_NS::IObject>(child),
                 GetSelf<META_NS::IContainer>() };
             if (type == META_NS::ContainerChangeType::ADDED) {
@@ -433,11 +536,6 @@ void Node::OnChildChanged(META_NS::ContainerChangeType type, const INode::Ptr& c
             s->InvokeUserNotification<META_NS::IOnChildChanged>(event, info);
         }
     }
-}
-
-void Node::TrackImportedEntities(BASE_NS::array_view<const CORE_NS::Entity> entities)
-{
-    imported_.insert(imported_.end(), entities.begin(), entities.end());
 }
 
 bool Node::IsListening() const
@@ -459,7 +557,7 @@ void Node::OnNodeActiveStateChanged(NodeActiteStateInfo state)
 Future<bool> Node::IsEnabledInHierarchy() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTask([=, ent = GetEntity()] {
+        return s->AddTaskOrRunDirectly([=, ent = GetEntity()] {
             auto& ecs = s->GetEcsContext();
             if (auto c =
                     static_cast<CORE3D_NS::INodeComponentManager*>(ecs.FindComponent<CORE3D_NS::NodeComponent>())) {
@@ -471,6 +569,16 @@ Future<bool> Node::IsEnabledInHierarchy() const
         });
     }
     return {};
+}
+
+Future<BASE_NS::string> Node::GetUniqueChildName(BASE_NS::string_view name) const
+{
+    auto is = GetInternalScene();
+    const auto n = BASE_NS::string(name);
+    if (!is) {
+        return META_NS::GetTaskQueueRegistry().ConstructFutureWithValue(META_NS::ConstructAny(n));
+    }
+    return is->AddTaskOrRunDirectly([is, n, entity = GetEntity()] { return is->GetUniqueName(n, entity); });
 }
 
 SCENE_END_NAMESPACE()

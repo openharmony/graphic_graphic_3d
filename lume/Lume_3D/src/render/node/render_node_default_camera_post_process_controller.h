@@ -61,14 +61,11 @@ private:
     JsonInputs jsonInputs_;
 
     struct CurrentScene {
-        RenderCamera camera;
-
-        uint32_t cameraIdx { 0 };
-        BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        SceneRenderCameraData camData;
         uint32_t multiviewLayer { RENDER_NS::PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
-
         BASE_NS::string cameraControllerRenderNodeName;
+
+        RenderScene scene;
     };
     bool validPostProcessInputs_ { false };
 

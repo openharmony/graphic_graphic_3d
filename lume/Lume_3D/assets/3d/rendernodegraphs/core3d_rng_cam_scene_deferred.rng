@@ -28,6 +28,10 @@
         {
             "name": "history_next",
             "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
+            "name": "camera",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
         }
     ],
     "nodes": [
@@ -44,7 +48,7 @@
                 {
                     "name": "depth",
                     "format": "d32_sfloat",
-                    "usageFlags": "depth_stencil_attachment | input_attachment | transient_attachment",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
                     "engineCreationFlags": "dynamic_barriers"
                 },
@@ -58,7 +62,7 @@
                 {
                     "name": "velocity_normal",
                     "format": "r16g16b16a16_sfloat",
-                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
                     "engineCreationFlags": "dynamic_barriers"
                 },

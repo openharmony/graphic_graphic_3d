@@ -23,14 +23,16 @@
 
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
+#include <meta/interface/intf_containable.h>
 
-#include "util_interfaces.h"
+#include "../util_interfaces.h"
 
 SCENE_BEGIN_NAMESPACE()
 
 META_REGISTER_CLASS(Texture, "07e6dc19-57ca-4a3a-aa71-a53db9bf2e58", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class Texture : public META_NS::IntroduceInterfaces<EcsLazyProperty, ArrayElementIndex, META_NS::INamed, ITexture> {
+class Texture : public META_NS::IntroduceInterfaces<EcsLazyProperty, ArrayElementIndex, META_NS::INamed, ITexture,
+                    META_NS::IContainable, META_NS::IMutableContainable> {
     META_OBJECT(Texture, ClassId::Texture, IntroduceInterfaces)
 
 public:
@@ -54,10 +56,23 @@ public:
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 
+    void SetParent(const META_NS::IObject::Ptr& parent) override
+    {
+        parent_ = parent;
+    }
+
+    META_NS::IObject::Ptr GetParent() const override
+    {
+        return parent_.lock();
+    }
+
     BASE_NS::string GetName() const override
     {
         return META_NS::GetValue(Name());
     }
+
+private:
+    META_NS::IObject::WeakPtr parent_;
 };
 
 SCENE_END_NAMESPACE()

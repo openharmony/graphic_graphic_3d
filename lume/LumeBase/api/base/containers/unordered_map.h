@@ -679,7 +679,7 @@ protected:
         if (buckets_.empty()) {
             resize = true;
         } else {
-            const float load = size_ / static_cast<float>(buckets_.size());
+            const float load = static_cast<float>(size_) / static_cast<float>(buckets_.size());
             resize = (load > 0.7f);
         }
         if (resize) {

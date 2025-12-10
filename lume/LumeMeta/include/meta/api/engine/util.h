@@ -91,7 +91,7 @@ inline bool SetEngineValueToProperty(const IProperty::Ptr& p, const IEngineValue
             return true;
         }
     } else {
-        CORE_LOG_W("Trying to attach incompatible engine value to property (%s)", p->GetName().c_str());
+        CORE_LOG_W("Trying to attach incompatible engine value to property (%s)", p ? p->GetName().c_str() : "unknown");
     }
     return false;
 }

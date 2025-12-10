@@ -19,7 +19,7 @@
 
 #include "BaseObjectJS.h"
 
-class MaterialPropertyJS : public BaseObject {
+class MaterialPropertyJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 35;
     static void Init(napi_env env, napi_value exports);
@@ -29,8 +29,8 @@ public:
     static void SetFactor(Scene::ITexture::Ptr texture, NapiApi::Object factorJS);
     static void SetImage(Scene::ITexture::Ptr texture, NapiApi::Object imageJS);
     static void SetSampler(Scene::ITexture::Ptr texture, NapiApi::Object samplerJS);
-private:
     void* GetInstanceImpl(uint32_t) override;
+private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;

@@ -55,9 +55,11 @@ public:
     static void Destroy(RENDER_NS::IRenderNode* instance);
 
 private:
+    static constexpr uint32_t MAX_WATER_PLANES = 16U;
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
 
-    void InitializeRippleBuffers(RENDER_NS::IRenderCommandList& cmdList);
+    void InitializeRippleBuffers(RENDER_NS::IRenderCommandList& cmdList,
+        const RenderDataStoreWeather::WaterEffectData& waterPlaneData, uint32_t slot);
 
     void ParseRenderNodeInputs();
 
@@ -76,23 +78,17 @@ private:
     RENDER_NS::RenderHandle initShader_;
     RENDER_NS::RenderHandle shader_;
 
-    RENDER_NS::IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
+    RENDER_NS::IDescriptorSetBinder::Ptr updateDescriptorSetBinder_[MAX_WATER_PLANES];
     RENDER_NS::PipelineLayout pipelineLayout_;
     RENDER_NS::RenderHandle psoHandle_;
 
-    RENDER_NS::IPipelineDescriptorSetBinder::Ptr initPipelineDescriptorSetBinder_;
+    RENDER_NS::IDescriptorSetBinder::Ptr initDescriptorSetBinder_[MAX_WATER_PLANES];
     RENDER_NS::PipelineLayout initPipelineLayout_;
     RENDER_NS::RenderHandle initPsoHandle_;
 
     RENDER_NS::RenderHandle defaultMaterialSam_;
-    RENDER_NS::RenderHandle rippleTextureHandle_;
-    RENDER_NS::RenderHandle rippleTextureHandle1_;
-    RENDER_NS::RenderHandle rippleInputArgsBuffer_;
 
     RenderDataStoreWeather* dataStoreWeather_ { nullptr };
-
-    uint32_t pingPongIdx { 0 };
-    bool areTextureInit { false };
 };
 CORE3D_END_NAMESPACE()
 

@@ -23,7 +23,7 @@ declare_args() {
   CORE_DIR_NAME = "LumeEngine"
   RENDER_DIR_NAME = "LumeRender"
   CORE3D_DIR_NAME = "Lume_3D"
-  LUME3DTEXT_DIR_NAME = "Lume3DText"
+  LUME3DTEXT_DIR_NAME = "Lume_3DText"
   BINARY_DIR_NAME = "LumeBinaryCompile"
   META_DIR_NAME = "LumeMeta"
   SCENE_DIR_NAME = "LumeScene"
@@ -33,6 +33,7 @@ declare_args() {
   ECS_SERIALIZER_DIR_NAME = "LumeEcsSerializer"
 
   LUME_OHOS_BUILD = true
+  OPEN_SOURCE_BUILD = false
   CORE_DEV_ENABLED = 1
 
   USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN = true
@@ -97,6 +98,7 @@ template("lume_rofs") {
     script = invoker.script
     cpu_type = ""
     output_obj = ""
+    assets_path = ""
     if (target_cpu == "arm") {
       cpu_type = "armeabi-v7a"
       output_obj = "${invoker.base_name}_32.o"
@@ -108,19 +110,25 @@ template("lume_rofs") {
     }
 
     if (target_cpu == "x86") {
-      cpu_type = "armeabi-v7a"
+      cpu_type = "x86"
       output_obj = "${invoker.base_name}_x32.o"
     }
 
-    if (target_cpu == "x64") {
-      cpu_type = "arm64-v8a"
+    if (target_cpu == "x86_64" || target_cpu == "x64") {
+      cpu_type = "x86_64"
       output_obj = "${invoker.base_name}_x64.o"
+    }
+
+    if (defined(invoker.assets_path)) {
+      assets_path = invoker.assets_path
+    } else {
+      assets_path = invoker.copy_path
     }
 
     args = [
       rebase_path(invoker.tool_path, root_build_dir),
       "-${cpu_type}",
-      rebase_path(invoker.copy_path, root_build_dir),
+      rebase_path(assets_path, root_build_dir),
       invoker.root,
       invoker.bin_name,
       invoker.size_name,

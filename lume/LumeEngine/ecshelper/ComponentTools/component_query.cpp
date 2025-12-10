@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,6 @@
 #include <base/containers/array_view.h>
 #include <base/containers/iterator.h>
 #include <base/containers/type_traits.h>
-#include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
 #include <core/ecs/entity.h>

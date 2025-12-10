@@ -38,9 +38,24 @@ auto CreateFutureFromResultFunction(Func&& func)
 template<typename Func>
 auto AddFutureTaskOrRunDirectly(const ITaskQueue::Ptr& queue, Func&& func)
 {
-    auto q = GetTaskQueueRegistry().GetCurrentTaskQueue();
-    if (q == queue) {
-        return CreateFutureFromResultFunction(BASE_NS::forward<Func>(func));
+    auto& tr = GetTaskQueueRegistry();
+    auto currentQueue = tr.GetCurrentTaskQueue();
+    bool queueChange = (currentQueue != queue);
+    bool direct = !queueChange;
+    if (!direct) {
+        if (auto ti = interface_cast<ITaskQueueThreadInfo>(queue)) {
+            direct = ti->CurrentThreadIsExecutionThread();
+        }
+    }
+    if (direct) {
+        if (queueChange) {
+            tr.SetCurrentTaskQueue(queue);
+        }
+        auto res = CreateFutureFromResultFunction(BASE_NS::forward<Func>(func));
+        if (queueChange) {
+            tr.SetCurrentTaskQueue(currentQueue);
+        }
+        return res;
     }
     return Future<PlainType_t<decltype(func())>>(queue->AddWaitableTask(CreateWaitableTask(BASE_NS::move(func))));
 }

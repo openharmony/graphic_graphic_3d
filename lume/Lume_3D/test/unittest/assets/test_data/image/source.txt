@@ -1,0 +1,9 @@
+
+canine* public domain source image
+    from: https://www.pexels.com/photo/boston-terrier-wearing-unicorn-pet-costume-1564506/
+
+cubemap_yokohama* Creative Commons Attribution 3.0 Unported License
+    from: http://www.humus.name/index.php?page=Textures&ID=139
+
+ktx-test CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+    from: https://github.com/sevmeyer/ktxtest

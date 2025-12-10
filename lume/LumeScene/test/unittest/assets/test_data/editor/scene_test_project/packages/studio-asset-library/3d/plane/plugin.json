@@ -1,0 +1,16 @@
+{
+    "name": "3d-plane",
+    "version": "1.0",
+    "icon": {
+        "uri": "Lume_Icon.svg",
+        "rounded": false
+    },
+    "author": "Ark",
+    "description": "A simple 3D plane model",
+    "depends": [],
+    "assets": [
+        "plane.gltf"
+    ],
+    "uid": "f82c4d12-5c35-11ed-9b6a-0242ac120002",
+    "api": {}
+}

@@ -1,0 +1,88 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "invalidType"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "OutputImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                },
+                {
+                    "name": "DummyImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "configurationName": "RenderConfiguration",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "DummyImage1",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "configurationName": "RenderConfiguration",
+                    "format": "r32g32b32a32_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | transfer_src | transfer_dst",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers | generate_mips",
+                    "width": 128,
+                    "height": 128,
+                    "depth": 1,
+                    "mipCount": 3
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeBloom",
+            "nodeName": "RenderNodeBloom",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "BloomDataStore",
+                "configurationName": "BloomConfiguration"
+            },
+            "resources": {
+                "customInputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "InputImage0"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "optionalOffset": 0,
+                        "name": "OutputImage0"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,82 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Declarations
+import("//build/test.gni")
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+# Test case compilation output path
+module_output_path = "graphic_3d/lume/LumeBase"
+
+# ohos_unittest
+ohos_unittest("lume_base_api_test") {
+
+  module_out_path = module_output_path
+
+  # Configs
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_BASE_PATH}:lume_unit_test_config"
+  ]
+
+  # Includes
+  include_dirs = [
+    "common",
+    "api_unit_test/src"
+  ]
+
+  # Src
+  sources = [
+    "common/test_runner_ohos_system.cpp",
+
+    # Containers
+    "api_unit_test/src/containers/array_view_test.cpp",
+    "api_unit_test/src/containers/byte_array_test.cpp",
+    "api_unit_test/src/containers/flat_map_test.cpp",
+    "api_unit_test/src/containers/iterator_test.cpp",
+    "api_unit_test/src/containers/ptr_test.cpp",
+    "api_unit_test/src/containers/string_test.cpp",
+    "api_unit_test/src/containers/string_view_test.cpp",
+    "api_unit_test/src/containers/unordered_map_test.cpp",
+    "api_unit_test/src/containers/vector_test.cpp",
+
+    # Math
+    "api_unit_test/src/math/math_test.cpp",
+
+    # Util
+    "api_unit_test/src/util/algorithm_test.cpp",
+    "api_unit_test/src/util/base64_test.cpp",
+    "api_unit_test/src/util/color_test.cpp",
+    "api_unit_test/src/util/hasher_test.cpp",
+    "api_unit_test/src/util/uid_test.cpp",
+    "api_unit_test/src/util/utf8_test.cpp"
+  ]
+    
+  # External deps
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "googletest:gtest",
+    "googletest:gmock"
+  ]
+
+  # graphic/graphic_3d
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+# group ("unittest")
+group("unittest") {
+  testonly = true
+  deps = [ ":lume_base_api_test" ]
+}

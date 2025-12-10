@@ -26,8 +26,8 @@ CORE_BEGIN_NAMESPACE()
 using CORE3D_NS::PlanarReflectionComponent;
 
 // Extend propertysystem with the enums
-ENUM_TYPE_METADATA(
-    PlanarReflectionComponent::FlagBits, ENUM_VALUE(ACTIVE_RENDER_BIT, "Active Render"), ENUM_VALUE(MSAA_BIT, "MSAA"))
+ENUM_TYPE_METADATA(PlanarReflectionComponent::FlagBits, ENUM_VALUE(ACTIVE_RENDER_BIT, "Active Render"),
+    ENUM_VALUE(MSAA_BIT, "MSAA"), ENUM_VALUE(WATER_BIT, "Water"))
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -81,6 +81,7 @@ IComponentManager* IPlanarReflectionComponentManagerInstance(IEcs& ecs)
 
 void IPlanarReflectionComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<PlanarReflectionComponentManager*>(instance);
+    static_cast<PlanarReflectionComponentManager*>(instance)->~PlanarReflectionComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

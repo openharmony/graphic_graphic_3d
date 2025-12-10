@@ -109,7 +109,7 @@ static CORE3D_NS::IMeshBuilder::Ptr CreateMeshBuilder(
 Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=, data = BASE_NS::move(d)] {
+        return scene->AddTaskOrRunDirectly([=, data = BASE_NS::move(d)] {
             CORE3D_NS::IMeshBuilder::Submesh submesh;
             submesh.inputAssembly =
                 RENDER_NS::GraphicsState::InputAssembly { false, RENDER_NS::PrimitiveTopology(data.topology) };
@@ -153,7 +153,7 @@ Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
 Future<IMesh::Ptr> MeshCreator::CreateCube(const MeshConfig& c, float width, float height, float depth)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTaskOrRunDirectly([=] {
             auto& util = scene->GetGraphicsContext().GetMeshUtil();
             auto ent = util.GenerateCubeMesh(
                 *scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), width, height, depth);
@@ -165,7 +165,7 @@ Future<IMesh::Ptr> MeshCreator::CreateCube(const MeshConfig& c, float width, flo
 Future<IMesh::Ptr> MeshCreator::CreatePlane(const MeshConfig& c, float width, float depth)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTaskOrRunDirectly([=] {
             auto& util = scene->GetGraphicsContext().GetMeshUtil();
             auto ent =
                 util.GeneratePlaneMesh(*scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), width, depth);
@@ -177,7 +177,7 @@ Future<IMesh::Ptr> MeshCreator::CreatePlane(const MeshConfig& c, float width, fl
 Future<IMesh::Ptr> MeshCreator::CreateSphere(const MeshConfig& c, float radius, uint32_t rings, uint32_t sectors)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTaskOrRunDirectly([=] {
             auto& util = scene->GetGraphicsContext().GetMeshUtil();
             auto ent = util.GenerateSphereMesh(
                 *scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), radius, rings, sectors);
@@ -189,7 +189,7 @@ Future<IMesh::Ptr> MeshCreator::CreateSphere(const MeshConfig& c, float radius, 
 Future<IMesh::Ptr> MeshCreator::CreateCone(const MeshConfig& c, float radius, float length, uint32_t sectors)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTaskOrRunDirectly([=] {
             auto& util = scene->GetGraphicsContext().GetMeshUtil();
             auto ent = util.GenerateConeMesh(
                 *scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), radius, length, sectors);
@@ -201,7 +201,7 @@ Future<IMesh::Ptr> MeshCreator::CreateCone(const MeshConfig& c, float radius, fl
 Future<IMesh::Ptr> MeshCreator::CreateCylinder(const MeshConfig& c, float radius, float height, uint32_t segmentCount)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTask([=] {
+        return scene->AddTaskOrRunDirectly([=] {
             auto& util = scene->GetGraphicsContext().GetMeshUtil();
             auto ent = util.GenerateCylinderMesh(
                 *scene->GetEcsContext().GetNativeEcs(), c.name, GetMaterial(c), radius, height, segmentCount);

@@ -76,6 +76,7 @@ public:
         LIGHTING_SHADOW_TYPE_VSM_BIT = (1 << 0),
         LIGHTING_POINT_ENABLED_BIT = (1 << 1),
         LIGHTING_SPOT_ENABLED_BIT = (1 << 2),
+        LIGHTING_RECT_ENABLED_BIT = (1 << 3),
     };
     using LightingFlags = uint32_t;
 
@@ -83,6 +84,7 @@ public:
         uint32_t directional { 0u };
         uint32_t point { 0u };
         uint32_t spot { 0u };
+        uint32_t rect { 0u };
 
         uint32_t dirShadow { 0u };
         uint32_t spotShadow { 0u };

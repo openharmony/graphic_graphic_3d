@@ -80,7 +80,7 @@ struct PluginState final {
         },
     };
     */
-    PluginState(CORE3D_NS::IGraphicsContext& context) : context_(context) {}
+    explicit PluginState(CORE3D_NS::IGraphicsContext& context) : context_(context) {}
 };
 
 constexpr CORE_NS::ComponentManagerTypeInfo TEXT_COMPONENT_TYPE_INFO = {

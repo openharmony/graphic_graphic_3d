@@ -1,0 +1,46 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeFullscreenGeneric",
+            "nodeName": "RenderBackBuffer",
+            "enableCommandBufferRecording": false,
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "rendershaders://shader/GfxGpuResourceManagerTest2.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "CORE_DEFAULT_BACKBUFFER"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": 0
+                }
+            },
+            "resources": {
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ],
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "TestImage"
+                    }
+                ]
+            }
+        }
+    ]
+}

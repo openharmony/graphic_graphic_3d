@@ -15,6 +15,8 @@
 
 #include "render_node_weather_simulation.h"
 
+#include <cinttypes>
+
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <3d/render/intf_render_node_scene_util.h>
 #include <base/math/mathf.h>
@@ -49,42 +51,51 @@ void RenderNodeWeatherSimulation ::InitNode(IRenderNodeContextManager& renderNod
 
     auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const auto& renderNodeUtil = renderNodeContextMgr.GetRenderNodeUtil();
+    auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+
     if (!shaderMgr.IsValid(shader_) || !shaderMgr.IsValid(initShader_)) {
         CORE_LOG_E("RenderNodeRippleSimulation needs a valid shader handle");
     }
 
+    const uint32_t set = 0U;
+    initPipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(initShader_);
+    pipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(shader_);
+
+    DescriptorCounts updateDescriptorSet = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
+    DescriptorCounts initDescriptorSet = renderNodeUtil.GetDescriptorCounts(initPipelineLayout_);
+
+    vector<DescriptorCounts> descriptorCounts;
+    descriptorCounts.reserve(MAX_WATER_PLANES * 2U);
+    for (uint32_t i = 0; i < MAX_WATER_PLANES; i++) {
+        descriptorCounts.push_back(updateDescriptorSet);
+        descriptorCounts.push_back(initDescriptorSet);
+    }
+    descriptorSetMgr.ResetAndReserve(descriptorCounts);
+
     // simulate shader
     {
-        pipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(shader_);
         psoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(shader_, pipelineLayout_, {});
-
-        {
-            const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(pipelineLayout_);
-            renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(dc);
-        }
-
         // create pipeline descriptor set
-        pipelineDescriptorSetBinder_ = renderNodeUtil.CreatePipelineDescriptorSetBinder(pipelineLayout_);
+        for (uint32_t i = 0; i < MAX_WATER_PLANES; i++) {
+            RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, pipelineLayout_);
+            updateDescriptorSetBinder_[i] = descriptorSetMgr.CreateDescriptorSetBinder(
+                descriptorSetHandle, pipelineLayout_.descriptorSetLayouts[set].bindings);
+        }
     }
 
     // initialization shader
     {
-        initPipelineLayout_ = renderNodeContextMgr.GetRenderNodeUtil().CreatePipelineLayout(initShader_);
         initPsoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(initShader_, initPipelineLayout_, {});
-
-        {
-            const DescriptorCounts dc = renderNodeUtil.GetDescriptorCounts(initPipelineLayout_);
-            renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(dc);
-        }
-
         // create pipeline descriptor set
-        initPipelineDescriptorSetBinder_ = renderNodeUtil.CreatePipelineDescriptorSetBinder(initPipelineLayout_);
+        for (uint32_t i = 0; i < MAX_WATER_PLANES; i++) {
+            RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, initPipelineLayout_);
+
+            initDescriptorSetBinder_[i] = descriptorSetMgr.CreateDescriptorSetBinder(
+                descriptorSetHandle, initPipelineLayout_.descriptorSetLayouts[set].bindings);
+        }
     }
 
     defaultMaterialSam_ = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
-    rippleTextureHandle_ = gpuResourceMgr.GetImageHandle("RIPPLE_RENDER_NODE_TEXTURE_0");
-    rippleTextureHandle1_ = gpuResourceMgr.GetImageHandle("RIPPLE_RENDER_NODE_TEXTURE_1");
-    rippleInputArgsBuffer_ = gpuResourceMgr.GetBufferHandle("RIPPLE_RENDER_NODE_INPUTBUFFER");
 }
 
 void RenderNodeWeatherSimulation ::PreExecuteFrame()
@@ -95,6 +106,8 @@ void RenderNodeWeatherSimulation ::PreExecuteFrame()
 void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
 {
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
+    const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+
     dataStoreWeather_ =
         static_cast<RenderDataStoreWeather*>(renderDataStoreMgr.GetRenderDataStore("RenderDataStoreWeather"));
     const IRenderDataStoreDefaultScene* dataStoreScene = static_cast<CORE3D_NS::IRenderDataStoreDefaultScene*>(
@@ -107,188 +120,166 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
         return; // invalid shader
     }
 
-    if (!areTextureInit) {
-        InitializeRippleBuffers(cmdList);
-        areTextureInit = true;
-        return;
-    }
-
     const auto& effectData = dataStoreWeather_->GetWaterEffectData();
     if (effectData.empty()) {
+        return; // No water planes to simulate
+    }
+
+    const auto scene = dataStoreScene->GetScene();
+    const float deltaTime = scene.deltaTime / 1000.0f;
+    uint32_t planeIndex = 0u;
+
+    // Loop through each water effect plane to process its simulation
+    for (const auto& waterPlaneData : effectData) {
+        // Retrieve the specific textures, args buffer, and ping-pong index for this plane
+        const RenderHandle& current_rippleTexture0 = waterPlaneData.texture0;
+        const RenderHandle& current_rippleTexture1 = waterPlaneData.texture1;
+        const RenderHandle& current_rippleInputArgsBuffer = waterPlaneData.argsBuffer;
+        const uint32_t current_pingPongIdx = waterPlaneData.curIdx;
+
+        if (!RenderHandleUtil::IsValid(current_rippleTexture0) || !RenderHandleUtil::IsValid(current_rippleTexture1) ||
+            !RenderHandleUtil::IsValid(current_rippleInputArgsBuffer)) {
+            CORE_LOG_W("RenderNodeWeatherSimulation: Invalid render handles for water plane %" PRIu64
+                       ". Skipping simulation for this plane.",
+                waterPlaneData.id);
+            continue;
+        }
+        if (!waterPlaneData.isInitialized) {
+            InitializeRippleBuffers(cmdList, waterPlaneData, planeIndex);
+        }
+        cmdList.BindPipeline(psoHandle_);
+        const auto textureImageDesc = gpuResourceMgr.GetImageDescriptor(current_rippleTexture0);
+        if (textureImageDesc.width <= 1u || textureImageDesc.height <= 1u) {
+            CORE_LOG_W("RenderNodeWeatherSimulation: Invalid texture dimensions (%ux%u) for water plane %" PRIu64
+                       ". Skipping simulation.",
+                textureImageDesc.width, textureImageDesc.height, waterPlaneData.id);
+            continue;
+        }
+        // --- Bindings for THIS plane's simulation ---
+        {
+            auto& pipelineDescriptorSetBinder = updateDescriptorSetBinder_[planeIndex];
+            pipelineDescriptorSetBinder->ClearBindings();
+
+            {
+                BindableBuffer bindable;
+                bindable.handle = current_rippleInputArgsBuffer;
+                bindable.byteOffset = 0;
+                bindable.byteSize = sizeof(DefaultWaterRippleDataStruct);
+                pipelineDescriptorSetBinder->BindBuffer(0, bindable);
+            }
+
+            {
+                BindableImage bindable;
+                bindable.handle = (current_pingPongIdx == 0) ? current_rippleTexture0 : current_rippleTexture1;
+                pipelineDescriptorSetBinder->BindImage(1, bindable);
+            }
+
+            {
+                BindableImage bindable;
+                bindable.handle = (current_pingPongIdx == 0) ? current_rippleTexture1 : current_rippleTexture0;
+                pipelineDescriptorSetBinder->BindImage(2, bindable);
+            }
+
+            const auto descHandle = updateDescriptorSetBinder_[planeIndex]->GetDescriptorSetHandle();
+            const auto bindings = updateDescriptorSetBinder_[planeIndex]->GetDescriptorSetLayoutBindingResources();
+            cmdList.UpdateDescriptorSet(descHandle, bindings);
+        }
+        {
+            const auto descHandles = updateDescriptorSetBinder_[planeIndex]->GetDescriptorSetHandle();
+            cmdList.BindDescriptorSet(0, descHandles);
+        }
+
+        // Push constants for THIS plane
+        BASE_NS::Math::Vec4 pc { deltaTime, 0, waterPlaneData.planeOffset.x, waterPlaneData.planeOffset.y };
+        cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
+
+        // Dispatch compute shader for THIS plane
+        const uint32_t tgcX = (textureImageDesc.width + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
+        const uint32_t tgcY = (textureImageDesc.height + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
+        cmdList.Dispatch(tgcX, tgcY, 1);
+
+        planeIndex++;
+    }
+}
+
+void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderCommandList& cmdList,
+    const RenderDataStoreWeather::WaterEffectData& waterPlaneData, uint32_t slot)
+{
+    const RenderHandle& current_rippleTexture0 = waterPlaneData.texture0;
+    const RenderHandle& current_rippleTexture1 = waterPlaneData.texture1;
+    const RenderHandle& rippleInputArgsBuffer = waterPlaneData.argsBuffer;
+
+    if (!RenderHandleUtil::IsValid(current_rippleTexture0) || !RenderHandleUtil::IsValid(current_rippleTexture1) ||
+        !RenderHandleUtil::IsValid(rippleInputArgsBuffer)) {
+        CORE_LOG_W("RenderNodeWeatherSimulation::InitializeSpecificPlaneRippleBuffers: Invalid render handles for "
+                   "water plane %" PRIu64 ". Cannot initialize.",
+            waterPlaneData.id);
         return;
     }
 
     const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(rippleTextureHandle_);
-
-    const auto scene = dataStoreScene->GetScene();
-    {
-        auto& pipelineDescriptorSetBinder = *pipelineDescriptorSetBinder_;
-        pipelineDescriptorSetBinder.ClearBindings();
-
-        // bind the input args buffer
-        {
-            BindableBuffer bindable;
-            bindable.handle = rippleInputArgsBuffer_;
-            bindable.byteOffset = 0;
-            bindable.byteSize = sizeof(DefaultWaterRippleDataStruct);
-            pipelineDescriptorSetBinder.BindBuffer(0, 0, bindable);
-        }
-
-        // bind the ripple storage src texture
-        {
-            BindableImage bindable;
-            if (pingPongIdx == 0) {
-                bindable.handle = rippleTextureHandle_;
-            } else {
-                bindable.handle = rippleTextureHandle1_;
-            }
-            pipelineDescriptorSetBinder.BindImage(0, 1, bindable);
-        }
-
-        // bind the ripple storage dst texture
-        {
-            BindableImage bindable;
-            if (pingPongIdx == 1) {
-                bindable.handle = rippleTextureHandle_;
-            } else {
-                bindable.handle = rippleTextureHandle1_;
-            }
-            pipelineDescriptorSetBinder.BindImage(0, 2, bindable);
-        }
-
-        const auto descHandle = pipelineDescriptorSetBinder_->GetDescriptorSetHandle(0);
-        const auto bindings = pipelineDescriptorSetBinder_->GetDescriptorSetLayoutBindingResources(0);
-        cmdList.UpdateDescriptorSet(descHandle, bindings);
-    }
-
-    cmdList.BindPipeline(psoHandle_);
-
-    // bind all sets
-    {
-        const auto descHandles = pipelineDescriptorSetBinder_->GetDescriptorSetHandles();
-        cmdList.BindDescriptorSets(0, descHandles);
-    }
-
-    BASE_NS::Math::Vec4 pc { scene.deltaTime / 1000.0f, 0, 0, 0 };
-
-    // NOTE: fix the hard-coded
-    // Add plane offcet to pc
-    pc.z = effectData[0U].planeOffset.x;
-    pc.w = effectData[0U].planeOffset.y;
-
-    cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
-
-    // dispatch compute shader
-    if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
-
-        const uint32_t tgcX = (targetSize.x + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
-        const uint32_t tgcY = (targetSize.y + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
-
-        cmdList.Dispatch(tgcX, tgcY, 1);
-    } else {
-        CORE_LOG_W("RenderNodeRippleSimulation: dispatchResources needed");
-    }
-
-    {
-        // add barrier for memory
-        constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-        constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
-                                           AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
-                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-
-        cmdList.CustomMemoryBarrier(src, dst);
-        cmdList.AddCustomBarrierPoint();
-    }
-
-    // copy from 1 to 0
-    if (pingPongIdx == 0U) {
-        ImageCopy imageCopy;
-        imageCopy.srcSubresource = { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-        imageCopy.srcOffset = { 0, 0, 0 };
-        imageCopy.dstSubresource = { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-        imageCopy.dstOffset = { 0, 0, 0 };
-        imageCopy.extent = { TextureImageDesc.width, TextureImageDesc.height, 1u };
-
-        cmdList.CopyImageToImage(rippleTextureHandle1_, rippleTextureHandle_, imageCopy);
-    }
-
-    pingPongIdx = (pingPongIdx == 0U) ? 1U : 0U;
-}
-
-void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderCommandList& cmdList)
-{
-    const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(rippleTextureHandle_);
-
-    {
-        auto& pipelineDescriptorSetBinder = *initPipelineDescriptorSetBinder_;
-        pipelineDescriptorSetBinder.ClearBindings();
-
-        // bind the input args buffer
-        {
-            BindableBuffer bindable;
-            bindable.handle = rippleInputArgsBuffer_;
-            bindable.byteOffset = 0;
-            bindable.byteSize = sizeof(DefaultWaterRippleDataStruct);
-            pipelineDescriptorSetBinder.BindBuffer(0, 0, bindable);
-        }
-
-        // bind the ripple storage src texture
-        {
-            BindableImage bindable;
-            bindable.handle = rippleTextureHandle_;
-            bindable.samplerHandle = rippleTextureHandle_;
-            pipelineDescriptorSetBinder.BindImage(0, 1, bindable);
-        }
-
-        // bind the ripple storage dst texture
-        {
-            BindableImage bindable;
-            bindable.handle = rippleTextureHandle1_;
-            bindable.samplerHandle = rippleTextureHandle1_;
-            pipelineDescriptorSetBinder.BindImage(0, 2, bindable);
-        }
-
-        const auto descHandle = initPipelineDescriptorSetBinder_->GetDescriptorSetHandle(0);
-        const auto bindings = initPipelineDescriptorSetBinder_->GetDescriptorSetLayoutBindingResources(0);
-        cmdList.UpdateDescriptorSet(descHandle, bindings);
-    }
+    const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(current_rippleTexture0);
 
     cmdList.BindPipeline(initPsoHandle_);
 
-    // bind all sets
     {
-        const auto descHandles = initPipelineDescriptorSetBinder_->GetDescriptorSetHandles();
-        cmdList.BindDescriptorSets(0, descHandles);
-    }
+        auto& pipelineDescriptorSetBinder = initDescriptorSetBinder_[slot];
+        pipelineDescriptorSetBinder->ClearBindings();
 
-    // dispatch compute shader
-    if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+        {
+            BindableBuffer bindable;
+            bindable.handle = rippleInputArgsBuffer;
+            bindable.byteOffset = 0;
+            bindable.byteSize = sizeof(DefaultWaterRippleDataStruct);
+            pipelineDescriptorSetBinder->BindBuffer(0, bindable);
+        }
 
-        const uint32_t tgcX = (targetSize.x + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
-        const uint32_t tgcY = (targetSize.y + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
+        {
+            BindableImage bindable;
+            bindable.handle = current_rippleTexture0;
+            pipelineDescriptorSetBinder->BindImage(1, bindable);
+        }
 
-        cmdList.Dispatch(tgcX, tgcY, 1);
-    } else {
-        CORE_LOG_W("RenderNodeRippleSimulation: dispatchResources needed");
-    }
+        // Bind the second ripple texture as a storage image for initialization
+        {
+            BindableImage bindable;
+            bindable.handle = current_rippleTexture1;
+            pipelineDescriptorSetBinder->BindImage(2, bindable);
+        }
 
-    {
-        // add barrier for memory
-        constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-        constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
-                                           AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+        const auto descHandle = initDescriptorSetBinder_[slot]->GetDescriptorSetHandle();
+        const auto bindings = initDescriptorSetBinder_[slot]->GetDescriptorSetLayoutBindingResources();
+        cmdList.UpdateDescriptorSet(descHandle, bindings);
+
+        {
+            const auto descHandles = initDescriptorSetBinder_[slot]->GetDescriptorSetHandle();
+            cmdList.BindDescriptorSet(0, descHandles);
+        }
+
+        // Dispatch compute shader to initialize textures for this plane
+        if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
+            const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+
+            const uint32_t tgcX = (targetSize.x + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
+            const uint32_t tgcY = (targetSize.y + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
+
+            cmdList.Dispatch(tgcX, tgcY, 1);
+        } else {
+            CORE_LOG_W("RenderNodeRippleSimulation: dispatchResources needed");
+        }
+
+        // Add a barrier immediately after initializing this plane's textures.
+        {
+            constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+            constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
+                                               AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+                    PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
-        cmdList.CustomMemoryBarrier(src, dst);
-        cmdList.AddCustomBarrierPoint();
+            cmdList.CustomMemoryBarrier(src, dst);
+            cmdList.AddCustomBarrierPoint();
+        }
     }
 }
 
@@ -306,7 +297,7 @@ void RenderNodeWeatherSimulation ::ParseRenderNodeInputs()
 
     // simulate shader
     {
-        const auto shaderName = parserUtil.GetStringValue(jsonVal, "shader");
+        const auto shaderName = "3dshaders://computeshader/water_ripple_simulation.shader";
         shader_ = shaderMgr.GetShaderHandle(shaderName);
     }
 

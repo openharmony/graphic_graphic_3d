@@ -80,6 +80,7 @@ IComponentManager* IReflectionProbeComponentManagerInstance(IEcs& ecs)
 
 void IReflectionProbeComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<ReflectionProbeComponentManager*>(instance);
+    static_cast<ReflectionProbeComponentManager*>(instance)->~ReflectionProbeComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

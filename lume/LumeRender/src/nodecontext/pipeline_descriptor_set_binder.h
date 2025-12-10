@@ -90,7 +90,6 @@ public:
     DescriptorSetBinder(
         RenderHandle handle, BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
     explicit DescriptorSetBinder(BASE_NS::array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings);
-    ~DescriptorSetBinder() override = default;
 
     void ClearBindings() override;
     RenderHandle GetDescriptorSetHandle() const override;
@@ -106,6 +105,7 @@ public:
     void BindBuffer(uint32_t binding, RenderHandle handle, uint32_t byteOffset, uint32_t byteSize) override;
     // for descriptor array binding
     void BindBuffers(uint32_t binding, BASE_NS::array_view<const BindableBuffer> resources) override;
+    void BindBuffers(uint32_t binding, BASE_NS::array_view<const RenderHandle> resources) override;
 
     // all must call this
     void BindImage(uint32_t binding, const BindableImage& resource, AdditionalDescriptorFlags flags) override;
@@ -114,6 +114,7 @@ public:
     void BindImage(uint32_t binding, RenderHandle handle, RenderHandle samplerHandle) override;
     // for descriptor array binding
     void BindImages(uint32_t binding, BASE_NS::array_view<const BindableImage> resources) override;
+    void BindImages(uint32_t binding, BASE_NS::array_view<const RenderHandle> resources) override;
 
     // all must call this
     void BindSampler(uint32_t binding, const BindableSampler& resource, AdditionalDescriptorFlags flags) override;
@@ -121,6 +122,7 @@ public:
     void BindSampler(uint32_t binding, RenderHandle handle) override;
     // for descriptor array binding
     void BindSamplers(uint32_t binding, BASE_NS::array_view<const BindableSampler> resources) override;
+    void BindSamplers(uint32_t binding, BASE_NS::array_view<const RenderHandle> resources) override;
 
 protected:
     void Destroy() override;

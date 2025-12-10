@@ -44,7 +44,11 @@ enum class MaterialType : uint8_t {
      * Does not use deferred rendering path in any case due to complex material model.
      * Note: that base color is always automatically pre-multiplied in all cases
      */
-    CUSTOM_COMPLEX = 5
+    CUSTOM_COMPLEX = 5,
+    /**
+     * Occlusion material. Needs ClassId::OcclusionMaterial for support.
+     */
+    OCCLUSION = 6,
 };
 
 /** Default render sort layer id */
@@ -79,6 +83,22 @@ inline LightingFlags operator|(LightingFlags l, LightingFlags r)
 {
     return LightingFlags(static_cast<uint32_t>(l) | static_cast<uint32_t>(r));
 }
+
+class IRenderSort : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IRenderSort, "9d376d9e-b5a4-43bd-8dff-88e49646e2e3")
+public:
+    /** Render sort layer. Within a render slot a layer can define a sort layer order.
+     * There are 0-63 values available. Default id value is 32.
+     * 0 first, 63 last
+     * 1. Typical use case is to set render sort layer to objects which render with depth test without depth write.
+     * 2. Typical use case is to always render character and/or camera object first to cull large parts of the view.
+     * 3. Sort e.g. plane layers.
+     */
+    /** Sort layer used sorting submeshes in rendering in render slots. Valid ID values 0 - 63. */
+    META_PROPERTY(uint8_t, RenderSortLayer)
+    /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
+    META_PROPERTY(uint8_t, RenderSortLayerOrder)
+};
 
 class IMaterial : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IMaterial, "c531141e-9d59-4ba3-9aca-b10986ed8805")
@@ -131,7 +151,19 @@ public:
     }
 };
 
+/**
+ * @brief Default material implementation.
+ *        The material will conform to the metallic roughness workflow by default.
+ *        When any of the shaders is set the material switch to custom (shader graph) workflow.
+ */
 META_REGISTER_CLASS(Material, "ffcb25d5-18fd-42ad-8df5-ebd5197bc8a6", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+/**
+ * @brief Occlusion material.
+ *        The material will conform to the occlusion material workflow and cannot be changed.
+ * @note  Changing any of the IMaterial properties for OcclusionMaterial has no effect.
+ */
+META_REGISTER_CLASS(OcclusionMaterial, "d465ebcb-576d-431b-8a87-5c74df515807", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 SCENE_END_NAMESPACE()
 

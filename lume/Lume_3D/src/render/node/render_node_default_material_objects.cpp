@@ -47,8 +47,6 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr bool ENABLE_RT { true };
-
 constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
 constexpr uint32_t MIN_UBO_OBJECT_COUNT { CORE_UNIFORM_BUFFER_MAX_BIND_SIZE / UBO_BIND_OFFSET_ALIGNMENT };
 constexpr uint32_t MIN_MATERIAL_DESC_SET_COUNT { 64U };
@@ -102,7 +100,7 @@ void GetDefaultMaterialGpuResources(const IRenderNodeGpuResourceManager& gpuReso
 }
 
 // returns if there were changes and needs a descriptor set update
-bool UpdateCurrentMaterialHandles(IRenderNodeGpuResourceManager& gpuResourceMgr, const bool forceUpdate,
+bool UpdateCurrentMaterialHandles(const IRenderNodeGpuResourceManager& gpuResourceMgr, const bool forceUpdate,
     const RenderNodeDefaultMaterialObjects::MaterialHandleStruct& defaultMat,
     const RenderDataDefaultMaterial::MaterialHandles& matHandles,
     RenderNodeDefaultMaterialObjects::MaterialHandleStruct& storedMaterialHandles)
@@ -145,20 +143,21 @@ void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& rende
     renderNodeContextMgr_ = &renderNodeContextMgr;
 
     // get flags for rt
-    if constexpr (ENABLE_RT) {
+    {
         rtEnabled_ = false;
-        IRenderContext &renderContext = renderNodeContextMgr_->GetRenderContext();
-        CORE_NS::IClassRegister *cr = renderContext.GetInterface<CORE_NS::IClassRegister>();
-        if (cr != nullptr) {
-            IGraphicsContext *graphicsContext = CORE_NS::GetInstance<IGraphicsContext>(*cr, UID_GRAPHICS_CONTEXT);
-            if (graphicsContext) {
+        bindlessEnabled_ = false;
+        IRenderContext& renderContext = renderNodeContextMgr_->GetRenderContext();
+        if (auto* renderContextClassRegister = renderContext.GetInterface<CORE_NS::IClassRegister>()) {
+            if (auto* graphicsContext =
+                    CORE_NS::GetInstance<IGraphicsContext>(*renderContextClassRegister, UID_GRAPHICS_CONTEXT)) {
                 const IGraphicsContext::CreateInfo ci = graphicsContext->GetCreateInfo();
                 if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_ACCELERATION_STRUCTURES_BIT) {
                     rtEnabled_ = true;
                 }
+                if (ci.createFlags & IGraphicsContext::CreateInfo::ENABLE_BINDLESS_PIPELINES_BIT) {
+                    bindlessEnabled_ = true;
+                }
             }
-        } else {
-            CORE_LOG_E("get null ClassRegister");
         }
     }
 
@@ -170,8 +169,11 @@ void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& rende
 
     const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-    const IShaderManager::RenderSlotData shaderRsd = shaderMgr.GetRenderSlotData(
-        shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE));
+    const string_view defaultRenderSlot = bindlessEnabled_
+                                              ? DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE_BINDLESS
+                                              : DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE;
+    const IShaderManager::RenderSlotData shaderRsd =
+        shaderMgr.GetRenderSlotData(shaderMgr.GetRenderSlotId(defaultRenderSlot));
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!shaderRsd.pipelineLayout) {
         CORE_LOG_W("CORE3D_VALIDATION: Missing default material pipeline layout");
@@ -336,64 +338,109 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
             CORE_LOG_ONCE_W(tmpStr, "CORE3D_VALIDATION: Invalid default material descriptor set setup");
         }
 #endif
-        IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        for (size_t idx = 0; idx < materialHandles.size(); ++idx) {
-            if (idx >= globalDescs_.descriptorSets.size()) {
-                break; // prevent possible issues
+        const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+        if (bindlessEnabled_) {
+            constexpr uint32_t set = 2U;
+            constexpr uint32_t imgBindingIdx = 0U;
+            constexpr uint32_t smpBindingIdx = 1U;
+
+            const auto& descSetLayout = defaultMaterialPipelineLayout_.descriptorSetLayouts[set];
+            const uint32_t currImageCount = descSetLayout.bindings[imgBindingIdx].descriptorCount;
+            const uint32_t currSamplerCount = descSetLayout.bindings[smpBindingIdx].descriptorCount;
+
+            constexpr IGpuResourceManager::ImageHandleInfo imageInfo {
+                IGpuResourceManager::ImageHandleInfo::HANDLE_FILL_WITH_DEFAULT_BIT,
+                ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT
+            };
+            constexpr IGpuResourceManager::SamplerHandleInfo samplerInfo {
+                IGpuResourceManager::SamplerHandleInfo::HANDLE_FILL_WITH_DEFAULT_BIT
+            };
+            blImageHandles_.clear();
+            blSamplerHandles_.clear();
+            // fetch
+            gpuResourceMgr.GetImageHandles(imageInfo, blImageHandles_);
+            gpuResourceMgr.GetSamplerHandles(samplerInfo, blSamplerHandles_);
+
+            auto FillAndResizeWithDefaults = [](const uint32_t currCount, const RenderHandle defHandle, auto& vec) {
+                const uint32_t validCount = static_cast<uint32_t>(vec.size());
+                // resize and add default resources
+                if (validCount < currCount) {
+                    vec.append(currCount - validCount, defHandle);
+                }
+            };
+
+            FillAndResizeWithDefaults(currImageCount, defaultMaterialStruct_.resources[0U].handle, blImageHandles_);
+            FillAndResizeWithDefaults(
+                currSamplerCount, defaultMaterialStruct_.resources[0U].samplerHandle, blSamplerHandles_);
+
+            if (auto* binder = globalDescs_.dmSet2Binder.get(); binder) {
+                uint32_t bindingIdx = 0u;
+
+                binder->BindImages(bindingIdx++, blImageHandles_);
+                binder->BindSamplers(bindingIdx++, blSamplerHandles_);
+
+                cmdList.UpdateDescriptorSet(
+                    binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+                globalDescs_.dmSet2Ready = true;
             }
-            auto* binder = globalDescs_.descriptorSets[idx].get();
-            if (binder && (idx < materialHandles.size())) {
-                const auto& matHandles = materialHandles[idx];
-                MaterialHandleStruct& storedMatHandles = globalDescs_.materials[idx];
-                const bool updateDescSet = UpdateCurrentMaterialHandles(
-                    gpuResourceMgr, globalDescs_.forceUpdate, defaultMaterialStruct_, matHandles, storedMatHandles);
+        } else {
+            for (size_t idx = 0; idx < materialHandles.size(); ++idx) {
+                if (idx >= globalDescs_.descriptorSets.size()) {
+                    break; // prevent possible issues
+                }
+                auto* binder = globalDescs_.descriptorSets[idx].get();
+                if (binder && (idx < materialHandles.size())) {
+                    const auto& matHandles = materialHandles[idx];
+                    MaterialHandleStruct& storedMatHandles = globalDescs_.materials[idx];
+                    const bool updateDescSet = UpdateCurrentMaterialHandles(
+                        gpuResourceMgr, globalDescs_.forceUpdate, defaultMaterialStruct_, matHandles, storedMatHandles);
 
-                if (globalDescs_.forceUpdate || updateDescSet) {
-                    uint32_t bindingIdx = 0u;
-                    // base color is bound separately to support automatic hwbuffer/OES shader modification
-                    binder->BindImage(
-                        bindingIdx++, storedMatHandles.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
+                    if (globalDescs_.forceUpdate || updateDescSet) {
+                        uint32_t bindingIdx = 0u;
+                        // base color is bound separately to support automatic hwbuffer/OES shader modification
+                        binder->BindImage(
+                            bindingIdx++, storedMatHandles.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
 
-                    CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
-                    // skip baseColor as it's bound already
-                    constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
-                    binder->BindImages(bindingIdx++, array_view(storedMatHandles.resources + 1, theCount));
+                        CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
+                        // skip baseColor as it's bound already
+                        constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
+                        binder->BindImages(bindingIdx++, array_view(storedMatHandles.resources + 1, theCount));
 
-                    cmdList.UpdateDescriptorSet(
-                        binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+                        cmdList.UpdateDescriptorSet(
+                            binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+                    }
                 }
             }
         }
         globalDescs_.forceUpdate = false;
     }
-    if (auto* binder = globalDescs_.dmSet1Binder.get(); binder) {
+    if (auto* binder1 = globalDescs_.dmSet1Binder.get(); binder1) {
         // NOTE: should be PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE or current size
         constexpr uint32_t skinSize = sizeof(DefaultMaterialSkinStruct);
         uint32_t bindingIdx = 0u;
-        binder->BindBuffer(bindingIdx++, ubos_.mesh.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder->BindBuffer(bindingIdx++, ubos_.submeshSkin.GetHandle(), 0U, skinSize);
-        binder->BindBuffer(bindingIdx++, ubos_.mat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder->BindBuffer(
+        binder1->BindBuffer(bindingIdx++, ubos_.mesh.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        binder1->BindBuffer(bindingIdx++, ubos_.submeshSkin.GetHandle(), 0U, skinSize);
+        binder1->BindBuffer(bindingIdx++, ubos_.mat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        binder1->BindBuffer(
             bindingIdx++, ubos_.matTransform.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        binder->BindBuffer(
+        binder1->BindBuffer(
             bindingIdx++, ubos_.userMat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
-        cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
-    }
-    // update only once
-    if (!globalDescs_.dmSet2Ready) {
-        if (auto* binder = globalDescs_.dmSet2Binder.get(); binder) {
+        cmdList.UpdateDescriptorSet(
+            binder1->GetDescriptorSetHandle(), binder1->GetDescriptorSetLayoutBindingResources());
+    } else if ((!bindlessEnabled_) && (!globalDescs_.dmSet2Ready)) {
+        if (auto* binder2 = globalDescs_.dmSet2Binder.get(); binder2) {
             uint32_t bindingIdx = 0u;
             // base color is bound separately to support automatic hwbuffer/OES shader modification
-            binder->BindImage(
+            binder2->BindImage(
                 bindingIdx++, defaultMaterialStruct_.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
 
             CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
             // skip baseColor as it's bound already
             constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
-            binder->BindImages(bindingIdx++, array_view(defaultMaterialStruct_.resources + 1, theCount));
+            binder2->BindImages(bindingIdx++, array_view(defaultMaterialStruct_.resources + 1, theCount));
 
             cmdList.UpdateDescriptorSet(
-                binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
+                binder2->GetDescriptorSetHandle(), binder2->GetDescriptorSetLayoutBindingResources());
             globalDescs_.dmSet2Ready = true;
         }
     }
@@ -423,10 +470,8 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         ubos_.mesh = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME, bDesc);
 
         // rt
-        if constexpr (ENABLE_RT) {
-            if (rtEnabled_) {
-                ProcessTlasBuffers();
-            }
+        if (rtEnabled_) {
+            ProcessTlasBuffers();
         }
     }
     if (objectCounts_.maxSkinCount < objectCounts.maxSkinCount) {
@@ -497,7 +542,24 @@ void RenderNodeDefaultMaterialObjects::ProcessGlobalBinders()
             us + DefaultMaterialMaterialConstants::MATERIAL_SET1_GLOBAL_DESCRIPTOR_SET_NAME, bindings);
         globalDescs_.dmSet1Binder = dsMgr.CreateDescriptorSetBinder(globalDescs_.dmSet1.GetHandle(), bindings);
     }
-    if (!globalDescs_.dmSet2Binder) {
+
+    // with bindless we evaluate every frame if we need to allocate more for bind-all descriptor set
+    if (bindlessEnabled_) {
+        bool reAlloc = false;
+        constexpr uint32_t set = 2U;
+        if ((!globalDescs_.dmSet2Binder) || reAlloc) {
+            const string_view us = stores_.dataStoreNameScene;
+            INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();
+            globalDescs_.dmSet2 = {};
+            globalDescs_.dmSet2Binder = {};
+
+            const auto& bindings = defaultMaterialPipelineLayout_.descriptorSetLayouts[set].bindings;
+            globalDescs_.dmSet2 = dsMgr.CreateGlobalDescriptorSet(
+                us + DefaultMaterialMaterialConstants::MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME, bindings);
+            globalDescs_.dmSet2Binder = dsMgr.CreateDescriptorSetBinder(globalDescs_.dmSet2.GetHandle(), bindings);
+        }
+
+    } else if (!globalDescs_.dmSet2Binder) {
         const string_view us = stores_.dataStoreNameScene;
         INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();
         globalDescs_.dmSet2 = {};
@@ -544,59 +606,57 @@ void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
 void RenderNodeDefaultMaterialObjects::UpdateTlasBuffers(
     IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial)
 {
-    if constexpr (ENABLE_RT) {
-        if (rtEnabled_) {
-            if (tlas_.createNewBuffer) {
-                tlas_.createNewBuffer = false;
+    if (rtEnabled_) {
+        if (tlas_.createNewBuffer) {
+            tlas_.createNewBuffer = false;
 
-                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-                const uint32_t byteSize =
-                    PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE * objectCounts_.maxMeshCount;
-                const GpuBufferDesc desc {
-                    BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                        BufferUsageFlagBits::
-                            CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, // usageFlags
-                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT, // memoryPropertyFlags
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                    // engineCreationFlags
-                    byteSize,                                                           // byteSize
-                    BASE_NS::Format::BASE_FORMAT_UNDEFINED,                             // format
-                };
-                // name not needed, only access here
-                tlas_.asInstanceBuffer = gpuResourceMgr.Create(tlas_.asInstanceBuffer, desc);
+            auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+            const uint32_t byteSize =
+                PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE * objectCounts_.maxMeshCount;
+            const GpuBufferDesc desc {
+                BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                    BufferUsageFlagBits::
+                        CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, // usageFlags
+                MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT, // memoryPropertyFlags
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                    // engineCreationFlags
+                byteSize,                                                           // byteSize
+                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                             // format
+            };
+            // name not needed, only access here
+            tlas_.asInstanceBuffer = gpuResourceMgr.Create(tlas_.asInstanceBuffer, desc);
 
-                // allocate scratch
-                const GpuBufferDesc scratchDesc {
-                    BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                        BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, // usageFlags
-                    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                         // memoryPropertyFlags
-                    0U,                                                            // engineCreationFlags
-                    tlas_.asBuildSizes.buildScratchSize,                           // byteSize
-                    BASE_NS::Format::BASE_FORMAT_UNDEFINED,                        // format
-                };
-                tlas_.scratch = gpuResourceMgr.Create(tlas_.scratch, scratchDesc);
-            }
+            // allocate scratch
+            const GpuBufferDesc scratchDesc {
+                BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                    BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, // usageFlags
+                CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                         // memoryPropertyFlags
+                0U,                                                            // engineCreationFlags
+                tlas_.asBuildSizes.buildScratchSize,                           // byteSize
+                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                        // format
+            };
+            tlas_.scratch = gpuResourceMgr.Create(tlas_.scratch, scratchDesc);
+        }
 
-            const RenderDataStoreDefaultMaterial& dsMat = (const RenderDataStoreDefaultMaterial&)dataStoreMaterial;
-            const auto blasData = dsMat.GetMeshBlasData();
-            if (!blasData.empty()) {
-                cmdList.CopyAccelerationStructureInstances({ tlas_.asInstanceBuffer.GetHandle(), 0U }, blasData);
+        const RenderDataStoreDefaultMaterial& dsMat = (const RenderDataStoreDefaultMaterial&)dataStoreMaterial;
+        const auto blasData = dsMat.GetMeshBlasData();
+        if (!blasData.empty()) {
+            cmdList.CopyAccelerationStructureInstances({ tlas_.asInstanceBuffer.GetHandle(), 0U }, blasData);
 
-                const uint32_t blasCount = static_cast<uint32_t>(blasData.size());
-                AsGeometryInstancesData asInstances;
-                asInstances.info = { false, 0U, blasCount };
-                asInstances.data = { tlas_.asInstanceBuffer.GetHandle(), 0U };
+            const uint32_t blasCount = static_cast<uint32_t>(blasData.size());
+            AsGeometryInstancesData asInstances;
+            asInstances.info = { false, 0U, blasCount };
+            asInstances.data = { tlas_.asInstanceBuffer.GetHandle(), 0U };
 
-                AsBuildGeometryData geometry;
-                geometry.dstAccelerationStructure = tlas_.as.GetHandle();
-                geometry.scratchBuffer = { tlas_.scratch.GetHandle(), 0U };
-                geometry.srcAccelerationStructure = {};
-                geometry.info.type = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-                geometry.info.mode = BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD;
-                geometry.info.flags =
-                    BuildAccelerationStructureFlagBits::CORE_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT;
-                cmdList.BuildAccelerationStructures(geometry, {}, {}, { &asInstances, 1U });
-            }
+            AsBuildGeometryData geometry;
+            geometry.dstAccelerationStructure = tlas_.as.GetHandle();
+            geometry.scratchBuffer = { tlas_.scratch.GetHandle(), 0U };
+            geometry.srcAccelerationStructure = {};
+            geometry.info.type = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+            geometry.info.mode = BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD;
+            geometry.info.flags =
+                BuildAccelerationStructureFlagBits::CORE_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT;
+            cmdList.BuildAccelerationStructures(geometry, {}, {}, { &asInstances, 1U });
         }
     }
 }

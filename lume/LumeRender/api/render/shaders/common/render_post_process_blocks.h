@@ -71,13 +71,11 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
         POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) {
         // this is cheap chroma
         const vec2 distUv = (uv - 0.5) * 2.0;
-        const CORE_RELAXEDP float chroma = dot(distUv, distUv) * chromaFactor.y * chromaFactor.x;
+        const CORE_RELAXEDP float chroma = dot(distUv, distUv) * chromaFactor.x;
 
         const vec2 uvDistToImageCenter = chroma * uvSize;
-        const CORE_RELAXEDP float chromaRed =
-            textureLod(imgSampler, uv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).x;
-        const CORE_RELAXEDP float chromaBlue =
-            textureLod(imgSampler, uv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), 0).z;
+        const CORE_RELAXEDP float chromaRed = textureLod(imgSampler, uv - uvDistToImageCenter, 0).x;
+        const CORE_RELAXEDP float chromaBlue = textureLod(imgSampler, uv + uvDistToImageCenter, 0).z;
 
         outCol.r = chromaRed;
         outCol.b = chromaBlue;
@@ -96,13 +94,11 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
         POST_PROCESS_SPECIALIZATION_COLOR_FRINGE_BIT) {
         // this is cheap chroma
         const vec2 distUv = (uv - 0.5) * 2.0;
-        const CORE_RELAXEDP float chroma = dot(distUv, distUv) * chromaFactor.y * chromaFactor.x;
+        const CORE_RELAXEDP float chroma = dot(distUv, distUv) * chromaFactor.x;
 
         const vec2 uvDistToImageCenter = chroma * uvSize;
-        const CORE_RELAXEDP float chromaRed =
-            textureLod(imgSampler, vec3(uv - vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), layer), 0).x;
-        const CORE_RELAXEDP float chromaBlue =
-            textureLod(imgSampler, vec3(uv + vec2(uvDistToImageCenter.x, uvDistToImageCenter.y), layer), 0).z;
+        const CORE_RELAXEDP float chromaRed = textureLod(imgSampler, vec3(uv - uvDistToImageCenter, layer), 0).x;
+        const CORE_RELAXEDP float chromaBlue = textureLod(imgSampler, vec3(uv + uvDistToImageCenter, layer), 0).z;
 
         outCol.r = chromaRed;
         outCol.b = chromaBlue;
@@ -111,6 +107,7 @@ void PostProcessColorFringeBlock(in uint postProcessFlags, in vec4 chromaFactor,
 
 /**
  * returns triangle noise
+ * https://github.com/google/filament/blob/main/shaders/src/dithering.fs
  * n must be normalized in [0..1] (e.g. texture coordinates)
  */
 

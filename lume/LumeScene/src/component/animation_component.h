@@ -41,7 +41,8 @@ public:
 
     // Part of AnimationStateComponent
     META_PROPERTY(float, Time)
-    META_READONLY_PROPERTY(bool, Completed);
+    META_READONLY_PROPERTY(bool, Completed)
+    META_PROPERTY(uint32_t, CurrentLoop)
 };
 
 META_REGISTER_CLASS(
@@ -62,6 +63,7 @@ public:
     SCENE_STATIC_ARRAY_PROPERTY_DATA(IInternalAnimation, CORE_NS::EntityReference, Tracks, "AnimationComponent.tracks")
     SCENE_STATIC_PROPERTY_DATA(IInternalAnimation, float, Time, "AnimationStateComponent.time")
     SCENE_STATIC_PROPERTY_DATA(IInternalAnimation, bool, Completed, "AnimationStateComponent.completed")
+    SCENE_STATIC_PROPERTY_DATA(IInternalAnimation, uint32_t, CurrentLoop, "AnimationStateComponent.currentLoop")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(CORE3D_NS::AnimationComponent::PlaybackState, State)
@@ -74,6 +76,7 @@ public:
 
     META_IMPLEMENT_PROPERTY(float, Time)
     META_IMPLEMENT_READONLY_PROPERTY(bool, Completed)
+    META_IMPLEMENT_PROPERTY(uint32_t, CurrentLoop)
 public:
     BASE_NS::string GetName() const override;
     bool SetEcsObject(const IEcsObject::Ptr& obj) override;

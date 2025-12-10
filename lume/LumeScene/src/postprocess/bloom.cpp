@@ -36,16 +36,14 @@ struct RenderHandleImageConverter {
         auto p = META_NS::GetPointer<IImage>(any);
         if (auto scene = scene_.lock()) {
             if (RENDER_NS::RenderHandleUtil::IsValid(v)) {
-                scene
-                    ->AddTask([&] {
-                        if (!p) {
-                            p = interface_pointer_cast<IImage>(scene->CreateObject(ClassId::Image));
-                        }
-                        if (auto i = interface_cast<IRenderResource>(p)) {
-                            i->SetRenderHandle(scene->GetRenderContext().GetDevice().GetGpuResourceManager().Get(v));
-                        }
-                    })
-                    .Wait();
+                scene->RunDirectlyOrInTask([&] {
+                    if (!p) {
+                        p = interface_pointer_cast<IImage>(scene->CreateObject(ClassId::Image));
+                    }
+                    if (auto i = interface_cast<IRenderResource>(p)) {
+                        i->SetRenderHandle(scene->GetRenderContext().GetDevice().GetGpuResourceManager().Get(v));
+                    }
+                });
             } else {
                 p = nullptr;
             }
@@ -57,13 +55,11 @@ struct RenderHandleImageConverter {
     {
         TargetType handle;
         if (auto scene = scene_.lock()) {
-            scene
-                ->AddTask([&] {
-                    if (auto i = interface_cast<IRenderResource>(v)) {
-                        handle = i->GetRenderHandle().GetHandle();
-                    }
-                })
-                .Wait();
+            scene->RunDirectlyOrInTask([&] {
+                if (auto i = interface_cast<IRenderResource>(v)) {
+                    handle = i->GetRenderHandle().GetHandle();
+                }
+            });
         }
         return handle;
     }
@@ -74,12 +70,13 @@ struct RenderHandleImageConverter {
 
 bool Bloom::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
-    if (p && p->GetName() == "DirtMaskImage") {
-        auto ep = object_->CreateProperty(GetPropertyPath(path)).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(
-                   META_NS::IValue::Ptr(new ConvertingValue<RenderHandleImageConverter>(ep, { object_->GetScene() })));
+    if (!p) {
+        return false;
+    }
+    if (p->GetName() == "DirtMaskImage") {
+        auto ep = CreateProperty(GetPropertyPath(path));
+        return ep && PushPropertyValue(p, META_NS::IValue::Ptr { new ConvertingValue<RenderHandleImageConverter>(
+                                              ep, { GetInternalScene() }) });
     }
     return PostProcessEffect::InitDynamicProperty(p, path);
 }

@@ -38,44 +38,44 @@ class IBloom : public IPostProcessEffect {
     META_INTERFACE(IPostProcessEffect, IBloom, "8020311e-8724-4a20-be99-e46cf667b505")
 public:
     /**
-     * @brief Camera post-processing settings, bloom type
+     * @brief Bloom type.
      */
     META_PROPERTY(BloomType, Type)
     /**
-     * @brief Camera post-processing settings, bloom quality type
+     * @brief Bloom quality.
      */
     META_PROPERTY(EffectQualityType, Quality)
     /**
-     * @brief Camera post-processing settings, bloom threshold hard
+     * @brief Bloom threshold hard.
      */
     META_PROPERTY(float, ThresholdHard)
     /**
-     * @brief Camera post-processing settings, bloom threshold soft
+     * @brief Bloom threshold soft.
      */
     META_PROPERTY(float, ThresholdSoft)
     /**
-     * @brief Camera post-processing settings, bloom amount coefficient
+     * @brief Bloom amount coefficient
      */
     META_PROPERTY(float, AmountCoefficient)
     /**
-     * @brief Camera post-processing settings
+     * @brief Bloom dirt mask coefficient.
      */
     META_PROPERTY(float, DirtMaskCoefficient)
     /**
-     * @brief Camera post-processing settings
+     * @brief Bloom dirt mask image.
      */
     META_PROPERTY(IImage::Ptr, DirtMaskImage)
     /**
-     * @brief Camera post-processing settings
+     * @brief If true, use compute dispatches for bloom.
      */
     META_PROPERTY(bool, UseCompute)
     /**
      * @brief Scatter (amount of bloom spread). (1.0 full spread / default)
      */
     META_PROPERTY(float, Scatter)
-    /** @brief Scaling factor. Controls the amount of scaling and bloom spread
-     * Reduces the downscale and upscale steps
-     * Values 0 - 1. Value of 0.5 halves the scale steps
+    /** @brief Scaling factor. Controls the amount of scaling and bloom spread.
+     *         Reduces the downscale and upscale steps.
+     *         Values 0 - 1. Value of 0.5 halves the scale steps.
      */
     META_PROPERTY(float, ScaleFactor)
 };

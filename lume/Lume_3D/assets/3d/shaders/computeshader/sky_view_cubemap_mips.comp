@@ -1,0 +1,30 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// sets and specializations
+
+layout(set = 0, binding = 0) uniform sampler2DArray uCubemapSampler;
+layout(set = 0, binding = 1, r11f_g11f_b10f) uniform writeonly image2DArray uOutputCubemap;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+void main()
+{
+    ivec3 globalID = ivec3(gl_GlobalInvocationID);
+    ivec3 dimensions = imageSize(uOutputCubemap);
+    
+    if (any(greaterThanEqual(globalID.xy, dimensions.xy))) {
+        return;
+    }
+
+    vec2 uv = vec2(globalID.xy) / vec2(dimensions.xy);
+    uint face = gl_GlobalInvocationID.z;
+    if (face > 5) {
+        return;
+    }
+    
+    vec4 color = texture(uCubemapSampler, vec3(uv, float(face)));
+
+    imageStore(uOutputCubemap, ivec3(globalID.xy, face), color);
+}

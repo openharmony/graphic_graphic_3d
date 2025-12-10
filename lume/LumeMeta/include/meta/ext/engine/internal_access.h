@@ -82,37 +82,45 @@ public:
     {
         return MetaType<Type>::coreType == type;
     }
+    template<typename T>
+    static T* CalcLocation(T* data, const EnginePropertyParams& params)
+    {
+        uintptr_t offset = uintptr_t(data) + params.Offset();
+        auto cont = params.containerMethods;
+        if (cont) {
+            auto arroffset = uintptr_t(data) + params.arraySubsOffset;
+            if (params.index >= cont->size(arroffset)) {
+                return nullptr;
+            }
+            offset = uintptr_t(cont->get(arroffset, params.index)) + params.Offset();
+        }
+        return (T*)offset;
+    }
+
+    using SyncTempType = BASE_NS::conditional_t<Internal::IsArray<Type>::VALUE,
+        ArrayAny<typename Internal::IsArray<Type>::ItemType>, Any<Type>>;
+
     AnyReturnValue SyncToEngine(const IAny& value, const EnginePropertyParams& params) const override
     {
-        if (CORE_NS::ScopedHandle<Type> guard { params.handle.Handle() }) {
-            uintptr_t offset = (uintptr_t)(&(*guard)) + params.Offset();
-            auto cont = params.containerMethods;
-            if (cont) {
-                auto arroffset = (uintptr_t)(&(*guard)) + params.arraySubsOffset;
-                if (params.index >= cont->size(arroffset)) {
-                    return AnyReturn::FAIL;
+        SyncTempType temp;
+        AnyReturnValue res = temp.CopyFrom(value) ? SyncFromEngine(params, temp) : AnyReturn::FAIL;
+        if (res == AnyReturn::SUCCESS) {
+            if (CORE_NS::ScopedHandle<Type> guard { params.handle.Handle() }) {
+                if (Type* location = CalcLocation(&*guard, params)) {
+                    return value.GetData(
+                        UidFromType<Type>(), location, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
                 }
-                offset = uintptr_t(cont->get(arroffset, params.index)) + params.Offset();
             }
-            return value.GetData(
-                UidFromType<Type>(), (void*)offset, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
+            res = AnyReturn::FAIL;
         }
-        return AnyReturn::FAIL;
+        return res;
     }
     AnyReturnValue SyncFromEngine(const EnginePropertyParams& params, IAny& out) const override
     {
         if (CORE_NS::ScopedHandle<const Type> guard { params.handle.Handle() }) {
-            uintptr_t offset = (uintptr_t)(&(*guard)) + params.Offset();
-            auto cont = params.containerMethods;
-            if (cont) {
-                auto arroffset = (uintptr_t)(&(*guard)) + params.arraySubsOffset;
-                if (params.index >= cont->size(arroffset)) {
-                    return AnyReturn::FAIL;
-                }
-                offset = uintptr_t(cont->get(arroffset, params.index)) + params.Offset();
+            if (const Type* location = CalcLocation(&*guard, params)) {
+                return out.SetData(UidFromType<Type>(), location, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
             }
-            return out.SetData(
-                UidFromType<Type>(), (const void*)offset, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
         }
         return AnyReturn::FAIL;
     }
@@ -139,11 +147,11 @@ public:
     AnyReturnValue SyncToEngine(const IAny& value, const EnginePropertyParams& params) const override
     {
         AnyReturnValue res = AnyReturn::FAIL;
-        CORE_NS::ScopedHandle<Type[]> guard { params.handle.Handle() };
-        if (guard && params.property.metaData.containerMethods) {
-            BASE_NS::vector<Type> vec;
-            res = value.GetData(UidFromType<InternalType>(), &vec, sizeof(InternalType));
-            if (res) {
+        ArrayAny<Type> temp;
+        if (SyncFromEngine(params, temp) && (res = temp.CopyFrom(value)) == AnyReturn::SUCCESS) {
+            CORE_NS::ScopedHandle<Type[]> guard { params.handle.Handle() };
+            if (guard && params.property.metaData.containerMethods) {
+                const BASE_NS::vector<Type>& vec = temp.InternalGetValue();
                 if (params.property.type.isArray) {
                     size_t size = params.property.count < vec.size() ? params.property.count : vec.size();
                     for (size_t i = 0; i != size; ++i) {

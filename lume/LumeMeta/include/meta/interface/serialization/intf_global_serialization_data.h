@@ -27,21 +27,7 @@
 
 META_BEGIN_NAMESPACE()
 
-struct SerializationSettings {
-    /**
-     * @brief Export property default value.
-     */
-    /**
-     * @brief Do not export native properties which have default value set
-     */
-    /**
-     * @brief Do not export native properties which value is set the same as the set default value (non-binding)
-     *        (user can set the same value as default and this is not considered as default value).
-     */
-    /**
-     * @brief Do not export native properties which have non-serializable binding set.
-     */
-};
+struct SerializationSettings {};
 
 /// Interface to access global serialization data
 class IGlobalSerializationData : public CORE_NS::IInterface {

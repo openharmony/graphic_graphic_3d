@@ -36,13 +36,11 @@ SceneObject::~SceneObject()
         for (auto&& v : attachments) {
             Detach(v);
         }
-        internal_
-            ->AddTask([&, atts = BASE_NS::move(attachments)]() mutable {
-                atts.clear();
-                internal_->Uninitialize();
-                internal_.reset();
-            })
-            .Wait();
+        internal_->RunDirectlyOrInTask([&, atts = BASE_NS::move(attachments)]() mutable {
+            atts.clear();
+            internal_->Uninitialize();
+            internal_.reset();
+        });
     }
 }
 
@@ -72,18 +70,16 @@ bool SceneObject::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS:
         // ETS API requires RenderConfigurationComponent to be available as an attachment in the root node
         // of the Scene. When RenderConfiguration property is initialized, attach the component wrapper into the
         // Scene's root node for it to be available from JS.
-        return internal_
-            ->AddTask([&]() -> bool {
-                if (META_NS::Property<IRenderConfiguration::Ptr> t { p }) {
-                    if (auto root = internal_->GetRootNode()) {
-                        if (auto component = internal_->CreateEcsComponent(root, "RenderConfigurationComponent")) {
-                            return t->SetValue(interface_pointer_cast<IRenderConfiguration>(component));
-                        }
+        return internal_->RunDirectlyOrInTask([&]() -> bool {
+            if (META_NS::Property<IRenderConfiguration::Ptr> t { p }) {
+                if (auto root = internal_->GetRootNode()) {
+                    if (auto component = internal_->CreateEcsComponent(root, "RenderConfigurationComponent")) {
+                        return t->SetValue(interface_pointer_cast<IRenderConfiguration>(component));
                     }
                 }
-                return false;
-            })
-            .GetResult();
+            }
+            return false;
+        });
     }
     return false;
 }
@@ -108,43 +104,65 @@ void SceneObject::StartAutoUpdate(META_NS::TimeSpan interval)
 
 Future<INode::Ptr> SceneObject::GetRootNode() const
 {
-    return internal_->AddTask([=] { return internal_->GetRootNode(); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->GetRootNode(); });
 }
 
 Future<INode::Ptr> SceneObject::CreateNode(const BASE_NS::string_view uri, META_NS::ObjectId id)
 {
-    return internal_->AddTask([=, path = BASE_NS::string(uri)] { return internal_->CreateNode(path, id); });
+    return internal_->AddTaskOrRunDirectly(
+        [=, path = BASE_NS::string(uri)] { return internal_->CreateNode(path, id); });
+}
+Future<INode::Ptr> SceneObject::CreateNode(
+    const INode::ConstPtr& parent, BASE_NS::string_view name, META_NS::ObjectId id)
+{
+    return internal_->AddTaskOrRunDirectly(
+        [=, n = BASE_NS::string(name)] { return internal_->CreateNode(parent, n, id); });
 }
 
 Future<INode::Ptr> SceneObject::FindNode(BASE_NS::string_view uri, META_NS::ObjectId id) const
 {
-    return internal_->AddTask([=, path = BASE_NS::string(uri)] { return internal_->FindNode(path, id); });
+    return internal_->AddTaskOrRunDirectly([=, path = BASE_NS::string(uri)] { return internal_->FindNode(path, id); });
+}
+
+Future<BASE_NS::vector<INode::Ptr>> SceneObject::FindNamedNodes(const IScene::FindNamedNodeParams& params) const
+{
+    return internal_->AddTaskOrRunDirectly([=, name = BASE_NS::string(params.name)] {
+        return internal_->FindNamedNodes(params.name, params.maxCount, params.root, params.id, params.traversalType);
+    });
 }
 
 Future<META_NS::IObject::Ptr> SceneObject::CreateObject(META_NS::ObjectId id)
 {
-    return internal_->AddTask([=] { return internal_->CreateObject(id); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->CreateObject(id); });
 }
 
-Future<bool> SceneObject::ReleaseNode(INode::Ptr&& node, bool recursive)
+Future<uint32_t> SceneObject::ReleaseNode(INode::Ptr&& node, bool recursive)
 {
-    return internal_->AddTask(
+    return internal_->AddTaskOrRunDirectly(
         [=, n = BASE_NS::move(node)]() mutable { return internal_->ReleaseNode(BASE_NS::move(n), recursive); });
 }
 
-Future<bool> SceneObject::RemoveNode(const INode::Ptr& node)
+Future<bool> SceneObject::RemoveNode(INode::Ptr&& node)
 {
-    return internal_->AddTask([=] { return internal_->RemoveNode(node); });
+    return internal_->AddTaskOrRunDirectly(
+        [=, n = BASE_NS::move(node)]() mutable { return internal_->RemoveNode(BASE_NS::move(n), true); });
+}
+
+Future<bool> SceneObject::RemoveObject(META_NS::IObject::Ptr&& object, const RemoveObjectOptions& options)
+{
+    return internal_->AddTaskOrRunDirectly([=, o = BASE_NS::move(object), opt = options]() mutable {
+        return internal_->RemoveObject(BASE_NS::move(o), opt.removeFromResourceIndex);
+    });
 }
 
 Future<BASE_NS::vector<ICamera::Ptr>> SceneObject::GetCameras() const
 {
-    return internal_->AddTask([=] { return internal_->GetCameras(); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->GetCameras(); });
 }
 
 Future<BASE_NS::vector<META_NS::IAnimation::Ptr>> SceneObject::GetAnimations() const
 {
-    return internal_->AddTask([=] { return internal_->GetAnimations(); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->GetAnimations(); });
 }
 
 IInternalScene::Ptr SceneObject::GetInternalScene() const
@@ -154,11 +172,11 @@ IInternalScene::Ptr SceneObject::GetInternalScene() const
 
 Future<bool> SceneObject::SetRenderMode(RenderMode mode)
 {
-    return internal_->AddTask([=] { return internal_->SetRenderMode(mode); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->SetRenderMode(mode); });
 }
 Future<RenderMode> SceneObject::GetRenderMode() const
 {
-    return internal_->AddTask([=] { return internal_->GetRenderMode(); });
+    return internal_->AddTaskOrRunDirectly([=] { return internal_->GetRenderMode(); });
 }
 IComponent::Ptr SceneObject::GetComponent(const INode::Ptr& node, BASE_NS::string_view componentName) const
 {
@@ -173,13 +191,13 @@ IComponent::Ptr SceneObject::GetComponent(const INode::Ptr& node, BASE_NS::strin
 }
 Future<IComponent::Ptr> SceneObject::CreateComponent(const INode::Ptr& node, BASE_NS::string_view componentName)
 {
-    return internal_->AddTask(
+    return internal_->AddTaskOrRunDirectly(
         [=, name = BASE_NS::string(componentName)] { return internal_->CreateEcsComponent(node, name); });
 }
 Future<NodeHits> SceneObject::CastRay(
     const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const
 {
-    return internal_->AddTask([=] {
+    return internal_->AddTaskOrRunDirectly([=] {
         RayCastOptions ops;
         if (ops.layerMask == NONE_LAYER_MASK) {
             ops.layerMask = ALL_LAYER_MASK;
@@ -190,6 +208,10 @@ Future<NodeHits> SceneObject::CastRay(
         }
         return result;
     });
+}
+ResourceGroupBundle SceneObject::GetResourceGroups() const
+{
+    return internal_->GetResourceGroups();
 }
 
 SCENE_END_NAMESPACE()

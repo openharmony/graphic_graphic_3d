@@ -20,6 +20,7 @@
 #include <base/math/vector.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
+#include <core/property_tools/property_macros.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/render_data_store_render_pods.h>
@@ -38,7 +39,6 @@
 #include "datastore/render_data_store_post_process.h"
 #include "default_engine_constants.h"
 #include "device/gpu_resource_handle_util.h"
-#include "render_post_process_motion_blur.h"
 #include "util/log.h"
 
 // shaders
@@ -49,6 +49,19 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 CORE_BEGIN_NAMESPACE()
+ENUM_TYPE_METADATA(MotionBlurConfiguration::Sharpness, ENUM_VALUE(SOFT, "Soft Sharpness"),
+    ENUM_VALUE(MEDIUM, "Medium Sharpness"), ENUM_VALUE(SHARP, "Sharp Sharpness"))
+
+ENUM_TYPE_METADATA(MotionBlurConfiguration::Quality, ENUM_VALUE(LOW, "Low Quality"),
+    ENUM_VALUE(MEDIUM, "Medium Quality"), ENUM_VALUE(HIGH, "High Quality"))
+
+DATA_TYPE_METADATA(MotionBlurConfiguration, MEMBER_PROPERTY(sharpness, "Sharpness", 0),
+    MEMBER_PROPERTY(quality, "Quality", 0), MEMBER_PROPERTY(alpha, "Alpha", 0),
+    MEMBER_PROPERTY(velocityCoefficient, "Velocity Coefficient", 0))
+
+DATA_TYPE_METADATA(RenderPostProcessMotionBlurNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
+    MEMBER_PROPERTY(size, "Size", 0), MEMBER_PROPERTY(motionBlurConfiguration, "Motion Blur Configuration", 0))
+
 DATA_TYPE_METADATA(RenderPostProcessMotionBlurNode::NodeInputs, MEMBER_PROPERTY(input, "input", 0),
     MEMBER_PROPERTY(velocity, "velocity", 0), MEMBER_PROPERTY(depth, "depth", 0))
 DATA_TYPE_METADATA(RenderPostProcessMotionBlurNode::NodeOutputs, MEMBER_PROPERTY(output, "output", 0))
@@ -90,11 +103,9 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
 } // namespace
 
 RenderPostProcessMotionBlurNode::RenderPostProcessMotionBlurNode()
-    : inputProperties_(
-          &nodeInputsData, array_view(PropertyType::DataType<RenderPostProcessMotionBlurNode::NodeInputs>::properties)),
-      outputProperties_(&nodeOutputsData,
-          array_view(PropertyType::DataType<RenderPostProcessMotionBlurNode::NodeOutputs>::properties))
-
+    : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
+      inputProperties_(&nodeInputsData, PropertyType::DataType<NodeInputs>::MetaDataFromType()),
+      outputProperties_(&nodeOutputsData, PropertyType::DataType<NodeOutputs>::MetaDataFromType())
 {}
 
 IPropertyHandle* RenderPostProcessMotionBlurNode::GetRenderInputProperties()
@@ -122,11 +133,9 @@ IRenderNode::ExecuteFlags RenderPostProcessMotionBlurNode::GetExecuteFlags() con
     }
 }
 
-void RenderPostProcessMotionBlurNode::Init(
-    const IRenderPostProcess::Ptr& postProcess, IRenderNodeContextManager& renderNodeContextMgr)
+void RenderPostProcessMotionBlurNode::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    postProcess_ = postProcess;
 
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr.GetShaderManager();
     {
@@ -184,66 +193,30 @@ void RenderPostProcessMotionBlurNode::Init(
     samplerNearestHandle_ = renderNodeContextMgr.GetGpuResourceManager().GetSamplerHandle(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_NEAREST_CLAMP);
     gpuBuffer_ = CreateGpuBuffers(gpuResourceMgr, gpuBuffer_);
-
+    binders_.localSet0.reset();
+    binders_.localTileMaxSet0.reset();
+    for (auto& binder : binders_.localTileNeighborhoodSet0) {
+        binder.reset();
+    }
     valid_ = true;
 }
 
-void RenderPostProcessMotionBlurNode::PreExecute()
+void RenderPostProcessMotionBlurNode::PreExecuteFrame()
 {
-    if (valid_ && postProcess_) {
-        const array_view<const uint8_t> propertyView = postProcess_->GetData();
+    if (valid_) {
+        const array_view<const uint8_t> propertyView = GetData();
         // this node is directly dependant
         PLUGIN_ASSERT(propertyView.size_bytes() == sizeof(RenderPostProcessMotionBlurNode::EffectProperties));
         if (propertyView.size_bytes() == sizeof(RenderPostProcessMotionBlurNode::EffectProperties)) {
             effectProperties_ = (const RenderPostProcessMotionBlurNode::EffectProperties&)(*propertyView.data());
-            if ((effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::MEDIUM) ||
-                (effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::HIGH)) {
-                const uint32_t compSizeX = (effectProperties_.size.x + VELOCITY_TILE_SIZE - 1U) / VELOCITY_TILE_SIZE;
-                const uint32_t compSizeY = (effectProperties_.size.y + VELOCITY_TILE_SIZE - 1U) / VELOCITY_TILE_SIZE;
-                if ((!tileVelocityImages_[0U]) || (tileImageSize_.x != compSizeX) || (tileImageSize_.y != compSizeY)) {
-                    IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-                    GpuImageDesc desc = renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(
-                        nodeInputsData.velocity.handle);
-                    desc.engineCreationFlags = CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
-                                               CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
-                    desc.usageFlags = CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-                    desc.mipCount = 1U;
-                    desc.layerCount = 1U;
-                    desc.width = compSizeX;
-                    desc.height = compSizeY;
-                    tileVelocityImages_[0U] = gpuResourceMgr.Create(tileVelocityImages_[0U], desc);
-                    tileVelocityImages_[1U] = gpuResourceMgr.Create(tileVelocityImages_[1U], desc);
-
-                    tileImageSize_ = { compSizeX, compSizeY };
-                }
-            }
         }
     } else {
         effectProperties_.enabled = false;
     }
 }
 
-void RenderPostProcessMotionBlurNode::Execute(IRenderCommandList& cmdList)
+RenderPass RenderPostProcessMotionBlurNode::CreateRenderPass()
 {
-    if (!RenderHandleUtil::IsGpuImage(nodeOutputsData.output.handle)) {
-        return;
-    }
-
-    CheckDescriptorSetNeed();
-
-    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderMotionBlur", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
-
-    const RenderHandle velocity = nodeInputsData.velocity.handle;
-    RenderHandle tileVelocity = nodeInputsData.velocity.handle;
-    if ((effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::MEDIUM) ||
-        (effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::HIGH)) {
-        ExecuteTileVelocity(cmdList);
-        const RenderHandle tv = GetTileVelocityForMotionBlur();
-        tileVelocity = RenderHandleUtil::IsValid(tv) ? tv : velocity;
-    }
-
-    const auto& renderData = renderData_;
-
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
     renderPass.renderPassDesc.renderArea = { 0, 0, effectProperties_.size.x, effectProperties_.size.y };
@@ -256,39 +229,68 @@ void RenderPostProcessMotionBlurNode::Execute(IRenderCommandList& cmdList)
     subpass.colorAttachmentCount = 1;
     subpass.colorAttachmentIndices[0] = 0;
 
+    return renderPass;
+}
+
+void RenderPostProcessMotionBlurNode::ExecuteMotionBlur(IRenderCommandList& cmdList)
+{
+    const RenderHandle velocity = nodeInputsData.velocity.handle;
+    RenderHandle tileVelocity = velocity;
+
+    if ((effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::MEDIUM) ||
+        (effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::HIGH)) {
+        ExecuteTileVelocity(cmdList);
+        const RenderHandle tv = GetTileVelocityForMotionBlur();
+        tileVelocity = RenderHandleUtil::IsValid(tv) ? tv : velocity;
+    }
+
+    RenderPass renderPass = CreateRenderPass();
+
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-    cmdList.BindPipeline(renderData.pso);
+    cmdList.BindPipeline(renderData_.pso);
 
     shaderParameters_ = GetFactorMotionBlur();
     UpdateBuffer(renderNodeContextMgr_->GetGpuResourceManager(), gpuBuffer_.GetHandle(), shaderParameters_);
 
-    {
-        auto& binder = *binders_.localSet0;
-        binder.ClearBindings();
-        uint32_t binding = 0u;
-        binder.BindImage(binding++, nodeInputsData.input.handle, samplerHandle_);
-        binder.BindImage(binding++, nodeInputsData.depth.handle, samplerNearestHandle_);
-        binder.BindImage(binding++, velocity, samplerHandle_);
-        binder.BindImage(binding++, tileVelocity, samplerHandle_);
-        binder.BindBuffer(binding++, gpuBuffer_.GetHandle(), 0u);
+    auto& binder = *binders_.localSet0;
+    binder.ClearBindings();
+    uint32_t binding = 0u;
+    binder.BindImage(binding++, nodeInputsData.input.handle, samplerHandle_);
+    binder.BindImage(binding++, nodeInputsData.depth.handle, samplerNearestHandle_);
+    binder.BindImage(binding++, nodeInputsData.velocity.handle, samplerHandle_);
+    binder.BindImage(binding++, tileVelocity, samplerHandle_);
+    binder.BindBuffer(binding++, gpuBuffer_.GetHandle(), 0u);
 
-        cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
-        cmdList.BindDescriptorSet(0u, binder.GetDescriptorSetHandle());
-    }
+    cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
+    cmdList.BindDescriptorSet(0u, binder.GetDescriptorSetHandle());
 
-    if (renderData.pipelineLayout.pushConstant.byteSize > 0) {
+    if (renderData_.pipelineLayout.pushConstant.byteSize > 0) {
         const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
         const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
         const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
         cmdList.PushConstantData(renderData_.pipelineLayout.pushConstant, arrayviewU8(pc));
     }
 
-    // dynamic state
     cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
     cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
 
     cmdList.Draw(3u, 1u, 0u, 0u);
+
     cmdList.EndRenderPass();
+}
+
+void RenderPostProcessMotionBlurNode::ExecuteFrame(IRenderCommandList& cmdList)
+{
+    if (!RenderHandleUtil::IsGpuImage(nodeOutputsData.output.handle)) {
+        return;
+    }
+
+    CheckDescriptorSetNeed();
+    CheckTemporaryTargetNeed();
+
+    RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderMotionBlur", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
+    ExecuteMotionBlur(cmdList);
 }
 
 void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cmdList)
@@ -434,6 +436,31 @@ DescriptorCounts RenderPostProcessMotionBlurNode::GetRenderDescriptorCounts() co
     } };
 }
 
+void RenderPostProcessMotionBlurNode::CheckTemporaryTargetNeed()
+{
+    if ((effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::MEDIUM) ||
+        (effectProperties_.motionBlurConfiguration.quality == MotionBlurConfiguration::Quality::HIGH)) {
+        const uint32_t compSizeX = (effectProperties_.size.x + VELOCITY_TILE_SIZE - 1U) / VELOCITY_TILE_SIZE;
+        const uint32_t compSizeY = (effectProperties_.size.y + VELOCITY_TILE_SIZE - 1U) / VELOCITY_TILE_SIZE;
+        if ((!tileVelocityImages_[0U]) || (tileImageSize_.x != compSizeX) || (tileImageSize_.y != compSizeY)) {
+            IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+            GpuImageDesc desc =
+                renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(nodeInputsData.velocity.handle);
+            desc.engineCreationFlags =
+                CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS | CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
+            desc.usageFlags = CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            desc.mipCount = 1U;
+            desc.layerCount = 1U;
+            desc.width = compSizeX;
+            desc.height = compSizeY;
+            tileVelocityImages_[0U] = gpuResourceMgr.Create(tileVelocityImages_[0U], desc);
+            tileVelocityImages_[1U] = gpuResourceMgr.Create(tileVelocityImages_[1U], desc);
+
+            tileImageSize_ = { compSizeX, compSizeY };
+        }
+    }
+}
+
 void RenderPostProcessMotionBlurNode::CheckDescriptorSetNeed()
 {
     if (!binders_.localSet0) {
@@ -464,5 +491,4 @@ void RenderPostProcessMotionBlurNode::CheckDescriptorSetNeed()
         }
     }
 }
-
 RENDER_END_NAMESPACE()

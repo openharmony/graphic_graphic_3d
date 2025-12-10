@@ -33,6 +33,8 @@ void RenderNodeEndFrameStaging::InitNode(IRenderNodeContextManager& renderNodeCo
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     dataStoreNameStaging_ = renderNodeGraphData.renderNodeGraphName + "RenderDataStoreDefaultStaging";
+
+    renderStaging.Init(renderNodeContextMgr);
 }
 
 void RenderNodeEndFrameStaging::PreExecuteFrame()

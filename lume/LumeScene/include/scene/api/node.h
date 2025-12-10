@@ -20,12 +20,15 @@
 #include <scene/ext/intf_component.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_environment.h>
+#include <scene/interface/intf_layer.h>
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_text.h>
+
+#include <meta/api/util.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -60,29 +63,20 @@ BASE_NS::shared_ptr<Result> FindFromContainer(
     }
     return nullptr;
 }
-template<typename Interface>
-INode::Ptr FindNode(
-    const BASE_NS::shared_ptr<Interface>& root, BASE_NS::string_view name, META_NS::TraversalType traversalType)
-{
-    INode::Ptr n;
-    META_NS::IterateShared(
-        interface_pointer_cast<META_NS::IIterable>(root),
-        [&](const META_NS::IObject::Ptr& object) -> bool {
-            if (Internal::CheckName(object, name)) {
-                n = interface_pointer_cast<INode>(object);
-            }
-            return !n.operator bool();
-        },
-        traversalType);
-    return n;
-}
 
 } // namespace Internal
 
-/// Wrapper for generic Scene nodes which implement SCENE_NS::INode.
-class Node : public META_NS::Named {
+class Layer : public META_NS::Named {
 public:
-    META_INTERFACE_OBJECT(Node, META_NS::Named, INode)
+    META_INTERFACE_OBJECT(Layer, META_NS::Named, ILayer)
+    /// @see ILayer::LayerMask
+    META_INTERFACE_OBJECT_PROPERTY(uint64_t, LayerMask)
+};
+
+/// Wrapper for generic Scene nodes which implement SCENE_NS::INode.
+class Node : public Layer {
+public:
+    META_INTERFACE_OBJECT(Node, Layer, INode)
     /// @see ITransform::Position
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec3, Position)
     /// @see ITransform::Scale
@@ -126,6 +120,38 @@ public:
     {
         return META_INTERFACE_OBJECT_CALL_PTR(GetScene());
     }
+    /// @see INode::GetUniqueChildName
+    META_API_ASYNC auto GetUniqueChildName(BASE_NS::string_view name) const
+    {
+        return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(BASE_NS::string, GetUniqueChildName(name));
+    }
+    /**
+     * @brief Finds all occurrences of a child node with given name from this node's hierarchy.
+     * @note  If the full path is known, it is more efficient to call Scene::GetNode
+     * @param name Name of the node to find.
+     * @param maxCOunt Maximum number of nodes to return.
+     * @param traversalType Can be used to control how the scene is traversed, or to limit finding only immediate
+     *        children by specifying TraversalType::NO_HIERARCHY.
+     * @return The first node matching the parameters or an invalid node in case of failure.
+     */
+    META_API_ASYNC auto FindNodes(BASE_NS::string_view name, size_t maxCount,
+        META_NS::TraversalType traversalType = META_NS::TraversalType::FULL_HIERARCHY) const
+    {
+        auto f = CallPtr<INode>([=](auto& n) {
+            auto scene = n.GetScene();
+            ::SCENE_NS::IScene::FindNamedNodeParams params;
+            params.name = name;
+            params.maxCount = maxCount;
+            params.root = GetPtr<INode>();
+            params.traversalType = traversalType;
+            return scene->FindNamedNodes(params);
+        });
+        if constexpr (CallType.async) {
+            return f;
+        } else {
+            return META_NS::Internal::ArrayCast<Node>(f.GetResult());
+        }
+    }
     /**
      * @brief Finds the first occurrence of a child node with given name from this node's hierarchy.
      * @note  If the full path is known, it is more efficient to call Scene::GetNode
@@ -134,10 +160,19 @@ public:
      *        children by specifying TraversalType::NO_HIERARCHY.
      * @return The first node matching the parameters or an invalid node in case of failure.
      */
-    auto FindNode(
+    META_API_ASYNC auto FindNode(
         BASE_NS::string_view name, META_NS::TraversalType traversalType = META_NS::TraversalType::FULL_HIERARCHY) const
     {
-        return Node(Internal::FindNode(GetPtr(), name, traversalType));
+        auto f = CallPtr<INode>([=](auto& n) {
+            auto scene = n.GetScene();
+            ::SCENE_NS::IScene::FindNamedNodeParams params;
+            params.name = name;
+            params.maxCount = 1;
+            params.root = GetPtr<INode>();
+            params.traversalType = traversalType;
+            return scene ? scene->FindNamedNode(params) : decltype(scene->FindNamedNode(params)) {};
+        });
+        return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
     /**
      * @brief Imports a Scene into this scene under this node.
@@ -189,6 +224,8 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(CameraCulling, Culling)
     /// @see ICamera::RenderingPipeline
     META_INTERFACE_OBJECT_PROPERTY(CameraPipeline, RenderingPipeline)
+    /// @see ICamera::MSAASampleCount
+    META_INTERFACE_OBJECT_PROPERTY(CameraSampleCount, MSAASampleCount)
     /// @see ICamera::SceneFlags
     META_INTERFACE_OBJECT_PROPERTY(uint32_t, SceneFlags)
     /// @see ICamera::PipelineFlags
@@ -210,21 +247,26 @@ public:
     /// @see ICamera::ClearDepth
     META_INTERFACE_OBJECT_PROPERTY(float, ClearDepth)
     /// @see ICamera::LayerMask
-    META_INTERFACE_OBJECT_PROPERTY(uint64_t, LayerMask)
+    META_INTERFACE_OBJECT_PROPERTY(uint64_t, CameraLayerMask)
     /// @see ICamera::ColorTargetCustomization
     META_INTERFACE_OBJECT_ARRAY_PROPERTY(ColorFormat, ColorTargetCustomization, ColorTargetCustomization)
     /// @see ICamera::CustomProjectionMatrix
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Mat4X4, CustomProjectionMatrix)
     /// @see ICamera::PostProcess
     META_INTERFACE_OBJECT_PROPERTY(SCENE_NS::PostProcess, PostProcess)
+    /// @see ICamera::DownsamplePercentage
+    META_INTERFACE_OBJECT_PROPERTY(float, DownsamplePercentage)
+    /// @see ICamera::SetActive
     META_API_ASYNC auto SetActive(bool active)
     {
         return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(bool, SetActive(active));
     }
+    /// @see ICamera::IsActive
     bool IsActive() const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(IsActive());
     }
+    /// @see ICamera::SetRenderTarget
     META_API_ASYNC auto SetRenderTarget(const IRenderTarget::Ptr& target)
     {
         return META_INTERFACE_OBJECT_ASYNC_CALL_PTR(bool, SetRenderTarget(target));
@@ -243,6 +285,21 @@ public:
     void SendPointerUp(uint32_t pointerId, const BASE_NS::Math::Vec2& position, META_NS::TimeSpan time = {})
     {
         SendPointerEvent(pointerId, SCENE_NS::PointerEvent::PointerState::POINTER_UP, position, time);
+    }
+    /// @see ICameraEffect::Effects
+    META_NS::ArrayProperty<IEffect::Ptr> Effects()
+    {
+        return CallPtr<ICameraEffect>([](auto& p) { return p.Effects(); });
+    }
+    /// Return effects associated with the camera object
+    BASE_NS::vector<IEffect::Ptr> GetEffects() const
+    {
+        return CallPtr<ICameraEffect>([](auto& p) { return p.Effects()->GetValue(); });
+    }
+    /// Set the list of effects to apply on the camera output.
+    void SetEffects(BASE_NS::array_view<const IEffect::Ptr> effects)
+    {
+        CallPtr<ICameraEffect>([&](auto& p) { p.Effects()->SetValue(effects); });
     }
 
 private:

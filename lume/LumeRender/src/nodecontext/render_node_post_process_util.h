@@ -89,7 +89,6 @@ private:
     RenderNodeCopyUtil renderCopyLayer_;
 
     struct PostProcessInterfaces {
-        IRenderPostProcess::Ptr postProcess;
         IRenderPostProcessNode::Ptr postProcessNode;
     };
     PostProcessInterfaces ppLensFlareInterface_;
@@ -100,6 +99,7 @@ private:
     PostProcessInterfaces ppRenderMotionBlurInterface_;
     PostProcessInterfaces ppRenderBloomInterface_;
     PostProcessInterfaces ppRenderUpscaleInterface_;
+    PostProcessInterfaces ppRenderFastUpscalerInterface_;
     PostProcessInterfaces ppRenderCombinedInterface_;
 
     struct AdditionalImageData {
@@ -117,7 +117,6 @@ private:
     bool validInputsForTaa_ { false };
     bool validInputsForDof_ { false };
     bool validInputsForMb_ { false };
-    bool validInputsForUpscale_ { false };
 
     BASE_NS::vector<InputOutput> framePostProcessInOut_;
 
@@ -132,12 +131,8 @@ private:
     struct TemporaryImages {
         uint32_t idx = 0U;
         uint32_t imageCount = 0U;
-        uint32_t mipIdx = 0U;
-        uint32_t mipImageCount = 0U;
         RenderHandleReference images[2U];
-        RenderHandleReference mipImages[2U];
         BASE_NS::Math::Vec4 targetSize { 0.0f, 0.0f, 0.0f, 0.0f };
-        uint32_t mipCount[2U];
 
         RenderHandleReference layerCopyImage;
     };
@@ -151,16 +146,6 @@ private:
             ti_.idx = (ti_.idx + 1) % static_cast<uint32_t>(ti_.imageCount);
         }
         return { ti_.images[ti_.idx].GetHandle() };
-    }
-    BindableImage GetMipImage(const RenderHandle& input)
-    {
-        if (ti_.mipImageCount == 0U) {
-            return {};
-        }
-        if (input == ti_.mipImages[ti_.mipIdx].GetHandle()) {
-            ti_.mipIdx = (ti_.mipIdx + 1) % static_cast<uint32_t>(ti_.mipImageCount);
-        }
-        return { ti_.mipImages[ti_.mipIdx].GetHandle() };
     }
 
     struct AllBinders {

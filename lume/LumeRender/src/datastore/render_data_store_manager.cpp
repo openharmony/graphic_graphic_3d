@@ -49,13 +49,14 @@ void RenderDataStoreManager::CommitFrameData()
         if (it->second->GetRefCount() > 2) { // in stores_, renderAccessStores_ and user, 2: min ref count
             ++it;
         } else {
-            pendingRenderAccess.push_back({ it->first, {} });
+            pendingRenderAccess.push_back({ it->first, BASE_NS::move(it->second) });
             it = renderAccessStores_.erase(it);
         }
     }
     if (!pendingRenderAccess.empty()) {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto& ref : pendingRenderAccess) {
+            pointerToStoreHash_.erase(ref.renderDataStore.get());
             stores_.erase(ref.hash);
         }
     }

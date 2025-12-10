@@ -34,4 +34,23 @@ private:
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };
+
+// UVec2 also maps to Vec2 on JS side
+class UVec2Proxy : public ObjectPropertyProxy {
+public:
+    UVec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::UVec2> prop);
+    ~UVec2Proxy() override;
+    void SetValue(NapiApi::Object v) override;
+
+    static BASE_NS::Math::Vec2 ToNative(NapiApi::Object vec2, bool& success);
+    static NapiApi::Object ToNapiObject(BASE_NS::Math::UVec2 vec2, napi_env env);
+
+    using ObjectPropertyProxy::GetPropertyPtr;
+
+private:
+    void SetValue(const BASE_NS::Math::UVec2& v);
+    void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
+    napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
+};
+
 #endif

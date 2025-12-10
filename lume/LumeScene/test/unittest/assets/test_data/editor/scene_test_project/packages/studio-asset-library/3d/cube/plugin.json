@@ -1,0 +1,16 @@
+{
+    "name": "3d-cube",
+    "version": "1.0",
+    "icon": {
+        "uri": "Lume_Icon.svg",
+        "rounded": false
+    },
+    "author": "Ark",
+    "description": "A simple 3D cube model",
+    "depends": [],
+    "assets": [
+        "cube.gltf"
+    ],
+    "uid": "f82c4a24-5c35-11ed-9b6a-0242ac120002",
+    "api": {}
+}

@@ -1,0 +1,112 @@
+{
+  "compatibility_info": {
+    "version": "22.00",
+    "type": "rendernodegraph"
+  },
+  "nodes": [
+    {
+      "typeName": "RenderNodeCreateGpuImages",
+      "nodeName": "RenderNodeCreateGpuImages",
+      "gpuImageDescs": [
+        {
+          "name": "OutputImage0",
+          "dependencyFlags": "size | format | mipCount | layerCount | samples",
+          "configurationName": "RenderConfiguration",
+          "imageType": "2d",
+          "imageViewType": "2d",
+          "format": "r16g16b16a16_sfloat",
+          "imageTiling": "optimal",
+          "usageFlags": "storage | color_attachment | transfer_src | sampled",
+          "memoryPropertyFlags": "device_local",
+          "engineCreationFlags": "dynamic_barriers",
+          "width": 512,
+          "height": 512,
+          "depth": 1
+        },
+        {
+          "name": "DummyImage0",
+          "dependencyImageName": "InputImage0",
+          "dependencyFlags": "",
+          "imageType": "2d",
+          "imageViewType": "2d",
+          "configurationName": "RenderConfiguration",
+          "imageTiling": "optimal",
+          "usageFlags": "storage",
+          "memoryPropertyFlags": "device_local",
+          "engineCreationFlags": "dynamic_barriers"
+        },
+        {
+          "name": "DummyImage1",
+          "imageType": "2d",
+          "imageViewType": "2d",
+          "configurationName": "RenderConfiguration",
+          "format": "r16g16b16a16_sfloat",
+          "imageTiling": "optimal",
+          "usageFlags": "storage | transfer_src | transfer_dst",
+          "memoryPropertyFlags": "device_local",
+          "engineCreationFlags": "dynamic_barriers | generate_mips",
+          "width": 128,
+          "height": 128,
+          "depth": 1,
+          "mipCount": 3
+        }
+      ]
+    },
+    {
+      "typeName": "RenderNodeRenderPostProcessesGeneric",
+      "nodeName": "RenderNodeRenderPostProcessesGeneric",
+      "queue": {
+        "type": "graphics",
+        "index": 0
+      },
+      "renderDataStore": {
+        "typeName": "RenderDataStoreRenderPostProcesses",
+        "dataStoreName": "RenderDataStoreRenderPostProcesses",
+        "configurationName": "SrcTests"
+      },
+      "resources": {
+        "customInputImages": [
+          {
+            "set": 0,
+            "binding": 0,
+            "optionalOffset": 0,
+            "name": "InputImage0",
+            "usageName": "input"
+          },
+          {
+            "set": 0,
+            "binding": 1,
+            "optionalOffset": 0,
+            "name": "InputImage1",
+            "usageName": "velocity_normal"
+          },
+          {
+            "set": 0,
+            "binding": 1,
+            "optionalOffset": 0,
+            "name": "InputImage2",
+            "usageName": "depth"
+          }
+        ],
+        "customOutputImages": [
+          {
+            "set": 0,
+            "binding": 0,
+            "optionalOffset": 0,
+            "name": "OutputImage0",
+            "usageName": "output"
+          }
+        ],
+        "customInputBuffers": [
+          {
+            "set": 0,
+            "binding": 0,
+            "optionalOffset": 0,
+            "name": "InputBuffer0",
+            "usageName": "camera"
+          }
+        ]
+      }
+    }
+  ]
+}

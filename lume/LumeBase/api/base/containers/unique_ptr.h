@@ -409,4 +409,14 @@ template<class T, class... Args, BASE_NS::enable_if_t<BASE_NS::is_array_v<T> && 
 void make_unique(Args&&... args) = delete;
 BASE_END_NAMESPACE()
 
+/// @brief Casts a unique_ptr of a base class to a derived class without dynamic checks, transferring ownership to the
+/// new object.
+///
+/// If `p` is not a null pointer value and does not actually point to a BaseT class subobject of an object of type
+/// Derived, the behavior is undefined.
+template<typename Derived, typename BaseT>
+BASE_NS::unique_ptr<Derived> static_pointer_cast(BASE_NS::unique_ptr<BaseT>&& p)
+{
+    return BASE_NS::unique_ptr<Derived>(static_cast<Derived*>(p.release()));
+}
 #endif // API_BASE_CONTAINERS_UNIQUE_PTR_H

@@ -1,0 +1,39 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+#include "common/cmaa2_common.h"
+
+layout(set = 0, binding = 0, std430) readonly buffer bControlBuffer {
+    ControlBufferStruct controlBuffer;
+};
+
+layout(set = 0, binding = 1, std430) writeonly buffer bCandidateDispatchBuffer {
+    DispatchIndirectCommand candidateDispatchBuffer;
+};
+
+layout(set = 0, binding = 2, std430) writeonly buffer bApplyDispatchBuffer {
+    DispatchIndirectCommand applyDispatchBuffer;
+};
+
+uint DivideRoundUp(const uint value, const uint divisor) {
+    return (value + divisor - 1u) / divisor;
+}
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    const uint shapeCandidateCount = controlBuffer.shapeCandidateCount;
+    const uint candidateGroupsX = max(1u, DivideRoundUp(shapeCandidateCount, CMAA2_PROCESS_CANDIDATES_NUM_THREADS));
+    
+    candidateDispatchBuffer.x = candidateGroupsX;
+    candidateDispatchBuffer.y = 1u;
+    candidateDispatchBuffer.z = 1u;
+    
+    const uint blendLocationCount = controlBuffer.blendLocationCount;
+    const uint applyGroupsX = max(1u, DivideRoundUp(blendLocationCount, CMAA2_DEFERRED_APPLY_NUM_THREADS));
+    
+    applyDispatchBuffer.x = applyGroupsX;
+    applyDispatchBuffer.y = 4u;
+    applyDispatchBuffer.z = 1u;
+}

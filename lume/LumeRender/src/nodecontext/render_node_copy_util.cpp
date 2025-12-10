@@ -90,6 +90,7 @@ void RenderNodeCopyUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
         renderData_.shaderLayer = shaderMgr.GetShaderHandle("rendershaders://shader/fullscreen_copy_layer.shader");
         renderData_.pipelineLayoutLayer = shaderMgr.GetReflectionPipelineLayout(renderData_.shaderLayer);
     }
+    binder_.reset();
 }
 
 void RenderNodeCopyUtil::PreExecute() {}

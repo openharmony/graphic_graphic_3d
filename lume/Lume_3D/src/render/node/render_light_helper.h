@@ -34,10 +34,16 @@ public:
 
     static constexpr bool ENABLE_CLUSTERED_LIGHTING { false };
 
+    static constexpr uint32_t LIGHT_SORT_BITS = RenderLight::LightUsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT |
+                                                RenderLight::LightUsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT |
+                                                RenderLight::LightUsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT |
+                                                RenderLight::LightUsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT;
+
     struct LightCounts {
         uint32_t directionalLightCount { 0u };
         uint32_t pointLightCount { 0u };
         uint32_t spotLightCount { 0u };
+        uint32_t rectLightCount { 0u };
     };
 
     static BASE_NS::Math::Vec4 GetShadowAtlasSizeInvSize(const IRenderDataStoreDefaultLight& dsLight)
@@ -68,9 +74,10 @@ public:
             sortedFlags[outIdx].index = inIdx;
             ++outIdx;
         }
+
         sortedFlags.resize(outIdx);
         std::sort(sortedFlags.begin(), sortedFlags.end(), [](const auto& lhs, const auto& rhs) {
-            return ((lhs.lightUsageFlags & 0x7u) < (rhs.lightUsageFlags & 0x7u));
+            return ((lhs.lightUsageFlags & LIGHT_SORT_BITS) < (rhs.lightUsageFlags & LIGHT_SORT_BITS));
         });
         return sortedFlags;
     }
@@ -82,12 +89,18 @@ public:
         const BASE_NS::Math::Vec4 pos = currLight.pos;
         const BASE_NS::Math::Vec4 dir = currLight.dir;
         memLight->pos = pos;
-        memLight->dir = dir;
+        memLight->dir = dir; // for rect light x-dir
         constexpr float epsilonForMinDivisor { 0.0001f };
         memLight->dir.w = BASE_NS::Math::max(epsilonForMinDivisor, currLight.range);
         memLight->color =
             BASE_NS::Math::Vec4(BASE_NS::Math::Vec3(currLight.color) * currLight.color.w, currLight.color.w);
-        memLight->spotLightParams = currLight.spotLightParams;
+        if (currLight.lightUsageFlags & RenderLight::LightUsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT) {
+            memLight->spotLightParams = currLight.spotLightParams;
+        } else if (currLight.lightUsageFlags & RenderLight::LightUsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT) {
+            memLight->spotLightParams = currLight.spotLightParams; // y-dir with baked size
+        } else {
+            memLight->spotLightParams = { 0.0f, 0.0f, 0.0f, 0.0f };
+        }
         memLight->shadowFactors = { currLight.shadowFactors.x, currLight.shadowFactors.y, currLight.shadowFactors.z,
             shadowStepSize };
         memLight->flags = { currLight.lightUsageFlags, currLight.shadowCameraIndex, currLight.shadowIndex,
@@ -95,6 +108,20 @@ public:
         memLight->indices = { static_cast<uint32_t>(currLight.id >> 32U),
             static_cast<uint32_t>(currLight.id & 0xFFFFffff), static_cast<uint32_t>(currLight.layerMask >> 32U),
             static_cast<uint32_t>(currLight.layerMask & 0xFFFFffff) };
+    }
+
+    static void EvaluateLightCounts(const RenderLight::LightUsageFlags lightUsageFlags, LightCounts& lightCounts)
+    {
+        using UsageFlagBits = RenderLight::LightUsageFlagBits;
+        if (lightUsageFlags & UsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT) {
+            lightCounts.directionalLightCount++;
+        } else if (lightUsageFlags & UsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT) {
+            lightCounts.pointLightCount++;
+        } else if (lightUsageFlags & UsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT) {
+            lightCounts.spotLightCount++;
+        } else if (lightUsageFlags & UsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT) {
+            lightCounts.rectLightCount++;
+        }
     }
 };
 CORE3D_END_NAMESPACE()

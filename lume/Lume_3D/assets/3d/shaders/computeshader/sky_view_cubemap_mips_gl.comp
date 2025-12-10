@@ -1,0 +1,49 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// sets and specializations
+
+layout(set = 0, binding = 0) uniform samplerCube uCubemapSampler;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2DArray uOutputCubemap;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+vec3 GetCubemapCoord(vec2 inUv, uint face)
+{
+    const vec2 uv = inUv * 2.0 - 1.0;
+    const vec3 coords[] = {
+        vec3(1.0, -uv.y, -uv.x),  // +X
+        vec3(-1.0, -uv.y, uv.x),  // -X
+        vec3(uv.x, 1.0, uv.y),    // +Y
+        vec3(uv.x, -1.0, -uv.y),  // -Y
+        vec3(uv.x, -uv.y, 1.0),   // +Z
+        vec3(-uv.x, -uv.y, -1.0), // -Z
+    };
+    
+    const uint index = min(face, 5U);
+    const vec3 cubeUv = normalize(coords[index]);
+    return cubeUv;
+}
+  
+void main()
+{
+    ivec3 globalID = ivec3(gl_GlobalInvocationID);
+    ivec3 dimensions = imageSize(uOutputCubemap);
+    
+    if (any(greaterThanEqual(globalID.xy, dimensions.xy))) {
+        return;
+    }
+
+    vec2 uv = vec2(globalID.xy) / vec2(dimensions.xy);
+    uint face = gl_GlobalInvocationID.z;
+    if (face > 5) {
+        return;
+    }
+    
+    vec3 direction = GetCubemapCoord(uv, face);
+    vec4 color = texture(uCubemapSampler, direction);
+
+    imageStore(uOutputCubemap, globalID, color);
+}
+

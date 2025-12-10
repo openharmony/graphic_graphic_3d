@@ -150,7 +150,7 @@ void Sampler::ResetObject()
         return changed;
     };
     auto scene = scene_.lock();
-    auto changed = scene ? scene->AddTask(task).GetResult() : task();
+    auto changed = scene ? scene->RunDirectlyOrInTask(task) : task();
     if (changed) {
         NotifyChanged();
     }

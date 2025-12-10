@@ -114,21 +114,21 @@ vec3 GetWorldPos(const uint cameraIdx, const float depthSample, const vec2 uv)
     return sceneView.xyz / sceneView.w;
 }
 
-float GetLodForRadianceSample(const float roughness)
+float CoreGetLodForRadianceSample(const float roughness)
 {
     return uEnvironmentData.values.x * roughness;
 }
 
-vec3 GetIrradianceSample(const vec3 worldNormal)
+vec3 CoreGetIrradianceSample(const vec3 worldNormal)
 {
     const vec3 worldNormalEnv = mat3(uEnvironmentData.envRotation) * worldNormal;
     return unpackIblIrradianceSH(worldNormalEnv, uEnvironmentData.shIndirectCoefficients) *
            uEnvironmentData.indirectDiffuseColorFactor.rgb;
 }
 
-vec3 GetRadianceSample(const vec3 worldReflect, const float roughness)
+vec3 CoreGetRadianceSample(const vec3 worldReflect, const float roughness)
 {
-    const CORE_RELAXEDP float cubeLod = GetLodForRadianceSample(roughness);
+    const CORE_RELAXEDP float cubeLod = CoreGetLodForRadianceSample(roughness);
     const vec3 worldReflectEnv = mat3(uEnvironmentData.envRotation) * worldReflect;
     return unpackIblRadiance(textureLod(uSampRadiance, worldReflectEnv, cubeLod)) *
            uEnvironmentData.indirectSpecularColorFactor.rgb;
@@ -138,11 +138,11 @@ vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, c
 {
     // NOTE: this makes a pre color selection based on alpha
     // we would generally need an extra flag, the default texture is black with alpha zero
-    const CORE_RELAXEDP float lod = GetLodForRadianceSample(roughness);
+    const CORE_RELAXEDP float lod = CoreGetLodForRadianceSample(roughness);
     vec4 color = textureLod(uSampColorPrePass, fragUv, lod).rgba;
     if (color.a < 0.5f) {
         // sample environment if the default pre pass color was 0.0 alpha
-        color.rgb = GetRadianceSample(worldReflect, roughness);
+        color.rgb = CoreGetRadianceSample(worldReflect, roughness);
     }
     return color.rgb;
 }
@@ -277,12 +277,12 @@ vec4 PbrBasic(float depthBufferSample, FullGBufferData fd)
 
     if ((fd.materialFlags & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) {
         // lambert baked into irradianceSample (SH)
-        CORE_RELAXEDP vec3 irradiance = GetIrradianceSample(shadingData.N) * shadingData.diffuseColor * fd.ao;
+        CORE_RELAXEDP vec3 irradiance = CoreGetIrradianceSample(shadingData.N) * shadingData.diffuseColor * fd.ao;
 
         const vec3 worldReflect = reflect(-shadingData.V, shadingData.N);
         const CORE_RELAXEDP vec3 fIndirect = EnvBRDFApprox(shadingData.f0.xyz, roughness, NoV);
         // ao applied after clear coat
-        CORE_RELAXEDP vec3 radianceSample = GetRadianceSample(worldReflect, roughness);
+        CORE_RELAXEDP vec3 radianceSample = CoreGetRadianceSample(worldReflect, roughness);
         CORE_RELAXEDP vec3 radiance = radianceSample * fIndirect;
         // apply ao for indirect specular as well (cheap version)
 #if 1

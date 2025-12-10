@@ -168,6 +168,7 @@ private:
     void ClearScissorReset();
     static void SetPushConstant(uint32_t program, const Gles::PushConstantReflection& pc, const void* data);
     void SetPushConstants(uint32_t program, const BASE_NS::array_view<Gles::PushConstantReflection>& pushConstants);
+    static void PatchSecondaryMultiRenderPasses(RenderCommandFrameData& rcfd);
     void DoSubPass(uint32_t subPass);
 
     struct Managers {

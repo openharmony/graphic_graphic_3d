@@ -155,8 +155,8 @@ struct PerformanceTraceSeverity {
     }
 };
 
-using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>; // 1000: size
-using PROFILER_TRACE = PerformanceTraceSeverity<2000>; // 2000: size
+using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>; // 1000: severity level
+using PROFILER_TRACE = PerformanceTraceSeverity<2000>;   // 2000: severity level
 
 template<int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
 inline constexpr bool PerformanceTraceEnabled()

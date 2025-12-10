@@ -35,16 +35,14 @@
 
 namespace ige {
 namespace {
-void FormatPath(std::string& path, bool isDirectory)
+void FormatPath(std::string& path, const bool isDirectory)
 {
-    size_t length = path.length();
-
     // Make directory separators consistent.
     std::replace(path.begin(), path.end(), '\\', '/');
 
     // Ensure there is last separator in place.
-    if (path.length() > 0 && isDirectory) {
-        if (path[length - 1] != '/') {
+    if (!path.empty() && isDirectory) {
+        if (path[path.length() - 1] != '/') {
             path += '/';
         }
     }
@@ -70,7 +68,7 @@ std::string ResolveAbsolutePath(std::string_view path, bool isDirectory)
             FindClose(handle);
         }
     }
-#elif defined(__PLATFORM_MW_32__) || defined(__PLATFORM_MW_64__)
+#elif defined(__MINGW32__) || defined(__MINGW64__)
     char resolvedPath[_MAX_PATH] = {};
     if (_fullpath(resolvedPath, path.data(), _MAX_PATH) != nullptr) {
         if (isDirectory) {
@@ -109,7 +107,7 @@ std::optional<Collection> GatherFilesAndDirectories(std::string_view path)
     Collection collection;
 #ifdef HAS_FILESYSTEM
     std::error_code error;
-    for (auto const& entry : std::filesystem::directory_iterator { std::filesystem::u8path(path), error }) {
+    for (auto const& entry : std::filesystem::directory_iterator{ std::filesystem::u8path(path), error }) {
         if (entry.is_directory()) {
             collection.directories.push_back(entry.path().filename().u8string());
         } else if (entry.is_regular_file()) {
@@ -166,9 +164,9 @@ std::optional<Collection> GatherFilesAndDirectories(std::string_view path)
     return collection;
 }
 
-void RecursivelyCollectAllFiles(std::string_view path, std::vector<std::string>& aFiles)
+void RecursivelyCollectAllFiles(const std::string_view path, std::vector<std::string>& aFiles) // NOLINT(*-no-recursion)
 {
-    auto filesAndDirs = GatherFilesAndDirectories(path);
+    const auto filesAndDirs = GatherFilesAndDirectories(path);
     if (!filesAndDirs) {
         return;
     }
@@ -197,7 +195,7 @@ void RecursivelyCollectAllFiles(std::string_view path, std::vector<std::string>&
 }
 } // namespace
 
-bool FileMonitor::AddPath(std::string_view path)
+bool FileMonitor::AddPath(const std::string_view path)
 {
     std::string absolutePath = ResolveAbsolutePath(path, true);
     if (absolutePath.empty() || IsWatchingDirectory(absolutePath) || IsWatchingSubDirectory(absolutePath)) {
@@ -219,28 +217,28 @@ bool FileMonitor::AddPath(std::string_view path)
     return true;
 }
 
-bool FileMonitor::RemovePath(std::string_view path)
+bool FileMonitor::RemovePath(const std::string_view path)
 {
-    std::string absolutePath = ResolveAbsolutePath(path, true);
+    const std::string absolutePath = ResolveAbsolutePath(path, true);
 
-    std::vector<std::string>::iterator iterator = std::find(mDirectories.begin(), mDirectories.end(), absolutePath);
-    if (iterator != mDirectories.end()) {
-        // Collect all tracked files within this directory.
-        std::vector<std::string> files;
-        RecursivelyCollectAllFiles(absolutePath, files);
-
-        // Stop tracking of removed files.
-        for (const auto& ref : files) {
-            // Remove from tracked list.
-            RemoveFile(ref);
-        }
-
-        // Remove directory from watch list.
-        mDirectories.erase(iterator);
-        return true;
+    const auto iterator = std::find(mDirectories.begin(), mDirectories.end(), absolutePath);
+    if (iterator == mDirectories.end()) {
+        return false;
     }
 
-    return false;
+    // Collect all tracked files within this directory.
+    std::vector<std::string> files;
+    RecursivelyCollectAllFiles(absolutePath, files);
+
+    // Stop tracking of removed files.
+    for (const auto& ref : files) {
+        // Remove from tracked list.
+        RemoveFile(ref);
+    }
+
+    // Remove directory from watch list.
+    mDirectories.erase(iterator);
+    return true;
 }
 
 bool FileMonitor::AddFile(std::string_view path)
@@ -275,7 +273,7 @@ bool FileMonitor::AddFile(std::string_view path)
 
 bool FileMonitor::RemoveFile(const std::string& path)
 {
-    auto iterator = mFiles.find(path);
+    const auto iterator = mFiles.find(path);
     if (iterator != mFiles.end()) {
         mFiles.erase(iterator);
         return true;
@@ -284,32 +282,22 @@ bool FileMonitor::RemoveFile(const std::string& path)
     return false;
 }
 
-bool FileMonitor::IsWatchingDirectory(std::string_view path)
+bool FileMonitor::IsWatchingDirectory(std::string_view path) const
 {
-    for (const auto& ref : mDirectories) {
-        if (path.find(ref) != std::string::npos) {
-            // Already watching this directory or it's parent.
-            return true;
-        }
-    }
-
-    return false;
+    return std::any_of(mDirectories.begin(), mDirectories.end(), [&path](const auto& ref) {
+        return path.find(ref) != std::string::npos; // Already watching this directory or it's parent.
+    });
 }
 
 bool FileMonitor::IsWatchingSubDirectory(std::string_view path)
 {
-    for (const auto& ref : mDirectories) {
-        if (ref.find(path) != std::string::npos) {
-            // Already watching subdirectory of given directory.
-            return true;
-        }
-    }
-
-    return false;
+    return std::any_of(mDirectories.begin(), mDirectories.end(), [&path](const auto& ref) {
+        return ref.find(path) != std::string::npos; // Already watching subdirectory of given directory.
+    });
 }
 
 void FileMonitor::ScanModifications(
-    std::vector<std::string>& aAdded, std::vector<std::string>& aRemoved, std::vector<std::string>& aModified)
+    std::vector<std::string>& added, std::vector<std::string>& removed, std::vector<std::string>& modified)
 {
     // Collect all files that are under monitoring.
     std::vector<std::string> files;
@@ -327,7 +315,7 @@ void FileMonitor::ScanModifications(
             const auto time = std::filesystem::last_write_time(u8path, error).time_since_epoch().count();
             if ((!error) && (time != iterator->second.timestamp)) {
                 // This file is modified.
-                aModified.push_back(file);
+                modified.push_back(file);
 
                 // Store new time.
                 iterator->second.timestamp = time;
@@ -337,7 +325,7 @@ void FileMonitor::ScanModifications(
             struct stat fs;
             if ((stat(file.c_str(), &fs) == 0) && (fs.st_mtime != iterator->second.timestamp)) {
                 // This file is modified.
-                aModified.push_back(file);
+                modified.push_back(file);
 
                 // Store new time.
                 iterator->second.timestamp = fs.st_mtime;
@@ -345,7 +333,7 @@ void FileMonitor::ScanModifications(
 #endif
         } else {
             // This is a new file.
-            aAdded.push_back(file);
+            added.push_back(file);
         }
     }
 
@@ -353,18 +341,18 @@ void FileMonitor::ScanModifications(
     for (const auto& ref : mFiles) {
         if (std::find(files.begin(), files.end(), ref.first) == files.end()) {
             // This file no longer exists.
-            aRemoved.push_back(ref.first);
+            removed.push_back(ref.first);
         }
     }
 
     // Stop tracking of removed files.
-    for (const auto& ref : aRemoved) {
+    for (const auto& ref : removed) {
         // Remove from tracked list.
         RemoveFile(ref);
     }
 
     // Start tracking of new files.
-    for (const auto& ref : aAdded) {
+    for (const auto& ref : added) {
         // Add to tracking list.
         AddFile(ref);
     }
@@ -375,8 +363,8 @@ std::vector<std::string> FileMonitor::GetMonitoredFiles() const
     std::vector<std::string> files;
     files.reserve(mFiles.size());
 
-    for (auto it = mFiles.begin(), end = mFiles.end(); it != end; ++it) {
-        files.push_back(it->first);
+    for (const auto& mFile : mFiles) {
+        files.push_back(mFile.first);
     }
     return files;
 }

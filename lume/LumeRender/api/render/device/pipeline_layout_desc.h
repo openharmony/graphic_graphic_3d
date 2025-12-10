@@ -43,7 +43,7 @@ struct PipelineLayoutConstants {
     static constexpr uint32_t MAX_PUSH_CONSTANT_RANGE_COUNT { 1u };
     /** Max UBO bind byte size */
     static constexpr uint32_t MAX_UBO_BIND_BYTE_SIZE { 16u * 1024u };
-    /** UBO bind offset alignemtn */
+    /** UBO bind offset alignment */
     static constexpr uint32_t MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE { 256u };
 };
 

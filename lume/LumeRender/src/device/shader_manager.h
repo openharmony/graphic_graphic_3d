@@ -198,6 +198,7 @@ public:
     ShaderThreadGroup GetReflectionThreadGroupSize(const RenderHandle& handle) const;
 
     uint64_t HashGraphicsState(const GraphicsState& graphicsState) const override;
+    uint64_t HashGraphicsState(const GraphicsState& graphicsState, uint32_t renderSlotId) const override;
 
     struct ShaderPathCreateData {
         BASE_NS::string_view variantName;
@@ -542,6 +543,7 @@ public:
     ShaderThreadGroup GetReflectionThreadGroupSize(const RenderHandle& handle) const override;
 
     uint64_t HashGraphicsState(const GraphicsState& graphicsState) const override;
+    uint64_t HashGraphicsState(const GraphicsState& graphicsState, uint32_t renderSlotId) const override;
 
     bool IsValid(const RenderHandle& handle) const override;
     bool IsComputeShader(const RenderHandle& handle) const override;

@@ -114,6 +114,12 @@ inline float sqrt(float value)
     return sqrtf(value);
 }
 
+/** Returns cube root of value */
+inline float cbrt(float value)
+{
+    return cbrtf(value);
+}
+
 /** Returns the sine of angle value in radians */
 inline float sin(float value)
 {

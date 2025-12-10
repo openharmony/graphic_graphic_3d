@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-#if defined(__OHOS_PLATFORM__)
+#if defined(__OHOS__)
 #undef HAS_FILESYSTEM
 #else
 #ifdef __has_include
@@ -259,7 +259,9 @@ string StdDirectory::ResolveAbsolutePath(const string_view pathIn, bool isDirect
     auto path = pathIn;
 #ifdef _WIN32
     // remove the '/' slash..
-    path = path.substr(1);
+    if (!path.empty() && path.front() == '/') {
+        path = path.substr(1);
+    }
 #endif
 
 #ifdef HAS_FILESYSTEM
@@ -286,7 +288,7 @@ string StdDirectory::ResolveAbsolutePath(const string_view pathIn, bool isDirect
             }
         }
     }
-#elif defined(__OHOS_PLATFORM__) || defined(__linux__)
+#elif defined(__OHOS__) || defined(__linux__)
     char resolvedPath[PATH_MAX];
     if (realpath(string(path).c_str(), resolvedPath) != nullptr) {
         absolutePath = resolvedPath;

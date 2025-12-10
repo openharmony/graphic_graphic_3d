@@ -178,6 +178,7 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
         "Device local memory is only memory property supported for GLES GpuImage (flags: %u)",
         desc_.memoryPropertyFlags);
     plat_ = GetPlatformData(device_, desc_.format);
+    plat_.mipCount = desc.mipCount;
     // Check for formats that require special attention.
     if ((desc.usageFlags & CORE_IMAGE_USAGE_STORAGE_BIT)) {
         // Force the format to "other" (there might be others that require "special handling".

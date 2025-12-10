@@ -1571,17 +1571,21 @@ void FillSpecular(MaterialComponent& desc, const GLTFImportResult& importResult,
         gltfMaterial.specular.colorTexture.index == GLTF2::GLTF_INVALID_INDEX) {
         FillTextureParams(
             gltfMaterial.specular.texture, importResult, data, em, desc, MaterialComponent::TextureIndex::SPECULAR);
+        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index == GLTF2::GLTF_INVALID_INDEX &&
                gltfMaterial.specular.colorTexture.index != GLTF2::GLTF_INVALID_INDEX) {
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
+        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index != gltfMaterial.specular.colorTexture.index) {
         CORE_LOG_W("Separate specular strength and color textures are not supported!");
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
-    } else {
+    } else { // both textures valid
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
+        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE |
+                                    MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE;
     }
 #endif
 }
@@ -2433,6 +2437,9 @@ struct GLTF2Importer::AnimationTaskData {
         auto animationEntity = entityManager.CreateReferenceCounted();
         animationManager->Create(animationEntity);
         const auto animationHandle = animationManager->Write(animationEntity);
+        if (!animationHandle) {
+            return false;
+        }
 
         auto& animationTracks = animationHandle->tracks;
         animationTracks.reserve(tracks.size());
@@ -2675,7 +2682,7 @@ const GltfMeshData& GLTF2Importer::GetMeshData() const
 
 bool GLTF2Importer::IsValid() const
 {
-    return uriManager_ && renderHandleManager_ && materialManager_ && meshManager_ && nameManager_ && uriManager_;
+    return uriManager_ && renderHandleManager_ && materialManager_ && meshManager_ && nameManager_;
 }
 
 void GLTF2Importer::LaunchGatherTasks(size_t firstTask, ImportPhase phase)

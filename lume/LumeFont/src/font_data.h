@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <freetype/freetype.h>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 
 #include <base/containers/string_view.h>
@@ -45,7 +46,7 @@ public:
     FontData(const std::weak_ptr<FaceData>& face, FT_Size size, bool sdf);
     ~FontData();
 
-    FontSize GetSize();
+    FontSize GetSize() const;
 
     FontMetrics GetMetrics();
     GlyphMetrics GetGlyphMetrics(uint32_t glyphIndex);

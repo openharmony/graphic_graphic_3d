@@ -63,7 +63,7 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]];
+                [[fallthrough]]; // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 // Evaluate current value
                 Evaluate();
@@ -299,6 +299,9 @@ void TrackAnimation::UpdateCurrentTrack(uint32_t index)
 
 ReturnError TrackAnimation::Export(IExportContext& c) const
 {
+    if (this->GetResourceId().IsValid() && this->SerialiseAsResourceId(c)) {
+        return this->ExportResourceId(c);
+    }
     return Serializer(c) & AutoSerialize() & NamedValue("Keyframes", keyframes_);
 }
 ReturnError TrackAnimation::Import(IImportContext& c)

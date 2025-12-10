@@ -201,7 +201,7 @@ public:
     /** Returns acceleration structure build sizes. Only a single geometry data should be valid.
      *  @param geometryInfo Build geometry info for size calculations.
      *  @param triangles Build geometry info for size calculations.
-     *  @param aabb Build geometry info for size calculations.
+     *  @param aabbs Build geometry info for size calculations.
      *  @param instances Build geometry info for size calculations.
      */
     virtual AsBuildSizes GetAccelerationStructureBuildSizes(const AsBuildGeometryInfo& geometry,

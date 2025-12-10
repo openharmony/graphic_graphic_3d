@@ -1,0 +1,66 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_POST_PROCESS_CTRL"
+        }
+    ],
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraPostProcessInterfaceController",
+            "nodeName": "CORE3D_RN_CAM_POST_PROCESS_INTERFACE_CTRL",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStoreRenderPostProcesses",
+                "typeName": "RenderDataStoreRenderPostProcesses",
+                "configurationName": "CORE3D_RENDER_POST_PROCESS_CAM"
+            },
+            "resources": {
+                "customInputBuffers": [
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "camera",
+                        "usageName": "camera"
+                    }
+                ],
+                "customInputImages": [
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "output",
+                        "usageName": "input"
+                    },
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "depth",
+                        "usageName": "depth"
+                    },
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "velocity_normal",
+                        "usageName": "velocity_normal"
+                    },
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "history",
+                        "usageName": "history"
+                    }
+                ],
+                "customOutputImages": [
+                    {
+                        "resourceLocation": "from_previous_render_node_graph_output",
+                        "name": "output",
+                        "usageName": "output"
+                    }
+                ]
+            }
+        }
+    ]
+}

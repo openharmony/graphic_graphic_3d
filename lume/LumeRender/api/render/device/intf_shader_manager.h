@@ -69,7 +69,7 @@ RENDER_BEGIN_NAMESPACE()
  *  #extension GL_ARB_separate_shader_objects : enable
  *  #extension GL_ARB_shading_language_420pack : enable
  *
- *  Default specilization that can be used (handled automatically):
+ *  Default specialization that can be used (handled automatically):
  *  layout(constant_id = 0) const uint CORE_BACKEND_TYPE = 0;
  *  Vulkan: CORE_BACKEND_TYPE = 0
  *  GL and GLES: CORE_BACKEND_TYPE = 1
@@ -347,7 +347,7 @@ public:
      */
     virtual RenderHandleReference CreatePipelineLayout(const PipelineLayoutCreateInfo& createInfo) = 0;
 
-    /** Create a vertex input declaration. Prefer laoding vertex input declaration from json files.
+    /** Create a vertex input declaration. Prefer loading vertex input declaration from json files.
      *  @param createInfo A vertex input declaration create info.
      *  @return Returns vertex input declaration handle.
      */
@@ -529,13 +529,13 @@ public:
 
     /** Get specialization reflected from the given shader.
      *  @param handle A handle to a valid shader or compute shader.
-     *  @return Returns a view to shader specialization. The struct should not be holded unto.
+     *  @return Returns a view to shader specialization. The struct should not be hold onto.
      */
     virtual ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandleReference& handle) const = 0;
 
     /** Get vertex input declaration reflected from the shader. (Zero values if shader does not have one)
      *  @param handle A handle to a valid shader.
-     *  @return Returns a view to vertex input declaration view. The struct should not be holded unto.
+     *  @return Returns a view to vertex input declaration view. The struct should not be hold onto.
      */
     virtual VertexInputDeclarationView GetReflectionVertexInputDeclaration(
         const RenderHandleReference& handle) const = 0;
@@ -547,6 +547,7 @@ public:
     virtual ShaderThreadGroup GetReflectionThreadGroupSize(const RenderHandleReference& handle) const = 0;
 
     /** Hash graphics state.
+     * @param graphicsState Graphics state for which the hash is calculated.
      *  @return Returns a hash for shader related graphics state.
      */
     virtual uint64_t HashGraphicsState(const GraphicsState& graphicsState) const = 0;
@@ -573,26 +574,26 @@ public:
 
     /** Save graphics state
      *  @param saveInfo Struct containing all the required info to build json
-     *  @return Returrn ShaderOutWriteResult which contains result
+     *  @return Return ShaderOutWriteResult which contains result
      */
     virtual ShaderOutWriteResult SaveShaderGraphicsState(const ShaderGraphicsStateSaveInfo& saveInfo) = 0;
 
     /** Save vertex input declaration
      *  @param saveInfo Struct containing all the required info to build json
-     *  @return Returrn ShaderOutWriteResult which contains result
+     *  @return Return ShaderOutWriteResult which contains result
      */
     virtual ShaderOutWriteResult SaveShaderVertexInputDeclaration(
         const ShaderVertexInputDeclarationsSaveInfo& saveInfo) = 0;
 
     /** Save pipeline layout
      *  @param saveInfo Struct containing all the required info to build json
-     *  @return Returrn ShaderOutWriteResult which contains result
+     *  @return Return ShaderOutWriteResult which contains result
      */
     virtual ShaderOutWriteResult SaveShaderPipelineLayout(const ShaderPipelineLayoutSaveInfo& saveInfo) = 0;
 
     /** Save pipeline layout
      *  @param saveInfo Struct containing all the required info to build json
-     *  @return Returrn ShaderOutWriteResult which contains result
+     *  @return Return ShaderOutWriteResult which contains result
      */
     virtual ShaderOutWriteResult SaveShaderVariants(const ShaderVariantsSaveInfo& saveInfo) = 0;
 
@@ -722,6 +723,13 @@ public:
      *  @return Returns forced graphics state flags.
      */
     virtual GraphicsStateFlags GetForcedGraphicsStateFlags(const uint32_t renderSlotId) const = 0;
+
+    /** Hash graphics state and render slot.
+     * @param graphicsState Graphics state for which the hash is calculated.
+     * @param renderSlotId Render slot ID which is included in the hash.
+     *  @return Returns a hash for shader related graphics state.
+     */
+    virtual uint64_t HashGraphicsState(const GraphicsState& graphicsState, uint32_t renderSlotId) const = 0;
 
 protected:
     IShaderManager() = default;
@@ -871,13 +879,13 @@ public:
 
     /** Get specialization reflected from the given shader.
      *  @param handle A handle to a valid shader or compute shader.
-     *  @return Returns a view to shader specialization. The struct should not be holded unto.
+     *  @return Returns a view to shader specialization. The struct should not be hold onto.
      */
     virtual ShaderSpecializationConstantView GetReflectionSpecialization(const RenderHandle& handle) const = 0;
 
     /** Get vertex input declaration reflected from the shader. (Zero values if shader does not have one)
      *  @param handle A handle to a valid shader.
-     *  @return Returns a view to vertex input declaration view. The struct should not be holded unto.
+     *  @return Returns a view to vertex input declaration view. The struct should not be hold onto.
      */
     virtual VertexInputDeclarationView GetReflectionVertexInputDeclaration(const RenderHandle& handle) const = 0;
 
@@ -951,6 +959,13 @@ public:
      * @return Returns IdDesc for a given handle.
      */
     virtual IShaderManager::IdDesc GetIdDesc(const RenderHandle& handle) const = 0;
+
+    /** Hash graphics state and render slot.
+     * @param graphicsState Graphics state for which the hash is calculated.
+     * @param renderSlotId Render slot ID which is included in the hash.
+     *  @return Returns a hash for shader related graphics state.
+     */
+    virtual uint64_t HashGraphicsState(const GraphicsState& graphicsState, uint32_t renderSlotId) const = 0;
 
 protected:
     IRenderNodeShaderManager() = default;

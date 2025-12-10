@@ -93,11 +93,11 @@ uint32_t SpecializationByteSize(ShaderSpecialization::Constant::Type type)
 {
     switch (type) {
         case RENDER_NS::ShaderSpecialization::Constant::Type::BOOL:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::UINT32:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::INT32:
-            [[fallthrough]];
+            [[fallthrough]]; // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::FLOAT:
             return 4;
         default:

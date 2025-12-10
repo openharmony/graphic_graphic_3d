@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 
 #include "AnimationJS.h"
 #include "CameraJS.h"
+#include "EffectJS.h"
 #include "EnvironmentJS.h"
 #include "GeometryJS.h"
 #include "ImageJS.h"
@@ -25,6 +26,7 @@
 #include "MeshResourceJS.h"
 #include "MorpherJS.h"
 #include "NodeJS.h"
+#include "OcclusionMaterialJS.h"
 #include "PostProcJS.h"
 #include "RenderContextJS.h"
 #include "SamplerJS.h"
@@ -39,6 +41,13 @@
 #include "geometry_definition/PlaneJS.h"
 #include "geometry_definition/SphereJS.h"
 #include "geometry_definition/CylinderJS.h"
+
+void DebugNativesHavingJS();
+napi_value BridgeDebugNativesHavingJS(napi_env env, napi_callback_info info)
+{
+    DebugNativesHavingJS();
+    return nullptr;
+}
 
 void RegisterClasses(napi_env env, napi_value exports)
 {
@@ -138,6 +147,10 @@ void RegisterClasses(napi_env env, napi_value exports)
 
     napi_value scene3dNS = exports;
     SceneJS::Init(env, scene3dNS);
+    napi_property_descriptor desci[] = {
+        {"Dump", nullptr, BridgeDebugNativesHavingJS, nullptr, nullptr, nullptr, napi_default, nullptr}};
+    napi_define_properties(env, exports, sizeof(desci) / sizeof(desci[0]), desci);
+
     NodeJS::Init(env, scene3dNS);
     CameraJS::Init(env, scene3dNS);
     EnvironmentJS::Init(env, scene3dNS);
@@ -165,6 +178,10 @@ void RegisterClasses(napi_env env, napi_value exports)
     TextNodeJS::Init(env, scene3dNS);
     MaterialPropertyJS::Init(env, scene3dNS);
     RenderContextJS::Init(env, scene3dNS);
+    NodeContainerJS::Init(env, scene3dNS);
+    EffectJS::Init(env, scene3dNS);
+    EffectsContainerJS::Init(env, scene3dNS);
+    OcclusionMaterial::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     CameraJS::RegisterEnums({ env, scene3dNS });

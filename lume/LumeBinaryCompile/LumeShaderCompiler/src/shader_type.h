@@ -30,4 +30,20 @@ enum class ShaderKind {
     COMPUTE,
 };
 
+constexpr const char* ShaderKindToString(const ShaderKind kind)
+{
+    switch (kind) {
+        case ShaderKind::VERTEX:
+            return "VERTEX";
+        case ShaderKind::FRAGMENT:
+            return "FRAGMENT";
+        case ShaderKind::GEOMETRY:
+            return "GEOMETRY";
+        case ShaderKind::COMPUTE:
+            return "COMPUTE";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 #endif

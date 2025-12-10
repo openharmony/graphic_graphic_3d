@@ -47,14 +47,14 @@ napi_env Function::GetEnv() const
     return env_;
 }
 
-napi_value Function::Invoke(const NapiApi::Object& thisJS, size_t argc, napi_value* argv) const
+napi_value Function::Invoke(const NapiApi::Object& thisJS, const JsFuncArgs& args) const
 {
     if (!env_) {
         return nullptr;
     }
     auto res = env_.GetUndefined();
     if (func_) {
-        napi_call_function(env_, thisJS.ToNapiValue(), func_, argc, argv, &res);
+        napi_call_function(env_, thisJS.ToNapiValue(), func_, args.argc, args.argv, &res);
     }
     return res;
 }

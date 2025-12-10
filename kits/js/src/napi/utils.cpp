@@ -44,6 +44,17 @@ MyInstanceState::MyInstanceState(napi_env env, napi_value obj) : env_(env)
 MyInstanceState::~MyInstanceState()
 {
     uint32_t res;
+#ifdef __OHOS_PLATFORM__
+// make sure that reference will be destroyed if it is held by us only
+        uint32_t result{};
+        napi_reference_ref(env_, ref_, &result);
+        if (result <=2) {
+            napi_delete_reference(env_, ref_);
+            return;
+        } else {
+           napi_reference_unref(env_, ref_, &res);
+        }
+#endif
     napi_reference_unref(env_, ref_, &res);
 }
 
@@ -190,6 +201,26 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
             return true;
         }
     }
+    if constexpr (BASE_NS::is_same_v<type, uint8_t>) {
+        if (jstype == napi_number) {
+            return true;
+        }
+    }
+    if constexpr (BASE_NS::is_same_v<type, int8_t>) {
+        if (jstype == napi_number) {
+            return true;
+        }
+    }
+    if constexpr (BASE_NS::is_same_v<type, uint16_t>) {
+        if (jstype == napi_number) {
+            return true;
+        }
+    }
+    if constexpr (BASE_NS::is_same_v<type, int16_t>) {
+        if (jstype == napi_number) {
+            return true;
+        }
+    }
     if constexpr (BASE_NS::is_same_v<type, uint32_t>) {
         if (jstype == napi_number) {
             return true;
@@ -247,6 +278,10 @@ template bool ValidateType<bool>(napi_valuetype, bool);
 template bool ValidateType<std::optional<bool>>(napi_valuetype, bool);
 template bool ValidateType<float>(napi_valuetype, bool);
 template bool ValidateType<double>(napi_valuetype, bool);
+template bool ValidateType<uint8_t>(napi_valuetype, bool);
+template bool ValidateType<int8_t>(napi_valuetype, bool);
+template bool ValidateType<uint16_t>(napi_valuetype, bool);
+template bool ValidateType<int16_t>(napi_valuetype, bool);
 template bool ValidateType<uint32_t>(napi_valuetype, bool);
 template bool ValidateType<int32_t>(napi_valuetype, bool);
 template bool ValidateType<int64_t>(napi_valuetype, bool);

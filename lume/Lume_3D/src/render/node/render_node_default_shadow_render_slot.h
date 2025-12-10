@@ -175,6 +175,7 @@ private:
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;
 
     bool validShadowNode_ { true };
+    bool bindlessEnabled_ { false };
     uint32_t shadowCount_ { 0U };
 };
 CORE3D_END_NAMESPACE()

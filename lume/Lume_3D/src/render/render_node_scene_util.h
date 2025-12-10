@@ -20,6 +20,7 @@
 
 #include <3d/render/intf_render_node_scene_util.h>
 #include <3d/render/render_data_defines_3d.h>
+#include <base/containers/array_view.h>
 #include <base/containers/vector.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/pipeline_state_desc.h>
@@ -43,6 +44,26 @@ class RenderNodeSceneUtil {
 public:
     RenderNodeSceneUtil() = default;
     ~RenderNodeSceneUtil() = default;
+
+    struct FrameGlobalDescriptorSets {
+        RENDER_NS::RenderHandle set0;
+        RENDER_NS::RenderHandle set1;
+        RENDER_NS::RenderHandle set2Default;
+        BASE_NS::array_view<const RENDER_NS::RenderHandle> set2;
+        bool valid = false;
+    };
+    enum FrameGlobalDescriptorSetFlagBits : uint32_t {
+        /** Set 0 */
+        GLOBAL_SET_0 = (1 << 0),
+        /** Set 1 */
+        GLOBAL_SET_1 = (1 << 1),
+        /** Set(s) 2 */
+        GLOBAL_SET_2 = (1 << 2),
+        /** All sets */
+        GLOBAL_SET_ALL = 0xFFFFffff,
+    };
+    /** Container for frame global descriptor set flag bits */
+    using FrameGlobalDescriptorSetFlags = uint32_t;
 
     static SceneRenderDataStores GetSceneRenderDataStores(
         const RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
@@ -68,6 +89,16 @@ public:
     static SceneCameraImageHandles GetSceneCameraImageHandles(
         RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr, const BASE_NS::string_view sceneName,
         const BASE_NS::string_view cameraName, const RenderCamera& camera);
+    static SceneRenderCameraData GetSceneCameraData(const IRenderDataStoreDefaultScene& dataStoreScene,
+        const IRenderDataStoreDefaultCamera& dataStoreCamera, const uint64_t cameraId,
+        const BASE_NS::string_view cameraName);
+
+    // get multiview camera indices, the mvIndices is reset in the function
+    static void GetMultiViewCameraIndices(
+        const IRenderDataStoreDefaultCamera& rds, const RenderCamera& cam, BASE_NS::vector<uint32_t>& mvIndices);
+    // only valid for ExecuteFrame, call only there and do not store
+    static FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(const RENDER_NS::IRenderNodeContextManager& rncm,
+        const SceneRenderDataStores& stores, BASE_NS::string_view cameraName, FrameGlobalDescriptorSetFlags flags);
 };
 
 class RenderNodeSceneUtilImpl : public IRenderNodeSceneUtil {
@@ -100,6 +131,9 @@ public:
     SceneCameraImageHandles GetSceneCameraImageHandles(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr,
         const BASE_NS::string_view sceneName, const BASE_NS::string_view cameraName,
         const RenderCamera& camera) override;
+    SceneRenderCameraData GetSceneCameraData(const IRenderDataStoreDefaultScene& dataStoreScene,
+        const IRenderDataStoreDefaultCamera& dataStoreCamera, const uint64_t cameraId,
+        const BASE_NS::string_view cameraName) override;
 
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;

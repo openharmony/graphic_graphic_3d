@@ -35,9 +35,19 @@ enum class EffectQualityType {
     HIGH = 2,
 };
 
+enum class EffectSharpnessType {
+    /** Produces soft effect */
+    SOFT = 0,
+    /** Produces normal effect */
+    MEDIUM = 1,
+    /** Produces sharp effect */
+    SHARP = 2
+};
+
 SCENE_END_NAMESPACE()
 
 META_TYPE(SCENE_NS::EffectQualityType)
+META_TYPE(SCENE_NS::EffectSharpnessType)
 META_INTERFACE_TYPE(SCENE_NS::IPostProcessEffect)
 
 #endif

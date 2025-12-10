@@ -26,6 +26,7 @@
 #include <3d/ecs/components/dynamic_environment_blender_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/fog_component.h>
+#include <3d/ecs/components/graphics_state_component.h>
 #include <3d/ecs/components/joint_matrices_component.h>
 #include <3d/ecs/components/layer_component.h>
 #include <3d/ecs/components/light_component.h>
@@ -36,6 +37,7 @@
 #include <3d/ecs/components/planar_reflection_component.h>
 #include <3d/ecs/components/post_process_component.h>
 #include <3d/ecs/components/post_process_configuration_component.h>
+#include <3d/ecs/components/post_process_effect_component.h>
 #include <3d/ecs/components/reflection_probe_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
@@ -77,6 +79,7 @@
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
+#include <render/datastore/intf_render_data_store_render_post_processes.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
@@ -111,76 +114,88 @@ static constexpr uint64_t SHADOW_CAMERA_START_UNIQUE_ID { 100 };
 static constexpr uint32_t MAX_BATCH_SUBMESH_COUNT { 64u };
 #endif
 
-static constexpr uint32_t MAX_BATCH_OBJECT_COUNT { PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE /
-                                                   PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-
 // typename for POD data. (e.g. "PostProcess") (core/render/intf_render_data_store_pod.h)
 static constexpr string_view POST_PROCESS_NAME { "PostProcess" };
 static constexpr string_view POD_DATA_STORE_NAME { "RenderDataStorePod" };
 static constexpr string_view PP_DATA_STORE_NAME { "RenderDataStorePostProcess" };
+static constexpr string_view RPP_DATA_STORE_NAME { "RenderDataStoreRenderPostProcesses" };
 
 // In addition to the base our renderableQuery has two required components and three optional components:
 // (0) RenderMeshComponent
 // (1) WorldMatrixComponent
-// (2) PreviousWorldMatrixComponent
-// (3) LayerComponent (optional)
+// (2) LayerComponent (optional)
+// (3) SkinComponent (optional)
 // (4) JointMatrixComponent (optional)
 // (5) PreviousJointMatrixComponent (optional)
+// (6) NodeComponent (optional)
 static constexpr const auto RQ_RMC = 0U;
 static constexpr const auto RQ_WM = 1U;
 static constexpr const auto RQ_L = 2U;
-static constexpr const auto RQ_JM = 3U;
-static constexpr const auto RQ_PJM = 4U;
+static constexpr const auto RQ_SM = 3U;
+static constexpr const auto RQ_JM = 4U;
+static constexpr const auto RQ_PJM = 5U;
+static constexpr const auto RQ_N = 6U;
+
+static constexpr const string_view STATE_OPAQUE_NAME { "3dshaderstates://core3d_dm.shadergs" };
+static constexpr const string_view STATE_TRANSLUCENT_NAME { "3dshaderstates://core3d_dm.shadergs" };
+static constexpr const string_view STATE_DEPTH_NAME { "3dshaderstates://core3d_dm_depth.shadergs" };
+
+static constexpr const string_view DS_OPAQUE_NAME { "OPAQUE_FW_DS" };
+static constexpr const string_view DS_TRANSLUCENT_NAME { "TRANSLUCENT_FW_DS" };
+static constexpr const string_view DS_DEPTH_NAME { "DEPTH_DS" };
+
+static const MaterialComponent DEF_MATERIAL_COMPONENT {};
+static constexpr RenderDataDefaultMaterial::InputMaterialUniforms DEF_INPUT_MATERIAL_UNIFORMS {};
+
+struct ShaderRenderSlotInfo {
+    const string_view renderSlot;
+    const string_view graphicsStateName;
+    const string_view doubleSidedVariantName;
+};
 
 void FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
-    IRenderHandleComponentManager& renderHandleMgr, const IShaderManager& shaderMgr, const string_view renderSlot,
+    IRenderHandleComponentManager& renderHandleMgr, const IShaderManager& shaderMgr, const ShaderRenderSlotInfo srsi,
     RenderSystem::DefaultMaterialShaderData::SingleShaderData& shaderData)
 {
-    const uint32_t renderSlotId = shaderMgr.GetRenderSlotId(renderSlot);
+    const uint32_t renderSlotId = shaderMgr.GetRenderSlotId(srsi.renderSlot);
     const IShaderManager::RenderSlotData rsd = shaderMgr.GetRenderSlotData(renderSlotId);
 
-    auto uri = "3dshaders://" + renderSlot;
-    auto resourceEntity = LookupResourceByUri(uri, uriManager, renderHandleMgr);
-    if (!EntityUtil::IsValid(resourceEntity)) {
-        resourceEntity = em.Create();
-        renderHandleMgr.Create(resourceEntity);
-        renderHandleMgr.Write(resourceEntity)->reference = rsd.shader;
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    if (!rsd.shader) {
+        CORE_LOG_W(
+            "CORE3D_VALIDATION: Default material render slot shader not found (slot:%s)", srsi.renderSlot.data());
+    }
+    if (!rsd.graphicsState) {
+        CORE_LOG_W("CORE3D_VALIDATION: Default material render slot graphics state not found (slot:%s)",
+            srsi.renderSlot.data());
+    }
+#endif
+
+    auto uri = "3dshaders://" + srsi.renderSlot;
+    auto resourceEntity = GetOrCreateEntityReference(renderHandleMgr.GetEcs(), rsd.shader);
+    uriManager.Create(resourceEntity);
+    uriManager.Write(resourceEntity)->uri = uri;
+    shaderData.shader = BASE_NS::move(resourceEntity);
+
+    if (rsd.graphicsState) {
+        uri = "3dshaderstates://";
+        uri += srsi.renderSlot;
+
+        resourceEntity = GetOrCreateEntityReference(renderHandleMgr.GetEcs(), rsd.graphicsState);
         uriManager.Create(resourceEntity);
         uriManager.Write(resourceEntity)->uri = uri;
-    }
-    shaderData.shader = em.GetReferenceCounted(resourceEntity);
+        shaderData.gfxState = BASE_NS::move(resourceEntity);
 
-    uri = "3dshaderstates://";
-    uri += renderSlot;
-    resourceEntity = LookupResourceByUri(uri, uriManager, renderHandleMgr);
-    if (!EntityUtil::IsValid(resourceEntity)) {
-        resourceEntity = em.Create();
-        renderHandleMgr.Create(resourceEntity);
-        renderHandleMgr.Write(resourceEntity)->reference = rsd.graphicsState;
-        uriManager.Create(resourceEntity);
-        uriManager.Write(resourceEntity)->uri = uri;
-    }
-    shaderData.gfxState = em.GetReferenceCounted(resourceEntity);
-
-    uri += "_DBL";
-    resourceEntity = LookupResourceByUri(uri, uriManager, renderHandleMgr);
-    if (!EntityUtil::IsValid(resourceEntity)) {
-        // fetch double sided mode (no culling gfx state) (NOTE: could be fetched with name)
-        if (rsd.graphicsState) {
-            GraphicsState gfxState = shaderMgr.GetGraphicsState(rsd.graphicsState);
-            gfxState.rasterizationState.cullModeFlags = CullModeFlagBits::CORE_CULL_MODE_NONE;
-            const uint64_t gfxStateHash = shaderMgr.HashGraphicsState(gfxState);
-            auto handlDbl = shaderMgr.GetGraphicsStateHandleByHash(gfxStateHash);
-            if (handlDbl) {
-                resourceEntity = em.Create();
-                renderHandleMgr.Create(resourceEntity);
-                renderHandleMgr.Write(resourceEntity)->reference = handlDbl;
-                uriManager.Create(resourceEntity);
-                uriManager.Write(resourceEntity)->uri = uri;
-            }
+        // fetch double sided mode (no culling gfx state)
+        auto handlDbl = shaderMgr.GetGraphicsStateHandle(srsi.graphicsStateName, srsi.doubleSidedVariantName);
+        if (handlDbl) {
+            resourceEntity = GetOrCreateEntityReference(renderHandleMgr.GetEcs(), handlDbl);
+            uri += "_DBL";
+            uriManager.Create(resourceEntity);
+            uriManager.Write(resourceEntity)->uri = uri;
+            shaderData.gfxStateDoubleSided = BASE_NS::move(resourceEntity);
         }
     }
-    shaderData.gfxStateDoubleSided = em.GetReferenceCounted(resourceEntity);
 }
 
 constexpr GpuImageDesc CreateReflectionPlaneGpuImageDesc(bool depthImage)
@@ -280,26 +295,39 @@ void ValidateRenderCamera(RenderCamera& camera)
 }
 
 fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> GetPostProcessName(
-    const IPostProcessComponentManager* postProcessMgr,
-    const IPostProcessConfigurationComponentManager* postProcessConfigMgr, const INameComponentManager* nameMgr,
-    const string_view sceneName, const Entity& entity)
+    const INameComponentManager* nameMgr, const string_view sceneName, const Entity& entity, bool hasEffectComponent)
 {
-    if (postProcessMgr && postProcessConfigMgr && nameMgr) {
-        if (postProcessMgr->HasComponent(entity) || postProcessConfigMgr->HasComponent(entity)) {
-            if (ScopedHandle<const NameComponent> nameHandle = nameMgr->Read(entity);
-                nameHandle && (!nameHandle->name.empty())) {
-                return fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> { nameHandle->name };
-            } else {
-                // checks if any of the post process mgrs has valid entity for camera
-                fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> ret =
-                    DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME;
-                ret.append(sceneName);
-                ret.append(to_hex(entity.id));
-                return ret;
-            }
+    if (nameMgr) {
+        if (ScopedHandle<const NameComponent> nameHandle = nameMgr->Read(entity);
+            nameHandle && (!nameHandle->name.empty())) {
+            return fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> { nameHandle->name };
+        } else {
+            // checks if any of the post process mgrs has valid entity for camera
+            fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> ret =
+                hasEffectComponent ? DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_EFFECT_PREFIX_NAME
+                                   : DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME;
+
+            ret.append(sceneName);
+            ret.append(to_hex(entity.id));
+            return ret;
         }
     }
-    return (DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME);
+    return hasEffectComponent ? DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_EFFECT_PREFIX_NAME
+                              : DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME;
+}
+
+fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> GetPostProcessName(
+    const IPostProcessComponentManager* postProcessMgr,
+    const IPostProcessConfigurationComponentManager* postProcessConfigMgr,
+    const IPostProcessEffectComponentManager* postProcessEffectMgr, const INameComponentManager* nameMgr,
+    const string_view sceneName, const Entity& entity)
+{
+    const bool hasEffectComponent = (postProcessEffectMgr && postProcessEffectMgr->HasComponent(entity));
+    if (hasEffectComponent || (postProcessMgr && postProcessMgr->HasComponent(entity)) ||
+        (postProcessConfigMgr && postProcessConfigMgr->HasComponent(entity))) {
+        return GetPostProcessName(nameMgr, sceneName, entity, hasEffectComponent);
+    }
+    return DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME;
 }
 
 string GetPostProcessRenderNodeGraph(
@@ -331,12 +359,22 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
     const ICameraComponentManager& cameraMgr, const IGpuResourceManager& gpuResourceMgr, const CameraComponent& cc,
     RenderCamera& renderCamera, const bool checkCustomTargets)
 {
+    float screenPercentage;
+    if (cc.renderingPipeline != CameraComponent::RenderingPipeline::LIGHT_FORWARD) {
+        screenPercentage = Math::clamp(cc.screenPercentage, 0.25f, 1.0f);
+    } else {
+        screenPercentage = 1.0f;
+    }
+
     renderCamera.layerMask = cc.layerMask;
     renderCamera.viewport = { cc.viewport[0u], cc.viewport[1u], cc.viewport[2u], cc.viewport[3u] };
     renderCamera.scissor = { cc.scissor[0u], cc.scissor[1u], cc.scissor[2u], cc.scissor[3u] };
+
     // if component has a non-zero resolution use it.
     if (cc.renderResolution[0u] && cc.renderResolution[1u]) {
-        renderCamera.renderResolution = { cc.renderResolution[0u], cc.renderResolution[1u] };
+        renderCamera.renderResolution = { static_cast<uint32_t>(
+                                              static_cast<float>(cc.renderResolution[0u]) * screenPercentage),
+            static_cast<uint32_t>(static_cast<float>(cc.renderResolution[1u]) * screenPercentage) };
     } else {
         // otherwise check if render target is known, either a custom target or default backbuffer for main camera.
         RenderHandleReference target;
@@ -358,6 +396,7 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
         }
     }
 
+    renderCamera.screenPercentage = screenPercentage;
     renderCamera.zNear = cc.zNear;
     renderCamera.zFar = cc.zFar;
     renderCamera.flags = GetRenderCameraFlagsFromComponentFlags(cc.pipelineFlags);
@@ -400,8 +439,7 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
     for (uint32_t idx = 0; idx < maxMvCount; ++idx) {
         const auto& mvRef = cc.multiViewCameras[idx];
         if (auto otherCamera = cameraMgr.Read(mvRef)) {
-            if ((otherCamera->sceneFlags & (CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT |
-                                               CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT)) &&
+            if ((otherCamera->sceneFlags & (CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT)) &&
                 (otherCamera->pipelineFlags & CameraComponent::PipelineFlagBits::MULTI_VIEW_ONLY_BIT)) {
                 renderCamera.multiViewCameraIds[renderCamera.multiViewCameraCount++] = mvRef.id;
                 HashCombine(renderCamera.multiViewCameraHash, mvRef.id);
@@ -453,7 +491,7 @@ RenderCamera CreateColorPrePassRenderCamera(const IRenderHandleComponentManager&
         rc.flags = RenderCamera::CAMERA_FLAG_COLOR_PRE_PASS_BIT | RenderCamera::CAMERA_FLAG_OPAQUE_BIT |
                    RenderCamera::CAMERA_FLAG_CLEAR_DEPTH_BIT | RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT;
     }
-    rc.name = to_string(uniqueId);
+    rc.name = to_hex(uniqueId);
     rc.id = uniqueId; // unique id for main pre-pass
     rc.prePassColorTargetName = {};
     rc.postProcessName = DefaultMaterialCameraConstants::CAMERA_PRE_PASS_POST_PROCESS_PREFIX_NAME;
@@ -727,31 +765,34 @@ struct ReflectionPlaneTargetUpdate {
     EntityReference depthRenderTarget;
 };
 
-void UpdateReflectionPlaneMaterial(IRenderMeshComponentManager& renderMeshMgr, IMeshComponentManager& meshMgr,
+Entity UpdateReflectionPlaneMaterial(IRenderMeshComponentManager& renderMeshMgr, IMeshComponentManager& meshMgr,
     IMaterialComponentManager& materialMgr, const Entity& entity, const float screenPercentage,
     const ReflectionPlaneTargetUpdate& rptu)
 {
     // update material
     const auto rmcHandle = renderMeshMgr.Read(entity);
     if (!rmcHandle) {
-        return;
+        return {};
     }
     const auto meshHandle = meshMgr.Read(rmcHandle->mesh);
     if (!meshHandle) {
-        return;
+        return {};
     }
     if (meshHandle->submeshes.empty()) {
-        return;
+        return {};
     }
     if (auto matHandle = materialMgr.Write(meshHandle->submeshes[0].material)) {
         // NOTE: CLEARCOAT_ROUGHNESS cannot be used due to material flags bit is enabled for lighting
         matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].factor = {
-            static_cast<float>(rptu.mipCount),
+            static_cast<float>(Math::min(rptu.mipCount, rptu.mipCount - 1U)),
             screenPercentage,
             static_cast<float>(rptu.renderTargetResolution[0u]),
             static_cast<float>(rptu.renderTargetResolution[1u]),
         };
+        matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image = rptu.colorRenderTarget;
+        return meshHandle->submeshes[0].material;
     }
+    return {};
 }
 
 void ProcessReflectionTargetSize(const PlanarReflectionComponent& rc, const RenderCamera& cam, Math::UVec2& targetRes)
@@ -824,6 +865,7 @@ inline Math::Vec4 CalculateCameraSpaceClipPlane(
     const Math::Vec3 offsetPos = pos;
     const Math::Vec3 cpos = Math::MultiplyPoint3X4(view, offsetPos);
     const Math::Vec3 cnormal = Math::Normalize(Math::MultiplyVector(view, normal)) * sideSign;
+
     return Math::Vec4(cnormal.x, cnormal.y, cnormal.z, -Math::Dot(cpos, cnormal));
 }
 
@@ -833,7 +875,23 @@ inline void CalculateObliqueProjectionMatrix(Math::Mat4X4& projection, const Mat
     const Math::Mat4X4 inverseProjection = Inverse(projection);
 
     const Math::Vec4 q = inverseProjection * Math::Vec4(Sgn(plane.x), Sgn(plane.y), 1.0f, 1.0f);
-    const Math::Vec4 c = plane * (2.0f / Math::Dot(plane, q));
+
+    // https://terathon.com/lengyel/Lengyel-Oblique.pdf page 7 Figure 4b shows what we want to achieve.
+    // The scale of 'c' plane controls the angle between near and far planes. Lengyel's algorithm minimizes this angle
+    // to optimize depth precision by making the far plane pass through the original frustum's corner point Q.
+
+    // IMPORTANT TRADE-OFF: This optimizes depth precision but it is more prone to clip geometry from specific angles.
+
+    // In https://terathon.com/blog/oblique-clipping.html the equation is "plane * (2.0f / Math::Dot(plane, q))"
+    // The factor 2.0f creates a small angle between the 2 planes and it is clipping geometry close to the far plane.
+    // Using a smaller factor of 0.1 (larger angle) it prevents geometry clipping close to the far plane.
+
+    // Oblique projection requires the clipping plane to face toward the camera (planeDotQ < 0).
+    // When planeDotQ approaches zero or becomes positive, we clamp the scaling factor to ensure the plane always clips
+    // in the correct direction.
+    const float planeDotQ = Math::Dot(plane, q);
+    const float clampedScale = Math::min(0.1f / Math::abs(planeDotQ), 0.1f);
+    const Math::Vec4 c = plane * -clampedScale;
 
     projection.data[2u] = c.x;
     projection.data[6u] = c.y;
@@ -893,26 +951,339 @@ inline void DestroyBatchData(BASE_NS::unordered_map<CORE_NS::Entity, RenderSyste
     }
 }
 
-MinAndMax GetMeshMinAndMax(const IRenderPreprocessorSystem& renderPreprocessorSystem, const Entity renderMeshEntity,
-    array_view<const Entity> nextRenderMeshEntities)
-{
-    const auto meshAabb =
-        static_cast<const RenderPreprocessorSystem&>(renderPreprocessorSystem).GetRenderMeshAabb(renderMeshEntity);
-    MinAndMax mam { meshAabb.min, meshAabb.max };
-    for (const auto& nextRenderMeshEntity : nextRenderMeshEntities) {
-        const auto nextMeshAabb = static_cast<const RenderPreprocessorSystem&>(renderPreprocessorSystem)
-                                      .GetRenderMeshAabb(nextRenderMeshEntity);
-        mam.minAABB = Math::min(mam.minAABB, nextMeshAabb.min);
-        mam.maxAABB = Math::max(mam.maxAABB, nextMeshAabb.max);
-    }
-    return mam;
-}
-
 inline void ProcessCameraAddMultiViewHash(const RenderCamera& cam, unordered_map<uint64_t, uint64_t>& childToParent)
 {
     for (uint32_t idx = 0; idx < cam.multiViewCameraCount; ++idx) {
         childToParent.insert_or_assign(cam.multiViewCameraIds[idx], cam.id);
     }
+}
+
+void CalculateFinalSceneBoundingSphere(
+    const RenderBoundingSphere& renderBoundingSphere, Math::Vec3& center, float& radius)
+{
+    if (renderBoundingSphere.radius == 0.0f) {
+        // basically no objects when radius is zero
+        center = Math::Vec3(0.0f, 0.0f, 0.0f);
+        radius = 0.0f;
+    } else {
+        const auto boundingSpherePosition = renderBoundingSphere.center;
+        const float boundingSphereRadius = renderBoundingSphere.radius;
+
+        // Compensate jitter and adjust scene bounding sphere only if change in bounds is meaningful.
+        if (radius > 0.0f) {
+            // Calculate distance to new bounding sphere origin from current sphere.
+            const float pointDistance = Math::Magnitude(boundingSpherePosition - center);
+            // Calculate distance to edge of new bounding sphere from current sphere origin.
+            const float sphereEdgeDistance = pointDistance + boundingSphereRadius;
+
+            // Calculate step size for adjustment, use 10% granularity from current bounds.
+            constexpr float granularityPct = 0.10f;
+            const float granularity = radius * granularityPct;
+
+            // Calculate required change of size, in order to fit new sphere inside current bounds.
+            const float radDifference = sphereEdgeDistance - radius;
+            const float posDifference = Math::Magnitude(boundingSpherePosition - center);
+            // We need to adjust only if the change is bigger than the step size.
+            if ((Math::abs(radDifference) > granularity) || (posDifference > granularity)) {
+                // Calculate how many steps we need to change and in to which direction.
+                const float radAmount = ceil((boundingSphereRadius - radius) / granularity);
+                const int32_t posAmount = (int32_t)ceil(posDifference / granularity);
+                if ((radAmount != 0.f) || (posAmount != 0)) {
+                    // Update size and position of the bounds.
+                    center = boundingSpherePosition;
+                    radius = radius + (radAmount * granularity);
+                }
+            }
+        } else {
+            // No existing bounds, start with new values.
+            radius = boundingSphereRadius;
+            center = boundingSpherePosition;
+        }
+    }
+}
+
+struct CameraOrdering {
+    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t mainId { RenderSceneDataConstants::INVALID_ID };
+    size_t renderCameraIdx { 0 };
+};
+
+vector<CameraOrdering> SortCameras(const array_view<const RenderCamera> renderCameras, const bool prepassRequired)
+{
+    vector<CameraOrdering> baseCameras;
+    vector<CameraOrdering> depCameras;
+    baseCameras.reserve(renderCameras.size());
+    depCameras.reserve(renderCameras.size());
+    size_t mainCamIdx = size_t(~0);
+    // ignore shadow and multi-view only cameras
+    constexpr uint32_t ignoreFlags { RenderCamera::CAMERA_FLAG_SHADOW_BIT |
+                                     RenderCamera::CAMERA_FLAG_MULTI_VIEW_ONLY_BIT };
+    for (size_t camIdx = 0; camIdx < renderCameras.size(); ++camIdx) {
+        const auto& cam = renderCameras[camIdx];
+        if ((cam.flags & ignoreFlags)) {
+            continue;
+        }
+        if (cam.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) {
+            mainCamIdx = camIdx;
+        } else if (cam.mainCameraId == RenderSceneDataConstants::INVALID_ID) {
+            baseCameras.push_back({ cam.id, cam.mainCameraId, camIdx });
+        } else if (!(cam.flags & RenderCamera::CAMERA_FLAG_COLOR_PRE_PASS_BIT) || prepassRequired) {
+            // do not add pre-pass camera if render processing does not need it
+            depCameras.push_back({ cam.id, cam.mainCameraId, camIdx });
+        }
+    }
+    // main camera needs to be the last
+    if (mainCamIdx < renderCameras.size()) {
+        const auto& cam = renderCameras[mainCamIdx];
+        baseCameras.push_back({ cam.id, cam.mainCameraId, mainCamIdx });
+    }
+    // insert dependency cameras to correct positions
+    for (const auto& depCam : depCameras) {
+        const auto pos = std::find_if(baseCameras.cbegin(), baseCameras.cend(),
+            [mainId = depCam.mainId](const CameraOrdering& base) { return base.id == mainId; });
+        if (pos != baseCameras.cend()) {
+            baseCameras.insert(pos, depCam);
+        }
+    }
+    // now cameras are in correct order if the dependencies were correct in RenderCameras
+    return baseCameras;
+}
+
+void RemoveMaterialProperties(IRenderDataStoreDefaultMaterial& dsMaterial,
+    const IMaterialComponentManager& materialManager, array_view<const Entity> removedMaterials)
+{
+    // destroy rendering side decoupled material data
+    for (const auto& entRef : removedMaterials) {
+        dsMaterial.DestroyMaterialData(entRef.id);
+    }
+}
+#if (CORE3D_VALIDATION_ENABLED == 1)
+void ValidateInputColor(const Entity material, const MaterialComponent& matComp)
+{
+    if (matComp.type < MaterialComponent::Type::CUSTOM) {
+        const auto& base = matComp.textures[MaterialComponent::TextureIndex::BASE_COLOR];
+        if ((base.factor.x > 1.0f) || (base.factor.y > 1.0f) || (base.factor.z > 1.0f) || (base.factor.w > 1.0f)) {
+            CORE_LOG_ONCE_I("ValidateInputColor_expect_base_colorfactor",
+                "CORE3D_VALIDATION: Non custom material type expects base color factor to be <= 1.0f.");
+        }
+        const auto& mat = matComp.textures[MaterialComponent::TextureIndex::MATERIAL];
+        if ((mat.factor.y > 1.0f) || (mat.factor.z > 1.0f)) {
+            CORE_LOG_ONCE_I("ValidateInputColor_expect_roughness_metallic_factor",
+                "CORE3D_VALIDATION: Non custom material type expects roughness and metallic to be <= 1.0f.");
+        }
+    }
+}
+#endif
+
+inline void GetRenderHandleReferences(const IRenderHandleComponentManager& renderHandleMgr,
+    const array_view<const EntityReference> inputs, array_view<RenderHandleReference>& outputs)
+{
+    for (size_t idx = 0; idx < outputs.size(); ++idx) {
+        outputs[idx] = renderHandleMgr.GetRenderHandleReference(inputs[idx]);
+    }
+}
+
+constexpr uint32_t RenderMaterialLightingFlagsFromMaterialFlags(const MaterialComponent::LightingFlags materialFlags)
+{
+    uint32_t rmf = 0;
+    if (materialFlags & MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT) {
+        rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SHADOW_RECEIVER_BIT;
+    }
+    if (materialFlags & MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT) {
+        rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SHADOW_CASTER_BIT;
+    }
+    if (materialFlags & MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT) {
+        rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT;
+    }
+    if (materialFlags & MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT) {
+        rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT;
+    }
+    if (materialFlags & MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT) {
+        rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT;
+    }
+    return rmf;
+}
+
+constexpr uint32_t RenderSubmeshFlagsFromMeshFlags(const MeshComponent::Submesh::Flags flags)
+{
+    uint32_t rmf = 0;
+    if (flags & MeshComponent::Submesh::FlagBits::TANGENTS_BIT) {
+        rmf |= RenderSubmeshFlagBits::RENDER_SUBMESH_TANGENTS_BIT;
+    }
+    if (flags & MeshComponent::Submesh::FlagBits::VERTEX_COLORS_BIT) {
+        rmf |= RenderSubmeshFlagBits::RENDER_SUBMESH_VERTEX_COLORS_BIT;
+    }
+    if (flags & MeshComponent::Submesh::FlagBits::SKIN_BIT) {
+        rmf |= RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT;
+    }
+    if (flags & MeshComponent::Submesh::FlagBits::SECOND_TEXCOORD_BIT) {
+        rmf |= RenderSubmeshFlagBits::RENDER_SUBMESH_SECOND_TEXCOORD_BIT;
+    }
+    return rmf;
+}
+
+RenderDataDefaultMaterial::InputMaterialUniforms InputMaterialUniformsFromMaterialComponent(
+    const Entity material, const MaterialComponent& matDesc)
+{
+    RenderDataDefaultMaterial::InputMaterialUniforms mu = DEF_INPUT_MATERIAL_UNIFORMS;
+
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    ValidateInputColor(material, matDesc);
+#endif
+
+    uint32_t transformBits = 0u;
+    constexpr const uint32_t texCount = Math::min(static_cast<uint32_t>(MaterialComponent::TextureIndex::TEXTURE_COUNT),
+        RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT);
+    for (uint32_t idx = 0u; idx < texCount; ++idx) {
+        const auto& tex = matDesc.textures[idx];
+        auto& texRef = mu.textureData[idx];
+        texRef.factor = tex.factor;
+        texRef.translation = tex.transform.translation;
+        texRef.rotation = tex.transform.rotation;
+        texRef.scale = tex.transform.scale;
+        const bool hasTransform = (texRef.translation.x != 0.0f) || (texRef.translation.y != 0.0f) ||
+                                  (texRef.rotation != 0.0f) || (texRef.scale.x != 1.0f) || (texRef.scale.y != 1.0f);
+        transformBits |= static_cast<uint32_t>(hasTransform) << idx;
+    }
+    {
+        // NOTE: premultiplied alpha, applied here and therefore the baseColor factor is special
+        const auto& tex = matDesc.textures[MaterialComponent::TextureIndex::BASE_COLOR];
+        const float alpha = tex.factor.w;
+        const Math::Vec4 baseColor = {
+            tex.factor.x * alpha,
+            tex.factor.y * alpha,
+            tex.factor.z * alpha,
+            alpha,
+        };
+
+        constexpr uint32_t index = 0u;
+        mu.textureData[index].factor = baseColor;
+    }
+    mu.alphaCutoff = matDesc.alphaCutoff;
+    mu.texCoordSetBits = matDesc.useTexcoordSetBit;
+    mu.texTransformSetBits = transformBits;
+    mu.id = material.id;
+    return mu;
+}
+
+inline RenderDataDefaultMaterial::MaterialHandlesWithHandleReference GetMaterialHandles(
+    const MaterialComponent& materialDesc, const IRenderHandleComponentManager& gpuManager)
+{
+    RenderDataDefaultMaterial::MaterialHandlesWithHandleReference materialHandles;
+    auto imageIt = std::begin(materialHandles.images);
+    auto samplerIt = std::begin(materialHandles.samplers);
+    for (const MaterialComponent::TextureInfo& info : materialDesc.textures) {
+        *imageIt++ = gpuManager.GetRenderHandleReference(info.image);
+        *samplerIt++ = gpuManager.GetRenderHandleReference(info.sampler);
+    }
+    return materialHandles;
+}
+
+uint32_t RenderMaterialFlagsFromMaterialValues(const MaterialComponent& matComp,
+    const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference& handles, const uint32_t hasTransformBit)
+{
+    uint32_t rmf = 0;
+    // enable built-in specialization for default materials
+    CORE_ASSERT(matComp.type <= MaterialComponent::Type::OCCLUSION);
+    if (matComp.type < MaterialComponent::Type::CUSTOM) {
+        if (handles.images[MaterialComponent::TextureIndex::NORMAL] ||
+            handles.images[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL]) {
+            // need to check for tangents as well with submesh
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_NORMAL_MAP_BIT;
+        }
+        if (matComp.textures[MaterialComponent::TextureIndex::CLEARCOAT].factor.x > 0.0f) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_CLEAR_COAT_BIT;
+        }
+        if ((matComp.textures[MaterialComponent::TextureIndex::SHEEN].factor.x > 0.0f) ||
+            (matComp.textures[MaterialComponent::TextureIndex::SHEEN].factor.y > 0.0f) ||
+            (matComp.textures[MaterialComponent::TextureIndex::SHEEN].factor.z > 0.0f)) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SHEEN_BIT;
+        }
+        if (matComp.textures[MaterialComponent::TextureIndex::SPECULAR].factor != Math::Vec4(1.f, 1.f, 1.f, 1.f) ||
+            handles.images[MaterialComponent::TextureIndex::SPECULAR]) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_BIT;
+        }
+        if (matComp.textures[MaterialComponent::TextureIndex::TRANSMISSION].factor.x > 0.0f) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_TRANSMISSION_BIT;
+        }
+    }
+    rmf |= (hasTransformBit > 0U) ? RenderMaterialFlagBits::RENDER_MATERIAL_TEXTURE_TRANSFORM_BIT : 0U;
+    // NOTE: built-in shaders write 1.0 to alpha always when discard is enabled
+    rmf |= (matComp.alphaCutoff < 1.0f) ? RenderMaterialFlagBits::RENDER_MATERIAL_SHADER_DISCARD_BIT : 0U;
+    // NOTE: GPU instancing specialization needs to be enabled during rendering
+    return rmf;
+}
+
+inline constexpr RenderMaterialFlags RenderMaterialFlagsFromMaterialValues(
+    MaterialComponent::ExtraRenderingFlags extraFlags)
+{
+    RenderMaterialFlags rmf = 0;
+    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::CAMERA_EFFECT)
+               ? (RenderMaterialFlags)RenderMaterialFlagBits::RENDER_MATERIAL_CAMERA_EFFECT_BIT
+               : 0U;
+    // enable render time GPU instancing evaluation
+    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::ALLOW_GPU_INSTANCING_BIT)
+               ? RENDER_MATERIAL_GPU_INSTANCING_BIT
+               : 0U;
+    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE)
+               ? RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT
+               : 0;
+    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE)
+               ? RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT
+               : 0;
+    return rmf;
+}
+
+void SetupSubmeshBuffers(const IRenderHandleComponentManager& renderHandleManager,
+    const MeshComponent::Submesh& submesh, RenderSubmeshDataWithHandleReference& renderSubmesh)
+{
+    CORE_STATIC_ASSERT(
+        MeshComponent::Submesh::BUFFER_COUNT <= RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+    // calculate real vertex buffer count and fill "safety" handles for default material
+    // no default shader variants without joints etc.
+    // NOTE: optimize for minimal GetRenderHandleReference calls
+    // often the same vertex buffer is used.
+    Entity prevEntity = {};
+
+    for (size_t idx = 0; idx < countof(submesh.bufferAccess); ++idx) {
+        const auto& acc = submesh.bufferAccess[idx];
+        auto& vb = renderSubmesh.buffers.vertexBuffers[idx];
+        if (EntityUtil::IsValid(prevEntity) && (prevEntity == acc.buffer)) {
+            vb.bufferHandle = renderSubmesh.buffers.vertexBuffers[idx - 1].bufferHandle;
+            vb.bufferOffset = acc.offset;
+            vb.byteSize = acc.byteSize;
+        } else if (acc.buffer) {
+            vb.bufferHandle = renderHandleManager.GetRenderHandleReference(acc.buffer);
+            vb.bufferOffset = acc.offset;
+            vb.byteSize = acc.byteSize;
+
+            // store the previous entity
+            prevEntity = acc.buffer;
+        } else {
+            vb.bufferHandle = renderSubmesh.buffers.vertexBuffers[0].bufferHandle; // expecting safety binding
+            vb.bufferOffset = 0;
+            vb.byteSize = 0;
+        }
+    }
+
+    // NOTE: we will get max amount of vertex buffers if there is at least one
+    renderSubmesh.buffers.vertexBufferCount =
+        submesh.bufferAccess[0U].buffer ? static_cast<uint32_t>(countof(submesh.bufferAccess)) : 0U;
+
+    if (submesh.indexBuffer.buffer) {
+        renderSubmesh.buffers.indexBuffer.bufferHandle =
+            renderHandleManager.GetRenderHandleReference(submesh.indexBuffer.buffer);
+        renderSubmesh.buffers.indexBuffer.bufferOffset = submesh.indexBuffer.offset;
+        renderSubmesh.buffers.indexBuffer.byteSize = submesh.indexBuffer.byteSize;
+        renderSubmesh.buffers.indexBuffer.indexType = submesh.indexBuffer.indexType;
+    }
+    if (submesh.indirectArgsBuffer.buffer) {
+        renderSubmesh.buffers.indirectArgsBuffer.bufferHandle =
+            renderHandleManager.GetRenderHandleReference(submesh.indirectArgsBuffer.buffer);
+        renderSubmesh.buffers.indirectArgsBuffer.bufferOffset = submesh.indirectArgsBuffer.offset;
+        renderSubmesh.buffers.indirectArgsBuffer.byteSize = submesh.indirectArgsBuffer.byteSize;
+    }
+    renderSubmesh.buffers.inputAssembly = submesh.inputAssembly;
 }
 } // namespace
 
@@ -928,25 +1299,31 @@ RenderSystem::RenderSystem(IEcs& ecs)
       environmentMgr_(GetManager<IEnvironmentComponentManager>(ecs)), fogMgr_(GetManager<IFogComponentManager>(ecs)),
       gpuHandleMgr_(GetManager<IRenderHandleComponentManager>(ecs)), layerMgr_(GetManager<ILayerComponentManager>(ecs)),
       dynamicEnvBlendMgr_(GetManager<IDynamicEnvironmentBlenderComponentManager>(ecs)),
+      skinMgr_(GetManager<ISkinComponentManager>(ecs)),
       jointMatricesMgr_(GetManager<IJointMatricesComponentManager>(ecs)),
       prevJointMatricesMgr_(GetManager<IPreviousJointMatricesComponentManager>(ecs)),
       postProcessMgr_(GetManager<IPostProcessComponentManager>(ecs)),
       postProcessConfigMgr_(GetManager<IPostProcessConfigurationComponentManager>(ecs)),
+      postProcessEffectMgr_(GetManager<IPostProcessEffectComponentManager>(ecs)),
+      graphicsStateMgr_(GetManager<IGraphicsStateComponentManager>(ecs)),
       RENDER_SYSTEM_PROPERTIES(&properties_, array_view(ComponentMetadata))
 {
-    if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>(); engine) {
+    if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>()) {
         frustumUtil_ = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
-        renderContext_ = GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
-        if (renderContext_) {
-            picking_ = GetInstance<IPicking>(*renderContext_->GetInterface<IClassRegister>(), UID_PICKING);
-            graphicsContext_ =
-                GetInstance<IGraphicsContext>(*renderContext_->GetInterface<IClassRegister>(), UID_GRAPHICS_CONTEXT);
-            if (graphicsContext_) {
-                renderUtil_ = &graphicsContext_->GetRenderUtil();
-            }
-            shaderMgr_ = &renderContext_->GetDevice().GetShaderManager();
-            gpuResourceMgr_ = &renderContext_->GetDevice().GetGpuResourceManager();
+        if (auto* engineClassRegister = engine->GetInterface<IClassRegister>()) {
+            renderContext_ = GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
         }
+    }
+    if (renderContext_) {
+        if (auto* renderClassRegister = renderContext_->GetInterface<IClassRegister>()) {
+            picking_ = GetInstance<IPicking>(*renderClassRegister, UID_PICKING);
+            graphicsContext_ = GetInstance<IGraphicsContext>(*renderClassRegister, UID_GRAPHICS_CONTEXT);
+        }
+        if (graphicsContext_) {
+            renderUtil_ = &graphicsContext_->GetRenderUtil();
+        }
+        shaderMgr_ = &renderContext_->GetDevice().GetShaderManager();
+        gpuResourceMgr_ = &renderContext_->GetDevice().GetGpuResourceManager();
     }
 }
 
@@ -1011,6 +1388,8 @@ void RenderSystem::SetDataStorePointers(IRenderDataStoreManager& manager)
     dsLight_ = refcnt_ptr<IRenderDataStoreDefaultLight>(manager.GetRenderDataStore(properties_.dataStoreLight));
     dsMaterial_ =
         refcnt_ptr<IRenderDataStoreDefaultMaterial>(manager.GetRenderDataStore(properties_.dataStoreMaterial));
+    dsRenderPostProcesses_ = refcnt_ptr<IRenderDataStoreRenderPostProcesses>(manager.Create(
+        IRenderDataStoreRenderPostProcesses::UID, (properties_.dataStorePrefix + RPP_DATA_STORE_NAME).data()));
 }
 
 const IEcs& RenderSystem::GetECS() const
@@ -1039,16 +1418,71 @@ void RenderSystem::Initialize()
     }
     if (renderContext_ && uriMgr_ && gpuHandleMgr_) {
         // fetch default shaders and graphics states
-        const IShaderManager& shaderMgr = renderContext_->GetDevice().GetShaderManager();
         auto& entityMgr = ecs_.GetEntityManager();
-        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, shaderMgr,
-            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, dmShaderData_.opaque);
-        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, shaderMgr,
-            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT, dmShaderData_.blend);
-        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, shaderMgr,
-            DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH, dmShaderData_.depth);
+        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, *shaderMgr_,
+            { DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, STATE_OPAQUE_NAME, DS_OPAQUE_NAME },
+            dmShaderData_.opaque);
+        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, *shaderMgr_,
+            { DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT, STATE_TRANSLUCENT_NAME,
+                DS_TRANSLUCENT_NAME },
+            dmShaderData_.blend);
+        FillShaderData(entityMgr, *uriMgr_, *gpuHandleMgr_, *shaderMgr_,
+            { DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH, STATE_DEPTH_NAME, DS_DEPTH_NAME },
+            dmShaderData_.depth);
     }
+    {
+        const auto opaqueRenderSlot =
+            shaderMgr_->GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+        const auto opaqueSlotData = shaderMgr_->GetRenderSlotData(opaqueRenderSlot);
 
+        auto graphicsState = shaderMgr_->GetGraphicsState(opaqueSlotData.graphicsState);
+        // only change needed compared to opaque slot is to disable color writes.
+        graphicsState.colorBlendState.colorAttachments->colorWriteMask = 0U;
+
+        const auto stateHash = shaderMgr_->HashGraphicsState(graphicsState, opaqueSlotData.renderSlotId);
+        auto gsRenderHandleRef = shaderMgr_->GetGraphicsStateHandleByHash(stateHash);
+        if (!gsRenderHandleRef) {
+            const auto path = "3dshaderstates://" + to_hex(stateHash);
+            const IShaderManager::GraphicsStateCreateInfo createInfo { path, graphicsState };
+            const IShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo {
+                DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, {}, {}, {}, 0U, false
+            };
+            gsRenderHandleRef = shaderMgr_->CreateGraphicsState(createInfo, variantCreateInfo);
+        }
+        if (gsRenderHandleRef) {
+            dmShaderData_.gfxStateOcclusionMaterial = GetOrCreateEntityReference(ecs_, gsRenderHandleRef);
+        }
+    }
+    {
+        const auto environmentRenderSlot =
+            shaderMgr_->GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_ENVIRONMENT);
+        const auto environmentSlotData = shaderMgr_->GetRenderSlotData(environmentRenderSlot);
+
+        auto graphicsState = shaderMgr_->GetGraphicsState(environmentSlotData.graphicsState);
+        graphicsState.colorBlendState.colorAttachmentCount = 1U;
+        // compared to environment slot blending is required.
+        for (auto& outColor : graphicsState.colorBlendState.colorAttachments) {
+            outColor.enableBlend = true;
+            outColor.dstColorBlendFactor = BlendFactor::CORE_BLEND_FACTOR_ONE;
+            outColor.dstAlphaBlendFactor = BlendFactor::CORE_BLEND_FACTOR_ONE;
+            outColor.srcColorBlendFactor = BlendFactor::CORE_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            outColor.srcAlphaBlendFactor = BlendFactor::CORE_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+        }
+
+        const auto stateHash = shaderMgr_->HashGraphicsState(graphicsState, environmentSlotData.renderSlotId);
+        auto gsRenderHandleRef = shaderMgr_->GetGraphicsStateHandleByHash(stateHash);
+        if (!gsRenderHandleRef) {
+            const auto path = "3dshaderstates://" + to_hex(stateHash);
+            const IShaderManager::GraphicsStateCreateInfo createInfo { path, graphicsState };
+            const IShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo {
+                DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, {}, {}, {}, 0U, false
+            };
+            gsRenderHandleRef = shaderMgr_->CreateGraphicsState(createInfo, variantCreateInfo);
+        }
+        if (gsRenderHandleRef) {
+            dmShaderData_.gfxStateOcclusionEnvironment = GetOrCreateEntityReference(ecs_, gsRenderHandleRef);
+        }
+    }
     {
         const ComponentQuery::Operation operations[] = {
             { *nodeMgr_, ComponentQuery::Operation::REQUIRE },
@@ -1062,8 +1496,10 @@ void RenderSystem::Initialize()
         const ComponentQuery::Operation operations[] = {
             { *worldMatrixMgr_, ComponentQuery::Operation::REQUIRE },
             { *layerMgr_, ComponentQuery::Operation::OPTIONAL },
+            { *skinMgr_, ComponentQuery::Operation::OPTIONAL },
             { *jointMatricesMgr_, ComponentQuery::Operation::OPTIONAL },
             { *prevJointMatricesMgr_, ComponentQuery::Operation::OPTIONAL },
+            { *nodeMgr_, ComponentQuery::Operation::OPTIONAL },
         };
         renderableQuery_.SetEcsListenersEnabled(true);
         renderableQuery_.SetupQuery(*renderMeshMgr_, operations, true);
@@ -1077,6 +1513,15 @@ void RenderSystem::Initialize()
         reflectionsQuery_.SetEcsListenersEnabled(true);
         reflectionsQuery_.SetupQuery(*planarReflectionMgr_, operations);
     }
+    {
+        const ComponentQuery::Operation operations[] = {
+            { *worldMatrixMgr_, ComponentQuery::Operation::REQUIRE },
+            { *nodeMgr_, ComponentQuery::Operation::OPTIONAL },
+            { *postProcessEffectMgr_, ComponentQuery::Operation::OPTIONAL },
+        };
+        cameraQuery_.SetEcsListenersEnabled(true);
+        cameraQuery_.SetupQuery(*cameraMgr_, operations);
+    }
     if (renderContext_) {
         IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
         if (auto dsPod = refcnt_ptr<IRenderDataStorePod>(rdsMgr.GetRenderDataStore(POD_DATA_STORE_NAME))) {
@@ -1088,6 +1533,10 @@ void RenderSystem::Initialize()
             }
         }
     }
+    ecs_.AddListener(*planarReflectionMgr_, *this);
+    ecs_.AddListener(*materialMgr_, *this);
+    ecs_.AddListener(*meshMgr_, *this);
+    ecs_.AddListener(*graphicsStateMgr_, *this);
 }
 
 bool RenderSystem::Update(bool frameRenderingQueued, uint64_t totalTime, uint64_t deltaTime)
@@ -1105,11 +1554,20 @@ bool RenderSystem::Update(bool frameRenderingQueued, uint64_t totalTime, uint64_
     const auto fogGen = fogMgr_->GetGenerationCounter();
     const auto postprocessGen = postProcessMgr_->GetGenerationCounter();
     const auto postprocessConfigurationGen = postProcessConfigMgr_->GetGenerationCounter();
+    const auto postprocessEffectGen = postProcessEffectMgr_->GetGenerationCounter();
+    const auto jointGen = jointMatricesMgr_->GetGenerationCounter();
+    const auto layerGen = layerMgr_->GetGenerationCounter();
+    const auto nodeGen = nodeMgr_->GetGenerationCounter();
+    const auto renderMeshGen = renderMeshMgr_->GetGenerationCounter();
+    const auto worldMatrixGen = worldMatrixMgr_->GetGenerationCounter();
     if (!frameRenderingQueued && (renderConfigurationGeneration_ == renderConfigurationGen) &&
         (cameraGeneration_ == cameraGen) && (lightGeneration_ == lightGen) &&
         (planarReflectionGeneration_ == planarReflectionGen) && (environmentGeneration_ == environmentGen) &&
         (fogGeneration_ == fogGen) && (postprocessGeneration_ == postprocessGen) &&
-        (postprocessConfigurationGeneration_ == postprocessConfigurationGen)) {
+        (postprocessConfigurationGeneration_ == postprocessConfigurationGen) &&
+        (postprocessEffectGeneration_ == postprocessEffectGen) && (jointGeneration_ == jointGen) &&
+        (layerGeneration_ == layerGen) && (nodeGeneration_ == nodeGen) && (renderMeshGeneration_ == renderMeshGen) &&
+        (worldMatrixGeneration_ == worldMatrixGen)) {
         return false;
     }
 
@@ -1121,6 +1579,12 @@ bool RenderSystem::Update(bool frameRenderingQueued, uint64_t totalTime, uint64_
     fogGeneration_ = fogGen;
     postprocessGeneration_ = postprocessGen;
     postprocessConfigurationGeneration_ = postprocessConfigurationGen;
+    postprocessEffectGeneration_ = postprocessEffectGen;
+    jointGeneration_ = jointGen;
+    layerGeneration_ = layerGen;
+    nodeGeneration_ = nodeGen;
+    renderMeshGeneration_ = renderMeshGen;
+    worldMatrixGeneration_ = worldMatrixGen;
 
     totalTime_ = totalTime;
     deltaTime_ = deltaTime;
@@ -1144,9 +1608,103 @@ bool RenderSystem::Update(bool frameRenderingQueued, uint64_t totalTime, uint64_
 
 void RenderSystem::Uninitialize()
 {
+    ecs_.RemoveListener(*planarReflectionMgr_, *this);
+    ecs_.RemoveListener(*materialMgr_, *this);
+    ecs_.RemoveListener(*meshMgr_, *this);
+    ecs_.RemoveListener(*graphicsStateMgr_, *this);
+
     lightQuery_.SetEcsListenersEnabled(false);
     renderableQuery_.SetEcsListenersEnabled(false);
     reflectionsQuery_.SetEcsListenersEnabled(false);
+    cameraQuery_.SetEcsListenersEnabled(false);
+}
+
+void RenderSystem::OnComponentEvent(
+    EventType type, const IComponentManager& componentManager, array_view<const Entity> entities)
+{
+    if (componentManager.GetUid() == IMaterialComponentManager::UID) {
+        if ((type == EventType::CREATED) || (type == EventType::MODIFIED)) {
+            materialModifiedEvents_.append(entities.cbegin(), entities.cend());
+        } else if (type == EventType::DESTROYED) {
+            materialDestroyedEvents_.append(entities.cbegin(), entities.cend());
+        }
+        materialGeneration_ = componentManager.GetGenerationCounter();
+    } else if (componentManager.GetUid() == IMeshComponentManager::UID) {
+        if ((type == EventType::CREATED) || (type == EventType::MODIFIED)) {
+            meshModifiedEvents_.append(entities.cbegin(), entities.cend());
+        } else if (type == EventType::DESTROYED) {
+            meshDestroyedEvents_.append(entities.cbegin(), entities.cend());
+        }
+        meshGeneration_ = componentManager.GetGenerationCounter();
+    } else if (componentManager.GetUid() == IGraphicsStateComponentManager::UID) {
+        if ((type == EventType::CREATED) || (type == EventType::MODIFIED)) {
+            graphicsStateModifiedEvents_.append(entities.cbegin(), entities.cend());
+        }
+    } else if (componentManager.GetUid() == IPlanarReflectionComponentManager::UID) {
+        if (type == EventType::CREATED) {
+            for (const auto& entity : entities) {
+                IComponentManager::ComponentId meshId = IComponentManager::INVALID_COMPONENT_ID;
+                if (auto renderMeshHandle = renderMeshMgr_->Read(entity)) {
+                    meshId = meshMgr_->GetComponentId(renderMeshHandle->mesh);
+                }
+                if (meshId == IComponentManager::INVALID_COMPONENT_ID) {
+#if CORE3D_VALIDATION_ENABLED
+                    CORE_LOG_ONCE_E(
+                        "planar" + to_hex(entity.id), "CORE3D_VALIDATION: PlanarReflectionComponent missing mesh");
+#endif
+                    continue;
+                }
+                Entity material;
+                if (auto meshHandle = meshMgr_->Read(meshId); meshHandle && !meshHandle->submeshes.empty()) {
+                    material = meshHandle->submeshes[0U].material;
+                }
+                if (!EntityUtil::IsValid(material)) {
+                    material = ecs_.GetEntityManager().Create();
+                    reflectionPlanes_.insert({ entity, ReflectionPlaneData { material } });
+                    if (auto meshWriteHandle = meshMgr_->Write(meshId)) {
+                        meshWriteHandle->submeshes[0U].material = material;
+                    }
+                }
+                auto materialHandle = materialMgr_->Write(material);
+                if (!materialHandle) {
+                    materialMgr_->Create(material);
+                    materialHandle = materialMgr_->Write(material);
+                    // With default roughness value of 1 reflection is barely visible. Lower the roughness so that by
+                    // default the effect is more visible.
+                    if (materialHandle) {
+                        materialHandle->textures[MaterialComponent::TextureIndex::MATERIAL].factor.y = 0.2f;
+                    }
+                }
+                if (materialHandle) {
+                    materialModifiedEvents_.push_back(material);
+                    if (!materialHandle->materialShader.shader) {
+                        auto* uriCM = GetManager<IUriComponentManager>(ecs_);
+                        constexpr const string_view uri = "3dshaders://shader/core3d_dm_fw_reflection_plane.shader";
+                        auto shaderEntity = LookupResourceByUri(uri, *uriCM, *gpuHandleMgr_);
+                        if (!EntityUtil::IsValid(shaderEntity)) {
+                            shaderEntity = ecs_.GetEntityManager().Create();
+                            gpuHandleMgr_->Create(shaderEntity);
+                            gpuHandleMgr_->Write(shaderEntity)->reference = shaderMgr_->GetShaderHandle(uri);
+                            uriCM->Create(shaderEntity);
+                            uriCM->Write(shaderEntity)->uri = uri;
+                        }
+                        materialHandle->materialShader.shader =
+                            ecs_.GetEntityManager().GetReferenceCounted(shaderEntity);
+                    }
+                    materialHandle->extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISCARD_BIT;
+                }
+            }
+        } else if (type == EventType::DESTROYED) {
+            for (const auto& entity : entities) {
+                if (auto pos = reflectionPlanes_.find(entity); pos != reflectionPlanes_.cend()) {
+                    if (EntityUtil::IsValid(pos->second.material)) {
+                        ecs_.GetEntityManager().Destroy(pos->second.material);
+                    }
+                    reflectionPlanes_.erase(pos);
+                }
+            }
+        }
+    }
 }
 
 RenderConfigurationComponent RenderSystem::GetRenderConfigurationComponent()
@@ -1163,16 +1721,30 @@ RenderConfigurationComponent RenderSystem::GetRenderConfigurationComponent()
 Entity RenderSystem::ProcessScene(const RenderConfigurationComponent& sc)
 {
     Entity cameraEntity { INVALID_ENTITY };
-    // Grab active camera.
+    // Grab active main camera.
     const auto cameraCount = cameraMgr_->GetComponentCount();
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    bool hasActiveMainCamera = false;
+#endif
     for (IComponentManager::ComponentId id = 0; id < cameraCount; ++id) {
         if (auto handle = cameraMgr_->Read(id); handle) {
-            if (handle->sceneFlags & CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT) {
+            if ((handle->sceneFlags & CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT) &&
+                (handle->sceneFlags & CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT)) {
                 cameraEntity = cameraMgr_->GetEntity(id);
+#if (CORE3D_VALIDATION_ENABLED == 1)
+                hasActiveMainCamera = true;
+#endif
                 break;
             }
         }
     }
+#if (CORE3D_VALIDATION_ENABLED == 1)
+    if (!hasActiveMainCamera) {
+        CORE_LOG_ONCE_I(
+            "RenderSystem::ProcessScene_no_active_main_cams", "CORE3D_VALIDATION: Main cameras are not active");
+    }
+#endif
+
     dsLight_->SetShadowTypes(GetRenderShadowTypes(sc), 0u);
 
     // NOTE: removed code for "No main camera set, grab 1st one (if any)."
@@ -1180,7 +1752,7 @@ Entity RenderSystem::ProcessScene(const RenderConfigurationComponent& sc)
     return cameraEntity;
 }
 
-void RenderSystem::EvaluateFrameObjectFlags()
+void RenderSystem::EvaluateRenderDataStoreOutput()
 {
     const auto info = dsMaterial_->GetRenderFrameObjectInfo();
     // update built-in pipeline modifications for default materials
@@ -1189,356 +1761,82 @@ void RenderSystem::EvaluateFrameObjectFlags()
         // automatically done by e.g. gltf2 importer
         renderProcessing_.frameFlags |= NEEDS_COLOR_PRE_PASS; // when allowing prepass on demand
     }
-}
 
-void RenderSystem::ProcessMesh(const RenderMeshData rmd, const SkinProcessData& spd)
-{
-    CORE_STATIC_ASSERT(sizeof(RenderMeshComponent::customData) == sizeof(RenderMeshData::customData));
-    // NOTE: When object is skinned we use the mesh bounding box for all the submeshes because currently
-    // there is no way to know here which joints affect one specific renderSubmesh.
-    const bool useJoints = spd.jointMatricesComponent && (spd.jointMatricesComponent->count > 0);
-    RenderMeshSkinData rmsd;
-    if (useJoints) {
-        CORE_ASSERT(spd.prevJointMatricesComponent);
-        rmsd.skinJointMatrices = array_view<Math::Mat4X4 const>(
-            spd.jointMatricesComponent->jointMatrices, spd.jointMatricesComponent->count);
-        rmsd.prevSkinJointMatrices = array_view<Math::Mat4X4 const>(
-            spd.prevJointMatricesComponent->jointMatrices, spd.prevJointMatricesComponent->count);
-        rmsd.aabb.minAabb = spd.jointMatricesComponent->jointsAabbMin;
-        rmsd.aabb.maxAabb = spd.jointMatricesComponent->jointsAabbMax;
-    }
-    const auto aabbs =
-        static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetRenderMeshAabbs(Entity { rmd.id });
-
-    RenderMeshAabbData renderMeshAabb;
-    const bool hasMeshAabb = (!aabbs.empty());
-    if (hasMeshAabb) {
-        renderMeshAabb.aabb.minAabb = aabbs[0].min;
-        renderMeshAabb.aabb.maxAabb = aabbs[0].max;
-    }
-    renderMeshAabb.submeshAabb = { reinterpret_cast<const RenderMinAndMax*>(aabbs.data()), aabbs.size() };
-
-    dsMaterial_->AddFrameRenderMeshData(rmd, renderMeshAabb, rmsd);
-}
-
-void RenderSystem::ProcessMesh(
-    BASE_NS::array_view<const RenderMeshData> rmd, const RenderMeshBatchData rmbd, const SkinProcessData& spd)
-{
-    CORE_STATIC_ASSERT(sizeof(RenderMeshComponent::customData) == sizeof(RenderMeshData::customData));
-    if (rmd.empty()) {
-        return;
-    }
-    const auto& baseRmd = rmd[0];
-
-    // NOTE: When object is skinned we use the mesh bounding box for all the submeshes because currently
-    // there is no way to know here which joints affect one specific renderSubmesh.
-    const bool useJoints = spd.jointMatricesComponent && (spd.jointMatricesComponent->count > 0);
-    RenderMeshSkinData rmsd;
-    if (useJoints) {
-        CORE_ASSERT(spd.prevJointMatricesComponent);
-        rmsd.skinJointMatrices = array_view<Math::Mat4X4 const>(
-            spd.jointMatricesComponent->jointMatrices, spd.jointMatricesComponent->count);
-        rmsd.prevSkinJointMatrices = array_view<Math::Mat4X4 const>(
-            spd.prevJointMatricesComponent->jointMatrices, spd.prevJointMatricesComponent->count);
-        rmsd.aabb.minAabb = spd.jointMatricesComponent->jointsAabbMin;
-        rmsd.aabb.maxAabb = spd.jointMatricesComponent->jointsAabbMax;
-    }
-    const auto aabbs =
-        static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetRenderMeshAabbs(Entity { baseRmd.id });
-
-    RenderMeshAabbData renderMeshAabb;
-    const bool hasMeshAabb = (!aabbs.empty());
-    if (hasMeshAabb) {
-        renderMeshAabb.aabb.minAabb = aabbs[0].min;
-        renderMeshAabb.aabb.maxAabb = aabbs[0].max;
-    }
-    renderMeshAabb.submeshAabb = { reinterpret_cast<const RenderMinAndMax*>(aabbs.data()), aabbs.size() };
-
-    dsMaterial_->AddFrameRenderMeshData(rmd, renderMeshAabb, rmsd, rmbd);
-}
-
-void RenderSystem::ProcessRenderMeshComponentBatch(
-    const uint32_t sceneId, const Entity renderMeshBatch, const ComponentQuery::ResultRow* row)
-{
-    const RenderMeshComponent renderMeshComponent = renderMeshMgr_->Get(row->components[RQ_RMC]);
-    const auto worldMatrix = worldMatrixMgr_->Read(row->components[RQ_WM]);
-    const uint64_t layerMask = !row->IsValidComponentId(RQ_L) ? LayerConstants::DEFAULT_LAYER_MASK
-                                                              : layerMgr_->Get(row->components[RQ_L]).layerMask;
-    // NOTE: direct component id for skins added to batch processing
-    batches_[renderMeshBatch].push_back({ row->entity, renderMeshComponent.mesh, layerMask, sceneId,
-        row->components[RQ_JM], row->components[RQ_PJM], worldMatrix->matrix, worldMatrix->prevMatrix });
-}
-
-void RenderSystem::ProcessRenderMeshAutomaticBatch(
-    const uint32_t sceneId, array_view<const Entity> renderMeshComponents)
-{
-    auto SubmitBatch = [&](const vector<RenderMeshData>& rmd, const uint32_t jointId, const uint32_t prevJointId,
-                           const RenderMeshBatchData& rmbd) {
-        if ((jointId != IComponentManager::INVALID_COMPONENT_ID) &&
-            (prevJointId != IComponentManager::INVALID_COMPONENT_ID)) {
-            auto const jointMatricesData = jointMatricesMgr_->Read(jointId);
-            auto const prevJointMatricesData = prevJointMatricesMgr_->Read(prevJointId);
-            const SkinProcessData spd { &(*jointMatricesData), &(*prevJointMatricesData) };
-            ProcessMesh(rmd, rmbd, spd);
-        } else {
-            ProcessMesh(rmd, rmbd, {});
-        }
-    };
-
-    uint32_t batchIndex = 0;
-    uint32_t batchedCount = 0;
-    ScopedHandle<const MeshComponent> meshHandle;
-    const uint32_t batchInstCount = static_cast<uint32_t>(renderMeshComponents.size());
-    MinAndMax mam;
-    bool openBatch = false;
-    IComponentManager::ComponentId jointId = IComponentManager::INVALID_COMPONENT_ID;
-    IComponentManager::ComponentId prevJointId = IComponentManager::INVALID_COMPONENT_ID;
-    for (const auto& entity : renderMeshComponents) {
-        const auto row = renderableQuery_.FindResultRow(entity);
-        if (!row) {
-            continue;
-        }
-        const RenderMeshComponent rmc = renderMeshMgr_->Get(row->components[RQ_RMC]);
-        if (!meshHandle) {
-            meshHandle = meshMgr_->Read(rmc.mesh);
-            if (!meshHandle) {
-                continue;
-            }
-        }
-
-        const WorldMatrixComponent& world = worldMatrixMgr_->Get(row->components[RQ_WM]);
-        const uint64_t layerMask = !row->IsValidComponentId(RQ_L) ? LayerConstants::DEFAULT_LAYER_MASK
-                                                                  : layerMgr_->Read(row->components[RQ_L])->layerMask;
-        // this is a batch of the same material
-        // duplicates the mesh uniform data for all instances
-        if (batchIndex == 0) {
-            LogBatchValidation(*meshHandle);
-
-            openBatch = true;
-            renderMeshData_.clear();
-            renderMeshData_.reserve(meshHandle->submeshes.size());
-
-            const uint32_t currBatchCount = Math::min(batchInstCount - batchedCount, MAX_BATCH_OBJECT_COUNT);
-            // process AABBs for all instances, the same mesh is used for all instances with their own
-            // transform
-            mam = GetMeshMinAndMax(*renderPreprocessorSystem_, entity,
-                array_view(renderMeshComponents.data() + batchedCount, currBatchCount));
-
-            batchedCount += currBatchCount;
-            // this is a batch of same material, so the material uniform data is duplicated
-            RenderMeshData rmd { world.matrix, world.matrix, world.prevMatrix, entity.id, rmc.mesh.id, layerMask,
-                sceneId };
-            std::copy(std::begin(rmc.customData), std::end(rmc.customData), std::begin(rmd.customData));
-            renderMeshData_.push_back(move(rmd));
-            // Optional skin, cannot change based on submesh)
-            if (row->IsValidComponentId(RQ_JM) && row->IsValidComponentId(RQ_PJM)) {
-                jointId = row->components[RQ_JM];
-                prevJointId = row->components[RQ_PJM];
-            }
-        } else {
-            // NOTE: normal matrix is missing
-            RenderMeshData rmd { world.matrix, world.matrix, world.prevMatrix, entity.id, rmc.mesh.id, layerMask,
-                sceneId };
-            std::copy(std::begin(rmc.customData), std::end(rmc.customData), std::begin(rmd.customData));
-            renderMeshData_.push_back(move(rmd));
-            // NOTE: materials have been automatically duplicated for all instance
-        }
-        if (++batchIndex == MAX_BATCH_OBJECT_COUNT) {
-            SubmitBatch(renderMeshData_, jointId, prevJointId, { { mam.minAABB, mam.maxAABB }, 0U });
-            // reset
-            batchIndex = 0;
-            openBatch = false;
-            jointId = IComponentManager::INVALID_COMPONENT_ID;
-            prevJointId = IComponentManager::INVALID_COMPONENT_ID;
-        }
-    }
-    // submit final batch
-    if (openBatch) {
-        SubmitBatch(renderMeshData_, jointId, prevJointId, { { mam.minAABB, mam.maxAABB }, 0U });
-    }
-}
-
-void RenderSystem::ProcessSingleRenderMesh(const uint32_t sceneId, Entity renderMeshComponent)
-{
-    // add a single mesh
-    if (const auto row = renderableQuery_.FindResultRow(renderMeshComponent); row) {
-        const RenderMeshComponent rmc = renderMeshMgr_->Get(row->components[RQ_RMC]);
-        if (const auto meshData = meshMgr_->Read(rmc.mesh); meshData) {
-            const WorldMatrixComponent world = worldMatrixMgr_->Get(row->components[RQ_WM]);
-            const uint64_t layerMask = !row->IsValidComponentId(RQ_L) ? LayerConstants::DEFAULT_LAYER_MASK
-                                                                      : layerMgr_->Get(row->components[RQ_L]).layerMask;
-            RenderMeshData rmd { world.matrix, world.matrix, world.prevMatrix, row->entity.id, rmc.mesh.id, layerMask,
-                sceneId };
-            std::copy(std::begin(rmc.customData), std::end(rmc.customData), std::begin(rmd.customData));
-            // (4, 5) JointMatrixComponents are optional.
-            if (row->IsValidComponentId(RQ_JM) && row->IsValidComponentId(RQ_PJM)) {
-                auto const jointMatricesData = jointMatricesMgr_->Read(row->components[RQ_JM]);
-                auto const prevJointMatricesData = prevJointMatricesMgr_->Read(row->components[RQ_PJM]);
-                CORE_ASSERT(jointMatricesData);
-                CORE_ASSERT(prevJointMatricesData);
-                const SkinProcessData spd { &(*jointMatricesData), &(*prevJointMatricesData) };
-                ProcessMesh(rmd, spd);
-            } else {
-                ProcessMesh(rmd, {});
-            }
-        }
-    }
+    CalculateFinalSceneBoundingSphere(
+        info.shadowCasterBoundingSphere, sceneBoundingSpherePosition_, sceneBoundingSphereRadius_);
 }
 
 void RenderSystem::ProcessRenderables()
 {
     renderableQuery_.Execute();
-    const auto levelData = static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetSceneData();
-    for (const auto& level : levelData) {
-        for (const auto& rmc : level.renderBatchComponents) {
-            if (const auto row = renderableQuery_.FindResultRow(rmc); row) {
-                const RenderMeshComponent renderMeshComponent = renderMeshMgr_->Get(row->components[RQ_RMC]);
-                // batched render mesh components not processed linearly
-                ProcessRenderMeshComponentBatch(level.sceneId, renderMeshComponent.renderMeshBatch, row);
-            }
-        }
 
-        {
-            auto currentIndex = 0U;
-            auto batchStartIndex = 0U;
-            Entity currentMesh;
-            for (const auto& rmc : level.instancingAllowed) {
-                if (const auto row = renderableQuery_.FindResultRow(rmc); row) {
-                    const RenderMeshComponent renderMeshComponent = renderMeshMgr_->Get(row->components[RQ_RMC]);
-                    if (currentMesh != renderMeshComponent.mesh) {
-                        // create batch when the mesh changes [batchStartIndex..currentIndex)
-                        if (const auto batchSize = currentIndex - batchStartIndex; batchSize) {
-                            ProcessRenderMeshAutomaticBatch(
-                                level.sceneId, { level.instancingAllowed.data() + batchStartIndex, batchSize });
-                        }
+    IComponentManager::ComponentId jointId = IComponentManager::INVALID_COMPONENT_ID;
+    IComponentManager::ComponentId prevJointId = IComponentManager::INVALID_COMPONENT_ID;
+    const auto queryResults = renderableQuery_.GetResults();
+    for (const auto& row : queryResults) {
+        jointId = IComponentManager::INVALID_COMPONENT_ID;
+        prevJointId = IComponentManager::INVALID_COMPONENT_ID;
 
-                        batchStartIndex = currentIndex;
-                        currentMesh = renderMeshComponent.mesh;
-                    }
+        const auto& entity = row.entity;
+        if (auto rmcHandle = renderMeshMgr_->Read(row.components[RQ_RMC])) {
+            uint32_t sceneId = 0U;
+            bool enabled = false; // not going to rendering if there's no node (could go..)
+            if (row.IsValidComponentId(RQ_N)) {
+                if (auto nodeHandle = nodeMgr_->Read(row.components[RQ_N]); nodeHandle) {
+                    sceneId = nodeHandle->sceneId;
+                    enabled = nodeHandle->effectivelyEnabled;
                 }
-                ++currentIndex;
+            }
+            if (!enabled) {
+                continue;
+            }
+            RenderMeshBatchData renderMeshBatch;
+            if (EntityUtil::IsValid(rmcHandle->renderMeshBatch)) {
+                if (auto batchRenderMeshComponent = renderMeshMgr_->Read(rmcHandle->renderMeshBatch);
+                    batchRenderMeshComponent) {
+                    renderMeshBatch.renderMeshId = rmcHandle->renderMeshBatch.id;
+                    renderMeshBatch.meshId = batchRenderMeshComponent->mesh.id;
+                }
             }
 
-            // handle the tail
-            if (const auto batchSize = currentIndex - batchStartIndex; batchSize) {
-                ProcessRenderMeshAutomaticBatch(
-                    level.sceneId, { level.instancingAllowed.data() + batchStartIndex, batchSize });
-            }
-        }
+            const WorldMatrixComponent& world = worldMatrixMgr_->Get(row.components[RQ_WM]);
+            const uint64_t layerMask = !row.IsValidComponentId(RQ_L) ? LayerConstants::DEFAULT_LAYER_MASK
+                                                                     : layerMgr_->Read(row.components[RQ_L])->layerMask;
 
-        for (const auto& rmc : level.rest) {
-            ProcessSingleRenderMesh(level.sceneId, rmc);
-        }
-    }
-
-    // process render mesh batch component related meshes
-    ProcessRenderMeshBatchComponentRenderables();
-}
-
-void RenderSystem::ProcessRenderMeshBatchComponentRenderables()
-{
-    auto SubmitBatch = [&](const vector<RenderMeshData>& rmd, const uint32_t jointId, const uint32_t prevJointId,
-                           const RenderMeshBatchData& rmbd) {
-        if ((jointId != IComponentManager::INVALID_COMPONENT_ID) &&
-            (prevJointId != IComponentManager::INVALID_COMPONENT_ID)) {
-            auto const jointMatricesData = jointMatricesMgr_->Read(jointId);
-            auto const prevJointMatricesData = prevJointMatricesMgr_->Read(prevJointId);
-            const SkinProcessData spd { &(*jointMatricesData), &(*prevJointMatricesData) };
-            ProcessMesh(rmd, rmbd, spd);
-        } else {
-            ProcessMesh(rmd, rmbd, {});
-        }
-    };
-
-    // process render mesh batch component related meshes
-    RenderMeshBatchData rmbd { {}, RENDER_MATERIAL_GPU_INSTANCING_MATERIAL_BIT };
-    for (const auto& batchRef : batches_) {
-        uint32_t batchIndex = 0U;
-        uint32_t batchedCount = 0U;
-        IComponentManager::ComponentId jointId = IComponentManager::INVALID_COMPONENT_ID;
-        IComponentManager::ComponentId prevJointId = IComponentManager::INVALID_COMPONENT_ID;
-        const uint32_t batchInstCount = static_cast<uint32_t>(batchRef.second.size());
-        MinAndMax mam;
-        bool batchOpen = false;
-        for (uint32_t entIdx = 0U; entIdx < batchInstCount; ++entIdx) {
-            const auto& inst = batchRef.second[entIdx];
-            const Entity& entRef = inst.entity;
-            const Entity& meshEntRef = inst.mesh;
-            if (const auto meshData = meshMgr_->Read(meshEntRef); meshData) {
-                const auto& mesh = *meshData;
-                const RenderMeshComponent rmc = renderMeshMgr_->Get(entRef);
-                // process the first fully
-                if (batchIndex == 0U) {
-                    LogBatchValidation(mesh);
-
-                    batchOpen = true;
-                    renderMeshData_.clear();
-                    renderMeshData_.reserve(meshData->submeshes.size());
-
-                    const uint32_t currPatchCount = Math::min(batchInstCount - batchedCount, MAX_BATCH_OBJECT_COUNT);
-                    // process AABBs for all instances, the same mesh is used for all instances with their own
-                    // transform
-                    const BatchIndices batchIndices { ~0u, entIdx + 1U, entIdx + currPatchCount };
-                    CombineBatchWorldMinAndMax(batchRef.second, batchIndices, mesh, mam);
-                    batchedCount += currPatchCount;
-                    RenderMeshData rmd { inst.mtx, inst.mtx, inst.prevWorld, entRef.id, meshEntRef.id, inst.layerMask };
-                    std::copy(std::begin(rmc.customData), std::end(rmc.customData), std::begin(rmd.customData));
-                    renderMeshData_.push_back(move(rmd));
-                    // Optional skin, cannot change based on submesh)
-                    if (inst.jointId != IComponentManager::INVALID_COMPONENT_ID) {
-                        jointId = inst.jointId;
-                        prevJointId = inst.prevJointId;
-                    }
+            // this is a batch of same material, so the material uniform data is duplicated
+            RenderMeshData rmd { world.matrix, world.matrix, world.prevMatrix, entity.id, rmcHandle->mesh.id, layerMask,
+                sceneId };
+            std::copy(std::begin(rmcHandle->customData), std::end(rmcHandle->customData), std::begin(rmd.customData));
+            // Optional skin, cannot change based on submesh)
+            RenderMeshSkinData rmsd;
+            if (row.IsValidComponentId(RQ_SM) && row.IsValidComponentId(RQ_JM) && row.IsValidComponentId(RQ_PJM)) {
+                jointId = row.components[RQ_JM];
+                prevJointId = row.components[RQ_PJM];
+                if (auto skin = skinMgr_->Read(row.components[RQ_SM])) {
+                    rmsd.id = skin->skinRoot.id;
                 } else {
-                    // NOTE: normal matrix is missing
-                    RenderMeshData rmd { inst.mtx, inst.mtx, inst.prevWorld, entRef.id, meshEntRef.id, inst.layerMask };
-                    std::copy(std::begin(rmc.customData), std::end(rmc.customData), std::begin(rmd.customData));
-                    renderMeshData_.push_back(move(rmd));
+                    static_assert(RenderSceneDataConstants::INVALID_INDEX == INVALID_ENTITY);
+                    rmsd.id = RenderSceneDataConstants::INVALID_INDEX;
                 }
-                if (++batchIndex == MAX_BATCH_OBJECT_COUNT) {
-                    rmbd.aabb = { mam.minAABB, mam.maxAABB };
-                    SubmitBatch(renderMeshData_, jointId, prevJointId, rmbd);
-                    // reset
-                    batchIndex = 0;
-                    batchOpen = false;
-                    jointId = IComponentManager::INVALID_COMPONENT_ID;
-                    prevJointId = IComponentManager::INVALID_COMPONENT_ID;
-                }
-            }
-        }
-        if (batchOpen) {
-            rmbd.aabb = { mam.minAABB, mam.maxAABB };
-            SubmitBatch(renderMeshData_, jointId, prevJointId, rmbd);
-        }
-    }
-    // NOTE: we destroy batch entity if its elements were not used in this frame
-    DestroyBatchData(batches_);
-}
+                auto const jointMatricesData = jointMatricesMgr_->Read(jointId);
+                auto const prevJointMatricesData = prevJointMatricesMgr_->Read(prevJointId);
+                const SkinProcessData spd { &(*jointMatricesData), &(*prevJointMatricesData) };
 
-void RenderSystem::CombineBatchWorldMinAndMax(
-    const BatchDataVector& batchVec, const BatchIndices& batchIndices, const MeshComponent& mesh, MinAndMax& mam) const
-{
-    CORE_ASSERT(picking_);
-    CORE_ASSERT(batchIndices.batchEndIndex <= static_cast<uint32_t>(batchVec.size()));
-    if (batchIndices.submeshIndex == ~0u) {
-        for (uint32_t bIdx = batchIndices.batchStartIndex; bIdx < batchIndices.batchEndIndex; ++bIdx) {
-            const BatchData& bData = batchVec[bIdx];
-            const auto& meshAabb =
-                static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetRenderMeshAabb(bData.entity);
-            mam.minAABB = Math::min(mam.minAABB, meshAabb.min);
-            mam.maxAABB = Math::max(mam.maxAABB, meshAabb.max);
-        }
-    } else if (batchIndices.submeshIndex < mesh.submeshes.size()) {
-        for (uint32_t bIdx = batchIndices.batchStartIndex; bIdx < batchIndices.batchEndIndex; ++bIdx) {
-            const BatchData& bData = batchVec[bIdx];
-            const auto& submeshAabbs =
-                static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetRenderMeshAabbs(bData.entity);
-            if (batchIndices.submeshIndex < submeshAabbs.size()) {
-                mam.minAABB = Math::min(mam.minAABB, submeshAabbs[batchIndices.submeshIndex].min);
-                mam.maxAABB = Math::max(mam.maxAABB, submeshAabbs[batchIndices.submeshIndex].max);
+                CORE_ASSERT(spd.prevJointMatricesComponent);
+                rmsd.skinJointMatrices = array_view<Math::Mat4X4 const>(
+                    spd.jointMatricesComponent->jointMatrices, spd.jointMatricesComponent->count);
+                rmsd.prevSkinJointMatrices = array_view<Math::Mat4X4 const>(
+                    spd.prevJointMatricesComponent->jointMatrices, spd.prevJointMatricesComponent->count);
+                rmsd.aabb.minAabb = spd.jointMatricesComponent->jointsAabbMin;
+                rmsd.aabb.maxAabb = spd.jointMatricesComponent->jointsAabbMax;
             }
+
+            dsMaterial_->AddFrameRenderMeshData(rmd, rmsd, renderMeshBatch);
         }
     }
+
+    // force submission
+    dsMaterial_->SubmitFrameMeshData();
 }
 
 void RenderSystem::ProcessEnvironments(const RenderConfigurationComponent& renderConfig)
@@ -1546,6 +1844,11 @@ void RenderSystem::ProcessEnvironments(const RenderConfigurationComponent& rende
     if (!(environmentMgr_ && layerMgr_ && gpuHandleMgr_)) {
         return;
     }
+
+    const RenderHandleReference graphicsState =
+        (dsMaterial_->GetRenderFrameObjectInfo().renderMaterialFlags & RENDER_MATERIAL_OCCLUSION_BIT)
+            ? gpuHandleMgr_->GetRenderHandleReference(dmShaderData_.gfxStateOcclusionEnvironment)
+            : RenderHandleReference {};
 
     const auto envCount = environmentMgr_->GetComponentCount();
     for (IComponentManager::ComponentId id = 0; id < envCount; ++id) {
@@ -1574,6 +1877,9 @@ void RenderSystem::ProcessEnvironments(const RenderConfigurationComponent& rende
             RenderCamera::Environment renderEnv;
             FillRenderEnvironment(
                 *gpuHandleMgr_, layerMask, envEntity, component, probeTarget, renderEnv, *dynamicEnvBlendMgr_);
+
+            renderEnv.graphicsState = graphicsState;
+
             // material custom resources (first check preferred custom resources)
             if (!component.customResources.empty()) {
                 const size_t maxCustomCount = Math::min(component.customResources.size(),
@@ -1609,88 +1915,134 @@ void RenderSystem::ProcessEnvironments(const RenderConfigurationComponent& rende
 void RenderSystem::ProcessCameras(
     const RenderConfigurationComponent& renderConfig, const Entity& mainCameraEntity, RenderScene& renderScene)
 {
+    cameraQuery_.Execute();
+    const auto queryResults = cameraQuery_.GetResults();
+    if (queryResults.empty()) {
+        return; // early out
+    }
+
     // The scene camera and active render cameras are added here. ProcessReflections reflection cameras.
     // This is temporary when moving towards camera based rendering in 3D context.
     const uint32_t mainCameraId = cameraMgr_->GetComponentId(mainCameraEntity);
-    const auto cameraCount = cameraMgr_->GetComponentCount();
+    const auto cameraCount = queryResults.size();
     vector<RenderCamera> tmpCameras;
     tmpCameras.reserve(cameraCount);
     unordered_map<uint64_t, uint64_t> mvChildToParent; // multi-view child to parent
-    for (IComponentManager::ComponentId id = 0; id < cameraCount; ++id) {
+    RenderScene::Flags sceneFlags { 0u };
+
+    const auto hasOcclusionMaterial =
+        dsMaterial_->GetRenderFrameObjectInfo().renderMaterialFlags & RENDER_MATERIAL_OCCLUSION_BIT;
+
+    for (const auto& row : queryResults) {
+        const auto id = row.components[0U];
         ScopedHandle<const CameraComponent> handle = cameraMgr_->Read(id);
         const CameraComponent& component = *handle;
         if ((mainCameraId != id) && ((component.sceneFlags & CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT) == 0)) {
             continue;
         }
-        const Entity cameraEntity = cameraMgr_->GetEntity(id);
+        const Entity cameraEntity = row.entity;
         uint32_t level = 0U;
-        if (auto nodeHandle = nodeMgr_->Read(cameraEntity)) {
+        if (auto nodeHandle = nodeMgr_->Read(row.components[2U])) {
+            if (!nodeHandle->effectivelyEnabled) {
+                continue;
+            }
             level = nodeHandle->sceneId;
         }
-        const auto worldMatrixComponentId = worldMatrixMgr_->GetComponentId(cameraEntity);
-        // Make sure we have render matrix.
-        if (worldMatrixComponentId != IComponentManager::INVALID_COMPONENT_ID) {
-            const WorldMatrixComponent renderMatrixComponent = worldMatrixMgr_->Get(worldMatrixComponentId);
 
-            float determinant = 0.0f;
-            const Math::Mat4X4 view = Math::Inverse(Math::Mat4X4(renderMatrixComponent.matrix.data), determinant);
+        const WorldMatrixComponent renderMatrixComponent = worldMatrixMgr_->Get(row.components[1U]);
 
-            RenderCamera::Flags rcFlags = 0;
-            if (mainCameraId == id) {
-                renderScene.cameraIndex = static_cast<uint32_t>(tmpCameras.size());
-                rcFlags = RenderCamera::CAMERA_FLAG_MAIN_BIT;
-            }
-            const bool createPrePassCam = (component.pipelineFlags & CameraComponent::FORCE_COLOR_PRE_PASS_BIT) ||
-                                          (component.pipelineFlags & CameraComponent::ALLOW_COLOR_PRE_PASS_BIT);
-            renderProcessing_.frameFlags |=
-                (component.pipelineFlags & CameraComponent::FORCE_COLOR_PRE_PASS_BIT) ? NEEDS_COLOR_PRE_PASS : 0;
+        renderProcessing_.frameFlags |=
+            (component.pipelineFlags & CameraComponent::FORCE_COLOR_PRE_PASS_BIT) ? NEEDS_COLOR_PRE_PASS : 0;
 
-            bool isCameraNegative = determinant < 0.0f;
-            const auto proj = CameraMatrixUtil::CalculateProjectionMatrix(component, isCameraNegative);
-
-            RenderCamera camera;
-            FillRenderCameraBaseFromCameraComponent(
-                *gpuHandleMgr_, *cameraMgr_, *gpuResourceMgr_, component, camera, true);
-            // we add entity id as camera name if there isn't name (we need this for render node graphs)
-            camera.id = cameraEntity.id;
-            camera.name = GetCameraName(*nameMgr_, cameraEntity);
-            if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
-                camera.flags |= RenderCamera::CameraFlagBits::CAMERA_FLAG_INVERSE_WINDING_BIT;
-            }
-
-            camera.sceneId = level;
-
-            camera.matrices.view = view;
-            camera.matrices.proj = proj;
-            const CameraData prevFrameCamData = UpdateAndGetPreviousFrameCameraData(cameraEntity, view, proj);
-            camera.matrices.viewPrevFrame = prevFrameCamData.view;
-            camera.matrices.projPrevFrame = prevFrameCamData.proj;
-            camera.flags |= (rcFlags | ((isCameraNegative) ? RenderCamera::CAMERA_FLAG_INVERSE_WINDING_BIT : 0));
-            FillCameraRenderEnvironment(*dsCamera_, component, camera);
-            camera.fog = GetRenderCameraFogFromComponent(layerMgr_, fogMgr_, renderConfig, component);
-            camera.shaderFlags |=
-                (camera.fog.id != RenderSceneDataConstants::INVALID_ID) ? RenderCamera::CAMERA_SHADER_FOG_BIT : 0U;
-            camera.postProcessName = GetPostProcessName(
-                postProcessMgr_, postProcessConfigMgr_, nameMgr_, properties_.dataStoreScene, component.postProcess);
-            camera.customPostProcessRenderNodeGraphFile =
-                GetPostProcessRenderNodeGraph(postProcessConfigMgr_, component.postProcess);
-
-            // NOTE: setting up the color pre pass with a target name is a temporary solution
-            uint64_t prePassCameraHash = 0U;
-            if (createPrePassCam) {
-                prePassCameraHash = Hash(camera.id, camera.id);
-                camera.prePassColorTargetName = renderScene.name +
-                                                DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME +
-                                                to_string(prePassCameraHash);
-            }
-            tmpCameras.push_back(camera);
-            ProcessCameraAddMultiViewHash(camera, mvChildToParent);
-            // The order of setting cameras matter (main camera index is set already)
-            if (createPrePassCam) {
-                tmpCameras.push_back(CreateColorPrePassRenderCamera(
-                    *gpuHandleMgr_, *cameraMgr_, *gpuResourceMgr_, camera, component.prePassCamera, prePassCameraHash));
-            }
+        RenderCamera camera;
+        FillRenderCameraBaseFromCameraComponent(*gpuHandleMgr_, *cameraMgr_, *gpuResourceMgr_, component, camera, true);
+        // we add entity id as camera name if there isn't name (we need this for render node graphs)
+        camera.id = cameraEntity.id;
+        camera.name = GetCameraName(*nameMgr_, cameraEntity);
+        if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
+            camera.flags |= RenderCamera::CameraFlagBits::CAMERA_FLAG_INVERSE_WINDING_BIT;
         }
+
+        if (mainCameraId == id) {
+            renderScene.cameraIndex = static_cast<uint32_t>(tmpCameras.size());
+            camera.flags |= RenderCamera::CAMERA_FLAG_MAIN_BIT;
+        }
+        if (hasOcclusionMaterial) {
+            camera.flags |= RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT;
+            camera.clearColorValues.float32[3U] = 0.f;
+            camera.colorTargetCustomization->format = BASE_FORMAT_R16G16B16A16_SFLOAT;
+        }
+        camera.sceneId = level;
+
+        float determinant = 0.0f;
+        const Math::Mat4X4 view = Math::Inverse(Math::Mat4X4(renderMatrixComponent.matrix.data), determinant);
+
+        bool isCameraNegative = determinant < 0.0f;
+        const Math::Mat4X4 proj = CameraMatrixUtil::CalculateProjectionMatrix(component, isCameraNegative);
+        if (isCameraNegative) {
+            camera.flags |= RenderCamera::CAMERA_FLAG_INVERSE_WINDING_BIT;
+        }
+
+        camera.matrices.view = view;
+        camera.matrices.proj = proj;
+        const CameraData prevFrameCamData = UpdateAndGetPreviousFrameCameraData(cameraEntity, view, proj);
+        camera.matrices.viewPrevFrame = prevFrameCamData.view;
+        camera.matrices.projPrevFrame = prevFrameCamData.proj;
+        // for orthographic projection use 90 degree perspective projection for the environment and for other
+        // projections the same projection as for eveything else.
+        if (component.projection == CameraComponent::Projection::ORTHOGRAPHIC) {
+            camera.flags |= RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT;
+            auto aspect = 1.f;
+            if (component.aspect > 0.f) {
+                aspect = component.aspect;
+            } else if (component.renderResolution.y > 0U) {
+                aspect =
+                    static_cast<float>(component.renderResolution.x) / static_cast<float>(component.renderResolution.y);
+            }
+            camera.matrices.envProj =
+                Math::PerspectiveRhZo(90.f * BASE_NS::Math::DEG2RAD, aspect, component.zNear, component.zFar);
+            camera.matrices.envProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+        } else {
+            camera.matrices.envProj = camera.matrices.proj;
+        }
+        FillCameraRenderEnvironment(*dsCamera_, component, camera);
+        camera.fog = GetRenderCameraFogFromComponent(layerMgr_, fogMgr_, renderConfig, component);
+        camera.shaderFlags |=
+            (camera.fog.id != RenderSceneDataConstants::INVALID_ID) ? RenderCamera::CAMERA_SHADER_FOG_BIT : 0U;
+
+        auto postprocessEntity = component.postProcess;
+        if (row.components[3U] != IComponentManager::INVALID_COMPONENT_ID) {
+            postprocessEntity = row.entity;
+            camera.flags |= RenderCamera::CAMERA_FLAG_POST_PROCESS_EFFECTS_BIT;
+        } else if (postProcessEffectMgr_ && postProcessEffectMgr_->HasComponent(postprocessEntity)) {
+            camera.flags |= RenderCamera::CAMERA_FLAG_POST_PROCESS_EFFECTS_BIT;
+        }
+        camera.postProcessName = GetPostProcessName(postProcessMgr_, postProcessConfigMgr_, postProcessEffectMgr_,
+            nameMgr_, properties_.dataStoreScene, postprocessEntity);
+
+        camera.customPostProcessRenderNodeGraphFile =
+            GetPostProcessRenderNodeGraph(postProcessConfigMgr_, component.postProcess);
+
+        // NOTE: setting up the color pre pass with a target name is a temporary solution
+        uint64_t prePassCameraHash = 0U;
+        const bool createPrePassCam = (component.pipelineFlags & CameraComponent::FORCE_COLOR_PRE_PASS_BIT) ||
+                                      (component.pipelineFlags & CameraComponent::ALLOW_COLOR_PRE_PASS_BIT);
+        if (createPrePassCam) {
+            prePassCameraHash = Hash(camera.id, camera.id);
+            camera.prePassColorTargetName = renderScene.name +
+                                            DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME +
+                                            to_hex(prePassCameraHash) + '_' + to_hex(prePassCameraHash);
+        }
+        tmpCameras.push_back(camera);
+        ProcessCameraAddMultiViewHash(camera, mvChildToParent);
+        // The order of setting cameras matter (main camera index is set already)
+        if (createPrePassCam) {
+            tmpCameras.push_back(CreateColorPrePassRenderCamera(
+                *gpuHandleMgr_, *cameraMgr_, *gpuResourceMgr_, camera, component.prePassCamera, prePassCameraHash));
+        }
+        sceneFlags |= (camera.environment.flags & RenderCamera::Environment::ENVIRONMENT_FLAG_CAMERA_WEATHER_BIT)
+                          ? RenderScene::RenderSceneFlagBits::SCENE_FLAG_WEATHER_BIT
+                          : 0;
     }
     // add cameras to data store
     for (auto& cam : tmpCameras) {
@@ -1702,6 +2054,7 @@ void RenderSystem::ProcessCameras(
         }
         dsCamera_->AddCamera(cam);
     }
+    renderScene.flags |= sceneFlags;
 }
 
 void RenderSystem::ProcessReflection(const ComponentQuery::ResultRow& row,
@@ -1757,8 +2110,15 @@ void RenderSystem::ProcessReflection(const ComponentQuery::ResultRow& row,
     const Math::Vec4 cameraSpaceClipPlane = CalculateCameraSpaceClipPlane(reflectedView, translation, normal, -1.0f);
     CalculateObliqueProjectionMatrix(reflectedProjection, cameraSpaceClipPlane);
 
+    // If the reflection plane has a postprocess pick the max mip level from blur config.
+    auto maxMipBlur = reflectionMaxMipBlur_;
+    if (EntityUtil::IsValid(reflComponent.postProcess)) {
+        if (auto pp = postProcessMgr_->Read(reflComponent.postProcess)) {
+            maxMipBlur = Math::min(maxMipBlur, pp->blurConfiguration.maxMipLevel);
+        }
+    }
     const ReflectionPlaneTargetUpdate rptu = UpdatePlaneReflectionTargetResolution(
-        *gpuResourceMgr_, *gpuHandleMgr_, camera, row.entity, targetRes, reflectionMaxMipBlur_, reflComponent);
+        *gpuResourceMgr_, *gpuHandleMgr_, camera, row.entity, targetRes, maxMipBlur, reflComponent);
     if (rptu.recreated) {
         if (auto handle = planarReflectionMgr_->Write(row.components[0u])) {
             handle->renderTargetResolution[0] = rptu.renderTargetResolution[0];
@@ -1766,8 +2126,11 @@ void RenderSystem::ProcessReflection(const ComponentQuery::ResultRow& row,
             handle->colorRenderTarget = rptu.colorRenderTarget;
             handle->depthRenderTarget = rptu.depthRenderTarget;
         }
-        UpdateReflectionPlaneMaterial(
+        const auto material = UpdateReflectionPlaneMaterial(
             *renderMeshMgr_, *meshMgr_, *materialMgr_, row.entity, reflComponent.screenPercentage, rptu);
+        if (EntityUtil::IsValid(material)) {
+            materialModifiedEvents_.push_back(material);
+        }
     }
 
     RenderCamera reflCam;
@@ -1775,6 +2138,7 @@ void RenderSystem::ProcessReflection(const ComponentQuery::ResultRow& row,
     reflCam.id = reflCamId;
     reflCam.mainCameraId = camera.id; // link to main camera
     reflCam.sceneId = camera.sceneId;
+    reflCam.reflectionId = static_cast<uint32_t>(row.entity.id & 0xFFFFFFFFU);
     reflCam.layerMask = reflComponent.layerMask;
     reflCam.matrices.view = reflectedView;
     reflCam.matrices.proj = reflectedProjection;
@@ -1797,14 +2161,20 @@ void RenderSystem::ProcessReflection(const ComponentQuery::ResultRow& row,
     reflCam.flags = (reflComponent.additionalFlags & PlanarReflectionComponent::FlagBits::MSAA_BIT)
                         ? RenderCamera::CAMERA_FLAG_MSAA_BIT
                         : 0U;
-    reflCam.flags |= (RenderCamera::CAMERA_FLAG_REFLECTION_BIT | RenderCamera::CAMERA_FLAG_INVERSE_WINDING_BIT);
-    reflCam.flags |= (RenderCamera::CAMERA_FLAG_CUSTOM_TARGETS_BIT);
+    reflCam.flags |= (RenderCamera::CAMERA_FLAG_REFLECTION_BIT | RenderCamera::CAMERA_FLAG_INVERSE_WINDING_BIT |
+                      RenderCamera::CAMERA_FLAG_CUSTOM_TARGETS_BIT);
     reflCam.renderPipelineType = RenderCamera::RenderPipelineType::LIGHT_FORWARD;
     reflCam.clearDepthStencil = camera.clearDepthStencil;
     reflCam.clearColorValues = camera.clearColorValues;
     reflCam.cullType = RenderCamera::CameraCullType::CAMERA_CULL_VIEW_FRUSTUM;
     reflCam.environment = camera.environment;
-    reflCam.postProcessName = DefaultMaterialCameraConstants::CAMERA_REFLECTION_POST_PROCESS_PREFIX_NAME;
+    reflCam.postProcessName = GetPostProcessName(postProcessMgr_, postProcessConfigMgr_, postProcessEffectMgr_,
+        nameMgr_, properties_.dataStoreScene, reflComponent.postProcess);
+    // If GetPostProcessName returned the default prefix replace with reflection postprocess prefix which matches the
+    // default render data store.
+    if (reflCam.postProcessName == DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_PREFIX_NAME) {
+        reflCam.postProcessName = DefaultMaterialCameraConstants::CAMERA_REFLECTION_POST_PROCESS_PREFIX_NAME;
+    }
     dsCamera_->AddCamera(reflCam);
 }
 
@@ -1861,22 +2231,21 @@ void RenderSystem::ProcessReflections(const RenderScene& renderScene)
 
 void RenderSystem::ProcessLight(const LightProcessData& lpd)
 {
-    const auto& lightComponent = lpd.lightComponent;
-    RenderLight light { lpd.entity.id, lightComponent.lightLayerMask,
+    const auto& lc = lpd.lightComponent;
+    RenderLight light { lpd.entity.id, lc.lightLayerMask,
         { lpd.world[3u], 1.0f }, // the last column (3) of the world matrix contains the world position.
-        { Math::Normalize(lpd.world * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f)), 0.0f },
-        { lightComponent.color, lightComponent.intensity } };
+        { Math::Normalize(lpd.world * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f)), 0.0f }, { lc.color, lc.intensity } };
 
     // See:
     // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_lights_punctual
-    const float outer = Math::clamp(lightComponent.spotOuterAngle, lightComponent.spotInnerAngle, Math::PI / 2.0f);
-    const float inner = Math::clamp(lightComponent.spotInnerAngle, 0.0f, outer);
+    const float outer = Math::clamp(lc.spotOuterAngle, lc.spotInnerAngle, Math::PI / 2.0f);
+    const float inner = Math::clamp(lc.spotInnerAngle, 0.0f, outer);
 
-    if (lightComponent.type == LightComponent::Type::DIRECTIONAL) {
+    if (lc.type == LightComponent::Type::DIRECTIONAL) {
         light.lightUsageFlags |= RenderLight::LightUsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT;
-    } else if (lightComponent.type == LightComponent::Type::POINT) {
+    } else if (lc.type == LightComponent::Type::POINT) {
         light.lightUsageFlags |= RenderLight::LightUsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT;
-    } else if (lightComponent.type == LightComponent::Type::SPOT) {
+    } else if (lc.type == LightComponent::Type::SPOT) {
         light.lightUsageFlags |= RenderLight::LightUsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT;
 
         const float cosInnerConeAngle = cosf(inner);
@@ -1886,14 +2255,28 @@ void RenderSystem::ProcessLight(const LightProcessData& lpd)
         const float lightAngleOffset = -cosOuterConeAngle * lightAngleScale;
 
         light.spotLightParams = { lightAngleScale, lightAngleOffset, inner, outer };
+    } else if (lc.type == LightComponent::Type::RECT) {
+        light.lightUsageFlags |= RenderLight::LightUsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT;
+        light.lightUsageFlags |=
+            lc.rectLight.twoSided ? RenderLight::LightUsageFlagBits::LIGHT_USAGE_TWO_SIDED_LIGHT_BIT : 0;
+
+        const Math::Vec3 dir = Math::Normalize(light.dir);
+        Math::Vec3 up = Math::Normalize(Math::Cross(dir, Math::Vec3(1.0f, 0.0f, 0.0f)));
+
+        // Edge case, because dir can be paralell to (1, 0, 0).
+        if (up.x == 0.0f && up.y == 0.0f && up.z == 0.0f) {
+            up = Math::Vec3(0.0f, 1.0f, 0.0f);
+        }
+        const Math::Vec3 right = -Math::Cross(up, dir);
+
+        light.dir = Math::Vec4(right * lc.rectLight.width, lc.rectLight.width);
+        light.spotLightParams = Math::Vec4(up * lc.rectLight.height, lc.rectLight.height);
     }
-    light.range = ComponentUtilFunctions::CalculateSafeLightRange(lightComponent.range, lightComponent.intensity);
+    light.range = ComponentUtilFunctions::CalculateSafeLightRange(lc.range, lc.intensity);
 
     light.sceneId = lpd.sceneId;
-
-    if (lightComponent.shadowEnabled) {
-        light.shadowFactors = { Math::clamp01(lightComponent.shadowStrength), lightComponent.shadowDepthBias,
-            lightComponent.shadowNormalBias, 0.0f };
+    if (lc.shadowEnabled) {
+        light.shadowFactors = { Math::clamp01(lc.shadowStrength), lc.shadowDepthBias, lc.shadowNormalBias, 0.0f };
         ProcessShadowCamera(lpd, light);
     }
 
@@ -1992,19 +2375,38 @@ void RenderSystem::ProcessLights(RenderScene& renderScene)
     }
 }
 
-void RenderSystem::ProcessPostProcesses()
+void RenderSystem::ProcessPostProcesses(const Entity& mainCameraEntity)
 {
-    if (!renderContext_ || !postProcessMgr_ || !postProcessConfigMgr_) {
+    ProcessPostProcessComponents(mainCameraEntity);
+    ProcessPostProcessConfigurationComponents();
+    ProcessPostProcessEffectComponents();
+}
+
+void RenderSystem::ProcessPostProcessComponents(const Entity& mainCameraEntity)
+{
+    if (!renderContext_ || !postProcessMgr_) {
         return;
     }
     IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
     auto dsPod = refcnt_ptr<IRenderDataStorePod>(rdsMgr.GetRenderDataStore(POD_DATA_STORE_NAME));
-    auto dsPp = refcnt_ptr<IRenderDataStorePostProcess>(rdsMgr.GetRenderDataStore(PP_DATA_STORE_NAME));
-    if ((!dsPod) || (!dsPp)) {
+    if (!dsPod) {
         return;
     }
 
     const auto postProcessCount = postProcessMgr_->GetComponentCount();
+    if (!postProcessCount) {
+        return;
+    }
+
+    const auto screenPercentage = [](const ICameraComponentManager* cameraMgr, const Entity& mainCameraEntity) {
+        if (ScopedHandle<const CameraComponent> cameraHandle = cameraMgr->Read(mainCameraEntity)) {
+            return Math::clamp(cameraHandle->screenPercentage, 0.25f, 1.0f);
+        }
+        return 1.f;
+    }(cameraMgr_, mainCameraEntity);
+
+    const float upscaleRatio = 1.0f / screenPercentage;
+
     for (IComponentManager::ComponentId id = 0; id < postProcessCount; ++id) {
         const auto handle = postProcessMgr_->Read(id);
         // in reality it shouldn't be possible to get an invalid handle.
@@ -2028,10 +2430,14 @@ void RenderSystem::ProcessPostProcesses()
         ppConfig.dofConfiguration = pp.dofConfiguration;
         ppConfig.motionBlurConfiguration = pp.motionBlurConfiguration;
         ppConfig.lensFlareConfiguration = pp.lensFlareConfiguration;
+        ppConfig.upscaleConfiguration.ratio =
+            pp.upscaleConfiguration.ratio == 1.0f ? upscaleRatio : pp.upscaleConfiguration.ratio;
+        ppConfig.upscaleConfiguration.smoothScale = pp.upscaleConfiguration.smoothScale;
+        ppConfig.upscaleConfiguration.structureSensitivity = pp.upscaleConfiguration.structureSensitivity;
+        ppConfig.upscaleConfiguration.edgeSharpness = pp.upscaleConfiguration.edgeSharpness;
 
         const Entity ppEntity = postProcessMgr_->GetEntity(id);
-        const auto ppName =
-            GetPostProcessName(postProcessMgr_, postProcessConfigMgr_, nameMgr_, properties_.dataStoreScene, ppEntity);
+        const auto ppName = GetPostProcessName(nameMgr_, properties_.dataStoreScene, ppEntity, false);
         // NOTE: camera based new post process interface integration
         RecalculatePostProcesses(ppName, ppConfig);
         auto const dataView = dsPod->Get(ppName);
@@ -2042,6 +2448,19 @@ void RenderSystem::ProcessPostProcesses()
             dsPod->CreatePod(POST_PROCESS_NAME, ppName, arrayviewU8(ppConfig));
         }
     }
+}
+
+void RenderSystem::ProcessPostProcessConfigurationComponents()
+{
+    if (!renderContext_ || !postProcessConfigMgr_) {
+        return;
+    }
+    IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
+
+    auto dsPp = refcnt_ptr<IRenderDataStorePostProcess>(rdsMgr.GetRenderDataStore(PP_DATA_STORE_NAME));
+    if (!dsPp) {
+        return;
+    }
     const auto postProcessConfigCount = postProcessConfigMgr_->GetComponentCount();
     for (IComponentManager::ComponentId id = 0; id < postProcessConfigCount; ++id) {
         // NOTE: should check if nothing has changed and not copy data if it has not changed
@@ -2051,8 +2470,7 @@ void RenderSystem::ProcessPostProcesses()
             continue;
         }
         const Entity ppEntity = postProcessConfigMgr_->GetEntity(id);
-        const auto ppName =
-            GetPostProcessName(postProcessMgr_, postProcessConfigMgr_, nameMgr_, properties_.dataStoreScene, ppEntity);
+        const auto ppName = GetPostProcessName(nameMgr_, properties_.dataStoreScene, ppEntity, false);
         if (!dsPp->Contains(ppName)) {
             renderProcessing_.postProcessConfigs.emplace_back(ppName);
             dsPp->Create(ppName);
@@ -2066,6 +2484,39 @@ void RenderSystem::ProcessPostProcesses()
                 dsPp->Create(ppName, ref.name, move(shader));
                 dsPp->Set(ppName, ref.name, vars);
             }
+        }
+    }
+}
+
+void RenderSystem::ProcessPostProcessEffectComponents()
+{
+    if (!renderContext_ || !postProcessEffectMgr_) {
+        return;
+    }
+    if (!dsRenderPostProcesses_) {
+        return;
+    }
+
+    const auto postProcessEffectCount = postProcessEffectMgr_->GetComponentCount();
+    for (IComponentManager::ComponentId id = 0; id < postProcessEffectCount; ++id) {
+        // NOTE: should check if nothing has changed and not copy data if it has not changed
+        const auto handle = postProcessEffectMgr_->Read(id);
+        // in reality it shouldn't be possible to get an invalid handle.
+        if (!handle || handle->effects.empty()) {
+            continue;
+        }
+        const Entity ppEntity = postProcessEffectMgr_->GetEntity(id);
+
+        BASE_NS::vector<IRenderDataStoreRenderPostProcesses::PostProcessData> ppd;
+        uint64_t ppId = 0U;
+        for (const auto& ref : handle->effects) {
+            if (ref) {
+                ppd.push_back({ ppId++, ref });
+            }
+        }
+        if (!ppd.empty()) {
+            const auto ppName = GetPostProcessName(nameMgr_, properties_.dataStoreScene, ppEntity, true);
+            dsRenderPostProcesses_->AddData(ppName, ppd);
         }
     }
 }
@@ -2139,6 +2590,10 @@ void RenderSystem::FetchFullScene()
 #if (CORE3D_DEV_ENABLED == 1)
     CORE_CPU_PERF_SCOPE("CORE3D", "RenderSystem", "FetchFullScene", CORE3D_PROFILER_DEFAULT_COLOR);
 #endif
+    if ((materialGeneration_ != materialMgr_->GetGenerationCounter()) ||
+        (meshGeneration_ != meshMgr_->GetGenerationCounter())) {
+        ecs_.ProcessEvents();
+    }
 
     // Process scene settings (if present), look up first active scene.
     const RenderConfigurationComponent renderConfig = GetRenderConfigurationComponent();
@@ -2162,25 +2617,43 @@ void RenderSystem::FetchFullScene()
     renderDataScene.frameIndex = static_cast<uint32_t>((frameIndex_ % std::numeric_limits<uint32_t>::max()));
     renderProcessing_.frameFlags = 0; // zero frame flags for camera processing
 
-    ProcessEnvironments(renderConfig);
-    ProcessCameras(renderConfig, cameraEntity, renderDataScene);
-    ProcessReflections(renderDataScene);
-    ProcessPostProcesses();
+    if (!graphicsStateModifiedEvents_.empty()) {
+        HandleGraphicsStateEvents();
+    }
+
+    if (const auto generation = meshMgr_->GetGenerationCounter(); meshGeneration_ != generation) {
+        const auto meshes = meshMgr_->GetComponentCount();
+        for (IComponentManager::ComponentId id = 0U; id < meshes; ++id) {
+            if (meshMgr_->GetComponentGeneration(id) > meshGeneration_) {
+                meshModifiedEvents_.push_back(meshMgr_->GetEntity(id));
+            }
+        }
+        meshGeneration_ = generation;
+    }
+
+    if (!materialModifiedEvents_.empty() || !materialDestroyedEvents_.empty()) {
+        HandleMaterialEvents();
+    }
+    // material events needs to be handled before mesh events
+    if (!meshModifiedEvents_.empty() || !meshDestroyedEvents_.empty()) {
+        HandleMeshEvents();
+    }
 
     // Process all render components.
     ProcessRenderables();
 
+    ProcessEnvironments(renderConfig);
+    ProcessCameras(renderConfig, cameraEntity, renderDataScene);
+    ProcessReflections(renderDataScene);
+    ProcessPostProcesses(cameraEntity);
+
     // fill frame flags after renderable processing
-    EvaluateFrameObjectFlags();
+    // fill shadow caster bounding spheres after renderable processing
+    EvaluateRenderDataStoreOutput();
 
     // Process render node graphs automatically based on camera if needed bits set for properties
     // Some materials might request color pre-pass etc. (needs to be done after renderables are processed)
     ProcessRenderNodeGraphs(renderConfig, renderDataScene);
-
-    // NOTE: move world sphere calculation to own system
-    const auto boundingSphere = static_cast<RenderPreprocessorSystem*>(renderPreprocessorSystem_)->GetBoundingSphere();
-    sceneBoundingSpherePosition_ = boundingSphere.center;
-    sceneBoundingSphereRadius_ = boundingSphere.radius;
 
     renderDataScene.worldSceneCenter = sceneBoundingSpherePosition_;
     renderDataScene.worldSceneBoundingSphereRadius = sceneBoundingSphereRadius_;
@@ -2205,95 +2678,48 @@ void RenderSystem::ProcessRenderNodeGraphs(
 {
     auto& orderedRngs = renderProcessing_.orderedRenderNodeGraphs;
     orderedRngs.clear();
-    const bool createRngs =
-        (renderConfig.renderingFlags & RenderConfigurationComponent::SceneRenderingFlagBits::CREATE_RNGS_BIT);
-    if (createRngs && graphicsContext_ && renderUtil_) {
-        struct CameraOrdering {
-            uint64_t id { RenderSceneDataConstants::INVALID_ID };
-            uint64_t mainId { RenderSceneDataConstants::INVALID_ID };
-            size_t renderCameraIdx { 0 };
-        };
-        const auto& renderCameras = dsCamera_->GetCameras();
-        vector<CameraOrdering> baseCameras;
-        vector<CameraOrdering> depCameras;
-        baseCameras.reserve(renderCameras.size());
-        depCameras.reserve(renderCameras.size());
-        size_t mainCamIdx = size_t(~0);
-        // ignore shadow and multi-view only cameras
-        constexpr uint32_t ignoreFlags { RenderCamera::CAMERA_FLAG_SHADOW_BIT |
-                                         RenderCamera::CAMERA_FLAG_MULTI_VIEW_ONLY_BIT };
-        for (size_t camIdx = 0; camIdx < renderCameras.size(); ++camIdx) {
-            const auto& cam = renderCameras[camIdx];
-            if ((cam.flags & ignoreFlags) == 0) {
-                if (cam.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) {
-                    mainCamIdx = camIdx;
-                } else {
-                    if (cam.mainCameraId == RenderSceneDataConstants::INVALID_ID) {
-                        baseCameras.push_back({ cam.id, cam.mainCameraId, camIdx });
-                    } else {
-                        // do not add pre-pass camera if render processing does not need it
-                        if (cam.flags & RenderCamera::CAMERA_FLAG_COLOR_PRE_PASS_BIT) {
-                            if (renderProcessing_.frameFlags & NEEDS_COLOR_PRE_PASS) {
-                                depCameras.push_back({ cam.id, cam.mainCameraId, camIdx });
-                            }
-                        } else {
-                            depCameras.push_back({ cam.id, cam.mainCameraId, camIdx });
-                        }
-                    }
-                }
-            }
-        }
-        // main camera needs to be the last
-        if (mainCamIdx < renderCameras.size()) {
-            const auto& cam = renderCameras[mainCamIdx];
-            baseCameras.push_back({ cam.id, cam.mainCameraId, mainCamIdx });
-        }
-        // insert dependency cameras to correct positions
-        for (const auto& depCam : depCameras) {
-            for (size_t idx = 0; idx < baseCameras.size(); ++idx) {
-                if (depCam.mainId == baseCameras[idx].id) {
-                    baseCameras.insert(baseCameras.begin() + int64_t(idx), depCam);
-                    break;
-                }
-            }
-        }
-        // now cameras are in correct order if the dependencied were correct in RenderCameras
+    if (!(renderConfig.renderingFlags & RenderConfigurationComponent::SceneRenderingFlagBits::CREATE_RNGS_BIT)) {
+        return;
+    }
 
-        // first create scene render node graph if needed
-        // we need to have scene render node graph as a separate
-        orderedRngs.push_back(GetSceneRenderNodeGraph(renderScene));
+    const auto& renderCameras = dsCamera_->GetCameras();
+    const vector<CameraOrdering> baseCameras =
+        SortCameras(renderCameras, (renderProcessing_.frameFlags & NEEDS_COLOR_PRE_PASS));
 
-        // then, add valid camera render node graphs
-        for (const auto& cam : baseCameras) {
-            CORE_ASSERT(cam.renderCameraIdx < renderCameras.size());
-            const auto& camRef = renderCameras[cam.renderCameraIdx];
-            CORE_ASSERT(camRef.id != 0xFFFFFFFFffffffff); // there must be an id for uniqueness
-            CameraRngsOutput camRngs = GetCameraRenderNodeGraphs(renderScene, camRef);
-            if (camRngs.rngs.rngHandle) {
-                orderedRngs.push_back(move(camRngs.rngs.rngHandle));
-                if (camRngs.rngs.ppRngHandle) {
-                    orderedRngs.push_back(move(camRngs.rngs.ppRngHandle));
-                }
-                for (uint32_t mvIdx = 0U; mvIdx < RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT;
-                     ++mvIdx) {
-                    if (camRngs.multiviewPpHandles[mvIdx]) {
-                        orderedRngs.push_back(move(camRngs.multiviewPpHandles[mvIdx]));
-                    }
-                }
+    // first create scene render node graph if needed
+    // we need to have scene render node graph as a separate
+    orderedRngs.push_back(GetSceneRenderNodeGraph(renderScene));
+
+    // then, add valid camera render node graphs
+    for (const auto& cam : baseCameras) {
+        CORE_ASSERT(cam.renderCameraIdx < renderCameras.size());
+        const auto& camRef = renderCameras[cam.renderCameraIdx];
+        CORE_ASSERT(camRef.id != 0xFFFFFFFFffffffff); // there must be an id for uniqueness
+        CameraRngsOutput camRngs = GetCameraRenderNodeGraphs(renderScene, camRef);
+        if (!camRngs.rngs.rngHandle) {
+            continue;
+        }
+        orderedRngs.push_back(move(camRngs.rngs.rngHandle));
+        if (camRngs.rngs.ppRngHandle) {
+            orderedRngs.push_back(move(camRngs.rngs.ppRngHandle));
+        }
+        for (uint32_t mvIdx = 0U; mvIdx < RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT; ++mvIdx) {
+            if (camRngs.multiviewPpHandles[mvIdx]) {
+                orderedRngs.push_back(move(camRngs.multiviewPpHandles[mvIdx]));
             }
         }
-        // then possible post scene custom render node graph
-        if (renderProcessing_.sceneRngs.customPostRng) {
-            orderedRngs.push_back(renderProcessing_.sceneRngs.customPostRng);
-        }
-        // destroy unused after two frames
-        const uint64_t ageLimit = (frameIndex_ < 2) ? 0 : (frameIndex_ - 2);
-        for (auto iter = renderProcessing_.camIdToRng.begin(); iter != renderProcessing_.camIdToRng.end();) {
-            if (iter->second.lastFrameIndex < ageLimit) {
-                iter = renderProcessing_.camIdToRng.erase(iter);
-            } else {
-                ++iter;
-            }
+    }
+    // then possible post scene custom render node graph
+    if (renderProcessing_.sceneRngs.customPostRng) {
+        orderedRngs.push_back(renderProcessing_.sceneRngs.customPostRng);
+    }
+    // destroy unused after two frames
+    const uint64_t ageLimit = (frameIndex_ < 2) ? 0 : (frameIndex_ - 2);
+    for (auto iter = renderProcessing_.camIdToRng.begin(); iter != renderProcessing_.camIdToRng.end();) {
+        if (iter->second.lastFrameIndex < ageLimit) {
+            iter = renderProcessing_.camIdToRng.erase(iter);
+        } else {
+            ++iter;
         }
     }
 }
@@ -2301,6 +2727,11 @@ void RenderSystem::ProcessRenderNodeGraphs(
 RenderSystem::CameraRngsOutput RenderSystem::GetCameraRenderNodeGraphs(
     const RenderScene& renderScene, const RenderCamera& renderCamera)
 {
+    CameraRngsOutput rngs;
+    if (renderCamera.customRenderNodeGraph) {
+        rngs.rngs.rngHandle = renderCamera.customRenderNodeGraph;
+        return rngs;
+    }
     constexpr uint32_t rngChangeFlags =
         RenderCamera::CAMERA_FLAG_MSAA_BIT | RenderCamera::CAMERA_FLAG_CUSTOM_TARGETS_BIT;
     auto createNewRngs = [](auto& rngm, const auto& rnUtil, const auto& scene, const auto& obj, const auto& mvCams) {
@@ -2322,72 +2753,65 @@ RenderSystem::CameraRngsOutput RenderSystem::GetCameraRenderNodeGraphs(
     };
 
     IRenderNodeGraphManager& rngm = renderContext_->GetRenderNodeGraphManager();
-    CameraRngsOutput rngs;
-    rngs.rngs.rngHandle = renderCamera.customRenderNodeGraph;
-    if (!rngs.rngs.rngHandle) {
-        if (auto iter = renderProcessing_.camIdToRng.find(renderCamera.id);
-            iter != renderProcessing_.camIdToRng.cend()) {
-            // NOTE: not optimal, currently re-creates a render node graph if:
-            // * msaa flags have changed
-            // * post process name / component has changed
-            // * pipeline has changed
-            // * rng files have changed
-            // * multi-view count has changed
-            const bool reCreate =
-                ((iter->second.flags & rngChangeFlags) != (renderCamera.flags & rngChangeFlags)) ||
-                (iter->second.postProcessName != renderCamera.postProcessName) ||
-                (iter->second.renderPipelineType != renderCamera.renderPipelineType) ||
-                (iter->second.customRngFile != renderCamera.customRenderNodeGraphFile) ||
-                (iter->second.customPostProcessRngFile != renderCamera.customPostProcessRenderNodeGraphFile) ||
-                (iter->second.multiViewCameraCount != renderCamera.multiViewCameraCount) ||
-                (iter->second.multiViewCameraHash != renderCamera.multiViewCameraHash);
-            if (reCreate) {
-                iter->second.rngs = {};
-                const vector<RenderCamera> multiviewCameras = GetMultiviewCameras(renderCamera);
-                auto newRngs = createNewRngs(rngm, renderUtil_, renderScene, renderCamera, multiviewCameras);
-                // copy
-                rngs = newRngs;
-                iter->second.rngs = move(newRngs.rngs);
-                // update multiview post process
-                for (size_t mvIdx = 0; mvIdx < multiviewCameras.size(); ++mvIdx) {
-                    const auto& mvCamera = multiviewCameras[mvIdx];
-                    auto& mvData = renderProcessing_.camIdToRng[mvCamera.id];
-                    mvData.rngs.ppRngHandle = move(newRngs.multiviewPpHandles[mvIdx]);
-                    mvData.lastFrameIndex = frameIndex_;
-                }
-            } else {
-                // found and copy the handles
-                rngs.rngs = iter->second.rngs;
-                // multiview post processes
-                for (uint32_t mvIdx = 0; mvIdx < renderCamera.multiViewCameraCount; ++mvIdx) {
-                    auto& mvData = renderProcessing_.camIdToRng[renderCamera.multiViewCameraIds[mvIdx]];
-                    rngs.multiviewPpHandles[mvIdx] = mvData.rngs.ppRngHandle;
-                    mvData.lastFrameIndex = frameIndex_;
-                }
-            }
-            iter->second.flags = renderCamera.flags;
-            iter->second.renderPipelineType = renderCamera.renderPipelineType;
-            iter->second.lastFrameIndex = frameIndex_;
-            iter->second.postProcessName = renderCamera.postProcessName;
-            iter->second.customRngFile = renderCamera.customRenderNodeGraphFile;
-            iter->second.customPostProcessRngFile = renderCamera.customPostProcessRenderNodeGraphFile;
-            iter->second.multiViewCameraCount = renderCamera.multiViewCameraCount;
-            iter->second.multiViewCameraHash = renderCamera.multiViewCameraHash;
-        } else {
+    if (auto iter = renderProcessing_.camIdToRng.find(renderCamera.id); iter != renderProcessing_.camIdToRng.cend()) {
+        // NOTE: not optimal, currently re-creates a render node graph if:
+        // * msaa flags have changed
+        // * post process name / component has changed
+        // * pipeline has changed
+        // * rng files have changed
+        // * multi-view count has changed
+        const bool reCreate =
+            ((iter->second.flags & rngChangeFlags) != (renderCamera.flags & rngChangeFlags)) ||
+            (iter->second.postProcessName != renderCamera.postProcessName) ||
+            (iter->second.renderPipelineType != renderCamera.renderPipelineType) ||
+            (iter->second.customRngFile != renderCamera.customRenderNodeGraphFile) ||
+            (iter->second.customPostProcessRngFile != renderCamera.customPostProcessRenderNodeGraphFile) ||
+            (iter->second.multiViewCameraCount != renderCamera.multiViewCameraCount) ||
+            (iter->second.multiViewCameraHash != renderCamera.multiViewCameraHash);
+        if (reCreate) {
+            iter->second.rngs = {};
             const vector<RenderCamera> multiviewCameras = GetMultiviewCameras(renderCamera);
-            auto newRngs = createNewRngs(rngm, renderUtil_, renderScene, renderCamera, multiviewCameras);
-            rngs = newRngs;
-            renderProcessing_.camIdToRng[renderCamera.id] = { move(newRngs.rngs), renderCamera.flags,
-                renderCamera.renderPipelineType, frameIndex_, renderCamera.postProcessName,
-                renderCamera.customRenderNodeGraphFile, renderCamera.customPostProcessRenderNodeGraphFile,
-                renderCamera.multiViewCameraCount, renderCamera.multiViewCameraHash };
+            rngs = createNewRngs(rngm, renderUtil_, renderScene, renderCamera, multiviewCameras);
+            // copy
+            iter->second.rngs = rngs.rngs;
             // update multiview post process
             for (size_t mvIdx = 0; mvIdx < multiviewCameras.size(); ++mvIdx) {
                 const auto& mvCamera = multiviewCameras[mvIdx];
                 auto& mvData = renderProcessing_.camIdToRng[mvCamera.id];
-                mvData.rngs.ppRngHandle = move(newRngs.multiviewPpHandles[mvIdx]);
+                mvData.rngs.ppRngHandle = rngs.multiviewPpHandles[mvIdx];
                 mvData.lastFrameIndex = frameIndex_;
             }
+        } else {
+            // found and copy the handles
+            rngs.rngs = iter->second.rngs;
+            // multiview post processes
+            for (uint32_t mvIdx = 0; mvIdx < renderCamera.multiViewCameraCount; ++mvIdx) {
+                auto& mvData = renderProcessing_.camIdToRng[renderCamera.multiViewCameraIds[mvIdx]];
+                rngs.multiviewPpHandles[mvIdx] = mvData.rngs.ppRngHandle;
+                mvData.lastFrameIndex = frameIndex_;
+            }
+        }
+        iter->second.flags = renderCamera.flags;
+        iter->second.renderPipelineType = renderCamera.renderPipelineType;
+        iter->second.lastFrameIndex = frameIndex_;
+        iter->second.postProcessName = renderCamera.postProcessName;
+        iter->second.customRngFile = renderCamera.customRenderNodeGraphFile;
+        iter->second.customPostProcessRngFile = renderCamera.customPostProcessRenderNodeGraphFile;
+        iter->second.multiViewCameraCount = renderCamera.multiViewCameraCount;
+        iter->second.multiViewCameraHash = renderCamera.multiViewCameraHash;
+    } else {
+        const vector<RenderCamera> multiviewCameras = GetMultiviewCameras(renderCamera);
+        rngs = createNewRngs(rngm, renderUtil_, renderScene, renderCamera, multiviewCameras);
+        renderProcessing_.camIdToRng[renderCamera.id] = { rngs.rngs, renderCamera.flags,
+            renderCamera.renderPipelineType, frameIndex_, renderCamera.postProcessName,
+            renderCamera.customRenderNodeGraphFile, renderCamera.customPostProcessRenderNodeGraphFile,
+            renderCamera.multiViewCameraCount, renderCamera.multiViewCameraHash };
+        // update multiview post process
+        for (size_t mvIdx = 0; mvIdx < multiviewCameras.size(); ++mvIdx) {
+            const auto& mvCamera = multiviewCameras[mvIdx];
+            auto& mvData = renderProcessing_.camIdToRng[mvCamera.id];
+            mvData.rngs.ppRngHandle = rngs.multiviewPpHandles[mvIdx];
+            mvData.lastFrameIndex = frameIndex_;
         }
     }
     return rngs;
@@ -2484,6 +2908,255 @@ vector<RenderCamera> RenderSystem::GetMultiviewCameras(const RenderCamera& rende
         }
     }
     return mvCameras;
+}
+
+void RenderSystem::HandleMaterialEvents() noexcept
+{
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "RenderSystem", "HandleMaterialEvents", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+    if (!materialDestroyedEvents_.empty()) {
+        std::sort(materialDestroyedEvents_.begin(), materialDestroyedEvents_.end());
+    }
+
+    if (!materialModifiedEvents_.empty()) {
+        std::sort(materialModifiedEvents_.begin(), materialModifiedEvents_.end());
+        // creating a component generates created and modified events. filter out materials which were created and
+        // modified.
+        materialModifiedEvents_.erase(std::unique(materialModifiedEvents_.begin(), materialModifiedEvents_.end()),
+            materialModifiedEvents_.cend());
+
+        if (!materialDestroyedEvents_.empty()) {
+            // filter out materials which were created/modified, but also destroyed.
+            materialModifiedEvents_.erase(std::set_difference(materialModifiedEvents_.cbegin(),
+                                              materialModifiedEvents_.cend(), materialDestroyedEvents_.cbegin(),
+                                              materialDestroyedEvents_.cend(), materialModifiedEvents_.begin()),
+                materialModifiedEvents_.cend());
+        }
+        UpdateMaterialProperties();
+        materialModifiedEvents_.clear();
+    }
+    if (!materialDestroyedEvents_.empty()) {
+        RemoveMaterialProperties(*dsMaterial_, *materialMgr_, materialDestroyedEvents_);
+        materialDestroyedEvents_.clear();
+    }
+}
+
+void RenderSystem::HandleMeshEvents() noexcept
+{
+#if (CORE3D_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("CORE3D", "RenderPreprocessorSystem", "HandleMeshEvents", CORE3D_PROFILER_DEFAULT_COLOR);
+#endif
+    if (!meshDestroyedEvents_.empty()) {
+        std::sort(meshDestroyedEvents_.begin(), meshDestroyedEvents_.end());
+    }
+
+    if (!meshModifiedEvents_.empty()) {
+        // creating a component generates created and modified events. filter out materials which were created and
+        // modified.
+        std::sort(meshModifiedEvents_.begin(), meshModifiedEvents_.end());
+        meshModifiedEvents_.erase(
+            std::unique(meshModifiedEvents_.begin(), meshModifiedEvents_.end()), meshModifiedEvents_.cend());
+
+        if (!meshDestroyedEvents_.empty()) {
+            // filter out meshes which were created/modified, but also destroyed.
+            meshModifiedEvents_.erase(
+                std::set_difference(meshModifiedEvents_.cbegin(), meshModifiedEvents_.cend(),
+                    meshDestroyedEvents_.cbegin(), meshDestroyedEvents_.cend(), meshModifiedEvents_.begin()),
+                meshModifiedEvents_.cend());
+        }
+
+        vector<uint64_t> additionalMaterials;
+        for (const auto& entRef : meshModifiedEvents_) {
+            if (auto meshHandle = meshMgr_->Read(entRef); meshHandle) {
+                MeshDataWithHandleReference md;
+                md.aabbMin = meshHandle->aabbMin;
+                md.aabbMax = meshHandle->aabbMax;
+                md.meshId = entRef.id;
+                const bool hasSkin = (!meshHandle->jointBounds.empty());
+                // md.jointBounds
+                md.submeshes.resize(meshHandle->submeshes.size());
+                for (size_t smIdx = 0; smIdx < md.submeshes.size(); smIdx++) {
+                    auto& writeRef = md.submeshes[smIdx];
+                    const auto& readRef = meshHandle->submeshes[smIdx];
+                    writeRef.materialId = readRef.material.id;
+                    if (!readRef.additionalMaterials.empty()) {
+                        additionalMaterials.clear();
+                        additionalMaterials.resize(readRef.additionalMaterials.size());
+                        for (size_t matIdx = 0; matIdx < additionalMaterials.size(); ++matIdx) {
+                            additionalMaterials[matIdx] = readRef.additionalMaterials[matIdx].id;
+                        }
+                        // array view to additional materials
+                        writeRef.additionalMaterials = additionalMaterials;
+                    }
+
+                    writeRef.meshRenderSortLayer = readRef.renderSortLayer;
+                    writeRef.meshRenderSortLayerOrder = readRef.renderSortLayerOrder;
+                    writeRef.aabbMin = readRef.aabbMin;
+                    writeRef.aabbMax = readRef.aabbMax;
+
+                    SetupSubmeshBuffers(*gpuHandleMgr_, readRef, writeRef);
+                    writeRef.submeshFlags = RenderSubmeshFlagsFromMeshFlags(readRef.flags);
+
+                    // Clear skinning bit if joint matrices were not given.
+                    if (!hasSkin) {
+                        writeRef.submeshFlags &= ~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT;
+                    }
+
+                    writeRef.drawCommand.vertexCount = readRef.vertexCount;
+                    writeRef.drawCommand.indexCount = readRef.indexCount;
+                    writeRef.drawCommand.instanceCount = readRef.instanceCount;
+                    writeRef.drawCommand.drawCountIndirect = readRef.drawCountIndirect;
+                    writeRef.drawCommand.strideIndirect = readRef.strideIndirect;
+                    writeRef.drawCommand.firstIndex = readRef.firstIndex;
+                    writeRef.drawCommand.vertexOffset = readRef.vertexOffset;
+                    writeRef.drawCommand.firstInstance = readRef.firstInstance;
+                }
+                dsMaterial_->UpdateMeshData(md.meshId, md);
+            }
+        }
+        meshModifiedEvents_.clear();
+    }
+    if (!meshDestroyedEvents_.empty()) {
+        // destroy rendering side decoupled material data
+        for (const auto& entRef : meshDestroyedEvents_) {
+            dsMaterial_->DestroyMeshData(entRef.id);
+        }
+        meshDestroyedEvents_.clear();
+    }
+}
+
+void RenderSystem::HandleGraphicsStateEvents() noexcept
+{
+    std::sort(graphicsStateModifiedEvents_.begin(), graphicsStateModifiedEvents_.end());
+    graphicsStateModifiedEvents_.erase(
+        std::unique(graphicsStateModifiedEvents_.begin(), graphicsStateModifiedEvents_.end()),
+        graphicsStateModifiedEvents_.cend());
+
+    const auto materialCount = materialMgr_->GetComponentCount();
+    for (const auto& modifiedEntity : graphicsStateModifiedEvents_) {
+        auto handle = graphicsStateMgr_->Read(modifiedEntity);
+        if (!handle) {
+            continue;
+        }
+        string_view renderSlot = handle->renderSlot;
+        if (renderSlot.empty()) {
+            // if no render slot is given select translucent or opaque based on blend state.
+            renderSlot =
+                std::any_of(handle->graphicsState.colorBlendState.colorAttachments,
+                    handle->graphicsState.colorBlendState.colorAttachments +
+                        handle->graphicsState.colorBlendState.colorAttachmentCount,
+                    [](const GraphicsState::ColorBlendState::Attachment& attachment) { return attachment.enableBlend; })
+                    ? DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT
+                    : DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE;
+        }
+        const auto renderSlotId = shaderMgr_->GetRenderSlotId(renderSlot);
+        const auto stateHash = shaderMgr_->HashGraphicsState(handle->graphicsState, renderSlotId);
+        auto gsRenderHandleRef = shaderMgr_->GetGraphicsStateHandleByHash(stateHash);
+        // if the state doesn't match any existing states based on the hash create a new one
+        if (!gsRenderHandleRef) {
+            const auto path = "3dshaderstates://" + to_hex(stateHash);
+            IShaderManager::GraphicsStateCreateInfo createInfo { path, handle->graphicsState };
+            IShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo;
+            variantCreateInfo.renderSlot = renderSlot;
+            gsRenderHandleRef = shaderMgr_->CreateGraphicsState(createInfo, variantCreateInfo);
+        }
+        if (gsRenderHandleRef) {
+            // when there's render handle for the state check that there's also a RenderHandleComponent which points to
+            // the render handle.
+            auto rhHandle = gpuHandleMgr_->Write(modifiedEntity);
+            if (!rhHandle) {
+                gpuHandleMgr_->Create(modifiedEntity);
+                rhHandle = gpuHandleMgr_->Write(modifiedEntity);
+            }
+            if (rhHandle) {
+                rhHandle->reference = gsRenderHandleRef;
+            }
+        }
+        // add any material using the state to the list of modified materials, so that we update the material to render
+        // data store.
+        for (IComponentManager::ComponentId id = 0U; id < materialCount; ++id) {
+            if (auto materialHandle = materialMgr_->Read(id)) {
+                if (materialHandle->materialShader.graphicsState == modifiedEntity ||
+                    materialHandle->depthShader.graphicsState == modifiedEntity) {
+                    materialModifiedEvents_.push_back(materialMgr_->GetEntity(id));
+                }
+            }
+        }
+    }
+    graphicsStateModifiedEvents_.clear();
+}
+
+void RenderSystem::UpdateMaterialProperties()
+{
+    // assuming modifiedMaterials was sorted we can assume the next entity is between pos and end.
+    for (const auto& entity : materialModifiedEvents_) {
+        auto materialHandle = materialMgr_->Read(entity);
+        if (!materialHandle) {
+            continue;
+        }
+
+        // create/update rendering side decoupled material data
+        UpdateSingleMaterial(entity, &(*materialHandle));
+    }
+}
+
+void RenderSystem::UpdateSingleMaterial(const Entity matEntity, const MaterialComponent* materialHandle)
+{
+    const MaterialComponent& materialComp = (materialHandle) ? *materialHandle : DEF_MATERIAL_COMPONENT;
+    const RenderDataDefaultMaterial::InputMaterialUniforms materialUniforms =
+        InputMaterialUniformsFromMaterialComponent(matEntity, materialComp);
+
+    // NOTE: we force material updates, no early outs
+
+    array_view<const uint8_t> customData;
+    if (materialComp.customProperties) {
+        const auto buffer = static_cast<const uint8_t*>(materialComp.customProperties->RLock());
+        // NOTE: set and binding are currently not supported, we only support built-in mapping
+        // the data goes to a predefined set and binding
+        customData = array_view(buffer, materialComp.customProperties->Size());
+        materialComp.customProperties->RUnlock();
+    }
+    // material extensions
+    RenderHandleReference handleReferences[RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT];
+    array_view<RenderHandleReference> extHandles;
+    // extension valid only with non-default material
+    if (EntityUtil::IsValid(matEntity)) {
+        // first check the preferred vector version
+        if (!materialComp.customResources.empty()) {
+            const size_t maxCount = Math::min(static_cast<size_t>(materialComp.customResources.size()),
+                static_cast<size_t>(RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_RESOURCE_COUNT));
+            extHandles = { handleReferences, maxCount };
+            GetRenderHandleReferences(*gpuHandleMgr_, materialComp.customResources, extHandles);
+        }
+    }
+    const uint32_t transformBits = materialUniforms.texTransformSetBits;
+    const RenderMaterialFlags rmfFromBits =
+        RenderMaterialLightingFlagsFromMaterialFlags(materialComp.materialLightingFlags);
+    {
+        const RenderDataDefaultMaterial::MaterialHandlesWithHandleReference materialHandles =
+            GetMaterialHandles(materialComp, *gpuHandleMgr_);
+        const RenderMaterialFlags rmfFromValues =
+            RenderMaterialFlagsFromMaterialValues(materialComp, materialHandles, transformBits);
+        const RenderMaterialFlags rmfFromExtraFlags =
+            RenderMaterialFlagsFromMaterialValues(materialComp.extraRenderingFlags);
+        const RenderMaterialFlags rmf = rmfFromBits | rmfFromValues | rmfFromExtraFlags;
+        const RenderDataDefaultMaterial::MaterialData data {
+            { gpuHandleMgr_->GetRenderHandleReference(materialComp.materialShader.shader),
+                gpuHandleMgr_->GetRenderHandleReference((materialComp.type == MaterialComponent::Type::OCCLUSION)
+                                                            ? dmShaderData_.gfxStateOcclusionMaterial
+                                                            : materialComp.materialShader.graphicsState) },
+            { gpuHandleMgr_->GetRenderHandleReference(materialComp.depthShader.shader),
+                gpuHandleMgr_->GetRenderHandleReference(materialComp.depthShader.graphicsState) },
+            materialComp.extraRenderingFlags, rmf, materialComp.customRenderSlotId,
+            RenderMaterialType(materialComp.type),
+            (materialComp.type == MaterialComponent::Type::OCCLUSION) ? uint8_t(0U)
+                                                                      : materialComp.renderSort.renderSortLayer,
+            materialComp.renderSort.renderSortLayerOrder
+        };
+
+        dsMaterial_->UpdateMaterialData(matEntity.id, materialUniforms, materialHandles, data, customData, extHandles);
+    }
 }
 
 ISystem* IRenderSystemInstance(IEcs& ecs)

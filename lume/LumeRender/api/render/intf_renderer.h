@@ -38,7 +38,7 @@ class IRenderDataStoreManager;
  * Render node graph can be created (and should be) created with json.
  * Json file is loaded with IRenderNodeGraphLoader and stored to RenderNodeGraphManager.
  * Render Data Store:
- * Render data store contains multiple managers that can store data that is accessable in render nodes.
+ * Render data store contains multiple managers that can store data that is accessible in render nodes.
  *
  * NOTE: render node graphs need to be unique per frame
  * The same render node graph cannot be send to rendering multiple times in a frame

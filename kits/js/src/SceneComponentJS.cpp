@@ -15,6 +15,8 @@
 
 #include "SceneComponentJS.h"
 
+#include <algorithm>
+
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/intf_task_queue.h>
@@ -27,7 +29,11 @@
 
 #include <render/intf_render_context.h>
 
+#include "JsObjectCache.h"
 #include "SceneJS.h"
+
+#include <cctype>
+
 using namespace SCENE_NS;
 
 void SceneComponentJS::Init(napi_env env, napi_value exports)
@@ -39,6 +45,9 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
     napi_value func;
     auto status = napi_define_class(env, "SceneComponent", NAPI_AUTO_LENGTH, BaseObject::ctor<SceneComponentJS>(),
         nullptr, props.size(), props.data(), &func);
+    if (status != napi_ok) {
+        LOG_E("export class failed in %s", __func__);
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -59,6 +68,10 @@ void SceneComponentJS::DisposeNative(void*)
         disposed_ = true;
         LOG_V("SceneComponentJS::DisposeNative");
 
+        if (auto native = GetNativeObject<META_NS::IObject>()) {
+            DetachJsObj(native, "_JSW");
+        }
+
         if (!jsProps_.IsEmpty()) {
             NapiApi::Object inp = jsProps_.GetObject();
             for (auto&& v : proxies_) {
@@ -77,13 +90,13 @@ void SceneComponentJS::DisposeNative(void*)
 void* SceneComponentJS::GetInstanceImpl(uint32_t id)
 {
     if (id == SceneComponentJS::ID) {
-        return this;
+        return static_cast<SceneComponentJS*>(this);
     }
-    return nullptr;
+    return BaseObject::GetInstanceImpl(id);
 }
 void SceneComponentJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetObject().GetJsWrapper<SceneJS>());
+    DisposeNative(scene_.GetJsWrapper<SceneJS>());
     BaseObject::Finalize(env);
 }
 SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
@@ -114,6 +127,41 @@ SceneComponentJS::~SceneComponentJS()
     DisposeNative(nullptr);
 }
 
+using GenericComponentMapping = BASE_NS::unordered_map<BASE_NS::string_view, BASE_NS::vector<BASE_NS::string_view>>;
+
+const GenericComponentMapping& GetComponentMapping()
+{
+    static const GenericComponentMapping map = []() {
+        GenericComponentMapping m;
+        m["RenderConfigurationComponent"] = { "shadowType", "shadowQuality", "shadowSmoothness", "renderingFlags" };
+        return m;
+    }();
+    return map;
+}
+
+bool ShouldExposeToJS(BASE_NS::string_view componentName, BASE_NS::string_view propertyName)
+{
+    // Weather system uses mixed casing, we cannot exclude properties based on first char
+    if (componentName == "WeatherEffectComponent") {
+        return true;
+    }
+
+    if (!propertyName.empty() && std::isupper(propertyName[0])) {
+        // Some specific component wrappers in LumeScene expose ECS properties as LumeScene
+        // level properties (whose name starts with an upper case letter). Do not expose those
+        // to JS.
+        return false;
+    }
+
+    const auto& map = GetComponentMapping();
+    auto it = map.find(componentName);
+    if (it == map.end()) {
+        return true; // No mapping defined, expose all
+    }
+    const auto& mapping = it->second;
+    return std::find(mapping.begin(), mapping.end(), propertyName) != mapping.end();
+}
+
 void SceneComponentJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj)
 {
     auto comp = interface_cast<SCENE_NS::IComponent>(obj);
@@ -125,10 +173,19 @@ void SceneComponentJS::AddProperties(NapiApi::Object meJs, const META_NS::IObjec
 
     NapiApi::Object jsProps(meJs.GetEnv());
     BASE_NS::vector<napi_property_descriptor> napi_descs;
+    BASE_NS::string componentName;
+    if (auto o = interface_cast<META_NS::IObject>(comp)) {
+        componentName = o->GetName();
+    }
     for (auto&& p : meta->GetProperties()) {
-        if (auto proxy = PropertyToProxy(scene_.GetObject(), jsProps, p)) {
-            auto res = proxies_.insert_or_assign(SCENE_NS::PropertyName(p->GetName()), proxy);
-            napi_descs.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxy)));
+        if (p) {
+            const auto name = BASE_NS::string(SCENE_NS::PropertyName(p->GetName()));
+            if (ShouldExposeToJS(componentName, name)) {
+                if (auto proxy = PropertyToProxy(scene_.GetNapiObject(), jsProps, p)) {
+                    auto res = proxies_.insert_or_assign(name, proxy);
+                    napi_descs.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxy)));
+                }
+            }
         }
     }
 

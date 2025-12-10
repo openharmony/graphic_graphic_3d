@@ -26,8 +26,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
 
-#include "property/property_handle.h"
-
 CORE3D_BEGIN_NAMESPACE()
 class INameComponentManager;
 class INodeComponentManager;

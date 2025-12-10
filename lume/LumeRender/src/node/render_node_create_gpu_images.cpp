@@ -211,31 +211,53 @@ void RenderNodeCreateGpuImages::PreExecuteFrame()
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     for (size_t idx = 0; idx < resourceHandles_.size(); ++idx) {
         const RenderHandle dependencyHandle = dependencyHandles_[idx];
-        if (gpuResourceMgr.IsValid(dependencyHandle)) {
-            const GpuImageDesc& dependencyDesc = gpuResourceMgr.GetImageDescriptor(dependencyHandle);
-            const DependencyList& dependencyList = dependencyList_[idx];
-            GpuImageDesc& descRef = descs_[idx];
+        if (!gpuResourceMgr.IsValid(dependencyHandle)) {
+            continue;
+        }
 
-            const bool recreateImage = CheckForDescUpdates(dependencyDesc, dependencyList, descRef);
-            if (recreateImage) {
-                descs_[idx] = descRef;
-                // NOTE: shading rate is not in the desc
-                const Size2D shadingRateTexelSize = shadingRateTexelSizes_[idx];
-                descRef.width =
-                    static_cast<uint32_t>(Math::ceil(float(descRef.width) / float(shadingRateTexelSize.width)));
-                descRef.height =
-                    static_cast<uint32_t>(Math::ceil(float(descRef.height) / float(shadingRateTexelSize.height)));
-                // replace the handle
-                resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], descRef);
-            }
+        const GpuImageDesc& dependencyDesc = gpuResourceMgr.GetImageDescriptor(dependencyHandle);
+        const DependencyList& dependencyList = dependencyList_[idx];
+        GpuImageDesc& descRef = descs_[idx];
+        const bool recreateImage = CheckForDescUpdates(dependencyDesc, dependencyList, descRef);
+        if (!recreateImage) {
+            continue;
+        }
+
+        // NOTE: shading rate is not in the desc
+        const Size2D shadingRateTexelSize = shadingRateTexelSizes_[idx];
+        descRef.width = static_cast<uint32_t>(Math::ceil(float(descRef.width) / float(shadingRateTexelSize.width)));
+        descRef.height = static_cast<uint32_t>(Math::ceil(float(descRef.height) / float(shadingRateTexelSize.height)));
+        // replace the handle
+        resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], descRef);
+        if (jsonInputs_.gpuImageDescs[idx].clearWhenCreated) {
+            clearImages_.push_back(
+                { resourceHandles_[idx].GetHandle(), jsonInputs_.gpuImageDescs[idx].clearValue.color });
         }
     }
-
     // broadcast the resources
     for (size_t idx = 0; idx < resourceHandles_.size(); ++idx) {
         IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
         rngShareMgr.RegisterRenderNodeOutput(names_[idx].shareName, resourceHandles_[idx].GetHandle());
     }
+}
+
+void RenderNodeCreateGpuImages::ExecuteFrame(IRenderCommandList& cmdList)
+{
+    constexpr ImageSubresourceRange range[] = { { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0U,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0U, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS } };
+    for (const auto& clear : clearImages_) {
+        cmdList.ClearColorImage(clear.handle, clear.value, range);
+    }
+    clearImages_.clear();
+}
+
+IRenderNode::ExecuteFlags RenderNodeCreateGpuImages::GetExecuteFlags() const
+{
+    if (clearImages_.empty()) {
+        // no work in execute
+        return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE;
+    }
+    return IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DEFAULT;
 }
 
 Size2D RenderNodeCreateGpuImages::GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize)

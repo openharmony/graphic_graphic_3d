@@ -22,14 +22,20 @@
 #include <napi_api.h>
 
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_ecs_object_access.h>
+#include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/intf_render_resource.h>
+#include <scene/interface/intf_shader.h>
+
+#include <3d/ecs/components/render_handle_component.h>
 
 #include "BaseObjectJS.h"
+#include "ColorProxy.h"
+#include "QuatProxy.h"
 #include "Vec2Proxy.h"
 #include "Vec3Proxy.h"
 #include "Vec4Proxy.h"
-#include "QuatProxy.h"
-#include "ColorProxy.h"
 
 PropertyProxy::~PropertyProxy()
 {
@@ -38,12 +44,12 @@ PropertyProxy::~PropertyProxy()
 
 PropertyProxy::PropertyProxy(META_NS::IProperty::Ptr prop) : prop_(prop)
 {
-    assert(prop_);
+    assert(prop);
 }
 
 META_NS::IProperty::Ptr PropertyProxy::GetPropertyPtr() const noexcept
 {
-    return prop_;
+    return prop_.lock();
 }
 
 void PropertyProxy::SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface> extra)
@@ -54,6 +60,13 @@ void PropertyProxy::SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface> extr
 const BASE_NS::shared_ptr<CORE_NS::IInterface> PropertyProxy::GetExtra() const noexcept
 {
     return extra_.lock();
+}
+
+void PropertyProxy::ResetValue()
+{
+    if (auto p = GetPropertyPtr()) {
+        p->ResetValue();
+    }
 }
 
 ObjectPropertyProxy::MemberProxy::MemberProxy(ObjectPropertyProxy* p, BASE_NS::string m) : proxy_(p), memb_(m) {}
@@ -174,10 +187,8 @@ ObjectPropertyProxy::~ObjectPropertyProxy()
 }
 
 EntityProxy::EntityProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<CORE_NS::Entity> prop)
-    : PropertyProxy(prop)
+    : PropertyProxy(prop), obj_(obj), scene_(scn)
 {
-    scene_ = scn;
-    obj_ = obj;
 }
 
 EntityProxy::~EntityProxy()
@@ -205,12 +216,28 @@ napi_value EntityProxy::Value()
 {
     NapiApi::Env env(obj_.GetEnv());
     if (auto entity = META_NS::GetValue(GetProperty<CORE_NS::Entity>()); CORE_NS::EntityUtil::IsValid(entity)) {
-        if (auto scene = scene_.GetObject().GetNative<SCENE_NS::IScene>()) {
+        if (auto scene = scene_.GetObject<SCENE_NS::IScene>()) {
             if (auto internal = scene->GetInternalScene()) {
-                if (auto node = internal->FindNode(entity, {})) {
+                SCENE_NS::INode::Ptr node;
+
+                if (auto shader = shader_.GetObject()) {
+                    return shader.ToNapiValue();
+                } else {
+                    internal
+                        ->AddTask([&node, &internal, &entity]() {
+                            if ((node = internal->FindNode(entity, {}))) {
+                                return;
+                            }
+                        })
+                        .Wait();
+                }
+
+                if (node) {
                     NapiApi::Object parms(env);
                     napi_value args[] = { scene_.GetValue(), parms.ToNapiValue() };
                     return CreateFromNativeInstance(env, node, PtrType::WEAK, args).ToNapiValue();
+                } else {
+                    LOG_E("Unable to determine the type of the entity stored in the property");
                 }
             }
         }
@@ -228,6 +255,20 @@ void EntityProxy::SetValue(NapiApi::FunctionContext<>& info)
             if (auto ecso = ecsoa->GetEcsObject()) {
                 entity = ecso->GetEntity();
             }
+        } else if (auto renderResource = val.GetNative<SCENE_NS::IRenderResource>()) {
+            shader_ = NapiApi::StrongRef(data.Env(), val.ToNapiValue());
+            if (auto scene = scene_.GetObject<SCENE_NS::IScene>()) {
+                auto internalScene = scene->GetInternalScene();
+                scene->GetInternalScene()
+                    ->AddTask([&entity, internalScene, renderResource, this]() {
+                        auto& ecsContext = internalScene->GetEcsContext();
+                        entityReference_ = ecsContext.GetRenderHandleEntity(renderResource->GetRenderHandle());
+                        entity = entityReference_;
+                    })
+                    .Wait();
+            }
+        } else {
+            LOG_E("Unknown entity type given for entity property");
         }
         META_NS::SetValue(GetProperty<CORE_NS::Entity>(), entity);
     }
@@ -235,19 +276,13 @@ void EntityProxy::SetValue(NapiApi::FunctionContext<>& info)
 
 void ImageProxy::Reset()
 {
-    auto prop = GetPropertyPtr();
-    if (!obj_.IsEmpty() && prop) {
-        obj_.GetObject().DeleteProperty(prop->GetName());
-    }
     obj_.Reset();
     scene_.Reset();
 }
 
 ImageProxy::ImageProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IImage::Ptr> prop)
-    : PropertyProxy(prop)
+    : PropertyProxy(prop), obj_(obj), scene_(scn)
 {
-    scene_ = scn;
-    obj_ = obj;
 }
 ImageProxy::~ImageProxy()
 {
@@ -286,27 +321,24 @@ void ImageProxy::SetValue(NapiApi::FunctionContext<>& info)
     }
 }
 
+#define SET_AND_RETURN(cc) \
+    if (META_NS::IsCompatibleWith<cc>(t)) {\
+        return BASE_NS::shared_ptr { new TypeProxy<cc>(obj, t) };\
+    }
+
 BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     NapiApi::Object scene, NapiApi::Object obj, const META_NS::IProperty::Ptr& t)
 {
-    if (META_NS::IsCompatibleWith<float>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<float>(obj, t) };
-    }
-    if (META_NS::IsCompatibleWith<int32_t>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<int32_t>(obj, t) };
-    }
-    if (META_NS::IsCompatibleWith<uint32_t>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<uint32_t>(obj, t) };
-    }
-    if (META_NS::IsCompatibleWith<int64_t>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<int64_t>(obj, t) };
-    }
-    if (META_NS::IsCompatibleWith<uint64_t>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<uint64_t>(obj, t) };
-    }
-    if (META_NS::IsCompatibleWith<BASE_NS::string>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<BASE_NS::string>(obj, t) };
-    }
+    SET_AND_RETURN(float)
+    SET_AND_RETURN(int8_t)
+    SET_AND_RETURN(uint8_t)
+    SET_AND_RETURN(int16_t)
+    SET_AND_RETURN(uint16_t)
+    SET_AND_RETURN(int32_t)
+    SET_AND_RETURN(uint32_t)
+    SET_AND_RETURN(int64_t)
+    SET_AND_RETURN(uint64_t)
+    SET_AND_RETURN(BASE_NS::string)
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec2>(t)) {
         return BASE_NS::shared_ptr { new Vec2Proxy(obj.GetEnv(), t) };
     }
@@ -328,9 +360,7 @@ BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     if (META_NS::IsCompatibleWith<CORE_NS::Entity>(t)) {
         return BASE_NS::shared_ptr { new EntityProxy(scene, obj, t) };
     }
-    if (META_NS::IsCompatibleWith<bool>(t)) {
-        return BASE_NS::shared_ptr { new TypeProxy<bool>(obj, t) };
-    }
+    SET_AND_RETURN(bool)
     auto any = META_NS::GetInternalAny(t);
     LOG_F("Unsupported property type [%s]", any ? any->GetTypeIdString().c_str() : "<Unknown>");
     return nullptr;

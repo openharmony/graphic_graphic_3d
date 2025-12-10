@@ -19,15 +19,13 @@
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/property/intf_stack_resetable.h>
 
-#include "any.h"
+#include "../any.h"
 #include "dependencies.h"
 
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-StackProperty::StackProperty(BASE_NS::string name)
-    : Super(BASE_NS::move(name)), onChangedCallback_(MakeCallback<IOnChanged>([this] { InternalOnChanged(); }))
-{}
+StackProperty::StackProperty(BASE_NS::string name) : Super(BASE_NS::move(name)) {}
 
 StackProperty::~StackProperty()
 {
@@ -359,7 +357,13 @@ BASE_NS::vector<IModifier::Ptr> StackProperty::GetModifiers(
 }
 AnyReturnValue StackProperty::SetDefaultValue(const IAny& value)
 {
-    CORE_ASSERT_MSG(defaultValue_, "SetInternalAny not called");
+    if (!defaultValue_) {
+        CORE_LOG_D("Initializing internal any with SetDefaultValue");
+        auto res = SetInternalAny(value.Clone(false));
+        if (!res) {
+            return res;
+        }
+    }
     AnyReturnValue res = defaultValue_->CopyFrom(value);
     if (res && values_.empty()) {
         NotifyChange();

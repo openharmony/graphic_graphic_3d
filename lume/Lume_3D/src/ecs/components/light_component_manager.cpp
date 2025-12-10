@@ -27,10 +27,14 @@ using CORE3D_NS::LightComponent;
 
 /** Extend propertysystem with the enums */
 DECLARE_PROPERTY_TYPE(LightComponent::Type);
+DECLARE_PROPERTY_TYPE(LightComponent::RectLight);
 
 // Declare their metadata
-ENUM_TYPE_METADATA(
-    LightComponent::Type, ENUM_VALUE(DIRECTIONAL, "Directional"), ENUM_VALUE(POINT, "Point"), ENUM_VALUE(SPOT, "Spot"))
+ENUM_TYPE_METADATA(LightComponent::Type, ENUM_VALUE(DIRECTIONAL, "Directional"), ENUM_VALUE(POINT, "Point"),
+    ENUM_VALUE(SPOT, "Spot"), ENUM_VALUE(RECT, "Rect"))
+
+DATA_TYPE_METADATA(LightComponent::RectLight, MEMBER_PROPERTY(width, "Width", 0), MEMBER_PROPERTY(height, "Height", 0))
+
 CORE_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
@@ -81,6 +85,7 @@ IComponentManager* ILightComponentManagerInstance(IEcs& ecs)
 
 void ILightComponentManagerDestroy(IComponentManager* instance)
 {
-    delete static_cast<LightComponentManager*>(instance);
+    static_cast<LightComponentManager*>(instance)->~LightComponentManager();
+    ::operator delete(instance);
 }
 CORE3D_END_NAMESPACE()

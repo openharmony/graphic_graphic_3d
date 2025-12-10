@@ -22,7 +22,7 @@
 #include "SceneResourceImpl.h"
 #include "geometry_definition/GeometryDefinition.h"
 
-class MeshResourceJS : public BaseObject, public SceneResourceImpl {
+class MeshResourceJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 140;
 
@@ -31,9 +31,9 @@ public:
 
     static void Init(napi_env env, napi_value exports);
 
-    virtual void* GetInstanceImpl(uint32_t id) override;
+    void* GetInstanceImpl(uint32_t id) override;
 
-    SCENE_NS::IMesh::Ptr CreateMesh();
+    SCENE_NS::IMesh::Ptr CreateMesh(const SCENE_NS::IScene::Ptr& scene);
 
 private:
     void Finalize(napi_env env) override;

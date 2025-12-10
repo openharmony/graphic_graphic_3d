@@ -1,0 +1,54 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "RenderNodeDraw0",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OutputImage"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 2,
+                "subpassContents": "secondary_command_lists",
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "RenderNodeDraw1",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OutputImage"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 2,
+                "subpassContents": "secondary_command_lists",
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        }
+    ]
+}

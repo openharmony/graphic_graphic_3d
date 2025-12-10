@@ -273,9 +273,8 @@ SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchai
 {
     // check for surface creation automatically
     if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
-        plat_.surface =
-            device_.GetEglState().CreateSurface(swapchainCreateInfo.window.window, swapchainCreateInfo.window.instance,
-                (swapchainCreateInfo.swapchainFlags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT));
+        plat_.surface = device_.GetEglState().CreateSurface(
+            swapchainCreateInfo.window.window, swapchainCreateInfo.window.instance, flags_);
         ownsSurface_ = true;
     } else {
         plat_.surface = (uintptr_t)swapchainCreateInfo.surfaceHandle;

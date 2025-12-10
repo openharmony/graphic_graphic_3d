@@ -18,7 +18,7 @@
 #include "SceneResourceImpl.h"
 #include "RenderContextJS.h"
 
-class ImageJS : public BaseObject, SceneResourceImpl {
+class ImageJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 110;
     static void Init(napi_env env, napi_value exports);

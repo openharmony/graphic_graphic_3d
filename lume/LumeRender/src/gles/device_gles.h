@@ -219,6 +219,8 @@ public:
     void DeleteFrameBuffer(uint32_t fbo);
 
     void SetActiveTextureUnit(uint32_t textureUnit); // hide this.
+    void SetMipLevels(
+        const unsigned int textureUnit, const uint32_t baseLevel, const uint32_t maxLevel, const uint32_t type);
     // swizzles for textures
     void TexSwizzle(uint32_t image, uint32_t target, const BASE_NS::Math::UVec4& swizzle);
     // texture upload / storage

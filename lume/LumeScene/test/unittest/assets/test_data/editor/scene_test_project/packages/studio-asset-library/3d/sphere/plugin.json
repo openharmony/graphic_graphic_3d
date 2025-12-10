@@ -1,0 +1,16 @@
+{
+    "name": "3d-sphere",
+    "version": "1.0",
+    "icon": {
+        "uri": "Lume_Icon.svg",
+        "rounded": false
+    },
+    "author": "Ark",
+    "description": "A simple 3D sphere model",
+    "depends": [],
+    "assets": [
+        "sphere.gltf"
+    ],
+    "uid": "f82c4fc4-5c35-11ed-9b6a-0242ac120002",
+    "api": {}
+}

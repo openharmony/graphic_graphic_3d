@@ -19,6 +19,8 @@ lume_binary_complile("lume_binary_assets_compile") {
   outputs = [ "$target_gen_dir" ]
   dest_gen_path = "$target_gen_dir"
 }
+
+
 group("binary_compile_asset") {
   deps = [ ":lume_binary_assets_compile" ]
   if (ohos_indep_compiler_enable) {

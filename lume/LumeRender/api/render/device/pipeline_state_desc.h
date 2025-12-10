@@ -401,9 +401,9 @@ enum QueryPipelineStatisticFlagBits {
     CORE_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT = 0x00000040,
     /** Fragment shader invocations bit */
     CORE_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT = 0x00000080,
-    /* Tesselation control shader patches bit */
+    /* Tessellation control shader patches bit */
     CORE_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT = 0x00000100,
-    /* Tesselation evaluation shader invocations bit */
+    /* Tessellation evaluation shader invocations bit */
     CORE_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200,
     /** Compute shader invocations bit */
     CORE_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400,
@@ -651,7 +651,7 @@ enum AttachmentLoadOp {
     CORE_ATTACHMENT_LOAD_OP_LOAD = 0,
     /** Clear */
     CORE_ATTACHMENT_LOAD_OP_CLEAR = 1,
-    /** Dont care */
+    /** Don't care */
     CORE_ATTACHMENT_LOAD_OP_DONT_CARE = 2,
 };
 
@@ -659,7 +659,7 @@ enum AttachmentLoadOp {
 enum AttachmentStoreOp {
     /** Store */
     CORE_ATTACHMENT_STORE_OP_STORE = 0,
-    /** Dont care */
+    /** Don't care */
     CORE_ATTACHMENT_STORE_OP_DONT_CARE = 1,
 };
 
@@ -1089,7 +1089,7 @@ struct RenderPassSubpassDesc {
     uint32_t colorAttachmentCount { 0u };
     /** Resolve attachment count in this subpass */
     uint32_t resolveAttachmentCount { 0u };
-    /** Fragmend shading rate attachment count in this subpass */
+    /** Fragment shading rate attachment count in this subpass */
     uint32_t fragmentShadingRateAttachmentCount { 0u };
 
     /** Depth resolve mode flag bit */
@@ -1131,7 +1131,7 @@ struct RenderPassWithHandleReference {
 enum GraphicsStateFlagBits {
     /** Input assembly bit */
     CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT = 0x00000001,
-    /** Rastarization state bit */
+    /** Rasterization state bit */
     CORE_GRAPHICS_STATE_RASTERIZATION_STATE_BIT = 0x00000002,
     /** Depth stencil state bit */
     CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT = 0x00000004,
@@ -1374,7 +1374,7 @@ struct BufferOffsetWithHandleReference {
     uint32_t offset { 0U };
 };
 
-/** Accleration structure types */
+/** Acceleration structure types */
 enum AccelerationStructureType : uint32_t {
     /** Acceleration structure type top level */
     CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL = 0,
@@ -1604,7 +1604,7 @@ using GeometryInstanceFlags = uint32_t;
 struct AsInstance {
     /** Transform matrix */
     BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
-    /** User specified index accessable in ray shaders with InstanceCustomIndexKHR (24 bits) */
+    /** User specified index accessible in ray shaders with InstanceCustomIndexKHR (24 bits) */
     uint32_t instanceCustomIndex { 0U };
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
     uint8_t mask { 0U };
@@ -1622,7 +1622,7 @@ struct AsInstance {
 struct AsInstanceWithHandleReference {
     /** Transform matrix */
     BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
-    /** User specified index accessable in ray shaders with InstanceCustomIndexKHR (24 bits) */
+    /** User specified index accessible in ray shaders with InstanceCustomIndexKHR (24 bits) */
     uint32_t instanceCustomIndex { 0U };
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
     uint8_t mask { 0U };

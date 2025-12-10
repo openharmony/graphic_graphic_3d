@@ -1,0 +1,54 @@
+#version 460 core
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+// specialization
+
+// includes
+#include "render/shaders/common/render_compatibility_common.h"
+
+// sets
+
+layout(set = 0, binding = 0, std430) restrict readonly buffer uInputBuffer
+{
+    uint workGroupX;
+    uint workGroupY;
+    uint workGroupZ;
+    uint pad;
+    uint inputData[];
+};
+layout(set = 0, binding = 1, std430) restrict writeonly buffer uOutputBuffer
+{
+    uint outWorkGroupX;
+    uint outWorkGroupY;
+    uint outWorkGroupZ;
+    uint outPad;
+    uint outputData[];
+};
+
+layout(constant_id = 0) const uint C1 = 0;
+
+layout(push_constant) uniform PC
+{
+    uint add;
+} pc;
+
+// NOTE: Not sane local sizes for real work (we inpurpose use this)
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+    const uint tid = gl_GlobalInvocationID.x;
+
+    if (gl_GlobalInvocationID.x == 0) {
+        outWorkGroupX = gl_NumWorkGroups.x;
+        outWorkGroupY = gl_NumWorkGroups.y;
+        outWorkGroupZ = gl_NumWorkGroups.z;
+        outPad = 0;
+    }
+
+    if (C1 == 0) {
+        outputData[tid] = inputData[tid];
+    } else {
+        outputData[tid] = inputData[tid] + pc.add;
+    }
+}

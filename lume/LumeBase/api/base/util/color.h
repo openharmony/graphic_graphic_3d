@@ -63,8 +63,10 @@ public:
     /** Constructs Color from ARGB format (uint32_t)
      */
     constexpr explicit Color(const uint32_t color) noexcept
-        : x(((color >> COLOR_SHIFT_16) & UINT8_MAX) / 255.0f), y(((color >> COLOR_SHIFT_8) & UINT8_MAX) / 255.0f),
-          z(((color >> COLOR_SHIFT_0) & UINT8_MAX) / 255.0f), w(((color >> COLOR_SHIFT_24) & UINT8_MAX) / 255.0f)
+        : x(float((color >> COLOR_SHIFT_16) & UINT8_MAX) / 255.0f),
+          y(float((color >> COLOR_SHIFT_8) & UINT8_MAX) / 255.0f),
+          z(float((color >> COLOR_SHIFT_0) & UINT8_MAX) / 255.0f),
+          w(float((color >> COLOR_SHIFT_24) & UINT8_MAX) / 255.0f)
     {}
 
     constexpr explicit Color(const BASE_NS::Math::Vec4& other) noexcept : x(other.x), y(other.y), z(other.z), w(other.w)
@@ -446,9 +448,8 @@ inline uint32_t FromColorRGBA(const Color color, const ColorSpaceFlags flags)
 {
     if (flags == 0U) {
         return FromColorRGBAToLinear(color);
-    } else {
-        return FromColorRGBAToSRGB(color);
     }
+    return FromColorRGBAToSRGB(color);
 }
 
 inline constexpr uint32_t PackPremultiplyColorUnorm(Color color)
