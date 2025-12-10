@@ -26,11 +26,6 @@ config("lume_base_api_config") {
         "${LUME_BASE_PATH}/api"
     ]
 
-    # Configs applying to this config
-    configs = [
-        "//third_party/bounds_checking_function:libsec_public_config"
-    ]
-    
     # C preprocessor defines - #defines
     defines = []
 }

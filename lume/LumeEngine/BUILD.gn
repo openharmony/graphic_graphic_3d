@@ -22,9 +22,7 @@ config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
   ]
-  configs = [
-    "//third_party/bounds_checking_function:libsec_public_config",
-  ]
+
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0"
@@ -272,6 +270,7 @@ ohos_source_set("lume_engine_src") {
     "resource_management:global_resmgr",
     "qos_manager:qos",
     "resource_schedule_service:ressched_client",
+    "bounds_checking_function:libsec_shared",
   ]
 
   if (LUME_OHOS_BUILD) {
@@ -413,6 +412,10 @@ ohos_source_set("lume_component_help_src") {
     "${LUME_CORE_PATH}/api/core/property_tools/property_macros.h",
     "${LUME_CORE_PATH}/api/core/property_tools/property_value.h",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_static_library("libComponentHelper") {

@@ -409,6 +409,13 @@ void NodeETS::RemoveChild(const std::shared_ptr<NodeETS> &childNode)
     }
 }
 
+void NodeETS::SetNodeTypeInternal(NodeType type)
+{
+    if (auto node = node_.lock()) {
+        type_ = type;
+    }
+}
+
 bool operator==(const SCENE_NS::INode::Ptr node, const std::shared_ptr<NodeETS> nodeETS)
 {
     if (!node || !nodeETS) {
