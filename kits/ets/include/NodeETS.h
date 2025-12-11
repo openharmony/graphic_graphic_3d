@@ -34,7 +34,7 @@ class NodeETS : public SceneResourceETS, public std::enable_shared_from_this<Nod
 
 public:
     static std::shared_ptr<NodeETS> FromNative(const SCENE_NS::INode::Ptr &node);
-    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5 };
+    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5, CUSTOM = 255 };
 
     NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node);
     explicit NodeETS(const SCENE_NS::INode::Ptr &node);
@@ -80,6 +80,8 @@ public:
     void RemoveChild(const std::shared_ptr<NodeETS> &childNode);
     bool IsAttached() const;
     virtual void Attached(bool attached);
+
+    void SetNodeTypeInternal(NodeType type);
 
 public:
     SCENE_NS::INode::Ptr GetInternalNode()
