@@ -407,7 +407,15 @@ InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(const std::s
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<MaterialETS>>(nullptr, "Invalid scene");
     }
-    if (auto mat = scene_->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::Material).GetResult()) {
+
+    SCENE_NS::IMaterial::Ptr mat;
+    if (materialType == MaterialETS::MaterialType::OCCLUSION) {
+        mat = scene_->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::OcclusionMaterial).GetResult();
+    } else {
+        mat = scene_->CreateObject<SCENE_NS::IMaterial>(SCENE_NS::ClassId::Material).GetResult();
+    }
+
+    if (mat) {
         if (materialType == MaterialETS::MaterialType::SHADER) {
             META_NS::SetValue(mat->Type(), SCENE_NS::MaterialType::CUSTOM);
         } else if (materialType == MaterialETS::MaterialType::UNLIT) {

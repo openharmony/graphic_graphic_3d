@@ -19,6 +19,7 @@
 #include <base/util/color.h>
 
 #include "SceneResourceFactoryImpl.h"
+#include "OcclusionMaterialImpl.h"
 #include "PBRMaterialImpl.h"
 #include "ParamUtils.h"
 
@@ -137,6 +138,8 @@ namespace OHOS::Render3D::KITETS {
         type = MaterialETS::MaterialType::UNLIT;
     }  else if (materialType == ::SceneResources::MaterialType::key_t::UNLIT_SHADOW_ALPHA) {
         type = MaterialETS::MaterialType::UNLIT_SHADOW_ALPHA;
+    } else if (materialType == ::SceneResources::MaterialType::key_t::OCCLUSION) {
+        type = MaterialETS::MaterialType::OCCLUSION;
     } else {
         type = MaterialETS::MaterialType::METALLIC_ROUGHNESS;
     }
@@ -146,8 +149,14 @@ namespace OHOS::Render3D::KITETS {
         auto mat = ::SceneResources::PBRMaterial({nullptr, nullptr});
         return ::SceneResources::VariousMaterial::make_pbr(mat);
     }
-    auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(material.value);
-    return ::SceneResources::VariousMaterial::make_pbr(mat);
+
+    if (type == MaterialETS::MaterialType::OCCLUSION) {
+        auto mat = ::taihe::make_holder<OcclusionMaterialImpl, ::SceneResources::OcclusionMaterial>(material.value);
+        return ::SceneResources::VariousMaterial::make_occlusion(mat);
+    } else {
+        auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(material.value);
+        return ::SceneResources::VariousMaterial::make_pbr(mat);
+    }
 }
 
 ::SceneResources::Environment SceneResourceFactoryImpl::createEnvironmentSync(

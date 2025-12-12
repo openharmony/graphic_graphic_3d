@@ -148,6 +148,7 @@ enum MaterialType: i32 {
     METALLIC_ROUGHNESS = 2,
     UNLIT = 3,
     UNLIT_SHADOW_ALPHA = 100,
+    OCCLUSION = 4,
 }
 
 enum CullMode: i32 {
@@ -325,10 +326,14 @@ interface UnlitShadowAlphaMaterial : Material {
 interface PBRMaterial: MetallicRoughnessMaterial, ShaderMaterial, UnlitMaterial, UnlitShadowAlphaMaterial {
 }
 
+interface OcclusionMaterial : Material {
+}
+
 union VariousMaterial {
     pbr: PBRMaterial;
     shader: ShaderMaterial;
     metaRough: MetallicRoughnessMaterial;
+    occlusion: OcclusionMaterial;
     base: Material;
 }
 
