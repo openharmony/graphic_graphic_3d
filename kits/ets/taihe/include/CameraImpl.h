@@ -74,6 +74,7 @@ public:
 
     ::SceneTypes::Mat4x4 getViewMatrix();
     ::SceneTypes::Mat4x4 getProjectionMatrix();
+
     std::shared_ptr<CameraETS> getInternalCamera() const
     {
         return cameraETS_;

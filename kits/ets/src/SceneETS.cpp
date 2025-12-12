@@ -328,11 +328,11 @@ std::shared_ptr<NodeETS> SceneETS::CloneNode(std::shared_ptr<NodeETS> node, std:
 
     if (SCENE_NS::INode::Ptr parentNode = parent->GetInternalNode()) {
         if (SCENE_NS::INode::Ptr n = node->GetInternalNode()) {
-            auto clone = n->Clone(name, parentNode).GetResult();
+            auto clone = n->Clone(name.c_str(), parentNode).GetResult();
             if (!clone) {
                 return nullptr;
             }
-            return std::make_shared<NodeETS>(node);
+            return std::make_shared<NodeETS>(clone);
         }
     }
     return nullptr;

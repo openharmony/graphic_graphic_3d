@@ -306,7 +306,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 ::SceneTypes::Mat4x4 CameraImpl::getViewMatrix()
 {
     if (cameraETS_) {
-        BASE_NS::Math::Mat4x4 viewMatrix =  cameraETS_->GetViewMatrix();
+        BASE_NS::Math::Mat4X4 viewMatrix =  cameraETS_->GetViewMatrix();
         return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[0]),
                                   ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[1]),
                                   ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[2]),
@@ -321,7 +321,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 ::SceneTypes::Mat4x4 CameraImpl::getProjectionMatrix()
 {
     if (cameraETS_) {
-        BASE_NS::Math::Mat4x4 projectionMatrix =  cameraETS_->GetProjectionMatrix();
+        BASE_NS::Math::Mat4X4 projectionMatrix =  cameraETS_->GetProjectionMatrix();
         return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[0]),
                                   ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[1]),
                                   ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[2]),
