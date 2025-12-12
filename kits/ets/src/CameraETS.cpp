@@ -340,6 +340,32 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
 }
 
+BASE_NS::Math::Mat4X4 CameraETS::GetViewMatrix()
+{
+    auto camera = camera_.lock();
+    if (!camera) {
+        return {};
+    }
+    auto cameraMatrixAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(camera);
+    if (!cameraMatrixAccessor) {
+        return {};
+    }
+    return cameraMatrixAccessor->GetViewMatrix();
+}
+
+BASE_NS::Math::Mat4X4 CameraETS::GetProjectionMatrix()
+{
+    auto camera = camera_.lock();
+    if (!camera) {
+        return {};
+    }
+    auto cameraMatrixAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(camera);
+    if (!cameraMatrixAccessor) {
+        return {};
+    }
+    return cameraMatrixAccessor->GetProjectionMatrix();
+}
+
 SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPipelineType &pipeline)
 {
     switch (pipeline) {

@@ -318,6 +318,26 @@ std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string &path)
     return rootNode->GetNodeByPath(realPath);
 }
 
+std::shared_ptr<NodeETS> SceneETS::CloneNode(std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent,
+    const std::string &name)
+{
+    if (!scene_ || !node || !parent) {
+        CORE_LOG_E("empty scene/node/parent");
+        return nullptr;
+    }
+
+    if (SCENE_NS::INode::Ptr parentNode = parent->GetInternalNode()) {
+        if (SCENE_NS::INode::Ptr n = node->GetInternalNode()) {
+            auto clone = n->Clone(name.c_str(), parentNode).GetResult();
+            if (!clone) {
+                return nullptr;
+            }
+            return std::make_shared<NodeETS>(clone);
+        }
+    }
+    return nullptr;
+}
+
 InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string &path)
 {
     if (!scene_) {

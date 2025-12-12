@@ -368,6 +368,47 @@ void SceneImpl::destroy()
     }
 }
 
+::SceneNodes::VariousNodesOrNull SceneImpl::cloneNode(
+    ::SceneNodes::weak::Node node, ::SceneNodes::weak::Node parent, ::taihe::string_view name)
+{
+    WIDGET_LOGI("SceneImpl::cloneNode");
+    if (!sceneETS_) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+
+    if (node.is_error()) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
+    if (!nodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
+    if (!nodeImpl) {
+        WIDGET_LOGE("Invalid node in importNode");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+
+    if (parent.is_error()) {
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    auto parentNodeOptional = static_cast<::SceneResources::weak::SceneResource>(parent)->getImpl();
+    if (!parentNodeOptional.has_value()) {
+        WIDGET_LOGE("invalid node in taihe object");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+    auto parentNodeImpl = reinterpret_cast<NodeImpl*>(parentNodeOptional.value());
+    if (!parentNodeImpl) {
+        WIDGET_LOGE("Invalid node in importNode");
+        return SceneNodes::VariousNodesOrNull::make_nValue();
+    }
+
+    std::shared_ptr<NodeETS> clone =
+        sceneETS_->CloneNode(nodeImpl->GetInternalNode(), parentNodeImpl->GetInternalNode(), std::string(name));
+    return NodeImpl::MakeVariousNodesOrNull(clone);
+}
+
 ::SceneTH::RenderConfiguration SceneImpl::getRenderConfiguration()
 {
     if (!sceneETS_) {

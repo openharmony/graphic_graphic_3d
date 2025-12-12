@@ -86,6 +86,8 @@ public:
 
     std::vector<std::shared_ptr<AnimationETS>> GetAnimations();
     std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
+    std::shared_ptr<NodeETS> CloneNode(std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent,
+        const std::string &name);
     InvokeReturn<std::shared_ptr<SceneComponentETS>> CreateComponent(std::shared_ptr<NodeETS> node,
         const std::string &name);
 

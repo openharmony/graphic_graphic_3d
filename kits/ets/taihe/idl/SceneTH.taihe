@@ -234,6 +234,8 @@ interface Scene {
 
     getComponent(node: Node, name: String): SceneComponentOrNull;
 
+    cloneNode(node: Node, parent: Node, name: String): VariousNodesOrNull;
+
     getSceneNative(): i64;
 
     @get getImpl(): Optional<i64>;
