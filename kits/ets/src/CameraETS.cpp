@@ -339,7 +339,7 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
 }
 
-BASE_NS::Math::Mat4x4 CameraETS::GetViewMatrix()
+BASE_NS::Math::Mat4X4 CameraETS::GetViewMatrix()
 {
     auto camera = camera_.lock();
     if (!camera) {
@@ -352,7 +352,7 @@ BASE_NS::Math::Mat4x4 CameraETS::GetViewMatrix()
     return cameraMatrixAccessor->GetViewMatrix();
 }
 
-BASE_NS::Math::Mat4x4 CameraETS::GetProjectionMatrix()
+BASE_NS::Math::Mat4X4 CameraETS::GetProjectionMatrix()
 {
     auto camera = camera_.lock();
     if (!camera) {

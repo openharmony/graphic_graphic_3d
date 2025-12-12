@@ -21,6 +21,7 @@
 
 #include "ColorImpl.h"
 #include "Vec3Impl.h"
+#include "Vec4Impl.h"
 
 #include "interop_js/arkts_interop_js_api.h"
 #include "interop_js/arkts_esvalue.h"
