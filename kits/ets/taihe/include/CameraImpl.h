@@ -72,6 +72,8 @@ public:
     ::SceneTypes::Vec3 worldToScreen(::SceneTypes::weak::Vec3 worldPosition);
     ::SceneTypes::Vec3 screenToWorld(::SceneTypes::weak::Vec3 viewPosition);
 
+    ::SceneTypes::Mat4x4 getViewMatrix();
+    ::SceneTypes::Mat4x4 getProjectionMatrix();
     std::shared_ptr<CameraETS> getInternalCamera() const
     {
         return cameraETS_;

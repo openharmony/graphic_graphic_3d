@@ -78,6 +78,9 @@ public:
 
     ::SceneTH::SceneComponentOrNull getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name);
 
+    ::SceneNodes::VariousNodesOrNull cloneNode(
+        ::SceneNodes::weak::Node node, ::SceneNodes::weak::Node parent, ::taihe::string_view name);
+
     ::SceneTH::RenderConfiguration getRenderConfiguration();
 
     int64_t getSceneNative();

@@ -62,7 +62,7 @@ export class NodeContainerProxy implements Container<Node> {
 @!namespace("SceneNodes")
 
 from SceneResources use SceneResource, Mesh, MeshResource, Morpher;
-from SceneTypes use Quaternion, Color, RenderingPipelineType, Vec2, Vec3;
+from SceneTypes use Quaternion, Color, RenderingPipelineType, Vec2, Vec3, Mat4x4;
 from ScenePostProcessSettings use PostProcessSettings;
 from SceneTH use RaycastParameters, RaycastResult, SceneNodeParameters;
 
@@ -258,6 +258,9 @@ interface Camera: Node {
 
     worldToScreen(worldPosition: Vec3): Vec3;
     screenToWorld(viewPosition: Vec3): Vec3;
+
+    getViewMatrix(): Mat4x4;
+    getProjectionMatrix(): Mat4x4;
 
     @!sts_inject_into_class("""
     get children(): Container<Node> {

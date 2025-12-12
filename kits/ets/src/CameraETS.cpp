@@ -314,7 +314,6 @@ BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3 &screen)
         return {};
     }
 }
-
 InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BASE_NS::Math::Vec2 &position,
     const std::shared_ptr<NodeETS> rootNode, const std::shared_ptr<NodeETS> layerMaskNode)
 {
@@ -338,6 +337,32 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
         return CameraETS::RaycastResult{nodePtr, nodeHit.distanceToCenter, nodeHit.position};
     });
     return InvokeReturn<std::vector<CameraETS::RaycastResult>>(result);
+}
+
+BASE_NS::Math::Mat4x4 CameraETS::GetViewMatrix()
+{
+    auto camera = camera_.lock();
+    if (!camera) {
+        return {};
+    }
+    auto cameraMatrixAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(camera);
+    if (!cameraMatrixAccessor) {
+        return {};
+    }
+    return cameraMatrixAccessor->GetViewMatrix();
+}
+
+BASE_NS::Math::Mat4x4 CameraETS::GetProjectionMatrix()
+{
+    auto camera = camera_.lock();
+    if (!camera) {
+        return {};
+    }
+    auto cameraMatrixAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(camera);
+    if (!cameraMatrixAccessor) {
+        return {};
+    }
+    return cameraMatrixAccessor->GetProjectionMatrix();
 }
 
 SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPipelineType &pipeline)

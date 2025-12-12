@@ -302,6 +302,36 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
     return taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(cameraETS_->ScreenToWorld(screen));
 }
 
+::SceneTypes::Mat4x4 CameraImpl::getViewMatrix()
+{
+    if (cameraETS_) {
+        BASE_NS::Math::Mat4x4 viewMatrix =  cameraETS_->GetViewMatrix();
+        return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[0]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[1]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[2]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[3])};
+    }
+    return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
+}
+
+::SceneTypes::Mat4x4 CameraImpl::getProjectionMatrix()
+{
+    if (cameraETS_) {
+        BASE_NS::Math::Mat4x4 projectionMatrix =  cameraETS_->GetProjectionMatrix();
+        return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[0]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[1]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[2]),
+                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[3])};
+    }
+    return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
+}
+
 ::SceneNodes::Camera cameraTransferStaticImpl(uintptr_t input)
 {
     WIDGET_LOGI("cameraTransferStaticImpl");

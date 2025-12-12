@@ -75,6 +75,9 @@ public:
     InvokeReturn<std::vector<CameraETS::RaycastResult>> Raycast(const BASE_NS::Math::Vec2 &position,
         const std::shared_ptr<NodeETS> rootNode = nullptr, const std::shared_ptr<NodeETS> layerMask = nullptr);
 
+    BASE_NS::Math::Mat4x4 GetViewMatrix();
+    BASE_NS::Math::Mat4x4 GetProjectionMatrix();
+
 private:
     inline SCENE_NS::CameraPipeline ToInternalType(const CameraETS::RenderingPipelineType &pipeline);
     inline CameraETS::RenderingPipelineType FromInternalType(const SCENE_NS::CameraPipeline &pipeline);
