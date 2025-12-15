@@ -192,6 +192,7 @@ ohos_source_set("widget_adapter_source") {
       "ipc:ipc_single",
       "napi:ace_napi",
       "qos_manager:qos",
+      "resource_schedule_service:ressched_client",
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
