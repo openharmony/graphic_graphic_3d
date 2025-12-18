@@ -275,14 +275,14 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * NOTE: when material shader is updated the possible material metadata and custom properties are updated
      * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
      */
-    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
+    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0,)
 
     /** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
      * Needs to match default material layouts and specializations (api/3d/shaders/common).
      * If no default slot given to shader default material shader slots are used automatically.
      * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
      */
-    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
+    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0,)
 
     /** Extra material rendering flags define special rendering hints */
     DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags",
@@ -347,7 +347,7 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
      * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
      */
     DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0,)
 
     /** Per material additional user property data which is passed to shader UBO.
      * Max size is 256 bytes.
@@ -360,7 +360,7 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 
     /** Render sorting for layers (sorting priority)
      */
-    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0, )
+    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0,)
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

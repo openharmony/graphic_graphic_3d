@@ -378,7 +378,7 @@ vec3 GetValFromSkyLUT(vec3 rayDir, vec3 sunDir, vec3 viewPos)
     float height = length(viewPos);
     vec3 up = viewPos / height;
 
-    float horizonAngle = safeacos(sqrt(height * height - GROUND_RADIUS_KM * GROUND_RADIUS_KM) / height);
+    float horizonAngle = Safeacos(sqrt(height * height - GROUND_RADIUS_KM * GROUND_RADIUS_KM) / height);
     // Negated to match our coordinate system
     float altitudeAngle = -(horizonAngle - acos(dot(rayDir, up)));
 

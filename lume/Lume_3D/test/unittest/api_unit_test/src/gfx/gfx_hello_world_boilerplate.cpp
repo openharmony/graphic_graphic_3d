@@ -62,8 +62,8 @@ void CreateCubeObjects(UTest::TestResources& res)
 
     const Math::Vec3 basePos = { 0.0f, 0.0f, -10.0f };
 
-    auto CreateCube = [&](const Math::Vec4 col, const Math::Vec3 pos, const bool sort, const uint8_t layer,
-                          const uint8_t order) {
+    auto createCube = [&res, &ecs, &shaderMgr, &em, &materialManager, &nodeSystem](const Math::Vec4 col,
+                          const Math::Vec3 pos, const bool sort, const uint8_t layer, const uint8_t order) {
         Entity materialEntity = em.Create();
         materialManager->Create(materialEntity);
         if (auto handle = materialManager->Write(materialEntity); handle) {
@@ -81,14 +81,14 @@ void CreateCubeObjects(UTest::TestResources& res)
         nodeSystem->GetNode(cubeEntity)->SetPosition(pos);
     };
     // sort to correct transparent order (final first)
-    CreateCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, 0.0f }, true, 63, 0);
-    CreateCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -1.0f }, true, 1, 0);
-    CreateCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -2.0f }, true, 0, 0);
+    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, 0.0f }, true, 63, 0); // 63: parm
+    createCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -1.0f }, true, 1, 0);
+    createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -2.0f }, true, 0, 0);
 
     // sort to wrong transparent order with center flip
-    CreateCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, 0.0f }, true, 32, 0);
-    CreateCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -1.0f }, true, 36, 0);
-    CreateCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -2.0f }, true, 36, 1);
+    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, 0.0f }, true, 32, 0); // 32: parm
+    createCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -1.0f }, true, 36, 0); // 36: parm
+    createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -2.0f }, true, 36, 1); // 36: parm
 }
 
 /*  Similar test case as we have the Hello world application
@@ -96,7 +96,7 @@ void CreateCubeObjects(UTest::TestResources& res)
     only n number of frames for validation.
     In addition has material render sorting.
 */
-void helloWorldTest(UTest::TestResources& res)
+void HelloWorldTest(UTest::TestResources& res)
 {
     auto& ecs = res.GetEcs();
     IEntityManager& em = ecs.GetEntityManager();

@@ -103,7 +103,7 @@ BEGIN_COMPONENT(ILightComponentManager, LightComponent)
 
     /** Rect area light parameters
      */
-    DEFINE_PROPERTY(RectLight, rectLight, "Area light parameters", 0, )
+    DEFINE_PROPERTY(RectLight, rectLight, "Area light parameters", 0,)
 
 END_COMPONENT(ILightComponentManager, LightComponent, "8047c9cd-4e83-45b3-91d9-dd32d643f0c8")
 #if !defined(IMPLEMENT_MANAGER)

@@ -103,7 +103,6 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
             const IRenderFrameUtil::CopyFlags copyFlags = IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE;
             rfUtil.CopyToCpu(outputImageHandle0, copyFlags);
             renderer.RenderFrame({});
-
         } else {
             if (needsRender) {
                 renderer.RenderFrame(res.GetGraphicsContext().GetRenderNodeGraphs(*ecs));
@@ -129,7 +128,7 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
         const char* backendName = res.GetDeviceBackendType() == DeviceBackendType::VULKAN ? "Vulkan" : "OpenGL";
         UTest::WritePng(BASE_NS::string(appDir + "/cloud" + backendName + ".png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4);
+            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4); // 4: parm
     }
 }
 
@@ -211,7 +210,7 @@ void CloudTest(UTest::TestResources& res)
             meshUtil.GeneratePlane(res.GetEcs(), "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10));
+            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(res.GetEcs(), reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {
@@ -280,17 +279,6 @@ void CloudTest(UTest::TestResources& res)
     auto* wcm = GetManager<IWeatherComponentManager>(ecs);
     wcm->Create(sceneRoot);
     if (auto handle = wcm->Write(sceneRoot)) {
-        // handle->lowFrequencyImage =
-        //     LoadImage(imageManager, "test://image/weather/LowFrequency.ktx", gpuResourceMgr, *handleManager);
-        // handle->highFrequencyImage =
-        //     LoadImage(imageManager, "test://image/weather/HighFrequency.ktx", gpuResourceMgr, *handleManager);
-        // handle->curlNoiseImage =
-        //     LoadImage(imageManager, "test://image/weather/curlNoise.png", gpuResourceMgr, *handleManager);
-        // handle->cirrusImage =
-        //     LoadImage(imageManager, "test://image/weather/cirrus.png", gpuResourceMgr, *handleManager);
-        // handle->weatherMapImage =
-        //     LoadImage(imageManager, "test://image/weather/weatherMap.png", gpuResourceMgr, *handleManager);
-
         // Temporary solution: Use only 2 of the required textures to reduce the size of test images
         handle->lowFrequencyImage =
             LoadImage(imageManager, "test://image/weather/HighFrequency.ktx", gpuResourceMgr, *handleManager, true);

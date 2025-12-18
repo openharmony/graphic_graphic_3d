@@ -32,7 +32,7 @@ BEGIN_COMPONENT(IDynamicEnvironmentBlenderComponentManager, DynamicEnvironmentBl
     /** Entities containing EnvironmentComponents that are pushed to camera buffers and can be blended.
      *  Controls indirect and environment lighting. Currently there is a limit of 4 blend environments.
      */
-    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, environments, "Environments", 0, )
+    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, environments, "Environments", 0,)
 
     /** Environment blend weights in a Vec4(Vector4).
      *  Each component of the vector decides weight in the total of 100% blend (for example vec4(0.25f, 0.75f, 0, 0)

@@ -104,7 +104,6 @@ void TickTest(
             const IRenderFrameUtil::CopyFlags copyFlags = IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE;
             rfUtil.CopyToCpu(outputImageHandle0, copyFlags);
             renderer.RenderFrame({});
-
         } else {
             if (needsRender) {
                 renderer.RenderFrame(gfxCtx.GetRenderNodeGraphs(ecs));
@@ -125,12 +124,6 @@ void TickTest(
             }
         }
     }
-
-    //  if (byteArray) {
-    //     const BASE_NS::string appDir = engine.GetFileManager().GetEntry("app://").name;
-    //     UTest::WritePng(BASE_NS::string(appDir + "/multiEcs.png").c_str(), WIDTH, HEIGHT, 4,
-    //         byteArray->GetData().data(), WIDTH * 4);
-    // }
 }
 
 vector<GLTFResourceData> MultiEcsTest(
@@ -200,7 +193,7 @@ vector<GLTFResourceData> MultiEcsTest(
         reflectionPlane = meshUtil.GeneratePlane(ecs, "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10));
+            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(ecs, reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {

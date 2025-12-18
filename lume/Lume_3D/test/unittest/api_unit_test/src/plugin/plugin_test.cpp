@@ -38,7 +38,7 @@ constexpr BASE_NS::Uid UNKNOWN_UID { "c0ffee00-600d-1234-1234-deadbeef0bad" };
 
 class TypeInfoListener final : public CORE_NS::IPluginRegister::ITypeInfoListener {
 public:
-    TypeInfoListener(CORE_NS::IPluginRegister& pluginRegister) : pluginRegister_(pluginRegister)
+    explicit TypeInfoListener(CORE_NS::IPluginRegister& pluginRegister) : pluginRegister_(pluginRegister)
     {
         pluginRegister.AddListener(*this);
     }

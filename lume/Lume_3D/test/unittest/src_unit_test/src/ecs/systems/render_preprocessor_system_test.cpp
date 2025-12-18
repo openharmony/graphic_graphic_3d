@@ -99,33 +99,6 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, RenderPreprocessorSystemTest, testing
 
     ecs->ProcessEvents();
     rpSystem->Update(true, 1u, 1u);
-
-    // NOTE: The disable bit is deprecated i.e. not in use at the moment
-
-    // Disable first submesh, bounding sphere should remain the same
-    // auto materialManager = GetManager<IMaterialComponentManager>(*ecs);
-    // if (auto materialHandle = materialManager->Write(additionalMaterial); materialHandle) {
-    //    materialHandle->extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISABLE_BIT;
-    //}
-    //
-    // ecs->ProcessEvents();
-    // rpSystem->Update(true, 2u, 1u);
-    //{
-    //    auto sphere = rpSystem->GetBoundingSphere();
-    //    EXPECT_EQ(0.0f, sphere.center.x);
-    //    EXPECT_EQ(0.0f, sphere.center.y);
-    //    EXPECT_EQ(0.0f, sphere.center.z);
-    //    EXPECT_GT(1.0f, sphere.radius);
-    //    EXPECT_LT(0.5f, sphere.radius);
-    //}
-    //
-    //// Disable both submeshes, bounding sphere radius should be 0 now
-    // if (auto materialHandle = materialManager->Write(materialEntity); materialHandle) {
-    //     materialHandle->extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISABLE_BIT;
-    // }
-    //
-    // ecs->ProcessEvents();
-    // rpSystem->Update(true, 3u, 1u);
 }
 
 /**
@@ -170,20 +143,6 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, MeshBatch, testing::ext::TestSize.Lev
     }
     ecs->ProcessEvents();
     ecs->Update(1u, 1u);
-    //{
-    //    auto sphere = rpSystem->GetBoundingSphere();
-    //    EXPECT_EQ(2.0f, sphere.center.x);
-    //    EXPECT_EQ(0.0f, sphere.center.y);
-    //    EXPECT_EQ(0.0f, sphere.center.z);
-    //    EXPECT_LT(2.0f, sphere.radius);
-    //    EXPECT_GT(2.5f, sphere.radius);
-    //}
-    // EXPECT_EQ(Math::Vec3(0.0f, -0.5f, -0.5f), rpSystem->GetRenderMeshAabb(cube).min);
-    // EXPECT_EQ(Math::Vec3(1.0f, 0.5f, 0.5f), rpSystem->GetRenderMeshAabb(cube).max);
-    // for (const auto& aabb : rpSystem->GetRenderMeshAabbs(cube)) {
-    //    EXPECT_EQ(Math::Vec3(0.0f, -0.5f, -0.5f), aabb.min);
-    //    EXPECT_EQ(Math::Vec3(1.0f, 0.5f, 0.5f), aabb.max);
-    //}
 
     const Entity cloneMaterial = CreateSolidColorMaterial(*ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f });
     IMaterialComponentManager* materialManager = GetManager<IMaterialComponentManager>(*ecs);
@@ -204,18 +163,4 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, MeshBatch, testing::ext::TestSize.Lev
 
     ecs->ProcessEvents();
     ecs->Update(2u, 1u);
-    //{
-    //    auto sphere = rpSystem->GetBoundingSphere();
-    //    EXPECT_EQ(1.5f, sphere.center.x);
-    //    EXPECT_EQ(0.0f, sphere.center.y);
-    //    EXPECT_EQ(0.0f, sphere.center.z);
-    //    EXPECT_LT(1.5f, sphere.radius);
-    //    EXPECT_GT(2.0f, sphere.radius);
-    //}
-    // EXPECT_EQ(Math::Vec3(3.0f, -0.5f, -0.5f), rpSystem->GetRenderMeshAabb(node->GetEntity()).min);
-    // EXPECT_EQ(Math::Vec3(4.0f, 0.5f, 0.5f), rpSystem->GetRenderMeshAabb(node->GetEntity()).max);
-    // for (const auto& aabb : rpSystem->GetRenderMeshAabbs(node->GetEntity())) {
-    //    EXPECT_EQ(Math::Vec3(3.0f, -0.5f, -0.5f), aabb.min);
-    //    EXPECT_EQ(Math::Vec3(4.0f, 0.5f, 0.5f), aabb.max);
-    //}
 }

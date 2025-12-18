@@ -18,7 +18,7 @@
 
 #include "common/atmosphere_lut.h"
 
-const int numScatteringSteps = 32;
+const int NUM_SCATTERING_STEPS = 32;
 
 vec3 GetValFromTransmittanceLUT(ivec2 bufferRes, vec3 pos, vec3 sunDir)
 {
@@ -46,7 +46,7 @@ vec3 GetValFromMultipleScatteringLUT(ivec2 bufferRes, vec3 pos, vec3 sunDir)
     float normalizedHeight = clamp((height - GROUND_RADIUS_KM) / (ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM), 0.0, 1.0);
 
     vec2 uv;
-    uv.x = clamp(0.5 + 0.5 * sunCosZenithAngle, 0.0, 1.0);
+    uv.x = clamp(0.5 + 0.5 * sunCosZenithAngle, 0.0, 1.0); // 0.5: parm
     uv.y = normalizedHeight;
 
     return texture(multipleScatteringLut, uv).rgb;
@@ -67,19 +67,20 @@ float GetSkyExposure(vec3 sunDir, float skyViewBrightness)
 vec3 RaymarchScattering(vec3 viewPos, vec3 rayDir, vec3 sunDir, int numSteps, const AtmosphericConfig atmosphericConfig)
 {
     // Calculate atmosphere and ground intersections
-    vec2 atmos_intercept = RayIntersectSphere2D(viewPos, rayDir, ATMOSPHERE_RADIUS_KM);
-    float terra_intercept = RayIntersectSphere(viewPos, rayDir, GROUND_RADIUS_KM);
+    vec2 atmosIntercept = RayIntersectSphere2D(viewPos, rayDir, ATMOSPHERE_RADIUS_KM);
+    float terraIntercept = RayIntersectSphere(viewPos, rayDir, GROUND_RADIUS_KM);
 
-    float mindist, maxdist;
+    float mindist;
+    float maxdist;
     bool hitGround = false;
 
     // Check if the ray intersects the atmosphere at all
-    if (atmos_intercept.x < atmos_intercept.y) {
+    if (atmosIntercept.x < atmosIntercept.y) {
         // there is an atmosphere intercept!
         // start at the closest atmosphere intercept
         // trace the distance between the closest and farthest intercept
-        mindist = atmos_intercept.x > 0.0 ? atmos_intercept.x : 0.0;
-        maxdist = atmos_intercept.y > 0.0 ? atmos_intercept.y : 0.0;
+        mindist = atmosIntercept.x > 0.0 ? atmosIntercept.x : 0.0;
+        maxdist = atmosIntercept.y > 0.0 ? atmosIntercept.y : 0.0;
     } else {
         // No atmosphere intercept means no atmosphere!
         return vec3(0.0);
@@ -92,8 +93,8 @@ vec3 RaymarchScattering(vec3 viewPos, vec3 rayDir, vec3 sunDir, int numSteps, co
 
     // if there's a terra intercept that's closer than the atmosphere one,
     // use that instead!
-    if (terra_intercept > 0.0) {
-        maxdist = terra_intercept; // confirm valid intercepts
+    if (terraIntercept > 0.0) {
+        maxdist = terraIntercept; // confirm valid intercepts
         hitGround = true;
     }
 

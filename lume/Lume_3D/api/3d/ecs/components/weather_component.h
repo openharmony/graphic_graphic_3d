@@ -158,17 +158,17 @@ BEGIN_COMPONENT(IWeatherComponentManager, WeatherComponent)
         PropertyFlags::IS_BITFIELD, 0U, WeatherComponent::CloudOptimizationFlagBits)
 
     /** lowFrequencyImage */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, lowFrequencyImage, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, lowFrequencyImage, "", 0,)
     /** highFrequencyImage */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, highFrequencyImage, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, highFrequencyImage, "", 0,)
     /** curlNoiseImage */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, curlNoiseImage, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, curlNoiseImage, "", 0,)
     /** cirrusImage */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, cirrusImage, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, cirrusImage, "", 0,)
     /** weatherMapImage */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, weatherMapImage, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, weatherMapImage, "", 0,)
 
-    DEFINE_PROPERTY(CORE_NS::Entity, directionalSun, "", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, directionalSun, "", 0,)
 
 END_COMPONENT(IWeatherComponentManager, WeatherComponent, "aeb22dc1-b7c7-4fbe-85bb-96668b9420fb")
 #if !defined(IMPLEMENT_MANAGER)

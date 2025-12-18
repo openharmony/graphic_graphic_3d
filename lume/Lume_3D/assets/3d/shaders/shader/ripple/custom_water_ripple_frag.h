@@ -13,6 +13,9 @@
  * limitations under the License.
  */
 
+#ifndef CUSTOM_WATER_RIPPLE_FRAG_H
+#define CUSTOM_WATER_RIPPLE_FRAG_H
+
 // includes
 
 #include "3d/shaders/common/3d_dm_indirect_lighting_common.h"
@@ -240,3 +243,5 @@ vec4 PlaneReflector(const vec2 fragUv)
 
     return vec4(color * baseColor.a, baseColor.a);
 }
+
+#endif // CUSTOM_WATER_RIPPLE_FRAG_H

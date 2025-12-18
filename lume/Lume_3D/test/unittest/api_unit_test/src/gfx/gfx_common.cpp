@@ -109,9 +109,6 @@ void TestResources::DestroyTestWindow()
 
 void TestResources::TakeImageData()
 {
-#if 0
-    engine_->CreateSwapchain(aSwapchainCreateInfo);
-#else
     GpuImageDesc imageDesc;
     imageDesc.width = windowWidth_;
     imageDesc.height = windowHeight_;
@@ -126,7 +123,7 @@ void TestResources::TakeImageData()
     imageHandle_ = renderContext_->GetDevice().GetGpuResourceManager().Create("TestOutputImage", imageDesc);
 
     GpuBufferDesc bufferDesc;
-    bufferDesc.byteSize = windowWidth_ * windowHeight_ * 4;
+    bufferDesc.byteSize = windowWidth_ * windowHeight_ * 4; // 4: parm
     bufferDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
     bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
     bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -147,7 +144,6 @@ void TestResources::TakeImageData()
         }
         byteArray_ = make_unique<ByteArray>(bufferDesc.byteSize);
     }
-#endif
 }
 
 void TestResources::SetBackendExtra(DeviceCreateInfo& deviceCreateInfo)
@@ -231,11 +227,12 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
             return;
         }
         surface_ = (uint64_t)surface;
-
     } else if (device.GetBackendType() == RENDER_NS::DeviceBackendType::OPENGL ||
                device.GetBackendType() == RENDER_NS::DeviceBackendType::OPENGLES) {
         EGLNativeWindowType window = ::Test::g_androidApp->GetWindowHandle();
-        EGLint COLOR_SPACE = 0, COLOR_SPACE_SRGB = 0, COLOR_SPACE_LINEAR = 0;
+        EGLint COLOR_SPACE = 0;
+        EGLint COLOR_SPACE_SRGB = 0;
+        EGLint COLOR_SPACE_LINEAR = 0;
 #if !defined(EGL_VERSION_1_5)
         // If EGL_KHR_create_context extension not defined in headers, so just define the values here.
         // (copied from khronos specifications)
@@ -253,7 +250,7 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
         EGLConfig config = data.config;
 
         bool hasSRGB = true;
-        if ((data.majorVersion > 1) || ((data.majorVersion == 1) && (data.minorVersion > 4))) {
+        if ((data.majorVersion > 1) || ((data.majorVersion == 1) && (data.minorVersion > 4))) { // 4: parm
             COLOR_SPACE = EGL_GL_COLORSPACE;
             COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB;
             COLOR_SPACE_LINEAR = EGL_GL_COLORSPACE_LINEAR;
@@ -366,10 +363,7 @@ void TestResources::TickTest(int frameCountToTick)
 {
     // Tick for 4 frames and collect imaging for comparison
     for (int i = 0; i < frameCountToTick; i++) {
-        // stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
         // We need modified or new rendernodegraph and possibly a buffer where to get the image write data.
-        // stbi_write_png("./test.png", 200, 200, 0, &data, 100);
-
         auto* ecs = ecs_.get();
         engine_->TickFrame(array_view(&ecs, 1));
 
@@ -392,9 +386,7 @@ void TestResources::TickTestAutoRng(int frameCountToTick)
 {
     // Tick for frameCountToTick frames and collect imaging for comparison
     for (int i = 0; i < frameCountToTick; i++) {
-        // stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
         // We need modified or new rendernodegraph and possibly a buffer where to get the image write data.
-        // stbi_write_png("./test.png", 200, 200, 0, &data, 100);
         auto* ecs = ecs_.get();
         engine_->TickFrame(array_view(&ecs, 1));
 

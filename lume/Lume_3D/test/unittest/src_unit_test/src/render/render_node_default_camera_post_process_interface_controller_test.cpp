@@ -132,7 +132,7 @@ void TickTest(UTest::TestContext* testContext, TestResources& tr, int32_t frameC
             }
         }
 
-        if (idx == 2) {
+        if (idx == 2) { // 2: parm
             auto& rdsMgr = testContext->renderContext->GetRenderDataStoreManager();
             auto dataStoreDataCopy = refcnt_ptr<IRenderDataStoreDefaultGpuResourceDataCopy>(
                 rdsMgr.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY));

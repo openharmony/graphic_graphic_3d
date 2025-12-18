@@ -853,10 +853,11 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
             const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
             const float range = uLightData.lights[currLightIdx].dir.w;
             const float attenuation = max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / (dist * dist);
+            const vec3 spec = vec3(0.05);
             // NOTE: could check for NoL > 0.0 and NoV > 0.0
-            color += CalculateRectAreaLight(
-                         currLightIdx, materialDiffuseBRDF, vec3(0.05), sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
-                     attenuation;
+            color +=
+                CalculateRectAreaLight(currLightIdx, materialDiffuseBRDF, spec, sd.N, sd.V, sd.pos.xyz, sd.alpha2) *
+                attenuation;
         }
     }
     return color;

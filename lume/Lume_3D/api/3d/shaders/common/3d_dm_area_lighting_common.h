@@ -32,7 +32,7 @@ float RectangleSolidAngle(vec3 p, vec3 v0, vec3 v1, vec3 v2, vec3 v3)
     float g2 = acos(dot(-n2, n3));
     float g3 = acos(dot(-n3, n0));
 
-    return g0 + g1 + g2 + g3 - 2. * M_PI;
+    return g0 + g1 + g2 + g3 - 2. * M_PI; // 2.: scale
 }
 
 float TracePlane(vec3 o, vec3 d, vec3 planeOrigin, vec3 planeNormal)
@@ -40,12 +40,12 @@ float TracePlane(vec3 o, vec3 d, vec3 planeOrigin, vec3 planeNormal)
     return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
 }
 
-float saturate(float x)
+float Saturate(float x)
 {
     return clamp(x, 0.0, 1.0);
 }
 
-float sqr(float x)
+float Sqr(float x)
 {
     return x * x;
 }
@@ -60,7 +60,6 @@ vec3 CalculateRectAreaLight(uint lightIdx, vec3 diff, vec3 spec, vec3 N, vec3 V,
     const vec3 rDir = mix(N, reflect(-V, N), 1 - alpha2);
 
     float faceCheck = dot(lPos - P, -lDir);
-
     if (faceCheck > 0.0) {
         return vec3(0.0, 0.0, 0.0);
     }
@@ -74,10 +73,10 @@ vec3 CalculateRectAreaLight(uint lightIdx, vec3 diff, vec3 spec, vec3 N, vec3 V,
     const float yLen = length(yDirHalf);
     const float sAngle = RectangleSolidAngle(P, v0, v1, v2, v3);
 
-    const float NoL = sAngle * 0.2 *
-                      (saturate(dot(normalize(v0 - P), N)) + saturate(dot(normalize(v1 - P), N)) +
-                          saturate(dot(normalize(v2 - P), N)) + saturate(dot(normalize(v3 - P), N)) +
-                          saturate(dot(normalize(lPos - P), N)));
+    const float noL = sAngle * 0.2 *
+                      (Saturate(dot(normalize(v0 - P), N)) + Saturate(dot(normalize(v1 - P), N)) +
+                          Saturate(dot(normalize(v2 - P), N)) + Saturate(dot(normalize(v3 - P), N)) +
+                          Saturate(dot(normalize(lPos - P), N)));
 
     const vec3 intPos = P + rDir * TracePlane(P, rDir, lPos, lDir);
     const vec3 intVec = intPos - lPos;
@@ -87,10 +86,10 @@ vec3 CalculateRectAreaLight(uint lightIdx, vec3 diff, vec3 spec, vec3 N, vec3 V,
     vec3 specularFactor = vec3(0, 0, 0);
     vec3 diffuseFactor = diff / M_PI;
 
-    float RoL = dot(rDir, lDir);
-    if (RoL > 0.0) {
-        float specFactor = 1.0 - clamp(length(nearRect - intDist) * sqr(1.0 - alpha2) * 32.0, 0.0, 1.0);
-        specularFactor += spec * specFactor * RoL * NoL;
+    float roL = dot(rDir, lDir);
+    if (roL > 0.0) {
+        float specFactor = 1.0 - clamp(length(nearRect - intDist) * Sqr(1.0 - alpha2) * 32.0, 0.0, 1.0);
+        specularFactor += spec * specFactor * roL * noL;
     }
 
     const float range = uLightData.lights[lightIdx].dir.w;

@@ -798,7 +798,7 @@ void RenderDataStoreDefaultMaterial::GetDefaultRenderSlots()
     if (bindlessEnabled_) {
         // add bindless opaque mask to fetch the opaque render slot meshes if in use
         materialRenderSlots_.opaqueMask |= (1ull << uint64_t(shaderMgr_.GetRenderSlotId(
-                                                DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE_BINDLESS)));
+            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE_BINDLESS)));
     }
 
     materialRenderSlots_.defaultTranslucentRenderSlot =
@@ -808,7 +808,7 @@ void RenderDataStoreDefaultMaterial::GetDefaultRenderSlots()
         // add bindless translucent mask to fetch the translucent render slot meshes if in use
         materialRenderSlots_.translucentMask |=
             (1ull << uint64_t(
-                 shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT_BINDLESS)));
+                shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT_BINDLESS)));
     }
 
     materialRenderSlots_.defaultDepthRenderSlot =
@@ -822,7 +822,7 @@ void RenderDataStoreDefaultMaterial::GetDefaultRenderSlots()
         materialRenderSlots_.depthMask |=
             (1ull << uint64_t(shaderMgr_.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_BINDLESS)));
         materialRenderSlots_.depthMask |= (1ull << uint64_t(shaderMgr_.GetRenderSlotId(
-                                               DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM_BINDLESS)));
+            DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH_VSM_BINDLESS)));
     }
 }
 
@@ -1506,7 +1506,7 @@ uint32_t RenderDataStoreDefaultMaterial::AddFrameSkinJointMatricesImpl(const uin
         return skinJointIndex;
     }
     if (auto pos = std::find_if(meshData_.frameSkinIndices.cbegin(), meshData_.frameSkinIndices.cend(),
-            [id](const pair<uint64_t, uint32_t> val) { return val.first == id; });
+        [id](const pair<uint64_t, uint32_t> val) { return val.first == id; });
         pos != meshData_.frameSkinIndices.cend()) {
         return pos->second;
     }

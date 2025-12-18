@@ -104,7 +104,7 @@ void AreaLightTest(UTest::TestResources& res)
             meshUtil.GeneratePlane(res.GetEcs(), "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10));
+            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(res.GetEcs(), reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {

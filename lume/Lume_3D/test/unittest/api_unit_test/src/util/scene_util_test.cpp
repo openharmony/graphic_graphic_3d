@@ -707,10 +707,6 @@ UNIT_TEST(API_SceneUtil, CloneMaterialWithCustomShader, testing::ext::TestSize.L
         auto materialManager = GetManager<IMaterialComponentManager>(*ecs2);
         materialManager->Create(materialEntity);
         if (auto scopedHandle = materialManager->Write(materialEntity)) {
-            // auto uri = "3dshaders://" + DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE;
-            // auto uriManager = GetManager<CORE3D_NS::IUriComponentManager>(*ecs2);
-            // auto renderHandleManager = GetManager<CORE3D_NS::IRenderHandleComponentManager>(*ecs2);
-            // auto resourceEntity = LookupResourceByUri(uri, *uriManager, *renderHandleManager);
             auto [shader, state] = CreateShader(*ecs2, *testContext->renderContext, "test://shader/test.shader");
             scopedHandle->materialShader.shader = shader;
             scopedHandle->materialShader.graphicsState = state;

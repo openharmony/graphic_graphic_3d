@@ -53,11 +53,11 @@ BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
 
     /** Reflection output render target.
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0,)
 
     /** Reflection pass depth render target.
      */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0, )
+    DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0,)
 
     /** Clip offset to reflection plane.
      */
@@ -76,7 +76,7 @@ BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
     /** Entity containing a PostProcessComponent that is applied to the rendered reflection. If not defined the
      * camera will use default CORE3D_POST_PROCESS_REFLECTION_CAM configuration.
      */
-    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0, )
+    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0,)
 
 END_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent, "5081ccf4-2013-43c1-b9bb-23041e73ac6d")
 #if !defined(IMPLEMENT_MANAGER)

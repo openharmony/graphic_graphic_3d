@@ -516,13 +516,14 @@ CompressionMode GetModeMeshoptCompression(
         // When mode is "TRIANGLES", count must be divisible by 3
         // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
         // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if ((count % 3U == 0) && ((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) {
+        if ((count % 3U == 0) && ((byteStride == 2) || (byteStride == 4)) && // 2: parm 4: parm
+            (filter == CompressionFilter::NONE)) {
             ret = CompressionMode::TRIANGLES;
         }
     } else if (mode == "INDICES") {
         // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
         // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if (((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) {
+        if (((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) { // 2: parm 4: parm
             ret = CompressionMode::INDICES;
         }
     }

@@ -159,7 +159,6 @@ void FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
 {
     const uint32_t renderSlotId = shaderMgr.GetRenderSlotId(srsi.renderSlot);
     const IShaderManager::RenderSlotData rsd = shaderMgr.GetRenderSlotData(renderSlotId);
-
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!rsd.shader) {
         CORE_LOG_W(
@@ -2262,7 +2261,6 @@ void RenderSystem::ProcessLight(const LightProcessData& lpd)
 
         const Math::Vec3 dir = Math::Normalize(light.dir);
         Math::Vec3 up = Math::Normalize(Math::Cross(dir, Math::Vec3(1.0f, 0.0f, 0.0f)));
-
         // Edge case, because dir can be paralell to (1, 0, 0).
         if (up.x == 0.0f && up.y == 0.0f && up.z == 0.0f) {
             up = Math::Vec3(0.0f, 1.0f, 0.0f);
@@ -2929,8 +2927,8 @@ void RenderSystem::HandleMaterialEvents() noexcept
         if (!materialDestroyedEvents_.empty()) {
             // filter out materials which were created/modified, but also destroyed.
             materialModifiedEvents_.erase(std::set_difference(materialModifiedEvents_.cbegin(),
-                                              materialModifiedEvents_.cend(), materialDestroyedEvents_.cbegin(),
-                                              materialDestroyedEvents_.cend(), materialModifiedEvents_.begin()),
+                materialModifiedEvents_.cend(), materialDestroyedEvents_.cbegin(),
+                materialDestroyedEvents_.cend(), materialModifiedEvents_.begin()),
                 materialModifiedEvents_.cend());
         }
         UpdateMaterialProperties();

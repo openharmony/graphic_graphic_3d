@@ -32,7 +32,7 @@ namespace HelloWorldBoilerplate {
     only n number of frames for validation.
     In addition has material render sorting.
 */
-void helloWorldTest(CORE3D_NS::UTest::TestResources& res);
+void HelloWorldTest(CORE3D_NS::UTest::TestResources& res);
 
 void GetPerformanceDataCounters(BASE_NS::string_view name, CORE_NS::IPerformanceDataManager::CounterPairView data);
 CORE_NS::IPerformanceDataManager::ComparisonData ComparePerformanceDataCounters(BASE_NS::string_view name,

@@ -57,11 +57,11 @@ public:
         BASE_NS::Math::Vec3 frustumB;
         float worldScale;
         BASE_NS::Math::Vec3 frustumC;
-        float _padding0;
+        float padding0;
         BASE_NS::Math::Vec3 frustumD;
-        float _padding1;
+        float padding1;
         BASE_NS::Math::Vec3 cameraPosition;
-        float _padding2;
+        float padding2;
         BASE_NS::Math::Vec3 rayleighScatteringBase;
         float mieAbsorptionBase;
         BASE_NS::Math::Vec3 ozoneAbsorptionBase;

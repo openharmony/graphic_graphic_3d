@@ -84,7 +84,6 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
             root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(), *gltf.data, result.data, ecs, {},
                 CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL);
             EXPECT_TRUE(EntityUtil::IsValid(root));
-            // TODO: render configuration is not related to root
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
         }
         return result;
@@ -361,10 +360,10 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
             if (auto samplerHandle = rhManager->Write(samplers[i]); samplerHandle) {
                 GpuSamplerDesc desc;
                 desc.magFilter = CORE_FILTER_LINEAR;
-                desc.mipMapMode = (i % 2 == 0) ? CORE_FILTER_NEAREST : CORE_FILTER_LINEAR;
-                desc.minFilter = (i < 2) ? CORE_FILTER_LINEAR : CORE_FILTER_NEAREST;
-                desc.addressModeU =
-                    (i % 2 == 0) ? CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : CORE_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+                desc.mipMapMode = (i % 2 == 0) ? CORE_FILTER_NEAREST : CORE_FILTER_LINEAR;   // 2: parm
+                desc.minFilter = (i < 2) ? CORE_FILTER_LINEAR : CORE_FILTER_NEAREST;         // 2: parm
+                desc.addressModeU = (i % 2 == 0) ? CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : // 2: parm
+                                        CORE_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
                 desc.addressModeV = CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
                 desc.addressModeW = CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
                 samplerHandle->reference = renderContext.GetDevice().GetGpuResourceManager().Create(desc);
@@ -430,12 +429,12 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
                     matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 1.0f };
 
-                    matHandle->textures[MaterialComponent::TextureIndex::AO].sampler = samplers[2];
+                    matHandle->textures[MaterialComponent::TextureIndex::AO].sampler = samplers[2]; // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::AO].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::AO].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
 
-                    matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplers[3];
+                    matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplers[3]; // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].sampler = samplers[0];
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].image = image;
@@ -443,11 +442,13 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
-                    matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].sampler = samplers[2];
+                    matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].sampler =
+                        samplers[2]; // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
-                    matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].sampler = samplers[3];
+                    matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].sampler =
+                        samplers[3]; // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
@@ -457,7 +458,8 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
                     matHandle->textures[MaterialComponent::TextureIndex::SPECULAR].sampler = samplers[1];
                     matHandle->textures[MaterialComponent::TextureIndex::SPECULAR].image = image;
-                    matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].sampler = samplers[2];
+                    matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].sampler =
+                        samplers[2]; // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].image = image;
 
                     matHandle->textures[MaterialComponent::TextureIndex::EMISSIVE].factor =
@@ -465,7 +467,7 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
 
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].transform.scale =
                         Math::Vec2 { 0.5f, 0.5f };
-                    matHandle->textures[MaterialComponent::TextureIndex::NORMAL].sampler = samplers[3];
+                    matHandle->textures[MaterialComponent::TextureIndex::NORMAL].sampler = samplers[3]; // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].factor =
                         Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };

@@ -7,5 +7,5 @@
 
 void main(void)
 {
-    cloudMain();
+    CloudMain();
 }

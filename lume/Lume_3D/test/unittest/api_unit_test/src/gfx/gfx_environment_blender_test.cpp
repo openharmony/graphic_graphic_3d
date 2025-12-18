@@ -64,7 +64,7 @@ Cubemaps CreateEnvironmentCubemaps(IGpuResourceManager& gpuResManager)
     cubeDesc.height = 1;
     cubeDesc.width = 1;
     cubeDesc.depth = 1;
-    cubeDesc.layerCount = 6;
+    cubeDesc.layerCount = 6; // 6: parm
     cubeDesc.createFlags = ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     cubeDesc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
     cubeDesc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
@@ -168,16 +168,16 @@ EntityReference EnvironmentBlenderTest(UTest::TestResources& res)
 
 void Validate(array_view<uint8_t> data)
 {
-    for (uint32_t i = 0; i < data.size(); i += 4) {
+    for (uint32_t i = 0; i < data.size(); i += 4) { // 4: offset
         uint8_t r = data[i + 0];
         uint8_t g = data[i + 1];
         uint8_t b = data[i + 2];
         uint8_t a = data[i + 3];
 
-        ASSERT_EQ(r, 186);
-        ASSERT_EQ(g, 186);
-        ASSERT_EQ(b, 186);
-        ASSERT_EQ(a, 255);
+        ASSERT_EQ(r, 186); // 186: parm
+        ASSERT_EQ(g, 186); // 186: parm
+        ASSERT_EQ(b, 186); // 186: parm
+        ASSERT_EQ(a, 255); // 255: parm
     }
 }
 } // namespace
