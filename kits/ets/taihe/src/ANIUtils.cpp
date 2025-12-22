@@ -16,6 +16,179 @@
 #include "ANIUtils.h"
 
 namespace OHOS::Render3D::KITETS {
+ani_object WrapDoubleAsObj(const ani_double value, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    static constexpr const char *className = "std.core.Double";
+    ani_class doubleCls {};
+    env->FindClass(className, &doubleCls);
+    ani_method ctor {};
+    env->Class_FindMethod(doubleCls, "<ctor>", "d:", &ctor);
+    ani_object obj {};
+    env->Object_New(doubleCls, ctor, &obj, static_cast<ani_double>(value));
+    return obj;
+}
+
+ani_double ParseObjToDouble(ani_object obj, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    ani_double value = 0.0;
+    env->Object_CallMethodByName_Double(obj, "toDouble", ":d", &value);
+    return value;
+}
+
+ani_object WrapIntAsObj(const ani_int value, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    static constexpr const char *className = "std.core.Int";
+    ani_class intCls {};
+    env->FindClass(className, &intCls);
+    ani_method ctor {};
+    env->Class_FindMethod(intCls, "<ctor>", "i:", &ctor);
+    ani_object obj {};
+    env->Object_New(intCls, ctor, &obj, static_cast<ani_int>(value));
+    return obj;
+}
+
+ani_int ParseObjToInt(ani_object obj, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    ani_int value = 0;
+    env->Object_CallMethodByName_Int(obj, "toInt", ":i", &value);
+    return value;
+}
+
+ani_object WrapBoolAsObj(const ani_boolean value, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    static constexpr const char *className = "std.core.Boolean";
+    ani_class boolCls {};
+    env->FindClass(className, &boolCls);
+    ani_method ctor {};
+    env->Class_FindMethod(boolCls, "<ctor>", "z:", &ctor);
+    ani_object obj {};
+    env->Object_New(boolCls, ctor, &obj, static_cast<ani_boolean>(value));
+    return obj;
+}
+
+ani_boolean ParseObjToBool(ani_object obj, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    ani_boolean value = ANI_FALSE;
+    env->Object_CallMethodByName_Boolean(obj, "toBoolean", ":z", &value);
+    return value;
+}
+
+ani_object WrapColorAsObj(::SceneTypes::Color color, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    
+    ani_object obj {};
+
+    ani_class colorCls {};
+    ani_status status = env->FindClass("graphics3d.SceneTypes._taihe_Color_inner", &colorCls);
+    if (status != ANI_OK) {
+        WIDGET_LOGE("find color class failed, status: %{public}d", status);
+        return obj;
+    }
+
+    ani_method initMethod {};
+    status = env->Class_FindMethod(colorCls, "<ctor>", "ll:", &initMethod);
+    if (status != ANI_OK) {
+        WIDGET_LOGE("find color init method failed, status: %{public}d", status);
+        return obj;
+    }
+
+    ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(color.m_handle.vtbl_ptr);
+    ani_long ani_data_ptr = reinterpret_cast<ani_long>(color.m_handle.data_ptr);
+    color.m_handle.data_ptr = nullptr;
+
+    status = env->Object_New(colorCls, initMethod, &obj, ani_vtbl_ptr, ani_data_ptr);
+    if (status != ANI_OK) {
+        WIDGET_LOGE("create new ani color failed, status: %{public}d", status);
+        return obj;
+    }
+    return obj;
+}
+
+BASE_NS::Color ParseObjToColor(ani_object obj, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+
+    ani_double r = 0.0;
+    ani_double g = 0.0;
+    ani_double b = 0.0;
+    ani_double a = 0.0;
+
+    env->Object_GetPropertyByName_Double(obj, "r", &r);
+    env->Object_GetPropertyByName_Double(obj, "g", &g);
+    env->Object_GetPropertyByName_Double(obj, "b", &b);
+    env->Object_GetPropertyByName_Double(obj, "a", &a);
+
+    BASE_NS::Color color = BASE_NS::Color(r, g, b, a);
+    return color;
+}
+
+AniObjectType HandleAniObject(ani_object obj, ani_env *env)
+{
+    if (env == nullptr) {
+        env = taihe::get_env();
+    }
+    ani_class intClass {};
+    env->FindClass("std.core.Int", &intClass);
+
+    ani_class doubleClass {};
+    env->FindClass("std.core.Double", &doubleClass);
+
+    ani_class boolClass {};
+    env->FindClass("std.core.Boolean", &boolClass);
+
+    ani_class colorClass {};
+    env->FindClass("graphics3d.SceneTypes.Color", &colorClass);
+
+    ani_boolean isInteger = ANI_FALSE;
+    env->Object_InstanceOf(obj, intClass, &isInteger);
+    if (isInteger) {
+        return AniObjectType::TYPE_INT;
+    }
+
+    ani_boolean isDouble = ANI_FALSE;
+    env->Object_InstanceOf(obj, doubleClass, &isDouble);
+    if (isDouble) {
+        return AniObjectType::TYPE_DOUBLE;
+    }
+
+    ani_boolean isBoolean = ANI_FALSE;
+    env->Object_InstanceOf(obj, boolClass, &isBoolean);
+    if (isBoolean) {
+        return AniObjectType::TYPE_BOOLEAN;
+    }
+
+    ani_boolean isColor = ANI_FALSE;
+    env->Object_InstanceOf(obj, colorClass, &isColor);
+    if (isColor) {
+        return AniObjectType::TYPE_COLOR;
+    }
+
+    return AniObjectType::TYPE_UNKNOWN;
+}
+
 std::string ResourceToString(ani_object ani_obj, ani_env *env)
 {
     static std::string GET_METHOD_SIGNATURE = "";
@@ -51,7 +224,6 @@ std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env)
 {
     std::string uriStr;
     if (!uri) {
-        WIDGET_LOGI("uri is empty");
         return uriStr;
     }
 

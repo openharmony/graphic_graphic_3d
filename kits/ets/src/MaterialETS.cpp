@@ -127,13 +127,7 @@ void MaterialETS::SetCullMode(MaterialETS::CullMode mode)
         CORE_LOG_E("set cull mode failed, invalid shader");
         return;
     }
-    SCENE_NS::CullModeFlags flags = SCENE_NS::CullModeFlags::NONE;
-    if (mode == CullMode::FRONT) {
-        flags = SCENE_NS::CullModeFlags::FRONT_BIT;
-    } else if (mode == CullMode::BACK) {
-        flags = SCENE_NS::CullModeFlags::BACK_BIT;
-    }
-    META_NS::SetValue(shader->CullMode(), flags);
+    META_NS::SetValue(shader->CullMode(), static_cast<SCENE_NS::CullModeFlags>(mode));
     // need to forcefully refresh the material, otherwise render will ignore the changes
     auto val = META_NS::GetValue(material_->MaterialShader());
     META_NS::SetValue(material_->MaterialShader(), val);

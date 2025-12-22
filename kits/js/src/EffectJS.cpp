@@ -228,7 +228,22 @@ napi_value EffectsContainerJS::RemoveChild(NapiApi::FunctionContext<NapiApi::Obj
 SCENE_NS::IEffect::Ptr EffectJS::CreateEffectInstance()
 {
     return interface_pointer_cast<SCENE_NS::IEffect>(META_NS::GetObjectRegistry().Create(SCENE_NS::ClassId::Effect));
- }
+}
+
+static inline napi_value CallSetProperty(napi_env env, napi_callback_info info)
+{
+    // Require PARTIAL arg count since we need 2 args (and only one is defined for FunctionContext), SetEffectProperty
+    // handles the second one at runtime.
+    NapiApi::FunctionContext<BASE_NS::string> fc(env, info, NapiApi::ArgCount::PARTIAL);
+    if (auto value = fc.RawThis()) {
+        EffectJS* me = nullptr;
+        napi_unwrap(env, value, (void**)&me);
+        if (me) {
+            return me->SetEffectProperty(fc);
+        }
+    }
+    return fc.GetUndefined();
+}
 
 void EffectJS::Init(napi_env env, napi_value exports)
 {
@@ -238,6 +253,10 @@ void EffectJS::Init(napi_env env, napi_value exports)
     props.push_back(GetSetProperty<bool, EffectJS, &EffectJS::GetEnabled, &EffectJS::SetEnabled>("enabled"));
     props.push_back(GetProperty<BASE_NS::string, EffectJS, &EffectJS::GetEffectId>("effectId"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, EffectJS, &EffectJS::Dispose>("destroy"));
+    props.push_back(Method<NapiApi::FunctionContext<BASE_NS::string>, EffectJS, &EffectJS::GetEffectProperty>(
+        "getPropertyValue"));
+    props.push_back(napi_property_descriptor {
+        "setPropertyValue", nullptr, CallSetProperty, nullptr, nullptr, nullptr, napi_default_method, nullptr });
 
     napi_value func;
     auto status = napi_define_class(env, "Effect", NAPI_AUTO_LENGTH, BaseObject::ctor<EffectJS>(),
@@ -371,4 +390,117 @@ void EffectJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& 
             }
         }
     }
+}
+
+napi_value EffectJS::GetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx)
+{
+    auto meJS = ctx.This();
+    if (!meJS) {
+        return ctx.GetNull();
+    }
+    BASE_NS::string propertyName = ctx.Arg<0>();
+    if (!meJS.Has(propertyName)) {
+        return ctx.GetNull();
+    }
+    auto env = meJS.GetEnv();
+    auto object = meJS.ToNapiValue();
+    napi_value currentValue = meJS.Get(propertyName);
+    napi_valuetype jstype;
+    napi_typeof(env, currentValue, &jstype);
+    if (jstype != napi_object) {
+        return currentValue;
+    }
+    // Value is an object, do a clone
+    NapiApi::Object result(env);
+    napi_value allProps;
+    if (napi_get_all_property_names(env, currentValue, napi_key_collection_mode::napi_key_own_only,
+            napi_key_filter::napi_key_all_properties, napi_key_conversion::napi_key_keep_numbers,
+            &allProps) == napi_ok) {
+        uint32_t len {};
+        napi_get_array_length(env, allProps, &len);
+        for (uint32_t i = 0; i < len; i++) {
+            napi_value key;
+            if (napi_get_element(env, allProps, i, &key) == napi_ok) {
+                napi_value value;
+                if (napi_get_property(env, currentValue, key, &value) == napi_ok) {
+                    napi_set_property(env, result.ToNapiValue(), key, value);
+                }
+            }
+        }
+    }
+    return result.ToNapiValue();
+}
+
+/// Checks that source object has all of the properties that reference object has and that the type of those properties
+/// matches the reference
+bool MatchType(napi_env env, napi_value source, napi_value reference)
+{
+    napi_value allProps;
+    // Get all properties from reference
+    if (napi_get_all_property_names(env, reference, napi_key_collection_mode::napi_key_own_only,
+            napi_key_filter::napi_key_all_properties, napi_key_conversion::napi_key_keep_numbers,
+            &allProps) == napi_ok) {
+        uint32_t len {};
+        napi_get_array_length(env, allProps, &len);
+        for (uint32_t i = 0; i < len; i++) {
+            napi_value key;
+            if (napi_get_element(env, allProps, i, &key) == napi_ok) {
+                napi_value sourceValue;
+                napi_value referenceValue;
+                // Source and reference object must both have the property
+                if (napi_get_property(env, source, key, &sourceValue) == napi_ok &&
+                    napi_get_property(env, reference, key, &referenceValue) == napi_ok) {
+                    napi_valuetype sourceType;
+                    napi_valuetype referenceType;
+                    napi_typeof(env, sourceValue, &sourceType);
+                    napi_typeof(env, referenceValue, &referenceType);
+                    // Type of the properties must match
+                    if (sourceType != referenceType) {
+                        // Type doesn't match -> fail
+                        return false;
+                    }
+                } else {
+                    // Did not find the property from source or reference -> fail
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+napi_value EffectJS::SetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx)
+{
+    bool success = false;
+    auto meJS = ctx.This();
+    if (meJS && ctx.ArgCount() > 1) {
+        BASE_NS::string propertyName = ctx.Arg<0>();
+        napi_value value = ctx.Value(1); // Take raw napi_value of the 'value' parameter
+        if (meJS.Has(propertyName)) {
+            auto env = meJS.GetEnv();
+            auto object = meJS.ToNapiValue();
+            // Get type of input value
+            napi_valuetype jstype;
+            napi_typeof(env, value, &jstype);
+
+            // Get type of the value in target property
+            napi_value currentValue;
+            napi_get_named_property(env, object, propertyName.c_str(), &currentValue);
+
+            // Get type of target property value
+            napi_valuetype currentjstype;
+            napi_typeof(env, currentValue, &currentjstype);
+
+            // Require that types match
+            if (jstype == currentjstype) {
+                if (jstype == napi_object) {
+                    if (!MatchType(env, value, currentValue)) {
+                        return ctx.GetBoolean(false);
+                    }
+                }
+                return ctx.GetBoolean(napi_set_named_property(env, object, propertyName.c_str(), value) == napi_ok);
+            }
+        }
+    }
+    return ctx.GetBoolean(false);
 }

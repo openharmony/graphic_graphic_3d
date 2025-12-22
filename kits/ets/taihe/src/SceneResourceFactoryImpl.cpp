@@ -19,6 +19,7 @@
 #include <base/util/color.h>
 
 #include "SceneResourceFactoryImpl.h"
+#include "EffectImpl.h"
 #include "OcclusionMaterialImpl.h"
 #include "PBRMaterialImpl.h"
 #include "ParamUtils.h"
@@ -206,6 +207,24 @@ namespace OHOS::Render3D::KITETS {
     } else {
         taihe::set_error(geom.error);
         return SceneNodes::Geometry({nullptr, nullptr});
+    }
+}
+
+::SceneResources::Effect SceneResourceFactoryImpl::createEffectSync(::SceneTH::EffectParameters const &params)
+{
+    if (!sceneETS_) {
+        taihe::set_error("Invalid scene");
+        return ::SceneResources::Effect({nullptr, nullptr});
+    }
+    std::string effectId = std::string(params.effectId);
+
+    InvokeReturn<std::shared_ptr<EffectETS>> effect = sceneETS_->CreateEffect(effectId.c_str());
+
+    if (effect.error.empty()) {
+        return taihe::make_holder<EffectImpl, ::SceneResources::Effect>(effect.value);
+    } else {
+        taihe::set_error(effect.error);
+        return ::SceneResources::Effect({nullptr, nullptr});
     }
 }
 

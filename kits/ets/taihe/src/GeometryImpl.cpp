@@ -43,7 +43,7 @@ GeometryImpl::~GeometryImpl()
             taihe::make_holder<MorpherImpl, SceneResources::Morpher>(geometryETS_->GetMorpher());
         return taihe::optional<SceneResources::Morpher>(std::in_place, m);
     } else {
-        return taihe::optional<SceneResources::Morpher>(std::nullopt);
+        return std::nullopt;
     }
 }
 }  // namespace OHOS::Render3D::KITETS

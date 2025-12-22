@@ -449,6 +449,27 @@ InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(const std::s
     }
 }
 
+InvokeReturn<std::shared_ptr<EffectETS>> SceneETS::CreateEffect(BASE_NS::string_view effectId)
+{
+    if (!scene_) {
+        return InvokeReturn<std::shared_ptr<EffectETS>>(nullptr, "Invalid scene");
+    }
+
+    if (!BASE_NS::IsUidString(effectId)) {
+        return InvokeReturn<std::shared_ptr<EffectETS>>(nullptr, "Invalid effect id");
+    }
+
+    if (auto effectClassId = BASE_NS::StringToUid(effectId); effectClassId != BASE_NS::Uid {}) {
+        const auto effect =
+            interface_pointer_cast<SCENE_NS::IEffect>(META_NS::GetObjectRegistry().Create(SCENE_NS::ClassId::Effect));
+        if (!(effect && effect->InitializeEffect(scene_, effectClassId).GetResult())) {
+            return InvokeReturn<std::shared_ptr<EffectETS>>(nullptr, "Failed to instantiate Effect");
+        }
+        return InvokeReturn(std::make_shared<EffectETS>(effect));
+    }
+    return InvokeReturn<std::shared_ptr<EffectETS>>(nullptr, "Effect creation failed");
+}
+
 InvokeReturn<std::shared_ptr<EnvironmentETS>> SceneETS::CreateEnvironment(
     const std::string &name, const std::string &uri)
 {

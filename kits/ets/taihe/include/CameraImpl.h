@@ -66,6 +66,8 @@ public:
     ::taihe::optional<::SceneTypes::RenderingPipelineType> getRenderingPipeline();
     void setRenderingPipeline(::taihe::optional_view<::SceneTypes::RenderingPipelineType> renderingPipeline);
 
+    ::SceneNodes::EffectsContainer getEffectsContainer();
+
     ::taihe::array<::SceneTH::RaycastResult> raycastSync(
         ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const &params);
 

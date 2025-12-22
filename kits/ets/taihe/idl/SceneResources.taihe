@@ -17,6 +17,7 @@
 import { ResourceStr } from 'arkui.component.units';
 import { RecordIterator } from './RecordProxy';
 import { Callback } from '@ohos.base';
+import { Color } from './SceneTypes';
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
 
@@ -115,7 +116,7 @@ class MorpherRecord extends Record<string, double> {
 
 @!namespace("SceneResources")
 
-from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType, Quaternion;
+from SceneTypes use Vec2, Vec3, Vec4, Aabb, GeometryDefinition, GeometryDefinitionType, Quaternion, Color;
 from SceneTH use SceneResourceParameters;
 
 enum SceneResourceType: i32 {
@@ -128,6 +129,7 @@ enum SceneResourceType: i32 {
     SHADER = 6,
     IMAGE = 7,
     MESH_RESOURCE = 8,
+    EFFECT = 9,
 }
 
 interface SceneResource {
@@ -459,6 +461,27 @@ interface Environment : SceneResource {
 interface Image : SceneResource {
     @get getWidth(): i32;
     @get getHeight(): i32;
+}
+
+union EffectPropertyOutputValue {
+    t_obj: Opaque;
+    @undefined uValue;
+    @null nValue;
+}
+
+union EffectPropertyInputValue {
+    t_obj: Opaque;
+    @undefined uValue;
+}
+
+interface Effect : SceneResource {
+    @get getEnabled(): bool;
+    @set setEnabled(enabled: bool): void;
+
+    @get getEffectId(): String;
+
+    getPropertyValue(key: String): EffectPropertyOutputValue;
+    setPropertyValue(key: String, value: EffectPropertyInputValue): bool;
 }
 
 union ShaderInputType {
