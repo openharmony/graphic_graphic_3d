@@ -69,6 +69,8 @@ public:
     CameraETS::RenderingPipelineType GetRenderingPipeline();
     void SetRenderingPipeline(const RenderingPipelineType pipeline);
 
+    META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> GetEffectsContainer();
+
     BASE_NS::Math::Vec3 WorldToScreen(const BASE_NS::Math::Vec3 &world);
     BASE_NS::Math::Vec3 ScreenToWorld(const BASE_NS::Math::Vec3 &screen);
 

@@ -297,6 +297,15 @@ void CameraETS::SetRenderingPipeline(const RenderingPipelineType pipeline)
     camera->RenderingPipeline()->SetValue(ToInternalType(pipeline));
 }
 
+META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> CameraETS::GetEffectsContainer()
+{
+    META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> effects;
+    if (auto cameraEffect = interface_pointer_cast<SCENE_NS::ICameraEffect>(camera_)) {
+        effects = cameraEffect->Effects();
+    }
+    return effects;
+}
+
 BASE_NS::Math::Vec3 CameraETS::WorldToScreen(const BASE_NS::Math::Vec3 &world)
 {
     if (auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_)) {

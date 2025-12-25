@@ -56,6 +56,8 @@ public:
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
     napi_value GetEffectId(NapiApi::FunctionContext<>& ctx);
 
+    napi_value GetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx);
+    napi_value SetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx);
 private:
     SCENE_NS::IEffect::Ptr GetEffect(NapiApi::Object o) const;
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);

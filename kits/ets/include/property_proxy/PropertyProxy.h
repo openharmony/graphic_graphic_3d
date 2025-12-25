@@ -131,50 +131,51 @@ std::string GetTypeName()
 }
 
 template <typename Type>
-void ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, const std::string &key)
+bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, const std::string &key)
 {
     if (!proxy) {
         CORE_LOG_E("set proxy failed, proxy doesn't exist");
-        return;
+        return false;
     }
     META_NS::IProperty::Ptr prop = proxy->GetPropertyPtr();
     if (!prop) {
         CORE_LOG_E("set prop failed, prop is invalid");
-        return;
+        return false;
     }
 
     if (META_NS::IsCompatibleWith<Type>(prop)) {
         static_pointer_cast<PropertyProxy<Type>>(proxy)->SetValue(value);
-        return;
+        return true;
     }
     if constexpr (std::is_same_v<Type, int32_t> || std::is_same_v<Type, float>) {
         if (META_NS::IsCompatibleWith<float>(prop)) {
             static_pointer_cast<PropertyProxy<float>>(proxy)->SetValue(static_cast<float>(value));
             CORE_LOG_W("property [%s] has type [float], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
-            return;
+            return true;
         } else if (META_NS::IsCompatibleWith<int32_t>(prop)) {
             static_pointer_cast<PropertyProxy<int32_t>>(proxy)->SetValue(static_cast<int32_t>(value));
             CORE_LOG_W("property [%s] has type [int32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
-            return;
+            return true;
         } else if (META_NS::IsCompatibleWith<uint32_t>(prop)) {
             static_pointer_cast<PropertyProxy<uint32_t>>(proxy)->SetValue(
                 static_cast<uint32_t>(static_cast<int32_t>(value)));
             CORE_LOG_W("property [%s] has type [uint32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
-            return;
+            return true;
         } else if (META_NS::IsCompatibleWith<int64_t>(prop)) {
             static_pointer_cast<PropertyProxy<int64_t>>(proxy)->SetValue(static_cast<int64_t>(value));
             CORE_LOG_W("property [%s] has type [int64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
-            return;
+            return true;
         } else if (META_NS::IsCompatibleWith<uint64_t>(prop)) {
             static_pointer_cast<PropertyProxy<uint64_t>>(proxy)->SetValue(
                 static_cast<uint64_t>(static_cast<int64_t>(value)));
             CORE_LOG_W("property [%s] has type [uint64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
-            return;
+            return true;
         }
     }
     auto any = META_NS::GetInternalAny(prop);
     CORE_LOG_E("property [%s] has type [%s], but get [%s]", key.c_str(),
                any ? any->GetTypeIdString().c_str() : "<Unknown>", GetTypeName<Type>().c_str());
+    return false;
 }
 
 template <typename Type>

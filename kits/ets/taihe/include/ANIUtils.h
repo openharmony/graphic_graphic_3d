@@ -31,6 +31,14 @@
 #include "SceneETS.h"
 
 namespace OHOS::Render3D::KITETS {
+enum AniObjectType {
+    TYPE_INT = 0,
+    TYPE_DOUBLE = 1,
+    TYPE_BOOLEAN = 2,
+    TYPE_COLOR = 3,
+    TYPE_UNKNOWN = -1
+};
+
 /**
  * Determine whether the actual type of ResourceStr is String
  */
@@ -74,6 +82,24 @@ inline ani_string ToANIString(std::string str, ani_env *env = nullptr)
     }
     return result_string;
 }
+
+ani_object WrapDoubleAsObj(const ani_double value, ani_env *env = nullptr);
+
+ani_double ParseObjToDouble(ani_object obj, ani_env *env = nullptr);
+
+ani_object WrapIntAsObj(const ani_int value, ani_env *env = nullptr);
+
+ani_int ParseObjToInt(ani_object obj, ani_env *env = nullptr);
+
+ani_object WrapBoolAsObj(const ani_boolean value, ani_env *env = nullptr);
+
+ani_boolean ParseObjToBool(ani_object obj, ani_env *env = nullptr);
+
+ani_object WrapColorAsObj(::SceneTypes::Color value, ani_env *env = nullptr);
+
+BASE_NS::Color ParseObjToColor(ani_object obj, ani_env *env = nullptr);
+
+AniObjectType HandleAniObject(ani_object obj, ani_env *env = nullptr);
 
 std::string ResourceToString(ani_object ani_obj, ani_env *env = nullptr);
 

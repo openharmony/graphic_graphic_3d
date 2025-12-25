@@ -73,6 +73,8 @@ public:
     ::SceneNodes::Geometry createGeometrySync(
         ::SceneTH::SceneNodeParameters const &params, ::SceneResources::weak::MeshResource mesh);
 
+    ::SceneResources::Effect createEffectSync(::SceneTH::EffectParameters const &params);
+
     ::taihe::optional<int64_t> getImpl()
     {
         return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));

@@ -61,6 +61,41 @@ void SceneComponentETS::SetName(const std::string& name)
     name_ = name;
 }
 
+using GenericComponentMapping = BASE_NS::unordered_map<BASE_NS::string_view, BASE_NS::vector<BASE_NS::string_view>>;
+
+const GenericComponentMapping& GetComponentMapping()
+{
+    static const GenericComponentMapping map = []() {
+        GenericComponentMapping m;
+        m["RenderConfigurationComponent"] = { "shadowType", "shadowQuality", "shadowSmoothness", "renderingFlags" };
+        return m;
+    }();
+    return map;
+}
+
+bool ShouldExpose(BASE_NS::string_view componentName, BASE_NS::string_view propertyName)
+{
+    // Weather system uses mixed casing, we cannot exclude properties based on first char
+    if (componentName == "WeatherEffectComponent") {
+        return true;
+    }
+
+    if (!propertyName.empty() && std::isupper(propertyName[0])) {
+        // Some specific component wrappers in LumeScene expose ECS properties as LumeScene
+        // level properties (whose name starts with an upper case letter). Do not expose those
+        // to JS.
+        return false;
+    }
+
+    const auto& map = GetComponentMapping();
+    auto it = map.find(componentName);
+    if (it == map.end()) {
+        return true; // No mapping defined, expose all
+    }
+    const auto& mapping = it->second;
+    return std::find(mapping.begin(), mapping.end(), propertyName) != mapping.end();
+}
+
 void SceneComponentETS::AddProperties()
 {
     auto compoment = comp_.lock();
@@ -71,10 +106,19 @@ void SceneComponentETS::AddProperties()
     compoment->PopulateAllProperties();
     keys_.clear();
     proxies_.clear();
-
+    BASE_NS::string componentName;
+    if (auto o = interface_cast<META_NS::IObject>(compoment)) {
+        componentName = o->GetName();
+    }
     for (auto&& p : meta->GetProperties()) {
-        if (auto proxy = PropertyToProxy(p)) {
-            proxies_.insert_or_assign(SCENE_NS::PropertyName(p->GetName()).data(), std::move(proxy));
+        if (!p) {
+            continue;
+        }
+        const auto name = SCENE_NS::PropertyName(p->GetName());
+        if (ShouldExpose(componentName, name)) {
+            if (auto proxy = PropertyToProxy(p)) {
+                proxies_.insert_or_assign(SCENE_NS::PropertyName(p->GetName()).data(), std::move(proxy));
+            }
         }
     }
     keys_.reserve(proxies_.size());

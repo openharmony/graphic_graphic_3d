@@ -15,6 +15,7 @@
 
 @!sts_inject("""
 import { ResourceStr } from 'arkui.component.units';
+import { Effect } from './SceneResources';
 // Ensure that libscene_ani is loaded.
 loadLibrary('scene_ani.z');
 
@@ -57,11 +58,42 @@ export class NodeContainerProxy implements Container<Node> {
         return this.nc.count();
     }
 }
+
+export class EffectsContainerProxy implements Container<Effect> {
+    private ec: EffectsContainer;
+    constructor(ec: EffectsContainer) {
+        this.ec = ec;
+    }
+
+    append(item: Effect): void {
+        this.ec.append(item);
+    }
+
+    insertAfter(item: Effect, sibling: Effect | null): void {
+        this.ec.insertAfter(item, sibling);
+    }
+
+    remove(item: Effect): void {
+        this.ec.remove(item);
+    }
+
+    get(index: int): Effect | null {
+        return this.ec.get(index);
+    }
+
+    clear(): void {
+        this.ec.clear();
+    }
+
+    count(): int {
+        return this.ec.count();
+    }
+}
 """)
 
 @!namespace("SceneNodes")
 
-from SceneResources use SceneResource, Mesh, MeshResource, Morpher;
+from SceneResources use SceneResource, Mesh, MeshResource, Morpher, Effect;
 from SceneTypes use Quaternion, Color, RenderingPipelineType, Vec2, Vec3, Mat4x4;
 from ScenePostProcessSettings use PostProcessSettings;
 from SceneTH use RaycastParameters, RaycastResult, SceneNodeParameters;
@@ -87,6 +119,20 @@ interface NodeContainer {
     remove(item: Node): void;
 
     get(index: i32): VariousNodesOrNull;
+
+    clear(): void;
+
+    count(): i32;
+}
+
+interface EffectsContainer {
+    append(item: Effect): void;
+
+    insertAfter(item: Effect, sibling: EffectOrNull): void;
+
+    remove(item: Effect): void;
+
+    get(index: i32): EffectOrNull;
 
     clear(): void;
 
@@ -131,6 +177,11 @@ interface Node: SceneResource {
 
 union NodeOrNull {
     node: Node;
+    @null nValue;
+}
+
+union EffectOrNull {
+    effect: Effect;
     @null nValue;
 }
 
@@ -243,6 +294,18 @@ interface Camera: Node {
 
     @get getPostProcess(): PostProcessSettingsOrNull;
     @set setPostProcess(process: PostProcessSettingsOrNull): void;
+
+    @!sts_inject_into_interface("""
+    get effects(): Container<Effect>;
+    """)
+
+    @!sts_inject_into_class("""
+    get effects(): Container<Effect> {
+        return new EffectsContainerProxy(this.getEffectsContainer()) as Container<Effect>;
+    }
+    """)
+
+    getEffectsContainer(): EffectsContainer;
 
     @get getClearColor(): ColorOrNull;
     @set setClearColor(color: ColorOrNull): void;

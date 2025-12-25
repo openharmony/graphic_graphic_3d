@@ -31,6 +31,7 @@
 
 #include "AnimationETS.h"
 #include "CameraETS.h"
+#include "EffectETS.h"
 #include "EnvironmentETS.h"
 #include "GeometryETS.h"
 #include "LightETS.h"
@@ -71,6 +72,7 @@ public:
         const std::string &name, const std::string &path, LightETS::LightType lightType);
     InvokeReturn<std::shared_ptr<MaterialETS>> CreateMaterial(
         const std::string &name, const std::string &uri, const MaterialETS::MaterialType &materialType);
+    InvokeReturn<std::shared_ptr<EffectETS>> CreateEffect(BASE_NS::string_view effectId);
     InvokeReturn<std::shared_ptr<RenderConfigurationETS>> CreateRenderConfiguration(
         SCENE_NS::IRenderConfiguration::Ptr &rc);
 

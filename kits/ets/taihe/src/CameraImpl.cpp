@@ -20,6 +20,7 @@
 #endif
 
 #include "ColorImpl.h"
+#include "EffectImpl.h"
 #include "Vec3Impl.h"
 #include "Vec4Impl.h"
 
@@ -243,6 +244,12 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
         }
         cameraETS_->SetRenderingPipeline((CameraETS::RenderingPipelineType)type.get_value());
     }
+}
+
+::SceneNodes::EffectsContainer CameraImpl::getEffectsContainer()
+{
+    return taihe::make_holder<EffectsContainerImpl, ::SceneNodes::EffectsContainer>(
+        std::make_shared<EffectsContainerETS>(cameraETS_->GetEffectsContainer()));
 }
 
 ::taihe::array<::SceneTH::RaycastResult> CameraImpl::raycastSync(::SceneTypes::weak::Vec2 viewPosition,

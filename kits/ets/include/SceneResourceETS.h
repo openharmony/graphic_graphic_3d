@@ -61,6 +61,10 @@ public:
          * The resource is a MeshResource.
          */
         MESH_RESOURCE = 8,
+        /**
+         * The resource is an Effect.
+         */
+        EFFECT = 9,
     };
 
     explicit SceneResourceETS(SceneResourceType type);
