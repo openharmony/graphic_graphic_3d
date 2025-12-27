@@ -361,7 +361,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
             gpuResourceMgr.GetImageHandles(imageInfo, blImageHandles_);
             gpuResourceMgr.GetSamplerHandles(samplerInfo, blSamplerHandles_);
 
-            auto FillAndResizeWithDefaults = [](const uint32_t currCount, const RenderHandle defHandle, auto& vec) {
+            auto fillAndResizeWithDefaults = [](const uint32_t currCount, const RenderHandle defHandle, auto& vec) {
                 const uint32_t validCount = static_cast<uint32_t>(vec.size());
                 // resize and add default resources
                 if (validCount < currCount) {
@@ -369,8 +369,8 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
                 }
             };
 
-            FillAndResizeWithDefaults(currImageCount, defaultMaterialStruct_.resources[0U].handle, blImageHandles_);
-            FillAndResizeWithDefaults(
+            fillAndResizeWithDefaults(currImageCount, defaultMaterialStruct_.resources[0U].handle, blImageHandles_);
+            fillAndResizeWithDefaults(
                 currSamplerCount, defaultMaterialStruct_.resources[0U].samplerHandle, blSamplerHandles_);
 
             if (auto* binder = globalDescs_.dmSet2Binder.get(); binder) {
@@ -394,7 +394,6 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
                     MaterialHandleStruct& storedMatHandles = globalDescs_.materials[idx];
                     const bool updateDescSet = UpdateCurrentMaterialHandles(
                         gpuResourceMgr, globalDescs_.forceUpdate, defaultMaterialStruct_, matHandles, storedMatHandles);
-
                     if (globalDescs_.forceUpdate || updateDescSet) {
                         uint32_t bindingIdx = 0u;
                         // base color is bound separately to support automatic hwbuffer/OES shader modification
@@ -558,7 +557,6 @@ void RenderNodeDefaultMaterialObjects::ProcessGlobalBinders()
                 us + DefaultMaterialMaterialConstants::MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME, bindings);
             globalDescs_.dmSet2Binder = dsMgr.CreateDescriptorSetBinder(globalDescs_.dmSet2.GetHandle(), bindings);
         }
-
     } else if (!globalDescs_.dmSet2Binder) {
         const string_view us = stores_.dataStoreNameScene;
         INodeContextDescriptorSetManager& dsMgr = renderNodeContextMgr_->GetDescriptorSetManager();

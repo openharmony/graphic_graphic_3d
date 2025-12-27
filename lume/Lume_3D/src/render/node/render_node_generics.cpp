@@ -134,7 +134,6 @@ void RenderNodeMixin::RecreateImages(
     }
     auto& gpuResourceManager = renderNodeContextMgr->GetGpuResourceManager();
     auto descCurr = gpuResourceManager.GetImageDescriptor(handle.GetHandle());
-
     if (int(descCurr.width) != size.w || int(descCurr.height) != size.h) {
         desc.width = uint32_t(size.w);
         desc.height = uint32_t(size.h);

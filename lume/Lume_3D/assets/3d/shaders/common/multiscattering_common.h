@@ -23,7 +23,7 @@ const float UINT_TO_FLOAT_SCALE = 1.0 / (1u << 24);
 
 uint FloatToScaledUint(float value)
 {
-    return uint(clamp(value * float(FLOAT_TO_UINT_SCALE), 0.0, float(1u << 31)));
+    return uint(clamp(value * float(FLOAT_TO_UINT_SCALE), 0.0, float(1u << 31))); // 31: offset
 }
 
 float ScaledUintToFloat(uint value)
@@ -65,7 +65,7 @@ void GetMulScattValues(vec3 pos, vec3 sunDir, inout vec3 currentThreadLum, inout
         int j = k % SQRT_SAMPLES;
 
         float theta = M_PI * (float(i) + 0.5) / float(SQRT_SAMPLES);
-        float phi = safeacos(1.0 - 2.0 * (float(j) + 0.5) / float(SQRT_SAMPLES));
+        float phi = Safeacos(1.0 - 2.0 * (float(j) + 0.5) / float(SQRT_SAMPLES));
         vec3 rayDir = GetSphericalDir(theta, phi);
 
         float atmoDist = RayIntersectSphere(pos, rayDir, ATMOSPHERE_RADIUS_KM);

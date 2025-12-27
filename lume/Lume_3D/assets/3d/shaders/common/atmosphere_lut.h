@@ -40,7 +40,7 @@ struct AtmosphericConfig {
     float skyViewBrightness;
 };
 
-float safeacos(const float x)
+float Safeacos(const float x)
 {
     return acos(clamp(x, -1.0, 1.0));
 }
@@ -97,7 +97,7 @@ vec2 RayIntersectSphere2D(vec3 start, vec3 dir, float radius)
     if (d < 0.0) {
         return vec2(1e5, -1e5);
     }
-    return vec2((-b - sqrt(d)) / (2.0 * a), (-b + sqrt(d)) / (2.0 * a));
+    return vec2((-b - sqrt(d)) / (2.0 * a), (-b + sqrt(d)) / (2.0 * a)); // 2.0: scale
 }
 
 vec3 GetSphericalDir(float theta, float phi)
@@ -130,22 +130,22 @@ float GetRayleighPhase(float cosTheta)
 // This provides better sampling near the horizon
 void GetRMuFromTransmittanceTextureUv(vec2 uv, out float r, out float mu)
 {
-    // H: height of atmosphere above ground level
-    float H = sqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
-    float x_mu = uv.x;
-    float x_r = uv.y;
+    // h: height of atmosphere above ground level
+    float h = sqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float xMu = uv.x;
+    float xR = uv.y;
 
     // rho: horizontal distance from earth center to the point at radius r
-    float rho = H * x_r;
+    float rho = h * xR;
     r = sqrt(rho * rho + GROUND_RADIUS_KM * GROUND_RADIUS_KM);
 
     // Distance bounds for ray from point at radius r to atmosphere boundary
-    float d_min = ATMOSPHERE_RADIUS_KM - r;
-    float d_max = rho + H;
-    float d = d_min + x_mu * (d_max - d_min);
+    float dMin = ATMOSPHERE_RADIUS_KM - r;
+    float dMax = rho + h;
+    float d = dMin + xMu * (dMax - dMin);
 
     // Cosine of view angle
-    mu = (d == 0.0) ? 1.0 : (H * H - rho * rho - d * d) / (2.0 * r * d);
+    mu = (d == 0.0) ? 1.0 : (h * h - rho * rho - d * d) / (2.0 * r * d);
     mu = clamp(mu, -1.0, 1.0);
 }
 
@@ -153,17 +153,17 @@ void GetRMuFromTransmittanceTextureUv(vec2 uv, out float r, out float mu)
 // Converts (radius, cosine_zenith_angle) back to UV coordinates for LUT sampling
 vec2 GetTransmittanceTextureUvFromRMu(float r, float mu)
 {
-    float H = sqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
+    float h = sqrt(ATMOSPHERE_RADIUS_KM * ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
 
     float rho = sqrt(max(0.0, r * r - GROUND_RADIUS_KM * GROUND_RADIUS_KM));
 
-    float d_min = ATMOSPHERE_RADIUS_KM - r; // Minimum distance (straight up)
-    float d_max = rho + H;                  // Maximum distance (tangent to ground)
+    float dMin = ATMOSPHERE_RADIUS_KM - r; // Minimum distance (straight up)
+    float dMax = rho + h;                  // Maximum distance (tangent to ground)
 
     // Solve for distance d using quadratic formula
-    // Original: mu = (H^2 - rho^2 - d^2) / (2 * r * d)
-    // Rearranged: d^2 + 2*r*mu*d - (H^2 - rho^2) = 0
-    // Applying quadratic formula gives discriminant = r^2*mu^2 + H^2 - rho^2
+    // Original: mu = (h^2 - rho^2 - d^2) / (2 * r * d)
+    // Rearranged: d^2 + 2*r*mu*d - (h^2 - rho^2) = 0
+    // Applying quadratic formula gives discriminant = r^2*mu^2 + h^2 - rho^2
     // Solution: d = -r*mu + sqrt(discriminant)
 
     // discriminant = r^2*mu^2 + ATMOSPHERE_RADIUS_KM^2 - GROUND_RADIUS_KM^2 - r^2 + GROUND_RADIUS_KM^2
@@ -175,10 +175,10 @@ vec2 GetTransmittanceTextureUvFromRMu(float r, float mu)
     float d = max(0.0, -r * mu + sqrt(max(0.0, discriminant)));
 
     // Convert back to normalized UV coordinates
-    float x_mu = clamp((d - d_min) / (d_max - d_min), 0.0, 1.0); // Angle coordinate
-    float x_r = clamp(rho / H, 0.0, 1.0);                        // Height coordinate
+    float xMu = clamp((d - dMin) / (dMax - dMin), 0.0, 1.0); // Angle coordinate
+    float xR = clamp(rho / h, 0.0, 1.0);                        // Height coordinate
 
-    return vec2(x_mu, x_r);
+    return vec2(xMu, xR);
 }
 
 float DistanceToTopAtmosphereBoundary(float r, float mu)
@@ -207,7 +207,8 @@ vec3 ComputeTransmittanceToTopAtmosphereBoundary(float r, float mu, const Atmosp
         float t = i * dt;
         vec3 samplePos = pos + t * dir;
 
-        vec3 rayleighScattering, extinction;
+        vec3 rayleighScattering;
+        vec3 extinction;
         float mieScattering;
         GetScatteringValues(samplePos, atmosphericConfig, rayleighScattering, mieScattering, extinction);
 

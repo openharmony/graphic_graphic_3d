@@ -134,9 +134,6 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, baseShaders, testing::ext::TestSize.L
                         RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
             materialShader, depthShader);
     }
-    // TODO: cull mode front face not supported by defaults
-    // CheckValues(ISceneUtil::MaterialShaderInfo{ false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_FRONT_BIT,
-    //    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE });
 
     // blend
     {
@@ -153,8 +150,6 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, baseShaders, testing::ext::TestSize.L
                         RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
             materialShader, depthShader);
     }
-    // CheckValues(ISceneUtil::MaterialShaderInfo{ true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_FRONT_BIT,
-    //    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE });
 }
 
 /**
@@ -211,9 +206,6 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, byRenderSlot, testing::ext::TestSize.
     CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
                     RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
-    // CheckValues(ISceneUtil::MaterialShaderInfo{ false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_FRONT_BIT,
-    //                RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
-    //    DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
 
     // translucent
     CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
@@ -222,9 +214,6 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, byRenderSlot, testing::ext::TestSize.
     CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
                     RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
-    // CheckValues(ISceneUtil::MaterialShaderInfo{ true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_FRONT_BIT,
-    //                RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
-    //    DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
 
     // shadow
     CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
@@ -233,7 +222,4 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, byRenderSlot, testing::ext::TestSize.
     CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
                     RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
         DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH);
-    // CheckValues(ISceneUtil::MaterialShaderInfo{ false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_FRONT_BIT,
-    //                RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
-    //    DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH);
 }

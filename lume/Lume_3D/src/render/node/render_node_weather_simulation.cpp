@@ -177,7 +177,7 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
             {
                 BindableImage bindable;
                 bindable.handle = (current_pingPongIdx == 0) ? current_rippleTexture1 : current_rippleTexture0;
-                pipelineDescriptorSetBinder->BindImage(2, bindable);
+                pipelineDescriptorSetBinder->BindImage(2, bindable); // 2: parm
             }
 
             const auto descHandle = updateDescriptorSetBinder_[planeIndex]->GetDescriptorSetHandle();
@@ -244,7 +244,7 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
         {
             BindableImage bindable;
             bindable.handle = current_rippleTexture1;
-            pipelineDescriptorSetBinder->BindImage(2, bindable);
+            pipelineDescriptorSetBinder->BindImage(2, bindable); // 2: parm
         }
 
         const auto descHandle = initDescriptorSetBinder_[slot]->GetDescriptorSetHandle();

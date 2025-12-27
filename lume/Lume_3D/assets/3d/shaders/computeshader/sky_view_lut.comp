@@ -66,7 +66,7 @@ void main() {
     float height = length(viewPos);
     vec3 up = viewPos / height;
     float horizonParam = (height * height - GROUND_RADIUS_KM * GROUND_RADIUS_KM);
-    float horizonAngle = safeacos(sqrt(horizonParam) / height) - 0.5*M_PI;
+    float horizonAngle = Safeacos(sqrt(horizonParam) / height) - 0.5*M_PI;
     float altitudeAngle = adjV*0.5*M_PI - horizonAngle;
     
     float cosAltitude = cos(altitudeAngle);
@@ -77,7 +77,7 @@ void main() {
     vec3 sunDir = vec3(0.0, sin(sunElevation), -cos(sunElevation));
     
     // Flip the sun direction to match the sky environment shader
-    vec3 lum = RaymarchScattering(viewPos, rayDir, -sunDir, numScatteringSteps, atmosphericConfig);
+    vec3 lum = RaymarchScattering(viewPos, rayDir, -sunDir, NUM_SCATTERING_STEPS, atmosphericConfig);
     
     imageStore(skyViewOut, uv, vec4(lum, 1.0));
 }

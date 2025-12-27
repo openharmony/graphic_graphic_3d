@@ -188,10 +188,6 @@ RENDER_NS::IDevice* GetDevice()
     if (!GetTestEnv()->device) {
         const ::Test::LogLevelScope logLevel =
             ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_ERROR);
-
-        // const DeviceCreateInfo deviceCreateInfo{ DeviceBackendType::VULKAN };
-
-        // getTestEnv()->device = CreateDevice(deviceCreateInfo);
         CORE_ASSERT(GetTestEnv()->device != nullptr);
     }
 

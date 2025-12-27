@@ -107,7 +107,7 @@ public:
         mUpdatedComponents[&componentManager] = amount + entities.size();
     }
 
-    void clear()
+    void Clear()
     {
         mAddedEntities = 0;
         mRemovedEntities = 0;
@@ -116,17 +116,17 @@ public:
         mUpdatedComponents.clear();
     }
 
-    size_t getAddedEntities() const
+    size_t GetAddedEntities() const
     {
         return mAddedEntities;
     }
 
-    size_t getRemovedEntities() const
+    size_t GetRemovedEntities() const
     {
         return mRemovedEntities;
     }
 
-    size_t getAddedComponents(const IComponentManager& componentManager) const
+    size_t GetAddedComponents(const IComponentManager& componentManager) const
     {
         auto it = mAddedComponents.find(&componentManager);
         if (it != mAddedComponents.end()) {
@@ -136,7 +136,7 @@ public:
         return 0;
     }
 
-    size_t getRemovedComponents(const IComponentManager& componentManager) const
+    size_t GetRemovedComponents(const IComponentManager& componentManager) const
     {
         auto it = mRemovedComponents.find(&componentManager);
         if (it != mRemovedComponents.end()) {
@@ -146,7 +146,7 @@ public:
         return 0;
     }
 
-    size_t getUpdatedComponents(const IComponentManager& componentManager) const
+    size_t GetUpdatedComponents(const IComponentManager& componentManager) const
     {
         auto it = mUpdatedComponents.find(&componentManager);
         if (it != mUpdatedComponents.end()) {
@@ -195,8 +195,8 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
     const size_t nodeCount = 5;
 
     ecs->ProcessEvents();
-    const size_t initialEntities = listener.getAddedEntities();
-    const size_t initialNames = listener.getAddedComponents(nameComponentManager);
+    const size_t initialEntities = listener.GetAddedEntities();
+    const size_t initialNames = listener.GetAddedComponents(nameComponentManager);
 
     // Create nodes.
     for (size_t i = 0; i < nodeCount; ++i) {
@@ -206,14 +206,14 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
     ecs->ProcessEvents();
 
     // See that listeners got fired.
-    ASSERT_EQ(listener.getAddedEntities(), initialEntities + nodeCount);
-    ASSERT_EQ(listener.getAddedComponents(nodeComponentManager), nodeCount);
-    ASSERT_EQ(listener.getAddedComponents(nameComponentManager), initialNames + nodeCount);
-    ASSERT_EQ(listener.getAddedComponents(transformComponentManager), nodeCount);
-    ASSERT_EQ(listener.getUpdatedComponents(nodeComponentManager), 0);
-    ASSERT_EQ(listener.getUpdatedComponents(nameComponentManager), 0);
-    ASSERT_EQ(listener.getUpdatedComponents(transformComponentManager), 0);
-    listener.clear();
+    ASSERT_EQ(listener.GetAddedEntities(), initialEntities + nodeCount);
+    ASSERT_EQ(listener.GetAddedComponents(nodeComponentManager), nodeCount);
+    ASSERT_EQ(listener.GetAddedComponents(nameComponentManager), initialNames + nodeCount);
+    ASSERT_EQ(listener.GetAddedComponents(transformComponentManager), nodeCount);
+    ASSERT_EQ(listener.GetUpdatedComponents(nodeComponentManager), 0);
+    ASSERT_EQ(listener.GetUpdatedComponents(nameComponentManager), 0);
+    ASSERT_EQ(listener.GetUpdatedComponents(transformComponentManager), 0);
+    listener.Clear();
 
     // Modify nodes.
     nodes.front()->SetName("test");
@@ -221,10 +221,10 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
 
     ecs->ProcessEvents();
 
-    ASSERT_EQ(listener.getUpdatedComponents(nodeComponentManager), 0);
-    ASSERT_EQ(listener.getUpdatedComponents(nameComponentManager), 1);
-    ASSERT_EQ(listener.getUpdatedComponents(transformComponentManager), 1);
-    listener.clear();
+    ASSERT_EQ(listener.GetUpdatedComponents(nodeComponentManager), 0);
+    ASSERT_EQ(listener.GetUpdatedComponents(nameComponentManager), 1);
+    ASSERT_EQ(listener.GetUpdatedComponents(transformComponentManager), 1);
+    listener.Clear();
 
     auto handle = nodeComponentManager.GetData(nodes.front()->GetEntity());
     handle->WLock();
@@ -232,10 +232,10 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
 
     ecs->ProcessEvents();
 
-    ASSERT_EQ(listener.getUpdatedComponents(nodeComponentManager), 1);
-    ASSERT_EQ(listener.getUpdatedComponents(nameComponentManager), 0);
-    ASSERT_EQ(listener.getUpdatedComponents(transformComponentManager), 0);
-    listener.clear();
+    ASSERT_EQ(listener.GetUpdatedComponents(nodeComponentManager), 1);
+    ASSERT_EQ(listener.GetUpdatedComponents(nameComponentManager), 0);
+    ASSERT_EQ(listener.GetUpdatedComponents(transformComponentManager), 0);
+    listener.Clear();
 
     // Remove all node components.
     for (auto& node : nodes) {
@@ -244,22 +244,22 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
 
     ecs->ProcessEvents();
 
-    ASSERT_EQ(listener.getRemovedEntities(), 0);
-    ASSERT_EQ(listener.getRemovedComponents(nodeComponentManager), nodeCount);
-    ASSERT_EQ(listener.getRemovedComponents(nameComponentManager), 0);
-    ASSERT_EQ(listener.getRemovedComponents(transformComponentManager), 0);
-    listener.clear();
+    ASSERT_EQ(listener.GetRemovedEntities(), 0);
+    ASSERT_EQ(listener.GetRemovedComponents(nodeComponentManager), nodeCount);
+    ASSERT_EQ(listener.GetRemovedComponents(nameComponentManager), 0);
+    ASSERT_EQ(listener.GetRemovedComponents(transformComponentManager), 0);
+    listener.Clear();
 
     IEntityManager& entityManager = ecs->GetEntityManager();
     entityManager.DestroyAllEntities();
 
     ecs->ProcessEvents();
 
-    ASSERT_EQ(listener.getRemovedEntities(), initialEntities + nodeCount);
-    ASSERT_EQ(listener.getRemovedComponents(nodeComponentManager), 0);
-    ASSERT_EQ(listener.getRemovedComponents(nameComponentManager), initialNames + nodeCount);
-    ASSERT_EQ(listener.getRemovedComponents(transformComponentManager), nodeCount);
-    listener.clear();
+    ASSERT_EQ(listener.GetRemovedEntities(), initialEntities + nodeCount);
+    ASSERT_EQ(listener.GetRemovedComponents(nodeComponentManager), 0);
+    ASSERT_EQ(listener.GetRemovedComponents(nameComponentManager), initialNames + nodeCount);
+    ASSERT_EQ(listener.GetRemovedComponents(transformComponentManager), nodeCount);
+    listener.Clear();
 
     ecs->RemoveListener(static_cast<IEcs::EntityListener&>(listener));
     ecs->RemoveListener(static_cast<IEcs::ComponentListener&>(listener));

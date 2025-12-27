@@ -126,7 +126,7 @@ UNIT_TEST(API_GfxTest, HelloWorldTestVulkan, testing::ext::TestSize.Level1)
     // generates cubes and in addition sorts them with material renderSort
     UTest::TestResources res(360u, 260u, DeviceBackendType::VULKAN);
     res.LiftTestUp(static_cast<int32_t>(res.GetWindowWidth()), static_cast<int32_t>(res.GetWindowHeight()));
-    HelloWorldBoilerplate::helloWorldTest(res);
+    HelloWorldBoilerplate::HelloWorldTest(res);
     res.TickTest(10);
 
     if (res.GetByteArray()) {
@@ -1282,7 +1282,8 @@ void CalculateTangents(const array_view<const uint16_t>& indices, const array_vi
     array_view<Math::Vec4>& outTangents)
 {
     // http://www.terathon.com/code/tangent.html
-    vector<Math::Vec3> tan1, tan2;
+    vector<Math::Vec3> tan1;
+    vector<Math::Vec3> tan2;
     tan1.resize(positions.size(), { 0, 0, 0 });
     tan2.resize(positions.size(), { 0, 0, 0 });
 

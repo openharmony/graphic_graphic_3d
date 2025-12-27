@@ -102,7 +102,6 @@ RenderHandleReference CreateCloudDataUniformBuffer(
 
 void RenderNodeCameraWeather::UpdateAerialPerspectiveParams(const Math::Mat4X4& viewProj)
 {
-    // TODO: add a case for OpenGL NDC space
     const Math::Mat4X4 invViewProj = Math::Inverse(viewProj);
 
     const Math::Vec4 A0 = invViewProj * Math::Vec4(-1.0f, -1.0f, 0.1f, 1.0f); // Top-left
@@ -163,7 +162,6 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     renderNodeContextMgr_ = &renderNodeContextMgr;
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     deviceBackendType_ = renderNodeContextMgr_->GetRenderContext().GetDevice().GetBackendType();
-    // const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
 
     ParseRenderNodeInputs();
 
@@ -307,7 +305,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     desc.enableAnisotropy = false;
     desc.maxAnisotropy = 1;
     desc.minLod = 0;
-    desc.maxLod = 10;
+    desc.maxLod = 10; // 10: parm
     desc.addressModeU = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
     desc.addressModeV = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
     desc.addressModeW = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -344,8 +342,8 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
         {},
     };
 
-    imageDesc.width = 2048;
-    imageDesc.height = 2048;
+    imageDesc.width = 2048; // 2048: parm
+    imageDesc.height = 2048; // 2048: parm
     imageDesc.depth = 1u;
     imageDesc.format = Format::BASE_FORMAT_R32G32B32A32_SFLOAT;
     imageDesc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
@@ -423,7 +421,7 @@ void RenderNodeCameraWeather::PreExecuteFrame()
             UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
 
             settings_ = dataStoreWeather->GetWeatherSettings();
-            cameraPos_ = Math::Inverse(currentScene_.camData.camera.matrices.view)[3];
+            cameraPos_ = Math::Inverse(currentScene_.camData.camera.matrices.view)[3]; // 3: index
             downscale_ = (int32_t)settings_.cloudRenderingType;
 
             auto cameras = dataStoreCamera->GetCameras();
@@ -468,7 +466,6 @@ void RenderNodeCameraWeather::ExecuteFrame(IRenderCommandList& cmdList)
 
     fgds_ = RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_, stores_, cameraName_,
         RenderNodeSceneUtil::FrameGlobalDescriptorSetFlagBits::GLOBAL_SET_0);
-
     if (!fgds_.valid) {
         return;
     }
@@ -551,7 +548,6 @@ void RenderNodeCameraWeather::ExecuteFrame(IRenderCommandList& cmdList)
     }
 
     // Sky view is dependent of the camera height, therefore calculate it everyframe to render from different altitudes
-    // ComputeAerialPerspective(cmdList);
     ComputeSkyView(cmdList);
 
     // Update cubemap when the sun position or any of the look up tables have changed
@@ -562,7 +558,7 @@ void RenderNodeCameraWeather::ExecuteFrame(IRenderCommandList& cmdList)
         UpdateAtmosphericConfig();
         prevTimeOfDay_ = settings_.timeOfDay;
         // For some reason OpenGL is cleaning the cubemap on the first iteration, so flag this after second frame
-        isFirstFrame = frameNumber < 2;
+        isFirstFrame = frameNumber < 2; // 2: parm
         needsFullMipUpdate = true;
     } else if (needsFullMipUpdate) {
         ComputeSkyViewCubemap(cmdList);
@@ -677,7 +673,10 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
     skyBinder_.cloudVolume->BindBuffer(1U, binding, { uniformBuffer_.GetHandle() });
 
     // Outputs
-    BindableImage writeImg, historyImg, writeDepthImg, historyDepthImg;
+    BindableImage writeImg;
+    BindableImage historyImg;
+    BindableImage writeDepthImg;
+    BindableImage historyDepthImg;
     writeImg.handle = cloudTexture_;
     historyImg.handle = cloudTexturePrev_;
     writeDepthImg.handle = cloudTextureDepth_;
@@ -779,7 +778,8 @@ void RenderNodeCameraWeather::ComputeMultipleScattering(RENDER_NS::IRenderComman
     cmdList.BindPipeline(skyPso_.multipleScatteringLut);
 
     skyBinder_.multipleScatteringLut->ClearBindings();
-    BindableImage bindable, transmittanceBindable;
+    BindableImage bindable;
+    BindableImage transmittanceBindable;
     bindable.handle = multipleScatteringLutHandle_.GetHandle();
     transmittanceBindable.handle = transmittanceLutHandle_.GetHandle();
     transmittanceBindable.samplerHandle = defaultSamplers_.linearHandle;
@@ -830,7 +830,10 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
     cmdList.BindPipeline(skyPso_.aerialPerspectiveLut);
 
     skyBinder_.aerialPerspectiveLut->ClearBindings();
-    BindableImage aerialOut, transmittanceBindable, multipleScatteringBindable, shadowMapBindable;
+    BindableImage aerialOut;
+    BindableImage transmittanceBindable;
+    BindableImage multipleScatteringBindable;
+    BindableImage shadowMapBindable;
     BindableBuffer aerialPerspectiveBindableBuffer;
     aerialOut.handle = aerialPerspectiveLutHandle_.GetHandle();
     transmittanceBindable.handle = transmittanceLutHandle_.GetHandle();
@@ -853,9 +856,9 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
 
     skyBinder_.aerialPerspectiveLut->BindImage(0, 0, aerialOut);
     skyBinder_.aerialPerspectiveLut->BindImage(0, 1, transmittanceBindable);
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable);
-    skyBinder_.aerialPerspectiveLut->BindBuffer(0, 3, aerialPerspectiveBindableBuffer);
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable);
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable); // 2: parm
+    skyBinder_.aerialPerspectiveLut->BindBuffer(0, 3, aerialPerspectiveBindableBuffer); // 3: parm
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable); // 4: parm
 
     const auto descHandle = skyBinder_.aerialPerspectiveLut->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.aerialPerspectiveLut->GetDescriptorSetLayoutBindingResources(0);
@@ -864,7 +867,6 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
     cmdList.BindDescriptorSets(0, descHandles);
 
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(aerialOut.handle);
-
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
         const Math::UVec2 targetSize = { TextureImageDesc.width, TextureImageDesc.height };
 
@@ -883,7 +885,9 @@ void RenderNodeCameraWeather::ComputeSkyView(RENDER_NS::IRenderCommandList& cmdL
     cmdList.BindPipeline(skyPso_.skyViewLut);
 
     skyBinder_.skyViewLut->ClearBindings();
-    BindableImage bindable, transmittanceBindable, multipleScatteringBindable;
+    BindableImage bindable;
+    BindableImage transmittanceBindable;
+    BindableImage multipleScatteringBindable;
     bindable.handle = skyViewLutHandle_.GetHandle();
     transmittanceBindable.handle = transmittanceLutHandle_.GetHandle();
     transmittanceBindable.samplerHandle = defaultSamplers_.linearHandle;
@@ -892,7 +896,7 @@ void RenderNodeCameraWeather::ComputeSkyView(RENDER_NS::IRenderCommandList& cmdL
 
     skyBinder_.skyViewLut->BindImage(0, 0, bindable);
     skyBinder_.skyViewLut->BindImage(0, 1, transmittanceBindable);
-    skyBinder_.skyViewLut->BindImage(0, 2, multipleScatteringBindable);
+    skyBinder_.skyViewLut->BindImage(0, 2, multipleScatteringBindable); // 2: parm
 
     const auto descHandle = skyBinder_.skyViewLut->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.skyViewLut->GetDescriptorSetLayoutBindingResources(0);
@@ -947,7 +951,8 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
     } uPc;
 
     skyBinder_.skyCubemap->ClearBindings();
-    BindableImage bindable, skyViewBindable;
+    BindableImage bindable;
+    BindableImage skyViewBindable;
     bindable.handle = skyCubemapHandle_.GetHandle();
     bindable.mip = 0;
     skyViewBindable.handle = skyViewLutHandle_.GetHandle();
@@ -966,7 +971,6 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
         const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
-
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
@@ -975,7 +979,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
         uPc.cameraPosBrightness = Math::Vec4(cameraPos_, settings_.skyViewBrightness);
 
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
-        cmdList.Dispatch(tgcX, tgcY, 6);
+        cmdList.Dispatch(tgcX, tgcY, 6); // 6: parm
     } else {
         CORE_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
@@ -1050,7 +1054,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemapMips(RENDER_NS::IRenderComman
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
-        cmdList.Dispatch(tgcX, tgcY, 6);
+        cmdList.Dispatch(tgcX, tgcY, 6); // 6: parm
     }
 
     // Final barrier: transition ALL mip levels to SHADER_READ_ONLY_OPTIMAL for graphics pipeline

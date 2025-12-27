@@ -52,7 +52,7 @@ void main() {
     float v = float(uv.y + 0.5) / float(imageDim.y);
     
     float sunCosTheta = 2.0*u - 1.0;
-    float sunTheta = safeacos(sunCosTheta);
+    float sunTheta = Safeacos(sunCosTheta);
     
     float height = mix(GROUND_RADIUS_KM + CAMERA_HEIGHT_SCALE, ATMOSPHERE_RADIUS_KM, v);
     

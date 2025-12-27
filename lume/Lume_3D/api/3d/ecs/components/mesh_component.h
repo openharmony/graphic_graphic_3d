@@ -173,10 +173,10 @@ BEGIN_COMPONENT(IMeshComponentManager, MeshComponent)
 #endif
 
     /** Submeshes */
-    DEFINE_PROPERTY(BASE_NS::vector<Submesh>, submeshes, "Submeshes", 0, )
+    DEFINE_PROPERTY(BASE_NS::vector<Submesh>, submeshes, "Submeshes", 0,)
 
     /** Joint bounds */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, jointBounds, "Joint Bounds", 0, )
+    DEFINE_PROPERTY(BASE_NS::vector<float>, jointBounds, "Joint Bounds", 0,)
 
     /** AABB min */
     DEFINE_PROPERTY(BASE_NS::Math::Vec3, aabbMin, "Min AABB", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))

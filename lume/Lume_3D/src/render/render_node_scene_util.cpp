@@ -441,12 +441,11 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
         }
 
         refSubmeshIndices = std::move(sortedSubmeshIndices);
-    }
-    // front-to-back render layer sort is 0 -> 63
-    // back-to-front render layer sort is 63 -> 0
-    else if (renderSlotInfo.sortType == RenderSlotSortType::FRONT_TO_BACK) {
+    } else if (renderSlotInfo.sortType == RenderSlotSortType::FRONT_TO_BACK) {
+        // front-to-back render layer sort is 0 -> 63
         std::sort(refSubmeshIndices.begin(), refSubmeshIndices.end(), Less<SlotSubmeshIndex>());
     } else if (renderSlotInfo.sortType == RenderSlotSortType::BACK_TO_FRONT) {
+        // back-to-front render layer sort is 63 -> 0
         std::sort(refSubmeshIndices.begin(), refSubmeshIndices.end(), Greater<SlotSubmeshIndex>());
     }
 }

@@ -13,6 +13,9 @@
  * limitations under the License.
  */
 
+#ifndef CORE3D_DM_FW_CLOUD_FRAG_H
+#define CORE3D_DM_FW_CLOUD_FRAG_H
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 #extension GL_EXT_debug_printf : enable
@@ -57,7 +60,7 @@ vec4 GetTexelFetch(const ivec2 uv, const uint instanceIdx, const uint matTexIdx)
 #endif
 }
 
-void cloudMain()
+void CloudMain()
 {
     const uint frameIndex = floatBitsToUint(uEnvironmentData.groundColor.w);
     const uint idx = CORE_MATERIAL_TEX_NORMAL_IDX + texIndexAddition + frameIndex;
@@ -74,8 +77,7 @@ void cloudMain()
     const float twoSpatialSigmaSq = 2.0 * SPATIAL_SIGMA * SPATIAL_SIGMA;
     const float twoColorSigmaSq = 2.0 * COLOR_SIGMA * COLOR_SIGMA;
 
-    vec4 next;
-    next = GetTextureSample(uvFull, 0, idx);
+    vec4 next = GetTextureSample(uvFull, 0, idx);
 
     uint depthTexIdx = CORE_MATERIAL_TEX_EMISSIVE_IDX + texIndexAddition + frameIndex;
     float centerDepth = GetTextureSample(uvFull, 0, depthTexIdx).r;
@@ -119,3 +121,5 @@ void cloudMain()
 
     outColor = totalColor / totalWeight;
 }
+
+#endif // CORE3D_DM_FW_CLOUD_FRAG_H

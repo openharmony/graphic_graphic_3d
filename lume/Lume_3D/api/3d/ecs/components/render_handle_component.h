@@ -42,7 +42,7 @@ BEGIN_COMPONENT(IRenderHandleComponentManager, RenderHandleComponent)
      * Further details of the image can be queried with IGpuResourceManager::IsGpuBuffer/Image/Sampler*,
      * IGpuResourceManager::GetBuffer/Image/SamplerDescriptor.
      */
-    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0, )
+    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0,)
 
 END_COMPONENT_EXT(
     IRenderHandleComponentManager, RenderHandleComponent, "fb5c16b5-c369-4f7b-bc02-5398ddfdfa1d",

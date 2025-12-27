@@ -80,7 +80,6 @@ vec3 GetTransmissionRadianceSample(const vec2 fragUv, const vec3 worldReflect, c
     return color.rgb;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 // "main" functions
 
 vec4 unlitBasic()
@@ -322,7 +321,7 @@ vec4 pbrBasic()
             CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
             // Approximate double refraction by assuming a solid sphere beneath the point.
             const float ior = 1.0;
-            const float Eta = (1.0 / 1.5); // expecting glass
+            const float eta = (1.0 / 1.5); // expecting glass
             // NOTE: ATM use direct refract (no sphere mapping)
             const vec3 rr = -V; // refract(-V, N, 1.0 / ior);
             const CORE_RELAXEDP vec3 transmissionRadianceSample = GetTransmissionRadianceSample(fragUv, rr, roughness);

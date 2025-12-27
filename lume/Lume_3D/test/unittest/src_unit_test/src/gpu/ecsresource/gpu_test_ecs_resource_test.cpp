@@ -194,7 +194,6 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
 
     const Entity imageEntity = ecs->GetEntityManager().Create();
     gpuHandleManager->Set(imageEntity, { gpuResourceManager.Create(gpuDesc, move(result.image)) });
-    // nameManager->Set(imageEntity, { "" });
     uriManager->Set(imageEntity, { string(imageUri) });
 
     ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), imageEntity);
@@ -285,7 +284,6 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
 
     const Entity imageEntity = ecs->GetEntityManager().Create();
     gpuHandleManager->Set(imageEntity, { gpuResourceManager.Create(gpuDesc, move(result.image)) });
-    // nameManager->Set(imageEntity, { "" });
     uriManager->Set(imageEntity, { string(imageUri) });
 
     ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), imageEntity);
@@ -306,7 +304,6 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
 
     // Ensure it is gone.
     ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), Entity {});
-    // EXPECT_TRUE(gpuResourceManager.GetImage(gpuImageHandle));
     RenderHandleReference gpuImageHandleRef = gpuResourceManager.Get(gpuImageHandle);
     gpuImageHandleRef = {};
 }

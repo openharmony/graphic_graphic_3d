@@ -109,7 +109,7 @@ void WaterRippleTest(UTest::TestResources& res)
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
             node->SetScale(Math::Vec3(planeDims.x, 0.01f, planeDims.y));
-            node->SetRotation(Math::AngleAxis(10 * Math::DEG2RAD, Math::Vec3(1, 0, 0)));
+            node->SetRotation(Math::AngleAxis(10 * Math::DEG2RAD, Math::Vec3(1, 0, 0))); // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(ecs, reflectionPlane);
 
@@ -199,7 +199,7 @@ void WaterRippleTest(UTest::TestResources& res)
     for (uint32_t i = 0; i < NUM_CUBES; i++) {
         auto cube =
             nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Cube" + to_string(i), whiteMaterial, 1.0f, 1.0f, 1.0f));
-        cube->SetPosition(startLoc + Math::Vec3(i * 3, 0.0f, 0.0f));
+        cube->SetPosition(startLoc + Math::Vec3(i * 3, 0.0f, 0.0f)); // 3: parm
         if (auto* waterRippleManager = GetManager<IWaterRippleComponentManager>(ecs); waterRippleManager) {
             waterRippleManager->Create(cube->GetEntity());
             if (auto ripple = waterRippleManager->Write(cube->GetEntity())) {
@@ -230,10 +230,10 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
 
     for (uint ii = 0; ii < steps; ii++) {
         const float t = float(ii) / steps;
-        if (t < 0.5) {
-            cubeYPos[ii] = Math::lerp(2.0f, -2.0f, t * 2);
+        if (t < 0.5) { // 0.5: parm
+            cubeYPos[ii] = Math::lerp(2.0f, -2.0f, t * 2); // 2: parm
         } else {
-            cubeYPos[ii] = Math::lerp(-2.0f, 2.0f, (t - 0.5f) * 2);
+            cubeYPos[ii] = Math::lerp(-2.0f, 2.0f, (t - 0.5f) * 2); // 2: parm
         }
     }
 
@@ -245,7 +245,6 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
             const IRenderFrameUtil::CopyFlags copyFlags = IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE;
             rfUtil.CopyToCpu(outputImageHandle0, copyFlags);
             renderer.RenderFrame({});
-
         } else {
             auto nodeSystem = GetSystem<INodeSystem>(*ecs);
             auto& rootNode = nodeSystem->GetRootNode();
@@ -285,7 +284,7 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
     if (byteArray) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
         UTest::WritePng(BASE_NS::string(appDir + "/WaterRippleTestVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4);
+            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4); // 4: parm
     }
 }
 

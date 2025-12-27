@@ -93,7 +93,6 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
             root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(), *gltf.data, result.data, ecs, {},
                 CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL);
             EXPECT_TRUE(EntityUtil::IsValid(root));
-            // TODO: render configuration is not related to root
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
         } else {
             CORE_LOG_E("Import error: %s", result.error.c_str());

@@ -63,9 +63,6 @@ UNIT_TEST(SRC_GpuTest_GLTFImporterTest, importGltfObject, testing::ext::TestSize
     auto importResult = importer->GetResult();
     ASSERT_TRUE(importResult.success);
 
-    // Create actual GpuBuffers.
-    // engine->GetResourceManager().HandlePendingAllocations();
-
     ASSERT_EQ(importResult.data.textures.size(), 4);
     ASSERT_EQ(importResult.data.materials.size(), 1);
     ASSERT_EQ(importResult.data.meshes.size(), 1);
@@ -142,7 +139,6 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs)
             auto root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(), *gltf.data, result.data, ecs, {},
                 CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL);
             EXPECT_TRUE(EntityUtil::IsValid(root));
-            // TODO: render configuration is not related to root
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
         }
         return result;

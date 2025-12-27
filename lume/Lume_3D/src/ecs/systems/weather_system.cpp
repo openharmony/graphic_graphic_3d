@@ -495,7 +495,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
             }
 
             dataStoreWeather_->SetWeatherSettings(weatherManager_.GetEntity(id).id, settings);
-            if (settings.coverage < 0.01 || settings.density < 0.0001) {
+            if (settings.coverage < 0.01 || settings.density < 0.0001) { // 0.01: parm 0.0001: parm
                 cloudEnabledThisFrame = false;
             }
         }

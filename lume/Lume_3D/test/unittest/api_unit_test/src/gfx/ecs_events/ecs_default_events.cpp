@@ -121,7 +121,7 @@ UNIT_TEST(ECS, DefaultEventCycle, testing::ext::TestSize.Level1)
     };
     ComponentListeningChecker clistener;
 
-    HelloWorldBoilerplate::helloWorldTest(res);
+    HelloWorldBoilerplate::HelloWorldTest(res);
     res.TickTest(3);
 
     ecs.AddListener(elistener);

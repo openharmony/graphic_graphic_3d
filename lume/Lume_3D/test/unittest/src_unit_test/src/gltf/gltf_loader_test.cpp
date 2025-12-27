@@ -50,22 +50,22 @@ bool isExpectedAttribute(const GLTF2::AttributeBase& aAttribute, const GLTF2::At
 }
 void validateWaterBottle(GLTF2::Data const& aData)
 {
-    ASSERT_EQ(aData.accessors.size(), 5);
+    ASSERT_EQ(aData.accessors.size(), 5); // 5: parm
     ASSERT_EQ(aData.animations.size(), 0);
     ASSERT_EQ(aData.materials.size(), 1);
     ASSERT_EQ(aData.meshes.size(), 1);
     ASSERT_EQ(aData.buffers.size(), 1);
-    ASSERT_EQ(aData.textures.size(), 4);
+    ASSERT_EQ(aData.textures.size(), 4); // 4: parm
     ASSERT_EQ(aData.nodes.size(), 1);
-    ASSERT_EQ(aData.images.size(), 4);
-    ASSERT_EQ(aData.bufferViews.size(), 9);
+    ASSERT_EQ(aData.images.size(), 4);      // 4: parm
+    ASSERT_EQ(aData.bufferViews.size(), 9); // 9: parm
     ASSERT_EQ(aData.scenes.size(), 1);
 }
 
 void validateMonster(GLTF2::Data const& aData)
 {
     ASSERT_EQ(aData.scenes.size(), 1);
-    ASSERT_EQ(aData.nodes.size(), 35);
+    ASSERT_EQ(aData.nodes.size(), 35); // 35: parm
     ASSERT_EQ(aData.meshes.size(), 1);
     ASSERT_EQ(aData.animations.size(), 1);
     ASSERT_EQ(aData.skins.size(), 1);
@@ -74,8 +74,8 @@ void validateMonster(GLTF2::Data const& aData)
     ASSERT_EQ(aData.textures.size(), 1);
     ASSERT_EQ(aData.images.size(), 1);
     ASSERT_EQ(aData.samplers.size(), 1);
-    ASSERT_EQ(aData.bufferViews.size(), 8);
-    ASSERT_EQ(aData.accessors.size(), 135);
+    ASSERT_EQ(aData.bufferViews.size(), 8); // 8: parm
+    ASSERT_EQ(aData.accessors.size(), 135); // 135: parm
 
     // Every primitive should have these attributes.
     GLTF2::AttributeType expectedAttributes[] = {
@@ -121,15 +121,15 @@ void validateMonster(GLTF2::Data const& aData)
 
     const auto& animation = *(aData.animations[0]);
 
-    ASSERT_EQ(animation.samplers.size(), 96);
-    ASSERT_EQ(animation.tracks.size(), 96);
+    ASSERT_EQ(animation.samplers.size(), 96); // 96: parm
+    ASSERT_EQ(animation.tracks.size(), 96);   // 96: parm
 
-    ASSERT_EQ(animation.samplers[0]->input, aData.accessors[6].get());
+    ASSERT_EQ(animation.samplers[0]->input, aData.accessors[6].get()); // 6: index
     ASSERT_EQ(animation.samplers[0]->interpolation, GLTF2::AnimationInterpolation::LINEAR);
-    ASSERT_EQ(animation.samplers[0]->output, aData.accessors[7].get());
+    ASSERT_EQ(animation.samplers[0]->output, aData.accessors[7].get()); // 7: index
 
     ASSERT_EQ(animation.tracks[0].sampler, animation.samplers[0].get());
-    ASSERT_EQ(animation.tracks[0].channel.node, aData.nodes[2].get());
+    ASSERT_EQ(animation.tracks[0].channel.node, aData.nodes[2].get()); // 2: index
     ASSERT_EQ(animation.tracks[0].channel.path, GLTF2::AnimationPath::TRANSLATION);
 }
 } // namespace
