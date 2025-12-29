@@ -25,6 +25,8 @@
 
 #include <core/intf_engine.h>
 #include <core/ecs/intf_system_graph_loader.h>
+#include <core/ecs/intf_ecs.h>
+
 #include <core/engine_info.h>
 #include <core/implementation_uids.h>
 #include <core/io/intf_file_manager.h>
@@ -49,6 +51,7 @@
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_material.h>
+#include <scene/ext/intf_ecs_object.h>
 
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -85,7 +88,14 @@ public:
     {
         return engineInitSuccessful_;
     }
-
+    bool EngineTickFrame(CORE_NS::IEcs::Ptr ecs);
+    bool LoadPluginByUid(const BASE_NS::Uid& uid);
+    void CreateEmptyScene();
+    CORE_NS::IEcs::Ptr GetEcs();
+    virtual META_NS::IObject::Ptr GetSceneObj()
+    {
+        return sceneWidgetObj_;
+    }
 protected:
     static bool LoadEngineLib();
     static bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);

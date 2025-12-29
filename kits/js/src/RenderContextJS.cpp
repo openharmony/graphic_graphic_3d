@@ -759,6 +759,12 @@ bool RenderContextJS::InitRenderManager()
 
             renderManager_ = interface_pointer_cast<SCENE_NS::IRenderResourceManager>(r.Create(
                 SCENE_NS::ClassId::RenderResourceManager, obj));
+        } else {
+            if (!ctx) {
+                CORE_LOG_E("RenderContextJS::InitRenderManager() ctx is invalid");
+            } else {
+                CORE_LOG_E("RenderContextJS::InitRenderManager() ctx->GetProperty() is invalid");
+            }
         }
     }
     return renderManager_ != nullptr;
