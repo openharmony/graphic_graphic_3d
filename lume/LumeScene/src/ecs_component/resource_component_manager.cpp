@@ -80,7 +80,7 @@ public:
         return {};
     }
 
-    virtual bool HasGroup(BASE_NS::string_view group) const override
+    bool HasGroup(BASE_NS::string_view group) const override
     {
         const auto pos = std::find_if(components_.begin(), components_.end(),
             [&](const BaseComponentHandle& component) { return component.data_.resourceId.group == group; });

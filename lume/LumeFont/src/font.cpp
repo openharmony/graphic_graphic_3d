@@ -113,9 +113,9 @@ GlyphInfo Font::GetGlyphInfo(uint32_t glyphIndex)
     return {};
 }
 
-uint32_t Font::GetGlyphIndex(uint32_t code)
+uint32_t Font::GetGlyphIndex(uint32_t codepoint)
 {
-    return faceData_->GetGlyphIndex(code);
+    return faceData_->GetGlyphIndex(codepoint);
 }
 
 const CORE_NS::IInterface* Font::GetInterface(const BASE_NS::Uid& uid) const
