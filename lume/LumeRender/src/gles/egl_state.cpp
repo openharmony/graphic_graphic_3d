@@ -843,11 +843,13 @@ EGLConfig PickFirstWindowConfig(EGLDisplay dpy, const BackbufferReq& req, Desire
                         dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples))
                     return c;
             }
+            // fall-through
         case DesiredOutput::HDR_1010102: {
             // 10:10:10:2
             if (auto c =
                     TryPattern(dpy, req, 10, 10, 10, 2, req.minDepthBits, req.minStencilBits, false, req.msaaSamples))
                 return c;
+            // fall-through
         }
         case DesiredOutput::SDR_SRGB:
         case DesiredOutput::SDR_LINEAR: {

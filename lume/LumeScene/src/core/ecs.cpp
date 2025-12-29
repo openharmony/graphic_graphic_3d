@@ -32,7 +32,7 @@
 #include "ecs_object.h"
 #include "internal_scene.h"
 
-#define SCENE_ASSERT_THREAD(thread) CORE_ASSERT(thread == std::this_thread::get_id())
+#define SCENE_ASSERT_THREAD(thread) CORE_ASSERT((thread) == std::this_thread::get_id())
 
 SCENE_BEGIN_NAMESPACE()
 

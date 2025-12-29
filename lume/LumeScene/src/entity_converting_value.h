@@ -81,7 +81,7 @@ struct DynamicInterfacePtrEntityConverter {
     using SourceType = typename Interface::Ptr;
     using TargetType = CORE_NS::Entity;
 
-    DynamicInterfacePtrEntityConverter(IInternalScene::Ptr scene) : scene_(scene) {}
+    explicit DynamicInterfacePtrEntityConverter(IInternalScene::Ptr scene) : scene_(scene) {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {

@@ -59,7 +59,7 @@ static RENDER_NS::RenderHandleReference DoCreateGraphicsState(RENDER_NS::IShader
     auto hash = man.HashGraphicsState(gs, slotId);
 
     if (auto existing = man.GetGraphicsStateHandleByHash(hash); existing.GetHandle().id
-        != RENDER_NS::INVALID_RESOURCE_HANDLE){
+        != RENDER_NS::INVALID_RESOURCE_HANDLE) {
         return existing;
     }
 
@@ -124,8 +124,8 @@ bool GraphicsState::UpdateGraphicsState(
     {
         std::unique_lock lock { mutex_ };
         if (depthOptions_.has_value()) {
-            // Override options for depth have been set, override these from the default. Note that Blend still controls the
-            // render slot id
+            // Override options for depth have been set, override these from the default.
+            // Note that Blend still controls the render slot id.
             auto gss = gs;
             gss.depthStencilState.enableDepthTest = depthOptions_->enableDepthTest;
             gss.depthStencilState.enableDepthWrite = depthOptions_->enableDepthWrite;
@@ -231,7 +231,7 @@ void Shader::SetShaderStateOverride(const ColorBlendOptions* colorOptions, const
     auto context = context_.lock();
     auto state = GetGraphicsState();
     if (context && state) {
-	    auto blend = GetBlend();
+        auto blend = GetBlend();
         context->RunDirectlyOrInTask(
             [&] { UpdateGraphicsState(context, CreateNewGraphicsState(context, blend), blend); });
     }
@@ -259,7 +259,8 @@ void Shader::OnPropertyChanged(const META_NS::IProperty& p)
     } else if (p.GetName() == "Blend") {
         auto blend = GetBlend();
         if (IsBlendEnabled(GetGraphicsState(context)) != blend) {
-            context->RunDirectlyOrInTask([&] { UpdateGraphicsState(context, CreateNewGraphicsState(context, blend), blend); });
+            context->RunDirectlyOrInTask(
+                [&] { UpdateGraphicsState(context, CreateNewGraphicsState(context, blend), blend); });
         }
     } else if (p.GetName() == "PolygonMode") {
         context->RunDirectlyOrInTask([&] {

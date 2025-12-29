@@ -337,7 +337,7 @@ inline BASE_NS::string RefUri::ToString() const
         }
         // don't escape special names
         res += it->type != Node::SPECIAL ? EscapeName(it->name) : it->name;
-        if (it->type == Node::PROPERTY && it->index != -1) {
+        if (it->type == Node::PROPERTY && it->index != static_cast<uint32_t>(-1)) {
             res += "[" + BASE_NS::to_string(it->index) + "]";
         }
     }

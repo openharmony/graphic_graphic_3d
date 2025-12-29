@@ -97,7 +97,7 @@ const spirv_cross::SPIRConstant& SpecConstByName(const spirv_cross::CompilerGLSL
 } // namespace
 
 // inherit from CompilerGLSL to have better access
-CoreCompiler::CoreCompiler(const uint32_t* ir, const size_t wordCount) : CompilerGLSL(ir, wordCount) {}
+CoreCompiler::CoreCompiler(const uint32_t* ir, size_t wordCount) : CompilerGLSL(ir, wordCount) {}
 
 std::vector<spirv_cross::SPIRConstant> CoreCompiler::GetConstants() const
 {
