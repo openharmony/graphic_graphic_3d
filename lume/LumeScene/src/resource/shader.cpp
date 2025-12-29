@@ -57,7 +57,6 @@ static RENDER_NS::RenderHandleReference DoCreateGraphicsState(RENDER_NS::IShader
     // use graphics state hash for the path, so that same states get reused. Shader manager always keeps reference
     // to the state and so the states are not automatically freed, causing them to pile up if always creating a new one.
     auto hash = man.HashGraphicsState(gs, slotId);
-
     if (auto existing = man.GetGraphicsStateHandleByHash(hash); existing.GetHandle().id
         != RENDER_NS::INVALID_RESOURCE_HANDLE) {
         return existing;
