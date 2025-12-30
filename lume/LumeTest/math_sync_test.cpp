@@ -1995,3 +1995,922 @@ UNIT_TEST(API_MathVectorUtil, Vector3project, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(projected.y, 0.0f);
     ASSERT_FLOAT_EQ(projected.z, -2.5f);
 }
+
+/**
+ * @tc.name: Vector3angle
+ * @tc.desc: Tests for Vector3angle. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3angle, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector1st = Math::Vec3(1.0f, 0.0f, 0.0f);
+    const Math::Vec3 vector2nd = Math::Vec3(1.0f / Math::sqrt(2.0f), 0.5f, 0.5f);
+
+    const float angle = Math::Angle(vector1st, vector2nd);
+
+    ASSERT_FLOAT_EQ(angle, 45.0f * Math::DEG2RAD);
+}
+
+/**
+ * @tc.name: Vector3dot
+ * @tc.desc: Tests for Vector3Dot. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3dot, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector1st = Math::Vec3(1.0f, 2.0f, 3.0f);
+    constexpr Math::Vec3 vector2nd = Math::Vec3(1.0f, 2.0f, 3.0f);
+
+    constexpr float dotProduct = Math::Dot(vector1st, vector2nd);
+
+    ASSERT_FLOAT_EQ(dotProduct, 14.0f);
+}
+
+/**
+ * @tc.name: Vector3cross
+ * @tc.desc: Tests for Vector3Cross. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3cross, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector1st = Math::Vec3(1.0f, 2.0f, 3.0f);
+    constexpr Math::Vec3 vector2nd = Math::Vec3(4.0f, 5.0f, 6.0f);
+
+    const Math::Vec3 crossProduct = Math::Cross(vector1st, vector2nd);
+
+    ASSERT_FLOAT_EQ(crossProduct.x, -3.0f);
+    ASSERT_FLOAT_EQ(crossProduct.y, 6.0f);
+    ASSERT_FLOAT_EQ(crossProduct.z, -3.0f);
+}
+
+/**
+ * @tc.name: Vector3lerp
+ * @tc.desc: Tests for Vector3Lerp. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3lerp, testing::ext::TestSize.Level1)
+{
+    float value = 0.0f;
+    constexpr Math::Vec3 pos1 = Math::Vec3(0.0f, 0.0f, 0.0f);
+    constexpr Math::Vec3 pos2 = Math::Vec3(10.0f, 0.0f, 20.0f);
+
+    Math::Vec3 pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 0.0f);
+
+    value = 0.5f;
+    pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 5.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 10.0f);
+
+    value = 1.0f;
+    pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 10.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 20.0f);
+}
+
+/**
+ * @tc.name: Vector3squareMagnitude
+ * @tc.desc: Tests for Vector3Square Magnitude. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3squareMagnitude, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector = Math::Vec3(2.0f, 2.0f, 3.0f);
+    const float sqrtMagnitude = Math::SqrMagnitude(vector);
+
+    ASSERT_FLOAT_EQ(sqrtMagnitude, 17.0f);
+}
+
+/**
+ * @tc.name: Vector3magnitude
+ * @tc.desc: Tests for Vector3Magnitude. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3magnitude, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector = Math::Vec3(0.0f, 3.0f, 4.0f); // squareroot from 25 = 5
+    const float magnitude = Math::Magnitude(vector);
+
+    ASSERT_FLOAT_EQ(magnitude, 5.0f);
+}
+
+/**
+ * @tc.name: Vector3normalize
+ * @tc.desc: Tests for Vector3Normalize. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector3normalize, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 vector = Math::Vec3(10.0f, 0.0f, 10.0f);
+
+    const Math::Vec3 normalizedVector = Math::Normalize(vector);
+
+    ASSERT_FLOAT_EQ(normalizedVector.x, 0.707107f);
+    ASSERT_FLOAT_EQ(normalizedVector.y, 0.0f);
+    ASSERT_FLOAT_EQ(normalizedVector.z, 0.707107f);
+}
+
+/**
+ * @tc.name: Vector4squareMagnitude
+ * @tc.desc: Tests for Vector4Square Magnitude. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4squareMagnitude, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec4 vector = Math::Vec4(2.0f, 2.0f, 3.0f, 3.0f);
+    const float sqrtMagnitude = Math::SqrMagnitude(vector);
+
+    ASSERT_FLOAT_EQ(sqrtMagnitude, 26.0f);
+}
+
+/**
+ * @tc.name: Vector4magnitude
+ * @tc.desc: Tests for Vector4magnitude. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4magnitude, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec4 vector = Math::Vec4(0.0f, 3.0f, 4.0f, 5.0f);
+    const float magnitude = Math::Magnitude(vector);
+
+    ASSERT_FLOAT_EQ(magnitude, Math::sqrt(50.0f));
+}
+
+/**
+ * @tc.name: Vector4distance
+ * @tc.desc: Tests for Vector4distance. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4distance, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec4 vector1st = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    constexpr Math::Vec4 vector2nd = Math::Vec4(-1.0f, -1.0f, -1.0f, -1.0f);
+
+    const float t = Math::distance(vector1st, vector2nd);
+
+    ASSERT_FLOAT_EQ(t, 2.0f * Math::sqrt(4.0f));
+}
+/**
+ * @tc.name: Vector4distance2
+ * @tc.desc: Tests for Vector4distance2. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4distance2, testing::ext::TestSize.Level1) // squared
+{
+    constexpr Math::Vec4 vector1st = Math::Vec4(1.0f, 0.0f, -1.0f, 1.0f);
+    constexpr Math::Vec4 vector2nd = Math::Vec4(0.0f, 1.0f, -2.0f, 0.0f);
+
+    const float t = Math::Distance2(vector1st, vector2nd);
+
+    ASSERT_FLOAT_EQ(t, 4.0f);
+}
+
+/**
+ * @tc.name: Vector4normalize
+ * @tc.desc: Tests for Vector4normalize. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4normalize, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec4 vector = Math::Vec4(10.0f, 10.0f, 10.0f, 10.0f);
+
+    const Math::Vec4 normalizedVector = Math::Normalize(vector);
+
+    ASSERT_FLOAT_EQ(normalizedVector.x, 1.0f / Math::sqrt(4.0f));
+    ASSERT_FLOAT_EQ(normalizedVector.x, 1.0f / Math::sqrt(4.0f));
+    ASSERT_FLOAT_EQ(normalizedVector.z, 1.0f / Math::sqrt(4.0f));
+    ASSERT_FLOAT_EQ(normalizedVector.z, 1.0f / Math::sqrt(4.0f));
+}
+
+/**
+ * @tc.name: Vector4lerp
+ * @tc.desc: Tests for Vector4Lerp. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, Vector4lerp, testing::ext::TestSize.Level1)
+{
+    float value = 0.0f;
+    constexpr Math::Vec4 pos1 = Math::Vec4(0.0f, 0.0f, 0.0f, -10.0f);
+    constexpr Math::Vec4 pos2 = Math::Vec4(10.0f, 0.0f, 20.0f, 0.0f);
+
+    Math::Vec4 pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.w, -10.0f);
+
+    value = 0.5f;
+    pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 5.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 10.0f);
+    ASSERT_FLOAT_EQ(pos3.w, -5.0f);
+
+    value = 1.0f;
+    pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 10.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 20.0f);
+    ASSERT_FLOAT_EQ(pos3.w, 0.0f);
+
+    value = 3.0f;
+    pos3 = Math::Lerp(pos1, pos2, value);
+    ASSERT_FLOAT_EQ(pos3.x, 10.0f);
+    ASSERT_FLOAT_EQ(pos3.y, 0.0f);
+    ASSERT_FLOAT_EQ(pos3.z, 20.0f);
+    ASSERT_FLOAT_EQ(pos3.w, 0.0f);
+}
+
+// Quaternion
+
+/**
+ * @tc.name: Default
+ * @tc.desc: Tests for Default. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionConstructors, Default, testing::ext::TestSize.Level1)
+{
+    ASSERT_NO_FATAL_FAILURE([[maybe_unused]] Math::Quat quaternion = Math::Quat());
+}
+
+/**
+ * @tc.name: Initializer
+ * @tc.desc: Tests for Initializer. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionConstructors, Initializer, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion = Math::Quat(1.000001f, 2.000002f, 3.000003f, 4.000004f);
+
+    ASSERT_FLOAT_EQ(quaternion.x, 1.000001f);
+    ASSERT_FLOAT_EQ(quaternion.y, 2.000002f);
+    ASSERT_FLOAT_EQ(quaternion.z, 3.000003f);
+    ASSERT_FLOAT_EQ(quaternion.w, 4.000004f);
+}
+
+/**
+ * @tc.name: Copy
+ * @tc.desc: Tests for Copy. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionConstructors, Copy, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion = Math::Quat(1.000001f, 2.000002f, 3.000003f, 4.000004f);
+    constexpr Math::Quat copiedQuaternion = Math::Quat(quaternion);
+
+    ASSERT_FLOAT_EQ(copiedQuaternion.x, quaternion.x);
+    ASSERT_FLOAT_EQ(copiedQuaternion.y, quaternion.y);
+    ASSERT_FLOAT_EQ(copiedQuaternion.z, quaternion.z);
+}
+
+/**
+ * @tc.name: QuaternionOperatorMultiplication
+ * @tc.desc: Tests for Quaternion Operator Multiplication. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorMultiplication, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion1 = Math::Quat(0.5f, 0.5f, 0.5f, 1.0f);
+    constexpr Math::Quat quaternion2 = Math::Quat(0.2f, 0.0f, 0.0f, 1.0f);
+
+    constexpr auto quaternion3 = quaternion1 * quaternion2;
+
+    ASSERT_FLOAT_EQ(quaternion3.x, 0.7f); // i
+    ASSERT_FLOAT_EQ(quaternion3.y, 0.6f); // j
+    ASSERT_FLOAT_EQ(quaternion3.z, 0.4f); // k
+    ASSERT_FLOAT_EQ(quaternion3.w, 0.9f); // real
+}
+
+/**
+ * @tc.name: QuaternionOperatorMultiplicationScalar
+ * @tc.desc: Tests for Quaternion Operator Multiplication Scalar. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorMultiplicationScalar, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion = Math::Quat(0.5f, 0.5f, 0.5f, 1.0f);
+    {
+        constexpr auto temp = quaternion * 0.001f;
+
+        ASSERT_FLOAT_EQ(temp.x, 0.0005f); // i
+        ASSERT_FLOAT_EQ(temp.y, 0.0005f); // j
+        ASSERT_FLOAT_EQ(temp.z, 0.0005f); // k
+        ASSERT_FLOAT_EQ(temp.w, 0.001f);  // real
+    }
+
+    {
+        constexpr auto temp = 0.001f * quaternion;
+
+        ASSERT_FLOAT_EQ(temp.x, 0.0005f); // i
+        ASSERT_FLOAT_EQ(temp.y, 0.0005f); // j
+        ASSERT_FLOAT_EQ(temp.z, 0.0005f); // k
+        ASSERT_FLOAT_EQ(temp.w, 0.001f);  // real
+    }
+}
+
+/**
+ * @tc.name: QuaternionOperatorFloatDivision
+ * @tc.desc: Tests for Quaternion Operator Float Division. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorFloatDivision, testing::ext::TestSize.Level1)
+{
+    Math::Quat quaternion = Math::Quat(0.2f, 0.4f, 0.0f, 1.0f);
+    constexpr float divider = 2.0f;
+
+    quaternion = quaternion / divider;
+
+    ASSERT_FLOAT_EQ(quaternion.x, 0.1f); // i
+    ASSERT_FLOAT_EQ(quaternion.y, 0.2f); // j
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f); // k
+    ASSERT_FLOAT_EQ(quaternion.w, 0.5f); // real
+}
+
+/**
+ * @tc.name: QuaternionOperatorFloatDivisionAssignment
+ * @tc.desc: Tests for Quaternion Operator Float Division Assignment. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorFloatDivisionAssignment, testing::ext::TestSize.Level1)
+{
+    Math::Quat quaternion = Math::Quat(0.2f, 0.4f, 0.0f, 1.0f);
+    constexpr float divider = 2.0f;
+
+    quaternion /= divider;
+
+    ASSERT_FLOAT_EQ(quaternion.x, 0.1f); // i
+    ASSERT_FLOAT_EQ(quaternion.y, 0.2f); // j
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f); // k
+    ASSERT_FLOAT_EQ(quaternion.w, 0.5f); // real
+}
+
+// Quaternion Util
+/**
+ * @tc.name: FromEulerRad
+ * @tc.desc: Tests for From Euler Rad. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, FromEulerRad, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 eulerVector = Math::Vec3(60.0f * Math::DEG2RAD, 0.0f, 0.0f);
+
+    const Math::Quat quaternion = Math::FromEulerRad(eulerVector);
+
+    ASSERT_FLOAT_EQ(quaternion.x, 0.5f);
+    ASSERT_FLOAT_EQ(quaternion.y, 0.0f);
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f);
+    ASSERT_FLOAT_EQ(quaternion.w, 0.86602539f);
+}
+
+/**
+ * @tc.name: LengthSquared
+ * @tc.desc: Tests for Length Squared. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, LengthSquared, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion = Math::Quat(1.0f, 1.0f, 1.0f, 1.0f);
+    const float squaredLength = Math::LengthSquared(quaternion);
+
+    ASSERT_FLOAT_EQ(squaredLength, 4.0f);
+}
+
+/**
+ * @tc.name: Length
+ * @tc.desc: Tests for Length. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Length, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat quaternion = Math::Quat(1.0f, 1.0f, 1.0f, 1.0f);
+    const float Length = Math::Length(quaternion);
+
+    ASSERT_FLOAT_EQ(Length, 2.0f);
+}
+
+/**
+ * @tc.name: AngleAxis
+ * @tc.desc: Tests for Angle Axis. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, AngleAxis, testing::ext::TestSize.Level1)
+{
+    constexpr float amountToRotate = Math::DEG2RAD * 60.0f;
+
+    const Math::Quat quaternion = Math::AngleAxis(amountToRotate, Math::Vec3(0.0f, 1.0f, 0.0f));
+
+    ASSERT_FLOAT_EQ(quaternion.x, 0.0f);
+    ASSERT_FLOAT_EQ(quaternion.y, 0.5f);
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f);
+    ASSERT_FLOAT_EQ(quaternion.w, 0.86602539f);
+}
+
+/**
+ * @tc.name: Inverse
+ * @tc.desc: Tests for Inverse. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Inverse, testing::ext::TestSize.Level1)
+{
+    Math::Quat quaternion(0.5f, 0.5f, 0.5f, 1.0f);
+    quaternion = Math::Inverse(quaternion);
+
+    ASSERT_FLOAT_EQ(quaternion.x, -0.2857143f);
+    ASSERT_FLOAT_EQ(quaternion.y, -0.2857143f);
+    ASSERT_FLOAT_EQ(quaternion.z, -0.2857143f);
+    ASSERT_FLOAT_EQ(quaternion.w, 0.5714286f);
+}
+
+/**
+ * @tc.name: Euler
+ * @tc.desc: Tests for Euler. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Euler, testing::ext::TestSize.Level1)
+{
+    {
+        const Math::Quat quaternion = Math::Euler(60.0f, 0.0f, 0.0f);
+
+        ASSERT_FLOAT_EQ(quaternion.x, 0.5f);
+        ASSERT_FLOAT_EQ(quaternion.y, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.z, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.w, 0.86602539f);
+    }
+
+    {
+        constexpr Math::Vec3 vec = Math::Vec3(60.0f, 0.0f, 0.0f);
+        const Math::Quat quaternion = Math::Euler(vec);
+
+        ASSERT_FLOAT_EQ(quaternion.x, 0.5f);
+        ASSERT_FLOAT_EQ(quaternion.y, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.z, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.w, 0.86602539f);
+    }
+}
+
+/**
+ * @tc.name: Conjugate
+ * @tc.desc: Tests for Conjugate. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Conjugate, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Quat quat = Math::Quat(0.0f, 0.0f, -0.707107f, 0.707107f);
+        const Math::Quat quaternion = Math::Conjugate(quat);
+
+        ASSERT_FLOAT_EQ(quaternion.x, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.y, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.z, 0.707107f);
+        ASSERT_FLOAT_EQ(quaternion.w, 0.707107f);
+    }
+}
+
+/**
+ * @tc.name: VectorMultiplication
+ * @tc.desc: Tests for Vector Multiplication. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, VectorMultiplication, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Quat quat = Math::Quat(0.0f, 0.0f, -0.707107f, 0.707107f);
+        constexpr Math::Vec3 vec = Math::Vec3(1.0f, 2.0f, -3.0f);
+        Math::Vec3 temp = quat * vec;
+
+        constexpr Math::Quat qVec = Math::Quat(1.0f, 2.0f, -3.0f, 0.0f);
+
+        Math::Quat qVecMult = quat * qVec * (Math::Conjugate(quat));
+
+        ASSERT_NEAR(temp.x, qVecMult.x, 0.0001f);
+        ASSERT_NEAR(temp.y, qVecMult.y, 0.0001f);
+        ASSERT_NEAR(temp.z, qVecMult.z, 0.0001f);
+    }
+    {
+        constexpr Math::Quat quat = Math::Quat(0.0f, 0.0f, -0.707107f, 0.707107f);
+        constexpr Math::Vec3 vec = Math::Vec3(1.0f, 2.0f, -3.0f);
+        Math::Vec3 temp = vec * quat;
+
+        constexpr Math::Quat qVec = Math::Quat(1.0f, 2.0f, -3.0f, 0.0f);
+
+        Math::Quat qVecMult = (Math::Conjugate(quat)) * qVec * quat;
+
+        ASSERT_NEAR(temp.x, qVecMult.x, 0.0001f);
+        ASSERT_NEAR(temp.y, qVecMult.y, 0.0001f);
+        ASSERT_NEAR(temp.z, qVecMult.z, 0.0001f);
+    }
+}
+
+/**
+ * @tc.name: Normalize
+ * @tc.desc: Tests for Normalize. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Normalize, testing::ext::TestSize.Level1)
+{
+    { // Bad input
+
+        constexpr Math::Quat quat = Math::Quat(0.0f, 0.0f, 0.0f, 0.0f);
+        const Math::Quat quaternion = Math::Normalize(quat);
+
+        ASSERT_FLOAT_EQ(quaternion.x, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.y, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.z, 0.0f);
+        ASSERT_FLOAT_EQ(quaternion.w, 1.0f);
+    }
+
+    {
+        constexpr Math::Quat quat = Math::Quat(-1.0f, -1.0f, -1.0f, -1.0f);
+        const Math::Quat quaternion = Math::Normalize(quat);
+
+        ASSERT_FLOAT_EQ(quaternion.x, -0.5f);
+        ASSERT_FLOAT_EQ(quaternion.y, -0.5f);
+        ASSERT_FLOAT_EQ(quaternion.z, -0.5f);
+        ASSERT_FLOAT_EQ(quaternion.w, -0.5f);
+    }
+}
+
+/**
+ * @tc.name: LookRotation
+ * @tc.desc: Tests for Look Rotation. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, LookRotation, testing::ext::TestSize.Level1)
+{
+    Math::Quat rotation = Math::Quat(0.0f, 0.0f, 0.0f, 1.0f);
+
+    constexpr Math::Vec3 myPosition = Math::Vec3(0.0f, 0.0f, 0.0f);
+    constexpr Math::Vec3 targetPosition = Math::Vec3(90.0f, 0.0f, 90.0f);
+
+    constexpr Math::Vec3 relativePos = targetPosition - myPosition;
+
+    rotation = Math::LookRotation(relativePos, Math::Vec3(0.0f, 1.0f, 0.0f));
+
+    ASSERT_FLOAT_EQ(rotation.x, 0.0f);
+    ASSERT_FLOAT_EQ(rotation.y, 0.38268346f);
+    ASSERT_FLOAT_EQ(rotation.z, 0.0f);
+    ASSERT_FLOAT_EQ(rotation.w, 0.92387956f);
+}
+
+/**
+ * @tc.name: NormalizeAngle
+ * @tc.desc: Tests for Normalize Angle. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, NormalizeAngle, testing::ext::TestSize.Level1)
+{
+    float angle = -0.1f;
+    angle = Math::NormalizeAngle(angle);
+
+    ASSERT_FLOAT_EQ(angle, 359.9f);
+
+    angle = 360.2f;
+    angle = Math::NormalizeAngle(angle);
+
+    ASSERT_NEAR(angle, 0.2f, 0.0001f);
+}
+
+/**
+ * @tc.name: NormalizeAngles
+ * @tc.desc: Tests for Normalize Angles. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, NormalizeAngles, testing::ext::TestSize.Level1)
+{
+    Math::Vec3 angles = Math::Vec3(-0.1f, 200.0f, -0.1f);
+    angles = Math::NormalizeAngles(angles);
+
+    ASSERT_LT(angles.x, 359.91f);
+    ASSERT_GT(angles.x, 359.89f);
+
+    ASSERT_FLOAT_EQ(angles.y, 200.0f);
+
+    ASSERT_LT(angles.z, 359.91f);
+    ASSERT_GT(angles.z, 359.89f);
+}
+
+/**
+ * @tc.name: ToEulerRad
+ * @tc.desc: Tests for To Euler Rad. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, ToEulerRad, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat qRot = Math::Quat(0.0f, 0.383f, 0.0f, 0.9235f); // Should be near Y 45 degrees
+    const Math::Vec3 rotation = Math::ToEulerRad(qRot);
+
+    ASSERT_FLOAT_EQ(rotation.y, 0.78581429f);
+}
+
+/**
+ * @tc.name: Slerp
+ * @tc.desc: Tests for Slerp. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, Slerp, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat qRot1 = Math::Quat(0.0f, 0.0f, -0.707107f, 0.707107f);
+    constexpr Math::Quat qRot2 = Math::Quat(0.707107f, 0.0f, 0.707107f, 0.0f);
+    {
+        const float coeff = 0.0f;
+        Math::Quat qT = Math::Slerp(qRot1, qRot2, coeff);
+
+        ASSERT_FLOAT_EQ(qT.x, 0.0f);
+        ASSERT_FLOAT_EQ(qT.y, 0.0f);
+        ASSERT_FLOAT_EQ(qT.z, -0.707107f);
+        ASSERT_FLOAT_EQ(qT.w, 0.707107f);
+    }
+
+    {
+        const float coeff = 1.0f;
+        Math::Quat qT = Math::Slerp(qRot1, qRot2, coeff);
+
+        ASSERT_FLOAT_EQ(qT.x, -0.707107f);
+        ASSERT_FLOAT_EQ(qT.y, 0.0f);
+        ASSERT_FLOAT_EQ(qT.z, -0.707107f);
+        ASSERT_FLOAT_EQ(qT.w, 0.0f);
+    }
+
+    {
+        const float coeff = 0.5f;
+        Math::Quat qT = Math::Slerp(qRot1, qRot2, coeff);
+
+        // trigonometry test
+
+        float cosTeta = Math::Dot(qRot1, qRot2);
+        if (cosTeta < 0) {
+            cosTeta = -cosTeta;
+            float Teta = Math::acos(cosTeta);
+            Math::Quat qT1 = sin((1 - coeff) * Teta) / sin(Teta) * qRot1;
+            Math::Quat qT2 = -sin(coeff * Teta) / sin(Teta) * qRot2;
+            ASSERT_NEAR(qT.x, (qT1.x + qT2.x), 0.0001f);
+            ASSERT_NEAR(qT.y, (qT1.y + qT2.y), 0.0001f);
+            ASSERT_NEAR(qT.z, (qT1.z + qT2.z), 0.0001f);
+            ASSERT_NEAR(qT.w, (qT1.w + qT2.w), 0.0001f);
+        }
+    }
+
+    {
+        constexpr Math::Quat qRotPositive1 = Math::Quat(0.0f, 0.0f, -0.707107f, 0.707107f);
+        constexpr Math::Quat qRotPositive2 = Math::Quat(0.707107f, 0.0f, -0.707107f, 0.0f);
+
+        const float coeff = 0.5f;
+        Math::Quat qT = Math::Slerp(qRotPositive1, qRotPositive2, coeff);
+
+        // trigonometry test
+
+        float cosTeta = Math::Dot(qRotPositive1, qRotPositive2);
+        float Teta = Math::acos(cosTeta);
+        Math::Quat qT1 = sin((1 - coeff) * Teta) / sin(Teta) * qRotPositive1;
+        Math::Quat qT2 = sin(coeff * Teta) / sin(Teta) * qRotPositive2;
+        ASSERT_NEAR(qT.x, (qT1.x + qT2.x), 0.0001f);
+        ASSERT_NEAR(qT.y, (qT1.y + qT2.y), 0.0001f);
+        ASSERT_NEAR(qT.z, (qT1.z + qT2.z), 0.0001f);
+        ASSERT_NEAR(qT.w, (qT1.w + qT2.w), 0.0001f);
+    }
+
+    {
+        constexpr Math::Quat qRotPositive1 = Math::Quat(0.0f, 0.0f, 0.707107f, 0.707107f);
+        constexpr Math::Quat qRotPositive2 = Math::Quat(0.0f, 0.0f, 0.707107f, 0.707107f);
+
+        const float coeff = 0.5f;
+        Math::Quat qT = Math::Slerp(qRotPositive1, qRotPositive2, coeff);
+
+        ASSERT_FLOAT_EQ(qT.x, 0.0f);
+        ASSERT_FLOAT_EQ(qT.y, 0.0f);
+        ASSERT_FLOAT_EQ(qT.z, 0.707107f);
+        ASSERT_FLOAT_EQ(qT.w, 0.707107f);
+    }
+}
+
+// Quaternion remaining base actions
+
+/**
+ * @tc.name: DivideZero
+ * @tc.desc: Tests for Divide Zero. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternion, DivideZero, testing::ext::TestSize.Level1)
+{
+    Math::Quat rotation = Math::Quat(0.0f, 0.0f, 0.0f, 1.0f);
+
+    rotation /= 0.0f;
+
+    ASSERT_FLOAT_EQ(rotation.x, HUGE_VALF);
+    ASSERT_FLOAT_EQ(rotation.y, HUGE_VALF);
+    ASSERT_FLOAT_EQ(rotation.z, HUGE_VALF);
+    ASSERT_FLOAT_EQ(rotation.w, HUGE_VALF);
+}
+
+/**
+ * @tc.name: Compare
+ * @tc.desc: Tests for Compare. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternion, Compare, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Quat rotation = Math::Quat(0.0f, 0.0f, 0.0f, 1.0f);
+    constexpr const Math::Quat rotation2 = Math::Quat(0.0f, 0.0f, 0.0f, 1.0f);
+    constexpr const Math::Quat rotation3 = Math::Quat(0.0f, 0.0f, 0.0f, 2.0f);
+
+    // != calls == bouble cover for free
+    ASSERT_FALSE(rotation != rotation2);
+    ASSERT_FALSE(rotation == rotation3);
+    ASSERT_TRUE(rotation == Normalize(rotation3));
+
+    // const index compare
+    ASSERT_FLOAT_EQ(rotation2[0], rotation3[0]);
+}
+
+// Matrix
+
+/**
+ * @tc.name: Default
+ * @tc.desc: Tests for Default. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3constructors, Default, testing::ext::TestSize.Level1)
+{
+    ASSERT_NO_FATAL_FAILURE([[maybe_unused]] Math::Mat3X3 mat = Math::Mat3X3());
+}
+
+/**
+ * @tc.name: Initializer
+ * @tc.desc: Tests for Initializer. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3constructors, Initializer, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1 = Math::Vec3(1.0f, 0.0f, 0.0f);
+    constexpr Math::Vec3 col2 = Math::Vec3(0.0f, 1.0f, 0.0f);
+    constexpr Math::Vec3 col3 = Math::Vec3(0.0f, 0.0f, 1.0f);
+    [[maybe_unused]] constexpr Math::Mat3X3 mat = Math::Mat3X3(col1, col2, col3);
+
+    ASSERT_FLOAT_EQ(col1.x, 1.0f);
+    ASSERT_FLOAT_EQ(col1.y, 0.0f);
+    ASSERT_FLOAT_EQ(col1.z, 0.0f);
+
+    ASSERT_FLOAT_EQ(col2.x, 0.0f);
+    ASSERT_FLOAT_EQ(col2.y, 1.0f);
+    ASSERT_FLOAT_EQ(col2.z, 0.0f);
+
+    ASSERT_FLOAT_EQ(col3.x, 0.0f);
+    ASSERT_FLOAT_EQ(col3.y, 0.0f);
+    ASSERT_FLOAT_EQ(col3.z, 1.0f);
+}
+
+/**
+ * @tc.name: Copy
+ * @tc.desc: Tests for Copy. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3constructors, Copy, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1 = Math::Vec3(1.0f, 0.0f, 0.0f);
+    constexpr Math::Vec3 col2 = Math::Vec3(0.0f, 1.0f, 0.0f);
+    constexpr Math::Vec3 col3 = Math::Vec3(0.0f, 0.0f, 1.0f);
+    constexpr Math::Mat3X3 mat = Math::Mat3X3(col1, col2, col3);
+    constexpr Math::Mat3X3 copiedMat = Math::Mat3X3(mat);
+
+    ASSERT_FLOAT_EQ(copiedMat.data[0], 1.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[1], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[2], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[3], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[4], 1.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[5], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[6], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[7], 0.0f);
+    ASSERT_FLOAT_EQ(copiedMat.data[8], 1.0f);
+}
+
+/**
+ * @tc.name: Matrix3x3OperatorAddition
+ * @tc.desc: Tests for Matrix3X3 Operator Addition. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3operators, Matrix3x3OperatorAddition, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1A = Math::Vec3(1.0f, 2.0f, 3.0f);
+    constexpr Math::Vec3 col2A = Math::Vec3(4.0f, 5.0f, 6.0f);
+    constexpr Math::Vec3 col3A = Math::Vec3(7.0f, 8.0f, 9.0f);
+    constexpr Math::Mat3X3 matA = Math::Mat3X3(col1A, col2A, col3A);
+
+    constexpr Math::Vec3 col1B = Math::Vec3(0.5f, 1.5f, 2.5f);
+    constexpr Math::Vec3 col2B = Math::Vec3(3.5f, 4.5f, 5.5f);
+    constexpr Math::Vec3 col3B = Math::Vec3(6.5f, 7.5f, 8.5f);
+    constexpr Math::Mat3X3 matB = Math::Mat3X3(col1B, col2B, col3B);
+
+    const Math::Mat3X3 result = matA + matB;
+
+    ASSERT_FLOAT_EQ(result.data[0], 1.5f);
+    ASSERT_FLOAT_EQ(result.data[1], 3.5f);
+    ASSERT_FLOAT_EQ(result.data[2], 5.5f);
+
+    ASSERT_FLOAT_EQ(result.data[3], 7.5f);
+    ASSERT_FLOAT_EQ(result.data[4], 9.5f);
+    ASSERT_FLOAT_EQ(result.data[5], 11.5f);
+
+    ASSERT_FLOAT_EQ(result.data[6], 13.5f);
+    ASSERT_FLOAT_EQ(result.data[7], 15.5f);
+    ASSERT_FLOAT_EQ(result.data[8], 17.5f);
+}
+
+/**
+ * @tc.name: Matrix3x3OperatorAdditionAssignment
+ * @tc.desc: Tests for Matrix3X3 Operator Addition Assignment. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3operators, Matrix3x3OperatorAdditionAssignment, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1A = Math::Vec3(1.0f, 2.0f, 3.0f);
+    constexpr Math::Vec3 col2A = Math::Vec3(4.0f, 5.0f, 6.0f);
+    constexpr Math::Vec3 col3A = Math::Vec3(7.0f, 8.0f, 9.0f);
+    Math::Mat3X3 matA = Math::Mat3X3(col1A, col2A, col3A);
+
+    constexpr Math::Vec3 col1B = Math::Vec3(0.5f, 1.5f, 2.5f);
+    constexpr Math::Vec3 col2B = Math::Vec3(3.5f, 4.5f, 5.5f);
+    constexpr Math::Vec3 col3B = Math::Vec3(6.5f, 7.5f, 8.5f);
+    constexpr Math::Mat3X3 matB = Math::Mat3X3(col1B, col2B, col3B);
+
+    matA += matB;
+
+    ASSERT_FLOAT_EQ(matA.data[0], 1.5f);
+    ASSERT_FLOAT_EQ(matA.data[1], 3.5f);
+    ASSERT_FLOAT_EQ(matA.data[2], 5.5f);
+
+    ASSERT_FLOAT_EQ(matA.data[3], 7.5f);
+    ASSERT_FLOAT_EQ(matA.data[4], 9.5f);
+    ASSERT_FLOAT_EQ(matA.data[5], 11.5f);
+
+    ASSERT_FLOAT_EQ(matA.data[6], 13.5f);
+    ASSERT_FLOAT_EQ(matA.data[7], 15.5f);
+    ASSERT_FLOAT_EQ(matA.data[8], 17.5f);
+}
+
+/**
+ * @tc.name: Matrix3x3OperatorSubtraction
+ * @tc.desc: Tests for Matrix3X3 Operator Subtraction. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3operators, Matrix3x3OperatorSubtraction, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1A = Math::Vec3(5.0f, -3.0f, 0.0f);
+    constexpr Math::Vec3 col2A = Math::Vec3(7.5f, 1.0f, -2.0f);
+    constexpr Math::Vec3 col3A = Math::Vec3(3.0f, 4.0f, -5.0f);
+    constexpr Math::Mat3X3 matA = Math::Mat3X3(col1A, col2A, col3A);
+
+    constexpr Math::Vec3 col1B = Math::Vec3(2.0f, -1.0f, 0.0f);
+    constexpr Math::Vec3 col2B = Math::Vec3(3.5f, 0.5f, -1.0f);
+    constexpr Math::Vec3 col3B = Math::Vec3(1.0f, 2.0f, -3.0f);
+    constexpr Math::Mat3X3 matB = Math::Mat3X3(col1B, col2B, col3B);
+
+    const Math::Mat3X3 result = matA - matB;
+
+    ASSERT_FLOAT_EQ(result.data[0], 3.0f);
+    ASSERT_FLOAT_EQ(result.data[1], -2.0f);
+    ASSERT_FLOAT_EQ(result.data[2], 0.0f);
+
+    ASSERT_FLOAT_EQ(result.data[3], 4.0f);
+    ASSERT_FLOAT_EQ(result.data[4], 0.5f);
+    ASSERT_FLOAT_EQ(result.data[5], -1.0f);
+
+    ASSERT_FLOAT_EQ(result.data[6], 2.0f);
+    ASSERT_FLOAT_EQ(result.data[7], 2.0f);
+    ASSERT_FLOAT_EQ(result.data[8], -2.0f);
+}
+
+/**
+ * @tc.name: Matrix3x3OperatorSubtractionAssignment
+ * @tc.desc: Tests for Matrix3X3 Operator Subtraction Assignment. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathMatrix3x3operators, Matrix3x3OperatorSubtractionAssignment, testing::ext::TestSize.Level1)
+{
+    constexpr Math::Vec3 col1A = Math::Vec3(5.0f, -3.0f, 0.0f);
+    constexpr Math::Vec3 col2A = Math::Vec3(7.5f, 1.0f, -2.0f);
+    constexpr Math::Vec3 col3A = Math::Vec3(3.0f, 4.0f, -5.0f);
+    Math::Mat3X3 matA = Math::Mat3X3(col1A, col2A, col3A);
+
+    constexpr Math::Vec3 col1B = Math::Vec3(2.0f, -1.0f, 0.0f);
+    constexpr Math::Vec3 col2B = Math::Vec3(3.5f, 0.5f, -1.0f);
+    constexpr Math::Vec3 col3B = Math::Vec3(1.0f, 2.0f, -3.0f);
+    constexpr Math::Mat3X3 matB = Math::Mat3X3(col1B, col2B, col3B);
+
+    matA -= matB;
+
+    ASSERT_FLOAT_EQ(matA.data[0], 3.0f);
+    ASSERT_FLOAT_EQ(matA.data[1], -2.0f);
+    ASSERT_FLOAT_EQ(matA.data[2], 0.0f);
+
+    ASSERT_FLOAT_EQ(matA.data[3], 4.0f);
+    ASSERT_FLOAT_EQ(matA.data[4], 0.5f);
+    ASSERT_FLOAT_EQ(matA.data[5], -1.0f);
+
+    ASSERT_FLOAT_EQ(matA.data[6], 2.0f);
+    ASSERT_FLOAT_EQ(matA.data[7], 2.0f);
+    ASSERT_FLOAT_EQ(matA.data[8], -2.0f);
+}
