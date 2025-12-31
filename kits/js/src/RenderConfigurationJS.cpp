@@ -14,11 +14,12 @@
  */
 #include "RenderConfigurationJS.h"
 
-#include "class_definition_helpers.h"
-#include "BaseObjectJS.h"
+#include <meta/api/metadata_util.h>
 
 #include <3d/render/intf_render_data_store_default_light.h>
-#include <meta/api/metadata_util.h>
+
+#include "BaseObjectJS.h"
+#include "class_definition_helpers.h"
 
 static constexpr napi_type_tag RENDER_CONFIG_TAG = { SCENE_NS::IRenderConfiguration::UID.data[0],
     SCENE_NS::IRenderConfiguration::UID.data[1] };
@@ -61,7 +62,7 @@ napi_value ClassGetter(napi_env env, napi_callback_info info)
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
         if (auto impl = UnwrapObject<Class>(fc.GetEnv(), fc.This(), RENDER_CONFIG_TAG)) {
-           return  (impl->*F)(fc);
+            return (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
@@ -72,12 +73,11 @@ inline napi_value ClassSetter(napi_env env, napi_callback_info info)
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc && fc.This()) {
         if (auto impl = UnwrapObject<Class>(fc.GetEnv(), fc.This(), RENDER_CONFIG_TAG)) {
-             (impl->*F)(fc);
+            (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 };
-
 
 RenderConfiguration::RenderConfiguration() {}
 
@@ -126,12 +126,12 @@ void RenderConfiguration::SetFrom(napi_env env, SCENE_NS::IRenderConfiguration::
         resolutionProxy_.reset();
         rc_ = rc;
     }
- }
+}
 
 RenderConfiguration* RenderConfiguration::Unwrap(NapiApi::Object obj)
 {
     return UnwrapObject<RenderConfiguration>(obj.GetEnv(), obj, RENDER_CONFIG_TAG);
- }
+}
 
 napi_value RenderConfiguration::Dispose(NapiApi::FunctionContext<>& ctx)
 {
@@ -171,7 +171,7 @@ napi_value RenderConfiguration::GetShadowResolution(NapiApi::FunctionContext<>& 
         auto p = r->GetPropertyPtr();
         if (p && p->IsValueSet()) {
             // We return a valid object only if the value has been set by the user, as defined in .d.ts
-            return r->Value(); 
+            return r->Value();
         }
     }
     return ctx.GetUndefined();
@@ -184,7 +184,8 @@ void RenderConfiguration::SetShadowResolution(NapiApi::FunctionContext<NapiApi::
         if (obj.IsDefined()) {
             r->SetValue(obj);
         } else {
-            // shadowResolution = undefined leads to resetting the property, setting shadow resolution back to default value
+            // shadowResolution = undefined leads to resetting the property, setting shadow resolution back to default
+            // value
             r->ResetValue();
         }
     }

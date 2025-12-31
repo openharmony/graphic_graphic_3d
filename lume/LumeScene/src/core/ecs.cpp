@@ -525,7 +525,7 @@ static void NotifyChildAdded(IInternalScene& scene, CORE_NS::Entity parent, CORE
             if (auto nodeSystem = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(*scene.GetEcsContext().GetNativeEcs())) {
                 if (auto parentNode = nodeSystem->GetNode(parent)) {
                     auto children = parentNode->GetChildren();
-                    for (auto childIndex = 0; childIndex < children.size(); ++childIndex) {
+                    for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
                         if (children[childIndex]->GetEntity() == entity) {
                             index = childIndex;
                             break;
