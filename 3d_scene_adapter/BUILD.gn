@@ -111,6 +111,7 @@ ohos_source_set("scene_adapter_source") {
     "src/scene_adapter.cpp",
     "src/scene_bridge.cpp",
     "src/scene_bridge_ani.cpp",
+    "src/offscreen_scene.cpp",
   ]
 
   include_dirs = [

@@ -19,6 +19,7 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 module_output_path = "graphic_3d/graphic_3d/3d_scene_adapter"
 
 ohos_unittest("SceneAdapterUnitTest") {
+  module_out_path = module_output_path
   include_dirs = [
     "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
     "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
@@ -67,6 +68,91 @@ ohos_unittest("SceneAdapterUnitTest") {
 
   deps = [
     "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter"
+  ]
+
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "ability_runtime:app_context",
+    "ability_runtime:data_ability_helper",
+    "ability_runtime:napi_base_context",
+    "ability_runtime:napi_common",
+    "bundle_framework:appexecfwk_base",
+    "bundle_framework:appexecfwk_core",
+    "c_utils:utils",
+    "googletest:gmock",
+    "googletest:gtest",
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "graphic_2d:librender_service_base",
+    "graphic_2d:librender_service_client",
+    "graphic_surface:surface",
+    "graphic_surface:sync_fence",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+    "init:libbegetutil",
+    "input:libmmi-client",
+    "napi:ace_napi",
+    "vulkan-headers:vulkan_headers",
+  ]
+  
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_unittest("AGPOffscreenRenderUnitTest") {
+  module_out_path = module_output_path
+
+  include_dirs = [
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include/ohos",
+  ]
+
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
+
+  sources = [ "offscreen_render_unit_test.cpp",
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/src/offscreen_scene.cpp"
+     ]
+
+  defines = [
+    "CORE_HAS_GLES_BACKEND=1",
+    "CORE_HAS_VULKAN_BACKEND=1",
+  ]
+
+  defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
+
+  if (target_cpu == "arm") {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+      "PLATFORM_CORE_PLUGIN_PATH=/system/lib/graphics3d",
+      "PLATFORM_APP_ROOT_PATH=/system/lib/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib/graphics3d",
+    ]
+  }
+
+  if (target_cpu == "arm64") {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+      "PLATFORM_CORE_PLUGIN_PATH=/system/lib64/graphics3d/",
+      "PLATFORM_APP_ROOT_PATH=/system/lib64/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib64/graphics3d/",
+    ]
+  }
+
+  configs = [
+    "//foundation/graphic/graphic_3d/3d_scene_adapter:lume3d_config",
+    "//foundation/graphic/graphic_3d/3d_scene_adapter:scene_adapter_config",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter:widget_adapter_config",
+  ]
+
+  deps = [
+    "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+    "//foundation/graphic/graphic_3d/lume/LumeScene:AGPSceneApi"
   ]
 
   external_deps = [

@@ -963,4 +963,109 @@ void SceneAdapter::AcquireImage(const SurfaceBufferInfo &bufferInfo)
         return false;
     }));
 }
+
+void SceneAdapter::CreateEmptyScene()
+{
+    auto &objRegistry = META_NS::GetObjectRegistry();
+    auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
+    auto sceneManager = objRegistry.Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, objContext);
+
+    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
+        if (!scene || !scene->RenderConfiguration()->GetValue()) {
+            return;
+        }
+        // make sure there's a valid root node
+        scene->GetInternalScene()->GetEcsContext().CreateUnnamedRootNode();
+
+        auto &obr = META_NS::GetObjectRegistry();
+
+        META_NS::IObjectRegistry* obrPtr = &obr;
+        // SceneETS::AddScene function begin
+        if (!obrPtr) {
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get obr null");
+            return;
+        }
+        auto params = interface_pointer_cast<META_NS::IMetadata>(obrPtr->GetDefaultObjectContext());
+        if (!params) {
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get params null");
+            return;
+        }
+        auto duh = params->GetArrayProperty<IntfWeakPtr>("Scenes");
+        if (!duh) {
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get duh null");
+            return;
+        }
+        
+        duh->AddValue(interface_pointer_cast<CORE_NS::IInterface>(scene));
+        // SceneETS::AddScene function end
+
+        this->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
+    };
+    auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
+
+    std::string sceneRes = "scene://empty";
+    sceneManager->CreateScene(sceneRes.c_str())
+        .Then(BASE_NS::move(engineThreadTask), engineQ)
+        .Wait();
+}
+
+bool SceneAdapter::LoadPluginByUid(const BASE_NS::Uid& uid)
+{
+    if (engineInstance_.libHandle_) {
+        WIDGET_LOGI("%s, already loaded", __func__);
+        return true;
+    }
+    if (!LoadEngineLib()) {
+        return false;
+    }
+
+    BASE_NS::vector<BASE_NS::Uid> pluginVector = { uid };
+    #define TO_STRING(name) #name
+    #define PLATFORM_PATH_NAME(name) TO_STRING(name)
+    CORE_NS::PlatformCreateInfo platformCreateInfo {
+        PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
+        PLATFORM_PATH_NAME(PLATFORM_CORE_PLUGIN_PATH),
+        PLATFORM_PATH_NAME(PLATFORM_APP_ROOT_PATH),
+        PLATFORM_PATH_NAME(PLATFORM_APP_PLUGIN_PATH),
+        hapInfo_.hapPath_.c_str(),
+        hapInfo_.bundleName_.c_str(),
+        hapInfo_.moduleName_.c_str(),
+        hapInfo_.resourceManager_
+    };
+    #undef TO_STRING
+    #undef PLATFORM_PATH_NAME
+
+    const BASE_NS::array_view<BASE_NS::Uid> pluginList(pluginVector.data(), pluginVector.size());
+    CORE_NS::CreatePluginRegistry(platformCreateInfo);
+    if (!CORE_NS::GetPluginRegister().LoadPlugins(pluginList)) {
+        WIDGET_LOGE("fail to load scene widget plugin");
+        return false;
+    }
+    WIDGET_LOGI("load plugin success");
+    return true;
+}
+
+CORE_NS::IEcs::Ptr SceneAdapter::GetEcs()
+{
+    auto sceneObj = GetSceneObj();
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
+    if (!scene) {
+        WIDGET_LOGE("scene not ready");
+        return nullptr;
+    }
+    CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
+    return ecs;
+}
+
+bool SceneAdapter::EngineTickFrame(CORE_NS::IEcs::Ptr ecs)
+{
+    if (!engineInstance_.engine_) {
+        WIDGET_LOGE("engine not ready");
+        return false;
+    }
+
+    auto* ecsRawPtr = ecs.get();
+    const BASE_NS::array_view arrView{&ecsRawPtr, 1};
+    return engineInstance_.engine_->TickFrame(arrView);
+}
 }  // namespace OHOS::Render3D

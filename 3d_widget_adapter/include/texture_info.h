@@ -43,6 +43,7 @@ struct WindowChangeInfo {
     SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
     uint32_t transformType = 0; // TransformHint
     uint32_t backgroundColor = 0x00000000; // transparent color, argb
+    uint64_t producerSurfaceId = 0x0;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H

@@ -71,7 +71,8 @@ public:
 private:
     void CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig);
     void* CreateNativeWindow(uint32_t width, uint32_t height);
-    void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow);
+    void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
+        uint64_t producerSurface = 0x0);
     void ConfigTexture(float width, float height);
     void RemoveChild();
 
@@ -209,19 +210,60 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     return reinterpret_cast<void *>(window);
 }
 
-void TextureLayerImpl::ConfigWindow(float offsetX, float offsetY, float width, float height, float scale,
-    bool recreateWindow)
+void *CreateNativeOffscreenWindow(uint32_t width, uint32_t height, uint64_t producerSurfaceId, uint32_t transform)
+{
+    auto utils = OHOS::SurfaceUtils::GetInstance();
+    WIDGET_LOGI("TextureLayerImpl::CreateNativeOffscreenWindow");
+
+    auto producerSurface = utils->GetSurface(producerSurfaceId);
+    if (!producerSurface) {
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow Get producer surface fail");
+        return nullptr;
+    }
+
+    auto t = RotationToTransform(transform);
+    producerSurface->SetTransformHint(t);
+
+    auto ret = SurfaceUtils::GetInstance()->Add(producerSurface->GetUniqueId(), producerSurface);
+    if (ret != SurfaceError::SURFACE_ERROR_OK) {
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow add surface error");
+        return nullptr;
+    }
+
+    auto window = CreateNativeWindowFromSurface(&producerSurface);
+    if (!window) {
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow CreateNativeWindowFromSurface failed");
+    }
+    return reinterpret_cast<void *>(window);
+}
+
+void TextureLayerImpl::ConfigWindow(
+    float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
+    uint64_t producerSurface)
 {
     float widthScale = image_.textureInfo_.widthScale_;
     float heightScale = image_.textureInfo_.heightScale_;
+    constexpr uint64_t nullSurfaceID = 0x0;
+
     if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
         image_.textureInfo_.recreateWindow_ = recreateWindow;
 
-        if (!image_.textureInfo_.nativeWindow_) {
-            image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
-                static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale)));
+        if (producerSurface == nullSurfaceID) {
+            if (!image_.textureInfo_.nativeWindow_) {
+                image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
+                    static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale)));
+            }
+        } else {
+            WIDGET_LOGI("TextureLayerImpl::ConfigWindow offscreen render");
+            if (!image_.textureInfo_.nativeWindow_) {
+                image_.textureInfo_.nativeWindow_ =
+                    reinterpret_cast<void *>(CreateNativeOffscreenWindow(static_cast<uint32_t>(width * widthScale),
+                        static_cast<uint32_t>(height * heightScale),
+                        producerSurface,
+                        transform_));
+            }
         }
-        // need check recreate window flag
+            // need check recreate window flag
         NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
             SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
             static_cast<uint32_t>(height * scale * heightScale));
@@ -277,7 +319,8 @@ TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChang
     image_.textureInfo_.heightScale_ = static_cast<float>(windowChangeInfo.heightScale);
 
     ConfigWindow(windowChangeInfo.offsetX, windowChangeInfo.offsetY, windowChangeInfo.width,
-        windowChangeInfo.height, windowChangeInfo.scale, windowChangeInfo.recreateWindow);
+        windowChangeInfo.height, windowChangeInfo.scale, windowChangeInfo.recreateWindow,
+        windowChangeInfo.producerSurfaceId);
 
     return image_.textureInfo_;
 }
