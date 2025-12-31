@@ -40,6 +40,7 @@
 
 static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
 const float CAM_INDEX_RENDER = 15.7f;
+static constexpr BASE_NS::Math::Mat4X4 ZERO_4X4 = {};
 
 namespace {
 
@@ -608,6 +609,9 @@ napi_value CameraJS::Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::
 napi_value CameraJS::GetProjectionMatrix(NapiApi::FunctionContext<>& ctx)
 {
     auto cameraMatrixAccessor = GetNativeObject<SCENE_NS::ICameraMatrixAccessor>();
+    if (!cameraMatrixAccessor) {
+        return ConvertMatrixToJs(ctx.Env(), ZERO_4X4);
+    }
 
     return ConvertMatrixToJs(ctx.Env(), cameraMatrixAccessor->GetProjectionMatrix());
 }
@@ -615,6 +619,9 @@ napi_value CameraJS::GetProjectionMatrix(NapiApi::FunctionContext<>& ctx)
 napi_value CameraJS::GetViewMatrix(NapiApi::FunctionContext<>& ctx)
 {
     auto cameraMatrixAccessor = GetNativeObject<SCENE_NS::ICameraMatrixAccessor>();
+    if (!cameraMatrixAccessor) {
+        return ConvertMatrixToJs(ctx.Env(), ZERO_4X4);
+    }
 
     return ConvertMatrixToJs(ctx.Env(), cameraMatrixAccessor->GetViewMatrix());
 }

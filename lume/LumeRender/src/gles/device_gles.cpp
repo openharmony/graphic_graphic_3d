@@ -1708,6 +1708,9 @@ void DeviceGLES::BindBuffer(uint32_t target, uint32_t buffer)
         return;
     }
 #endif
+    if (targetId >= MAX_BUFFER_TARGET_ID) {
+        return;
+    }
     auto& state = bufferBound_[targetId];
     if ((!state.bound) || (state.buffer != buffer)) {
         state.bound = true;
@@ -1725,6 +1728,9 @@ void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buf
         return;
     }
 #endif
+    if ((targetId >= MAX_BUFFER_BIND_ID) || (binding >= MAX_BINDING_VALUE)) {
+        return;
+    }
     auto& slot = boundBuffers_[targetId][binding];
 
     if ((slot.cached == false) || (slot.buffer != buffer) || (slot.offset != offset) || (slot.size != size)) {
@@ -1741,6 +1747,9 @@ void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buf
             return;
         }
 #endif
+        if (targetId2 >= MAX_BUFFER_TARGET_ID) {
+            return;
+        }
         auto& state = bufferBound_[targetId2];
         state.bound = true;
         state.buffer = buffer;
@@ -1774,7 +1783,7 @@ uint32_t DeviceGLES::BoundProgram() const
 uint32_t DeviceGLES::BoundBuffer(uint32_t target) const
 {
     const uint32_t targetId = GenericTargetToTargetId(target);
-    if (targetId >= MAX_BUFFER_BIND_ID) {
+    if (targetId >= MAX_BUFFER_TARGET_ID) {
         return 0;
     }
     const auto& slot = bufferBound_[targetId];
@@ -1863,6 +1872,9 @@ void DeviceGLES::BindTexture(uint32_t textureUnit, uint32_t target, uint32_t tex
         return;
     }
 #endif
+    if ((textureUnit >= MAX_TEXTURE_UNITS) || (targetId >= MAX_TEXTURE_TARGET_ID)) {
+        return;
+    }
 #if RENDER_HAS_GLES_BACKEND
     if (target == GL_TEXTURE_EXTERNAL_OES) {
         // Work around for oes textures needing a bind to zero to update.

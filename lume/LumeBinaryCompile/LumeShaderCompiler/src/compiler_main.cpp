@@ -21,6 +21,7 @@
 
 // standard library
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -1654,7 +1655,16 @@ bool IsDirty(const std::filesystem::path& outputMetaFilename, const std::uint64_
             return true;
         }
         // take the unix epoch and simple xor of the compile mask for comparision
-        std::uint64_t modifiedTime = std::stoull(line.erase(0U, delimPos + 1U));
+        std::uint64_t modifiedTime = 0;
+        {
+            auto& realLine = line.erase(0U, delimPos + 1U);
+            auto [ptr, err] = std::from_chars(realLine.data(), realLine.data() + realLine.size(), modifiedTime);
+            if (err == std::errc::invalid_argument) {
+                LUME_LOG_E("\"Line\" is not a number.");
+            } else if (err == std::errc::result_out_of_range) {
+                LUME_LOG_E("Number of \"Line\" is out of range.");
+            }
+        }
         std::uint64_t nanosSinceUnixEpoch = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                                 std::filesystem::last_write_time(file).time_since_epoch())
                                                 .count() ^
