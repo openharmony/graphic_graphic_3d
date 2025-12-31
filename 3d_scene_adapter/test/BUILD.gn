@@ -19,6 +19,7 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 module_output_path = "graphic_3d/graphic_3d/3d_scene_adapter"
 
 ohos_unittest("SceneAdapterUnitTest") {
+  module_out_path = module_output_path
   include_dirs = [
     "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
     "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
@@ -99,6 +100,8 @@ ohos_unittest("SceneAdapterUnitTest") {
 }
 
 ohos_unittest("AGPOffscreenRenderUnitTest") {
+  module_out_path = module_output_path
+
   include_dirs = [
     "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
     "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
