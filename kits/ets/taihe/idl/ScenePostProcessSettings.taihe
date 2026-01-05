@@ -53,17 +53,17 @@ interface BloomSettings {
 
 interface VignetteSettings {
     @get getRoundness(): Optional<f64>;
-    @set setRoundness(scaleFactor: Optional<f64>): void;
+    @set setRoundness(roundness: Optional<f64>): void;
 
     @get getIntensity(): Optional<f64>;
-    @set setIntensity(scatter: Optional<f64>): void;
+    @set setIntensity(intensity: Optional<f64>): void;
 
     @get getImpl(): Optional<i64>;
 }
 
 interface ColorFringeSettings {
     @get getIntensity(): Optional<f64>;
-    @set setIntensity(scatter: Optional<f64>): void;
+    @set setIntensity(intensity: Optional<f64>): void;
 
     @get getImpl(): Optional<i64>;
 }
@@ -76,10 +76,10 @@ interface PostProcessSettings {
     @set setBloom(bloom: Optional<BloomSettings>): void;
 
     @get getVignette(): Optional<VignetteSettings>;
-    @set setVignette(bloom: Optional<VignetteSettings>): void;
+    @set setVignette(vignette: Optional<VignetteSettings>): void;
 
     @get getColorFringe(): Optional<ColorFringeSettings>;
-    @set setColorFringe(bloom: Optional<ColorFringeSettings>): void;
+    @set setColorFringe(colorFringe: Optional<ColorFringeSettings>): void;
 
     @get getImpl(): Optional<i64>;
 }
