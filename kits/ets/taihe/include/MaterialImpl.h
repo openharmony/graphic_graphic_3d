@@ -23,7 +23,7 @@
 #include "SceneTH.user.hpp"
 #include "SceneResources.proj.hpp"
 #include "SceneResources.impl.hpp"
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "MaterialPropertyImpl.h"
 
 #include <scene/interface/intf_material.h>

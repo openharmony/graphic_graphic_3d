@@ -18,7 +18,7 @@
 
 #include <scene/ext/intf_ecs_object_access.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 class EntityProxy : public PropertyProxy<CORE_NS::Entity> {

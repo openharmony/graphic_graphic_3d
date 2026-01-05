@@ -25,7 +25,7 @@
 #include "SceneTypes.proj.hpp"
 #include "SceneTypes.impl.hpp"
 
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "MeshResourceETS.h"
 
 #include "geometry_definition/CubeETS.h"

@@ -32,7 +32,7 @@
 #include "TonemapETS.h"
 #include "PostProcessETS.h"
 
-#include "NodeImpl.h"
+#include "taihe/include/NodeImpl.h"
 #include "PostProcessSettingsImpl.h"
 
 namespace OHOS::Render3D::KITETS {

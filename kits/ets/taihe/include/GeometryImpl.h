@@ -29,7 +29,7 @@
 
 #include "MeshImpl.h"
 #include "MorpherImpl.h"
-#include "NodeImpl.h"
+#include "taihe/include/NodeImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 class GeometryImpl : public NodeImpl {

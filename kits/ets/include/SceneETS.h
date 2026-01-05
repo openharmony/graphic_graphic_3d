@@ -41,7 +41,7 @@
 #include "RenderConfigurationETS.h"
 #include "SceneComponentETS.h"
 #include "RenderContextETS.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 #include "Utils.h"
 
 namespace OHOS::Render3D {

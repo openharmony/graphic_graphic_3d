@@ -19,7 +19,7 @@
 #include <meta/interface/intf_object.h>
 #include <scene/interface/intf_light.h>
 
-#include "ColorProxy.h"
+#include "property_proxy/ColorProxy.h"
 #include "NodeETS.h"
 #include "Utils.h"
 

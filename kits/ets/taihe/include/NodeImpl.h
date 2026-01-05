@@ -34,7 +34,7 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "NodeETS.h"
 
 namespace OHOS::Render3D::KITETS {

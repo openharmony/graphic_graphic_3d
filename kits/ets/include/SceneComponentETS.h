@@ -16,7 +16,7 @@
 #ifndef OHOS_3D_SCENE_COMPONENT_ETS_H
 #define OHOS_3D_SCENE_COMPONENT_ETS_H
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 #include "Utils.h"
 
 namespace OHOS::Render3D {

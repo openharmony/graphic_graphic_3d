@@ -382,6 +382,17 @@
            ],
            "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper"
           }
+        },
+        {
+          "header": {
+            "header_base": "//foundation/graphic/graphic_3d/kits/ets",
+            "header_files": [
+            ]
+          },
+          "name": "//foundation/graphic/graphic_3d/kits/ets:scene_ani"
+        },
+        {
+          "name": "//foundation/graphic/graphic_3d/kits/ets:copy_scene"
         }
       ],
       "sub_component": [

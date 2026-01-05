@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "Vec3Proxy.h"
+#include "property_proxy/Vec3Proxy.h"
 
 namespace OHOS::Render3D {
 Vec3Proxy::Vec3Proxy(const META_NS::Property<BASE_NS::Math::Vec3> &prop) : PropertyProxy<BASE_NS::Math::Vec3>(prop)

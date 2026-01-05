@@ -19,7 +19,7 @@
 #include <scene/interface/intf_texture.h>
 
 #include "ImageETS.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 #include "SamplerETS.h"
 #include "Utils.h"
 

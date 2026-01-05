@@ -24,7 +24,7 @@
 #include "ANIUtils.h"
 #include "ParamUtils.h"
 #include "ImageETS.h"
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 class ImageImpl : public SceneResourceImpl {

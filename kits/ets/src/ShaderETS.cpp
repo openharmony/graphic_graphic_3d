@@ -21,9 +21,9 @@
 
 #include "ImageETS.h"
 #include "SceneResourceETS.h"
-#include "Vec2Proxy.h"
-#include "Vec3Proxy.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec2Proxy.h"
+#include "property_proxy/Vec3Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D {
 // list of default names

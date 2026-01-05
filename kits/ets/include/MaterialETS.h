@@ -19,7 +19,7 @@
 #include <scene/interface/intf_material.h>
 
 #include "MaterialPropertyETS.h"
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 #include "SceneResourceETS.h"
 #include "ShaderETS.h"
 
