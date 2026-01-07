@@ -87,19 +87,16 @@ void Validate(const UTest::EngineResources& er)
                 BindableImageWithHandleReference bindable;
                 EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uImage",
                     CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T, bindable));
-                // shaderPipelineBinder_->BindImage(0U, 1U, bindable);
             }
             {
                 BindableSamplerWithHandleReference bindable;
                 EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uSampler",
                     CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T, bindable));
-                // shaderPipelineBinder_->BindSampler(0U, 2U, bindable);
             }
             {
                 BindableSamplerWithHandleReference bindable;
                 EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uBuffer",
                     CORE_NS::PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T, bindable));
-                // shaderPipelineBinder_->BindBuffer(0U, 3U, bindable);
             }
         }
 
@@ -114,7 +111,6 @@ void Validate(const UTest::EngineResources& er)
             EXPECT_TRUE(
                 CORE_NS::SetPropertyValue(*customProperties, "param_0", CORE_NS::PropertyType::FLOAT_T, param0));
             EXPECT_TRUE(CORE_NS::SetPropertyValue(*customProperties, "param_1", CORE_NS::PropertyType::VEC2_T, param1));
-            // or.. shaderPipelineBinder_->SetUniformData(0U, 0U, data);
         }
     }
 

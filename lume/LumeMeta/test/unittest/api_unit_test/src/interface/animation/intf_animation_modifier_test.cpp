@@ -200,9 +200,6 @@ IAnimation::Ptr CreatePropertyAnimation(API_AnimationModifierTestBase& test)
 
     animation.SetProperty(property);
     animation.SetDuration(TimeSpan::Milliseconds(1000));
-
-    // property->SetValue(to);
-
     return animation;
 }
 

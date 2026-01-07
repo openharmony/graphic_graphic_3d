@@ -71,18 +71,10 @@ UNIT_TEST_F(API_ClassRegistryTest, GetAllTypesUis, testing::ext::TestSize.Level1
 {
     auto animations = classRegistry_.GetAllTypes({ IAnimation::UID });
     EXPECT_THAT(animations, testing::Not(testing::IsEmpty()));
-    // EXPECT_THAT(animations, ContainsClass(ClassId::ParallelAnimation));
-    // EXPECT_THAT(animations, ContainsClass(ClassId::SequentialAnimation));
-    // EXPECT_THAT(animations, ContainsClass(ClassId::TrackAnimation));
     EXPECT_THAT(animations, ContainsClass(META_NS::ClassId::KeyframeAnimation));
-    // EXPECT_THAT(animations, ContainsClass(ClassId::PropertyAnimation));
 
     auto staggered = classRegistry_.GetAllTypes({ IStaggeredAnimation::UID });
-    // EXPECT_THAT(staggered, ContainsClass(ClassId::ParallelAnimation));
-    // EXPECT_THAT(staggered, ContainsClass(ClassId::SequentialAnimation));
-    // EXPECT_THAT(staggered, Not(ContainsClass(ClassId::TrackAnimation)));
     EXPECT_THAT(staggered, testing::Not(ContainsClass(META_NS::ClassId::KeyframeAnimation)));
-    // EXPECT_THAT(staggered, Not(ContainsClass(ClassId::PropertyAnimation)));
 }
 
 META_REGISTER_CLASS(MyObject1, "440d971e-afae-497a-95c3-97c3ba7f5d18", META_NS::ObjectCategoryBits::APPLICATION)

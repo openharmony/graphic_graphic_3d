@@ -417,7 +417,7 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
     if (perfLoggerId_) {
         if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
-                                      [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+                                    [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
             logger_.RemoveOutput(perfLoggerId_);
             perfLoggerId_ = 0U;
         }

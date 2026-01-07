@@ -1387,8 +1387,8 @@ void DeviceGLES::InitializePipelineCache(array_view<const uint8_t> initialData)
     auto* header = reinterpret_cast<const CacheHeader*>(initialData.data());
     if ((header->version != CACHE_VERSION) ||
         (header->revisionHash != Hash(string_view(reinterpret_cast<const char*>(glGetString(GL_VENDOR))),
-                                     string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
-                                     string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
+                                      string_view(reinterpret_cast<const char*>(glGetString(GL_RENDERER))),
+                                      string_view(reinterpret_cast<const char*>(glGetString(GL_VERSION)))))) {
         return;
     }
     if ((sizeof(CacheHeader) + header->programs * sizeof(CacheHeader::Program)) > initialData.size()) {
@@ -2000,7 +2000,7 @@ const DeviceGLES::ImageFormat& DeviceGLES::GetGlImageFormat(const Format format)
         return *pos;
     }
     if (const auto pos = std::lower_bound(std::begin(IMAGE_FORMATS_FALLBACK), std::end(IMAGE_FORMATS_FALLBACK), format,
-            [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
+        [](const ImageFormat& element, const Format value) { return element.coreFormat < value; });
         (pos != std::end(IMAGE_FORMATS_FALLBACK)) && (pos->coreFormat == format)) {
         PLUGIN_LOG_I("using fallback for format %u", format);
         return *pos;

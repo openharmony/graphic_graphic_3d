@@ -39,9 +39,6 @@ UNIT_TEST(API_SerializationCompatTest, TestType, testing::ext::TestSize.Level1)
     ASSERT_TRUE(obj);
     EXPECT_EQ(obj->First()->GetValue(), 2);
     EXPECT_EQ(obj->Second()->GetValue(), "Hipshops");
-    // old system seems to export array property value even though it is just default,
-    // so this makes things not equal
-    // EXPECT_TRUE(IsEqual(interface_pointer_cast<IMetadata>(CreateTestType()), obj));
 }
 
 /**
@@ -170,66 +167,5 @@ UNIT_TEST(API_SerializationCompatTest, LocalStringProperties, testing::ext::Test
         EXPECT_EQ(p->GetValue(), "Teksti");
     }
 }
-
-// TEST(API_SerializationCompatTest, GenerateCompat)
-// {
-//     {
-//         TestSerialiser ser;
-//         auto object = CreateTestType();
-//         object->First()->Set(2);
-//         object->Second()->Set("Hipshops");
-//         ASSERT_TRUE(ser.Export(object));
-//         ser.Dump("app://test_type.json");
-//     }
-
-//     {
-//         TestSerialiser ser;
-//         auto object = CreateTestType();
-//         object->First()->Set(2);
-//         object->Second()->Set("Hipshops");
-//         Object obj;
-//         obj.AddProperty(ConstructProperty<BASE_NS::string>(GetObjectRegistry(), "Test", "Some"));
-
-//         auto att = interface_cast<IAttach>(object);
-//         ASSERT_TRUE(att);
-//         att->Attach(obj);
-
-//         ASSERT_TRUE(ser.Export(object));
-//         ser.Dump("app://test_type_with_attachment.json");
-//     }
-
-//     {
-//         TestSerialiser ser;
-//         Object object;
-//         object.AddProperty(ConstructProperty<IObject::Ptr>(GetObjectRegistry(), "Test", nullptr));
-//         ASSERT_TRUE(ser.Export(object));
-//         ser.Dump("app://obj1.json");
-//     }
-
-//     {
-//         TestSerialiser ser;
-//         Object object1;
-//         Object object2;
-//         auto p = ConstructProperty<IObject::Ptr>(GetObjectRegistry(), "Test", nullptr);
-//         p->Set(object2);
-//         object1.AddProperty(p);
-//         ASSERT_TRUE(ser.Export(object1));
-//         ser.Dump("app://obj2.json");
-//     }
-
-//     {
-//         TestSerialiser ser;
-//         Object object;
-//         auto p1 = ConstructProperty<int>(GetObjectRegistry(), "p1", 0);
-//         auto p2 = ConstructProperty<int>(GetObjectRegistry(), "p2", 0);
-//         p2->Bind(p1);
-//         p1->Set(3);
-//         object.AddProperty(p1);
-//         object.AddProperty(p2);
-//         ASSERT_TRUE(ser.Export(object));
-//         ser.Dump("app://bind.json");
-//     }
-// }
-
 } // namespace UTest
 META_END_NAMESPACE()

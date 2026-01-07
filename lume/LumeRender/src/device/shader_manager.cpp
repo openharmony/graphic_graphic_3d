@@ -1861,7 +1861,7 @@ void ShaderManager::DestroyShader(const RenderHandle handle)
 
     auto eraseIndexData = [](auto& mapStore, const RenderHandle handle) {
         if (auto const pos = std::find_if(
-                mapStore.begin(), mapStore.end(), [handle](auto const& element) { return element.second == handle; });
+            mapStore.begin(), mapStore.end(), [handle](auto const& element) { return element.second == handle; });
             pos != mapStore.end()) {
             mapStore.erase(pos);
         }
@@ -1926,7 +1926,7 @@ void ShaderManager::DestroyGraphicsState(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }
@@ -1948,7 +1948,7 @@ void ShaderManager::DestroyPipelineLayout(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }
@@ -1971,7 +1971,7 @@ void ShaderManager::DestroyVertexInputDeclaration(const RenderHandle handle)
 
         auto eraseIndexData = [](auto& mapStore, const uint32_t index) {
             if (auto const pos = std::find_if(
-                    mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
+                mapStore.begin(), mapStore.end(), [index](auto const& element) { return element.second == index; });
                 pos != mapStore.end()) {
                 mapStore.erase(pos);
             }

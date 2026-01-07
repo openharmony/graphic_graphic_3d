@@ -484,9 +484,6 @@ void ShaderPipelineBinderTest(const UTest::EngineResources& engine)
         desc.vertexInputDeclarationPath = "test_vertexinputdeclarations://";
         iShaderMgr.LoadShaderFiles(desc);
     }
-
-    // TODO: we should actually bind something
-    // TODO: we should have shader that has bindings
     {
         const RenderHandleReference testShader =
             iShaderMgr.GetShaderHandle(string_view("test_shaders://shader_manager_test.shader"));
@@ -750,8 +747,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
                 } else {
                     auto& vertexInputBindingDescriptions = vertexInputStateJson["vertexInputBindingDescriptions"];
                     if (!vertexInputBindingDescriptions) {
-                        ADD_FAILURE()
-                            << "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputBindingDescriptions";
+                        ADD_FAILURE() <<
+                            "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputBindingDescriptions";
                     } else {
                         auto descIt = vertexInputBindingDescriptions.array_.begin();
                         auto& descJson = *descIt;
@@ -762,8 +759,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
 
                     auto& vertexInputAttributeDescriptions = vertexInputStateJson["vertexInputAttributeDescriptions"];
                     if (!vertexInputAttributeDescriptions) {
-                        ADD_FAILURE()
-                            << "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputAttributeDescriptions";
+                        ADD_FAILURE() <<
+                            "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputAttributeDescriptions";
                     } else {
                         auto descIt = vertexInputAttributeDescriptions.array_.begin();
                         auto& descJson = *descIt;
@@ -820,7 +817,6 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
     }
 
     { // variants
-
         GraphicsState state {};
 
         GraphicsState::ColorBlendState& cbs = state.colorBlendState;
@@ -1107,8 +1103,6 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
                                 Verify(colorAttachmentJson["srcAlphaBlendFactor"], "one");
                                 Verify(colorAttachmentJson["srcColorBlendFactor"], "one");
                             }
-
-                            // NOTE/TODO: returns array, should be checked.
                             auto& colorBlendConstants = colorBlendState["colorBlendConstants"];
                             Verify(colorBlendState["enableLogicOp"], true);
                             Verify(colorBlendState["logicOp"], "nor");

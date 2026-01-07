@@ -28,7 +28,7 @@ SCENE_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(IResourceComponentManager, ResourceComponent)
-    DEFINE_PROPERTY(CORE_NS::ResourceId, resourceId, "ResourceId", 0, )
+    DEFINE_PROPERTY(CORE_NS::ResourceId, resourceId, "ResourceId", 0,)
 END_COMPONENT_EXT(IResourceComponentManager, ResourceComponent, "8356ec65-f43f-4dc6-82f5-d65a51d19c11",
                   /**
                    * @brief Get Entity from the resource id

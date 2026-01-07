@@ -123,8 +123,8 @@ bool GraphicsState::UpdateGraphicsState(
     {
         std::unique_lock lock { mutex_ };
         if (depthOptions_.has_value()) {
-            // Override options for depth have been set, override these from the default.
-            // Note that Blend still controls the render slot id.
+            // Override options for depth have been set,
+            // override these from the default. Note that Blend still controls the render slot id
             auto gss = gs;
             gss.depthStencilState.enableDepthTest = depthOptions_->enableDepthTest;
             gss.depthStencilState.enableDepthWrite = depthOptions_->enableDepthWrite;

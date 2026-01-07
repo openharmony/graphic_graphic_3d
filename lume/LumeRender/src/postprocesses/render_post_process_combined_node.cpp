@@ -62,7 +62,7 @@ ENUM_TYPE_METADATA(RENDER_NS::DitherConfiguration::DitherType, ENUM_VALUE(INTERL
 
 ENUM_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration::ConversionFunctionType,
     ENUM_VALUE(CONVERSION_LINEAR, "Linear"), ENUM_VALUE(CONVERSION_LINEAR_TO_SRGB, "Linear to sRGB"),
-    ENUM_VALUE(CONVERSION_MULTIPLY_WITH_ALPHA, "Multiply With Alpha"), )
+    ENUM_VALUE(CONVERSION_MULTIPLY_WITH_ALPHA, "Multiply With Alpha"),)
 
 DATA_TYPE_METADATA(RENDER_NS::TonemapConfiguration, MEMBER_PROPERTY(tonemapType, "Tonemap Type", 0),
     MEMBER_PROPERTY(exposure, "Exposure", 0))

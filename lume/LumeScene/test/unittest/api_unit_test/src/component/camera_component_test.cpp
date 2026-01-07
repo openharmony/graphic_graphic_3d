@@ -23,7 +23,6 @@
 #include <render/device/intf_gpu_resource_manager.h>
 
 #include <meta/api/make_callback.h>
-// #include <meta/api/property/property_info.h>
 #include <meta/interface/resource/intf_dynamic_resource.h>
 
 #include "scene/scene_component_test.h"
@@ -93,10 +92,7 @@ public:
 
         EXPECT_EQ(count, 1);
 
-        // fix?
-        // auto entity = interface_cast<IEcsResource>(bmap)->GetEntity();
         ASSERT_EQ(nativeComponent.customColorTargets.size(), 1);
-        // EXPECT_EQ(nativeComponent.customColorTargets[0], entity);
         EXPECT_EQ(nativeComponent.renderResolution[0], bmap->Size()->GetValue().x);
         EXPECT_EQ(nativeComponent.renderResolution[1], bmap->Size()->GetValue().y);
 

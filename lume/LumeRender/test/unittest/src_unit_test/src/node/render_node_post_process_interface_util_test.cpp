@@ -877,11 +877,6 @@ void TestCmaa2IntfUtil(DeviceBackendType backend)
     }
     TickTest(testData, 3);
     return;
-    ValidateCmaa2(testData);
-    {
-        DestroyTestResources(*testData.engine.device, testData.resources);
-        DestroyEngine(testData.engine);
-    }
 }
 } // namespace
 

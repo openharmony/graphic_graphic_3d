@@ -93,7 +93,7 @@ void InternalScene::Uninitialize()
 
     if (const auto rctx = GetRenderContextPtr()) {
         // Do a "empty render" to flush out the gpu resources instantly.
-        for(size_t i = 0; i < deferedRenderCount_; ++i) {
+        for (size_t i = 0; i < deferedRenderCount_; ++i) {
             rctx->GetRenderer().RenderFrame({});
         }
     }

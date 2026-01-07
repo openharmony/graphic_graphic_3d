@@ -437,7 +437,7 @@ struct DefaultMaterialUnpackedPostProcessStruct {
 
 uint GetPackFlatIndices(const uint cameraIdx, const uint instanceIdx)
 {
-    return ((instanceIdx << 16) | (cameraIdx & 0xffff));
+    return ((instanceIdx << 16) | (cameraIdx & 0xffff)); // 16: shift
 }
 
 void GetUnpackFlatIndices(in uint indices, out uint cameraIdx, out uint instanceIdx)

@@ -455,7 +455,7 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest3, testing::ext::TestSize.Level1)
     EXPECT_TRUE(animation.GetRunning());
     // Each step steps by 10ms, so 300 steps should cover the whole 1000ms animation 3 times
     this->StepAnimations(
-        { animation }, 302, [&](uint32_t frame) {}); // TODO figure out why we need 2 extra frames, 300 should be enough
+        { animation }, 302, [&](uint32_t frame) {});
 
     EXPECT_EQ(animation.GetProgress(), 1.f);
     EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 3);

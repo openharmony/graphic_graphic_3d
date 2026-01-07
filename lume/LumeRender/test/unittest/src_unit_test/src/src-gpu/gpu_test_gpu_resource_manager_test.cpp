@@ -297,7 +297,6 @@ UNIT_TEST(SRC_GpuResourceManager, AccelerationStructureCreationTest, testing::ex
 UNIT_TEST(SRC_GpuResourceManager, ImageCreationTest, testing::ext::TestSize.Level1)
 {
     UTest::EngineResources er;
-    // er.backend = DeviceBackendType::VULKAN;
     UTest::CreateEngineSetup(er);
     ASSERT_TRUE(er.device != nullptr);
 
@@ -429,10 +428,6 @@ UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestVulkan, testing::ext::Tes
     UTest::CreateEngineSetup(er);
 
     IGpuResourceManager& gpuResourceMgr = er.device->GetGpuResourceManager();
-    // auto gpuBufferHd = gpuResourceMgr.GetGpuBufferHandles();
-    // auto gpuImageHd = gpuResourceMgr.GetGpuImageHandles();
-    // auto gpuSamplerHd = gpuResourceMgr.GetGpuSamplerHandles();
-
     {
         GpuImageDesc desc;
         desc.height = 16;
@@ -458,10 +453,6 @@ UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestVulkan, testing::ext::Tes
         ASSERT_NE(RenderHandle {}, viewHandle.GetHandle());
         ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
     }
-
-    // er.context->GetRenderer().RenderFrame({});
-    // gpuResourceMgr.WaitForIdleAndDestroyGpuResources();
-
     UTest::DestroyEngine(er);
 }
 #endif // RENDER_HAS_VULKAN_BACKEND

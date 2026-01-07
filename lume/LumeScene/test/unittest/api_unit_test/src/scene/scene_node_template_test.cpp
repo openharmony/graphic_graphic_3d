@@ -309,13 +309,6 @@ UNIT_TEST_F(API_SceneNodeTemplateTest, NodeTemplateExternal, testing::ext::TestS
             ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
             subs[0]->Material()->SetValue(material);
         }
-
-        /*     if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-                 i->SetResourceId("app://nt_ext_test.scene");
-             }
-
-             ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
-     */
         auto extNode = scene->FindNode("//ext").GetResult();
         ASSERT_TRUE(extNode);
 
@@ -452,8 +445,6 @@ UNIT_TEST_F(API_SceneNodeTemplateTest, NodeTemplateRecursive, testing::ext::Test
     ASSERT_TRUE(res->FindNode("//1/some/2/some").GetResult());
     ASSERT_TRUE(res->FindNode("//1/some/2/some/3").GetResult());
     ASSERT_TRUE(res->FindNode("//1/some/2/some/3/some").GetResult());
-
-    // PrintHierarchy(res->GetRootNode().GetResult());
 }
 
 /**

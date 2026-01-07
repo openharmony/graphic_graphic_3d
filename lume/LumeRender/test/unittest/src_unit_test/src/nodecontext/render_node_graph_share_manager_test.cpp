@@ -210,7 +210,7 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
 
     rngShareMgr.Init(2, "Node2", "Node2_fullname");
     rngGlobalShareDataMgr.BeginFrame();
-    rngShareMgr.BeginFrame(2);
+    rngShareMgr.BeginFrame(2); // 2: param
     {
         RenderHandle outputs[] = { buffer0.GetHandle(), buffer1.GetHandle(), buffer2.GetHandle() };
         rngShareMgr.RegisterRenderNodeOutputs({ outputs, countof(outputs) });

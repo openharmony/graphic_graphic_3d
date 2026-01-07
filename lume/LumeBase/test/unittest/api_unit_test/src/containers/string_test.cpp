@@ -103,8 +103,6 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
 
         EXPECT_EQ(testString.begin(), testString.end());
         EXPECT_EQ(testString.cbegin(), testString.cend());
-        //        EXPECT_EQ(testString.rbegin(), testString.rend());
-        //        EXPECT_EQ(testString.crbegin(), testString.crend());
     }
     {
         constexpr const char* TEST_STRING = "\0";
@@ -117,11 +115,6 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         for (const auto c : testString) {
             EXPECT_EQ(*str++, c);
         }
-        /*
-                for (auto begin = testString.rbegin(), end = testString.rend(); begin != end; ++begin) {
-                    EXPECT_EQ(*--str, *begin);
-                }
-        */
     }
     {
         constexpr const char TEST_STRING[] = { '\0' };
@@ -207,7 +200,6 @@ UNIT_TEST(API_ContainersString, NonEmptyString, testing::ext::TestSize.Level1)
         EXPECT_FALSE(testString.empty());
         EXPECT_EQ(strlen(TEST_STRING), testString.size());
         EXPECT_EQ('B', testString[1]);
-        // EXPECT_EQ('B', testString.at(1));
         EXPECT_EQ(testString.front(), TEST_STRING[0]);
         EXPECT_EQ(testString.back(), TEST_STRING[strlen(TEST_STRING) - 1]);
         {
@@ -219,19 +211,10 @@ UNIT_TEST(API_ContainersString, NonEmptyString, testing::ext::TestSize.Level1)
 
         EXPECT_NE(testString.begin(), testString.end());
         EXPECT_NE(testString.cbegin(), testString.cend());
-        /*
-        EXPECT_NE(testString.rbegin(), testString.rend());
-        EXPECT_NE(testString.crbegin(), testString.crend());
-        */
         const char* str = TEST_STRING;
         for (const auto c : testString) {
             EXPECT_EQ(*str++, c);
         }
-        /*
-        for (auto begin = testString.rbegin(), end = testString.rend(); begin != end; ++begin) {
-            EXPECT_EQ(*--str, *begin);
-        }
-        */
     }
     {
         constexpr const char* TEST_STRING = "ABCDEF";
@@ -395,8 +378,6 @@ UNIT_TEST(API_ContainersString, ReserveAndShrink, testing::ext::TestSize.Level1)
         testString.reserve(NEW_CAPACITY);
         EXPECT_GE(testString.capacity(), NEW_CAPACITY);
         testString = SHORT_STRING;
-        // testString.shrink_to_fit();
-        // EXPECT_LT(testString.capacity(), NEW_CAPACITY);
     }
     {
         BASE_NS::string testString(SHORT_STRING);
@@ -408,14 +389,6 @@ UNIT_TEST(API_ContainersString, ReserveAndShrink, testing::ext::TestSize.Level1)
         for (const auto c : testString) {
             EXPECT_EQ(*str++, c);
         }
-        /*
-        testString.shrink_to_fit();
-        EXPECT_LT(testString.capacity(), NEW_CAPACITY);
-        str = SHORT_STRING;
-        for (const auto c : testString) {
-            EXPECT_EQ(*str++, c);
-        }
-        */
     }
     {
         BASE_NS::string testString(LONG_STRING);
@@ -427,14 +400,6 @@ UNIT_TEST(API_ContainersString, ReserveAndShrink, testing::ext::TestSize.Level1)
         for (const auto c : testString) {
             EXPECT_EQ(*str++, c);
         }
-        /*
-
-        testString.shrink_to_fit();
-        EXPECT_LT(testString.capacity(), NEW_CAPACITY);
-        str = LONG_STRING;
-        for (const auto c : testString) {
-            EXPECT_EQ(*str++, c);
-        }*/
     }
     {
         BASE_NS::string testString(SHORT_STRING);
@@ -450,13 +415,6 @@ UNIT_TEST(API_ContainersString, ReserveAndShrink, testing::ext::TestSize.Level1)
         for (const auto c : testString) {
             EXPECT_EQ(*str++, c);
         }
-        /*
-        testString.shrink_to_fit();
-        EXPECT_LT(testString.capacity(), NEW_CAPACITY);
-        str = LONG_STRING;
-        for (const auto c : testString) {
-            EXPECT_EQ(*str++, c);
-        }*/
     }
 
     {
@@ -502,72 +460,6 @@ void VerifyInsertResult(
  */
 UNIT_TEST(API_ContainersString, DISABLED_Insert, testing::ext::TestSize.Level1)
 {
-#if 0
-    // NOTE: need real tests. this is just a smoke test to call each insert overload once.
-    const BASE_NS::string insertString(SHORT_STRING_LOWERCASE);
-    constexpr BASE_NS::string_view insertStringView(SHORT_STRING_LOWERCASE);
-
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(BASE_NS::string::size_type(3u), BASE_NS::string::size_type(2u), 'a');
-    }
-
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, SHORT_STRING_LOWERCASE);
-        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 3);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, LONG_STRING_LOWERCASE);
-        VerifyInsertResult(testString, SHORT_STRING, LONG_STRING_LOWERCASE, 3);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, SHORT_STRING_LOWERCASE, 2);
-        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 3, 2);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, LONG_STRING_LOWERCASE, 16);
-        VerifyInsertResult(testString, SHORT_STRING, LONG_STRING_LOWERCASE, 3, 16);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(99, SHORT_STRING_LOWERCASE, 2);
-        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 99, 2);
-    }
-    {
-        BASE_NS::string testString(LONG_STRING);
-        testString.insert(99, LONG_STRING_LOWERCASE, 16);
-        VerifyInsertResult(testString, LONG_STRING, LONG_STRING_LOWERCASE, 99, 16);
-    }
-
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, insertString);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, insertString, 2, 2);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(testString.begin() + 3, 'a');
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(testString.begin() + 3, SHORT_STRING_LOWERCASE, SHORT_STRING_LOWERCASE + 2);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, insertStringView);
-    }
-    {
-        BASE_NS::string testString(SHORT_STRING);
-        testString.insert(3, insertStringView, 2, 2);
-    }
-#endif
 }
 
 void VerifyEraseResult(
@@ -1015,7 +907,7 @@ void CustomAllocatorAppend(const char* initialValue, const char* appendValue, BA
             customAllocator->reset();
             const BASE_NS::string lhs(initialValue);
             BASE_NS::string testString = BASE_NS::string(lhs, alloc);
-            testString.append(5, 'A');
+            testString.append(5, 'A'); // 5: len
             VerifyAppendResult(testString, initialValue, "AAAAA", expectedResult);
         }
     }
@@ -1061,30 +953,6 @@ void Compare(BASE_NS::string const& lhs, BASE_NS::string_view rhs)
  */
 UNIT_TEST(API_ContainersString, DISABLED_Resize, testing::ext::TestSize.Level1)
 {
-#if 0
-    BASE_NS::string testString;
-
-    testString.resize(5, 'A');
-    Compare(testString, BASE_NS::string_view("AAAAA", 5));
-
-    testString.resize(10, 'B');
-    Compare(testString, BASE_NS::string_view("AAAAABBBBB", 10));
-
-    testString.resize(5, 'C');
-    Compare(testString, BASE_NS::string_view("AAAAA", 5));
-
-    testString.resize(6);
-    Compare(testString, BASE_NS::string_view("AAAAA\0", 6));
-
-    testString.resize(7, 'C');
-    Compare(testString, BASE_NS::string_view("AAAAA\0C", 7));
-
-    testString.resize(2, 'D');
-    Compare(testString, BASE_NS::string_view("AA", 2));
-
-    testString.resize(0, 'E');
-    Compare(testString, BASE_NS::string_view("", 0));
-#endif
 }
 
 template<typename Lhs, typename Rhs>

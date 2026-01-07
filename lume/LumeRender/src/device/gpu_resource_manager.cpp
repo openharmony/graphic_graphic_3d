@@ -1409,7 +1409,7 @@ void GpuResourceManager::Destroy(PerManagerStore& store, const RenderHandle& han
     if (const uint32_t hasNameId = RenderHandleUtil::GetHasNamePart(handle); hasNameId != 0U) {
         // remove name if present
         if (auto const pos = std::find_if(store.nameToClientIndex.begin(), store.nameToClientIndex.end(),
-                [arrayIndex](auto const& nameToHandle) { return nameToHandle.second == arrayIndex; });
+            [arrayIndex](auto const& nameToHandle) { return nameToHandle.second == arrayIndex; });
             pos != store.nameToClientIndex.end()) {
             store.nameToClientIndex.erase(pos);
         }
@@ -2571,8 +2571,9 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::StoreAllocation(
             data.handle = store.clientHandles[iter->second];
             PLUGIN_ASSERT_MSG(!RenderHandleUtil::IsDeferredDestroy(data.handle.GetHandle()),
                 "deferred desctruction resources cannot be replaced");
-            data.handle = RenderHandleReference(CreateClientHandle(info.type, info.descriptor,
-                                                    data.handle.GetHandle().id, hasNameId, info.addHandleFlags),
+            data.handle = RenderHandleReference(
+                CreateClientHandle(info.type, info.descriptor,
+                    data.handle.GetHandle().id, hasNameId, info.addHandleFlags),
                 data.handle.GetCounter());
         }
         if (!data.handle) {

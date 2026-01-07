@@ -65,7 +65,7 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
 
     std::lock_guard writerLock(mutex_);
     if (auto it = std::find_if(
-            datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
+        datas_.cbegin(), datas_.cend(), [pixelSize](const Data& data) { return data.pixelSize == pixelSize; });
         it != datas_.cend()) {
         return it->fontData.get();
     }
@@ -94,8 +94,8 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
                 }
             }
             if (smallestDiff) {
-                CORE_LOG_N("use of closest match for bitmap font, request: %dpx , selected: %dpx", pixelSize26Dot6 >> 6,
-                    sizes[closestIdx].y_ppem >> 6);
+                CORE_LOG_N("use of closest match for bitmap font, request: %dpx , selected: %dpx",
+                    pixelSize26Dot6 >> 6, sizes[closestIdx].y_ppem >> 6); // 6: shift
             }
         }
         err = FT_Select_Size(face_, closestIdx);
@@ -112,7 +112,7 @@ FontData* FaceData::CreateFontData(float sizeInPt, uint16_t xDpi, uint16_t yDpi,
     datas_.push_back(Data { pixelSize, std::move(fontData) });
 
     CORE_LOG_N("create FontData PT: %f dpi: %d (pix: %d, yppem: %d, h: %d) %p", sizeInPt, yDpi, pixelSize,
-        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this);
+        fontDataPtr->sizeData_->metrics.y_ppem, fontDataPtr->sizeData_->metrics.height >> 6, this); // 6: shift
 
     return fontDataPtr;
 }

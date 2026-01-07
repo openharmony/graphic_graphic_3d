@@ -130,7 +130,6 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
         ASSERT_TRUE(int_av[0] == int_data[0]);
         ASSERT_TRUE(int_av[1] == int_data[1]);
         ASSERT_TRUE(int_av[2] == int_data[2]);
-        // ASSERT_TRUE(int_av[3] == int_data[3]);
     }
     {
         BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(&int_data[0], 4);
@@ -175,10 +174,6 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
         BASE_NS::array_view<const uint8_t> uint_av = BASE_NS::arrayviewU8<uint8_t>(*uint8_data);
         ASSERT_TRUE(uint_av.size() == 1); // pointer size is 1 -> data is the same but size is always 1
         ASSERT_TRUE(uint_av[0] == uint8_data[0]);
-        // True as well, sequential data in memory
-        // ASSERT_TRUE(uint_av[1] == uint8_data[1]);
-        // ASSERT_TRUE(uint_av[2] == uint8_data[2]);
-        // ASSERT_TRUE(uint_av[3] == uint8_data[3]);
         delete[] uint8_data;
     }
     {
@@ -186,10 +181,6 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
         BASE_NS::array_view<const uint8_t> uint_av = BASE_NS::arrayviewU8<uint8_t>(*uint8_data);
         ASSERT_TRUE(uint_av.size() == 1); // pointer size is 1 -> data is the same but size is always 1
         ASSERT_TRUE(uint_av[0] == uint8_data[0]);
-        // True as well, sequential data in memory
-        // ASSERT_TRUE(uint_av[1] == uint8_data[1]);
-        // ASSERT_TRUE(uint_av[2] == uint8_data[2]);
-        // ASSERT_TRUE(uint_av[3] == uint8_data[3]);
     }
     {
         uint8_t uint8_data[4] = { 3, 2, 1, 0 };

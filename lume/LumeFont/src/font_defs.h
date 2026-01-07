@@ -131,12 +131,12 @@ inline uint16_t lshift_u16(uint16_t val, uint8_t bits)
 
 inline uint8_t GetStrength(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 48) & UINT8_MAX;
+    return rshift_u64(glyphKey, 48) & UINT8_MAX; // 48: shift
 }
 
 inline uint8_t GetSkewX(uint64_t glyphKey)
 {
-    return rshift_u64(glyphKey, 56) & UINT8_MAX;
+    return rshift_u64(glyphKey, 56) & UINT8_MAX; // 56: shift
 }
 
 inline int32_t IntToFp26(int32_t val)
@@ -153,7 +153,7 @@ inline int32_t Fp26ToInt(int32_t val)
 // font size in pixel
 inline uint64_t MakeGlyphKey(float size, uint32_t idx)
 {
-    return (static_cast<uint64_t>(size) << 32) | idx;
+    return (static_cast<uint64_t>(size) << 32) | idx; // 32: shift
 }
 
 // FT_Pos is a 26.6 fixed point value, 2^6 = 64

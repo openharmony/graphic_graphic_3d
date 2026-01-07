@@ -249,7 +249,6 @@ UNIT_TEST(SRC_IoTest, customTests, testing::ext::TestSize.Level1)
         {
             CORE_ASSERT(fromPath == "test_file01.dat");
             CORE_ASSERT(toPath == "test_file02.dat");
-            // printf("TempFS::Rename\n");
             return true;
         }
         vector<string> GetUriPaths(const string_view uri) const override

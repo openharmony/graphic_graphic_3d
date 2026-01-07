@@ -840,7 +840,7 @@ EGLConfig PickFirstWindowConfig(EGLDisplay dpy, const BackbufferReq& req, Desire
         case DesiredOutput::HDR_SCRGB_F16:
             if (havePixelFloatExt) {
                 if (auto c = TryPattern(
-                        dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples))
+                    dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples))
                     return c;
             }
             // fall-through

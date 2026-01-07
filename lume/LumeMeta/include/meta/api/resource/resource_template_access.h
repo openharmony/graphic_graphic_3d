@@ -61,7 +61,7 @@ public:
         if (auto ores = interface_cast<IObjectResource>(res)) {
             ores->SetResourceType(templateType_);
             if (auto i = interface_cast<IMetadata>(res)) {
-                 if (auto m = interface_cast<IMetadata>(resource)) {
+                if (auto m = interface_cast<IMetadata>(resource)) {
                     for (auto&& p : m->GetProperties()) {
                         CloneToDefault(p, *i);
                     }

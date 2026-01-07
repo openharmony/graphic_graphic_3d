@@ -63,7 +63,6 @@ UNIT_TEST(SRC_GpuAccelerationStructure, GpuAccelerationStructureTestVulkan, test
         auto platDesc = accBuffer.GetPlatformData();
 #if (RENDER_VULKAN_RT_ENABLED)
         // These are not the same thing, needs better documentation
-        // ASSERT_EQ(desc.bufferDesc.byteSize, platDesc.byteSize);
 #endif // RENDER_VULKAN_RT_ENABLED
     }
     device.Deactivate();

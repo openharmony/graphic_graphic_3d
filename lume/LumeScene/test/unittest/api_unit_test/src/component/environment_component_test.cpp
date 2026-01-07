@@ -87,10 +87,6 @@ UNIT_TEST_F(API_ScenePluginEnvironmentComponentTest, Members, testing::ext::Test
         auto propValue = prop->GetValue();
         EXPECT_EQ(propValue, bitmap);
     }
-    // fix?
-    //    auto entity = interface_cast<IEcsResource>(bitmap)->GetEntity();
-    //    EXPECT_EQ(nativeComponent.radianceCubemap, entity);
-    //    EXPECT_EQ(nativeComponent.envMap, entity);
 
     auto prop = GetArrayProperty<BASE_NS::Math::Vec3>("IrradianceCoefficients");
     BASE_NS::Math::Vec3 coeffs[9] = {

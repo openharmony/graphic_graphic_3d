@@ -1800,7 +1800,7 @@ void RenderGraph::HandleDescriptorSets(ParameterCache& params,
                 // first is the ref, starting from 1 we use array offsets
                 const auto& bRes = (idx == 0) ? ref : images[arrayOffset + idx - 1].desc;
                 if (CheckForBarrierNeed(
-                        params.handledCustomBarriers, params.customBarrierCount, bRes.resource.handle)) {
+                    params.handledCustomBarriers, params.customBarrierCount, bRes.resource.handle)) {
                     UpdateStateAndCreateBarriersGpuImage(bRes.state, bRes.resource, params);
                 }
             }

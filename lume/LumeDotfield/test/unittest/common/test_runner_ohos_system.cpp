@@ -119,8 +119,8 @@ RENDER_NS::IRenderContext::Ptr CreateContext(CORE_NS::IEngine& engine, const REN
 #elif RENDER_HAS_GL_BACKEND
     RENDER_NS::BackendExtraGL glExtra;
     glExtra.MSAASamples = 0;
-    glExtra.depthBits = 24;
-    glExtra.alphaBits = 8;
+    glExtra.depthBits = 24; // 24: param
+    glExtra.alphaBits = 8; // 8: param
     glExtra.stencilBits = 0;
     deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGL;
     deviceCreateInfo.backendConfiguration = &glExtra;

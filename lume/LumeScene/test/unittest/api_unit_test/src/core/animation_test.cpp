@@ -256,7 +256,6 @@ TEST_F(API_ScenePluginAnimationTest, Destroy)
             auto speedModifier = META_NS::GetObjectRegistry().Create<META_NS::AnimationModifiers::ISpeed>(
                 META_NS::ClassId::SpeedAnimationModifier);
             interface_cast<META_NS::IAttach>(anim)->Attach(speedModifier);
-            // speedModifier->SpeedFactor()->SetValue(speed);
             interface_cast<META_NS::IStartableAnimation>(anim)->Start();
             for (size_t c = 0; c != 10; ++c) {
                 scene->GetInternalScene()->RunDirectlyOrInTask([&] {

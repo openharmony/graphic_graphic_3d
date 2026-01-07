@@ -59,10 +59,6 @@ UNIT_TEST(API_ContainersUnorderedMap, PairVerification, testing::ext::TestSize.L
     original = otherL;
     ASSERT_EQ(original.first, 13);
     ASSERT_EQ(original.second, 14);
-    // Other(s) constructor(s)
-    // pair<int, int> original2(20, 15);
-    // ASSERT_EQ(original2.first, 20);
-    // ASSERT_EQ(original2.second, 15);
     {
         pair<int, int> original2 = other;
         ASSERT_EQ(original2.first, 12);
@@ -311,7 +307,6 @@ UNIT_TEST(API_ContainersUnorderedMap, Iterators, testing::ext::TestSize.Level1)
     // Iterate over the map using iterator
     size_t count = 0;
     while (it != string_int.end()) {
-        // ASSERT_EQ(it->first, keyValVec[count].first);
         ASSERT_STREQ(it->first.c_str(), keyValVec[count].first.c_str());
         ASSERT_EQ((*it).second, keyValVec[count].second);
         ++it;

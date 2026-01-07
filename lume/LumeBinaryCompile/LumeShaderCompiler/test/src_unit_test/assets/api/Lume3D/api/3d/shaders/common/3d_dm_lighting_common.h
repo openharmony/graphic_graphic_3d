@@ -690,7 +690,6 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
     float subsurface = mix(backScatter, 1.0, forwardScatter) * (1.0 - ssssv.thickness);
     calculatedColor += ssssv.scatterColor * (subsurface * dLambert());
 
-    // TODO: apply attenuation to the transmitted light, i.e. uLightData.lights[currLightIdx].attenuation
     return (calculatedColor * uLightData.lights[currLightIdx].color.rgb);
 }
 
