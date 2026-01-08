@@ -35,13 +35,8 @@ public:
     ::taihe::optional<double> getIntensity();
     void setIntensity(::taihe::optional_view<double> intensity);
 
-    ::taihe::optional<int64_t> getImpl()
-    {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
-    }
-
 private:
     std::shared_ptr<ColorFringeETS> colorFringeETS_;
 };
 } // namespace OHOS::Render3D::KITETS
-#endif  // OHOS_3D_COLOR_FRINGE_SETTINGS_IMPL_H
+#endif  // OHOS_3D_COLOR_FRINGE_SETTINGS_IMPL_H
