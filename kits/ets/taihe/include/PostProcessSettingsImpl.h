@@ -51,11 +51,6 @@ public:
     ::taihe::optional<::ScenePostProcessSettings::ColorFringeSettings> getColorFringe();
     void setColorFringe(::taihe::optional_view<::ScenePostProcessSettings::ColorFringeSettings> colorFringe);
 
-    ::taihe::optional<int64_t> getImpl()
-    {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
-    }
-
     std::shared_ptr<PostProcessETS> GetInternalSettings() const
     {
         return postProcessETS_;

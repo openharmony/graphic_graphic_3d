@@ -57,17 +57,7 @@ void PostProcessSettingsImpl::setToneMapping(
     }
     if (toneMapping.has_value()) {
         ScenePostProcessSettings::ToneMappingSettings tonemapValue = toneMapping.value();
-        taihe::optional<int64_t> implOp = tonemapValue->getImpl();
-        if (implOp.has_value()) {
-            ToneMappingSettingsImpl *settings = reinterpret_cast<ToneMappingSettingsImpl *>(implOp.value());
-            if (settings == nullptr) {
-                postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
-            } else {
-                postProcessETS_->SetToneMapping(settings->tonemapETS_);
-            }
-        } else {
-            postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
-        }
+        postProcessETS_->SetToneMapping(ToneMappingSettingsImpl::CreateInternal(tonemapValue));
     } else {
         postProcessETS_->SetToneMapping(nullptr);
     }
@@ -91,14 +81,7 @@ void PostProcessSettingsImpl::setBloom(::taihe::optional_view<::ScenePostProcess
     }
     if (bloom.has_value()) {
         ScenePostProcessSettings::BloomSettings bloomValue = bloom.value();
-        taihe::optional<int64_t> implOp = bloomValue->getImpl();
-        if (implOp.has_value()) {
-            if (BloomSettingsImpl *settings = reinterpret_cast<BloomSettingsImpl *>(implOp.value())) {
-                postProcessETS_->SetBloom(settings->bloomETS_);
-            }
-        } else {
-            postProcessETS_->SetBloom(BloomSettingsImpl::CreateInternal(bloomValue));
-        }
+        postProcessETS_->SetBloom(BloomSettingsImpl::CreateInternal(bloomValue));
     } else {
         postProcessETS_->SetBloom(nullptr);
     }
@@ -122,14 +105,7 @@ void PostProcessSettingsImpl::setVignette(::taihe::optional_view<::ScenePostProc
     }
     if (vignette.has_value()) {
         ScenePostProcessSettings::VignetteSettings vignetteValue = vignette.value();
-        taihe::optional<int64_t> implOp = vignetteValue->getImpl();
-        if (implOp.has_value()) {
-            if (VignetteSettingsImpl *settings = reinterpret_cast<VignetteSettingsImpl *>(implOp.value())) {
-                postProcessETS_->SetVignette(settings->vignetteETS_);
-            }
-        } else {
-            postProcessETS_->SetVignette(VignetteSettingsImpl::CreateInternal(vignetteValue));
-        }
+        postProcessETS_->SetVignette(VignetteSettingsImpl::CreateInternal(vignetteValue));
     } else {
         postProcessETS_->SetVignette(nullptr);
     }
@@ -154,14 +130,7 @@ void PostProcessSettingsImpl::setColorFringe(
     }
     if (colorFringe.has_value()) {
         ScenePostProcessSettings::ColorFringeSettings colorFringeValue = colorFringe.value();
-        taihe::optional<int64_t> implOp = colorFringeValue->getImpl();
-        if (implOp.has_value()) {
-            if (ColorFringeSettingsImpl *settings = reinterpret_cast<ColorFringeSettingsImpl *>(implOp.value())) {
-                postProcessETS_->SetColorFringe(settings->colorFringeETS_);
-            }
-        } else {
-            postProcessETS_->SetColorFringe(ColorFringeSettingsImpl::CreateInternal(colorFringeValue));
-        }
+        postProcessETS_->SetColorFringe(ColorFringeSettingsImpl::CreateInternal(colorFringeValue));
     } else {
         postProcessETS_->SetColorFringe(nullptr);
     }

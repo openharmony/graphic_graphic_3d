@@ -41,11 +41,6 @@ public:
     ::taihe::optional<double> getExposure();
     void setExposure(::taihe::optional_view<double> exposure);
 
-    ::taihe::optional<int64_t> getImpl()
-    {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
-    }
-
 private:
     std::shared_ptr<TonemapETS> tonemapETS_;
 };

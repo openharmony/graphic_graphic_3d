@@ -84,6 +84,7 @@ public:
 
 private:
     std::shared_ptr<CameraETS> cameraETS_;
+    std::shared_ptr<PostProcessSettingsImpl> postProcessSettingsImpl_;
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_CAMERA_IMPL_H

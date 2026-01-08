@@ -127,15 +127,11 @@ void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &p
     }
     std::shared_ptr<PostProcessETS> pp;
     ScenePostProcessSettings::PostProcessSettings ppValue = process.get_postProcess_ref();
-    taihe::optional<int64_t> implOp = ppValue->getImpl();
     bool createNewOne = true;
-    if (implOp.has_value()) {
-        PostProcessSettingsImpl *ppsi = reinterpret_cast<PostProcessSettingsImpl *>(implOp.value());
-        if (ppsi != nullptr) {
-            WIDGET_LOGI("a post process settings that assosict with a camera");
-            createNewOne = false;
-            pp = ppsi->GetInternalSettings();
-        }
+    if (this->postProcessSettingsImpl_ != nullptr) {
+        WIDGET_LOGI("a post process settings that assosict with a camera");
+        createNewOne = false;
+        pp = this->postProcessSettingsImpl_->GetInternalSettings();
     }
     if (createNewOne) {
         taihe::optional<ScenePostProcessSettings::ToneMappingSettings> tonemapOp = ppValue->getToneMapping();
@@ -174,6 +170,7 @@ void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &p
             colorFringe = nullptr;
         }
         pp = std::make_shared<PostProcessETS>(tonemap, bloom, vignette, colorFringe);
+        postProcessSettingsImpl_ = std::make_shared<PostProcessSettingsImpl>(pp);
     }
     cameraETS_->SetPostProcess(pp);
 }

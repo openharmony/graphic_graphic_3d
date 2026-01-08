@@ -41,11 +41,6 @@ public:
     ::taihe::optional<double> getScatter();
     void setScatter(::taihe::optional_view<double> scatter);
 
-    ::taihe::optional<int64_t> getImpl()
-    {
-        return taihe::optional<int64_t>(std::in_place, reinterpret_cast<uintptr_t>(this));
-    }
-
 private:
     std::shared_ptr<BloomETS> bloomETS_;
 };

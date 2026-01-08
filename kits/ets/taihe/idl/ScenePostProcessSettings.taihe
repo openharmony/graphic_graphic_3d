@@ -31,8 +31,6 @@ interface ToneMappingSettings {
 
     @get getExposure(): Optional<f64>;
     @set setExposure(exposure: Optional<f64>): void;
-
-    @get getImpl(): Optional<i64>;
 }
 
 interface BloomSettings {
@@ -47,8 +45,6 @@ interface BloomSettings {
 
     @get getScatter(): Optional<f64>;
     @set setScatter(scatter: Optional<f64>): void;
-
-    @get getImpl(): Optional<i64>;
 }
 
 interface VignetteSettings {
@@ -57,15 +53,11 @@ interface VignetteSettings {
 
     @get getIntensity(): Optional<f64>;
     @set setIntensity(intensity: Optional<f64>): void;
-
-    @get getImpl(): Optional<i64>;
 }
 
 interface ColorFringeSettings {
     @get getIntensity(): Optional<f64>;
     @set setIntensity(intensity: Optional<f64>): void;
-
-    @get getImpl(): Optional<i64>;
 }
 
 interface PostProcessSettings {
@@ -80,6 +72,4 @@ interface PostProcessSettings {
 
     @get getColorFringe(): Optional<ColorFringeSettings>;
     @set setColorFringe(colorFringe: Optional<ColorFringeSettings>): void;
-
-    @get getImpl(): Optional<i64>;
 }
