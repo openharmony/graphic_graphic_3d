@@ -135,7 +135,7 @@ FontMetrics FontData::GetMetrics()
     uint32_t xIndex = faceData->GetGlyphIndex('x');
     if (xIndex) {
         GlyphMetrics glyphMetrics = GetGlyphMetrics(xIndex);
-        fontMetrics.x_height = glyphMetrics.top - glyphMetrics.bottom; // FIXME: verify this value
+        fontMetrics.x_height = glyphMetrics.top - glyphMetrics.bottom;
     } else {
         // double check what to do if 'x' char is not found in face
         fontMetrics.x_height = -fontMetrics.ascent;
@@ -231,7 +231,6 @@ const FontDefs::Glyph* FontData::GetOrCreateCachedGlyph(uint32_t glyphIndex)
     std::shared_lock readerLock(mutex_);
 
     auto glyphPos = glyphCache_.find(glyphIndex);
-
     if (glyphPos != glyphCache_.end()) {
         return &glyphPos->second;
     }

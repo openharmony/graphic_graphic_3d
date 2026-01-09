@@ -1220,49 +1220,6 @@ UNIT_TEST_F(API_ContainerTest, FindAnyInvalid, testing::ext::TestSize.Level1)
 }
 
 /**
- * @tc.name: ObjectFlagsDefault
- * @tc.desc: Tests for Object Flags Default. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
- UNIT_TEST_F(API_ContainerTest, ObjectFlagsDefault, testing::ext::TestSize.Level1)
-{
-    TestSerialiser ser;
-    ASSERT_TRUE(ser.Export(container_));
-
-    auto imported = ser.Import<IContainer>();
-    ASSERT_TRUE(imported);
-
-    EXPECT_EQ(imported->GetAll().size(), NumDirectChildren);
-}
-*/
-
-/**
- * @tc.name: ObjectFlagsNoHierarchy
- * @tc.desc: Tests for Object Flags No Hierarchy. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
-UNIT_TEST_F(API_ContainerTest, ObjectFlagsNoHierarchy, testing::ext::TestSize.Level1)
-{
-    TestSerialiser ser;
-    auto flags = interface_cast<IObjectFlags>(container_);
-    ASSERT_TRUE(flags);
-
-    auto objectFlags = flags->GetObjectFlags();
-    objectFlags.Clear(ObjectFlagBits::SERIALIZE_HIERARCHY);
-    flags->SetObjectFlags(objectFlags);
-
-    ASSERT_TRUE(ser.Export(container_));
-
-    auto imported = ser.Import<IContainer>();
-    ASSERT_TRUE(imported);
-
-    EXPECT_EQ(imported->GetAll().size(), 0);
-}
-*/
-
-/**
  * @tc.name: IterationSupport
  * @tc.desc: Tests for Iteration Support. [AUTO-GENERATED]
  * @tc.type: FUNC

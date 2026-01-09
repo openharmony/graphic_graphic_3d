@@ -475,7 +475,6 @@ UNIT_TEST(API_ContainersVector, insert_and_convert_vector_element_type, testing:
     bs.resize(3);
     as.insert(as.end(), bs.begin(), bs.end());
 
-    // bs.insert(bs.end(),as.begin(),as.end()); //this is impossible, due to not having the conversion.
     ASSERT_TRUE(as[0].val == 42);
     ASSERT_TRUE(as[1].val == 42);
     ASSERT_TRUE(as[2].val == 42);
@@ -704,12 +703,6 @@ UNIT_TEST(API_ContainersVector, Initialization, testing::ext::TestSize.Level1)
     // Operator=
     vecInt[0] = 6;
     ASSERT_EQ(vecInt[0], 6);
-
-    // Allocator (alternative) TODO
-    // vector<double> array;
-    // double* p;
-    // int size = 8;
-    // p = Allocate(array, size);
 }
 
 /**
@@ -955,7 +948,6 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         vector<int> vecInt; // allocate 0 memory
         vecInt.resize(0);
         classInstance.wrap_uninitialized_value_construct(vecInt.begin().ptr(), vecInt.begin().ptr());
-        // ASSERT_EQ(vecInt.size(), 0);
     }
     {
         vector<int> vecInt; // allocate some memory for int with default value
@@ -1328,7 +1320,6 @@ UNIT_TEST(API_ContainersVector, Capacity, testing::ext::TestSize.Level1)
 
     // Max size
     ASSERT_GT(vecInt.max_size(), 0U);
-    // printf("Max size of a vec: %lld \n", vecInt.max_size());
 
     // Reserve
     vecInt.reserve(nEle);
@@ -1510,8 +1501,4 @@ UNIT_TEST(API_ContainersVector, Modifiers, testing::ext::TestSize.Level1)
     ASSERT_GT(vecInt.size(), 0U);
     vecInt.clear();
     ASSERT_EQ(vecInt.size(), 0U);
-
-    /*for (auto it = vecInt.begin(); it != vecInt.end(); ++it) {
-        printf("Values: %d \n", *it);
-    }*/
 }

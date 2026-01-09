@@ -104,7 +104,6 @@ extern "C" JNIEXPORT jobjectArray JNICALL Java_com_huawei_agpbase_test_NativeTes
 //
 // This is for running the native tests from Java code. (e.g. from a test runner).
 // Java signature:
-//    native int runNative(Context context, String outputPath, String[] arguments);
 //
 extern "C" JNIEXPORT jint JNICALL Java_com_huawei_agpbase_test_NativeTestRunner_runNativeTests(
     JNIEnv* env, jclass /* clazz */, jobject context, jstring outputFile, jobjectArray arguments)
@@ -149,7 +148,6 @@ extern "C" JNIEXPORT jint JNICALL Java_com_huawei_agpbase_test_NativeTestRunner_
     return result;
 }
 
-// #define REDIRECT_TO_FILE
 #define REDIRECT_TO_LOG
 
 namespace {
@@ -251,7 +249,6 @@ void android_main(struct android_app* state)
                 // NOTE: could set the result as the result code for the activity.
                 // NOTE: why doesn't return completely exit the program?
                 // (Need to press stop in android studio)
-                // return;
                 exit(result);
             }
         }
@@ -276,7 +273,7 @@ static void startOutputFileRedirect(const char* filename, bool append)
     fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0660);
     assert(fd >= 0);
     dup2(fd, 1);
-    dup2(fd, 2);
+    dup2(fd, 2); // 2: param
 }
 
 static void stopOutputFileRedirect()
@@ -319,7 +316,7 @@ static int runLoggingThread()
     // create the pipe and redirect stdout and stderr
     pipe(pfd);
     dup2(pfd[1], 1);
-    dup2(pfd[1], 2);
+    dup2(pfd[1], 2); // 2: param
 
     // spawn the logging thread
     if (pthread_create(&loggingThread, 0, loggingFunction, 0) == -1) {

@@ -547,7 +547,7 @@ public:
 
     FileIncluder(
         const std::filesystem::path& shaderSourcePath, array_view<const std::filesystem::path> shaderIncludePaths) :
-        shaderSourcePath_(shaderSourcePath), shaderIncludePaths_(shaderIncludePaths)
+            shaderSourcePath_(shaderSourcePath), shaderIncludePaths_(shaderIncludePaths)
     {}
 
     IncludeResult* includeSystem(const char* headerName, const char* includerName, size_t inclusionDepth) override
@@ -824,7 +824,7 @@ std::optional<std::string> PreProcessShader(const std::string_view source, const
 
     std::string output;
     if (!shader.preprocess(&kGLSLangDefaultTResource, GLSL_VERSION, EProfile::ENoProfile, false, false, rules, &output,
-            settings.includer)) {
+        settings.includer)) {
         LUME_LOG_E("Spirv preprocessing of '%s' failed - info log:\n%s", sourceName.data(), shader.getInfoLog());
         LUME_LOG_E("Spirv preprocessing of '%s' failed - debug log: \n%s", sourceName.data(), shader.getInfoDebugLog());
         return std::nullopt;
@@ -941,7 +941,7 @@ void ProcessResource(const spirv_cross::Compiler& compiler, const spirv_cross::R
             }
             if (spirType.image.sampled == 1) {
                 binding.imageFlags |= ImageFlags::IMAGE_SAMPLED;
-            } else if (spirType.image.sampled == 2) {
+            } else if (spirType.image.sampled == 2) { // 2: index
                 binding.imageFlags |= ImageFlags::IMAGE_LOAD_STORE;
             }
         }
@@ -1722,7 +1722,6 @@ bool RunAllCompilationStages(std::string_view inputFilename, CompilationSettings
         outputMetaFilename += ".meta";
 
         const bool dirty = params.checkIfChanged ? IsDirty(outputMetaFilename, mask) : true;
-
         // nothing to do
         if (!dirty) {
             return true;
@@ -1860,8 +1859,8 @@ std::vector<std::string> FilterByExtension(
         std::string lowercaseFileExt = std::filesystem::u8path(file).extension().u8string();
         std::transform(lowercaseFileExt.begin(), lowercaseFileExt.end(), lowercaseFileExt.begin(), tolower);
         if (std::any_of(aIncludeExtensions.cbegin(), aIncludeExtensions.cend(),
-                [lowercaseExt = std::string_view(lowercaseFileExt)](
-                    const std::string_view& extension) { return (lowercaseExt == extension); })) {
+            [lowercaseExt = std::string_view(lowercaseFileExt)](
+                const std::string_view& extension) { return (lowercaseExt == extension); })) {
             filtered.push_back(file);
         }
     }

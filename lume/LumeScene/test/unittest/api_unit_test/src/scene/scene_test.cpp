@@ -790,12 +790,6 @@ UNIT_TEST_F(API_ScenePlugin, ExternalNode, testing::ext::TestSize.Level1)
         { "animation_AnimatedCube", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
 
     BASE_NS::string extGroup = "test_assets://AnimatedCube/AnimatedCube.gltf";
-    /*
-        EXPECT_TRUE(resources->GetResource({ "test_assets://AnimatedCube/AnimatedCube_BaseColor.png", extGroup },
-       scene)); EXPECT_TRUE( resources->GetResource({ "test_assets://AnimatedCube/AnimatedCube_MetallicRoughness.png",
-       extGroup }, scene)); EXPECT_TRUE( resources->GetResource({
-       "test_assets://AnimatedCube/AnimatedCube.gltf/animations/0", extGroup }, scene));*/
-
     auto ch = scene->FindNode("//test/new").GetResult();
     ASSERT_TRUE(ch);
 

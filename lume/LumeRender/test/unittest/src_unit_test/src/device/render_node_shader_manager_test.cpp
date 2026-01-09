@@ -60,10 +60,10 @@ void Validate(const UTest::EngineResources& er)
         IShaderManager::ShaderCreateInfo info;
         info.pipelineLayout = plHandle1.GetHandle();
         info.path = "newShader";
-        IShaderManager::ShaderModulePath shaderPaths[2] = { { "rendershaders://shader/fullscreen_triangle.vert.spv",
-                                                                ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT },
-            { "rendershaders://shader/ShaderPipelineBinderTest.frag.spv",
-                ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT } };
+        IShaderManager::ShaderModulePath shaderPaths[2] = {{"rendershaders://shader/fullscreen_triangle.vert.spv",
+                                                            ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT},
+                                                           {"rendershaders://shader/ShaderPipelineBinderTest.frag.spv",
+                                                            ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT}};
         info.shaderPaths = { shaderPaths, 2 };
         auto newShaderHandle = shaderMgr.CreateShader(info);
         ASSERT_TRUE(renderNodeShaderMgr.IsValid(newShaderHandle.GetHandle()));

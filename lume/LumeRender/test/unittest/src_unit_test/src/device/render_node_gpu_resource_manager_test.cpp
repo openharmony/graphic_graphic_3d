@@ -68,7 +68,7 @@ void Validate(const UTest::EngineResources& er)
         uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle {});
         // There's already 1 default buffer with all possible usage flags, so even though we created 2 buffers, theres
         // one more
-        ASSERT_EQ(gpuResourceMgr.GetBufferCount(), 3);
+        ASSERT_EQ(gpuResourceMgr.GetBufferCount(), 3); // 3: buffer count
         ASSERT_EQ(handles.size(), 3);
         ASSERT_EQ(invalidCount, 1);
     }

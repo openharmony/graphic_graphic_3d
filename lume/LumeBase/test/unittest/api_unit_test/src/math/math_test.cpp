@@ -3281,28 +3281,6 @@ UNIT_TEST(API_MathMatrix4x4operators, DISABLED_VectorMultipliedByMatrix4x4, test
 {
     // This test was here to test against GLM matrix implementation that
     // has been removed as it was an unneeded extra dependency.
-#if 0
-    Math::Vec4 vector4(1.1f, 2.2f, 3.3f, 4.4f);
-    glm::vec4 glmVector4(1.1f, 2.2f, 3.3f, 4.4f);
-
-    Math::Mat4X4 coreMat(0.5f,0.6f,0.7f,0.8f,
-                               0.9f, 1.1f, 1.2f, 1.3f,
-                               1.4f, 1.5f, 1.6f, 1.7f,
-                               2.5f, 1.8f, 1.9f, 2.0f);
-
-    glm::mat4 glmMat(0.5f, 0.6f, 0.7f, 0.8f,
-                     0.9f, 1.1f, 1.2f, 1.3f,
-                     1.4f, 1.5f, 1.6f, 1.7f,
-                     2.5f, 1.8f, 1.9f, 2.0f);
-
-    Math::Vec4 result = coreMat * vector4;
-    glm::vec4 resultGlm = glmMat * glmVector4;
-
-    for (int i = 0; i < 4; i++)
-    {
-        ASSERT_FLOAT_EQ(result.data[i], resultGlm.data.data[i]);
-    }
-#endif
 }
 
 /**
@@ -4221,7 +4199,6 @@ UNIT_TEST(API_MathMatrixUtil, ExtractEigenVectorM3, testing::ext::TestSize.Level
  */
 UNIT_TEST(API_MathMatrixUtil, TRS, testing::ext::TestSize.Level1)
 {
-    // TODO: add rotation equality check
     constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
     constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
     constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
@@ -4346,12 +4323,6 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X3, testing::ext::TestSize.Level1)
     const Math::Vec2 result = Math::MultiplyPoint2X3(mat, position);
 
     // NOTE: vertice array which we multiply
-
-    // for (int i = 0; i < 3; i++)
-    //{
-    //    printf("%f %i \n", result.data[i], i);
-    //}
-
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.4f + 0.7f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.5f + 0.8f);
 }
@@ -4377,12 +4348,6 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X4, testing::ext::TestSize.Level1)
     const Math::Vec2 result = Math::MultiplyPoint2X4(mat, position);
 
     // NOTE: vertice array which we multiply
-
-    // for (int i = 0; i < 3; i++)
-    //{
-    //    printf("%f %i \n", result.data[i], i);
-    //}
-
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.5f + 1.2f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.6f + 1.3f);
 }
@@ -4429,12 +4394,6 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint3X4, testing::ext::TestSize.Level1)
     const Math::Vec3 result = Math::MultiplyPoint3X4(mat, position);
 
     // NOTE: vertice array which we multiply
-
-    // for (int i = 0; i < 3; i++)
-    //{
-    //    printf("%f %i \n", result.data[i], i);
-    //}
-
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.5f + 3.3f * 0.8f + 1.2f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.6f + 3.3f * 0.9f + 1.3f);
     ASSERT_FLOAT_EQ(result.data[2], 1.1f * 0.3f + 2.2f * 0.7f + 3.3f * 1.0f + 1.4f);

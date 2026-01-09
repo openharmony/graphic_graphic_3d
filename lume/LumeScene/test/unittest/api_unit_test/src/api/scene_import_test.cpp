@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-// #define WIN_MEMLEAK_CHECK
 #ifdef WIN_MEMLEAK_CHECK
 #include <crtdbg.h>
 #endif
@@ -235,7 +234,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneRemoveObject, testing::ext::TestS
     auto configuration = META_NS::GetValue(sc->RenderConfiguration());
     auto envProp = configuration->Environment();
     auto e = META_NS::GetValue(envProp);
-    auto env = Environment(e);    
+    auto env = Environment(e);
     ASSERT_TRUE(env);
 
     auto res = env.GetPtr<CORE_NS::IResource>();

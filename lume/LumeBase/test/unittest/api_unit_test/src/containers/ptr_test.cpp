@@ -100,9 +100,6 @@ UNIT_TEST(API_ContainersUniquePtr, destructor, testing::ext::TestSize.Level1)
         {
             auto ptr = unique_ptr<TestPtrD&, TestPtrD&>(&test, test);
             EXPECT_TRUE(test.deleted == ptr->deleted); // destructor not called yet
-            // auto& v1 = ptr.operator*;
-            // auto& v2 = *ptr;
-            //			EXPECT_TRUE(v1 == v2);
         }
         EXPECT_TRUE(test.deleted);
     }
@@ -1087,7 +1084,6 @@ UNIT_TEST(API_ContainersSharedPtr, SharedPtr, testing::ext::TestSize.Level1)
     int constructCount = 0, destructCount = 0;
 
     BASE_NS::shared_ptr<PtrTestData> ptr(new PtrTestData(constructCount, destructCount));
-    // ASSERT_NE(ptr.block, nullptr);
     ASSERT_NE(ptr.get(), nullptr);
 
     EXPECT_EQ(ptr->data_, 0);

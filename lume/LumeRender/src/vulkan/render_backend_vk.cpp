@@ -597,7 +597,6 @@ pair<vector<RenderPassSubpassDesc>, vector<RenderPassAttachmentResourceStates>> 
         const uint32_t currCmdBufferIdx = cmdBufferIdx + secondIdx;
         RenderCommandContext& rcCtx = renderCommandFrameData.renderCommandContexts[currCmdBufferIdx];
         auto rcRef = rcCtx.renderCommandList->GetRenderCommands();
-
         if (mrpData.rpBeginCmdIndex >= rcRef.size()) {
             continue;
         }

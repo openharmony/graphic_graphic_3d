@@ -63,16 +63,16 @@ DECLARE_PROPERTY_TYPE(BASE_NS::vector<META_NS::UTest::EngineTestType>);
 DECLARE_PROPERTY_TYPE(META_NS::UTest::EngineTestEnum);
 DECLARE_PROPERTY_TYPE(META_NS::UTest::EngineTestBitField);
 // clang-format off
-ENUM_TYPE_METADATA(META_NS::UTest::EngineTestEnum
-    , ENUM_VALUE(MY_VALUE_1, "Value 1")
-    , ENUM_VALUE(MY_VALUE_2, "Value 2")
-    , ENUM_VALUE(MY_VALUE_3, "Value 3"))
+ENUM_TYPE_METADATA(META_NS::UTest::EngineTestEnum,
+    ENUM_VALUE(MY_VALUE_1, "Value 1"),
+    ENUM_VALUE(MY_VALUE_2, "Value 2"),
+    ENUM_VALUE(MY_VALUE_3, "Value 3"))
 
-ENUM_TYPE_METADATA(META_NS::UTest::EngineTestBitField
-    , ENUM_VALUE(MY_VALUE_1, "Value 1")
-    , ENUM_VALUE(MY_VALUE_2, "Value 2")
-    , ENUM_VALUE(MY_VALUE_3, "Value 3")
-    , ENUM_VALUE(MY_VALUE_4, "Value 4"))
+ENUM_TYPE_METADATA(META_NS::UTest::EngineTestBitField,
+    ENUM_VALUE(MY_VALUE_1, "Value 1"),
+    ENUM_VALUE(MY_VALUE_2, "Value 2"),
+    ENUM_VALUE(MY_VALUE_3, "Value 3"),
+    ENUM_VALUE(MY_VALUE_4, "Value 4"))
 
 // clang-format on
 

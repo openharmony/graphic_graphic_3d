@@ -110,24 +110,32 @@ const TestTypes BasicTestData(
         TType<ITestType::ConstPtr> {[]{return CreateTestType("Test1");}, []{return CreateTestType("Test2");}},
         TType<IObject::Ptr>        {IObject::Ptr{}, IObject::Ptr{}},
         TType<IAny::Ptr>           {[]{return ConstructAny(1);}, []{return ConstructAny(2);}},
-        TType<IArrayAny::Ptr>      {[]{return ConstructArrayAny<uint32_t>({1,2,1});}, []{return ConstructArrayAny<uint32_t>({2,3,4});}},
+        TType<IArrayAny::Ptr>      {[]{return ConstructArrayAny<uint32_t>({1, 2, 1});},
+                                    []{return ConstructArrayAny<uint32_t>({2, 3, 4});}},
         TType<BASE_NS::Math::Vec2> {BASE_NS::Math::Vec2{1.3f, 5.0f}, BASE_NS::Math::Vec2{-3.1f, 13.0f}},
-        TType<BASE_NS::Math::Vec3> {BASE_NS::Math::Vec3{1.f, 2.f ,3.f},BASE_NS::Math::Vec3{4.f, 1.2f, 0.88f}},
-        TType<BASE_NS::Math::Vec4> {BASE_NS::Math::Vec4{4.f, 5.f, 6.f, 7.f},BASE_NS::Math::Vec4{-0.005f, 0.13f, 13.f, 100.f}},
-        TType<BASE_NS::Math::UVec2>{BASE_NS::Math::UVec2{1,2},BASE_NS::Math::UVec2{6,7}},
-        TType<BASE_NS::Math::UVec3>{BASE_NS::Math::UVec3{1,2,3},BASE_NS::Math::UVec3{6,7,8}},
-        TType<BASE_NS::Math::UVec4>{BASE_NS::Math::UVec4{1,2,3,4},BASE_NS::Math::UVec4{6,7,8,9}},
-        TType<BASE_NS::Math::IVec2>{BASE_NS::Math::IVec2{-1, 1},BASE_NS::Math::IVec2{60, -50}},
-        TType<BASE_NS::Math::IVec3>{BASE_NS::Math::IVec3{-1, 1, 0},BASE_NS::Math::IVec3{60, -50, 1}},
-        TType<BASE_NS::Math::IVec4>{BASE_NS::Math::IVec4{-1, 1, 9, -50},BASE_NS::Math::IVec4{60, -50, 2, 3}},
-        TType<BASE_NS::Math::Quat> {BASE_NS::Math::Quat{4.f, 5.f, 6.f, 7.f},BASE_NS::Math::Quat{-0.005f, 0.13f, 13.f, 100.f}},
-        TType<BASE_NS::Math::Mat3X3>{BASE_NS::Math::Mat3X3{BASE_NS::Math::Vec3{1.f, 2.f, 3.f}, BASE_NS::Math::Vec3{4.f, 5.f, 6.f}, BASE_NS::Math::Vec3{7.f, 8.f, 9.f}},BASE_NS::Math::Mat3X3{3.3f}},
-        TType<BASE_NS::Math::Mat4X4>{BASE_NS::Math::Mat4X4{1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f},BASE_NS::Math::Mat4X4{2.2f}},
+        TType<BASE_NS::Math::Vec3> {BASE_NS::Math::Vec3{1.f, 2.f ,3.f}, BASE_NS::Math::Vec3{4.f, 1.2f, 0.88f}},
+        TType<BASE_NS::Math::Vec4> {BASE_NS::Math::Vec4{4.f, 5.f, 6.f, 7.f},
+                                    BASE_NS::Math::Vec4{-0.005f, 0.13f, 13.f, 100.f}},
+        TType<BASE_NS::Math::UVec2>{BASE_NS::Math::UVec2{1,2}, BASE_NS::Math::UVec2{6,7}},
+        TType<BASE_NS::Math::UVec3>{BASE_NS::Math::UVec3{1,2,3}, BASE_NS::Math::UVec3{6,7,8}},
+        TType<BASE_NS::Math::UVec4>{BASE_NS::Math::UVec4{1,2,3,4}, BASE_NS::Math::UVec4{6,7,8,9}},
+        TType<BASE_NS::Math::IVec2>{BASE_NS::Math::IVec2{-1, 1}, BASE_NS::Math::IVec2{60, -50}},
+        TType<BASE_NS::Math::IVec3>{BASE_NS::Math::IVec3{-1, 1, 0}, BASE_NS::Math::IVec3{60, -50, 1}},
+        TType<BASE_NS::Math::IVec4>{BASE_NS::Math::IVec4{-1, 1, 9, -50}, BASE_NS::Math::IVec4{60, -50, 2, 3}},
+        TType<BASE_NS::Math::Quat> {BASE_NS::Math::Quat{4.f, 5.f, 6.f, 7.f},
+                                    BASE_NS::Math::Quat{-0.005f, 0.13f, 13.f, 100.f}},
+        TType<BASE_NS::Math::Mat3X3>{BASE_NS::Math::Mat3X3{BASE_NS::Math::Vec3{1.f, 2.f, 3.f},
+                                     BASE_NS::Math::Vec3{4.f, 5.f, 6.f},
+                                     BASE_NS::Math::Vec3{7.f, 8.f, 9.f}}, BASE_NS::Math::Mat3X3{3.3f}},
+        TType<BASE_NS::Math::Mat4X4>{BASE_NS::Math::Mat4X4{1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f,
+                                                           8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f},
+                                    BASE_NS::Math::Mat4X4{2.2f}},
         TType<TraversalType>       {TraversalType::FULL_HIERARCHY, TraversalType::BREADTH_FIRST_ORDER},
         TType<StartBehavior>       {StartBehavior::MANUAL, StartBehavior::AUTOMATIC},
         TType<StartableState>      {StartableState::ATTACHED, StartableState::STARTED},
         TType<TimeSpan>            {TimeSpan::Microseconds(1234567), TimeSpan::Microseconds(97)},
-        TType<BASE_NS::Uid>        {BASE_NS::StringToUid("9e6d554e-3647-4040-a5c4-ea299fa85b8f"), BASE_NS::StringToUid("d3c49aa9-9314-4680-b23a-7d2a24a0af30")}
+        TType<BASE_NS::Uid>        {BASE_NS::StringToUid("9e6d554e-3647-4040-a5c4-ea299fa85b8f"),
+                                    BASE_NS::StringToUid("d3c49aa9-9314-4680-b23a-7d2a24a0af30")}
         );
 
 // clang-format on
@@ -398,9 +406,6 @@ UNIT_TEST(API_SerializationTest, InstanceIdMapping, testing::ext::TestSize.Level
     for (auto&& v : map1) {
         EXPECT_TRUE(revMap.count(v.second));
     }
-
-    // ser1.Dump("app://ids1.json");
-    // ser2.Dump("app://ids2.json");
 }
 
 META_REGISTER_CLASS(TestMetadata, "95d0b30e-5c77-4d4f-8741-04a7b2b11ad2", ObjectCategoryBits::NO_CATEGORY)

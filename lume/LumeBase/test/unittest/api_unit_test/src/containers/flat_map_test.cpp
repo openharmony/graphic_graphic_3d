@@ -234,7 +234,6 @@ UNIT_TEST(API_ContainersFlatMap, Iterators, testing::ext::TestSize.Level1)
     // Iterate over the map using iterator
     size_t count = 0;
     while (it != string_int.end()) {
-        // ASSERT_EQ(it->first, keyValVec[count].first);
         ASSERT_STREQ(it->first.c_str(), keyValVec[count].first.c_str());
         ASSERT_EQ((*it).second, keyValVec[count].second);
         ++it;
@@ -532,89 +531,4 @@ UNIT_TEST(API_ContainersFlatMap, DISABLED_HashPolicy, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_ContainersFlatMap, StringView, testing::ext::TestSize.Level1)
 {
-#if 0
-    flat_map<BASE_NS::string, int> string_int = flat_map<BASE_NS::string, int>();
-    /*	Error for androuid build
-
-        string_int["First"] = 10;
-        string_int.insert({ "Second", 456 });
-        string_int.insert({ "Third", 0 });
-        string_int.insert({ string_view("Forth"), 234 });*/
-    const string_view fifth = "Fifth";
-    string_int.insert({ fifth, 345 });
-    const string_view sixth = "Sixth";
-    const pair<string_view, int> sixth_pair = { sixth, 6 };
-    string_int.insert(sixth_pair);
-
-    /*	Error for androuid build
-
-        ASSERT_EQ(string_int["First"], 10);
-        ASSERT_EQ(string_int["Second"], 456);
-        ASSERT_EQ(string_int["Third"], 0);
-        ASSERT_EQ(string_int["Forth"], 234);*/
-    ASSERT_EQ(string_int[fifth], 345);
-    ASSERT_EQ(string_int[sixth], 6);
-
-    ASSERT_EQ((string_int.insert({ fifth, 345 })).second, false);
-    ASSERT_EQ((string_int.insert(sixth_pair)).second, false);
-
-    {
-        auto findRes = string_int.find(fifth);
-        ASSERT_EQ(findRes->first, fifth);
-        ASSERT_EQ(findRes->second, 345);
-    }
-    {
-        const auto string_int_C = string_int;
-        const auto findRes = string_int_C.find(fifth);
-        ASSERT_EQ(findRes->first, fifth);
-        ASSERT_EQ(findRes->second, 345);
-    }
-
-    ASSERT_EQ(true, string_int.contains(fifth));
-    ASSERT_EQ(1, string_int.count(fifth));
-    EXPECT_EQ(1, string_int.erase(fifth));
-    EXPECT_EQ(0, string_int.erase(fifth));
-    ASSERT_EQ(false, string_int.contains(fifth));
-    ASSERT_EQ(0, string_int.contains(fifth));
-
-    {
-        auto findRes = string_int.find(fifth);
-        ASSERT_FALSE(findRes != string_int.end());
-    }
-    {
-        const auto string_int_C = string_int;
-        const auto findRes = string_int_C.find(fifth);
-        ASSERT_FALSE(findRes != string_int_C.end());
-    }
-    ASSERT_EQ(string_int[fifth], false);
-    // Checking element on existance adds it to flat_map with false value
-    ASSERT_EQ(string_int[fifth], false);
-    ASSERT_EQ(true, string_int.contains(fifth));
-    ASSERT_EQ(1, string_int.count(fifth));
-    string_int.insert({ fifth, 345 });
-    // As a result adding it with proper key will not overrite it
-    ASSERT_EQ(1, string_int.count(fifth));
-    ASSERT_EQ(string_int[fifth], false);
-    string_int[fifth] = 345;
-    ASSERT_EQ(string_int[fifth], 345);
-
-    static constexpr auto seventh = string_view { "Seventh" };
-    auto inserted = string_int.insert_or_assign(seventh, 346);
-    EXPECT_EQ(inserted.first->first, seventh);
-    EXPECT_EQ(inserted.first->second, 346);
-    EXPECT_TRUE(inserted.second);
-
-    auto assigned = string_int.insert_or_assign(seventh, 347);
-    EXPECT_EQ(assigned.first->first, seventh);
-    EXPECT_EQ(assigned.first->second, 347);
-    EXPECT_FALSE(assigned.second);
-
-    {
-        // as node is not inserted back into the container we expect it to be properly cleaned up.
-        auto node = string_int.extract(fifth);
-        EXPECT_EQ(node.key(), fifth);
-        node = string_int.extract(seventh);
-        EXPECT_EQ(node.key(), seventh);
-    }
-#endif
 }

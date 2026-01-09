@@ -213,10 +213,6 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                         *(reinterpret_cast<void**>(&g_glClientWaitSync)) =
                             reinterpret_cast<void*>(wglGetProcAddress("glClientWaitSync"));
                     }
-                    // if (g_glClientWaitSync == nullptr) {
-                    //     *(reinterpret_cast<void**>(&g_glClientWaitSync)) =
-                    //         reinterpret_cast<void*>(GetProcAddress(glModule_, "glClientWaitSync"));
-                    // }
                     ASSERT_NE(g_glClientWaitSync, nullptr);
 
                     if (g_glClientWaitSync &&
@@ -224,9 +220,6 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                         GLsync sync = (GLsync)(firstSignal.gpuSignalResourceHandle);
                         GLenum waitSyncRes = g_glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
                         ASSERT_EQ(waitSyncRes, GL_ALREADY_SIGNALED);
-                        // ASSERT_NE(waitSyncRes, GL_WAIT_FAILED);
-                        // ASSERT_NE(waitSyncRes, GL_ALREADY_SIGNALED);
-                        // ASSERT_NE(waitSyncRes, GL_TIMEOUT_EXPIRED);
                     }
                     wglMakeCurrent(nullptr, nullptr);
 #endif

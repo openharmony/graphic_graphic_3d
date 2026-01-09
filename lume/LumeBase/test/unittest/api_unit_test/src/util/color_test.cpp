@@ -136,7 +136,7 @@ UNIT_TEST(API_UnitTest_Color, T9FromColorRGBAToLinear, testing::ext::TestSize.Le
 {
     BASE_NS::Color srcCol { 0.25f, 0.5f, 0.75f, 1.0f };
     uint32_t dstCol = BASE_NS::FromColorRGBAToLinear(srcCol);
-    EXPECT_EQ(dstCol, 0xffbf7f3f); // TODO: Check if roundings are correct
+    EXPECT_EQ(dstCol, 0xffbf7f3f);
 }
 
 /**
@@ -148,7 +148,7 @@ UNIT_TEST(API_UnitTest_Color, T10FromColorRGBAToSRGB, testing::ext::TestSize.Lev
 {
     BASE_NS::Color srcCol { 0.25f, 0.5f, 0.75f, 1.0f }; // 0.75 = 223.74, 0.5 = 186, 0.25 = 135.79
     uint32_t dstCol = BASE_NS::FromColorRGBAToSRGB(srcCol);
-    EXPECT_EQ(dstCol, 0xffe0bb88); // TODO: Check if roundings are correct
+    EXPECT_EQ(dstCol, 0xffe0bb88);
 }
 
 /**

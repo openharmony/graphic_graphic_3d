@@ -445,16 +445,16 @@ public:
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
         // Check for JPEG / DQT / JFIF / Exif / ICC_PROFILE tag
-        // 10：size
+        // 10：size 2、3、6、7、8、9：index
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
             imageFileBytes[2] == 0xff &&
             (imageFileBytes[3] == 0xdb ||
-                (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-                    imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
-                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
-                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+             (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
+              imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+             (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
+              imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+             (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
+              imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
             return true;
         }
 

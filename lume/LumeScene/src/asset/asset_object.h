@@ -46,11 +46,10 @@ private:
     void CreateImageResources(
         const IScene::Ptr& sc, BASE_NS::string_view uri, const BASE_NS::vector<CORE_NS::EntityReference>& entities);
 
-    CORE_NS::Entity ImportSceneFromGltf(CORE_NS::EntityReference root);
+    CORE_NS::Entity ImportSceneFromGltf(const CORE3D_NS::IGLTFData& gltfData, CORE_NS::EntityReference root);
 
 private:
     CORE3D_NS::IGraphicsContext* graphicsContext_ {};
-    CORE3D_NS::GLTFLoadResult loadResult_ {};
     CORE3D_NS::IGLTF2Importer::Ptr importer_ {};
     CORE_NS::IEcs::Ptr ecs_ {};
 };

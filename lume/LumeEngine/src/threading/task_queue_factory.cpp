@@ -231,7 +231,7 @@ public:
                 std::lock_guard lock(mutex_);
                 for (const ITask* dep : dependencies) {
                     if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                            [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
+                        [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                         pos != q_.cend()) {
                         deps.push_back(*pos);
                     }

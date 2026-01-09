@@ -50,7 +50,6 @@ using namespace BASE_NS;
  */
 UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
 {
-    // TODO: Fix test to run on OHOS ndk - copying the files to a temp dir.
     auto data = std::string("1234567890");
 
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
@@ -103,14 +102,12 @@ UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
     ASSERT_TRUE(files->OpenFile("assets:../assetReadTest.txt") == nullptr);
 
     // Test absolute path
-    // files->RegisterPath("void", "assets://D:", false);
     const auto& constFm = static_cast<CORE_NS::FileManager*>(files.get());
     EXPECT_TRUE(constFm != nullptr);
     EXPECT_EQ(constFm->GetAbsolutePaths("assets:.././").size(), 0);
     EXPECT_EQ(constFm->GetAbsolutePaths("assets:./file1..txt").size(), 0);
     EXPECT_EQ(constFm->GetAbsolutePaths("assets:file1.txt").size(), 0);
     EXPECT_EQ(constFm->GetAbsolutePaths("assets:./").size(), pathsCount);
-    // constFm->GetAbsolutePaths("void://file1.txt");
 
     // Test currently unsupported Rof (creation would always fail)
     const auto& rofPointer = constFm->CreateROFilesystem(nullptr, 0);
@@ -120,22 +117,6 @@ UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
     EXPECT_FALSE(rofPointer->CreateFile("io/test_directory/rofIO.txt"));
 
     const auto& memFile1 = rofPointer->OpenFile("io/test_directory/rofIO.txt", IFile::Mode::READ_ONLY);
-    // memFile1->GetMode();
-
-    // memFile1->Write(data.c_str(), data.length());
-
-    // length
-    // auto length = memFile1->GetLength();
-    // EXPECT_EQ(length, data.length());
-
-    // Read
-    // auto buffer = std::make_unique<uint8_t[]>(static_cast<size_t>(length));
-    // auto read = memFile1->Read(buffer.get(), length);
-    // EXPECT_EQ(read, length);
-
-    // Verify
-    // auto result = std::string((const char*)buffer.get(), static_cast<size_t>(length));
-    // EXPECT_EQ(result, data);
 
     EXPECT_FALSE(rofPointer->DeleteFile("rof1.txt"));
     EXPECT_FALSE(rofPointer->CreateDirectory("./rof"));
@@ -173,5 +154,4 @@ UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
 
     EXPECT_FALSE(factory->CreateStdFileSystem("file:///D:"));
     EXPECT_TRUE(factory->CreateStdFileSystem("file:./"));
-    // EXPECT_TRUE(factory->CreateStdFileSystem("../../../../../../boot.ini"));
 }

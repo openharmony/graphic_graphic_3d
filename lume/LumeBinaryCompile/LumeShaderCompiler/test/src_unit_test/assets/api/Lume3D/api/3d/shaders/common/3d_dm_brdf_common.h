@@ -58,7 +58,7 @@ float dAshikhmin(float roughness, float NoH)
 // includes microfaced BRDF denominator and geometry term
 float vAshikhmin(float NoV, float NoL)
 {
-    return 1.0 / (4.0 * (NoL + NoV - NoL * NoL));
+    return 1.0 / (4.0 * (NoL + NoV - NoL * NoL)); // 4.0: param
 }
 
 float dCharlie(float roughness, float NoH)
@@ -66,7 +66,7 @@ float dCharlie(float roughness, float NoH)
     const float invR = 1.0 / roughness;
     const float cos2h = NoH * NoH;
     const float sin2h = 1.0 - cos2h; // NOTE: should max to fp16
-    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * CORE_BRDF_PI);
+    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * CORE_BRDF_PI); // 0.5:param 2.0: param
 }
 
 // compensation for underlaying surface
@@ -133,7 +133,7 @@ float vGGXWithCombinedDenominator(float alpha2, float NoV, float NoL)
 // Kelemen 2001
 float vKelemen(float LoH)
 {
-    return min(0.25 / (LoH * LoH), CORE_HDR_FLOAT_CLAMP_MAX_VALUE);
+    return min(0.25 / (LoH * LoH), CORE_HDR_FLOAT_CLAMP_MAX_VALUE); // 0.25: param
 }
 
 float vGGXAnisotropic(

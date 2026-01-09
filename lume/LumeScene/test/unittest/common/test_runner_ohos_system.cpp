@@ -79,7 +79,6 @@ void RegisterTestFileProtocol(CORE_NS::IFileManager& fileManager)
     // Register protocol requeired by LumeScene plugin assets
     fileManager.RegisterPath("test_assets", applicationTestAssetsDirectory, true);
 
-    // TODO: Scene plugin also uses the "project:" protocol. The whole requirement should be removed.
     fileManager.RegisterPath("project", "test_assets://project/", false);
     fileManager.RegisterPath("assets", "project://", false);
     fileManager.RegisterPath("fonts", "project://fonts/", false);

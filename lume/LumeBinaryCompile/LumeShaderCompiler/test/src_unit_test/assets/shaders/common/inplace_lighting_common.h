@@ -74,7 +74,6 @@ vec3 CalculateLightInplace(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, 
 bool CheckLightLayerMask(uint currLightIdx, uvec2 layers)
 {
     // Check that the light is enabled for this specific object.
-    // TODO: It seems like the mask bits are in .wz order when it should be .zw?
     const uvec2 lightLayerMask = uLightData.lights[currLightIdx].indices.wz;
     // If any of the layer bits match the light layer mask -> return true (i.e. use this light).
     return (layers & lightLayerMask) != uvec2(0, 0);
