@@ -43,16 +43,26 @@ const TestTypes InterpolationTestData(
     TType<double> { 3.0, -4363.12455 },
     TType<BASE_NS::Math::Vec2> { BASE_NS::Math::Vec2 { 1.3f, 5.0f },  BASE_NS::Math::Vec2 { -3.1f, 13.0f } },
     TType<BASE_NS::Math::Vec3> { BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f }, BASE_NS::Math::Vec3 { 4.f, 1.2f, 0.88f } },
-    TType<BASE_NS::Math::Vec4> { BASE_NS::Math::Vec4 { 4.f, 5.f, 6.f, 7.f }, BASE_NS::Math::Vec4 { -0.005f, 0.13f, 13.f, 100.f } },
+    TType<BASE_NS::Math::Vec4> {
+        BASE_NS::Math::Vec4 { 4.f, 5.f, 6.f, 7.f },
+        BASE_NS::Math::Vec4 { -0.005f, 0.13f, 13.f, 100.f } },
     TType<BASE_NS::Math::UVec2> { BASE_NS::Math::UVec2 { 1, 2 }, BASE_NS::Math::UVec2 { 6, 7 } },
     TType<BASE_NS::Math::UVec3> { BASE_NS::Math::UVec3 { 1, 2, 3 }, BASE_NS::Math::UVec3 { 6, 7, 8 } },
     TType<BASE_NS::Math::UVec4> { BASE_NS::Math::UVec4 { 1, 2, 3, 4 }, BASE_NS::Math::UVec4 { 6, 7, 8, 9 } },
     TType<BASE_NS::Math::IVec2> { BASE_NS::Math::IVec2 { -1, 1 }, BASE_NS::Math::IVec2 { 60, -50 } },
     TType<BASE_NS::Math::IVec3> { BASE_NS::Math::IVec3 { -1, 1, 0 }, BASE_NS::Math::IVec3 { 60, -50, 1 } },
     TType<BASE_NS::Math::IVec4> { BASE_NS::Math::IVec4 { -1, 1, 9, -50 }, BASE_NS::Math::IVec4 { 60, -50, 2, 3 } },
-    TType<BASE_NS::Math::Quat> { BASE_NS::Math::Quat { 4.f, 5.f, 6.f, 7.f }, BASE_NS::Math::Quat { -0.005f, 0.13f, 13.f, 100.f } },
-    TType<BASE_NS::Math::Mat3X3> { BASE_NS::Math::Mat3X3 { BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f }, BASE_NS::Math::Vec3 { 4.f, 5.f, 6.f }, BASE_NS::Math::Vec3 { 7.f, 8.f, 9.f } }, BASE_NS::Math::Mat3X3 { 3.3f } },
-    TType<BASE_NS::Math::Mat4X4> { BASE_NS::Math::Mat4X4 { 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f }, BASE_NS::Math::Mat4X4 { 2.2f } });
+    TType<BASE_NS::Math::Quat> {
+        BASE_NS::Math::Quat { 4.f, 5.f, 6.f, 7.f },
+        BASE_NS::Math::Quat { -0.005f, 0.13f, 13.f, 100.f } },
+    TType<BASE_NS::Math::Mat3X3> {
+        BASE_NS::Math::Mat3X3 {
+            BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f },
+            BASE_NS::Math::Vec3 { 4.f, 5.f, 6.f },
+            BASE_NS::Math::Vec3 { 7.f, 8.f, 9.f } }, BASE_NS::Math::Mat3X3 { 3.3f } },
+    TType<BASE_NS::Math::Mat4X4> {
+        BASE_NS::Math::Mat4X4 { 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f },
+        BASE_NS::Math::Mat4X4 { 2.2f } });
 // clang-format on
 
 template<typename Type>

@@ -42,7 +42,6 @@ layout(set = 1, binding = 3) uniform texture2D uGBufferMaterial;
 #endif
 
 // comes from render/shaders/common/render_post_process_layout_common.h
-// (constant_id = 0) CORE_POST_PROCESS_FLAGS = 0;
 // not used
 layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;
 // used

@@ -220,28 +220,6 @@ UNIT_TEST_F(API_TimerTests, BadQueue, testing::ext::TestSize.Level1)
         EXPECT_TRUE(!t.IsRunning());
     }
 }
-
-/**
- * @tc.name: Debug
- * @tc.desc: Tests for Debug. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
-UNIT_TEST_F(API_TimerTests, Debug, testing::ext::TestSize.Level1)
-{
-    Timer t;
-    auto start = std::chrono::steady_clock::now();
-    EXPECT_TRUE(t.Start(
-        TimeSpan::Milliseconds(20),
-        [start] {
-            auto diff = std::chrono::steady_clock::now() - start;
-            CORE_LOG_W("hit %lld", std::chrono::duration_cast<std::chrono::milliseconds>(diff).count());
-        },
-        Timer::RECURRING, queueId_));
-
-    META_WAIT_TIMED(200);
-}
-*/
 } // namespace UTest
 
 META_END_NAMESPACE()

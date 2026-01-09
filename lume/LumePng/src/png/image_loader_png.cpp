@@ -549,7 +549,7 @@ public:
         // guaranteed that stack is cleaned up with longjmp, so have the big buffer pointer and pointers to start of
         // each row available here, and we can call reset() to release memory if something fails.
         BASE_NS::unique_ptr<uint8_t[]> image;
-        BASE_NS::unique_ptr<png_byte*[]> rows;
+        BASE_NS::unique_ptr<png_byte *[]> rows;
         if (setjmp(png_jmpbuf(png))) {
             rows.reset();
             image.reset();
@@ -591,7 +591,7 @@ public:
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
             image = BASE_NS::make_unique<uint8_t[]>(imageSize);
-            rows = BASE_NS::make_unique<png_byte*[]>(height);
+            rows = BASE_NS::make_unique<png_byte *[]>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();
             if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {

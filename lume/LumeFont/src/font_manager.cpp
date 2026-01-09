@@ -300,7 +300,6 @@ void FontManager::GetTypeFacesByFile(vector<TypeFace>& typeFaces, string_view pa
         } else {
             CORE_LOG_W("failed to create face: %s", path.data());
         }
-
     } while (faceIndex < numFaces);
 }
 
@@ -563,7 +562,7 @@ void FontManager::UploadPending()
 {
     std::lock_guard writerLock(atlasMutex_);
     if (std::all_of(atlasTextures_.cbegin(), atlasTextures_.cend(),
-            [](const AtlasTexture& atlas) { return atlas.pending.empty(); })) {
+        [](const AtlasTexture& atlas) { return atlas.pending.empty(); })) {
         return;
     }
 

@@ -87,12 +87,12 @@ bool ColorConversion::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE
     if (name == "Function") {
         auto fn = GetFunctionProperty();
         return fn && PushPropertyValue(
-                         p, META_NS::IValue::Ptr { new ConvertingValue<ColorConversionFunctionConverter>(fn, { fn }) });
+                        p, META_NS::IValue::Ptr { new ConvertingValue<ColorConversionFunctionConverter>(fn, { fn }) });
     }
     if (name == "MultiplyWithAlpha") {
         auto fn = GetFunctionProperty();
         return fn && PushPropertyValue(
-                         p, META_NS::IValue::Ptr { new ConvertingValue<MultiplyWithAlphaConverter>(fn, { fn }) });
+                        p, META_NS::IValue::Ptr { new ConvertingValue<MultiplyWithAlphaConverter>(fn, { fn }) });
     }
     return PostProcessEffect::InitDynamicProperty(p, path);
 }

@@ -316,7 +316,7 @@ vec4 DownscaleRGBADof(
         weight += samples[i].a;
     }
     if (weight > 0.0) {
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 5; ++i) { // 5: size
             color += samples[i] * weights[i];
         }
     } else {

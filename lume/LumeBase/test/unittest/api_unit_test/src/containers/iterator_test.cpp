@@ -34,11 +34,6 @@ struct Node {
 UNIT_TEST(API_ContainersIterator, ConstIterator, testing::ext::TestSize.Level1)
 {
     int int_data[] = { 4, 3, 2, 1, 0 };
-    //{
-    //	BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>();
-    //	ASSERT_TRUE(int_av.size() == 0);
-    //	ASSERT_TRUE(int_av.empty());
-    //}
     BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(int_data);
     {
         BASE_NS::const_iterator<array_view<int>> it = int_av.begin();
@@ -314,11 +309,6 @@ UNIT_TEST(API_ContainersIterator, Iterator, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1)
 {
     int int_data[] = { 4, 3, 2, 1, 0 };
-    //{
-    //	BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>();
-    //	ASSERT_TRUE(int_av.size() == 0);
-    //	ASSERT_TRUE(int_av.empty());
-    //}
     BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(int_data);
     {
         BASE_NS::reverse_iterator<iterator<array_view<int>>> it(int_av.begin());
@@ -652,14 +642,4 @@ UNIT_TEST(API_ContainersIterator, MoveIterator, testing::ext::TestSize.Level1)
         ASSERT_EQ(it->value, 0);
         ASSERT_EQ(it->next, nullptr);
     }
-    // int int_data_2d[][2] = { {0,1},{2,3} };
-    // BASE_NS::array_view<int[2]> int_2d_av = BASE_NS::array_view<int[2]>(int_data_2d);
-    //{
-    //	BASE_NS::move_iterator<array_view<int[2]>::iterator> it = make_move_iterator(int_2d_av.begin());
-    //	ASSERT_EQ(it[0], int_data_2d[0][0]);
-    //	ASSERT_EQ(it[1], int_data_2d[0][1]);
-    //	it++;
-    //	ASSERT_EQ(it[0], int_data_2d[1][0]);
-    //	ASSERT_EQ(it[1], int_data_2d[1][1]);
-    // }
 }

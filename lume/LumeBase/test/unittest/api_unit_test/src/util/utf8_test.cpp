@@ -57,7 +57,7 @@ constexpr const char str_invalid[][7] = {
     // Unexpected continuation bytes
     { '\x80' },
     { '\xBF' },
-    // The following two bytes cannot appear in a correct UTF-8 string 
+    // The following two bytes cannot appear in a correct UTF-8 string
     { '\xFE' },
     { '\xFF' },
     { '\xFE', '\xFE', '\xFF', '\xFF' },
@@ -82,7 +82,7 @@ constexpr const char str_invalid[][7] = {
 
     // ==================
     // Illegal code positions
-    // Single UTF-16 surrogates 
+    // Single UTF-16 surrogates
     { '\xED', '\xA0', '\x80' },
     { '\xED', '\xAD', '\xBF' },
     { '\xED', '\xAE', '\x80' },
@@ -90,11 +90,6 @@ constexpr const char str_invalid[][7] = {
     // Paired UTF-16 surrogates
     { '\xED', '\xA0', '\x80', '\xED', '\xB0', '\x80' },
     { '\xED', '\xAF', '\xBF', '\xED', '\xBF', '\xBF' },
-
-    // ==================
-    // Other illegal code positions
-    //{ '\xEF', '\xBF', '\xBE' }, //Those 2 cp are accepted by the algorithm
-    //{ '\xEF', '\xBF', '\xBF' },
 };
 // clang-format on
 } // namespace

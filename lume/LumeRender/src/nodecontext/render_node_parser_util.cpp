@@ -116,7 +116,8 @@ RENDER_JSON_SERIALIZE_ENUM(ImageUsageFlagBits,
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "depth_stencil_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, "transient_attachment" },
         { ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "input_attachment" },
-        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT, "fragment_shading_rate_attachment" },
+        { ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
+            "fragment_shading_rate_attachment" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(ImageCreateFlagBits,
@@ -178,7 +179,8 @@ RENDER_JSON_SERIALIZE_ENUM(BufferUsageFlagBits,
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT, "indirect" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT, "shader_binding_table" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, "shader_device_address" },
-        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, "acceleration_structure_build_input_read_only" },
+        { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,
+            "acceleration_structure_build_input_read_only" },
         { BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT, "acceleration_structure_storage" },
     })
 
@@ -199,7 +201,8 @@ RENDER_JSON_SERIALIZE_ENUM(RenderNodeGraphResourceLocationType,
         { RenderNodeGraphResourceLocationType::FROM_RENDER_GRAPH_OUTPUT, "from_render_graph_output" },
         { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_OUTPUT, "from_previous_render_node_output" },
         { RenderNodeGraphResourceLocationType::FROM_NAMED_RENDER_NODE_OUTPUT, "from_named_render_node_output" },
-        { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT, "from_previous_render_node_graph_output" },
+        { RenderNodeGraphResourceLocationType::FROM_PREVIOUS_RENDER_NODE_GRAPH_OUTPUT,
+            "from_previous_render_node_graph_output" },
     })
 
 RENDER_JSON_SERIALIZE_ENUM(ResolveModeFlagBits,

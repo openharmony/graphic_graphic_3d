@@ -484,10 +484,10 @@ template<typename ComponentType, typename BaseClass>
 BaseManager<ComponentType, BaseClass>::BaseComponentHandle::BaseComponentHandle(BaseComponentHandle&& other) noexcept
     :
 #ifndef NDEBUG
-      rLocked_(BASE_NS::exchange(other.rLocked_, 0U)), wLocked_(BASE_NS::exchange(other.wLocked_, false)),
+    rLocked_(BASE_NS::exchange(other.rLocked_, 0U)), wLocked_(BASE_NS::exchange(other.wLocked_, false)),
 #endif
-      manager_(other.manager_), generation_(BASE_NS::exchange(other.generation_, 0U)),
-      entity_(BASE_NS::exchange(other.entity_, {})), data_(BASE_NS::exchange(other.data_, {}))
+    manager_(other.manager_), generation_(BASE_NS::exchange(other.generation_, 0U)),
+    entity_(BASE_NS::exchange(other.entity_, {})), data_(BASE_NS::exchange(other.data_, {}))
 {
 #ifndef NDEBUG
     CORE_ASSERT((rLocked_ == 0U) && !wLocked_);

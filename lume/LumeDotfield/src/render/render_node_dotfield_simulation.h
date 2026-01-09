@@ -52,7 +52,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "c82a51c3-1be3-4479-b867-bd92a2a9e98b" };
-    static constexpr char const* TYPE_NAME = "RenderNodeDotfieldSimulation";
+    static constexpr const  char* TYPE_NAME = "RenderNodeDotfieldSimulation";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

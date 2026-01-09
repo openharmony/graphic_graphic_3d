@@ -199,7 +199,6 @@ bool AssetObject::Load(
 
     auto& gltf = graphicsContext_->GetGltf();
     loadResult_ = gltf.LoadGLTF(uri);
-
     if (!loadResult_.success) {
         CORE_LOG_E("Loaded '%s' with errors:\n%s", BASE_NS::string(uri).c_str(), loadResult_.error.c_str());
     }

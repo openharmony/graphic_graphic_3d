@@ -481,8 +481,6 @@ void RenderNodePostProcessInterfaceUtil::PrepareIntermediateTargets(RenderHandle
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
 void RenderNodePostProcessInterfaceUtilImpl::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
     rn_.Init(renderNodeContextMgr);

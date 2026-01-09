@@ -66,7 +66,6 @@ void TestConfig(UTest::EngineResources& er)
         dci,
     };
     const RenderResultCode rrc = er.context->Init(info);
-
     if (rrc == RenderResultCode::RENDER_SUCCESS) {
         er.device = &er.context->GetDevice();
         er.context->GetRenderer().RenderFrame({});
@@ -212,10 +211,6 @@ void TestDevice(const UTest::EngineResources& er)
         device.SetLockResourceBackendAccess(true);
         ASSERT_TRUE(device.GetLockResourceBackendAccess());
         device.SetBackendConfig({});
-        {
-            // const auto& properties = device.GetCommonDeviceProperties();
-            // ASSERT_EQ(0, properties.fragmentShadingRateProperties.maxFragmentSize.height);
-        }
 #if RENDER_HAS_VULKAN_BACKEND
         if (er.backend == DeviceBackendType::VULKAN) {
             DeviceVk& deviceVk = static_cast<DeviceVk&>(device);
@@ -316,28 +311,6 @@ void TestBackendExtra(const UTest::EngineResources& er)
 #if RENDER_HAS_VULKAN_BACKEND
     // NOTE: this test cannot run
     // it should be done from the API level with different vulkan instances
-
-    /*
-    Device& device = *static_cast<Device*>(er.device);
-    DeviceVk& deviceVk = static_cast<DeviceVk&>(device);
-
-    DeviceCreateInfo deviceCreateInfo;
-    BackendExtraVk vkExtra;
-    vkExtra.device = deviceVk.GetPlatformDataVk().device;
-    vkExtra.instance = deviceVk.GetPlatformDataVk().instance;
-    vkExtra.physicalDevice = deviceVk.GetPlatformDataVk().physicalDevice;
-    vkExtra.enableMultiQueue = true;
-    vkExtra.enableMultiQueue = er.enableMultiQueue;
-    deviceCreateInfo.backendType = er.backend;
-    deviceCreateInfo.backendConfiguration = &vkExtra;
-
-    RenderContext& renderContext = static_cast<RenderContext&>(*er.context);
-
-    DeviceVk newDevice { renderContext };
-    ASSERT_EQ(vkExtra.device, newDevice.GetPlatformDataVk().device);
-    ASSERT_EQ(vkExtra.instance, newDevice.GetPlatformDataVk().instance);
-    ASSERT_EQ(vkExtra.physicalDevice, newDevice.GetPlatformDataVk().physicalDevice);
-    */
 #endif // RENDER_HAS_VULKAN_BACKEND
 }
 } // namespace

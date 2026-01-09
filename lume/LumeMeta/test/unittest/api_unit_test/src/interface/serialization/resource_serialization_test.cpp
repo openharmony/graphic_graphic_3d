@@ -329,7 +329,6 @@ void API_ResourceSerializationTest::BasicAnimationTemplateTest(BASE_NS::string_v
         auto resource = interface_pointer_cast<CORE_NS::IResource>(anim);
         auto dt = interface_pointer_cast<IDerivedFromTemplate>(anim);
         ASSERT_TRUE(dt);
-        // ASSERT_TRUE(acc->SetValuesFromTemplate(templ, resource));
         ASSERT_TRUE(dt->SetTemplate(templ));
         // set property must be after setting values from template as it has the property too
         anim.SetProperty(property);

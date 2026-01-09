@@ -300,8 +300,6 @@ UNIT_TEST_F(API_EngineManagerTest, ChangeHandle, testing::ext::TestSize.Level1)
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    //    manager->ConstructValue(EnginePropertyHandle {&cman1, cman1.entityRef}, "handle.value", EngineValueOptions{});
-    //    EXPECT_EQ(manager->GetAllEngineValues().size(), 2);
     EngineValueOptions options;
     options.recurseKnownStructs = true;
     AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman1, cman1.entityRef }, options);
@@ -344,7 +342,6 @@ void TestWithSingle(BASE_NS::string_view path, EngineValueOptions ops = {})
     }
     name += path;
 
-    // EXPECT_TRUE(manager->ConstructProperty<Type>(name)) << "Property: " << name.c_str();
     EXPECT_TRUE(manager->ConstructProperty<Type>(name));
 }
 

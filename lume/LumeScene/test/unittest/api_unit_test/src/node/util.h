@@ -54,12 +54,6 @@ inline void TestNodeMetadata(const ISceneManager::Ptr& manager, const META_NS::C
 
     {
         auto vec = obj->GetAllMetadatas(META_NS::MetadataType::PROPERTY);
-
-        // to check for name order
-        // for(auto&& p : vec) {
-        //     CORE_LOG_I("  %s", p.name.c_str());
-        // }
-
         ASSERT_GE(vec.size(), 6);
         EXPECT_THAT(vec, Contains(nameMetaInfo).Times(1));
         EXPECT_THAT(vec, Contains(positionMetaInfo).Times(1));

@@ -17,8 +17,6 @@
 #include <mutex>
 #include <thread>
 
-// need notice
-
 #include <base/containers/vector.h>
 
 #include <meta/base/interface_macros.h>
@@ -132,9 +130,6 @@ public:
     {
         std::unique_lock lock { mutex_ };
         execThread_ = std::this_thread::get_id();
-
-    // need notice
-
         while (!terminate_) {
             if (!tasks_.empty()) {
                 TimeSpan delta = tasks_.back().executeTime - Time();
@@ -150,8 +145,6 @@ public:
             auto curTime = Time();
             TaskQueueImpl::ProcessTasks(lock, curTime);
         }
-
-    // need notice
     }
 
 private:

@@ -215,7 +215,6 @@ INode::Ptr SceneImportContext::ConstructNode(const ISceneNodeSer& ser, INode& pa
     INode::Ptr res;
     if (auto obj = interface_cast<META_NS::IObject>(&parent)) {
         res = scene_->CreateNode(interface_pointer_cast<INode>(obj->GetSelf()), ser.GetName(), ser.GetId()).GetResult();
-
         if (auto obj = interface_pointer_cast<META_NS::IObject>(res)) {
             CopyObjectValues(ser, obj);
         }
@@ -248,7 +247,7 @@ INode::Ptr SceneImportContext::LoadExternalNode(const ISceneExternalNodeSer& in,
             }
         }
         // if we spawned this resource, clean it up
-        if (resource.use_count() == 2) {
+        if (resource.use_count() == 2) { // 2: count
             resources_->PurgeResource(in.GetResourceId());
         }
     } else {

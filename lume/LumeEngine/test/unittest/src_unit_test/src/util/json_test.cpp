@@ -259,7 +259,7 @@ void ParseTypes()
 
         value = CORE_NS::json::parse<T>("-42");
         ASSERT_TRUE(value && value.is_number() && value.is_signed_int());
-        EXPECT_EQ(value.template as_number<int32_t>(), -42);
+        EXPECT_EQ(value.template as_number<int32_t>(), -42); // 42: param
 
         value = CORE_NS::json::parse<T>("42.25");
         ASSERT_TRUE(value && value.is_number() && value.is_floating_point());

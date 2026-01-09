@@ -64,11 +64,7 @@ UNIT_TEST_F(API_ScenePluginShaderTest, LoadShader, testing::ext::TestSize.Level1
     auto man = scene->CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager).GetResult();
     ASSERT_TRUE(man);
     for (auto&& uri : {
-             "test://shaders/test.shader", //
-             //"test://celia/Shaders/ShadowPlane.shader", //
-             //"test://celia/Shaders/CeliaShell.shader",  //
-             //"test://celia/Shaders/CeliaPetal.shader",  //
-             //"test://celia/Shaders/Cap.shader"          //
+             "test://shaders/test.shader",
          }) {
         EXPECT_TRUE(man->LoadShader(uri).GetResult());
     }

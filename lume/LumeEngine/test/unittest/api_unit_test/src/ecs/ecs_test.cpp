@@ -51,7 +51,7 @@ END_COMPONENT(ITestComponentManager, TestComponent, "b8d0c322-228e-4a77-94f6-ac5
 
 BEGIN_COMPONENT(ITestComponent2Manager, TestComponent2)
 DEFINE_PROPERTY(float, value, "Value", 0, VALUE(0))
-DEFINE_PROPERTY(EntityReference, ref, "Reference", 0, )
+DEFINE_PROPERTY(EntityReference, ref, "Reference", 0,)
 END_COMPONENT(ITestComponent2Manager, TestComponent2, "b8d0c322-228e-4a77-94f6-ac530e7f4e3d")
 
 // Definition of the component manager.
@@ -86,14 +86,14 @@ public:
 
 private:
     BEGIN_PROPERTY(TestComponent, ComponentMetadata)
-    DEFINE_PROPERTY(uint32_t, value, "Value", 0, )
+    DEFINE_PROPERTY(uint32_t, value, "Value", 0,)
     END_PROPERTY();
     const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 };
 
 class TestComponent2Manager final : public BaseManager<TestComponent2, ITestComponent2Manager> {
 public:
-    TestComponent2Manager(IEcs& ecs)
+    explicit TestComponent2Manager(IEcs& ecs)
         : BaseManager<TestComponent2, ITestComponent2Manager>(ecs, CORE_NS::GetName<TestComponent2>())
     {}
 
@@ -119,7 +119,7 @@ public:
 
 private:
     BEGIN_PROPERTY(TestComponent2, ComponentMetadata)
-    DEFINE_PROPERTY(float, value, "Value", 0, )
+    DEFINE_PROPERTY(float, value, "Value", 0,)
     END_PROPERTY();
     const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
 };
@@ -422,8 +422,8 @@ bool operator==(const ComponentListener::Event& lhs, const ComponentListener::Ev
 {
     return lhs.type == rhs.type && &lhs.manager == &rhs.manager && lhs.entities.size() == rhs.entities.size() &&
            std::all_of(std::begin(lhs.entities), std::end(lhs.entities), [&re = rhs.entities](const Entity& le) {
-               return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
-           });
+                return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
+            });
 }
 
 constexpr const string_view systemGraph = "test://systemGraph.json";
@@ -1070,8 +1070,6 @@ UNIT_TEST(API_EcsTest, createAndDestroyEntityReference, testing::ext::TestSize.L
             ++count;
         }
         EXPECT_EQ(count, entities.size());
-
-        // auto itCopy = entityManager.Begin().Clone();
 
         // create a few "holes" by removing entities
         entities.erase(entities.begin() + 1);

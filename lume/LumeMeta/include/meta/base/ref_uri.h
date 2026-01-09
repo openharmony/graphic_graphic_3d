@@ -396,7 +396,7 @@ inline const RefUri& RefUri::ContextUri()
 inline bool RefUri::AddPropertySegment(BASE_NS::string seg)
 {
     uint32_t index = -1;
-    if (seg.size() > 3 && seg.back() == ']' && seg[seg.size() - 2] != ESCAPE_CHAR) {
+    if (seg.size() > 3 && seg.back() == ']' && seg[seg.size() - 2] != ESCAPE_CHAR) { // 2: size 3:size
         auto pos = seg.find_last_of('[');
         if (pos != BASE_NS::string_view::npos) {
             char* end {};

@@ -53,40 +53,16 @@ public:
     META_END_STATIC_DATA()
     META_IMPLEMENT_PROPERTY(TestFlags, Flags)
 };
-/*
-template<class T>
-static void RegisterUIntSerialization()
-{
-    using namespace Serialization;
-    auto& imp = GetObjectRegistry().GetImportContext();
-    auto& exp = GetObjectRegistry().GetExportContext();
 
-    exp.RegisterValueExporter(CreateValueSerialiser<T>(
-        [](IExportContext& c, const T& v) { return c.ExportUnsignedInteger(static_cast<uint64_t>(v)); }));
-
-    imp.RegisterValueImporter(CreateValueDeserialiser<T>([](IImportContext& c, const Primitive& p, T& v) {
-        if (c.CanImportUnsignedInteger(p)) {
-            v = static_cast<T>(c.ImportUnsignedInteger(p));
-            return true;
-        }
-        return false;
-    }));
-}
-*/
 class API_BitfieldPropertyTest : public ::testing::Test {
 public:
     static void SetUpTestSuite()
     {
-        // RegisterPropertyType<TestFlags>();
         RegisterObjectType<BitfieldPropertyObject>();
-        // RegisterUIntSerialization<TestFlags>();
     }
     static void TearDownTestSuite()
     {
-        // GetObjectRegistry().GetExportContext().UnregisterValueExporter(GetPropertyUid(TestFlags));
-        // GetObjectRegistry().GetImportContext().UnregisterValueImporter(GetPropertyUid(TestFlags));
         UnregisterObjectType<BitfieldPropertyObject>();
-        // UnRegisterPropertyType<TestFlags>();
     }
 
     void SetUp() override
@@ -141,23 +117,6 @@ UNIT_TEST_F(API_BitfieldPropertyTest, SetValueOp, testing::ext::TestSize.Level1)
     EXPECT_EQ(GetValue(object_->Flags()), TestFlagBits::FLAG1 | TestFlagBits::FLAG2 | TestFlagBits::FLAG4);
 }
 
-/**
- * @tc.name: Serialisation
- * @tc.desc: Tests for Serialisation. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
-UNIT_TEST_F(API_BitfieldPropertyTest, Serialisation, testing::ext::TestSize.Level1)
-{
-    TestSerialiser ser;
-    object_->Flags()->SetValue(TestFlagBits::FLAG4);
-    ASSERT_TRUE(ser.Export(object_));
-    ser.Dump("app://bitfield.json");
-    auto obj = ser.Import<ITestFlagsInterface>();
-    ASSERT_TRUE(obj);
-    EXPECT_EQ(obj->Flags()->GetValue(), TestFlagBits::FLAG4);
-}
-*/
 UNIT_TEST(API_BitfieldTest, Or, testing::ext::TestSize.Level1)
 {
     EnumBitField<TestFlagBits> value1(TestFlagBits::FLAG1);

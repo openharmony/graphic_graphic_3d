@@ -559,13 +559,13 @@ auto MachoUpdate(FatHeader& fathdr, FatArch* archs, uint32_t fatAlignment, size_
 
 struct Macho {
     FatHeader fathdr;
-    std::array<FatArch, 2> archs;
+    std::array<FatArch, 2> archs; // 2: size
     MachHeader64 x64Header;
     MachHeader64 arm64Header;
     SegmentCommand64 dataSeg;
     Section64 dataSect;
     SymtabCommand symtab;
-    std::array<Nlist64, 2> syms;
+    std::array<Nlist64, 2> syms; // 2: size
 };
 
 template<typename T1>

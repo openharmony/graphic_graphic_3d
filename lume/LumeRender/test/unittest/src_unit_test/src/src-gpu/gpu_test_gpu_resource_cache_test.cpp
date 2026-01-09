@@ -39,7 +39,6 @@ UNIT_TEST(SRC_GpuResourceCache, GpuResourceCacheBasicTest, testing::ext::TestSiz
     if (er.backend == DeviceBackendType::OPENGL) {
         er.createWindow = true;
     }
-    // er.backend = DeviceBackendType::VULKAN;
     UTest::CreateEngineSetup(er);
     ASSERT_TRUE(er.device != nullptr);
 

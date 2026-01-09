@@ -189,8 +189,8 @@ protected:
 
         // image and buffer descriptors
         RENDER_NS::GpuImageDesc imageDesc;
-        imageDesc.width = 512;
-        imageDesc.height = 512;
+        imageDesc.width = 512; // 512: width
+        imageDesc.height = 512; // 512: height
         imageDesc.depth = 1;
         imageDesc.engineCreationFlags = RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
         imageDesc.format = BASE_NS::Format::BASE_FORMAT_R8G8B8A8_UNORM;
@@ -203,7 +203,7 @@ protected:
         m_imageHandle = renderContext->GetDevice().GetGpuResourceManager().Create("TestOutputImage", imageDesc);
 
         RENDER_NS::GpuBufferDesc bufferDesc;
-        bufferDesc.byteSize = 512 * 512 * 4;
+        bufferDesc.byteSize = 512 * 512 * 4; // 512: heigth、width 4: bytes per pixel
         bufferDesc.engineCreationFlags = RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
         bufferDesc.usageFlags = RENDER_NS::CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags =

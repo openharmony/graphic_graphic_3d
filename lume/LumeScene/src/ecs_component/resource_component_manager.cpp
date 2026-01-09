@@ -71,9 +71,9 @@ public:
     CORE_NS::Entity GetEntityWithResource(const CORE_NS::ResourceId& rid) const override
     {
         if (const auto pos = std::find_if(components_.begin(), components_.end(),
-                [&rid](const BaseComponentHandle& component) {
-                    return component.data_.resourceId.name == rid.name && component.data_.resourceId.group == rid.group;
-                });
+            [&rid](const BaseComponentHandle& component) {
+                return component.data_.resourceId.name == rid.name && component.data_.resourceId.group == rid.group;
+            });
             pos != components_.end()) {
             return pos->entity_;
         }

@@ -163,9 +163,6 @@ void DestroyTestResources(IDevice& device, TestResources& tr)
     for (uint32_t idx = 0; idx < TEST_IMAGE_COUNT; ++idx) {
         tr.images[idx].imageHandle = {};
     }
-
-    // TODO: check delete count
-
     tr.byteArray.reset();
 }
 
@@ -231,8 +228,6 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         if (idx == frameCountToTick - 1) {
             er.device->GetGpuResourceManager().WaitForIdleAndDestroyGpuResources();
         }
-
-        // TODO:
         {
             // Gpu image test create and destroy in the same frame
             const uint32_t col = td.GetTestColor();

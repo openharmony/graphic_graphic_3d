@@ -848,12 +848,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterialFromTemplate, testing::ex
             ASSERT_TRUE(p);
             p->SetValue(0.5f);
         }
-        /*{
-            auto p = m->GetArrayProperty<ITexture::Ptr>("Textures", META_NS::MetadataQuery::EXISTING);
-            ASSERT_TRUE(p);
-            p->SetValue(69);
-        }*/
-
         auto material = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
         ASSERT_TRUE(material);
 
@@ -994,7 +988,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
         ASSERT_EQ(resources->Export("app://ext_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(scene, "app://ext_mat_test.json"));
-        // resources->PurgeResource("app://ext_mat_test.scene");
         resources->RemoveAllResources();
     }
     ASSERT_EQ(resources->Import("app://ext_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
@@ -1072,7 +1065,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateMaterialResource, testing::ext::Te
 {
     auto scene = CreateEmptyScene();
     {
-        // auto resource = CreateObjectResource(ClassId::Material, ClassId::MaterialResourceTemplate);
         auto access =
             META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::MaterialTemplateAccess);
         ASSERT_TRUE(access);
@@ -1106,51 +1098,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateMaterialResource, testing::ext::Te
     ASSERT_TRUE(SetTemplate(ClassId::MaterialTemplateAccess, res, mat));
     EXPECT_EQ(mat->AlphaCutoff()->GetValue(), 2.0);
 }
-
-/**
- * @tc.name: CreatePostProcessResource
- * @tc.desc: Tests for Create Post Process Resource. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
-UNIT_TEST_F(API_SceneSerialisationTest, CreatePostProcessResource, testing::ext::TestSize.Level1)
-{
-   auto scene = CreateEmptyScene();
-   {
-       auto resource = CreateObjectResource(ClassId::PostProcess, ClassId::PostProcessTemplate);
-       ASSERT_TRUE(resource);
-
-       auto m = interface_cast<META_NS::IMetadata>(resource);
-       ASSERT_TRUE(m);
-       {
-           //auto p = m->GetProperty<float>("AlphaCutoff", META_NS::MetadataQuery::EXISTING);
-           //ASSERT_TRUE(p);
-           //p->SetValue(2.0);
-       }
-
-       if (auto r = interface_cast<CORE_NS::ISetResourceId>(resource)) {
-           r->SetResourceId("app://create_postprocess.resource");
-       }
-       resources->AddResource(resource);
-       resources->ExportResourcePayload(resource);
-
-       ASSERT_EQ(resources->Export("app://create_postprocess.resources"), CORE_NS::IResourceManager::Result::OK);
-       resources->PurgeResource("app://create_postprocess.resource");
-   }
-
-   auto pp = scene->CreateObject<IPostProcess>(ClassId::PostProcess).GetResult();
-   ASSERT_TRUE(pp);
-
-   auto res = resources->GetResource("app://create_postprocess.resource");
-   ASSERT_TRUE(res);
-
-   if (auto i = interface_cast<META_NS::IDerivedFromResource>(pp)) {
-       i->SetResource(res);
-   }
-
-   //EXPECT_EQ(pp->AlphaCutoff()->GetValue(), 2.0);
-}
-*/
 
 /**
  * @tc.name: SaveEnvironmentOptions
@@ -2247,42 +2194,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, NodeHierarchyDuplicateImport, testing::e
     ASSERT_TRUE(n);
 
     EXPECT_EQ(n->GetChildren().GetResult().size(), 1);
-    // PrintHierarchy(scene->GetRootNode().GetResult());
 }
-
-/**
- * @tc.name: Editor
- * @tc.desc: Tests for Editor. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-/*
-UNIT_TEST_F(API_SceneSerialisationTest, Editor, testing::ext::TestSize.Level1)
-{
-   auto& engine = context->GetRenderer()->GetEngine();
-   auto& fm = engine.GetFileManager();
-   fm.RegisterPath("project", "app://editor", true);
-   resources->SetFileManager(CORE_NS::IFileManager::Ptr(&fm));
-
-   ASSERT_EQ(resources->Import("app://editor/default_resources.res"), CORE_NS::IResourceManager::Result::OK);
-   Scene sc(interface_pointer_cast<IScene>(resources->GetResource("project://assets/default.scene")));
-   ASSERT_TRUE(sc);
-   auto scene = sc.GetPtr<IScene>();
-
-   auto n = sc.FindNode("cube.gltf");
-   ASSERT_TRUE(n);
-
-   auto cam = sc.FindNode("Perspective Camera");
-   ASSERT_TRUE(cam);
-
-   auto att = cam.GetPtr<META_NS::IAttach>()->GetAttachments();
-   ASSERT_TRUE(att.size() == 7);
-   auto obj = att[6];
-   ASSERT_TRUE(obj);
-   auto prop = interface_cast<META_NS::IMetadata>(obj)->GetProperty<INode::WeakPtr>("TargetNode");
-   ASSERT_TRUE(prop);
-   EXPECT_TRUE(prop->GetValue().lock());
-   EXPECT_EQ(prop->GetValue().lock(), n.GetPtr<INode>());
-}*/
-
 } // namespace UTest
 SCENE_END_NAMESPACE()

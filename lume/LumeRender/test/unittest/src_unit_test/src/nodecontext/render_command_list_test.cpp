@@ -672,7 +672,7 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         cmdList.BuildAccelerationStructures(geom, {}, {}, {});
 
         RenderPassDesc renderPassDesc;
-        renderPassDesc.attachmentCount = 4;
+        renderPassDesc.attachmentCount = 4; // 4: param
         renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
         renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
         renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -830,9 +830,6 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
                 auto& ref = rbbbc.swapchainData.emplace_back();
                 ref.handle = swapchain.GetHandle();
                 ref.config.backBufferType = NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN;
-                // NOTE: old way removed
-                // memcpy(ref.config.backBufferName, RESOLVE_ATTACHMENT_NAME.data(), RESOLVE_ATTACHMENT_NAME.size());
-                // ref.config.backBufferName[RESOLVE_ATTACHMENT_NAME.size()] = 0;
                 ref.config.present = true;
                 ref.backBufferState.gpuQueue = queue;
             }
@@ -1215,9 +1212,6 @@ void TestSecondaryCommandList(DeviceBackendType backend)
             rbbbc.swapchainData.push_back({});
             auto& ref = rbbbc.swapchainData[0U];
             ref.config.backBufferType = NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN;
-            // NOTE: old way removed
-            // memcpy(ref.config.backBufferName, RESOLVE_ATTACHMENT_NAME.data(), RESOLVE_ATTACHMENT_NAME.size());
-            // ref.config.backBufferName[RESOLVE_ATTACHMENT_NAME.size()] = 0;
             ref.config.present = true;
             ref.backBufferState.gpuQueue = queue;
         }
