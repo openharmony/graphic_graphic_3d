@@ -99,9 +99,9 @@ public:
             outputStream << '(' << std::string_view(filenameView.data(), filenameView.size()) << ':' << linenumber
                          << "): ";
             outputStream << std::string_view(message.data(), message.size());
-            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", outputStream.str().c_str());
+            HILOG_IMPL(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", outputStream.str().c_str());
         } else {
-            HiLogPrint(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", message.data());
+            HILOG_IMPL(LOG_CORE, logPriority, LOG_DOMAIN, LOG_TAG, "%{public}s", message.data());
         }
     }
 
