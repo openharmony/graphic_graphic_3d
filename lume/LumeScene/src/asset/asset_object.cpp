@@ -198,11 +198,11 @@ bool AssetObject::Load(
     graphicsContext_ = &scene->GetGraphicsContext();
 
     auto& gltf = graphicsContext_->GetGltf();
-    loadResult_ = gltf.LoadGLTF(uri);
-    if (!loadResult_.success) {
-        CORE_LOG_E("Loaded '%s' with errors:\n%s", BASE_NS::string(uri).c_str(), loadResult_.error.c_str());
+    auto gltfLoadResult = gltf.LoadGLTF(uri);
+    if (!gltfLoadResult.success) {
+        CORE_LOG_E("Loaded '%s' with errors:\n%s", BASE_NS::string(uri).c_str(), gltfLoadResult.error.c_str());
     }
-    if (!loadResult_.data) {
+    if (!gltfLoadResult.data) {
         return false;
     }
 
@@ -212,7 +212,7 @@ bool AssetObject::Load(
         CORE_LOG_E("Creating glTF importer failed");
         return false;
     }
-    importer_->ImportGLTF(*loadResult_.data, CORE3D_NS::CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL);
+    importer_->ImportGLTF(*gltfLoadResult.data, CORE3D_NS::CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL);
     const auto& gltfImportResult = importer_->GetResult();
     if (!gltfImportResult.success) {
         CORE_LOG_E("Importing of '%s' failed: %s", BASE_NS::string(uri).c_str(), gltfImportResult.error.c_str());
@@ -220,7 +220,7 @@ bool AssetObject::Load(
     }
 
     // Loading and importing of glTF was done successfully. Fill the collection with all the gltf entities.
-    const auto rootEntity = ImportSceneFromGltf({});
+    const auto rootEntity = ImportSceneFromGltf(*gltfLoadResult.data, {});
     if (rootEntity == CORE_NS::Entity {}) {
         return false;
     }
@@ -237,13 +237,13 @@ bool AssetObject::Load(
     return true;
 }
 
-CORE_NS::Entity AssetObject::ImportSceneFromGltf(CORE_NS::EntityReference root)
+CORE_NS::Entity AssetObject::ImportSceneFromGltf(const CORE3D_NS::IGLTFData& gltfData, CORE_NS::EntityReference root)
 {
     auto& gltf = graphicsContext_->GetGltf();
 
     // Import the default scene, or first scene if there is no default scene set.
-    size_t sceneIndex = loadResult_.data->GetDefaultSceneIndex();
-    if (sceneIndex == CORE3D_NS::CORE_GLTF_INVALID_INDEX && loadResult_.data->GetSceneCount() > 0) {
+    size_t sceneIndex = gltfData.GetDefaultSceneIndex();
+    if (sceneIndex == CORE3D_NS::CORE_GLTF_INVALID_INDEX && gltfData.GetSceneCount() > 0) {
         // Use first scene.
         sceneIndex = 0;
     }
@@ -252,8 +252,7 @@ CORE_NS::Entity AssetObject::ImportSceneFromGltf(CORE_NS::EntityReference root)
     CORE_NS::Entity importedSceneEntity {};
     if (sceneIndex != CORE3D_NS::CORE_GLTF_INVALID_INDEX) {
         CORE3D_NS::GltfSceneImportFlags importFlags = CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL;
-        importedSceneEntity =
-            gltf.ImportGltfScene(sceneIndex, *loadResult_.data, resourceData, *ecs_, root, importFlags);
+        importedSceneEntity = gltf.ImportGltfScene(sceneIndex, gltfData, resourceData, *ecs_, root, importFlags);
     }
     if (!CORE_NS::EntityUtil::IsValid(importedSceneEntity)) {
         return {};
