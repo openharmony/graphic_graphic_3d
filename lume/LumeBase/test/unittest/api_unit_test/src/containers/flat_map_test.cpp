@@ -396,6 +396,7 @@ UNIT_TEST(API_ContainersFlatMap, Lookup, testing::ext::TestSize.Level1)
 #endif
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ExtractInsertBug
  * @tc.desc: Tests for Extract Insert Bug. [AUTO-GENERATED]
@@ -447,6 +448,7 @@ UNIT_TEST(API_ContainersFlatMap, DISABLED_ExtractInsertBug, testing::ext::TestSi
     ASSERT_EQ(original.size(), 1);
 #endif
 }
+#endif
 
 /**
  * @tc.name: ExtractInsertBug2
@@ -474,6 +476,7 @@ UNIT_TEST(API_ContainersFlatMap, ExtractInsertBug2, testing::ext::TestSize.Level
 
 // Improves coverage but takes calculation time. OpenCppCoverage works terable with it.
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: HashPolicy
  * @tc.desc: Tests for Hash Policy. [AUTO-GENERATED]
@@ -523,6 +526,7 @@ UNIT_TEST(API_ContainersFlatMap, DISABLED_HashPolicy, testing::ext::TestSize.Lev
     ASSERT_TRUE(durationReserve <= durationNoReserve);
 #endif
 }
+#endif
 
 /**
  * @tc.name: StringView
