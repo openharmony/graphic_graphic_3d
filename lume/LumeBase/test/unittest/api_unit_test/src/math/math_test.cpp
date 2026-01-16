@@ -3272,6 +3272,7 @@ UNIT_TEST(API_MathMatrix4x4operators, Matrix4x4operatorMultiplicationWithScalar,
     ASSERT_FLOAT_EQ(result.data[15], multiplier * 3.3f);
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: VectorMultipliedByMatrix4x4
  * @tc.desc: Tests for Vector Multiplied By Matrix4X4. [AUTO-GENERATED]
@@ -3282,6 +3283,7 @@ UNIT_TEST(API_MathMatrix4x4operators, DISABLED_VectorMultipliedByMatrix4x4, test
     // This test was here to test against GLM matrix implementation that
     // has been removed as it was an unneeded extra dependency.
 }
+#endif
 
 /**
  * @tc.name: Matrix4x4operatorAssigment
