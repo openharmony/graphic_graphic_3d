@@ -235,6 +235,7 @@ ohos_source_set("lume_3d_src") {
     "c_utils:utils",
     "vulkan-headers:vulkan_headers",
     "vulkan-loader:vulkan_loader",
+    "meshoptimizer:meshoptimizer",
 
   ]
   part_name = "graphic_3d"

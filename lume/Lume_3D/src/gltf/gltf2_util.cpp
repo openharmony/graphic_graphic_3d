@@ -19,6 +19,13 @@
 #include <cinttypes>
 #include <cstring>
 // need notice
+#if defined(__OHOS_PLATFORM__)
+#include <dlfcn.h>
+#endif
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+#include <meshoptimizer.h>
+#endif
+
 #include <base/containers/fixed_string.h>
 #include <base/util/base64_decode.h>
 #include <core/io/intf_file_manager.h>
@@ -64,6 +71,96 @@ vector<uint8_t> Read(Accessor const& accessor)
     const uint32_t elementSize = componentCount * componentByteSize;
     const uint32_t count = accessor.count;
     // need notice
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+    // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
+    // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
+    // whole buffer.
+    if (accessor.bufferView->meshoptCompression.buffer) {
+#if defined(__OHOS_PLATFORM__)
+        // Open the dynamic meshopt library.
+        void* handle = dlopen("libmeshoptimizer.z.so", RTLD_LAZY);
+        if (!handle) {
+            PLUGIN_LOG_E("Unable to load dynamic library meshopt dynamic library");
+            return {};
+        }
+        // Obtaining a Function Pointer.
+        typedef int (*DecodeVertexBufferFunc)(void*, size_t, size_t, const unsigned char*, size_t);
+        typedef void (*DecodeFilterOctFunc)(void*, size_t, size_t);
+        typedef void (*DecodeFilterQuatFunc)(void*, size_t, size_t);
+        typedef void (*DecodeFilterExpFunc)(void*, size_t, size_t);
+        typedef int (*DecodeIndexBufferFunc)(void*, size_t, size_t, const unsigned char*, size_t);
+        DecodeVertexBufferFunc meshopt_decodeVertexBuffer =
+            (DecodeVertexBufferFunc)dlsym(handle, "meshopt_decodeVertexBuffer");
+        DecodeFilterOctFunc meshopt_decodeFilterOct = (DecodeFilterOctFunc)dlsym(handle, "meshopt_decodeFilterOct");
+        DecodeFilterQuatFunc meshopt_decodeFilterQuat = (DecodeFilterQuatFunc)dlsym(handle, "meshopt_decodeFilterQuat");
+        DecodeFilterExpFunc meshopt_decodeFilterExp = (DecodeFilterExpFunc)dlsym(handle, "meshopt_decodeFilterExp");
+        DecodeIndexBufferFunc meshopt_decodeIndexBuffer =
+            (DecodeIndexBufferFunc)dlsym(handle, "meshopt_decodeIndexBuffer");
+        if (!meshopt_decodeVertexBuffer || !meshopt_decodeFilterOct || !meshopt_decodeFilterQuat ||
+            !meshopt_decodeFilterExp || !meshopt_decodeIndexBuffer) {
+            PLUGIN_LOG_E("Unable to find a function to decompress meshopt format.");
+            dlclose(handle);
+            return {};
+        }
+#endif
+        auto& meshoptCompression = accessor.bufferView->meshoptCompression;
+        meshoptCompression.dataLock.Lock();
+        if (meshoptCompression.data.empty()) {
+            meshoptCompression.data.resize(accessor.bufferView->byteLength);
+            const uint8_t* compressed = meshoptCompression.buffer->data.data() + meshoptCompression.byteOffset;
+            uint8_t* decompressed = meshoptCompression.data.data();
+            if (meshoptCompression.mode == CompressionMode::ATTRIBUTES) {
+                const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
+                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                if (ret) {
+                    PLUGIN_LOG_E("meshopt_decodeVertexBuffer %d", ret);
+                    meshoptCompression.data.clear();
+                } else {
+                    if (meshoptCompression.filter == CompressionFilter::OCTAHEDRAL) {
+                        meshopt_decodeFilterOct(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                    } else if (meshoptCompression.filter == CompressionFilter::QUATERNION) {
+                        meshopt_decodeFilterQuat(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                    } else if (meshoptCompression.filter == CompressionFilter::EXPONENTIAL)
+                        meshopt_decodeFilterExp(decompressed, meshoptCompression.count, meshoptCompression.byteStride);
+                }
+            } else {
+                // mode 1 (TRIANGLES) for triangle list, mode 2 (INDICES) for other topologies,
+                const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
+                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                if (ret) {
+                    PLUGIN_LOG_E("meshopt_decodeIndexBuffer %d", ret);
+                    meshoptCompression.data.clear();
+                }
+            }
+        }
+        meshoptCompression.dataLock.Unlock();
+        vector<uint8_t> data;
+        if (!meshoptCompression.data.empty()) {
+            const auto total = (count * elementSize);
+            data.resize(total);
+            // copy accessor.count elements from accessor.byteOffset taking stride into account.
+            const size_t byteStride = meshoptCompression.byteStride;
+            const uint8_t* src = accessor.bufferView->meshoptCompression.data.data() + accessor.byteOffset;
+            uint8_t* dst = data.data();
+            if (data.size() < (accessor.byteOffset + total)) {
+                data.resize(total);
+            }
+            if ((elementSize == byteStride) || (byteStride == 0)) {
+                std::copy(src, src + total, dst);
+            } else {
+                for (uint32_t element = 0; element < count; ++element) {
+                    std::copy(src, src + elementSize, dst);
+                    src += byteStride;
+                    dst += elementSize;
+                }
+            }
+        }
+#if defined(__OHOS_PLATFORM__)
+        dlclose(handle);
+#endif
+        return data;
+    }
+#endif
     if (!accessor.bufferView->data) {
         return {};
     }
