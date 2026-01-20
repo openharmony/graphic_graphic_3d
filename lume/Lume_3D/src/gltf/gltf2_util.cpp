@@ -22,7 +22,7 @@
 #if defined(__OHOS_PLATFORM__)
 #include <dlfcn.h>
 #endif
-#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
+#if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION) && !defined(__OHOS_PLATFORM__)
 #include <meshoptimizer.h>
 #endif
 
