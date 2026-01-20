@@ -80,7 +80,7 @@ vector<uint8_t> Read(Accessor const& accessor)
         // Open the dynamic meshopt library.
         void* handle = dlopen("libmeshoptimizer.z.so", RTLD_LAZY);
         if (!handle) {
-            PLUGIN_LOG_E("Unable to load dynamic library meshopt dynamic library");
+            CORE_LOG_E("Unable to load dynamic library meshopt dynamic library");
             return {};
         }
         // Obtaining a Function Pointer.
@@ -98,7 +98,7 @@ vector<uint8_t> Read(Accessor const& accessor)
             (DecodeIndexBufferFunc)dlsym(handle, "meshopt_decodeIndexBuffer");
         if (!meshopt_decodeVertexBuffer || !meshopt_decodeFilterOct || !meshopt_decodeFilterQuat ||
             !meshopt_decodeFilterExp || !meshopt_decodeIndexBuffer) {
-            PLUGIN_LOG_E("Unable to find a function to decompress meshopt format.");
+            CORE_LOG_E("Unable to find a function to decompress meshopt format.");
             dlclose(handle);
             return {};
         }
@@ -113,7 +113,7 @@ vector<uint8_t> Read(Accessor const& accessor)
                 const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
                     meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
                 if (ret) {
-                    PLUGIN_LOG_E("meshopt_decodeVertexBuffer %d", ret);
+                    CORE_LOG_E("meshopt_decodeVertexBuffer %d", ret);
                     meshoptCompression.data.clear();
                 } else {
                     if (meshoptCompression.filter == CompressionFilter::OCTAHEDRAL) {
@@ -128,7 +128,7 @@ vector<uint8_t> Read(Accessor const& accessor)
                 const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
                     meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
                 if (ret) {
-                    PLUGIN_LOG_E("meshopt_decodeIndexBuffer %d", ret);
+                    CORE_LOG_E("meshopt_decodeIndexBuffer %d", ret);
                     meshoptCompression.data.clear();
                 }
             }
