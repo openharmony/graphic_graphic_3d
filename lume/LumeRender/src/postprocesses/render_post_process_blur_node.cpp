@@ -562,7 +562,7 @@ bool RenderPostProcessBlurNode::EvaluateInOut()
         return true;
     }
 #if (RENDER_VALIDATION_ENABLED == 1)
-    CORE_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_inout_issue",
+    PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_inout_issue",
         "RENDER_VALIDATION: render post process input / output issue");
 #endif
     return false;

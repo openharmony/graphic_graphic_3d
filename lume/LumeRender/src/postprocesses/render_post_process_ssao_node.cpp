@@ -27,6 +27,8 @@
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/property/property_types.h>
 
+#include "util/log.h"
+
 using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
@@ -167,7 +169,7 @@ void RenderPostProcessSsaoNode::PreExecuteFrame()
 
         cameraUbo_ = nodeInputsData_.camera.handle;
         if (!RenderHandleUtil::IsValid(cameraUbo_)) {
-            CORE_LOG_E("RenderPostProcessSsaoNode: Could not find camera UBO, SSAO will be disabled!");
+            PLUGIN_LOG_E("RenderPostProcessSsaoNode: Could not find camera UBO, SSAO will be disabled!");
             valid_ = false;
             return;
         }
@@ -184,7 +186,7 @@ void RenderPostProcessSsaoNode::PreExecuteFrame()
             velocityNormalIsValid_ = false;
             currVelocityNormalInput_.handle = defaultInput_.handle;
 
-            CORE_LOG_ONCE_W("RenderPostProcessSsaoNodeVelocityMissing",
+            PLUGIN_LOG_ONCE_W("RenderPostProcessSsaoNodeVelocityMissing",
                 "RenderPostProcessSsaoNode: No velocityNormal texture found, using screen-space approximation!");
         }
     }
@@ -257,7 +259,7 @@ void RenderPostProcessSsaoNode::ExecuteFrame(IRenderCommandList& cmdList)
 void RenderPostProcessSsaoNode::RenderDownscalePass(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(currInput_.handle) || !RenderHandleUtil::IsValid(currDepthInput_.handle)) {
-        CORE_LOG_E("RenderDownscalePass inputs invalid!");
+        PLUGIN_LOG_E("RenderDownscalePass inputs invalid!");
         return;
     }
 
@@ -304,7 +306,7 @@ void RenderPostProcessSsaoNode::RenderSSAOPass(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(targets_.halfResDepth.GetHandle()) ||
         !RenderHandleUtil::IsValid(targets_.halfResColor.GetHandle())) {
-        CORE_LOG_E("RenderSSAOPass inputs invalid!");
+        PLUGIN_LOG_E("RenderSSAOPass inputs invalid!");
         return;
     }
 
@@ -349,7 +351,7 @@ void RenderPostProcessSsaoNode::RenderBlurPass(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(targets_.ssaoTexture.GetHandle()) ||
         !RenderHandleUtil::IsValid(currDepthInput_.handle)) {
-        CORE_LOG_E("RenderBlurPass inputs invalid!");
+        PLUGIN_LOG_E("RenderBlurPass inputs invalid!");
         return;
     }
 
@@ -389,7 +391,7 @@ void RenderPostProcessSsaoNode::RenderAreaNoisePass(RENDER_NS::IRenderCommandLis
 {
     if (!RenderHandleUtil::IsValid(targets_.ssaoTexture.GetHandle()) ||
         !RenderHandleUtil::IsValid(targets_.ssaoAreaNoiseTexture.GetHandle())) {
-        CORE_LOG_E("RenderAreaNoisePass inputs invalid!");
+        PLUGIN_LOG_E("RenderAreaNoisePass inputs invalid!");
         return;
     }
 

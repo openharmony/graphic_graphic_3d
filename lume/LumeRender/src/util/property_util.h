@@ -25,6 +25,8 @@
 #include <core/property/property_types.h>
 #include <render/namespace.h>
 
+#include "util/log.h"
+
 RENDER_BEGIN_NAMESPACE()
 /*
  * Implements a custom property blob for simple PODs e.g. shader custom shader properties which are stored in a single
@@ -188,7 +190,7 @@ public:
         // the casting type needs to be known
         if ((index < metaData_.size())) {
             const auto& meta = metaData_[index];
-            CORE_ASSERT(meta.offset < data_.size_in_bytes());
+            PLUGIN_ASSERT(meta.offset < data_.size_in_bytes());
             if (void* ptr = (void*)(data_.data() + meta.offset); ptr) {
                 return *((T*)(ptr));
             }

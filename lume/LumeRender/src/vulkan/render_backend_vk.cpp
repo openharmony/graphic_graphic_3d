@@ -168,121 +168,122 @@ void RenderBackendVk::AcquirePresentationInfo(
     RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig)
 {
     RENDER_CPU_PERF_SCOPE("AcquirePresentationInfo", "");
-    if (device_.HasSwapchain()) {
-        presentationData_.present = true;
-        // resized to same for convenience
-        presentationData_.infos.resize(backBufferConfig.swapchainData.size());
-        for (size_t swapIdx = 0; swapIdx < backBufferConfig.swapchainData.size(); ++swapIdx) {
-            const auto& swapData = backBufferConfig.swapchainData[swapIdx];
-            PresentationInfo pi;
+    if (!device_.HasSwapchain()) {
+        return;
+    }
+
+    // resized to same for convenience
+    presentationData_.infos.resize(backBufferConfig.swapchainData.size());
+    for (size_t swapIdx = 0; swapIdx < backBufferConfig.swapchainData.size(); ++swapIdx) {
+        const auto& swapData = backBufferConfig.swapchainData[swapIdx];
+        PresentationInfo pi;
+
+        if (const auto* swapchain = static_cast<const SwapchainVk*>(device_.GetSwapchain(swapData.handle))) {
+            const uint32_t semaphoreIdx = swapchain->GetNextAcquireSwapchainSemaphoreIndex();
+            const SwapchainPlatformDataVk& platSwapchain = swapchain->GetPlatformData();
+            PLUGIN_ASSERT(semaphoreIdx < platSwapchain.swapchainImages.semaphores.size());
+            pi.swapchainSemaphore = platSwapchain.swapchainImages.semaphores[semaphoreIdx];
+            pi.swapchain = platSwapchain.swapchain;
+            // NOTE: for legacy default backbuffer reasons there might the same swapchain multiple times ATM
+            pi.useSwapchain = std::none_of(presentationData_.infos.cbegin(), presentationData_.infos.cend(),
+                [current = pi.swapchain](const PresentationInfo& piRef) { return piRef.swapchain == current; });
+
+            // NOTE: do not re-acquire default backbuffer swapchain if it's in used with different handle
+            if (!pi.useSwapchain) {
+                continue;
+            }
             const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
+            const VkResult result = vkAcquireNextImageKHR(device, // device
+                pi.swapchain,                                     // swapchin
+                UINT64_MAX,                                       // timeout
+                pi.swapchainSemaphore,                            // semaphore
+                (VkFence) nullptr,                                // fence
+                &pi.swapchainImageIndex);                         // pImageIndex
 
-            if (const auto* swapchain = static_cast<const SwapchainVk*>(device_.GetSwapchain(swapData.handle));
-                swapchain) {
-                const SwapchainPlatformDataVk& platSwapchain = swapchain->GetPlatformData();
-                const VkSwapchainKHR vkSwapchain = platSwapchain.swapchain;
-                const uint32_t semaphoreIdx = swapchain->GetNextAcquireSwapchainSemaphoreIndex();
-                PLUGIN_ASSERT(semaphoreIdx < platSwapchain.swapchainImages.semaphores.size());
-                pi.swapchainSemaphore = platSwapchain.swapchainImages.semaphores[semaphoreIdx];
-                pi.swapchain = platSwapchain.swapchain;
-                pi.useSwapchain = true;
-                // NOTE: for legacy default backbuffer reasons there might the same swapchain multiple times ATM
-                for (const auto& piRef : presentationData_.infos) {
-                    if (piRef.swapchain == pi.swapchain) {
-                        pi.useSwapchain = false;
-                    }
+            switch (result) {
+                // Success
+                case VK_SUCCESS:
+                case VK_TIMEOUT:
+                case VK_NOT_READY:
+                case VK_SUBOPTIMAL_KHR:
+                    pi.validAcquire = true;
+                    break;
+
+                // Failure
+                case VK_ERROR_OUT_OF_HOST_MEMORY:
+                case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+                    PLUGIN_LOG_E("vkAcquireNextImageKHR out of memory");
+                    break;
+                case VK_ERROR_DEVICE_LOST:
+                    PLUGIN_LOG_E("vkAcquireNextImageKHR device lost");
+                    break;
+                case VK_ERROR_OUT_OF_DATE_KHR:
+                    PLUGIN_LOG_E("vkAcquireNextImageKHR surface out of date");
+                    break;
+                case VK_ERROR_SURFACE_LOST_KHR:
+                    PLUGIN_LOG_E("vkAcquireNextImageKHR surface lost");
+                    break;
+
+                case VK_EVENT_SET:
+                case VK_EVENT_RESET:
+                case VK_INCOMPLETE:
+                case VK_ERROR_INITIALIZATION_FAILED:
+                case VK_ERROR_MEMORY_MAP_FAILED:
+                case VK_ERROR_LAYER_NOT_PRESENT:
+                case VK_ERROR_EXTENSION_NOT_PRESENT:
+                case VK_ERROR_FEATURE_NOT_PRESENT:
+                case VK_ERROR_INCOMPATIBLE_DRIVER:
+                case VK_ERROR_TOO_MANY_OBJECTS:
+                case VK_ERROR_FORMAT_NOT_SUPPORTED:
+                case VK_ERROR_FRAGMENTED_POOL:
+                case VK_ERROR_OUT_OF_POOL_MEMORY:
+                case VK_ERROR_INVALID_EXTERNAL_HANDLE:
+                case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
+                case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
+                case VK_ERROR_VALIDATION_FAILED_EXT:
+                case VK_ERROR_INVALID_SHADER_NV:
+                // case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
+                case VK_ERROR_FRAGMENTATION_EXT:
+                case VK_ERROR_NOT_PERMITTED_EXT:
+                // case VK_ERROR_INVALID_DEVICE_ADDRESS_EXT:
+                case VK_RESULT_MAX_ENUM:
+                default:
+                    PLUGIN_LOG_E("vkAcquireNextImageKHR surface lost. Device invalidated");
+                    PLUGIN_ASSERT(false && "unknown result from vkAcquireNextImageKHR");
+                    device_.SetDeviceStatus(false);
+                    break;
+            }
+            if (pi.validAcquire) {
+                pi.presentSemaphore = platSwapchain.swapchainImages.presetSemaphores[pi.swapchainImageIndex];
+
+                presentationData_.present = true;
+                if (pi.swapchainImageIndex >= static_cast<uint32_t>(platSwapchain.swapchainImages.images.size())) {
+                    PLUGIN_LOG_E("swapchain image index (%u) should be smaller than (%u)", pi.swapchainImageIndex,
+                        static_cast<uint32_t>(platSwapchain.swapchainImages.images.size()));
                 }
-                // NOTE: do not re-acquire default backbuffer swapchain if it's in used with different handle
-                if (pi.useSwapchain) {
-                    const VkResult result = vkAcquireNextImageKHR(device, // device
-                        vkSwapchain,                                      // swapchin
-                        UINT64_MAX,                                       // timeout
-                        pi.swapchainSemaphore,                            // semaphore
-                        (VkFence) nullptr,                                // fence
-                        &pi.swapchainImageIndex);                         // pImageIndex
 
-                    switch (result) {
-                        // Success
-                        case VK_SUCCESS:
-                        case VK_TIMEOUT:
-                        case VK_NOT_READY:
-                        case VK_SUBOPTIMAL_KHR:
-                            pi.validAcquire = true;
-                            break;
+                const Device::SwapchainData swapchainData = device_.GetSwapchainData(swapData.handle);
+                const RenderHandle handle = swapchainData.remappableSwapchainImage;
+                if (pi.swapchainImageIndex < swapchainData.imageViewCount) {
+                    // remap image to backbuffer
+                    const RenderHandle currentSwapchainHandle = swapchainData.imageViews[pi.swapchainImageIndex];
+                    // special swapchain remapping
+                    gpuResourceMgr_.RenderBackendImmediateRemapGpuImageHandle(handle, currentSwapchainHandle);
+                }
+                pi.renderGraphProcessedState = swapData.backBufferState;
+                pi.imageLayout = swapData.layout;
+                if (pi.imageLayout != ImageLayout::CORE_IMAGE_LAYOUT_PRESENT_SRC) {
+                    pi.presentationLayoutChangeNeeded = true;
+                    pi.renderNodeCommandListIndex =
+                        static_cast<uint32_t>(renderCommandFrameData.renderCommandContexts.size() - 1);
 
-                        // Failure
-                        case VK_ERROR_OUT_OF_HOST_MEMORY:
-                        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-                            PLUGIN_LOG_E("vkAcquireNextImageKHR out of memory");
-                            return;
-                        case VK_ERROR_DEVICE_LOST:
-                            PLUGIN_LOG_E("vkAcquireNextImageKHR device lost");
-                            return;
-                        case VK_ERROR_OUT_OF_DATE_KHR:
-                            PLUGIN_LOG_E("vkAcquireNextImageKHR surface out of date");
-                            return;
-                        case VK_ERROR_SURFACE_LOST_KHR:
-                            PLUGIN_LOG_E("vkAcquireNextImageKHR surface lost");
-                            return;
-
-                        case VK_EVENT_SET:
-                        case VK_EVENT_RESET:
-                        case VK_INCOMPLETE:
-                        case VK_ERROR_INITIALIZATION_FAILED:
-                        case VK_ERROR_MEMORY_MAP_FAILED:
-                        case VK_ERROR_LAYER_NOT_PRESENT:
-                        case VK_ERROR_EXTENSION_NOT_PRESENT:
-                        case VK_ERROR_FEATURE_NOT_PRESENT:
-                        case VK_ERROR_INCOMPATIBLE_DRIVER:
-                        case VK_ERROR_TOO_MANY_OBJECTS:
-                        case VK_ERROR_FORMAT_NOT_SUPPORTED:
-                        case VK_ERROR_FRAGMENTED_POOL:
-                        case VK_ERROR_OUT_OF_POOL_MEMORY:
-                        case VK_ERROR_INVALID_EXTERNAL_HANDLE:
-                        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-                        case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
-                        case VK_ERROR_VALIDATION_FAILED_EXT:
-                        case VK_ERROR_INVALID_SHADER_NV:
-                        // case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
-                        case VK_ERROR_FRAGMENTATION_EXT:
-                        case VK_ERROR_NOT_PERMITTED_EXT:
-                        // case VK_ERROR_INVALID_DEVICE_ADDRESS_EXT:
-                        case VK_RESULT_MAX_ENUM:
-                        default:
-                            PLUGIN_LOG_E("vkAcquireNextImageKHR surface lost. Device invalidated");
-                            PLUGIN_ASSERT(false && "unknown result from vkAcquireNextImageKHR");
-                            device_.SetDeviceStatus(false);
-                            break;
-                    }
-
-                    if (pi.swapchainImageIndex >= static_cast<uint32_t>(platSwapchain.swapchainImages.images.size())) {
-                        PLUGIN_LOG_E("swapchain image index (%u) should be smaller than (%u)", pi.swapchainImageIndex,
-                            static_cast<uint32_t>(platSwapchain.swapchainImages.images.size()));
-                    }
-
-                    const Device::SwapchainData swapchainData = device_.GetSwapchainData(swapData.handle);
-                    const RenderHandle handle = swapchainData.remappableSwapchainImage;
-                    if (pi.swapchainImageIndex < swapchainData.imageViewCount) {
-                        // remap image to backbuffer
-                        const RenderHandle currentSwapchainHandle = swapchainData.imageViews[pi.swapchainImageIndex];
-                        // special swapchain remapping
-                        gpuResourceMgr_.RenderBackendImmediateRemapGpuImageHandle(handle, currentSwapchainHandle);
-                    }
-                    pi.renderGraphProcessedState = swapData.backBufferState;
-                    pi.imageLayout = swapData.layout;
-                    if (pi.imageLayout != ImageLayout::CORE_IMAGE_LAYOUT_PRESENT_SRC) {
-                        pi.presentationLayoutChangeNeeded = true;
-                        pi.renderNodeCommandListIndex =
-                            static_cast<uint32_t>(renderCommandFrameData.renderCommandContexts.size() - 1);
-
-                        if (const GpuImageVk* swapImage = gpuResourceMgr_.GetImage<GpuImageVk>(handle); swapImage) {
-                            pi.swapchainImage = swapImage->GetPlatformData().image;
-                        }
+                    if (const GpuImageVk* swapImage = gpuResourceMgr_.GetImage<GpuImageVk>(handle); swapImage) {
+                        pi.swapchainImage = swapImage->GetPlatformData().image;
                     }
                 }
             }
-            presentationData_.infos[swapIdx] = pi;
         }
+        presentationData_.infos[swapIdx] = pi;
     }
 }
 
@@ -304,7 +305,7 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
             for (const auto& presRef : presentationData_.infos) {
                 // NOTE: default backbuffer might be present multiple times
                 // the flag useSwapchain should be false in these cases
-                if (presRef.useSwapchain && presRef.swapchain && presRef.validAcquire) {
+                if (presRef.useSwapchain && presRef.validAcquire && presRef.swapchain) {
                     PLUGIN_ASSERT(presRef.imageLayout == ImageLayout::CORE_IMAGE_LAYOUT_PRESENT_SRC);
                     vkSwapImageIndices.push_back(presRef.swapchainImageIndex);
                     vkSwapchains.push_back(presRef.swapchain);
@@ -318,10 +319,10 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
             // semaphore)
             if (!vkSwapchains.empty()) {
                 VkSemaphore waitSemaphore = VK_NULL_HANDLE;
-                uint32_t waitSemaphoreCount = 0;
+                uint32_t waitSemaphoreCount = 0U;
                 if (commandBufferSubmitter_.presentationWaitSemaphore != VK_NULL_HANDLE) {
                     waitSemaphore = commandBufferSubmitter_.presentationWaitSemaphore;
-                    waitSemaphoreCount = 1;
+                    waitSemaphoreCount = 1U;
                 }
 
                 const VkPresentInfoKHR presentInfo {
@@ -390,7 +391,7 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
                     default:
                         PLUGIN_LOG_E("vkQueuePresentKHR surface lost");
                         PLUGIN_ASSERT(false && "unknown result from vkQueuePresentKHR");
-                        break;
+                        return;
                 }
             }
 #if (RENDER_PERF_ENABLED == 1)
@@ -490,11 +491,11 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
 
         const auto& renderContextRef = renderCommandFrameData.renderCommandContexts[cmdBufferIdx];
 
-        vector<VkSemaphore> waitSemaphores = {};
-        vector<VkPipelineStageFlags> waitSemaphorePipelineStageFlags = {};
+        vector<VkSemaphore> waitSemaphores;
+        vector<VkPipelineStageFlags> waitSemaphorePipelineStageFlags;
         for (uint32_t waitIdx = 0; waitIdx < renderContextRef.submitDepencies.waitSemaphoreCount; ++waitIdx) {
             const uint32_t waitCmdBufferIdx = renderContextRef.submitDepencies.waitSemaphoreNodeIndices[waitIdx];
-            PLUGIN_ASSERT(waitIdx < (uint32_t)commandBufferSubmitter_.commandBuffers.size());
+            PLUGIN_ASSERT(waitCmdBufferIdx < (uint32_t)commandBufferSubmitter_.commandBuffers.size());
 
             VkSemaphore waitSemaphore = commandBufferSubmitter_.commandBuffers[waitCmdBufferIdx].semaphore;
             if (waitSemaphore != VK_NULL_HANDLE) {
@@ -503,12 +504,16 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             }
         }
 
+        bool validAcquire = true;
         if ((!swapchainSemaphoreWaited) && (renderContextRef.submitDepencies.waitForSwapchainAcquireSignal) &&
             (!presentationData_.infos.empty())) {
             swapchainSemaphoreWaited = true;
             // go through all swapchain semaphores
             for (const auto& presRef : presentationData_.infos) {
-                if (presRef.swapchainSemaphore) {
+                if (!presRef.validAcquire && presRef.swapchainSemaphore) {
+                    swapchainSemaphoreWaited = false;
+                    validAcquire = false;
+                } else if (presRef.validAcquire && presRef.swapchainSemaphore) {
                     waitSemaphores.push_back(presRef.swapchainSemaphore);
                     waitSemaphorePipelineStageFlags.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
                 }
@@ -519,7 +524,8 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
         VkFence fence = VK_NULL_HANDLE;
         if (finalCommandBufferSubmissionIndex == cmdBufferIdx) { // final presentation
             // add fence signaling to last submission for frame sync
-            if (auto frameSync = static_cast<RenderFrameSyncVk*>(renderCommandFrameData.renderFrameSync); frameSync) {
+            if (auto frameSync = static_cast<RenderFrameSyncVk*>(renderCommandFrameData.renderFrameSync);
+                validAcquire && frameSync) {
                 fence = frameSync->GetFrameFence().fence;
                 frameSync->FrameFenceIsSignalled();
             }
@@ -532,10 +538,10 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
                     for (size_t sigIdx = 0; sigIdx < externalSignals.size(); ++sigIdx) {
                         // needs to be false
                         if (!externalSignals[sigIdx].signaled && (externalSemaphores[sigIdx])) {
-                            if (const auto* gs = (const GpuSemaphoreVk*)externalSemaphores[sigIdx].get(); gs) {
-                                semaphores.push_back(gs->GetPlatformData().semaphore);
-                                externalSignals[sigIdx].signaled = true;
-                            }
+                            semaphores.push_back(static_cast<const GpuSemaphoreVk&>(*externalSemaphores[sigIdx])
+                                                     .GetPlatformData()
+                                                     .semaphore);
+                            externalSignals[sigIdx].signaled = true;
                         }
                     }
                 }
@@ -557,20 +563,20 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             semaphores.push_back(cmdSubmitterRef.semaphore);
         }
 
-        const VkSubmitInfo submitInfo {
-            VK_STRUCTURE_TYPE_SUBMIT_INFO,                              // sType
-            nullptr,                                                    // pNext
-            static_cast<uint32_t>(waitSemaphores.size()),               // waitSemaphoreCount
-            (waitSemaphores.empty()) ? nullptr : waitSemaphores.data(), // pWaitSemaphores
-            waitSemaphorePipelineStageFlags.data(),                     // pWaitDstStageMask
-            1,                                                          // commandBufferCount
-            &cmdSubmitterRef.commandBuffer,                             // pCommandBuffers
-            static_cast<uint32_t>(semaphores.size()),                   // signalSemaphoreCount
-            (semaphores.empty()) ? nullptr : semaphores.data(),         // pSignalSemaphores
-        };
-
         const VkQueue queue = deviceVk_.GetGpuQueue(renderContextRef.renderCommandList->GetGpuQueue()).queue;
-        if (queue) {
+        if (validAcquire && queue) {
+            const VkSubmitInfo submitInfo {
+                VK_STRUCTURE_TYPE_SUBMIT_INFO,                              // sType
+                nullptr,                                                    // pNext
+                static_cast<uint32_t>(waitSemaphores.size()),               // waitSemaphoreCount
+                (waitSemaphores.empty()) ? nullptr : waitSemaphores.data(), // pWaitSemaphores
+                waitSemaphorePipelineStageFlags.data(),                     // pWaitDstStageMask
+                1U,                                                         // commandBufferCount
+                &cmdSubmitterRef.commandBuffer,                             // pCommandBuffers
+                static_cast<uint32_t>(semaphores.size()),                   // signalSemaphoreCount
+                (semaphores.empty()) ? nullptr : semaphores.data(),         // pSignalSemaphores
+            };
+
             RENDER_CPU_PERF_SCOPE("vkQueueSubmit", "");
             VALIDATE_VK_RESULT(vkQueueSubmit(queue, // queue
                 1,                                  // submitCount

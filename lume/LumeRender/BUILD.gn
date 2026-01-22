@@ -16,8 +16,6 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 declare_args() {
   RENDER_LOG_ENABLED = true
   RENDER_VALIDATION_ENABLED = false
-  RENDER_BUILD_GLES = true
-  RENDER_BUILD_VULKAN = true
   RENDER_ROFS = "rofsRndr"
 }
 
@@ -225,8 +223,6 @@ ohos_source_set("lume_render_src") {
     "src/node/render_node_end_frame_staging.h",
     "src/node/render_node_fullscreen_generic.cpp",
     "src/node/render_node_fullscreen_generic.h",
-    "src/node/render_node_mip_chain_post_process.cpp",
-    "src/node/render_node_mip_chain_post_process.h",
     "src/node/render_node_queue_transfer.cpp",
     "src/node/render_node_queue_transfer.h",
     "src/node/render_node_render_post_processes_generic.cpp",
