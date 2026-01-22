@@ -541,6 +541,7 @@ UNIT_TEST(API_ContainersUnorderedMap, ExtractInsertBug2, testing::ext::TestSize.
 
 // Improves coverage but takes calculation time. OpenCppCoverage works terable with it.
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: HashPolicy
  * @tc.desc: Tests for Hash Policy. [AUTO-GENERATED]
@@ -588,6 +589,7 @@ UNIT_TEST(API_ContainersUnorderedMap, DISABLED_HashPolicy, testing::ext::TestSiz
 
     ASSERT_TRUE(durationReserve <= durationNoReserve);
 }
+#endif
 
 /**
  * @tc.name: StringView
