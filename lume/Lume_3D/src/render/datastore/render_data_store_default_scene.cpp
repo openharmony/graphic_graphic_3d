@@ -20,6 +20,7 @@
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <core/log.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;

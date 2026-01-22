@@ -34,6 +34,7 @@
 #include <base/math/vector_util.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
+#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/plugin/intf_class_register.h>

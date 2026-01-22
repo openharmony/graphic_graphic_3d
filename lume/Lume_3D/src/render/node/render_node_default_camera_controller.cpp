@@ -1229,6 +1229,7 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     {},
                     {},
                     {},
+                    {},
                 };
                 constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
                 if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {

@@ -21,6 +21,7 @@
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/matrix_util.h>
 #include <core/json/json.h>
+#include <core/log.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/device/intf_shader_manager.h>

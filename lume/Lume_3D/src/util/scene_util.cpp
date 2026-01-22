@@ -1192,7 +1192,7 @@ ISceneUtil::ClonedEntities SceneUtil::Clone(IEcs& source, Entity sourceEntity, E
     if (!CORE_NS::EntityUtil::IsValid(sourceEntity) || !source.GetEntityManager().IsAlive(sourceEntity)) {
         return {};
     }
-    auto result = CloneEntities(source, source, GatherEntities(source), {});
+    auto result = CloneEntities(source, source, GatherEntities(source, sourceEntity), {});
     Entity destinationEntity = result.oldToNew[sourceEntity].entity;
     auto* nodeManager = GetManager<INodeComponentManager>(source);
     if (nodeManager) {
