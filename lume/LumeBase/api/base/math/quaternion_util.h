@@ -29,7 +29,8 @@ namespace Math {
 /** \addtogroup group_math_quaternionutil
  *  @{
  */
-/** Create quaternion from vector3 (takes radians) */
+
+/** Create quaternion from vector3 (takes radians) - XYZ order */
 static inline Quat FromEulerRad(const Vec3& euler)
 {
     const float roll = euler.x;
@@ -83,13 +84,13 @@ static inline constexpr Quat Inverse(const Quat& rotation)
     return rotation;
 }
 
-/** Creates quaternion from three separate euler angles (degrees) */
+/** Creates quaternion from three separate euler angles (degrees) - XYZ order */
 static inline Quat Euler(const float& x, const float& y, const float& z)
 {
     return FromEulerRad(Vec3(x, y, z) * Math::DEG2RAD);
 }
 
-/** Creates quaternion from euler angles (degrees) */
+/** Creates quaternion from euler angles (degrees) - XYZ order */
 static inline Quat Euler(const Vec3& euler)
 {
     return FromEulerRad(euler * Math::DEG2RAD);
@@ -152,7 +153,7 @@ static inline constexpr Vec3 NormalizeAngles(Vec3 angles)
     return angles;
 }
 
-/** Convert quaternion to euler values (radians) */
+/** Convert quaternion to euler values (radians) - XYZ order */
 static inline Vec3 ToEulerRad(const Quat& q)
 {
     // roll (x-axis rotation)
@@ -163,7 +164,7 @@ static inline Vec3 ToEulerRad(const Quat& q)
     // pitch (y-axis rotation)
     const float sinp = +2.0f * (q.w * q.y - q.z * q.x);
     // use 90 degrees if out of range
-    const float pitch = (fabs(sinp) >= 1.f) ? copysign(Math::PI / 2.0f, sinp) : asin(sinp);
+    const float pitch = (fabs(sinp) >= (1.0f - Math::BASE_EPSILON)) ? copysign(Math::PI / 2.0f, sinp) : asin(sinp);
 
     // yaw (z-axis rotation)
     const float sinyCosp = +2.0f * (q.w * q.z + q.x * q.y);
