@@ -134,7 +134,7 @@ void RenderDataStoreDefaultDotfield::SetTime(float time) noexcept
 }
 
 // for plugin / factory interface
-refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultDotfield::Create(IRenderContext& context, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultDotfield::Create(IRenderContext& context, const char* name)
 {
     return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultDotfield(context, name));
 }
