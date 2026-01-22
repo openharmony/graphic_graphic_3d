@@ -318,18 +318,17 @@ void RenderBackendVk::Present(const RenderBackendBackBufferConfiguration& backBu
             // NOTE: currently waits for the last valid submission semaphore (backtraces here for valid
             // semaphore)
             if (!vkSwapchains.empty()) {
-                VkSemaphore waitSemaphore = VK_NULL_HANDLE;
-                uint32_t waitSemaphoreCount = 0U;
-                if (commandBufferSubmitter_.presentationWaitSemaphore != VK_NULL_HANDLE) {
-                    waitSemaphore = commandBufferSubmitter_.presentationWaitSemaphore;
-                    waitSemaphoreCount = 1U;
+                BASE_NS::vector<VkSemaphore> waitSemaphores;
+                waitSemaphores.reserve(presentationData_.infos.size());
+                for (const auto& info : presentationData_.infos) {
+                    waitSemaphores.push_back(info.presentSemaphore);
                 }
 
                 const VkPresentInfoKHR presentInfo {
                     VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,         // sType
                     nullptr,                                    // pNext
-                    waitSemaphoreCount,                         // waitSemaphoreCount
-                    &waitSemaphore,                             // pWaitSemaphores
+                    waitSemaphores.size(),                      // waitSemaphoreCount
+                    waitSemaphores.data(),                      // pWaitSemaphores
                     static_cast<uint32_t>(vkSwapchains.size()), // swapchainCount
                     vkSwapchains.data(),                        // pSwapchains
                     vkSwapImageIndices.data(),                  // pImageIndices
@@ -471,7 +470,6 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
 {
     // NOTE: currently backtraces to final valid command buffer semaphore
     uint32_t finalCommandBufferSubmissionIndex = ~0u;
-    commandBufferSubmitter_.presentationWaitSemaphore = VK_NULL_HANDLE;
     bool swapchainSemaphoreWaited = false;
     for (int32_t cmdBufferIdx = (int32_t)commandBufferSubmitter_.commandBuffers.size() - 1; cmdBufferIdx >= 0;
          --cmdBufferIdx) {
@@ -520,7 +518,7 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             }
         }
 
-        vector<VkSemaphore> semaphores = {};
+        vector<VkSemaphore> semaphores;
         VkFence fence = VK_NULL_HANDLE;
         if (finalCommandBufferSubmissionIndex == cmdBufferIdx) { // final presentation
             // add fence signaling to last submission for frame sync
@@ -548,9 +546,9 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             }
 
             if (presentationData_.present) {
-                commandBufferSubmitter_.presentationWaitSemaphore =
-                    commandBufferSubmitter_.commandBuffers[cmdBufferIdx].semaphore;
-                semaphores.push_back(commandBufferSubmitter_.presentationWaitSemaphore);
+                for (const auto& info : presentationData_.infos) {
+                    semaphores.push_back(info.presentSemaphore);
+                }
             }
             // add additional semaphores
             for (const auto& swapRef : backBufferConfig.swapchainData) {

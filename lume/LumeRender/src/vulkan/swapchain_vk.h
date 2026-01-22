@@ -37,6 +37,7 @@ struct SwapchainImagesVk {
     uint32_t height { 0 };
 
     BASE_NS::vector<VkSemaphore> semaphores;
+    BASE_NS::vector<VkSemaphore> presetSemaphores;
 };
 
 struct SwapchainPlatformDataVk final {
