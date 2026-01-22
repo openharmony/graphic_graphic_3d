@@ -115,11 +115,16 @@ struct LibPlugin {
     const IPlugin* plugin;
 };
 
-constexpr bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) noexcept
+bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) noexcept
 {
-    return libPlugin.plugin->version.uid == rhs;
+    if (libPlugin.lib) {
+        return libPlugin.lib->GetPluginUid() == rhs;
+    } else if (libPlugin.plugin) {
+        return libPlugin.plugin->version.uid == rhs;
+    } else {
+        return false;
+    }
 }
-
 template<typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
 {
@@ -171,13 +176,12 @@ void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager)
         if (!pluginFile.ends_with(libraryFileExtension)) {
             continue;
         }
+        auto filePtr = fileManager.OpenFile(pluginRoot + file.name);
         const string absoluteFile = fileManager.GetEntry(pluginRoot + file.name).name;
-        if (ILibrary::Ptr lib = ILibrary::Load(absoluteFile); lib) {
-            const IPlugin* plugin = lib->GetPlugin();
-            if (plugin && (plugin->typeUid == IPlugin::UID)) {
-                CORE_LOG_V("\t%s", plugin->name);
-                plugins.push_back({ move(lib), plugin });
-            }
+        CORE_LOG_V("\t%s", absoluteFile.data());
+        if (ILibrary::Ptr lib = ILibrary::Load(absoluteFile, filePtr)) {
+            CORE_LOG_V("\tUID %s", BASE_NS::to_string(lib->GetPluginUid()).data());
+            plugins.push_back({ move(lib), {} });
         }
     }
 }
@@ -186,9 +190,16 @@ bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availa
 {
     bool found = true;
     if (auto pos = FindIf(availablePlugins,
-            [&uidToLoad](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
+            [&uidToLoad](const LibPlugin& libPlugin) {
+                if (libPlugin.lib) {
+                    return libPlugin.lib->GetPluginUid() == uidToLoad;
+                } else {
+                    return libPlugin.plugin->version.uid == uidToLoad;
+                }
+            });
         pos != availablePlugins.end()) {
-        found = AllOf(pos->plugin->pluginDependencies,
+        auto pluginDependencies = pos->lib ? pos->lib->GetPluginDependencies() : pos->plugin->pluginDependencies;
+        found = AllOf(pluginDependencies,
             [&](const Uid& dependency) { return AddDependencies(toBeLoaded, availablePlugins, dependency); });
         if (found) {
             toBeLoaded.push_back(uidToLoad);
@@ -208,7 +219,11 @@ vector<Uid> GatherRequiredPlugins(const array_view<const Uid> pluginUids, const 
     if (pluginUids.empty()) {
         loadAll.reserve(plugins.size());
         for (auto& plugin : plugins) {
-            loadAll.push_back(plugin.plugin->version.uid);
+            if (plugin.lib) {
+                loadAll.push_back(plugin.lib->GetPluginUid());
+            } else {
+                loadAll.push_back(plugin.plugin->version.uid);
+            }
         }
     }
 
@@ -394,6 +409,9 @@ bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
             // This shouldn't be possible as toLoad should contain UIDs which are found in plugins.
             continue;
         }
+        if (pos->lib) {
+            pos->plugin = pos->lib->GetPlugin();
+        }
         if (!pos->plugin) {
             // This shouldn't be possible as GatherStatic/DynamicPlugins should add only valid plugin pointers, lib can
             // be null.
@@ -417,7 +435,7 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
     if (perfLoggerId_) {
         if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
-                                    [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+                                      [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
             logger_.RemoveOutput(perfLoggerId_);
             perfLoggerId_ = 0U;
         }

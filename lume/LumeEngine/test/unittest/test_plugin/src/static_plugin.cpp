@@ -31,8 +31,8 @@
 
 namespace UTest {
 const char* GetVersionInfo();
-CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
-void UnregisterInterfaces(CORE_NS::PluginToken);
+CORE_NS::PluginToken RegisterInterfacesStatic(CORE_NS::IPluginRegister&);
+void UnregisterInterfacesStatic(CORE_NS::PluginToken);
 } // namespace UTest
 
 extern "C" {
@@ -42,8 +42,8 @@ PLUGIN_DATA(CoreTestStatic) {
     "Static Test Plugin",
     // Version information of the plugin.
     { UTest::UID_STATIC_PLUGIN, UTest::GetVersionInfo },
-    UTest::RegisterInterfaces,
-    UTest::UnregisterInterfaces,
+    UTest::RegisterInterfacesStatic,
+    UTest::UnregisterInterfacesStatic,
     {},
 };
 DEFINE_STATIC_PLUGIN(CoreTestStatic);
@@ -114,7 +114,7 @@ const char* GetVersionInfo()
     return "static 1.0";
 }
 
-CORE_NS::PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
+CORE_NS::PluginToken RegisterInterfacesStatic(IPluginRegister& pluginRegistry)
 {
     GlobalToken* token = new GlobalToken { pluginRegistry };
 
@@ -124,7 +124,7 @@ CORE_NS::PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     return token;
 }
 
-void UnregisterInterfaces(PluginToken token)
+void UnregisterInterfacesStatic(PluginToken token)
 {
     GlobalToken* state = static_cast<GlobalToken*>(token);
 
