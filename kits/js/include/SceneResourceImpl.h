@@ -18,7 +18,41 @@
 
 #include <napi_api.h>
 
+#include <optional>
+
 #include <base/containers/vector.h>
+#include <meta/interface/property/property.h>
+
+template<typename SourceType, uint32_t SourceIndex, typename Fn>
+bool SetPropertyValue(NapiApi::FunctionContext<std::optional<SourceType>>& ctx, Fn&& callback)
+{
+    std::optional<SourceType> opt = ctx.template Arg<SourceIndex>();
+    bool defined = opt.has_value();
+    SourceType value = opt.value_or(SourceType {});
+    return callback(value, defined);
+}
+
+template<typename SourceType, uint32_t SourceIndex, typename TargetType>
+bool SetPropertyValue(NapiApi::FunctionContext<std::optional<SourceType>>& ctx,
+    const META_NS::Property<TargetType>& property, std::optional<TargetType> defaultValue = {})
+{
+    if (property) {
+        SetPropertyValue<SourceType, SourceIndex>(ctx, [&](SourceType& value, bool defined) -> bool {
+            if (defined) {
+                auto v = static_cast<TargetType>(static_cast<SourceType>(value));
+                return property->SetValue(v);
+            }
+            if (defaultValue.has_value()) {
+                // Defined default value which should be set in case there is no value
+                return property->SetValue(defaultValue.value());
+            }
+            property->ResetValue();
+            return true;
+        });
+    }
+    return false;
+}
+
 
 class SceneResourceImpl {
 public:
@@ -89,7 +123,7 @@ protected:
     NapiApi::StrongRef uri_;
 
     // returns false if owning scene has been destroyed.
-    bool validateSceneRef();
+    bool validateSceneRef() const;
     // flagged to true, IF user directly called "destroy" to the resource.
     // used to identify if we want FULL cleanup or just release the "handle".
     bool userDisposed_ { false };

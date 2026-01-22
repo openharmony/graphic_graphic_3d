@@ -84,7 +84,7 @@ NapiApi::WeakObjectRef SceneResourceImpl::GetSceneWeakRef()
     return scene_;
 }
 
-bool SceneResourceImpl::validateSceneRef()
+bool SceneResourceImpl::validateSceneRef() const
 {
     // Scene may currently hold other types than SCENE_NS::IScene
     // Any strong reference obtained suffices for now
@@ -148,11 +148,17 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
     auto native = ctx.This().GetNative();
     if (auto named = interface_cast<META_NS::INamed>(native)) {
         name = META_NS::GetValue(named->Name());
-    } else if (native) {
-        name = native->GetName();
+    } else if (auto objectname = interface_cast<META_NS::IObjectName>(native)) {
+        name = objectname->GetName();
     }
     if (name.empty()) {
-        name = name_; // Use cached if we didn't get anything from underlying object
+        if (!name_.empty()) {
+            name = name_; // Use cached if we didn't get anything from underlying object
+        } else {
+            if (native) {
+                native->GetName(); // Last resort, this can give object id as name
+            }
+        }
     }
     return ctx.GetString(name);
 }
