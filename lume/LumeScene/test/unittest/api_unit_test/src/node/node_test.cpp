@@ -859,9 +859,7 @@ void API_ScenePluginNodeTest::CloneNodeTest(
     BASE_NS::vector<CORE_NS::MatchingResourceId> res {
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
-    };
+        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
 
     auto infos = GetResourceManager(cube)->GetResourceInfos(res);
     ASSERT_TRUE(!infos.empty());
@@ -879,6 +877,23 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneNode, testing::ext::TestSize.Level1)
 {
     auto scene = CreateEmptyScene();
     CloneNodeTest(scene, "other", nullptr, "other");
+}
+
+/**
+ * @tc.name: CloneNodeDifferentScene
+ * @tc.desc: Tests for Clone Node from different scene.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginNodeTest, CloneNodeDifferentScene, testing::ext::TestSize.Level1)
+{
+    auto cube = Scene(LoadScene("test://AnimatedCube/AnimatedCube.gltf"));
+    auto cube2 = Scene(LoadScene("test://AnimatedCube/AnimatedCube.gltf"));
+    auto node = cube.FindNode("AnimatedCube");
+    ASSERT_TRUE(node);
+    auto differentSceneRoot = cube2.GetRootNode();
+    ASSERT_TRUE(differentSceneRoot);
+    // Should fail from different scene
+    EXPECT_FALSE(node.Clone("invalid", differentSceneRoot));
 }
 
 /**
@@ -966,15 +981,13 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneNodeTwice, testing::ext::TestSize.Leve
     BASE_NS::vector<CORE_NS::MatchingResourceId> res {
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
-    };
+        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
 
     auto infos = GetResourceManager(cube)->GetResourceInfos(res);
     ASSERT_TRUE(!infos.empty());
 
     auto res1 = ChangeGroup(AddToResourceName(infos, " (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf");
-    auto res2 = ChangeGroup(AddToResourceName(infos, " (2)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf");
+    auto res2 = ChangeGroup(AddToResourceName(infos, " (1) (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf");
     auto allRes = res1;
     allRes.insert(allRes.end(), res2.begin(), res2.end());
 
@@ -1004,8 +1017,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneRoot, testing::ext::TestSize.Level1)
     BASE_NS::vector<CORE_NS::MatchingResourceId> res {
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
+        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
     };
 
     auto infos = GetResourceManager(cube)->GetResourceInfos(res);
@@ -1047,9 +1059,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneConflictingName, testing::ext::TestSiz
     BASE_NS::vector<CORE_NS::MatchingResourceId> res {
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
         { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
-    };
+        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
 
     auto infos = GetResourceManager(cube)->GetResourceInfos(res);
     ASSERT_TRUE(!infos.empty());

@@ -19,7 +19,7 @@
 #include <scene/ext/component.h>
 #include <scene/interface/intf_material.h>
 
-#include <3d/ecs/components/material_component.h>
+#include "shader_compare.h"
 
 #include <meta/ext/object.h>
 
@@ -27,20 +27,6 @@ META_TYPE(CORE3D_NS::MaterialComponent::Type)
 META_TYPE(CORE3D_NS::MaterialComponent::Shader)
 META_TYPE(CORE3D_NS::MaterialComponent::TextureInfo)
 META_TYPE(CORE3D_NS::MaterialComponent::RenderSort)
-
-META_BEGIN_NAMESPACE()
-template<bool B>
-struct DefaultCompare<CORE3D_NS::MaterialComponent::Shader, B> {
-    using T = CORE3D_NS::MaterialComponent::Shader;
-    static constexpr bool Equal(const T& v1, const T& v2)
-    {
-        return v1.shader == v2.shader && v1.graphicsState == v2.graphicsState;
-    }
-
-    template<typename NewType>
-    using Rebind = DefaultCompare<NewType>;
-};
-META_END_NAMESPACE()
 
 SCENE_BEGIN_NAMESPACE()
 

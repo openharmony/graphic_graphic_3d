@@ -13,6 +13,13 @@
  * limitations under the License.
  */
 
+#if __OHOS__
+// #include <native_buffer/native_buffer.h>
+#endif
+#if __ANDROID__
+#include <android/hardware_buffer.h>
+#endif
+
 #include <scene/interface/intf_image.h>
 #include <scene/interface/resource/types.h>
 
@@ -69,6 +76,48 @@ UNIT_TEST_F(API_ScenePluginImageTest, DISABLED_ResourceReload, testing::ext::Tes
 
     EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2 { 252, 256 }));
 }
+
+// #if defined(__ANDROID__)
+// UNIT_TEST_F(API_ScenePluginImageTest, DISABLED_CreateExternalImage, testing::ext::TestSize.Level1)
+// #else
+// UNIT_TEST_F(API_ScenePluginImageTest, CreateExternalImage, testing::ext::TestSize.Level1)
+// #endif
+// {
+// #if defined(__ANDROID__)
+//    AHardwareBuffer_Desc desc { 4U, 4U, 1U, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+//        AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY | AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE, 0U, 0U, 0U };
+//    AHardwareBuffer* buf;
+//    AHardwareBuffer_allocate(&desc, &buf);
+//    ASSERT_TRUE(buf);
+
+//     AHardwareBuffer_describe(buf, &desc);
+// #elif defined(__OHOS__)
+//     OH_NativeBuffer_Config config { 4, 4, OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_YCBCR_420_SP,
+//         OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_HW_TEXTURE, 8 };
+//     OH_NativeBuffer* buf = OH_NativeBuffer_Alloc(&config);
+//     ASSERT_TRUE(buf);
+//     OH_NativeBuffer_GetConfig(buf, &config);
+// #else
+//     char buf[1]; // This is not actually going anywhere
+// #endif
+
+//     scene = CreateEmptyScene();
+//     auto ext = scene->CreateObject<IExternalImage>(ClassId::ExternalImage).GetResult();
+//     ASSERT_TRUE(ext);
+//     SCENE_NS::IExternalImage::ExternalBufferInfo buffer;
+
+//     auto buffer_set = ext->SetExternalBuffer(buffer);
+
+// #if defined(__ANDROID__)
+//     ASSERT_TRUE(buffer_set);
+//     AHardwareBuffer_release(buf);
+// #elif defined(__OHOS__)
+//     ASSERT_TRUE(buffer_set);
+//     OH_NativeBuffer_Unreference(buf);
+// #else
+//     ASSERT_FALSE(buffer_set);
+// #endif
+// }
 
 } // namespace UTest
 

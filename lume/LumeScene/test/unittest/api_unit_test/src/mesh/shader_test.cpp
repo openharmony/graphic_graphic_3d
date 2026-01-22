@@ -148,7 +148,7 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
  * @tc.desc: Tests for Shader Resource Reload. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_ScenePluginShaderTest, DISABLED_ShaderResourceReload, testing::ext::TestSize.Level1)
+UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestSize.Level1)
 #endif
 {
     CreateEmptyScene();

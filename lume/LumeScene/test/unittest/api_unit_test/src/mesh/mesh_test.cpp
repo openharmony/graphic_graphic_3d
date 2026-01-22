@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+#include <functional>
+#include <scene/ext/intf_ecs_object_access.h>
 #include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_mesh.h>
 
@@ -27,6 +29,7 @@ public:
     {
         ScenePluginTest::SetUp();
         auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
         auto node = scene->CreateNode("//test", ClassId::MeshNode).GetResult();
         ASSERT_TRUE(node);
         mesh_ = interface_pointer_cast<IMesh>(node);
@@ -74,6 +77,23 @@ public:
         WaitForUserQueue();
     }
 
+    CORE_NS::Entity GetEntity(const BASE_NS::shared_ptr<CORE_NS::IInterface>& object)
+    {
+        return GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(object));
+    }
+
+    void ExpectValidEntity(const CORE_NS::Entity& entity)
+    {
+        EXPECT_TRUE(CORE_NS::EntityUtil::IsValid(entity));
+    }
+
+    void ExpectValidEntity(const BASE_NS::shared_ptr<CORE_NS::IInterface>& object)
+    {
+        EXPECT_TRUE(CORE_NS::EntityUtil::IsValid(GetEntity(object)));
+    }
+
+    void TestMeshNodeCreation(std::function<IMesh::Ptr(const ICreateMesh::Ptr&, const IMaterial::Ptr&)>&& createFn);
+
     IMesh::Ptr mesh_;
 };
 
@@ -90,6 +110,82 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreatePlaneMesh, testing::ext::TestSize.Lev
     ASSERT_TRUE(m);
     EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
+}
+
+void API_ScenePluginMeshTest::TestMeshNodeCreation(
+    std::function<IMesh::Ptr(const ICreateMesh::Ptr&, const IMaterial::Ptr&)>&& createFn)
+{
+    auto material = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
+    auto mc = scene->CreateObject<ICreateMesh>(ClassId::MeshCreator).GetResult();
+    ASSERT_TRUE(mc);
+    auto materialEntity = GetEntity(material);
+
+    ExpectValidEntity(materialEntity);
+
+    auto m = createFn(mc, material);
+    auto meshEntity = GetEntity(m);
+    ExpectValidEntity(meshEntity);
+    UpdateScene();
+
+    auto ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
+    ASSERT_TRUE(ecs);
+
+    auto checkMeshMaterial = [&]() {
+        auto mshcm = CORE_NS::GetManager<CORE3D_NS::IMeshComponentManager>(*ecs);
+        ASSERT_TRUE(mshcm->HasComponent(meshEntity));
+        if (auto rh = mshcm->Read(meshEntity)) {
+            ASSERT_GT(rh->submeshes.size(), 0);
+            for (auto&& sm : rh->submeshes) {
+                EXPECT_EQ(sm.material, materialEntity);
+            }
+        }
+    };
+
+    checkMeshMaterial();
+
+    auto node = scene->CreateNode<Scene::INode>("//geometry", Scene::ClassId::MeshNode).GetResult();
+    ASSERT_TRUE(interface_cast<IMeshAccess>(node)->SetMesh(m).GetResult());
+    UpdateScene();
+
+    checkMeshMaterial();
+
+    auto meshMaterial = META_NS::GetValue(m->SubMeshes()->GetValue()[0]->Material());
+    EXPECT_EQ(meshMaterial, material);
+}
+
+/**
+ * @tc.name: CreateMeshWithOptions
+ * @tc.desc: Test mesh creation with options
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, CreateMeshWithOptions, testing::ext::TestSize.Level1)
+{
+    TestMeshNodeCreation(
+        [](const auto& mc, const auto& material) { return mc->CreatePlane({ "plane", material }, 10, 5).GetResult(); });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        return mc->CreateCube({ "cube", material }, 10, 10, 5).GetResult();
+    });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        return mc->CreateSphere({ "sphere", material }, 10, 5, 5).GetResult();
+    });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        return mc->CreateCone({ "cone", material }, 10, 5, 5).GetResult();
+    });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        return mc->CreateCylinder({ "cylinder", material }, 10, 6, 5).GetResult();
+    });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        CustomMeshData data;
+        data.vertices = { { -1, -1, -1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+        data.indices = { 0, 1, 2, 2, 1, 3 };
+
+        return mc->Create({ "custom", material }, data).GetResult();
+    });
 }
 
 /**

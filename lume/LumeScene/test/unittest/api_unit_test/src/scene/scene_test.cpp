@@ -790,6 +790,7 @@ UNIT_TEST_F(API_ScenePlugin, ExternalNode, testing::ext::TestSize.Level1)
         { "animation_AnimatedCube", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
 
     BASE_NS::string extGroup = "test_assets://AnimatedCube/AnimatedCube.gltf";
+
     auto ch = scene->FindNode("//test/new").GetResult();
     ASSERT_TRUE(ch);
 
@@ -1141,7 +1142,7 @@ UNIT_TEST_F(API_ScenePlugin, ResourceCountTest, testing::ext::TestSize.Level1)
     // Expected counters with 2 loaded scenes
     IRenderContext::Counters expectedAnimatedCube2 = { { { 23, 4, 0 }, { 23, 4, 0 } }, 2, 8, { 23, 14, 10 } };
     // Expected counters with 2 loaded scenes after importing scene 1 into 2
-    IRenderContext::Counters expectedAnimatedCube2Imported = { { { 46, 7, 3 }, { 23, 4, 0 } }, 2, 12, { 23, 14, 10 } };
+    IRenderContext::Counters expectedAnimatedCube2Imported = { { { 46, 7, 2 }, { 23, 4, 0 } }, 2, 12, { 23, 14, 10 } };
 
     const auto countersBeforeRender = getCounters();
     CompareCounters(countersBeforeRender, expectedAnimatedCube, "scene loaded");
@@ -1165,7 +1166,7 @@ UNIT_TEST_F(API_ScenePlugin, ResourceCountTest, testing::ext::TestSize.Level1)
     EXPECT_TRUE(cube2->RemoveNode(BASE_NS::move(imported)).GetResult());
     render();
     auto expected = expectedAnimatedCube2;
-    expected.scenes[0].nodeObjectCount = 2; // We still have root node
+    expected.scenes[0].nodeObjectCount = 1; // We still have root node
     CompareCounters(getCounters(), expected, "removed imported node");
     // Remove cube2 scene
     cube2root.reset();

@@ -22,6 +22,7 @@
 #include <scene/ext/intf_converting_value.h>
 #include <scene/ext/intf_create_entity.h>
 #include <scene/ext/scene_debug_info.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_light.h>
@@ -39,7 +40,6 @@
 #include "../component/generic_component.h"
 #include "../node/startable_handler.h"
 #include "../resource/ecs_animation.h"
-#include "ecs_object.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -611,6 +611,25 @@ static BASE_NS::vector<CORE_NS::Entity> GetAddedEntities(const INode::Ptr& node)
     return p ? p->GetAddedEntities() : BASE_NS::vector<CORE_NS::Entity> {};
 }
 
+bool InternalScene::RemoveEntity(
+    const CORE_NS::IResourceManager::Ptr& resources, CORE_NS::Entity entity, bool removeFromIndex)
+{
+    if (!(ecs_ && CORE_NS::EntityUtil::IsValid(entity))) {
+        return false;
+    }
+    animations_.erase(entity);
+    if (resources) {
+        if (auto v = ecs_->resourceComponentManager->Read(entity)) {
+            if (removeFromIndex) {
+                resources->RemoveResource(v->resourceId);
+            } else {
+                resources->PurgeResource(v->resourceId);
+            }
+        }
+    }
+    return ecs_->RemoveEntity(entity);
+}
+
 bool InternalScene::RemoveObject(META_NS::IObject::Ptr&& object, bool removeFromIndex)
 {
     if (auto node = interface_pointer_cast<INode>(object)) {
@@ -618,29 +637,19 @@ bool InternalScene::RemoveObject(META_NS::IObject::Ptr&& object, bool removeFrom
         return RemoveNode(BASE_NS::move(node), removeFromIndex);
     }
     bool res = false;
-    if (auto acc = interface_cast<IEcsObjectAccess>(object)) {
-        if (auto eobj = acc->GetEcsObject()) {
-            auto entity = eobj->GetEntity();
-            animations_.erase(entity);
-            if (auto c = GetContext()) {
-                if (auto r = c->GetResources()) {
-                    if (auto v = ecs_->resourceComponentManager->Read(entity)) {
-                        if (removeFromIndex) {
-                            r->RemoveResource(v->resourceId);
-                        } else {
-                            r->PurgeResource(v->resourceId);
-                        }
-                    }
-                }
-            }
-            res = ecs_->RemoveEntity(entity);
-        }
+    if (auto entity = GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(object));
+        CORE_NS::EntityUtil::IsValid(entity)) {
+        res = RemoveEntity(GetResourceManager(this), entity, removeFromIndex);
     }
     return res;
 }
 
 bool InternalScene::RemoveNode(INode::Ptr&& node, bool removeFromIndex)
 {
+    if (auto notify = interface_cast<INodeNotify>(node)) {
+        // Notify state change before doing any other changes to node
+        notify->OnNodeActiveStateChanged(INodeNotify::NodeActiteStateInfo::DEACTIVATING);
+    }
     if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
         BASE_NS::vector<CORE_NS::Entity> added;
         if (auto ext = GetExternalNodeAttachment(node)) {
@@ -652,38 +661,61 @@ bool InternalScene::RemoveNode(INode::Ptr&& node, bool removeFromIndex)
             }
             added = ext->GetAddedEntities();
         }
-
-        if (auto eobj = acc->GetEcsObject()) {
-            auto decents = ecs_->GetNodeDescendants(eobj->GetEntity());
-            for (auto&& ent : decents) {
-                if (auto it = nodes_.find(ent); it != nodes_.end()) {
-                    ReleaseCached(it);
-                }
-                ecs_->RemoveEntity(ent);
-                for (auto it = added.begin(); it != added.end(); ++it) {
-                    if (*it == ent) {
-                        added.erase(it);
-                        break;
-                    }
+        const auto decents = ecs_->GetNodeDescendants(GetEcsObjectEntity(acc));
+        for (auto&& ent : decents) {
+            if (auto it = nodes_.find(ent); it != nodes_.end()) {
+                ReleaseCached(it);
+            }
+            ecs_->RemoveEntity(ent);
+            for (auto it = added.begin(); it != added.end(); ++it) {
+                if (*it == ent) {
+                    added.erase(it);
+                    break;
                 }
             }
         }
+        const auto resources = GetResourceManager(this);
         for (auto it = added.begin(); it != added.end(); ++it) {
-            animations_.erase(*it);
-            if (auto c = GetContext()) {
-                if (auto r = c->GetResources()) {
-                    if (auto v = ecs_->resourceComponentManager->Read(*it)) {
-                        if (removeFromIndex) {
-                            r->RemoveResource(v->resourceId);
-                        } else {
-                            r->PurgeResource(v->resourceId);
-                        }
-                    }
-                }
-            }
-            ecs_->RemoveEntity(*it);
+            RemoveEntity(resources, *it, removeFromIndex);
         }
         return true;
+    }
+    return false;
+}
+
+bool InternalScene::RemoveNamedChild(const INode::Ptr& node, BASE_NS::string_view name)
+{
+    if (!ecs_) {
+        return false;
+    }
+    auto parentEntity = GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(node));
+    CORE3D_NS::ISceneNode* sn = ecs_->GetNode(parentEntity);
+    if (!sn) {
+        return false;
+    }
+    CORE_NS::Entity childEntity;
+    for (auto&& child : sn->GetChildren()) {
+        if (child && child->GetName() == name) {
+            childEntity = child->GetEntity();
+            break;
+        }
+    }
+    if (CORE_NS::EntityUtil::IsValid(childEntity)) {
+        if (auto n = nodes_.find(childEntity); n != nodes_.end()) {
+            // We already have a wrapper for the node
+            auto remove = n->second;
+            return RemoveNode(BASE_NS::move(remove), true);
+        }
+        // No wrapper, remove only from ECS
+        const auto decents = ecs_->GetNodeDescendants(childEntity);
+        const auto resources = GetResourceManager(this);
+        for (auto&& ent : decents) {
+            if (auto it = nodes_.find(ent); it != nodes_.end()) {
+                ReleaseCached(it);
+            }
+            RemoveEntity(resources, ent, true);
+        }
+        return RemoveEntity(resources, childEntity, true);
     }
     return false;
 }
