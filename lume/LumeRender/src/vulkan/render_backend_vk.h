@@ -65,6 +65,7 @@ struct CommandBufferSubmitter {
         VkCommandBuffer secondaryCommandBuffer { VK_NULL_HANDLE };
     };
 
+    VkSemaphore presentationWaitSemaphore { VK_NULL_HANDLE };
     BASE_NS::vector<CommandBuffer> commandBuffers;
 };
 
@@ -279,7 +280,6 @@ private:
         bool validAcquire { false };
         uint32_t swapchainImageIndex { ~0u };
         VkSemaphore swapchainSemaphore { VK_NULL_HANDLE };
-        VkSemaphore presentSemaphore { VK_NULL_HANDLE };
         bool presentationLayoutChangeNeeded { false };
         uint32_t renderNodeCommandListIndex { ~0u };
         GpuResourceState renderGraphProcessedState;

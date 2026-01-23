@@ -357,7 +357,6 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             plat_.swapchainImages.images.resize(realImageCount);
             plat_.swapchainImages.imageViews.resize(realImageCount);
             plat_.swapchainImages.semaphores.resize(realImageCount);
-            plat_.swapchainImages.presetSemaphores.resize(realImageCount);
 
             result = vkGetSwapchainImagesKHR(vkDevice, // device
                 plat_.swapchain,                       // swapchain
@@ -379,6 +378,12 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
                 1,                         // layerCount
             };
 
+            constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
+            const VkSemaphoreCreateInfo semaphoreCreateInfo {
+                VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
+                nullptr,                                 // pNext
+                semaphoreCreateFlags,                    // flags
+            };
             for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
                 const VkImageViewCreateInfo imageViewCreateInfo {
                     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
@@ -395,25 +400,11 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
                     nullptr,                                 // pAllocator
                     &plat_.swapchainImages.imageViews[idx]); // pView
                 LogAndUpdateResultError(result, mainResult);
-            }
 
-            constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-            const VkSemaphoreCreateInfo semaphoreCreateInfo {
-                VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-                nullptr,                                 // pNext
-                semaphoreCreateFlags,                    // flags
-            };
-            for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
                 result = vkCreateSemaphore(vkDevice,         // device
                     &semaphoreCreateInfo,                    // pCreateInfo
                     nullptr,                                 // pAllocator
                     &plat_.swapchainImages.semaphores[idx]); // pSemaphore
-                LogAndUpdateResultError(result, mainResult);
-
-                result = vkCreateSemaphore(vkDevice,               // device
-                    &semaphoreCreateInfo,                          // pCreateInfo
-                    nullptr,                                       // pAllocator
-                    &plat_.swapchainImages.presetSemaphores[idx]); // pSemaphore
                 LogAndUpdateResultError(result, mainResult);
             }
         }
