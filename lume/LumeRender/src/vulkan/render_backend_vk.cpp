@@ -254,8 +254,6 @@ void RenderBackendVk::AcquirePresentationInfo(
                     break;
             }
             if (pi.validAcquire) {
-                pi.presentSemaphore = platSwapchain.swapchainImages.presetSemaphores[pi.swapchainImageIndex];
-
                 presentationData_.present = true;
                 if (pi.swapchainImageIndex >= static_cast<uint32_t>(platSwapchain.swapchainImages.images.size())) {
                     PLUGIN_LOG_E("swapchain image index (%u) should be smaller than (%u)", pi.swapchainImageIndex,

@@ -22,13 +22,13 @@
 #include <base/util/hash.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/property_types.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
-#include "util/log.h"
 #include "util/property_util.h"
 
 #define IMPLEMENT_MANAGER

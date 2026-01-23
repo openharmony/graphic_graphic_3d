@@ -646,10 +646,6 @@ bool InternalScene::RemoveObject(META_NS::IObject::Ptr&& object, bool removeFrom
 
 bool InternalScene::RemoveNode(INode::Ptr&& node, bool removeFromIndex)
 {
-    if (auto notify = interface_cast<INodeNotify>(node)) {
-        // Notify state change before doing any other changes to node
-        notify->OnNodeActiveStateChanged(INodeNotify::NodeActiteStateInfo::DEACTIVATING);
-    }
     if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
         BASE_NS::vector<CORE_NS::Entity> added;
         if (auto ext = GetExternalNodeAttachment(node)) {
