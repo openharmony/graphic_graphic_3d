@@ -196,6 +196,11 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
             return true;
         }
     }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<float>>) {
+        if (jstype == napi_number || jstype == napi_undefined) {
+            return true;
+        }
+    }
     if constexpr (BASE_NS::is_same_v<type, double>) {
         if (jstype == napi_number) {
             return true;
@@ -223,6 +228,11 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
     }
     if constexpr (BASE_NS::is_same_v<type, uint32_t>) {
         if (jstype == napi_number) {
+            return true;
+        }
+    }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<uint32_t>>) {
+        if (jstype == napi_number || jstype == napi_undefined) {
             return true;
         }
     }
@@ -277,12 +287,14 @@ template bool ValidateType<BASE_NS::string>(napi_valuetype, bool);
 template bool ValidateType<bool>(napi_valuetype, bool);
 template bool ValidateType<std::optional<bool>>(napi_valuetype, bool);
 template bool ValidateType<float>(napi_valuetype, bool);
+template bool ValidateType<std::optional<float>>(napi_valuetype, bool);
 template bool ValidateType<double>(napi_valuetype, bool);
 template bool ValidateType<uint8_t>(napi_valuetype, bool);
 template bool ValidateType<int8_t>(napi_valuetype, bool);
 template bool ValidateType<uint16_t>(napi_valuetype, bool);
 template bool ValidateType<int16_t>(napi_valuetype, bool);
 template bool ValidateType<uint32_t>(napi_valuetype, bool);
+template bool ValidateType<std::optional<uint32_t>>(napi_valuetype, bool);
 template bool ValidateType<int32_t>(napi_valuetype, bool);
 template bool ValidateType<int64_t>(napi_valuetype, bool);
 template bool ValidateType<uint64_t>(napi_valuetype, bool);

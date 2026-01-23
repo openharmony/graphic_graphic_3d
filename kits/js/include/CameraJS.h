@@ -39,6 +39,8 @@ public:
     META_NS::IObject::Ptr CreateObject(const META_NS::ClassInfo&);
     void ReleaseObject(const META_NS::IObject::Ptr&);
 
+    SCENE_NS::IPostProcess::Ptr MakeDefaultPostProcess();
+
 private:
     void DisposeNative(void*) override;
     void Finalize(napi_env env) override;
@@ -101,5 +103,6 @@ private:
 
     bool msaaEnabled_ { false };
     bool clearColorEnabled_ { false };
+    bool postProcSetToNull_ { false };
 };
 #endif

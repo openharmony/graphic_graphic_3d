@@ -47,6 +47,7 @@
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>

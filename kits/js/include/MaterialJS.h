@@ -14,6 +14,9 @@
  */
 #ifndef MATERIAL_JS_H
 #define MATERIAL_JS_H
+
+#include <optional>
+
 #include <meta/interface/intf_object.h>
 #include <meta/api/property/property_event_handler.h>
 #include <scene/interface/intf_material.h>
@@ -40,20 +43,24 @@ protected:
 
     MaterialType materialType_;
 
+    void ShaderChanged(SCENE_NS::IShader::Ptr& shader);
+
 private:
     napi_value GetMaterialType(NapiApi::FunctionContext<>& ctx);
     napi_value GetShadowReceiver(NapiApi::FunctionContext<>& ctx);
-    void SetShadowReceiver(NapiApi::FunctionContext<bool>& ctx);
+    void SetShadowReceiver(NapiApi::FunctionContext<std::optional<bool>>& ctx);
     napi_value GetCullMode(NapiApi::FunctionContext<>& ctx);
-    void SetCullMode(NapiApi::FunctionContext<uint32_t>& ctx);
+    void SetCullMode(NapiApi::FunctionContext<std::optional<uint32_t>>& ctx);
     napi_value GetPolygonMode(NapiApi::FunctionContext<>& ctx);
-    void SetPolygonMode(NapiApi::FunctionContext<uint32_t>& ctx);
+    void SetPolygonMode(NapiApi::FunctionContext<std::optional<uint32_t>>& ctx);
     napi_value GetBlend(NapiApi::FunctionContext<>& ctx);
     void SetBlend(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value GetAlphaCutoff(NapiApi::FunctionContext<>& ctx);
-    void SetAlphaCutoff(NapiApi::FunctionContext<float>& ctx);
+    void SetAlphaCutoff(NapiApi::FunctionContext<std::optional<float>>& ctx);
     napi_value GetRenderSort(NapiApi::FunctionContext<>& ctx);
     void SetRenderSort(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
+    SCENE_NS::IShader::Ptr GetMaterialShader(const NapiApi::Object& me) const;
 
     struct BlendJS {
         NapiApi::Object GetObject()
@@ -65,6 +72,9 @@ private:
     };
     BlendJS blend_;
     META_NS::PropertyChangedEventHandler shaderChanged_;
+
+    void StoreDefaultCullMode(const SCENE_NS::IShader::Ptr& shader);
+    std::optional<SCENE_NS::CullModeFlags> defaultCullMode_;
 };
 
 class MaterialJS final : public BaseObject, public BaseMaterial {

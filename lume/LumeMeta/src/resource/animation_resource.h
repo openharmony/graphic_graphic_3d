@@ -105,14 +105,17 @@ public:
         const CORE_NS::IResource::ConstPtr& templ, const CORE_NS::IResource::Ptr& resource) const override
     {
         auto res = Super::SetValuesFromTemplate(templ, resource);
-        if (res) {
-            if (auto md = interface_cast<IMetadata>(templ)) {
-                if (auto p = md->GetProperty("Keyframes", MetadataQuery::EXISTING)) {
-                    if (auto track = interface_cast<ITrackAnimation>(resource)) {
-                        if (auto keyframes = track->Keyframes()) {
-                            CopyValue(p, *keyframes);
-                        }
-                    }
+        if (!res) {
+            return false;
+        }
+        auto md = interface_cast<IMetadata>(templ);
+        if (!md) {
+            return false;
+        }
+        if (auto p = md->GetProperty("Keyframes", MetadataQuery::EXISTING)) {
+            if (auto track = interface_cast<ITrackAnimation>(resource)) {
+                if (auto keyframes = track->Keyframes()) {
+                    CopyValue(p, *keyframes);
                 }
             }
         }

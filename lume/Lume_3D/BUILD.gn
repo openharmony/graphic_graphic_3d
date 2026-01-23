@@ -233,10 +233,15 @@ ohos_source_set("lume_3d_src") {
 
   external_deps = [
     "c_utils:utils",
-    "vulkan-headers:vulkan_headers",
-    "vulkan-loader:vulkan_loader",
-
   ]
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }

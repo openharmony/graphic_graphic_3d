@@ -162,6 +162,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
 
     META_NS::RegisterObjectType<EcsObject>();
     META_NS::RegisterObjectType<Image>();
+    META_NS::RegisterObjectType<ExternalImage>();
     META_NS::RegisterObjectType<Bloom>();
     META_NS::RegisterObjectType<Tonemap>();
     META_NS::RegisterObjectType<Blur>();
@@ -252,6 +253,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<MorphComponent>();
 
     META_NS::UnregisterObjectType<EcsObject>();
+    META_NS::UnregisterObjectType<ExternalImage>();
     META_NS::UnregisterObjectType<Image>();
     META_NS::UnregisterObjectType<Bloom>();
     META_NS::UnregisterObjectType<Tonemap>();

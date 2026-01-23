@@ -13,6 +13,13 @@
  * limitations under the License.
  */
 
+#if __OHOS__
+// #include <native_buffer/native_buffer.h>
+#endif
+#if __ANDROID__
+#include <android/hardware_buffer.h>
+#endif
+
 #include <scene/interface/intf_image.h>
 #include <scene/interface/resource/types.h>
 

@@ -124,8 +124,15 @@ Future<bool> Node::AddChild(const INode::Ptr& child, size_t index)
 }
 Future<INode::Ptr> Node::Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent)
 {
+    if (parent && parent->GetScene() != GetScene()) {
+        // Require same scene for node import
+        CORE_LOG_E("Cannot clone a Node to a different Scene.");
+        return {};
+    }
     if (auto s = GetInternalScene()) {
         return s->AddTaskOrRunDirectly([=, name = BASE_NS::string(nodeName)]() mutable {
+            s->SyncProperties();
+
             IEcsObject::Ptr parentObj = nullptr;
             if (auto i = interface_cast<IEcsObjectAccess>(parent)) {
                 parentObj = i->GetEcsObject();
@@ -227,47 +234,39 @@ Future<INode::Ptr> Node::ImportChildScene(
         CORE_LOG_E("Cannot import scene into itself.");
         return {};
     }
-    if (auto s = GetInternalScene(); s && scene) {
-        if (scene != GetScene()) {
-            for (auto&& child : GetChildren().GetResult()) {
-                auto name = child->GetName();
-                if (name == nodeName) {
-                    CORE_LOG_W("Removing duplicate when importing %s", name.c_str());
-                    GetScene()->RemoveNode(BASE_NS::move(child)).Wait();
-                    break;
-                }
+    auto s = GetInternalScene();
+    if (s && scene) {
+        return s->AddTaskOrRunDirectly([=, name = BASE_NS::string(nodeName), rgroup = BASE_NS::string(resourceGroup)] {
+            if (s->RemoveNamedChild(GetSelf<INode>(), name)) {
+                CORE_LOG_W("Removed existing duplicate node when importing '%s'", name.c_str());
             }
-            return s->AddTaskOrRunDirectly(
-                [=, name = BASE_NS::string(nodeName), rgroup = BASE_NS::string(resourceGroup)] {
-                    auto res = CopyExternalAsChild(*object_, *scene, rgroup);
-                    auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
-                    if (auto named = interface_cast<META_NS::INamed>(node)) {
-                        named->Name()->SetValue(name);
-                        SyncPropertyDirect(s, named->Name()).GetResult();
-                    }
-                    if (node && s->GetOptions().createResources) {
-                        META_NS::IResourceGroupHandle::Ptr handle;
-                        if (!res.resourceGroup.empty()) {
-                            if (auto c = s->GetContext()) {
-                                if (auto i = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
-                                    handle = i->GetGroupHandle(res.resourceGroup);
-                                    auto bundle = s->GetResourceGroups();
-                                    if (!bundle.GetHandle(res.resourceGroup)) {
-                                        bundle.PushGroupHandleToBack(handle);
-                                        s->SetResourceGroups(BASE_NS::move(bundle));
-                                    }
-                                }
+            auto res = CopyExternalAsChild(*object_, *scene, rgroup);
+            auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+            if (auto named = interface_cast<META_NS::INamed>(node)) {
+                named->Name()->SetValue(name);
+                SyncPropertyDirect(s, named->Name()).GetResult();
+            }
+            if (node && s->GetOptions().createResources) {
+                META_NS::IResourceGroupHandle::Ptr handle;
+                if (!res.resourceGroup.empty()) {
+                    if (auto c = s->GetContext()) {
+                        if (auto i = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
+                            handle = i->GetGroupHandle(res.resourceGroup);
+                            auto bundle = s->GetResourceGroups();
+                            if (!bundle.GetHandle(res.resourceGroup)) {
+                                bundle.PushGroupHandleToBack(handle);
+                                s->SetResourceGroups(BASE_NS::move(bundle));
                             }
                         }
-                        if (auto resource = interface_pointer_cast<CORE_NS::IResource>(scene)) {
-                            AddExternalNodeAttachment(
-                                *node, BASE_NS::move(res.newEntities), resource->GetResourceId(), res.resourceGroup);
-                        }
                     }
-                    return node;
-                });
-        }
-        CORE_LOG_E("Cannot import a scene into itself.");
+                }
+                if (auto resource = interface_pointer_cast<CORE_NS::IResource>(scene)) {
+                    AddExternalNodeAttachment(
+                        *node, BASE_NS::move(res.newEntities), resource->GetResourceId(), res.resourceGroup);
+                }
+            }
+            return node;
+        });
     }
     return {};
 }

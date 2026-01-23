@@ -68,70 +68,71 @@ function(add_subdirectory_with_folder _folder_name _folder)
     endforeach()
 endfunction()
 
-cmake_policy(SET CMP0077 OLD)
-# if (__OHOS_PLATFORM__)
+if (__OHOS_PLATFORM__)
+    #set default and modified options for glslang
+    set(ENABLE_CTEST OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
+    set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
+    set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
+    set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
+    set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
 
-#set default and modified options for glslang
-set(ENABLE_CTEST OFF CACHE BOOL "" FORCE) 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
-set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
-set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
-set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
-set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
+    #set default and modified options for spirv-tools
+    set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "" FORCE)
+    set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "" FORCE)
+    set(SPIRV_WERROR OFF CACHE BOOL "" FORCE)
+    set(SPIRV_WARN_EVERYTHING OFF CACHE BOOL "" FORCE)
+    set(SPIRV_COLOR_TERMINAL ON CACHE BOOL "" FORCE)
+    set(SPIRV_LOG_DEBUG OFF CACHE BOOL "" FORCE)
+    set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
+    set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
+    set(SPIRV_CHECK_CONTEXT ON CACHE BOOL "" FORCE)
+    set(SPIRV_TOOLS_INSTALL_EMACS_HELPERS OFF CACHE BOOL "" FORCE)
 
-#set default and modified options for spirv-tools
-set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "" FORCE)
-set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "" FORCE)
-set(SPIRV_WERROR OFF CACHE BOOL "" FORCE)
-set(SPIRV_WARN_EVERYTHING OFF CACHE BOOL "" FORCE)
-set(SPIRV_COLOR_TERMINAL ON CACHE BOOL "" FORCE)
-set(SPIRV_LOG_DEBUG OFF CACHE BOOL "" FORCE)
-set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
-set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
-set(SPIRV_CHECK_CONTEXT ON CACHE BOOL "" FORCE)
-set(SPIRV_TOOLS_INSTALL_EMACS_HELPERS OFF CACHE BOOL "" FORCE)
+    #set default and modified options for spirv-cross
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF CACHE BOOL "")
+    set(SPIRV_CROSS_CLI OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_GLSL ON CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "" FORCE)
+    set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 
-#set default and modified options for spirv-cross
-set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF CACHE BOOL "")
-set(SPIRV_CROSS_CLI OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_GLSL ON CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "" FORCE)
-set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "" FORCE)
+    string(REPLACE "/foundation" ";" TEMP_PATH ${CMAKE_CURRENT_LIST_FILE})
+    list(GET TEMP_PATH 0 OHOS_ROOT_PATH)
+    set(SPIRV_TOOLS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-tools")
+    set(SPIRV_TOOLS_EXTENSION_PATH "${OHOS_ROOT_PATH}/third_party/vk-gl-cts/build/external/spirv-tools/spirv-tools")
+    # temp solution
+    #set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-cross")
+    set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/skia/third_party/externals/spirv-cross")
+    set(GLSLANG_PATH "${OHOS_ROOT_PATH}/third_party/glslang")
+    set(KHRONOS_GL "${OHOS_ROOT_PATH}/third_party/openGLES/api/GL")
+    set(KHRONOS_KHR "${OHOS_ROOT_PATH}/third_party/EGL/api")
+    # vulkan-sdk-1.3.275.0
+    # SPIRV-Headers causes "INTERFACE_LIBRARY targets may only have whitelisted properties.", but we don't need to include is as it's header only
+    add_library(SPIRV-Headers INTERFACE)
+    target_sources(SPIRV-Headers INTERFACE "${OHOS_ROOT_PATH}/third_party/spirv-headers")
+    set(SPIRV-Headers_SOURCE_DIR "${OHOS_ROOT_PATH}/third_party/spirv-headers")
+    message(STATUS "spirv-tools: ${SPIRV_TOOLS_PATH} spirv-cross: ${SPIRV_CROSS_PATH} spirv-headers: ${SPIRV-Headers_SOURCE_DIR} glslang: ${GLSLANG_PATH}")
+    add_subdirectory(${SPIRV_TOOLS_PATH} "3rdPartyST" EXCLUDE_FROM_ALL)
+    add_subdirectory(${GLSLANG_PATH} "3rdPartyGL" EXCLUDE_FROM_ALL)
+    add_subdirectory(${SPIRV_CROSS_PATH} "3rdPartCross" EXCLUDE_FROM_ALL )
+    set(GLSLANG_VERSION "120200")
 
-string(REPLACE "/foundation" ";" TEMP_PATH ${CMAKE_CURRENT_LIST_FILE})
-list(GET TEMP_PATH 0 OHOS_ROOT_PATH)
-set(SPIRV_TOOLS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-tools")
-set(SPIRV_TOOLS_EXTENSION_PATH "${OHOS_ROOT_PATH}/third_party/vk-gl-cts/build/external/spirv-tools/spirv-tools")
-# temp solution
-#set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-cross")
-set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/skia/third_party/externals/spirv-cross")
-set(GLSLANG_PATH "${OHOS_ROOT_PATH}/third_party/glslang")
-set(KHRONOS_GL "${OHOS_ROOT_PATH}/third_party/openGLES/api/GL")
-set(KHRONOS_KHR "${OHOS_ROOT_PATH}/third_party/EGL/api")
-# vulkan-sdk-1.3.275.0
-# SPIRV-Headers causes "INTERFACE_LIBRARY targets may only have whitelisted properties.", but we don't need to include is as it's header only
-add_library(SPIRV-Headers INTERFACE)
-target_sources(SPIRV-Headers INTERFACE "${OHOS_ROOT_PATH}/third_party/spirv-headers")
-set(SPIRV-Headers_SOURCE_DIR "${OHOS_ROOT_PATH}/third_party/spirv-headers")
-message(STATUS "spirv-tools: ${SPIRV_TOOLS_PATH} spirv-cross: ${SPIRV_CROSS_PATH} spirv-headers: ${SPIRV-Headers_SOURCE_DIR} glslang: ${GLSLANG_PATH}")
-add_subdirectory(${SPIRV_TOOLS_PATH} "3rdPartyST" EXCLUDE_FROM_ALL)
-add_subdirectory(${GLSLANG_PATH} "3rdPartyGL" EXCLUDE_FROM_ALL)
-add_subdirectory(${SPIRV_CROSS_PATH} "3rdPartCross" EXCLUDE_FROM_ALL )
-set(GLSLANG_VERSION "120000")
+else()
+    add_subdirectory(3rdparty 3rdparty)
+    cmake_policy(SET CMP0077 OLD)
 
-# else()
-    # add_subdirectory(3rdparty 3rdparty)
-
-    # set(GLSLANG_VERSION 120000)
-# endif()
+    set(GLSLANG_VERSION 120200)
+    set(KHRONOS_GL "3rdparty/khronos/gl")
+    set(KHRONOS_KHR "3rdparty/khronos")
+endif()
 
 set(sources 
     src/compiler_main.h
@@ -167,11 +168,12 @@ target_include_directories(${LibName} PUBLIC
     # ${CMAKE_BINARY_DIR}/3rdparty/SPIRV-Tools
     ${SPIRV_TOOLS_PATH}
     ${SPIRV_TOOLS_EXTENSION_PATH}
+    ${CMAKE_BINARY_DIR}/3rdparty/SPIRV-Tools
     ${KHRONOS_KHR}
     ${KHRONOS_GL}
 )
 
-# add_dependencies(${LibName} enum_string_mapping)
+add_dependencies(${LibName} enum_string_mapping)
 target_compile_definitions(${LibName} PRIVATE GLSLANG_VERSION=${GLSLANG_VERSION} )
 target_compile_definitions(${LibName} PRIVATE WIN32_LEAN_AND_MEAN=1)
 # Strip all debug logging code from a release build.

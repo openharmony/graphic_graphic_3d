@@ -131,8 +131,10 @@ vec4 unlitShadowAlpha()
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
         const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
-        const float NoL = clamp(dot(N, L), 0.0, 1.0);
-
+        const float NoL = min(1.0, dot(N, L));
+        if (NoL <= 0.0) {
+            continue;
+        }
         CORE_RELAXEDP float shadowCoeff = 1.0;
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHADOW_RECEIVER_BIT) == CORE_MATERIAL_SHADOW_RECEIVER_BIT) {
             const uvec4 lightFlags = uLightData.lights[currLightIdx].flags;

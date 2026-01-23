@@ -91,13 +91,31 @@ type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
     if constexpr (BASE_NS::is_same_v<type, float>) {
         double tmp;
         status = napi_get_value_double(env_, value_, &tmp);
-        value = tmp;
+        value = static_cast<float>(tmp);
+    }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<float>>) {
+        double tmp;
+        status = napi_get_value_double(env_, value_, &tmp);
+        if (status == napi_ok) {
+            value = static_cast<float>(tmp);
+        } else {
+            value.reset();
+        }
     }
     if constexpr (BASE_NS::is_same_v<type, double>) {
         status = napi_get_value_double(env_, value_, &value);
     }
     if constexpr (BASE_NS::is_same_v<type, uint32_t>) {
         status = napi_get_value_uint32(env_, value_, &value);
+    }
+    if constexpr (BASE_NS::is_same_v<type, std::optional<uint32_t>>) {
+        uint32_t tmp;
+        status = napi_get_value_uint32(env_, value_, &tmp);
+        if (status == napi_ok) {
+            value = tmp;
+        } else {
+            value.reset();
+        }
     }
     if constexpr (BASE_NS::is_same_v<type, int32_t>) {
         status = napi_get_value_int32(env_, value_, &value);
@@ -133,12 +151,14 @@ template class Value<BASE_NS::string>;
 template class Value<bool>;
 template class Value<std::optional<bool>>;
 template class Value<float>;
+template class Value<std::optional<float>>;
 template class Value<double>;
 template class Value<uint8_t>;
 template class Value<int8_t>;
 template class Value<uint16_t>;
 template class Value<int16_t>;
 template class Value<uint32_t>;
+template class Value<std::optional<uint32_t>>;
 template class Value<int32_t>;
 template class Value<int64_t>;
 template class Value<uint64_t>;

@@ -2607,6 +2607,43 @@ UNIT_TEST(API_MathQuaternionUtil, ToEulerRad, testing::ext::TestSize.Level1)
 }
 
 /**
+ * @tc.name: ToEulerRadSingularity
+ * @tc.desc: Tests for To Euler Rad Singularity. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, ToEulerRadSingularity, testing::ext::TestSize.Level1)
+{
+    const Math::Quat qRot = Math::Euler(0.0f, 90.0f, 0.0f);
+    const Math::Vec3 qRotToEuler = Math::ToEulerRad(qRot) * Math::RAD2DEG;
+
+    ASSERT_FLOAT_EQ(qRotToEuler.x, 0.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler.y, 90.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler.z, 0.0f);
+
+    const Math::Quat qRot1 = Math::Euler(0.0f, -90.0f, 0.0f);
+    const Math::Vec3 qRotToEuler1 = Math::ToEulerRad(qRot1) * Math::RAD2DEG;
+
+    ASSERT_FLOAT_EQ(qRotToEuler1.x, 0.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler1.y, -90.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler1.z, 0.0f);
+
+    // Wrapping case: 810 deg == 90 deg
+    const Math::Quat qRot2 = Math::Euler(0.0f, 810.0f, 0.0f);
+    const Math::Vec3 qRotToEuler2 = Math::ToEulerRad(qRot2) * Math::RAD2DEG;
+
+    ASSERT_FLOAT_EQ(qRotToEuler2.x, 0.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler2.y, 90.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler2.z, 0.0f);
+
+    const Math::Quat qRot3 = Math::Euler(0.0f, -810.0f, 0.0f);
+    const Math::Vec3 qRotToEuler3 = Math::ToEulerRad(qRot3) * Math::RAD2DEG;
+
+    ASSERT_FLOAT_EQ(qRotToEuler3.x, 0.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler3.y, -90.0f);
+    ASSERT_FLOAT_EQ(qRotToEuler3.z, 0.0f);
+}
+
+/**
  * @tc.name: Slerp
  * @tc.desc: Tests for Slerp. [AUTO-GENERATED]
  * @tc.type: FUNC

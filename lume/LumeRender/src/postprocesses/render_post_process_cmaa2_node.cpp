@@ -27,6 +27,8 @@
 #include <render/nodecontext/intf_render_node_util.h>
 #include <render/property/property_types.h>
 
+#include "util/log.h"
+
 using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
@@ -332,7 +334,7 @@ void RenderPostProcessCmaa2Node::ClearImages(IRenderCommandList& cmdList)
 void RenderPostProcessCmaa2Node::RenderEdgeDetectionPass(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(currInput_.handle)) {
-        CORE_LOG_E("RenderEdgeDetectionPass: input invalid!");
+        PLUGIN_LOG_E("RenderEdgeDetectionPass: input invalid!");
         return;
     }
 

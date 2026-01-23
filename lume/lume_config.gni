@@ -52,6 +52,11 @@ declare_args() {
 }
 
 declare_args() {
+  RENDER_BUILD_VULKAN = true
+  RENDER_BUILD_GLES = true
+}
+
+declare_args() {
   LUME_ROOT = "//${LUME_PATH}"
 }
 

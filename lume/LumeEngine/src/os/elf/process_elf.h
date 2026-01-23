@@ -13,31 +13,22 @@
  * limitations under the License.
  */
 
-#ifndef CORE_OS_OHOS_LIBRARY_OHOS_H
-#define CORE_OS_OHOS_LIBRARY_OHOS_H
+#ifndef OS_PROCESS_ELF_H
+#define OS_PROCESS_ELF_H
 
+#include <base/containers/string.h>
+#include <base/containers/vector.h>
+#include <base/util/uid.h>
+#include <core/io/intf_file.h>
 #include <core/namespace.h>
 
-#include "os/elf/process_elf.h"
-#include "os/intf_library.h"
-
 CORE_BEGIN_NAMESPACE()
-class LibraryOHOS final : public ILibrary {
-public:
-    explicit LibraryOHOS(PluginData&& data);
-    ~LibraryOHOS() override;
-
-    IPlugin* GetPlugin() const override;
-    BASE_NS::Uid GetPluginUid() const override;
-    BASE_NS::array_view<const BASE_NS::Uid> GetPluginDependencies() const override;
-
-protected:
-    void Destroy() override;
-
-private:
-    PluginData data_;
-    mutable void* libraryHandle_ { nullptr };
+struct PluginData {
+    BASE_NS::string filename;
+    BASE_NS::Uid pluginUid;
+    BASE_NS::vector<BASE_NS::Uid> dependencies;
 };
-CORE_END_NAMESPACE()
 
-#endif // CORE_OS_OHOS_LIBRARY_OHOS_H
+PluginData ProcessElf(BASE_NS::string_view filePath, const IFile::Ptr& filePtr);
+CORE_END_NAMESPACE()
+#endif // OS_PROCESS_ELF_H

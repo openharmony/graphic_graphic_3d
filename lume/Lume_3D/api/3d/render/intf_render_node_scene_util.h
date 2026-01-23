@@ -23,6 +23,7 @@
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
+#include <core/plugin/intf_interface.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/render_data_structures.h>
 

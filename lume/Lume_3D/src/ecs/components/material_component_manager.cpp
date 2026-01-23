@@ -22,6 +22,7 @@
 #include <base/util/hash.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/property_types.h>
 #include <render/device/intf_shader_manager.h>
@@ -63,7 +64,9 @@ ENUM_TYPE_METADATA(MaterialComponent::LightingFlagBits, ENUM_VALUE(SHADOW_RECEIV
 
 ENUM_TYPE_METADATA(MaterialComponent::ExtraRenderingFlagBits, ENUM_VALUE(DISCARD_BIT, "Discard Special Materials"),
     ENUM_VALUE(DISABLE_BIT, "Disable Material Rendering"), ENUM_VALUE(ALLOW_GPU_INSTANCING_BIT, "Allow GPU Instancing"),
-    ENUM_VALUE(CAMERA_EFFECT, "Camera Effect"))
+    ENUM_VALUE(CAMERA_EFFECT, "Camera Effect"),
+    ENUM_VALUE(IGNORE_SPECULAR_FACTOR_TEXTURE, "Ignore Specular Texture Strength"),
+    ENUM_VALUE(IGNORE_SPECULAR_COLOR_TEXTURE, "Specular Texture Color"))
 
 DATA_TYPE_METADATA(MaterialComponent::TextureTransform, MEMBER_PROPERTY(translation, "Translation", 0),
     MEMBER_PROPERTY(rotation, "Rotation", 0), MEMBER_PROPERTY(scale, "Scale", 0))

@@ -238,7 +238,7 @@ GpuImageVk::GpuImageVk(
     Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer)
     : device_(device), plat_((const GpuImagePlatformDataVk&)platformData),
       desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc), ownsResources_(false),
-      ownsImage_(plat_.image ? false : true), ownsImageViews_(plat_.imageView ? false : true)
+      ownsImage_(hwBuffer ? false : (plat_.image == VK_NULL_HANDLE)), ownsImageViews_(plat_.imageView == VK_NULL_HANDLE)
 {
     // with platform data the resources can be created from hwbuffer and/or direct platform images
     // the destruction happens based on ownsImage_ and ownsImageViews_
@@ -268,6 +268,7 @@ GpuImageVk::~GpuImageVk()
             vkDestroyImageView(device, // device
                 ref,                   // imageView
                 nullptr);              // pAllocator
+            ref = VK_NULL_HANDLE;
         }
         vec.clear();
     };
@@ -277,11 +278,13 @@ GpuImageVk::~GpuImageVk()
         vkDestroyImageView(device, // device
             plat_.imageView,       // imageView
             nullptr);              // pAllocator
+        plat_.imageView = VK_NULL_HANDLE;
         if (destroyImageViewBase_) {
             vkDestroyImageView(device, // device
                 plat_.imageViewBase,   // imageView
                 nullptr);              // pAllocator
         }
+        plat_.imageViewBase = VK_NULL_HANDLE;
         destroyImageViews(device, platViews_.mipImageViews);
         destroyImageViews(device, platViews_.layerImageViews);
         destroyImageViews(device, platViews_.mipImageAllLayerViews);
@@ -298,6 +301,7 @@ GpuImageVk::~GpuImageVk()
         PLUGIN_ASSERT(gpuMemAllocator);
         if (gpuMemAllocator) {
             gpuMemAllocator->DestroyImage(plat_.image, mem_.allocation);
+            plat_.image = VK_NULL_HANDLE;
         }
     }
     if (plat_.platformHwBuffer) {

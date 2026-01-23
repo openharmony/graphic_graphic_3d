@@ -24,6 +24,7 @@
 #include <scene/interface/intf_scene.h>
 #include <scene/ext/util.h>
 #include "PropertyProxy.h"
+#include "SceneResourceImpl.h"
 
 #include <render/intf_render_context.h>
 
@@ -253,6 +254,7 @@ void EffectJS::Init(napi_env env, napi_value exports)
     props.push_back(GetSetProperty<bool, EffectJS, &EffectJS::GetEnabled, &EffectJS::SetEnabled>("enabled"));
     props.push_back(GetProperty<BASE_NS::string, EffectJS, &EffectJS::GetEffectId>("effectId"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, EffectJS, &EffectJS::Dispose>("destroy"));
+
     props.push_back(Method<NapiApi::FunctionContext<BASE_NS::string>, EffectJS, &EffectJS::GetEffectProperty>(
         "getPropertyValue"));
     props.push_back(napi_property_descriptor {
@@ -319,6 +321,7 @@ EffectJS::EffectJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
     BASE_NS::string name = native->GetName();
     meJs.Set("name", name);
+    meJs.Set("resourceType", NapiApi::Value<uint32_t>(e, SceneResourceImpl::SceneResourceType::EFFECT));
     AddProperties(meJs, native);
 }
 

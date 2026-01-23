@@ -636,9 +636,9 @@ UNIT_TEST(API_SceneUtil, EcsCloneNode, testing::ext::TestSize.Level1)
         }
     }
     {
+        const auto originalCount = GetEntityCount(*ecs);
         vector<Entity> clones = graphicsContext->GetSceneUtil().Clone(*ecs, sceneEnity, sceneEnity).entities;
-        // Since we are cloning the root node, the size will be double the size of the cloned data
-        EXPECT_EQ(GetEntityCount(*ecs), clones.size() * 2);
+        EXPECT_EQ(GetEntityCount(*ecs), clones.size() + originalCount);
     }
 }
 

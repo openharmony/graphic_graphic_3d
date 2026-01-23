@@ -27,7 +27,6 @@
 #include "node/render_node_default_acceleration_structure_staging.h"
 #include "node/render_node_end_frame_staging.h"
 #include "node/render_node_fullscreen_generic.h"
-#include "node/render_node_mip_chain_post_process.h"
 #include "node/render_node_queue_transfer.h"
 #include "node/render_node_render_post_processes_generic.h"
 #include "node/render_node_shader_passes_generic.h"
@@ -56,7 +55,6 @@ void RegisterCoreRenderNodes(RenderNodeManager& renderNodeManager)
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeEndFrameStaging>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeFullscreenGeneric>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeShaderPassesGeneric>());
-    renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeMipChainPostProcess>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeSinglePostProcess>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeStaging>());
     renderNodeManager.AddRenderNodeFactory(FillRenderNodeType<RenderNodeDefaultAccelerationStructureStaging>());

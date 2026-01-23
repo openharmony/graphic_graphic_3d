@@ -58,6 +58,19 @@ public:
 };
 
 /**
+ * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IImage.
+ */
+class ExternalImage : public Image {
+public:
+    META_INTERFACE_OBJECT(ExternalImage, Image, IExternalImage)
+    /// @see IExternalImage::SetExternalBuffer
+    bool SetExternalBuffer(const IExternalImage::ExternalBufferInfo& buffer)
+    {
+        return META_INTERFACE_OBJECT_CALL_PTR(SetExternalBuffer(buffer));
+    }
+};
+
+/**
  * @brief The Image class is a wrapper class for objects which implement SCENE_NS::IEnvironment.
  */
 class Environment : public Resource {
