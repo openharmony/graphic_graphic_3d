@@ -35,6 +35,28 @@ struct JsFuncArgs;
 
 namespace NapiApi {
 
+struct Scope {
+    Scope(napi_env env): env_(env)
+    {
+        if (env_) {
+            napi_open_handle_scope(env_, &scope_);
+        }
+    }
+    ~Scope()
+    {
+        if (env_ && scope_) {
+            napi_close_handle_scope(env_, scope_);
+        }
+    }
+    operator bool() const
+    {
+        return scope_ != nullptr;
+    }
+
+    napi_env env_{nullptr};
+    napi_handle_scope scope_{nullptr};
+};
+
 class Object {
 public:
     Object() = default;

@@ -132,6 +132,10 @@ bool JSWrapperState::DeleteReference(napi_ref ref)
     auto curQueue = META_NS::GetTaskQueueRegistry().GetCurrentTaskQueue();
     if (auto p = interface_cast<INodeJSTaskQueue>(curQueue)) {
         napi_env env = p->GetNapiEnv();
+        NapiApi::Scope scope(env);
+        if (!scope) {
+            return false;
+        }
         napi_value obj = nullptr;
         napi_get_reference_value(env, ref, &obj);
         if (obj) {

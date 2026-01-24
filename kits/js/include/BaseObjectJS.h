@@ -56,9 +56,17 @@ protected:
     virtual ~BaseObject() {}
     BaseObject(napi_env env, napi_callback_info info) : TrueRootObject(env, info)
     {
+        NapiApi::Scope scope(env);
+        if (!scope) {
+            return;
+        }
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
         auto DTOR = [](napi_env env, void* nativeObject, void* finalize) {
+            NapiApi::Scope scope(env);
+            if (!scope) {
+                return;
+            }
             TrueRootObject* ptr = static_cast<TrueRootObject*>(nativeObject);
             ptr->Finalize(env);
             TrueRootObject::destroy(ptr);
