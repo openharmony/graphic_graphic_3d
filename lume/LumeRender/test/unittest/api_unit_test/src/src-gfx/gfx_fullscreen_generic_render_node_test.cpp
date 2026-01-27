@@ -13,15 +13,20 @@
  * limitations under the License.
  */
 
+#include <core/intf_engine.h>
+#include <core/property/property_handle_util.h>
 #include <render/datastore/intf_render_data_store_default_gpu_resource_data_copy.h>
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
+#include <render/datastore/intf_render_data_store_shader_passes.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
 #include <render/intf_renderer.h>
 #include <render/nodecontext/intf_render_node_graph_manager.h>
+#include <render/property/property_types.h>
 
 #include "test_framework.h"
 #if defined(UNIT_TESTS_USE_HCPPTEST)
@@ -44,6 +49,7 @@ static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
 static constexpr uint32_t PUSH_CONSTANT { 2u };
 // NOTE: created in render node graph
 static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view SHADER_PASSES_TEST { "ShaderPassesTest" };
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -57,6 +63,13 @@ struct TestResources {
     RenderHandleReference renderNodeGraph;
 
     refcnt_ptr<IRenderDataStorePod> dataStorePod;
+
+    refcnt_ptr<IRenderDataStoreShaderPasses> dataStoreShaderPasses;
+    IRenderDataStoreShaderPasses::RenderPassData renderPassData;
+
+    refcnt_ptr<IShaderPipelineBinder> shaderPipelineBinder;
+    RenderHandleReference vertexBufferHandle;
+    RenderHandleReference indexBufferHandle;
 };
 
 struct TestData {
@@ -122,6 +135,105 @@ TestResources CreateTestResources(UTest::EngineResources& er, uint32_t constValu
         res.dataStorePod->CreatePod(
             "pushConstants", "pushConstants", { reinterpret_cast<const uint8_t*>(&PUSH_CONSTANT), sizeof(uint32_t) });
     }
+    {
+        auto& rdsMgr = er.context->GetRenderDataStoreManager();
+        res.dataStoreShaderPasses = refcnt_ptr<IRenderDataStoreShaderPasses>(
+            rdsMgr.Create(IRenderDataStoreShaderPasses::UID, "RenderDataStoreShaderPasses"));
+    }
+    {
+        IShaderManager& shaderMgr = er.context->GetDevice().GetShaderManager();
+        constexpr IShaderManager::ShaderFilePathDesc shaderPathDesc { "rendershaders://", "", "", "" };
+        // shaderMgr.LoadShaderFiles(shaderPathDesc);
+
+        RenderHandleReference shader =
+            shaderMgr.GetShaderHandle("rendershaders://shader/GfxBackBufferRenderNodeTest.shader");
+
+        res.shaderPipelineBinder = shaderMgr.CreateShaderPipelineBinder(shader);
+
+        IShaderPipelineBinder::DrawCommand drawCmd {};
+        drawCmd.vertexCount = 0u;
+        drawCmd.indexCount = 3u;
+        drawCmd.instanceCount = 1u;
+        res.shaderPipelineBinder->SetDrawCommand(drawCmd);
+
+        if (auto* bindingProperties = res.shaderPipelineBinder->GetBindingProperties(); bindingProperties) {
+            {
+                BindableImageWithHandleReference bindable;
+                bindable.handle = res.inputImageHandle0;
+                CORE_NS::SetPropertyValue(*bindingProperties, "uImage",
+                    CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T, bindable);
+            }
+            {
+                IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
+                BindableSamplerWithHandleReference bindable;
+                bindable.handle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
+                CORE_NS::SetPropertyValue(*bindingProperties, "uSampler",
+                    CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T, bindable);
+            }
+        }
+
+        if (auto* customProperties = res.shaderPipelineBinder->GetProperties(); customProperties) {
+            float param0 = 0.5f;
+            Math::Vec2 param1 { 2.0f, 3.0f };
+
+            CORE_NS::SetPropertyValue(*customProperties, "param_0", CORE_NS::PropertyType::FLOAT_T, param0);
+            CORE_NS::SetPropertyValue(*customProperties, "param_1", CORE_NS::PropertyType::VEC2_T, param1);
+        }
+        {
+            IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
+
+            struct Vertex {
+                float px, py;
+                float ux, uy;
+            };
+            const Vertex vertices[3] = {
+                { -1.0f, -1.0f, 0.0f, 0.0f },
+                { 3.0f, -1.0f, 2.0f, 0.0f },
+                { -1.0f, 3.0f, 0.0f, 2.0f },
+            };
+
+            GpuBufferDesc vbDesc {};
+            vbDesc.byteSize = sizeof(vertices);
+            vbDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
+            vbDesc.usageFlags = CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            vbDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+            const auto vbDataView = array_view(reinterpret_cast<const uint8_t*>(vertices), sizeof(vertices));
+
+            res.vertexBufferHandle = gpuResourceMgr.Create("TestFullscreenVB", vbDesc, vbDataView);
+
+            VertexBufferWithHandleReference vbRef {};
+            vbRef.bufferHandle = res.vertexBufferHandle;
+            vbRef.bufferOffset = 0;
+            vbRef.byteSize = vbDesc.byteSize;
+
+            res.shaderPipelineBinder->BindVertexBuffers({ &vbRef, 1u });
+        }
+        {
+            IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
+
+            // 3 indices for the triangle
+            const uint16_t indices[3] = { 0, 1, 2 };
+
+            GpuBufferDesc ibDesc {};
+            ibDesc.byteSize = sizeof(indices);
+            ibDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
+            ibDesc.usageFlags = CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            ibDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+            const auto ibDataView = array_view(reinterpret_cast<const uint8_t*>(indices), sizeof(indices));
+
+            res.indexBufferHandle = gpuResourceMgr.Create("TestFullscreenIB", ibDesc, ibDataView);
+
+            IndexBufferWithHandleReference ibRef {};
+            ibRef.bufferHandle = res.indexBufferHandle;
+            ibRef.bufferOffset = 0;
+            ibRef.byteSize = ibDesc.byteSize;
+            ibRef.indexType = CORE_INDEX_TYPE_UINT16;
+
+            res.shaderPipelineBinder->BindIndexBuffer(ibRef);
+        }
+    }
     res.byteArray = make_unique<ByteArray>(NUM_BYTES);
 
     return res;
@@ -133,6 +245,11 @@ void DestroyTestResources(IDevice& device, TestResources& tr)
     tr.inputImageHandle0 = {};
     tr.copyBufferHandle0 = {};
     tr.renderNodeGraph = {};
+    tr.dataStorePod = {};
+    tr.dataStoreShaderPasses = {};
+    tr.shaderPipelineBinder = {};
+    tr.vertexBufferHandle = {};
+    tr.indexBufferHandle = {};
     tr.byteArray.reset();
 }
 
@@ -142,6 +259,31 @@ void TickTest(TestData& td, int32_t frameCountToTick)
     TestResources& tr = td.resources;
 
     for (int32_t idx = 0; idx < frameCountToTick; ++idx) {
+        if (tr.dataStoreShaderPasses && tr.shaderPipelineBinder) {
+            if (idx == 1) {
+                IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
+                const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME_0);
+
+                auto& rp = tr.renderPassData.renderPass;
+                rp.subpassStartIndex = 0;
+
+                rp.renderPassDesc.attachmentCount = 1;
+                rp.renderPassDesc.subpassCount = 1;
+                rp.renderPassDesc.renderArea = { 0, 0, TEST_DATA_SIZE.x, TEST_DATA_SIZE.y };
+
+                rp.renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
+                rp.renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
+                rp.renderPassDesc.attachmentHandles[0] = outputImageHandle0;
+
+                rp.subpassDesc.colorAttachmentCount = 1;
+                rp.subpassDesc.colorAttachmentIndices[0] = 0;
+            }
+            if (idx >= 1) {
+                tr.renderPassData.shaderBinders.clear();
+                tr.renderPassData.shaderBinders.push_back(tr.shaderPipelineBinder);
+                tr.dataStoreShaderPasses->AddRenderData(SHADER_PASSES_TEST, { &tr.renderPassData, 1U });
+            }
+        }
         if (idx == 1) {
             auto& rdsMgr = er.context->GetRenderDataStoreManager();
             if (refcnt_ptr<IRenderDataStoreDefaultStaging> dsStaging =
@@ -179,7 +321,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
             tr.renderNodeGraph, { inputs, countof(inputs) }, {});
 
-        if (idx == 0) {
+        if (idx == 0 || idx == 1) {
             er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
         } else {
             er.context->GetRenderer().RenderFrame({});

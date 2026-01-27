@@ -55,6 +55,15 @@ public:
     }
 };
 
+class ExternalImage : public META_NS::IntroduceInterfaces<Image, IExternalImage> {
+    META_OBJECT(ExternalImage, ClassId::ExternalImage, IntroduceInterfaces)
+public:
+    virtual bool SetExternalBuffer(const ExternalBufferInfo& buffer) override;
+
+private:
+    bool SetBufferInternal(const IRenderContext::Ptr& context, const ExternalBufferInfo& buffer);
+};
+
 SCENE_END_NAMESPACE()
 
 #endif

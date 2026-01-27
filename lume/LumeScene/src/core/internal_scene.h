@@ -79,6 +79,7 @@ public:
     uint32_t ReleaseNode(INode::Ptr&& node, bool recursive) override;
     bool RemoveNode(INode::Ptr&&, bool) override;
     bool RemoveObject(META_NS::IObject::Ptr&&, bool) override;
+    bool RemoveNamedChild(const INode::Ptr& node, BASE_NS::string_view name) override;
 
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, CORE_NS::Entity) const override;
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, const CORE_NS::ResourceId&) const override;
@@ -186,6 +187,7 @@ private:
     void SetNodeActive(const INode::Ptr& child, bool active);
     bool IsSameScene(const INode::Ptr& node) const;
 private:
+    bool RemoveEntity(const CORE_NS::IResourceManager::Ptr& resources, CORE_NS::Entity entity, bool removeFromIndex);
     BASE_NS::vector<INode::Ptr> FindNodes(CORE_NS::Entity root, BASE_NS::string_view name, size_t maxCount,
         META_NS::ObjectId id, META_NS::TraversalType traversalType) const;
 

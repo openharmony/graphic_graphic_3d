@@ -5,6 +5,19 @@
     },
     "nodes": [
         {
+            "typeName": "RenderNodeShaderPassesGeneric",
+            "nodeName": "RenderNodeShaderPassesGeneric",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStoreShaderPasses",
+                "typeName": "RenderDataStoreShaderPasses",
+                "configurationName": ""
+            }
+        },
+        {
             "typeName": "RenderNodeCreateGpuImages",
             "nodeName": "RenderNodeCreateGpuImages",
             "gpuImageDescs": [
@@ -72,7 +85,7 @@
                 "subpassCount": 1,
                 "subpassContents": "inline",
                 "subpass": {
-                    "colorAttachmentIndices": [0]
+                    "colorAttachmentIndices": [ 0 ]
                 }
             },
             "resources": {
@@ -124,7 +137,7 @@
                 "subpassCount": 1,
                 "subpassContents": "inline",
                 "subpass": {
-                    "colorAttachmentIndices": [0]
+                    "colorAttachmentIndices": [ 0 ]
                 }
             },
             "resources": {

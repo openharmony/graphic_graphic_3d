@@ -18,24 +18,16 @@
 #include <dlfcn.h>
 
 #include <base/containers/string.h>
+#include <base/containers/vector.h>
 #include <core/log.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_plugin.h>
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string;
 using BASE_NS::string_view;
 
-LibraryOHOS::LibraryOHOS(const string_view filename)
-{
-    string tmp(filename);
-    libraryHandle_ = dlopen(tmp.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!libraryHandle_) {
-        const char* errorMessage = dlerror();
-        if (errorMessage != NULL) {
-            CORE_LOG_E("Loading dynamic library '%s' failed: %s", filename.data(), errorMessage);
-        }
-    }
-}
+LibraryOHOS::LibraryOHOS(PluginData&& data) : data_(BASE_NS::move(data)) {}
 
 LibraryOHOS::~LibraryOHOS()
 {
@@ -48,10 +40,27 @@ LibraryOHOS::~LibraryOHOS()
 IPlugin* LibraryOHOS::GetPlugin() const
 {
     if (!libraryHandle_) {
-        return nullptr;
+        libraryHandle_ = dlopen(data_.filename.c_str(), RTLD_NOW | RTLD_LOCAL);
+        if (!libraryHandle_) {
+            const char* errorMessage = dlerror();
+            if (errorMessage != NULL) {
+                CORE_LOG_E("Loading dynamic library '%s' failed: %s", data_.filename.data(), errorMessage);
+            }
+            return nullptr;
+        }
     }
 
     return reinterpret_cast<IPlugin*>(dlsym(libraryHandle_, "gPluginData"));
+}
+
+BASE_NS::Uid LibraryOHOS::GetPluginUid() const
+{
+    return data_.pluginUid;
+}
+
+BASE_NS::array_view<const BASE_NS::Uid> LibraryOHOS::GetPluginDependencies() const
+{
+    return data_.dependencies;
 }
 
 void LibraryOHOS::Destroy()
@@ -59,9 +68,13 @@ void LibraryOHOS::Destroy()
     delete this;
 }
 
-ILibrary::Ptr ILibrary::Load(const string_view filePath)
+ILibrary::Ptr ILibrary::Load(const string_view filePath, const IFile::Ptr& filePtr)
 {
-    return ILibrary::Ptr { new LibraryOHOS(filePath) };
+    auto pluginData = ProcessElf(filePath, filePtr);
+    if ((pluginData.pluginUid != BASE_NS::Uid {})) {
+        return ILibrary::Ptr { new LibraryOHOS(BASE_NS::move(pluginData)) };
+    }
+    return {};
 }
 
 string_view ILibrary::GetFileExtension()

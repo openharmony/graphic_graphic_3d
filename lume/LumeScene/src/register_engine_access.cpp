@@ -27,7 +27,6 @@
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/light_component.h>
-#include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 
@@ -36,6 +35,8 @@
 #include <meta/ext/engine/internal_access.h>
 #include <meta/interface/engine/intf_engine_data.h>
 #include <meta/interface/intf_object_registry.h>
+
+#include "component/shader_compare.h"
 
 using CORE3D_NS::EnvironmentComponent;
 using CORE3D_NS::LightComponent;

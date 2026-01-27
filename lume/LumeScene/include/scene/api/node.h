@@ -196,6 +196,12 @@ public:
         auto f = CallPtr<INodeImport>([=](auto& ni) { return ni.ImportChildScene(uri, name); });
         return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
+    /// @see INode::Clone.
+    META_API_ASYNC auto Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent = {})
+    {
+        auto f = CallPtr<INode>([=](auto& n) { return n.Clone(nodeName, parent); });
+        return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
+    }
 };
 
 /// Wrapper for Scene camera nodes which implement SCENE_NS::ICamera.

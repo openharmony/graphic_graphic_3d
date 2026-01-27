@@ -280,6 +280,9 @@ napi_value NodeImpl::Dispose(NapiApi::FunctionContext<>& ctx)
     scene_.Reset();
     return ctx.GetUndefined();
 }
+
+constexpr uint32_t MAX_LAYER_BIT = 63; // Max bit index for uint64_t bitmask
+
 napi_value NodeImpl::GetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t>& ctx)
 {
     if (!validateSceneRef()) {
@@ -287,6 +290,9 @@ napi_value NodeImpl::GetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t>& ctx
     }
     uint32_t bit = ctx.Arg<0>();
     bool enabled = true;
+    if (bit > MAX_LAYER_BIT) {
+        return ctx.GetBoolean(false);
+    }
     if (auto node = ctx.This().GetNative<SCENE_NS::INode>()) {
         uint64_t mask = 1ull << bit;
         if (auto comp = SCENE_NS::GetComponent<SCENE_NS::ILayer>(node)) {
@@ -301,6 +307,9 @@ napi_value NodeImpl::SetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t, bool
         return ctx.GetUndefined();
     }
     uint32_t bit = ctx.Arg<0>();
+    if (bit > MAX_LAYER_BIT) {
+        return ctx.GetUndefined();
+    }
     bool enabled = ctx.Arg<1>();
     if (auto node = ctx.This().GetNative<SCENE_NS::INode>()) {
         if (!SCENE_NS::GetComponent<SCENE_NS::ILayer>(node)) {

@@ -618,6 +618,8 @@ public:
 // Assert that UVec3 is the same as 3 uint32_t's
 static_assert(sizeof(UVec3) == 3 * sizeof(uint32_t));
 
+static constexpr UVec3 ZERO_UVEC3(0U, 0U, 0U);
+
 /** @ingroup group_math_vector */
 /** Unsigned integer vector4 presentation */
 class UVec4 {
@@ -677,6 +679,8 @@ public:
 
 // Assert that UVec4 is the same as 4 uint32_t's
 static_assert(sizeof(UVec4) == 4 * sizeof(uint32_t));
+
+static constexpr UVec4 ZERO_UVEC4(0U, 0U, 0U, 0U);
 
 /** @ingroup group_math_vector */
 /** Signed integer vector2 presentation */
@@ -845,6 +849,8 @@ public:
 // Assert that IVec2 is the same as 2 int32_t's
 static_assert(sizeof(IVec2) == 2 * sizeof(int32_t));
 
+static constexpr IVec2 ZERO_IVEC2(0, 0);
+
 /** @ingroup group_math_vector */
 /** Signed integer vector3 presentation */
 class IVec3 {
@@ -902,6 +908,8 @@ public:
 
 // Assert that IVec3 is the same as 3 int32_t's
 static_assert(sizeof(IVec3) == 3 * sizeof(int32_t));
+
+static constexpr IVec3 ZERO_IVEC3(0, 0, 0);
 
 /** @ingroup group_math_vector */
 /** Signed integer vector4 presentation */
@@ -963,6 +971,8 @@ public:
 
 // Assert that IVec4 is the same as 4 int32_t's
 static_assert(sizeof(IVec4) == 4 * sizeof(int32_t));
+
+static constexpr IVec4 ZERO_IVEC4(0, 0, 0, 0);
 
 constexpr float& Vec3::operator[](size_t index)
 {

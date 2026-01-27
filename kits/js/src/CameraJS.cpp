@@ -219,8 +219,6 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
-
-    meJs.Set("postProcess", fromJs.GetNull());
 }
 void CameraJS::Finalize(napi_env env)
 {
@@ -349,9 +347,10 @@ void CameraJS::SetNear(NapiApi::FunctionContext<float>& ctx)
 
 napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
 {
-    if (!validateSceneRef()) {
-        return ctx.GetUndefined();
+    if (postProcSetToNull_ || !validateSceneRef()) {
+        return ctx.GetNull();
     }
+
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
         auto postproc = camera->PostProcess()->GetValue();
         if (!postproc) {
@@ -400,23 +399,23 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     if (!native) {
-        napi_value args[] = {
-            ctx.This().ToNapiValue(),  // Camera..
-            psp ? ctx.Arg<0>().ToNapiValue()
-                : NapiApi::Object(ctx.Env()).ToNapiValue()  // "javascript object for values"
-        };
-
         if (auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot())) {
-            auto postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
+            META_NS::IObject::Ptr postproc;
 
             if (!psp) {
-                if (auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(postproc)) {
-                    pp->Vignette()->GetValue()->Enabled()->SetValue(true);
-                    pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
-                    pp->Bloom()->GetValue()->Enabled()->SetValue(true);
-                    pp->Tonemap()->GetValue()->Enabled()->SetValue(true);
-                }
+                postProcSetToNull_ = true;
+                postproc = interface_pointer_cast<META_NS::IObject>(MakeDefaultPostProcess());
+            } else {
+                postProcSetToNull_ = false;
+                postproc = cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess);
             }
+
+            napi_value args[] = {
+                ctx.This().ToNapiValue(), // Camera..
+                psp ? ctx.Arg<0>().ToNapiValue()
+                    : NapiApi::Object(ctx.Env()).ToNapiValue() // "javascript object for values"
+            };
+
             // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
             psp = CreateFromNativeInstance(ctx.Env(), postproc, PtrType::WEAK, args);
             native = psp.GetRoot();
@@ -664,6 +663,23 @@ META_NS::IObject::Ptr CameraJS::CreateObject(const META_NS::ClassInfo& type)
     }
     return nullptr;
 }
+
+SCENE_NS::IPostProcess::Ptr CameraJS::MakeDefaultPostProcess()
+{
+    auto postproc = CreateObject(SCENE_NS::ClassId::PostProcess);
+
+    if (auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(postproc)) {
+        pp->Vignette()->GetValue()->Enabled()->SetValue(true);
+        pp->ColorFringe()->GetValue()->Enabled()->SetValue(true);
+        pp->Bloom()->GetValue()->Enabled()->SetValue(true);
+        pp->Tonemap()->GetValue()->Enabled()->SetValue(true);
+
+        return pp;
+    }
+
+    return {};
+}
+
 void CameraJS::ReleaseObject(const META_NS::IObject::Ptr& obj)
 {
     if (obj) {

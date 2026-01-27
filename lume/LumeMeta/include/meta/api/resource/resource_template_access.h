@@ -60,11 +60,11 @@ public:
         res = GetObjectRegistry().Create<CORE_NS::IResource>(META_NS::ClassId::ObjectResource);
         if (auto ores = interface_cast<IObjectResource>(res)) {
             ores->SetResourceType(templateType_);
-            if (auto i = interface_cast<IMetadata>(res)) {
-                if (auto m = interface_cast<IMetadata>(resource)) {
-                    for (auto&& p : m->GetProperties()) {
-                        CloneToDefault(p, *i);
-                    }
+            auto i = interface_cast<IMetadata>(res);
+            auto m = interface_cast<IMetadata>(resource);
+            if (i && m) {
+                for (auto&& p : m->GetProperties()) {
+                    CloneToDefault(p, *i);
                 }
             }
         } else {
@@ -86,18 +86,18 @@ public:
             CORE_LOG_W("Invalid resource type");
             return false;
         }
-        if (auto resm = interface_cast<META_NS::IMetadata>(templ)) {
-            if (auto m = interface_cast<META_NS::IMetadata>(res)) {
-                for (auto&& p : resm->GetProperties()) {
-                    if (!m->GetMetadata(MetadataType::PROPERTY, p->GetName()).readOnly) {
-                        CopyToDefaultAndReset(p, *m);
-                    }
+        auto resm = interface_cast<META_NS::IMetadata>(templ);
+        auto m = interface_cast<META_NS::IMetadata>(res);
+        if (resm && m) {
+            for (auto&& p : resm->GetProperties()) {
+                if (!m->GetMetadata(MetadataType::PROPERTY, p->GetName()).readOnly) {
+                    CopyToDefaultAndReset(p, *m);
                 }
-                if (auto id = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
-                    id->SetTemplateId(templ->GetResourceId());
-                }
-                return true;
             }
+            if (auto id = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
+                id->SetTemplateId(templ->GetResourceId());
+            }
+            return true;
         }
         CORE_LOG_W("Invalid resource given to SetValuesFromTemplate: %s", res->GetResourceId().ToString().c_str());
         return false;

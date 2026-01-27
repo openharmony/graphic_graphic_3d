@@ -280,19 +280,19 @@ void ShaderPipelineBinder::EvaluateCustomPropertyBindings()
                 const RenderHandleType plDescType =
                     DescriptorSetBinderUtil::GetRenderHandleType(plBindingRef.descriptorType);
                 if (bindingRef.binding != plBindingRef.binding) {
-                    CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
-                               "layout (set: %u, bindingIdx %u != bindingIdx %u)",
+                    PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
+                                 "layout (set: %u, bindingIdx %u != bindingIdx %u)",
                         setIdx, bindingRef.binding, plBindingRef.binding);
                 }
                 if (bindingRef.type != plDescType) {
-                    CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
-                               "layout (set: %u, binding: %u)",
+                    PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
+                                 "layout (set: %u, binding: %u)",
                         setIdx, bindingRef.binding);
                 }
             }
         } else {
-            CORE_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding count missmatch."
-                       "(set: %u, bindings: %u != bindings: %u",
+            PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding count missmatch."
+                         "(set: %u, bindings: %u != bindings: %u",
                 setIdx, static_cast<uint32_t>(descRef.bindings.size()), static_cast<uint32_t>(plSet.bindings.size()));
         }
     }

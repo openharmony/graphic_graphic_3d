@@ -22,6 +22,7 @@
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
+#include <core/log.h>
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;

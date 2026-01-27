@@ -22,7 +22,7 @@
 Basic shadowing functions
 */
 // NOTE: has currently some issues
-#define CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS 0
+#define CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS 1
 
 vec2 ComputeReceiverPlaneDepthBias(const vec3 uvDdx, const vec3 uvDdy)
 {
@@ -81,10 +81,10 @@ float CalcPcfShadow(
         const vec3 shadowDdy = dFdy(shadowCoord);
         const vec2 receiverPlaneDepthBias = ComputeReceiverPlaneDepthBias(shadowDdx, shadowDdy);
 
-        // static depth biasing for incorrect fractional sampling
-        const float fSamplingError = 2.0 * dot(vec2(1.0) * texelSize, abs(receiverPlaneDepthBias));
+        const float MAX_SAMPLING_ERROR = 0.0005f;
+        const float fSamplingError = min(dot(abs(receiverPlaneDepthBias), texelSize), MAX_SAMPLING_ERROR);
 
-        const float compareDepth = shadowCoord.z - min(fSamplingError, 0.01);
+        const float compareDepth = shadowCoord.z - bias - fSamplingError;
 #else
         // NOTE: not used for this purpose ATM
         const vec2 receiverPlaneDepthBias = vec2(shadowFactor.y, shadowFactor.y);

@@ -21,6 +21,7 @@
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <core/intf_engine.h>
 #include <core/json/json.h>
+#include <core/log.h>
 #include <core/namespace.h>
 #include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>

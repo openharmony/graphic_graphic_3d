@@ -1571,12 +1571,12 @@ void FillSpecular(MaterialComponent& desc, const GLTFImportResult& importResult,
         gltfMaterial.specular.colorTexture.index == GLTF2::GLTF_INVALID_INDEX) {
         FillTextureParams(
             gltfMaterial.specular.texture, importResult, data, em, desc, MaterialComponent::TextureIndex::SPECULAR);
-        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE;
+        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_COLOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index == GLTF2::GLTF_INVALID_INDEX &&
                gltfMaterial.specular.colorTexture.index != GLTF2::GLTF_INVALID_INDEX) {
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
-        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE;
+        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index != gltfMaterial.specular.colorTexture.index) {
         CORE_LOG_W("Separate specular strength and color textures are not supported!");
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
@@ -1584,8 +1584,8 @@ void FillSpecular(MaterialComponent& desc, const GLTFImportResult& importResult,
     } else { // both textures valid
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
-        desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE |
-                                    MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE;
+        desc.extraRenderingFlags &= ~(MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_COLOR_TEXTURE |
+                                      MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE);
     }
 #endif
 }

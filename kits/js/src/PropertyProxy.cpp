@@ -139,6 +139,10 @@ void ObjectPropertyProxy::Reset()
     }
 
     NapiApi::Env env(obj_.GetEnv());
+    NapiApi::Scope scope(env);
+    if (!scope) {
+        return;
+    }
     // unhook all hooked members.
     auto ValueObject = obj_.GetObject();
     for (; !accessors_.empty();) {

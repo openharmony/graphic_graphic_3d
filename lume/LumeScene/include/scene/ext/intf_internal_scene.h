@@ -163,6 +163,8 @@ public:
     virtual uint32_t ReleaseNode(INode::Ptr&& node, bool recursive) = 0;
     virtual bool RemoveNode(INode::Ptr&& node, bool removeFromIndex = true) = 0;
     virtual bool RemoveObject(META_NS::IObject::Ptr&& object, bool removeFromIndex = true) = 0;
+    /// Remove child with given name. Returns true if node was removed, false if child node name was not found.
+    virtual bool RemoveNamedChild(const INode::Ptr& node, BASE_NS::string_view name) = 0;
 
     virtual BASE_NS::vector<INode::Ptr> GetChildren(const BASE_NS::shared_ptr<IEcsObject>&) const = 0;
     virtual bool RemoveChild(const BASE_NS::shared_ptr<IEcsObject>& object, const INode::Ptr& child) = 0;

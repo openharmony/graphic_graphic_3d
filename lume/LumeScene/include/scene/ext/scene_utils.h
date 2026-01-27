@@ -25,27 +25,54 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IInternalScene::ConstPtr& iScene)
+/**
+ * @brief Return the resource manager associated with an IInternalScene instance.
+ */
+inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IInternalScene* is)
 {
-    if (!iScene) {
+    if (!is) {
         return {};
     }
-    auto context = iScene->GetContext();
+    const auto context = is->GetContext();
     if (!context) {
         return {};
     }
     return context->GetResources();
 }
 
-inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IScene::ConstPtr& scene)
+/**
+ * @brief Return the resource manager associated with an IInternalScene instance.
+ */
+inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IInternalScene::ConstPtr& is)
+{
+    return GetResourceManager(is.get());
+}
+
+/**
+ * @brief Return the resource manager associated with an IInternalScene instance.
+ */
+inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IScene* scene)
 {
     return scene ? GetResourceManager(scene->GetInternalScene()) : nullptr;
 }
 
+/**
+ * @brief Return the resource manager associated with an IScene instance.
+ */
+inline CORE_NS::IResourceManager::Ptr GetResourceManager(const IScene::ConstPtr& scene)
+{
+    return GetResourceManager(scene.get());
+}
+
+/**
+ * @brief Returns the first attachment of the node which implements IExternalNode,
+ *        or nullptr in case such an attachment does not exist.
+ */
 inline IExternalNode::Ptr GetExternalNodeAttachment(const INode::ConstPtr& node)
 {
-    if (auto att = interface_cast<META_NS::IAttach>(node)) {
-        auto ext = att->GetAttachments<IExternalNode>();
+    const auto att = interface_cast<META_NS::IAttach>(node);
+    if (att) {
+        const auto ext = att->GetAttachments<IExternalNode>();
         if (!ext.empty()) {
             return ext.front();
         }

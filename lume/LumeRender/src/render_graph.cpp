@@ -1420,7 +1420,7 @@ void RenderGraph::HandleRenderpassIndirectBufferBarriers(ParameterCache& params,
 namespace {
 void AddBarrier(const RenderHandle handle, const AccessFlags accessFlags, const PipelineStageFlags srcPipelineFlags,
     const PipelineStageFlags dstPipelineFlags, ImageLayout srcLayout, ImageLayout dstLayout,
-    vector<CommandBarrier> barriers)
+    vector<CommandBarrier>& barriers)
 {
     barriers.push_back(CommandBarrier { handle,
         ResourceBarrier { accessFlags, srcPipelineFlags, srcLayout, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE,

@@ -15,6 +15,7 @@
 
 #include "SceneJS.h"
 
+#include "CameraJS.h"
 #include "JsObjectCache.h"
 #include "LightJS.h"
 #include "MaterialJS.h"
@@ -628,6 +629,9 @@ napi_value SceneJS::CreateCamera(NapiApi::FunctionContext<>& vCtx)
         if (auto node = result.GetJsWrapper<NodeImpl>()) {
             node->Attached(true);
         }
+        if (auto cameraJs = result.GetJsWrapper<CameraJS>()) {
+            camera->PostProcess()->SetValue(cameraJs->MakeDefaultPostProcess());
+        }
         if (auto cameraParams = cameraParamRef.GetObject()) {
             ApplyCameraParameters(cameraParams, result);
         }
@@ -696,6 +700,12 @@ napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uin
     const auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetNativeObject());
     if (!scene) {
         return promise.Reject("Invalid scene");
+    }
+
+    auto params = NapiApi::Object { ctx.Arg<0>() };
+    auto uri = params.Get<BASE_NS::string>("uri");
+    if (uri.IsDefinedAndNotNull()) {
+        return promise.Reject("Material creation from uri is not supported");
     }
 
     auto convertToJs = [promise, type, sceneRef = NapiApi::StrongRef(ctx.This()),

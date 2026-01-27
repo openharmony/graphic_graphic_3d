@@ -1214,7 +1214,7 @@ uint32_t RenderMaterialFlagsFromMaterialValues(const MaterialComponent& matComp,
 }
 
 inline constexpr RenderMaterialFlags RenderMaterialFlagsFromMaterialValues(
-    MaterialComponent::ExtraRenderingFlags extraFlags)
+    MaterialComponent::ExtraRenderingFlags extraFlags, const bool hasSpecular)
 {
     RenderMaterialFlags rmf = 0;
     rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::CAMERA_EFFECT)
@@ -1224,12 +1224,14 @@ inline constexpr RenderMaterialFlags RenderMaterialFlagsFromMaterialValues(
     rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::ALLOW_GPU_INSTANCING_BIT)
                ? RENDER_MATERIAL_GPU_INSTANCING_BIT
                : 0U;
-    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::SPECULAR_FACTOR_TEXTURE)
-               ? RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT
-               : 0;
-    rmf |= (extraFlags & MaterialComponent::ExtraRenderingFlagBits::SPECULAR_COLOR_TEXTURE)
-               ? RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT
-               : 0;
+    if (hasSpecular) {
+        if (!(extraFlags & MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE)) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT;
+        }
+        if (!(extraFlags & MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_COLOR_TEXTURE)) {
+            rmf |= RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT;
+        }
+    }
     return rmf;
 }
 
@@ -1966,11 +1968,7 @@ void RenderSystem::ProcessCameras(
             renderScene.cameraIndex = static_cast<uint32_t>(tmpCameras.size());
             camera.flags |= RenderCamera::CAMERA_FLAG_MAIN_BIT;
         }
-        if (hasOcclusionMaterial) {
-            camera.flags |= RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT;
-            camera.clearColorValues.float32[3U] = 0.f;
-            camera.colorTargetCustomization->format = BASE_FORMAT_R16G16B16A16_SFLOAT;
-        }
+
         camera.sceneId = level;
 
         float determinant = 0.0f;
@@ -1988,7 +1986,7 @@ void RenderSystem::ProcessCameras(
         camera.matrices.viewPrevFrame = prevFrameCamData.view;
         camera.matrices.projPrevFrame = prevFrameCamData.proj;
         // for orthographic projection use 90 degree perspective projection for the environment and for other
-        // projections the same projection as for eveything else.
+        // projections the same projection as for everything else.
         if (component.projection == CameraComponent::Projection::ORTHOGRAPHIC) {
             camera.flags |= RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT;
             auto aspect = 1.f;
@@ -2005,6 +2003,16 @@ void RenderSystem::ProcessCameras(
             camera.matrices.envProj = camera.matrices.proj;
         }
         FillCameraRenderEnvironment(*dsCamera_, component, camera);
+        // if the scene uses occlusion material and there's an environment the target should be cleared black for
+        // correct blending and the target must have an alpha channel.
+        if (hasOcclusionMaterial &&
+            (camera.environment.backgroundType != RenderCamera::Environment::BackgroundType::BG_TYPE_NONE)) {
+            camera.flags |= RenderCamera::CAMERA_FLAG_CLEAR_COLOR_BIT;
+            for (auto& colorComponent : camera.clearColorValues.float32) {
+                colorComponent = 0.f;
+            }
+            camera.colorTargetCustomization->format = BASE_FORMAT_R16G16B16A16_SFLOAT;
+        }
         camera.fog = GetRenderCameraFogFromComponent(layerMgr_, fogMgr_, renderConfig, component);
         camera.shaderFlags |=
             (camera.fog.id != RenderSceneDataConstants::INVALID_ID) ? RenderCamera::CAMERA_SHADER_FOG_BIT : 0U;
@@ -3136,8 +3144,8 @@ void RenderSystem::UpdateSingleMaterial(const Entity matEntity, const MaterialCo
             GetMaterialHandles(materialComp, *gpuHandleMgr_);
         const RenderMaterialFlags rmfFromValues =
             RenderMaterialFlagsFromMaterialValues(materialComp, materialHandles, transformBits);
-        const RenderMaterialFlags rmfFromExtraFlags =
-            RenderMaterialFlagsFromMaterialValues(materialComp.extraRenderingFlags);
+        const RenderMaterialFlags rmfFromExtraFlags = RenderMaterialFlagsFromMaterialValues(
+            materialComp.extraRenderingFlags, (rmfFromValues & RenderMaterialFlagBits::RENDER_MATERIAL_SPECULAR_BIT));
         const RenderMaterialFlags rmf = rmfFromBits | rmfFromValues | rmfFromExtraFlags;
         const RenderDataDefaultMaterial::MaterialData data {
             { gpuHandleMgr_->GetRenderHandleReference(materialComp.materialShader.shader),

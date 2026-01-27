@@ -116,10 +116,10 @@ BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
          */
         CAMERA_EFFECT = (1 << 3),
 
-        /** Use alpha channel of the specular texture for specular factor */
-        SPECULAR_FACTOR_TEXTURE = (1 << 4),
-        /** Use rgb channels of the specular texture for specular color */
-        SPECULAR_COLOR_TEXTURE = (1 << 5),
+        /** Ignore alpha channel of the specular texture for the strength of the specular reflection. */
+        IGNORE_SPECULAR_FACTOR_TEXTURE = (1 << 4),
+        /** Ignore rgb channels of the specular texture for the F0 color of the specular reflection. */
+        IGNORE_SPECULAR_COLOR_TEXTURE = (1 << 5),
     };
     /** Container for extra material rendering flag bits */
     using ExtraRenderingFlags = uint32_t;

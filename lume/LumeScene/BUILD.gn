@@ -244,7 +244,22 @@ ohos_source_set("lume_scenewidget_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
     "${LUME_META_PATH}:libPluginMetaObject",
   ]
+
   external_deps = [ "c_utils:utils" ]
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+    ]
+  }
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+    ]
+  }
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
