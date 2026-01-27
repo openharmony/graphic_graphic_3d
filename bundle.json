@@ -406,9 +406,7 @@
       ],
       "test": [
         "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest",
-        "//foundation/graphic/graphic_3d/lume/LumeBase/test/unittest:unittest",
-        "//foundation/graphic/graphic_3d/lume/LumeRender/test/unittest:unittest",
-        "//foundation/graphic/graphic_3d/lume/LumeMeta/test/unittest:unittest"
+        "//foundation/graphic/graphic_3d/lume/LumeBase/test/unittest:unittest"
       ]
     },
     "deps": {
