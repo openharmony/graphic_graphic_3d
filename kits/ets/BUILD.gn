@@ -21,7 +21,10 @@ part_name = "graphic_3d"
 taihe_generated_file_path = "$taihe_file_path/out/$subsystem_name/$part_name"
 
 config("lume3d_config") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "test/unittest:*",
+  ]
 
   include_dirs = [
     "${LUME_BASE_PATH}/api",

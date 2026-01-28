@@ -47,7 +47,6 @@ private:
     RenderContextETS();
 
     std::weak_ptr<RenderResourcesETS> resources_;
-    SCENE_NS::IRenderResourceManager::Ptr renderResourceManager_;
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_RENDER_CONTEXT_ETS_H
