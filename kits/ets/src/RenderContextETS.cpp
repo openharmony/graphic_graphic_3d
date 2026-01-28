@@ -34,25 +34,32 @@
 #endif
 
 META_TYPE(BASE_NS::shared_ptr<CORE_NS::IImageLoaderManager::LoadResult>);
+namespace {
+SCENE_NS::IRenderResourceManager::Ptr GetResourceManager()
+{
+    auto &obr = META_NS::GetObjectRegistry();
+    auto data = obr.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
+    if (!data) {
+        return {};
+    }
+    auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+    auto renderContext = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")->GetValue();
+    data->AddProperty(META_NS::ConstructProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext", renderContext));
+    auto rrmObj = obr.Create(SCENE_NS::ClassId::RenderResourceManager, data);
+    if (rrmObj) {
+        return interface_pointer_cast<SCENE_NS::IRenderResourceManager>(rrmObj);
+    } else {
+        return {};
+    }
+}
+}
 
 namespace OHOS::Render3D {
 RenderContextETS::RenderContextETS()
-{
-    auto &r = META_NS::GetObjectRegistry();
-    auto obj = r.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
-    if (obj) {
-        auto doc = interface_cast<META_NS::IMetadata>(r.GetDefaultObjectContext());
-        auto renderContext = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")->GetValue();
-        obj->AddProperty(META_NS::ConstructProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext", renderContext));
-        renderResourceManager_ = interface_pointer_cast<SCENE_NS::IRenderResourceManager>(
-            r.Create(SCENE_NS::ClassId::RenderResourceManager, obj));
-    }
-}
+{}
 
 RenderContextETS::~RenderContextETS()
-{
-    renderResourceManager_.reset();
-}
+{}
 
 std::shared_ptr<RenderResourcesETS> RenderContextETS::GetResources()
 {
@@ -81,13 +88,14 @@ bool RenderContextETS::LoadPlugin(const std::string &name)
 
 InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const std::string &name, const std::string &uri)
 {
-    if (!renderResourceManager_) {
+    auto renderResourceManager = GetResourceManager();
+    if (!renderResourceManager) {
         return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "render resource manager is not ready");
     }
     if (uri.empty()) {
         return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "Invalid shader uri given");
     }
-    SCENE_NS::IShader::Ptr shader = renderResourceManager_->LoadShader(uri.c_str()).GetResult();
+    SCENE_NS::IShader::Ptr shader = renderResourceManager->LoadShader(uri.c_str()).GetResult();
     return InvokeReturn<std::shared_ptr<ShaderETS>>(std::make_shared<ShaderETS>(shader, name, uri));
 }
 
