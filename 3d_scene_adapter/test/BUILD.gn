@@ -184,9 +184,69 @@ ohos_unittest("AGPOffscreenRenderUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("SceneBridgeAniUnitTest") {
+  module_out_path = module_output_path
+
+  include_dirs = [
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/src",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include/ohos",
+  ]
+
+  sources = [ "scene_bridge_ani_unit_test.cpp" ]
+
+  deps = [
+    "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+    "//foundation/graphic/graphic_3d/lume/LumeScene:AGPSceneApi"
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "napi:ace_napi",
+    "runtime_core:ani",
+    "runtime_core:ani_helpers",
+  ]
+  
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_unittest("SceneBridgeUnitTest") {
+  module_out_path = module_output_path
+
+  include_dirs = [
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/src",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include/ohos",
+  ]
+
+  sources = [ "scene_bridge_unit_test.cpp" ]
+
+  deps = [
+    "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
+    "//foundation/graphic/graphic_3d/lume/LumeScene:AGPSceneApi"
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "napi:ace_napi",
+    "runtime_core:ani",
+    "runtime_core:ani_helpers",
+  ]
+  
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 group("unittest") {
     testonly = true
     deps = [
-        ":SceneAdapterUintTest"
+        ":SceneAdapterUintTest",
+        ":SceneBridgeAniUnitTest",
+        ":SceneBridgeUnitTest"
     ]
 }

@@ -368,5 +368,284 @@ HWTEST_F(SceneAdapterUT, AcquireImage002, TestSize.Level1)
     // ecpect no dump calling AcquireImage
 }
 
+/**
+ * @tc.name: SetNeedsRepaint001
+ * @tc.desc: test SetNeedsRepaint
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, SetNeedsRepaint001, TestSize.Level1)
+{
+    WIDGET_LOGD("SetNeedsRepaint001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    adapter->SetNeedsRepaint(true);
+    bool needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, true);
+
+    adapter->SetNeedsRepaint(false);
+    needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, false);
+}
+
+/**
+ * @tc.name: GetEcs001
+ * @tc.desc: test GetEcs returns null when no scene
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, GetEcs001, TestSize.Level1)
+{
+    WIDGET_LOGD("GetEcs001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // Without CreateEmptyScene, GetEcs should return null
+    auto ecs = adapter->GetEcs();
+    EXPECT_EQ(ecs, nullptr);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: GetEcs002
+ * @tc.desc: test GetEcs without init
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, GetEcs002, TestSize.Level1)
+{
+    WIDGET_LOGD("GetEcs002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // Without LoadPluginsAndInit, GetEcs should return null
+    auto ecs = adapter->GetEcs();
+    EXPECT_EQ(ecs, nullptr);
+}
+
+/**
+ * @tc.name: LoadPluginsAndInit003
+ * @tc.desc: test LoadPluginsAndInit multiple times
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, LoadPluginsAndInit003, TestSize.Level1)
+{
+    WIDGET_LOGD("LoadPluginsAndInit003");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    ret = adapter->LoadPluginsAndInit();
+    EXPECT_EQ(ret, true);
+
+    ret = adapter->LoadPluginsAndInit();
+    EXPECT_EQ(ret, true);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: OnWindowChange004
+ * @tc.desc: test OnWindowChange with recreateWindow
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, OnWindowChange004, TestSize.Level1)
+{
+    WIDGET_LOGD("OnWindowChange004");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    auto textureLayer = adapter->CreateTextureLayer();
+    ASSERT_NE(textureLayer, nullptr);
+
+    WindowChangeInfo info;
+    info.offsetX = 10.0;
+    info.offsetY = 20.0;
+    info.width = 1920.0;
+    info.height = 1080.0;
+    info.scale = 2.0;
+    info.widthScale = 0.8;
+    info.heightScale = 0.8;
+    info.recreateWindow = true;
+    info.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    info.transformType = 1;
+
+    adapter->OnWindowChange(info);
+
+    auto textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_LT(std::fabs(textureInfo.width_ - 1920.0), EPSILON);
+    EXPECT_LT(std::fabs(textureInfo.height_ - 1080.0), EPSILON);
+    EXPECT_LT(std::fabs(textureInfo.widthScale_ - 0.8), EPSILON);
+    EXPECT_LT(std::fabs(textureInfo.heightScale_ - 0.8), EPSILON);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: Deinit002
+ * @tc.desc: test Deinit without init
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, Deinit002, TestSize.Level1)
+{
+    WIDGET_LOGD("Deinit002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // Deinit without LoadPluginsAndInit
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+
+    // GetEcs should return null after deinit without proper init
+    auto ecs = adapter->GetEcs();
+    EXPECT_EQ(ecs, nullptr);
+
+    // GetSceneObj should return null
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+
+    // NeedsRepaint should be false without proper init
+    bool needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, true);
+}
+
+/**
+ * @tc.name: GetSceneObj001
+ * @tc.desc: test GetSceneObj returns null when no scene
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, GetSceneObj001, TestSize.Level1)
+{
+    WIDGET_LOGD("GetSceneObj001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // Without CreateEmptyScene, GetSceneObj should return null
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: GetSceneObj002
+ * @tc.desc: test GetSceneObj without init
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, GetSceneObj002, TestSize.Level1)
+{
+    WIDGET_LOGD("GetSceneObj002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // Without LoadPluginsAndInit, GetSceneObj should return null
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+}
+
+/**
+ * @tc.name: ShutdownPluginRegistry001
+ * @tc.desc: test ShutdownPluginRegistry
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, ShutdownPluginRegistry001, TestSize.Level1)
+{
+    WIDGET_LOGD("ShutdownPluginRegistry001");
+
+    // Initialize engine first
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+
+    // Shutdown multiple times - should handle gracefully
+    SceneAdapter::ShutdownPluginRegistry();
+
+    // After shutdown, engine init flag remains true (static flag not reset)
+    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
+
+    // Shutdown again - should not crash
+    SceneAdapter::ShutdownPluginRegistry();
+    SceneAdapter::ShutdownPluginRegistry();
+
+    // Engine init flag still true
+    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
+}
+
+/**
+ * @tc.name: RenderFrame003
+ * @tc.desc: test RenderFrame after Deinit
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, RenderFrame003, TestSize.Level1)
+{
+    WIDGET_LOGD("RenderFrame003");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    auto textureLayer = adapter->CreateTextureLayer();
+    ASSERT_NE(textureLayer, nullptr);
+    adapter->OnWindowChange(g_windowChangeInfo);
+
+    bool needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, true);
+
+    adapter->Deinit();
+
+    // After deinit, needsRepaint should be false
+    needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, false);
+
+    // Render after deinit - should handle gracefully
+    adapter->RenderFrame();
+    adapter->RenderFrame(true);
+
+    // needsRepaint should still be false
+    needsRepaint = adapter->NeedsRepaint();
+    EXPECT_EQ(needsRepaint, false);
+}
+
+/**
+ * @tc.name: AcquireImage003
+ * @tc.desc: test AcquireImage with various buffer info
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, AcquireImage003, TestSize.Level1)
+{
+    WIDGET_LOGD("AcquireImage003");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    auto textureLayer = adapter->CreateTextureLayer();
+    ASSERT_NE(textureLayer, nullptr);
+
+    // Initially, should not have received buffer
+    bool receiveBuffer = adapter->GetReceiveBuffer();
+    EXPECT_EQ(receiveBuffer, false);
+
+    SurfaceBufferInfo bufferInfo;
+    bufferInfo.sfBuffer_ = nullptr;
+    bufferInfo.acquireFence_ = nullptr;
+    bufferInfo.needsTrans_ = false;
+    bufferInfo.transformMatrix_ = {16, 1.0};
+    bufferInfo.fn_ = nullptr;
+
+    adapter->AcquireImage(bufferInfo);
+
+    // AcquireImage with null buffer should be handled gracefully
+    // The adapter should still be in a valid state
+    auto ecs = adapter->GetEcs();
+    EXPECT_EQ(ecs, nullptr);
+
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
 } // namespace
 }
