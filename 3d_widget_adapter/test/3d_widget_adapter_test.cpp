@@ -467,5 +467,397 @@ HWTEST_F(WidgetAdapter3DTest, UnloadEnvModel1, testing::ext::TestSize.Level1)
     bool ret = adapter.UnloadEnvModel();
     ASSERT_EQ(ret, true);
 }
+
+/**
+ * @tc.name: DeInitEngine1
+ * @tc.desc: Verify DeInitEngine with valid engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, DeInitEngine1, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    
+    // This should not crash
+    adapter.DeInitEngine();
+    
+    // After deinit, operations should fail
+    bool ret = adapter.SetupCameraViewport(800, 600);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: DeInitEngine2
+ * @tc.desc: Verify DeInitEngine with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, DeInitEngine2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    
+    // This should not crash even with null engine
+    adapter.DeInitEngine();
+}
+
+/**
+ * @tc.name: SetupCameraTransform2
+ * @tc.desc: Verify SetupCameraTransform with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, SetupCameraTransform2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    Position position{};
+    Vec3 lookAt{};
+    Vec3 up{};
+    Quaternion rotation{};
+
+    bool ret = adapter.SetupCameraTransform(position, lookAt, up, rotation);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: SetupCameraViewProjection2
+ * @tc.desc: Verify SetupCameraViewProjection with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, SetupCameraViewProjection2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    float near = 0.0f;
+    float far = 0.0f;
+    float degree = 0.0f;
+
+    bool ret = adapter.SetupCameraViewProjection(near, far, degree);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: SetupCameraViewport2
+ * @tc.desc: Verify SetupCameraViewport with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, SetupCameraViewport2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    uint32_t width = 800;
+    uint32_t height = 600;
+
+    bool ret = adapter.SetupCameraViewport(width, height);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateLights2
+ * @tc.desc: Verify UpdateLights with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateLights2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::vector<std::shared_ptr<OHOS::Render3D::Light>> lights{};
+
+    bool ret = adapter.UpdateLights(lights);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: OnTouchEvent2
+ * @tc.desc: Verify OnTouchEvent with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, OnTouchEvent2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    PointerEvent event{};
+
+    bool ret = adapter.OnTouchEvent(event);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: DrawFrame2
+ * @tc.desc: Verify DrawFrame with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUI0P
+ */
+HWTEST_F(WidgetAdapter3DTest, DrawFrame2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    bool ret = adapter.DrawFrame();
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateGeometries2
+ * @tc.desc: Verify UpdateGeometries with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateGeometries2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::vector<std::shared_ptr<Geometry>> shapes{};
+
+    bool ret = adapter.UpdateGeometries(shapes);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateGLTFAnimations2
+ * @tc.desc: Verify UpdateGLTFAnimations with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateGLTFAnimations2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::vector<std::shared_ptr<GLTFAnimation>> animations{};
+
+    bool ret = adapter.UpdateGLTFAnimations(animations);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateCustomRender2
+ * @tc.desc: Verify UpdateCustomRender with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateCustomRender2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::shared_ptr<CustomRenderDescriptor> customRenders{};
+
+    bool ret = adapter.UpdateCustomRender(customRenders);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateShaderPath2
+ * @tc.desc: Verify UpdateShaderPath with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateShaderPath2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::string shaderPath = "path";
+
+    bool ret = adapter.UpdateShaderPath(shaderPath);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateImageTexturePaths2
+ * @tc.desc: Verify UpdateImageTexturePaths with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateImageTexturePaths2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::vector<std::string> imageTextures{};
+
+    bool ret = adapter.UpdateImageTexturePaths(imageTextures);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UpdateShaderInputBuffer2
+ * @tc.desc: Verify UpdateShaderInputBuffer with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UpdateShaderInputBuffer2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::shared_ptr<OHOS::Render3D::ShaderInputBuffer> shaderInputBuffer{};
+
+    bool ret = adapter.UpdateShaderInputBuffer(shaderInputBuffer);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: OnWindowChange2
+ * @tc.desc: Verify OnWindowChange with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, OnWindowChange2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    TextureInfo texture{};
+
+    bool ret = adapter.OnWindowChange(texture);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: LoadSceneModel2
+ * @tc.desc: Verify LoadSceneModel with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, LoadSceneModel2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::string scene = "scene";
+
+    bool ret = adapter.LoadSceneModel(scene);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: LoadEnvModel2
+ * @tc.desc: Verify LoadEnvModel with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, LoadEnvModel2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+    std::string enviroment = "enviroment";
+    BackgroundType type{};
+
+    bool ret = adapter.LoadEnvModel(enviroment, type);
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UnloadSceneModel2
+ * @tc.desc: Verify UnloadSceneModel with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UnloadSceneModel2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    bool ret = adapter.UnloadSceneModel();
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: UnloadEnvModel2
+ * @tc.desc: Verify UnloadEnvModel with null engine - Note: bug in source code, should call UnloadEnvModel
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, UnloadEnvModel2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    bool ret = adapter.UnloadEnvModel();
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: NeedsRepaint2
+ * @tc.desc: Verify NeedsRepaint with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, NeedsRepaint2, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    bool ret = adapter.NeedsRepaint();
+    ASSERT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: DrawFrame3
+ * @tc.desc: Verify DrawFrame with firstFrame logic (multiple calls)
+ * @tc.type: FUNC
+ * @tc.require: SR000GUI0P
+ */
+HWTEST_F(WidgetAdapter3DTest, DrawFrame3, testing::ext::TestSize.Level1)
+{
+    WidgetAdapter adapter(0U);
+
+    auto engine = std::make_unique<EngineTest>();
+    adapter.Initialize(std::move(engine));
+    
+    // First call should work (firstFrame_ = true)
+    bool ret1 = adapter.DrawFrame();
+    ASSERT_EQ(ret1, true);
+    
+    // Second call should also work (firstFrame_ = false)
+    bool ret2 = adapter.DrawFrame();
+    ASSERT_EQ(ret2, true);
+    
+    // Multiple calls should all work
+    bool ret3 = adapter.DrawFrame();
+    ASSERT_EQ(ret3, true);
+}
+
+/**
+ * @tc.name: Constructor1
+ * @tc.desc: Verify WidgetAdapter constructor with different keys
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, Constructor1, testing::ext::TestSize.Level1)
+{
+    uint32_t key1 = 0;
+    uint32_t key2 = 12345;
+    uint32_t key3 = UINT32_MAX;
+    
+    WidgetAdapter adapter1(key1);
+    WidgetAdapter adapter2(key2);
+    WidgetAdapter adapter3(key3);
+    
+    // Just verify they can be constructed without crash
+    // The actual key value is private, so we can't verify it directly
+    (void)adapter1;
+    (void)adapter2;
+    (void)adapter3;
+}
+
+/**
+ * @tc.name: Destructor1
+ * @tc.desc: Verify WidgetAdapter destructor with valid engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, Destructor1, testing::ext::TestSize.Level1)
+{
+    // Create adapter with engine and let it go out of scope
+    {
+        WidgetAdapter adapter(0U);
+        auto engine = std::make_unique<EngineTest>();
+        adapter.Initialize(std::move(engine));
+        // adapter will be destroyed when leaving scope
+    }
+    // If we reach here without crash, destructor worked
+}
+
+/**
+ * @tc.name: Destructor2
+ * @tc.desc: Verify WidgetAdapter destructor without engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
+HWTEST_F(WidgetAdapter3DTest, Destructor2, testing::ext::TestSize.Level1)
+{
+    // Create adapter without engine and let it go out of scope
+    {
+        WidgetAdapter adapter(0U);
+        // Don't initialize with engine
+        // adapter will be destroyed when leaving scope
+    }
+    // If we reach here without crash, destructor worked
+}
 }  // namespace
 }  // namespace OHOS::Render3D
