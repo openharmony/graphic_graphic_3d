@@ -485,11 +485,11 @@ HWTEST_F(WidgetAdapter3DTest, DrawFrame2, testing::ext::TestSize.Level1)
 }
 
 /**
-* @tc.name: DeInitEngine1
-* @tc.desc: Verify DeInitEngine with valid engine
-* @tc.type: FUNC
-* @tc.require: SR000GUGO2
-*/
+ * @tc.name: DeInitEngine1
+ * @tc.desc: Verify DeInitEngine with valid engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, DeInitEngine1, testing::ext::TestSize.Level1)
 {
     WidgetAdapter adapter(0U);
@@ -501,11 +501,11 @@ HWTEST_F(WidgetAdapter3DTest, DeInitEngine1, testing::ext::TestSize.Level1)
 }
  	 
 /**
-* @tc.name: DeInitEngine2
-* @tc.desc: Verify DeInitEngine with null engine
-* @tc.type: FUNC
-* @tc.require: SR000GUGO2
-*/
+ * @tc.name: DeInitEngine2
+ * @tc.desc: Verify DeInitEngine with null engine
+ * @tc.type: FUNC
+ * @tc.require: SR000GUGO2
+ */
 HWTEST_F(WidgetAdapter3DTest, DeInitEngine2, testing::ext::TestSize.Level1)
 {
     WidgetAdapter adapter(0U);
