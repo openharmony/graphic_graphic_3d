@@ -43,7 +43,15 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && colorFringe_.lock() == other->colorFringe_.lock());
+        auto myPostProc = postProc_.lock();
+        auto otherPostProc = other->postProc_.lock();
+        auto myColorFringe = colorFringe_.lock();
+        auto otherColorFringe = other->colorFringe_.lock();
+
+        if (!myPostProc || !otherPostProc || !myColorFringe || !otherColorFringe) {
+            return false;
+        }
+        return (myPostProc == otherPostProc && myColorFringe == otherColorFringe);
     }
 
     bool IsMatch(const std::shared_ptr<ColorFringeETS> other) const

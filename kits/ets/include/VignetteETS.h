@@ -47,7 +47,15 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && vignette_.lock() == other->vignette_.lock());
+        auto myPostProc = postProc_.lock();
+        auto otherPostProc = other->postProc_.lock();
+        auto myVignette = vignette_.lock();
+        auto otherVignette = other->vignette_.lock();
+
+        if (!myPostProc || !otherPostProc || !myVignette || !otherVignette) {
+            return false;
+        }
+        return (myPostProc == otherPostProc && myVignette == otherVignette);
     }
 
     bool IsMatch(const std::shared_ptr<VignetteETS> other) const

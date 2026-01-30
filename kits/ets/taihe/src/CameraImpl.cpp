@@ -125,53 +125,47 @@ void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &p
         cameraETS_->SetPostProcess(nullptr);
         return;
     }
-    std::shared_ptr<PostProcessETS> pp;
     ScenePostProcessSettings::PostProcessSettings ppValue = process.get_postProcess_ref();
-    bool createNewOne = true;
-    if (this->postProcessSettingsImpl_ != nullptr) {
-        WIDGET_LOGI("a post process settings that assosict with a camera");
-        createNewOne = false;
-        pp = this->postProcessSettingsImpl_->GetInternalSettings();
+
+    // Parse all settings from ppValue
+    taihe::optional<ScenePostProcessSettings::ToneMappingSettings> tonemapOp = ppValue->getToneMapping();
+    std::shared_ptr<TonemapETS> tonemap;
+    if (tonemapOp.has_value()) {
+        tonemap = ToneMappingSettingsImpl::CreateInternal(tonemapOp.value());
+    } else {
+        WIDGET_LOGI("CameraImpl::setPostProcess: disable tonemap");
+        tonemap = nullptr;
     }
-    if (createNewOne) {
-        taihe::optional<ScenePostProcessSettings::ToneMappingSettings> tonemapOp = ppValue->getToneMapping();
-        std::shared_ptr<TonemapETS> tonemap;
-        if (tonemapOp.has_value()) {
-            tonemap = ToneMappingSettingsImpl::CreateInternal(tonemapOp.value());
-        } else {
-            WIDGET_LOGI("CameraImpl::setPostProcess: disable tonemap");
-            tonemap = nullptr;
-        }
 
-        taihe::optional<ScenePostProcessSettings::BloomSettings> bloomOp = ppValue->getBloom();
-        std::shared_ptr<BloomETS> bloom;
-        if (bloomOp.has_value()) {
-            bloom = BloomSettingsImpl::CreateInternal(bloomOp.value());
-        } else {
-            WIDGET_LOGI("CameraImpl::setPostProcess: disable bloom");
-            bloom = nullptr;
-        }
-
-        taihe::optional<ScenePostProcessSettings::VignetteSettings> vignetteOp = ppValue->getVignette();
-        std::shared_ptr<VignetteETS> vignette;
-        if (vignetteOp.has_value()) {
-            vignette = VignetteSettingsImpl::CreateInternal(vignetteOp.value());
-        } else {
-            WIDGET_LOGI("CameraImpl::setPostProcess: disable vignette");
-            vignette = nullptr;
-        }
-
-        taihe::optional<ScenePostProcessSettings::ColorFringeSettings> colorFringeOp = ppValue->getColorFringe();
-        std::shared_ptr<ColorFringeETS> colorFringe;
-        if (colorFringeOp.has_value()) {
-            colorFringe = ColorFringeSettingsImpl::CreateInternal(colorFringeOp.value());
-        } else {
-            WIDGET_LOGI("CameraImpl::setPostProcess: disable colorFringe");
-            colorFringe = nullptr;
-        }
-        pp = std::make_shared<PostProcessETS>(tonemap, bloom, vignette, colorFringe);
-        postProcessSettingsImpl_ = std::make_shared<PostProcessSettingsImpl>(pp);
+    taihe::optional<ScenePostProcessSettings::BloomSettings> bloomOp = ppValue->getBloom();
+    std::shared_ptr<BloomETS> bloom;
+    if (bloomOp.has_value()) {
+        bloom = BloomSettingsImpl::CreateInternal(bloomOp.value());
+    } else {
+        WIDGET_LOGI("CameraImpl::setPostProcess: disable bloom");
+        bloom = nullptr;
     }
+
+    taihe::optional<ScenePostProcessSettings::VignetteSettings> vignetteOp = ppValue->getVignette();
+    std::shared_ptr<VignetteETS> vignette;
+    if (vignetteOp.has_value()) {
+        vignette = VignetteSettingsImpl::CreateInternal(vignetteOp.value());
+    } else {
+        WIDGET_LOGI("CameraImpl::setPostProcess: disable vignette");
+        vignette = nullptr;
+    }
+
+    taihe::optional<ScenePostProcessSettings::ColorFringeSettings> colorFringeOp = ppValue->getColorFringe();
+    std::shared_ptr<ColorFringeETS> colorFringe;
+    if (colorFringeOp.has_value()) {
+        colorFringe = ColorFringeSettingsImpl::CreateInternal(colorFringeOp.value());
+    } else {
+        WIDGET_LOGI("CameraImpl::setPostProcess: disable colorFringe");
+        colorFringe = nullptr;
+    }
+
+    WIDGET_LOGI("Create new post process settings");
+    std::shared_ptr<PostProcessETS> pp = std::make_shared<PostProcessETS>(tonemap, bloom, vignette, colorFringe);
     cameraETS_->SetPostProcess(pp);
 }
 

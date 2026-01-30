@@ -67,17 +67,23 @@ void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
 {
     auto pp = postProc_.lock();
     if (!pp) {
+        // not assign to a native PostProcess yet, just stage the value
+        if (tonemap_) {
+            tonemap_->SetEnabled(true);
+            tonemap_->SetType(tonemap->GetType());
+            tonemap_->SetExposure(tonemap->GetExposure());
+        } else {
+            tonemap_ = std::move(tonemap);
+        }
         return;
     }
-
     if (!tonemap_) {
         SCENE_NS::ITonemap::Ptr toneValue = META_NS::GetValue(pp->Tonemap());
         tonemap_ = std::make_shared<TonemapETS>(pp, toneValue);
     }
-
     if (tonemap) {
         if (tonemap_->StrictEqual(tonemap)) {
-            // setting the exactly the same tonemap setting. do nothing.
+            // set self to self, do nothing
             return;
         }
         if (tonemap_->IsMatch(tonemap)) {
@@ -119,6 +125,19 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
 {
     auto pp = postProc_.lock();
     if (!pp) {
+        // not assign to a native PostProcess yet, just stage the value
+        if (bloom_) {
+            bloom_->SetEnabled(true);
+            bloom_->SetType(bloom->GetType());
+            bloom_->SetQuality(bloom->GetQuality());
+            bloom_->SetThresholdHard(bloom->GetThresholdHard());
+            bloom_->SetThresholdSoft(bloom->GetThresholdSoft());
+            bloom_->SetScatter(bloom->GetScatter());
+            bloom_->SetScaleFactor(bloom->GetScaleFactor());
+            bloom_->SetAmountCoefficient(bloom->GetAmountCoefficient());
+        } else {
+            bloom_ = std::move(bloom);
+        }
         return;
     }
     if (!bloom_) {
@@ -127,7 +146,7 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
     }
     if (bloom) {
         if (bloom_->StrictEqual(bloom)) {
-            // setting the exactly the same bloom setting. do nothing.
+            // set self to self, do nothing
             return;
         }
         if (bloom_->IsMatch(bloom)) {
@@ -174,6 +193,14 @@ void PostProcessETS::SetVignette(const std::shared_ptr<VignetteETS> vignette)
 {
     auto pp = postProc_.lock();
     if (!pp) {
+        // not assign to a native PostProcess yet, just stage the value
+        if (vignette_) {
+            vignette_->SetEnabled(true);
+            vignette_->SetRoundness(vignette->GetRoundness());
+            vignette_->SetIntensity(vignette->GetIntensity());
+        } else {
+            vignette_ = std::move(vignette);
+        }
         return;
     }
     if (!vignette_) {
@@ -182,7 +209,7 @@ void PostProcessETS::SetVignette(const std::shared_ptr<VignetteETS> vignette)
     }
     if (vignette) {
         if (vignette_->StrictEqual(vignette)) {
-            // setting the exactly the same vignette setting. do nothing.
+            // set self to self, do nothing
             return;
         }
         if (vignette_->IsMatch(vignette)) {
@@ -193,7 +220,7 @@ void PostProcessETS::SetVignette(const std::shared_ptr<VignetteETS> vignette)
                 return META_NS::IAny::Ptr{};
             });
         } else {
-            CORE_LOG_F("Invalid state. Can't change the post process of a bloom if it already has one");
+            CORE_LOG_F("Invalid state. Can't change the post process of a vignette if it already has one");
         }
     } else {
         vignette_->SetEnabled(false);
@@ -224,6 +251,13 @@ void PostProcessETS::SetColorFringe(const std::shared_ptr<ColorFringeETS> colorF
 {
     auto pp = postProc_.lock();
     if (!pp) {
+        // not assign to a native PostProcess yet, just stage the value
+        if (colorFringe_) {
+            colorFringe_->SetEnabled(true);
+            colorFringe_->SetIntensity(colorFringe->GetIntensity());
+        } else {
+            colorFringe_ = std::move(colorFringe);
+        }
         return;
     }
     if (!colorFringe_) {
@@ -232,7 +266,7 @@ void PostProcessETS::SetColorFringe(const std::shared_ptr<ColorFringeETS> colorF
     }
     if (colorFringe) {
         if (colorFringe_->StrictEqual(colorFringe)) {
-            // setting the exactly the same colorFringe setting. do nothing.
+            // set self to self, do nothing
             return;
         }
         if (colorFringe_->IsMatch(colorFringe)) {
@@ -242,7 +276,7 @@ void PostProcessETS::SetColorFringe(const std::shared_ptr<ColorFringeETS> colorF
                 return META_NS::IAny::Ptr{};
             });
         } else {
-            CORE_LOG_F("Invalid state. Can't change the post process of a bloom if it already has one");
+            CORE_LOG_F("Invalid state. Can't change the post process of a colorFringe if it already has one");
         }
     } else {
         colorFringe_->SetEnabled(false);
