@@ -476,8 +476,8 @@ HWTEST_F(WidgetAdapter3DTest, UnloadEnvModel1, testing::ext::TestSize.Level1)
  */
 HWTEST_F(WidgetAdapter3DTest, DrawFrame2, testing::ext::TestSize.Level1)
 {
- 	WidgetAdapter adapter(0U);
- 	auto engine = std::make_unique<EngineTest>();
+    WidgetAdapter adapter(0U);
+    auto engine = std::make_unique<EngineTest>();
     adapter.Initialize(std::move(engine));
     bool ret = adapter.DrawFrame();
     adapter.DrawFrame();
