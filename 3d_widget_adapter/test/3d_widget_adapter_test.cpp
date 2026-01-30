@@ -479,9 +479,12 @@ HWTEST_F(WidgetAdapter3DTest, DrawFrame2, testing::ext::TestSize.Level1)
     WidgetAdapter adapter(0U);
     auto engine = std::make_unique<EngineTest>();
     adapter.Initialize(std::move(engine));
-    bool ret = adapter.DrawFrame();
-    adapter.DrawFrame();
-    ASSERT_EQ(ret, true);
+    bool ret1 = adapter.DrawFrame();
+    ASSERT_EQ(ret1, true);
+    bool ret2 = adapter.DrawFrame();
+    ASSERT_EQ(ret2, true);
+    bool ret3 = adapter.DrawFrame();
+    ASSERT_EQ(ret3, true);
 }
 
 /**
