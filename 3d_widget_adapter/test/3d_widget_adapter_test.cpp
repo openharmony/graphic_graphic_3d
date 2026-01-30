@@ -493,7 +493,7 @@ HWTEST_F(WidgetAdapter3DTest, DrawFrame2, testing::ext::TestSize.Level1)
  */
 HWTEST_F(WidgetAdapter3DTest, DeInitEngine1, testing::ext::TestSize.Level1)
 {
-  -  WidgetAdapter adapter(0U);
+    WidgetAdapter adapter(0U);
     auto engine = std::make_unique<EngineTest>();
     adapter.Initialize(std::move(engine));
     bool beforeDeinit = adapter.SetupCameraViewport(800, 600);
