@@ -102,6 +102,25 @@ ohos_unittest("TextureLayerUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("ShaderInputBufferUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "shader_input_buffer_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 group("unittest") {
   testonly = true
 
@@ -109,6 +128,7 @@ group("unittest") {
     ":3d_widget_adpater_test",
     ":EngineFactoryTest",
     ":GraphicsManagerUnitTest",
+    ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",
   ]
 }

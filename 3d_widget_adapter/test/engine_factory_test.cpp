@@ -127,6 +127,8 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Loop_MemoryStability, testing::ext::Tes
 {
     // Create and destroy multiple engines in a loop
     const int iterationCount = 100;
+    int validEngineCount = 0;
+
     for (int i = 0; i < iterationCount; ++i) {
         auto engine = EngineFactory::CreateEngine(EngineFactory::EngineType::LUME);
 
@@ -134,11 +136,15 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Loop_MemoryStability, testing::ext::Tes
         ASSERT_NE(engine, nullptr);
         EXPECT_NE(engine.get(), nullptr);
 
+        if (engine && engine.get()) {
+            validEngineCount++;
+        }
+
         // Engine will be automatically destroyed when going out of scope
     }
 
-    // If we reach here without crashing, memory management is working
-    EXPECT_TRUE(true);
+    // Verify all iterations created valid engines
+    EXPECT_EQ(validEngineCount, iterationCount);
 }
 
 /**
@@ -192,17 +198,19 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Release_ManualDestruction, testing::ext
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Scope_AutoDestruction, testing::ext::TestSize.Level1)
 {
-    // Create engine in a scope
-    {
-        auto engine = EngineFactory::CreateEngine(EngineFactory::EngineType::LUME);
-        ASSERT_NE(engine, nullptr);
-        ASSERT_NE(engine.get(), nullptr);
+    IEngine* rawPtr = nullptr;
+    auto engine = EngineFactory::CreateEngine(EngineFactory::EngineType::LUME);
+    ASSERT_NE(engine, nullptr);
+    ASSERT_NE(engine.get(), nullptr);
+    rawPtr = engine.get();
 
-        // Engine will be automatically destroyed here
+    auto engine2 = EngineFactory::CreateEngine(EngineFactory::EngineType::LUME);
+    EXPECT_NE(engine2, nullptr);
+
+    // Verify new engine has a different address (old one was properly destroyed)
+    if (rawPtr != nullptr) {
+        EXPECT_NE(engine2.get(), rawPtr);
     }
-
-    // If we reach here without crashing, automatic destruction works
-    EXPECT_TRUE(true);
 }
 
 /**

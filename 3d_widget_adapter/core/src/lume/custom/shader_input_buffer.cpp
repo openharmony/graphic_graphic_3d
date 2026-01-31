@@ -76,8 +76,8 @@ void ShaderInputBuffer::Update(float *buffer, uint32_t floatSize)
         return;
     }
 
-    auto ret = memcpy_s(reinterpret_cast<void *>(buffer_), floatSize_,
-        reinterpret_cast<void *>(buffer), floatSize);
+    auto ret = memcpy_s(reinterpret_cast<void *>(buffer_), floatSize_ * sizeof(float),
+        reinterpret_cast<void *>(buffer), floatSize * sizeof(float));
     if (ret != EOK) {
         WIDGET_LOGE("ShaderInputBuffer Update memory copy error");
     }
