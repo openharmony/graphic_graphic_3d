@@ -54,7 +54,15 @@ public:
         if (!other) {
             return false;
         }
-        return (camera_.lock() == other->camera_.lock() && postProc_.lock() == other->postProc_.lock());
+        auto myCamera = camera_.lock();
+        auto otherCamera = other->camera_.lock();
+        auto myPostProc = postProc_.lock();
+        auto otherPostProc = other->postProc_.lock();
+
+        if (!myCamera || !otherCamera || !myPostProc || !otherPostProc) {
+            return false;
+        }
+        return (myCamera == otherCamera && myPostProc == otherPostProc);
     }
 
     bool IsMatch(const std::shared_ptr<PostProcessETS> other) const

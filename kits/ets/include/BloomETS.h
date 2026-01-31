@@ -68,7 +68,15 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && bloom_.lock() == other->bloom_.lock());
+        auto myPostProc = postProc_.lock();
+        auto otherPostProc = other->postProc_.lock();
+        auto myBloom = bloom_.lock();
+        auto otherBloom = other->bloom_.lock();
+
+        if (!myPostProc || !otherPostProc || !myBloom || !otherBloom) {
+            return false;
+        }
+        return (myPostProc == otherPostProc && myBloom == otherBloom);
     }
 
     bool IsMatch(const std::shared_ptr<BloomETS> other) const

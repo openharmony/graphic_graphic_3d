@@ -51,7 +51,15 @@ public:
         if (!other) {
             return false;
         }
-        return (postProc_.lock() == other->postProc_.lock() && tonemap_.lock() == other->tonemap_.lock());
+        auto myPostProc = postProc_.lock();
+        auto otherPostProc = other->postProc_.lock();
+        auto myTonemap = tonemap_.lock();
+        auto otherTonemap = other->tonemap_.lock();
+
+        if (!myPostProc || !otherPostProc || !myTonemap || !otherTonemap) {
+            return false;
+        }
+        return (myPostProc == otherPostProc && myTonemap == otherTonemap);
     }
 
     bool IsMatch(const std::shared_ptr<TonemapETS> other) const
