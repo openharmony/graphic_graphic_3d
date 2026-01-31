@@ -248,11 +248,6 @@ ohos_source_set("lume_engine_src") {
       "src/os/ohos/ohos_filesystem.h",
       "src/os/ohos/platform_ohos.cpp",
       "src/os/ohos/platform_ohos.h",
-      "src/os/elf/elf_common.h",
-      "src/os/elf/elf32.h",
-      "src/os/elf/elf64.h",
-      "src/os/elf/process_elf.cpp",
-      "src/os/elf/process_elf.h",
     ]
   }
 
