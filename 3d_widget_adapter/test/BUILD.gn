@@ -57,6 +57,31 @@ ohos_unittest("GraphicsManagerUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("EngineFactoryTest") {
+  module_out_path = module_output_path
+
+  sources = [ "engine_factory_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "graphic_2d:librender_service_client",
+    "hilog:libhilog",
+  ]
+
+  include_dirs = [
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include",
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/include/ohos"
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 ohos_unittest("TextureLayerUnitTest") {
   module_out_path = module_output_path
 
@@ -82,6 +107,7 @@ group("unittest") {
 
   deps = [
     ":3d_widget_adpater_test",
+    ":EngineFactoryTest",
     ":GraphicsManagerUnitTest",
     ":TextureLayerUnitTest",
   ]
