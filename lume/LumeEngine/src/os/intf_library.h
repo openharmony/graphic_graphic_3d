@@ -16,11 +16,8 @@
 #ifndef API_CORE_OS_ILIBRARY_H
 #define API_CORE_OS_ILIBRARY_H
 
-#include <base/containers/array_view.h>
 #include <base/containers/string_view.h>
 #include <base/containers/unique_ptr.h>
-#include <base/util/uid.h>
-#include <core/io/intf_file.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -37,12 +34,6 @@ public:
     /** Get plugin */
     virtual IPlugin* GetPlugin() const = 0;
 
-    /** Get UID of the plugin. */
-    virtual BASE_NS::Uid GetPluginUid() const = 0;
-
-    /** Get dependencies of the plugin. */
-    virtual BASE_NS::array_view<const BASE_NS::Uid> GetPluginDependencies() const = 0;
-
     /** Get library file extension */
     static BASE_NS::string_view GetFileExtension();
 
@@ -56,7 +47,7 @@ public:
     using Ptr = BASE_NS::unique_ptr<ILibrary, Deleter>;
 
     /** Load library from given path */
-    static ILibrary::Ptr Load(BASE_NS::string_view filepath, const IFile::Ptr&);
+    static ILibrary::Ptr Load(BASE_NS::string_view filepath);
 
 protected:
     ILibrary() = default;
