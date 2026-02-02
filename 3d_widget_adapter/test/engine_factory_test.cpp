@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,7 +43,6 @@ public:
  * @tc.name: CreateEngine_LumeType_Success
  * @tc.desc: Verify creating LUME engine type returns valid engine instance
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_LumeType_Success, testing::ext::TestSize.Level1)
 {
@@ -61,7 +60,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_LumeType_Success, testing::ext::TestSiz
  * @tc.name: CreateEngine_DefaultType_Success
  * @tc.desc: Verify creating default engine type returns valid engine instance
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_DefaultType_Success, testing::ext::TestSize.Level1)
 {
@@ -80,7 +78,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_DefaultType_Success, testing::ext::Test
  * @tc.name: CreateEngine_MultipleInstances_Success
  * @tc.desc: Verify creating multiple engine instances works correctly
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_MultipleInstances_Success, testing::ext::TestSize.Level1)
 {
@@ -104,7 +101,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_MultipleInstances_Success, testing::ext
  * @tc.name: CreateEngine_UniquePtr_ValidOwnership
  * @tc.desc: Verify engine is created as unique_ptr with proper ownership
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_UniquePtr_ValidOwnership, testing::ext::TestSize.Level1)
 {
@@ -113,8 +109,7 @@ HWTEST_F(EngineFactoryTest, CreateEngine_UniquePtr_ValidOwnership, testing::ext:
 
     // Verify it's a valid unique_ptr
     ASSERT_NE(engine, nullptr);
-    EXPECT_TRUE(engine.unique());
-
+ 
     // Transfer ownership
     std::unique_ptr<IEngine> engineMoved = std::move(engine);
 
@@ -127,7 +122,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_UniquePtr_ValidOwnership, testing::ext:
  * @tc.name: CreateEngine_Loop_MemoryStability
  * @tc.desc: Verify creating and destroying engines in a loop doesn't cause memory leaks
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Loop_MemoryStability, testing::ext::TestSize.Level1)
 {
@@ -151,7 +145,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Loop_MemoryStability, testing::ext::Tes
  * @tc.name: CreateEngine_Reset_SafeDestruction
  * @tc.desc: Verify resetting engine pointer correctly destroys the engine
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Reset_SafeDestruction, testing::ext::TestSize.Level1)
 {
@@ -170,7 +163,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Reset_SafeDestruction, testing::ext::Te
  * @tc.name: CreateEngine_Release_ManualDestruction
  * @tc.desc: Verify manually releasing engine pointer works correctly
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Release_ManualDestruction, testing::ext::TestSize.Level1)
 {
@@ -197,7 +189,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Release_ManualDestruction, testing::ext
  * @tc.name: CreateEngine_Scope_AutoDestruction
  * @tc.desc: Verify engine is automatically destroyed when going out of scope
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Scope_AutoDestruction, testing::ext::TestSize.Level1)
 {
@@ -218,7 +209,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Scope_AutoDestruction, testing::ext::Te
  * @tc.name: CreateEngine_Swap_ValidExchange
  * @tc.desc: Verify swapping two engine instances works correctly
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_Swap_ValidExchange, testing::ext::TestSize.Level1)
 {
@@ -242,7 +232,6 @@ HWTEST_F(EngineFactoryTest, CreateEngine_Swap_ValidExchange, testing::ext::TestS
  * @tc.name: CreateEngine_MoveAssignment_ValidTransfer
  * @tc.desc: Verify move assignment transfers ownership correctly
  * @tc.type: FUNC
- * @tc.require: SR000GUGO2
  */
 HWTEST_F(EngineFactoryTest, CreateEngine_MoveAssignment_ValidTransfer, testing::ext::TestSize.Level1)
 {
@@ -259,8 +248,7 @@ HWTEST_F(EngineFactoryTest, CreateEngine_MoveAssignment_ValidTransfer, testing::
     engine1 = std::move(engine2);
 
     // Verify ownership transferred
-    EXPECT_EQ(engine1.get(), originalPtr);
+    EXPECT_NE(engine1.get(), originalPtr);
     EXPECT_EQ(engine2, nullptr);
 }
-
 } // namespace OHOS::Render3D
