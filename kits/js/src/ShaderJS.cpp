@@ -39,6 +39,8 @@ void ShaderJS::Init(napi_env env, napi_value exports)
     SceneResourceImpl::GetPropertyDescs(node_props);
 
 #define NAPI_API_JS_NAME Shader
+    DeclareMethod("setShaderInputs", SetInputs, NapiApi::Object);
+    // maintain compatibility, to be deleted later
     DeclareMethod("SetInputs", SetInputs, NapiApi::Object);
     DeclareGet(NapiApi::Object, "inputs", GetInputs);
 
