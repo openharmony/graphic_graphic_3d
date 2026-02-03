@@ -238,7 +238,7 @@ ohos_source_set("lume_3d_src") {
   if (!LUME_OHOS_BUILD) {
     external_deps += [
       "meshoptimizer:meshoptimizer",
-  ]
+    ]
   }
 
   if (RENDER_BUILD_VULKAN) {
