@@ -23,7 +23,7 @@ class Cube : public Geometry {
 public:
     Cube(std::string name, float width, float height, float depth, Vec3& position) : Geometry(name, position),
         width_(width), height_(height), depth_(depth) {};
-    ~Cube override() {};
+    ~Cube() override {};
 
     int32_t GetType() const override
     {
