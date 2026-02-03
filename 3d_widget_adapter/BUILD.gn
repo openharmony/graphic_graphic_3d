@@ -152,7 +152,6 @@ ohos_source_set("widget_adapter_source") {
   ]
 
   public_configs = [ ":widget_adapter_config" ]
-
   external_deps = []
 
   if (current_os == "ohos") {

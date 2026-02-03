@@ -145,7 +145,7 @@ source_set("campreview_rofs_obj") {
   if (target_cpu == "x64") {
     output_obj = "${CAM_PREVIEW_ROFS}_x64.o"
   }
-  
+
   sources = [ "${target_gen_dir}/assets/${output_obj}" ]
   deps = [ ":CAM_PREVIEW_ROFS" ]
 }

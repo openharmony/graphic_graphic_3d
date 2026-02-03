@@ -23,7 +23,7 @@ class Sphere : public Geometry {
 public:
     Sphere(std::string name, float radius, float rings, float sectors, Vec3& position)
         : Geometry(name, position), radius_(radius), rings_(rings), sectors_(sectors) {};
-    virtual ~Sphere() {};
+    ~Sphere() override {};
 
     int32_t GetType() const override
     {
