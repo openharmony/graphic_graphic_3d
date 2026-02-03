@@ -95,7 +95,7 @@ static inline napi_value TROGetter(napi_env env, napi_callback_info info)
     NapiApi::FunctionContext fc(env, info);
     if (fc) {
         if (TrueRootObject* instance = fc.This().GetRoot()) {
-            if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
+            if (auto impl = static_cast<Object*>(instance->GetInstanceImpl(Object::ID))) {
                 return (impl->*F)(fc);
             }
         };
@@ -108,7 +108,7 @@ static inline napi_value TROSetter(napi_env env, napi_callback_info info)
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc) {
         if (TrueRootObject* instance = fc.This().GetRoot()) {
-            if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
+            if (auto impl = static_cast<Object*>(instance->GetInstanceImpl(Object::ID))) {
                 (impl->*F)(fc);
             }
         }
@@ -150,7 +150,7 @@ napi_value TROMethod(napi_env env, napi_callback_info info)
     FC fc(env, info);
     if (fc) {
         if (TrueRootObject* instance = fc.This().GetRoot()) {
-            if (Object* impl = (Object*)instance->GetInstanceImpl(Object::ID)) {
+            if (auto impl = static_cast<Object*>(instance->GetInstanceImpl(Object::ID))) {
                 return (impl->*F)(fc);
             }
         }
