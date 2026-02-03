@@ -313,7 +313,8 @@ RENDER_NS::IRenderContext::Ptr LumeCommon::CreateRenderContext(EGLContext gfxCon
 
     Render::DeviceCreateInfo deviceCreateInfo;
     std::string backendProp = LumeRenderConfig::GetInstance().renderBackend_ == "force_vulkan" ? "vulkan" :
-        ((activateProductBasis_ || activateProductContentBasis_) ? LumeRenderConfig::GetInstance().renderBackend_ : "gles");
+        ((activateProductBasis_ || activateProductContentBasis_) ?
+        LumeRenderConfig::GetInstance().renderBackend_ : "gles");
 
     RENDER_NS::BackendExtraVk vkExtra;
     RENDER_NS::BackendExtraGLES glesExtra;
