@@ -958,7 +958,6 @@ void Compare(BASE_NS::string const& lhs, BASE_NS::string_view rhs)
 UNIT_TEST(API_ContainersString, DISABLED_Resize, testing::ext::TestSize.Level1)
 {
 }
-#endif
 #endif DISABLED_TESTS_ON
 
 template<typename Lhs, typename Rhs>
