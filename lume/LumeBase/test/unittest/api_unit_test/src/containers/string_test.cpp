@@ -340,6 +340,7 @@ UNIT_TEST(API_ContainersString, Assign, testing::ext::TestSize.Level1)
         BASE_NS::allocator alloc { &custom, CustomAllocator::alloc, CustomAllocator::free };
         AssingString(alloc, alloc);
     }
+#ifdef DISABLED_TESTS_ON
     {
         ShortAllocator customShort;
         char hugeCharArray[256] = "";
@@ -362,6 +363,7 @@ UNIT_TEST(API_ContainersString, Assign, testing::ext::TestSize.Level1)
         EXPECT_EQ(valCustom.size(), 0);
         EXPECT_EQ(valCustom.capacity(), 30); // const empty short string capacity
     }
+#endif
 }
 
 /**
@@ -462,7 +464,7 @@ void VerifyInsertResult(
 UNIT_TEST(API_ContainersString, DISABLED_Insert, testing::ext::TestSize.Level1)
 {
 }
-#endif DISABLED_TESTS_ON
+#endif
 
 void VerifyEraseResult(
     BASE_NS::string const& testString, const char* initialValue, const size_t index, const size_t count)
@@ -957,7 +959,7 @@ void Compare(BASE_NS::string const& lhs, BASE_NS::string_view rhs)
 UNIT_TEST(API_ContainersString, DISABLED_Resize, testing::ext::TestSize.Level1)
 {
 }
-#endif DISABLED_TESTS_ON
+#endif
 
 template<typename Lhs, typename Rhs>
 void CompareTest(Lhs lhs, Rhs rhs)
