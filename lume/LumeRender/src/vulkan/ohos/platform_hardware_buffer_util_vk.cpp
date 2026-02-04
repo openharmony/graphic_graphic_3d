@@ -86,7 +86,7 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     VkExternalMemoryImageCreateInfo externalMemoryImageCreateInfo {
         VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,        // sType
         nullptr,                                                    // pNext
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS, // handleTypes
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OH_NATIVE_BUFFER_BIT_OHOS, // handleTypes
     };
     imageCreateInfo.pNext = &externalMemoryImageCreateInfo;
     if (useExternalFormat) { // chain external format

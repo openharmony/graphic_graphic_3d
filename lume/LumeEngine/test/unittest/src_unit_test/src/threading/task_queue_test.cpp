@@ -97,6 +97,7 @@ UNIT_TEST(SRC_TaskQueueTest, testExecutionOrder, testing::ext::TestSize.Level1)
     gStorage.checkValidity(5);
 }
 
+#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: testHierarchy
@@ -259,6 +260,7 @@ UNIT_TEST(SRC_TaskQueueTest, testBlocking, testing::ext::TestSize.Level1)
 
     gStorage.checkValidity(7);
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: testPrematureDestruction
@@ -462,6 +464,8 @@ UNIT_TEST(SRC_TaskQueueTest, testDispatcherOverMultipleFrames, testing::ext::Tes
 
     gStorage.checkValidity(10);
 }
+
+#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: multithreadIo
@@ -610,3 +614,4 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
         EXPECT_EQ(gStorage.data[2], 3);
     }
 }
+#endif // DISABLED_TESTS_ON

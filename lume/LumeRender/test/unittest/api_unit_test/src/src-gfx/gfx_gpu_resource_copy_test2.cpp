@@ -334,6 +334,7 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceCopyLayersTestVulkan, testing::
 {
     TestGpuResourceCopyLayers(DeviceBackendType::VULKAN, false);
 }
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: GpuResourceCopyLayersCompressedTestVulkan
  * @tc.desc: Tests mainly for GPU buffer-image, image-buffer copies with array layers and compressed image formats.
@@ -344,6 +345,7 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, DISABLED_GpuResourceCopyLayersCompressedTe
 {
     TestGpuResourceCopyLayers(DeviceBackendType::VULKAN, true);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

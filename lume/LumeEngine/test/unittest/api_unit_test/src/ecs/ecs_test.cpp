@@ -93,7 +93,7 @@ private:
 
 class TestComponent2Manager final : public BaseManager<TestComponent2, ITestComponent2Manager> {
 public:
-    explicit TestComponent2Manager(IEcs& ecs)
+    TestComponent2Manager(IEcs& ecs)
         : BaseManager<TestComponent2, ITestComponent2Manager>(ecs, CORE_NS::GetName<TestComponent2>())
     {}
 
@@ -421,9 +421,9 @@ public:
 bool operator==(const ComponentListener::Event& lhs, const ComponentListener::Event& rhs)
 {
     return lhs.type == rhs.type && &lhs.manager == &rhs.manager && lhs.entities.size() == rhs.entities.size() &&
-           std::all_of(std::begin(lhs.entities), std::end(lhs.entities), [&re = rhs.entities](const Entity& le) {
-                return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
-            });
+        std::all_of(std::begin(lhs.entities), std::end(lhs.entities), [&re = rhs.entities](const Entity& le) {
+            return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
+        });
 }
 
 constexpr const string_view systemGraph = "test://systemGraph.json";
@@ -1417,6 +1417,7 @@ UNIT_TEST(API_EcsTest, entityComparison, testing::ext::TestSize.Level1)
     static_assert(e2 >= e2);
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: systemAfterBefore
  * @tc.desc: Tests for System After Before. [AUTO-GENERATED]
@@ -1485,6 +1486,7 @@ UNIT_TEST(API_EcsTest, DISABLED_systemAfterBefore, testing::ext::TestSize.Level1
     pluginRegister.UnregisterTypeInfo(testSystemDInfo);
     pluginRegister.UnregisterTypeInfo(testComponentInfo);
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: sharedPtr

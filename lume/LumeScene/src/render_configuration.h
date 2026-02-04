@@ -29,10 +29,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class RenderConfiguration
-    : public META_NS::IntroduceInterfaces<Component, IRenderConfiguration, ICreateEntity,
-                                          META_NS::IPropertyOwner, META_NS::IMetadataOwner>
-{
+class RenderConfiguration : public META_NS::IntroduceInterfaces<
+    Component, IRenderConfiguration, ICreateEntity, META_NS::IPropertyOwner, META_NS::IMetadataOwner> {
     META_OBJECT(RenderConfiguration, ClassId::RenderConfiguration, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()

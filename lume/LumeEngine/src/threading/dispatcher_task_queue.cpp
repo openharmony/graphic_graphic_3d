@@ -80,6 +80,8 @@ void DispatcherTaskQueue::SubmitAfter(uint64_t afterIdentifier, uint64_t taskIde
 void DispatcherTaskQueue::SubmitAfter(
     BASE_NS::array_view<const uint64_t> afterIdentifiers, uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {
+    std::lock_guard lock(queueLock_);
+
     ptrdiff_t pos = -1;
     for (const auto afterIdentifier : afterIdentifiers) {
         auto it = std::find(tasks_.begin(), tasks_.end(), afterIdentifier);

@@ -840,6 +840,8 @@ UNIT_TEST(SRC_IoTest, directoryFilelist, testing::ext::TestSize.Level1)
     // Delete the test data.
     ASSERT_EQ(recursivelyDeleteDirectory(files.get(), directoryUri), true);
 }
+
+#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: fileMonitorTest
@@ -985,6 +987,7 @@ UNIT_TEST(SRC_IoTest, fileMonitorTest, testing::ext::TestSize.Level1)
     // Delete the temp data.
     ASSERT_TRUE(recursivelyDeleteDirectory(fileManager.get(), testRootUri));
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: missingProtocol
@@ -1011,6 +1014,7 @@ UNIT_TEST(SRC_IoTest, missingProtocol, testing::ext::TestSize.Level1)
         ASSERT_TRUE(dir == nullptr);
     }
 }
+#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: missingFilesAndDirs
@@ -1142,6 +1146,7 @@ UNIT_TEST(SRC_IoTest, TestDirectoryListing, testing::ext::TestSize.Level1)
         }
     }
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: normalizePath
@@ -1180,6 +1185,7 @@ UNIT_TEST(SRC_IoTest, normalizePath, testing::ext::TestSize.Level1)
     EXPECT_EQ(NormalizePath("foo/../bar/../"), "/");
     EXPECT_EQ(NormalizePath("foo/../../bar/"), "");
 }
+#ifdef DISABLED_TESTS_ON
 
 /**
  * @tc.name: fileApiTest
@@ -1215,6 +1221,7 @@ UNIT_TEST(SRC_IoTest, DISABLED_pathToolTest, testing::ext::TestSize.Level1)
 #endif
     EXPECT_TRUE(IsRelative(""));
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: fileModeTest

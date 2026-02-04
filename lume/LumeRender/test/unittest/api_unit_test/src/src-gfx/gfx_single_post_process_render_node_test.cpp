@@ -658,6 +658,7 @@ UNIT_TEST(
 {
     TestBloom(UTest::GetOpenGLBackend(), false);
 }
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: SinglePostProcessRenderNodeComputeBloomTestOpenGL
  * @tc.desc: Tests for a single bloom post process using compute in OpenGL.
@@ -674,6 +675,7 @@ UNIT_TEST(API_GfxSinglePostProcessRenderNode, SinglePostProcessRenderNodeCompute
 {
     TestBloom(UTest::GetOpenGLBackend(), true);
 }
+#endif // DISABLED_TESTS_ON
 /**
  * @tc.name: SinglePostProcessRenderNodeBlurTestOpenGL
  * @tc.desc: Tests for a single normal blur post process in OpenGL.

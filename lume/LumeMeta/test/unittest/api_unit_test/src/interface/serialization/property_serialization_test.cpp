@@ -99,6 +99,7 @@ UNIT_TEST(API_SerializationTest, ExportImportWeakPtrPropertyValue, testing::ext:
     ASSERT_TRUE(p2->GetValue().lock() == p1->GetValue());
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ExportImportWeakPtrPropertyWithGlobalAnchor
  * @tc.desc: Tests for Export Import Weak Ptr Property With Global Anchor. [AUTO-GENERATED]
@@ -134,6 +135,7 @@ UNIT_TEST(API_SerializationTest, DISABLED_ExportImportWeakPtrPropertyWithGlobalA
 
     GetObjectRegistry().GetGlobalSerializationData().UnregisterGlobalObject(interface_pointer_cast<IObject>(cont));
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: PropertyBind

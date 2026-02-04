@@ -550,6 +550,7 @@ UNIT_TEST(API_TaskQueueTest, CreateWaitableTask, testing::ext::TestSize.Level1)
     EXPECT_EQ(f->GetResultOr<int>(0), 1);
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: RecurringMultipleOrder
  * @tc.desc: Tests for Recurring Multiple Order. [AUTO-GENERATED]
@@ -583,6 +584,7 @@ UNIT_TEST(API_TaskQueueTest, DISABLED_RecurringMultipleOrder, testing::ext::Test
     EXPECT_TRUE(task1 == 5);
     EXPECT_TRUE(task2 == 6);
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: ApiFuture

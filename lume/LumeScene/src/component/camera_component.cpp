@@ -114,7 +114,8 @@ void CameraComponent::NotifyRenderTargetChanged()
 {
     if (renderTarget_ && IsActive()) {
         auto scene = GetInternalScene();
-        if (auto dr = interface_pointer_cast<META_NS::IDynamicResource>(renderTarget_)) {
+        auto dr = interface_pointer_cast<META_NS::IDynamicResource>(renderTarget_);
+        if (scene && dr) {
             // anyone listening?
             if (dr->EventOnResourceChanged(META_NS::MetadataQuery::EXISTING)) {
                 (void)scene->AddTaskOrRunDirectly(

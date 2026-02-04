@@ -22,7 +22,9 @@ config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
   ]
-
+  configs = [
+    "//third_party/bounds_checking_function:libsec_public_config",
+  ]
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0"

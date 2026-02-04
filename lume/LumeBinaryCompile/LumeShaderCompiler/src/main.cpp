@@ -55,7 +55,7 @@ struct CommandLineArgs {
     {
         // Jumping through some hoops to get the command line parameters as utf8 on Windows.
         this->argc = argc;
-        this->argvUtf8 = new char *[argc];
+        this->argvUtf8 = new char*[argc];
         for (int i = 0; i < argc; i++) {
             // ReSharper disable once CppDFAMemoryLeak
             argvUtf8[i] = AllocateUtf8String(argv[i], static_cast<int>(wcslen(argv[i])));

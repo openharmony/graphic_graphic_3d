@@ -340,7 +340,6 @@ UNIT_TEST(API_ContainersString, Assign, testing::ext::TestSize.Level1)
         BASE_NS::allocator alloc { &custom, CustomAllocator::alloc, CustomAllocator::free };
         AssingString(alloc, alloc);
     }
-#ifdef DISABLED_TESTS_ON
     {
         ShortAllocator customShort;
         char hugeCharArray[256] = "";
@@ -464,7 +463,7 @@ void VerifyInsertResult(
 UNIT_TEST(API_ContainersString, DISABLED_Insert, testing::ext::TestSize.Level1)
 {
 }
-#endif
+#endif DISABLED_TESTS_ON
 
 void VerifyEraseResult(
     BASE_NS::string const& testString, const char* initialValue, const size_t index, const size_t count)
@@ -960,6 +959,7 @@ UNIT_TEST(API_ContainersString, DISABLED_Resize, testing::ext::TestSize.Level1)
 {
 }
 #endif
+#endif DISABLED_TESTS_ON
 
 template<typename Lhs, typename Rhs>
 void CompareTest(Lhs lhs, Rhs rhs)

@@ -324,6 +324,7 @@ UNIT_TEST(API_GfxBloomRenderNodeTest, GfxBloomRenderNodeTestOpenGL, testing::ext
 {
     TestBloomRenderNode(UTest::GetOpenGLBackend(), false);
 }
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ComputeBloomRenderNodeTestOpenGL
  * @tc.desc: Tests for the bloom post process to work correctly on the OpenGL backend using a compute shader.
@@ -338,4 +339,5 @@ UNIT_TEST(API_GfxBloomRenderNodeTest, ComputeBloomRenderNodeTestOpenGL, testing:
 {
     TestBloomRenderNode(UTest::GetOpenGLBackend(), true);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

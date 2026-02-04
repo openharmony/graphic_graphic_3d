@@ -188,6 +188,7 @@ UNIT_TEST(API_GfxTest, CloudTestVulkan, testing::ext::TestSize.Level1)
     res.ShutdownTest();
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: CloudTestOpenGL
  * @tc.desc: Tests for Clouds rendering. Disabled at the moment as some of the required shader don't support GL.
@@ -220,6 +221,7 @@ UNIT_TEST(API_GfxTest, DISABLED_CloudTestOpenGL, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: CullingTestVulkan

@@ -130,7 +130,7 @@ void RenderConfiguration::OnPropertyChanged(const META_NS::IProperty& property)
         isset &= value.x > 0 && value.y > 0; // Require size to be larger than 0x0 even if set
         auto scene = GetInternalScene();
         if (scene) {
-            scene->RunDirectlyOrInTask( // need notice
+            scene->RunDirectlyOrInTask(
                 [this, scene, isset, value = BASE_NS::move(value)]() { UpdateShadowResolution(*scene, isset, value); });
         }
     } else if (name == SHADOW_QUALITY_PROP_NAME) {

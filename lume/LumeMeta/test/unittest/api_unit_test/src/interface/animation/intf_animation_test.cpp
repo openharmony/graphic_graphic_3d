@@ -212,6 +212,7 @@ UNIT_TEST_F(API_AnimationTest, KeyframeAnimationSerialization, testing::ext::Tes
     EXPECT_FALSE(ani->Running()->GetValue());
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ImplicitAnimation
  * @tc.desc: Tests for Implicit Animation. [AUTO-GENERATED]
@@ -289,6 +290,7 @@ UNIT_TEST_F(API_AnimationTest, DISABLED_ImplicitAnimation, testing::ext::TestSiz
     EXPECT_EQ(GetStartedCalledCount(), 2);
     EXPECT_EQ(GetFinishedCalledCount(), 2);
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: ImplicitAnimationNoEvaluate

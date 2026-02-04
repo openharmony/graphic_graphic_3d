@@ -370,6 +370,7 @@ UNIT_TEST(SRC_Device, DeviceTestVulkan, testing::ext::TestSize.Level1)
     TestDevice(engine);
     UTest::DestroyEngine(engine);
 }
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceBackendExtraTest2Vulkan
  * @tc.desc: DOES NOTHING RIGH NOW
@@ -383,6 +384,7 @@ UNIT_TEST(SRC_Device, DISABLED_DeviceBackendExtraTest2Vulkan, testing::ext::Test
     TestBackendExtra(engine);
     UTest::DestroyEngine(engine);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
@@ -401,6 +403,7 @@ UNIT_TEST(SRC_Device, LowLevelDeviceTestOpenGL, testing::ext::TestSize.Level1)
     UTest::DestroyEngine(engine);
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceConfigurationTestOpenGL
  * @tc.desc: Tests device configuration for OpenGL.
@@ -415,6 +418,7 @@ UNIT_TEST(SRC_Device, DISABLED_DeviceConfigurationTestOpenGL, testing::ext::Test
     TestConfig(engine);
     UTest::DestroyEngine(engine);
 }
+#endif // DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceTestOpenGL
  * @tc.desc: Tests for OpenGL device properties.
