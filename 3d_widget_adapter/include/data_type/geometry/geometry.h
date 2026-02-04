@@ -24,7 +24,7 @@ class Geometry {
 public:
     Geometry(std::string name, Vec3& position, bool castShadows = false, bool receiveShadows = false) : name_(name),
         position_(position), castShadows_(castShadows), receiveShadows_(receiveShadows) {};
-    ~Geometry() = default;
+    virtual ~Geometry() = default;
 
     virtual int32_t GetType() const = 0;
     virtual bool Equals(const Geometry& obj) const

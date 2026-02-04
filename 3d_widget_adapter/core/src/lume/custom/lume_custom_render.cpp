@@ -86,6 +86,7 @@ void LumeCustomRender::RegistorShaderPath(const std::string &shaderPath)
         }
     }
     engine_->GetFileManager().RegisterPath("shaders", tempPath.c_str(), false);
+
     static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc{ "shaders://" };
     renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc);
     renderContext_->GetDevice().GetShaderManager().LoadShaderFile(shaderPath.c_str());
@@ -255,7 +256,8 @@ std::string GetFileNameFromPath(const std::string &path)
     return path;
 }
 
-void LumeCustomRender::LoadRenderNodeGraph(const std::string &rngUri, const RENDER_NS::RenderHandleReference &output)
+void LumeCustomRender::LoadRenderNodeGraph(const std::string& rngUri,
+    const RENDER_NS::RenderHandleReference &output)
 {
     const std::string rngFileName = GetFileNameFromPath(rngUri);
     // add multiswapchain name, inputbuffer name, resolutionbuffer name by file name.
@@ -272,7 +274,8 @@ void LumeCustomRender::LoadRenderNodeGraph(const std::string &rngUri, const REND
 
     auto const result = loader->Load(graphUri);
     if (!result.error.empty()) {
-        WIDGET_LOGE("3D render node graph load fail: %s, uri %s", result.error.c_str(), rngUri.c_str());
+        WIDGET_LOGE("3D render node graph load fail: %s, uri %s", result.error.c_str(),
+            rngUri.c_str());
         return;
     }
 
@@ -301,8 +304,8 @@ bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInput
     auto bSize = shaderInputBuffer->ByteSize();
     if (bufferDesc_.byteSize != bSize) {
         bufferDesc_.byteSize = bSize;
-        shaderInputBufferHandle_ =
-            renderContext_->GetDevice().GetGpuResourceManager().Create(GetInputBufferName().c_str(), bufferDesc_);
+        shaderInputBufferHandle_ = renderContext_->GetDevice().GetGpuResourceManager().Create(
+            GetInputBufferName().c_str(), bufferDesc_);
     }
 
     const float *buffer = shaderInputBuffer->Map(fSize);
@@ -319,6 +322,7 @@ bool LumeCustomRender::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInput
 }
 
 void LumeCustomRender::OnDrawFrame()
-{}
+{
+}
 
 }  // namespace OHOS::Render3D

@@ -160,11 +160,11 @@ void GraphicsTask::EngineThread()
 
     auto tid = syscall(SYS_gettid);
     if (tid > 0) {
-    std::unordered_map<std::string, std::string> mapPayload {
-        { "pid", std::to_string(getpid()) }, { "tid", std::to_string(tid)}};
-    WIDGET_LOGI("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
-    OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
-        RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
+        std::unordered_map<std::string, std::string> mapPayload {
+            { "pid", std::to_string(getpid()) }, { "tid", std::to_string(tid)}};
+        WIDGET_LOGI("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
+        OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
+            RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
     }
 
     WIDGET_LOGD("GraphicsTask::EngineThread execute exit");

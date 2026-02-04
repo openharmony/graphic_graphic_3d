@@ -16,11 +16,11 @@
 #include "texture_layer.h"
 
 #ifdef USE_M133_SKIA
-#include "include/gpu/ganesh/GrBackendSurface.h"
-#include "include/gpu/ganesh/gl/GrGLInterface.h"
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
 #else
-#include "include/gpu/GrBackendSurface.h"
-#include "include/gpu/gl/GrGLInterface.h"
+#include <include/gpu/GrBackendSurface.h>
+#include <include/gpu/gl/GrGLInterface.h>
 #endif
 #include <native_buffer.h>
 #include <render_service_base/include/pipeline/rs_recording_canvas.h>
@@ -82,7 +82,7 @@ private:
     uint32_t height_ = 0u;
     int32_t key_ = INT32_MAX;
     uint32_t transform_ = 0U;
-    uint32_t backgroundColor_ = 0U;
+    uint32_t backgroundColor_ = 0x00000000;
 
     std::shared_ptr<Rosen::RSNode> rsNode_ = nullptr;
     std::shared_ptr<Rosen::RSNode> parent_ = nullptr;
@@ -146,7 +146,7 @@ void TextureLayerImpl::CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig 
     // Init: The first true indicates that RenderThread is created, and the second true indicates that multiple
     // instances are used. When multi-instance is not used, each process has a global RSUIDirector. When multi-instance
     // is used, each instance corresponds to one RSUIDirector.
-    rsUIDirector_->Init(true, false); // the second params need to be true for adapting multi-instances
+    rsUIDirector_->Init(true, true); // plan to do :the second paramenter need to be true for adapting multi-instances
     auto rsUIContext = rsUIDirector_->GetRSUIContext();
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
 }
@@ -210,14 +210,14 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     return reinterpret_cast<void *>(window);
 }
 
-void *CreateNativeOffscreenWindow(uint32_t width, uint32_t height, uint64_t producerSurfaceId, uint32_t transform)
+void *CreateNativeOffScreenWindow(uint32_t width, uint32_t height, uint64_t producerSurfaceId, uint32_t transform)
 {
     auto utils = OHOS::SurfaceUtils::GetInstance();
-    WIDGET_LOGI("TextureLayerImpl::CreateNativeOffscreenWindow");
+    WIDGET_LOGI("TextureLayerImpl::CreateNativeOffScreenWindow");
 
     auto producerSurface = utils->GetSurface(producerSurfaceId);
     if (!producerSurface) {
-        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow Get producer surface fail");
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffScreenWindow Get producer surface fail");
         return nullptr;
     }
 
@@ -226,13 +226,13 @@ void *CreateNativeOffscreenWindow(uint32_t width, uint32_t height, uint64_t prod
 
     auto ret = SurfaceUtils::GetInstance()->Add(producerSurface->GetUniqueId(), producerSurface);
     if (ret != SurfaceError::SURFACE_ERROR_OK) {
-        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow add surface error");
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffScreenWindow add surface error");
         return nullptr;
     }
 
     auto window = CreateNativeWindowFromSurface(&producerSurface);
     if (!window) {
-        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffscreenWindow CreateNativeWindowFromSurface failed");
+        WIDGET_LOGE("TextureLayerImpl::CreateNativeOffScreenWindow CreateNativeWindowFromSurface failed");
     }
     return reinterpret_cast<void *>(window);
 }
@@ -257,13 +257,13 @@ void TextureLayerImpl::ConfigWindow(
             WIDGET_LOGI("TextureLayerImpl::ConfigWindow offscreen render");
             if (!image_.textureInfo_.nativeWindow_) {
                 image_.textureInfo_.nativeWindow_ =
-                    reinterpret_cast<void *>(CreateNativeOffscreenWindow(static_cast<uint32_t>(width * widthScale),
+                    reinterpret_cast<void *>(CreateNativeOffScreenWindow(static_cast<uint32_t>(width * widthScale),
                         static_cast<uint32_t>(height * heightScale),
                         producerSurface,
                         transform_));
             }
         }
-            // need check recreate window flag
+        // need check recreate window flag
         NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
             SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
             static_cast<uint32_t>(height * scale * heightScale));

@@ -502,7 +502,7 @@ HWTEST_F(WidgetAdapter3DTest, DeInitEngine1, testing::ext::TestSize.Level1)
     bool afterDeinit = adapter.SetupCameraViewport(800, 600);
     ASSERT_EQ(afterDeinit, false);
 }
- 	 
+
 /**
  * @tc.name: DeInitEngine2
  * @tc.desc: Verify DeInitEngine with null engine
