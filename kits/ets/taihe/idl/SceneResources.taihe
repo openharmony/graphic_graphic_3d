@@ -228,12 +228,12 @@ interface Sampler {
 
 union ImageOrNull {
     image: Image;
-    @null nValue;
+    nValue: @null unit;
 }
 
 union ImageOrNullOrUndefined {
-    @undefined uValue;
-    @null nValue;
+    uValue: @undefined unit;
+    nValue: @null unit;
     image: Image;
 }
 
@@ -378,7 +378,7 @@ interface MeshResource : SceneResource {
 }
 
 union CallbackUndefinedType {
-    @undefined undefined;
+    undefined: @undefined unit;
 }
 
 interface Animation : SceneResource {
@@ -465,13 +465,13 @@ interface Image : SceneResource {
 
 union EffectPropertyOutputValue {
     t_obj: Opaque;
-    @undefined uValue;
-    @null nValue;
+    uValue: @undefined unit;
+    nValue: @null unit;
 }
 
 union EffectPropertyInputValue {
     t_obj: Opaque;
-    @undefined uValue;
+    uValue: @undefined unit;
 }
 
 interface Effect : SceneResource {
