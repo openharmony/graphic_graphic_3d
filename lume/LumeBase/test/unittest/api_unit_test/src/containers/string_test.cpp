@@ -362,7 +362,6 @@ UNIT_TEST(API_ContainersString, Assign, testing::ext::TestSize.Level1)
         EXPECT_EQ(valCustom.size(), 0);
         EXPECT_EQ(valCustom.capacity(), 30); // const empty short string capacity
     }
-#endif
 }
 
 /**
