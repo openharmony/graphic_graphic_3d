@@ -109,6 +109,7 @@ enum NodeType: i32 {
     GEOMETRY = 2,
     CAMERA = 3,
     LIGHT = 4,
+    CUSTOM = 255,
 }
 
 interface NodeContainer {

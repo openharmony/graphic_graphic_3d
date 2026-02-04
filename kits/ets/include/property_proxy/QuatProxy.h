@@ -18,7 +18,7 @@
 
 #include <base/math/quaternion.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 class QuatProxy : public PropertyProxy<BASE_NS::Math::Quat> {

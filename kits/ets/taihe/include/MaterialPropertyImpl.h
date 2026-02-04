@@ -22,7 +22,7 @@
 
 #include "ANIUtils.h"
 #include "SamplerImpl.h"
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 
 #include "MaterialPropertyETS.h"
 #include "SamplerETS.h"

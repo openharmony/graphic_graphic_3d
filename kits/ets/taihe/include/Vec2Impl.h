@@ -16,7 +16,7 @@
 #ifndef OHOS_3D_VEC2_IMPL_H
 #define OHOS_3D_VEC2_IMPL_H
 
-#include "Vec2Proxy.h"
+#include "property_proxy/Vec2Proxy.h"
 
 namespace OHOS::Render3D::KITETS {
 class Vec2Impl {

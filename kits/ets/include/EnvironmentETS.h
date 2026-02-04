@@ -22,8 +22,8 @@
 
 #include "ImageETS.h"
 #include "SceneResourceETS.h"
-#include "Vec4Proxy.h"
-#include "QuatProxy.h"
+#include "property_proxy/Vec4Proxy.h"
+#include "property_proxy/QuatProxy.h"
 
 namespace OHOS::Render3D {
 class EnvironmentETS : public SceneResourceETS {

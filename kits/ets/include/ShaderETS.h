@@ -22,7 +22,7 @@
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_shader.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 #include "SceneResourceETS.h"
 
 namespace OHOS::Render3D {

@@ -18,7 +18,7 @@
 
 #include <base/util/color.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 class ColorProxy : public PropertyProxy<BASE_NS::Color> {

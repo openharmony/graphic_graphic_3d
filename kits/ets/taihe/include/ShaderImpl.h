@@ -16,7 +16,7 @@
 #ifndef OHOS_3D_SHADER_IMPL_H
 #define OHOS_3D_SHADER_IMPL_H
 
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "SceneTH.user.hpp"
 #include "stdexcept"
 #include "taihe/optional.hpp"

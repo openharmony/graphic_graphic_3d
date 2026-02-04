@@ -14,15 +14,15 @@
  */
 
 
-#include "ColorProxy.h"
-#include "EntityProxy.h"
-#include "ImageProxy.h"
-#include "QuatProxy.h"
-#include "Vec2Proxy.h"
-#include "Vec3Proxy.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/ColorProxy.h"
+#include "property_proxy/EntityProxy.h"
+#include "property_proxy/ImageProxy.h"
+#include "property_proxy/QuatProxy.h"
+#include "property_proxy/Vec2Proxy.h"
+#include "property_proxy/Vec3Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 std::shared_ptr<IPropertyProxy> PropertyToProxy(const META_NS::IProperty::Ptr &prop)

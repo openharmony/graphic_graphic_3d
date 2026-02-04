@@ -16,7 +16,7 @@
 #ifndef OHOS_3D_QUATERNION_IMPL_H
 #define OHOS_3D_QUATERNION_IMPL_H
 
-#include "QuatProxy.h"
+#include "property_proxy/QuatProxy.h"
 
 namespace OHOS::Render3D::KITETS {
 class QuaternionImpl {

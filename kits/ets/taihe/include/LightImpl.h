@@ -27,7 +27,7 @@
 
 #include "LightETS.h"
 
-#include "NodeImpl.h"
+#include "taihe/include/NodeImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 class LightImpl : public NodeImpl {

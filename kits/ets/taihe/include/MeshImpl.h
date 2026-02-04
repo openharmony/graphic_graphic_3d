@@ -21,7 +21,7 @@
 #include "stdexcept"
 
 #include "MaterialImpl.h"
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "SubMeshImpl.h"
 
 #include "MaterialETS.h"

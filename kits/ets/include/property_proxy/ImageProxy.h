@@ -18,7 +18,7 @@
 
 #include <scene/interface/intf_image.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 class ImageProxy : public PropertyProxy<SCENE_NS::IImage::Ptr> {

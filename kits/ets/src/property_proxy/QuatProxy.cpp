@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "QuatProxy.h"
+#include "property_proxy/QuatProxy.h"
 
 namespace OHOS::Render3D {
 QuatProxy::QuatProxy(const META_NS::Property<BASE_NS::Math::Quat> &prop) : PropertyProxy<BASE_NS::Math::Quat>(prop)

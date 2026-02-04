@@ -20,6 +20,30 @@ subsystem_name = "graphic"
 part_name = "graphic_3d"
 taihe_generated_file_path = "$taihe_file_path/out/$subsystem_name/$part_name"
 
+config("taihe_config") {
+  visibility = [ ":*" ]
+  defines = []
+
+  if (current_os == "ohos") {
+    defines += [
+      "__OHOS_PLATFORM__",
+      "__SCENE_ADAPTER__",
+      "__PHYSICS_MODULES__",
+    ]
+  }
+
+  include_dirs = [
+    ".",
+    "include",
+    "include/property_proxy",
+    "taihe/include",
+  ]
+
+  cflags = [
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))"
+  ]
+}
+
 config("lume3d_config") {
   visibility = [
     ":*",
@@ -138,6 +162,7 @@ taihe_shared_library("scene_ani") {
   part_name = "$part_name"
   sources = get_target_outputs(":run_taihe")
   include_dirs = [
+    ".",
     "include",
     "include/property_proxy",
     "taihe/include",
@@ -232,8 +257,6 @@ taihe_shared_library("scene_ani") {
     "src/VignetteETS.cpp",
   ]
 
-  shlib_type = "ani"
-
   deps = [
     ":run_taihe",
     "../../3d_widget_adapter:lib3dWidgetAdapter",
@@ -256,6 +279,12 @@ taihe_shared_library("scene_ani") {
   configs = [
     ":lume3d_config",
     "../../3d_scene_adapter:scene_adapter_config",
+  ]
+
+  public_configs = [
+    ":taihe_config",
+    "../../3d_scene_adapter:scene_adapter_config",
+    "../../3d_widget_adapter:widget_adapter_config"
   ]
 }
 
@@ -354,6 +383,8 @@ ohos_prebuilt_etc("graphics3d_scene_types_etc") {
 }
 
 group("graphics_3d_taihe") {
+  public_configs = [ ":taihe_config" ]
+
   deps = [
     ":graphics3d_scene_etc",
     ":graphics3d_scene_nodes_etc",

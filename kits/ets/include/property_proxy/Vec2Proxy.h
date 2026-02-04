@@ -18,7 +18,7 @@
 
 #include <base/math/vector.h>
 
-#include "PropertyProxy.h"
+#include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
 class Vec2Proxy : public PropertyProxy<BASE_NS::Math::Vec2> {

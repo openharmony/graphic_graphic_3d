@@ -26,7 +26,7 @@
 #include "NodeETS.h"
 #include "PostProcessETS.h"
 #include "Utils.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D {
 class CameraETS : public NodeETS {

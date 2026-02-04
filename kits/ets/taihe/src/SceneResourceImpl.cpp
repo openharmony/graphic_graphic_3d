@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 ::taihe::string SceneResourceImpl::getName()

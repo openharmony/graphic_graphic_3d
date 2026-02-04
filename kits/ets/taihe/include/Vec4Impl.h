@@ -16,7 +16,7 @@
 #ifndef OHOS_3D_VEC4_IMPL_H
 #define OHOS_3D_VEC4_IMPL_H
 
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D::KITETS {
 class Vec4Impl {

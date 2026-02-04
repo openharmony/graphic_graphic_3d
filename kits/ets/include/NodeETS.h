@@ -24,8 +24,8 @@
 #include <scene/interface/intf_node.h>
 
 #include "SceneResourceETS.h"
-#include "Vec3Proxy.h"
-#include "QuatProxy.h"
+#include "property_proxy/Vec3Proxy.h"
+#include "property_proxy/QuatProxy.h"
 
 namespace OHOS::Render3D {
 class NodeETS : public SceneResourceETS, public std::enable_shared_from_this<NodeETS> {

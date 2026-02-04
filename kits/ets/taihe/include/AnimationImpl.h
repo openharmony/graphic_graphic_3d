@@ -33,7 +33,7 @@
 #include "CheckNapiEnv.h"
 
 #include "AnimationETS.h"
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 
 namespace OHOS::Render3D::KITETS {
 class AnimationImpl : public SceneResourceImpl {

@@ -16,8 +16,8 @@
 #ifndef OHOS_3D_COLOR_IMPL_H
 #define OHOS_3D_COLOR_IMPL_H
 
-#include "ColorProxy.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/ColorProxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D::KITETS {
 class ColorImpl {

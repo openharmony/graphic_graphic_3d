@@ -32,7 +32,7 @@
 #include "napi/native_api.h"
 #include "CheckNapiEnv.h"
 
-#include "SceneResourceImpl.h"
+#include "taihe/include/SceneResourceImpl.h"
 #include "EnvironmentETS.h"
 
 namespace OHOS::Render3D::KITETS {

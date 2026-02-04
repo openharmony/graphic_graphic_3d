@@ -16,14 +16,14 @@
 #include "SceneComponentImpl.h"
 
 #include "ImageImpl.h"
-#include "ImageProxy.h"
-#include "PropertyProxy.h"
+#include "property_proxy/ImageProxy.h"
+#include "property_proxy/PropertyProxy.h"
 #include "Vec2Impl.h"
-#include "Vec2Proxy.h"
+#include "property_proxy/Vec2Proxy.h"
 #include "Vec3Impl.h"
-#include "Vec3Proxy.h"
+#include "property_proxy/Vec3Proxy.h"
 #include "Vec4Impl.h"
-#include "Vec4Proxy.h"
+#include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D::KITETS {
 SceneComponentImpl::SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneComponentETS)

@@ -31,7 +31,7 @@
 #include "GeometryImpl.h"
 #include "LightImpl.h"
 #include "MaterialImpl.h"
-#include "NodeImpl.h"
+#include "taihe/include/NodeImpl.h"
 
 #include "RenderResourceFactoryImpl.h"
 #include "SceneETS.h"

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "NodeImpl.h"
+#include "taihe/include/NodeImpl.h"
 
 #include "CameraETS.h"
 #include "CameraImpl.h"
