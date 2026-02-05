@@ -150,8 +150,8 @@ interface SceneResourceFactory : RenderResourceFactory {
 }
 
 union ComponentPropertyType {
-    @undefined uValue;
-    @null nValue;
+    uValue: @undefined unit;
+    nValue: @null unit;
     t_string: String;
     t_bool: bool;
     t_i32: i32;
@@ -211,7 +211,7 @@ struct RenderParameters {
 
 union SceneComponentOrNull {
     sc: SceneComponent;
-    @null nValue;
+    nValue: @null unit;
 }
 
 @class
@@ -251,7 +251,7 @@ interface Scene {
 
 union RenderContextOrNull {
     rc: RenderContext;
-    @null nValue;
+    nValue: @null unit;
 }
 
 @static("Scene")

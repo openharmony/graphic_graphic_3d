@@ -178,12 +178,12 @@ interface Node: SceneResource {
 
 union NodeOrNull {
     node: Node;
-    @null nValue;
+    nValue: @null unit;
 }
 
 union EffectOrNull {
     effect: Effect;
-    @null nValue;
+    nValue: @null unit;
 }
 
 union VariousNodesOrNull {
@@ -191,7 +191,7 @@ union VariousNodesOrNull {
     camera: Camera;
     light: Light;
     node: Node;
-    @null nValue;
+    nValue: @null unit;
 }
 
 union VariousNodes {
@@ -272,12 +272,12 @@ union LightTypeUnion {
 
 union PostProcessSettingsOrNull {
     postProcess: PostProcessSettings;
-    @null nValue;
+    nValue: @null unit;
 }
 
 union ColorOrNull {
     color: Color;
-    @null nValue;
+    nValue: @null unit;
 }
 
 interface Camera: Node {
