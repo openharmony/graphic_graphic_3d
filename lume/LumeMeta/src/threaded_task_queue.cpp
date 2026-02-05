@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+
 #include <base/containers/vector.h>
 
 #include <meta/base/interface_macros.h>
@@ -144,6 +145,7 @@ public:
             auto curTime = Time();
             TaskQueueImpl::ProcessTasks(lock, curTime);
         }
+    }
 
 private:
     uint64_t threadId_ { 0 };
