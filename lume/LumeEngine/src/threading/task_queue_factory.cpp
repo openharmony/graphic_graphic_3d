@@ -21,14 +21,6 @@
 #include <deque>
 #include <thread>
 
-#if define(__OHOS_PLATFORM__)
-#include <qos.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
-#include <res_sched_client.h>
-#endif
-
 // need notice
 #include <base/containers/array_view.h>
 #include <base/containers/atomics.h>
@@ -414,19 +406,6 @@ private:
         JavaThreadContext javaContext;
 #endif
 
-#if defined(__OHOS_PLATFORM__)
-        int ret = OHOS::QOS::SetThreadQos(OHOS::QOS::QosLevel::QOS_USER_INTERACTIVE);
-        CORE_LOG_I("set engine child thread qos %s", ret == 0 ? "success" : "failed");
-        auto tid = syscall(SYS_gettid);
-        if (tid > 0) {
-            std::unordered_map<std::string, std::string> mapPayload { { "pid", std::to_string(getpid()) },
-                { "tid", std::to_string(tid) } };
-            CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
-            OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
-                RES_TYPE_EXT_ENGINE_SET_QOS, 1, mapPayload);
-        }
-#endif
-
         while (true) {
             // Function to process.
             BASE_NS::shared_ptr<Task> task;
@@ -441,13 +420,7 @@ private:
             }
             // If there was no task it means we are stopping and thread can exit.
             if (!task) {
-#if defined(__OHOS_PLATFORM__)
-                std::unordered_map<std::string, std::string> mapPayload { { "pid", std::to_string(getpid()) },
-                    { "tid", std::to_string(tid) } };
-                CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
-                OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
-                    RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
-#endif
+            // need notice
                 return;
             }
 
