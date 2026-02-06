@@ -1187,6 +1187,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidAssetTest, testing::ext::TestSize.Level1)
     delete gltf2;
 }
 
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: InvalidAnimationTest
  * @tc.desc: Tests for Invalid Animation Test. [AUTO-GENERATED]
@@ -1245,6 +1246,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, DISABLED_InvalidAnimationTest, testing::ext::TestS
 
     delete gltf2;
 }
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: InvalidLightTest

@@ -374,6 +374,7 @@ UNIT_TEST(API_GfxCombinedPostProcessRenderNode, MipmapBlurTestOpenGL, testing::e
 {
     TestCombinedPostProcessRenderNode(UTest::GetOpenGLBackend(), false, false, true);
 }
+#ifdef DISABLED_TESTS_ON
 #if NDEBUG
 /**
  * @tc.name: AntiAliasingTestOpenGL
@@ -392,4 +393,5 @@ UNIT_TEST(API_GfxCombinedPostProcessRenderNode, DISABLED_AntiAliasingTestOpenGL,
 {
     TestCombinedPostProcessRenderNode(UTest::GetOpenGLBackend(), false, true, false);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

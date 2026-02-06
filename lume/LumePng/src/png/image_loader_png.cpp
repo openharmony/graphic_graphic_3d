@@ -495,6 +495,7 @@ public:
                 return ResultFailure("Invalid number of color channels.");
             }
 
+            const size_t bytesPerComponent = is16bpc ? 2u : 1u;
             const size_t imageSize = width * height * channels;
             if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
                 png_destroy_read_struct(&png, &info, nullptr);
@@ -509,11 +510,11 @@ public:
             auto row = rows.get();
             if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {
                 for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + ((height - 1) - i) * (width * channels);
+                    *row++ = image.get() + ((height - 1) - i) * (width * channels * bytesPerComponent);
                 }
             } else {
                 for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + i * (width * channels);
+                    *row++ = image.get() + i * (width * channels * bytesPerComponent);
                 }
             }
 
@@ -549,7 +550,7 @@ public:
         // guaranteed that stack is cleaned up with longjmp, so have the big buffer pointer and pointers to start of
         // each row available here, and we can call reset() to release memory if something fails.
         BASE_NS::unique_ptr<uint8_t[]> image;
-        BASE_NS::unique_ptr<png_byte *[]> rows;
+        BASE_NS::unique_ptr<png_byte*[]> rows;
         if (setjmp(png_jmpbuf(png))) {
             rows.reset();
             image.reset();
@@ -582,7 +583,8 @@ public:
                 return ResultFailure("Invalid number of color channels.");
             }
 
-            const size_t imageSize = width * height * channels;
+            const size_t bytesPerComponent = is16bpc ? 2u : 1u;
+            const size_t imageSize = width * height * channels * bytesPerComponent;
             if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
                 png_destroy_read_struct(&png, &info, nullptr);
                 return ResultFailure("Image too large.");
@@ -591,16 +593,16 @@ public:
             // alternative would be to use a different api which writes only one row and feed it the correct address
             // every time.
             image = BASE_NS::make_unique<uint8_t[]>(imageSize);
-            rows = BASE_NS::make_unique<png_byte *[]>(height);
+            rows = BASE_NS::make_unique<png_byte*[]>(height);
             // fill rows depending on should there be a vertical flip or not.
             auto row = rows.get();
             if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {
                 for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + ((height - 1) - i) * (width * channels);
+                    *row++ = image.get() + ((height - 1) - i) * (width * channels * bytesPerComponent);
                 }
             } else {
                 for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + i * (width * channels);
+                    *row++ = image.get() + i * (width * channels * bytesPerComponent);
                 }
             }
 

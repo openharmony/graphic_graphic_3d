@@ -742,6 +742,7 @@ UNIT_TEST(API_AttachmentTest, ResolveFinalClass, testing::ext::TestSize.Level1)
     UnregisterObjectType<MyTypedAttachment2>();
 }
 #else
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ResolveFinalClass
  * @tc.desc: Tests for Resolve Final Class. [AUTO-GENERATED]
@@ -751,6 +752,7 @@ UNIT_TEST(API_AttachmentTest, DISABLED_ResolveFinalClass, testing::ext::TestSize
 {
     // Skip
 }
+#endif // DISABLED_TESTS_ON
 #endif
 
 /**

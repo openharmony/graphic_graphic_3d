@@ -45,8 +45,8 @@ META_REGISTER_CLASS(PostProcessResourceTemplate,
     "161b04c3-df31-4014-b338-c1e643aed0fd", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(PostProcessResource,
     "e898b36b-e823-4540-bd6d-71708f6bde83", META_NS::ObjectCategoryBits::NO_CATEGORY)
-META_REGISTER_CLASS(PostProcessTemplateAccess, "f905d854-dcda-4e57-a095-e7e572d5d714",
-    META_NS::ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(PostProcessTemplateAccess,
+    "f905d854-dcda-4e57-a095-e7e572d5d714", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(SceneResource, "d5665843-e011-4d77-a036-e973d309071c", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(GltfSceneResource, "e5c20c22-e646-4b78-9458-39f7c8d32f29", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ShaderResource, "37e22cc6-30db-4d07-8e6d-a5145490a82f", META_NS::ObjectCategoryBits::NO_CATEGORY)

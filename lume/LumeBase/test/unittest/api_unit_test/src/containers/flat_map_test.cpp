@@ -448,7 +448,7 @@ UNIT_TEST(API_ContainersFlatMap, DISABLED_ExtractInsertBug, testing::ext::TestSi
     ASSERT_EQ(original.size(), 1);
 #endif
 }
-#endif
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: ExtractInsertBug2
@@ -526,7 +526,7 @@ UNIT_TEST(API_ContainersFlatMap, DISABLED_HashPolicy, testing::ext::TestSize.Lev
     ASSERT_TRUE(durationReserve <= durationNoReserve);
 #endif
 }
-#endif
+#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: StringView

@@ -46,7 +46,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "dc5da6ef-0214-4275-b7a3-c68421e76313" };
-    static constexpr const  char* TYPE_NAME = "RenderNodeDummy";
+    static constexpr const char* TYPE_NAME = "RenderNodeDummy";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -78,7 +78,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "8e85e0d0-4617-42c1-8e5e-5a125c33de12" };
-    static constexpr const  char* TYPE_NAME = "RenderNodeDummy2";
+    static constexpr const char* TYPE_NAME = "RenderNodeDummy2";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

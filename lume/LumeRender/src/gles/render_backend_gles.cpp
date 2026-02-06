@@ -2105,7 +2105,7 @@ void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithT
         descriptorSetHandles_ + renderCmd.firstSet);
     auto* dst = descriptorSetDynamicOffsets_ + renderCmd.firstSet;
     for (const auto& src : array_view(renderCmd.descriptorSetDynamicOffsets + renderCmd.firstSet,
-            renderCmd.descriptorSetDynamicOffsets + lastSet)) {
+        renderCmd.descriptorSetDynamicOffsets + lastSet)) {
         dst->dynamicOffsetCount = src.dynamicOffsetCount;
         std::copy(src.dynamicOffsets, src.dynamicOffsets + src.dynamicOffsetCount, dst->dynamicOffsets);
         ++dst;

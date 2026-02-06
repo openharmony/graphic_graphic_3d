@@ -163,9 +163,6 @@ add_library(${LibName} ${sources})
 target_include_directories(${LibName} PUBLIC
     include
     src
-    # 3rdparty/khronos
-    # ${SPIRV_TOOLS_SOURCE_DIR}
-    # ${CMAKE_BINARY_DIR}/3rdparty/SPIRV-Tools
     ${SPIRV_TOOLS_PATH}
     ${SPIRV_TOOLS_EXTENSION_PATH}
     ${CMAKE_BINARY_DIR}/3rdparty/SPIRV-Tools

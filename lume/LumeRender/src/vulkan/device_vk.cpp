@@ -869,9 +869,9 @@ void DeviceVk::CreateInstance()
 {
     RENDER_CPU_PERF_SCOPE("CreateInstance", "");
     const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE)
-                                     ? CreateFunctionsVk::CreateInstance(VersionInfo{"core_renderer", 0, 1, 0},
-                                                                         VersionInfo{"core_renderer_app", 0, 1, 0})
-                                     : CreateFunctionsVk::GetWrapper(plat_.instance);
+                                    ? CreateFunctionsVk::CreateInstance(VersionInfo{"core_renderer", 0, 1, 0},
+                                    VersionInfo{"core_renderer_app", 0, 1, 0})
+                                    : CreateFunctionsVk::GetWrapper(plat_.instance);
 
     plat_.instance = instanceWrapper.instance;
     // update with physical device creation

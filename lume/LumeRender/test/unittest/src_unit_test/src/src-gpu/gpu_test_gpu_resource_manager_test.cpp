@@ -458,6 +458,7 @@ UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestVulkan, testing::ext::Tes
 #endif // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#ifdef DISABLED_TESTS_ON
 #if NDEBUG
 /**
  * @tc.name: ImageViewCreationTestOpenGL
@@ -514,6 +515,7 @@ UNIT_TEST(SRC_GpuResourceManager, DISABLED_ImageViewCreationTestOpenGL, testing:
         UTest::DestroyEngine(er);
     }
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 void TestGpuResourceManager(DeviceBackendType backend)

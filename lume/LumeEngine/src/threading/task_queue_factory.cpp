@@ -406,8 +406,6 @@ private:
         JavaThreadContext javaContext;
 #endif
 
-// need notice
-
         while (true) {
             // Function to process.
             BASE_NS::shared_ptr<Task> task;

@@ -153,7 +153,7 @@ struct RenderMeshData {
     /** layer mask. */
     uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
     /** scene ID */
-    uint32_t sceneId { 0U };
+    uint64_t sceneId { 0LLU };
 
     /** Custom data. */
     BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT] {};

@@ -44,6 +44,7 @@ static void CopyImageFile(CORE_NS::IFileManager& manager, BASE_NS::string_view p
     ASSERT_TRUE(CopyFile(manager, BASE_NS::string(path) + name, file));
 }
 
+#ifdef DISABLED_TESTS_ON
 #ifdef _WIN32
 /**
  * @tc.name: ResourceReload
@@ -76,7 +77,7 @@ UNIT_TEST_F(API_ScenePluginImageTest, DISABLED_ResourceReload, testing::ext::Tes
 
     EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2 { 252, 256 }));
 }
-
+#endif // DISABLED_TESTS_ON
 } // namespace UTest
 
 SCENE_END_NAMESPACE()

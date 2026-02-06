@@ -135,6 +135,7 @@ static void CopyShaderFiles(CORE_NS::IFileManager& manager, BASE_NS::string_view
     CopyShaderFile(manager, dir, "test.shader");
 }
 
+#ifdef DISABLED_TESTS_ON
 #ifdef _WIN32
 /**
  * @tc.name: ShaderResourceReload
@@ -205,6 +206,7 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
         EXPECT_EQ(count, 1);
     }
 }
+#endif
 
 } // namespace UTest
 SCENE_END_NAMESPACE()

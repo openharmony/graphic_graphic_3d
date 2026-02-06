@@ -215,6 +215,7 @@ UNIT_TEST(API_GfxComputeGenericRenderNode, GfxComputeGenericRenderNodeTestVulkan
 #endif // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: GfxComputeGenericRenderNodeTestOpenGL
  * @tc.desc: Tests RenderNodeComputeGeneric by issuing a compute shader with input data and push constants. The output
@@ -230,4 +231,5 @@ UNIT_TEST(
     // Shader specialization doesn't work with OpenGL
     TestComputeGenericRenderNode(UTest::GetOpenGLBackend(), 0u);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

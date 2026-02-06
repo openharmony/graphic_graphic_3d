@@ -66,8 +66,8 @@ public:
             bool success = tryAroot(".") || tryAroot("..") || tryAroot("../..") || tryAroot("../../..") ||
                 tryAroot("../../../..") || tryAroot("../../../../..");
 
-            EXPECT_TRUE(success) <<
-                "FAIL to use %s folder to locate root folder for unit test, check where is the running exe?";
+            EXPECT_TRUE(success)
+                << "FAIL to use %s folder to locate root folder for unit test, check where is the running exe?";
             return runTimeFolderPrefix;
         };
         shaderCompilerRoot_ = bindFolder("test", "src_unit_test\\assets\\test_shaders");
@@ -101,7 +101,7 @@ EnvFolderBinder gFoldBinder;
 int RunMain(std::vector<std::string>& argStrings)
 {
     const int argc = static_cast<int>(argStrings.size());
-    char** argv = new char *[argc];
+    char** argv = new char*[argc];
     for (int i = 0; i < argc; i++) {
         argv[i] = argStrings[i].data();
     }

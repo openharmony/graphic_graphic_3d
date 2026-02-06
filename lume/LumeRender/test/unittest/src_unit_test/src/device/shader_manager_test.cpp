@@ -1158,6 +1158,7 @@ UNIT_TEST(SRC_ShaderManager, ShaderManagerTestVulkan, testing::ext::TestSize.Lev
 #endif // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ShaderManagerTestOpenGL
  * @tc.desc: Tests the IShaderManager interface by creating shaders, pipeline layouts, vertex input declarations.
@@ -1175,4 +1176,5 @@ UNIT_TEST(SRC_ShaderManager, DISABLED_ShaderManagerTestOpenGL, testing::ext::Tes
     Validate(engine);
     UTest::DestroyEngine(engine);
 }
+#endif // DISABLED_TESTS_ON
 #endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

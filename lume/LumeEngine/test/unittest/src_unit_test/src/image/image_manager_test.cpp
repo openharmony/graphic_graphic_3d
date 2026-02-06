@@ -66,10 +66,12 @@ BASE_NS::unique_ptr<IImageLoaderManager, void (*)(IImageLoaderManager*)> CreateI
  * @tc.type: FUNC
  */
 #if (USE_STB_IMAGE == 0)
+#ifdef DISABLED_TESTS_ON
 UNIT_TEST(SRC_ImageManagerTest, DISABLED_basicLoadImage, testing::ext::TestSize.Level1)
 {
     // Skip
 }
+#endif // DISABLED_TESTS_ON
 #else
 UNIT_TEST(SRC_ImageManagerTest, basicLoadImage, testing::ext::TestSize.Level1)
 {
@@ -409,10 +411,12 @@ void checkImageData(const char* aTest, const IImageContainer& aImage, uint32_t a
  * @tc.type: FUNC
  */
 #if (USE_STB_IMAGE == 0)
+#ifdef DISABLED_TESTS_ON
 UNIT_TEST(SRC_ImageManagerTest, DISABLED_loadImages, testing::ext::TestSize.Level1)
 {
     // Skip
 }
+#endif // DISABLED_TESTS_ON
 #else
 UNIT_TEST(SRC_ImageManagerTest, loadImages, testing::ext::TestSize.Level1)
 {
