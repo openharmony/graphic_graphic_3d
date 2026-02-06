@@ -68,7 +68,7 @@ void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
     auto pp = postProc_.lock();
     if (!pp) {
         // not assign to a native PostProcess yet, just stage the value
-        if (tonemap_) {
+        if (tonemap_ && tonemap) {
             tonemap_->SetEnabled(true);
             tonemap_->SetType(tonemap->GetType());
             tonemap_->SetExposure(tonemap->GetExposure());
