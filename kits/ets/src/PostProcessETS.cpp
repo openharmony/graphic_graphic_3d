@@ -68,7 +68,7 @@ void PostProcessETS::SetToneMapping(const std::shared_ptr<TonemapETS> tonemap)
     auto pp = postProc_.lock();
     if (!pp) {
         // not assign to a native PostProcess yet, just stage the value
-        if (tonemap_) {
+        if (tonemap_ && tonemap) {
             tonemap_->SetEnabled(true);
             tonemap_->SetType(tonemap->GetType());
             tonemap_->SetExposure(tonemap->GetExposure());
@@ -126,7 +126,7 @@ void PostProcessETS::SetBloom(const std::shared_ptr<BloomETS> bloom)
     auto pp = postProc_.lock();
     if (!pp) {
         // not assign to a native PostProcess yet, just stage the value
-        if (bloom_) {
+        if (bloom_ && bloom) {
             bloom_->SetEnabled(true);
             bloom_->SetType(bloom->GetType());
             bloom_->SetQuality(bloom->GetQuality());
@@ -194,7 +194,7 @@ void PostProcessETS::SetVignette(const std::shared_ptr<VignetteETS> vignette)
     auto pp = postProc_.lock();
     if (!pp) {
         // not assign to a native PostProcess yet, just stage the value
-        if (vignette_) {
+        if (vignette_ && vignette) {
             vignette_->SetEnabled(true);
             vignette_->SetRoundness(vignette->GetRoundness());
             vignette_->SetIntensity(vignette->GetIntensity());
@@ -252,7 +252,7 @@ void PostProcessETS::SetColorFringe(const std::shared_ptr<ColorFringeETS> colorF
     auto pp = postProc_.lock();
     if (!pp) {
         // not assign to a native PostProcess yet, just stage the value
-        if (colorFringe_) {
+        if (colorFringe_ && colorFringe) {
             colorFringe_->SetEnabled(true);
             colorFringe_->SetIntensity(colorFringe->GetIntensity());
         } else {
