@@ -16,7 +16,7 @@ import("//build/ohos/ace/ace.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 config("lume3d_config") {
-  visibility = [ ":*" ]
+  # visibility = [ ":*" ]
   defines =
       [ "USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN=$USE_LIB_PNG_JPEG_DYNAMIC_PLUGIN" ]
   include_dirs = [
