@@ -11,6 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#Options
+RENDER_BUILD_GLES = true
+RENDER_BUILD_VULKAN = true
+
 import("//build/test.gni")
 
 import("//build/ohos.gni")
@@ -121,6 +125,89 @@ ohos_unittest("ShaderInputBufferUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("LumeCustomRenderUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "lume_custom_render_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "graphic_surface:surface",
+    "hilog:libhilog",
+  ]
+
+  include_dirs =[
+    "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include/lume",
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_CORE_PATH}/api/platform/ohos",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+  ]
+
+  cflags = [
+    "-Wall",
+    "-Werror",
+    "-g3",
+    "-Dprivate=public",
+    "-Dprotected=public",
+  ]
+
+  defines = [
+    "USE_ACE_SKIA",
+    "CORE_DYNAMIC=1",
+  ]
+
+  if (target_cpu == "arm64" || target_cpu == "x64") {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib64/",
+      "PLATFORM_CORE_PLUGIN_PATH=/system/lib64/graphics3d/",
+      "PLATFORM_APP_ROOT_PATH=/system/lib64/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib64/graphics3d/",
+    ]
+  } else {
+    defines += [
+      "PLATFORM_CORE_ROOT_PATH=/system/lib/",
+      "PLATFORM_CORE_PLUGIN_PATH=/system/lib/graphics3d/",
+      "PLATFORM_APP_ROOT_PATH=/system/lib/",
+      "PLATFORM_APP_PLUGIN_PATH=/system/lib/graphics3d/",
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    defines += [
+      "RENDER_HAS_VULKAN_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_GLES) {
+    defines += [
+      "RENDER_HAS_GLES_BACKEND=1"
+    ]
+  }
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3"
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 group("unittest") {
   testonly = true
 
@@ -128,6 +215,7 @@ group("unittest") {
     ":3d_widget_adpater_test",
     ":EngineFactoryTest",
     ":GraphicsManagerUnitTest",
+    ":LumeCustomRenderUnitTest",
     ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",
   ]
