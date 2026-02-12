@@ -38,6 +38,44 @@ ohos_unittest("3d_widget_adpater_test") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("DataTypeUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "data_type_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_unittest("GeometryUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "geometry_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 ohos_unittest("GraphicsManagerUnitTest") {
   module_out_path = module_output_path
 
@@ -126,7 +164,9 @@ group("unittest") {
 
   deps = [
     ":3d_widget_adpater_test",
+    ":DataTypeUnitTest",
     ":EngineFactoryTest",
+    ":GeometryUnitTest",
     ":GraphicsManagerUnitTest",
     ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",
