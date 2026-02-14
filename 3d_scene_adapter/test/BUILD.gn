@@ -106,6 +106,7 @@ ohos_unittest("AGPOffscreenRenderUnitTest") {
     "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
     "//foundation/graphic/graphic_3d/3d_widget_adapter/core/include",
     "//foundation/graphic/graphic_3d/3d_widget_adapter/include/ohos",
+    "//foundation/graphic/graphic_3d/3d_scene_adapter/src",
   ]
 
   cflags = [
@@ -115,16 +116,21 @@ ohos_unittest("AGPOffscreenRenderUnitTest") {
     "-fno-omit-frame-pointer",
   ]
 
-  sources = [ "offscreen_render_unit_test.cpp",
+  sources = [
+    "offscreen_render_unit_test.cpp",
     "//foundation/graphic/graphic_3d/3d_scene_adapter/src/offscreen_scene.cpp"
-     ]
+  ]
 
   defines = [
     "CORE_HAS_GLES_BACKEND=1",
     "CORE_HAS_VULKAN_BACKEND=1",
   ]
 
-  defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
+  defines += [
+    "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z",
+    "private=public",
+    "protected=public"
+  ]
 
   if (target_cpu == "arm") {
     defines += [
@@ -243,10 +249,11 @@ ohos_unittest("SceneBridgeUnitTest") {
 }
 
 group("unittest") {
-    testonly = true
-    deps = [
-        ":SceneAdapterUintTest",
-        ":SceneBridgeAniUnitTest",
-        ":SceneBridgeUnitTest"
-    ]
+  testonly = true
+  deps = [
+    ":SceneAdapterUnitTest",
+    ":AGPOffscreenRenderUnitTest",
+    ":SceneBridgeAniUnitTest",
+    ":SceneBridgeUnitTest"
+  ]
 }

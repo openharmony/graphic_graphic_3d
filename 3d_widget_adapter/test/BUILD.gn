@@ -99,6 +99,25 @@ ohos_unittest("GraphicsManagerUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("GraphicsTaskUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "graphics_task_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 ohos_unittest("EngineFactoryTest") {
   module_out_path = module_output_path
 
@@ -255,6 +274,7 @@ group("unittest") {
     ":EngineFactoryTest",
     ":GeometryUnitTest",
     ":GraphicsManagerUnitTest",
+    ":GraphicsTaskUnitTest",
     ":LumeCustomRenderUnitTest",
     ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",

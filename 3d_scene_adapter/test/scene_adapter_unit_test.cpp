@@ -647,5 +647,418 @@ HWTEST_F(SceneAdapterUT, AcquireImage003, TestSize.Level1)
     adapter->Deinit();
     adapter->DeinitRenderThread();
 }
-} // namespace
+
+/**
+ * @tc.name: CreateEmptyScene001
+ * @tc.desc: test CreateEmptyScene with initialized engine
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, CreateEmptyScene001, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateEmptyScene001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // CreateEmptyScene should complete without crash
+    adapter->CreateEmptyScene();
+
+    {
+        // After CreateEmptyScene, GetSceneObj should return non-null
+        auto sceneObj = adapter->GetSceneObj();
+        EXPECT_NE(sceneObj, nullptr);
+
+        // After CreateEmptyScene, GetEcs should return non-null
+        auto ecs = adapter->GetEcs();
+        EXPECT_NE(ecs, nullptr);
+    }
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
 }
+
+/**
+ * @tc.name: CreateEmptyScene002
+ * @tc.desc: test CreateEmptyScene multiple times
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, CreateEmptyScene002, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateEmptyScene002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // CreateEmptyScene multiple times
+    adapter->CreateEmptyScene();
+    {
+        auto sceneObj1 = adapter->GetSceneObj();
+        EXPECT_NE(sceneObj1, nullptr);
+    }
+    
+    // Second call should replace the previous scene
+    adapter->CreateEmptyScene();
+    {
+        auto sceneObj2 = adapter->GetSceneObj();
+        EXPECT_NE(sceneObj2, nullptr);
+    }
+    
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: EngineTickFrame001
+ * @tc.desc: test EngineTickFrame with null ecs
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, EngineTickFrame001, TestSize.Level1)
+{
+    WIDGET_LOGD("EngineTickFrame001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // EngineTickFrame with null ecs should return false
+    bool ret = adapter->EngineTickFrame(nullptr);
+    EXPECT_EQ(ret, false);
+}
+
+/**
+ * @tc.name: EngineTickFrame002
+ * @tc.desc: test EngineTickFrame with valid ecs
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, EngineTickFrame002, TestSize.Level1)
+{
+    WIDGET_LOGD("EngineTickFrame002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    adapter->CreateEmptyScene();
+
+    {
+        auto ecs = adapter->GetEcs();
+        ASSERT_NE(ecs, nullptr);
+
+        // EngineTickFrame with valid ecs should return true
+        ret = adapter->EngineTickFrame(ecs);
+        EXPECT_EQ(ret, true);
+    }
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: SetSceneObj001
+ * @tc.desc: test SetSceneObj with null object
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, SetSceneObj001, TestSize.Level1)
+{
+    WIDGET_LOGD("SetSceneObj001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // SetSceneObj with null object
+    adapter->SetSceneObj(nullptr);
+
+    // GetSceneObj should return null
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+}
+
+/**
+ * @tc.name: SetSceneObj002
+ * @tc.desc: test SetSceneObj then GetSceneObj
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, SetSceneObj002, TestSize.Level1)
+{
+    WIDGET_LOGD("SetSceneObj002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    {
+        // CreateEmptyScene to get a valid scene object
+        adapter->CreateEmptyScene();
+        auto sceneObj1 = adapter->GetSceneObj();
+        ASSERT_NE(sceneObj1, nullptr);
+
+        // Set the same scene object again
+        adapter->SetSceneObj(sceneObj1);
+        auto sceneObj2 = adapter->GetSceneObj();
+        EXPECT_NE(sceneObj2, nullptr);
+    }
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: DeinitRenderThread001
+ * @tc.desc: test DeinitRenderThread without proper init
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, DeinitRenderThread001, TestSize.Level1)
+{
+    WIDGET_LOGD("DeinitRenderThread001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+
+    // DeinitRenderThread without LoadPluginsAndInit should handle gracefully
+    adapter->DeinitRenderThread();
+
+    // Adapter should still be in a valid state
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+}
+
+/**
+ * @tc.name: DeinitRenderThread002
+ * @tc.desc: test DeinitRenderThread multiple times
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, DeinitRenderThread002, TestSize.Level1)
+{
+    WIDGET_LOGD("DeinitRenderThread002");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // DeinitRenderThread multiple times should handle gracefully
+    adapter->DeinitRenderThread();
+    adapter->DeinitRenderThread();
+    adapter->DeinitRenderThread();
+
+    // Should not crash
+    auto sceneObj = adapter->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+}
+
+/**
+ * @tc.name: MultipleAdapters001
+ * @tc.desc: test multiple adapter instances
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, MultipleAdapters001, TestSize.Level1)
+{
+    WIDGET_LOGD("MultipleAdapters001");
+
+    // Create multiple adapter instances
+    auto adapter1 = std::make_unique<SceneAdapterTester>();
+    auto adapter2 = std::make_unique<SceneAdapterTester>();
+
+    {
+        // Init first adapter
+        bool ret1 = adapter1->LoadPluginsAndInit();
+        EXPECT_EQ(ret1, true);
+
+        // Init second adapter - should use existing engine
+        bool ret2 = adapter2->LoadPluginsAndInit();
+        EXPECT_EQ(ret2, true);
+    }
+
+    // Both should have valid engine init status
+    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
+
+    adapter1->Deinit();
+    adapter2->Deinit();
+
+    // Only deinit render thread once (shared engine)
+    adapter1->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: MultipleAdapters002
+ * @tc.desc: test multiple adapters with CreateEmptyScene
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, MultipleAdapters002, TestSize.Level1)
+{
+    WIDGET_LOGD("MultipleAdapters002");
+
+    auto adapter1 = std::make_unique<SceneAdapterTester>();
+    auto adapter2 = std::make_unique<SceneAdapterTester>();
+
+    {
+        bool ret1 = adapter1->LoadPluginsAndInit();
+        EXPECT_EQ(ret1, true);
+
+        bool ret2 = adapter2->LoadPluginsAndInit();
+        EXPECT_EQ(ret2, true);
+    }
+
+    // Create scenes in both adapters
+    adapter1->CreateEmptyScene();
+    adapter2->CreateEmptyScene();
+
+    {
+        // Each should have its own scene object
+        auto sceneObj1 = adapter1->GetSceneObj();
+        auto sceneObj2 = adapter2->GetSceneObj();
+
+        EXPECT_NE(sceneObj1, nullptr);
+        EXPECT_NE(sceneObj2, nullptr);
+
+        // Scenes should be different
+        EXPECT_NE(sceneObj1.get(), sceneObj2.get());
+    }
+
+    adapter1->Deinit();
+    adapter2->Deinit();
+    adapter1->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: CreateEmptySceneThenRender001
+ * @tc.desc: test render after CreateEmptyScene
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, CreateEmptySceneThenRender001, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateEmptySceneThenRender001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    adapter->CreateEmptyScene();
+    {
+        auto textureLayer = adapter->CreateTextureLayer();
+        ASSERT_NE(textureLayer, nullptr);
+    }
+    adapter->OnWindowChange(g_windowChangeInfo);
+
+    // RenderFrame should work after CreateEmptyScene
+    adapter->RenderFrame();
+    adapter->RenderFrame(true);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: GetEcsWithCreateEmptyScene001
+ * @tc.desc: test GetEcs returns valid after CreateEmptyScene
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, GetEcsWithCreateEmptyScene001, TestSize.Level1)
+{
+    WIDGET_LOGD("GetEcsWithCreateEmptyScene001");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+
+    // Before CreateEmptyScene, GetEcs returns null
+    {
+        auto ecs1 = adapter->GetEcs();
+        EXPECT_EQ(ecs1, nullptr);
+    }
+
+    // After CreateEmptyScene, GetEcs returns valid
+    adapter->CreateEmptyScene();
+    {
+        auto ecs2 = adapter->GetEcs();
+        EXPECT_NE(ecs2, nullptr);
+    }
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: IsEngineInitSuccessful001
+ * @tc.desc: test IsEngineInitSuccessful static method
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, IsEngineInitSuccessful001, TestSize.Level1)
+{
+    WIDGET_LOGD("IsEngineInitSuccessful001");
+
+    // Initially, engine should not be init
+    // Note: static flag might be true from previous tests
+    bool initStatus = SceneAdapter::IsEngineInitSuccessful();
+
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    {
+        bool ret = adapter->LoadPluginsAndInit();
+        EXPECT_EQ(ret, true);
+    }
+
+    // After LoadPluginsAndInit, should be true
+    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: AcquireImage004
+ * @tc.desc: test AcquireImage with empty transform matrix
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, AcquireImage004, TestSize.Level1)
+{
+    WIDGET_LOGD("AcquireImage004");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    adapter->CreateEmptyScene();
+
+    {
+        SurfaceBufferInfo bufferInfo;
+        bufferInfo.sfBuffer_ = nullptr;
+        bufferInfo.acquireFence_ = nullptr;
+        bufferInfo.needsTrans_ = false;
+        // Empty transform matrix (less than 16 elements)
+        bufferInfo.transformMatrix_ = {0, 0.0};
+        bufferInfo.fn_ = nullptr;
+
+        // Should handle gracefully with default identity matrix
+        adapter->AcquireImage(bufferInfo);
+    }
+
+    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() {
+        return META_NS::IAny::Ptr{};
+    });
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddWaitableTask(syncCB)->Wait();
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+
+/**
+ * @tc.name: AcquireImage005
+ * @tc.desc: test AcquireImage with oversize transform matrix
+ * @tc.type: FUNC
+ */
+HWTEST_F(SceneAdapterUT, AcquireImage005, TestSize.Level1)
+{
+    WIDGET_LOGD("AcquireImage005");
+    auto adapter = std::make_unique<SceneAdapterTester>();
+    bool ret = adapter->LoadPluginsAndInit();
+    ASSERT_EQ(ret, true);
+    adapter->CreateEmptyScene();
+
+    {
+        SurfaceBufferInfo bufferInfo;
+        bufferInfo.sfBuffer_ = nullptr;
+        bufferInfo.acquireFence_ = nullptr;
+        bufferInfo.needsTrans_ = false;
+        // Oversize transform matrix (more than 16 elements)
+        bufferInfo.transformMatrix_ = {20, 1.0};
+        bufferInfo.fn_ = nullptr;
+
+        // Should handle gracefully (log error but continue)
+        adapter->AcquireImage(bufferInfo);
+    }
+
+    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() {
+        return META_NS::IAny::Ptr{};
+    });
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddWaitableTask(syncCB)->Wait();
+
+    adapter->Deinit();
+    adapter->DeinitRenderThread();
+}
+} // namespace
+} // namespace OHOS::Render3D

@@ -137,7 +137,7 @@ public:
         info.width = static_cast<float>(offscreenBufferWidth_);
         info.height = static_cast<float>(offscreenBufferHeight_);
 
-        int.producerSurfaceId = this->producerSurfaceId_;
+        info.producerSurfaceId = this->producerSurfaceId_;
 
         CameraIntrinsics intr{
             1,          // fov
@@ -238,4 +238,393 @@ HWTEST_F(OffscreenRenderUT, OffscreenRender, TestSize.Level1)
     }
 }
 
-} // namespace
+/**
+ * @tc.name: OffscreenSceneGetSceneObj001
+ * @tc.desc: test GetSceneObj returns null before LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    // Before LoadPluginByUid, GetSceneObj should return null
+    auto sceneObj = offScreenScene->GetSceneObj();
+    EXPECT_EQ(sceneObj, nullptr);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneGetSceneObj002
+ * @tc.desc: test GetSceneObj returns valid after LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    bool ret = offScreenScene->LoadPluginByUid(uid);
+    EXPECT_TRUE(ret);
+
+    // After LoadPluginByUid, GetSceneObj should return valid
+    {
+        auto sceneObj = offScreenScene->GetSceneObj();
+        EXPECT_NE(sceneObj, nullptr);
+    }
+    // sceneObj released here before Deinit
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneGetCamera001
+ * @tc.desc: test GetCamera returns null before CreateCamera
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    // Before CreateCamera, GetCamera should return null
+    auto camera = offScreenScene->GetCamera();
+    EXPECT_EQ(camera, nullptr);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneGetCamera002
+ * @tc.desc: test GetCamera returns valid after CreateCamera
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    OffscreenCameraConfigs p;
+    offScreenScene->CreateCamera(p);
+
+    // After CreateCamera, GetCamera should return valid
+    auto camera = offScreenScene->GetCamera();
+    EXPECT_NE(camera, nullptr);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneSetCameraConfigs001
+ * @tc.desc: test SetCameraConfigs before CreateCamera
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    // SetCameraConfigs before CreateCamera should return false
+    OffscreenCameraConfigs p;
+    bool ret = offScreenScene->SetCameraConfigs(p);
+    EXPECT_FALSE(ret);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneSetCameraConfigs002
+ * @tc.desc: test SetCameraConfigs after CreateCamera
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    OffscreenCameraConfigs p1;
+    p1.intrinsics_.fov_ = 0.5f;
+    p1.intrinsics_.near_ = 0.1f;
+    p1.intrinsics_.far_ = 100.0f;
+    offScreenScene->CreateCamera(p1);
+
+    // SetCameraConfigs after CreateCamera should return true
+    OffscreenCameraConfigs p2;
+    p2.intrinsics_.fov_ = 0.8f;
+    p2.intrinsics_.near_ = 0.2f;
+    p2.intrinsics_.far_ = 200.0f;
+    bool ret = offScreenScene->SetCameraConfigs(p2);
+    EXPECT_TRUE(ret);
+
+    // Verify camera properties were updated
+    auto camera = offScreenScene->GetCamera();
+    EXPECT_NE(camera, nullptr);
+    EXPECT_EQ(camera->FoV()->GetValue(), 0.8f);
+    EXPECT_EQ(camera->NearPlane()->GetValue(), 0.2f);
+    EXPECT_EQ(camera->FarPlane()->GetValue(), 200.0f);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneRenderFrame001
+ * @tc.desc: test RenderFrame before CreateCamera
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneRenderFrame001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    // RenderFrame before CreateCamera should handle gracefully
+    bool ret = offScreenScene->RenderFrame();
+    EXPECT_TRUE(ret); // RenderFrame returns true even without camera
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneDeinit001
+ * @tc.desc: test Deinit without engine deinit
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    OffscreenCameraConfigs p;
+    offScreenScene->CreateCamera(p);
+
+    // Get scene object before Deinit
+    {
+        auto sceneObjBefore = offScreenScene->GetSceneObj();
+        EXPECT_NE(sceneObjBefore, nullptr);
+    }
+
+    // Deinit without deinitEngine (false)
+    offScreenScene->Deinit(false);
+
+    // After Deinit(false), scene object reference is cleared
+    {
+        auto sceneObjAfter = offScreenScene->GetSceneObj();
+        EXPECT_EQ(sceneObjAfter, nullptr);
+    }
+
+    // Full deinit
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneDeinit002
+ * @tc.desc: test Deinit with engine deinit
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    OffscreenCameraConfigs p;
+    offScreenScene->CreateCamera(p);
+
+    // Deinit with engine deinit (true)
+    offScreenScene->Deinit(true);
+
+    // After deinit, operations should handle gracefully
+    offScreenScene->Deinit(true); // Multiple deinit calls
+}
+
+/**
+ * @tc.name: OffscreenSceneOnWindowChange001
+ * @tc.desc: test OnWindowChange before LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    // OnWindowChange before LoadPluginByUid should handle gracefully
+    OHOS::Render3D::WindowChangeInfo info;
+    info.width = 512;
+    info.height = 512;
+
+    bool ret = offScreenScene->OnWindowChange(info);
+    EXPECT_TRUE(ret);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneOnWindowChange002
+ * @tc.desc: test OnWindowChange after LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    OHOS::Render3D::WindowChangeInfo info;
+    info.width = 1024;
+    info.height = 768;
+
+    bool ret = offScreenScene->OnWindowChange(info);
+    EXPECT_TRUE(ret);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneGetEcs001
+ * @tc.desc: test GetEcs returns null before LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    // Before LoadPluginByUid, GetEcs should return null
+    auto ecs = offScreenScene->GetEcs();
+    EXPECT_EQ(ecs, nullptr);
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneGetEcs002
+ * @tc.desc: test GetEcs returns valid after LoadPluginByUid
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs002, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    // After LoadPluginByUid, GetEcs should return valid
+    {
+        auto ecs = offScreenScene->GetEcs();
+        EXPECT_NE(ecs, nullptr);
+    }
+    // ecs released here before Deinit
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneEngineTickFrame001
+ * @tc.desc: test EngineTickFrame with valid ecs
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneEngineTickFrame001, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    {
+        auto ecs = offScreenScene->GetEcs();
+        EXPECT_NE(ecs, nullptr);
+        bool ret = offScreenScene->EngineTickFrame(ecs);
+        EXPECT_TRUE(ret);
+    }
+    // ecs and ret released here before Deinit
+
+    offScreenScene->Deinit(true);
+}
+
+/**
+ * @tc.name: OffscreenSceneCameraConfigsDump
+ * @tc.desc: test OffscreenCameraConfigs Dump method
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneCameraConfigsDump, TestSize.Level1)
+{
+    OffscreenCameraConfigs p;
+    p.position_ = OHOS::Render3D::Vector3f({1.0f, 2.0f, 3.0f});
+    p.rotation_ = OHOS::Render3D::Vector4f({0.0f, 0.0f, 0.0f, 1.0f});
+    p.clearColor_ = OHOS::Render3D::Vector4f({0.5f, 0.5f, 0.5f, 1.0f});
+    p.intrinsics_.fov_ = 0.8f;
+    p.intrinsics_.near_ = 0.1f;
+    p.intrinsics_.far_ = 100.0f;
+
+    std::string dump = p.Dump();
+    EXPECT_FALSE(dump.empty());
+    // Check if dump contains expected values
+    EXPECT_NE(dump.find("OffscreenCamera:"), std::string::npos);
+}
+
+/**
+ * @tc.name: OffscreenSceneCreateCameraDifferentConfigs
+ * @tc.desc: test CreateCamera with different configurations
+ * @tc.type: FUNC
+ */
+HWTEST_F(OffscreenRenderUT, OffscreenSceneCreateCameraDifferentConfigs, TestSize.Level1)
+{
+    auto offScreenScene = GetOffscreenSceneInstance();
+    EXPECT_NE(offScreenScene, nullptr);
+
+    std::string uid{UID_DOTFIELD_PLUGIN};
+    offScreenScene->LoadPluginByUid(uid);
+
+    // Create camera with custom configs
+    OffscreenCameraConfigs p;
+    p.position_ = OHOS::Render3D::Vector3f({5.0f, 10.0f, 15.0f});
+    p.rotation_ = OHOS::Render3D::Vector4f({0.0f, 1.0f, 0.0f, 0.0f});
+    p.clearColor_ = OHOS::Render3D::Vector4f({1.0f, 0.0f, 0.0f, 1.0f});
+    p.intrinsics_.fov_ = 1.2f;
+    p.intrinsics_.near_ = 0.01f;
+    p.intrinsics_.far_ = 1000.0f;
+
+    bool ret = offScreenScene->CreateCamera(p);
+    EXPECT_TRUE(ret);
+
+    auto camera = offScreenScene->GetCamera();
+    EXPECT_NE(camera, nullptr);
+
+    // Verify camera was created with correct properties
+    auto pos = interface_pointer_cast<SCENE_NS::INode>(camera)->Position()->GetValue();
+    EXPECT_LT(std::fabs(pos.x - 5.0f), Rosen::EPSILON);
+    EXPECT_LT(std::fabs(pos.y - 10.0f), Rosen::EPSILON);
+    EXPECT_LT(std::fabs(pos.z - 15.0f), Rosen::EPSILON);
+
+    EXPECT_EQ(camera->FoV()->GetValue(), 1.2f);
+    EXPECT_EQ(camera->NearPlane()->GetValue(), 0.01f);
+    EXPECT_EQ(camera->FarPlane()->GetValue(), 1000.0f);
+
+    offScreenScene->Deinit(true);
+}
+} // namespace OHOS::Render3D
