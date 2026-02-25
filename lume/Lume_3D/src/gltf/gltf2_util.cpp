@@ -75,7 +75,8 @@ vector<uint8_t> Read(Accessor const& accessor)
     // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
     // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
     // whole buffer.
-    if (accessor.bufferView->meshoptCompression.buffer) {
+    if (accessor.bufferView->meshoptCompression.buffer &&
+        !accessor.bufferView->meshoptCompression.buffer->data.empty()) {
 #if defined(__OHOS_PLATFORM__)
         // Open the dynamic meshopt library.
         void* handle = dlopen("libmeshoptimizer.z.so", RTLD_LAZY);
