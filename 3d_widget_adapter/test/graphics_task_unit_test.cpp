@@ -29,8 +29,21 @@ namespace OHOS::Render3D {
 
 class GraphicsTaskUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
+    static void SetUpTestCase()
+    {
+        GraphicsTask::GetInstance();
+    }
+
+    static void TearDownTestCase()
+    {
+        auto& task = GraphicsTask::GetInstance();
+        task.exit_ = true;
+        task.PushSyncMessage([]() {});
+        if (task.loop_.joinable()) {
+            task.loop_.join();
+        }
+    }
+
     void SetUp() {}
     void TearDown() {}
 };
@@ -183,9 +196,6 @@ HWTEST_F(GraphicsTaskUT, PushSyncMessage_ExecutesTask, TestSize.Level1)
     std::atomic<bool> executed{false};
 
     task.PushSyncMessage([&executed]() { executed = true; });
-
-    // Wait a bit for execution
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     EXPECT_TRUE(executed.load());
 }
@@ -378,6 +388,153 @@ HWTEST_F(GraphicsTaskUT, PushAsyncMessage_WithCapture_ExecutesCorrectly, TestSiz
     future.wait();
 
     EXPECT_EQ(result.load(), 150);
+}
+
+/**
+ * @tc.name: PushAsyncMessage_LargeNumberOfTasks_AllComplete
+ * @tc.desc: test PushAsyncMessage with many tasks
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, PushAsyncMessage_LargeNumberOfTasks_AllComplete, TestSize.Level1)
+{
+    WIDGET_LOGD("PushAsyncMessage_LargeNumberOfTasks_AllComplete");
+    auto& task = GraphicsTask::GetInstance();
+    std::atomic<int> counter{0};
+    const int taskCount = 100;
+
+    std::vector<std::shared_future<void>> futures;
+    for (int i = 0; i < taskCount; i++) {
+        futures.push_back(task.PushAsyncMessage([&counter]() { counter++; }));
+    }
+
+    for (auto& future : futures) {
+        future.wait();
+    }
+
+    EXPECT_EQ(counter.load(), taskCount);
+}
+
+/**
+ * @tc.name: PushSyncMessage_LargeNumberOfTasks_AllComplete
+ * @tc.desc: test PushSyncMessage with many tasks
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, PushSyncMessage_LargeNumberOfTasks_AllComplete, TestSize.Level1)
+{
+    WIDGET_LOGD("PushSyncMessage_LargeNumberOfTasks_AllComplete");
+    auto& task = GraphicsTask::GetInstance();
+    std::atomic<int> counter{0};
+    const int taskCount = 100;
+
+    for (int i = 0; i < taskCount; i++) {
+        task.PushSyncMessage([&counter]() { counter++; });
+    }
+
+    EXPECT_EQ(counter.load(), taskCount);
+}
+
+/**
+ * @tc.name: PushAsyncMessage_ImmediateExecution
+ * @tc.desc: test that async messages start executing promptly
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, PushAsyncMessage_ImmediateExecution, TestSize.Level1)
+{
+    WIDGET_LOGD("PushAsyncMessage_ImmediateExecution");
+    auto& task = GraphicsTask::GetInstance();
+    std::atomic<bool> started{false};
+
+    auto future = task.PushAsyncMessage([&started]() {
+        started = true;
+    });
+
+    future.wait();
+    EXPECT_TRUE(started.load());
+}
+
+/**
+ * @tc.name: PushSyncMessage_ReturnsImmediately
+ * @tc.desc: test that sync messages execute and return
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, PushSyncMessage_ReturnsImmediately, TestSize.Level1)
+{
+    WIDGET_LOGD("PushSyncMessage_ReturnsImmediately");
+    auto& task = GraphicsTask::GetInstance();
+    std::atomic<bool> executed{false};
+
+    auto start = std::chrono::steady_clock::now();
+    task.PushSyncMessage([&executed]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        executed = true;
+    });
+    auto end = std::chrono::steady_clock::now();
+
+    EXPECT_TRUE(executed.load());
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    EXPECT_GE(duration, 10);
+}
+
+/**
+ * @tc.name: ConcurrentPushAsync_AllComplete
+ * @tc.desc: test concurrent PushAsyncMessage calls
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, ConcurrentPushAsync_AllComplete, TestSize.Level1)
+{
+    WIDGET_LOGD("ConcurrentPushAsync_AllComplete");
+    auto& task = GraphicsTask::GetInstance();
+    std::atomic<int> counter{0};
+    const int threadCount = 10;
+    const int tasksPerThread = 10;
+
+    std::vector<std::thread> threads;
+    std::vector<std::vector<std::shared_future<void>>> allFutures(threadCount);
+
+    auto pushTask = [&task, &allFutures, tasksPerThread, &counter](int threadIndex) {
+        for (int i = 0; i < tasksPerThread; i++) {
+            allFutures[threadIndex].push_back(task.PushAsyncMessage([&counter]() { counter++; }));
+        }
+    };
+
+    for (int t = 0; t < threadCount; t++) {
+        threads.emplace_back([&, t]() { pushTask(t); });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    for (auto& futures : allFutures) {
+        for (auto& future : futures) {
+            future.wait();
+        }
+    }
+
+    EXPECT_EQ(counter.load(), threadCount * tasksPerThread);
+}
+
+/**
+ * @tc.name: Message_ReuseAfterMove
+ * @tc.desc: test Message can be reused after move
+ * @tc.type: FUNC
+ */
+HWTEST_F(GraphicsTaskUT, Message_ReuseAfterMove, TestSize.Level1)
+{
+    WIDGET_LOGD("Message_ReuseAfterMove");
+    std::atomic<bool> executed1{false};
+    std::atomic<bool> executed2{false};
+
+    GraphicsTask::Message msg1([&executed1]() { executed1 = true; });
+    GraphicsTask::Message msg2(std::move(msg1));
+
+    msg1 = GraphicsTask::Message([&executed2]() { executed2 = true; });
+
+    msg2.Execute();
+    msg1.Execute();
+
+    EXPECT_TRUE(executed1.load());
+    EXPECT_TRUE(executed2.load());
 }
 
 } // namespace OHOS::Render3D

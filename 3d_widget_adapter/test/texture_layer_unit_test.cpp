@@ -302,4 +302,432 @@ HWTEST_F(TextureLayerUT, SetParent001, TestSize.Level1)
     EXPECT_NE(textureLayer, nullptr);
 }
 
+/**
+ * @tc.name: SetParent002
+ * @tc.desc: test SetParent after OnWindowChange (rsNode_ created)
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, SetParent002, TestSize.Level1)
+{
+    WIDGET_LOGD("SetParent002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // First call OnWindowChange to create rsNode_
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Set parent to null - this tests RemoveChild path with rsNode_ created
+    std::shared_ptr<Rosen::RSNode> parent = nullptr;
+    textureLayer->SetParent(parent);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RemoveChild001
+ * @tc.desc: test RemoveChild with null parent and null rsNode
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RemoveChild001, TestSize.Level1)
+{
+    WIDGET_LOGD("RemoveChild001");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Don't initialize parent or rsNode
+    // SetParent will call RemoveChild internally
+    std::shared_ptr<Rosen::RSNode> parent = nullptr;
+    textureLayer->SetParent(parent);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RemoveChild002
+ * @tc.desc: test RemoveChild when rsNode_ is created
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RemoveChild002, TestSize.Level1)
+{
+    WIDGET_LOGD("RemoveChild002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Call OnWindowChange to create rsNode_
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Set parent to null - RemoveChild will be called internally
+    // Since parent_ is null and rsNode_ is not null, RemoveChild will not do anything
+    std::shared_ptr<Rosen::RSNode> nullParent = nullptr;
+    textureLayer->SetParent(nullParent);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RotationToTransform001
+ * @tc.desc: test RotationToTransform with 0 degrees
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RotationToTransform001, TestSize.Level1)
+{
+    WIDGET_LOGD("RotationToTransform001");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.transformType = 0; // 0 degrees
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RotationToTransform002
+ * @tc.desc: test RotationToTransform with 90 degrees
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RotationToTransform002, TestSize.Level1)
+{
+    WIDGET_LOGD("RotationToTransform002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.transformType = 90; // 90 degrees
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RotationToTransform003
+ * @tc.desc: test RotationToTransform with 180 degrees
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RotationToTransform003, TestSize.Level1)
+{
+    WIDGET_LOGD("RotationToTransform003");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.transformType = 180; // 180 degrees
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RotationToTransform004
+ * @tc.desc: test RotationToTransform with 270 degrees
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RotationToTransform004, TestSize.Level1)
+{
+    WIDGET_LOGD("RotationToTransform004");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.transformType = 270; // 270 degrees
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: RotationToTransform005
+ * @tc.desc: test RotationToTransform with invalid rotation
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, RotationToTransform005, TestSize.Level1)
+{
+    WIDGET_LOGD("RotationToTransform005");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.transformType = 45; // invalid rotation, should default to 0
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: CreateNativeWindow001
+ * @tc.desc: test CreateNativeWindow with SURFACE_WINDOW
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, CreateNativeWindow001, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateNativeWindow001");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Test SURFACE_WINDOW - triggers CreateNativeWindow path
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_WINDOW;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+}
+
+/**
+ * @tc.name: CreateNativeWindow002
+ * @tc.desc: test CreateNativeWindow with SURFACE_TEXTURE
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, CreateNativeWindow002, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateNativeWindow002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Test SURFACE_TEXTURE - triggers CreateNativeWindow path
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+}
+
+/**
+ * @tc.name: CreateNativeWindow003
+ * @tc.desc: test CreateNativeWindow with SURFACE_BUFFER
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, CreateNativeWindow003, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateNativeWindow003");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Test SURFACE_BUFFER - triggers CreateNativeWindow path
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_BUFFER;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+}
+
+/**
+ * @tc.name: CreateNativeWindow004
+ * @tc.desc: test CreateNativeWindow with producerSurfaceId (offscreen render)
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, CreateNativeWindow004, TestSize.Level1)
+{
+    WIDGET_LOGD("CreateNativeWindow004");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Test with producerSurfaceId - triggers CreateNativeOffScreenWindow path
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.producerSurfaceId = 0x12345678; // non-zero surface ID
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+}
+
+/**
+ * @tc.name: ConfigWindow001
+ * @tc.desc: test ConfigWindow with recreateWindow true
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, ConfigWindow001, TestSize.Level1)
+{
+    WIDGET_LOGD("ConfigWindow001");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.recreateWindow = true;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.recreateWindow_, true);
+}
+
+/**
+ * @tc.name: ConfigWindow002
+ * @tc.desc: test ConfigWindow with recreateWindow false
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, ConfigWindow002, TestSize.Level1)
+{
+    WIDGET_LOGD("ConfigWindow002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.recreateWindow = false;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.recreateWindow_, false);
+}
+
+/**
+ * @tc.name: SetBackgroundColor003
+ * @tc.desc: test SetBackgroundColor with rsNode initialized
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, SetBackgroundColor003, TestSize.Level1)
+{
+    WIDGET_LOGD("SetBackgroundColor003");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Initialize rsNode_ by calling OnWindowChange
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    windowChangeInfo.backgroundColor = 0xFF0000FF;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Set background color
+    textureLayer->SetBackgroundColor(0x00FF00FF);
+
+    // Verify no crash
+    EXPECT_NE(textureLayer, nullptr);
+}
+
+/**
+ * @tc.name: DestroyRenderTarget002
+ * @tc.desc: test DestroyRenderTarget after initialization
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, DestroyRenderTarget002, TestSize.Level1)
+{
+    WIDGET_LOGD("DestroyRenderTarget002");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    // Initialize by calling OnWindowChange
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    // Verify texture info is set
+    TextureInfo textureInfoBefore = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfoBefore.width_, 800U);
+
+    // Destroy render target
+    textureLayer->DestroyRenderTarget();
+
+    // Verify texture info is reset
+    TextureInfo textureInfoAfter = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfoAfter.width_, 0U);
+    EXPECT_EQ(textureInfoAfter.height_, 0U);
+}
+
+/**
+ * @tc.name: OnWindowChange006
+ * @tc.desc: test OnWindowChange with scale and widthScale/heightScale
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, OnWindowChange006, TestSize.Level1)
+{
+    WIDGET_LOGD("OnWindowChange006");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.scale = 2.0f;
+    windowChangeInfo.widthScale = 0.5f;
+    windowChangeInfo.heightScale = 0.5f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+    EXPECT_LT(std::fabs(textureInfo.widthScale_ - 0.5f), 0.0001f);
+    EXPECT_LT(std::fabs(textureInfo.heightScale_ - 0.5f), 0.0001f);
+}
+
+/**
+ * @tc.name: OnWindowChange007
+ * @tc.desc: test OnWindowChange with offset values
+ * @tc.type: FUNC
+ */
+HWTEST_F(TextureLayerUT, OnWindowChange007, TestSize.Level1)
+{
+    WIDGET_LOGD("OnWindowChange007");
+    int32_t key = 100;
+    auto textureLayer = std::make_unique<TextureLayer>(key);
+
+    WindowChangeInfo windowChangeInfo;
+    windowChangeInfo.offsetX = 100.0f;
+    windowChangeInfo.offsetY = 200.0f;
+    windowChangeInfo.width = 800.0f;
+    windowChangeInfo.height = 600.0f;
+    windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
+    textureLayer->OnWindowChange(windowChangeInfo);
+
+    TextureInfo textureInfo = textureLayer->GetTextureInfo();
+    EXPECT_EQ(textureInfo.width_, 800U);
+    EXPECT_EQ(textureInfo.height_, 600U);
+}
+
 } // namespace OHOS::Render3D
