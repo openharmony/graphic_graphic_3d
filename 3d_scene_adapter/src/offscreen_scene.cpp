@@ -21,6 +21,7 @@
 #include <string_view>
 #include <string>
 #include <sys/syscall.h>
+#include <cinttypes>
 
 #include <base/containers/array_view.h>
 #include <base/containers/shared_ptr.h>
@@ -140,7 +141,8 @@ public:
     bool OnWindowChange(const WindowChangeInfo& windowChangeInfo) override
     {
         if (GetOffscreenDFXEnabled()) {
-            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %llx", windowChangeInfo.producerSurfaceId);
+            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %" PRIx64,
+                windowChangeInfo.producerSurfaceId);
         }
         sceneAdapter_->OnWindowChange(windowChangeInfo);
         return true;
