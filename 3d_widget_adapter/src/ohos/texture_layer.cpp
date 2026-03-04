@@ -67,6 +67,7 @@ public:
         bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW) override;
     TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
     void SetBackgroundColor(uint32_t backgroundColor) override;
+    void SetRenderScale(float widthScale, float heightScale) override;
 
 private:
     void CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig);
@@ -275,6 +276,12 @@ void TextureLayerImpl::ConfigWindow(
     }
 }
 
+void TextureLayerImpl::SetRenderScale(float widthScale, float heightScale)
+{
+    image_.textureInfo_.widthScale_ = widthScale;
+    image_.textureInfo_.heightScale_ = heightScale;
+}
+
 TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
     bool recreateWindow, SurfaceType surfaceType)
 {
@@ -372,6 +379,11 @@ void TextureLayer::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
 void TextureLayer::SetBackgroundColor(uint32_t backgroundColor)
 {
     textureLayer_->SetBackgroundColor(backgroundColor);
+}
+
+void TextureLayer::SetRenderScale(float widthScale, float heightScale)
+{
+    textureLayer_->SetRenderScale(widthScale, heightScale);
 }
 
 TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,

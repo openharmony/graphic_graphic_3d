@@ -467,6 +467,14 @@ bool SceneAdapter::LoadPluginsAndInit()
     return true;
 }
 
+void SceneAdapter::OnWindowChange(float renderWidth, float renderHeight)
+{
+    auto wci = windowChangeInfo_;
+    wci.widthScale = renderWidth;
+    wci.heightScale = renderHeight;
+    OnWindowChange(wci);
+}
+
 void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 {
     WIDGET_LOGI("SceneAdapter::OnWindowchange");
@@ -512,6 +520,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
     if (engineThread) {
         engineThread->AddWaitableTask(cb)->Wait();
         onWindowChanged_ = true;
+        windowChangeInfo_ = windowChangeInfo;
     } else {
         WIDGET_LOGE("ENGINE_THREAD not ready in OnWindowChange");
     }
