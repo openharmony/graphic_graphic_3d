@@ -1364,4 +1364,119 @@ HWTEST_F(LumeCustomRenderUT, MethodSequences_StressTest, testing::ext::TestSize.
     EXPECT_TRUE(render.NeedsFrameCallback());
 }
 
+// ============================================================================
+// Tests for SetRenderOutput method
+// ============================================================================
+
+/**
+ * @tc.name: SetRenderOutput_NullOutput_NoCrash
+ * @tc.desc: Verify SetRenderOutput handles null output without crashing
+ * @tc.type: FUNC
+ */
+HWTEST_F(LumeCustomRenderUT, SetRenderOutput_NullOutput_NoCrash, testing::ext::TestSize.Level1)
+{
+    LumeCustomRenderTestHelper render(true);
+
+    CustomRenderInput input;
+    input.engine_ = engine_;
+    input.graphicsContext_ = graphicsContext3D_;
+    input.renderContext_ = renderContext_;
+    input.ecs_ = ecs_;
+    input.width_ = 2560;
+    input.height_ = 1440;
+    input.useMultiSwapChain_ = true;
+
+    render.Initialize(input);
+
+    ASSERT_NE(engine_, nullptr);
+    ASSERT_NE(renderContext_, nullptr);
+    ASSERT_NE(ecs_, nullptr);
+
+    RENDER_NS::RenderHandleReference nullOutput;
+    render.SetRenderOutput(nullOutput);
+
+    EXPECT_TRUE(render.NeedsFrameCallback());
+}
+
+/**
+ * @tc.name: SetRenderOutput_ValidOutput_NoCrash
+ * @tc.desc: Verify SetRenderOutput handles valid output without crashing
+ * @tc.type: FUNC
+ */
+HWTEST_F(LumeCustomRenderUT, SetRenderOutput_ValidOutput_NoCrash, testing::ext::TestSize.Level1)
+{
+    LumeCustomRenderTestHelper render(true);
+
+    CustomRenderInput input;
+    input.engine_ = engine_;
+    input.graphicsContext_ = graphicsContext3D_;
+    input.renderContext_ = renderContext_;
+    input.ecs_ = ecs_;
+    input.width_ = 2560;
+    input.height_ = 1440;
+    input.useMultiSwapChain_ = true;
+
+    render.Initialize(input);
+
+    ASSERT_NE(engine_, nullptr);
+    ASSERT_NE(renderContext_, nullptr);
+    ASSERT_NE(ecs_, nullptr);
+
+    RENDER_NS::RenderHandleReference output;
+    render.SetRenderOutput(output);
+
+    EXPECT_TRUE(render.NeedsFrameCallback());
+}
+
+/**
+ * @tc.name: SetRenderOutput_MultipleCalls_NoCrash
+ * @tc.desc: Verify SetRenderOutput can be called multiple times without crashing
+ * @tc.type: FUNC
+ */
+HWTEST_F(LumeCustomRenderUT, SetRenderOutput_MultipleCalls_NoCrash, testing::ext::TestSize.Level1)
+{
+    LumeCustomRenderTestHelper render(true);
+
+    CustomRenderInput input;
+    input.engine_ = engine_;
+    input.graphicsContext_ = graphicsContext3D_;
+    input.renderContext_ = renderContext_;
+    input.ecs_ = ecs_;
+    input.width_ = 2560;
+    input.height_ = 1440;
+    input.useMultiSwapChain_ = true;
+
+    render.Initialize(input);
+
+    ASSERT_NE(engine_, nullptr);
+    ASSERT_NE(renderContext_, nullptr);
+    ASSERT_NE(ecs_, nullptr);
+
+    RENDER_NS::RenderHandleReference output1;
+    RENDER_NS::RenderHandleReference output2;
+    RENDER_NS::RenderHandleReference nullOutput;
+
+    render.SetRenderOutput(output1);
+    render.SetRenderOutput(output2);
+    render.SetRenderOutput(nullOutput);
+    render.SetRenderOutput(output1);
+
+    EXPECT_TRUE(render.NeedsFrameCallback());
+}
+
+/**
+ * @tc.name: SetRenderOutput_BeforeInitialize_NoCrash
+ * @tc.desc: Verify SetRenderOutput called before Initialize doesn't crash
+ * @tc.type: FUNC
+ */
+HWTEST_F(LumeCustomRenderUT, SetRenderOutput_BeforeInitialize_NoCrash, testing::ext::TestSize.Level1)
+{
+    LumeCustomRenderTestHelper render(true);
+
+    RENDER_NS::RenderHandleReference output;
+    render.SetRenderOutput(output);
+
+    EXPECT_TRUE(render.NeedsFrameCallback());
+}
+
 } // namespace OHOS::Render3D

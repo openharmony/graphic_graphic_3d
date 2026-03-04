@@ -114,6 +114,14 @@ ohos_unittest("GraphicsTaskUnitTest") {
 
   defines = [ "USE_ACE_SKIA" ]
 
+  cflags = [
+    "-Wall",
+    "-Werror",
+    "-g3",
+    "-Dprivate=public",
+    "-Dprotected=public",
+  ]
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
@@ -265,6 +273,48 @@ ohos_unittest("LumeCustomRenderUnitTest") {
   subsystem_name = "graphic"
 }
 
+ohos_unittest("OffScreenContextHelperUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "offscreen_context_helper_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_unittest("GraphicsManagerCommonUnitTest") {
+  module_out_path = module_output_path
+
+  sources = [ "graphics_manager_common_unit_test.cpp" ]
+
+  deps = [ "${LUME_ROOT}/../3d_widget_adapter:widget_adapter_source" ]
+
+  external_deps = [
+    "graphic_2d:EGL",
+    "graphic_2d:GLESv3",
+    "hilog:libhilog",
+  ]
+
+  defines = [ "USE_ACE_SKIA" ]
+
+  cflags = [
+    "-Dprotected=public",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 group("unittest") {
   testonly = true
 
@@ -273,9 +323,11 @@ group("unittest") {
     ":DataTypeUnitTest",
     ":EngineFactoryTest",
     ":GeometryUnitTest",
+    ":GraphicsManagerCommonUnitTest",
     ":GraphicsManagerUnitTest",
     ":GraphicsTaskUnitTest",
     ":LumeCustomRenderUnitTest",
+    ":OffScreenContextHelperUnitTest",
     ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",
   ]
