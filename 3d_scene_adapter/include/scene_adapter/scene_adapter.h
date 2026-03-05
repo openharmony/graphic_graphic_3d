@@ -75,6 +75,7 @@ public:
     bool LoadPluginsAndInit() override; // it should be static function
     std::shared_ptr<TextureLayer> CreateTextureLayer() override;
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
+    void OnWindowChange(float renderWidth, float renderHeight) override;
     void RenderFrame(bool needsSyncPaint = false) override;
     void Deinit() override;
     void SetNeedsRepaint(bool needsRepaint);
@@ -125,6 +126,7 @@ protected:
     META_NS::ITaskQueueTask::Ptr singleFrameAsync_;
     META_NS::ITaskQueueWaitableTask::Ptr singleFrameSync_;
     META_NS::ITaskQueueWaitableTask::Ptr propSyncSync_;
+    WindowChangeInfo windowChangeInfo_;
 
     SurfaceBufferInfo sfBufferInfo_;
 
