@@ -17,7 +17,7 @@ import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 # Test case compilation output path
-module_output_path = "graphic_3d/lume/Lume3D"
+module_output_path = "graphic_3d/graphic_3d/lume/Lume3D"
 
 # Options
 RENDER_BUILD_GLES = true

@@ -17,7 +17,7 @@ import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 # Test case compilation output path
-module_output_path = "graphic_3d/lume/LumeBase"
+module_output_path = "graphic_3d/graphic_3d/lume/LumeBase"
 
 # ohos_unittest
 ohos_unittest("lume_base_api_test") {
