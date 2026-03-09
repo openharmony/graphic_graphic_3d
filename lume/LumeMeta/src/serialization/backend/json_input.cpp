@@ -120,30 +120,49 @@ ISerNode::Ptr JsonInput::ImportArray(const json::value::array& arr)
 
 ISerNode::Ptr JsonInput::Import(const json::value& value)
 {
+    static constexpr uint32_t MAX_DEPTH = 256u;
+
+    if (++depth_ >= MAX_DEPTH) {
+        CORE_LOG_E("Maximum JSON hierarchy depth exceeded");
+        return {};
+    }
+    ISerNode::Ptr result;
+
     switch (value.type) {
         case json::type::boolean:
-            return ISerNode::Ptr(new BoolNode(value.boolean_));
+            result = ISerNode::Ptr(new BoolNode(value.boolean_));
+            break;
         case json::type::floating_point:
-            return ISerNode::Ptr(new DoubleNode(value.float_));
+            result = ISerNode::Ptr(new DoubleNode(value.float_));
+            break;
         case json::type::signed_int:
-            return ISerNode::Ptr(new IntNode(value.signed_));
+            result = ISerNode::Ptr(new IntNode(value.signed_));
+            break;
         case json::type::unsigned_int:
-            return ISerNode::Ptr(new UIntNode(value.unsigned_));
+            result = ISerNode::Ptr(new UIntNode(value.unsigned_));
+            break;
         case json::type::string:
-            return ISerNode::Ptr(new StringNode(CORE_NS::json::unescape(value.string_)));
+            result = ISerNode::Ptr(new StringNode(CORE_NS::json::unescape(value.string_)));
+            break;
         case json::type::object:
             if (auto ref = value.find("$ref")) {
-                return ImportRef(*ref);
+                result = ImportRef(*ref);
+            } else {
+                result = ImportObject(value);
             }
-            return ImportObject(value);
+            break;
         case json::type::array:
-            return ImportArray(value.array_);
+            result = ImportArray(value.array_);
+            break;
         case json::type::null:
-            return ISerNode::Ptr(new NilNode);
+            result = ISerNode::Ptr(new NilNode);
+            break;
         default:
             CORE_ASSERT_MSG(false, "Unhandled primitive type in Json input");
-            return nullptr;
+            break;
     }
+    depth_--;
+    return result;
 }
 
 bool JsonInput::ReadMetadata(const json::value& value)
@@ -206,6 +225,7 @@ ISerNode::Ptr JsonInput::ImportRootObject(const json::value& value)
 
 ISerNode::Ptr JsonInput::Process(BASE_NS::string_view data)
 {
+    depth_ = 0;
     ISerNode::Ptr res;
     auto json = CORE_NS::json::parse(data.data());
     if (json.is_object()) {
