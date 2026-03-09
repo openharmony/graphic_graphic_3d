@@ -240,7 +240,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenRender, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetSceneObj001
- * @tc.desc: test GetSceneObj returns null before LoadPluginByUid
+ * @tc.desc: test GetSceneObj returns null before LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj001, TestSize.Level1)
@@ -257,7 +257,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetSceneObj002
- * @tc.desc: test GetSceneObj returns valid after LoadPluginByUid
+ * @tc.desc: test GetSceneObj returns valid after LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj002, TestSize.Level1)
@@ -281,7 +281,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetSceneObj002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetCamera001
- * @tc.desc: test GetCamera returns null before CreateCamera
+ * @tc.desc: test GetCamera returns null before CreateCamera [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera001, TestSize.Level1)
@@ -301,7 +301,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetCamera002
- * @tc.desc: test GetCamera returns valid after CreateCamera
+ * @tc.desc: test GetCamera returns valid after CreateCamera [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera002, TestSize.Level1)
@@ -324,7 +324,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetCamera002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneSetCameraConfigs001
- * @tc.desc: test SetCameraConfigs before CreateCamera
+ * @tc.desc: test SetCameraConfigs before CreateCamera [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs001, TestSize.Level1)
@@ -345,7 +345,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneSetCameraConfigs002
- * @tc.desc: test SetCameraConfigs after CreateCamera
+ * @tc.desc: test SetCameraConfigs after CreateCamera [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs002, TestSize.Level1)
@@ -382,7 +382,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneRenderFrame001
- * @tc.desc: test RenderFrame before CreateCamera
+ * @tc.desc: test RenderFrame before CreateCamera [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneRenderFrame001, TestSize.Level1)
@@ -402,7 +402,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneRenderFrame001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneDeinit001
- * @tc.desc: test Deinit without engine deinit
+ * @tc.desc: test Deinit without engine deinit [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit001, TestSize.Level1)
@@ -437,7 +437,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneDeinit002
- * @tc.desc: test Deinit with engine deinit
+ * @tc.desc: test Deinit with engine deinit [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit002, TestSize.Level1)
@@ -460,7 +460,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneDeinit002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneOnWindowChange001
- * @tc.desc: test OnWindowChange before LoadPluginByUid
+ * @tc.desc: test OnWindowChange before LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange001, TestSize.Level1)
@@ -481,7 +481,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneOnWindowChange002
- * @tc.desc: test OnWindowChange after LoadPluginByUid
+ * @tc.desc: test OnWindowChange after LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange002, TestSize.Level1)
@@ -504,7 +504,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneOnWindowChange002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetEcs001
- * @tc.desc: test GetEcs returns null before LoadPluginByUid
+ * @tc.desc: test GetEcs returns null before LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs001, TestSize.Level1)
@@ -521,7 +521,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneGetEcs002
- * @tc.desc: test GetEcs returns valid after LoadPluginByUid
+ * @tc.desc: test GetEcs returns valid after LoadPluginByUid [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs002, TestSize.Level1)
@@ -544,7 +544,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneGetEcs002, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneEngineTickFrame001
- * @tc.desc: test EngineTickFrame with valid ecs
+ * @tc.desc: test EngineTickFrame with valid ecs [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneEngineTickFrame001, TestSize.Level1)
@@ -568,7 +568,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneEngineTickFrame001, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneCameraConfigsDump
- * @tc.desc: test OffscreenCameraConfigs Dump method
+ * @tc.desc: test OffscreenCameraConfigs Dump method [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneCameraConfigsDump, TestSize.Level1)
@@ -589,7 +589,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneCameraConfigsDump, TestSize.Level1)
 
 /**
  * @tc.name: OffscreenSceneCreateCameraDifferentConfigs
- * @tc.desc: test CreateCamera with different configurations
+ * @tc.desc: test CreateCamera with different configurations [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(OffscreenRenderUT, OffscreenSceneCreateCameraDifferentConfigs, TestSize.Level1)
