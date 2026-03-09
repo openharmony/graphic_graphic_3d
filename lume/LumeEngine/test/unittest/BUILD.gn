@@ -258,8 +258,10 @@ ohos_unittest("lume_engine_src_test") {
     "src_unit_test/src/threading/task_queue_test.cpp",
     
     # Util
+    "src_unit_test/src/util/frustum_util_test.cpp",
     "src_unit_test/src/util/json_test.cpp",
     "src_unit_test/src/util/linear_allocator_test.cpp",
+    "src_unit_test/src/util/string_util_test.cpp",
   ]
 
   # External deps
