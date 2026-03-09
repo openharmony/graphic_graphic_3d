@@ -61,6 +61,7 @@ private:
 private:
     Version metaVersion_;
     SerMetadata metadata_;
+    uint32_t depth_ {};
 };
 
 } // namespace Serialization
