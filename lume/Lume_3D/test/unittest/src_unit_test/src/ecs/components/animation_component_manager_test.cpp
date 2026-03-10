@@ -18,10 +18,6 @@
 #include <base/containers/string.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
-#if !defined(JSON_IMPL)
-#define JSON_IMPL
-#endif
-#include <core/json/json.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
