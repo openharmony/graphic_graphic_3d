@@ -650,7 +650,7 @@ HWTEST_F(SceneAdapterUT, AcquireImage003, TestSize.Level1)
 
 /**
  * @tc.name: CreateEmptyScene001
- * @tc.desc: test CreateEmptyScene with initialized engine
+ * @tc.desc: test CreateEmptyScene with initialized engine [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, CreateEmptyScene001, TestSize.Level1)
@@ -679,7 +679,7 @@ HWTEST_F(SceneAdapterUT, CreateEmptyScene001, TestSize.Level1)
 
 /**
  * @tc.name: CreateEmptyScene002
- * @tc.desc: test CreateEmptyScene multiple times
+ * @tc.desc: test CreateEmptyScene multiple times [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, CreateEmptyScene002, TestSize.Level1)
@@ -709,7 +709,7 @@ HWTEST_F(SceneAdapterUT, CreateEmptyScene002, TestSize.Level1)
 
 /**
  * @tc.name: EngineTickFrame001
- * @tc.desc: test EngineTickFrame with null ecs
+ * @tc.desc: test EngineTickFrame with null ecs [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, EngineTickFrame001, TestSize.Level1)
@@ -724,7 +724,7 @@ HWTEST_F(SceneAdapterUT, EngineTickFrame001, TestSize.Level1)
 
 /**
  * @tc.name: EngineTickFrame002
- * @tc.desc: test EngineTickFrame with valid ecs
+ * @tc.desc: test EngineTickFrame with valid ecs [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, EngineTickFrame002, TestSize.Level1)
@@ -751,7 +751,7 @@ HWTEST_F(SceneAdapterUT, EngineTickFrame002, TestSize.Level1)
 
 /**
  * @tc.name: SetSceneObj001
- * @tc.desc: test SetSceneObj with null object
+ * @tc.desc: test SetSceneObj with null object [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, SetSceneObj001, TestSize.Level1)
@@ -769,7 +769,7 @@ HWTEST_F(SceneAdapterUT, SetSceneObj001, TestSize.Level1)
 
 /**
  * @tc.name: SetSceneObj002
- * @tc.desc: test SetSceneObj then GetSceneObj
+ * @tc.desc: test SetSceneObj then GetSceneObj [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, SetSceneObj002, TestSize.Level1)
@@ -797,7 +797,7 @@ HWTEST_F(SceneAdapterUT, SetSceneObj002, TestSize.Level1)
 
 /**
  * @tc.name: DeinitRenderThread001
- * @tc.desc: test DeinitRenderThread without proper init
+ * @tc.desc: test DeinitRenderThread without proper init [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, DeinitRenderThread001, TestSize.Level1)
@@ -815,7 +815,7 @@ HWTEST_F(SceneAdapterUT, DeinitRenderThread001, TestSize.Level1)
 
 /**
  * @tc.name: DeinitRenderThread002
- * @tc.desc: test DeinitRenderThread multiple times
+ * @tc.desc: test DeinitRenderThread multiple times [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, DeinitRenderThread002, TestSize.Level1)
@@ -837,7 +837,7 @@ HWTEST_F(SceneAdapterUT, DeinitRenderThread002, TestSize.Level1)
 
 /**
  * @tc.name: MultipleAdapters001
- * @tc.desc: test multiple adapter instances
+ * @tc.desc: test multiple adapter instances [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, MultipleAdapters001, TestSize.Level1)
@@ -870,7 +870,7 @@ HWTEST_F(SceneAdapterUT, MultipleAdapters001, TestSize.Level1)
 
 /**
  * @tc.name: MultipleAdapters002
- * @tc.desc: test multiple adapters with CreateEmptyScene
+ * @tc.desc: test multiple adapters with CreateEmptyScene [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, MultipleAdapters002, TestSize.Level1)
@@ -911,7 +911,7 @@ HWTEST_F(SceneAdapterUT, MultipleAdapters002, TestSize.Level1)
 
 /**
  * @tc.name: CreateEmptySceneThenRender001
- * @tc.desc: test render after CreateEmptyScene
+ * @tc.desc: test render after CreateEmptyScene [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, CreateEmptySceneThenRender001, TestSize.Level1)
@@ -938,7 +938,7 @@ HWTEST_F(SceneAdapterUT, CreateEmptySceneThenRender001, TestSize.Level1)
 
 /**
  * @tc.name: GetEcsWithCreateEmptyScene001
- * @tc.desc: test GetEcs returns valid after CreateEmptyScene
+ * @tc.desc: test GetEcs returns valid after CreateEmptyScene [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, GetEcsWithCreateEmptyScene001, TestSize.Level1)
@@ -967,7 +967,7 @@ HWTEST_F(SceneAdapterUT, GetEcsWithCreateEmptyScene001, TestSize.Level1)
 
 /**
  * @tc.name: IsEngineInitSuccessful001
- * @tc.desc: test IsEngineInitSuccessful static method
+ * @tc.desc: test IsEngineInitSuccessful static method [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, IsEngineInitSuccessful001, TestSize.Level1)
@@ -993,7 +993,7 @@ HWTEST_F(SceneAdapterUT, IsEngineInitSuccessful001, TestSize.Level1)
 
 /**
  * @tc.name: AcquireImage004
- * @tc.desc: test AcquireImage with empty transform matrix
+ * @tc.desc: test AcquireImage with empty transform matrix [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, AcquireImage004, TestSize.Level1)
@@ -1028,7 +1028,7 @@ HWTEST_F(SceneAdapterUT, AcquireImage004, TestSize.Level1)
 
 /**
  * @tc.name: AcquireImage005
- * @tc.desc: test AcquireImage with oversize transform matrix
+ * @tc.desc: test AcquireImage with oversize transform matrix [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 HWTEST_F(SceneAdapterUT, AcquireImage005, TestSize.Level1)

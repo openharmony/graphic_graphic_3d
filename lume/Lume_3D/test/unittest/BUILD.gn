@@ -239,6 +239,7 @@ ohos_unittest("lume_3d_src_test") {
     "common/test_runner_ohos_system.cpp",
 
     # ECS - Components
+    "src_unit_test/src/ecs/components/animation_component_manager_test.cpp",
     "src_unit_test/src/ecs/components/base_manager_test.cpp",
 
     # ECS - Systems
