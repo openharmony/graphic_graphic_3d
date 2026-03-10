@@ -82,7 +82,7 @@ private:
     napi_value CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-
+    napi_value CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
     napi_value CreateScene(NapiApi::FunctionContext<>& ctx);

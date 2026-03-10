@@ -139,6 +139,7 @@ ohos_unittest("lume_scene_api_test") {
     "api_unit_test/src/scene/scene_ser_compat_test.cpp",
     "api_unit_test/src/scene/scene_serialisation_test.cpp",
     "api_unit_test/src/scene/scene_test.cpp",
+    "api_unit_test/src/scene/surface_stream_test.cpp",
   ]
 
   # External deps
