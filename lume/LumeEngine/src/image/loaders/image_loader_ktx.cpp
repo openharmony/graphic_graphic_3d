@@ -100,6 +100,8 @@ string_view ReadStringZ(const uint8_t** data, size_t maxBytes, size_t* bytesRead
 #endif
 // On desktop typical dimension limit for GPU images is 16k. On mobile even less.
 constexpr const uint32_t MAX_DIMENSIONS = 16384U;
+// On desktop typical value of maxImageArrayLayers. Vulkan requires 256.
+constexpr const uint32_t MAX_ARRAY_ELEMENTS = 2048U;
 
 // 12 byte ktx identifier.
 constexpr const size_t KTX_IDENTIFIER_LENGTH = 12;
@@ -126,6 +128,12 @@ struct KtxHeader {
 };
 
 constexpr const size_t KTX_HEADER_LENGTH = sizeof(KtxHeader);
+
+struct MipDimensions {
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+};
 
 IImageContainer::ImageType GetImageType(const KtxHeader& header)
 {
@@ -205,17 +213,17 @@ public:
     }
 
     static void ProcessMipmapLevel(KtxImage::Ptr& image, const size_t imageBufferIndex,
-        const uint32_t currentImageElementOffset, const GlImageFormatInfo& formatInfo, const uint32_t elementWidth,
-        const uint32_t elementHeight, const uint32_t mipmapLevel, const uint32_t faceCount,
-        const uint32_t arrayElementCount, const uint32_t elementDepth, const size_t subelementLength)
+        const uint32_t currentImageElementOffset, const GlImageFormatInfo& formatInfo, const MipDimensions& dims,
+        const uint32_t mipmapLevel, const uint32_t faceCount, const uint32_t arrayElementCount,
+        const size_t subelementLength)
     {
         image->imageBuffers_[imageBufferIndex].bufferOffset = currentImageElementOffset;
 
         // Vulkan requires the bufferRowLength and bufferImageHeight to be multiple of block width / height.
         const auto blockWidth = formatInfo.blockWidth;
         const auto blockHeight = formatInfo.blockHeight;
-        const auto widthBlockCount = (elementWidth + (blockWidth - 1)) / blockWidth;
-        const auto heightBlockCount = (elementHeight + (blockHeight - 1)) / blockHeight;
+        const auto widthBlockCount = (dims.width + (blockWidth - 1)) / blockWidth;
+        const auto heightBlockCount = (dims.height + (blockHeight - 1)) / blockHeight;
         image->imageBuffers_[imageBufferIndex].bufferRowLength = widthBlockCount * blockWidth;
         image->imageBuffers_[imageBufferIndex].bufferImageHeight = heightBlockCount * blockHeight;
 
@@ -223,9 +231,9 @@ public:
 
         image->imageBuffers_[imageBufferIndex].layerCount = faceCount * arrayElementCount;
 
-        image->imageBuffers_[imageBufferIndex].width = elementWidth;
-        image->imageBuffers_[imageBufferIndex].height = elementHeight;
-        image->imageBuffers_[imageBufferIndex].depth = elementDepth;
+        image->imageBuffers_[imageBufferIndex].width = dims.width;
+        image->imageBuffers_[imageBufferIndex].height = dims.height;
+        image->imageBuffers_[imageBufferIndex].depth = dims.depth;
 
         //
         // Vulkan requires that: "If the calling command's VkImage parameter's
@@ -283,7 +291,12 @@ public:
         desc.width = ktx.pixelWidth;
         desc.height = ((ktx.pixelHeight == 0) ? 1 : ktx.pixelHeight);
         desc.depth = ((ktx.pixelDepth == 0) ? 1 : ktx.pixelDepth);
-        desc.layerCount = arrayElementCount * faceCount;
+        const uint64_t totalLayers = static_cast<uint64_t>(arrayElementCount) * faceCount;
+        if (totalLayers > MAX_ARRAY_ELEMENTS) {
+            CORE_LOG_D("Ktx layerCount too large.");
+            return false;
+        }
+        desc.layerCount = static_cast<uint32_t>(totalLayers);
 
         const bool compressed = (desc.imageFlags & ImageFlags::FLAGS_COMPRESSED_BIT) != 0;
         const bool imageRequestingMips = (desc.imageFlags & ImageFlags::FLAGS_REQUESTING_MIPMAPS_BIT) != 0;
@@ -362,6 +375,36 @@ public:
         return true;
     }
 
+    static bool ValidateMipLevel(const KtxImage::Ptr& image, const uint8_t* data, uint64_t totalSizePadded,
+        size_t mipSize, const GlImageFormatInfo& formatInfo, const MipDimensions& dims)
+    {
+        if (totalSizePadded >= UINT32_MAX) {
+            CORE_LOG_D("imageSize too big");
+            return false;
+        }
+
+        const auto fileBytesLeft = image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get());
+        if (totalSizePadded > fileBytesLeft) {
+            CORE_LOG_D("Not enough data for the element");
+            return false;
+        }
+
+        // Verify mip data size is consistent with declared dimensions and layers.
+        if (formatInfo.bitsPerBlock >= 8u) {
+            const size_t blocksX = (dims.width + formatInfo.blockWidth - 1u) / formatInfo.blockWidth;
+            const size_t blocksY = (dims.height + formatInfo.blockHeight - 1u) / formatInfo.blockHeight;
+            const size_t blocksZ = (dims.depth + formatInfo.blockDepth - 1u) / formatInfo.blockDepth;
+            const size_t bytesPerBlock = formatInfo.bitsPerBlock / 8u;
+            const size_t expectedMipSize = blocksX * blocksY * blocksZ * bytesPerBlock * image->imageDesc_.layerCount;
+            if (mipSize < expectedMipSize) {
+                CORE_LOG_D("Ktx mip data too small for declared dimensions and layers.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     static ImageLoaderManager::LoadResult CreateImage(
         KtxImage::Ptr image, const KtxHeader& ktx, uint32_t loadFlags, const uint8_t* data, bool isEndianFlipped)
     {
@@ -385,9 +428,7 @@ public:
         }
 
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
-            uint32_t elementWidth = image->imageDesc_.width;
-            uint32_t elementHeight = image->imageDesc_.height;
-            uint32_t elementDepth = image->imageDesc_.depth;
+            MipDimensions dims { image->imageDesc_.width, image->imageDesc_.height, image->imageDesc_.depth };
 
             // Create buffer info for each mipmap level.
             // NOTE: One BufferImageCopy can copy all the layers and faces in one step.
@@ -414,43 +455,25 @@ public:
                 const size_t lodSize = myReadU32(&data);
                 // Pad to to a multiple of 4.
                 const size_t lodSizePadded = lodSize + ((~lodSize + 1) & (4u - 1u));
-
+                const size_t mipSize = lodSize * iterations;
                 const uint64_t totalSizePadded = static_cast<uint64_t>(lodSizePadded) * iterations;
-                if (totalSizePadded >= UINT32_MAX) {
-                    CORE_LOG_D("imageSize too big");
-                    return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-                }
 
-                const auto fileBytesLeft =
-                    image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get());
-                if (totalSizePadded > fileBytesLeft) {
-                    CORE_LOG_D("Not enough data for the element");
-                    CORE_LOG_V(
-                        "  mips=%u faces=%u arrayElements=%u", inputMipCount, ktx.numberOfFaces, arrayElementCount);
-                    CORE_LOG_V("  mipmapLevel=%u lodsize=%zu end=%zu filesize=%zu.", mipmapLevel, lodSize,
-                        static_cast<size_t>(data - image->fileBytes_.get() + static_cast<ptrdiff_t>(lodSize)),
-                        image->fileBytesLength_);
+                if (!ValidateMipLevel(image, data, totalSizePadded, mipSize, formatInfo, dims)) {
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
 
                 const auto currentImageElementOffset = static_cast<uint32_t>(data - image->imageBytes_);
                 CORE_ASSERT_MSG(currentImageElementOffset % 4u == 0, "Offset must be aligned to 4 bytes");
-                ProcessMipmapLevel(image, imageBufferIndex, currentImageElementOffset, formatInfo, elementWidth,
-                    elementHeight, mipmapLevel, ktx.numberOfFaces, arrayElementCount, elementDepth,
-                    static_cast<uint32_t>(totalSizePadded));
+                ProcessMipmapLevel(image, imageBufferIndex, currentImageElementOffset, formatInfo, dims, mipmapLevel,
+                    ktx.numberOfFaces, arrayElementCount, static_cast<uint32_t>(totalSizePadded));
 
                 // Move to the next buffer if any.
                 imageBufferIndex++;
 
                 // Figure out the next mipmap level sizes. The dimentions of each level are half of the previous.
-                elementWidth /= 2u;
-                elementWidth = (elementWidth <= 1) ? 1 : elementWidth;
-
-                elementHeight /= 2u;
-                elementHeight = (elementHeight <= 1) ? 1 : elementHeight;
-
-                elementDepth /= 2u;
-                elementDepth = (elementDepth <= 1) ? 1 : elementDepth;
+                dims.width = std::max(dims.width / 2u, 1u);
+                dims.height = std::max(dims.height / 2u, 1u);
+                dims.depth = std::max(dims.depth / 2u, 1u);
 
                 // Skip to the next lod level.
                 // NOTE: in theory there could be packing here for each face. in that case we would need to
@@ -464,6 +487,49 @@ public:
             }
         }
         return ImageLoaderManager::ResultSuccess(CORE_NS::move(image));
+    }
+
+    static bool ValidateKtxHeader(const KtxHeader& ktxHeader)
+    {
+        if (memcmp(ktxHeader.identifier, KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) != 0) {
+            CORE_LOG_D("Ktx invalid file identifier.");
+            return false;
+        }
+        if (ktxHeader.endianness != KTX_FILE_ENDIANNESS && ktxHeader.endianness != KTX_FILE_ENDIANNESS_FLIPPED) {
+            CORE_LOG_D("Ktx invalid endian marker.");
+            return false;
+        }
+        if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) { // 1 for regular, 6 for cubemaps
+            CORE_LOG_D("Ktx invalid numberOfFaces.");
+            return false;
+        }
+        if ((ktxHeader.pixelWidth == 0) || (ktxHeader.pixelDepth > 0 && ktxHeader.pixelHeight == 0)) {
+            CORE_LOG_D("Ktx pixelWidth can't be 0.");
+            return false;
+        }
+        if ((ktxHeader.pixelWidth > MAX_DIMENSIONS) || (ktxHeader.pixelHeight > MAX_DIMENSIONS) ||
+            (ktxHeader.pixelDepth > MAX_DIMENSIONS)) {
+            CORE_LOG_D("Ktx pixel dimensions too big.");
+            return false;
+        }
+        if (ktxHeader.numberOfArrayElements > MAX_ARRAY_ELEMENTS) {
+            CORE_LOG_D("Ktx numberOfArrayElements too large.");
+            return false;
+        }
+        if (ktxHeader.numberOfMipmapLevels) {
+            if (ktxHeader.numberOfMipmapLevels > 32U) { // 2^32 - 1, limit to
+                CORE_LOG_D("Ktx numberOfMipmapLevels suspiciously large.");
+                return false;
+            }
+            const uint32_t maxSize =
+                std::max(std::max(ktxHeader.pixelWidth, ktxHeader.pixelHeight), ktxHeader.pixelDepth);
+            const auto maxMipSize = 1U << (ktxHeader.numberOfMipmapLevels - 1U);
+            if (maxSize < maxMipSize) {
+                CORE_LOG_D("Ktx numberOfMipmapLevels too big for dimensions.");
+                return false;
+            }
+        }
+        return true;
     }
 
     // Actual ktx loading implementation.
@@ -485,40 +551,8 @@ public:
 
         const uint8_t* data = image->fileBytes_.get();
         const auto ktxHeader = ReadHeader(&data);
-        // Check that the header values make sense.
-        if (memcmp(ktxHeader.identifier, KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) != 0) {
-            CORE_LOG_D("Ktx invalid file identifier.");
+        if (!ValidateKtxHeader(ktxHeader)) {
             return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        }
-        if (ktxHeader.endianness != KTX_FILE_ENDIANNESS && ktxHeader.endianness != KTX_FILE_ENDIANNESS_FLIPPED) {
-            CORE_LOG_D("Ktx invalid endian marker.");
-            return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        }
-        if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) { // 1 for regular, 6 for cubemaps
-            CORE_LOG_D("Ktx invalid numberOfFaces.");
-            return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        }
-        if ((ktxHeader.pixelWidth == 0) || (ktxHeader.pixelDepth > 0 && ktxHeader.pixelHeight == 0)) {
-            CORE_LOG_D("Ktx pixelWidth can't be 0.");
-            return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        }
-        if ((ktxHeader.pixelWidth > MAX_DIMENSIONS) || (ktxHeader.pixelHeight > MAX_DIMENSIONS) ||
-            (ktxHeader.pixelDepth > MAX_DIMENSIONS)) {
-            CORE_LOG_D("Ktx pixel dimensions too big.");
-            return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-        }
-        if (ktxHeader.numberOfMipmapLevels) {
-            if (ktxHeader.numberOfMipmapLevels > 32U) { // 2^32 - 1, limit to
-                CORE_LOG_D("Ktx numberOfMipmapLevels suspiciously large.");
-                return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-            }
-            const uint32_t maxSize =
-                std::max(std::max(ktxHeader.pixelWidth, ktxHeader.pixelHeight), ktxHeader.pixelDepth);
-            const auto maxMipSize = 1U << (ktxHeader.numberOfMipmapLevels - 1U);
-            if (maxSize < maxMipSize) {
-                CORE_LOG_D("Ktx numberOfMipmapLevels too big for dimensions.");
-                return ImageLoaderManager::ResultFailure("Invalid ktx data.");
-            }
         }
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if (ktxHeader.bytesOfKeyValueData >

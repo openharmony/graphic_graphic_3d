@@ -240,6 +240,16 @@ public:
             return ImageLoaderManager::ResultFailure("Invalid astc data.");
         }
 
+        // Verify file has enough data for the payload declared by the header
+        const size_t blocksX = (header.width + header.blockWidth - 1u) / header.blockWidth;
+        const size_t blocksY = (header.height + header.blockHeight - 1u) / header.blockHeight;
+        const size_t blocksZ = (header.depth + header.blockDepth - 1u) / header.blockDepth;
+        const size_t expectedFileSize = ASTC_HEADER_SIZE + blocksX * blocksY * blocksZ * ASTC_BYTES_PER_BLOCK;
+        if (fileBytesLength < expectedFileSize) {
+            CORE_LOG_D("Astc file too small for declared dimensions.");
+            return ImageLoaderManager::ResultFailure("Invalid astc data.");
+        }
+
         return CreateImage(move(image), header, loadFlags, data);
     }
 
