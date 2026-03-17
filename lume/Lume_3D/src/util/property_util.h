@@ -26,6 +26,8 @@
 #include <core/property/property_handle_util.h>
 #include <core/property/property_types.h>
 
+#include "util/log.h"
+
 CORE3D_BEGIN_NAMESPACE()
 /*
  * Simple signaller class
@@ -195,7 +197,7 @@ public:
         static_assert(sizeof(T) == ptrSize);
         if ((index < metaData_.size())) {
             const auto& meta = metaData_[index];
-            CORE_ASSERT(meta.offset < data_.size_in_bytes());
+            PLUGIN_ASSERT(meta.offset < data_.size_in_bytes());
             if (void* ptr = (void*)(data_.data() + meta.offset); ptr) {
                 return *((T*)(ptr));
             }

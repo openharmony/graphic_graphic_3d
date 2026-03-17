@@ -75,6 +75,8 @@ public:
 
     CreateInfo GetCreateInfo() const override;
 
+    void UpdateEcs(CORE_NS::IEcs& ecs, const UpdateOptions& options) const override;
+
     // IInterface
     const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;

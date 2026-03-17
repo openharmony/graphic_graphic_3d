@@ -182,6 +182,7 @@ void Validate(array_view<uint8_t> data)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: EnvironmentBlenderTestVulkan
  * @tc.type: FUNC
@@ -206,3 +207,4 @@ UNIT_TEST(API_GfxTest, EnvironmentBlenderTestVulkan, testing::ext::TestSize.Leve
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

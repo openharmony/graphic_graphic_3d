@@ -99,6 +99,7 @@
                 <filteritem type="filename" name="*.lsb" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.res" desc="test resource file,can not add license head"/>
                 <filteritem type="filename" name="*.spv" desc="test resource file,can not add license head"/>
+                <filteritem type="filename" name="*.bin" desc="test resource file,binary glTF data"/>
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
             </filefilter>

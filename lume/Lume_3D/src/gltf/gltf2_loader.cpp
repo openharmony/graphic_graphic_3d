@@ -19,7 +19,9 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <securec.h>
 
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
@@ -27,7 +29,6 @@
 #include <base/containers/unique_ptr.h>
 #include <base/containers/vector.h>
 #include <core/io/intf_file_manager.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 
@@ -265,7 +266,7 @@ bool ParseOptionalNumber(
         } else if (it->is_string()) {
             // Some glTF files have strings in place of numbers, so we try to perform auto conversion here.
             ConvertStringToValue(it->string_, out);
-            CORE_LOG_W("Expected number when parsing but found string (performing auto conversion to number type).");
+            PLUGIN_LOG_W("Expected number when parsing but found string (performing auto conversion to number type).");
             return true;
         } else {
             out = defaultValue;
@@ -437,7 +438,8 @@ std::optional<int> BufferViewByteOffset(
         SetError(loadResult, "bufferView.byteOffset isn't valid offset");
         return std::nullopt;
     } else if (!buffer || !(*buffer) || !byteLength ||
-               ((*buffer)->byteLength < static_cast<size_t>(size_t(offset) + *byteLength))) {
+               (static_cast<uint64_t>((*buffer)->byteLength) <
+                   static_cast<uint64_t>(offset) + static_cast<uint64_t>(*byteLength))) {
         SetError(loadResult, "bufferView.byteLength is larger than buffer.byteLength");
         return std::nullopt;
     }
@@ -626,6 +628,22 @@ bool ParseBufferView(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+std::optional<ComponentType> ParseComponentType(LoadResult& loadResult, int componentType)
+{
+    switch (componentType) {
+        case static_cast<int>(ComponentType::BYTE):
+        case static_cast<int>(ComponentType::UNSIGNED_BYTE):
+        case static_cast<int>(ComponentType::SHORT):
+        case static_cast<int>(ComponentType::UNSIGNED_SHORT):
+        case static_cast<int>(ComponentType::UNSIGNED_INT):
+        case static_cast<int>(ComponentType::FLOAT):
+            return static_cast<ComponentType>(componentType);
+        default:
+            SetError(loadResult, "Invalid componentType value");
+            return std::nullopt;
+    }
+}
+
 std::optional<ComponentType> AccessorComponentType(LoadResult& loadResult, const json::value& jsonData)
 {
     int componentType = 0;
@@ -633,7 +651,7 @@ std::optional<ComponentType> AccessorComponentType(LoadResult& loadResult, const
         SetError(loadResult, "Failed to read accessor.componentType");
         return std::nullopt;
     }
-    return static_cast<ComponentType>(componentType);
+    return ParseComponentType(loadResult, componentType);
 }
 
 std::optional<uint32_t> AccessorCount(LoadResult& loadResult, const json::value& jsonData)
@@ -688,7 +706,7 @@ std::optional<uint32_t> AccessorByteOffset(
 {
     uint32_t byteOffset;
     if (!ParseOptionalNumber<uint32_t>(loadResult, byteOffset, jsonData, "byteOffset", 0)) {
-        return false;
+        return std::nullopt;
     } else if (bufferView && (*bufferView) && ((*bufferView)->byteLength <= byteOffset)) {
         SetError(loadResult, "Accessor.byteOffset isn't valid offset");
         return std::nullopt;
@@ -745,9 +763,13 @@ std::optional<SparseIndices> AccessorSparseIndices(LoadResult& loadResult, const
         return std::nullopt;
     }
 
-    indices.componentType = static_cast<ComponentType>(componentType);
+    if (auto ct = ParseComponentType(loadResult, componentType); ct) {
+        indices.componentType = *ct;
+    } else {
+        return std::nullopt;
+    }
 
-    if (!ParseOptionalNumber<uint32_t>(loadResult, indices.byteOffset, jsonData, "bufferOffset", 0)) {
+    if (!ParseOptionalNumber<uint32_t>(loadResult, indices.byteOffset, jsonData, "byteOffset", 0)) {
         return std::nullopt;
     }
 
@@ -768,7 +790,7 @@ std::optional<SparseValues> AccessorSparseValues(LoadResult& loadResult, const j
         return std::nullopt;
     }
 
-    if (!ParseOptionalNumber<uint32_t>(loadResult, values.byteOffset, jsonData, "bufferOffset", 0)) {
+    if (!ParseOptionalNumber<uint32_t>(loadResult, values.byteOffset, jsonData, "byteOffset", 0)) {
         return std::nullopt;
     }
 
@@ -883,10 +905,18 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
             SetError(loadResult, "Accessor.sparse.count is invalid");
             return false;
         }
+        if (sparseRef.indices.bufferView && sparseRef.indices.bufferView->byteStride != 0) {
+            SetError(loadResult, "Accessor.sparse.indices.bufferView must not define byteStride");
+            return false;
+        }
         if (!ValidateAccessor(loadResult, sparseRef.indices.componentType, sparseRef.count, DataType::SCALAR,
                 sparseRef.indices.bufferView, sparseRef.indices.byteOffset, array_view<const float> {},
                 array_view<const float> {})) {
             SetError(loadResult, "Accessor.sparse.indices is invalid");
+            return false;
+        }
+        if (sparseRef.values.bufferView && sparseRef.values.bufferView->byteStride != 0) {
+            SetError(loadResult, "Accessor.sparse.values.bufferView must not define byteStride");
             return false;
         }
         if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), sparseRef.count,
@@ -2019,7 +2049,8 @@ bool ImageBasedLightIrradianceCoefficients(
                 [](const json::value& item) { return item.is_number() ? item.as_number<float>() : 0.f; });
         }
 
-        if (coeff.size() != 3) {
+        constexpr size_t requiredCoefficientCount = 3u;
+        if (coeff.size() != requiredCoefficientCount) {
             return false;
         }
 
@@ -2027,7 +2058,20 @@ bool ImageBasedLightIrradianceCoefficients(
         return true;
     };
 
-    return ForEachInArray(loadResult, jsonData, "irradianceCoefficients", parseIrradianceCoefficients);
+    if (!ForEachInArray(loadResult, jsonData, "irradianceCoefficients", parseIrradianceCoefficients)) {
+        return false;
+    }
+
+    // EXT_lights_image_based spec requires exactly 9 coefficients (one per SH band-0..band-2 basis function).
+    // Reject any partial array — the importer cannot use it and the data is non-conformant.
+    constexpr size_t requiredCoefficientCount = 9u;
+    if (!irradianceCoefficients.empty() && irradianceCoefficients.size() != requiredCoefficientCount) {
+        PLUGIN_LOG_W("GLTF2: EXT_lights_image_based irradianceCoefficients must be a 9x3 array (got %zu); ignoring.",
+            irradianceCoefficients.size());
+        irradianceCoefficients.clear();
+    }
+
+    return true;
 }
 
 bool ImageBasedLightSpecularImages(
@@ -2339,6 +2383,16 @@ bool ParseNode(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+bool CheckCycle(const BASE_NS::unique_ptr<Node>& node, const Node* childNode)
+{
+    for (const Node* ancestor = node.get(); ancestor; ancestor = ancestor->parent) {
+        if (ancestor == childNode) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool FinalizeNodes(LoadResult& loadResult)
 {
     bool result = true;
@@ -2355,6 +2409,12 @@ bool FinalizeNodes(LoadResult& loadResult)
             auto childNode = nodes[index].get();
             if (childNode->parent) {
                 SetError(loadResult, "Node has multiple parents");
+                result = false;
+                continue;
+            }
+            // Detect cycles: check that node is not already a descendant of childNode.
+            if (CheckCycle(node, childNode)) {
+                SetError(loadResult, "Node graph contains a cycle");
                 result = false;
                 continue;
             }
@@ -2534,7 +2594,7 @@ bool ParseSkin(LoadResult& loadResult, const json::value& jsonData)
     }
 
     if (joints.size() > CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT) {
-        CORE_LOG_W("Number of joints (%zu) more than current limit (%u)", joints.size(),
+        PLUGIN_LOG_W("Number of joints (%zu) more than current limit (%u)", joints.size(),
             CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
     }
 
@@ -2588,7 +2648,7 @@ void FinalizeGltfContent(LoadResult& loadResult)
         }
 
         if (hasDuplicate) {
-            CORE_LOG_D("Optimizing out duplicate image from glTF: %s/images/%zu",
+            PLUGIN_LOG_D("Optimizing out duplicate image from glTF: %s/images/%zu",
                 loadResult.data->defaultResources.c_str(), imageIndex);
         }
     }
@@ -2649,6 +2709,8 @@ bool AnimationChannels(LoadResult& loadResult, const json::value& jsonData, Anim
 
         if (sampler != GLTF_INVALID_INDEX && sampler < animation.samplers.size()) {
             animationTrack.sampler = animation.samplers[sampler].get();
+        } else {
+            RETURN_WITH_ERROR(loadResult, "Sampler is required");
         }
 
         const auto targetParser = [&animationTrack](LoadResult& loadResult, const json::value& targetJson) -> bool {
@@ -2663,7 +2725,7 @@ bool AnimationChannels(LoadResult& loadResult, const json::value& jsonData, Anim
                 }
 
                 if (!GetAnimationPath(path, animationTrack.channel.path)) {
-                    CORE_LOG_W("Skipping unsupported animation path: %s", path.c_str());
+                    PLUGIN_LOG_W("Skipping unsupported animation path: %s", path.c_str());
                     return false;
                 }
             }
@@ -2790,7 +2852,7 @@ bool GltfUsedExtension(LoadResult& loadResult, const json::value& jsonData)
             const auto& val = extension.string_;
             if (std::find(std::begin(SUPPORTED_EXTENSIONS), std::end(SUPPORTED_EXTENSIONS), val) ==
                 std::end(SUPPORTED_EXTENSIONS)) {
-                CORE_LOG_W("glTF uses unsupported extension: %s", string(val).c_str());
+                PLUGIN_LOG_W("glTF uses unsupported extension: %s", string(val).c_str());
             }
         }
 
@@ -2909,6 +2971,72 @@ bool ParseGLTF(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+bool ReadFileData(IFile& file, void* target, const uint64_t size)
+{
+    return file.Read(target, size) >= size;
+}
+
+bool ReadGLBHeader(LoadResult& loadResult, IFile& file, GLBHeader& header)
+{
+    if (!ReadFileData(file, &header, sizeof(GLBHeader))) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB object");
+    }
+    if (header.magic != GLTF_MAGIC) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB header");
+    }
+    if (header.length > loadResult.data->size) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: GLB header definition for size is larger than file size");
+    }
+    loadResult.data->size = header.length;
+    constexpr uint32_t glbVersion = 2;
+    if (header.version != glbVersion) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB version 2");
+    }
+    return true;
+}
+
+bool ReadJsonChunk(LoadResult& loadResult, IFile& file, const uint64_t headerLength, GLBChunk& chunkJson)
+{
+    if (!ReadFileData(file, &chunkJson, sizeof(GLBChunk))) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB chunk");
+    }
+    if (headerLength < (sizeof(GLBHeader) + sizeof(GLBChunk))) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected JSON chunk");
+    }
+
+    const uint64_t chunkJsonLength = static_cast<uint64_t>(chunkJson.chunkLength);
+    const uint64_t maxJsonChunkLength = headerLength - sizeof(GLBHeader) - sizeof(GLBChunk);
+    if (chunkJson.chunkType != static_cast<uint32_t>(ChunkType::JSON) || chunkJson.chunkLength == 0 ||
+        (chunkJson.chunkLength % sizeof(uint32_t)) || chunkJsonLength > maxJsonChunkLength) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected JSON chunk");
+    }
+    return true;
+}
+
+bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength)
+{
+    constexpr uint64_t glbDataOffsetPrefix = sizeof(GLBHeader) + (2u * sizeof(GLBChunk));
+    const uint64_t dataOffset = glbDataOffsetPrefix + chunkJsonLength;
+    if (dataOffset < glbDataOffsetPrefix || dataOffset > headerLength || dataOffset > loadResult.data->size ||
+        dataOffset > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: data part offset is out of file");
+    }
+    loadResult.data->defaultResourcesOffset = static_cast<int32_t>(dataOffset);
+    return true;
+}
+
+bool ReadJsonChunkData(LoadResult& loadResult, IFile& file, const uint32_t chunkLength, string& jsonString)
+{
+    jsonString.resize(chunkLength);
+    if (jsonString.size() != chunkLength) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: allocation for JSON data failed");
+    }
+    if (!ReadFileData(file, reinterpret_cast<void*>(jsonString.data()), chunkLength)) {
+        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: JSON chunk size not match");
+    }
+    return true;
+}
+
 void LoadGLTF(LoadResult& loadResult, IFile& file)
 {
     const uint64_t byteLength = file.GetLength();
@@ -2933,62 +3061,24 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
 bool LoadGLB(LoadResult& loadResult, IFile& file)
 {
     GLBHeader header;
-    uint64_t bytes = file.Read(&header, sizeof(GLBHeader));
-
-    if (bytes < sizeof(GLBHeader)) {
-        // cannot read header
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB object");
+    if (!ReadGLBHeader(loadResult, file, header)) {
+        return false;
     }
 
-    if (header.magic != GLTF_MAGIC) {
-        // 0x46546C67 >> "glTF"
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB header");
-    }
-
-    if (header.length > loadResult.data->size) {
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: GLB header definition for size is larger than file size");
-    } else {
-        loadResult.data->size = header.length;
-    }
-
-    if (header.version != 2) {
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB version 2");
-    }
+    const uint64_t headerLength = static_cast<uint64_t>(header.length);
 
     GLBChunk chunkJson;
-    bytes = file.Read(&chunkJson, sizeof(GLBChunk));
-
-    if (bytes < sizeof(GLBChunk)) {
-        // cannot read chunk data
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB chunk");
+    if (!ReadJsonChunk(loadResult, file, headerLength, chunkJson)) {
+        return false;
     }
 
-    if (chunkJson.chunkType != static_cast<uint32_t>(ChunkType::JSON) || chunkJson.chunkLength == 0 ||
-        (chunkJson.chunkLength % 4) || chunkJson.chunkLength > (header.length - sizeof(header) - sizeof(chunkJson))) {
-        // first chunk have to be JSON
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected JSON chunk");
+    if (!SetDataOffset(loadResult, headerLength, static_cast<uint64_t>(chunkJson.chunkLength))) {
+        return false;
     }
-
-    const size_t dataOffset = chunkJson.chunkLength + sizeof(GLBHeader) + 2 * sizeof(GLBChunk);
-
-    if (dataOffset > loadResult.data->size) {
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: data part offset is out of file");
-    }
-
-    loadResult.data->defaultResourcesOffset = static_cast<int32_t>(dataOffset);
 
     string jsonString;
-    jsonString.resize(chunkJson.chunkLength);
-
-    if (jsonString.size() != chunkJson.chunkLength) {
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: allocation for JSON data failed");
-    }
-
-    bytes = file.Read(reinterpret_cast<void*>(jsonString.data()), chunkJson.chunkLength);
-
-    if (bytes < chunkJson.chunkLength) {
-        // cannot read chunk data
-        RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: JSON chunk size not match");
+    if (!ReadJsonChunkData(loadResult, file, chunkJson.chunkLength, jsonString)) {
+        return false;
     }
 
     json::value o = json::parse(jsonString.data());
@@ -3009,13 +3099,13 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
 
     IFile::Ptr file = fileManager.OpenFile(uri);
     if (!file) {
-        CORE_LOG_D("Error loading '%s'", string(uri).data());
+        PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
         return LoadResult("Failed to open file.");
     }
 
     const uint64_t fileLength = file->GetLength();
     if (fileLength > SIZE_MAX) {
-        CORE_LOG_D("Error loading '%s'", string(uri).data());
+        PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
         return LoadResult("Failed to open file, file size larger than SIZE_MAX");
     }
 
@@ -3051,9 +3141,10 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     LoadResult result;
 
     // if the buffer starts with a GLB header assume GLB, otherwise glTF with embedded data.
-    char const* ext = ".gltf";
+    const char* ext = ".gltf";
     if (data.size() >= (sizeof(GLBHeader) + sizeof(GLBChunk))) {
-        GLBHeader const& header = *reinterpret_cast<GLBHeader const*>(data.data());
+        GLBHeader header {};
+        memcpy_s(&header, sizeof(header), data.data(), sizeof(GLBHeader));
         if (header.magic == GLTF_MAGIC) {
             ext = ".glb";
         }

@@ -21,13 +21,14 @@
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <core/intf_engine.h>
 #include <core/json/json.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_plugin.h>
 #include <render/intf_render_context.h>
 #include <render/render_data_structures.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -67,7 +68,7 @@ RenderNodeGraphDesc LoadRenderNodeGraph(IRenderNodeGraphLoader& rngLoader, const
 {
     IRenderNodeGraphLoader::LoadResult lr = rngLoader.Load(rng);
     if (!lr.success) {
-        CORE_LOG_E("error loading render node graph: %s - error: %s", rng.data(), lr.error.data());
+        PLUGIN_LOG_E("error loading render node graph: %s - error: %s", rng.data(), lr.error.data());
     }
     return lr.desc;
 }
@@ -104,7 +105,7 @@ inline json::standalone_value GetPodPostProcess(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
     renderDataStore["dataStoreName"] = "RenderDataStorePod";
-    renderDataStore["typeName"] = "RenderDataStorePod"; // This is render data store TYPE_NAME
+    renderDataStore["typeName"] = "RenderDataStorePod"; // This is render data store typeName
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
@@ -113,7 +114,7 @@ inline json::standalone_value GetPostProcess(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
     renderDataStore["dataStoreName"] = "RenderDataStorePostProcess";
-    renderDataStore["typeName"] = "RenderDataStorePostProcess"; // This is render data store TYPE_NAME
+    renderDataStore["typeName"] = "RenderDataStorePostProcess"; // This is render data store typeName
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
@@ -122,7 +123,7 @@ inline json::standalone_value GetRenderPostProcesses(const string_view name)
 {
     auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
     renderDataStore["dataStoreName"] = "RenderDataStoreRenderPostProcesses";
-    renderDataStore["typeName"] = "RenderDataStoreRenderPostProcesses"; // This is render data store TYPE_NAME
+    renderDataStore["typeName"] = "RenderDataStoreRenderPostProcesses"; // This is render data store typeName
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
@@ -162,7 +163,7 @@ vector<const RENDER_NS::RenderNodeTypeInfo*> GetRenderNodesWithDependencies()
 {
     // Gather RenderNodeTypeInfo which have after of before dependencies.
     vector<const RENDER_NS::RenderNodeTypeInfo*> renderNodesWithDependencies;
-    auto typeInfos = CORE_NS::GetPluginRegister().GetTypeInfos(RENDER_NS::RenderNodeTypeInfo::UID);
+    auto typeInfos = CORE3D_NS::GetPluginRegister().GetTypeInfos(RENDER_NS::RenderNodeTypeInfo::UID);
     for (auto* info : typeInfos) {
         if (info && (info->typeUid == RenderNodeTypeInfo::UID)) {
             auto* renderNodeTypeInfo = static_cast<const RenderNodeTypeInfo*>(info);
@@ -184,7 +185,7 @@ void InjectWeatherSimulationNode(RenderNodeGraphDesc& desc, const RenderScene& r
                     desc.nodes.insert(
                         desc.nodes.begin() + int64_t(nodeIdx + 1), GetDefaultSceneWeatherSimulationNode());
 #if (CORE3D_DEV_ENABLED == 1)
-                    CORE_LOG_I("Injecting RenderNodeWeatherSimulation node");
+                    PLUGIN_LOG_I("Injecting RenderNodeWeatherSimulation node");
 #endif
                     break;
                 }
@@ -195,7 +196,7 @@ void InjectWeatherSimulationNode(RenderNodeGraphDesc& desc, const RenderScene& r
 
 void InjectRenderNodes(RenderNodeGraphDesc& desc, IRenderNodeGraphManager& manager)
 {
-    const auto typeInfos = CORE_NS::GetPluginRegister().GetTypeInfos(RENDER_NS::RenderNodeTypeInfo::UID);
+    const auto typeInfos = CORE3D_NS::GetPluginRegister().GetTypeInfos(RENDER_NS::RenderNodeTypeInfo::UID);
     const auto renderNodeTypeInfos =
         array_view(reinterpret_cast<const RenderNodeTypeInfo* const*>(typeInfos.data()), typeInfos.size());
     BASE_NS::vector<RenderNodeDesc> requests;
@@ -259,7 +260,7 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
                 if (desc.nodes[nodeIdx].typeName == RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_STR) {
                     desc.nodes.insert(desc.nodes.begin() + int64_t(nodeIdx), GetDefaultCameraControllerNode());
 #if (CORE3D_DEV_ENABLED == 1)
-                    CORE_LOG_W("Injecting camera RenderNodeDefaultCameraController render node for compatibility");
+                    PLUGIN_LOG_W("Injecting camera RenderNodeDefaultCameraController render node for compatibility");
 #endif
                     break;
                 }
@@ -274,7 +275,7 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
                 if (desc.nodes[nodeIdx].typeName == RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_STR) {
                     desc.nodes.insert(desc.nodes.begin() + int64_t(nodeIdx + 1), GetDefaultCameraCloudsNode());
 #if (CORE3D_DEV_ENABLED == 1)
-                    CORE_LOG_I("Injecting camera RenderNodeCameraWeather render node");
+                    PLUGIN_LOG_I("Injecting camera RenderNodeCameraWeather render node");
 #endif
                     break;
                 }
@@ -411,7 +412,7 @@ RenderNodeGraphDesc RenderUtil::SelectBaseDesc(const RenderCamera& renderCamera)
         if ((renderCamera.flags & RenderCamera::CAMERA_FLAG_MAIN_BIT) && (imageDesc.sampleCountFlags > 1) &&
             (!depthOutput)) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_I("3d_util_depth_gles_mixing" + to_string(renderCamera.id),
+            PLUGIN_LOG_ONCE_I("3d_util_depth_gles_mixing" + to_string(renderCamera.id),
                 "CORE3D_VALIDATION: GL(ES) Camera MSAA flags checked from CORE_DEFAULT_BACKBUFFER. "
                 "Prefer assigning swapchain handle to camera.");
 #endif
@@ -467,12 +468,9 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
     auto& rngManager = context_.GetRenderNodeGraphManager();
 
     // process camera
-    {
-        auto& desc = descs.camera;
-        desc = SelectBaseDesc(renderCamera);
-        desc.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
-        FillCameraDescsData(renderCamera, customCameraName, desc, rngManager);
-    }
+    descs.camera = SelectBaseDesc(renderCamera);
+    descs.camera.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
+    FillCameraDescsData(renderCamera, customCameraName, descs.camera, rngManager);
     // process post process
     // NOTE: we do not add base post process render node graph to custom camera render node graphs
     {
@@ -493,17 +491,18 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
         }
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (renderCamera.multiViewCameraCount != static_cast<uint32_t>(multiviewCameras.size())) {
-            CORE_LOG_W("CORE3D_VALIDATION: Multi-view camera count mismatch in render node graph creation.");
+            PLUGIN_LOG_W("CORE3D_VALIDATION: Multi-view camera count mismatch in render node graph creation.");
         }
 #endif
         // multi-view camera post processes
         if (renderCamera.multiViewCameraCount == static_cast<uint32_t>(multiviewCameras.size())) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
             if (!renderCamera.customPostProcessRenderNodeGraphFile.empty()) {
-                CORE_LOG_W("CORE3D_VALIDATION: Multi-view camera custom post process render node graph not supported.");
+                PLUGIN_LOG_W(
+                    "CORE3D_VALIDATION: Multi-view camera custom post process render node graph not supported.");
             }
 #endif
-            CORE_ASSERT(descs.multiViewCameraCount <= countof(descs.multiViewCameraPostProcesses));
+            PLUGIN_ASSERT(descs.multiViewCameraCount <= countof(descs.multiViewCameraPostProcesses));
             descs.multiViewCameraCount = renderCamera.multiViewCameraCount;
             for (size_t mvIdx = 0; mvIdx < descs.multiViewCameraCount; ++mvIdx) {
                 const auto& mvCameraRef = multiviewCameras[mvIdx];

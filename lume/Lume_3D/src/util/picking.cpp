@@ -34,13 +34,13 @@
 #include <base/math/vector_util.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/plugin/intf_class_register.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/intf_property_handle.h>
 
+#include "util/log.h"
 #include "util/scene_util.h"
 
 CORE3D_BEGIN_NAMESPACE()
@@ -406,7 +406,7 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
                     result.push_back(raycastResult);
                 }
             } else {
-                CORE_LOG_W(
+                PLUGIN_LOG_W(
                     "no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id, renderMeshComponent.mesh.id);
             }
         }
@@ -459,7 +459,7 @@ vector<RayCastResult> Picking::RayCast(
                                 result.push_back(raycastResult);
                             }
                         } else {
-                            CORE_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id,
+                            PLUGIN_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id,
                                 renderMeshComponent.mesh.id);
                         }
                     }
@@ -480,7 +480,7 @@ BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCast(const BASE_NS::M
     vector<RayTriangleCastResult> result;
 
     if (triangles.size() % 3 != 0) {
-        CORE_LOG_W("Number of triangles vertices not divisible by 3!");
+        PLUGIN_LOG_W("Number of triangles vertices not divisible by 3!");
         return result;
     }
 

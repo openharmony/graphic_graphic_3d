@@ -36,7 +36,7 @@ constexpr size_t MaxStringLengthFromArray(T (&)[N])
 inline void CopyStringToArray(const BASE_NS::string_view source, char* target, size_t maxLength)
 {
     if (source.size() > maxLength) {
-        CORE_LOG_W("CopyStringToArray: string (%zu) longer than %zu", source.size(), maxLength);
+        PLUGIN_LOG_W("CopyStringToArray: string (%zu) longer than %zu", source.size(), maxLength);
     }
     size_t const length = source.copy(target, maxLength);
     target[length] = '\0';

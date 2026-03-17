@@ -68,7 +68,6 @@
 #include <core/ecs/intf_entity_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
@@ -110,9 +109,6 @@ namespace {
 static const RenderSubmeshWithHandleReference INIT {};
 static constexpr uint32_t NEEDS_COLOR_PRE_PASS { 1u << 0u };
 static constexpr uint64_t SHADOW_CAMERA_START_UNIQUE_ID { 100 };
-#if (CORE3D_VALIDATION_ENABLED == 1)
-static constexpr uint32_t MAX_BATCH_SUBMESH_COUNT { 64u };
-#endif
 
 // typename for POD data. (e.g. "PostProcess") (core/render/intf_render_data_store_pod.h)
 static constexpr string_view POST_PROCESS_NAME { "PostProcess" };
@@ -161,11 +157,11 @@ void FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
     const IShaderManager::RenderSlotData rsd = shaderMgr.GetRenderSlotData(renderSlotId);
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!rsd.shader) {
-        CORE_LOG_W(
+        PLUGIN_LOG_W(
             "CORE3D_VALIDATION: Default material render slot shader not found (slot:%s)", srsi.renderSlot.data());
     }
     if (!rsd.graphicsState) {
-        CORE_LOG_W("CORE3D_VALIDATION: Default material render slot graphics state not found (slot:%s)",
+        PLUGIN_LOG_W("CORE3D_VALIDATION: Default material render slot graphics state not found (slot:%s)",
             srsi.renderSlot.data());
     }
 #endif
@@ -286,7 +282,7 @@ void ValidateRenderCamera(RenderCamera& camera)
         if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_MSAA_BIT) {
             camera.flags = camera.flags & (~RenderCamera::CameraFlagBits::CAMERA_FLAG_MSAA_BIT);
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_I("valid_r_c" + to_string(camera.id),
+            PLUGIN_LOG_ONCE_I("valid_r_c" + to_string(camera.id),
                 "MSAA flag with deferred pipeline dropped (cam id %" PRIu64 ")", camera.id);
 #endif
         }
@@ -388,7 +384,7 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
             const auto& imageDesc = gpuResourceMgr.GetImageDescriptor(target);
             renderCamera.renderResolution = { imageDesc.width, imageDesc.height };
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_E(to_hex(cameraMgr.GetEcs().GetId()) + "_render_system",
+            PLUGIN_LOG_ONCE_E(to_hex(cameraMgr.GetEcs().GetId()) + "_render_system",
                 "CORE3D_VALIDATION: camera render resolution resized to match target %ux%u",
                 renderCamera.renderResolution.x, renderCamera.renderResolution.y);
 #endif
@@ -426,7 +422,7 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
         }
         RenderHandleReference customDepthTarget = renderHandleMgr.GetRenderHandleReference(cc.customDepthTarget);
         if (customColorTarget.GetHandleType() != RenderHandleType::GPU_IMAGE) {
-            CORE_LOG_E("invalid custom render target(s) for camera (%s)", renderCamera.name.c_str());
+            PLUGIN_LOG_E("invalid custom render target(s) for camera (%s)", renderCamera.name.c_str());
         }
         renderCamera.depthTarget = move(customDepthTarget);
         renderCamera.colorTargets[0u] = move(customColorTarget);
@@ -449,7 +445,7 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
         (renderCamera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_MULTI_VIEW_ONLY_BIT)) {
         if (renderCamera.renderPipelineType == RenderCamera::RenderPipelineType::LIGHT_FORWARD) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_I(to_string(renderCamera.id) + "camera_pipeline_mv",
+            PLUGIN_LOG_ONCE_I(to_string(renderCamera.id) + "camera_pipeline_mv",
                 "Camera rendering pipeline cannot be LIGHT_FORWARD for multi-view (changing to FORWARD internally).");
 #endif
             renderCamera.renderPipelineType = RenderCamera::RenderPipelineType::FORWARD;
@@ -620,8 +616,8 @@ void FillCameraRenderEnvironment(
 void FillMultiEnvironments(const IEnvironmentComponentManager& envMgr, RenderCamera::Environment& renderEnv)
 {
     // only supported background type
-    CORE_ASSERT(renderEnv.multiEnvCount != 0U);
-    CORE_ASSERT(renderEnv.backgroundType == RenderCamera::Environment::BG_TYPE_CUBEMAP);
+    PLUGIN_ASSERT(renderEnv.multiEnvCount != 0U);
+    PLUGIN_ASSERT(renderEnv.backgroundType == RenderCamera::Environment::BG_TYPE_CUBEMAP);
     // replace base environment values -> combine indirect diffuse values
     renderEnv.indirectDiffuseFactor = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
     renderEnv.indirectSpecularFactor = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -926,30 +922,6 @@ Math::Mat4X4 CalculateReflectionMatrix(const Math::Vec4& plane)
     return result;
 }
 
-inline void LogBatchValidation(const MeshComponent& mesh)
-{
-#if (CORE3D_VALIDATION_ENABLED == 1)
-    if (mesh.submeshes.size() > MAX_BATCH_SUBMESH_COUNT) {
-        CORE_LOG_ONCE_E("submesh_counts_batch",
-            "CORE3D_VALIDATION: GPU instancing batches not supported for submeshes with count %u > %u ",
-            static_cast<uint32_t>(mesh.submeshes.size()), MAX_BATCH_SUBMESH_COUNT);
-    }
-#endif
-}
-
-inline void DestroyBatchData(BASE_NS::unordered_map<CORE_NS::Entity, RenderSystem::BatchDataVector>& batches)
-{
-    // NOTE: we destroy batch entity if its elements were not used in this frame
-    for (auto iter = batches.begin(); iter != batches.end();) {
-        if (iter->second.empty()) {
-            iter = batches.erase(iter);
-        } else {
-            iter->second.clear();
-            ++iter;
-        }
-    }
-}
-
 inline void ProcessCameraAddMultiViewHash(const RenderCamera& cam, unordered_map<uint64_t, uint64_t>& childToParent)
 {
     for (uint32_t idx = 0; idx < cam.multiViewCameraCount; ++idx) {
@@ -986,7 +958,7 @@ void CalculateFinalSceneBoundingSphere(
             if ((Math::abs(radDifference) > granularity) || (posDifference > granularity)) {
                 // Calculate how many steps we need to change and in to which direction.
                 const float radAmount = ceil((boundingSphereRadius - radius) / granularity);
-                const int32_t posAmount = (int32_t)ceil(posDifference / granularity);
+                const int32_t posAmount = static_cast<int32_t>(ceil(posDifference / granularity));
                 if ((radAmount != 0.f) || (posAmount != 0)) {
                     // Update size and position of the bounds.
                     center = boundingSpherePosition;
@@ -1062,12 +1034,12 @@ void ValidateInputColor(const Entity material, const MaterialComponent& matComp)
     if (matComp.type < MaterialComponent::Type::CUSTOM) {
         const auto& base = matComp.textures[MaterialComponent::TextureIndex::BASE_COLOR];
         if ((base.factor.x > 1.0f) || (base.factor.y > 1.0f) || (base.factor.z > 1.0f) || (base.factor.w > 1.0f)) {
-            CORE_LOG_ONCE_I("ValidateInputColor_expect_base_colorfactor",
+            PLUGIN_LOG_ONCE_I("ValidateInputColor_expect_base_colorfactor",
                 "CORE3D_VALIDATION: Non custom material type expects base color factor to be <= 1.0f.");
         }
         const auto& mat = matComp.textures[MaterialComponent::TextureIndex::MATERIAL];
         if ((mat.factor.y > 1.0f) || (mat.factor.z > 1.0f)) {
-            CORE_LOG_ONCE_I("ValidateInputColor_expect_roughness_metallic_factor",
+            PLUGIN_LOG_ONCE_I("ValidateInputColor_expect_roughness_metallic_factor",
                 "CORE3D_VALIDATION: Non custom material type expects roughness and metallic to be <= 1.0f.");
         }
     }
@@ -1183,7 +1155,7 @@ uint32_t RenderMaterialFlagsFromMaterialValues(const MaterialComponent& matComp,
 {
     uint32_t rmf = 0;
     // enable built-in specialization for default materials
-    CORE_ASSERT(matComp.type <= MaterialComponent::Type::OCCLUSION);
+    PLUGIN_ASSERT(matComp.type <= MaterialComponent::Type::OCCLUSION);
     if (matComp.type < MaterialComponent::Type::CUSTOM) {
         if (handles.images[MaterialComponent::TextureIndex::NORMAL] ||
             handles.images[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL]) {
@@ -1238,7 +1210,7 @@ inline constexpr RenderMaterialFlags RenderMaterialFlagsFromMaterialValues(
 void SetupSubmeshBuffers(const IRenderHandleComponentManager& renderHandleManager,
     const MeshComponent::Submesh& submesh, RenderSubmeshDataWithHandleReference& renderSubmesh)
 {
-    CORE_STATIC_ASSERT(
+    PLUGIN_STATIC_ASSERT(
         MeshComponent::Submesh::BUFFER_COUNT <= RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
     // calculate real vertex buffer count and fill "safety" handles for default material
     // no default shader variants without joints etc.
@@ -1310,15 +1282,15 @@ RenderSystem::RenderSystem(IEcs& ecs)
       RENDER_SYSTEM_PROPERTIES(&properties_, array_view(ComponentMetadata))
 {
     if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>()) {
-        frustumUtil_ = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+        frustumUtil_ = CORE3D_NS::GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
         if (auto* engineClassRegister = engine->GetInterface<IClassRegister>()) {
-            renderContext_ = GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
+            renderContext_ = CORE3D_NS::GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
         }
     }
     if (renderContext_) {
         if (auto* renderClassRegister = renderContext_->GetInterface<IClassRegister>()) {
-            picking_ = GetInstance<IPicking>(*renderClassRegister, UID_PICKING);
-            graphicsContext_ = GetInstance<IGraphicsContext>(*renderClassRegister, UID_GRAPHICS_CONTEXT);
+            picking_ = CORE3D_NS::GetInstance<IPicking>(*renderClassRegister, UID_PICKING);
+            graphicsContext_ = CORE3D_NS::GetInstance<IGraphicsContext>(*renderClassRegister, UID_GRAPHICS_CONTEXT);
         }
         if (graphicsContext_) {
             renderUtil_ = &graphicsContext_->GetRenderUtil();
@@ -1412,7 +1384,7 @@ void RenderSystem::Initialize()
             properties_.dataStoreMorph = in->dataStoreMorph;
             properties_.dataStorePrefix = in->dataStorePrefix;
         } else {
-            CORE_LOG_E("DEPRECATED USAGE: RenderPreprocessorSystem not found. Add system to system graph.");
+            PLUGIN_LOG_E("DEPRECATED USAGE: RenderPreprocessorSystem not found. Add system to system graph.");
         }
 
         SetDataStorePointers(renderContext_->GetRenderDataStoreManager());
@@ -1598,7 +1570,7 @@ bool RenderSystem::Update(bool frameRenderingQueued, uint64_t totalTime, uint64_
         FetchFullScene();
     } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("rs_data_stores_not_found", "CORE3D_VALIDATION: render system render data stores not found");
+        PLUGIN_LOG_ONCE_W("rs_data_stores_not_found", "CORE3D_VALIDATION: render system render data stores not found");
 #endif
     }
     frameIndex_++;
@@ -1618,6 +1590,18 @@ void RenderSystem::Uninitialize()
     renderableQuery_.SetEcsListenersEnabled(false);
     reflectionsQuery_.SetEcsListenersEnabled(false);
     cameraQuery_.SetEcsListenersEnabled(false);
+
+    dmShaderData_ = {};
+    renderProcessing_ = {};
+    DestroyRenderDataStores();
+
+    dsScene_.reset();
+    dsCamera_.reset();
+    dsLight_.reset();
+    dsMaterial_.reset();
+    dsRenderPostProcesses_.reset();
+    cameraData_.clear();
+    reflectionPlanes_.clear();
 }
 
 void RenderSystem::OnComponentEvent(
@@ -1650,7 +1634,7 @@ void RenderSystem::OnComponentEvent(
                 }
                 if (meshId == IComponentManager::INVALID_COMPONENT_ID) {
 #if CORE3D_VALIDATION_ENABLED
-                    CORE_LOG_ONCE_E(
+                    PLUGIN_LOG_ONCE_E(
                         "planar" + to_hex(entity.id), "CORE3D_VALIDATION: PlanarReflectionComponent missing mesh");
 #endif
                     continue;
@@ -1741,7 +1725,7 @@ Entity RenderSystem::ProcessScene(const RenderConfigurationComponent& sc)
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!hasActiveMainCamera) {
-        CORE_LOG_ONCE_I(
+        PLUGIN_LOG_ONCE_I(
             "RenderSystem::ProcessScene_no_active_main_cams", "CORE3D_VALIDATION: Main cameras are not active");
     }
 #endif
@@ -1823,7 +1807,7 @@ void RenderSystem::ProcessRenderables()
                 auto const prevJointMatricesData = prevJointMatricesMgr_->Read(prevJointId);
                 const SkinProcessData spd { &(*jointMatricesData), &(*prevJointMatricesData) };
 
-                CORE_ASSERT(spd.prevJointMatricesComponent);
+                PLUGIN_ASSERT(spd.prevJointMatricesComponent);
                 rmsd.skinJointMatrices = array_view<Math::Mat4X4 const>(
                     spd.jointMatricesComponent->jointMatrices, spd.jointMatricesComponent->count);
                 rmsd.prevSkinJointMatrices = array_view<Math::Mat4X4 const>(
@@ -1944,9 +1928,11 @@ void RenderSystem::ProcessCameras(
         const Entity cameraEntity = row.entity;
         uint32_t level = 0U;
         if (auto nodeHandle = nodeMgr_->Read(row.components[2U])) {
+#ifndef __OHOS__
             if (!nodeHandle->effectivelyEnabled) {
                 continue;
             }
+#endif
             level = nodeHandle->sceneId;
         }
 
@@ -2301,7 +2287,7 @@ void RenderSystem::ProcessShadowCamera(const LightProcessData lpd, RenderLight& 
         light.lightUsageFlags &= (~RenderLight::LightUsageFlagBits::LIGHT_USAGE_SHADOW_LIGHT_BIT);
 #if (CORE3D_VALIDATION_ENABLED == 1)
         const string onceName = string(to_string(light.id) + "_too_many_cam");
-        CORE_LOG_ONCE_W(onceName, "CORE3D_VALIDATION: shadow camera dropped, too many cameras in scene");
+        PLUGIN_LOG_ONCE_W(onceName, "CORE3D_VALIDATION: shadow camera dropped, too many cameras in scene");
 #endif
         return; // early out
     }
@@ -2319,7 +2305,7 @@ void RenderSystem::ProcessShadowCamera(const LightProcessData lpd, RenderLight& 
         // Add slight bias offset to radius.
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (std::isinf(lpd.renderScene.worldSceneBoundingSphereRadius)) {
-            CORE_LOG_ONCE_W("inf_scene", "Infinite world bounding sphere, shadows won't be visible.");
+            PLUGIN_LOG_ONCE_W("inf_scene", "Infinite world bounding sphere, shadows won't be visible.");
         }
 #endif
         const float nonZeroRadius = Math::max(lpd.renderScene.worldSceneBoundingSphereRadius, Math::EPSILON);
@@ -2566,23 +2552,29 @@ void RenderSystem::RecalculatePostProcesses(BASE_NS::string_view name, RENDER_NS
 
 void RenderSystem::DestroyRenderDataStores()
 {
-    if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>(); engine) {
-        // check that render context is still alive
-        if (auto renderContext =
-                GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
-            renderContext) {
-            IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
-            if (auto dataStore = refcnt_ptr<IRenderDataStorePod>(rdsMgr.GetRenderDataStore(POD_DATA_STORE_NAME))) {
-                for (const auto& ref : renderProcessing_.postProcessPods) {
-                    dataStore->DestroyPod(POST_PROCESS_NAME, ref.c_str());
-                }
+    auto* engine = ecs_.GetClassFactory().GetInterface<IEngine>();
+    if (!engine) {
+        return;
+    }
+    auto* classRegister = engine->GetInterface<IClassRegister>();
+    if (!classRegister) {
+        return;
+    }
+    // check that render context is still alive
+    if (auto renderContext = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        renderContext) {
+        IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
+        if (auto dataStore = refcnt_ptr<IRenderDataStorePod>(rdsMgr.GetRenderDataStore(POD_DATA_STORE_NAME))) {
+            for (const auto& ref : renderProcessing_.postProcessPods) {
+                dataStore->DestroyPod(POST_PROCESS_NAME, ref.c_str());
             }
-            if (auto dataStore =
-                    refcnt_ptr<IRenderDataStorePostProcess>(rdsMgr.GetRenderDataStore(PP_DATA_STORE_NAME))) {
-                for (const auto& ref : renderProcessing_.postProcessConfigs) {
-                    dataStore->Destroy(ref.c_str());
-                }
+            renderProcessing_.postProcessPods.clear();
+        }
+        if (auto dataStore = refcnt_ptr<IRenderDataStorePostProcess>(rdsMgr.GetRenderDataStore(PP_DATA_STORE_NAME))) {
+            for (const auto& ref : renderProcessing_.postProcessConfigs) {
+                dataStore->Destroy(ref.c_str());
             }
+            renderProcessing_.postProcessConfigs.clear();
         }
     }
 }
@@ -2698,9 +2690,9 @@ void RenderSystem::ProcessRenderNodeGraphs(
 
     // then, add valid camera render node graphs
     for (const auto& cam : baseCameras) {
-        CORE_ASSERT(cam.renderCameraIdx < renderCameras.size());
+        PLUGIN_ASSERT(cam.renderCameraIdx < renderCameras.size());
         const auto& camRef = renderCameras[cam.renderCameraIdx];
-        CORE_ASSERT(camRef.id != 0xFFFFFFFFffffffff); // there must be an id for uniqueness
+        PLUGIN_ASSERT(camRef.id != 0xFFFFFFFFffffffff); // there must be an id for uniqueness
         CameraRngsOutput camRngs = GetCameraRenderNodeGraphs(renderScene, camRef);
         if (!camRngs.rngs.rngHandle) {
             continue;
@@ -2935,8 +2927,8 @@ void RenderSystem::HandleMaterialEvents() noexcept
         if (!materialDestroyedEvents_.empty()) {
             // filter out materials which were created/modified, but also destroyed.
             materialModifiedEvents_.erase(std::set_difference(materialModifiedEvents_.cbegin(),
-                materialModifiedEvents_.cend(), materialDestroyedEvents_.cbegin(),
-                materialDestroyedEvents_.cend(), materialModifiedEvents_.begin()),
+                                              materialModifiedEvents_.cend(), materialDestroyedEvents_.cbegin(),
+                                              materialDestroyedEvents_.cend(), materialModifiedEvents_.begin()),
                 materialModifiedEvents_.cend());
         }
         UpdateMaterialProperties();
@@ -2971,57 +2963,7 @@ void RenderSystem::HandleMeshEvents() noexcept
                     meshDestroyedEvents_.cbegin(), meshDestroyedEvents_.cend(), meshModifiedEvents_.begin()),
                 meshModifiedEvents_.cend());
         }
-
-        vector<uint64_t> additionalMaterials;
-        for (const auto& entRef : meshModifiedEvents_) {
-            if (auto meshHandle = meshMgr_->Read(entRef); meshHandle) {
-                MeshDataWithHandleReference md;
-                md.aabbMin = meshHandle->aabbMin;
-                md.aabbMax = meshHandle->aabbMax;
-                md.meshId = entRef.id;
-                const bool hasSkin = (!meshHandle->jointBounds.empty());
-                // md.jointBounds
-                md.submeshes.resize(meshHandle->submeshes.size());
-                for (size_t smIdx = 0; smIdx < md.submeshes.size(); smIdx++) {
-                    auto& writeRef = md.submeshes[smIdx];
-                    const auto& readRef = meshHandle->submeshes[smIdx];
-                    writeRef.materialId = readRef.material.id;
-                    if (!readRef.additionalMaterials.empty()) {
-                        additionalMaterials.clear();
-                        additionalMaterials.resize(readRef.additionalMaterials.size());
-                        for (size_t matIdx = 0; matIdx < additionalMaterials.size(); ++matIdx) {
-                            additionalMaterials[matIdx] = readRef.additionalMaterials[matIdx].id;
-                        }
-                        // array view to additional materials
-                        writeRef.additionalMaterials = additionalMaterials;
-                    }
-
-                    writeRef.meshRenderSortLayer = readRef.renderSortLayer;
-                    writeRef.meshRenderSortLayerOrder = readRef.renderSortLayerOrder;
-                    writeRef.aabbMin = readRef.aabbMin;
-                    writeRef.aabbMax = readRef.aabbMax;
-
-                    SetupSubmeshBuffers(*gpuHandleMgr_, readRef, writeRef);
-                    writeRef.submeshFlags = RenderSubmeshFlagsFromMeshFlags(readRef.flags);
-
-                    // Clear skinning bit if joint matrices were not given.
-                    if (!hasSkin) {
-                        writeRef.submeshFlags &= ~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT;
-                    }
-
-                    writeRef.drawCommand.vertexCount = readRef.vertexCount;
-                    writeRef.drawCommand.indexCount = readRef.indexCount;
-                    writeRef.drawCommand.instanceCount = readRef.instanceCount;
-                    writeRef.drawCommand.drawCountIndirect = readRef.drawCountIndirect;
-                    writeRef.drawCommand.strideIndirect = readRef.strideIndirect;
-                    writeRef.drawCommand.firstIndex = readRef.firstIndex;
-                    writeRef.drawCommand.vertexOffset = readRef.vertexOffset;
-                    writeRef.drawCommand.firstInstance = readRef.firstInstance;
-                }
-                dsMaterial_->UpdateMeshData(md.meshId, md);
-            }
-        }
-        meshModifiedEvents_.clear();
+        HandleModifiedMeshes();
     }
     if (!meshDestroyedEvents_.empty()) {
         // destroy rendering side decoupled material data
@@ -3163,6 +3105,61 @@ void RenderSystem::UpdateSingleMaterial(const Entity matEntity, const MaterialCo
 
         dsMaterial_->UpdateMaterialData(matEntity.id, materialUniforms, materialHandles, data, customData, extHandles);
     }
+}
+
+void RenderSystem::HandleModifiedMeshes() noexcept
+{
+    vector<uint64_t> additionalMaterials;
+    for (const auto& entRef : meshModifiedEvents_) {
+        auto meshHandle = meshMgr_->Read(entRef);
+        if (!meshHandle) {
+            continue;
+        }
+
+        MeshDataWithHandleReference md;
+        md.aabbMin = meshHandle->aabbMin;
+        md.aabbMax = meshHandle->aabbMax;
+        md.meshId = entRef.id;
+        const bool hasSkin = (!meshHandle->jointBounds.empty());
+        // md.jointBounds
+        md.submeshes.resize(meshHandle->submeshes.size());
+        for (size_t smIdx = 0; smIdx < md.submeshes.size(); smIdx++) {
+            auto& writeRef = md.submeshes[smIdx];
+            const auto& readRef = meshHandle->submeshes[smIdx];
+            writeRef.materialId = readRef.material.id;
+            additionalMaterials.clear();
+            for (const auto& addMat : readRef.additionalMaterials) {
+                additionalMaterials.push_back(addMat.id);
+            }
+            if (!additionalMaterials.empty()) {
+                writeRef.additionalMaterials = additionalMaterials;
+            }
+
+            writeRef.meshRenderSortLayer = readRef.renderSortLayer;
+            writeRef.meshRenderSortLayerOrder = readRef.renderSortLayerOrder;
+            writeRef.aabbMin = readRef.aabbMin;
+            writeRef.aabbMax = readRef.aabbMax;
+
+            SetupSubmeshBuffers(*gpuHandleMgr_, readRef, writeRef);
+            writeRef.submeshFlags = RenderSubmeshFlagsFromMeshFlags(readRef.flags);
+
+            // Clear skinning bit if joint matrices were not given.
+            if (!hasSkin) {
+                writeRef.submeshFlags &= ~RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT;
+            }
+
+            writeRef.drawCommand.vertexCount = readRef.vertexCount;
+            writeRef.drawCommand.indexCount = readRef.indexCount;
+            writeRef.drawCommand.instanceCount = readRef.instanceCount;
+            writeRef.drawCommand.drawCountIndirect = readRef.drawCountIndirect;
+            writeRef.drawCommand.strideIndirect = readRef.strideIndirect;
+            writeRef.drawCommand.firstIndex = readRef.firstIndex;
+            writeRef.drawCommand.vertexOffset = readRef.vertexOffset;
+            writeRef.drawCommand.firstInstance = readRef.firstInstance;
+        }
+        dsMaterial_->UpdateMeshData(md.meshId, md);
+    }
+    meshModifiedEvents_.clear();
 }
 
 ISystem* IRenderSystemInstance(IEcs& ecs)

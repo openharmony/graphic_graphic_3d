@@ -114,19 +114,6 @@ public:
 
     BASE_NS::array_view<const RENDER_NS::RenderHandleReference> GetRenderNodeGraphs() const override;
 
-    struct BatchData {
-        CORE_NS::Entity entity; // node, render mesh component
-        CORE_NS::Entity mesh;   // mesh component
-        uint64_t layerMask { LayerConstants::DEFAULT_LAYER_MASK };
-        uint64_t sceneId { 0U };
-        CORE_NS::IComponentManager::ComponentId jointId { CORE_NS::IComponentManager::INVALID_COMPONENT_ID };
-        CORE_NS::IComponentManager::ComponentId prevJointId { CORE_NS::IComponentManager::INVALID_COMPONENT_ID };
-
-        BASE_NS::Math::Mat4X4 mtx;       // world matrix
-        BASE_NS::Math::Mat4X4 prevWorld; // previous world matrix
-    };
-    using BatchDataVector = BASE_NS::vector<BatchData>;
-
     struct DefaultMaterialShaderData {
         struct SingleShaderData {
             CORE_NS::EntityReference shader;
@@ -206,6 +193,7 @@ private:
     void HandleGraphicsStateEvents() noexcept;
     void UpdateMaterialProperties();
     void UpdateSingleMaterial(CORE_NS::Entity matEntity, const MaterialComponent* materialHandle);
+    void HandleModifiedMeshes() noexcept;
 
     bool active_ = true;
     CORE_NS::IEcs& ecs_;
@@ -348,10 +336,6 @@ private:
     };
     // store previous frame matrices
     BASE_NS::unordered_map<CORE_NS::Entity, CameraData> cameraData_;
-
-    BASE_NS::unordered_map<CORE_NS::Entity, BatchDataVector> batches_;
-    // used for render mesh batch processing
-    BASE_NS::vector<RenderMeshData> renderMeshData_;
 
     // store default shader data for default materials in this ECS
     DefaultMaterialShaderData dmShaderData_;

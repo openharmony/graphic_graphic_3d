@@ -47,7 +47,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "e3bc29b2-c1d0-4322-a41a-449354fd5a42" };
-    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultEnv";
+    static constexpr const char* const typeName = "RenderNodeDefaultEnv";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

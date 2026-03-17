@@ -22,13 +22,14 @@
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/matrix_util.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
+
+#include "util/log.h"
 
 // NOTE: do not include in header
 #include "render_light_helper.h"

@@ -533,6 +533,39 @@ UNIT_TEST(SRC_GLTFUtilTest, GltfDataTest, testing::ext::TestSize.Level1)
 }
 
 /**
+ * @tc.name: GltfDataSeekFailureTest
+ * @tc.desc: Tests for Gltf Data Seek Failure Test.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFUtilTest, GltfDataSeekFailureTest, testing::ext::TestSize.Level1)
+{
+    auto& fileManager = UTest::GetTestContext()->engine->GetFileManager();
+
+    GLTF2::Data data { fileManager };
+    data.defaultResourcesOffset = 1; // equal to file length below
+    data.defaultResources = "cache://seek_fail_buffer.bin";
+
+    data.buffers.push_back(unique_ptr<GLTF2::Buffer> { new GLTF2::Buffer {} });
+    data.buffers.back()->byteLength = 1;
+    data.buffers.back()->uri = "";
+
+    {
+        auto file = fileManager.CreateFile("cache://seek_fail_buffer.bin");
+        ASSERT_TRUE(file);
+        const uint8_t byte = 0u;
+        file->Write(&byte, 1u);
+        file->Close();
+        data.memoryFile_ = move(file);
+    }
+
+    GLTF2::BufferLoadResult seekFailedResult = GLTF2::LoadBuffers(&data, fileManager);
+    EXPECT_FALSE(seekFailedResult.success);
+    EXPECT_NE(seekFailedResult.error.find("Failed to seek buffer"), BASE_NS::string::npos);
+
+    fileManager.DeleteFile("cache://seek_fail_buffer.bin");
+}
+
+/**
  * @tc.name: LoadDataTest
  * @tc.desc: Tests for Load Data Test. [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -697,5 +730,39 @@ UNIT_TEST(SRC_GLTFUtilTest, LoadDataTest, testing::ext::TestSize.Level1)
 
         GLTF2::GLTFLoadDataResult result = GLTF2::LoadData(accessor);
         EXPECT_FALSE(result.success);
+    }
+    {
+        GLTF2::Buffer sparseIndicesBuffer;
+        sparseIndicesBuffer.byteLength = 1u;
+        sparseIndicesBuffer.data.resize(sparseIndicesBuffer.byteLength);
+        sparseIndicesBuffer.data[0u] = 1u; // out of range for accessor.count == 1
+
+        constexpr uint32_t sparseValuesSize = 4u;
+        GLTF2::Buffer sparseValuesBuffer;
+        sparseValuesBuffer.byteLength = sparseValuesSize;
+        sparseValuesBuffer.data.resize(sparseValuesBuffer.byteLength);
+
+        GLTF2::BufferView sparseIndicesBufferView;
+        sparseIndicesBufferView.buffer = &sparseIndicesBuffer;
+        sparseIndicesBufferView.data = sparseIndicesBuffer.data.data();
+
+        GLTF2::BufferView sparseValuesBufferView;
+        sparseValuesBufferView.buffer = &sparseValuesBuffer;
+        sparseValuesBufferView.data = sparseValuesBuffer.data.data();
+
+        GLTF2::Accessor accessor;
+        accessor.count = 1u;
+        accessor.componentType = GLTF2::ComponentType::FLOAT;
+        accessor.type = GLTF2::DataType::SCALAR;
+
+        accessor.sparse.count = 1u;
+        accessor.sparse.indices.bufferView = &sparseIndicesBufferView;
+        accessor.sparse.indices.byteOffset = 0u;
+        accessor.sparse.indices.componentType = GLTF2::ComponentType::UNSIGNED_BYTE;
+        accessor.sparse.values.bufferView = &sparseValuesBufferView;
+        accessor.sparse.values.byteOffset = 0u;
+
+        GLTF2::GLTFLoadDataResult result = GLTF2::LoadData(accessor);
+        EXPECT_TRUE(result.success);
     }
 }

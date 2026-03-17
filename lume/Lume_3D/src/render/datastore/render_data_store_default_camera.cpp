@@ -22,7 +22,8 @@
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
-#include <core/log.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -68,7 +69,7 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
         if ((camera.id != RenderSceneDataConstants::INVALID_ID) || (!camera.name.empty())) {
             for (const auto& cam : cameras_) {
                 if ((camera.id == cam.id) || ((!camera.name.empty()) && (camera.name == cam.name))) {
-                    CORE_LOG_ONCE_W(to_string(camera.id) + camera.name,
+                    PLUGIN_LOG_ONCE_W(to_string(camera.id) + camera.name,
                         "CORE_VALIDATION: non unique camera id: %" PRIu64 " or name: %s", camera.id,
                         camera.name.c_str());
                 }
@@ -78,7 +79,7 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
         cameras_.push_back(camera);
     } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("drop_camera_count_full", "CORE3D_VALIDATION: camera dropped (max count: %u)",
+        PLUGIN_LOG_ONCE_W("drop_camera_count_full", "CORE3D_VALIDATION: camera dropped (max count: %u)",
             DefaultMaterialCameraConstants::MAX_CAMERA_COUNT);
 #endif
     }
@@ -90,7 +91,7 @@ void RenderDataStoreDefaultCamera::AddEnvironment(const RenderCamera::Environmen
     if (environment.id != RenderSceneDataConstants::INVALID_ID) {
         for (const auto& env : environments_) {
             if (environment.id == env.id) {
-                CORE_LOG_ONCE_W("rdsdc_add_env" + to_string(environment.id),
+                PLUGIN_LOG_ONCE_W("rdsdc_add_env" + to_string(environment.id),
                     "CORE_VALIDATION: non unique camera id: %" PRIu64, env.id);
             }
         }
@@ -194,7 +195,7 @@ uint32_t RenderDataStoreDefaultCamera::GetEnvironmentIndex(const uint64_t id) co
 }
 
 refcnt_ptr<RENDER_NS::IRenderDataStore> RenderDataStoreDefaultCamera::Create(
-    RENDER_NS::IRenderContext&, char const* name)
+    RENDER_NS::IRenderContext&, const char* name)
 {
     // device not used
     return refcnt_ptr<RENDER_NS::IRenderDataStore>(new RenderDataStoreDefaultCamera(name));

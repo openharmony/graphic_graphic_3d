@@ -59,10 +59,6 @@ public:
         CORE_NS::Entity mesh;
         // Reflection plane material.
         CORE_NS::Entity material;
-        // Reflection plane color target.
-        CORE_NS::EntityReference colorTarget;
-        // Reflection plane depth target.
-        CORE_NS::EntityReference depthTarget;
     };
 
     void CreateReflectionPlaneComponent(CORE_NS::IEcs& ecs, const CORE_NS::Entity& nodeEntity) override;

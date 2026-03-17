@@ -53,6 +53,7 @@
 #else
 #include "test_runner.h"
 #endif
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -95,7 +96,7 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
             EXPECT_TRUE(EntityUtil::IsValid(root));
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
         } else {
-            CORE_LOG_E("Import error: %s", result.error.c_str());
+            PLUGIN_LOG_E("Import error: %s", result.error.c_str());
         }
         return result;
     }

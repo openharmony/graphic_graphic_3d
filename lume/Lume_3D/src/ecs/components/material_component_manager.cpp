@@ -22,13 +22,13 @@
 #include <base/util/hash.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/property_types.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
+#include "util/log.h"
 #include "util/property_util.h"
 
 #define IMPLEMENT_MANAGER
@@ -103,7 +103,6 @@ using BASE_NS::unordered_map;
 using BASE_NS::vector;
 
 using CORE_NS::Entity;
-using CORE_NS::GetInstance;
 using CORE_NS::GetManager;
 using CORE_NS::IClassRegister;
 using CORE_NS::IComponentManager;
@@ -219,7 +218,7 @@ void AppendProperties(vector<Property>& newProperties, vector<string>& newString
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (propertyObject.value.is_array() && propertyIt->type.isArray &&
             propertyObject.value.array_.size() > propertyIt->count) {
-            CORE_LOG_W("CORE3D_VALIDATION: material property metadata count mismatch (%u <= %u)",
+            PLUGIN_LOG_W("CORE3D_VALIDATION: material property metadata count mismatch (%u <= %u)",
                 uint32_t(propertyObject.value.array_.size()), uint32_t(propertyIt->count));
         }
 #endif
@@ -610,9 +609,12 @@ MaterialComponentManager::MaterialComponentManager(IEcs& ecs) noexcept
     : ecs_(ecs), renderHandleManager_(GetManager<IRenderHandleComponentManager>(ecs))
 {
     if (CORE_NS::IEngine* engine = ecs_.GetClassFactory().GetInterface<CORE_NS::IEngine>(); engine) {
-        if (IRenderContext* renderContext =
-                GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
-            renderContext) {
+        IRenderContext* renderContext = nullptr;
+        auto classRegister = engine->GetInterface<IClassRegister>();
+        if (classRegister) {
+            renderContext = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        }
+        if (renderContext) {
             shaderManager_ = &renderContext->GetDevice().GetShaderManager();
         }
     }
@@ -1027,7 +1029,7 @@ ScopedHandle<MaterialComponent> MaterialComponentManager::Write(Entity entity)
 // Internal
 void MaterialComponentManager::Updated(Entity entity)
 {
-    CORE_ASSERT_MSG(CORE_NS::EntityUtil::IsValid(entity), "Invalid ComponentId, bound to INVALID_ENTITY");
+    PLUGIN_ASSERT_MSG(CORE_NS::EntityUtil::IsValid(entity), "Invalid ComponentId, bound to INVALID_ENTITY");
     modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_UPDATED_BIT | MODIFIED;
     generationCounter_++;
 }
@@ -1076,7 +1078,7 @@ MaterialComponentManager::ComponentHandle& MaterialComponentManager::ComponentHa
     ComponentHandle&& other) noexcept
 {
     if (this != &other) {
-        CORE_ASSERT(manager_ == other.manager_);
+        PLUGIN_ASSERT(manager_ == other.manager_);
         entity_ = exchange(other.entity_, {});
         cachedShader_ = exchange(other.cachedShader_, {});
         metaData_ = exchange(other.metaData_, nullptr);
@@ -1112,9 +1114,9 @@ size_t MaterialComponentManager::ComponentHandle::Size() const
 
 const void* MaterialComponentManager::ComponentHandle::RLock() const
 {
-    CORE_ASSERT(manager_);
+    PLUGIN_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(!wLocked_);
+    PLUGIN_ASSERT(!wLocked_);
     rLocked_++;
 #endif
     return &data_;
@@ -1122,18 +1124,18 @@ const void* MaterialComponentManager::ComponentHandle::RLock() const
 
 void MaterialComponentManager::ComponentHandle::RUnlock() const
 {
-    CORE_ASSERT(manager_);
+    PLUGIN_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ > 0U);
+    PLUGIN_ASSERT(rLocked_ > 0U);
     rLocked_--;
 #endif
 }
 
 void* MaterialComponentManager::ComponentHandle::WLock()
 {
-    CORE_ASSERT(manager_);
+    PLUGIN_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ <= 1U && !wLocked_);
+    PLUGIN_ASSERT(rLocked_ <= 1U && !wLocked_);
     wLocked_ = true;
 #endif
     return &data_;
@@ -1141,9 +1143,9 @@ void* MaterialComponentManager::ComponentHandle::WLock()
 
 void MaterialComponentManager::ComponentHandle::WUnlock()
 {
-    CORE_ASSERT(manager_);
+    PLUGIN_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(wLocked_);
+    PLUGIN_ASSERT(wLocked_);
     wLocked_ = false;
 #endif
     // update generation etc..

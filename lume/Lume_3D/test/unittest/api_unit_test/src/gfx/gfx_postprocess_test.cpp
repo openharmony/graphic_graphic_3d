@@ -177,6 +177,7 @@ void PostprocessEffectSsao(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: PostprocessEffectSsaoVulkan
  * @tc.desc: Tests SSAO with simple primitives.
@@ -197,6 +198,7 @@ UNIT_TEST(API_GfxTest, PostprocessEffectSsaoVulkan, testing::ext::TestSize.Level
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: PostprocessEffectSsaoOpenGL

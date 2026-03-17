@@ -28,8 +28,9 @@ config("lume_3d_api") {
 
 config("lume_3d_config") {
   include_dirs = [
-    "src/",
-    "assets/",
+    "api",
+    "src",
+    "assets",
   ]
 
   defines = [
@@ -157,6 +158,7 @@ ohos_source_set("lume_3d_src") {
     "src/graphics_context.cpp",
     "src/graphics_context.h",
     "src/plugin/static_plugin.cpp",
+    "src/plugin/static_registry.cpp",
     "src/render/datastore/render_data_store_default_camera.cpp",
     "src/render/datastore/render_data_store_default_camera.h",
     "src/render/datastore/render_data_store_default_light.cpp",

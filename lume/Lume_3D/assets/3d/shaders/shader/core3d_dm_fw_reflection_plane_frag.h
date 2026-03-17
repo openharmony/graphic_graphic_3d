@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -185,7 +185,10 @@ vec4 PlaneReflector(const vec2 fragUv)
     // fog handling
     InplaceFogBlock(CORE_CAMERA_FLAGS, inPos.xyz, camPos.xyz, vec4(color, baseColor.a), color);
 
-    outVelocityNormal = GetPackVelocityAndNormal(GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), N);
+    if ((CORE_CAMERA_FLAGS & CORE_CAMERA_VELOCITY_OUT_BIT) == CORE_CAMERA_VELOCITY_OUT_BIT) {
+        outVelocityNormal =
+            GetPackVelocityAndNormal(GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), N);
+    }
 
     return GetPackPbrColor(color.rgb, baseColor.a);
 }

@@ -33,7 +33,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/plugin/intf_class_register.h>
@@ -45,6 +44,7 @@
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
+#include "util/log.h"
 #include "util/mesh_util.h"
 
 namespace {
@@ -146,6 +146,7 @@ struct OutputBuffer {
     BASE_NS::Format format;
     uint32_t stride;
     BASE_NS::array_view<uint8_t> buffer;
+    BASE_NS::Math::Vec4 defaultValue;
 };
 
 template<typename T, size_t N, size_t M>
@@ -447,7 +448,7 @@ size_t GetVertexAttributeByteSize(
         vertexAttributeDesc) {
         const FormatProperties& properties = GetFormatSpec(vertexAttributeDesc->format);
 
-        CORE_ASSERT_MSG(
+        PLUGIN_ASSERT_MSG(
             properties.format != BASE_FORMAT_UNDEFINED, "Format not supported (%u).", vertexAttributeDesc->format);
         return properties.componentCount * properties.componentByteSize;
     }
@@ -594,7 +595,7 @@ constexpr Conversion CONVERSIONS[] = {
 void GenericConversion(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t count,
     const FormatProperties& dstFormat, const FormatProperties& srcFormat) noexcept
 {
-    CORE_LOG_V("%u %u", srcData.format, dstData.format);
+    PLUGIN_LOG_V("%u %u", srcData.format, dstData.format);
     auto dstPtr = dstData.buffer.data();
     auto srcPtr = srcData.buffer.data();
     const auto components = Math::min(srcFormat.componentCount, dstFormat.componentCount);
@@ -603,10 +604,44 @@ void GenericConversion(OutputBuffer& dstData, const MeshBuilder::DataBuffer& src
             dstFormat.fromIntermediate(dstPtr + i * dstFormat.componentByteSize,
                 srcFormat.toIntermediate(srcPtr + i * srcFormat.componentByteSize));
         }
-        auto intermediate = srcFormat.toIntermediate(srcPtr);
-        dstFormat.fromIntermediate(dstPtr, intermediate);
         srcPtr += srcData.stride;
         dstPtr += dstData.stride;
+    }
+}
+
+void FillRemaining(OutputBuffer& dstData, size_t count, const FormatProperties& dstFormat,
+    const FormatProperties& srcFormat, const Math::Vec4& fill) noexcept
+{
+    const auto components = Math::min(srcFormat.componentCount, dstFormat.componentCount);
+    if (!components) {
+        return;
+    }
+    auto dstPtr = dstData.buffer.data();
+    while (count--) {
+        for (auto i = components; i < dstFormat.componentCount; ++i) {
+            dstFormat.fromIntermediate(dstPtr + i * dstFormat.componentByteSize, fill.data[i]);
+        }
+        dstPtr += dstData.stride;
+    }
+}
+
+void SimpleCopy(OutputBuffer& dstData, size_t dstElementSize, const MeshBuilder::DataBuffer& srcData,
+    size_t srcElementSize, size_t count)
+{
+    if (dstData.stride == srcData.stride && dstData.stride == dstElementSize) {
+        // strides match and no padding
+        CloneData(dstData.buffer.data(), dstData.buffer.size(), srcData.buffer.data(), srcElementSize * count);
+    } else {
+        // stride mismatch or padding
+        auto dstPtr = dstData.buffer.data();
+        auto dstSize = dstData.buffer.size();
+        auto srcPtr = srcData.buffer.data();
+        while (count--) {
+            CloneData(dstPtr, dstSize, srcPtr, srcElementSize);
+            dstPtr += dstData.stride;
+            srcPtr += srcData.stride;
+            dstSize -= dstData.stride;
+        }
     }
 }
 
@@ -618,12 +653,12 @@ void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t 
     }
     const auto dstFormat = GetFormatSpec(dstData.format);
     if (dstFormat.format == BASE_FORMAT_UNDEFINED) {
-        CORE_LOG_E("destination format (%u) not supported", dstData.format);
+        PLUGIN_LOG_E("destination format (%u) not supported", dstData.format);
         return;
     }
     const auto srcFormat = GetFormatSpec(srcData.format);
     if (srcFormat.format == BASE_FORMAT_UNDEFINED) {
-        CORE_LOG_E("source format (%u) not supported", srcData.format);
+        PLUGIN_LOG_E("source format (%u) not supported", srcData.format);
         return;
     }
     const auto dstElementSize = dstFormat.componentCount * dstFormat.componentByteSize;
@@ -633,23 +668,9 @@ void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t 
     }
     if (dstData.format == srcData.format) {
         // no conversion required
-        if (dstData.stride == srcData.stride && dstData.stride == dstElementSize) {
-            // strides match and no padding
-            CloneData(dstData.buffer.data(), dstData.buffer.size(), srcData.buffer.data(), srcElementSize * count);
-        } else {
-            // stride mismatch or padding
-            auto dstPtr = dstData.buffer.data();
-            auto dstSize = dstData.buffer.size();
-            auto srcPtr = srcData.buffer.data();
-            while (count--) {
-                CloneData(dstPtr, dstSize, srcPtr, srcElementSize);
-                dstPtr += dstData.stride;
-                srcPtr += srcData.stride;
-                dstSize -= dstData.stride;
-            }
-        }
+        SimpleCopy(dstData, dstElementSize, srcData, srcElementSize, count);
     } else if (!srcFormat.toIntermediate || !dstFormat.fromIntermediate) {
-        CORE_LOG_E("missing conversion from %u to %u", srcFormat.format, dstFormat.format);
+        PLUGIN_LOG_E("missing conversion from %u to %u", srcFormat.format, dstFormat.format);
     } else {
         // must convert between formats
         // attempt to inline commonly used conversions
@@ -661,6 +682,9 @@ void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t 
             pos->converter(dstData.buffer.data(), dstData.stride, srcData.buffer.data(), srcData.stride, count);
         } else {
             GenericConversion(dstData, srcData, count, dstFormat, srcFormat);
+        }
+        if (dstFormat.componentCount > srcFormat.componentCount) {
+            FillRemaining(dstData, count, dstFormat, srcFormat, dstData.defaultValue);
         }
     }
 }
@@ -751,7 +775,7 @@ void SmoothNormal(
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!processed) {
-        CORE_LOG_W("MeshBuilder did not smooth normals for primitive topology (%u)", static_cast<uint32_t>(pt));
+        PLUGIN_LOG_W("MeshBuilder did not smooth normals for primitive topology (%u)", static_cast<uint32_t>(pt));
     }
 #endif
 }
@@ -873,7 +897,7 @@ void GenerateDefaultTangents(IMeshBuilder::DataBuffer& tangents, vector<uint8_t>
             break;
         }
         default:
-            CORE_ASSERT_MSG(false, "Invalid elementSize %u", indices.stride);
+            PLUGIN_ASSERT_MSG(false, "Invalid elementSize %u", indices.stride);
     }
 }
 
@@ -885,7 +909,7 @@ std::optional<std::reference_wrapper<const FormatProperties>> Verify(
     }
     const auto& formatProperties = GetFormatSpec(dataBuffer.format);
     if (formatProperties.format == BASE_FORMAT_UNDEFINED) {
-        CORE_LOG_E("format (%u) not supported", formatProperties.format);
+        PLUGIN_LOG_E("format (%u) not supported", formatProperties.format);
         return std::nullopt;
     }
     if (const auto elementSize = formatProperties.componentCount * formatProperties.componentByteSize;
@@ -1244,7 +1268,7 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
                 auto offset = vertexData_.size();
                 vertexData_.resize(offset + sizeof(Math::Vec3) * submeshDesc.vertexCount);
                 OutputBuffer dst { BASE_FORMAT_R32G32B32_SFLOAT, sizeof(Math::Vec3),
-                    { vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount } };
+                    { vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount }, {} };
                 Fill(dst, normals, submeshDesc.vertexCount);
                 submesh.normalOffset = static_cast<int32_t>(offset);
                 submesh.normalSize = sizeof(Math::Vec3) * submeshDesc.vertexCount;
@@ -1260,7 +1284,7 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
                 auto offset = vertexData_.size();
                 vertexData_.resize(offset + sizeof(Math::Vec2) * submeshDesc.vertexCount);
                 OutputBuffer dst { BASE_FORMAT_R32G32_SFLOAT, sizeof(Math::Vec2),
-                    { vertexData_.data() + offset, sizeof(Math::Vec2) * submeshDesc.vertexCount } };
+                    { vertexData_.data() + offset, sizeof(Math::Vec2) * submeshDesc.vertexCount }, {} };
                 Fill(dst, texcoords0, submeshDesc.vertexCount);
                 submesh.uvOffset = static_cast<int32_t>(offset);
                 submesh.uvSize = sizeof(Math::Vec2) * submeshDesc.vertexCount;
@@ -1290,7 +1314,8 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
         // Process vertex colors.
         if (!colors.buffer.empty() && submesh.info.colors) {
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_COL];
-            if (WriteData(colors, submesh, MeshComponent::Submesh::DM_VB_COL, acc.offset, acc.byteSize, buffer)) {
+            if (WriteData(colors, submesh, MeshComponent::Submesh::DM_VB_COL, acc.offset, acc.byteSize, buffer,
+                Math::Vec4(1.f))) {
                 submeshDesc.flags |= MeshComponent::Submesh::FlagBits::VERTEX_COLORS_BIT;
             }
         }
@@ -1313,9 +1338,9 @@ void MeshBuilder::SetIndexData(size_t submeshIndex, const DataBuffer& indices)
 
         OutputBuffer output = [](RENDER_NS::IndexType indexType) {
             if (indexType == IndexType::CORE_INDEX_TYPE_UINT16) {
-                return OutputBuffer { BASE_FORMAT_R16_UINT, sizeof(uint16_t), {} };
+                return OutputBuffer { BASE_FORMAT_R16_UINT, sizeof(uint16_t), {}, {} };
             }
-            return OutputBuffer { BASE_FORMAT_R32_UINT, sizeof(uint32_t), {} };
+            return OutputBuffer { BASE_FORMAT_R32_UINT, sizeof(uint32_t), {}, {} };
         }(submesh.info.indexType);
         const auto bufferSize = output.stride * indexCount;
         submeshDesc.indexBuffer.byteSize = bufferSize;
@@ -1363,7 +1388,7 @@ void MeshBuilder::SetJointData(
                 jointIndexAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
 
                 OutputBuffer dstData { indexAttributeDesc->format, bindingDesc->stride,
-                    { buffer + jointIndexAcc.offset, jointIndexAcc.byteSize } };
+                    { buffer + jointIndexAcc.offset, jointIndexAcc.byteSize }, {} };
                 Fill(dstData, jointData, submesh.info.vertexCount);
             }
         }
@@ -1381,7 +1406,7 @@ void MeshBuilder::SetJointData(
                 jointWeightAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
 
                 OutputBuffer dstData { weightAttributeDesc->format, bindingDesc->stride,
-                    { buffer + jointWeightAcc.offset, jointWeightAcc.byteSize } };
+                    { buffer + jointWeightAcc.offset, jointWeightAcc.byteSize }, {} };
                 Fill(dstData, weightData, submesh.info.vertexCount);
             }
         }
@@ -1425,27 +1450,28 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
             // Base data starts after index data
             const uint32_t baseOffset = indexOffset + totalIndexSize;
             {
-                OutputBuffer dstData { POSITION_FORMAT, sizeof(MorphInputData), { buffer + baseOffset, targetSize } };
+                OutputBuffer dstData { POSITION_FORMAT, sizeof(MorphInputData), { buffer + baseOffset, targetSize },
+                    {} };
                 Fill(dstData, basePositions, submesh.info.vertexCount);
             }
 
             if (!baseNormals.buffer.empty()) {
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
                 OutputBuffer dstData { NORMAL_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nortan), targetSize } };
+                    { buffer + baseOffset + offsetof(MorphInputData, nortan), targetSize }, {} };
 #else
                 OutputBuffer dstData { NORMAL_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nor), targetSize } };
+                    { buffer + baseOffset + offsetof(MorphInputData, nor), targetSize }, {} };
 #endif
                 Fill(dstData, baseNormals, submesh.info.vertexCount);
             }
             if (!baseTangents.buffer.empty()) {
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
                 OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize } };
+                    { buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize }, {} };
 #else
                 OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, tan), targetSize } };
+                    { buffer + baseOffset + offsetof(MorphInputData, tan), targetSize }, {} };
 #endif
                 Fill(dstData, baseTangents, submesh.info.vertexCount);
             }
@@ -1488,7 +1514,7 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
 {
     const auto posFormat = GetFormatSpec(positions.format);
     if (posFormat.format == BASE_FORMAT_UNDEFINED) {
-        CORE_LOG_E("position format (%u) not supported", posFormat.format);
+        PLUGIN_LOG_E("position format (%u) not supported", posFormat.format);
         return;
     }
     const auto posElementSize = posFormat.componentCount * posFormat.componentByteSize;
@@ -1584,7 +1610,7 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
         } break;
 
         default:
-            CORE_LOG_W("CalculateAABB: position format %u not handled.", posFormat.format);
+            PLUGIN_LOG_W("CalculateAABB: position format %u not handled.", posFormat.format);
             break;
     }
     SetAABB(submeshIndex, finalMinimum, finalMaximum);
@@ -2146,6 +2172,12 @@ void MeshBuilder::CalculateJointBounds(
 bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh, uint32_t attributeLocation,
     uint32_t& byteOffset, uint32_t& byteSize, uint8_t* dst) const
 {
+    return WriteData(srcData, submesh, attributeLocation, byteOffset, byteSize, dst, Math::Vec4 {});
+}
+
+bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh, uint32_t attributeLocation,
+    uint32_t& byteOffset, uint32_t& byteSize, uint8_t* dst, const Math::Vec4& defaultValue) const
+{
     if (const VertexInputDeclaration::VertexInputAttributeDescription* attributeDesc =
             GetVertexAttributeDescription(attributeLocation, vertexInputDeclaration_.attributeDescriptions);
         attributeDesc) {
@@ -2155,7 +2187,8 @@ bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh
             // this offset and size should be aligned
             byteOffset = submesh.vertexBindingOffset[bindingDesc->binding] + attributeDesc->offset;
             byteSize = submesh.info.vertexCount * bindingDesc->stride;
-            OutputBuffer dstData { attributeDesc->format, bindingDesc->stride, { dst + byteOffset, byteSize } };
+            OutputBuffer dstData { attributeDesc->format, bindingDesc->stride, { dst + byteOffset, byteSize },
+                defaultValue };
             Fill(dstData, srcData, submesh.info.vertexCount);
             return true;
         }

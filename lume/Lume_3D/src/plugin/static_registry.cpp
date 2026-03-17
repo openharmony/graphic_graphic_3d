@@ -13,13 +13,35 @@
  * limitations under the License.
  */
 
+#include <3d/namespace.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
 class IPluginRegister;
 CORE_END_NAMESPACE()
 
-extern "C" void InitRegistry(CORE_NS::IPluginRegister&)
+namespace {
+CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
+} // namespace
+
+CORE3D_BEGIN_NAMESPACE()
+CORE_NS::IPluginRegister& GetPluginRegister()
 {
-    // Initializing static plugin. (registry is available directly, nothing to do here.)
+    return *gPluginRegistry;
+}
+CORE3D_END_NAMESPACE()
+
+// Bridge for engine headers that reference CORE_NS::GetPluginRegister().
+CORE_BEGIN_NAMESPACE()
+IPluginRegister& GetPluginRegister()
+{
+    return CORE3D_NS::GetPluginRegister();
+}
+CORE_END_NAMESPACE()
+
+extern "C" void InitRegistry(CORE_NS::IPluginRegister& pluginRegistry)
+{
+    // Initializing dynamic plugin.
+    // Pluginregistry access via the provided registry instance which is saved here.
+    gPluginRegistry = &pluginRegistry;
 }

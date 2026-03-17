@@ -159,6 +159,8 @@ private:
 
     bool WriteData(const DataBuffer& data, const SubmeshExt& submesh, uint32_t attributeLocation, uint32_t& byteOffset,
         uint32_t& byteSize, uint8_t* dst) const;
+    bool WriteData(const DataBuffer& data, const SubmeshExt& submesh, uint32_t attributeLocation, uint32_t& byteOffset,
+        uint32_t& byteSize, uint8_t* dst, const BASE_NS::Math::Vec4& defaultValue) const;
 
     RENDER_NS::IRenderContext& renderContext_;
     RENDER_NS::VertexInputDeclarationView vertexInputDeclaration_;

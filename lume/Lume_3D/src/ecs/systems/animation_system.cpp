@@ -36,7 +36,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
@@ -245,7 +244,7 @@ void Assign(const PropertyTypeDecl& type, uint8_t* dst, const InitialTransformCo
             break;
         }
         default: {
-            CORE_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
+            PLUGIN_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
             break;
         }
     }
@@ -307,7 +306,7 @@ void Add(const PropertyTypeDecl& type, uint8_t* dst, const InitialTransformCompo
             break;
         }
         default: {
-            CORE_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
+            PLUGIN_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
             break;
         }
     }
@@ -482,7 +481,7 @@ void AnimateTrack(const PropertyTypeDecl& type, const AnimationSystem::Interpola
             break;
         }
         default: {
-            CORE_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
+            PLUGIN_LOG_ONCE_D(to_string(type.typeHash), "AnimateTrack failed, unsupported type %s", type.name.data());
             return;
         }
     }
@@ -569,7 +568,7 @@ void CopyInitialDataComponent(
             break;
         }
         default: {
-            CORE_LOG_ONCE_D(
+            PLUGIN_LOG_ONCE_D(
                 to_string(property->type.typeHash), "AnimateTrack failed, unsupported type %s", property->name.data());
             return;
         }
@@ -796,11 +795,11 @@ IAnimationPlayback* AnimationSystem::CreatePlayback(Entity const& animationEntit
                 if (auto targetNode = node.LookupNodeByPath(nameHandle->name); targetNode) {
                     targetEntities.push_back(targetNode->GetEntity());
                 } else {
-                    CORE_LOG_D("Cannot find target node for animation track '%s'.", nameHandle->name.data());
+                    PLUGIN_LOG_D("Cannot find target node for animation track '%s'.", nameHandle->name.data());
                     return nullptr;
                 }
             } else {
-                CORE_LOG_D("Cannot match unnamed animation track.");
+                PLUGIN_LOG_D("Cannot match unnamed animation track.");
                 return nullptr;
             }
         }
@@ -1235,7 +1234,7 @@ void AnimationSystem::ResetTargetProperties(array_view<const uint32_t> resultInd
                         Assign(entry.property->type, &*baseAddress + entry.propertyOffset, trackValues.initial);
                     }
                 } else {
-                    CORE_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
+                    PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
                         "ResetTargetProperties failed, type mismatch %" PRIx64, entry.property->type.typeHash);
                 }
             }
@@ -1340,7 +1339,7 @@ void AnimationSystem::AnimateTracks(array_view<const uint32_t> resultIndices)
 
                 if ((outputHandle->type != entry.property->type) || (outputHandle->type != trackValues.initial.type) ||
                     (outputHandle->type != trackValues.result.type)) {
-                    CORE_LOG_ONCE_D(to_string(Hash(trackId, outputHandle->type)),
+                    PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, outputHandle->type)),
                         "AnimateTrack failed, unexpected type %" PRIx64, outputHandle->type);
                     continue;
                 }
@@ -1397,7 +1396,7 @@ void AnimationSystem::ApplyResults(array_view<const uint32_t> resultIndices)
                             Add(entry.property->type, &*baseAddress + entry.propertyOffset, values.result);
                         }
                     } else {
-                        CORE_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
+                        PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
                             "ApplyResults failed, type mismatch %" PRIx64, entry.property->type.typeHash);
                     }
                 }

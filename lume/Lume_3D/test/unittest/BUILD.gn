@@ -21,7 +21,6 @@ module_output_path = "graphic_3d/graphic_3d/lume/Lume3D"
 
 # Options
 RENDER_BUILD_GLES = true
-RENDER_BUILD_VULKAN = true
 
 #
 # Lume3D API test config
@@ -239,7 +238,6 @@ ohos_unittest("lume_3d_src_test") {
     "common/test_runner_ohos_system.cpp",
 
     # ECS - Components
-    "src_unit_test/src/ecs/components/animation_component_manager_test.cpp",
     "src_unit_test/src/ecs/components/base_manager_test.cpp",
 
     # ECS - Systems
@@ -328,9 +326,6 @@ ohos_source_set("lume_3d_src_static") {
   visibility = [ ":*" ]
   
   sources = [
-    #"../../src/plugin/static_plugin.cpp", # already in lume_3d_config
-    "../../src/plugin/static_registry.cpp",
-    #"../../src/util/json.cpp", # JSON_IMPL is defined in the test src code
   ]
 
   configs = [

@@ -34,7 +34,10 @@ void main(void)
     InplaceEnvironmentBlock(CORE_DEFAULT_ENV_TYPE, cameraIdx, inUv, outColor);
 
     vec2 fragUv;
-    CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
+    if ((CORE_POST_PROCESS_FLAGS > 0) ||
+        ((CORE_CAMERA_FLAGS & CORE_CAMERA_VELOCITY_OUT_BIT) == CORE_CAMERA_VELOCITY_OUT_BIT)) {
+        CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
+    }
 
     // specialization for post process
     if (CORE_POST_PROCESS_FLAGS > 0) {
@@ -44,18 +47,22 @@ void main(void)
     // ray from camera to an infinity point (NDC) for the current frame
     const vec2 resolution = uGeneralData.viewportSizeInvViewportSize.xy;
 
-    const vec4 currentClipSpacePos = vec4(
-        fragUv.x / resolution.x * 2.0 - 1.0,
-        (resolution.y - fragUv.y) / resolution.y * 2.0 - 1.0,
-        1.0, 1.0);
-    vec4 currentWorldSpaceDir = uCameras[cameraIdx].viewProjInv * currentClipSpacePos;
-    currentWorldSpaceDir /= currentWorldSpaceDir.w;
+    if ((CORE_CAMERA_FLAGS & CORE_CAMERA_VELOCITY_OUT_BIT) == CORE_CAMERA_VELOCITY_OUT_BIT) {
+        // ray from camera to an infinity point (NDC) for the current frame
+        const vec2 resolution = uGeneralData.viewportSizeInvViewportSize.xy;
 
-    // ray from camera to an infinity point (NDC) for the previous frame
-    vec4 prevClipSpacePos = uCameras[cameraIdx].viewProjPrevFrame * currentWorldSpaceDir;
-    prevClipSpacePos /= prevClipSpacePos.w;
-    const vec2 prevScreenSpacePos = vec2((prevClipSpacePos.x + 1.0) * 0.5 * resolution.x, (1.0 - prevClipSpacePos.y) * 0.5 * resolution.y);
+        const vec4 currentClipSpacePos =
+            vec4(fragUv.x / resolution.x * 2.0 - 1.0, (resolution.y - fragUv.y) / resolution.y * 2.0 - 1.0, 1.0, 1.0);
+        vec4 currentWorldSpaceDir = uCameras[cameraIdx].viewProjInv * currentClipSpacePos;
+        currentWorldSpaceDir /= currentWorldSpaceDir.w;
 
-    const vec2 velocity = (fragUv.xy - prevScreenSpacePos) * vec2(1.0, -1.0);
-    outVelocityNormal = GetPackVelocityAndNormal(velocity, vec3(0.0));
+        // ray from camera to an infinity point (NDC) for the previous frame
+        vec4 prevClipSpacePos = uCameras[cameraIdx].viewProjPrevFrame * currentWorldSpaceDir;
+        prevClipSpacePos /= prevClipSpacePos.w;
+        const vec2 prevScreenSpacePos =
+            vec2((prevClipSpacePos.x + 1.0) * 0.5 * resolution.x, (1.0 - prevClipSpacePos.y) * 0.5 * resolution.y);
+
+        const vec2 velocity = (fragUv.xy - prevScreenSpacePos) * vec2(1.0, -1.0);
+        outVelocityNormal = GetPackVelocityAndNormal(velocity, vec3(0.0));
+    }
 }

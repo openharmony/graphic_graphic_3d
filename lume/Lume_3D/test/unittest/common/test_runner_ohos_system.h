@@ -187,7 +187,7 @@ public:
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         // Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -221,7 +221,13 @@ public:
 
         g_testContext = std::make_unique<TestContext>();
         g_testContext->engine = CreateEngine();
+#if RENDER_HAS_VULKAN_BACKEND
         g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::VULKAN);
+#elif RENDER_HAS_GLES_BACKEND
+        g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::OPENGLES);
+#else
+        g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::OPENGL);
+#endif
         g_testContext->graphicsContext = CreateContext(*g_testContext->renderContext);
         g_testContext->ecs = CreateAndInitializeDefaultEcs(*g_testContext->engine);
     }

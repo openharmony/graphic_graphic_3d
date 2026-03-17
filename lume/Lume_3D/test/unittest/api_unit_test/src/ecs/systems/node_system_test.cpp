@@ -17,6 +17,7 @@
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/node_component.h>
+#include <3d/ecs/components/world_matrix_component.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <base/containers/array_view.h>
 #include <base/containers/fixed_string.h>
@@ -538,29 +539,55 @@ UNIT_TEST(API_EcsNodeSystem, EffectivelyEnabledTest, testing::ext::TestSize.Leve
     auto graphicsContext = testContext->graphicsContext;
     auto ecs = testContext->ecs;
 
+    auto wcm = GetManager<IWorldMatrixComponentManager>(*ecs);
     auto nodeSystem = GetSystem<INodeSystem>(*ecs);
     ASSERT_NE(nullptr, nodeSystem);
     {
         auto node1 = nodeSystem->CreateNode();
+        node1->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
         auto node2 = nodeSystem->CreateNode();
+        node2->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
         auto node3 = nodeSystem->CreateNode();
+        node3->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
         auto node4 = nodeSystem->CreateNode();
+        node4->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
         auto node5 = nodeSystem->CreateNode();
+        node5->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
 
         node2->SetParent(*node1);
         node3->SetParent(*node2);
         node5->SetParent(*node2);
         node4->SetParent(*node1);
 
+        ecs->ProcessEvents();
         ecs->Update(1u, 1u);
+        ecs->ProcessEvents();
+
+        auto oldWorld = wcm->Get(node5->GetEntity());
+        EXPECT_EQ(oldWorld.matrix.w, BASE_NS::Math::Vec4(0.f, 3.f, 0.f, 1.f));
         node2->SetEnabled(false); // disables 2, and its children 3 and 5
+        node2->SetPosition(BASE_NS::Math::Vec3());
+
+        ecs->ProcessEvents();
         ecs->Update(2u, 1u);
+        ecs->ProcessEvents();
+
+        auto newWorld = wcm->Get(node5->GetEntity());
+        EXPECT_EQ(newWorld.matrix, oldWorld.matrix);
+        nodeSystem->RefreshAllNodes();
+        auto newWorld2 = wcm->Get(node5->GetEntity());
+        EXPECT_EQ(newWorld2.matrix.w, BASE_NS::Math::Vec4(0.f, 2.f, 0.f, 1.f));
 
         EXPECT_TRUE(node1->GetEffectivelyEnabled());
         EXPECT_FALSE(node2->GetEffectivelyEnabled());
         EXPECT_FALSE(node3->GetEffectivelyEnabled());
         EXPECT_TRUE(node4->GetEffectivelyEnabled());
         EXPECT_FALSE(node5->GetEffectivelyEnabled());
+
+        node2->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
+        graphicsContext->UpdateEcs(*ecs, IGraphicsContext::UpdateOptions { true });
+        auto newWorld3 = wcm->Get(node5->GetEntity());
+        EXPECT_EQ(newWorld3.matrix, oldWorld.matrix);
 
         node3->SetEnabled(false); // disables 3, but already disabled due to parent
         ecs->Update(3u, 1u);

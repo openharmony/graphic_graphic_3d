@@ -86,7 +86,7 @@ void CreateCubeObjects(UTest::TestResources& res)
     createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -2.0f }, true, 0, 0);
 
     // sort to wrong transparent order with center flip
-    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, 0.0f }, true, 32, 0); // 32: parm
+    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, 0.0f }, true, 32, 0);  // 32: parm
     createCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -1.0f }, true, 36, 0); // 36: parm
     createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -2.0f }, true, 36, 1); // 36: parm
 }

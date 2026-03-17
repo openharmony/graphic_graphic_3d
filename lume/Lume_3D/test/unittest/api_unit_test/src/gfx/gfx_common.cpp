@@ -59,7 +59,6 @@
 #include <render/util/intf_render_frame_util.h>
 #include <render/util/intf_render_util.h>
 #include <render/util/performance_data_structures.h>
-#include <render/vulkan/intf_device_vk.h>
 
 #include "test_framework.h"
 #if defined(UNIT_TESTS_USE_HCPPTEST)
@@ -154,10 +153,24 @@ void TestResources::SetBackendExtra(DeviceCreateInfo& deviceCreateInfo)
         deviceCreateInfo.backendConfiguration = &glExtra_;
     }
 #endif
+#if RENDER_HAS_GLES_BACKEND
+    if (testBackend_ == DeviceBackendType::OPENGLES) {
+        constexpr uint32_t defaultDepthBits = 24;
+        constexpr uint32_t defaultAlphaBits = 8;
+        glesExtra_.MSAASamples = 0;
+        glesExtra_.depthBits = defaultDepthBits;
+        glesExtra_.alphaBits = defaultAlphaBits;
+        glesExtra_.stencilBits = 0;
+        deviceCreateInfo.backendType = DeviceBackendType::OPENGLES;
+        deviceCreateInfo.backendConfiguration = &glesExtra_;
+    }
+#endif
+#if RENDER_HAS_VULKAN_BACKEND
     if (testBackend_ == DeviceBackendType::VULKAN) {
         deviceCreateInfo.backendType = DeviceBackendType::VULKAN;
         deviceCreateInfo.backendConfiguration = &vkExtra_;
     }
+#endif
 }
 
 void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, IDevice& device)

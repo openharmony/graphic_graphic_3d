@@ -19,7 +19,6 @@
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/mathf.h>
-#include <core/log.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
@@ -37,6 +36,8 @@
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
+
+#include "util/log.h"
 
 // shaders
 #include <render/shaders/common/render_post_process_structs_common.h>
@@ -108,8 +109,8 @@ RenderNodeCameraSinglePostProcess::ShadowBuffers GetShadowBufferNodeData(
 RenderHandleReference CreatePostProcessDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {
-    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    CORE_STATIC_ASSERT(
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    PLUGIN_STATIC_ASSERT(
         sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
     return gpuResourceMgr.Create(
         handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -199,10 +200,10 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
         threadGroupSize_ = shaderMgr.GetReflectionThreadGroupSize(shader_);
         if (dispatchResources_.customInputBuffers.empty() && dispatchResources_.customInputImages.empty()) {
             valid_ = false;
-            CORE_LOG_W("RenderNodeCameraSinglePostProcess: dispatchResources (GPU buffer or GPU image) needed");
+            PLUGIN_LOG_W("RenderNodeCameraSinglePostProcess: dispatchResources (GPU buffer or GPU image) needed");
         }
     } else {
-        CORE_LOG_E("RN:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_E("RenderNode:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
     }
     {
         // NOTE: cannot be compared with shaderMgr.GetCompatibilityFlags due to missing pipeline layout handle
@@ -215,7 +216,7 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
             const IShaderManager::CompatibilityFlags compatibilityFlags =
                 shaderMgr.GetCompatibilityFlags(baseCamPlHandle, basePlHandle);
             if ((compatibilityFlags & IShaderManager::CompatibilityFlagBits::COMPATIBLE_BIT) == 0) {
-                CORE_LOG_E("RN:%s uncompatible render vs 3D pipeline layout (%s)",
+                PLUGIN_LOG_E("RenderNode:%s uncompatible render vs 3D pipeline layout (%s)",
                     renderNodeContextMgr_->GetName().data(), POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
             }
         }
@@ -223,8 +224,8 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
         const IShaderManager::CompatibilityFlags compatibilityFlags =
             shaderMgr.GetCompatibilityFlags(baseCamPlHandle, plHandle);
         if ((compatibilityFlags & IShaderManager::CompatibilityFlagBits::COMPATIBLE_BIT) == 0) {
-            CORE_LOG_E("RN:%s uncompatible pipeline layout to %s", renderNodeContextMgr_->GetName().data(),
-                POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
+            PLUGIN_LOG_E("RenderNode:%s uncompatible pipeline layout to %s",
+                renderNodeContextMgr_->GetName().data(), POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
         }
     }
 
@@ -233,7 +234,9 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
     const uint32_t postProcessFlag = GetPostProcessFlag(jsonInputs_.ppName);
     if (postProcessFlag != 0) {
         valid_ = false;
-        CORE_LOG_W("RN:%s does not execute render built-in post processes.", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W(
+            "RenderNode:%s does not execute render built-in post processes.",
+            renderNodeContextMgr_->GetName().data());
     }
 #endif
     InitCreateBinders();
@@ -302,8 +305,8 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
         if ((renderPass.renderPassDesc.attachmentCount == 0) ||
             !RenderHandleUtil::IsValid(renderPass.renderPassDesc.attachmentHandles[0])) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_W("rp_missing_" + renderNodeContextMgr_->GetName(), "RN: %s, invalid attachment",
-                renderNodeContextMgr_->GetName().data());
+            PLUGIN_LOG_ONCE_W("rp_missing_" + renderNodeContextMgr_->GetName(),
+                "RenderNode: %s, invalid attachment", renderNodeContextMgr_->GetName().data());
 #endif
             return;
         }
@@ -332,7 +335,7 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!pipelineDescriptorSetBinder_->GetPipelineDescriptorSetLayoutBindingValidity()) {
-        CORE_LOG_W("RN: %s, bindings missing", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W("RenderNode: %s, bindings missing", renderNodeContextMgr_->GetName().data());
     }
 #endif
 
@@ -533,9 +536,9 @@ void RenderNodeCameraSinglePostProcess::UpdateGlobalPostProcessUbo()
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const RenderPostProcessConfiguration rppc =
         renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(ppGlobalConfig_);
-    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    CORE_STATIC_ASSERT(sizeof(LocalPostProcessStruct) ==
-                       sizeof(IRenderDataStorePostProcess::PostProcess::Variables::customPropertyData));
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    PLUGIN_STATIC_ASSERT(sizeof(LocalPostProcessStruct) ==
+                         sizeof(IRenderDataStorePostProcess::PostProcess::Variables::customPropertyData));
     if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.postProcess.GetHandle())); data) {
         const auto* dataEnd = data + sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct);
         // global data
@@ -601,11 +604,12 @@ void RenderNodeCameraSinglePostProcess::ParseRenderNodeInputs()
 
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        CORE_LOG_W("CORE3D_VALIDATION: RN %s renderDataStore::dataStoreName missing.",
+        PLUGIN_LOG_W("CORE3D_VALIDATION: RenderNode %s renderDataStore::dataStoreName missing.",
             renderNodeContextMgr_->GetName().data());
     }
     if (jsonInputs_.ppName.empty()) {
-        CORE_LOG_W("CORE3D_VALIDATION: RN %s postProcess name missing.", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W("CORE3D_VALIDATION: RenderNode %s postProcess name missing.",
+            renderNodeContextMgr_->GetName().data());
     }
 #endif
 
@@ -627,7 +631,7 @@ void RenderNodeCameraSinglePostProcess::ParseRenderNodeInputs()
         } else if (defaultOutput == "white") {
             jsonInputs_.defaultOutputImage = DefaultOutputImage::WHITE;
         } else {
-            CORE_LOG_W(
+            PLUGIN_LOG_W(
                 "RenderNodeCameraSinglePostProcess default output image not supported (%s)", defaultOutput.c_str());
         }
     }

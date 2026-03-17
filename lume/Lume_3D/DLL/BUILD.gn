@@ -15,6 +15,10 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 config("lume_3d_plugin_config") {
   defines = [ "CORE_PLUGIN=1" ]
+  include_dirs = [
+     "../src",
+     "../api",
+  ]
 }
 
 ohos_source_set("lume_3d_plugin_src") {

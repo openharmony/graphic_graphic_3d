@@ -30,13 +30,13 @@
 #include <base/math/vector.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_factory.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 
+#include "util/log.h"
 #include "util/uri_lookup.h"
 
 CORE3D_BEGIN_NAMESPACE()
@@ -370,7 +370,7 @@ void GenerateTorusGeometry(
 void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
 {
     if (radius < Math::EPSILON || height < Math::EPSILON || segments < CYLINDER_MIN_SEGMENTS) {
-        CORE_LOG_E(
+        PLUGIN_LOG_E(
             "Invalid parameters for cylinder creation: radius %f, height %f, segments %u", radius, height, segments);
         return;
     }
@@ -855,7 +855,7 @@ CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS
 Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity meshHandle)
 {
     INodeSystem* nodesystem = GetSystem<INodeSystem>(ecs);
-    CORE_ASSERT(nodesystem);
+    PLUGIN_ASSERT(nodesystem);
 
     // Create node to scene.
     ISceneNode* node = nodesystem->CreateNode();
@@ -867,7 +867,7 @@ Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity 
 
     // Add render mesh component.
     IRenderMeshComponentManager* renderMeshManager = GetManager<IRenderMeshComponentManager>(ecs);
-    CORE_ASSERT(renderMeshManager);
+    PLUGIN_ASSERT(renderMeshManager);
 
     RenderMeshComponent component = CreateComponent(*renderMeshManager, node->GetEntity());
     component.mesh = meshHandle;
@@ -922,7 +922,7 @@ IMeshBuilder::Ptr MeshUtil::InitializeBuilder(const IMeshBuilder::Submesh& subme
 {
     IMeshBuilder::Ptr builder;
     if (IClassRegister* classRegister = factory_.GetInterface<IClassRegister>(); classRegister) {
-        auto renderContext = GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        auto renderContext = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
         if (!renderContext) {
             return {};
         }
@@ -930,7 +930,7 @@ IMeshBuilder::Ptr MeshUtil::InitializeBuilder(const IMeshBuilder::Submesh& subme
         const VertexInputDeclarationView vertexInputDeclaration =
             shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(
                 DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD));
-        builder = CreateInstance<IMeshBuilder>(*renderContext, UID_MESH_BUILDER);
+        builder = CORE3D_NS::CreateInstance<IMeshBuilder>(*renderContext, UID_MESH_BUILDER);
         builder->Initialize(vertexInputDeclaration, 1);
 
         builder->AddSubmesh(submesh);

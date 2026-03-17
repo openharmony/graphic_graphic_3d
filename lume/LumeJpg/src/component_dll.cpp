@@ -13,10 +13,11 @@
  * limitations under the License.
  */
 
+#include <jpg/implementation_uids.h>
+
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_decl.h>
 #include <core/plugin/intf_plugin_register.h>
-#include <jpg/implementation_uids.h>
 
 #include "jpg/image_loader_jpg.h"
 
