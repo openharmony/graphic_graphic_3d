@@ -130,6 +130,33 @@ std::string GetTypeName()
 #endif
 }
 
+template<typename From, typename To,
+    typename = std::enable_if_t<(std::is_same_v<From, float> || std::is_same_v<From, int32_t>) &&
+                                (std::is_same_v<To, uint32_t> || std::is_same_v<To, uint64_t>)>>
+To convertValue(const From value)
+{
+    if (std::isnan(value) || std::isinf(value) || value < 0) {
+        return 0;
+    }
+    if constexpr (std::is_same_v<From, int32_t>) {
+        return static_cast<To>(value);
+    } else {
+        if constexpr (std::is_same_v<To, uint32_t>) {
+            if (value >= static_cast<float>(std::numeric_limits<uint32_t>::max())) {
+                return std::numeric_limits<uint32_t>::max();
+            } else {
+                return static_cast<uint32_t>(value);
+            }
+        } else {
+            if (value >= static_cast<float>(std::numeric_limits<uint64_t>::max())) {
+                return std::numeric_limits<uint64_t>::max();
+            } else {
+                return static_cast<uint64_t>(value);
+            }
+        }
+    }
+}
+
 template <typename Type>
 bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, const std::string &key)
 {
@@ -157,18 +184,18 @@ bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, 
             CORE_LOG_W("property [%s] has type [int32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
             return true;
         } else if (META_NS::IsCompatibleWith<uint32_t>(prop)) {
-            static_pointer_cast<PropertyProxy<uint32_t>>(proxy)->SetValue(
-                static_cast<uint32_t>(static_cast<int32_t>(value)));
+            uint32_t finalValue = convertValue<Type, uint32_t>(value);
             CORE_LOG_W("property [%s] has type [uint32_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            static_pointer_cast<PropertyProxy<uint32_t>>(proxy)->SetValue(finalValue);
             return true;
         } else if (META_NS::IsCompatibleWith<int64_t>(prop)) {
             static_pointer_cast<PropertyProxy<int64_t>>(proxy)->SetValue(static_cast<int64_t>(value));
             CORE_LOG_W("property [%s] has type [int64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
             return true;
         } else if (META_NS::IsCompatibleWith<uint64_t>(prop)) {
-            static_pointer_cast<PropertyProxy<uint64_t>>(proxy)->SetValue(
-                static_cast<uint64_t>(static_cast<int64_t>(value)));
+            uint64_t finalValue = convertValue<Type, uint64_t>(value);
             CORE_LOG_W("property [%s] has type [uint64_t], but get [%s]", key.c_str(), GetTypeName<Type>().c_str());
+            static_pointer_cast<PropertyProxy<uint64_t>>(proxy)->SetValue(finalValue);
             return true;
         }
     }
