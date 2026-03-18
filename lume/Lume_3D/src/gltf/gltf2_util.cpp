@@ -335,6 +335,54 @@ BufferLoadResult ReadBufferFile(Buffer& buffer, IFile& file, const uint32_t offs
     return BufferLoadResult {};
 }
 
+// Resolves a relative URI against a base directory path using RFC 3986 §5.2 dot-removal.
+// Returns the resolved path if it stays within base, or an empty string if it would escape.
+// base:  directory of the glTF file, e.g. "assets://app/models"
+// uri:   decoded relative URI from the glTF asset, e.g. "textures/../rock.png"
+static string ResolveUri(string_view base, string_view uri)
+{
+    // Split base into segments so we can track the sandbox floor.
+    vector<string_view> segments;
+    for (size_t pos = 0; pos <= base.size();) {
+        const size_t slash = base.find('/', pos);
+        const size_t end = (slash == string_view::npos) ? base.size() : slash;
+        if (end > pos) {
+            segments.push_back(base.substr(pos, end - pos));
+        }
+        if (slash == string_view::npos)
+            break;
+        pos = slash + 1u;
+    }
+    const size_t floor = segments.size(); // cannot pop below this
+
+    // Process URI segments (RFC 3986 §5.2.4 remove-dot-segments).
+    for (size_t pos = 0; pos <= uri.size();) {
+        const size_t slash = uri.find('/', pos);
+        const size_t end = (slash == string_view::npos) ? uri.size() : slash;
+        const string_view seg = uri.substr(pos, end - pos);
+        pos = (slash == string_view::npos) ? uri.size() + 1u : slash + 1u;
+
+        if (seg == "..") {
+            if (segments.size() <= floor) {
+                return {}; // would escape the base directory
+            }
+            segments.pop_back();
+        } else if (!seg.empty() && seg != ".") {
+            segments.push_back(seg);
+        }
+    }
+
+    // Reconstruct the resolved path.
+    string result;
+    result.reserve(base.size() + uri.size() + 1u);
+    for (size_t i = 0; i < segments.size(); ++i) {
+        if (i > 0)
+            result += '/';
+        result.append(segments[i].data(), segments[i].size());
+    }
+    return result;
+}
+
 BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& fileManager)
 {
     if (IsDataURI(buffer.uri)) {
