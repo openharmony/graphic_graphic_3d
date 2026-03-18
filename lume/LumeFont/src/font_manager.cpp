@@ -66,9 +66,9 @@ constexpr Width widths_os2_match[] = { Width(0), Width::UltraCondensed, Width::E
     Width::SemiCondensed, Width::Normal, Width::SemiExpanded, Width::Expanded, Width::ExtraExpanded,
     Width::UltraExpanded };
 
-TypeFace InitTypeFace(FT_Face face, string_view path, string_view filename)
+bool InitTypeFace(FT_Face face, string_view path, string_view filename, TypeFace& typeFace)
 {
-    TypeFace typeFace {
+    typeFace = TypeFace {
         string(path),            // font file path
         face->family_name,       // family name as defined in font file
         face->style_name,        // style name as defined in font file
@@ -79,6 +79,11 @@ TypeFace InitTypeFace(FT_Face face, string_view path, string_view filename)
     const TT_OS2* tblOS2 = static_cast<TT_OS2*>(FT_Get_Sfnt_Table(face, FT_SFNT_OS2));
     if (tblOS2) {
         typeFace.style.Weight = static_cast<Weight>(tblOS2->usWeightClass);
+        if (tblOS2->usWidthClass >= std::size(widths_os2_match)) {
+            CORE_LOG_W("invalid usWidthClass in font face: %s | %s | %s", BASE_NS::string(filename).c_str(),
+                face->family_name, face->style_name);
+            return false;
+        }
         typeFace.style.Width = widths_os2_match[tblOS2->usWidthClass];
     } else {
         if (FT_ULong(face->style_flags) & FT_STYLE_FLAG_BOLD) {
@@ -88,7 +93,7 @@ TypeFace InitTypeFace(FT_Face face, string_view path, string_view filename)
     if (FT_ULong(face->style_flags) & FT_STYLE_FLAG_ITALIC) {
         typeFace.style.SlantType = SlantType::Italic;
     }
-    return typeFace;
+    return true;
 }
 } // namespace
 
@@ -179,7 +184,6 @@ std::shared_ptr<FontBuffer> FontManager::CreateFontBuffer(const TypeFace& typeFa
     auto fb = std::make_shared<FontBuffer>(this, typeFace.uid, bytes);
 
     fontBuffers_.insert({ typeFace.uid, fb });
-    CORE_LOG_N("create FontBuffer %p", this);
 
     return fb;
 }
@@ -280,8 +284,9 @@ void FontManager::GetTypeFacesByFile(vector<TypeFace>& typeFaces, string_view pa
         FT_Long faceId = FT_Long(FT_ULong(instanceIndex) << INSTANCE_SHIFT) + faceIndex;
         auto face = OpenFtFace(buf, faceId);
         // lume api is utf8, unicode is the default charmap with freetype.
-        if (face && face->charmap) {
-            typeFaces.push_back(InitTypeFace(face, path, entry.name));
+        TypeFace typeFace {};
+        if (face && face->charmap && InitTypeFace(face, path, entry.name, typeFace)) {
+            typeFaces.push_back(typeFace);
 
             numFaces = face->num_faces;
             numInstances = FT_Long(FT_ULong(face->style_flags) >> INSTANCE_SHIFT);
@@ -296,9 +301,11 @@ void FontManager::GetTypeFacesByFile(vector<TypeFace>& typeFaces, string_view pa
                 ++faceIndex;
                 instanceIndex = 0;
             }
-            FT_Done_Face(face);
         } else {
             CORE_LOG_W("failed to create face: %s", path.data());
+        }
+        if (face) {
+            FT_Done_Face(face);
         }
     } while (faceIndex < numFaces);
 }
@@ -776,7 +783,6 @@ void FontManager::Unref()
 {
     if (refcnt_.fetch_sub(1, std::memory_order_release) == 1) {
         std::atomic_thread_fence(std::memory_order_acquire);
-        CORE_LOG_N("delete FontManager %p", this);
         delete this;
     }
 }

@@ -300,7 +300,13 @@ public:
         image->imageDesc_ =
             ResolveImageDesc(format, imageWidth, imageHeight, bitsPerPixel, generateMips, isPremultiplied);
         image->imageBytes_ = BASE_NS::move(imageBytes);
-        image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
+
+        const uint64_t totalBytes =
+            static_cast<uint64_t>(imageWidth) * imageHeight * componentCount * bytesPerComponent;
+        if (totalBytes > UINT32_MAX) {
+            return ImageLoaderManager::ResultFailure("Image size exceeds maximum supported size.");
+        }
+        image->imageBytesLength_ = static_cast<uint32_t>(totalBytes);
 
         image->imageBuffer_ = SubImageDesc {
             0,           // uint32_t bufferOffset
