@@ -792,8 +792,8 @@ void SceneAdapter::RenderFunction()
             disabledCameras.push_back(c);
         }
     }
+    
     auto activeCameraCount = cams.size() - disabledCameras.size();
-
     if (bitmapCleared_ && bitmap_ && activeCameraCount > 0) {
         const auto& textureInfo = textureLayer_->GetTextureInfo();
         auto& device = engineInstance_.renderContext_->GetDevice();
