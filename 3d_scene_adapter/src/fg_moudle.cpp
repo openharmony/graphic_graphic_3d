@@ -41,7 +41,7 @@ using namespace RENDER_NS;
 using namespace FG;
 
 BASE_NS::refcnt_ptr<CORE_NS::IEcs> FGModule::ecs_;
-// CORE_NS::EntityReference FGModule::fgConfigEntity_;s
+// CORE_NS::EntityReference FGModule::fgConfigEntity_;
 
 namespace {
 GpuImageDesc GetGpuImageDesc(
@@ -62,16 +62,16 @@ GpuImageDesc GetGpuImageDesc(
     imageDesc.bitsPerBlock = 8;
     imageDesc.mipCount = 1;
     imageDesc.layerCount = 1;
-    imageDesc.imageViewType = 
+    imageDesc.imageViewType =
         IImageContainer::ImageViewType::VIEW_TYPE_2D;
     imageDesc.blockPixelDepth = 1;
-    imageDesc.imageType = 
+    imageDesc.imageType =
         IImageContainer::ImageType::TYPE_2D;
     GpuImageDesc gpuImageDesc = gpuResourceMgr.CreateGpuImageDesc(imageDesc);
     gpuImageDesc.imageTiling = ImageTiling::CORE_IMAGE_TILING_OPTIMAL;
     gpuImageDesc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     gpuImageDesc.createFlags = 0;
-    gpuImageDesc.engineCreationFlags = 
+    gpuImageDesc.engineCreationFlags =
         EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS;
     gpuImageDesc.mipCount = 1;
     gpuImageDesc.layerCount = 1;
@@ -92,6 +92,7 @@ RenderHandleReference CreateTexture(
     auto imageHandle = gpuResourceMgr.Create(name, gpuImageDesc);
     return imageHandle;
 }
+
 RenderHandleReference CreateTextureDepth(
     shared_ptr<IRenderContext> rc, const Base::string_view& name,
     const Format format, const uint32_t width, const uint32_t height)
@@ -106,108 +107,111 @@ RenderHandleReference CreateTextureDepth(
 }// namespace
 
 RenderHandleReference CreateRenderNodeGraphFG(shared_ptr<IRenderContext> renderContext_,
- const string_view rngPath)
+    const string_view rngPath)
 {
- IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
- const RenderHandleReference handle = 
-   graphManager.loadAndCreate(
-     IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngPath);
- return handle;
+    IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
+    const RenderHandleReference handle = 
+        graphManager.loadAndCreate(
+            IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngPath);
+    return handle;
 }
 
 struct CreatedImageData {
- Math::UVec2 size { 0, 0};
- RenderHandleReference handle;
- CORE_NS::EntityReference entity;
+    Math::UVec2 size { 0, 0 };
+    RenderHandleReference handle;
+    CORE_NS::EntityReference entity;
 };
 
 FG::FGModule::FGModule() {}
 
 void FGModule::Init(shared_ptr<SCENE_NS::IInternalScene> scene,
- shared_ptr<IRenderContext> renderContext,
- shared_ptr<CORE_NS::IEngine> engine,
- refcnt_ptr<CORE_NS::IEcs> ecs)
+    shared_ptr<IRenderContext> renderContext,
+    shared_ptr<CORE_NS::IEngine> engine,
+    refcnt_ptr<CORE_NS::IEcs> ecs)
 {
- ecs_ = ecs;
- RenderHandleReference rngPredict = CreateRenderNodeGraphFG(renderContext,
-   "fg_rofd://rendernodegraphs/fg_predict.rng");
- const string_view display_real = fg_withSR_ ?
-   "fg_rofd://rendernodegraphs/fg_display_real_with_sr.rng" :
-   "fg_rofd://rendernodegraphs/fg_display_real.rng";
- RenderHandleReference rngDisplayReal = CreateRenderNodeGraphFG(renderContext, display_real);
- const string_view displayPredict = fg_withSR_ ?
-   "fg_rofd://rendernodegraphs/fg_display_real_with_sr.rng" :
-   "fg_rofd://rendernodegraphs/fg_display_real.rng";
- RenderHandleReference rngDisplayPredict = CreateRenderNodeGraphFG(renderContext, display_real);
-
- scene->AppendFGRenderNodeGraph(rngPredict, rngDisplayReal, rngDisplayPredict);
+    ecs_ = ecs;
+    RenderHandleReference rngPredict = CreateRenderNodeGraphFG(renderContext,
+        "fg_rofd://rendernodegraphs/fg_predict.rng");
+    const string_view display_real = fg_.withSR_ ?
+        "fg_rofd://rendernodegraphs/fg_display_real_with_sr.rng" :
+        "fg_rofd://rendernodegraphs/fg_display_real.rng";
+    RenderHandleReference rngDisplayReal = CreateRenderNodeGraphFG(renderContext, display_real);
+    const string_view displayPredict = fg_.withSR_ ?
+        "fg_rofd://rendernodegraphs/fg_display_predict_with_sr.rng" :
+        "fg_rofd://rendernodegraphs/fg_display_predict.rng";
+    RenderHandleReference rngDisplayPredict = CreateRenderNodeGraphFG(renderContext, displayPredict);
+   
+    scene->AppendFGRenderNodeGraph(rngPredict, rngDisplayReal, rngDisplayPredict);
 }
 
 void FGModule::Update(shared_ptr<SCENE_NS::IScene> scene) {}
 
 const FGData FGModule::InitConfig()
 {
- if (!ecs_) {
-   return fg_;
- }
- auto* fgConfigMgr = static_cast<IFGComponentManager*>(ecs_->GetComponentManager(IFGComponentManager::UID));
- if (!fgConfigMgr) {
-   return fg_;
- }
- auto fgEntity = fgConfigMgr->GetEntity(0);
- auto fgHandle = fgConfigMgr->Write(fgEntity);
+    if (!ecs_) {
+        return fg_;
+    }
+    auto* fgConfigMgr = static_cast<IFGComponentManager*>(ecs_->GetComponentManager(IFGComponentManager::UID));
+    if (!fgConfigMgr) {
+        return fg_;
+    }
+    auto fgEntity = fgConfigMgr->GetEntity(0);
+    auto fgHandle = fgConfigMgr->Write(fgEntity);
 
- if (!fgHandle) {
-   return fg_;
- }
- FGComponent& fgComponent = *fgHandle;
+    if (!fgHandle) {
+        return fg_;
+    }
 
- uint32_t quality = fgComponent.quality;
- unit32_t algorithm = fgComponent.algorithm;
+    FGComponent& fgComponent = *fgHandle;
 
- enum FGQualityType {
-   QUALITY_TYPE_FIX = 0,
-   QUALITY_TYPE_NORMAL = 1,
-   QUALITY_TYPE_LOW = 2,
-   QUALITY_TYPE_BAD = 3,
- };
- enum FGAlgorithm {
- FG_HYDRA = 0,
- FG_GRIDWARP = 1,
-};
+    uint32_t quality = fgComponent.quality;
+    unit32_t algorithm = fgComponent.algorithm;
 
-if (quality == 0) {
- fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
-} else if (quality == 1) {
- fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORNAL;
-} else if (quality == 2) {
- fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_LOW;
-} else if (quality == 3) {
- fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_BAD;
-} else {
- fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
-}
+    enum FGQualityType {
+       QUALITY_TYPE_FIX = 0,
+       QUALITY_TYPE_NORMAL = 1,
+       QUALITY_TYPE_LOW = 2,
+       QUALITY_TYPE_BAD = 3,
+    };
 
-if (algorithm == 0) {
- fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
-} else if (algorithm == 1) {
- fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_GRIDWARP;
-} else if (algorithm == 2) {
- fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_IOI;
-} else {
- fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
-}
-return fg_;
+    enum FGAlgorithm {
+       FG_HYDRA = 0,
+       FG_GRIDWARP = 1,
+    };
+
+    if (quality == 0) {
+        fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
+    } else if (quality == 1) {
+        fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORMAL;
+    } else if (quality == 2) {
+        fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_LOW;
+    } else if (quality == 3) {
+        fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_BAD;
+    } else {
+        fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
+    }
+ 
+    if (algorithm == 0) {
+        fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
+    } else if (algorithm == 1) {
+        fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_GRIDWARP;
+    } else if (algorithm == 2) {
+        fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_IOI;
+    } else {
+        fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
+    }
+
+    return fg_;
 }
 
 const FGData FGModule::GetConfig()
 {
- return fg_;
+    return fg_;
 }
 
 bool FGModule::IsEnable()
 {
- return fg_.enable_;
+    return fg_.enable_;
 }
 
 bool FGModule::EnableFG()
@@ -240,9 +244,9 @@ RenderHandleReference FGModule::CreateGpuResource(
     desc.depth = 1;
     desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
     desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    desc.usageFlags = ImageAspectFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-            ImageAspectFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT |
-            ImageAspectFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    desc.usageFlags = ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT |
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
     desc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
     desc.imageTiling = ImageTiling::CORE_IMAGE_TILING_OPTIMAL;
     desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_2D;
@@ -259,13 +263,35 @@ void FGModule::CreateGpuImages(
     RENDER_NS::RenderHandleReference& FGPredictOutputHandle_,
     RENDER_NS::RenderHandleReference& FGDepthOutputHandle_)
 {
- FGColorOutputHandle_ = CreateTexture(rc, "FG_COLOR_OUTPUT",
-   BASE_FORMAT_R8G8B8A8_SRGB,
-   static_cast<int>(width), static_cast<int>(height));
- FGPredictOutputHandle_ = CreateTexture(rc, "FG_PREDICT_OUTPUT",
-   BASE_FORMAT_R8G8B8A8_SRGB,
-   static_cast<int>(width), static_cast<int>(height));
- FGDepthOutputHandle_ = CreateTexture(rc, "SCENE_DEPTH_EMPTY",
-   fg.algorithm_ == 1? BASE_FORMAT_D32_SFLOAT_S8_UINT : BASE_FORMAT_D32_SFLOAT,
-   static_cast<int>(width), static_cast<int>(height));
+    FGColorOutputHandle_ = CreateTexture(rc, "FG_COLOR_OUTPUT",
+        BASE_FORMAT_R8G8B8A8_SRGB,
+        static_cast<int>(width), static_cast<int>(height));
+    FGPredictOutputHandle_ = CreateTexture(rc, "FG_PREDICT_OUTPUT",
+        BASE_FORMAT_R8G8B8A8_SRGB,
+        static_cast<int>(width), static_cast<int>(height));
+    FGDepthOutputHandle_ = CreateTexture(rc, "SCENE_DEPTH_EMPTY",
+        fg.algorithm_ == 1? BASE_FORMAT_D32_SFLOAT_S8_UINT : BASE_FORMAT_D32_SFLOAT,
+        static_cast<int>(width), static_cast<int>(height));
+}
+
+void FGModule::AttachComponent()
+{
+    if (!ecs_) {
+        return fg_;
+    }
+    auto* fgConfigMgr = static_cast<IFGComponentManager*>(
+        (*ecs_).GetComponentManager(IFGComponentManager::UID)));
+    if (!fgConfigMgr) {
+        return;
+    }
+    auto fgEntity = fgConfigMgr->GetEntity(0);
+    auto fgHandle = fgConfigMgr->Write(fgEntity);
+    if (!fgHandle) {
+        return;
+    }
+    fgHandle->fgDetailConfiguration.qualityType = fg_.quality_;
+    fgHandle->fgDetailConfiguration.algorithm = fg_.algorithm_;
+    fgHandle->fgDetailConfiguration.FGWidth = fg_.width_;
+    fgHandle->fgDetailConfiguration.FGHeight = fg_.height_;
+    fgHandle->fgDetailConfiguration.withSR = fg_.withSR_;
 }

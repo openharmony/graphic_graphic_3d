@@ -59,7 +59,7 @@ struct FGDetailConfiguration {
  */
 BEGIN_COMPONENT(IFGComponentManager, FGComponent)
 #ifndef IMPLEMENT_MANAGER
-    enum FlagBits :: uint32_t {
+    enum FlagBits : uint32_t {
       FG1_BIT = (1 << 0),
       FG2_BIT = (1 << 1),
       FG3_BIT = (1 << 2),
@@ -72,7 +72,7 @@ BEGIN_COMPONENT(IFGComponentManager, FGComponent)
     /** The method of frame_generation fill when rendering.
     */
     DEFINE_BITFIELD_PROPERTY(
-        Flags, enableFlags, "Enabled FrameGeration", PropertyFlgs::IS_BITFILED, VALUE(0), FGComponent::FlagBits)
+        Flags, enableFlags, "Enabled FrameGeration", PropertyFlags::IS_BITFIELD, VALUE(0), FGComponent::FlagBits)
     
     /** FG detail configuration.
     */
