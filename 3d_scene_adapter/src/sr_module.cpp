@@ -108,7 +108,7 @@ void SRModule::Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
     BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
     BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs)
 {
-    static constexpr BASE_NS::Uid custom_system_uid { SR::ISrSystem::UID };
+    static constexpr BASE_NS::Uid custom_system_uid { SR::ISRSystem::UID };
     
     ecs_ = ecs;
     CORE_NS::ISystem* srSystem = ecs_->GetSystem(custom_system_uid);
@@ -132,7 +132,7 @@ bool SRModule::EnableSR()
             sr_.enable_ = true;
             return true;
         }
-    
+    }
     return false;
 }
 
@@ -144,7 +144,8 @@ const SRData SRModule::InitConfig(
         (*ecs_).GetComponentManager(SR::ISRComponentManager::UID));
     if (!srConfigMgr) {
         return sr_;
-    
+    }
+
     auto srEntity = srConfigMgr->GetEntity(1);
     auto srHandle = srConfigMgr->Write(srEntity);
     if (!srHandle) {
@@ -153,14 +154,15 @@ const SRData SRModule::InitConfig(
 
     SR::SRComponent& testComponent = *srHandle;
     const auto method = testComponent.algorithm;
-    const auto quality = testComponent.sra    
+    const auto quality = testComponent.sraRate;
     if (method == "sr_lut") {
         sr_.type_ = MethodTypeSR::LUT;
     } else if (method == "sr_hgsr1") {
         sr_.type_ = MethodTypeSR::HGSR1;
     } else {
         sr_.type_ = MethodTypeSR::BILINEAR;
-    
+    }
+
     RENDER_NS::RenderHandleReference rng;
     switch (sr_.type_) {
         case MethodTypeSR::LUT:
@@ -172,7 +174,7 @@ const SRData SRModule::InitConfig(
         default:
             rng = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_bilinear.rng");
             break;
-    
+    }
     if (!rng) {
         return sr_;
     }

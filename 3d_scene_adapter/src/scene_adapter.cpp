@@ -314,7 +314,7 @@ bool SceneAdapter::SRInitialize()
             srModule.Init(internalScene, renderContext, engine, ecs);
             return false;
         }));
-    SRModule::srinitialized_ = true;
+    SRModule::srInitialized_ = true;
     return true;
 }
 #endif
@@ -636,14 +636,16 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 #ifdef __SR_MODULE__
         // create offscreen render target for super resolution plugin
         if (auto rc = engineInstance_.renderContext_; SRModule::Enable() && rc) {
-            PropSync();
-            const auto& sr = SRModule::InitConfig(scene->GetInternalScene(), rc);
-            auto const width = textureInfo.width_*textureInfo.widthScale_;
-            auto const height = textureInfo.height_*textureInfo.heightScale_;
-            auto& gpuResourceMgr = rcFG->GetDevice().GetGpuResourceManager();
-            const auto& desc = gpuResourceMgr.GetImageDescriptor(swapchainHandle_);
-            SRModule::SetWindowSize(desc.width, desc.height);
-            offscreenHandle_ = SRModule::CreateGpuResource(rc, width / sr.rate_, height / sr.rate_);
+            if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
+                PropSync();
+                const auto& sr = SRModule::InitConfig(scene->GetInternalScene(), rc);
+                auto const width = textureInfo.width_*textureInfo.widthScale_;
+                auto const height = textureInfo.height_*textureInfo.heightScale_;
+                auto& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
+                const auto& desc = gpuResourceMgr.GetImageDescriptor(swapchainHandle_);
+                SRModule::SetWindowSize(desc.width, desc.height);
+                offscreenHandle_ = SRModule::CreateGpuResource(rc, width / sr.rate_, height / sr.rate_);                
+            }
         } else {
             WIDGET_LOGI("offscreen handle resource not created.");
         }
@@ -789,7 +791,44 @@ void SceneAdapter::RenderFunction()
             c->SetActive(false);
             disabledCameras.push_back(c);
         }
+    }
 
+    auto activeCameraCount = cams.size() - disabledCameras.size();
+
+    if (bitmapCleared_ && bitmap_ && activeCameraCount > 0) {
+        const auto& textureInfo = textureLayer_->GetTextureInfo();
+        auto& device = engineInstance_.renderContext_->GetDevice();
+        RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
+            0U,
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
+            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
+            RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            {
+                reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
+                {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
+            }
+        };
+
+        swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+        
+        if(auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)){
+#ifdef __SR_MODULE__
+            const auto& sr = SRModule::GetConfig();
+            if(sr.enable_ && textureLayer_){
+                SRModule::AttachComponent();
+                i->SetRenderHandle(offscreenHandle_);
+            } else {
+                i->SetRenderHandle(swapchainHandle_);
+            }
+#else
+            i->SetRenderHandle(swapchainHandle_);
+#endif
+        }
+        bitmapCleared_ = false;
+    }
+
+    for (auto c : cams) {
         AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
     }
 
@@ -960,9 +999,9 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
         return;
     }
 #ifdef __FG_MODULE__
-    if (FG::Module::IsEnable()) {
+    if (FG::FGModule::IsEnable()) {
         auto &obr = META_NS::GetObjectRegistry();
-        auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_);
@@ -975,7 +1014,7 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
                 0.0f, 0.0f
             };
             i->SetRenderHandle(FGColorOutputHandle_);
-            j->SetRenderHandle(FGColorOutputHandle_);
+            j->SetRenderHandle(FGDepthOutputHandle_);
         }
         camera->SetRenderTarget(bitmap_);
         UpdateCameraDepthTarget(component->GetEcsObject(), bitmap2_);
