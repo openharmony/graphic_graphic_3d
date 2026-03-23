@@ -291,7 +291,7 @@ bool SceneAdapter::SRInitialize()
         return true;
     }
 
-    if(!SRModule::EnableSR()) {
+    if (!SRModule::EnableSR()) {
         return false;
     }
 
@@ -639,8 +639,8 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
                 PropSync();
                 const auto& sr = SRModule::InitConfig(scene->GetInternalScene(), rc);
-                auto const width = textureInfo.width_*textureInfo.widthScale_;
-                auto const height = textureInfo.height_*textureInfo.heightScale_;
+                auto const width = textureInfo.width_ * textureInfo.widthScale_;
+                auto const height = textureInfo.height_ * textureInfo.heightScale_;
                 auto& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
                 const auto& desc = gpuResourceMgr.GetImageDescriptor(swapchainHandle_);
                 SRModule::SetWindowSize(desc.width, desc.height);
@@ -658,7 +658,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
 #ifdef __SR_MODULE__
             auto rc = engineInstance_.renderContext_;
             const auto &sr = SRModule::GetConfig();
-            if(sr.enable_ && textureLayer_) {
+            if (sr.enable_ && textureLayer_) {
                 SRModule::AttachComponent();
                 i->SetRenderHandle(offscreenHandle_);
             } else {
@@ -792,7 +792,6 @@ void SceneAdapter::RenderFunction()
             disabledCameras.push_back(c);
         }
     }
-
     auto activeCameraCount = cams.size() - disabledCameras.size();
 
     if (bitmapCleared_ && bitmap_ && activeCameraCount > 0) {
@@ -812,10 +811,10 @@ void SceneAdapter::RenderFunction()
 
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
         
-        if(auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)){
+        if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
 #ifdef __SR_MODULE__
             const auto& sr = SRModule::GetConfig();
-            if(sr.enable_ && textureLayer_){
+            if (sr.enable_ && textureLayer_) {
                 SRModule::AttachComponent();
                 i->SetRenderHandle(offscreenHandle_);
             } else {
