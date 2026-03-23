@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
-// need notice
 #if defined(__OHOS_PLATFORM__)
 #include <dlfcn.h>
 #endif
@@ -29,8 +28,9 @@
 #include <base/containers/fixed_string.h>
 #include <base/util/base64_decode.h>
 #include <core/io/intf_file_manager.h>
-#include <core/log.h>
 #include <core/namespace.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -70,7 +70,6 @@ vector<uint8_t> Read(Accessor const& accessor)
     const uint32_t componentCount = GetComponentsCount(accessor.type);
     const uint32_t elementSize = componentCount * componentByteSize;
     const uint32_t count = accessor.count;
-    // need notice
 #if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
     // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
     // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
@@ -81,7 +80,7 @@ vector<uint8_t> Read(Accessor const& accessor)
         // Open the dynamic meshopt library.
         void* handle = dlopen("libmeshoptimizer.z.so", RTLD_LAZY);
         if (!handle) {
-            CORE_LOG_E("Unable to load dynamic library meshopt dynamic library");
+            PLUGIN_LOG_E("Unable to load dynamic library meshopt dynamic library");
             return {};
         }
         // Obtaining a Function Pointer.
@@ -99,7 +98,7 @@ vector<uint8_t> Read(Accessor const& accessor)
             (DecodeIndexBufferFunc)dlsym(handle, "meshopt_decodeIndexBuffer");
         if (!meshopt_decodeVertexBuffer || !meshopt_decodeFilterOct || !meshopt_decodeFilterQuat ||
             !meshopt_decodeFilterExp || !meshopt_decodeIndexBuffer) {
-            CORE_LOG_E("Unable to find a function to decompress meshopt format.");
+            PLUGIN_LOG_E("Unable to find a function to decompress meshopt format.");
             dlclose(handle);
             return {};
         }
@@ -114,7 +113,7 @@ vector<uint8_t> Read(Accessor const& accessor)
                 const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
                     meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
                 if (ret) {
-                    CORE_LOG_E("meshopt_decodeVertexBuffer %d", ret);
+                    PLUGIN_LOG_E("meshopt_decodeVertexBuffer %d", ret);
                     meshoptCompression.data.clear();
                 } else {
                     if (meshoptCompression.filter == CompressionFilter::OCTAHEDRAL) {
@@ -129,7 +128,7 @@ vector<uint8_t> Read(Accessor const& accessor)
                 const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
                     meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
                 if (ret) {
-                    CORE_LOG_E("meshopt_decodeIndexBuffer %d", ret);
+                    PLUGIN_LOG_E("meshopt_decodeIndexBuffer %d", ret);
                     meshoptCompression.data.clear();
                 }
             }
@@ -168,6 +167,9 @@ vector<uint8_t> Read(Accessor const& accessor)
 
     const size_t startOffset = accessor.bufferView->byteOffset + accessor.byteOffset;
     const size_t bufferLength = accessor.bufferView->buffer->byteLength;
+    if (startOffset > bufferLength) {
+        return vector<uint8_t>();
+    }
     const size_t bufferRemaining = bufferLength - startOffset;
     const size_t byteStride = accessor.bufferView->byteStride;
 
@@ -190,21 +192,147 @@ vector<uint8_t> Read(Accessor const& accessor)
 }
 
 template<class T>
-void CopySparseElements(
+bool CopySparseElements(
     ByteBuffer& destination, const ByteBuffer& source, const ByteBuffer& indices, uint32_t elementSize, size_t count)
 {
-    const T* indicesPtr = reinterpret_cast<const T*>(indices.data());
-    auto const end = ptrdiff_t(destination.data() + destination.size());
+    if ((elementSize == 0u) || (count == 0u)) {
+        return true;
+    }
+
+    const size_t elementSizeInBytes = static_cast<size_t>(elementSize);
+    if (((indices.size() / sizeof(T)) < count) || ((source.size() / elementSizeInBytes) < count)) {
+        PLUGIN_LOG_E("Invalid sparse accessor data size.");
+        return false;
+    }
+
+    const size_t destinationElementCount = destination.size() / elementSizeInBytes;
     for (size_t i = 0u; i < count; ++i) {
-        const uint8_t* sourcePtr = source.data() + (i * elementSize);
-        uint8_t* destinationPtr = destination.data() + (indicesPtr[i] * elementSize);
-        auto const left = end - ptrdiff_t(destinationPtr);
-        if (left > 0) {
-            if (!CloneData(destinationPtr, size_t(left), sourcePtr, elementSize)) {
-                CORE_LOG_E("Copying of sparseElements failed.");
-            }
+        T sparseIndex {};
+        if (!CloneData(&sparseIndex, sizeof(T), indices.data() + (i * sizeof(T)), sizeof(T))) {
+            PLUGIN_LOG_E("Failed to read sparse index.");
+            return false;
+        }
+        const size_t destinationIndex = static_cast<size_t>(sparseIndex);
+        if (destinationIndex >= destinationElementCount) {
+            PLUGIN_LOG_W("Sparse accessor index out of range.");
+            continue;
+        }
+
+        const size_t sourceOffset = i * elementSizeInBytes;
+        const size_t destinationOffset = destinationIndex * elementSizeInBytes;
+        if (!CloneData(destination.data() + destinationOffset, destination.size() - destinationOffset,
+            source.data() + sourceOffset, elementSizeInBytes)) {
+            PLUGIN_LOG_E("Copying of sparseElements failed.");
+            return false;
         }
     }
+
+    return true;
+}
+
+BufferLoadResult ResolveBufferSource(Data const& data, Buffer const& buffer, string_view& uri, uint32_t& offset)
+{
+    if (buffer.uri.size()) {
+        uri = buffer.uri;
+        offset = 0u;
+        return BufferLoadResult {};
+    }
+    if (data.defaultResourcesOffset >= 0) {
+        uri = data.defaultResources;
+        offset = static_cast<uint32_t>(data.defaultResourcesOffset);
+        return BufferLoadResult {};
+    }
+    return BufferLoadResult { false, "Failed to open buffer: " + buffer.uri + '\n' };
+}
+
+// Resolves a relative URI against a base directory path using RFC 3986 §5.2 dot-removal.
+// Returns the resolved path if it stays within base, or an empty string if it would escape.
+// base:  directory of the glTF file, e.g. "assets://app/models"
+// uri:   decoded relative URI from the glTF asset, e.g. "textures/../rock.png"
+string ResolveUri(string_view base, string_view uri)
+{
+    // Split base into segments so we can track the sandbox floor.
+    // Empty segments are retained so that the "//" authority separator in URIs
+    // like "file://path" is naturally reconstructed (e.g. "file:" + "" + "path").
+    vector<string_view> segments;
+    for (size_t pos = 0; pos <= base.size();) {
+        const size_t slash = base.find('/', pos);
+        const size_t end = (slash == string_view::npos) ? base.size() : slash;
+        segments.push_back(base.substr(pos, end - pos));
+        if (slash == string_view::npos) {
+            break;
+        }
+        pos = slash + 1u;
+    }
+    const size_t floor = segments.size(); // cannot pop below this
+    string result;
+
+    // Process URI segments (RFC 3986 §5.2.4 remove-dot-segments).
+    for (size_t pos = 0; pos <= uri.size();) {
+        const size_t slash = uri.find('/', pos);
+        const size_t end = (slash == string_view::npos) ? uri.size() : slash;
+        const string_view seg = uri.substr(pos, end - pos);
+        pos = (slash == string_view::npos) ? uri.size() + 1u : slash + 1u;
+
+        if (seg == "..") {
+            if (segments.size() <= floor) {
+                return result; // would escape the base directory
+            }
+            segments.pop_back();
+        } else if (!seg.empty() && seg != ".") {
+            segments.push_back(seg);
+        }
+    }
+
+    // Reconstruct the resolved path.
+    result.reserve(base.size() + uri.size() + 1u);
+    for (size_t i = 0; i < segments.size(); ++i) {
+        if (i > 0) {
+            result += '/';
+        }
+        result.append(segments[i].data(), segments[i].size());
+    }
+    return result;
+}
+
+IFile* OpenBufferFile(Data const& data, IFileManager& fileManager, const string_view uri, IFile::Ptr& file)
+{
+    if (data.memoryFile_) {
+        return data.memoryFile_.get();
+    }
+
+    const string fileName = ResolveUri(data.filepath, uri);
+    if (fileName.empty()) {
+        PLUGIN_LOG_W("GLTF2: Buffer URI escapes base directory: %s", string(uri).c_str());
+        return nullptr;
+    }
+
+    file = fileManager.OpenFile(fileName);
+    return file.get();
+}
+
+BufferLoadResult ReadBufferFile(Buffer& buffer, IFile& file, const uint32_t offset)
+{
+    if (!file.Seek(offset)) {
+        return BufferLoadResult { false, "Failed to seek buffer: " + buffer.uri + '\n' };
+    }
+
+    const auto length = file.GetLength();
+    const auto position = file.GetPosition();
+    if (position > length) {
+        return BufferLoadResult { false, "Failed to read buffer: " + buffer.uri + '\n' };
+    }
+    const auto remaining = length - position;
+    if (remaining < buffer.byteLength) {
+        PLUGIN_LOG_W("Buffer size %zu larger than file size (%" PRIu64 " remaining).", buffer.byteLength, remaining);
+        buffer.byteLength = static_cast<size_t>(remaining);
+    }
+
+    buffer.data.resize(buffer.byteLength);
+    if (file.Read(buffer.data.data(), buffer.byteLength) != buffer.byteLength) {
+        return BufferLoadResult { false, "Failed to read buffer: " + buffer.uri + '\n' };
+    }
+    return BufferLoadResult {};
 }
 
 BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& fileManager)
@@ -213,62 +341,35 @@ BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& file
         if (!DecodeDataURI(buffer.data, buffer.uri, buffer.byteLength, true)) {
             return BufferLoadResult { false, "Failed to decode data uri: " + buffer.uri + '\n' };
         }
-    } else {
-        uint32_t offset;
-        string_view uri;
-        if (buffer.uri.size()) {
-            uri = buffer.uri;
-            offset = 0u;
-        } else if (data.defaultResourcesOffset >= 0) {
-            uri = data.defaultResources;
-            offset = static_cast<uint32_t>(data.defaultResourcesOffset);
-        } else {
-            return BufferLoadResult { false, "Failed to open buffer: " + buffer.uri + '\n' };
-        }
-
-        IFile::Ptr file;
-        IFile* filePtr = nullptr;
-        if (data.memoryFile_) {
-            filePtr = data.memoryFile_.get();
-        } else {
-            string fileName;
-            fileName.reserve(data.filepath.size() + 1u + uri.size());
-            fileName.append(data.filepath);
-            fileName.append("/");
-            fileName.append(uri);
-
-            file = fileManager.OpenFile(fileName);
-            filePtr = file.get();
-        }
-        if (!filePtr) {
-            return BufferLoadResult { false, "Failed open uri: " + buffer.uri + '\n' };
-        }
-
-        filePtr->Seek(offset);
-
-        // Check that buffer does not overflow over the file boundaries.
-        const auto length = filePtr->GetLength();
-        const auto remaining = length - filePtr->GetPosition();
-        if (remaining < buffer.byteLength) {
-            // Clamp buffer to file boundary.
-            CORE_LOG_W("Buffer size %zu larger than file size (%" PRIu64 " remaining).", buffer.byteLength, remaining);
-            buffer.byteLength = static_cast<size_t>(remaining);
-        }
-
-        buffer.data.resize(buffer.byteLength);
-
-        if (filePtr->Read(buffer.data.data(), buffer.byteLength) != buffer.byteLength) {
-            return BufferLoadResult { false, "Failed to read buffer: " + buffer.uri + '\n' };
-        }
+        return BufferLoadResult {};
     }
 
-    return BufferLoadResult {};
+    uint32_t offset = 0u;
+    string_view uri;
+    const auto sourceResult = ResolveBufferSource(data, buffer, uri, offset);
+    if (!sourceResult.success) {
+        return sourceResult;
+    }
+
+    IFile::Ptr file;
+    IFile* filePtr = OpenBufferFile(data, fileManager, uri, file);
+    if (!filePtr) {
+        return BufferLoadResult { false, "Failed open uri: " + buffer.uri + '\n' };
+    }
+
+    return ReadBufferFile(buffer, *filePtr, offset);
 }
 
 void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
 {
     if (accessor.count < accessor.sparse.count) {
         result.error += "invalid accessor.sparse.count\n";
+        result.success = false;
+        return;
+    }
+
+    if (!accessor.sparse.indices.bufferView || !accessor.sparse.values.bufferView) {
+        result.error += "invalid accessor.sparse.bufferView\n";
         result.success = false;
         return;
     }
@@ -285,6 +386,10 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
         auto const count = accessor.sparse.count;
 
         sparseIndicesData = Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
+    } else {
+        result.error += "invalid accessor.sparse.indices.bufferView\n";
+        result.success = false;
+        return;
     }
 
     auto const& sparseValuesBufferView = accessor.sparse.values.bufferView;
@@ -300,21 +405,22 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
 
         sourceData = Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
 
+        bool copySuccess = true;
         switch (accessor.sparse.indices.componentType) {
             case ComponentType::UNSIGNED_BYTE: {
-                CopySparseElements<uint8_t>(
+                copySuccess = CopySparseElements<uint8_t>(
                     result.data, sourceData, sparseIndicesData, elementSize, accessor.sparse.count);
                 break;
             }
 
             case ComponentType::UNSIGNED_SHORT: {
-                CopySparseElements<uint16_t>(
+                copySuccess = CopySparseElements<uint16_t>(
                     result.data, sourceData, sparseIndicesData, elementSize, accessor.sparse.count);
                 break;
             }
 
             case ComponentType::UNSIGNED_INT: {
-                CopySparseElements<uint32_t>(
+                copySuccess = CopySparseElements<uint32_t>(
                     result.data, sourceData, sparseIndicesData, elementSize, accessor.sparse.count);
                 break;
             }
@@ -328,17 +434,25 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
                 result.success = false;
                 break;
         }
+        if (!copySuccess) {
+            result.error += "invalid accessor.sparse data\n";
+            result.success = false;
+        }
+    } else {
+        result.error += "invalid accessor.sparse.values.bufferView\n";
+        result.success = false;
     }
 }
 
 bool ReadUriToVector(
     const string_view filePath, IFileManager& fileManager, string_view const& uri, vector<uint8_t>& out)
 {
-    string filepath;
-    filepath.reserve(filePath.size() + 1u + uri.size());
-    filepath += filePath;
-    filepath += '/';
-    filepath += uri;
+    const string filepath = ResolveUri(filePath, uri);
+    if (filepath.empty()) {
+        PLUGIN_LOG_W("GLTF2: Image URI escapes base directory: %s", string(uri).c_str());
+        return false;
+    }
+
     auto file = fileManager.OpenFile(filepath);
     if (file) {
         const size_t count = static_cast<size_t>(file->GetLength());
@@ -684,7 +798,7 @@ string_view GetAnimationPath(AnimationPath path)
         default:
             [[fallthrough]]; // follow the same procedure as INVALID
         case AnimationPath::INVALID:
-            CORE_LOG_W("invalid animation path %d", static_cast<int>(path));
+            PLUGIN_LOG_W("invalid animation path %d", static_cast<int>(path));
             return "translation";
         case AnimationPath::TRANSLATION:
             return "translation";

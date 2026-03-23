@@ -19,7 +19,6 @@
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/mathf.h>
-#include <core/log.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/datastore/intf_render_data_store_post_process.h>
@@ -39,6 +38,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 
 #include "render/default_constants.h"
+#include "util/log.h"
 
 // shaders
 #include <render/shaders/common/render_post_process_structs_common.h>
@@ -158,7 +158,7 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteFrame(IRenderCommandList& cmdLi
     const auto* dataStoreScene =
         static_cast<IRenderDataStoreDefaultScene*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameScene));
     if (valid_ && dataStoreCamera && dataStoreScene) {
-        CORE_ASSERT(dataStoreCamera->HasBlendEnvironments());
+        PLUGIN_ASSERT(dataStoreCamera->HasBlendEnvironments());
         UpdateImageData();
         InitializeShaderData();
 
@@ -207,7 +207,7 @@ RenderHandle RenderNodeDefaultEnvironmentBlender::GetEnvironmentTargetHandle(
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const GpuImageDesc& desc = gpuResourceMgr.GetImageDescriptor(target);
         if ((desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0U) {
-            CORE_LOG_ONCE_W("target_usage_cubemap_color_attachment_" + to_string(target.id),
+            PLUGIN_LOG_ONCE_W("target_usage_cubemap_color_attachment_" + to_string(target.id),
                 "CORE3D_VALIDATION: Environment blending radiance cubemap target has invalid flags");
         }
 #endif
@@ -221,7 +221,7 @@ RenderHandle RenderNodeDefaultEnvironmentBlender::GetEnvironmentTargetHandle(
             }
         }
         if (!RenderHandleUtil::IsValid(target)) {
-            CORE_LOG_W("Target handle issues with cubemap blender");
+            PLUGIN_LOG_W("Target handle issues with cubemap blender");
         }
     }
     return target;
@@ -255,7 +255,7 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
     IRenderCommandList& cmdList, const array_view<const RenderCamera::Environment> environments, const uint32_t envIdx)
 {
     const auto& envRef = environments[envIdx];
-    CORE_ASSERT(envRef.multiEnvCount > 0U);
+    PLUGIN_ASSERT(envRef.multiEnvCount > 0U);
 
     const RenderHandle target = GetEnvironmentTargetHandle(envRef);
     if (!RenderHandleUtil::IsValid(target)) {
@@ -348,8 +348,8 @@ void RenderNodeDefaultEnvironmentBlender::UpdateSet0(IRenderCommandList& cmdList
     // bind all radiance cubemaps
     const auto& sets = allEnvSets_[envIdx];
     auto& binder = *sets.localSets[mipIdx];
-    CORE_ASSERT(sets.localSets[mipIdx]);
-    CORE_ASSERT(blendImages.size() == 2U);
+    PLUGIN_ASSERT(sets.localSets[mipIdx]);
+    PLUGIN_ASSERT(blendImages.size() == 2U);
 
     const uint32_t maxCount = Math::min(DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT, 2U);
     uint32_t binding = 0U;
@@ -380,7 +380,7 @@ void RenderNodeDefaultEnvironmentBlender::InitializeShaderData()
             psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
                 shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
         } else {
-            CORE_LOG_E("RN:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
+            PLUGIN_LOG_E("RenderNode:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
         }
         InitCreateBinders();
     }

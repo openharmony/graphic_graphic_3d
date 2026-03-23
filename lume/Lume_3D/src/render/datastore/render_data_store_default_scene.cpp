@@ -20,7 +20,8 @@
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <core/log.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -72,7 +73,7 @@ void RenderDataStoreDefaultScene::SetScene(const RenderScene& renderScene)
 RenderScene RenderDataStoreDefaultScene::GetScene(const string_view name) const
 {
     if (const auto iter = nameToScene_.find(name); iter != nameToScene_.cend()) {
-        CORE_ASSERT(iter->second < scenes_.size());
+        PLUGIN_ASSERT(iter->second < scenes_.size());
         return scenes_[iter->second];
     } else {
         return {};
@@ -89,7 +90,7 @@ RenderScene RenderDataStoreDefaultScene::GetScene() const
 }
 
 // for plugin / factory interface
-refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultScene::Create(IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultScene::Create(IRenderContext&, const char* name)
 {
     // device not needed
     return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultScene(name));

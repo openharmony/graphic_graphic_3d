@@ -179,6 +179,7 @@ void AreaLightTest(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: AreaLightTestVulkan
  * @tc.type: FUNC
@@ -198,3 +199,4 @@ UNIT_TEST(API_GfxTest, AreaLightTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

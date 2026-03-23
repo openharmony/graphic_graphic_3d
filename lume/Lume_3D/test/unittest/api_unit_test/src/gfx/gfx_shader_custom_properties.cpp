@@ -139,6 +139,7 @@ void ShaderCustomPropertiesTest(CORE3D_NS::UTest::TestResources& res)
 }
 }; // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: ShaderCustomProperties
  * @tc.desc: Tests for Shader Custom Properties. [AUTO-GENERATED]
@@ -153,3 +154,4 @@ UNIT_TEST(API_GfxTest, ShaderCustomProperties, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

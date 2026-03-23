@@ -370,8 +370,8 @@ struct Accessor {
 };
 
 struct AttributeBase {
-    AttributeType type;
-    uint32_t index; // for example texcoord 0,1,2...
+    AttributeType type { AttributeType::INVALID };
+    uint32_t index { 0 }; // for example texcoord 0,1,2...
 };
 
 struct Attribute {
@@ -392,7 +392,7 @@ struct Image {
     BufferView* bufferView { nullptr };
 
     // The image's MIME type. Needed when BufferView is used.
-    MimeType type;
+    MimeType type { MimeType::INVALID };
 };
 
 struct Sampler {
@@ -678,7 +678,7 @@ struct Camera {
     // Name.
     BASE_NS::string name;
 
-    CameraType type;
+    CameraType type { CameraType::INVALID };
 
     union Attributes {
         struct Perspective {
@@ -701,7 +701,7 @@ struct Camera {
             float zfar;
             float znear;
         } ortho;
-    } attributes;
+    } attributes {};
 };
 
 struct Skin {
@@ -742,7 +742,7 @@ struct Node {
     BASE_NS::vector<size_t> tmpChildren; // indices, used when gltf is parsed. (NOTE: move outside of node)
 
     Skin* skin { nullptr };
-    uint32_t tmpSkin; // index to skin (NOTE: move outside of node)
+    uint32_t tmpSkin { ~0u }; // index to skin (NOTE: move outside of node)
 
     bool usesTRS = true;
 
@@ -771,13 +771,13 @@ struct Scene {
 struct AnimationSampler {
     Accessor* input { nullptr };
     Accessor* output { nullptr };
-    AnimationInterpolation interpolation;
+    AnimationInterpolation interpolation { AnimationInterpolation::INVALID };
 };
 
 struct AnimationChannel // = animation.channel.target
 {
     Node* node { nullptr };
-    AnimationPath path;
+    AnimationPath path { AnimationPath::INVALID };
 };
 
 struct AnimationTrack // = animation.channel

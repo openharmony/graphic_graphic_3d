@@ -68,6 +68,8 @@ public:
     void AddListener(SceneNodeListener& listener) override;
     void RemoveListener(SceneNodeListener& listener) override;
 
+    void RefreshAllNodes() override;
+
     // IEcs::ComponentListener
     void OnComponentEvent(CORE_NS::IEcs::ComponentListener::EventType type,
         const CORE_NS::IComponentManager& componentManager,

@@ -230,7 +230,7 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
 
     for (uint ii = 0; ii < steps; ii++) {
         const float t = float(ii) / steps;
-        if (t < 0.5) { // 0.5: parm
+        if (t < 0.5) {                                     // 0.5: parm
             cubeYPos[ii] = Math::lerp(2.0f, -2.0f, t * 2); // 2: parm
         } else {
             cubeYPos[ii] = Math::lerp(-2.0f, 2.0f, (t - 0.5f) * 2); // 2: parm
@@ -290,6 +290,7 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
 
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: WaterRippleTestVulkan
  * @tc.type: FUNC
@@ -303,3 +304,4 @@ UNIT_TEST(API_GfxTest, WaterRippleTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

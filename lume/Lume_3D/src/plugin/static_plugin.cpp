@@ -57,7 +57,6 @@
 #include <3d/ecs/systems/intf_render_system.h>
 #include <3d/ecs/systems/intf_skinning_system.h>
 #include <3d/ecs/systems/intf_weather_system.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/intf_plugin.h>
@@ -89,6 +88,7 @@
 #include "render/node/render_node_default_shadows_blur.h"
 #include "render/node/render_node_morph.h"
 #include "render/node/render_node_weather_simulation.h"
+#include "util/log.h"
 
 // Include the declarations directly from engine.
 // NOTE: macro defined by cmake as CORE_STATIC_PLUGIN_HEADER="${CORE_ROOT_DIRECTORY}/src/static_plugin_decl.h"
@@ -311,14 +311,14 @@ constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
 template<typename RenderType>
 constexpr auto FillRenderDataStoreTypeInfo()
 {
-    return RenderDataStoreTypeInfo { { RenderDataStoreTypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME,
+    return RenderDataStoreTypeInfo { { RenderDataStoreTypeInfo::UID }, RenderType::UID, RenderType::typeName,
         RenderType::Create };
 }
 
 template<typename RenderType>
 constexpr auto FillRenderNodeTypeInfo()
 {
-    return RenderNodeTypeInfo { { RenderNodeTypeInfo::UID }, RenderType::UID, RenderType::TYPE_NAME, RenderType::Create,
+    return RenderNodeTypeInfo { { RenderNodeTypeInfo::UID }, RenderType::UID, RenderType::typeName, RenderType::Create,
         RenderType::Destroy, IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT,
         IRenderNode::ClassType::CLASS_TYPE_NODE, {}, {} };
 }

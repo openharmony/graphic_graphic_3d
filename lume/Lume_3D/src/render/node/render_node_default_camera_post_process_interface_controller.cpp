@@ -18,7 +18,6 @@
 #include <3d/render/default_material_constants.h>
 #include <3d/render/intf_render_data_store_default_camera.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
-#include <core/log.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/implementation_uids.h>
@@ -32,6 +31,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -50,7 +50,7 @@ void FillPostProcessImages(const RenderCamera& cam, const uint32_t layer,
             outputHandle = cam.colorTargets[0U].GetHandle();
         } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_W(to_string(cam.id) + "FillPostProcessInterfaceImages_",
+            PLUGIN_LOG_ONCE_W(to_string(cam.id) + "FillPostProcessInterfaceImages_",
                 "Multi-view target output not found for layer (%u)", layer);
 #endif
         }

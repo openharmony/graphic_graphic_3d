@@ -193,3 +193,8 @@ export(EXPORT PluginJPGTargets
        FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/PluginJPGTargets.cmake"
        NAMESPACE PluginJPG::
 )
+
+option(JPG_UNIT_TESTS_ENABLED "Build LumeJpg unit tests" OFF)
+if(JPG_UNIT_TESTS_ENABLED)
+    add_subdirectory(test/unittest/api_unit_test)
+endif()

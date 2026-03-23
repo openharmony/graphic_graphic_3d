@@ -493,7 +493,6 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
 }
 } // namespace
 
-#ifdef NDEBUG
 /**
  * @tc.name: ExportEditedScene
  * @tc.desc: Tests for Export Edited Scene. [AUTO-GENERATED]
@@ -528,7 +527,6 @@ UNIT_TEST(SRC_GLTFExporterTest, ExportEditedScene, testing::ext::TestSize.Level1
 
     delete gltf2;
 }
-#endif // NDEBUG
 
 /**
  * @tc.name: ExportInvalidLight

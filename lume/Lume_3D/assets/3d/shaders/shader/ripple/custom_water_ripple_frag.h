@@ -239,7 +239,10 @@ vec4 PlaneReflector(const vec2 fragUv)
 
     InplaceFogBlock(CORE_CAMERA_FLAGS, inPos.xyz, camPos.xyz, vec4(color, baseColor.a), color);
 
-    outVelocityNormal = GetPackVelocityAndNormal(GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), N);
+    if ((CORE_CAMERA_FLAGS & CORE_CAMERA_VELOCITY_OUT_BIT) == CORE_CAMERA_VELOCITY_OUT_BIT) {
+        outVelocityNormal =
+            GetPackVelocityAndNormal(GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), N);
+    }
 
     return vec4(color * baseColor.a, baseColor.a);
 }

@@ -52,7 +52,7 @@ public:
     }
     BASE_NS::string_view GetTypeName() const override
     {
-        return TYPE_NAME;
+        return typeName;
     }
 
     BASE_NS::string_view GetName() const override
@@ -75,8 +75,8 @@ public:
     RenderScene GetScene() const override;
 
     // for plugin / factory interface
-    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultScene";
-    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const* name);
+    static constexpr const char* const typeName = "RenderDataStoreDefaultScene";
+    static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, const char* name);
 
 private:
     BASE_NS::string name_;

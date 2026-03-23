@@ -176,7 +176,7 @@ vec2 GetTransmittanceTextureUvFromRMu(float r, float mu)
 
     // Convert back to normalized UV coordinates
     float xMu = clamp((d - dMin) / (dMax - dMin), 0.0, 1.0); // Angle coordinate
-    float xR = clamp(rho / h, 0.0, 1.0);                        // Height coordinate
+    float xR = clamp(rho / h, 0.0, 1.0);                     // Height coordinate
 
     return vec2(xMu, xR);
 }

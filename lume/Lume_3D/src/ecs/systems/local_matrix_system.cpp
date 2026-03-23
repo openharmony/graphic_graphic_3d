@@ -131,6 +131,7 @@ bool LocalMatrixSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
 void LocalMatrixSystem::Uninitialize()
 {
     componentQuery_.SetEcsListenersEnabled(false);
+    transformComponentGenerations_.clear();
 }
 
 ISystem* LocalMatrixSystemInstance(IEcs& ecs)

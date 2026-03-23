@@ -21,7 +21,6 @@
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/matrix_util.h>
 #include <core/json/json.h>
-#include <core/log.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/device/intf_shader_manager.h>
@@ -36,6 +35,7 @@
 
 #include "render/datastore/render_data_store_weather.h"
 #include "render/shaders/common/render_post_process_structs_common.h"
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -92,7 +92,7 @@ template<typename T>
 RenderHandleReference CreateCloudDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {
-    CORE_STATIC_ASSERT(sizeof(T) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
+    PLUGIN_STATIC_ASSERT(sizeof(T) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
     return gpuResourceMgr.Create(
         handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
@@ -169,7 +169,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     auto& shaderMgr = renderNodeContextMgr.GetShaderManager();
     const auto& renderNodeUtil = renderNodeContextMgr.GetRenderNodeUtil();
     if (!shaderMgr.IsValid(transmittanceShader_)) {
-        CORE_LOG_E("RenderNodeCameraWeather needs a valid shader handle");
+        PLUGIN_LOG_E("RenderNodeCameraWeather needs a valid shader handle");
     }
 
     if (auto* classRegister = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassRegister>()) {
@@ -179,7 +179,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     if (renderNodeSceneUtil_) {
         stores_ = renderNodeSceneUtil_->GetSceneRenderDataStores(
             renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-        dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
+        dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::typeName);
 
         GetSceneUniformBuffers(stores_.dataStoreNameScene);
 
@@ -343,7 +343,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
         {},
     };
 
-    imageDesc.width = 2048; // 2048: parm
+    imageDesc.width = 2048;  // 2048: parm
     imageDesc.height = 2048; // 2048: parm
     imageDesc.depth = 1u;
     imageDesc.format = Format::BASE_FORMAT_R32G32B32A32_SFLOAT;
@@ -713,13 +713,12 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
 
     if (textureImageDesc.width > 1u && textureImageDesc.height > 1u) {
         const Math::UVec3 targetSize = { textureImageDesc.width, textureImageDesc.height, 1 };
-
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
         cmdList.PushConstant(pc, reinterpret_cast<const uint8_t*>(&uPc));
         cmdList.Dispatch(tgcX, tgcY, 1);
     } else {
-        CORE_LOG_ONCE_W(to_hex(uintptr_t(this)), "RenderNodeCameraWeather: dispatchResources needed");
+        PLUGIN_LOG_ONCE_W(to_hex(uintptr_t(this)), "RenderNodeCameraWeather: dispatchResources needed");
     }
 }
 
@@ -766,7 +765,7 @@ void RenderNodeCameraWeather::ComputeTransmittance(RENDER_NS::IRenderCommandList
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Dispatch(tgcX, tgcY, 1);
     } else {
-        CORE_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
+        PLUGIN_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
 }
 
@@ -817,7 +816,7 @@ void RenderNodeCameraWeather::ComputeMultipleScattering(RENDER_NS::IRenderComman
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Dispatch(tgcX, tgcY, 1);
     } else {
-        CORE_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
+        PLUGIN_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
 }
 
@@ -857,9 +856,9 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
 
     skyBinder_.aerialPerspectiveLut->BindImage(0, 0, aerialOut);
     skyBinder_.aerialPerspectiveLut->BindImage(0, 1, transmittanceBindable);
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable); // 2: parm
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable);       // 2: parm
     skyBinder_.aerialPerspectiveLut->BindBuffer(0, 3, aerialPerspectiveBindableBuffer); // 3: parm
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable); // 4: parm
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable);                // 4: parm
 
     const auto descHandle = skyBinder_.aerialPerspectiveLut->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.aerialPerspectiveLut->GetDescriptorSetLayoutBindingResources(0);
@@ -932,7 +931,7 @@ void RenderNodeCameraWeather::ComputeSkyView(RENDER_NS::IRenderCommandList& cmdL
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Dispatch(tgcX, tgcY, 1);
     } else {
-        CORE_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
+        PLUGIN_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
 }
 
@@ -972,6 +971,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
         const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
@@ -982,7 +982,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Dispatch(tgcX, tgcY, 6); // 6: parm
     } else {
-        CORE_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
+        PLUGIN_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
 }
 

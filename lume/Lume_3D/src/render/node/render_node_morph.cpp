@@ -18,7 +18,6 @@
 #include <algorithm>
 
 #include <3d/render/intf_render_data_store_morph.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -28,6 +27,8 @@
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_command_list.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
+
+#include "util/log.h"
 
 namespace {
 #include "3d/shaders/common/morph_target_structs.h"
@@ -181,7 +182,7 @@ void RenderNodeMorph::UpdateWeightsAndTargets(array_view<const RenderDataMorph::
             const auto& activeTargets = submesh.activeTargets;
             const auto blockSize = (static_cast<uint32_t>(activeTargets.size()) + 3u) / 4u;
             // Assert that the maximum active morph target count is not reached.
-            CORE_ASSERT((offset + blockSize) < bufferSize_);
+            PLUGIN_ASSERT((offset + blockSize) < bufferSize_);
             if ((offset + blockSize) < bufferSize_) {
                 for (size_t i = 0; i < activeTargets.size(); i++) {
                     morphData[offset + i / 4u].target[i % 4u] = activeTargets[i].id;
