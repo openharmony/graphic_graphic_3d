@@ -154,7 +154,7 @@ const SRData SRModule::InitConfig(
 
     SR::SRComponent& testComponent = *srHandle;
     const auto method = testComponent.algorithm;
-    const auto quality = testComponent.sraRate;
+    const auto quality = testComponent.srRate;
     if (method == "sr_lut") {
         sr_.type_ = MethodTypeSR::LUT;
     } else if (method == "sr_hgsr1") {
