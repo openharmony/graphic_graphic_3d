@@ -91,6 +91,17 @@
 #include <surface_buffer.h>
 #include <securec.h>
 
+#ifdef __FG_MODULE__
+#include "scene_adapter/fg_module.h"
+#include <render/datastore/intf_render_data_store_manager.h>
+#endif
+#ifdef __SR_MODULE__
+#include "scene_adapter/sr_module.h"
+#include <plugin_sr/implementation_uids.h>
+#include <plugin_sr/render/intf_render_data_store_sr.h>
+#include <render/datastore/intf_render_data_store_manager.h>
+#endif
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES/gl.h>
@@ -194,6 +205,46 @@ bool LoadFunc(T &fn, const char *fName, void* handle)
     return true;
 }
 
+inline SCENE_NS::IEcsContext* GetEcs(const SCENE_NS::IEcsObject::Ptr& object)
+{
+    if (auto s = object->GetScene()) {
+        return &s->GetEcsContext();
+    }
+    return nullptr;
+}
+ 
+template<typename ComponentType>
+CORE_NS::ScopedHandle<ComponentType> GetScopedHandle(const SCENE_NS::IEcsObject::Ptr& object)
+{
+    if (auto ecs = GetEcs(object)) {
+        if (auto m = ecs->FindComponent<ComponentType>()) {
+            return CORE_NS::ScopedHandle<ComponentType> { m->GetData(object->GetEntity()) };
+        }
+    }
+    return CORE_NS::ScopedHandle<ComponentType> {};
+}
+ 
+bool UpdateCameraDepthTarget(const SCENE_NS::IEcsObject::Ptr& camera, const SCENE_NS::IRenderTarget::Ptr& target)
+{
+    if (auto ecs = GetEcs(camera)) {
+        CORE_NS::EntityReference ent;
+        if (target) {
+            ent = camera->GetScene()->GetEcsContext().GetRenderHandleEntity(target->GetRenderHandle());
+        }
+        if (auto c = GetScopedHandle<CORE3D_NS::CameraComponent>(camera)) {
+            if (ent) {
+                c->customDepthTarget = ent;
+            } else {
+                c->customDepthTarget = {};
+            }
+            return true;
+        }
+    }
+    CORE_LOG_E("Failed to set camera Depth target");
+    return false;
+}
+
+
 SceneAdapter::~SceneAdapter()
 {
 }
@@ -202,6 +253,71 @@ SceneAdapter::SceneAdapter()
 {
     WIDGET_LOGD("scene adapter Impl create");
 }
+
+#ifdef __FG_MODULE__
+bool SceneAdapter::FGInitialize()
+{
+    if (!FG::FGModule::EnableFG()) {
+        return false;
+    }
+
+    RETURN_FALSE_IF_NULL(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    RETURN_FALSE_IF_NULL(scene);
+    auto internalScene = scene->GetInternalScene();
+    RETURN_FALSE_IF_NULL(internalScene);
+    auto ecs = internalScene->GetEcsContext().GetNativeEcs();
+    RETURN_FALSE_IF_NULL(ecs);
+    auto renderContext = engineInstance_.renderContext_;
+    RETURN_FALSE_IF_NULL(renderContext);
+    auto engine = engineInstance_.engine_;
+    RETURN_FALSE_IF_NULL(engine);
+
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)
+        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(
+        [internalScene, ecs, renderContext, engine]()->bool {
+            FG::FGModule fgModule;
+            fgModule.Init(internalScene, renderContext, engine, ecs);
+            return false;
+        }));
+    return true;
+}
+#endif
+
+#ifdef __SR_MODULE__
+bool SceneAdapter::SRInitialize()
+{
+    if (SRModule::srInitialized_) {
+        return true;
+    }
+
+    if(!SRModule::EnableSR()) {
+        return false;
+    }
+
+    RETURN_FALSE_IF_NULL(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    RETURN_FALSE_IF_NULL(scene);
+    auto internalScene = scene->GetInternalScene();
+    RETURN_FALSE_IF_NULL(internalScene);
+    auto ecs = internalScene->GetEcsContext().GetNativeEcs();
+    RETURN_FALSE_IF_NULL(ecs);
+    auto renderContext = engineInstance_.renderContext_;
+    RETURN_FALSE_IF_NULL(renderContext);
+    auto engine = engineInstance_.engine_;
+    RETURN_FALSE_IF_NULL(engine);
+
+    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)
+        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(
+            [internalScene, ecs, renderContext, engine]()->bool {
+            OHOS::Render3D::SRModule srModule;
+            srModule.Init(internalScene, renderContext, engine, ecs);
+            return false;
+        }));
+    SRModule::srinitialized_ = true;
+    return true;
+}
+#endif
 
 bool SceneAdapter::LoadEngineLib()
 {
@@ -498,12 +614,57 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             }
         };
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
+#ifdef __FG_MODULE__
+        if (FG::FGModule::IsEnable()) {
+            const auto& fg = FG::FGModule::GetConfig();
+            auto rcFG = engineInstance_.renderContext_;
+            if (fg.enable_ && rcFG) {
+                PropSync();
+                auto& gpuResourceMgr = rcFG->GetDevice().GetGpuResourceManager();
+                const auto& desc = gpuResourceMgr.GetImageDescriptor(swapchainHandle_);
+                FG::FGModule::SetWindowSize(desc.width, desc.height);
+                FG::FGModule::InitConfig();
+                FG::FGModule::AttachComponent();
+                FG::FGModule::CreateGpuImages(rcFG, desc.width, desc.height, fg,
+                    FGColorOutputHandle_, FGPredictOutputHandle_, FGDepthOutputHandle_);
+            } else {
+                WIDGET_LOGI("frame generation handle resource not created.");
+            }
+        }
+#endif
 
+#ifdef __SR_MODULE__
+        // create offscreen render target for super resolution plugin
+        if (auto rc = engineInstance_.renderContext_; SRModule::Enable() && rc) {
+            PropSync();
+            const auto& sr = SRModule::InitConfig(scene->GetInternalScene(), rc);
+            auto const width = textureInfo.width_*textureInfo.widthScale_;
+            auto const height = textureInfo.height_*textureInfo.heightScale_;
+            auto& gpuResourceMgr = rcFG->GetDevice().GetGpuResourceManager();
+            const auto& desc = gpuResourceMgr.GetImageDescriptor(swapchainHandle_);
+            SRModule::SetWindowSize(desc.width, desc.height);
+            offscreenHandle_ = SRModule::CreateGpuResource(rc, width / sr.rate_, height / sr.rate_);
+        } else {
+            WIDGET_LOGI("offscreen handle resource not created.");
+        }
+#endif
         auto &obr = META_NS::GetObjectRegistry();
         auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
+#ifdef __SR_MODULE__
+            auto rc = engineInstance_.renderContext_;
+            const auto &sr = SRModule::GetConfig();
+            if(sr.enable_ && textureLayer_) {
+                SRModule::AttachComponent();
+                i->SetRenderHandle(offscreenHandle_);
+            } else {
+                i->SetRenderHandle(swapchainHandle_);
+            }
+#else
             i->SetRenderHandle(swapchainHandle_);
+#endif
         }
 
         if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
@@ -755,6 +916,10 @@ void SceneAdapter::Deinit()
             device.DestroySwapchain(swapchainHandle_);
         }
         swapchainHandle_ = {};
+        if (bitmap2_) {
+            bitmap2_.reset();
+        }
+
         if (bitmap_) {
             bitmap_.reset();
             auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
@@ -762,6 +927,14 @@ void SceneAdapter::Deinit()
                 return META_NS::IAny::Ptr {};
             }
         }
+#ifdef __FG_MODULE__
+        FGColorOutputHandle_ = {};
+        FGPredictOutputHandle_ = {};
+        FGDepthOutputHandle_ = {};
+#endif
+#ifdef __SR_MODULE__
+        offscreenHandle_ = {};
+#endif
         return META_NS::IAny::Ptr {};
     });
     engineThread->AddWaitableTask(func)->Wait();
@@ -777,6 +950,7 @@ void SceneAdapter::Deinit()
 void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
 {
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
+    auto component = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(cameraObj);
     if (!camera) {
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
         return;
@@ -785,7 +959,32 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
         camera->SetRenderTarget({});
         return;
     }
+#ifdef __FG_MODULE__
+    if (FG::Module::IsEnable()) {
+        auto &obr = META_NS::GetObjectRegistry();
+        auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_);
+        auto j = interface_cast<SCENE_NS::IRenderResource>(bitmap2_);
+        if (i && j) {
+            auto rcFG = engineInstance_.renderContext_;
+            const auto& fg = FG::FGModule::GetConfig();
+            auto factor = BASE_NS::Math::Vec4 {
+                static_cast<float>(fg.width_), static_cast<float>(fg.height_),
+                0.0f, 0.0f
+            };
+            i->SetRenderHandle(FGColorOutputHandle_);
+            j->SetRenderHandle(FGColorOutputHandle_);
+        }
+        camera->SetRenderTarget(bitmap_);
+        UpdateCameraDepthTarget(component->GetEcsObject(), bitmap2_);
+    } else {
+        camera->SetRenderTarget(bitmap_);
+    }
+#else
     camera->SetRenderTarget(bitmap_);
+#endif
 }
 
 namespace {
