@@ -155,13 +155,13 @@ void FGModule::Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
     customRenderNodeGraph_.clear();
 
     if (rngPredict_ && rngDisplayReal_ && rngDisplayPredict_) {
-        if(frameIndex <= 2) { // Frame 1, 2
+        if (frameIndex <= 2) { // Frame 1, 2
             // Mixed Frame: (Render, Predict, Display Render) Frame 1, 2
             customRenderNodeGraph_.push_back(rngPredict_);
             customRenderNodeGraph_.push_back(rngDisplayReal_);
             scene->ModifyCustomRenderNodeGraph(
                 Scene::IInternalScene::RenderNodeGraphModificationMode::APPEND, customRenderNodeGraph_);
-        } else if (frameIndex % 2 == 0) { // Frame 4, 6...
+        } else if (frameIndex % 2 == 0) { // EvenFrame
             // Predict Frame: (Display Render, Render) Frame 4, 6...
             customRenderNodeGraph_.push_back(rngPredict_);
             customRenderNodeGraph_.push_back(rngDisplayPredict_);
