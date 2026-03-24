@@ -149,6 +149,8 @@ protected: // IApplicationContextProvider
 
     SceneDebugInfo GetDebugInfo() const override;
 
+    void ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
+        const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng) override;
 public:
     NodeHits CastRay(
         const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const override;
@@ -230,6 +232,11 @@ private:
 
     BASE_NS::vector<INodeNotify::Ptr> GetNotifiableNodesFromHierarchy(CORE_NS::Entity root);
 
+    void ProcessCustomRenderNodeGraph(
+        BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
+ 	    BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles);
+ 	RenderNodeGraphModificationMode modificationMode_;
+ 	BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
 private: // locked bits
     mutable std::shared_mutex mutex_;
     bool pendingRender_ {};

@@ -757,6 +757,40 @@ void InternalScene::SetNodeActive(const INode::Ptr& child, bool active)
     }
 }
 
+void InternalScene::ProcessCustomRenderNodeGraph(
+    BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
+    BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles)
+{
+
+    if (customRenderNodeGraph_.size() == 0) {
+        return;
+    }
+    customRenderHandles.clear();
+
+    switch(modificationMode_) {
+        case RenderNodeGraphModificationMode::PREPEND:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            customRenderHandles.insert(customRenderHandles.end(),
+                renderHandles.begin(), renderHandles.end());
+            break;
+        case RenderNodeGraphModificationMode::APPEND:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                renderHandles.begin(), renderHandles.end());
+            customRenderHandles.insert(customRenderHandles.end(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            break;
+        case RenderNodeGraphModificationMode::REPLACE:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            break;
+        default:
+            return;
+    }
+    renderHandles = move(customRenderHandles);
+    return;
+}
+
 void InternalScene::SetEntityActive(const BASE_NS::shared_ptr<IEcsObject>& child, bool active)
 {
     if (!child || !ecs_) {
@@ -919,6 +953,10 @@ void InternalScene::Update(const UpdateInfo& info)
 
     if ((needsRender && mode_ != RenderMode::MANUAL) || pending) {
         auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_->ecs);
+
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderHandles;
+        ProcessCustomRenderNodeGraph(customRenderHandles, renderHandles);
+
         if (!renderHandles.empty()) {
             // The scene needs to be rendered.
             if (auto rctx = GetRenderContextPtr()) {
@@ -1253,6 +1291,13 @@ SceneDebugInfo InternalScene::GetDebugInfo() const
         }
     }
     return info;
+}
+
+void InternalScene::ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
+    const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng)
+{
+    modificationMode_ = mode;
+    customRenderNodeGraph_ = rng;
 }
 
 SCENE_END_NAMESPACE()

@@ -182,7 +182,7 @@ const FGData FGModule::InitConfig()
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
     } else if (quality == 1) {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORMAL;
-    } else if (quality == 2) {
+    } else if (quality == 2) { // 2
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_LOW;
     } else if (quality == 3) { // 3
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_BAD;
