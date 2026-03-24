@@ -633,7 +633,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
         }
 #endif
 
-// #ifdef __SR_MODULE__
+#ifdef __SR_MODULE__
         // create offscreen render target for super resolution plugin
         if (auto rc = engineInstance_.renderContext_; SRModule::Enable() && rc) {
             if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
@@ -649,7 +649,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
         } else {
             WIDGET_LOGI("offscreen handle resource not created.");
         }
-// #endif
+#endif
         auto &obr = META_NS::GetObjectRegistry();
         auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
