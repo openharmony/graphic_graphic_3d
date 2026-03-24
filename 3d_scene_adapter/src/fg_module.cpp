@@ -46,7 +46,7 @@ BASE_NS::refcnt_ptr<CORE_NS::IEcs> FGModule::ecs_;
 namespace {
 GpuImageDesc GetGpuImageDesc(
     shared_ptr<IRenderContext> rc,
-    const Base::string_view& name, 
+    const Base::string_view& name,
     const Format format, const uint32_t width, const uint32_t height)
 {
     IGpuResourceManager& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
@@ -59,7 +59,7 @@ GpuImageDesc GetGpuImageDesc(
     imageDesc.blockPixelDepth = 1;
     imageDesc.blockPixelHeight = 1;
     imageDesc.blockPixelWidth = 1;
-    imageDesc.bitsPerBlock = 8;
+    imageDesc.bitsPerBlock = 8; // bitsPerBlock
     imageDesc.mipCount = 1;
     imageDesc.layerCount = 1;
     imageDesc.imageViewType =
@@ -102,15 +102,15 @@ RenderHandleReference CreateTextureDepth(
     ImageUsageFlags usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT;
     gpuImageDesc.usageFlags = usageFlags;
     RenderHandleReference imageHandle = gpuResourceMgr.Create(name, gpuImageDesc);
-    return imageHandle; 
-} 
-}// namespace
+    return imageHandle;
+}
+} // namespace
 
 RenderHandleReference CreateRenderNodeGraphFG(shared_ptr<IRenderContext> renderContext_,
     const string_view rngPath)
 {
     IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
-    const RenderHandleReference handle = 
+    const RenderHandleReference handle =
         graphManager.loadAndCreate(
             IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngPath);
     return handle;
@@ -168,24 +168,24 @@ const FGData FGModule::InitConfig()
     unit32_t algorithm = fgComponent.algorithm;
 
     enum FGQualityType {
-       QUALITY_TYPE_FIX = 0,
-       QUALITY_TYPE_NORMAL = 1,
-       QUALITY_TYPE_LOW = 2,
-       QUALITY_TYPE_BAD = 3,
+        QUALITY_TYPE_FIX = 0,
+        QUALITY_TYPE_NORMAL = 1,
+        QUALITY_TYPE_LOW = 2,
+        QUALITY_TYPE_BAD = 3,
     };
 
     enum FGAlgorithm {
-       FG_HYDRA = 0,
-       FG_GRIDWARP = 1,
+        FG_HYDRA = 0,
+        FG_GRIDWARP = 1,
     };
 
     if (quality == 0) {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
-    } else if (quality == 1) {
+    } else if (quality == 1) { // QUALITY_TYPE_NORMAL
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORMAL;
-    } else if (quality == 2) {
+    } else if (quality == 2) { // QUALITY_TYPE_LOW
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_LOW;
-    } else if (quality == 3) {
+    } else if (quality == 3) { // QUALITY_TYPE_BAD
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_BAD;
     } else {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
@@ -193,9 +193,9 @@ const FGData FGModule::InitConfig()
  
     if (algorithm == 0) {
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
-    } else if (algorithm == 1) {
+    } else if (algorithm == 1) { // FG_GRIDWARP
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_GRIDWARP;
-    } else if (algorithm == 2) {
+    } else if (algorithm == 2) { // FG_IOI
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_IOI;
     } else {
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
@@ -235,7 +235,7 @@ void FGModule::SetWindowSize(const int& width, const int& height)
 }
 
 RenderHandleReference FGModule::CreateGpuResource(
- shared_ptr<IRenderContext> rc, float width, float height)
+    shared_ptr<IRenderContext> rc, float width, float height)
 {
     IGpuResourceManager& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
     GpuImageDesc desc;
