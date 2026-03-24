@@ -59,7 +59,7 @@ GpuImageDesc GetGpuImageDesc(
     imageDesc.blockPixelDepth = 1;
     imageDesc.blockPixelHeight = 1;
     imageDesc.blockPixelWidth = 1;
-    imageDesc.bitsPerBlock = 8; // bitsPerBlock
+    imageDesc.bitsPerBlock = 8; // 8
     imageDesc.mipCount = 1;
     imageDesc.layerCount = 1;
     imageDesc.imageViewType =
@@ -157,7 +157,6 @@ const FGData FGModule::InitConfig()
     }
     auto fgEntity = fgConfigMgr->GetEntity(0);
     auto fgHandle = fgConfigMgr->Write(fgEntity);
-
     if (!fgHandle) {
         return fg_;
     }
@@ -181,11 +180,11 @@ const FGData FGModule::InitConfig()
 
     if (quality == 0) {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
-    } else if (quality == 1) { // QUALITY_TYPE_NORMAL
+    } else if (quality == 1) {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORMAL;
-    } else if (quality == 2) { // QUALITY_TYPE_LOW
+    } else if (quality == 2) {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_LOW;
-    } else if (quality == 3) { // QUALITY_TYPE_BAD
+    } else if (quality == 3) { // 3
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_BAD;
     } else {
         fg_.quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_FIX;
@@ -193,9 +192,9 @@ const FGData FGModule::InitConfig()
  
     if (algorithm == 0) {
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
-    } else if (algorithm == 1) { // FG_GRIDWARP
+    } else if (algorithm == 1) {
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_GRIDWARP;
-    } else if (algorithm == 2) { // FG_IOI
+    } else if (algorithm == 2) { // 2
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_IOI;
     } else {
         fg_.algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
