@@ -91,6 +91,7 @@
 #include <surface_buffer.h>
 #include <securec.h>
 
+#include <3d/ecs/components/camera_component.h>
 #ifdef __FG_MODULE__
 #include "scene_adapter/fg_module.h"
 #include <render/datastore/intf_render_data_store_manager.h>
