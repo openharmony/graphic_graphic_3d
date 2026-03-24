@@ -63,7 +63,7 @@ NodeETS::~NodeETS()
 void NodeETS::Destroy()
 {
     auto node = node_.lock();
-    if (node) {
+    if (!node) {
         return;
     }
     ExecSyncTask([remove = !IsAttached(), node = BASE_NS::move(node)]() mutable {
