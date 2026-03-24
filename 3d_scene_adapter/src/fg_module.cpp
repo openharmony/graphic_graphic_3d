@@ -86,7 +86,7 @@ RenderHandleReference CreateTexture(
     IGpuResourceManager& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
     auto gpuImageDesc = GetGpuImageDesc(rc, name, format, width, height);
     ImageUsageFlags usageFlags = CORE_IMAGE_USAGE_SAMPLED_BIT |
-        CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+        CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
         CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
     gpuImageDesc.usageFlags = usageFlags;
     auto imageHandle = gpuResourceMgr.Create(name, gpuImageDesc);
@@ -111,7 +111,7 @@ RenderHandleReference CreateRenderNodeGraphFG(shared_ptr<IRenderContext> renderC
 {
     IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
     const RenderHandleReference handle =
-        graphManager.loadAndCreate(
+        graphManager.LoadAndCreate(
             IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngPath);
     return handle;
 }
@@ -131,14 +131,14 @@ void FGModule::Init(shared_ptr<SCENE_NS::IInternalScene> scene,
 {
     ecs_ = ecs;
     RenderHandleReference rngPredict = CreateRenderNodeGraphFG(renderContext,
-        "fg_rofd://rendernodegraphs/fg_predict.rng");
+        "fg_rofs://rendernodegraphs/fg_predict.rng");
     const string_view display_real = fg_.withSR_ ?
-        "fg_rofd://rendernodegraphs/fg_display_real_with_sr.rng" :
-        "fg_rofd://rendernodegraphs/fg_display_real.rng";
+        "fg_rofs://rendernodegraphs/fg_display_real_with_sr.rng" :
+        "fg_rofs://rendernodegraphs/fg_display_real.rng";
     RenderHandleReference rngDisplayReal = CreateRenderNodeGraphFG(renderContext, display_real);
     const string_view displayPredict = fg_.withSR_ ?
-        "fg_rofd://rendernodegraphs/fg_display_predict_with_sr.rng" :
-        "fg_rofd://rendernodegraphs/fg_display_predict.rng";
+        "fg_rofs://rendernodegraphs/fg_display_predict_with_sr.rng" :
+        "fg_rofs://rendernodegraphs/fg_display_predict.rng";
     RenderHandleReference rngDisplayPredict = CreateRenderNodeGraphFG(renderContext, displayPredict);
    
     scene->AppendFGRenderNodeGraph(rngPredict, rngDisplayReal, rngDisplayPredict);
@@ -164,7 +164,7 @@ const FGData FGModule::InitConfig()
     FGComponent& fgComponent = *fgHandle;
 
     uint32_t quality = fgComponent.quality;
-    unit32_t algorithm = fgComponent.algorithm;
+    uint32_t algorithm = fgComponent.algorithm;
 
     enum FGQualityType {
         QUALITY_TYPE_FIX = 0,
@@ -228,7 +228,7 @@ bool FGModule::EnableFG()
 
 void FGModule::SetWindowSize(const int& width, const int& height)
 {
-    if (width<0 || hieght<0) return;
+    if (width<0 || height<0) return;
     fg_.width_ = width;
     fg_.height_ = height;
 }
@@ -268,7 +268,7 @@ void FGModule::CreateGpuImages(
     FGPredictOutputHandle_ = CreateTexture(rc, "FG_PREDICT_OUTPUT",
         BASE_FORMAT_R8G8B8A8_SRGB,
         static_cast<int>(width), static_cast<int>(height));
-    FGDepthOutputHandle_ = CreateTexture(rc, "SCENE_DEPTH_EMPTY",
+    FGDepthOutputHandle_ = CreateTextureDepth(rc, "SCENE_DEPTH_EMPTY",
         fg.algorithm_ == 1? BASE_FORMAT_D32_SFLOAT_S8_UINT : BASE_FORMAT_D32_SFLOAT,
         static_cast<int>(width), static_cast<int>(height));
 }
@@ -276,10 +276,10 @@ void FGModule::CreateGpuImages(
 void FGModule::AttachComponent()
 {
     if (!ecs_) {
-        return fg_;
+        return;
     }
     auto* fgConfigMgr = static_cast<IFGComponentManager*>(
-        (*ecs_).GetComponentManager(IFGComponentManager::UID)));
+        (*ecs_).GetComponentManager(IFGComponentManager::UID));
     if (!fgConfigMgr) {
         return;
     }
