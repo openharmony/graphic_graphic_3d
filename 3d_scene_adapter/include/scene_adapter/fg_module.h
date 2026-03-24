@@ -47,7 +47,7 @@
 FG_BEGIN_NAMESPACE()
 constexpr BASE_NS::string_view RENDER_DATA_STORE_FG_NAME { "RenderDataStoreFG" };
 static constexpr BASE_NS::Uid UID_FG_PLUGIN { "f62d40d0-2d52-4e7c-9f11-34d1f1978f59" };
-static constexpr BASE_NS::Uid UID_FG_COMPONENT_MANAGER { "d8dc6863-7347-432e-8503-06a373c0ef8f" };
+static constexpr BASE_NS::Uid UID_FG_COMPONENT_MANAGER { "b8dc6863-7347-432e-8503-06a373c0ef8f" };
 struct FGData {
     bool enable_ = false;
     bool withSR_ = false;
@@ -64,18 +64,18 @@ public:
     FGModule();
 
     void Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
-        BASE_NS::shared_ptr<SCENE_NS::IRenderContext> renderContext,
+        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext,
         BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
         BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs);
     
-    const void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
+    static void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
         BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc);
 
     static const FGData InitConfig();
     static const FGData GetConfig();
     static bool EnableFG();
     static bool IsEnable();
-    static bool SetWindowSize(const int& width, const int& height);
+    static void SetWindowSize(const int& width, const int& height);
     static void AttachComponent();
 
     static RENDER_NS::RenderHandleReference CreateGpuResource(
@@ -87,7 +87,7 @@ public:
         RENDER_NS::RenderHandleReference& FGColorOutputHandle_,
         RENDER_NS::RenderHandleReference& FGPredictOutputHandle_,
         RENDER_NS::RenderHandleReference& FGDepthOutputHandle_);
-    inline static bool fgInitialized_ = false; 
+    inline static bool fgInitialized_ = false;
 
 private:
     static inline FGData fg_;

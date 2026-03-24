@@ -848,7 +848,6 @@ void SceneAdapter::RenderFunction()
     }
 #endif
 
-
     scene->GetInternalScene()->Update(false);
     bool receiveBuffer = receiveBuffer_;
     receiveBuffer_ = false;

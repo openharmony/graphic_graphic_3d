@@ -107,7 +107,7 @@ void SRModule::Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext,
     BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
     BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs)
-{   
+{
     ecs_ = ecs;
 }
 
@@ -157,7 +157,6 @@ const SRData SRModule::InitConfig(
         sr_.type_ = MethodTypeSR::BILINEAR;
     }
 
-    RENDER_NS::RenderHandleReference rng;
     switch (sr_.type_) {
         case MethodTypeSR::LUT:
             rngSR_ = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_lut.rng");
@@ -231,7 +230,6 @@ void SRModule::AttachComponent()
     auto* srConfigMgr = static_cast<SR::ISRComponentManager*>(
         (*ecs_).GetComponentManager(SR::ISRComponentManager::UID));
     if (!srConfigMgr) return;
-    auto srHandle = srConfigMgr->Write(srConfigEntity_);
 
     auto srEntity = srConfigMgr->GetEntity(0);
     auto srHandle = srConfigMgr->Write(srEntity);

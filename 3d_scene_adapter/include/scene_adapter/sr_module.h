@@ -93,7 +93,7 @@ private:
     static BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs_;
     static CORE_NS::EntityReference srConfigEntity_;
     inline static RENDER_NS::RenderHandleReference rngSR_;
-    inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> cutomRenderNodeGraph_;
+    inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_SR_MODULE_H

@@ -19,6 +19,7 @@
 #include <3d/implementation_uids.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/components/render_mesh_component.h>
+#include <3d/ecs/components/render_handle_component.h>
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 
@@ -143,7 +144,7 @@ void FGModule::Init(shared_ptr<SCENE_NS::IInternalScene> scene,
     scene->AppendFGRenderNodeGraph(rngPredict, rngDisplayReal, rngDisplayPredict);
 }
 
-void FGModule::Update(shared_ptr<SCENE_NS::IInternalScene> scene,
+void FGModule::Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc)
 {
     uint64_t frameIndex = 0;
@@ -154,18 +155,18 @@ void FGModule::Update(shared_ptr<SCENE_NS::IInternalScene> scene,
     customRenderNodeGraph_.clear();
 
     if (rngPredict_ && rngDisplayReal_ && rngDisplayPredict_) {
-        if(frameIndex <= 2) {
+        if(frameIndex <= 2) { // Frame 1, 2
             // Mixed Frame: (Render, Predict, Display Render) Frame 1, 2
             customRenderNodeGraph_.push_back(rngPredict_);
             customRenderNodeGraph_.push_back(rngDisplayReal_);
             scene->ModifyCustomRenderNodeGraph(
                 Scene::IInternalScene::RenderNodeGraphModificationMode::APPEND, customRenderNodeGraph_);
-        } else if (frameIndex % 2 == 0) {
+        } else if (frameIndex % 2 == 0) { // Frame 4, 6...
             // Predict Frame: (Display Render, Render) Frame 4, 6...
             customRenderNodeGraph_.push_back(rngPredict_);
-            customRenderNodeGraph_.push_back(rngDisplayReal_);
+            customRenderNodeGraph_.push_back(rngDisplayPredict_);
             scene->ModifyCustomRenderNodeGraph(
-                Scene::IInternalScene::RenderNodeGraphModificationMode::REPLACE, customRenderNodeGraph_); 
+                Scene::IInternalScene::RenderNodeGraphModificationMode::REPLACE, customRenderNodeGraph_);
         } else {
             // Real Frame: (Display Render, Render) Frame 3, 5...
             customRenderNodeGraph_.push_back(rngDisplayReal_);
