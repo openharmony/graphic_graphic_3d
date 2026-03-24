@@ -145,7 +145,7 @@ public:
         PREPEND,
  	    APPEND,
  	    REPLACE
- 	};
+    };
     /// Create object, if the entity is invalid, new one is created
     virtual META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, CORE_NS::Entity) const = 0;
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id) const
@@ -190,7 +190,7 @@ public:
 
     virtual bool SetRenderMode(RenderMode) = 0;
     virtual RenderMode GetRenderMode() const = 0;
-    
+
     virtual void ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
         const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng) = 0;
     virtual void RenderFrame() = 0;

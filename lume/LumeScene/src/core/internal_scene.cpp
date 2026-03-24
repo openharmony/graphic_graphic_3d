@@ -761,13 +761,12 @@ void InternalScene::ProcessCustomRenderNodeGraph(
     BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
     BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles)
 {
-
     if (customRenderNodeGraph_.size() == 0) {
         return;
     }
     customRenderHandles.clear();
 
-    switch(modificationMode_) {
+    switch (modificationMode_) {
         case RenderNodeGraphModificationMode::PREPEND:
             customRenderHandles.insert(customRenderHandles.begin(),
                 customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
