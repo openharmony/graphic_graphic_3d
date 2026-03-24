@@ -257,6 +257,10 @@ SceneAdapter::SceneAdapter()
 #ifdef __FG_MODULE__
 bool SceneAdapter::FGInitialize()
 {
+    if (FG::FGModule::fgInitialized_) {
+        return true;
+    }
+
     if (!FG::FGModule::EnableFG()) {
         return false;
     }
@@ -280,6 +284,7 @@ bool SceneAdapter::FGInitialize()
             fgModule.Init(internalScene, renderContext, engine, ecs);
             return false;
         }));
+    FG::FGModule::fgInitialized_ = true;
     return true;
 }
 #endif
@@ -830,6 +835,19 @@ void SceneAdapter::RenderFunction()
     for (auto c : cams) {
         AttachSwapchain(interface_pointer_cast<META_NS::IObject>(c));
     }
+
+#ifdef __SR_MODULE__
+    if (SRModule::Enable()) {
+        SRModule::Update(scene->GetInternalScene());
+    }
+#endif
+
+#ifdef __FG_MODULE__
+    if (FG::FGModule::IsEnable()) {
+        FG::FGModule::Update(scene->GetInternalScene(), rc);
+    }
+#endif
+
 
     scene->GetInternalScene()->Update(false);
     bool receiveBuffer = receiveBuffer_;

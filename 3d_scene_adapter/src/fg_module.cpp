@@ -33,7 +33,7 @@
 #define LOW_QUALITY 3.0
 #define BALANCED_QUALITY 2.0
 #define HIGH_QUALITY 1.5
-#define ULTRA_QUALITY 1.0
+#define ULTRA_QUALITY 1.3
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -41,7 +41,6 @@ using namespace RENDER_NS;
 using namespace FG;
 
 BASE_NS::refcnt_ptr<CORE_NS::IEcs> FGModule::ecs_;
-// CORE_NS::EntityReference FGModule::fgConfigEntity_;
 
 namespace {
 GpuImageDesc GetGpuImageDesc(
@@ -130,21 +129,51 @@ void FGModule::Init(shared_ptr<SCENE_NS::IInternalScene> scene,
     refcnt_ptr<CORE_NS::IEcs> ecs)
 {
     ecs_ = ecs;
-    RenderHandleReference rngPredict = CreateRenderNodeGraphFG(renderContext,
+    rngPredict_ = CreateRenderNodeGraphFG(renderContext,
         "fg_rofs://rendernodegraphs/fg_predict.rng");
     const string_view display_real = fg_.withSR_ ?
         "fg_rofs://rendernodegraphs/fg_display_real_with_sr.rng" :
         "fg_rofs://rendernodegraphs/fg_display_real.rng";
-    RenderHandleReference rngDisplayReal = CreateRenderNodeGraphFG(renderContext, display_real);
+    rngDisplayReal_ = CreateRenderNodeGraphFG(renderContext, display_real);
     const string_view displayPredict = fg_.withSR_ ?
         "fg_rofs://rendernodegraphs/fg_display_predict_with_sr.rng" :
         "fg_rofs://rendernodegraphs/fg_display_predict.rng";
-    RenderHandleReference rngDisplayPredict = CreateRenderNodeGraphFG(renderContext, displayPredict);
+    rngDisplayPredict_ = CreateRenderNodeGraphFG(renderContext, displayPredict);
    
     scene->AppendFGRenderNodeGraph(rngPredict, rngDisplayReal, rngDisplayPredict);
 }
 
-void FGModule::Update(shared_ptr<SCENE_NS::IScene> scene) {}
+void FGModule::Update(shared_ptr<SCENE_NS::IInternalScene> scene,
+    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc)
+{
+    uint64_t frameIndex = 0;
+    if (rc) {
+        frameIndex = rc->GetDevice().GetFrameCount();
+    }
+
+    customRenderNodeGraph_.clear();
+
+    if (rngPredict_ && rngDisplayReal_ && rngDisplayPredict_) {
+        if(frameIndex <= 2) {
+            // Mixed Frame: (Render, Predict, Display Render) Frame 1, 2
+            customRenderNodeGraph_.push_back(rngPredict_);
+            customRenderNodeGraph_.push_back(rngDisplayReal_);
+            scene->ModifyCustomRenderNodeGraph(
+                Scene::IInternalScene::RenderNodeGraphModificationMode::APPEND, customRenderNodeGraph_);
+        } else if (frameIndex % 2 == 0) {
+            // Predict Frame: (Display Render, Render) Frame 4, 6...
+            customRenderNodeGraph_.push_back(rngPredict_);
+            customRenderNodeGraph_.push_back(rngDisplayReal_);
+            scene->ModifyCustomRenderNodeGraph(
+                Scene::IInternalScene::RenderNodeGraphModificationMode::REPLACE, customRenderNodeGraph_); 
+        } else {
+            // Real Frame: (Display Render, Render) Frame 3, 5...
+            customRenderNodeGraph_.push_back(rngDisplayReal_);
+            scene->ModifyCustomRenderNodeGraph(
+                Scene::IInternalScene::RenderNodeGraphModificationMode::PREPEND, customRenderNodeGraph_);
+        }
+    }
+}
 
 const FGData FGModule::InitConfig()
 {
@@ -155,13 +184,12 @@ const FGData FGModule::InitConfig()
     if (!fgConfigMgr) {
         return fg_;
     }
-    auto fgEntity = fgConfigMgr->GetEntity(0);
-    auto fgHandle = fgConfigMgr->Write(fgEntity);
+    auto fgHandle = fgConfigMgr->Read(0);
     if (!fgHandle) {
         return fg_;
     }
 
-    FGComponent& fgComponent = *fgHandle;
+    const FGComponent& fgComponent = *fgHandle;
 
     uint32_t quality = fgComponent.quality;
     uint32_t algorithm = fgComponent.algorithm;

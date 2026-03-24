@@ -68,7 +68,8 @@ public:
         BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
         BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs);
     
-    void Update(BASE_NS::shared_ptr<SCENE_NS::IScene> scene);
+    const void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
+        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc);
 
     static const FGData InitConfig();
     static const FGData GetConfig();
@@ -86,10 +87,15 @@ public:
         RENDER_NS::RenderHandleReference& FGColorOutputHandle_,
         RENDER_NS::RenderHandleReference& FGPredictOutputHandle_,
         RENDER_NS::RenderHandleReference& FGDepthOutputHandle_);
+    inline static bool fgInitialized_ = false; 
 
 private:
     static inline FGData fg_;
     static BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs_;
+    inline static RENDER_NS::RenderHandleReference rngPredict_;
+    inline static RENDER_NS::RenderHandleReference rngDisplayReal_;
+    inline static RENDER_NS::RenderHandleReference rngDisplayPredict_;
+    inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
 };
 FG_END_NAMESPACE()
 #endif // OHOS_RENDER_3D_FG_MODULE_H

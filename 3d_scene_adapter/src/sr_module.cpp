@@ -37,7 +37,7 @@
 #define LOW_QUALITY 3.0
 #define BALANCED_QUALITY 2.0
 #define HIGH_QUALITY 1.5
-#define ULTRA_QUALITY 1.0
+#define ULTRA_QUALITY 1.3
 static constexpr BASE_NS::Uid UID_SR_PLUGIN { "c075f146-30bb-4df2-90f5-73069de404dc" };
 
 namespace OHOS::Render3D {
@@ -107,22 +107,17 @@ void SRModule::Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext,
     BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
     BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs)
-{
-    static constexpr BASE_NS::Uid custom_system_uid { SR::ISRSystem::UID };
-    
+{   
     ecs_ = ecs;
-    CORE_NS::ISystem* srSystem = ecs_->GetSystem(custom_system_uid);
-    srSystem->Initialize();
-
-    auto* srConfigMgr = static_cast<SR::ISRComponentManager*>(
-        (*ecs_).GetComponentManager(SR::ISRComponentManager::UID));
-    if (!srConfigMgr) return;
-    auto& entityMgr = ecs_->GetEntityManager();
-    srConfigEntity_ = entityMgr.CreateReferenceCounted();
-    srConfigMgr->Create(srConfigEntity_);
 }
 
-void SRModule::Update(BASE_NS::shared_ptr<SCENE_NS::IScene> scene) {}
+void SRModule::Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene)
+{
+    customRenderNodeGraph_.clear();
+    customRenderNodeGraph_.push_back(rngSR_);
+    scene->ModifyCustomRenderNodeGraph(
+        Scene::IInternalScene::RenderNodeGraphModificationMode::APPEND, customRenderNodeGraph_);
+}
 
 bool SRModule::EnableSR()
 {
@@ -146,13 +141,12 @@ const SRData SRModule::InitConfig(
         return sr_;
     }
 
-    auto srEntity = srConfigMgr->GetEntity(1);
-    auto srHandle = srConfigMgr->Write(srEntity);
+    auto srHandle = srConfigMgr->Read(0);
     if (!srHandle) {
         return sr_;
     }
 
-    SR::SRComponent& testComponent = *srHandle;
+    const SR::SRComponent& testComponent = *srHandle;
     const auto method = testComponent.algorithm;
     const auto quality = testComponent.srRate;
     if (method == "sr_lut") {
@@ -166,20 +160,19 @@ const SRData SRModule::InitConfig(
     RENDER_NS::RenderHandleReference rng;
     switch (sr_.type_) {
         case MethodTypeSR::LUT:
-            rng = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_lut.rng");
+            rngSR_ = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_lut.rng");
             break;
         case MethodTypeSR::HGSR1:
-            rng = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_hgsr1.rng");
+            rngSR_ = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_hgsr1.rng");
             break;
         default:
-            rng = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_bilinear.rng");
+            rngSR_ = CreateRenderNodeGraph(renderContext, "sr_rofs://rendernodegraphs/sr_bilinear.rng");
             break;
     }
-    if (!rng) {
+    if (!rngSR_) {
         return sr_;
     }
     
-    scene->AppendCustomRenderNodeGraph(rng);
     if (quality == "low") {
         sr_.rate_ = QualityToRate(QualityTypeSR::LOW);
     } else if (quality == "balanced") {
@@ -234,11 +227,14 @@ RENDER_NS::RenderHandleReference SRModule::CreateGpuResource(
 
 void SRModule::AttachComponent()
 {
-    if (!ecs_ || !srConfigEntity_) return;
+    if (!ecs_) return;
     auto* srConfigMgr = static_cast<SR::ISRComponentManager*>(
         (*ecs_).GetComponentManager(SR::ISRComponentManager::UID));
     if (!srConfigMgr) return;
     auto srHandle = srConfigMgr->Write(srConfigEntity_);
+
+    auto srEntity = srConfigMgr->GetEntity(0);
+    auto srHandle = srConfigMgr->Write(srEntity);
     if (!srHandle) return;
 
     SR::SRComponent& srComponent = *srHandle;

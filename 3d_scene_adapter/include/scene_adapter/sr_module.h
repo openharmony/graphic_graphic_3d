@@ -74,7 +74,7 @@ public:
         BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
         BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs);
 
-    void Update(BASE_NS::shared_ptr<SCENE_NS::IScene> scene);
+    static void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene);
 
     static bool EnableSR();
     static const SRData InitConfig(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
@@ -92,6 +92,8 @@ private:
     static SRData sr_;
     static BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs_;
     static CORE_NS::EntityReference srConfigEntity_;
+    inline static RENDER_NS::RenderHandleReference rngSR_;
+    inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> cutomRenderNodeGraph_;
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_SR_MODULE_H
