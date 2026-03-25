@@ -1008,11 +1008,12 @@ META_NS::IAnimation::Ptr InternalScene::FindAnimation(const CORE_NS::ResourceId&
     META_NS::IAnimation::Ptr anim;
     for (size_t i = 0; !anim && i != ecs_->animationComponentManager->GetComponentCount(); ++i) {
         auto ent = ecs_->animationComponentManager->GetEntity(i);
-        if (ecs_->ecs->GetEntityManager().IsAlive(ent)) {
-            if (auto r = ecs_->resourceComponentManager->Read(ent)) {
-                if (r->resourceId == id) {
-                    anim = FindAnimation(ent, false);
-                }
+        if (!ecs_->ecs->GetEntityManager().IsAlive(ent)) {
+            continue;
+        }
+        if (auto r = ecs_->resourceComponentManager->Read(ent)) {
+            if (r->resourceId == id) {
+                anim = FindAnimation(ent, false);
             }
         }
     }

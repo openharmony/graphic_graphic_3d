@@ -184,18 +184,21 @@ static void SetResourceGroups(const IScene& scene, ISceneSer& out)
 static META_NS::IObject::Ptr BuildObjectHierarchy(const IScene& scene)
 {
     META_NS::IObject::Ptr res = META_NS::GetObjectRegistry().Create(ClassId::SceneSer);
-    if (res) {
-        if (auto obj = interface_cast<META_NS::IObject>(&scene)) {
-            if (auto ser = interface_cast<ISceneNodeSer>(res)) {
-                SetObjectData(*obj, *ser);
-                if (auto ser = interface_cast<ISceneSer>(res)) {
-                    SetResourceGroups(scene, *ser);
-                }
-                if (auto i = interface_cast<META_NS::IContainer>(res)) {
-                    if (auto root = interface_pointer_cast<META_NS::IObject>(scene.GetRootNode().GetResult())) {
-                        i->Add(BuildObjectNode(*root));
-                    }
-                }
+    if (!res) {
+        return res;
+    }
+    auto obj = interface_cast<META_NS::IObject>(&scene);
+    if (!obj) {
+        return res;
+    }
+    if (auto ser = interface_cast<ISceneNodeSer>(res)) {
+        SetObjectData(*obj, *ser);
+        if (auto ser = interface_cast<ISceneSer>(res)) {
+            SetResourceGroups(scene, *ser);
+        }
+        if (auto i = interface_cast<META_NS::IContainer>(res)) {
+            if (auto root = interface_pointer_cast<META_NS::IObject>(scene.GetRootNode().GetResult())) {
+                i->Add(BuildObjectNode(*root));
             }
         }
     }
