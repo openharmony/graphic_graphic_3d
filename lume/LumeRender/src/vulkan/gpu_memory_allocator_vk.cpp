@@ -42,13 +42,8 @@
 #undef VMA_NOT_NULL
 #define VMA_NOT_NULL
 #endif
-#define VMA_IMPLEMENTATION
 #if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
-#ifdef USE_M133_SKIA
-#include <third_party/externals/vulkanmemoryallocator/include/vk_mem_alloc.h>
-#else
-#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
-#endif
+#include "vk_mem_alloc.h"
 #else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
