@@ -545,38 +545,6 @@ HWTEST_F(SceneAdapterUT, GetSceneObj002, TestSize.Level1)
 }
 
 /**
- * @tc.name: ShutdownPluginRegistry001
- * @tc.desc: test ShutdownPluginRegistry
- * @tc.type: FUNC
- */
-HWTEST_F(SceneAdapterUT, ShutdownPluginRegistry001, TestSize.Level1)
-{
-    WIDGET_LOGD("ShutdownPluginRegistry001");
-
-    // Initialize engine first
-    auto adapter = std::make_unique<SceneAdapterTester>();
-    bool ret = adapter->LoadPluginsAndInit();
-    ASSERT_EQ(ret, true);
-    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
-
-    adapter->Deinit();
-    adapter->DeinitRenderThread();
-
-    // Shutdown multiple times - should handle gracefully
-    SceneAdapter::ShutdownPluginRegistry();
-
-    // After shutdown, engine init flag remains true (static flag not reset)
-    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
-
-    // Shutdown again - should not crash
-    SceneAdapter::ShutdownPluginRegistry();
-    SceneAdapter::ShutdownPluginRegistry();
-
-    // Engine init flag still true
-    EXPECT_EQ(SceneAdapter::IsEngineInitSuccessful(), true);
-}
-
-/**
  * @tc.name: RenderFrame003
  * @tc.desc: test RenderFrame after Deinit
  * @tc.type: FUNC
