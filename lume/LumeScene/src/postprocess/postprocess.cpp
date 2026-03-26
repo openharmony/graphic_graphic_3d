@@ -27,6 +27,7 @@
 #include "lens_flare.h"
 #include "motion_blur.h"
 #include "taa.h"
+#include "tone.h"
 #include "tonemap.h"
 #include "upscale.h"
 #include "util.h"
@@ -125,6 +126,9 @@ bool PostProcess::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS:
     }
     if (name == "Taa") {
         return InitEffect<ITaa>(p, ClassId::Taa);
+    }
+    if (name == "Tone") {
+        return InitEffect<ITone>(p, ClassId::Tone);
     }
     if (name == "Vignette") {
         return InitEffect<IVignette>(p, ClassId::Vignette);

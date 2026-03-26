@@ -68,6 +68,7 @@
 #include "postprocess/motion_blur.h"
 #include "postprocess/postprocess.h"
 #include "postprocess/taa.h"
+#include "postprocess/tone.h"
 #include "postprocess/tonemap.h"
 #include "postprocess/upscale.h"
 #include "postprocess/vignette.h"
@@ -164,6 +165,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<Image>();
     META_NS::RegisterObjectType<ExternalImage>();
     META_NS::RegisterObjectType<Bloom>();
+    META_NS::RegisterObjectType<Tone>();
     META_NS::RegisterObjectType<Tonemap>();
     META_NS::RegisterObjectType<Blur>();
     META_NS::RegisterObjectType<MotionBlur>();
@@ -256,6 +258,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<ExternalImage>();
     META_NS::UnregisterObjectType<Image>();
     META_NS::UnregisterObjectType<Bloom>();
+    META_NS::UnregisterObjectType<Tone>();
     META_NS::UnregisterObjectType<Tonemap>();
     META_NS::UnregisterObjectType<Blur>();
     META_NS::UnregisterObjectType<MotionBlur>();

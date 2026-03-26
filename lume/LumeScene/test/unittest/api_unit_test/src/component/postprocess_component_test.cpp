@@ -36,6 +36,7 @@ META_TYPE(RENDER_NS::DofConfiguration);
 META_TYPE(RENDER_NS::FxaaConfiguration);
 META_TYPE(RENDER_NS::MotionBlurConfiguration);
 META_TYPE(RENDER_NS::TaaConfiguration);
+META_TYPE(RENDER_NS::ToneConfiguration);
 META_TYPE(RENDER_NS::TonemapConfiguration);
 META_TYPE(RENDER_NS::VignetteConfiguration);
 META_TYPE(RENDER_NS::UpscaleConfiguration);
@@ -49,6 +50,7 @@ using RENDER_NS::DofConfiguration;
 using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
+using RENDER_NS::ToneConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
@@ -144,6 +146,15 @@ protected:
         EXPECT_TRUE(interface->Sharpness());
     }
     template<>
+    void TestInterface(ITone* interface)
+    {
+        EXPECT_TRUE(interface->FilterColor());
+        EXPECT_TRUE(interface->HueShift());
+        EXPECT_TRUE(interface->Saturation());
+        EXPECT_TRUE(interface->Brightness());
+        EXPECT_TRUE(interface->Contrast());
+    }
+    template<>
     void TestInterface(ITonemap* interface)
     {
         EXPECT_TRUE(interface->Type());
@@ -211,6 +222,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, Members, testing::ext::Test
     TEST_COMPLEX_PROP(FxaaConfiguration, "Fxaa", nativeComponent.fxaaConfiguration, sharpness, fxaaSoft);
     TEST_COMPLEX_PROP(MotionBlurConfiguration, "MotionBlur", nativeComponent.motionBlurConfiguration, alpha, f);
     TEST_COMPLEX_PROP(TaaConfiguration, "Taa", nativeComponent.taaConfiguration, sharpness, taaSoft);
+    TEST_COMPLEX_PROP(ToneConfiguration, "Tone", nativeComponent.toneConfiguration, brightness, f);
     TEST_COMPLEX_PROP(TonemapConfiguration, "Tonemap", nativeComponent.tonemapConfiguration, exposure, f);
     TEST_COMPLEX_PROP(VignetteConfiguration, "Vignette", nativeComponent.vignetteConfiguration, power, f);
     TEST_COMPLEX_PROP(UpscaleConfiguration, "Upscale", nativeComponent.upscaleConfiguration, ratio, f);
@@ -361,6 +373,17 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, TaaComponent, testing::ext:
 {
     static constexpr META_NS::ObjectId id { "004fb0b2-4248-464b-bd43-dcab43ddb8d8" }; // ClassId::Taa
     TestPPComponent<ITaa>(id);
+}
+
+/**
+ * @tc.name: ToneComponent
+ * @tc.desc: Tone component interface test.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ToneComponent, testing::ext::TestSize.Level1)
+{
+    static constexpr META_NS::ObjectId id { "7b5d8e3f-9a4b-4c7d-8e3f-9a4b4c7d8e3f" }; // ClassId::Tone
+    TestPPComponent<ITone>(id);
 }
 
 /**

@@ -46,6 +46,37 @@ void PostProcessTonemapBlock(in uint postProcessFlags, in vec4 tonemapFactor, in
 }
 
 /**
+ * returns tone adjusted color
+ */
+void PostProcessToneBlock(
+    in uint postProcessFlags, in vec4 toneFactor, in vec4 filterColor, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_TONE_BIT) == POST_PROCESS_SPECIALIZATION_TONE_BIT) {
+        // 1. Apply color filter (only use rgb components)
+        outCol *= filterColor.rgb;
+
+        // 2. Apply hue shift
+        const float hueShift = toneFactor.w;
+        if (abs(hueShift) > 0.001) {
+            outCol = HueShift(outCol, hueShift);
+        }
+
+        // 3. Build combined color adjustment matrix
+        const float brightness = toneFactor.x;
+        const float contrast = toneFactor.y;
+        const float saturation = toneFactor.z;
+
+        // Order: saturation -> contrast -> brightness
+        mat4 colorMatrix = BrightnessMatrix(brightness) * ContrastMatrix(contrast) * SaturationMatrix(saturation);
+
+        // 4. Apply color matrix
+        outCol = (colorMatrix * vec4(outCol, 1.0)).rgb;
+    }
+}
+
+/**
  * returns vignette applied color with vignette values in the range 0-1
  */
 void PostProcessVignetteBlock(

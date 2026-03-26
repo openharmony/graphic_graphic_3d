@@ -163,6 +163,8 @@ ohos_source_set("lume_scenewidget_src") {
     "src/postprocess/postprocess_effect.h",
     "src/postprocess/taa.cpp",
     "src/postprocess/taa.h",
+    "src/postprocess/tone.cpp",
+    "src/postprocess/tone.h",
     "src/postprocess/tonemap.cpp",
     "src/postprocess/tonemap.h",
     "src/postprocess/upscale.cpp",
