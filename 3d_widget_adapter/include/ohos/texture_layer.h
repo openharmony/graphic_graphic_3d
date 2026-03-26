@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include <render_service_client/core/ui/rs_node.h>
+#include <render_service_client/core/ui/rs_ui_context.h>
 #include "texture_info.h"
 
 namespace OHOS::Render3D {
@@ -32,7 +33,8 @@ public:
 
     virtual void SetParent(std::shared_ptr<Rosen::RSNode>& parent);
     virtual TextureInfo OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
-        bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW);
+        bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW,
+        std::shared_ptr<Rosen::RSUIContext> rsUIContext = nullptr);
     virtual TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo);
     virtual void SetBackgroundColor(uint32_t backgroundColor);
     virtual void SetRenderScale(float widthScale, float heightScale);
