@@ -41,7 +41,6 @@
 #include "component/mesh_component.h"
 #include "component/node_component.h"
 #include "component/postprocess_component.h"
-#include "component/text_component.h"
 #include "component/transform_component.h"
 #include "containable_object.h"
 #include "core/ecs_object.h"
@@ -57,7 +56,6 @@
 #include "node/light_node.h"
 #include "node/mesh_node.h"
 #include "node/node.h"
-#include "node/text_node.h"
 #include "postprocess/bloom.h"
 #include "postprocess/blur.h"
 #include "postprocess/color_conversion.h"
@@ -143,7 +141,6 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<CameraNode>();
     META_NS::RegisterObjectType<LightNode>();
     META_NS::RegisterObjectType<MeshNode>();
-    META_NS::RegisterObjectType<TextNode>();
 
     META_NS::RegisterObjectType<GenericComponent>();
     META_NS::RegisterObjectType<CameraComponent>();
@@ -157,7 +154,6 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<MeshComponent>();
     META_NS::RegisterObjectType<RenderMeshComponent>();
     META_NS::RegisterObjectType<NodeComponent>();
-    META_NS::RegisterObjectType<TextComponent>();
     META_NS::RegisterObjectType<MorphComponent>();
 
     META_NS::RegisterObjectType<EcsObject>();
@@ -235,7 +231,6 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<CameraNode>();
     META_NS::UnregisterObjectType<LightNode>();
     META_NS::UnregisterObjectType<MeshNode>();
-    META_NS::UnregisterObjectType<TextNode>();
 
     META_NS::UnregisterObjectType<GenericComponent>();
     META_NS::UnregisterObjectType<CameraComponent>();
@@ -249,7 +244,6 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<MeshComponent>();
     META_NS::UnregisterObjectType<RenderMeshComponent>();
     META_NS::UnregisterObjectType<NodeComponent>();
-    META_NS::UnregisterObjectType<TextComponent>();
     META_NS::UnregisterObjectType<MorphComponent>();
 
     META_NS::UnregisterObjectType<EcsObject>();

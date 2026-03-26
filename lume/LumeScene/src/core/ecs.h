@@ -21,7 +21,7 @@
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/interface/scene_options.h>
 #include <set>
-#include <text_3d/ecs/components/text_component.h>
+#include <thread>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_state_component.h>
@@ -125,9 +125,6 @@ public:
 
     SCENE_NS::IEntityOwnerComponentManager* entityOwnerComponentManager {};
     SCENE_NS::IResourceComponentManager* resourceComponentManager {};
-
-    // optional
-    TEXT3D_NS::ITextComponentManager* textComponentManager {};
 
     BASE_NS::unique_ptr<CORE_NS::ComponentQuery> meshQuery {};
     BASE_NS::unique_ptr<CORE_NS::ComponentQuery> materialQuery {};

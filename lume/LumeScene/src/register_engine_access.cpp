@@ -19,8 +19,6 @@
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_render_configuration.h>
-#include <scene/interface/intf_text.h>
-#include <text_3d/ecs/components/text_component.h>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_state_component.h>
@@ -50,8 +48,6 @@ using CORE3D_NS::AnimationStateComponent;
 using CORE3D_NS::CameraComponent;
 using CORE3D_NS::RenderConfigurationComponent;
 
-using TEXT3D_NS::TextComponent;
-
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(EnvironmentComponent::Background);
 DECLARE_PROPERTY_TYPE(LightComponent::Type);
@@ -76,7 +72,6 @@ DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowType);
 DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowQuality);
 DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowSmoothness);
 
-DECLARE_PROPERTY_TYPE(TextComponent::FontMethod);
 CORE_END_NAMESPACE()
 
 META_TYPE(CORE3D_NS::EnvironmentComponent::Background);
@@ -101,8 +96,6 @@ META_TYPE(CORE3D_NS::CameraComponent::TargetUsage);
 META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowType);
 META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowQuality);
 META_TYPE(CORE3D_NS::RenderConfigurationComponent::SceneShadowSmoothness);
-
-META_TYPE(TEXT3D_NS::TextComponent::FontMethod);
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -178,8 +171,6 @@ void RegisterEngineAccess()
     RegisterMapEngineAccessImpl<LightComponent::Type, LightType>();
     RegisterMapEngineAccessImpl<MaterialComponent::Type, MaterialType>();
 
-    RegisterMapEngineAccessImpl<TextComponent::FontMethod, SCENE_NS::FontMethod>();
-
     RegisterEngineAccessImplAndAny<MaterialComponent::RenderSort>();
     RegisterEngineAccessImplAndAny<MaterialComponent::Shader>();
     RegisterEngineAccessImplAndAny<MaterialComponent::TextureInfo>();
@@ -220,8 +211,6 @@ void UnregisterEngineAccess()
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::RenderingPipeline>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::Culling>::coreType);
     r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<CameraComponent::Projection>::coreType);
-
-    r.GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<TextComponent::FontMethod>::coreType);
 }
 
 } // namespace Internal

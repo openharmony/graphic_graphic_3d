@@ -31,7 +31,6 @@
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_render_context.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 
 #include <core/image/intf_image_loader_manager.h>

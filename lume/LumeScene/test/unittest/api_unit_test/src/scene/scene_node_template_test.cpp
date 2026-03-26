@@ -38,7 +38,6 @@
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 #include <scene/interface/resource/types.h>
 #include <scene/interface/resource/util.h>
