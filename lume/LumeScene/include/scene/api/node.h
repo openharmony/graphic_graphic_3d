@@ -26,7 +26,6 @@
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/interface/intf_text.h>
 
 #include <meta/api/util.h>
 
@@ -369,32 +368,6 @@ public:
     {
         auto f = CallPtr<IMeshAccess>([](const auto& ma) { return ma.GetMesh(); });
         return Internal::UnwrapFuture<CallType, Mesh>(BASE_NS::move(f));
-    }
-};
-
-/// Wrapper for Scene text nodes which implement SCENE_NS::IText.
-class Text3D : public Node {
-public:
-    META_INTERFACE_OBJECT(Text3D, Node, IText)
-    /// @see IText::Test
-    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::string, Text)
-    /// @see IText::FontFamily
-    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::string, FontFamily)
-    /// @see IText::FontStyle
-    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::string, FontStyle)
-    /// @see IText::FontSize
-    META_INTERFACE_OBJECT_PROPERTY(float, FontSize)
-    /// @see IText::Font3DThickness
-    META_INTERFACE_OBJECT_PROPERTY(float, Font3DThickness)
-    /// @see IText::FontMethod
-    META_INTERFACE_OBJECT_PROPERTY(SCENE_NS::FontMethod, FontMethod)
-    /// @see IText::TextColor
-    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec4, TextColor)
-    /// Set TextColor from BASE_NS::Color.
-    auto& SetTextColor(const BASE_NS::Color& color)
-    {
-        SetTextColor(BASE_NS::Math::Vec4(color.r, color.g, color.b, color.a));
-        return *this;
     }
 };
 

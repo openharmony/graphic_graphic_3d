@@ -59,6 +59,7 @@ void LightImpl::setColor(::SceneTypes::weak::Color color)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     BASE_NS::Color colorVec{color->getR(), color->getG(), color->getB(), color->getA()};
     lightETS_->SetColor(colorVec);
@@ -77,6 +78,7 @@ void LightImpl::setIntensity(double intensity)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     lightETS_->SetIntensity(intensity);
 }
@@ -94,6 +96,7 @@ void LightImpl::setShadowEnabled(bool enabled)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     lightETS_->SetShadowEnabled(enabled);
 }
@@ -111,6 +114,7 @@ void LightImpl::setEnabled(bool enable)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     lightETS_->SetEnabled(enable);
 }
@@ -128,6 +132,7 @@ void LightImpl::setInnerAngle(::taihe::optional_view<double> innerAngle)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     if (innerAngle.has_value()) {
         lightETS_->SetInnerAngle(innerAngle.value());
@@ -149,6 +154,7 @@ void LightImpl::setOuterAngle(::taihe::optional_view<double> outerAngle)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     if (outerAngle.has_value()) {
         lightETS_->SetOuterAngle(outerAngle.value());
@@ -171,6 +177,7 @@ void LightImpl::setRange(::taihe::optional_view<double> range)
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
+        return;
     }
     if (range.has_value()) {
         lightETS_->SetRange(range.value());

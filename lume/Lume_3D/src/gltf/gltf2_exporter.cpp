@@ -2237,8 +2237,8 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
     }(data.buffers);
 
     // GLB format stores total length as uint32_t — reject output that would overflow. (VULN-035)
-    constexpr uint64_t glbOverhead = sizeof(GLBHeader) + 2u * sizeof(GLBChunk);
-    const uint64_t totalSize64 = glbOverhead + jsonSize + binarySize;
+    constexpr uint64_t GLB_OVERHEAD = sizeof(GLBHeader) + 2u * sizeof(GLBChunk);
+    const uint64_t totalSize64 = GLB_OVERHEAD + jsonSize + binarySize;
     if (binarySize > std::numeric_limits<uint32_t>::max() || totalSize64 > std::numeric_limits<uint32_t>::max()) {
         PLUGIN_LOG_E("GLB export: total size exceeds 4 GB uint32_t limit, aborting.");
         return;

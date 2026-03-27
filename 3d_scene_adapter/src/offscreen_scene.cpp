@@ -66,7 +66,6 @@
 #include <scene/interface/intf_application_context.h>
 
 #include <scene/ext/intf_ecs_object_access.h>
-#include <text_3d/implementation_uids.h>
 #include "ability.h"
 
 #include "data_ability_helper.h"

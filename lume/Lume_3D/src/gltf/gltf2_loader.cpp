@@ -2064,8 +2064,8 @@ bool ImageBasedLightIrradianceCoefficients(
 
     // EXT_lights_image_based spec requires exactly 9 coefficients (one per SH band-0..band-2 basis function).
     // Reject any partial array — the importer cannot use it and the data is non-conformant.
-    constexpr size_t requiredCoefficientCount = 9u;
-    if (!irradianceCoefficients.empty() && irradianceCoefficients.size() != requiredCoefficientCount) {
+    constexpr size_t REQUIRED_COEFFICIENT_COUNT = 9u;
+    if (!irradianceCoefficients.empty() && irradianceCoefficients.size() != REQUIRED_COEFFICIENT_COUNT) {
         PLUGIN_LOG_W("GLTF2: EXT_lights_image_based irradianceCoefficients must be a 9x3 array (got %zu); ignoring.",
             irradianceCoefficients.size());
         irradianceCoefficients.clear();
