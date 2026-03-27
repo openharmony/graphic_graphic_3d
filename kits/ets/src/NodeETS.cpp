@@ -35,10 +35,6 @@ std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
             return std::make_shared<CameraETS>(interface_pointer_cast<SCENE_NS::ICamera>(node));
         } else if (name == "LightNode") {
             return std::make_shared<LightETS>(interface_pointer_cast<SCENE_NS::ILight>(node));
-        } else if (name == "TextNode") {
-            // should return TextETS
-            CORE_LOG_E("TextETS not implemented yet!");
-            return std::make_shared<NodeETS>(NodeType::TEXT, node);
         }
     }
     return std::make_shared<NodeETS>(NodeType::NODE, node);

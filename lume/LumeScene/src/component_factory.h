@@ -18,7 +18,6 @@
 
 #include <scene/ext/intf_component_factory.h>
 #include <scene/ext/intf_internal_scene.h>
-#include <text_3d/ecs/components/text_component.h>
 
 #include <3d/ecs/components/render_configuration_component.h>
 
@@ -31,7 +30,6 @@
 #include "component/mesh_component.h"
 #include "component/node_component.h"
 #include "component/postprocess_component.h"
-#include "component/text_component.h"
 #include "component/transform_component.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -78,7 +76,6 @@ inline void AddBuiltinComponentFactories(IInternalScene::Ptr s)
     s->RegisterComponent(
         CORE3D_NS::ILayerComponentManager::UID, CreateShared<ComponentFactory>(ClassId::LayerComponent));
     s->RegisterComponent(CORE3D_NS::INodeComponentManager::UID, CreateShared<ComponentFactory>(ClassId::NodeComponent));
-    s->RegisterComponent(TEXT3D_NS::ITextComponentManager::UID, CreateShared<ComponentFactory>(ClassId::TextComponent));
     s->RegisterComponent(CORE3D_NS::IRenderConfigurationComponentManager::UID,
         CreateShared<ComponentFactory>(ClassId::RenderConfiguration));
 }

@@ -189,7 +189,6 @@ void NodeImpl::RegisterEnums(NapiApi::Object exports)
     DECL_ENUM(NodeType, GEOMETRY);
     DECL_ENUM(NodeType, CAMERA);
     DECL_ENUM(NodeType, LIGHT);
-    DECL_ENUM(NodeType, TEXT);
     DECL_ENUM(NodeType, CUSTOM);
 #undef DECL_ENUM
     exports.Set("NodeType", NodeType);

@@ -20,7 +20,6 @@
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_render_configuration.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/intf_texture.h>
 #include <scene/interface/resource/image_info.h>
 
@@ -47,7 +46,6 @@ using BasicTypes = META_NS::TypeList<
     ColorFormat,
     EffectQualityType,
     EffectSharpnessType,
-    FontMethod,
     LightType,
     BloomType,
     TonemapType,
@@ -84,8 +82,7 @@ using ObjectTypes = META_NS::TypeList<
     INode::WeakPtr,
     ICamera::WeakPtr,
     IMesh::WeakPtr,
-    ILight::WeakPtr,
-    IText::WeakPtr
+    ILight::WeakPtr
     >;
 // clang-format on
 

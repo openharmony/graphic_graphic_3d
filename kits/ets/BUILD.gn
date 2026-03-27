@@ -64,11 +64,6 @@ config("lume3d_config") {
     include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
   }
 
-  configs = [
-    "${LUME_ROOT}/LumeFont:lume_font_api",
-    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
-  ]
-
   cflags = [
     "-Wall",
     "-fexceptions",
