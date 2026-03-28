@@ -23,6 +23,7 @@
 #include <meta/ext/object.h>
 
 META_TYPE(RENDER_NS::TonemapConfiguration)
+META_TYPE(RENDER_NS::ToneConfiguration)
 META_TYPE(RENDER_NS::BloomConfiguration)
 META_TYPE(RENDER_NS::VignetteConfiguration)
 META_TYPE(RENDER_NS::ColorFringeConfiguration)
@@ -43,6 +44,7 @@ class IInternalPostProcess : public CORE_NS::IInterface {
 public:
     META_PROPERTY(uint32_t, EnableFlags)
     META_PROPERTY(RENDER_NS::TonemapConfiguration, Tonemap)
+    META_PROPERTY(RENDER_NS::ToneConfiguration, Tone)
     META_PROPERTY(RENDER_NS::BloomConfiguration, Bloom)
     META_PROPERTY(RENDER_NS::VignetteConfiguration, Vignette)
     META_PROPERTY(RENDER_NS::ColorFringeConfiguration, ColorFringe)
@@ -68,6 +70,8 @@ public:
     SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, uint32_t, EnableFlags, "PostProcessComponent.enableFlags")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::TonemapConfiguration, Tonemap, "PostProcessComponent.tonemapConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(
+        IInternalPostProcess, RENDER_NS::ToneConfiguration, Tone, "PostProcessComponent.toneConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::BloomConfiguration, Bloom, "PostProcessComponent.bloomConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
@@ -96,6 +100,7 @@ public:
 
     META_IMPLEMENT_PROPERTY(uint32_t, EnableFlags)
     META_IMPLEMENT_PROPERTY(RENDER_NS::TonemapConfiguration, Tonemap)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::ToneConfiguration, Tone)
     META_IMPLEMENT_PROPERTY(RENDER_NS::BloomConfiguration, Bloom)
     META_IMPLEMENT_PROPERTY(RENDER_NS::VignetteConfiguration, Vignette)
     META_IMPLEMENT_PROPERTY(RENDER_NS::ColorFringeConfiguration, ColorFringe)

@@ -55,6 +55,13 @@ void main(void)
     PostProcessBloomCombineBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_BLOOM], inUv,
         uBloomSampler, uDirtSampler, outColor.rgb, outColor.rgb);
 
+    PostProcessToneBlock(
+        uGlobalData.flags.x,
+        uGlobalData.factors[POST_PROCESS_INDEX_TONE],
+        uGlobalData.userFactors[POST_PROCESS_USER_INDEX_TONE_FILTER_COLOR], // filterColor
+        outColor.rgb,
+        outColor.rgb);
+
     PostProcessTonemapBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);
     const float tickDelta = uGlobalData.renderTimings.y; // tick delta time (ms)

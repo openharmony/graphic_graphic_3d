@@ -129,6 +129,18 @@ public:
             static_cast<float>(input.tonemapConfiguration.tonemapType) };
     }
 
+    static inline BASE_NS::Math::Vec4 GetFactorTone(const PostProcessConfiguration& input)
+    {
+        // .x = brightness, .y = contrast, .z = saturation, .w = hueShift
+        return { input.toneConfiguration.brightness, input.toneConfiguration.contrast,
+            input.toneConfiguration.saturation, input.toneConfiguration.hueShift };
+    }
+
+    static inline BASE_NS::Math::Vec4 GetFactorToneFilterColor(const PostProcessConfiguration& input)
+    {
+        return input.toneConfiguration.filterColor;
+    }
+
     static inline BASE_NS::Math::Vec4 GetFactorVignette(const PostProcessConfiguration& input)
     {
         return { input.vignetteConfiguration.coefficient, input.vignetteConfiguration.power, 0.0f, 0.0f };

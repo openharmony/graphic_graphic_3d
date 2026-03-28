@@ -45,6 +45,24 @@ public:
 };
 
 /**
+ * @brief The Tone class wraps a post process effect which implements ITone.
+ */
+class Tone : public PostProcessEffect {
+public:
+    META_INTERFACE_OBJECT(Tone, PostProcessEffect, ITone)
+    /// @see ITone::FilterColor
+    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec4, FilterColor)
+    /// @see ITone::HueShift
+    META_INTERFACE_OBJECT_PROPERTY(float, HueShift)
+    /// @see ITone::Saturation
+    META_INTERFACE_OBJECT_PROPERTY(float, Saturation)
+    /// @see ITone::Brightness
+    META_INTERFACE_OBJECT_PROPERTY(float, Brightness)
+    /// @see ITone::Contrast
+    META_INTERFACE_OBJECT_PROPERTY(float, Contrast)
+};
+
+/**
  * @brief The Bloom class wraps a post process effect which implements IBloom.
  */
 class Bloom : public PostProcessEffect {
@@ -241,6 +259,8 @@ public:
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Fxaa, Fxaa)
     /// @see IPostProcess::Taa
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Taa, Taa)
+    /// @see IPostProcess::Tone
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Tone, Tone)
     /// @see IPostProcess::Vignette
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Vignette, Vignette)
     /// @see IPostProcess::LensFlare

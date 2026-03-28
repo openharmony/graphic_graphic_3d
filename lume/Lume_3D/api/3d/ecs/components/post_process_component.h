@@ -37,6 +37,7 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
         COLOR_CONVERSION_BIT = (1 << 3),
         COLOR_FRINGE_BIT = (1 << 4),
         UPSCALE_BIT = (1 << 5),
+        TONE_BIT = (1 << 7),
         BLUR_BIT = (1 << 8),
         BLOOM_BIT = (1 << 9),
         FXAA_BIT = (1 << 10),
@@ -83,6 +84,10 @@ BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
      */
     DEFINE_PROPERTY(RENDER_NS::ColorConversionConfiguration, colorConversionConfiguration,
         "Color Conversion Configuration", 0, ARRAY_VALUE())
+
+    /** Tone color adjustment configuration.
+     */
+    DEFINE_PROPERTY(RENDER_NS::ToneConfiguration, toneConfiguration, "Tone Configuration", 0, ARRAY_VALUE())
 
     /** FX anti-aliasing configuration.
      */
