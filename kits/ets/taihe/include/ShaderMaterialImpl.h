@@ -27,7 +27,7 @@ namespace OHOS::Render3D::KITETS {
 class ShaderMaterialImpl : virtual public MaterialImpl {
 public:
     ShaderMaterialImpl(const std::shared_ptr<MaterialETS> mat);
-    ~ShaderMaterialImpl();
+    virtual ~ShaderMaterialImpl();
 
     ::taihe::optional<::SceneResources::Shader> getColorShader();
     void setColorShader(::taihe::optional_view<::SceneResources::Shader> shader);

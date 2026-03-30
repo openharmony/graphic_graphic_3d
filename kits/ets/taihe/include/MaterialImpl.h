@@ -34,7 +34,7 @@ namespace OHOS::Render3D::KITETS {
 class MaterialImpl : public SceneResourceImpl {
 public:
     MaterialImpl(const std::shared_ptr<MaterialETS> mat);
-    ~MaterialImpl();
+    virtual ~MaterialImpl();
     void destroy() override;
 
     ::SceneResources::MaterialType getMaterialType();

@@ -27,7 +27,7 @@ class PBRMaterialImpl : public MetallicRoughnessMaterialImpl, public ShaderMater
     public UnlitShadowAlphaImpl {
 public:
     PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat);
-    ~PBRMaterialImpl();
+    virtual ~PBRMaterialImpl();
 
 private:
     std::shared_ptr<MaterialETS> materialETS_;

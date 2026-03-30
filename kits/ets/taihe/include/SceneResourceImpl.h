@@ -35,7 +35,7 @@ public:
         : type_(type), sceneResourceETS_(srETS)
     {}
 
-    ~SceneResourceImpl()
+    virtual ~SceneResourceImpl()
     {
         sceneResourceETS_.reset();
     }
