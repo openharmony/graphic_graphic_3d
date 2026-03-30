@@ -368,6 +368,8 @@ RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration
     output.factors[PostProcessConfiguration::INDEX_COLOR_CONVERSION] =
         PostProcessConversionHelper::GetFactorColorConversion(input);
     output.factors[PostProcessConfiguration::INDEX_COLOR_FRINGE] = PostProcessConversionHelper::GetFactorFringe(input);
+    output.factors[PostProcessConfiguration::INDEX_WHITE_BALANCE] =
+        PostProcessConversionHelper::GetFactorWhiteBalance(input);
     output.factors[PostProcessConfiguration::INDEX_TONE] = PostProcessConversionHelper::GetFactorTone(input);
 
     output.factors[PostProcessConfiguration::INDEX_BLUR] = PostProcessConversionHelper::GetFactorBlur(input);

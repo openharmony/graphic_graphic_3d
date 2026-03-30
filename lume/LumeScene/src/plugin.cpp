@@ -70,6 +70,7 @@
 #include "postprocess/tonemap.h"
 #include "postprocess/upscale.h"
 #include "postprocess/vignette.h"
+#include "postprocess/white_balance.h"
 #include "render_configuration.h"
 #include "render_context.h"
 #include "resource/ecs_animation.h"
@@ -173,6 +174,7 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<Vignette>();
     META_NS::RegisterObjectType<LensFlare>();
     META_NS::RegisterObjectType<Upscale>();
+    META_NS::RegisterObjectType<WhiteBalance>();
     META_NS::RegisterObjectType<PostProcess>();
 
     META_NS::RegisterObjectType<Environment>();
@@ -264,6 +266,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<Vignette>();
     META_NS::UnregisterObjectType<LensFlare>();
     META_NS::UnregisterObjectType<Upscale>();
+    META_NS::UnregisterObjectType<WhiteBalance>();
     META_NS::UnregisterObjectType<PostProcess>();
 
     META_NS::UnregisterObjectType<Environment>();

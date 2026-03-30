@@ -437,8 +437,9 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     ppStack.postProcesses.push_back(
         FillBuiltInData(PostProcessConstants::RENDER_UPSCALER_BIT, PostProcessConstants::RENDER_UPSCALER_BIT,
             defUserIdx, PostProcessConversionHelper::GetFactorUpscaler(ppConfig), {}));
-    ppStack.postProcesses.push_back(FillBuiltInData(
-        PostProcessConstants::RENDER_EMPTY_6, PostProcessConstants::RENDER_EMPTY_6, defUserIdx, {}, {}));
+    ppStack.postProcesses.push_back(
+        FillBuiltInData(PostProcessConstants::RENDER_WHITE_BALANCE, PostProcessConstants::RENDER_WHITE_BALANCE,
+            defUserIdx, PostProcessConversionHelper::GetFactorWhiteBalance(ppConfig), {}));
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_TONE,
         PostProcessConstants::RENDER_TONE, defUserIdx, PostProcessConversionHelper::GetFactorTone(ppConfig), {}));
 

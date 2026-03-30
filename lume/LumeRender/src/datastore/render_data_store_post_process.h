@@ -129,6 +129,11 @@ public:
             static_cast<float>(input.tonemapConfiguration.tonemapType) };
     }
 
+    static inline BASE_NS::Math::Vec4 GetFactorWhiteBalance(const PostProcessConfiguration& input)
+    {
+        return { input.whiteBalanceConfiguration.temperature, input.whiteBalanceConfiguration.tint, 0.0f, 0.0f };
+    }
+
     static inline BASE_NS::Math::Vec4 GetFactorTone(const PostProcessConfiguration& input)
     {
         // .x = brightness, .y = contrast, .z = saturation, .w = hueShift

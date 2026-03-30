@@ -41,6 +41,7 @@ constexpr auto DOF_TYPE = PROPERTYTYPE(RENDER_NS::DofConfiguration);
 constexpr auto MOTION_BLUR_TYPE = PROPERTYTYPE(RENDER_NS::MotionBlurConfiguration);
 constexpr auto LENS_FLARE_TYPE = PROPERTYTYPE(RENDER_NS::LensFlareConfiguration);
 constexpr auto UPSCALE_TYPE = PROPERTYTYPE(RENDER_NS::UpscaleConfiguration);
+constexpr auto WHITE_BALANCE_TYPE = PROPERTYTYPE(RENDER_NS::WhiteBalanceConfiguration);
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -120,7 +121,7 @@ void Effect::PopulateProperties()
     // system)
     static std::set<uint64_t> knownPostProcesses = { BLOOM_TYPE, VIGNETTE_TYPE, COLOR_FRINGE_TYPE, DITHER_TYPE,
         BLUR_TYPE, TONEMAP_TYPE, TONE_TYPE, COLOR_CONVERSION_TYPE, FXAA_TYPE, TAA_TYPE, DOF_TYPE, MOTION_BLUR_TYPE,
-        LENS_FLARE_TYPE, UPSCALE_TYPE };
+        LENS_FLARE_TYPE, UPSCALE_TYPE, WHITE_BALANCE_TYPE };
 
     BASE_NS::vector<META_NS::IEngineValue::Ptr> valid;
     BASE_NS::vector<META_NS::IEngineValue::Ptr> values;

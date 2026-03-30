@@ -2416,6 +2416,7 @@ void RenderSystem::ProcessPostProcessComponents(const Entity& mainCameraEntity)
         ppConfig.ditherConfiguration = pp.ditherConfiguration;
         ppConfig.blurConfiguration = pp.blurConfiguration;
         ppConfig.colorConversionConfiguration = pp.colorConversionConfiguration;
+        ppConfig.whiteBalanceConfiguration = pp.whiteBalanceConfiguration;
         ppConfig.toneConfiguration = pp.toneConfiguration;
         ppConfig.tonemapConfiguration = pp.tonemapConfiguration;
         ppConfig.fxaaConfiguration = pp.fxaaConfiguration;

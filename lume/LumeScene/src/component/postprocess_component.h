@@ -36,6 +36,7 @@ META_TYPE(RENDER_NS::DofConfiguration)
 META_TYPE(RENDER_NS::MotionBlurConfiguration)
 META_TYPE(RENDER_NS::LensFlareConfiguration)
 META_TYPE(RENDER_NS::UpscaleConfiguration)
+META_TYPE(RENDER_NS::WhiteBalanceConfiguration)
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -57,6 +58,7 @@ public:
     META_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
     META_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
     META_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
+    META_PROPERTY(RENDER_NS::WhiteBalanceConfiguration, WhiteBalance)
 };
 
 META_REGISTER_CLASS(
@@ -96,6 +98,8 @@ public:
         "PostProcessComponent.lensFlareConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::UpscaleConfiguration, Upscale, "PostProcessComponent.upscaleConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, RENDER_NS::WhiteBalanceConfiguration, WhiteBalance,
+        "PostProcessComponent.whiteBalanceConfiguration")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(uint32_t, EnableFlags)
@@ -113,6 +117,7 @@ public:
     META_IMPLEMENT_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
     META_IMPLEMENT_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
     META_IMPLEMENT_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::WhiteBalanceConfiguration, WhiteBalance)
 public:
     BASE_NS::string GetName() const override;
 };

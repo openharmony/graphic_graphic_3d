@@ -32,6 +32,7 @@
 #include "upscale.h"
 #include "util.h"
 #include "vignette.h"
+#include "white_balance.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -138,6 +139,9 @@ bool PostProcess::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS:
     }
     if (name == "Upscale") {
         return InitEffect<IUpscale>(p, ClassId::Upscale);
+    }
+    if (name == "WhiteBalance") {
+        return InitEffect<IWhiteBalance>(p, ClassId::WhiteBalance);
     }
 
     return false;
