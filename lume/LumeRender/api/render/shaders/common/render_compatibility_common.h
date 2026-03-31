@@ -31,6 +31,7 @@ using vec4 = BASE_NS::Math::Vec4;
 using uvec2 = BASE_NS::Math::UVec2;
 using uvec3 = BASE_NS::Math::UVec3;
 using uvec4 = BASE_NS::Math::UVec4;
+using mat3 = BASE_NS::Math::Mat3X3;
 using mat4 = BASE_NS::Math::Mat4X4;
 #endif
 

@@ -80,6 +80,7 @@ using ObjectTypes = META_NS::TypeList<
     IMotionBlur::Ptr,
     ITaa::Ptr,
     IVignette::Ptr,
+    IWhiteBalance::Ptr,
     INode::WeakPtr,
     ICamera::WeakPtr,
     IMesh::WeakPtr,
