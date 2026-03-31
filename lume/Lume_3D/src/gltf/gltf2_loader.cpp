@@ -548,7 +548,12 @@ bool ParseMeshoptCompression(LoadResult& loadResult, const json::value& meshOptC
     if (!SafeGetJsonValue(meshOptCompression, "count", loadResult.error, bufferView->meshoptCompression.count)) {
         return false;
     }
-    if (bufferView->byteLength != (*byteStride) * bufferView->meshoptCompression.count) {
+    // Guard against size_t overflow on 32-bit platforms before the product comparison.
+    const size_t stride = size_t(*byteStride);
+    if (stride > 0u && bufferView->meshoptCompression.count > std::numeric_limits<size_t>::max() / stride) {
+        return false;
+    }
+    if (bufferView->byteLength != stride * bufferView->meshoptCompression.count) {
         return false;
     }
     if (auto const pos = meshOptCompression.find("filter"); pos && pos->is_string()) {
