@@ -1,0 +1,102 @@
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+config("lume_boids_swarm_config") {
+  include_dirs = [
+    "api",
+    "src",
+  ]
+
+  defines = [ "CORE_PLUGIN=1" ]
+
+  cflags = [
+    "-Wall",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-ignored-qualifiers",
+    "-Wno-unused-lambda-capture",
+    "-Wno-unused-but-set-variable",
+  ]
+
+  cflags_cc = [
+    "-Wno-overloaded-virtual",
+    "-Wno-missing-braces",
+  ]
+}
+
+config("lume_boids_swarm_api") {
+  include_dirs = [
+    "api",
+  ]
+}
+
+ohos_source_set("lume_boids_swarm_src") {
+  public_configs = [
+    ":lume_boids_swarm_config",
+    ":lume_boids_swarm_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+  ]
+  
+  deps = [ 
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
+  ]
+
+  sources = [
+    "version.cpp",
+    "src/plugin.cpp",
+    "src/ecs/components/boids_swarm_component_manager.cpp",
+    "src/ecs/components/boids_swarm_gravity_component_manager.cpp",
+    "src/ecs/components/boids_swarm_repulsion_component_manager.cpp",
+    "src/ecs/components/boids_swarm_state_component_manager.cpp",
+    "src/ecs/systems/boids_swarm_system.cpp",
+    "src/ecs/systems/boids_swarm_system.h",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("PluginBoidsSwarmApi") {
+  public_configs = [
+    ":lume_boids_swarm_api",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("libPluginBoidsSwarm") {
+  deps = [
+    ":lume_boids_swarm_src",
+  ]
+
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}

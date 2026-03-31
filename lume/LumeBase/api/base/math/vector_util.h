@@ -16,6 +16,7 @@
 #ifndef API_BASE_MATH_VECTOR_UTIL_H
 #define API_BASE_MATH_VECTOR_UTIL_H
 
+#include <base/containers/type_traits.h>
 #include <base/math/mathf.h>
 #include <base/math/vector.h>
 #include <base/namespace.h>
@@ -328,6 +329,24 @@ static inline constexpr Vec4 Lerp(const Vec4& v1, const Vec4& v2, float t)
 {
     t = Math::clamp01(t);
     return Vec4(v1.x + (v2.x - v1.x) * t, v1.y + (v2.y - v1.y) * t, v1.z + (v2.z - v1.z) * t, v1.w + (v2.w - v1.w) * t);
+}
+
+template<typename T>
+static inline constexpr T Clamp(const T& v, const T& min, const T& max)
+{
+    constexpr bool IS_VEC_TYPE =
+        BASE_NS::is_same_v<T, Vec2> || BASE_NS::is_same_v<T, Vec3> || BASE_NS::is_same_v<T, Vec4>;
+    static_assert(IS_VEC_TYPE || BASE_NS::is_arithmetic_v<T>, "Not an accepted type tp be clamped");
+
+    if constexpr (IS_VEC_TYPE) {
+        T clamped;
+        for (size_t xyz = 0; xyz < sizeof(v.data) / sizeof(v.data[0]); ++xyz) {
+            clamped[xyz] = Math::clamp(v[xyz], min[xyz], max[xyz]);
+        }
+        return clamped;
+    } else {
+        return Math::clamp(v, min, max);
+    }
 }
 
 /** @} */

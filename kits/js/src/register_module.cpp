@@ -14,6 +14,7 @@
  */
 
 #include "AnimationJS.h"
+#include "BoidsSwarmPluginJS.h"
 #include "CameraJS.h"
 #include "EffectJS.h"
 #include "EnvironmentJS.h"
@@ -180,6 +181,8 @@ void RegisterClasses(napi_env env, napi_value exports)
     EffectJS::Init(env, scene3dNS);
     EffectsContainerJS::Init(env, scene3dNS);
     OcclusionMaterial::Init(env, scene3dNS);
+    BoidsSwarmWorldJS::Init(env, scene3dNS);
+    BoidsSwarmPluginJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     CameraJS::RegisterEnums({ env, scene3dNS });
