@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #define SCENE_ADAPTER_INTF_CAMERA_UTILS_H
@@ -6,6 +20,7 @@ namespace OHOS::Render3D {
 
 class Vector3f {
 public:
+    static constexpr size_t V3F_SIZE = 3;
     union {
         struct {
             float x, y, z;
@@ -19,10 +34,10 @@ public:
 
     // return the last element (z) if index is out of bounds
     constexpr float& operator[](size_t index) noexcept {
-        return data[index >= 3 ? 2 : index];
+        return data[index >= V3F_SIZE ? V3F_SIZE - 1 : index];
     }
     constexpr const float& operator[](size_t index) const noexcept {
-        return data[index >= 3 ? 2 : index];
+        return data[index >= V3F_SIZE ? V3F_SIZE - 1 : index];
     }
 };
 
@@ -33,6 +48,7 @@ static_assert(offsetof(Vector3f, z) == 2 * sizeof(float), "z offset error");
 
 class Vector4f {
 public:
+    static constexpr size_t V4F_SIZE = 4;
     union {
         struct {
             float x, y, z, w;
@@ -44,14 +60,12 @@ public:
     constexpr Vector4f(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w) {}
     explicit constexpr Vector4f(float s) noexcept : x(s), y(s), z(s), w(s) {}
 
-    // 非常量下标运算符，越界时返回最后一个元素（w）
     constexpr float& operator[](size_t index) noexcept {
-        return data[index >= 4 ? 3 : index];
+        return data[index >= V4F_SIZE ? V4F_SIZE - 1 : index];
     }
 
-    // 常量下标运算符，越界时返回最后一个元素（w）
     constexpr const float& operator[](size_t index) const noexcept {
-        return data[index >= 4 ? 3 : index];
+        return data[index >= V4F_SIZE ? V4F_SIZE - 1 : index];
     }
 };
 
@@ -82,12 +96,12 @@ struct CameraConfigs {
     std::string Dump()
     {
         std::string ret = "OffscreenCamera:[";
-        ret += " position_: " + std::to_string(position_[0]) + '\t' + std::to_string(position_[1]) + '\t' +
-            std::to_string(position_[2]) + '\t';
-        ret += " rotation_: " + std::to_string(rotation_[0]) + '\t' + std::to_string(rotation_[1]) + '\t' +
-                std::to_string(rotation_[2]) + '\t' + std::to_string(rotation_[3]) + '\t';
-        ret += "clearColor: " + std::to_string(clearColor_[0]) + '\t' + std::to_string(clearColor_[1]) + '\t' +
-            std::to_string(clearColor_[2]) + '\t' + std::to_string(clearColor_[3]) + '\t';
+        ret += " position_: " + std::to_string(position_.x) + '\t' + std::to_string(position_.y) + '\t' +
+            std::to_string(position_.z) + '\t';
+        ret += " rotation_: " + std::to_string(rotation_.x) + '\t' + std::to_string(rotation_.y) + '\t' +
+                std::to_string(rotation_.z) + '\t' + std::to_string(rotation_.w) + '\t';
+        ret += "clearColor: " + std::to_string(clearColor_.x) + '\t' + std::to_string(clearColor_.y) + '\t' +
+            std::to_string(clearColor_.z) + '\t' + std::to_string(clearColor_.w) + '\t';
         ret += "fov: " + std::to_string(intrinsics_.fov_) + "near: " + std::to_string(intrinsics_.near_) +
             "far: " + std::to_string(intrinsics_.far_);
         ret += "]";
