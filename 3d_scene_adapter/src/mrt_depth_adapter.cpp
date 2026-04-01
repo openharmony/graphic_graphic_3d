@@ -91,7 +91,7 @@
 namespace OHOS::Render3D {
 static constexpr BASE_NS::Uid ENGINE_THREAD{ "2070e705-d061-40e4-bfb7-90fad2c280af" };
 
-static const std::string UidMRT_PLUGIN { "a1b2c3d4-e5f6-7890-abcd-ef123456daca" };
+static const std::string UID_MRT_PLUGIN { "a1b2c3d4-e5f6-7890-abcd-ef123456daca" };
 static bool MRTDFXEnabled()
 {
     // only read parameter upon restart of the process
