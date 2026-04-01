@@ -109,7 +109,6 @@ static bool MRTDisabled()
     return disabled;
 }
 
-
 #define CHECK_NULL_RET_LOGE(ptr, ret)                        \
     do {                                                     \
         if (!(ptr)) {                                        \
@@ -117,9 +116,6 @@ static bool MRTDisabled()
             return ret;                                      \
         }                                                    \
     } while (0)
-
-
-
 
 class MrtDepthAdapter : public IMrtDepthAdapter {
 public:
@@ -351,7 +347,7 @@ public:
             sceneAdapter_->DeinitRenderThread();
         }
         engineInited_ = false;
-    }    
+    }
     ~MrtDepthAdapter()
     {
         if (engineInited_) {

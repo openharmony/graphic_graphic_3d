@@ -83,7 +83,7 @@ static_assert(offsetof(Vector4f, w) == 3 * sizeof(float), "w offset error");
 
 struct CameraIntrinsics {
     CameraIntrinsics(float fov = 1, float near = 0.1, float far = 10) :
-                              fov_(fov), near_(near), far_(far) {}
+                        fov_(fov), near_(near), far_(far) {}
     float fov_ = 1;
     float near_ = 0.1;
     float far_ = 10;
