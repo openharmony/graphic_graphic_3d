@@ -91,7 +91,7 @@
 namespace OHOS::Render3D {
 static constexpr BASE_NS::Uid ENGINE_THREAD{ "2070e705-d061-40e4-bfb7-90fad2c280af" };
 
-static const std::string UID_MRT_PLUGIN { "a1b2c3d4-e5f6-7890-abcd-ef123456daca" };
+static const std::string UidMRT_PLUGIN { "a1b2c3d4-e5f6-7890-abcd-ef123456daca" };
 static bool MRTDFXEnabled()
 {
     // only read parameter upon restart of the process
@@ -263,7 +263,7 @@ private:
         auto sceneObj = sceneAdapter_->GetSceneObj();
         auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
         struct rr {
-        uint32_t id_ = 1;
+        uint32_t id = 1;
             // not actual tree, but map of entities, and their children.
             BASE_NS::unordered_map<CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>> tree;
             BASE_NS::vector<CORE_NS::Entity> roots;
@@ -274,9 +274,9 @@ private:
                 CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
                 cm = CORE_NS::GetManager<CORE3D_NS::INodeComponentManager>(*ecs);
                 nm = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*ecs);
-                fix();
+                Fix();
             }
-            void scan()
+            void Scan()
             {
                 const auto count = cm->GetComponentCount();
                 // collect nodes and their children.
@@ -294,27 +294,27 @@ private:
                     }
                 }
             }
-            void recurse(CORE_NS::Entity id)
+            void Recurse(CORE_NS::Entity id)
             {
                 CORE3D_NS::NameComponent c = nm->Get(id);
                 if (c.name.empty()) {
                     // create a name for unnamed node.
                     c.name = "Unnamed Node ";
-                    c.name += BASE_NS::to_string(id_++);
+                    c.name += BASE_NS::to_string(id++);
                     nm->Set(id, c);
                 }
                 for (auto c : tree[id]) {
-                    recurse(c);
+                    Recurse(c);
                 }
             }
-            void fix()
+            void Fix()
             {
-                scan();
+                Scan();
                 for (auto i : roots) {
-                    id_ = 1;
+                    id = 1;
                     // force root node name to match legacy by default.
                     for (auto c : tree[i]) {
-                        recurse(c);
+                        Recurse(c);
                     }
                 }
             }
