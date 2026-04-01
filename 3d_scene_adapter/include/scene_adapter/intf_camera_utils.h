@@ -33,10 +33,12 @@ public:
     explicit constexpr Vector3f(float s) noexcept : x(s), y(s), z(s) {}
 
     // return the last element (z) if index is out of bounds
-    constexpr float& operator[](size_t index) noexcept {
+    constexpr float& operator[](size_t index) noexcept
+    {
         return data[index >= V3F_SIZE ? V3F_SIZE - 1 : index];
     }
-    constexpr const float& operator[](size_t index) const noexcept {
+    constexpr const float& operator[](size_t index) const noexcept
+    {
         return data[index >= V3F_SIZE ? V3F_SIZE - 1 : index];
     }
 };
@@ -60,11 +62,13 @@ public:
     constexpr Vector4f(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w) {}
     explicit constexpr Vector4f(float s) noexcept : x(s), y(s), z(s), w(s) {}
 
-    constexpr float& operator[](size_t index) noexcept {
+    constexpr float& operator[](size_t index) noexcept
+    {
         return data[index >= V4F_SIZE ? V4F_SIZE - 1 : index];
     }
 
-    constexpr const float& operator[](size_t index) const noexcept {
+    constexpr const float& operator[](size_t index) const noexcept
+    {
         return data[index >= V4F_SIZE ? V4F_SIZE - 1 : index];
     }
 };
@@ -95,7 +99,7 @@ struct CameraConfigs {
 
     std::string Dump()
     {
-        std::string ret = "OffscreenCamera:[";
+        std::string ret = "Camera:[";
         ret += " position_: " + std::to_string(position_.x) + '\t' + std::to_string(position_.y) + '\t' +
             std::to_string(position_.z) + '\t';
         ret += " rotation_: " + std::to_string(rotation_.x) + '\t' + std::to_string(rotation_.y) + '\t' +
