@@ -350,12 +350,12 @@ ohos_shared_library("AGP3DApi") {
 }
 
 ohos_static_library("libAGP3D") {
-  public_deps = [
+  deps = [
     ":lume_3d_src",
   ]
 
   if (CORE3D_EMBEDDED_ASSETS_ENABLED) {
-    deps = [
+    deps += [
       ":lume_3d_rofs_obj"
     ]
   }
