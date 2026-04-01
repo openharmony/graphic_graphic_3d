@@ -134,9 +134,7 @@ public:
     void CreateSceneByGltfUri(std::string u) override
     {
         WIDGET_LOGI("MrtDepthAdapter::CreateSceneByGltfUri with uri: %{public}s", u.c_str());
-
         // wait to add implementation
-
         sceneInited_ = true;
     }
 
@@ -157,7 +155,7 @@ public:
     bool CreateCamera(const CameraConfigs& p) override
     {
         CHECK_NULL_RET_LOGE(sceneAdapter_, false);
-        if (GetOffscreenDFXEnabled()) {
+        if (MRTDFXEnabled()) {
             WIDGET_LOGI("MrtDepthAdapter::CreateCamera with config: %{public}s", p.Dump().c_str());
         }
 
@@ -225,10 +223,9 @@ public:
         auto &clearColor = p.clearColor_;
         cameraPtr_->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});   // RGBA
 
-        if (GetOffscreenDFXEnabled()) {
+        if (MRTDFXEnabled()) {
             WIDGET_LOGI("OffScreenScene::SetCameraConfigs camera info: %{public}s", p.Dump().c_str());
         }
-        
         return true;
     }
     
