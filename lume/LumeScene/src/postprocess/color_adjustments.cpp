@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-#include "tone.h"
+#include "color_adjustments.h"
 
 #include <3d/ecs/components/post_process_component.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-BASE_NS::string_view Tone::GetComponentPath() const
+BASE_NS::string_view ColorAdjustments::GetComponentPath() const
 {
-    static constexpr BASE_NS::string_view p("PostProcessComponent.toneConfiguration.");
+    static constexpr BASE_NS::string_view p("PostProcessComponent.colorAdjustmentsConfiguration.");
     return p;
 }
 

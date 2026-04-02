@@ -26,7 +26,7 @@
 #include <scene/interface/postprocess/intf_lens_flare.h>
 #include <scene/interface/postprocess/intf_motion_blur.h>
 #include <scene/interface/postprocess/intf_taa.h>
-#include <scene/interface/postprocess/intf_tone.h>
+#include <scene/interface/postprocess/intf_color_adjustments.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/postprocess/intf_upscale.h>
 #include <scene/interface/postprocess/intf_vignette.h>
@@ -74,9 +74,9 @@ public:
      */
     META_READONLY_PROPERTY(ITaa::Ptr, Taa)
     /**
-     * @brief Camera postprocessing settings, tone color adjustment
+     * @brief Camera postprocessing settings, color adjustments
      */
-    META_READONLY_PROPERTY(ITone::Ptr, Tone)
+    META_READONLY_PROPERTY(IColorAdjustments::Ptr, ColorAdjustments)
     /**
      * @brief Camera postprocessing settings, vignette
      */

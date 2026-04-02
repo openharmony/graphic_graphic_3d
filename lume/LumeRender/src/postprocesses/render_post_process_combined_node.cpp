@@ -52,7 +52,7 @@ ENUM_TYPE_METADATA(RENDER_NS::PostProcessConfiguration::PostProcessEnableFlagBit
     ENUM_VALUE(ENABLE_TONEMAP_BIT, "Tonemap"), ENUM_VALUE(ENABLE_VIGNETTE_BIT, "Vignette"),
     ENUM_VALUE(ENABLE_DITHER_BIT, "Dither"), ENUM_VALUE(ENABLE_COLOR_CONVERSION_BIT, "Color Conversion"),
     ENUM_VALUE(ENABLE_COLOR_FRINGE_BIT, "Color Fringe"), ENUM_VALUE(ENABLE_WHITE_BALANCE_BIT, "White Balance"),
-    ENUM_VALUE(ENABLE_TONE_BIT, "Tone"))
+    ENUM_VALUE(ENABLE_COLOR_ADJUSTMENTS_BIT, "Color Adjustments"))
 
 ENUM_TYPE_METADATA(RENDER_NS::TonemapConfiguration::TonemapType, ENUM_VALUE(TONEMAP_ACES, "Aces"),
     ENUM_VALUE(TONEMAP_ACES_2020, "Aces 2020"), ENUM_VALUE(TONEMAP_FILMIC, "Filmic"),
@@ -83,7 +83,7 @@ DATA_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration,
 DATA_TYPE_METADATA(RENDER_NS::WhiteBalanceConfiguration, MEMBER_PROPERTY(temperature, "Temperature", 0),
     MEMBER_PROPERTY(tint, "Tint", 0))
 
-DATA_TYPE_METADATA(RENDER_NS::ToneConfiguration, MEMBER_PROPERTY(filterColor, "Filter Color", 0),
+DATA_TYPE_METADATA(RENDER_NS::ColorAdjustmentsConfiguration, MEMBER_PROPERTY(filterColor, "Filter Color", 0),
     MEMBER_PROPERTY(hueShift, "Hue Shift", 0), MEMBER_PROPERTY(saturation, "Saturation", 0),
     MEMBER_PROPERTY(brightness, "Brightness", 0), MEMBER_PROPERTY(contrast, "Contrast", 0))
 
@@ -96,7 +96,7 @@ DATA_TYPE_METADATA(RENDER_NS::PostProcessConfiguration,
     MEMBER_PROPERTY(colorConversionConfiguration, "Color Conversion Configuration", 0),
     MEMBER_PROPERTY(colorFringeConfiguration, "Color Fringe Configuration", 0),
     MEMBER_PROPERTY(whiteBalanceConfiguration, "White Balance Configuration", 0),
-    MEMBER_PROPERTY(toneConfiguration, "Tone Configuration", 0))
+    MEMBER_PROPERTY(colorAdjustmentsConfiguration, "Color Adjustments Configuration", 0))
 
 DATA_TYPE_METADATA(RENDER_NS::RenderPostProcessCombinedNode::EffectProperties, MEMBER_PROPERTY(enabled, "Enabled", 0),
     MEMBER_PROPERTY(glOptimizedLayerCopyEnabled, "GL Optimized Layer Copy Enabled", 0),

@@ -134,16 +134,16 @@ public:
         return { input.whiteBalanceConfiguration.temperature, input.whiteBalanceConfiguration.tint, 0.0f, 0.0f };
     }
 
-    static inline BASE_NS::Math::Vec4 GetFactorTone(const PostProcessConfiguration& input)
+    static inline BASE_NS::Math::Vec4 GetFactorColorAdjustments(const PostProcessConfiguration& input)
     {
         // .x = brightness, .y = contrast, .z = saturation, .w = hueShift
-        return { input.toneConfiguration.brightness, input.toneConfiguration.contrast,
-            input.toneConfiguration.saturation, input.toneConfiguration.hueShift };
+        return { input.colorAdjustmentsConfiguration.brightness, input.colorAdjustmentsConfiguration.contrast,
+            input.colorAdjustmentsConfiguration.saturation, input.colorAdjustmentsConfiguration.hueShift };
     }
 
-    static inline BASE_NS::Math::Vec4 GetFactorToneFilterColor(const PostProcessConfiguration& input)
+    static inline BASE_NS::Math::Vec4 GetFactorColorAdjustmentsFilterColor(const PostProcessConfiguration& input)
     {
-        return input.toneConfiguration.filterColor;
+        return input.colorAdjustmentsConfiguration.filterColor;
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorVignette(const PostProcessConfiguration& input)

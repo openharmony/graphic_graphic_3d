@@ -440,8 +440,9 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     ppStack.postProcesses.push_back(
         FillBuiltInData(PostProcessConstants::RENDER_WHITE_BALANCE, PostProcessConstants::RENDER_WHITE_BALANCE,
             defUserIdx, PostProcessConversionHelper::GetFactorWhiteBalance(ppConfig), {}));
-    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_TONE,
-        PostProcessConstants::RENDER_TONE, defUserIdx, PostProcessConversionHelper::GetFactorTone(ppConfig), {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_COLOR_ADJUSTMENTS,
+        PostProcessConstants::RENDER_COLOR_ADJUSTMENTS, defUserIdx,
+        PostProcessConversionHelper::GetFactorColorAdjustments(ppConfig), {}));
 
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_BLUR,
         PostProcessConfiguration::INDEX_BLUR, defUserIdx, PostProcessConversionHelper::GetFactorBlur(ppConfig), {}));
@@ -479,9 +480,9 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
         ppStack.globalFactors.factors[idx] = ppStack.postProcesses[idx].variables.factor;
     }
 
-    // fill userFactors for Tone filterColor (stored directly, not in customPropertyData)
-    ppStack.globalFactors.userFactors[PostProcessConstants::USER_INDEX_TONE_FILTER_COLOR] =
-        PostProcessConversionHelper::GetFactorToneFilterColor(ppConfig);
+    // fill userFactors for ColorAdjustments filterColor (stored directly, not in customPropertyData)
+    ppStack.globalFactors.userFactors[PostProcessConstants::USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR] =
+        PostProcessConversionHelper::GetFactorColorAdjustmentsFilterColor(ppConfig);
 }
 
 void RenderDataStorePostProcess::GetShaderProperties(
