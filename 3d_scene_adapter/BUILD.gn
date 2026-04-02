@@ -103,12 +103,15 @@ group("sceneAdapterInterface") {
   public_configs = [ ":scene_adapter_config" ]
 }
 
+
 ohos_source_set("scene_adapter_source") {
   sources = [
     "src/scene_adapter.cpp",
     "src/scene_bridge.cpp",
     "src/scene_bridge_ani.cpp",
     "src/offscreen_scene.cpp",
+    "src/mrt_depth_adapter.cpp",
+    "src/camera_utils.cpp"
   ]
 
   include_dirs = [
