@@ -294,16 +294,16 @@ private:
                     }
                 }
             }
-            void Recurse(CORE_NS::Entity id)
+            void Recurse(CORE_NS::Entity entityId)
             {
-                CORE3D_NS::NameComponent c = nm->Get(id);
+                CORE3D_NS::NameComponent c = nm->Get(entityId);
                 if (c.name.empty()) {
                     // create a name for unnamed node.
                     c.name = "Unnamed Node ";
                     c.name += BASE_NS::to_string(id++);
-                    nm->Set(id, c);
+                    nm->Set(entityId, c);
                 }
-                for (auto c : tree[id]) {
+                for (auto c : tree[entityId]) {
                     Recurse(c);
                 }
             }
