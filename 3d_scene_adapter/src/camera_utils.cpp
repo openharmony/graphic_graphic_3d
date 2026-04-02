@@ -15,6 +15,7 @@
 
 #include <string>
 #include "intf_camera_utils.h"
+#include "3d_widget_adapter_log.h"
 
 namespace OHOS::Render3D {
 std::string CameraConfigs::Dump()
