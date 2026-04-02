@@ -16,7 +16,6 @@
 #ifndef SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #define SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #include <cstddef>
-#include <string>
 
 namespace OHOS::Render3D {
 
@@ -96,20 +95,7 @@ struct CameraConfigs {
     CameraIntrinsics intrinsics_;
     Vector4f clearColor_ = {0, 0, 0, 1}; // RGBA = black opaque
 
-    std::string Dump()
-    {
-        std::string ret = "Camera:[";
-        ret += " position_: " + std::to_string(position_.x) + '\t' + std::to_string(position_.y) + '\t' +
-            std::to_string(position_.z) + '\t';
-        ret += " rotation_: " + std::to_string(rotation_.x) + '\t' + std::to_string(rotation_.y) + '\t' +
-                std::to_string(rotation_.z) + '\t' + std::to_string(rotation_.w) + '\t';
-        ret += "clearColor: " + std::to_string(clearColor_.x) + '\t' + std::to_string(clearColor_.y) + '\t' +
-            std::to_string(clearColor_.z) + '\t' + std::to_string(clearColor_.w) + '\t';
-        ret += "fov: " + std::to_string(intrinsics_.fov_) + "near: " + std::to_string(intrinsics_.near_) +
-            "far: " + std::to_string(intrinsics_.far_);
-        ret += "]";
-        return ret;
-    }
+    std::string Dump();
 };
 
 } // namespace OHOS::Render3D
