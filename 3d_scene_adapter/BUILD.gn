@@ -103,6 +103,7 @@ group("sceneAdapterInterface") {
   public_configs = [ ":scene_adapter_config" ]
 }
 
+
 ohos_source_set("scene_adapter_source") {
   sources = [
     "src/scene_adapter.cpp",

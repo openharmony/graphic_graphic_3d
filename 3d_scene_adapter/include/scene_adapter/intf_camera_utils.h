@@ -95,7 +95,7 @@ struct CameraConfigs {
     CameraIntrinsics intrinsics_;
     Vector4f clearColor_ = {0, 0, 0, 1}; // RGBA = black opaque
 
-    std::string Dump();
+    std::string Dump() const;
 };
 
 } // namespace OHOS::Render3D
