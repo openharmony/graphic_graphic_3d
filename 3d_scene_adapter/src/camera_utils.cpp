@@ -18,7 +18,7 @@
 #include "3d_widget_adapter_log.h"
 
 namespace OHOS::Render3D {
-std::string CameraConfigs::Dump()
+std::string CameraConfigs::Dump() const
 {
     std::string ret = "Camera:[";
     ret += " position_: " + std::to_string(position_.x) + '\t' + std::to_string(position_.y) + '\t' +

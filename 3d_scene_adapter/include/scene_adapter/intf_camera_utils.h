@@ -16,7 +16,7 @@
 #ifndef SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #define SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #include <cstddef>
-
+#include <string>
 namespace OHOS::Render3D {
 
 class Vector3f {
