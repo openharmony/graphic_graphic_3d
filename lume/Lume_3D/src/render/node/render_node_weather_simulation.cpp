@@ -21,7 +21,6 @@
 #include <3d/render/intf_render_node_scene_util.h>
 #include <base/math/mathf.h>
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/datastore/intf_render_data_store_pod.h>
@@ -38,6 +37,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 
 #include "3d/shaders/common/water_ripple_common.h"
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -54,7 +54,7 @@ void RenderNodeWeatherSimulation ::InitNode(IRenderNodeContextManager& renderNod
     auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
 
     if (!shaderMgr.IsValid(shader_) || !shaderMgr.IsValid(initShader_)) {
-        CORE_LOG_E("RenderNodeRippleSimulation needs a valid shader handle");
+        PLUGIN_LOG_E("RenderNodeRippleSimulation needs a valid shader handle");
     }
 
     const uint32_t set = 0U;
@@ -139,8 +139,8 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
 
         if (!RenderHandleUtil::IsValid(current_rippleTexture0) || !RenderHandleUtil::IsValid(current_rippleTexture1) ||
             !RenderHandleUtil::IsValid(current_rippleInputArgsBuffer)) {
-            CORE_LOG_W("RenderNodeWeatherSimulation: Invalid render handles for water plane %" PRIu64
-                       ". Skipping simulation for this plane.",
+            PLUGIN_LOG_W("RenderNodeWeatherSimulation: Invalid render handles for water plane %" PRIu64
+                         ". Skipping simulation for this plane.",
                 waterPlaneData.id);
             continue;
         }
@@ -150,8 +150,8 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
         cmdList.BindPipeline(psoHandle_);
         const auto textureImageDesc = gpuResourceMgr.GetImageDescriptor(current_rippleTexture0);
         if (textureImageDesc.width <= 1u || textureImageDesc.height <= 1u) {
-            CORE_LOG_W("RenderNodeWeatherSimulation: Invalid texture dimensions (%ux%u) for water plane %" PRIu64
-                       ". Skipping simulation.",
+            PLUGIN_LOG_W("RenderNodeWeatherSimulation: Invalid texture dimensions (%ux%u) for water plane %" PRIu64
+                         ". Skipping simulation.",
                 textureImageDesc.width, textureImageDesc.height, waterPlaneData.id);
             continue;
         }
@@ -211,8 +211,8 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
 
     if (!RenderHandleUtil::IsValid(current_rippleTexture0) || !RenderHandleUtil::IsValid(current_rippleTexture1) ||
         !RenderHandleUtil::IsValid(rippleInputArgsBuffer)) {
-        CORE_LOG_W("RenderNodeWeatherSimulation::InitializeSpecificPlaneRippleBuffers: Invalid render handles for "
-                   "water plane %" PRIu64 ". Cannot initialize.",
+        PLUGIN_LOG_W("RenderNodeWeatherSimulation::InitializeSpecificPlaneRippleBuffers: Invalid render handles for "
+                     "water plane %" PRIu64 ". Cannot initialize.",
             waterPlaneData.id);
         return;
     }
@@ -265,7 +265,7 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
 
             cmdList.Dispatch(tgcX, tgcY, 1);
         } else {
-            CORE_LOG_W("RenderNodeRippleSimulation: dispatchResources needed");
+            PLUGIN_LOG_W("RenderNodeRippleSimulation: dispatchResources needed");
         }
 
         // Add a barrier immediately after initializing this plane's textures.

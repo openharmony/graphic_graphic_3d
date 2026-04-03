@@ -24,30 +24,10 @@
 #include <core/ecs/intf_ecs.h>
 
 #include <scene/interface/intf_camera.h>
-
+#include "intf_camera_utils.h"
 namespace OHOS::Render3D {
 
-using Vector4f = Base::Math::Vec4;
-using Vector3f = Base::Math::Vec3;
-
-struct OffscreenCameraIntrinsics {
-    OffscreenCameraIntrinsics(float fov = 1, float near = 0.1, float far = 10) :
-                              fov_(fov), near_(near), far_(far) {}
-    float fov_ = 1;
-    float near_ = 0.1;
-    float far_ = 10;
-};
-
-struct OffscreenCameraConfigs {
-    // camera pose
-    Vector3f position_ = {0, 0, 0};
-    Vector4f rotation_ = {0, 0, 0, 1};
-
-    OffscreenCameraIntrinsics intrinsics_;
-    Vector4f clearColor_ = {0, 0, 0, 1}; // RGBA = black opaque
-
-    std::string Dump() const;
-};
+using OffscreenCameraConfigs = CameraConfigs;
 class IOffScreenScene {
 public:
     virtual bool OnWindowChange(const WindowChangeInfo& windowChangeInfo) = 0;

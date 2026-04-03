@@ -85,10 +85,10 @@ struct PostProcessConstants {
 
         /** Render empty */
         RENDER_UPSCALER_BIT = 5,
-        /** Render empty */
-        RENDER_EMPTY_6 = 6,
-        /** Render empty */
-        RENDER_EMPTY_7 = 7,
+        /** Render white balance */
+        RENDER_WHITE_BALANCE = 6,
+        /** Render tone */
+        RENDER_TONE = 7,
 
         /** Render blur index */
         RENDER_BLUR = 8,
@@ -114,8 +114,8 @@ struct PostProcessConstants {
         "render_color_conversion",
         "render_color_fringe",
         "render_upscaler_bit",
-        "",
-        "",
+        "render_white_balance",
+        "render_tone",
         "render_blur",
         "render_bloom",
         "render_fxaa",
@@ -133,6 +133,9 @@ struct PostProcessConstants {
     static constexpr uint32_t GLOBAL_FACTOR_COUNT { POST_PROCESS_INDICES::POST_PROCESS_COUNT };
     /** User global post process factor count */
     static constexpr uint32_t USER_GLOBAL_FACTOR_COUNT { 16u };
+
+    /** User factor index for Tone filterColor */
+    static constexpr uint32_t USER_INDEX_TONE_FILTER_COLOR { 0u };
     /** User local post process factor count */
     static constexpr uint32_t USER_LOCAL_FACTOR_COUNT { USER_GLOBAL_FACTOR_COUNT };
     /** User local post process factor byte size */
@@ -276,6 +279,32 @@ struct TonemapConfiguration {
     float exposure { 0.7f };
 };
 
+/** White balance configuration. */
+struct WhiteBalanceConfiguration {
+    /** Temperature */
+    float temperature { 0.0f };
+    /** Tint */
+    float tint { 0.0f };
+};
+
+/** Tone color adjustment configuration. */
+struct ToneConfiguration {
+    /** Color filter (RGBA, RGB used for filter, Alpha reserved) */
+    BASE_NS::Math::Vec4 filterColor { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    /** Hue shift in degrees (0-360) */
+    float hueShift { 0.0f };
+
+    /** Saturation (0.0 = grayscale, 1.0 = original) */
+    float saturation { 1.0f };
+
+    /** Brightness adjustment (-1.0 to 1.0, 0 = original) */
+    float brightness { 0.0f };
+
+    /** Contrast (0.0 = grayscale, 1.0 = original) */
+    float contrast { 1.0f };
+};
+
 /** Opto-electronic conversion functions. */
 struct ColorConversionConfiguration {
     /** Color conversion flags */
@@ -410,6 +439,10 @@ struct PostProcessConfiguration {
         ENABLE_COLOR_FRINGE_BIT = (1 << 4),
         /** Enable upscale */
         ENABLE_UPSCALE_BIT = (1 << 5),
+        /** Enable white balance */
+        ENABLE_WHITE_BALANCE_BIT = (1 << 6),
+        /** Enable tone color adjustment */
+        ENABLE_TONE_BIT = (1 << 7),
 
         /** Enable blur */
         ENABLE_BLUR_BIT = (1 << 8),
@@ -436,6 +469,8 @@ struct PostProcessConfiguration {
         INDEX_COLOR_CONVERSION = 3,
         INDEX_COLOR_FRINGE = 4,
         INDEX_UPSCALE = 5,
+        INDEX_WHITE_BALANCE = 6,
+        INDEX_TONE = 7,
 
         INDEX_BLUR = 8,
         INDEX_BLOOM = 9,
@@ -458,6 +493,10 @@ struct PostProcessConfiguration {
     DitherConfiguration ditherConfiguration;
     /** Color conversion configuration */
     ColorConversionConfiguration colorConversionConfiguration;
+    /** White balance configuration */
+    WhiteBalanceConfiguration whiteBalanceConfiguration;
+    /** Tone color adjustment configuration */
+    ToneConfiguration toneConfiguration;
 
     /** Color fringe configuration */
     ColorFringeConfiguration colorFringeConfiguration;
@@ -527,6 +566,8 @@ DECLARE_PROPERTY_TYPE(RENDER_NS::TonemapConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::VignetteConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::DitherConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::ColorConversionConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::WhiteBalanceConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::ToneConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::ColorFringeConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BloomConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BlurConfiguration);

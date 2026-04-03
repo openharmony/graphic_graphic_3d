@@ -71,7 +71,7 @@ array_view<const RenderDataMorph::Submesh> RenderDataStoreMorph::GetSubmeshes() 
 }
 
 // for plugin / factory interface
-refcnt_ptr<IRenderDataStore> RenderDataStoreMorph::Create(RENDER_NS::IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreMorph::Create(RENDER_NS::IRenderContext&, const char* name)
 {
     return refcnt_ptr<IRenderDataStore>(new RenderDataStoreMorph(name));
 }

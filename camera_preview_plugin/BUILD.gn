@@ -178,20 +178,20 @@ ohos_source_set("campreview_src") {
 }
 
 ohos_static_library("libCamPreview") {
-  public_deps = [
+  deps = [
     ":campreview_src",
     "${LUME_CORE_PATH}:lume_component_help_src",
   ]
 
   if (CAM_PREVIEW_EMBEDDED_ASSETS_ENABLED) {
-    deps = [ ":campreview_rofs_obj" ]
+    deps += [ ":campreview_rofs_obj" ]
   }
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
 
 ohos_shared_library(LIB_CAM_PREVIEW) {
-  public_deps = [ ":libCamPreview" ]
+  deps = [ ":libCamPreview" ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"
   subsystem_name = "graphic"

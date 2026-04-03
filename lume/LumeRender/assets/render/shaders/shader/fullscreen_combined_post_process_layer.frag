@@ -43,8 +43,18 @@ void main(void)
     PostProcessColorFringeBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_FRINGE], inUv,
         uPc.viewportSizeInvSize.zw, uImgSampler, layer, outColor.rgb, outColor.rgb);
 
+    PostProcessWhiteBalanceBlock(
+        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_WHITE_BALANCE], outColor.rgb, outColor.rgb);
+
     PostProcessBloomCombineBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_BLOOM], inUv,
         uBloomSampler, uDirtSampler, outColor.rgb, outColor.rgb);
+
+    PostProcessToneBlock(
+        uGlobalData.flags.x,
+        uGlobalData.factors[POST_PROCESS_INDEX_TONE],
+        uGlobalData.userFactors[POST_PROCESS_USER_INDEX_TONE_FILTER_COLOR], // filterColor
+        outColor.rgb,
+        outColor.rgb);
 
     PostProcessTonemapBlock(
         uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);

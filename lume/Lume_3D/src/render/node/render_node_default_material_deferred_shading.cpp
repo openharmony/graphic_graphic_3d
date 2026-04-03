@@ -25,7 +25,6 @@
 #include <base/containers/string.h>
 #include <base/math/matrix.h>
 #include <base/math/matrix_util.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -43,6 +42,7 @@
 
 #include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -86,8 +86,8 @@ RenderNodeDefaultMaterialDeferredShading::ShadowBuffers GetShadowBufferNodeData(
 RenderHandleReference CreatePostProcessDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {
-    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    CORE_STATIC_ASSERT(
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    PLUGIN_STATIC_ASSERT(
         sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
     return gpuResourceMgr.Create(
         handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -114,7 +114,7 @@ void RenderNodeDefaultMaterialDeferredShading::InitNode(IRenderNodeContextManage
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        CORE_LOG_V("%s: render data store post process configuration not set in render node graph",
+        PLUGIN_LOG_V("%s: render data store post process configuration not set in render node graph",
             renderNodeContextMgr_->GetName().data());
     }
 
@@ -418,7 +418,7 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDefaultShaderData()
             allShaderData_.defaultSpecilizationConstants[idx] = sscv.constants[idx];
         }
     } else {
-        CORE_LOG_W("RenderNode: %s, invalid shader given", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W("RenderNode: %s, invalid shader given", renderNodeContextMgr_->GetName().data());
     }
 }
 
@@ -439,7 +439,8 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
     if (compatibilityFlags != 0) {
         valid_ = true;
     } else {
-        CORE_LOG_W("RN: %s incompatible pipeline layout for given shader", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W("RenderNode: %s incompatible pipeline layout for given shader",
+            renderNodeContextMgr_->GetName().data());
     }
 
     // currently we allocate just in case based on both layouts to make sure that we have enough descriptors
@@ -488,8 +489,8 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
         valid = valid && CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.images);
         valid = valid && CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.samplers);
         if (!valid) {
-            CORE_LOG_W("RN: %s does not support user bindings for sets <= %u", renderNodeContextMgr_->GetName().data(),
-                BUILT_IN_SETS_COUNT);
+            PLUGIN_LOG_W("RenderNode: %s does not support user bindings for sets <= %u",
+                renderNodeContextMgr_->GetName().data(), BUILT_IN_SETS_COUNT);
         }
         allDescriptorSets_.hasUserSet2 = !(
             allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetLayoutBindingResources(BUILT_IN_SETS_COUNT)
@@ -541,9 +542,9 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateGlobalPostProcessUbo()
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const RenderPostProcessConfiguration rppc =
         renderNodeContextMgr_->GetRenderNodeUtil().GetRenderPostProcessConfiguration(ppGlobalConfig_);
-    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
-    CORE_STATIC_ASSERT(sizeof(LocalPostProcessStruct) ==
-                       sizeof(IRenderDataStorePostProcess::PostProcess::Variables::customPropertyData));
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    PLUGIN_STATIC_ASSERT(sizeof(LocalPostProcessStruct) ==
+                         sizeof(IRenderDataStorePostProcess::PostProcess::Variables::customPropertyData));
     if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.postProcess.GetHandle())); data) {
         const auto* dataEnd = data + sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct);
         // global data

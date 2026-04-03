@@ -33,7 +33,7 @@ public:
 };
 
 /**
- * @brief The Bloom class wraps a post process effect which implements ITonemap.
+ * @brief The Tonemap class wraps a post process effect which implements ITonemap.
  */
 class Tonemap : public PostProcessEffect {
 public:
@@ -42,6 +42,36 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(TonemapType, Type)
     /// @see ITonemap::Exposure
     META_INTERFACE_OBJECT_PROPERTY(float, Exposure)
+};
+
+/**
+ * @brief The WhiteBalance class wraps a post process effect which implements IWhiteBalance.
+ */
+class WhiteBalance : public PostProcessEffect {
+public:
+    META_INTERFACE_OBJECT(WhiteBalance, PostProcessEffect, IWhiteBalance)
+    /// @see IWhiteBalance::Temperature
+    META_INTERFACE_OBJECT_PROPERTY(float, Temperature)
+    /// @see IWhiteBalance::Tint
+    META_INTERFACE_OBJECT_PROPERTY(float, Tint)
+};
+
+/**
+ * @brief The Tone class wraps a post process effect which implements ITone.
+ */
+class Tone : public PostProcessEffect {
+public:
+    META_INTERFACE_OBJECT(Tone, PostProcessEffect, ITone)
+    /// @see ITone::FilterColor
+    META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec4, FilterColor)
+    /// @see ITone::HueShift
+    META_INTERFACE_OBJECT_PROPERTY(float, HueShift)
+    /// @see ITone::Saturation
+    META_INTERFACE_OBJECT_PROPERTY(float, Saturation)
+    /// @see ITone::Brightness
+    META_INTERFACE_OBJECT_PROPERTY(float, Brightness)
+    /// @see ITone::Contrast
+    META_INTERFACE_OBJECT_PROPERTY(float, Contrast)
 };
 
 /**
@@ -241,12 +271,16 @@ public:
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Fxaa, Fxaa)
     /// @see IPostProcess::Taa
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Taa, Taa)
+    /// @see IPostProcess::Tone
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Tone, Tone)
     /// @see IPostProcess::Vignette
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Vignette, Vignette)
     /// @see IPostProcess::LensFlare
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::LensFlare, LensFlare)
-    /// @see IPostProcess::LensFlare
+    /// @see IPostProcess::Upscale
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Upscale, Upscale)
+    /// @see IPostProcess::WhiteBalance
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::WhiteBalance, WhiteBalance)
 };
 
 SCENE_END_NAMESPACE()

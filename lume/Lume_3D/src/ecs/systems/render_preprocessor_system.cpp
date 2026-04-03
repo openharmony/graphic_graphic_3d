@@ -26,7 +26,6 @@
 #include <3d/render/intf_render_data_store_morph.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/scoped_handle.h>
@@ -34,6 +33,8 @@
 #include <core/property_tools/property_macros.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
+
+#include "util/log.h"
 
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(RENDER_NS::IRenderDataStoreManager*);
@@ -72,12 +73,12 @@ RenderPreprocessorSystem::RenderPreprocessorSystem(IEcs& ecs)
 {
     if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>()) {
         if (auto* engineClassRegister = engine->GetInterface<IClassRegister>()) {
-            renderContext_ = GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
+            renderContext_ = CORE3D_NS::GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
         }
     }
     if (renderContext_) {
         if (auto* renderClassRegister = renderContext_->GetInterface<IClassRegister>()) {
-            graphicsContext_ = GetInstance<IGraphicsContext>(*renderClassRegister, UID_GRAPHICS_CONTEXT);
+            graphicsContext_ = CORE3D_NS::GetInstance<IGraphicsContext>(*renderClassRegister, UID_GRAPHICS_CONTEXT);
         }
     }
 }
@@ -196,7 +197,14 @@ bool RenderPreprocessorSystem::Update(bool frameRenderingQueued, uint64_t totalT
     return false;
 }
 
-void RenderPreprocessorSystem::Uninitialize() {}
+void RenderPreprocessorSystem::Uninitialize()
+{
+    dsScene_.reset();
+    dsCamera_.reset();
+    dsLight_.reset();
+    dsMaterial_.reset();
+    dsMorph_.reset();
+}
 
 ISystem* IRenderPreprocessorSystemInstance(IEcs& ecs)
 {

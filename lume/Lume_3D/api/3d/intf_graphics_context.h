@@ -117,6 +117,19 @@ public:
      */
     virtual CreateInfo GetCreateInfo() const = 0;
 
+    /** Options for a partial ECS update.
+     */
+    struct UpdateOptions {
+        /** Update the world transformations of all the nodes. */
+        bool worldTransforms;
+    };
+
+    /** Performs a partial update of 3D related systems. This is not a replacement of a regular IEcs::Update, but
+     * intended for updating some states after loading, but before rendering the first frame. Like any other ECS related
+     * functionality, they all need to be externally synchronized.
+     */
+    virtual void UpdateEcs(CORE_NS::IEcs& ecs, const UpdateOptions& options) const = 0;
+
 protected:
     IGraphicsContext() = default;
     virtual ~IGraphicsContext() = default;

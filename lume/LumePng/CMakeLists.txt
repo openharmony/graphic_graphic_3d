@@ -189,3 +189,8 @@ export(EXPORT PluginPNGTargets
        FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/PluginPNGTargets.cmake"
        NAMESPACE PluginPNG::
 )
+
+option(PNG_UNIT_TESTS_ENABLED "Build LumePng unit tests" OFF)
+if(PNG_UNIT_TESTS_ENABLED)
+    add_subdirectory(test/unittest/api_unit_test)
+endif()

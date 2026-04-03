@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.18)
+if (NOT TARGET AGPEngine::AGPEngine)
+    if (EXISTS "${CORE_ROOT_DIRECTORY}/CMakeLists.txt")
+        message("Found core engine source in ${CORE_ROOT_DIRECTORY}")
+        add_subdirectory("${CORE_ROOT_DIRECTORY}" build)
+    elseif()
+    endif()
+endif()

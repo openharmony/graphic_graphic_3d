@@ -20,7 +20,6 @@
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
-#include <core/log.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_render_context.h>
@@ -29,6 +28,7 @@
 #include "gltf2_exporter.h"
 #include "gltf2_importer.h"
 #include "gltf2_loader.h"
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -73,7 +73,7 @@ GLTFLoadResult Gltf2::LoadGLTF(array_view<uint8_t const> data)
 Entity Gltf2::ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData, const GLTFResourceData& gltfResourceData,
     IEcs& ecs, Entity rootEntity, GltfSceneImportFlags flags)
 {
-    CORE_ASSERT(renderContext_);
+    PLUGIN_ASSERT(renderContext_);
     if (renderContext_) {
         const GLTF2::Data& data = static_cast<const GLTF2::Data&>(gltfData);
         return ImportScene(renderContext_->GetDevice(), sceneIndex, data, gltfResourceData, ecs, rootEntity, 0U, flags);
@@ -84,7 +84,7 @@ Entity Gltf2::ImportGltfScene(size_t sceneIndex, const IGLTFData& gltfData, cons
 Entity Gltf2::ImportGltfScene(const size_t sceneIndex, const IGLTFData& gltfData,
     const GLTFResourceData& gltfResourceData, IEcs& ecs, const uint32_t level, const GltfSceneImportFlags flags)
 {
-    CORE_ASSERT(renderContext_);
+    PLUGIN_ASSERT(renderContext_);
     if (renderContext_) {
         const GLTF2::Data& data = static_cast<const GLTF2::Data&>(gltfData);
         return ImportScene(renderContext_->GetDevice(), sceneIndex, data, gltfResourceData, ecs, {}, level, flags);
@@ -94,7 +94,7 @@ Entity Gltf2::ImportGltfScene(const size_t sceneIndex, const IGLTFData& gltfData
 
 IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs)
 {
-    CORE_ASSERT(engine_ && renderContext_);
+    PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
         if (auto pool = ecs.GetThreadPool(); pool) {
             return CreateGLTF2Importer(ecs, *pool);
@@ -109,7 +109,7 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs)
 
 IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs, IThreadPool& pool)
 {
-    CORE_ASSERT(engine_ && renderContext_);
+    PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
         auto ret = BASE_NS::make_unique<GLTF2::GLTF2Importer>(*engine_, *renderContext_, ecs, pool);
         if (ret->IsValid()) {
@@ -131,7 +131,7 @@ ISceneLoader::Result Gltf2::Load(string_view uri)
 
 ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs)
 {
-    CORE_ASSERT(engine_ && renderContext_);
+    PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
         return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs) };
     }
@@ -140,7 +140,7 @@ ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs)
 
 ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs, IThreadPool& pool)
 {
-    CORE_ASSERT(engine_ && renderContext_);
+    PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
         return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs, pool) };
     }
@@ -183,7 +183,7 @@ void Gltf2::Unref() {}
 // Api exporting function.
 bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)
 {
-    CORE_ASSERT(engine_);
+    PLUGIN_ASSERT(engine_);
     if (!engine_) {
         return false;
     }

@@ -27,7 +27,6 @@
 #include <base/containers/unordered_map.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/property/property_types.h>
@@ -127,6 +126,27 @@ bool LookupNodesByComponent(
 
     return result;
 }
+
+void CalculateWorldMatrix(
+    Math::Mat4X4& pm, ILocalMatrixComponentManager& localMatrixManager, const ComponentQuery::ResultRow& row)
+{
+    if (auto local = localMatrixManager.Read(row.components[LOCAL_INDEX])) {
+        pm = pm * local->matrix;
+    }
+}
+
+void UpdateWorldMatrix(
+    const Math::Mat4X4& pm, IWorldMatrixComponentManager& worldMatrixManager, const ComponentQuery::ResultRow& row)
+{
+    auto id = row.components[WORLD_INDEX];
+    if (id == IComponentManager::INVALID_COMPONENT_ID) {
+        worldMatrixManager.Create(row.entity);
+        id = worldMatrixManager.GetComponentId(row.entity);
+    }
+    if (auto worldMatrixHandle = worldMatrixManager.Write(row.components[WORLD_INDEX])) {
+        worldMatrixHandle->matrix = pm;
+    }
+}
 } // namespace
 
 // Interface that allows nodes to access other nodes and request cache updates.
@@ -219,7 +239,7 @@ public:
         nodeAccess_.Refresh();
 
         // Ensure we are not ancestors of the new parent.
-        CORE_ASSERT(IsAncestorOf(node) == false);
+        PLUGIN_ASSERT(IsAncestorOf(node) == false);
 
         nodeAccess_.SetParent(*this, node);
     }
@@ -342,39 +362,48 @@ public:
 
     bool RemoveChild(size_t index) override
     {
-        if (EntityUtil::IsValid(entity_) && !children_.empty()) {
-            nodeAccess_.Refresh();
-            if (index < children_.size()) {
-                if (auto* node = children_[index]) {
-                    nodeAccess_.SetParent(*node, *nodeAccess_.GetNode({}));
-                    nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
-                    return true;
-                } else {
-                    CORE_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, index);
-                    children_.erase(children_.cbegin() + static_cast<ptrdiff_t>(index));
+        if (!EntityUtil::IsValid(entity_) || children_.empty()) {
+            return false;
+        }
+        nodeAccess_.Refresh();
+        if (index < children_.size()) {
+            if (auto* node = children_[index]) {
+                auto root = nodeAccess_.GetNode({});
+                if (!root) {
+                    return false;
                 }
+                nodeAccess_.SetParent(*node, *root);
+                nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
+                return true;
+            } else {
+                PLUGIN_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, index);
+                children_.erase(children_.cbegin() + static_cast<ptrdiff_t>(index));
             }
         }
+
         return false;
     }
 
     bool RemoveChildren() override
     {
-        if (EntityUtil::IsValid(entity_) && !children_.empty()) {
-            auto root = nodeAccess_.GetNode({});
-            while (!children_.empty()) {
-                if (auto* node = children_.back()) {
-                    const auto index = children_.size() - 1U;
-                    nodeAccess_.SetParent(*node, *root);
-                    nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
-                } else {
-                    CORE_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, children_.size() - 1U);
-                    children_.pop_back();
-                }
-            }
-            return true;
+        if (!EntityUtil::IsValid(entity_) || children_.empty()) {
+            return false;
         }
-        return false;
+        auto root = nodeAccess_.GetNode({});
+        if (!root) {
+            return false;
+        }
+        while (!children_.empty()) {
+            if (auto* node = children_.back()) {
+                const auto index = children_.size() - 1U;
+                nodeAccess_.SetParent(*node, *root);
+                nodeAccess_.Notify(*this, INodeSystem::SceneNodeListener::EventType::REMOVED, *node, index);
+            } else {
+                PLUGIN_LOG_W("Node %" PRIx64 " with null child at %zu", entity_.id, children_.size() - 1U);
+                children_.pop_back();
+            }
+        }
+        return true;
     }
 
     const ISceneNode* LookupNodeByPath(string_view const& path) const override
@@ -1062,6 +1091,12 @@ struct NodeSystem::State {
     bool parentEnabled;
 };
 
+struct NodeSystem::NodeInfo {
+    Entity parent;
+    bool isEffectivelyEnabled;
+    bool effectivelyEnabledChanged;
+};
+
 void NodeSystem::SetActive(bool state)
 {
     active_ = state;
@@ -1243,6 +1278,57 @@ void NodeSystem::RemoveListener(SceneNodeListener& listener)
     cache_->RemoveListener(listener);
 }
 
+void NodeSystem::RefreshAllNodes()
+{
+    nodeQuery_.Execute();
+
+    // Make sure node cache is valid.
+    cache_->Refresh();
+
+    stack_.clear();
+    stack_.reserve(nodeManager_.GetComponentCount());
+    for (auto* child : GetRootNode().GetChildren()) {
+        if (child) {
+            stack_.push_back(State { static_cast<SceneNode*>(child), Math::IDENTITY_4X4, child->GetEnabled() });
+        }
+    }
+    while (!stack_.empty()) {
+        auto state = stack_.back();
+        stack_.pop_back();
+
+        auto row = nodeQuery_.FindResultRow(state.node->GetEntity());
+        if (!row) {
+            continue;
+        }
+        const auto nodeInfo = ProcessNode(state.node, state.parentEnabled, row);
+
+        Math::Mat4X4& pm = state.parentMatrix;
+
+        if (row->IsValidComponentId(LOCAL_INDEX)) {
+            CalculateWorldMatrix(pm, localMatrixManager_, *row);
+            UpdateWorldMatrix(pm, worldMatrixManager_, *row);
+
+            // Save the values that were used to calculate current world matrix.
+            state.node->lastState_.localMatrixGeneration =
+                localMatrixManager_.GetComponentGeneration(row->components[LOCAL_INDEX]);
+            if (state.node->lastState_.parent != nodeInfo.parent) {
+                state.node->lastState_.parent = nodeInfo.parent;
+                state.node->lastState_.parentNode = static_cast<SceneNode*>(GetNode(nodeInfo.parent));
+            }
+        }
+        for (auto* child : state.node->GetChildren()) {
+            if (!child) {
+                continue;
+            }
+            stack_.push_back(State { static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled });
+        }
+    }
+
+    // Store generation counters.
+    localMatrixGeneration_ = localMatrixManager_.GetGenerationCounter();
+    nodeGeneration_ = nodeManager_.GetGenerationCounter();
+}
+
 void NodeSystem::OnComponentEvent(IEcs::ComponentListener::EventType type, const IComponentManager& componentManager,
     array_view<const Entity> entities)
 {
@@ -1306,8 +1392,8 @@ void NodeSystem::Initialize()
         { localMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL },
         { worldMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL },
     };
-    CORE_ASSERT(&operations[LOCAL_INDEX - 1U].target == &localMatrixManager_);
-    CORE_ASSERT(&operations[WORLD_INDEX - 1U].target == &worldMatrixManager_);
+    PLUGIN_ASSERT(&operations[LOCAL_INDEX - 1U].target == &localMatrixManager_);
+    PLUGIN_ASSERT(&operations[WORLD_INDEX - 1U].target == &worldMatrixManager_);
     nodeQuery_.SetupQuery(nodeManager_, operations, true);
     nodeQuery_.SetEcsListenersEnabled(true);
     ecs_.AddListener(nodeManager_, *this);
@@ -1361,12 +1447,12 @@ bool NodeSystem::Update(bool, uint64_t, uint64_t)
                     parentEnabled = nodeHandle->effectivelyEnabled;
                 } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-                    CORE_LOG_W("%" PRIx64 " missing Node", row->entity.id);
+                    PLUGIN_LOG_W("%" PRIx64 " missing Node", row->entity.id);
 #endif
                 }
             } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-                CORE_LOG_W("Parent %" PRIx64 " not found from component query", parent->GetEntity().id);
+                PLUGIN_LOG_W("Parent %" PRIx64 " not found from component query", parent->GetEntity().id);
 #endif
                 parentEnabled = true;
                 parentMatrix = Math::IDENTITY_4X4;
@@ -1451,12 +1537,6 @@ vector<ISceneNode*> NodeSystem::CollectChangedNodes()
     return result;
 }
 
-struct NodeSystem::NodeInfo {
-    Entity parent;
-    bool isEffectivelyEnabled;
-    bool effectivelyEnabledChanged;
-};
-
 NodeSystem::NodeInfo NodeSystem::ProcessNode(
     SceneNode* node, const bool parentEnabled, const ComponentQuery::ResultRow* row)
 {
@@ -1501,25 +1581,8 @@ void NodeSystem::UpdateTransformations(ISceneNode& node, Math::Mat4X4 const& mat
         Math::Mat4X4& pm = state.parentMatrix;
 
         if (nodeInfo.isEffectivelyEnabled && row->IsValidComponentId(LOCAL_INDEX)) {
-            if (auto local = localMatrixManager_.Read(row->components[LOCAL_INDEX])) {
-                pm = pm * local->matrix;
-            } else {
-#if (CORE3D_VALIDATION_ENABLED == 1)
-                CORE_LOG_W("%" PRIx64 " missing LocalWorldMatrix", row->entity.id);
-#endif
-            }
-
-            if (row->IsValidComponentId(WORLD_INDEX)) {
-                if (auto worldMatrixHandle = worldMatrixManager_.Write(row->components[WORLD_INDEX])) {
-                    worldMatrixHandle->matrix = pm;
-                } else {
-#if (CORE3D_VALIDATION_ENABLED == 1)
-                    CORE_LOG_W("%" PRIx64 " missing WorldMatrix", row->entity.id);
-#endif
-                }
-            } else {
-                worldMatrixManager_.Set(row->entity, { pm });
-            }
+            CalculateWorldMatrix(pm, localMatrixManager_, *row);
+            UpdateWorldMatrix(pm, worldMatrixManager_, *row);
 
             // Save the values that were used to calculate current world matrix.
             state.node->lastState_.localMatrixGeneration =

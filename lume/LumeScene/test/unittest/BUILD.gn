@@ -78,7 +78,6 @@ ohos_unittest("lume_scene_api_test") {
     "${LUME_PNG_PATH}:lume_png_api",
     "${LUME_JPG_PATH}:lume_jpg_api",
     "${LUME_CORE3D_PATH}:lume_3d_api",
-    "${LUME_LUME3DTEXT_PATH}:lume_3dtext_api",
 
     "${LUME_BASE_PATH}:lume_unit_test_config",
     ":lume_scene_test_config"
@@ -111,7 +110,6 @@ ohos_unittest("lume_scene_api_test") {
     "api_unit_test/src/component/mesh_component_test.cpp",
     "api_unit_test/src/component/node_component_test.cpp",
     "api_unit_test/src/component/postprocess_component_test.cpp",
-    "api_unit_test/src/component/text_component_test.cpp",
     "api_unit_test/src/component/transform_component_test.cpp",
 
     # Core
@@ -133,7 +131,6 @@ ohos_unittest("lume_scene_api_test") {
     "api_unit_test/src/node/new_node_type_test.cpp",
     "api_unit_test/src/node/node_startable_test.cpp",
     "api_unit_test/src/node/node_test.cpp",
-    "api_unit_test/src/node/text_node_test.cpp",
 
     # Scene
     "api_unit_test/src/scene/scene_ser_compat_test.cpp",

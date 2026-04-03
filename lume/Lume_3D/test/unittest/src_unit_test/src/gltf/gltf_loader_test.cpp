@@ -1187,13 +1187,12 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidAssetTest, testing::ext::TestSize.Level1)
     delete gltf2;
 }
 
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: InvalidAnimationTest
  * @tc.desc: Tests for Invalid Animation Test. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_GLTFLoaderTest, DISABLED_InvalidAnimationTest, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_GLTFLoaderTest, InvalidAnimationTest, testing::ext::TestSize.Level1)
 {
     UTest::TestContext* testContext = UTest::GetTestContext();
     auto engine = testContext->engine;
@@ -1246,7 +1245,6 @@ UNIT_TEST(SRC_GLTFLoaderTest, DISABLED_InvalidAnimationTest, testing::ext::TestS
 
     delete gltf2;
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: InvalidLightTest
@@ -1576,6 +1574,10 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidSamplerTest, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
 {
+    constexpr string_view expectedJsonChunkError = "Parsing GLTF failed: expected JSON chunk";
+    constexpr uint32_t glbVersion = 2;
+    constexpr uint32_t chunkAlignment = 4u;
+
     UTest::TestContext* testContext = UTest::GetTestContext();
     auto engine = testContext->engine;
     auto renderContext = testContext->renderContext;
@@ -1609,7 +1611,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = 2;
+        header.version = glbVersion;
         header.length = 1000;
         vector<uint8_t> data;
         data.resize(100);
@@ -1627,7 +1629,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = 2;
+        header.version = glbVersion;
         header.length = 2;
         vector<uint8_t> data;
         data.resize(2);
@@ -1645,7 +1647,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = 2;
+        header.version = glbVersion;
         header.length = 2;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = 7;
@@ -1667,7 +1669,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = 2;
+        header.version = glbVersion;
         header.length = 2;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
@@ -1689,7 +1691,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = 2;
+        header.version = glbVersion;
         header.length = 128;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
@@ -1707,6 +1709,67 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
         EXPECT_FALSE(gltf.success);
 
         engine->GetFileManager().DeleteFile("cache://tmp.glb");
+    }
+
+    {
+        GLTF2::GLBHeader header;
+        header.magic = GLTF2::GLTF_MAGIC;
+        header.version = glbVersion;
+        header.length = sizeof(GLTF2::GLBHeader); // 12: header only
+        GLTF2::GLBChunk chunk;
+        chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
+        chunk.chunkLength = 0xFFFFFFF0u;
+        auto tmpFile = engine->GetFileManager().CreateFile("cache://tmp.glb");
+        tmpFile->Write(reinterpret_cast<uint8_t*>(&header), sizeof(header));
+        tmpFile->Write(reinterpret_cast<uint8_t*>(&chunk), sizeof(chunk));
+        tmpFile->Close();
+
+        auto gltf = gltf2->LoadGLTF("cache://tmp.glb");
+        EXPECT_FALSE(gltf.success);
+        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
+
+        engine->GetFileManager().DeleteFile("cache://tmp.glb");
+    }
+
+    {
+        GLTF2::GLBHeader header;
+        header.magic = GLTF2::GLTF_MAGIC;
+        header.version = glbVersion;
+        header.length = static_cast<uint32_t>(sizeof(GLTF2::GLBHeader) + sizeof(GLTF2::GLBChunk) - 1u);
+        GLTF2::GLBChunk chunk;
+        chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
+        chunk.chunkLength = chunkAlignment;
+        vector<uint8_t> data(chunkAlignment, 0u);
+        auto tmpFile = engine->GetFileManager().CreateFile("cache://tmp.glb");
+        tmpFile->Write(reinterpret_cast<uint8_t*>(&header), sizeof(header));
+        tmpFile->Write(reinterpret_cast<uint8_t*>(&chunk), sizeof(chunk));
+        tmpFile->Write(data.data(), data.size());
+        tmpFile->Close();
+
+        auto gltf = gltf2->LoadGLTF("cache://tmp.glb");
+        EXPECT_FALSE(gltf.success);
+        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
+
+        engine->GetFileManager().DeleteFile("cache://tmp.glb");
+    }
+
+    {
+        GLTF2::GLBHeader header;
+        header.magic = GLTF2::GLTF_MAGIC;
+        header.version = glbVersion;
+        header.length = sizeof(GLTF2::GLBHeader); // 12: header only
+        GLTF2::GLBChunk chunk;
+        chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
+        chunk.chunkLength = 0xFFFFFFF0u;
+        vector<uint8_t> data;
+        data.insert(data.end(), reinterpret_cast<uint8_t const*>(&header),
+            reinterpret_cast<uint8_t const*>(&header) + sizeof(header));
+        data.insert(data.end(), reinterpret_cast<uint8_t const*>(&chunk),
+            reinterpret_cast<uint8_t const*>(&chunk) + sizeof(chunk));
+
+        auto gltf = gltf2->LoadGLTF(array_view<uint8_t const>(data.data(), data.size()));
+        EXPECT_FALSE(gltf.success);
+        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
     }
 
     delete gltf2;

@@ -14,7 +14,6 @@
  */
 
 #include <array>
-#include <vulkan/vulkan.h>
 
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/environment_component.h>
@@ -300,6 +299,7 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: AnimationWithReflectionTest
  * @tc.desc: Tests for Animation With Reflection Test. [AUTO-GENERATED]
@@ -327,3 +327,4 @@ UNIT_TEST(API_GfxTest, AnimationWithReflectionTest, testing::ext::TestSize.Level
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

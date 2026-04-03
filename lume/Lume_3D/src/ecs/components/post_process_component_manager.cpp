@@ -33,9 +33,11 @@ using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::LensFlareConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
+using RENDER_NS::ToneConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
+using RENDER_NS::WhiteBalanceConfiguration;
 
 using CORE3D_NS::PostProcessComponent;
 
@@ -44,7 +46,8 @@ ENUM_TYPE_METADATA(PostProcessComponent::FlagBits, ENUM_VALUE(TONEMAP_BIT, "Tone
     ENUM_VALUE(UPSCALE_BIT, "Upscale"), ENUM_VALUE(DITHER_BIT, "Dither"), ENUM_VALUE(BLUR_BIT, "Blur"),
     ENUM_VALUE(COLOR_CONVERSION_BIT, "Color Conversion"), ENUM_VALUE(FXAA_BIT, "Fast Approximate Anti-Aliasing"),
     ENUM_VALUE(TAA_BIT, "Temporal Anti-Aliasing"), ENUM_VALUE(DOF_BIT, "Depth of Field"),
-    ENUM_VALUE(MOTION_BLUR_BIT, "Motion Blur"), ENUM_VALUE(LENS_FLARE_BIT, "Lens Flare"))
+    ENUM_VALUE(MOTION_BLUR_BIT, "Motion Blur"), ENUM_VALUE(LENS_FLARE_BIT, "Lens Flare"),
+    ENUM_VALUE(WHITE_BALANCE_BIT, "White Balance"), ENUM_VALUE(TONE_BIT, "Tone"))
 
 /** Extend propertysystem with the enums */
 
@@ -110,6 +113,13 @@ DATA_TYPE_METADATA(RENDER_NS::BlurConfiguration, MEMBER_PROPERTY(blurType, "Type
 DATA_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration,
     BITFIELD_MEMBER_PROPERTY(conversionFunctionType, "Conversion Function", PropertyFlags::IS_BITFIELD,
         RENDER_NS::ColorConversionConfiguration::ConversionFunctionType))
+
+DATA_TYPE_METADATA(RENDER_NS::WhiteBalanceConfiguration, MEMBER_PROPERTY(temperature, "Temperature", 0),
+    MEMBER_PROPERTY(tint, "Tint", 0))
+
+DATA_TYPE_METADATA(RENDER_NS::ToneConfiguration, MEMBER_PROPERTY(filterColor, "Filter Color", 0),
+    MEMBER_PROPERTY(hueShift, "Hue Shift", 0), MEMBER_PROPERTY(saturation, "Saturation", 0),
+    MEMBER_PROPERTY(brightness, "Brightness", 0), MEMBER_PROPERTY(contrast, "Contrast", 0))
 
 DATA_TYPE_METADATA(
     RENDER_NS::FxaaConfiguration, MEMBER_PROPERTY(sharpness, "Sharpness", 0), MEMBER_PROPERTY(quality, "Quality", 0))

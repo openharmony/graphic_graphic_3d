@@ -26,7 +26,7 @@ namespace OHOS::Render3D::KITETS {
 class UnlitMaterialImpl : virtual public MaterialImpl {
 public:
     UnlitMaterialImpl(const std::shared_ptr<MaterialETS> mat);
-    ~UnlitMaterialImpl();
+    virtual ~UnlitMaterialImpl();
 
     ::SceneResources::MaterialProperty getBaseColorInner();
     void setBaseColorInner(::SceneResources::weak::MaterialProperty color);

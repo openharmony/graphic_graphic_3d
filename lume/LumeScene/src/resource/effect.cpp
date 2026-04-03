@@ -33,6 +33,7 @@ constexpr auto COLOR_FRINGE_TYPE = PROPERTYTYPE(RENDER_NS::ColorFringeConfigurat
 constexpr auto DITHER_TYPE = PROPERTYTYPE(RENDER_NS::DitherConfiguration);
 constexpr auto BLUR_TYPE = PROPERTYTYPE(RENDER_NS::BlurConfiguration);
 constexpr auto TONEMAP_TYPE = PROPERTYTYPE(RENDER_NS::TonemapConfiguration);
+constexpr auto TONE_TYPE = PROPERTYTYPE(RENDER_NS::ToneConfiguration);
 constexpr auto COLOR_CONVERSION_TYPE = PROPERTYTYPE(RENDER_NS::ColorConversionConfiguration);
 constexpr auto FXAA_TYPE = PROPERTYTYPE(RENDER_NS::FxaaConfiguration);
 constexpr auto TAA_TYPE = PROPERTYTYPE(RENDER_NS::TaaConfiguration);
@@ -40,6 +41,7 @@ constexpr auto DOF_TYPE = PROPERTYTYPE(RENDER_NS::DofConfiguration);
 constexpr auto MOTION_BLUR_TYPE = PROPERTYTYPE(RENDER_NS::MotionBlurConfiguration);
 constexpr auto LENS_FLARE_TYPE = PROPERTYTYPE(RENDER_NS::LensFlareConfiguration);
 constexpr auto UPSCALE_TYPE = PROPERTYTYPE(RENDER_NS::UpscaleConfiguration);
+constexpr auto WHITE_BALANCE_TYPE = PROPERTYTYPE(RENDER_NS::WhiteBalanceConfiguration);
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -118,8 +120,8 @@ void Effect::PopulateProperties()
     // List of know PostProcess property types that we should traverse into (even if they are known types by our meta
     // system)
     static std::set<uint64_t> knownPostProcesses = { BLOOM_TYPE, VIGNETTE_TYPE, COLOR_FRINGE_TYPE, DITHER_TYPE,
-        BLUR_TYPE, TONEMAP_TYPE, COLOR_CONVERSION_TYPE, FXAA_TYPE, TAA_TYPE, DOF_TYPE, MOTION_BLUR_TYPE,
-        LENS_FLARE_TYPE, UPSCALE_TYPE };
+        BLUR_TYPE, TONEMAP_TYPE, TONE_TYPE, COLOR_CONVERSION_TYPE, FXAA_TYPE, TAA_TYPE, DOF_TYPE, MOTION_BLUR_TYPE,
+        LENS_FLARE_TYPE, UPSCALE_TYPE, WHITE_BALANCE_TYPE };
 
     BASE_NS::vector<META_NS::IEngineValue::Ptr> valid;
     BASE_NS::vector<META_NS::IEngineValue::Ptr> values;

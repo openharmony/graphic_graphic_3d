@@ -29,11 +29,9 @@
 #include <core/io/intf_file_manager.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <render/datastore/intf_render_data_store_default_gpu_resource_data_copy.h>
-#include <render/gles/intf_device_gles.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 #include <render/intf_renderer.h>
-#include <render/vulkan/intf_device_vk.h>
 
 #if (RENDER_HAS_VULKAN_BACKEND)
 #include <vulkan/vulkan.h>
@@ -118,11 +116,22 @@ private:
     RenderHandleReference imageHandle_;
     RenderHandleReference bufferHandle_;
 
+#if RENDER_HAS_VULKAN_BACKEND
     DeviceBackendType testBackend_ = DeviceBackendType::VULKAN;
+#elif RENDER_HAS_GLES_BACKEND
+    DeviceBackendType testBackend_ = DeviceBackendType::OPENGLES;
+#elif RENDER_HAS_GL_BACKEND
+    DeviceBackendType testBackend_ = DeviceBackendType::OPENGL;
+#endif
 #if defined(RENDER_HAS_GL_BACKEND) && RENDER_HAS_GL_BACKEND
     BackendExtraGL glExtra_;
 #endif
+#if RENDER_HAS_GLES_BACKEND
+    BackendExtraGLES glesExtra_;
+#endif
+#if RENDER_HAS_VULKAN_BACKEND
     BackendExtraVk vkExtra_;
+#endif
 
     uint64_t surface_;
 };

@@ -437,10 +437,11 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     ppStack.postProcesses.push_back(
         FillBuiltInData(PostProcessConstants::RENDER_UPSCALER_BIT, PostProcessConstants::RENDER_UPSCALER_BIT,
             defUserIdx, PostProcessConversionHelper::GetFactorUpscaler(ppConfig), {}));
-    ppStack.postProcesses.push_back(FillBuiltInData(
-        PostProcessConstants::RENDER_EMPTY_6, PostProcessConstants::RENDER_EMPTY_6, defUserIdx, {}, {}));
-    ppStack.postProcesses.push_back(FillBuiltInData(
-        PostProcessConstants::RENDER_EMPTY_7, PostProcessConstants::RENDER_EMPTY_7, defUserIdx, {}, {}));
+    ppStack.postProcesses.push_back(
+        FillBuiltInData(PostProcessConstants::RENDER_WHITE_BALANCE, PostProcessConstants::RENDER_WHITE_BALANCE,
+            defUserIdx, PostProcessConversionHelper::GetFactorWhiteBalance(ppConfig), {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_TONE,
+        PostProcessConstants::RENDER_TONE, defUserIdx, PostProcessConversionHelper::GetFactorTone(ppConfig), {}));
 
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_BLUR,
         PostProcessConfiguration::INDEX_BLUR, defUserIdx, PostProcessConversionHelper::GetFactorBlur(ppConfig), {}));
@@ -477,6 +478,10 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     for (size_t idx = 0; idx < ppStack.postProcesses.size(); ++idx) {
         ppStack.globalFactors.factors[idx] = ppStack.postProcesses[idx].variables.factor;
     }
+
+    // fill userFactors for Tone filterColor (stored directly, not in customPropertyData)
+    ppStack.globalFactors.userFactors[PostProcessConstants::USER_INDEX_TONE_FILTER_COLOR] =
+        PostProcessConversionHelper::GetFactorToneFilterColor(ppConfig);
 }
 
 void RenderDataStorePostProcess::GetShaderProperties(

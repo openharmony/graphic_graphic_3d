@@ -23,6 +23,7 @@
 #include <meta/ext/object.h>
 
 META_TYPE(RENDER_NS::TonemapConfiguration)
+META_TYPE(RENDER_NS::ToneConfiguration)
 META_TYPE(RENDER_NS::BloomConfiguration)
 META_TYPE(RENDER_NS::VignetteConfiguration)
 META_TYPE(RENDER_NS::ColorFringeConfiguration)
@@ -35,6 +36,7 @@ META_TYPE(RENDER_NS::DofConfiguration)
 META_TYPE(RENDER_NS::MotionBlurConfiguration)
 META_TYPE(RENDER_NS::LensFlareConfiguration)
 META_TYPE(RENDER_NS::UpscaleConfiguration)
+META_TYPE(RENDER_NS::WhiteBalanceConfiguration)
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -43,6 +45,7 @@ class IInternalPostProcess : public CORE_NS::IInterface {
 public:
     META_PROPERTY(uint32_t, EnableFlags)
     META_PROPERTY(RENDER_NS::TonemapConfiguration, Tonemap)
+    META_PROPERTY(RENDER_NS::ToneConfiguration, Tone)
     META_PROPERTY(RENDER_NS::BloomConfiguration, Bloom)
     META_PROPERTY(RENDER_NS::VignetteConfiguration, Vignette)
     META_PROPERTY(RENDER_NS::ColorFringeConfiguration, ColorFringe)
@@ -55,6 +58,7 @@ public:
     META_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
     META_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
     META_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
+    META_PROPERTY(RENDER_NS::WhiteBalanceConfiguration, WhiteBalance)
 };
 
 META_REGISTER_CLASS(
@@ -68,6 +72,8 @@ public:
     SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, uint32_t, EnableFlags, "PostProcessComponent.enableFlags")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::TonemapConfiguration, Tonemap, "PostProcessComponent.tonemapConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(
+        IInternalPostProcess, RENDER_NS::ToneConfiguration, Tone, "PostProcessComponent.toneConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::BloomConfiguration, Bloom, "PostProcessComponent.bloomConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
@@ -92,10 +98,13 @@ public:
         "PostProcessComponent.lensFlareConfiguration")
     SCENE_STATIC_PROPERTY_DATA(
         IInternalPostProcess, RENDER_NS::UpscaleConfiguration, Upscale, "PostProcessComponent.upscaleConfiguration")
+    SCENE_STATIC_PROPERTY_DATA(IInternalPostProcess, RENDER_NS::WhiteBalanceConfiguration, WhiteBalance,
+        "PostProcessComponent.whiteBalanceConfiguration")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(uint32_t, EnableFlags)
     META_IMPLEMENT_PROPERTY(RENDER_NS::TonemapConfiguration, Tonemap)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::ToneConfiguration, Tone)
     META_IMPLEMENT_PROPERTY(RENDER_NS::BloomConfiguration, Bloom)
     META_IMPLEMENT_PROPERTY(RENDER_NS::VignetteConfiguration, Vignette)
     META_IMPLEMENT_PROPERTY(RENDER_NS::ColorFringeConfiguration, ColorFringe)
@@ -108,6 +117,7 @@ public:
     META_IMPLEMENT_PROPERTY(RENDER_NS::MotionBlurConfiguration, MotionBlur)
     META_IMPLEMENT_PROPERTY(RENDER_NS::LensFlareConfiguration, LensFlare)
     META_IMPLEMENT_PROPERTY(RENDER_NS::UpscaleConfiguration, Upscale)
+    META_IMPLEMENT_PROPERTY(RENDER_NS::WhiteBalanceConfiguration, WhiteBalance)
 public:
     BASE_NS::string GetName() const override;
 };

@@ -44,9 +44,11 @@ public:
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IDepthOfField::Ptr, DepthOfField, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IFxaa::Ptr, Fxaa, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, ITaa::Ptr, Taa, "")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, ITone::Ptr, Tone, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IVignette::Ptr, Vignette, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, ILensFlare::Ptr, LensFlare, "")
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IUpscale::Ptr, Upscale, "")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcess, IWhiteBalance::Ptr, WhiteBalance, "")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_READONLY_PROPERTY(ITonemap::Ptr, Tonemap)
@@ -58,9 +60,11 @@ public:
     META_IMPLEMENT_READONLY_PROPERTY(IDepthOfField::Ptr, DepthOfField)
     META_IMPLEMENT_READONLY_PROPERTY(IFxaa::Ptr, Fxaa)
     META_IMPLEMENT_READONLY_PROPERTY(ITaa::Ptr, Taa)
+    META_IMPLEMENT_READONLY_PROPERTY(ITone::Ptr, Tone)
     META_IMPLEMENT_READONLY_PROPERTY(IVignette::Ptr, Vignette)
     META_IMPLEMENT_READONLY_PROPERTY(ILensFlare::Ptr, LensFlare)
     META_IMPLEMENT_READONLY_PROPERTY(IUpscale::Ptr, Upscale)
+    META_IMPLEMENT_READONLY_PROPERTY(IWhiteBalance::Ptr, WhiteBalance)
 
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;

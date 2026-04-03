@@ -34,9 +34,11 @@ using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::LensFlareConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
+using RENDER_NS::ToneConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
+using RENDER_NS::WhiteBalanceConfiguration;
 
 META_TYPE(RENDER_NS::TonemapConfiguration);
 META_TYPE(RENDER_NS::TonemapConfiguration::TonemapType);
@@ -59,12 +61,14 @@ META_TYPE(RENDER_NS::MotionBlurConfiguration);
 META_TYPE(RENDER_NS::MotionBlurConfiguration::Quality);
 META_TYPE(RENDER_NS::MotionBlurConfiguration::Sharpness);
 META_TYPE(RENDER_NS::TaaConfiguration);
+META_TYPE(RENDER_NS::ToneConfiguration);
 META_TYPE(RENDER_NS::TaaConfiguration::Quality);
 META_TYPE(RENDER_NS::TaaConfiguration::Sharpness);
 META_TYPE(RENDER_NS::LensFlareConfiguration);
 META_TYPE(RENDER_NS::LensFlareConfiguration::Quality);
 META_TYPE(RENDER_NS::VignetteConfiguration);
 META_TYPE(RENDER_NS::UpscaleConfiguration);
+META_TYPE(RENDER_NS::WhiteBalanceConfiguration);
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -106,9 +110,11 @@ void RegisterPostProcessEngineAccess()
     RegisterEngineAccessImpl<MotionBlurConfiguration>();
     RegisterEngineAccessImpl<TaaConfiguration>();
     RegisterEngineAccessImpl<TonemapConfiguration>();
+    RegisterEngineAccessImpl<ToneConfiguration>();
     RegisterEngineAccessImpl<VignetteConfiguration>();
     RegisterEngineAccessImpl<LensFlareConfiguration>();
     RegisterEngineAccessImpl<UpscaleConfiguration>();
+    RegisterEngineAccessImpl<WhiteBalanceConfiguration>();
 
     RegisterMapEngineAccessImpl<TonemapConfiguration::TonemapType, TonemapType>();
     RegisterMapEngineAccessImpl<BloomConfiguration::BloomType, BloomType>();
@@ -153,9 +159,11 @@ void UnregisterPostProcessEngineAccess()
     UnregisterEngineAccessImpl<MotionBlurConfiguration>();
     UnregisterEngineAccessImpl<TaaConfiguration>();
     UnregisterEngineAccessImpl<TonemapConfiguration>();
+    UnregisterEngineAccessImpl<ToneConfiguration>();
     UnregisterEngineAccessImpl<VignetteConfiguration>();
     UnregisterEngineAccessImpl<LensFlareConfiguration>();
     UnregisterEngineAccessImpl<UpscaleConfiguration>();
+    UnregisterEngineAccessImpl<WhiteBalanceConfiguration>();
 }
 
 } // namespace Internal

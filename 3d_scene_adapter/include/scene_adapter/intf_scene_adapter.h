@@ -17,7 +17,7 @@
 #define OHOS_RENDER_3D_INTF_SCENE_ADAPTER_H
 
 #include <memory>
-
+#include <vector>
 #include "texture_info.h"
 
 namespace OHOS::Render3D {
@@ -30,6 +30,7 @@ public:
     virtual bool LoadPluginsAndInit() = 0;
     virtual std::shared_ptr<TextureLayer> CreateTextureLayer() = 0;
     virtual void OnWindowChange(const WindowChangeInfo& windowChangeInfo) = 0;
+    virtual void OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo) {};
     virtual void OnWindowChange(float renderWidth, float renderHeight) = 0;
     virtual void RenderFrame(bool needsSyncPaint = false) = 0;
     virtual void Deinit() = 0;

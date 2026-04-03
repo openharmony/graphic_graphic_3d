@@ -79,7 +79,6 @@ private:
     static void ApplyCameraParameters(NapiApi::Object& params, NapiApi::Object& cam);
     napi_value CreateLight(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx);
     napi_value CreateNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    napi_value CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateEnvironment(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx);

@@ -44,7 +44,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "17f73190-ddc4-44dc-a286-a88a3387e12d" };
-    static constexpr char const* TYPE_NAME = "RenderNodeDefaultCameraPostProcessInterfaceController";
+    static constexpr const char* typeName = "RenderNodeDefaultCameraPostProcessInterfaceController";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

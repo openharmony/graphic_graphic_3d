@@ -126,7 +126,7 @@ private:
     BASE_NS::unordered_map<CORE_NS::Entity, RipplePlaneResources> handleResources_;
     uint32_t cameraCount_ { 0U };
     BASE_NS::vector<float> screenPercentages_;
-    bool cloudWasEnabled_ { true };
+    bool cloudWasEnabled_ { false };
 
     BASE_NS::vector<uint64_t> initializedPlaneIds_;
 

@@ -51,7 +51,7 @@ public:
 
     // for plugin / factory interface
     static constexpr BASE_NS::Uid UID { "291720f5-1a00-446f-ab98-cc62f6c29562" };
-    static constexpr char const* TYPE_NAME = "RenderNodeDefaultEnvironmentBlender";
+    static constexpr const char* typeName = "RenderNodeDefaultEnvironmentBlender";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();

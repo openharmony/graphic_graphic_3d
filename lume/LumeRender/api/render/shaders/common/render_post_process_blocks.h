@@ -46,6 +46,82 @@ void PostProcessTonemapBlock(in uint postProcessFlags, in vec4 tonemapFactor, in
 }
 
 /**
+ * returns tone adjusted color
+ */
+void PostProcessToneBlock(
+    in uint postProcessFlags, in vec4 toneFactor, in vec4 filterColor, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_TONE_BIT) == POST_PROCESS_SPECIALIZATION_TONE_BIT) {
+        // 1. Apply color filter (only use rgb components)
+        outCol *= filterColor.rgb;
+
+        // 2. Apply hue shift
+        const float hueShift = toneFactor.w;
+        if (abs(hueShift) > 0.001) {
+            outCol = HueShift(outCol, hueShift);
+        }
+
+        // 3. Build combined color adjustment matrix
+        const float brightness = toneFactor.x;
+        const float contrast = toneFactor.y;
+        const float saturation = toneFactor.z;
+
+        // Order: saturation -> contrast -> brightness
+        mat4 colorMatrix = BrightnessMatrix(brightness) * ContrastMatrix(contrast) * SaturationMatrix(saturation);
+
+        // 4. Apply color matrix
+        outCol = (colorMatrix * vec4(outCol, 1.0)).rgb;
+    }
+}
+
+/**
+ * returns whiteBalance adjusted color
+ */
+void PostProcessWhiteBalanceBlock(in uint postProcessFlags, in vec4 whiteBalanceFactor, in vec3 inCol, out vec3 outCol)
+{
+    outCol = inCol;
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_WHITE_BALANCE_BIT) ==
+        POST_PROCESS_SPECIALIZATION_WHITE_BALANCE_BIT) {
+        float temperature = clamp(whiteBalanceFactor.x, -100.0, 100.0);
+        float tint = clamp(whiteBalanceFactor.y, -100.0, 100.0);
+
+        float normalizedTemp = temperature * 1.67 / 100.0;
+        float normalizedTint = tint * 1.67 / 100.0;
+
+        float chromaticityX = 0.31271 - normalizedTemp * (normalizedTemp < 0.0 ? 0.1 : 0.05);
+        chromaticityX = clamp(chromaticityX, 0.1, 0.7);
+        float illuminantY = 2.87 * chromaticityX - 3.0 * chromaticityX * chromaticityX - 0.27509507;
+        float chromaticityY = illuminantY + normalizedTint * 0.05;
+        chromaticityY = clamp(chromaticityY, 0.1, 0.9);
+
+        float xyzY = 1.0;
+        float xyzX = xyzY * chromaticityX / chromaticityY;
+        float xyzZ = xyzY * (1.0 - chromaticityX - chromaticityY) / chromaticityY;
+
+        float lmsL = 0.7328 * xyzX + 0.4296 * xyzY - 0.1624 * xyzZ;
+        float lmsM = -0.7036 * xyzX + 1.6975 * xyzY + 0.0061 * xyzZ;
+        float lmsS = 0.0030 * xyzX + 0.0136 * xyzY + 0.9834 * xyzZ;
+
+        vec3 standardLms = vec3(0.949237, 1.03542, 1.08728);
+        vec3 targetLms = vec3(lmsL, lmsM, lmsS);
+
+        vec3 balance = vec3(standardLms.x / targetLms.x, standardLms.y / targetLms.y, standardLms.z / targetLms.z);
+
+        const mat3 rgbToLmsMat = mat3(vec3(3.90405e-1, 7.08416e-2, 2.31082e-2),
+            vec3(5.49941e-1, 9.63172e-1, 1.28021e-1), vec3(8.92632e-3, 1.35775e-3, 9.36245e-1));
+
+        const mat3 lmsToRgbMat = mat3(vec3(2.85847e+0, -2.10182e-1, -4.18120e-2),
+            vec3(-1.62879e+0, 1.15820e+0, -1.18169e-1), vec3(-2.48910e-2, 3.24281e-4, 1.06867e+0));
+
+        vec3 lmsColor = rgbToLmsMat * inCol;
+        lmsColor *= balance;
+        outCol = lmsToRgbMat * lmsColor;
+    }
+}
+
+/**
  * returns vignette applied color with vignette values in the range 0-1
  */
 void PostProcessVignetteBlock(

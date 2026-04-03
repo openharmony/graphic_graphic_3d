@@ -26,9 +26,11 @@
 #include <scene/interface/postprocess/intf_lens_flare.h>
 #include <scene/interface/postprocess/intf_motion_blur.h>
 #include <scene/interface/postprocess/intf_taa.h>
+#include <scene/interface/postprocess/intf_tone.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/postprocess/intf_upscale.h>
 #include <scene/interface/postprocess/intf_vignette.h>
+#include <scene/interface/postprocess/intf_white_balance.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -72,6 +74,10 @@ public:
      */
     META_READONLY_PROPERTY(ITaa::Ptr, Taa)
     /**
+     * @brief Camera postprocessing settings, tone color adjustment
+     */
+    META_READONLY_PROPERTY(ITone::Ptr, Tone)
+    /**
      * @brief Camera postprocessing settings, vignette
      */
     META_READONLY_PROPERTY(IVignette::Ptr, Vignette)
@@ -83,6 +89,10 @@ public:
      * @brief Camera postprocessing settings, upscale
      */
     META_READONLY_PROPERTY(IUpscale::Ptr, Upscale)
+    /**
+     * @brief Camera postprocessing settings, white balance
+     */
+    META_READONLY_PROPERTY(IWhiteBalance::Ptr, WhiteBalance)
 };
 
 META_REGISTER_CLASS(PostProcess, "2df6c964-5a32-4270-86e6-755e3f5697ff", META_NS::ObjectCategoryBits::NO_CATEGORY)

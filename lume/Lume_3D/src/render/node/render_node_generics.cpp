@@ -16,7 +16,6 @@
 
 #include <core/image/intf_image_loader_manager.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
@@ -26,6 +25,8 @@
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/nodecontext/intf_render_node_util.h>
+
+#include "util/log.h"
 
 using namespace RENDER_NS;
 using namespace CORE_NS;
@@ -118,7 +119,7 @@ void RenderNodeMixin::RecreateImages(RenderSize size, RENDER_NS::RenderHandleRef
     desc.width = uint32_t(size.w);
     desc.height = uint32_t(size.h);
     handle = gpuResourceManager.Create(handle, desc);
-    CORE_ASSERT(gpuResourceManager.IsValid(handle.GetHandle()));
+    PLUGIN_ASSERT(gpuResourceManager.IsValid(handle.GetHandle()));
 }
 
 void RenderNodeMixin::RecreateImages(
@@ -138,6 +139,6 @@ void RenderNodeMixin::RecreateImages(
         desc.width = uint32_t(size.w);
         desc.height = uint32_t(size.h);
         handle = gpuResourceManager.Create(handle, desc);
-        CORE_ASSERT(gpuResourceManager.IsValid(handle.GetHandle()));
+        PLUGIN_ASSERT(gpuResourceManager.IsValid(handle.GetHandle()));
     }
 }

@@ -82,7 +82,7 @@ public:
 
     BASE_NS::string_view GetTypeName() const override
     {
-        return TYPE_NAME;
+        return typeName;
     }
 
     BASE_NS::string_view GetName() const override
@@ -188,7 +188,7 @@ public:
     BASE_NS::array_view<const RENDER_NS::AsInstance> GetMeshBlasData() const;
 
     // for plugin / factory interface
-    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultMaterial";
+    static constexpr const char* const typeName = "RenderDataStoreDefaultMaterial";
     static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const* name);
 
     // bindless global indices
@@ -336,6 +336,8 @@ private:
         uint32_t submeshIndex, RenderSubmesh& submesh);
     void AddFrameRenderMeshDataAdditionalMaterial(
         uint32_t matIndex, uint32_t submeshFrameIndex, RenderSubmesh& renderSubmesh);
+    void AddFrameSubmeshAdditionalMaterials(const MeshDataContainer& meshDataContainer,
+        const SubmeshDataContainer& submesh, const RenderSubmesh& rs);
     uint32_t AddFrameSkinJointMatricesImpl(uint64_t id,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices);

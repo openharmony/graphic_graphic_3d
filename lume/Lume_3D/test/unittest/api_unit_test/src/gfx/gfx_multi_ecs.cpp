@@ -298,6 +298,7 @@ struct NodeContainer {
     string type;
     bool found;
 };
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: MultiEcs
  * @tc.type: FUNC
@@ -361,3 +362,4 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

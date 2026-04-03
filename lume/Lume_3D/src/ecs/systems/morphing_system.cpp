@@ -27,7 +27,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property/property_types.h>
@@ -36,6 +35,8 @@
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
+
+#include "util/log.h"
 
 CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(RENDER_NS::IRenderDataStoreManager*);
@@ -91,7 +92,9 @@ MorphingSystem::MorphingSystem(IEcs& ecs)
       MORPHING_SYSTEM_PROPERTIES(&properties_, ComponentMetadata)
 {
     if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>(); engine) {
-        renderContext_ = GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
+        if (auto classRegister = engine->GetInterface<IClassRegister>(); classRegister) {
+            renderContext_ = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        }
     }
 }
 
@@ -114,7 +117,7 @@ void MorphingSystem::Initialize()
             const auto in = ScopedHandle<IRenderPreprocessorSystem::Properties>(rps->GetProperties());
             properties_.dataStoreName = in->dataStoreMorph;
         } else {
-            CORE_LOG_E("DEPRECATED USAGE: RenderPreprocessorSystem not found. Add system to system graph.");
+            PLUGIN_LOG_E("DEPRECATED USAGE: RenderPreprocessorSystem not found. Add system to system graph.");
         }
 
         SetDataStore(renderContext_->GetRenderDataStoreManager(), properties_.dataStoreName);
@@ -132,6 +135,7 @@ void MorphingSystem::Uninitialize()
     ecs_.RemoveListener(static_cast<IEcs::EntityListener&>(*this));
     ecs_.RemoveListener(morphManager_, *this);
     nodeQuery_.SetEcsListenersEnabled(false);
+    dataStore_.reset();
 }
 
 void MorphingSystem::SetDataStore(IRenderDataStoreManager& manager, const string_view name)
@@ -238,7 +242,7 @@ bool MorphingSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
     }
     if (dataStore_ == nullptr) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("ms_data_stores_not_found", "CORE3D_VALIDATION: morphing render data store not found");
+        PLUGIN_LOG_ONCE_W("ms_data_stores_not_found", "CORE3D_VALIDATION: morphing render data store not found");
 #endif
         return false;
     }

@@ -25,7 +25,6 @@
 #include <base/containers/vector.h>
 #include <base/math/matrix_util.h>
 #include <core/implementation_uids.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/util/intf_frustum_util.h>
@@ -38,6 +37,7 @@
 #include <render/nodecontext/intf_render_node_util.h>
 
 #include "render/datastore/render_data_store_default_material.h"
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -286,7 +286,7 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     vector<SlotSubmeshIndex>& refSubmeshIndices)
 {
     // Get IFrustumUtil from global plugin registry.
-    auto frustumUtil = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+    auto frustumUtil = CORE3D_NS::GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
     if (!frustumUtil) {
         return;
     }
@@ -479,7 +479,7 @@ SceneBufferHandles RenderNodeSceneUtil::GetSceneBufferHandles(
     checkValidity(defaultBuffer, valid, buffers.mesh);
     checkValidity(defaultBuffer, valid, buffers.skinJoint);
     if (!valid) {
-        CORE_LOG_E(
+        PLUGIN_LOG_E(
             "RN: %s, invalid configuration, not all scene buffers not found.", renderNodeContextMgr.GetName().data());
     }
     return buffers;
@@ -520,7 +520,7 @@ SceneCameraBufferHandles RenderNodeSceneUtil::GetSceneCameraBufferHandles(
     checkValidity(defaultBuffer, valid, buffers.light);
     checkValidity(defaultBuffer, valid, buffers.lightCluster);
     if (!valid) {
-        CORE_LOG_E(
+        PLUGIN_LOG_E(
             "RN: %s, invalid configuration, not all camera buffers found.", renderNodeContextMgr.GetName().data());
     }
     return buffers;
@@ -546,6 +546,20 @@ SceneCameraImageHandles RenderNodeSceneUtil::GetSceneCameraImageHandles(
         handles.radianceCubemap =
             gpuMgr.GetImageHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP);
     }
+
+    // In case validation layer is not enabled, developer can check from logs here
+    for (const auto& handle : { handles.radianceCubemap }) {
+        auto desc = gpuMgr.GetImageDescriptor(handle);
+        if (desc.imageViewType == ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE ||
+            desc.imageViewType == ImageViewType::CORE_IMAGE_VIEW_TYPE_2D_ARRAY ||
+            desc.imageViewType == ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+            continue;
+        }
+
+        PLUGIN_LOG_E("Image bound to samplerCube is not of valid imageViewType. It's undefined behavior!!! Your "
+                     "rendering result might differs by devices.");
+    }
+
     return handles;
 }
 
@@ -570,7 +584,7 @@ SceneRenderCameraData RenderNodeSceneUtil::GetSceneCameraData(const IRenderDataS
         return { cameraIdx, flags, cameras[cameraIdx] };
     } else {
         const auto tmpName = to_string(cameraId) + "RenderNodeSceneUtil::GetSceneCamere";
-        CORE_LOG_ONCE_W(tmpName, "Render camera not found  (id:%" PRIx64 " name:%s", cameraId, cameraName.data());
+        PLUGIN_LOG_ONCE_W(tmpName, "Render camera not found  (id:%" PRIx64 " name:%s", cameraId, cameraName.data());
         return {};
     }
 }
@@ -578,7 +592,7 @@ SceneRenderCameraData RenderNodeSceneUtil::GetSceneCameraData(const IRenderDataS
 void RenderNodeSceneUtil::GetMultiViewCameraIndices(
     const IRenderDataStoreDefaultCamera& rds, const RenderCamera& cam, vector<uint32_t>& mvIndices)
 {
-    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    PLUGIN_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
     const uint32_t inputCount =
         Math::min(cam.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
     mvIndices.clear();
@@ -618,13 +632,13 @@ RenderNodeSceneUtil::FrameGlobalDescriptorSets RenderNodeSceneUtil::GetFrameGlob
         fgds.valid = fgds.valid && RenderHandleUtil::IsValid(fgds.set2Default);
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (fgds.set2.empty()) {
-            CORE_LOG_ONCE_W("core3d_global_descriptor_set_render_slot_issues",
+            PLUGIN_LOG_ONCE_W("core3d_global_descriptor_set_render_slot_issues",
                 "CORE3D_VALIDATION: Global descriptor set for default material env not found");
         }
 #endif
     }
     if (!fgds.valid) {
-        CORE_LOG_ONCE_E("core3d_global_descriptor_set_rs_all_issues",
+        PLUGIN_LOG_ONCE_E("core3d_global_descriptor_set_rs_all_issues",
             "Global descriptor set 0/1/2 for default material not "
             "found (RenderNodeDefaultCameraController needed)");
     }

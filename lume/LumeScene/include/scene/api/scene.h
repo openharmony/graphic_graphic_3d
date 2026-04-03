@@ -64,20 +64,6 @@ struct MaterialResourceParameters : public SceneResourceParameters {
 };
 
 /**
- * @brief The TextResourceParameters class defines Text3D node creation specific parameters.
- */
-struct TextResourceParameters : public SceneResourceParameters {
-    /// The text string to show
-    BASE_NS::string text;
-    /// Font to use
-    BASE_NS::string font;
-    /// Height of the rasterized 2d texture.
-    float fontSize {};
-    /// Text color in SRGB RGBA.
-    BASE_NS::Math::Vec4 color;
-};
-
-/**
  * @brief The EffectResourceParameters class defines Effect creation specific parameters.
  */
 struct EffectResourceParameters : public SceneResourceParameters {
@@ -204,11 +190,6 @@ public:
     META_API_ASYNC auto CreateLightNode(const SceneResourceParameters& params)
     {
         return CallCreateNode<Light, CallType>(params, ClassId::LightNode);
-    }
-    /// Creates a new text node with given parameters.
-    META_API_ASYNC auto CreateTextNode(const TextResourceParameters& params)
-    {
-        return CallCreateNode<Text3D, CallType>(params, ClassId::TextNode);
     }
     /// Create a new Effect object
     META_API_ASYNC auto CreateEffect(const EffectResourceParameters& params)

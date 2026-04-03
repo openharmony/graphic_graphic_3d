@@ -16,7 +16,6 @@
 #include "render_node_create_default_camera_gpu_images.h"
 
 #include <3d/render/intf_render_data_store_default_camera.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -27,6 +26,8 @@
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 #include <render/nodecontext/intf_render_node_parser_util.h>
 #include <render/render_data_structures.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -42,7 +43,7 @@ void RenderNodeCreateDefaultCameraGpuImages::InitNode(IRenderNodeContextManager&
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
 
     if (jsonInputs_.gpuImageDescs.empty()) {
-        CORE_LOG_W("RenderNodeCreateDefaultCameraGpuImages: No gpu image descs given to");
+        PLUGIN_LOG_W("RenderNodeCreateDefaultCameraGpuImages: No gpu image descs given to");
     }
 
     descs_.reserve(jsonInputs_.gpuImageDescs.size());
@@ -66,7 +67,7 @@ void RenderNodeCreateDefaultCameraGpuImages::InitNode(IRenderNodeContextManager&
 
 void RenderNodeCreateDefaultCameraGpuImages::PreExecuteFrame()
 {
-    CORE_ASSERT(resourceHandles_.size() == descs_.size());
+    PLUGIN_ASSERT(resourceHandles_.size() == descs_.size());
     UpdateRenderTargets();
 
     // broadcast the resources

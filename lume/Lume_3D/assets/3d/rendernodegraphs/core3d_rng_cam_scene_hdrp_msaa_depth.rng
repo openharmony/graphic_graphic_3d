@@ -14,6 +14,10 @@
             "nodeName": "CORE3D_RN_CAM_CTRL"
         },
         {
+            "name": "camera",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        },
+        {
             "name": "depth",
             "nodeName": "CORE3D_RN_CAM_CTRL"
         }

@@ -36,7 +36,6 @@
 #include <base/math/mathf.h>
 #include <base/math/matrix_util.h>
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
@@ -58,6 +57,7 @@
 #include <render/render_data_structures.h>
 
 #include "render/datastore/render_data_store_weather.h"
+#include "util/log.h"
 // NOTE: do not include in header
 #include "render_light_helper.h"
 
@@ -80,14 +80,14 @@ void ValidateRenderCamera(RenderCamera& camera)
         if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_MSAA_BIT) {
             camera.flags = camera.flags & (~RenderCamera::CameraFlagBits::CAMERA_FLAG_MSAA_BIT);
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_I("valid_r_c_" + to_string(camera.id),
+            PLUGIN_LOG_ONCE_I("valid_r_c_" + to_string(camera.id),
                 "MSAA flag with deferred pipeline dropped (cam id %" PRIu64 ")", camera.id);
 #endif
         }
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (camera.id == RenderSceneDataConstants::INVALID_ID) {
-        CORE_LOG_ONCE_I("valid_r_c_id" + to_string(camera.id), "Invalid camera id (cam id %" PRIu64 ")", camera.id);
+        PLUGIN_LOG_ONCE_I("valid_r_c_id" + to_string(camera.id), "Invalid camera id (cam id %" PRIu64 ")", camera.id);
     }
 #endif
 }
@@ -100,7 +100,8 @@ Format GetValidColorFormat(const IRenderNodeGpuResourceManager& gpuResourceMgr, 
         ((formatProperties.optimalTilingFeatures & CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)) {
         outFormat = Format::BASE_FORMAT_R8G8B8A8_SRGB;
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_W("CORE_VALIDATION: not supported camera color format %u, using BASE_FORMAT_R8G8B8A8_SRGB", outFormat);
+        PLUGIN_LOG_W(
+            "CORE_VALIDATION: not supported camera color format %u, using BASE_FORMAT_R8G8B8A8_SRGB", outFormat);
 #endif
     }
     return outFormat;
@@ -113,7 +114,7 @@ Format GetValidDepthFormat(const IRenderNodeGpuResourceManager& gpuResourceMgr, 
     if ((formatProperties.optimalTilingFeatures & CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0) {
         outFormat = Format::BASE_FORMAT_D32_SFLOAT;
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_W("CORE_VALIDATION: not supported camera depth format %u, using BASE_FORMAT_D32_SFLOAT", outFormat);
+        PLUGIN_LOG_W("CORE_VALIDATION: not supported camera depth format %u, using BASE_FORMAT_D32_SFLOAT", outFormat);
 #endif
     }
     return outFormat;
@@ -312,7 +313,7 @@ void CreateBaseColorTarget(IRenderNodeGpuResourceManager& gpuResourceMgr, const 
     RenderNodeDefaultCameraController::CreatedTargets& targets)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-    CORE_LOG_I("CORE3D_VALIDATION: creating camera base color target %s", customCamRngId.data());
+    PLUGIN_LOG_I("CORE3D_VALIDATION: creating camera base color target %s", customCamRngId.data());
 #endif
     GpuImageDesc desc = cameraResourceSetup.inputImageDescs.output;
     desc.width = camera.renderResolution.x;
@@ -422,7 +423,7 @@ void CreateColorTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
     RenderNodeDefaultCameraController::CreatedTargets& createdTargets, float upscaleRatio)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-    CORE_LOG_D("CORE3D_VALIDATION: creating camera color targets %s", customCamRngId.data());
+    PLUGIN_LOG_D("CORE3D_VALIDATION: creating camera color targets %s", customCamRngId.data());
 #endif
     // This (re-)creates all the needed color targets
     GpuImageDesc desc = cameraResourceSetup.inputImageDescs.color;
@@ -484,7 +485,7 @@ void CreateDepthTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
     RenderNodeDefaultCameraController::CreatedTargets& createdTargets)
 {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-    CORE_LOG_D("CORE3D_VALIDATION: creating camera depth targets %s", customCamRngId.data());
+    PLUGIN_LOG_D("CORE3D_VALIDATION: creating camera depth targets %s", customCamRngId.data());
 #endif
     // this (re-)creates all the needed depth targets
     // we support cameras without depth targets (default depth is created if no msaa)
@@ -621,7 +622,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
+    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::typeName);
 
     currentScene_ = {};
     currentScene_.customCamRngName = jsonInputs_.customCameraName + '_' + to_hex(jsonInputs_.customCameraId);
@@ -923,7 +924,7 @@ void RenderNodeDefaultCameraController::CreateResources()
     if (validDepthHandle && isMultiview) {
         validDepthHandle = false;
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "cam_controller_multiview_depth",
+        PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "cam_controller_multiview_depth",
             "CORE3D_VALIDATION: Multi-view not supported with custom depth targets (creating new layered depth)");
 #endif
     }
@@ -982,7 +983,7 @@ void RenderNodeDefaultCameraController::CreateResources()
             camRes_.renResolution.y = Math::max(1u, colorDesc.height);
 #if (CORE3D_VALIDATION_ENABLED == 1)
             const string_view nodeName = renderNodeContextMgr_->GetName();
-            CORE_LOG_ONCE_E(nodeName + "cam_controller_renRes",
+            PLUGIN_LOG_ONCE_E(nodeName + "cam_controller_renRes",
                 "CORE3D_VALIDATION: RN:%s camera render resolution resized to match target %ux%u", nodeName.data(),
                 camRes_.renResolution.x, camRes_.renResolution.y);
 #endif
@@ -1032,7 +1033,7 @@ void RenderNodeDefaultCameraController::CreateResourceBaseTargets()
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if ((!RenderHandleUtil::IsValid(camRes_.colorTarget)) &&
             (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT)) {
-            CORE_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "cubemap_def_backbuffer",
+            PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "cubemap_def_backbuffer",
                 "CORE3D_VALIDATION: camera (%s) main camera with default backbuffer cannot be cubemap camera",
                 currentScene_.customCamRngName.data());
         }
@@ -1041,7 +1042,7 @@ void RenderNodeDefaultCameraController::CreateResourceBaseTargets()
             ((camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) == 0)) {
             camRes_.colorTarget = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_BACKBUFFER");
 #if (CORE3D_VALIDATION_ENABLED == 1)
-            CORE_LOG_ONCE_I(renderNodeContextMgr_->GetName() + "using_def_backbuffer",
+            PLUGIN_LOG_ONCE_I(renderNodeContextMgr_->GetName() + "using_def_backbuffer",
                 "CORE3D_VALIDATION: camera (%s) using CORE_DEFAULT_BACKBUFFER", currentScene_.customCamRngName.data());
 #endif
         }
@@ -1129,7 +1130,7 @@ void RenderNodeDefaultCameraController::UpdateGeneralUniformBuffer()
     if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(uboHandles_.generalData.GetHandle())); data) {
         const auto* dataEnd = data + sizeof(DefaultMaterialGeneralDataStruct);
         if (!CloneData(data, size_t(dataEnd - data), &dataStruct, sizeof(DefaultMaterialGeneralDataStruct))) {
-            CORE_LOG_E("generalData ubo copying failed.");
+            PLUGIN_LOG_E("generalData ubo copying failed.");
         }
         gpuResourceMgr.UnmapBuffer(uboHandles_.generalData.GetHandle());
     }
@@ -1137,12 +1138,12 @@ void RenderNodeDefaultCameraController::UpdateGeneralUniformBuffer()
 
 void RenderNodeDefaultCameraController::UpdatePostProcessUniformBuffer()
 {
-    CORE_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
+    PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(uboHandles_.postProcess.GetHandle())); data) {
         const auto* dataEnd = data + sizeof(GlobalPostProcessStruct);
         if (!CloneData(data, size_t(dataEnd - data), &currentRenderPPConfiguration_, sizeof(GlobalPostProcessStruct))) {
-            CORE_LOG_E("post process ubo copying failed.");
+            PLUGIN_LOG_E("post process ubo copying failed.");
         }
         gpuResourceMgr.UnmapBuffer(uboHandles_.postProcess.GetHandle());
     }
@@ -1254,7 +1255,7 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     Math::Vec4(ws.timeOfDay, ws.moonBrightness, ws.nightGlow, ws.skyViewBrightness);
 
                 if (!CloneData(data, size_t(dataEnd - data), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
-                    CORE_LOG_E("environment ubo copying failed.");
+                    PLUGIN_LOG_E("environment ubo copying failed.");
                 }
                 data = data + sizeof(DefaultMaterialEnvironmentStruct);
             }
@@ -1282,7 +1283,7 @@ void RenderNodeDefaultCameraController::UpdateFogUniformBuffer()
     if (auto data = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(uboHandles_.fog.GetHandle())); data) {
         const auto* dataEnd = data + sizeof(DefaultMaterialFogStruct);
         if (!CloneData(data, size_t(dataEnd - data), &fogStruct, sizeof(DefaultMaterialFogStruct))) {
-            CORE_LOG_E("fog ubo copying failed.");
+            PLUGIN_LOG_E("fog ubo copying failed.");
         }
         gpuResourceMgr.UnmapBuffer(uboHandles_.fog.GetHandle());
     }

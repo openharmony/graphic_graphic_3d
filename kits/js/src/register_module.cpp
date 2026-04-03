@@ -34,7 +34,6 @@
 #include "SceneJS.h"
 #include "ShaderJS.h"
 #include "SubMeshJS.h"
-#include "TextNodeJS.h"
 #include "ToneMapJS.h"
 #include "geometry_definition/CubeJS.h"
 #include "geometry_definition/CustomJS.h"
@@ -175,7 +174,6 @@ void RegisterClasses(napi_env env, napi_value exports)
     GeometryDefinition::CylinderJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
-    TextNodeJS::Init(env, scene3dNS);
     MaterialPropertyJS::Init(env, scene3dNS);
     RenderContextJS::Init(env, scene3dNS);
     NodeContainerJS::Init(env, scene3dNS);

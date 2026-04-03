@@ -26,7 +26,6 @@ config("lume3d_config") {
     "${LUME_CORE3D_PATH}/api",
     "${LUME_META_PATH}/include",
     "${LUME_SCENE_PATH}/include",
-    "${LUME_FONT_PATH}/include",
     "//foundation/graphic/graphic_3d/camera_preview_plugin/api/",
   ]
 
@@ -41,8 +40,6 @@ config("lume3d_config") {
   }
   configs = [
     "${LUME_CORE_PATH}:lume_component_help_config",
-    "${LUME_ROOT}/LumeFont:lume_font_api",
-    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
   ]
 
   cflags = [
@@ -106,6 +103,7 @@ group("sceneAdapterInterface") {
   public_configs = [ ":scene_adapter_config" ]
 }
 
+
 ohos_source_set("scene_adapter_source") {
   sources = [
     "src/scene_adapter.cpp",
@@ -113,6 +111,8 @@ ohos_source_set("scene_adapter_source") {
     "src/scene_bridge_ani.cpp",
     "src/offscreen_scene.cpp",
     "src/surface_stream.cpp",
+    "src/mrt_depth_adapter.cpp",
+    "src/camera_utils.cpp"
   ]
 
   include_dirs = [
