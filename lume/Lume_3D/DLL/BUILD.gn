@@ -43,7 +43,7 @@ ohos_source_set("lume_3d_plugin_src") {
 }
 
 ohos_shared_library(LIB_CORE3D) {
-  public_deps = [
+  deps = [
     ":lume_3d_plugin_src",
     "${LUME_CORE3D_PATH}:libAGP3D",
   ]

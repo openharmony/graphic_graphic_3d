@@ -242,7 +242,7 @@ ohos_shared_library("AGPMetaApi") {
 }
 
 ohos_static_library("libMetaObject") {
-  public_deps = [
+  deps = [
     ":lume_metaobject_src",
   ]
   part_name = "graphic_3d"
@@ -250,7 +250,7 @@ ohos_static_library("libMetaObject") {
 }
 
 ohos_shared_library("libPluginMetaObject") {
-  public_deps = [
+  deps = [
     ":libMetaObject",
   ]
   relative_install_dir = "graphics3d"
