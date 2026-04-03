@@ -27,13 +27,13 @@ RENDER_BUILD_GLES = true
 #
 
 #
-# Unit tests Lume3D api config 
+# Unit tests Lume3D api config
 #
 config("lume_3d_test_config") {
 
   # Only targets in the current buildfile ("private")
   visibility = [":*"]
-  
+
   # Unit test defines
   defines = [
     "OHOS_PLATFORM_ASSETS_PATH=\"/data/test/resource/graphic_3d/Lume3D/test_data/\"",
@@ -57,7 +57,7 @@ config("lume_3d_test_config") {
 config("lume_3d_test_dynamic_lib_config") {
   # Only targets in the current buildfile ("private")
   visibility = [":*"]
-  
+
   defines = [
     "CORE_DYNAMIC=1"
   ]
@@ -83,7 +83,7 @@ ohos_unittest("lume_3d_api_test") {
     ":lume_3d_test_config",
     ":lume_3d_test_dynamic_lib_config"
   ]
-  
+
   # Includes
   include_dirs = [
     "common",
@@ -135,7 +135,7 @@ ohos_unittest("lume_3d_api_test") {
 
     # Plugin
     "api_unit_test/src/plugin/plugin_test.cpp",
-    
+
     # Render
     "api_unit_test/src/render/graphics_context_test.cpp",
     "api_unit_test/src/render/render_data_store_default_camera_test.cpp",
@@ -148,7 +148,7 @@ ohos_unittest("lume_3d_api_test") {
     "api_unit_test/src/util/mesh_builder_test.cpp",
     "api_unit_test/src/util/picking_test.cpp",
     "api_unit_test/src/util/render_util_test.cpp",
-    "api_unit_test/src/util/scene_util_test.cpp",      
+    "api_unit_test/src/util/scene_util_test.cpp",
   ]
 
   # External deps
@@ -198,7 +198,7 @@ config("lume_3d_static_lib_config") {
 
   # Only targets in the current buildfile ("private")
   visibility = [":*"]
-  
+
   # Using static lib
   defines = [
     "CORE3D_STATIC_LIB",
@@ -249,7 +249,7 @@ ohos_unittest("lume_3d_src_test") {
     "src_unit_test/src/gltf/gltf_exporter_test.cpp",
     "src_unit_test/src/gltf/gltf_importer_test.cpp",
     "src_unit_test/src/gltf/gltf_util_test.cpp",
-    
+
     # GPU
     "src_unit_test/src/gpu/ecsresource/gpu_test_ecs_resource_test.cpp",
     "src_unit_test/src/gpu/gltf/gpu_test_gltf_importer_test.cpp",
@@ -262,6 +262,7 @@ ohos_unittest("lume_3d_src_test") {
     "src_unit_test/src/render/render_node_scene_util_test.cpp",
 
     # Util
+    "src_unit_test/src/util/mesh_util_test.cpp",
     "src_unit_test/src/util/property_util_test.cpp",
   ]
 
@@ -313,7 +314,7 @@ ohos_unittest("lume_3d_src_test") {
 # group ("unittest")
 group("unittest") {
     testonly = true
-    deps = [ 
+    deps = [
         ":lume_3d_api_test",
         ":lume_3d_src_test"
     ]
@@ -321,10 +322,10 @@ group("unittest") {
 
 #
 # Lume3D Static lib
-# 
+#
 ohos_source_set("lume_3d_src_static") {
   visibility = [ ":*" ]
-  
+
   sources = [
   ]
 
@@ -348,7 +349,7 @@ ohos_static_library("libStaticAGP3D") {
     "${LUME_CORE3D_PATH}:lume_3d_rofs_obj",
     ":lume_3d_src_static"
   ]
-  
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
@@ -391,7 +392,7 @@ ohos_source_set("core3d_test_plugin_shared_src") {
 }
 
 #
-# Test plugin lib (SHARED) 
+# Test plugin lib (SHARED)
 #
 ohos_shared_library("libCore3DTestSharedPlugin") {
   deps = [
