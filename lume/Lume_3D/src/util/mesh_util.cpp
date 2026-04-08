@@ -16,6 +16,7 @@
 #include "mesh_util.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/name_component.h>
@@ -93,6 +94,11 @@ constexpr uint16_t CUBE_INDICES[6u * 6u] = {
 constexpr uint32_t CUBE_UV_INDICES[6u] = { 0, 3, 1, 3, 2, 1 };
 
 constexpr uint32_t CYLINDER_MIN_SEGMENTS = 3u;
+constexpr uint32_t SPHERE_MIN_RINGS = 2u;
+constexpr uint32_t SPHERE_MIN_SECTORS = 2u;
+constexpr uint32_t CONE_MIN_SECTORS = 3u;
+constexpr uint32_t TORUS_MIN_MAJOR_SECTORS = 3u;
+constexpr uint32_t TORUS_MIN_MINOR_SECTORS = 3u;
 
 constexpr float CYLINDER_CAP_UV_RADIUS = 0.24f;
 
@@ -109,6 +115,85 @@ struct Geometry {
     vector<Math::Vec2>& uvs;
     vector<IndexType>& indices;
 };
+
+bool IsFinitePositive(const float value)
+{
+    return std::isfinite(value) && (value > Math::EPSILON);
+}
+
+bool ValidatePlaneMeshParameters(float width, float depth)
+{
+    if (IsFinitePositive(width) && IsFinitePositive(depth)) {
+        return true;
+    }
+
+    CORE_LOG_E("GeneratePlaneMesh failed: invalid parameters (width=%f, depth=%f). "
+                "Width and depth must be finite and > 0.",
+        width, depth);
+    return false;
+}
+
+bool ValidateCubeMeshParameters(float width, float height, float depth)
+{
+    if (IsFinitePositive(width) && IsFinitePositive(height) && IsFinitePositive(depth)) {
+        return true;
+    }
+
+    CORE_LOG_E("GenerateCubeMesh failed: invalid parameters (width=%f, height=%f, depth=%f). "
+                "All dimensions must be finite and > 0.",
+        width, height, depth);
+    return false;
+}
+
+bool ValidateSphereMeshParameters(float radius, uint32_t rings, uint32_t sectors)
+{
+    if (IsFinitePositive(radius) && (rings >= SPHERE_MIN_RINGS) && (sectors >= SPHERE_MIN_SECTORS)) {
+        return true;
+    }
+
+    CORE_LOG_E("GenerateSphereMesh failed: invalid parameters (radius=%f, rings=%u, sectors=%u). "
+                "Radius must be finite and > 0, rings >= %u, sectors >= %u.",
+        radius, rings, sectors, SPHERE_MIN_RINGS, SPHERE_MIN_SECTORS);
+    return false;
+}
+
+bool ValidateConeMeshParameters(float radius, float length, uint32_t sectors)
+{
+    if (IsFinitePositive(radius) && IsFinitePositive(length) && (sectors >= CONE_MIN_SECTORS)) {
+        return true;
+    }
+
+    CORE_LOG_E("GenerateConeMesh failed: invalid parameters (radius=%f, length=%f, sectors=%u). "
+                "Radius and length must be finite and > 0, sectors >= %u.",
+        radius, length, sectors, CONE_MIN_SECTORS);
+    return false;
+}
+
+bool ValidateTorusMeshParameters(float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors)
+{
+    if (IsFinitePositive(majorRadius) && IsFinitePositive(minorRadius) && (majorSectors >= TORUS_MIN_MAJOR_SECTORS) &&
+        (minorSectors >= TORUS_MIN_MINOR_SECTORS)) {
+        return true;
+    }
+
+    CORE_LOG_E("GenerateTorusMesh failed: invalid parameters "
+                "(majorRadius=%f, minorRadius=%f, majorSectors=%u, minorSectors=%u). "
+                "Radii must be finite and > 0, majorSectors >= %u, minorSectors >= %u.",
+        majorRadius, minorRadius, majorSectors, minorSectors, TORUS_MIN_MAJOR_SECTORS, TORUS_MIN_MINOR_SECTORS);
+    return false;
+}
+
+bool ValidateCylinderMeshParameters(float radius, float height, uint32_t segmentCount)
+{
+    if (IsFinitePositive(radius) && IsFinitePositive(height) && (segmentCount >= CYLINDER_MIN_SEGMENTS)) {
+        return true;
+    }
+
+    CORE_LOG_E("GenerateCylinderMesh failed: invalid parameters (radius=%f, height=%f, segmentCount=%u). "
+                "Radius and height must be finite and > 0, segmentCount >= %u.",
+        radius, height, segmentCount, CYLINDER_MIN_SEGMENTS);
+    return false;
+}
 
 void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint16_t> geometry)
 {
@@ -152,28 +237,32 @@ void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint1
 
 void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geometry<uint32_t> geometry)
 {
+    constexpr uint32_t maxRingsSectors = 16384u;
+    rings = std::min(rings, maxRingsSectors);
+    sectors = std::min(sectors, maxRingsSectors);
+
     vector<Math::Vec3>& vertices = geometry.vertices;
     vector<Math::Vec3>& normals = geometry.normals;
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
     const size_t maxVertexCount = rings * sectors;
-    const size_t maxIndexCount = (rings - 1) * sectors * 6u;
+    const size_t maxIndexCount = (rings - 1U) * sectors * 6U;
 
     vertices.reserve(maxVertexCount);
     normals.reserve(maxVertexCount);
     uvs.reserve(maxVertexCount);
     indices.reserve(maxIndexCount);
 
-    const float r = 1.0f / static_cast<float>(rings - 1);
-    const float s = 1.0f / static_cast<float>(sectors - 1);
+    const float r = 1.0f / static_cast<float>(rings - 1U);
+    const float s = 1.0f / static_cast<float>(sectors - 1U);
 
     constexpr float pi = Math::PI;
     constexpr float halfPi = Math::PI * 0.5f;
 
-    for (uint32_t ring = 0; ring < rings; ++ring) {
+    for (uint32_t ring = 0U; ring < rings; ++ring) {
         const auto ringF = static_cast<float>(ring);
-        for (uint32_t sector = 0; sector < sectors; ++sector) {
+        for (uint32_t sector = 0U; sector < sectors; ++sector) {
             const auto sectorF = static_cast<float>(sector);
             const float y = Math::sin(-halfPi + pi * ringF * r);
             const float x = Math::cos(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
@@ -185,8 +274,8 @@ void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geom
 
             if (ring < rings - 1) {
                 const uint32_t curRow = ring * sectors;
-                const uint32_t nextRow = (ring + 1) * sectors;
-                const uint32_t nextS = (sector + 1) % sectors;
+                const uint32_t nextRow = (ring + 1U) * sectors;
+                const uint32_t nextS = (sector + 1U) % sectors;
 
                 indices.push_back(curRow + sector);
                 indices.push_back(nextRow + sector);
@@ -620,6 +709,10 @@ constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
 
 Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Entity material, float width, float depth)
 {
+    if (!ValidatePlaneMeshParameters(width, depth)) {
+        return {};
+    }
+
     const float extentX = width * 0.5f;
     const float extentZ = depth * 0.5f;
 
@@ -670,6 +763,10 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
 Entity MeshUtil::GenerateSphereMesh(
     const IEcs& ecs, const string_view name, Entity material, float radius, uint32_t rings, uint32_t sectors)
 {
+    if (!ValidateSphereMeshParameters(radius, rings, sectors)) {
+        return {};
+    }
+
     vector<Math::Vec3> vertices;
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
@@ -707,6 +804,10 @@ Entity MeshUtil::GenerateSphereMesh(
 Entity MeshUtil::GenerateConeMesh(
     const IEcs& ecs, const string_view name, Entity material, float radius, float length, uint32_t sectors)
 {
+    if (!ValidateConeMeshParameters(radius, length, sectors)) {
+        return {};
+    }
+
     vector<Math::Vec3> vertices;
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
@@ -744,6 +845,10 @@ Entity MeshUtil::GenerateConeMesh(
 Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Entity material, float majorRadius,
     float minorRadius, uint32_t majorSectors, uint32_t minorSectors)
 {
+    if (!ValidateTorusMeshParameters(majorRadius, minorRadius, majorSectors, minorSectors)) {
+        return {};
+    }
+
     vector<Math::Vec3> vertices;
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
@@ -781,6 +886,10 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
 Entity MeshUtil::GenerateCubeMesh(
     const IEcs& ecs, const string_view name, Entity material, float width, float height, float depth)
 {
+    if (!ValidateCubeMeshParameters(width, height, depth)) {
+        return {};
+    }
+
     vector<Math::Vec3> positions;
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
@@ -818,6 +927,10 @@ Entity MeshUtil::GenerateCubeMesh(
 CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS::string_view name,
     CORE_NS::Entity material, float radius, float height, uint32_t segmentCount)
 {
+    if (!ValidateCylinderMeshParameters(radius, height, segmentCount)) {
+        return {};
+    }
+
     vector<Math::Vec3> vertices;
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
@@ -880,12 +993,18 @@ Entity MeshUtil::GenerateCube(
     const IEcs& ecs, const string_view name, Entity material, float width, float height, float depth)
 {
     const Entity meshHandle = GenerateCubeMesh(ecs, name, material, width, height, depth);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 
 Entity MeshUtil::GeneratePlane(const IEcs& ecs, const string_view name, Entity material, float width, float depth)
 {
     const Entity meshHandle = GeneratePlaneMesh(ecs, name, material, width, depth);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 
@@ -893,6 +1012,9 @@ Entity MeshUtil::GenerateSphere(
     const IEcs& ecs, const string_view name, Entity material, float radius, uint32_t rings, uint32_t sectors)
 {
     const Entity meshHandle = GenerateSphereMesh(ecs, name, material, radius, rings, sectors);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 
@@ -900,6 +1022,9 @@ Entity MeshUtil::GenerateCone(
     const IEcs& ecs, const string_view name, Entity material, float radius, float length, uint32_t sectors)
 {
     const Entity meshHandle = GenerateConeMesh(ecs, name, material, radius, length, sectors);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 
@@ -908,6 +1033,9 @@ Entity MeshUtil::GenerateTorus(const IEcs& ecs, const string_view name, Entity m
 {
     const Entity meshHandle =
         GenerateTorusMesh(ecs, name, material, majorRadius, minorRadius, majorSectors, minorSectors);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 
@@ -915,6 +1043,9 @@ Entity MeshUtil::GenerateCylinder(
     const IEcs& ecs, const string_view name, Entity material, float radius, float height, uint32_t segmentCount)
 {
     const Entity meshHandle = GenerateCylinderMesh(ecs, name, material, radius, height, segmentCount);
+    if (meshHandle == Entity {}) {
+        return {};
+    }
     return GenerateEntity(ecs, name, meshHandle);
 }
 

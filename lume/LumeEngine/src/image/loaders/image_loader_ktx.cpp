@@ -376,7 +376,7 @@ public:
     }
 
     static bool ValidateMipLevel(const KtxImage::Ptr& image, const uint8_t* data, uint64_t totalSizePadded,
-        size_t mipSize, const GlImageFormatInfo& formatInfo, const MipDimensions& dims)
+        uint64_t mipSize, const GlImageFormatInfo& formatInfo, const MipDimensions& dims)
     {
         if (totalSizePadded >= UINT32_MAX) {
             CORE_LOG_D("imageSize too big");
@@ -391,13 +391,18 @@ public:
 
         // Verify mip data size is consistent with declared dimensions and layers.
         if (formatInfo.bitsPerBlock >= 8u) {
-            const size_t blocksX = (dims.width + formatInfo.blockWidth - 1u) / formatInfo.blockWidth;
-            const size_t blocksY = (dims.height + formatInfo.blockHeight - 1u) / formatInfo.blockHeight;
-            const size_t blocksZ = (dims.depth + formatInfo.blockDepth - 1u) / formatInfo.blockDepth;
-            const size_t bytesPerBlock = formatInfo.bitsPerBlock / 8u;
-            const size_t expectedMipSize = blocksX * blocksY * blocksZ * bytesPerBlock * image->imageDesc_.layerCount;
-            if (mipSize < expectedMipSize) {
-                CORE_LOG_D("Ktx mip data too small for declared dimensions and layers.");
+            const uint64_t blocksX =
+                (static_cast<uint64_t>(dims.width) + formatInfo.blockWidth - 1u) / formatInfo.blockWidth;
+            const uint64_t blocksY =
+                (static_cast<uint64_t>(dims.height) + formatInfo.blockHeight - 1u) / formatInfo.blockHeight;
+            const uint64_t blocksZ =
+                (static_cast<uint64_t>(dims.depth) + formatInfo.blockDepth - 1u) / formatInfo.blockDepth;
+            const uint64_t bytesPerBlock = static_cast<uint64_t>(formatInfo.bitsPerBlock / 8u);
+            const uint64_t rowSize = blocksX * bytesPerBlock;
+            const uint64_t rowSizePadded = rowSize + ((~rowSize + 1u) & (4u - 1u));
+            const uint64_t expectedMipSize = rowSizePadded * blocksY * blocksZ * image->imageDesc_.layerCount;
+            if (mipSize != expectedMipSize) {
+                CORE_LOG_D("Ktx mip data size mismatch with declared dimensions and layers.");
                 return false;
             }
         }
