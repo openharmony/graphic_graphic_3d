@@ -16,6 +16,7 @@
 #include "gltf2_exporter.h"
 
 #include <charconv>
+#include <limits>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_input_component.h>
@@ -740,7 +741,8 @@ Accessor* AnimationInput(
 
         auto inputAccessor = bufferHelper.StoreAccessor(accessor);
         // The accessor used for animation.sampler.input requires min and max values.
-        if (inputAccessor && (inputAccessor->min.empty() || inputAccessor->max.empty())) {
+        if (inputAccessor && inputAccessor->bufferView && inputAccessor->bufferView->data &&
+            (inputAccessor->min.empty() || inputAccessor->max.empty())) {
             auto input =
                 array_view(reinterpret_cast<float const*>(inputAccessor->bufferView->data + inputAccessor->byteOffset),
                     inputAccessor->count);
@@ -1460,6 +1462,9 @@ void ExportBufferViews(json::value& jsonGltf, const Data& data)
     json::value jsonBufferViews = json::value::array {};
     for (const auto& bufferView : data.bufferViews) {
         json::value jsonBufferView = json::value::object {};
+        if (!bufferView->buffer) {
+            continue; // defensive: skip malformed bufferView without a buffer (VULN-038)
+        }
         jsonBufferView["buffer"] = FindObjectIndex(data.buffers, *bufferView->buffer);
         if (bufferView->byteOffset) {
             jsonBufferView["byteOffset"] = bufferView->byteOffset;
@@ -2217,17 +2222,28 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
         jsonString.append(4 - pad, ' ');
     }
 
+    if (jsonString.size() > std::numeric_limits<uint32_t>::max()) {
+        CORE_LOG_E("GLB export: JSON chunk exceeds 4 GB limit, aborting.");
+        return;
+    }
     const auto jsonSize = static_cast<uint32_t>(jsonString.size());
     const auto binarySize = [](const auto& aBuffers) {
-        size_t totalSize = 0;
+        uint64_t totalSize = 0;
         for (const auto& buffer : aBuffers) {
             totalSize += buffer->data.size();
         }
-        return static_cast<uint32_t>(totalSize);
+        return totalSize;
     }(data.buffers);
 
-    const auto header = GLBHeader { GLTF_MAGIC, 2,
-        static_cast<uint32_t>(sizeof(GLBHeader) + sizeof(GLBChunk) + jsonSize + sizeof(GLBChunk) + binarySize) };
+    // GLB format stores total length as uint32_t — reject output that would overflow. (VULN-035)
+    constexpr uint64_t glbOverhead = sizeof(GLBHeader) + 2u * sizeof(GLBChunk);
+    const uint64_t totalSize64 = glbOverhead + jsonSize + binarySize;
+    if (binarySize > std::numeric_limits<uint32_t>::max() || totalSize64 > std::numeric_limits<uint32_t>::max()) {
+        CORE_LOG_E("GLB export: total size exceeds 4 GB uint32_t limit, aborting.");
+        return;
+    }
+    constexpr uint32_t glbVersion = 2;
+    const auto header = GLBHeader { GLTF_MAGIC, glbVersion, static_cast<uint32_t>(totalSize64) };
     file.Write(&header, sizeof(header));
 
     const auto jsonChunk = GLBChunk { jsonSize, static_cast<uint32_t>(ChunkType::JSON) };
@@ -2235,10 +2251,11 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
 
     file.Write(jsonString.data(), jsonSize);
 
-    const auto binaryChunk = GLBChunk { binarySize, static_cast<uint32_t>(ChunkType::BIN) };
+    const auto binarySize32 = static_cast<uint32_t>(binarySize); // safe: checked above
+    const auto binaryChunk = GLBChunk { binarySize32, static_cast<uint32_t>(ChunkType::BIN) };
     file.Write(&binaryChunk, sizeof(binaryChunk));
 
-    file.Write(data.buffers.front()->data.data(), binarySize);
+    file.Write(data.buffers.front()->data.data(), binarySize32);
 }
 
 /* Writes the GLTF2::Data as a glTF file. */
