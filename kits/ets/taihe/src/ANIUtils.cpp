@@ -191,32 +191,35 @@ AniObjectType HandleAniObject(ani_object obj, ani_env *env)
 
 std::string ResourceToString(ani_object ani_obj, ani_env *env)
 {
-    static std::string GET_METHOD_SIGNATURE = "";
-    if (GET_METHOD_SIGNATURE.empty()) {
-        arkts::ani_signature::SignatureBuilder builder{};
-        builder.AddInt().SetReturnUndefined();
-        GET_METHOD_SIGNATURE = builder.BuildSignatureDescriptor();
-    }
     std::string resourceStr;
     if (env == nullptr) {
         env = taihe::get_env();
     }
 
     ani_object params;
-    env->Object_GetPropertyByName_Ref(ani_obj, "params", reinterpret_cast<ani_ref *>(&params));
-    ani_int length;
-    env->Object_GetPropertyByName_Int(params, "length", &length);
-    WIDGET_LOGD("resource params length %{public}d", length);
-    for (int i = 0; i < static_cast<int>(length); i++) {
-        ani_ref stringEntryRef;
-        env->Object_CallMethodByName_Ref(
-            params, "$_get", GET_METHOD_SIGNATURE.c_str(), &stringEntryRef, static_cast<ani_int>(i));
-        resourceStr = ToStdString(reinterpret_cast<ani_string>(stringEntryRef), env);
-        WIDGET_LOGD("string in params: %{public}s", resourceStr.c_str());
-        // there supposed to be one resource string
+    ani_status status = env->Object_GetPropertyByName_Ref(ani_obj, "params", reinterpret_cast<ani_ref *>(&params));
+    if (status != ANI_OK) {
+        WIDGET_LOGE("get the params of Resource failed, status: %{public}d", status);
         return resourceStr;
     }
-    WIDGET_LOGE("no valid string in resource param");
+    ani_size len;
+    status = env->Array_GetLength(reinterpret_cast<ani_array>(params), &len);
+    if (status != ANI_OK) {
+        WIDGET_LOGE("get params length failed, status: %{public}d", status);
+        return resourceStr;
+    }
+    if (len <= 0) {
+        WIDGET_LOGE("the params of Resource is empty");
+        return resourceStr;
+    }
+
+    ani_ref param0;
+    status = env->Array_Get(reinterpret_cast<ani_array>(params), 0, &param0);
+    if (status != ANI_OK) {
+        WIDGET_LOGE("get the first element of params failed, status: %{public}d", status);
+        return resourceStr;
+    }
+    resourceStr = ToStdString(reinterpret_cast<ani_string>(param0), env);
     return resourceStr;
 }
 

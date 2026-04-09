@@ -207,7 +207,7 @@ std::string NodeETS::GetPath()
     BASE_NS::string rootName = "";
     if (auto scene = node->GetScene()) {
         if (auto root = scene->GetRootNode().GetResult()) {
-            rootName = NodeETS(root).GetName().c_str();
+            rootName = NodeETS(NodeType::NODE, root).GetName().c_str();
         }
     }
     BASE_NS::string path = node->GetPath().GetResult();

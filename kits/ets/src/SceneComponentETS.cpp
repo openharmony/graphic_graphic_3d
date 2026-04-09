@@ -132,4 +132,28 @@ std::shared_ptr<IPropertyProxy> SceneComponentETS::GetProperty(const std::string
     return proxies_[key];
 }
 
+void SceneComponentETS::ClearArrayProperty(const std::string &key)
+{
+    // NOTE: Currently only supports clearing IImage::Ptr array properties.
+    // If other SceneResource array types need to be supported in the future,
+    // add corresponding type checks and SetArrayProperty calls here.
+    std::shared_ptr<IPropertyProxy> proxy = GetProperty(key);
+    if (!proxy) {
+        CORE_LOG_E("property [%s] proxy not found", key.c_str());
+        return;
+    }
+    META_NS::IProperty::Ptr prop = proxy->GetPropertyPtr();
+    if (!prop) {
+        CORE_LOG_E("property [%s] prop is invalid", key.c_str());
+        return;
+    }
+    if (META_NS::IsCompatibleWith<BASE_NS::vector<SCENE_NS::IImage::Ptr>>(prop)) {
+        SetArrayProperty(key, BASE_NS::vector<SCENE_NS::IImage::Ptr>());
+        return;
+    }
+    auto any = META_NS::GetInternalAny(prop);
+    CORE_LOG_E("property [%s] type [%s] is not supported yet", key.c_str(),
+               any ? any->GetTypeIdString().c_str() : "<Unknown>");
+}
+
 }  // namespace OHOS::Render3D

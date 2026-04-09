@@ -331,7 +331,7 @@ std::shared_ptr<NodeETS> SceneETS::CloneNode(std::shared_ptr<NodeETS> node, std:
             if (!clone) {
                 return nullptr;
             }
-            return std::make_shared<NodeETS>(clone);
+            return NodeETS::FromNative(clone);
         }
     }
     return nullptr;
@@ -573,7 +573,7 @@ std::shared_ptr<NodeETS> SceneETS::ImportNode(const std::string &name, std::shar
             }
         }
         ResetAnimations();
-        auto nodeETS = std::make_shared<NodeETS>(importedNode);
+        auto nodeETS = NodeETS::FromNative(importedNode);
         nodeETS->Attached(true);
         return nodeETS;
     }
@@ -598,7 +598,7 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::sha
     if (auto import = interface_cast<SCENE_NS::INodeImport>(parentObj)) {
         auto importedNode = import->ImportChildScene(extScene, name.c_str()).GetResult();
         ResetAnimations();
-        auto nodeETS = std::make_shared<NodeETS>(importedNode);
+        auto nodeETS = NodeETS::FromNative(importedNode);
         nodeETS->Attached(true);
         return nodeETS;
     }
