@@ -46,27 +46,28 @@ void PostProcessTonemapBlock(in uint postProcessFlags, in vec4 tonemapFactor, in
 }
 
 /**
- * returns tone adjusted color
+ * returns color adjusted color
  */
-void PostProcessToneBlock(
-    in uint postProcessFlags, in vec4 toneFactor, in vec4 filterColor, in vec3 inCol, out vec3 outCol)
+void PostProcessColorAdjustmentsBlock(
+    in uint postProcessFlags, in vec4 colorAdjustmentsFactor, in vec4 filterColor, in vec3 inCol, out vec3 outCol)
 {
     outCol = inCol;
 
-    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_TONE_BIT) == POST_PROCESS_SPECIALIZATION_TONE_BIT) {
+    if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_COLOR_ADJUSTMENTS_BIT) ==
+        POST_PROCESS_SPECIALIZATION_COLOR_ADJUSTMENTS_BIT) {
         // 1. Apply color filter (only use rgb components)
         outCol *= filterColor.rgb;
 
         // 2. Apply hue shift
-        const float hueShift = toneFactor.w;
+        const float hueShift = colorAdjustmentsFactor.w;
         if (abs(hueShift) > 0.001) {
             outCol = HueShift(outCol, hueShift);
         }
 
         // 3. Build combined color adjustment matrix
-        const float brightness = toneFactor.x;
-        const float contrast = toneFactor.y;
-        const float saturation = toneFactor.z;
+        const float brightness = colorAdjustmentsFactor.x;
+        const float contrast = colorAdjustmentsFactor.y;
+        const float saturation = colorAdjustmentsFactor.z;
 
         // Order: saturation -> contrast -> brightness
         mat4 colorMatrix = BrightnessMatrix(brightness) * ContrastMatrix(contrast) * SaturationMatrix(saturation);

@@ -69,7 +69,7 @@ using ObjectTypes = META_NS::TypeList<
     IMorpher::Ptr,
     IPostProcess::Ptr,
     IBloom::Ptr,
-    ITone::Ptr,
+    IColorAdjustments::Ptr,
     ITonemap::Ptr,
     IColorConversion::Ptr,
     IColorFringe::Ptr,

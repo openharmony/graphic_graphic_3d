@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_INTERFACE_POSTPROCESS_ITONE_H
-#define SCENE_INTERFACE_POSTPROCESS_ITONE_H
+#ifndef SCENE_INTERFACE_POSTPROCESS_ICOLOR_ADJUSTMENTS_H
+#define SCENE_INTERFACE_POSTPROCESS_ICOLOR_ADJUSTMENTS_H
 
 #include <scene/base/types.h>
 #include <scene/interface/postprocess/intf_postprocess_effect.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-class ITone : public IPostProcessEffect {
-    META_INTERFACE(IPostProcessEffect, ITone, "4a8c9d2e-5f3a-47b6-8c9d-2e5f3a47b68c")
+class IColorAdjustments : public IPostProcessEffect {
+    META_INTERFACE(IPostProcessEffect, IColorAdjustments, "4a8c9d2e-5f3a-47b6-8c9d-2e5f3a47b68c")
 public:
     /**
      * @brief Color filter multiplied with output color (RGB used, Alpha ignored)
@@ -52,6 +52,6 @@ public:
 
 SCENE_END_NAMESPACE()
 
-META_INTERFACE_TYPE(SCENE_NS::ITone)
+META_INTERFACE_TYPE(SCENE_NS::IColorAdjustments)
 
-#endif // SCENE_INTERFACE_POSTPROCESS_ITONE_H
+#endif // SCENE_INTERFACE_POSTPROCESS_ICOLOR_ADJUSTMENTS_H

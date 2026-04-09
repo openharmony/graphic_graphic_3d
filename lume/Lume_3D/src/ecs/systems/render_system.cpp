@@ -2417,7 +2417,7 @@ void RenderSystem::ProcessPostProcessComponents(const Entity& mainCameraEntity)
         ppConfig.blurConfiguration = pp.blurConfiguration;
         ppConfig.colorConversionConfiguration = pp.colorConversionConfiguration;
         ppConfig.whiteBalanceConfiguration = pp.whiteBalanceConfiguration;
-        ppConfig.toneConfiguration = pp.toneConfiguration;
+        ppConfig.colorAdjustmentsConfiguration = pp.colorAdjustmentsConfiguration;
         ppConfig.tonemapConfiguration = pp.tonemapConfiguration;
         ppConfig.fxaaConfiguration = pp.fxaaConfiguration;
         ppConfig.taaConfiguration = pp.taaConfiguration;
@@ -2430,9 +2430,9 @@ void RenderSystem::ProcessPostProcessComponents(const Entity& mainCameraEntity)
         ppConfig.upscaleConfiguration.structureSensitivity = pp.upscaleConfiguration.structureSensitivity;
         ppConfig.upscaleConfiguration.edgeSharpness = pp.upscaleConfiguration.edgeSharpness;
 
-        // Set Tone filterColor to userFactors
-        ppConfig.userFactors[RENDER_NS::PostProcessConstants::USER_INDEX_TONE_FILTER_COLOR] =
-            ppConfig.toneConfiguration.filterColor;
+        // Set ColorAdjustments filterColor to userFactors
+        ppConfig.userFactors[RENDER_NS::PostProcessConstants::USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR] =
+            ppConfig.colorAdjustmentsConfiguration.filterColor;
 
         const Entity ppEntity = postProcessMgr_->GetEntity(id);
         const auto ppName = GetPostProcessName(nameMgr_, properties_.dataStoreScene, ppEntity, false);

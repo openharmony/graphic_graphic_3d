@@ -49,10 +49,10 @@ void main(void)
     PostProcessBloomCombineBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_BLOOM], inUv,
         uBloomSampler, uDirtSampler, outColor.rgb, outColor.rgb);
 
-    PostProcessToneBlock(
+    PostProcessColorAdjustmentsBlock(
         uGlobalData.flags.x,
-        uGlobalData.factors[POST_PROCESS_INDEX_TONE],
-        uGlobalData.userFactors[POST_PROCESS_USER_INDEX_TONE_FILTER_COLOR], // filterColor
+        uGlobalData.factors[POST_PROCESS_INDEX_COLOR_ADJUSTMENTS],
+        uGlobalData.userFactors[POST_PROCESS_USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR], // filterColor
         outColor.rgb,
         outColor.rgb);
 

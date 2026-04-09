@@ -87,8 +87,8 @@ struct PostProcessConstants {
         RENDER_UPSCALER_BIT = 5,
         /** Render white balance */
         RENDER_WHITE_BALANCE = 6,
-        /** Render tone */
-        RENDER_TONE = 7,
+        /** Render color adjustments */
+        RENDER_COLOR_ADJUSTMENTS = 7,
 
         /** Render blur index */
         RENDER_BLUR = 8,
@@ -115,7 +115,7 @@ struct PostProcessConstants {
         "render_color_fringe",
         "render_upscaler_bit",
         "render_white_balance",
-        "render_tone",
+        "render_color_adjustments",
         "render_blur",
         "render_bloom",
         "render_fxaa",
@@ -134,8 +134,8 @@ struct PostProcessConstants {
     /** User global post process factor count */
     static constexpr uint32_t USER_GLOBAL_FACTOR_COUNT { 16u };
 
-    /** User factor index for Tone filterColor */
-    static constexpr uint32_t USER_INDEX_TONE_FILTER_COLOR { 0u };
+    /** User factor index for ColorAdjustments filterColor */
+    static constexpr uint32_t USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR { 0u };
     /** User local post process factor count */
     static constexpr uint32_t USER_LOCAL_FACTOR_COUNT { USER_GLOBAL_FACTOR_COUNT };
     /** User local post process factor byte size */
@@ -287,8 +287,8 @@ struct WhiteBalanceConfiguration {
     float tint { 0.0f };
 };
 
-/** Tone color adjustment configuration. */
-struct ToneConfiguration {
+/** Color adjustments configuration. */
+struct ColorAdjustmentsConfiguration {
     /** Color filter (RGBA, RGB used for filter, Alpha reserved) */
     BASE_NS::Math::Vec4 filterColor { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -441,8 +441,8 @@ struct PostProcessConfiguration {
         ENABLE_UPSCALE_BIT = (1 << 5),
         /** Enable white balance */
         ENABLE_WHITE_BALANCE_BIT = (1 << 6),
-        /** Enable tone color adjustment */
-        ENABLE_TONE_BIT = (1 << 7),
+        /** Enable color adjustments */
+        ENABLE_COLOR_ADJUSTMENTS_BIT = (1 << 7),
 
         /** Enable blur */
         ENABLE_BLUR_BIT = (1 << 8),
@@ -470,7 +470,7 @@ struct PostProcessConfiguration {
         INDEX_COLOR_FRINGE = 4,
         INDEX_UPSCALE = 5,
         INDEX_WHITE_BALANCE = 6,
-        INDEX_TONE = 7,
+        INDEX_COLOR_ADJUSTMENTS = 7,
 
         INDEX_BLUR = 8,
         INDEX_BLOOM = 9,
@@ -495,8 +495,8 @@ struct PostProcessConfiguration {
     ColorConversionConfiguration colorConversionConfiguration;
     /** White balance configuration */
     WhiteBalanceConfiguration whiteBalanceConfiguration;
-    /** Tone color adjustment configuration */
-    ToneConfiguration toneConfiguration;
+    /** Color adjustments configuration */
+    ColorAdjustmentsConfiguration colorAdjustmentsConfiguration;
 
     /** Color fringe configuration */
     ColorFringeConfiguration colorFringeConfiguration;
@@ -567,7 +567,7 @@ DECLARE_PROPERTY_TYPE(RENDER_NS::VignetteConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::DitherConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::ColorConversionConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::WhiteBalanceConfiguration);
-DECLARE_PROPERTY_TYPE(RENDER_NS::ToneConfiguration);
+DECLARE_PROPERTY_TYPE(RENDER_NS::ColorAdjustmentsConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::ColorFringeConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BloomConfiguration);
 DECLARE_PROPERTY_TYPE(RENDER_NS::BlurConfiguration);

@@ -13,27 +13,28 @@
  * limitations under the License.
  */
 
-#ifndef SCENE_SRC_POSTPROCESS_TONE_H
-#define SCENE_SRC_POSTPROCESS_TONE_H
+#ifndef SCENE_SRC_POSTPROCESS_COLOR_ADJUSTMENTS_H
+#define SCENE_SRC_POSTPROCESS_COLOR_ADJUSTMENTS_H
 
-#include <scene/interface/postprocess/intf_tone.h>
+#include <scene/interface/postprocess/intf_color_adjustments.h>
 
 #include "postprocess_effect.h"
 
 SCENE_BEGIN_NAMESPACE()
 
-META_REGISTER_CLASS(Tone, "7b5d8e3f-9a4b-4c7d-8e3f-9a4b4c7d8e3f", META_NS::ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(ColorAdjustments, "7b5d8e3f-9a4b-4c7d-8e3f-9a4b4c7d8e3f", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class Tone : public Internal::PostProcessEffect<ITone, CORE3D_NS::PostProcessComponent::TONE_BIT> {
-    META_OBJECT(Tone, ClassId::Tone, PostProcessEffect)
+class ColorAdjustments
+    : public Internal::PostProcessEffect<IColorAdjustments, CORE3D_NS::PostProcessComponent::COLOR_ADJUSTMENTS_BIT> {
+    META_OBJECT(ColorAdjustments, ClassId::ColorAdjustments, PostProcessEffect)
 public:
     META_BEGIN_STATIC_DATA()
     SCENE_STATIC_DYNINIT_PROPERTY_DATA(IPostProcessEffect, bool, Enabled, "")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITone, BASE_NS::Math::Vec4, FilterColor, "filterColor")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITone, float, HueShift, "hueShift")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITone, float, Saturation, "saturation")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITone, float, Brightness, "brightness")
-    SCENE_STATIC_DYNINIT_PROPERTY_DATA(ITone, float, Contrast, "contrast")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorAdjustments, BASE_NS::Math::Vec4, FilterColor, "filterColor")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorAdjustments, float, HueShift, "hueShift")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorAdjustments, float, Saturation, "saturation")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorAdjustments, float, Brightness, "brightness")
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(IColorAdjustments, float, Contrast, "contrast")
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(bool, Enabled)
@@ -49,4 +50,4 @@ private:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_POSTPROCESS_TONE_H
+#endif // SCENE_SRC_POSTPROCESS_COLOR_ADJUSTMENTS_H

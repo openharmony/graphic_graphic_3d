@@ -57,20 +57,20 @@ public:
 };
 
 /**
- * @brief The Tone class wraps a post process effect which implements ITone.
+ * @brief The ColorAdjustments class wraps a post process effect which implements IColorAdjustments.
  */
-class Tone : public PostProcessEffect {
+class ColorAdjustments : public PostProcessEffect {
 public:
-    META_INTERFACE_OBJECT(Tone, PostProcessEffect, ITone)
-    /// @see ITone::FilterColor
+    META_INTERFACE_OBJECT(ColorAdjustments, PostProcessEffect, IColorAdjustments)
+    /// @see IColorAdjustments::FilterColor
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec4, FilterColor)
-    /// @see ITone::HueShift
+    /// @see IColorAdjustments::HueShift
     META_INTERFACE_OBJECT_PROPERTY(float, HueShift)
-    /// @see ITone::Saturation
+    /// @see IColorAdjustments::Saturation
     META_INTERFACE_OBJECT_PROPERTY(float, Saturation)
-    /// @see ITone::Brightness
+    /// @see IColorAdjustments::Brightness
     META_INTERFACE_OBJECT_PROPERTY(float, Brightness)
-    /// @see ITone::Contrast
+    /// @see IColorAdjustments::Contrast
     META_INTERFACE_OBJECT_PROPERTY(float, Contrast)
 };
 
@@ -271,8 +271,8 @@ public:
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Fxaa, Fxaa)
     /// @see IPostProcess::Taa
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Taa, Taa)
-    /// @see IPostProcess::Tone
-    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Tone, Tone)
+    /// @see IPostProcess::ColorAdjustments
+    META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::ColorAdjustments, ColorAdjustments)
     /// @see IPostProcess::Vignette
     META_INTERFACE_OBJECT_READONLY_PROPERTY(SCENE_NS::Vignette, Vignette)
     /// @see IPostProcess::LensFlare
