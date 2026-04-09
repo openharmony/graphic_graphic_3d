@@ -19,7 +19,9 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <securec.h>
 
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
@@ -437,7 +439,8 @@ std::optional<int> BufferViewByteOffset(
         SetError(loadResult, "bufferView.byteOffset isn't valid offset");
         return std::nullopt;
     } else if (!buffer || !(*buffer) || !byteLength ||
-               ((*buffer)->byteLength < static_cast<size_t>(size_t(offset) + *byteLength))) {
+               (static_cast<uint64_t>((*buffer)->byteLength) <
+                   static_cast<uint64_t>(offset) + static_cast<uint64_t>(*byteLength))) {
         SetError(loadResult, "bufferView.byteLength is larger than buffer.byteLength");
         return std::nullopt;
     }
@@ -626,6 +629,22 @@ bool ParseBufferView(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+std::optional<ComponentType> ParseComponentType(LoadResult& loadResult, int componentType)
+{
+    switch (componentType) {
+        case static_cast<int>(ComponentType::BYTE):
+        case static_cast<int>(ComponentType::UNSIGNED_BYTE):
+        case static_cast<int>(ComponentType::SHORT):
+        case static_cast<int>(ComponentType::UNSIGNED_SHORT):
+        case static_cast<int>(ComponentType::UNSIGNED_INT):
+        case static_cast<int>(ComponentType::FLOAT):
+            return static_cast<ComponentType>(componentType);
+        default:
+            SetError(loadResult, "Invalid componentType value");
+            return std::nullopt;
+    }
+}
+
 std::optional<ComponentType> AccessorComponentType(LoadResult& loadResult, const json::value& jsonData)
 {
     int componentType = 0;
@@ -633,7 +652,7 @@ std::optional<ComponentType> AccessorComponentType(LoadResult& loadResult, const
         SetError(loadResult, "Failed to read accessor.componentType");
         return std::nullopt;
     }
-    return static_cast<ComponentType>(componentType);
+    return ParseComponentType(loadResult, componentType);
 }
 
 std::optional<uint32_t> AccessorCount(LoadResult& loadResult, const json::value& jsonData)
@@ -688,7 +707,7 @@ std::optional<uint32_t> AccessorByteOffset(
 {
     uint32_t byteOffset;
     if (!ParseOptionalNumber<uint32_t>(loadResult, byteOffset, jsonData, "byteOffset", 0)) {
-        return false;
+        return std::nullopt;
     } else if (bufferView && (*bufferView) && ((*bufferView)->byteLength <= byteOffset)) {
         SetError(loadResult, "Accessor.byteOffset isn't valid offset");
         return std::nullopt;
@@ -745,9 +764,13 @@ std::optional<SparseIndices> AccessorSparseIndices(LoadResult& loadResult, const
         return std::nullopt;
     }
 
-    indices.componentType = static_cast<ComponentType>(componentType);
+    if (auto ct = ParseComponentType(loadResult, componentType); ct) {
+        indices.componentType = *ct;
+    } else {
+        return std::nullopt;
+    }
 
-    if (!ParseOptionalNumber<uint32_t>(loadResult, indices.byteOffset, jsonData, "bufferOffset", 0)) {
+    if (!ParseOptionalNumber<uint32_t>(loadResult, indices.byteOffset, jsonData, "byteOffset", 0)) {
         return std::nullopt;
     }
 
@@ -768,7 +791,7 @@ std::optional<SparseValues> AccessorSparseValues(LoadResult& loadResult, const j
         return std::nullopt;
     }
 
-    if (!ParseOptionalNumber<uint32_t>(loadResult, values.byteOffset, jsonData, "bufferOffset", 0)) {
+    if (!ParseOptionalNumber<uint32_t>(loadResult, values.byteOffset, jsonData, "byteOffset", 0)) {
         return std::nullopt;
     }
 
@@ -883,10 +906,18 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
             SetError(loadResult, "Accessor.sparse.count is invalid");
             return false;
         }
+        if (sparseRef.indices.bufferView && sparseRef.indices.bufferView->byteStride != 0) {
+            SetError(loadResult, "Accessor.sparse.indices.bufferView must not define byteStride");
+            return false;
+        }
         if (!ValidateAccessor(loadResult, sparseRef.indices.componentType, sparseRef.count, DataType::SCALAR,
                 sparseRef.indices.bufferView, sparseRef.indices.byteOffset, array_view<const float> {},
                 array_view<const float> {})) {
             SetError(loadResult, "Accessor.sparse.indices is invalid");
+            return false;
+        }
+        if (sparseRef.values.bufferView && sparseRef.values.bufferView->byteStride != 0) {
+            SetError(loadResult, "Accessor.sparse.values.bufferView must not define byteStride");
             return false;
         }
         if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), sparseRef.count,
@@ -2019,7 +2050,7 @@ bool ImageBasedLightIrradianceCoefficients(
                 [](const json::value& item) { return item.is_number() ? item.as_number<float>() : 0.f; });
         }
 
-        if (coeff.size() != 3) {
+        if (coeff.size() != 3u) {
             return false;
         }
 
@@ -2027,7 +2058,20 @@ bool ImageBasedLightIrradianceCoefficients(
         return true;
     };
 
-    return ForEachInArray(loadResult, jsonData, "irradianceCoefficients", parseIrradianceCoefficients);
+    if (!ForEachInArray(loadResult, jsonData, "irradianceCoefficients", parseIrradianceCoefficients)) {
+        return false;
+    }
+
+    // EXT_lights_image_based spec requires exactly 9 coefficients (one per SH band-0..band-2 basis function).
+    // Reject any partial array — the importer cannot use it and the data is non-conformant.
+    constexpr size_t requiredCoefficientCount = 9u;
+    if (!irradianceCoefficients.empty() && irradianceCoefficients.size() != requiredCoefficientCount) {
+        CORE_LOG_W("GLTF2: EXT_lights_image_based irradianceCoefficients must be a 9x3 array (got %zu); ignoring.",
+            irradianceCoefficients.size());
+        irradianceCoefficients.clear();
+    }
+
+    return true;
 }
 
 bool ImageBasedLightSpecularImages(
@@ -2339,6 +2383,16 @@ bool ParseNode(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+bool CheckCycle(const BASE_NS::unique_ptr<Node>& node, const Node* childNode)
+{
+    for (const Node* ancestor = node.get(); ancestor; ancestor = ancestor->parent) {
+        if (ancestor == childNode) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool FinalizeNodes(LoadResult& loadResult)
 {
     bool result = true;
@@ -2355,6 +2409,12 @@ bool FinalizeNodes(LoadResult& loadResult)
             auto childNode = nodes[index].get();
             if (childNode->parent) {
                 SetError(loadResult, "Node has multiple parents");
+                result = false;
+                continue;
+            }
+            // Detect cycles: check that node is not already a descendant of childNode.
+            if (CheckCycle(node, childNode)) {
+                SetError(loadResult, "Node graph contains a cycle");
                 result = false;
                 continue;
             }
@@ -3053,7 +3113,8 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     // if the buffer starts with a GLB header assume GLB, otherwise glTF with embedded data.
     char const* ext = ".gltf";
     if (data.size() >= (sizeof(GLBHeader) + sizeof(GLBChunk))) {
-        GLBHeader const& header = *reinterpret_cast<GLBHeader const*>(data.data());
+        GLBHeader header {};
+        memcpy_s(&header, sizeof(header), data.data(), sizeof(GLBHeader));
         if (header.magic == GLTF_MAGIC) {
             ext = ".glb";
         }
