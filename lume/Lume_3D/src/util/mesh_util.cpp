@@ -237,9 +237,6 @@ void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint1
 
 void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geometry<uint32_t> geometry)
 {
-    if ((rings == 0U) || (sectors == 0U)) {
-        return;
-    }
     constexpr uint32_t maxRingsSectors = 16384u;
     rings = std::min(rings, maxRingsSectors);
     sectors = std::min(sectors, maxRingsSectors);
@@ -250,22 +247,22 @@ void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geom
     vector<uint32_t>& indices = geometry.indices;
 
     const size_t maxVertexCount = rings * sectors;
-    const size_t maxIndexCount = (rings - 1) * sectors * 6u;
+    const size_t maxIndexCount = (rings - 1U) * sectors * 6U;
 
     vertices.reserve(maxVertexCount);
     normals.reserve(maxVertexCount);
     uvs.reserve(maxVertexCount);
     indices.reserve(maxIndexCount);
 
-    const float r = 1.0f / static_cast<float>(rings - 1);
-    const float s = 1.0f / static_cast<float>(sectors - 1);
+    const float r = 1.0f / static_cast<float>(rings - 1U);
+    const float s = 1.0f / static_cast<float>(sectors - 1U);
 
     constexpr float pi = Math::PI;
     constexpr float halfPi = Math::PI * 0.5f;
 
-    for (uint32_t ring = 0; ring < rings; ++ring) {
+    for (uint32_t ring = 0U; ring < rings; ++ring) {
         const auto ringF = static_cast<float>(ring);
-        for (uint32_t sector = 0; sector < sectors; ++sector) {
+        for (uint32_t sector = 0U; sector < sectors; ++sector) {
             const auto sectorF = static_cast<float>(sector);
             const float y = Math::sin(-halfPi + pi * ringF * r);
             const float x = Math::cos(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
@@ -277,8 +274,8 @@ void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geom
 
             if (ring < rings - 1) {
                 const uint32_t curRow = ring * sectors;
-                const uint32_t nextRow = (ring + 1) * sectors;
-                const uint32_t nextS = (sector + 1) % sectors;
+                const uint32_t nextRow = (ring + 1U) * sectors;
+                const uint32_t nextS = (sector + 1U) % sectors;
 
                 indices.push_back(curRow + sector);
                 indices.push_back(nextRow + sector);
