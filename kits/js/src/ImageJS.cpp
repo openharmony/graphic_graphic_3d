@@ -118,6 +118,7 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
     auto bitmap = GetNativeObject<SCENE_NS::IBitmap>();
     if (bitmap == nullptr) {
         LOG_E("Cannot finish creating an image: Native image object missing");
+        assert(false);
         return;
     }
 
@@ -149,33 +150,27 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
         LOG_E("### building image without uri");
     }
 
-    if (auto bitmap = GetNativeObject<SCENE_NS::IBitmap>()) {
-        auto uri = ExtractUri(uri_.GetObject());
-        LOG_V("### uri: %s", uri.c_str());
-	    if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
-            if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
-                auto prop = META_NS::ConstructProperty<BASE_NS::string>(
-                    "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
-                m->AddProperty(prop);
-            } else {
-                LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
-            }
+    auto uri = ExtractUri(uri_.GetObject());
+    LOG_V("### uri: %s", uri.c_str());
+    if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
+        if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
+            auto prop = META_NS::ConstructProperty<BASE_NS::string>(
+                "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
+            m->AddProperty(prop);
+        } else {
+            LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
         }
-        if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
-            resources_ = renderContextJs->GetResources();
-            if (resources_) {
-                resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-                resources_->StoreBitmap(uri, BASE_NS::move(bitmap));
-            } else {
-                LOG_E("Cannot finish creating an image: no resources");
-                assert(false);
-                return;
-            }
+    }
+    if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
+        resources_ = renderContextJs->GetResources();
+        if (resources_) {
+            resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            resources_->StoreBitmap(uri, BASE_NS::move(bitmap));
+        } else {
+            LOG_E("Cannot finish creating an image: no resources");
+            assert(false);
+            return;
         }
-    } else {
-        LOG_E("Cannot finish creating an image: Native image object missing");
-        assert(false);
-        return;
     }
 
     AddBridge("ImageJS", meJs);

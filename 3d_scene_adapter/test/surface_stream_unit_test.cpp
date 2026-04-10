@@ -13,12 +13,25 @@
  * limitations under the License.
  */
 
-#if defined(UNIT_TESTS_USE_HCPPTEST)
-#include "test_runner_ohos_system.h"
-#else
-#include "test_runner.h"
-#endif
-
+#include <dlfcn.h>
+#include <gtest/gtest.h>
+#include <core/engine_info.h>
+#include <core/implementation_uids.h>
+#include <core/intf_engine.h>
+#include <core/io/intf_file_manager.h>
+#include <core/os/intf_platform.h>
+#include <core/plugin/intf_class_factory.h>
+#include <core/plugin/intf_plugin_register.h>
+#include <core/property/property_types.h>
+#include <core/resources/intf_resource_manager.h>
+#include <meta/api/metadata_util.h>
+#include <meta/api/object.h>
+#include <meta/ext/attachment/behavior.h>
+#include <meta/interface/intf_manual_clock.h>
+#include <meta/interface/intf_object_registry.h>
+#include <meta/interface/resource/intf_resource.h>
+#include <render/device/intf_gpu_resource_manager.h>
+#include <render/intf_renderer.h>
 #include <scene/api/scene.h>
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_ecs_object.h>
@@ -36,27 +49,62 @@
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
-#include <scene/interface/intf_surface_stream.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 #include <scene/interface/resource/types.h>
 #include <scene/interface/resource/util.h>
-
-#include <core/resources/intf_resource_manager.h>
-
-#include <meta/api/metadata_util.h>
-#include <meta/api/object.h>
-#include <meta/ext/attachment/behavior.h>
-#include <meta/interface/intf_object_registry.h>
-#include <meta/interface/resource/intf_resource.h>
-
+#include <scene/interface/scene_options.h>
+#include <scene_adapter/intf_surface_stream.h>
+#include <scene_adapter/surface_stream.h>
+#include "3d_widget_adapter_log.h"
 #include "scene/scene_test.h"
+#include <3d/implementation_uids.h>
+#include <scene/interface/intf_application_context.h>
+#if RENDER_HAS_GLES_BACKEND || RENDER_HAS_GL_BACKEND
+#include <render/gles/intf_device_gles.h>
+#endif
+#if RENDER_HAS_VULKAN_BACKEND
+#include <vulkan/vulkan.h>
+#include <render/vulkan/intf_device_vk.h>
+#endif
 
-SCENE_BEGIN_NAMESPACE()
-namespace UTest {
+using namespace testing;
+using namespace testing::ext;
 
-class API_SurfaceStreamTest : public ScenePluginTest {
+namespace OHOS::Render3D {
+
+static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
+
+class SurfaceStreamTest : public SCENE_NS::UTest::ScenePluginTest {
 public:
+    static void SetUpTestCase()
+    {
+        LoadEngineLib();
+        LoadPlugins();
+        CreateEngine();
+        CreateRenderContext();
+        ASSERT_NE(renderContext_, nullptr);
+        CreateGraphicsContext();
+        CreateEcs();
+        CreateAppContext();
+    }
+
+    static void TearDownTestCase()
+    {
+        appContext_.reset();
+        if (ecs_) {
+            ecs_->Uninitialize();
+        }
+        ecs_.reset();
+        graphicsContext3D_.reset();
+        renderContext_.reset();
+        engine_.reset();
+
+        if (libHandle_) {
+            dlclose(libHandle_);
+            libHandle_ = nullptr;
+        }
+    }
+
     void SetUp() override
     {
         ScenePluginTest::SetUp();
@@ -66,16 +114,270 @@ public:
     {
         ScenePluginTest::TearDown();
     }
+
+private:
+    static void LoadEngineLib()
+    {
+        // Load engine library and initialize global function pointers
+        // These global function pointers are defined in lume_common.cpp
+
+        // Try multiple possible library paths for different environments
+        const char* libPaths[] = {
+            "/system/lib64/libAGPDLL.z.so",  // Production device path
+            "/system/lib/libAGPDLL.z.so",    // 32-bit device path
+            "./libAGPDLL.z.so",              // Local development path
+            "libAGPDLL.z.so"                 // Search in library path
+        };
+
+        for (const char* path : libPaths) {
+            libHandle_ = dlopen(path, RTLD_LAZY);
+            if (libHandle_) {
+                WIDGET_LOGI("[SurfaceStreamTest] Successfully loaded engine library from: %{public}s", path);
+                break;
+            }
+        }
+
+        if (!libHandle_) {
+            WIDGET_LOGE("[SurfaceStreamTest] Failed to load engine library from all paths:");
+            for (const char* path : libPaths) {
+                WIDGET_LOGE("[SurfaceStreamTest]   - %{public}s", path);
+            }
+            WIDGET_LOGE("[SurfaceStreamTest] Error: %{public}s", dlerror());
+        }
+        ASSERT_TRUE(libHandle_ != nullptr) <<
+            "Failed to load engine library. Check that the engine library is built and accessible.";
+
+        auto* createPluginReg = reinterpret_cast<void (*)(const CORE_NS::PlatformCreateInfo&)>(
+            dlsym(libHandle_, "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE"));
+        auto* getPluginReg = reinterpret_cast<CORE_NS::IPluginRegister& (*)()>(
+            dlsym(libHandle_, "_ZN4Core17GetPluginRegisterEv"));
+
+        if (!createPluginReg || !getPluginReg) {
+            if (!createPluginReg) {
+                WIDGET_LOGE("[SurfaceStreamTest] CreatePluginRegistry: NULL - %{public}s", dlerror());
+            }
+            if (!getPluginReg) {
+                WIDGET_LOGE("[SurfaceStreamTest] GetPluginRegister: NULL - %{public}s", dlerror());
+            }
+            ASSERT_TRUE(false) << "Failed to load engine function pointers";
+        }
+
+        // Assign to global function pointers
+        CORE_NS::CreatePluginRegistry = createPluginReg;
+        CORE_NS::GetPluginRegister = getPluginReg;
+
+        // Verify function pointers are properly initialized
+        ASSERT_TRUE(CORE_NS::CreatePluginRegistry != nullptr);
+        ASSERT_TRUE(CORE_NS::GetPluginRegister != nullptr);
+
+        WIDGET_LOGI("[SurfaceStreamTest] Engine library loaded successfully, function pointers initialized");
+    }
+
+    static void LoadPlugins()
+    {
+        if (CORE_NS::CreatePluginRegistry == nullptr) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: CreatePluginRegistry is nullptr in LoadPlugins!");
+            ASSERT_TRUE(false) << "CreatePluginRegistry became nullptr between LoadEngineLib and LoadPlugins";
+        }
+
+        // Create plugin registry with platform info
+        // Use the paths defined in BUILD.gn
+        CORE_NS::PlatformCreateInfo platformCreateInfo {
+            PLATFORM_CORE_ROOT_PATH,
+            PLATFORM_CORE_PLUGIN_PATH,
+            PLATFORM_APP_ROOT_PATH,
+            PLATFORM_APP_PLUGIN_PATH
+        };
+        CORE_NS::CreatePluginRegistry(platformCreateInfo);
+        // Load necessary plugins
+        constexpr BASE_NS::Uid plugins[] = {
+            RENDER_NS::UID_RENDER_PLUGIN,
+            CORE3D_NS::UID_3D_PLUGIN,
+            SCENE_NS::UID_SCENE_PLUGIN
+        };
+
+        auto& pluginRegister = CORE_NS::GetPluginRegister();
+        bool loadResult = pluginRegister.LoadPlugins(plugins);
+        WIDGET_LOGI("[SurfaceStreamTest] LoadPlugins returned, result = %{public}s", loadResult ? "true" : "false");
+
+        if (!loadResult) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: Failed to load plugins!");
+            ASSERT_TRUE(false) << "Failed to load required plugins";
+        }
+
+        WIDGET_LOGI("[SurfaceStreamTest] LoadPlugins completed successfully");
+    }
+
+    static void CreateEngine()
+    {
+        auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
+        ASSERT_TRUE(factory != nullptr) << "Failed to get engine factory";
+
+        CORE_NS::PlatformCreateInfo platformCreateInfo {
+            PLATFORM_CORE_ROOT_PATH,
+            PLATFORM_CORE_PLUGIN_PATH,
+            PLATFORM_APP_ROOT_PATH,
+            PLATFORM_APP_PLUGIN_PATH
+        };
+        CORE_NS::EngineCreateInfo engineCreateInfo {
+            platformCreateInfo,
+            {"UnitTest", 0, 1, 0},  // application version
+            {}                       // application context
+        };
+        engine_ = factory->Create(engineCreateInfo);
+        ASSERT_TRUE(engine_ != nullptr) << "Failed to create engine";
+
+        engine_->Init();
+    }
+
+    static void CreateRenderContext()
+    {
+        if (!engine_) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: engine_ is null in CreateRenderContext!");
+            ASSERT_TRUE(false) << "engine_ is null";
+        }
+
+        auto* classFactory = engine_->GetInterface<CORE_NS::IClassFactory>();
+
+        if (!classFactory) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: GetInterface<IClassFactory>() returned null!");
+            ASSERT_TRUE(false) << "GetInterface<IClassFactory>() returned null";
+        }
+
+        auto renderInstance = classFactory->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT);
+        if (!renderInstance) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: CreateInstance returned null!");
+            ASSERT_TRUE(false) << "CreateInstance returned null";
+        }
+
+        renderContext_ = BASE_NS::shared_ptr<RENDER_NS::IRenderContext>(
+            static_cast<RENDER_NS::IRenderContext*>(renderInstance.release()));
+
+        ASSERT_TRUE(renderContext_ != nullptr) << "Failed to create render context";
+
+        RENDER_NS::DeviceCreateInfo deviceCreateInfo;
+#if RENDER_HAS_VULKAN_BACKEND
+        WIDGET_LOGI("[SurfaceStreamTest] Using Vulkan backend");
+        RENDER_NS::BackendExtraVk vkExtra;
+        deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::VULKAN;
+        deviceCreateInfo.backendConfiguration = &vkExtra;
+#elif RENDER_HAS_GLES_BACKEND
+        WIDGET_LOGI("[SurfaceStreamTest] Using OpenGL ES backend");
+        RENDER_NS::BackendExtraGles glesExtra;
+        glesExtra.applicationContext = EGL_NO_CONTEXT;
+        glesExtra.sharedContext = EGL_NO_CONTEXT;
+        glesExtra.MSAASamples = 0;
+        glesExtra.depthBits = 24; // depth bits is 24
+        deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
+        deviceCreateInfo.backendConfiguration = &glesExtra;
+#elif RENDER_HAS_GL_BACKEND
+        WIDGET_LOGI("[SurfaceStreamTest] Using OpenGL backend");
+        RENDER_NS::BackendExtraGL glExtra;
+        glExtra.MSAASamples = 0;
+        glExtra.depthBits = 24; // depth bits is 24
+        glExtra.alphaBits = 8; // alpha bits is 8
+        glExtra.stencilBits = 0;
+        deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGL;
+        deviceCreateInfo.backendConfiguration = &glExtra;
+#else
+        WIDGET_LOGE("[SurfaceStreamTest] ERROR: No rendering backend available!");
+        ASSERT_TRUE(false) << "No rendering backend available";
+#endif
+
+        auto result = renderContext_->Init({{"UnitTest", 0, 1, 0}, deviceCreateInfo});
+        ASSERT_EQ(result, RENDER_NS::RenderResultCode::RENDER_SUCCESS) <<
+            "Failed to initialize render context";
+    }
+
+    static void CreateGraphicsContext()
+    {
+        // Verify renderContext_ is valid before proceeding
+        if (!renderContext_) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: renderContext_ is null!");
+            ASSERT_TRUE(false) << "renderContext_ is null in CreateGraphicsContext";
+        }
+
+        auto* classFactory = renderContext_->GetInterface<CORE_NS::IClassFactory>();
+
+        if (!classFactory) {
+            WIDGET_LOGE("[SurfaceStreamTest] ERROR: GetInterface<CORE_NS::IClassFactory>() returned null!");
+            ASSERT_TRUE(false) << "GetInterface<CORE_NS::IClassFactory>() returned null";
+        }
+
+        graphicsContext3D_ = CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(
+            *classFactory, CORE3D_NS::UID_GRAPHICS_CONTEXT);
+
+        ASSERT_TRUE(graphicsContext3D_ != nullptr) << "Failed to create graphics context";
+
+        // Create and initialize with CreateInfo (required for proper initialization)
+        CORE3D_NS::IGraphicsContext::CreateInfo gfxInf;
+        gfxInf.colorSpaceFlags = 0;
+        gfxInf.createFlags = 0;
+
+        graphicsContext3D_->Init(gfxInf);
+        WIDGET_LOGI("[SurfaceStreamTest] graphicsContext3D_->Init(gfxInf) completed");
+    }
+
+    static void CreateEcs()
+    {
+        ecs_ = engine_->CreateEcs();
+        ASSERT_TRUE(ecs_ != nullptr) << "Failed to create ECS";
+        ecs_->Initialize();
+    }
+
+    static void CreateAppContext()
+    {
+        auto& taskQueueRegistry = META_NS::GetTaskQueueRegistry();
+
+        auto engineTaskQueue = taskQueueRegistry.GetTaskQueue(ENGINE_THREAD);
+        if (!engineTaskQueue) {
+            engineTaskQueue =
+                META_NS::GetObjectRegistry().Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
+            taskQueueRegistry.RegisterTaskQueue(engineTaskQueue, ENGINE_THREAD);
+        }
+        auto appTaskQueue = engineTaskQueue;
+
+        auto resources =
+            META_NS::GetObjectRegistry().Create<CORE_NS::IResourceManager>(META_NS::ClassId::FileResourceManager);
+
+        resources->SetFileManager(CORE_NS::IFileManager::Ptr(&engine_->GetFileManager()));
+
+        appContext_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(
+            SCENE_NS::ClassId::ApplicationContext);
+
+        ASSERT_TRUE(appContext_ != nullptr) << "Failed to create appContext_";
+        SCENE_NS::IApplicationContext::ApplicationContextInfo info { engineTaskQueue, appTaskQueue, renderContext_,
+            resources, SCENE_NS::SceneOptions {} };
+
+        ASSERT_TRUE(appContext_->Initialize(info));
+    }
+
+public:
+    static void* libHandle_;
+    static CORE_NS::IEngine::Ptr engine_;
+    static BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_;  // 使用 refcnt_ptr 与 LumeCustomRender 一致
+    static CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D_;
+    static CORE_NS::IEcs::Ptr ecs_;
+    static SCENE_NS::IApplicationContext::Ptr appContext_;
 };
+
+// Static member definitions
+void* SurfaceStreamTest::libHandle_ = nullptr;
+CORE_NS::IEngine::Ptr SurfaceStreamTest::engine_ {};
+BASE_NS::shared_ptr<RENDER_NS::IRenderContext> SurfaceStreamTest::renderContext_ {};
+CORE3D_NS::IGraphicsContext::Ptr SurfaceStreamTest::graphicsContext3D_ {};
+CORE_NS::IEcs::Ptr SurfaceStreamTest::ecs_ {};
+SCENE_NS::IApplicationContext::Ptr SurfaceStreamTest::appContext_ {};
 
 /**
  * @tc.name: OnBufferAvailable
  * @tc.desc: Tests for SurfaceStream.OnBufferAvailable [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, OnBufferAvailable, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, OnBufferAvailable, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -99,9 +401,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, OnBufferAvailable, testing::ext::TestSize.Lev
  * @tc.desc: Tests for SurfaceStream.Build [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, Build, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, Build, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
 
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
@@ -127,9 +430,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, Build, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.Attach [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, Attach, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, Attach, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -155,9 +459,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, Attach, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.Init [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, Init, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, Init, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -180,9 +485,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, Init, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.UpdateView [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, UpdateView, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, UpdateView, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -204,9 +510,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, UpdateView, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.SetHeight [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, SetHeight, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, SetHeight, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -228,9 +535,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, SetHeight, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.GetHeight [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, GetHeight, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, GetHeight, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -250,9 +558,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, GetHeight, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.SetWidth [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, SetWidth, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, SetWidth, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -274,9 +583,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, SetWidth, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.GetWidth [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, GetWidth, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, GetWidth, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -296,9 +606,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, GetWidth, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.GetSurfaceId [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, GetSurfaceId, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, GetSurfaceId, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -320,7 +631,6 @@ UNIT_TEST_F(API_SurfaceStreamTest, GetSurfaceId, testing::ext::TestSize.Level1)
     // After attach, surface ID should be non-zero
     // Note: The actual surface ID is set during Init() which is called in Attach()
     // We can't verify the exact value, but it should be different from 0
-    // EXPECT_NE(surfaceStreamInterface->GetSurfaceId(), 0);
 
     EXPECT_TRUE(attach->Detach(surfaceStream));
 }
@@ -330,9 +640,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, GetSurfaceId, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for SurfaceStream.Detach [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, Detach, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, Detach, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -361,9 +672,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, Detach, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for creating multiple SurfaceStream instances [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, MultipleInstances, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, MultipleInstances, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
 
     auto surfaceStream1 = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
@@ -410,9 +722,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, MultipleInstances, testing::ext::TestSize.Lev
  * @tc.desc: Tests for width and height boundary values [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, WidthHeightBounds, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, WidthHeightBounds, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -446,9 +759,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, WidthHeightBounds, testing::ext::TestSize.Lev
  * @tc.desc: Tests for reattaching SurfaceStream after detach [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, ReattachAfterDetach, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, ReattachAfterDetach, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
     ASSERT_TRUE(surfaceStream);
@@ -475,9 +789,10 @@ UNIT_TEST_F(API_SurfaceStreamTest, ReattachAfterDetach, testing::ext::TestSize.L
  * @tc.desc: Tests for SurfaceStream lifecycle (create, attach, detach, destroy) [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_SurfaceStreamTest, SurfaceStreamLifecycle, testing::ext::TestSize.Level1)
+HWTEST_F(SurfaceStreamTest, SurfaceStreamLifecycle, TestSize.Level1)
 {
     auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
     auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
 
     auto surfaceStream = obr.Create<ISurfaceStream>(ClassId::SurfaceStream, doc);
@@ -506,5 +821,4 @@ UNIT_TEST_F(API_SurfaceStreamTest, SurfaceStreamLifecycle, testing::ext::TestSiz
     EXPECT_TRUE(attach->Detach(surfaceStream));
 }
 
-} // namespace UTest
-SCENE_END_NAMESPACE()
+} // namespace OHOS::Render3D

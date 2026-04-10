@@ -389,8 +389,6 @@ struct GpuImageDesc {
 
     /** RGBA component mapping */
     ComponentMapping componentMapping;
-
-    bool isFormatEffectivelySet { false };
 };
 
 /** GPU sampler descriptor */

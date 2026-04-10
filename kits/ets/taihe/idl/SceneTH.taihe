@@ -71,7 +71,7 @@ class SceneComponentRecord extends Record<string, ComponentPropertyType> {
 
 @!namespace("Scene")
 
-from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, MeshResource, Sampler, SceneResource, Effect;
+from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, ImageStream, MeshResource, Sampler, SceneResource, Effect;
 from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull, VariousNodes;
 from SceneTypes use RenderingPipelineType, GeometryDefinitionType, Vec2, Vec3, Vec4;
 
@@ -101,6 +101,9 @@ interface RenderResourceFactory {
 
     @gen_promise("createImage")
     createImageSync(params: SceneResourceParameters): Image;
+
+    @gen_promise("createImageStream")
+    createImageStreamSync(params: SceneResourceParameters): ImageStream;
 
     @gen_promise("createMesh")
     createMeshSync(params: SceneResourceParameters, geometry: GeometryDefinitionType): MeshResource;

@@ -1369,6 +1369,7 @@ unique_ptr<GpuImage> DeviceVk::CreateGpuImageView(
     GpuImagePlatformDataVk platData;
     platData.image = imageDesc.image;
     platData.imageView = imageDesc.imageView;
+    platData.isFormatEffectivelySet = imageDesc.isFormatEffectivelySet;
     return CreateGpuImageView(desc, platData, imageDesc.platformHwBuffer);
 }
 

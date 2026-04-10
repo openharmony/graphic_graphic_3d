@@ -26,7 +26,8 @@
 #include <scene/ext/intf_render_resource.h>
 #include <scene/interface/intf_shader.h>
 #include <scene/interface/intf_render_context.h>
-
+#include <scene_adapter/intf_surface_stream.h>
+#include <scene_adapter/surface_stream.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
 #ifdef __SCENE_ADAPTER__
@@ -169,6 +170,40 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     }
     GetResources()->StoreBitmap(uri.c_str(), bitmap);
     return std::make_shared<ImageETS>(name, uri, bitmap);
+}
+
+std::shared_ptr<ImageETS> RenderContextETS::CreateImageStream(const std::string &name, const std::string &uri)
+{
+    std::string internalUri = uri;
+    auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
+    auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+
+    auto createGpuResource = [internalUri]() mutable -> SCENE_NS::IBitmap::Ptr {
+        auto& obr = META_NS::GetObjectRegistry();
+        auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        auto bitmap = obr.Create<SCENE_NS::IBitmap>(SCENE_NS::ClassId::Bitmap, doc);
+        internalUri += std::to_string(reinterpret_cast<uintptr_t>(bitmap.get()));
+        if (auto metadata = interface_cast<META_NS::IMetadata>(bitmap)) {
+            metadata->AddProperty(META_NS::ConstructProperty<BASE_NS::string>("Uri", internalUri.c_str()));
+        }
+
+        auto surfaceStream = obr.Create<OHOS::Render3D::ISurfaceStream>(OHOS::Render3D::ClassId::SurfaceStream, doc);
+        if (auto attach = interface_cast<Meta::IAttach>(bitmap); surfaceStream) {
+            attach->Attach(surfaceStream);
+        }
+
+        return bitmap;
+    };
+
+    const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
+    auto bitmap = META_NS::AddFutureTaskOrRunDirectly(engineQ, BASE_NS::move(createGpuResource)).GetResult();
+    if (!bitmap) {
+        WIDGET_LOGE("Failed to load image from URI %{public}s", internalUri.c_str());
+        return nullptr;
+    }
+    GetResources()->StoreBitmap(internalUri.c_str(), bitmap);
+    return std::make_shared<ImageETS>(name, internalUri, bitmap);
 }
 
 bool RenderContextETS::RegisterResourcePath(const std::string &protocol, const std::string &uri)

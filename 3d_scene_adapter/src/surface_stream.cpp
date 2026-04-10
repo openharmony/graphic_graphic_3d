@@ -258,15 +258,15 @@ void SurfaceStream::UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t
     imageDesc.usageFlags = RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT;
     imageDesc.width = width;
     imageDesc.height = height;
-    imageDesc.isFormatEffectivelySet = true;
     RENDER_NS::RenderHandleReference handle;
-    BASE_NS::string frameId;
-    frameId = "Internal://SurfaceStream_" + BASE_NS::to_string(surfaceId_) + "_" +
+    BASE_NS::string frameId = "Internal://SurfaceStream_";
+    frameId += BASE_NS::to_string(surfaceId_) + "_" +
         BASE_NS::to_string(frameIndex_.fetch_add(1, std::memory_order_relaxed));
 
     if (backendType_ == RENDER_NS::DeviceBackendType::VULKAN) {
         RENDER_NS::ImageDescVk vkImageDesc {};
         vkImageDesc.platformHwBuffer = (uintptr_t)buffer;
+        vkImageDesc.isFormatEffectivelySet = true;
         handle = grm.CreateView(frameId, imageDesc, vkImageDesc);
     }
     if (backendType_ == RENDER_NS::DeviceBackendType::OPENGLES) {
@@ -286,12 +286,14 @@ void SurfaceStream::UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t
 
 SurfaceStream::~SurfaceStream()
 {
-    std::lock_guard<std::mutex> lock(surfaceBufferCacheMutex_);
-    while (!surfaceBufferCache_.empty()) {
-        auto oldSurfaceBuffer = surfaceBufferCache_.front();
-        surfaceBufferCache_.pop();
-        if (oldSurfaceBuffer) {
-            consumerSurface_->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
+    {
+        std::lock_guard<std::mutex> lock(surfaceBufferCacheMutex_);
+        while (!surfaceBufferCache_.empty()) {
+            auto oldSurfaceBuffer = surfaceBufferCache_.front();
+            surfaceBufferCache_.pop();
+            if (oldSurfaceBuffer) {
+                consumerSurface_->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
+            }
         }
     }
 

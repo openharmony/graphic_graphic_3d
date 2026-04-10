@@ -248,7 +248,6 @@ GpuImageVk::GpuImageVk(
         PLUGIN_LOG_W("RENDER_VALIDATION: creating GpuImage without image, imageView, or hwBuffer");
     }
 #endif
-    desc_.isFormatEffectivelySet = desc.isFormatEffectivelySet;
     FillImageDescVk(desc_, plat_);
     // additional image views are not created if initial image view is provided
     if (plat_.image && !plat_.imageView && (desc_.usageFlags & IMAGE_VIEW_USAGE_FLAGS)) {

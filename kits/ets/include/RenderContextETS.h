@@ -42,6 +42,7 @@ public:
 
     InvokeReturn<std::shared_ptr<ShaderETS>> CreateShader(const std::string &name, const std::string &uri);
     std::shared_ptr<ImageETS> CreateImage(const std::string &name, const std::string &uri);
+    std::shared_ptr<ImageETS> CreateImageStream(const std::string &name, const std::string &uri);
 
 private:
     RenderContextETS();

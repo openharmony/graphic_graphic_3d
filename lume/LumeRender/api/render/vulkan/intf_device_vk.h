@@ -114,6 +114,9 @@ struct ImageDescVk final : BackendSpecificImageDesc {
 
     /** Platform specific hardware buffer */
     uintptr_t platformHwBuffer { 0u };
+
+    /** Whether to set the format of the platform specific hardware buffer */
+    bool isFormatEffectivelySet { false };
 };
 
 /** Buffer descriptor vulkan for creating engine GpuBuffer based on given data */
@@ -202,6 +205,9 @@ struct GpuImagePlatformDataVk final : public GpuImagePlatformData {
 
     /** Platform specific hardware buffer */
     uintptr_t platformHwBuffer { 0u };
+
+    /** Whether to set the format of the platform specific hardware buffer */
+    bool isFormatEffectivelySet { false };
 };
 
 /** Low level vk sampler access. (Usable only with low level engine use-cases) */
