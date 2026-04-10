@@ -24,6 +24,8 @@
 #include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_render_context.h>
 #include <scene/interface/intf_shader.h>
+#include <scene_adapter/intf_surface_stream.h>
+#include <scene_adapter/surface_stream.h>
 #include <render/device/intf_gpu_resource_manager.h>
 
 #include <scene/interface/intf_shader.h>
@@ -290,6 +292,8 @@ void RenderContextJS::Init(napi_env env, napi_value exports)
             "createShader"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateImage>(
             "createImage"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateImageStream>(
+            "createImageStream"),
         Method<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, RenderContextJS,
             &RenderContextJS::CreateMeshResource>("createMesh"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, RenderContextJS, &RenderContextJS::CreateSampler>(
@@ -567,6 +571,62 @@ napi_value RenderContextJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object
     const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
     META_NS::AddFutureTaskOrRunDirectly(ioQ, BASE_NS::move(loadImage))
         .Then(BASE_NS::move(createGpuResource), engineQ)
+        .Then(BASE_NS::move(convertToJs), jsQ);
+
+    return promise;
+}
+
+napi_value RenderContextJS::CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    LUME_TRACE_FUNC()
+    using namespace RENDER_NS;
+    const auto env = ctx.GetEnv();
+    auto promise = Promise(env);
+
+    NapiApi::Object resourceParams = ctx.Arg<0>();
+    BASE_NS::string uri = "Internal://SurfaceStream_";
+    auto& obr = META_NS::GetObjectRegistry();
+    obr.RegisterObjectType<OHOS::Render3D::SurfaceStream>();
+    auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+    const auto resources = GetResources();
+
+    auto createGpuResource = [uri, resources]() mutable -> SCENE_NS::IBitmap::Ptr {
+        auto& obr = META_NS::GetObjectRegistry();
+        auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
+        auto bitmap = obr.Create<SCENE_NS::IBitmap>(SCENE_NS::ClassId::Bitmap, doc);
+        uri += BASE_NS::to_string(reinterpret_cast<uintptr_t>(bitmap.get()));
+        if (auto metadata = interface_cast<META_NS::IMetadata>(bitmap)) {
+            metadata->AddProperty(META_NS::ConstructProperty<BASE_NS::string>("Uri", uri));
+        }
+
+        auto surfaceStream = obr.Create<OHOS::Render3D::ISurfaceStream>(OHOS::Render3D::ClassId::SurfaceStream, doc);
+        if (auto attach = interface_cast<Meta::IAttach>(bitmap); surfaceStream) {
+            attach->Attach(surfaceStream);
+        }
+
+        if (bitmap && resources) {
+            resources->StoreBitmap(uri, bitmap);
+        }
+        return bitmap;
+    };
+
+    auto convertToJs = [promise, uri, contextRef = NapiApi::StrongRef(ctx.This()),
+                       paramRef = NapiApi::StrongRef(resourceParams)](SCENE_NS::IBitmap::Ptr bitmap) mutable {
+        if (bitmap == nullptr) {
+            CORE_LOG_E("reject create image stream");
+            promise.Reject(BASE_NS::string{"Failed to load image from URI "}.append(uri));
+            return;
+        }
+
+        const auto env = promise.Env();
+        napi_value args[] = { contextRef.GetValue(), paramRef.GetValue() };
+        const auto result = CreateFromNativeInstance(env, bitmap, PtrType::WEAK, args);
+        promise.Resolve(result.ToNapiValue());
+    };
+
+    const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
+    const auto jsQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
+    META_NS::AddFutureTaskOrRunDirectly(engineQ, BASE_NS::move(createGpuResource))
         .Then(BASE_NS::move(convertToJs), jsQ);
 
     return promise;

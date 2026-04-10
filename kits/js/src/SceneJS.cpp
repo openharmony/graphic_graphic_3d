@@ -115,6 +115,7 @@ void SceneJS::Init(napi_env env, napi_value exports)
             "createMaterial"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImageStream>("createImageStream"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateSampler>("createSampler"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
@@ -1029,6 +1030,16 @@ napi_value SceneJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
     auto promise = Promise(ctx.GetEnv());
     return promise.Reject("No render context to create an image.");
+}
+
+napi_value SceneJS::CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    LUME_TRACE_FUNC()
+    if (auto renderContext = renderContextJS_.GetObject()) {
+        return renderContext.Invoke("createImageStream", ctx.Arg<0>().ToNapiValue());
+    }
+    auto promise = Promise(ctx.GetEnv());
+    return promise.Reject("No render context to create an image stream.");
 }
 
 napi_value SceneJS::CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)

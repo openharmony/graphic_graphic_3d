@@ -463,6 +463,10 @@ interface Image : SceneResource {
     @get getHeight(): i32;
 }
 
+interface ImageStream : Image {
+    @get getSurfaceId(): String;
+}
+
 union EffectPropertyOutputValue {
     t_obj: Opaque;
     uValue: @undefined unit;

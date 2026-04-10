@@ -81,6 +81,7 @@ public:
 
     napi_value CreateShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+    napi_value CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value CreateMeshResource(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
     // create sampler
     napi_value CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx);

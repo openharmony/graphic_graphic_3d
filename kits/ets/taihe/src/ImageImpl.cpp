@@ -38,6 +38,18 @@ namespace OHOS::Render3D::KITETS {
     return taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
 }
 
+::SceneResources::ImageStream ImageImpl::createImageStreamFromTH(SceneTH::SceneResourceParameters const &params)
+{
+    const std::string name = ExtractResourceName(params);
+    const std::string uri = "Internal://SurfaceStream_";
+    auto imageStreamETS = RenderContextETS::GetInstance().CreateImageStream(name, uri);
+    if (uri.empty() || name.empty() || !imageStreamETS) {
+        ::taihe::set_error("Invalid scene resource ImageStream parameters given");
+        return SceneResources::ImageStream({nullptr, nullptr});
+    }
+    return taihe::make_holder<ImageImpl, ::SceneResources::ImageStream>(imageStreamETS);
+}
+
 ImageImpl::ImageImpl(const std::shared_ptr<ImageETS> imageETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::IMAGE, imageETS), imageETS_(imageETS)
 {}
@@ -63,5 +75,10 @@ int32_t ImageImpl::getWidth()
 int32_t ImageImpl::getHeight()
 {
     return imageETS_ != nullptr ? imageETS_->GetHeight() : 0;
+}
+
+::taihe::string ImageImpl::getSurfaceId()
+{
+    return imageETS_ != nullptr ? imageETS_->GetSurfaceId().c_str() : "";
 }
 }  // namespace OHOS::Render3D::KITETS

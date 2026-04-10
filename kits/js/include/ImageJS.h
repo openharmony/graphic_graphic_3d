@@ -33,9 +33,10 @@ private:
     // JS properties
     napi_value GetWidth(NapiApi::FunctionContext<>& ctx);
     napi_value GetHeight(NapiApi::FunctionContext<>& ctx);
-
+    napi_value GetSurfaceId(NapiApi::FunctionContext<>& ctx);
 private:
     BASE_NS::shared_ptr<RenderResources> resources_;
+    META_NS::IObject::Ptr attachment_ = nullptr;
 };
 
 #endif

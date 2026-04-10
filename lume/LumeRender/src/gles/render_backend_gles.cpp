@@ -2118,7 +2118,7 @@ void RenderBackendGLES::RenderCommandBindDescriptorSets(const RenderCommandWithT
     oesBinds_.clear();
     oesBindingsChanged_ = true;
     const auto& ncdsm = *static_cast<NodeContextDescriptorSetManagerGles*>(managers_.descriptorSetMgr);
-    for (uint32_t set = firstSet_; set < setCount_; ++set) {
+    for (uint32_t set = firstSet_, end = (firstSet_ + setCount_); set < end; ++set) {
         const auto& descHandle = descriptorSetHandles_[set];
         if (!ncdsm.HasPlatformConversionBindings(descHandle)) {
             continue;
