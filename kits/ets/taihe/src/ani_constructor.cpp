@@ -22,6 +22,7 @@
 #include "SceneTypes.ani.hpp"
 #include "SceneNodes.ani.hpp"
 #include "SceneNodes.Transfer.ani.hpp"
+#include "SceneBoidsSwarm.ani.hpp"
 #if __has_include(<ani.h>)
 #include <ani.h>
 #elif __has_include(<ani/ani.h>)
@@ -72,6 +73,10 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
     }
     if (ANI_OK != SceneNodes::Transfer::ANIRegister(env)) {
         WIDGET_LOGE("Error from SceneNodes::Transfer::ANIRegister");
+        status = ANI_ERROR;
+    }
+    if (ANI_OK != SceneBoidsSwarm::ANIRegister(env)) {
+        WIDGET_LOGE("Error from SceneBoidsSwarm::ANIRegister");
         status = ANI_ERROR;
     }
     *result = ANI_VERSION_1;

@@ -1,0 +1,108 @@
+/*
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@!sts_inject("""
+import { ResourceStr } from 'arkui.component.units';
+// Ensure that libscene_ani is loaded.
+loadLibrary('scene_ani.z');
+""")
+
+@!namespace("SceneBoidsSim")
+
+from SceneNodes use Node;
+from SceneTH use Scene;
+from SceneTypes use Vec3, Quaternion;
+
+struct BoidsSimParameters {
+    initialVelocity: Optional<Vec3>;
+    initialPosition: Optional<Vec3>;
+    initialRotation: Optional<Quaternion>;
+    boundaryMinPos: Optional<Vec3>;
+    boundaryMaxPos: Optional<Vec3>;
+    maxTurnRate: Optional<Vec3>;
+    maxVelocityMag: Optional<f64>;
+    maxAccelerationMag: Optional<f64>;
+    separationWeight: Optional<f64>;
+    separationDistance: Optional<f64>;
+    alignmentWeight: Optional<f64>;
+    alignmentDistance: Optional<f64>;
+    cohesionWeight: Optional<f64>;
+    cohesionDistance: Optional<f64>;
+    boundaryWeight: Optional<f64>;
+    gravityWeight: Optional<f64>;
+    repulsionWeight: Optional<f64>;
+    boundaryDistance: Optional<f64>;
+}
+
+struct BoidsSimGravityParameters {
+    radius: Optional<f64>;
+    accelerationMag: Optional<f64>;
+}
+
+struct BoidsSimRepulsionParameters {
+    radius: Optional<f64>;
+    accelerationMag: Optional<f64>;
+}
+
+union BoidsSimParametersOrNull {
+    rc: BoidsSimParameters;
+    nValue: @null unit;
+}
+
+union BoidsSimGravityParametersOrNull {
+    rc: BoidsSimGravityParameters;
+    nValue: @null unit;
+}
+
+union BoidsSimRepulsionParametersOrNull {
+    rc: BoidsSimRepulsionParameters;
+    nValue: @null unit;
+}
+
+@class
+interface BoidsSimWorld {
+    play(): void;
+    pause(): void;
+    stop(): void;
+    @get getIsPlaying(): bool;
+
+    addBoidsSimComponent(node: Node, param: BoidsSimParameters): void;
+    addBoidsSimGravityComponent(node: Node, param: BoidsSimGravityParameters): void;
+    addBoidsSimRepulsionComponent(node: Node, param: BoidsSimRepulsionParameters): void;
+
+    setBoidsSimComponent(node: Node, param: BoidsSimParameters): void;
+    setBoidsSimGravityComponent(node: Node, param: BoidsSimGravityParameters): void;
+    setBoidsSimRepulsionComponent(node: Node, param: BoidsSimRepulsionParameters): void;
+
+    getBoidsSimComponent(node: Node): BoidsSimParametersOrNull;
+    getBoidsSimGravityComponent(node: Node): BoidsSimGravityParametersOrNull;
+    getBoidsSimRepulsionComponent(node: Node): BoidsSimRepulsionParametersOrNull;
+
+    removeBoidsSimComponent(node: Node): void;
+    removeBoidsSimGravityComponent(node: Node): void;
+    removeBoidsSimRepulsionComponent(node: Node): void;
+}
+
+union BoidsSimWorldOrNull {
+    rc: BoidsSimWorld;
+    nValue: @null unit;
+}
+
+@class
+interface BoidsSimPlugin {
+}
+
+@static("BoidsSimPlugin")
+function getDefaultBoidsSimWorld(scene: Scene): BoidsSimWorldOrNull;

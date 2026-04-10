@@ -25,6 +25,7 @@ config("lume3d_config") {
     "${LUME_CORE_PATH}/api",
     "${LUME_RENDER_PATH}/api",
     "${LUME_CORE3D_PATH}/api",
+    "${LUME_BOIDSSWARM_PATH}/api",
     "${LUME_META_PATH}/include",
     "${LUME_SCENE_PATH}/include",
   ]
@@ -105,6 +106,7 @@ ohos_source_set("napi_source") {
       "src/AnimationJS.cpp",
       "src/ArrayPropertyProxy.cpp",
       "src/BaseObjectJS.cpp",
+      "src/BoidsSwarmPluginJS.cpp",
       "src/BloomJS.cpp",
       "src/CameraJS.cpp",
       "src/ColorProxy.cpp",

@@ -411,7 +411,8 @@
         "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
         "//foundation/graphic/graphic_3d/kits/js:libscene",
         "//foundation/graphic/graphic_3d/kits/ets:graphics_3d_taihe",
-        "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview"
+        "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview",
+        "//foundation/graphic/graphic_3d/lume/LumeBoidsSwarm:libPluginBoidsSwarm"
       ],
       "test": [
         "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest",
