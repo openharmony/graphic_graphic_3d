@@ -59,7 +59,6 @@ config("lume_scenewidget_config") {
 ohos_source_set("lume_scenewidget_src") {
   configs = [
     ":lume_scenewidget_config",
-    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
     "${LUME_RENDER_PATH}:lume_render_api",
     "${LUME_CORE_PATH}:lume_base_api",
     "${LUME_CORE_PATH}:lume_engine_api",
@@ -93,8 +92,6 @@ ohos_source_set("lume_scenewidget_src") {
     "src/component/node_component.h",
     "src/component/postprocess_component.cpp",
     "src/component/postprocess_component.h",
-    "src/component/text_component.cpp",
-    "src/component/text_component.h",
     "src/component/transform_component.cpp",
     "src/component/transform_component.h",
     "src/component_factory.h",
@@ -139,8 +136,6 @@ ohos_source_set("lume_scenewidget_src") {
     "src/node/node.h",
     "src/node/startable_handler.cpp",
     "src/node/startable_handler.h",
-    "src/node/text_node.cpp",
-    "src/node/text_node.h",
     "src/plugin.cpp",
     "src/postprocess/bloom.cpp",
     "src/postprocess/bloom.h",

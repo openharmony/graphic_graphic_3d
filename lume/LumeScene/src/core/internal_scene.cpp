@@ -28,7 +28,6 @@
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/interface/intf_text.h>
 
 #include <3d/implementation_uids.h>
 #include <render/intf_render_context.h>
@@ -268,9 +267,6 @@ META_NS::ObjectId InternalScene::DeducePrimaryNodeType(CORE_NS::Entity ent) cons
     }
     if (ecs_->lightComponentManager->HasComponent(ent)) {
         return ClassId::LightNode;
-    }
-    if (ecs_->textComponentManager && ecs_->textComponentManager->HasComponent(ent)) {
-        return ClassId::TextNode;
     }
     if (ecs_->renderMeshComponentManager->HasComponent(ent)) {
         return ClassId::MeshNode;

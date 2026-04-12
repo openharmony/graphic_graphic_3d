@@ -47,7 +47,7 @@ private:
 class NodeImpl : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 2;
-    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, TEXT = 5, CUSTOM = 255 };
+    enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, CUSTOM = 255 };
 
     static void RegisterEnums(NapiApi::Object exports);
 

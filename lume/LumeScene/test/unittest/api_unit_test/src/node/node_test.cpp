@@ -600,15 +600,6 @@ UNIT_TEST_F(API_ScenePluginNodeTest, LightNodeMetadata, testing::ext::TestSize.L
 {
     TestNodeMetadata(GetSceneManager(), ClassId::LightNode);
 }
-/**
- * @tc.name: TextNodeMetadata
- * @tc.desc: Tests for Text Node Metadata. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_ScenePluginNodeTest, TextNodeMetadata, testing::ext::TestSize.Level1)
-{
-    TestNodeMetadata(GetSceneManager(), ClassId::TextNode);
-}
 
 /**
  * @tc.name: NodeContrainerRemoveImportScene
