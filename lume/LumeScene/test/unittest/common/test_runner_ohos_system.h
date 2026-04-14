@@ -138,7 +138,7 @@ public:
         CORE_NS::CreatePluginRegistry(info);
 
         constexpr BASE_NS::Uid uids[] { JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN,
-            SCENE_NS::UID_SCENE_PLUGIN, TEXT3D_NS::UID_TEXT3D_PLUGIN };
+            SCENE_NS::UID_SCENE_PLUGIN };
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
 
         g_testEnv = std::make_unique<TestEnvironment>();

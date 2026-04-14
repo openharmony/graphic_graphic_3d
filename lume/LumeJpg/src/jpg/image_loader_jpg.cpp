@@ -380,7 +380,7 @@ public:
                 return ResultFailure("Invalid number of color channels.");
             }
 
-            const size_t imageSize = static_cast<uint64_t>(width) * height * channels;
+            const size_t imageSize = static_cast<size_t>(width) * height * channels;
             if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
                 jpeg_destroy_decompress(&cinfo);
                 return ResultFailure("Image too large.");

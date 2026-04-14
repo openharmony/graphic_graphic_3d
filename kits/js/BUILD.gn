@@ -33,11 +33,6 @@ config("lume3d_config") {
     include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
   }
 
-  configs = [
-    "${LUME_ROOT}/LumeFont:lume_font_api",
-    "${LUME_ROOT}/Lume_3DText:lume_3dtext_api",
-  ]
-
   cflags = [
     "-Wall",
     "-fexceptions",
@@ -159,7 +154,6 @@ ohos_source_set("napi_source") {
       "src/SceneResourceImpl.cpp",
       "src/ShaderJS.cpp",
       "src/SubMeshJS.cpp",
-      "src/TextNodeJS.cpp",
       "src/ToneMapJS.cpp",
       "src/TrueRootObject.cpp",
       "src/Vec2Proxy.cpp",

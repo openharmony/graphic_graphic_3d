@@ -37,7 +37,6 @@
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 #include <scene/interface/resource/types.h>
 #include <scene/interface/resource/util.h>
@@ -1270,20 +1269,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, Light, testing::ext::TestSize.Level1)
         auto obj = META_NS::GetObjectRegistry().Create<META_NS::IMetadata>(META_NS::ClassId::Object);
         ASSERT_TRUE(META_NS::CreatePropertiesFromStaticMeta(::SCENE_NS::ClassId::LightNode, *obj));
         ASSERT_TRUE(Export(obj, "app://light.json"));
-    }
-}
-
-/**
- * @tc.name: Text
- * @tc.desc: Tests for Text. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_SceneSerialisationTest, Text, testing::ext::TestSize.Level1)
-{
-    {
-        auto obj = META_NS::GetObjectRegistry().Create<META_NS::IMetadata>(META_NS::ClassId::Object);
-        ASSERT_TRUE(META_NS::CreatePropertiesFromStaticMeta(::SCENE_NS::ClassId::TextNode, *obj));
-        ASSERT_TRUE(Export(obj, "app://text.json"));
     }
 }
 
