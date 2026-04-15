@@ -53,7 +53,9 @@ inline bool IsString(uintptr_t resourceStr, ani_env *env = nullptr)
         return false;
     }
     ani_boolean isStr;
-    env->Object_InstanceOf((ani_object)resourceStr, cls, &isStr);
+    if (ANI_OK != env->Object_InstanceOf((ani_object)resourceStr, cls, &isStr)) {
+        return false;
+    }
     return isStr;
 }
 
@@ -63,10 +65,15 @@ inline std::string ToStdString(const ani_string &ani_str, ani_env *env = nullptr
         env = taihe::get_env();
     }
     ani_size sz{};
-    env->String_GetUTF8Size(ani_str, &sz);
+
+    if (ANI_OK != env->String_GetUTF8Size(ani_str, &sz)) {
+        return {};
+    }
 
     std::string result(sz + 1, 0);
-    env->String_GetUTF8(ani_str, result.data(), result.size(), &sz);
+    if (ANI_OK != env->String_GetUTF8(ani_str, result.data(), result.size(), &sz)) {
+        return {};
+    }
     result.resize(sz);
     return result;
 }
