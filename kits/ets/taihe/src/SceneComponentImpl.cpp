@@ -264,61 +264,54 @@ void SceneComponentImpl::SetPropertyFromSceneResource(const std::string &name,
     }
 }
 
+namespace {
+std::optional<BASE_NS::vector<SCENE_NS::IImage::Ptr>> BuildImageArray(
+    const ::taihe::array<::SceneResources::SceneResource> &srArray)
+{
+    BASE_NS::vector<SCENE_NS::IImage::Ptr> arr;
+    for (size_t i = 0; i < srArray.size(); ++i) {
+        taihe::optional<int64_t> srOp = srArray[i]->getImpl();
+        if (!srOp.has_value()) {
+            WIDGET_LOGE("array element at index %{public}zu does not hold impl", i);
+            arr.push_back(nullptr);
+            continue;
+        }
+        SceneResourceImpl *srImpl = reinterpret_cast<SceneResourceImpl *>(srOp.value());
+        if (!srImpl) {
+            WIDGET_LOGE("failed to set impl from taihe at index %{public}zu", i);
+            arr.push_back(nullptr);
+            continue;
+        }
+        auto currentType = srImpl->getResourceType();
+        if (currentType.get_key() != ::SceneResources::SceneResourceType::key_t::IMAGE) {
+            WIDGET_LOGE("array element at index %{public}zu is not IMAGE type", i);
+            return std::nullopt;
+        }
+        std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl *>(srImpl)->getInternalImage();
+        arr.push_back(imgETS->GetNativeImage());
+    }
+    return arr;
+}
+}
+
 void SceneComponentImpl::SetArrayPropertyFromSceneResource(
     const std::string &name, const ::taihe::array<::SceneResources::SceneResource> &srArray)
 {
     if (srArray.size() == 0) {
-        WIDGET_LOGE("taihe::array<::SceneResources::SceneResource> size is 0");
+        sceneComponentETS_->ClearArrayProperty(name);
         return;
     }
-    taihe::optional<int64_t> srOp0 = srArray[0]->getImpl();
-    if (!srOp0) {
-        WIDGET_LOGE("taihe optional does not hold impl");
-        return;
-    }
-    SceneResourceImpl *srImpl0 = reinterpret_cast<SceneResourceImpl *>(srOp0.value());
-    if (!srImpl0) {
-        WIDGET_LOGE("failed to set impl from taihe");
-        return;
-    }
-    auto srType = srImpl0->getResourceType();
-    switch (srType.get_key()) {
-        case ::SceneResources::SceneResourceType::key_t::NODE:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::ENVIRONMENT:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::MATERIAL:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::MESH:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::ANIMATION:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::SHADER:
-            break;
-        case ::SceneResources::SceneResourceType::key_t::IMAGE: {
-            BASE_NS::vector<SCENE_NS::IImage::Ptr> arr;
-            for (auto &sr : srArray) {
-                taihe::optional<int64_t> srOp = sr->getImpl();
-                if (!srOp.has_value()) {
-                    arr.push_back(nullptr);
-                    continue;
-                }
-                SceneResourceImpl *srImpl = reinterpret_cast<SceneResourceImpl *>(srOp.value());
-                if (srImpl) {
-                    std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl *>(srImpl)->getInternalImage();
-                    arr.push_back(imgETS->GetNativeImage());
-                } else {
-                    arr.push_back(nullptr);
-                }
-            }
-            sceneComponentETS_->SetArrayProperty(name, arr);
-            break;
+    auto srType = srArray[0]->getResourceType();
+    if (srType.get_key() == ::SceneResources::SceneResourceType::key_t::IMAGE) {
+        auto arr = BuildImageArray(srArray);
+        if (arr.has_value()) {
+            sceneComponentETS_->SetArrayProperty(name, arr.value());
         }
-        case ::SceneResources::SceneResourceType::key_t::MESH_RESOURCE:
-            break;
-        default:
-            WIDGET_LOGE("no match SceneResourceType");
-            break;
+    } else {
+        // NOTE: Currently only supports IMAGE type array properties.
+        // If other SceneResource array types need to be supported in the future,
+        // add corresponding BuildXXXArray functions and handle them here.
+        WIDGET_LOGE("SceneResourceType [%{public}d] is not supported yet", static_cast<int>(srType.get_key()));
     }
 }
 

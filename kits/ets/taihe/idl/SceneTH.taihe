@@ -232,9 +232,9 @@ interface Scene {
 
     destroy(): void;
 
-    importNode(name: String, node: Node, parent: NodeOrNull): Node;
+    importNode(name: String, node: Node, parent: NodeOrNull): VariousNodes;
 
-    importScene(name: String, scene: Scene, parent: NodeOrNull): Node;
+    importScene(name: String, scene: Scene, parent: NodeOrNull): VariousNodes;
 
     renderFrame(params: Optional<RenderParameters>): bool;
 

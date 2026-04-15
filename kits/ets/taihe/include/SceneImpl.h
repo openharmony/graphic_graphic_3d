@@ -66,10 +66,10 @@ public:
 
     void destroy();
 
-    ::SceneNodes::Node importNode(
+    ::SceneNodes::VariousNodes importNode(
         ::taihe::string_view name, ::SceneNodes::weak::Node node, ::SceneNodes::NodeOrNull parent);
 
-    ::SceneNodes::Node importScene(
+    ::SceneNodes::VariousNodes importScene(
         ::taihe::string_view name, ::SceneTH::weak::Scene scene, ::SceneNodes::NodeOrNull parent);
 
     bool renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> params);

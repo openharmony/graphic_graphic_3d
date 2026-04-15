@@ -127,33 +127,34 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     return scene;
 }
 
-::SceneNodes::Node SceneImpl::importNode(::taihe::string_view name, ::SceneNodes::weak::Node node,
+::SceneNodes::VariousNodes SceneImpl::importNode(::taihe::string_view name, ::SceneNodes::weak::Node node,
     ::SceneNodes::NodeOrNull parent)
 {
     if (!sceneETS_ || node.is_error()) {
-        return ::SceneNodes::Node({nullptr, nullptr});
+        WIDGET_LOGE("can't import node, the scene or node is invalid!");
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
-        return ::SceneNodes::Node({nullptr, nullptr});
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
     if (!nodeImpl) {
         WIDGET_LOGE("Invalid node in importNode");
-        return ::SceneNodes::Node({nullptr, nullptr});
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     std::shared_ptr<NodeETS> res{nullptr};
     if (parent.holds_node()) {
         auto parentNodeOptional = static_cast<::SceneResources::weak::SceneResource>(parent.get_node_ref())->getImpl();
         if (!parentNodeOptional.has_value()) {
             WIDGET_LOGE("invalid node in taihe object");
-            return ::SceneNodes::Node({nullptr, nullptr});
+            return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
         }
         auto parentNodeImpl = reinterpret_cast<NodeImpl*>(parentNodeOptional.value());
         if (!parentNodeImpl) {
             WIDGET_LOGE("Invalid parent node in importNode");
-            return ::SceneNodes::Node({nullptr, nullptr});
+            return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
         }
         res = sceneETS_->ImportNode(std::string(name), nodeImpl->GetInternalNode(), parentNodeImpl->GetInternalNode());
     } else {
@@ -161,22 +162,23 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     }
     if (!res) {
         WIDGET_LOGE("ImportNode fail with null value");
-        return ::SceneNodes::Node({nullptr, nullptr});
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     animations_ = std::nullopt;
-    return taihe::make_holder<NodeImpl, ::SceneNodes::Node>(res);
+    return NodeImpl::MakeVariousNodes(res);
 }
 
-::SceneNodes::Node SceneImpl::importScene(::taihe::string_view name, ::SceneTH::weak::Scene scene,
+::SceneNodes::VariousNodes SceneImpl::importScene(::taihe::string_view name, ::SceneTH::weak::Scene scene,
     ::SceneNodes::NodeOrNull parent)
 {
     if (!sceneETS_ || scene.is_error()) {
-        return ::SceneNodes::Node({nullptr, nullptr});
+        WIDGET_LOGE("can't import scene, the scene or the scene to be imported is invalid!");
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     ::taihe::optional<int64_t> sceneOptional = scene->getImpl();
     if (!sceneOptional.has_value()) {
         WIDGET_LOGE("Invalid scene in importScene");
-        return ::SceneNodes::Node({nullptr, nullptr});
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     auto sceneImpl = reinterpret_cast<SceneImpl*>(sceneOptional.value());
     std::shared_ptr<NodeETS> res{nullptr};
@@ -184,12 +186,12 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
         auto parentNodeOptional = static_cast<::SceneResources::weak::SceneResource>(parent.get_node_ref())->getImpl();
         if (!parentNodeOptional.has_value()) {
             WIDGET_LOGE("invalid node in taihe object");
-            return ::SceneNodes::Node({nullptr, nullptr});
+            return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
         }
         auto parentNodeImpl = reinterpret_cast<NodeImpl*>(parentNodeOptional.value());
         if (!parentNodeImpl) {
             WIDGET_LOGE("Invalid parent node in importNode");
-            return ::SceneNodes::Node({nullptr, nullptr});
+            return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
         }
         res =
             sceneETS_->ImportScene(std::string(name), sceneImpl->getInternalScene(), parentNodeImpl->GetInternalNode());
@@ -198,10 +200,10 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     }
     if (!res) {
         WIDGET_LOGE("ImportNode fail with null value");
-        return ::SceneNodes::Node({nullptr, nullptr});
+        return SceneNodes::VariousNodes::make_node(taihe::make_holder<NodeImpl, ::SceneNodes::Node>(nullptr));
     }
     animations_ = std::nullopt;
-    return taihe::make_holder<NodeImpl, ::SceneNodes::Node>(res);
+    return NodeImpl::MakeVariousNodes(res);
 }
 
 ::SceneTH::Scene sceneTransferStaticImpl(uintptr_t input)

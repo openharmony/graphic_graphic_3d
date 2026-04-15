@@ -40,6 +40,8 @@ public:
 
     std::shared_ptr<IPropertyProxy> GetProperty(const std::string &key);
 
+    void ClearArrayProperty(const std::string &key);
+
     template<typename Type>
     void SetProperty(const std::string &key, const Type &value)
     {
