@@ -23,7 +23,6 @@
 #include <base/containers/type_traits.h>
 #include <base/math/matrix.h>
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
@@ -37,6 +36,7 @@
 #include <render/resource_handle.h>
 
 #include "render/datastore/render_data_store_default_material.h"
+#include "util/log.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -176,7 +176,7 @@ void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& rende
         shaderMgr.GetRenderSlotData(shaderMgr.GetRenderSlotId(defaultRenderSlot));
 #if (CORE3D_VALIDATION_ENABLED == 1)
     if (!shaderRsd.pipelineLayout) {
-        CORE_LOG_W("CORE3D_VALIDATION: Missing default material pipeline layout");
+        PLUGIN_LOG_W("CORE3D_VALIDATION: Missing default material pipeline layout");
     }
 #endif
     defaultMaterialPipelineLayout_ = shaderMgr.GetPipelineLayout(shaderRsd.pipelineLayout.GetHandle());
@@ -222,7 +222,7 @@ void RenderNodeDefaultMaterialObjects::ExecuteFrame(IRenderCommandList& cmdList)
 
         UpdateDescriptorSets(cmdList, *dataStoreMaterial);
     } else {
-        CORE_LOG_E("invalid render data store in RenderNodeDefaultMaterialObjects");
+        PLUGIN_LOG_E("invalid render data store in RenderNodeDefaultMaterialObjects");
     }
 }
 
@@ -232,14 +232,14 @@ void RenderNodeDefaultMaterialObjects::UpdateMeshBuffer(const IRenderDataStoreDe
     // mesh data is copied to single buffer with UBO_BIND_OFFSET_ALIGNMENT alignments
     if (auto meshDataPtr = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.mesh.GetHandle())); meshDataPtr) {
         constexpr uint32_t meshByteSize = sizeof(DefaultMaterialSingleMeshStruct);
-        CORE_STATIC_ASSERT(meshByteSize >= UBO_BIND_OFFSET_ALIGNMENT);
-        CORE_STATIC_ASSERT(sizeof(RenderMeshData) == sizeof(DefaultMaterialSingleMeshStruct));
+        PLUGIN_STATIC_ASSERT(meshByteSize >= UBO_BIND_OFFSET_ALIGNMENT);
+        PLUGIN_STATIC_ASSERT(sizeof(RenderMeshData) == sizeof(DefaultMaterialSingleMeshStruct));
         const auto* meshDataPtrEnd = meshDataPtr + meshByteSize * objectCounts_.maxMeshCount;
         if (const auto meshData = dataStoreMaterial.GetMeshData(); !meshData.empty()) {
             // clone all at once, they are in order
             const size_t cloneByteSize = meshData.size_bytes();
             if (!CloneData(meshDataPtr, size_t(meshDataPtrEnd - meshDataPtr), meshData.data(), cloneByteSize)) {
-                CORE_LOG_I("meshData ubo copying failed");
+                PLUGIN_LOG_I("meshData ubo copying failed");
             }
         }
 
@@ -254,7 +254,7 @@ void RenderNodeDefaultMaterialObjects::UpdateSkinBuffer(const IRenderDataStoreDe
     // skin offset for submesh is calculated submesh.skinIndex * sizeof(DefaultMaterialSkinStruct)
     // NOTE: the size could be optimized, but render data store should calculate correct size with alignment
     if (auto skinData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.submeshSkin.GetHandle())); skinData) {
-        CORE_STATIC_ASSERT(
+        PLUGIN_STATIC_ASSERT(
             RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT * 2u == CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
         const auto* skinDataEnd = skinData + sizeof(DefaultMaterialSkinStruct) * objectCounts_.maxSkinCount;
         const auto meshJointMatrices = dataStoreMaterial.GetMeshJointMatrices();
@@ -264,11 +264,11 @@ void RenderNodeDefaultMaterialObjects::UpdateSkinBuffer(const IRenderDataStoreDe
             const size_t copySize = copyCount * sizeof(Math::Mat4X4);
             const size_t ptrOffset = CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET * sizeof(Math::Mat4X4);
             if (!CloneData(skinData, size_t(skinDataEnd - skinData), jointRef.data, copySize)) {
-                CORE_LOG_I("skinData ubo copying failed");
+                PLUGIN_LOG_I("skinData ubo copying failed");
             }
             if (!CloneData(skinData + ptrOffset, size_t(skinDataEnd - (skinData + ptrOffset)),
                     jointRef.data + copyCount, copySize)) {
-                CORE_LOG_I("skinData ubo copying failed");
+                PLUGIN_LOG_I("skinData ubo copying failed");
             }
             skinData = skinData + sizeof(DefaultMaterialSkinStruct);
         }
@@ -301,18 +301,18 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
         const RenderDataDefaultMaterial::AllMaterialUniforms& uniforms = materialUniforms[matIdx];
         if (!CloneData(matFactorData, size_t(matFactorDataEnd - matFactorData), &uniforms.factors,
                 sizeof(RenderDataDefaultMaterial::MaterialUniforms))) {
-            CORE_LOG_I("materialFactorData ubo copying failed");
+            PLUGIN_LOG_I("materialFactorData ubo copying failed");
         }
         if (!CloneData(matTransformData, size_t(matTransformDataEnd - matTransformData), &uniforms.transforms,
                 sizeof(RenderDataDefaultMaterial::MaterialPackedUniforms))) {
-            CORE_LOG_I("materialTransformData ubo copying failed");
+            PLUGIN_LOG_I("materialTransformData ubo copying failed");
         }
         const auto materialCustomProperties = dataStoreMaterial.GetMaterialCustomPropertyData(matIdx);
         if (!materialCustomProperties.empty()) {
-            CORE_ASSERT(materialCustomProperties.size_bytes() <= UBO_BIND_OFFSET_ALIGNMENT);
+            PLUGIN_ASSERT(materialCustomProperties.size_bytes() <= UBO_BIND_OFFSET_ALIGNMENT);
             if (!CloneData(userMaterialData, size_t(userMaterialDataEnd - userMaterialData),
                     materialCustomProperties.data(), materialCustomProperties.size_bytes())) {
-                CORE_LOG_I("userMaterialData ubo copying failed");
+                PLUGIN_LOG_I("userMaterialData ubo copying failed");
             }
         }
         matFactorData = matFactorData + UBO_BIND_OFFSET_ALIGNMENT;
@@ -335,7 +335,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
         if (globalDescs_.descriptorSets.size() != globalDescs_.materials.size()) {
             const string tmpStr =
                 renderNodeContextMgr_->GetName() + "RenderNodeDefaultMaterialObjects::UpdateDescriptorSets";
-            CORE_LOG_ONCE_W(tmpStr, "CORE3D_VALIDATION: Invalid default material descriptor set setup");
+            PLUGIN_LOG_ONCE_W(tmpStr, "CORE3D_VALIDATION: Invalid default material descriptor set setup");
         }
 #endif
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -400,7 +400,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
                         binder->BindImage(
                             bindingIdx++, storedMatHandles.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
 
-                        CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
+                        PLUGIN_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
                         // skip baseColor as it's bound already
                         constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
                         binder->BindImages(bindingIdx++, array_view(storedMatHandles.resources + 1, theCount));
@@ -433,7 +433,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
             binder2->BindImage(
                 bindingIdx++, defaultMaterialStruct_.resources[MaterialComponent::TextureIndex::BASE_COLOR]);
 
-            CORE_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
+            PLUGIN_STATIC_ASSERT(MaterialComponent::TextureIndex::BASE_COLOR == 0);
             // skip baseColor as it's bound already
             constexpr size_t theCount = RenderDataDefaultMaterial::MATERIAL_TEXTURE_COUNT - 1;
             binder2->BindImages(bindingIdx++, array_view(defaultMaterialStruct_.resources + 1, theCount));
@@ -456,14 +456,14 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
     // instancing utilization for mesh and materials
     if (objectCounts_.maxMeshCount < objectCounts.maxMeshCount) {
         // mesh matrix uses max ubo bind size to utilize gpu instancing
-        CORE_STATIC_ASSERT(sizeof(DefaultMaterialMeshStruct) <= PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        PLUGIN_STATIC_ASSERT(sizeof(DefaultMaterialMeshStruct) <= PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
         objectCounts_.maxMeshCount =
             objectCounts.maxMeshCount + (objectCounts.maxMeshCount / overEstimate) + MIN_UBO_OBJECT_COUNT;
 
         const uint32_t byteSize =
             static_cast<uint32_t>(Align(objectCounts_.maxMeshCount * singleComponentStructSize, baseStructSize));
         objectCounts_.maxMeshCount = (byteSize / singleComponentStructSize) - MIN_UBO_OBJECT_COUNT;
-        CORE_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
+        PLUGIN_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
 
         bDesc.byteSize = byteSize;
         ubos_.mesh = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MESH_DATA_BUFFER_NAME, bDesc);
@@ -480,14 +480,14 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         ubos_.submeshSkin = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::SKIN_DATA_BUFFER_NAME, bDesc);
     }
     if (objectCounts_.maxMaterialCount < objectCounts.maxMaterialCount) {
-        CORE_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
+        PLUGIN_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
         objectCounts_.maxMaterialCount =
             objectCounts.maxMaterialCount + (objectCounts.maxMaterialCount / overEstimate) + MIN_UBO_OBJECT_COUNT;
 
         const uint32_t byteSize =
             static_cast<uint32_t>(Align(objectCounts_.maxMaterialCount * singleComponentStructSize, baseStructSize));
         objectCounts_.maxMaterialCount = (byteSize / singleComponentStructSize) - MIN_UBO_OBJECT_COUNT;
-        CORE_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
+        PLUGIN_ASSERT((int32_t(byteSize / singleComponentStructSize) - int32_t(MIN_UBO_OBJECT_COUNT)) > 0);
 
         bDesc.byteSize = byteSize;
         ubos_.mat = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_DATA_BUFFER_NAME, bDesc);
@@ -497,7 +497,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
             gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME, bDesc);
     }
     if (objectCounts_.maxUniqueMaterialCount < objectCounts.maxUniqueMaterialCount) {
-        CORE_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
+        PLUGIN_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
         objectCounts_.maxUniqueMaterialCount = objectCounts.maxUniqueMaterialCount +
                                                (objectCounts.maxUniqueMaterialCount / overEstimate) +
                                                MIN_MATERIAL_DESC_SET_COUNT;
@@ -512,7 +512,7 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         const auto& bindings = defaultMaterialPipelineLayout_.descriptorSetLayouts[set].bindings;
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (bindings.empty()) {
-            CORE_LOG_W("CORE3D_VALIDATION: Zero bindings in default material pipeline layout set 2");
+            PLUGIN_LOG_W("CORE3D_VALIDATION: Zero bindings in default material pipeline layout set 2");
         }
 #endif
         globalDescs_.handles = dsMgr.CreateGlobalDescriptorSets(
@@ -572,7 +572,7 @@ void RenderNodeDefaultMaterialObjects::ProcessGlobalBinders()
 
 void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
 {
-    CORE_ASSERT(rtEnabled_);
+    PLUGIN_ASSERT(rtEnabled_);
     // NOTE: does not overestimate
     // re-allocates every time
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();

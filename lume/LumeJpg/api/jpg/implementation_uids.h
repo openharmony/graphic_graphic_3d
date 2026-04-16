@@ -19,7 +19,7 @@
 #include <base/util/uid.h>
 
 namespace JPGPlugin {
-static constexpr BASE_NS::Uid UID_JPG_PLUGIN{ "ccc84726-4ac3-4d16-993a-3fe4081de6d2" };
+static constexpr BASE_NS::Uid UID_JPG_PLUGIN { "ccc84726-4ac3-4d16-993a-3fe4081de6d2" };
 }
 
 #endif // PLUGIN_API_JPG_IMPLEMENTATION_UIDS_H

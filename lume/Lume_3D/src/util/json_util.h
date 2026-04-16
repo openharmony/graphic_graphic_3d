@@ -23,9 +23,9 @@
 #include <base/containers/string_view.h>
 #include <base/math/mathf.h>
 #include <core/json/json.h>
-#include <core/log.h>
 #include <core/namespace.h>
 
+#include "util/log.h"
 #include "util/string_util.h"
 
 CORE3D_BEGIN_NAMESPACE()

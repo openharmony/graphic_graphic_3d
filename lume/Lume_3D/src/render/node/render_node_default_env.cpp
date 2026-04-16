@@ -25,7 +25,6 @@
 #include <base/containers/string.h>
 #include <base/math/matrix.h>
 #include <base/math/matrix_util.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store.h>
 #include <render/datastore/intf_render_data_store_manager.h>
@@ -43,6 +42,7 @@
 
 #include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -91,7 +91,7 @@ InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefa
             if (desc.imageViewType == CORE_IMAGE_VIEW_TYPE_2D) {
                 iedh.texHandle = handle;
             } else {
-                CORE_LOG_ONCE_E("inv_env_2d_bg_type", "invalid environment map, type does not match background type");
+                PLUGIN_LOG_ONCE_E("inv_env_2d_bg_type", "invalid environment map, type does not match background type");
             }
         } else if (env.backgroundType == RenderCamera::Environment::BG_TYPE_CUBEMAP) {
             bool valid = false;
@@ -100,7 +100,7 @@ InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefa
                 valid = true;
             }
             if (dynCubemap && (env.multiEnvCount >= 2U)) {
-                CORE_STATIC_ASSERT(DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT >= 2U);
+                PLUGIN_STATIC_ASSERT(DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT >= 2U);
                 const RenderCamera::Environment env1 = dsCamera.GetEnvironment(env.multiEnvIds[0U]);
                 const RenderCamera::Environment env2 = dsCamera.GetEnvironment(env.multiEnvIds[1U]);
                 iedh.cubeHandle = env1.envMap.GetHandle();
@@ -108,7 +108,7 @@ InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefa
                 valid = true;
             }
             if (!valid) {
-                CORE_LOG_ONCE_E("inv_env_cu_bg_type", "invalid environment map, type does not match background type");
+                PLUGIN_LOG_ONCE_E("inv_env_cu_bg_type", "invalid environment map, type does not match background type");
             }
         }
         iedh.lodLevel = env.envMapLodLevel;
@@ -144,7 +144,7 @@ void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContext
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        CORE_LOG_V("%s: render data store post process configuration not set in render node graph",
+        PLUGIN_LOG_V("%s: render data store post process configuration not set in render node graph",
             renderNodeContextMgr_->GetName().data());
     }
 
@@ -274,7 +274,7 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
 bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
     IRenderCommandList& cmdList, const RenderCamera::Environment& renderEnv)
 {
-    CORE_ASSERT(currShaderData_.customSet);
+    PLUGIN_ASSERT(currShaderData_.customSet);
 
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
@@ -312,7 +312,7 @@ bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
 
     auto& binder = *binderPtr;
     for (uint32_t idx = 0; idx < static_cast<uint32_t>(customResourceHandles.size()); ++idx) {
-        CORE_ASSERT(idx < descBindings.size());
+        PLUGIN_ASSERT(idx < descBindings.size());
         const RenderHandle currRes = customResourceHandles[idx].GetHandle();
         if (gpuResourceMgr.IsGpuBuffer(currRes)) {
             binder.BindBuffer(idx, currRes, 0);
@@ -336,7 +336,7 @@ bool RenderNodeDefaultEnv::UpdateAndBindCustomSet(
 
     if (!valid) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("default_env_custom_res_issue",
+        PLUGIN_LOG_ONCE_W("default_env_custom_res_issue",
             "invalid bindings with custom shader descriptor set 1 or 3 (render node: %s)",
             renderNodeContextMgr_->GetName().data());
 #endif

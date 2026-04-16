@@ -49,6 +49,7 @@
 #else
 #include "test_runner.h"
 #endif
+#include "util/log.h"
 #include "util/mesh_util.h"
 
 using namespace BASE_NS;
@@ -95,7 +96,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testMeshResource, testing::ext::TestSize.Lev
     auto graphicsContext = testContext->graphicsContext;
     auto ecs = testContext->ecs;
 
-    auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
+    auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
     constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, IMeshComponentManager::UID,
         INameComponentManager::UID, IUriComponentManager::UID };
     for (const auto component : components) {
@@ -141,7 +142,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
     auto graphicsContext = testContext->graphicsContext;
     auto ecs = testContext->ecs;
 
-    auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
+    auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
     constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, INameComponentManager::UID,
         IUriComponentManager::UID };
     for (const auto component : components) {
@@ -150,7 +151,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
             ecs->CreateComponentManager(*info);
         }
     }
-    auto systems = GetPluginRegister().GetTypeInfos(SystemTypeInfo::UID);
+    auto systems = CORE3D_NS::GetPluginRegister().GetTypeInfos(SystemTypeInfo::UID);
 
     auto uriManager = GetManager<IUriComponentManager>(*ecs);
     auto gpuHandleManager = GetManager<IRenderHandleComponentManager>(*ecs);
@@ -232,7 +233,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
     auto graphicsContext = testContext->graphicsContext;
     auto ecs = testContext->ecs;
 
-    auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
+    auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
     constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, INameComponentManager::UID,
         IUriComponentManager::UID };
     for (const auto component : components) {
@@ -324,7 +325,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
     constexpr Uid requiredManagers[] = {
         ITransformComponentManager::UID,
     };
-    const auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
+    const auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -332,7 +333,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
         }
     }
     constexpr string_view animationSystemName = "AnimationSystem";
-    for (const auto* typeInfo : GetPluginRegister().GetTypeInfos(SystemTypeInfo::UID)) {
+    for (const auto* typeInfo : CORE3D_NS::GetPluginRegister().GetTypeInfos(SystemTypeInfo::UID)) {
         if (const auto* systemTypeInfo = static_cast<const SystemTypeInfo*>(typeInfo);
             systemTypeInfo && (systemTypeInfo->typeName == animationSystemName)) {
             for (const auto component : components) {

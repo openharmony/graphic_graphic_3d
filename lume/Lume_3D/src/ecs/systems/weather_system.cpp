@@ -47,7 +47,6 @@
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/plugin/intf_class_factory.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
@@ -63,6 +62,7 @@
 
 #include "3d/shaders/common/water_ripple_common.h"
 #include "ecs/systems/render_preprocessor_system.h"
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -80,6 +80,8 @@ static constexpr string_view RIPPLE_TEXTURE_NAME_1 { "RIPPLE_RENDER_NODE_TEXTURE
 #endif
 static constexpr string_view RIPPLE_INPUT_BUFFER_NAME { "RIPPLE_RENDER_NODE_INPUTBUFFER" };
 static constexpr uint32_t MAX_REFLECTION_CAMERAS = 16U;
+static constexpr float minCloudCoverage = 0.01f;
+static constexpr float minCloudDensity = 0.0001f;
 
 // We could just have variants in one shader file, but both variants would use the same renderslot so ShaderManager
 // validation complains at ShaderManager::CreateBaseShaderPathsAndHashes(...)
@@ -237,10 +239,11 @@ WeatherSystem::WeatherSystem(IEcs& ecs)
 {
     auto classRegister = ecs.GetClassFactory().GetInterface<IClassRegister>();
     if (classRegister) {
-        renderContext_ = GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        renderContext_ = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
         if (renderContext_) {
             if (auto renderContextClassRegister = renderContext_->GetInterface<IClassRegister>()) {
-                graphicsContext_ = GetInstance<IGraphicsContext>(*renderContextClassRegister, UID_GRAPHICS_CONTEXT);
+                graphicsContext_ =
+                    CORE3D_NS::GetInstance<IGraphicsContext>(*renderContextClassRegister, UID_GRAPHICS_CONTEXT);
             }
             gpuResourceManager_ = &renderContext_->GetDevice().GetGpuResourceManager();
             renderDataStoreManager_ = &renderContext_->GetRenderDataStoreManager();
@@ -369,6 +372,19 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         return false;
     }
 
+    const uint32_t weatherComponentCount = static_cast<uint32_t>(weatherManager_.GetComponentCount());
+    if (weatherComponentCount == 0U) {
+        if (auto* nodeSystem = GetSystem<INodeSystem>(ecs_)) {
+            for (const auto& e : cloudMatData_.renderMeshEntity) {
+                if (auto* node = nodeSystem->GetNode(e)) {
+                    node->SetEnabled(false);
+                }
+            }
+        }
+        cloudWasEnabled_ = false;
+        return false;
+    }
+
     if (!dataStoreWeather_ && renderDataStoreManager_) {
         string dsName;
         if (IRenderPreprocessorSystem* rpSystem = GetSystem<IRenderPreprocessorSystem>(ecs_); rpSystem) {
@@ -376,7 +392,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
                 dsName = in->dataStorePrefix;
             }
         }
-        dsName += RenderDataStoreWeather::TYPE_NAME;
+        dsName += RenderDataStoreWeather::typeName;
         dataStoreWeather_ = refcnt_ptr<RenderDataStoreWeather>(
             renderDataStoreManager_->Create(RenderDataStoreWeather::UID, dsName.c_str()));
     }
@@ -390,7 +406,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
 
     const auto cameraComponentCount = camManager_.GetComponentCount();
     const auto planarCount = planarReflectionManager_.GetComponentCount();
-    bool cloudEnabledThisFrame = true;
+    bool cloudEnabledThisFrame = false;
     bool weatherUpdated = false;
 
     if (const auto weatherGeneration = weatherManager_.GetGenerationCounter();
@@ -496,9 +512,6 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
             }
 
             dataStoreWeather_->SetWeatherSettings(weatherManager_.GetEntity(id).id, settings);
-            if (settings.coverage < 0.01 || settings.density < 0.0001) { // 0.01: parm 0.0001: parm
-                cloudEnabledThisFrame = false;
-            }
         }
     }
 
@@ -513,6 +526,21 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
                 }
             }
         }
+
+        bool weatherHasCloudsThisFrame = false;
+        for (auto id = 0U; id < weatherComponentCount; ++id) {
+            auto handle = weatherManager_.Read(id);
+            if (!handle) {
+                continue;
+            }
+            // Skip rendering clouds if they are not visible
+            if (handle->coverage >= minCloudCoverage && handle->density >= minCloudDensity) {
+                weatherHasCloudsThisFrame = true;
+                break;
+            }
+        }
+
+        cloudEnabledThisFrame = usesWeather && weatherHasCloudsThisFrame;
 
         vector<uint64_t> ids;
         uint32_t index = 0;
@@ -700,7 +728,7 @@ void WeatherSystem::ProcessWaterRipples()
         }
         return;
     }
-    const auto pickingUtil = GetInstance<IPicking>(*renderContextClassRegister, UID_PICKING);
+    const auto pickingUtil = CORE3D_NS::GetInstance<IPicking>(*renderContextClassRegister, UID_PICKING);
     if (!pickingUtil) {
         return;
     }
@@ -709,7 +737,7 @@ void WeatherSystem::ProcessWaterRipples()
 
     for (auto& [planeEntity, planeRes] : handleResources_) {
         if (!EntityUtil::IsValid(planeEntity)) {
-            CORE_LOG_W("WeatherSystem: Skipping invalid water plane entity in ProcessWaterRipples.");
+            PLUGIN_LOG_W("WeatherSystem: Skipping invalid water plane entity in ProcessWaterRipples.");
             continue;
         }
 
@@ -762,7 +790,10 @@ void WeatherSystem::ProcessWaterRipples()
 
         const auto IntersectAabb = [this, renderContextClassRegister](const Math::Vec3& worldXYZ, Math::Vec2& inPlaneUv,
                                        const Entity& planeEntity) -> bool {
-            const auto pickingUtil = GetInstance<IPicking>(*renderContextClassRegister, UID_PICKING);
+            const auto pickingUtil = CORE3D_NS::GetInstance<IPicking>(*renderContextClassRegister, UID_PICKING);
+            if (!pickingUtil) {
+                return false;
+            }
             const auto mam = pickingUtil->GetWorldMatrixComponentAABB(planeEntity, false, ecs_);
 
             Math::Vec3 aabbMin = mam.minAABB;
@@ -947,8 +978,8 @@ void WeatherSystem::OnComponentEvent(
                     if (waterEnabled) {
                         // A water plane was added, create resources for it.
                         if (handleResources_.find(planeEntity) == handleResources_.end()) {
-                            CORE_LOG_V("WeatherSystem: Water plane entity %" PRIu64
-                                       " added. Creating simulation resources.",
+                            PLUGIN_LOG_V("WeatherSystem: Water plane entity %" PRIu64
+                                         " added. Creating simulation resources.",
                                 planeEntity.id);
                             if (graphicsContext_) {
                                 auto res = CreateSimulationResourcesForEntity(ecs_, *graphicsContext_, planeEntity);
@@ -976,9 +1007,9 @@ void WeatherSystem::OnComponentEvent(
                                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].sampler = {};
                                 }
                             }
-                            CORE_LOG_V("WeatherSystem: Water plane %" PRIu64
-                                       " disabled.Switching to regular reflection plane material. Destroying "
-                                       "simulation resources..",
+                            PLUGIN_LOG_V("WeatherSystem: Water plane %" PRIu64
+                                         " disabled.Switching to regular reflection plane material. Destroying "
+                                         "simulation resources..",
                                 planeEntity.id);
                             DestorySimulationResources(planeEntity);
                         }
@@ -986,8 +1017,8 @@ void WeatherSystem::OnComponentEvent(
                 } else if (type == EventType::DESTROYED) {
                     auto it = handleResources_.find(planeEntity);
                     if (it != handleResources_.end()) {
-                        CORE_LOG_V("WeatherSystem: Water plane entity %" PRIu64
-                                   " removed.Destroying simulation resources.",
+                        PLUGIN_LOG_V("WeatherSystem: Water plane entity %" PRIu64
+                                     " removed.Destroying simulation resources.",
                             planeEntity.id);
                         DestorySimulationResources(planeEntity);
                     }

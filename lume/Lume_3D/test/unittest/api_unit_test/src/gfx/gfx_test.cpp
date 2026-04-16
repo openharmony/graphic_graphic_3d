@@ -77,8 +77,6 @@
 #include "test_framework.h"
 
 // glTF test
-#include <vulkan/vulkan.h>
-
 #include <3d/gltf/gltf.h>
 #include <3d/intf_graphics_context.h>
 #include <3d/util/intf_mesh_util.h>
@@ -116,6 +114,7 @@ void CheckRenderNodeCounters(
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: HelloWorldTestVulkan
  * @tc.desc: Tests for Hello World Test Vulkan. [AUTO-GENERATED]
@@ -169,17 +168,25 @@ UNIT_TEST(API_GfxTest, CloudTestVulkan, testing::ext::TestSize.Level1)
     Cloud::TickTest(res, 10u);
 
     // evaluate performance data counters
+    static constexpr int64_t expectedTriangles = 370299;
+    static constexpr int64_t expectedInstances = 152;
+    static constexpr int64_t expectedDraws = 152;
+    static constexpr int64_t expectedDispatches = 4;
+    static constexpr int64_t expectedPipelines = 25;
+    static constexpr int64_t expectedRenderPasses = 31;
+    static constexpr int64_t expectedDescriptorUpdates = 4;
+    static constexpr int64_t expectedDescriptorBinds = 158;
     static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 370299 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 152 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 152 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
         { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 4 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatches },
         { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 25 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 31 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 4 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 158 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, expectedPipelines },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, expectedDescriptorUpdates },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, expectedDescriptorBinds },
     };
     IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
         defaultCounts, defaultCounts + countof(defaultCounts));
@@ -187,14 +194,15 @@ UNIT_TEST(API_GfxTest, CloudTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
-#ifdef DISABLED_TESTS_ON
+#if RENDER_HAS_GL_BACKEND
 /**
  * @tc.name: CloudTestOpenGL
- * @tc.desc: Tests for Clouds rendering. Disabled at the moment as some of the required shader don't support GL.
+ * @tc.desc: Tests for Clouds rendering. Cloud/sky compute shaders not supported on GLES backend.
  * @tc.type: FUNC
  */
-UNIT_TEST(API_GfxTest, DISABLED_CloudTestOpenGL, testing::ext::TestSize.Level1)
+UNIT_TEST(API_GfxTest, CloudTestOpenGL, testing::ext::TestSize.Level1)
 {
     // Run with clouds and sky enabled
     UTest::TestResources res(720u, 520u, UTest::GetOpenGLBackend());
@@ -203,26 +211,44 @@ UNIT_TEST(API_GfxTest, DISABLED_CloudTestOpenGL, testing::ext::TestSize.Level1)
     Cloud::TickTest(res, 10u);
 
     // evaluate performance data counters
-    static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 370299 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 152 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 152 },
+    static constexpr int64_t expectedTriangles = 370299;
+    static constexpr int64_t expectedInstances = 152;
+    static constexpr int64_t expectedDraws = 152;
+    static constexpr int64_t expectedDispatchesGl = 4;
+    static constexpr int64_t expectedDispatchesGles = 2;
+    static constexpr int64_t expectedRenderPasses = 31;
+    static constexpr IPerformanceDataManager::CounterPair defaultCountsGl[] {
+        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
         { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 4 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatchesGl },
         { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 25 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 31 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 4 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 158 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0 },
     };
-    IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
-        defaultCounts, defaultCounts + countof(defaultCounts));
-    CheckRenderNodeCounters(defaultCountsVec);
+    static constexpr IPerformanceDataManager::CounterPair defaultCountsGles[] {
+        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatchesGles },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
+        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0 },
+    };
+    CheckRenderNodeCounters(IPerformanceDataManager::ConstCounterPairView(
+        (UTest::GetOpenGLBackend() == DeviceBackendType::OPENGL) ? defaultCountsGl : defaultCountsGles));
 
     res.ShutdownTest();
 }
-#endif // DISABLED_TESTS_ON
+#endif // RENDER_HAS_GL_BACKEND
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: CullingTestVulkan
  * @tc.desc: Tests for Culling. [AUTO-GENERATED]
@@ -260,6 +286,7 @@ UNIT_TEST(API_GfxTest, CullingTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 #ifndef __OHOS_PLATFORM__
 /**
@@ -412,6 +439,7 @@ void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProc
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: glTFmodelDrawTestVulkan
  * @tc.desc: Tests for Gl Tfmodel Draw Test Vulkan. [AUTO-GENERATED]
@@ -457,6 +485,7 @@ UNIT_TEST(API_GfxTest, glTFmodelDrawBindlessTestVulkan, testing::ext::TestSize.L
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: glTFmodelDrawTestOpenGL
@@ -580,6 +609,7 @@ void glTFmodelDrawTest2(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: glTFmodelDrawTest2Vulkan
  * @tc.desc: Tests for Gl Tfmodel Draw Test2Vulkan. [AUTO-GENERATED]
@@ -600,6 +630,7 @@ UNIT_TEST(API_GfxTest2, glTFmodelDrawTest2Vulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: glTFmodelDrawTest2OpenGL
@@ -734,6 +765,7 @@ void glTFmodelDrawTest3(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: glTFmodelDrawTest3Vulkan
  * @tc.desc: Tests for Gl Tfmodel Draw Test3Vulkan. [AUTO-GENERATED]
@@ -754,6 +786,7 @@ UNIT_TEST(API_GfxTest3, glTFmodelDrawTest3Vulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: Random
@@ -897,6 +930,7 @@ void NearFarClipTest(UTest::TestResources& res, CameraComponent::Projection proj
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: perspectiveNearFarClipTestVulkan
  * @tc.desc: Tests for Perspective Near Far Clip Test Vulkan. [AUTO-GENERATED]
@@ -939,6 +973,7 @@ UNIT_TEST(API_GfxTest, orthographicNearFarClipTestVulkan, testing::ext::TestSize
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 void CreateBatch(IEcs& ecs, ISceneNode* node)
@@ -1163,6 +1198,7 @@ void CubeBatchTest(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: cubeBatchTestVulkan
  * @tc.desc: Tests for Cube Batch Test Vulkan. [AUTO-GENERATED]
@@ -1200,6 +1236,7 @@ UNIT_TEST(API_GfxTest, cubeBatchTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 constexpr Math::Vec3 CUBE_POS[8u] = {
@@ -1646,6 +1683,7 @@ void MeshBuilderTest(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: meshBuilderTestVulkan
  * @tc.desc: Tests for Mesh Builder Test Vulkan. [AUTO-GENERATED]
@@ -1666,6 +1704,7 @@ UNIT_TEST(API_GfxTest, meshBuilderTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 constexpr string_view CAMERA_0_NAME { "MultiViewSampleCamera0" };
@@ -1812,6 +1851,7 @@ void NegativeScale(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: negativeScaleTestVulkan
  * @tc.desc: Tests for Negative Scale Test Vulkan. [AUTO-GENERATED]
@@ -1832,6 +1872,7 @@ UNIT_TEST(API_GfxTest, negativeScaleTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 void OcclusionMaterial(UTest::TestResources& res)
@@ -1953,6 +1994,7 @@ void OcclusionMaterial(UTest::TestResources& res)
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: occlusionMaterialTestVulkan
  * @tc.desc: Tests for Occlusion Material with Vulkan.
@@ -1973,6 +2015,7 @@ UNIT_TEST(API_GfxTest, occlusionMaterialTestVulkan, testing::ext::TestSize.Level
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: occlusionMaterialTestOpenGL

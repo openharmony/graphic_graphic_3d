@@ -129,6 +129,23 @@ public:
             static_cast<float>(input.tonemapConfiguration.tonemapType) };
     }
 
+    static inline BASE_NS::Math::Vec4 GetFactorWhiteBalance(const PostProcessConfiguration& input)
+    {
+        return { input.whiteBalanceConfiguration.temperature, input.whiteBalanceConfiguration.tint, 0.0f, 0.0f };
+    }
+
+    static inline BASE_NS::Math::Vec4 GetFactorColorAdjustments(const PostProcessConfiguration& input)
+    {
+        // .x = brightness, .y = contrast, .z = saturation, .w = hueShift
+        return { input.colorAdjustmentsConfiguration.brightness, input.colorAdjustmentsConfiguration.contrast,
+            input.colorAdjustmentsConfiguration.saturation, input.colorAdjustmentsConfiguration.hueShift };
+    }
+
+    static inline BASE_NS::Math::Vec4 GetFactorColorAdjustmentsFilterColor(const PostProcessConfiguration& input)
+    {
+        return input.colorAdjustmentsConfiguration.filterColor;
+    }
+
     static inline BASE_NS::Math::Vec4 GetFactorVignette(const PostProcessConfiguration& input)
     {
         return { input.vignetteConfiguration.coefficient, input.vignetteConfiguration.power, 0.0f, 0.0f };

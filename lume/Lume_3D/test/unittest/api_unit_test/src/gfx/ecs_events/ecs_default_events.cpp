@@ -54,6 +54,7 @@ string PrintComponentFailInfo(array_view<const Entity> entities, const IComponen
 }
 } // namespace
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
     Ensure there are no ECS events in simple 3D scenery when camera is not moved.
 */
@@ -143,3 +144,4 @@ UNIT_TEST(ECS, DefaultEventCycle, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
+#endif // RENDER_HAS_VULKAN_BACKEND

@@ -14,6 +14,7 @@
  */
 
 #include "AnimationJS.h"
+#include "BoidsSwarmPluginJS.h"
 #include "CameraJS.h"
 #include "EffectJS.h"
 #include "EnvironmentJS.h"
@@ -34,7 +35,6 @@
 #include "SceneJS.h"
 #include "ShaderJS.h"
 #include "SubMeshJS.h"
-#include "TextNodeJS.h"
 #include "ToneMapJS.h"
 #include "geometry_definition/CubeJS.h"
 #include "geometry_definition/CustomJS.h"
@@ -175,13 +175,14 @@ void RegisterClasses(napi_env env, napi_value exports)
     GeometryDefinition::CylinderJS::Init(env, scene3dNS);
     AnimationJS::Init(env, scene3dNS);
     SceneComponentJS::Init(env, scene3dNS);
-    TextNodeJS::Init(env, scene3dNS);
     MaterialPropertyJS::Init(env, scene3dNS);
     RenderContextJS::Init(env, scene3dNS);
     NodeContainerJS::Init(env, scene3dNS);
     EffectJS::Init(env, scene3dNS);
     EffectsContainerJS::Init(env, scene3dNS);
     OcclusionMaterial::Init(env, scene3dNS);
+    BoidsSwarmWorldJS::Init(env, scene3dNS);
+    BoidsSwarmPluginJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     CameraJS::RegisterEnums({ env, scene3dNS });

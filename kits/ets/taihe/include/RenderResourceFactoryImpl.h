@@ -51,6 +51,11 @@ public:
         return ImageImpl::createImageFromTH(params);
     }
 
+    ::SceneResources::ImageStream createImageStreamSync(::SceneTH::SceneResourceParameters const &params)
+    {
+        return ImageImpl::createImageStreamFromTH(params);
+    }
+
     ::SceneResources::MeshResource createMeshSync(
         ::SceneTH::SceneResourceParameters const &params, ::SceneTypes::GeometryDefinitionType const &geometry)
     {

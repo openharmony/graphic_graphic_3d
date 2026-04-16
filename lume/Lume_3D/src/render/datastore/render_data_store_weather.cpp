@@ -16,8 +16,9 @@
 #include "render_data_store_weather.h"
 
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <render/intf_render_context.h>
+
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;

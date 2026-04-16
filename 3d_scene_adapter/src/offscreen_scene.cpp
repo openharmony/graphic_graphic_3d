@@ -21,6 +21,7 @@
 #include <string_view>
 #include <string>
 #include <sys/syscall.h>
+#include <cinttypes>
 
 #include <base/containers/array_view.h>
 #include <base/containers/shared_ptr.h>
@@ -65,7 +66,6 @@
 #include <scene/interface/intf_application_context.h>
 
 #include <scene/ext/intf_ecs_object_access.h>
-#include <text_3d/implementation_uids.h>
 #include "ability.h"
 
 #include "data_ability_helper.h"
@@ -90,20 +90,6 @@
 #include "param/sys_param.h"
 namespace OHOS::Render3D {
 static constexpr BASE_NS::Uid ENGINE_THREAD{ "2070e705-d061-40e4-bfb7-90fad2c280af" };
-std::string OffscreenCameraConfigs::Dump() const
-{
-    std::string ret = "OffscreenCamera:[";
-    ret += " position_: " + std::to_string(position_[0]) + '\t' + std::to_string(position_[1]) + '\t' +
-           std::to_string(position_[2]) + '\t';
-    ret += " rotation_: " + std::to_string(rotation_[0]) + '\t' + std::to_string(rotation_[1]) + '\t' +
-              std::to_string(rotation_[2]) + '\t' + std::to_string(rotation_[3]) + '\t';
-    ret += "clearColor: " + std::to_string(clearColor_[0]) + '\t' + std::to_string(clearColor_[1]) + '\t' +
-           std::to_string(clearColor_[2]) + '\t' + std::to_string(clearColor_[3]) + '\t';
-    ret += "fov: " + std::to_string(intrinsics_.fov_) + "near: " + std::to_string(intrinsics_.near_) +
-           "far: " + std::to_string(intrinsics_.far_);
-    ret += "]";
-    return ret;
-}
 
 static bool GetOffscreenDFXEnabled()
 {
@@ -140,7 +126,8 @@ public:
     bool OnWindowChange(const WindowChangeInfo& windowChangeInfo) override
     {
         if (GetOffscreenDFXEnabled()) {
-            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %llx", windowChangeInfo.producerSurfaceId);
+            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %" PRIx64,
+                windowChangeInfo.producerSurfaceId);
         }
         sceneAdapter_->OnWindowChange(windowChangeInfo);
         return true;

@@ -40,9 +40,12 @@ public:
     int32_t GetWidth() const;
     int32_t GetHeight() const;
 
+    BASE_NS::string GetSurfaceId() const;
+
 private:
     SCENE_NS::IBitmap::Ptr bitmap_{nullptr};
     std::shared_ptr<RenderResourcesETS> resources_{nullptr};
+    META_NS::IObject::Ptr attachment_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif // OHOS_3D_IMAGE_ETS_H

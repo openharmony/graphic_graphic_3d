@@ -79,18 +79,21 @@ static CORE_NS::IResource::Ptr LoadTemplate(const CORE_NS::IResourceType::Storag
         if (!res && type) {
             res = interface_pointer_cast<CORE_NS::IResource>(type->GetValue());
         }
-    }
-    if (res) {
-        if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
-            auto base = opts->GetBaseResource();
-            if (base.IsValid()) {
-                auto r = s.self->GetResource(base, s.context);
-                if (!r) {
-                    CORE_LOG_W("Could not load base resource for %s", base.ToString().c_str());
-                }
-                if (SetValuesFromTemplate(r, res)) {
-                    i->SetTemplateId(base);
-                }
+        if (!res) {
+            return res;
+        }
+        auto i = interface_cast<META_NS::IDerivedFromTemplate>(res);
+        if (!i) {
+            return res;
+        }
+        auto base = opts->GetBaseResource();
+        if (base.IsValid()) {
+            auto r = s.self->GetResource(base, s.context);
+            if (!r) {
+                CORE_LOG_W("Could not load base resource for %s", base.ToString().c_str());
+            }
+            if (SetValuesFromTemplate(r, res)) {
+                i->SetTemplateId(base);
             }
         }
     }

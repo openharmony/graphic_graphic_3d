@@ -59,7 +59,6 @@
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
@@ -227,7 +226,7 @@ void ConvertNormalizedDataToFloat(GLTF2::GLTFLoadDataResult const& result, float
         dstComponentCount = result.componentCount;
     }
 
-    CORE_ASSERT_MSG(dstComponentCount >= result.componentCount,
+    PLUGIN_ASSERT_MSG(dstComponentCount >= result.componentCount,
         "Padding count cannot be negative. Make sure expected component count is equal or greater than source "
         "component count.");
 
@@ -262,7 +261,7 @@ void ConvertNormalizedDataToFloat(GLTF2::GLTFLoadDataResult const& result, float
                 default:
                 case GLTF2::ComponentType::UNSIGNED_INT:
                 case GLTF2::ComponentType::INT:
-                    CORE_ASSERT(false);
+                    PLUGIN_ASSERT(false);
                     *destination = 0.0f;
                     break;
             }
@@ -290,7 +289,7 @@ void ConvertDataToFloat(GLTF2::GLTFLoadDataResult const& result, float* destinat
         dstComponentCount = result.componentCount;
     }
 
-    CORE_ASSERT_MSG(dstComponentCount >= result.componentCount,
+    PLUGIN_ASSERT_MSG(dstComponentCount >= result.componentCount,
         "Padding count cannot be negative. Make sure expected component count is equal or greater than source "
         "component count.");
 
@@ -324,7 +323,7 @@ void ConvertDataToFloat(GLTF2::GLTFLoadDataResult const& result, float* destinat
                 default:
                 case GLTF2::ComponentType::UNSIGNED_INT:
                 case GLTF2::ComponentType::INT:
-                    CORE_ASSERT(false);
+                    PLUGIN_ASSERT(false);
                     *destination = 0.0f;
                     break;
             }
@@ -373,7 +372,7 @@ void ConvertDataToBool(GLTF2::GLTFLoadDataResult const& result, bool* destinatio
                 default:
                 case GLTF2::ComponentType::UNSIGNED_INT:
                 case GLTF2::ComponentType::INT:
-                    CORE_ASSERT(false);
+                    PLUGIN_ASSERT(false);
                     *destination = false;
                     break;
             }
@@ -517,7 +516,7 @@ void ValidateIndices(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, b
         case GLTF2::ComponentType::INT:
             indices.success = false;
             indices.error += "Invalid componentType for indices.\n";
-            CORE_ASSERT(false);
+            PLUGIN_ASSERT(false);
             break;
     }
 }
@@ -585,9 +584,9 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     // Spec says POSITION,NORMAL and TANGENT must be FLOAT & VEC3
     // NOTE: ASSERT for now, if the types don't match, they need to be converted. (or we should fail
     // since out-of-spec)
-    CORE_ASSERT(loadDataResult.componentType == GLTF2::ComponentType::FLOAT);
-    CORE_ASSERT(loadDataResult.componentCount == 3U);
-    CORE_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
+    PLUGIN_ASSERT(loadDataResult.componentType == GLTF2::ComponentType::FLOAT);
+    PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
+    PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
 #endif
     if (finalDataResult.componentCount > 0U) {
         finalDataResult.data.append(loadDataResult.data.begin(), loadDataResult.data.end());
@@ -670,7 +669,7 @@ IndexType GetPrimitiveIndexType(const GLTF2::MeshPrimitive& primitive)
             break;
     }
 
-    CORE_ASSERT_MSG(false, "Not supported index type.");
+    PLUGIN_ASSERT_MSG(false, "Not supported index type.");
 
     return CORE_INDEX_TYPE_UINT32;
 }
@@ -846,7 +845,13 @@ GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportRes
     const IMaterialComponentManager& materialManager, const IDevice& device, IEngine& engine)
 {
     GatherMeshDataResult result;
-    auto context = GetInstance<IRenderContext>(*engine.GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
+    auto intf = engine.GetInterface<IClassRegister>();
+    if (!intf) {
+        result.success = false;
+        result.error = "Class register unavailable.";
+        return result;
+    }
+    auto context = CORE3D_NS::GetInstance<IRenderContext>(*engine.GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
     if (!context) {
         result.success = false;
         result.error = "RenderContext not found.";
@@ -857,7 +862,8 @@ GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportRes
         shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(
             DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD));
 
-    result.meshBuilder.reset(static_cast<MeshBuilder*>(CreateInstance<IMeshBuilder>(*context, UID_MESH_BUILDER).get()));
+    result.meshBuilder.reset(
+        static_cast<MeshBuilder*>(CORE3D_NS::CreateInstance<IMeshBuilder>(*context, UID_MESH_BUILDER).get()));
     result.meshBuilder->Initialize(vertexInputDeclaration, mesh.primitives.size());
 
     // Create primitive import info for mesh builder.
@@ -1161,9 +1167,9 @@ uint32_t ResolveImageLoadFlags(
         result &= ~IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
 
         if (GLTF2::IsDataURI(image.uri)) {
-            CORE_LOG_W("Unable to resolve color space for Image, defaulting to SRGB.");
+            PLUGIN_LOG_W("Unable to resolve color space for Image, defaulting to SRGB.");
         } else {
-            CORE_LOG_W("Unable to resolve color space for Image %s, defaulting to SRGB.", image.uri.c_str());
+            PLUGIN_LOG_W("Unable to resolve color space for Image %s, defaulting to SRGB.", image.uri.c_str());
         }
     }
 
@@ -1259,7 +1265,7 @@ AnimationTrackComponent::Interpolation ConvertAnimationInterpolation(GLTF2::Anim
 {
     switch (mode) {
         case GLTF2::AnimationInterpolation::INVALID:
-            CORE_ASSERT(false);
+            PLUGIN_ASSERT(false);
             break;
         case GLTF2::AnimationInterpolation::STEP:
             return AnimationTrackComponent::Interpolation::STEP;
@@ -1279,12 +1285,12 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
 {
     destination.resize(animationFrameDataResult.elementCount);
     if (animationFrameDataResult.componentType == GLTF2::ComponentType::FLOAT) {
-        CORE_ASSERT(animationFrameDataResult.elementSize == sizeof(T));
+        PLUGIN_ASSERT(animationFrameDataResult.elementSize == sizeof(T));
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(T), animationFrameDataResult.data.data(),
                 dataSizeInBytes)) {
-            CORE_LOG_E("Copying of raw framedata failed.");
+            PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
     } else {
         // Convert data.
@@ -1302,12 +1308,12 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
     destination.resize(animationFrameDataResult.elementCount);
     if (animationFrameDataResult.componentType == GLTF2::ComponentType::BYTE ||
         animationFrameDataResult.componentType == GLTF2::ComponentType::UNSIGNED_BYTE) {
-        CORE_ASSERT(animationFrameDataResult.elementSize == sizeof(bool));
+        PLUGIN_ASSERT(animationFrameDataResult.elementSize == sizeof(bool));
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
         if (!CloneData(destination.data(), destination.size() * sizeof(bool), animationFrameDataResult.data.data(),
                 dataSizeInBytes)) {
-            CORE_LOG_E("Copying of raw framedata failed.");
+            PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
     } else {
         // Convert data.
@@ -1374,7 +1380,7 @@ bool BuildAnimationOutput(GLTF2::Data const& data, IFileManager& fileManager, GL
 
             case GLTF2::AnimationPath::INVALID:
             default:
-                CORE_LOG_W("Animation.channel.path type %d not implemented", static_cast<int>(path));
+                PLUGIN_LOG_W("Animation.channel.path type %d not implemented", static_cast<int>(path));
                 break;
         }
     }
@@ -1467,7 +1473,7 @@ RenderHandleReference ImportTexture(const string_view uri, IImageContainer::Ptr 
         }
         staging.CopyBufferToImage(bufferHandle, imageHandle, copies);
     } else {
-        CORE_LOG_W("Creating an import image failed (format:%u, width:%u, height:%u)",
+        PLUGIN_LOG_W("Creating an import image failed (format:%u, width:%u, height:%u)",
             static_cast<uint32_t>(gpuImageDesc.format), gpuImageDesc.width, gpuImageDesc.height);
     }
     return imageHandle;
@@ -1553,7 +1559,7 @@ void FillSheen(MaterialComponent& desc, const GLTFImportResult& importResult, co
     desc.textures[MaterialComponent::TextureIndex::SHEEN].factor = Math::Vec4(gltfMaterial.sheen.factor, 0.f);
     FillTextureParams(gltfMaterial.sheen.texture, importResult, data, em, desc, MaterialComponent::TextureIndex::SHEEN);
     if (gltfMaterial.sheen.roughnessTexture.texture) {
-        CORE_LOG_W("Sheen roughness mapping not supported by gltf2 importer");
+        PLUGIN_LOG_W("Sheen roughness mapping not supported by gltf2 importer");
     }
     // to sheen alpha
     desc.textures[MaterialComponent::TextureIndex::SHEEN].factor.w = gltfMaterial.sheen.roughness;
@@ -1578,7 +1584,7 @@ void FillSpecular(MaterialComponent& desc, const GLTFImportResult& importResult,
             MaterialComponent::TextureIndex::SPECULAR);
         desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index != gltfMaterial.specular.colorTexture.index) {
-        CORE_LOG_W("Separate specular strength and color textures are not supported!");
+        PLUGIN_LOG_W("Separate specular strength and color textures are not supported!");
         FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
             MaterialComponent::TextureIndex::SPECULAR);
     } else { // both textures valid
@@ -1892,7 +1898,7 @@ void RecursivelyCreateComponents(IEcs& ecs, const GLTF2::Data& data, const GLTF2
     const Entity environmentEntity, const GLTFResourceData& gltfResourceData, Entity& defaultCamera, uint32_t flags)
 {
     const size_t nodeIndex = FindIndex(data.nodes, &node);
-    CORE_ASSERT_MSG(nodeIndex != GLTF2::GLTF_INVALID_INDEX, "Cannot find node: %s", node.name.c_str());
+    PLUGIN_ASSERT_MSG(nodeIndex != GLTF2::GLTF_INVALID_INDEX, "Cannot find node: %s", node.name.c_str());
 
     const Entity entity = FindEntity(sceneEntities, nodeIndex);
 
@@ -2026,8 +2032,8 @@ void CreateMorphComponents(const GLTF2::Data& data, const GLTFResourceData& gltf
         // Assert that all primitives have the same targets. (the spec is a bit confusing here or i just
         // can't read.)
         for (const auto& primitive : node->mesh->primitives) {
-            CORE_UNUSED(primitive);
-            CORE_ASSERT(primitive.targets.size() == weightCount);
+            PLUGIN_UNUSED(primitive);
+            PLUGIN_ASSERT(primitive.targets.size() == weightCount);
         }
 
         // We have targets, so prepare the morph system/component.
@@ -2090,12 +2096,12 @@ Entity CreateEnvironmentComponent(IGpuResourceManager& gpuResourceManager, const
     envHandle->environmentRotation = light->rotation;
 
     // Either we have full set of coefficients or there are no coefficients at all.
-    CORE_ASSERT(light->irradianceCoefficients.size() == 0u || light->irradianceCoefficients.size() == 9u);
+    PLUGIN_ASSERT(light->irradianceCoefficients.size() == 0u || light->irradianceCoefficients.size() == 9u);
 
     std::transform(light->irradianceCoefficients.begin(), light->irradianceCoefficients.end(),
         envHandle->irradianceCoefficients, [](const GLTF2::ImageBasedLight::LightingCoeff& coeff) {
             // Each coefficient needs to have three components.
-            CORE_ASSERT(coeff.size() == 3u);
+            PLUGIN_ASSERT(coeff.size() == 3u);
 
             // Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
             return Math::Vec3(coeff[0u], coeff[1u], coeff[2u]);
@@ -2226,7 +2232,7 @@ RenderHandleReference CreateCubemapFromImages(
 
     auto handle = gpuResourceManager.Create("", imageDesc, data.data, data.copyInfo);
     if (!handle) {
-        CORE_LOG_W("Creating an import cubemap image failed (format:%u, width:%u, height:%u)",
+        PLUGIN_LOG_W("Creating an import cubemap image failed (format:%u, width:%u, height:%u)",
             static_cast<uint32_t>(imageDesc.format), imageDesc.width, imageDesc.height);
     }
     return handle;
@@ -2250,7 +2256,7 @@ auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
     shaderData.gfxStateDoubleSided = em.GetReferenceCounted(resourceEntity);
     if (!(EntityUtil::IsValid(shaderData.shader) && EntityUtil::IsValid(shaderData.gfxState) &&
             EntityUtil::IsValid(shaderData.gfxStateDoubleSided))) {
-        CORE_LOG_ONCE_W(renderSlot, "GLTF2 importer cannot find default shader data.");
+        PLUGIN_LOG_ONCE_W(renderSlot, "GLTF2 importer cannot find default shader data.");
     }
 }
 } // namespace
@@ -2491,7 +2497,7 @@ struct GLTF2Importer::AnimationTaskData {
     {
         switch (pathType) {
             case GLTF2::AnimationPath::INVALID:
-                CORE_ASSERT(false);
+                PLUGIN_ASSERT(false);
                 break;
             case GLTF2::AnimationPath::TRANSLATION:
                 trackComponent.component = ITransformComponentManager::UID;
@@ -2529,14 +2535,19 @@ GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEc
       meshManager_(GetManager<IMeshComponentManager>(*ecs_)), nameManager_(GetManager<INameComponentManager>(*ecs_)),
       uriManager_(GetManager<IUriComponentManager>(*ecs_)), threadPool_(&pool)
 {
-    if (IGraphicsContext* graphicsContext_ =
-            GetInstance<IGraphicsContext>(*(renderContext_.GetInterface<IClassRegister>()), UID_GRAPHICS_CONTEXT);
-        graphicsContext_) {
-        colorSpaceFlags_ = graphicsContext_->GetCreateInfo().colorSpaceFlags;
+    auto classRegister = renderContext_.GetInterface<IClassRegister>();
+    if (classRegister) {
+        if (IGraphicsContext* graphicsContext_ =
+                CORE3D_NS::GetInstance<IGraphicsContext>(*classRegister, UID_GRAPHICS_CONTEXT);
+            graphicsContext_) {
+            colorSpaceFlags_ = graphicsContext_->GetCreateInfo().colorSpaceFlags;
+        }
     }
 
-    const auto factory = GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
-    mainThreadQueue_ = factory->CreateDispatcherTaskQueue({});
+    const auto factory = CORE3D_NS::GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY);
+    if (factory) {
+        mainThreadQueue_ = factory->CreateDispatcherTaskQueue({});
+    }
     if (renderHandleManager_ && uriManager_) {
         // fetch default shaders and graphics states
         auto& entityMgr = ecs_->GetEntityManager();
@@ -2766,7 +2777,7 @@ bool GLTF2Importer::ProgressTask(ImporterTask& task)
         task.state = ImporterTask::State::Gather;
         if (task.gather) {
             // All gather task should be launched during Prepare() to fully utilize the thread pool.
-            CORE_ASSERT(false);
+            PLUGIN_ASSERT(false);
             return false;
         }
     }
@@ -2999,7 +3010,7 @@ void GLTF2Importer::HandleImportTasks()
                 } else {
                     // Import phase failed.
                     const string error = "Import data failed: " + task->name;
-                    CORE_LOG_W("%s", error.c_str());
+                    PLUGIN_LOG_W("%s", error.c_str());
                     result_.success = false;
                     result_.error += error + '\n';
                 }
@@ -3030,7 +3041,7 @@ void GLTF2Importer::HandleGatherTasks()
                 } else {
                     // Gather phase failed.
                     const string error = "Gather data failed: " + task->name;
-                    CORE_LOG_W("%s", error.c_str());
+                    PLUGIN_LOG_W("%s", error.c_str());
                     result_.success = false;
                     result_.error += error + '\n';
                 }
@@ -3128,7 +3139,7 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
             t->data.imageHandle =
                 ImportTexture(t->data.uri, move(result.image), *t->data.staging, importer->gpuResourceManager_);
         } else {
-            CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
+            PLUGIN_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
             t->errors += result.error;
             t->errors += '\n';
         }
@@ -3200,7 +3211,7 @@ void GLTF2Importer::PrepareImageTasks()
         if (EntityUtil::IsValid(imageEntity)) {
             // Already exists.
             result_.data.images[i] = ecs_->GetEntityManager().GetReferenceCounted(imageEntity);
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
             continue;
         }
 
@@ -3267,7 +3278,7 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
                             IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT, colorSpaceFlags_);
                     if (!loadResult.success) {
                         success = false;
-                        CORE_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), loadResult.error);
+                        PLUGIN_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), loadResult.error);
                         break;
                     }
 
@@ -3315,7 +3326,7 @@ void GLTF2Importer::PrepareMaterialTasks()
         uri += to_string(i);
         auto materialEntity = LookupResourceByUri(uri, *uriManager_, *materialManager_);
         if (EntityUtil::IsValid(materialEntity)) {
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
         } else {
             materialEntity = ecs_->GetEntityManager().Create();
             if (!uri.empty()) {
@@ -3373,7 +3384,7 @@ void GLTF2Importer::PrepareMeshTasks()
         if (EntityUtil::IsValid(meshEntity)) {
             // Already exists.
             result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
             continue;
         }
 
@@ -3500,7 +3511,7 @@ void GLTF2Importer::PrepareAnimationTasks()
         const auto animationEntity = LookupResourceByUri(uri, *uriManager_, *animationManager);
         if (EntityUtil::IsValid(animationEntity)) {
             result_.data.animations[i] = ecs_->GetEntityManager().GetReferenceCounted(animationEntity);
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
             continue;
         }
         vector<GatheredDataTask<ComponentTaskData<AnimationInputComponent>>*> inputResults;
@@ -3540,7 +3551,7 @@ void GLTF2Importer::PrepareSkinTasks()
         if (EntityUtil::IsValid(skinIbmEntity)) {
             // Already exists.
             result_.data.skins[i] = ecs_->GetEntityManager().GetReferenceCounted(skinIbmEntity);
-            CORE_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
             continue;
         }
 
@@ -3584,16 +3595,22 @@ void GLTF2Importer::Destroy()
 }
 
 Gltf2SceneImporter::Gltf2SceneImporter(IEngine& engine, IRenderContext& renderContext, IEcs& ecs)
-    : ecs_(ecs), graphicsContext_(GetInstance<IGraphicsContext>(
-                     *renderContext.GetInterface<IClassRegister>(), UID_GRAPHICS_CONTEXT)),
-      importer_(new GLTF2::GLTF2Importer(engine, renderContext, ecs))
-{}
+    : ecs_(ecs), importer_(new GLTF2::GLTF2Importer(engine, renderContext, ecs))
+{
+    auto classRegister = renderContext.GetInterface<IClassRegister>();
+    if (classRegister) {
+        graphicsContext_ = CORE3D_NS::GetInstance<IGraphicsContext>(*classRegister, UID_GRAPHICS_CONTEXT);
+    }
+}
 
 Gltf2SceneImporter::Gltf2SceneImporter(IEngine& engine, IRenderContext& renderContext, IEcs& ecs, IThreadPool& pool)
-    : ecs_(ecs), graphicsContext_(GetInstance<IGraphicsContext>(
-                     *renderContext.GetInterface<IClassRegister>(), UID_GRAPHICS_CONTEXT)),
-      importer_(new GLTF2::GLTF2Importer(engine, renderContext, ecs, pool))
-{}
+    : ecs_(ecs), importer_(new GLTF2::GLTF2Importer(engine, renderContext, ecs, pool))
+{
+    auto classRegister = renderContext.GetInterface<IClassRegister>();
+    if (classRegister) {
+        graphicsContext_ = CORE3D_NS::GetInstance<IGraphicsContext>(*classRegister, UID_GRAPHICS_CONTEXT);
+    }
+}
 
 void Gltf2SceneImporter::ImportResources(const ISceneData::Ptr& data, ResourceImportFlags flags)
 {

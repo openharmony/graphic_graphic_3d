@@ -28,7 +28,6 @@
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/interface/intf_text.h>
 
 #include <3d/implementation_uids.h>
 #include <render/intf_render_context.h>
@@ -268,9 +267,6 @@ META_NS::ObjectId InternalScene::DeducePrimaryNodeType(CORE_NS::Entity ent) cons
     }
     if (ecs_->lightComponentManager->HasComponent(ent)) {
         return ClassId::LightNode;
-    }
-    if (ecs_->textComponentManager && ecs_->textComponentManager->HasComponent(ent)) {
-        return ClassId::TextNode;
     }
     if (ecs_->renderMeshComponentManager->HasComponent(ent)) {
         return ClassId::MeshNode;
@@ -757,6 +753,39 @@ void InternalScene::SetNodeActive(const INode::Ptr& child, bool active)
     }
 }
 
+void InternalScene::ProcessCustomRenderNodeGraph(
+    BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
+    BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles)
+{
+    if (customRenderNodeGraph_.size() == 0) {
+        return;
+    }
+    customRenderHandles.clear();
+
+    switch (modificationMode_) {
+        case RenderNodeGraphModificationMode::PREPEND:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            customRenderHandles.insert(customRenderHandles.end(),
+                renderHandles.begin(), renderHandles.end());
+            break;
+        case RenderNodeGraphModificationMode::APPEND:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                renderHandles.begin(), renderHandles.end());
+            customRenderHandles.insert(customRenderHandles.end(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            break;
+        case RenderNodeGraphModificationMode::REPLACE:
+            customRenderHandles.insert(customRenderHandles.begin(),
+                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            break;
+        default:
+            return;
+    }
+    renderHandles = move(customRenderHandles);
+    return;
+}
+
 void InternalScene::SetEntityActive(const BASE_NS::shared_ptr<IEcsObject>& child, bool active)
 {
     if (!child || !ecs_) {
@@ -919,6 +948,10 @@ void InternalScene::Update(const UpdateInfo& info)
 
     if ((needsRender && mode_ != RenderMode::MANUAL) || pending) {
         auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_->ecs);
+
+        BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderHandles;
+        ProcessCustomRenderNodeGraph(customRenderHandles, renderHandles);
+
         if (!renderHandles.empty()) {
             // The scene needs to be rendered.
             if (auto rctx = GetRenderContextPtr()) {
@@ -1008,11 +1041,12 @@ META_NS::IAnimation::Ptr InternalScene::FindAnimation(const CORE_NS::ResourceId&
     META_NS::IAnimation::Ptr anim;
     for (size_t i = 0; !anim && i != ecs_->animationComponentManager->GetComponentCount(); ++i) {
         auto ent = ecs_->animationComponentManager->GetEntity(i);
-        if (ecs_->ecs->GetEntityManager().IsAlive(ent)) {
-            if (auto r = ecs_->resourceComponentManager->Read(ent)) {
-                if (r->resourceId == id) {
-                    anim = FindAnimation(ent, false);
-                }
+        if (!ecs_->ecs->GetEntityManager().IsAlive(ent)) {
+            continue;
+        }
+        if (auto r = ecs_->resourceComponentManager->Read(ent)) {
+            if (r->resourceId == id) {
+                anim = FindAnimation(ent, false);
             }
         }
     }
@@ -1253,6 +1287,13 @@ SceneDebugInfo InternalScene::GetDebugInfo() const
         }
     }
     return info;
+}
+
+void InternalScene::ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
+    const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng)
+{
+    modificationMode_ = mode;
+    customRenderNodeGraph_ = rng;
 }
 
 SCENE_END_NAMESPACE()

@@ -20,6 +20,7 @@
 #include <jpeglib.h>
 #include <limits>
 #include <memory>
+#include <mutex>
 
 #include <base/math/mathf.h>
 #include <core/io/intf_file_manager.h>
@@ -35,6 +36,7 @@ constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
 constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
 
 uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
+std::once_flag g_sRgbPremultiplyLookupOnce;
 
 void InitializeSRGBTable()
 {
@@ -83,9 +85,7 @@ bool PremultiplyAlpha(
                 img++; // Skip over the alpha value.
             }
         } else {
-            if (g_sRgbPremultiplyLookup[256u * 256u - 1] == 0) {
-                InitializeSRGBTable();
-            }
+            std::call_once(g_sRgbPremultiplyLookupOnce, InitializeSRGBTable);
             uint8_t* img = imageBytes;
             for (uint32_t i = 0; i < pixelCount; i++) {
                 uint8_t* p = &g_sRgbPremultiplyLookup[img[channelCount - 1] * 256u];
@@ -305,6 +305,18 @@ public:
         longjmp(*jmpBuffer, 1);
     }
 
+    static bool FillRowPointers(uint8_t** rows, uint8_t* base, uint32_t height, size_t stride, bool flipVertically)
+    {
+        const size_t imageSize = stride * height;
+        for (auto i = 0U; i < height; ++i) {
+            rows[i] = flipVertically ? base + ((height - 1) - i) * stride : base + i * stride;
+            if (rows[i] < base || rows[i] >= base + imageSize) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     static IImageLoaderManager::LoadResult Load(array_view<const uint8_t> imageFileBytes, uint32_t loadFlags) noexcept
     {
         if (imageFileBytes.empty()) {
@@ -355,6 +367,7 @@ public:
             }
             if (!jpeg_start_decompress(&cinfo)) {
                 jpeg_abort_decompress(&cinfo);
+                return ResultFailure("jpeg_start_decompress failed.");
             }
 
             // update the image information in case some conversions will be done.
@@ -367,7 +380,7 @@ public:
                 return ResultFailure("Invalid number of color channels.");
             }
 
-            const size_t imageSize = width * height * channels;
+            const size_t imageSize = static_cast<size_t>(width) * height * channels;
             if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
                 jpeg_destroy_decompress(&cinfo);
                 return ResultFailure("Image too large.");
@@ -377,16 +390,10 @@ public:
             // every time.
             image = BASE_NS::make_unique<uint8_t[]>(imageSize);
             rows = BASE_NS::make_unique<uint8_t* []>(height);
-            // fill rows depending on should there be a vertical flip or not.
-            auto row = rows.get();
-            if (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) {
-                for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + ((height - 1) - i) * (width * channels);
-                }
-            } else {
-                for (auto i = 0U; i < height; ++i) {
-                    *row++ = image.get() + i * (width * channels);
-                }
+            const size_t stride = static_cast<size_t>(width) * channels;
+            const bool flip = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0;
+            if (!FillRowPointers(rows.get(), image.get(), height, stride, flip)) {
+                return ResultFailure("Row pointer out of bounds.");
             }
             while (cinfo.output_scanline < cinfo.output_height) {
                 jpeg_read_scanlines(
@@ -445,16 +452,16 @@ public:
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
         // Check for JPEG / DQT / JFIF / Exif / ICC_PROFILE tag
-        // 10：size 2、3、6、7、8、9：index
+        // 10：size
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
             imageFileBytes[2] == 0xff &&
             (imageFileBytes[3] == 0xdb ||
-             (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-              imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
-             (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-              imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
-             (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-              imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+                (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
+                    imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
             return true;
         }
 

@@ -21,10 +21,23 @@
 #include "3d_widget_adapter_log.h"
 #endif
 
+#include <meta/interface/intf_attach.h>
+#include <scene_adapter/intf_surface_stream.h>
+
 namespace OHOS::Render3D {
 ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(bitmap)
 {
+    auto attachments = interface_cast<META_NS::IAttach>(bitmap_)->GetAttachments();
+    for (auto& attachment : attachments) {
+        auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment);
+        if (surfaceStream == nullptr) {
+            continue;
+        }
+        attachment_ = attachment;
+        break;
+    }
+
     SetName(name);
     SetUri(uri);
 
@@ -68,6 +81,10 @@ META_NS::IObject::Ptr ImageETS::GetNativeObj() const
 
 int32_t ImageETS::GetWidth() const
 {
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return surfaceStream->GetWidth();
+    }
+
     if (!bitmap_) {
         WIDGET_LOGE("ImageETS::GetWidth() bitmap_ is nullptr");
         return 0;
@@ -77,10 +94,23 @@ int32_t ImageETS::GetWidth() const
 
 int32_t ImageETS::GetHeight() const
 {
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return surfaceStream->GetHeight();
+    }
+
     if (!bitmap_) {
         WIDGET_LOGE("ImageETS::GetHeight() bitmap_ is nullptr");
         return 0;
     }
     return bitmap_->Size()->GetValue().y;
+}
+
+BASE_NS::string ImageETS::GetSurfaceId() const
+{
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return BASE_NS::string(BASE_NS::to_string(surfaceStream->GetSurfaceId()));
+    }
+
+    return "";
 }
 }  // namespace OHOS::Render3D

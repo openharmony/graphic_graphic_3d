@@ -21,7 +21,6 @@
 #include <base/containers/allocator.h>
 #include <base/math/matrix_util.h>
 #include <base/math/quaternion_util.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/util/intf_frustum_util.h>
 #include <render/datastore/intf_render_data_store.h>
@@ -29,6 +28,8 @@
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
+
+#include "util/log.h"
 
 namespace {
 #include "3d/shaders/common/3d_dm_structures_common.h"
@@ -123,7 +124,7 @@ inline constexpr Math::UVec2 GetPacked64(const uint64_t value)
 constexpr Math::UVec4 GetMultiViewCameraIndicesFunc(const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam)
 {
     Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
-    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    PLUGIN_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
     const uint32_t inputCount =
         Math::min(cam.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
     for (uint32_t idx = 0U; idx < inputCount; ++idx) {
@@ -147,7 +148,7 @@ constexpr Math::UVec4 GetCubemapMultiViewCameraIndicesFunc(
     const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, const array_view<const uint32_t> cameraIndices)
 {
     Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
-    CORE_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
+    PLUGIN_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
     constexpr uint32_t inputCount = CUBEMAP_EXTRA_CAMERA_COUNT;
     mvIndices[0U] = inputCount; // multi-view camera count
     // NOTE: keeps compatibility with the old code
@@ -170,13 +171,13 @@ void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeCon
     renderNodeContextMgr_ = &renderNodeContextMgr;
 
     // Get IFrustumUtil from global plugin registry.
-    frustumUtil_ = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+    frustumUtil_ = CORE3D_NS::GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
 
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
 
-    CORE_STATIC_ASSERT((sizeof(DefaultCameraMatrixStruct) % CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT) == 0);
+    PLUGIN_STATIC_ASSERT((sizeof(DefaultCameraMatrixStruct) % CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT) == 0);
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     {
         const string bufferName =
@@ -332,8 +333,8 @@ BASE_NS::Math::UVec4 RenderNodeDefaultCameras::GetMultiViewCameraIndices(
             startCameraIndex + 4U,
         };
         for (size_t idx = 0; idx < CUBEMAP_EXTRA_CAMERA_COUNT; ++idx) {
-            CORE_ASSERT(currSize + idx < cubemapCameras_.size());
-            CORE_ASSERT(idx < cubemapMatrices_.size());
+            PLUGIN_ASSERT(currSize + idx < cubemapCameras_.size());
+            PLUGIN_ASSERT(idx < cubemapMatrices_.size());
             auto& currCamera = cubemapCameras_[currSize + idx];
             currCamera = cam;
             currCamera.flags = 0U;
@@ -413,7 +414,7 @@ Math::UVec4 GetMultiEnvironmentIndices(
                     multiEnvIdx = envIdx;
                 }
             }
-            CORE_ASSERT(idx + 1U <= 3U);
+            PLUGIN_ASSERT(idx + 1U <= 3U);
             multiEnvIndices[idx + 1U] = multiEnvIdx;
         }
         return multiEnvIndices;
@@ -426,7 +427,7 @@ Math::UVec4 GetMultiEnvironmentIndices(
 void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCamera* dsCamera,
     const array_view<const RenderCamera::Environment> environments, uint8_t* const data)
 {
-    CORE_ASSERT(data);
+    PLUGIN_ASSERT(data);
     const auto* dataEnd = data + sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT;
 
     const uint32_t envCount = static_cast<uint32_t>(
@@ -472,7 +473,7 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
         }
 
         if (!CloneData(dat, size_t(dataEnd - dat), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
-            CORE_LOG_E("environment ubo copying failed.");
+            PLUGIN_LOG_E("environment ubo copying failed.");
         }
     }
 }

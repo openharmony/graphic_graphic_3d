@@ -53,7 +53,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
@@ -67,6 +66,7 @@
 
 #include "uri_lookup.h"
 #include "util/component_util_functions.h"
+#include "util/log.h"
 
 namespace {
 constexpr uint32_t REFLECTION_PROBE_DEFAULT_SIZE { 256U };
@@ -311,32 +311,6 @@ namespace {
 // default size, updated in render system based on main scene camera
 constexpr Math::UVec2 DEFAULT_PLANE_TARGET_SIZE { 2u, 2u };
 
-EntityReference CreateReflectionPlaneGpuImage(IGpuResourceManager& gpuResourceMgr,
-    IRenderHandleComponentManager& handleManager, INameComponentManager& nameManager, const string_view name,
-    const Format format, const ImageUsageFlags usageFlags, const MemoryPropertyFlags memoryPropertyFlags)
-{
-    const auto entity = handleManager.GetEcs().GetEntityManager().CreateReferenceCounted();
-    handleManager.Create(entity);
-
-    GpuImageDesc desc;
-    desc.width = DEFAULT_PLANE_TARGET_SIZE.x;
-    desc.height = DEFAULT_PLANE_TARGET_SIZE.y;
-    desc.depth = 1U;
-    desc.mipCount = DefaultMaterialCameraConstants::REFLECTION_PLANE_MIP_COUNT;
-    desc.format = format;
-    desc.memoryPropertyFlags = memoryPropertyFlags;
-    desc.usageFlags = usageFlags;
-    desc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
-    desc.imageTiling = ImageTiling::CORE_IMAGE_TILING_OPTIMAL;
-    desc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_2D;
-    desc.engineCreationFlags = EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS;
-    handleManager.Write(entity)->reference = gpuResourceMgr.Create(name, desc);
-
-    nameManager.Create(entity);
-    nameManager.Write(entity)->name = name;
-    return entity;
-}
-
 SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     IEcs& ecs, IGraphicsContext& graphicsContext, const Entity& nodeEntity)
 {
@@ -352,21 +326,7 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     }
 
     auto& device = graphicsContext.GetRenderContext().GetDevice();
-    auto& gpuResourceMgr = device.GetGpuResourceManager();
     plane.entity = nodeEntity;
-    plane.colorTarget = CreateReflectionPlaneGpuImage(gpuResourceMgr, *gpuHandleCM, *nameCM,
-        DefaultMaterialCameraConstants::CAMERA_COLOR_PREFIX_NAME + to_hex(nodeEntity.id),
-        Format::BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
-        ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT,
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    // NOTE: uses transient attachement usage flag and cannot be read.
-    plane.depthTarget = CreateReflectionPlaneGpuImage(gpuResourceMgr, *gpuHandleCM, *nameCM,
-        DefaultMaterialCameraConstants::CAMERA_DEPTH_PREFIX_NAME + to_hex(nodeEntity.id), Format::BASE_FORMAT_D16_UNORM,
-        ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
 
     const auto meshHandle = [&]() {
         const auto rmcHandle = renderMeshCM->Read(nodeEntity);
@@ -393,7 +353,6 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
         }
         matComponent.materialShader.shader = ecs.GetEntityManager().GetReferenceCounted(shaderEntity);
 
-        matComponent.textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image = plane.colorTarget;
         matComponent.extraRenderingFlags = MaterialComponent::ExtraRenderingFlagBits::DISCARD_BIT;
     }
 
@@ -407,8 +366,6 @@ void SceneUtil::CreateReflectionPlaneComponent(IEcs& ecs, const Entity& nodeEnti
     if (EntityUtil::IsValid(plane.entity)) {
         auto prcm = GetManager<IPlanarReflectionComponentManager>(ecs);
         PlanarReflectionComponent prc;
-        prc.colorRenderTarget = plane.colorTarget;
-        prc.depthRenderTarget = plane.depthTarget;
         prc.renderTargetResolution[0] = DEFAULT_PLANE_TARGET_SIZE.x;
         prc.renderTargetResolution[1] = DEFAULT_PLANE_TARGET_SIZE.y;
         prcm->Set(plane.entity, prc);
@@ -422,8 +379,6 @@ void SceneUtil::CreateReflectionPlaneComponent(
     if (EntityUtil::IsValid(plane.entity)) {
         auto prcm = GetManager<IPlanarReflectionComponentManager>(ecs);
         PlanarReflectionComponent prc;
-        prc.colorRenderTarget = plane.colorTarget;
-        prc.depthRenderTarget = plane.depthTarget;
         prc.renderTargetResolution[0] = DEFAULT_PLANE_TARGET_SIZE.x;
         prc.renderTargetResolution[1] = DEFAULT_PLANE_TARGET_SIZE.y;
         prc.additionalFlags |= flags;
@@ -511,7 +466,7 @@ vector<Entity> CreateJointMapping(
             (pos != dstJointNamesEnd) ? dstJointEntities[static_cast<size_t>(std::distance(dstJointNamesBegin, pos))]
                                       : Entity {});
         if (pos == dstJointNamesEnd) {
-            CORE_LOG_W("Target skin missing joint %s", srcJointName.data());
+            PLUGIN_LOG_W("Target skin missing joint %s", srcJointName.data());
         }
     }
     return srcToDstJointMapping;
@@ -575,7 +530,7 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
                     return dstTrackEntity;
                 }
             }
-            CORE_LOG_W("no target for track %" PRIx64, static_cast<Entity>(srcTrackEntity).id);
+            PLUGIN_LOG_W("no target for track %" PRIx64, static_cast<Entity>(srcTrackEntity).id);
             return srcTrackEntity;
         });
     return trackTargets;
@@ -703,7 +658,7 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
             if (rsd.shader) {
                 shader.shader = GetOrCreateEntityReference(entityMgr, *renderHandleMgr, rsd.shader);
             } else {
-                CORE_LOG_D("SceneUtil: render slot base shader not found (%s)", renderSlot.data());
+                PLUGIN_LOG_D("SceneUtil: render slot base shader not found (%s)", renderSlot.data());
             }
             if (rsd.graphicsState) {
                 RENDER_NS::GraphicsState gs = shaderMgr.GetGraphicsState(rsd.graphicsState);
@@ -713,10 +668,10 @@ void SceneUtil::GetDefaultMaterialShaderData(IEcs& ecs, const ISceneUtil::Materi
                 const RenderHandleReference gsHandle = shaderMgr.GetGraphicsStateHandleByHash(gsHash);
                 shader.graphicsState = GetOrCreateEntityReference(entityMgr, *renderHandleMgr, gsHandle);
             } else {
-                CORE_LOG_D("SceneUtil: render slot base graphics state not found (%s)", renderSlot.data());
+                PLUGIN_LOG_D("SceneUtil: render slot base graphics state not found (%s)", renderSlot.data());
             }
         } else {
-            CORE_LOG_W("SceneUtil: render slot id not found (%s)", renderSlot.data());
+            PLUGIN_LOG_W("SceneUtil: render slot id not found (%s)", renderSlot.data());
         }
     }
 }
@@ -725,7 +680,7 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
 {
     auto jointsManager = GetManager<ISkinJointsComponentManager>(ecs);
     if (!jointsManager) {
-        CORE_LOG_E("Missing ISkinJointsComponentManager.");
+        PLUGIN_LOG_E("Missing ISkinJointsComponentManager.");
         return;
     }
     vector<Entity> dstToSrcJointMapping;
@@ -733,11 +688,11 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
         auto dstJointsComponent = jointsManager->Read(targetEntity);
         auto srcJointsComponent = jointsManager->Read(sourceEntity);
         if (!dstJointsComponent) {
-            CORE_LOG_E("target doesn't have SkinJointsComponent.");
+            PLUGIN_LOG_E("target doesn't have SkinJointsComponent.");
             return;
         }
         if (!srcJointsComponent) {
-            CORE_LOG_E("source doesn't have SkinJointsComponent.");
+            PLUGIN_LOG_E("source doesn't have SkinJointsComponent.");
             return;
         }
 
@@ -746,7 +701,7 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
 
         dstToSrcJointMapping = CreateJointMapping(ecs, srcJointEntities, dstJointEntities);
         if (dstJointsComponent->count != dstToSrcJointMapping.size()) {
-            CORE_LOG_E("couldn't match all joints.");
+            PLUGIN_LOG_E("couldn't match all joints.");
         }
     }
     auto dstJointsComponent = jointsManager->Write(targetEntity);
@@ -978,7 +933,7 @@ vector<Entity> GatherEntities(const IEcs& source, const Entity sourceEntity)
     }
     auto nodeSystem = GetSystem<INodeSystem>(source);
     if (!nodeSystem) {
-        CORE_LOG_W("Missing INodeSystem");
+        PLUGIN_LOG_W("Missing INodeSystem");
         return entities;
     }
     vector<IComponentManager*> managers;
@@ -1080,7 +1035,7 @@ void UpdateEntities(IComponentManager* manager, Entity entity,
                     *entity = it->second.entity;
                     data->WUnlock();
                 } else {
-                    CORE_LOG_D("couldn't find %s", to_hex(entity->id).data());
+                    PLUGIN_LOG_D("couldn't find %s", to_hex(entity->id).data());
                 }
             },
             [&oldToNew, data, &updatedProperties, &em](EntityReference* entity) {
@@ -1093,7 +1048,7 @@ void UpdateEntities(IComponentManager* manager, Entity entity,
                     *entity = em.GetReferenceCounted(it->second.entity);
                     data->WUnlock();
                 } else {
-                    CORE_LOG_D("couldn't find %s", to_hex(static_cast<const Entity>(*entity).id).data());
+                    PLUGIN_LOG_D("couldn't find %s", to_hex(static_cast<const Entity>(*entity).id).data());
                 }
             });
     }
@@ -1135,7 +1090,8 @@ CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity>
             for (const auto& srcManager : managers) {
                 auto* dstManager = destination.GetComponentManager(srcManager->GetUid());
                 if (!dstManager) {
-                    CORE_LOG_W("ComponentManager %s missing from destination.", to_string(srcManager->GetUid()).data());
+                    PLUGIN_LOG_W(
+                        "ComponentManager %s missing from destination.", to_string(srcManager->GetUid()).data());
                     continue;
                 }
                 dstManager->Create(dstEntity);
@@ -1179,7 +1135,7 @@ ISceneUtil::ClonedEntities SceneUtil::Clone(
             handle->parent = parentEntity;
         }
     } else {
-        CORE_LOG_W("Failed to reparent: missing INodeComponentManager");
+        PLUGIN_LOG_W("Failed to reparent: missing INodeComponentManager");
     }
     return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
 }
@@ -1201,7 +1157,7 @@ ISceneUtil::ClonedEntities SceneUtil::Clone(IEcs& source, Entity sourceEntity, E
             handle->parent = parentEntity;
         }
     } else {
-        CORE_LOG_W("Failed to reparent: missing INodeComponentManager");
+        PLUGIN_LOG_W("Failed to reparent: missing INodeComponentManager");
     }
     return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
 }
@@ -1231,7 +1187,7 @@ bool SceneUtil::IsSphereInsideCameraFrustum(
     if (!EntityUtil::IsValid(cameraEntity)) {
         return false;
     }
-    auto* frustumUtil = GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
+    auto* frustumUtil = CORE3D_NS::GetInstance<IFrustumUtil>(UID_FRUSTUM_UTIL);
     auto* cameraMgr = GetManager<ICameraComponentManager>(ecs);
     auto* worldMatrixMgr = GetManager<IWorldMatrixComponentManager>(ecs);
     if (!frustumUtil || !cameraMgr || !worldMatrixMgr) {

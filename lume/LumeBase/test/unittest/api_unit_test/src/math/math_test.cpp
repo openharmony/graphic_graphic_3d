@@ -2225,6 +2225,446 @@ UNIT_TEST(API_MathVectorUtil, Vector4lerp, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(pos3.w, 0.0f);
 }
 
+/**
+ * @tc.name: ClampVector2
+ * @tc.desc: Tests for Clamp Vector2. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, ClampVector2, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Vec2 val = Math::Vec2(0.5f, 1.5f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 2.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.5f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(3.0f, 4.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 2.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(-1.0f, -2.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 2.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(1.5f, 2.5f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 2.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 3.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.5f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.5f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(0.0f, 0.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(0.0f, 0.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(0.0f, 0.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 0.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(5.0f, 5.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(5.0f, 5.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(5.0f, 5.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 5.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(1.0001f, 1.9999f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 2.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0001f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.9999f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(1.0f, 2.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(2.0f, 2.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(1.00001f, 1.00002f);
+        constexpr Math::Vec2 minVal = Math::Vec2(1.0f, 1.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(1.0001f, 1.0001f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.00001f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.00002f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(1000000.0f, -1000000.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(-10.0f, -10.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(10.0f, 10.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 10.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -10.0f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(0.000001f, -0.000001f);
+        constexpr Math::Vec2 minVal = Math::Vec2(-0.00001f, -0.00001f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(0.00001f, 0.00001f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.000001f);
+        ASSERT_FLOAT_EQ(clamped.y, -0.000001f);
+    }
+    {
+        constexpr Math::Vec2 val = Math::Vec2(-5.0f, -5.0f);
+        constexpr Math::Vec2 minVal = Math::Vec2(-10.0f, -10.0f);
+        constexpr Math::Vec2 maxVal = Math::Vec2(-1.0f, -1.0f);
+        const Math::Vec2 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -5.0f);
+    }
+}
+
+/**
+ * @tc.name: ClampVector3
+ * @tc.desc: Tests for Clamp Vector3. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, ClampVector3, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Vec3 val = Math::Vec3(0.5f, 1.5f, 2.5f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(2.0f, 2.0f, 2.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.5f);
+        ASSERT_FLOAT_EQ(clamped.z, 2.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(3.0f, 4.0f, 5.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(2.0f, 2.0f, 2.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 2.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(-1.0f, -2.0f, -3.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(2.0f, 2.0f, 2.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 1.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(1.5f, 2.5f, 3.5f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 2.0f, 3.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(2.0f, 3.0f, 4.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.5f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.5f);
+        ASSERT_FLOAT_EQ(clamped.z, 3.5f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(0.0f, 0.0f, 0.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(0.0f, 0.0f, 0.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(0.0f, 0.0f, 0.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 0.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(5.0f, 5.0f, 5.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(5.0f, 5.0f, 5.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(5.0f, 5.0f, 5.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 5.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(1.0f, 2.0f, 3.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(3.0f, 3.0f, 3.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 3.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(1.00001f, 1.00002f, 1.00003f);
+        constexpr Math::Vec3 minVal = Math::Vec3(1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(1.0001f, 1.0001f, 1.0001f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.00001f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.00002f);
+        ASSERT_FLOAT_EQ(clamped.z, 1.00003f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(1000000.0f, -1000000.0f, 500000.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(-10.0f, -10.0f, -10.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(10.0f, 10.0f, 10.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 10.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -10.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 10.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(0.000001f, -0.000001f, 0.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(-0.00001f, -0.00001f, -0.00001f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(0.00001f, 0.00001f, 0.00001f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.000001f);
+        ASSERT_FLOAT_EQ(clamped.y, -0.000001f);
+        ASSERT_FLOAT_EQ(clamped.z, 0.0f);
+    }
+    {
+        constexpr Math::Vec3 val = Math::Vec3(-5.0f, -5.0f, -5.0f);
+        constexpr Math::Vec3 minVal = Math::Vec3(-10.0f, -10.0f, -10.0f);
+        constexpr Math::Vec3 maxVal = Math::Vec3(-1.0f, -1.0f, -1.0f);
+        const Math::Vec3 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.z, -5.0f);
+    }
+}
+
+/**
+ * @tc.name: ClampVector4
+ * @tc.desc: Tests for Clamp Vector4. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathVectorUtil, ClampVector4, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Vec4 val = Math::Vec4(0.5f, 1.5f, 2.5f, 3.5f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(2.0f, 2.0f, 2.0f, 2.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.5f);
+        ASSERT_FLOAT_EQ(clamped.z, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 2.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(3.0f, 4.0f, 5.0f, 6.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(2.0f, 2.0f, 2.0f, 2.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 2.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(-1.0f, -2.0f, -3.0f, -4.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(2.0f, 2.0f, 2.0f, 2.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 1.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(1.5f, 2.5f, 3.5f, 4.5f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 2.0f, 3.0f, 4.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(2.0f, 3.0f, 4.0f, 5.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.5f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.5f);
+        ASSERT_FLOAT_EQ(clamped.z, 3.5f);
+        ASSERT_FLOAT_EQ(clamped.w, 4.5f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 0.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(5.0f, 5.0f, 5.0f, 5.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(5.0f, 5.0f, 5.0f, 5.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(5.0f, 5.0f, 5.0f, 5.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 5.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 5.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(1.0f, 2.0f, 3.0f, 4.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(2.0f, 2.0f, 2.0f, 2.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.0f);
+        ASSERT_FLOAT_EQ(clamped.y, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 2.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 2.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(1.00001f, 1.00002f, 1.00003f, 1.00004f);
+        constexpr Math::Vec4 minVal = Math::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(1.0001f, 1.0001f, 1.0001f, 1.0001f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 1.00001f);
+        ASSERT_FLOAT_EQ(clamped.y, 1.00002f);
+        ASSERT_FLOAT_EQ(clamped.z, 1.00003f);
+        ASSERT_FLOAT_EQ(clamped.w, 1.00004f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(1000000.0f, -1000000.0f, 500000.0f, -500000.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(-10.0f, -10.0f, -10.0f, -10.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(10.0f, 10.0f, 10.0f, 10.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 10.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -10.0f);
+        ASSERT_FLOAT_EQ(clamped.z, 10.0f);
+        ASSERT_FLOAT_EQ(clamped.w, -10.0f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(0.000001f, -0.000001f, 0.0f, 0.000005f);
+        constexpr Math::Vec4 minVal = Math::Vec4(-0.00001f, -0.00001f, -0.00001f, -0.00001f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(0.00001f, 0.00001f, 0.00001f, 0.00001f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, 0.000001f);
+        ASSERT_FLOAT_EQ(clamped.y, -0.000001f);
+        ASSERT_FLOAT_EQ(clamped.z, 0.0f);
+        ASSERT_FLOAT_EQ(clamped.w, 0.000005f);
+    }
+    {
+        constexpr Math::Vec4 val = Math::Vec4(-5.0f, -5.0f, -5.0f, -5.0f);
+        constexpr Math::Vec4 minVal = Math::Vec4(-10.0f, -10.0f, -10.0f, -10.0f);
+        constexpr Math::Vec4 maxVal = Math::Vec4(-1.0f, -1.0f, -1.0f, -1.0f);
+        const Math::Vec4 clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped.x, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.y, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.z, -5.0f);
+        ASSERT_FLOAT_EQ(clamped.w, -5.0f);
+    }
+}
+
+/**
+ * @tc.name: ClampArithmeticTypes
+ * @tc.desc: Tests for Clamp Arithmetic Types. [AUTO-GENERATED]
+ * @tc.type: FUNC
+
+ */
+UNIT_TEST(API_MathVectorUtil, ClampArithmeticTypes, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr float val = 0.5f;
+        constexpr float minVal = 1.0f;
+        constexpr float maxVal = 2.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 1.0f);
+    }
+    {
+        constexpr float val = 3.0f;
+        constexpr float minVal = 1.0f;
+        constexpr float maxVal = 2.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 2.0f);
+    }
+    {
+        constexpr int val = 5;
+        constexpr int minVal = 1;
+        constexpr int maxVal = 10;
+        const int clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_EQ(clamped, 5);
+    }
+    {
+        constexpr int val = 15;
+        constexpr int minVal = 1;
+        constexpr int maxVal = 10;
+        const int clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_EQ(clamped, 10);
+    }
+    {
+        constexpr float val = 5.0f;
+        constexpr float minVal = 5.0f;
+        constexpr float maxVal = 5.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 5.0f);
+    }
+    {
+        constexpr float val = 0.0f;
+        constexpr float minVal = 0.0f;
+        constexpr float maxVal = 0.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 0.0f);
+    }
+    {
+        constexpr float val = 1.00001f;
+        constexpr float minVal = 1.0f;
+        constexpr float maxVal = 1.0001f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 1.00001f);
+    }
+    {
+        constexpr float val = 1.0f;
+        constexpr float minVal = 1.0f;
+        constexpr float maxVal = 2.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 1.0f);
+    }
+    {
+        constexpr float val = 2.0f;
+        constexpr float minVal = 1.0f;
+        constexpr float maxVal = 2.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 2.0f);
+    }
+    {
+        constexpr int val = 5;
+        constexpr int minVal = 5;
+        constexpr int maxVal = 5;
+        const int clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_EQ(clamped, 5);
+    }
+    {
+        constexpr int val = 0;
+        constexpr int minVal = 0;
+        constexpr int maxVal = 0;
+        const int clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_EQ(clamped, 0);
+    }
+    {
+        constexpr float val = 1000000.0f;
+        constexpr float minVal = -10.0f;
+        constexpr float maxVal = 10.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 10.0f);
+    }
+    {
+        constexpr float val = 0.000001f;
+        constexpr float minVal = -0.00001f;
+        constexpr float maxVal = 0.00001f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, 0.000001f);
+    }
+    {
+        constexpr float val = -5.0f;
+        constexpr float minVal = -10.0f;
+        constexpr float maxVal = -1.0f;
+        const float clamped = Math::Clamp(val, minVal, maxVal);
+        ASSERT_FLOAT_EQ(clamped, -5.0f);
+    }
+}
+
 // Quaternion
 
 /**
@@ -2591,6 +3031,100 @@ UNIT_TEST(API_MathQuaternionUtil, NormalizeAngles, testing::ext::TestSize.Level1
 
     ASSERT_LT(angles.z, 359.91f);
     ASSERT_GT(angles.z, 359.89f);
+}
+
+/**
+ * @tc.name: NormalizeAngleRad
+ * @tc.desc: Tests for Normalize Angle Rad. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, NormalizeAngleRad, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr float angle = 0.0f;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_FLOAT_EQ(normalized, 0.0f);
+    }
+    {
+        constexpr float angle = Math::PI / 2.0f;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_FLOAT_EQ(normalized, Math::PI / 2.0f);
+    }
+    {
+        constexpr float angle = -Math::PI / 2.0f;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_FLOAT_EQ(normalized, -Math::PI / 2.0f);
+    }
+    {
+        constexpr float angle = Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_FLOAT_EQ(normalized, Math::PI);
+    }
+    {
+        constexpr float angle = -Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_FLOAT_EQ(normalized, -Math::PI);
+    }
+    {
+        constexpr float angle = 3.0f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, Math::PI, 0.0001f);
+    }
+    {
+        constexpr float angle = -3.0f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, -Math::PI, 0.0001f);
+    }
+    {
+        constexpr float angle = 5.0f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, Math::PI, 0.0001f);
+    }
+    {
+        constexpr float angle = -5.0f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, -Math::PI, 0.0001f);
+    }
+    {
+        constexpr float angle = 2.5f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, 0.5f * Math::PI, 0.0001f);
+    }
+    {
+        constexpr float angle = -2.5f * Math::PI;
+        const float normalized = Math::NormalizeAngleRad(angle);
+        ASSERT_NEAR(normalized, -0.5f * Math::PI, 0.0001f);
+    }
+}
+
+/**
+ * @tc.name: NormalizeAnglesRad
+ * @tc.desc: Tests for Normalize Angles Rad. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MathQuaternionUtil, NormalizeAnglesRad, testing::ext::TestSize.Level1)
+{
+    {
+        constexpr Math::Vec3 angles = Math::Vec3(0.0f, Math::PI / 2.0f, -Math::PI / 2.0f);
+        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
+        ASSERT_FLOAT_EQ(normalized.x, 0.0f);
+        ASSERT_FLOAT_EQ(normalized.y, Math::PI / 2.0f);
+        ASSERT_FLOAT_EQ(normalized.z, -Math::PI / 2.0f);
+    }
+    {
+        constexpr Math::Vec3 angles = Math::Vec3(3.0f * Math::PI, -3.0f * Math::PI, 5.0f * Math::PI);
+        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
+        ASSERT_NEAR(normalized.x, Math::PI, 0.0001f);
+        ASSERT_NEAR(normalized.y, -Math::PI, 0.0001f);
+        ASSERT_NEAR(normalized.z, Math::PI, 0.0001f);
+    }
+    {
+        constexpr Math::Vec3 angles = Math::Vec3(2.5f * Math::PI, -2.5f * Math::PI, 0.5f * Math::PI);
+        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
+        ASSERT_NEAR(normalized.x, 0.5f * Math::PI, 0.0001f);
+        ASSERT_NEAR(normalized.y, -0.5f * Math::PI, 0.0001f);
+        ASSERT_NEAR(normalized.z, 0.5f * Math::PI, 0.0001f);
+    }
 }
 
 /**

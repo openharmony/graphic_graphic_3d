@@ -153,6 +153,30 @@ static inline constexpr Vec3 NormalizeAngles(Vec3 angles)
     return angles;
 }
 
+/** Normalize single (radian) angle to [-π, π] */
+static inline constexpr float NormalizeAngleRad(float angle)
+{
+    if (!std::isfinite(angle)) {
+        return 0.0f;
+    }
+    while (angle > Math::PI) {
+        angle -= 2.0f * Math::PI;
+    }
+    while (angle < -Math::PI) {
+        angle += 2.0f * Math::PI;
+    }
+    return angle;
+}
+
+/** Normalize vector3 angles (radians) to [-π, π] */
+static inline constexpr Vec3 NormalizeAnglesRad(Vec3 angles)
+{
+    angles.x = NormalizeAngleRad(angles.x);
+    angles.y = NormalizeAngleRad(angles.y);
+    angles.z = NormalizeAngleRad(angles.z);
+    return angles;
+}
+
 /** Convert quaternion to euler values (radians) - XYZ order */
 static inline Vec3 ToEulerRad(const Quat& q)
 {

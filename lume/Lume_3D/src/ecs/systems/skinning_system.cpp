@@ -34,7 +34,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <core/property_tools/property_api_impl.inl>
@@ -43,6 +42,7 @@
 
 #include "ecs/components/previous_joint_matrices_component.h"
 #include "ecs/systems/node_system.h"
+#include "util/log.h"
 #include "util/string_util.h"
 
 CORE3D_BEGIN_NAMESPACE()
@@ -63,8 +63,8 @@ void UpdateJointBounds(IPicking& pick, const array_view<const float>& jointBound
     const size_t jointBoundsDataSize = jointBoundsData.size();
     const size_t boundsCount = jointBoundsDataSize / 6U;
 
-    CORE_ASSERT(jointBoundsData.size() % 6U == 0); // 6: should be multiple of 6
-    CORE_ASSERT(jointMatrices.count >= boundsCount);
+    PLUGIN_ASSERT(jointBoundsData.size() % 6U == 0); // 6: should be multiple of 6
+    PLUGIN_ASSERT(jointMatrices.count >= boundsCount);
 
     static constexpr float maxFloat = std::numeric_limits<float>::max();
     static constexpr Math::Vec3 minDefault(maxFloat, maxFloat, maxFloat);
@@ -106,10 +106,16 @@ void UpdateJointBounds(IPicking& pick, const array_view<const float>& jointBound
 IPicking* GetPicking(IEcs& ecs)
 {
     if (IEngine* engine = ecs.GetClassFactory().GetInterface<IEngine>(); engine) {
-        if (auto renderContext =
-                GetInstance<IRenderContext>(*engine->GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
-            renderContext) {
-            return GetInstance<IPicking>(*renderContext->GetInterface<IClassRegister>(), UID_PICKING);
+        IRenderContext* renderContext = nullptr;
+        if (auto classRegister = engine->GetInterface<IClassRegister>(); classRegister) {
+            renderContext = CORE3D_NS::GetInstance<IRenderContext>(*classRegister, UID_RENDER_CONTEXT);
+        }
+        IClassRegister* renderClassRegister = nullptr;
+        if (renderContext) {
+            renderClassRegister = renderContext->GetInterface<IClassRegister>();
+        }
+        if (renderClassRegister) {
+            return CORE3D_NS::GetInstance<IPicking>(*renderClassRegister, UID_PICKING);
         }
     }
     return nullptr;
@@ -249,7 +255,7 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
     if (!skinIbmHandle) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         auto const onceId = to_hex(row.entity.id);
-        CORE_LOG_ONCE_W(onceId.c_str(), "Invalid skin resource for entity %s", onceId.c_str());
+        PLUGIN_LOG_ONCE_W(onceId.c_str(), "Invalid skin resource for entity %s", onceId.c_str());
 #endif
         return;
     }
@@ -262,7 +268,7 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
     if (jointEntities.size() != ibmMatrices.size()) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         auto const onceId = to_hex(row.entity.id);
-        CORE_LOG_ONCE_W(onceId.c_str(), "Entity (%zu) and description (%zu) counts don't match for entity %s",
+        PLUGIN_LOG_ONCE_W(onceId.c_str(), "Entity (%zu) and description (%zu) counts don't match for entity %s",
             jointEntities.size(), ibmMatrices.size(), onceId.c_str());
 #endif
         return;
@@ -373,7 +379,7 @@ void SkinningSystem::CreateInstance(
     if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {
         auto& skinIbm = *skinIbmHandle;
         if (skinIbm.matrices.size() != joints.size()) {
-            CORE_LOG_E(
+            PLUGIN_LOG_E(
                 "Skin bone count doesn't match the given joints (%zu, %zu)!", skinIbm.matrices.size(), joints.size());
             return;
         }
@@ -417,8 +423,8 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
         }
         if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {
             if (skinIbmHandle->matrices.size() != joints.size()) {
-                CORE_LOG_E("Skin bone count doesn't match the given joints (%zu, %zu)!", skinIbmHandle->matrices.size(),
-                    joints.size());
+                PLUGIN_LOG_E("Skin bone count doesn't match the given joints (%zu, %zu)!",
+                    skinIbmHandle->matrices.size(), joints.size());
                 return;
             }
         }

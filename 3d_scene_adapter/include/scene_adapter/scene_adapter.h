@@ -119,6 +119,7 @@ protected:
 
     std::shared_ptr<TextureLayer> textureLayer_;
     SCENE_NS::IRenderTarget::Ptr bitmap_;
+    SCENE_NS::IRenderTarget::Ptr bitmap2_;
     uint32_t key_ = 0;
     bool needsRepaint_ = true;
     bool receiveBuffer_ = false;
@@ -132,6 +133,21 @@ protected:
 
     bool onWindowChanged_ = false; // todo engine thread check
     static bool engineInitSuccessful_;
+    bool bitmapCleared_ = true;
+
+#ifdef __FG_MODULE__
+    RENDER_NS::RenderHandleReference FGColorOutputHandle_ = {};
+    RENDER_NS::RenderHandleReference FGPredictOutputHandle_ = {};
+    RENDER_NS::RenderHandleReference FGDepthOutputHandle_ = {};
+public:
+    bool FGInitialize();
+#endif
+
+#ifdef __SR_MODULE__
+    RENDER_NS::RenderHandleReference offscreenHandle_ = {};
+public:
+    bool SRInitialize();
+#endif
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_SCENE_ADAPTER_H

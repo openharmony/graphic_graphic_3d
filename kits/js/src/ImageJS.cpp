@@ -14,7 +14,9 @@
  */
 #include "ImageJS.h"
 
+#include <meta/interface/intf_attach.h>
 #include <scene/interface/intf_scene.h>
+#include <scene_adapter/intf_surface_stream.h>
 
 #include "JsObjectCache.h"
 #include "ParamParsing.h"
@@ -31,7 +33,7 @@ void ImageJS::Init(napi_env env, napi_value exports)
     SceneResourceImpl::GetPropertyDescs(props);
     props.emplace_back(GetProperty<uint32_t, ImageJS, &ImageJS::GetWidth>("width"));
     props.emplace_back(GetProperty<uint32_t, ImageJS, &ImageJS::GetHeight>("height"));
-
+    props.emplace_back(GetProperty<BASE_NS::string, ImageJS, &ImageJS::GetSurfaceId>("surfaceId"));
     // clang-format on
 
     napi_value func;
@@ -112,43 +114,65 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
         }
     }
     NapiApi::Object args = fromJs.Arg<1>();
+
+    auto bitmap = GetNativeObject<SCENE_NS::IBitmap>();
+    if (bitmap == nullptr) {
+        LOG_E("Cannot finish creating an image: Native image object missing");
+        assert(false);
+        return;
+    }
+
+    auto attachments = interface_cast<META_NS::IAttach>(bitmap)->GetAttachments();
+    for (auto& attachment : attachments) {
+        auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment);
+        if (surfaceStream == nullptr) {
+            continue;
+        }
+        attachment_ = attachment;
+        break;
+    }
+
+    if (const auto name = ExtractName(args); !name.empty()) {
+        meJs.Set("name", name);
+    }
+
+    if (attachment_) {
+        BASE_NS::string uri = "Internal://SurfaceStream_";
+        uri += BASE_NS::to_string(reinterpret_cast<uintptr_t>(bitmap.get()));
+        NapiApi::Env env(e);
+        SetUri(NapiApi::StrongRef(env, env.GetString(uri)));
+        return;
+    }
+
     if (args.Get("uri")) {
         SetUri(args);
     } else {
         LOG_E("### building image without uri");
     }
 
-    if (auto bitmap = GetNativeObject<SCENE_NS::IBitmap>()) {
-        auto uri = ExtractUri(uri_.GetObject());
-        LOG_V("### uri: %s", uri.c_str());
-	    if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
-            if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
-                auto prop = META_NS::ConstructProperty<BASE_NS::string>(
-                    "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
-                m->AddProperty(prop);
-            } else {
-                LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
-            }
+    auto uri = ExtractUri(uri_.GetObject());
+    LOG_V("### uri: %s", uri.c_str());
+    if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
+        if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
+            auto prop = META_NS::ConstructProperty<BASE_NS::string>(
+                "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
+            m->AddProperty(prop);
+        } else {
+            LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
         }
-        if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
-            resources_ = renderContextJs->GetResources();
-            if (resources_) {
-                resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
-                resources_->StoreBitmap(uri, BASE_NS::move(bitmap));
-            } else {
-                LOG_E("Cannot finish creating an image: no resources");
-                assert(false);
-                return;
-            }
+    }
+    if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
+        resources_ = renderContextJs->GetResources();
+        if (resources_) {
+            resources_->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+            resources_->StoreBitmap(uri, BASE_NS::move(bitmap));
+        } else {
+            LOG_E("Cannot finish creating an image: no resources");
+            assert(false);
+            return;
         }
-    } else {
-        LOG_E("Cannot finish creating an image: Native image object missing");
-        assert(false);
-        return;
     }
-    if (const auto name = ExtractName(args); !name.empty()) {
-        meJs.Set("name", name);
-    }
+
     AddBridge("ImageJS", meJs);
 }
 
@@ -162,6 +186,11 @@ napi_value ImageJS::GetWidth(NapiApi::FunctionContext<>& ctx)
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
+
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return ctx.GetNumber(surfaceStream->GetWidth());
+    }
+
     uint32_t width = 0;
     if (auto env = interface_cast<IBitmap>(GetNativeObject())) {
         width = env->Size()->GetValue().x;
@@ -174,9 +203,25 @@ napi_value ImageJS::GetHeight(NapiApi::FunctionContext<>& ctx)
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
+
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return ctx.GetNumber(surfaceStream->GetHeight());
+    }
+
     uint32_t height = 0;
     if (auto env = interface_cast<IBitmap>(GetNativeObject())) {
         height = env->Size()->GetValue().y;
     }
     return ctx.GetNumber(height);
+}
+
+napi_value ImageJS::GetSurfaceId(NapiApi::FunctionContext<>& ctx)
+{
+    if (!validateSceneRef()) {
+        return ctx.GetUndefined();
+    }
+    if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
+        return ctx.GetString(BASE_NS::to_string(surfaceStream->GetSurfaceId()));
+    }
+    return ctx.GetUndefined();
 }

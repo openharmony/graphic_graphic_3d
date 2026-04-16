@@ -24,7 +24,6 @@
 #include <core/ecs/intf_entity_manager.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
-#include <core/log.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
@@ -40,12 +39,15 @@
 #include <render/loader/intf_render_data_configuration_loader.h>
 #include <render/nodecontext/intf_render_node_graph_manager.h>
 
+#include "util/log.h"
+
 #if (RENDER_HAS_VULKAN_BACKEND)
 #include <render/vulkan/intf_device_vk.h>
 #endif
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/uri_component.h>
+#include <3d/ecs/systems/intf_node_system.h>
 #include <3d/ecs/systems/intf_render_system.h>
 #include <3d/implementation_uids.h>
 #include <3d/intf_plugin.h>
@@ -55,6 +57,7 @@
 #include <3d/util/intf_mesh_util.h>
 #include <3d/util/intf_scene_util.h>
 
+#include "ecs/systems/local_matrix_system.h"
 #include "gltf/gltf2.h"
 #include "render/render_node_scene_util.h"
 #include "util/log.h"
@@ -102,8 +105,8 @@ void LogCore3dBuildInfo()
 #define CORE3D_TO_STRING_INTERNAL(x) #x
 #define CORE3D_TO_STRING(x) CORE3D_TO_STRING_INTERNAL(x)
 
-    CORE_LOG_I("CORE3D_VALIDATION_ENABLED=" CORE3D_TO_STRING(CORE3D_VALIDATION_ENABLED));
-    CORE_LOG_I("CORE3D_DEV_ENABLED=" CORE3D_TO_STRING(CORE3D_DEV_ENABLED));
+    PLUGIN_LOG_I("CORE3D_VALIDATION_ENABLED=" CORE3D_TO_STRING(CORE3D_VALIDATION_ENABLED));
+    PLUGIN_LOG_I("CORE3D_DEV_ENABLED=" CORE3D_TO_STRING(CORE3D_DEV_ENABLED));
 }
 
 void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& defaultGpuResources)
@@ -306,7 +309,7 @@ GraphicsContext ::~GraphicsContext()
 
 void GraphicsContext::Init(const CreateInfo& createInfo)
 {
-    CORE_LOG_D("3D graphics context init.");
+    PLUGIN_LOG_D("3D graphics context init.");
     CORE_CPU_PERF_SCOPE("CORE3D", "GraphicsContext::Init", "", CORE3D_PROFILER_DEFAULT_COLOR);
 
     if (initialized_) {
@@ -315,7 +318,9 @@ void GraphicsContext::Init(const CreateInfo& createInfo)
     auto& engine = context_.GetEngine();
 
     createInfo_ = createInfo;
-    meshUtil_ = make_unique<MeshUtil>(*engine.GetInterface<CORE_NS::IClassFactory>());
+    if (auto classFactory = engine.GetInterface<CORE_NS::IClassFactory>(); classFactory) {
+        meshUtil_ = make_unique<MeshUtil>(*classFactory);
+    }
     gltf2_ = make_unique<Gltf2>(*this);
     sceneUtil_ = make_unique<SceneUtil>(*this);
     renderUtil_ = make_unique<RenderUtil>(*this);
@@ -324,7 +329,7 @@ void GraphicsContext::Init(const CreateInfo& createInfo)
 
     GetPluginRegister().AddListener(*this);
 
-    for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(I3DPlugin::UID)) {
+    for (auto info : CORE3D_NS::GetPluginRegister().GetTypeInfos(I3DPlugin::UID)) {
         if (auto plugin = static_cast<const I3DPlugin*>(info); plugin && plugin->createPlugin) {
             auto token = plugin->createPlugin(*this);
             plugins_.push_back({ token, plugin });
@@ -375,6 +380,23 @@ IRenderUtil& GraphicsContext::GetRenderUtil() const
 GraphicsContext::CreateInfo GraphicsContext::GetCreateInfo() const
 {
     return createInfo_;
+}
+
+void GraphicsContext::UpdateEcs(IEcs& ecs, const UpdateOptions& options) const
+{
+    if (options.worldTransforms) {
+        // Make sure NodeSystem gets all the component events.
+        ecs.ProcessEvents();
+
+        if (auto local = GetSystem<LocalMatrixSystem>(ecs)) {
+            // LocalMatrixSystem doesn't care about the time stamps so this is safe.
+            local->Update(true, 0U, 0U);
+        }
+        if (auto node = GetSystem<INodeSystem>(ecs)) {
+            // Instead of regular Update call RefreshAllNodes to update even disabled nodes.
+            node->RefreshAllNodes();
+        }
+    }
 }
 
 const IInterface* GraphicsContext::GetInterface(const Uid& uid) const

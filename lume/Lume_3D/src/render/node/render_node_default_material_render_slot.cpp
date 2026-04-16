@@ -26,7 +26,6 @@
 #include <3d/render/intf_render_data_store_default_scene.h>
 #include <base/math/matrix_util.h>
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
@@ -47,6 +46,7 @@
 
 #include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 
 #if (CORE3D_DEV_ENABLED == 1)
 #include "render/datastore/render_data_store_default_material.h"
@@ -192,7 +192,7 @@ void RenderNodeDefaultMaterialRenderSlot::InitNode(IRenderNodeContextManager& re
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        CORE_LOG_V("%s: render data store post process configuration not set in render node graph",
+        PLUGIN_LOG_V("%s: render data store post process configuration not set in render node graph",
             renderNodeContextMgr_->GetName().data());
     }
     rngRenderPass_ = renderNodeContextMgr_->GetRenderNodeUtil().CreateRenderPass(inputRenderPass_);
@@ -228,7 +228,7 @@ void RenderNodeDefaultMaterialRenderSlot::ExecuteFrame(IRenderCommandList& cmdLi
     if (validRenderDataStore) {
         UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
     } else {
-        CORE_LOG_E("invalid render data stores in RenderNodeDefaultMaterialRenderSlot");
+        PLUGIN_LOG_E("invalid render data stores in RenderNodeDefaultMaterialRenderSlot");
     }
 
 #if (CORE3D_VALIDATION_ENABLED == 1)
@@ -329,7 +329,7 @@ void RenderNodeDefaultMaterialRenderSlot::RenderSubmeshes(IRenderCommandList& cm
                 (customResourceHandles[currSubmesh.indices.materialIndex].resourceHandleCount == 0U) ||
                 !UpdateAndBindSet3(cmdList, customResourceHandles[currSubmesh.indices.materialIndex])) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-                CORE_LOG_ONCE_W("material_render_slot_custom_set3_issue",
+                PLUGIN_LOG_ONCE_W("material_render_slot_custom_set3_issue",
                     "CORE3D_VALIDATION: invalid bindings with custom shader descriptor set 3 (render node: %s)",
                     renderNodeContextMgr_->GetName().data());
 #endif
@@ -429,7 +429,7 @@ bool RenderNodeDefaultMaterialRenderSlot::UpdateAndBindSet3(
     }
     auto& binder = *binderPtr;
     for (uint32_t idx = 0; idx < customResourceData.resourceHandleCount; ++idx) {
-        CORE_ASSERT(idx < descBindings.size());
+        PLUGIN_ASSERT(idx < descBindings.size());
         const RenderHandle& currRes = customResourceData.resourceHandles[idx];
         if (gpuResourceMgr.IsGpuBuffer(currRes)) {
             binder.BindBuffer(idx, currRes, 0);
@@ -588,15 +588,15 @@ void RenderNodeDefaultMaterialRenderSlot::CreateDefaultShaderData()
             Math::min(static_cast<uint32_t>(allShaderData_.defaultSpecilizationConstants.size()),
                 SpecializationData::MAX_FLAG_COUNT);
     } else {
-        CORE_LOG_I("RenderNode: %s, no default shaders for render slot id %u", renderNodeContextMgr_->GetName().data(),
-            jsonInputs_.shaderRenderSlotId);
+        PLUGIN_LOG_I("RenderNode: %s, no default shaders for render slot id %u",
+            renderNodeContextMgr_->GetName().data(), jsonInputs_.shaderRenderSlotId);
     }
     if (jsonInputs_.shaderRenderSlotId != jsonInputs_.stateRenderSlotId) {
         const IShaderManager::RenderSlotData stateRsd = shaderMgr.GetRenderSlotData(jsonInputs_.stateRenderSlotId);
         if (stateRsd.graphicsState) {
             allShaderData_.defaultStateHandle = stateRsd.graphicsState.GetHandle();
         } else {
-            CORE_LOG_I("RenderNode: %s, no default state for render slot id %u",
+            PLUGIN_LOG_I("RenderNode: %s, no default state for render slot id %u",
                 renderNodeContextMgr_->GetName().data(), jsonInputs_.stateRenderSlotId);
         }
     }
@@ -780,7 +780,7 @@ void RenderNodeDefaultMaterialRenderSlot::ParseRenderNodeInputs()
     // with bindless the default render slots can be switched
     if (bindlessEnabled_) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_I("Switching to bindless variants of default material render slots (node:%s)",
+        PLUGIN_LOG_I("Switching to bindless variants of default material render slots (node:%s)",
             renderNodeContextMgr_->GetNodeName().data());
 #endif
         if (jsonInputs_.renderSlotName == DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE) {
@@ -897,7 +897,7 @@ const PipelineLayout& RenderNodeDefaultMaterialRenderSlot::GetEvaluatedPipelineL
                 shaderMgr.GetCompatibilityFlags(allShaderData_.defaultPlHandle, reflPl);
             if (flags == 0) {
                 const auto idDesc = shaderMgr.GetIdDesc(shader);
-                CORE_LOG_W("Compatibility issue with 3D default material shaders (name: %s, path: %s)",
+                PLUGIN_LOG_W("Compatibility issue with 3D default material shaders (name: %s, path: %s)",
                     idDesc.displayName.c_str(), idDesc.path.c_str());
             }
         }

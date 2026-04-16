@@ -185,10 +185,10 @@ source_set("lume_dotfield_rofs_obj") {
 }
 
 ohos_static_library("libDotfield") {
-  public_deps = [ ":lume_dotfield_src" ]
+  deps = [ ":lume_dotfield_src" ]
 
   if (DOTFIELD_EMBEDDED_ASSETS_ENABLED) {
-    deps = [ ":lume_dotfield_rofs_obj" ]
+    deps += [ ":lume_dotfield_rofs_obj" ]
   }
 
   part_name = "graphic_3d"
@@ -218,7 +218,7 @@ ohos_source_set("lume_dotfield_src_plugin") {
 }
 
 ohos_shared_library("libPluginDotfield") {
-  public_deps = [
+  deps = [
     ":libDotfield",
     ":lume_dotfield_src_plugin"
   ]

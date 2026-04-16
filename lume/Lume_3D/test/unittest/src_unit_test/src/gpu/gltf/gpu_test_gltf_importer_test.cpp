@@ -29,6 +29,7 @@
 #else
 #include "test_runner.h"
 #endif
+#include "util/log.h"
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -43,7 +44,7 @@ UNIT_TEST(SRC_GpuTest_GLTFImporterTest, importGltfObject, testing::ext::TestSize
 {
     // Show only warnings and errors because we don't want to see the normal output this test generates.
     ::Test::LogLevelScope logLevel =
-        ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_WARNING);
+        ::Test::LogLevelScope(CORE3D_NS::GetPluginLogger(), CORE_NS::ILogger::LogLevel::LOG_WARNING);
 
     UTest::TestContext* testContext = UTest::GetTestContext();
     auto engine = testContext->engine;
@@ -83,7 +84,7 @@ UNIT_TEST(SRC_GpuTest_GLTFImporterTest, meshData, testing::ext::TestSize.Level1)
 {
     // Show only warnings and errors because we don't want to see the normal output this test generates.
     ::Test::LogLevelScope logLevel =
-        ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_WARNING);
+        ::Test::LogLevelScope(CORE3D_NS::GetPluginLogger(), CORE_NS::ILogger::LogLevel::LOG_WARNING);
 
     UTest::TestContext* testContext = UTest::GetTestContext();
     auto engine = testContext->engine;

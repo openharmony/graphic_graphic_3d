@@ -18,7 +18,6 @@
 #include <algorithm>
 
 #include <3d/render/intf_render_data_store_default_light.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -34,6 +33,7 @@
 #include <render/resource_handle.h>
 
 #include "render/default_constants.h"
+#include "util/log.h"
 
 // shaders
 #include <render/shaders/common/render_blur_common.h>
@@ -177,7 +177,7 @@ void RenderNodeDefaultShadowsBlur::ProcessSingleShadow(IRenderCommandList& cmdLi
             const VertexInputDeclarationView vidv =
                 shaderMgr.GetReflectionVertexInputDeclaration(shaderData_.shaderHandle);
             const uint32_t specializationFlags[] = { CORE_BLUR_TYPE_RG };
-            CORE_ASSERT(sscv.constants.size() == countof(specializationFlags));
+            PLUGIN_ASSERT(sscv.constants.size() == countof(specializationFlags));
             const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
             auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
             shaderData_.psoHandle = psoMgr.GetGraphicsPsoHandle(shaderData_.shaderHandle, graphicsStateHandle,

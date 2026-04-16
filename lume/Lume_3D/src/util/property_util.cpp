@@ -18,13 +18,13 @@
 #include <cinttypes>
 
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <core/property/intf_property_handle.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/core_metadata.inl>
 
 #include "util/component_util_functions.h"
 #include "util/json_util.h"
+#include "util/log.h"
 #include "util/string_util.h"
 
 CORE_BEGIN_NAMESPACE()
@@ -243,7 +243,7 @@ void CustomPropertyPodContainer::AddOffsetProperty(const string_view propertyNam
         metaData_.push_back(meta);
         data_.resize(Math::max(data_.size(), meta.offset + meta.size));
     } else {
-        CORE_LOG_W("unsupported property addition for custom property POD container");
+        PLUGIN_LOG_W("unsupported property addition for custom property POD container");
     }
 }
 
@@ -272,7 +272,7 @@ void CustomPropertyPodContainer::AddOffsetProperty(const string_view propertyNam
             CloneData(data_.data() + offset, data_.size_in_bytes() - offset, data.data(), data.size_bytes());
         }
     } else {
-        CORE_LOG_W("unsupported property addition for custom property POD container");
+        PLUGIN_LOG_W("unsupported property addition for custom property POD container");
     }
 }
 
@@ -360,8 +360,8 @@ PropertyTypeDecl CustomPropertyPodHelper::GetPropertyTypeDeclaration(const strin
     } else if (type == "mat4x4") {
         return PropertyType::MAT4X4_T;
     } else {
-        CORE_LOG_W("CORE3D_VALIDATION: Invalid property type only int, uint, float, bool, and XvecX variants, and "
-                   "mat3x3 and mat4x4 are supported");
+        PLUGIN_LOG_W("CORE3D_VALIDATION: Invalid property type only int, uint, float, bool, and XvecX variants, and "
+                     "mat3x3 and mat4x4 are supported");
     }
     // NOTE: does not handle invalid types
     return PropertyType::INVALID;
@@ -474,7 +474,7 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
         SafeFromJsonValue(value, val);
         customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat4X4) });
     } else {
-        CORE_LOG_W("CORE3D_VALIDATION: Invalid property type only int, uint, float, and XvecX variants supported");
+        PLUGIN_LOG_W("CORE3D_VALIDATION: Invalid property type only int, uint, float, and XvecX variants supported");
     }
     // NOTE: does not handle invalid types
 }
@@ -488,20 +488,20 @@ CustomPropertyBindingContainer::CustomPropertyBindingContainer(CustomPropertyWri
 CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
 {
     if (!data_.empty()) {
-        CORE_ASSERT((metaData_.size() * ENTITY_REFERENCE_BYTE_SIZE) == data_.size());
+        PLUGIN_ASSERT((metaData_.size() * ENTITY_REFERENCE_BYTE_SIZE) == data_.size());
         for (size_t idx = 0; idx < metaData_.size(); ++idx) {
             const auto& meta = metaData_[idx];
-            CORE_ASSERT(meta.offset < data_.size_in_bytes());
+            PLUGIN_ASSERT(meta.offset < data_.size_in_bytes());
             switch (meta.type) {
                 case PropertyType::ENTITY_REFERENCE_T: {
-                    CORE_ASSERT(meta.size == ENTITY_REFERENCE_BYTE_SIZE);
+                    PLUGIN_ASSERT(meta.size == ENTITY_REFERENCE_BYTE_SIZE);
                     if (EntityReference* resource = (EntityReference*)(data_.data() + meta.offset); resource) {
                         DestroyHelper(*resource);
                     }
                     break;
                 }
                 default: {
-                    CORE_LOG_E("custom property binding destruction error");
+                    PLUGIN_LOG_E("custom property binding destruction error");
                     break;
                 }
             }
@@ -613,7 +613,7 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
                 break;
         }
     } else {
-        CORE_LOG_W("unsupported property addition for custom property binding container");
+        PLUGIN_LOG_W("unsupported property addition for custom property binding container");
     }
 }
 
@@ -650,7 +650,7 @@ PropertyTypeDecl GetPropertyTypeDeclaration(const string_view type)
     } else if (type == "sampler") {
         return PropertyType::ENTITY_REFERENCE_T;
     } else {
-        CORE_LOG_W("CORE3D_VALIDATION: Invalid property type only buffer, image, and sampler supported");
+        PLUGIN_LOG_W("CORE3D_VALIDATION: Invalid property type only buffer, image, and sampler supported");
     }
     // NOTE: does not handle invalid types
     return PropertyType::INVALID;

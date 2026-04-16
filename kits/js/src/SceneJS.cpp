@@ -46,7 +46,6 @@ static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" 
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_render_context.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/interface/intf_text.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 
 #include <core/image/intf_image_loader_manager.h>
@@ -112,11 +111,11 @@ void SceneJS::Init(napi_env env, napi_value exports)
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateCamera>("createCamera"),
         Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateLight>("createLight"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateNode>("createNode"),
-        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateTextNode>("createTextNode"),
         Method<NapiApi::FunctionContext<NapiApi::Object, uint32_t>, SceneJS, &SceneJS::CreateMaterial>(
             "createMaterial"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateShader>("createShader"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImage>("createImage"),
+        Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateImageStream>("createImageStream"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateSampler>("createSampler"),
         Method<NapiApi::FunctionContext<NapiApi::Object>, SceneJS, &SceneJS::CreateEnvironment>("createEnvironment"),
         Method<NapiApi::FunctionContext<>, SceneJS, &SceneJS::CreateScene>("createScene"),
@@ -685,12 +684,6 @@ napi_value SceneJS::CreateNode(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     return CreateNode(ctx, "Node", SCENE_NS::ClassId::Node);
 }
 
-napi_value SceneJS::CreateTextNode(NapiApi::FunctionContext<NapiApi::Object>& ctx)
-{
-    LUME_TRACE_FUNC()
-    return CreateNode(ctx, "TextNode", SCENE_NS::ClassId::TextNode);
-}
-
 napi_value SceneJS::CreateMaterial(NapiApi::FunctionContext<NapiApi::Object, uint32_t>& ctx)
 {
     LUME_TRACE_FUNC()
@@ -1037,6 +1030,16 @@ napi_value SceneJS::CreateImage(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
     auto promise = Promise(ctx.GetEnv());
     return promise.Reject("No render context to create an image.");
+}
+
+napi_value SceneJS::CreateImageStream(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    LUME_TRACE_FUNC()
+    if (auto renderContext = renderContextJS_.GetObject()) {
+        return renderContext.Invoke("createImageStream", ctx.Arg<0>().ToNapiValue());
+    }
+    auto promise = Promise(ctx.GetEnv());
+    return promise.Reject("No render context to create an image stream.");
 }
 
 napi_value SceneJS::CreateSampler(NapiApi::FunctionContext<NapiApi::Object>& ctx)

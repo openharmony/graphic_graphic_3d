@@ -130,9 +130,40 @@ RENDER_NS::IRenderContext::Ptr CreateContext(CORE_NS::IEngine& engine, const REN
     auto renderContext = static_cast<RENDER_NS::IRenderContext::Ptr>(
         engine.GetInterface<CORE_NS::IClassFactory>()->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT));
 
-    RENDER_NS::DeviceCreateInfo deviceCreateInfo {
-        backend, // backendType
-    };
+    RENDER_NS::DeviceCreateInfo deviceCreateInfo;
+#if RENDER_HAS_VULKAN_BACKEND
+    RENDER_NS::BackendExtraVk vkExtra;
+    if (backend == RENDER_NS::DeviceBackendType::VULKAN) {
+        deviceCreateInfo.backendType = backend;
+        deviceCreateInfo.backendConfiguration = &vkExtra;
+    }
+#endif
+#if RENDER_HAS_GLES_BACKEND
+    RENDER_NS::BackendExtraGLES glesExtra;
+    if (backend == RENDER_NS::DeviceBackendType::OPENGLES) {
+        constexpr uint32_t defaultDepthBits = 24;
+        constexpr uint32_t defaultAlphaBits = 8;
+        glesExtra.MSAASamples = 0;
+        glesExtra.depthBits = defaultDepthBits;
+        glesExtra.alphaBits = defaultAlphaBits;
+        glesExtra.stencilBits = 0;
+        deviceCreateInfo.backendType = backend;
+        deviceCreateInfo.backendConfiguration = &glesExtra;
+    }
+#endif
+#if RENDER_HAS_GL_BACKEND
+    RENDER_NS::BackendExtraGL glExtra;
+    if (backend == RENDER_NS::DeviceBackendType::OPENGL) {
+        constexpr uint32_t defaultDepthBits = 24;
+        constexpr uint32_t defaultAlphaBits = 8;
+        glExtra.MSAASamples = 0;
+        glExtra.depthBits = defaultDepthBits;
+        glExtra.alphaBits = defaultAlphaBits;
+        glExtra.stencilBits = 0;
+        deviceCreateInfo.backendType = backend;
+        deviceCreateInfo.backendConfiguration = &glExtra;
+    }
+#endif
 
     const RENDER_NS::RenderCreateInfo info {
         {

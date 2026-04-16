@@ -26,6 +26,12 @@
 void InplacePostProcess(in vec2 fragUv, inout vec4 color)
 {
     // FUNCTIONS_CORE_POST_PROCESS
+    PostProcessWhiteBalanceBlock(
+        uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_WHITE_BALANCE], color.rgb, color.rgb);
+    PostProcessColorAdjustmentsBlock(uPostProcessData.flags.x,
+        uPostProcessData.factors[POST_PROCESS_INDEX_COLOR_ADJUSTMENTS],
+        uPostProcessData.userFactors[POST_PROCESS_USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR], // filterColor
+        color.rgb, color.rgb);
     PostProcessTonemapBlock(
         uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_TONEMAP], color.rgb, color.rgb);
 

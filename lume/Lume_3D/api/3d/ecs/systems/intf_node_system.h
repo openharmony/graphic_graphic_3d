@@ -239,6 +239,11 @@ public:
      */
     virtual void DestroyNode(ISceneNode& node) = 0;
 
+    /** Refresh the world transformation of all the nodes even if they are disabled. During normal ISystem::Update the
+     * system updates the transformation of enabled nodes only.
+     */
+    virtual void RefreshAllNodes() = 0;
+
     /** Listener for changes in SceneNode children. */
     class SceneNodeListener {
     public:

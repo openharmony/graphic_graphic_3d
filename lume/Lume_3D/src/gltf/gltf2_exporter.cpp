@@ -16,6 +16,7 @@
 #include "gltf2_exporter.h"
 
 #include <charconv>
+#include <limits>
 
 #include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/animation_input_component.h>
@@ -49,7 +50,6 @@
 #include <core/ecs/intf_ecs.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <core/property/intf_property_handle.h>
@@ -63,6 +63,7 @@
 #include "gltf/gltf2_data_structures.h"
 #include "gltf/gltf2_util.h"
 #include "util/json_util.h"
+#include "util/log.h"
 
 template<>
 uint64_t BASE_NS::hash(const bool& val)
@@ -507,7 +508,7 @@ void ExportGltfCameras(const IEcs& ecs, const Entities& entities, ExportResult& 
                     default: {
                         exportCamera->type = CameraType::INVALID;
 
-                        CORE_LOG_E("cannot export camera %u", static_cast<uint32_t>(cameraComponent.projection));
+                        PLUGIN_LOG_E("cannot export camera %u", static_cast<uint32_t>(cameraComponent.projection));
 
                         result.error += "failed to export camera";
                         result.success = false;
@@ -533,7 +534,7 @@ void ExportGltfLight(const IEcs& ecs, const Entities& entities, ExportResult& re
                 const auto lightComponent = lightManager->Get(lightEntity);
                 switch (lightComponent.type) {
                     default:
-                        CORE_LOG_E("cannot export light %u", static_cast<uint32_t>(lightComponent.type));
+                        PLUGIN_LOG_E("cannot export light %u", static_cast<uint32_t>(lightComponent.type));
                         exportLight->type = LightType::DIRECTIONAL;
 
                         result.error += "failed to export light";
@@ -677,7 +678,7 @@ void ExportGltfSkins(const IEcs& ecs, const Entities& entities, const vector<uni
         // find the skeleton root node
         exportSkin->skeleton = FindSkeletonRoot(exportSkin->joints);
         if (!exportSkin->skeleton) {
-            CORE_LOG_D("Couldn't find common root for skinned entity %s", to_hex(skinnedEntity.id).data());
+            PLUGIN_LOG_D("Couldn't find common root for skinned entity %s", to_hex(skinnedEntity.id).data());
         }
 
         // gather all the joint nodes
@@ -691,7 +692,7 @@ void ExportGltfSkins(const IEcs& ecs, const Entities& entities, const vector<uni
             if (jointIndex < nodeArray.size()) {
                 exportSkin->joints.push_back(nodeArray[jointIndex].get());
             } else {
-                CORE_LOG_D("joint node not exported");
+                PLUGIN_LOG_D("joint node not exported");
             }
         }
     }
@@ -713,7 +714,7 @@ Node* GetAnimationTarget(const INodeSystem& nodeSystem, const INameComponentMana
         if (const auto nameHandle = nameManager.Read(trackEntity); nameHandle) {
             nodePath = nameHandle->name;
         }
-        CORE_LOG_W("couldn't resolve node path: %s", nodePath.data());
+        PLUGIN_LOG_W("couldn't resolve node path: %s", nodePath.data());
     }
     return target;
 }
@@ -740,7 +741,8 @@ Accessor* AnimationInput(
 
         auto inputAccessor = bufferHelper.StoreAccessor(accessor);
         // The accessor used for animation.sampler.input requires min and max values.
-        if (inputAccessor && (inputAccessor->min.empty() || inputAccessor->max.empty())) {
+        if (inputAccessor && inputAccessor->bufferView && inputAccessor->bufferView->data &&
+            (inputAccessor->min.empty() || inputAccessor->max.empty())) {
             auto input =
                 array_view(reinterpret_cast<float const*>(inputAccessor->bufferView->data + inputAccessor->byteOffset),
                     inputAccessor->count);
@@ -936,7 +938,7 @@ vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const 
     unordered_map<string, IGLTFData::Ptr>& originalGltfs)
 {
     vector<Entity> usedMaterials;
-    CORE_ASSERT(usedMeshes.size() == result.data->meshes.size());
+    PLUGIN_ASSERT(usedMeshes.size() == result.data->meshes.size());
     if (usedMeshes.empty() || usedMeshes.size() != result.data->meshes.size()) {
         return usedMaterials;
     }
@@ -1216,7 +1218,8 @@ void ExportGltfMaterials(const IEngine& engine, const IMaterialComponentManager&
 {
     if (!usedMaterials.empty()) {
         IDevice* device = nullptr;
-        if (auto context = GetInstance<IRenderContext>(*engine.GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
+        if (auto context =
+                CORE3D_NS::GetInstance<IRenderContext>(*engine.GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
             context) {
             device = &context->GetDevice();
         }
@@ -1460,6 +1463,9 @@ void ExportBufferViews(json::value& jsonGltf, const Data& data)
     json::value jsonBufferViews = json::value::array {};
     for (const auto& bufferView : data.bufferViews) {
         json::value jsonBufferView = json::value::object {};
+        if (!bufferView->buffer) {
+            continue; // defensive: skip malformed bufferView without a buffer (VULN-038)
+        }
         jsonBufferView["buffer"] = FindObjectIndex(data.buffers, *bufferView->buffer);
         if (bufferView->byteOffset) {
             jsonBufferView["byteOffset"] = bufferView->byteOffset;
@@ -2217,17 +2223,28 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
         jsonString.append(4 - pad, ' ');
     }
 
+    if (jsonString.size() > std::numeric_limits<uint32_t>::max()) {
+        PLUGIN_LOG_E("GLB export: JSON chunk exceeds 4 GB limit, aborting.");
+        return;
+    }
     const auto jsonSize = static_cast<uint32_t>(jsonString.size());
     const auto binarySize = [](const auto& aBuffers) {
-        size_t totalSize = 0;
+        uint64_t totalSize = 0;
         for (const auto& buffer : aBuffers) {
             totalSize += buffer->data.size();
         }
-        return static_cast<uint32_t>(totalSize);
+        return totalSize;
     }(data.buffers);
 
-    const auto header = GLBHeader { GLTF_MAGIC, 2,
-        static_cast<uint32_t>(sizeof(GLBHeader) + sizeof(GLBChunk) + jsonSize + sizeof(GLBChunk) + binarySize) };
+    // GLB format stores total length as uint32_t — reject output that would overflow. (VULN-035)
+    constexpr uint64_t GLB_OVERHEAD = sizeof(GLBHeader) + 2u * sizeof(GLBChunk);
+    const uint64_t totalSize64 = GLB_OVERHEAD + jsonSize + binarySize;
+    if (binarySize > std::numeric_limits<uint32_t>::max() || totalSize64 > std::numeric_limits<uint32_t>::max()) {
+        PLUGIN_LOG_E("GLB export: total size exceeds 4 GB uint32_t limit, aborting.");
+        return;
+    }
+    constexpr uint32_t glbVersion = 2;
+    const auto header = GLBHeader { GLTF_MAGIC, glbVersion, static_cast<uint32_t>(totalSize64) };
     file.Write(&header, sizeof(header));
 
     const auto jsonChunk = GLBChunk { jsonSize, static_cast<uint32_t>(ChunkType::JSON) };
@@ -2235,10 +2252,11 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
 
     file.Write(jsonString.data(), jsonSize);
 
-    const auto binaryChunk = GLBChunk { binarySize, static_cast<uint32_t>(ChunkType::BIN) };
+    const auto binarySize32 = static_cast<uint32_t>(binarySize); // safe: checked above
+    const auto binaryChunk = GLBChunk { binarySize32, static_cast<uint32_t>(ChunkType::BIN) };
     file.Write(&binaryChunk, sizeof(binaryChunk));
 
-    file.Write(data.buffers.front()->data.data(), binarySize);
+    file.Write(data.buffers.front()->data.data(), binarySize32);
 }
 
 /* Writes the GLTF2::Data as a glTF file. */

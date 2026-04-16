@@ -26,7 +26,6 @@
 #include <base/math/mathf.h>
 #include <base/math/matrix_util.h>
 #include <base/math/vector_util.h>
-#include <core/log.h>
 #include <core/namespace.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/datastore/intf_render_data_store.h>
@@ -45,6 +44,7 @@
 
 #include "render/default_constants.h"
 #include "render/render_node_scene_util.h"
+#include "util/log.h"
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
@@ -151,13 +151,13 @@ FrameGlobalDescriptorSets GetFrameGlobalDescriptorSets(
             us + DefaultMaterialMaterialConstants::MATERIAL_DEFAULT_RESOURCE_GLOBAL_DESCRIPTOR_SET_NAME);
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (fgds.set2.empty()) {
-            CORE_LOG_ONCE_W("core3d_global_descriptor_set_render_slot_issues",
+            PLUGIN_LOG_ONCE_W("core3d_global_descriptor_set_render_slot_issues",
                 "CORE3D_VALIDATION: Global descriptor set for default material env not found");
         }
 #endif
         fgds.valid = RenderHandleUtil::IsValid(fgds.set1) && RenderHandleUtil::IsValid(fgds.set2Default);
         if (!fgds.valid) {
-            CORE_LOG_ONCE_E("core3d_global_descriptor_set_shadow_all_issues",
+            PLUGIN_LOG_ONCE_E("core3d_global_descriptor_set_shadow_all_issues",
                 "Global descriptor set 1/2 for default material not found (RenderNodeDefaultCameraController needed)");
         }
     }
@@ -290,7 +290,7 @@ void RenderNodeDefaultShadowRenderSlot::ExecuteFrame(IRenderCommandList& cmdList
         const auto scene = storeScene->GetScene();
         const auto lightCounts = storeLight->GetLightCounts();
         const uint32_t shadowCounts = lightCounts.shadowCount;
-        CORE_ASSERT(shadowCounts == shadowCount_);
+        PLUGIN_ASSERT(shadowCounts == shadowCount_);
         if (shadowCounts == 0) {
             return; // early out
         }
@@ -315,7 +315,7 @@ void RenderNodeDefaultShadowRenderSlot::ExecuteFrame(IRenderCommandList& cmdList
 #if (CORE3D_VALIDATION_ENABLED == 1)
             if (light.shadowCameraIndex >= static_cast<uint32_t>(cameras.size())) {
                 const string onceName = string(renderNodeContextMgr_->GetName().data()) + "_too_many_cam";
-                CORE_LOG_ONCE_W(onceName,
+                PLUGIN_LOG_ONCE_W(onceName,
                     "CORE3D_VALIDATION: RN: %s, shadow cameras dropped, too many cameras in scene",
                     renderNodeContextMgr_->GetName().data());
             }
@@ -760,7 +760,7 @@ void RenderNodeDefaultShadowRenderSlot::UpdateGeneralDataUniformBuffers(
             auto* currData = data + UBO_OFFSET_ALIGNMENT * shadowPassIndex;
             if (!CloneData(
                     currData, size_t(dataEnd - currData), &dataStruct, sizeof(DefaultMaterialGeneralDataStruct))) {
-                CORE_LOG_E("generalData ubo copying failed.");
+                PLUGIN_LOG_E("generalData ubo copying failed.");
             }
         }
         shadowPassIndex++;
@@ -795,7 +795,7 @@ void RenderNodeDefaultShadowRenderSlot::ParseRenderNodeInputs()
     // with bindless the default render slots are switched
     if (bindlessEnabled_) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_I("Switching to bindless variants of default material render slots (node:%s)",
+        PLUGIN_LOG_I("Switching to bindless variants of default material render slots (node:%s)",
             renderNodeContextMgr_->GetNodeName().data());
 #endif
         if (rsSlot == DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH) {
@@ -811,7 +811,8 @@ void RenderNodeDefaultShadowRenderSlot::ParseRenderNodeInputs()
     if (jsonInputs_.renderSlotVsmId == ~0u) {
         jsonInputs_.renderSlotVsmId = jsonInputs_.renderSlotId;
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_I("RN (%s), VSM render slot not given (renderSlotVsm)", renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_I("RenderNode (%s), VSM render slot not given (renderSlotVsm)",
+            renderNodeContextMgr_->GetName().data());
 #endif
     }
 }

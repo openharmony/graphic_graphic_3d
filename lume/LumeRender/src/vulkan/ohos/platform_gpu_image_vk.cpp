@@ -55,8 +55,10 @@ void GpuImageVk::CreatePlatformHwBuffer()
     }
     const PlatformHardwareBufferUtil::HardwareBufferProperties hwBufferProperties =
         PlatformHardwareBufferUtil::QueryHwBufferFormatProperties(deviceVk, plat_.platformHwBuffer);
-    plat_.format = hwBufferProperties.format;
-    desc_.format = static_cast<BASE_NS::Format>(hwBufferProperties.format);
+    if (!plat_.isFormatEffectivelySet) {
+        plat_.format = hwBufferProperties.format;
+        desc_.format = static_cast<BASE_NS::Format>(hwBufferProperties.format);
+    }
     if (hwBufferProperties.allocationSize > 0) {
         PlatformHardwareBufferUtil::HardwareBufferImage hwBufferImage =
             PlatformHardwareBufferUtil::CreateHwPlatformImage(

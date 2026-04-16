@@ -20,8 +20,9 @@
 #include <3d/render/default_material_constants.h>
 #include <3d/render/render_data_defines_3d.h>
 #include <base/containers/array_view.h>
-#include <core/log.h>
 #include <render/resource_handle.h>
+
+#include "util/log.h"
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -104,7 +105,7 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
     const uint32_t lightCount = lightCounts_.directional + lightCounts_.spot + lightCounts_.point + lightCounts_.rect;
     if (lightCount >= DefaultMaterialLightingConstants::MAX_LIGHT_COUNT) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        CORE_LOG_ONCE_W("drop_light_count_", "CORE3D_VALIDATION: light dropped (max count: %u)",
+        PLUGIN_LOG_ONCE_W("drop_light_count_", "CORE3D_VALIDATION: light dropped (max count: %u)",
             DefaultMaterialLightingConstants::MAX_LIGHT_COUNT);
 #endif
         return;
@@ -162,7 +163,7 @@ IRenderDataStoreDefaultLight::LightingFlags RenderDataStoreDefaultLight::GetLigh
 }
 
 // for plugin / factory interface
-refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultLight::Create(RENDER_NS::IRenderContext&, char const* name)
+refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultLight::Create(RENDER_NS::IRenderContext&, const char* name)
 {
     return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultLight(name));
 }

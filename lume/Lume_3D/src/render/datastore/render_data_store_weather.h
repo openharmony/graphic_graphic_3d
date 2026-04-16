@@ -35,7 +35,7 @@ RENDER_END_NAMESPACE()
 CORE3D_BEGIN_NAMESPACE()
 class RenderDataStoreWeather : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr const char* const TYPE_NAME = "RenderDataStoreWeather";
+    static constexpr const char* const typeName = "RenderDataStoreWeather";
     static constexpr BASE_NS::Uid UID { "13BFD29D-D68A-466F-8577-9F09784DB901" };
 
     RenderDataStoreWeather(const RENDER_NS::IRenderContext& renderContext, BASE_NS::string_view name);
@@ -173,7 +173,7 @@ public:
 
     BASE_NS::string_view GetTypeName() const override
     {
-        return TYPE_NAME;
+        return typeName;
     }
 
     BASE_NS::string_view GetName() const override

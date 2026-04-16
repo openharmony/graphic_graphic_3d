@@ -93,7 +93,6 @@ bool Ecs::Initialize(const BASE_NS::shared_ptr<IInternalScene>& scene, const Sce
     postProcessComponentManager = GetCoreManager<CORE3D_NS::IPostProcessComponentManager>();
     localMatrixComponentManager = GetCoreManager<CORE3D_NS::ILocalMatrixComponentManager>();
     worldMatrixComponentManager = GetCoreManager<CORE3D_NS::IWorldMatrixComponentManager>();
-    textComponentManager = GetCoreManager<TEXT3D_NS::ITextComponentManager>();
     morphComponentManager = GetCoreManager<CORE3D_NS::IMorphComponentManager>();
 
     if (animationComponentManager) {
