@@ -56,7 +56,7 @@ float GetPcfSampleCmp(sampler2D shadow, const vec2 baseUv, vec2 offset, const fl
 #else
     const float compZ = compareDepth;
 #endif
-    return float(int(texture(shadow, baseUV + uvOffset).x <= compareDepth));
+    return float(int(texture(shadow, baseUv + uvOffset).x <= compareDepth));
 }
 
 float GetPcfSample(sampler2D shadow, const vec2 baseUv, const vec2 offset, const float compareDepth,
@@ -68,7 +68,7 @@ float GetPcfSample(sampler2D shadow, const vec2 baseUv, const vec2 offset, const
 #else
     const float compZ = compareDepth;
 #endif
-    return float(texture(shadow, baseUV + uvOffset).x);
+    return float(texture(shadow, baseUv + uvOffset).x);
 }
 
 float GetPcfSampleCmp(sampler2D shadow, const vec2 baseUv, const vec2 offset, const float compareDepth,
@@ -87,7 +87,7 @@ float GetPcfSampleCmp(sampler2D shadow, const vec2 baseUv, const vec2 offset, co
             newDepth = compareDepth + dDepth_dx * px + dDepth_dy * py;
         }
         newDepth = newDepth - bias;
-        return float(int(texture(shadow, baseUV + uvOffset).x <= newDepth));
+        return float(int(texture(shadow, baseUv + uvOffset).x <= newDepth));
     } else {
         return 0;
     }
