@@ -18,6 +18,8 @@
 
 #include "render/shaders/common/render_compatibility_common.h"
 
+#extension GL_EXT_control_flow_attributes : require
+
 /*
 Basic shadowing functions
 */
@@ -45,11 +47,148 @@ float GetPcfSample(sampler2DShadow shadow, const vec2 baseUv, const vec2 offset,
     return texture(shadow, vec3(baseUv + uvOffset, compZ)).x;
 }
 
+float GetPcfSampleCmp(sampler2D shadow, const vec2 baseUv, vec2 offset, const float compareDepth,
+    const vec2 texelSize, const vec2 receiverPlaneDepthBias)
+{
+    const vec2 uvOffset = offset * texelSize;
+#if (CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS == 1)
+    const float compZ = compareDepth + dot(uvOffset, receiverPlaneDepthBias);
+#else
+    const float compZ = compareDepth;
+#endif
+    return float(int(texture(shadow, baseUV + uvOffset).x <= compareDepth));
+}
+
+float GetPcfSample(sampler2D shadow, const vec2 baseUv, const vec2 offset, const float compareDepth,
+    const vec2 texelSize, const vec2 receiverPlaneDepthBias)
+{
+    const vec2 uvOffset = offset * texelSize;
+#if (CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS == 1)
+    const float compZ = compareDepth + dot(uvOffset, receiverPlaneDepthBias);
+#else
+    const float compZ = compareDepth;
+#endif
+    return float(texture(shadow, baseUV + uvOffset).x);
+}
+
+float GetPcfSampleCmp(sampler2D shadow, const vec2 baseUv, const vec2 offset, const float compareDepth,
+    const vec2 texelSize, const vec2 receiverPlaneDepthBias, const float bias, float dDepth_dx, float dDepth_dy,
+    vec2 uvGradient_x, vec2 uvGradient_y)
+{
+    if (offset.x != 0 || offset.y != 0) {
+        const vec2 uvOffset = offset * texelSize;
+        float newDepth = 0;
+        float det = uvGradient_x.x * uvGradient_y.y - uvGradient_x.y * uvGradient_y.x;
+        if (abs(det) < 1e-6) {
+            newDepth = compareDepth;
+        } else {
+            float px = (uvGradient_y.y * uvOffset.x - uvGradient_y.x * uvOffset.y) / det;
+            float py = (-uvGradient_x.y * uvOffset.x + uvGradient_x.x * uvOffset.y) / det;
+            newDepth = compareDepth + dDepth_dx * px + dDepth_dy * py;
+        }
+        newDepth = newDepth - bias;
+        return float(int(texture(shadow, baseUV + uvOffset).x <= newDepth));
+    } else {
+        return 0;
+    }
+}
+
 bool ValidShadowRange(const vec3 shadowCoord, float stepSize, float shadowIdx, const float texelSizeX)
 {
     const float xMin = stepSize * shadowIdx;
     const float xMax = xMin + stepSize;
     return ((shadowCoord.z > 0.0) && (shadowCoord.x > xMin) && (shadowCoord.x < xMax - texelSizeX * 2.0f));
+}
+
+float Hash12(vec2 p)
+{
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract( (p3.x + p3.y) * p3.z);
+}
+
+void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, int numSamples)
+{
+    float angle = 3.1415 * 3.1415;
+    const float ANGLE_STEP = 3.883222077450933;
+    float radiusStep = radius / numSamples;
+    float temp = 0;
+    for(int i = 0; i < numSamples; i++)
+    {
+        disk[i] = vec2(cos(angle), sin(angle)) * pow(temp / radius, 0.75) * radius;
+        temp += radiusStep;
+        angle += ANGLE_STEP;
+    }
+}
+
+//Variable PCF implementation with adjustable radius and sample count (4-64)
+float CalcVariablePcfShadow(
+    sampler2D shadow, vec4 inShadowCoord, float NoL, vec4 shadowFactor, vec4 atlasSizeInvSize, uvec2 shadowFlags,
+    float sampleRadius, int sampleCount)
+{
+    //divide for perspective (just in case if used)
+    const vec3 shadowCoord = inShadowCoord.xyz / inShadowCoord.w;
+
+    float light = 1.0;
+    if (ValidShadowRange(shadowCoord, shadowFactor.w, float(shadowFlags.x), atlasSizeInvSize.z)) {
+        const vec2 textureSize = atlasSizeInvSize.xy;
+        const vec2 texelSize = atlasSizeInvSize.zw;
+        const float normalBias = shadowFactor.z;
+        const float depthBias = shadowFactor.y;
+        float bias = max(normalBias * (1.0 - NoL), depthBias);
+
+        const vec2 offset = vec2(0.5);
+        const vec2 uv = (shadowCoord.xy * textureSize) + offset;
+        vec2 baseUv = (floor(uv) - offset) * texelSize;
+
+#if (CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS == 1)
+        const vec3 shadowDdx = dFdx(shadowCoord);
+        const vec3 shadowDdy = dFdy(shadowCoord);
+        const vec2 receiverPlaneDepthBias = ComputeReceiverPlaneDepthBias(shadowDdx, shadowDdy);
+
+        //static depth biasing for incorrect fractional sampling
+        const float fSamplingError = 2.0 * dot(vec2(1.0) * texelSize, abs(receiverPlaneDepthBias));
+
+        const float compareDepth = shadowCoord.z - min(fSamplingError, 0.01);
+#else
+        // NOTE: not used for this purpose ATM
+        const vec2 receiverPlaneDepthBias = vec2(shadowFactor.y, shadowFactor.y);
+        const float compareDepth = shadowCoord.z - bias;
+#endif
+
+        float sum = 0.0;
+        int validSamples = 0;
+
+        //Clamp sample count to valid range
+        int clampedSampleCount = clamp(sampleCount, 0, 64);
+
+        vec2 possion[64];
+        vec2 seed = shadowCoord.xy * gl_FragCoord.xy;
+        InitPoissonDiskSamples(seed, possion, sampleRadius, clampedSampleCount);
+
+        float dDepth_dx = dFdx(compareDepth);
+        float dDepth_dy = dFdy(compareDepth);
+        vec2 uvGradient_x = dFdx(baseUv);
+        vec2 uvGradient_y = dFdy(baseUv);
+
+        [[unroll]]for(int i = 0; i < 32; i++)
+        {
+            if (i >= clampedSampleCount) {
+                break;
+            }
+            sum += GetPcfSampleCmp(shadow, baseUv, possion[i], compareDepth, texelSize, receiverPlaneDepthBias, bias,
+                dDepth_dx, dDepth_dy, uvGradient_x, uvGradient_y);
+            validSamples++;
+        }
+
+        if(validSamples > 0)
+        {
+            sum /= float(validSamples);
+            //shadow strength
+            light = 1.0 - (sum * shadowFactor.x);
+        }
+    }
+    return light;
 }
 
 // http://www.ludicon.com/castano/blog/articles/shadow-mapping-summary-part-1/

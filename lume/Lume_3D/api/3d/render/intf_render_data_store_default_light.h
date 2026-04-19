@@ -44,6 +44,8 @@ public:
         PCF = 0,
         /* Variance Shadow Maps */
         VSM = 1,
+        /* Variable Percentage Closer Filtering */
+        VARIABLE_PCF = 2,
     };
 
     /** Shadow quality. Default is NORMAL.
@@ -77,6 +79,7 @@ public:
         LIGHTING_POINT_ENABLED_BIT = (1 << 1),
         LIGHTING_SPOT_ENABLED_BIT = (1 << 2),
         LIGHTING_RECT_ENABLED_BIT = (1 << 3),
+        LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT = (1 << 4),
     };
     using LightingFlags = uint32_t;
 
@@ -98,6 +101,8 @@ public:
         ShadowType shadowType { ShadowType::PCF };
         ShadowQuality shadowQuality { ShadowQuality::NORMAL };
         ShadowSmoothness shadowSmoothness { ShadowSmoothness::NORMAL };
+        float vpcfRadius;
+        int32_t vpcfSampleCount;
     };
 
     /** Shadow quality resolutions.

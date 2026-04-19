@@ -343,6 +343,8 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
         const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
@@ -357,6 +359,16 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -369,6 +381,8 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+    // const float vpcfRadius = uLightData.vpcfRadius;
+    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
         for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
             const uint currLightIdx = spotLightLightBeginIndex + spotIdx;
 
@@ -387,6 +401,16 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                    } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                        shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                            shadowCoord,
+                            NoL,
+                            shadowFactors,
+                            atlasSizeInvSize,
+                            lightFlags.zw,
+                            vpcfRadius,
+                            vpcfSampleCount);
                     } else {
                         shadowCoeff = CalcPcfShadow(
                             uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -454,6 +478,8 @@ vec3 CalculateLighting(
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
         const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
@@ -468,6 +494,16 @@ vec3 CalculateLighting(
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -480,6 +516,8 @@ vec3 CalculateLighting(
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+    // const float vpcfRadius = uLightData.vpcfRadius;
+    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
         for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
             const uint currLightIdx = spotLightLightBeginIndex + spotIdx;
 
@@ -498,6 +536,16 @@ vec3 CalculateLighting(
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                    } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                        shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                            shadowCoord,
+                            NoL,
+                            shadowFactors,
+                            atlasSizeInvSize,
+                            lightFlags.zw,
+                            vpcfRadius,
+                            vpcfSampleCount);
                     } else {
                         shadowCoeff = CalcPcfShadow(
                             uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -616,6 +664,8 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
         const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
@@ -630,6 +680,16 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -643,6 +703,8 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+    // const float vpcfRadius = uLightData.vpcfRadius;
+    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
         for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
             const uint currLightIdx = spotLightLightBeginIndex + spotIdx;
 
@@ -661,6 +723,16 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                    } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                        shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                            shadowCoord,
+                            NoL,
+                            shadowFactors,
+                            atlasSizeInvSize,
+                            lightFlags.zw,
+                            vpcfRadius,
+                            vpcfSampleCount);
                     } else {
                         shadowCoeff = CalcPcfShadow(
                             uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -761,6 +833,8 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
         const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
@@ -775,6 +849,16 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -787,6 +871,8 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+    // const float vpcfRadius = uLightData.vpcfRadius;
+    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
         for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
             const uint currLightIdx = spotLightLightBeginIndex + spotIdx;
 
@@ -805,6 +891,16 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                    } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                        shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                            shadowCoord,
+                            NoL,
+                            shadowFactors,
+                            atlasSizeInvSize,
+                            lightFlags.zw,
+                            vpcfRadius,
+                            vpcfSampleCount);
                     } else {
                         shadowCoeff = CalcPcfShadow(
                             uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -932,6 +1028,8 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
 
     // directional lights
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
@@ -953,6 +1051,16 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -966,6 +1074,8 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
+    // const float vpcfRadius = uLightData.vpcfRadius;
+    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
 
 #if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
         for (uint cLightIdx = 0; cLightIdx < cluster.count; cLightIdx++) {
@@ -995,6 +1105,16 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
                             CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                             shadowCoeff = CalcVsmShadow(
                                 uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                        } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                    CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                            shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                                shadowCoord,
+                                NoL,
+                                shadowFactors,
+                                atlasSizeInvSize,
+                                lightFlags.zw,
+                                vpcfRadius,
+                                vpcfSampleCount);
                         } else {
                             shadowCoeff = CalcPcfShadow(
                                 uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);

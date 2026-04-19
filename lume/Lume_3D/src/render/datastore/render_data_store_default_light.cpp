@@ -150,6 +150,9 @@ IRenderDataStoreDefaultLight::LightingFlags RenderDataStoreDefaultLight::GetLigh
     if (shadowTypes_.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM) {
         lightingSpecializationFlags |= LightingFlagBits::LIGHTING_SHADOW_TYPE_VSM_BIT;
     }
+    if (shadowTypes_.shadowType == IRenderDataStoreDefaultLight::ShadowType::VARIABLE_PCF) {
+        lightingSpecializationFlags |= LightingFlagBits::LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT;
+    }
     if (lightCounts_.point > 0u) {
         lightingSpecializationFlags |= LightingFlagBits::LIGHTING_POINT_ENABLED_BIT;
     }
