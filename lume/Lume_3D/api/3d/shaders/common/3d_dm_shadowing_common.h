@@ -110,13 +110,13 @@ float Hash12(vec2 p)
 void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, int numSamples)
 {
     float angle = 3.1415 * 3.1415;
-    const float ANGLE_STEP = 3.883222077450933;
+    const float angleStep = 3.883222077450933;
     float radiusStep = radius / numSamples;
     float temp = 0;
     for (int i = 0; i < numSamples; i++) {
         disk[i] = vec2(cos(angle), sin(angle)) * pow(temp / radius, 0.75) * radius;
         temp += radiusStep;
-        angle += ANGLE_STEP;
+        angle += angleStep;
     }
 }
 
@@ -170,7 +170,7 @@ float CalcVariablePcfShadow(
         vec2 uvGradient_x = dFdx(baseUv);
         vec2 uvGradient_y = dFdy(baseUv);
 
-        [[unroll]]for (int i = 0; i < 32; i++) {
+        [[unroll]]for (int i = 0; i < 32; i++) { //Clamp sample count to valid range for better performance
             if (i >= clampedSampleCount) {
                 break;
             }
