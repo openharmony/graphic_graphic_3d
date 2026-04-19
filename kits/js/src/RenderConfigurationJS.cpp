@@ -228,7 +228,7 @@ void RenderConfiguration::SetShadowConfig(NapiApi::FunctionContext<NapiApi::Obje
         return;
     } else {
         shadowConfig->SetRenderConfiguration(rc_);
-        softShadowConfigJs_ = BASE_NS::move(shadowConfig->wrap(arg0));
+        softShadowConfigJs_ = BASE_NS::move(shadowConfig->Wrap(arg0));
         shadowConfig.release();
     }
 }
