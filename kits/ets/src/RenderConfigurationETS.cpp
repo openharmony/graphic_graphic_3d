@@ -57,4 +57,31 @@ void RenderConfigurationETS::SetShadowResolution(const BASE_NS::Math::UVec2 &res
     }
     shadowResolution_->SetValue(res);
 }
+
+void RenderConfigurationETS::SetSoftShadowConfig(const std::shared_ptr<SoftShadowConfigETS> softShadowConfigETS)
+{
+    if (!rc_) {
+        CORE_LOG_E("empty render configuration object");
+        return;
+    }
+
+    if (!softShadowConfigETS) {
+        CORE_LOG_E("Undefined soft shadow config given, back to hard shadow config.");
+        rc_->ShadowType()->SetValue(SCENE_NS::SceneShadowType::PCF);
+        softShadowConfigETS_.reset();
+        return;
+    }
+    softShadowConfigETS->SetRenderConfiguration(rc_);
+    softShadowConfigETS_ = std::move(softShadowConfigETS);
+}
+
+std::shared_ptr<SoftShadowConfigETS> RenderConfigurationETS::GetSoftShadowConfig()
+{
+    if (!rc_) {
+        CORE_LOG_E("empty render configuration object");
+        return nullptr;
+    }
+    return softShadowConfigETS_;
+}
+
 }  // namespace OHOS::Render3D

@@ -183,6 +183,7 @@ void RegisterClasses(napi_env env, napi_value exports)
     OcclusionMaterial::Init(env, scene3dNS);
     BoidsSwarmWorldJS::Init(env, scene3dNS);
     BoidsSwarmPluginJS::Init(env, scene3dNS);
+    ShadowConfiguration::PCFConfigJS::Init(env, scene3dNS);
 
     BaseLight::RegisterEnums({ env, scene3dNS });
     CameraJS::RegisterEnums({ env, scene3dNS });
@@ -192,4 +193,5 @@ void RegisterClasses(napi_env env, napi_value exports)
     SceneResourceImpl::RegisterEnums({ env, scene3dNS });
     SceneJS::RegisterEnums({ env, scene3dNS });
     SamplerJS::RegisterEnums({ env, scene3dNS });
+    ShadowConfiguration::RegisterEnums({ env, scene3dNS });
 }

@@ -36,11 +36,15 @@ private:
     napi_value GetShadowResolution(NapiApi::FunctionContext<>& ctx);
     void SetShadowResolution(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
+    napi_value GetShadowConfig(NapiApi::FunctionContext<>& ctx);
+    void SetShadowConfig(NapiApi::FunctionContext<NapiApi::Object>& ctx);
+
     UVec2Proxy* GetResolutionProxy(napi_env env);
     napi_value GetShadowResolutionValue(napi_env env);
 
     SCENE_NS::IRenderConfiguration::Ptr rc_;
     BASE_NS::unique_ptr<UVec2Proxy> resolutionProxy_;
+    NapiApi::StrongRef softShadowConfigJs_;
 };
 
 #endif // RENDER_CONFIGURATION_JS_H

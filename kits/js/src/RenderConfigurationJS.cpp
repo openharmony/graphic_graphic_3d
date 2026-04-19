@@ -21,6 +21,10 @@
 #include "BaseObjectJS.h"
 #include "class_definition_helpers.h"
 
+#include "shadow_configuration/ShadowConfiguration.h"
+#include "napi/value.h"
+using namespace ShadowConfiguration;
+
 static constexpr napi_type_tag RENDER_CONFIG_TAG = { SCENE_NS::IRenderConfiguration::UID.data[0],
     SCENE_NS::IRenderConfiguration::UID.data[1] };
 
@@ -153,6 +157,10 @@ NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
     napi_property_descriptor descs[] = {
         { "shadowResolution", nullptr, nullptr, ClassGetter<RenderConfiguration, &RenderConfiguration::GetShadowResolution>,
             ClassSetter<RenderConfiguration, NapiApi::Object, &RenderConfiguration::SetShadowResolution>, nullptr, napi_default_jsproperty, this },
+        { "softShadowConfig", nullptr, nullptr,
+            ClassGetter<RenderConfiguration, &RenderConfiguration::GetShadowConfig>,
+            ClassSetter<RenderConfiguration, NapiApi::Object, &RenderConfiguration::SetShadowConfig>,
+            nullptr, napi_default_jsproperty, this },
         { "destroy", nullptr, ClassMethod<RenderConfiguration, &RenderConfiguration::Dispose>,
             nullptr, nullptr, nullptr, napi_default_jsproperty, this }
     };
@@ -188,5 +196,39 @@ void RenderConfiguration::SetShadowResolution(NapiApi::FunctionContext<NapiApi::
             // value
             r->ResetValue();
         }
+    }
+}
+
+napi_value RenderConfiguration::GetShadowConfig(NapiApi::FunctionContext<>& ctx)
+{
+    if (softShadowConfigJs_.IsEmpty()) {
+        return ctx.GetUndefined();
+    }
+    return softShadowConfigJs_.GetValue();
+}
+
+void RenderConfiguration::SetShadowConfig(NapiApi::FunctionContext<NapiApi::Object>& ctx)
+{
+    if (!rc_) {
+        LOG_E("no rc return it");
+        return;
+    }
+
+    auto arg0 = ctx.Arg<0>();
+    if (arg0.IsUndefinedOrNull()) {
+        LOG_E("Undefined soft shadow config given, lume engine back to default shadow config.");
+        rc_->ShadowType()->SetValue(SCENE_NS::SceneShadowType::PCF);
+        softShadowConfigJs_.Reset();
+        return;
+    }
+
+    BASE_NS::unique_ptr<SoftShadowConfigJS> shadowConfig = SoftShadowConfigJS::FromJs(arg0);
+    if (!shadowConfig) {
+        LOG_E("Invalid soft shadow config given.");
+        return;
+    } else {
+        shadowConfig->SetRenderConfiguration(rc_);
+        softShadowConfigJs_ = BASE_NS::move(shadowConfig->wrap(arg0));
+        shadowConfig.release();
     }
 }
