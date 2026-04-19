@@ -41,7 +41,6 @@ public:
     {
         float radius = radiusOpt.value_or(DEFAULT_RADIUS);
         int32_t count = countOpt.value_or(DEFAULT_COUNT);
-
         if (!std::isfinite(radius) || radius < 0.0f || count < 0) {
             CORE_LOG_E("Unable to create PCFConfigETS: Invalid shadowSampleRadius or shadowSampleCount given.");
             return nullptr;

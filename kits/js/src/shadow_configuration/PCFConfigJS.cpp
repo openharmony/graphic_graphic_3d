@@ -54,7 +54,6 @@ SoftShadowConfigJS* PCFConfigJS::FromJs(NapiApi::Object& jsPCFConfig)
 {
     float radius = jsPCFConfig.Get<float>("shadowSampleRadius").valueOrDefault();
     int32_t count = jsPCFConfig.Get<int32_t>("shadowSampleCount").valueOrDefault();
-
     if (!std::isfinite(radius) || radius < 0.0f || count < 0) {
         LOG_E("Unable to create PCFConfigJS: Invalid shadowSampleRadius or shadowSampleCount given");
         return {};

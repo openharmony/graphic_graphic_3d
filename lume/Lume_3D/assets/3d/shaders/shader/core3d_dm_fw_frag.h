@@ -167,8 +167,6 @@ vec4 unlitShadowAlpha()
     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SPOT_ENABLED_BIT) == CORE_LIGHTING_SPOT_ENABLED_BIT) {
         const uint spotLightCount = uLightData.spotLightCount;
         const uint spotLightLightBeginIndex = uLightData.spotLightBeginIndex;
-    // const float vpcfRadius = uLightData.vpcfRadius;
-    // const int vpcfSampleCount = uLightData.vpcfSampleCount;
         for (uint spotIdx = 0; spotIdx < spotLightCount; ++spotIdx) {
             const uint currLightIdx = spotLightLightBeginIndex + spotIdx;
 

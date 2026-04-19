@@ -104,7 +104,7 @@ float Hash12(vec2 p)
 {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
-    return fract( (p3.x + p3.y) * p3.z);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, int numSamples)
@@ -113,7 +113,7 @@ void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, in
     const float ANGLE_STEP = 3.883222077450933;
     float radiusStep = radius / numSamples;
     float temp = 0;
-    for(int i = 0; i < numSamples; i++)
+    for (int i = 0; i < numSamples; i++)
     {
         disk[i] = vec2(cos(angle), sin(angle)) * pow(temp / radius, 0.75) * radius;
         temp += radiusStep;
@@ -171,7 +171,7 @@ float CalcVariablePcfShadow(
         vec2 uvGradient_x = dFdx(baseUv);
         vec2 uvGradient_y = dFdy(baseUv);
 
-        [[unroll]]for(int i = 0; i < 32; i++)
+        [[unroll]]for (int i = 0; i < 32; i++)
         {
             if (i >= clampedSampleCount) {
                 break;
@@ -181,8 +181,7 @@ float CalcVariablePcfShadow(
             validSamples++;
         }
 
-        if(validSamples > 0)
-        {
+        if (validSamples > 0) {
             sum /= float(validSamples);
             //shadow strength
             light = 1.0 - (sum * shadowFactor.x);
