@@ -78,8 +78,7 @@ void RenderConfigurationImpl::setShadowResolution(::taihe::optional_view<::Scene
 
     auto type = shadowConfigETS->GetType();
     switch (type) {
-        case ShadowAlgorithmType::PCF:
-        {
+        case ShadowAlgorithmType::PCF: {
             auto pcfConfigETS = std::static_pointer_cast<PCFConfigETS>(shadowConfigETS);
             ::SceneTH::PCFConfig result = ::taihe::make_holder<PCFConfigImpl, ::SceneTH::PCFConfig>(pcfConfigETS);
             return ::taihe::optional<::SceneTH::SoftShadowConfigType>(
