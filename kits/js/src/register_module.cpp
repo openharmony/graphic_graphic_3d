@@ -41,6 +41,7 @@
 #include "geometry_definition/PlaneJS.h"
 #include "geometry_definition/SphereJS.h"
 #include "geometry_definition/CylinderJS.h"
+#include "shadow_configuration/PCFConfigJS.h"
 
 void DebugNativesHavingJS();
 napi_value BridgeDebugNativesHavingJS(napi_env env, napi_callback_info info)
