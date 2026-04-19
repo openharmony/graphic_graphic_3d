@@ -19,8 +19,10 @@
 #include <string>
 #include <scene/interface/intf_scene.h>
 #include "Vec2Proxy.h"
+#include "shadow_configuration/ShadowConfiguration.h"
 
 namespace OHOS::Render3D {
+using namespace ShadowConfiguration;
 class RenderConfigurationETS {
 public:
 
@@ -38,10 +40,16 @@ public:
     std::shared_ptr<UVec2Proxy> GetShadowResolution();
     void SetShadowResolution(const BASE_NS::Math::UVec2 &res);
 
+    std::shared_ptr<SoftShadowConfigETS> GetSoftShadowConfig();
+    void SetSoftShadowConfig(const std::shared_ptr<SoftShadowConfigETS> softShadowConfigETS);
+
+    void SetDefaultSoftShadowConfig() { SetSoftShadowConfig(nullptr); }
+
 private:
     SCENE_NS::IRenderConfiguration::Ptr rc_{nullptr};
     SCENE_NS::IScene::WeakPtr scene_{nullptr};
     std::shared_ptr<UVec2Proxy> shadowResolution_{nullptr};
+    std::shared_ptr<SoftShadowConfigETS> softShadowConfigETS_{nullptr};
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_RENDERCONFIGURATION_ETS_H

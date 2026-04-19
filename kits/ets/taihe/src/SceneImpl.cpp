@@ -425,6 +425,13 @@ void SceneImpl::destroy()
         return taihe::make_holder<RenderConfigurationImpl, ::SceneTH::RenderConfiguration>(nullptr);
     }
 }
+
+::SceneTH::PCFConfig CreatePCFConfig()
+{
+    std::shared_ptr<PCFConfigETS> pcfConfigETS = PCFConfigETS::Create();
+    return taihe::make_holder<PCFConfigImpl, ::SceneTH::PCFConfig>(pcfConfigETS);
+}
+
 } // namespace OHOS::Render3D::KITETS
 
 using namespace OHOS::Render3D::KITETS;
@@ -434,4 +441,5 @@ TH_EXPORT_CPP_API_getDefaultRenderContext(getDefaultRenderContext);
 TH_EXPORT_CPP_API_loadScene(loadScene);
 TH_EXPORT_CPP_API_sceneTransferStaticImpl(sceneTransferStaticImpl);
 TH_EXPORT_CPP_API_sceneTransferDynamicImpl(sceneTransferDynamicImpl);
+TH_EXPORT_CPP_API_CreatePCFConfig(CreatePCFConfig);
 // NOLINTEND

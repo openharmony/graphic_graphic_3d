@@ -29,6 +29,8 @@ enum class SceneShadowType : uint8_t {
     PCF = 0,
     /* Variance shadow maps. Filtering done in separate blur passes in texture space. */
     VSM = 1,
+    /* Variable percentage closer shadow filtering. Filtering done per pixel in screenspace. */
+    VARIABLE_PCF = 2,
 };
 
 enum class SceneShadowQuality : uint8_t {
@@ -83,6 +85,8 @@ public:
      * used instead.
      */
     META_PROPERTY(BASE_NS::Math::UVec2, ShadowResolution)
+    META_PROPERTY(float, VariablePcfRadius)
+    META_PROPERTY(int32_t, VariablePcfSampleCount)
 };
 
 META_REGISTER_CLASS(

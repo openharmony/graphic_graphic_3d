@@ -36,6 +36,8 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
         PCF = 0,
         /* Variance shadow maps. Filtering done in separate blur passes in texture space. */
         VSM = 1,
+        /* Variable percentage closer shadow filtering. Filtering done per pixel in screenspace. */
+        VARIABLE_PCF = 2,
     };
 
     enum class SceneShadowQuality : uint8_t {
@@ -78,6 +80,8 @@ BEGIN_COMPONENT(IRenderConfigurationComponentManager, RenderConfigurationCompone
     /** Shadow type for the (ECS) scene.
      */
     DEFINE_PROPERTY(SceneShadowType, shadowType, "Shadow Type", 0, VALUE(SceneShadowType::PCF))
+    DEFINE_PROPERTY(float, vpcfRadius, "Variable PCF Radius", 0,)
+    DEFINE_PROPERTY(int32_t, vpcfSampleCount, "Variable PCF Sample Count", 0,)
 
     /** Shadow quality for the (ECS) scene.
      */

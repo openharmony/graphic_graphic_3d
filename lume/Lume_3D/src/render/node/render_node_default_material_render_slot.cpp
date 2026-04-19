@@ -70,23 +70,23 @@ constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = { CORE_DYNAMIC_STATE_ENUM_VIEW
 constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
 
 // 0000 0000 0000 FFFF ffff Render hash
-// 0000 0000 000F 0000 0000 Lighting
-// 0000 0000 00F0 0000 0000 Postprocess
-// 0000 0000 0F00 0000 0000 Camera
-// 0000 0000 F000 0000 0000 Primitive topology
-// 0000 000F 0000 0000 0000 Submesh
+// 0000 0000 00FF 0000 0000 Lighting
+// 0000 0000 0F00 0000 0000 Postprocess
+// 0000 0000 F000 0000 0000 Camera
+// 0000 000F 0000 0000 0000 Primitive topology
+// 0000 00F0 0000 0000 0000 Submesh
 static constexpr uint64_t RENDER_HASH_FLAGS_MASK { 0xFFFFffffULL };
 static constexpr uint64_t LIGHTING_FLAGS_SHIFT { 32ULL };
-static constexpr uint64_t LIGHTING_FLAGS_MASK { 0xFULL << LIGHTING_FLAGS_SHIFT };
-static constexpr uint64_t POST_PROCESS_FLAGS_SHIFT { 36ULL };
+static constexpr uint64_t LIGHTING_FLAGS_MASK { 0xFFULL << LIGHTING_FLAGS_SHIFT };
+static constexpr uint64_t POST_PROCESS_FLAGS_SHIFT { 40ULL };
 static constexpr uint64_t POST_PROCESS_FLAGS_MASK { 0xFULL << POST_PROCESS_FLAGS_SHIFT };
-static constexpr uint64_t CAMERA_FLAGS_SHIFT { 40ULL };
+static constexpr uint64_t CAMERA_FLAGS_SHIFT { 44ULL };
 static constexpr uint64_t CAMERA_FLAGS_MASK { 0xFULL << CAMERA_FLAGS_SHIFT };
 // last enum values don't fit in the mask, but values above TRIANGLE_FAN (5) are for geometry and tesselation shaders
 // which we don't enable in the device initialization.
-static constexpr uint64_t PRIMITIVE_TOPOLOGY_SHIFT { 44ULL };
+static constexpr uint64_t PRIMITIVE_TOPOLOGY_SHIFT { 48ULL };
 static constexpr uint64_t PRIMITIVE_TOPOLOGY_MASK { 0xFULL << PRIMITIVE_TOPOLOGY_SHIFT };
-static constexpr uint64_t SUBMESH_FLAG_SHIFT { 48ULL };
+static constexpr uint64_t SUBMESH_FLAG_SHIFT { 52ULL };
 static constexpr uint64_t SUBMESH_FLAG_MASK { 0xFULL << SUBMESH_FLAG_SHIFT };
 
 // our light weight straight to screen post processes are only interested in these

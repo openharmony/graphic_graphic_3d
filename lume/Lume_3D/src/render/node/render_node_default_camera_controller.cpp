@@ -1303,6 +1303,7 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
         const auto scene = dataStoreScene->GetScene();
         const uint32_t sceneId = currentScene_.camera.sceneId;
         const auto& lights = dataStoreLight->GetLights();
+        const IRenderDataStoreDefaultLight::ShadowTypes st = dataStoreLight->GetShadowTypes();
         const Math::Vec4 shadowAtlasSizeInvSize = RenderLightHelper::GetShadowAtlasSizeInvSize(*dataStoreLight);
         const uint32_t shadowCount = dataStoreLight->GetLightCounts().shadowCount;
         // light buffer update (needs to be updated every frame)
@@ -1347,6 +1348,9 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
             lightStruct->clusterFactors = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
             lightStruct->atlasSizeInvSize = shadowAtlasSizeInvSize;
             lightStruct->additionalFactors = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+            lightStruct->vpcfRadius = st.vpcfRadius;
+            lightStruct->vpcfSampleCount = st.vpcfSampleCount;
 
             gpuResourceMgr.UnmapBuffer(uboHandles_.light.GetHandle());
         }

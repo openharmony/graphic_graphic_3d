@@ -127,6 +127,8 @@ vec4 unlitShadowAlpha()
     const uint directionalLightCount = uLightData.directionalLightCount;
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
+    const float vpcfRadius = uLightData.vpcfRadius;
+    const int vpcfSampleCount = uLightData.vpcfSampleCount;
     CORE_RELAXEDP float fullShadowCoeff = 1.0;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
@@ -144,6 +146,16 @@ vec4 unlitShadowAlpha()
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                    shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                        shadowCoord,
+                        NoL,
+                        shadowFactors,
+                        atlasSizeInvSize,
+                        lightFlags.zw,
+                        vpcfRadius,
+                        vpcfSampleCount);
                 } else {
                     shadowCoeff = CalcPcfShadow(
                         uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
@@ -173,6 +185,16 @@ vec4 unlitShadowAlpha()
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
+                    } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
+                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                        shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
+                            shadowCoord,
+                            NoL,
+                            shadowFactors,
+                            atlasSizeInvSize,
+                            lightFlags.zw,
+                            vpcfRadius,
+                            vpcfSampleCount);
                     } else {
                         shadowCoeff = CalcPcfShadow(
                             uSampDepthShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);

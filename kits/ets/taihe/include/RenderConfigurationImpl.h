@@ -36,6 +36,7 @@ class RenderConfigurationImpl {
 private:
     std::shared_ptr<RenderConfigurationETS> rcETS_{nullptr};
     BASE_NS::Math::UVec2 resolution_{BASE_NS::Math::ZERO_UVEC2};
+    bool isShadowConfigUndefined_{true};
 public:
     explicit RenderConfigurationImpl(const std::shared_ptr<RenderConfigurationETS> rcETS);
     ~RenderConfigurationImpl();
@@ -44,6 +45,9 @@ public:
 
     ::taihe::optional<::SceneTypes::Vec2> getShadowResolution();
     void setShadowResolution(::taihe::optional_view<::SceneTypes::Vec2> resolution);
+
+    ::taihe::optional<::SceneTH::SoftShadowConfigType> getSoftShadowConfig();
+    void setSoftShadowConfig(::taihe::optional_view<::SceneTH::SoftShadowConfigType> softShadowConfig);
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ENVIRONMENT_IMPL_H

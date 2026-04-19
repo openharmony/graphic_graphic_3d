@@ -125,6 +125,7 @@
 #define CORE_LIGHTING_POINT_ENABLED_BIT (1 << 1)
 #define CORE_LIGHTING_SPOT_ENABLED_BIT (1 << 2)
 #define CORE_LIGHTING_RECT_ENABLED_BIT (1 << 3)
+#define CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT (1 << 4)
 
 // needs to match LumeEngine/3D/api/3d/render/render_data_defines_3d.h RenderSubmeshFlagBits
 #define CORE_SUBMESH_TANGENTS_BIT (1 << 0)
@@ -376,6 +377,13 @@ struct DefaultMaterialLightStruct {
     vec4 additionalFactors;
 
     DefaultMaterialSingleLightStruct lights[CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT];
+
+    float vpcfRadius;
+    int vpcfSampleCount;
+
+    // for byte alignment
+    uint paddings0;
+    uint paddings1;
 };
 
 // contains the per-cluster data: the number of lights within this cluster

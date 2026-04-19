@@ -254,7 +254,8 @@ void RenderNodeDefaultShadowRenderSlot::PreExecuteFrame()
 
             shadowBuffers_.depthHandle =
                 gpuResourceMgr.Create(shadowBuffers_.depthName, GetDepthBufferDesc(shadowBuffers_));
-            if (shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM) {
+            if (shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM ||
+                shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VARIABLE_PCF) {
                 shadowBuffers_.vsmColorHandle = gpuResourceMgr.Create(
                     shadowBuffers_.vsmColorName, GetColorBufferDesc(gpuResourceMgr, shadowBuffers_));
             } else {
@@ -370,7 +371,10 @@ void RenderNodeDefaultShadowRenderSlot::RenderSubmeshes(IRenderCommandList& cmdL
     bool initialBindDone = false; // cannot be checked from the idx
     bool hasSet2ImageData = false;
     const auto& selectableShaders =
-        (shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM) ? vsmShaders_ : pcfShaders_;
+        (shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM ||
+            shadowType == IRenderDataStoreDefaultLight::ShadowType::VARIABLE_PCF)
+            ? vsmShaders_
+            : pcfShaders_;
 
     const auto& submeshMaterialFlags = dataStoreMaterial.GetSubmeshMaterialFlags();
     const auto& submeshes = dataStoreMaterial.GetSubmeshes();
@@ -725,7 +729,8 @@ void RenderNodeDefaultShadowRenderSlot::UpdateCurrentScene(
         *reinterpret_cast<const float*>(&scene.frameIndex) };
 
     currentScene_.renderSlotId =
-        (shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM)
+        (shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VSM ||
+            shadowBuffers_.shadowTypes.shadowType == IRenderDataStoreDefaultLight::ShadowType::VARIABLE_PCF)
             ? jsonInputs_.renderSlotVsmId
             : jsonInputs_.renderSlotId;
 }
