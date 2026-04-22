@@ -148,7 +148,8 @@ void TextureLayerImpl::CreateNatviceWindowNode(
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
 }
 
-void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
+void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height,
+    std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
     bundleName_ = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig;
@@ -247,7 +248,8 @@ void TextureLayerImpl::ConfigWindow(
         if (producerSurface == nullSurfaceID) {
             if (!image_.textureInfo_.nativeWindow_) {
                 image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
-                    static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale), rsUIContext));
+                    static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale),
+                    rsUIContext));
             }
         } else {
             WIDGET_LOGI("TextureLayerImpl::ConfigWindow offscreen render");
