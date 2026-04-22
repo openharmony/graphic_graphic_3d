@@ -28,7 +28,21 @@ namespace OHOS::Render3D {
 ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(bitmap)
 {
-    auto attachments = interface_cast<META_NS::IAttach>(bitmap_)->GetAttachments();
+    SetName(name);
+    SetUri(uri);
+
+    resources_ = RenderContextETS::GetInstance().GetResources();
+
+    if (bitmap_ == nullptr) {
+        WIDGET_LOGE("bitmap is nullptr");
+        return;
+    }
+    auto iAttach = interface_cast<META_NS::IAttach>(bitmap_);
+    if (iAttach == nullptr) {
+        WIDGET_LOGE("Incorrect type, iAttach is null");
+        return;
+    }
+    auto attachments = iAttach->GetAttachments();
     for (auto& attachment : attachments) {
         auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment);
         if (surfaceStream == nullptr) {
@@ -37,11 +51,6 @@ ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_
         attachment_ = attachment;
         break;
     }
-
-    SetName(name);
-    SetUri(uri);
-
-    resources_ = RenderContextETS::GetInstance().GetResources();
 }
 
 ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
@@ -89,7 +98,10 @@ int32_t ImageETS::GetWidth() const
         WIDGET_LOGE("ImageETS::GetWidth() bitmap_ is nullptr");
         return 0;
     }
-    return bitmap_->Size()->GetValue().x;
+    if (auto size = bitmap_->Size(); size) {
+        return size->GetValue().x;
+    }
+    return 0;
 }
 
 int32_t ImageETS::GetHeight() const
@@ -102,13 +114,16 @@ int32_t ImageETS::GetHeight() const
         WIDGET_LOGE("ImageETS::GetHeight() bitmap_ is nullptr");
         return 0;
     }
-    return bitmap_->Size()->GetValue().y;
+    if (auto size = bitmap_->Size(); size) {
+        return size->GetValue().y;
+    }
+    return 0;
 }
 
-BASE_NS::string ImageETS::GetSurfaceId() const
+std::string ImageETS::GetSurfaceId() const
 {
     if (auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment_); surfaceStream) {
-        return BASE_NS::string(BASE_NS::to_string(surfaceStream->GetSurfaceId()));
+        return std::to_string(surfaceStream->GetSurfaceId());
     }
 
     return "";

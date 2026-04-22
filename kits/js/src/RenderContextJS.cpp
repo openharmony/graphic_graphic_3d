@@ -600,7 +600,7 @@ napi_value RenderContextJS::CreateImageStream(NapiApi::FunctionContext<NapiApi::
         }
 
         auto surfaceStream = obr.Create<OHOS::Render3D::ISurfaceStream>(OHOS::Render3D::ClassId::SurfaceStream, doc);
-        if (auto attach = interface_cast<Meta::IAttach>(bitmap); surfaceStream) {
+        if (auto attach = interface_cast<Meta::IAttach>(bitmap); attach && surfaceStream) {
             attach->Attach(surfaceStream);
         }
 

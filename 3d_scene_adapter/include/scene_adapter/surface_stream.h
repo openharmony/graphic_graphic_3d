@@ -49,7 +49,7 @@ private:
     bool AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext) override;
     bool DetachFrom(const META_NS::IAttach::Ptr& target) override;
 
-    void Init();
+    bool Init();
     void Deinit();
 
     void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
