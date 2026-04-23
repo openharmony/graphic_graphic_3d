@@ -73,7 +73,7 @@ class SceneComponentRecord extends Record<string, ComponentPropertyType> {
 
 from SceneResources use Shader, MaterialType, VariousMaterial, Animation, Environment, Image, ImageStream, MeshResource, Sampler, SceneResource, Effect;
 from SceneNodes use Camera, LightType, LightTypeUnion, Light, Node, NodeType, Geometry, NodeOrNull, VariousNodesOrNull, VariousNodes;
-from SceneTypes use RenderingPipelineType, GeometryDefinitionType, Vec2, Vec3, Vec4;
+from SceneTypes use RenderingPipelineType, GeometryDefinitionType, Vec2, Vec3, Vec4, ShadowAlgorithmType;
 
 struct SceneResourceParameters {
     name: String;
@@ -203,9 +203,35 @@ interface RenderContext {
     registerResourcePath(protocol: String, uri: String): bool;
 }
 
+interface SoftShadowConfig {
+    @get getShadowAlgorithmType(): ShadowAlgorithmType;
+}
+
+@class
+interface PCFConfig : SoftShadowConfig {
+    @get getShadowSampleRadius(): Optional<f64>;
+    @set setShadowSampleRadius(shadowSampleRadius: Optional<f64>): void;
+
+    @get getShadowSampleCount(): Optional<i32>;
+    @set setShadowSampleCount(shadowSampleCount: Optional<i32>): void;
+
+    getPCFConfigImpl(): i64;
+}
+
+@ctor("PCFConfig")
+function CreatePCFConfig(): PCFConfig;
+
+union SoftShadowConfigType {
+    pcf: PCFConfig;
+    base: SoftShadowConfig;
+}
+
 interface RenderConfiguration {
     @get getShadowResolution(): Optional<Vec2>;
     @set setShadowResolution(resolution: Optional<Vec2>): void;
+
+    @get getSoftShadowConfig(): Optional<SoftShadowConfigType>;
+    @set setSoftShadowConfig(softShadowConfig: Optional<SoftShadowConfigType>): void;
 }
 
 struct RenderParameters {
@@ -232,9 +258,9 @@ interface Scene {
 
     destroy(): void;
 
-    importNode(name: String, node: Node, parent: NodeOrNull): Node;
+    importNode(name: String, node: Node, parent: NodeOrNull): VariousNodes;
 
-    importScene(name: String, scene: Scene, parent: NodeOrNull): Node;
+    importScene(name: String, scene: Scene, parent: NodeOrNull): VariousNodes;
 
     renderFrame(params: Optional<RenderParameters>): bool;
 

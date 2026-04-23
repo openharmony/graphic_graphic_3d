@@ -695,9 +695,13 @@ constexpr IRenderDataStoreDefaultLight::ShadowTypes GetRenderShadowTypes(
 {
     IRenderDataStoreDefaultLight::ShadowTypes st { IRenderDataStoreDefaultLight::ShadowType::PCF,
         IRenderDataStoreDefaultLight::ShadowQuality::NORMAL, IRenderDataStoreDefaultLight::ShadowSmoothness::NORMAL };
-    st.shadowType = (renderConfigurationComponent.shadowType == RenderConfigurationComponent::SceneShadowType::VSM)
-                        ? IRenderDataStoreDefaultLight::ShadowType::VSM
-                        : IRenderDataStoreDefaultLight::ShadowType::PCF;
+    if (renderConfigurationComponent.shadowType == RenderConfigurationComponent::SceneShadowType::VSM) {
+        st.shadowType = IRenderDataStoreDefaultLight::ShadowType::VSM;
+    } else if (renderConfigurationComponent.shadowType == RenderConfigurationComponent::SceneShadowType::VARIABLE_PCF) {
+        st.shadowType = IRenderDataStoreDefaultLight::ShadowType::VARIABLE_PCF;
+        st.vpcfRadius = renderConfigurationComponent.vpcfRadius;
+        st.vpcfSampleCount = renderConfigurationComponent.vpcfSampleCount;
+    }
     if (renderConfigurationComponent.shadowQuality == RenderConfigurationComponent::SceneShadowQuality::LOW) {
         st.shadowQuality = IRenderDataStoreDefaultLight::ShadowQuality::LOW;
     } else if (renderConfigurationComponent.shadowQuality == RenderConfigurationComponent::SceneShadowQuality::HIGH) {

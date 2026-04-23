@@ -28,6 +28,7 @@
 #include "AnimationImpl.h"
 #include "SceneComponentImpl.h"
 #include "SceneResourceFactoryImpl.h"
+#include "ShadowConfigurationImpl.h"
 #include "SceneETS.h"
 
 #include "scene_adapter/intf_scene_adapter.h"
@@ -66,10 +67,10 @@ public:
 
     void destroy();
 
-    ::SceneNodes::Node importNode(
+    ::SceneNodes::VariousNodes importNode(
         ::taihe::string_view name, ::SceneNodes::weak::Node node, ::SceneNodes::NodeOrNull parent);
 
-    ::SceneNodes::Node importScene(
+    ::SceneNodes::VariousNodes importScene(
         ::taihe::string_view name, ::SceneTH::weak::Scene scene, ::SceneNodes::NodeOrNull parent);
 
     bool renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> params);
@@ -103,6 +104,9 @@ public:
 ::SceneTH::Scene sceneTransferStaticImpl(uintptr_t input);
 
 uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input);
+
+::SceneTH::PCFConfig CreatePCFConfig();
+
 } // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_IMPL_H

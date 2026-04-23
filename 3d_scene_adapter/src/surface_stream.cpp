@@ -136,13 +136,22 @@ bool SurfaceStream::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS:
     }
 
     auto bitmap = interface_cast<SCENE_NS::IBitmap>(target);
-    renderResource_ = interface_pointer_cast<SCENE_NS::IRenderResource>(target);
     if (bitmap == nullptr) {
         CORE_LOG_E("Incorrect type bitmap is null");
         return false;
     }
+    renderResource_ = interface_pointer_cast<SCENE_NS::IRenderResource>(target);
+    if (auto sp = renderResource_.lock(); !sp) {
+        CORE_LOG_E("render resource attach failed");
+        return false;
+    }
 
-    Init();
+    auto ret = Init();
+    if (!ret) {
+        CORE_LOG_E("surface stream Init failed");
+        return false;
+    }
+
     return true;
 }
 
@@ -158,28 +167,30 @@ bool SurfaceStream::DetachFrom(const META_NS::IAttach::Ptr& target)
     return true;
 }
 
-void SurfaceStream::Init()
+bool SurfaceStream::Init()
 {
     consumerSurface_ = OHOS::IConsumerSurface::Create("IumeSurfaceConsumer");
     if (consumerSurface_ == nullptr) {
         CORE_LOG_E("create surface consumer failed");
-        return;
+        return false;
     }
     auto producer = consumerSurface_->GetProducer();
     if (producer == nullptr) {
         CORE_LOG_E("create surface producer failed");
-        return;
+        return false;
     }
     producerSurface_ = OHOS::Surface::CreateSurfaceAsProducer(producer);
     auto utils = OHOS::SurfaceUtils::GetInstance();
     if (producerSurface_ == nullptr || utils == nullptr) {
         CORE_LOG_E("get producer surface or utils failed");
-        return;
+        return false;
     }
     producerSurface_->SetQueueSize(queueSize_);
     surfaceId_ = producerSurface_->GetUniqueId();
     utils->Add(surfaceId_, producerSurface_);
     consumerSurface_->RegisterConsumerListener(this);
+
+    return true;
 }
 
 void SurfaceStream::Deinit()
@@ -291,7 +302,10 @@ SurfaceStream::~SurfaceStream()
         while (!surfaceBufferCache_.empty()) {
             auto oldSurfaceBuffer = surfaceBufferCache_.front();
             surfaceBufferCache_.pop();
-            if (oldSurfaceBuffer) {
+            if (oldSurfaceBuffer == nullptr) {
+                continue;
+            }
+            if (consumerSurface_) {
                 consumerSurface_->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
             }
         }

@@ -40,7 +40,7 @@ public:
     int32_t GetWidth() const;
     int32_t GetHeight() const;
 
-    BASE_NS::string GetSurfaceId() const;
+    std::string GetSurfaceId() const;
 
 private:
     SCENE_NS::IBitmap::Ptr bitmap_{nullptr};

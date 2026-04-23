@@ -79,6 +79,6 @@ int32_t ImageImpl::getHeight()
 
 ::taihe::string ImageImpl::getSurfaceId()
 {
-    return imageETS_ != nullptr ? imageETS_->GetSurfaceId().c_str() : "";
+    return imageETS_ != nullptr ? ::taihe::string(imageETS_->GetSurfaceId()) : "";
 }
 }  // namespace OHOS::Render3D::KITETS

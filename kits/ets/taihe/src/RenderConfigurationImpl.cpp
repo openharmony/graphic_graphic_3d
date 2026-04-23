@@ -14,10 +14,13 @@
  */
 
 #include "RenderConfigurationImpl.h"
+#include "ShadowConfigurationImpl.h"
 #include "Vec2Impl.h"
 #include "Utils.h"
+#include "shadow_configuration/PCFConfigETS.h"
 
 namespace OHOS::Render3D::KITETS {
+using namespace ShadowConfiguration;
 RenderConfigurationImpl::RenderConfigurationImpl(const std::shared_ptr<RenderConfigurationETS> rcETS)
     : rcETS_(rcETS)
 {
@@ -65,4 +68,57 @@ void RenderConfigurationImpl::setShadowResolution(::taihe::optional_view<::Scene
         WIDGET_LOGE("Invalid resolution");
     }
 }
+
+::taihe::optional<::SceneTH::SoftShadowConfigType> RenderConfigurationImpl::getSoftShadowConfig()
+{
+    RETURN_IF_NULL_WITH_VALUE(rcETS_, std::nullopt);
+
+    std::shared_ptr<SoftShadowConfigETS> shadowConfigETS = rcETS_->GetSoftShadowConfig();
+    RETURN_IF_NULL_WITH_VALUE(shadowConfigETS, std::nullopt);
+
+    auto type = shadowConfigETS->GetType();
+    switch (type) {
+        case ShadowAlgorithmType::PCF: {
+            auto pcfConfigETS = std::static_pointer_cast<PCFConfigETS>(shadowConfigETS);
+            ::SceneTH::PCFConfig result = ::taihe::make_holder<PCFConfigImpl, ::SceneTH::PCFConfig>(pcfConfigETS);
+            return ::taihe::optional<::SceneTH::SoftShadowConfigType>(
+                std::in_place, ::SceneTH::SoftShadowConfigType::make_pcf(result));
+        }
+        default:
+            return std::nullopt;
+    }
+}
+
+void RenderConfigurationImpl::setSoftShadowConfig(
+    ::taihe::optional_view<::SceneTH::SoftShadowConfigType> softShadowConfig)
+{
+    RETURN_IF_NULL(rcETS_);
+
+    if (!softShadowConfig.has_value()) {
+        WIDGET_LOGE("Undefined soft shadow config given, lume engine back to default shadow config.");
+        rcETS_->SetDefaultSoftShadowConfig();
+        isShadowConfigUndefined_ = true;
+        return;
+    }
+    auto shadowConfigUnion = softShadowConfig.value();
+    if (shadowConfigUnion.holds_pcf()) {
+        const SceneTH::PCFConfig &pcfConfig = shadowConfigUnion.get_pcf_ref();
+        int64_t implRawPtr = pcfConfig->getPCFConfigImpl();
+        PCFConfigImpl *implPtr = reinterpret_cast<PCFConfigImpl *>(implRawPtr);
+        std::shared_ptr<PCFConfigETS> pcfConfigETS = implPtr->getPCFConfigETS();
+
+        if (!pcfConfigETS) {
+            WIDGET_LOGE("Empty PCFConfigETS from PCFConfigImpl.");
+            taihe::set_error("Empty PCFConfigETS given.");
+            return;
+        } else {
+            rcETS_->SetSoftShadowConfig(pcfConfigETS);
+            isShadowConfigUndefined_ = false;
+        }
+    } else {
+        taihe::set_error("Unknown type of SoftShadowConfig");
+        return;
+    }
+}
+
 }  // namespace OHOS::Render3D::KITETS

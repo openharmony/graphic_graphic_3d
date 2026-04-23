@@ -118,11 +118,14 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
     auto bitmap = GetNativeObject<SCENE_NS::IBitmap>();
     if (bitmap == nullptr) {
         LOG_E("Cannot finish creating an image: Native image object missing");
-        assert(false);
         return;
     }
-
-    auto attachments = interface_cast<META_NS::IAttach>(bitmap)->GetAttachments();
+    auto iAttach = interface_cast<META_NS::IAttach>(bitmap);
+    if (iAttach == nullptr) {
+        LOG_E("Incorrect type, iAttach is null");
+        return;
+    }
+    auto attachments = iAttach->GetAttachments();
     for (auto& attachment : attachments) {
         auto surfaceStream = interface_pointer_cast<OHOS::Render3D::ISurfaceStream>(attachment);
         if (surfaceStream == nullptr) {
