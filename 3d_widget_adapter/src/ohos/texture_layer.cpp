@@ -71,7 +71,7 @@ public:
     void SetRenderScale(float widthScale, float heightScale) override;
 
 private:
-    void CreateNatviceWindowNode(
+    void CreateNativeWindowNode(
         const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void* CreateNativeWindow(uint32_t width, uint32_t height, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
@@ -142,7 +142,7 @@ GraphicTransformType RotationToTransform(uint32_t rotation)
     return transform;
 }
 
-void TextureLayerImpl::CreateNatviceWindowNode(
+void TextureLayerImpl::CreateNativeWindowNode(
     const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
@@ -158,7 +158,7 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height,
     } else {
         surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_) };
     }
-    CreateNatviceWindowNode(surfaceNodeConfig, rsUIContext);
+    CreateNativeWindowNode(surfaceNodeConfig, rsUIContext);
     if (!rsNode_) {
         WIDGET_LOGE("Create rs node fail");
         return nullptr;
