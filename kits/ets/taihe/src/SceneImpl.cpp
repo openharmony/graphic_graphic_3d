@@ -59,14 +59,14 @@ bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> 
 ::SceneResources::Environment SceneImpl::getEnvironment()
 {
     if (!sceneETS_) {
-        return ::SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
     }
     InvokeReturn<std::shared_ptr<EnvironmentETS>> environemnt = sceneETS_->GetEnvironment();
     if (environemnt) {
         return taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(environemnt.value);
     } else {
         WIDGET_LOGE("getEnvironment error: %s", environemnt.error.c_str());
-        return ::SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
     }
 }
 
@@ -211,14 +211,15 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     WIDGET_LOGI("sceneTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
+        nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
-        return ::SceneTH::Scene({nullptr, nullptr});
+        return ::taihe::make_holder<SceneImpl, ::SceneTH::Scene>(nullptr, nullptr);
     }
-    auto sceneJS = reinterpret_cast<SceneJS *>(nativePtr);
+    auto sceneJS = static_cast<SceneJS *>(static_cast<TrueRootObject *>(nativePtr)->GetInstanceImpl(SceneJS::ID));
     if (!sceneJS) {
         WIDGET_LOGE("transfer scene failed");
-        return ::SceneTH::Scene({nullptr, nullptr});
+        return ::taihe::make_holder<SceneImpl, ::SceneTH::Scene>(nullptr, nullptr);
     }
     SCENE_NS::IScene::Ptr scene = sceneJS->GetNativeObject<SCENE_NS::IScene>();
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter = sceneJS->scene_;
@@ -324,24 +325,24 @@ void SceneImpl::destroy()
 {
     if (!sceneETS_ || node.is_error()) {
         taihe::set_error("Invalid parameters given");
-        return ::SceneTH::SceneComponent({nullptr, nullptr});
+        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         taihe::set_error("invalid node in taihe object");
-        return ::SceneTH::SceneComponent({nullptr, nullptr});
+        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
     }
     auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
     if (!nodeImpl) {
         taihe::set_error("Invalid node in createComponent");
-        return ::SceneTH::SceneComponent({nullptr, nullptr});
+        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
     }
     auto component = sceneETS_->CreateComponent(nodeImpl->GetInternalNode(), std::string(name));
     if (component) {
         return taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(component.value);
     } else {
         taihe::set_error(component.error);
-        return ::SceneTH::SceneComponent({nullptr, nullptr});
+        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
     }
 }
 

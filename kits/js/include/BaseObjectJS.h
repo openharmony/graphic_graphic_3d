@@ -71,7 +71,8 @@ protected:
             ptr->Finalize(env);
             TrueRootObject::destroy(ptr);
         };
-        napi_wrap(env, thisVar, reinterpret_cast<void*>((TrueRootObject*)this), DTOR, nullptr, nullptr);
+        NapiApi::WrapTagged<TrueRootObject>(env, thisVar, reinterpret_cast<void*>((TrueRootObject*)this), DTOR, nullptr,
+            TrueRootObject::TYPE_TAG, nullptr);
     }
     template<typename Object>
     static inline napi_callback ctor()

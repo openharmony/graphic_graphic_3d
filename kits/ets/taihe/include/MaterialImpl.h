@@ -77,12 +77,12 @@ template <size_t Index>
 {
     if (!materialETS_) {
         WIDGET_LOGE("get property[%zu] failed, internal material is null", Index);
-        return ::SceneResources::MaterialProperty({nullptr, nullptr});
+        return ::taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(nullptr);
     }
     std::shared_ptr<MaterialPropertyETS> prop = materialETS_->GetProperty(Index);
     if (!prop) {
         WIDGET_LOGE("get property[%zu] failed, property is null", Index);
-        return ::SceneResources::MaterialProperty({nullptr, nullptr});
+        return ::taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(nullptr);
     }
     return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(prop);
 }

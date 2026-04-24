@@ -73,7 +73,7 @@ void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const &img)
 {
     if (!materialPropertyETS_) {
         WIDGET_LOGE("get factor failed, can't get internal material property");
-        return ::SceneTypes::Vec4({nullptr, nullptr});
+        return ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4);
     }
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(materialPropertyETS_->GetFactor());
 }

@@ -29,8 +29,7 @@ napi_value Getter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        Class* impl = nullptr;
-        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
+        auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), Class::TYPE_TAG);
         if (impl) {
             return (impl->*F)(fc);
         }
@@ -43,8 +42,7 @@ inline napi_value Setter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc && fc.This()) {
-        Class* impl = nullptr;
-        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
+        auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), Class::TYPE_TAG);
         if (impl) {
             (impl->*F)(fc);
         }

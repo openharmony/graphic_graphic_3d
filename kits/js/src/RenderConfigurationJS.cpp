@@ -31,12 +31,7 @@ static constexpr napi_type_tag RENDER_CONFIG_TAG = { SCENE_NS::IRenderConfigurat
 template<typename Class>
 Class* UnwrapObject(napi_env env, const NapiApi::Object& object, const napi_type_tag& tag)
 {
-    Class* impl = nullptr;
-    bool isObject = false;
-    auto value = object.ToNapiValue();
-    napi_unwrap(env, value, (void**)&impl);
-    napi_status status = napi_check_object_type_tag(env, value, &tag, &isObject);
-    return isObject ? impl : nullptr;
+    return NapiApi::UnwrapTagged<Class>(env, object.ToNapiValue(), tag);
 }
 
 template<typename Class>
@@ -151,7 +146,7 @@ NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
         delete ptr;
     };
     auto env = obj.GetEnv();
-    napi_wrap(env, obj.ToNapiValue(), this, DTOR, nullptr, nullptr);
+    NapiApi::WrapTagged<RenderConfiguration>(env, obj.ToNapiValue(), this, DTOR, nullptr, RENDER_CONFIG_TAG, nullptr);
 
     // clang-format off
     napi_property_descriptor descs[] = {
@@ -167,7 +162,6 @@ NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
     // clang-format on
     auto wrapped = obj.ToNapiValue();
     napi_define_properties(obj.GetEnv(), wrapped, BASE_NS::countof(descs), descs);
-    napi_type_tag_object(env, wrapped, &RENDER_CONFIG_TAG); // Used for type checking in UnwrapObject
     SetTo(obj);
     return NapiApi::StrongRef(obj);
 }

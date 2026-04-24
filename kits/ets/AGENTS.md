@@ -15,6 +15,10 @@ summary: ArkTS/ANI绑定层，通过Taihe IDL生成胶水代码桥接ArkTS到原
 - 宏定义：`__OHOS_PLATFORM__`、`__SCENE_ADAPTER__`
 - Taihe IDL 编译器从 `.taihe` 文件生成 `.abi.c`、`.ani.cpp`、`.ets`、`.proj.hpp`、`.impl.hpp`、`.user.hpp`
 
+### 对象构造禁忌
+
+- **禁止**：禁忌通过 `({nullptr, nullptr})` 构造无效对象作为返回值，会导致未定义行为（如 SIGSEGV 崩溃）
+
 ### 命名空间
 
 - ETS 包装类：`OHOS::Render3D`（`include/` + `src/`）

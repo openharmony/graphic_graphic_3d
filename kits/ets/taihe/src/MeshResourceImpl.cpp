@@ -86,7 +86,7 @@ SceneResources::MeshResource MeshResourceImpl::Create(
         }
     } else {
         taihe::set_error("Unknown type of GeometryDefinition");
-        return SceneResources::MeshResource({nullptr, nullptr});
+        return ::taihe::make_holder<MeshResourceImpl, SceneResources::MeshResource>(nullptr);
     }
     const std::string name(params.name);
     const std::string uri = ExtractUri(params.uri);

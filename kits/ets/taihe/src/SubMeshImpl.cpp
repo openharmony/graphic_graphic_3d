@@ -47,11 +47,13 @@ void SubMeshImpl::setName(::taihe::string_view name)
 {
     if (!subMeshETS_) {
         WIDGET_LOGE("get material failed, internal submesh is null");
-        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
+        return ::SceneResources::VariousMaterial::make_pbr(
+            ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(nullptr));
     }
     std::shared_ptr<MaterialETS> matETS = subMeshETS_->GetMaterial();
     if (!matETS) {
-        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
+        return ::SceneResources::VariousMaterial::make_pbr(
+            ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(nullptr));
     }
     auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(matETS);
     return ::SceneResources::VariousMaterial::make_pbr(mat);

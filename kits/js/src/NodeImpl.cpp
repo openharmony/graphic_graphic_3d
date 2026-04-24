@@ -33,13 +33,14 @@
 
 // NodeContainerJS
 
+static constexpr napi_type_tag NODE_CONTAINER_TAG = { SCENE_NS::INode::UID.data[0], SCENE_NS::INode::UID.data[1] };
+
 template<typename FC, napi_value (NodeContainerJS::*F)(FC&)>
 static inline napi_value ECMethodI(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
     if (auto value = fc.RawThis()) {
-        NodeContainerJS* me = nullptr;
-        napi_unwrap(env, value, (void**)&me);
+        auto me = NapiApi::UnwrapTagged<NodeContainerJS>(env, value, NODE_CONTAINER_TAG);
         if (me) {
             return (me->*F)(fc);
         }
@@ -94,7 +95,8 @@ NodeContainerJS::NodeContainerJS(napi_env e, napi_callback_info i)
     LOG_V("NodeContainerJS ++");
     napi_value thisVar = nullptr;
     napi_get_cb_info(e, i, nullptr, nullptr, &thisVar, nullptr);
-    napi_wrap(e, thisVar, reinterpret_cast<void*>((NodeContainerJS*)this), nullptr, nullptr, nullptr);
+    NapiApi::WrapTagged<NodeContainerJS>(e, thisVar, reinterpret_cast<void*>((NodeContainerJS*)this), nullptr, nullptr,
+        NODE_CONTAINER_TAG, nullptr);
 
     if (auto fromJs = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>(e, i)) {
         node_ = NapiApi::Object(fromJs.Arg<0>());
