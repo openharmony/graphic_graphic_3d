@@ -19,6 +19,9 @@
 #include <cstdint>
 #include <data_type/constants.h>
 
+namespace OHOS::Rosen {
+class RSUIContext;
+}
 namespace OHOS::Render3D {
 struct TextureInfo {
     uint32_t width_ = 0U;
@@ -44,6 +47,7 @@ struct WindowChangeInfo {
     uint32_t transformType = 0; // TransformHint
     uint32_t backgroundColor = 0x00000000; // transparent color, argb
     uint64_t producerSurfaceId = 0x0;
+    std::shared_ptr<Rosen::RSUIContext> rsUIContext = nullptr;
     void* customNativeWin = nullptr;
 };
 } // namespace OHOS::Render3D

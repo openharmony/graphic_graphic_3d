@@ -64,16 +64,18 @@ public:
 
     void SetParent(std::shared_ptr<Rosen::RSNode>& parent) override;
     TextureInfo OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
-        bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW) override;
+        bool recreateWindow, SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW,
+        std::shared_ptr<Rosen::RSUIContext> rsUIContext = nullptr) override;
     TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
     void SetBackgroundColor(uint32_t backgroundColor) override;
     void SetRenderScale(float widthScale, float heightScale) override;
 
 private:
-    void CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig);
-    void* CreateNativeWindow(uint32_t width, uint32_t height);
+    void CreateNativeWindowNode(
+        const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
+    void* CreateNativeWindow(uint32_t width, uint32_t height, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
-        uint64_t producerSurface = 0x0);
+        uint64_t producerSurface, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void ConfigTexture(float width, float height);
     void RemoveChild();
 
@@ -106,7 +108,6 @@ void TextureLayerImpl::SetParent(std::shared_ptr<Rosen::RSNode>& parent)
     RemoveChild();
 
     if (parent_ && rsNode_) {
-        rsNode_->SetRSUIContext(parent->GetRSUIContext());
         parent_->AddChild(rsNode_, 0); // second paramenter is added child at the index of parent's children;
     }
 }
@@ -141,18 +142,14 @@ GraphicTransformType RotationToTransform(uint32_t rotation)
     return transform;
 }
 
-void TextureLayerImpl::CreateNatviceWindowNode(const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig)
+void TextureLayerImpl::CreateNativeWindowNode(
+    const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
-    rsUIDirector_ = OHOS::Rosen::RSUIDirector::Create();
-    // Init: The first true indicates that RenderThread is created, and the second true indicates that multiple
-    // instances are used. When multi-instance is not used, each process has a global RSUIDirector. When multi-instance
-    // is used, each instance corresponds to one RSUIDirector.
-    rsUIDirector_->Init(true, true); // plan to do :the second paramenter need to be true for adapting multi-instances
-    auto rsUIContext = rsUIDirector_->GetRSUIContext();
     rsNode_ = Rosen::RSSurfaceNode::Create(surfaceNodeConfig, false, rsUIContext);
 }
 
-void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
+void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height,
+    std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
     bundleName_ = GraphicsManager::GetInstance().GetHapInfo().bundleName_;
     struct Rosen::RSSurfaceNodeConfig surfaceNodeConfig;
@@ -161,7 +158,7 @@ void* TextureLayerImpl::CreateNativeWindow(uint32_t width, uint32_t height)
     } else {
         surfaceNodeConfig = { .SurfaceNodeName = std::string("SceneViewer Model") + std::to_string(key_) };
     }
-    CreateNatviceWindowNode(surfaceNodeConfig);
+    CreateNativeWindowNode(surfaceNodeConfig, rsUIContext);
     if (!rsNode_) {
         WIDGET_LOGE("Create rs node fail");
         return nullptr;
@@ -240,7 +237,7 @@ void *CreateNativeOffScreenWindow(uint32_t width, uint32_t height, uint64_t prod
 
 void TextureLayerImpl::ConfigWindow(
     float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
-    uint64_t producerSurface)
+    uint64_t producerSurface, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
     float widthScale = image_.textureInfo_.widthScale_;
     float heightScale = image_.textureInfo_.heightScale_;
@@ -248,11 +245,11 @@ void TextureLayerImpl::ConfigWindow(
 
     if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
         image_.textureInfo_.recreateWindow_ = recreateWindow;
-
         if (producerSurface == nullSurfaceID) {
             if (!image_.textureInfo_.nativeWindow_) {
                 image_.textureInfo_.nativeWindow_ = reinterpret_cast<void *>(CreateNativeWindow(
-                    static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale)));
+                    static_cast<uint32_t>(width * widthScale), static_cast<uint32_t>(height * heightScale),
+                    rsUIContext));
             }
         } else {
             WIDGET_LOGI("TextureLayerImpl::ConfigWindow offscreen render");
@@ -283,7 +280,7 @@ void TextureLayerImpl::SetRenderScale(float widthScale, float heightScale)
 }
 
 TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
-    bool recreateWindow, SurfaceType surfaceType)
+    bool recreateWindow, SurfaceType surfaceType, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
     // no DestroyRenderTarget will not cause memory leak / render issue
     surface_ = surfaceType;
@@ -293,7 +290,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
     image_.textureInfo_.width_ = static_cast<uint32_t>(width);
     image_.textureInfo_.height_ = static_cast<uint32_t>(height);
 
-    ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow);
+    ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow, 0x0, rsUIContext);
 
     WIDGET_LOGD("TextureLayer OnWindowChange offsetX %f, offsetY %f, width %d, height %d, float scale %f,"
         "recreateWindow %d window empty %d", offsetX, offsetY, image_.textureInfo_.width_, image_.textureInfo_.height_,
@@ -327,7 +324,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChang
 
     ConfigWindow(windowChangeInfo.offsetX, windowChangeInfo.offsetY, windowChangeInfo.width,
         windowChangeInfo.height, windowChangeInfo.scale, windowChangeInfo.recreateWindow,
-        windowChangeInfo.producerSurfaceId);
+        windowChangeInfo.producerSurfaceId, windowChangeInfo.rsUIContext);
 
     return image_.textureInfo_;
 }
@@ -387,9 +384,10 @@ void TextureLayer::SetRenderScale(float widthScale, float heightScale)
 }
 
 TextureInfo TextureLayer::OnWindowChange(float offsetX, float offsetY, float width, float height, float scale,
-    bool recreateWindow, SurfaceType surfaceType)
+    bool recreateWindow, SurfaceType surfaceType, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
 {
-    return textureLayer_->OnWindowChange(offsetX, offsetY, width, height, scale, recreateWindow, surfaceType);
+    return textureLayer_->OnWindowChange(
+        offsetX, offsetY, width, height, scale, recreateWindow, surfaceType, rsUIContext);
 }
 
 TextureInfo TextureLayer::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
