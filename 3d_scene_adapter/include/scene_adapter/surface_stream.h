@@ -40,7 +40,11 @@ constexpr uint32_t SURFACE_QUEUE_SIZE = 5;
 class SurfaceStream final : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, ISurfaceStream>,
     public OHOS::IBufferConsumerListenerClazz {
     META_OBJECT(SurfaceStream, ClassId::SurfaceStream, IntroduceInterfaces)
-    ~SurfaceStream();
+public:
+    META_NO_COPY_MOVE(SurfaceStream)
+
+    SurfaceStream() = default;
+    ~SurfaceStream() override;
 protected:
     void OnBufferAvailable() override;
 private:
