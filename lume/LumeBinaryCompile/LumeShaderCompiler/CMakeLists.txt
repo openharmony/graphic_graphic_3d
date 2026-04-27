@@ -107,7 +107,7 @@ if (__OHOS_PLATFORM__)
     string(REPLACE "/foundation" ";" TEMP_PATH ${CMAKE_CURRENT_LIST_FILE})
     list(GET TEMP_PATH 0 OHOS_ROOT_PATH)
     set(SPIRV_TOOLS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-tools")
-    set(SPIRV_TOOLS_EXTENSION_PATH "${OHOS_ROOT_PATH}/third_party/vk-gl-cts/build/external/spirv-tools/spirv-tools")
+    set(SPIRV_TOOLS_EXTENSION_PATH "${CMAKE_BINARY_DIR}/3rdPartyST")
     # temp solution
     #set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/spirv-cross")
     set(SPIRV_CROSS_PATH "${OHOS_ROOT_PATH}/third_party/skia/third_party/externals/spirv-cross")
