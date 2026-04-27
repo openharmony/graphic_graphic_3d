@@ -31,8 +31,6 @@ PlatformData GraphicsManager::GetPlatformData() const
     };
     #undef TO_STRING
     #undef PLATFORM_PATH_NAME
-    WIDGET_LOGD("platformdata %s, %s, %s, %s,", data.coreRootPath_.c_str(),
-        data.corePluginPath_.c_str(), data.appRootPath_.c_str(), data.appPluginPath_.c_str());
     return data;
 }
 
@@ -49,11 +47,6 @@ PlatformData GraphicsManager::GetPlatformData(const HapInfo& hapInfo) const
     };
     #undef TO_STRING
     #undef PLATFORM_PATH_NAME
-    WIDGET_LOGD("platformdata %{public}s, %{public}s, %{public}s, %{public}s,", data.coreRootPath_.c_str(),
-        data.corePluginPath_.c_str(), data.appRootPath_.c_str(), data.appPluginPath_.c_str());
-
-    WIDGET_LOGD("HapInfo %{public}s, %{public}s, %{public}s,", data.hapInfo_.hapPath_.c_str(),
-        data.hapInfo_.bundleName_.c_str(), data.hapInfo_.moduleName_.c_str());
     return data;
 }
 
