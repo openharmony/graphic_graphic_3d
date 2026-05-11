@@ -274,7 +274,10 @@ ohos_source_set("lume_engine_src") {
   ]
 
   if (LUME_OHOS_BUILD) {
-    external_deps += [ "hilog:libhilog" ]
+    external_deps += [
+      "hilog:libhilog",
+      "icu:shared_icuuc",
+    ]
   }
   part_name = "graphic_3d"
   subsystem_name = "graphic"

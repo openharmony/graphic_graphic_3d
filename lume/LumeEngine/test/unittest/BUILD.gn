@@ -269,7 +269,8 @@ ohos_unittest("lume_engine_src_test") {
     "bounds_checking_function:libsec_shared",
     "hilog:libhilog",
     "googletest:gtest",
-    "googletest:gmock"
+    "googletest:gmock",
+    "icu:shared_icuuc",
   ]
 
   # Deps
