@@ -35,7 +35,7 @@ class TextureLayer;
 // receives multi windowchangeInfo
 class IMrtDepthAdapter {
 public:
-    virtual void CreateSceneByGltfUri(std::string u);
+    virtual void CreateSceneByGltfUri(const std::string& uri, std::function<void(bool)> func = nullptr);
     virtual bool CreateCamera(const CameraConfigs& p);
     virtual bool SetCameraConfigs(const CameraConfigs& p);
 

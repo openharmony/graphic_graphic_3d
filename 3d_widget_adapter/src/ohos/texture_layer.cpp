@@ -70,12 +70,20 @@ public:
     void SetBackgroundColor(uint32_t backgroundColor) override;
     void SetRenderScale(float widthScale, float heightScale) override;
 
+    static void* SurfaceToNativeWindow(void* pSurface)
+    {
+        // sometimes it is hard to include the correct window.h
+        // use this wrapped function to provide a steady interface
+        return CreateNativeWindowFromSurface(pSurface);
+    }
+
 private:
     void CreateNativeWindowNode(
         const Rosen::RSSurfaceNodeConfig &surfaceNodeConfig, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void* CreateNativeWindow(uint32_t width, uint32_t height, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
     void ConfigWindow(float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
-        uint64_t producerSurface, std::shared_ptr<Rosen::RSUIContext> rsUIContext);
+        std::shared_ptr<Rosen::RSUIContext> rsUIContext,
+        uint64_t producerSurface = 0x0, void* customNativeWin = nullptr);
     void ConfigTexture(float width, float height);
     void RemoveChild();
 
@@ -237,11 +245,22 @@ void *CreateNativeOffScreenWindow(uint32_t width, uint32_t height, uint64_t prod
 
 void TextureLayerImpl::ConfigWindow(
     float offsetX, float offsetY, float width, float height, float scale, bool recreateWindow,
-    uint64_t producerSurface, std::shared_ptr<Rosen::RSUIContext> rsUIContext)
+    std::shared_ptr<Rosen::RSUIContext> rsUIContext, uint64_t producerSurface, void* customNativeWin)
 {
     float widthScale = image_.textureInfo_.widthScale_;
     float heightScale = image_.textureInfo_.heightScale_;
     constexpr uint64_t nullSurfaceID = 0x0;
+
+    if (customNativeWin != nullptr) {
+        float handleW = width * scale * widthScale;
+        float handleH = height * scale * heightScale;
+
+        WIDGET_LOGI("TextureLayerImpl::ConfigWindow customNativeWin handleW %f, handleH %f", handleW, handleH);
+        image_.textureInfo_.nativeWindow_ = customNativeWin;
+        NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
+            SET_BUFFER_GEOMETRY, static_cast<uint32_t>(handleW), static_cast<uint32_t>(handleH));
+        return;
+    }
 
     if (surface_ == SurfaceType::SURFACE_WINDOW || surface_ == SurfaceType::SURFACE_TEXTURE) {
         image_.textureInfo_.recreateWindow_ = recreateWindow;
@@ -265,9 +284,16 @@ void TextureLayerImpl::ConfigWindow(
         NativeWindowHandleOpt(reinterpret_cast<OHNativeWindow *>(image_.textureInfo_.nativeWindow_),
             SET_BUFFER_GEOMETRY, static_cast<uint32_t>(width * scale * widthScale),
             static_cast<uint32_t>(height * scale * heightScale));
-        if (rsNode_ == nullptr) {
-            WIDGET_LOGE("TextureLayer ConfigWindow rsNode_ is nullptr.");
+        if (rsNode_ != nullptr && producerSurface == nullSurfaceID) {
+            rsNode_->SetBounds(offsetX, offsetY, width, height); // on screen render with default swapchain
             return;
+        } else if (rsNode_ != nullptr && producerSurface != nullSurfaceID) {
+            WIDGET_LOGI("TextureLayerImpl::ConfigWindow offscreen render");
+            return;
+        } else {
+            WIDGET_LOGE("TextureLayerImpl::ConfigWindow error, %s %s",
+                (rsNode_ != nullptr) ? "on screen" : "offscreen",
+                (producerSurface == nullSurfaceID) ? "null surface" : "custom surface");
         }
         rsNode_->SetBounds(offsetX, offsetY, width, height);
     }
@@ -290,7 +316,7 @@ TextureInfo TextureLayerImpl::OnWindowChange(float offsetX, float offsetY, float
     image_.textureInfo_.width_ = static_cast<uint32_t>(width);
     image_.textureInfo_.height_ = static_cast<uint32_t>(height);
 
-    ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow, 0x0, rsUIContext);
+    ConfigWindow(offsetX, offsetY, width, height, scale, recreateWindow, rsUIContext);
 
     WIDGET_LOGD("TextureLayer OnWindowChange offsetX %f, offsetY %f, width %d, height %d, float scale %f,"
         "recreateWindow %d window empty %d", offsetX, offsetY, image_.textureInfo_.width_, image_.textureInfo_.height_,
@@ -324,7 +350,9 @@ TextureInfo TextureLayerImpl::OnWindowChange(const WindowChangeInfo& windowChang
 
     ConfigWindow(windowChangeInfo.offsetX, windowChangeInfo.offsetY, windowChangeInfo.width,
         windowChangeInfo.height, windowChangeInfo.scale, windowChangeInfo.recreateWindow,
-        windowChangeInfo.producerSurfaceId, windowChangeInfo.rsUIContext);
+        windowChangeInfo.rsUIContext,
+        windowChangeInfo.producerSurfaceId,
+        windowChangeInfo.customNativeWin);
 
     return image_.textureInfo_;
 }
@@ -403,6 +431,11 @@ void TextureLayer::DestroyRenderTarget()
 TextureLayer::TextureLayer(int32_t key)
 {
     textureLayer_ = std::make_shared<TextureLayerImpl>(key);
+}
+
+void* TextureLayer::SurfaceToNativeWindow(void* pSurface)
+{
+    return TextureLayerImpl::SurfaceToNativeWindow(pSurface);
 }
 
 TextureLayer::~TextureLayer()

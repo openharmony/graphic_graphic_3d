@@ -75,6 +75,8 @@ public:
     bool LoadPluginsAndInit() override; // it should be static function
     std::shared_ptr<TextureLayer> CreateTextureLayer() override;
     void OnWindowChange(const WindowChangeInfo& windowChangeInfo) override;
+    void OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo) override;
+
     void OnWindowChange(float renderWidth, float renderHeight) override;
     void RenderFrame(bool needsSyncPaint = false) override;
     void Deinit() override;
@@ -91,17 +93,36 @@ public:
     }
     bool EngineTickFrame(CORE_NS::IEcs::Ptr ecs);
     bool LoadPluginByUid(const BASE_NS::Uid& uid);
-    void CreateEmptyScene();
+    void CreateScene(const std::string& uri = "", std::function<void(bool)> func = nullptr);
+    inline void CreateEmptyScene()
+    {
+        CreateScene();
+    }
+
+    bool SetExtraSwapChainName(const std::vector<std::string>& vNames);
+    bool AddExtraPlugin(const BASE_NS::Uid& uid)
+    {
+        vExtraPlugins_.emplace_back(uid);
+        return true;
+    }
+
     CORE_NS::IEcs::Ptr GetEcs();
     virtual META_NS::IObject::Ptr GetSceneObj()
     {
         return sceneWidgetObj_;
     }
 protected:
+    void CreateMultiExtraTextureLayer(size_t numTextureLayers, bool clear);
     static bool LoadEngineLib();
     static bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
     static bool InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo);
-    void AttachSwapchain(META_NS::IObject::Ptr camera);
+    void AttachSwapchain(SCENE_NS::IRenderTarget::Ptr bigmap, META_NS::IObject::Ptr camera);
+
+    void AttachSwapchain(META_NS::IObject::Ptr camera)
+    {
+        AttachSwapchain(bitmap_, camera);
+    }
+
     void RenderFunction();
     void CreateRenderFunction();
     void UpdateSurfaceBuffer();
@@ -116,10 +137,17 @@ protected:
     RENDER_NS::RenderHandleReference bufferFenceHandle_;
     BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreDefaultStaging> renderDataStoreDefaultStaging_;
     CORE_NS::EntityReference camImageEF_;
-
+    // store the extra swapchain handles for destroying them
+    std::vector<RENDER_NS::RenderHandleReference> vExtraSwapChainHandle_;
     std::shared_ptr<TextureLayer> textureLayer_;
+    std::vector<std::shared_ptr<TextureLayer>> vExtraTextureLayer_;
     SCENE_NS::IRenderTarget::Ptr bitmap_;
     SCENE_NS::IRenderTarget::Ptr bitmap2_;
+
+    // only need swapchain names and let engine attach the extra swapchains automatically
+    std::vector<std::string> vExtraSwapChainNames_;
+    std::vector<BASE_NS::Uid> vExtraPlugins_;
+
     uint32_t key_ = 0;
     bool needsRepaint_ = true;
     bool receiveBuffer_ = false;
