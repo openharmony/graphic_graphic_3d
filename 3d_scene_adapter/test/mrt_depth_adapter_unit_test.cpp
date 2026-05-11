@@ -19,26 +19,21 @@
 #include <fstream>
 #include <filesystem>
 
-// for buffer queue
 #include <surface_buffer.h>
 #include <surface_utils.h>
 #include <native_buffer.h>
 #include <iconsumer_surface.h>
 #include <window.h>
 
-// render source
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_render_resource.h>
 
-// widget adapter
 #include "texture_info.h"
-#include "ohos/3d_widget_adapter_log.h" // for log
-// scene adapter
+#include "ohos/3d_widget_adapter_log.h"
 #include "scene_adapter/intf_scene_adapter.h"
 #include "scene_adapter/intf_mrt_depth_adapter.h"
 
-// scene pointer
 #include <meta/interface/intf_object.h>
 #include <scene/interface/intf_scene.h>
 
@@ -64,234 +59,174 @@ using CameraIntrinsics = OHOS::Render3D::CameraIntrinsics;
 using CameraConfigs = OHOS::Render3D::CameraConfigs;
 using OHOS::Render3D::IMrtDepthAdapter;
 
-// Khronos gltf sample with one triangle
-// CC0 license and free to use
 static const std::string g_GltfContent = R"({
   "scene" : 0,
-  "scenes" : [
-    {
-      "nodes" : [ 0 ]
-    }
-  ],
-  
-  "nodes" : [
-    {
-      "mesh" : 0
-    }
-  ],
-  
-  "meshes" : [
-    {
-      "primitives" : [ {
-        "attributes" : {
-          "POSITION" : 1
-        },
-        "indices" : 0
-      } ]
-    }
-  ],
-
-  "buffers" : [
-    {
-      "uri" : "Triangle.bin",
-      "byteLength" : 44
-    }
-  ],
+  "scenes" : [ { "nodes" : [ 0 ] } ],
+  "nodes" : [ { "mesh" : 0 } ],
+  "meshes" : [ {
+    "primitives" : [ {
+      "attributes" : { "POSITION" : 1 },
+      "indices" : 0
+    } ]
+  } ],
+  "buffers" : [ { "uri" : "Triangle.bin", "byteLength" : 44 } ],
   "bufferViews" : [
-    {
-      "buffer" : 0,
-      "byteOffset" : 0,
-      "byteLength" : 6,
-      "target" : 34963
-    },
-    {
-      "buffer" : 0,
-      "byteOffset" : 8,
-      "byteLength" : 36,
-      "target" : 34962
-    }
+    { "buffer" : 0, "byteOffset" : 0, "byteLength" : 6, "target" : 34963 },
+    { "buffer" : 0, "byteOffset" : 8, "byteLength" : 36, "target" : 34962 }
   ],
   "accessors" : [
-    {
-      "bufferView" : 0,
-      "byteOffset" : 0,
-      "componentType" : 5123,
-      "count" : 3,
-      "type" : "SCALAR",
-      "max" : [ 2 ],
-      "min" : [ 0 ]
-    },
-    {
-      "bufferView" : 1,
-      "byteOffset" : 0,
-      "componentType" : 5126,
-      "count" : 3,
-      "type" : "VEC3",
-      "max" : [ 1.0, 1.0, 0.0 ],
-      "min" : [ 0.0, 0.0, 0.0 ]
-    }
+    { "bufferView" : 0, "byteOffset" : 0, "componentType" : 5123,
+      "count" : 3, "type" : "SCALAR", "max" : [ 2 ], "min" : [ 0 ] },
+    { "bufferView" : 1, "byteOffset" : 0, "componentType" : 5126,
+      "count" : 3, "type" : "VEC3", "max" : [ 1.0, 1.0, 0.0 ], "min" : [ 0.0, 0.0, 0.0 ] }
   ],
-  
-  "asset" : {
-    "version" : "2.0"
-  }
+  "asset" : { "version" : "2.0" }
 })";
 
-static const std::string validUri = "/data/storage/very/long/file/path/to/uri/expect/no/duplicate/testModel.gltf";
-
-// helper writing function
+static const std::string validUri =
+    "/data/storage/very/long/file/path/to/uri/expect/no/duplicate/testModel.gltf";
 
 static bool writeGltfFile(const std::string& uri, const std::string& content)
 {
     std::ofstream outFile(uri);
     outFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     try {
-      fs::path filePath(uri);
-      fs::create_directories(filePath.parent_path());
-      outFile.open(uri);
+        fs::path filePath(uri);
+        fs::create_directories(filePath.parent_path());
+        outFile.open(uri);
     } catch (std::exception& e) {
-      WIDGET_LOGE("Failed to create file: %{public}s, error: %{public}s", uri.c_str(), e.what());
-      return false;
+        WIDGET_LOGE("Failed to create file: %{public}s, error: %{public}s",
+                    uri.c_str(), e.what());
+        return false;
     }
 
     outFile << content;
     outFile.close();
     if (!outFile) {
         return false;
-    }  
+    }
     return true;
 }
 
 class BufferContextManager : public OHOS::Rosen::IConsumerListenerClazz {
 public:
-  void OnBufferAvailable() override
-  {
-      EXPECT_NE(consumerSurface_, nullptr);
-      OHOS::sptr<OHOS::SurfaceBuffer> buffer;
-      int32_t fence = -1;
-      int64_t timestamp = 0;
-      OHOS::Rect damage;
+    void OnBufferAvailable() override
+    {
+        EXPECT_NE(consumerSurface_, nullptr);
+        OHOS::sptr<OHOS::SurfaceBuffer> buffer;
+        int32_t fence = -1;
+        int64_t timestamp = 0;
+        OHOS::Rect damage;
 
-      // get buffer
-      auto success = consumerSurface_->AcquireBuffer(buffer, fence, timestamp, damage);
-      EXPECT_NE(buffer, nullptr);
-      EXPECT_EQ(success, OHOS::SURFACE_ERROR_OK);
-      
-      OH_NativeBuffer *nativeBuffer = buffer->SurfaceBufferToNativaBuffer(); // GPU buffer
-      EXPECT_NE(nativeBuffer, nullptr);
+        auto success = consumerSurface_->AcquireBuffer(buffer, fence, timestamp, damage);
+        EXPECT_NE(buffer, nullptr);
+        EXPECT_EQ(success, OHOS::SURFACE_ERROR_OK);
 
-      consumerSurface_->ReleaseBuffer(buffer, fence);
-  }
-  OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_;
-  OHOS::sptr<OHOS::ISurface> producerSurface_;
+        OH_NativeBuffer* nativeBuffer = buffer->SurfaceBufferToNativaBuffer();
+        EXPECT_NE(nativeBuffer, nullptr);
 
-  WindowChangeInfo CreateWindowChangeInfo(const std::string& sName = "consumerSurface") const
-  {
-    consumerSurface_ = OHOS::IConsumerSurface::Create(sName.c_str());
-    EXPECT_NE(consumerSurface_, nullptr);
+        consumerSurface_->ReleaseBuffer(buffer, fence);
+    }
 
-    auto producer = consumerSurface_->GetProducer();
-    EXPECT_NE(producer, nullptr);
-    auto producerSurface = OHOS::Surface::CreateSurfaceAsProducer(producer);
-    auto utils = OHOS::SurfaceUtils::GetInstance();
-    
-    offscreenBufferHeight_ = g_height;
-    offscreenBufferWidth_ = g_width;
+    WindowChangeInfo CreateWindowChangeInfo(const std::string& sName = "consumerSurface") const
+    {
+        consumerSurface_ = OHOS::IConsumerSurface::Create(sName.c_str());
+        EXPECT_NE(consumerSurface_, nullptr);
 
-    producerSurface->SetQueueSize(5);
-    producerSurface->SetUserData("SURFACE_STRIDE_AIGNMENT", "8");
-    producerSurface->SetUserData("SURFACE_FORMAT", std::to_string(static_cast<int>(OHOS::GRAPHIC_PIXEL_FMT_RGBA_8888)));
-    producerSurface->SetUserData("SURFACE_WIDTH", std::to_string(offscreenBufferWidth_));
-    producerSurface->SetUserData("SURFACE_HEIGHT", std::to_string(offscreenBufferHeight_));
+        auto producer = consumerSurface_->GetProducer();
+        EXPECT_NE(producer, nullptr);
+        auto producerSurface = OHOS::Surface::CreateSurfaceAsProducer(producer);
+        auto utils = OHOS::SurfaceUtils::GetInstance();
 
-    producerSurfaceId_ = producerSurface->GetUniqueId();
-    utils->Add(producerSurfaceId_, producerSurface);
-    consumerSurface_->RegisterConsumerListener(this);
-    
-    OHOS::Render3D::WindowChangeInfo info;
-    info.width = static_cast<float>(offscreenBufferWidth_);
-    info.height = static_cast<float>(offscreenBufferHeight_);
+        offscreenBufferHeight_ = g_height;
+        offscreenBufferWidth_ = g_width;
 
-    info.producerSurfaceId = producerSurfaceId_;
+        producerSurface->SetQueueSize(5);
+        producerSurface->SetUserData("SURFACE_STRIDE_AIGNMENT", "8");
+        producerSurface->SetUserData("SURFACE_FORMAT",
+            std::to_string(static_cast<int>(OHOS::GRAPHIC_PIXEL_FMT_RGBA_8888)));
+        producerSurface->SetUserData("SURFACE_WIDTH",
+            std::to_string(offscreenBufferWidth_));
+        producerSurface->SetUserData("SURFACE_HEIGHT",
+            std::to_string(offscreenBufferHeight_));
 
-    auto window = TextureLayer::SurfaceToNativeWindow(&producerSurface);
+        producerSurfaceId_ = producerSurface->GetUniqueId();
+        utils->Add(producerSurfaceId_, producerSurface);
+        consumerSurface_->RegisterConsumerListener(this);
 
-    info.customNativeWin = reinterpret_cast<void*>(window);
-    window_ = window;
-    return info;
-  }
+        OHOS::Render3D::WindowChangeInfo info;
+        info.width = static_cast<float>(offscreenBufferWidth_);
+        info.height = static_cast<float>(offscreenBufferHeight_);
+        info.producerSurfaceId = producerSurfaceId_;
 
-  uint64_t producerSurfaceId_ = 0;
-  uint32_t offscreenBufferWidth_ = 0;
-  uint32_t offscreenBufferHeight_ = 0;
-  OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_ = nullptr;
-  OHOS::sptr<OHOS::ISurface> producerSurface_ = nullptr;
+        auto window = TextureLayer::SurfaceToNativeWindow(&producerSurface);
+        info.customNativeWin = reinterpret_cast<void*>(window);
+        window_ = window;
+        return info;
+    }
 
-  void* window_ = nullptr;
+    OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_ = nullptr;
+    OHOS::sptr<OHOS::ISurface> producerSurface_ = nullptr;
+    uint64_t producerSurfaceId_ = 0;
+    uint32_t offscreenBufferWidth_ = 0;
+    uint32_t offscreenBufferHeight_ = 0;
+    void* window_ = nullptr;
 };
 
 class RenderSession {
 public:
     RenderSession()
     {
-      mrtScene_ = OHOS::Render3D::GetMrtDepthAdapterInstance();
-      EXPECT_NE(mrtScene_, nullptr);
+        mrtScene_ = OHOS::Render3D::GetMrtDepthAdapterInstance();
+        EXPECT_NE(mrtScene_, nullptr);
     }
+
     ~RenderSession()
     {
-      if (mrtScene_) {
-        mrtScene_->Deinit(true);
-      }
+        if (mrtScene_) {
+            mrtScene_->Deinit(true);
+        }
     }
-    BASE_NS::shared_ptr<IMrtDepthAdapter> mrtScene_ = nullptr;
-    OHOS::Render3D::CameraConfigs camConfigs_ {};
-    std::string gltfFilePath_ {};
-    BufferContextManager rgbBufferCtx{};
-    BufferContextManager depthBufferCtx{};
 
     void ConfigRender()
     {
-      CameraIntrinsics intr {
-        1, // fov
-        0.0001, // near
-        10000 //far
-      };
+        CameraIntrinsics intr { 1, 0.0001, 10000 };
 
-      camConfigs_.position_ = OHOS::Render3D::Vector3f({-0.5, 2, 1});
-      camConfigs_.rotation_ = OHOS::Render3D::Vector4f({1, 0, 0, 0});
-      camConfigs_.intrinsics_ = intr;
-      camConfigs_.clearColor_ = OHOS::Render3D::Vector4f({0, 1, 1, 1});
-      auto info = rgbBufferCtx.CreateWindowChangeInfo("rgbBuffer");
-      auto info2 = depthBufferCtx.CreateWindowChangeInfo("depthBuffer");
-      std::vector<WindowChangeInfo> vInfo{};
-      vInfo.push_back(info);
-      vInfo.push_back(info2);
+        camConfigs_.position_ = OHOS::Render3D::Vector3f({ -0.5, 2, 1 });
+        camConfigs_.rotation_ = OHOS::Render3D::Vector4f({ 1, 0, 0, 0 });
+        camConfigs_.intrinsics_ = intr;
+        camConfigs_.clearColor_ = OHOS::Render3D::Vector4f({ 0, 1, 1, 1 });
 
-      mrtScene_->CreateSceneByGltfUri(gltfFilePath_);
-      mrtScene_->OnWindowChange(vInfo);
+        auto info = rgbBufferCtx.CreateWindowChangeInfo("rgbBuffer");
+        auto info2 = depthBufferCtx.CreateWindowChangeInfo("depthBuffer");
+        std::vector<WindowChangeInfo> vInfo {};
+        vInfo.push_back(info);
+        vInfo.push_back(info2);
+
+        mrtScene_->CreateSceneByGltfUri(gltfFilePath_);
+        mrtScene_->OnWindowChange(vInfo);
     }
 
     void RenderFrame(int i)
     {
-      camConfigs_.position_ = OHOS::Render3D::Vector3f({0, 0, -4 + 0.02 * i});
-      mrtScene_->SetCameraConfigs(camConfigs_);
-      mrtScene_->RenderFrame();
+        camConfigs_.position_ = OHOS::Render3D::Vector3f({ 0, 0, -4 + 0.02 * i });
+        mrtScene_->SetCameraConfigs(camConfigs_);
+        mrtScene_->RenderFrame();
     }
+
+    BASE_NS::shared_ptr<IMrtDepthAdapter> mrtScene_ = nullptr;
+    OHOS::Render3D::CameraConfigs camConfigs_ {};
+    std::string gltfFilePath_ {};
+    BufferContextManager rgbBufferCtx {};
+    BufferContextManager depthBufferCtx {};
 };
 
-
-/**
- * @tc.name: CreateSceneByGltfUri
- * @tc.desc: test CreateSceneByGltfUri
- * @tc.type: FUNC
- */
 HWTEST_F(MrtDepthAdapterUT, CreateSceneByGltfUri, TestSize.Level1)
 {
     auto mrtScene = OHOS::Render3D::GetMrtDepthAdapterInstance();
     EXPECT_NE(mrtScene, nullptr);
 
     std::string uri = "invalidUri";
-
     mrtScene->CreateSceneByGltfUri(uri);
     EXPECT_FALSE(mrtScene->IsSceneValid());
 
@@ -301,26 +236,20 @@ HWTEST_F(MrtDepthAdapterUT, CreateSceneByGltfUri, TestSize.Level1)
     mrtScene->Deinit(true);
 }
 
-/**
- * @tc.name: bU
- * @tc.desc: test offscreen render with mrt depth adapter
- * @tc.type: FUNC
-*/
 HWTEST_F(MrtDepthAdapterUT, BufferQueueTest, TestSize.Level1)
 {
-  writeGltfFile(validUri, g_GltfContent);
+    writeGltfFile(validUri, g_GltfContent);
 
-  RenderSession session;
-  session.gltfFilePath_ = validUri;
-  session.ConfigRender();
-  EXPECT_TRUE(session.mrtScene_->IsSceneValid());
+    RenderSession session;
+    session.gltfFilePath_ = validUri;
+    session.ConfigRender();
+    EXPECT_TRUE(session.mrtScene_->IsSceneValid());
 
-  session.RenderFrame(0);
-  static constexpr int TOTAL_FRAMES = 20;
-  for (int i = 1; i <= TOTAL_FRAMES; ++i) {
-    session.RenderFrame(i);
-  }
-  // expect no crash
+    session.RenderFrame(0);
+    static constexpr int TOTAL_FRAMES = 20;
+    for (int i = 1; i <= TOTAL_FRAMES; ++i) {
+        session.RenderFrame(i);
+    }
 }
 
 } // namespace OHOS::Render3D

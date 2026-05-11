@@ -302,7 +302,7 @@ public:
             WIDGET_LOGI("MrtDepthAdapter::SetDefaultCameraPtr no camera found in scene, create one");
             return CreateCamera(p);
         } else if (cams.size() > 1) {
-            WIDGET_LOGW("MrtDepthAdapter::SetDefaultCameraPtr multiple cameras found in scene, expect only one, use the first one");
+            WIDGET_LOGW("MrtDepthAdapter::SetDefaultCameraPtr multiple cameras foundin scene, use the first one");
         }
         cameraPtr_ = cams[0];
         return true;
