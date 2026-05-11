@@ -59,7 +59,7 @@ using CameraIntrinsics = OHOS::Render3D::CameraIntrinsics;
 using CameraConfigs = OHOS::Render3D::CameraConfigs;
 using OHOS::Render3D::IMrtDepthAdapter;
 
-static const std::string g_GltfContent = R"({
+static const std::string GLTF_CONTENT = R"({
   "scene" : 0,
   "scenes" : [ { "nodes" : [ 0 ] } ],
   "nodes" : [ { "mesh" : 0 } ],
@@ -83,10 +83,10 @@ static const std::string g_GltfContent = R"({
   "asset" : { "version" : "2.0" }
 })";
 
-static const std::string validUri =
+static const std::string VALID_URI =
     "/data/storage/very/long/file/path/to/uri/expect/no/duplicate/testModel.gltf";
 
-static bool writeGltfFile(const std::string& uri, const std::string& content)
+static bool WriteGltfFile(const std::string& uri, const std::string& content)
 {
     std::ofstream outFile(uri);
     outFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
@@ -230,24 +230,24 @@ HWTEST_F(MrtDepthAdapterUT, CreateSceneByGltfUri, TestSize.Level1)
     mrtScene->CreateSceneByGltfUri(uri);
     EXPECT_FALSE(mrtScene->IsSceneValid());
 
-    writeGltfFile(validUri, g_GltfContent);
-    mrtScene->CreateSceneByGltfUri(validUri);
+    WriteGltfFile(VALID_URI, GLTF_CONTENT);
+    mrtScene->CreateSceneByGltfUri(VALID_URI);
     EXPECT_TRUE(mrtScene->IsSceneValid());
     mrtScene->Deinit(true);
 }
 
 HWTEST_F(MrtDepthAdapterUT, BufferQueueTest, TestSize.Level1)
 {
-    writeGltfFile(validUri, g_GltfContent);
+    WriteGltfFile(VALID_URI, GLTF_CONTENT);
 
     RenderSession session;
-    session.gltfFilePath_ = validUri;
+    session.gltfFilePath_ = VALID_URI;
     session.ConfigRender();
     EXPECT_TRUE(session.mrtScene_->IsSceneValid());
 
     session.RenderFrame(0);
-    static constexpr int TOTAL_FRAMES = 20;
-    for (int i = 1; i <= TOTAL_FRAMES; ++i) {
+    static constexpr int total_frames = 20;
+    for (int i = 1; i <= total_frames; ++i) {
         session.RenderFrame(i);
     }
 }

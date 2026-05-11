@@ -195,7 +195,8 @@ public:
 
         if (MRTDFXEnabled()) {
             for (size_t i = 0; i < vWindowChangeInfo.size(); ++i) {
-                DumpWinChangeInfo(vWindowChangeInfo[i], "MrtDepthAdapter::OnWindowChange index: " + std::to_string(i) + " ");
+                DumpWinChangeInfo(vWindowChangeInfo[i], "MrtDepthAdapter::OnWindowChange index: " + \
+                    std::to_string(i) + " ");
             }
             WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %lX", vWindowChangeInfo[0].producerSurfaceId);
         }
@@ -264,7 +265,8 @@ public:
         cameraPtr_ = camera;
         cameraPtr_->XOffset->SetValue(p.offsetX_);
         cameraPtr_->YOffset->SetValue(p.offsetY_);
-        cameraPtr_->Projection->SetValue(static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
+        cameraPtr_->Projection->SetValue(
+            static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(camera);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
@@ -482,7 +484,6 @@ public:
     {
         return cameraPtr_;
     }
-
 };
 
 BASE_NS::shared_ptr<IMrtDepthAdapter> GetMrtDepthAdapterInstance()
