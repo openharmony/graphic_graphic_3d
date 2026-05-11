@@ -1374,8 +1374,7 @@ void SceneAdapter::CreateScene(const std::string& uri, std::function<void(bool)>
     };
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
 
-    std::string sceneRes = "scene://empty";
-    sceneManager->CreateScene(sceneRes.c_str())
+    sceneManager->CreateScene(uri.c_str())
         .Then(BASE_NS::move(engineThreadTask), engineQ)
         .Wait();
 }

@@ -60,8 +60,8 @@ static const std::string UID_MRT_PLUGIN { "a1b2c3d4-e5f6-7890-abcd-ef123456daca"
 static uint32_t g_width = 512;
 static uint32_t g_height = 512;
 
-using CameraIntrinsics = OHOS::Render3D::OffscreenCameraIntrinsics;
-using CameraConfigs = OHOS::Render3D::OffscreenCameraConfigs;
+using CameraIntrinsics = OHOS::Render3D::CameraIntrinsics;
+using CameraConfigs = OHOS::Render3D::CameraConfigs;
 using OHOS::Render3D::IMrtDepthAdapter;
 
 // Khronos gltf sample with one triangle
@@ -243,7 +243,7 @@ public:
         mrtScene_->Deinit(true);
       }
     }
-    Base::shared_ptr<IMrtDepthAdapter> mrtScene_ = nullptr;
+    BASE_NS::shared_ptr<IMrtDepthAdapter> mrtScene_ = nullptr;
     OHOS::Render3D::CameraConfigs camConfigs_ {};
     std::string gltfFilePath_ {};
     BufferContextManager rgbBufferCtx{};

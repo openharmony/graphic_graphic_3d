@@ -310,11 +310,11 @@ public:
 
     void DumpCameraMatrices() const
     {
-        auto camAccessor = interface_pointer_cast<Scene::ICameraMatrixAccessor>(cameraPtr_);
+        auto camAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(cameraPtr_);
         auto viewMat = camAccessor->GetViewMatrix();
         auto projMat = camAccessor->GetProjectionMatrix();
 
-        auto printMatFunc = [] (std::string& printMat, const Base::Math::Mat4X4& mat) {
+        auto printMatFunc = [] (std::string& printMat, const BASE_NS::Math::Mat4X4& mat) {
             printMat = "[ ";
             constexpr int viewMatSize = 4 * 4;
             for (int i = 0; i < viewMatSize; ++i) {
