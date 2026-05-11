@@ -557,23 +557,23 @@ void SceneAdapter::CreateMultiExtraTextureLayer(size_t numTextureLayers, bool cl
     WIDGET_LOGI("SceneAdapter::CreateMultiExtraTextureLayer: num %zu", numTextureLayers);
     if (clear) {
         vExtraTextureLayer_.clear();
-        vExtraSwapchainHandle_.clear();
+        vExtraSwapChainHandle_.clear();
         for (size_t i = 0; i < numTextureLayers; i++) {
             vExtraTextureLayer_.emplace_back(std::make_shared<TextureLayer>(key_++));
-            vExtraSwapchainHandle_.emplace_back();
+            vExtraSwapChainHandle_.emplace_back();
         }
         return;
     }
 
     for (size_t i = 0; i < numTextureLayers; i++) {
         vExtraTextureLayer_[i] = std::make_shared<TextureLayer>(key_++);
-        vExtraSwapchainHandle_[i] = {};
+        vExtraSwapChainHandle_[i] = {};
     }
 }
 
 bool SceneAdapter::SetExtraSwapChainName(const std::vector<std::string>& names)
 {
-    vExtraSwapChainName_ = names;
+    vExtraSwapChainNames_ = names;
     return true;
 }
 
@@ -733,9 +733,9 @@ void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWin
         auto& device = engineInstance_.renderContext_->GetDevice();
 
         if (vExtraTextureLayer_.size() != vExtraWinChangeInfo.size() ||
-            vExtraSwapchainHandle_.size() != vExtraWinChangeInfo.size()) {
+            vExtraSwapChainHandle_.size() != vExtraWinChangeInfo.size()) {
             // destroy swapchains
-            for (const auto& s : vExtraSwapchainHandle_) {
+            for (const auto& s : vExtraSwapChainHandle_) {
                 device.DestroySwapchainHandle(s);
             }
             // clear and re-create texture layers and swapchain handle vectors
@@ -763,10 +763,10 @@ void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWin
                 }
             };
 
-            std::string name = vExtraSwapChainName_.size() == 0 ? \ 
-                "ExtraSwapchain" + std::to_string(i) : vExtraSwapChainName_[i];
+            std::string name = vExtraSwapChainNames_.size() == 0 ?
+                "ExtraSwapchain" + std::to_string(i) : vExtraSwapChainNames_[i];
             
-            vExtraSwapchainHandle_[i] = device.CreateSwapchainHandle(swapchainCreateInfo, vExtraSwapchainHandle_[i],
+            vExtraSwapChainHandle_[i] = device.CreateSwapchainHandle(swapchainCreateInfo, vExtraSwapChainHandle_[i],
                 name.c_str()); // store for destroy
         }
         return META_NS::IAny::Ptr {};
@@ -884,7 +884,7 @@ void SceneAdapter::RenderFunction()
         }
     }
 
-    if (vExtraSwapChainHandle_.size != vExtraTextureLayer_.size()) {
+    if (vExtraSwapChainHandle_.size() != vExtraTextureLayer_.size()) {
         WIDGET_LOGE("extra swapchain handle and texture layer size mismatch");
         return;
     }
@@ -1062,13 +1062,13 @@ void SceneAdapter::Deinit()
         if (swapchainHandle_) {
             device.DestroySwapchain(swapchainHandle_);
         }
-        if (vExtraSwapchainHandle_.size() > 0) {
-            for (const auto& s : vExtraSwapchainHandle_) {
+        if (vExtraSwapChainHandle_.size() > 0) {
+            for (const auto& s : vExtraSwapChainHandle_) {
                 device.DestroySwapchain(s);
             }
         }
         swapchainHandle_ = {};
-        vExtraSwapchainHandle_.clear();
+        vExtraSwapChainHandle_.clear();
         if (bitmap2_) {
             bitmap2_.reset();
         }

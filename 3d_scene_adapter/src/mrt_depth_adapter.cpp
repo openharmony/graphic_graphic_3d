@@ -161,7 +161,7 @@ public:
 
     void CreateSceneByGltfUri(const std::string& gltfUri, std::function<void(bool)> func) override
     {
-        WIDGET_LOGI("MrtDepthAdapter::CreateSceneByGltfUri with uri: %{public}s", u.c_str());
+        WIDGET_LOGI("MrtDepthAdapter::CreateSceneByGltfUri with uri: %{public}s", gltfUri.c_str());
         WIDGET_SCOPED_TRACE("MrtDepthAdapter::CreateSceneByGltfUri");
 
         // load scene gltf

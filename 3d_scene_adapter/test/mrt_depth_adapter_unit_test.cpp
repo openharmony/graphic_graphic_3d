@@ -16,6 +16,8 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <cmath>
+#include <fstream>
+#include <filesystem>
 
 // for buffer queue
 #include <surface_buffer.h>
@@ -42,10 +44,11 @@
 
 using namespace testing;
 using namespace testing::ext;
+namespace fs = std::filesystem;
 
 namespace OHOS::Render3D {
 
-class OffscreenRenderUT : public ::testing::Test {
+class MrtDepthAdapterUT : public ::testing::Test {
 public:
     static void SetUpTestCase() {}
     static void TearDownTestCase() {}
@@ -63,8 +66,7 @@ using OHOS::Render3D::IMrtDepthAdapter;
 
 // Khronos gltf sample with one triangle
 // CC0 license and free to use
-static const std::string g_GltfContent = "R(
-{
+static const std::string g_GltfContent = R"({
   "scene" : 0,
   "scenes" : [
     {
@@ -133,8 +135,7 @@ static const std::string g_GltfContent = "R(
   "asset" : {
     "version" : "2.0"
   }
-}
-)";
+})";
 
 static const std::string validUri = "/data/storage/very/long/file/path/to/uri/expect/no/duplicate/testModel.gltf";
 
@@ -199,7 +200,7 @@ public:
 
     producerSurface->SetQueueSize(5);
     producerSurface->SetUserData("SURFACE_STRIDE_AIGNMENT", "8");
-    producerSurface->SetUserData("SURFACE_FORMAT", std::to_string("OHOS::GRAPHIC_PIXEL_FMT_RGBA_8888"));
+    producerSurface->SetUserData("SURFACE_FORMAT", std::to_string(static_cast<int>(OHOS::GRAPHIC_PIXEL_FMT_RGBA_8888)));
     producerSurface->SetUserData("SURFACE_WIDTH", std::to_string(offscreenBufferWidth_));
     producerSurface->SetUserData("SURFACE_HEIGHT", std::to_string(offscreenBufferHeight_));
 
@@ -243,7 +244,7 @@ public:
       }
     }
     Base::shared_ptr<IMrtDepthAdapter> mrtScene_ = nullptr;
-    OHOS::Render3D::CameraConfigs camComfigs_ {};
+    OHOS::Render3D::CameraConfigs camConfigs_ {};
     std::string gltfFilePath_ {};
     BufferContextManager rgbBufferCtx{};
     BufferContextManager depthBufferCtx{};
@@ -256,9 +257,9 @@ public:
         10000 //far
       };
 
-      camComfigs_.position_ = OHOS::Render3D::Vector3f({-0.5, 2, 1});
-      camComfigs_.rotation_ = OHOS::Render3D::Vector4f({1, 0, 0, 0});
-      camComfigs_.intrinsics_ = intr;
+      camConfigs_.position_ = OHOS::Render3D::Vector3f({-0.5, 2, 1});
+      camConfigs_.rotation_ = OHOS::Render3D::Vector4f({1, 0, 0, 0});
+      camConfigs_.intrinsics_ = intr;
       camConfigs_.clearColor_ = OHOS::Render3D::Vector4f({0, 1, 1, 1});
       auto info = rgbBufferCtx.CreateWindowChangeInfo("rgbBuffer");
       auto info2 = depthBufferCtx.CreateWindowChangeInfo("depthBuffer");
@@ -272,11 +273,11 @@ public:
 
     void RenderFrame(int i)
     {
-      camComfigs_.intrinsics_.position_ = OHOS::Render3D::Vector3f({0, 0, -4 + 0.02 * i});
-      mrtScene_->SetCameraConfigs(camComfigs_);
+      camConfigs_.position_ = OHOS::Render3D::Vector3f({0, 0, -4 + 0.02 * i});
+      mrtScene_->SetCameraConfigs(camConfigs_);
       mrtScene_->RenderFrame();
     }
-}
+};
 
 
 /**

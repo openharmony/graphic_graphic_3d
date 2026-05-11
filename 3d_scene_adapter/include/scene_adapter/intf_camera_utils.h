@@ -89,7 +89,7 @@ struct CameraIntrinsics {
 
 enum class CameraModelType : uint8_t {
     /* Orthographic camera*/
-    OTHOGRAPHIC = 0,
+    ORTHOGRAPHIC = 0,
     /* Perspective camera */
     PERSPECTIVE = 1,
     /* Frustum camera */
