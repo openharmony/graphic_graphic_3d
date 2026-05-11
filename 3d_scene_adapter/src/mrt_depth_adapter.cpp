@@ -118,7 +118,6 @@ static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr
     WIDGET_LOGW("WindowChangeInfo: %s", printStr.c_str());
 }
 
-
 #define CHECK_NULL_RET_LOGE(ptr, ret)                        \
     do {                                                     \
         if (!(ptr)) {                                        \
@@ -188,7 +187,8 @@ public:
             WIDGET_LOGE("MrtDepthAdapter::OnWindowChange scene not inited");
             return false;
         }
-        if (vWindowChangeInfo.size() < 2) {
+        constexpr size_t minExpectedWindows = 2; // default + at least 1 extra for MRT
+        if (vWindowChangeInfo.size() < minExpectedWindows) {
             WIDGET_LOGE("MrtDepthAdapter get invalid vWindowChangeInfo with size: %zu", vWindowChangeInfo.size());
             return false;
         }
@@ -348,7 +348,8 @@ public:
         cameraPtr_->FoV()->SetValue(p.intrinsics_.fov_);
         cameraPtr_->XOffset->SetValue(p.offsetX_);
         cameraPtr_->YOffset->SetValue(p.offsetY_);
-        cameraPtr_->Projection->SetValue(static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
+        cameraPtr_->Projection->SetValue(
+            static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(cameraPtr_);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
@@ -369,9 +370,6 @@ public:
     }
 
 private:
-
-    
-
     void SetDefaultEnvironment()
     {
         WIDGET_LOGI("OffScreenScene::SetDefaultEnvironment");

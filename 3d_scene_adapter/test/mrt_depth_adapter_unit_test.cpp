@@ -141,7 +141,8 @@ public:
         offscreenBufferHeight_ = g_height;
         offscreenBufferWidth_ = g_width;
 
-        producerSurface->SetQueueSize(5);
+        constexpr size_t queueSize = 5;
+        producerSurface->SetQueueSize(queueSize);
         producerSurface->SetUserData("SURFACE_STRIDE_AIGNMENT", "8");
         producerSurface->SetUserData("SURFACE_FORMAT",
             std::to_string(static_cast<int>(OHOS::GRAPHIC_PIXEL_FMT_RGBA_8888)));
@@ -246,8 +247,8 @@ HWTEST_F(MrtDepthAdapterUT, BufferQueueTest, TestSize.Level1)
     EXPECT_TRUE(session.mrtScene_->IsSceneValid());
 
     session.RenderFrame(0);
-    static constexpr int total_frames = 20;
-    for (int i = 1; i <= total_frames; ++i) {
+    static constexpr int totalFrames = 20;
+    for (int i = 1; i <= totalFrames; ++i) {
         session.RenderFrame(i);
     }
 }
