@@ -265,7 +265,7 @@ public:
         cameraPtr_ = camera;
         cameraPtr_->XOffset()->SetValue(p.offsetX_);
         cameraPtr_->YOffset()->SetValue(p.offsetY_);
-        cameraPtr_->Projection->SetValue(
+        cameraPtr_->Projection()->SetValue(
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(camera);
@@ -348,7 +348,7 @@ public:
         cameraPtr_->FoV()->SetValue(p.intrinsics_.fov_);
         cameraPtr_->XOffset->SetValue(p.offsetX_);
         cameraPtr_->YOffset->SetValue(p.offsetY_);
-        cameraPtr_->Projection->SetValue(
+        cameraPtr_->Projection()->SetValue(
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(cameraPtr_);
