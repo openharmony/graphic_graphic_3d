@@ -198,7 +198,7 @@ public:
                 DumpWinChangeInfo(vWindowChangeInfo[i], "MrtDepthAdapter::OnWindowChange index: " + \
                     std::to_string(i) + " ");
             }
-            WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %lX", vWindowChangeInfo[0].producerSurfaceId);
+            WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %llX", vWindowChangeInfo[0].producerSurfaceId);
         }
 
         sceneAdapter_->OnWindowChange(vWindowChangeInfo[0]); // default swapchain
@@ -263,8 +263,8 @@ public:
         camera->FarPlane()->SetValue(p.intrinsics_.far_);
         camera->FoV()->SetValue(p.intrinsics_.fov_);
         cameraPtr_ = camera;
-        cameraPtr_->XOffset->SetValue(p.offsetX_);
-        cameraPtr_->YOffset->SetValue(p.offsetY_);
+        cameraPtr_->XOffset()->SetValue(p.offsetX_);
+        cameraPtr_->YOffset()->SetValue(p.offsetY_);
         cameraPtr_->Projection->SetValue(
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 

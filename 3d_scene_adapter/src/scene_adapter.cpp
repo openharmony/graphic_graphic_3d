@@ -736,7 +736,7 @@ void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWin
             vExtraSwapChainHandle_.size() != vExtraWinChangeInfo.size()) {
             // destroy swapchains
             for (const auto& s : vExtraSwapChainHandle_) {
-                device.DestroySwapchainHandle(s);
+                device.DestroySwapchain(s);
             }
             // clear and re-create texture layers and swapchain handle vectors
             CreateMultiExtraTextureLayer(vExtraWinChangeInfo.size(), true);
@@ -746,9 +746,6 @@ void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWin
         for (size_t i = 0; i < vExtraWinChangeInfo.size(); i++) {
             auto& layer = vExtraTextureLayer_[i];
             auto& wInfo = vExtraWinChangeInfo[i];
-            if (hapInfo_.bundleName_ != "") {
-                layer->GetHapBundleName(hapInfo_);
-            }
 
             layer->OnWindowChange(wInfo);
             const auto& textureInfo = layer->GetTextureInfo();

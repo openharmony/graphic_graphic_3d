@@ -114,7 +114,7 @@ public:
 protected:
     void CreateMultiExtraTextureLayer(size_t numTextureLayers, bool clear);
     static bool LoadEngineLib();
-    static bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
+    bool LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
     static bool InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo);
     void AttachSwapchain(SCENE_NS::IRenderTarget::Ptr bigmap, META_NS::IObject::Ptr camera);
 
