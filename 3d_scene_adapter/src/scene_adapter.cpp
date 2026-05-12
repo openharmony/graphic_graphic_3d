@@ -752,14 +752,13 @@ void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWin
             RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
                 0U,
                 RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
                 RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                 {
                     reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
                     {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
                 }
             };
-
             std::string name = vExtraSwapChainNames_.size() == 0 ?
                 "ExtraSwapchain" + std::to_string(i) : vExtraSwapChainNames_[i];
             

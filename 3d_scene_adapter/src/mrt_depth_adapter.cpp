@@ -346,8 +346,8 @@ public:
         cameraPtr_->NearPlane()->SetValue(p.intrinsics_.near_);
         cameraPtr_->FarPlane()->SetValue(p.intrinsics_.far_);
         cameraPtr_->FoV()->SetValue(p.intrinsics_.fov_);
-        cameraPtr_->XOffset->SetValue(p.offsetX_);
-        cameraPtr_->YOffset->SetValue(p.offsetY_);
+        cameraPtr_->XOffset()->SetValue(p.offsetX_);
+        cameraPtr_->YOffset()->SetValue(p.offsetY_);
         cameraPtr_->Projection()->SetValue(
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
