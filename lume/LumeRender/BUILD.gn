@@ -411,6 +411,7 @@ ohos_source_set("lume_render_src") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
+      "vma:vma"
     ]
   }
 
