@@ -38,7 +38,7 @@ public:
     virtual TextureInfo OnWindowChange(const WindowChangeInfo& windowChangeInfo);
     virtual void SetBackgroundColor(uint32_t backgroundColor);
     virtual void SetRenderScale(float widthScale, float heightScale);
-
+    static void* SurfaceToNativeWindow(void* pSurface);
 protected:
     TextureLayer() = default;
 

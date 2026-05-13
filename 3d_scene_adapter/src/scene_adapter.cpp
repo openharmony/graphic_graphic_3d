@@ -374,6 +374,11 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
         PNGPlugin::UID_PNG_PLUGIN,
 #endif
     };
+    
+    for (const auto& u: vExtraPlugins_) {
+        DefaultPluginVector.emplace_back(u);
+    }
+
     const BASE_NS::array_view<BASE_NS::Uid> DefaultPluginList(DefaultPluginVector.data(), DefaultPluginVector.size());
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
     if (!CORE_NS::GetPluginRegister().LoadPlugins(DefaultPluginList)) {
@@ -547,6 +552,31 @@ std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
     return textureLayer_;
 }
 
+void SceneAdapter::CreateMultiExtraTextureLayer(size_t numTextureLayers, bool clear)
+{
+    WIDGET_LOGI("SceneAdapter::CreateMultiExtraTextureLayer: num %zu", numTextureLayers);
+    if (clear) {
+        vExtraTextureLayer_.clear();
+        vExtraSwapChainHandle_.clear();
+        for (size_t i = 0; i < numTextureLayers; i++) {
+            vExtraTextureLayer_.emplace_back(std::make_shared<TextureLayer>(key_++));
+            vExtraSwapChainHandle_.emplace_back();
+        }
+        return;
+    }
+
+    for (size_t i = 0; i < numTextureLayers; i++) {
+        vExtraTextureLayer_[i] = std::make_shared<TextureLayer>(key_++);
+        vExtraSwapChainHandle_[i] = {};
+    }
+}
+
+bool SceneAdapter::SetExtraSwapChainName(const std::vector<std::string>& names)
+{
+    vExtraSwapChainNames_ = names;
+    return true;
+}
+
 bool SceneAdapter::LoadPluginsAndInit()
 {
     LockCompositor(); // an APP_FREEZE here, so add lock just in case, but suspect others' error
@@ -694,6 +724,58 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
     }
 }
 
+void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWinChangeInfo)
+{
+    WIDGET_LOGI("SceneAdapter::OnWindowChange for extra texture layers, num %zu", vExtraWinChangeInfo.size());
+
+    auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this, &vExtraWinChangeInfo]() {
+        WIDGET_SCOPED_TRACE("SceneAdapter::OnWindowChange for extra texture layers task");
+        auto& device = engineInstance_.renderContext_->GetDevice();
+
+        if (vExtraTextureLayer_.size() != vExtraWinChangeInfo.size() ||
+            vExtraSwapChainHandle_.size() != vExtraWinChangeInfo.size()) {
+            // destroy swapchains
+            for (const auto& s : vExtraSwapChainHandle_) {
+                device.DestroySwapchain(s);
+            }
+            // clear and re-create texture layers and swapchain handle vectors
+            CreateMultiExtraTextureLayer(vExtraWinChangeInfo.size(), true);
+        }
+
+        // configure new swapchains
+        for (size_t i = 0; i < vExtraWinChangeInfo.size(); i++) {
+            auto& layer = vExtraTextureLayer_[i];
+            auto& wInfo = vExtraWinChangeInfo[i];
+
+            layer->OnWindowChange(wInfo);
+            const auto& textureInfo = layer->GetTextureInfo();
+            RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
+                0U,
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
+                RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                {
+                    reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
+                    {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
+                }
+            };
+            std::string name = vExtraSwapChainNames_.size() == 0 ?
+                "ExtraSwapchain" + std::to_string(i) : vExtraSwapChainNames_[i];
+            
+            vExtraSwapChainHandle_[i] = device.CreateSwapchainHandle(swapchainCreateInfo, vExtraSwapChainHandle_[i],
+                name.c_str()); // store for destroy
+        }
+        return META_NS::IAny::Ptr {};
+    });
+
+    if (engineThread) {
+        engineThread->AddWaitableTask(cb)->Wait();
+        onWindowChanged_ = true;
+    } else {
+        WIDGET_LOGE("ENGINE_THREAD not ready in OnWindowChange for extra texture layers");
+    }
+}
+
 void SceneAdapter::CreateRenderFunction()
 {
     propSyncSync_ = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
@@ -796,6 +878,11 @@ void SceneAdapter::RenderFunction()
             c->SetActive(false);
             disabledCameras.push_back(c);
         }
+    }
+
+    if (vExtraSwapChainHandle_.size() != vExtraTextureLayer_.size()) {
+        WIDGET_LOGE("extra swapchain handle and texture layer size mismatch");
+        return;
     }
 
     auto activeCameraCount = cams.size() - disabledCameras.size();
@@ -922,7 +1009,7 @@ int32_t SceneAdapter::CreateFenceFD(
 void SceneAdapter::RenderFrame(bool needsSyncPaint)
 {
     if (!engineThread) {
-        WIDGET_LOGE("no engineThread for Render");
+        WIDGET_LOGE("SceneAdapter no engineThread for Render");
         return;
     }
     if (renderTask) {
@@ -934,7 +1021,7 @@ void SceneAdapter::RenderFrame(bool needsSyncPaint)
         CreateRenderFunction();
     }
     if (!onWindowChanged_) {
-        WIDGET_LOGW("window has not changed");
+        WIDGET_LOGW("SceneAdapter: window has not changed");
         return;
     }
     if (propSyncSync_) {
@@ -966,11 +1053,18 @@ void SceneAdapter::Deinit()
     RETURN_IF_NULL(engineThread);
     WIDGET_LOGI("SceneAdapter::Deinit");
     auto func = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
+        auto& device = engineInstance_.renderContext_->GetDevice();
+
         if (swapchainHandle_) {
-            auto& device = engineInstance_.renderContext_->GetDevice();
             device.DestroySwapchain(swapchainHandle_);
         }
+        if (vExtraSwapChainHandle_.size() > 0) {
+            for (const auto& s : vExtraSwapChainHandle_) {
+                device.DestroySwapchain(s);
+            }
+        }
         swapchainHandle_ = {};
+        vExtraSwapChainHandle_.clear();
         if (bitmap2_) {
             bitmap2_.reset();
         }
@@ -1002,7 +1096,7 @@ void SceneAdapter::Deinit()
     onWindowChanged_ = false;
 }
 
-void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
+void SceneAdapter::AttachSwapchain(SCENE_NS::IRenderTarget::Ptr bitmap, META_NS::IObject::Ptr cameraObj)
 {
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
     auto component = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(cameraObj);
@@ -1010,7 +1104,7 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
         return;
     }
-    if (!bitmap_ || !camera->IsActive()) {
+    if (!bitmap || !camera->IsActive()) {
         camera->SetRenderTarget({});
         return;
     }
@@ -1018,9 +1112,9 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
     if (FG::FGModule::IsEnable()) {
         auto &obr = META_NS::GetObjectRegistry();
         auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
-        bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        bitmap = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
-        auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_);
+        auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap);
         auto j = interface_cast<SCENE_NS::IRenderResource>(bitmap2_);
         if (i && j) {
             auto rcFG = engineInstance_.renderContext_;
@@ -1032,13 +1126,13 @@ void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
             i->SetRenderHandle(FGColorOutputHandle_);
             j->SetRenderHandle(FGDepthOutputHandle_);
         }
-        camera->SetRenderTarget(bitmap_);
+        camera->SetRenderTarget(bitmap);
         UpdateCameraDepthTarget(component->GetEcsObject(), bitmap2_);
     } else {
-        camera->SetRenderTarget(bitmap_);
+        camera->SetRenderTarget(bitmap);
     }
 #else
-    camera->SetRenderTarget(bitmap_);
+    camera->SetRenderTarget(bitmap);
 #endif
 }
 
@@ -1227,14 +1321,20 @@ void SceneAdapter::AcquireImage(const SurfaceBufferInfo &bufferInfo)
     }));
 }
 
-void SceneAdapter::CreateEmptyScene()
+void SceneAdapter::CreateScene(const std::string& uri, std::function<void(bool)> cb)
 {
     auto &objRegistry = META_NS::GetObjectRegistry();
     auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
     auto sceneManager = objRegistry.Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, objContext);
 
-    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
+    auto engineThreadTask = [this, cb](SCENE_NS::IScene::Ptr scene) mutable {
+        auto runCbIfAvailable = [cb](bool flag) {
+            if (cb) {
+                cb(flag);
+            }
+        };
         if (!scene || !scene->RenderConfiguration()->GetValue()) {
+            runCbIfAvailable(false);
             return;
         }
         // make sure there's a valid root node
@@ -1245,17 +1345,20 @@ void SceneAdapter::CreateEmptyScene()
         META_NS::IObjectRegistry* obrPtr = &obr;
         // SceneETS::AddScene function begin
         if (!obrPtr) {
-            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get obr null");
+            WIDGET_LOGE("SceneAdapter::CreateScene get obr null");
+            runCbIfAvailable(false);
             return;
         }
         auto params = interface_pointer_cast<META_NS::IMetadata>(obrPtr->GetDefaultObjectContext());
         if (!params) {
-            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get params null");
+            WIDGET_LOGE("SceneAdapter::CreateScene get params null");
+            runCbIfAvailable(false);
             return;
         }
         auto duh = params->GetArrayProperty<IntfWeakPtr>("Scenes");
         if (!duh) {
-            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get duh null");
+            WIDGET_LOGE("SceneAdapter::CreateScene get duh null");
+            runCbIfAvailable(false);
             return;
         }
         
@@ -1263,11 +1366,11 @@ void SceneAdapter::CreateEmptyScene()
         // SceneETS::AddScene function end
 
         this->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
+        runCbIfAvailable(true);
     };
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
 
-    std::string sceneRes = "scene://empty";
-    sceneManager->CreateScene(sceneRes.c_str())
+    sceneManager->CreateScene(uri.c_str())
         .Then(BASE_NS::move(engineThreadTask), engineQ)
         .Wait();
 }

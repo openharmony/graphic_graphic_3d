@@ -87,6 +87,17 @@ struct CameraIntrinsics {
     float far_ = 10;
 };
 
+enum class CameraModelType : uint8_t {
+    /* Orthographic camera*/
+    ORTHOGRAPHIC = 0,
+    /* Perspective camera */
+    PERSPECTIVE = 1,
+    /* Frustum camera */
+    FRUSTUM = 2,
+    /* Custom matrix provided for camera*/
+    CUSTOM = 3
+};
+
 struct CameraConfigs {
     // camera pose
     Vector3f position_ = {0, 0, 0};
@@ -96,6 +107,11 @@ struct CameraConfigs {
     Vector4f clearColor_ = {0, 0, 0, 1}; // RGBA = black opaque
 
     std::string Dump() const;
+
+    // offset is valid only when using Frustum camera model
+    float offsetX_ = 0.0f;
+    float offsetY_ = 0.0f;
+    CameraModelType camModelType_ = CameraModelType::PERSPECTIVE;
 };
 
 } // namespace OHOS::Render3D

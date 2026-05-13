@@ -109,6 +109,15 @@ static bool MRTDisabled()
     return disabled;
 }
 
+static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr = "")
+{
+    printStr += "ProducerSurface= " + std::to_string(info.producerSurfaceId);
+    printStr += "w, h" + std::to_string(info.width) + " " + std::to_string(info.height);
+    printStr += "w, h scale" + std::to_string(info.widthScale) + " " + std::to_string(info.heightScale);
+    
+    WIDGET_LOGW("WindowChangeInfo: %s", printStr.c_str());
+}
+
 #define CHECK_NULL_RET_LOGE(ptr, ret)                        \
     do {                                                     \
         if (!(ptr)) {                                        \
@@ -119,31 +128,105 @@ static bool MRTDisabled()
 
 class MrtDepthAdapter : public IMrtDepthAdapter {
 public:
+    /*
+        usage:
+        1. constructor
+        2. load by gltf uri
+        3. onwindowchange
+        4. setcamereaconfigs
+        5. renderFrame
+    */
     MrtDepthAdapter()
     {
         WIDGET_LOGI("MrtDepthAdapter::MrtDepthAdapter()");
+        WIDGET_SCOPED_TRACE("MrtDepthAdapter::MrtDepthAdapter");
         sceneAdapter_ = BASE_NS::make_shared<SceneAdapter>();
+
+        if (!MRTDisabled()) {
+            BASE_NS::Uid u(*(char(*)[37])UID_MRT_PLUGIN.c_str());
+            sceneAdapter_->AddExtraPlugin(u);
+        } else {
+            WIDGET_LOGW("MrtDepthadapter::MrtDepthAdapter() MRT DISABLED");
+        }
         sceneAdapter_->LoadPluginsAndInit();
         engineInited_ = true;
     }
-
-    void CreateSceneByGltfUri(std::string u) override
+    ~MrtDepthAdapter()
     {
-        WIDGET_LOGI("MrtDepthAdapter::CreateSceneByGltfUri with uri: %{public}s", u.c_str());
-        // wait to add implementation
+        if (engineInited_) {
+            this->Deinit();
+        }
+    }
+
+    void CreateSceneByGltfUri(const std::string& gltfUri, std::function<void(bool)> func) override
+    {
+        WIDGET_LOGI("MrtDepthAdapter::CreateSceneByGltfUri with uri: %{public}s", gltfUri.c_str());
+        WIDGET_SCOPED_TRACE("MrtDepthAdapter::CreateSceneByGltfUri");
+
+        // load scene gltf
+        std::string gltfUriInput = gltfUri;
+        std::string fileHeader = "file://";
+        if (gltfUri.rfind("/", 0) == 0) { // start with "/", absolute path
+            gltfUriInput = fileHeader + gltfUri;
+        }
+        sceneAdapter_->CreateScene(gltfUriInput, func);
+        sceneAdapter_->CreateTextureLayer(); // default swapchain
+        AttachRootNode();
+        SetDefaultEnvironment();
+        std::vector<std::string> vNames;
+        vNames.emplace_back("cameraDepthOutput"); // this name must match the declaration in the renderNodeGraph
+        sceneAdapter_->SetExtraSwapChainName(vNames);
         sceneInited_ = true;
     }
 
     bool OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo) override
     {
-        // wait to add implementation
+        WIDGET_LOGI("MrtDepthAdapter::OnWindowChange");
+        WIDGET_SCOPED_TRACE("MrtDepthAdapter::OnWindowChange");
+        if (!sceneInited_) {
+            WIDGET_LOGE("MrtDepthAdapter::OnWindowChange scene not inited");
+            return false;
+        }
+        constexpr size_t minExpectedWindows = 2; // default + at least 1 extra for MRT
+        if (vWindowChangeInfo.size() < minExpectedWindows) {
+            WIDGET_LOGE("MrtDepthAdapter get invalid vWindowChangeInfo with size: %zu", vWindowChangeInfo.size());
+            return false;
+        }
+
+        if (MRTDFXEnabled()) {
+            for (size_t i = 0; i < vWindowChangeInfo.size(); ++i) {
+                DumpWinChangeInfo(vWindowChangeInfo[i], "MrtDepthAdapter::OnWindowChange index: " + \
+                    std::to_string(i) + " ");
+            }
+            WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %llX", vWindowChangeInfo[0].producerSurfaceId);
+        }
+
+        sceneAdapter_->OnWindowChange(vWindowChangeInfo[0]); // default swapchain
+
+        if (MRTDisabled()) {
+            WIDGET_LOGW("MrtDepthAdapter::OnWindowChange MRT DISABLED, only process the first window change info");
+            return true;
+        }
+
+        // vExtra = vWin[1:]
+        std::vector<WindowChangeInfo> vExtraWindowChangeInfo(vWindowChangeInfo.begin() + 1, vWindowChangeInfo.end());
+        sceneAdapter_->OnWindowChange(vExtraWindowChangeInfo);
         return true;
+    }
+    void Deinit(bool deinitEngine = false) override
+    {
+        WIDGET_LOGI("MrtDepthAdapter::Deinit %{public}s", deinitEngine ? "with engine" : " ");
+        sceneAdapter_->Deinit();
+        if (deinitEngine) {
+            sceneAdapter_->DeinitRenderThread();
+        }
+        engineInited_ = false;
     }
 
     bool RenderFrame() override
     {
         WIDGET_SCOPED_TRACE("MrtDepthAdapter::RenderFrame");
-
+        
         sceneAdapter_->RenderFrame(false);
         return true;
     }
@@ -180,6 +263,10 @@ public:
         camera->FarPlane()->SetValue(p.intrinsics_.far_);
         camera->FoV()->SetValue(p.intrinsics_.fov_);
         cameraPtr_ = camera;
+        cameraPtr_->XOffset()->SetValue(p.offsetX_);
+        cameraPtr_->YOffset()->SetValue(p.offsetY_);
+        cameraPtr_->Projection()->SetValue(
+            static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(camera);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
@@ -204,6 +291,54 @@ public:
         return true;
     }
 
+    bool SetDefaultCameraPtr(const CameraConfigs& p)
+    {
+        auto sceneObj = sceneAdapter_->GetSceneObj();
+        if (!sceneObj) {
+            WIDGET_LOGE("MrtDepthAdapter::SetDefaultCameraPtr sceneObj is null");
+            return false;
+        }
+        auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
+        auto cams = scene->GetCameras().GetResult();
+        if (cams.size() == 0) {
+            WIDGET_LOGI("MrtDepthAdapter::SetDefaultCameraPtr no camera found in scene, create one");
+            return CreateCamera(p);
+        } else if (cams.size() > 1) {
+            WIDGET_LOGW("MrtDepthAdapter::SetDefaultCameraPtr multiple cameras foundin scene, use the first one");
+        }
+        cameraPtr_ = cams[0];
+        return true;
+    }
+
+    void DumpCameraMatrices() const
+    {
+        auto camAccessor = interface_pointer_cast<SCENE_NS::ICameraMatrixAccessor>(cameraPtr_);
+        auto viewMat = camAccessor->GetViewMatrix();
+        auto projMat = camAccessor->GetProjectionMatrix();
+
+        auto printMatFunc = [] (std::string& printMat, const BASE_NS::Math::Mat4X4& mat) {
+            printMat = "[ ";
+            constexpr int viewMatSize = 4 * 4;
+            for (int i = 0; i < viewMatSize; ++i) {
+                if (i % 4 == 0) {
+                    printMat += "[";
+                }
+                printMat += std::to_string(mat.data[i]);
+                printMat += ", ";
+                if (i % 4 == 3) {
+                    printMat += "]";
+                }
+            }
+            printMat += " ]";
+        };
+
+        std::string printViewMat;
+        printMatFunc(printViewMat, viewMat);
+        std::string printProjMat;
+        printMatFunc(printProjMat, projMat);
+        WIDGET_LOGI("Camera View Matrix: %s, Camera Projection Matrix: %s", printViewMat.c_str(), printProjMat.c_str());
+    }
+
     bool SetCameraConfigs(const CameraConfigs& p) override
     {
         CHECK_NULL_RET_LOGE(cameraPtr_, false);
@@ -211,6 +346,10 @@ public:
         cameraPtr_->NearPlane()->SetValue(p.intrinsics_.near_);
         cameraPtr_->FarPlane()->SetValue(p.intrinsics_.far_);
         cameraPtr_->FoV()->SetValue(p.intrinsics_.fov_);
+        cameraPtr_->XOffset()->SetValue(p.offsetX_);
+        cameraPtr_->YOffset()->SetValue(p.offsetY_);
+        cameraPtr_->Projection()->SetValue(
+            static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(cameraPtr_);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
@@ -225,6 +364,11 @@ public:
         return true;
     }
     
+    bool IsSceneValid() const
+    {
+        return sceneAdapter_!=nullptr && sceneAdapter_->GetEcs() != nullptr;
+    }
+
 private:
     void SetDefaultEnvironment()
     {
@@ -337,22 +481,6 @@ public:
     BASE_NS::shared_ptr<SCENE_NS::ICamera> GetCamera() override
     {
         return cameraPtr_;
-    }
-
-    void Deinit(bool deinitEngine = false) override
-    {
-        WIDGET_LOGI("MrtDepthAdapter::Deinit %{public}s", deinitEngine ? "with engine" : " ");
-        sceneAdapter_->Deinit();
-        if (deinitEngine) {
-            sceneAdapter_->DeinitRenderThread();
-        }
-        engineInited_ = false;
-    }
-    ~MrtDepthAdapter()
-    {
-        if (engineInited_) {
-            this->Deinit();
-        }
     }
 };
 
