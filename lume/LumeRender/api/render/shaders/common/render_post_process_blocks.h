@@ -55,25 +55,28 @@ void PostProcessColorAdjustmentsBlock(
 
     if ((postProcessFlags & POST_PROCESS_SPECIALIZATION_COLOR_ADJUSTMENTS_BIT) ==
         POST_PROCESS_SPECIALIZATION_COLOR_ADJUSTMENTS_BIT) {
-        // 1. Apply color filter (only use rgb components)
+        // 1. Brightness (matrix)
+        const float brightness = colorAdjustmentsFactor.x;
+        const float contrast = colorAdjustmentsFactor.y;
+        const float saturation = colorAdjustmentsFactor.z;
+
+        outCol = (BrightnessMatrix(brightness) * vec4(outCol, 1.0)).rgb;
+
+        // 2. Contrast in LogC space
+        outCol = ContrastLogC(outCol, contrast);
+        outCol = max(outCol, 0.0);
+
+        // 3. Apply color filter
         outCol *= filterColor.rgb;
 
-        // 2. Apply hue shift
+        // 4. Apply hue shift
         const float hueShift = colorAdjustmentsFactor.w;
         if (abs(hueShift) > 0.001) {
             outCol = HueShift(outCol, hueShift);
         }
 
-        // 3. Build combined color adjustment matrix
-        const float brightness = colorAdjustmentsFactor.x;
-        const float contrast = colorAdjustmentsFactor.y;
-        const float saturation = colorAdjustmentsFactor.z;
-
-        // Order: saturation -> contrast -> brightness
-        mat4 colorMatrix = BrightnessMatrix(brightness) * ContrastMatrix(contrast) * SaturationMatrix(saturation);
-
-        // 4. Apply color matrix
-        outCol = (colorMatrix * vec4(outCol, 1.0)).rgb;
+        // 5. Saturation (matrix)
+        outCol = (SaturationMatrix(saturation) * vec4(outCol, 1.0)).rgb;
     }
 }
 
