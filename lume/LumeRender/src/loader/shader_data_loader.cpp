@@ -32,6 +32,7 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr size_t VERSION_SIZE { 5u };
 constexpr uint32_t VERSION_MAJOR { 22u };
+constexpr uint64_t MAX_SHADER_DATA_FILE_BYTE_SIZE { 16ull * 1024ull * 1024ull };
 
 void LoadState(const json::value& jsonData, GraphicsState& graphicsState, GraphicsStateFlags& stateFlags,
     ShaderDataLoader::LoadResult& result)
@@ -203,6 +204,9 @@ ShaderDataLoader::LoadResult ShaderDataLoader::Load(IFileManager& fileManager, c
     }
 
     const uint64_t byteLength = file->GetLength();
+    if (byteLength > MAX_SHADER_DATA_FILE_BYTE_SIZE) {
+        return LoadResult("Shader file too large.");
+    }
 
     string raw;
     raw.resize(static_cast<size_t>(byteLength));

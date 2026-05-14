@@ -15,6 +15,7 @@
 
 #include "loader/shader_loader.h"
 
+#include <cinttypes>
 #include <cstring>
 #include <set>
 
@@ -53,6 +54,7 @@ constexpr string_view ShaderDataFileExtensions[] {
     ".shadervid",
     ".shaderpl",
 };
+constexpr uint64_t MAX_SHADER_FILE_BYTE_SIZE { 16ull * 1024ull * 1024ull };
 
 bool HasExtension(const char* ext, const string_view fileUri)
 {
@@ -77,10 +79,21 @@ ShaderDataFileType GetShaderDataFileType(const string_view fullFilename)
     return ShaderDataFileType::UNDEFINED;
 }
 
-vector<uint8_t> ReadFile(IFile& file)
+vector<uint8_t> ReadFile(IFile& file, const string_view uri)
 {
-    auto fileData = vector<uint8_t>(static_cast<std::size_t>(file.GetLength()));
-    file.Read(fileData.data(), fileData.size());
+    const uint64_t fileLength = file.GetLength();
+    if (fileLength > MAX_SHADER_FILE_BYTE_SIZE) {
+        PLUGIN_LOG_E(
+            "shader file too large (%s): %" PRIu64 " > %" PRIu64, uri.data(), fileLength, MAX_SHADER_FILE_BYTE_SIZE);
+        return {};
+    }
+
+    auto fileData = vector<uint8_t>(static_cast<std::size_t>(fileLength));
+    const auto bytesRead = file.Read(fileData.data(), fileData.size());
+    if (bytesRead != fileLength) {
+        PLUGIN_LOG_E("failed to read shader file (%s)", uri.data());
+        return {};
+    }
     return fileData;
 }
 } // namespace
@@ -303,10 +316,10 @@ ShaderLoader::ShaderFile ShaderLoader::LoadShaderFile(const string_view shader, 
             break;
     }
     if (shaderFile) {
-        info.data = ReadFile(*shaderFile);
+        info.data = ReadFile(*shaderFile, shader);
 
         if (IFile::Ptr reflectionFile = fileManager_.OpenFile(shader + ".lsb"); reflectionFile) {
-            info.reflectionData = ReadFile(*reflectionFile);
+            info.reflectionData = ReadFile(*reflectionFile, shader + ".lsb");
         }
         info.info = { stageBits, info.data, ShaderReflectionData { info.reflectionData } };
     } else {

@@ -100,6 +100,10 @@ constexpr uint32_t CONE_MIN_SECTORS = 3u;
 constexpr uint32_t TORUS_MIN_MAJOR_SECTORS = 3u;
 constexpr uint32_t TORUS_MIN_MINOR_SECTORS = 3u;
 
+// Upper bound on per-axis sector/segment/ring counts. Caps memory and prevents integer
+// overflow in vertex/index count math. 4096 yields up to ~16 M vertices on torus/sphere.
+constexpr uint32_t MESH_MAX_SECTORS = 4096u;
+
 constexpr float CYLINDER_CAP_UV_RADIUS = 0.24f;
 
 constexpr Math::Vec2 CYLINDER_CAP_UV_CENTER[2u] = { Math::Vec2(0.25f, 0.25f), Math::Vec2(0.75f, 0.25f) };
@@ -128,7 +132,7 @@ bool ValidatePlaneMeshParameters(float width, float depth)
     }
 
     PLUGIN_LOG_E("GeneratePlaneMesh failed: invalid parameters (width=%f, depth=%f). "
-                "Width and depth must be finite and > 0.",
+                 "Width and depth must be finite and > 0.",
         width, depth);
     return false;
 }
@@ -140,58 +144,63 @@ bool ValidateCubeMeshParameters(float width, float height, float depth)
     }
 
     PLUGIN_LOG_E("GenerateCubeMesh failed: invalid parameters (width=%f, height=%f, depth=%f). "
-                "All dimensions must be finite and > 0.",
+                 "All dimensions must be finite and > 0.",
         width, height, depth);
     return false;
 }
 
 bool ValidateSphereMeshParameters(float radius, uint32_t rings, uint32_t sectors)
 {
-    if (IsFinitePositive(radius) && (rings >= SPHERE_MIN_RINGS) && (sectors >= SPHERE_MIN_SECTORS)) {
+    if (IsFinitePositive(radius) && (rings >= SPHERE_MIN_RINGS) && (rings <= MESH_MAX_SECTORS) &&
+        (sectors >= SPHERE_MIN_SECTORS) && (sectors <= MESH_MAX_SECTORS)) {
         return true;
     }
 
     PLUGIN_LOG_E("GenerateSphereMesh failed: invalid parameters (radius=%f, rings=%u, sectors=%u). "
-                "Radius must be finite and > 0, rings >= %u, sectors >= %u.",
-        radius, rings, sectors, SPHERE_MIN_RINGS, SPHERE_MIN_SECTORS);
+                 "Radius must be finite and > 0, rings in [%u, %u], sectors in [%u, %u].",
+        radius, rings, sectors, SPHERE_MIN_RINGS, MESH_MAX_SECTORS, SPHERE_MIN_SECTORS, MESH_MAX_SECTORS);
     return false;
 }
 
 bool ValidateConeMeshParameters(float radius, float length, uint32_t sectors)
 {
-    if (IsFinitePositive(radius) && IsFinitePositive(length) && (sectors >= CONE_MIN_SECTORS)) {
+    if (IsFinitePositive(radius) && IsFinitePositive(length) && (sectors >= CONE_MIN_SECTORS) &&
+        (sectors <= MESH_MAX_SECTORS)) {
         return true;
     }
 
     PLUGIN_LOG_E("GenerateConeMesh failed: invalid parameters (radius=%f, length=%f, sectors=%u). "
-                "Radius and length must be finite and > 0, sectors >= %u.",
-        radius, length, sectors, CONE_MIN_SECTORS);
+                 "Radius and length must be finite and > 0, sectors in [%u, %u].",
+        radius, length, sectors, CONE_MIN_SECTORS, MESH_MAX_SECTORS);
     return false;
 }
 
 bool ValidateTorusMeshParameters(float majorRadius, float minorRadius, uint32_t majorSectors, uint32_t minorSectors)
 {
     if (IsFinitePositive(majorRadius) && IsFinitePositive(minorRadius) && (majorSectors >= TORUS_MIN_MAJOR_SECTORS) &&
-        (minorSectors >= TORUS_MIN_MINOR_SECTORS)) {
+        (majorSectors <= MESH_MAX_SECTORS) && (minorSectors >= TORUS_MIN_MINOR_SECTORS) &&
+        (minorSectors <= MESH_MAX_SECTORS)) {
         return true;
     }
 
     PLUGIN_LOG_E("GenerateTorusMesh failed: invalid parameters "
-                "(majorRadius=%f, minorRadius=%f, majorSectors=%u, minorSectors=%u). "
-                "Radii must be finite and > 0, majorSectors >= %u, minorSectors >= %u.",
-        majorRadius, minorRadius, majorSectors, minorSectors, TORUS_MIN_MAJOR_SECTORS, TORUS_MIN_MINOR_SECTORS);
+                 "(majorRadius=%f, minorRadius=%f, majorSectors=%u, minorSectors=%u). "
+                 "Radii must be finite and > 0, majorSectors in [%u, %u], minorSectors in [%u, %u].",
+        majorRadius, minorRadius, majorSectors, minorSectors, TORUS_MIN_MAJOR_SECTORS, MESH_MAX_SECTORS,
+        TORUS_MIN_MINOR_SECTORS, MESH_MAX_SECTORS);
     return false;
 }
 
 bool ValidateCylinderMeshParameters(float radius, float height, uint32_t segmentCount)
 {
-    if (IsFinitePositive(radius) && IsFinitePositive(height) && (segmentCount >= CYLINDER_MIN_SEGMENTS)) {
+    if (IsFinitePositive(radius) && IsFinitePositive(height) && (segmentCount >= CYLINDER_MIN_SEGMENTS) &&
+        (segmentCount <= MESH_MAX_SECTORS)) {
         return true;
     }
 
     PLUGIN_LOG_E("GenerateCylinderMesh failed: invalid parameters (radius=%f, height=%f, segmentCount=%u). "
-                "Radius and height must be finite and > 0, segmentCount >= %u.",
-        radius, height, segmentCount, CYLINDER_MIN_SEGMENTS);
+                 "Radius and height must be finite and > 0, segmentCount in [%u, %u].",
+        radius, height, segmentCount, CYLINDER_MIN_SEGMENTS, MESH_MAX_SECTORS);
     return false;
 }
 
@@ -237,17 +246,13 @@ void GenerateCubeGeometry(float width, float height, float depth, Geometry<uint1
 
 void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geometry<uint32_t> geometry)
 {
-    constexpr uint32_t maxRingsSectors = 16384u;
-    rings = std::min(rings, maxRingsSectors);
-    sectors = std::min(sectors, maxRingsSectors);
-
     vector<Math::Vec3>& vertices = geometry.vertices;
     vector<Math::Vec3>& normals = geometry.normals;
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    const size_t maxVertexCount = rings * sectors;
-    const size_t maxIndexCount = (rings - 1U) * sectors * 6U;
+    const size_t maxVertexCount = static_cast<size_t>(rings) * static_cast<size_t>(sectors);
+    const size_t maxIndexCount = static_cast<size_t>(rings - 1U) * static_cast<size_t>(sectors) * 6U;
 
     vertices.reserve(maxVertexCount);
     normals.reserve(maxVertexCount);
@@ -262,11 +267,14 @@ void GenerateSphereGeometry(float radius, uint32_t rings, uint32_t sectors, Geom
 
     for (uint32_t ring = 0U; ring < rings; ++ring) {
         const auto ringF = static_cast<float>(ring);
+        const float ringAngle = pi * ringF * r;
+        const float ringSin = Math::sin(ringAngle);
+        const float y = Math::sin(-halfPi + ringAngle);
         for (uint32_t sector = 0U; sector < sectors; ++sector) {
             const auto sectorF = static_cast<float>(sector);
-            const float y = Math::sin(-halfPi + pi * ringF * r);
-            const float x = Math::cos(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
-            const float z = Math::sin(TWO_PI * sectorF * s) * Math::sin(pi * ringF * r);
+            const float sectorAngle = TWO_PI * sectorF * s;
+            const float x = Math::cos(sectorAngle) * ringSin;
+            const float z = Math::sin(sectorAngle) * ringSin;
 
             vertices.emplace_back(x * radius, y * radius, z * radius);
             normals.emplace_back(x, y, z);
@@ -297,18 +305,13 @@ void GenerateConeCap(
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    // Already generated vertices: tip + sectors
-    uint32_t startVertex = 1U + sectors;
-
-    // Cap center vert.
-    const uint32_t bottomIndex = startVertex;
+    // Tip + side ring already emitted: cap starts after vertex (1 + sectors).
+    const uint32_t bottomIndex = 1U + sectors;
     vertices.emplace_back(0.0f, 0.0f, length);
     normals.emplace_back(0.0f, 0.0f, 1.0f);
     uvs.emplace_back(0.5f, 0.5f);
 
-    ++startVertex;
-
-    // Cap ring and triangles.
+    const uint32_t startVertex = bottomIndex + 1U;
     for (uint32_t idx = 0; idx < sectors; ++idx) {
         const uint32_t vertexIndex = startVertex + idx;
 
@@ -338,7 +341,7 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
 
     const float s = (sectors > 0U) ? (1.0f / static_cast<float>(sectors)) : 1.0f;
 
-    const size_t maxVertexCount = (2 * static_cast<size_t>(sectors)) + 2u;
+    const size_t maxVertexCount = (2u * static_cast<size_t>(sectors)) + 2u;
     const size_t maxIndexCount = static_cast<size_t>(sectors) * 6u;
 
     vertices.reserve(maxVertexCount);
@@ -353,7 +356,6 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
     normals.emplace_back(0.0f, 0.0f, -1.0f);
     uvs.emplace_back(0.5f, 0.5f);
 
-    // Bottom ring vertices and side triangles, with given radius
     const uint32_t startVertex = 1U;
     for (uint32_t idx = 0; idx < sectors; ++idx) {
         const auto idxF = static_cast<float>(idx);
@@ -377,10 +379,7 @@ void GenerateConeGeometry(float radius, float length, uint32_t sectors, Geometry
         indices.push_back(v1);
     }
 
-    constexpr bool generateCapping = true;
-    if constexpr (generateCapping) {
-        GenerateConeCap(radius, length, sectors, geometry, unitCoords);
-    }
+    GenerateConeCap(radius, length, sectors, geometry, unitCoords);
 }
 
 vector<Math::Vec3> GenerateTorusSlices(float minorRadius, uint32_t minorSectors, float minorStep)
@@ -409,6 +408,11 @@ void GenerateTorusGeometry(
     const float minorStep = TWO_PI / static_cast<float>(minorSectors);
 
     const size_t maxVertexCount = static_cast<size_t>(majorSectors) * static_cast<size_t>(minorSectors);
+    if (maxVertexCount > SIZE_MAX / 6u || maxVertexCount > UINT32_MAX) {
+        PLUGIN_LOG_E("GenerateTorusMesh failed: vertex count overflow (majorSectors=%u, minorSectors=%u).",
+            majorSectors, minorSectors);
+        return;
+    }
     const size_t maxIndexCount = maxVertexCount * 6u;
 
     vertices.reserve(maxVertexCount);
@@ -418,23 +422,20 @@ void GenerateTorusGeometry(
 
     const vector<Math::Vec3> tubeSlice = GenerateTorusSlices(minorRadius, minorSectors, minorStep);
 
+    const auto translation = Math::Vec3(0.0f, 0.0f, majorRadius);
     uint32_t currentVertexIndex = 0;
     for (uint32_t ring = 0; ring < majorSectors; ring++) {
         const float majorRadians = static_cast<float>(ring) * majorStep;
         const auto rotation = Math::AngleAxis(majorRadians, { 0.0f, 1.0f, 0.0f });
-        const auto translation = Math::Vec3(0.0f, 0.0f, 1.0f) * majorRadius;
+        const auto tubeCenter = rotation * translation;
+        const float tx = 1.0f - Math::abs(majorRadians / TWO_PI * 2.0f - 1.0f);
 
         for (uint32_t vertexIndex = 0; vertexIndex < minorSectors; vertexIndex++) {
-            const auto& ringVertex = tubeSlice[vertexIndex];
-
-            const auto tubeCenter = rotation * translation;
-
-            vertices.push_back(rotation * ringVertex + tubeCenter);
-
-            normals.push_back(Math::Normalize(rotation * ringVertex));
+            const auto rotatedRingVertex = rotation * tubeSlice[vertexIndex];
+            vertices.push_back(rotatedRingVertex + tubeCenter);
+            normals.push_back(Math::Normalize(rotatedRingVertex));
 
             const float minorRadians = static_cast<float>(vertexIndex) * minorStep;
-            const float tx = 1.0f - Math::abs(majorRadians / TWO_PI * 2.0f - 1.0f);
             const float ty = 1.0f - Math::abs(minorRadians / TWO_PI * 2.0f - 1.0f);
             uvs.emplace_back(tx, ty);
 
@@ -456,33 +457,24 @@ void GenerateTorusGeometry(
     }
 }
 
-void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
+void GenerateCylinderCaps(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
 {
-    if (radius < Math::EPSILON || height < Math::EPSILON || segments < CYLINDER_MIN_SEGMENTS) {
-        PLUGIN_LOG_E(
-            "Invalid parameters for cylinder creation: radius %f, height %f, segments %u", radius, height, segments);
-        return;
-    }
     vector<Math::Vec3>& vertices = geometry.vertices;
     vector<Math::Vec3>& normals = geometry.normals;
     vector<Math::Vec2>& uvs = geometry.uvs;
     vector<uint32_t>& indices = geometry.indices;
 
-    const size_t maxVertexCount = segments * 4U + 2U;
-    const size_t maxIndexCount = segments * 12U - 12U;
-    vertices.reserve(maxVertexCount);
-    normals.reserve(maxVertexCount);
-    uvs.reserve(maxVertexCount);
-    indices.reserve(maxIndexCount);
-
-    // The upper and lower bases of the cylinder
-    for (size_t i = 0; i < segments; i++) {
-        const float angle = float(i) * (360.0f / float(segments)) * Math::DEG2RAD;
-        vertices.emplace_back(sin(angle) * radius, 0.5f * height, cos(angle) * radius);
-        vertices.emplace_back(sin(angle) * radius, -0.5f * height, cos(angle) * radius);
+    const float angleStep = TWO_PI / static_cast<float>(segments);
+    const float halfHeight = 0.5f * height;
+    for (uint32_t i = 0; i < segments; i++) {
+        const float angle = static_cast<float>(i) * angleStep;
+        const float sa = Math::sin(angle);
+        const float ca = Math::cos(angle);
+        vertices.emplace_back(sa * radius, halfHeight, ca * radius);
+        vertices.emplace_back(sa * radius, -halfHeight, ca * radius);
         normals.emplace_back(0.f, 1.f, 0.f);
         normals.emplace_back(0.f, -1.f, 0.f);
-        const Math::Vec2 uv = Math::Vec2(sin(angle), cos(angle));
+        const Math::Vec2 uv { sa, ca };
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[0]);
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[1]);
     }
@@ -494,22 +486,79 @@ void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geo
         indices.push_back(2U * i + 3U);
         indices.push_back(2U * i + 1U);
     }
-    // The lateral surface of the cylinder
-    uint32_t indexOffset = uint32_t(vertices.size());
+}
+
+void GenerateCylinderSides(uint32_t segments, Geometry<uint32_t> geometry)
+{
+    vector<Math::Vec3>& vertices = geometry.vertices;
+    vector<Math::Vec3>& normals = geometry.normals;
+    vector<Math::Vec2>& uvs = geometry.uvs;
+    vector<uint32_t>& indices = geometry.indices;
+
+    const uint32_t indexOffset = static_cast<uint32_t>(vertices.size());
+    const size_t ringSpan = 2U * static_cast<size_t>(segments);
+    const float invSegments = 1.0f / static_cast<float>(segments);
     for (uint32_t i = 0; i <= segments; i++) {
-        const Math::Vec3 v0 = vertices[(2U * i) % (2U * segments)];
-        const Math::Vec3 v1 = vertices[(2U * i + 1) % (2U * segments)];
+        const Math::Vec3 v0 = vertices[(2U * static_cast<size_t>(i)) % ringSpan];
+        const Math::Vec3 v1 = vertices[(2U * static_cast<size_t>(i) + 1U) % ringSpan];
         vertices.emplace_back(v0);
         vertices.emplace_back(v1);
         normals.append(2U, Math::Normalize(Math::Vec3(v0.x, 0.f, v0.z)));
-        uvs.emplace_back(float(i) / float(segments), 1.0f);
-        uvs.emplace_back(float(i) / float(segments), 0.5f);
+        const float u = static_cast<float>(i) * invSegments;
+        uvs.emplace_back(u, 1.0f);
+        uvs.emplace_back(u, 0.5f);
     }
     for (uint32_t i = 0; i < segments; i++) {
         for (uint32_t j = 0; j < 6U; j++) {
-            indices.push_back(indexOffset + 2 * i + CYLINDER_SIDE_INDICES[j]);
+            indices.push_back(indexOffset + 2U * i + CYLINDER_SIDE_INDICES[j]);
         }
     }
+}
+
+void GenerateCylinderGeometry(float radius, float height, uint32_t segments, Geometry<uint32_t> geometry)
+{
+    const size_t segmentsST = static_cast<size_t>(segments);
+    const size_t maxVertexCount = segmentsST * 4U + 2U;
+    const size_t maxIndexCount = segmentsST * 12U - 12U;
+    geometry.vertices.reserve(maxVertexCount);
+    geometry.normals.reserve(maxVertexCount);
+    geometry.uvs.reserve(maxVertexCount);
+    geometry.indices.reserve(maxIndexCount);
+
+    GenerateCylinderCaps(radius, height, segments, geometry);
+    GenerateCylinderSides(segments, geometry);
+}
+
+IMeshBuilder::Submesh MakeSubmesh(Entity material, uint32_t vertexCount, uint32_t indexCount, IndexType indexType)
+{
+    IMeshBuilder::Submesh submesh;
+    submesh.material = material;
+    submesh.vertexCount = vertexCount;
+    submesh.indexCount = indexCount;
+    submesh.indexType = indexType;
+    submesh.tangents = true;
+    return submesh;
+}
+
+IndexType PickIndexType(uint32_t vertexCount)
+{
+    return vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
+}
+
+struct VertexBufferData {
+    IMeshBuilder::DataBuffer positions;
+    IMeshBuilder::DataBuffer normals;
+    IMeshBuilder::DataBuffer uvs;
+    IMeshBuilder::DataBuffer tangents;
+};
+
+void FillBuilder(IMeshBuilder& builder, const VertexBufferData& vertexBuffers, IMeshBuilder::DataBuffer indices)
+{
+    IMeshBuilder::DataBuffer dummy {};
+    builder.SetVertexData(
+        0, vertexBuffers.positions, vertexBuffers.normals, vertexBuffers.uvs, dummy, vertexBuffers.tangents, dummy);
+    builder.CalculateAABB(0, vertexBuffers.positions);
+    builder.SetIndexData(0, indices);
 }
 } // namespace
 
@@ -518,11 +567,16 @@ void CalculateTangentBitangent(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec3> outTan, array_view<Math::Vec3> outBitan)
 {
+    const size_t vertexCount = positions.size();
     const auto indexCount = (indices.size() / 3U) * 3U;
     for (size_t i = 0; i < indexCount; i += 3U) {
         const IndexType aa = indices[i + 0U];
         const IndexType bb = indices[i + 1U];
         const IndexType cc = indices[i + 2U];
+
+        if (aa >= vertexCount || bb >= vertexCount || cc >= vertexCount) {
+            continue;
+        }
 
         const Math::Vec2& uv1 = uvs[aa];
         const Math::Vec2& uv2 = uvs[bb];
@@ -556,19 +610,15 @@ void CalculateTangentBitangent(const array_view<const IndexType>& indices,
         outBitan[cc] += tdir;
     }
 }
-void CalculateFinalTangent(const array_view<const Math::Vec3>& normals, array_view<const Math::Vec3> tan,
-    array_view<const Math::Vec3> bitan, array_view<Math::Vec4>& outTangents)
+void CalculateFinalTangent(array_view<const Math::Vec3> normals, array_view<const Math::Vec3> tan,
+    array_view<const Math::Vec3> bitan, array_view<Math::Vec4> outTangents)
 {
-    for (size_t i = 0; i < normals.size(); i++) {
+    const size_t count = std::min({ normals.size(), tan.size(), bitan.size(), outTangents.size() });
+    for (size_t i = 0; i < count; i++) {
         const Math::Vec3& n = normals[i];
         const Math::Vec3& t = tan[i];
-
-        // Gram-Schmidt orthogonalize
         const Math::Vec3 tmp = Math::Normalize(t - n * Math::Dot(n, t));
-
-        // Calculate handedness
         const float w = (Math::Dot(Math::Cross(n, t), bitan[i]) < 0.0F) ? 1.0F : -1.0F;
-
         outTangents[i] = Math::Vec4(tmp.x, tmp.y, tmp.z, w);
     }
 }
@@ -593,7 +643,7 @@ void CalculateTangentImpl(const array_view<const IndexType>& indices, const arra
 template<typename IndexType>
 void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
-    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4>& outTangents)
+    const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
 {
     if (indices.size() < 3U) {
         return;
@@ -604,41 +654,12 @@ void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
 
     CalculateTangentBitangent(array_view(indices.data(), 3U), positions, uvs, tan, bitan);
 
+    IndexType triangle[3];
     for (size_t i = 2U; i < indices.size(); ++i) {
-        const IndexType aa = (i % 2U) ? indices[i - 1U] : indices[i - 2U];
-        const IndexType bb = (i % 2U) ? indices[i - 2U] : indices[i - 1U];
-        const IndexType cc = indices[i];
-
-        const Math::Vec2& uv1 = uvs[aa];
-        const Math::Vec2& uv2 = uvs[bb];
-        const Math::Vec2& uv3 = uvs[cc];
-
-        const auto st1 = uv2 - uv1;
-        const auto st2 = uv3 - uv1;
-
-        auto d = Math::Cross(st1, st2);
-        if (Math::abs(d) < Math::EPSILON) {
-            d = Math::EPSILON;
-        }
-        const float r = 1.0f / d;
-
-        const Math::Vec3& v1 = positions[aa];
-        const Math::Vec3& v2 = positions[bb];
-        const Math::Vec3& v3 = positions[cc];
-
-        const auto e1 = v2 - v1;
-        const auto e2 = v3 - v1;
-
-        const Math::Vec3 sdir { (e1 * st2.y - e2 * st1.y) * r };
-        tan[aa] += sdir;
-        tan[bb] += sdir;
-        tan[cc] += sdir;
-
-        const Math::Vec3 tdir { (e2 * st1.x - e1 * st2.x) * r };
-
-        bitan[aa] += tdir;
-        bitan[bb] += tdir;
-        bitan[cc] += tdir;
+        triangle[0] = (i % 2U) ? indices[i - 1U] : indices[i - 2U];
+        triangle[1] = (i % 2U) ? indices[i - 2U] : indices[i - 1U];
+        triangle[2] = indices[i];
+        CalculateTangentBitangent(array_view<const IndexType>(triangle, 3U), positions, uvs, tan, bitan);
     }
     CalculateFinalTangent(normals, tan, bitan, outTangents);
 }
@@ -736,27 +757,12 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
             PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
     }
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = 6u;
-    submesh.indexCount = 6u;
-    submesh.indexType = CORE_INDEX_TYPE_UINT16;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(pos);
-    auto normalData = FillData(PLANE_NORM);
-    auto uvData = FillData(PLANE_UV);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indices = FillData(PLANE_IND);
-    builder->SetIndexData(0, indices);
-
+    auto builder = InitializeBuilder(MakeSubmesh(material, 6u, 6u, CORE_INDEX_TYPE_UINT16));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(pos), FillData(PLANE_NORM), FillData(PLANE_UV), FillData(tangents) }, FillData(PLANE_IND));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -777,27 +783,14 @@ Entity MeshUtil::GenerateSphereMesh(
     CalculateTangents(
         indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = static_cast<uint32_t>(vertices.size());
-    submesh.indexCount = static_cast<uint32_t>(indices.size());
-    submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(vertices);
-    auto normalData = FillData(normals);
-    auto uvData = FillData(uvs);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indexData = FillData(indices);
-    builder->SetIndexData(0, indexData);
-
+    const auto vertexCount = static_cast<uint32_t>(vertices.size());
+    const auto indexCount = static_cast<uint32_t>(indices.size());
+    auto builder = InitializeBuilder(MakeSubmesh(material, vertexCount, indexCount, PickIndexType(vertexCount)));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -814,31 +807,18 @@ Entity MeshUtil::GenerateConeMesh(
     vector<uint32_t> indices;
     GenerateConeGeometry(radius, length, sectors, { vertices, normals, uvs, indices });
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = static_cast<uint32_t>(vertices.size());
-    submesh.indexCount = static_cast<uint32_t>(indices.size());
-    submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
-    submesh.tangents = true;
-
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(
         indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(vertices);
-    auto normalData = FillData(normals);
-    auto uvData = FillData(uvs);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indexData = FillData(indices);
-    builder->SetIndexData(0, indexData);
-
+    const auto vertexCount = static_cast<uint32_t>(vertices.size());
+    const auto indexCount = static_cast<uint32_t>(indices.size());
+    auto builder = InitializeBuilder(MakeSubmesh(material, vertexCount, indexCount, PickIndexType(vertexCount)));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -859,27 +839,14 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
     CalculateTangents(
         indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = static_cast<uint32_t>(vertices.size());
-    submesh.indexCount = static_cast<uint32_t>(indices.size());
-    submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(vertices);
-    auto normalData = FillData(normals);
-    auto uvData = FillData(uvs);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indexData = FillData(indices);
-    builder->SetIndexData(0, indexData);
-
+    const auto vertexCount = static_cast<uint32_t>(vertices.size());
+    const auto indexCount = static_cast<uint32_t>(indices.size());
+    auto builder = InitializeBuilder(MakeSubmesh(material, vertexCount, indexCount, PickIndexType(vertexCount)));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -900,27 +867,13 @@ Entity MeshUtil::GenerateCubeMesh(
     CalculateTangents(
         indices, positions, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = static_cast<uint32_t>(countof(CUBE_INDICES));
-    submesh.indexCount = static_cast<uint32_t>(countof(CUBE_INDICES));
-    submesh.indexType = CORE_INDEX_TYPE_UINT16;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(positions);
-    auto normalData = FillData(normals);
-    auto uvData = FillData(uvs);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indexData = FillData(indices);
-    builder->SetIndexData(0, indexData);
-
+    constexpr auto cubeIndexCount = static_cast<uint32_t>(countof(CUBE_INDICES));
+    auto builder = InitializeBuilder(MakeSubmesh(material, cubeIndexCount, cubeIndexCount, CORE_INDEX_TYPE_UINT16));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(positions), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -941,27 +894,14 @@ CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS
     CalculateTangents(
         indices, vertices, normals, uvs, PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
 
-    IMeshBuilder::Submesh submesh;
-    submesh.material = material;
-    submesh.vertexCount = static_cast<uint32_t>(vertices.size());
-    submesh.indexCount = static_cast<uint32_t>(indices.size());
-    submesh.indexType = submesh.vertexCount <= UINT16_MAX ? CORE_INDEX_TYPE_UINT16 : CORE_INDEX_TYPE_UINT32;
-    submesh.tangents = true;
-
-    auto builder = InitializeBuilder(submesh);
-
-    auto positionData = FillData(vertices);
-    auto normalData = FillData(normals);
-    auto uvData = FillData(uvs);
-    auto tangentData = FillData(tangents);
-    IMeshBuilder::DataBuffer dummy {};
-    builder->SetVertexData(0, positionData, normalData, uvData, dummy, tangentData, dummy);
-
-    builder->CalculateAABB(0, positionData);
-
-    auto indexData = FillData(indices);
-    builder->SetIndexData(0, indexData);
-
+    const auto vertexCount = static_cast<uint32_t>(vertices.size());
+    const auto indexCount = static_cast<uint32_t>(indices.size());
+    auto builder = InitializeBuilder(MakeSubmesh(material, vertexCount, indexCount, PickIndexType(vertexCount)));
+    if (!builder) {
+        return {};
+    }
+    FillBuilder(
+        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -970,7 +910,6 @@ Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity 
     INodeSystem* nodesystem = GetSystem<INodeSystem>(ecs);
     PLUGIN_ASSERT(nodesystem);
 
-    // Create node to scene.
     ISceneNode* node = nodesystem->CreateNode();
     if (!node) {
         return Entity {};
@@ -978,7 +917,6 @@ Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity 
 
     node->SetName(name);
 
-    // Add render mesh component.
     IRenderMeshComponentManager* renderMeshManager = GetManager<IRenderMeshComponentManager>(ecs);
     PLUGIN_ASSERT(renderMeshManager);
 
