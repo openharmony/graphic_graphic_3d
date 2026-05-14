@@ -198,7 +198,7 @@ public:
                 DumpWinChangeInfo(vWindowChangeInfo[i], "MrtDepthAdapter::OnWindowChange index: " + \
                     std::to_string(i) + " ");
             }
-            WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %llX", vWindowChangeInfo[0].producerSurfaceId);
+            WIDGET_LOGI("MrtDepthAdapter::OnWindowChange with surfaceId %{public}" PRIX64, vWindowChangeInfo[0].producerSurfaceId);
         }
 
         sceneAdapter_->OnWindowChange(vWindowChangeInfo[0]); // default swapchain
