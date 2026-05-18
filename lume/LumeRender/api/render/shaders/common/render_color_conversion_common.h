@@ -139,6 +139,45 @@ mat4 BrightnessMatrix(float brightness)
 }
 
 /**
+ * Linear to LogC (Alexa Wide Gamut, El 1000)
+ */
+vec3 LinearToLogC(vec3 color)
+{
+    const float a = 5.555556;
+    const float b = 0.047996;
+    const float c = 0.244161;
+    const float d = 0.386036;
+    const float log10 = 2.302585;
+    return c * log(max(a * color + b, vec3(0.0))) / log10 + d;
+}
+
+/**
+ * LogC to Linear (Alexa Wide Gamut, El 1000)
+ */
+vec3 LogCToLinear(vec3 color)
+{
+    const float a = 5.555556;
+    const float b = 0.047996;
+    const float c = 0.244161;
+    const float d = 0.386036;
+    const float logcBase = 10.0;
+    return (pow(vec3(logcBase), (color - d) / c) - b) / a;
+}
+
+/**
+ * LogC contrast
+ * Applies contrast adjustment in LogC color space for perceptually uniform results.
+ * Uses ACEScc mid-gray (0.4135884) as the pivot point.
+ */
+vec3 ContrastLogC(vec3 color, float contrast)
+{
+    const float acesccMidGray = 0.4135884;
+    vec3 colorLog = LinearToLogC(color);
+    colorLog = (colorLog - acesccMidGray) * contrast + acesccMidGray;
+    return LogCToLinear(colorLog);
+}
+
+/**
  * Contrast matrix
  * https://docs.rainmeter.net/tips/colormatrix-guide/
  */
@@ -157,12 +196,11 @@ mat4 ContrastMatrix(float contrast)
 }
 
 /**
- * Saturation matrix
- * https://docs.rainmeter.net/tips/colormatrix-guide/
+ * Saturation matrix using Rec.709/sRGB luminance weights
  */
 mat4 SaturationMatrix(float saturation)
 {
-    const vec3 luminance = vec3(0.3086, 0.6094, 0.0820);
+    const vec3 luminance = vec3(0.2126, 0.7152, 0.0722);
 
     const float t = (1 - saturation);
     const float sr = t * luminance.r;
