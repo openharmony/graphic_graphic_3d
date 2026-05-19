@@ -423,7 +423,7 @@ ohos_unittest("lume_render_src_test") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
-      "skia:skia_canvaskit", # vk mem allocator
+      "vma:vma"
     ]
   }
   
