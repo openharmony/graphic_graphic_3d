@@ -44,14 +44,14 @@ DirectionalLightImpl::DirectionalLightImpl(const std::shared_ptr<LightETS> light
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
-        return SceneTypes::Color({nullptr, nullptr});
+        return ::taihe::make_holder<ColorImpl, SceneTypes::Color>(BASE_NS::BLACK_COLOR);
     }
     auto color = lightETS_->GetColor();
     if (color) {
         return taihe::make_holder<ColorImpl, SceneTypes::Color>(color);
     } else {
         WIDGET_LOGE("lightETS_ GetColor fail");
-        return SceneTypes::Color({nullptr, nullptr});
+        return ::taihe::make_holder<ColorImpl, SceneTypes::Color>(BASE_NS::BLACK_COLOR);
     }
 }
 

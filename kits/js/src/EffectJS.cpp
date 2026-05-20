@@ -34,6 +34,9 @@
 
 using namespace SCENE_NS;
 
+static constexpr napi_type_tag EFFECTS_CONTAINER_TAG = { SCENE_NS::ICameraEffect::UID.data[0],
+    SCENE_NS::ICameraEffect::UID.data[1] };
+
 // EffectsContainerJS
 
 template<typename FC, napi_value (EffectsContainerJS::*F)(FC&)>
@@ -41,8 +44,7 @@ static inline napi_value ECMethodI(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
     if (auto value = fc.RawThis()) {
-        EffectsContainerJS* me = nullptr;
-        napi_unwrap(env, value, (void**)&me);
+        auto me = NapiApi::UnwrapTagged<EffectsContainerJS>(env, value, EFFECTS_CONTAINER_TAG);
         if (me) {
             return (me->*F)(fc);
         }
@@ -111,10 +113,8 @@ EffectsContainerJS::EffectsContainerJS(napi_env e, napi_callback_info i)
         LOG_E("Unable to get napi callback info");
     }
 
-    status = napi_wrap(e, thisVar, reinterpret_cast<void*>((EffectsContainerJS*)this), dtor, nullptr, nullptr);
-    if (status != napi_ok) {
-        LOG_E("Unable to wrap EffectsContainerJS");
-    }
+    NapiApi::WrapTagged<EffectsContainerJS>(e, thisVar, reinterpret_cast<void*>((EffectsContainerJS*)this), dtor,
+        nullptr, EFFECTS_CONTAINER_TAG, nullptr);
 
     if (auto fromJs = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>(e, i)) {
         camera_ = NapiApi::Object(fromJs.Arg<0>());
@@ -237,8 +237,7 @@ static inline napi_value CallSetProperty(napi_env env, napi_callback_info info)
     // handles the second one at runtime.
     NapiApi::FunctionContext<BASE_NS::string> fc(env, info, NapiApi::ArgCount::PARTIAL);
     if (auto value = fc.RawThis()) {
-        EffectJS* me = nullptr;
-        napi_unwrap(env, value, (void**)&me);
+        auto me = NapiApi::UnwrapTagged<EffectJS>(env, value, TrueRootObject::TYPE_TAG);
         if (me) {
             return me->SetEffectProperty(fc);
         }

@@ -35,7 +35,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
     std::string nodePath = ExtractNodePath(params);
     InvokeReturn<std::shared_ptr<CameraETS>> camera = sceneETS_->CreateCamera(nodePath);
@@ -43,7 +43,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(camera.value);
     } else {
         taihe::set_error(camera.error);
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
 }
 
@@ -52,7 +52,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
     bool msaa = false;
     if (cameraParams.msaa) {
@@ -70,7 +70,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(camera.value);
     } else {
         taihe::set_error(camera.error);
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
 }
 
@@ -79,7 +79,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return SceneNodes::LightTypeUnion::make_base(SceneNodes::Light({nullptr, nullptr}));
+        return SceneNodes::LightTypeUnion::make_base(::taihe::make_holder<LightImpl, SceneNodes::Light>(nullptr));
     }
     std::string nodeName = ExtractNodeName(params);
     std::string nodePath = ExtractNodePath(params);
@@ -87,7 +87,7 @@ namespace OHOS::Render3D::KITETS {
     InvokeReturn<std::shared_ptr<LightETS>> light = sceneETS_->CreateLight(nodeName, nodePath, type);
     if (!light) {
         taihe::set_error(light.error);
-        return SceneNodes::LightTypeUnion::make_base(SceneNodes::Light({nullptr, nullptr}));
+        return SceneNodes::LightTypeUnion::make_base(::taihe::make_holder<LightImpl, SceneNodes::Light>(nullptr));
     }
     switch (type) {
         case LightETS::LightType::DIRECTIONAL:
@@ -109,7 +109,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return SceneNodes::Node({nullptr, nullptr});
+        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
     }
     std::string nodePath = ExtractNodePath(params);
     WIDGET_LOGD("SceneResourceFactoryImpl::createNodeSync, nodePath: %{public}s", nodePath.c_str());
@@ -118,7 +118,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<NodeImpl, ::SceneNodes::Node>(node.value);
     } else {
         taihe::set_error(node.error);
-        return SceneNodes::Node({nullptr, nullptr});
+        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
     }
 }
 
@@ -127,7 +127,8 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene ets");
-        auto mat = ::SceneResources::MetallicRoughnessMaterial({nullptr, nullptr});
+        auto mat =
+            ::taihe::make_holder<MetallicRoughnessMaterialImpl, ::SceneResources::MetallicRoughnessMaterial>(nullptr);
         return ::SceneResources::VariousMaterial::make_metaRough(mat);
     }
     std::string name = std::string(params.name);
@@ -147,7 +148,7 @@ namespace OHOS::Render3D::KITETS {
     InvokeReturn<std::shared_ptr<MaterialETS>> material = sceneETS_->CreateMaterial(name, uri, type);
     if (!material) {
         taihe::set_error(material.error);
-        auto mat = ::SceneResources::PBRMaterial({nullptr, nullptr});
+        auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(nullptr);
         return ::SceneResources::VariousMaterial::make_pbr(mat);
     }
 
@@ -165,7 +166,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return ::SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
     }
     std::string name = ExtractResourceName(params);
     std::string uri = ExtractUri(params.uri);
@@ -175,7 +176,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(environment.value);
     } else {
         taihe::set_error(environment.error);
-        return ::SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
     }
 }
 
@@ -184,21 +185,21 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return SceneNodes::Geometry({nullptr, nullptr});
+        return ::taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(nullptr);
     }
     if (mesh.is_error()) {
         taihe::set_error("Invalid mesh resource given");
-        return SceneNodes::Geometry({nullptr, nullptr});
+        return ::taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(nullptr);
     }
     auto meshOptional = static_cast<::SceneResources::weak::SceneResource>(mesh)->getImpl();
     if (!meshOptional.has_value()) {
         taihe::set_error("invalid mesh in taihe object");
-        return SceneNodes::Geometry({nullptr, nullptr});
+        return ::taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(nullptr);
     }
     auto mri = reinterpret_cast<MeshResourceImpl*>(meshOptional.value());
     if (mri == nullptr || !(mri->mrETS_)) {
         taihe::set_error("Invalid MeshResource");
-        return SceneNodes::Geometry({nullptr, nullptr});
+        return ::taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(nullptr);
     }
     std::string nodePath = ExtractNodePath(params);
     InvokeReturn<std::shared_ptr<GeometryETS>> geom = sceneETS_->CreateGeometry(nodePath, mri->mrETS_);
@@ -206,7 +207,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<GeometryImpl, ::SceneNodes::Geometry>(geom.value);
     } else {
         taihe::set_error(geom.error);
-        return SceneNodes::Geometry({nullptr, nullptr});
+        return ::taihe::make_holder<GeometryImpl, SceneNodes::Geometry>(nullptr);
     }
 }
 
@@ -214,7 +215,7 @@ namespace OHOS::Render3D::KITETS {
 {
     if (!sceneETS_) {
         taihe::set_error("Invalid scene");
-        return ::SceneResources::Effect({nullptr, nullptr});
+        return ::taihe::make_holder<EffectImpl, ::SceneResources::Effect>(nullptr);
     }
     std::string effectId = std::string(params.effectId);
 
@@ -224,7 +225,7 @@ namespace OHOS::Render3D::KITETS {
         return taihe::make_holder<EffectImpl, ::SceneResources::Effect>(effect.value);
     } else {
         taihe::set_error(effect.error);
-        return ::SceneResources::Effect({nullptr, nullptr});
+        return ::taihe::make_holder<EffectImpl, ::SceneResources::Effect>(nullptr);
     }
 }
 
@@ -232,14 +233,15 @@ namespace OHOS::Render3D::KITETS {
 {
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
+        nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
-        return SceneTH::SceneResourceFactory({nullptr, nullptr});
+        return ::taihe::make_holder<SceneResourceFactoryImpl, SceneTH::SceneResourceFactory>(nullptr);
     }
-    auto sceneJS = reinterpret_cast<SceneJS *>(nativePtr);
+    auto sceneJS = static_cast<SceneJS *>(static_cast<TrueRootObject *>(nativePtr)->GetInstanceImpl(SceneJS::ID));
     if (!sceneJS) {
         WIDGET_LOGE("transfer SceneResourceFactory failed");
-        return SceneTH::SceneResourceFactory({nullptr, nullptr});
+        return ::taihe::make_holder<SceneResourceFactoryImpl, SceneTH::SceneResourceFactory>(nullptr);
     }
     SCENE_NS::IScene::Ptr scene = sceneJS->GetNativeObject<SCENE_NS::IScene>();
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter = sceneJS->scene_;

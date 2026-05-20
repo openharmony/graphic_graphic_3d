@@ -32,7 +32,7 @@ GeometryImpl::~GeometryImpl()
     if (geometryETS_) {
         return taihe::make_holder<MeshImpl, SceneResources::Mesh>(geometryETS_->GetMesh());
     } else {
-        return SceneResources::Mesh({nullptr, nullptr});
+        return ::taihe::make_holder<MeshImpl, SceneResources::Mesh>(nullptr);
     }
 }
 

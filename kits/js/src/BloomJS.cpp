@@ -15,14 +15,16 @@
 #include "BloomJS.h"
 
 #include "BaseObjectJS.h"
+#include <scene/interface/postprocess/intf_bloom.h>
+
+static constexpr napi_type_tag BLOOM_CONFIG_TAG = { SCENE_NS::IBloom::UID.data[0], SCENE_NS::IBloom::UID.data[1] };
 
 template<napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
 napi_value BloomConfiguration::Method(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        BloomConfiguration* impl = nullptr;
-        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
+        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
         if (impl) {
             return (impl->*F)(fc);
         }
@@ -35,8 +37,7 @@ napi_value BloomConfiguration::Getter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        BloomConfiguration* impl = nullptr;
-        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
+        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
         if (impl) {
             return (impl->*F)(fc);
         }
@@ -48,8 +49,7 @@ inline napi_value BloomConfiguration::Setter(napi_env env, napi_callback_info in
 {
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc && fc.This()) {
-        BloomConfiguration* impl = nullptr;
-        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
+        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
         if (impl) {
             (impl->*F)(fc);
         }
@@ -139,9 +139,7 @@ void BloomConfiguration::SetTo(SCENE_NS::IBloom::Ptr bloom)
 
 BloomConfiguration* BloomConfiguration::Unwrap(NapiApi::Object obj)
 {
-    BloomConfiguration* settings = nullptr;
-    napi_unwrap(obj.GetEnv(), obj.ToNapiValue(), (void**)&settings);
-    return settings;
+    return NapiApi::UnwrapTagged<BloomConfiguration>(obj.GetEnv(), obj.ToNapiValue(), BLOOM_CONFIG_TAG);
 }
 
 napi_value BloomConfiguration::Dispose(NapiApi::FunctionContext<>& ctx)
@@ -158,7 +156,8 @@ NapiApi::StrongRef BloomConfiguration::Wrap(NapiApi::Object obj)
         delete ptr;
     };
 
-    napi_wrap(obj.GetEnv(), obj.ToNapiValue(), this, DTOR, nullptr, nullptr);
+    NapiApi::WrapTagged<BloomConfiguration>(obj.GetEnv(), obj.ToNapiValue(), this, DTOR, nullptr, BLOOM_CONFIG_TAG,
+        nullptr);
 
     // clang-format off
     napi_property_descriptor descs[] = {

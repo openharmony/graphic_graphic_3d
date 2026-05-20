@@ -68,7 +68,8 @@ NapiApi::StrongRef PCFConfigJS::Wrap(NapiApi::Object obj)
         PCFConfigJS* ptr = static_cast<PCFConfigJS*>(nativeObject);
         delete ptr;
     };
-    napi_wrap(obj.GetEnv(), obj.ToNapiValue(), this, dtor, nullptr, nullptr);
+    NapiApi::WrapTagged<PCFConfigJS>(obj.GetEnv(), obj.ToNapiValue(), this, dtor, nullptr, PCFConfigJS::TYPE_TAG,
+        nullptr);
 
     // clang-format off
     napi_property_descriptor methods[] = {

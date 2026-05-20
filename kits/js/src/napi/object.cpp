@@ -18,6 +18,7 @@
 #include <base/containers/string.h>
 
 #include "../TrueRootObject.h"
+#include "class_definition_helpers.h"
 #include "function.h"
 #include "utils.h"
 

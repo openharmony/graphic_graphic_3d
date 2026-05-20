@@ -40,6 +40,9 @@ class TrueRootObject {
 public:
     static constexpr uint32_t ID = 0xCAFED00D;
 
+    // UUID: 0fa71476-38a9-43eb-b1f0-fe2beaeee8fb
+    static constexpr napi_type_tag TYPE_TAG { 0x0FA7147638A943EBULL, 0xB1F0FE2BEAEEE8FBULL };
+
     TrueRootObject() = delete;
     TrueRootObject(napi_env env, napi_callback_info info);
 

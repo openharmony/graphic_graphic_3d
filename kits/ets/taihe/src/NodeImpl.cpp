@@ -233,7 +233,7 @@ NodeImpl::~NodeImpl()
     if (nodeETS_) {
         return taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(nodeETS_->GetPosition());
     }
-    return SceneTypes::Vec3({nullptr, nullptr});
+    return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
 }
 
 void NodeImpl::setPosition(::SceneTypes::weak::Vec3 pos)
@@ -248,7 +248,7 @@ void NodeImpl::setPosition(::SceneTypes::weak::Vec3 pos)
     if (nodeETS_) {
         return taihe::make_holder<QuaternionImpl, SceneTypes::Quaternion>(nodeETS_->GetRotation());
     }
-    return SceneTypes::Quaternion({nullptr, nullptr});
+    return ::taihe::make_holder<QuaternionImpl, SceneTypes::Quaternion>(BASE_NS::Math::Quat(0.0, 0.0, 0.0, 1.0));
 }
 
 void NodeImpl::setRotation(::SceneTypes::weak::Quaternion rotate)
@@ -263,7 +263,7 @@ void NodeImpl::setRotation(::SceneTypes::weak::Quaternion rotate)
     if (nodeETS_) {
         return taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(nodeETS_->GetScale());
     }
-    return SceneTypes::Vec3({nullptr, nullptr});
+    return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
 }
 
 void NodeImpl::setScale(::SceneTypes::weak::Vec3 scale)
@@ -347,16 +347,17 @@ void NodeImpl::destroy()
     WIDGET_LOGI("nodeTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
+        nativePtr == nullptr) {
         WIDGET_LOGE("nodeTransferStaticImpl failed during arkts_esvalue_unwrap.");
-        return SceneNodes::Node({nullptr, nullptr});
+        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
     }
 
-    TrueRootObject *tro = reinterpret_cast<TrueRootObject *>(nativePtr);
+    TrueRootObject *tro = static_cast<TrueRootObject *>(nativePtr);
     SCENE_NS::INode::Ptr nodePtr = tro->GetNativeObject<SCENE_NS::INode>();
     if (nodePtr == nullptr) {
         WIDGET_LOGE("nodeTransferStaticImpl failed during GetNativeObject.");
-        return SceneNodes::Node({nullptr, nullptr});
+        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
     }
     auto node = NodeETS::FromNative(nodePtr);
     NodeETS::NodeType type = node->GetNodeType();

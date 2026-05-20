@@ -59,7 +59,8 @@ void EnvironmentImpl::setBackgroundType(::SceneResources::EnvironmentBackgroundT
 
 ::SceneTypes::Vec4 EnvironmentImpl::getIndirectDiffuseFactor()
 {
-    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
+    RETURN_IF_NULL_WITH_VALUE(
+        envETS_, (::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)));
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetIndirectDiffuseFactor());
 }
 
@@ -72,7 +73,8 @@ void EnvironmentImpl::setIndirectDiffuseFactor(::SceneTypes::weak::Vec4 factor)
 
 ::SceneTypes::Vec4 EnvironmentImpl::getIndirectSpecularFactor()
 {
-    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
+    RETURN_IF_NULL_WITH_VALUE(
+        envETS_, (::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)));
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetIndirectSpecularFactor());
 }
 
@@ -85,7 +87,8 @@ void EnvironmentImpl::setIndirectSpecularFactor(::SceneTypes::weak::Vec4 factor)
 
 ::SceneTypes::Vec4 EnvironmentImpl::getEnvironmentMapFactor()
 {
-    RETURN_IF_NULL_WITH_VALUE(envETS_, SceneTypes::Vec4({nullptr, nullptr}));
+    RETURN_IF_NULL_WITH_VALUE(
+        envETS_, (::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)));
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(envETS_->GetEnvironmentMapFactor());
 }
 
@@ -208,31 +211,33 @@ void EnvironmentImpl::setIrradianceCoefficients(::taihe::optional_view<::taihe::
     WIDGET_LOGI("environmentTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
+        nativePtr == nullptr) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during arkts_esvalue_unwrap.");
-        return SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, SceneResources::Environment>(nullptr);
     }
 
-    EnvironmentJS *tro = reinterpret_cast<EnvironmentJS *>(nativePtr);
-    if (tro == nullptr) {
+    auto environmentJS =
+        static_cast<EnvironmentJS *>(static_cast<TrueRootObject *>(nativePtr)->GetInstanceImpl(EnvironmentJS::ID));
+    if (!environmentJS) {
         WIDGET_LOGE("environmentTransferStaticImpl failed, input is not environment.");
-        return SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, SceneResources::Environment>(nullptr);
     }
-    SCENE_NS::IEnvironment::Ptr environment = tro->GetNativeObject<SCENE_NS::IEnvironment>();
+    SCENE_NS::IEnvironment::Ptr environment = environmentJS->GetNativeObject<SCENE_NS::IEnvironment>();
     if (environment == nullptr) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during GetNativeObject.");
-        return SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, SceneResources::Environment>(nullptr);
     }
 
-    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetNapiObject(); 
+    NapiApi::Object sceneJs = environmentJS->GetSceneWeakRef().GetNapiObject();
     if (!sceneJs) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during GetSceneWeakRef.");
-        return SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, SceneResources::Environment>(nullptr);
     }
     SCENE_NS::IScene::Ptr scene = sceneJs.GetNative<SCENE_NS::IScene>();
     if (!scene) {
         WIDGET_LOGE("environmentTransferStaticImpl Invalid scene.");
-        return SceneResources::Environment({nullptr, nullptr});
+        return ::taihe::make_holder<EnvironmentImpl, SceneResources::Environment>(nullptr);
     }
 
     return taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(

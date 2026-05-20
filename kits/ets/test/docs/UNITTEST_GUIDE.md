@@ -190,7 +190,7 @@ private:
 
 #### 初始化流程
 
-1. **LoadEngineLib()**: 动态加载引擎核心库 `lib_engine_core.z.so`
+1. **LoadEngineLib()**: 动态加载引擎核心库 `libAGPDLL.z.so`
 2. **LoadPlugins()**: 加载必要的插件（如场景插件）
 3. **CreateEngine()**: 创建引擎实例并初始化文件管理器
 4. **CreateRenderContext()**: 创建渲染上下文，支持 Vulkan/GLES 后端
@@ -429,7 +429,7 @@ HWTEST_F(SceneETSUnitTest, SceneETS_Load_LargeModel_001, TestSize.Level2)
 **原因**: 动态库路径未正确设置
 
 **解决方案**:
-1. 确认 `lib_engine_core.z.so` 等库文件已部署到设备
+1. 确认 `libAGPDLL.z.so` 等库文件已部署到设备
 2. 检查编译时定义的路径宏是否与设备路径匹配
 
 ### Q3: 测试用例通过但引擎崩溃
@@ -541,7 +541,7 @@ ohos_unittest("SceneETSUnitTest") {
   defines = [
     "CORE_HAS_GLES_BACKEND=1",
     "CORE_HAS_VULKAN_BACKEND=1",
-    "LIB_ENGINE_CORE=\"lib_engine_core.z.so\"",
+    "LIB_ENGINE_CORE=\"libAGPDLL.z.so\"",
   ]
 
   configs = [

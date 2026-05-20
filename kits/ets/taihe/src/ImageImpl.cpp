@@ -33,7 +33,7 @@ namespace OHOS::Render3D::KITETS {
     auto imageETS = RenderContextETS::GetInstance().CreateImage(name, uri);
     if (uri.empty() || name.empty() || !imageETS) {
         ::taihe::set_error("Invalid scene resource Image parameters given");
-        return SceneResources::Image({nullptr, nullptr});
+        return ::taihe::make_holder<ImageImpl, SceneResources::Image>(nullptr);
     }
     return taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
 }
@@ -45,7 +45,7 @@ namespace OHOS::Render3D::KITETS {
     auto imageStreamETS = RenderContextETS::GetInstance().CreateImageStream(name, uri);
     if (uri.empty() || name.empty() || !imageStreamETS) {
         ::taihe::set_error("Invalid scene resource ImageStream parameters given");
-        return SceneResources::ImageStream({nullptr, nullptr});
+        return ::taihe::make_holder<ImageImpl, SceneResources::ImageStream>(nullptr);
     }
     return taihe::make_holder<ImageImpl, ::SceneResources::ImageStream>(imageStreamETS);
 }

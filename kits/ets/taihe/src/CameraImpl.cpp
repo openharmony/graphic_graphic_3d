@@ -285,7 +285,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 {
     if (!cameraETS_) {
         WIDGET_LOGE("cameraETS_ is null");
-        return SceneTypes::Vec3({nullptr, nullptr});
+        return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
     }
     BASE_NS::Math::Vec3 world{worldPosition->getX(), worldPosition->getY(), worldPosition->getZ()};
     return taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(cameraETS_->WorldToScreen(world));
@@ -295,7 +295,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 {
     if (!cameraETS_) {
         WIDGET_LOGE("cameraETS_ is null");
-        return SceneTypes::Vec3({nullptr, nullptr});
+        return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
     }
     BASE_NS::Math::Vec3 screen{viewPosition->getX(), viewPosition->getY(), viewPosition->getZ()};
     return taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(cameraETS_->ScreenToWorld(screen));
@@ -336,14 +336,15 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
     WIDGET_LOGI("cameraTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
+        nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
-    TrueRootObject *tro = reinterpret_cast<TrueRootObject *>(nativePtr);
+    TrueRootObject *tro = static_cast<TrueRootObject *>(nativePtr);
     if (tro == nullptr) {
         WIDGET_LOGE("transfer camera failed");
-        return SceneNodes::Camera({nullptr, nullptr});
+        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
     }
     SCENE_NS::ICamera::Ptr cam = tro->GetNativeObject<SCENE_NS::ICamera>();
     return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(std::make_shared<CameraETS>(cam));

@@ -24,6 +24,8 @@ namespace ShadowConfiguration {
 
 class PCFConfigJS : public SoftShadowConfigJS {
 public:
+    // UUID: 4968bb0f-0127-4986-a3d2-93711e24b2f4
+    static constexpr napi_type_tag TYPE_TAG { 0x4968BB0F01274986ULL, 0xA3D293711E24B2F4ULL };
     ~PCFConfigJS() override = default;
     static SoftShadowConfigJS* FromJs(NapiApi::Object& jsPCFConfig);
     SCENE_NS::IRenderConfiguration::Ptr GetRenderConfiguration() const override;

@@ -28,12 +28,16 @@
 
 #include "../TrueRootObject.h"
 #include "env.h"
+#include "utils.h"
 #include "value.h"
 
 class TrueRootObject;
 struct JsFuncArgs;
 
 namespace NapiApi {
+
+template<typename Class>
+inline Class* UnwrapTagged(napi_env env, napi_value js_object, const napi_type_tag& type_tag);
 
 struct Scope {
     Scope(napi_env env): env_(env)
@@ -137,9 +141,7 @@ private:
         if (!env_ || !object_) {
             return nullptr;
         }
-        T* me = nullptr;
-        napi_unwrap(env_, object_, (void**)&me);
-        return me;
+        return UnwrapTagged<T>(env_, object_, TrueRootObject::TYPE_TAG);
     }
 
     napi_valuetype jstype = napi_undefined;
