@@ -340,6 +340,7 @@ void BoidsSwarmWorldJS::Init(napi_env env, napi_value exports)
         nullptr, props.size(), props.data(), &func);
     if (status != napi_ok) {
         LOG_E("napi_define_class failed (status %d) for BoidsSimWorld", status);
+        return;
     }
 
     NapiApi::Object { env, exports }.Set("BoidsSimWorld", func);
@@ -451,10 +452,11 @@ napi_value BoidsSwarmWorldJS::GetBoidsSimStateComponent(NapiApi::FunctionContext
         return ctx.GetNull();
     }
 
-    napi_value resultValue = nullptr;
-    auto env = ctx.GetEnv();
+    BASE_NS::Math::Vec3 velocities[BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT] {};
+    float velocityMag = 0.0f;
+    bool success = false;
 
-    ExecSyncTask([ecsAccess, env, &resultValue]() -> META_NS::IAny::Ptr {
+    ExecSyncTask([ecsAccess, &velocities, &velocityMag, &success]() -> META_NS::IAny::Ptr {
         CORE_NS::IEcs* ecs = ecsAccess->GetEcsObject()->GetScene()->GetEcsContext().GetNativeEcs().get();
         if (!ecs) {
             LOG_E("Failed to get ECS");
@@ -480,20 +482,29 @@ napi_value BoidsSwarmWorldJS::GetBoidsSimStateComponent(NapiApi::FunctionContext
             return META_NS::IAny::Ptr {};
         }
 
-        NapiApi::Object resultObj(env);
-        NapiApi::Array velocitiesArray(env, BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT);
         for (size_t i = 0; i < BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT; ++i) {
-            velocitiesArray.Set_value(i, Vec3ToNapi(handle->velocities[i], env));
+            velocities[i] = handle->velocities[i];
         }
-        resultObj.Set("velocities", velocitiesArray);
-        resultObj.Set("velocity", velocitiesArray.Get_value(0));
-        resultObj.Set("velocityMag", NapiApi::Value<float>(env, handle->velocityMag));
-
-        resultValue = resultObj.ToNapiValue();
+        velocityMag = handle->velocityMag;
+        success = true;
         return META_NS::IAny::Ptr {};
     });
 
-    return resultValue ? resultValue : ctx.GetNull();
+    if (!success) {
+        return ctx.GetNull();
+    }
+
+    auto env = ctx.GetEnv();
+    NapiApi::Object resultObj(env);
+    NapiApi::Array velocitiesArray(env, BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT);
+    for (size_t i = 0; i < BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT; ++i) {
+        velocitiesArray.Set_value(i, Vec3ToNapi(velocities[i], env));
+    }
+    resultObj.Set("velocities", velocitiesArray);
+    resultObj.Set("velocity", velocitiesArray.Get_value(0));
+    resultObj.Set("velocityMag", NapiApi::Value<float>(env, velocityMag));
+
+    return resultObj.ToNapiValue();
 }
 
 napi_value BoidsSwarmWorldJS::RemoveBoidsSimComponent(NapiApi::FunctionContext<NapiApi::Object>& ctx)
@@ -921,6 +932,18 @@ napi_value BoidsSwarmPluginJS::GetDefaultBoidsSimWorld(NapiApi::FunctionContext<
     auto scene = sceneObj.GetNative<SCENE_NS::IScene>();
     if (!scene) {
         LOG_E("Object is not a valid IScene");
+        return ctx.GetNull();
+    }
+
+    bool systemAvailable = false;
+    ExecSyncTask([scene, &systemAvailable]() -> META_NS::IAny::Ptr {
+        auto* system = GetBoidsSystem(scene);
+        systemAvailable = system != nullptr;
+        return {};
+    });
+
+    if (!systemAvailable) {
+        LOG_E("BoidsSwarmSystem not available (plugin not loaded)");
         return ctx.GetNull();
     }
 
