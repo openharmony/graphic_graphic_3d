@@ -326,7 +326,6 @@ group("unittest") {
     ":GraphicsManagerCommonUnitTest",
     ":GraphicsManagerUnitTest",
     ":GraphicsTaskUnitTest",
-    ":LumeCustomRenderUnitTest",
     ":OffScreenContextHelperUnitTest",
     ":ShaderInputBufferUnitTest",
     ":TextureLayerUnitTest",
