@@ -756,6 +756,18 @@ void BoidsSimWorldImpl::RemoveComponent(
         WIDGET_LOGE("getDefaultBoidsSimWorld: failed to get native scene");
         return ::SceneBoidsSwarm::BoidsSimWorldOrNull::make_nValue();
     }
+    bool systemAvailable = false;
+    ExecSyncTask([scene = nativeScene, &systemAvailable]() -> META_NS::IAny::Ptr {
+        auto* system = GetBoidsSystem(scene);
+        systemAvailable = system != nullptr;
+        return {};
+    });
+
+    if (!systemAvailable) {
+        WIDGET_LOGE("BoidsSwarmSystem not available (plugin not loaded)");
+        return ::SceneBoidsSwarm::BoidsSimWorldOrNull::make_nValue();
+    }
+
     auto rc = taihe::make_holder<BoidsSimWorldImpl, ::SceneBoidsSwarm::BoidsSimWorld>(
         BASE_NS::move(nativeScene));
     return ::SceneBoidsSwarm::BoidsSimWorldOrNull::make_rc(rc);

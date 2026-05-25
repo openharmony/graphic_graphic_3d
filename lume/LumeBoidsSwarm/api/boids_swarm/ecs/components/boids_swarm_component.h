@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -117,14 +117,12 @@ BEGIN_COMPONENT(IBoidsSwarmComponentManager, BoidsSwarmComponent)
     DEFINE_PROPERTY(float, repulsionWeight, "Repulsion Weight", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
 
     // Constant external force vector added every frame (e.g. wind, current). Default: (0, 0, 0).
-    // Range: [0, +inf) per boid (clamped to magnitude <= maxAccelerationMag).
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, drivenForce, "Extra Driven Force", CORE_NS::PropertyFlags::HAS_MIN,
-        ARRAY_VALUE(0.0f, 0.0f, 0.0f))
+    DEFINE_PROPERTY(BASE_NS::Math::Vec3, drivenForce, "Extra Driven Force", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
     // Scales the drivenForce contribution in the weighted force sum. Default: 1.0f. Range: [0, +inf).
+    // Range: [0, +inf) per boid (clamped to magnitude <= maxAccelerationMag).
     DEFINE_PROPERTY(float, drivenForceWeight, "Extra Driven Force Weight", CORE_NS::PropertyFlags::HAS_MIN, 1.0f)
 
-    // Collision radius for boid-boid and boid-boundary hard collision tests. Default: 0.0f. Range: [0, +inf).
-    DEFINE_PROPERTY(float, boundingSphereRadius, "Bounding Sphere Radius", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
+    DEFINE_PROPERTY(bool, velDirIsFwd, "Velocity Direction Is Forward", 0, false)
 
     // Entity list used as separation neighbours instead of all swarm members.
     // Default: empty. Range: any list of valid Entity references.
