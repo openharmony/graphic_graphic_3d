@@ -22,6 +22,7 @@
 #include <string>
 #include <sys/syscall.h>
 #include <cinttypes>
+#include <cmath>
 
 #include <base/containers/array_view.h>
 #include <base/containers/shared_ptr.h>
@@ -97,7 +98,7 @@ static bool MRTDFXEnabled()
     // only read parameter upon restart of the process
     // avoid numerous IO load
     static bool dfxEnabled =
-        std::atoi(system::GetParameter("AGP_MRT_DEBUG", "0").c_str()) == 1;
+        std::atoi(system::GetParameter("persist.sys.graphic.AGP_MRT_DEBUG", "0").c_str()) == 1;
     return dfxEnabled;
 }
 
@@ -105,8 +106,15 @@ static bool MRTDisabled()
 {
     // force disable
     static bool disabled =
-        std::atoi(system::GetParameter("AGP_MRT_FORCE_DISABLE", "0").c_str()) == 1;
+        std::atoi(system::GetParameter("persist.sys.graphic.AGP_MRT_FORCE_DISABLE", "0").c_str()) == 1;
     return disabled;
+}
+
+static bool RenderIfDirtyEnabled()
+{
+    static bool enabled =
+        std::atoi(system::GetParameter("persist.sys.graphic.AGP_MRT_RENDER_IF_DIRTY", "1").c_str()) == 1;
+    return enabled;
 }
 
 static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr = "")
@@ -116,6 +124,56 @@ static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr
     printStr += "w, h scale" + std::to_string(info.widthScale) + " " + std::to_string(info.heightScale);
     
     WIDGET_LOGW("WindowChangeInfo: %s", printStr.c_str());
+}
+
+static constexpr float EPSILON_ABS = 1e-5f;
+static constexpr float EPSILON_REL = 1e-5f;
+
+static inline bool FloatEqual(float a, float b)
+{
+    if (a == b) {
+        return true;
+    }
+    float diff = std::abs(a - b);
+    float maxVal = std::max(std::abs(a), std::abs(b));
+    if (maxVal < 1.0f) {
+        return diff < EPSILON_ABS;
+    }
+    return diff / maxVal < EPSILON_REL;
+}
+
+static bool IsCameraConfigsEqual(const CameraConfigs& lhs, const CameraConfigs& rhs)
+{
+    if (!FloatEqual(lhs.position_.x, rhs.position_.x) ||
+        !FloatEqual(lhs.position_.y, rhs.position_.y) ||
+        !FloatEqual(lhs.position_.z, rhs.position_.z)) {
+        return false;
+    }
+    if (!FloatEqual(lhs.rotation_.x, rhs.rotation_.x) ||
+        !FloatEqual(lhs.rotation_.y, rhs.rotation_.y) ||
+        !FloatEqual(lhs.rotation_.z, rhs.rotation_.z) ||
+        !FloatEqual(lhs.rotation_.w, rhs.rotation_.w)) {
+        return false;
+    }
+    if (!FloatEqual(lhs.intrinsics_.fov_, rhs.intrinsics_.fov_) ||
+        !FloatEqual(lhs.intrinsics_.near_, rhs.intrinsics_.near_) ||
+        !FloatEqual(lhs.intrinsics_.far_, rhs.intrinsics_.far_)) {
+        return false;
+    }
+    if (!FloatEqual(lhs.clearColor_.x, rhs.clearColor_.x) ||
+        !FloatEqual(lhs.clearColor_.y, rhs.clearColor_.y) ||
+        !FloatEqual(lhs.clearColor_.z, rhs.clearColor_.z) ||
+        !FloatEqual(lhs.clearColor_.w, rhs.clearColor_.w)) {
+        return false;
+    }
+    if (!FloatEqual(lhs.offsetX_, rhs.offsetX_) ||
+        !FloatEqual(lhs.offsetY_, rhs.offsetY_)) {
+        return false;
+    }
+    if (lhs.camModelType_ != rhs.camModelType_) {
+        return false;
+    }
+    return true;
 }
 
 #define CHECK_NULL_RET_LOGE(ptr, ret)                        \
@@ -211,6 +269,10 @@ public:
         // vExtra = vWin[1:]
         std::vector<WindowChangeInfo> vExtraWindowChangeInfo(vWindowChangeInfo.begin() + 1, vWindowChangeInfo.end());
         sceneAdapter_->OnWindowChange(vExtraWindowChangeInfo);
+        
+        // set render if dirty
+        auto ecs = sceneAdapter_->GetEcs();
+        ecs->SetRenderMode(RenderIfDirtyEnabled() ? CORE_NS::RenderMode::RENDER_IF_DIRTY : CORE_NS::RenderMode::RENDER_ALWAYS);
         return true;
     }
     void Deinit(bool deinitEngine = false) override
@@ -343,6 +405,11 @@ public:
     {
         CHECK_NULL_RET_LOGE(cameraPtr_, false);
 
+        bool equal = IsCameraConfigsEqual(lastCameraConfigs_, p);
+        if (equal) {
+            return true;
+        }
+
         cameraPtr_->NearPlane()->SetValue(p.intrinsics_.near_);
         cameraPtr_->FarPlane()->SetValue(p.intrinsics_.far_);
         cameraPtr_->FoV()->SetValue(p.intrinsics_.fov_);
@@ -356,7 +423,9 @@ public:
         node->Rotation()->SetValue({p.rotation_.x, p.rotation_.y, p.rotation_.z, p.rotation_.w});
 
         auto &clearColor = p.clearColor_;
-        cameraPtr_->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});   // RGBA
+        cameraPtr_->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});
+
+        lastCameraConfigs_ = p;
 
         if (MRTDFXEnabled()) {
             WIDGET_LOGI("OffScreenScene::SetCameraConfigs camera info: %{public}s", p.Dump().c_str());
@@ -468,6 +537,7 @@ private:
     BASE_NS::shared_ptr<SCENE_NS::ICamera> cameraPtr_ = nullptr;
     bool engineInited_ = false;
     bool sceneInited_ = false;
+    CameraConfigs lastCameraConfigs_;
 public:
 
     CORE_NS::IEcs::Ptr GetEcs() override
