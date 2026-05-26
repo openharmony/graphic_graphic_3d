@@ -28,7 +28,7 @@ void RegisterEnums(NapiApi::Object exports)
     {                                                                                        \
         napi_create_uint32(enu.GetEnv(), static_cast<uint32_t>(ShadowAlgorithmType::x), &v); \
         enu.Set(#x, v);                                                                      \
-    }                                                                                        \
+    }
     DECL_ENUM(shadowAlgorithmType, PCF);
 #undef DECL_ENUM
 

@@ -32,7 +32,7 @@ RenderConfigurationImpl::~RenderConfigurationImpl()
     rcETS_.reset();
 }
 
-std::shared_ptr<RenderConfigurationETS> RenderConfigurationImpl::GetRenderConfigurationETS()
+const std::shared_ptr<RenderConfigurationETS> RenderConfigurationImpl::GetRenderConfigurationETS()
 {
     return rcETS_;
 }
