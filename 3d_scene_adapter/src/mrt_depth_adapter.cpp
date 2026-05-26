@@ -273,7 +273,7 @@ public:
         // set render if dirty
         auto ecs = sceneAdapter_->GetEcs();
         ecs->SetRenderMode(RenderIfDirtyEnabled() ?
-            CORE_NS::RenderMode::RENDER_IF_DIRTY : CORE_NS::RenderMode::RENDER_ALWAYS);
+            CORE_NS::IEcs::RenderMode::RENDER_IF_DIRTY : CORE_NS::IEcs::RenderMode::RENDER_ALWAYS);
         return true;
     }
     void Deinit(bool deinitEngine = false) override
