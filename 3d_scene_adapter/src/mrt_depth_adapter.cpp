@@ -126,20 +126,10 @@ static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr
     WIDGET_LOGW("WindowChangeInfo: %s", printStr.c_str());
 }
 
-static constexpr float EPSILON_ABS = 1e-5f;
-static constexpr float EPSILON_REL = 1e-5f;
-
 static inline bool FloatEqual(float a, float b)
 {
-    if (a == b) {
-        return true;
-    }
-    float diff = std::abs(a - b);
-    float maxVal = std::max(std::abs(a), std::abs(b));
-    if (maxVal < 1.0f) {
-        return diff < EPSILON_ABS;
-    }
-    return diff / maxVal < EPSILON_REL;
+    constexpr float EPSILON_ABS = 1e-5f;
+    return std::abs(a - b) < EPSILON_ABS;
 }
 
 static bool IsCameraConfigsEqual(const CameraConfigs& lhs, const CameraConfigs& rhs)
