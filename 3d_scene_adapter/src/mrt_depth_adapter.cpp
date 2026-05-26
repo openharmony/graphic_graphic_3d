@@ -128,8 +128,8 @@ static void DumpWinChangeInfo(const WindowChangeInfo& info, std::string printStr
 
 static inline bool FloatEqual(float a, float b)
 {
-    constexpr float EPSILON_ABS = 1e-5f;
-    return std::abs(a - b) < EPSILON_ABS;
+    constexpr float eps = 1e-5f;
+    return std::abs(a - b) < eps;
 }
 
 static bool IsCameraConfigsEqual(const CameraConfigs& lhs, const CameraConfigs& rhs)
