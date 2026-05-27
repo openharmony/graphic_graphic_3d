@@ -1,0 +1,124 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "e8b050bd-7671-4cf9-8941-3f88d8599542",
+        "uri": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/custom_core3d_dm_fw.frag",
+        "sha1": "3ac372ace89a7c2c557cd73b87c7c17e71fca67d",
+        "spec": {
+            "$meta": {
+                "version": "1.0"
+            },
+            "$root": {
+                "$classId": "5af14b09-98e9-412d-9e1b-105e81e2347f",
+                "$name": "ShaderSourceAsset",
+                "$instanceId": "00000132-8b9f-51f0-5629-7f41dc416859",
+                "$properties": {
+                    "MediaType": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "application/vnd.ark.glsl.fragment-shader",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AutoCompile": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "IncludePaths": {
+                        "$classId": "02387d17-c1f3-d90f-5072-6f7065727479",
+                        "defaultValue": [],
+                        "flags": 163
+                    },
+                    "GeneratorSourceUri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/ShadowPlane.shadergraph",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsGenerated": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Iid": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "e8b050bd-7671-4cf9-8941-3f88d8599542",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsBuiltIn": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Size": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "OutputDirectory": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/",
+                        "defaultValue": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/",
+                        "flags": 227
+                    },
+                    "Uri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "Category": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AddSdkIncludes": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "CompileOptions": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 227
+                    },
+                    "Name": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "ModifiedTimestamp": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "133603306971994485",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Optimize": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    }
+                },
+                "Thumbnail": {
+                    "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                    "defaultValue": "",
+                    "flags": 33
+                }
+            }
+        },
+        "thumbdata": ""
+    }
+}

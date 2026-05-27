@@ -98,7 +98,7 @@ private:
     void OnTypeInfoEvent(EventType type, BASE_NS::array_view<const CORE_NS::ITypeInfo* const> typeInfos) override;
 
     struct Agp3DPluginState& factory_;
-    RENDER_NS::IRenderContext& context_;
+    RENDER_NS::IRenderContext& renderContext_;
 
     BASE_NS::vector<BASE_NS::pair<CORE_NS::PluginToken, const I3DPlugin*>> plugins_;
     BASE_NS::vector<const CORE_NS::InterfaceTypeInfo*> interfaceTypeInfos_;
@@ -108,8 +108,8 @@ private:
     BASE_NS::unique_ptr<MeshUtil> meshUtil_;
     BASE_NS::unique_ptr<Gltf2> gltf2_;
     BASE_NS::unique_ptr<RenderUtil> renderUtil_;
-    bool initialized_ { false };
-    uint32_t refcnt_ { 0 };
+    bool initialized_{false};
+    int32_t refcnt_{0};
 };
 
 inline constexpr BASE_NS::string_view GetName(const IGraphicsContext*)
@@ -118,4 +118,4 @@ inline constexpr BASE_NS::string_view GetName(const IGraphicsContext*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // GRAPHICS_CONTEXT_H
+#endif  // GRAPHICS_CONTEXT_H

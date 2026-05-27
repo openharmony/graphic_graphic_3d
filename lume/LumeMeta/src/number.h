@@ -45,7 +45,7 @@ private:
     VariantType value_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

@@ -25,20 +25,21 @@ struct ColorConverter {
 
     static SourceType ConvertToSource(META_NS::IAny&, const TargetType& v)
     {
-        return SourceType { v.x, v.y, v.z, 0.f };
+        return SourceType{v.x, v.y, v.z, 0.f};
     }
     static TargetType ConvertToTarget(const SourceType& v)
     {
-        return TargetType { v.x, v.y, v.z };
+        return TargetType{v.x, v.y, v.z};
     }
 };
-} // namespace
+}  // namespace
 bool LightComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
     if (p->GetName() == "Color") {
         auto ep = object_->CreateProperty(path).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ColorConverter>(ep)));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<ColorConverter>(ep)));
     }
     return false;
 }

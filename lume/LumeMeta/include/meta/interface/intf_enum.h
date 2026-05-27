@@ -25,8 +25,8 @@ META_BEGIN_NAMESPACE()
 enum class EnumType { SINGLE_VALUE, BIT_FIELD };
 
 struct EnumValue {
-    BASE_NS::string_view name; /// Name of the value
-    BASE_NS::string_view desc; /// Description of the value
+    BASE_NS::string_view name;  /// Name of the value
+    BASE_NS::string_view desc;  /// Description of the value
 };
 
 /**

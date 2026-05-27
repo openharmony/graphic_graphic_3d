@@ -37,7 +37,7 @@ CORE_BEGIN_NAMESPACE()
 
 class IFileSystemApi : public IClassFactory {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "dfe630b1-04ce-4c20-ac0d-7a521369dfbe" };
+    static constexpr auto UID = BASE_NS::Uid{"dfe630b1-04ce-4c20-ac0d-7a521369dfbe"};
 
     virtual IFileManager::Ptr CreateFilemanager() = 0;
     virtual IFileMonitor::Ptr CreateFilemonitor(IFileManager&) = 0;
@@ -57,4 +57,4 @@ inline constexpr BASE_NS::string_view GetName(const IFileSystemApi*)
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IFILE_SYSTEM_API_H
+#endif  // API_CORE_IFILE_SYSTEM_API_H

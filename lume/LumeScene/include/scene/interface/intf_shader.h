@@ -77,12 +77,12 @@ public:
 
     /// Override blending options
     struct ColorBlendOptions {
-        bool enableBlend {};
+        bool enableBlend{};
     };
     /// Override depth options
     struct DepthStencilOptions {
-        bool enableDepthWrite {};
-        bool enableDepthTest {};
+        bool enableDepthWrite{};
+        bool enableDepthTest{};
     };
     struct RasterizationOptions {};
 

@@ -53,7 +53,7 @@ private:
     RENDER_NS::RenderNodeGraphDesc GetBasePostProcessDesc(const RenderCamera& renderCamera) const;
 
     RENDER_NS::IRenderContext& context_;
-    const RENDER_NS::DeviceBackendType backendType_ { RENDER_NS::DeviceBackendType::VULKAN };
+    const RENDER_NS::DeviceBackendType backendType_{RENDER_NS::DeviceBackendType::VULKAN};
 
     RENDER_NS::RenderNodeGraphDesc rngdScene_;
     RENDER_NS::RenderNodeGraphDesc rngdCamLwrp_;
@@ -74,4 +74,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_RENDER_UTIL_H
+#endif  // CORE_UTIL_RENDER_UTIL_H

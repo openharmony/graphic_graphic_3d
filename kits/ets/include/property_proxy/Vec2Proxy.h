@@ -23,7 +23,7 @@
 namespace OHOS::Render3D {
 class Vec2Proxy : public PropertyProxy<BASE_NS::Math::Vec2> {
 public:
-    explicit Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2> &prop);
+    explicit Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2>& prop);
     ~Vec2Proxy() override;
 
     float GetX() const;
@@ -35,7 +35,7 @@ public:
 
 class UVec2Proxy : public PropertyProxy<BASE_NS::Math::UVec2> {
 public:
-    explicit UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2> &prop);
+    explicit UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2>& prop);
     ~UVec2Proxy() override;
 
     uint32_t GetX() const;

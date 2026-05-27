@@ -44,28 +44,23 @@ public:
     void stop();
     bool getIsPlaying();
 
-    void addBoidsSimComponent(
-        ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimParameters params);
-    void setBoidsSimComponent(
-        ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimParameters params);
-    ::SceneBoidsSwarm::BoidsSimParametersOrNull getBoidsSimComponent(
-        ::SceneNodes::weak::Node node);
+    void addBoidsSimComponent(::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimParameters params);
+    void setBoidsSimComponent(::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimParameters params);
+    ::SceneBoidsSwarm::BoidsSimParametersOrNull getBoidsSimComponent(::SceneNodes::weak::Node node);
     void removeBoidsSimComponent(::SceneNodes::weak::Node node);
 
     void addBoidsSimGravityComponent(
         ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimGravityParameters params);
     void setBoidsSimGravityComponent(
         ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimGravityParameters params);
-    ::SceneBoidsSwarm::BoidsSimGravityParametersOrNull getBoidsSimGravityComponent(
-        ::SceneNodes::weak::Node node);
+    ::SceneBoidsSwarm::BoidsSimGravityParametersOrNull getBoidsSimGravityComponent(::SceneNodes::weak::Node node);
     void removeBoidsSimGravityComponent(::SceneNodes::weak::Node node);
 
     void addBoidsSimRepulsionComponent(
         ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimRepulsionParameters params);
     void setBoidsSimRepulsionComponent(
         ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimRepulsionParameters params);
-    ::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull getBoidsSimRepulsionComponent(
-        ::SceneNodes::weak::Node node);
+    ::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull getBoidsSimRepulsionComponent(::SceneNodes::weak::Node node);
     void removeBoidsSimRepulsionComponent(::SceneNodes::weak::Node node);
 
 private:
@@ -76,6 +71,6 @@ private:
 
 ::SceneBoidsSwarm::BoidsSimWorldOrNull getDefaultBoidsSimWorld(::SceneTH::weak::Scene scene);
 
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
-#endif // OHOS_3D_SCENE_BOIDSSWARM_IMPL_H
+#endif  // OHOS_3D_SCENE_BOIDSSWARM_IMPL_H

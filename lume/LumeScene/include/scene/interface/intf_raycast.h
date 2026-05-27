@@ -35,6 +35,19 @@ struct RayCastOptions {
      * @brief Include only nodes from this hierarchy
      */
     INode::ConstPtr node;
+    /**
+     * @brief Hit evaluation options.
+     */
+    enum HitOptions {
+        /** All nodes regardless of their enabled state should be hit. */
+        HIT_ALL = 0,
+        /** Only enabled (visible) nodes should be added to the result. */
+        HIT_ENABLED,
+    };
+    /**
+     * @brief Controls which nodes to include in the ray cast result.
+     */
+    HitOptions hitOptions{HIT_ALL};
 };
 
 /**
@@ -44,11 +57,11 @@ struct NodeHit {
     /// Node the ray hit
     INode::Ptr node;
     /// Distance of the hit from the start position
-    float distance {};
+    float distance{};
     /// Distance of the AABB center from the start position
-    float distanceToCenter {};
+    float distanceToCenter{};
     /// World position of the hit
-    BASE_NS::Math::Vec3 position {};
+    BASE_NS::Math::Vec3 position{};
 };
 
 using NodeHits = BASE_NS::vector<NodeHit>;

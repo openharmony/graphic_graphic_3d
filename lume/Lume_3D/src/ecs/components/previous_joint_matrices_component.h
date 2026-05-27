@@ -31,16 +31,16 @@ namespace {
  */
 BEGIN_COMPONENT(IPreviousJointMatricesComponentManager, PreviousJointMatricesComponent)
 
-    /**
-     * Number of valid entries in jointMatrices array.
-     */
-    DEFINE_PROPERTY(size_t, count, "Number Of Matrices", 0, 0)
+/**
+ * Number of valid entries in jointMatrices array.
+ */
+DEFINE_PROPERTY(size_t, count, "Number Of Matrices", 0, 0)
 
-    /**
-     * Joint matrices for the skinned entity. SkinningSystem calculates the joint matrices
-     */
-    DEFINE_ARRAY_PROPERTY(
-        BASE_NS::Math::Mat4X4, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointMatrices, "Joint Matrices", 0, ARRAY_VALUE())
+/**
+ * Joint matrices for the skinned entity. SkinningSystem calculates the joint matrices
+ */
+DEFINE_ARRAY_PROPERTY(
+    BASE_NS::Math::Mat4X4, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointMatrices, "Joint Matrices", 0, ARRAY_VALUE())
 
 END_COMPONENT(
     IPreviousJointMatricesComponentManager, PreviousJointMatricesComponent, "7f1327fc-7869-4952-aa87-3b55f40c8a80")

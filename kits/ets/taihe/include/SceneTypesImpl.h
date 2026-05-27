@@ -229,8 +229,8 @@ public:
     }
 
 private:
-    float radius_;
-    int32_t segmentCount_;
+    float radius_{0.0f};
+    int32_t segmentCount_{0};
 };
 
 class CylinderGeometryImpl : public GeometryDefinitionImpl {
@@ -278,6 +278,6 @@ private:
     float height_{0.0f};
     int32_t segmentCount_{0};
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_TYPES_IMPL_H

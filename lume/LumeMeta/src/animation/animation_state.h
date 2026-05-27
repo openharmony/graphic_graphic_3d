@@ -66,9 +66,9 @@ public:
     virtual void Uninitialize();
     /** Result of a step operation */
     struct StepStatus {
-        IAnimationInternal::AnimationTargetState state { IAnimationInternal::AnimationTargetState::UNDEFINED };
-        float progress {};
-        bool changed {};
+        IAnimationInternal::AnimationTargetState state{IAnimationInternal::AnimationTargetState::UNDEFINED};
+        float progress{};
+        bool changed{};
 
         constexpr bool StatusChanged() const noexcept
         {
@@ -165,17 +165,17 @@ private:
     void SetProgress(float progress) noexcept;
 
 private:
-    IAnimationController::WeakPtr controller_;         // Animation's controller
-    IOnChanged::InterfaceTypePtr updateTotalDuration_; // Callback function for total duration update
-    AnimationStateParams params_;                      // Animation parameters
+    IAnimationController::WeakPtr controller_;          // Animation's controller
+    IOnChanged::InterfaceTypePtr updateTotalDuration_;  // Callback function for total duration update
+    AnimationStateParams params_;                       // Animation parameters
     struct StateData {
-        int32_t loops { 1 };
+        int32_t loops{1};
         TimeSpan totalDuration;
         IAnimationModifier::DurationData duration;
-        bool shouldInit_ { false };
+        bool shouldInit_{false};
         IManualClock::Ptr clock_;
         std::optional<META_NS::TimeSpan> lastTick_;
-        IAnimationInternal::AnimationTargetState animationState_ { IAnimationInternal::AnimationTargetState::STOPPED };
+        IAnimationInternal::AnimationTargetState animationState_{IAnimationInternal::AnimationTargetState::STOPPED};
 
         void ResetLastTick() noexcept
         {
@@ -204,8 +204,8 @@ private:
             return duration.duration;
         }
 
-    } state_;                                             // State data
-    mutable FindCache<IAnimationModifier> modifierCache_; // Cached modifier query
+    } state_;                                              // State data
+    mutable FindCache<IAnimationModifier> modifierCache_;  // Cached modifier query
 };
 
 /**
@@ -256,8 +256,8 @@ private:
     IInterpolator::Ptr interpolator_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_STATE_H
+#endif  // META_SRC_ANIMATION_STATE_H

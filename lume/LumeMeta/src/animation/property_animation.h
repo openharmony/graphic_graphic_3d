@@ -33,10 +33,10 @@ public:
 protected:
     bool Build(const IMetadata::Ptr& meta) override;
 
-protected: // IAnimation
+protected:  // IAnimation
     void Step(const IClock::ConstPtr& clock) override;
 
-public: // IModifier
+public:  // IModifier
     EvaluationResult ProcessOnGet(IAny& value) override;
     EvaluationResult ProcessOnSet(IAny& value, const IAny& current) override;
 
@@ -54,11 +54,11 @@ private:
     IAny::Ptr from_;
     IAny::Ptr to_;
     IAny::Ptr currentValue_;
-    bool evalChanged_ {};
+    bool evalChanged_{};
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_PROPERTY_ANIMATION_H
+#endif  // META_SRC_ANIMATION_PROPERTY_ANIMATION_H

@@ -30,7 +30,7 @@
 
 CORE_BEGIN_NAMESPACE()
 namespace StringUtil {
-template<class T, size_t N>
+template <class T, size_t N>
 constexpr size_t MaxStringLengthFromArray(T (&)[N])
 {
     return N - 1u;
@@ -103,7 +103,8 @@ inline bool FindAndReplaceOne(
     const auto p = source.find(find);
     if (p != BASE_NS::string::npos) {
         source.replace(source.cbegin() + static_cast<BASE_NS::string::difference_type>(p),
-            source.cbegin() + static_cast<BASE_NS::string::difference_type>(p + find.length()), replace);
+            source.cbegin() + static_cast<BASE_NS::string::difference_type>(p + find.length()),
+            replace);
     }
     return (p != BASE_NS::string::npos);
 }
@@ -114,7 +115,7 @@ inline void FindAndReplaceAll(
     while (FindAndReplaceOne(source, find, replace))
         ;
 }
-} // namespace StringUtil
+}  // namespace StringUtil
 CORE_END_NAMESPACE()
 
-#endif // CORE_UTIL_STRING_UTIL_H
+#endif  // CORE_UTIL_STRING_UTIL_H

@@ -59,7 +59,7 @@ UNIT_TEST_F(API_EngineValueTest, Values, testing::ext::TestSize.Level1)
         EXPECT_TRUE(any->Clone());
         EXPECT_TRUE(any->Clone(true));
         EXPECT_TRUE(any->Clone(false));
-        EXPECT_TRUE(any->Clone(AnyCloneOptions {}));
+        EXPECT_TRUE(any->Clone(AnyCloneOptions{}));
         AnyCloneOptions opt;
         opt.value = CloneValueType::COPY_VALUE;
         opt.role = TypeIdRole::ITEM;
@@ -96,7 +96,7 @@ UNIT_TEST_F(API_EngineValueTest, Values, testing::ext::TestSize.Level1)
 class PropertyHandle;
 
 namespace Internal {
-static PropertyHandle* CurrentTestingProperty {};
+static PropertyHandle* CurrentTestingProperty{};
 }
 
 class PropertyHandle : public CORE_NS::IPropertyHandle {
@@ -139,12 +139,12 @@ public:
     {
         return &data_[0];
     };
-    void RUnlock() const override {};
+    void RUnlock() const override{};
     void* WLock() override
     {
         return &data_[0];
     };
-    void WUnlock() override {};
+    void WUnlock() override{};
 
     CORE_NS::ContainerApi* GetContainerApi()
     {
@@ -163,7 +163,7 @@ public:
 
 private:
     CORE_NS::ContainerApi api_;
-    size_t size_ { 1 };
+    size_t size_{1};
     BASE_NS::vector<uint8_t> data_;
     CORE_NS::PropertyTypeDecl decl_;
 };
@@ -200,7 +200,7 @@ public:
     }
     CORE_NS::Entity GetEntity(IComponentManager::ComponentId index) const override
     {
-        return CORE_NS::Entity {};
+        return CORE_NS::Entity{};
     }
     uint32_t GetComponentGeneration(IComponentManager::ComponentId index) const override
     {
@@ -214,13 +214,16 @@ public:
     {
         return 0;
     }
-    void Create(CORE_NS::Entity entity) override {}
+    void Create(CORE_NS::Entity entity) override
+    {}
     bool Destroy(CORE_NS::Entity entity) override
     {
         return true;
     }
-    void Gc() override {}
-    void Destroy(BASE_NS::array_view<const CORE_NS::Entity> gcList) override {}
+    void Gc() override
+    {}
+    void Destroy(BASE_NS::array_view<const CORE_NS::Entity> gcList) override
+    {}
     BASE_NS::vector<CORE_NS::Entity> GetAddedComponents() override
     {
         return {};
@@ -241,12 +244,14 @@ public:
     {
         return 0;
     }
-    void ClearModifiedFlags() override {}
+    void ClearModifiedFlags() override
+    {}
     uint32_t GetGenerationCounter() const override
     {
         return 0;
     }
-    void SetData(CORE_NS::Entity entity, const CORE_NS::IPropertyHandle& data) override {}
+    void SetData(CORE_NS::Entity entity, const CORE_NS::IPropertyHandle& data) override
+    {}
     const CORE_NS::IPropertyHandle* GetData(CORE_NS::Entity entity) const override
     {
         returnValidCounter_--;
@@ -257,7 +262,8 @@ public:
         returnValidCounter_--;
         return returnValidCounter_ ? handle_.get() : nullptr;
     }
-    void SetData(ComponentId index, const CORE_NS::IPropertyHandle& data) override {}
+    void SetData(ComponentId index, const CORE_NS::IPropertyHandle& data) override
+    {}
     const CORE_NS::IPropertyHandle* GetData(ComponentId index) const override
     {
         returnValidCounter_--;
@@ -291,7 +297,7 @@ public:
 
 private:
     BASE_NS::unique_ptr<PropertyHandle> handle_;
-    mutable int returnValidCounter_ { std::numeric_limits<int>::max() };
+    mutable int returnValidCounter_{std::numeric_limits<int>::max()};
 };
 
 /**
@@ -309,13 +315,15 @@ UNIT_TEST_F(API_EngineValueTest, Access, testing::ext::TestSize.Level1)
     auto accesses = data.GetAllRegisteredValueAccess();
     EXPECT_FALSE(accesses.empty());
 
-    auto testAccess = [](const IEngineInternalValueAccess::Ptr& access, const EnginePropertyParams& params,
-                          EngineValueTestComponentManager& manager, const IAny::Ptr& any) {
+    auto testAccess = [](const IEngineInternalValueAccess::Ptr& access,
+                          const EnginePropertyParams& params,
+                          EngineValueTestComponentManager& manager,
+                          const IAny::Ptr& any) {
         ASSERT_TRUE(any);
         access->SyncFromEngine(params, *any);
         access->SyncToEngine(*any, params);
 
-        auto invalid = Any<InvalidType> {};
+        auto invalid = Any<InvalidType>{};
         access->SyncFromEngine(params, invalid);
         access->SyncToEngine(invalid, params);
 
@@ -338,7 +346,8 @@ UNIT_TEST_F(API_EngineValueTest, Access, testing::ext::TestSize.Level1)
         manager.ResetReturnInvalidCount();
     };
 
-    auto verifyAny = [&](const IEngineInternalValueAccess::Ptr& access, EngineValueTestComponentManager& manager,
+    auto verifyAny = [&](const IEngineInternalValueAccess::Ptr& access,
+                         EngineValueTestComponentManager& manager,
                          std::function<IAny::Ptr(CORE_NS::Property&)>&& createAny) {
         auto* ph = manager.GetPropertyHandle();
         ASSERT_TRUE(ph);
@@ -363,7 +372,7 @@ UNIT_TEST_F(API_EngineValueTest, Access, testing::ext::TestSize.Level1)
         // Set handle
         EnginePropertyHandle handle;
         handle.manager = &manager;
-        handle.entity = CORE_NS::Entity { 1 }; // Any valid value is ok here
+        handle.entity = CORE_NS::Entity{1};  // Any valid value is ok here
         params.handle = handle;
         testAccess(access, params, manager, any);
         // Set container methods
@@ -385,8 +394,8 @@ UNIT_TEST_F(API_EngineValueTest, Access, testing::ext::TestSize.Level1)
 
         // Create a dummy property for calling IInternalValueAccess methods
         auto manager = EngineValueTestComponentManager(decl);
-        AnyCloneOptions cloneItem { CloneValueType::COPY_VALUE, TypeIdRole::ITEM };
-        AnyCloneOptions cloneArray { CloneValueType::COPY_VALUE, TypeIdRole::ARRAY };
+        AnyCloneOptions cloneItem{CloneValueType::COPY_VALUE, TypeIdRole::ITEM};
+        AnyCloneOptions cloneArray{CloneValueType::COPY_VALUE, TypeIdRole::ARRAY};
 
         IAny::Ptr baseAny;
         verifyAny(access, manager, [&](CORE_NS::Property& p) {
@@ -399,5 +408,5 @@ UNIT_TEST_F(API_EngineValueTest, Access, testing::ext::TestSize.Level1)
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

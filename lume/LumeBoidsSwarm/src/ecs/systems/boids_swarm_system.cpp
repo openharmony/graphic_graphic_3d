@@ -30,10 +30,10 @@
 #include <core/property_tools/property_api_impl.inl>
 
 namespace {
-static constexpr uint32_t BOIDSSWARM_PROFILER_DEFAULT_COLOR { 0xff00ff };
+static constexpr uint32_t BOIDSSWARM_PROFILER_DEFAULT_COLOR{0xff00ff};
 
-static constexpr auto VELOCITY_COUNT { BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT };
-static constexpr auto VELOCITY_CURRENT_INDEX { BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_CURRENT_INDEX };
+static constexpr auto VELOCITY_COUNT{BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT};
+static constexpr auto VELOCITY_CURRENT_INDEX{BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_CURRENT_INDEX};
 
 struct GravityField {};
 struct RepulsionField {};
@@ -67,7 +67,7 @@ struct QueryRowIndices {
     enum class RepulsionEntity : uint32_t { BOIDS_SWARM_REPULSION_COMP = 0, TRANSFORM_COMP = 1 };
 };
 
-template<typename T>
+template <typename T>
 uint32_t GetQueryRowIndex(T IndexAsEnum)
 {
     return static_cast<uint32_t>(IndexAsEnum);
@@ -85,12 +85,12 @@ BASE_NS::Math::Vec3 ClampMagnitude(const BASE_NS::Math::Vec3& v, float maxMagnit
 BASE_NS::Math::Vec3 ComputeUpVector(const BASE_NS::Math::IVec3& axisMask)
 {
     if (axisMask.x == 0 && axisMask.y != 0 && axisMask.z != 0) {
-        return { 1.f, 0.f, 0.f };
+        return {1.f, 0.f, 0.f};
     }
     if (axisMask.x != 0 && axisMask.y != 0 && axisMask.z == 0) {
-        return { 0.f, 0.f, 1.f };
+        return {0.f, 0.f, 1.f};
     }
-    return { 0.f, 1.f, 0.f };
+    return {0.f, 1.f, 0.f};
 }
 
 BASE_NS::Math::Quat ClampRotationDelta(
@@ -184,7 +184,7 @@ BOIDSSWARM_NS::BoidsSwarmStateComponent& operator>>(
     state.velocityMag = BASE_NS::Math::Magnitude(frameData.velocities[VELOCITY_CURRENT_INDEX]);
     return state;
 }
-} // namespace
+}  // namespace
 
 BOIDSSWARM_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -201,12 +201,13 @@ bool BoidsSwarmSystem::IsActive() const
 }
 
 BoidsSwarmSystem::BoidsSwarmSystem(IEcs& ecs)
-    : ecs_(ecs), boidsSwarmManager_(*(GetManager<IBoidsSwarmComponentManager>(ecs))),
+    : ecs_(ecs),
+      boidsSwarmManager_(*(GetManager<IBoidsSwarmComponentManager>(ecs))),
       boidsSwarmGravityManager_(*(GetManager<IBoidsSwarmGravityComponentManager>(ecs))),
       boidsSwarmRepulsionManager_(*(GetManager<IBoidsSwarmRepulsionComponentManager>(ecs))),
       boidsSwarmStateManager_(*(GetManager<IBoidsSwarmStateComponentManager>(ecs))),
       transformManager_(*(GetManager<CORE3D_NS::ITransformComponentManager>(ecs))),
-      randomEngine_(std::random_device {}())
+      randomEngine_(std::random_device{}())
 {}
 
 string_view BoidsSwarmSystem::GetName() const
@@ -229,7 +230,8 @@ IPropertyHandle* BoidsSwarmSystem::GetProperties()
     return nullptr;
 }
 
-void BoidsSwarmSystem::SetProperties(const IPropertyHandle&) {}
+void BoidsSwarmSystem::SetProperties(const IPropertyHandle&)
+{}
 
 const IEcs& BoidsSwarmSystem::GetECS() const
 {
@@ -248,8 +250,8 @@ float BoidsSwarmSystem::GetTimeStepSec() const
 
 void BoidsSwarmSystem::SetAxisMask(const BASE_NS::Math::IVec3& axisMask)
 {
-    axisMask_ = { axisMask.x != 0 ? 1 : 0, axisMask.y != 0 ? 1 : 0, axisMask.z != 0 ? 1 : 0 };
-    axisMaskFloat_ = { axisMask.x != 0 ? 1.f : 0.f, axisMask.y != 0 ? 1.f : 0.f, axisMask.z != 0 ? 1.f : 0.f };
+    axisMask_ = {axisMask.x != 0 ? 1 : 0, axisMask.y != 0 ? 1 : 0, axisMask.z != 0 ? 1 : 0};
+    axisMaskFloat_ = {axisMask.x != 0 ? 1.f : 0.f, axisMask.y != 0 ? 1.f : 0.f, axisMask.z != 0 ? 1.f : 0.f};
 }
 
 BASE_NS::Math::IVec3 BoidsSwarmSystem::GetAxisMask() const
@@ -294,20 +296,20 @@ void BoidsSwarmSystem::Initialize()
     ecs_.AddListener(boidsSwarmRepulsionManager_, *this);
 
     const ComponentQuery::Operation operations[] = {
-        { transformManager_, ComponentQuery::Operation::REQUIRE },
-        { boidsSwarmStateManager_, ComponentQuery::Operation::REQUIRE },
+        {transformManager_, ComponentQuery::Operation::REQUIRE},
+        {boidsSwarmStateManager_, ComponentQuery::Operation::REQUIRE},
     };
     swarmEntityQuery_.SetEcsListenersEnabled(true);
     swarmEntityQuery_.SetupQuery(boidsSwarmManager_, operations);
 
     const ComponentQuery::Operation gravityOperations[] = {
-        { transformManager_, ComponentQuery::Operation::REQUIRE },
+        {transformManager_, ComponentQuery::Operation::REQUIRE},
     };
     gravityEntityQuery_.SetEcsListenersEnabled(true);
     gravityEntityQuery_.SetupQuery(boidsSwarmGravityManager_, gravityOperations);
 
     const ComponentQuery::Operation repulsionOperations[] = {
-        { transformManager_, ComponentQuery::Operation::REQUIRE },
+        {transformManager_, ComponentQuery::Operation::REQUIRE},
     };
     repulsionEntityQuery_.SetEcsListenersEnabled(true);
     repulsionEntityQuery_.SetupQuery(boidsSwarmRepulsionManager_, repulsionOperations);
@@ -510,8 +512,12 @@ void BoidsSwarmSystem::Run()
         const Math::Vec3& position = positions_[i];
 
         Math::Vec3 fieldForce = Math::ZERO_VEC3;
-        auto processField = [&](const auto& query, auto& manager, auto compIndexEnum, auto transformCompIndexEnum,
-                                int directionSign, float BoidsSwarmFrameData::*weightMember) {
+        auto processField = [&](const auto& query,
+                                auto& manager,
+                                auto compIndexEnum,
+                                auto transformCompIndexEnum,
+                                int directionSign,
+                                float BoidsSwarmFrameData::*weightMember) {
             uint32_t fieldCount = 0;
 
             const auto& results = query.GetResults();
@@ -539,13 +545,19 @@ void BoidsSwarmSystem::Run()
         };
 
         if constexpr (is_same_v<decltype(field), GravityField>) {
-            processField(gravityEntityQuery_, boidsSwarmGravityManager_,
+            processField(gravityEntityQuery_,
+                boidsSwarmGravityManager_,
                 QueryRowIndices::GravityEntity::BOIDS_SWARM_GRAVITY_COMP,
-                QueryRowIndices::GravityEntity::TRANSFORM_COMP, +1, &BoidsSwarmFrameData::gravityWeight);
+                QueryRowIndices::GravityEntity::TRANSFORM_COMP,
+                +1,
+                &BoidsSwarmFrameData::gravityWeight);
         } else if constexpr (is_same_v<decltype(field), RepulsionField>) {
-            processField(repulsionEntityQuery_, boidsSwarmRepulsionManager_,
+            processField(repulsionEntityQuery_,
+                boidsSwarmRepulsionManager_,
                 QueryRowIndices::RepulsionEntity::BOIDS_SWARM_REPULSION_COMP,
-                QueryRowIndices::RepulsionEntity::TRANSFORM_COMP, -1, &BoidsSwarmFrameData::repulsionWeight);
+                QueryRowIndices::RepulsionEntity::TRANSFORM_COMP,
+                -1,
+                &BoidsSwarmFrameData::repulsionWeight);
         }
 
         return ClampMagnitude(fieldForce, frameData.maxAccelerationMag);
@@ -691,7 +703,7 @@ void BoidsSwarmSystem::LimitTurnRate(BoidsSwarmFrameData& frameData, const Math:
             const Math::Vec3 prevDir = prevVel / prevVelMag;
             Math::Quat clamped = ClampRotationDelta(Math::LookRotation(prevDir, up), curRot, frameData.maxTurnRate);
             currVel = clamped * Math::Vec3(0.f, 0.f, currVelMag);
-            currVel *= axisMaskFloat_; // avoid drifting on locked axes due to rotation
+            currVel *= axisMaskFloat_;  // avoid drifting on locked axes due to rotation
         }
     } else {
         frameData.rotation =

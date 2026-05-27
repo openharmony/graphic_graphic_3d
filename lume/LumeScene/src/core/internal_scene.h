@@ -20,6 +20,7 @@
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_node_notify.h>
 #include <scene/interface/intf_application_context.h>
+#include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/scene_options.h>
 #include <shared_mutex>
@@ -58,6 +59,7 @@ public:
 
     bool Initialize() override;
     void Uninitialize() override;
+    void PostLoad() override;
 
     IRenderContext::Ptr GetContext() const override
     {
@@ -93,6 +95,7 @@ public:
     BASE_NS::vector<META_NS::IAnimation::Ptr> GetAnimations() const override;
     META_NS::IAnimation::Ptr FindAnimation(CORE_NS::Entity ent) const override;
     META_NS::IAnimation::Ptr FindAnimation(const CORE_NS::ResourceId&) const override;
+    META_NS::IAnimation::Ptr ConstructAnimation(const CORE_NS::ResourceId&) const override;
     META_NS::IAnimation::Ptr FindAnimation(CORE_NS::Entity ent, bool queryResource) const;
 
     IEcsContext& GetEcsContext() override
@@ -138,7 +141,7 @@ public:
     void StartAllStartables(META_NS::IStartableController::ControlBehavior behavior) override;
     void StopAllStartables(META_NS::IStartableController::ControlBehavior behavior) override;
 
-protected: // IApplicationContextProvider
+protected:  // IApplicationContextProvider
     IApplicationContext::ConstPtr GetApplicationContext() const override
     {
         return context_.lock();
@@ -151,6 +154,7 @@ protected: // IApplicationContextProvider
 
     void ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
         const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng) override;
+
 public:
     NodeHits CastRay(
         const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const override;
@@ -173,6 +177,7 @@ private:
 
     NodeHits MapHitResults(const BASE_NS::vector<CORE3D_NS::RayCastResult>& res, const RayCastOptions& options) const;
     bool UpdateSyncProperties(bool resetPending);
+    void SyncPropertiesForObject(const IEcsObject::Ptr& eobj);
     uint32_t ReleaseChildNodes(const IEcsObject::Ptr& eobj);
 
     void OnChildChanged(
@@ -188,10 +193,26 @@ private:
 
     void SetNodeActive(const INode::Ptr& child, bool active);
     bool IsSameScene(const INode::Ptr& node) const;
+    void RemoveExternalNode(const IExternalNode::Ptr& n, bool removeFromIndex);
+
 private:
     bool RemoveEntity(const CORE_NS::IResourceManager::Ptr& resources, CORE_NS::Entity entity, bool removeFromIndex);
     BASE_NS::vector<INode::Ptr> FindNodes(CORE_NS::Entity root, BASE_NS::string_view name, size_t maxCount,
         META_NS::ObjectId id, META_NS::TraversalType traversalType) const;
+
+    // Breadth-first body of FindNodes. Returns true once maxCount results are accumulated.
+    bool FindNodesBfs(const CORE3D_NS::ISceneNode& root, BASE_NS::string_view name, size_t maxCount,
+        META_NS::ObjectId id, BASE_NS::vector<INode::Ptr>& nodes) const;
+
+    // Depth-first body of FindNodes. Used for any non-BREADTH_FIRST_ORDER traversal — the original
+    // FindNodes treats every non-BFS variant identically, so the specific DFS order is not threaded through.
+    void FindNodesDfs(const CORE3D_NS::ISceneNode& root, BASE_NS::string_view name, size_t maxCount,
+        META_NS::ObjectId id, BASE_NS::vector<INode::Ptr>& nodes) const;
+
+    // Looks up entity's INode proxy (constructing it if not cached) and appends it to nodes.
+    // Returns true once nodes has reached maxCount (maxCount == 0 means unlimited).
+    bool AppendFoundNode(
+        CORE_NS::Entity entity, META_NS::ObjectId id, size_t maxCount, BASE_NS::vector<INode::Ptr>& nodes) const;
 
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> GetRenderContextPtr() const
     {
@@ -208,7 +229,7 @@ private:
     // LumeTS may initialize us without the default application context. In that case, store the render
     // context given at initialization time and use that
     IApplicationContext::ConstWeakPtr context_;
-    IRenderContext::Ptr renderContext_; // Optional
+    IRenderContext::Ptr renderContext_;  // Optional
 
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D_;
 
@@ -218,28 +239,27 @@ private:
     BASE_NS::unordered_map<BASE_NS::Uid, IComponentFactory::Ptr> componentFactories_;
 
     mutable NodesType nodes_;
-    mutable BASE_NS::unordered_map<CORE_NS::Entity, META_NS::IAnimation::WeakPtr> animations_;
     mutable BASE_NS::vector<IInternalCamera::WeakPtr> renderingCameras_;
 
-    uint64_t firstTime_ { ~0u };
-    uint64_t previousFrameTime_ { ~0u };
-    uint64_t deltaTime_ { 1u };
+    uint64_t firstTime_{~0u};
+    uint64_t previousFrameTime_{~0u};
+    uint64_t deltaTime_{1u};
 
-    RenderMode mode_ { RenderMode::ALWAYS };
-    size_t nodeListening_ {};
+    RenderMode mode_{RenderMode::ALWAYS};
+    size_t nodeListening_{};
 
-    size_t deferedRenderCount_ { 6u }; // resource clean is deferred 6 non-rendering frames
+    size_t deferedRenderCount_{6u};  // resource clean is deferred 6 non-rendering frames
 
     BASE_NS::vector<INodeNotify::Ptr> GetNotifiableNodesFromHierarchy(CORE_NS::Entity root);
 
-    void ProcessCustomRenderNodeGraph(
-        BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
- 	    BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles);
-    RenderNodeGraphModificationMode modificationMode_;
+    void ProcessCustomRenderNodeGraph(BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
+        BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles);
+    RenderNodeGraphModificationMode modificationMode_{RenderNodeGraphModificationMode::INVALID};
     BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
-private: // locked bits
+
+private:  // locked bits
     mutable std::shared_mutex mutex_;
-    bool pendingRender_ {};
+    bool pendingRender_{};
     BASE_NS::unordered_map<void*, META_NS::IEnginePropertySync::WeakPtr> syncs_;
     ResourceGroupBundle groups_;
 };

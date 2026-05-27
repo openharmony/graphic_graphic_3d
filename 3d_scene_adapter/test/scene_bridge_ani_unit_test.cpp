@@ -27,10 +27,14 @@ namespace OHOS::Render3D {
 
 class SceneBridgeAniUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 /**
@@ -64,4 +68,4 @@ HWTEST_F(SceneBridgeAniUT, UnwrapSceneFromAni002, TestSize.Level1)
     EXPECT_EQ(result, nullptr);
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

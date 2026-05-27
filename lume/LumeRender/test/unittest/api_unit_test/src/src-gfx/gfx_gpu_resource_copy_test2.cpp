@@ -33,16 +33,16 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 4u, 4u };
-static constexpr uint32_t NUM_LAYERS { 6 };
-static constexpr uint32_t TEST_ELEMENT_BYTE_SIZE[2] { 1u, 1u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{4u, 4u};
+static constexpr uint32_t NUM_LAYERS{6};
+static constexpr uint32_t TEST_ELEMENT_BYTE_SIZE[2]{1u, 1u};
 static constexpr uint32_t NUM_BLOCKS = 1u;
 static constexpr uint32_t BLOCK_BYTE_SIZE = 8u;
-static constexpr string_view TEST_IMAGE_NAME_0 { "TestImage0" };
-static constexpr string_view TEST_IMAGE_NAME_1 { "TestImage1" };
-static constexpr string_view TEST_BUFFER_NAME_0 { "TestBuffer0" };
-static constexpr string_view TEST_BUFFER_NAME_1 { "TestBuffer1" };
-static constexpr string_view TEST_BUFFER_NAME_2 { "TestBuffer2" };
+static constexpr string_view TEST_IMAGE_NAME_0{"TestImage0"};
+static constexpr string_view TEST_IMAGE_NAME_1{"TestImage1"};
+static constexpr string_view TEST_BUFFER_NAME_0{"TestBuffer0"};
+static constexpr string_view TEST_BUFFER_NAME_1{"TestBuffer1"};
+static constexpr string_view TEST_BUFFER_NAME_2{"TestBuffer2"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -71,6 +71,19 @@ bool isOpenGLBackend(DeviceBackendType type)
 TestResources CreateTestResources(UTest::EngineResources& er, bool compressed)
 {
     TestResources res;
+    BASE_NS::Format compressedFormat = BASE_NS::Format::BASE_FORMAT_UNDEFINED;
+    if (compressed) {
+        for (uint32_t format = BASE_FORMAT_BC1_RGB_UNORM_BLOCK; format <= BASE_FORMAT_ASTC_12x12_SRGB_BLOCK; ++format) {
+            auto properties = er.device->GetFormatProperties(static_cast<BASE_NS::Format>(format));
+            if ((properties.optimalTilingFeatures & (FormatFeatureFlagBits::CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT |
+                                                        FormatFeatureFlagBits::CORE_FORMAT_FEATURE_TRANSFER_DST_BIT)) ==
+                (FormatFeatureFlagBits::CORE_FORMAT_FEATURE_TRANSFER_SRC_BIT |
+                    FormatFeatureFlagBits::CORE_FORMAT_FEATURE_TRANSFER_DST_BIT)) {
+                compressedFormat = static_cast<BASE_NS::Format>(format);
+                break;
+            }
+        }
+    }
     {
         GpuImageDesc imageDesc;
         imageDesc.width = TEST_DATA_SIZE.x;
@@ -80,7 +93,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool compressed)
         if (!compressed) {
             imageDesc.format = BASE_FORMAT_R8_UNORM;
         } else {
-            imageDesc.format = BASE_FORMAT_EAC_R11_UNORM_BLOCK;
+            imageDesc.format = compressedFormat;
         }
         imageDesc.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
         imageDesc.imageType = CORE_IMAGE_TYPE_2D;
@@ -100,7 +113,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool compressed)
         if (!compressed) {
             imageDesc.format = BASE_FORMAT_R8_UNORM;
         } else {
-            imageDesc.format = BASE_FORMAT_EAC_R11_UNORM_BLOCK;
+            imageDesc.format = compressedFormat;
         }
         imageDesc.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
         imageDesc.imageType = CORE_IMAGE_TYPE_2D;
@@ -120,7 +133,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool compressed)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         res.copyBufferHandle0 =
-            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_0, bufferDesc, { bufferDefaultData });
+            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_0, bufferDesc, {bufferDefaultData});
     }
     {
         GpuBufferDesc bufferDesc;
@@ -182,8 +195,8 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool compressed)
                 bufferImageCopy.imageSubresource.mipLevel = 0u;
                 bufferImageCopy.imageSubresource.baseArrayLayer = 0u;
                 bufferImageCopy.imageSubresource.layerCount = NUM_LAYERS;
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                 dsStaging->CopyBufferToImage(tr.copyBufferHandle0, tr.testImageHandle0, bufferImageCopy);
             }
         }
@@ -198,8 +211,8 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool compressed)
                 bufferImageCopy.imageSubresource.mipLevel = 0u;
                 bufferImageCopy.imageSubresource.baseArrayLayer = 0u;
                 bufferImageCopy.imageSubresource.layerCount = NUM_LAYERS;
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                 dsStaging->CopyBufferToImage(tr.copyBufferHandle0, tr.testImageHandle1, bufferImageCopy);
             }
         }
@@ -220,8 +233,8 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool compressed)
                     } else {
                         bufferImageCopy.imageSubresource.layerCount = NUM_LAYERS;
                     }
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle0, tr.copyBufferHandle1, bufferImageCopy);
                 }
                 if (!isOpenGLBackend(er.backend) || !compressed) {
@@ -238,8 +251,8 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool compressed)
                     } else {
                         bufferImageCopy.imageSubresource.layerCount = NUM_LAYERS;
                     }
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle1, tr.copyBufferHandle2, bufferImageCopy);
                 }
             }
@@ -321,7 +334,7 @@ void TestGpuResourceCopyLayers(DeviceBackendType backend, bool compressed)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -334,19 +347,17 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceCopyLayersTestVulkan, testing::
 {
     TestGpuResourceCopyLayers(DeviceBackendType::VULKAN, false);
 }
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: GpuResourceCopyLayersCompressedTestVulkan
  * @tc.desc: Tests mainly for GPU buffer-image, image-buffer copies with array layers and compressed image formats.
  * Readback on CPU to validate that all copies were successful. Backend is Vulkan.
  * @tc.type: FUNC
  */
-UNIT_TEST(API_GfxGpuResourceCopyTest, DISABLED_GpuResourceCopyLayersCompressedTestVulkan, testing::ext::TestSize.Level1)
+UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceCopyLayersCompressedTestVulkan, testing::ext::TestSize.Level1)
 {
     TestGpuResourceCopyLayers(DeviceBackendType::VULKAN, true);
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -369,4 +380,4 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceCopyLayersCompressedTestOpenGL,
 {
     TestGpuResourceCopyLayers(UTest::GetOpenGLBackend(), true);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

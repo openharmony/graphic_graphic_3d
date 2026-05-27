@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "description": "track template + parallel-with-inline-derived-trackAnim override",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "../animation_only_tmpl3.index",
+        "node": {
+            "type": "node",
+            "name": "AnimOnlyScene",
+            "children": [
+                {
+                    "type": "node",
+                    "name": "AnimatedEmpty"
+                }
+            ]
+        }
+    }
+}

@@ -32,7 +32,7 @@
 namespace OHOS::Render3D::KITETS {
 class ShaderImpl : public SceneResourceImpl {
 public:
-    ShaderImpl(const std::shared_ptr<ShaderETS> &shader);
+    ShaderImpl(const std::shared_ptr<ShaderETS>& shader);
     ~ShaderImpl();
     void destroy() override;
 

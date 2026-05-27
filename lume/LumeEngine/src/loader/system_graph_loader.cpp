@@ -60,10 +60,10 @@ using BASE_NS::Math::Vec3;
 using BASE_NS::Math::Vec4;
 
 namespace {
-constexpr size_t VERSION_SIZE { 5u };
-constexpr uint32_t VERSION_MAJOR { 22u };
+constexpr size_t VERSION_SIZE{5u};
+constexpr uint32_t VERSION_MAJOR{22u};
 
-template<class TYPEINFO>
+template <class TYPEINFO>
 const TYPEINFO* FindTypeInfo(const string_view name, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -75,7 +75,7 @@ const TYPEINFO* FindTypeInfo(const string_view name, const array_view<const ITyp
     return nullptr;
 }
 
-template<class TYPEINFO>
+template <class TYPEINFO>
 const TYPEINFO* FindTypeInfo(const Uid& uid, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -91,7 +91,7 @@ struct PropertyValue {
     const IPropertyHandle* handle;
     void* offset;
     const Property* info;
-    template<typename Type>
+    template <typename Type>
     Type& Get() const
     {
         return *static_cast<Type*>(offset);
@@ -99,7 +99,7 @@ struct PropertyValue {
 };
 
 // For primitive types..
-template<typename ElementType>
+template <typename ElementType>
 void ReadArrayPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     ElementType* output = &propertyData.Get<ElementType>();
@@ -119,7 +119,7 @@ void ReadArrayPropertyValue(const json::value& jsonData, const PropertyValue& pr
 }
 
 // Specialization for char types (strings).. (null terminate the arrays)
-template<>
+template <>
 void ReadArrayPropertyValue<char>(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     char* output = &propertyData.Get<char>();
@@ -134,7 +134,7 @@ void ReadArrayPropertyValue<char>(const json::value& jsonData, const PropertyVal
     }
 }
 
-template<class HandleType>
+template <class HandleType>
 void ReadHandlePropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     decltype(HandleType::id) result;
@@ -144,7 +144,7 @@ void ReadHandlePropertyValue(const json::value& jsonData, const PropertyValue& p
     }
 }
 
-template<class VecType, size_t n>
+template <class VecType, size_t n>
 void ReadVecPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& /* error */)
 {
     if (auto const array = jsonData.find(propertyData.info->name); array) {
@@ -158,7 +158,7 @@ bool ResolveComponentDependencies(
 {
     for (const Uid& dependencyUid : dependencies) {
         // default constructed UID is used as a wildcard for dependecies not known at compile time.
-        if (dependencyUid == Uid {}) {
+        if (dependencyUid == Uid{}) {
             continue;
         }
         // See if this component type exists in ecs
@@ -298,13 +298,13 @@ void ParseProperties(const json::value& jsonData, ISystem& system, string& error
         const IPropertyApi* propertyApi = systemPropertyHandle->Owner();
         for (size_t i = 0U, count = propertyApi->PropertyCount(); i < count; ++i) {
             if (auto* prop = propertyApi->MetaData(i)) {
-                PropertyValue property { systemPropertyHandle, static_cast<uint8_t*>(offset) + prop->offset, prop };
+                PropertyValue property{systemPropertyHandle, static_cast<uint8_t*>(offset) + prop->offset, prop};
                 ReadPropertyValue(*propertiesIt, property, error);
             }
         }
     }
     systemPropertyHandle->WUnlock();
-    system.SetProperties(*systemPropertyHandle); // notify that the properties HAVE changed.
+    system.SetProperties(*systemPropertyHandle);  // notify that the properties HAVE changed.
 }
 
 bool ParseSystem(const json::value& jsonData, const array_view<const ITypeInfo* const>& componentMetadata,
@@ -331,7 +331,9 @@ bool ParseSystem(const json::value& jsonData, const array_view<const ITypeInfo* 
 
         // Create system and read properties.
         ISystem* system = ecs.CreateSystem(*typeInfo);
-        ParseProperties(jsonData, *system, error);
+        if (system) {
+            ParseProperties(jsonData, *system, error);
+        }
 
         return true;
     }
@@ -348,8 +350,8 @@ SystemGraphLoader::LoadResult ParseSystemGraphVersion(const json::value& jsonDat
     SystemGraphLoader::LoadResult finalResult;
     string ver;
     string type;
-    uint32_t verMajor { ~0u };
-    uint32_t verMinor { ~0u };
+    uint32_t verMajor{~0u};
+    uint32_t verMinor{~0u};
     if (const json::value* iter = jsonData.find("compatibility_info"); iter) {
         SafeGetJsonValue(*iter, "type", finalResult.error, type);
         SafeGetJsonValue(*iter, "version", finalResult.error, ver);
@@ -364,7 +366,8 @@ SystemGraphLoader::LoadResult ParseSystemGraphVersion(const json::value& jsonDat
     if ((type != "systemgraph") || (verMajor != VERSION_MAJOR)) {
         // NOTE: we're still loading the system graph
         CORE_LOG_W("DEPRECATED SYSTEM GRAPH: invalid system graph type (%s) and / or invalid version (%s).",
-            type.c_str(), ver.c_str());
+            type.c_str(),
+            ver.c_str());
     }
     return finalResult;
 }
@@ -392,7 +395,7 @@ ISystemGraphLoader::LoadResult LoadFromNullTerminated(const string_view jsonStri
 
     return finalResult;
 }
-} // namespace
+}  // namespace
 
 SystemGraphLoader::LoadResult SystemGraphLoader::Load(const string_view uri, IEcs& ecs)
 {
@@ -403,6 +406,11 @@ SystemGraphLoader::LoadResult SystemGraphLoader::Load(const string_view uri, IEc
     }
 
     const uint64_t byteLength = file->GetLength();
+
+    constexpr uint64_t MAX_SYSTEM_GRAPH_SIZE = 16u * 1024u * 1024u;
+    if (byteLength > MAX_SYSTEM_GRAPH_SIZE) {
+        return LoadResult("System graph file too large.");
+    }
 
     string raw(static_cast<size_t>(byteLength), string::value_type());
     if (file->Read(raw.data(), byteLength) != byteLength) {
@@ -420,7 +428,8 @@ SystemGraphLoader::LoadResult SystemGraphLoader::LoadString(const string_view js
     return LoadFromNullTerminated(asString, ecs);
 }
 
-SystemGraphLoader::SystemGraphLoader(IFileManager& fileManager) : fileManager_ { fileManager } {}
+SystemGraphLoader::SystemGraphLoader(IFileManager& fileManager) : fileManager_{fileManager}
+{}
 
 void SystemGraphLoader::Destroy()
 {
@@ -430,7 +439,7 @@ void SystemGraphLoader::Destroy()
 // SystemGraphLoader factory
 ISystemGraphLoader::Ptr SystemGraphLoaderFactory::Create(IFileManager& fileManager)
 {
-    return ISystemGraphLoader::Ptr { new SystemGraphLoader(fileManager) };
+    return ISystemGraphLoader::Ptr{new SystemGraphLoader(fileManager)};
 }
 
 const IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid) const
@@ -449,7 +458,9 @@ IInterface* SystemGraphLoaderFactory::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void SystemGraphLoaderFactory::Ref() {}
+void SystemGraphLoaderFactory::Ref()
+{}
 
-void SystemGraphLoaderFactory::Unref() {}
+void SystemGraphLoaderFactory::Unref()
+{}
 CORE_END_NAMESPACE()

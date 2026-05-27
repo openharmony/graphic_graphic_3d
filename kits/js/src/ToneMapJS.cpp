@@ -19,6 +19,7 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
+#include <optional>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_scene.h>
@@ -82,15 +83,22 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
 
     BASE_NS::vector<napi_property_descriptor> node_props;
     // clang-format off
-    node_props.emplace_back(GetSetProperty<uint32_t, ToneMapJS, &ToneMapJS::GetType, &ToneMapJS::SetType>("type"));
     node_props.emplace_back(
-        GetSetProperty<float, ToneMapJS, &ToneMapJS::GetExposure, &ToneMapJS::SetExposure>("exposure"));
+        GetSetProperty<std::optional<uint32_t>, ToneMapJS, &ToneMapJS::GetType, &ToneMapJS::SetType>("type"));
+    node_props.emplace_back(
+        GetSetProperty<std::optional<float>, ToneMapJS, &ToneMapJS::GetExposure, &ToneMapJS::SetExposure>("exposure"));
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, ToneMapJS, &ToneMapJS::Dispose>("destroy"));
     // clang-format on
 
     napi_value func;
-    auto status = napi_define_class(env, "ToneMappingSettings", NAPI_AUTO_LENGTH, BaseObject::ctor<ToneMapJS>(),
-        nullptr, node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "ToneMappingSettings",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<ToneMapJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -119,10 +127,10 @@ void ToneMapJS::Init(napi_env env, napi_value exports)
 napi_value ToneMapJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     LOG_V("ToneMapJS::Dispose");
-    DisposeNative(nullptr);
+    DisposeNative();
     return {};
 }
-void ToneMapJS::DisposeNative(void*)
+void ToneMapJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -162,7 +170,7 @@ void* ToneMapJS::GetInstanceImpl(uint32_t id)
 }
 void ToneMapJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -188,7 +196,7 @@ ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i)
         return;
     }
 
-    AddBridge("ToneMapJS",ctx.This());
+    AddBridge("ToneMapJS", ctx.This());
     NapiApi::Object toneMapArgs = ctx.Arg<0>();
     exposure_ = toneMapArgs.Get<float>("exposure").valueOrDefault(exposure_);
     type_ = static_cast<ToneMappingType>(toneMapArgs.Get<uint32_t>("type").valueOrDefault(type_));
@@ -200,7 +208,7 @@ ToneMapJS::ToneMapJS(napi_env e, napi_callback_info i)
 ToneMapJS::~ToneMapJS()
 {
     LOG_V("ToneMapJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
@@ -216,13 +224,23 @@ napi_value ToneMapJS::GetType(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(static_cast<uint32_t>(type_));
 }
 
-void ToneMapJS::SetType(NapiApi::FunctionContext<uint32_t>& ctx)
+void ToneMapJS::SetType(NapiApi::FunctionContext<std::optional<uint32_t>>& ctx)
 {
-    const auto nativeType = ToNativeType(ctx.Arg<0>());
-    type_ = ToJs(nativeType);
+    auto value = ctx.Arg<0>().valueOrDefault();
+    if (value) {
+        const auto nativeType = ToNativeType(*value);
+        type_ = ToJs(nativeType);
 
-    if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        toneMap->Type()->SetValue(nativeType);
+        if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
+            toneMap->Type()->SetValue(nativeType);
+        }
+    } else {
+        if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
+            toneMap->Type()->Reset();
+            type_ = ToJs(toneMap->Type()->GetValue());
+        } else {
+            type_ = ACES;
+        }
     }
 }
 
@@ -235,10 +253,18 @@ napi_value ToneMapJS::GetExposure(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(exposure_);
 }
 
-void ToneMapJS::SetExposure(NapiApi::FunctionContext<float>& ctx)
+void ToneMapJS::SetExposure(NapiApi::FunctionContext<std::optional<float>>& ctx)
 {
-    exposure_ = ctx.Arg<0>();
+    auto value = ctx.Arg<0>().valueOrDefault();
     if (auto toneMap = interface_cast<SCENE_NS::ITonemap>(GetNativeObject())) {
-        toneMap->Exposure()->SetValue(exposure_);
+        if (value) {
+            exposure_ = *value;
+            toneMap->Exposure()->SetValue(exposure_);
+        } else {
+            toneMap->Exposure()->Reset();
+            exposure_ = toneMap->Exposure()->GetValue();
+        }
+    } else {
+        exposure_ = value.value_or(0.0f);
     }
 }

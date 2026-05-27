@@ -34,8 +34,8 @@ public:
     virtual bool IsCompatible(const TypeId& id) const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IValue)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IValue)
 
 #endif

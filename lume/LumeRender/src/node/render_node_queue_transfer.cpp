@@ -34,11 +34,14 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 
-void RenderNodeQueueTransfer::InitNode(IRenderNodeContextManager& renderNodeContextMgr) {}
+void RenderNodeQueueTransfer::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
+{}
 
-void RenderNodeQueueTransfer::PreExecuteFrame() {}
+void RenderNodeQueueTransfer::PreExecuteFrame()
+{}
 
-void RenderNodeQueueTransfer::ExecuteFrame(IRenderCommandList& cmdList) {}
+void RenderNodeQueueTransfer::ExecuteFrame(IRenderCommandList& cmdList)
+{}
 
 // for plugin / factory interface
 IRenderNode* RenderNodeQueueTransfer::Create()

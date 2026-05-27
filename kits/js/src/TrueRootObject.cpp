@@ -22,7 +22,7 @@
 TrueRootObject::TrueRootObject(napi_env env, napi_callback_info info)
 {
     if (auto getOnlyFirstArg = NapiApi::FunctionContext<NapiApi::Object>(env, info, NapiApi::ArgCount::PARTIAL)) {
-        auto firstArg = NapiApi::Object { getOnlyFirstArg.Arg<0>() };
+        auto firstArg = NapiApi::Object{getOnlyFirstArg.Arg<0>()};
         ExtractNativeObject(firstArg);
     }
 }
@@ -57,7 +57,8 @@ void TrueRootObject::UnsetNativeObject()
     objW_ = nullptr;
 }
 
-void* TrueRootObject::GetInstanceImpl(uint32_t id) {
+void* TrueRootObject::GetInstanceImpl(uint32_t id)
+{
     if (id == TrueRootObject::ID) {
         return static_cast<TrueRootObject*>(this);
     }
@@ -68,7 +69,7 @@ void TrueRootObject::Finalize(napi_env env)
 {
     // Synchronously destroy the lume object in engine thread.. (only for strong refs.)
     if (obj_) {
-        ExecSyncTask([obj = BASE_NS::move(obj_)]() { return META_NS::IAny::Ptr {}; });
+        ExecSyncTask([obj = BASE_NS::move(obj_)]() { return META_NS::IAny::Ptr{}; });
     }
     // and reset the weak ref too. (which may be null anyway)
     objW_.reset();
@@ -95,7 +96,7 @@ void TrueRootObject::ExtractNativeObject(NapiApi::Object& resourceParam)
     resourceParam.DeleteProperty("NativeObjectPtrType");
 
     META_NS::IObject::Ptr metaPtr;
-    InjectedNativeObject* ptr { nullptr };
+    InjectedNativeObject* ptr{nullptr};
     napi_get_value_external(env, nativeObjStash, (void**)&ptr);
     if (ptr == nullptr || !(metaPtr = ptr->Reset())) {
         LOG_E("Unable to wrap a native object with TrueRootObject: Native object was null");
@@ -127,7 +128,7 @@ void TrueRootObject::InjectNativeObject(
 
     NapiApi::Object resourceParam(env, args.argv[0]);
     resourceParam.Set("NativeObject", nativeObjStash);
-    resourceParam.Set("NativeObjectPtrType", NapiApi::Env { env }.GetNumber(static_cast<uint32_t>(ptrType)));
+    resourceParam.Set("NativeObjectPtrType", NapiApi::Env{env}.GetNumber(static_cast<uint32_t>(ptrType)));
 }
 
 TrueRootObject::InjectedNativeObject::InjectedNativeObject(const META_NS::IObject::Ptr& obj)

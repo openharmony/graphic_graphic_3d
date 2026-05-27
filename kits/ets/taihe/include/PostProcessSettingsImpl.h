@@ -35,10 +35,10 @@ namespace OHOS::Render3D::KITETS {
 class PostProcessSettingsImpl {
 public:
     static std::shared_ptr<PostProcessETS> CreateInternal(
-        const ScenePostProcessSettings::ToneMappingSettings &tonemapData,
-        const ScenePostProcessSettings::BloomSettings &bloomData,
-        const ScenePostProcessSettings::VignetteSettings &vignetteData,
-        const ScenePostProcessSettings::ColorFringeSettings &colorFringeData);
+        const ScenePostProcessSettings::ToneMappingSettings& tonemapData,
+        const ScenePostProcessSettings::BloomSettings& bloomData,
+        const ScenePostProcessSettings::VignetteSettings& vignetteData,
+        const ScenePostProcessSettings::ColorFringeSettings& colorFringeData);
 
     PostProcessSettingsImpl(const std::shared_ptr<PostProcessETS> postProcessETS);
     ~PostProcessSettingsImpl();
@@ -59,5 +59,5 @@ public:
 private:
     std::shared_ptr<PostProcessETS> postProcessETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_POST_PROCESS_SETTINGS_IMPL_H

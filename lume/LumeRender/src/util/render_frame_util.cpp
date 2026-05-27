@@ -36,15 +36,15 @@ RENDER_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 
 namespace {
-const string_view RENDER_DATA_STORE_DEFAULT_STAGING { "RenderDataStoreDefaultStaging" };
-const string_view RENDER_DATA_STORE_DEFAULT_DATA_COPY { "RenderDataStoreDefaultGpuResourceDataCopy" };
-const string_view RENDER_DATA_STORE_POD { "RenderDataStorePod" };
-const string_view POD_NAME { "NodeGraphBackBufferConfiguration" };
+const string_view RENDER_DATA_STORE_DEFAULT_STAGING{"RenderDataStoreDefaultStaging"};
+const string_view RENDER_DATA_STORE_DEFAULT_DATA_COPY{"RenderDataStoreDefaultGpuResourceDataCopy"};
+const string_view RENDER_DATA_STORE_POD{"RenderDataStorePod"};
+const string_view POD_NAME{"NodeGraphBackBufferConfiguration"};
 
 GpuBufferDesc GetStagingBufferDesc(
     const uint32_t byteSize, const EngineBufferCreationFlags engineBufferCreationAdditionalFlags)
 {
-    return GpuBufferDesc {
+    return GpuBufferDesc{
         CORE_BUFFER_USAGE_TRANSFER_DST_BIT,
         CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
         CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS | engineBufferCreationAdditionalFlags,
@@ -52,7 +52,7 @@ GpuBufferDesc GetStagingBufferDesc(
         {},
     };
 }
-} // namespace
+}  // namespace
 
 RenderFrameUtil::RenderFrameUtil(const IRenderContext& renderContext)
     : renderContext_(renderContext), device_(renderContext_.GetDevice())
@@ -84,14 +84,14 @@ void RenderFrameUtil::BeginFrame()
         const uint64_t frameIndex = device_.GetFrameCount();
         for (auto& ref : thisFrameSignalData_.gpuSemaphores) {
             if (ref) {
-                gpuSignalDeferredDestroy_.push_back({ frameIndex, move(ref) });
+                gpuSignalDeferredDestroy_.push_back({frameIndex, move(ref)});
             }
         }
         thisFrameSignalData_.gpuSemaphores.clear();
         thisFrameSignalData_.signalData.clear();
 
         // process backbuffer
-        postBackBufferConfig_ = preBackBufferConfig_; // NOTE: copy
+        postBackBufferConfig_ = preBackBufferConfig_;  // NOTE: copy
         // process copies
         const size_t count = preFrame_.copyData.size();
         auto& bufferedPostFrame = bufferedPostFrame_[bufferedIndex_];
@@ -147,7 +147,7 @@ void RenderFrameUtil::ProcessFrameInputCopyData(const RenderFrameUtil::CopyData&
         const RenderHandleType type = dataToBeCopied.handle.GetHandleType();
         thisFrameCopiedData_.push_back({});
         auto& copyDataRef = thisFrameCopiedData_.back();
-        copyDataRef = { {}, dataToBeCopied.frameIndex, dataToBeCopied.handle, dataToBeCopied.copyFlags, {} };
+        copyDataRef = {{}, dataToBeCopied.frameIndex, dataToBeCopied.handle, dataToBeCopied.copyFlags, {}};
 
         const bool byteBufferCopy = ((dataToBeCopied.copyFlags & IRenderFrameUtil::GPU_BUFFER_ONLY) == 0);
         const EngineBufferCreationFlags ebcf =
@@ -164,32 +164,41 @@ void RenderFrameUtil::ProcessFrameInputCopyData(const RenderFrameUtil::CopyData&
                 copyDataRef.byteBuffer = make_unique<ByteArray>(byteSize);
             }
 
-            const BufferCopy bc {
-                0,        // srcOffset
-                0,        // dstOffset
-                byteSize, // size
+            const BufferCopy bc{
+                0,         // srcOffset
+                0,         // dstOffset
+                byteSize,  // size
             };
-            dsStaging_->CopyBufferToBuffer(dataToBeCopied.handle, copyDataRef.bufferHandle, bc,
+            dsStaging_->CopyBufferToBuffer(dataToBeCopied.handle,
+                copyDataRef.bufferHandle,
+                bc,
                 IRenderDataStoreDefaultStaging::ResourceCopyInfo::END_FRAME);
         } else if (type == RenderHandleType::GPU_IMAGE) {
             const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dataToBeCopied.handle);
             const uint32_t bytesPerPixel = gpuResourceMgr.GetFormatProperties(dataToBeCopied.handle).bytesPerPixel;
-            const uint32_t byteSize = desc.width * desc.height * bytesPerPixel;
+            const uint64_t byteSize64 =
+                static_cast<uint64_t>(desc.width) * static_cast<uint64_t>(desc.height) * bytesPerPixel;
+            if (byteSize64 > std::numeric_limits<uint32_t>::max()) {
+                continue;
+            }
+            const uint32_t byteSize = static_cast<uint32_t>(byteSize64);
 
             copyDataRef.bufferHandle = gpuResourceMgr.Create(GetStagingBufferDesc(byteSize, ebcf));
             if (byteBufferCopy) {
                 copyDataRef.byteBuffer = make_unique<ByteArray>(byteSize);
             }
 
-            const BufferImageCopy bic {
-                0,                                                                // bufferOffset
-                0,                                                                // bufferRowLength
-                0,                                                                // bufferImageHeight
-                ImageSubresourceLayers { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u }, // imageSubresource
-                Size3D { 0, 0, 0 },                                               // imageOffset
-                Size3D { desc.width, desc.height, 1u },                           // imageExtent
+            const BufferImageCopy bic{
+                0,                                                              // bufferOffset
+                0,                                                              // bufferRowLength
+                0,                                                              // bufferImageHeight
+                ImageSubresourceLayers{CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u},  // imageSubresource
+                Size3D{0, 0, 0},                                                // imageOffset
+                Size3D{desc.width, desc.height, 1u},                            // imageExtent
             };
-            dsStaging_->CopyImageToBuffer(dataToBeCopied.handle, copyDataRef.bufferHandle, bic,
+            dsStaging_->CopyImageToBuffer(dataToBeCopied.handle,
+                copyDataRef.bufferHandle,
+                bic,
                 IRenderDataStoreDefaultStaging::ResourceCopyInfo::END_FRAME);
         }
 
@@ -218,8 +227,8 @@ void RenderFrameUtil::ProcessFrameSignalData()
         SignalData sd = ref;
         sd.signalResourceType = (backendType == DeviceBackendType::VULKAN) ? SignalResourceType::GPU_SEMAPHORE
                                                                            : SignalResourceType::GPU_FENCE;
-        if (ref.gpuSignalResourceHandle) { // input signal handle given
-                                           // validity checked with input method
+        if (ref.gpuSignalResourceHandle) {  // input signal handle given
+                                            // validity checked with input method
             // create a view to external handle
             thisFrameSignalData_.gpuSemaphores.push_back(device.CreateGpuSemaphoreView(ref.gpuSignalResourceHandle));
         } else {
@@ -270,8 +279,6 @@ void RenderFrameUtil::ProcessFrameSignalDeferredDestroy()
 
 void RenderFrameUtil::EndFrame()
 {
-    frameHasWaitForIdle_ = false;
-
     postFrame_.copyData.clear();
     if (frameHasWaitForIdle_) {
         for (auto& ref : bufferedPostFrame_) {
@@ -280,6 +287,7 @@ void RenderFrameUtil::EndFrame()
     } else {
         bufferedPostFrame_[bufferedIndex_].copyData.clear();
     }
+    frameHasWaitForIdle_ = false;
 }
 
 void RenderFrameUtil::CopyToCpu(const RenderHandleReference& handle, const CopyFlags flags)
@@ -291,7 +299,7 @@ void RenderFrameUtil::CopyToCpu(const RenderHandleReference& handle, const CopyF
     const auto lock = std::lock_guard(mutex_);
 
     const uint64_t frameIndex = device_.GetFrameCount();
-    preFrame_.copyData.push_back({ frameIndex, handle, flags });
+    preFrame_.copyData.push_back({frameIndex, handle, flags});
 }
 
 bool RenderFrameUtil::ValidateInput(const RenderHandleReference& handle)
@@ -376,7 +384,8 @@ void RenderFrameUtil::AddGpuSignal(const SignalData& signalData)
             valid = false;
         }
         if (!valid) {
-            PLUGIN_LOG_E("Invalid signal type (%u) for platform (%u)", static_cast<uint32_t>(signalResourceType),
+            PLUGIN_LOG_E("Invalid signal type (%u) for platform (%u)",
+                static_cast<uint32_t>(signalResourceType),
                 static_cast<uint32_t>(backendType));
         }
     }

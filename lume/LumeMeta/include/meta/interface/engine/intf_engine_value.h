@@ -28,9 +28,9 @@ META_BEGIN_NAMESPACE()
  * @brief Direction to which synchronise engine values
  */
 enum class EngineSyncDirection {
-    AUTO,       /// Synchronise cached value to engine if changed, otherwise sync engine to cached value
-    TO_ENGINE,  /// Synchronise cached value to engine
-    FROM_ENGINE /// Synchronise from engine to cached value
+    AUTO,        /// Synchronise cached value to engine if changed, otherwise sync engine to cached value
+    TO_ENGINE,   /// Synchronise cached value to engine
+    FROM_ENGINE  /// Synchronise from engine to cached value
 };
 
 META_REGISTER_INTERFACE(IEngineValue, "2edaea8a-936d-4bc5-a5eb-ecfdbb50574d")
@@ -56,13 +56,13 @@ public:
  */
 struct EnginePropertyHandle {
     // If manager is set, then the property handle is returned via given entity from the manager
-    CORE_NS::IComponentManager* manager {};
+    CORE_NS::IComponentManager* manager{};
     CORE_NS::Entity entity;
     // in case the property path contains IPropertyHandle*, we need to keep pointer to the most
     // recent value having such handle, so that we are able to update the handle properly
     IValue::Ptr parentValue;
     // Optional direct property handle
-    CORE_NS::IPropertyHandle* handle {};
+    CORE_NS::IPropertyHandle* handle{};
 
     CORE_NS::IPropertyHandle* Handle() const
     {
@@ -86,24 +86,24 @@ struct EnginePropertyHandle {
  */
 struct EnginePropertyParams {
     EnginePropertyHandle handle;
-    CORE_NS::Property property {};
+    CORE_NS::Property property{};
     // offset to the parent property data, this is needed for member properties
     // calculate baseOffset + property.offset to access the data,
     // baseOffset is zero if not a member property
-    uintptr_t baseOffset {};
+    uintptr_t baseOffset{};
 
     uintptr_t Offset() const
     {
         return baseOffset + property.offset;
     }
 
-    uint32_t index {};
-    const CORE_NS::ContainerApi* containerMethods {};
-    uintptr_t arraySubsOffset {};
+    uint32_t index{};
+    const CORE_NS::ContainerApi* containerMethods{};
+    uintptr_t arraySubsOffset{};
 
     // to support some old code, we allow to push the value directly to the engine property
     // if this is set, the values can only be set in the engine task queue thread
-    bool pushValueToEngineDirectly {};
+    bool pushValueToEngineDirectly{};
 
     EnginePropertyParams() = default;
 
@@ -166,7 +166,8 @@ public:
     virtual bool ResetPendingNotify() = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IEngineValue)
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IEngineValue)
 
 #endif

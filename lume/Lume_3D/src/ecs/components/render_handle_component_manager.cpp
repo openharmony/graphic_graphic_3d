@@ -111,7 +111,8 @@ public:
 
     Entity GetEntityWithReference(const RenderHandleReference& handle) const override
     {
-        if (const auto pos = std::find_if(components_.begin(), components_.end(),
+        if (const auto pos = std::find_if(components_.begin(),
+                components_.end(),
                 [handle = handle.GetHandle()](
                     const BaseComponentHandle& component) { return component.data_.reference.GetHandle() == handle; });
             pos != components_.end()) {

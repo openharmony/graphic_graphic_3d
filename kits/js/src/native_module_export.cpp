@@ -35,8 +35,8 @@ static napi_value Export(napi_env env, napi_value exports)
     auto sceneAdapter_ = std::make_shared<OHOS::Render3D::SceneAdapter>();
     sceneAdapter_->LoadPluginsAndInit();
 
-    NapiApi::MyInstanceState *mis;
-    NapiApi::MyInstanceState::GetInstance(env, (void **)&mis);
+    NapiApi::MyInstanceState* mis;
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         // should not happen?
         WIDGET_LOGW("scene.napi reloaded!");
@@ -48,9 +48,9 @@ static napi_value Export(napi_env env, napi_value exports)
         NapiApi::MyInstanceState::SetInstance(
             env,
             mis,
-            [](napi_env env, void *finalize_data, void *finalize_hint) {
+            [](napi_env env, void* finalize_data, void* finalize_hint) {
                 WIDGET_LOGD("scene.napi finalizer begin");
-                auto d = static_cast<NapiApi::MyInstanceState *>(finalize_data);
+                auto d = static_cast<NapiApi::MyInstanceState*>(finalize_data);
                 // Make sure that the render thread is gone.
                 OHOS::Render3D::SceneAdapter::DeinitRenderThread();
                 // check for leaked objects.
@@ -78,15 +78,13 @@ static napi_value Export(napi_env env, napi_value exports)
 /*
  * module define
  */
-static napi_module g_module = {
-    .nm_version = 1,
+static napi_module g_module = {.nm_version = 1,
     .nm_flags = 0,
     .nm_filename = nullptr,
     .nm_register_func = Export,
     .nm_modname = "scene.napi",
-    .nm_priv = (reinterpret_cast<void *>(0)),
-    .reserved = {0}
-};
+    .nm_priv = (reinterpret_cast<void*>(0)),
+    .reserved = {0}};
 
 /*
  * module register
@@ -96,4 +94,4 @@ extern "C" __attribute__((constructor)) void Graphics3dKitRegisterModule(void)
     WIDGET_LOGD("graphics 3d register");
     napi_module_register(&g_module);
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

@@ -1,0 +1,64 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name": "mat-base-tex"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"textures": {
+						"baseColor": {
+							"factor": [
+								1.0,
+								0.0,
+								0.0,
+								1.0
+							],
+							"rotation": 0.25
+						},
+						"emissive": {
+							"factor": [
+								0.5,
+								0.5,
+								0.5,
+								1.0
+							]
+						}
+					}
+				}
+			},
+			{
+				"resourceId": {
+					"name": "mat-leaf-tex"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"derivedFrom": {
+						"name": "mat-base-tex"
+					},
+					"textures": {
+						"baseColor": {
+							"factor": [
+								0.0,
+								1.0,
+								0.0,
+								1.0
+							]
+						},
+						"normal": {
+							"factor": [
+								0.0,
+								0.0,
+								1.0,
+								1.0
+							]
+						}
+					}
+				}
+			}
+		]
+	}
+}

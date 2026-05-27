@@ -30,14 +30,14 @@ public:
     virtual bool LoadPluginsAndInit() = 0;
     virtual std::shared_ptr<TextureLayer> CreateTextureLayer() = 0;
     virtual void OnWindowChange(const WindowChangeInfo& windowChangeInfo) = 0;
-    virtual void OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo) {};
+    virtual void OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo){};
     virtual void OnWindowChange(float renderWidth, float renderHeight) = 0;
     virtual void RenderFrame(bool needsSyncPaint = false) = 0;
     virtual void Deinit() = 0;
     virtual bool NeedsRepaint() = 0;
-    virtual void AcquireImage(const SurfaceBufferInfo &bufferInfo){};
+    virtual void AcquireImage(const SurfaceBufferInfo& bufferInfo){};
     virtual ~ISceneAdapter() = default;
 };
 
-} // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_INTF_SCENE_ADAPTER_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_INTF_SCENE_ADAPTER_H

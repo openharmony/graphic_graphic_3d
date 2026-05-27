@@ -21,13 +21,13 @@ META_BEGIN_NAMESPACE()
 
 Future::StateType Future::GetState() const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     return state_;
 }
 
 Future::StateType Future::Wait() const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     while (state_ == IFuture::WAITING) {
         cond_.wait(lock);
     }
@@ -36,7 +36,7 @@ Future::StateType Future::Wait() const
 
 Future::StateType Future::WaitFor(const TimeSpan& time) const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     while (state_ == IFuture::WAITING) {
         if (cond_.wait_for(lock, std::chrono::microseconds(time.ToMicroseconds())) == std::cv_status::timeout) {
             return IFuture::WAITING;
@@ -47,7 +47,7 @@ Future::StateType Future::WaitFor(const TimeSpan& time) const
 
 IAny::Ptr Future::GetResult() const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     while (state_ == IFuture::WAITING) {
         cond_.wait(lock);
     }
@@ -56,14 +56,14 @@ IAny::Ptr Future::GetResult() const
 
 IFuture::Ptr Future::Then(const IFutureContinuation::Ptr& func, const ITaskQueue::Ptr& queue)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     IFuture::Ptr result;
     if (state_ == IFuture::ABANDONED) {
         BASE_NS::shared_ptr<Future> f(new Future);
         f->SetAbandoned();
         result = BASE_NS::move(f);
     } else {
-        ContinuationData d { queue == nullptr, queue };
+        ContinuationData d{queue == nullptr, queue};
         d.continuation.reset(new ContinuationQueueTask(func));
         result = d.continuation->GetFuture();
         continuations_.push_back(BASE_NS::move(d));
@@ -77,9 +77,9 @@ IFuture::Ptr Future::Then(const IFutureContinuation::Ptr& func, const ITaskQueue
 void Future::Cancel()
 {
     bool notify = false;
-    ITaskQueue::Token token {};
+    ITaskQueue::Token token{};
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         if (state_ != IFuture::COMPLETED) {
             notify = true;
             token = token_;
@@ -130,7 +130,7 @@ void Future::ActivateContinuation(std::unique_lock<std::mutex>& lock)
 
 void Future::SetResult(IAny::Ptr p)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     token_ = {};
     if (state_ == IFuture::WAITING) {
         result_ = BASE_NS::move(p);
@@ -142,7 +142,7 @@ void Future::SetResult(IAny::Ptr p)
 
 void Future::SetAbandoned()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (state_ == IFuture::WAITING) {
         state_ = IFuture::ABANDONED;
         token_ = {};
@@ -157,7 +157,7 @@ void Future::SetAbandoned()
 
 void Future::SetQueueInfo(const ITaskQueue::Ptr& queue, ITaskQueue::Token token)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (state_ == IFuture::WAITING) {
         queue_ = queue;
         token_ = token;
@@ -207,6 +207,6 @@ IObjectFactory::Ptr GetPromiseFactory()
     return Promise::GetFactory();
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

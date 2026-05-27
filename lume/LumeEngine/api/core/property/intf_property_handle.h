@@ -59,4 +59,4 @@ protected:
     virtual ~IPropertyHandle() = default;
 };
 CORE_END_NAMESPACE()
-#endif // API_CORE_PROPERTY_IPROPERTY_HANDLE_H
+#endif  // API_CORE_PROPERTY_IPROPERTY_HANDLE_H

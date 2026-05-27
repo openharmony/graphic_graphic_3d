@@ -25,14 +25,15 @@
 META_BEGIN_NAMESPACE()
 
 /// Helper that maps IValue GetVAlue/SetValue to corresponding function pointers
-template<typename Type, typename GetFunc, typename SetFunc>
+template <typename Type, typename GetFunc, typename SetFunc>
 class CustomValue : public IntroduceInterfaces<IValue> {
 public:
-    CustomValue(GetFunc gfunc, SetFunc sfunc) : gfunc_(BASE_NS::move(gfunc)), sfunc_(BASE_NS::move(sfunc)) {}
+    CustomValue(GetFunc gfunc, SetFunc sfunc) : gfunc_(BASE_NS::move(gfunc)), sfunc_(BASE_NS::move(sfunc))
+    {}
 
     AnyReturnValue SetValue(const IAny& any) override
     {
-        Type value {};
+        Type value{};
         auto res = any.GetValue(value);
         if (res) {
             if (sfunc_(value)) {
@@ -64,7 +65,7 @@ private:
 };
 
 /// Add custom value to property
-template<typename Type, typename GetFunc, typename SetFunc>
+template <typename Type, typename GetFunc, typename SetFunc>
 bool AddCustomValue(const IProperty::Ptr& p, GetFunc gf, SetFunc sf)
 {
     if (auto i = interface_cast<IStackProperty>(p)) {
@@ -75,7 +76,7 @@ bool AddCustomValue(const IProperty::Ptr& p, GetFunc gf, SetFunc sf)
 }
 
 /// Add custom value that calls member functions for property
-template<typename Type, typename Obj>
+template <typename Type, typename Obj>
 bool AddGetSetCustomValue(const Property<Type>& p, Obj* obj, Type (Obj::*getf)() const, bool (Obj::*setf)(const Type&))
 {
     IStackProperty::Ptr sp = interface_pointer_cast<IStackProperty>(p);
@@ -86,7 +87,7 @@ bool AddGetSetCustomValue(const Property<Type>& p, Obj* obj, Type (Obj::*getf)()
         if (auto lock = weak.lock()) {
             return (obj->*getf)();
         }
-        return Type {};
+        return Type{};
     };
     auto sf = [obj, setf, weak = BASE_NS::weak_ptr<IObject>(obj->GetSelf())](const Type& value) -> bool {
         if (auto lock = weak.lock()) {

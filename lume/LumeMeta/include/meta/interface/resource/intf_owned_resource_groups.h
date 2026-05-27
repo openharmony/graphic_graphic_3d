@@ -28,11 +28,12 @@ META_BEGIN_NAMESPACE()
 class IOwnedResourceGroups : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IOwnedResourceGroups, "b56de526-dc5a-40a6-bd26-d0db842fbbdd")
 public:
-    virtual IResourceGroupHandle::Ptr GetGroupHandle(BASE_NS::string_view group) = 0;
+    virtual IResourceGroupHandle::Ptr GetGroupHandle(
+        BASE_NS::string_view group, const CORE_NS::ResourceContextPtr&) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IOwnedResourceGroups)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IOwnedResourceGroups)
 
 #endif

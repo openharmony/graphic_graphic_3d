@@ -39,12 +39,12 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 Format GetValidDepthFormat(const DeviceVk& deviceVk)
 {
-    constexpr uint32_t PREFERRED_FORMAT_COUNT { 3 };
-    constexpr Format preferredFormats[PREFERRED_FORMAT_COUNT] = { BASE_FORMAT_D24_UNORM_S8_UINT, BASE_FORMAT_D32_SFLOAT,
-        BASE_FORMAT_D16_UNORM };
+    constexpr uint32_t PREFERRED_FORMAT_COUNT{3};
+    constexpr Format preferredFormats[PREFERRED_FORMAT_COUNT] = {
+        BASE_FORMAT_D24_UNORM_S8_UINT, BASE_FORMAT_D32_SFLOAT, BASE_FORMAT_D16_UNORM};
 #ifndef NDEBUG
-    constexpr string_view PREFERRED_FORMAT_NAMES[PREFERRED_FORMAT_COUNT] = { "BASE_FORMAT_D24_UNORM_S8_UINT",
-        "BASE_FORMAT_D32_SFLOAT", "BASE_FORMAT_D16_UNORM" };
+    constexpr string_view PREFERRED_FORMAT_NAMES[PREFERRED_FORMAT_COUNT] = {
+        "BASE_FORMAT_D24_UNORM_S8_UINT", "BASE_FORMAT_D32_SFLOAT", "BASE_FORMAT_D16_UNORM"};
 #endif
     Format finalFormat = BASE_FORMAT_UNDEFINED;
     const auto& devPlat = deviceVk.GetPlatformInternalDataVk();
@@ -65,19 +65,19 @@ Format GetValidDepthFormat(const DeviceVk& deviceVk)
 }
 
 struct ColorInfo {
-    VkFormat format { VK_FORMAT_UNDEFINED };
-    VkColorSpaceKHR colorSpace { VK_COLOR_SPACE_MAX_ENUM_KHR };
+    VkFormat format{VK_FORMAT_UNDEFINED};
+    VkColorSpaceKHR colorSpace{VK_COLOR_SPACE_MAX_ENUM_KHR};
 };
 
 VkFormat GetColorFormat(const uint32_t flags, const vector<VkSurfaceFormatKHR>& surfaceFormats)
 {
-    constexpr uint32_t preferredFormatCount { 4u };
-    constexpr VkFormat srgbFormats[preferredFormatCount] = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
-        VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM };
-    constexpr VkFormat nonSrgbFormats[preferredFormatCount] = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM,
-        VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB };
-    constexpr VkFormat hdrFormats[] = { VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32,
-        VK_FORMAT_R16G16B16A16_SFLOAT };
+    constexpr uint32_t preferredFormatCount{4u};
+    constexpr VkFormat srgbFormats[preferredFormatCount] = {
+        VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM};
+    constexpr VkFormat nonSrgbFormats[preferredFormatCount] = {
+        VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB};
+    constexpr VkFormat hdrFormats[] = {
+        VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32, VK_FORMAT_R16G16B16A16_SFLOAT};
 
     // If pSurfaceFormats includes just one entry, whose value for format is VK_FORMAT_UNDEFINED,
     // surface has no preferred format. In this case, the application can use any valid VkFormat value.
@@ -96,7 +96,7 @@ VkFormat GetColorFormat(const uint32_t flags, const vector<VkSurfaceFormatKHR>& 
     }
     const bool preferSrgbFormat = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT);
     const array_view<const VkFormat> formats =
-        (preferSrgbFormat) ? array_view<const VkFormat> { srgbFormats } : array_view<const VkFormat> { nonSrgbFormats };
+        (preferSrgbFormat) ? array_view<const VkFormat>{srgbFormats} : array_view<const VkFormat>{nonSrgbFormats};
 
     for (auto format : formats) {
         for (auto surfaceFormat : surfaceFormats) {
@@ -145,20 +145,22 @@ VkPresentModeKHR GetPresentMode(const VkPhysicalDevice physicalDevice, const VkS
     VALIDATE_VK_RESULT(
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data()));
 
-    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR; // FIFO must be supported by the specification.
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;  // FIFO must be supported by the specification.
     if ((flags & SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT) != SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT) {
         // immediate is really without vsync, but it might not be supported, so we also check for mailbox.
-        if (std::any_of(presentModes.cbegin(), presentModes.cend(),
-                [](const VkPresentModeKHR& supported) { return supported == VK_PRESENT_MODE_IMMEDIATE_KHR; })) {
+        if (std::any_of(presentModes.cbegin(), presentModes.cend(), [](const VkPresentModeKHR& supported) {
+                return supported == VK_PRESENT_MODE_IMMEDIATE_KHR;
+            })) {
             swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        } else if (std::any_of(presentModes.cbegin(), presentModes.cend(),
-                       [](const VkPresentModeKHR& supported) { return supported == VK_PRESENT_MODE_MAILBOX_KHR; })) {
+        } else if (std::any_of(presentModes.cbegin(), presentModes.cend(), [](const VkPresentModeKHR& supported) {
+                       return supported == VK_PRESENT_MODE_MAILBOX_KHR;
+                   })) {
             swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
         }
     }
 
 #if (RENDER_DEV_ENABLED == 1)
-    constexpr uint32_t strArraySize { 4 };
+    constexpr uint32_t strArraySize{4};
     constexpr string_view presentModeStrings[strArraySize] = {
         "VK_PRESENT_MODE_IMMEDIATE_KHR",
         "VK_PRESENT_MODE_MAILBOX_KHR",
@@ -205,46 +207,47 @@ constexpr GpuImageDesc GetColorDesc(
     const uint32_t width, const uint32_t height, const Format format, const ImageUsageFlags imageUsageFlags)
 {
     return {
-        ImageType::CORE_IMAGE_TYPE_2D,                                 // imageType
-        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,                        // imageViewType
-        format,                                                        // format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                        // imageTiling
-        imageUsageFlags,                                               // usageFlags
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // memoryPropertyFlags
-        0,                                                             // createFlags
+        ImageType::CORE_IMAGE_TYPE_2D,                                  // imageType
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,                         // imageViewType
+        format,                                                         // format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                         // imageTiling
+        imageUsageFlags,                                                // usageFlags
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,  // memoryPropertyFlags
+        0,                                                              // createFlags
         EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS, // engineCreationFlags
-        width,                                                                                    // width
-        height,                                                                                   // height
-        1,                                                                                        // depth
-        1,                                                                                        // mipCount
-        1,                                                                                        // layerCount
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                                             // sampleCountFlags
-        {},                                                                                       // componentMapping
+            EngineImageCreationFlagBits::
+                CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS,  // engineCreationFlags
+        width,                                                            // width
+        height,                                                           // height
+        1,                                                                // depth
+        1,                                                                // mipCount
+        1,                                                                // layerCount
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                     // sampleCountFlags
+        {},                                                               // componentMapping
     };
 }
 
 constexpr GpuImageDesc GetDepthDesc(const uint32_t width, const uint32_t height, const Format format)
 {
     return {
-        ImageType::CORE_IMAGE_TYPE_2D,          // imageType
-        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, // imageViewType
-        format,                                 // format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL, // imageTiling
+        ImageType::CORE_IMAGE_TYPE_2D,           // imageType
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,  // imageViewType
+        format,                                  // format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,  // imageTiling
         ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
             ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, // usageFlags
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,  // usageFlags
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,    // memoryPropertyFlags
-        0,                                                                        // createFlags
-        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, // engineCreationFlags
-        width,                                                                    // width
-        height,                                                                   // height
-        1,                                                                        // depth
-        1,                                                                        // mipCount
-        1,                                                                        // layerCount
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                             // sampleCountFlags
-        {},                                                                       // componentMapping
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,     // memoryPropertyFlags
+        0,                                                                         // createFlags
+        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,  // engineCreationFlags
+        width,                                                                     // width
+        height,                                                                    // height
+        1,                                                                         // depth
+        1,                                                                         // mipCount
+        1,                                                                         // layerCount
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                              // sampleCountFlags
+        {},                                                                        // componentMapping
     };
 }
 
@@ -255,7 +258,7 @@ inline void LogAndUpdateResultError(const VkResult newResult, VkResult& result)
         result = newResult;
     }
 }
-} // namespace
+}  // namespace
 
 SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCreateInfo)
     : device_(device), flags_(swapchainCreateInfo.swapchainFlags)
@@ -264,7 +267,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
     auto const physicalDevice = devicePlatformData.physicalDevice;
     // check for surface creation automatically
     if ((swapchainCreateInfo.surfaceHandle == 0) && swapchainCreateInfo.window.window) {
-        CreateFunctionsVk::Window win { swapchainCreateInfo.window.instance, swapchainCreateInfo.window.window };
+        CreateFunctionsVk::Window win{swapchainCreateInfo.window.instance, swapchainCreateInfo.window.window};
         surface_ = CreateFunctionsVk::CreateSurface(devicePlatformData.instance, win);
         ownsSurface_ = true;
     } else {
@@ -300,7 +303,7 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             (surfaceCapabilities.maxImageCount == 0)
                 ? (Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount))
                 : (Math::min(surfaceCapabilities.maxImageCount,
-                             Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
+                      Math::max(surfaceCapabilities.minImageCount, deviceConfig.swapchainImageCount)));
         PLUGIN_LOG_D("swapchainImageCount: %u", imageCount);
 
         const VkSurfaceTransformFlagsKHR swapchainTransform =
@@ -310,33 +313,35 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
 
         const auto desiredUsageFlags = static_cast<VkImageUsageFlags>(swapchainCreateInfo.imageUsageFlags);
         const VkImageUsageFlags imageUsageFlags = desiredUsageFlags & surfaceCapabilities.supportedUsageFlags;
-        PLUGIN_LOG_D("swapchain usage flags, selected: %u, desired: %u, capabilities: %u", imageUsageFlags,
-            desiredUsageFlags, surfaceCapabilities.supportedUsageFlags);
+        PLUGIN_LOG_D("swapchain usage flags, selected: %u, desired: %u, capabilities: %u",
+            imageUsageFlags,
+            desiredUsageFlags,
+            surfaceCapabilities.supportedUsageFlags);
 
         VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
         if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
             compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         }
 
-        VkSwapchainCreateInfoKHR const vkSwapchainCreateInfo {
-            VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,       // sType
-            nullptr,                                           // pNext
-            0,                                                 // flags
-            surface_,                                          // surface
-            imageCount,                                        // minImageCount
-            ci.format,                                         // imageFormat
-            ci.colorSpace,                                     // imageColorSpace
-            swapchainExtent,                                   // imageExtent
-            1,                                                 // imageArrayLayers
-            imageUsageFlags,                                   // imageUsage
-            VK_SHARING_MODE_EXCLUSIVE,                         // imageSharingMode
-            0,                                                 // queueFamilyIndexCount
-            nullptr,                                           // pQueueFamilyIndices
-            (VkSurfaceTransformFlagBitsKHR)swapchainTransform, // preTransform
-            compositeAlpha,                                    // compositeAlpha
-            swapchainPresentMode,                              // presentMode
-            VK_TRUE,                                           // clipped
-            VK_NULL_HANDLE,                                    // oldSwapchain
+        VkSwapchainCreateInfoKHR const vkSwapchainCreateInfo{
+            VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,        // sType
+            nullptr,                                            // pNext
+            0,                                                  // flags
+            surface_,                                           // surface
+            imageCount,                                         // minImageCount
+            ci.format,                                          // imageFormat
+            ci.colorSpace,                                      // imageColorSpace
+            swapchainExtent,                                    // imageExtent
+            1,                                                  // imageArrayLayers
+            imageUsageFlags,                                    // imageUsage
+            VK_SHARING_MODE_EXCLUSIVE,                          // imageSharingMode
+            0,                                                  // queueFamilyIndexCount
+            nullptr,                                            // pQueueFamilyIndices
+            (VkSurfaceTransformFlagBitsKHR)swapchainTransform,  // preTransform
+            compositeAlpha,                                     // compositeAlpha
+            swapchainPresentMode,                               // presentMode
+            VK_TRUE,                                            // clipped
+            VK_NULL_HANDLE,                                     // oldSwapchain
         };
 
         VkResult mainResult = VK_SUCCESS;
@@ -346,10 +351,10 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
         }
         if (mainResult == VK_SUCCESS) {
             uint32_t realImageCount = 0;
-            VkResult result = vkGetSwapchainImagesKHR(vkDevice, // device
-                plat_.swapchain,                                // swapchain
-                &realImageCount,                                // pSwapchainImageCount
-                nullptr);                                       // pSwapchainImages
+            VkResult result = vkGetSwapchainImagesKHR(vkDevice,  // device
+                plat_.swapchain,                                 // swapchain
+                &realImageCount,                                 // pSwapchainImageCount
+                nullptr);                                        // pSwapchainImages
             LogAndUpdateResultError(result, mainResult);
 
             PLUGIN_LOG_D("swapchain realImageCount: %u", realImageCount);
@@ -357,59 +362,70 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
             plat_.swapchainImages.images.resize(realImageCount);
             plat_.swapchainImages.imageViews.resize(realImageCount);
             plat_.swapchainImages.semaphores.resize(realImageCount);
+            plat_.swapchainImages.presetSemaphores.resize(realImageCount);
 
-            result = vkGetSwapchainImagesKHR(vkDevice, // device
-                plat_.swapchain,                       // swapchain
-                &realImageCount,                       // pSwapchainImageCount
-                plat_.swapchainImages.images.data());  // pSwapchainImages
+            result = vkGetSwapchainImagesKHR(vkDevice,  // device
+                plat_.swapchain,                        // swapchain
+                &realImageCount,                        // pSwapchainImageCount
+                plat_.swapchainImages.images.data());   // pSwapchainImages
             LogAndUpdateResultError(result, mainResult);
 
-            constexpr VkComponentMapping componentMapping {
-                VK_COMPONENT_SWIZZLE_IDENTITY, // r
-                VK_COMPONENT_SWIZZLE_IDENTITY, // g
-                VK_COMPONENT_SWIZZLE_IDENTITY, // b
-                VK_COMPONENT_SWIZZLE_IDENTITY, // a
+            constexpr VkComponentMapping componentMapping{
+                VK_COMPONENT_SWIZZLE_IDENTITY,  // r
+                VK_COMPONENT_SWIZZLE_IDENTITY,  // g
+                VK_COMPONENT_SWIZZLE_IDENTITY,  // b
+                VK_COMPONENT_SWIZZLE_IDENTITY,  // a
             };
-            constexpr VkImageSubresourceRange imageSubresourceRange {
-                VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
-                0,                         // baseMipLevel
-                1,                         // levelCount
-                0,                         // baseArrayLayer
-                1,                         // layerCount
+            constexpr VkImageSubresourceRange imageSubresourceRange{
+                VK_IMAGE_ASPECT_COLOR_BIT,  // aspectMask
+                0,                          // baseMipLevel
+                1,                          // levelCount
+                0,                          // baseArrayLayer
+                1,                          // layerCount
             };
 
-            constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-            const VkSemaphoreCreateInfo semaphoreCreateInfo {
-                VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-                nullptr,                                 // pNext
-                semaphoreCreateFlags,                    // flags
+            for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
+                const VkImageViewCreateInfo imageViewCreateInfo{
+                    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,  // sType
+                    nullptr,                                   // pNext
+                    0,                                         // flags
+                    plat_.swapchainImages.images[idx],         // image
+                    VK_IMAGE_VIEW_TYPE_2D,                     // viewType
+                    ci.format,                                 // format
+                    componentMapping,                          // components
+                    imageSubresourceRange                      // subresourceRange;
+                };
+                result = vkCreateImageView(vkDevice,          // device
+                    &imageViewCreateInfo,                     // pCreateInfo
+                    nullptr,                                  // pAllocator
+                    &plat_.swapchainImages.imageViews[idx]);  // pView
+                LogAndUpdateResultError(result, mainResult);
+            }
+
+            constexpr VkSemaphoreCreateFlags semaphoreCreateFlags{0};
+            const VkSemaphoreCreateInfo semaphoreCreateInfo{
+                VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,  // sType
+                nullptr,                                  // pNext
+                semaphoreCreateFlags,                     // flags
             };
             for (uint32_t idx = 0; idx < plat_.swapchainImages.imageViews.size(); ++idx) {
-                const VkImageViewCreateInfo imageViewCreateInfo {
-                    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
-                    nullptr,                                  // pNext
-                    0,                                        // flags
-                    plat_.swapchainImages.images[idx],        // image
-                    VK_IMAGE_VIEW_TYPE_2D,                    // viewType
-                    ci.format,                                // format
-                    componentMapping,                         // components
-                    imageSubresourceRange                     // subresourceRange;
-                };
-                result = vkCreateImageView(vkDevice,         // device
-                    &imageViewCreateInfo,                    // pCreateInfo
-                    nullptr,                                 // pAllocator
-                    &plat_.swapchainImages.imageViews[idx]); // pView
+                result = vkCreateSemaphore(vkDevice,          // device
+                    &semaphoreCreateInfo,                     // pCreateInfo
+                    nullptr,                                  // pAllocator
+                    &plat_.swapchainImages.semaphores[idx]);  // pSemaphore
                 LogAndUpdateResultError(result, mainResult);
 
-                result = vkCreateSemaphore(vkDevice,         // device
-                    &semaphoreCreateInfo,                    // pCreateInfo
-                    nullptr,                                 // pAllocator
-                    &plat_.swapchainImages.semaphores[idx]); // pSemaphore
+                result = vkCreateSemaphore(vkDevice,                // device
+                    &semaphoreCreateInfo,                           // pCreateInfo
+                    nullptr,                                        // pAllocator
+                    &plat_.swapchainImages.presetSemaphores[idx]);  // pSemaphore
                 LogAndUpdateResultError(result, mainResult);
             }
         }
 
-        desc_ = GetColorDesc(plat_.swapchainImages.width, plat_.swapchainImages.height, (Format)ci.format,
+        desc_ = GetColorDesc(plat_.swapchainImages.width,
+            plat_.swapchainImages.height,
+            (Format)ci.format,
             (ImageUsageFlags)imageUsageFlags);
 
         if (flags_ & 0x2) {
@@ -432,16 +448,23 @@ SwapchainVk::~SwapchainVk()
     const VkDevice device = devicePlatformData.device;
     for (auto const imageView : plat_.swapchainImages.imageViews) {
         if (imageView) {
-            vkDestroyImageView(device, // device
-                imageView,             // imageView
-                nullptr);              // pAllocator
+            vkDestroyImageView(device,  // device
+                imageView,              // imageView
+                nullptr);               // pAllocator
         }
     }
     for (const auto semaphore : plat_.swapchainImages.semaphores) {
         if (semaphore) {
-            vkDestroySemaphore(device, // device
-                semaphore,             // semaphore
-                nullptr);              // pAllocator
+            vkDestroySemaphore(device,  // device
+                semaphore,              // semaphore
+                nullptr);               // pAllocator
+        }
+    }
+    for (const auto semaphore : plat_.swapchainImages.presetSemaphores) {
+        if (semaphore) {
+            vkDestroySemaphore(device,  // device
+                semaphore,              // semaphore
+                nullptr);               // pAllocator
         }
     }
 

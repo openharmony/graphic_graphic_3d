@@ -52,7 +52,7 @@ private:
     mutable std::once_flag animInit_;
 
     // the registry is still requested when destroyed, so we keep plain pointer to circumvent that.
-    ObjectRegistry* registry_ {};
+    ObjectRegistry* registry_{};
     mutable IAnimationController::Ptr animationController_;
     const CORE_NS::SyncApi sapi_;
 };

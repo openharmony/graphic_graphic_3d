@@ -15,6 +15,11 @@ import("//build/ohos.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 declare_args() {
+  histogram_management_enable = true
+  if (defined(global_parts_info) &&
+      !defined(global_parts_info.hiviewdfx_api_metrics)) {
+    histogram_management_enable = false
+  }
 }
 
 config("lume3d_config") {
@@ -85,7 +90,6 @@ config("napi_config") {
       "__OHOS_PLATFORM__",
       "__SCENE_ADAPTER__",
       "__NAPI_CALL_TF_WITH_PRIORITY__",
-      "__PHYSICS_MODULE__",
     ]
   }
 
@@ -143,6 +147,7 @@ ohos_source_set("napi_source") {
       "src/OcclusionMaterialJS.cpp",
       "src/ParamParsing.cpp",
       "src/PostProcJS.cpp",
+      "src/product_stubs.cpp",
       "src/Promise.cpp",
       "src/PropertyProxy.cpp",
       "src/QuatProxy.cpp",
@@ -189,6 +194,18 @@ ohos_source_set("napi_source") {
     "napi:ace_napi",
   ]
 
+  if (histogram_management_enable) {
+    external_deps += [ "api_metrics:histogrammanager" ]
+    defines += [ "HISTOGRAM_MANAGEMENT_ENABLE" ]
+  }
+
+  # RES_SCHED_ENABLE: product-only feature, requires resource_schedule_service
+  # if (defined(global_parts_info) &&
+  #     defined(global_parts_info.resourceschedule_resource_schedule_service)) {
+  #   external_deps += [ "resource_schedule_service:ressched_client" ]
+  #   defines += [ "RES_SCHED_ENABLE" ]
+  # }
+
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
@@ -201,6 +218,7 @@ ohos_shared_library("libKitHelper") {
   deps = [ ":napi_source" ]
   public_configs = [ ":napi_config", "../../3d_scene_adapter:scene_adapter_config", "../../3d_widget_adapter:widget_adapter_config" ]
   part_name = "graphic_3d"
+  external_deps = [ "hilog:libhilog" ]
   subsystem_name = "graphic"
 }
 

@@ -152,6 +152,6 @@ std::unique_ptr<ILogger::IOutput> CreateLoggerFileOutput(const char* filename);
 bool CheckOnce(const char* aId);
 void CheckOnceReset();
 
-} // namespace lume
+}  // namespace lume
 
-#endif // API_LUME_LOG_H
+#endif  // API_LUME_LOG_H

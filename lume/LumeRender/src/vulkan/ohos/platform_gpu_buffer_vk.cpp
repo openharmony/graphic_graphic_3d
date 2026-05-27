@@ -34,13 +34,13 @@ void GpuBufferVk::CreatePlatformHwBuffer()
     const auto& platData = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
     VkDevice device = platData.device;
 
-    VkNativeBufferPropertiesOHOS bufferProperties {};
+    VkNativeBufferPropertiesOHOS bufferProperties{};
     bufferProperties.sType = VK_STRUCTURE_TYPE_NATIVE_BUFFER_PROPERTIES_OHOS;
 
     OH_NativeBuffer* nativeBuffer = static_cast<OH_NativeBuffer*>(reinterpret_cast<void*>(plat_.platformHwBuffer));
-    VALIDATE_VK_RESULT(extFunctions.vkGetNativeBufferPropertiesOHOS(device, // device
-        nativeBuffer,                                                       // buffer
-        &bufferProperties));                                                // pProperties
+    VALIDATE_VK_RESULT(extFunctions.vkGetNativeBufferPropertiesOHOS(device,  // device
+        nativeBuffer,                                                        // buffer
+        &bufferProperties));                                                 // pProperties
 
     PlatformHardwareBufferUtil::HardwareBufferProperties hardwareBufferProperties;
     hardwareBufferProperties.allocationSize = bufferProperties.allocationSize;

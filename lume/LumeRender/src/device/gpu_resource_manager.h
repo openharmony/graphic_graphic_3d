@@ -31,14 +31,14 @@
 
 #include "device/gpu_buffer.h"
 #include "device/gpu_image.h"
-#include "device/gpu_resource_handle_util.h" // for EngineResourceHandle
+#include "device/gpu_resource_handle_util.h"  // for EngineResourceHandle
 
 RENDER_BEGIN_NAMESPACE()
 class Device;
 class GpuSampler;
 class GpuResourceCache;
 class GpuResourceManagerBase;
-template<typename ResourceType, typename CreateInfoType>
+template <typename ResourceType, typename CreateInfoType>
 class GpuResourceManagerTyped;
 struct GpuImagePlatformData;
 
@@ -72,7 +72,7 @@ struct StagingCopyStruct {
     };
 
     /** Data type, default vector */
-    DataType dataType { DataType::DATA_TYPE_VECTOR };
+    DataType dataType{DataType::DATA_TYPE_VECTOR};
 
     /** Source handle */
     RenderHandleReference srcHandle;
@@ -80,9 +80,9 @@ struct StagingCopyStruct {
     RenderHandleReference dstHandle;
 
     /** Begin index */
-    uint32_t beginIndex { 0U };
+    uint32_t beginIndex{0U};
     /** Count */
-    uint32_t count { 0U };
+    uint32_t count{0U};
 
     /** Staging data */
     BASE_NS::vector<uint8_t> stagingData;
@@ -90,17 +90,17 @@ struct StagingCopyStruct {
     CORE_NS::IImageContainer::Ptr imageContainerPtr;
 
     /** Optional format for scaling */
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
 
     /** Staging buffer index. */
-    uint32_t stagingBufferIndex { 0U };
+    uint32_t stagingBufferIndex{0U};
     /** Staging buffer byteoffset. */
-    uint32_t stagingBufferByteOffset { 0U };
+    uint32_t stagingBufferByteOffset{0U};
     /** Staging buffer bytesize. */
-    uint32_t stagingBufferByteSize { 0U };
+    uint32_t stagingBufferByteSize{0U};
 
     /** Invalid operation which should be ignored. Might be a copy that has been removed during processing. */
-    bool invalidOperation { false };
+    bool invalidOperation{false};
 };
 
 /** Staging image scaling info struct. Uses the same scaling image for all with the format */
@@ -108,11 +108,11 @@ struct StagingImageScalingStruct {
     /** Handle to the resource which is created just before staging */
     RenderHandleReference handle;
     /** Format of the scaling image */
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
     /** Maximum width of the scaling image */
-    uint32_t maxWidth { 0u };
+    uint32_t maxWidth{0u};
     /** Maximum height of the scaling image */
-    uint32_t maxHeight { 0u };
+    uint32_t maxHeight{0u};
 };
 
 /** All staging scaling image data */
@@ -152,7 +152,7 @@ struct StagingConsumeStruct {
     BASE_NS::vector<RenderHandle> stagingBuffers;
 
     /** Staging buffer byte size for each staging buffer */
-    BASE_NS::vector<uint32_t> stagingByteSizes {};
+    BASE_NS::vector<uint32_t> stagingByteSizes{};
 };
 
 /** Per frame work loop:
@@ -205,7 +205,7 @@ public:
     using GpuResourceManagerFlags = uint32_t;
 
     struct CreateInfo {
-        GpuResourceManagerFlags flags { 0 };
+        GpuResourceManagerFlags flags{0};
     };
 
     GpuResourceManager(Device& device, const CreateInfo& createInfo);
@@ -290,11 +290,13 @@ public:
     GpuImageDesc GetImageDescriptor(const RenderHandleReference& handle) const override;
     GpuSamplerDesc GetSamplerDescriptor(const RenderHandleReference& handle) const override;
     GpuAccelerationStructureDesc GetAccelerationStructureDescriptor(const RenderHandleReference& handle) const override;
+    uint64_t GetBufferDeviceAddress(const RenderHandleReference& handle) const override;
 
     GpuBufferDesc GetBufferDescriptor(const RenderHandle& handle) const;
     GpuImageDesc GetImageDescriptor(const RenderHandle& handle) const;
     GpuSamplerDesc GetSamplerDescriptor(const RenderHandle& handle) const;
     GpuAccelerationStructureDesc GetAccelerationStructureDescriptor(const RenderHandle& handle) const;
+    uint64_t GetBufferDeviceAddress(const RenderHandle& handle) const;
 
     /** Forward allocation/deallocation requests to actual resource managers. Not thread safe.
     Called only from Renderer. */
@@ -306,6 +308,10 @@ public:
     This method is un-safe and should only be called from specific location(s). */
     void RenderBackendImmediateRemapGpuImageHandle(
         const RenderHandle& clientHandle, const RenderHandle& clientHandleGpuResource);
+
+    /** Invalidate gpu image handle. This is intended only for swapchain destruction where the view etc. handles should
+     * be invalid so they can't be accidentally used. */
+    void InvalidateGpuImageHandle(const RenderHandle& clientHandle);
 
     /** The staging data is locked for this frame consumable sets. */
     void LockFrameStagingData();
@@ -338,17 +344,17 @@ public:
     GpuImage* GetImage(const RenderHandle& gpuHandle) const;
     GpuSampler* GetSampler(const RenderHandle& gpuHandle) const;
 
-    template<typename T>
+    template <typename T>
     T* GetBuffer(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetBuffer(handle));
     }
-    template<typename T>
+    template <typename T>
     T* GetImage(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetImage(handle));
     }
-    template<typename T>
+    template <typename T>
     T* GetSampler(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetSampler(handle));
@@ -435,7 +441,7 @@ public:
 private:
     Device& device_;
 
-    GpuResourceManagerFlags gpuResourceMgrFlags_ { 0 };
+    GpuResourceManagerFlags gpuResourceMgrFlags_{0};
 
     BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuBuffer, GpuBufferDesc>> gpuBufferMgr_;
     BASE_NS::unique_ptr<GpuResourceManagerTyped<GpuImage, GpuImageDesc>> gpuImageMgr_;
@@ -444,9 +450,12 @@ private:
     BASE_NS::unique_ptr<GpuResourceCache> gpuResourceCache_;
 
     union ResourceDescriptor {
-        explicit ResourceDescriptor(const GpuBufferDesc& descriptor) : combinedBufDescriptor { {}, descriptor } {}
-        explicit ResourceDescriptor(const GpuImageDesc& descriptor) : imageDescriptor(descriptor) {}
-        explicit ResourceDescriptor(const GpuSamplerDesc& descriptor) : samplerDescriptor(descriptor) {}
+        explicit ResourceDescriptor(const GpuBufferDesc& descriptor) : combinedBufDescriptor{{}, descriptor}
+        {}
+        explicit ResourceDescriptor(const GpuImageDesc& descriptor) : imageDescriptor(descriptor)
+        {}
+        explicit ResourceDescriptor(const GpuSamplerDesc& descriptor) : samplerDescriptor(descriptor)
+        {}
         explicit ResourceDescriptor(const GpuAccelerationStructureDesc& descriptor) : combinedBufDescriptor(descriptor)
         {}
         // used for GpuBufferDesc as well
@@ -467,16 +476,20 @@ private:
     struct OperationDescription {
         OperationDescription(
             RenderHandle handle, const ResourceDescriptor& descriptor, AllocType allocType, uint32_t optResourceIndex)
-            : handle(handle), descriptor(descriptor), allocType(allocType), optionalResourceIndex(optResourceIndex),
-              optionalStagingVectorIndex(~0u), optionalStagingCopyType(StagingCopyStruct::CopyType::UNDEFINED)
+            : handle(handle),
+              descriptor(descriptor),
+              allocType(allocType),
+              optionalResourceIndex(optResourceIndex),
+              optionalStagingVectorIndex(~0u),
+              optionalStagingCopyType(StagingCopyStruct::CopyType::UNDEFINED)
         {}
 
         RenderHandle handle;
         ResourceDescriptor descriptor;
-        AllocType allocType { AllocType::UNDEFINED };
-        uint32_t optionalResourceIndex { ~0u };
-        uint32_t optionalStagingVectorIndex { ~0u };
-        StagingCopyStruct::CopyType optionalStagingCopyType { StagingCopyStruct::CopyType::UNDEFINED };
+        AllocType allocType{AllocType::UNDEFINED};
+        uint32_t optionalResourceIndex{~0u};
+        uint32_t optionalStagingVectorIndex{~0u};
+        StagingCopyStruct::CopyType optionalStagingCopyType{StagingCopyStruct::CopyType::UNDEFINED};
     };
     struct RemapDescription {
         RenderHandle shallowClientHandle;
@@ -488,72 +501,72 @@ private:
     struct PendingData {
         BASE_NS::vector<OperationDescription> allocations;
         // optional
-        BASE_NS::vector<BASE_NS::unique_ptr<GpuBuffer>> buffers; // pre-created
-        BASE_NS::vector<BASE_NS::unique_ptr<GpuImage>> images;   // pre-created
+        BASE_NS::vector<BASE_NS::unique_ptr<GpuBuffer>> buffers;  // pre-created
+        BASE_NS::vector<BASE_NS::unique_ptr<GpuImage>> images;    // pre-created
         BASE_NS::vector<RemapDescription> remaps;
     };
 
     mutable std::mutex allocationMutex_;
     struct AdditionalData {
-        uintptr_t resourcePtr { 0 };
-        uint32_t indexToPendingData { ~0u }; // cleared to default when processed
+        uintptr_t resourcePtr{0};
+        uint32_t indexToPendingData{~0u};  // cleared to default when processed
     };
 
     struct PerManagerStore {
-        const RenderHandleType handleType { RenderHandleType::UNDEFINED };
-        GpuResourceManagerBase* mgr { nullptr };
+        const RenderHandleType handleType{RenderHandleType::UNDEFINED};
+        GpuResourceManagerBase* mgr{nullptr};
 
         // client access lock
-        mutable std::shared_mutex clientMutex {};
+        mutable std::shared_mutex clientMutex{};
 
         // the following needs be locked with clientMutex
-        BASE_NS::unordered_map<BASE_NS::string, uint32_t> nameToClientIndex {};
+        BASE_NS::unordered_map<BASE_NS::string, uint32_t> nameToClientIndex{};
         // resource descriptions, accessed with RenderHandle array index
-        BASE_NS::vector<ResourceDescriptor> descriptions {};
+        BASE_NS::vector<ResourceDescriptor> descriptions{};
 
         // handles might be invalid (when invalid generation is stored in high-bits, i.e. the handle is invalid)
-        BASE_NS::vector<RenderHandleReference> clientHandles {};
+        BASE_NS::vector<RenderHandleReference> clientHandles{};
 
         // index to pending data, ptr to possible gpu buffer mapped data
-        BASE_NS::vector<AdditionalData> additionalData {};
+        BASE_NS::vector<AdditionalData> additionalData{};
 
         // handle ids which can be re-used
-        BASE_NS::vector<uint64_t> availableHandleIds {};
+        BASE_NS::vector<uint64_t> availableHandleIds{};
 
-        PendingData pendingData {};
+        PendingData pendingData{};
 
         // the following are not locked (ever)
 
         // handles might be invalid (when invalid generation is stored in high - bits, i.e.the handle is invalid)
-        BASE_NS::vector<EngineResourceHandle> gpuHandles {};
+        BASE_NS::vector<EngineResourceHandle> gpuHandles{};
         // ogl object name tagging not supported ATM
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-        BASE_NS::vector<RenderHandle> debugTagAllocations {};
+        BASE_NS::vector<RenderHandle> debugTagAllocations{};
 #endif
         void HandleRemoved(uint32_t arrayIndex, const OperationDescription& operation);
         void HandleAlloc(uint32_t allocationIndex, const OperationDescription& operation);
         bool HandleDealloc(uint32_t allocationIndex, const OperationDescription& operation, bool isFrameEnd,
             const bool allowDestruction);
     };
-    PerManagerStore bufferStore_ { RenderHandleType::GPU_BUFFER };
-    PerManagerStore imageStore_ { RenderHandleType::GPU_IMAGE };
-    PerManagerStore samplerStore_ { RenderHandleType::GPU_SAMPLER };
+    PerManagerStore bufferStore_{RenderHandleType::GPU_BUFFER};
+    PerManagerStore imageStore_{RenderHandleType::GPU_IMAGE};
+    PerManagerStore samplerStore_{RenderHandleType::GPU_SAMPLER};
 
     // needs to be locked when called
     static uint64_t GetNextAvailableHandleId(PerManagerStore& mgrStore);
 
     struct StoreAllocationData {
         RenderHandleReference handle;
-        size_t allocationIndex { ~0u };
+        size_t allocationIndex{~0u};
     };
     struct StoreAllocationInfo {
         ResourceDescriptor descriptor;
         BASE_NS::string_view name;
-        RenderHandle replacedHandle {};
-        RenderHandleType type {};
-        uint32_t optResourceIndex { ~0u };
-        uint32_t addHandleFlags { 0u };
-        AllocType allocType { AllocType::ALLOC };
+        RenderHandle replacedHandle{};
+        RenderHandleType type{};
+        uint32_t optResourceIndex{~0u};
+        uint32_t addHandleFlags{0u};
+        AllocType allocType{AllocType::ALLOC};
     };
 
     void HandlePendingAllocationsImpl(bool isFrameEnd, bool allowDestruction);
@@ -624,28 +637,28 @@ private:
     StateDestroyConsumeStruct clientHandleStateDestroy_;
 
     mutable std::mutex stagingMutex_;
-    StagingConsumeStruct stagingOperations_;   // needs to be locked
-    StagingConsumeStruct perFrameStagingData_; // per frame data after LockFrameStagingData()
+    StagingConsumeStruct stagingOperations_;    // needs to be locked
+    StagingConsumeStruct perFrameStagingData_;  // per frame data after LockFrameStagingData()
     BASE_NS::vector<RenderHandleReference> perFrameStagingBuffers_;
     BASE_NS::vector<RenderHandleReference> perFrameStagingScalingImages_;
 
     // combined with bitwise OR buffer usage flags
-    BufferUsageFlags defaultBufferUsageFlags_ { 0u };
+    BufferUsageFlags defaultBufferUsageFlags_{0u};
     // combined with bitwise OR image usage flags
-    ImageUsageFlags defaultImageUsageFlags_ { 0u };
+    ImageUsageFlags defaultImageUsageFlags_{0u};
 
     struct RenderTimeReservedGpuBuffer {
         // not threaded usage
         RenderHandle baseHandle;
         RenderHandleReference handle;
 
-        void* mappedData { nullptr };
-        uint32_t neededByteSize { 0U };
-        uint32_t storedByteSize { 0U };
+        void* mappedData{nullptr};
+        uint32_t neededByteSize{0U};
+        uint32_t storedByteSize{0U};
 
         struct SingleValue {
-            uint32_t byteOffset { 0U };
-            uint32_t byteSize { 0U };
+            uint32_t byteOffset{0U};
+            uint32_t byteSize{0U};
         };
 
         BASE_NS::vector<SingleValue> values;
@@ -653,13 +666,14 @@ private:
     };
     RenderTimeReservedGpuBuffer renderTimeReservedGpuBuffer_;
 
-    RenderTimeState renderTimeState_ { RenderTimeState::UNDEFINED };
+    RenderTimeState renderTimeState_{RenderTimeState::UNDEFINED};
 
     DefaultResources defaultResources_;
 
     // ogl object name tagging not supported ATM
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
     void ProcessDebugTags();
+    void AddDebugTagsForStore(PerManagerStore& store, RenderHandleType handleType);
 #endif
 };
 
@@ -700,6 +714,7 @@ public:
     GpuImageDesc GetImageDescriptor(const RenderHandle& handle) const override;
     GpuSamplerDesc GetSamplerDescriptor(const RenderHandle& handle) const override;
     GpuAccelerationStructureDesc GetAccelerationStructureDescriptor(const RenderHandle& handle) const override;
+    uint64_t GetBufferDeviceAddress(const RenderHandle& handle) const override;
 
     bool HasStagingData() const;
     StagingConsumeStruct ConsumeStagingData();
@@ -756,4 +771,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_RESOURCE_MANAGER_H
+#endif  // DEVICE_GPU_RESOURCE_MANAGER_H

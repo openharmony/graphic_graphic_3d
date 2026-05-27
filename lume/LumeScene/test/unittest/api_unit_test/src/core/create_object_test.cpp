@@ -60,6 +60,6 @@ UNIT_TEST_F(API_ScenePluginCreateObjectTest, RenderConfigurationMembers, testing
     ASSERT_TRUE(p);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

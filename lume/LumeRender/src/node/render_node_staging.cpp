@@ -97,7 +97,7 @@ void CopyHostDirectlyToBuffer(
         gpuResourceMgr.UnmapBuffer(ref.dstHandle.GetHandle());
     }
 }
-} // namespace
+}  // namespace
 
 void RenderNodeStaging::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -159,7 +159,7 @@ void RenderNodeStaging::ExecuteFrame(IRenderCommandList& cmdList)
 
         if (RenderHandleUtil::IsValid(buffer) && (size)) {
             if (auto* dataPtr = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(buffer)); dataPtr) {
-                mappedBuffers[i] = { buffer, dataPtr, size };
+                mappedBuffers[i] = {buffer, dataPtr, size};
             }
         }
     }

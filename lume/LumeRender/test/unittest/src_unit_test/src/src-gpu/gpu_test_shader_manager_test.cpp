@@ -75,7 +75,8 @@ void LoadShaderDataTest(const UTest::EngineResources& engine)
         fileManager->RegisterPath(
             "test_pipelinelayouts", applicationTestAssetsDirectory + "separateshaders/pipelinelayouts", true);
         fileManager->RegisterPath("test_vertexinputdeclarations",
-            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations", true);
+            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations",
+            true);
         fileManager->RegisterPath(
             "test_shaderstates", applicationTestAssetsDirectory + "separateshaders/shaderstates", true);
     }
@@ -138,10 +139,9 @@ void LoadShaderDataTest(const UTest::EngineResources& engine)
 
         // test graphics state flags
         {
-            constexpr GraphicsStateFlags compareFlags {
+            constexpr GraphicsStateFlags compareFlags{
                 GraphicsStateFlagBits::CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT |
-                GraphicsStateFlagBits::CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT
-            };
+                GraphicsStateFlagBits::CORE_GRAPHICS_STATE_DEPTH_STENCIL_STATE_BIT};
 
             // get with shader
             {
@@ -411,7 +411,8 @@ void LoadVertexInputDeclarationJsonTest(const UTest::EngineResources& engine)
     // Register
     {
         fileManager->RegisterPath("vertexinputdeclarations",
-            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations", true);
+            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations",
+            true);
     }
     iShaderMgr.LoadShaderFile("vertexinputdeclarations://shader_manager_test.shadervid");
 
@@ -472,7 +473,8 @@ void ShaderPipelineBinderTest(const UTest::EngineResources& engine)
         fileManager->RegisterPath(
             "test_pipelinelayouts", applicationTestAssetsDirectory + "separateshaders/pipelinelayouts", true);
         fileManager->RegisterPath("test_vertexinputdeclarations",
-            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations", true);
+            applicationTestAssetsDirectory + "separateshaders/vertexinputdeclarations",
+            true);
         fileManager->RegisterPath(
             "test_shaderstates", applicationTestAssetsDirectory + "separateshaders/shaderstates", true);
     }
@@ -541,13 +543,13 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
 
     // the following values in here are not correct configuration, only something to compare against.
     {
-        IShaderManager::ShaderGraphicsStateSaveInfo sgsdsi {};
-        GraphicsState state {};
+        IShaderManager::ShaderGraphicsStateSaveInfo sgsdsi{};
+        GraphicsState state{};
         state.colorBlendState = {};
         uint32_t multiBit =
             ColorComponentFlagBits::CORE_COLOR_COMPONENT_A_BIT | ColorComponentFlagBits::CORE_COLOR_COMPONENT_G_BIT;
         state.colorBlendState.colorAttachmentCount = 1;
-        state.colorBlendState.colorAttachments[0] = GraphicsState::ColorBlendState::Attachment { true, multiBit };
+        state.colorBlendState.colorAttachments[0] = GraphicsState::ColorBlendState::Attachment{true, multiBit};
 
         GraphicsState::DepthStencilState& dss = state.depthStencilState;
         dss.backStencilOpState.compareMask = val;
@@ -588,7 +590,7 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         rs.lineWidth = 1.2f;
         rs.polygonMode = CORE_POLYGON_MODE_FILL;
 
-        IShaderManager::ShaderStateLoaderVariantData vd {};
+        IShaderManager::ShaderStateLoaderVariantData vd{};
         vd.baseShaderState = "baseShaderState";
         vd.baseVariantName = "baseVariantName";
         vd.renderSlot = "renderSlot";
@@ -596,8 +598,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         vd.stateFlags = CORE_GRAPHICS_STATE_INPUT_ASSEMBLY_BIT;
         vd.variantName = "variantName";
         sgsdsi.stateName = "myState";
-        sgsdsi.states = { state };
-        sgsdsi.stateVariants = { vd };
+        sgsdsi.states = {state};
+        sgsdsi.stateVariants = {vd};
         auto sgresult = iShaderMgr.SaveShaderGraphicsState(sgsdsi);
         if (!sgresult.success) {
             ADD_FAILURE() << "SaveShaderGraphicsState failed";
@@ -714,22 +716,22 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         }
     }
 
-    { // vids
-        IShaderManager::ShaderVertexInputDeclarationsSaveInfo sviddsi {};
-        VertexInputDeclarationView vid {};
-        VertexInputDeclaration::VertexInputAttributeDescription attr[] = { {
-            1U,                                // location
-            1U,                                // binding
-            BASE_FORMAT_A1R5G5B5_UNORM_PACK16, // format
-            0U,                                // offset
-        } };
-        vid.attributeDescriptions = { attr };
-        VertexInputDeclaration::VertexInputBindingDescription bnd[] = { {
-            1U,                            // binding
-            4U,                            // stride
-            CORE_VERTEX_INPUT_RATE_VERTEX, // vertexInputRate
-        } };
-        vid.bindingDescriptions = { bnd };
+    {  // vids
+        IShaderManager::ShaderVertexInputDeclarationsSaveInfo sviddsi{};
+        VertexInputDeclarationView vid{};
+        VertexInputDeclaration::VertexInputAttributeDescription attr[] = {{
+            1U,                                 // location
+            1U,                                 // binding
+            BASE_FORMAT_A1R5G5B5_UNORM_PACK16,  // format
+            0U,                                 // offset
+        }};
+        vid.attributeDescriptions = {attr};
+        VertexInputDeclaration::VertexInputBindingDescription bnd[] = {{
+            1U,                             // binding
+            4U,                             // stride
+            CORE_VERTEX_INPUT_RATE_VERTEX,  // vertexInputRate
+        }};
+        vid.bindingDescriptions = {bnd};
         sviddsi.vidName = "myVid";
         sviddsi.vid = vid;
         auto vidresult = iShaderMgr.SaveShaderVertexInputDeclaration(sviddsi);
@@ -747,8 +749,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
                 } else {
                     auto& vertexInputBindingDescriptions = vertexInputStateJson["vertexInputBindingDescriptions"];
                     if (!vertexInputBindingDescriptions) {
-                        ADD_FAILURE() <<
-                            "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputBindingDescriptions";
+                        ADD_FAILURE()
+                            << "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputBindingDescriptions";
                     } else {
                         auto descIt = vertexInputBindingDescriptions.array_.begin();
                         auto& descJson = *descIt;
@@ -759,8 +761,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
 
                     auto& vertexInputAttributeDescriptions = vertexInputStateJson["vertexInputAttributeDescriptions"];
                     if (!vertexInputAttributeDescriptions) {
-                        ADD_FAILURE() <<
-                            "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputAttributeDescriptions";
+                        ADD_FAILURE()
+                            << "ShaderVertexInputDeclarationsDataSaveInfo - no vertexInputAttributeDescriptions";
                     } else {
                         auto descIt = vertexInputAttributeDescriptions.array_.begin();
                         auto& descJson = *descIt;
@@ -774,8 +776,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         }
     }
 
-    { // pipelines
-        IShaderManager::ShaderPipelineLayoutSaveInfo spldsi {};
+    {  // pipelines
+        IShaderManager::ShaderPipelineLayoutSaveInfo spldsi{};
         spldsi.layoutName = "myLayout";
 
         PipelineLayout& layout = spldsi.layout;
@@ -816,8 +818,8 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         }
     }
 
-    { // variants
-        GraphicsState state {};
+    {  // variants
+        GraphicsState state{};
 
         GraphicsState::ColorBlendState& cbs = state.colorBlendState;
         cbs.colorAttachmentCount = 2;
@@ -867,23 +869,23 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         rs.lineWidth = 1.0f;
         rs.polygonMode = CORE_POLYGON_MODE_LINE;
 
-        IShaderManager::ShaderVariant v1 {};
-        v1.shaders.push_back({ "core3d://computerShader.spv", CORE_SHADER_STAGE_COMPUTE_BIT });
+        IShaderManager::ShaderVariant v1{};
+        v1.shaders.push_back({"core3d://computerShader.spv", CORE_SHADER_STAGE_COMPUTE_BIT});
         v1.displayName = "myShader";
-        v1.shaders.push_back({ "core3d://fragmentShader.spv", CORE_SHADER_STAGE_FRAGMENT_BIT });
+        v1.shaders.push_back({"core3d://fragmentShader.spv", CORE_SHADER_STAGE_FRAGMENT_BIT});
         v1.graphicsState = state;
         v1.materialMetadata = "just a test string";
         v1.pipelineLayout = "pipelineLayout";
         v1.renderSlot = "renderSlot";
         v1.renderSlotDefaultShader = true;
-        v1.shaderFileStr = ""; // NO?
-        v1.stateFlags = { CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT };
+        v1.shaderFileStr = "";  // NO?
+        v1.stateFlags = {CORE_GRAPHICS_STATE_COLOR_BLEND_STATE_BIT};
         v1.variantName = "myVariant";
         v1.vertexInputDeclaration = "verticesUri";
-        v1.shaders.push_back({ "core3d://vertexShader.spv", CORE_SHADER_STAGE_VERTEX_BIT });
+        v1.shaders.push_back({"core3d://vertexShader.spv", CORE_SHADER_STAGE_VERTEX_BIT});
         v1.graphicsState.depthStencilState.backStencilOpState.compareMask = val;
 
-        IShaderManager::ShaderVariant v2 {};
+        IShaderManager::ShaderVariant v2{};
         v2.displayName = "myShader2";
         v2.variantName = "myVariant2";
         GraphicsState& state2 = v2.graphicsState;
@@ -895,7 +897,7 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
         cbs2.enableLogicOp = true;
         cbs2.logicOp = CORE_LOGIC_OP_NOR;
 
-        IShaderManager::ShaderVariantsSaveInfo svdsi {};
+        IShaderManager::ShaderVariantsSaveInfo svdsi{};
         svdsi.category = "3D/Material";
         svdsi.shaders.push_back(v1);
         svdsi.shaders.push_back(v2);
@@ -916,7 +918,7 @@ void SaveShaderJsonTest(const UTest::EngineResources& engine)
                 auto& shader1Json = *shader1It;
                 if (!shader1Json) {
                     ADD_FAILURE() << "ShaderVariantsDataSaveInfo - no shader1Json";
-                } else { // HEHE
+                } else {  // HEHE
                     Verify(shader1Json["materialMetadata"], "just a test string");
                     Verify(shader1Json["displayName"], "myShader");
                     Verify(shader1Json["variantName"], "myVariant");

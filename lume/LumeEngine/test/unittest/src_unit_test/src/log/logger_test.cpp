@@ -49,7 +49,8 @@ public:
         outputStream << std::string_view(aMessage.data(), aMessage.size());
     }
 
-    void Destroy() override {}
+    void Destroy() override
+    {}
 
     std::string GetOutput()
     {
@@ -71,7 +72,7 @@ void LogStuff(ILogger& logger)
     logger.Log(ILogger::LogLevel::LOG_ERROR, "", 0, "Error");
     logger.Log(ILogger::LogLevel::LOG_FATAL, "", 0, "Fatal.");
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: basicLogging
@@ -84,7 +85,7 @@ UNIT_TEST(SRC_LoggerTest, basicLogging, testing::ext::TestSize.Level1)
         StringOutput testOutput;
         auto* logOutput = &testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { logOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{logOutput});
 
         // Currently verbose is the default log level.
 #ifdef NDEBUG
@@ -105,7 +106,7 @@ UNIT_TEST(SRC_LoggerTest, basicLogging, testing::ext::TestSize.Level1)
         StringOutput testOutput;
         auto* logOutput = &testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { logOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{logOutput});
 #ifdef NDEBUG
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_VERBOSE);
 #endif
@@ -120,7 +121,7 @@ UNIT_TEST(SRC_LoggerTest, basicLogging, testing::ext::TestSize.Level1)
         StringOutput testOutput;
         auto* logOutput = &testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { logOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{logOutput});
 #ifdef NDEBUG
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_VERBOSE);
 #endif
@@ -142,7 +143,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
 
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_VERBOSE);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_VERBOSE);
@@ -158,7 +159,8 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
         LogStuff(testLogger);
 
 #if defined(__OHOS_PLATFORM__)
-        // need notice
+        ASSERT_EQ(testOutput.GetOutput(),
+            "VerboseDebugInfoWarningErrorFatal.VerboseDebugInfoWarningErrorFatal.VerboseDebugInfoWarningErrorFatal.");
 #else
         ASSERT_EQ(
             testOutput.GetOutput(), "VerboseDebugInfoWarningErrorFatal.ErrorFatal.VerboseDebugInfoWarningErrorFatal.");
@@ -168,7 +170,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_VERBOSE);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_VERBOSE);
         LogStuff(testLogger);
@@ -178,7 +180,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_DEBUG);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_DEBUG);
         LogStuff(testLogger);
@@ -188,7 +190,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_INFO);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_INFO);
         LogStuff(testLogger);
@@ -198,7 +200,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_WARNING);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_WARNING);
         LogStuff(testLogger);
@@ -208,7 +210,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_ERROR);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_ERROR);
         LogStuff(testLogger);
@@ -218,7 +220,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_FATAL);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_FATAL);
         LogStuff(testLogger);
@@ -228,7 +230,7 @@ UNIT_TEST(SRC_LoggerTest, logLevels, testing::ext::TestSize.Level1)
     {
         StringOutput testOutput;
         Logger testLogger(false);
-        testLogger.AddOutput(ILogger::IOutput::Ptr { &testOutput });
+        testLogger.AddOutput(ILogger::IOutput::Ptr{&testOutput});
         testLogger.SetLogLevel(ILogger::LogLevel::LOG_NONE);
         ASSERT_EQ(testLogger.GetLogLevel(), ILogger::LogLevel::LOG_NONE);
         LogStuff(testLogger);

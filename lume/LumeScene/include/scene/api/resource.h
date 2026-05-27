@@ -18,6 +18,7 @@
 
 #include <scene/interface/intf_environment.h>
 #include <scene/interface/intf_image.h>
+#include <scene/interface/intf_in_use.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_postprocess.h>
@@ -150,6 +151,14 @@ public:
     META_INTERFACE_OBJECT_PROPERTY(float, Rotation)
     /// @see ITexture::Scale
     META_INTERFACE_OBJECT_PROPERTY(BASE_NS::Math::Vec2, Scale)
+    /**
+     * @brief Returns true if the texture slot for this MaterialProperty's MaterialPropertyIndex was defined in the
+     *        .shader file used by the material.
+     */
+    bool IsInUse() const
+    {
+        return CallPtr<IInUse>([](const auto& i) { return i.IsInUse(); });
+    }
 };
 
 /**
@@ -177,14 +186,14 @@ public:
     }
     /// Returns a named custom property with given type. Null if property does not exist or given type is not compatible
     /// with the property value.
-    template<typename Type>
+    template <typename Type>
     auto GetCustomProperty(BASE_NS::string_view name) const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomProperty<Type>(name));
     }
     /// Returns a named custom array property with given type. Null if property does not exist or given type is not
     /// compatible with the property value.
-    template<typename Type>
+    template <typename Type>
     META_NS::ArrayProperty<Type> GetCustomArrayProperty(BASE_NS::string_view name) const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomArrayProperty<Type>(name));
@@ -388,4 +397,4 @@ public:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_API_RESOURCE_H
+#endif  // SCENE_API_RESOURCE_H

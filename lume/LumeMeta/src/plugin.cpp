@@ -22,8 +22,8 @@
 #include "meta_object_lib.h"
 
 namespace {
-static CORE_NS::IPluginRegister* g_pluginRegistry { nullptr };
-} // namespace
+static CORE_NS::IPluginRegister* g_pluginRegistry{nullptr};
+}  // namespace
 
 CORE_BEGIN_NAMESPACE()
 IPluginRegister& GetPluginRegister()
@@ -42,10 +42,13 @@ namespace {
 MetaObjectLib* g_state = nullptr;
 
 // Register our interface to the GLOBAL registry.
-constexpr CORE_NS::InterfaceTypeInfo INTERFACE = { &g_state, IMetaObjectLib::UID, "Meta Object Lib", nullptr,
+constexpr CORE_NS::InterfaceTypeInfo INTERFACE = {&g_state,
+    IMetaObjectLib::UID,
+    "Meta Object Lib",
+    nullptr,
     [](CORE_NS::IClassRegister& registry, CORE_NS::PluginToken token) -> CORE_NS::IInterface* {
         return *static_cast<IMetaObjectLib**>(token);
-    } };
+    }};
 
 PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
 {
@@ -85,7 +88,7 @@ const char* VersionString()
 }
 
 // const BASE_NS::Uid plugin_deps[] {};
-} // namespace
+}  // namespace
 
 META_END_NAMESPACE()
 
@@ -96,8 +99,11 @@ _declspec(dllexport)
 __attribute__((visibility("default")))
 #endif
     // NOLINTNEXTLINE(readability-identifier-naming) to keep LumeEngine convention
-    CORE_NS::IPlugin gPluginData { { IPlugin::UID }, "MetaObject",
+    CORE_NS::IPlugin gPluginData{{IPlugin::UID},
+        "MetaObject",
         /** Version information of the plugin. */
-        CORE_NS::Version { META_NS::META_OBJECT_PLUGIN_UID, META_NS::VersionString }, META_NS::RegisterInterfaces,
-        META_NS::UnregisterInterfaces, {} };
+        CORE_NS::Version{META_NS::META_OBJECT_PLUGIN_UID, META_NS::VersionString},
+        META_NS::RegisterInterfaces,
+        META_NS::UnregisterInterfaces,
+        {}};
 }

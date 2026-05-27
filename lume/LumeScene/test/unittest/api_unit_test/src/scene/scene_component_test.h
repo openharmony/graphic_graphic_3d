@@ -30,17 +30,17 @@ namespace UTest {
  */
 #define TEST_COMPLEX_PROP(ComplexType, propName, nativeMember, subMemberToTest, nondefaultValue)                       \
     {                                                                                                                  \
-        auto complexPropObject = ComplexType {};                                                                       \
+        auto complexPropObject = ComplexType{};                                                                        \
         complexPropObject.subMemberToTest = nondefaultValue;                                                           \
         auto complexPropIsEqual = [](const auto& a, const auto& b) { return a.subMemberToTest == b.subMemberToTest; }; \
         using NType = std::remove_reference<decltype(nativeMember)>::type;                                             \
         TestEngineProperty<ComplexType, NType>(propName, complexPropObject, nativeMember, complexPropIsEqual);         \
     }
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 class ScenePluginComponentTest : public ScenePluginTest {
 public:
-    using ComponentType = decltype(BASE_NS::declval<ComponentManager>().Get(CORE_NS::Entity {}));
+    using ComponentType = decltype(BASE_NS::declval<ComponentManager>().Get(CORE_NS::Entity{}));
 
     void SetComponent(INode::Ptr node, BASE_NS::string_view name)
     {
@@ -62,7 +62,7 @@ public:
         nativeComponent = manager->Get(entity);
     }
 
-    template<typename Type>
+    template <typename Type>
     META_NS::Property<Type> GetProperty(BASE_NS::string_view name)
     {
         auto m = interface_cast<META_NS::IMetadata>(object);
@@ -72,7 +72,7 @@ public:
         return p;
     }
 
-    template<typename Type>
+    template <typename Type>
     META_NS::ArrayProperty<Type> GetArrayProperty(BASE_NS::string_view name)
     {
         auto m = interface_cast<META_NS::IMetadata>(object);
@@ -85,7 +85,7 @@ public:
     /**
      * @brief Temporarily alter the value of a property and check that the native engine value changes accordingly.
      */
-    template<typename Type, typename NType>
+    template <typename Type, typename NType>
     void TestEngineProperty(BASE_NS::string_view name, Type value, const NType& componentMember)
     {
         auto defaultIsEqual = [](const NType& a, const NType& b) { return a == b; };
@@ -95,7 +95,7 @@ public:
     /**
      * @brief Use a custom equality check for complex types lacking operator==. See TEST_COMPLEX_PROP macro for usage.
      */
-    template<typename Type, typename NType>
+    template <typename Type, typename NType>
     void TestEngineProperty(BASE_NS::string_view name, Type value, const NType& componentMember,
         std::function<bool(const NType&, const NType&)> isEqual)
     {
@@ -144,7 +144,7 @@ public:
     ComponentType nativeComponent;
 };
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
 #endif

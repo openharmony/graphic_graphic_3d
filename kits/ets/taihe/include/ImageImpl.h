@@ -29,8 +29,8 @@
 namespace OHOS::Render3D::KITETS {
 class ImageImpl : public SceneResourceImpl {
 public:
-    static SceneResources::Image createImageFromTH(SceneTH::SceneResourceParameters const &params);
-    static SceneResources::ImageStream createImageStreamFromTH(SceneTH::SceneResourceParameters const &params);
+    static SceneResources::Image createImageFromTH(SceneTH::SceneResourceParameters const& params);
+    static SceneResources::ImageStream createImageStreamFromTH(SceneTH::SceneResourceParameters const& params);
     explicit ImageImpl(const std::shared_ptr<ImageETS> imageETS);
     ~ImageImpl();
     void destroy() override;
@@ -48,5 +48,5 @@ public:
 private:
     std::shared_ptr<ImageETS> imageETS_{nullptr};
 };
-} // namespace OHOS::Render3D::KITETS
-#endif // OHOS_3D_IMAGE_IMPL_H
+}  // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_IMAGE_IMPL_H

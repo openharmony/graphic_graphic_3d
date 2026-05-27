@@ -12,12 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "shadow_configuration/PCFConfigETS.h"
 
 namespace OHOS::Render3D::ShadowConfiguration {
 
-PCFConfigETS::PCFConfigETS(float radius, int32_t count) : SoftShadowConfigETS(), radius_(radius), count_(count) {}
+PCFConfigETS::PCFConfigETS(float radius, int32_t count) : SoftShadowConfigETS(), radius_(radius), count_(count)
+{}
 
 ShadowAlgorithmType PCFConfigETS::GetType()
 {
@@ -36,6 +36,7 @@ void PCFConfigETS::SetRenderConfiguration(SCENE_NS::IRenderConfiguration::Ptr rc
         renderConfiguration_.reset();
         return;
     }
+
     rc->ShadowType()->SetValue(SCENE_NS::SceneShadowType::VARIABLE_PCF);
     rc->VariablePcfRadius()->SetValue(radius_);
     rc->VariablePcfSampleCount()->SetValue(count_);
@@ -51,7 +52,7 @@ int32_t PCFConfigETS::GetCount()
 void PCFConfigETS::SetCount(int32_t shadowSampleCount)
 {
     if (shadowSampleCount < 0) {
-        CORE_LOG_E("Invalid shadow sample count given");
+        CORE_LOG_E("Invalid shadowSampleCount given.");
         return;
     }
     count_ = shadowSampleCount;
@@ -73,7 +74,7 @@ float PCFConfigETS::GetRadius()
 void PCFConfigETS::SetRadius(float shadowSampleRadius)
 {
     if (!std::isfinite(shadowSampleRadius) || shadowSampleRadius < 0.0f) {
-        CORE_LOG_E("Invalid shadow sample radius given");
+        CORE_LOG_E("Invalid shadowSampleRadius given.");
         return;
     }
     radius_ = shadowSampleRadius;

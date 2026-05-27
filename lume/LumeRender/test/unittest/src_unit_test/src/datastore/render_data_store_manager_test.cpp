@@ -61,12 +61,12 @@ void CreatePods(UTest::EngineResources& er)
         ppConf.taaConfiguration.quality = TaaConfiguration::Quality::HIGH;
         ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView);
 
         // Create again to trigger set with updated values
         ppConf.bloomConfiguration.useCompute = false;
-        const array_view<const uint8_t> dataView2 = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView2 = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView2);
     }
     // empty pod
@@ -79,11 +79,11 @@ void CreatePods(UTest::EngineResources& er)
     }
 }
 
-template<class RenderDataStoreType>
+template <class RenderDataStoreType>
 RenderDataStoreTypeInfo FillRenderDataStoreTypeInfo()
 {
     return {
-        { RenderDataStoreTypeInfo::UID },
+        {RenderDataStoreTypeInfo::UID},
         RenderDataStoreType::UID,
         RenderDataStoreType::TYPE_NAME,
         RenderDataStoreType::Create,
@@ -141,7 +141,7 @@ void Validate(const UTest::EngineResources& er)
             desc.mipCount = 1u;
             desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             auto handle = er.device->GetGpuResourceManager().Create(desc);
-            dsStaging->ClearColorImage(handle, ClearColorValue {});
+            dsStaging->ClearColorImage(handle, ClearColorValue{});
             dsStaging->PreRender();
             auto byteSize = dsStaging->GetImageClearByteSize();
             ASSERT_EQ(16u, byteSize);
@@ -157,7 +157,7 @@ void Validate(const UTest::EngineResources& er)
             bufferCopy.dstOffset = 0u;
             bufferCopy.srcOffset = 0u;
             bufferCopy.size = 1u;
-            dsStaging->CopyDataToBufferOnCpu({ &data, 1 }, handle, bufferCopy);
+            dsStaging->CopyDataToBufferOnCpu({&data, 1}, handle, bufferCopy);
         }
 
         dataStore = er.context->GetRenderDataStoreManager().Create(
@@ -200,9 +200,9 @@ void Validate(const UTest::EngineResources& er)
     ASSERT_TRUE(er.context->GetRenderDataStoreManager().GetRenderDataStore("PostProcessDataStore"));
 #if NDEBUG
     ASSERT_FALSE(er.context->GetRenderDataStoreManager().Create({}, ""));
-#endif // NDEBUG
+#endif  // NDEBUG
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderDataStoreManagerTest

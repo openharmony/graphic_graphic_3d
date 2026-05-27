@@ -95,4 +95,4 @@ void RegisterStaticPlugin(const CORE_NS::IPlugin& plugin);
 #endif
 #endif
 // clang-format on
-#endif // API_CORE_PLUGIN_INTF_STATIC_PLUGIN_DECL_H
+#endif  // API_CORE_PLUGIN_INTF_STATIC_PLUGIN_DECL_H

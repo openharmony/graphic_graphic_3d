@@ -26,18 +26,18 @@
 RENDER_BEGIN_NAMESPACE()
 GpuSemaphoreVk::GpuSemaphoreVk(Device& device) : device_(device)
 {
-    constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo {
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-        nullptr,                                 // pNext
-        semaphoreCreateFlags,                    // flags
+    constexpr VkSemaphoreCreateFlags semaphoreCreateFlags{0};
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo{
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,  // sType
+        nullptr,                                  // pNext
+        semaphoreCreateFlags,                     // flags
     };
 
     const VkDevice vkDev = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
-    VALIDATE_VK_RESULT(vkCreateSemaphore(vkDev, // device
-        &semaphoreCreateInfo,                   // pCreateInfo
-        nullptr,                                // pAllocator
-        &plat_.semaphore));                     // pSemaphore
+    VALIDATE_VK_RESULT(vkCreateSemaphore(vkDev,  // device
+        &semaphoreCreateInfo,                    // pCreateInfo
+        nullptr,                                 // pAllocator
+        &plat_.semaphore));                      // pSemaphore
 }
 
 GpuSemaphoreVk::GpuSemaphoreVk(Device& device, const uint64_t handle) : device_(device), ownsResources_(false)
@@ -54,9 +54,9 @@ GpuSemaphoreVk::~GpuSemaphoreVk()
     if (ownsResources_ && plat_.semaphore) {
         const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
 
-        vkDestroySemaphore(device, // device
-            plat_.semaphore,       // semaphore
-            nullptr);              // pAllocator
+        vkDestroySemaphore(device,  // device
+            plat_.semaphore,        // semaphore
+            nullptr);               // pAllocator
     }
     plat_.semaphore = VK_NULL_HANDLE;
 }

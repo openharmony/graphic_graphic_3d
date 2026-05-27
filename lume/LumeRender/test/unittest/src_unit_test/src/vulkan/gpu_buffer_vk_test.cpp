@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/gpu_buffer_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -52,7 +52,7 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestVulkan, testing::ext::TestSize.Level1)
         desc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferVk buffer { device, desc };
+        GpuBufferVk buffer{device, desc};
         ASSERT_NE(nullptr, buffer.Map());
         ASSERT_NE(nullptr, buffer.MapMemory());
         buffer.Unmap();
@@ -63,7 +63,7 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestVulkan, testing::ext::TestSize.Level1)
         desc.format = BASE_FORMAT_R8G8B8A8_UINT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferVk buffer { device, desc };
+        GpuBufferVk buffer{device, desc};
         ASSERT_NE(nullptr, buffer.MapMemory());
         ASSERT_NE(nullptr, buffer.Map());
         buffer.Unmap();
@@ -74,12 +74,12 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestVulkan, testing::ext::TestSize.Level1)
         desc.format = BASE_FORMAT_R8G8B8A8_UINT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferVk buffer { device, desc };
+        GpuBufferVk buffer{device, desc};
         ASSERT_NE(nullptr, buffer.MapMemory());
         ASSERT_NE(nullptr, buffer.Map());
     }
-#endif // NDEBUG
+#endif  // NDEBUG
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

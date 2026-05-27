@@ -41,4 +41,4 @@ public:
 
 META_END_NAMESPACE()
 
-#endif // API_UI_EASING_CURVE_H
+#endif  // API_UI_EASING_CURVE_H

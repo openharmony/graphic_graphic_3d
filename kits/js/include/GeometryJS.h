@@ -19,17 +19,19 @@
 #include "BaseObjectJS.h"
 #include "MeshResourceJS.h"
 #include "NodeImpl.h"
+#include "export.h"
 
-class GeometryJS final : public BaseObject, public NodeImpl {
+class SCENE_ADDON_PUBLIC GeometryJS final : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 100;
     static void Init(napi_env env, napi_value exports);
     GeometryJS(napi_env, napi_callback_info);
     ~GeometryJS() override;
     void* GetInstanceImpl(uint32_t) override;
+
 private:
     void Construct(napi_env env, NapiApi::Object meJs, NapiApi::Object scene, NapiApi::Object sceneNodeParameters);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     napi_value GetMesh(NapiApi::FunctionContext<>& ctx);
     napi_value GetMorpher(NapiApi::FunctionContext<>& ctx);

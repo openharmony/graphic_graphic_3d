@@ -17,10 +17,9 @@
 #define SCENE_SRC_APPLICATION_CONTEXT_H
 
 #include <scene/interface/intf_application_context.h>
+#include <scene/interface/serialization/intf_metadata_importer.h>
 
 #include <meta/ext/object.h>
-
-#include "resource/resource_types.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -46,7 +45,9 @@ public:
                     args->AddProperty(op);
                 }
             }
-            RegisterResourceTypes(context_->GetResources(), args);
+            if (auto importer = META_NS::GetObjectRegistry().Create<IMetadataImporter>(ClassId::MetadataImporter)) {
+                importer->RegisterResourceTypes(context_->GetResources(), args);
+            }
             sceneManager_ = META_NS::GetObjectRegistry().Create<ISceneManager>(ClassId::SceneManager, args);
         }
         return res;

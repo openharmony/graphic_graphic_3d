@@ -72,7 +72,7 @@ using namespace testing::ext;
 
 namespace OHOS::Render3D {
 
-static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
 
 class SurfaceStreamTest : public SCENE_NS::UTest::ScenePluginTest {
 public:
@@ -144,13 +144,13 @@ private:
             }
             WIDGET_LOGE("[SurfaceStreamTest] Error: %{public}s", dlerror());
         }
-        ASSERT_TRUE(libHandle_ != nullptr) <<
-            "Failed to load engine library. Check that the engine library is built and accessible.";
+        ASSERT_TRUE(libHandle_ != nullptr)
+            << "Failed to load engine library. Check that the engine library is built and accessible.";
 
         auto* createPluginReg = reinterpret_cast<void (*)(const CORE_NS::PlatformCreateInfo&)>(
             dlsym(libHandle_, "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE"));
-        auto* getPluginReg = reinterpret_cast<CORE_NS::IPluginRegister& (*)()>(
-            dlsym(libHandle_, "_ZN4Core17GetPluginRegisterEv"));
+        auto* getPluginReg =
+            reinterpret_cast<CORE_NS::IPluginRegister& (*)()>(dlsym(libHandle_, "_ZN4Core17GetPluginRegisterEv"));
 
         if (!createPluginReg || !getPluginReg) {
             if (!createPluginReg) {
@@ -182,19 +182,12 @@ private:
 
         // Create plugin registry with platform info
         // Use the paths defined in BUILD.gn
-        CORE_NS::PlatformCreateInfo platformCreateInfo {
-            PLATFORM_CORE_ROOT_PATH,
-            PLATFORM_CORE_PLUGIN_PATH,
-            PLATFORM_APP_ROOT_PATH,
-            PLATFORM_APP_PLUGIN_PATH
-        };
+        CORE_NS::PlatformCreateInfo platformCreateInfo{
+            PLATFORM_CORE_ROOT_PATH, PLATFORM_CORE_PLUGIN_PATH, PLATFORM_APP_ROOT_PATH, PLATFORM_APP_PLUGIN_PATH};
         CORE_NS::CreatePluginRegistry(platformCreateInfo);
         // Load necessary plugins
         constexpr BASE_NS::Uid plugins[] = {
-            RENDER_NS::UID_RENDER_PLUGIN,
-            CORE3D_NS::UID_3D_PLUGIN,
-            SCENE_NS::UID_SCENE_PLUGIN
-        };
+            RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN, SCENE_NS::UID_SCENE_PLUGIN};
 
         auto& pluginRegister = CORE_NS::GetPluginRegister();
         bool loadResult = pluginRegister.LoadPlugins(plugins);
@@ -213,16 +206,12 @@ private:
         auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
         ASSERT_TRUE(factory != nullptr) << "Failed to get engine factory";
 
-        CORE_NS::PlatformCreateInfo platformCreateInfo {
-            PLATFORM_CORE_ROOT_PATH,
-            PLATFORM_CORE_PLUGIN_PATH,
-            PLATFORM_APP_ROOT_PATH,
-            PLATFORM_APP_PLUGIN_PATH
-        };
-        CORE_NS::EngineCreateInfo engineCreateInfo {
+        CORE_NS::PlatformCreateInfo platformCreateInfo{
+            PLATFORM_CORE_ROOT_PATH, PLATFORM_CORE_PLUGIN_PATH, PLATFORM_APP_ROOT_PATH, PLATFORM_APP_PLUGIN_PATH};
+        CORE_NS::EngineCreateInfo engineCreateInfo{
             platformCreateInfo,
             {"UnitTest", 0, 1, 0},  // application version
-            {}                       // application context
+            {}                      // application context
         };
         engine_ = factory->Create(engineCreateInfo);
         ASSERT_TRUE(engine_ != nullptr) << "Failed to create engine";
@@ -267,15 +256,15 @@ private:
         glesExtra.applicationContext = EGL_NO_CONTEXT;
         glesExtra.sharedContext = EGL_NO_CONTEXT;
         glesExtra.MSAASamples = 0;
-        glesExtra.depthBits = 24; // depth bits is 24
+        glesExtra.depthBits = 24;  // depth bits is 24
         deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
         deviceCreateInfo.backendConfiguration = &glesExtra;
 #elif RENDER_HAS_GL_BACKEND
         WIDGET_LOGI("[SurfaceStreamTest] Using OpenGL backend");
         RENDER_NS::BackendExtraGL glExtra;
         glExtra.MSAASamples = 0;
-        glExtra.depthBits = 24; // depth bits is 24
-        glExtra.alphaBits = 8; // alpha bits is 8
+        glExtra.depthBits = 24;  // depth bits is 24
+        glExtra.alphaBits = 8;   // alpha bits is 8
         glExtra.stencilBits = 0;
         deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGL;
         deviceCreateInfo.backendConfiguration = &glExtra;
@@ -285,8 +274,7 @@ private:
 #endif
 
         auto result = renderContext_->Init({{"UnitTest", 0, 1, 0}, deviceCreateInfo});
-        ASSERT_EQ(result, RENDER_NS::RenderResultCode::RENDER_SUCCESS) <<
-            "Failed to initialize render context";
+        ASSERT_EQ(result, RENDER_NS::RenderResultCode::RENDER_SUCCESS) << "Failed to initialize render context";
     }
 
     static void CreateGraphicsContext()
@@ -304,8 +292,8 @@ private:
             ASSERT_TRUE(false) << "GetInterface<CORE_NS::IClassFactory>() returned null";
         }
 
-        graphicsContext3D_ = CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(
-            *classFactory, CORE3D_NS::UID_GRAPHICS_CONTEXT);
+        graphicsContext3D_ =
+            CORE_NS::CreateInstance<CORE3D_NS::IGraphicsContext>(*classFactory, CORE3D_NS::UID_GRAPHICS_CONTEXT);
 
         ASSERT_TRUE(graphicsContext3D_ != nullptr) << "Failed to create graphics context";
 
@@ -342,12 +330,12 @@ private:
 
         resources->SetFileManager(CORE_NS::IFileManager::Ptr(&engine_->GetFileManager()));
 
-        appContext_ = META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(
-            SCENE_NS::ClassId::ApplicationContext);
+        appContext_ =
+            META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(SCENE_NS::ClassId::ApplicationContext);
 
         ASSERT_TRUE(appContext_ != nullptr) << "Failed to create appContext_";
-        SCENE_NS::IApplicationContext::ApplicationContextInfo info { engineTaskQueue, appTaskQueue, renderContext_,
-            resources, SCENE_NS::SceneOptions {} };
+        SCENE_NS::IApplicationContext::ApplicationContextInfo info{
+            engineTaskQueue, appTaskQueue, renderContext_, resources, SCENE_NS::SceneOptions{}};
 
         ASSERT_TRUE(appContext_->Initialize(info));
     }
@@ -363,11 +351,11 @@ public:
 
 // Static member definitions
 void* SurfaceStreamTest::libHandle_ = nullptr;
-CORE_NS::IEngine::Ptr SurfaceStreamTest::engine_ {};
-BASE_NS::shared_ptr<RENDER_NS::IRenderContext> SurfaceStreamTest::renderContext_ {};
-CORE3D_NS::IGraphicsContext::Ptr SurfaceStreamTest::graphicsContext3D_ {};
-CORE_NS::IEcs::Ptr SurfaceStreamTest::ecs_ {};
-SCENE_NS::IApplicationContext::Ptr SurfaceStreamTest::appContext_ {};
+CORE_NS::IEngine::Ptr SurfaceStreamTest::engine_{};
+BASE_NS::shared_ptr<RENDER_NS::IRenderContext> SurfaceStreamTest::renderContext_{};
+CORE3D_NS::IGraphicsContext::Ptr SurfaceStreamTest::graphicsContext3D_{};
+CORE_NS::IEcs::Ptr SurfaceStreamTest::ecs_{};
+SCENE_NS::IApplicationContext::Ptr SurfaceStreamTest::appContext_{};
 
 /**
  * @tc.name: OnBufferAvailable
@@ -821,4 +809,4 @@ HWTEST_F(SurfaceStreamTest, SurfaceStreamLifecycle, TestSize.Level1)
     EXPECT_TRUE(attach->Detach(surfaceStream));
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

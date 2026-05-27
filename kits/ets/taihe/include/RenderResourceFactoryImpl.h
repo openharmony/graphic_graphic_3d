@@ -44,27 +44,27 @@ public:
         // Don't forget to implement the constructor.
     }
 
-    ::SceneResources::Shader createShaderSync(::SceneTH::SceneResourceParameters const &params);
+    ::SceneResources::Shader createShaderSync(::SceneTH::SceneResourceParameters const& params);
 
-    ::SceneResources::Image createImageSync(::SceneTH::SceneResourceParameters const &params)
+    ::SceneResources::Image createImageSync(::SceneTH::SceneResourceParameters const& params)
     {
         return ImageImpl::createImageFromTH(params);
     }
 
-    ::SceneResources::ImageStream createImageStreamSync(::SceneTH::SceneResourceParameters const &params)
+    ::SceneResources::ImageStream createImageStreamSync(::SceneTH::SceneResourceParameters const& params)
     {
         return ImageImpl::createImageStreamFromTH(params);
     }
 
     ::SceneResources::MeshResource createMeshSync(
-        ::SceneTH::SceneResourceParameters const &params, ::SceneTypes::GeometryDefinitionType const &geometry)
+        ::SceneTH::SceneResourceParameters const& params, ::SceneTypes::GeometryDefinitionType const& geometry)
     {
         // The parameters in the make_holder function should be of the same type
         // as the parameters in the constructor of the actual implementation class.
         return MeshResourceImpl::Create(params, geometry);
     }
 
-    ::SceneResources::Sampler createSamplerSync(::SceneTH::SceneResourceParameters const &params);
+    ::SceneResources::Sampler createSamplerSync(::SceneTH::SceneResourceParameters const& params);
 
     ::SceneTH::Scene createSceneSync(::taihe::optional_view<uintptr_t> uri)
     {
@@ -78,5 +78,5 @@ public:
         return SceneTH::loadSceneWithLoadParams(uri, param);
     }
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_RESOURCE_FACTORY_IMPL_H

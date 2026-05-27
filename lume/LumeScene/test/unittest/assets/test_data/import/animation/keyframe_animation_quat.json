@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "keyframeAnimation",
+		"name": "kfAnimQuat",
+		"duration": 500.0,
+		"from": { "type": "quat", "value": [0.0, 0.0, 0.0, 1.0] },
+		"to": { "type": "quat", "value": [1.0, 0.0, 0.0, 0.0] }
+	}
+}

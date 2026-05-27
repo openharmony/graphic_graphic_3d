@@ -27,12 +27,12 @@ BOIDSSWARM_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(IBoidsSwarmRepulsionComponentManager, BoidsSwarmRepulsionComponent)
-    // Radius of influence; boids within this distance from the entity are pushed away.
-    // Default: 0.0f. Range: [0, +inf).
-    DEFINE_PROPERTY(float, radius, "Radius", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
-    // Magnitude of repulsion acceleration applied away from the entity.
-    // Default: 0.0f. Range: [0, +inf).
-    DEFINE_PROPERTY(float, accelerationMag, "Acceleration Magnitude", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
+// Radius of influence; boids within this distance from the entity are pushed away.
+// Default: 0.0f. Range: [0, +inf).
+DEFINE_PROPERTY(float, radius, "Radius", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
+// Magnitude of repulsion acceleration applied away from the entity.
+// Default: 0.0f. Range: [0, +inf).
+DEFINE_PROPERTY(float, accelerationMag, "Acceleration Magnitude", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
 END_COMPONENT(
     IBoidsSwarmRepulsionComponentManager, BoidsSwarmRepulsionComponent, "b2c3d4e5-f6a7-8901-bcde-f23456789012")
 

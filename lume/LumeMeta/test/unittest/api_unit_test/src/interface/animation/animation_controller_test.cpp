@@ -227,7 +227,7 @@ UNIT_TEST_F(API_AnimationControllerTest, Serialization, testing::ext::TestSize.L
     ASSERT_TRUE(imported);
 
     auto controllers =
-        AttachmentContainer(imported).GetAttachments({ TypeId(META_NS::InterfaceId::IAnimationController) });
+        AttachmentContainer(imported).GetAttachments({TypeId(META_NS::InterfaceId::IAnimationController)});
     ASSERT_EQ(controllers.size(), 1);
 
     auto importedController = interface_pointer_cast<IAnimationController>(controllers[0]);
@@ -271,6 +271,6 @@ UNIT_TEST_F(API_AnimationControllerTest, Serialization, testing::ext::TestSize.L
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

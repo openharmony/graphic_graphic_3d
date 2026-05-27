@@ -29,14 +29,14 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr size_t MEMORY_ALIGNMENT { 16 };
+constexpr size_t MEMORY_ALIGNMENT{16};
 
 void* AllocateBarrierListMemory(RenderBarrierList::LinearAllocatorStruct& allocator, const size_t byteSize)
 {
     void* rc = allocator.allocators[allocator.currentIndex]->Allocate(byteSize);
     if (rc) {
         return rc;
-    } else { // current allocator is out of memory
+    } else {  // current allocator is out of memory
         PLUGIN_ASSERT_MSG(allocator.allocators[allocator.currentIndex]->GetByteSize() > 0,
             "do not create render barrier list with zero size initial allocation");
 
@@ -56,7 +56,7 @@ CommandBarrier* AllocateCommandBarriers(RenderBarrierList::LinearAllocatorStruct
     const size_t byteSize = count * sizeof(CommandBarrier);
     return static_cast<CommandBarrier*>(AllocateBarrierListMemory(allocator, byteSize));
 }
-} // namespace
+}  // namespace
 
 RenderBarrierList::RenderBarrierList(const uint32_t reserveBarrierCountHint)
 {
@@ -79,7 +79,7 @@ void RenderBarrierList::BeginFrame()
 
     if (!linearAllocator_.allocators.empty()) {
         linearAllocator_.currentIndex = 0;
-        if (linearAllocator_.allocators.size() == 1) { // size is good for this frame
+        if (linearAllocator_.allocators.size() == 1) {  // size is good for this frame
             linearAllocator_.allocators[linearAllocator_.currentIndex]->Reset();
         } else if (linearAllocator_.allocators.size() > 1) {
             size_t fullByteSize = 0;
@@ -113,8 +113,8 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
             if (auto iter = barrierPointIndextoIndex_.find(barrierPointIndex);
                 iter != barrierPointIndextoIndex_.cend()) {
                 barrierIndex = iter->second;
-            } else { // first barrier to this barrier point index
-                barrierPointBarriers_.push_back(BarrierPointBarriers {});
+            } else {  // first barrier to this barrier point index
+                barrierPointBarriers_.push_back(BarrierPointBarriers{});
                 barrierIndex = barrierPointBarriers_.size() - 1;
                 barrierPointIndextoIndex_[barrierPointIndex] = barrierIndex;
             }
@@ -126,7 +126,7 @@ void RenderBarrierList::AddBarriersToBarrierPoint(
 
             structData->count = barrierCount;
             structData->commandBarriers = commandBarrierData;
-            if (ref.barrierListCount == 1) { // first barrier point barrier list
+            if (ref.barrierListCount == 1) {  // first barrier point barrier list
                 ref.firstBarrierList = structData;
             } else {
                 // patch next pointer for previous BarrierPointBarrierList

@@ -19,7 +19,7 @@
 
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED == 1)
 CORE_BEGIN_NAMESPACE()
-template<>
+template <>
 struct CORE_NS::PerformanceTraceSubsystem<2> {
     static constexpr bool IsEnabled()
     {
@@ -37,13 +37,22 @@ using PROFILER_SUBSYSTEM_RENDERER = CORE_NS::PerformanceTraceSubsystem<2>;
 RENDER_END_NAMESPACE()
 #endif
 
-constexpr uint32_t RENDER_PROFILER_DEFAULT_COLOR { 0xff5c00 };
-#define RENDER_CPU_PERF_BEGIN(timerName, subCategory, name, ...)                                    \
-    CORE_PROFILER_PERF_BEGIN(timerName, "RENDER", subCategory, name, RENDER_PROFILER_DEFAULT_COLOR, \
-        RENDER_NS::PROFILER_SUBSYSTEM_RENDERER, ##__VA_ARGS__)
+constexpr uint32_t RENDER_PROFILER_DEFAULT_COLOR{0xff5c00};
+#define RENDER_CPU_PERF_BEGIN(timerName, subCategory, name, ...) \
+    CORE_PROFILER_PERF_BEGIN(timerName,                          \
+        "RENDER",                                                \
+        subCategory,                                             \
+        name,                                                    \
+        RENDER_PROFILER_DEFAULT_COLOR,                           \
+        RENDER_NS::PROFILER_SUBSYSTEM_RENDERER,                  \
+        ##__VA_ARGS__)
 #define RENDER_CPU_PERF_END(timerName) CORE_PROFILER_PERF_END(timerName)
-#define RENDER_CPU_PERF_SCOPE(subCategory, name, ...)                                    \
-    CORE_PROFILER_PERF_SCOPE("RENDER", subCategory, name, RENDER_PROFILER_DEFAULT_COLOR, \
-        RENDER_NS::PROFILER_SUBSYSTEM_RENDERER, ##__VA_ARGS__)
+#define RENDER_CPU_PERF_SCOPE(subCategory, name, ...) \
+    CORE_PROFILER_PERF_SCOPE("RENDER",                \
+        subCategory,                                  \
+        name,                                         \
+        RENDER_PROFILER_DEFAULT_COLOR,                \
+        RENDER_NS::PROFILER_SUBSYSTEM_RENDERER,       \
+        ##__VA_ARGS__)
 
 #endif

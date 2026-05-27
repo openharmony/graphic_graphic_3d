@@ -117,7 +117,6 @@ UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
     EXPECT_FALSE(rofPointer->CreateFile("io/test_directory/rofIO.txt"));
 
     const auto& memFile1 = rofPointer->OpenFile("io/test_directory/rofIO.txt", IFile::Mode::READ_ONLY);
-
     EXPECT_FALSE(rofPointer->DeleteFile("rof1.txt"));
     EXPECT_FALSE(rofPointer->CreateDirectory("./rof"));
     EXPECT_FALSE(rofPointer->OpenDirectory("./rof"));
@@ -147,7 +146,7 @@ UNIT_TEST(SRC_IoTest, fileUriHandlingTests, testing::ext::TestSize.Level1)
     EXPECT_TRUE(stdSys);
     EXPECT_FALSE(stdSys->CreateFile("."));
     EXPECT_EQ(stdSys->GetUriPaths("").size(), 0);
-#if WIN32
+#ifdef WIN32
     EXPECT_TRUE(factory->CreateStdFileSystem("\\"));
 #endif
     EXPECT_FALSE(factory->CreateStdFileSystem("void://"));

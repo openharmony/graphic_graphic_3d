@@ -50,4 +50,4 @@ public:
 
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_IMAGE_H
+#endif  // DEVICE_GPU_IMAGE_H

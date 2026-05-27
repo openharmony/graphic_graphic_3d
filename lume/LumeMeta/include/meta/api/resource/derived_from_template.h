@@ -30,13 +30,13 @@ class DerivedFromTemplate : public IDerivedFromTemplate {
 public:
     bool SetTemplateId(CORE_NS::ResourceId id) override
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         resource_ = BASE_NS::move(id);
         return true;
     }
     CORE_NS::ResourceId GetTemplateId() const override
     {
-        std::shared_lock lock { mutex_ };
+        std::shared_lock lock{mutex_};
         return resource_;
     }
 

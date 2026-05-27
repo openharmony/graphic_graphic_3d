@@ -24,10 +24,10 @@
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()
-constexpr const uint64_t GPU_RESOURCE_HANDLE_ID_MASK { INVALID_RESOURCE_HANDLE };
+constexpr const uint64_t GPU_RESOURCE_HANDLE_ID_MASK{INVALID_RESOURCE_HANDLE};
 
 struct EngineResourceHandle {
-    uint64_t id { GPU_RESOURCE_HANDLE_ID_MASK };
+    uint64_t id{GPU_RESOURCE_HANDLE_ID_MASK};
 };
 
 inline bool operator==(EngineResourceHandle const& lhs, EngineResourceHandle const& rhs)
@@ -44,30 +44,30 @@ enum RenderHandleInfoFlagBits {
     CORE_RESOURCE_HANDLE_IMMEDIATELY_CREATED = 0x00000008,
     CORE_RESOURCE_HANDLE_DEFERRED_DESTROY = 0x00000010,
     CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER = 0x00000020,
-    CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION = 0x00000040, // e.g. hwBuffer ycbcr conversion / oes
+    CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION = 0x00000040,  // e.g. hwBuffer ycbcr conversion / oes
     CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE = 0x00000080,
-    CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE = 0x00000100, // e.g. remappable resource or dynamic ring buffer buffer
+    CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE = 0x00000100,  // e.g. remappable resource or dynamic ring buffer buffer
     CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE =
-        0x00000200, // created to be used as swapchain (fast check for additional processing)
-    CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE = 0x00000400,      // additional image state tracking
-    CORE_RESOURCE_HANDLE_RENDER_TIME_MAPPED_GPU_BUFFER = 0x00000800, // special render time mappable GPU buffer
+        0x00000200,  // created to be used as swapchain (fast check for additional processing)
+    CORE_RESOURCE_HANDLE_DYNAMIC_ADDITIONAL_STATE = 0x00000400,       // additional image state tracking
+    CORE_RESOURCE_HANDLE_RENDER_TIME_MAPPED_GPU_BUFFER = 0x00000800,  // special render time mappable GPU buffer
 };
 using RenderHandleInfoFlags = uint32_t;
 
 namespace RenderHandleUtil {
-static constexpr uint64_t RES_ID_MASK { GPU_RESOURCE_HANDLE_ID_MASK };
-static constexpr uint64_t RES_HANDLE_ID_MASK { RENDER_HANDLE_ID_MASK };
-static constexpr uint64_t RES_HANDLE_GENERATION_MASK { 0xFF000000 };
-static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK { 0x100000000000 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK { 0xfff00000000 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK { 0xFFFF000000000000 };
+static constexpr uint64_t RES_ID_MASK{GPU_RESOURCE_HANDLE_ID_MASK};
+static constexpr uint64_t RES_HANDLE_ID_MASK{RENDER_HANDLE_ID_MASK};
+static constexpr uint64_t RES_HANDLE_GENERATION_MASK{0xFF000000};
+static constexpr uint64_t RES_HANDLE_HAS_NAME_MASK{0x100000000000};
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_MASK{0xfff00000000};
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_MASK{0xFFFF000000000000};
 
-static constexpr uint64_t RES_HANDLE_ID_SHIFT { RENDER_HANDLE_ID_SHIFT };
-static constexpr uint64_t RES_HANDLE_TYPE_SHIFT { 0 };
-static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT { 24 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT { 32 };
-static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT { 44 };
-static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT { 48 };
+static constexpr uint64_t RES_HANDLE_ID_SHIFT{RENDER_HANDLE_ID_SHIFT};
+static constexpr uint64_t RES_HANDLE_TYPE_SHIFT{0};
+static constexpr uint64_t RES_HANDLE_GENERATION_SHIFT{24};
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INFO_SHIFT{32};
+static constexpr uint64_t RES_HANDLE_HAS_NAME_SHIFT{44};
+static constexpr uint64_t RES_HANDLE_ADDITIONAL_INDEX_SHIFT{48};
 
 RenderHandle CreateGpuResourceHandle(
     RenderHandleType type, RenderHandleInfoFlags infoFlags, uint32_t index, uint32_t generationIndex);
@@ -201,26 +201,26 @@ inline constexpr bool IsValid(const EngineResourceHandle& handle)
 }
 inline constexpr RenderHandleType GetHandleType(const EngineResourceHandle& handle)
 {
-    return GetHandleType(RenderHandle { handle.id });
+    return GetHandleType(RenderHandle{handle.id});
 }
 inline constexpr uint32_t GetIndexPart(const EngineResourceHandle& handle)
 {
-    return GetIndexPart(RenderHandle { handle.id });
+    return GetIndexPart(RenderHandle{handle.id});
 }
 inline constexpr uint32_t GetGenerationIndexPart(const EngineResourceHandle& handle)
 {
-    return GetGenerationIndexPart(RenderHandle { handle.id });
+    return GetGenerationIndexPart(RenderHandle{handle.id});
 }
 EngineResourceHandle CreateEngineResourceHandle(RenderHandleType type, uint32_t index, uint32_t generationIndex);
-} // namespace RenderHandleUtil
+}  // namespace RenderHandleUtil
 RENDER_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<>
+template <>
 inline uint64_t hash(const RENDER_NS::RenderHandle& value)
 {
     return value.id;
 }
 BASE_END_NAMESPACE()
 
-#endif // DEVICE_GPU_RESOURCE_HANDLE_UTIL_H
+#endif  // DEVICE_GPU_RESOURCE_HANDLE_UTIL_H

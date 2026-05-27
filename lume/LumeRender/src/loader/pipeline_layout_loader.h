@@ -34,10 +34,11 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(BASE_NS::string_view error) : success(false), error(error) {}
+        explicit LoadResult(BASE_NS::string_view error) : success(false), error(error)
+        {}
 
         /** Indicates, whether the parsing operation is successful. */
-        bool success { true };
+        bool success{true};
 
         /** In case of parsing error, contains the description of the error. */
         BASE_NS::string error;
@@ -80,8 +81,8 @@ private:
     PipelineLayout pipelineLayout_;
     BASE_NS::string uri_;
     BASE_NS::string renderSlotName_;
-    bool renderSlotDefaultPl_ { false };
+    bool renderSlotDefaultPl_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // LOADER_PIPELINE_LAYOUT_LOADER_H
+#endif  // LOADER_PIPELINE_LAYOUT_LOADER_H

@@ -41,7 +41,7 @@ bool Connector::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IOb
     }
 
     handle_ = event->AddHandler(func);
-    return handle_ != IEvent::Token {};
+    return handle_ != IEvent::Token{};
 }
 
 bool Connector::DetachFrom(const META_NS::IAttach::Ptr& target)
@@ -54,7 +54,7 @@ bool Connector::DetachFrom(const META_NS::IAttach::Ptr& target)
                 return false;
             }
             event->RemoveHandler(handle_);
-            handle_ = IEvent::Token {};
+            handle_ = IEvent::Token{};
         }
     }
     return true;

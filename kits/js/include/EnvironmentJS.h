@@ -18,8 +18,9 @@
 #include "SceneResourceImpl.h"
 #include "Vec4Proxy.h"
 #include "QuatProxy.h"
+#include "export.h"
 
-class EnvironmentJS final: public BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC EnvironmentJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 90;
     static void Init(napi_env env, napi_value exports);
@@ -29,7 +30,7 @@ public:
     void* GetInstanceImpl(uint32_t id) override;
 
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     // JS properties
     enum EnvironmentBackgroundType {

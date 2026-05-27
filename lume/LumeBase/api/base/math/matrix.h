@@ -70,16 +70,19 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr Mat3X3() noexcept : data { 0 } {}
+    inline constexpr Mat3X3() noexcept : data{0}
+    {}
 
     /** Identity constructor */
-    inline explicit constexpr Mat3X3(float id) noexcept : data { id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, id } {}
+    inline explicit constexpr Mat3X3(float id) noexcept : data{id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, id}
+    {}
 
     /** Constructor for using Vector3's */
-    inline constexpr Mat3X3(Vec3 const& v0, Vec3 const& v1, Vec3 const& v2) noexcept : x(v0), y(v1), z(v2) {}
+    inline constexpr Mat3X3(Vec3 const& v0, Vec3 const& v1, Vec3 const& v2) noexcept : x(v0), y(v1), z(v2)
+    {}
 
     /** Constructor for array of floats */
-    inline constexpr Mat3X3(const float d[9]) noexcept : data { d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8] }
+    inline constexpr Mat3X3(const float d[9]) noexcept : data{d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]}
     {}
 
     /** Add two matrices */
@@ -115,12 +118,13 @@ public:
     /** Multiply two matrices */
     inline constexpr Mat3X3 operator*(const Mat3X3& rhs) const
     {
-        const Vec3& rha { rhs.x.x, rhs.y.x, rhs.z.x };
-        const Vec3& rhb { rhs.x.y, rhs.y.y, rhs.z.y };
-        const Vec3& rhc { rhs.x.z, rhs.y.z, rhs.z.z };
+        const Vec3& rha{rhs.x.x, rhs.y.x, rhs.z.x};
+        const Vec3& rhb{rhs.x.y, rhs.y.y, rhs.z.y};
+        const Vec3& rhc{rhs.x.z, rhs.y.z, rhs.z.z};
 
-        return { { Dot(x, rha), Dot(x, rhb), Dot(x, rhc) }, { Dot(y, rha), Dot(y, rhb), Dot(y, rhc) },
-            { Dot(z, rha), Dot(z, rhb), Dot(z, rhc) } };
+        return {{Dot(x, rha), Dot(x, rhb), Dot(x, rhc)},
+            {Dot(y, rha), Dot(y, rhb), Dot(y, rhc)},
+            {Dot(z, rha), Dot(z, rhb), Dot(z, rhc)}};
     }
 
     /** Multiply columns by float scalar value */
@@ -165,7 +169,7 @@ public:
         struct {
             Vec4 x, y, z, w;
         };
-        Vec4 base[4]; // base[0] is X ,base [1] is Y, etc..
+        Vec4 base[4];  // base[0] is X ,base [1] is Y, etc..
         float data[16];
     };
 
@@ -187,7 +191,8 @@ public:
 
     // Constructors
     /** Zero initializer constructor */
-    inline constexpr Mat4X4() : data { 0 } {}
+    inline constexpr Mat4X4() : data{0}
+    {}
 
     /** Constructor for Vector4's */
     inline constexpr Mat4X4(Vec4 const& v0, Vec4 const& v1, Vec4 const& v2, Vec4 const& v3) : x(v0), y(v1), z(v2), w(v3)
@@ -195,24 +200,38 @@ public:
 
     /** Constructor for array of floats */
     inline constexpr Mat4X4(const float d[16])
-        : data { d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15] }
+        : data{d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]}
     {}
 
     /** Constructor for floats */
     inline constexpr Mat4X4(float d0, float d1, float d2, float d3, float d4, float d5, float d6, float d7, float d8,
         float d9, float d10, float d11, float d12, float d13, float d14, float d15)
-        : data { d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15 }
+        : data{d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15}
     {}
 
     /** Identity constructor */
     inline explicit constexpr Mat4X4(float id)
-        : data { id, 0.0f, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, 0.0f, id }
+        : data{id, 0.0f, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, 0.0f, id}
     {}
 
     /** Conversion constructor from Mat3X3 to Mat4X4 */
     explicit inline constexpr Mat4X4(const Mat3X3& mat3X3)
-        : data { mat3X3.data[0], mat3X3.data[1], mat3X3.data[2], 0.0f, mat3X3.data[3], mat3X3.data[4], mat3X3.data[5],
-              0.0f, mat3X3.data[6], mat3X3.data[7], mat3X3.data[8], 0.0f, 0.0f, 0.0f, 0.0f, 1.0f }
+        : data{mat3X3.data[0],
+              mat3X3.data[1],
+              mat3X3.data[2],
+              0.0f,
+              mat3X3.data[3],
+              mat3X3.data[4],
+              mat3X3.data[5],
+              0.0f,
+              mat3X3.data[6],
+              mat3X3.data[7],
+              mat3X3.data[8],
+              0.0f,
+              0.0f,
+              0.0f,
+              0.0f,
+              1.0f}
     {}
 
     /** Multiply two matrices */
@@ -227,10 +246,10 @@ public:
         __m128 rhsZ = _mm_broadcast_ss(rhs.x.data + 2);
         __m128 rhsW = _mm_broadcast_ss(rhs.x.data + 3);
         // multiply each column of lhs with rhs's first columns components while adding the results
-        __m128 rhsC = _mm_mul_ps(x.vec4, rhsX);        // res.x = lhs.x * rhs.x.x
-        rhsC = _mm_fmadd_ps(y.vec4, rhsY, rhsC);       // res.x += lhs.y * rhs.x.y
-        rhsC = _mm_fmadd_ps(z.vec4, rhsZ, rhsC);       // res.x += lhs.z * rhs.x.z
-        res.x.vec4 = _mm_fmadd_ps(w.vec4, rhsW, rhsC); // res.x += lhs.w * rhs.x.w
+        __m128 rhsC = _mm_mul_ps(x.vec4, rhsX);         // res.x = lhs.x * rhs.x.x
+        rhsC = _mm_fmadd_ps(y.vec4, rhsY, rhsC);        // res.x += lhs.y * rhs.x.y
+        rhsC = _mm_fmadd_ps(z.vec4, rhsZ, rhsC);        // res.x += lhs.z * rhs.x.z
+        res.x.vec4 = _mm_fmadd_ps(w.vec4, rhsW, rhsC);  // res.x += lhs.w * rhs.x.w
 
         // repeat for second column of rhs
         rhsX = _mm_broadcast_ss(rhs.y.data + 0);
@@ -269,13 +288,13 @@ public:
         __m128 rhsZ = _mm_set_ps1(rhs.x.z);
         __m128 rhsW = _mm_set_ps1(rhs.x.w);
         // multiply each column of lhs with rhs's first columns components
-        rhsX = _mm_mul_ps(x.vec4, rhsX); // lhs.x * rhs.x.x
-        rhsY = _mm_mul_ps(y.vec4, rhsY); // lhs.y * rhs.x.y
-        rhsZ = _mm_mul_ps(z.vec4, rhsZ); // lhs.z * rhs.x.z
-        rhsW = _mm_mul_ps(w.vec4, rhsW); // lhs.w * rhs.x.w
+        rhsX = _mm_mul_ps(x.vec4, rhsX);  // lhs.x * rhs.x.x
+        rhsY = _mm_mul_ps(y.vec4, rhsY);  // lhs.y * rhs.x.y
+        rhsZ = _mm_mul_ps(z.vec4, rhsZ);  // lhs.z * rhs.x.z
+        rhsW = _mm_mul_ps(w.vec4, rhsW);  // lhs.w * rhs.x.w
         // sum the products
-        rhsX = _mm_add_ps(rhsX, rhsY); // (lhs.x * rhs.x.x) + (lhs.y * rhs.x.y)
-        rhsZ = _mm_add_ps(rhsZ, rhsW); // (lhs.z * rhs.x.z) + (lhs.w * rhs.x.w)
+        rhsX = _mm_add_ps(rhsX, rhsY);  // (lhs.x * rhs.x.x) + (lhs.y * rhs.x.y)
+        rhsZ = _mm_add_ps(rhsZ, rhsW);  // (lhs.z * rhs.x.z) + (lhs.w * rhs.x.w)
         res.x.vec4 = _mm_add_ps(rhsX, rhsZ);
 
         // repeat for second column of rhs
@@ -321,10 +340,10 @@ public:
         // multiply each column of lhs with rhs's first columns components
         float32x4_t rhsC = vld1q_f32(rhs.x.data);
         res.x.vec4 = vmovq_n_f32(0);
-        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, x.vec4, rhsC, 0); // res.x += lhs.x * rhs.x.x
-        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, y.vec4, rhsC, 1); // res.x += lhs.y * rhs.x.y
-        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, z.vec4, rhsC, 2); // res.x += lhs.z * rhs.x.z
-        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, w.vec4, rhsC, 3); // res.x += lhs.w * rhs.x.w
+        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, x.vec4, rhsC, 0);  // res.x += lhs.x * rhs.x.x
+        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, y.vec4, rhsC, 1);  // res.x += lhs.y * rhs.x.y
+        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, z.vec4, rhsC, 2);  // res.x += lhs.z * rhs.x.z
+        res.x.vec4 = vfmaq_laneq_f32(res.x.vec4, w.vec4, rhsC, 3);  // res.x += lhs.w * rhs.x.w
 
         // repeat for second column of rhs
         rhsC = vld1q_f32(rhs.y.data);
@@ -449,7 +468,7 @@ public:
         struct {
             Vec3 x, y, z, w;
         };
-        Vec3 base[4]; // base[0] is X ,base [1] is Y, etc..
+        Vec3 base[4];  // base[0] is X ,base [1] is Y, etc..
         float data[12];
     };
 
@@ -471,7 +490,8 @@ public:
 
     // Constructors
     /** Zero initializer constructor */
-    inline constexpr Mat4X3() : data { 0 } {}
+    inline constexpr Mat4X3() : data{0}
+    {}
 
     /** Constructor for Vector4's */
     inline constexpr Mat4X3(Vec3 const& v0, Vec3 const& v1, Vec3 const& v2, Vec3 const& v3) : x(v0), y(v1), z(v2), w(v3)
@@ -479,18 +499,17 @@ public:
 
     /** Constructor for array of floats */
     inline constexpr Mat4X3(const float d[12])
-        : data { d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11] }
+        : data{d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11]}
     {}
 
     /** Constructor for floats */
     inline constexpr Mat4X3(float d0, float d1, float d2, float d3, float d4, float d5, float d6, float d7, float d8,
         float d9, float d10, float d11)
-        : data { d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11 }
+        : data{d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11}
     {}
 
     /** Identity constructor */
-    inline explicit constexpr Mat4X3(float id)
-        : data { id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f }
+    inline explicit constexpr Mat4X3(float id) : data{id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f, id, 0.0f, 0.0f, 0.0f}
     {}
 
     /** Multiply columns by float scalar value */
@@ -528,7 +547,7 @@ static_assert(sizeof(Mat4X3) == 12 * sizeof(float));
 static constexpr Mat4X3 IDENTITY_4X3(1.f);
 
 #include <base/math/disable_warning_4201_footer.h>
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_MATRIX_H
+#endif  // API_BASE_MATH_MATRIX_H

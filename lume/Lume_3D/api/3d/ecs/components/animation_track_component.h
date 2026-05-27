@@ -32,34 +32,34 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IAnimationTrackComponentManager, AnimationTrackComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    /**
-     * Animation interpolation types. Can be one of the following:
-     * step, linear and spline
-     */
-    enum class Interpolation : uint8_t {
-        /** Interpolation type step */
-        STEP,
-        /** Interpolation type linear */
-        LINEAR,
-        /** Interpolation type spline */
-        SPLINE
-    };
+/**
+ * Animation interpolation types. Can be one of the following:
+ * step, linear and spline
+ */
+enum class Interpolation : uint8_t {
+    /** Interpolation type step */
+    STEP,
+    /** Interpolation type linear */
+    LINEAR,
+    /** Interpolation type spline */
+    SPLINE
+};
 #endif
-    /** Animation target */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, target, "Target Entity", 0, )
-    /** Component type to animate */
-    DEFINE_PROPERTY(BASE_NS::Uid, component, "Target Component UID", 0, )
-    /** Property to animate. */
-    DEFINE_PROPERTY(BASE_NS::string, property, "Target Property", 0, )
-    /** Animation interpolation mode */
-    DEFINE_PROPERTY(Interpolation, interpolationMode, "Interpolation Mode", 0, )
-    /** Animation timestamps */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, timestamps, "Input Component", 0, )
-    /** Animation data */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, data, "Output Component", 0, )
+/** Animation target */
+DEFINE_PROPERTY(CORE_NS::EntityReference, target, "Target Entity", 0, )
+/** Component type to animate */
+DEFINE_PROPERTY(BASE_NS::Uid, component, "Target Component UID", 0, )
+/** Property to animate. */
+DEFINE_PROPERTY(BASE_NS::string, property, "Target Property", 0, )
+/** Animation interpolation mode */
+DEFINE_PROPERTY(Interpolation, interpolationMode, "Interpolation Mode", 0, )
+/** Animation timestamps */
+DEFINE_PROPERTY(CORE_NS::EntityReference, timestamps, "Input Component", 0, )
+/** Animation data */
+DEFINE_PROPERTY(CORE_NS::EntityReference, data, "Output Component", 0, )
 
 END_COMPONENT(IAnimationTrackComponentManager, AnimationTrackComponent, "42b5784a-44e6-4de1-8892-d0871ebca989")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()
 #endif
-#endif // API_3D_ECS_COMPONENTS_ANIMATION_TRACK_COMPONENT_H
+#endif  // API_3D_ECS_COMPONENTS_ANIMATION_TRACK_COMPONENT_H

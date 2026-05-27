@@ -30,7 +30,7 @@ namespace UTest {
 class API_ScenePluginEnvironmentComponentTest
     : public ScenePluginComponentTest<CORE3D_NS::IEnvironmentComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestIEnvironmentPropertyGetters(T* env)
     {
         EXPECT_TRUE(env->Background());
@@ -68,8 +68,8 @@ UNIT_TEST_F(API_ScenePluginEnvironmentComponentTest, Members, testing::ext::Test
     ASSERT_TRUE(AddComponent<CORE3D_NS::IEnvironmentComponentManager>(node));
     SetComponent(node, "EnvironmentComponent");
 
-    BASE_NS::Math::Vec4 vec4 { 1.0f, 2.0f, 3.0f, 4.0f };
-    BASE_NS::Math::Quat quat { 1.0f, 2.0f, 3.0f, 4.0f };
+    BASE_NS::Math::Vec4 vec4{1.0f, 2.0f, 3.0f, 4.0f};
+    BASE_NS::Math::Quat quat{1.0f, 2.0f, 3.0f, 4.0f};
 
     TestEngineProperty<EnvBackgroundType>("Background", EnvBackgroundType::CUBEMAP, nativeComponent.background);
     TestEngineProperty<BASE_NS::Math::Vec4>("IndirectDiffuseFactor", vec4, nativeComponent.indirectDiffuseFactor);
@@ -80,7 +80,7 @@ UNIT_TEST_F(API_ScenePluginEnvironmentComponentTest, Members, testing::ext::Test
     TestEngineProperty<float>("EnvironmentMapLodLevel", 0.5, nativeComponent.envMapLodLevel);
 
     auto bitmap = CreateTestBitmap();
-    for (BASE_NS::string_view propName : { "RadianceImage", "EnvironmentImage" }) {
+    for (BASE_NS::string_view propName : {"RadianceImage", "EnvironmentImage"}) {
         auto prop = GetProperty<IImage::Ptr>(propName);
         prop->SetValue(bitmap);
         UpdateComponentMembers();
@@ -90,9 +90,15 @@ UNIT_TEST_F(API_ScenePluginEnvironmentComponentTest, Members, testing::ext::Test
 
     auto prop = GetArrayProperty<BASE_NS::Math::Vec3>("IrradianceCoefficients");
     BASE_NS::Math::Vec3 coeffs[9] = {
-        { 1.1f, 1.2f, 1.3f }, { 2.1f, 2.2f, 2.3f }, { 3.1f, 3.2f, 3.3f }, //
-        { 4.1f, 4.2f, 4.3f }, { 5.1f, 5.2f, 5.3f }, { 6.1f, 6.2f, 6.3f }, //
-        { 7.1f, 7.2f, 7.3f }, { 8.1f, 8.2f, 8.3f }, { 9.1f, 9.2f, 9.3f }  //
+        {1.1f, 1.2f, 1.3f},
+        {2.1f, 2.2f, 2.3f},
+        {3.1f, 3.2f, 3.3f},  //
+        {4.1f, 4.2f, 4.3f},
+        {5.1f, 5.2f, 5.3f},
+        {6.1f, 6.2f, 6.3f},  //
+        {7.1f, 7.2f, 7.3f},
+        {8.1f, 8.2f, 8.3f},
+        {9.1f, 9.2f, 9.3f}  //
     };
     prop->SetValue(coeffs);
     UpdateComponentMembers();
@@ -118,6 +124,6 @@ UNIT_TEST_F(API_ScenePluginEnvironmentComponentTest, Functions, testing::ext::Te
     TestIEnvironmentFunctions(interface_cast<IEnvironment>(object));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

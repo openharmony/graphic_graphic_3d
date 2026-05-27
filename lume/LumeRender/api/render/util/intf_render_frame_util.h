@@ -59,13 +59,13 @@ public:
         /** handle for reference/check-up */
         BASE_NS::unique_ptr<BASE_NS::ByteArray> byteBuffer;
         /** frame index */
-        uint64_t frameIndex { 0 };
+        uint64_t frameIndex{0};
         /** handle for reference/check-up */
-        RenderHandleReference handle {};
+        RenderHandleReference handle{};
         /** copy flags */
-        CopyFlags copyFlags { 0u };
+        CopyFlags copyFlags{0u};
         /** additional buffer handle if doing GPU -> GPU readable copy */
-        RenderHandleReference bufferHandle {};
+        RenderHandleReference bufferHandle{};
     };
     /** Back buffer configuration
      * Which overwrites NodeGraphBackBufferConfiguration POD
@@ -85,10 +85,10 @@ public:
 
         /** Name of the GpuImage in render node graph json where rendering happens.
          * Image with this name must have been created by the application (or by the renderer). */
-        BASE_NS::string backBufferName { "CORE_DEFAULT_BACKBUFFER" };
+        BASE_NS::string backBufferName{"CORE_DEFAULT_BACKBUFFER"};
 
         /** Back buffer type */
-        BackBufferType backBufferType = { BackBufferType::UNDEFINED };
+        BackBufferType backBufferType = {BackBufferType::UNDEFINED};
 
         /** Handle to the final target.
          * If backbufferType is SWAPCHAIN this handle is not used.
@@ -99,10 +99,10 @@ public:
         RenderHandleReference gpuBufferHandle;
 
         /** Present */
-        bool present { false };
+        bool present{false};
 
         /** Binary semaphore for signaling end of frame, i.e. when rendered to back buffer */
-        uint64_t gpuSemaphoreHandle { 0 };
+        uint64_t gpuSemaphoreHandle{0};
     };
 
     /** Signal resource object which can be retrieved after render frame has been processed
@@ -111,11 +111,11 @@ public:
         /** Handle if it was attached to some handle */
         RenderHandleReference handle;
         /** Guarantee that the semaphore object has been signaled */
-        bool signaled { false };
+        bool signaled{false};
         /** Low level signal resource handle (In Vulkan GPU semaphore) */
-        uint64_t gpuSignalResourceHandle { 0 };
+        uint64_t gpuSignalResourceHandle{0};
         /** Low level signal resource type */
-        SignalResourceType signalResourceType {};
+        SignalResourceType signalResourceType{};
     };
 
     /** Copy data to CPU the next frame if waiting for idle.
@@ -173,4 +173,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_UTIL_IRENDER_FRAME_UTIL_H
+#endif  // API_RENDER_UTIL_IRENDER_FRAME_UTIL_H

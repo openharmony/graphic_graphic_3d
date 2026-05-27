@@ -63,7 +63,7 @@ void TestRenderContext(const UTest::EngineResources& er)
     auto metadata = ((RenderContext&)context).GetInterfaceMetadata();
     uint32_t initialSize = metadata.size();
     {
-        InterfaceTypeInfo interfaceInfo { nullptr, UID_RENDER_DATA_CONFIGURATION_LOADER };
+        InterfaceTypeInfo interfaceInfo{nullptr, UID_RENDER_DATA_CONFIGURATION_LOADER};
         ((RenderContext&)context).UnregisterInterfaceType(interfaceInfo);
     }
     {
@@ -76,30 +76,36 @@ void TestRenderContext(const UTest::EngineResources& er)
     IPluginRegister::ITypeInfoListener* typeInfoListener = (IPluginRegister::ITypeInfoListener*)renderContext;
     ASSERT_NE(nullptr, typeInfoListener);
     {
-        IRenderPlugin plugin0 { [](IRenderContext&) -> PluginToken { return PluginToken(); }, [](PluginToken) {} };
-        IRenderPlugin plugin1 { nullptr, nullptr };
-        RenderDataStoreTypeInfo plugin2 { { RenderDataStoreTypeInfo::UID }, RenderDataStoreTypeInfo::UID, "plugin2",
+        IRenderPlugin plugin0{[](IRenderContext&) -> PluginToken { return PluginToken(); }, [](PluginToken) {}};
+        IRenderPlugin plugin1{nullptr, nullptr};
+        RenderDataStoreTypeInfo plugin2{{RenderDataStoreTypeInfo::UID},
+            RenderDataStoreTypeInfo::UID,
+            "plugin2",
 #ifdef NDEBUG
             nullptr
 #else
-            [](IRenderContext&, char const*) -> BASE_NS::refcnt_ptr<IRenderDataStore> { return nullptr; }
+            [](IRenderContext&, const char*) -> BASE_NS::refcnt_ptr<IRenderDataStore> { return nullptr; }
 #endif
         };
-        RenderNodeTypeInfo plugin3 { { RenderNodeTypeInfo::UID }, RenderNodeTypeInfo::UID, "plugin3",
+        RenderNodeTypeInfo plugin3{{RenderNodeTypeInfo::UID},
+            RenderNodeTypeInfo::UID,
+            "plugin3",
 #ifdef NDEBUG
-            nullptr, nullptr
+            nullptr,
+            nullptr
 #else
-            []() -> IRenderNode* { return nullptr; }, [](IRenderNode*) -> void {}
+            []() -> IRenderNode* { return nullptr; },
+            [](IRenderNode*) -> void {}
 #endif
         };
-        ITypeInfo* typeInfos[] = { &plugin0, &plugin1, &plugin2, &plugin3 };
+        ITypeInfo* typeInfos[] = {&plugin0, &plugin1, &plugin2, &plugin3};
         typeInfoListener->OnTypeInfoEvent(
-            IPluginRegister::ITypeInfoListener::EventType::ADDED, { typeInfos, countof(typeInfos) });
+            IPluginRegister::ITypeInfoListener::EventType::ADDED, {typeInfos, countof(typeInfos)});
         typeInfoListener->OnTypeInfoEvent(
-            IPluginRegister::ITypeInfoListener::EventType::REMOVED, { typeInfos, countof(typeInfos) });
+            IPluginRegister::ITypeInfoListener::EventType::REMOVED, {typeInfos, countof(typeInfos)});
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderContextTest

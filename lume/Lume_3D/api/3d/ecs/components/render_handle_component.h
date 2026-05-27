@@ -38,11 +38,11 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IRenderHandleComponentManager, RenderHandleComponent)
 
-    /** Handle to the render resources.
-     * Further details of the image can be queried with IGpuResourceManager::IsGpuBuffer/Image/Sampler*,
-     * IGpuResourceManager::GetBuffer/Image/SamplerDescriptor.
-     */
-    DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0, )
+/** Handle to the render resources.
+ * Further details of the image can be queried with IGpuResourceManager::IsGpuBuffer/Image/Sampler*,
+ * IGpuResourceManager::GetBuffer/Image/SamplerDescriptor.
+ */
+DEFINE_PROPERTY(RENDER_NS::RenderHandleReference, reference, "Render Handle Reference", 0, )
 
 END_COMPONENT_EXT(
     IRenderHandleComponentManager, RenderHandleComponent, "fb5c16b5-c369-4f7b-bc02-5398ddfdfa1d",
@@ -135,4 +135,4 @@ inline CORE_NS::EntityReference GetOrCreateEntityReference(
 
 CORE3D_END_NAMESPACE()
 #endif
-#endif // API_3D_ECS_COMPONENTS_RENDER_HANDLE_COMPONENT_H
+#endif  // API_3D_ECS_COMPONENTS_RENDER_HANDLE_COMPONENT_H

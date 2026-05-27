@@ -23,13 +23,19 @@ bool GenericComponent::Build(const META_NS::IMetadata::Ptr& d)
 {
     if (Super::Build(d)) {
         component_ = GetBuildArg<BASE_NS::string>(d, "Component");
+        id_ = GetBuildArg<META_NS::ObjectId>(d, "ComponentId");
     }
-    return !component_.empty();
+    return !component_.empty() && id_.IsValid();
 }
 
 BASE_NS::string GenericComponent::GetName() const
 {
     return component_;
+}
+
+META_NS::ObjectId GenericComponent::GetComponentId() const
+{
+    return id_;
 }
 
 SCENE_END_NAMESPACE()

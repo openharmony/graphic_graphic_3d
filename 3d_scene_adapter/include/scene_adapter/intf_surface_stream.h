@@ -42,5 +42,5 @@ public:
 
 META_REGISTER_CLASS(SurfaceStream, "961433c5-ae97-423e-9a9d-d8ef3063618b", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-}
-#endif // OHOS_RENDER_3D_INTF_SURFACE_STREAM_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_INTF_SURFACE_STREAM_H

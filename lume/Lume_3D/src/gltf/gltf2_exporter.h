@@ -38,11 +38,13 @@ struct ExportResult final {
     ~ExportResult();
     ExportResult(ExportResult&&) = default;
     ExportResult& operator=(ExportResult&&) = default;
-    explicit ExportResult(BASE_NS::string&& error) : success(false), error(error) {}
-    explicit ExportResult(BASE_NS::unique_ptr<Data>&& data) : data(BASE_NS::move(data)) {}
+    explicit ExportResult(BASE_NS::string&& error) : success(false), error(error)
+    {}
+    explicit ExportResult(BASE_NS::unique_ptr<Data>&& data) : data(BASE_NS::move(data))
+    {}
 
     /** Indicates, whether the export operation is successful. */
-    bool success { true };
+    bool success{true};
 
     /** The description of the error. */
     BASE_NS::string error;
@@ -54,7 +56,7 @@ struct ExportResult final {
 void SaveGLB(Data const& data, CORE_NS::IFile& file, BASE_NS::string_view versionString);
 void SaveGLTF(Data const& data, CORE_NS::IFile& file, BASE_NS::string_view versionString);
 ExportResult ExportGLTF(CORE_NS::IEngine& engine, const CORE_NS::IEcs& ecs);
-} // namespace GLTF2
+}  // namespace GLTF2
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__GLTF__GLTF2_EXPORTER_H
+#endif  // CORE__GLTF__GLTF2_EXPORTER_H

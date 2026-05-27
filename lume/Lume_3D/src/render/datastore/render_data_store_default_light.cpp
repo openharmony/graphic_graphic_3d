@@ -28,7 +28,8 @@ CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
-RenderDataStoreDefaultLight::RenderDataStoreDefaultLight(const string_view name) : name_(name) {}
+RenderDataStoreDefaultLight::RenderDataStoreDefaultLight(const string_view name) : name_(name)
+{}
 
 void RenderDataStoreDefaultLight::PostRender()
 {
@@ -91,13 +92,13 @@ Math::UVec2 RenderDataStoreDefaultLight::GetShadowQualityResolution() const
 void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
 {
     // drop light that has all components below zero (negative light)
-    constexpr float lightIntensityEpsilon { 0.0001f };
+    constexpr float lightIntensityEpsilon{0.0001f};
     if (((light.color.x < 0.0f) && (light.color.y < 0.0f) && (light.color.z < 0.0f)) ||
         (light.color.w < lightIntensityEpsilon)) {
         return;
     }
 
-    RenderLight renderLight = light; // copy
+    RenderLight renderLight = light;  // copy
     // we do not support negative color values for lights
     renderLight.color.x = Math::max(0.0f, renderLight.color.x);
     renderLight.color.y = Math::max(0.0f, renderLight.color.y);
@@ -105,7 +106,8 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
     const uint32_t lightCount = lightCounts_.directional + lightCounts_.spot + lightCounts_.point + lightCounts_.rect;
     if (lightCount >= DefaultMaterialLightingConstants::MAX_LIGHT_COUNT) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_ONCE_W("drop_light_count_", "CORE3D_VALIDATION: light dropped (max count: %u)",
+        PLUGIN_LOG_ONCE_W("drop_light_count_",
+            "CORE3D_VALIDATION: light dropped (max count: %u)",
             DefaultMaterialLightingConstants::MAX_LIGHT_COUNT);
 #endif
         return;
@@ -127,7 +129,7 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
             } else if (renderLight.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
                 lightCounts_.spotShadow++;
             }
-            renderLight.shadowIndex = shadowCount; // shadow index in atlas
+            renderLight.shadowIndex = shadowCount;  // shadow index in atlas
             lightCounts_.shadowCount = lightCounts_.spotShadow + lightCounts_.dirShadow;
         }
     }

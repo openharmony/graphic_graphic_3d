@@ -26,16 +26,16 @@
 
 NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCENE_NS::NodeHit hitResult)
 {
-    auto result = NapiApi::Object { env };
+    auto result = NapiApi::Object{env};
 
-    napi_value args[] = { scene.GetValue(), NapiApi::Object { env }.ToNapiValue() };
+    napi_value args[] = {scene.GetValue(), NapiApi::Object{env}.ToNapiValue()};
     const auto jsNode = CreateFromNativeInstance(env, hitResult.node, PtrType::WEAK, args);
     if (auto nodeImpl = jsNode.GetJsWrapper<NodeImpl>()) {
         nodeImpl->Attached(true);
     }
 
-    auto centerDistance = napi_value {};
-    auto distance = napi_value {};
+    auto centerDistance = napi_value{};
+    auto distance = napi_value{};
     napi_create_double(env, hitResult.distance, &distance);
     napi_create_double(env, hitResult.distanceToCenter, &centerDistance);
 
@@ -48,8 +48,8 @@ NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCEN
 
 SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastParameters)
 {
-    auto layerMask = uint64_t {};
-    auto jsObj = NapiApi::Object { env, raycastParameters.Get("layerMask") };
+    auto layerMask = uint64_t{};
+    auto jsObj = NapiApi::Object{env, raycastParameters.Get("layerMask")};
     if (auto rootObject = jsObj.GetRoot()) {
         // Layer masks are served as Node objects to the JS side.
         if (auto nativeNode = interface_pointer_cast<SCENE_NS::INode>(rootObject->GetNativeObject())) {
@@ -59,10 +59,10 @@ SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastPa
         }
     }
 
-    auto rootNode = SCENE_NS::INode::ConstPtr {};
-    auto anotherjsObj = NapiApi::Object { env, raycastParameters.Get("rootNode") };
+    auto rootNode = SCENE_NS::INode::ConstPtr{};
+    auto anotherjsObj = NapiApi::Object{env, raycastParameters.Get("rootNode")};
     if (auto rootObject = anotherjsObj.GetRoot()) {
         rootNode = interface_pointer_cast<SCENE_NS::INode>(rootObject->GetNativeObject());
     }
-    return { layerMask, rootNode };
+    return {layerMask, rootNode};
 }

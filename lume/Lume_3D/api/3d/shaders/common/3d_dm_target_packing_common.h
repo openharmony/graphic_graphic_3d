@@ -182,4 +182,4 @@ void GetUnpackVelocityAndNormal(in vec4 packed, out vec2 velocity, out vec3 norm
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_PACKING_COMMON_H
+#endif  // SHADERS_COMMON_3D_DEFAULT_MATERIAL_PACKING_COMMON_H

@@ -66,14 +66,14 @@ struct ShaderModuleCreateInfo;
 struct QueueProperties;
 
 struct LowLevelQueueInfo {
-    VkQueueFlags queueFlags { 0 };
-    uint32_t queueFamilyIndex { ~0u };
-    uint32_t queueCount { 0 };
-    float priority { 1.0f };
+    VkQueueFlags queueFlags{0};
+    uint32_t queueFamilyIndex{~0u};
+    uint32_t queueCount{0};
+    float priority{1.0f};
 };
 
 struct LowLevelGpuQueueVk {
-    VkQueue queue { VK_NULL_HANDLE };
+    VkQueue queue{VK_NULL_HANDLE};
 
     LowLevelQueueInfo queueInfo;
 };
@@ -83,12 +83,12 @@ struct DevicePlatformInternalDataVk {
 };
 
 struct DebugFunctionUtilitiesVk {
-    PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT { nullptr };
-    PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT { nullptr };
-    PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT { nullptr };
+    PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT{nullptr};
+    PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT{nullptr};
+    PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT{nullptr};
 
-    VkDebugUtilsMessengerEXT debugMessenger { VK_NULL_HANDLE };
-    VkDebugReportCallbackEXT debugCallback { VK_NULL_HANDLE };
+    VkDebugUtilsMessengerEXT debugMessenger{VK_NULL_HANDLE};
+    VkDebugReportCallbackEXT debugCallback{VK_NULL_HANDLE};
 };
 
 class DeviceVk final : public Device {
@@ -176,26 +176,26 @@ public:
     BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(uint64_t handle) override;
 
     struct FeatureConfigurations {
-        float minSampleShading { 0.25f };
+        float minSampleShading{0.25f};
     };
     const FeatureConfigurations& GetFeatureConfigurations() const;
 
     struct CommonDeviceExtensions {
-        bool swapchain { false };
+        bool swapchain{false};
 
         // external_memory and external_memory_capabilities
-        bool externalMemory { false };
-        bool getMemoryRequirements2 { false };
-        bool samplerYcbcrConversion { false };
-        bool queueFamilyForeign { false };
+        bool externalMemory{false};
+        bool getMemoryRequirements2{false};
+        bool samplerYcbcrConversion{false};
+        bool queueFamilyForeign{false};
 
-        bool renderPass2 { false };
-        bool fragmentShadingRate { false };
-        bool multiView { false };
-        bool descriptorIndexing { false };
+        bool renderPass2{false};
+        bool fragmentShadingRate{false};
+        bool multiView{false};
+        bool descriptorIndexing{false};
 
         // portability_subset
-        bool portabilitySubset { false };
+        bool portabilitySubset{false};
     };
     const CommonDeviceExtensions& GetCommonDeviceExtensions() const;
     const PlatformDeviceExtensions& GetPlatformDeviceExtensions() const;
@@ -206,33 +206,36 @@ public:
 
     struct ExtFunctions {
         // VK_KHR_sampler_ycbcr_conversion or Vulkan 1.1
-        PFN_vkCreateSamplerYcbcrConversion vkCreateSamplerYcbcrConversion { nullptr };
-        PFN_vkDestroySamplerYcbcrConversion vkDestroySamplerYcbcrConversion { nullptr };
+        PFN_vkCreateSamplerYcbcrConversion vkCreateSamplerYcbcrConversion{nullptr};
+        PFN_vkDestroySamplerYcbcrConversion vkDestroySamplerYcbcrConversion{nullptr};
 
         // VK_KHR_get_memory_requirements2 or Vulkan 1.1
-        PFN_vkGetImageMemoryRequirements2 vkGetImageMemoryRequirements2 { nullptr };
+        PFN_vkGetImageMemoryRequirements2 vkGetImageMemoryRequirements2{nullptr};
         // VK_KHR_get_physical_device_properties2 or Vulkan 1.1
-        PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2 { nullptr };
-        PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2 { nullptr };
+        PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2{nullptr};
+        PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2{nullptr};
 
         // VK_KHR_create_renderpass2 or Vulkan 1.2
-        PFN_vkCreateRenderPass2KHR vkCreateRenderPass2KHR { nullptr };
+        PFN_vkCreateRenderPass2KHR vkCreateRenderPass2KHR{nullptr};
 
         // VK_KHR_swapchain
-        PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR { nullptr };
+        PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR{nullptr};
 
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
         // VK_KHR_fragment_shading_rate
-        PFN_vkCmdSetFragmentShadingRateKHR vkCmdSetFragmentShadingRateKHR { nullptr };
+        PFN_vkCmdSetFragmentShadingRateKHR vkCmdSetFragmentShadingRateKHR{nullptr};
 #endif
+
+        // VK_KHR_buffer_device_address
+        PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR{nullptr};
 
 #if (RENDER_VULKAN_RT_ENABLED == 1)
         // VK_KHR_acceleration_structure
-        PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR { nullptr };
-        PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR { nullptr };
-        PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR { nullptr };
-        PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR { nullptr };
-        PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR { nullptr };
+        PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR{nullptr};
+        PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR{nullptr};
+        PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR{nullptr};
+        PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR{nullptr};
+        PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR{nullptr};
 #endif
     };
     const ExtFunctions& GetExtFunctions() const;
@@ -242,7 +245,7 @@ public:
     void CreatePlatformExtFunctions();
 
     struct DefaultVulkanObjects {
-        VkDescriptorSetLayout emptyDescriptorSetLayout { VK_NULL_HANDLE };
+        VkDescriptorSetLayout emptyDescriptorSetLayout{VK_NULL_HANDLE};
     };
     const DefaultVulkanObjects& GetDefaultVulkanObjects() const;
 
@@ -256,7 +259,7 @@ private:
     BASE_NS::unique_ptr<PlatformGpuMemoryAllocator> platformGpuMemoryAllocator_;
 
     DevicePlatformDataVk plat_;
-    bool ownInstanceAndDevice_ { true };
+    bool ownInstanceAndDevice_{true};
     DevicePlatformInternalDataVk platInternal_;
 
     FeatureConfigurations featureConfigurations_;
@@ -270,7 +273,7 @@ private:
     };
     LowLevelGpuQueues lowLevelGpuQueues_;
 
-    uint32_t gpuQueueCount_ { 0 };
+    uint32_t gpuQueueCount_{0};
 
     BASE_NS::unordered_map<BASE_NS::string, uint32_t> extensions_;
     CommonDeviceExtensions commonDeviceExtensions_;
@@ -284,7 +287,7 @@ private:
     PlatformExtFunctions platformExtFunctions_;
     DefaultVulkanObjects defaultVulkanObjects_;
     // render context create info flags
-    uint32_t rcFlags_ { 0U };
+    uint32_t rcFlags_{0U};
 };
 
 BASE_NS::unique_ptr<Device> CreateDeviceVk(RenderContext& renderContext);
@@ -308,4 +311,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_DEVICE_VK_H
+#endif  // VULKAN_DEVICE_VK_H

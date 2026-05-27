@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"description": "nested node template level 3 (leaf)",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "node",
+			"name": "level3",
+			"position": [3, 3, 3]
+		}
+	},
+	"primaryGroup": ""
+}

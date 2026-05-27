@@ -18,6 +18,7 @@
 #include <3d/implementation_uids.h>
 #include <3d/intf_graphics_context.h>
 #include <3d/render/default_material_constants.h>
+#include <3d/render/intf_render_data_store_default_camera.h>
 #include <3d/render/intf_render_data_store_default_material.h>
 #include <base/containers/allocator.h>
 #include <base/containers/type_traits.h>
@@ -40,28 +41,49 @@
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-constexpr uint32_t MIN_UBO_OBJECT_COUNT { CORE_UNIFORM_BUFFER_MAX_BIND_SIZE / UBO_BIND_OFFSET_ALIGNMENT };
-constexpr uint32_t MIN_MATERIAL_DESC_SET_COUNT { 64U };
+constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT{PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE};
+constexpr uint32_t MIN_UBO_OBJECT_COUNT{CORE_UNIFORM_BUFFER_MAX_BIND_SIZE / UBO_BIND_OFFSET_ALIGNMENT};
+constexpr uint32_t MIN_MATERIAL_DESC_SET_COUNT{64U};
 
-constexpr GpuBufferDesc UBO_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc UBO_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
 
-constexpr size_t Align(size_t value, size_t align)
+constexpr GpuBufferDesc SSBO_DESC{CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
+
+constexpr size_t Align(size_t value, size_t align) noexcept
 {
-    if (value == 0) {
-        return 0;
+    if (align == 0U) {
+        return value;
     }
-    return ((value + align) / align) * align;
+
+    return ((value + align - 1U) / align) * align;
 }
+
+constexpr uint32_t GreatestCommonDivisor(uint32_t a, uint32_t b) noexcept
+{
+    return (b == 0U) ? a : GreatestCommonDivisor(b, a % b);
+}
+
+constexpr uint32_t LeastCommonMultiple(uint32_t a, uint32_t b) noexcept
+{
+    return (a / GreatestCommonDivisor(a, b)) * b;
+}
+
+// Slot stride aligned to both bind-offset and element stride so GL ring-buffered slots land on element boundaries.
+constexpr uint32_t LP_SLOT_STRIDE_ALIGN =
+    LeastCommonMultiple(UBO_BIND_OFFSET_ALIGNMENT, LightProbeConstants::SSBO_SINGLE_LIGHT_PROBE_DATA_SIZE);
 
 void GetDefaultMaterialGpuResources(const IRenderNodeGpuResourceManager& gpuResourceMgr,
     RenderNodeDefaultMaterialObjects::MaterialHandleStruct& defaultMat)
@@ -136,7 +158,7 @@ bool UpdateCurrentMaterialHandles(const IRenderNodeGpuResourceManager& gpuResour
     }
     return hasChanges;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -182,7 +204,7 @@ void RenderNodeDefaultMaterialObjects::InitNode(IRenderNodeContextManager& rende
     defaultMaterialPipelineLayout_ = shaderMgr.GetPipelineLayout(shaderRsd.pipelineLayout.GetHandle());
     GetDefaultMaterialGpuResources(gpuResourceMgr, defaultMaterialStruct_);
 
-    ProcessBuffers({ 1u, 1u, 1u, 1u, 1u });
+    ProcessBuffers({1u, 1u, 1u, 1u, 1u, 0u});
 }
 
 void RenderNodeDefaultMaterialObjects::PreExecuteFrame()
@@ -195,16 +217,17 @@ void RenderNodeDefaultMaterialObjects::PreExecuteFrame()
             renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameMaterial));
         dataStoreMaterial) {
         const auto dsOc = dataStoreMaterial->GetObjectCounts();
-        const ObjectCounts oc {
+        const ObjectCounts oc{
             Math::max(dsOc.meshCount, 1u),
             Math::max(dsOc.submeshCount, 1u),
             Math::max(dsOc.skinCount, 1u),
             Math::max(dsOc.materialCount, 1u),
             Math::max(dsOc.uniqueMaterialCount, 1u),
+            dsOc.lightProbeDataCount * 2u,
         };
         ProcessBuffers(oc);
     } else {
-        ProcessBuffers({ 1u, 1u, 1u, 1u, 1u });
+        ProcessBuffers({1u, 1u, 1u, 1u, 1u, 0u});
     }
 }
 
@@ -254,21 +277,28 @@ void RenderNodeDefaultMaterialObjects::UpdateSkinBuffer(const IRenderDataStoreDe
     // skin offset for submesh is calculated submesh.skinIndex * sizeof(DefaultMaterialSkinStruct)
     // NOTE: the size could be optimized, but render data store should calculate correct size with alignment
     if (auto skinData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.submeshSkin.GetHandle())); skinData) {
+        PLUGIN_STATIC_ASSERT(RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT == CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
         PLUGIN_STATIC_ASSERT(
-            RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT * 2u == CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
+            RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT_WITH_PREVIOUS == CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET);
         const auto* skinDataEnd = skinData + sizeof(DefaultMaterialSkinStruct) * objectCounts_.maxSkinCount;
         const auto meshJointMatrices = dataStoreMaterial.GetMeshJointMatrices();
         for (const auto& jointRef : meshJointMatrices) {
-            // we copy first current frame matrices, then previous frame
-            const size_t copyCount = static_cast<size_t>(jointRef.count / 2u);
-            const size_t copySize = copyCount * sizeof(Math::Mat4X4);
-            const size_t ptrOffset = CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET * sizeof(Math::Mat4X4);
-            if (!CloneData(skinData, size_t(skinDataEnd - skinData), jointRef.data, copySize)) {
+            const size_t currentCount =
+                static_cast<size_t>(jointRef.previousFrameOffset ? jointRef.previousFrameOffset : jointRef.count);
+            const size_t currentSize = currentCount * sizeof(Math::Mat4X4);
+            if (!CloneData(skinData, size_t(skinDataEnd - skinData), jointRef.data, currentSize)) {
                 PLUGIN_LOG_I("skinData ubo copying failed");
             }
-            if (!CloneData(skinData + ptrOffset, size_t(skinDataEnd - (skinData + ptrOffset)),
-                    jointRef.data + copyCount, copySize)) {
-                PLUGIN_LOG_I("skinData ubo copying failed");
+            if (jointRef.previousFrameOffset > 0u) {
+                const size_t prevCount = static_cast<size_t>(jointRef.count - jointRef.previousFrameOffset);
+                const size_t prevSize = prevCount * sizeof(Math::Mat4X4);
+                const size_t ptrOffset = CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET * sizeof(Math::Mat4X4);
+                if (!CloneData(skinData + ptrOffset,
+                        size_t(skinDataEnd - (skinData + ptrOffset)),
+                        jointRef.data + jointRef.previousFrameOffset,
+                        prevSize)) {
+                    PLUGIN_LOG_I("skinData ubo copying failed");
+                }
             }
             skinData = skinData + sizeof(DefaultMaterialSkinStruct);
         }
@@ -285,6 +315,16 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
     auto matTransformData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.matTransform.GetHandle()));
     auto userMaterialData = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ubos_.userMat.GetHandle()));
     if (!matFactorData || !matTransformData || !userMaterialData) {
+        if (matFactorData) {
+            gpuResourceMgr.UnmapBuffer(ubos_.mat.GetHandle());
+        }
+        if (matTransformData) {
+            gpuResourceMgr.UnmapBuffer(ubos_.matTransform.GetHandle());
+        }
+        if (userMaterialData) {
+            gpuResourceMgr.UnmapBuffer(ubos_.userMat.GetHandle());
+        }
+        PLUGIN_LOG_E("invalid material ubo handle");
         return;
     }
     const auto* matFactorDataEnd = matFactorData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
@@ -292,6 +332,7 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
     const auto* userMaterialDataEnd = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT * objectCounts_.maxMaterialCount;
     const auto materialUniforms = dataStoreMaterial.GetMaterialUniforms();
     const auto materialFrameIndices = dataStoreMaterial.GetMaterialFrameIndices();
+
     for (uint32_t matOff = 0; matOff < materialFrameIndices.size(); ++matOff) {
         const uint32_t matIdx = materialFrameIndices[matOff];
         if (matIdx >= materialUniforms.size()) {
@@ -299,22 +340,29 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
         }
 
         const RenderDataDefaultMaterial::AllMaterialUniforms& uniforms = materialUniforms[matIdx];
-        if (!CloneData(matFactorData, size_t(matFactorDataEnd - matFactorData), &uniforms.factors,
+        if (!CloneData(matFactorData,
+                size_t(matFactorDataEnd - matFactorData),
+                &uniforms.factors,
                 sizeof(RenderDataDefaultMaterial::MaterialUniforms))) {
             PLUGIN_LOG_I("materialFactorData ubo copying failed");
         }
-        if (!CloneData(matTransformData, size_t(matTransformDataEnd - matTransformData), &uniforms.transforms,
+        if (!CloneData(matTransformData,
+                size_t(matTransformDataEnd - matTransformData),
+                &uniforms.transforms,
                 sizeof(RenderDataDefaultMaterial::MaterialPackedUniforms))) {
             PLUGIN_LOG_I("materialTransformData ubo copying failed");
         }
         const auto materialCustomProperties = dataStoreMaterial.GetMaterialCustomPropertyData(matIdx);
         if (!materialCustomProperties.empty()) {
             PLUGIN_ASSERT(materialCustomProperties.size_bytes() <= UBO_BIND_OFFSET_ALIGNMENT);
-            if (!CloneData(userMaterialData, size_t(userMaterialDataEnd - userMaterialData),
-                    materialCustomProperties.data(), materialCustomProperties.size_bytes())) {
+            if (!CloneData(userMaterialData,
+                    size_t(userMaterialDataEnd - userMaterialData),
+                    materialCustomProperties.data(),
+                    materialCustomProperties.size_bytes())) {
                 PLUGIN_LOG_I("userMaterialData ubo copying failed");
             }
         }
+
         matFactorData = matFactorData + UBO_BIND_OFFSET_ALIGNMENT;
         matTransformData = matTransformData + UBO_BIND_OFFSET_ALIGNMENT;
         userMaterialData = userMaterialData + UBO_BIND_OFFSET_ALIGNMENT;
@@ -323,6 +371,22 @@ void RenderNodeDefaultMaterialObjects::UpdateMaterialBuffers(const IRenderDataSt
     gpuResourceMgr.UnmapBuffer(ubos_.mat.GetHandle());
     gpuResourceMgr.UnmapBuffer(ubos_.matTransform.GetHandle());
     gpuResourceMgr.UnmapBuffer(ubos_.userMat.GetHandle());
+
+    auto ssboLightProbeDataCount = dataStoreMaterial.GetObjectCounts().lightProbeDataCount;
+    if (ssboLightProbeDataCount == 0u) {
+        return;
+    }
+    PLUGIN_STATIC_ASSERT(LightProbeConstants::SSBO_SINGLE_LIGHT_PROBE_DATA_SIZE == sizeof(LightProbeInterpolatedData));
+    auto ssboSize = ssboLightProbeDataCount * LightProbeConstants::SSBO_SINGLE_LIGHT_PROBE_DATA_SIZE;
+    auto lightProbeInterpolatedDataData =
+        reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(ssbos_.lightProbeInterpolatedData.GetHandle()));
+    const auto lightProbeInterpolatedDataDataEnd = lightProbeInterpolatedDataData + ssboSize;
+    const auto& shCoefficientsUpdate = dataStoreMaterial.GetLightProbeData();
+    CloneData(lightProbeInterpolatedDataData,
+        size_t(lightProbeInterpolatedDataDataEnd - lightProbeInterpolatedDataData),
+        shCoefficientsUpdate.data(),
+        ssboSize);
+    gpuResourceMgr.UnmapBuffer(ssbos_.lightProbeInterpolatedData.GetHandle());
 }
 
 void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
@@ -348,13 +412,11 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
             const uint32_t currImageCount = descSetLayout.bindings[imgBindingIdx].descriptorCount;
             const uint32_t currSamplerCount = descSetLayout.bindings[smpBindingIdx].descriptorCount;
 
-            constexpr IGpuResourceManager::ImageHandleInfo imageInfo {
+            constexpr IGpuResourceManager::ImageHandleInfo imageInfo{
                 IGpuResourceManager::ImageHandleInfo::HANDLE_FILL_WITH_DEFAULT_BIT,
-                ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT
-            };
-            constexpr IGpuResourceManager::SamplerHandleInfo samplerInfo {
-                IGpuResourceManager::SamplerHandleInfo::HANDLE_FILL_WITH_DEFAULT_BIT
-            };
+                ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT};
+            constexpr IGpuResourceManager::SamplerHandleInfo samplerInfo{
+                IGpuResourceManager::SamplerHandleInfo::HANDLE_FILL_WITH_DEFAULT_BIT};
             blImageHandles_.clear();
             blSamplerHandles_.clear();
             // fetch
@@ -386,7 +448,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
         } else {
             for (size_t idx = 0; idx < materialHandles.size(); ++idx) {
                 if (idx >= globalDescs_.descriptorSets.size()) {
-                    break; // prevent possible issues
+                    break;  // prevent possible issues
                 }
                 auto* binder = globalDescs_.descriptorSets[idx].get();
                 if (binder && (idx < materialHandles.size())) {
@@ -424,6 +486,14 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
             bindingIdx++, ubos_.matTransform.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
         binder1->BindBuffer(
             bindingIdx++, ubos_.userMat.GetHandle(), 0U, PipelineLayoutConstants::MAX_UBO_BIND_BYTE_SIZE);
+        auto ssboLightProbeCount = dataStoreMaterial.GetObjectCounts().lightProbeDataCount;
+        auto ssboHandle = ssboLightProbeCount != 0u ? ssbos_.lightProbeInterpolatedData.GetHandle()
+                                                    : renderNodeContextMgr_->GetGpuResourceManager().GetBufferHandle(
+                                                          "CORE_DEFAULT_GPU_BUFFER");
+        auto ssboSize = ssboLightProbeCount != 0u
+                            ? ssboLightProbeCount * LightProbeConstants::SSBO_SINGLE_LIGHT_PROBE_DATA_SIZE
+                            : 1u;
+        binder1->BindBuffer(bindingIdx++, ssboHandle, 0U, ssboSize);
         cmdList.UpdateDescriptorSet(
             binder1->GetDescriptorSetHandle(), binder1->GetDescriptorSetLayoutBindingResources());
     } else if ((!bindlessEnabled_) && (!globalDescs_.dmSet2Ready)) {
@@ -448,7 +518,7 @@ void RenderNodeDefaultMaterialObjects::UpdateDescriptorSets(
 void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& objectCounts)
 {
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-    constexpr uint32_t overEstimate { 16u };
+    constexpr uint32_t overEstimate{16u};
     constexpr uint32_t baseStructSize = CORE_UNIFORM_BUFFER_MAX_BIND_SIZE;
     constexpr uint32_t singleComponentStructSize = UBO_BIND_OFFSET_ALIGNMENT;
     const string_view us = stores_.dataStoreNameScene;
@@ -496,6 +566,16 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         ubos_.userMat =
             gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_USER_DATA_BUFFER_NAME, bDesc);
     }
+    if (objectCounts_.maxLightProbeDataCount < objectCounts.maxLightProbeDataCount) {
+        GpuBufferDesc ssboDesc = SSBO_DESC;
+        ssboDesc.byteSize = static_cast<uint32_t>(
+            Align(objectCounts.maxLightProbeDataCount * LightProbeConstants::SSBO_SINGLE_LIGHT_PROBE_DATA_SIZE,
+                LP_SLOT_STRIDE_ALIGN));
+        ssbos_.lightProbeInterpolatedData =
+            gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::LIGHT_PROBE_SH_COEFFICIENTS, ssboDesc);
+        objectCounts_.maxLightProbeDataCount = objectCounts.maxLightProbeDataCount;
+    }
+
     if (objectCounts_.maxUniqueMaterialCount < objectCounts.maxUniqueMaterialCount) {
         PLUGIN_STATIC_ASSERT(sizeof(RenderDataDefaultMaterial::MaterialUniforms) <= UBO_BIND_OFFSET_ALIGNMENT);
         objectCounts_.maxUniqueMaterialCount = objectCounts.maxUniqueMaterialCount +
@@ -516,7 +596,8 @@ void RenderNodeDefaultMaterialObjects::ProcessBuffers(const ObjectCounts& object
         }
 #endif
         globalDescs_.handles = dsMgr.CreateGlobalDescriptorSets(
-            us + DefaultMaterialMaterialConstants::MATERIAL_RESOURCES_GLOBAL_DESCRIPTOR_SET_NAME, bindings,
+            us + DefaultMaterialMaterialConstants::MATERIAL_RESOURCES_GLOBAL_DESCRIPTOR_SET_NAME,
+            bindings,
             objectCounts_.maxUniqueMaterialCount);
         globalDescs_.descriptorSets.resize(globalDescs_.handles.size());
         globalDescs_.materials.resize(globalDescs_.handles.size());
@@ -580,21 +661,21 @@ void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
 
     IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
     {
-        AsGeometryInstancesInfo asInstances { false, 0U, objectCounts_.maxMeshCount };
+        AsGeometryInstancesInfo asInstances{false, 0U, objectCounts_.maxMeshCount};
 
         AsBuildGeometryInfo geometryInfo;
         geometryInfo.type = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
         // build
         geometryInfo.mode = BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD;
         geometryInfo.flags = BuildAccelerationStructureFlagBits::CORE_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT;
-        tlas_.asBuildSizes = device.GetAccelerationStructureBuildSizes(geometryInfo, {}, {}, { &asInstances, 1U });
-        const GpuAccelerationStructureDesc desc { AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
-            GpuBufferDesc {
+        tlas_.asBuildSizes = device.GetAccelerationStructureBuildSizes(geometryInfo, {}, {}, {&asInstances, 1U});
+        const GpuAccelerationStructureDesc desc{AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+            GpuBufferDesc{
                 CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT,
                 CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS,
                 tlas_.asBuildSizes.accelerationStructureSize,
-            } };
+            }};
         tlas_.as = gpuResourceMgr.Create(us + DefaultMaterialMaterialConstants::MATERIAL_TLAS_PREFIX_NAME, desc);
         tlas_.createNewBuffer = true;
     }
@@ -611,27 +692,27 @@ void RenderNodeDefaultMaterialObjects::UpdateTlasBuffers(
             auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
             const uint32_t byteSize =
                 PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE * objectCounts_.maxMeshCount;
-            const GpuBufferDesc desc {
+            const GpuBufferDesc desc{
                 BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                     BufferUsageFlagBits::
-                        CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT, // usageFlags
+                        CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,  // usageFlags
                 MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT, // memoryPropertyFlags
-                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                    // engineCreationFlags
-                byteSize,                                                           // byteSize
-                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                             // format
+                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT,  // memoryPropertyFlags
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                     // engineCreationFlags
+                byteSize,                                                            // byteSize
+                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                              // format
             };
             // name not needed, only access here
             tlas_.asInstanceBuffer = gpuResourceMgr.Create(tlas_.asInstanceBuffer, desc);
 
             // allocate scratch
-            const GpuBufferDesc scratchDesc {
+            const GpuBufferDesc scratchDesc{
                 BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                    BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, // usageFlags
-                CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                         // memoryPropertyFlags
-                0U,                                                            // engineCreationFlags
-                tlas_.asBuildSizes.buildScratchSize,                           // byteSize
-                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                        // format
+                    BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
+                CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
+                0U,                                                             // engineCreationFlags
+                tlas_.asBuildSizes.buildScratchSize,                            // byteSize
+                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
             };
             tlas_.scratch = gpuResourceMgr.Create(tlas_.scratch, scratchDesc);
         }
@@ -639,22 +720,22 @@ void RenderNodeDefaultMaterialObjects::UpdateTlasBuffers(
         const RenderDataStoreDefaultMaterial& dsMat = (const RenderDataStoreDefaultMaterial&)dataStoreMaterial;
         const auto blasData = dsMat.GetMeshBlasData();
         if (!blasData.empty()) {
-            cmdList.CopyAccelerationStructureInstances({ tlas_.asInstanceBuffer.GetHandle(), 0U }, blasData);
+            cmdList.CopyAccelerationStructureInstances({tlas_.asInstanceBuffer.GetHandle(), 0U}, blasData);
 
             const uint32_t blasCount = static_cast<uint32_t>(blasData.size());
             AsGeometryInstancesData asInstances;
-            asInstances.info = { false, 0U, blasCount };
-            asInstances.data = { tlas_.asInstanceBuffer.GetHandle(), 0U };
+            asInstances.info = {false, 0U, blasCount};
+            asInstances.data = {tlas_.asInstanceBuffer.GetHandle(), 0U};
 
             AsBuildGeometryData geometry;
             geometry.dstAccelerationStructure = tlas_.as.GetHandle();
-            geometry.scratchBuffer = { tlas_.scratch.GetHandle(), 0U };
+            geometry.scratchBuffer = {tlas_.scratch.GetHandle(), 0U};
             geometry.srcAccelerationStructure = {};
             geometry.info.type = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
             geometry.info.mode = BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD;
             geometry.info.flags =
                 BuildAccelerationStructureFlagBits::CORE_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT;
-            cmdList.BuildAccelerationStructures(geometry, {}, {}, { &asInstances, 1U });
+            cmdList.BuildAccelerationStructures(geometry, {}, {}, {&asInstances, 1U});
         }
     }
 }

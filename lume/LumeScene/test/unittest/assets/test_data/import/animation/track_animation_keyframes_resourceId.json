@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "resourceIdKeyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [
+			{ "type": "resourceId", "name": "first-ref", "group": "g1" },
+			{ "type": "resourceId", "name": "second-ref" }
+		]
+	}
+}

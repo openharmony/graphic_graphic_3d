@@ -27,7 +27,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename Func>
+template <typename Func>
 auto CreateFutureFromResultFunction(Func&& func)
 {
     auto fut =
@@ -35,7 +35,7 @@ auto CreateFutureFromResultFunction(Func&& func)
     return Future<PlainType_t<decltype(func())>>(fut);
 }
 
-template<typename Func>
+template <typename Func>
 auto AddFutureTaskOrRunDirectly(const ITaskQueue::Ptr& queue, Func&& func)
 {
     auto& tr = GetTaskQueueRegistry();

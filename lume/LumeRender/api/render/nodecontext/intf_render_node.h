@@ -105,4 +105,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_H
+#endif  // API_RENDER_IRENDER_NODE_H

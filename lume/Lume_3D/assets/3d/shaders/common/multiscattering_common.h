@@ -23,7 +23,7 @@ const float UINT_TO_FLOAT_SCALE = 1.0 / (1u << 24);
 
 uint FloatToScaledUint(float value)
 {
-    return uint(clamp(value * float(FLOAT_TO_UINT_SCALE), 0.0, float(1u << 31))); // 31: offset
+    return uint(clamp(value * float(FLOAT_TO_UINT_SCALE), 0.0, float(1u << 31)));  // 31: offset
 }
 
 float ScaledUintToFloat(uint value)
@@ -126,4 +126,4 @@ void GetMulScattValues(vec3 pos, vec3 sunDir, inout vec3 currentThreadLum, inout
     }
 }
 
-#endif // MULTIPLESCATTERING_COMMON_H
+#endif  // MULTIPLESCATTERING_COMMON_H

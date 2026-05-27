@@ -109,7 +109,7 @@ HWTEST_F(EngineFactoryTest, CreateEngine_UniquePtr_ValidOwnership, testing::ext:
 
     // Verify it's a valid unique_ptr
     ASSERT_NE(engine, nullptr);
- 
+
     // Transfer ownership
     std::unique_ptr<IEngine> engineMoved = std::move(engine);
 
@@ -259,4 +259,4 @@ HWTEST_F(EngineFactoryTest, CreateEngine_MoveAssignment_ValidTransfer, testing::
     EXPECT_NE(engine1.get(), originalPtr);
     EXPECT_EQ(engine2, nullptr);
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

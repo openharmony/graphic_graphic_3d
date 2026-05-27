@@ -1,0 +1,40 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name": "mat-base"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"alphaCutoff": 0.1
+				}
+			},
+			{
+				"resourceId": {
+					"name": "mat-mid"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"derivedFrom": {
+						"name": "mat-base"
+					},
+					"alphaCutoff": 0.5
+				}
+			},
+			{
+				"resourceId": {
+					"name": "mat-leaf"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"derivedFrom": {
+						"name": "mat-mid"
+					}
+				}
+			}
+		]
+	}
+}

@@ -43,9 +43,9 @@ CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-constexpr uint32_t MAX_LOOP_COUNT { 2u };
-} // namespace
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+constexpr uint32_t MAX_LOOP_COUNT{2u};
+}  // namespace
 
 void RenderNodeDefaultShadowsBlur::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -128,7 +128,7 @@ void RenderNodeDefaultShadowsBlur::ExecuteFrame(IRenderCommandList& cmdList)
         static_cast<IRenderDataStoreDefaultLight*>(renderDataStoreMgr.GetRenderDataStore(stores_.dataStoreNameLight));
     if (dataStoreLight) {
         if (shadowTypes_.shadowType != IRenderDataStoreDefaultLight::ShadowType::VSM) {
-            return; // early out
+            return;  // early out
         }
 
         RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "3DShadowsBlur", DefaultDebugConstants::DEFAULT_DEBUG_COLOR);
@@ -155,7 +155,7 @@ void RenderNodeDefaultShadowsBlur::ProcessSingleShadow(IRenderCommandList& cmdLi
     if (gpuResourceMgr.IsGpuImage(imageHandle) && gpuResourceMgr.IsGpuImage(tempImage.imageHandle.GetHandle())) {
         RenderPass renderPass;
         renderPass.renderPassDesc.attachmentCount = 1u;
-        renderPass.renderPassDesc.renderArea = { 0, 0, tempImage.width, tempImage.height };
+        renderPass.renderPassDesc.renderArea = {0, 0, tempImage.width, tempImage.height};
         renderPass.renderPassDesc.subpassCount = 1u;
         renderPass.renderPassDesc.attachments[0].layer = drawIdx;
         renderPass.subpassStartIndex = 0;
@@ -163,9 +163,13 @@ void RenderNodeDefaultShadowsBlur::ProcessSingleShadow(IRenderCommandList& cmdLi
         subpass.colorAttachmentCount = 1u;
         subpass.colorAttachmentIndices[0] = 0;
 
-        renderPass.renderPassDesc.attachments[0] = { 0, 0, AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE,
-            AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE, AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE,
-            AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE, ClearValue { ClearColorValue {} } };
+        renderPass.renderPassDesc.attachments[0] = {0,
+            0,
+            AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE,
+            AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE,
+            AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE,
+            AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE,
+            ClearValue{ClearColorValue{}}};
 
         if (!RenderHandleUtil::IsValid(shaderData_.psoHandle)) {
             const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
@@ -176,22 +180,32 @@ void RenderNodeDefaultShadowsBlur::ProcessSingleShadow(IRenderCommandList& cmdLi
                 shaderMgr.GetReflectionSpecialization(shaderData_.shaderHandle);
             const VertexInputDeclarationView vidv =
                 shaderMgr.GetReflectionVertexInputDeclaration(shaderData_.shaderHandle);
-            const uint32_t specializationFlags[] = { CORE_BLUR_TYPE_RG };
+            const uint32_t specializationFlags[] = {CORE_BLUR_TYPE_RG};
             PLUGIN_ASSERT(sscv.constants.size() == countof(specializationFlags));
-            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
+            const ShaderSpecializationConstantDataView specDataView{sscv.constants, specializationFlags};
             auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-            shaderData_.psoHandle = psoMgr.GetGraphicsPsoHandle(shaderData_.shaderHandle, graphicsStateHandle,
-                reflPipelineLayout, vidv, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            shaderData_.psoHandle = psoMgr.GetGraphicsPsoHandle(shaderData_.shaderHandle,
+                graphicsStateHandle,
+                reflPipelineLayout,
+                vidv,
+                specDataView,
+                {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
 
         const float fWidth = static_cast<float>(tempImage.width);
         const float fHeight = static_cast<float>(tempImage.height);
-        const Math::Vec4 texSizeInvTexSize = { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight };
+        const Math::Vec4 texSizeInvTexSize = {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight};
 
-        const ViewportDesc viewport { 0.0f, 0.0f, fWidth, fHeight, 0.0f, 1.0f };
-        const ScissorDesc scissor { 0, 0, tempImage.width, tempImage.height };
+        const ViewportDesc viewport{0.0f, 0.0f, fWidth, fHeight, 0.0f, 1.0f};
+        const ScissorDesc scissor{0, 0, tempImage.width, tempImage.height};
 
-        RenderData(cmdList, renderPass, viewport, scissor, imageHandle, tempImage.imageHandle.GetHandle(), drawIdx,
+        RenderData(cmdList,
+            renderPass,
+            viewport,
+            scissor,
+            imageHandle,
+            tempImage.imageHandle.GetHandle(),
+            drawIdx,
             texSizeInvTexSize);
     }
 }
@@ -212,13 +226,25 @@ void RenderNodeDefaultShadowsBlur::RenderData(IRenderCommandList& cmdList, const
         const uint32_t descriptorSetIndex = (drawIdx * loopCount) + idx;
         // horizontal
         renderPass.renderPassDesc.attachmentHandles[0] = outputHandle;
-        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set0Horizontal[descriptorSetIndex],
-            texSizeInvTexSize, { 1.0f, 0.0f, 0.0f, 0.0f }, inputHandle);
+        RenderBlur(cmdList,
+            renderPass,
+            viewport,
+            scissor,
+            allDescriptorSets_.set0Horizontal[descriptorSetIndex],
+            texSizeInvTexSize,
+            {1.0f, 0.0f, 0.0f, 0.0f},
+            inputHandle);
         ExplicitOutputBarrier(cmdList, inputHandle);
         // vertical
         renderPass.renderPassDesc.attachmentHandles[0] = inputHandle;
-        RenderBlur(cmdList, renderPass, viewport, scissor, allDescriptorSets_.set0Vertical[descriptorSetIndex],
-            texSizeInvTexSize, { 0.0f, 1.0f, 0.0f, 0.0f }, outputHandle);
+        RenderBlur(cmdList,
+            renderPass,
+            viewport,
+            scissor,
+            allDescriptorSets_.set0Vertical[descriptorSetIndex],
+            texSizeInvTexSize,
+            {0.0f, 1.0f, 0.0f, 0.0f},
+            outputHandle);
     }
 }
 
@@ -241,7 +267,7 @@ void RenderNodeDefaultShadowsBlur::RenderBlur(IRenderCommandList& cmdList, const
         cmdList.BindDescriptorSet(0u, bind.GetDescriptorSetHandle());
     }
 
-    const LocalPostProcessPushConstantStruct pc { texSizeInvTexSize, dir };
+    const LocalPostProcessPushConstantStruct pc{texSizeInvTexSize, dir};
     cmdList.PushConstant(shaderData_.pushConstant, reinterpret_cast<const uint8_t*>(&pc));
 
     cmdList.Draw(3u, 1u, 0u, 0u);
@@ -250,11 +276,14 @@ void RenderNodeDefaultShadowsBlur::RenderBlur(IRenderCommandList& cmdList, const
 
 void RenderNodeDefaultShadowsBlur::ExplicitInputBarrier(IRenderCommandList& cmdList, const RenderHandle handle)
 {
-    const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         PipelineStageFlagBits::CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        ImageLayout::CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-    const ImageSubresourceRange range { CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        ImageLayout::CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    const ImageSubresourceRange range{CORE_IMAGE_ASPECT_COLOR_BIT,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     cmdList.CustomImageBarrier(handle, dst, range);
 
     cmdList.AddCustomBarrierPoint();
@@ -262,11 +291,14 @@ void RenderNodeDefaultShadowsBlur::ExplicitInputBarrier(IRenderCommandList& cmdL
 
 void RenderNodeDefaultShadowsBlur::ExplicitOutputBarrier(IRenderCommandList& cmdList, const RenderHandle handle)
 {
-    const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT,
+    const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT,
         PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-    const ImageSubresourceRange range { CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+    const ImageSubresourceRange range{CORE_IMAGE_ASPECT_COLOR_BIT,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     cmdList.CustomImageBarrier(handle, dst, range);
 
     cmdList.AddCustomBarrierPoint();
@@ -277,10 +309,10 @@ void RenderNodeDefaultShadowsBlur::CreateDescriptorSets()
     auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
     const uint32_t descriptorSetCount = DefaultMaterialLightingConstants::MAX_SHADOW_COUNT * MAX_LOOP_COUNT;
     {
-        const DescriptorCounts dc { {
-            { CORE_DESCRIPTOR_TYPE_SAMPLER, descriptorSetCount },
-            { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptorSetCount },
-        } };
+        const DescriptorCounts dc{{
+            {CORE_DESCRIPTOR_TYPE_SAMPLER, descriptorSetCount},
+            {CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptorSetCount},
+        }};
         descriptorSetMgr.ResetAndReserve(dc);
     }
 

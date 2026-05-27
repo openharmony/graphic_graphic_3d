@@ -100,4 +100,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IO_IFILE_H
+#endif  // API_CORE_IO_IFILE_H

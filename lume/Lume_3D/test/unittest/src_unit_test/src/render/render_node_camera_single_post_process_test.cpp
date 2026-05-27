@@ -37,14 +37,14 @@ using namespace RENDER_NS;
 using namespace CORE3D_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 512u, 512u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{512u, 512u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(float) / 4u;
 float imageData[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
-static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
+static constexpr string_view COPY_BUFFER_NAME_0{"CopyBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -81,7 +81,7 @@ TestResources CreateTestResources(UTest::TestContext* testContext)
         imageDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         imageDesc.usageFlags =
             CORE_IMAGE_USAGE_TRANSFER_SRC_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT;
-        const array_view<const uint8_t> dataView { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+        const array_view<const uint8_t> dataView{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
         res.inputImageHandle0 = testContext->renderContext->GetDevice().GetGpuResourceManager().Create(
             INPUT_IMAGE_NAME_0, imageDesc, dataView);
     }
@@ -130,9 +130,9 @@ void TickTest(UTest::TestContext* testContext, TestResources& tr, int32_t frameC
                 bufferImageCopy.bufferRowLength = TEST_DATA_SIZE.x / 2u;
                 bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE.y / 2u;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x / 2u, TEST_DATA_SIZE.y / 2u, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x / 2u, TEST_DATA_SIZE.y / 2u, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = testContext->renderContext->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME_0);
@@ -141,7 +141,7 @@ void TickTest(UTest::TestContext* testContext, TestResources& tr, int32_t frameC
             }
         }
 
-        if (idx == 2) { // 2: parm
+        if (idx == 2) {  // 2: parm
             auto& rdsMgr = testContext->renderContext->GetRenderDataStoreManager();
             auto dataStoreDataCopy = refcnt_ptr<IRenderDataStoreDefaultGpuResourceDataCopy>(
                 rdsMgr.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY));
@@ -155,14 +155,14 @@ void TickTest(UTest::TestContext* testContext, TestResources& tr, int32_t frameC
         }
 
         testContext->engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         testContext->renderContext->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
 
-        testContext->renderContext->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+        testContext->renderContext->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: BasicTest

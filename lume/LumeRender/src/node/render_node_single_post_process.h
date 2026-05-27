@@ -51,7 +51,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "f4495799-9db7-477f-9eaf-6fad26260304" };
+    static constexpr BASE_NS::Uid UID{"f4495799-9db7-477f-9eaf-6fad26260304"};
     static constexpr const char* TYPE_NAME = "CORE_RN_SINGLE_POST_PROCESS";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -59,7 +59,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     void InitCreateBinders();
@@ -86,14 +86,14 @@ private:
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
         BASE_NS::string ppName;
-        DefaultOutputImage defaultOutputImage { DefaultOutputImage::OUTPUT };
+        DefaultOutputImage defaultOutputImage{DefaultOutputImage::OUTPUT};
 
-        bool hasChangeableRenderPassHandles { false };
-        bool hasChangeableResourceHandles { false };
-        bool hasChangeableDispatchHandles { false };
+        bool hasChangeableRenderPassHandles{false};
+        bool hasChangeableResourceHandles{false};
+        bool hasChangeableDispatchHandles{false};
 
-        uint32_t inputIdx { ~0u };
-        uint32_t outputIdx { ~0u };
+        uint32_t inputIdx{~0u};
+        uint32_t outputIdx{~0u};
     };
     JsonInputs jsonInputs_;
 
@@ -108,7 +108,7 @@ private:
         RenderHandle defSampler;
 
         // the flag for the post built-in post process
-        uint32_t postProcessFlag { 0u };
+        uint32_t postProcessFlag{0u};
     };
     BuiltInVariables builtInVariables_;
 
@@ -119,8 +119,8 @@ private:
     PipelineLayout pipelineLayout_;
     RenderHandle psoHandle_;
     PushConstant pushConstant_;
-    bool graphics_ { true };
-    ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
+    bool graphics_{true};
+    ShaderThreadGroup threadGroupSize_{1u, 1u, 1u};
 
     IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
     IDescriptorSetBinder::Ptr copyBinder_;
@@ -135,13 +135,13 @@ private:
         // after (256) we have effect local data
         RenderHandleReference postProcess;
 
-        uint32_t effectLocalDataIndex { 1u };
+        uint32_t effectLocalDataIndex{1u};
     };
     UboHandles ubos_;
 
-    bool useAutoBindSet0_ { false };
-    bool valid_ { false };
+    bool useAutoBindSet0_{false};
+    bool valid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H
+#endif  // RENDER_NODE_RENDER_NODE_SINGLE_POST_PROCESS_H

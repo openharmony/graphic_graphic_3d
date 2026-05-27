@@ -15,19 +15,21 @@
 
 #ifndef ARRAY_PROPERTY_PROXY_H
 #define ARRAY_PROPERTY_PROXY_H
+#include <meta/api/util.h>
 #include <meta/interface/intf_event.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/property/array_property.h>
 #include <meta/interface/property/property.h>
 #include <meta/interface/property/property_events.h>
-#include <meta/api/util.h>
 #include <napi_api.h>
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 
-class ArrayPropertyProxy {
+#include "export.h"
+
+class SCENE_ADDON_PUBLIC ArrayPropertyProxy {
 public:
     explicit ArrayPropertyProxy(META_NS::IProperty::Ptr prop, META_NS::IArrayAny::IndexType index);
     virtual ~ArrayPropertyProxy();
@@ -38,7 +40,7 @@ public:
 
 protected:
     /// Returns a Property<Type> instance from underlying property
-    template<typename Type>
+    template <typename Type>
     META_NS::ArrayProperty<Type> GetProperty() const
     {
         return META_NS::ArrayProperty<Type>(prop_);
@@ -56,7 +58,7 @@ private:
     META_NS::IArrayAny::IndexType index_;
 };
 
-template<typename Type>
+template <typename Type>
 class TypeArrayProxy : public ArrayPropertyProxy {
 public:
     TypeArrayProxy(NapiApi::Object obj, META_NS::IProperty::Ptr prop, META_NS::IArrayAny::IndexType index)
@@ -91,7 +93,7 @@ protected:
     }
     void SetValue(NapiApi::FunctionContext<>& info) override
     {
-        NapiApi::FunctionContext<Type> data { info };
+        NapiApi::FunctionContext<Type> data{info};
         if (data) {
             Type value = data.template Arg<0>();
             auto arrayProp = GetProperty<Type>();
@@ -111,13 +113,14 @@ private:
     NapiApi::WeakRef obj_;
 };
 
-template<typename Type>
-BASE_NS::shared_ptr<ArrayPropertyProxy> PropertyToArrayProxy(NapiApi::Object scene, NapiApi::Object obj,
-    META_NS::ArrayProperty<Type>& t, META_NS::IArrayAny::IndexType index)
+template <typename Type>
+BASE_NS::shared_ptr<ArrayPropertyProxy> PropertyToArrayProxy(
+    NapiApi::Object scene, NapiApi::Object obj, META_NS::ArrayProperty<Type>& t, META_NS::IArrayAny::IndexType index)
 {
-    return BASE_NS::shared_ptr { new TypeArrayProxy<Type>(obj, t, index) };
+    return BASE_NS::shared_ptr{new TypeArrayProxy<Type>(obj, t, index)};
 }
 
-napi_property_descriptor CreateArrayProxyDesc(const char* name, BASE_NS::shared_ptr<ArrayPropertyProxy> proxy);
+SCENE_ADDON_PUBLIC napi_property_descriptor CreateArrayProxyDesc(
+    const char* name, BASE_NS::shared_ptr<ArrayPropertyProxy> proxy);
 
 #endif

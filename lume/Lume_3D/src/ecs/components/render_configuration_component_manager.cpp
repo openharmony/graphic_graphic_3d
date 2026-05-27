@@ -33,7 +33,7 @@ DECLARE_PROPERTY_TYPE(RenderConfigurationComponent::SceneShadowSmoothness);
 // Declare their metadata
 ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneShadowType, ENUM_VALUE(PCF, "PCF (Percentage Closer Filtering)"),
     ENUM_VALUE(VSM, "VSM (Variance Shadow Maps)"),
-    ENUM_VALUE(VARIABLE_PCF, "VARIABLE_PCF (Variable Percentage Closer Filtering)"))
+    ENUM_VALUE(VARIABLE_PCF, "Variable PCF (Percentage Closer Filtering)"))
 
 ENUM_TYPE_METADATA(RenderConfigurationComponent::SceneShadowQuality, ENUM_VALUE(LOW, "Low"),
     ENUM_VALUE(NORMAL, "Normal"), ENUM_VALUE(HIGH, "High"), ENUM_VALUE(ULTRA, "Ultra"))

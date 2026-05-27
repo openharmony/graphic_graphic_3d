@@ -38,7 +38,7 @@ CORE3D_BEGIN_NAMESPACE()
 class IRenderDataStoreDefaultCamera;
 class IRenderDataStoreDefaultScene;
 
-class RenderNodeDefaultMaterialRenderSlot final : public RENDER_NS::IRenderNode {
+class RenderNodeDefaultMaterialRenderSlot : public RENDER_NS::IRenderNode {
 public:
     RenderNodeDefaultMaterialRenderSlot() = default;
     ~RenderNodeDefaultMaterialRenderSlot() override = default;
@@ -64,14 +64,14 @@ public:
         RENDER_NS::RenderHandle shaderHandle;
         RENDER_NS::RenderHandle psoHandle;
         RENDER_NS::RenderHandle graphicsStateHandle;
-        bool needsCustomSetBindings { false };
+        bool needsCustomSetBindings{false};
     };
     struct AllShaderData {
         BASE_NS::vector<PerShaderData> perShaderData;
         // shader hash, per shader data index
-        BASE_NS::unordered_map<uint64_t, uint32_t> shaderIdToData;
+        BASE_NS::unordered_map<uint64_t, uint64_t> shaderIdToData;
 
-        bool slotHasShaders { false };
+        bool slotHasShaders{false};
         RENDER_NS::RenderHandle defaultShaderHandle;
         RENDER_NS::RenderHandle defaultStateHandle;
         RENDER_NS::RenderHandle defaultPlHandle;
@@ -79,49 +79,49 @@ public:
         RENDER_NS::PipelineLayout defaultPipelineLayout;
         RENDER_NS::PipelineLayout defaultTmpPipelineLayout;
         BASE_NS::vector<RENDER_NS::ShaderSpecialization::Constant> defaultSpecilizationConstants;
-        bool defaultPlSet3 { false };
+        bool defaultPlSet3{false};
     };
     struct PipelineInfo {
         RENDER_NS::RenderHandle boundPsoHandle;
-        uint64_t boundShaderHash { 0U };
-        bool boundCustomSetNeed { false };
+        uint64_t boundShaderHash{0U};
+        bool boundCustomSetNeed{false};
     };
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "80758e28-f064-45e6-878d-624652598405" };
-    static constexpr const char* const typeName = "RenderNodeDefaultMaterialRenderSlot";
+    static constexpr BASE_NS::Uid UID{"80758e28-f064-45e6-878d-624652598405"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultMaterialRenderSlot";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
-private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+protected:
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
 
-        RENDER_NS::RenderSlotSortType sortType { RENDER_NS::RenderSlotSortType::NONE };
-        RENDER_NS::RenderSlotCullType cullType { RENDER_NS::RenderSlotCullType::NONE };
+        RENDER_NS::RenderSlotSortType sortType{RENDER_NS::RenderSlotSortType::NONE};
+        RENDER_NS::RenderSlotCullType cullType{RENDER_NS::RenderSlotCullType::NONE};
 
-        RenderSceneFlags nodeFlags { 0u };
+        RenderSceneFlags nodeFlags{0u};
         BASE_NS::string renderSlotName;
-        uint32_t renderSlotId { 0u };
-        uint32_t shaderRenderSlotId { 0u };
-        uint32_t stateRenderSlotId { 0u };
-        uint32_t shaderRenderSlotBaseId { 0u };
-        uint32_t shaderRenderSlotMultiviewId { 0u };
-        bool initialExplicitShader { false };
-        bool explicitShader { false };
-        RenderSubmeshFlags nodeSubmeshExtraFlags { 0 };
-        RenderMaterialFlags nodeMaterialDiscardFlags { 0 };
+        uint32_t renderSlotId{0u};
+        uint32_t shaderRenderSlotId{0u};
+        uint32_t stateRenderSlotId{0u};
+        uint32_t shaderRenderSlotBaseId{0u};
+        uint32_t shaderRenderSlotMultiviewId{0u};
+        bool initialExplicitShader{false};
+        bool explicitShader{false};
+        RenderSubmeshFlags nodeSubmeshExtraFlags{0};
+        RenderMaterialFlags nodeMaterialDiscardFlags{0};
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
-        bool hasChangeableRenderPassHandles { false };
+        bool hasChangeableRenderPassHandles{false};
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -129,7 +129,7 @@ private:
     struct ShaderStateData {
         RENDER_NS::RenderHandle shader;
         RENDER_NS::RenderHandle gfxState;
-        uint64_t hash { 0 };
+        uint64_t hash{0};
     };
     struct CurrentScene {
         SceneRenderCameraData camData;
@@ -139,21 +139,21 @@ private:
 
         RENDER_NS::RenderHandle prePassColorTarget;
 
-        bool hasShadow { false };
-        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
-        IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
-        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
+        bool hasShadow{false};
+        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes{};
+        IRenderDataStoreDefaultLight::LightingFlags lightingFlags{0u};
+        RenderCamera::ShaderFlags cameraShaderFlags{0u};  // evaluated based on camera and scene flags
         BASE_NS::vector<uint32_t> mvCameraIndices;
     };
     struct SpecializationData {
-        static constexpr uint32_t MAX_FLAG_COUNT { 16u };
+        static constexpr uint32_t MAX_FLAG_COUNT{16u};
         uint32_t flags[MAX_FLAG_COUNT];
 
-        uint32_t maxSpecializationCount { 0u };
+        uint32_t maxSpecializationCount{0u};
     };
     struct PsoAndInfo {
         RENDER_NS::RenderHandle pso;
-        bool set3 { false };
+        bool set3{false};
     };
 
     void ParseRenderNodeInputs();
@@ -212,12 +212,12 @@ private:
     RENDER_NS::RenderPass renderPass_;
     // the base default render node graph from RNG setup
     RENDER_NS::RenderPass rngRenderPass_;
-    bool fsrEnabled_ { false };
-    bool bindlessEnabled_ { false };
+    bool fsrEnabled_{false};
+    bool bindlessEnabled_{false};
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_RENDER_SLOT_H

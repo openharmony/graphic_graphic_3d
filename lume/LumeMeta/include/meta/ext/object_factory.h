@@ -31,11 +31,14 @@ META_BEGIN_NAMESPACE()
 class ObjectFactory : public IObjectFactory {
     // Ignore refcounts as DefaultObjectFactory is always created as static object
     // for the class for which it implements a factory.
-    void Ref() override {}
-    void Unref() override {}
+    void Ref() override
+    {}
+    void Unref() override
+    {}
 
 public:
-    ObjectFactory(const META_NS::ClassInfo& info) : info_(info) {}
+    ObjectFactory(const META_NS::ClassInfo& info) : info_(info)
+    {}
     CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override
     {
         if (uid == CORE_NS::IInterface::UID) {
@@ -62,13 +65,14 @@ private:
     META_NS::ClassInfo info_;
 };
 
-template<typename FinalClass>
+template <typename FinalClass>
 class PlainObjectFactory : public ObjectFactory {
 public:
-    PlainObjectFactory(const META_NS::ClassInfo& info) : ObjectFactory(info) {}
+    PlainObjectFactory(const META_NS::ClassInfo& info) : ObjectFactory(info)
+    {}
     IObject::Ptr CreateInstance() const override
     {
-        return IObject::Ptr { new FinalClass };
+        return IObject::Ptr{new FinalClass};
     }
     ClassConstructionType ConstructionType() const override
     {
@@ -80,10 +84,11 @@ public:
  * @brief The DefaultObjectFactory class implements the default object factory used
  *        by ObjectFwd and such. hash
  */
-template<typename FinalClass>
+template <typename FinalClass>
 class DefaultObjectFactory final : public PlainObjectFactory<FinalClass> {
 public:
-    DefaultObjectFactory(const META_NS::ClassInfo& info) : PlainObjectFactory<FinalClass>(info) {}
+    DefaultObjectFactory(const META_NS::ClassInfo& info) : PlainObjectFactory<FinalClass>(info)
+    {}
     const StaticObjectMetadata* GetClassStaticMetadata() const override
     {
         return FinalClass::StaticMetadata();
@@ -103,17 +108,17 @@ public:
  *  Helper macro for creating ObjectTypeInfo with machinery to register a class using the default object
  *  factory and creating instances of it.
  */
-#define META_DEFINE_OBJECT_TYPE_INFO(FinalClass, ClassInfo)                                                      \
-    friend class META_NS::DefaultObjectFactory<FinalClass>;                                                      \
-                                                                                                                 \
-public:                                                                                                          \
-    static META_NS::IObjectFactory::Ptr GetFactory()                                                             \
-    {                                                                                                            \
-        static META_NS::DefaultObjectFactory<FinalClass> factory(ClassInfo);                                     \
-        return META_NS::IObjectFactory::Ptr { &factory };                                                        \
-    }                                                                                                            \
-    static constexpr const META_NS::ObjectTypeInfo OBJECT_INFO { { META_NS::ObjectTypeInfo::UID }, GetFactory }; \
-                                                                                                                 \
+#define META_DEFINE_OBJECT_TYPE_INFO(FinalClass, ClassInfo)                                                 \
+    friend class META_NS::DefaultObjectFactory<FinalClass>;                                                 \
+                                                                                                            \
+public:                                                                                                     \
+    static META_NS::IObjectFactory::Ptr GetFactory()                                                        \
+    {                                                                                                       \
+        static META_NS::DefaultObjectFactory<FinalClass> factory(ClassInfo);                                \
+        return META_NS::IObjectFactory::Ptr{&factory};                                                      \
+    }                                                                                                       \
+    static constexpr const META_NS::ObjectTypeInfo OBJECT_INFO{{META_NS::ObjectTypeInfo::UID}, GetFactory}; \
+                                                                                                            \
 private:
 
 META_END_NAMESPACE()

@@ -78,8 +78,8 @@ protected:
     static constexpr auto INVALID_SHADER_URI = "test://this/is/a/nonexistent.shader";
 
 private:
-    Node parent_ { nullptr };
-    Scene scene_ { nullptr };
+    Node parent_{nullptr};
+    Scene scene_{nullptr};
 };
 
 using META_NS::Async;
@@ -194,7 +194,7 @@ UNIT_TEST_F(API_EffectTest, CameraEffect, testing::ext::TestSize.Level1)
 {
     auto& scene = GetScene();
     auto factory = scene.GetResourceFactory();
-    auto camera = factory.CreateCameraNode({ "//camera" });
+    auto camera = factory.CreateCameraNode({"//camera"});
     ASSERT_TRUE(camera);
 
     EcsScene ecss(scene);
@@ -212,20 +212,20 @@ UNIT_TEST_F(API_EffectTest, CameraEffect, testing::ext::TestSize.Level1)
         auto ppm = static_cast<CORE3D_NS::IPostProcessEffectComponentManager*>(
             ecss.GetEcs()->GetComponentManager(CORE3D_NS::IPostProcessEffectComponentManager::UID));
         auto ef = ppm->Read(entity);
-        return ef ? ef->effects : BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr> {};
+        return ef ? ef->effects : BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr>{};
     };
 
     EXPECT_FALSE(hasEffectComponent());
     EXPECT_TRUE(getEffects().empty());
 
-    auto lf = factory.CreateEffect({ "", DefaultEffects::LENS_FLARE_EFFECT_ID });
-    auto bl = factory.CreateEffect({ "", DefaultEffects::BLOOM_EFFECT_ID });
+    auto lf = factory.CreateEffect({"", DefaultEffects::LENS_FLARE_EFFECT_ID});
+    auto bl = factory.CreateEffect({"", DefaultEffects::BLOOM_EFFECT_ID});
     ASSERT_TRUE(lf);
     ASSERT_TRUE(bl);
 
-    camera.SetEffects({ lf, bl });
-    BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr> renderEffects { lf.GetPtr<IEffect>()->GetEffect(),
-        bl.GetPtr<IEffect>()->GetEffect() };
+    camera.SetEffects({lf, bl});
+    BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr> renderEffects{
+        lf.GetPtr<IEffect>()->GetEffect(), bl.GetPtr<IEffect>()->GetEffect()};
 
     UpdateScene();
     EXPECT_TRUE(hasEffectComponent());
@@ -240,5 +240,5 @@ UNIT_TEST_F(API_EffectTest, CameraEffect, testing::ext::TestSize.Level1)
     EXPECT_TRUE(getEffects().empty());
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()

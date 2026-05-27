@@ -32,10 +32,13 @@ namespace UTest {
 
 class API_ClassRegistryTest : public ::testing::Test {
 protected:
-    API_ClassRegistryTest() : classRegistry_(META_NS::GetClassRegistry()) {}
+    API_ClassRegistryTest() : classRegistry_(META_NS::GetClassRegistry())
+    {}
 
-    void SetUp() override {}
-    void TearDown() override {}
+    void SetUp() override
+    {}
+    void TearDown() override
+    {}
 
 protected:
     IClassRegistry& classRegistry_;
@@ -69,12 +72,20 @@ UNIT_TEST_F(API_ClassRegistryTest, GetAllClasses, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ClassRegistryTest, GetAllTypesUis, testing::ext::TestSize.Level1)
 {
-    auto animations = classRegistry_.GetAllTypes({ IAnimation::UID });
+    auto animations = classRegistry_.GetAllTypes({IAnimation::UID});
     EXPECT_THAT(animations, testing::Not(testing::IsEmpty()));
+    // EXPECT_THAT(animations, ContainsClass(ClassId::ParallelAnimation));
+    // EXPECT_THAT(animations, ContainsClass(ClassId::SequentialAnimation));
+    // EXPECT_THAT(animations, ContainsClass(ClassId::TrackAnimation));
     EXPECT_THAT(animations, ContainsClass(META_NS::ClassId::KeyframeAnimation));
+    // EXPECT_THAT(animations, ContainsClass(ClassId::PropertyAnimation));
 
-    auto staggered = classRegistry_.GetAllTypes({ IStaggeredAnimation::UID });
+    auto staggered = classRegistry_.GetAllTypes({IStaggeredAnimation::UID});
+    // EXPECT_THAT(staggered, ContainsClass(ClassId::ParallelAnimation));
+    // EXPECT_THAT(staggered, ContainsClass(ClassId::SequentialAnimation));
+    // EXPECT_THAT(staggered, Not(ContainsClass(ClassId::TrackAnimation)));
     EXPECT_THAT(staggered, testing::Not(ContainsClass(META_NS::ClassId::KeyframeAnimation)));
+    // EXPECT_THAT(staggered, Not(ContainsClass(ClassId::PropertyAnimation)));
 }
 
 META_REGISTER_CLASS(MyObject1, "440d971e-afae-497a-95c3-97c3ba7f5d18", META_NS::ObjectCategoryBits::APPLICATION)
@@ -170,5 +181,5 @@ UNIT_TEST_F(API_ClassRegistryTest, Events, testing::ext::TestSize.Level1)
     EXPECT_TRUE(classReg.OnClassUnregistered()->RemoveHandler(token2));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

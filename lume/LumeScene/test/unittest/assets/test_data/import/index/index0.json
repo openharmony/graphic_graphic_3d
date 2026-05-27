@@ -1,0 +1,16 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name" : "cube"
+				},
+				"name": "Cube gltf",
+				"type": "gltf",
+				"path": "test_assets://AnimatedCube/AnimatedCube.gltf"	
+			}
+		]
+	}
+}

@@ -19,6 +19,7 @@
 #include <3d/util/intf_mesh_builder.h>
 #include <base/util/formats.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <render/resource_handle.h>
 
 #include "gltf/gltf2_util.h"
@@ -28,11 +29,11 @@ class IRenderContext;
 RENDER_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
-class MeshBuilder final : public IMeshBuilder {
+class MeshBuilder final : public CORE_NS::IInterfaceHelper<IMeshBuilder> {
 public:
     MeshBuilder(RENDER_NS::IRenderContext& renderContext);
 
-    ~MeshBuilder() override = default;
+    ~MeshBuilder() override;
 
     void Initialize(const RENDER_NS::VertexInputDeclarationView& vertexInputDeclaration, size_t submeshCount) override;
     void Initialize(const Configuration& config) override;
@@ -73,16 +74,10 @@ public:
 
     void CreateGpuResources() override;
     void CreateGpuResources(const GpuBufferCreateInfo& createInfo) override;
+    void FinalizeCpuData() const;
 
     CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs) const override;
     CORE_NS::Entity CreateMesh(CORE_NS::IEcs& ecs, CORE_NS::Entity meshEntity) const override;
-
-    // IInterface
-    const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-
-    void Ref() override;
-    void Unref() override;
 
     void EnablePrimitiveRestart(size_t index);
 
@@ -100,9 +95,9 @@ public:
     // Morph target descriptor
     struct MorphTargetDesc {
         // Offset to morph target data from submesh's morphTargetOffset.
-        uint32_t offset { 0 };
+        uint32_t offset{0};
         // Byte size of morph target data.
-        uint32_t byteSize { 0 };
+        uint32_t byteSize{0};
     };
 
     // Extend submesh info with offset-data.
@@ -162,6 +157,8 @@ private:
     bool WriteData(const DataBuffer& data, const SubmeshExt& submesh, uint32_t attributeLocation, uint32_t& byteOffset,
         uint32_t& byteSize, uint8_t* dst, const BASE_NS::Math::Vec4& defaultValue) const;
 
+    void RemapBufferAccessToBindings(size_t submeshIndex);
+
     RENDER_NS::IRenderContext& renderContext_;
     RENDER_NS::VertexInputDeclarationView vertexInputDeclaration_;
 
@@ -191,9 +188,8 @@ private:
     mutable BASE_NS::vector<uint8_t> vertexData_;
     BASE_NS::vector<uint8_t> indexData_;
     uint32_t flags_ = 0;
-    bool rtEnabled_ { false };
-    uint32_t refCount_ = 0;
+    bool rtEnabled_{false};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_MESH_BUILDER_H
+#endif  // CORE_UTIL_MESH_BUILDER_H

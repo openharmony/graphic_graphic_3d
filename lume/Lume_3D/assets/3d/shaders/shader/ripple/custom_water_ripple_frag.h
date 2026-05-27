@@ -229,7 +229,7 @@ vec4 PlaneReflector(const vec2 fragUv)
 
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_TRANSMISSION_BIT) == CORE_MATERIAL_TRANSMISSION_BIT) {
             // NOTE: ATM use direct refract (no sphere mapping)
-            const vec3 rr = -V; // refract(-V, N, 1.0 / ior);
+            const vec3 rr = -V;  // refract(-V, N, 1.0 / ior);
             const vec3 Ft = GetTransmissionRadianceSample(movingFragUv, rr, roughness) * baseColor.rgb;
             irradiance *= (1.0 - transmission);
             irradiance = mix(irradiance, Ft, transmission);
@@ -247,4 +247,4 @@ vec4 PlaneReflector(const vec2 fragUv)
     return vec4(color * baseColor.a, baseColor.a);
 }
 
-#endif // CUSTOM_WATER_RIPPLE_FRAG_H
+#endif  // CUSTOM_WATER_RIPPLE_FRAG_H

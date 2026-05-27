@@ -47,7 +47,7 @@ bool ObjectContainer::CallAboutToChange(ContainerChangeType type, const IObject:
 {
     bool success = true;
     if (auto ev = GetAboutToChange()) {
-        Invoke<IOnChildChanging>(ev, ChildChangedInfo { type, object, parent_ }, success);
+        Invoke<IOnChildChanging>(ev, ChildChangedInfo{type, object, parent_}, success);
     }
     return success;
 }

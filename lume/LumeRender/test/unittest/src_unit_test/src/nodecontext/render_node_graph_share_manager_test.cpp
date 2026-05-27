@@ -45,17 +45,17 @@ RenderHandleReference CreateBuffer(const UTest::EngineResources& engine)
 }
 void TestRenderGraphShareDataManager(const UTest::EngineResources& engine)
 {
-    RenderNodeGraphShareDataManager rngShareDataMgr { {} };
+    RenderNodeGraphShareDataManager rngShareDataMgr{{}};
 
     RenderHandleReference buffer0 = CreateBuffer(engine);
     RenderHandleReference buffer1 = CreateBuffer(engine);
     RenderHandleReference buffer2 = CreateBuffer(engine);
     {
-        IRenderNodeGraphShareManager::NamedResource inputs[] = { { "buffer0", buffer0.GetHandle() },
-            { "buffer2", buffer2.GetHandle() } };
-        IRenderNodeGraphShareManager::NamedResource outputs[] = { { "buffer2", buffer2.GetHandle() },
-            { "buffer1", buffer1.GetHandle() } };
-        rngShareDataMgr.BeginFrame(nullptr, nullptr, 5, { inputs, countof(inputs) }, { outputs, countof(outputs) });
+        IRenderNodeGraphShareManager::NamedResource inputs[] = {
+            {"buffer0", buffer0.GetHandle()}, {"buffer2", buffer2.GetHandle()}};
+        IRenderNodeGraphShareManager::NamedResource outputs[] = {
+            {"buffer2", buffer2.GetHandle()}, {"buffer1", buffer1.GetHandle()}};
+        rngShareDataMgr.BeginFrame(nullptr, nullptr, 5, {inputs, countof(inputs)}, {outputs, countof(outputs)});
         {
             auto result = rngShareDataMgr.GetRenderNodeGraphInputs();
             ASSERT_EQ(countof(inputs), result.size());
@@ -118,13 +118,13 @@ void TestRenderGraphShareDataManager(const UTest::EngineResources& engine)
         resources[1].name = "out1";
         resources[1].nodeName = "node1";
         RenderNodeGraphGlobalShareDataManager rngGlobalShareDataMgr;
-        RenderNodeGraphShareDataManager rngShareDataMgr2 { { resources, countof(resources) } };
-        IRenderNodeGraphShareManager::NamedResource inputs[] = { { "buffer0", buffer0.GetHandle() },
-            { "buffer2", buffer2.GetHandle() } };
-        IRenderNodeGraphShareManager::NamedResource outputs[] = { { "buffer2", buffer2.GetHandle() } };
+        RenderNodeGraphShareDataManager rngShareDataMgr2{{resources, countof(resources)}};
+        IRenderNodeGraphShareManager::NamedResource inputs[] = {
+            {"buffer0", buffer0.GetHandle()}, {"buffer2", buffer2.GetHandle()}};
+        IRenderNodeGraphShareManager::NamedResource outputs[] = {{"buffer2", buffer2.GetHandle()}};
         rngGlobalShareDataMgr.BeginFrame();
         rngShareDataMgr2.BeginFrame(
-            &rngGlobalShareDataMgr, &rngShareDataMgr, 5, { inputs, countof(inputs) }, { outputs, countof(outputs) });
+            &rngGlobalShareDataMgr, &rngShareDataMgr, 5, {inputs, countof(inputs)}, {outputs, countof(outputs)});
         rngShareDataMgr2.RegisterRenderNodeName(0u, "node1", "node1_fullname");
         rngShareDataMgr2.RegisterRenderNodeOutput(0u, "", {});
         rngShareDataMgr2.RegisterRenderNodeOutput(0u, "out1", buffer0.GetHandle());
@@ -162,14 +162,14 @@ void TestRenderGraphShareDataManager(const UTest::EngineResources& engine)
             ASSERT_EQ(0u, prevOutput.size());
         }
         RenderNodeGraphShareManager rngShareMgr(rngShareDataMgr2);
-        ASSERT_NE(RenderHandle {}, rngShareMgr.GetPrevRenderNodeGraphOutput(0u));
-        ASSERT_NE(RenderHandle {}, rngShareMgr.GetNamedPrevRenderNodeGraphOutput("buffer1"));
+        ASSERT_NE(RenderHandle{}, rngShareMgr.GetPrevRenderNodeGraphOutput(0u));
+        ASSERT_NE(RenderHandle{}, rngShareMgr.GetNamedPrevRenderNodeGraphOutput("buffer1"));
     }
 }
 void TestRenderGraphShareManager(const UTest::EngineResources& engine)
 {
     RenderNodeGraphGlobalShareDataManager rngGlobalShareDataMgr;
-    RenderNodeGraphShareDataManager rngShareDataMgr { {} };
+    RenderNodeGraphShareDataManager rngShareDataMgr{{}};
     RenderNodeGraphShareManager rngShareMgr(rngShareDataMgr);
     ASSERT_TRUE(rngShareMgr.GetInterface(CORE_NS::IInterface::UID));
     ASSERT_TRUE(rngShareMgr.GetInterface(CORE_NS::IInterface::UID)->GetInterface<IRenderNodeGraphShareManager>());
@@ -185,13 +185,13 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
     RenderHandleReference buffer1 = CreateBuffer(engine);
     RenderHandleReference buffer2 = CreateBuffer(engine);
     {
-        IRenderNodeGraphShareManager::NamedResource inputs[] = { { "buffer0", buffer0.GetHandle() },
-            { "buffer2", buffer2.GetHandle() } };
-        IRenderNodeGraphShareManager::NamedResource outputs[] = { { "buffer2", buffer2.GetHandle() },
-            { "buffer1", buffer1.GetHandle() } };
+        IRenderNodeGraphShareManager::NamedResource inputs[] = {
+            {"buffer0", buffer0.GetHandle()}, {"buffer2", buffer2.GetHandle()}};
+        IRenderNodeGraphShareManager::NamedResource outputs[] = {
+            {"buffer2", buffer2.GetHandle()}, {"buffer1", buffer1.GetHandle()}};
         rngGlobalShareDataMgr.BeginFrame();
         rngShareDataMgr.BeginFrame(
-            &rngGlobalShareDataMgr, nullptr, 5, { inputs, countof(inputs) }, { outputs, countof(outputs) });
+            &rngGlobalShareDataMgr, nullptr, 5, {inputs, countof(inputs)}, {outputs, countof(outputs)});
         {
             auto result = rngShareDataMgr.GetRenderNodeGraphInputs();
             ASSERT_EQ(countof(inputs), result.size());
@@ -210,10 +210,10 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
 
     rngShareMgr.Init(2, "Node2", "Node2_fullname");
     rngGlobalShareDataMgr.BeginFrame();
-    rngShareMgr.BeginFrame(2); // 2: param
+    rngShareMgr.BeginFrame(2);  // 2: param
     {
-        RenderHandle outputs[] = { buffer0.GetHandle(), buffer1.GetHandle(), buffer2.GetHandle() };
-        rngShareMgr.RegisterRenderNodeOutputs({ outputs, countof(outputs) });
+        RenderHandle outputs[] = {buffer0.GetHandle(), buffer1.GetHandle(), buffer2.GetHandle()};
+        rngShareMgr.RegisterRenderNodeOutputs({outputs, countof(outputs)});
         rngShareMgr.RegisterGlobalRenderNodeOutput("Name1", buffer0.GetHandle());
         rngShareMgr.RegisterGlobalRenderNodeOutput("Name2", buffer1.GetHandle());
         rngShareMgr.RegisterGlobalRenderNodeOutput("Name3", buffer2.GetHandle());
@@ -237,7 +237,7 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
         }
         {
             auto result = rngShareMgr.GetRegisteredRenderNodeOutput("Node2", "NonExistingResource");
-            ASSERT_EQ(RenderHandle {}, result);
+            ASSERT_EQ(RenderHandle{}, result);
         }
         {
             auto result = rngShareMgr.GetRegisteredPrevRenderNodeOutput(0);
@@ -245,18 +245,18 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
         }
     }
     {
-        RenderHandle inputs[] = { buffer0.GetHandle(), buffer2.GetHandle() };
+        RenderHandle inputs[] = {buffer0.GetHandle(), buffer2.GetHandle()};
         auto result = rngShareMgr.GetRenderNodeGraphInputs();
         ASSERT_EQ(countof(inputs), result.size());
         for (uint32_t i = 0; i < result.size(); ++i) {
             ASSERT_EQ(inputs[i], result[i]);
             ASSERT_EQ(inputs[i], rngShareMgr.GetRenderNodeGraphInput(i));
         }
-        ASSERT_EQ(RenderHandle {}, rngShareMgr.GetRenderNodeGraphInput(3));
+        ASSERT_EQ(RenderHandle{}, rngShareMgr.GetRenderNodeGraphInput(3));
     }
     {
-        RenderHandle inputs[] = { buffer0.GetHandle(), buffer2.GetHandle() };
-        string names[] = { "buffer0", "buffer2" };
+        RenderHandle inputs[] = {buffer0.GetHandle(), buffer2.GetHandle()};
+        string names[] = {"buffer0", "buffer2"};
         auto result = rngShareMgr.GetNamedRenderNodeGraphInputs();
         ASSERT_EQ(countof(inputs), result.size());
         for (uint32_t i = 0; i < result.size(); ++i) {
@@ -271,7 +271,7 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
         ASSERT_EQ(buffer2.GetHandle(), rngShareMgr.GetRenderNodeGraphOutput(0u));
         ASSERT_EQ(buffer1.GetHandle(), outputs[1]);
         ASSERT_EQ(buffer1.GetHandle(), rngShareMgr.GetRenderNodeGraphOutput(1u));
-        ASSERT_EQ(RenderHandle {}, rngShareMgr.GetRenderNodeGraphOutput(2u));
+        ASSERT_EQ(RenderHandle{}, rngShareMgr.GetRenderNodeGraphOutput(2u));
     }
     {
         auto outputs = rngShareMgr.GetNamedRenderNodeGraphOutputs();
@@ -284,22 +284,22 @@ void TestRenderGraphShareManager(const UTest::EngineResources& engine)
     {
         auto outputs = rngShareMgr.GetPrevRenderNodeGraphOutputs();
         ASSERT_EQ(0u, outputs.size());
-        ASSERT_EQ(RenderHandle {}, rngShareMgr.GetPrevRenderNodeGraphOutput(1u));
+        ASSERT_EQ(RenderHandle{}, rngShareMgr.GetPrevRenderNodeGraphOutput(1u));
     }
     {
         auto outputs = rngShareMgr.GetNamedPrevRenderNodeGraphOutputs();
         ASSERT_EQ(0u, outputs.size());
-        ASSERT_EQ(RenderHandle {}, rngShareMgr.GetNamedPrevRenderNodeGraphOutput(""));
+        ASSERT_EQ(RenderHandle{}, rngShareMgr.GetNamedPrevRenderNodeGraphOutput(""));
     }
     {
         RenderHandle handles[10];
         for (uint32_t i = 0; i < countof(handles); ++i) {
             handles[i] = {};
         }
-        rngShareMgr.RegisterRenderNodeOutputs({ handles, countof(handles) });
+        rngShareMgr.RegisterRenderNodeOutputs({handles, countof(handles)});
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeGraphShareDataManagerTest

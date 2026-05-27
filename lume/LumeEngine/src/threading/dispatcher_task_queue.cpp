@@ -31,7 +31,8 @@ CORE_BEGIN_NAMESPACE()
 using BASE_NS::vector;
 
 // -- Dispatcher task queue.
-DispatcherTaskQueue::DispatcherTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool) {}
+DispatcherTaskQueue::DispatcherTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool)
+{}
 
 DispatcherTaskQueue::~DispatcherTaskQueue()
 {

@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/gpu_buffer_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include <device/device.h>
 
@@ -51,7 +51,7 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestOpenGL, testing::ext::TestSize.Level1)
         desc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferGLES buffer { device, desc };
+        GpuBufferGLES buffer{device, desc};
         ASSERT_EQ(nullptr, buffer.Map());
         ASSERT_EQ(nullptr, buffer.MapMemory());
     }
@@ -62,7 +62,7 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestOpenGL, testing::ext::TestSize.Level1)
         desc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferGLES buffer { device, desc };
+        GpuBufferGLES buffer{device, desc};
         ASSERT_NE(nullptr, buffer.Map());
         ASSERT_NE(nullptr, buffer.MapMemory());
         buffer.Unmap();
@@ -73,7 +73,7 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestOpenGL, testing::ext::TestSize.Level1)
         desc.format = BASE_FORMAT_R8G8B8A8_UINT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        GpuBufferGLES buffer { device, desc };
+        GpuBufferGLES buffer{device, desc};
         ASSERT_NE(nullptr, buffer.MapMemory());
         ASSERT_NE(nullptr, buffer.Map());
         buffer.Unmap();
@@ -81,4 +81,4 @@ UNIT_TEST(SRC_GpuBuffer, GpuBufferTestOpenGL, testing::ext::TestSize.Level1)
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

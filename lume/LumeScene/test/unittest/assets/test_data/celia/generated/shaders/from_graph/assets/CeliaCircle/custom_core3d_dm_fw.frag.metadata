@@ -1,0 +1,131 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "bdda9258-646b-42f9-8795-57c65f124636",
+        "uri": "project://assets/generated/shaders/from_graph/assets/CeliaCircle/custom_core3d_dm_fw.frag",
+        "sha1": "fdbfa2f5cd217bb405ee22922dddcb6786cae21c",
+        "spec": {
+            "$meta": {
+                "version": "1.0"
+            },
+            "$root": {
+                "$classId": "5af14b09-98e9-412d-9e1b-105e81e2347f",
+                "$name": "ShaderSourceAsset",
+                "$instanceId": "000059de-474a-fcd4-3dae-df467bff3505",
+                "$properties": {
+                    "Thumbnail": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "MediaType": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "application/vnd.ark.glsl.fragment-shader",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AutoCompile": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "IncludePaths": {
+                        "$classId": "02387d17-c1f3-d90f-5072-6f7065727479",
+                        "value": [],
+                        "defaultValue": [],
+                        "flags": 227
+                    },
+                    "GeneratorSourceUri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/CeliaCircle.shadergraph",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsGenerated": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Iid": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "bdda9258-646b-42f9-8795-57c65f124636",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsBuiltIn": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Size": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "OutputDirectory": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/CeliaCircle/",
+                        "defaultValue": "project://assets/generated/shaders/from_graph/assets/CeliaCircle/",
+                        "flags": 227
+                    },
+                    "Uri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/CeliaCircle/custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "Category": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AddSdkIncludes": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "CompileOptions": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 227
+                    },
+                    "IsValid": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 235
+                    },
+                    "Name": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "ModifiedTimestamp": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "133604277171288657",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Optimize": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    }
+                }
+            }
+        }
+    }
+}

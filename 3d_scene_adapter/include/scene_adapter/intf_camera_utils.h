@@ -16,6 +16,7 @@
 #ifndef SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #define SCENE_ADAPTER_INTF_CAMERA_UTILS_H
 #include <cstddef>
+#include <cstdint>
 #include <string>
 namespace OHOS::Render3D {
 
@@ -29,9 +30,12 @@ public:
         float data[3];
     };
 
-    constexpr Vector3f() noexcept : x(0.0f), y(0.0f), z(0.0f) {}
-    constexpr Vector3f(float x, float y, float z) noexcept : x(x), y(y), z(z) {}
-    explicit constexpr Vector3f(float s) noexcept : x(s), y(s), z(s) {}
+    constexpr Vector3f() noexcept : x(0.0f), y(0.0f), z(0.0f)
+    {}
+    constexpr Vector3f(float x, float y, float z) noexcept : x(x), y(y), z(z)
+    {}
+    explicit constexpr Vector3f(float s) noexcept : x(s), y(s), z(s)
+    {}
 
     // return the last element (z) if index is out of bounds
     constexpr float& operator[](size_t index) noexcept
@@ -59,9 +63,12 @@ public:
         float data[4];
     };
 
-    constexpr Vector4f() noexcept : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
-    constexpr Vector4f(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w) {}
-    explicit constexpr Vector4f(float s) noexcept : x(s), y(s), z(s), w(s) {}
+    constexpr Vector4f() noexcept : x(0.0f), y(0.0f), z(0.0f), w(0.0f)
+    {}
+    constexpr Vector4f(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w)
+    {}
+    explicit constexpr Vector4f(float s) noexcept : x(s), y(s), z(s), w(s)
+    {}
 
     constexpr float& operator[](size_t index) noexcept
     {
@@ -81,7 +88,8 @@ static_assert(offsetof(Vector4f, z) == 2 * sizeof(float), "z offset error");
 static_assert(offsetof(Vector4f, w) == 3 * sizeof(float), "w offset error");
 
 struct CameraIntrinsics {
-    CameraIntrinsics(float fov = 1, float near = 0.1, float far = 10) : fov_(fov), near_(near), far_(far) {}
+    CameraIntrinsics(float fov = 1, float near = 0.1, float far = 10) : fov_(fov), near_(near), far_(far)
+    {}
     float fov_ = 1;
     float near_ = 0.1;
     float far_ = 10;
@@ -89,7 +97,7 @@ struct CameraIntrinsics {
 
 enum class CameraModelType : uint8_t {
     /* Orthographic camera*/
-    ORTHOGRAPHIC = 0,
+    OTHOGRAPHIC = 0,
     /* Perspective camera */
     PERSPECTIVE = 1,
     /* Frustum camera */
@@ -104,15 +112,14 @@ struct CameraConfigs {
     Vector4f rotation_ = {0, 0, 0, 1};
 
     CameraIntrinsics intrinsics_;
-    Vector4f clearColor_ = {0, 0, 0, 1}; // RGBA = black opaque
+    Vector4f clearColor_ = {0, 0, 0, 1};  // RGBA = black opaque
 
-    std::string Dump() const;
-
-    // offset is valid only when using Frustum camera model
     float offsetX_ = 0.0f;
     float offsetY_ = 0.0f;
     CameraModelType camModelType_ = CameraModelType::PERSPECTIVE;
+
+    std::string Dump() const;
 };
 
-} // namespace OHOS::Render3D
-#endif // SCENE_ADAPTER_INTF_CAMERA_UTILS_H
+}  // namespace OHOS::Render3D
+#endif  // SCENE_ADAPTER_INTF_CAMERA_UTILS_H

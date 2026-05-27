@@ -4,14 +4,23 @@
 
 // sets and specializations
 
-layout(set = 0, binding = 0) uniform samplerCube uCubemapSampler;
-layout(set = 0, binding = 1, rgba16f) uniform writeonly image2DArray uOutputCubemap;
+layout(set = 0, binding = 0) uniform samplerCube uCubemapHiRes;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2DArray uCubemapLoRes;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+// based on "Downsample Cubemap HLSL Code" from Activision
+// https://research.activision.com/publications/archives/fast-filtering-of-reflection-probes
+
+float CalcWeight(float u, float v)
+{
+    float val = u*u + v*v + 1.0;
+    return val * sqrt(val);
+}
+
 vec3 GetCubemapCoord(vec2 inUv, uint face)
 {
-    const vec2 uv = inUv * 2.0 - 1.0;
+    vec2 uv = inUv * 2.0 - 1.0;
     const vec3 coords[] = {
         vec3(1.0, -uv.y, -uv.x),  // +X
         vec3(-1.0, -uv.y, uv.x),  // -X
@@ -25,25 +34,48 @@ vec3 GetCubemapCoord(vec2 inUv, uint face)
     const vec3 cubeUv = normalize(coords[index]);
     return cubeUv;
 }
-  
+
 void main()
 {
-    ivec3 globalID = ivec3(gl_GlobalInvocationID);
-    ivec3 dimensions = imageSize(uOutputCubemap);
+    ivec3 gid = ivec3(gl_GlobalInvocationID);
+    ivec3 loResSize = imageSize(uCubemapLoRes);
+    ivec3 hiResSize = loResSize * 2;
+	vec2 invHiResSize = 1.0 / vec2(hiResSize.xy);
     
-    if (any(greaterThanEqual(globalID.xy, dimensions.xy))) {
+    if (any(greaterThanEqual(gid.xy, loResSize.xy)) || gid.z > 5u) {
         return;
-    }
+	}
 
-    vec2 uv = vec2(globalID.xy) / vec2(dimensions.xy);
-    uint face = gl_GlobalInvocationID.z;
-    if (face > 5) {
-        return;
-    }
-    
-    vec3 direction = GetCubemapCoord(uv, face);
-    vec4 color = texture(uCubemapSampler, direction);
+    uint face = gid.z;
+    ivec2 srcBase = gid.xy * 2;
 
-    imageStore(uOutputCubemap, globalID, color);
+	vec4 c00 = texture(uCubemapHiRes, GetCubemapCoord(vec2(srcBase + vec2(0, 0)) * invHiResSize, face));
+	vec4 c10 = texture(uCubemapHiRes, GetCubemapCoord(vec2(srcBase + vec2(1, 0)) * invHiResSize, face));
+	vec4 c01 = texture(uCubemapHiRes, GetCubemapCoord(vec2(srcBase + vec2(0, 1)) * invHiResSize, face));
+	vec4 c11 = texture(uCubemapHiRes, GetCubemapCoord(vec2(srcBase + vec2(1, 1)) * invHiResSize, face));
+
+	float invRes = 1.0 / float(loResSize.x);
+
+	float u0 = ((float(gid.x) * 2.0 + 1.0 - 0.75) *  invRes - 1.0);
+	float u1 = ((float(gid.x) * 2.0 + 1.0 + 0.75) *  invRes - 1.0);
+	float v0 = ((float(gid.y) * 2.0 + 1.0 - 0.75) * -invRes + 1.0);
+	float v1 = ((float(gid.y) * 2.0 + 1.0 + 0.75) * -invRes + 1.0);
+
+	float weights[4];
+	weights[0] = CalcWeight(u0, v0);
+	weights[1] = CalcWeight(u1, v0);
+	weights[2] = CalcWeight(u0, v1);
+	weights[3] = CalcWeight(u1, v1);
+
+	const float wsum = 0.5 / (weights[0] + weights[1] + weights[2] + weights[3]);
+	for (int i = 0; i < 4; i++) {
+		weights[i] = weights[i] * wsum + 0.125;
+	}
+
+	vec4 color = c00 * weights[0] +
+				 c10 * weights[1] +
+				 c01 * weights[2] +
+				 c11 * weights[3];
+
+	imageStore(uCubemapLoRes, gid, color);
 }
-

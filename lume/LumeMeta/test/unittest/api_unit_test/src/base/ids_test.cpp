@@ -22,7 +22,7 @@
 META_BEGIN_NAMESPACE()
 namespace UTest {
 
-template<typename Id>
+template <typename Id>
 void IdTest()
 {
     Id id1;
@@ -40,7 +40,7 @@ void IdTest()
     EXPECT_EQ(id2.ToString(), "29495e67-14a6-40aa-a16f-1923630af506");
     EXPECT_FALSE(id1.IsValid());
     EXPECT_TRUE(id2.IsValid());
-    EXPECT_EQ(id3.ToUid(), BASE_NS::Uid { "29495e67-14a6-40aa-a16f-1923630af506" });
+    EXPECT_EQ(id3.ToUid(), BASE_NS::Uid{"29495e67-14a6-40aa-a16f-1923630af506"});
     id1 = id2;
     EXPECT_TRUE(id1 == id2);
     EXPECT_TRUE(id1.Compare(id2) == 0);
@@ -76,5 +76,5 @@ UNIT_TEST(API_IdTests, InstanceId, testing::ext::TestSize.Level1)
     IdTest<InstanceId>();
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

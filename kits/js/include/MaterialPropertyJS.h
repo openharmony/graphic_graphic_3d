@@ -18,8 +18,9 @@
 #include "Vec4Proxy.h"
 
 #include "BaseObjectJS.h"
+#include "export.h"
 
-class MaterialPropertyJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC MaterialPropertyJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 35;
     static void Init(napi_env env, napi_value exports);
@@ -30,9 +31,10 @@ public:
     static void SetImage(Scene::ITexture::Ptr texture, NapiApi::Object imageJS);
     static void SetSampler(Scene::ITexture::Ptr texture, NapiApi::Object samplerJS);
     void* GetInstanceImpl(uint32_t) override;
+
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     NapiApi::StrongRef sampler_;

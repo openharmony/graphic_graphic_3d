@@ -27,6 +27,7 @@ bool ReverseModifier::ProcessOnGetDuration(DurationData& duration) const
 {
     return true;
 }
+
 bool ReverseModifier::ProcessOnStep(StepData& step) const
 {
     step.progress = 1.f - step.progress;
@@ -34,6 +35,11 @@ bool ReverseModifier::ProcessOnStep(StepData& step) const
     return true;
 }
 
-} // namespace AnimationModifiers
+float ReverseModifier::ModifySpeed(float speed) const
+{
+    return speed * -1.f;
+}
+
+}  // namespace AnimationModifiers
 
 META_END_NAMESPACE()

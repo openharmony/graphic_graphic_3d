@@ -23,13 +23,13 @@
 #include <glslang/Public/ShaderLang.h>
 
 TBuiltInResource kGLSLangDefaultTResource = {
-    /*.maxLights = */ 8,        // From OpenGL 3.0 table 6.46.
-    /*.maxClipPlanes = */ 6,    // From OpenGL 3.0 table 6.46.
-    /*.maxTextureUnits = */ 2,  // From OpenGL 3.0 table 6.50.
-    /*.maxTextureCoords = */ 8, // From OpenGL 3.0 table 6.50.
+    /*.maxLights = */ 8,         // From OpenGL 3.0 table 6.46.
+    /*.maxClipPlanes = */ 6,     // From OpenGL 3.0 table 6.46.
+    /*.maxTextureUnits = */ 2,   // From OpenGL 3.0 table 6.50.
+    /*.maxTextureCoords = */ 8,  // From OpenGL 3.0 table 6.50.
     /*.maxVertexAttribs = */ 16,
     /*.maxVertexUniformComponents = */ 4096,
-    /*.maxVaryingFloats = */ 60, // From OpenGLES 3.1 table 6.44.
+    /*.maxVaryingFloats = */ 60,  // From OpenGLES 3.1 table 6.44.
     /*.maxVertexTextureImageUnits = */ 16,
     /*.maxCombinedTextureImageUnits = */ 80,
     /*.maxTextureImageUnits = */ 16,
@@ -41,10 +41,10 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxDrawBuffers = */ 8,
 
     /*.maxVertexUniformVectors = */ 256,
-    /*.maxVaryingVectors = */ 15, // From OpenGLES 3.1 table 6.44.
+    /*.maxVaryingVectors = */ 15,  // From OpenGLES 3.1 table 6.44.
     /*.maxFragmentUniformVectors = */ 256,
-    /*.maxVertexOutputVectors = */ 16,  // maxVertexOutputComponents / 4
-    /*.maxFragmentInputVectors = */ 15, // maxFragmentInputComponents / 4
+    /*.maxVertexOutputVectors = */ 16,   // maxVertexOutputComponents / 4
+    /*.maxFragmentInputVectors = */ 15,  // maxFragmentInputComponents / 4
     /*.minProgramTexelOffset = */ -8,
     /*.maxProgramTexelOffset = */ 7,
     /*.maxClipDistances = */ 8,
@@ -58,14 +58,14 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxComputeTextureImageUnits = */ 16,
     /*.maxComputeImageUniforms = */ 8,
     /*.maxComputeAtomicCounters = */ 8,
-    /*.maxComputeAtomicCounterBuffers = */ 1, // From OpenGLES 3.1 Table 6.43
+    /*.maxComputeAtomicCounterBuffers = */ 1,  // From OpenGLES 3.1 Table 6.43
     /*.maxVaryingComponents = */ 60,
     /*.maxVertexOutputComponents = */ 64,
     /*.maxGeometryInputComponents = */ 64,
     /*.maxGeometryOutputComponents = */ 128,
     /*.maxFragmentInputComponents = */ 128,
-    /*.maxImageUnits = */ 8, // This does not seem to be defined anywhere,
-                             // set to ImageUnits.
+    /*.maxImageUnits = */ 8,  // This does not seem to be defined anywhere,
+                              // set to ImageUnits.
     /*.maxCombinedImageUnitsAndFragmentOutputs = */ 8,
     /*.maxCombinedShaderOutputResources = */ 8,
     /*.maxImageSamples = */ 0,
@@ -79,9 +79,9 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxGeometryOutputVertices = */ 256,
     /*.maxGeometryTotalOutputComponents = */ 1024,
     /*.maxGeometryUniformComponents = */ 512,
-    /*.maxGeometryVaryingComponents = */ 60, // Does not seem to be defined
-                                             // anywhere, set equal to
-                                             // maxVaryingComponents.
+    /*.maxGeometryVaryingComponents = */ 60,  // Does not seem to be defined
+                                              // anywhere, set equal to
+                                              // maxVaryingComponents.
     /*.maxTessControlInputComponents = */ 128,
     /*.maxTessControlOutputComponents = */ 128,
     /*.maxTessControlTextureImageUnits = */ 16,
@@ -102,7 +102,7 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxFragmentAtomicCounters = */ 8,
     /*.maxCombinedAtomicCounters = */ 8,
     /*.maxAtomicCounterBindings = */ 1,
-    /*.maxVertexAtomicCounterBuffers = */ 0, // From OpenGLES 3.1 Table 6.41.
+    /*.maxVertexAtomicCounterBuffers = */ 0,  // From OpenGLES 3.1 Table 6.41.
 
     // ARB_shader_atomic_counters.
     /*.maxTessControlAtomicCounterBuffers = */ 0,
@@ -110,13 +110,13 @@ TBuiltInResource kGLSLangDefaultTResource = {
     /*.maxGeometryAtomicCounterBuffers = */ 0,
     // /ARB_shader_atomic_counters.
 
-    /*.maxFragmentAtomicCounterBuffers = */ 0, // From OpenGLES 3.1 Table 6.43.
+    /*.maxFragmentAtomicCounterBuffers = */ 0,  // From OpenGLES 3.1 Table 6.43.
     /*.maxCombinedAtomicCounterBuffers = */ 1,
     /*.maxAtomicCounterBufferSize = */ 32,
     /*.maxTransformFeedbackBuffers = */ 4,
     /*.maxTransformFeedbackInterleavedComponents = */ 64,
-    /*.maxCullDistances = */ 8,                // ARB_cull_distance.
-    /*.maxCombinedClipAndCullDistances = */ 8, // ARB_cull_distance.
+    /*.maxCullDistances = */ 8,                 // ARB_cull_distance.
+    /*.maxCombinedClipAndCullDistances = */ 8,  // ARB_cull_distance.
     /*.maxSamples = */ 4,
     /* .maxMeshOutputVerticesNV = */ 256,
     /* .maxMeshOutputPrimitivesNV = */ 512,
@@ -153,5 +153,4 @@ TBuiltInResource kGLSLangDefaultTResource = {
         /*.generalSamplerIndexing = */ 1,
         /*.generalVariableIndexing = */ 1,
         /*.generalConstantMatrixVectorIndexing = */ 1,
-    }
-};
+    }};

@@ -16,6 +16,7 @@
 #ifndef RENDER_NODE_RENDER_NODE_COPY_UTIL_H
 #define RENDER_NODE_RENDER_NODE_COPY_UTIL_H
 
+#include <core/plugin/intf_interface_helper.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
@@ -26,7 +27,7 @@
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
 
-class RenderNodeCopyUtil final : public IRenderNodeCopyUtil {
+class RenderNodeCopyUtil final : public CORE_NS::IInterfaceHelper<IRenderNodeCopyUtil> {
 public:
     RenderNodeCopyUtil() = default;
     ~RenderNodeCopyUtil() override = default;
@@ -36,12 +37,6 @@ public:
     void Execute(IRenderCommandList& cmdList, const CopyInfo& copyInfo) override;
 
     DescriptorCounts GetRenderDescriptorCounts() const override;
-
-    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-
-    void Ref() override;
-    void Unref() override;
 
 private:
     IRenderNodeContextManager* renderNodeContextMgr_;
@@ -60,9 +55,7 @@ private:
     RenderDataHandles renderData_;
 
     IDescriptorSetBinder::Ptr binder_;
-
-    uint32_t refCount_ { 0U };
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_COPY_UTIL_H
+#endif  // RENDER_NODE_RENDER_NODE_COPY_UTIL_H

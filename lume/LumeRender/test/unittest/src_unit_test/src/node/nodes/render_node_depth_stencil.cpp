@@ -37,8 +37,8 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 
 namespace {
-static constexpr string_view VERTEX_BUFFER_NAME { "VertexBuffer" };
-} // namespace
+static constexpr string_view VERTEX_BUFFER_NAME{"VertexBuffer"};
+}  // namespace
 
 void RenderNodeDepthStencil::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -51,19 +51,24 @@ void RenderNodeDepthStencil::InitNode(IRenderNodeContextManager& renderNodeConte
 
     IShaderManager& shaderMgr = renderNodeContextMgr_->GetRenderContext().GetDevice().GetShaderManager();
     auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/DepthStencilTest.shader");
-    const ShaderSpecializationConstantDataView specialization { {}, {} };
-    constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+    const ShaderSpecializationConstantDataView specialization{{}, {}};
+    constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
     GraphicsState graphicsState;
     graphicsState.depthStencilState.enableDepthTest = true;
     graphicsState.depthStencilState.enableStencilTest = true;
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     auto pipelineLayout = renderNodeUtil.CreatePipelineLayout(shaderHandle.GetHandle());
     const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle);
-    psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(), graphicsState,
-        pipelineLayout, inputLayout, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+        graphicsState,
+        pipelineLayout,
+        inputLayout,
+        specialization,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 }
 
-void RenderNodeDepthStencil::PreExecuteFrame() {}
+void RenderNodeDepthStencil::PreExecuteFrame()
+{}
 
 void RenderNodeDepthStencil::ExecuteFrame(IRenderCommandList& cmdList)
 {
@@ -73,8 +78,8 @@ void RenderNodeDepthStencil::ExecuteFrame(IRenderCommandList& cmdList)
 
     IShaderManager& shaderMgr = renderNodeContextMgr_->GetRenderContext().GetDevice().GetShaderManager();
     auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/DepthStencilTest.shader");
-    const ShaderSpecializationConstantDataView specialization { {}, {} };
-    constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+    const ShaderSpecializationConstantDataView specialization{{}, {}};
+    constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
     GraphicsState graphicsState;
     if (count_ == 0) {
         graphicsState.depthStencilState.enableDepthTest = true;
@@ -86,8 +91,12 @@ void RenderNodeDepthStencil::ExecuteFrame(IRenderCommandList& cmdList)
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     auto pipelineLayout = renderNodeUtil.CreatePipelineLayout(shaderHandle.GetHandle());
     const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle);
-    psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(), graphicsState,
-        pipelineLayout, inputLayout, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+        graphicsState,
+        pipelineLayout,
+        inputLayout,
+        specialization,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
     const RenderPass renderPass = renderNodeUtil.CreateRenderPass(inputRenderPass_);
     const ViewportDesc viewportDesc = renderNodeUtil.CreateDefaultViewport(renderPass);
@@ -102,7 +111,7 @@ void RenderNodeDepthStencil::ExecuteFrame(IRenderCommandList& cmdList)
 
     VertexBuffer vbo;
     vbo.bufferHandle = vertexBufferHandle_;
-    cmdList.BindVertexBuffers({ &vbo, 1 });
+    cmdList.BindVertexBuffers({&vbo, 1});
 
     cmdList.Draw(3u, 1u, 0u, 0u);
 

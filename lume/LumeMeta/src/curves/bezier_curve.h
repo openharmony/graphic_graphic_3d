@@ -62,9 +62,9 @@ private:
     BASE_NS::Math::Vec2 coeff_[3];
 };
 
-} // namespace Easing
-} // namespace Curves
+}  // namespace Easing
+}  // namespace Curves
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_CUBIC_BEZIER_EASING_CURVE_H
+#endif  // META_SRC_CUBIC_BEZIER_EASING_CURVE_H

@@ -43,18 +43,18 @@ void KeyframeAnimation::OnAnimationStateChanged(const AnimationStateChangedInfo&
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]]; // follow the same procedure as STOPPED
+                [[fallthrough]];  // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 if (currentValue_) {
                     // Evaluate current value
                     Evaluate();
                     // Then set the correct keyframe value to the underlying property
-                    PropertyLock lock { p.property };
+                    PropertyLock lock{p.property};
                     lock->SetValueAny(*currentValue_);
                 }
                 break;
             case AnimationTargetState::RUNNING: {
-                PropertyLock lock { p.property };
+                PropertyLock lock{p.property};
                 currentValue_ = lock->GetValueAny().Clone(false);
             }
                 // Evaluate current value
@@ -73,12 +73,15 @@ void KeyframeAnimation::Start()
 
 void KeyframeAnimation::Evaluate()
 {
-    const PropertyAnimationState::EvaluationData data { currentValue_, META_ACCESS_PROPERTY_VALUE(From),
-        META_ACCESS_PROPERTY_VALUE(To), META_ACCESS_PROPERTY_VALUE(Progress), META_ACCESS_PROPERTY_VALUE(Curve) };
+    const PropertyAnimationState::EvaluationData data{currentValue_,
+        META_ACCESS_PROPERTY_VALUE(From),
+        META_ACCESS_PROPERTY_VALUE(To),
+        META_ACCESS_PROPERTY_VALUE(Progress),
+        META_ACCESS_PROPERTY_VALUE(Curve)};
     if (GetState().EvaluateValue(data) == AnyReturn::SUCCESS) {
         NotifyChanged();
         if (auto prop = GetTargetProperty()) {
-            PropertyLock lock { prop.property };
+            PropertyLock lock{prop.property};
             prop.stack->EvaluateAndStore();
         }
     }
@@ -143,5 +146,5 @@ ReturnError KeyframeAnimation::Finalize(IImportFunctions& f)
     return GenericError::SUCCESS;
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

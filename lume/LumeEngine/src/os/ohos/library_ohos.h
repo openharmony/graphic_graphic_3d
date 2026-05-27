@@ -18,22 +18,26 @@
 
 #include <core/namespace.h>
 
+#include "os/elf/process_elf.h"
 #include "os/intf_library.h"
 
 CORE_BEGIN_NAMESPACE()
 class LibraryOHOS final : public ILibrary {
 public:
-    explicit LibraryOHOS(const BASE_NS::string_view filename);
+    explicit LibraryOHOS(PluginData&& data);
     ~LibraryOHOS() override;
 
     IPlugin* GetPlugin() const override;
+    BASE_NS::Uid GetPluginUid() const override;
+    BASE_NS::array_view<const BASE_NS::Uid> GetPluginDependencies() const override;
 
 protected:
     void Destroy() override;
 
 private:
-    void* libraryHandle_ { nullptr };
+    PluginData data_;
+    mutable void* libraryHandle_{nullptr};
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_OS_OHOS_LIBRARY_OHOS_H
+#endif  // CORE_OS_OHOS_LIBRARY_OHOS_H

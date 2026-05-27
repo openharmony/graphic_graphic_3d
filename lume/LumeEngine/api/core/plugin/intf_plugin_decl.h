@@ -31,4 +31,4 @@
 #endif
 #endif
 // clang-format on
-#endif // API_CORE_PLUGIN_INTF_PLUGIN_DECL_H
+#endif  // API_CORE_PLUGIN_INTF_PLUGIN_DECL_H

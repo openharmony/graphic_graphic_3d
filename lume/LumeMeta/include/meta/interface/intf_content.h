@@ -19,7 +19,6 @@
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
 #include <meta/interface/interface_macros.h>
-#include <meta/interface/loaders/intf_content_loader.h>
 
 META_BEGIN_NAMESPACE()
 

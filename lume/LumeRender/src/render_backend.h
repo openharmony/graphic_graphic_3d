@@ -34,7 +34,7 @@ struct RenderBackendBackBufferConfiguration {
         // state after render node graph processing
         GpuResourceState backBufferState;
         // layout after render node graph processing
-        ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+        ImageLayout layout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
         // configuration for the back buffer
         NodeGraphBackBufferConfiguration config;
     };
@@ -54,4 +54,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_BACKEND_H
+#endif  // RENDER_BACKEND_H

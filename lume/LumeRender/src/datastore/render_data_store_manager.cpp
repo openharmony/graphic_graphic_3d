@@ -27,7 +27,8 @@
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-RenderDataStoreManager::RenderDataStoreManager(IRenderContext& renderContext) : renderContext_(renderContext) {}
+RenderDataStoreManager::RenderDataStoreManager(IRenderContext& renderContext) : renderContext_(renderContext)
+{}
 
 void RenderDataStoreManager::CommitFrameData()
 {
@@ -46,10 +47,10 @@ void RenderDataStoreManager::CommitFrameData()
     // all valid stores can be accessed from render access stores without locks
     // remove unused data stores and gather their hashes so that stores_ can be cleaned up as well.
     for (auto it = renderAccessStores_.begin(); it != renderAccessStores_.end();) {
-        if (it->second->GetRefCount() > 2) { // in stores_, renderAccessStores_ and user, 2: min ref count
+        if (it->second->GetRefCount() > 2) {  // in stores_, renderAccessStores_ and user, 2: min ref count
             ++it;
         } else {
-            pendingRenderAccess.push_back({ it->first, BASE_NS::move(it->second) });
+            pendingRenderAccess.push_back({it->first, BASE_NS::move(it->second)});
             it = renderAccessStores_.erase(it);
         }
     }
@@ -146,25 +147,29 @@ BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::Create(
         std::lock_guard<std::mutex> lock(mutex_);
 
         if (auto const namedStoreIt = stores_.find(dataStoreNameHash); namedStoreIt != stores_.cend()) {
-            PLUGIN_LOG_D("Named data store already exists (type: %s) (name: %s)", to_string(dataStoreTypeUid).data(),
+            PLUGIN_LOG_D("Named data store already exists (type: %s) (name: %s)",
+                to_string(dataStoreTypeUid).data(),
                 dataStoreName);
             dataStore = namedStoreIt->second;
             if (dataStore->GetUid() != dataStoreTypeUid) {
                 PLUGIN_LOG_E("Named data store (type: %s, name: %s) exists with different type (%s)",
-                    to_string(dataStoreTypeUid).data(), dataStoreName, dataStore->GetTypeName().data());
+                    to_string(dataStoreTypeUid).data(),
+                    dataStoreName,
+                    dataStore->GetTypeName().data());
                 dataStore = nullptr;
             }
         } else {
             auto const dataStoreIt = stores_.insert_or_assign(dataStoreNameHash,
                 refcnt_ptr<IRenderDataStore>(factoryIt->second.createDataStore(renderContext_, dataStoreName)));
-            pointerToStoreHash_.insert_or_assign(dataStoreIt.first->second.get(), uint64_t { dataStoreNameHash });
+            pointerToStoreHash_.insert_or_assign(dataStoreIt.first->second.get(), uint64_t{dataStoreNameHash});
             dataStore = dataStoreIt.first->second;
         }
 
-        pendingRenderAccess_.push_back({ dataStoreNameHash, dataStore });
+        pendingRenderAccess_.push_back({dataStoreNameHash, dataStore});
         return dataStore;
     } else {
-        PLUGIN_LOG_E("render data store type not found (type: %s) (named: %s)", to_string(dataStoreTypeUid).data(),
+        PLUGIN_LOG_E("render data store type not found (type: %s) (named: %s)",
+            to_string(dataStoreTypeUid).data(),
             dataStoreName);
     }
     return nullptr;
@@ -182,7 +187,7 @@ void RenderDataStoreManager::AddRenderDataStoreFactory(const RenderDataStoreType
 
     if (typeInfo.createDataStore) {
         auto const dataStoreTypeHash = hash(typeInfo.uid);
-        factories_.insert({ dataStoreTypeHash, typeInfo });
+        factories_.insert({dataStoreTypeHash, typeInfo});
     } else {
         PLUGIN_LOG_E("RenderDataStoreTypeInfo must provide non-null function pointers");
         PLUGIN_ASSERT(typeInfo.createDataStore && "createDataStore cannot be null");

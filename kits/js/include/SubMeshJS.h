@@ -19,8 +19,9 @@
 
 #include "BaseObjectJS.h"
 #include "Vec3Proxy.h"
+#include "export.h"
 
-class SubMeshJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC SubMeshJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 50;
     static void Init(napi_env env, napi_value exports);
@@ -30,7 +31,7 @@ public:
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     napi_value GetName(NapiApi::FunctionContext<>& ctx);
     void SetName(NapiApi::FunctionContext<BASE_NS::string>& ctx);
@@ -43,6 +44,6 @@ private:
     NapiApi::WeakObjectRef scene_;
 
     NapiApi::WeakObjectRef parentMesh_;
-    uint32_t indexInParent_ { 0 };
+    uint32_t indexInParent_{0};
 };
 #endif

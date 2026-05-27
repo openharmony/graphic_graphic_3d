@@ -43,31 +43,31 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "31d7e1f0-cdeb-4f1d-832c-85c710beb100" };
-    static constexpr const char* typeName = "RenderNodeDefaultCameraPostProcessController";
+    static constexpr BASE_NS::Uid UID{"31d7e1f0-cdeb-4f1d-832c-85c710beb100"};
+    static constexpr const char* TYPE_NAME = "RenderNodeDefaultCameraPostProcessController";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
     };
     JsonInputs jsonInputs_;
 
     struct CurrentScene {
         SceneRenderCameraData camData;
-        uint32_t multiviewLayer { RENDER_NS::PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        uint32_t multiviewLayer{RENDER_NS::PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
         BASE_NS::string cameraControllerRenderNodeName;
 
         RenderScene scene;
     };
-    bool validPostProcessInputs_ { false };
+    bool validPostProcessInputs_{false};
 
     void RegisterOutputs();
     void ParseRenderNodeInputs();
@@ -81,4 +81,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER__NODE__RENDER_NODE_DEFAULT_CAMERA_POST_PROCESS_CONTROLLER_H
+#endif  // CORE3D_RENDER__NODE__RENDER_NODE_DEFAULT_CAMERA_POST_PROCESS_CONTROLLER_H

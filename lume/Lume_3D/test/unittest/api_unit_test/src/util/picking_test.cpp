@@ -78,10 +78,10 @@ void SetWorldMatrixFromPosition(Entity entity, IEcs& ecs, Math::Vec3 position)
     worldMatrixManager->Create(entity);
     if (auto scopedHandle = worldMatrixManager->Write(entity); scopedHandle) {
         scopedHandle->matrix =
-            Math::Trs(position, Math::FromEulerRad(Math::Vec3 { 0.0f, 0.0f, 0.0f }), Math::Vec3 { 1.0f, 1.0f, 1.0f });
+            Math::Trs(position, Math::FromEulerRad(Math::Vec3{0.0f, 0.0f, 0.0f}), Math::Vec3{1.0f, 1.0f, 1.0f});
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: IInterfaceTest
@@ -127,18 +127,18 @@ UNIT_TEST(API_UtilPicking, GetTransformComponentAABBTest, testing::ext::TestSize
     ASSERT_NE(nullptr, nodeSystem);
 
     ISceneNode* root = nodeSystem->CreateNode();
-    root->SetPosition(Math::Vec3 { -5.0f, 0.0f, 5.0f });
-    SetAabb(root->GetEntity(), *ecs, Math::Vec3 { -1.0f, -1.0f, -1.0f }, Math::Vec3 { 2.0f, 2.0f, 2.0f });
+    root->SetPosition(Math::Vec3{-5.0f, 0.0f, 5.0f});
+    SetAabb(root->GetEntity(), *ecs, Math::Vec3{-1.0f, -1.0f, -1.0f}, Math::Vec3{2.0f, 2.0f, 2.0f});
 
     ISceneNode* child1 = nodeSystem->CreateNode();
-    child1->SetPosition(Math::Vec3 { 0.0f, 5.0f, -5.0f });
+    child1->SetPosition(Math::Vec3{0.0f, 5.0f, -5.0f});
     child1->SetParent(*root);
-    SetAabb(child1->GetEntity(), *ecs, Math::Vec3 { -2.0f, -2.0f, -2.0f }, Math::Vec3 { 0.0f, 0.0f, 0.0f });
+    SetAabb(child1->GetEntity(), *ecs, Math::Vec3{-2.0f, -2.0f, -2.0f}, Math::Vec3{0.0f, 0.0f, 0.0f});
 
     ISceneNode* child2 = nodeSystem->CreateNode();
-    child2->SetPosition(Math::Vec3 { 5.0f, -5.0f, 0.0f });
+    child2->SetPosition(Math::Vec3{5.0f, -5.0f, 0.0f});
     child2->SetParent(*root);
-    SetAabb(child2->GetEntity(), *ecs, Math::Vec3 { 0.0f, 0.0f, 0.0f }, Math::Vec3 { 3.0f, 3.0f, 3.0f });
+    SetAabb(child2->GetEntity(), *ecs, Math::Vec3{0.0f, 0.0f, 0.0f}, Math::Vec3{3.0f, 3.0f, 3.0f});
     {
         MinAndMax mam = picking->GetTransformComponentAABB(root->GetEntity(), true, *ecs);
         EXPECT_EQ(-7.0, mam.minAABB.x);
@@ -149,7 +149,7 @@ UNIT_TEST(API_UtilPicking, GetTransformComponentAABBTest, testing::ext::TestSize
         EXPECT_EQ(8.0, mam.maxAABB.z);
     }
     // tick one so that LocalMatrixComponents are up-to-date.
-    IEcs* ecsArr[] = { &*ecs };
+    IEcs* ecsArr[] = {&*ecs};
     engine->TickFrame(ecsArr);
 
     // remove TransfromComponents and check that GetTransformComponentAABB works with local matrices.
@@ -189,22 +189,22 @@ UNIT_TEST(API_UtilPicking, GetWorldMatrixComponentAABBTest, testing::ext::TestSi
     ASSERT_NE(nullptr, jointMatricesManager);
 
     ISceneNode* root = nodeSystem->CreateNode();
-    SetWorldMatrixFromPosition(root->GetEntity(), *ecs, Math::Vec3 { -5.0f, 0.0f, 5.0f });
+    SetWorldMatrixFromPosition(root->GetEntity(), *ecs, Math::Vec3{-5.0f, 0.0f, 5.0f});
     jointMatricesManager->Create(root->GetEntity());
     if (auto scopedHandle = jointMatricesManager->Write(root->GetEntity()); scopedHandle) {
-        scopedHandle->jointsAabbMin = Math::Vec3 { -6.0f, -1.0f, 4.0f };
-        scopedHandle->jointsAabbMax = Math::Vec3 { -3.0f, 2.0f, 7.0f };
+        scopedHandle->jointsAabbMin = Math::Vec3{-6.0f, -1.0f, 4.0f};
+        scopedHandle->jointsAabbMax = Math::Vec3{-3.0f, 2.0f, 7.0f};
     }
 
     ISceneNode* child1 = nodeSystem->CreateNode();
-    SetWorldMatrixFromPosition(child1->GetEntity(), *ecs, Math::Vec3 { -5.0f, 5.0f, 0.0f });
+    SetWorldMatrixFromPosition(child1->GetEntity(), *ecs, Math::Vec3{-5.0f, 5.0f, 0.0f});
     child1->SetParent(*root);
-    SetAabb(child1->GetEntity(), *ecs, Math::Vec3 { -2.0f, -2.0f, -2.0f }, Math::Vec3 { 0.0f, 0.0f, 0.0f });
+    SetAabb(child1->GetEntity(), *ecs, Math::Vec3{-2.0f, -2.0f, -2.0f}, Math::Vec3{0.0f, 0.0f, 0.0f});
 
     ISceneNode* child2 = nodeSystem->CreateNode();
-    SetWorldMatrixFromPosition(child2->GetEntity(), *ecs, Math::Vec3 { 0.0f, -5.0f, 5.0f });
+    SetWorldMatrixFromPosition(child2->GetEntity(), *ecs, Math::Vec3{0.0f, -5.0f, 5.0f});
     child2->SetParent(*root);
-    SetAabb(child2->GetEntity(), *ecs, Math::Vec3 { 0.0f, 0.0f, 0.0f }, Math::Vec3 { 3.0f, 3.0f, 3.0f });
+    SetAabb(child2->GetEntity(), *ecs, Math::Vec3{0.0f, 0.0f, 0.0f}, Math::Vec3{3.0f, 3.0f, 3.0f});
 
     MinAndMax mam = picking->GetWorldMatrixComponentAABB(root->GetEntity(), true, *ecs);
     EXPECT_EQ(-7.0, mam.minAABB.x);
@@ -238,17 +238,17 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
     ASSERT_NE(nullptr, meshManager);
 
     // Perspective projection
-    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(*ecs, Math::Vec3(0.0f, 0.5f, 4.0f),
-        Math::FromEulerRad(Math::Vec3 { 0.03f, 0.05f, 0.07f }), 2.0f, 100.0f, 75.0f);
+    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(
+        *ecs, Math::Vec3(0.0f, 0.5f, 4.0f), Math::FromEulerRad(Math::Vec3{0.03f, 0.05f, 0.07f}), 2.0f, 100.0f, 75.0f);
     auto cube =
-        nodeSystem->GetNode(graphicsContext->GetMeshUtil().GenerateCube(*ecs, "cube0", Entity {}, 3.0f, 3.0f, 3.0f));
-    cube->SetPosition({ -1.0f, -2.0f, -5.0f });
-    cube->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+        nodeSystem->GetNode(graphicsContext->GetMeshUtil().GenerateCube(*ecs, "cube0", Entity{}, 3.0f, 3.0f, 3.0f));
+    cube->SetPosition({-1.0f, -2.0f, -5.0f});
+    cube->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
     auto dummyNode = nodeSystem->CreateNode();
     renderMeshManager->Create(dummyNode->GetEntity());
 
     {
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f });
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f});
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
     }
@@ -259,7 +259,7 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
         scopedHandle->projection = CameraComponent::Projection::ORTHOGRAPHIC;
     }
     graphicsContext->GetSceneUtil().UpdateCameraViewport(
-        *ecs, camera, Math::UVec2 { 512u, 512u }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        *ecs, camera, Math::UVec2{512u, 512u}, true, Math::DEG2RAD * 75.0f, 10.0f);
     cube->SetPosition(Math::Vec3(0.0f, 0.5f, -5.0f));
 
     ecs->ProcessEvents();
@@ -267,7 +267,7 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
     ecs->ProcessEvents();
 
     {
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f });
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f});
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
     }
@@ -276,20 +276,20 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
     if (auto scopedHandle = meshManager->Write(renderMeshManager->Read(cube->GetEntity())->mesh); scopedHandle) {
         ASSERT_EQ(1, scopedHandle->submeshes.size());
         scopedHandle->submeshes.push_back(scopedHandle->submeshes[0]);
-        Math::Vec3 shift { 0.03f, 0.04f, 0.01f };
+        Math::Vec3 shift{0.03f, 0.04f, 0.01f};
         scopedHandle->submeshes[1].aabbMin += shift;
         scopedHandle->submeshes[1].aabbMax += shift;
     }
 
     {
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f });
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f});
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
     }
 
     // Ray cast world position
     {
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f });
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f});
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
         EXPECT_NE(0.0f, result[0].worldPosition.x);
@@ -319,24 +319,24 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
     }
 
     {
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f });
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f});
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
-        EXPECT_EQ(0, picking->RayCastFromCamera(*ecs, Entity {}, Math::Vec2 { 0.0f, 0.0f }).size());
+        EXPECT_EQ(0, picking->RayCastFromCamera(*ecs, Entity{}, Math::Vec2{0.0f, 0.0f}).size());
     }
 
     // Layer mask
     {
         // Should find cube with default mask although it doesn't have a LayerComponent
         auto result =
-            picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f }, LayerConstants::DEFAULT_LAYER_MASK);
+            picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f}, LayerConstants::DEFAULT_LAYER_MASK);
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
     }
     {
         // Shouldn't find cube with non-default mask as it doesn't have a LayerComponent
         auto result =
-            picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f }, ~LayerConstants::DEFAULT_LAYER_MASK);
+            picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f}, ~LayerConstants::DEFAULT_LAYER_MASK);
         EXPECT_EQ(0, result.size());
     }
 
@@ -349,14 +349,14 @@ UNIT_TEST(API_UtilPicking, RayCastTest, testing::ext::TestSize.Level1)
     {
         // Should find cube when mask includes something the cube has
         auto result =
-            picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f }, LayerFlagBits::CORE_LAYER_FLAG_BIT_04);
+            picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f}, LayerFlagBits::CORE_LAYER_FLAG_BIT_04);
         ASSERT_EQ(1, result.size());
         EXPECT_EQ(cube, result[0].node);
     }
     {
         // Shouldn't find cube with mask which doesn't overlap cube's layer mask
         auto result =
-            picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.4f, 0.63f }, LayerFlagBits::CORE_LAYER_FLAG_BIT_01);
+            picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.4f, 0.63f}, LayerFlagBits::CORE_LAYER_FLAG_BIT_01);
         EXPECT_EQ(0, result.size());
     }
 }
@@ -384,8 +384,8 @@ UNIT_TEST(API_UtilPicking, RayTriangleCastTest, testing::ext::TestSize.Level1)
     ASSERT_NE(nullptr, meshManager);
 
     // Perspective projection
-    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(*ecs, Math::Vec3(0.0f, 0.5f, 4.0f),
-        Math::FromEulerRad(Math::Vec3 { 0.03f, 0.05f, 0.07f }), 2.0f, 100.0f, 75.0f);
+    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(
+        *ecs, Math::Vec3(0.0f, 0.5f, 4.0f), Math::FromEulerRad(Math::Vec3{0.03f, 0.05f, 0.07f}), 2.0f, 100.0f, 75.0f);
 
     // Orthographic projection
     auto cameraManager = GetManager<ICameraComponentManager>(*ecs);
@@ -393,7 +393,7 @@ UNIT_TEST(API_UtilPicking, RayTriangleCastTest, testing::ext::TestSize.Level1)
         scopedHandle->projection = CameraComponent::Projection::ORTHOGRAPHIC;
     }
     graphicsContext->GetSceneUtil().UpdateCameraViewport(
-        *ecs, camera, Math::UVec2 { 512u, 512u }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        *ecs, camera, Math::UVec2{512u, 512u}, true, Math::DEG2RAD * 75.0f, 10.0f);
 
     ecs->ProcessEvents();
     ecs->Update(1u, 1u);
@@ -402,10 +402,14 @@ UNIT_TEST(API_UtilPicking, RayTriangleCastTest, testing::ext::TestSize.Level1)
     // Ray cast against a CCw and a CC triangle, expect to not hit the CC triangle.
     {
         // the 1st triangle has CCw winding, the 2nd one CC, only the 1st triangle should be hit.
-        const BASE_NS::vector<Math::Vec3> triangles = { Math::Vec3(2, 2, 0), Math::Vec3(-2, 2, 0),
-            Math::Vec3(-2, -2, 0), Math::Vec3(-2, -2, 0), Math::Vec3(-2, 2, 0), Math::Vec3(2, 2, 0) };
+        const BASE_NS::vector<Math::Vec3> triangles = {Math::Vec3(2, 2, 0),
+            Math::Vec3(-2, 2, 0),
+            Math::Vec3(-2, -2, 0),
+            Math::Vec3(-2, -2, 0),
+            Math::Vec3(-2, 2, 0),
+            Math::Vec3(2, 2, 0)};
 
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.6f, 0.4f }, triangles);
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.6f, 0.4f}, triangles);
         ASSERT_EQ(1, result.size());
         EXPECT_NE(0, result[0].distance);
 
@@ -424,11 +428,17 @@ UNIT_TEST(API_UtilPicking, RayTriangleCastTest, testing::ext::TestSize.Level1)
 
     // Ray cast against multiple triangles, expect to hit the first 2 triangles.
     {
-        const BASE_NS::vector<Math::Vec3> triangles = { Math::Vec3(2, 2, 0), Math::Vec3(-2, 2, 0),
-            Math::Vec3(-2, -2, 0), Math::Vec3(2, 2, -1), Math::Vec3(-2, 2, -1), Math::Vec3(-2, -2, -1),
-            Math::Vec3(2, 4, -1), Math::Vec3(-2, 4, -1), Math::Vec3(-2, 0, -1) };
+        const BASE_NS::vector<Math::Vec3> triangles = {Math::Vec3(2, 2, 0),
+            Math::Vec3(-2, 2, 0),
+            Math::Vec3(-2, -2, 0),
+            Math::Vec3(2, 2, -1),
+            Math::Vec3(-2, 2, -1),
+            Math::Vec3(-2, -2, -1),
+            Math::Vec3(2, 4, -1),
+            Math::Vec3(-2, 4, -1),
+            Math::Vec3(-2, 0, -1)};
 
-        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2 { 0.6f, 0.4f }, triangles);
+        auto result = picking->RayCastFromCamera(*ecs, camera, Math::Vec2{0.6f, 0.4f}, triangles);
         ASSERT_EQ(2, result.size());
         EXPECT_NE(0, result[0].distance);
 
@@ -463,12 +473,12 @@ UNIT_TEST(API_UtilPicking, WorldAndScreenCoordinatesTest, testing::ext::TestSize
     auto picking = GetInstance<IPicking>(*renderContext->GetInterface<IClassRegister>(), UID_PICKING);
     ASSERT_NE(nullptr, picking);
 
-    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(*ecs, Math::Vec3(0.0f, 0.5f, 4.0f),
-        Math::FromEulerRad(Math::Vec3 { 0.03f, 0.05f, 0.07f }), 2.0f, 100.0f, 75.0f);
+    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(
+        *ecs, Math::Vec3(0.0f, 0.5f, 4.0f), Math::FromEulerRad(Math::Vec3{0.03f, 0.05f, 0.07f}), 2.0f, 100.0f, 75.0f);
 
     constexpr const float eps = 1e-6f;
     {
-        Math::Vec3 worldCoords { -0.1f, 0.6f, -4.0f };
+        Math::Vec3 worldCoords{-0.1f, 0.6f, -4.0f};
         Math::Vec3 screenCoords = picking->WorldToScreen(*ecs, camera, worldCoords);
         Math::Vec3 result = picking->ScreenToWorld(*ecs, camera, screenCoords);
         for (uint32_t i = 0; i < 3; ++i) {
@@ -477,7 +487,7 @@ UNIT_TEST(API_UtilPicking, WorldAndScreenCoordinatesTest, testing::ext::TestSize
         }
     }
     {
-        Math::Vec3 screenCoords { -0.1f, 0.3f, -0.25f };
+        Math::Vec3 screenCoords{-0.1f, 0.3f, -0.25f};
         Math::Vec3 worldCoords = picking->ScreenToWorld(*ecs, camera, screenCoords);
         Math::Vec3 result = picking->WorldToScreen(*ecs, camera, worldCoords);
         for (uint32_t i = 0; i < 3; ++i) {
@@ -486,7 +496,7 @@ UNIT_TEST(API_UtilPicking, WorldAndScreenCoordinatesTest, testing::ext::TestSize
         }
     }
     {
-        EXPECT_EQ(Math::Vec3 {}, picking->WorldToScreen(*ecs, Entity {}, Math::Vec3 {}));
-        EXPECT_EQ(Math::Vec3 {}, picking->ScreenToWorld(*ecs, Entity {}, Math::Vec3 {}));
+        EXPECT_EQ(Math::Vec3{}, picking->WorldToScreen(*ecs, Entity{}, Math::Vec3{}));
+        EXPECT_EQ(Math::Vec3{}, picking->ScreenToWorld(*ecs, Entity{}, Math::Vec3{}));
     }
 }

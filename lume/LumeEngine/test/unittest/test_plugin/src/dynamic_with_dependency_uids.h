@@ -21,10 +21,10 @@
 #include "intf_test.h"
 
 namespace UTest2 {
-constexpr BASE_NS::Uid UID_SHARED_PLUGIN { "12345678-1234-1234-1234-deadbeef0030" };
+constexpr BASE_NS::Uid UID_SHARED_PLUGIN{"12345678-1234-1234-1234-deadbeef0030"};
 
-constexpr BASE_NS::Uid UID_SHARED_GLOBAL_TEST_IMPL { "12345678-1234-1234-1234-deadbeef0031" };
-constexpr BASE_NS::Uid UID_SHARED_ENGINE_TEST_IMPL { "12345678-1234-1234-1234-deadbeef0032" };
+constexpr BASE_NS::Uid UID_SHARED_GLOBAL_TEST_IMPL{"12345678-1234-1234-1234-deadbeef0031"};
+constexpr BASE_NS::Uid UID_SHARED_ENGINE_TEST_IMPL{"12345678-1234-1234-1234-deadbeef0032"};
 
 class SharedTest final : public UTest::Test {
 public:
@@ -45,5 +45,5 @@ public:
         return Type::SHARED_GLOBAL;
     }
 };
-} // namespace UTest2
-#endif // CORE_TEST_PLUGIN_DYNAMIC_UIDS
+}  // namespace UTest2
+#endif  // CORE_TEST_PLUGIN_DYNAMIC_UIDS

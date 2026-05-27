@@ -45,6 +45,7 @@ public:
     META_FORWARD_PROPERTY(BASE_NS::Math::Vec3, Scale, META_EXT_CALL_BASE(ITransform, Scale()))
     META_FORWARD_PROPERTY(uint64_t, LayerMask, META_EXT_CALL_BASE(ILayer, LayerMask()))
     META_FORWARD_PROPERTY(bool, Enabled, META_EXT_CALL_BASE(INode, Enabled()))
+    META_FORWARD_PROPERTY(::SCENE_NS::NodeFlags, NodeFlags, META_EXT_CALL_BASE(INode, NodeFlags()))
 
     BASE_NS::shared_ptr<::META_NS::IEvent> EventOnContainerChanged(META_NS::MetadataQuery q) const override
     {
@@ -109,17 +110,18 @@ protected:
         return META_EXT_CALL_BASE(INodeImport, ImportChild(node));
     }
     Future<INode::Ptr> ImportChildScene(
-        const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup) override
+        const IScene::ConstPtr& scene, const INodeImport::ImportOptions& options) override
     {
-        return META_EXT_CALL_BASE(INodeImport, ImportChildScene(scene, nodeName, resourceGroup));
+        return META_EXT_CALL_BASE(INodeImport, ImportChildScene(scene, options));
     }
     Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) override
     {
         return META_EXT_CALL_BASE(INodeImport, ImportChildScene(uri, nodeName));
     }
-    Future<INode::Ptr> ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ) override
+    Future<INode::Ptr> ImportTemplate(
+        const META_NS::IObjectTemplate::ConstPtr& templ, BASE_NS::string_view resourceGroup) override
     {
-        return META_EXT_CALL_BASE(INodeImport, ImportTemplate(templ));
+        return META_EXT_CALL_BASE(INodeImport, ImportTemplate(templ, resourceGroup));
     }
     bool SetEcsObject(const IEcsObject::Ptr& obj) override
     {

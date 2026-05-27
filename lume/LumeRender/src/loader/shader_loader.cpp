@@ -47,19 +47,19 @@ enum ShaderDataFileType : uint32_t {
     PIPELINE_LAYOUT = 4,
 };
 
-constexpr string_view ShaderDataFileExtensions[] {
+constexpr string_view ShaderDataFileExtensions[]{
     "",
     ".shader",
     ".shadergs",
     ".shadervid",
     ".shaderpl",
 };
-constexpr uint64_t MAX_SHADER_FILE_BYTE_SIZE { 16ull * 1024ull * 1024ull };
+constexpr uint64_t MAX_SHADER_FILE_BYTE_SIZE{16ULL * 1024ULL * 1024ULL};
 
-bool HasExtension(const char* ext, const string_view fileUri)
+bool HasExtension(const string_view ext, const string_view fileUri)
 {
     if (auto const pos = fileUri.rfind(ext); pos != string_view::npos) {
-        return std::strlen(ext) == (fileUri.length() - pos);
+        return ext.size() == (fileUri.length() - pos);
     }
     return false;
 }
@@ -96,7 +96,7 @@ vector<uint8_t> ReadFile(IFile& file, const string_view uri)
     }
     return fileData;
 }
-} // namespace
+}  // namespace
 
 ShaderLoader::ShaderLoader(IFileManager& fileManager, ShaderManager& shaderManager, const DeviceBackendType type)
     : fileManager_(fileManager), shaderMgr_(shaderManager), type_(type)
@@ -183,9 +183,9 @@ void ShaderLoader::HandleShaderFile(
             for (const auto& shaderVariant : shaderVariants) {
                 // Dev related book-keeping for reloading of spv files
                 auto const handleType = handle.GetHandleType();
-                string compShader {};
-                string vertShader {};
-                string fragShader {};
+                string compShader{};
+                string vertShader{};
+                string fragShader{};
                 for (const auto& spvInfo : shaderVariant.shaders) {
                     switch (spvInfo.shaderType) {
                         case CORE_SHADER_STAGE_COMPUTE_BIT:
@@ -280,7 +280,9 @@ void ShaderLoader::RecurseDirectory(const string_view currentPath, const IDirect
                 break;
             case IDirectory::Entry::Type::FILE: {
                 // does not force the shader module re-creations
-                HandleShaderFile(currentPath + entry.name, entry, false);
+                if (HasExtension(ShaderDataFileExtensions[ShaderDataFileType::SHADER].data(), entry.name)) {
+                    HandleShaderFile(currentPath + entry.name, entry, false);
+                }
                 break;
             }
             case IDirectory::Entry::Type::DIRECTORY: {
@@ -304,6 +306,7 @@ ShaderLoader::ShaderFile ShaderLoader::LoadShaderFile(const string_view shader, 
     IFile::Ptr shaderFile;
     switch (type_) {
         case DeviceBackendType::VULKAN:
+        case DeviceBackendType::MALEOON:
             shaderFile = fileManager_.OpenFile(shader);
             break;
         case DeviceBackendType::OPENGLES:
@@ -321,7 +324,7 @@ ShaderLoader::ShaderFile ShaderLoader::LoadShaderFile(const string_view shader, 
         if (IFile::Ptr reflectionFile = fileManager_.OpenFile(shader + ".lsb"); reflectionFile) {
             info.reflectionData = ReadFile(*reflectionFile, shader + ".lsb");
         }
-        info.info = { stageBits, info.data, ShaderReflectionData { info.reflectionData } };
+        info.info = {stageBits, info.data, ShaderReflectionData{info.reflectionData}};
     } else {
         PLUGIN_LOG_E("shader file not found (%s)", shader.data());
     }
@@ -333,7 +336,7 @@ RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& 
     RenderHandleReference firstShaderVariantRhr;
     const array_view<const IShaderManager::ShaderVariant> shaderVariants = dataLoader.GetShaderVariants();
     for (const auto& svRef : shaderVariants) {
-        string_view computeShader {};
+        string_view computeShader{};
         for (const auto& shader : svRef.shaders) {
             switch (shader.shaderType) {
                 case CORE_SHADER_STAGE_COMPUTE_BIT:
@@ -379,8 +382,9 @@ RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& 
             if (!firstShaderVariantRhr) {
                 // NOTE: empty variant name
                 rhr = shaderMgr_.Create(
-                    ComputeShaderCreateData { uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr },
-                    { {}, displayName }, { svRef.ownBaseShader, svRef.addBaseShader });
+                    ComputeShaderCreateData{uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr},
+                    {{}, displayName},
+                    {svRef.ownBaseShader, svRef.addBaseShader});
                 firstShaderVariantRhr = rhr;
                 // add additional fullname with variant for the base shader
                 if (!variantName.empty()) {
@@ -388,11 +392,12 @@ RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& 
                 }
             } else {
                 rhr = shaderMgr_.Create(
-                    ComputeShaderCreateData { uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr },
-                    { variantName, displayName }, { svRef.ownBaseShader, svRef.addBaseShader });
+                    ComputeShaderCreateData{uri, rsId, catId, plIndex, index, shaderFileStr, matMetadataStr},
+                    {variantName, displayName},
+                    {svRef.ownBaseShader, svRef.addBaseShader});
             }
             if (svRef.renderSlotDefaultShader) {
-                shaderMgr_.SetRenderSlotData({ rsId, rhr, {}, {}, {} });
+                shaderMgr_.SetRenderSlotData({rsId, rhr, {}, {}, {}});
             }
         } else {
             PLUGIN_LOG_E("Failed to load shader : %s", computeShader.data());
@@ -406,8 +411,8 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
     RenderHandleReference firstShaderVariantRhr;
     const array_view<const IShaderManager::ShaderVariant> shaderVariants = dataLoader.GetShaderVariants();
     for (const auto& svRef : shaderVariants) {
-        string_view vertexShader {};
-        string_view fragmentShader {};
+        string_view vertexShader{};
+        string_view fragmentShader{};
 
         for (const auto& shader : svRef.shaders) {
             switch (shader.shaderType) {
@@ -443,7 +448,7 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
             const string fullName = uri + svRef.variantName;
             // default graphics state is created beforehand
             const RenderHandleReference defaultGfxState = shaderMgr_.CreateGraphicsState(
-                { fullName, svRef.graphicsState }, { svRef.renderSlot, {}, {}, {}, svRef.stateFlags });
+                {fullName, svRef.graphicsState}, {svRef.renderSlot, {}, {}, {}, svRef.stateFlags});
             const uint32_t rsId = shaderMgr_.CreateRenderSlotId(svRef.renderSlot);
             const uint32_t catId = shaderMgr_.CreateCategoryId(dataLoader.GetBaseCategory());
             const uint32_t plIndex = svRef.pipelineLayout.empty()
@@ -464,8 +469,9 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
             if (!firstShaderVariantRhr) {
                 // NOTE: empty variant name
                 rhr = shaderMgr_.Create(
-                    { uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta },
-                    { {}, svRef.displayName }, { svRef.ownBaseShader, svRef.addBaseShader });
+                    {uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta},
+                    {{}, svRef.displayName},
+                    {svRef.ownBaseShader, svRef.addBaseShader});
                 firstShaderVariantRhr = rhr;
                 // add additional fullname with variant for the base shader
                 if (!svRef.variantName.empty()) {
@@ -473,11 +479,13 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
                 }
             } else {
                 rhr = shaderMgr_.Create(
-                    { uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta },
-                    { svRef.variantName, svRef.displayName }, { svRef.ownBaseShader, svRef.addBaseShader });
+                    {uri, rsId, catId, vidIndex, plIndex, stateIndex, vertIndex, fragIndex, shaderStr, matMeta},
+                    {svRef.variantName, svRef.displayName},
+                    {svRef.ownBaseShader, svRef.addBaseShader});
             }
             if (svRef.renderSlotDefaultShader) {
-                shaderMgr_.SetRenderSlotData({ rsId, rhr, {}, {}, {} });
+                shaderMgr_.SetRenderSlotData(
+                    {rsId, rhr, {}, {}, shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration)});
             }
         } else {
             PLUGIN_LOG_E("Failed to load shader : %s %s", vertexShader.data(), fragmentShader.data());
@@ -493,9 +501,9 @@ RenderHandleReference ShaderLoader::CreateShader(const ShaderDataLoader& dataLoa
         return {};
     }
 
-    string_view compShader {};
-    string_view vertShader {};
-    string_view fragShader {};
+    string_view compShader{};
+    string_view vertShader{};
+    string_view fragShader{};
 
     for (const auto& shader : shaderVariants[0].shaders) {
         switch (shader.shaderType) {
@@ -545,14 +553,17 @@ void ShaderLoader::CreateShaderStates(const string_view uri,
     const array_view<const GraphicsState>& states)
 {
     for (size_t stateIdx = 0; stateIdx < states.size(); ++stateIdx) {
-        const ShaderManager::GraphicsStateCreateInfo createInfo { uri, states[stateIdx] };
+        const ShaderManager::GraphicsStateCreateInfo createInfo{uri, states[stateIdx]};
         const auto& variant = variantData[stateIdx];
-        const ShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo { variant.renderSlot, variant.variantName,
-            variant.baseShaderState, variant.baseVariantName, variant.stateFlags };
+        const ShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo{variant.renderSlot,
+            variant.variantName,
+            variant.baseShaderState,
+            variant.baseVariantName,
+            variant.stateFlags};
         const RenderHandleReference handle = shaderMgr_.CreateGraphicsState(createInfo, variantCreateInfo);
         if (variant.renderSlotDefaultState && (!variant.renderSlot.empty())) {
             const uint32_t renderSlotId = shaderMgr_.GetRenderSlotId(variant.renderSlot);
-            shaderMgr_.SetRenderSlotData({ renderSlotId, {}, handle, {}, {} });
+            shaderMgr_.SetRenderSlotData({renderSlotId, {}, handle, {}, {}});
         }
         if (!handle) {
             PLUGIN_LOG_E(
@@ -590,7 +601,7 @@ RenderHandleReference ShaderLoader::CreateVertexInputDeclaration(const VertexInp
     if (defaultRenderSlot) {
         renderSlotId = shaderMgr_.CreateRenderSlotId(loader.GetRenderSlot());
     }
-    return shaderMgr_.CreateVertexInputDeclaration({ uri, dataView, renderSlotId, defaultRenderSlot });
+    return shaderMgr_.CreateVertexInputDeclaration({uri, dataView, renderSlotId, defaultRenderSlot});
 }
 
 void ShaderLoader::LoadPipelineLayouts(const string_view currentPath, const IDirectory& directory)
@@ -618,11 +629,11 @@ RenderHandleReference ShaderLoader::CreatePipelineLayout(const PipelineLayoutLoa
     const PipelineLayout& pipelineLayout = loader.GetPipelineLayout();
     // handles only render slot data if default
     const bool defaultRenderSlot = loader.GetDefaultRenderSlot();
-    uint32_t renderSlotId = { ~0U };
+    uint32_t renderSlotId = {~0U};
     if (defaultRenderSlot) {
         renderSlotId = shaderMgr_.CreateRenderSlotId(loader.GetRenderSlot());
     }
-    return shaderMgr_.CreatePipelineLayout({ uri, pipelineLayout, renderSlotId, defaultRenderSlot });
+    return shaderMgr_.CreatePipelineLayout({uri, pipelineLayout, renderSlotId, defaultRenderSlot});
 }
 
 RENDER_END_NAMESPACE()

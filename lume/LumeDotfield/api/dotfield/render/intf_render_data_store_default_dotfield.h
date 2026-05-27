@@ -30,33 +30,33 @@
 namespace RENDER_NS {
 class IGpuResourceManager;
 class IShaderManager;
-} // namespace RENDER_NS
+}  // namespace RENDER_NS
 
 namespace Dotfield {
 struct RenderDataDefaultDotfield {
     /* Buffering count, for easier management. */
-    static constexpr uint32_t DOTFIELD_BUFFERING_COUNT { 2u };
+    static constexpr uint32_t DOTFIELD_BUFFERING_COUNT{2u};
 
     /** Dotfield
      */
     struct DotfieldPrimitive {
-        CORE_NS::Entity entity {};
+        CORE_NS::Entity entity{};
 
-        BASE_NS::Math::Mat4X4 matrix { 1.f };
-        BASE_NS::Math::UVec2 size { 64u, 64u };
-        BASE_NS::Math::Vec2 touch { 0.0f, 0.0f };
-        BASE_NS::Math::Vec3 touchDirection { 0.0f, 0.0f, 0.0f };
-        BASE_NS::Math::UVec4 colors { 0u, 0u, 0u, 0u };
-        float pointScale { 60.f };
-        float touchRadius { 0.f };
+        BASE_NS::Math::Mat4X4 matrix{1.f};
+        BASE_NS::Math::UVec2 size{64u, 64u};
+        BASE_NS::Math::Vec2 touch{0.0f, 0.0f};
+        BASE_NS::Math::Vec3 touchDirection{0.0f, 0.0f, 0.0f};
+        BASE_NS::Math::UVec4 colors{0u, 0u, 0u, 0u};
+        float pointScale{60.f};
+        float touchRadius{0.f};
     };
 
     struct BufferData {
-        uint32_t currFrameIndex { 0u }; // 0 or 1 for double buffering
+        uint32_t currFrameIndex{0u};  // 0 or 1 for double buffering
 
         struct Buffer {
             // double buffering
-            RENDER_NS::RenderHandleReference dataBuffer[DOTFIELD_BUFFERING_COUNT]; // (packed) data
+            RENDER_NS::RenderHandleReference dataBuffer[DOTFIELD_BUFFERING_COUNT];  // (packed) data
         };
         BASE_NS::vector<Buffer> buffers;
     };
@@ -70,7 +70,7 @@ RenderDataStoreDefaultDotfield
 */
 class IRenderDataStoreDefaultDotfield : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "f01a1d5f-2bfa-4f46-892f-33eb0397a654" };
+    static constexpr BASE_NS::Uid UID{"f01a1d5f-2bfa-4f46-892f-33eb0397a654"};
 
     virtual void AddDotfieldPrimitive(const RenderDataDefaultDotfield::DotfieldPrimitive& dotfieldPrimitive) = 0;
     virtual void RemoveDotfieldPrimitive(const CORE_NS::Entity& entity) = 0;
@@ -83,6 +83,6 @@ public:
     virtual float GetTime() const noexcept = 0;
     virtual void SetTime(float time) noexcept = 0;
 };
-} // namespace Dotfield
+}  // namespace Dotfield
 
-#endif // PLUGIN_API_RENDER_DATA_STORE_DEFAULT_DOTFIELD_H
+#endif  // PLUGIN_API_RENDER_DATA_STORE_DEFAULT_DOTFIELD_H

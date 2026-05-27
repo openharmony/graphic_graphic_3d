@@ -40,17 +40,16 @@ class MeshResourceImpl : public SceneResourceImpl {
 
 public:
     static SceneResources::MeshResource Create(
-        SceneTH::SceneResourceParameters const &params, ::SceneTypes::GeometryDefinitionType const &geometry);
+        SceneTH::SceneResourceParameters const& params, ::SceneTypes::GeometryDefinitionType const& geometry);
 
     explicit MeshResourceImpl(const std::shared_ptr<MeshResourceETS> mrETS);
     ~MeshResourceImpl();
     void destroy() override;
 
 private:
-    static BASE_NS::unique_ptr<Geometry::CustomETS> MakeCustomETS(
-        const SceneTypes::CustomGeometry &customGeometry);
+    static BASE_NS::unique_ptr<Geometry::CustomETS> MakeCustomETS(const SceneTypes::CustomGeometry& customGeometry);
 
     std::shared_ptr<MeshResourceETS> mrETS_{nullptr};
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MESH_RESOURCE_IMPL_H

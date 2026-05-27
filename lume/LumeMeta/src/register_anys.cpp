@@ -30,7 +30,6 @@
 #include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/intf_startable.h>
-#include <meta/interface/loaders/intf_content_loader.h>
 
 META_BEGIN_NAMESPACE()
 
@@ -84,7 +83,6 @@ using ObjectTypes = TypeList<
     IValue::ConstPtr,
     IValue::WeakPtr,
     IValue::ConstWeakPtr,
-    IContentLoader::Ptr,
     IProperty::Ptr,
     IProperty::ConstPtr,
     IProperty::WeakPtr,
@@ -108,14 +106,14 @@ using ObjectTypes = TypeList<
 
 namespace Internal {
 
-template<typename... List>
+template <typename... List>
 static void RegisterTypes(IPropertyRegister& pr, TypeList<List...>)
 {
     (pr.RegisterAny(CreateShared<DefaultAnyBuilder<Any<List>>>()), ...);
     (pr.RegisterAny(CreateShared<DefaultAnyBuilder<ArrayAny<List>>>()), ...);
 }
 
-template<typename... List>
+template <typename... List>
 static void UnregisterTypes(IPropertyRegister& pr, TypeList<List...>)
 {
     (pr.UnregisterAny(ArrayAny<List>::StaticGetClassId()), ...);
@@ -125,8 +123,8 @@ static void UnregisterTypes(IPropertyRegister& pr, TypeList<List...>)
 void RegisterAnys(IObjectRegistry& registry)
 {
     auto& pr = registry.GetPropertyRegister();
-    RegisterTypes(pr, BasicTypes {});
-    RegisterTypes(pr, ObjectTypes {});
+    RegisterTypes(pr, BasicTypes{});
+    RegisterTypes(pr, ObjectTypes{});
 
     RegisterTypeForBuiltinAny<StartableState>();
     RegisterTypeForBuiltinAny<StartBehavior>();
@@ -135,12 +133,12 @@ void RegisterAnys(IObjectRegistry& registry)
 void UnRegisterAnys(IObjectRegistry& registry)
 {
     auto& pr = registry.GetPropertyRegister();
-    UnregisterTypes(pr, ObjectTypes {});
-    UnregisterTypes(pr, BasicTypes {});
+    UnregisterTypes(pr, ObjectTypes{});
+    UnregisterTypes(pr, BasicTypes{});
 
     UnregisterTypeForBuiltinAny<StartableState>();
     UnregisterTypeForBuiltinAny<StartBehavior>();
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

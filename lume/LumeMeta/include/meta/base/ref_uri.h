@@ -67,7 +67,7 @@ public:
 
     struct Node {
         BASE_NS::string name;
-        enum Type { OBJECT, PROPERTY, ATTACHMENT, SPECIAL } type {};
+        enum Type { OBJECT, PROPERTY, ATTACHMENT, SPECIAL } type{};
         uint32_t index = uint32_t(-1);
     };
 
@@ -190,15 +190,16 @@ private:
     static BASE_NS::string UnEscapeName(BASE_NS::string_view str);
 
 private:
-    bool isValid_ {};
+    bool isValid_{};
     InstanceId baseUid_;
-    bool startFromRoot_ {};
+    bool startFromRoot_{};
     BASE_NS::vector<Node> segments_;
     // this is context specific, not in the string format
-    bool interpretAbsolute_ {};
+    bool interpretAbsolute_{};
 };
 
-inline RefUri::RefUri() : isValid_ { true } {}
+inline RefUri::RefUri() : isValid_{true}
+{}
 
 inline RefUri::RefUri(BASE_NS::string_view uri)
 {
@@ -217,7 +218,7 @@ inline bool RefUri::IsValid() const
 
 inline bool RefUri::IsEmpty() const
 {
-    RefUri empty {};
+    RefUri empty{};
     // ignore the context specific flag for empty check
     empty.SetAbsoluteInterpretation(GetAbsoluteInterpretation());
     return *this == empty;
@@ -240,7 +241,7 @@ inline bool RefUri::ReferencesObject() const
 
 inline RefUri RefUri::RelativeUri() const
 {
-    RefUri copy { *this };
+    RefUri copy{*this};
     copy.SetBaseObjectUid({});
     return copy;
 }
@@ -295,25 +296,25 @@ inline void RefUri::SetBaseObjectUid(const InstanceId& uid)
 inline void RefUri::PushObjectSegment(BASE_NS::string name)
 {
     if (name.empty()) {
-        segments_.push_back(Node { "@", Node::SPECIAL });
+        segments_.push_back(Node{"@", Node::SPECIAL});
     } else {
-        segments_.push_back(Node { BASE_NS::move(name), Node::OBJECT });
+        segments_.push_back(Node{BASE_NS::move(name), Node::OBJECT});
     }
 }
 
 inline void RefUri::PushPropertySegment(BASE_NS::string name, uint32_t index)
 {
-    segments_.push_back(Node { BASE_NS::move(name), Node::PROPERTY, index });
+    segments_.push_back(Node{BASE_NS::move(name), Node::PROPERTY, index});
 }
 
 inline void RefUri::PushAttachmentSegment(BASE_NS::string name)
 {
-    segments_.push_back(Node { BASE_NS::move(name), Node::ATTACHMENT });
+    segments_.push_back(Node{BASE_NS::move(name), Node::ATTACHMENT});
 }
 
 inline void RefUri::PushObjectContextSegment()
 {
-    segments_.push_back(Node { "@Context", Node::SPECIAL });
+    segments_.push_back(Node{"@Context", Node::SPECIAL});
 }
 
 inline BASE_NS::string RefUri::ToString() const
@@ -377,29 +378,29 @@ inline bool RefUri::operator!=(const RefUri& uri) const
 
 inline const RefUri& RefUri::ParentUri()
 {
-    static const RefUri uri { "ref:/.." };
+    static const RefUri uri{"ref:/.."};
     return uri;
 }
 
 inline const RefUri& RefUri::SelfUri()
 {
-    static const RefUri uri { "ref:/" };
+    static const RefUri uri{"ref:/"};
     return uri;
 }
 
 inline const RefUri& RefUri::ContextUri()
 {
-    static const RefUri uri { "ref:/@Context" };
+    static const RefUri uri{"ref:/@Context"};
     return uri;
 }
 
 inline bool RefUri::AddPropertySegment(BASE_NS::string seg)
 {
     uint32_t index = -1;
-    if (seg.size() > 3 && seg.back() == ']' && seg[seg.size() - 2] != ESCAPE_CHAR) { // 2: size 3:size
+    if (seg.size() > 3 && seg.back() == ']' && seg[seg.size() - 2] != ESCAPE_CHAR) {  // 2: size 3:size
         auto pos = seg.find_last_of('[');
         if (pos != BASE_NS::string_view::npos) {
-            char* end {};
+            char* end{};
             auto res = strtoul(seg.data() + pos + 1, &end, 10);
             if (end != seg.data() + seg.size() - 1) {
                 return false;
@@ -480,7 +481,7 @@ inline bool RefUri::ParsePath(BASE_NS::string_view path)
         }
     }
     // all good, reverse segments and we are done
-    BASE_NS::vector<Node> rev { segments_.rbegin(), segments_.rend() };
+    BASE_NS::vector<Node> rev{segments_.rbegin(), segments_.rend()};
     segments_ = BASE_NS::move(rev);
     return true;
 }
@@ -499,10 +500,10 @@ inline bool RefUri::ParseUid(BASE_NS::string_view& path)
 inline bool RefUri::Parse(BASE_NS::string_view uri)
 {
     // we check the header and size must be at least 5 (at least / after the header)
-    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") { // 5: size, 4: size
+    if (uri.size() < 5 || uri.substr(0, 4) != "ref:") {  // 5: size, 4: size
         return false;
     }
-    uri.remove_prefix(4); // 4: size
+    uri.remove_prefix(4);  // 4: size
     // see if it is path or valid uid
     if (uri[0] != SEPARATOR_CHAR && !ParseUid(uri)) {
         return false;
@@ -515,7 +516,7 @@ inline bool RefUri::Parse(BASE_NS::string_view uri)
 
 inline BASE_NS::string RefUri::EscapeName(BASE_NS::string_view str)
 {
-    BASE_NS::string res { str };
+    BASE_NS::string res{str};
     for (size_t i = 0; i != res.size(); ++i) {
         if (ESCAPED_CHARS.find(res[i]) != BASE_NS::string_view::npos) {
             res.insert(i, &ESCAPE_CHAR, 1);
@@ -527,7 +528,7 @@ inline BASE_NS::string RefUri::EscapeName(BASE_NS::string_view str)
 
 inline BASE_NS::string RefUri::UnEscapeName(BASE_NS::string_view str)
 {
-    BASE_NS::string res { str };
+    BASE_NS::string res{str};
     for (size_t i = 0; i < res.size(); ++i) {
         if (res[i] == ESCAPE_CHAR) {
             res.erase(i, 1);

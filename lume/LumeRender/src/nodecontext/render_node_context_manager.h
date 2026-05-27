@@ -62,9 +62,9 @@ public:
         RenderNodeGraphShareDataManager& renderNodeGraphShareDataMgr;
     };
     struct PerFrameTimings {
-        uint64_t totalTimeUs { 0 };
-        uint64_t deltaTimeUs { 0 };
-        uint64_t frameIndex { 0 };
+        uint64_t totalTimeUs{0};
+        uint64_t deltaTimeUs{0};
+        uint64_t frameIndex{0};
     };
 
     explicit RenderNodeContextManager(const CreateInfo& createInfo);
@@ -112,8 +112,8 @@ private:
     RenderCommandList& renderCommandList_;
 
     struct ContextInterface {
-        BASE_NS::Uid uid {};
-        CORE_NS::IInterface* contextInterface { nullptr };
+        BASE_NS::Uid uid{};
+        CORE_NS::IInterface* contextInterface{nullptr};
     };
     BASE_NS::vector<ContextInterface> contextInterfaces_;
 
@@ -125,8 +125,8 @@ private:
     BASE_NS::unique_ptr<RenderNodeParserUtil> renderNodeParserUtil_;
 
     // index in render node graph
-    uint32_t renderNodeIdx_ { ~0u };
+    uint32_t renderNodeIdx_{~0u};
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__RENDER_NODE_CONTEXT_MANAGER_H
+#endif  // CORE__RENDER__RENDER_NODE_CONTEXT_MANAGER_H

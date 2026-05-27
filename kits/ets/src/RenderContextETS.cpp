@@ -38,7 +38,7 @@ META_TYPE(BASE_NS::shared_ptr<CORE_NS::IImageLoaderManager::LoadResult>);
 namespace {
 SCENE_NS::IRenderResourceManager::Ptr GetResourceManager()
 {
-    auto &obr = META_NS::GetObjectRegistry();
+    auto& obr = META_NS::GetObjectRegistry();
     auto data = obr.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
     if (!data) {
         return {};
@@ -53,7 +53,7 @@ SCENE_NS::IRenderResourceManager::Ptr GetResourceManager()
         return {};
     }
 }
-}
+}  // namespace
 
 namespace OHOS::Render3D {
 RenderContextETS::RenderContextETS()
@@ -73,7 +73,7 @@ std::shared_ptr<RenderResourcesETS> RenderContextETS::GetResources()
     return resources;
 }
 
-bool RenderContextETS::LoadPlugin(const std::string &name)
+bool RenderContextETS::LoadPlugin(const std::string& name)
 {
     if (!BASE_NS::IsUidString(name.c_str())) {
         WIDGET_LOGE("%{public}s is not a Uid string", name.c_str());
@@ -87,7 +87,7 @@ bool RenderContextETS::LoadPlugin(const std::string &name)
     }).GetResult();
 }
 
-InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const std::string &name, const std::string &uri)
+InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const std::string& name, const std::string& uri)
 {
     auto renderResourceManager = GetResourceManager();
     if (!renderResourceManager) {
@@ -100,7 +100,7 @@ InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const st
     return InvokeReturn<std::shared_ptr<ShaderETS>>(std::make_shared<ShaderETS>(shader, name, uri));
 }
 
-std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name, const std::string &uri)
+std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string& name, const std::string& uri)
 {
     // Create an image in four steps:
     // 1. Parse args in JS thread (this function body)
@@ -127,7 +127,7 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     using LoadResult = CORE_NS::IImageLoaderManager::LoadResult;
     auto loadImage = [uri, renderContext]() {
         uint32_t imageLoaderFlags = CORE_NS::IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS;
-        auto &imageLoaderMgr = renderContext->GetEngine().GetImageLoaderManager();
+        auto& imageLoaderMgr = renderContext->GetEngine().GetImageLoaderManager();
         // LoadResult contains a unique pointer, so can't copy. Move it to the heap and pass a pointer instead.
         return BASE_NS::shared_ptr<LoadResult>{new LoadResult{imageLoaderMgr.LoadImage(uri.c_str(), imageLoaderFlags)}};
     };
@@ -135,7 +135,7 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     auto createGpuResource = [uri, renderContext](
                                  BASE_NS::shared_ptr<LoadResult> loadResult) -> SCENE_NS::IBitmap::Ptr {
         if (!loadResult->success) {
-            WIDGET_LOGE("%{public}s", BASE_NS::string { "Failed to load image: " }.append(loadResult->error).c_str());
+            WIDGET_LOGE("%{public}s", BASE_NS::string{"Failed to load image: "}.append(loadResult->error).c_str());
             return {};
         }
 
@@ -163,7 +163,8 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     const auto ioQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(IO_QUEUE);
     const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
     auto bitmap = META_NS::AddFutureTaskOrRunDirectly(ioQ, BASE_NS::move(loadImage))
-        .Then(BASE_NS::move(createGpuResource), engineQ).GetResult();
+                      .Then(BASE_NS::move(createGpuResource), engineQ)
+                      .GetResult();
     if (!bitmap) {
         WIDGET_LOGE("Failed to load image from URI %{public}s", uri.c_str());
         return nullptr;
@@ -172,7 +173,7 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImage(const std::string &name,
     return std::make_shared<ImageETS>(name, uri, bitmap);
 }
 
-std::shared_ptr<ImageETS> RenderContextETS::CreateImageStream(const std::string &name, const std::string &uri)
+std::shared_ptr<ImageETS> RenderContextETS::CreateImageStream(const std::string& name, const std::string& uri)
 {
     std::string internalUri = uri;
     auto& obr = META_NS::GetObjectRegistry();
@@ -206,20 +207,23 @@ std::shared_ptr<ImageETS> RenderContextETS::CreateImageStream(const std::string 
     return std::make_shared<ImageETS>(name, internalUri, bitmap);
 }
 
-bool RenderContextETS::RegisterResourcePath(const std::string &protocol, const std::string &uri)
+bool RenderContextETS::RegisterResourcePath(const std::string& protocol, const std::string& uri)
 {
     if (protocol.empty() || uri.empty()) {
         CORE_LOG_E("Invalid protocol or uri");
         return false;
     }
-    auto &obr = META_NS::GetObjectRegistry();
+    auto& obr = META_NS::GetObjectRegistry();
     auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     if (!doc) {
         CORE_LOG_E("Get default object context failed");
         return false;
     }
-    auto &fileManager = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")
-                            ->GetValue()->GetRenderer()->GetEngine().GetFileManager();
+    auto& fileManager = doc->GetProperty<SCENE_NS::IRenderContext::Ptr>("RenderContext")
+                            ->GetValue()
+                            ->GetRenderer()
+                            ->GetEngine()
+                            .GetFileManager();
     // Check if the proxy protocol exists already.
     if (!fileManager.CheckExistence(protocol.c_str())) {
         CORE_LOG_E("Protocol %s does not exist", protocol.c_str());

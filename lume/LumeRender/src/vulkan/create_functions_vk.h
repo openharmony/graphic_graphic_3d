@@ -30,30 +30,30 @@ struct VersionInfo;
 class RenderContext;
 
 struct InstanceWrapper {
-    VkInstance instance { VK_NULL_HANDLE };
-    bool debugReportSupported { false };
-    bool debugUtilsSupported { false };
-    uint32_t apiMajor { 0u };
-    uint32_t apiMinor { 0u };
+    VkInstance instance{VK_NULL_HANDLE};
+    bool debugReportSupported{false};
+    bool debugUtilsSupported{false};
+    uint32_t apiMajor{0u};
+    uint32_t apiMinor{0u};
 };
 
 struct PhysicalDeviceWrapper {
-    VkPhysicalDevice physicalDevice { VK_NULL_HANDLE };
+    VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
     BASE_NS::vector<VkExtensionProperties> physicalDeviceExtensions;
     PhysicalDevicePropertiesVk physicalDeviceProperties;
 };
 
 struct DeviceWrapper {
-    VkDevice device { VK_NULL_HANDLE };
+    VkDevice device{VK_NULL_HANDLE};
     BASE_NS::vector<BASE_NS::string> extensions;
 };
 
 struct QueueProperties {
-    VkQueueFlags requiredFlags { 0 };
-    VkQueueFlags negativeFlags { 0 };
-    uint32_t count { 0 };
-    float priority { 1.0f };
-    bool canPresent { false };
+    VkQueueFlags requiredFlags{0};
+    VkQueueFlags negativeFlags{0};
+    uint32_t count{0};
+    float priority{1.0f};
+    bool canPresent{false};
 };
 
 class CreateFunctionsVk {
@@ -103,4 +103,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_CREATE_FUNCTIONS_VK_H
+#endif  // VULKAN_CREATE_FUNCTIONS_VK_H

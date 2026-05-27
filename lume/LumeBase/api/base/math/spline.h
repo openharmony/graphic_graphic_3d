@@ -22,7 +22,7 @@ BASE_BEGIN_NAMESPACE()
 namespace Math {
 /** @ingroup group_math_spline */
 /** For hermite interpolation */
-template<typename T>
+template <typename T>
 inline constexpr T Hermite(T const& v1, T const& t1, T const& v2, T const& t2, float s)
 {
     const float s2 = s * s;
@@ -37,7 +37,7 @@ inline constexpr T Hermite(T const& v1, T const& t1, T const& v2, T const& t2, f
 
     return v1 * f1 + v2 * f2 + t1 * f3 + t2 * f4;
 }
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_SPLINE_H
+#endif  // API_BASE_MATH_SPLINE_H

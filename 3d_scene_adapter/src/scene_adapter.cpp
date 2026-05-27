@@ -159,7 +159,7 @@ using IntfPtr = META_NS::SharedPtrIInterface;
 using IntfWeakPtr = META_NS::WeakPtrIInterface;
 
 struct EngineInstance {
-    void *libHandle_ = nullptr;
+    void* libHandle_ = nullptr;
     SCENE_NS::IApplicationContext::Ptr applicationContext_;
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_;
     BASE_NS::shared_ptr<CORE_NS::IEngine> engine_;
@@ -171,7 +171,7 @@ static HapInfo hapInfo_;
 META_NS::ITaskQueue::Ptr engineThread;
 META_NS::ITaskQueue::Ptr ioThread;
 META_NS::ITaskQueue::Ptr releaseThread;
-META_NS::ITaskQueue::Token renderTask {};
+META_NS::ITaskQueue::Token renderTask{};
 
 void LockCompositor()
 {
@@ -183,19 +183,19 @@ void UnlockCompositor()
     mute.unlock();
 }
 
-static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
-static constexpr BASE_NS::Uid APP_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
-static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
-static constexpr BASE_NS::Uid JS_RELEASE_THREAD { "3784fa96-b25b-4e9c-bbf1-e897d36f73af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
+static constexpr BASE_NS::Uid APP_THREAD{"b2e8cef3-453a-4651-b564-5190f8b5190d"};
+static constexpr BASE_NS::Uid IO_QUEUE{"be88e9a0-9cd8-45ab-be48-937953dc258f"};
+static constexpr BASE_NS::Uid JS_RELEASE_THREAD{"3784fa96-b25b-4e9c-bbf1-e897d36f73af"};
 static constexpr uint32_t FLOAT_TO_BYTE = sizeof(float) / sizeof(uint8_t);
 static constexpr uint32_t TRANSFORM_MATRIX_SIZE = 16;
 static const char* const RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 static const char* const ENV_PROPERTIES_BUFFER_NAME = "AR_CAMERA_TRANSFORM_MATRIX";
-static constexpr uint64_t BUFFER_FENCE_HANDLE_BASE { 0xAAAAAAAAaaaaaaaa };
+static constexpr uint64_t BUFFER_FENCE_HANDLE_BASE{0xAAAAAAAAaaaaaaaa};
 static constexpr uint32_t TIME_OUT_MILLISECONDS = 5000;
 
-template<typename T>
-bool LoadFunc(T &fn, const char *fName, void* handle)
+template <typename T>
+bool LoadFunc(T& fn, const char* fName, void* handle)
 {
     fn = reinterpret_cast<T>(dlsym(handle, fName));
     if (fn == nullptr) {
@@ -212,18 +212,18 @@ inline SCENE_NS::IEcsContext* GetEcs(const SCENE_NS::IEcsObject::Ptr& object)
     }
     return nullptr;
 }
- 
-template<typename ComponentType>
+
+template <typename ComponentType>
 CORE_NS::ScopedHandle<ComponentType> GetScopedHandle(const SCENE_NS::IEcsObject::Ptr& object)
 {
     if (auto ecs = GetEcs(object)) {
         if (auto m = ecs->FindComponent<ComponentType>()) {
-            return CORE_NS::ScopedHandle<ComponentType> { m->GetData(object->GetEntity()) };
+            return CORE_NS::ScopedHandle<ComponentType>{m->GetData(object->GetEntity())};
         }
     }
-    return CORE_NS::ScopedHandle<ComponentType> {};
+    return CORE_NS::ScopedHandle<ComponentType>{};
 }
- 
+
 bool UpdateCameraDepthTarget(const SCENE_NS::IEcsObject::Ptr& camera, const SCENE_NS::IRenderTarget::Ptr& target)
 {
     if (auto ecs = GetEcs(camera)) {
@@ -244,10 +244,8 @@ bool UpdateCameraDepthTarget(const SCENE_NS::IEcsObject::Ptr& camera, const SCEN
     return false;
 }
 
-
 SceneAdapter::~SceneAdapter()
-{
-}
+{}
 
 SceneAdapter::SceneAdapter()
 {
@@ -277,9 +275,9 @@ bool SceneAdapter::FGInitialize()
     auto engine = engineInstance_.engine_;
     RETURN_FALSE_IF_NULL(engine);
 
-    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)
-        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(
-        [internalScene, ecs, renderContext, engine]()->bool {
+    META_NS::GetTaskQueueRegistry()
+        .GetTaskQueue(ENGINE_THREAD)
+        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>([internalScene, ecs, renderContext, engine]() -> bool {
             FG::FGModule fgModule;
             fgModule.Init(internalScene, renderContext, engine, ecs);
             return false;
@@ -312,9 +310,9 @@ bool SceneAdapter::SRInitialize()
     auto engine = engineInstance_.engine_;
     RETURN_FALSE_IF_NULL(engine);
 
-    META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)
-        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>(
-            [internalScene, ecs, renderContext, engine]()->bool {
+    META_NS::GetTaskQueueRegistry()
+        .GetTaskQueue(ENGINE_THREAD)
+        ->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>([internalScene, ecs, renderContext, engine]() -> bool {
             OHOS::Render3D::SRModule srModule;
             srModule.Init(internalScene, renderContext, engine, ecs);
             return false;
@@ -331,26 +329,25 @@ bool SceneAdapter::LoadEngineLib()
         return true;
     }
 
-    #define TO_STRING(name) #name
-    #define LIB_NAME(name) TO_STRING(name)
-    constexpr std::string_view lib { LIB_NAME(LIB_ENGINE_CORE)".so" };
+#define TO_STRING(name) #name
+#define LIB_NAME(name) TO_STRING(name)
+    constexpr std::string_view lib{LIB_NAME(LIB_ENGINE_CORE) ".so"};
     engineInstance_.libHandle_ = dlopen(lib.data(), RTLD_LAZY);
 
     if (engineInstance_.libHandle_ == nullptr) {
         WIDGET_LOGE("%s, open lib fail %s", __func__, dlerror());
     }
-    #undef TO_STRING
-    #undef LIB_NAME
+#undef TO_STRING
+#undef LIB_NAME
 
-    #define LOAD_FUNC(fn, name) LoadFunc<decltype(fn)>(fn, name, engineInstance_.libHandle_)
-    if (!(LOAD_FUNC(CORE_NS::CreatePluginRegistry,
-        "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE")
-        && LOAD_FUNC(CORE_NS::GetPluginRegister, "_ZN4Core17GetPluginRegisterEv")
-        && LOAD_FUNC(CORE_NS::IsDebugBuild, "_ZN4Core12IsDebugBuildEv")
-        && LOAD_FUNC(CORE_NS::GetVersion, "_ZN4Core13GetVersionRevEv"))) {
+#define LOAD_FUNC(fn, name) LoadFunc<decltype(fn)>(fn, name, engineInstance_.libHandle_)
+    if (!(LOAD_FUNC(CORE_NS::CreatePluginRegistry, "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE") &&
+            LOAD_FUNC(CORE_NS::GetPluginRegister, "_ZN4Core17GetPluginRegisterEv") &&
+            LOAD_FUNC(CORE_NS::IsDebugBuild, "_ZN4Core12IsDebugBuildEv") &&
+            LOAD_FUNC(CORE_NS::GetVersion, "_ZN4Core13GetVersionRevEv"))) {
         return false;
     }
-    #undef LOAD_FUNC
+#undef LOAD_FUNC
 
     return true;
 }
@@ -374,11 +371,6 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
         PNGPlugin::UID_PNG_PLUGIN,
 #endif
     };
-    
-    for (const auto& u: vExtraPlugins_) {
-        DefaultPluginVector.emplace_back(u);
-    }
-
     const BASE_NS::array_view<BASE_NS::Uid> DefaultPluginList(DefaultPluginVector.data(), DefaultPluginVector.size());
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
     if (!CORE_NS::GetPluginRegister().LoadPlugins(DefaultPluginList)) {
@@ -406,7 +398,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
     }
     releaseThread = tr.GetTaskQueue(JS_RELEASE_THREAD);
     if (!releaseThread) {
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         releaseThread = obr.Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
         tr.RegisterTaskQueue(releaseThread, JS_RELEASE_THREAD);
     }
@@ -414,7 +406,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
     bool inited = false;
     auto initCheck = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([&inited]() {
         inited = (engineInstance_.engine_ != nullptr);
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     engineThread->AddWaitableTask(initCheck)->Wait();
     if (inited) {
@@ -424,21 +416,21 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
 
     auto engineInit = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([platformCreateInfo]() {
         setpriority(0, 0, ENGINE_SERVICE_PRIORITY);
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         // Initialize lumeengine/render etc
         CORE_NS::EngineCreateInfo engineCreateInfo{platformCreateInfo, {}, {}};
         if (auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY)) {
             engineInstance_.engine_.reset(factory->Create(engineCreateInfo).get());
         } else {
             WIDGET_LOGE("could not get engine factory");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
         if (!engineInstance_.engine_) {
             WIDGET_LOGE("get engine fail");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
-        auto &fileManager = engineInstance_.engine_->GetFileManager();
-        const auto &platform = engineInstance_.engine_->GetPlatform();
+        auto& fileManager = engineInstance_.engine_->GetFileManager();
+        const auto& platform = engineInstance_.engine_->GetPlatform();
         platform.RegisterDefaultPaths(fileManager);
         engineInstance_.engine_->Init();
 
@@ -451,7 +443,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
             WIDGET_LOGI("backend vulkan");
         } else {
             WIDGET_LOGI("backend gles");
-            glExtra.depthBits = 24; // 24 : bits size
+            glExtra.depthBits = 24;  // 24 : bits size
             glExtra.sharedContext = EGL_NO_CONTEXT;
             deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
             deviceCreateInfo.backendConfiguration = &glExtra;
@@ -460,15 +452,14 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         }
 
         engineInstance_.renderContext_.reset(
-            static_cast<RENDER_NS::IRenderContext *>(
-                engineInstance_.engine_->GetInterface<CORE_NS::IClassFactory>()
-                    ->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT)
-                    .release()));
+            static_cast<RENDER_NS::IRenderContext*>(engineInstance_.engine_->GetInterface<CORE_NS::IClassFactory>()
+                                                        ->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT)
+                                                        .release()));
 
         auto rrc = engineInstance_.renderContext_->Init(renderCreateInfo);
         if (rrc != RENDER_NS::RenderResultCode::RENDER_SUCCESS) {
             WIDGET_LOGE("Failed to create render context");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         // Save the stuff to the default object context.
@@ -478,7 +469,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
         auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         if (doc == nullptr) {
             WIDGET_LOGE("nullptr from interface_cast");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
         auto flags = META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE;
 
@@ -488,43 +479,40 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
 
         // Use engine file manager for our resource manager
         auto resources =
-            META_NS::GetObjectRegistry().Create<CORE_NS::IResourceManager>(
-                    META_NS::ClassId::FileResourceManager);
+            META_NS::GetObjectRegistry().Create<CORE_NS::IResourceManager>(META_NS::ClassId::FileResourceManager);
         resources->SetFileManager(CORE_NS::IFileManager::Ptr(&fileManager));
 
         engineInstance_.applicationContext_ =
-            META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(
-                    SCENE_NS::ClassId::ApplicationContext);
+            META_NS::GetObjectRegistry().Create<SCENE_NS::IApplicationContext>(SCENE_NS::ClassId::ApplicationContext);
         if (engineInstance_.applicationContext_) {
             SCENE_NS::IApplicationContext::ApplicationContextInfo info{
-                engineThread, appThread, engineInstance_.renderContext_,
-                    resources, SCENE_NS::SceneOptions{}};
+                engineThread, appThread, engineInstance_.renderContext_, resources, SCENE_NS::SceneOptions{}};
             engineInstance_.applicationContext_->Initialize(info);
         }
 
         doc->GetProperty<META_NS::SharedPtrIInterface>("EngineQueue")->SetValue(engineThread);
         doc->GetProperty<META_NS::SharedPtrIInterface>("AppQueue")->SetValue(appThread);
         doc->AddProperty(META_NS::ConstructProperty<SCENE_NS::IRenderContext::Ptr>(
-                    "RenderContext", engineInstance_.applicationContext_->GetRenderContext(), flags));
+            "RenderContext", engineInstance_.applicationContext_->GetRenderContext(), flags));
 
         WIDGET_LOGD("register shader paths");
-        static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc { "shaders://" };
+        static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc{"shaders://"};
         engineInstance_.engine_->GetFileManager().RegisterPath("shaders", "OhosRawFile://shaders", false);
         engineInstance_.renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc);
 
         engineInstance_.engine_->GetFileManager().RegisterPath("appshaders", "OhosRawFile://shaders", false);
-        engineInstance_.engine_->GetFileManager().RegisterPath("apppipelinelayouts",
-            "OhosRawFile:///pipelinelayouts/", true);
+        engineInstance_.engine_->GetFileManager().RegisterPath(
+            "apppipelinelayouts", "OhosRawFile:///pipelinelayouts/", true);
         engineInstance_.engine_->GetFileManager().RegisterPath("fonts", "OhosRawFile:///fonts", true);
 
-        static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc1 { "appshaders://" };
+        static constexpr const RENDER_NS::IShaderManager::ShaderFilePathDesc desc1{"appshaders://"};
         engineInstance_.renderContext_->GetDevice().GetShaderManager().LoadShaderFiles(desc1);
 
         // "render" one frame. this is to initialize all the default resources etc.
         // if we never render a single frame, we will get "false positive" leaks of gpu resources.
         engineInstance_.renderContext_->GetRenderer().RenderFrame({});
         WIDGET_LOGI("init engine success");
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     engineThread->AddWaitableTask(engineInit)->Wait();
     return true;
@@ -542,7 +530,7 @@ std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
     auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         textureLayer_ = std::make_shared<TextureLayer>(key_);
         key_++;
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     if (engineThread) {
         engineThread->AddWaitableTask(cb)->Wait();
@@ -552,54 +540,27 @@ std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
     return textureLayer_;
 }
 
-void SceneAdapter::CreateMultiExtraTextureLayer(size_t numTextureLayers, bool clear)
-{
-    WIDGET_LOGI("SceneAdapter::CreateMultiExtraTextureLayer: num %zu", numTextureLayers);
-    if (clear) {
-        vExtraTextureLayer_.clear();
-        vExtraSwapChainHandle_.clear();
-        for (size_t i = 0; i < numTextureLayers; i++) {
-            vExtraTextureLayer_.emplace_back(std::make_shared<TextureLayer>(key_++));
-            vExtraSwapChainHandle_.emplace_back();
-        }
-        return;
-    }
-
-    for (size_t i = 0; i < numTextureLayers; i++) {
-        vExtraTextureLayer_[i] = std::make_shared<TextureLayer>(key_++);
-        vExtraSwapChainHandle_[i] = {};
-    }
-}
-
-bool SceneAdapter::SetExtraSwapChainName(const std::vector<std::string>& names)
-{
-    vExtraSwapChainNames_ = names;
-    return true;
-}
-
 bool SceneAdapter::LoadPluginsAndInit()
 {
-    LockCompositor(); // an APP_FREEZE here, so add lock just in case, but suspect others' error
+    LockCompositor();  // an APP_FREEZE here, so add lock just in case, but suspect others' error
     WIDGET_LOGI("scene adapter loadPlugins");
 
     if (hapInfo_.hapPath_ == "") {
         hapInfo_ = GetHapInfo();
     }
 
-    #define TO_STRING(name) #name
-    #define PLATFORM_PATH_NAME(name) TO_STRING(name)
-    CORE_NS::PlatformCreateInfo platformCreateInfo {
-        PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
+#define TO_STRING(name) #name
+#define PLATFORM_PATH_NAME(name) TO_STRING(name)
+    CORE_NS::PlatformCreateInfo platformCreateInfo{PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_CORE_PLUGIN_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_PLUGIN_PATH),
         hapInfo_.hapPath_.c_str(),
         hapInfo_.bundleName_.c_str(),
         hapInfo_.moduleName_.c_str(),
-        hapInfo_.resourceManager_
-    };
-    #undef TO_STRING
-    #undef PLATFORM_PATH_NAME
+        hapInfo_.resourceManager_};
+#undef TO_STRING
+#undef PLATFORM_PATH_NAME
     if (!LoadPlugins(platformCreateInfo)) {
         UnlockCompositor();
         engineInitSuccessful_ = false;
@@ -626,28 +587,26 @@ void SceneAdapter::OnWindowChange(float renderWidth, float renderHeight)
     OnWindowChange(wci);
 }
 
-void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
+void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 {
     WIDGET_LOGI("SceneAdapter::OnWindowchange");
     auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this, &windowChangeInfo]() {
         if (!textureLayer_) {
             WIDGET_LOGE("textureLayer is null in OnWindowChange");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
         textureLayer_->OnWindowChange(windowChangeInfo);
         const auto& textureInfo = textureLayer_->GetTextureInfo();
         auto& device = engineInstance_.renderContext_->GetDevice();
-        RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-            0U,
+        RENDER_NS::SwapchainCreateInfo swapchainCreateInfo{0U,
             RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
             RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             {
                 reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
-                {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
-            }
-        };
+                {},  // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
+            }};
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
 #ifdef __FG_MODULE__
         if (FG::FGModule::IsEnable()) {
@@ -660,8 +619,13 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
                 FG::FGModule::SetWindowSize(desc.width, desc.height);
                 FG::FGModule::InitConfig();
                 FG::FGModule::AttachComponent();
-                FG::FGModule::CreateGpuImages(rcFG, desc.width, desc.height, fg,
-                    FGColorOutputHandle_, FGPredictOutputHandle_, FGDepthOutputHandle_);
+                FG::FGModule::CreateGpuImages(rcFG,
+                    desc.width,
+                    desc.height,
+                    fg,
+                    FGColorOutputHandle_,
+                    FGPredictOutputHandle_,
+                    FGDepthOutputHandle_);
             } else {
                 WIDGET_LOGI("frame generation handle resource not created.");
             }
@@ -685,14 +649,14 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
             WIDGET_LOGI("offscreen handle resource not created.");
         }
 #endif
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
 #ifdef __SR_MODULE__
             auto rc = engineInstance_.renderContext_;
-            const auto &sr = SRModule::GetConfig();
+            const auto& sr = SRModule::GetConfig();
             if (sr.enable_ && textureLayer_) {
                 SRModule::AttachComponent();
                 i->SetRenderHandle(offscreenHandle_);
@@ -712,7 +676,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
                 }
             }
         }
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 
     if (engineThread) {
@@ -724,63 +688,11 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo &windowChangeInfo)
     }
 }
 
-void SceneAdapter::OnWindowChange(const std::vector<WindowChangeInfo> &vExtraWinChangeInfo)
-{
-    WIDGET_LOGI("SceneAdapter::OnWindowChange for extra texture layers, num %zu", vExtraWinChangeInfo.size());
-
-    auto cb = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this, &vExtraWinChangeInfo]() {
-        WIDGET_SCOPED_TRACE("SceneAdapter::OnWindowChange for extra texture layers task");
-        auto& device = engineInstance_.renderContext_->GetDevice();
-
-        if (vExtraTextureLayer_.size() != vExtraWinChangeInfo.size() ||
-            vExtraSwapChainHandle_.size() != vExtraWinChangeInfo.size()) {
-            // destroy swapchains
-            for (const auto& s : vExtraSwapChainHandle_) {
-                device.DestroySwapchain(s);
-            }
-            // clear and re-create texture layers and swapchain handle vectors
-            CreateMultiExtraTextureLayer(vExtraWinChangeInfo.size(), true);
-        }
-
-        // configure new swapchains
-        for (size_t i = 0; i < vExtraWinChangeInfo.size(); i++) {
-            auto& layer = vExtraTextureLayer_[i];
-            auto& wInfo = vExtraWinChangeInfo[i];
-
-            layer->OnWindowChange(wInfo);
-            const auto& textureInfo = layer->GetTextureInfo();
-            RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-                0U,
-                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT,
-                RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                {
-                    reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
-                    {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
-                }
-            };
-            std::string name = vExtraSwapChainNames_.size() == 0 ?
-                "ExtraSwapchain" + std::to_string(i) : vExtraSwapChainNames_[i];
-            
-            vExtraSwapChainHandle_[i] = device.CreateSwapchainHandle(swapchainCreateInfo, vExtraSwapChainHandle_[i],
-                name.c_str()); // store for destroy
-        }
-        return META_NS::IAny::Ptr {};
-    });
-
-    if (engineThread) {
-        engineThread->AddWaitableTask(cb)->Wait();
-        onWindowChanged_ = true;
-    } else {
-        WIDGET_LOGE("ENGINE_THREAD not ready in OnWindowChange for extra texture layers");
-    }
-}
-
 void SceneAdapter::CreateRenderFunction()
 {
     propSyncSync_ = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         PropSync();
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     // Task used for oneshot renders
     singleFrameAsync_ = META_NS::MakeCallback<META_NS::ITaskQueueTask>([this]() {
@@ -790,7 +702,7 @@ void SceneAdapter::CreateRenderFunction()
     // Task used for oneshot synchronous renders
     singleFrameSync_ = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
         RenderFunction();
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 }
 
@@ -803,11 +715,11 @@ void SceneAdapter::DeinitRenderThread()
     }
     auto engine_deinit = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() {
         // destroy all swapchains
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
         if (doc == nullptr) {
             WIDGET_LOGE("nullptr from interface_cast");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
         // hmm.. this is somewhat uncool
         {
@@ -827,7 +739,7 @@ void SceneAdapter::DeinitRenderThread()
         return META_NS::IAny::Ptr{};
     });
     engineThread->AddWaitableTask(engine_deinit)->Wait();
-    auto &tr = META_NS::GetTaskQueueRegistry();
+    auto& tr = META_NS::GetTaskQueueRegistry();
     tr.UnregisterTaskQueue(ENGINE_THREAD);
     engineThread.reset();
     tr.UnregisterTaskQueue(IO_QUEUE);
@@ -880,29 +792,22 @@ void SceneAdapter::RenderFunction()
         }
     }
 
-    if (vExtraSwapChainHandle_.size() != vExtraTextureLayer_.size()) {
-        WIDGET_LOGE("extra swapchain handle and texture layer size mismatch");
-        return;
-    }
-
     auto activeCameraCount = cams.size() - disabledCameras.size();
     if (bitmapCleared_ && bitmap_ && activeCameraCount > 0) {
         const auto& textureInfo = textureLayer_->GetTextureInfo();
         auto& device = engineInstance_.renderContext_->GetDevice();
-        RENDER_NS::SwapchainCreateInfo swapchainCreateInfo {
-            0U,
+        RENDER_NS::SwapchainCreateInfo swapchainCreateInfo{0U,
             RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
-            RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
+                RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT,
             RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             {
                 reinterpret_cast<uintptr_t>(textureInfo.nativeWindow_),
-                {}, // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
-            }
-        };
+                {},  // instance is not needed for eglCreateSurface or vkCreateSurfaceOHOS
+            }};
 
         swapchainHandle_ = device.CreateSwapchainHandle(swapchainCreateInfo, swapchainHandle_, {});
-        
+
         if (auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_)) {
 #ifdef __SR_MODULE__
             const auto& sr = SRModule::GetConfig();
@@ -982,7 +887,7 @@ void SceneAdapter::RenderFunction()
 }
 
 int32_t SceneAdapter::CreateFenceFD(
-    const RENDER_NS::IRenderFrameUtil::SignalData &signalData, RENDER_NS::IDevice &device)
+    const RENDER_NS::IRenderFrameUtil::SignalData& signalData, RENDER_NS::IDevice& device)
 {
     int32_t fenceFileDesc = -1;
     auto backendType = device.GetBackendType();
@@ -990,7 +895,7 @@ int32_t SceneAdapter::CreateFenceFD(
         // NOTE: vulkan not implemented yet
         WIDGET_LOGD("vulkan fence");
     } else if (backendType == RENDER_NS::DeviceBackendType::OPENGLES) {
-        const auto disp = static_cast<const RENDER_NS::DevicePlatformDataGLES &>(device.GetPlatformData()).display;
+        const auto disp = static_cast<const RENDER_NS::DevicePlatformDataGLES&>(device.GetPlatformData()).display;
         EGLSyncKHR sync = reinterpret_cast<EGLSyncKHR>(static_cast<uintptr_t>(signalData.gpuSignalResourceHandle));
         if (sync == EGL_NO_SYNC_KHR) {
             WIDGET_LOGE("invalid EGLSync from signal data");
@@ -1009,7 +914,7 @@ int32_t SceneAdapter::CreateFenceFD(
 void SceneAdapter::RenderFrame(bool needsSyncPaint)
 {
     if (!engineThread) {
-        WIDGET_LOGE("SceneAdapter no engineThread for Render");
+        WIDGET_LOGE("no engineThread for Render");
         return;
     }
     if (renderTask) {
@@ -1021,7 +926,7 @@ void SceneAdapter::RenderFrame(bool needsSyncPaint)
         CreateRenderFunction();
     }
     if (!onWindowChanged_) {
-        WIDGET_LOGW("SceneAdapter: window has not changed");
+        WIDGET_LOGW("window has not changed");
         return;
     }
     if (propSyncSync_) {
@@ -1053,18 +958,11 @@ void SceneAdapter::Deinit()
     RETURN_IF_NULL(engineThread);
     WIDGET_LOGI("SceneAdapter::Deinit");
     auto func = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([this]() {
-        auto& device = engineInstance_.renderContext_->GetDevice();
-
         if (swapchainHandle_) {
+            auto& device = engineInstance_.renderContext_->GetDevice();
             device.DestroySwapchain(swapchainHandle_);
         }
-        if (vExtraSwapChainHandle_.size() > 0) {
-            for (const auto& s : vExtraSwapChainHandle_) {
-                device.DestroySwapchain(s);
-            }
-        }
         swapchainHandle_ = {};
-        vExtraSwapChainHandle_.clear();
         if (bitmap2_) {
             bitmap2_.reset();
         }
@@ -1073,7 +971,7 @@ void SceneAdapter::Deinit()
             bitmap_.reset();
             auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
             if (!scene) {
-                return META_NS::IAny::Ptr {};
+                return META_NS::IAny::Ptr{};
             }
         }
 #ifdef __FG_MODULE__
@@ -1084,7 +982,7 @@ void SceneAdapter::Deinit()
 #ifdef __SR_MODULE__
         offscreenHandle_ = {};
 #endif
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     engineThread->AddWaitableTask(func)->Wait();
 
@@ -1096,7 +994,7 @@ void SceneAdapter::Deinit()
     onWindowChanged_ = false;
 }
 
-void SceneAdapter::AttachSwapchain(SCENE_NS::IRenderTarget::Ptr bitmap, META_NS::IObject::Ptr cameraObj)
+void SceneAdapter::AttachSwapchain(META_NS::IObject::Ptr cameraObj)
 {
     auto camera = interface_pointer_cast<SCENE_NS::ICamera>(cameraObj);
     auto component = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(cameraObj);
@@ -1104,41 +1002,39 @@ void SceneAdapter::AttachSwapchain(SCENE_NS::IRenderTarget::Ptr bitmap, META_NS:
         WIDGET_LOGE("cast cameraObj failed in AttachSwapchain.");
         return;
     }
-    if (!bitmap || !camera->IsActive()) {
+    if (!bitmap_ || !camera->IsActive()) {
         camera->SetRenderTarget({});
         return;
     }
 #ifdef __FG_MODULE__
     if (FG::FGModule::IsEnable()) {
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         auto doc = interface_pointer_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
-        bitmap = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
+        bitmap_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
         bitmap2_ = obr.Create<SCENE_NS::IRenderTarget>(SCENE_NS::ClassId::Bitmap, doc);
-        auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap);
+        auto i = interface_cast<SCENE_NS::IRenderResource>(bitmap_);
         auto j = interface_cast<SCENE_NS::IRenderResource>(bitmap2_);
         if (i && j) {
             auto rcFG = engineInstance_.renderContext_;
             const auto& fg = FG::FGModule::GetConfig();
-            auto factor = BASE_NS::Math::Vec4 {
-                static_cast<float>(fg.width_), static_cast<float>(fg.height_),
-                0.0f, 0.0f
-            };
+            auto factor =
+                BASE_NS::Math::Vec4{static_cast<float>(fg.width_), static_cast<float>(fg.height_), 0.0f, 0.0f};
             i->SetRenderHandle(FGColorOutputHandle_);
             j->SetRenderHandle(FGDepthOutputHandle_);
         }
-        camera->SetRenderTarget(bitmap);
+        camera->SetRenderTarget(bitmap_);
         UpdateCameraDepthTarget(component->GetEcsObject(), bitmap2_);
     } else {
-        camera->SetRenderTarget(bitmap);
+        camera->SetRenderTarget(bitmap_);
     }
 #else
-    camera->SetRenderTarget(bitmap);
+    camera->SetRenderTarget(bitmap_);
 #endif
 }
 
 namespace {
 RENDER_NS::RenderHandleReference CreateOESTextureHandle(CORE_NS::IEcs::Ptr ecs,
-    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext, const SurfaceBufferInfo &surfaceBufferInfo)
+    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext, const SurfaceBufferInfo& surfaceBufferInfo)
 {
     if (!ecs || !renderContext) {
         WIDGET_LOGE("null ecs or renderContext");
@@ -1173,7 +1069,7 @@ RENDER_NS::RenderHandleReference CreateOESTextureHandle(CORE_NS::IEcs::Ptr ecs,
         return {};
     }
 
-    auto &gpuResourceManager = renderContext->GetDevice().GetGpuResourceManager();
+    auto& gpuResourceManager = renderContext->GetDevice().GetGpuResourceManager();
     auto handle = gpuResourceManager.CreateView("AR_CAMERA_PREVIEW", {}, *data);
 
     return handle;
@@ -1196,8 +1092,8 @@ void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
 
     auto envManager = CORE_NS::GetManager<CORE3D_NS::IEnvironmentComponentManager>(*ecs);
     RETURN_IF_NULL(envManager);
-    const auto &shaderMgr = renderContext->GetDevice().GetShaderManager();
-    auto &entityManager = (*ecs).GetEntityManager();
+    const auto& shaderMgr = renderContext->GetDevice().GetShaderManager();
+    auto& entityManager = (*ecs).GetEntityManager();
     auto renderHandleManager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(*ecs);
     RETURN_IF_NULL(renderHandleManager);
     auto uriManager = CORE_NS::GetManager<CORE3D_NS::IUriComponentManager>(*ecs);
@@ -1221,7 +1117,7 @@ void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
         RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
         bufferSize};
     BASE_NS::array_view<const uint8_t> transData(
-        reinterpret_cast<const uint8_t *>(sfBufferInfo_.transformMatrix_.data()), bufferSize);
+        reinterpret_cast<const uint8_t*>(sfBufferInfo_.transformMatrix_.data()), bufferSize);
     camTransBufferHandle_ =
         renderContext->GetDevice().GetGpuResourceManager().Create(ENV_PROPERTIES_BUFFER_NAME, envBufferDesc, transData);
     CORE_NS::EntityReference transBufferEF = entityManager.CreateReferenceCounted();
@@ -1247,10 +1143,10 @@ void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
 
     if (auto rc = scene->RenderConfiguration()->GetValue()) {
         if (auto env = rc->Environment()->GetValue()) {
-            CORE_NS::Entity environmentEntity = interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(env)->
-                GetEcsObject()->GetEntity();
+            CORE_NS::Entity environmentEntity =
+                interface_pointer_cast<SCENE_NS::IEcsObjectAccess>(env)->GetEcsObject()->GetEntity();
             if (auto envDataHandle = envManager->Write(environmentEntity)) {
-                CORE3D_NS::EnvironmentComponent &envComponent = *envDataHandle;
+                CORE3D_NS::EnvironmentComponent& envComponent = *envDataHandle;
                 envComponent.background = CORE3D_NS::EnvironmentComponent::Background::IMAGE;
                 envComponent.shader = shaderEF;
                 envComponent.customResources.push_back({camImageEF_});
@@ -1262,8 +1158,10 @@ void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
     }
     if (!renderDataStoreDefaultStaging_) {
         renderDataStoreDefaultStaging_ = BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreDefaultStaging>(
-            static_cast<RENDER_NS::IRenderDataStoreDefaultStaging *>(
-            renderContext->GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING).get()));
+            static_cast<RENDER_NS::IRenderDataStoreDefaultStaging*>(
+                renderContext->GetRenderDataStoreManager()
+                    .GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING)
+                    .get()));
         RETURN_IF_NULL(renderDataStoreDefaultStaging_);
     }
 }
@@ -1285,7 +1183,7 @@ void SceneAdapter::UpdateSurfaceBuffer()
     const uint32_t bufferSize = sfBufferInfo_.transformMatrix_.size() * FLOAT_TO_BYTE;
     if (bufferSize < TRANSFORM_MATRIX_SIZE * FLOAT_TO_BYTE) {
         WIDGET_LOGE("transform matrix size:%d not 4x4", bufferSize / FLOAT_TO_BYTE);
-        const float *arr = BASE_NS::Math::IDENTITY_4X4.data;
+        const float* arr = BASE_NS::Math::IDENTITY_4X4.data;
         sfBufferInfo_.transformMatrix_.assign(arr, arr + TRANSFORM_MATRIX_SIZE);
     } else if (bufferSize > TRANSFORM_MATRIX_SIZE * FLOAT_TO_BYTE) {
         WIDGET_LOGE("transform matrix size:%d not 4x4", bufferSize / FLOAT_TO_BYTE);
@@ -1304,13 +1202,13 @@ void SceneAdapter::UpdateSurfaceBuffer()
 
     if (camTransBufferHandle_ && renderDataStoreDefaultStaging_) {
         BASE_NS::array_view<const uint8_t> transData(
-            reinterpret_cast<const uint8_t *>(sfBufferInfo_.transformMatrix_.data()), bufferSize);
+            reinterpret_cast<const uint8_t*>(sfBufferInfo_.transformMatrix_.data()), bufferSize);
         const RENDER_NS::BufferCopy bufferCopy{0, 0, bufferSize};
         renderDataStoreDefaultStaging_->CopyDataToBufferOnCpu(transData, camTransBufferHandle_, bufferCopy);
     }
 }
 
-void SceneAdapter::AcquireImage(const SurfaceBufferInfo &bufferInfo)
+void SceneAdapter::AcquireImage(const SurfaceBufferInfo& bufferInfo)
 {
     RETURN_IF_NULL(engineThread);
     engineThread->AddTask(META_NS::MakeCallback<META_NS::ITaskQueueTask>([this, bufferInfo]() {
@@ -1321,58 +1219,47 @@ void SceneAdapter::AcquireImage(const SurfaceBufferInfo &bufferInfo)
     }));
 }
 
-void SceneAdapter::CreateScene(const std::string& uri, std::function<void(bool)> cb)
+void SceneAdapter::CreateEmptyScene()
 {
-    auto &objRegistry = META_NS::GetObjectRegistry();
+    auto& objRegistry = META_NS::GetObjectRegistry();
     auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
     auto sceneManager = objRegistry.Create<SCENE_NS::ISceneManager>(SCENE_NS::ClassId::SceneManager, objContext);
 
-    auto engineThreadTask = [this, cb](SCENE_NS::IScene::Ptr scene) mutable {
-        auto runCbIfAvailable = [cb](bool flag) {
-            if (cb) {
-                cb(flag);
-            }
-        };
+    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
         if (!scene || !scene->RenderConfiguration()->GetValue()) {
-            runCbIfAvailable(false);
             return;
         }
         // make sure there's a valid root node
         scene->GetInternalScene()->GetEcsContext().CreateUnnamedRootNode();
 
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
 
         META_NS::IObjectRegistry* obrPtr = &obr;
         // SceneETS::AddScene function begin
         if (!obrPtr) {
-            WIDGET_LOGE("SceneAdapter::CreateScene get obr null");
-            runCbIfAvailable(false);
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get obr null");
             return;
         }
         auto params = interface_pointer_cast<META_NS::IMetadata>(obrPtr->GetDefaultObjectContext());
         if (!params) {
-            WIDGET_LOGE("SceneAdapter::CreateScene get params null");
-            runCbIfAvailable(false);
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get params null");
             return;
         }
         auto duh = params->GetArrayProperty<IntfWeakPtr>("Scenes");
         if (!duh) {
-            WIDGET_LOGE("SceneAdapter::CreateScene get duh null");
-            runCbIfAvailable(false);
+            WIDGET_LOGE("SceneAdapter::CreateEmptyScene get duh null");
             return;
         }
-        
+
         duh->AddValue(interface_pointer_cast<CORE_NS::IInterface>(scene));
         // SceneETS::AddScene function end
 
         this->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
-        runCbIfAvailable(true);
     };
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
 
-    sceneManager->CreateScene(uri.c_str())
-        .Then(BASE_NS::move(engineThreadTask), engineQ)
-        .Wait();
+    std::string sceneRes = "scene://empty";
+    sceneManager->CreateScene(sceneRes.c_str()).Then(BASE_NS::move(engineThreadTask), engineQ).Wait();
 }
 
 bool SceneAdapter::LoadPluginByUid(const BASE_NS::Uid& uid)
@@ -1385,21 +1272,19 @@ bool SceneAdapter::LoadPluginByUid(const BASE_NS::Uid& uid)
         return false;
     }
 
-    BASE_NS::vector<BASE_NS::Uid> pluginVector = { uid };
-    #define TO_STRING(name) #name
-    #define PLATFORM_PATH_NAME(name) TO_STRING(name)
-    CORE_NS::PlatformCreateInfo platformCreateInfo {
-        PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
+    BASE_NS::vector<BASE_NS::Uid> pluginVector = {uid};
+#define TO_STRING(name) #name
+#define PLATFORM_PATH_NAME(name) TO_STRING(name)
+    CORE_NS::PlatformCreateInfo platformCreateInfo{PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_CORE_PLUGIN_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_PLUGIN_PATH),
         hapInfo_.hapPath_.c_str(),
         hapInfo_.bundleName_.c_str(),
         hapInfo_.moduleName_.c_str(),
-        hapInfo_.resourceManager_
-    };
-    #undef TO_STRING
-    #undef PLATFORM_PATH_NAME
+        hapInfo_.resourceManager_};
+#undef TO_STRING
+#undef PLATFORM_PATH_NAME
 
     const BASE_NS::array_view<BASE_NS::Uid> pluginList(pluginVector.data(), pluginVector.size());
     CORE_NS::CreatePluginRegistry(platformCreateInfo);

@@ -29,17 +29,17 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/device_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/device_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 using namespace BASE_NS;
 using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr uint8_t pipelineCache[50] = { 0u };
+static constexpr uint8_t pipelineCache[50] = {0u};
 
 void TestConfig(UTest::EngineResources& er)
 {
@@ -56,12 +56,12 @@ void TestConfig(UTest::EngineResources& er)
         er.engine->GetInterface<CORE_NS::IClassFactory>()->CreateInstance(UID_RENDER_CONTEXT).get()));
     ASSERT_TRUE(er.context);
 
-    const RenderCreateInfo info {
+    const RenderCreateInfo info{
         {
-            "", // name
-            1,  // versionMajor
-            0,  // versionMinor
-            0,  // versionPatch
+            "",  // name
+            1,   // versionMajor
+            0,   // versionMinor
+            0,   // versionPatch
         },
         dci,
     };
@@ -73,22 +73,7 @@ void TestConfig(UTest::EngineResources& er)
         CORE_LOG_E("Render context init failed");
         CORE_ASSERT(false);
     }
-    unique_ptr<Device> tmpDevice = nullptr;
-#if RENDER_HAS_VULKAN_BACKEND
-    if (er.backend == DeviceBackendType::VULKAN) {
-        tmpDevice = CreateDeviceVk((RenderContext&)(*er.context.get()));
-    }
-#endif // RENDER_HAS_VULKAN_BACKEND
-#if RENDER_HAS_GL_BACKEND
-    if (er.backend == DeviceBackendType::OPENGL) {
-        tmpDevice = CreateDeviceGL((RenderContext&)(*er.context.get()));
-    }
-#endif // RENDER_HAS_GL_BACKEND
-#if RENDER_HAS_GLES_BACKEND
-    if (er.backend == DeviceBackendType::OPENGLES) {
-        tmpDevice = CreateDeviceGLES((RenderContext&)(*er.context.get()));
-    }
-#endif // RENDER_HAS_GLES_BACKEND
+    Device* tmpDevice = &static_cast<Device&>(er.context->GetDevice());
 
     const auto devCon = tmpDevice->GetDeviceConfiguration();
     ASSERT_EQ(dci.deviceConfiguration.bufferingCount, devCon.bufferingCount);
@@ -100,7 +85,7 @@ void TestPipelineCache(const UTest::EngineResources& er)
 {
     Device& device = *static_cast<Device*>(er.device);
     {
-        device.InitializePipelineCache({ pipelineCache, countof(pipelineCache) });
+        device.InitializePipelineCache({pipelineCache, countof(pipelineCache)});
         auto data = device.GetPipelineCache();
         ASSERT_NE(0, data.size());
         device.InitializePipelineCache(data);
@@ -124,7 +109,7 @@ void TestLowLevelDevice(const UTest::EngineResources& er)
             auto platData = deviceVk.GetPlatformDataVk();
             ASSERT_EQ(((DeviceVk&)device).GetPlatformDataVk().device, platData.device);
             {
-                GpuBufferDesc desc {};
+                GpuBufferDesc desc{};
                 desc.byteSize = 16;
                 desc.engineCreationFlags = EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
                                            EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
@@ -139,7 +124,7 @@ void TestLowLevelDevice(const UTest::EngineResources& er)
                 ASSERT_TRUE(buffer.buffer);
             }
             {
-                GpuImageDesc desc {};
+                GpuImageDesc desc{};
                 desc.engineCreationFlags = EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS;
                 desc.format = BASE_FORMAT_R32G32B32A32_SFLOAT;
                 desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -161,7 +146,7 @@ void TestLowLevelDevice(const UTest::EngineResources& er)
                 ASSERT_TRUE(image.image);
             }
             {
-                GpuSamplerDesc desc {};
+                GpuSamplerDesc desc{};
                 desc.engineCreationFlags = 0;
                 desc.addressModeU = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
                 desc.addressModeV = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -192,13 +177,13 @@ void TestLowLevelDevice(const UTest::EngineResources& er)
                 ASSERT_FALSE(sampler.sampler);
             }
         }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
         if (er.backend == DeviceBackendType::OPENGL || er.backend == DeviceBackendType::OPENGLES) {
             LowLevelDeviceGLES& deviceGL = static_cast<LowLevelDeviceGLES&>(lowLevelDevice);
             ASSERT_EQ(er.backend, deviceGL.GetBackendType());
         }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
     }
 }
 void TestDevice(const UTest::EngineResources& er)
@@ -225,7 +210,7 @@ void TestDevice(const UTest::EngineResources& er)
             {
                 // NOTE: this is a low-level test which user does not have access to
                 // one could create proper test to the previous IGpuResourceManager::Create()
-                GpuAccelerationStructureDesc accStructDesc {};
+                GpuAccelerationStructureDesc accStructDesc{};
                 accStructDesc.accelerationStructureType =
                     AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
                 accStructDesc.bufferDesc.usageFlags = CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT;
@@ -241,7 +226,7 @@ void TestDevice(const UTest::EngineResources& er)
                 ASSERT_EQ(0u, accBuildSizes.accelerationStructureSize);
                 ASSERT_EQ(0u, accBuildSizes.buildScratchSize);
                 ASSERT_EQ(0u, accBuildSizes.updateScratchSize);
-#endif // !(RENDER_VULKAN_RT_ENABLED)
+#endif  // !(RENDER_VULKAN_RT_ENABLED)
             }
             {
                 uint32_t formatIdx = static_cast<uint32_t>(BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM);
@@ -255,13 +240,13 @@ void TestDevice(const UTest::EngineResources& er)
             }
             {
                 auto properties = deviceVk.GetFormatProperties(Format::BASE_FORMAT_UNDEFINED);
-                ASSERT_EQ(FormatProperties {}.bufferFeatures, properties.bufferFeatures);
-                ASSERT_EQ(FormatProperties {}.bytesPerPixel, properties.bytesPerPixel);
-                ASSERT_EQ(FormatProperties {}.linearTilingFeatures, properties.linearTilingFeatures);
-                ASSERT_EQ(FormatProperties {}.optimalTilingFeatures, properties.optimalTilingFeatures);
+                ASSERT_EQ(FormatProperties{}.bufferFeatures, properties.bufferFeatures);
+                ASSERT_EQ(FormatProperties{}.bytesPerPixel, properties.bytesPerPixel);
+                ASSERT_EQ(FormatProperties{}.linearTilingFeatures, properties.linearTilingFeatures);
+                ASSERT_EQ(FormatProperties{}.optimalTilingFeatures, properties.optimalTilingFeatures);
             }
         }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
         if (er.backend == DeviceBackendType::OPENGL || er.backend == DeviceBackendType::OPENGLES) {
             DeviceGLES& deviceGL = static_cast<DeviceGLES&>(device);
@@ -274,7 +259,7 @@ void TestDevice(const UTest::EngineResources& er)
             ASSERT_EQ(0u, deviceGL.BoundBuffer(0u, 0u));
             ASSERT_EQ(0u, deviceGL.BoundTexture(0u, 0u));
             ASSERT_EQ(0u, deviceGL.BoundTexture(0u, 0u));
-#endif // NDEBUG
+#endif  // NDEBUG
 
             ASSERT_EQ(0u, deviceGL.BoundSampler(0u));
 
@@ -284,7 +269,7 @@ void TestDevice(const UTest::EngineResources& er)
 
                 deviceGL.Activate();
 
-                GpuAccelerationStructureDesc accStructDesc {};
+                GpuAccelerationStructureDesc accStructDesc{};
                 accStructDesc.accelerationStructureType =
                     AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
                 accStructDesc.bufferDesc.usageFlags = CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT;
@@ -294,26 +279,25 @@ void TestDevice(const UTest::EngineResources& er)
                 auto gpuBuffer = deviceGL.CreateGpuBuffer(accStructDesc);
                 ASSERT_TRUE(gpuBuffer);
                 auto buildSizes = deviceGL.GetAccelerationStructureBuildSizes({}, {}, {}, {});
-                ASSERT_EQ(AsBuildSizes {}.accelerationStructureSize, buildSizes.accelerationStructureSize);
-                ASSERT_EQ(AsBuildSizes {}.buildScratchSize, buildSizes.buildScratchSize);
-                ASSERT_EQ(AsBuildSizes {}.updateScratchSize, buildSizes.updateScratchSize);
+                ASSERT_EQ(AsBuildSizes{}.accelerationStructureSize, buildSizes.accelerationStructureSize);
+                ASSERT_EQ(AsBuildSizes{}.buildScratchSize, buildSizes.buildScratchSize);
+                ASSERT_EQ(AsBuildSizes{}.updateScratchSize, buildSizes.updateScratchSize);
 
                 gpuBuffer.reset();
 
                 deviceGL.Deactivate();
             }
         }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
     }
 }
 void TestBackendExtra(const UTest::EngineResources& er)
 {
 #if RENDER_HAS_VULKAN_BACKEND
     // NOTE: this test cannot run
-    // it should be done from the API level with different vulkan instances
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -370,13 +354,12 @@ UNIT_TEST(SRC_Device, DeviceTestVulkan, testing::ext::TestSize.Level1)
     TestDevice(engine);
     UTest::DestroyEngine(engine);
 }
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceBackendExtraTest2Vulkan
  * @tc.desc: DOES NOTHING RIGH NOW
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_Device, DISABLED_DeviceBackendExtraTest2Vulkan, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_Device, DeviceBackendExtraTest2Vulkan, testing::ext::TestSize.Level1)
 {
     UTest::EngineResources engine;
     engine.backend = DeviceBackendType::VULKAN;
@@ -384,8 +367,7 @@ UNIT_TEST(SRC_Device, DISABLED_DeviceBackendExtraTest2Vulkan, testing::ext::Test
     TestBackendExtra(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -403,13 +385,12 @@ UNIT_TEST(SRC_Device, LowLevelDeviceTestOpenGL, testing::ext::TestSize.Level1)
     UTest::DestroyEngine(engine);
 }
 
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceConfigurationTestOpenGL
  * @tc.desc: Tests device configuration for OpenGL.
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_Device, DISABLED_DeviceConfigurationTestOpenGL, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_Device, DeviceConfigurationTestOpenGL, testing::ext::TestSize.Level1)
 {
     UTest::EngineResources engine;
     engine.backend = UTest::GetOpenGLBackend();
@@ -418,7 +399,6 @@ UNIT_TEST(SRC_Device, DISABLED_DeviceConfigurationTestOpenGL, testing::ext::Test
     TestConfig(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // DISABLED_TESTS_ON
 /**
  * @tc.name: DeviceTestOpenGL
  * @tc.desc: Tests for OpenGL device properties.
@@ -433,4 +413,4 @@ UNIT_TEST(SRC_Device, DeviceTestOpenGL, testing::ext::TestSize.Level1)
     TestDevice(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

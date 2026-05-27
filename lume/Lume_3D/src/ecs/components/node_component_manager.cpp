@@ -21,6 +21,14 @@
 #define IMPLEMENT_MANAGER
 #include <core/property_tools/property_macros.h>
 
+CORE_BEGIN_NAMESPACE()
+using CORE3D_NS::NodeComponent;
+
+DECLARE_PROPERTY_TYPE(NodeComponent::FlagBits);
+
+ENUM_TYPE_METADATA(NodeComponent::FlagBits, ENUM_VALUE(CONTRIBUTE_GI_BIT, "Contribute GI"))
+CORE_END_NAMESPACE()
+
 CORE3D_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
 using BASE_NS::countof;

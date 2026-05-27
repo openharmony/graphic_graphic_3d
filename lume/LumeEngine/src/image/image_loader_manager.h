@@ -28,7 +28,7 @@
 #include <core/plugin/intf_plugin_register.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -73,4 +73,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IMAGE_IMAGE_LOADER_MANAGER_H
+#endif  // CORE_IMAGE_IMAGE_LOADER_MANAGER_H

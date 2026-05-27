@@ -20,51 +20,49 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <napi_api.h>
-#include <scene/interface/intf_scene.h>
 #include <scene/ext/component_util.h>
 #include <scene/interface/component_util.h>
 #include <scene/interface/intf_layer.h>
 #include <scene/interface/intf_light.h>
+#include <scene/interface/intf_scene.h>
 
 #include <3d/ecs/components/layer_component.h>
 
 #include "BaseObjectJS.h"
 #include "JsObjectCache.h"
+#include "class_definition_helpers.h"
 
-// NodeContainerJS
+static constexpr napi_type_tag NODE_CONTAINER_TAG = {SCENE_NS::INode::UID.data[0], SCENE_NS::INode::UID.data[1]};
 
-static constexpr napi_type_tag NODE_CONTAINER_TAG = { SCENE_NS::INode::UID.data[0], SCENE_NS::INode::UID.data[1] };
-
-template<typename FC, napi_value (NodeContainerJS::*F)(FC&)>
+template <typename FC, napi_value (NodeContainerJS::*F)(FC&)>
 static inline napi_value ECMethodI(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
     if (auto value = fc.RawThis()) {
-        auto me = NapiApi::UnwrapTagged<NodeContainerJS>(env, value, NODE_CONTAINER_TAG);
-        if (me) {
+        if (auto me = NapiApi::UnwrapTagged<NodeContainerJS>(env, value, NODE_CONTAINER_TAG)) {
             return (me->*F)(fc);
         }
     }
     return fc.GetUndefined();
 };
 
-template<typename FC, napi_value (NodeContainerJS::*F)(FC&)>
+template <typename FC, napi_value (NodeContainerJS::*F)(FC&)>
 static inline napi_property_descriptor ECMethod(
     const char* const name, napi_property_attributes flags = napi_default_method)
 {
-    return napi_property_descriptor { name, nullptr, ECMethodI<FC, F>, nullptr, nullptr, nullptr, flags, nullptr };
+    return napi_property_descriptor{name, nullptr, ECMethodI<FC, F>, nullptr, nullptr, nullptr, flags, nullptr};
 }
 
 void NodeContainerJS::Init(napi_env env, napi_value exports)
 {
     using namespace NapiApi;
 
-    napi_property_descriptor props[] = { ECMethod<FunctionContext<Object>, &NodeContainerJS::AppendChild>("append"),
+    napi_property_descriptor props[] = {ECMethod<FunctionContext<Object>, &NodeContainerJS::AppendChild>("append"),
         ECMethod<FunctionContext<Object, Object>, &NodeContainerJS::InsertChildAfter>("insertAfter"),
         ECMethod<FunctionContext<Object>, &NodeContainerJS::RemoveChild>("remove"),
         ECMethod<FunctionContext<uint32_t>, &NodeContainerJS::GetChild>("get"),
         ECMethod<FunctionContext<>, &NodeContainerJS::ClearChildren>("clear"),
-        ECMethod<FunctionContext<>, &NodeContainerJS::GetCount>("count") };
+        ECMethod<FunctionContext<>, &NodeContainerJS::GetCount>("count")};
     napi_callback ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         napi_value thisVar = nullptr;
         // fetch the "this" from javascript.
@@ -95,8 +93,8 @@ NodeContainerJS::NodeContainerJS(napi_env e, napi_callback_info i)
     LOG_V("NodeContainerJS ++");
     napi_value thisVar = nullptr;
     napi_get_cb_info(e, i, nullptr, nullptr, &thisVar, nullptr);
-    NapiApi::WrapTagged<NodeContainerJS>(e, thisVar, reinterpret_cast<void*>((NodeContainerJS*)this), nullptr, nullptr,
-        NODE_CONTAINER_TAG, nullptr);
+    NapiApi::WrapTagged<NodeContainerJS>(
+        e, thisVar, reinterpret_cast<void*>((NodeContainerJS*)this), nullptr, nullptr, NODE_CONTAINER_TAG, nullptr);
 
     if (auto fromJs = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>(e, i)) {
         node_ = NapiApi::Object(fromJs.Arg<0>());
@@ -116,7 +114,7 @@ NodeImpl* NodeContainerJS::GetNode()
     auto object = node_.GetNapiObject();
     if (object.IsDefined()) {
         if (auto root = object.GetRoot()) {
-            return static_cast<NodeImpl*>(root->GetInstanceImpl(NodeImpl::ID));    
+            return static_cast<NodeImpl*>(root->GetInstanceImpl(NodeImpl::ID));
         }
     }
     return nullptr;
@@ -246,8 +244,7 @@ void NodeImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props
     props.push_back(MakeTROMethod<FunctionContext<>, NodeImpl, &NodeImpl::Dispose>("destroy"));
     props.push_back(
         MakeTROMethod<FunctionContext<BASE_NS::string>, NodeImpl, &NodeImpl::GetNodeByPath>("getNodeByPath"));
-    props.push_back(
-        MakeTROMethod<FunctionContext<BASE_NS::string>, NodeImpl, &NodeImpl::GetComponent>("getComponent"));
+    props.push_back(MakeTROMethod<FunctionContext<BASE_NS::string>, NodeImpl, &NodeImpl::GetComponent>("getComponent"));
 
     // layermask methods.
     props.push_back(MakeTROMethod<FunctionContext<uint32_t>, NodeImpl, &NodeImpl::GetLayerMaskEnabled>("getEnabled"));
@@ -256,7 +253,7 @@ void NodeImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props
 
     // container
 #ifndef NODE_CONTAINER_WORKS
-     //Should not be needed anymore as NodeContainerJS handles container interface
+    // Should not be needed anymore as NodeContainerJS handles container interface
     props.push_back(MakeTROMethod<FunctionContext<Object>, NodeImpl, &NodeImpl::AppendChild>("append"));
     props.push_back(
         MakeTROMethod<FunctionContext<Object, Object>, NodeImpl, &NodeImpl::InsertChildAfter>("insertAfter"));
@@ -264,7 +261,7 @@ void NodeImpl::GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props
     props.push_back(MakeTROMethod<FunctionContext<uint32_t>, NodeImpl, &NodeImpl::GetChild>("get"));
     props.push_back(MakeTROMethod<FunctionContext<>, NodeImpl, &NodeImpl::ClearChildren>("clear"));
     props.push_back(MakeTROMethod<FunctionContext<>, NodeImpl, &NodeImpl::GetCount>("count"));
-#endif	
+#endif
 
     // Internal methods
     props.push_back(
@@ -282,7 +279,7 @@ napi_value NodeImpl::Dispose(NapiApi::FunctionContext<>& ctx)
     return ctx.GetUndefined();
 }
 
-constexpr uint32_t MAX_LAYER_BIT = 63; // Max bit index for uint64_t bitmask
+constexpr uint32_t MAX_LAYER_BIT = 63;  // Max bit index for uint64_t bitmask
 
 napi_value NodeImpl::GetLayerMaskEnabled(NapiApi::FunctionContext<uint32_t>& ctx)
 {
@@ -346,7 +343,7 @@ napi_value NodeImpl::GetNodeType(NapiApi::FunctionContext<>& ctx)
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
-    uint32_t type = -1; // return -1 if the object does not exist anymore
+    uint32_t type = -1;  // return -1 if the object does not exist anymore
     if (ctx.This().GetNative<SCENE_NS::INode>()) {
         type = type_;
     }
@@ -383,7 +380,7 @@ napi_value NodeImpl::GetNodeName(NapiApi::FunctionContext<>& ctx)
     // LEGACY COMPATIBILITY start
     auto parent = node->GetParent().GetResult();
     if (!parent) {
-        //parentless node, "root"
+        // parentless node, "root"
         if (name.empty()) {
             // no name, and no parent.
             // so return the legacy default name
@@ -591,7 +588,7 @@ napi_value NodeImpl::GetParent(NapiApi::FunctionContext<>& ctx)
 
     NapiApi::Env env(ctx.GetEnv());
     NapiApi::Object argJS(env);
-    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+    napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
 
     // These are owned by the scene, so store only a weak reference.
     auto js = CreateFromNativeInstance(env, parent, PtrType::WEAK, args);
@@ -613,8 +610,8 @@ napi_value NodeImpl::GetChildContainer(NapiApi::FunctionContext<>& ctx)
         auto meJs = ctx.This();
         if (auto me = meJs.GetNative<SCENE_NS::INode>()) {
             NapiApi::Env env(ctx.Env());
-            napi_value args[] = { meJs.ToNapiValue(), scene_.GetValue() };
-            children_ = NapiApi::StrongRef { NapiApi::Object { env, "NodeContainer", args } };
+            napi_value args[] = {meJs.ToNapiValue(), scene_.GetValue()};
+            children_ = NapiApi::StrongRef{NapiApi::Object{env, "NodeContainer", args}};
         }
     }
     return children_.GetValue();
@@ -633,8 +630,8 @@ napi_value NodeImpl::GetChild(NapiApi::FunctionContext<uint32_t>& ctx)
         auto children = node->GetChildren().GetResult();
         if (index < children.size()) {
             const auto env = ctx.GetEnv();
-            auto argJS = NapiApi::Object { env };
-            napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+            auto argJS = NapiApi::Object{env};
+            napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
             // These are owned by the scene, so store only weak reference.
             auto js = CreateFromNativeInstance(env, children[index], PtrType::WEAK, args);
             if (auto wrapper = js.GetJsWrapper<NodeImpl>()) {
@@ -680,7 +677,7 @@ napi_value NodeImpl::AppendChild(NapiApi::FunctionContext<NapiApi::Object>& ctx)
             return ctx.GetUndefined();
         }
 
-       if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
+        if (auto wrapper = childJS.GetJsWrapper<NodeImpl>()) {
             wrapper->Attached(true);
         }
         parent->AddChild(childNode);
@@ -837,8 +834,8 @@ napi_value NodeImpl::GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ct
             return ctx.GetNull();
         }
         const auto env = ctx.GetEnv();
-        auto argJS = NapiApi::Object { env };
-        napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+        auto argJS = NapiApi::Object{env};
+        napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
         // These are owned by the scene, so store only weak reference.
         auto js = CreateFromNativeInstance(env, child, PtrType::WEAK, args);
         if (js.GetJsWrapper<NodeImpl>()) {
@@ -867,7 +864,7 @@ napi_value NodeImpl::GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx
             if (auto comp = cont->FindByName<SCENE_NS::IComponent>(name)) {
                 NapiApi::Env env(ctx.GetEnv());
                 NapiApi::Object argJS(env);
-                napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+                napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
                 return CreateFromNativeInstance(env, comp, PtrType::WEAK, args).ToNapiValue();
             }
         }
@@ -887,12 +884,12 @@ void NodeImpl::Attached(bool attached)
 void CleanupNode(TrueRootObject* bo, bool isAttached)
 {
     if (!bo) {
-        LOG_E("#### CleanupNode: null root object");
+        LOG_E("CleanupNode: null root object");
         return;
     }
     auto node = bo->GetNativeObject<SCENE_NS::INode>();
     if (!node) {
-        LOG_V("#### CleanupNode: null native object, attached %d", isAttached);
+        LOG_V("CleanupNode: null native object, attached %d", isAttached);
         return;
     }
     ExecSyncTask([remove = !isAttached, bo, node = BASE_NS::move(node)]() mutable {
@@ -908,6 +905,6 @@ void CleanupNode(TrueRootObject* bo, bool isAttached)
                 scene->ReleaseNode(BASE_NS::move(node), false).Wait();
             }
         }
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 }

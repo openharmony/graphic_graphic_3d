@@ -44,7 +44,7 @@ UNIT_TEST(API_UnitTest_Algorithm, Less, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_UnitTest_Algorithm, InsertionSort, testing::ext::TestSize.Level1)
 {
-    std::uint8_t data[] = { 0, 7, 14, 3, 7, 12, 9, 1, 6, 11, 2, 8, 13, 4, 15, 5, 10 };
+    std::uint8_t data[] = {0, 7, 14, 3, 7, 12, 9, 1, 6, 11, 2, 8, 13, 4, 15, 5, 10};
     const auto elements = BASE_NS::extent_v<decltype(data)>;
     // sort with default less comparison
     BASE_NS::InsertionSort(data, data + elements);
@@ -66,7 +66,7 @@ UNIT_TEST(API_UnitTest_Algorithm, InsertionSort, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_UnitTest_Algorithm, LowerBound, testing::ext::TestSize.Level1)
 {
-    std::uint8_t data[] = { 7, 14, 3, 7, 9, 1, 6, 11, 2, 8, 13, 4, 15, 5, 10, 16 };
+    std::uint8_t data[] = {7, 14, 3, 7, 9, 1, 6, 11, 2, 8, 13, 4, 15, 5, 10, 16};
     const auto elements = BASE_NS::extent_v<decltype(data)>;
     BASE_NS::InsertionSort(data, data + elements);
 

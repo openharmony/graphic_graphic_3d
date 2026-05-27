@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "keyframeAnimation",
+		"name": "kfAnimVec3",
+		"duration": 500.0,
+		"from": { "type": "vec3", "value": [1.0, 2.0, 3.0] },
+		"to": { "type": "vec3", "value": [4.0, 5.0, 6.0] }
+	}
+}

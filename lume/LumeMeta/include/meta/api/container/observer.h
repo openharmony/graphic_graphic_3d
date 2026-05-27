@@ -47,7 +47,7 @@ public:
     {
         return META_INTERFACE_OBJECT_CALL_PTR(GetTarget());
     }
-    template<typename Type = IObject>
+    template <typename Type = IObject>
     auto GetAllObserved() const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetAllObserved<Type>());
@@ -62,12 +62,12 @@ public:
      * @return Event token for the handler which can be used to unsubscribe the handler. ContainerObserver does not
      * automatically unsubscribe the event at destruction.
      */
-    template<typename Callback>
+    template <typename Callback>
     auto OnHierarchyChanged(Callback&& callback) const
     {
         auto p = OnHierarchyChanged();
         return p ? p->AddHandler(MakeCallback<IOnHierarchyChanged>(BASE_NS::forward<Callback>(callback)))
-                 : IEvent::Token {};
+                 : IEvent::Token{};
     }
 };
 
@@ -97,23 +97,23 @@ public:
      * @return Event token for the handler which can be used to unsubscribe the handler. ContainerObserver does not
      * automatically unsubscribe the event at destruction.
      */
-    template<typename Callback>
+    template <typename Callback>
     auto OnDescendantChanged(Callback&& callback) const
     {
         auto p = OnDescendantChanged();
         return p ? p->AddHandler(MakeCallback<IOnChildChanged>(BASE_NS::forward<Callback>(callback)))
-                 : META_NS::IEvent::Token {};
+                 : META_NS::IEvent::Token{};
     }
 };
 
 /// Returns a default object which implements IObjectHierarchyObserver
-template<>
+template <>
 inline auto CreateObjectInstance<IObjectHierarchyObserver>()
 {
     return ObjectHierarchyObserver(CreateNew);
 }
 /// Returns a default object which implements IObjectHierarchyObserver
-template<>
+template <>
 inline auto CreateObjectInstance<IContainerObserver>()
 {
     return ContainerObserver(CreateNew);
@@ -121,4 +121,4 @@ inline auto CreateObjectInstance<IContainerObserver>()
 
 META_END_NAMESPACE()
 
-#endif // META_API_CONTAINER_OBSERVER_H
+#endif  // META_API_CONTAINER_OBSERVER_H

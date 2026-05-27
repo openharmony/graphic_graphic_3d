@@ -47,17 +47,17 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 512u, 512u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{512u, 512u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(uint16_t);
 uint16_t imageData[IMAGE_SIZE];
 float testDataTonemapper[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
-static constexpr string_view INPUT_IMAGE_NAME_1 { "InputImage1" };
-static constexpr string_view INPUT_IMAGE_NAME_2 { "InputImage2" };
-static constexpr string_view INPUT_BUFFER_NAME_0 { "InputBuffer0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
+static constexpr string_view INPUT_IMAGE_NAME_1{"InputImage1"};
+static constexpr string_view INPUT_IMAGE_NAME_2{"InputImage2"};
+static constexpr string_view INPUT_BUFFER_NAME_0{"InputBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -86,15 +86,15 @@ array_view<const uint8_t> CreateImageDataViewBloom()
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             if (i < TEST_DATA_SIZE.x / 2) {
                 float value = 15.f;
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value); // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value); // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value); // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value);  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value);  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value);  // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
             } else {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f); // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f); // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f); // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
             }
         }
     }
@@ -107,7 +107,7 @@ array_view<const uint8_t> CreateImageDataViewBloom()
     UTest::SaveHdrImage("SinglePostProcessBloomTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
 #endif
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 array_view<const uint8_t> CreateImageDataViewBlur()
@@ -116,15 +116,15 @@ array_view<const uint8_t> CreateImageDataViewBlur()
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             constexpr float value = 15.f;
             if (i < TEST_DATA_SIZE.x / 2 && (i + j) % 2 == 0) {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value); // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value);  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);   // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);   // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
             } else {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value); // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);   // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value);  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);   // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
             }
         }
     }
@@ -137,7 +137,7 @@ array_view<const uint8_t> CreateImageDataViewBlur()
     UTest::SaveHdrImage("SinglePostProcessBlurTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
 #endif
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 array_view<const uint8_t> CreateImageDataViewUpscale()
@@ -153,10 +153,10 @@ array_view<const uint8_t> CreateImageDataViewUpscale()
             float g = y / float(height);
             float b = (r + g) / 2.0f;
 
-            imageData[i * height * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);    // R
-            imageData[i * height * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);    // G
-            imageData[i * height * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);    // B
-            imageData[i * height * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+            imageData[i * height * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);     // R
+            imageData[i * height * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);     // G
+            imageData[i * height * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);     // B
+            imageData[i * height * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
         }
     }
 #if RENDER_SAVE_TEST_IMAGES == 1
@@ -167,8 +167,8 @@ array_view<const uint8_t> CreateImageDataViewUpscale()
     }
     UTest::SaveHdrImage("SinglePostProcessUpscalingTestInput.png", width, height, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+#endif  // RENDER_SAVE_TEST_IMAGES
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 array_view<const uint8_t> CreateImageDataViewSsao()
@@ -184,10 +184,10 @@ array_view<const uint8_t> CreateImageDataViewSsao()
             float g = y / float(height);
             float b = (r + g) / 2.0f;
 
-            imageData[i * height * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);    // R
-            imageData[i * height * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);    // G
-            imageData[i * height * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);    // B
-            imageData[i * height * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+            imageData[i * height * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);     // R
+            imageData[i * height * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);     // G
+            imageData[i * height * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);     // B
+            imageData[i * height * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
         }
     }
 #if RENDER_SAVE_TEST_IMAGES == 1
@@ -198,8 +198,8 @@ array_view<const uint8_t> CreateImageDataViewSsao()
     }
     UTest::SaveHdrImage("SinglePostProcessSsaoTestInput.png", width, height, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+#endif  // RENDER_SAVE_TEST_IMAGES
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResourcesBloom(UTest::EngineResources& er)
@@ -232,15 +232,15 @@ TestResources CreateTestResourcesBloom(UTest::EngineResources& er)
 
     RenderPostProcessBloomNode::EffectProperties properties = {};
     properties.enabled = true;
-    array_view<uint8_t> propData = { reinterpret_cast<uint8_t*>(&properties),
-        sizeof(RenderPostProcessBloomNode::EffectProperties) };
+    array_view<uint8_t> propData = {
+        reinterpret_cast<uint8_t*>(&properties), sizeof(RenderPostProcessBloomNode::EffectProperties)};
     bloom->SetData(propData);
 
     IRenderDataStoreRenderPostProcesses::PostProcessData data = {};
     data.id = 0;
     data.postProcess = bloom;
 
-    store->AddData("SrcTests", { &data, 1 });
+    store->AddData("SrcTests", {&data, 1});
     res.dataStore = store;
     // Render node graph
     {
@@ -285,15 +285,15 @@ TestResources CreateTestResourcesBlur(UTest::EngineResources& er)
 
     RenderPostProcessBlurNode::EffectProperties properties = {};
     properties.enabled = true;
-    array_view<uint8_t> propData = { reinterpret_cast<uint8_t*>(&properties),
-        sizeof(RenderPostProcessBlurNode::EffectProperties) };
+    array_view<uint8_t> propData = {
+        reinterpret_cast<uint8_t*>(&properties), sizeof(RenderPostProcessBlurNode::EffectProperties)};
     blur->SetData(propData);
 
     IRenderDataStoreRenderPostProcesses::PostProcessData data = {};
     data.id = 0;
     data.postProcess = blur;
 
-    store->AddData("SrcTests", { &data, 1 });
+    store->AddData("SrcTests", {&data, 1});
     res.dataStore = store;
     // Render node graph
     {
@@ -335,8 +335,8 @@ TestResources CreateTestResourcesUpscale(UTest::EngineResources& er)
     RenderPostProcessUpscaleNode::EffectProperties properties = {};
     properties.enabled = true;
     properties.upscaleConfiguration.ratio = 4.0f;
-    array_view<uint8_t> propData = { reinterpret_cast<uint8_t*>(&properties),
-        sizeof(RenderPostProcessUpscaleNode::EffectProperties) };
+    array_view<uint8_t> propData = {
+        reinterpret_cast<uint8_t*>(&properties), sizeof(RenderPostProcessUpscaleNode::EffectProperties)};
     upscaler->SetData(propData);
 
     IRenderDataStoreRenderPostProcesses::PostProcessData data = {};
@@ -345,7 +345,7 @@ TestResources CreateTestResourcesUpscale(UTest::EngineResources& er)
 
     refcnt_ptr<IRenderDataStoreRenderPostProcesses> store = er.context->GetRenderDataStoreManager().Create(
         IRenderDataStoreRenderPostProcesses::UID, "RenderDataStoreRenderPostProcesses");
-    store->AddData("SrcTests", { &data, 1 });
+    store->AddData("SrcTests", {&data, 1});
     res.dataStore = move(store);
 
     // Render node graph
@@ -414,9 +414,10 @@ TestResources CreateTestResourcesSsao(UTest::EngineResources& er)
         res.inputImageHandle2 = er.device->GetGpuResourceManager().Create(INPUT_IMAGE_NAME_2, imageDesc, dataView);
     }
     {
-        GpuBufferDesc bufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        GpuBufferDesc bufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 1024U };
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            1024U};
         res.inputBufferHandle0 = er.device->GetGpuResourceManager().Create(INPUT_BUFFER_NAME_0, bufferDesc);
     }
     auto* renderClassFactory = er.context->GetInterface<Core::IClassFactory>();
@@ -426,8 +427,8 @@ TestResources CreateTestResourcesSsao(UTest::EngineResources& er)
 
     RenderPostProcessSsaoNode::EffectProperties properties = {};
     properties.enabled = true;
-    array_view<uint8_t> propData = { reinterpret_cast<uint8_t*>(&properties),
-        sizeof(RenderPostProcessSsaoNode::EffectProperties) };
+    array_view<uint8_t> propData = {
+        reinterpret_cast<uint8_t*>(&properties), sizeof(RenderPostProcessSsaoNode::EffectProperties)};
     ssao->SetData(propData);
 
     IRenderDataStoreRenderPostProcesses::PostProcessData data = {};
@@ -436,7 +437,7 @@ TestResources CreateTestResourcesSsao(UTest::EngineResources& er)
 
     refcnt_ptr<IRenderDataStoreRenderPostProcesses> store = er.context->GetRenderDataStoreManager().Create(
         IRenderDataStoreRenderPostProcesses::UID, "RenderDataStoreRenderPostProcesses");
-    store->AddData("SrcTests", { &data, 1 });
+    store->AddData("SrcTests", {&data, 1});
     res.dataStore = move(store);
 
     // Render node graph
@@ -505,9 +506,10 @@ TestResources CreateTestResourcesCmaa2(UTest::EngineResources& er)
         res.inputImageHandle2 = er.device->GetGpuResourceManager().Create(INPUT_IMAGE_NAME_2, imageDesc, dataView);
     }
     {
-        GpuBufferDesc bufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        GpuBufferDesc bufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 1024U };
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            1024U};
         res.inputBufferHandle0 = er.device->GetGpuResourceManager().Create(INPUT_BUFFER_NAME_0, bufferDesc);
     }
     auto* renderClassFactory = er.context->GetInterface<Core::IClassFactory>();
@@ -517,8 +519,8 @@ TestResources CreateTestResourcesCmaa2(UTest::EngineResources& er)
 
     RenderPostProcessCmaa2Node::EffectProperties properties = {};
     properties.enabled = true;
-    array_view<uint8_t> propData = { reinterpret_cast<uint8_t*>(&properties),
-        sizeof(RenderPostProcessCmaa2Node::EffectProperties) };
+    array_view<uint8_t> propData = {
+        reinterpret_cast<uint8_t*>(&properties), sizeof(RenderPostProcessCmaa2Node::EffectProperties)};
     cmaa2->SetData(propData);
 
     IRenderDataStoreRenderPostProcesses::PostProcessData data = {};
@@ -527,7 +529,7 @@ TestResources CreateTestResourcesCmaa2(UTest::EngineResources& er)
 
     refcnt_ptr<IRenderDataStoreRenderPostProcesses> store = er.context->GetRenderDataStoreManager().Create(
         IRenderDataStoreRenderPostProcesses::UID, "RenderDataStoreRenderPostProcesses");
-    store->AddData("SrcTests", { &data, 1 });
+    store->AddData("SrcTests", {&data, 1});
     res.dataStore = move(store);
 
     // Render node graph
@@ -562,11 +564,11 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(tr.renderNodeGraph, inputs, {});
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderDeferred({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderDeferred({&tr.renderNodeGraph, 1u});
             er.context->GetRenderer().RenderDeferredFrame();
         } else {
             er.context->GetRenderer().RenderFrame({});
@@ -729,11 +731,11 @@ void ValidateUpscale(const TestData& td)
             float expectedA = 1.0f;
 
             float epsilon = 0.05f;
-            EXPECT_NEAR(R, expectedR, epsilon);
-            EXPECT_NEAR(G, expectedG, epsilon);
-            EXPECT_NEAR(B, expectedB, epsilon);
+            ASSERT_NEAR(R, expectedR, epsilon);
+            ASSERT_NEAR(G, expectedG, epsilon);
+            ASSERT_NEAR(B, expectedB, epsilon);
 
-            EXPECT_EQ(1.0f, A);
+            ASSERT_EQ(1.0f, A);
         }
     }
 }
@@ -878,7 +880,7 @@ void TestCmaa2IntfUtil(DeviceBackendType backend)
     TickTest(testData, 3);
     return;
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -934,7 +936,7 @@ UNIT_TEST(SRC_RenderNodePostProcessInterfaceUtil, RenderNodePostProcessInterface
 {
     TestCmaa2IntfUtil(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -991,4 +993,4 @@ UNIT_TEST(SRC_RenderNodePostProcessInterfaceUtil, RenderNodePostProcessInterface
 {
     TestCmaa2IntfUtil(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

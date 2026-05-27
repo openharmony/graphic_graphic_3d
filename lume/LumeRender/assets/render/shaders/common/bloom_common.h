@@ -318,4 +318,4 @@ vec3 BloomUpscaleVertical(vec2 uv, vec2 invTexSize, texture2D tex, sampler sampl
     return color;
 }
 
-#endif // SHADERS__COMMON__BLOOM_COMMON_H
+#endif  // SHADERS__COMMON__BLOOM_COMMON_H

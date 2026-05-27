@@ -42,4 +42,4 @@ void closedir(DIR* d);
 #include <dirent.h>
 #include <string>
 #endif
-#endif // LUME_DIR_H
+#endif  // LUME_DIR_H

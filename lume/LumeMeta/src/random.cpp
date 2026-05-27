@@ -69,7 +69,7 @@ private:
 
     uint64_t s_[4];
 };
-} // namespace
+}  // namespace
 
 BASE_NS::unique_ptr<IRandom> CreateXoroshiro128(uint64_t seed)
 {

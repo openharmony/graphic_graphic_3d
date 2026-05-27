@@ -41,7 +41,7 @@ private:
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
 private:
-    IEcsContext* ecs_ {};
+    IEcsContext* ecs_{};
     BASE_NS::unordered_map<CORE_NS::Entity, IEcsObject::WeakPtr> objects_;
 };
 

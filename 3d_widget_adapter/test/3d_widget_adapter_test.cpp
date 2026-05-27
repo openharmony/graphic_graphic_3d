@@ -36,7 +36,7 @@ bool EngineTest::LoadEngineLib()
     return true;
 }
 
-bool EngineTest::InitEngine(EGLContext eglContext, const PlatformData &data)
+bool EngineTest::InitEngine(EGLContext eglContext, const PlatformData& data)
 {
     (void)(eglContext);
     (void)(data);
@@ -55,7 +55,7 @@ void EngineTest::SetupCameraViewPort(uint32_t width, uint32_t height)
 }
 
 void EngineTest::SetupCameraTransform(
-    const Position &position, const Vec3 &lookAt, const Vec3 &up, const Quaternion &rotation)
+    const Position& position, const Vec3& lookAt, const Vec3& up, const Quaternion& rotation)
 {
     (void)(position);
     (void)(lookAt);
@@ -70,58 +70,58 @@ void EngineTest::SetupCameraViewProjection(float zNear, float zFar, float fovDeg
     (void)(fovDegrees);
 }
 
-void EngineTest::LoadSceneModel(const std::string &modelPath)
+void EngineTest::LoadSceneModel(const std::string& modelPath)
 {
     (void)(modelPath);
 }
 
-void EngineTest::LoadEnvModel(const std::string &modelPath, BackgroundType type)
+void EngineTest::LoadEnvModel(const std::string& modelPath, BackgroundType type)
 {
     (void)(modelPath);
     (void)(type);
 }
 
-void EngineTest::OnTouchEvent(const PointerEvent &event)
+void EngineTest::OnTouchEvent(const PointerEvent& event)
 {
     (void)(event);
 }
 
-void EngineTest::OnWindowChange(const TextureInfo &textureInfo)
+void EngineTest::OnWindowChange(const TextureInfo& textureInfo)
 {
     (void)(textureInfo);
 }
 
-void EngineTest::UpdateGeometries(const std::vector<std::shared_ptr<Geometry>> &shapes)
+void EngineTest::UpdateGeometries(const std::vector<std::shared_ptr<Geometry>>& shapes)
 {
     (void)(shapes);
 }
 
-void EngineTest::UpdateGLTFAnimations(const std::vector<std::shared_ptr<GLTFAnimation>> &animations)
+void EngineTest::UpdateGLTFAnimations(const std::vector<std::shared_ptr<GLTFAnimation>>& animations)
 {
     (void)(animations);
 }
 
-void EngineTest::UpdateLights(const std::vector<std::shared_ptr<Light>> &lights)
+void EngineTest::UpdateLights(const std::vector<std::shared_ptr<Light>>& lights)
 {
     (void)(lights);
 }
 
-void EngineTest::UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor> &customRender)
+void EngineTest::UpdateCustomRender(const std::shared_ptr<CustomRenderDescriptor>& customRender)
 {
     (void)(customRender);
 }
 
-void EngineTest::UpdateShaderPath(const std::string &shaderPath)
+void EngineTest::UpdateShaderPath(const std::string& shaderPath)
 {
     (void)(shaderPath);
 }
 
-void EngineTest::UpdateImageTexturePaths(const std::vector<std::string> &imageTextures)
+void EngineTest::UpdateImageTexturePaths(const std::vector<std::string>& imageTextures)
 {
     (void)(imageTextures);
 }
 
-void EngineTest::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer> &shaderInputBuffer)
+void EngineTest::UpdateShaderInputBuffer(const std::shared_ptr<ShaderInputBuffer>& shaderInputBuffer)
 {
     (void)(shaderInputBuffer);
 }

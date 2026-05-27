@@ -103,5 +103,5 @@ void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, const BA
 #endif
 }
 
-} // namespace GpuResourceUtil
+}  // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()

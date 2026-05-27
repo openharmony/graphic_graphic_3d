@@ -95,14 +95,14 @@ std::pair<CORE3D_NS::IPostProcessEffectComponentManager*, CORE_NS::Entity> GetPo
     if (ecso) {
         auto entity = ecso->GetEntity();
         if (auto ecs = GetEcs(ecso); ecs && CORE_NS::EntityUtil::IsValid(entity)) {
-            return { static_cast<CORE3D_NS::IPostProcessEffectComponentManager*>(
-                         ecs->GetComponentManager(CORE3D_NS::IPostProcessEffectComponentManager::UID)),
-                entity };
+            return {static_cast<CORE3D_NS::IPostProcessEffectComponentManager*>(
+                        ecs->GetComponentManager(CORE3D_NS::IPostProcessEffectComponentManager::UID)),
+                entity};
         }
     }
     return {};
 }
-} // namespace Internal
+}  // namespace Internal
 
 CORE3D_NS::IPostProcessEffectComponentManager* CameraEffectComponent::CreateEffectComponent()
 {
@@ -157,7 +157,7 @@ void CameraEffectComponent::UpdateEffects()
                 // No effects, remove effect component
                 DestroyEffectComponent();
             }
-            return hasEffects; // Return true if there were any effects
+            return hasEffects;  // Return true if there were any effects
         });
         // Update our SERIALIZE flag based on whether there are any effects defined. If the effect list is empty, no
         // need to serialize this component either

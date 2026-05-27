@@ -38,7 +38,7 @@ void DebugObjectNameVk(
 void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, BASE_NS::string_view name);
 void DebugImageNameVk(const IDevice& device, const GpuImage& image, BASE_NS::string_view name);
 void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, BASE_NS::string_view name);
-} // namespace GpuResourceUtil
+}  // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_RESOURCE_UTIL_VK_H
+#endif  // VULKAN_GPU_RESOURCE_UTIL_VK_H

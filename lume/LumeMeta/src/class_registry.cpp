@@ -23,7 +23,7 @@ META_BEGIN_NAMESPACE()
 
 void ClassRegistry::Clear()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     objectFactories_.clear();
 }
 
@@ -35,12 +35,12 @@ bool ClassRegistry::Unregister(const IObjectFactory::Ptr& fac)
     }
     size_t erased = 0;
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         erased = objectFactories_.erase(fac->GetClassInfo());
     }
     if (erased) {
         Invoke<IOnClassRegistrationChanged>(
-            EventOnClassUnregistered(MetadataQuery::EXISTING), ClassRegistrationInfo { fac });
+            EventOnClassUnregistered(MetadataQuery::EXISTING), ClassRegistrationInfo{fac});
         return true;
     }
     return false;
@@ -53,30 +53,31 @@ bool ClassRegistry::Register(const IObjectFactory::Ptr& fac)
         return false;
     }
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         auto& info = fac->GetClassInfo();
         auto& i = objectFactories_[info];
         if (i) {
             CORE_LOG_W("ClassRegistry: Cannot register a class that was already registered [name=%s, uid=%s]",
-                info.Name().data(), info.Id().ToString().c_str());
+                info.Name().data(),
+                info.Id().ToString().c_str());
             return false;
         }
         i = fac;
     }
-    Invoke<IOnClassRegistrationChanged>(EventOnClassRegistered(MetadataQuery::EXISTING), ClassRegistrationInfo { fac });
+    Invoke<IOnClassRegistrationChanged>(EventOnClassRegistered(MetadataQuery::EXISTING), ClassRegistrationInfo{fac});
     return true;
 }
 
 IObjectFactory::ConstPtr ClassRegistry::GetObjectFactory(const BASE_NS::Uid& uid) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = objectFactories_.find(uid);
     return it != objectFactories_.end() ? it->second : nullptr;
 }
 
 BASE_NS::string ClassRegistry::GetClassName(BASE_NS::Uid uid) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = objectFactories_.find(uid);
     return it != objectFactories_.end() ? BASE_NS::string(it->second->GetClassInfo().Name())
                                         : BASE_NS::string("Unknown class id [") + BASE_NS::to_string(uid) + "]";
@@ -85,7 +86,7 @@ BASE_NS::string ClassRegistry::GetClassName(BASE_NS::Uid uid) const
 BASE_NS::vector<IClassInfo::ConstPtr> ClassRegistry::GetAllTypes(
     ObjectCategoryBits category, bool strict, bool excludeDeprecated) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     BASE_NS::vector<IClassInfo::ConstPtr> infos;
     for (auto&& v : objectFactories_) {
         const auto& factory = v.second;
@@ -103,7 +104,7 @@ BASE_NS::vector<IClassInfo::ConstPtr> ClassRegistry::GetAllTypes(
 BASE_NS::vector<IClassInfo::ConstPtr> ClassRegistry::GetAllTypes(
     const BASE_NS::vector<BASE_NS::Uid>& interfaceUids, bool strict, bool excludeDeprecated) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     BASE_NS::vector<IClassInfo::ConstPtr> infos;
     for (auto&& v : objectFactories_) {
         const auto& factory = v.second;

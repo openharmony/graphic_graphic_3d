@@ -23,7 +23,7 @@
 
 BASE_BEGIN_NAMESPACE()
 namespace Internals {
-template<typename U, typename T>
+template <typename U, typename T>
 using EnableIfPointerConvertible = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<U*, T*>>;
 
 class ControlBlock {
@@ -85,8 +85,8 @@ public:
 
 private:
     // Count of the weak references +1 for the strong references
-    int32_t weakCount_ { 1 };
-    int32_t strongCount_ { 1 };
+    int32_t weakCount_{1};
+    int32_t strongCount_{1};
 };
 
 class ptr_base {
@@ -99,7 +99,7 @@ protected:
     ptr_base& operator=(ptr_base&&) = default;
 };
 
-template<typename Type>
+template <typename Type>
 class PtrCountedBase : public ptr_base {
 public:
     // NOLINTNEXTLINE(readability-identifier-naming) to keep std like syntax
@@ -116,7 +116,8 @@ public:
 
 protected:
     PtrCountedBase() = default;
-    PtrCountedBase(ControlBlock* c) : control_(c) {}
+    PtrCountedBase(ControlBlock* c) : control_(c)
+    {}
     ~PtrCountedBase() = default;
     PtrCountedBase(const PtrCountedBase&) = default;
     PtrCountedBase& operator=(const PtrCountedBase&) = default;
@@ -130,20 +131,20 @@ protected:
     }
 
 protected:
-    Type* pointer_ {};
-    ControlBlock* control_ {};
+    Type* pointer_{};
+    ControlBlock* control_{};
 
-    template<typename>
+    template <typename>
     friend class PtrCountedBase;
 };
 
-template<typename T>
+template <typename T>
 using DefaultDeleterType = void (*)(T*);
 
-template<typename T>
+template <typename T>
 class StorageBlock final : public ControlBlock {
 public:
-    explicit StorageBlock(T* ptr) : ptr_ { ptr }
+    explicit StorageBlock(T* ptr) : ptr_{ptr}
     {
         BASE_ASSERT(ptr != nullptr);
     }
@@ -159,13 +160,13 @@ public:
     }
 
 private:
-    T* ptr_ { nullptr };
+    T* ptr_{nullptr};
 };
 
-template<typename T, typename Deleter = DefaultDeleterType<T>>
+template <typename T, typename Deleter = DefaultDeleterType<T>>
 class StorageBlockWithDeleter final : public ControlBlock {
 public:
-    StorageBlockWithDeleter(T* ptr, Deleter deleter) : ptr_ { ptr }, deleter_ { BASE_NS::move(deleter) }
+    StorageBlockWithDeleter(T* ptr, Deleter deleter) : ptr_{ptr}, deleter_{BASE_NS::move(deleter)}
     {
         BASE_ASSERT(ptr != nullptr);
     }
@@ -181,16 +182,16 @@ public:
     }
 
 private:
-    T* ptr_ { nullptr };
+    T* ptr_{nullptr};
     Deleter deleter_;
 };
 
-template<typename T>
+template <typename T>
 class RefCountedObjectStorageBlock final : public ControlBlock {
 public:
     using deletableType = BASE_NS::remove_const_t<T>;
 
-    explicit RefCountedObjectStorageBlock(T* ptr) : ptr_ { ptr }
+    explicit RefCountedObjectStorageBlock(T* ptr) : ptr_{ptr}
     {
         BASE_ASSERT(ptr != nullptr);
         const_cast<deletableType*>(ptr)->Ref();
@@ -207,9 +208,9 @@ public:
     }
 
 private:
-    T* ptr_ { nullptr };
+    T* ptr_{nullptr};
 };
-} // namespace Internals
+}  // namespace Internals
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_SHARED_PTR_INTERNALS_H
+#endif  // API_BASE_CONTAINERS_SHARED_PTR_INTERNALS_H

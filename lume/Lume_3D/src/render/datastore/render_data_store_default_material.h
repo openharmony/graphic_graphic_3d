@@ -19,6 +19,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include <3d/light_probe_types/light_probe.h>
 #include <3d/render/intf_render_data_store_default_material.h>
 #include <base/containers/array_view.h>
 #include <base/containers/refcnt_ptr.h>
@@ -45,16 +46,16 @@ RenderDataStoreDefaultMaterial implementation.
 */
 class RenderDataStoreDefaultMaterial final : public IRenderDataStoreDefaultMaterial {
 public:
-    static constexpr uint64_t SLOT_SORT_HASH_MASK { 0xFFFFffff };
-    static constexpr uint64_t SLOT_SORT_HASH_SHIFT { 32U };
-    static constexpr uint64_t SLOT_SORT_MAX_DEPTH { 0xFFFFffff };
-    static constexpr uint64_t SLOT_SORT_DEPTH_SHIFT { 32U };
+    static constexpr uint64_t SLOT_SORT_HASH_MASK{0xFFFFffff};
+    static constexpr uint64_t SLOT_SORT_HASH_SHIFT{32U};
+    static constexpr uint64_t SLOT_SORT_MAX_DEPTH{0xFFFFffff};
+    static constexpr uint64_t SLOT_SORT_DEPTH_SHIFT{32U};
 
-    static constexpr uint32_t SHADER_DEFAULT_RENDER_SLOT_COUNT { 2U };
+    static constexpr uint32_t SHADER_DEFAULT_RENDER_SLOT_COUNT{2U};
 
     struct SceneBoundingVolumeHelper {
-        BASE_NS::Math::Vec3 sumOfSubmeshPoints { 0.0f, 0.0f, 0.0f };
-        uint32_t submeshCount { 0 };
+        BASE_NS::Math::Vec3 sumOfSubmeshPoints{0.0f, 0.0f, 0.0f};
+        uint32_t submeshCount{0};
 
         RenderMinAndMax aabb;
     };
@@ -63,7 +64,7 @@ public:
     ~RenderDataStoreDefaultMaterial() override = default;
 
     struct LinearAllocatorStruct {
-        uint32_t currentIndex { 0 };
+        uint32_t currentIndex{0};
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
@@ -71,8 +72,10 @@ public:
     void PreRender() override;
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
 
     uint32_t GetFlags() const override
@@ -82,7 +85,7 @@ public:
 
     BASE_NS::string_view GetTypeName() const override
     {
-        return typeName;
+        return TYPE_NAME;
     }
 
     BASE_NS::string_view GetName() const override
@@ -173,7 +176,7 @@ public:
 
     RenderFrameObjectInfo GetRenderFrameObjectInfo() const override;
 
-    uint32_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const override;
+    uint64_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const override;
 
     RenderFrameMaterialIndices AddRenderSlotSubmeshesFrameMaterialData(const uint32_t toSlotId,
         BASE_NS::array_view<const uint32_t> fromSlotIds,
@@ -183,12 +186,16 @@ public:
         const BASE_NS::array_view<const uint8_t> customPropertyData,
         const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) override;
 
+    void UpdateLightProbeDataByIndex(
+        const uint32_t submeshIndex, const LightProbeInterpolatedData& lightProbeInterpolatedData) override;
+    BASE_NS::array_view<const LightProbeInterpolatedData> GetLightProbeData() const override;
+    void UpdateSubmeshRenderMaterialFlagByIndex(uint32_t submeshIndex, RenderMaterialFlags flag) override;
     // NOTE: hidden method at the moment
     // returns frame mesh blas data
     BASE_NS::array_view<const RENDER_NS::AsInstance> GetMeshBlasData() const;
 
     // for plugin / factory interface
-    static constexpr const char* const typeName = "RenderDataStoreDefaultMaterial";
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultMaterial";
     static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, char const* name);
 
     // bindless global indices
@@ -203,15 +210,15 @@ public:
     struct MaterialDataContainer {
         RenderDataDefaultMaterial::MaterialData md;
         // noId to remove temp (usually) debug materials every frame
-        bool noId { false };
+        bool noId{false};
     };
     struct CustomPropertyData {
         // vector inside a vector
         BASE_NS::vector<uint8_t> data;
     };
     struct MaterialDefaultRenderSlotData {
-        RENDER_NS::IShaderManager::RenderSlotData data[SHADER_DEFAULT_RENDER_SLOT_COUNT] {};
-        uint32_t count { 0U };
+        RENDER_NS::IShaderManager::RenderSlotData data[SHADER_DEFAULT_RENDER_SLOT_COUNT]{};
+        uint32_t count{0U};
     };
     struct AllMaterialData {
         // NOTE: Uses packing, needs to be modified if changed
@@ -232,17 +239,17 @@ public:
         BASE_NS::vector<uint32_t> availableIndices;
 
         // The base added materials which are automatically the first indices in frameIndices
-        uint32_t baseMaterialCount { 0U };
+        uint32_t baseMaterialCount{0U};
     };
     struct MaterialRenderSlots {
-        uint32_t defaultOpaqueRenderSlot { ~0u };
-        uint64_t opaqueMask { 0 };
+        uint32_t defaultOpaqueRenderSlot{~0u};
+        uint64_t opaqueMask{0};
 
-        uint32_t defaultTranslucentRenderSlot { ~0u };
-        uint64_t translucentMask { 0 };
+        uint32_t defaultTranslucentRenderSlot{~0u};
+        uint64_t translucentMask{0};
 
-        uint32_t defaultDepthRenderSlot { ~0u };
-        uint64_t depthMask { 0 };
+        uint32_t defaultDepthRenderSlot{~0u};
+        uint64_t depthMask{0};
     };
 
     struct SubmeshData {
@@ -250,27 +257,27 @@ public:
 
         RenderDrawCommand drawCommand;
 
-        uint64_t material { RenderSceneDataConstants::INVALID_ID };
-        uint32_t materialIndex { 0U };
-        uint32_t additionalMaterialOffset { 0U };
-        uint32_t additionalMaterialCount { 0U };
+        uint64_t material{RenderSceneDataConstants::INVALID_ID};
+        uint32_t materialIndex{0U};
+        uint32_t additionalMaterialOffset{0U};
+        uint32_t additionalMaterialCount{0U};
 
-        RenderSubmeshFlags submeshFlags { 0U };
+        RenderSubmeshFlags submeshFlags{0U};
 
         // Additional rendering flags for this submesh material. Typically zero.
         // Use case could be adding some specific flags for e.g. pso creation / specialization.
-        RenderMaterialFlags renderSubmeshMaterialFlags { 0U };
+        RenderMaterialFlags renderSubmeshMaterialFlags{0U};
 
         // Mesh render sort layer id. Valid values are 0 - 63
-        uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+        uint8_t meshRenderSortLayer{RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID};
         // Mesh render sort layer id. Valid values are 0 - 255
-        uint8_t meshRenderSortLayerOrder { 0 };
+        uint8_t meshRenderSortLayerOrder{0};
 
         // local submesh aabb
         RenderMinAndMax aabb;
     };
     struct MeshData {
-        uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+        uint64_t meshId{RenderSceneDataConstants::INVALID_ID};
 
         // local aabb for the all submeshes
         RenderMinAndMax aabb;
@@ -285,10 +292,10 @@ public:
     };
     struct RenderMeshBatchDataContainer {
         RenderMeshData rmd;
-        uint32_t rmcBatchMeshIndex { RenderSceneDataConstants::INVALID_INDEX };
-        uint32_t skinIndex { RenderSceneDataConstants::INVALID_INDEX };
+        uint32_t rmcBatchMeshIndex{RenderSceneDataConstants::INVALID_INDEX};
+        uint32_t skinIndex{RenderSceneDataConstants::INVALID_INDEX};
         // typically used with skinning, otherwise ignored (with skinning in world space)
-        RenderMinAndMax forcedAabb {};
+        RenderMinAndMax forcedAabb{};
     };
     // container for MeshData and frame info
     struct MeshDataContainer {
@@ -321,6 +328,7 @@ public:
         BASE_NS::vector<RenderSubmesh> frameSubmeshes;
         BASE_NS::vector<RenderDataDefaultMaterial::SubmeshMaterialFlags> frameSubmeshMaterialFlags;
         BASE_NS::vector<RENDER_NS::AsInstance> frameMeshBlasInstanceData;
+        BASE_NS::vector<LightProbeInterpolatedData> frameLightProbeInterpolatedData;
     };
 
 private:
@@ -332,17 +340,26 @@ private:
         const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customResourceData);
     void UpdateFrameMaterialResourceReferences(uint32_t materialIndex);
 
+    void ValidateSubmeshIndices(RenderSubmesh& submesh);
+    const RenderDataDefaultMaterial::MaterialData& EnsureSubmeshMaterialData(RenderSubmesh& submesh);
+    RenderMaterialFlags GetSubmeshRenderMaterialFlags(
+        const RenderSubmesh& submesh, const RenderDataDefaultMaterial::MaterialData& perMatData) const;
+    void AddSubmeshToRenderSlots(
+        BASE_NS::array_view<const RENDER_NS::IShaderManager::RenderSlotData> renderSlotAndShaders,
+        uint32_t submeshIndex, const RenderSubmesh& submesh, RenderMaterialFlags submeshRenderMaterialFlags,
+        uint64_t renderHash);
     void FillSubmeshImpl(BASE_NS::array_view<const RENDER_NS::IShaderManager::RenderSlotData> renderSlotAndShaders,
         uint32_t submeshIndex, RenderSubmesh& submesh);
     void AddFrameRenderMeshDataAdditionalMaterial(
         uint32_t matIndex, uint32_t submeshFrameIndex, RenderSubmesh& renderSubmesh);
-    void AddFrameSubmeshAdditionalMaterials(const MeshDataContainer& meshDataContainer,
-        const SubmeshDataContainer& submesh, const RenderSubmesh& rs);
+    void AddFrameSubmeshAdditionalMaterials(
+        const MeshDataContainer& meshDataContainer, const SubmeshDataContainer& submesh, const RenderSubmesh& rs);
     uint32_t AddFrameSkinJointMatricesImpl(uint64_t id,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> skinJointMatrices,
         const BASE_NS::array_view<const BASE_NS::Math::Mat4X4> prevSkinJointMatrices);
 
     void GetDefaultRenderSlots();
+
     uint32_t GetRenderSlotIdFromMasks(const uint32_t renderSlotId) const;
 
     void UpdateMeshBlasData(MeshDataContainer& meshData);
@@ -358,6 +375,7 @@ private:
 
     AllMaterialData matData_;
     AllMeshData meshData_;
+
     RenderFrameObjectInfo renderFrameObjectInfo_;
 
     struct SlotSubmeshData {
@@ -374,17 +392,18 @@ private:
     BASE_NS::vector<uint32_t> materialFrameOffsets_;
     BASE_NS::vector<RenderMinAndMax> submeshAabbs_;
 
-    bool rtEnabled_ { false };
-    bool bindlessEnabled_ { false };
-    bool frameMeshDataSubmitted_ { false };
-    bool canUpdateBaseMaterialCount_ { true };
+    bool rtEnabled_{false};
+    bool bindlessEnabled_{false};
+    bool frameMeshDataSubmitted_{false};
+    bool canUpdateBaseMaterialCount_{true};
 
     SceneBoundingVolumeHelper shadowBoundingVolume_;
     // for bindless global resource indices
     MaterialHandleResourceIndices bindlessResourceIndices_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
+    BASE_NS::array_view<const LightProbeGroupComponent::LightProbe> lightProbes_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_MATERIAL_H
+#endif  // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_MATERIAL_H

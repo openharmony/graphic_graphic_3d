@@ -69,7 +69,7 @@ using VectorTypes = TypeList<
 namespace Internal {
 namespace {
 
-template<bool ArrayTypes, typename... List>
+template <bool ArrayTypes, typename... List>
 void RegisterBasicEngineTypes(IEngineData& d, TypeList<List...>)
 {
     (d.RegisterInternalValueAccess(MetaType<List>::coreType, CreateShared<EngineInternalValueAccess<List>>()), ...);
@@ -80,7 +80,7 @@ void RegisterBasicEngineTypes(IEngineData& d, TypeList<List...>)
     }
 }
 
-template<bool ArrayTypes, typename... List>
+template <bool ArrayTypes, typename... List>
 void UnRegisterBasicEngineTypes(IEngineData& d, TypeList<List...>)
 {
     (d.UnregisterInternalValueAccess(MetaType<List>::coreType), ...);
@@ -88,21 +88,21 @@ void UnRegisterBasicEngineTypes(IEngineData& d, TypeList<List...>)
         (d.UnregisterInternalValueAccess(MetaType<List[]>::coreType), ...);
     }
 }
-} // namespace
+}  // namespace
 
 void RegisterEngineTypes(IObjectRegistry& registry)
 {
     auto& pr = registry.GetEngineData();
-    RegisterBasicEngineTypes<true>(pr, SingleAndArrayTypes {});
-    RegisterBasicEngineTypes<false>(pr, VectorTypes {});
+    RegisterBasicEngineTypes<true>(pr, SingleAndArrayTypes{});
+    RegisterBasicEngineTypes<false>(pr, VectorTypes{});
 }
 
 void UnRegisterEngineTypes(IObjectRegistry& registry)
 {
     auto& pr = registry.GetEngineData();
-    UnRegisterBasicEngineTypes<false>(pr, VectorTypes {});
-    UnRegisterBasicEngineTypes<true>(pr, SingleAndArrayTypes {});
+    UnRegisterBasicEngineTypes<false>(pr, VectorTypes{});
+    UnRegisterBasicEngineTypes<true>(pr, SingleAndArrayTypes{});
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

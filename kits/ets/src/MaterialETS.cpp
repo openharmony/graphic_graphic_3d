@@ -18,10 +18,9 @@
 namespace OHOS::Render3D {
 MaterialETS::MaterialETS(const SCENE_NS::IMaterial::Ptr mat)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MATERIAL), material_(mat)
-{
-}
+{}
 
-MaterialETS::MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string &name, const std::string &uri)
+MaterialETS::MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string& name, const std::string& uri)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::MATERIAL), material_(mat)
 {
     SetName(name);
@@ -30,8 +29,8 @@ MaterialETS::MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string &
 
 MaterialETS::~MaterialETS()
 {
-    shader_.reset();
     material_.reset();
+    shader_.reset();
 }
 
 void MaterialETS::Destroy()
@@ -231,7 +230,7 @@ MaterialETS::RenderSort MaterialETS::GetRenderSort()
     return RenderSort{renderSort.renderSortLayer, renderSort.renderSortLayerOrder};
 }
 
-void MaterialETS::SetRenderSort(const MaterialETS::RenderSort &renderSort)
+void MaterialETS::SetRenderSort(const MaterialETS::RenderSort& renderSort)
 {
     if (!material_) {
         CORE_LOG_E("set render sort failed, invalid material");
@@ -282,13 +281,11 @@ void MaterialETS::SetColorShader(const std::shared_ptr<ShaderETS> shader)
     // bind it to material (in native)
     material_->MaterialShader()->SetValue(nativeShader);
 
-    if (!nativeShader) {
+    if (!nativeShader || !shader) {
         shader_.reset();
         return;
     }
-    if (shader) {
-        shader->BindToMaterial(material_);
-    }
+    shader->BindToMaterial(material_);
     shader_ = shader;
 }
 

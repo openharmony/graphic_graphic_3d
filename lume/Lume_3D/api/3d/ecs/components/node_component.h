@@ -28,24 +28,37 @@ CORE3D_BEGIN_NAMESPACE()
 /** Node component can be used to create hierarchy for the objects in scene.
  */
 BEGIN_COMPONENT(INodeComponentManager, NodeComponent)
+#if !defined(IMPLEMENT_MANAGER)
+/** Per-node flag bits. */
+enum FlagBits : uint32_t {
+    /** Node contributes to global illumination (e.g. baked into light probes). */
+    CONTRIBUTE_GI_BIT = (1 << 0),
+};
+/** Container for node flag bits. */
+using Flags = uint32_t;
+#endif
 
-    /** Id of the parent entity in hierarchy.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, parent, "Parent", 0, VALUE(CORE_NS::Entity { CORE_NS::INVALID_ENTITY }))
+/** Id of the parent entity in hierarchy.
+ */
+DEFINE_PROPERTY(CORE_NS::Entity, parent, "Parent", 0, VALUE(CORE_NS::Entity{CORE_NS::INVALID_ENTITY}))
 
-    /** Defines whether this entity is enabled or disabled. */
-    DEFINE_PROPERTY(bool, enabled, "Enabled", 0, true)
+/** Defines whether this entity is enabled or disabled. */
+DEFINE_PROPERTY(bool, enabled, "Enabled", 0, true)
 
-    /** Read-only property to check if this entity is enabled and belongs to enabled scene tree (all parents are also
-     * enabled). */
-    DEFINE_PROPERTY(bool, effectivelyEnabled, "Effectively Enabled", CORE_NS::PropertyFlags::IS_READONLY, true)
+/** Read-only property to check if this entity is enabled and belongs to enabled scene tree (all parents are also
+ * enabled). */
+DEFINE_PROPERTY(bool, effectivelyEnabled, "Effectively Enabled", CORE_NS::PropertyFlags::IS_READONLY, true)
 
-    /** Defines whether this entity is included in an exported scene. */
-    DEFINE_PROPERTY(bool, exported, "Exported", 0, true)
+/** Defines whether this entity is included in an exported scene. */
+DEFINE_PROPERTY(bool, exported, "Exported", 0, true)
 
-    /** Nodes can be assigned to different scenes". This allows setting up multiple node hierarchies with different
-     * scene ID values and rendering only the nodes in the same scene as the camera. */
-    DEFINE_PROPERTY(uint32_t, sceneId, "Scene", 0, 0U)
+/** Nodes can be assigned to different scenes". This allows setting up multiple node hierarchies with different
+ * scene ID values and rendering only the nodes in the same scene as the camera. */
+DEFINE_PROPERTY(uint32_t, sceneId, "Scene", 0, 0U)
+
+/** Per-node flags (see NodeComponent::FlagBits). */
+DEFINE_BITFIELD_PROPERTY(
+    uint32_t, flags, "Flags", CORE_NS::PropertyFlags::IS_BITFIELD, VALUE(0U), NodeComponent::FlagBits)
 
 END_COMPONENT(INodeComponentManager, NodeComponent, "d9d330b5-3900-4503-8c89-233c0c9184de")
 #if !defined(IMPLEMENT_MANAGER)

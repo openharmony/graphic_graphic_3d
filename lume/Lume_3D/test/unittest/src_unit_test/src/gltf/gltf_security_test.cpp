@@ -13,10 +13,16 @@
  * limitations under the License.
  */
 
+#include <3d/ecs/components/local_matrix_component.h>
+#include <3d/ecs/components/name_component.h>
+#include <3d/ecs/components/node_component.h>
+#include <3d/ecs/components/transform_component.h>
+#include <3d/ecs/components/world_matrix_component.h>
 #include <3d/gltf/gltf.h>
 #include <base/containers/array_view.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <core/ecs/intf_ecs.h>
 #include <core/io/intf_file_manager.h>
 
 #include "gltf/gltf2.h"
@@ -139,7 +145,7 @@ UNIT_TEST(SRC_GLTFSecurityTest, GlbUnalignedHeader, testing::ext::TestSize.Level
 {
     auto& files = UTest::GetTestContext()->engine->GetFileManager();
     // Feed a buffer that is shorter than the 12-byte GLB header.
-    const uint8_t glb[] = { 0x67, 0x6C, 0x54, 0x46, 0x02, 0x00, 0x00 }; // truncated after version
+    const uint8_t glb[] = {0x67, 0x6C, 0x54, 0x46, 0x02, 0x00, 0x00};  // truncated after version
     const array_view<const uint8_t> data(glb, sizeof(glb));
     auto result = GLTF2::LoadGLTF(files, data);
     EXPECT_FALSE(result.success);
@@ -231,4 +237,78 @@ UNIT_TEST(SRC_GLTFSecurityTest, SparseWrongKeyRegression, testing::ext::TestSize
             (void)GLTF2::LoadData(*result.data->accessors[0]);
         }
     }
+}
+
+/**
+ * @tc.name: DeepNodeHierarchyImport
+ * @tc.desc: A deeply nested acyclic scene must import without recursive stack
+ * growth.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, DeepNodeHierarchyImport, testing::ext::TestSize.Level1)
+{
+    auto* testContext = UTest::GetTestContext();
+    auto ecs = testContext->ecs;
+    auto graphicsContext = testContext->graphicsContext;
+
+    Gltf2 gltf2(*graphicsContext);
+    GLTF2::Data data{testContext->engine->GetFileManager()};
+
+    constexpr size_t NODE_COUNT = 20000u;
+    data.nodes.reserve(NODE_COUNT);
+    for (size_t index = 0; index < NODE_COUNT; ++index) {
+        data.nodes.push_back(BASE_NS::unique_ptr<GLTF2::Node>{new GLTF2::Node{}});
+    }
+    data.nodes[0]->name = "chain_root";
+    data.nodes[1]->name = "chain_child";
+    for (size_t index = 1; index < NODE_COUNT; ++index) {
+        auto* parent = data.nodes[index - 1U].get();
+        auto* child = data.nodes[index].get();
+        parent->children.push_back(child);
+        child->parent = parent;
+    }
+
+    data.scenes.push_back(BASE_NS::unique_ptr<GLTF2::Scene>{new GLTF2::Scene{}});
+    data.scenes[0]->nodes.push_back(data.nodes[0].get());
+
+    auto* nodeManager = GetManager<INodeComponentManager>(*ecs);
+    auto* nameManager = GetManager<INameComponentManager>(*ecs);
+    auto* transformManager = GetManager<ITransformComponentManager>(*ecs);
+    auto* localMatrixManager = GetManager<ILocalMatrixComponentManager>(*ecs);
+    auto* worldMatrixManager = GetManager<IWorldMatrixComponentManager>(*ecs);
+
+    const auto nodeCountBefore = nodeManager->GetComponentCount();
+    const auto nameCountBefore = nameManager->GetComponentCount();
+    const auto transformCountBefore = transformManager->GetComponentCount();
+    const auto localMatrixCountBefore = localMatrixManager->GetComponentCount();
+    const auto worldMatrixCountBefore = worldMatrixManager->GetComponentCount();
+
+    const Entity root = gltf2.ImportGltfScene(0u, data, GLTFResourceData{}, *ecs, Entity{}, 0u);
+    ASSERT_TRUE(EntityUtil::IsValid(root));
+
+    const size_t importedEntityCount = NODE_COUNT + 1u;  // Scene root + node chain.
+    EXPECT_EQ(nodeCountBefore + importedEntityCount, nodeManager->GetComponentCount());
+    EXPECT_EQ(nameCountBefore + importedEntityCount, nameManager->GetComponentCount());
+    EXPECT_EQ(transformCountBefore + importedEntityCount, transformManager->GetComponentCount());
+    EXPECT_EQ(localMatrixCountBefore + importedEntityCount, localMatrixManager->GetComponentCount());
+    EXPECT_EQ(worldMatrixCountBefore + importedEntityCount, worldMatrixManager->GetComponentCount());
+
+    const auto findEntityByName = [nameManager](string_view name) -> Entity {
+        for (IComponentManager::ComponentId index = 0; index < nameManager->GetComponentCount(); ++index) {
+            const Entity entity = nameManager->GetEntity(index);
+            if (const auto nameHandle = nameManager->Read(entity); nameHandle && nameHandle->name == name) {
+                return entity;
+            }
+        }
+        return {};
+    };
+
+    const Entity rootNodeEntity = findEntityByName("chain_root");
+    const Entity childNodeEntity = findEntityByName("chain_child");
+    ASSERT_TRUE(EntityUtil::IsValid(rootNodeEntity));
+    ASSERT_TRUE(EntityUtil::IsValid(childNodeEntity));
+
+    const auto childNodeHandle = nodeManager->Read(childNodeEntity);
+    ASSERT_TRUE(childNodeHandle);
+    EXPECT_EQ(rootNodeEntity, childNodeHandle->parent);
 }

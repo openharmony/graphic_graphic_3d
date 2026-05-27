@@ -38,12 +38,12 @@
 
 using namespace BASE_NS;
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::ImageLayout& val)
 {
     return static_cast<uint64_t>(val);
 }
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::RenderPassSubpassDesc& subpass)
 {
     uint64_t seed = 0;
@@ -63,9 +63,9 @@ uint64_t BASE_NS::hash(const RENDER_NS::RenderPassSubpassDesc& subpass)
 RENDER_BEGIN_NAMESPACE()
 namespace {
 struct FBSize {
-    uint32_t width { 0 };
-    uint32_t height { 0 };
-    uint32_t layers { 1 };
+    uint32_t width{0};
+    uint32_t height{0};
+    uint32_t layers{1};
 };
 
 inline void HashRenderPassCompatibility(uint64_t& hash, const RenderPassDesc& renderPassDesc,
@@ -75,15 +75,17 @@ inline void HashRenderPassCompatibility(uint64_t& hash, const RenderPassDesc& re
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
         const LowLevelRenderPassCompatibilityDescVk::Attachment& atCompatibilityDesc =
             renderPassCompatibilityDesc.attachments[idx];
-        HashCombine(hash, (static_cast<uint64_t>(atCompatibilityDesc.format) << 32ULL) |
-                              (static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags)));
+        HashCombine(hash,
+            (static_cast<uint64_t>(atCompatibilityDesc.format) << 32ULL) |
+                (static_cast<uint64_t>(atCompatibilityDesc.sampleCountFlags)));
         // render pass needs have matching stage masks (creates often different hash at first frame)
         // soft reset in render graph tries to prevent too many render passes
         HashCombine(hash, static_cast<uint64_t>(intputResourceStates.states[idx].pipelineStageFlags));
         if (subpasses.viewMask > 1U) {
             // with multi-view extension, renderpass updated for all mips
-            HashCombine(hash, (static_cast<uint64_t>(renderPassDesc.attachments[idx].layer) << 32ULL) |
-                                  (static_cast<uint64_t>(renderPassDesc.attachments[idx].mipLevel)));
+            HashCombine(hash,
+                (static_cast<uint64_t>(renderPassDesc.attachments[idx].layer) << 32ULL) |
+                    (static_cast<uint64_t>(renderPassDesc.attachments[idx].mipLevel)));
         }
     }
     // NOTE: subpass resources states are not hashed
@@ -94,8 +96,9 @@ inline void HashRenderPassLayouts(
     uint64_t& hash, const RenderPassDesc& renderPassDesc, const RenderPassImageLayouts& renderPassImageLayouts)
 {
     for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
-        HashCombine(hash, (static_cast<uint64_t>(renderPassImageLayouts.attachmentInitialLayouts[idx]) << 32ULL) |
-                              (static_cast<uint64_t>(renderPassImageLayouts.attachmentFinalLayouts[idx])));
+        HashCombine(hash,
+            (static_cast<uint64_t>(renderPassImageLayouts.attachmentInitialLayouts[idx]) << 32ULL) |
+                (static_cast<uint64_t>(renderPassImageLayouts.attachmentFinalLayouts[idx])));
     }
 }
 
@@ -115,8 +118,9 @@ inline void HashFramebuffer(
         if (const GpuImageVk* image = gpuResourceMgr.GetImage<GpuImageVk>(clientHandle); image) {
             imageId = VulkanHandleCast<uint64_t>(image->GetPlatformData().image);
         }
-        const uint64_t perAttachmentData[2U] { gpuHandle.id, imageId };
-        HashCombine(hash, FNV1aHash(perAttachmentData),
+        const uint64_t perAttachmentData[2U]{gpuHandle.id, imageId};
+        HashCombine(hash,
+            FNV1aHash(perAttachmentData),
             ((static_cast<uint64_t>(atDesc.layer) << 32ULL) | static_cast<uint64_t>(atDesc.mipLevel)));
     }
 }
@@ -134,9 +138,9 @@ inline void HashRenderPassOps(uint64_t& hash, const RenderPassDesc& renderPassDe
 }
 
 struct RenderPassHashes {
-    uint64_t renderPassCompatibilityHash { 0 };
-    uint64_t renderPassHash { 0 };  // continued hashing from compatibility
-    uint64_t frameBufferHash { 0 }; // only framebuffer related hash
+    uint64_t renderPassCompatibilityHash{0};
+    uint64_t renderPassHash{0};   // continued hashing from compatibility
+    uint64_t frameBufferHash{0};  // only framebuffer related hash
 };
 
 inline RenderPassHashes HashBeginRenderPass(const RenderCommandBeginRenderPass& beginRenderPass,
@@ -147,14 +151,17 @@ inline RenderPassHashes HashBeginRenderPass(const RenderCommandBeginRenderPass& 
     const auto& renderPassDesc = beginRenderPass.renderPassDesc;
 
     PLUGIN_ASSERT(renderPassDesc.subpassCount > 0);
-    HashRenderPassCompatibility(rpHashes.renderPassCompatibilityHash, renderPassDesc, renderPassCompatibilityDesc,
-        beginRenderPass.subpasses[0], beginRenderPass.inputResourceStates);
+    HashRenderPassCompatibility(rpHashes.renderPassCompatibilityHash,
+        renderPassDesc,
+        renderPassCompatibilityDesc,
+        beginRenderPass.subpasses[0],
+        beginRenderPass.inputResourceStates);
 
-    rpHashes.renderPassHash = rpHashes.renderPassCompatibilityHash; // for starting point
+    rpHashes.renderPassHash = rpHashes.renderPassCompatibilityHash;  // for starting point
     HashRenderPassLayouts(rpHashes.renderPassHash, renderPassDesc, beginRenderPass.imageLayouts);
     HashRenderPassOps(rpHashes.renderPassHash, renderPassDesc);
 
-    rpHashes.frameBufferHash = rpHashes.renderPassCompatibilityHash; // depends on the compatible render pass
+    rpHashes.frameBufferHash = rpHashes.renderPassCompatibilityHash;  // depends on the compatible render pass
     HashFramebuffer(rpHashes.frameBufferHash, renderPassDesc, gpuResourceMgr);
 
     return rpHashes;
@@ -168,7 +175,7 @@ VkFramebuffer CreateFramebuffer(const GpuResourceManager& gpuResourceMgr, const 
 
     // the size is taken from the render pass data
     // there might e.g. fragment shading rate images whose size differ
-    FBSize size { renderPassData.framebufferSize.width, renderPassData.framebufferSize.height, 1u };
+    FBSize size{renderPassData.framebufferSize.width, renderPassData.framebufferSize.height, 1u};
     VkImageView imageViews[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {};
     uint32_t viewIndex = 0;
 
@@ -207,22 +214,22 @@ VkFramebuffer CreateFramebuffer(const GpuResourceManager& gpuResourceMgr, const 
 #endif
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
     if (validImageViews && (viewIndex == attachmentCount)) {
-        const VkFramebufferCreateInfo framebufferCreateInfo {
-            VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
-            nullptr,                                   // pNext
-            VkFramebufferCreateFlags { 0 },            // flags
-            renderPassData.renderPassCompatibility,    // renderPass
-            attachmentCount,                           // attachmentCount
-            imageViews,                                // pAttachments
-            size.width,                                // width
-            size.height,                               // height
-            size.layers,                               // layers
+        const VkFramebufferCreateInfo framebufferCreateInfo{
+            VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,  // sType
+            nullptr,                                    // pNext
+            VkFramebufferCreateFlags{0},                // flags
+            renderPassData.renderPassCompatibility,     // renderPass
+            attachmentCount,                            // attachmentCount
+            imageViews,                                 // pAttachments
+            size.width,                                 // width
+            size.height,                                // height
+            size.layers,                                // layers
         };
 
-        VALIDATE_VK_RESULT(vkCreateFramebuffer(device, // device
-            &framebufferCreateInfo,                    // pCreateInfo
-            nullptr,                                   // pAllocator
-            &framebuffer));                            // pFramebuffer
+        VALIDATE_VK_RESULT(vkCreateFramebuffer(device,  // device
+            &framebufferCreateInfo,                     // pCreateInfo
+            nullptr,                                    // pAllocator
+            &framebuffer));                             // pFramebuffer
     }
 
     return framebuffer;
@@ -231,53 +238,53 @@ VkFramebuffer CreateFramebuffer(const GpuResourceManager& gpuResourceMgr, const 
 ContextCommandPoolVk CreateContextCommandPool(
     const VkDevice device, const VkCommandBufferLevel cmdBufferLevel, const uint32_t queueFamilyIndex)
 {
-    constexpr VkCommandPoolCreateFlags commandPoolCreateFlags { 0u };
-    const VkCommandPoolCreateInfo commandPoolCreateInfo {
-        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
-        nullptr,                                    // pNext
-        commandPoolCreateFlags,                     // flags
-        queueFamilyIndex,                           // queueFamilyIndexlayers
+    constexpr VkCommandPoolCreateFlags commandPoolCreateFlags{0u};
+    const VkCommandPoolCreateInfo commandPoolCreateInfo{
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,  // sType
+        nullptr,                                     // pNext
+        commandPoolCreateFlags,                      // flags
+        queueFamilyIndex,                            // queueFamilyIndexlayers
     };
-    constexpr VkSemaphoreCreateFlags semaphoreCreateFlags { 0 };
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo {
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType
-        nullptr,                                 // pNext
-        semaphoreCreateFlags,                    // flags
+    constexpr VkSemaphoreCreateFlags semaphoreCreateFlags{0};
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo{
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,  // sType
+        nullptr,                                  // pNext
+        semaphoreCreateFlags,                     // flags
     };
 
     ContextCommandPoolVk ctxPool;
-    VALIDATE_VK_RESULT(vkCreateCommandPool(device, // device
-        &commandPoolCreateInfo,                    // pCreateInfo
-        nullptr,                                   // pAllocator
-        &ctxPool.commandPool));                    // pCommandPool
+    VALIDATE_VK_RESULT(vkCreateCommandPool(device,  // device
+        &commandPoolCreateInfo,                     // pCreateInfo
+        nullptr,                                    // pAllocator
+        &ctxPool.commandPool));                     // pCommandPool
 
     // pre-create command buffers and semaphores
-    const VkCommandBufferAllocateInfo commandBufferAllocateInfo {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
-        nullptr,                                        // pNext
-        ctxPool.commandPool,                            // commandPool
-        cmdBufferLevel,                                 // level
-        1,                                              // commandBufferCount
+    const VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,  // sType
+        nullptr,                                         // pNext
+        ctxPool.commandPool,                             // commandPool
+        cmdBufferLevel,                                  // level
+        1,                                               // commandBufferCount
     };
 
-    VALIDATE_VK_RESULT(vkAllocateCommandBuffers(device, // device
-        &commandBufferAllocateInfo,                     // pAllocateInfo
-        &ctxPool.commandBuffer.commandBuffer));         // pCommandBuffers
+    VALIDATE_VK_RESULT(vkAllocateCommandBuffers(device,  // device
+        &commandBufferAllocateInfo,                      // pAllocateInfo
+        &ctxPool.commandBuffer.commandBuffer));          // pCommandBuffers
 
     for (uint32_t semIdx = 0U; semIdx < BASE_NS::countof(ctxPool.commandBuffer.semaphores); ++semIdx) {
-        VALIDATE_VK_RESULT(vkCreateSemaphore(device,     // device
-            &semaphoreCreateInfo,                        // pCreateInfo
-            nullptr,                                     // pAllocator
-            &ctxPool.commandBuffer.semaphores[semIdx])); // pSemaphore
+        VALIDATE_VK_RESULT(vkCreateSemaphore(device,      // device
+            &semaphoreCreateInfo,                         // pCreateInfo
+            nullptr,                                      // pAllocator
+            &ctxPool.commandBuffer.semaphores[semIdx]));  // pSemaphore
     }
 
     return ctxPool;
 }
-} // namespace
+}  // namespace
 
 NodeContextPoolManagerVk::NodeContextPoolManagerVk(
     Device& device, GpuResourceManager& gpuResourceManager, const GpuQueue& gpuQueue)
-    : NodeContextPoolManager(), device_ { device }, gpuResourceMgr_ { gpuResourceManager }, gpuQueue_(gpuQueue)
+    : NodeContextPoolManager(), device_{device}, gpuResourceMgr_{gpuResourceManager}, gpuQueue_(gpuQueue)
 {
     const auto& deviceVk = static_cast<const DeviceVk&>(device_);
     const VkDevice vkDevice = static_cast<const DevicePlatformDataVk&>(device_.GetPlatformData()).device;
@@ -307,15 +314,15 @@ NodeContextPoolManagerVk::~NodeContextPoolManagerVk()
         for (auto& cmdPoolRef : commandPools) {
             for (uint32_t semIdx = 0U; semIdx < BASE_NS::countof(cmdPoolRef.commandBuffer.semaphores); ++semIdx) {
                 if (const VkSemaphore semaphore = cmdPoolRef.commandBuffer.semaphores[semIdx]; semaphore) {
-                    vkDestroySemaphore(device, // device
-                        semaphore,             // semaphore
-                        nullptr);              // pAllocator
+                    vkDestroySemaphore(device,  // device
+                        semaphore,              // semaphore
+                        nullptr);               // pAllocator
                 }
             }
             if (cmdPoolRef.commandPool) {
-                vkDestroyCommandPool(device, // device
-                    cmdPoolRef.commandPool,  // commandPool
-                    nullptr);                // pAllocator
+                vkDestroyCommandPool(device,  // device
+                    cmdPoolRef.commandPool,   // commandPool
+                    nullptr);                 // pAllocator
             }
         }
     };
@@ -324,9 +331,9 @@ NodeContextPoolManagerVk::~NodeContextPoolManagerVk()
 
     for (auto& ref : framebufferCache_.hashToElement) {
         if (ref.second.frameBuffer != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(device, // device
-                ref.second.frameBuffer,  // framebuffer
-                nullptr);                // pAllocator
+            vkDestroyFramebuffer(device,  // device
+                ref.second.frameBuffer,   // framebuffer
+                nullptr);                 // pAllocator
         }
     }
     for (auto& ref : renderPassCache_.hashToElement) {
@@ -353,7 +360,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
     const uint64_t frameCount = device_.GetFrameCount();
 
 #if (RENDER_VALIDATION_ENABLED == 1)
-    PLUGIN_ASSERT(frameIndexBack_ != frameCount); // prevent multiple calls per frame
+    PLUGIN_ASSERT(frameIndexBack_ != frameCount);  // prevent multiple calls per frame
     frameIndexBack_ = frameCount;
     PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
 #endif
@@ -361,13 +368,17 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
     if (firstFrame_) {
         firstFrame_ = false;
         for (const auto& cmdPoolRef : commandPools_) {
-            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_cmd_buf");
+            GpuResourceUtil::DebugObjectNameVk(device_,
+                VK_OBJECT_TYPE_COMMAND_BUFFER,
+                VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer),
+                debugName_ + "_cmd_buf");
         }
         // NOTE: deferred creation
         for (const auto& cmdPoolRef : commandSecondaryPools_) {
-            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer), debugName_ + "_secondary_cmd_buf");
+            GpuResourceUtil::DebugObjectNameVk(device_,
+                VK_OBJECT_TYPE_COMMAND_BUFFER,
+                VulkanHandleCast<uint64_t>(cmdPoolRef.commandBuffer.commandBuffer),
+                debugName_ + "_secondary_cmd_buf");
         }
     }
 #endif
@@ -376,7 +387,7 @@ void NodeContextPoolManagerVk::BeginBackendFrame()
     auto& semaphoreIdxRef = commandPools_[bufferingIndex_].commandBuffer.semaphoreIdx;
     semaphoreIdxRef = (semaphoreIdxRef + 1U) % LowLevelCommandBufferVk::SEMAPHORE_BUFFERING_COUNT;
 
-    constexpr uint64_t additionalFrameCount { 2u };
+    constexpr uint64_t additionalFrameCount{2u};
     const auto minAge = device_.GetCommandBufferingCount() + additionalFrameCount;
     const auto ageLimit = (frameCount < minAge) ? 0 : (frameCount - minAge);
 
@@ -443,8 +454,8 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
         const RenderHandle imageHandle = beginRenderPass.renderPassDesc.attachmentHandles[idx];
         if (const auto* image = gpuResourceMgr_.GetImage<const GpuImageVk>(imageHandle); image) {
             const auto& platData = image->GetPlatformData();
-            renderPassData.renderPassCompatibilityDesc.attachments[idx] = { platData.format, platData.samples,
-                platData.aspectFlags };
+            renderPassData.renderPassCompatibilityDesc.attachments[idx] = {
+                platData.format, platData.samples, platData.aspectFlags};
             if (idx == 0) {
                 uint32_t maxFbWidth = platData.extent.width;
                 uint32_t maxFbHeight = platData.extent.height;
@@ -453,10 +464,10 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
                     maxFbWidth = Math::max(1u, maxFbWidth >> attachmentRef.mipLevel);
                     maxFbHeight = Math::max(1u, maxFbHeight >> attachmentRef.mipLevel);
                 }
-                renderPassData.viewport = { 0.0f, 0.0f, static_cast<float>(maxFbWidth), static_cast<float>(maxFbHeight),
-                    0.0f, 1.0f };
-                renderPassData.scissor = { { 0, 0 }, { maxFbWidth, maxFbHeight } };
-                renderPassData.framebufferSize = { maxFbWidth, maxFbHeight };
+                renderPassData.viewport = {
+                    0.0f, 0.0f, static_cast<float>(maxFbWidth), static_cast<float>(maxFbHeight), 0.0f, 1.0f};
+                renderPassData.scissor = {{0, 0}, {maxFbWidth, maxFbHeight}};
+                renderPassData.framebufferSize = {maxFbWidth, maxFbHeight};
 
                 // currently swapchain check and rotation only supported for single target rotation
                 if (RenderHandleUtil::IsSwapchain(imageHandle)) {
@@ -483,14 +494,16 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
         if (const auto iter = cache.hashToElement.find(renderPassData.renderPassCompatibilityHash);
             iter != cache.hashToElement.cend()) {
             renderPassData.renderPassCompatibility = iter->second.renderPass;
-        } else { // new
+        } else {  // new
             renderPassData.renderPassCompatibility =
                 renderPassCreator_.CreateRenderPassCompatibility(deviceVk, beginRenderPass, renderPassData);
-            cache.hashToElement[renderPassData.renderPassCompatibilityHash] = { 0,
-                renderPassData.renderPassCompatibility };
+            cache.hashToElement[renderPassData.renderPassCompatibilityHash] = {
+                0, renderPassData.renderPassCompatibility};
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_RENDER_PASS,
-                VulkanHandleCast<uint64_t>(renderPassData.renderPassCompatibility), debugName_ + "_rp_compatibility");
+            GpuResourceUtil::DebugObjectNameVk(device_,
+                VK_OBJECT_TYPE_RENDER_PASS,
+                VulkanHandleCast<uint64_t>(renderPassData.renderPassCompatibility),
+                debugName_ + "_rp_compatibility");
 #endif
         }
     }
@@ -500,12 +513,13 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
         if (auto iter = cache.hashToElement.find(renderPassData.frameBufferHash); iter != cache.hashToElement.cend()) {
             iter->second.frameUseIndex = frameCount;
             renderPassData.framebuffer = iter->second.frameBuffer;
-        } else { // new
+        } else {  // new
             renderPassData.framebuffer =
                 CreateFramebuffer(gpuResourceMgr_, beginRenderPass.renderPassDesc, renderPassData, device);
-            cache.hashToElement[renderPassData.frameBufferHash] = { frameCount, renderPassData.framebuffer };
+            cache.hashToElement[renderPassData.frameBufferHash] = {frameCount, renderPassData.framebuffer};
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_FRAMEBUFFER,
+            GpuResourceUtil::DebugObjectNameVk(device_,
+                VK_OBJECT_TYPE_FRAMEBUFFER,
                 VulkanHandleCast<uint64_t>(renderPassData.framebuffer),
                 debugName_ + "_fbo_" + to_string(renderPassData.framebufferSize.width) + "_" +
                     to_string(renderPassData.framebufferSize.height));
@@ -519,12 +533,14 @@ LowLevelRenderPassDataVk NodeContextPoolManagerVk::GetRenderPassData(
             iter != cache.hashToElement.cend()) {
             iter->second.frameUseIndex = frameCount;
             renderPassData.renderPass = iter->second.renderPass;
-        } else { // new
+        } else {  // new
             renderPassData.renderPass = renderPassCreator_.CreateRenderPass(deviceVk, beginRenderPass, renderPassData);
-            cache.hashToElement[renderPassData.renderPassHash] = { frameCount, renderPassData.renderPass };
+            cache.hashToElement[renderPassData.renderPassHash] = {frameCount, renderPassData.renderPass};
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
-            GpuResourceUtil::DebugObjectNameVk(device_, VK_OBJECT_TYPE_RENDER_PASS,
-                VulkanHandleCast<uint64_t>(renderPassData.renderPass), debugName_ + "_rp");
+            GpuResourceUtil::DebugObjectNameVk(device_,
+                VK_OBJECT_TYPE_RENDER_PASS,
+                VulkanHandleCast<uint64_t>(renderPassData.renderPass),
+                debugName_ + "_rp");
 #endif
         }
     }

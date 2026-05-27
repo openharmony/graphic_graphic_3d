@@ -28,9 +28,9 @@ CORE3D_BEGIN_NAMESPACE()
 BEGIN_COMPONENT(IReflectionProbeComponentManager, ReflectionProbeComponent)
 #if !defined(IMPLEMENT_MANAGER)
 #endif
-    /** Camera that will act as a probes rendering configuration
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, probeCamera, "Probe Camera", 0, )
+/** Camera that will act as a probes rendering configuration
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, probeCamera, "Probe Camera", 0, )
 
 END_COMPONENT(IReflectionProbeComponentManager, ReflectionProbeComponent, "714037fc-d0fa-48e0-9d93-7bbcabee6b7c")
 #if !defined(IMPLEMENT_MANAGER)

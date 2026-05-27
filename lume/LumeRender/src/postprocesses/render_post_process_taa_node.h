@@ -63,7 +63,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -74,7 +74,7 @@ public:
     IRenderNode::ExecuteFlags GetExecuteFlags() const override;
 
     struct EffectProperties {
-        bool enabled { false };
+        bool enabled{false};
         TaaConfiguration taaConfiguration;
     };
 
@@ -99,7 +99,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderPass CreateRenderPass(const RenderHandle input) const;
     BASE_NS::Math::Vec4 GetFactorTaa() const;
@@ -112,16 +112,16 @@ private:
     RenderHandle samplerHandle_;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_TAA_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_TAA_NODE_H

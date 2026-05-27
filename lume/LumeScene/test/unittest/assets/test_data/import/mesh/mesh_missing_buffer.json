@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "mesh",
+        "vertexAttributes": [
+            { "semantic": "position", "format": "r32g32b32Sfloat", "stride": 12 }
+        ],
+        "submeshes": [
+            {
+                "vertexCount": 3,
+                "indexCount": 0,
+                "indexType": "uint16",
+                "buffers": [
+                    { "semantic": "position", "offset": 0, "size": 36 }
+                ]
+            }
+        ]
+    }
+}

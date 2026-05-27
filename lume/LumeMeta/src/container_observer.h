@@ -49,10 +49,10 @@ private:
 
 class ContainerObserver : public IntroduceInterfaces<MetaObject, IContainerObserver> {
     META_OBJECT(ContainerObserver, ClassId::ContainerObserver, IntroduceInterfaces)
-protected: // LifeCycle
+protected:  // LifeCycle
     bool Build(const IMetadata::Ptr&) override;
 
-public: // IContainerObjserver
+public:  // IContainerObjserver
     void SetContainer(const IContainer::Ptr& container) override;
 
     META_BEGIN_STATIC_DATA()
@@ -79,8 +79,8 @@ private:
     BASE_NS::vector<Subscription> subscriptions_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_CONTAINER_OBSERVER_H
+#endif  // META_SRC_CONTAINER_OBSERVER_H

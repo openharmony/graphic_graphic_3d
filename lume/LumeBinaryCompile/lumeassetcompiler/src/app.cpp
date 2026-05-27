@@ -13,27 +13,29 @@
  * limitations under the License.
  */
 
-#include <cstring>
-#include <cinttypes>
-#include <cstddef>
+#include "app.h"
+
 #include <algorithm>
 #include <array>
+#include <cinttypes>
+#include <cstddef>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
-#include "app.h"
-#include "dir.h"
+
 #include "coff.h"
+#include "dir.h"
 #include "elf32.h"
 #include "elf64.h"
 #include "platform.h"
 #include "toarray.h"
 
 #ifdef __APPLE__
+#include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach-o/nlist.h>
-#include <mach-o/fat.h>
 #else
 #include "maco.h"
 #endif
@@ -49,22 +51,60 @@ std::vector<FsEntry> g_directory;
 std::vector<uint8_t> g_bin;
 std::vector<std::string_view> g_validExts;
 
-bool AddFile(const std::string& filename, const std::string& storename)
+bool HasValidExtension(const std::string& filename)
 {
     std::string_view ext;
     auto pos = filename.find_last_of('.');
     if (pos != std::string::npos) {
-        // found it.
         ext = std::string_view(filename).substr(pos);
     }
-    bool valid = false;
     for (const auto& e : g_validExts) {
         if (ext.compare(e) == 0) {
-            valid = true;
-            break;
+            return true;
         }
     }
-    if (!valid) {
+    return false;
+}
+
+bool GetFileSize(const std::string& filename, uint64_t& size)
+{
+#if defined(_WIN32) && (_WIN32)
+    struct _stat64 fileStat;
+    if (_stat64(filename.c_str(), &fileStat) == -1) {
+        return false;
+    }
+#else
+    struct stat fileStat;
+    if (stat(filename.c_str(), &fileStat) == -1) {
+        return false;
+    }
+#endif
+    size = fileStat.st_size;
+    return true;
+}
+
+bool ReadFileIntoBin(const std::string& filename, uint64_t offset, uint64_t size, size_t newSize)
+{
+    FILE* f = fopen(filename.c_str(), "rb");
+    if (f == nullptr) {
+        printf("Could not open %s.\n", filename.c_str());
+        return false;
+    }
+    const size_t oldSize = g_bin.size();
+    g_bin.resize(newSize);
+    if (fread(g_bin.data() + offset, 1, size_t(size), f) != size_t(size)) {
+        printf("Short read on %s.\n", filename.c_str());
+        fclose(f);
+        g_bin.resize(oldSize);
+        return false;
+    }
+    fclose(f);
+    return true;
+}
+
+bool AddFile(const std::string& filename, const std::string& storename)
+{
+    if (!HasValidExtension(filename)) {
         printf("Skipped %s\n", storename.c_str());
         return true;
     }
@@ -74,28 +114,22 @@ bool AddFile(const std::string& filename, const std::string& storename)
     }
     FsEntry tmp{};
     tmp.fname[storename.copy(tmp.fname, sizeof(tmp.fname) - 1U)] = '\0';
-#if defined(_WIN32) && (_WIN32)
-    struct _stat64 fileStat;
-    if (_stat64(filename.c_str(), &fileStat) == -1) {
-#else
-    struct stat fileStat;
-    if (stat(filename.c_str(), &fileStat) == -1) {
-#endif
+    if (!GetFileSize(filename, tmp.size)) {
         printf("File [%s] not found\n", tmp.fname);
         return false;
     }
-    tmp.size = fileStat.st_size;
     auto padding = (8 - (g_bin.size() & 7)) & 7;
     tmp.offset = g_bin.size() + padding;
-    g_directory.push_back(tmp);
-    FILE* f = fopen(filename.c_str(), "rb");
-    if (f == nullptr) {
-        printf("Could not open %s.\n", filename.c_str());
+
+    const size_t newSize = g_bin.size() + padding + tmp.size;
+    if (newSize < g_bin.size()) {
+        printf("File accumulation overflow.\n");
         return false;
     }
-    g_bin.resize(size_t(g_bin.size() + padding + tmp.size));
-    fread(g_bin.data() + tmp.offset, 1, size_t(tmp.size), f);
-    fclose(f);
+    if (!ReadFileIntoBin(filename, tmp.offset, tmp.size, newSize)) {
+        return false;
+    }
+    g_directory.push_back(tmp);
     printf("Stored: %s [%" PRIu64 " , %" PRIu64 "]\n", tmp.fname, tmp.offset, tmp.size);
     return true;
 }
@@ -138,15 +172,17 @@ bool AddDirectory(const std::string& path, const std::string& outpath)
         }
         return strcmp(lhs.d_name, rhs.d_name) < 0;
     });
+
+    bool success = true;
     for (const auto& dirEntry : entries) {
         if (dirEntry.d_type == DT_DIR) {
             AddDirectory(p + dirEntry.d_name, op + dirEntry.d_name);
         } else if (!AddFile(p + dirEntry.d_name, op + dirEntry.d_name)) {
-            return false;
+            success = false;
         }
     }
     closedir(pDir);
-    return true;
+    return success;
 }
 
 /*
@@ -166,7 +202,8 @@ bool AddDirectory(const std::string& path, const std::string& outpath)
  *           if (BinaryDataForReadOnlyFileSystem[i].fname[0] == 0) break;
  *           printf("%s\n", BinaryDataForReadOnlyFileSystem[i].fname);
  *           char* data = (char*)(BinaryDataForReadOnlyFileSystem[i].offset +
- * (uintptr_t)BinaryDataForReadOnlyFileSystem); printf("%lld\n", BinaryDataForReadOnlyFileSystem[i].offset);
+ * (uintptr_t)BinaryDataForReadOnlyFileSystem); printf("%lld\n",
+ * BinaryDataForReadOnlyFileSystem[i].offset);
  *       }
  *   }
  */
@@ -186,10 +223,14 @@ struct ObjFile {
 struct StringTable {
     char table[256u]{};
     char* dst = table;
-    StringTable() : dst(table) {}
-    uint32_t addString(std::string_view a)
+    StringTable() : dst(table)
+    {}
+    uint32_t AddString(std::string_view a)
     {
         const auto offset = dst - table;
+        if (static_cast<size_t>(offset) + a.size() + 1 > sizeof(table)) {
+            return UINT32_MAX;
+        }
         dst += a.copy(dst, sizeof(table) - offset);
         *dst++ = '\0';
         return static_cast<uint32_t>(offset);
@@ -200,20 +241,20 @@ struct StringTable {
     }
 };
 
-template<typename T>
+template <typename T>
 void FillCoffHead(T& obj, bool x64)
 {
     // fill coff header.
     obj.coffHead.machine = (!x64) ? IMAGE_FILE_MACHINE_I386 : IMAGE_FILE_MACHINE_AMD64;
     obj.coffHead.numberOfSections = sizeof(obj.sections) / sizeof(IMAGE_SECTION_HEADER);
-    obj.coffHead.timeDateStamp = 0; // duh.
+    obj.coffHead.timeDateStamp = 0;  // duh.
     obj.coffHead.pointerToSymbolTable = offsetof(T, symtab);
     obj.coffHead.numberOfSymbols = sizeof(obj.symtab) / sizeof(IMAGE_SYMBOL);
     obj.coffHead.sizeOfOptionalHeader = 0;
-    obj.coffHead.characteristics = 0; // if x86 use IMAGE_FILE_32BIT_MACHINE ?
+    obj.coffHead.characteristics = 0;  // if x86 use IMAGE_FILE_32BIT_MACHINE ?
 }
 
-template<typename T>
+template <typename T>
 size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
 {
     if (!x64) {
@@ -222,11 +263,14 @@ size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
         t += g_dataName;
         std::string t2 = "_";
         t2 += g_sizeName;
-        obj.symtab[1].n.name.Long = stringtable.addString(t);
-        obj.symtab[0].n.name.Long = stringtable.addString(t2);
+        obj.symtab[1].n.name.Long = stringtable.AddString(t);
+        obj.symtab[0].n.name.Long = stringtable.AddString(t2);
     } else {
-        obj.symtab[1].n.name.Long = stringtable.addString(g_dataName);
-        obj.symtab[0].n.name.Long = stringtable.addString(g_sizeName);
+        obj.symtab[1].n.name.Long = stringtable.AddString(g_dataName);
+        obj.symtab[0].n.name.Long = stringtable.AddString(g_sizeName);
+    }
+    if (obj.symtab[1].n.name.Long == UINT32_MAX || obj.symtab[0].n.name.Long == UINT32_MAX) {
+        return 0;
     }
 
     const uint32_t stringTableSize = uint32_t(stringtable.GetOffset());
@@ -234,7 +278,7 @@ size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
     return stringTableSize;
 }
 
-template<typename T>
+template <typename T>
 void FillCoffSectionAndSymtable(
     T& obj, size_t stringTableSize, const size_t sizeOfSection, const std::string& secname, bool x64)
 {
@@ -242,36 +286,47 @@ void FillCoffSectionAndSymtable(
     secname.copy(reinterpret_cast<char*>(obj.sections[0].name), sizeof(obj.sections[0].name));
     obj.sections[0].misc.virtualSize = 0;
     obj.sections[0].virtualAddress = 0;
-    obj.sections[0].sizeOfRawData = uint32_t(sizeOfSection); // sizeof the data on disk.
+    obj.sections[0].sizeOfRawData = uint32_t(sizeOfSection);  // sizeof the data on disk.
     obj.sections[0].pointerToRawData = static_cast<uint32_t>(
-        ((sizeof(T) + stringTableSize + 3) / 4) * 4); // DWORD align the data directly after the headers..
+        ((sizeof(T) + stringTableSize + 3) / 4) * 4);  // DWORD align the data directly after the headers..
     obj.sections[0].pointerToLinenumbers = 0;
     obj.sections[0].numberOfRelocations = 0;
     obj.sections[0].numberOfLinenumbers = 0;
     obj.sections[0].characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ;
     // fill symbols
     obj.symtab[1].value = uint32_t(sizeof(uint64_t));
-    obj.symtab[1].sectionNumber = 1; // first section.. (one based)
+    obj.symtab[1].sectionNumber = 1;  // first section.. (one based)
     obj.symtab[1].type = IMAGE_SYM_TYPE_CHAR | (IMAGE_SYM_DTYPE_ARRAY << 8);
     obj.symtab[1].storageClass = IMAGE_SYM_CLASS_EXTERNAL;
     obj.symtab[1].numberOfAuxSymbols = 0;
 
     obj.symtab[0].value = uint32_t(0u);
-    obj.symtab[0].sectionNumber = 1; // first section.. (one based)
-    // obj.symtab[0].type = IMAGE_SYM_TYPE_UINT;  //(just use IMAGE_SYM_TYPE_NULL like mstools?)
+    obj.symtab[0].sectionNumber = 1;  // first section.. (one based)
+    // obj.symtab[0].type = IMAGE_SYM_TYPE_UINT;  //(just use IMAGE_SYM_TYPE_NULL
+    // like mstools?)
     obj.symtab[0].storageClass = IMAGE_SYM_CLASS_EXTERNAL;
     obj.symtab[0].numberOfAuxSymbols = 0;
 }
 
 bool WriteObj(const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data, bool x64)
 {
+    if (sizeOfData > SIZE_MAX - sizeof(uint64_t)) {
+        return false;
+    }
     const size_t sizeOfSection = sizeof(uint64_t) + sizeOfData;
     ObjFile obj{};
     StringTable stringtable;
-    stringtable.dst += sizeof(uint32_t); // leave space for the size of the table as uint32
+    stringtable.dst += sizeof(uint32_t);  // leave space for the size of the table as uint32
 
+    if (sizeOfSection > UINT32_MAX) {
+        printf("Data too large for COFF format\n");
+        return false;
+    }
     FillCoffHead(obj, x64);
     size_t stringTableSize = FillCoffSymbtable(obj, stringtable, x64);
+    if (stringTableSize == 0) {
+        return false;
+    }
     FillCoffSectionAndSymtable(obj, static_cast<size_t>(stringTableSize), sizeOfSection, secname, x64);
 
     FILE* d = fopen(fname.c_str(), "wb");
@@ -279,16 +334,30 @@ bool WriteObj(const std::string& fname, const std::string& secname, size_t sizeO
         printf("Could not open %s.\n", fname.c_str());
         return false;
     }
-    // write headers
-    fwrite(&obj, sizeof(obj), 1u, d);
-    // write string table
-    fwrite(stringtable.table, stringTableSize, 1u, d);
-    // write sections..
-    size_t p = ftell(d);
+    if (fwrite(&obj, sizeof(obj), 1u, d) != 1u || fwrite(stringtable.table, stringTableSize, 1u, d) != 1u) {
+        fclose(d);
+        return false;
+    }
+    long rawP = ftell(d);
+    if (rawP < 0) {
+        fclose(d);
+        return false;
+    }
+    size_t p = static_cast<size_t>(rawP);
+    if (p > obj.sections[0].pointerToRawData) {
+        fclose(d);
+        return false;
+    }
     uint32_t pad = 0;
     size_t padcount = obj.sections[0].pointerToRawData - p;
-    fwrite(&pad, padcount, 1u, d);
-    fwrite(data, sizeOfSection, 1u, d);
+    if (padcount > sizeof(pad)) {
+        fclose(d);
+        return false;
+    }
+    if ((padcount > 0 && fwrite(&pad, padcount, 1u, d) != 1u) || fwrite(data, sizeOfSection, 1u, d) != 1u) {
+        fclose(d);
+        return false;
+    }
     fclose(d);
 
     return true;
@@ -306,11 +375,11 @@ struct Elf64Bit {
     Elf64_Sym symbs[3];
 };
 
-template<class Type>
+template <class Type>
 void FillElfHead(Type& o, uint8_t arch)
 {
     o.head.type = ET_REL;
-    o.head.machine = arch; // machine id..
+    o.head.machine = arch;  // machine id..
     o.head.version = EV_CURRENT;
     o.head.ehsize = sizeof(o.head);
     o.head.shentsize = sizeof(o.sections[0]);
@@ -319,55 +388,67 @@ void FillElfHead(Type& o, uint8_t arch)
     o.head.shstrndx = 1;
 }
 
-template<class Type>
-void FillElfSectionAndSymbtable(Type& o, uint8_t arch, StringTable& stringtable, size_t sizeOfData)
+template <class Type>
+bool FillElfSectionAndSymbtable(Type& o, uint8_t arch, StringTable& stringtable, size_t sizeOfData)
 {
-    // create symbols
-    o.symbs[2].name = stringtable.addString(g_dataName); // ?BinaryDataForReadOnlyFileSystem@@3PADA");
+    o.symbs[2].name = stringtable.AddString(g_dataName);
+    o.symbs[1].name = stringtable.AddString(g_sizeName);
+    o.sections[2].name = stringtable.AddString(".symtab");
+    if (o.symbs[2].name == UINT32_MAX || o.symbs[1].name == UINT32_MAX || o.sections[2].name == UINT32_MAX) {
+        return false;
+    }
     o.symbs[2].value = sizeof(uint64_t);
     o.symbs[2].size = static_cast<Elf32_Word>(sizeOfData);
     o.symbs[2].info = o.symbs[1].info = ELF_ST_INFO(STB_GLOBAL, STT_OBJECT);
     o.symbs[2].other = o.symbs[1].other = STV_HIDDEN;
     o.symbs[2].shndx = o.symbs[1].shndx = 3;
 
-    o.symbs[1].name = stringtable.addString(g_sizeName);
     o.symbs[1].value = 0;
     o.symbs[1].size = sizeof(uint64_t);
 
-    o.sections[2].name = stringtable.addString(".symtab");
     o.sections[2].type = SHT_SYMTAB;
-    o.sections[2].offset = offsetof(Type, symbs); // sizeof(o) + sizeOfSection + stringtable_size;
+    o.sections[2].offset = offsetof(Type, symbs);
     o.sections[2].addralign = 8;
     o.sections[2].size = sizeof(o.symbs);
     o.sections[2].entsize = sizeof(o.symbs[0]);
     o.sections[2].link = 1;
-    o.sections[2].info = 1; // index of first non-local symbol.
+    o.sections[2].info = 1;
+    return true;
 }
 
-template<class Type>
-void FillElfSection(Type& o, uint8_t arch, const std::string& secname, StringTable& stringtable, size_t sizeOfSection)
+template <class Type>
+bool FillElfSection(Type& o, uint8_t arch, const std::string& secname, StringTable& stringtable, size_t sizeOfSection)
 {
     std::string tmp = ".rodata.";
     tmp += secname;
 
-    o.sections[3].name = stringtable.addString(tmp.data());
+    o.sections[3].name = stringtable.AddString(tmp.data());
+    o.sections[1].name = stringtable.AddString(".strtab");
+    if (o.sections[3].name == UINT32_MAX || o.sections[1].name == UINT32_MAX) {
+        return false;
+    }
     o.sections[3].type = SHT_PROGBITS;
     o.sections[3].flags = SHF_ALLOC | SHF_MERGE;
     o.sections[3].offset = sizeof(o);
     o.sections[3].addralign = 8;
     o.sections[3].size = static_cast<Elf32_Word>(sizeOfSection);
-
-    o.sections[1].name = stringtable.addString(".strtab");
     o.sections[1].type = SHT_STRTAB;
     o.sections[1].offset = static_cast<Elf32_Off>(sizeof(o) + sizeOfSection);
     o.sections[1].addralign = 1;
     o.sections[1].size = static_cast<Elf32_Word>(stringtable.GetOffset());
+    return true;
 }
 
-template<class Type>
+template <class Type>
 bool WriteElf(uint8_t arch, const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data)
 {
+    if (sizeOfData > SIZE_MAX - sizeof(uint64_t)) {
+        return false;
+    }
     const size_t sizeOfSection = sizeOfData + sizeof(uint64_t);
+    if (sizeOfSection > UINT32_MAX) {
+        return false;
+    }
     Type o{};
     FillElfHead(o, arch);
 
@@ -376,18 +457,24 @@ bool WriteElf(uint8_t arch, const std::string& fname, const std::string& secname
     *(stringtable.dst) = '\0';
     ++(stringtable.dst);
 
-    FillElfSectionAndSymbtable(o, arch, stringtable, sizeOfData);
+    if (!FillElfSectionAndSymbtable(o, arch, stringtable, sizeOfData)) {
+        return false;
+    }
 
-    FillElfSection(o, arch, secname, stringtable, sizeOfSection);
+    if (!FillElfSection(o, arch, secname, stringtable, sizeOfSection)) {
+        return false;
+    }
 
     FILE* e = fopen(fname.c_str(), "wb");
     if (e == nullptr) {
         printf("Could not open %s.\n", fname.c_str());
         return false;
     }
-    fwrite(&o, sizeof(o), 1, e);
-    fwrite(data, sizeOfSection, 1, e);
-    fwrite(stringtable.table, size_t(o.sections[1].size), 1, e);
+    if (fwrite(&o, sizeof(o), 1, e) != 1 || fwrite(data, sizeOfSection, 1, e) != 1 ||
+        fwrite(stringtable.table, size_t(o.sections[1].size), 1, e) != 1) {
+        fclose(e);
+        return false;
+    }
     fclose(e);
     return true;
 }
@@ -402,7 +489,7 @@ auto MachoHeader()
 {
     FatHeader fathdr;
     fathdr.magic = FAT_CIGAM;
-    fathdr.nfat_arch = platform_htonl(2); // big-endian values in fat header
+    fathdr.nfat_arch = platform_htonl(2);  // big-endian values in fat header
     return fathdr;
 }
 
@@ -413,15 +500,15 @@ auto MachoArchs(uint32_t fatAlignmentPowerOfTwo)
         {
             static_cast<CpuType>(platform_htonl(CPU_TYPE_X86_64)),
             static_cast<CpuSubtype>(platform_htonl(CPU_SUBTYPE_X86_64_ALL)),
-            0, // offset
-            0, // size of data
+            0,  // offset
+            0,  // size of data
             platform_htonl(fatAlignmentPowerOfTwo),
         },
         {
             static_cast<CpuType>(platform_htonl(CPU_TYPE_ARM64)),
             static_cast<CpuSubtype>(platform_htonl(CPU_SUBTYPE_ARM64_ALL)),
-            0, // offset,
-            0, // size of data
+            0,  // offset,
+            0,  // size of data
             platform_htonl(fatAlignmentPowerOfTwo),
         },
     };
@@ -432,11 +519,14 @@ auto MachoArchs(uint32_t fatAlignmentPowerOfTwo)
 auto MachoX64Header()
 {
     MachHeader64 x64_header = {
-        MH_MAGIC_64, static_cast<CpuType>(CPU_TYPE_X86_64), static_cast<CpuSubtype>(CPU_SUBTYPE_X86_64_ALL), MH_OBJECT,
-        2,                                                                    // ncmds
-        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand), // sizeofcmds
-        0,                                                                    // flags
-        0                                                                     // reserved
+        MH_MAGIC_64,
+        static_cast<CpuType>(CPU_TYPE_X86_64),
+        static_cast<CpuSubtype>(CPU_SUBTYPE_X86_64_ALL),
+        MH_OBJECT,
+        2,                                                                     // ncmds
+        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand),  // sizeofcmds
+        0,                                                                     // flags
+        0                                                                      // reserved
     };
 
     return x64_header;
@@ -445,11 +535,14 @@ auto MachoX64Header()
 auto MachoARM64Header()
 {
     MachHeader64 arm64_header = {
-        MH_MAGIC_64, static_cast<CpuType>(CPU_TYPE_ARM64), static_cast<CpuSubtype>(CPU_SUBTYPE_ARM64_ALL), MH_OBJECT,
-        2,                                                                    // ncmds
-        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand), // sizeofcmds
-        0,                                                                    // flags
-        0                                                                     // reserved
+        MH_MAGIC_64,
+        static_cast<CpuType>(CPU_TYPE_ARM64),
+        static_cast<CpuSubtype>(CPU_SUBTYPE_ARM64_ALL),
+        MH_OBJECT,
+        2,                                                                     // ncmds
+        sizeof(SegmentCommand64) + sizeof(Section64) + sizeof(SymtabCommand),  // sizeofcmds
+        0,                                                                     // flags
+        0                                                                      // reserved
     };
 
     return arm64_header;
@@ -458,16 +551,17 @@ auto MachoARM64Header()
 auto MachoSegmentCommand64(size_t& sizeOfSection)
 {
     SegmentCommand64 data_seg = {
-        LC_SEGMENT_64, sizeof(data_seg) + sizeof(Section64),
-        "",                       // for object files name is empty
-        0,                        // vmaddress
-        (sizeOfSection + 7) & ~7, // vmsize aligned to 8 bytes
-        0,                        // fileoffset
-        sizeOfSection,            // filesize
-        VM_PROT_READ,             // maxprot
-        VM_PROT_READ,             // initprot
-        1,                        // nsects
-        SG_NORELOC                // flags
+        LC_SEGMENT_64,
+        sizeof(data_seg) + sizeof(Section64),
+        "",                        // for object files name is empty
+        0,                         // vmaddress
+        (sizeOfSection + 7) & ~7,  // vmsize aligned to 8 bytes
+        0,                         // fileoffset
+        sizeOfSection,             // filesize
+        VM_PROT_READ,              // maxprot
+        VM_PROT_READ,              // initprot
+        1,                         // nsects
+        SG_NORELOC                 // flags
     };
 
     return data_seg;
@@ -476,16 +570,17 @@ auto MachoSegmentCommand64(size_t& sizeOfSection)
 auto MachoDataSection(size_t& sizeOfSection)
 {
     Section64 data_sect = {
-        "__const", "__DATA",
-        0,             // addr
-        sizeOfSection, // vmsize aligned to 8 bytes
-        0,             // offset
-        3,             // alignment = 2^3 = 8 bytes
-        0,             // reloff
-        0,             // nreloc
-        S_REGULAR,     // flags
-        0,             // reserved1
-        0,             // reserved2
+        "__const",
+        "__DATA",
+        0,              // addr
+        sizeOfSection,  // vmsize aligned to 8 bytes
+        0,              // offset
+        3,              // alignment = 2^3 = 8 bytes
+        0,              // reloff
+        0,              // nreloc
+        S_REGULAR,      // flags
+        0,              // reserved1
+        0,              // reserved2
     };
 
     return data_sect;
@@ -494,11 +589,12 @@ auto MachoDataSection(size_t& sizeOfSection)
 auto MachoSymbolTable(uint32_t& string_size)
 {
     SymtabCommand symtab = {
-        LC_SYMTAB, sizeof(symtab),
-        0,           // symoff
-        2,           // nsyms
-        0,           // stroff
-        string_size, // strsize
+        LC_SYMTAB,
+        sizeof(symtab),
+        0,            // symoff
+        2,            // nsyms
+        0,            // stroff
+        string_size,  // strsize
     };
 
     return symtab;
@@ -509,16 +605,16 @@ auto MachoList(std::string& sizeName)
     using namespace std;
     Nlist64 ret[]{
         {
-            1, // first string
+            1,  // first string
             N_EXT | N_SECT,
-            1, // segment
+            1,  // segment
             REFERENCE_FLAG_DEFINED,
             0,
         },
         {
-            static_cast<uint32_t>(sizeName.size() + 2), // second string
+            static_cast<uint32_t>(sizeName.size() + 2),  // second string
             N_EXT | N_SECT,
-            1, // segment
+            1,  // segment
             REFERENCE_FLAG_DEFINED,
             8,
         },
@@ -539,7 +635,7 @@ struct MachoPaddingInfo {
 
 auto MachoUpdate(FatHeader& fathdr, FatArch* archs, uint32_t fatAlignment, size_t fpos)
 {
-    const uint32_t sliceOffset0 = static_cast<uint32_t>(sizeof(fathdr) + sizeof(archs)); // initial headers
+    const uint32_t sliceOffset0 = static_cast<uint32_t>(sizeof(fathdr) + 2 * sizeof(FatArch));  // initial headers
     const uint32_t sliceOffsetAligned0 = static_cast<uint32_t>(GetAligned(sliceOffset0, fatAlignment));
     const uint32_t slicePadding0 = sliceOffsetAligned0 - sliceOffset0;
 
@@ -553,44 +649,59 @@ auto MachoUpdate(FatHeader& fathdr, FatArch* archs, uint32_t fatAlignment, size_
     archs[1].offset = platform_htonl(sliceOffsetAligned1);
     archs[1].size = platform_htonl(static_cast<uint32_t>(fpos));
 
-    return MachoPaddingInfo{ sliceOffset0, sliceOffsetAligned0, slicePadding0, sliceOffset1, sliceOffsetAligned1,
-        slicePadding1 };
+    return MachoPaddingInfo{
+        sliceOffset0, sliceOffsetAligned0, slicePadding0, sliceOffset1, sliceOffsetAligned1, slicePadding1};
 }
 
 struct Macho {
     FatHeader fathdr;
-    std::array<FatArch, 2> archs; // 2: size
+    std::array<FatArch, 2> archs;
     MachHeader64 x64Header;
     MachHeader64 arm64Header;
     SegmentCommand64 dataSeg;
     Section64 dataSect;
     SymtabCommand symtab;
-    std::array<Nlist64, 2> syms; // 2: size
+    std::array<Nlist64, 2> syms;
 };
 
-template<typename T1>
-void MachoWriteArchitechtureData(size_t padding, size_t sizeOfSection, size_t sectionAlign, const std::string& dataName,
-    const std::string& sizeName, const void* data, const T1& sect, const MachHeader64& header, FILE* e)
+bool WritePadding(size_t count, FILE* f)
 {
-    for (size_t i = 0; i < padding; i++) {
-        fputc(0, e);
+    for (size_t i = 0; i < count; i++) {
+        fputc(0, f);
     }
-
-    fwrite(&header, sizeof(header), 1, e);
-    fwrite(&sect.dataSeg, sizeof(sect.dataSeg), 1, e);
-    fwrite(&sect.dataSect, sizeof(sect.dataSect), 1, e);
-    fwrite(&sect.symtab, sizeof(sect.symtab), 1, e);
-    fwrite(data, sizeOfSection, 1, e);
-    for (size_t i = 0; i < sectionAlign; i++) {
-        fputc(0, e); // alignment byte to begin string table 8 byte boundary
-    }
-    fwrite(&sect.syms, sizeof(sect.syms), 1, e);
-    fputc(0, e); // filler byte to begin string table as it starts indexing at 1
-    fwrite(sizeName.c_str(), sizeName.size() + 1, 1, e);
-    fwrite(dataName.c_str(), dataName.size() + 1, 1, e);
+    return !ferror(f);
 }
 
-template<typename T1>
+template <typename T1>
+bool MachoWriteArchitechtureData(size_t padding, size_t sizeOfSection, size_t sectionAlign, const std::string& dataName,
+    const std::string& sizeName, const void* data, const T1& sect, const MachHeader64& header, FILE* e)
+{
+    if (!WritePadding(padding, e)) {
+        return false;
+    }
+
+    if (fwrite(&header, sizeof(header), 1, e) != 1 || fwrite(&sect.dataSeg, sizeof(sect.dataSeg), 1, e) != 1 ||
+        fwrite(&sect.dataSect, sizeof(sect.dataSect), 1, e) != 1 ||
+        fwrite(&sect.symtab, sizeof(sect.symtab), 1, e) != 1 || fwrite(data, sizeOfSection, 1, e) != 1) {
+        return false;
+    }
+    if (!WritePadding(sectionAlign, e)) {
+        return false;
+    }
+    if (fwrite(&sect.syms, sizeof(sect.syms), 1, e) != 1) {
+        return false;
+    }
+    if (fputc(0, e) == EOF) {
+        return false;
+    }
+    if (fwrite(sizeName.c_str(), sizeName.size() + 1, 1, e) != 1 ||
+        fwrite(dataName.c_str(), dataName.size() + 1, 1, e) != 1) {
+        return false;
+    }
+    return true;
+}
+
+template <typename T1>
 bool MachoWriteFile(const std::string& fname, const T1& sect, const MachoPaddingInfo& slices,
     const std::string& dataName, const std::string& sizeName, const void* data, size_t endPadding, size_t sectionAlign,
     size_t sizeOfSection)
@@ -601,14 +712,20 @@ bool MachoWriteFile(const std::string& fname, const T1& sect, const MachoPadding
         return false;
     }
 
-    fwrite(&sect.fathdr, sizeof(sect.fathdr), 1, e);
-    fwrite(&sect.archs, sizeof(sect.archs), 1, e);
-    MachoWriteArchitechtureData(
-        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.x64Header, e);
-    MachoWriteArchitechtureData(
-        slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.arm64Header, e);
-    for (uint32_t i = 0; i < endPadding; i++) {
-        fputc(0, e);
+    if (fwrite(&sect.fathdr, sizeof(sect.fathdr), 1, e) != 1 || fwrite(&sect.archs, sizeof(sect.archs), 1, e) != 1) {
+        fclose(e);
+        return false;
+    }
+    if (!MachoWriteArchitechtureData(
+            slices.padding0, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.x64Header, e) ||
+        !MachoWriteArchitechtureData(
+            slices.padding1, sizeOfSection, sectionAlign, dataName, sizeName, data, sect, sect.arm64Header, e)) {
+        fclose(e);
+        return false;
+    }
+    if (!WritePadding(endPadding, e)) {
+        fclose(e);
+        return false;
     }
 
     fclose(e);
@@ -641,6 +758,9 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
     sect.archs = MachoArchs(fatAlignmentPowerOfTwo);
 
     // "file" offsets are actually relative to the architecture header
+    if (sizeOfData > SIZE_MAX - sizeof(uint64_t)) {
+        return false;
+    }
     size_t fpos = 0, sizeOfSection = sizeOfData + sizeof(uint64_t);
 
     sect.x64Header = MachoX64Header(), sect.arm64Header = MachoARM64Header();
@@ -650,7 +770,7 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
     std::string dataName = PrefixUnderscore(g_dataName), sizeName = PrefixUnderscore(g_sizeName);
 
     uint32_t string_size =
-        static_cast<uint32_t>(dataName.size() + sizeName.size() + 3); // prepending plus two terminating nulls
+        static_cast<uint32_t>(dataName.size() + sizeName.size() + 3);  // prepending plus two terminating nulls
 
     sect.symtab = MachoSymbolTable(string_size);
 
@@ -668,7 +788,8 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
     fpos += string_size;
 
     auto slices = MachoUpdate(sect.fathdr, sect.archs.data(), fatAlignment, fpos);
-    const size_t endPadding = GetAligned(slices.offsetAligned1 + fpos, fatAlignment);
+    const size_t totalAligned = GetAligned(slices.offsetAligned1 + fpos, fatAlignment);
+    const size_t endPadding = totalAligned - (slices.offsetAligned1 + fpos);
 
     return MachoWriteFile(fname, sect, slices, dataName, sizeName, data, endPadding, sectionAlign, sizeOfSection);
 }
@@ -699,15 +820,15 @@ constexpr uint32_t PlatformSet()
 }
 
 constexpr std::pair<std::string_view, uint32_t> PLATFORMS[] = {
-    { "-linux", ANDROID | PlatformSet() },
-    { "-android", ANDROID | PlatformSet() },
-    { "-windows", WINDOWS | PlatformSet() },
-    { "-mac", MAC | PlatformSet() },
-    { "-x86", BUILD_X86 },
-    { "-x86_64", ANDROID | BUILD_X64 },
-    { "-x64", WINDOWS | BUILD_X64 },
-    { "-armeabi-v7a", ANDROID | BUILD_V7 | PlatformSet() },
-    { "-arm64-v8a", ANDROID | BUILD_V8 | PlatformSet() },
+    {"-linux", ANDROID | PlatformSet()},
+    {"-android", ANDROID | PlatformSet()},
+    {"-windows", WINDOWS | PlatformSet()},
+    {"-mac", MAC | PlatformSet()},
+    {"-x86", BUILD_X86},
+    {"-x86_64", ANDROID | BUILD_X64},
+    {"-x64", WINDOWS | BUILD_X64},
+    {"-armeabi-v7a", ANDROID | BUILD_V7 | PlatformSet()},
+    {"-arm64-v8a", ANDROID | BUILD_V8 | PlatformSet()},
 };
 
 void ParseExtensions(std::string_view exts, std::vector<std::string_view>& extensions)
@@ -739,7 +860,8 @@ int ParseArcAndPlat(uint32_t& arcAndPlat, const int argc, char* argv[])
             break;
         }
 
-        if (auto pos = std::find_if(std::begin(PLATFORMS), std::end(PLATFORMS),
+        if (auto pos = std::find_if(std::begin(PLATFORMS),
+                std::end(PLATFORMS),
                 [argument = argv[baseArg + 1]](
                     const std::pair<std::string_view, uint32_t>& item) { return item.first == argument; });
             pos != std::end(PLATFORMS)) {
@@ -764,7 +886,7 @@ int ParseArcAndPlat(uint32_t& arcAndPlat, const int argc, char* argv[])
     arcAndPlat |= (platset ? 0 : (WINDOWS | ANDROID | MAC));
     return baseArg;
 }
-} // namespace
+}  // namespace
 
 int app_main(int argc, char* argv[])
 {
@@ -826,7 +948,7 @@ int app_main(int argc, char* argv[])
     }
 
     // add terminator
-    g_directory.push_back({ { 0 }, 0, 0 });
+    g_directory.push_back({{0}, 0, 0});
 
     const size_t sizeOfDir = (sizeof(FsEntry) * g_directory.size());
     const size_t sizeOfData = g_bin.size() + sizeOfDir;

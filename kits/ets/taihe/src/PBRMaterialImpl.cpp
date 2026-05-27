@@ -17,14 +17,16 @@
 
 namespace OHOS::Render3D::KITETS {
 PBRMaterialImpl::PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat)
-    : MaterialImpl(mat), MetallicRoughnessMaterialImpl(mat), ShaderMaterialImpl(mat),
-    UnlitMaterialImpl(mat), UnlitShadowAlphaImpl(mat), materialETS_(mat)
+    : MaterialImpl(mat),
+      MetallicRoughnessMaterialImpl(mat),
+      ShaderMaterialImpl(mat),
+      UnlitMaterialImpl(mat),
+      UnlitShadowAlphaImpl(mat),
+      materialETS_(mat)
 {}
 
 PBRMaterialImpl::~PBRMaterialImpl()
 {
-    if (materialETS_) {
-        materialETS_.reset();
-    }
+    materialETS_.reset();
 }
 }  // namespace OHOS::Render3D::KITETS

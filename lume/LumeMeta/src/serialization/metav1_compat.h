@@ -39,7 +39,7 @@ public:
     ISerNode::Ptr Process(ISerNode::Ptr) override;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

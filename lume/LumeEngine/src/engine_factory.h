@@ -47,4 +47,4 @@ public:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_ENGINE_FACTORY_H
+#endif  // CORE_ENGINE_FACTORY_H

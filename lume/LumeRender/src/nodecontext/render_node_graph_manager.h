@@ -105,14 +105,14 @@ private:
             ALLOC = 0,
             DEALLOC = 1,
         };
-        Type type { Type::ALLOC };
+        Type type{Type::ALLOC};
 
         RenderHandle renderNodeGraphHandle;
         BASE_NS::fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> renderNodeGraphName;
         BASE_NS::fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> renderNodeGraphDataStoreName;
         BASE_NS::fixed_string<RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> renderNodeGraphUri;
         RenderNodeGraphDesc renderNodeGraphDesc;
-        RenderNodeGraphUsageType usageType { RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC };
+        RenderNodeGraphUsageType usageType{RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC};
     };
     // If individual nodes are insert or erased, we need a pending destruction
     struct PendingRenderNode {
@@ -125,21 +125,21 @@ private:
             BEFORE = 1,
             AFTER = 2,
         };
-        Type type { Type::ALLOC };
+        Type type{Type::ALLOC};
 
         RenderHandle renderNodeGraphHandle;
         RenderNodeDesc renderNodeDesc;
 
-        PosType posType { PosType::BACK };
+        PosType posType{PosType::BACK};
         RenderDataConstants::RenderDataFixedString renderNodeName;
     };
     struct PendingRenderNodeGraphDestruction {
-        uint64_t frameIndex { 0u };
+        uint64_t frameIndex{0u};
         BASE_NS::vector<RenderNodeContextData> renderNodeGraphContextData;
     };
     // If individual nodes are erased, we need a pending destruction
     struct PendingRenderNodeDestruction {
-        uint64_t frameIndex { 0u };
+        uint64_t frameIndex{0u};
         RenderNodeContextData renderNodeContextData;
     };
 
@@ -162,10 +162,10 @@ private:
     BASE_NS::vector<RenderHandleReference> nodeGraphHandles_;
     // client-side
     struct RenderNodeGraphShareHandles {
-        RenderHandleReference inputs[RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
-        RenderHandleReference outputs[RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
-        uint32_t inputCount { 0 };
-        uint32_t outputCount { 0 };
+        RenderHandleReference inputs[RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}};
+        RenderHandleReference outputs[RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}};
+        uint32_t inputCount{0};
+        uint32_t outputCount{0};
     };
     BASE_NS::vector<RenderNodeGraphShareHandles> nodeGraphShareData_;
 
@@ -187,4 +187,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__RENDER_NODE_GRAPH_MANAGER_H
+#endif  // CORE__RENDER__RENDER_NODE_GRAPH_MANAGER_H

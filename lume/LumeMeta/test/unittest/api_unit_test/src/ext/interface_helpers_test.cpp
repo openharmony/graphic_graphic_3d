@@ -61,14 +61,14 @@ struct Class : IntroduceInterfaces<BaseA, BaseB, BaseC, BaseD, BaseE> {
     using MyBase = IntroduceInterfaces<BaseA, BaseB, BaseC, BaseD, BaseE>;
     using MyBase::GetInterface;
 
-    template<typename T>
+    template <typename T>
     T* Cast()
     {
         return static_cast<T*>(this);
     }
 };
 
-template<size_t S>
+template <size_t S>
 constexpr bool Contains(Internal::UIDArray<S> arr, const BASE_NS::Uid& uid)
 {
     for (size_t i = 0; i != S; ++i) {
@@ -79,7 +79,7 @@ constexpr bool Contains(Internal::UIDArray<S> arr, const BASE_NS::Uid& uid)
     return false;
 }
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: IntroduceInterfaces
@@ -114,14 +114,14 @@ UNIT_TEST(API_InterfaceHelpers, GetInterfaces, testing::ext::TestSize.Level1)
     constexpr auto arr = GetInterfaces<void, BaseA, BaseB, BaseC, BaseD, BaseE>();
     static_assert(sizeof(arr.data) / sizeof(arr.data[0]) == 8);
 
-    static_assert(Contains(arr, BASE_NS::Uid { "aefe1c98-1072-4867-8809-7fbea5887fa8" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "916c2330-6096-41d8-b40a-2e04fe0b74cb" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c6dbe0a5-4201-454e-83d9-d944d20b52b6" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c891c511-9e80-4d31-8247-e74a2a2fc406" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "6fbdaf63-b0c6-45b3-acf4-5b15ac2059b1" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "d44b6a34-9a8a-4588-9265-415e3a8a6787" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c1b8e289-878a-4fc5-b7f5-e5770f174244" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c99600c5-84d7-456e-8540-389804f7244c" }));
+    static_assert(Contains(arr, BASE_NS::Uid{"aefe1c98-1072-4867-8809-7fbea5887fa8"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"916c2330-6096-41d8-b40a-2e04fe0b74cb"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c6dbe0a5-4201-454e-83d9-d944d20b52b6"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c891c511-9e80-4d31-8247-e74a2a2fc406"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"6fbdaf63-b0c6-45b3-acf4-5b15ac2059b1"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"d44b6a34-9a8a-4588-9265-415e3a8a6787"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c1b8e289-878a-4fc5-b7f5-e5770f174244"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c99600c5-84d7-456e-8540-389804f7244c"}));
 }
 
 struct IDervivedLifecycle : ILifecycle {
@@ -131,8 +131,10 @@ struct IDervivedLifecycle : ILifecycle {
     {
         return true;
     }
-    void SetInstanceId(InstanceId) override {}
-    void Destroy() override {}
+    void SetInstanceId(InstanceId) override
+    {}
+    void Destroy() override
+    {}
 };
 
 struct IOtherDervivedLifecycle : ILifecycle {
@@ -142,8 +144,10 @@ struct IOtherDervivedLifecycle : ILifecycle {
     {
         return true;
     }
-    void SetInstanceId(InstanceId) override {}
-    void Destroy() override {}
+    void SetInstanceId(InstanceId) override
+    {}
+    void Destroy() override
+    {}
 };
 
 struct LivelyClass : IntroduceInterfaces<BaseA, IDervivedLifecycle, IOtherDervivedLifecycle, BaseD, BaseE> {
@@ -186,7 +190,7 @@ struct TopClass : IntroduceInterfaces<Class, BaseH, AnotherClass> {
     using MyBase = IntroduceInterfaces<Class, BaseH, AnotherClass>;
     using MyBase::GetInterface;
 
-    template<typename T>
+    template <typename T>
     T* Cast()
     {
         return static_cast<T*>(this);
@@ -206,17 +210,17 @@ UNIT_TEST(API_InterfaceHelpers, EmbeddedIntroduceInterfacesSupport, testing::ext
     constexpr auto arr = GetInterfaces<TopClass, Class, BaseH, AnotherClass>();
     static_assert(sizeof(arr.data) / sizeof(arr.data[0]) == 11);
 
-    static_assert(Contains(arr, BASE_NS::Uid { "aefe1c98-1072-4867-8809-7fbea5887fa8" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "916c2330-6096-41d8-b40a-2e04fe0b74cb" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c6dbe0a5-4201-454e-83d9-d944d20b52b6" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c891c511-9e80-4d31-8247-e74a2a2fc406" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "6fbdaf63-b0c6-45b3-acf4-5b15ac2059b1" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "d44b6a34-9a8a-4588-9265-415e3a8a6787" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c1b8e289-878a-4fc5-b7f5-e5770f174244" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "c99600c5-84d7-456e-8540-389804f7244c" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "23f2cf2e-7052-4037-b2ca-c0164918f1e1" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "41a6cfd4-55dc-4372-8ec1-7ca68fdbcafe" }));
-    static_assert(Contains(arr, BASE_NS::Uid { "920e72e2-abd5-4322-ba35-2a767db8ae89" }));
+    static_assert(Contains(arr, BASE_NS::Uid{"aefe1c98-1072-4867-8809-7fbea5887fa8"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"916c2330-6096-41d8-b40a-2e04fe0b74cb"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c6dbe0a5-4201-454e-83d9-d944d20b52b6"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c891c511-9e80-4d31-8247-e74a2a2fc406"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"6fbdaf63-b0c6-45b3-acf4-5b15ac2059b1"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"d44b6a34-9a8a-4588-9265-415e3a8a6787"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c1b8e289-878a-4fc5-b7f5-e5770f174244"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"c99600c5-84d7-456e-8540-389804f7244c"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"23f2cf2e-7052-4037-b2ca-c0164918f1e1"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"41a6cfd4-55dc-4372-8ec1-7ca68fdbcafe"}));
+    static_assert(Contains(arr, BASE_NS::Uid{"920e72e2-abd5-4322-ba35-2a767db8ae89"}));
 }
 
 /**
@@ -242,5 +246,5 @@ UNIT_TEST(API_InterfaceHelpers, EmbeddedIntroduceInterfacesSupportGetInterface, 
     EXPECT_TRUE(c.GetInterface(BaseH::UID) == static_cast<IInterface*>(c.Cast<BaseH>()));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

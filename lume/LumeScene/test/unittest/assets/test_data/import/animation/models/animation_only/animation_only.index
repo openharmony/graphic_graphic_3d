@@ -1,0 +1,16 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": {
+                    "type": "resourceId",
+                    "name": "Bounce"
+                },
+                "type": "parallelAnimation",
+                "path": "test://import/animation/models/animation_only/animations/Bounce.animation"
+            }
+        ]
+    }
+}

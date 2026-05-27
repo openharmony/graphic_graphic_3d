@@ -30,14 +30,14 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<>
+template <>
 uint64_t hash(const CORE_NS::IDirectory::Entry::Type& val)
 {
     return static_cast<uint64_t>(val);
 }
 BASE_END_NAMESPACE()
 
-template<>
+template <>
 struct std::hash<CORE_NS::IDirectory::Entry> {
     using argument_type = CORE_NS::IDirectory::Entry;
     using result_type = uint64_t;
@@ -56,9 +56,11 @@ bool operator==(const IDirectory::Entry& lhs, const IDirectory::Entry& rhs)
     return lhs.type == rhs.type && lhs.name == rhs.name;
 }
 
-ProxyDirectory::ProxyDirectory(vector<IDirectory::Ptr>&& directories) : directories_(move(directories)) {}
+ProxyDirectory::ProxyDirectory(vector<IDirectory::Ptr>&& directories) : directories_(move(directories))
+{}
 
-void ProxyDirectory::Close() {}
+void ProxyDirectory::Close()
+{}
 
 vector<IDirectory::Entry> ProxyDirectory::GetEntries() const
 {

@@ -44,19 +44,19 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr uint32_t GLOBAL_POST_PROCESS_SET { 0u };
-constexpr string_view RENDER_DATA_STORE_POD_NAME { RenderDataStorePod::TYPE_NAME };
+constexpr uint32_t GLOBAL_POST_PROCESS_SET{0u};
+constexpr string_view RENDER_DATA_STORE_POD_NAME{RenderDataStorePod::TYPE_NAME};
 
 constexpr string_view INPUT = "input";
 constexpr string_view OUTPUT = "output";
 
-constexpr string_view POST_PROCESS_BASE_PIPELINE_LAYOUT { "renderpipelinelayouts://post_process_common.shaderpl" };
+constexpr string_view POST_PROCESS_BASE_PIPELINE_LAYOUT{"renderpipelinelayouts://post_process_common.shaderpl"};
 
 struct DispatchResources {
-    RenderHandle buffer {};
-    RenderHandle image {};
+    RenderHandle buffer{};
+    RenderHandle image{};
 };
 
 DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& ir)
@@ -77,11 +77,11 @@ RenderHandleReference CreatePostProcessDataUniformBuffer(
     PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
     PLUGIN_STATIC_ASSERT(
         sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
+    return gpuResourceMgr.Create(handle,
+        GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct)});
 }
 
 uint32_t GetPostProcessFlag(const string_view ppName)
@@ -124,10 +124,13 @@ bool NeedsAutoBindingSet0(const RenderNodeHandles::InputResources& inputRes)
 
 inline BindableImage GetBindableImage(const RenderHandle& res)
 {
-    return BindableImage { res, PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, {} };
+    return BindableImage{res,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS,
+        ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED,
+        {}};
 }
-} // namespace
+}  // namespace
 
 void RenderNodeSinglePostProcess::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -169,7 +172,7 @@ void RenderNodeSinglePostProcess::InitNode(IRenderNodeContextManager& renderNode
         if (graphics_) {
             const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader_);
             psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+                shader_, graphicsState, pipelineLayout_, {}, {}, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         } else {
             psoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(shader_, pipelineLayout_, {});
         }
@@ -179,7 +182,8 @@ void RenderNodeSinglePostProcess::InitNode(IRenderNodeContextManager& renderNode
         const IShaderManager::CompatibilityFlags compatibilityFlags =
             shaderMgr.GetCompatibilityFlags(basePlHandle, plHandle);
         if ((compatibilityFlags & IShaderManager::CompatibilityFlagBits::COMPATIBLE_BIT) == 0) {
-            PLUGIN_LOG_E("RN:%s uncompatible pipeline layout to %s", renderNodeContextMgr_->GetName().data(),
+            PLUGIN_LOG_E("RN:%s uncompatible pipeline layout to %s",
+                renderNodeContextMgr_->GetName().data(),
                 POST_PROCESS_BASE_PIPELINE_LAYOUT.data());
         }
     }
@@ -222,8 +226,8 @@ void RenderNodeSinglePostProcess::ExecuteFrame(IRenderCommandList& cmdList)
             ExecuteSinglePostProcess(cmdList);
         }
     } else if (jsonInputs_.defaultOutputImage == DefaultOutputImage::INPUT_OUTPUT_COPY) {
-        IRenderNodeCopyUtil::CopyInfo copyInfo { GetBindableImage(builtInVariables_.input),
-            GetBindableImage(builtInVariables_.output), {} };
+        IRenderNodeCopyUtil::CopyInfo copyInfo{
+            GetBindableImage(builtInVariables_.input), GetBindableImage(builtInVariables_.output), {}};
         renderCopy_.Execute(cmdList, copyInfo);
     }
 }
@@ -253,7 +257,8 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
             !RenderHandleUtil::IsValid(renderPass.renderPassDesc.attachmentHandles[0])) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_W("rp_missing_" + renderNodeContextMgr_->GetName(),
-                "RENDER_VALIDATION: RN: %s, invalid attachment", renderNodeContextMgr_->GetName().data());
+                "RENDER_VALIDATION: RN: %s, invalid attachment",
+                renderNodeContextMgr_->GetName().data());
 #endif
             return;
         }
@@ -261,7 +266,7 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
         dispatchResources = GetDispatchResources(dispatchResources_);
         if ((!RenderHandleUtil::IsValid(dispatchResources.buffer)) &&
             (!RenderHandleUtil::IsValid(dispatchResources.image))) {
-            return; // no way to evaluate dispatch size
+            return;  // no way to evaluate dispatch size
         }
     }
 
@@ -273,9 +278,10 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
         // handle automatic set 0 bindings
         if ((refIndex == 0) && useAutoBindSet0_) {
             auto& binder = *pipelineDescriptorSetBinder_;
-            binder.BindBuffer(GLOBAL_POST_PROCESS_SET, 0u, BindableBuffer { ubos_.postProcess.GetHandle() });
-            binder.BindBuffer(GLOBAL_POST_PROCESS_SET, 1u,
-                BindableBuffer { ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct) });
+            binder.BindBuffer(GLOBAL_POST_PROCESS_SET, 0u, BindableBuffer{ubos_.postProcess.GetHandle()});
+            binder.BindBuffer(GLOBAL_POST_PROCESS_SET,
+                1u,
+                BindableBuffer{ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct)});
         } else if (invalidBindings) {
             const auto bindings = pipelineDescriptorSetBinder_->GetDescriptorSetLayoutBindingResources(refIndex);
             BindDefaultResources(refIndex, bindings);
@@ -308,12 +314,12 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
         if (pipelineLayout_.pushConstant.byteSize > 0) {
             const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
             const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-            const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-                ppLocalConfig_.variables.factor };
+            const LocalPostProcessPushConstantStruct pc{
+                {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, ppLocalConfig_.variables.factor};
             cmdList.PushConstantData(pipelineLayout_.pushConstant, arrayviewU8(pc));
         }
 
-        cmdList.Draw(3u, 1u, 0u, 0u); // vertex count, instance count, first vertex, first instance
+        cmdList.Draw(3u, 1u, 0u, 0u);  // vertex count, instance count, first vertex, first instance
         cmdList.EndRenderPass();
     } else {
         if (RenderHandleUtil::IsValid(dispatchResources.buffer)) {
@@ -321,12 +327,12 @@ void RenderNodeSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandList& c
         } else if (RenderHandleUtil::IsValid(dispatchResources.image)) {
             const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
             const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dispatchResources.image);
-            const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
+            const Math::UVec3 targetSize = {desc.width, desc.height, desc.depth};
             if (pipelineLayout_.pushConstant.byteSize > 0) {
                 const auto fWidth = static_cast<float>(targetSize.x);
                 const auto fHeight = static_cast<float>(targetSize.y);
-                const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-                    ppLocalConfig_.variables.factor };
+                const LocalPostProcessPushConstantStruct pc{
+                    {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, ppLocalConfig_.variables.factor};
                 cmdList.PushConstantData(pipelineLayout_.pushConstant, arrayviewU8(pc));
             }
 
@@ -370,7 +376,7 @@ void RenderNodeSinglePostProcess::BindDefaultResources(
         auto& binder = *pipelineDescriptorSetBinder_;
         for (const auto& ref : bindings.buffers) {
             if (!RenderHandleUtil::IsValid(ref.resource.handle)) {
-                binder.BindBuffer(set, ref.binding.binding, BindableBuffer { builtInVariables_.defBuffer });
+                binder.BindBuffer(set, ref.binding.binding, BindableBuffer{builtInVariables_.defBuffer});
             }
         }
         for (const auto& ref : bindings.images) {
@@ -383,7 +389,7 @@ void RenderNodeSinglePostProcess::BindDefaultResources(
         }
         for (const auto& ref : bindings.samplers) {
             if (!RenderHandleUtil::IsValid(ref.resource.handle)) {
-                binder.BindSampler(set, ref.binding.binding, BindableSampler { builtInVariables_.defSampler });
+                binder.BindSampler(set, ref.binding.binding, BindableSampler{builtInVariables_.defSampler});
             }
         }
     }

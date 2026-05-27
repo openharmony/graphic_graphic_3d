@@ -92,7 +92,7 @@ string_view ReadStringZ(const uint8_t** data, size_t maxBytes, size_t* bytesRead
     if (auto const pos = std::find(start, end, 0); pos != end) {
         *data = pos + 1;
         *bytesReadOut = static_cast<size_t>(std::distance(start, pos + 1));
-        return { reinterpret_cast<const char*>(start), *bytesReadOut };
+        return {reinterpret_cast<const char*>(start), *bytesReadOut};
     }
 
     return {};
@@ -105,8 +105,8 @@ constexpr const uint32_t MAX_ARRAY_ELEMENTS = 2048U;
 
 // 12 byte ktx identifier.
 constexpr const size_t KTX_IDENTIFIER_LENGTH = 12;
-constexpr const char KTX_IDENTIFIER_REFERENCE[KTX_IDENTIFIER_LENGTH] = { '\xAB', 'K', 'T', 'X', ' ', '1', '1', '\xBB',
-    '\r', '\n', '\x1A', '\n' };
+constexpr const char KTX_IDENTIFIER_REFERENCE[KTX_IDENTIFIER_LENGTH] = {
+    '\xAB', 'K', 'T', 'X', ' ', '1', '1', '\xBB', '\r', '\n', '\x1A', '\n'};
 constexpr const uint32_t KTX_FILE_ENDIANNESS = 0x04030201;
 constexpr const uint32_t KTX_FILE_ENDIANNESS_FLIPPED = 0x01020304;
 
@@ -167,7 +167,7 @@ IImageContainer::ImageViewType GetImageViewType(const KtxHeader& header, IImageC
             case IImageContainer::ImageType::TYPE_2D:
                 return IImageContainer::ImageViewType::VIEW_TYPE_2D_ARRAY;
             case IImageContainer::ImageType::TYPE_3D:
-                [[fallthrough]]; // 3d arrays are not supported.
+                [[fallthrough]];  // 3d arrays are not supported.
             case IImageContainer::ImageType::TYPE_MAX_ENUM:
                 return IImageContainer::ImageViewType::VIEW_TYPE_MAX_ENUM;
         }
@@ -204,7 +204,7 @@ public:
 
     array_view<const uint8_t> GetData() const override
     {
-        return { imageBytes_, imageBytesLength_ };
+        return {imageBytes_, imageBytesLength_};
     }
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
@@ -252,8 +252,10 @@ public:
             // is ok as it will only overwrite the now unnecessary "lodsize" value.
             const auto validOffset = static_cast<uint32_t>(currentImageElementOffset / bytesPerBlock * bytesPerBlock);
             auto* imageBytes = const_cast<uint8_t*>(image->imageBytes_);
-            if (memmove_s(imageBytes + validOffset, image->imageBytesLength_ - validOffset,
-                    imageBytes + currentImageElementOffset, subelementLength) != EOK) {
+            if (memmove_s(imageBytes + validOffset,
+                    image->imageBytesLength_ - validOffset,
+                    imageBytes + currentImageElementOffset,
+                    subelementLength) != EOK) {
                 CORE_LOG_E("memmove failed.");
             }
             image->imageBuffers_[imageBufferIndex].bufferOffset = validOffset;
@@ -400,7 +402,15 @@ public:
             const uint64_t bytesPerBlock = static_cast<uint64_t>(formatInfo.bitsPerBlock / 8u);
             const uint64_t rowSize = blocksX * bytesPerBlock;
             const uint64_t rowSizePadded = rowSize + ((~rowSize + 1u) & (4u - 1u));
-            const uint64_t expectedMipSize = rowSizePadded * blocksY * blocksZ * image->imageDesc_.layerCount;
+            const uint64_t layerCount = static_cast<uint64_t>(image->imageDesc_.layerCount);
+            const uint64_t maxPerLayer = UINT64_MAX / layerCount;
+            const uint64_t maxPerZ = maxPerLayer / blocksZ;
+            const uint64_t maxPerY = maxPerZ / blocksY;
+            if (rowSizePadded > maxPerY) {
+                CORE_LOG_D("Ktx mip size overflow.");
+                return false;
+            }
+            const uint64_t expectedMipSize = rowSizePadded * blocksY * blocksZ * layerCount;
             if (mipSize != expectedMipSize) {
                 CORE_LOG_D("Ktx mip data size mismatch with declared dimensions and layers.");
                 return false;
@@ -433,7 +443,7 @@ public:
         }
 
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
-            MipDimensions dims { image->imageDesc_.width, image->imageDesc_.height, image->imageDesc_.depth };
+            MipDimensions dims{image->imageDesc_.width, image->imageDesc_.height, image->imageDesc_.depth};
 
             // Create buffer info for each mipmap level.
             // NOTE: One BufferImageCopy can copy all the layers and faces in one step.
@@ -460,17 +470,33 @@ public:
                 const size_t lodSize = myReadU32(&data);
                 // Pad to to a multiple of 4.
                 const size_t lodSizePadded = lodSize + ((~lodSize + 1) & (4u - 1u));
-                const size_t mipSize = lodSize * iterations;
+                if (lodSizePadded < lodSize) {
+                    CORE_LOG_D("imageSize padding overflow");
+                    return ImageLoaderManager::ResultFailure("Invalid ktx data.");
+                }
+                const uint64_t mipSize = static_cast<uint64_t>(lodSize) * iterations;
                 const uint64_t totalSizePadded = static_cast<uint64_t>(lodSizePadded) * iterations;
 
                 if (!ValidateMipLevel(image, data, totalSizePadded, mipSize, formatInfo, dims)) {
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
 
-                const auto currentImageElementOffset = static_cast<uint32_t>(data - image->imageBytes_);
+                const auto offset = static_cast<size_t>(data - image->imageBytes_);
+                if (offset > UINT32_MAX) {
+                    CORE_LOG_D("Image element offset exceeds uint32_t range.");
+                    return ImageLoaderManager::ResultFailure("Invalid ktx data.");
+                }
+                const auto currentImageElementOffset = static_cast<uint32_t>(offset);
                 CORE_ASSERT_MSG(currentImageElementOffset % 4u == 0, "Offset must be aligned to 4 bytes");
-                ProcessMipmapLevel(image, imageBufferIndex, currentImageElementOffset, formatInfo, dims, mipmapLevel,
-                    ktx.numberOfFaces, arrayElementCount, static_cast<uint32_t>(totalSizePadded));
+                ProcessMipmapLevel(image,
+                    imageBufferIndex,
+                    currentImageElementOffset,
+                    formatInfo,
+                    dims,
+                    mipmapLevel,
+                    ktx.numberOfFaces,
+                    arrayElementCount,
+                    static_cast<uint32_t>(totalSizePadded));
 
                 // Move to the next buffer if any.
                 imageBufferIndex++;
@@ -504,7 +530,7 @@ public:
             CORE_LOG_D("Ktx invalid endian marker.");
             return false;
         }
-        if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) { // 1 for regular, 6 for cubemaps
+        if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) {  // 1 for regular, 6 for cubemaps
             CORE_LOG_D("Ktx invalid numberOfFaces.");
             return false;
         }
@@ -522,7 +548,7 @@ public:
             return false;
         }
         if (ktxHeader.numberOfMipmapLevels) {
-            if (ktxHeader.numberOfMipmapLevels > 32U) { // 2^32 - 1, limit to
+            if (ktxHeader.numberOfMipmapLevels > 32U) {  // 2^32 - 1, limit to
                 CORE_LOG_D("Ktx numberOfMipmapLevels suspiciously large.");
                 return false;
             }
@@ -665,11 +691,11 @@ private:
     // will be pointing to the file data anyway. Only downside is the wasted
     // memory for the file header.
     unique_ptr<uint8_t[]> fileBytes_;
-    size_t fileBytesLength_ { 0 };
+    size_t fileBytesLength_{0};
 
     // The actual image data part of the file;
-    const uint8_t* imageBytes_ { nullptr };
-    size_t imageBytesLength_ { 0 };
+    const uint8_t* imageBytes_{nullptr};
+    size_t imageBytesLength_{0};
 
     ImageDesc imageDesc_;
     vector<SubImageDesc> imageBuffers_;
@@ -677,10 +703,16 @@ private:
 
 class ImageLoaderKtx final : public IImageLoaderManager::IImageLoader {
 public:
+    using IImageLoaderManager::IImageLoader::Load;
+
     // Inherited via ImageManager::IImageLoader
     ImageLoaderManager::LoadResult Load(IFile& file, uint32_t loadFlags) const override
     {
-        auto byteLength = static_cast<size_t>(file.GetLength());
+        const uint64_t fileLen = file.GetLength();
+        if (fileLen > SIZE_MAX) {
+            return ImageLoaderManager::ResultFailure("File too large for this platform.");
+        }
+        auto byteLength = static_cast<size_t>(fileLen);
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) != 0) {
             // Only load header
             byteLength = KTX_HEADER_LENGTH;
@@ -729,7 +761,7 @@ public:
 
     vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
     {
-        return { std::begin(KTX_IMAGE_TYPES), std::end(KTX_IMAGE_TYPES) };
+        return {std::begin(KTX_IMAGE_TYPES), std::end(KTX_IMAGE_TYPES)};
     }
 
 protected:
@@ -738,10 +770,10 @@ protected:
         delete this;
     }
 };
-} // namespace
+}  // namespace
 
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderKtx(PluginToken)
 {
-    return ImageLoaderManager::IImageLoader::Ptr { new ImageLoaderKtx() };
+    return ImageLoaderManager::IImageLoader::Ptr{new ImageLoaderKtx()};
 }
 CORE_END_NAMESPACE()

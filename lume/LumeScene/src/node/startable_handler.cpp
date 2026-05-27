@@ -15,6 +15,8 @@
 
 #include "startable_handler.h"
 
+#include "../perf/cpu_perf_scope.h"
+
 SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
@@ -22,6 +24,7 @@ namespace Internal {
 bool StartStartable(
     const IInternalScene::Ptr& scene, StartableHandler::StartType type, const META_NS::IObject::Ptr& object)
 {
+    SCENE_CPU_PERF_SCOPE("Startable", object ? object->GetName() : BASE_NS::string("<null>"));
     if (auto startable = interface_cast<META_NS::IStartable>(object); startable && scene) {
         const auto state = META_NS::GetValue(startable->StartableState());
         if (state == META_NS::StartableState::ATTACHED) {
@@ -53,19 +56,28 @@ bool StopStartable(const META_NS::IObject::Ptr& object)
     return false;
 }
 
+BASE_NS::vector<META_NS::IObject::Ptr> GetStartables(const META_NS::IContainer::Ptr& container)
+{
+    META_NS::IContainer::FindOptions opts;
+    opts.uids = {META_NS::IStartable::UID};
+    opts.strict = false;
+    return container ? container->FindAll(opts) : BASE_NS::vector<META_NS::IObject::Ptr>{};
+}
+
 bool StartAllStartables(
     const IInternalScene::Ptr& scene, StartableHandler::StartType type, const META_NS::IObject::Ptr& object)
 {
-    auto startAll = [s = IInternalScene::WeakPtr { scene }, n = META_NS::IObject::WeakPtr { object }]() {
-        if (auto attach = interface_pointer_cast<META_NS::IAttach>(n)) {
+    auto startAll = [s = IInternalScene::WeakPtr{scene}, n = META_NS::IObject::WeakPtr{object}]() {
+        SCENE_CPU_PERF_SCOPE("Startable", "StartAllStartablesRun");
+        auto is = s.lock();
+        if (auto attach = interface_pointer_cast<META_NS::IAttach>(n); is && attach) {
             if (auto container = attach->GetAttachmentContainer(false)) {
-                META_NS::IterateShared(
-                    container,
-                    [s](const META_NS::IObject::Ptr& attachment) {
-                        StartStartable(s.lock(), StartableHandler::StartType::DIRECT, attachment);
-                        return true;
-                    },
-                    META_NS::TraversalType::NO_HIERARCHY);
+                // Snapshot attachments before starting to avoid holding a shared lock on the
+                // container during Start(). OnStart callbacks may modify the container which
+                // requires a unique lock, causing a deadlock if the shared lock is still held.
+                for (auto& startable : GetStartables(container)) {
+                    StartStartable(is, StartableHandler::StartType::DIRECT, startable);
+                }
                 return true;
             }
         }
@@ -86,17 +98,16 @@ bool StopAllStartables(const META_NS::IObject::Ptr& object)
 {
     if (auto attach = interface_pointer_cast<META_NS::IAttach>(object)) {
         if (auto container = attach->GetAttachmentContainer(false)) {
-            META_NS::IterateShared(container, [](const META_NS::IObject::Ptr& attachment) {
-                StopStartable(attachment);
-                return true;
-            });
+            for (auto& startable : GetStartables(container)) {
+                StopStartable(startable);
+            }
             return true;
         }
     }
     return false;
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 IInternalScene::Ptr StartableHandler::GetScene() const
 {
@@ -126,10 +137,9 @@ bool StartableHandler::StartAll(StartType type)
 bool StartableHandler::StopAll(const META_NS::IContainer::Ptr& container)
 {
     if (container) {
-        META_NS::IterateShared(container, [this](const META_NS::IObject::Ptr& attachment) {
-            Stop(attachment);
-            return true;
-        });
+        for (auto& startable : Internal::GetStartables(container)) {
+            Stop(startable);
+        }
         return true;
     }
     return false;

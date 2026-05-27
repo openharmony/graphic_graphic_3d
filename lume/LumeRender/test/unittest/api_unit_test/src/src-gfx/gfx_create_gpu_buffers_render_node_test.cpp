@@ -30,9 +30,9 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr string_view BUFFER_NAME_0 { "Buffer0" };
+static constexpr string_view BUFFER_NAME_0{"Buffer0"};
 // NOTE: created in render node graph
-static constexpr string_view BUFFER_NAME_1 { "Buffer1" };
+static constexpr string_view BUFFER_NAME_1{"Buffer1"};
 
 struct TestResources {
     RenderHandleReference bufferHandle0;
@@ -83,7 +83,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         tr.bufferHandle0 = er.device->GetGpuResourceManager().Create(BUFFER_NAME_0, bufferDesc);
 
         er.engine->TickFrame();
-        er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+        er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
 
         auto bufferHandle1 = er.device->GetGpuResourceManager().GetBufferHandle(BUFFER_NAME_1);
         auto bufferDesc1 = er.device->GetGpuResourceManager().GetBufferDescriptor(bufferHandle1);
@@ -111,7 +111,7 @@ void TestCreateGpuBuffersRenderNode(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -123,7 +123,7 @@ UNIT_TEST(API_GfxCreateGpuBuffersRenderNode, GfxCreateGpuBuffersRenderNodeTestVu
 {
     TestCreateGpuBuffersRenderNode(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -135,4 +135,4 @@ UNIT_TEST(API_GfxCreateGpuBuffersRenderNode, GfxCreateGpuBuffersRenderNodeTestOp
 {
     TestCreateGpuBuffersRenderNode(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

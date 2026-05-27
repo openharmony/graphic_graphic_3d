@@ -44,7 +44,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "dc5da6df-0234-4275-b7a3-d68421e76313" };
+    static constexpr BASE_NS::Uid UID{"dc5da6df-0234-4275-b7a3-d68421e76313"};
     static constexpr const char* TYPE_NAME = "RenderNodeComputeGeneric";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -52,7 +52,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     RenderHandle GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr);
@@ -65,8 +65,8 @@ private:
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
         RenderNodeGraphInputs::RenderDataStore renderDataStoreSpecialization;
 
-        bool hasChangeableResourceHandles { false };
-        bool hasChangeableDispatchHandles { false };
+        bool hasChangeableResourceHandles{false};
+        bool hasChangeableDispatchHandles{false};
     };
     JsonInputs jsonInputs_;
 
@@ -82,18 +82,18 @@ private:
     PipelineData pipelineData_;
 
     // data store push constant
-    bool useDataStorePushConstant_ { false };
+    bool useDataStorePushConstant_{false};
 
     // data store shader specialization
-    bool useDataStoreShaderSpecialization_ { false };
+    bool useDataStoreShaderSpecialization_{false};
     struct ShaderSpecilizationData {
         BASE_NS::vector<ShaderSpecialization::Constant> constants;
         BASE_NS::vector<uint32_t> data;
     };
     ShaderSpecilizationData shaderSpecializationData_;
 
-    ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
+    ShaderThreadGroup threadGroupSize_{1u, 1u, 1u};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_COMPUTE_GENERIC_H
+#endif  // RENDER_NODE_RENDER_NODE_COMPUTE_GENERIC_H

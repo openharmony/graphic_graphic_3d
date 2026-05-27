@@ -35,31 +35,40 @@ class NullIPerformanceTrace {
     {
         return 0;
     }
-    inline constexpr void EndEvent(uintptr_t eventTag) {}
-    inline constexpr void Message(const char* message, int callstack) {}
-    inline constexpr void Message(const char* message, size_t len, int callstack) {}
-    inline constexpr void AppInfo(const char* name, size_t len) {}
-    inline constexpr void Plot(const char* name, int64_t value) {}
-    inline constexpr void FrameBegin(const char* name) {}
-    inline constexpr void FrameEnd(const char* name) {}
-    inline constexpr void MemAllocNamed(const void* ptr, size_t size, bool secure, const char* name) {}
-    inline constexpr void MemFreeNamed(const void* ptr, bool secure, const char* name) {}
+    inline constexpr void EndEvent(uintptr_t eventTag)
+    {}
+    inline constexpr void Message(const char* message, int callstack)
+    {}
+    inline constexpr void Message(const char* message, size_t len, int callstack)
+    {}
+    inline constexpr void AppInfo(const char* name, size_t len)
+    {}
+    inline constexpr void Plot(const char* name, int64_t value)
+    {}
+    inline constexpr void FrameBegin(const char* name)
+    {}
+    inline constexpr void FrameEnd(const char* name)
+    {}
+    inline constexpr void MemAllocNamed(const void* ptr, size_t size, bool secure, const char* name)
+    {}
+    inline constexpr void MemFreeNamed(const void* ptr, bool secure, const char* name)
+    {}
 };
 
 // Setups two code paths, one enabled and one disabled
 constexpr int PROFILER_ENABLED = 1;
 constexpr int PROFILER_DISABLED = 0;
 
-constexpr uint32_t CORE_PROFILER_DEFAULT_COLOR { 0xff0000 };
+constexpr uint32_t CORE_PROFILER_DEFAULT_COLOR{0xff0000};
 
 // Use template specialisation to handle two code paths for enabled and disabled
-template<int>
+template <int>
 inline auto* GetTracer();
 
-template<>
+template <>
 inline auto* GetTracer<PROFILER_ENABLED>()
 {
-    static IPerformanceTrace* tracer { nullptr };
+    static IPerformanceTrace* tracer{nullptr};
     if (!tracer) {
         if (auto* inst = GetInstance<IPerformanceDataManagerFactory>(UID_PERFORMANCE_FACTORY)) {
             tracer = inst->GetFirstPerformanceTrace();
@@ -68,7 +77,7 @@ inline auto* GetTracer<PROFILER_ENABLED>()
 
     return tracer;
 }
-template<>
+template <>
 inline auto* GetTracer<PROFILER_DISABLED>()
 {
     static NullIPerformanceTrace tracer;
@@ -76,19 +85,20 @@ inline auto* GetTracer<PROFILER_DISABLED>()
 }
 
 // Use template specialisation to handle two code paths for enabled and disabled
-template<int>
+template <int>
 class CpuPerfScopeI;
 
-template<>
+template <>
 class CpuPerfScopeI<PROFILER_DISABLED> final {
 public:
     inline CpuPerfScopeI(const BASE_NS::string_view category, const BASE_NS::string_view subCategory,
         const BASE_NS::string_view name, const IPerformanceDataManager::Event& location)
     {}
-    inline void Stop() {}
+    inline void Stop()
+    {}
 };
 
-template<>
+template <>
 class CpuPerfScopeI<PROFILER_ENABLED> final {
 public:
     CpuPerfScopeI(const BASE_NS::string_view category, const BASE_NS::string_view subCategory,
@@ -122,18 +132,18 @@ public:
     }
 
 protected:
-    IPerformanceDataManager* manager_ { nullptr };
-    IPerformanceDataManager::TimerHandle timerName_ {};
-    uintptr_t token_ {};
+    IPerformanceDataManager* manager_{nullptr};
+    IPerformanceDataManager::TimerHandle timerName_{};
+    uintptr_t token_{};
     BASE_NS::string subCategory_;
     BASE_NS::string name_;
 };
 using CpuPerfScope = CpuPerfScopeI<PROFILER_ENABLED>;
 
-template<int N>
+template <int N>
 struct PerformanceTraceSubsystem;
 
-template<>
+template <>
 struct PerformanceTraceSubsystem<1> {
     static constexpr bool IsEnabled()
     {
@@ -143,7 +153,7 @@ struct PerformanceTraceSubsystem<1> {
 
 using PROFILER_SUBSYSTEM_DEFAULT = PerformanceTraceSubsystem<1>;
 
-template<int N>
+template <int N>
 struct PerformanceTraceSeverity {
     static constexpr bool IsEnabled()
     {
@@ -155,17 +165,17 @@ struct PerformanceTraceSeverity {
     }
 };
 
-using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>; // 1000: severity level
-using PROFILER_TRACE = PerformanceTraceSeverity<2000>;   // 2000: severity level
+using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>;  // 1000: severity level
+using PROFILER_TRACE = PerformanceTraceSeverity<2000>;    // 2000: severity level
 
-template<int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
+template <int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
 inline constexpr bool PerformanceTraceEnabled()
 {
     constexpr bool a = x::IsEnabled() && y::IsEnabled() ? true : false;
     return a;
 }
 
-template<>
+template <>
 inline constexpr bool PerformanceTraceEnabled<0, void, void>()
 {
     return PerformanceTraceEnabled<0, PROFILER_SUBSYSTEM_DEFAULT, PROFILER_DEFAULT>();
@@ -180,22 +190,22 @@ CORE_END_NAMESPACE()
 #define CORE_PROFILER_TOKEN(arg) arg
 #define CORE_PROFILER_ARGS(...) CORE_NS::PerformanceTraceEnabled<0, ##__VA_ARGS__>()
 
-#define CORE_PROFILER_PERF_BEGIN(timerName, category, subCategory, name, color, ...)                                \
-    static constexpr const auto CORE_CONCAT(eventLocation, __LINE__) =                                              \
-        CORE_NS::IPerformanceDataManager::Event { category "::" subCategory, __func__, __FILE__, __LINE__, color }; \
-    CORE_NS::CpuPerfScopeI<CORE_PROFILER_ARGS(__VA_ARGS__)> timerName(                                              \
+#define CORE_PROFILER_PERF_BEGIN(timerName, category, subCategory, name, color, ...)                             \
+    static constexpr const auto CORE_CONCAT(eventLocation, __LINE__) =                                           \
+        CORE_NS::IPerformanceDataManager::Event{category "::" subCategory, __func__, __FILE__, __LINE__, color}; \
+    CORE_NS::CpuPerfScopeI<CORE_PROFILER_ARGS(__VA_ARGS__)> timerName(                                           \
         category, subCategory, name, CORE_CONCAT(eventLocation, __LINE__))
 #define CORE_PROFILER_PERF_END(timerName) timerName.Stop()
 
-#define CORE_PROFILER_PERF_SCOPE(category, subCategory, name, color, ...)                                        \
-    static constexpr const auto CORE_CONCAT(eventLocation, __LINE__) = CORE_NS::IPerformanceDataManager::Event { \
-        category "::" subCategory,                                                                               \
-        __func__,                                                                                                \
-        __FILE__,                                                                                                \
-        __LINE__,                                                                                                \
-        color,                                                                                                   \
-    };                                                                                                           \
-    CORE_NS::CpuPerfScopeI<CORE_PROFILER_ARGS(__VA_ARGS__)> CORE_CONCAT(cpuPerfScope_, __LINE__)(                \
+#define CORE_PROFILER_PERF_SCOPE(category, subCategory, name, color, ...)                                       \
+    static constexpr const auto CORE_CONCAT(eventLocation, __LINE__) = CORE_NS::IPerformanceDataManager::Event{ \
+        category "::" subCategory,                                                                              \
+        __func__,                                                                                               \
+        __FILE__,                                                                                               \
+        __LINE__,                                                                                               \
+        color,                                                                                                  \
+    };                                                                                                          \
+    CORE_NS::CpuPerfScopeI<CORE_PROFILER_ARGS(__VA_ARGS__)> CORE_CONCAT(cpuPerfScope_, __LINE__)(               \
         category, subCategory, name, CORE_CONCAT(eventLocation, __LINE__))
 
 #define CORE_PROFILER_SYMBOL(name, value) constexpr const char* name = value
@@ -270,4 +280,4 @@ CORE_END_NAMESPACE()
 #define CORE_CPU_PERF_SCOPE(category, subCategory, name, ...)
 #endif
 
-#endif // API_CORE_PERF_CPU_PERF_SCOPE_H
+#endif  // API_CORE_PERF_CPU_PERF_SCOPE_H

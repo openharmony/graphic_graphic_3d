@@ -25,7 +25,7 @@
 #include <core/plugin/intf_interface.h>
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
+template <typename T>
 class vector;
 BASE_END_NAMESPACE()
 
@@ -40,7 +40,7 @@ class IFileManager;
 
 class IFileMonitor : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "107c2b9f-3be3-4d56-be22-6e3259a486f5" };
+    static constexpr auto UID = BASE_NS::Uid{"107c2b9f-3be3-4d56-be22-6e3259a486f5"};
 
     using Ptr = BASE_NS::refcnt_ptr<IFileMonitor>;
 
@@ -61,4 +61,4 @@ inline constexpr BASE_NS::string_view GetName(const IFileMonitor*)
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IFILE_MONITOR_H
+#endif  // API_CORE_IFILE_MONITOR_H

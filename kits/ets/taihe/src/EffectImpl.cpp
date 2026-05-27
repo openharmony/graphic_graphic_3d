@@ -52,7 +52,7 @@ void EffectsContainerImpl::append(::SceneResources::weak::Effect item)
     effectsContainerETS_->AppendChild(itemEffect);
 }
 
-void EffectsContainerImpl::insertAfter(::SceneResources::weak::Effect item, ::SceneNodes::EffectOrNull const &sibling)
+void EffectsContainerImpl::insertAfter(::SceneResources::weak::Effect item, ::SceneNodes::EffectOrNull const& sibling)
 {
     if (!effectsContainerETS_) {
         return;
@@ -142,7 +142,7 @@ int32_t EffectsContainerImpl::count()
     return 0;
 }
 
-::SceneNodes::EffectOrNull EffectImpl::MakeEffectOrNull(const std::shared_ptr<EffectETS> &effectETS)
+::SceneNodes::EffectOrNull EffectImpl::MakeEffectOrNull(const std::shared_ptr<EffectETS>& effectETS)
 {
     if (!effectETS) {
         return ::SceneNodes::EffectOrNull::make_nValue();
@@ -234,11 +234,12 @@ void EffectImpl::setEnabled(bool enabled)
     }
     auto any = META_NS::GetInternalAny(prop);
     WIDGET_LOGE("Unsupported property type [%{public}s] [%{public}s]",
-        any ? any->GetTypeIdString().c_str() : "<Unknown>", key.data());
+        any ? any->GetTypeIdString().c_str() : "<Unknown>",
+        key.data());
     return ::SceneResources::EffectPropertyOutputValue::make_nValue();
 }
 
-bool EffectImpl::setPropertyValue(::taihe::string_view key, ::SceneResources::EffectPropertyInputValue const &value)
+bool EffectImpl::setPropertyValue(::taihe::string_view key, ::SceneResources::EffectPropertyInputValue const& value)
 {
     if (!effectETS_) {
         WIDGET_LOGE("empty EffectETS");
@@ -264,4 +265,4 @@ bool EffectImpl::setPropertyValue(::taihe::string_view key, ::SceneResources::Ef
     }
     return false;
 }
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS

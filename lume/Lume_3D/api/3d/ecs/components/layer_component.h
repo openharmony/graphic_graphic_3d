@@ -29,9 +29,9 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ILayerComponentManager, LayerComponent)
 
-    /** Defines a layer mask. */
-    DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer Mask", CORE_NS::PropertyFlags::IS_BITFIELD,
-        VALUE(LayerConstants::DEFAULT_LAYER_MASK), LayerFlagBits)
+/** Defines a layer mask. */
+DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer Mask", CORE_NS::PropertyFlags::IS_BITFIELD,
+    VALUE(LayerConstants::DEFAULT_LAYER_MASK), LayerFlagBits)
 
 END_COMPONENT(ILayerComponentManager, LayerComponent, "01507270-f290-4f71-82f4-58f1bddeadc5")
 #if !defined(IMPLEMENT_MANAGER)

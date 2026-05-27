@@ -65,43 +65,43 @@ public:
     {
         return &sceneAdapter_;
     }
-    InvokeReturn<std::shared_ptr<NodeETS>> CreateNode(const std::string &path);
+    InvokeReturn<std::shared_ptr<NodeETS>> CreateNode(const std::string& path);
     InvokeReturn<std::shared_ptr<NodeETS>> GetRoot();
     InvokeReturn<std::shared_ptr<GeometryETS>> CreateGeometry(
-        const std::string &path, const std::shared_ptr<MeshResourceETS> &mr);
-    InvokeReturn<std::shared_ptr<CameraETS>> CreateCamera(const std::string &path,
+        const std::string& path, const std::shared_ptr<MeshResourceETS>& mr);
+    InvokeReturn<std::shared_ptr<CameraETS>> CreateCamera(const std::string& path,
         uint32_t pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD), bool msaa = false);
-    InvokeReturn<std::shared_ptr<EnvironmentETS>> CreateEnvironment(const std::string &name, const std::string &uri);
+    InvokeReturn<std::shared_ptr<EnvironmentETS>> CreateEnvironment(const std::string& name, const std::string& uri);
     InvokeReturn<std::shared_ptr<LightETS>> CreateLight(
-        const std::string &name, const std::string &path, LightETS::LightType lightType);
+        const std::string& name, const std::string& path, LightETS::LightType lightType);
     InvokeReturn<std::shared_ptr<MaterialETS>> CreateMaterial(
-        const std::string &name, const std::string &uri, const MaterialETS::MaterialType &materialType);
+        const std::string& name, const std::string& uri, const MaterialETS::MaterialType& materialType);
     InvokeReturn<std::shared_ptr<EffectETS>> CreateEffect(BASE_NS::string_view effectId);
     InvokeReturn<std::shared_ptr<RenderConfigurationETS>> CreateRenderConfiguration(
-        SCENE_NS::IRenderConfiguration::Ptr &rc);
+        SCENE_NS::IRenderConfiguration::Ptr& rc);
 
     InvokeReturn<std::shared_ptr<EnvironmentETS>> GetEnvironment();
     void SetEnvironment(const std::shared_ptr<EnvironmentETS> environmentETS);
 
-    std::shared_ptr<NodeETS> ImportNode(const std::string &name, std::shared_ptr<NodeETS> node,
-        std::shared_ptr<NodeETS> parent);
-    std::shared_ptr<NodeETS> ImportScene(const std::string &name, std::shared_ptr<SceneETS> scene,
-        std::shared_ptr<NodeETS> parent);
+    std::shared_ptr<NodeETS> ImportNode(
+        const std::string& name, std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent);
+    std::shared_ptr<NodeETS> ImportScene(
+        const std::string& name, std::shared_ptr<SceneETS> scene, std::shared_ptr<NodeETS> parent);
 
     bool RenderFrame(RenderParameters renderParam);
 
     std::vector<std::shared_ptr<AnimationETS>> GetAnimations();
-    std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
-    std::shared_ptr<NodeETS> CloneNode(std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent,
-        const std::string &name);
-    InvokeReturn<std::shared_ptr<SceneComponentETS>> CreateComponent(std::shared_ptr<NodeETS> node,
-        const std::string &name);
+    std::shared_ptr<NodeETS> GetNodeByPath(const std::string& path);
+    std::shared_ptr<NodeETS> CloneNode(
+        std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent, const std::string& name);
+    InvokeReturn<std::shared_ptr<SceneComponentETS>> CreateComponent(
+        std::shared_ptr<NodeETS> node, const std::string& name);
 
     void LoadRenderConfiguration(SCENE_NS::IScene::Ptr scene);
     InvokeReturn<std::shared_ptr<RenderConfigurationETS>> GetRenderConfiguration();
 
-    InvokeReturn<std::shared_ptr<SceneComponentETS>> GetComponent(std::shared_ptr<NodeETS> node,
-        const std::string &name);
+    InvokeReturn<std::shared_ptr<SceneComponentETS>> GetComponent(
+        std::shared_ptr<NodeETS> node, const std::string& name);
 
     void Destroy();
 
@@ -111,7 +111,7 @@ public:
     }
 
 private:
-    static void AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene);
+    static void AddScene(META_NS::IObjectRegistry* obr, SCENE_NS::IScene::Ptr scene);
     static void FlushScenes();
     // Based on the file extension, supply the scene manager a file resource manager to handle loading.
     static SCENE_NS::ISceneManager::Ptr CreateSceneManager(BASE_NS::string_view uri);

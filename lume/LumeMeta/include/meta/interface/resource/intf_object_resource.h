@@ -28,8 +28,8 @@ public:
     virtual void SetResourceType(const ObjectId&) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IObjectResource)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IObjectResource)
 
 #endif

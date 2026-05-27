@@ -1,0 +1,89 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "f7b745da-b2f1-4099-ba6a-ff03891b48e1",
+        "uri": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/custom_core3d_dm_fw.frag.spv",
+        "sha1": "fc4847738da34d0fc68e96b972d89bc6bb16f508",
+        "spec": {
+            "$meta": {
+                "version": "1.0"
+            },
+            "$root": {
+                "$classId": "7257b473-414c-471e-96c6-326a69d275a4",
+                "$name": "ShaderBinaryAsset",
+                "$instanceId": "00000132-b32d-6810-d16a-70195ceaff2d",
+                "$properties": {
+                    "Name": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "custom_core3d_dm_fw.frag.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "MediaType": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "application/vnd.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "Size": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "GeneratorSourceUri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsBuiltIn": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "ModifiedTimestamp": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "133603306972034402",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Category": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "IsGenerated": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Iid": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "f7b745da-b2f1-4099-ba6a-ff03891b48e1",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Uri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/ShadowPlane/custom_core3d_dm_fw.frag.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    }
+                },
+                "Thumbnail": {
+                    "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                    "defaultValue": "",
+                    "flags": 33
+                }
+            }
+        },
+        "thumbdata": ""
+    }
+}

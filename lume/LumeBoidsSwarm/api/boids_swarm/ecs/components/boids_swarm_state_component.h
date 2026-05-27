@@ -32,17 +32,17 @@ BOIDSSWARM_BEGIN_NAMESPACE()
 BEGIN_COMPONENT(IBoidsSwarmStateComponentManager, BoidsSwarmStateComponent)
 
 #if !defined(IMPLEMENT_MANAGER)
-    static constexpr size_t VELOCITY_COUNT { 3 };
-    static constexpr size_t VELOCITY_CURRENT_INDEX { 0 };
+static constexpr size_t VELOCITY_COUNT{3};
+static constexpr size_t VELOCITY_CURRENT_INDEX{0};
 #endif
 
-    // Velocity history ring buffer (3 entries). Index 0 is the current velocity.
-    // Runtime-computed, read-only. Default: (0, 0, 0) per entry.
-    DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, VELOCITY_COUNT, velocities, "Velocities",
-        CORE_NS::PropertyFlags::IS_READONLY, ARRAY_VALUE())
-    // Current speed scalar (magnitude of velocity at VELOCITY_CURRENT_INDEX).
-    // Runtime-computed, read-only. Default: 0.0f.
-    DEFINE_PROPERTY(float, velocityMag, "Velocity Magnitude", CORE_NS::PropertyFlags::IS_READONLY, 0.0f)
+// Velocity history ring buffer (3 entries). Index 0 is the current velocity.
+// Runtime-computed, read-only. Default: (0, 0, 0) per entry.
+DEFINE_ARRAY_PROPERTY(
+    BASE_NS::Math::Vec3, VELOCITY_COUNT, velocities, "Velocities", CORE_NS::PropertyFlags::IS_READONLY, ARRAY_VALUE())
+// Current speed scalar (magnitude of velocity at VELOCITY_CURRENT_INDEX).
+// Runtime-computed, read-only. Default: 0.0f.
+DEFINE_PROPERTY(float, velocityMag, "Velocity Magnitude", CORE_NS::PropertyFlags::IS_READONLY, 0.0f)
 
 END_COMPONENT(IBoidsSwarmStateComponentManager, BoidsSwarmStateComponent, "b2c3d4e5-f6a7-4890-b123-45678901cdef")
 

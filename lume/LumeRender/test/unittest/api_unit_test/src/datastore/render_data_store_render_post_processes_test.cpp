@@ -82,7 +82,7 @@ void Validate(const UTest::EngineResources& er)
     ASSERT_EQ("RenderDataStoreRenderPostProcesses_My", ds->GetName());
     ASSERT_EQ(IRenderDataStoreRenderPostProcesses::UID, ds->GetUid());
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderDataStoreRenderPostProcessesTest

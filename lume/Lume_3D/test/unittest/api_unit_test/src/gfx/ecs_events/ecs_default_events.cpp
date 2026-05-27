@@ -32,7 +32,7 @@ namespace {
 // adds the entity ids into a string
 string PrintEntityFailInfo(array_view<const Entity> entities)
 {
-    BASE_NS::string ret {};
+    BASE_NS::string ret{};
     for (auto e : entities) {
         ret.append(BASE_NS::to_string(e.id));
         ret.append(" ");
@@ -43,7 +43,7 @@ string PrintEntityFailInfo(array_view<const Entity> entities)
 // adds only the manager names into a string
 string PrintComponentFailInfo(array_view<const Entity> entities, const IComponentManager& manager)
 {
-    BASE_NS::string ret {};
+    BASE_NS::string ret{};
     for (auto e : entities) {
         if (manager.HasComponent(e)) {
             ret.append(manager.GetName());
@@ -52,7 +52,7 @@ string PrintComponentFailInfo(array_view<const Entity> entities, const IComponen
     }
     return ret;
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -70,7 +70,8 @@ UNIT_TEST(ECS, DefaultEventCycle, testing::ext::TestSize.Level1)
     // helper for catching entity events.
     class EntityListeningChecker : public IEcs::EntityListener {
     public:
-        EntityListeningChecker(IEcs& e) : ecs(e) {}
+        EntityListeningChecker(IEcs& e) : ecs(e)
+        {}
         void OnEntityEvent(EventType type, BASE_NS::array_view<const Entity> entities) override
         {
             auto managers = ecs.GetComponentManagers();
@@ -144,4 +145,4 @@ UNIT_TEST(ECS, DefaultEventCycle, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

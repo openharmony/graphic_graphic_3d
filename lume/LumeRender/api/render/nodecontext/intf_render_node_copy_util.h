@@ -36,7 +36,7 @@ class IRenderCommandList;
  */
 class IRenderNodeCopyUtil : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "cf855681-2446-42fc-bc6b-8c439871f8db" };
+    static constexpr BASE_NS::Uid UID{"cf855681-2446-42fc-bc6b-8c439871f8db"};
 
     using Ptr = BASE_NS::refcnt_ptr<IRenderNodeCopyUtil>;
 
@@ -57,7 +57,7 @@ public:
         /** Sampler (if not given linear clamp is used) */
         RenderHandle sampler;
         /** Copy type to be used */
-        CopyType copyType { CopyType::BASIC_COPY };
+        CopyType copyType{CopyType::BASIC_COPY};
     };
 
     /**
@@ -91,4 +91,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderNodeCopyUtil*)
 }
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_COPY_UTIL_H
+#endif  // API_RENDER_IRENDER_NODE_COPY_UTIL_H

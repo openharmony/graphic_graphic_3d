@@ -49,4 +49,4 @@ void SplitPath(BASE_NS::string_view pathIn, BASE_NS::string_view& drive, BASE_NS
     BASE_NS::string_view& filename, BASE_NS::string_view& ext);
 #endif
 CORE_END_NAMESPACE()
-#endif // CORE_IO_PATH_TOOLS_H
+#endif  // CORE_IO_PATH_TOOLS_H

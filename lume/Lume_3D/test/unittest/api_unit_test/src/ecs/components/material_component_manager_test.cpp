@@ -72,7 +72,7 @@ UNIT_TEST(API_EcsMaterialComponent, CreateTest, testing::ext::TestSize.Level1)
         ASSERT_TRUE(materialManager->HasComponent(entity));
         auto id = materialManager->GetComponentId(entity);
         ASSERT_NE(IComponentManager::INVALID_COMPONENT_ID, id);
-        EXPECT_EQ(IComponentManager::INVALID_COMPONENT_ID, materialManager->GetComponentId(Entity {}));
+        EXPECT_EQ(IComponentManager::INVALID_COMPONENT_ID, materialManager->GetComponentId(Entity{}));
         ASSERT_EQ(entity, materialManager->GetEntity(id));
         generation = materialManager->GetComponentGeneration(id);
         EXPECT_LE(generation, materialManager->GetGenerationCounter());
@@ -154,8 +154,8 @@ UNIT_TEST(API_EcsMaterialComponent, GetSetTest, testing::ext::TestSize.Level1)
     }
     // Get with invalid Entity
     {
-        MaterialComponent defaultMaterial {};
-        auto result = materialManager->Get(Entity {});
+        MaterialComponent defaultMaterial{};
+        auto result = materialManager->Get(Entity{});
         ASSERT_EQ(defaultMaterial.type, result.type);
         ASSERT_EQ(defaultMaterial.alphaCutoff, result.alphaCutoff);
         ASSERT_EQ(defaultMaterial.extraRenderingFlags, result.extraRenderingFlags);
@@ -163,8 +163,8 @@ UNIT_TEST(API_EcsMaterialComponent, GetSetTest, testing::ext::TestSize.Level1)
     }
     // Get with invalid ComponentId
     {
-        MaterialComponent defaultMaterial {};
-        auto componentId = materialManager->GetComponentId(Entity {});
+        MaterialComponent defaultMaterial{};
+        auto componentId = materialManager->GetComponentId(Entity{});
         auto result = materialManager->Get(componentId);
         ASSERT_EQ(defaultMaterial.type, result.type);
         ASSERT_EQ(defaultMaterial.alphaCutoff, result.alphaCutoff);
@@ -225,12 +225,12 @@ UNIT_TEST(API_EcsMaterialComponent, ReadWriteTest, testing::ext::TestSize.Level1
     }
     // Read with invalid Entity
     {
-        auto result = materialManager->Read(Entity {});
+        auto result = materialManager->Read(Entity{});
         ASSERT_FALSE(result);
     }
     // Read with invalid ComponentId
     {
-        auto componentId = materialManager->GetComponentId(Entity {});
+        auto componentId = materialManager->GetComponentId(Entity{});
         auto result = materialManager->Read(componentId);
         ASSERT_FALSE(result);
     }
@@ -343,7 +343,7 @@ UNIT_TEST(API_EcsMaterialComponent, GetSetDataTest, testing::ext::TestSize.Level
         }
         // GetData with invalid ComponentId
         {
-            auto componentId = materialManager->GetComponentId(Entity {});
+            auto componentId = materialManager->GetComponentId(Entity{});
             ASSERT_EQ(nullptr, materialManager->GetData(componentId));
         }
     }
@@ -367,7 +367,7 @@ CORE_NS::EntityReference CreateShader(CORE_NS::IEcs& ecs, RENDER_NS::IRenderCont
 
 class ComponentListener final : IEcs::ComponentListener {
 public:
-    ComponentListener(IEcs& ecs, IComponentManager* manager) : ecs_ { ecs }, manager_ { manager }
+    ComponentListener(IEcs& ecs, IComponentManager* manager) : ecs_{ecs}, manager_{manager}
     {
         if (manager) {
             ecs.AddListener(*manager, *this);
@@ -388,7 +388,7 @@ public:
     void OnComponentEvent(
         EventType type, const IComponentManager& componentManager, const array_view<const Entity> entities)
     {
-        events_.push_back(Event { type, componentManager, vector<Entity> { entities.begin(), entities.end() } });
+        events_.push_back(Event{type, componentManager, vector<Entity>{entities.begin(), entities.end()}});
     }
 
     IEcs& ecs_;
@@ -401,7 +401,7 @@ public:
     vector<Event> events_;
 };
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CustomPropertyMetadataTest
@@ -457,20 +457,20 @@ UNIT_TEST(API_EcsMaterialComponent, CustomPropertyMetadataTest, testing::ext::Te
             }
             if (auto* cb = scopedHandle->customBindingProperties; cb) {
                 {
-                    const EntityReference entRef({ 3U }, nullptr);
+                    const EntityReference entRef({3U}, nullptr);
                     const bool boolVal =
                         CORE_NS::SetPropertyValue(*cb, "uUserCustomImage", PropertyType::ENTITY_REFERENCE_T, entRef);
                     EXPECT_EQ(boolVal, true);
                     const auto entVal = CORE_NS::GetPropertyValue<EntityReference>(*cb, "uUserCustomImage");
-                    EXPECT_EQ(entVal.operator CORE_NS::Entity(), Entity { 3U });
+                    EXPECT_EQ(entVal.operator CORE_NS::Entity(), Entity{3U});
                 }
                 {
-                    const EntityReference entRef({ 9U }, nullptr);
+                    const EntityReference entRef({9U}, nullptr);
                     const bool boolVal =
                         CORE_NS::SetPropertyValue(*cb, "uUserCustomSampler", PropertyType::ENTITY_REFERENCE_T, entRef);
                     EXPECT_EQ(boolVal, true);
                     const auto entVal = CORE_NS::GetPropertyValue<EntityReference>(*cb, "uUserCustomSampler");
-                    EXPECT_EQ(entVal.operator CORE_NS::Entity(), Entity { 9U });
+                    EXPECT_EQ(entVal.operator CORE_NS::Entity(), Entity{9U});
                 }
             }
 
@@ -619,7 +619,7 @@ UNIT_TEST(API_EcsMaterialComponent, CustomPropertyMetadataTest, testing::ext::Te
     validateCustomProperties(materialManager, entity);
 
     ecs->ProcessEvents();
-    EXPECT_EQ(listener.events_.size(), 2U); // expected CREATED and MODIFIED events
+    EXPECT_EQ(listener.events_.size(), 2U);  // expected CREATED and MODIFIED events
     EXPECT_EQ(listener.events_[0U].type, IEcs::ComponentListener::EventType::CREATED);
     EXPECT_EQ(listener.events_[0U].entities[0], entity0);
     EXPECT_EQ(listener.events_[0U].entities[1], entity);
@@ -630,7 +630,7 @@ UNIT_TEST(API_EcsMaterialComponent, CustomPropertyMetadataTest, testing::ext::Te
     ecs->GetEntityManager().Destroy(entity0);
 
     ecs->ProcessEvents();
-    EXPECT_EQ(listener.events_.size(), 2U); // expected MOVED and DESTROYED events
+    EXPECT_EQ(listener.events_.size(), 2U);  // expected MOVED and DESTROYED events
     EXPECT_EQ(listener.events_[0U].type, IEcs::ComponentListener::EventType::MOVED);
     EXPECT_EQ(listener.events_[0U].entities[0], entity);
     EXPECT_EQ(listener.events_[1U].type, IEcs::ComponentListener::EventType::DESTROYED);
@@ -647,7 +647,7 @@ UNIT_TEST(API_EcsMaterialComponent, CustomPropertyMetadataTest, testing::ext::Te
         }
     }
     ecs->ProcessEvents();
-    EXPECT_EQ(listener.events_.size(), 1U); // expecting one MODIFIED event
+    EXPECT_EQ(listener.events_.size(), 1U);  // expecting one MODIFIED event
     EXPECT_EQ(listener.events_[0U].type, IEcs::ComponentListener::EventType::MODIFIED);
     EXPECT_EQ(listener.events_[0U].entities[0], entity);
     listener.events_.clear();

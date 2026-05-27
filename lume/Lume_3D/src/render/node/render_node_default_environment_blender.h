@@ -50,8 +50,8 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "291720f5-1a00-446f-ab98-cc62f6c29562" };
-    static constexpr const char* typeName = "RenderNodeDefaultEnvironmentBlender";
+    static constexpr BASE_NS::Uid UID{"291720f5-1a00-446f-ab98-cc62f6c29562"};
+    static constexpr const char* TYPE_NAME = "RenderNodeDefaultEnvironmentBlender";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -68,7 +68,7 @@ public:
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void InitializeShaderData();
     void InitCreateBinders();
@@ -82,7 +82,7 @@ private:
     void ExecuteSingleEnvironment(RENDER_NS::IRenderCommandList& cmdList,
         BASE_NS::array_view<const RenderCamera::Environment> environments, uint32_t idx);
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     // Json resources which might need re-fetching
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
@@ -111,17 +111,17 @@ private:
 
     SceneRenderDataStores stores_;
 
-    bool valid_ { false };
-    bool hasBlendEnvironments_ { false };
-    bool hasInitializedShaderData_ { false };
+    bool valid_{false};
+    bool hasBlendEnvironments_{false};
+    bool hasInitializedShaderData_{false};
 
     struct OwnedEnvironmentTargetData {
-        uint64_t id { 0ULL };
+        uint64_t id{0ULL};
         RENDER_NS::RenderHandleReference handle;
-        bool usedThisFrame { false };
+        bool usedThisFrame{false};
     };
     BASE_NS::vector<OwnedEnvironmentTargetData> envTargetData_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER__NODE__RENDER_NODE_DEFAULT_ENVIRONMENT_BLENDER_H
+#endif  // CORE3D_RENDER__NODE__RENDER_NODE_DEFAULT_ENVIRONMENT_BLENDER_H

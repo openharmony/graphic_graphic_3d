@@ -27,7 +27,7 @@ class Device;
 class DeviceGLES;
 struct GpuSemaphorePlatformDataGles final {
     // GLsync object
-    uint64_t sync { 0 };
+    uint64_t sync{0};
 };
 
 class GpuSemaphoreGles final : public GpuSemaphore {
@@ -42,9 +42,9 @@ public:
 private:
     DeviceGLES& device_;
 
-    bool ownsResources_ { true };
+    bool ownsResources_{true};
     GpuSemaphorePlatformDataGles plat_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_GPU_SEMAPHORE_GLES_H
+#endif  // GLES_GPU_SEMAPHORE_GLES_H

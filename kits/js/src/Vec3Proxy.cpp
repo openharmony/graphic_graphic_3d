@@ -27,7 +27,7 @@ Vec3Proxy::~Vec3Proxy()
 {
     Reset();
 }
-void Vec3Proxy::SetValue(const BASE_NS::Math::Vec3& v)
+void Vec3Proxy::SetNativeValue(const BASE_NS::Math::Vec3& v)
 {
     META_NS::SetValue(GetProperty<BASE_NS::Math::Vec3>(), v);
 }
@@ -79,7 +79,7 @@ void Vec3Proxy::SetValue(NapiApi::Object obj)
     auto y = obj.Get<float>("y");
     auto z = obj.Get<float>("z");
     if (x.IsValid() && y.IsValid() && z.IsValid()) {
-        SetValue({ x, y, z });
+        SetNativeValue({x, y, z});
     }
 }
 
@@ -89,7 +89,7 @@ BASE_NS::Math::Vec3 Vec3Proxy::ToNative(NapiApi::Object vec3, bool& success)
     auto y = vec3.Get<float>("y");
     auto z = vec3.Get<float>("z");
     success = x.IsValid() && y.IsValid() && z.IsValid();
-    return BASE_NS::Math::Vec3 { x, y, z };
+    return BASE_NS::Math::Vec3{x, y, z};
 }
 
 NapiApi::Object Vec3Proxy::ToNapiObject(BASE_NS::Math::Vec3 vec3, napi_env env)

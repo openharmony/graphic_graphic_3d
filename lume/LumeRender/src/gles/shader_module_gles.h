@@ -30,25 +30,25 @@ struct ShaderModuleCreateInfo;
 namespace Gles {
 struct PushConstantReflection;
 struct SpecConstantInfo;
-} // namespace Gles
+}  // namespace Gles
 struct ShaderModulePlatformDataGLES : ShaderModulePlatformData {
     BASE_NS::vector<Gles::PushConstantReflection> infos;
     struct Bind {
-        uint8_t iSet, iBind;   // binding set, binding index
-        uint8_t arrayElements; // for array binds.
-        BASE_NS::string name;  // name opengl uniform/block
+        uint8_t iSet, iBind;    // binding set, binding index
+        uint8_t arrayElements;  // for array binds.
+        BASE_NS::string name;   // name opengl uniform/block
     };
-    BASE_NS::vector<Bind> ubSets; // uniform blocks
-    BASE_NS::vector<Bind> sbSets; // shader storage blocks
-    BASE_NS::vector<Bind> siSets; // subpass inputs
-    BASE_NS::vector<Bind> ciSets; // image textures
-    BASE_NS::vector<Bind> cbSets; // combined textures (sampler2D etc)
+    BASE_NS::vector<Bind> ubSets;  // uniform blocks
+    BASE_NS::vector<Bind> sbSets;  // shader storage blocks
+    BASE_NS::vector<Bind> siSets;  // subpass inputs
+    BASE_NS::vector<Bind> ciSets;  // image textures
+    BASE_NS::vector<Bind> cbSets;  // combined textures (sampler2D etc)
     struct DoubleBind {
-        uint8_t sSet, sBind;  // sampler binding set, binding index
-        uint8_t iSet, iBind;  // image binding set, binding index
-        BASE_NS::string name; // name of combined image/sampler
+        uint8_t sSet, sBind;   // sampler binding set, binding index
+        uint8_t iSet, iBind;   // image binding set, binding index
+        BASE_NS::string name;  // name of combined image/sampler
     };
-    BASE_NS::vector<DoubleBind> combSets; // combined image / sampler (generated from separated image/sampler)
+    BASE_NS::vector<DoubleBind> combSets;  // combined image / sampler (generated from separated image/sampler)
 };
 
 class ShaderModuleGLES final : public ShaderModule {
@@ -70,7 +70,7 @@ public:
 
 private:
     Device& device_;
-    ShaderStageFlags shaderStageFlags_ { 0u };
+    ShaderStageFlags shaderStageFlags_{0u};
     ShaderModulePlatformDataGLES plat_;
     BASE_NS::vector<VertexInputDeclaration::VertexInputBindingDescription> vertexInputBindingDescriptions_;
     BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> vertexInputAttributeDescriptions_;
@@ -83,11 +83,11 @@ private:
 
     BASE_NS::string source_;
     BASE_NS::vector<Gles::SpecConstantInfo> specInfo_;
-    template<typename ShaderBase>
+    template <typename ShaderBase>
     friend void ProcessShaderModule(ShaderBase&, const ShaderModuleCreateInfo&);
-    template<typename ShaderBase>
+    template <typename ShaderBase>
     friend BASE_NS::string SpecializeShaderModule(const ShaderBase&, const ShaderSpecializationConstantDataView&);
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_SHADER_MODULE_GLES_H
+#endif  // GLES_SHADER_MODULE_GLES_H

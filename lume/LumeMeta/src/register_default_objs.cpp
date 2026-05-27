@@ -23,16 +23,9 @@
 #include "container/object_container.h"
 #include "container/object_flat_container.h"
 #include "container_observer.h"
-#include "engine/engine_input_property_manager.h"
+#include "engine/engine_value_manager.h"
 #include "functions.h"
 #include "keep_alive.h"
-#include "loaders/class_content_loader.h"
-#include "loaders/csv_string_resource_loader.h"
-#include "loaders/json_content_loader.h"
-#include "model/composite_object_provider.h"
-#include "model/container_data_model.h"
-#include "model/content_loader_object_provider.h"
-#include "model/instantiating_object_provider.h"
 #include "number.h"
 #include "object.h"
 #include "object_context.h"
@@ -79,19 +72,11 @@ static constexpr ObjectTypeInfo OBJECTS[] = {
     SettableFunction::OBJECT_INFO,
     PropertyFunction::OBJECT_INFO,
     ObjectContext::OBJECT_INFO,
-    ContainerDataModel::OBJECT_INFO,
-    CompositeObjectProvider::OBJECT_INFO,
-    InstantiatingObjectProvider::OBJECT_INFO,
-    ContentLoaderObjectProvider::OBJECT_INFO,
-    CsvStringResourceLoader::OBJECT_INFO,
-    ClassContentLoader::OBJECT_INFO,
     Internal::ObjectHierarchyObserver::OBJECT_INFO,
     StartableObjectController::OBJECT_INFO,
     Internal::Number::OBJECT_INFO,
     Connector::OBJECT_INFO,
-    JsonContentLoader::OBJECT_INFO,
     EngineValueManager::OBJECT_INFO,
-    EngineInputPropertyManager::OBJECT_INFO,
     ObjectName::OBJECT_INFO,
     FileResourceManager::OBJECT_INFO,
     ObjectResource::OBJECT_INFO,
@@ -179,5 +164,5 @@ void UnRegisterBuiltInObjects(IObjectRegistry& registry)
     }
     registry.UnregisterObjectType<META_NS::Internal::BaseObject>();
 }
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

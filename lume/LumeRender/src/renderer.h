@@ -112,14 +112,14 @@ private:
     BASE_NS::vector<RenderHandleReference> deferredRenderNodeGraphs_;
 
     RenderTimings::Times frameTimes_;
-    uint64_t firstTime_ { ~0u };
-    uint64_t previousFrameTime_ { ~0u };
-    uint64_t deltaTime_ { 1 };
+    uint64_t firstTime_{~uint64_t(0)};
+    uint64_t previousFrameTime_{~uint64_t(0)};
+    uint64_t deltaTime_{1};
 
-    IRenderDataStoreDefaultStaging* dsStaging_ { nullptr };
+    IRenderDataStoreDefaultStaging* dsStaging_{nullptr};
 
     struct RenderFrameTimeData {
-        uint64_t frameIndex { 0 };
+        uint64_t frameIndex{0};
 
         // filled before backend run
         // cleared after present run
@@ -129,13 +129,13 @@ private:
 
         // evaluated in RenderFrameBackendImpl
         // used in RenderFramePresentImpl
-        bool hasBackendWork { false };
+        bool hasBackendWork{false};
     };
     RenderFrameTimeData renderFrameTimeData_;
 
     struct SeparatedRenderingData {
-        bool separateBackend { false };
-        bool separatePresent { false };
+        bool separateBackend{false};
+        bool separatePresent{false};
 
         // this needs to be locked by RenderFrame (front-end) and RenderFrameBackend (back-end)
         std::mutex frontMtx;
@@ -146,10 +146,10 @@ private:
 
     RenderStatus renderStatus_;
     // could be called in parallel
-    uint64_t renderStatusDeferred_ { 0 };
+    uint64_t renderStatusDeferred_{0};
 
-    bool forceSequentialQueue_ { false };
+    bool forceSequentialQueue_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDERER_H
+#endif  // RENDER_RENDERER_H

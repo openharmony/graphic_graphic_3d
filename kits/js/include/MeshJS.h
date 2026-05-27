@@ -19,8 +19,9 @@
 
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
+#include "export.h"
 
-class MeshJS final : public BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC MeshJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 120;
     static void Init(napi_env env, napi_value exports);
@@ -29,7 +30,7 @@ public:
     void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     napi_value GetSubmesh(NapiApi::FunctionContext<>& ctx);
     napi_value GetAABB(NapiApi::FunctionContext<>& ctx);

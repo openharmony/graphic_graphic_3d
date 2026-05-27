@@ -40,8 +40,10 @@ void Collect(const uint32_t set, const DescriptorSetLayoutBinding& binding,
     BASE_NS::vector<ShaderModulePlatformDataGLES::Bind>& sets)
 {
     const auto name = "s" + to_string(set) + "_b" + to_string(binding.binding);
-    sets.push_back({ static_cast<uint8_t>(set), static_cast<uint8_t>(binding.binding),
-        static_cast<uint8_t>(binding.descriptorCount), string { name } });
+    sets.push_back({static_cast<uint8_t>(set),
+        static_cast<uint8_t>(binding.binding),
+        static_cast<uint8_t>(binding.descriptorCount),
+        string{name}});
 }
 
 void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& plat_)
@@ -57,19 +59,19 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
             for (const auto& binding : set.bindings) {
                 switch (binding.descriptorType) {
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER:
-                        samplers.push_back({ static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding) });
+                        samplers.push_back({static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding)});
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                         Collect(set.set, binding, plat_.cbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                        images.push_back({ static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding) });
+                        images.push_back({static_cast<uint8_t>(set.set), static_cast<uint8_t>(binding.binding)});
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE:
                         Collect(set.set, binding, plat_.ciSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                        [[fallthrough]]; // follow the same procedure as STORAGE
+                        [[fallthrough]];  // follow the same procedure as STORAGE
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -79,14 +81,14 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
                         Collect(set.set, binding, plat_.sbSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                        [[fallthrough]]; // follow the same procedure as STORAGE
+                        [[fallthrough]];  // follow the same procedure as STORAGE
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
                         Collect(set.set, binding, plat_.siSets);
                         break;
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
-                        [[fallthrough]]; // follow the same procedure as MAX
+                        [[fallthrough]];  // follow the same procedure as MAX
                     case DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM:
                         break;
                 }
@@ -97,7 +99,7 @@ void CollectRes(const PipelineLayout& pipeline, ShaderModulePlatformDataGLES& pl
         for (const auto& iBinding : images) {
             const auto name = "s" + to_string(iBinding.set) + "_b" + to_string(iBinding.bind) + "_s" +
                               to_string(sBinding.set) + "_b" + to_string(sBinding.bind);
-            plat_.combSets.push_back({ sBinding.set, sBinding.bind, iBinding.set, iBinding.bind, string { name } });
+            plat_.combSets.push_back({sBinding.set, sBinding.bind, iBinding.set, iBinding.bind, string{name}});
         }
     }
 }
@@ -108,8 +110,7 @@ void CreateSpecInfos(
     static_assert(static_cast<uint32_t>(Gles::SpecConstantInfo::Types::BOOL) ==
                   static_cast<uint32_t>(ShaderSpecialization::Constant::Type::BOOL));
     for (const auto& constant : constants) {
-        Gles::SpecConstantInfo info { static_cast<Gles::SpecConstantInfo::Types>(constant.type), constant.id, 1U, 1U,
-            {} };
+        Gles::SpecConstantInfo info{static_cast<Gles::SpecConstantInfo::Types>(constant.type), constant.id, 1U, 1U, {}};
         outSpecInfo.push_back(info);
     }
 }
@@ -118,42 +119,59 @@ void SortSets(PipelineLayout& pipelineLayout)
 {
     for (auto& currSet : pipelineLayout.descriptorSetLayouts) {
         if (currSet.set != PipelineLayoutConstants::INVALID_INDEX) {
-            std::sort(currSet.bindings.begin(), currSet.bindings.end(),
-                [](auto const& lhs, auto const& rhs) { return (lhs.binding < rhs.binding); });
+            std::sort(currSet.bindings.begin(), currSet.bindings.end(), [](auto const& lhs, auto const& rhs) {
+                return (lhs.binding < rhs.binding);
+            });
         }
     }
 }
-} // namespace
+}  // namespace
 struct Reader {
     const uint8_t* ptr;
+    size_t remaining{SIZE_MAX};
     uint8_t GetUint8()
     {
+        if (remaining < sizeof(uint8_t)) {
+            return 0;
+        }
+        remaining -= sizeof(uint8_t);
         return *ptr++;
     }
 
     uint16_t GetUint16()
     {
+        if (remaining < sizeof(uint16_t)) {
+            return 0;
+        }
         const auto value = static_cast<uint16_t>(*ptr | (*(ptr + 1) << 8));
         ptr += sizeof(uint16_t);
+        remaining -= sizeof(uint16_t);
         return value;
     }
     uint32_t GetUint32()
     {
-        const auto value =
-            static_cast<uint32_t>(*ptr | (*(ptr + 1) << 8) | ((*(ptr + 2)) << 16) | ((*(ptr + 3)) << 24));
+        if (remaining < sizeof(uint32_t)) {
+            return 0;
+        }
+        const auto value = static_cast<uint32_t>(*ptr) | static_cast<uint32_t>(*(ptr + 1)) << 8U |
+                           static_cast<uint32_t>(*(ptr + 2)) << 16U | static_cast<uint32_t>(*(ptr + 3)) << 24U;
         ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
         return value;
     }
     string_view GetStringView()
     {
-        string_view value;
         const uint16_t len = GetUint16();
-        value = string_view(static_cast<const char*>(static_cast<const void*>(ptr)), len);
+        if (remaining < len) {
+            return {};
+        }
+        string_view value(static_cast<const char*>(static_cast<const void*>(ptr)), len);
         ptr += len;
+        remaining -= len;
         return value;
     }
 };
-template<typename ShaderBase>
+template <typename ShaderBase>
 void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInfo)
 {
     me.pipelineLayout_ = createInfo.reflectionData.GetPipelineLayout();
@@ -167,10 +185,10 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
             bindingDesc.vertexInputRate = VertexInputRate::CORE_VERTEX_INPUT_RATE_VERTEX;
             me.vertexInputBindingDescriptions_.push_back(bindingDesc);
         }
-        me.vidv_.bindingDescriptions = { me.vertexInputBindingDescriptions_.data(),
-            me.vertexInputBindingDescriptions_.size() };
-        me.vidv_.attributeDescriptions = { me.vertexInputAttributeDescriptions_.data(),
-            me.vertexInputAttributeDescriptions_.size() };
+        me.vidv_.bindingDescriptions = {
+            me.vertexInputBindingDescriptions_.data(), me.vertexInputBindingDescriptions_.size()};
+        me.vidv_.attributeDescriptions = {
+            me.vertexInputAttributeDescriptions_.data(), me.vertexInputAttributeDescriptions_.size()};
     }
 
     if (me.shaderStageFlags_ & CORE_SHADER_STAGE_COMPUTE_BIT) {
@@ -180,7 +198,7 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
         me.stg_.z = tgs.z;
     }
     if (auto* ptr = createInfo.reflectionData.GetPushConstants(); ptr) {
-        Reader read { ptr };
+        Reader read{ptr};
         const auto constants = read.GetUint8();
         for (uint8_t i = 0U; i < constants; ++i) {
             Gles::PushConstantReflection refl;
@@ -198,7 +216,7 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
     }
 
     me.constants_ = createInfo.reflectionData.GetSpecializationConstants();
-    me.sscv_.constants = { me.constants_.data(), me.constants_.size() };
+    me.sscv_.constants = {me.constants_.data(), me.constants_.size()};
     CollectRes(me.pipelineLayout_, me.plat_);
     CreateSpecInfos(me.constants_, me.specInfo_);
     // sort bindings inside sets (and count them)
@@ -208,7 +226,7 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
         static_cast<const char*>(static_cast<const void*>(createInfo.spvData.data())), createInfo.spvData.size());
 }
 
-template<typename ShaderBase>
+template <typename ShaderBase>
 string SpecializeShaderModule(const ShaderBase& base, const ShaderSpecializationConstantDataView& specData)
 {
     return Gles::Specialize(base.shaderStageFlags_, base.source_, base.constants_, specData);

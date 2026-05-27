@@ -21,9 +21,9 @@
 namespace OHOS::Render3D {
 class Cube : public Geometry {
 public:
-    Cube(std::string name, float width, float height, float depth, Vec3& position) : Geometry(name, position),
-        width_(width), height_(height), depth_(depth) {};
-    ~Cube() override {};
+    Cube(std::string name, float width, float height, float depth, Vec3& position)
+        : Geometry(name, position), width_(width), height_(height), depth_(depth){};
+    ~Cube() override{};
 
     int32_t GetType() const override
     {
@@ -44,19 +44,19 @@ public:
     {
         return depth_;
     }
+
 protected:
     bool IsEqual(const Geometry& obj) const override
     {
         const auto& m = reinterpret_cast<const Cube&>(obj);
 
-        return GetWidth() == m.GetWidth()
-            && GetHeight() == m.GetHeight()
-            && GetDepth() == m.GetDepth();
+        return GetWidth() == m.GetWidth() && GetHeight() == m.GetHeight() && GetDepth() == m.GetDepth();
     }
+
 private:
-    float width_ { 0.0f };
-    float height_ { 0.0f };
-    float depth_ { 0.0f };
+    float width_{0.0f};
+    float height_{0.0f};
+    float depth_{0.0f};
 };
-} // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_CUBE_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_CUBE_H

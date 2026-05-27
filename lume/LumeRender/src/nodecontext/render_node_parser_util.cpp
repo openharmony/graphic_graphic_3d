@@ -244,7 +244,7 @@ inline bool ParseClearValue(const json::value& jsonData, ClearValue& clearValue,
 {
     bool valid = false;
     if (auto const pos = jsonData.find("clearColor"); pos) {
-        if (pos->is_array() && pos->array_.size() == 4) { // 4: array size, rgba
+        if (pos->is_array() && pos->array_.size() == 4) {  // 4: array size, rgba
             FromJson(*pos, clearValue.color.float32);
             valid = true;
         } else {
@@ -255,7 +255,7 @@ inline bool ParseClearValue(const json::value& jsonData, ClearValue& clearValue,
         }
     }
     if (auto const pos = jsonData.find("clearDepth"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size, depth and stencil
+        if (pos->is_array() && pos->array_.size() == 2) {  // 2: array size, depth and stencil
             if (pos->array_[0].is_number()) {
                 clearValue.depthStencil.depth = pos->array_[0].as_number<float>();
                 valid = true;
@@ -334,7 +334,7 @@ inline void FromJson(
     context.data.clearWhenCreated = ParseClearValue(jsonData, context.data.clearValue, context.error);
 
     if (auto const pos = jsonData.find("shadingRateTexelSize"); pos) {
-        if (pos->is_array() && pos->array_.size() == 2) { // 2: array size, width and height
+        if (pos->is_array() && pos->array_.size() == 2) {  // 2: array size, width and height
             if (pos->array_[0].is_number() && pos->array_[1u].is_number()) {
                 context.data.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 context.data.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
@@ -373,7 +373,7 @@ struct LoadResult {
     string error;
 };
 
-static constexpr size_t MAX_RNG_RENDER_PASS_SUBPASS_COUNT { 64 };
+static constexpr size_t MAX_RNG_RENDER_PASS_SUBPASS_COUNT{64};
 
 void SafetyCheckRenderPassVectors(RenderNodeGraphInputs::InputRenderPass& renderPass)
 {
@@ -407,7 +407,9 @@ void GetAttachmentIndices(const char* attachmentName, const json::value& subpass
 {
     if (auto const iIter = subpass.find(attachmentName); iIter) {
         if (iIter->is_array()) {
-            std::transform(iIter->array_.begin(), iIter->array_.end(), std::back_inserter(attachmentVector),
+            std::transform(iIter->array_.begin(),
+                iIter->array_.end(),
+                std::back_inserter(attachmentVector),
                 [](const json::value& value) {
                     if (value.is_number()) {
                         return value.template as_number<uint32_t>();
@@ -415,7 +417,7 @@ void GetAttachmentIndices(const char* attachmentName, const json::value& subpass
                     return 0u;
                 });
         } else {
-            attachmentVector = { iIter->template as_number<uint32_t>() };
+            attachmentVector = {iIter->template as_number<uint32_t>()};
         }
     }
 }
@@ -425,7 +427,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
 {
     auto const rp = node.find(name);
     if (!rp) {
-        return; // early out
+        return;  // early out
     }
     ParseArray<decltype(renderPass.attachments)::value_type>(*rp, "attachments", renderPass.attachments, result);
     SafeGetJsonValue(*rp, "subpassIndex", result.error, renderPass.subpassIndex);
@@ -480,7 +482,7 @@ void ParseRenderpass(const string_view name, const json::value& node,
         SafetyCheckRenderPassVectors(renderPass);
 
         if (auto const pos = sp->find("shadingRateTexelSize"); pos) {
-            if ((pos->is_array() && pos->array_.size() == 2) && // 2: array size, width and height
+            if ((pos->is_array() && pos->array_.size() == 2) &&  // 2: array size, width and height
                 (pos->array_[0].is_number() && pos->array_[1u].is_number())) {
                 renderPass.shadingRateTexelSize.width = pos->array_[0].as_number<uint32_t>();
                 renderPass.shadingRateTexelSize.height = pos->array_[1].as_number<uint32_t>();
@@ -510,9 +512,10 @@ void ParseResources(const string_view name, const json::value& node, RenderNodeG
             *res, "customOutputImages", resources.customOutputImages, result);
     }
 }
-} // namespace
+}  // namespace
 
-RenderNodeParserUtil::RenderNodeParserUtil(const CreateInfo& createInfo) {}
+RenderNodeParserUtil::RenderNodeParserUtil(const CreateInfo& createInfo)
+{}
 
 RenderNodeParserUtil::~RenderNodeParserUtil() = default;
 
@@ -670,7 +673,9 @@ CORE_NS::IInterface* RenderNodeParserUtil::GetInterface(const BASE_NS::Uid& uid)
     return nullptr;
 }
 
-void RenderNodeParserUtil::Ref() {}
+void RenderNodeParserUtil::Ref()
+{}
 
-void RenderNodeParserUtil::Unref() {}
+void RenderNodeParserUtil::Unref()
+{}
 RENDER_END_NAMESPACE()

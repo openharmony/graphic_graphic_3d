@@ -18,14 +18,11 @@
 namespace OHOS::Render3D::KITETS {
 MetallicRoughnessMaterialImpl::MetallicRoughnessMaterialImpl(const std::shared_ptr<MaterialETS> mat)
     : MaterialImpl(mat), materialETS_(mat)
-{
-}
+{}
 
 MetallicRoughnessMaterialImpl::~MetallicRoughnessMaterialImpl()
 {
-    if (materialETS_) {
-        materialETS_.reset();
-    }
+    materialETS_.reset();
 }
 
 ::SceneResources::MaterialProperty MetallicRoughnessMaterialImpl::getBaseColor()

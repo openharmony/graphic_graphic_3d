@@ -20,6 +20,7 @@
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_render_resource.h>
+#include <scene/interface/ecs/resource_component.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/resource/types.h>
 
@@ -30,7 +31,6 @@
 #include <3d/ecs/systems/intf_node_system.h>
 #include <base/containers/unordered_map.h>
 
-#include "../ecs_component/resource_component.h"
 #include "../resource/util.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -41,9 +41,9 @@ struct ResourcesCreator {
     IInternalScene::Ptr iScene;
     BASE_NS::string group;
 
-    IResourceComponentManager* resuMan {};
-    CORE3D_NS::IRenderHandleComponentManager* renderMan {};
-    CORE3D_NS::INameComponentManager* nameMan {};
+    IResourceComponentManager* resuMan{};
+    CORE3D_NS::IRenderHandleComponentManager* renderMan{};
+    CORE3D_NS::INameComponentManager* nameMan{};
     CORE_NS::IResourceManager::Ptr resources;
 
     ResourcesCreator(const IScene::Ptr& sc, BASE_NS::string_view uri, const CORE3D_NS::IGLTF2Importer::Ptr& importer,
@@ -69,10 +69,10 @@ struct ResourcesCreator {
             return;
         }
         if (rid.IsValid()) {
-            group = rid.ToString();
+            group = rid.name;
         } else {
             // try to find group name that is not in use
-            group = UniqueGroupName(resources, uri);
+            group = uri;
         }
         CORE_LOG_D("Loading gltf resources to group: %s", group.c_str());
 
@@ -80,7 +80,7 @@ struct ResourcesCreator {
         CreateMaterialResources(importer->GetResult().data.materials);
         CreateAnimationResources();
 
-        iScene->SetResourceGroups(StringToResourceGroupBundle(iScene->GetContext(), { group }));
+        iScene->SetResourceGroups(StringToResourceGroupBundle(scene, {group}));
     }
 
     void AddResource(
@@ -93,13 +93,13 @@ struct ResourcesCreator {
         if (name.empty()) {
             name = BASE_NS::string(nameprefix + BASE_NS::to_string(index));
         }
-        CORE_NS::ResourceId rid { name, group };
+        CORE_NS::ResourceId rid{name, group};
         resuMan->Create(ent);
         if (auto h = resuMan->Write(ent)) {
             h->resourceId = rid;
         }
-        if (!resources->GetResourceInfo(rid).id.IsValid()) {
-            resources->AddResource(rid, type, "", nullptr);
+        if (!resources->GetResourceInfo({rid, scene}).id.IsValid()) {
+            resources->AddResource({rid, scene}, type, "", nullptr);
         }
     }
 
@@ -123,15 +123,27 @@ struct ResourcesCreator {
         }
     }
 
+    BASE_NS::vector<CORE_NS::Entity> FindAnimations() const
+    {
+        auto& ecs = iScene->GetEcsContext();
+        auto animationManager = CORE_NS::GetManager<CORE3D_NS::IAnimationComponentManager>(*ecs.GetNativeEcs());
+        auto& entityManager = ecs.GetNativeEcs()->GetEntityManager();
+
+        BASE_NS::vector<CORE_NS::Entity> anims;
+        for (size_t i = 0; i != animationManager->GetComponentCount(); ++i) {
+            auto ent = animationManager->GetEntity(i);
+            if (entityManager.IsAlive(ent)) {
+                anims.push_back(ent);
+            }
+        }
+        return anims;
+    }
+
     void CreateAnimationResources()
     {
         size_t index = 0;
-        for (auto&& anim : iScene->GetAnimations()) {
-            if (auto i = interface_cast<IEcsObjectAccess>(anim)) {
-                if (auto obj = i->GetEcsObject()) {
-                    AddResource(obj->GetEntity(), ClassId::AnimationResource.Id().ToUid(), "animation_", index++);
-                }
-            }
+        for (auto&& anim : FindAnimations()) {
+            AddResource(anim, ClassId::AnimationResource.Id().ToUid(), "animation_", index++);
         }
     }
 };
@@ -160,7 +172,9 @@ void UpdateAnimationTrackTargets(
         animationData) {
         BASE_NS::vector<CORE_NS::Entity> targetEntities;
         targetEntities.reserve(animationData->tracks.size());
-        std::transform(animationData->tracks.begin(), animationData->tracks.end(), std::back_inserter(targetEntities),
+        std::transform(animationData->tracks.begin(),
+            animationData->tracks.end(),
+            std::back_inserter(targetEntities),
             [&nameManager = nameManager_, &node](const CORE_NS::Entity& trackEntity) {
                 if (auto nameHandle = nameManager.Read(trackEntity); nameHandle) {
                     if (nameHandle->name.empty()) {
@@ -171,7 +185,7 @@ void UpdateAnimationTrackTargets(
                         }
                     }
                 }
-                return CORE_NS::Entity {};
+                return CORE_NS::Entity{};
             });
         if (animationData->tracks.size() == targetEntities.size()) {
             auto targetIt = targetEntities.begin();
@@ -188,7 +202,7 @@ void UpdateAnimationTrackTargets(
         }
     }
 }
-} // namespace
+}  // namespace
 
 bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool createResources,
     const CORE_NS::ResourceId& rid, size_t offset)
@@ -221,7 +235,7 @@ bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool cre
 
     // Loading and importing of glTF was done successfully. Fill the collection with all the gltf entities.
     const auto rootEntity = ImportSceneFromGltf(*gltfLoadResult.data, {});
-    if (rootEntity == CORE_NS::Entity {}) {
+    if (rootEntity == CORE_NS::Entity{}) {
         return false;
     }
 
@@ -249,7 +263,7 @@ CORE_NS::Entity AssetObject::ImportSceneFromGltf(const CORE3D_NS::IGLTFData& glt
     }
 
     const CORE3D_NS::GLTFResourceData& resourceData = importer_->GetResult().data;
-    CORE_NS::Entity importedSceneEntity {};
+    CORE_NS::Entity importedSceneEntity{};
     if (sceneIndex != CORE3D_NS::CORE_GLTF_INVALID_INDEX) {
         CORE3D_NS::GltfSceneImportFlags importFlags = CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL;
         importedSceneEntity = gltf.ImportGltfScene(sceneIndex, gltfData, resourceData, *ecs_, root, importFlags);

@@ -20,8 +20,6 @@
 #include <meta/interface/intf_object_flags.h>
 #include <meta/interface/property/construct_property.h>
 #include <meta/interface/property/property.h>
-#include <meta/interface/property/construct_property.h>
-#include <meta/ext/metadata_helpers.h>
 
 META_BEGIN_NAMESPACE()
 
@@ -51,7 +49,7 @@ inline bool IsValueSame(const IProperty& p1, const IProperty& p2)
 inline bool CloneToDefaultIfSet(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::string_view name = {})
 {
     bool res = false;
-    if (PropertyLock lock { p }) {
+    if (PropertyLock lock{p}) {
         res = IsValueSet(*p);
         if (res) {
             if (auto copy = DuplicatePropertyType(GetObjectRegistry(), p, name)) {
@@ -67,7 +65,7 @@ inline bool CloneToDefaultIfSet(const IProperty::ConstPtr& p, IMetadata& out, BA
 
 inline void CloneToDefault(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::string_view name = {})
 {
-    if (PropertyLock lock { p }) {
+    if (PropertyLock lock{p}) {
         if (auto copy = DuplicatePropertyType(GetObjectRegistry(), p, name)) {
             if (auto sc = interface_cast<IStackProperty>(copy)) {
                 sc->SetDefaultValue(p->GetValue());
@@ -79,7 +77,7 @@ inline void CloneToDefault(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS
 
 inline void Clone(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::string_view name = {})
 {
-    if (PropertyLock lock { p }) {
+    if (PropertyLock lock{p}) {
         if (auto copy = DuplicatePropertyType(GetObjectRegistry(), p, name)) {
             copy->SetValue(p->GetValue());
             out.AddProperty(copy);
@@ -110,8 +108,8 @@ inline void Clone(const IMetadata& in, IMetadata& out)
 
 inline void CopyValue(const IProperty::ConstPtr& p, IProperty& out)
 {
-    if (PropertyLock plock { p }) {
-        if (PropertyLock lock { &out }) {
+    if (PropertyLock plock{p}) {
+        if (PropertyLock lock{&out}) {
             if (!out.SetValue(p->GetValue())) {
                 CORE_LOG_W("Failed to set property value [%s]", out.GetName().c_str());
             }
@@ -131,8 +129,8 @@ inline void CopyValue(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::str
 
 inline void CopyToDefaultAndReset(const IProperty::ConstPtr& p, IProperty& out)
 {
-    if (PropertyLock plock { p }) {
-        if (PropertyLock lock { &out }) {
+    if (PropertyLock plock{p}) {
+        if (PropertyLock lock{&out}) {
             if (auto sc = interface_cast<IStackProperty>(&out)) {
                 sc->SetDefaultValue(p->GetValue());
             }
@@ -141,12 +139,36 @@ inline void CopyToDefaultAndReset(const IProperty::ConstPtr& p, IProperty& out)
     }
 }
 
+inline void CopyToDefault(const IProperty::ConstPtr& p, IProperty& out)
+{
+    if (PropertyLock plock{p}) {
+        if (PropertyLock lock{&out}) {
+            lock->SetDefaultValueAny(p->GetValue());
+            if (!IsValueSet(out)) {
+                out.ResetValue();
+            }
+        }
+    }
+}
+
 inline void CopyToDefaultAndReset(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::string_view name = {})
 {
-    if (PropertyLock plock { p }) {
+    if (PropertyLock plock{p}) {
         BASE_NS::string n(name.empty() ? p->GetName() : name);
         if (auto target = out.GetProperty(n)) {
             CopyToDefaultAndReset(p, *target);
+        } else {
+            CORE_LOG_W("No such property [%s]", n.c_str());
+        }
+    }
+}
+
+inline void CopyToDefault(const IProperty::ConstPtr& p, IMetadata& out, BASE_NS::string_view name = {})
+{
+    if (PropertyLock plock{p}) {
+        BASE_NS::string n(name.empty() ? p->GetName() : name);
+        if (auto target = out.GetProperty(n)) {
+            CopyToDefault(p, *target);
         } else {
             CORE_LOG_W("No such property [%s]", n.c_str());
         }
@@ -164,6 +186,13 @@ inline void CopyToDefaultAndReset(const IMetadata& in, IMetadata& out)
 {
     for (auto&& p : in.GetProperties()) {
         CopyToDefaultAndReset(p, out);
+    }
+}
+
+inline void CopyToDefault(const IMetadata& in, IMetadata& out)
+{
+    for (auto&& p : in.GetProperties()) {
+        CopyToDefault(p, out);
     }
 }
 

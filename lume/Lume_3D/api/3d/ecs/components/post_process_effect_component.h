@@ -33,9 +33,9 @@ BEGIN_COMPONENT(IPostProcessEffectComponentManager, PostProcessEffectComponent)
 #if !defined(IMPLEMENT_MANAGER)
 #endif
 
-    /** Effects.
-     */
-    DEFINE_PROPERTY(BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr>, effects, "Effects", 0, ARRAY_VALUE())
+/** Effects.
+ */
+DEFINE_PROPERTY(BASE_NS::vector<RENDER_NS::IRenderPostProcess::Ptr>, effects, "Effects", 0, ARRAY_VALUE())
 
 END_COMPONENT(IPostProcessEffectComponentManager, PostProcessEffectComponent, "c4879f56-bd12-48a5-aae5-353c39916fdb")
 #if !defined(IMPLEMENT_MANAGER)

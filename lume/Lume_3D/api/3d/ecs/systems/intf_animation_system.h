@@ -115,7 +115,7 @@ protected:
  */
 class IAnimationSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "3937c464-0073-4900-865d-89da078b9daa" };
+    static constexpr BASE_NS::Uid UID{"3937c464-0073-4900-865d-89da078b9daa"};
 
     /** Creates a playback object that allows to control animation state (play, pause etc).
      *  This is intended for animations imported from glTF, which are limited to the node hierarchy.
@@ -154,4 +154,4 @@ protected:
 
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_IANIMATION_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_IANIMATION_SYSTEM_H

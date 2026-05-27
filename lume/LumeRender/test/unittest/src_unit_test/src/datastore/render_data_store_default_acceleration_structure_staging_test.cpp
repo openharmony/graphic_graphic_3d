@@ -41,16 +41,16 @@ void Validate(const UTest::EngineResources& er)
         static_cast<RenderDataStoreDefaultAccelerationStructureStaging*>(dataStore.get());
     ASSERT_EQ(0, dataStore->GetFlags());
     dataStoreAcc->Clear();
-    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryInstancesDataWithHandleReference> {});
-    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryTrianglesDataWithHandleReference> {});
-    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryAabbsDataWithHandleReference> {});
-    dataStoreAcc->CopyAccelerationStructureInstanceData({ {}, 0 }, {});
+    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryInstancesDataWithHandleReference>{});
+    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryTrianglesDataWithHandleReference>{});
+    dataStoreAcc->BuildAccelerationStructure({}, array_view<const AsGeometryAabbsDataWithHandleReference>{});
+    dataStoreAcc->CopyAccelerationStructureInstanceData({{}, 0}, {});
     bool hasStagingData = dataStoreAcc->HasStagingData();
     ASSERT_EQ(false, hasStagingData);
     AsConsumeStruct scs1 = dataStoreAcc->ConsumeStagingData();
     ASSERT_EQ(0, scs1.geometry.size());
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderDataStoreAccelerationStructureTest

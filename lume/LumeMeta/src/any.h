@@ -76,7 +76,7 @@ public:
     }
 };
 
-inline const DummyAny INVALID_ANY {};
+inline const DummyAny INVALID_ANY{};
 
 META_END_NAMESPACE()
 

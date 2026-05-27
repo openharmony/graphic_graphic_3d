@@ -1,0 +1,23 @@
+{
+	"version": "1.0",
+	"description": "test scene with root node transforms",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"name": "mynode",
+			"position": [1.0, 2.0, 3.0],
+			"scale": [2.0, 2.0, 2.0],
+			"rotation": [0.5, 0, 0.2, 0],
+			"nodeFlags": ["contributeGI"]
+		}
+	},
+	"dependencies": [
+		{
+			"name": "test plug",
+			"uid": "9ca2aff5-8a8d-4c1d-8250-6a4df380aacf",
+			"required": true
+		}		
+	]
+}

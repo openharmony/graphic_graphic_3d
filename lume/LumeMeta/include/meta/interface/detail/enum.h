@@ -21,19 +21,19 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template<typename Enum, size_t... Index>
+template <typename Enum, size_t... Index>
 BASE_NS::array_view<const META_NS::EnumValue> GetValues(const EnumValue<Enum>* const values, IndexSequence<Index...>)
 {
-    static const META_NS::EnumValue arr[] { values[Index].info... };
-    return BASE_NS::array_view<const META_NS::EnumValue> { arr };
+    static const META_NS::EnumValue arr[]{values[Index].info...};
+    return BASE_NS::array_view<const META_NS::EnumValue>{arr};
 }
 
-} // namespace Internal
+}  // namespace Internal
 
-template<typename T>
+template <typename T>
 using EnumCompatType = BASE_NS::conditional_t<BASE_NS::is_unsigned_v<BASE_NS::underlying_type_t<T>>, uint64_t, int64_t>;
 
-template<typename Type>
+template <typename Type>
 class EnumBase : public MultiTypeAny<Type, StaticCastConv, EnumCompatType<Type>> {
 public:
     explicit EnumBase(Type v = {})
@@ -58,10 +58,10 @@ private:
         return value_;
     }
 
-    Type value_ {};
+    Type value_{};
 };
 
-template<typename Type>
+template <typename Type>
 class ArrayEnumBase : public ArrayMultiTypeAnyBase<Type> {
     using Super = ArrayMultiTypeAnyBase<Type>;
 
@@ -78,21 +78,21 @@ public:
         if (options.role == TypeIdRole::ITEM) {
             return IAny::Ptr(new EnumBase<Type>);
         }
-        return IAny::Ptr(new ArrayEnumBase {
-            options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType {} });
+        return IAny::Ptr(new ArrayEnumBase{
+            options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType{}});
     }
 };
 
-template<typename Type>
+template <typename Type>
 IAny::Ptr EnumBase<Type>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {
         return IAny::Ptr(new ArrayEnumBase<Type>());
     }
-    return IAny::Ptr(new EnumBase { options.value == CloneValueType::COPY_VALUE ? this->value_ : Type {} });
+    return IAny::Ptr(new EnumBase{options.value == CloneValueType::COPY_VALUE ? this->value_ : Type{}});
 }
 
-template<typename EnumType>
+template <typename EnumType>
 class Enum : public IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum> {
 public:
     using Super = IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum>;
@@ -186,10 +186,10 @@ private:
         return value_;
     }
 
-    Type value_ { EnumType::DEFAULT_VALUE };
+    Type value_{EnumType::DEFAULT_VALUE};
 };
 
-template<typename EnumType>
+template <typename EnumType>
 class ArrayEnum : public ArrayEnumBase<typename EnumType::Type> {
     using Type = typename EnumType::Type;
     using Super = ArrayEnumBase<Type>;
@@ -207,18 +207,18 @@ public:
         if (options.role == TypeIdRole::ITEM) {
             return IAny::Ptr(new Enum<EnumType>);
         }
-        return IAny::Ptr(new ArrayEnum {
-            options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType {} });
+        return IAny::Ptr(
+            new ArrayEnum{options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType{}});
     }
 };
 
-template<typename EnumType>
+template <typename EnumType>
 IAny::Ptr Enum<EnumType>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {
         return IAny::Ptr(new ArrayEnum<EnumType>());
     }
-    return IAny::Ptr(new Enum { options.value == CloneValueType::COPY_VALUE ? this->value_ : EnumType::DEFAULT_VALUE });
+    return IAny::Ptr(new Enum{options.value == CloneValueType::COPY_VALUE ? this->value_ : EnumType::DEFAULT_VALUE});
 }
 
 META_END_NAMESPACE()

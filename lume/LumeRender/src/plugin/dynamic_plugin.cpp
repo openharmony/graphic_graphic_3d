@@ -16,3 +16,14 @@
 #include <core/plugin/intf_plugin_decl.h>
 
 #include "registry_data.cpp"
+#include "util/log.h"
+
+#if (CORE_PERF_ENABLED == 1) && (RENDER_PERF_ENABLED == 1)
+// Workaround for performance trace macros from LumeEngine.
+CORE_BEGIN_NAMESPACE()
+CORE_NS::IPluginRegister& GetPluginRegister()
+{
+    return RENDER_NS::GetPluginRegister();
+}
+CORE_END_NAMESPACE()
+#endif

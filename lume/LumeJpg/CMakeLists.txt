@@ -51,10 +51,10 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${loader} src/component_dll.cp
 # Collect version information from git.
 #
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_version.cpp
-           ${CMAKE_CURRENT_BINARY_DIR}/version.cpp
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.cpp
     COMMAND ${CMAKE_COMMAND} -P
             ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 #

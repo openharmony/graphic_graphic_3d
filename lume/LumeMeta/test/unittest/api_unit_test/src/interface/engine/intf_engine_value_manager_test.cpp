@@ -62,12 +62,12 @@ private:
  */
 UNIT_TEST_F(API_EngineManagerTest, Values, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman { prop1::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_PROPERTY_COUNT);
     auto p = manager->ConstructProperty<int32_t>("value");
     ASSERT_TRUE(p);
@@ -96,7 +96,7 @@ UNIT_TEST_F(API_EngineManagerTest, Values, testing::ext::TestSize.Level1)
 
     // update
     {
-        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
         EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_PROPERTY_COUNT);
         auto p = manager->ConstructProperty<int32_t>("value");
         ASSERT_TRUE(p);
@@ -105,7 +105,7 @@ UNIT_TEST_F(API_EngineManagerTest, Values, testing::ext::TestSize.Level1)
     {
         manager->RemoveValue("value");
         EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_PROPERTY_COUNT - 1);
-        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
         EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_PROPERTY_COUNT);
         auto p = manager->ConstructProperty<int32_t>("value");
         ASSERT_TRUE(p);
@@ -114,7 +114,7 @@ UNIT_TEST_F(API_EngineManagerTest, Values, testing::ext::TestSize.Level1)
     {
         manager->RemoveAll();
         EXPECT_EQ(manager->GetAllEngineValues().size(), 0);
-        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
         EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_PROPERTY_COUNT);
         auto p = manager->ConstructProperty<int32_t>("value");
         ASSERT_TRUE(p);
@@ -128,28 +128,28 @@ UNIT_TEST_F(API_EngineManagerTest, Values, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, ArrayValues, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman { prop1::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
     auto p = manager->ConstructArrayProperty<float>("floats");
     ASSERT_TRUE(p);
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float> {}));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float>{}));
 
-    EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman.GetData(0), "floats", (BASE_NS::vector<float> { 1, 2 })));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float> {}));
+    EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman.GetData(0), "floats", (BASE_NS::vector<float>{1, 2})));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float>{}));
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::AUTO));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float> { 1, 2 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float>{1, 2}));
 
-    EXPECT_TRUE(p->SetValue((BASE_NS::vector<float> { 3, 4, 5 })));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float> { 3, 4, 5 }));
+    EXPECT_TRUE(p->SetValue((BASE_NS::vector<float>{3, 4, 5})));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float>{3, 4, 5}));
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::AUTO));
 
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float> { 3, 4, 5 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<float>{3, 4, 5}));
     EXPECT_EQ(CORE_NS::GetPropertyValue<BASE_NS::vector<float>>(*cman.GetData(0), "floats"),
-        (BASE_NS::vector<float> { 3, 4, 5 }));
+        (BASE_NS::vector<float>{3, 4, 5}));
 }
 
 /**
@@ -159,14 +159,14 @@ UNIT_TEST_F(API_EngineManagerTest, ArrayValues, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursively, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman { prop1::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
     EngineValueOptions options;
     options.recurseKnownStructs = true;
-    AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman, cman.entityRef }, options);
+    AddEngineValuesRecursively(manager, EnginePropertyHandle{&cman, cman.entityRef}, options);
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_RECURSIVE_PROPERTY_COUNT);
     auto p = manager->ConstructProperty<BASE_NS::Math::IVec2>("vec2");
     ASSERT_TRUE(p);
@@ -221,8 +221,8 @@ UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursively, testing::ext::TestSize.
  */
 UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursivelyWithHandle, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman1 { prop1::ENGINE_TESTPROP_METADATA };
-    TestComponentManager<prop2::EngineTestProp> cman2 { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman1{prop1::ENGINE_TESTPROP_METADATA};
+    TestComponentManager<prop2::EngineTestProp> cman2{prop2::ENGINE_TESTPROP_METADATA};
 
     EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman1.GetData(0), "handle", cman2.GetData(0)));
 
@@ -231,7 +231,7 @@ UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursivelyWithHandle, testing::ext:
 
     EngineValueOptions options;
     options.recurseKnownStructs = true;
-    AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman1, cman1.entityRef }, options);
+    AddEngineValuesRecursively(manager, EnginePropertyHandle{&cman1, cman1.entityRef}, options);
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_RECURSIVE_PROPERTY_COUNT + prop2::TEST_PROPERTY_COUNT);
 
     auto handle = manager->ConstructProperty<CORE_NS::IPropertyHandle*>("handle");
@@ -244,7 +244,7 @@ UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursivelyWithHandle, testing::ext:
 
     auto array = manager->ConstructProperty<BASE_NS::vector<uint32_t>>("handle.array");
     ASSERT_TRUE(array);
-    EXPECT_EQ(array->GetValue(), (BASE_NS::vector<uint32_t> { 1, 1 }));
+    EXPECT_EQ(array->GetValue(), (BASE_NS::vector<uint32_t>{1, 1}));
 }
 
 /**
@@ -254,8 +254,8 @@ UNIT_TEST_F(API_EngineManagerTest, AddValuesRecursivelyWithHandle, testing::ext:
  */
 UNIT_TEST_F(API_EngineManagerTest, SyncWithInvalidParentHandle, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman1 { prop1::ENGINE_TESTPROP_METADATA };
-    TestComponentManager<prop2::EngineTestProp> cman2 { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman1{prop1::ENGINE_TESTPROP_METADATA};
+    TestComponentManager<prop2::EngineTestProp> cman2{prop2::ENGINE_TESTPROP_METADATA};
 
     EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman1.GetData(0), "handle", cman2.GetData(0)));
 
@@ -264,7 +264,7 @@ UNIT_TEST_F(API_EngineManagerTest, SyncWithInvalidParentHandle, testing::ext::Te
 
     EngineValueOptions options;
     options.recurseKnownStructs = true;
-    AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman1, cman1.entityRef }, options);
+    AddEngineValuesRecursively(manager, EnginePropertyHandle{&cman1, cman1.entityRef}, options);
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_RECURSIVE_PROPERTY_COUNT + prop2::TEST_PROPERTY_COUNT);
 
     auto handle = manager->ConstructProperty<CORE_NS::IPropertyHandle*>("handle");
@@ -291,18 +291,20 @@ UNIT_TEST_F(API_EngineManagerTest, SyncWithInvalidParentHandle, testing::ext::Te
  */
 UNIT_TEST_F(API_EngineManagerTest, ChangeHandle, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman1 { prop1::ENGINE_TESTPROP_METADATA };
-    TestComponentManager<prop2::EngineTestProp> cman2 { prop2::ENGINE_TESTPROP_METADATA };
-    TestComponentManager<prop2::EngineTestProp> cman3 { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman1{prop1::ENGINE_TESTPROP_METADATA};
+    TestComponentManager<prop2::EngineTestProp> cman2{prop2::ENGINE_TESTPROP_METADATA};
+    TestComponentManager<prop2::EngineTestProp> cman3{prop2::ENGINE_TESTPROP_METADATA};
 
     EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman1.GetData(0), "handle", cman2.GetData(0)));
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
+    //    manager->ConstructValue(EnginePropertyHandle {&cman1, cman1.entityRef}, "handle.value", EngineValueOptions{});
+    //    EXPECT_EQ(manager->GetAllEngineValues().size(), 2);
     EngineValueOptions options;
     options.recurseKnownStructs = true;
-    AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman1, cman1.entityRef }, options);
+    AddEngineValuesRecursively(manager, EnginePropertyHandle{&cman1, cman1.entityRef}, options);
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_RECURSIVE_PROPERTY_COUNT + prop2::TEST_PROPERTY_COUNT);
 
     auto handle = manager->ConstructProperty<CORE_NS::IPropertyHandle*>("handle");
@@ -322,18 +324,18 @@ UNIT_TEST_F(API_EngineManagerTest, ChangeHandle, testing::ext::TestSize.Level1)
     EXPECT_EQ(handle->GetValue(), cman3.GetData(0));
 }
 
-template<typename Type>
+template <typename Type>
 void TestWithSingle(BASE_NS::string_view path, EngineValueOptions ops = {})
 {
-    TestComponentManager<prop1::EngineTestProp> cman1 { prop1::ENGINE_TESTPROP_METADATA };
-    TestComponentManager<prop2::EngineTestProp> cman2 { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman1{prop1::ENGINE_TESTPROP_METADATA};
+    TestComponentManager<prop2::EngineTestProp> cman2{prop2::ENGINE_TESTPROP_METADATA};
 
     EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman1.GetData(0), "handle", cman2.GetData(0)));
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    manager->ConstructValue(EnginePropertyHandle { &cman1, cman1.entityRef }, path, ops);
+    manager->ConstructValue(EnginePropertyHandle{&cman1, cman1.entityRef}, path, ops);
     EXPECT_TRUE(manager->GetAllEngineValues().size() >= 1);
 
     auto name = ops.namePrefix;
@@ -342,6 +344,7 @@ void TestWithSingle(BASE_NS::string_view path, EngineValueOptions ops = {})
     }
     name += path;
 
+    // EXPECT_TRUE(manager->ConstructProperty<Type>(name)) << "Property: " << name.c_str();
     EXPECT_TRUE(manager->ConstructProperty<Type>(name));
 }
 
@@ -371,7 +374,7 @@ UNIT_TEST_F(API_EngineManagerTest, AddSingleValue, testing::ext::TestSize.Level1
     TestWithSingle<BASE_NS::Math::IVec2>("type.vec");
     TestWithSingle<int32_t>("type.vec.x");
 
-    TestWithSingle<int32_t>("type.vec.x", EngineValueOptions { "TestPrefix" });
+    TestWithSingle<int32_t>("type.vec.x", EngineValueOptions{"TestPrefix"});
 }
 
 // check the overlapping values don't overwrite each other if not altered
@@ -382,14 +385,14 @@ UNIT_TEST_F(API_EngineManagerTest, AddSingleValue, testing::ext::TestSize.Level1
  */
 UNIT_TEST_F(API_EngineManagerTest, Overlapping, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop1::EngineTestProp> cman { prop1::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
     EngineValueOptions options;
     options.recurseKnownStructs = true;
-    AddEngineValuesRecursively(manager, EnginePropertyHandle { &cman, cman.entityRef }, options);
+    AddEngineValuesRecursively(manager, EnginePropertyHandle{&cman, cman.entityRef}, options);
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop1::TEST_RECURSIVE_PROPERTY_COUNT);
 
     auto p = manager->ConstructProperty<BASE_NS::Math::IVec2>("vec2");
@@ -400,13 +403,13 @@ UNIT_TEST_F(API_EngineManagerTest, Overlapping, testing::ext::TestSize.Level1)
     x->SetValue(2);
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::TO_ENGINE));
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::FROM_ENGINE));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::Math::IVec2 { 2, 0 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::Math::IVec2{2, 0}));
     EXPECT_EQ(x->GetValue(), 2);
 
-    p->SetValue({ 3, 0 });
+    p->SetValue({3, 0});
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::TO_ENGINE));
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::FROM_ENGINE));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::Math::IVec2 { 3, 0 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::Math::IVec2{3, 0}));
     EXPECT_EQ(x->GetValue(), 3);
 }
 
@@ -417,12 +420,12 @@ UNIT_TEST_F(API_EngineManagerTest, Overlapping, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, Enum, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop3::EngineTestProp> cman { prop3::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop3::EngineTestProp> cman{prop3::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef });
+    manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef});
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop3::TEST_PROPERTY_COUNT);
 
     auto p = manager->ConstructProperty<EngineTestEnum>("enum1");
@@ -476,12 +479,12 @@ UNIT_TEST_F(API_EngineManagerTest, Enum, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, BitField, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop3::EngineTestProp> cman { prop3::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop3::EngineTestProp> cman{prop3::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
-    manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef });
+    manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef});
     EXPECT_EQ(manager->GetAllEngineValues().size(), prop3::TEST_PROPERTY_COUNT);
 
     auto p = manager->ConstructProperty<EngineTestBitField>("enum2");
@@ -539,54 +542,54 @@ UNIT_TEST_F(API_EngineManagerTest, BitField, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, ContainerSubscription, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop2::EngineTestProp> cman { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop2::EngineTestProp> cman{prop2::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(META_NS::ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
 
     bool arrres =
-        manager->ConstructValue(EnginePropertyHandle { &cman, cman.entityRef }, "complexVec", EngineValueOptions {});
+        manager->ConstructValue(EnginePropertyHandle{&cman, cman.entityRef}, "complexVec", EngineValueOptions{});
     ASSERT_TRUE(arrres);
 
     auto arr = manager->ConstructArrayProperty<EngineTestType>("complexVec");
     ASSERT_TRUE(arr);
 
     {
-        bool res = manager->ConstructValue(
-            EnginePropertyHandle { &cman, cman.entityRef }, "complexVec[2]", EngineValueOptions {});
+        bool res =
+            manager->ConstructValue(EnginePropertyHandle{&cman, cman.entityRef}, "complexVec[2]", EngineValueOptions{});
         ASSERT_FALSE(res);
     }
 
     bool res0 =
-        manager->ConstructValue(EnginePropertyHandle { &cman, cman.entityRef }, "complexVec[0]", EngineValueOptions {});
+        manager->ConstructValue(EnginePropertyHandle{&cman, cman.entityRef}, "complexVec[0]", EngineValueOptions{});
     ASSERT_TRUE(res0);
 
     auto v0 = manager->ConstructProperty<EngineTestType>("complexVec[0]");
     ASSERT_TRUE(v0);
-    EXPECT_EQ(v0->GetValue(), (EngineTestType { { 1, 2 } }));
+    EXPECT_EQ(v0->GetValue(), (EngineTestType{{1, 2}}));
 
     bool res1 =
-        manager->ConstructValue(EnginePropertyHandle { &cman, cman.entityRef }, "complexVec[1]", EngineValueOptions {});
+        manager->ConstructValue(EnginePropertyHandle{&cman, cman.entityRef}, "complexVec[1]", EngineValueOptions{});
     ASSERT_TRUE(res1);
 
     auto v1 = manager->ConstructProperty<EngineTestType>("complexVec[1]");
     ASSERT_TRUE(v1);
-    EXPECT_EQ(v1->GetValue(), (EngineTestType { { 8, 8 } }));
+    EXPECT_EQ(v1->GetValue(), (EngineTestType{{8, 8}}));
 
-    arr->SetValue({ EngineTestType { { 4, 4 } } });
+    arr->SetValue({EngineTestType{{4, 4}}});
     EXPECT_TRUE(manager->Sync(EngineSyncDirection::AUTO));
 
-    EXPECT_EQ(v0->GetValue(), (EngineTestType { { 4, 4 } }));
-    v0->SetValue({ { 5, 6 } });
+    EXPECT_EQ(v0->GetValue(), (EngineTestType{{4, 4}}));
+    v0->SetValue({{5, 6}});
     // old value is returned since there is nothing behind it any more
-    EXPECT_EQ(v1->GetValue(), (EngineTestType { { 8, 8 } }));
-    v1->SetValue({ { 3, 3 } });
+    EXPECT_EQ(v1->GetValue(), (EngineTestType{{8, 8}}));
+    v1->SetValue({{3, 3}});
 
     manager->Sync(EngineSyncDirection::AUTO);
 
     {
         bool res = manager->ConstructValue(
-            EnginePropertyHandle { &cman, cman.entityRef }, "complexVec[0].vec.x", EngineValueOptions {});
+            EnginePropertyHandle{&cman, cman.entityRef}, "complexVec[0].vec.x", EngineValueOptions{});
         ASSERT_TRUE(res);
 
         auto v = manager->ConstructProperty<int32_t>("complexVec[0].vec.x");
@@ -596,7 +599,7 @@ UNIT_TEST_F(API_EngineManagerTest, ContainerSubscription, testing::ext::TestSize
         manager->Sync(EngineSyncDirection::AUTO);
         EXPECT_EQ(v->GetValue(), 7);
     }
-    EXPECT_EQ(v0->GetValue(), (EngineTestType { { 7, 6 } }));
+    EXPECT_EQ(v0->GetValue(), (EngineTestType{{7, 6}}));
 
     v0->ResetValue();
 }
@@ -608,11 +611,11 @@ UNIT_TEST_F(API_EngineManagerTest, ContainerSubscription, testing::ext::TestSize
  */
 UNIT_TEST_F(API_EngineManagerTest, InvalidState, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop2::EngineTestProp> cman { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop2::EngineTestProp> cman{prop2::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
-    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
 
     auto value = manager->GetEngineValue("value");
     ASSERT_TRUE(value);
@@ -626,7 +629,7 @@ UNIT_TEST_F(API_EngineManagerTest, InvalidState, testing::ext::TestSize.Level1)
     EXPECT_EQ(value->Sync(EngineSyncDirection::AUTO), AnyReturn::INVALID_ARGUMENT);
     auto any = Any<int>(0);
     EXPECT_EQ(value->SetValue(any), AnyReturn::INVALID_ARGUMENT);
-    EXPECT_EQ(value->GetValue().GetClassId(), ObjectId {});
+    EXPECT_EQ(value->GetValue().GetClassId(), ObjectId{});
 }
 
 /**
@@ -636,11 +639,11 @@ UNIT_TEST_F(API_EngineManagerTest, InvalidState, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_EngineManagerTest, SetValueDirect, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop2::EngineTestProp> cman { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop2::EngineTestProp> cman{prop2::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
-    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
 
     Any<int> v(5);
     Any<float> f(1.f);
@@ -662,20 +665,20 @@ UNIT_TEST_F(API_EngineManagerTest, SetValueDirect, testing::ext::TestSize.Level1
  */
 UNIT_TEST_F(API_EngineManagerTest, ConstructPtr, testing::ext::TestSize.Level1)
 {
-    TestComponentManager<prop2::EngineTestProp> cman { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop2::EngineTestProp> cman{prop2::ENGINE_TESTPROP_METADATA};
 
     auto manager = GetObjectRegistry().Create<IEngineValueManager>(ClassId::EngineValueManager);
     ASSERT_TRUE(manager);
     EnginePropertyHandle eph;
     EXPECT_FALSE(manager->ConstructValues(eph, {}));
     EXPECT_FALSE(manager->ConstructValues(nullptr, {}));
-    auto ph = EnginePropertyHandle { &cman, cman.entityRef };
+    auto ph = EnginePropertyHandle{&cman, cman.entityRef};
     EXPECT_TRUE(manager->ConstructValues(ph.Handle(), {}));
     auto count = manager->GetAllEngineValues().size();
     EXPECT_GT(count, 0);
     EXPECT_TRUE(manager->ConstructValues(ph.Handle(), {}));
     EXPECT_EQ(count, manager->GetAllEngineValues().size());
-    EXPECT_TRUE(manager->ConstructValue(EnginePropertyParams {}, {}));
+    EXPECT_TRUE(manager->ConstructValue(EnginePropertyParams{}, {}));
     EXPECT_FALSE(manager->ConstructAllProperties().empty());
 }
 
@@ -691,7 +694,7 @@ UNIT_TEST_F(API_EngineManagerTest, Notification, testing::ext::TestSize.Level1)
     auto& tr = GetTaskQueueRegistry();
     tr.RegisterTaskQueue(queue, queueId);
 
-    TestComponentManager<prop2::EngineTestProp> cman { prop2::ENGINE_TESTPROP_METADATA };
+    TestComponentManager<prop2::EngineTestProp> cman{prop2::ENGINE_TESTPROP_METADATA};
 
     uint32_t onChangedCount = 0;
     {
@@ -699,7 +702,7 @@ UNIT_TEST_F(API_EngineManagerTest, Notification, testing::ext::TestSize.Level1)
         ASSERT_TRUE(manager);
         manager->SetNotificationQueue(queue);
 
-        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle { &cman, cman.entityRef }));
+        EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
         auto p = manager->ConstructProperty<int>("value");
 
         ASSERT_TRUE(p);
@@ -710,20 +713,41 @@ UNIT_TEST_F(API_EngineManagerTest, Notification, testing::ext::TestSize.Level1)
 
         EXPECT_EQ(onChangedCount, 1);
         queue->ProcessTasks();
-        EXPECT_EQ(onChangedCount, 2);
+        EXPECT_EQ(onChangedCount, 1);
 
         // Set + sync again but leave the notify pending in the queue
         p->SetValue(43);
-        EXPECT_EQ(onChangedCount, 3);
+        EXPECT_EQ(onChangedCount, 2);
         manager->Sync(EngineSyncDirection::AUTO);
         // Expect EngineValueManager to cancel the task at destruction
     }
-    EXPECT_EQ(onChangedCount, 3);
+    EXPECT_EQ(onChangedCount, 2);
     queue->ProcessTasks();
-    EXPECT_EQ(onChangedCount, 3);
+    EXPECT_EQ(onChangedCount, 2);
 
     tr.UnregisterTaskQueue(queueId);
 }
 
-} // namespace UTest
+/**
+ * @tc.name: DefaultValueFromEngineValue
+ * @tc.desc: Property constructed after a FROM_ENGINE sync reflects the engine-side value.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_EngineManagerTest, DefaultValueFromEngineValue, testing::ext::TestSize.Level1)
+{
+    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
+
+    auto manager = GetObjectRegistry().Create<IEngineValueManager>(ClassId::EngineValueManager);
+    ASSERT_TRUE(manager);
+    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
+
+    EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman.GetData(0), "value", 2));
+    manager->Sync(EngineSyncDirection::FROM_ENGINE);
+
+    auto p = manager->ConstructProperty<int32_t>("value");
+    ASSERT_TRUE(p);
+    EXPECT_EQ(p->GetValue(), 2);
+}
+
+}  // namespace UTest
 META_END_NAMESPACE()

@@ -60,7 +60,7 @@ public:
     /** Return TypeId of each keyframe */
     TypeId GetKeyframeItemTypeId() const noexcept
     {
-        return keyframeArray_ ? keyframeArray_->GetTypeId(TypeIdRole::ITEM) : TypeId {};
+        return keyframeArray_ ? keyframeArray_->GetTypeId(TypeIdRole::ITEM) : TypeId{};
     }
     /**
      * @brief Updates keyframe index based on given progress.
@@ -92,15 +92,15 @@ private:
     void SetPrePostFrameValues(float progress);
 
 private:
-    IArrayAny::Ptr keyframeArray_; // Keyframe values
-    IAny::Ptr currentValue_;       // Latest evaluated value (between trackStart_ and trackEnd_)
-    IAny::Ptr trackStart_;         // Current keyframe value
-    IAny::Ptr trackEnd_;           // Next keyframe value
-    float startProgress_ {};       // First timestamp
-    float endProgress_ {};         // Last timestamp
-    float currentRangeStartTs_ {}; // Timestamp of the current keyframe
-    float currentRangeEndTs_ {};   // Timestamp of the next keyframe
-    size_t currentIndex_ { ITrackAnimation::INVALID_INDEX };
+    IArrayAny::Ptr keyframeArray_;  // Keyframe values
+    IAny::Ptr currentValue_;        // Latest evaluated value (between trackStart_ and trackEnd_)
+    IAny::Ptr trackStart_;          // Current keyframe value
+    IAny::Ptr trackEnd_;            // Next keyframe value
+    float startProgress_{};         // First timestamp
+    float endProgress_{};           // Last timestamp
+    float currentRangeStartTs_{};   // Timestamp of the current keyframe
+    float currentRangeEndTs_{};     // Timestamp of the next keyframe
+    size_t currentIndex_{ITrackAnimation::INVALID_INDEX};
 
     ArrayProperty<float>& GetTimeStamps() noexcept
     {
@@ -109,8 +109,8 @@ private:
     TrackDataParams trackParams_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_TRACK_ANIMATION_STATE_H
+#endif  // META_SRC_ANIMATION_TRACK_ANIMATION_STATE_H

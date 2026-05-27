@@ -21,6 +21,7 @@
 #include <scene/interface/intf_scene.h>
 
 #include "TrueRootObject.h"
+#include "export.h"
 
 #if ENABLE_DIAGNOSTICS
 void DestroyBridge(void* ptr);
@@ -37,23 +38,26 @@ void DumpBridges();
 #endif
 
 // tasks execute in the engine/render thread.
-static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
 
 // tasks execute in the javascript mainthread. *NOT IMPLEMENTED*
-static constexpr BASE_NS::Uid JS_THREAD { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
+static constexpr BASE_NS::Uid JS_THREAD{"b2e8cef3-453a-4651-b564-5190f8b5190d"};
 
 class BaseObject : public TrueRootObject {
 public:
     static constexpr uint32_t ID = 0xD00DCAFE;
-    virtual void* GetInstanceImpl(uint32_t id) override {
+    virtual void* GetInstanceImpl(uint32_t id) override
+    {
         if (id == BaseObject::ID) {
             return static_cast<BaseObject*>(this);
         }
         return TrueRootObject::GetInstanceImpl(id);
     }
+
 protected:
-    bool disposed_ { false };
-    virtual ~BaseObject() {}
+    bool disposed_{false};
+    virtual ~BaseObject()
+    {}
     BaseObject(napi_env env, napi_callback_info info) : TrueRootObject(env, info)
     {
         NapiApi::Scope scope(env);
@@ -71,10 +75,15 @@ protected:
             ptr->Finalize(env);
             TrueRootObject::destroy(ptr);
         };
-        NapiApi::WrapTagged<TrueRootObject>(env, thisVar, reinterpret_cast<void*>((TrueRootObject*)this), DTOR, nullptr,
-            TrueRootObject::TYPE_TAG, nullptr);
+        NapiApi::WrapTagged<TrueRootObject>(env,
+            thisVar,
+            reinterpret_cast<void*>((TrueRootObject*)this),
+            DTOR,
+            nullptr,
+            TrueRootObject::TYPE_TAG,
+            nullptr);
     }
-    template<typename Object>
+    template <typename Object>
     static inline napi_callback ctor()
     {
         napi_callback ctor = [](napi_env env, napi_callback_info info) -> napi_value {
@@ -90,7 +99,7 @@ protected:
     }
 };
 
-template<typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&)>
+template <typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&)>
 static inline napi_value TROGetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
@@ -103,7 +112,7 @@ static inline napi_value TROGetter(napi_env env, napi_callback_info info)
     }
     return fc.GetUndefined();
 }
-template<typename Type, typename Object, void (Object::*F)(NapiApi::FunctionContext<Type>&)>
+template <typename Type, typename Object, void (Object::*F)(NapiApi::FunctionContext<Type>&)>
 static inline napi_value TROSetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext<Type> fc(env, info);
@@ -117,35 +126,35 @@ static inline napi_value TROSetter(napi_env env, napi_callback_info info)
     return fc.GetUndefined();
 };
 
-template<typename Type, typename Object, void (Object::*F2)(NapiApi::FunctionContext<Type>&)>
+template <typename Type, typename Object, void (Object::*F2)(NapiApi::FunctionContext<Type>&)>
 static inline napi_property_descriptor TROSetProperty(
     const char* const name, napi_property_attributes flags = napi_default_jsproperty)
 {
     static_assert(F2 != nullptr);
-    return napi_property_descriptor { name, nullptr, nullptr, nullptr, TROSetter<Type, Object, F2>, nullptr, flags,
-        nullptr };
+    return napi_property_descriptor{
+        name, nullptr, nullptr, nullptr, TROSetter<Type, Object, F2>, nullptr, flags, nullptr};
 }
 
-template<typename Type, typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&)>
+template <typename Type, typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&)>
 static inline napi_property_descriptor TROGetProperty(
     const char* const name, napi_property_attributes flags = napi_default_jsproperty)
 {
     static_assert(F != nullptr);
-    return napi_property_descriptor { name, nullptr, nullptr, TROGetter<Object, F>, nullptr, nullptr, flags, nullptr };
+    return napi_property_descriptor{name, nullptr, nullptr, TROGetter<Object, F>, nullptr, nullptr, flags, nullptr};
 }
 
-template<typename Type, typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&),
+template <typename Type, typename Object, napi_value (Object::*F)(NapiApi::FunctionContext<>&),
     void (Object::*F2)(NapiApi::FunctionContext<Type>&)>
 static inline napi_property_descriptor TROGetSetProperty(
     const char* const name, napi_property_attributes flags = napi_default_jsproperty)
 {
     static_assert(F != nullptr);
     static_assert(F2 != nullptr);
-    return napi_property_descriptor { name, nullptr, nullptr, TROGetter<Object, F>, TROSetter<Type, Object, F2>,
-        nullptr, flags, nullptr };
+    return napi_property_descriptor{
+        name, nullptr, nullptr, TROGetter<Object, F>, TROSetter<Type, Object, F2>, nullptr, flags, nullptr};
 }
 
-template<typename FC, typename Object, napi_value (Object::*F)(FC&)>
+template <typename FC, typename Object, napi_value (Object::*F)(FC&)>
 napi_value TROMethod(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
@@ -159,24 +168,24 @@ napi_value TROMethod(napi_env env, napi_callback_info info)
     return fc.GetUndefined();
 }
 
-template<typename FC, typename Object, napi_value (Object::*F)(FC&)>
+template <typename FC, typename Object, napi_value (Object::*F)(FC&)>
 inline napi_property_descriptor MakeTROMethod(
     const char* const name, napi_property_attributes flags = napi_default_method)
 {
-    return napi_property_descriptor { name, nullptr, TROMethod<FC, Object, F>, nullptr, nullptr, nullptr, flags,
-        nullptr };
+    return napi_property_descriptor{name, nullptr, TROMethod<FC, Object, F>, nullptr, nullptr, nullptr, flags, nullptr};
 }
 
 //  Create a javascript object that wraps specified IObject.
 //  uses the classid of obj to create correct wrapper.
 //  (if the wrapper already exists, returns a new reference to the wrapper)
-NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj, PtrType ptrType,
-    const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW");
-
-NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& name, const META_NS::IObject::Ptr& obj,
+SCENE_ADDON_PUBLIC NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj,
     PtrType ptrType, const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW");
 
-template<typename ObjectPtr>
+SCENE_ADDON_PUBLIC NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& name,
+    const META_NS::IObject::Ptr& obj, PtrType ptrType, const NapiApi::JsFuncArgs& args,
+    BASE_NS::string_view pname = "_JSW");
+
+template <typename ObjectPtr>
 NapiApi::Object CreateFromNativeInstance(napi_env env, const ObjectPtr& obj, PtrType ptrType,
     const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW")
 {
@@ -184,7 +193,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const ObjectPtr& obj, Ptr
     return CreateFromNativeInstance(env, iobj, ptrType, args, pname);
 }
 
-template<typename ObjectPtr>
+template <typename ObjectPtr>
 NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& name, const ObjectPtr& obj,
     PtrType ptrType, const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname = "_JSW")
 {
@@ -193,7 +202,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& na
 }
 
 // run synchronous task in specific tq.
-template<typename func>
+template <typename func>
 META_NS::IAny::Ptr ExecSyncTask(const META_NS::ITaskQueue::Ptr tq, func&& fun)
 {
     return tq
@@ -202,7 +211,7 @@ META_NS::IAny::Ptr ExecSyncTask(const META_NS::ITaskQueue::Ptr tq, func&& fun)
 }
 
 // run task synchronously in engine thread.
-template<typename func>
+template <typename func>
 META_NS::IAny::Ptr ExecSyncTask(func&& fun)
 {
     return ExecSyncTask(META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD), BASE_NS::move(fun));

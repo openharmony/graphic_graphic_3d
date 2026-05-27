@@ -1,0 +1,23 @@
+{
+	"version": "1.0",
+	"description": "test scene with external hierarchy using url",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",			
+			"children": [
+				{
+					"type": "external",
+					"name": "1",
+					"source": {
+						"type": "gltf",
+						"url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+					},
+					"resourceGroup": "cube-group"
+				}
+			]
+		}
+	}
+}

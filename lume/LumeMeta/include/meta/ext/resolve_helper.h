@@ -26,7 +26,7 @@ inline bool CheckValidResolve(const IObjectInstance::Ptr& base, const RefUri& ur
     if (!base || !uri.IsValid()) {
         return false;
     }
-    if (uri.BaseObjectUid() != BASE_NS::Uid {} && InstanceId(uri.BaseObjectUid()) != base->GetInstanceId()) {
+    if (uri.BaseObjectUid() != BASE_NS::Uid{} && InstanceId(uri.BaseObjectUid()) != base->GetInstanceId()) {
         return false;
     }
     return true;

@@ -21,10 +21,10 @@
 #include "intf_test.h"
 
 namespace UTest {
-constexpr BASE_NS::Uid UID_STATIC_PLUGIN { "12345678-1234-1234-1234-deadbeef0010" };
+constexpr BASE_NS::Uid UID_STATIC_PLUGIN{"12345678-1234-1234-1234-deadbeef0010"};
 
-constexpr BASE_NS::Uid UID_STATIC_GLOBAL_TEST_IMPL { "12345678-1234-1234-1234-deadbeef0011" };
-constexpr BASE_NS::Uid UID_STATIC_ENGINE_TEST_IMPL { "12345678-1234-1234-1234-deadbeef0012" };
+constexpr BASE_NS::Uid UID_STATIC_GLOBAL_TEST_IMPL{"12345678-1234-1234-1234-deadbeef0011"};
+constexpr BASE_NS::Uid UID_STATIC_ENGINE_TEST_IMPL{"12345678-1234-1234-1234-deadbeef0012"};
 
 class StaticTest final : public Test {
 public:
@@ -45,5 +45,5 @@ public:
         return Type::STATIC_GLOBAL;
     }
 };
-} // namespace UTest
-#endif // CORE_TEST_PLUGIN_STATIC_UIDS
+}  // namespace UTest
+#endif  // CORE_TEST_PLUGIN_STATIC_UIDS

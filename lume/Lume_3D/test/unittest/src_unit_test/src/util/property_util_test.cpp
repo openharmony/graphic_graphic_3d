@@ -75,7 +75,7 @@ public:
         ++writes_;
     }
 
-    uint32_t writes_ { 0U };
+    uint32_t writes_{0U};
 };
 
 /**
@@ -86,7 +86,7 @@ public:
 UNIT_TEST(SRC_UtilCustomPropertyPodContainer, GetSetValueTest, testing::ext::TestSize.Level1)
 {
     PropertySignal signal;
-    CustomPropertyPodContainer podContainer { signal, 16u };
+    CustomPropertyPodContainer podContainer{signal, 16u};
     EXPECT_EQ(0u, podContainer.GetByteSize());
     EXPECT_EQ(0u, podContainer.Size());
     EXPECT_EQ(0u, podContainer.PropertyCount());
@@ -105,23 +105,29 @@ UNIT_TEST(SRC_UtilCustomPropertyPodContainer, GetSetValueTest, testing::ext::Tes
     podContainer.ReservePropertyCount(3);
 
     constexpr const float floatVal = 1.0f;
-    podContainer.AddOffsetProperty("floatProp", "floatProp", 0u,
+    podContainer.AddOffsetProperty("floatProp",
+        "floatProp",
+        0u,
         CustomPropertyPodHelper::GetPropertyTypeDeclaration("float"),
-        { reinterpret_cast<const uint8_t*>(&floatVal), sizeof(float) });
+        {reinterpret_cast<const uint8_t*>(&floatVal), sizeof(float)});
 
     constexpr const int intVal = 4;
     podContainer.AddOffsetProperty(
         "intProp0", "intProp0", 4u, CustomPropertyPodHelper::GetPropertyTypeDeclaration("int"));
-    podContainer.AddOffsetProperty("intProp1", "intProp1", 8u,
+    podContainer.AddOffsetProperty("intProp1",
+        "intProp1",
+        8u,
         CustomPropertyPodHelper::GetPropertyTypeDeclaration("int"),
-        { reinterpret_cast<const uint8_t*>(&intVal), sizeof(int) });
+        {reinterpret_cast<const uint8_t*>(&intVal), sizeof(int)});
 
     // Only 3 properties are reserved so these properties will not be added
     podContainer.AddOffsetProperty(
         "intProp2", "intProp2", 12u, CustomPropertyPodHelper::GetPropertyTypeDeclaration("int"));
-    podContainer.AddOffsetProperty("floatProp2", "floatProp2", 16u,
+    podContainer.AddOffsetProperty("floatProp2",
+        "floatProp2",
+        16u,
         CustomPropertyPodHelper::GetPropertyTypeDeclaration("float"),
-        { reinterpret_cast<const uint8_t*>(&floatVal), sizeof(float) });
+        {reinterpret_cast<const uint8_t*>(&floatVal), sizeof(float)});
 
     EXPECT_EQ(floatVal, *reinterpret_cast<const float*>(podContainer.GetValue("floatProp").data()));
     EXPECT_EQ(intVal, *reinterpret_cast<const int*>(podContainer.GetValue("intProp1").data()));
@@ -133,7 +139,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodContainer, GetSetValueTest, testing::ext::Tes
     {
         int prop = 3;
         // set via array_view
-        EXPECT_TRUE(podContainer.SetValue("intProp0", { reinterpret_cast<const uint8_t*>(&prop), sizeof(int) }));
+        EXPECT_TRUE(podContainer.SetValue("intProp0", {reinterpret_cast<const uint8_t*>(&prop), sizeof(int)}));
         EXPECT_EQ(prop, *reinterpret_cast<const int*>(podContainer.GetValue("intProp0").data()));
         prop = 4;
         // set by value
@@ -143,13 +149,13 @@ UNIT_TEST(SRC_UtilCustomPropertyPodContainer, GetSetValueTest, testing::ext::Tes
         // type wrong
         EXPECT_FALSE(podContainer.SetValue("intProp0", 2.f));
         // name unknown
-        EXPECT_FALSE(podContainer.SetValue("intProp2", { reinterpret_cast<const uint8_t*>(&prop), sizeof(int) }));
+        EXPECT_FALSE(podContainer.SetValue("intProp2", {reinterpret_cast<const uint8_t*>(&prop), sizeof(int)}));
         EXPECT_FALSE(podContainer.SetValue("intProp2", prop));
     }
     {
         float prop = 2.0f;
         // set via array_view
-        EXPECT_TRUE(podContainer.SetValue(0u, { reinterpret_cast<const uint8_t*>(&prop), sizeof(float) }));
+        EXPECT_TRUE(podContainer.SetValue(0u, {reinterpret_cast<const uint8_t*>(&prop), sizeof(float)}));
         EXPECT_EQ(prop, *reinterpret_cast<const float*>(podContainer.GetValue("floatProp").data()));
         prop = 3.f;
         // set by value
@@ -159,7 +165,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodContainer, GetSetValueTest, testing::ext::Tes
         // type wrong
         EXPECT_FALSE(podContainer.SetValue("floatProp", 2U));
         // offset out of bounds
-        EXPECT_FALSE(podContainer.SetValue(16u, { reinterpret_cast<const uint8_t*>(&prop), sizeof(float) }));
+        EXPECT_FALSE(podContainer.SetValue(16u, {reinterpret_cast<const uint8_t*>(&prop), sizeof(float)}));
     }
 }
 
@@ -172,7 +178,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
 {
     PropertySignal signal;
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("int");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -182,7 +188,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5, *reinterpret_cast<const int*>(podContainer.GetValue("prop").data()));
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("uint");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -192,7 +198,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5u, *reinterpret_cast<const uint32_t*>(podContainer.GetValue("prop").data()));
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("float");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -202,7 +208,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5.0, *reinterpret_cast<const float*>(podContainer.GetValue("prop").data()));
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("bool");
         auto align = CustomPropertyPodHelper::GetPropertyTypeAlignment(propertyType);
@@ -223,7 +229,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
     }
 
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("vec2");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -235,7 +241,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5.0, result->y);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("vec3");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -248,7 +254,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5.0, result->z);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("vec4");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -262,7 +268,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5.0, result->w);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("ivec2");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -274,7 +280,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5, result->y);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("ivec3");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -287,7 +293,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5, result->z);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("ivec4");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -301,7 +307,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5, result->w);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("uvec2");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -313,7 +319,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5u, result->y);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("uvec3");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -326,7 +332,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         EXPECT_EQ(5u, result->z);
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("uvec4");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -341,7 +347,7 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
     }
 
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("mat3x3");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -349,10 +355,10 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         auto jsonValue = json::parse(jsonString.data());
         CustomPropertyPodHelper::SetCustomPropertyBlobValue(propertyType, &jsonValue, podContainer, 0u);
         const Math::Mat3X3* result = reinterpret_cast<const Math::Mat3X3*>(podContainer.GetValue("prop").data());
-        EXPECT_EQ(*result, Math::Mat3X3({ 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }));
+        EXPECT_EQ(*result, Math::Mat3X3({1, 2, 3}, {4, 5, 6}, {7, 8, 9}));
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("mat4x4");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);
@@ -360,10 +366,10 @@ UNIT_TEST(SRC_UtilCustomPropertyPodHelper, SetCustomPropertyBlobValue, testing::
         auto jsonValue = json::parse(jsonString.data());
         CustomPropertyPodHelper::SetCustomPropertyBlobValue(propertyType, &jsonValue, podContainer, 0u);
         const Math::Mat4X4* result = reinterpret_cast<const Math::Mat4X4*>(podContainer.GetValue("prop").data());
-        EXPECT_EQ(*result, Math::Mat4X4({ 1, 2, 3, 4 }, { 5, 6, 7, 8 }, { 9, 10, 11, 12 }, { 13, 14, 15, 16 }));
+        EXPECT_EQ(*result, Math::Mat4X4({1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}));
     }
     {
-        CustomPropertyPodContainer podContainer { signal, 16u };
+        CustomPropertyPodContainer podContainer{signal, 16u};
         podContainer.ReservePropertyCount(1u);
         auto propertyType = CustomPropertyPodHelper::GetPropertyTypeDeclaration("-1");
         podContainer.AddOffsetProperty("prop", "prop", 0u, propertyType);

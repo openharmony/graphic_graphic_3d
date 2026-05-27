@@ -60,9 +60,9 @@ public:
     struct RenderGraphBufferState {
         GpuResourceState state;
         BindableBuffer resource;
-        uint32_t prevRenderNodeIndex { ~0u };
+        uint32_t prevRenderNodeIndex{~0u};
     };
-    static constexpr uint32_t MAX_MIP_STATE_COUNT { 16u };
+    static constexpr uint32_t MAX_MIP_STATE_COUNT{16u};
     struct RenderGraphAdditionalImageState {
         BASE_NS::unique_ptr<ImageLayout[]> layouts;
         // NOTE: layers not handled yet
@@ -71,25 +71,33 @@ public:
         GpuResourceState state;
         BindableImage resource;
         RenderCommandWithType prevRc;
-        uint32_t prevRenderNodeIndex { ~0u };
+        uint32_t prevRenderNodeIndex{~0u};
         RenderGraphAdditionalImageState additionalState;
     };
     struct MultiRenderPassStore {
         BASE_NS::vector<RenderCommandBeginRenderPass*> renderPasses;
-        uint32_t fistRenderPassCommandListIndex { ~0u };
+        uint32_t firstRenderPassCommandListIndex{~0u};
+        // Key for AddBarriersToBarrierPoint; distinct from command list index.
+        uint32_t firstRenderPassBarrierPointIndex{~0u};
         // batch barriers to the first render pass
-        RenderBarrierList* firstRenderPassBarrierList { nullptr };
-        bool supportOpen { false };
+        RenderBarrierList* firstRenderPassBarrierList{nullptr};
+        bool supportOpen{false};
     };
 
     struct GpuQueueTransferState {
         RenderHandle handle;
-        uint32_t releaseNodeIdx { 0 };
-        uint32_t acquireNodeIdx { 0 };
-        GpuQueue releaseQueue {};
+        uint32_t releaseNodeIdx{0};
+        uint32_t acquireNodeIdx{0};
+        GpuQueue releaseQueue{};
 
-        ImageLayout optionalReleaseImageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
-        ImageLayout optionalAcquireImageLayout { CORE_IMAGE_LAYOUT_UNDEFINED };
+        ImageLayout optionalReleaseImageLayout{CORE_IMAGE_LAYOUT_UNDEFINED};
+        ImageLayout optionalAcquireImageLayout{CORE_IMAGE_LAYOUT_UNDEFINED};
+        // Access flags and pipeline stage for the releasing queue's last access.
+        AccessFlags releaseAccessFlags{0};
+        PipelineStageFlags releasePipelineStageFlags{0};
+        // Access flags and pipeline stage for the first use after acquisition.
+        AccessFlags acquireAccessFlags{0};
+        PipelineStageFlags acquirePipelineStageFlags{0};
     };
 
     struct SwapchainStates {
@@ -98,7 +106,7 @@ public:
             // state after render node graph processing
             GpuResourceState state;
             // layout after render node graph processing
-            ImageLayout layout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+            ImageLayout layout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
         };
         BASE_NS::vector<SwapchainState> swapchains;
     };
@@ -112,9 +120,9 @@ private:
     struct StateCache {
         MultiRenderPassStore multiRenderPassStore;
 
-        uint32_t nodeCounter { 0u };
-        bool checkForBackbufferDependency { false };
-        bool usesSwapchainImage { false };
+        uint32_t nodeCounter{0u};
+        bool checkForBackbufferDependency{false};
+        bool usesSwapchainImage{false};
     };
     StateCache stateCache_;
 
@@ -138,8 +146,10 @@ private:
         RenderCommandBeginRenderPass& rc, StateCache& stateCache);
     void BeginRenderPassHandleDependency(
         BeginRenderPassParameters& params, uint32_t commandListCommandIndex, RenderNodeContextData& nodeData);
-    void BeginRenderPassUpdateImageStates(BeginRenderPassParameters& params, const GpuQueue& gpuQueue,
-        BASE_NS::array_view<ImageLayout>& finalImageLayouts, uint32_t renderNodeIndex);
+    void BeginRenderPassUpdateImageStates(
+        BeginRenderPassParameters& params, const GpuQueue& gpuQueue, uint32_t renderNodeIndex);
+    void BeginRenderPassUpdateSingleImageState(
+        BeginRenderPassParameters& params, const GpuQueue& gpuQueue, uint32_t renderNodeIndex, uint32_t attachmentIdx);
     void BeginRenderPassUpdateSubpassImageStates(BASE_NS::array_view<const uint32_t> attatchmentIndices,
         const RenderPassDesc& renderPassDesc, const RenderPassAttachmentResourceStates& subpassResourceStatesRef,
         BASE_NS::array_view<ImageLayout> finalImageLayouts);
@@ -169,7 +179,10 @@ private:
     static void UpdateImageResourceState(
         RenderGraphImageState& stateRef, const ParameterCache& params, const CommandBarrier& cb);
 
-    void InsertRenderPassBarrier(const MultiRenderPassStore& store);
+    void InsertRenderPassBarrier(const GpuQueue& gpuQueue, const MultiRenderPassStore& store);
+    void InsertRenderPassAttachmentBarrier(const GpuQueue& gpuQueue, RenderCommandBeginRenderPass& beginCmd,
+        const RenderPassAttachmentResourceStates& subpassStates, uint32_t attachmentIdx, bool isDepth,
+        uint32_t& processedMask, BASE_NS::vector<CommandBarrier>& barriers);
 
     void HandleCustomBarriers(ParameterCache& params, uint32_t barrierIndexBegin,
         const BASE_NS::array_view<const CommandBarrier>& customBarrierListRef);
@@ -238,9 +251,9 @@ private:
     BASE_NS::vector<uint32_t> gpuBufferAvailableIndices_;
     BASE_NS::vector<uint32_t> gpuImageAvailableIndices_;
 
-    RenderGraphBufferState defaultBufferState_ {};
-    RenderGraphImageState defaultImageState_ {};
+    RenderGraphBufferState defaultBufferState_{};
+    RenderGraphImageState defaultImageState_{};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_GRAPH_H
+#endif  // RENDER_GRAPH_H

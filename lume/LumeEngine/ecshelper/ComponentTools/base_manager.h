@@ -37,7 +37,7 @@ struct Property;
 
 // BaseClass should inherit IComponentManager AND should follow the basic form of component managers
 // (this will be enforced later)
-template<typename ComponentType, typename BaseClass>
+template <typename ComponentType, typename BaseClass>
 class BaseManager : public BaseClass, public IPropertyApi {
     using ComponentId = IComponentManager::ComponentId;
 
@@ -123,17 +123,17 @@ protected:
         void* WLock() override;
         void WUnlock() override;
 #ifndef NDEBUG
-        mutable int32_t rLocked_ { 0 };
-        mutable bool wLocked_ { false };
+        mutable int32_t rLocked_{0};
+        mutable bool wLocked_{false};
 #endif
-        bool dirty_ { false };
-        BaseManager* manager_ { nullptr };
-        uint32_t generation_ { 0 };
+        bool dirty_{false};
+        BaseManager* manager_{nullptr};
+        uint32_t generation_{0};
         Entity entity_;
         ComponentType data_;
     };
-    uint32_t generationCounter_ { 0 };
-    uint32_t modifiedFlags_ { 0 };
+    uint32_t generationCounter_{0};
+    uint32_t modifiedFlags_{0};
     BASE_NS::unordered_map<Entity, ComponentId> entityComponent_;
     BASE_NS::vector<BaseComponentHandle> components_;
     BASE_NS::vector<Entity> added_;

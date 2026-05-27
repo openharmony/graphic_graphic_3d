@@ -1,0 +1,20 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "trackAnimation",
+        "name": "Bounce",
+        "duration": 3000,
+        "timestamps": [
+            0,
+            0.3333333432674408,
+            0.66666668653488159,
+            1
+        ],
+        "keyframes": [
+            { "type": "vec3", "value": [0, 0, 0] },
+            { "type": "vec3", "value": [1, 0, 0] },
+            { "type": "vec3", "value": [1, 1, 0] },
+            { "type": "vec3", "value": [0, 0, 0] }
+        ]
+    }
+}

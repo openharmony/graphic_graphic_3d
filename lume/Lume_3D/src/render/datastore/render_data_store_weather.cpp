@@ -67,7 +67,7 @@ void RenderDataStoreWeather::SetWaterEffect(const WaterEffectData& waterEffectDa
 
 array_view<const RenderDataStoreWeather::WaterEffectData> RenderDataStoreWeather::GetWaterEffectData() const
 {
-    return { waterEffectData_.data(), waterEffectData_.size() };
+    return {waterEffectData_.data(), waterEffectData_.size()};
 }
 
 void RenderDataStoreWeather::Ref()

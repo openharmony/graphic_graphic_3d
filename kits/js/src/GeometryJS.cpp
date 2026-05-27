@@ -21,7 +21,6 @@
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_mesh.h>
-#include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_scene.h>
 
 #include "MeshResourceJS.h"
@@ -40,7 +39,7 @@ void* GeometryJS::GetInstanceImpl(uint32_t id)
     return BaseObject::GetInstanceImpl(id);
 }
 
-void GeometryJS::DisposeNative(void* scn)
+void GeometryJS::DisposeNative()
 {
     if (disposed_) {
         return;
@@ -49,12 +48,11 @@ void GeometryJS::DisposeNative(void* scn)
     disposed_ = true;
     DisposeBridge(this);
     if (auto geom = GetNativeObject<META_NS::IObject>()) {
-        DetachJsObj(geom,"_JSW");
+        DetachJsObj(geom, "_JSW");
     }
 
-    SceneJS* sceneJS = static_cast<SceneJS*>(scn);
-    if (sceneJS) {
-        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     bool attached = IsAttached();
@@ -78,8 +76,14 @@ void GeometryJS::Init(napi_env env, napi_value exports)
     node_props.push_back(GetProperty<Object, GeometryJS, &GeometryJS::GetMorpher>("morpher"));
 
     napi_value func;
-    auto status = napi_define_class(env, "Geometry", NAPI_AUTO_LENGTH, BaseObject::ctor<GeometryJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Geometry",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<GeometryJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -95,7 +99,7 @@ GeometryJS::GeometryJS(napi_env e, napi_callback_info i) : BaseObject(e, i), Nod
 {
     LOG_V("GeometryJS ++ ");
 
-    if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> { e, i }) {
+    if (auto ctx = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>{e, i}) {
         AddBridge("GeometryJS", ctx.This());
         Construct(e, ctx.This(), ctx.Arg<0>(), ctx.Arg<1>());
     } else {
@@ -111,7 +115,7 @@ GeometryJS::~GeometryJS()
 
 void GeometryJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -153,7 +157,7 @@ napi_value GeometryJS::GetMesh(NapiApi::FunctionContext<>& ctx)
 
     NapiApi::Env env(ctx.Env());
     NapiApi::Object argJS(env);
-    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+    napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
     return CreateFromNativeInstance(env, "Mesh", mesh, PtrType::WEAK, args, "_JSWMesh").ToNapiValue();
 }
 
@@ -174,7 +178,6 @@ napi_value GeometryJS::GetMorpher(NapiApi::FunctionContext<>& ctx)
     SCENE_NS::IMorpher::Ptr morpher = META_NS::GetValue(access->Morpher());
     NapiApi::Env env(ctx.Env());
     NapiApi::Object argJS(env);
-    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
-    return CreateFromNativeInstance(env, "Morpher", morpher, PtrType::WEAK, args, "_JSWMorpher")
-        .ToNapiValue();
+    napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
+    return CreateFromNativeInstance(env, "Morpher", morpher, PtrType::WEAK, args, "_JSWMorpher").ToNapiValue();
 }

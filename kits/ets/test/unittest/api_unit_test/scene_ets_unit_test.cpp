@@ -22,8 +22,7 @@
 using namespace testing;
 using namespace testing::ext;
 namespace OHOS::Render3D {
-class SceneETSUnitTest : public EtsTest {
-};
+class SceneETSUnitTest : public EtsTest {};
 
 /**
  * @tc.name: SceneETS_Load_001
@@ -38,4 +37,4 @@ HWTEST_F(SceneETSUnitTest, SceneETS_Load_001, TestSize.Level1)
     EXPECT_TRUE(result);
     sceneETS->Destroy();
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

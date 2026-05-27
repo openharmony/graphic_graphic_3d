@@ -91,18 +91,21 @@ enum LayerFlagBits : uint64_t {
     CORE_LAYER_FLAG_BIT_61 = (1ULL << 61U),
     CORE_LAYER_FLAG_BIT_62 = (1ULL << 62U),
     CORE_LAYER_FLAG_BIT_63 = (1ULL << 63U),
+    CORE_LAYER_FLAG_BIT_LOW_32 = 0x00000000FFFFFFFFULL,
     CORE_LAYER_FLAG_BIT_ALL = 0xFFFFFFFFffffffff,
 };
 
 /** Layer constants */
 struct LayerConstants {
     /** Default layer mask */
-    static constexpr uint64_t DEFAULT_LAYER_MASK { LayerFlagBits::CORE_LAYER_FLAG_BIT_00 };
+    static constexpr uint64_t DEFAULT_LAYER_MASK{LayerFlagBits::CORE_LAYER_FLAG_BIT_00};
+    /** Low 32 bits layer mask */
+    static constexpr uint64_t LOW_32_LAYER_MASK{LayerFlagBits::CORE_LAYER_FLAG_BIT_LOW_32};
     /** All/Everything layer mask */
-    static constexpr uint64_t ALL_LAYER_MASK { LayerFlagBits::CORE_LAYER_FLAG_BIT_ALL };
+    static constexpr uint64_t ALL_LAYER_MASK{LayerFlagBits::CORE_LAYER_FLAG_BIT_ALL};
     /** None layer mask */
-    static constexpr uint64_t NONE_LAYER_MASK { LayerFlagBits::CORE_LAYER_FLAG_BIT_NONE };
+    static constexpr uint64_t NONE_LAYER_MASK{LayerFlagBits::CORE_LAYER_FLAG_BIT_NONE};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_COMPONENTS_LAYER_DEFINES_H
+#endif  // API_3D_ECS_COMPONENTS_LAYER_DEFINES_H

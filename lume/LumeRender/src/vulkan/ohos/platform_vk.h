@@ -27,13 +27,13 @@
 RENDER_BEGIN_NAMESPACE()
 struct PlatformDeviceExtensions {
     // hardware buffers supported
-    bool externalMemoryHardwareBuffer { false };
+    bool externalMemoryHardwareBuffer{false};
 };
 
 struct PlatformExtFunctions {
     // VK_OpenHarmony_external_memory_OHOS_native_buffer
-    PFN_vkGetNativeBufferPropertiesOHOS vkGetNativeBufferPropertiesOHOS { nullptr };
-    PFN_vkGetMemoryNativeBufferOHOS vkGetMemoryNativeBufferOHOS { nullptr };
+    PFN_vkGetNativeBufferPropertiesOHOS vkGetNativeBufferPropertiesOHOS{nullptr};
+    PFN_vkGetMemoryNativeBufferOHOS vkGetMemoryNativeBufferOHOS{nullptr};
 };
 
 void GetPlatformDeviceExtensions(BASE_NS::vector<BASE_NS::string_view>& extensions);
@@ -51,4 +51,4 @@ inline bool CanDevicePresent(VkInstance instance, VkPhysicalDevice device, uint3
     return true;
 }
 RENDER_END_NAMESPACE()
-#endif // VULKAN_OHOS_PLATFORM_VK_H
+#endif  // VULKAN_OHOS_PLATFORM_VK_H

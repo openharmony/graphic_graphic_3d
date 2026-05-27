@@ -30,99 +30,97 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IPostProcessComponentManager, PostProcessComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum FlagBits : uint32_t {
-        TONEMAP_BIT = (1 << 0),
-        VIGNETTE_BIT = (1 << 1),
-        DITHER_BIT = (1 << 2),
-        COLOR_CONVERSION_BIT = (1 << 3),
-        COLOR_FRINGE_BIT = (1 << 4),
-        UPSCALE_BIT = (1 << 5),
-        WHITE_BALANCE_BIT = (1 << 6),
-        COLOR_ADJUSTMENTS_BIT = (1 << 7),
-        BLUR_BIT = (1 << 8),
-        BLOOM_BIT = (1 << 9),
-        FXAA_BIT = (1 << 10),
-        TAA_BIT = (1 << 11),
-        DOF_BIT = (1 << 12),
-        MOTION_BLUR_BIT = (1 << 13),
-        LENS_FLARE_BIT = (1 << 14),
-    };
-    /** Container for post-processing flag bits */
-    using Flags = uint32_t;
+enum FlagBits : uint32_t {
+    TONEMAP_BIT = (1 << 0),
+    VIGNETTE_BIT = (1 << 1),
+    DITHER_BIT = (1 << 2),
+    COLOR_CONVERSION_BIT = (1 << 3),
+    COLOR_FRINGE_BIT = (1 << 4),
+    UPSCALE_BIT = (1 << 5),
+    WHITE_BALANCE_BIT = (1 << 6),
+    COLOR_ADJUSTMENTS_BIT = (1 << 7),
+    BLUR_BIT = (1 << 8),
+    BLOOM_BIT = (1 << 9),
+    FXAA_BIT = (1 << 10),
+    TAA_BIT = (1 << 11),
+    DOF_BIT = (1 << 12),
+    MOTION_BLUR_BIT = (1 << 13),
+    LENS_FLARE_BIT = (1 << 14),
+};
+/** Container for post-processing flag bits */
+using Flags = uint32_t;
 #endif
 
-    /** The type of the background fill when rendering.
-     */
-    DEFINE_BITFIELD_PROPERTY(
-        Flags, enableFlags, "Enabled Effects", PropertyFlags::IS_BITFIELD, VALUE(0), PostProcessComponent::FlagBits)
+/** The type of the background fill when rendering.
+ */
+DEFINE_BITFIELD_PROPERTY(
+    Flags, enableFlags, "Enabled Effects", PropertyFlags::IS_BITFIELD, VALUE(0), PostProcessComponent::FlagBits)
 
-    /** Tonemap configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::TonemapConfiguration, tonemapConfiguration, "Tonemap Configuration", 0, ARRAY_VALUE())
+/** Tonemap configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::TonemapConfiguration, tonemapConfiguration, "Tonemap Configuration", 0, ARRAY_VALUE())
 
-    /** Bloom configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::BloomConfiguration, bloomConfiguration, "Bloom Configuration", 0, ARRAY_VALUE())
+/** Bloom configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::BloomConfiguration, bloomConfiguration, "Bloom Configuration", 0, ARRAY_VALUE())
 
-    /** Vignette configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::VignetteConfiguration, vignetteConfiguration, "Vignette Configuration", 0, ARRAY_VALUE())
+/** Vignette configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::VignetteConfiguration, vignetteConfiguration, "Vignette Configuration", 0, ARRAY_VALUE())
 
-    /** Color fringe configuration.
-     */
-    DEFINE_PROPERTY(
-        RENDER_NS::ColorFringeConfiguration, colorFringeConfiguration, "Color Fringe Configuration", 0, ARRAY_VALUE())
+/** Color fringe configuration.
+ */
+DEFINE_PROPERTY(
+    RENDER_NS::ColorFringeConfiguration, colorFringeConfiguration, "Color Fringe Configuration", 0, ARRAY_VALUE())
 
-    /** Dither configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::DitherConfiguration, ditherConfiguration, "Dither Configuration", 0, ARRAY_VALUE())
+/** Dither configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::DitherConfiguration, ditherConfiguration, "Dither Configuration", 0, ARRAY_VALUE())
 
-    /** Blur configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::BlurConfiguration, blurConfiguration, "Target Blur Configuration", 0, ARRAY_VALUE())
+/** Blur configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::BlurConfiguration, blurConfiguration, "Target Blur Configuration", 0, ARRAY_VALUE())
 
-    /** Color conversion configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::ColorConversionConfiguration, colorConversionConfiguration,
-        "Color Conversion Configuration", 0, ARRAY_VALUE())
+/** Color conversion configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::ColorConversionConfiguration, colorConversionConfiguration, "Color Conversion Configuration",
+    0, ARRAY_VALUE())
 
-    /** White balance configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::WhiteBalanceConfiguration, whiteBalanceConfiguration, "White Balance Configuration", 0,
-        ARRAY_VALUE())
+/** White balance configuration.
+ */
+DEFINE_PROPERTY(
+    RENDER_NS::WhiteBalanceConfiguration, whiteBalanceConfiguration, "White Balance Configuration", 0, ARRAY_VALUE())
 
-    /** Color adjustments configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::ColorAdjustmentsConfiguration, colorAdjustmentsConfiguration,
-        "Color Adjustments Configuration", 0, ARRAY_VALUE())
+/** Color adjustments configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::ColorAdjustmentsConfiguration, colorAdjustmentsConfiguration,
+    "Color Adjustments Configuration", 0, ARRAY_VALUE())
 
-    /** FX anti-aliasing configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::FxaaConfiguration, fxaaConfiguration, "Fast Approximate Anti-Aliasing Configuration", 0,
-        ARRAY_VALUE())
+/** FX anti-aliasing configuration.
+ */
+DEFINE_PROPERTY(
+    RENDER_NS::FxaaConfiguration, fxaaConfiguration, "Fast Approximate Anti-Aliasing Configuration", 0, ARRAY_VALUE())
 
-    /** Temporal anti-aliasing configuration.
-     */
-    DEFINE_PROPERTY(
-        RENDER_NS::TaaConfiguration, taaConfiguration, "Temporal Anti-Aliasing Configuration", 0, ARRAY_VALUE())
+/** Temporal anti-aliasing configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::TaaConfiguration, taaConfiguration, "Temporal Anti-Aliasing Configuration", 0, ARRAY_VALUE())
 
-    /** Depth of field configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::DofConfiguration, dofConfiguration, "Depth Of Field Configuration", 0, ARRAY_VALUE())
+/** Depth of field configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::DofConfiguration, dofConfiguration, "Depth Of Field Configuration", 0, ARRAY_VALUE())
 
-    /** Motion blur configuration.
-     */
-    DEFINE_PROPERTY(
-        RENDER_NS::MotionBlurConfiguration, motionBlurConfiguration, "Motion Blur Configuration", 0, ARRAY_VALUE())
+/** Motion blur configuration.
+ */
+DEFINE_PROPERTY(
+    RENDER_NS::MotionBlurConfiguration, motionBlurConfiguration, "Motion Blur Configuration", 0, ARRAY_VALUE())
 
-    /** Lens flare configuration.
-     */
-    DEFINE_PROPERTY(
-        RENDER_NS::LensFlareConfiguration, lensFlareConfiguration, "Lens Flare Configuration", 0, ARRAY_VALUE())
+/** Lens flare configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::LensFlareConfiguration, lensFlareConfiguration, "Lens Flare Configuration", 0, ARRAY_VALUE())
 
-    /** Lens flare configuration.
-     */
-    DEFINE_PROPERTY(RENDER_NS::UpscaleConfiguration, upscaleConfiguration, "Upscale Configuration", 0, ARRAY_VALUE())
+/** Lens flare configuration.
+ */
+DEFINE_PROPERTY(RENDER_NS::UpscaleConfiguration, upscaleConfiguration, "Upscale Configuration", 0, ARRAY_VALUE())
 
 END_COMPONENT(IPostProcessComponentManager, PostProcessComponent, "a2c647e7-9c66-4565-af3b-3acc75b3718f")
 #if !defined(IMPLEMENT_MANAGER)

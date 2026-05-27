@@ -1,0 +1,17 @@
+{
+    "version": "1.0",
+    "description": "inner template wrapping GLTF without overrides or attachments",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "nested-inner-group"
+        }
+    },
+    "primaryGroup": ""
+}

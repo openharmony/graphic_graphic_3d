@@ -13,10 +13,12 @@
  * limitations under the License.
  */
 
+#include <scene/api/ecs_scene.h>
 #include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
 
+#include <3d/ecs/components/animation_component.h>
 #include <3d/ecs/components/material_component.h>
 
 #include <meta/api/animation.h>
@@ -35,7 +37,7 @@ protected:
     auto GetAnimationClassId() const
     {
         // ClassId::EcsAnimation
-        static constexpr META_NS::ObjectId ID { "5513d745-958f-4aa6-bab7-7561cebdc3dd" };
+        static constexpr META_NS::ObjectId ID{"5513d745-958f-4aa6-bab7-7561cebdc3dd"};
         return ID;
     }
 };
@@ -198,7 +200,7 @@ UNIT_TEST_F(API_ScenePluginAnimationTest, OnFinishedWithReverse, testing::ext::T
     mod->SpeedFactor()->SetValue(-1);
     interface_cast<META_NS::IAttach>(anim)->Attach(mod);
 
-    std::atomic<uint32_t> count {};
+    std::atomic<uint32_t> count{};
 
     anim->OnFinished()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([&] {
         ++count;
@@ -217,6 +219,87 @@ UNIT_TEST_F(API_ScenePluginAnimationTest, OnFinishedWithReverse, testing::ext::T
     EXPECT_EQ(count, 2);
 }
 
+/**
+ * @tc.name: Modifiers
+ * @tc.desc: Tests animation modifiers
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginAnimationTest, Modifiers, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+
+    EcsScene ecss(scene);
+    auto mgr = CORE_NS::GetManager<CORE3D_NS::IAnimationComponentManager>(*ecss.GetEcs());
+    ASSERT_TRUE(mgr);
+    EXPECT_EQ(mgr->GetComponentCount(), 1u);
+    auto added = mgr->GetAddedComponents();
+    ASSERT_FALSE(added.empty());
+    auto entity = added[0];
+
+    static constexpr float SPEED_FACTOR = 10.f;
+
+    {
+        auto handle = mgr->Write(entity);
+        ASSERT_TRUE(handle);
+        handle->speed = SPEED_FACTOR;
+        handle->repeatCount = 3u;  // Set this to 3, EcsAnimation initialization will revert it to 0
+    }
+
+    auto getEcsSpeed = [&]() {
+        auto handle = mgr->Read(entity);
+        return handle ? handle->speed : 0.f;
+    };
+
+    UpdateScene();
+    auto animations = scene->GetAnimations().GetResult();
+    ASSERT_EQ(animations.size(), 1);
+    auto animation = META_NS::Animation(animations[0]);
+    auto attachments = META_NS::AttachmentContainer(animation).GetAttachments(
+        {META_NS::AnimationModifiers::ILoop::UID, META_NS::AnimationModifiers::ISpeed::UID}, false);
+    ASSERT_EQ(attachments.size(), 1);
+
+    auto sm = META_NS::AnimationModifiers::Speed(attachments[0]);
+    EXPECT_TRUE(sm);
+
+    EXPECT_EQ(sm.GetSpeedFactor(), SPEED_FACTOR);
+    EXPECT_EQ(getEcsSpeed(), SPEED_FACTOR);
+
+    auto reverse = META_NS::AnimationModifiers::Reverse(META_NS::CreateNew);
+    EXPECT_TRUE(META_NS::AttachmentContainer(animation).Attach(reverse));
+    UpdateScene();
+
+    EXPECT_EQ(sm.GetSpeedFactor(), SPEED_FACTOR);  // Speed modifier = 10, Reverse modifier * -1 -> -10 in ECS
+    EXPECT_EQ(getEcsSpeed(), -SPEED_FACTOR);
+
+    sm.SetSpeedFactor(-SPEED_FACTOR);
+    UpdateScene();
+    EXPECT_EQ(sm.GetSpeedFactor(), -SPEED_FACTOR);
+    EXPECT_EQ(getEcsSpeed(), SPEED_FACTOR);  // Speed modifier = -10, Reverse modifier * -1 -> 10 in ECS
+
+    EXPECT_TRUE(META_NS::AttachmentContainer(animation).Detach(reverse));
+    UpdateScene();
+    EXPECT_EQ(sm.GetSpeedFactor(), -SPEED_FACTOR);
+    EXPECT_EQ(getEcsSpeed(), -SPEED_FACTOR);  // Speed modifier = -10, -> -10 in ECS
+
+    EXPECT_TRUE(META_NS::AttachmentContainer(animation).Detach(sm));
+    UpdateScene();
+
+    EXPECT_EQ(sm.GetSpeedFactor(), -SPEED_FACTOR);
+    EXPECT_EQ(getEcsSpeed(), SPEED_FACTOR);  // Original value in ECS was 10
+
+    EXPECT_TRUE(META_NS::AttachmentContainer(animation).Attach(reverse));
+    sm = META_NS::AnimationModifiers::Speed(META_NS::CreateNew).SetSpeedFactor(42.f);
+    EXPECT_TRUE(META_NS::AttachmentContainer(animation).Attach(sm));
+    UpdateScene();
+    EXPECT_EQ(getEcsSpeed(), -42.f);
+}
+
+/**
+ * @tc.name: Remove
+ * @tc.desc: Test animation removal
+ * @tc.type: FUNC
+ */
 TEST_F(API_ScenePluginAnimationTest, Remove)
 {
     auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
@@ -231,16 +314,22 @@ TEST_F(API_ScenePluginAnimationTest, Remove)
         auto res = interface_pointer_cast<CORE_NS::IResource>(anim);
         ASSERT_TRUE(res);
         resource = res->GetResourceId();
-        ASSERT_TRUE(resources->GetResource(resource));
+        ASSERT_TRUE(resources->GetResource({resource, scene}));
+        EXPECT_EQ(res->GetContext().GetRawPointer(), CORE_NS::ResourceContextPtr(scene).get());
     }
     scene->RemoveAnimation(anim).Wait();
     {
         auto anims = scene->GetAnimations().GetResult();
         ASSERT_TRUE(anims.empty());
-        ASSERT_FALSE(resources->GetResource(resource));
+        ASSERT_FALSE(resources->GetResource({resource, scene}));
     }
 }
 
+/**
+ * @tc.name: Destroy
+ * @tc.desc: Tests animation destroy
+ * @tc.type: FUNC
+ */
 TEST_F(API_ScenePluginAnimationTest, Destroy)
 {
     auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
@@ -263,7 +352,11 @@ TEST_F(API_ScenePluginAnimationTest, Destroy)
                     context->GetRenderer()->GetRenderer().RenderDeferredFrame();
                 });
             }
-            resources->RemoveAllResources();
+            for (auto&& a : anims) {
+                if (auto i = interface_pointer_cast<CORE_NS::IResource>(a)) {
+                    resources->PurgeResource({i->GetResourceId(), scene});
+                }
+            }
             interface_cast<META_NS::IAttach>(anim)->Detach(speedModifier);
         }
     }
@@ -271,8 +364,8 @@ TEST_F(API_ScenePluginAnimationTest, Destroy)
 }
 
 /**
- * @tc.name: Disabled
- * @tc.desc: Test GLTF imported animation state changes when the animation is disabled.
+ * @tc.name: Pause
+ * @tc.desc: Test GLTF imported animation pause
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ScenePluginAnimationTest, Pause, testing::ext::TestSize.Level1)
@@ -394,6 +487,49 @@ UNIT_TEST_F(API_ScenePluginAnimationTest, InvalidInit, testing::ext::TestSize.Le
     META_NS::SetValue(animation->Enabled(), true);
     startable->Seek(0.5);
 }
-} // namespace UTest
+
+/**
+ * @tc.name: Animations
+ * @tc.desc: Test scene GetAnimations
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginAnimationTest, Animations, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://celia/Celia.gltf");
+    ASSERT_TRUE(scene);
+    {
+        auto anims = scene->GetAnimations().GetResult();
+        ASSERT_EQ(anims.size(), 1);
+    }
+
+    {
+        auto delay = META_NS::TimeSpan::Milliseconds(1);
+        auto property = scene->GetRootNode().GetResult()->Scale();
+        auto value = property->GetValue();
+
+        BASE_NS::vector<float> timestamps = {0.0f, 0.5f, 1.f};
+        BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{10, 10, 10}, {50, 50, 50}, {100, 100, 100}};
+
+        META_NS::TrackAnimation<BASE_NS::Math::Vec3> anim(META_NS::CreateNew);
+        anim.SetKeyframes(keyframes)
+            .SetTimestamps(timestamps)
+            .SetProperty(property)
+            .SetDuration(META_NS::TimeSpan::Milliseconds(100));
+
+        ASSERT_TRUE(anim.GetValid());
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(anim)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"animation", scene});
+        }
+
+        ASSERT_TRUE(resources->AddResource(
+            interface_pointer_cast<CORE_NS::IResource>(anim), "app://track_animation_res_test.anim"));
+    }
+
+    auto anims = scene->GetAnimations().GetResult();
+    ASSERT_EQ(anims.size(), 2);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

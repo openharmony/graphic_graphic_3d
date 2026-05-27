@@ -33,7 +33,7 @@ void* MeshJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void MeshJS::DisposeNative(void* scn)
+void MeshJS::DisposeNative()
 {
     if (disposed_) {
         return;
@@ -41,11 +41,11 @@ void MeshJS::DisposeNative(void* scn)
     disposed_ = true;
     DisposeBridge(this);
     if (auto mesh = GetNativeObject<META_NS::IObject>()) {
-        DetachJsObj(mesh,"_JSWMesh");
+        DetachJsObj(mesh, "_JSWMesh");
     }
     LOG_V("MeshJS::DisposeNative");
-    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
-        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     scene_.Reset();
@@ -62,8 +62,17 @@ void MeshJS::Init(napi_env env, napi_value exports)
         GetSetProperty<Object, MeshJS, &MeshJS::GetMaterialOverride, &MeshJS::SetMaterialOverride>("materialOverride"));
 
     napi_value func;
-    auto status = napi_define_class(env, "Mesh", NAPI_AUTO_LENGTH, BaseObject::ctor<MeshJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Mesh",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<MeshJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
+    if (status != napi_ok) {
+        LOG_E("Failed to define class Mesh");
+    }
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
@@ -86,7 +95,7 @@ MeshJS::MeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResour
     }
     // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("MeshJS",meJs);
+    AddBridge("MeshJS", meJs);
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
         sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
@@ -98,7 +107,7 @@ MeshJS::~MeshJS()
 }
 void MeshJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -124,7 +133,7 @@ napi_value MeshJS::GetSubmesh(NapiApi::FunctionContext<>& ctx)
     }
     uint32_t i = 0;
     for (const auto& subMesh : subs) {
-        napi_value args[] = { scene_.GetValue(), ctx.This().ToNapiValue(), env.GetNumber(i) };
+        napi_value args[] = {scene_.GetValue(), ctx.This().ToNapiValue(), env.GetNumber(i)};
         auto val = CreateFromNativeInstance(ctx.Env(), subMesh, PtrType::WEAK, args);
         status = napi_set_element(ctx.Env(), tmp, i++, val.ToNapiValue());
     }
@@ -150,15 +159,15 @@ napi_value MeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
     NapiApi::Object res(env);
 
     NapiApi::Object min(env);
-    min.Set("x", NapiApi::Value<float> { env, aabmin.x });
-    min.Set("y", NapiApi::Value<float> { env, aabmin.y });
-    min.Set("z", NapiApi::Value<float> { env, aabmin.z });
+    min.Set("x", NapiApi::Value<float>{env, aabmin.x});
+    min.Set("y", NapiApi::Value<float>{env, aabmin.y});
+    min.Set("z", NapiApi::Value<float>{env, aabmin.z});
     res.Set("aabbMin", min);
 
     NapiApi::Object max(env);
-    max.Set("x", NapiApi::Value<float> { env, aabmax.x });
-    max.Set("y", NapiApi::Value<float> { env, aabmax.y });
-    max.Set("z", NapiApi::Value<float> { env, aabmax.z });
+    max.Set("x", NapiApi::Value<float>{env, aabmax.x});
+    max.Set("y", NapiApi::Value<float>{env, aabmax.y});
+    max.Set("z", NapiApi::Value<float>{env, aabmax.z});
     res.Set("aabbMax", max);
     return res.ToNapiValue();
 }
@@ -183,7 +192,7 @@ void MeshJS::SetMaterialOverride(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     NapiApi::Object obj = ctx.Arg<0>();
     auto newMaterial = obj.GetNative<SCENE_NS::IMaterial>();
     for (auto&& sm : sm->SubMeshes()->GetValue()) {
-        if (auto *smmeta = interface_cast<META_NS::IMetadata>(sm)) {
+        if (auto* smmeta = interface_cast<META_NS::IMetadata>(sm)) {
             if (newMaterial) {
                 if (!smmeta->GetProperty("OriginalMaterial", META_NS::MetadataQuery::EXISTING)) {
                     // if we do not have "OriginalMaterial" (material set before first override)

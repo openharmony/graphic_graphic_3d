@@ -31,29 +31,32 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t MIP_MAP_TILING_FEATURES { CORE_FORMAT_FEATURE_BLIT_DST_BIT | CORE_FORMAT_FEATURE_BLIT_SRC_BIT };
+constexpr uint32_t MIP_MAP_TILING_FEATURES{CORE_FORMAT_FEATURE_BLIT_DST_BIT | CORE_FORMAT_FEATURE_BLIT_SRC_BIT};
 
 void ExplicitBarrierUndefinedImageToTransferDst(IRenderCommandList& cmdList, const RenderHandle handle)
 {
-    const ImageResourceBarrier src { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+    const ImageResourceBarrier src{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
         PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-        ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED }; // NOTE: undefined, because we do not care the previous data
-    const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
-        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT, ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-    const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};  // NOTE: undefined, because we do not care the previous data
+    const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+        ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    const ImageSubresourceRange imageSubresourceRange{
+        ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     cmdList.CustomImageBarrier(handle, src, dst, imageSubresourceRange);
     cmdList.AddCustomBarrierPoint();
 }
 
 void ExplicitBarrierTransferDstImageToTransferSrc(IRenderCommandList& cmdList, const RenderHandle handle)
 {
-    const ImageResourceBarrier src { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
-        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT, ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-    const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
-        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT, ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
-    const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    const ImageResourceBarrier src{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+        ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+        ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+    const ImageSubresourceRange imageSubresourceRange{
+        ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     cmdList.CustomImageBarrier(handle, src, dst, imageSubresourceRange);
     cmdList.AddCustomBarrierPoint();
 }
@@ -61,7 +64,7 @@ void ExplicitBarrierTransferDstImageToTransferSrc(IRenderCommandList& cmdList, c
 void BlitScalingImage(IRenderCommandList& cmdList, const BufferImageCopy& copy, const RenderHandle srcHandle,
     const RenderHandle dstHandle, const GpuImageDesc& dstImageDesc)
 {
-    const ImageBlit imageBlit {
+    const ImageBlit imageBlit{
         {
             ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
             0,
@@ -69,8 +72,8 @@ void BlitScalingImage(IRenderCommandList& cmdList, const BufferImageCopy& copy, 
             1,
         },
         {
-            { 0, 0, 0 },
-            { copy.imageExtent.width, copy.imageExtent.height, 1 },
+            {0, 0, 0},
+            {copy.imageExtent.width, copy.imageExtent.height, 1},
         },
         {
             ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
@@ -79,8 +82,8 @@ void BlitScalingImage(IRenderCommandList& cmdList, const BufferImageCopy& copy, 
             1,
         },
         {
-            { 0, 0, 0 },
-            { dstImageDesc.width, dstImageDesc.height, 1 },
+            {0, 0, 0},
+            {dstImageDesc.width, dstImageDesc.height, 1},
         },
     };
     constexpr Filter filter = Filter::CORE_FILTER_LINEAR;
@@ -109,13 +112,16 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
     const uint32_t firstLevel = currentMipLevel + 1U;
     if (firstLevel < mipCount) {
         // all target layers from undefined to transfer dst as we're overwriting them.
-        const ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
-        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+        const ImageResourceBarrier src{
+            0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
+        const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
-            firstLevel, mipCount - firstLevel, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+        const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            firstLevel,
+            mipCount - firstLevel,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
         cmdList.CustomImageBarrier(mipImageHandle, src, dst, imageSubresourceRange);
         cmdList.AddCustomBarrierPoint();
     }
@@ -124,19 +130,22 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
         const uint32_t srcMipLevel = dstMipLevel - 1;
         // explicit transition for src mip
         {
-            const ImageResourceBarrier src { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+            const ImageResourceBarrier src{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-                ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-            const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+                ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+            const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-                ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
-            const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
-                srcMipLevel, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+                ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+            const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+                srcMipLevel,
+                1,
+                0,
+                PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
             cmdList.CustomImageBarrier(mipImageHandle, src, dst, imageSubresourceRange);
             cmdList.AddCustomBarrierPoint();
         }
         {
-            const ImageBlit imageBlit {
+            const ImageBlit imageBlit{
                 {
                     ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
                     srcMipLevel,
@@ -144,9 +153,10 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
                     layerCount,
                 },
                 {
-                    { 0, 0, 0 },
-                    { GetMipLevelSize(iw, srcMipLevel), GetMipLevelSize(ih, srcMipLevel),
-                        GetMipLevelSize(id, srcMipLevel) },
+                    {0, 0, 0},
+                    {GetMipLevelSize(iw, srcMipLevel),
+                        GetMipLevelSize(ih, srcMipLevel),
+                        GetMipLevelSize(id, srcMipLevel)},
                 },
                 {
                     ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
@@ -155,23 +165,27 @@ void GenerateMipmaps(IRenderCommandList& cmdList, const GpuImageDesc& imageDesc,
                     layerCount,
                 },
                 {
-                    { 0, 0, 0 },
-                    { GetMipLevelSize(iw, dstMipLevel), GetMipLevelSize(ih, dstMipLevel),
-                        GetMipLevelSize(id, dstMipLevel) },
+                    {0, 0, 0},
+                    {GetMipLevelSize(iw, dstMipLevel),
+                        GetMipLevelSize(ih, dstMipLevel),
+                        GetMipLevelSize(id, dstMipLevel)},
                 },
             };
             cmdList.BlitImage(mipImageHandle, mipImageHandle, imageBlit, filter);
 
             // explicit "out" transition for src mip to dst to enable easy all mip transition in the end
             {
-                const ImageResourceBarrier src { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+                const ImageResourceBarrier src{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
                     PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-                    ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
-                const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+                    ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+                const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
                     PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-                    ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-                const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
-                    srcMipLevel, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+                    ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+                const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+                    srcMipLevel,
+                    1,
+                    0,
+                    PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
                 cmdList.CustomImageBarrier(mipImageHandle, src, dst, imageSubresourceRange);
                 cmdList.AddCustomBarrierPoint();
             }
@@ -188,10 +202,10 @@ void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IR
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = ref.beginIndex;
-        const uint32_t count = ref.count;
-        for (uint32_t idx = 0; idx < count; ++idx) {
-            const BufferImageCopy& copyRef = bufferImageCopies[beginIndex + idx];
+        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
+        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
+        for (const auto& copyRef : copies) {
             // barriers are only done for dynamic resources automatically (e.g. when copying to same image multiple
             // times)
             // NOTE: add desc to data (so we do not need to lock gpu resource manager)
@@ -232,7 +246,8 @@ void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IR
 #if (RENDER_VALIDATION_ENABLED == 1)
                 if ((formatProperties.optimalTilingFeatures & MIP_MAP_TILING_FEATURES) != MIP_MAP_TILING_FEATURES) {
                     PLUGIN_LOG_ONCE_W("core_validation_auto_mipmapping",
-                        "RENDER_VALIDATION: requested automatic mip mapping not done for format: %u", imageDesc.format);
+                        "RENDER_VALIDATION: requested automatic mip mapping not done for format: %u",
+                        imageDesc.format);
                 }
 #endif
             }
@@ -247,10 +262,10 @@ void CopyImagesToBuffersImpl(IRenderCommandList& cmdList, const vector<StagingCo
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = ref.beginIndex;
-        const uint32_t count = ref.count;
-        for (uint32_t idx = 0; idx < count; ++idx) {
-            const BufferImageCopy& copyRef = bufferImageCopies[beginIndex + idx];
+        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
+        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
+        for (const auto& copyRef : copies) {
             cmdList.CopyImageToBuffer(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
         }
     }
@@ -263,15 +278,15 @@ void CopyImagesToImagesImpl(
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = ref.beginIndex;
-        const uint32_t count = ref.count;
-        for (uint32_t idx = 0; idx < count; ++idx) {
-            const ImageCopy& copyRef = imageCopies[beginIndex + idx];
+        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(imageCopies.size()));
+        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(imageCopies.size() - beginIndex));
+        const auto copies = array_view(imageCopies.data() + beginIndex, count);
+        for (const auto& copyRef : copies) {
             cmdList.CopyImageToImage(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
         }
     }
 }
-} // namespace
+}  // namespace
 
 void RenderStaging::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -287,13 +302,13 @@ void RenderStaging::PreExecuteFrame(const uint32_t clearByteSize)
         } else {
             additionalCopyBuffer_.byteOffset = 0;
             additionalCopyBuffer_.byteSize = clearByteSize;
-            const GpuBufferDesc desc {
-                BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT, // usageFlags
+            const GpuBufferDesc desc{
+                BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT,  // usageFlags
                 MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT, // memoryPropertyFlags
-                0,                                                                 // engineCreationFlags
-                additionalCopyBuffer_.byteSize,                                    // byteSize
-                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                            // format
+                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT,  // memoryPropertyFlags
+                0,                                                                  // engineCreationFlags
+                additionalCopyBuffer_.byteSize,                                     // byteSize
+                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                             // format
             };
 
             additionalCopyBuffer_.handle =
@@ -308,7 +323,8 @@ void RenderStaging::CopyHostToStaging(
     auto const copyUserDataToStagingBuffer = [](auto& gpuResourceMgr, auto const& ref) {
         auto* data = static_cast<uint8_t*>(gpuResourceMgr.MapBufferMemory(ref.srcHandle.GetHandle()));
         if (!data) {
-            PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64, ref.srcHandle.GetHandle().id,
+            PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64,
+                ref.srcHandle.GetHandle().id,
                 ref.dstHandle.GetHandle().id);
             return;
         }
@@ -329,8 +345,12 @@ void RenderStaging::CopyHostToStaging(
         }
         if ((srcPtr) && (srcSize > 0)) {
             PLUGIN_ASSERT(bufferDesc.byteSize >= srcSize);
-            data += ref.stagingBufferByteOffset; // offset to staging buffer
-            if (!CloneData(data, bufferDesc.byteSize, srcPtr, srcSize)) {
+            if (ref.stagingBufferByteOffset >= bufferDesc.byteSize) {
+                PLUGIN_LOG_E("staging buffer offset exceeds buffer size");
+                return;
+            }
+            data += ref.stagingBufferByteOffset;  // offset to staging buffer
+            if (!CloneData(data, bufferDesc.byteSize - ref.stagingBufferByteOffset, srcPtr, srcSize)) {
                 PLUGIN_LOG_E("Copying of staging data failed");
             }
         }
@@ -355,7 +375,8 @@ void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, c
         uint8_t* dataPtr = smb.mappedData;
         if (!dataPtr) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-            PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64, ref.srcHandle.GetHandle().id,
+            PLUGIN_LOG_E("staging: srcHandle %" PRIu64 " dstHandle %" PRIu64,
+                ref.srcHandle.GetHandle().id,
                 ref.dstHandle.GetHandle().id);
 #endif
             return;
@@ -375,8 +396,12 @@ void RenderStaging::CopyHostToStaging(const StagingConsumeStruct& stagingData, c
             }
         }
         if ((srcPtr) && (srcSize > 0)) {
+            if (ref.stagingBufferByteOffset >= smb.byteSize) {
+                PLUGIN_LOG_E("staging buffer offset exceeds buffer size");
+                return;
+            }
             const auto* dataEndPtr = smb.mappedData + smb.byteSize;
-            dataPtr = dataPtr + ref.stagingBufferByteOffset; // offset to staging buffer
+            dataPtr = dataPtr + ref.stagingBufferByteOffset;  // offset to staging buffer
             if (!CloneData(dataPtr, size_t(dataEndPtr - dataPtr), srcPtr, srcSize)) {
                 PLUGIN_LOG_E("Copying of staging data failed");
             }
@@ -400,18 +425,21 @@ void RenderStaging::CopyStagingToImages(IRenderCommandList& cmdList,
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
     if (stagingData.bufferToImage.empty() && renderDataStoreStagingData.bufferToImage.empty()) {
-        return; // early out to prevent command list commands
+        return;  // early out to prevent command list commands
     }
 
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
-        ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
-        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+        ImageResourceBarrier src{0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
+        const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+        const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
         for (const auto& ref : stagingData.bufferToImage) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.dstHandle.GetHandle()))) {
@@ -427,31 +455,40 @@ void RenderStaging::CopyStagingToImages(IRenderCommandList& cmdList,
     cmdList.EndDisableAutomaticBarrierPoints();
     cmdList.AddCustomBarrierPoint();
 
-    CopyBuffersToImages(gpuResourceMgr, cmdList, stagingData.bufferToImage, stagingData.bufferImageCopies,
+    CopyBuffersToImages(gpuResourceMgr,
+        cmdList,
+        stagingData.bufferToImage,
+        stagingData.bufferImageCopies,
         stagingData.scalingImageData);
-    CopyBuffersToImages(gpuResourceMgr, cmdList, renderDataStoreStagingData.bufferToImage,
-        renderDataStoreStagingData.bufferImageCopies, {}); // scaling from render data store not supported ATM
+    CopyBuffersToImages(gpuResourceMgr,
+        cmdList,
+        renderDataStoreStagingData.bufferToImage,
+        renderDataStoreStagingData.bufferImageCopies,
+        {});  // scaling from render data store not supported ATM
 
     // explicit output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
-        const ImageResourceBarrier src {
-            AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // we expect all mips to be transferred to dst
+        const ImageResourceBarrier src{
+            AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL  // we expect all mips to be transferred to dst
         };
-        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT, // some shader stage
-            ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
         for (const auto& ref : stagingData.bufferToImage) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.dstHandle.GetHandle()))) {
+                const auto dst = GetImagePostTransferDstBarrier(ref.dstHandle.GetHandle());
                 cmdList.CustomImageBarrier(ref.dstHandle.GetHandle(), src, dst, imageSubresourceRange);
             }
         }
         for (const auto& ref : renderDataStoreStagingData.bufferToImage) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.dstHandle.GetHandle()))) {
+                const auto dst = GetImagePostTransferDstBarrier(ref.dstHandle.GetHandle());
                 cmdList.CustomImageBarrier(ref.dstHandle.GetHandle(), src, dst, imageSubresourceRange);
             }
         }
@@ -464,19 +501,22 @@ void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList, const Stagi
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
     if (renderDataStoreStagingData.imageToBuffer.empty()) {
-        return; // early out to prevent command list commands
+        return;  // early out to prevent command list commands
     }
 
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
         // we transfer all mip levels, but we only copy the one
-        ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
-        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+        ImageResourceBarrier src{0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
+        const ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
-        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+        const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
         for (const auto& ref : renderDataStoreStagingData.imageToBuffer) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.srcHandle.GetHandle()))) {
@@ -495,19 +535,20 @@ void RenderStaging::CopyImagesToBuffers(IRenderCommandList& cmdList, const Stagi
     // explicit output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
-        const ImageResourceBarrier src {
-            AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL // we expect all mips to be transferred to dst
+        const ImageResourceBarrier src{
+            AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL  // we expect all mips to be transferred to dst
         };
-        // NOTE: should fetch usage flags
-        const ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT, // some shader stage
-            ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        const ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        const ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
         for (const auto& ref : renderDataStoreStagingData.imageToBuffer) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.srcHandle.GetHandle()))) {
+                const auto dst = GetImagePostTransferDstBarrier(ref.srcHandle.GetHandle());
                 cmdList.CustomImageBarrier(ref.srcHandle.GetHandle(), src, dst, imageSubresourceRange);
             }
         }
@@ -520,24 +561,27 @@ void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const Stagin
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
     if (renderDataStoreStagingData.imageToImage.empty()) {
-        return; // early out to prevent command list commands
+        return;  // early out to prevent command list commands
     }
 
     // explicit input barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
         // we transfer all mip levels, but we only copy the one
-        constexpr ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        constexpr ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
-        constexpr ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
-        constexpr ImageResourceBarrier srcDst { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+        constexpr ImageResourceBarrier src{0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
+        constexpr ImageResourceBarrier srcDst{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
 
-        constexpr ImageResourceBarrier dstDst { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+        constexpr ImageResourceBarrier dstDst{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
 
         for (const auto& ref : renderDataStoreStagingData.imageToImage) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.srcHandle.GetHandle()))) {
@@ -558,24 +602,25 @@ void RenderStaging::CopyImagesToImages(IRenderCommandList& cmdList, const Stagin
     // explicit output barriers
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
-        constexpr ImageResourceBarrier srcSrc { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+        constexpr ImageResourceBarrier srcSrc{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
-        constexpr ImageResourceBarrier dstSrc { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+        constexpr ImageResourceBarrier dstSrc{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
-        // NOTE: should fetch usage flags
-        constexpr ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT, // some shader stage
-            ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        constexpr ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+        constexpr ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
         for (const auto& ref : renderDataStoreStagingData.imageToImage) {
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.srcHandle.GetHandle()))) {
+                const auto dst = GetImagePostTransferDstBarrier(ref.srcHandle.GetHandle());
                 cmdList.CustomImageBarrier(ref.srcHandle.GetHandle(), srcSrc, dst, imageSubresourceRange);
             }
             if ((!ref.invalidOperation) && (!RenderHandleUtil::IsDynamicResource(ref.dstHandle.GetHandle()))) {
+                const auto dst = GetImagePostTransferDstBarrier(ref.dstHandle.GetHandle());
                 cmdList.CustomImageBarrier(ref.dstHandle.GetHandle(), dstSrc, dst, imageSubresourceRange);
             }
         }
@@ -588,13 +633,17 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
     const StagingConsumeStruct& renderDataStoreStagingData)
 {
     if (stagingData.bufferToBuffer.empty() && renderDataStoreStagingData.bufferToBuffer.empty()) {
-        return; // early out to prevent command list commands
+        return;  // early out to prevent command list commands
     }
 
-    const auto copyBuffersToBuffers = [](IRenderCommandList& cmdList, const vector<StagingCopyStruct>& bufferToBuffer,
+    const auto copyBuffersToBuffers = [](IRenderCommandList& cmdList,
+                                          const vector<StagingCopyStruct>& bufferToBuffer,
                                           const vector<BufferCopy>& bufferCopies) {
         for (const auto& ref : bufferToBuffer) {
             if (ref.invalidOperation) {
+                continue;
+            }
+            if (ref.beginIndex + ref.count > bufferCopies.size()) {
                 continue;
             }
             const auto copies = array_view(bufferCopies.data() + ref.beginIndex, ref.count);
@@ -634,7 +683,7 @@ void RenderStaging::ClearImages(IRenderCommandList& cmdList, const IRenderNodeGp
     const StagingImageClearConsumeStruct& imageClearData)
 {
     if (imageClearData.clears.empty()) {
-        return; // early out to prevent command list commands
+        return;  // early out to prevent command list commands
     }
 
     // explicit input barriers for resources that are not dynamic trackable
@@ -642,14 +691,17 @@ void RenderStaging::ClearImages(IRenderCommandList& cmdList, const IRenderNodeGp
     cmdList.BeginDisableAutomaticBarrierPoints();
     {
         // we transfer all mip levels
-        constexpr ImageSubresourceRange imageSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        constexpr ImageSubresourceRange imageSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
-        constexpr ImageResourceBarrier src { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
-        constexpr ImageResourceBarrier dst { AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
+        constexpr ImageResourceBarrier src{
+            0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
+        constexpr ImageResourceBarrier dst{AccessFlagBits::CORE_ACCESS_TRANSFER_READ_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT,
-            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL };
+            ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
 
         for (const auto& ref : imageClearData.clears) {
             if (!RenderHandleUtil::IsDynamicResource(ref.handle.GetHandle())) {
@@ -663,56 +715,99 @@ void RenderStaging::ClearImages(IRenderCommandList& cmdList, const IRenderNodeGp
     // alternative path for GLES, ClearColorImage
     if (renderNodeContextMgr_->GetRenderNodeGraphData().renderingConfiguration.renderBackend ==
         DeviceBackendType::OPENGLES) {
-        if (additionalCopyBuffer_.handle && (!imageClearData.clears.empty())) {
-            if (auto dataPtr =
-                    reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(additionalCopyBuffer_.handle.GetHandle()));
-                dataPtr) {
-                for (const auto& ref : imageClearData.clears) {
-                    const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(ref.handle.GetHandle());
-                    const uint32_t bytesPerPixel =
-                        gpuResourceMgr.GetFormatProperties(ref.handle.GetHandle()).bytesPerPixel;
-                    const uint32_t imgByteSize = desc.width * desc.height * bytesPerPixel;
-                    ImageSubresourceLayers imageSubresourceLayers { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-                        0, 1u };
-                    const BufferImageCopy bic {
-                        additionalCopyBuffer_.byteOffset, // bufferOffset
-                        0,                                // bufferRowLength
-                        0,                                // bufferImageHeight
-                        imageSubresourceLayers,           // imageSubresource
-                        { 0, 0, 0 },                      // imageOffset
-                        { desc.width, desc.height, 1u },  // imageExtent
-                    };
-#if (RENDER_VALIDATION_ENABLED == 1)
-                    const bool hasDiffColorVals =
-                        ((ref.color.uint32[0] != ref.color.uint32[1]) || (ref.color.uint32[0] != ref.color.uint32[2]) ||
-                            (ref.color.uint32[0] != ref.color.uint32[3]));
-                    if ((bytesPerPixel > 4u) || hasDiffColorVals || (desc.depth > 1u)) {
-                        PLUGIN_LOG_ONCE_W("RenderStaging::ClearImages_gles",
-                            "RENDER_VALIDATION: only byte clears support with OpenGLES ClearColorImage");
-                    }
-#endif
-                    if ((additionalCopyBuffer_.byteOffset + imgByteSize) <= additionalCopyBuffer_.byteSize) {
-                        ClearToValue(
-                            dataPtr, additionalCopyBuffer_.byteSize, uint8_t(0xff & ref.color.uint32[0]), imgByteSize);
-                        cmdList.CopyBufferToImage(
-                            additionalCopyBuffer_.handle.GetHandle(), ref.handle.GetHandle(), bic);
-                    }
-
-                    // advance
-                    additionalCopyBuffer_.byteOffset += imgByteSize;
-                    dataPtr = dataPtr + additionalCopyBuffer_.byteOffset;
-                }
-            }
-            gpuResourceMgr.UnmapBuffer(additionalCopyBuffer_.handle.GetHandle());
-        }
+        ClearImagesGles(cmdList, gpuResourceMgr, imageClearData);
     } else {
-        constexpr ImageSubresourceRange imgSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        constexpr ImageSubresourceRange imgSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
         for (const auto& ref : imageClearData.clears) {
-            cmdList.ClearColorImage(ref.handle.GetHandle(), ref.color, { &imgSubresourceRange, 1 });
+            cmdList.ClearColorImage(ref.handle.GetHandle(), ref.color, {&imgSubresourceRange, 1});
         }
         // NOTE: there's no way to guess the desired layout for non dynamic trackable clear resources
     }
+}
+
+void RenderStaging::ClearImagesGles(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
+    const StagingImageClearConsumeStruct& imageClearData)
+{
+    if ((!additionalCopyBuffer_.handle) || imageClearData.clears.empty()) {
+        return;
+    }
+    auto dataPtr = reinterpret_cast<uint8_t*>(gpuResourceMgr.MapBuffer(additionalCopyBuffer_.handle.GetHandle()));
+    if (!dataPtr) {
+        return;
+    }
+    for (const auto& ref : imageClearData.clears) {
+        const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(ref.handle.GetHandle());
+        const uint32_t bytesPerPixel = gpuResourceMgr.GetFormatProperties(ref.handle.GetHandle()).bytesPerPixel;
+        const uint64_t imgByteSize64 = static_cast<uint64_t>(desc.width) * desc.height * bytesPerPixel;
+        if (imgByteSize64 > UINT32_MAX) {
+            continue;
+        }
+        const uint32_t imgByteSize = static_cast<uint32_t>(imgByteSize64);
+        if ((additionalCopyBuffer_.byteOffset + imgByteSize) > additionalCopyBuffer_.byteSize) {
+            continue;
+        }
+#if (RENDER_VALIDATION_ENABLED == 1)
+        const bool hasDiffColorVals =
+            ((ref.color.uint32[0] != ref.color.uint32[1]) || (ref.color.uint32[0] != ref.color.uint32[2]) ||
+                (ref.color.uint32[0] != ref.color.uint32[3]));
+        if ((bytesPerPixel > 4u) || hasDiffColorVals || (desc.depth > 1u)) {
+            PLUGIN_LOG_ONCE_W("RenderStaging::ClearImages_gles",
+                "RENDER_VALIDATION: only byte clears support with OpenGLES ClearColorImage");
+        }
+#endif
+        ImageSubresourceLayers imageSubresourceLayers{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+        const BufferImageCopy bic{
+            additionalCopyBuffer_.byteOffset,  // bufferOffset
+            0,                                 // bufferRowLength
+            0,                                 // bufferImageHeight
+            imageSubresourceLayers,            // imageSubresource
+            {0, 0, 0},                         // imageOffset
+            {desc.width, desc.height, 1u},     // imageExtent
+        };
+        ClearToValue(dataPtr,
+            additionalCopyBuffer_.byteSize - additionalCopyBuffer_.byteOffset,
+            uint8_t(0xff & ref.color.uint32[0]),
+            imgByteSize);
+        cmdList.CopyBufferToImage(additionalCopyBuffer_.handle.GetHandle(), ref.handle.GetHandle(), bic);
+
+        // advance
+        additionalCopyBuffer_.byteOffset += imgByteSize;
+        dataPtr += imgByteSize;
+    }
+    gpuResourceMgr.UnmapBuffer(additionalCopyBuffer_.handle.GetHandle());
+}
+
+ImageResourceBarrier RenderStaging::GetImagePostTransferDstBarrier(const RenderHandle handle)
+{
+    const auto& gpuResManager = renderNodeContextMgr_->GetGpuResourceManager();
+    const auto& desc = gpuResManager.GetImageDescriptor(handle);
+
+    ImageResourceBarrier dst{0,
+        PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        ImageLayout::CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+
+    constexpr auto shaderStages = PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                  PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                  PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT) {
+        dst.pipelineStageFlags |= shaderStages;
+        dst.accessFlags |= AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT;
+    }
+    if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_STORAGE_BIT) {
+        dst.pipelineStageFlags |= shaderStages;
+        dst.accessFlags |= AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT;
+        dst.imageLayout = ImageLayout::CORE_IMAGE_LAYOUT_GENERAL;
+    }
+    if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
+        dst.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dst.accessFlags |= AccessFlagBits::CORE_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    }
+
+    return dst;
 }
 
 pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostTransferBarrier(
@@ -722,7 +817,7 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
 
     const auto& desc = gpuResManager.GetBufferDescriptor(handle);
 
-    BufferResourceBarrier dstBarrier = { 0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
+    BufferResourceBarrier dstBarrier = {0, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
 
     if (desc.usageFlags & BufferUsageFlagBits::CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
         dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -752,9 +847,8 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
         dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT;
     }
 
-    return { { AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT,
-                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT },
-        dstBarrier };
+    return {{AccessFlagBits::CORE_ACCESS_TRANSFER_WRITE_BIT, PipelineStageFlagBits::CORE_PIPELINE_STAGE_TRANSFER_BIT},
+        dstBarrier};
 }
 
 RENDER_END_NAMESPACE()

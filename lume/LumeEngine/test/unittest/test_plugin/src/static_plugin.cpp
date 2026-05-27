@@ -31,19 +31,19 @@
 
 namespace UTest {
 const char* GetVersionInfo();
-CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
-void UnregisterInterfaces(CORE_NS::PluginToken);
-} // namespace UTest
+CORE_NS::PluginToken RegisterInterfacesStatic(CORE_NS::IPluginRegister&);
+void UnregisterInterfacesStatic(CORE_NS::PluginToken);
+}  // namespace UTest
 
 extern "C" {
-PLUGIN_DATA(CoreTestStatic) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(CoreTestStatic){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "Static Test Plugin",
     // Version information of the plugin.
-    { UTest::UID_STATIC_PLUGIN, UTest::GetVersionInfo },
-    UTest::RegisterInterfaces,
-    UTest::UnregisterInterfaces,
+    {UTest::UID_STATIC_PLUGIN, UTest::GetVersionInfo},
+    UTest::RegisterInterfacesStatic,
+    UTest::UnregisterInterfacesStatic,
     {},
 };
 DEFINE_STATIC_PLUGIN(CoreTestStatic);
@@ -61,7 +61,7 @@ using namespace CORE_NS;
 namespace {
 struct EngineToken {
     IEngine& engine;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_STATIC_ENGINE_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -72,7 +72,7 @@ struct EngineToken {
 
 PluginToken CreatePlugin(IEngine& engine)
 {
-    EngineToken* token = new EngineToken { engine };
+    EngineToken* token = new EngineToken{engine};
 
     auto& registry = *engine.GetInterface<IClassRegister>();
 
@@ -97,7 +97,7 @@ constexpr IEnginePlugin ENGINE_PLUGIN(CreatePlugin, DestroyPlugin);
 struct GlobalToken {
     IPluginRegister& pluginRegistry;
     StaticGlobalTest test;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_STATIC_GLOBAL_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -107,16 +107,16 @@ struct GlobalToken {
         },
     };
 };
-} // namespace
+}  // namespace
 
 const char* GetVersionInfo()
 {
     return "static 1.0";
 }
 
-CORE_NS::PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
+CORE_NS::PluginToken RegisterInterfacesStatic(IPluginRegister& pluginRegistry)
 {
-    GlobalToken* token = new GlobalToken { pluginRegistry };
+    GlobalToken* token = new GlobalToken{pluginRegistry};
 
     pluginRegistry.RegisterTypeInfo(ENGINE_PLUGIN);
     pluginRegistry.GetClassRegister().RegisterInterfaceType(token->interfaceInfo);
@@ -124,7 +124,7 @@ CORE_NS::PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     return token;
 }
 
-void UnregisterInterfaces(PluginToken token)
+void UnregisterInterfacesStatic(PluginToken token)
 {
     GlobalToken* state = static_cast<GlobalToken*>(token);
 
@@ -133,4 +133,4 @@ void UnregisterInterfaces(PluginToken token)
 
     delete state;
 }
-} // namespace UTest
+}  // namespace UTest

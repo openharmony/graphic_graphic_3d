@@ -30,12 +30,12 @@ struct RenderCommandBeginRenderPass;
 class GpuResourceManager;
 
 struct LowlevelFramebufferGL {
-    uint32_t width { 0 };
-    uint32_t height { 0 };
+    uint32_t width{0};
+    uint32_t height{0};
     struct SubPassPair {
         // one fbo per subpass, one resolve fbo per subpass (if needed)
-        uint32_t fbo { 0 };
-        uint32_t resolve { 0 };
+        uint32_t fbo{0};
+        uint32_t resolve{0};
     };
     BASE_NS::vector<SubPassPair> fbos;
 };
@@ -63,13 +63,13 @@ public:
     void FilterRenderPass(RenderCommandBeginRenderPass& beginRenderPass);
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
     // not used ATM
-    void SetValidationDebugName(const BASE_NS::string_view debugName) override {};
+    void SetValidationDebugName(const BASE_NS::string_view debugName) override{};
 #endif
 private:
     DeviceGLES& device_;
     GpuResourceManager& gpuResourceMgr_;
-    uint32_t bufferingIndex_ { 0 };
-    uint32_t bufferingCount_ { 0 };
+    uint32_t bufferingIndex_{0};
+    uint32_t bufferingCount_{0};
     ContextFramebufferCacheGLES framebufferCache_;
     BASE_NS::vector<uint32_t> imageMap_;
     bool multisampledRenderToTexture_ = false;
@@ -77,10 +77,10 @@ private:
     bool multiView_ = false;
 
 #if (RENDER_VALIDATION_ENABLED == 1)
-    uint64_t frameIndexFront_ { 0 };
-    uint64_t frameIndexBack_ { 0 };
+    uint64_t frameIndexFront_{0};
+    uint64_t frameIndexBack_{0};
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__GLES__NODE_CONTEXT_POOL_MANAGER_GLES_H
+#endif  // CORE__RENDER__GLES__NODE_CONTEXT_POOL_MANAGER_GLES_H

@@ -1,0 +1,30 @@
+{
+    "version": "1.0",
+    "description": "test scene with camera inline postprocess",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "camera",
+                    "name": "test",
+                    "projection": "perspective",
+                    "postProcess": {
+                        "tonemap": {
+                            "enabled": true,
+                            "type": "aces",
+                            "exposure": 1.5
+                        },
+                        "bloom": {
+                            "enabled": true,
+                            "thresholdHard": 0.8,
+                            "amountCoefficient": 0.5
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

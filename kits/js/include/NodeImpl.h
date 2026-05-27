@@ -21,10 +21,11 @@
 #include "QuatProxy.h"
 #include "SceneResourceImpl.h"
 #include "Vec3Proxy.h"
+#include "export.h"
 
 class NodeImpl;
 
-class NodeContainerJS {
+class SCENE_ADDON_PUBLIC NodeContainerJS {
 public:
     static void Init(napi_env env, napi_value exports);
     NodeContainerJS(napi_env, napi_callback_info);
@@ -44,7 +45,7 @@ private:
     NapiApi::WeakObjectRef scene_;
 };
 
-class NodeImpl : public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC NodeImpl : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 2;
     enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, CUSTOM = 255 };
@@ -55,6 +56,7 @@ public:
     virtual void Attached(bool attached);
 
     void* GetInstanceImpl(uint32_t id) override;
+
 protected:
     static void GetPropertyDescs(BASE_NS::vector<napi_property_descriptor>& props);
     NodeImpl(NodeType type);
@@ -81,7 +83,7 @@ protected:
     napi_value GetNodeByPath(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value GetComponent(NapiApi::FunctionContext<BASE_NS::string>& ctx);
 
-    napi_value GetChildContainer(NapiApi::FunctionContext<>& fc); // returns a container object.
+    napi_value GetChildContainer(NapiApi::FunctionContext<>& fc);  // returns a container object.
 
     napi_value GetVisible(NapiApi::FunctionContext<>& ctx);
     void SetVisible(NapiApi::FunctionContext<bool>& ctx);
@@ -105,9 +107,9 @@ public:
 private:
     bool attached_ = false;
     NodeType type_;
-    BASE_NS::unique_ptr<Vec3Proxy> posProxy_ { nullptr };
-    BASE_NS::unique_ptr<Vec3Proxy> sclProxy_ { nullptr };
-    BASE_NS::unique_ptr<QuatProxy> rotProxy_ { nullptr };
+    BASE_NS::unique_ptr<Vec3Proxy> posProxy_{nullptr};
+    BASE_NS::unique_ptr<Vec3Proxy> sclProxy_{nullptr};
+    BASE_NS::unique_ptr<QuatProxy> rotProxy_{nullptr};
     NapiApi::StrongRef children_;
 };
 

@@ -1,0 +1,191 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "128694e9-3d8a-4c0b-835f-d20f3bb8f705",
+        "uri": "project://assets/environment/klippad_dawn_2_2k_skybox.ktx",
+        "xxh3": "44535ed13d4f55afe8bf9ac919d755e4",
+        "spec": {
+            "$meta": {
+                "meta-version": "2.0"
+            },
+            "$root": {
+                "$classId": "12708a3c-ff66-4ead-acbf-58d0a16db05e",
+                "$className": "ImageAsset",
+                "$instanceId": "00022cd2-5a1b-7af0-544b-41bb9fdcba52",
+                "__attachments": [
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "GenerateMipmaps",
+                        "defaultValue": {
+                            "$classId": "cd2fd49b-c6b0-14bd-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": true
+                        },
+                        "values": [
+                            {
+                                "$classId": "cd2fd49b-c6b0-14bd-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": true
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "ColorSpace",
+                        "defaultValue": {
+                            "$classId": "a6c66c82-e2b9-7488-4d75-6c7469416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [
+                            {
+                                "$classId": "a6c66c82-e2b9-7488-4d75-6c7469416e79",
+                                "$className": "Any",
+                                "value": 0
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Iid",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "128694e9-3d8a-4c0b-835f-d20f3bb8f705"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Uri",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "project://assets/environment/klippad_dawn_2_2k_skybox.ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Name",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "klippad_dawn_2_2k_skybox.ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "MediaType",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "image/ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Width",
+                        "defaultValue": {
+                            "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [
+                            {
+                                "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": 1024
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Height",
+                        "defaultValue": {
+                            "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [
+                            {
+                                "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": 1024
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Category",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Thumbnail",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [],
+                        "modifiers": []
+                    }
+                ]
+            }
+        }
+    }
+}

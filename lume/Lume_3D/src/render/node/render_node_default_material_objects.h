@@ -43,8 +43,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "a25b27ea-a4ff-4b64-87c7-a7865cccfd92" };
-    static constexpr const char* const typeName = "RenderNodeDefaultMaterialObjects";
+    static constexpr BASE_NS::Uid UID{"a25b27ea-a4ff-4b64-87c7-a7865cccfd92"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultMaterialObjects";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -56,11 +56,12 @@ public:
 
 private:
     struct ObjectCounts {
-        uint32_t maxMeshCount { 0u };
-        uint32_t maxSubmeshCount { 0u };
-        uint32_t maxSkinCount { 0u };
-        uint32_t maxMaterialCount { 0u };
-        uint32_t maxUniqueMaterialCount { 0u };
+        uint32_t maxMeshCount{0u};
+        uint32_t maxSubmeshCount{0u};
+        uint32_t maxSkinCount{0u};
+        uint32_t maxMaterialCount{0u};
+        uint32_t maxUniqueMaterialCount{0u};
+        uint32_t maxLightProbeDataCount{0u};
     };
     struct UboHandles {
         RENDER_NS::RenderHandleReference mat;
@@ -69,6 +70,9 @@ private:
         RENDER_NS::RenderHandleReference mesh;
         RENDER_NS::RenderHandleReference submeshSkin;
     };
+    struct SsboHandles {
+        RENDER_NS::RenderHandleReference lightProbeInterpolatedData;
+    };
     struct GlobalDescriptorSets {
         BASE_NS::vector<RENDER_NS::RenderHandleReference> handles;
         BASE_NS::vector<RENDER_NS::IDescriptorSetBinder::Ptr> descriptorSets;
@@ -76,7 +80,7 @@ private:
         // keeps track if we need changes
         BASE_NS::vector<MaterialHandleStruct> materials;
         // force update all new descriptor sets
-        bool forceUpdate { false };
+        bool forceUpdate{false};
 
         // default material set 1 descriptor set
         RENDER_NS::RenderHandleReference dmSet1;
@@ -86,7 +90,7 @@ private:
         // NOTE: with bindless contains global descriptor set if enabled
         RENDER_NS::RenderHandleReference dmSet2;
         RENDER_NS::IDescriptorSetBinder::Ptr dmSet2Binder;
-        bool dmSet2Ready { false };
+        bool dmSet2Ready{false};
     };
     struct TlasData {
         RENDER_NS::RenderHandleReference as;
@@ -94,7 +98,7 @@ private:
         RENDER_NS::RenderHandleReference scratch;
 
         RENDER_NS::AsBuildSizes asBuildSizes;
-        bool createNewBuffer { false };
+        bool createNewBuffer{false};
     };
 
     void UpdateMeshBuffer(const IRenderDataStoreDefaultMaterial& dataStoreMaterial);
@@ -108,25 +112,26 @@ private:
     void ProcessBuffers(const ObjectCounts& objectCounts);
     void ProcessGlobalBinders();
     void ProcessTlasBuffers();
-
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    void MapLightProbeSsboBuffer();
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     SceneRenderDataStores stores_;
     ObjectCounts objectCounts_;
     UboHandles ubos_;
+    SsboHandles ssbos_;
 
     GlobalDescriptorSets globalDescs_;
     RENDER_NS::PipelineLayout defaultMaterialPipelineLayout_;
     MaterialHandleStruct defaultMaterialStruct_;
 
-    bool rtEnabled_ { false };
-    bool bindlessEnabled_ { false };
+    bool rtEnabled_{false};
+    bool bindlessEnabled_{false};
     TlasData tlas_;
-
+    uint64_t lightProbeBufferSize_{0u};
     // helpers
     BASE_NS::vector<RENDER_NS::RenderHandle> blImageHandles_;
     BASE_NS::vector<RENDER_NS::RenderHandle> blSamplerHandles_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_H

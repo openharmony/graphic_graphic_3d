@@ -53,6 +53,7 @@ config("lume_scenewidget_config") {
     "-Wno-overloaded-virtual",
     "-Wno-thread-safety-attributes",
     "-Wno-missing-braces",
+    "-Oz"
   ]
 }
 
@@ -92,6 +93,7 @@ ohos_source_set("lume_scenewidget_src") {
     "src/component/node_component.h",
     "src/component/postprocess_component.cpp",
     "src/component/postprocess_component.h",
+    "src/component/shader_compare.h",
     "src/component/transform_component.cpp",
     "src/component/transform_component.h",
     "src/component_factory.h",
@@ -111,15 +113,14 @@ ohos_source_set("lume_scenewidget_src") {
     "src/ecs_component/entity_owner_component.h",
     "src/ecs_component/entity_owner_component_info.h",
     "src/ecs_component/entity_owner_component_manager.cpp",
-    "src/ecs_component/resource_component.h",
     "src/ecs_component/resource_component_info.h",
     "src/ecs_component/resource_component_manager.cpp",
     "src/entity_converting_value.h",
+    "src/json.cpp",
     "src/mesh/mesh.cpp",
     "src/mesh/mesh.h",
     "src/mesh/mesh_creator.cpp",
     "src/mesh/mesh_creator.h",
-    "src/mesh/mesh_resource.h",
     "src/mesh/sampler.cpp",
     "src/mesh/sampler.h",
     "src/mesh/submesh.cpp",
@@ -130,12 +131,15 @@ ohos_source_set("lume_scenewidget_src") {
     "src/node/camera_node.h",
     "src/node/light_node.cpp",
     "src/node/light_node.h",
+    "src/node/light_probe_group_node.cpp",
+    "src/node/light_probe_group_node.h",
     "src/node/mesh_node.cpp",
     "src/node/mesh_node.h",
     "src/node/node.cpp",
     "src/node/node.h",
     "src/node/startable_handler.cpp",
     "src/node/startable_handler.h",
+    "src/perf/cpu_perf_scope.h",
     "src/plugin.cpp",
     "src/postprocess/bloom.cpp",
     "src/postprocess/bloom.h",
@@ -173,11 +177,12 @@ ohos_source_set("lume_scenewidget_src") {
     "src/register_anys.cpp",
     "src/register_engine_access.cpp",
     "src/register_post_process_engine_access.cpp",
-    "src/register_serializers.cpp",
     "src/render_configuration.cpp",
     "src/render_configuration.h",
     "src/render_context.cpp",
     "src/render_context.h",
+    "src/resource/custom_property_defaults.cpp",
+    "src/resource/custom_property_defaults.h",
     "src/resource/ecs_animation.cpp",
     "src/resource/ecs_animation.h",
     "src/resource/effect.cpp",
@@ -188,45 +193,35 @@ ohos_source_set("lume_scenewidget_src") {
     "src/resource/image.h",
     "src/resource/material.cpp",
     "src/resource/material.h",
-    "src/resource/node_instantiator.cpp",
-    "src/resource/node_instantiator.h",
+    "src/resource/node_template.h",
     "src/resource/occlusion_material.cpp",
     "src/resource/occlusion_material.h",
     "src/resource/render_resource.cpp",
     "src/resource/render_resource.h",
     "src/resource/render_resource_manager.cpp",
     "src/resource/render_resource_manager.h",
-    "src/resource/resource_types.cpp",
-    "src/resource/resource_types.h",
     "src/resource/shader.cpp",
     "src/resource/shader.h",
-    "src/resource/types/animation_type.cpp",
-    "src/resource/types/animation_type.h",
-    "src/resource/types/environment_type.cpp",
-    "src/resource/types/environment_type.h",
-    "src/resource/types/gltf_scene_type.cpp",
-    "src/resource/types/gltf_scene_type.h",
-    "src/resource/types/image_type.cpp",
-    "src/resource/types/image_type.h",
-    "src/resource/types/material_type.cpp",
-    "src/resource/types/material_type.h",
-    "src/resource/types/postprocess_type.cpp",
-    "src/resource/types/postprocess_type.h",
-    "src/resource/types/scene_type.cpp",
-    "src/resource/types/scene_type.h",
-    "src/resource/types/shader_type.cpp",
-    "src/resource/types/shader_type.h",
+    "src/resource/util.h",
     "src/scene.cpp",
     "src/scene.h",
     "src/scene_manager.cpp",
     "src/scene_manager.h",
     "src/serialization/external_node.h",
-    "src/serialization/scene_exporter.cpp",
-    "src/serialization/scene_exporter.h",
-    "src/serialization/scene_importer.cpp",
-    "src/serialization/scene_importer.h",
-    "src/serialization/scene_ser.h",
-    "src/serialization/util.h",
+    "src/template/animation_template.cpp",
+    "src/template/animation_template.h",
+    "src/template/environment_template.cpp",
+    "src/template/environment_template.h",
+    "src/template/image_template.cpp",
+    "src/template/image_template.h",
+    "src/template/material_template.cpp",
+    "src/template/material_template.h",
+    "src/template/mesh_template.cpp",
+    "src/template/mesh_template.h",
+    "src/template/postprocess_template.cpp",
+    "src/template/postprocess_template.h",
+    "src/template/resource_template_base.cpp",
+    "src/template/resource_template_base.h",
     "src/util.h",
     "src/util_interfaces.h",
   ]
@@ -289,6 +284,239 @@ ohos_shared_library("libPluginSceneWidget") {
   deps = [
     ":lume_scenewidget_src",
   ]
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+config("lume_scene_metadata_importer_config") {
+  include_dirs = [
+    "serialization/metadata_importer_plugin/include",
+  ]
+}
+
+ohos_source_set("lume_scene_metadata_importer_src") {
+  configs = [
+    ":lume_scenewidget_config",
+    ":lume_scene_metadata_importer_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "serialization/metadata_importer_plugin/src/light_probe_group_ser.cpp",
+    "serialization/metadata_importer_plugin/src/light_probe_group_ser.h",
+    "serialization/metadata_importer_plugin/src/metadata_importer.h",
+    "serialization/metadata_importer_plugin/src/node_instantiator.cpp",
+    "serialization/metadata_importer_plugin/src/node_instantiator.h",
+    "serialization/metadata_importer_plugin/src/node_template_rewrite.cpp",
+    "serialization/metadata_importer_plugin/src/node_template_rewrite.h",
+    "serialization/metadata_importer_plugin/src/plugin.cpp",
+    "serialization/metadata_importer_plugin/src/register_serializers.cpp",
+    "serialization/metadata_importer_plugin/src/resource_util.h",
+    "serialization/metadata_importer_plugin/src/scene_exporter.cpp",
+    "serialization/metadata_importer_plugin/src/scene_exporter.h",
+    "serialization/metadata_importer_plugin/src/scene_importer.cpp",
+    "serialization/metadata_importer_plugin/src/scene_importer.h",
+    "serialization/metadata_importer_plugin/src/scene_ser.h",
+    "serialization/metadata_importer_plugin/src/serialization_util.h",
+    "serialization/metadata_importer_plugin/src/types/animation_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/animation_type.h",
+    "serialization/metadata_importer_plugin/src/types/environment_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/environment_type.h",
+    "serialization/metadata_importer_plugin/src/types/gltf_scene_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/gltf_scene_type.h",
+    "serialization/metadata_importer_plugin/src/types/image_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/image_type.h",
+    "serialization/metadata_importer_plugin/src/types/material_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/material_type.h",
+    "serialization/metadata_importer_plugin/src/types/node_template_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/node_template_type.h",
+    "serialization/metadata_importer_plugin/src/types/postprocess_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/postprocess_type.h",
+    "serialization/metadata_importer_plugin/src/types/resource_type_base.h",
+    "serialization/metadata_importer_plugin/src/types/resource_types.cpp",
+    "serialization/metadata_importer_plugin/src/types/resource_types.h",
+    "serialization/metadata_importer_plugin/src/types/scene_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/scene_type.h",
+    "serialization/metadata_importer_plugin/src/types/shader_type.cpp",
+    "serialization/metadata_importer_plugin/src/types/shader_type.h",
+  ]
+
+  include_dirs = [
+    "serialization/metadata_importer_plugin/src",
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+  ]
+
+  deps = [
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
+    "${LUME_META_PATH}:libPluginMetaObject",
+  ]
+
+  external_deps = [ "c_utils:utils" ]
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [ "vulkan-headers:vulkan_headers" ]
+  }
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("libPluginLumeSceneMetadataImporter") {
+  deps = [ ":lume_scene_metadata_importer_src" ]
+  relative_install_dir = "graphics3d"
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+config("lume_scene_importer_config") {
+  include_dirs = [
+    "serialization/importer_plugin/include",
+  ]
+}
+
+ohos_source_set("lume_scene_importer_src") {
+  configs = [
+    ":lume_scenewidget_config",
+    ":lume_scene_importer_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE_PATH}:lume_base_api",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [
+    "serialization/importer_plugin/src/config.h",
+    "serialization/importer_plugin/src/diagnostics.h",
+    "serialization/importer_plugin/src/import_any.cpp",
+    "serialization/importer_plugin/src/import_any.h",
+    "serialization/importer_plugin/src/import_context.cpp",
+    "serialization/importer_plugin/src/import_context.h",
+    "serialization/importer_plugin/src/import_helpers.cpp",
+    "serialization/importer_plugin/src/import_helpers.h",
+    "serialization/importer_plugin/src/importer.cpp",
+    "serialization/importer_plugin/src/importer.h",
+    "serialization/importer_plugin/src/loaders/animation_type.cpp",
+    "serialization/importer_plugin/src/loaders/animation_type.h",
+    "serialization/importer_plugin/src/loaders/environment_type.h",
+    "serialization/importer_plugin/src/loaders/gltf_scene_type.cpp",
+    "serialization/importer_plugin/src/loaders/gltf_scene_type.h",
+    "serialization/importer_plugin/src/loaders/image_type.cpp",
+    "serialization/importer_plugin/src/loaders/image_type.h",
+    "serialization/importer_plugin/src/loaders/material_type.h",
+    "serialization/importer_plugin/src/loaders/node_template_type.cpp",
+    "serialization/importer_plugin/src/loaders/node_template_type.h",
+    "serialization/importer_plugin/src/loaders/postprocess_type.h",
+    "serialization/importer_plugin/src/loaders/resource_type_base.h",
+    "serialization/importer_plugin/src/loaders/resource_types.cpp",
+    "serialization/importer_plugin/src/loaders/resource_types.h",
+    "serialization/importer_plugin/src/loaders/scene_type.cpp",
+    "serialization/importer_plugin/src/loaders/scene_type.h",
+    "serialization/importer_plugin/src/loaders/shader_type.cpp",
+    "serialization/importer_plugin/src/loaders/shader_type.h",
+    "serialization/importer_plugin/src/loaders/template_resource_types.h",
+    "serialization/importer_plugin/src/numeric_any.h",
+    "serialization/importer_plugin/src/objects/animation.cpp",
+    "serialization/importer_plugin/src/objects/animation.h",
+    "serialization/importer_plugin/src/objects/attachment.cpp",
+    "serialization/importer_plugin/src/objects/attachment.h",
+    "serialization/importer_plugin/src/objects/builtin.cpp",
+    "serialization/importer_plugin/src/objects/builtin.h",
+    "serialization/importer_plugin/src/objects/camera_node.cpp",
+    "serialization/importer_plugin/src/objects/camera_node.h",
+    "serialization/importer_plugin/src/objects/curve.cpp",
+    "serialization/importer_plugin/src/objects/environment.cpp",
+    "serialization/importer_plugin/src/objects/environment.h",
+    "serialization/importer_plugin/src/objects/extension_node.cpp",
+    "serialization/importer_plugin/src/objects/extension_node.h",
+    "serialization/importer_plugin/src/objects/external_node.cpp",
+    "serialization/importer_plugin/src/objects/external_node.h",
+    "serialization/importer_plugin/src/objects/flag_tables.h",
+    "serialization/importer_plugin/src/objects/format_table.h",
+    "serialization/importer_plugin/src/objects/geometry_node.cpp",
+    "serialization/importer_plugin/src/objects/geometry_node.h",
+    "serialization/importer_plugin/src/objects/image.cpp",
+    "serialization/importer_plugin/src/objects/image.h",
+    "serialization/importer_plugin/src/objects/index.cpp",
+    "serialization/importer_plugin/src/objects/index.h",
+    "serialization/importer_plugin/src/objects/light_node.cpp",
+    "serialization/importer_plugin/src/objects/light_node.h",
+    "serialization/importer_plugin/src/objects/light_probe_group_node.cpp",
+    "serialization/importer_plugin/src/objects/light_probe_group_node.h",
+    "serialization/importer_plugin/src/objects/material.cpp",
+    "serialization/importer_plugin/src/objects/material.h",
+    "serialization/importer_plugin/src/objects/node.cpp",
+    "serialization/importer_plugin/src/objects/node.h",
+    "serialization/importer_plugin/src/objects/node_template.cpp",
+    "serialization/importer_plugin/src/objects/node_template.h",
+    "serialization/importer_plugin/src/objects/node_template_internal.cpp",
+    "serialization/importer_plugin/src/objects/node_template_internal.h",
+    "serialization/importer_plugin/src/objects/node_template_updater.cpp",
+    "serialization/importer_plugin/src/objects/node_template_updater.h",
+    "serialization/importer_plugin/src/objects/postprocess.cpp",
+    "serialization/importer_plugin/src/objects/postprocess.h",
+    "serialization/importer_plugin/src/objects/property.cpp",
+    "serialization/importer_plugin/src/objects/property.h",
+    "serialization/importer_plugin/src/objects/render_configuration.cpp",
+    "serialization/importer_plugin/src/objects/render_configuration.h",
+    "serialization/importer_plugin/src/objects/scene.cpp",
+    "serialization/importer_plugin/src/objects/scene.h",
+    "serialization/importer_plugin/src/plugin.cpp",
+    "serialization/importer_plugin/src/scene_file_loader.cpp",
+    "serialization/importer_plugin/src/scene_file_loader.h",
+    "serialization/importer_plugin/src/resolve_object.cpp",
+    "serialization/importer_plugin/src/resolve_object.h",
+    "serialization/importer_plugin/src/resource_loaders.h",
+    "serialization/importer_plugin/src/util.h",
+  ]
+
+  include_dirs = [
+    "serialization/importer_plugin/src",
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "${LUME_META_PATH}/include",
+  ]
+
+  deps = [
+    "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
+    "${LUME_META_PATH}:libPluginMetaObject",
+  ]
+
+  external_deps = [ "c_utils:utils" ]
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [ "vulkan-headers:vulkan_headers" ]
+  }
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("libPluginLumeSceneImporter") {
+  deps = [ ":lume_scene_importer_src" ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"
   subsystem_name = "graphic"

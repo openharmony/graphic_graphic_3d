@@ -1,0 +1,24 @@
+{
+	"version": "1.0",
+	"description": "test scene with external hierarchy using url",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene8.index",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",			
+			"children": [
+				{
+					"type": "external",
+					"name": "1",
+					"source": {
+						"type": "nodeTemplate",
+						"url": "scene10.nodeTemplate"
+					},
+					"resourceGroup": "my-template"
+				}
+			]
+		}
+	}
+}

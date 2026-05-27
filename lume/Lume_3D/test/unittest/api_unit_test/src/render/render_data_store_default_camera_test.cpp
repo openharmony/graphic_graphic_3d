@@ -121,15 +121,15 @@ UNIT_TEST(API_RenderDataStoreDefaultCamera, GetAddCameraTest, testing::ext::Test
     // Get non-existing cameras
     {
         auto camera = dataStoreDefaultCamera->GetCamera("NonExistingCamera");
-        EXPECT_EQ(RenderCamera {}.name, camera.name);
-        EXPECT_EQ(RenderCamera {}.id, camera.id);
-        EXPECT_EQ(RenderCamera {}.customRenderNodeGraphFile, camera.customRenderNodeGraphFile);
+        EXPECT_EQ(RenderCamera{}.name, camera.name);
+        EXPECT_EQ(RenderCamera{}.id, camera.id);
+        EXPECT_EQ(RenderCamera{}.customRenderNodeGraphFile, camera.customRenderNodeGraphFile);
     }
     {
         auto camera = dataStoreDefaultCamera->GetCamera(3u);
-        EXPECT_EQ(RenderCamera {}.name, camera.name);
-        EXPECT_EQ(RenderCamera {}.id, camera.id);
-        EXPECT_EQ(RenderCamera {}.customRenderNodeGraphFile, camera.customRenderNodeGraphFile);
+        EXPECT_EQ(RenderCamera{}.name, camera.name);
+        EXPECT_EQ(RenderCamera{}.id, camera.id);
+        EXPECT_EQ(RenderCamera{}.customRenderNodeGraphFile, camera.customRenderNodeGraphFile);
     }
     {
         EXPECT_EQ(2u, dataStoreDefaultCamera->GetCameraCount());

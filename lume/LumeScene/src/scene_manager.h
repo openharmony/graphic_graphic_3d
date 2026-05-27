@@ -76,10 +76,21 @@ public:
 private:
     META_NS::IMetadata::Ptr CreateContext(SceneOptions opts) const;
 
-    // Load a scene by using an index file. See GuessIndexFilePath
-    static IScene::Ptr LoadSceneWithIndex(const IRenderContext::Ptr& context, BASE_NS::string_view uri);
+    // Resolve context_/opts_ from the default application context when no
+    // RenderContext build arg was supplied. Returns false only when a default
+    // application context exists but yields no render context.
+    bool UseDefaultContext();
+
+    // Load a scene by using an index file. See GuessIndexFilePath. resourceUris carries the already-parsed
+    // project.json "resources" list so this path does not re-parse the file.
+    static IScene::Ptr LoadSceneWithIndex(
+        const IRenderContext::Ptr& context, BASE_NS::string_view uri, BASE_NS::vector<BASE_NS::string> resourceUris);
 
     static void LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources);
+
+    // Import the given pre-parsed project resource URIs. Returns true if any URI was imported.
+    static bool LoadProjectResources(
+        const CORE_NS::IResourceManager::Ptr& resources, const BASE_NS::vector<BASE_NS::string>& resourceUris);
 
     enum class ProjectPathAction { REGISTER, UNREGISTER };
     // Register/unregister the given uri with the file manager

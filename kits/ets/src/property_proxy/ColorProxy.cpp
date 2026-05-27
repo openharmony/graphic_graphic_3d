@@ -16,7 +16,7 @@
 #include "property_proxy/ColorProxy.h"
 
 namespace OHOS::Render3D {
-ColorProxy::ColorProxy(const META_NS::Property<BASE_NS::Color> &prop) : PropertyProxy<BASE_NS::Color>(prop)
+ColorProxy::ColorProxy(const META_NS::Property<BASE_NS::Color>& prop) : PropertyProxy<BASE_NS::Color>(prop)
 {}
 
 ColorProxy::~ColorProxy()

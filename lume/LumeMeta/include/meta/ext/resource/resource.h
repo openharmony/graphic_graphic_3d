@@ -35,7 +35,10 @@ public:
     ReturnError ExportResourceId(IExportContext& c) const
     {
         ReturnError res = GenericError::FAIL;
-        if (resourceId_.IsValid()) {
+        if (resourceId_.id.IsValid()) {
+            if (auto i = interface_cast<ICollectResources>(c.Context().GetUserContext())) {
+                i->AddResource(resourceId_);
+            }
             if (auto ph = GetObjectRegistry().Create<CORE_NS::ISetResourceId>(ClassId::ResourcePlaceholder)) {
                 ph->SetResourceId(resourceId_);
                 ISerNode::Ptr node;
@@ -62,16 +65,19 @@ public:
     }
     CORE_NS::ResourceId GetResourceId() const override
     {
-        return resourceId_;
+        return resourceId_.id;
     }
-
-    void SetResourceId(CORE_NS::ResourceId id) override
+    CORE_NS::ResourceContextWeakPtr GetContext() const override
+    {
+        return resourceId_.context;
+    }
+    void SetResourceId(CORE_NS::ResourceIdContext id) override
     {
         resourceId_ = BASE_NS::move(id);
     }
 
 private:
-    CORE_NS::ResourceId resourceId_;
+    CORE_NS::ResourceIdContext resourceId_;
 };
 
 META_END_NAMESPACE()

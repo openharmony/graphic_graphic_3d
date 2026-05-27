@@ -13,10 +13,11 @@
  * limitations under the License.
  */
 
-#if __OHOS__
-// #include <native_buffer/native_buffer.h>
-#endif
-#if __ANDROID__
+#if __OHOS_PLATFORM__
+#include <surface/native_buffer.h>
+#elif __OHOS__
+#include <native_buffer/native_buffer.h>
+#elif __ANDROID__
 #include <android/hardware_buffer.h>
 #endif
 
@@ -44,40 +45,122 @@ static void CopyImageFile(CORE_NS::IFileManager& manager, BASE_NS::string_view p
     ASSERT_TRUE(CopyFile(manager, BASE_NS::string(path) + name, file));
 }
 
-#ifdef DISABLED_TESTS_ON
 #ifdef _WIN32
 /**
  * @tc.name: ResourceReload
- * @tc.desc: Tests for Resource Reload. [AUTO-GENERATED]
+ * @tc.desc: Tests for Resource Reload. [AUTO-GENERATED], only valid in Windows currently
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ScenePluginImageTest, ResourceReload, testing::ext::TestSize.Level1)
-#else
-/**
- * @tc.name: ResourceReload
- * @tc.desc: Tests for Resource Reload. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_ScenePluginImageTest, DISABLED_ResourceReload, testing::ext::TestSize.Level1)
-#endif
 {
     CreateEmptyScene();
 
     auto& manager = context->GetRenderer()->GetEngine().GetFileManager();
     CopyImageFile(manager, "test://image_reload/1/", "image.png");
 
-    EXPECT_TRUE(resources->AddResource("image", ClassId::ImageResource.Id().ToUid(), "file://image_reload/image.png"));
-    auto image = interface_pointer_cast<IImage>(resources->GetResource("image"));
+    EXPECT_TRUE(resources->AddResource(
+        CORE_NS::ResourceIdContext{"image"}, ClassId::ImageResource.Id().ToUid(), "file://image_reload/image.png"));
+    auto image = interface_pointer_cast<IImage>(resources->GetResource(CORE_NS::ResourceIdContext{"image"}));
     ASSERT_TRUE(image);
 
-    EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2 { 1200, 1219 }));
+    EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2{1200, 1219}));
 
     CopyImageFile(manager, "test://image_reload/2/", "image.png");
     ASSERT_TRUE(resources->ReloadResource(interface_pointer_cast<CORE_NS::IResource>(image)));
 
-    EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2 { 252, 256 }));
+    EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2{252, 256}));
 }
-#endif // DISABLED_TESTS_ON
-} // namespace UTest
+#endif
+
+#if defined(__ANDROID__)
+UNIT_TEST_F(API_ScenePluginImageTest, DISABLED_CreateExternalImage, testing::ext::TestSize.Level1)
+#else
+UNIT_TEST_F(API_ScenePluginImageTest, CreateExternalImage, testing::ext::TestSize.Level1)
+#endif
+{
+#if defined(__ANDROID__)
+    AHardwareBuffer_Desc desc{4U,
+        4U,
+        1U,
+        AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+        AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY | AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,
+        0U,
+        0U,
+        0U};
+    AHardwareBuffer* buf;
+    AHardwareBuffer_allocate(&desc, &buf);
+    ASSERT_TRUE(buf);
+
+    AHardwareBuffer_describe(buf, &desc);
+#elif defined(__OHOS__)
+    OH_NativeBuffer_Config config{4,
+        4,
+        OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_YCBCR_420_SP,
+        OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_HW_TEXTURE,
+        8};
+    OH_NativeBuffer* buf = OH_NativeBuffer_Alloc(&config);
+    ASSERT_TRUE(buf);
+    OH_NativeBuffer_GetConfig(buf, &config);
+#else
+    char buf[1];  // This is not actually going anywhere
+#endif
+
+    scene = CreateEmptyScene();
+    auto ext = scene->CreateObject<IExternalImage>(ClassId::ExternalImage).GetResult();
+    ASSERT_TRUE(ext);
+    SCENE_NS::IExternalImage::ExternalBufferInfo buffer;
+
+    auto buffer_set = ext->SetExternalBuffer(buffer);
+
+#if defined(__ANDROID__)
+    ASSERT_TRUE(buffer_set);
+    AHardwareBuffer_release(buf);
+#elif defined(__OHOS__)
+    ASSERT_TRUE(buffer_set);
+    OH_NativeBuffer_Unreference(buf);
+#else
+    ASSERT_FALSE(buffer_set);
+#endif
+}
+
+/**
+ * @tc.name: CreateImage
+ * @tc.desc: Tests creating an image via IRenderResourceManager.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginImageTest, CreateImage, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto man = scene->CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager).GetResult();
+    ASSERT_TRUE(man);
+
+    ImageCreateInfo info;
+    info.size = {64, 64};
+    info.format = BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB;
+    auto image = man->CreateImage(info).GetResult();
+    ASSERT_TRUE(image);
+    EXPECT_EQ(image->Size()->GetValue(), (BASE_NS::Math::UVec2{64, 64}));
+}
+
+/**
+ * @tc.name: LoadImageFromFile
+ * @tc.desc: Tests loading an image from a test asset URI.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginImageTest, LoadImageFromFile, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto man = scene->CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager).GetResult();
+    ASSERT_TRUE(man);
+
+    auto image = man->LoadImage("test://images/logo.png").GetResult();
+    ASSERT_TRUE(image);
+
+    auto size = image->Size()->GetValue();
+    EXPECT_GT(size.x, 0u);
+    EXPECT_GT(size.y, 0u);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

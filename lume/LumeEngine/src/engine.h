@@ -33,9 +33,10 @@
 #include <core/plugin/intf_interface_helper.h>
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
+#include <core/threading/intf_thread_pool.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T1, class T2>
+template <class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
 
@@ -89,9 +90,9 @@ private:
     void UnloadPlugins();
     static bool TickFrame(IEcs& ecs, uint64_t totalTime, uint64_t deltaTime);
 
-    uint64_t firstTime_ { ~0u };
-    uint64_t previousFrameTime_ { ~0u };
-    uint64_t deltaTime_ { 1 };
+    uint64_t firstTime_{~uint64_t(0)};
+    uint64_t previousFrameTime_{~uint64_t(0)};
+    uint64_t deltaTime_{1};
 
     BASE_NS::unique_ptr<IPlatform> platform_;
 
@@ -102,9 +103,11 @@ private:
     BASE_NS::vector<BASE_NS::pair<PluginToken, const IEnginePlugin*>> plugins_;
     BASE_NS::vector<const InterfaceTypeInfo*> interfaceTypeInfos_;
 
+    IThreadPool::Ptr threadPool_;
+
     // unique counter for ECS objects
-    int32_t ecsCounter_ { 0 };
+    int32_t ecsCounter_{0};
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_ENGINE_H
+#endif  // CORE_ENGINE_H

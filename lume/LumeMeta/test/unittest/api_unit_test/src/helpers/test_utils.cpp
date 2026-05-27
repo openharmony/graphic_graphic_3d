@@ -47,10 +47,10 @@ std::ostream& operator<<(std::ostream& os, const BASE_NS::Uid& uid)
 {
     std::stringstream ss;
 
-    ss << "{" << std::setfill('0') << std::setw(2) << std::hex; // 2: param
+    ss << "{" << std::setfill('0') << std::setw(2) << std::hex;
     for (size_t i = 0; i < sizeof(uid.data); i++) {
         ss << static_cast<uint16_t>(uid.data[i]);
-        if (i == 3 || i == 5 || i == 7 || i == 9) { // 3: param, 5: param, 7: param, 9: param
+        if (i == 3 || i == 5 || i == 7 || i == 9) {
             ss << "-";
         }
     }
@@ -73,14 +73,14 @@ namespace Math {
 std::ostream& operator<<(std::ostream& os, const BASE_NS::Math::Vec3& vec)
 {
     std::stringstream ss;
-    ss << std::setprecision(6) << "BASE_NS::Math::Vec3 {" << vec.x << ", " << vec.y << ", " << vec.z << "}"; // 6: param
+    ss << std::setprecision(6) << "BASE_NS::Math::Vec3 {" << vec.x << ", " << vec.y << ", " << vec.z << "}";
     return os << ss.str();
 }
 
 std::ostream& operator<<(std::ostream& os, const BASE_NS::Math::Vec2& vec)
 {
     std::stringstream ss;
-    ss << std::setprecision(6) << "BASE_NS::Math::Vec2 {" << vec.x << ", " << vec.y << "}"; // 6： param
+    ss << std::setprecision(6) << "BASE_NS::Math::Vec2 {" << vec.x << ", " << vec.y << "}";
     return os << ss.str();
 }
 
@@ -124,8 +124,8 @@ bool operator<=(const BASE_NS::Math::Vec2& lhs, const BASE_NS::Math::Vec2& rhs)
     return ((lhs.x <= rhs.x) && (lhs.y <= rhs.y));
 }
 
-} // namespace Math
-} // namespace BASE_NS
+}  // namespace Math
+}  // namespace BASE_NS
 
 namespace META_NS {
 std::ostream& operator<<(std::ostream& os, const META_NS::TimeSpan& ts)
@@ -133,4 +133,4 @@ std::ostream& operator<<(std::ostream& os, const META_NS::TimeSpan& ts)
     return os << ts.ToMicroseconds() << "us";
 }
 
-} // namespace META_NS
+}  // namespace META_NS

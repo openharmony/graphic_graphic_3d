@@ -511,7 +511,7 @@ interface Shader : SceneResource {
     setShaderInputs(inputs: Record<string, ShaderInputType>): void {
         inputs.forEach((v: ShaderInputType, k: string) => {
             this.setInput(k, v);
-        })
+        });
     }
     """)
 

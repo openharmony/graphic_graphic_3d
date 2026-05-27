@@ -21,22 +21,15 @@
 #include <render/device/intf_shader_manager.h>
 #include <render/intf_render_context.h>
 
+#include "util/align_util.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-
-constexpr uint32_t Align(uint32_t value, uint32_t align)
-{
-    if (value == 0) {
-        return 0;
-    }
-    return ((value + align) / align) * align;
-}
-} // namespace
+constexpr uint32_t OFFSET_ALIGNMENT{PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE};
+}  // namespace
 
 RenderDataStoreShaderPasses::RenderDataStoreShaderPasses(
     const IRenderContext& /* renderContext */, const string_view name)
@@ -77,17 +70,29 @@ int32_t RenderDataStoreShaderPasses::GetRefCount()
 void RenderDataStoreShaderPasses::AddRenderData(
     const BASE_NS::string_view name, const BASE_NS::array_view<const RenderPassData> data)
 {
-    if ((!name.empty()) && (!data.empty())) {
-        const auto lock = std::lock_guard(mutex_);
+    if (name.empty() || data.empty()) {
+        return;
+    }
 
-        auto& ref = nameToRenderObjects_[name];
-        ref.rpData.append(data.begin(), data.end());
-        for (const auto& rpRef : ref.rpData) {
-            for (const auto& shaderRef : rpRef.shaderBinders) {
-                if (shaderRef) {
-                    ref.alignedPropertyByteSize += Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
-                }
+    const auto lock = std::lock_guard(mutex_);
+
+    auto& ref = nameToRenderObjects_[name];
+    ref.rpData.append(data.begin(), data.end());
+    bool overflow = false;
+    for (const auto& rpRef : ref.rpData) {
+        for (const auto& shaderRef : rpRef.shaderBinders) {
+            if (!shaderRef) {
+                continue;
             }
+            const uint32_t aligned = Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
+            if (ref.alignedPropertyByteSize > (UINT32_MAX - aligned)) {
+                overflow = true;
+                break;
+            }
+            ref.alignedPropertyByteSize += aligned;
+        }
+        if (overflow) {
+            break;
         }
     }
 }
@@ -95,17 +100,29 @@ void RenderDataStoreShaderPasses::AddRenderData(
 void RenderDataStoreShaderPasses::AddComputeData(
     const BASE_NS::string_view name, const BASE_NS::array_view<const ComputePassData> data)
 {
-    if ((!name.empty()) && (!data.empty())) {
-        const auto lock = std::lock_guard(mutex_);
+    if (name.empty() || data.empty()) {
+        return;
+    }
 
-        auto& ref = nameToComputeObjects_[name];
-        ref.cpData.append(data.begin(), data.end());
-        for (const auto& rpRef : ref.cpData) {
-            for (const auto& shaderRef : rpRef.shaderBinders) {
-                if (shaderRef) {
-                    ref.alignedPropertyByteSize += Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
-                }
+    const auto lock = std::lock_guard(mutex_);
+
+    auto& ref = nameToComputeObjects_[name];
+    ref.cpData.append(data.begin(), data.end());
+    bool overflow = false;
+    for (const auto& rpRef : ref.cpData) {
+        for (const auto& shaderRef : rpRef.shaderBinders) {
+            if (!shaderRef) {
+                continue;
             }
+            const uint32_t aligned = Align(shaderRef->GetPropertyBindingByteSize(), OFFSET_ALIGNMENT);
+            if (ref.alignedPropertyByteSize > (UINT32_MAX - aligned)) {
+                overflow = true;
+                break;
+            }
+            ref.alignedPropertyByteSize += aligned;
+        }
+        if (overflow) {
+            break;
         }
     }
 }
@@ -162,7 +179,7 @@ RenderDataStoreShaderPasses::PropertyBindingDataInfo RenderDataStoreShaderPasses
     const auto lock = std::lock_guard(mutex_);
 
     if (const auto iter = nameToRenderObjects_.find(name); iter != nameToRenderObjects_.cend()) {
-        return { iter->second.alignedPropertyByteSize };
+        return {iter->second.alignedPropertyByteSize};
     }
     return {};
 }
@@ -173,7 +190,7 @@ RenderDataStoreShaderPasses::PropertyBindingDataInfo RenderDataStoreShaderPasses
     const auto lock = std::lock_guard(mutex_);
 
     if (const auto iter = nameToComputeObjects_.find(name); iter != nameToComputeObjects_.cend()) {
-        return { iter->second.alignedPropertyByteSize };
+        return {iter->second.alignedPropertyByteSize};
     }
     return {};
 }

@@ -30,7 +30,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename EventType>
+template <typename EventType>
 struct EventImplTraits {
     static bool IsCompatibleInterface(const ICallable::Ptr& c)
     {
@@ -39,7 +39,7 @@ struct EventImplTraits {
         }
         return c->GetInterface(EventType::UID) != nullptr || c->GetInterface(IOnChanged::UID) != nullptr;
     }
-    template<typename... Args>
+    template <typename... Args>
     static void Call(const ICallable::Ptr& p, Args&... args)
     {
         if (const auto f = interface_pointer_cast<IFunction>(p)) {
@@ -64,31 +64,33 @@ struct EventImplTraits {
     }
 };
 
-template<typename BaseClass, typename signature = typename BaseClass::FunctionType>
+template <typename BaseClass, typename signature = typename BaseClass::FunctionType>
 class EventImpl;
 
 class GenericEvent {
 public:
     using Token = typename IEvent::Token;
 
-    GenericEvent(BASE_NS::string name) : name_(BASE_NS::move(name)) {}
-    GenericEvent(const GenericEvent& e) : handlers_(e.handlers_), name_(e.name_) {}
+    GenericEvent(BASE_NS::string name) : name_(BASE_NS::move(name))
+    {}
+    GenericEvent(const GenericEvent& e) : handlers_(e.handlers_), name_(e.name_)
+    {}
     virtual ~GenericEvent()
     {
         // check that the invocation doesn't destroy its event impl
-        CORE_ASSERT_MSG(threadId_ == CORE_NS::ThreadId {}, "Event not allowed to destroy itself when invoked");
+        CORE_ASSERT_MSG(threadId_ == CORE_NS::ThreadId{}, "Event not allowed to destroy itself when invoked");
     }
 
 protected:
     void ResetEvent()
     {
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         handlers_.clear();
     }
     Token AddEventHandler(const ICallable::Ptr& p, Token userToken)
     {
         Token newToken = userToken ? userToken : (uintptr_t)p.get();
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         for (auto it = handlers_.begin(); it != handlers_.end(); ++it) {
             if (newToken == it->token) {
                 // Already connected.
@@ -96,7 +98,7 @@ protected:
                 return newToken;
             }
         }
-        handlers_.push_back(HandlerData { newToken, p });
+        handlers_.push_back(HandlerData{newToken, p});
         return newToken;
     }
     void EnableEventHandler(Token p, bool enabled)
@@ -104,7 +106,7 @@ protected:
         if (p == 0) {
             return;
         }
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         for (auto it = handlers_.begin(); it != handlers_.end(); ++it) {
             if (p == it->token) {
                 if (!enabled) {
@@ -121,7 +123,7 @@ protected:
         if (p == 0) {
             return true;
         }
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         for (auto it = handlers_.begin(); it != handlers_.end(); ++it) {
             if (p == it->token) {
                 if (--it->count == 0) {
@@ -137,7 +139,7 @@ protected:
     }
     BASE_NS::vector<ICallable::ConstPtr> GetEventHandlers() const
     {
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         BASE_NS::vector<ICallable::ConstPtr> handlers;
         handlers.reserve(handlers_.size());
         for (auto&& p : handlers_) {
@@ -147,25 +149,25 @@ protected:
     }
     bool HasEventHandlers() const
     {
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         return !handlers_.empty();
     }
     BASE_NS::string GetName(const char* defaultName) const
     {
-        CORE_NS::UniqueLock lock { mutex_ };
+        CORE_NS::UniqueLock lock{mutex_};
         return name_.empty() ? BASE_NS::string(defaultName) : name_;
     }
     struct InvokeData {
-        size_t currentCallCount {};
+        size_t currentCallCount{};
         BASE_NS::vector<ICallable::WeakPtr> handlers;
-        bool resetThreadId { false };
+        bool resetThreadId{false};
     };
     bool BeginInvoke(InvokeData& d)
     {
-        if (threadId_ != CORE_NS::ThreadId {} && threadId_ != CORE_NS::CurrentThreadId()) {
+        if (threadId_ != CORE_NS::ThreadId{} && threadId_ != CORE_NS::CurrentThreadId()) {
             return false;
         }
-        d.resetThreadId = threadId_ == CORE_NS::ThreadId {};
+        d.resetThreadId = threadId_ == CORE_NS::ThreadId{};
         if (d.resetThreadId) {
             threadId_ = CORE_NS::CurrentThreadId();
         }
@@ -194,17 +196,17 @@ protected:
     struct HandlerData {
         Token token;
         ICallable::Ptr ptr;
-        std::uint16_t count { 1 };
-        std::uint16_t disabled {};
+        std::uint16_t count{1};
+        std::uint16_t disabled{};
     };
     BASE_NS::vector<HandlerData> handlers_;
-    size_t callCount_ {};
+    size_t callCount_{};
     BASE_NS::string name_;
     mutable CORE_NS::Mutex mutex_;
     mutable CORE_NS::ThreadId threadId_;
 };
 
-template<typename BaseClass, typename R, typename... ARG>
+template <typename BaseClass, typename R, typename... ARG>
 class EventImpl<BaseClass, R(ARG...)> final : public IntroduceInterfaces<BaseClass, IObject, IEvent, ICloneable>,
                                               public GenericEvent {
     static_assert(BASE_NS::is_void_v<R>, "EventHandler callable must return void");
@@ -219,10 +221,12 @@ class EventImpl<BaseClass, R(ARG...)> final : public IntroduceInterfaces<BaseCla
         return interface_pointer_cast<CORE_NS::IInterface>(p);
     }
 
-    EventImpl(const EventImpl& e) : GenericEvent(e) {}
+    EventImpl(const EventImpl& e) : GenericEvent(e)
+    {}
 
 public:
-    explicit EventImpl(BASE_NS::string name = {}) : GenericEvent(BASE_NS::move(name)) {}
+    explicit EventImpl(BASE_NS::string name = {}) : GenericEvent(BASE_NS::move(name))
+    {}
     ~EventImpl() override
     {
         Reset();
@@ -304,12 +308,13 @@ public:
         // this makes sure that it stays >0 until the end of the function)
         auto self = BASE_NS::refcnt_ptr<EventImpl>(this);
         // Take lock after refcnt_ptr to make sure that if we get destroyed at the end, the lock is released first
-        CORE_NS::UniqueLock lock { GenericEvent::mutex_ };
+        CORE_NS::UniqueLock lock{GenericEvent::mutex_};
         GenericEvent::InvokeData invoke;
         if (GenericEvent::BeginInvoke(invoke)) {
             auto& handlers = invoke.handlers;
             for (auto it = handlers.begin();
-                 it != handlers.end() && invoke.currentCallCount == GenericEvent::callCount_; ++it) {
+                 it != handlers.end() && invoke.currentCallCount == GenericEvent::callCount_;
+                 ++it) {
                 if (auto callable = it->lock()) {
                     lock.Unlock();
                     Traits::Call(callable, args...);

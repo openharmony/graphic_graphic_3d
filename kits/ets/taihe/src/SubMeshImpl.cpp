@@ -23,9 +23,7 @@ SubMeshImpl::SubMeshImpl(const std::shared_ptr<SubMeshETS> subMeshETS) : subMesh
 
 SubMeshImpl::~SubMeshImpl()
 {
-    if (subMeshETS_) {
-        subMeshETS_.reset();
-    }
+    subMeshETS_.reset();
 }
 
 ::taihe::string SubMeshImpl::getName()
@@ -47,13 +45,11 @@ void SubMeshImpl::setName(::taihe::string_view name)
 {
     if (!subMeshETS_) {
         WIDGET_LOGE("get material failed, internal submesh is null");
-        return ::SceneResources::VariousMaterial::make_pbr(
-            ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(nullptr));
+        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
     }
     std::shared_ptr<MaterialETS> matETS = subMeshETS_->GetMaterial();
     if (!matETS) {
-        return ::SceneResources::VariousMaterial::make_pbr(
-            ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(nullptr));
+        return ::SceneResources::VariousMaterial::make_pbr(::SceneResources::PBRMaterial({nullptr, nullptr}));
     }
     auto mat = ::taihe::make_holder<PBRMaterialImpl, ::SceneResources::PBRMaterial>(matETS);
     return ::SceneResources::VariousMaterial::make_pbr(mat);
@@ -73,7 +69,7 @@ void SubMeshImpl::setMaterial(::SceneResources::weak::Material mat)
         WIDGET_LOGE("set material failed, material is null");
         return;
     }
-    MaterialImpl *matImpl = reinterpret_cast<MaterialImpl *>(implOp.value());
+    MaterialImpl* matImpl = reinterpret_cast<MaterialImpl*>(implOp.value());
     if (matImpl == nullptr) {
         WIDGET_LOGE("set material failed, material is null");
         return;

@@ -26,9 +26,9 @@ CORE3D_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(IWaterRippleComponentManager, WaterRippleComponent)
-    /** Position is the offset from the center of an object to its ripple component,
-        if the ripple component touch the water surface then a ripple is generated. */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, position, "Position", 0, ARRAY_VALUE(0, 0, 0))
+/** Position is the offset from the center of an object to its ripple component,
+    if the ripple component touch the water surface then a ripple is generated. */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, position, "Position", 0, ARRAY_VALUE(0, 0, 0))
 
 END_COMPONENT(IWaterRippleComponentManager, WaterRippleComponent, "5081aabb-2013-ffff-b9bb-23041e73bc3d")
 #if !defined(IMPLEMENT_MANAGER)

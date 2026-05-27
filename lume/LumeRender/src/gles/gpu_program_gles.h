@@ -31,7 +31,7 @@ class DeviceGLES;
 class ShaderModuleGLES;
 struct PushConstantReflection;
 struct OES_Bind {
-    uint8_t set { 0 }, bind { 0 };
+    uint8_t set{0}, bind{0};
 };
 struct Slice {
     uint16_t index;
@@ -58,13 +58,13 @@ struct ResourcesView {
     BASE_NS::array_view<uint8_t> ids;
 };
 struct GpuShaderProgramPlatformDataGL final {
-    uint32_t program { 0 };
-    int32_t flipLocation { Gles::INVALID_LOCATION };
+    uint32_t program{0};
+    int32_t flipLocation{Gles::INVALID_LOCATION};
     ResourcesView resourcesView;
     BASE_NS::array_view<Gles::PushConstantReflection> pushConstants;
-    int32_t inputs[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES] {};
-    const ShaderModuleGLES* vertShaderModule_ { nullptr };
-    const ShaderModuleGLES* fragShaderModule_ { nullptr };
+    int32_t inputs[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES]{};
+    const ShaderModuleGLES* vertShaderModule_{nullptr};
+    const ShaderModuleGLES* fragShaderModule_{nullptr};
 };
 
 class GpuShaderProgramGLES final : public GpuShaderProgram {
@@ -99,11 +99,11 @@ private:
 };
 
 struct GpuComputeProgramPlatformDataGL final {
-    uint32_t program { 0 };
-    int32_t flipLocation { Gles::INVALID_LOCATION };
+    uint32_t program{0};
+    int32_t flipLocation{Gles::INVALID_LOCATION};
     ResourcesView resourcesView;
     BASE_NS::array_view<Gles::PushConstantReflection> pushConstants;
-    const ShaderModuleGLES* module_ { nullptr };
+    const ShaderModuleGLES* module_{nullptr};
 };
 
 class GpuComputeProgramGLES final : public GpuComputeProgram {
@@ -128,4 +128,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_GPU_PROGRAM_GLES_H
+#endif  // GLES_GPU_PROGRAM_GLES_H

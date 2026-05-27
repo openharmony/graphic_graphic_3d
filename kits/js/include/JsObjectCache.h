@@ -18,6 +18,7 @@
 
 #include <meta/interface/intf_object.h>
 #include <napi_api.h>
+#include "export.h"
 
 /**
  * @brief Fetch a JS object from the cache if it's there.
@@ -25,9 +26,9 @@
  * @param name An identifier to separate multiple JS objects wrapping the same native.
  * @return The JS object wrapping the native one. If none found, a JS object with a JS null as value.
  */
-NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_view name = "_JSW");
+SCENE_ADDON_PUBLIC NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_view name = "_JSW");
 
-template<typename t>
+template <typename t>
 NapiApi::Object FetchJsObj(const t& obj, BASE_NS::string_view name = "_JSW")
 {
     return FetchJsObj(interface_pointer_cast<META_NS::IObject>(obj));
@@ -40,7 +41,7 @@ NapiApi::Object FetchJsObj(const t& obj, BASE_NS::string_view name = "_JSW")
  * @param name An identifier to separate multiple JS objects wrapping the same native.
  * @return The stored JS object. If an error occurred, a JS object with a JS null as value.
  */
-NapiApi::Object StoreJsObj(
+SCENE_ADDON_PUBLIC NapiApi::Object StoreJsObj(
     const META_NS::IObject::Ptr& obj, const NapiApi::Object& jsObj, BASE_NS::string_view name = "_JSW");
 
 /**
@@ -48,6 +49,6 @@ NapiApi::Object StoreJsObj(
  * @param obj The native object wrapped by jsObj.
  * @param name An identifier to separate multiple JS objects wrapping the same native.
  */
-void DetachJsObj(META_NS::IObject::Ptr& obj, BASE_NS::string_view name /*= "_JSW"*/);
+SCENE_ADDON_PUBLIC void DetachJsObj(META_NS::IObject::Ptr& obj, BASE_NS::string_view name /*= "_JSW"*/);
 
 #endif

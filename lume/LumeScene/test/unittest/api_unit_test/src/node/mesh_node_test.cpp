@@ -37,7 +37,7 @@ public:
         }
 
         size_t i = 0;
-        for (auto&& alphaCutoff : { 1.2345f, 2.3456f, 3.4567f }) {
+        for (auto&& alphaCutoff : {1.2345f, 2.3456f, 3.4567f}) {
             auto material = CreateMaterial();
             material->AlphaCutoff()->SetValue(alphaCutoff);
             mesh->SubMeshes()->GetValueAt(i++)->Material()->SetValue(material);
@@ -46,7 +46,7 @@ public:
 
     void CheckEquals(const BASE_NS::vector<ISubMesh::Ptr>& a) const
     {
-        BASE_NS::vector<float> alphaCutoff { 1.2345f, 2.3456f, 3.4567f };
+        BASE_NS::vector<float> alphaCutoff{1.2345f, 2.3456f, 3.4567f};
         ASSERT_EQ(a.size(), alphaCutoff.size());
         for (auto i = 0; i < a.size(); i++) {
             auto actual = a.at(i)->Material()->GetValue()->AlphaCutoff()->GetValue();
@@ -332,6 +332,87 @@ UNIT_TEST_F(API_ScenePluginMeshNodeTest, ImportMeshNode, testing::ext::TestSize.
     ASSERT_TRUE(!subs.empty());
 }
 
-} // namespace UTest
+/**
+ * @tc.name: MaterialOverrideNewSubmesh
+ * @tc.desc: Test that material override propagates to newly added submeshes via loaded scene.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshNodeTest, MaterialOverrideNewSubmesh, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto n = scene->FindNode<IMesh>("///AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    // Force SubMeshes initialization
+    auto subs = n->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto meshAcc = interface_cast<IMeshAccess>(n);
+    ASSERT_TRUE(meshAcc);
+    auto innerMesh = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(innerMesh);
+
+    // Set material override on the inner mesh
+    auto overrideMat = CreateMaterial();
+    overrideMat->AlphaCutoff()->SetValue(7.777f);
+    auto overrideIf = interface_cast<IMaterialOverride>(innerMesh);
+    ASSERT_TRUE(overrideIf);
+    overrideIf->SetMaterialOverride(overrideMat);
+    UpdateScene();
+
+    // Verify override is set
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), overrideMat);
+}
+
+/**
+ * @tc.name: MaterialOverrideSwitchMaterial
+ * @tc.desc: Test switching material override to a different material.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshNodeTest, MaterialOverrideSwitchMaterial, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto n = scene->FindNode<IMesh>("///AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    // Force SubMeshes initialization
+    auto subs = n->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto meshAcc = interface_cast<IMeshAccess>(n);
+    ASSERT_TRUE(meshAcc);
+    auto innerMesh = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(innerMesh);
+
+    auto overrideIf = interface_cast<IMaterialOverride>(innerMesh);
+    ASSERT_TRUE(overrideIf);
+
+    // Set first override
+    auto mat1 = CreateMaterial();
+    mat1->AlphaCutoff()->SetValue(1.111f);
+    overrideIf->SetMaterialOverride(mat1);
+    UpdateScene();
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), mat1);
+
+    // Switch to different override material (exercises update-existing-override path in submesh)
+    auto mat2 = CreateMaterial();
+    mat2->AlphaCutoff()->SetValue(2.222f);
+    overrideIf->SetMaterialOverride(mat2);
+    UpdateScene();
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), mat2);
+
+    // Reset override
+    overrideIf->SetMaterialOverride(nullptr);
+    UpdateScene();
+    EXPECT_FALSE(overrideIf->GetMaterialOverride());
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

@@ -33,7 +33,7 @@ namespace UTest {
 
 class API_ScenePluginCameraComponentTest : public ScenePluginComponentTest<CORE3D_NS::ICameraComponentManager> {
 public:
-    template<class T>
+    template <class T>
     void TestICameraPropertyGetters(T* camera)
     {
         EXPECT_TRUE(camera->IsActive());
@@ -141,16 +141,16 @@ UNIT_TEST_F(API_ScenePluginCameraComponentTest, Members, testing::ext::TestSize.
         "MSAASampleCount", CameraSampleCount::COUNT_2, nativeComponent.msaaSampleCount);
     TestEngineProperty<uint32_t>("SceneFlags", 12345, nativeComponent.sceneFlags);
     TestEngineProperty<uint32_t>("PipelineFlags", 2, nativeComponent.pipelineFlags);
-    TestEngineProperty<BASE_NS::Math::Vec4>("Viewport", { 0.7, 1.0, 2.0, 0.5 }, nativeComponent.viewport);
-    TestEngineProperty<BASE_NS::Math::Vec4>("Scissor", { 0.7, 1.0, 2.0, 0.5 }, nativeComponent.scissor);
-    TestEngineProperty<BASE_NS::Math::UVec2>("RenderTargetSize", { 12345, 12345 }, nativeComponent.renderResolution);
-    TestEngineProperty<BASE_NS::Math::Vec4>("ClearColor", { 0.5, 0.5, 0.5, 0 }, nativeComponent.clearColorValue);
+    TestEngineProperty<BASE_NS::Math::Vec4>("Viewport", {0.7, 1.0, 2.0, 0.5}, nativeComponent.viewport);
+    TestEngineProperty<BASE_NS::Math::Vec4>("Scissor", {0.7, 1.0, 2.0, 0.5}, nativeComponent.scissor);
+    TestEngineProperty<BASE_NS::Math::UVec2>("RenderTargetSize", {256, 256}, nativeComponent.renderResolution);
+    TestEngineProperty<BASE_NS::Math::Vec4>("ClearColor", {0.5, 0.5, 0.5, 0}, nativeComponent.clearColorValue);
     TestEngineProperty<float>("ClearDepth", 0.7, nativeComponent.clearDepthValue);
     TestEngineProperty<float>("DownsamplePercentage", 0.7, nativeComponent.screenPercentage);
     TestEngineProperty<uint64_t>("CameraLayerMask", 4, nativeComponent.layerMask);
 
     TestEngineProperty<BASE_NS::Math::Mat4X4>(
-        "CustomProjectionMatrix", BASE_NS::Math::Mat4X4 { 2.0 }, nativeComponent.customProjectionMatrix);
+        "CustomProjectionMatrix", BASE_NS::Math::Mat4X4{2.0}, nativeComponent.customProjectionMatrix);
 
     {
         auto pp = scene->CreateObject<IPostProcess>(ClassId::PostProcess).GetResult();
@@ -165,7 +165,7 @@ UNIT_TEST_F(API_ScenePluginCameraComponentTest, Members, testing::ext::TestSize.
     }
     {
         auto p = GetArrayProperty<ColorFormat>("ColorTargetCustomization");
-        BASE_NS::vector<ColorFormat> value { { BASE_NS::BASE_FORMAT_R8_UNORM }, { BASE_NS::BASE_FORMAT_R8_UINT } };
+        BASE_NS::vector<ColorFormat> value{{BASE_NS::BASE_FORMAT_R8_UNORM}, {BASE_NS::BASE_FORMAT_R8_UINT}};
         p->SetValue(value);
         UpdateComponentMembers();
         auto res = p->GetValue();
@@ -214,6 +214,41 @@ UNIT_TEST_F(API_ScenePluginCameraComponentTest, Functions, testing::ext::TestSiz
 }
 
 /**
+ * @tc.name: Properties
+ * @tc.desc: Check property enumeration API.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginCameraComponentTest, Properties, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//test", ClassId::CameraNode).GetResult();
+    SetComponent(node, "CameraComponent");
+    auto component = interface_cast<IComponent>(object);
+    ASSERT_TRUE(component);
+    auto props = component->EnumerateProperties();
+    ASSERT_FALSE(props.empty());
+    auto m = scene->GetInternalScene()->GetEcsContext().FindComponent("CameraComponent");
+    ASSERT_TRUE(m);
+    ASSERT_EQ(props.size(), m->GetPropertyApi().PropertyCount());
+    bool foundXOffset = false;
+    bool foundZFar = false;
+    for (auto&& p : props) {
+        if (p.name == "CameraComponent.xOffset") {
+            EXPECT_EQ(p.type.name, "float");
+            foundXOffset = true;
+        }
+        // EnumerateProperties must return ECS native names, not static metadata names
+        if (p.name == "CameraComponent.zFar") {
+            EXPECT_EQ(p.type.name, "float");
+            foundZFar = true;
+        }
+        EXPECT_NE(p.name, "FarPlane") << "EnumerateProperties should return ECS names, not static names";
+    }
+    ASSERT_TRUE(foundXOffset);
+    ASSERT_TRUE(foundZFar);
+}
+
+/**
  * @tc.name: IsActive
  * @tc.desc: Tests for Is Active. [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -240,6 +275,118 @@ UNIT_TEST_F(API_ScenePluginCameraComponentTest, IsActive, testing::ext::TestSize
     }
 }
 
-} // namespace UTest
+/**
+ * @tc.name: NodeFirstThenPopulate
+ * @tc.desc: Access typed property via ICamera, then PopulateAllProperties — no duplicate for same ECS path.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginCameraComponentTest, NodeFirstThenPopulate, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//test", ClassId::CameraNode).GetResult();
+    auto camera = interface_cast<ICamera>(node);
+    ASSERT_TRUE(camera);
+
+    // Access FarPlane via typed node — triggers lazy engine value binding
+    auto farPlaneProp = camera->FarPlane();
+    ASSERT_TRUE(farPlaneProp);
+    farPlaneProp->SetValue(500.f);
+
+    // Now populate all properties via component interface
+    SetComponent(node, "CameraComponent");
+    auto component = interface_cast<IComponent>(object);
+    ASSERT_TRUE(component);
+    EXPECT_TRUE(component->PopulateAllProperties());
+
+    // Count properties bound to "CameraComponent.zFar"
+    auto meta = interface_cast<META_NS::IMetadata>(object);
+    ASSERT_TRUE(meta);
+    int zFarCount = 0;
+    for (auto&& p : meta->GetProperties()) {
+        auto ev = META_NS::GetEngineValueFromProperty(p);
+        if (ev && ev->GetName() == "CameraComponent.zFar") {
+            ++zFarCount;
+        }
+    }
+    EXPECT_EQ(zFarCount, 1) << "Duplicate property for CameraComponent.zFar";
+
+    // Verify GetProperty by engine path returns the typed property
+    auto found = meta->GetProperty<float>("CameraComponent.zFar");
+    ASSERT_TRUE(found);
+    EXPECT_EQ(found->GetValue(), 500.f);
+
+    // Verify bidirectional sync
+    found->SetValue(999.f);
+    EXPECT_EQ(farPlaneProp->GetValue(), 999.f);
+}
+
+/**
+ * @tc.name: PopulateFirstThenNode
+ * @tc.desc: PopulateAllProperties first, then access via typed node — no duplicate.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginCameraComponentTest, PopulateFirstThenNode, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//test", ClassId::CameraNode).GetResult();
+    SetComponent(node, "CameraComponent");
+
+    // Populate all component properties first
+    auto component = interface_cast<IComponent>(object);
+    ASSERT_TRUE(component);
+    EXPECT_TRUE(component->PopulateAllProperties());
+
+    // Now access FarPlane via typed node
+    auto camera = interface_cast<ICamera>(node);
+    ASSERT_TRUE(camera);
+    auto farPlaneProp = camera->FarPlane();
+    ASSERT_TRUE(farPlaneProp);
+
+    // Count properties bound to "CameraComponent.zFar"
+    auto meta = interface_cast<META_NS::IMetadata>(object);
+    ASSERT_TRUE(meta);
+    int zFarCount = 0;
+    for (auto&& p : meta->GetProperties()) {
+        auto ev = META_NS::GetEngineValueFromProperty(p);
+        if (ev && ev->GetName() == "CameraComponent.zFar") {
+            ++zFarCount;
+        }
+    }
+    EXPECT_EQ(zFarCount, 1) << "Duplicate property for CameraComponent.zFar";
+
+    // Verify sync works
+    farPlaneProp->SetValue(750.f);
+    UpdateComponentMembers();
+    EXPECT_FLOAT_EQ(nativeComponent.zFar, 750.f);
+}
+
+/**
+ * @tc.name: GetPropertyByEnginePath
+ * @tc.desc: Verify GetProperty resolves engine paths to typed properties and returns nullptr for invalid paths.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginCameraComponentTest, GetPropertyByEnginePath, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//test", ClassId::CameraNode).GetResult();
+    SetComponent(node, "CameraComponent");
+
+    auto meta = interface_cast<META_NS::IMetadata>(object);
+    ASSERT_TRUE(meta);
+
+    // Should find "FarPlane" property via engine path "CameraComponent.zFar"
+    auto found = meta->GetProperty("CameraComponent.zFar");
+    ASSERT_TRUE(found);
+    EXPECT_EQ(found->GetName(), "FarPlane");
+
+    // Should return nullptr for non-existent paths
+    auto notFound = meta->GetProperty("CameraComponent.nonExistent");
+    EXPECT_FALSE(notFound);
+
+    auto notFound2 = meta->GetProperty("InvalidComponent.field");
+    EXPECT_FALSE(notFound2);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

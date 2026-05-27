@@ -28,7 +28,7 @@
 
 BASE_BEGIN_NAMESPACE()
 struct Uid;
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -248,14 +248,14 @@ protected:
 
 // Helper method to fetch managers by name
 /** Get manager */
-template<class T>
+template <class T>
 T* GetManager(const CORE_NS::IEcs& ecs)
 {
     return static_cast<T*>(ecs.GetComponentManager(T::UID));
 }
 
 /** Get system */
-template<class T>
+template <class T>
 T* GetSystem(const CORE_NS::IEcs& ecs)
 {
     return static_cast<T*>(ecs.GetSystem(T::UID));
@@ -263,4 +263,4 @@ T* GetSystem(const CORE_NS::IEcs& ecs)
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_IECS_H
+#endif  // API_CORE_ECS_IECS_H

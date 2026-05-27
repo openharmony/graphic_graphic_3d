@@ -29,8 +29,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class RenderConfiguration : public META_NS::IntroduceInterfaces<
-    Component, IRenderConfiguration, ICreateEntity, META_NS::IPropertyOwner, META_NS::IMetadataOwner> {
+class RenderConfiguration : public META_NS::IntroduceInterfaces<Component, IRenderConfiguration, ICreateEntity,
+                                META_NS::IPropertyOwner, META_NS::IMetadataOwner> {
     META_OBJECT(RenderConfiguration, ClassId::RenderConfiguration, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
@@ -45,7 +45,7 @@ public:
     SCENE_STATIC_PROPERTY_DATA(
         IRenderConfiguration, float, VariablePcfRadius, "RenderConfigurationComponent.vpcfRadius")
     SCENE_STATIC_PROPERTY_DATA(
-        IRenderConfiguration, int32_t, VariablePcfSampleCount, "RenderConfigurationComponent.vpcfSampleCount")
+        IRenderConfiguration, uint32_t, VariablePcfSampleCount, "RenderConfigurationComponent.vpcfSampleCount")
     SCENE_STATIC_PROPERTY_DATA(
         IRenderConfiguration, SceneShadowQuality, ShadowQuality, "RenderConfigurationComponent.shadowQuality")
     SCENE_STATIC_PROPERTY_DATA(
@@ -61,16 +61,16 @@ public:
     META_IMPLEMENT_PROPERTY(SceneShadowSmoothness, ShadowSmoothness)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec2, ShadowResolution)
     META_IMPLEMENT_PROPERTY(float, VariablePcfRadius)
-    META_IMPLEMENT_PROPERTY(int32_t, VariablePcfSampleCount)
+    META_IMPLEMENT_PROPERTY(uint32_t, VariablePcfSampleCount)
 
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     BASE_NS::string GetName() const override;
 
-protected: // IMetadataOwner
+protected:  // IMetadataOwner
     void OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i) override;
 
-protected: // IPropertyOwner
+protected:  // IPropertyOwner
     void OnPropertyChanged(const META_NS::IProperty& property) override;
 
 private:

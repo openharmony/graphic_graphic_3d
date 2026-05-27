@@ -37,7 +37,7 @@ public:
 
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
-    void ExecuteFrame(IRenderCommandList& cmdList) override {};
+    void ExecuteFrame(IRenderCommandList& cmdList) override{};
     ExecuteFlags GetExecuteFlags() const override
     {
         // no work in execute
@@ -45,7 +45,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "7c5b99c1-7b2f-4c9f-af9a-80cbf24efbbf" };
+    static constexpr BASE_NS::Uid UID{"7c5b99c1-7b2f-4c9f-af9a-80cbf24efbbf"};
     static constexpr const char* TYPE_NAME = "RenderNodeCreateGpuBuffers";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -53,7 +53,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
 
@@ -74,4 +74,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_CREATE_GPU_BUFFERS_H
+#endif  // RENDER_NODE_RENDER_NODE_CREATE_GPU_BUFFERS_H

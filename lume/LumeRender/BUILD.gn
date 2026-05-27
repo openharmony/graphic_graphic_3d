@@ -41,6 +41,15 @@ config("lume_render_api") {
       "RENDER_HAS_VULKAN_BACKEND=1"
     ]
   }
+
+  if (RENDER_BUILD_MALEOON) {
+    defines += [
+      "RENDER_HAS_MALEOON_BACKEND=1",
+      "MLN_USE_64_BIT_PTR_DEFINES=1",
+      "MLNVK_VALIDATION=0",
+      "RENDER_MALEOON_RT_ENABLED=0",
+    ]
+  }
 }
 
 config("lume_render_config") {
@@ -115,11 +124,9 @@ config("lume_render_config") {
     }
   }
 
-
   ldflags = [
     "-Wl,--undefined=AGPRender_StaticPlugin"
   ]
-
   cflags = [
     "-Wno-nullability-completeness",
     "-Wno-ignored-qualifiers",
@@ -132,10 +139,14 @@ ohos_source_set("lume_render_src") {
     ":lume_render_config",
   ]
   deps = []
-  external_deps = []
+  external_deps = [
+    "init:libbegetutil",
+  ]
+  include_dirs = []
 
   sources = [
     "src/plugin/static_plugin.cpp",
+    "src/plugin/static_registry.cpp",
     "version.cpp",
     "src/datastore/render_data_store_default_acceleration_structure_staging.cpp",
     "src/datastore/render_data_store_default_acceleration_structure_staging.h",
@@ -411,7 +422,45 @@ ohos_source_set("lume_render_src") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
-      "vma:vma"
+    ]
+  }
+
+  if (RENDER_BUILD_MALEOON) {
+    include_dirs += [
+      "//foundation/graphic/graphic_3d/maleoon_header/include",
+      "src/maleoon",
+    ]
+    sources += [
+      # Maleoon backend wrapper (AGP DeviceMln layer)
+      "src/maleoon/mln_convert.h",
+      "src/maleoon/device_mln.cpp",
+      "src/maleoon/device_mln.h",
+      "src/maleoon/gpu_buffer_mln.cpp",
+      "src/maleoon/gpu_buffer_mln.h",
+      "src/maleoon/gpu_image_mln.cpp",
+      "src/maleoon/gpu_image_mln.h",
+      "src/maleoon/gpu_sampler_mln.cpp",
+      "src/maleoon/gpu_sampler_mln.h",
+      "src/maleoon/gpu_semaphore_mln.cpp",
+      "src/maleoon/gpu_semaphore_mln.h",
+      "src/maleoon/shader_module_mln.cpp",
+      "src/maleoon/shader_module_mln.h",
+      "src/maleoon/gpu_program_mln.cpp",
+      "src/maleoon/gpu_program_mln.h",
+      "src/maleoon/pipeline_state_object_mln.cpp",
+      "src/maleoon/pipeline_state_object_mln.h",
+      "src/maleoon/render_frame_sync_mln.cpp",
+      "src/maleoon/render_frame_sync_mln.h",
+      "src/maleoon/node_context_descriptor_set_manager_mln.cpp",
+      "src/maleoon/node_context_descriptor_set_manager_mln.h",
+      "src/maleoon/descriptor_set_manager_mln.cpp",
+      "src/maleoon/descriptor_set_manager_mln.h",
+      "src/maleoon/node_context_pool_manager_mln.cpp",
+      "src/maleoon/node_context_pool_manager_mln.h",
+      "src/maleoon/swapchain_mln.cpp",
+      "src/maleoon/swapchain_mln.h",
+      "src/maleoon/render_backend_mln.cpp",
+      "src/maleoon/render_backend_mln.h",
     ]
   }
 
@@ -441,6 +490,7 @@ ohos_source_set("lume_render_src") {
   external_deps += [
     "c_utils:utils",
     "graphic_surface:surface",
+    "hitrace:hitrace_meter",
     "skia:skia_canvaskit",
   ]
 
@@ -539,7 +589,6 @@ ohos_source_set("lume_render_src_plugin") {
   ]
   sources = [
     "src/plugin/dynamic_plugin.cpp",
-    "src/plugin/dynamic_registry.cpp",
   ]
 
   configs = [

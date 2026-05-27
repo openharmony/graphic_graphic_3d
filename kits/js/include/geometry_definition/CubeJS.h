@@ -37,9 +37,9 @@ public:
 private:
     explicit CubeJS(const BASE_NS::Math::Vec3& size);
 
-    BASE_NS::Math::Vec3 size_ {};
+    BASE_NS::Math::Vec3 size_{};
 };
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition
 
 #endif

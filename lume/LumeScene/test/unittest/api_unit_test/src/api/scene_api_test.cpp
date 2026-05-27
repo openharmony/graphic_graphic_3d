@@ -62,7 +62,7 @@ public:
 class ApiBehavior : public META_NS::Behavior<IApiBehavior, IInputReceiver> {
     META_OBJECT(ApiBehavior, ::ClassId::ApiBehavior, Behavior)
 public:
-protected: // IInputReceiver
+protected:  // IInputReceiver
     void OnInput(PointerEvent& event) override
     {
         if (event.pointers.size()) {
@@ -75,7 +75,7 @@ protected: // IInputReceiver
         event.handled = !propagate_;
     }
 
-protected: // IApiBehavior
+protected:  // IApiBehavior
     uint32_t GetInputEventDownCount() const override
     {
         return downCount_;
@@ -90,9 +90,9 @@ protected: // IApiBehavior
     }
 
 private:
-    uint32_t downCount_ {};
-    uint32_t upCount_ {};
-    bool propagate_ { true };
+    uint32_t downCount_{};
+    uint32_t upCount_{};
+    bool propagate_{true};
 };
 
 class API_SceneApiTest : public ScenePluginTest {
@@ -143,8 +143,8 @@ protected:
     static constexpr auto INVALID_SHADER_URI = "test://this/is/a/nonexistent.shader";
 
 private:
-    Node parent_ { nullptr };
-    Scene scene_ { nullptr };
+    Node parent_{nullptr};
+    Scene scene_{nullptr};
 };
 
 using META_NS::Async;
@@ -355,14 +355,20 @@ UNIT_TEST_F(API_SceneApiTest, GetComponent, testing::ext::TestSize.Level1)
     camera.SetFoV(42.f);
     auto component = scene.GetComponent(camera, "CameraComponent");
     EXPECT_EQ(component.GetName(), "CameraComponent");
-    auto properties = META_NS::Metadata(component).GetProperties();
-    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("CameraComponent.yFov")));
-    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("CameraComponent.customProjectionMatrix")));
-    auto fov = META_NS::Metadata(component).GetProperty<float>("CameraComponent.yFov");
+    auto meta = META_NS::Metadata(component);
+    auto properties = meta.GetProperties();
+    // Property names should conform to the names defined in CameraComponent static metadata
+    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("FoV")));
+    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("CustomProjectionMatrix")));
+    // Verify engine-path lookup resolves to the correct static properties
+    auto fov = meta.GetProperty<float>("CameraComponent.yFov");
     ASSERT_TRUE(fov);
+    EXPECT_EQ(meta.GetProperty("FoV"), meta.GetProperty("CameraComponent.yFov"));
     EXPECT_EQ(GetValue(fov), 42.f);
     SetValue(fov, 21.f);
     EXPECT_EQ(camera.GetFoV(), 21.f);
+    EXPECT_TRUE(meta.GetProperty<float>("CameraComponent.aspect"));
+    EXPECT_TRUE(meta.GetProperty("CameraComponent.customProjectionMatrix"));
 }
 
 /**
@@ -412,10 +418,13 @@ UNIT_TEST_F(API_SceneApiTest, CreateComponent, testing::ext::TestSize.Level1)
     auto properties = META_NS::Metadata(component).GetProperties();
     EXPECT_EQ(properties.size(), 14);
 
-    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("LightComponent.type")));
-    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("LightComponent.shadowLayerMask")));
+    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("Type")));
+    EXPECT_THAT(properties, ::testing::Contains(NameMatcher("ShadowLayerMask")));
+    // Verify engine-path lookup resolves to the correct static properties
+    EXPECT_TRUE(META_NS::Metadata(component).GetProperty("LightComponent.type"));
+    EXPECT_TRUE(META_NS::Metadata(component).GetProperty("LightComponent.shadowLayerMask"));
 
-    auto color = META_NS::Metadata(component).GetProperty<BASE_NS::Math::Vec3>("LightComponent.color");
+    auto color = META_NS::Metadata(component).GetProperty<BASE_NS::Color>("LightComponent.color");
     ASSERT_TRUE(color);
     auto value = META_NS::GetValue(color);
     EXPECT_EQ(value.x, 1.f);
@@ -560,16 +569,16 @@ UNIT_TEST_F(API_SceneApiTest, NodeTransform, testing::ext::TestSize.Level1)
     auto transform = mc.GetProperty<BASE_NS::Math::Mat4X4>("matrix");
     ASSERT_TRUE(mc);
 
-    uint32_t changed {};
+    uint32_t changed{};
     META_NS::PropertyChangedEventHandler h;
     h.Subscribe(transform, [&]() { changed++; });
 
     auto quat = BASE_NS::Math::Euler(45.f, 45.f, 45.f);
     // Set rotation on root node of our scene
     scene.GetRootNode().SetRotation(quat);
-    EXPECT_EQ(changed, 0); // No change event yet as scene hasn't been updated
+    EXPECT_EQ(changed, 0);  // No change event yet as scene hasn't been updated
     UpdateScene();
-    EXPECT_EQ(changed, 1); // Should have received a change event for the property when scene was updated
+    EXPECT_EQ(changed, 1);  // Should have received a change event for the property when scene was updated
 
     // Get the TRS of our child node, it has no transform of its own so such now match the root
     // node's oritentation we set above
@@ -616,7 +625,7 @@ UNIT_TEST_F(API_SceneApiTest, LoadShaderAsync, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_SceneApiTest, MetallicRoughnessMaterial, testing::ext::TestSize.Level1)
 {
     auto factory = GetScene().GetResourceFactory();
-    auto material = MetallicRoughnessMaterial(factory.CreateMaterial({ "material", MaterialType::METALLIC_ROUGHNESS }));
+    auto material = MetallicRoughnessMaterial(factory.CreateMaterial({"material", MaterialType::METALLIC_ROUGHNESS}));
     ASSERT_TRUE(material);
     EXPECT_EQ(material.GetType(), MaterialType::METALLIC_ROUGHNESS);
 
@@ -644,7 +653,7 @@ UNIT_TEST_F(API_SceneApiTest, Sampler, testing::ext::TestSize.Level1)
 {
     auto& scene = GetScene();
     auto factory = scene.GetResourceFactory();
-    auto material = MetallicRoughnessMaterial(factory.CreateMaterial({ "material", MaterialType::METALLIC_ROUGHNESS }));
+    auto material = MetallicRoughnessMaterial(factory.CreateMaterial({"material", MaterialType::METALLIC_ROUGHNESS}));
     ASSERT_TRUE(material);
     EXPECT_EQ(material.GetType(), MaterialType::METALLIC_ROUGHNESS);
 
@@ -677,30 +686,30 @@ UNIT_TEST_F(API_SceneApiTest, Sampler, testing::ext::TestSize.Level1)
         return iss->GetRenderContext().GetDevice().GetGpuResourceManager().GetSamplerDescriptor(rhr);
     };
     // Should be null at this point since we have not set anything
-    EXPECT_EQ(getSampler(), CORE_NS::EntityReference {});
+    EXPECT_EQ(getSampler(), CORE_NS::EntityReference{});
 
     // Set mag filter, this should cause a new RenderHandleReference to be created and therefore a valid
     // EntityReference to be set in the material
     sampler.SetMagFilter(SamplerFilter::NEAREST);
     UpdateScene();
-    EXPECT_NE(getSampler(), CORE_NS::EntityReference {});
+    EXPECT_NE(getSampler(), CORE_NS::EntityReference{});
     EXPECT_EQ(getSamplerDescriptor().magFilter, RENDER_NS::Filter::CORE_FILTER_NEAREST);
 
     // Reset the sampler, should return back to null EntityReference
     sampler.ResetObject();
     UpdateScene();
-    EXPECT_EQ(getSampler(), CORE_NS::EntityReference {});
+    EXPECT_EQ(getSampler(), CORE_NS::EntityReference{});
     EXPECT_EQ(sampler.GetMagFilter(), SamplerFilter::LINEAR);
 
     // Set sampler to non-default, should create a new sampler
     sampler.SetMagFilter(SamplerFilter::NEAREST);
     UpdateScene();
-    EXPECT_NE(getSampler(), CORE_NS::EntityReference {});
+    EXPECT_NE(getSampler(), CORE_NS::EntityReference{});
     EXPECT_EQ(getSamplerDescriptor().magFilter, RENDER_NS::Filter::CORE_FILTER_NEAREST);
     // Set values to match the default sampler, should end up as null in ecs
     sampler.SetMagFilter(SamplerFilter::LINEAR);
     UpdateScene();
-    EXPECT_EQ(getSampler(), CORE_NS::EntityReference {});
+    EXPECT_EQ(getSampler(), CORE_NS::EntityReference{});
 }
 
 /**
@@ -711,7 +720,7 @@ UNIT_TEST_F(API_SceneApiTest, Sampler, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_SceneApiTest, CustomMaterial, testing::ext::TestSize.Level1)
 {
     auto factory = GetScene().GetResourceFactory();
-    auto material = factory.CreateMaterial({ "material", MaterialType::CUSTOM });
+    auto material = factory.CreateMaterial({"material", MaterialType::CUSTOM});
     ASSERT_TRUE(material);
     EXPECT_EQ(material.GetType(), MaterialType::CUSTOM);
     EXPECT_TRUE(material.SetMaterialShader(factory.CreateShader(VALID_SHADER_URI)));
@@ -744,7 +753,7 @@ UNIT_TEST_F(API_SceneApiTest, SwitchMaterialShader, testing::ext::TestSize.Level
 {
     auto factory = GetScene().GetResourceFactory();
     auto metallicRoughnessMaterial =
-        MetallicRoughnessMaterial(factory.CreateMaterial({ "material", MaterialType::METALLIC_ROUGHNESS }));
+        MetallicRoughnessMaterial(factory.CreateMaterial({"material", MaterialType::METALLIC_ROUGHNESS}));
     auto shader = factory.CreateShader("test://shaders/Custom.shader");
     EXPECT_TRUE(shader);
     EXPECT_TRUE(metallicRoughnessMaterial);
@@ -900,7 +909,7 @@ UNIT_TEST_F(API_SceneApiTest, ExplicitAnimation, testing::ext::TestSize.Level1)
 
     META_NS::KeyframeAnimation<BASE_NS::Math::Vec3> animation(META_NS::CreateNew);
 
-    animation.SetFrom(value).SetTo({ 1, 1, 1 }).SetProperty(property).SetDuration(META_NS::TimeSpan::Seconds(1));
+    animation.SetFrom(value).SetTo({1, 1, 1}).SetProperty(property).SetDuration(META_NS::TimeSpan::Seconds(1));
     EXPECT_TRUE(animation.GetValid());
     animation.Start();
     EXPECT_TRUE(animation.GetRunning());
@@ -1002,8 +1011,8 @@ UNIT_TEST_F(API_SceneApiTest, Input, testing::ext::TestSize.Level1)
     ASSERT_TRUE(attach.Attach(handler1));
     ASSERT_TRUE(attach.Attach(handler2));
 
-    camera.SendPointerDown(0, { 0.5, 0.5 });
-    camera.SendPointerUp(0, { 0.5, 0.5 });
+    camera.SendPointerDown(0, {0.5, 0.5});
+    camera.SendPointerUp(0, {0.5, 0.5});
 
     EXPECT_EQ(handler1->GetInputEventDownCount(), 1);
     EXPECT_EQ(handler2->GetInputEventDownCount(), 1);
@@ -1011,7 +1020,7 @@ UNIT_TEST_F(API_SceneApiTest, Input, testing::ext::TestSize.Level1)
     EXPECT_EQ(handler2->GetInputEventUpCount(), 1);
 
     handler1->SetPropagateEvent(false);
-    camera.SendPointerDown(0, { 0.5, 0.5 });
+    camera.SendPointerDown(0, {0.5, 0.5});
 
     EXPECT_EQ(handler1->GetInputEventDownCount(), 2);
     EXPECT_EQ(handler2->GetInputEventDownCount(), 1);
@@ -1019,7 +1028,7 @@ UNIT_TEST_F(API_SceneApiTest, Input, testing::ext::TestSize.Level1)
     EXPECT_EQ(handler2->GetInputEventUpCount(), 1);
 
     handler1->SetPropagateEvent(true);
-    camera.SendPointerUp(0, { 0.5, 0.5 });
+    camera.SendPointerUp(0, {0.5, 0.5});
 
     EXPECT_EQ(handler1->GetInputEventDownCount(), 2);
     EXPECT_EQ(handler2->GetInputEventDownCount(), 1);
@@ -1027,5 +1036,5 @@ UNIT_TEST_F(API_SceneApiTest, Input, testing::ext::TestSize.Level1)
     EXPECT_EQ(handler2->GetInputEventUpCount(), 2);
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()

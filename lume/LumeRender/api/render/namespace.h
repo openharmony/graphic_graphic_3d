@@ -22,6 +22,6 @@
 #define RENDER_NS Render
 
 #define RENDER_BEGIN_NAMESPACE() namespace Render {
-#define RENDER_END_NAMESPACE() } // namespace Render
+#define RENDER_END_NAMESPACE() }  // namespace Render
 
-#endif // API_RENDER_NAMESPACE_H
+#endif  // API_RENDER_NAMESPACE_H

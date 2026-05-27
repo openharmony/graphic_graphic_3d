@@ -101,4 +101,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_SCENE_UTIL_H
+#endif  // CORE_UTIL_SCENE_UTIL_H

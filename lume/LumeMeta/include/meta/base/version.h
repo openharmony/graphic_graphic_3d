@@ -26,7 +26,8 @@ META_BEGIN_NAMESPACE()
 class Version {
 public:
     /// Construct Versions from major and minor versions
-    constexpr Version(uint16_t major = 0, uint16_t minor = 0) : major_(major), minor_(minor) {}
+    constexpr Version(uint16_t major = 0, uint16_t minor = 0) : major_(major), minor_(minor)
+    {}
 
     /// Construct Version from string
     constexpr explicit Version(BASE_NS::string_view str)
@@ -67,8 +68,8 @@ private:
     }
 
 private:
-    uint16_t major_ {};
-    uint16_t minor_ {};
+    uint16_t major_{};
+    uint16_t minor_{};
 };
 
 constexpr inline bool operator==(const Version& l, const Version& r)

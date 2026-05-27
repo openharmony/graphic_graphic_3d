@@ -54,9 +54,13 @@ void CreateTestResources(TestData& td)
             static_cast<RenderNodeGraphManager&>(td.engine.context->GetRenderNodeGraphManager());
         RenderNodeManager& renderNodeMgr = renderNodeGraphMgr.GetRenderNodeManager();
         {
-            RenderNodeTypeInfo info { { RenderNodeTestUtil::UID }, RenderNodeTestUtil::UID,
-                RenderNodeTestUtil::TYPE_NAME, RenderNodeTestUtil::Create, RenderNodeTestUtil::Destroy,
-                RenderNodeTestUtil::BACKEND_FLAGS, RenderNodeTestUtil::CLASS_TYPE };
+            RenderNodeTypeInfo info{{RenderNodeTestUtil::UID},
+                RenderNodeTestUtil::UID,
+                RenderNodeTestUtil::TYPE_NAME,
+                RenderNodeTestUtil::Create,
+                RenderNodeTestUtil::Destroy,
+                RenderNodeTestUtil::BACKEND_FLAGS,
+                RenderNodeTestUtil::CLASS_TYPE};
             renderNodeMgr.AddRenderNodeFactory(info);
         }
     }
@@ -80,7 +84,7 @@ void TickTest(const TestData& td, int32_t frameCountToTick)
 
     for (int32_t idx = 0; idx < frameCountToTick; ++idx) {
         er.engine->TickFrame();
-        er.context->GetRenderer().RenderFrame({ &td.renderNodeGraph, 1 });
+        er.context->GetRenderer().RenderFrame({&td.renderNodeGraph, 1});
     }
 }
 
@@ -101,7 +105,7 @@ void TestRenderNodeUtil(DeviceBackendType backend)
         UTest::DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -114,7 +118,7 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeTestUtilTestVulkan, testing::ext::Test
 {
     TestRenderNodeUtil(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -127,4 +131,4 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeTestUtilTestOpenGL, testing::ext::Test
 {
     TestRenderNodeUtil(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

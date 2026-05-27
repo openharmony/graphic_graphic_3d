@@ -1,0 +1,15 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "template_with_index_anim.index",
+        "node": {
+            "type": "node",
+            "name": "tmplRootIdx",
+            "children": [
+                { "type": "light", "name": "tmplLight", "lightType": "point", "intensity": 1.0 }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

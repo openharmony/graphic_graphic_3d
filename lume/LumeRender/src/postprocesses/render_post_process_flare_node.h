@@ -37,9 +37,9 @@ public:
     using Ptr = BASE_NS::refcnt_ptr<RenderPostProcessFlareNode>;
 
     struct EffectProperties {
-        bool enabled { false };
-        BASE_NS::Math::Vec3 flarePos { 0.0f, 0.0f, 0.0f };
-        float intensity { 1.0f };
+        bool enabled{false};
+        BASE_NS::Math::Vec3 flarePos{0.0f, 0.0f, 0.0f};
+        float intensity{1.0f};
     };
 
     RenderPostProcessFlareNode();
@@ -65,7 +65,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // direct access in render nodes
@@ -97,12 +97,12 @@ private:
     CORE_NS::PropertyApiImpl<RenderPostProcessFlareNode::EffectProperties> properties_;
     EffectProperties effectProperties_;
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
     };
     JsonInputs jsonInputs_;
 
@@ -115,7 +115,7 @@ private:
     PushConstantStruct GetPushDataStruct(uint32_t width, uint32_t height) const;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     struct PipelineData {
         RENDER_NS::IShaderManager::GraphicsShaderData gsd;
@@ -131,8 +131,8 @@ private:
     RENDER_NS::BindableImage defaultInput_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POSTPROCESS_FLARE_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POSTPROCESS_FLARE_NODE_H

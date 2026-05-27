@@ -109,7 +109,7 @@ VertexInputDeclarationLoader::LoadResult Load(const json::value& jsonData, const
 
     return result;
 }
-} // namespace
+}  // namespace
 
 string_view VertexInputDeclarationLoader::GetUri() const
 {

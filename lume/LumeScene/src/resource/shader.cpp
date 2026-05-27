@@ -27,13 +27,13 @@ SCENE_BEGIN_NAMESPACE()
 
 bool GraphicsState::SetGraphicsState(RENDER_NS::RenderHandleReference handle)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     graphicsState_ = handle;
     return true;
 }
 RENDER_NS::RenderHandleReference GraphicsState::GetGraphicsState() const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return graphicsState_;
 }
 
@@ -57,8 +57,9 @@ static RENDER_NS::RenderHandleReference DoCreateGraphicsState(RENDER_NS::IShader
     // use graphics state hash for the path, so that same states get reused. Shader manager always keeps reference
     // to the state and so the states are not automatically freed, causing them to pile up if always creating a new one.
     auto hash = man.HashGraphicsState(gs, slotId);
-    if (auto existing = man.GetGraphicsStateHandleByHash(hash); existing.GetHandle().id
-        != RENDER_NS::INVALID_RESOURCE_HANDLE) {
+
+    if (auto existing = man.GetGraphicsStateHandleByHash(hash);
+        existing.GetHandle().id != RENDER_NS::INVALID_RESOURCE_HANDLE) {
         return existing;
     }
 
@@ -100,31 +101,30 @@ RENDER_NS::GraphicsState GraphicsState::CreateGraphicsState(
         gs = man.GetGraphicsState(rsd.graphicsState);
     }
     vinfo.renderSlot = slot;
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     graphicsState_ = DoCreateGraphicsState(man, gs, vinfo, renderSlotId);
     return gs;
 }
 
-bool GraphicsState::UpdateGraphicsState(
-    const IRenderContext::Ptr& context, const RENDER_NS::GraphicsState& gs,
+bool GraphicsState::UpdateGraphicsState(const IRenderContext::Ptr& context, const RENDER_NS::GraphicsState& gs,
     bool blend, BASE_NS::string_view renderSlot = {})
 {
     auto& man = context->GetRenderer()->GetDevice().GetShaderManager();
-    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo { renderSlot };
+    RENDER_NS::IShaderManager::GraphicsStateVariantCreateInfo vinfo{renderSlot};
     if (renderSlot.empty()) {
         vinfo.renderSlot = GetRenderSlot(gs);
     }
     RENDER_NS::RenderHandleReference s;
     auto renderSlotId =
         man.GetRenderSlotId(blend ? CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT
-            : CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
+                                  : CORE3D_NS::DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
 
     bool update = false;
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         if (depthOptions_.has_value()) {
-            // Override options for depth have been set,
-            // override these from the default. Note that Blend still controls the render slot id
+            // Override options for depth have been set, override these from the default.
+            // Note that Blend still controls the render slot id.
             auto gss = gs;
             gss.depthStencilState.enableDepthTest = depthOptions_->enableDepthTest;
             gss.depthStencilState.enableDepthWrite = depthOptions_->enableDepthWrite;
@@ -163,7 +163,7 @@ RENDER_NS::GraphicsState GraphicsState::CreateNewGraphicsState(const IRenderCont
 RENDER_NS::GraphicsState GraphicsState::GetGraphicsState(const IRenderContext::Ptr& context) const
 {
     auto& man = context->GetRenderer()->GetDevice().GetShaderManager();
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return man.GetGraphicsState(graphicsState_);
 }
 
@@ -184,6 +184,7 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
         CORE_LOG_E("Invalid context");
         return false;
     }
+    settingGraphicsState_ = true;
     RENDER_NS::IShaderManager::IdDesc desc;
     RENDER_NS::GraphicsState gs;
     context->RunDirectlyOrInTask([&] {
@@ -198,7 +199,7 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
     });
 
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         handle_ = shader;
     }
 
@@ -207,6 +208,9 @@ bool Shader::SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::
     CullMode()->SetValue(static_cast<CullModeFlags>(gs.rasterizationState.cullModeFlags));
     PolygonMode()->SetValue(static_cast<SCENE_NS::PolygonMode>(gs.rasterizationState.polygonMode));
     Blend()->SetValue(IsBlendEnabled(gs));
+
+    context->RunDirectlyOrInTask([&] { UpdateGraphicsState(context, gs, GetBlend()); });
+    settingGraphicsState_ = false;
 
     if (auto ev = EventOnResourceChanged(META_NS::MetadataQuery::EXISTING)) {
         META_NS::Invoke<META_NS::IOnChanged>(ev);
@@ -243,6 +247,9 @@ bool Shader::GetBlend() const
 }
 void Shader::OnPropertyChanged(const META_NS::IProperty& p)
 {
+    if (settingGraphicsState_) {
+        return;
+    }
     auto context = context_.lock();
     auto state = GetGraphicsState();
     if (!context || !state) {

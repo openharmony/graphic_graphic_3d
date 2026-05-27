@@ -55,8 +55,8 @@ layout(set = 0, binding = 6, std430) buffer uLightClusterIndexData
     DefaultMaterialLightClusterData uLightClusterData[CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT];
 };
 layout(set = 0, binding = 7) uniform CORE_RELAXEDP sampler2D uSampColorPrePass;
-layout(set = 0, binding = 8) uniform sampler2D uSampColorShadow;       // VSM or other
-layout(set = 0, binding = 9) uniform sampler2DShadow uSampDepthShadow; // PCF
+layout(set = 0, binding = 8) uniform sampler2D uSampColorShadow;        // VSM or other
+layout(set = 0, binding = 9) uniform sampler2DShadow uSampDepthShadow;  // PCF
 layout(set = 0, binding = 10) uniform samplerCube uSampRadiance;
 
 // disable set 1 and 2 for environment
@@ -85,6 +85,11 @@ layout(set = 1, binding = 4, std140) uniform uMaterialUserStructData
     DefaultMaterialUserMaterialStruct uMaterialUserData;
 };
 
+layout(set = 1, binding = 5, std430) buffer uLightProbeStructData
+{
+    DefaultSingleLightProbeStruct uLightProbeData[];
+};
+
 #if (CORE3D_DM_BINDLESS_FRAG_LAYOUT == 1)
 // experimental bindless with thousands of material textures
 layout(set = 2, binding = 0) uniform texture2D uImages[];
@@ -93,9 +98,21 @@ layout(set = 2, binding = 1) uniform sampler uSamplers[];
 // set 2 is for material data (base color separated for e.g. automatic hardware buffer static sampler support)
 layout(set = 2, binding = 0) uniform CORE_RELAXEDP sampler2D uSampTextureBase;
 layout(set = 2, binding = 1) uniform CORE_RELAXEDP sampler2D uSampTextures[CORE_MATERIAL_SAMPTEX_COUNT];
-#endif // CORE3D_BINDLESS_FRAG_LAYOUT
+#endif  // CORE3D_BINDLESS_FRAG_LAYOUT
 
-#endif // CORE3D_ENVIRONMENT_FRAG_LAYOUT
+#endif  // CORE3D_ENVIRONMENT_FRAG_LAYOUT
+
+#ifndef PUSH_CONSTANT_IN_SHADER
+layout(push_constant, std430) uniform uLightingPushConstant
+{
+    DefaultLightProbeDataIndexStruct uLightProbeDataIndexData;
+
+    // Used only by light probe bake vertex shader. We only support one
+    // push constant range, and vert and frag see the same push constants,
+    // so this has to be here.
+    uint uViewMatrixIndex;
+};
+#endif
 
 layout(constant_id = CORE_DM_CONSTANT_ID_MATERIAL_TYPE) const uint CORE_MATERIAL_TYPE = 0;
 layout(constant_id = CORE_DM_CONSTANT_ID_MATERIAL_FLAGS) const uint CORE_MATERIAL_FLAGS = 0;
@@ -107,4 +124,4 @@ layout(constant_id = CORE_DM_CONSTANT_ID_CAMERA_FLAGS) const uint CORE_CAMERA_FL
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
+#endif  // SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H

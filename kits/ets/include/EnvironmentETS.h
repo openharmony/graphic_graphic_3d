@@ -63,9 +63,9 @@ public:
     };
 
     EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene);
-    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name);
-    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string &name,
-        const std::string &uri);
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string& name);
+    EnvironmentETS(SCENE_NS::IEnvironment::Ptr environment, const SCENE_NS::IScene::Ptr scene, const std::string& name,
+        const std::string& uri);
     void Destroy() override;
     void Cleanup();
 
@@ -82,24 +82,24 @@ public:
     void SetBackgroundType(EnvironmentBackgroundType typeE);
 
     std::shared_ptr<Vec4Proxy> GetIndirectDiffuseFactor();
-    void SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4 &factor);
+    void SetIndirectDiffuseFactor(const BASE_NS::Math::Vec4& factor);
     std::shared_ptr<Vec4Proxy> GetIndirectSpecularFactor();
-    void SetIndirectSpecularFactor(const BASE_NS::Math::Vec4 &factor);
+    void SetIndirectSpecularFactor(const BASE_NS::Math::Vec4& factor);
 
     std::shared_ptr<Vec4Proxy> GetEnvironmentMapFactor();
-    void SetEnvironmentMapFactor(const BASE_NS::Math::Vec4 &factor);
+    void SetEnvironmentMapFactor(const BASE_NS::Math::Vec4& factor);
 
     std::shared_ptr<ImageETS> GetEnvironmentImage();
-    void SetEnvironmentImage(const std::shared_ptr<ImageETS> &image);
+    void SetEnvironmentImage(const std::shared_ptr<ImageETS>& image);
 
     std::shared_ptr<ImageETS> GetRadianceImage();
-    void SetRadianceImage(const std::shared_ptr<ImageETS> &image);
+    void SetRadianceImage(const std::shared_ptr<ImageETS>& image);
 
     BASE_NS::vector<BASE_NS::Math::Vec3> GetIrradianceCoefficients();
     void SetIrradianceCoefficients(const BASE_NS::vector<BASE_NS::Math::Vec3>& coefficients);
 
     std::shared_ptr<QuatProxy> GetEnvironmentRotation();
-    void SetEnvironmentRotation(const BASE_NS::Math::Quat &rotation);
+    void SetEnvironmentRotation(const BASE_NS::Math::Quat& rotation);
 
 private:
     SCENE_NS::IEnvironment::Ptr environment_{nullptr};

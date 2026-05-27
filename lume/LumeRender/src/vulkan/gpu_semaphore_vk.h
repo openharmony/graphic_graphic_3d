@@ -27,7 +27,7 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct GpuSemaphorePlatformDataVk final {
-    VkSemaphore semaphore { VK_NULL_HANDLE };
+    VkSemaphore semaphore{VK_NULL_HANDLE};
 };
 
 class GpuSemaphoreVk final : public GpuSemaphore {
@@ -42,8 +42,8 @@ public:
 private:
     Device& device_;
 
-    bool ownsResources_ { true };
+    bool ownsResources_{true};
     GpuSemaphorePlatformDataVk plat_;
 };
 RENDER_END_NAMESPACE()
-#endif // VULKAN_GPU_SEMAPHORE_VK_H
+#endif  // VULKAN_GPU_SEMAPHORE_VK_H

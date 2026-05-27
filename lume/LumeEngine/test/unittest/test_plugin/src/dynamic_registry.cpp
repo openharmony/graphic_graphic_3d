@@ -16,8 +16,8 @@
 #include <core/plugin/intf_plugin_register.h>
 
 namespace {
-static CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
-} // namespace
+static CORE_NS::IPluginRegister* gPluginRegistry{nullptr};
+}  // namespace
 
 CORE_BEGIN_NAMESPACE()
 IPluginRegister& GetPluginRegister()

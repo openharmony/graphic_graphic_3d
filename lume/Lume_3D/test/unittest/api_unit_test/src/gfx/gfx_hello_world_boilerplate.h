@@ -38,6 +38,6 @@ void GetPerformanceDataCounters(BASE_NS::string_view name, CORE_NS::IPerformance
 CORE_NS::IPerformanceDataManager::ComparisonData ComparePerformanceDataCounters(BASE_NS::string_view name,
     CORE_NS::IPerformanceDataManager::ConstCounterPairView lhs,
     CORE_NS::IPerformanceDataManager::ConstCounterPairView rhs);
-} // namespace HelloWorldBoilerplate
+}  // namespace HelloWorldBoilerplate
 
-#endif // CORE3D_TEST_API_GFX_HELLO_WORLD_BOILERPLATE_H
+#endif  // CORE3D_TEST_API_GFX_HELLO_WORLD_BOILERPLATE_H

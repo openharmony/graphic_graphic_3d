@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <charconv>
 #include <chrono>
+#include <climits>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -47,7 +48,8 @@
 namespace {
 constexpr int GLSL_VERSION = 110;
 
-// Enumerations from Engine which should match: Format, DescriptorType, ShaderStageFlagBits
+// Enumerations from Engine which should match: Format, DescriptorType,
+// ShaderStageFlagBits
 /** Format */
 enum class Format {
     /** Undefined */
@@ -436,10 +438,10 @@ enum class VertexInputRate {
 /** Pipeline layout constants */
 namespace PipelineLayoutConstants {
 /** Max descriptor set count */
-static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT{ 4u };
+static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT{4u};
 /** Invalid index */
-static constexpr uint32_t INVALID_INDEX{ ~0u };
-} // namespace PipelineLayoutConstants
+static constexpr uint32_t INVALID_INDEX{~0u};
+}  // namespace PipelineLayoutConstants
 
 enum class ImageDimension : uint8_t {
     DIMENSION_1D = 0,
@@ -466,21 +468,21 @@ static_assert(int(ImageDimension::DIMENSION_SUBPASS) == spv::Dim::DimSubpassData
 /** Descriptor set layout binding */
 struct DescriptorSetLayoutBinding {
     /** Binding */
-    uint32_t binding{ PipelineLayoutConstants::INVALID_INDEX };
+    uint32_t binding{PipelineLayoutConstants::INVALID_INDEX};
     /** Descriptor type */
-    DescriptorType descriptorType{ DescriptorType::MAX_ENUM };
+    DescriptorType descriptorType{DescriptorType::MAX_ENUM};
     /** Descriptor count */
-    uint32_t descriptorCount{ 0u };
+    uint32_t descriptorCount{0u};
     /** Stage flags */
     ShaderStageFlags shaderStageFlags;
-    ImageDimension imageDimension{ ImageDimension::DIMENSION_1D };
+    ImageDimension imageDimension{ImageDimension::DIMENSION_1D};
     uint8_t imageFlags;
 };
 
 /** Descriptor set layout */
 struct DescriptorSetLayout {
     /** Set */
-    uint32_t set{ PipelineLayoutConstants::INVALID_INDEX };
+    uint32_t set{PipelineLayoutConstants::INVALID_INDEX};
     /** Bindings */
     std::vector<DescriptorSetLayoutBinding> bindings;
 };
@@ -490,7 +492,7 @@ struct PushConstant {
     /** Shader stage flags */
     ShaderStageFlags shaderStageFlags;
     /** Byte size */
-    uint32_t byteSize{ 0u };
+    uint32_t byteSize{0u};
 };
 
 /** Pipeline layout */
@@ -498,27 +500,27 @@ struct PipelineLayout {
     /** Push constant */
     PushConstant pushConstant;
     /** Descriptor set count */
-    uint32_t descriptorSetCount{ 0u };
+    uint32_t descriptorSetCount{0u};
     /** Descriptor sets */
     DescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
 };
 
-constexpr const uint32_t RESERVED_CONSTANT_ID_INDEX{ 256u };
+constexpr const uint32_t RESERVED_CONSTANT_ID_INDEX{256u};
 
 /** Vertex input attribute description */
 struct VertexInputAttributeDescription {
     /** Location */
-    uint32_t location{ ~0u };
+    uint32_t location{~0u};
     /** Binding */
-    uint32_t binding{ ~0u };
+    uint32_t binding{~0u};
     /** Format */
-    Format format{ Format::UNDEFINED };
+    Format format{Format::UNDEFINED};
     /** Offset */
-    uint32_t offset{ 0u };
+    uint32_t offset{0u};
 };
 
 struct VertexAttributeInfo {
-    uint32_t byteSize{ 0u };
+    uint32_t byteSize{0u};
     VertexInputAttributeDescription description;
 };
 
@@ -546,8 +548,8 @@ public:
     };
 
     FileIncluder(
-        const std::filesystem::path& shaderSourcePath, array_view<const std::filesystem::path> shaderIncludePaths) :
-            shaderSourcePath_(shaderSourcePath), shaderIncludePaths_(shaderIncludePaths)
+        const std::filesystem::path& shaderSourcePath, array_view<const std::filesystem::path> shaderIncludePaths)
+        : shaderSourcePath_(shaderSourcePath), shaderIncludePaths_(shaderIncludePaths)
     {}
 
     IncludeResult* includeSystem(const char* headerName, const char* includerName, size_t inclusionDepth) override
@@ -659,7 +661,7 @@ struct CompilationSettings {
     FileIncluder& includer;
 };
 
-constexpr uint8_t REFLECTION_TAG[] = { 'r', 'f', 'l', 1 }; // last one is version
+constexpr uint8_t REFLECTION_TAG[] = {'r', 'f', 'l', 1};  // last one is version
 struct ReflectionHeader {
     uint8_t tag[sizeof(REFLECTION_TAG)];
     uint16_t type;
@@ -682,7 +684,7 @@ struct Inputs {
     ShaderEnv envVersion = ShaderEnv::version_vulkan_1_0;
 };
 
-template<typename InitFun, typename DeinitFun>
+template <typename InitFun, typename DeinitFun>
 class Scope {
 private:
     InitFun* init_;
@@ -709,7 +711,7 @@ std::optional<std::string> ReadFileToString(const std::string_view aFilename)
         file.open(std::filesystem::u8path(aFilename), std::ios::in);
 
         if (file.fail()) {
-            LUME_LOG_E("Error opening file %s:", std::string{ aFilename }.c_str());
+            LUME_LOG_E("Error opening file %s:", std::string{aFilename}.c_str());
             return std::nullopt;
         }
 
@@ -717,7 +719,7 @@ std::optional<std::string> ReadFileToString(const std::string_view aFilename)
         ss << file.rdbuf();
         return ss.str();
     } catch (std::exception const& ex) {
-        LUME_LOG_E("Error reading file: '%s': %s", std::string{ aFilename }.c_str(), ex.what());
+        LUME_LOG_E("Error reading file: '%s': %s", std::string{aFilename}.c_str(), ex.what());
         return std::nullopt;
     }
 }
@@ -807,6 +809,12 @@ std::optional<std::string> PreProcessShader(const std::string_view source, const
         return std::nullopt;
     }
 
+    if (source.size() > static_cast<size_t>(INT_MAX)) {
+        LUME_LOG_E(
+            "Shader source too large for preprocessing '%.*s'", static_cast<int>(sourceName.size()), sourceName.data());
+        return std::nullopt;
+    }
+
     const glslang::EShTargetLanguageVersion languageVersion = ToSpirVVersion(version.value());
 
     glslang::TShader shader(stage.value());
@@ -823,15 +831,82 @@ std::optional<std::string> PreProcessShader(const std::string_view source, const
         static_cast<EShMessages>(EShMsgOnlyPreprocessor | EShMsgSpvRules | EShMsgVulkanRules | EShMsgCascadingErrors);
 
     std::string output;
-    if (!shader.preprocess(&kGLSLangDefaultTResource, GLSL_VERSION, EProfile::ENoProfile, false, false, rules, &output,
-        settings.includer)) {
-        LUME_LOG_E("Spirv preprocessing of '%s' failed - info log:\n%s", sourceName.data(), shader.getInfoLog());
-        LUME_LOG_E("Spirv preprocessing of '%s' failed - debug log: \n%s", sourceName.data(), shader.getInfoDebugLog());
+    if (!shader.preprocess(&kGLSLangDefaultTResource,
+            GLSL_VERSION,
+            EProfile::ENoProfile,
+            false,
+            false,
+            rules,
+            &output,
+            settings.includer)) {
+        LUME_LOG_E("Spirv preprocessing of '%.*s' failed - info log:\n%s",
+            static_cast<int>(sourceName.size()),
+            sourceName.data(),
+            shader.getInfoLog());
+        LUME_LOG_E("Spirv preprocessing of '%.*s' failed - debug log: \n%s",
+            static_cast<int>(sourceName.size()),
+            sourceName.data(),
+            shader.getInfoDebugLog());
         return std::nullopt;
     }
 
     output.erase(0u, preamble.size());
     return output;
+}
+
+bool ParseGlslShader(glslang::TShader& shader, std::string_view source, std::string_view sourceName,
+    glslang::EShTargetClientVersion version, glslang::EShTargetLanguageVersion languageVersion)
+{
+    CommonShaderInit(shader, version, languageVersion);
+
+    const char* shaderStrings = source.data();
+    const int shaderLengths = static_cast<int>(source.size());
+    const char* stringNames = sourceName.data();
+    shader.setStringsWithLengthsAndNames(&shaderStrings, &shaderLengths, &stringNames, 1);
+
+    static constexpr std::string_view preamble = "#extension GL_GOOGLE_include_directive : enable\n";
+    shader.setPreamble(preamble.data());
+
+    constexpr auto rules = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules | EShMsgCascadingErrors);
+    if (!shader.parse(&kGLSLangDefaultTResource, GLSL_VERSION, EProfile::ENoProfile, false, false, rules)) {
+        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, shader.getInfoLog());
+        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, shader.getInfoDebugLog());
+        LUME_LOG_E("Spirv binary compilation failed while parsing '%.*s'",
+            static_cast<int>(sourceName.size()),
+            sourceName.data());
+        return false;
+    }
+    return true;
+}
+
+std::optional<std::vector<uint32_t>> LinkAndEmitSpirv(
+    glslang::TShader& shader, EShLanguage stage, std::string_view sourceName)
+{
+    glslang::TProgram program;
+    program.addShader(&shader);
+    if (!program.link(EShMsgDefault) || !program.mapIO()) {
+        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, shader.getInfoLog());
+        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, shader.getInfoDebugLog());
+        LUME_LOG_E("Spirv binary compilation failed while linking '%.*s'",
+            static_cast<int>(sourceName.size()),
+            sourceName.data());
+        return std::nullopt;
+    }
+
+    std::vector<unsigned int> spirv;
+    glslang::SpvOptions spv_options;
+    spv_options.generateDebugInfo = false;
+    spv_options.disableOptimizer = true;
+    spv_options.optimizeSize = false;
+    spv::SpvBuildLogger logger;
+    glslang::TIntermediate* intermediate = program.getIntermediate(stage);
+    glslang::GlslangToSpv(*intermediate, spirv, &logger, &spv_options);
+
+    constexpr uint32_t shadercGeneratorWord = 13;  // From SPIR-V XML Registry
+    constexpr uint32_t generatorWordIndex = 2;     // SPIR-V 2.3: Physical layout
+    assert(spirv.size() > generatorWordIndex);
+    spirv[generatorWordIndex] = (spirv[generatorWordIndex] & 0xffff) | (shadercGeneratorWord << 16u);
+    return spirv;
 }
 
 std::optional<std::vector<uint32_t>> CompileShaderToSpirvBinary(
@@ -849,54 +924,17 @@ std::optional<std::vector<uint32_t>> CompileShaderToSpirvBinary(
         return std::nullopt;
     }
 
-    const glslang::EShTargetLanguageVersion languageVersion = ToSpirVVersion(version.value());
-
-    glslang::TShader shader(stage.value());
-    CommonShaderInit(shader, version.value(), languageVersion);
-
-    const char* shaderStrings = source.data();
-    const int shaderLengths = static_cast<int>(source.size());
-    const char* stringNames = sourceName.data();
-    shader.setStringsWithLengthsAndNames(&shaderStrings, &shaderLengths, &stringNames, 1);
-
-    static constexpr std::string_view preamble = "#extension GL_GOOGLE_include_directive : enable\n";
-    shader.setPreamble(preamble.data());
-
-    constexpr auto rules = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules | EShMsgCascadingErrors);
-    if (!shader.parse(&kGLSLangDefaultTResource, GLSL_VERSION, EProfile::ENoProfile, false, false, rules)) {
-        const char* infoLog = shader.getInfoLog();
-        const char* debugInfoLog = shader.getInfoDebugLog();
-        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, infoLog);
-        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, debugInfoLog);
-        LUME_LOG_E("Spirv binary compilation failed while parsing '%s'", sourceName.data());
+    if (source.size() > static_cast<size_t>(INT_MAX)) {
+        LUME_LOG_E(
+            "Shader source too large for compilation '%.*s'", static_cast<int>(sourceName.size()), sourceName.data());
         return std::nullopt;
     }
 
-    glslang::TProgram program;
-    program.addShader(&shader);
-    if (!program.link(EShMsgDefault) || !program.mapIO()) {
-        const char* infoLog = shader.getInfoLog();
-        const char* debugInfoLog = shader.getInfoDebugLog();
-        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, infoLog);
-        lume::GetLogger().Write(lume::ILogger::LogLevel::ERROR, __FILE__, __LINE__, debugInfoLog);
-        LUME_LOG_E("Spirv binary compilation failed while linking '%s'", sourceName.data());
-        return {};
+    glslang::TShader shader(stage.value());
+    if (!ParseGlslShader(shader, source, sourceName, version.value(), ToSpirVVersion(version.value()))) {
+        return std::nullopt;
     }
-
-    std::vector<unsigned int> spirv;
-    glslang::SpvOptions spv_options;
-    spv_options.generateDebugInfo = false;
-    spv_options.disableOptimizer = true;
-    spv_options.optimizeSize = false;
-    spv::SpvBuildLogger logger;
-    glslang::TIntermediate* intermediate = program.getIntermediate(stage.value());
-    glslang::GlslangToSpv(*intermediate, spirv, &logger, &spv_options);
-
-    constexpr uint32_t shadercGeneratorWord = 13; // From SPIR-V XML Registry
-    constexpr uint32_t generatorWordIndex = 2;    // SPIR-V 2.3: Physical layout
-    assert(spirv.size() > generatorWordIndex);
-    spirv[generatorWordIndex] = (spirv[generatorWordIndex] & 0xffff) | (shadercGeneratorWord << 16u);
-    return spirv;
+    return LinkAndEmitSpirv(shader, stage.value(), sourceName);
 }
 
 void ProcessResource(const spirv_cross::Compiler& compiler, const spirv_cross::Resource& resource,
@@ -914,7 +952,8 @@ void ProcessResource(const spirv_cross::Compiler& compiler, const spirv_cross::R
     // Collect bindings.
     const uint32_t bindingIndex = compiler.get_decoration(resource.id, spv::DecorationBinding);
     auto& bindings = layout.bindings;
-    const auto pos = std::find_if(bindings.begin(), bindings.end(),
+    const auto pos = std::find_if(bindings.begin(),
+        bindings.end(),
         [bindingIndex](const DescriptorSetLayoutBinding& binding) { return binding.binding == bindingIndex; });
     if (pos == bindings.end()) {
         const spirv_cross::SPIRType& spirType = compiler.get_type(resource.type_id);
@@ -927,7 +966,7 @@ void ProcessResource(const spirv_cross::Compiler& compiler, const spirv_cross::R
         binding.imageDimension = ImageDimension(0);
         binding.imageFlags = 0;
         if (spirType.basetype == spirv_cross::SPIRType::BaseType::Image ||
-            spirv_cross::SPIRType::BaseType::SampledImage) {
+            spirType.basetype == spirv_cross::SPIRType::BaseType::SampledImage) {
             binding.imageDimension = ImageDimension(spirType.image.dim);
             binding.imageFlags = 0;
             if (spirType.image.depth) {
@@ -941,7 +980,7 @@ void ProcessResource(const spirv_cross::Compiler& compiler, const spirv_cross::R
             }
             if (spirType.image.sampled == 1) {
                 binding.imageFlags |= ImageFlags::IMAGE_SAMPLED;
-            } else if (spirType.image.sampled == 2) { // 2: index
+            } else if (spirType.image.sampled == 2) {  // 2: index
                 binding.imageFlags |= ImageFlags::IMAGE_LOAD_STORE;
             }
         }
@@ -986,12 +1025,14 @@ void ReflectDescriptorSets(const spirv_cross::Compiler& compiler, const spirv_cr
         ProcessResource(compiler, ref, shaderStateFlags, DescriptorType::ACCELERATION_STRUCTURE, layouts);
     }
 
-    std::sort(layouts, layouts + PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT,
+    std::sort(layouts,
+        layouts + PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT,
         [](const DescriptorSetLayout& lhs, const DescriptorSetLayout& rhs) { return (lhs.set < rhs.set); });
 
     std::for_each(
         layouts, layouts + PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT, [](DescriptorSetLayout& layout) {
-            std::sort(layout.bindings.begin(), layout.bindings.end(),
+            std::sort(layout.bindings.begin(),
+                layout.bindings.end(),
                 [](const DescriptorSetLayoutBinding& lhs, const DescriptorSetLayoutBinding& rhs) {
                     return (lhs.binding < rhs.binding);
                 });
@@ -1037,14 +1078,15 @@ std::vector<ShaderSpecializationConstant> ReflectSpecializationConstants(
             }
             const uint32_t size = spirvConstant.vector_size() * spirvConstant.columns() * sizeof(uint32_t);
             specializationConstants.push_back(
-                ShaderSpecializationConstant{ shaderStateFlags, constant.constant_id, constantType, offset });
+                ShaderSpecializationConstant{shaderStateFlags, constant.constant_id, constantType, offset});
             offset += size;
         }
     }
     // sorted based on offset due to offset mapping with shader combinations
     // NOTE: id and name indexing
-    std::sort(specializationConstants.begin(), specializationConstants.end(),
-        [](const auto& lhs, const auto& rhs) { return (lhs.offset < rhs.offset); });
+    std::sort(specializationConstants.begin(), specializationConstants.end(), [](const auto& lhs, const auto& rhs) {
+        return (lhs.offset < rhs.offset);
+    });
 
     return specializationConstants;
 }
@@ -1126,25 +1168,29 @@ std::vector<VertexInputAttributeDescription> ReflectVertexInputs(const spirv_cro
     std::vector<VertexInputAttributeDescription> vertexInputAttributes;
 
     std::vector<VertexAttributeInfo> vertexAttributeInfos;
-    std::transform(std::begin(resources.stage_inputs), std::end(resources.stage_inputs),
-        std::back_inserter(vertexAttributeInfos), [&compiler](const spirv_cross::Resource& attr) {
+    std::transform(std::begin(resources.stage_inputs),
+        std::end(resources.stage_inputs),
+        std::back_inserter(vertexAttributeInfos),
+        [&compiler](const spirv_cross::Resource& attr) {
             const spirv_cross::SPIRType& attributeType = compiler.get_type(attr.type_id);
             const uint32_t location = compiler.get_decoration(attr.id, spv::DecorationLocation);
             return VertexAttributeInfo{
                 // width is in bits so convert to bytes
-                attributeType.vecsize * (attributeType.width / 8u), // byteSize
+                attributeType.vecsize * (attributeType.width / 8u),  // byteSize
                 {
-                    // For now, assume that every vertex attribute comes from it's own binding which equals the
-                    location,                                  // location
-                    location,                                  // binding
-                    ConvertToVertexInputFormat(attributeType), // format
-                    0u                                         // offset
-                },                                             // description
+                    // For now, assume that every vertex attribute comes from it's
+                    // own binding which equals the
+                    location,                                   // location
+                    location,                                   // binding
+                    ConvertToVertexInputFormat(attributeType),  // format
+                    0u                                          // offset
+                },                                              // description
             };
         });
 
     // Sort input attributes by binding and location.
-    std::sort(std::begin(vertexAttributeInfos), std::end(vertexAttributeInfos),
+    std::sort(std::begin(vertexAttributeInfos),
+        std::end(vertexAttributeInfos),
         [](const VertexAttributeInfo& aA, const VertexAttributeInfo& aB) {
             if (aA.description.binding < aB.description.binding) {
                 return true;
@@ -1156,14 +1202,15 @@ std::vector<VertexInputAttributeDescription> ReflectVertexInputs(const spirv_cro
     // Create final attributes.
     if (!vertexAttributeInfos.empty()) {
         vertexInputAttributes.reserve(vertexAttributeInfos.size());
-        std::transform(vertexAttributeInfos.cbegin(), vertexAttributeInfos.cend(),
+        std::transform(vertexAttributeInfos.cbegin(),
+            vertexAttributeInfos.cend(),
             std::back_inserter(vertexInputAttributes),
             [](const VertexAttributeInfo& info) { return info.description; });
     }
     return vertexInputAttributes;
 }
 
-template<typename T>
+template <typename T>
 void Push(std::vector<uint8_t>& buffer, T data)
 {
     buffer.push_back(data & 0xffu);
@@ -1201,11 +1248,11 @@ uint16_t AppendPushConstants(std::vector<uint8_t>& reflection, uint32_t byteSize
 {
     const auto offsetPushConstants = static_cast<uint16_t>(reflection.size());
     if (!byteSize) {
-        reflection.push_back(0); // zero: no push constants
+        reflection.push_back(0);  // zero: no push constants
         return offsetPushConstants;
     }
 
-    reflection.push_back(1); // one: push constants
+    reflection.push_back(1);  // one: push constants
     Push(reflection, static_cast<uint16_t>(byteSize));
 
     Push(reflection, static_cast<uint8_t>(pushConstantReflection.size()));
@@ -1275,13 +1322,13 @@ uint16_t AppendVertexInputAttributes(
 uint16_t AppendExecutionLocalSize(std::vector<uint8_t>& reflection, const spirv_cross::Compiler& compiler)
 {
     const auto offsetLocalSize = static_cast<uint16_t>(reflection.size());
-    uint32_t size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 0u); // X = 0
+    uint32_t size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 0u);  // X = 0
     Push(reflection, size);
 
-    size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 1u); // Y = 1
+    size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 1u);  // Y = 1
     Push(reflection, size);
 
-    size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 2u); // Z = 2
+    size = compiler.get_execution_mode_argument(spv::ExecutionMode::ExecutionModeLocalSize, 2u);  // Z = 2
     Push(reflection, size);
     return offsetLocalSize;
 }
@@ -1298,7 +1345,8 @@ std::optional<std::vector<uint8_t>> ReflectSpvBinary(const std::vector<uint32_t>
     ReflectDescriptorSets(compiler, resources, shaderStateFlags, pipelineLayout.descriptorSetLayouts);
     pipelineLayout.descriptorSetCount =
         static_cast<uint32_t>(std::count_if(std::begin(pipelineLayout.descriptorSetLayouts),
-            std::end(pipelineLayout.descriptorSetLayouts), [](const DescriptorSetLayout& layout) {
+            std::end(pipelineLayout.descriptorSetLayouts),
+            [](const DescriptorSetLayout& layout) {
                 return layout.set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT;
             }));
     ReflectPushContants(compiler, resources, shaderStateFlags, pipelineLayout.pushConstant);
@@ -1371,7 +1419,7 @@ Binding GetBinding(const Gles::CoreCompiler& compiler, const spirv_cross::ID id)
     assert(dbind < Gles::ResourceLimits::MAX_BIND_IN_SET);
     const auto set = static_cast<uint8_t>(dset);
     const auto bind = static_cast<uint8_t>(dbind);
-    return { set, bind };
+    return {set, bind};
 }
 
 void SortSets(PipelineLayout& pipelineLayout)
@@ -1382,8 +1430,9 @@ void SortSets(PipelineLayout& pipelineLayout)
             pipelineLayout.descriptorSetCount++;
 
             // sort binding objects based on binding numbers
-            std::sort(currSet.bindings.begin(), currSet.bindings.end(),
-                [](auto const& lhs, auto const& rhs) { return (lhs.binding < rhs.binding); });
+            std::sort(currSet.bindings.begin(), currSet.bindings.end(), [](auto const& lhs, auto const& rhs) {
+                return (lhs.binding < rhs.binding);
+            });
         }
     }
 }
@@ -1418,8 +1467,9 @@ void Collect(Gles::CoreCompiler& compiler, const spirv_cross::SmallVector<spirv_
         compiler.unset_decoration(remap.id, spv::DecorationDescriptorSet);
         compiler.unset_decoration(remap.id, spv::DecorationBinding);
         if (forceBinding > 0) {
-            compiler.set_decoration(remap.id, spv::DecorationBinding,
-                forceBinding - 1); // will be over-written later. (special handling)
+            compiler.set_decoration(remap.id,
+                spv::DecorationBinding,
+                forceBinding - 1);  // will be over-written later. (special handling)
         }
     }
 }
@@ -1435,11 +1485,14 @@ void CollectRes(
     static constexpr uint32_t defaultBinding = 11;
     Collect(compiler, res.storage_buffers, defaultBinding + 1);
     Collect(compiler, res.storage_images, defaultBinding + 1);
-    Collect(compiler, res.uniform_buffers, 0); // 0 == remove binding decorations (let's the compiler decide)
-    Collect(compiler, res.subpass_inputs, 0);  // 0 == remove binding decorations (let's the compiler decide)
+    Collect(compiler, res.uniform_buffers,
+        0);  // 0 == remove binding decorations (let's the compiler decide)
+    Collect(compiler, res.subpass_inputs,
+        0);  // 0 == remove binding decorations (let's the compiler decide)
 
     // handle the real sampled images.
-    Collect(compiler, res.sampled_images, 0); // 0 == remove binding decorations (let's the compiler decide)
+    Collect(compiler, res.sampled_images,
+        0);  // 0 == remove binding decorations (let's the compiler decide)
 
     // and now the "generated ones" (separate image/sampler)
     std::string imageName;
@@ -1505,9 +1558,9 @@ void SetupSpirvCross(ShaderStageFlags stage, Gles::CoreCompiler* compiler, Devic
 
 struct Shader {
     ShaderStageFlags shaderStageFlags;
-    DeviceBackendType backend{ DeviceBackendType::OPENGL };
+    DeviceBackendType backend{DeviceBackendType::OPENGL};
     ShaderModulePlatformDataGLES plat;
-    bool ovrEnabled{ false };
+    bool ovrEnabled{false};
 
     std::string source_;
 };
@@ -1519,8 +1572,9 @@ void ProcessShaderModule(Shader& me, const ShaderModuleCreateInfo& createInfo)
     // Set some options.
     SetupSpirvCross(me.shaderStageFlags, &compiler, me.backend, me.ovrEnabled);
 
-    // first step in converting CORE_FLIP_NDC to regular uniform. (specializationconstant -> constant) this makes
-    // the compiled glsl more readable, and simpler to post process later.
+    // first step in converting CORE_FLIP_NDC to regular uniform.
+    // (specializationconstant -> constant) this makes the compiled glsl more
+    // readable, and simpler to post process later.
     Gles::ConvertSpecConstToConstant(compiler, "CORE_FLIP_NDC");
 
     auto active = compiler.get_active_interface_variables();
@@ -1538,7 +1592,7 @@ void ProcessShaderModule(Shader& me, const ShaderModuleCreateInfo& createInfo)
     Gles::ConvertConstantToUniform(compiler, me.source_, "CORE_FLIP_NDC");
 }
 
-template<typename T>
+template <typename T>
 bool WriteToFile(const array_view<T>& data, const std::filesystem::path& destinationFile)
 {
     std::ofstream outputStream(destinationFile, std::ios::out | std::ios::binary);
@@ -1641,8 +1695,9 @@ bool IsDirty(const std::filesystem::path& outputMetaFilename, const std::uint64_
         return true;
     }
 
-    // if we have a meta data that can guide our heuristics evaluate those to determine the likelihood that the file
-    // doesn't need recompilation. This set of heuristics are based on file modified time p.s. you system clock
+    // if we have a meta data that can guide our heuristics evaluate those to
+    // determine the likelihood that the file doesn't need recompilation. This set
+    // of heuristics are based on file modified time p.s. you system clock
     // precisions might vary per machine.
     std::string line;
     while (std::getline(meta, line)) {
@@ -1668,12 +1723,192 @@ bool IsDirty(const std::filesystem::path& outputMetaFilename, const std::uint64_
         std::uint64_t nanosSinceUnixEpoch = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                                 std::filesystem::last_write_time(file).time_since_epoch())
                                                 .count() ^
-            mask;
+                                            mask;
         if (modifiedTime != nanosSinceUnixEpoch) {
             return true;
         }
     }
     return false;
+}
+
+std::optional<ShaderKind> ShaderKindFromExtension(const std::string& extension)
+{
+    if (extension == ".vert") {
+        return ShaderKind::VERTEX;
+    }
+    if (extension == ".frag") {
+        return ShaderKind::FRAGMENT;
+    }
+    if (extension == ".comp") {
+        return ShaderKind::COMPUTE;
+    }
+    return std::nullopt;
+}
+
+std::uint64_t ComputeCompileMask(const Inputs& params)
+{
+    std::uint64_t mask = 0UL;
+    mask |= params.stripDebugInformation ? 1UL : 0UL;
+    mask |= params.optimizeSpirv ? 2UL : 0UL;
+    mask |= std::uint64_t(params.envVersion) << 2UL;
+    return mask;
+}
+
+std::optional<std::string> LoadAndPreprocessShader(std::string_view inputFilename, const std::string& relativeFilename,
+    ShaderKind shaderKind, CompilationSettings& settings)
+{
+    auto shaderSourceOpt = ReadFileToString(inputFilename);
+    if (!shaderSourceOpt) {
+        LUME_LOG_E("Failed to read file at %s", std::string{inputFilename}.c_str());
+        return std::nullopt;
+    }
+
+    auto preProcessedOpt = PreProcessShader(*shaderSourceOpt, shaderKind, relativeFilename, settings);
+    if (!preProcessedOpt) {
+        LUME_LOG_E(
+            "Failed to preprocess shader at %s of kind %s", relativeFilename.c_str(), ShaderKindToString(shaderKind));
+        return std::nullopt;
+    }
+    return preProcessedOpt;
+}
+
+bool OptimizeAndWriteSpirv(std::vector<uint32_t>& spvBinary, const std::string& preProcessedShader,
+    const std::vector<uint8_t>& reflection, ShaderKind shaderKind, const std::filesystem::path& outputFilename,
+    std::string_view inputFilename, const Inputs& params, CompilationSettings& settings)
+{
+    // spirv-opt resets the passes everytime so then need to be setup
+    if (params.optimizeSpirv) {
+        settings.optimizer->RegisterPerformancePasses();
+    }
+
+    RegisterStripPreprocessorDebugInfoPass(settings.optimizer);
+    settings.optimizer->SetMessageConsumer(MyMessageConsumer);
+    if (!settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
+        LUME_LOG_E("Failed to optimize %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
+        return false;
+    }
+
+    // generate gl and gles shaders from optimized binary but with file names
+    // intact but with just preprocessor extension directives stripped out
+    CreateGlShaders(outputFilename, preProcessedShader, shaderKind, spvBinary, ShaderReflectionData{reflection});
+
+    // strip out all other debug information like variable names, function names
+    if (params.stripDebugInformation) {
+        const bool registerPass = settings.optimizer->RegisterPassFromFlag("--strip-debug");
+        if (registerPass == false || !settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
+            LUME_LOG_E(
+                "Failed to strip debug information %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
+            return false;
+        }
+    }
+
+    if (!WriteToFile(array_view(spvBinary.data(), spvBinary.size()), outputFilename)) {
+        LUME_LOG_E("Failed to write to %s", outputFilename.u8string().c_str());
+        return false;
+    }
+    return true;
+}
+
+void WriteMetaFile(const std::filesystem::path& outputMetaFilename, const std::filesystem::path& inputFilenamePath,
+    const std::map<std::string, FileIncluder::Data>& includes, std::uint64_t mask)
+{
+    // write meta data so that recompilation can be skipped when there are no
+    // changes to files or settings.
+    std::ofstream meta(outputMetaFilename);
+
+    // store the unix epoch with simple xor of the compile mask for later
+    // comparision
+    meta << inputFilenamePath.u8string() << ':'
+         << (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
+                    .count() ^
+                mask)
+         << '\n';
+
+    for (const auto& itt : includes) {
+        meta << std::filesystem::absolute(itt.first).u8string() << ':'
+             << (std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
+                        .count() ^
+                    mask)
+             << '\n';
+    }
+}
+
+bool CompileShaderFile(std::string_view inputFilename, const std::filesystem::path& inputFilenamePath,
+    const std::string& relativeFilename, const std::filesystem::path& outputBase, std::uint64_t mask,
+    ShaderKind shaderKind, CompilationSettings& settings, const Inputs& params)
+{
+    std::filesystem::path outputMetaFilename = outputBase;
+    outputMetaFilename += ".meta";
+
+    const bool dirty = params.checkIfChanged ? IsDirty(outputMetaFilename, mask) : true;
+    if (!dirty) {
+        return true;
+    }
+
+    std::filesystem::path outputFilename = outputBase;
+    outputFilename += ".spv";
+
+    LUME_LOG_I("  %s", relativeFilename.c_str());
+    LUME_LOG_V("    input: '%.*s'", static_cast<int>(inputFilename.size()), inputFilename.data());
+    LUME_LOG_V("      dst: '%s'", settings.compiledShaderDestinationPath.u8string().c_str());
+    LUME_LOG_V(" relative: '%s'", relativeFilename.c_str());
+    LUME_LOG_V("   output: '%s'", outputFilename.u8string().c_str());
+
+    auto preProcessedOpt = LoadAndPreprocessShader(inputFilename, relativeFilename, shaderKind, settings);
+    if (!preProcessedOpt) {
+        return false;
+    }
+    const std::string preProcessedShader = *std::move(preProcessedOpt);
+
+    constexpr bool writePreprocessedShader = false;
+    if constexpr (writePreprocessedShader) {
+        auto preprocessedFile = outputFilename;
+        preprocessedFile += ".pre";
+        if (!WriteToFile(array_view(preProcessedShader.data(), preProcessedShader.size()), preprocessedFile)) {
+            LUME_LOG_E("Failed to save preprocessed %s", preprocessedFile.u8string().data());
+        }
+    }
+
+    auto spvBinaryOpt = CompileShaderToSpirvBinary(preProcessedShader, shaderKind, relativeFilename, settings);
+    if (!spvBinaryOpt) {
+        LUME_LOG_E("Failed to compile shader to spirv binary from %s", relativeFilename.c_str());
+        return false;
+    }
+    auto spvBinary = *std::move(spvBinaryOpt);
+
+    auto reflectionOpt = ReflectSpvBinary(spvBinary, shaderKind);
+    if (!reflectionOpt) {
+        LUME_LOG_E("Failed to reflect %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
+        return false;
+    }
+    const auto reflection = *std::move(reflectionOpt);
+
+    auto reflectionFile = outputFilename;
+    reflectionFile += ".lsb";
+    if (!WriteToFile(array_view(reflection.data(), reflection.size()), reflectionFile)) {
+        LUME_LOG_E("Failed to save reflection %s", reflectionFile.u8string().data());
+        return false;
+    }
+
+    if (!OptimizeAndWriteSpirv(
+            spvBinary, preProcessedShader, reflection, shaderKind, outputFilename, inputFilename, params, settings)) {
+        return false;
+    }
+
+    LUME_LOG_D("  -> %s", outputFilename.u8string().c_str());
+    WriteMetaFile(outputMetaFilename, inputFilenamePath, settings.includer.Files(), mask);
+    return true;
+}
+
+bool CopyShaderFile(const std::filesystem::path& inputFilenamePath, const std::filesystem::path& outputFilename,
+    const std::string& relativeFilename)
+{
+    if (!std::filesystem::exists(outputFilename) || !std::filesystem::equivalent(inputFilenamePath, outputFilename)) {
+        LUME_LOG_I("  %s", relativeFilename.c_str());
+        std::filesystem::copy(inputFilenamePath, outputFilename, std::filesystem::copy_options::overwrite_existing);
+    }
+    return true;
 }
 
 bool RunAllCompilationStages(std::string_view inputFilename, CompilationSettings& settings, const Inputs& params)
@@ -1686,169 +1921,43 @@ bool RunAllCompilationStages(std::string_view inputFilename, CompilationSettings
         // Make sure the output dir hierarchy exists.
         std::filesystem::create_directories(outputFilename.parent_path());
 
-        // create bitmask of settings that modify the compiled output
-        std::uint64_t mask = 0UL;
-        mask |= params.stripDebugInformation ? 1UL : 0UL;
-        mask |= params.optimizeSpirv ? 2UL : 0UL;
-        mask |= std::uint64_t(params.envVersion) << 2UL;
-
         const std::string relativeFilename = relativeInputFilename.u8string();
         const std::string extension = inputFilenamePath.extension().string();
 
         // Just copying .shader files to the destination dir.
         if (extension == ".shader") {
-            if (!std::filesystem::exists(outputFilename) ||
-                !std::filesystem::equivalent(inputFilenamePath, outputFilename)) {
-                LUME_LOG_I("  %s", relativeFilename.c_str());
-                std::filesystem::copy(
-                    inputFilenamePath, outputFilename, std::filesystem::copy_options::overwrite_existing);
-            }
-            return true;
+            return CopyShaderFile(inputFilenamePath, outputFilename, relativeFilename);
         }
 
-        ShaderKind shaderKind;
-        if (extension == ".vert") {
-            shaderKind = ShaderKind::VERTEX;
-        } else if (extension == ".frag") {
-            shaderKind = ShaderKind::FRAGMENT;
-        } else if (extension == ".comp") {
-            shaderKind = ShaderKind::COMPUTE;
-        } else {
+        const std::optional<ShaderKind> shaderKind = ShaderKindFromExtension(extension);
+        if (!shaderKind) {
             LUME_LOG_E("Unexpected input file extension %s", extension.c_str());
             return false;
         }
 
-        std::filesystem::path outputMetaFilename = outputFilename;
-        outputMetaFilename += ".meta";
-
-        const bool dirty = params.checkIfChanged ? IsDirty(outputMetaFilename, mask) : true;
-        // nothing to do
-        if (!dirty) {
-            return true;
-        }
-
-        outputFilename += ".spv";
-
-        LUME_LOG_I("  %s", relativeFilename.c_str());
-
-        LUME_LOG_V("    input: '%s'", inputFilename.data());
-        LUME_LOG_V("      dst: '%s'", settings.compiledShaderDestinationPath.u8string().c_str());
-        LUME_LOG_V(" relative: '%s'", relativeFilename.c_str());
-        LUME_LOG_V("   output: '%s'", outputFilename.u8string().c_str());
-
-        auto shaderSourceOpt = ReadFileToString(inputFilename);
-        if (!shaderSourceOpt) {
-            LUME_LOG_E("Failed to read file at %s", std::string{ inputFilename }.c_str());
-            return false;
-        }
-        const std::string shaderSource = *std::move(shaderSourceOpt);
-
-        auto preProcessedShaderOpt = PreProcessShader(shaderSource, shaderKind, relativeFilename, settings);
-        if (!preProcessedShaderOpt) {
-            LUME_LOG_E("Failed to preprocess shader at %s of kind %s", relativeFilename.c_str(),
-                ShaderKindToString(shaderKind));
-            return false;
-        }
-        const std::string preProcessedShader = *std::move(preProcessedShaderOpt);
-
-        constexpr bool writePreprocessedShader = false;
-        if constexpr (writePreprocessedShader) {
-            auto preprocessedFile = outputFilename;
-            preprocessedFile += ".pre";
-            if (!WriteToFile(array_view(preProcessedShader.data(), preProcessedShader.size()), preprocessedFile)) {
-                LUME_LOG_E("Failed to save preprocessed %s", preprocessedFile.u8string().data());
-            }
-        }
-
-        auto spvBinaryOpt = CompileShaderToSpirvBinary(preProcessedShader, shaderKind, relativeFilename, settings);
-        if (!spvBinaryOpt) {
-            LUME_LOG_E("Failed to compile shader to spirv binary from %s", relativeFilename.c_str());
-            return false;
-        }
-        auto spvBinary = *std::move(spvBinaryOpt);
-
-        auto reflectionOpt = ReflectSpvBinary(spvBinary, shaderKind);
-        if (!reflectionOpt) {
-            LUME_LOG_E("Failed to reflect %s", inputFilename.data());
-            return false;
-        }
-        const auto reflection = *std::move(reflectionOpt);
-
-        auto reflectionFile = outputFilename;
-        reflectionFile += ".lsb";
-        if (!WriteToFile(array_view(reflection.data(), reflection.size()), reflectionFile)) {
-            LUME_LOG_E("Failed to save reflection %s", reflectionFile.u8string().data());
-            return false;
-        }
-
-        // spirv-opt resets the passes everytime so then need to be setup
-        if (params.optimizeSpirv) {
-            settings.optimizer->RegisterPerformancePasses();
-        }
-
-        RegisterStripPreprocessorDebugInfoPass(settings.optimizer);
-        settings.optimizer->SetMessageConsumer(MyMessageConsumer);
-        if (!settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
-            LUME_LOG_E("Failed to optimize %s", inputFilename.data());
-            return false;
-        }
-
-        // generate gl and gles shaders from optimized binary but with file names intact but with just preprocessor
-        // extension directives stripped out
-        CreateGlShaders(outputFilename, preProcessedShader, shaderKind, spvBinary, ShaderReflectionData{ reflection });
-
-        // strip out all other debug information like variable names, function names
-        if (params.stripDebugInformation) {
-            const bool registerPass = settings.optimizer->RegisterPassFromFlag("--strip-debug");
-            if (registerPass == false || !settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
-                LUME_LOG_E("Failed to strip debug information %s", inputFilename.data());
-                return false;
-            }
-        }
-
-        // write the spirv-binary to disk
-        if (!WriteToFile(array_view(spvBinary.data(), spvBinary.size()), outputFilename)) {
-            LUME_LOG_E("Failed to write to %s", outputFilename.u8string().c_str());
-            return false;
-        }
-
-        LUME_LOG_D("  -> %s", outputFilename.u8string().c_str());
-
-        // write meta data so that recompilation can be skipped when there are no changes to files or settings.
-        std::ofstream meta = std::ofstream(outputMetaFilename);
-        auto includes = settings.includer.Files();
-
-        // store the unix epoch with simple xor of the compile mask for later comparision
-        meta << inputFilenamePath.u8string() << ':'
-             << (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                     std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
-                        .count() ^
-                    mask)
-             << '\n';
-
-        // store the unix epoch with simple xor of the compile mask for later comparision
-        for (const auto& itt : includes) {
-            meta << std::filesystem::absolute(itt.first).u8string() << ':'
-                 << (std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
-                            .count() ^
-                        mask)
-                 << '\n';
-        }
-
-        return true;
+        const std::uint64_t mask = ComputeCompileMask(params);
+        return CompileShaderFile(
+            inputFilename, inputFilenamePath, relativeFilename, outputFilename, mask, *shaderKind, settings, params);
     } catch (std::exception const& e) {
-        LUME_LOG_E("Processing file unexpectedly failed with an exception '%s': %s", inputFilename.data(), e.what());
+        LUME_LOG_E("Processing file unexpectedly failed with an exception '%.*s': %s",
+            static_cast<int>(inputFilename.size()),
+            inputFilename.data(),
+            e.what());
         return false;
     }
 }
 
 void ShowUsage()
 {
-    std::cout << "LumeShaderCompiler - Supported shader types: vertex (.vert), fragment (.frag), compute (.comp)\n\n"
+    std::cout << "LumeShaderCompiler - Supported shader types: vertex (.vert), "
+                 "fragment (.frag), compute (.comp)\n\n"
                  "How to use: \n"
-                 "LumeShaderCompiler.exe --source <source path> (sets destination path to same as source)\n"
-                 "LumeShaderCompiler.exe --source <source path> --destination <destination path>\n"
-                 "LumeShaderCompiler.exe --monitor (monitors changes in the source files)\n";
+                 "LumeShaderCompiler.exe --source <source path> (sets "
+                 "destination path to same as source)\n"
+                 "LumeShaderCompiler.exe --source <source path> --destination "
+                 "<destination path>\n"
+                 "LumeShaderCompiler.exe --monitor (monitors changes in the "
+                 "source files)\n";
 }
 
 std::vector<std::string> FilterByExtension(
@@ -1858,9 +1967,10 @@ std::vector<std::string> FilterByExtension(
     for (auto const& file : aFilenames) {
         std::string lowercaseFileExt = std::filesystem::u8path(file).extension().u8string();
         std::transform(lowercaseFileExt.begin(), lowercaseFileExt.end(), lowercaseFileExt.begin(), tolower);
-        if (std::any_of(aIncludeExtensions.cbegin(), aIncludeExtensions.cend(),
-            [lowercaseExt = std::string_view(lowercaseFileExt)](
-                const std::string_view& extension) { return (lowercaseExt == extension); })) {
+        if (std::any_of(aIncludeExtensions.cbegin(),
+                aIncludeExtensions.cend(),
+                [lowercaseExt = std::string_view(lowercaseFileExt)](
+                    const std::string_view& extension) { return (lowercaseExt == extension); })) {
             filtered.push_back(file);
         }
     }
@@ -1875,12 +1985,14 @@ struct Args {
 };
 
 constexpr Args ARGS[] = {
-    { "--help", 0,
+    {"--help",
+        0,
         [](Inputs& /* params */, char* /* argv */[]) {
             ShowUsage();
             return false;
-        } },
-    { "--sourceFile", 1,
+        }},
+    {"--sourceFile",
+        1,
         [](Inputs& params, char* argv[]) {
             params.sourceFile = std::filesystem::u8path(*argv);
             params.sourceFile.make_preferred();
@@ -1890,8 +2002,9 @@ constexpr Args ARGS[] = {
                 params.compiledShaderDestinationPath = params.shaderSourcesPath;
             }
             return true;
-        } },
-    { "--source", 1,
+        }},
+    {"--source",
+        1,
         [](Inputs& params, char* argv[]) {
             params.shaderSourcesPath = std::filesystem::u8path(*argv);
             params.shaderSourcesPath.make_preferred();
@@ -1899,39 +2012,46 @@ constexpr Args ARGS[] = {
                 params.compiledShaderDestinationPath = params.shaderSourcesPath;
             }
             return true;
-        } },
-    { "--destination", 1,
+        }},
+    {"--destination",
+        1,
         [](Inputs& params, char* argv[]) {
             params.compiledShaderDestinationPath = std::filesystem::u8path(*argv);
             params.compiledShaderDestinationPath.make_preferred();
             return true;
-        } },
-    { "--include", 1,
+        }},
+    {"--include",
+        1,
         [](Inputs& params, char* argv[]) {
             params.shaderIncludePaths.emplace_back(std::filesystem::u8path(*argv)).make_preferred();
             return true;
-        } },
-    { "--monitor", 0,
+        }},
+    {"--monitor",
+        0,
         [](Inputs& params, char* argv[]) {
             params.monitorChanges = true;
             return true;
-        } },
-    { "--optimize", 0,
+        }},
+    {"--optimize",
+        0,
         [](Inputs& params, char* argv[]) {
             params.optimizeSpirv = true;
             return true;
-        } },
-    { "--check-if-changed", 0,
+        }},
+    {"--check-if-changed",
+        0,
         [](Inputs& params, char* argv[]) {
             params.checkIfChanged = true;
             return true;
-        } },
-    { "--strip-debug-information", 0,
+        }},
+    {"--strip-debug-information",
+        0,
         [](Inputs& params, char* argv[]) {
             params.stripDebugInformation = true;
             return true;
-        } },
-    { "--vulkan", 1,
+        }},
+    {"--vulkan",
+        1,
         [](Inputs& params, char* argv[]) {
             const auto version = std::string_view(*argv);
             if (version == "1.0") {
@@ -1945,11 +2065,11 @@ constexpr Args ARGS[] = {
                 params.envVersion = ShaderEnv::version_vulkan_1_3;
 #endif
             } else {
-                LUME_LOG_E("Invalid vulkan version after --vulkan: %s", std::string{ version }.c_str());
+                LUME_LOG_E("Invalid vulkan version after --vulkan: %s", std::string{version}.c_str());
                 return false;
             }
             return true;
-        } },
+        }},
 };
 
 std::optional<Inputs> Parse(const int argc, char* argv[])
@@ -1959,7 +2079,7 @@ std::optional<Inputs> Parse(const int argc, char* argv[])
     params.shaderSourcesPath = currentFolder;
 
     for (int i = 1; i < argc;) {
-        const auto arg = std::string_view(argv[i]);
+        const auto arg = argv[i] ? std::string_view(argv[i]) : std::string_view();
         const auto pos =
             std::find_if(std::begin(ARGS), std::end(ARGS), [arg](const Args& item) { return item.name == arg; });
         if (pos == std::end(ARGS)) {
@@ -1967,7 +2087,9 @@ std::optional<Inputs> Parse(const int argc, char* argv[])
             return std::nullopt;
         }
         if ((i + pos->additionalArguments) >= argc) {
-            LUME_LOG_E("%.*s option requires %u additional arguments.\n", int(arg.size()), arg.data(),
+            LUME_LOG_E("%.*s option requires %u additional arguments.\n",
+                int(arg.size()),
+                arg.data(),
                 pos->additionalArguments);
             return std::nullopt;
         }
@@ -1984,7 +2106,7 @@ std::optional<Inputs> Parse(const int argc, char* argv[])
     return params;
 }
 
-constexpr std::string_view SUPPORTED_EXTENSIONS[] = { ".vert", ".frag", ".comp", ".shader" };
+constexpr std::string_view SUPPORTED_EXTENSIONS[] = {".vert", ".frag", ".comp", ".shader"};
 constexpr auto SUPPORTED_EXTENSIONS_VIEW =
     array_view(SUPPORTED_EXTENSIONS, std::extent_v<decltype(SUPPORTED_EXTENSIONS)>);
 
@@ -2033,7 +2155,8 @@ void HandleFilesFiltered(FileIncluder& fileIncluder, std::vector<std::string>& m
     CompilationSettings& settings, const Inputs& params)
 {
     fileIncluder.Reset();
-    auto pos = std::find_if(modifiedFiles.cbegin(), modifiedFiles.cend(),
+    auto pos = std::find_if(modifiedFiles.cbegin(),
+        modifiedFiles.cend(),
         [&sourceFile = params.sourceFile](const std::string& modified) { return modified == sourceFile; });
     if (pos != modifiedFiles.cend()) {
         if (RunAllCompilationStages(*pos, settings, params)) {
@@ -2043,7 +2166,7 @@ void HandleFilesFiltered(FileIncluder& fileIncluder, std::vector<std::string>& m
         }
     }
 }
-} // namespace
+}  // namespace
 
 int CompilerMain(int argc, char* argv[])
 {
@@ -2102,12 +2225,18 @@ int CompilerMain(int argc, char* argv[])
     std::vector<std::filesystem::path> searchPath;
     searchPath.reserve(1U + params->shaderIncludePaths.size());
     searchPath.emplace_back(params->shaderSourcesPath);
-    std::transform(params->shaderIncludePaths.cbegin(), params->shaderIncludePaths.cend(),
-        std::back_inserter(searchPath), [](const std::filesystem::path& path) { return path; });
+    std::transform(params->shaderIncludePaths.cbegin(),
+        params->shaderIncludePaths.cend(),
+        std::back_inserter(searchPath),
+        [](const std::filesystem::path& path) { return path; });
 
     auto fileIncluder = FileIncluder(params->shaderSourcesPath, searchPath);
-    auto settings = CompilationSettings{ params->envVersion, searchPath, {}, params->shaderSourcesPath,
-        params->compiledShaderDestinationPath, fileIncluder };
+    auto settings = CompilationSettings{params->envVersion,
+        searchPath,
+        {},
+        params->shaderSourcesPath,
+        params->compiledShaderDestinationPath,
+        fileIncluder};
 
     {
         spv_target_env targetEnv = spv_target_env::SPV_ENV_VULKAN_1_0;

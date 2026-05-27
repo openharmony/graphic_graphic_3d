@@ -22,7 +22,7 @@
 
 namespace OHOS::Render3D {
 std::shared_ptr<CameraETS> CameraETS::FromJS(
-    const SCENE_NS::ICamera::Ptr camera, const std::string &name, const std::string &uri)
+    const SCENE_NS::ICamera::Ptr camera, const std::string& name, const std::string& uri)
 {
     auto cameraETS = std::make_shared<CameraETS>(camera);
     cameraETS->SetName(name);
@@ -166,6 +166,7 @@ void CameraETS::SetPostProcess(const std::shared_ptr<PostProcessETS> pp)
             if (SCENE_NS::IScene::Ptr scene = node->GetScene()) {
                 auto newPostProc = interface_pointer_cast<SCENE_NS::IPostProcess>(
                     scene->CreateObject(SCENE_NS::ClassId::PostProcess).GetResult());
+
                 postProcess_->SetToneMapping(
                     std::make_shared<TonemapETS>(newPostProc, META_NS::GetValue(newPostProc->Tonemap())));
                 postProcess_->SetBloom(
@@ -253,7 +254,7 @@ InvokeReturn<std::shared_ptr<Vec4Proxy>> CameraETS::GetClearColor()
     return InvokeReturn(clearColorProxy_);
 }
 
-void CameraETS::SetClearColor(const bool enabled, const BASE_NS::Math::Vec4 &color)
+void CameraETS::SetClearColor(const bool enabled, const BASE_NS::Math::Vec4& color)
 {
     clearColorEnabled_ = enabled;
     auto camera = camera_.lock();
@@ -306,7 +307,7 @@ META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> CameraETS::GetEffectsContainer()
     return effects;
 }
 
-BASE_NS::Math::Vec3 CameraETS::WorldToScreen(const BASE_NS::Math::Vec3 &world)
+BASE_NS::Math::Vec3 CameraETS::WorldToScreen(const BASE_NS::Math::Vec3& world)
 {
     if (auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_)) {
         return rayCast->WorldPositionToScreen(world).GetResult();
@@ -315,7 +316,7 @@ BASE_NS::Math::Vec3 CameraETS::WorldToScreen(const BASE_NS::Math::Vec3 &world)
     }
 }
 
-BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3 &screen)
+BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3& screen)
 {
     if (auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_)) {
         return rayCast->ScreenPositionToWorld(screen).GetResult();
@@ -324,7 +325,7 @@ BASE_NS::Math::Vec3 CameraETS::ScreenToWorld(const BASE_NS::Math::Vec3 &screen)
     }
 }
 
-InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BASE_NS::Math::Vec2 &position,
+InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BASE_NS::Math::Vec2& position,
     const std::shared_ptr<NodeETS> rootNode, const std::shared_ptr<NodeETS> layerMaskNode)
 {
     auto rayCast = interface_pointer_cast<SCENE_NS::ICameraRayCast>(camera_);
@@ -341,7 +342,7 @@ InvokeReturn<std::vector<CameraETS::RaycastResult>> CameraETS::Raycast(const BAS
     BASE_NS::vector<SCENE_NS::NodeHit> nodeHits =
         rayCast->CastRay(position, {layerMask, rootNode ? rootNode->GetInternalNode() : nullptr}).GetResult();
     std::vector<CameraETS::RaycastResult> result(nodeHits.size());
-    std::transform(nodeHits.begin(), nodeHits.end(), result.begin(), [](const auto &nodeHit) {
+    std::transform(nodeHits.begin(), nodeHits.end(), result.begin(), [](const auto& nodeHit) {
         auto nodePtr = FromNative(nodeHit.node);
         nodePtr->Attached(true);
         return CameraETS::RaycastResult{nodePtr, nodeHit.distanceToCenter, nodeHit.position};
@@ -375,7 +376,7 @@ BASE_NS::Math::Mat4X4 CameraETS::GetProjectionMatrix()
     return cameraMatrixAccessor->GetProjectionMatrix();
 }
 
-SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPipelineType &pipeline)
+SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPipelineType& pipeline)
 {
     switch (pipeline) {
         case CameraETS::RenderingPipelineType::FORWARD:
@@ -385,7 +386,7 @@ SCENE_NS::CameraPipeline CameraETS::ToInternalType(const CameraETS::RenderingPip
     }
 }
 
-CameraETS::RenderingPipelineType CameraETS::FromInternalType(const SCENE_NS::CameraPipeline &pipeline)
+CameraETS::RenderingPipelineType CameraETS::FromInternalType(const SCENE_NS::CameraPipeline& pipeline)
 {
     switch (pipeline) {
         case SCENE_NS::CameraPipeline::FORWARD:

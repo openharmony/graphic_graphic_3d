@@ -68,4 +68,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_ROFS_FILESYSTEM_H
+#endif  // CORE_IO_ROFS_FILESYSTEM_H

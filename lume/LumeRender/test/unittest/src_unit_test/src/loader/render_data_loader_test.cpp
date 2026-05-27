@@ -35,8 +35,8 @@ UNIT_TEST(SRC_RenderDataLoader, LoadTest, testing::ext::TestSize.Level1)
     // Get engine file manager
     CORE_NS::IFileManager& fileMng = UTest::GetTestEnv()->er.engine->GetFileManager();
 
-    RenderDataLoader loader { fileMng };
-    IRenderDataStorePod* dataStore = new RenderDataStorePod { "POD" };
+    RenderDataLoader loader{fileMng};
+    IRenderDataStorePod* dataStore = new RenderDataStorePod{"POD"};
     loader.Load("NonExistingDirectory", *dataStore);
     ASSERT_TRUE(dataStore->Get("PostProcess").empty());
     delete (RenderDataStorePod*)dataStore;

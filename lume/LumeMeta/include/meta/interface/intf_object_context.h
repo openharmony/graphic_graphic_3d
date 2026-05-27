@@ -42,8 +42,6 @@ public:
 
 META_END_NAMESPACE()
 
-META_INTERFACE_TYPE(META_NS::IObjectContext)
-
 META_BEGIN_NAMESPACE()
 
 /**
@@ -66,5 +64,7 @@ public:
 };
 
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IObjectContext)
 
 #endif

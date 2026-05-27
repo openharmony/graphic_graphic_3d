@@ -19,9 +19,7 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 # Test case compilation output path
 module_output_path = "graphic_3d/graphic_3d/lume/LumeDotfield"
 
-# Options
-RENDER_BUILD_GLES = true
-RENDER_BUILD_VULKAN = true
+# Options (RENDER_BUILD_GLES and RENDER_BUILD_VULKAN come from lume_config.gni)
 
 #
 # LumeDotfield API test config
@@ -94,7 +92,9 @@ ohos_unittest("lume_dotfield_api_test") {
   external_deps = [
     "bounds_checking_function:libsec_shared",
     "googletest:gmock",
-    "googletest:gtest"
+    "googletest:gtest",
+    "graphic_surface:surface",
+    "graphic_2d:libnative_image", # Handle HOS window
   ]
 
   if (RENDER_BUILD_GLES) {

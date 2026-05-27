@@ -44,6 +44,11 @@ bool SpeedModifier::ProcessOnStep(StepData& step) const
     return true;
 }
 
-} // namespace AnimationModifiers
+float SpeedModifier::ModifySpeed(float speed) const
+{
+    return speed * META_ACCESS_PROPERTY_VALUE(SpeedFactor);
+}
+
+}  // namespace AnimationModifiers
 
 META_END_NAMESPACE()

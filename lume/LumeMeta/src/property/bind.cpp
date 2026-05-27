@@ -65,7 +65,8 @@ bool Bind::SetTarget(const IProperty::ConstPtr& prop, bool getDeps, const IPrope
 bool Bind::SetTarget(const IFunction::ConstPtr& func, bool getDeps, const IProperty* owner)
 {
     // inherit serializability from the function
-    META_NS::SetObjectFlags(static_cast<IObjectFlags*>(this), ObjectFlagBits::SERIALIZE,
+    META_NS::SetObjectFlags(static_cast<IObjectFlags*>(this),
+        ObjectFlagBits::SERIALIZE,
         META_NS::IsFlagSet(func, ObjectFlagBits::SERIALIZE));
     func_ = func;
     return func_ && CreateContext(getDeps, owner);
@@ -160,7 +161,8 @@ bool Bind::CreateContext(bool eval, const IProperty* owner)
     return context_ != nullptr;
 }
 
-void Bind::Reset() {}
+void Bind::Reset()
+{}
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

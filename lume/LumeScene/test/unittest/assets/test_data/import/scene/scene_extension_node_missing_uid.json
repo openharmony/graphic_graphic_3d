@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "description": "extensionNode with no nodeUid should fail to construct",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext"
+                }
+            ]
+        }
+    }
+}

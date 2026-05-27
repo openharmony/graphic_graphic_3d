@@ -33,7 +33,7 @@ struct Node {
  */
 UNIT_TEST(API_ContainersIterator, ConstIterator, testing::ext::TestSize.Level1)
 {
-    int int_data[] = { 4, 3, 2, 1, 0 };
+    int int_data[] = {4, 3, 2, 1, 0};
     BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(int_data);
     {
         BASE_NS::const_iterator<array_view<int>> it = int_av.begin();
@@ -164,7 +164,7 @@ UNIT_TEST(API_ContainersIterator, ConstIterator, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersIterator, Iterator, testing::ext::TestSize.Level1)
 {
-    int int_data[] = { 4, 3, 2, 1, 0 };
+    int int_data[] = {4, 3, 2, 1, 0};
     //{
     //	BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>();
     //	ASSERT_TRUE(int_av.size() == 0);
@@ -308,11 +308,11 @@ UNIT_TEST(API_ContainersIterator, Iterator, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1)
 {
-    int int_data[] = { 4, 3, 2, 1, 0 };
+    int int_data[] = {4, 3, 2, 1, 0};
     BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(int_data);
     {
         BASE_NS::reverse_iterator<iterator<array_view<int>>> it(int_av.begin());
-        it--; // to set to [0]
+        it--;  // to set to [0]
 
         ASSERT_EQ(*it, int_data[0]);
 
@@ -362,7 +362,7 @@ UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1
     }
     {
         BASE_NS::reverse_iterator<iterator<array_view<int>>> it(int_av.begin());
-        it--; // to set to [0]
+        it--;  // to set to [0]
 
         ASSERT_EQ(*it, int_data[0]);
 
@@ -438,7 +438,7 @@ UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1
 
     {
         const BASE_NS::reverse_iterator<iterator<array_view<Node>>> it(
-            (node_av.end())); //- 1 removed cause iterator is created before original value
+            (node_av.end()));  //- 1 removed cause iterator is created before original value
         ASSERT_EQ(it->value, 0);
         ASSERT_EQ(it->next, nullptr);
     }
@@ -446,7 +446,7 @@ UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1
     const char* char_data = "43210";
     BASE_NS::string_view sv(char_data);
     {
-        auto it = sv.rend(); // rend = begin -> needs -- to point to [0]
+        auto it = sv.rend();  // rend = begin -> needs -- to point to [0]
         it--;
         ASSERT_EQ(*it, char_data[0]);
 
@@ -504,7 +504,7 @@ UNIT_TEST(API_ContainersIterator, ReverseIterator, testing::ext::TestSize.Level1
 UNIT_TEST(API_ContainersIterator, MoveIterator, testing::ext::TestSize.Level1)
 {
     // behaves as iterator. *it is rvalue, not lvalue.
-    int int_data[] = { 4, 3, 2, 1, 0 };
+    int int_data[] = {4, 3, 2, 1, 0};
     BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>(int_data);
     typedef BASE_NS::array_view<int>::iterator Iter;
     {

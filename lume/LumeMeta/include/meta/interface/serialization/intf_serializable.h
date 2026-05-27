@@ -49,8 +49,8 @@ public:
     virtual ReturnError Finalize(IImportFunctions&) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::ISerializable)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::ISerializable)
 
 #endif

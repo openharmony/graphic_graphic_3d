@@ -52,7 +52,7 @@
 
 namespace {
 #include "app/shaders/common/dotfield_struct_common.h"
-} // namespace
+}  // namespace
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -92,29 +92,30 @@ private:
     void UpdateRenderDataStore();
 
     struct PropertyData {
-        float speed { 1.f };
+        float speed{1.f};
     };
 
     PROPERTY_LIST(PropertyData, ComponentMetadata, MEMBER_PROPERTY(speed, "Simulation speed", 0))
 
-    bool active_ { true };
+    bool active_{true};
     IEcs& ecs_;
-    IWorldMatrixComponentManager* worldMatrixManager_ { nullptr };
-    IMaterialComponentManager* materialManager_ { nullptr };
-    IMeshComponentManager* meshManager_ { nullptr };
-    IRenderMeshComponentManager* renderMeshManager_ { nullptr };
-    IRenderHandleComponentManager* renderHandleManager_ { nullptr };
-    IDotfieldComponentManager* dotfieldManager_ { nullptr };
-    IRenderDataStoreManager* renderDataStoreManager_ { nullptr };
+    IWorldMatrixComponentManager* worldMatrixManager_{nullptr};
+    IMaterialComponentManager* materialManager_{nullptr};
+    IMeshComponentManager* meshManager_{nullptr};
+    IRenderMeshComponentManager* renderMeshManager_{nullptr};
+    IRenderHandleComponentManager* renderHandleManager_{nullptr};
+    IDotfieldComponentManager* dotfieldManager_{nullptr};
+    IRenderDataStoreManager* renderDataStoreManager_{nullptr};
     EntityReference shader_;
-    PropertyData props_ { 1.f };
+    PropertyData props_{1.f};
 
     PropertyApiImpl<PropertyData> propertyApi_ = PropertyApiImpl<PropertyData>(&props_, ComponentMetadata);
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultDotfield> dsDefaultDotfield_;
 };
 
 DotfieldSystem::DotfieldSystem(IEcs& ecs)
-    : ecs_(ecs), worldMatrixManager_(GetManager<IWorldMatrixComponentManager>(ecs)),
+    : ecs_(ecs),
+      worldMatrixManager_(GetManager<IWorldMatrixComponentManager>(ecs)),
       materialManager_(GetManager<IMaterialComponentManager>(ecs)),
       meshManager_(GetManager<IMeshComponentManager>(ecs)),
       renderMeshManager_(GetManager<IRenderMeshComponentManager>(ecs)),
@@ -192,9 +193,11 @@ const IEcs& DotfieldSystem::GetECS() const
     return ecs_;
 }
 
-void DotfieldSystem::Initialize() {}
+void DotfieldSystem::Initialize()
+{}
 
-void DotfieldSystem::Uninitialize() {}
+void DotfieldSystem::Uninitialize()
+{}
 
 bool DotfieldSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t delta)
 {
@@ -223,7 +226,7 @@ bool DotfieldSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t d
             prim.touchDirection = dfc.touchDirection;
             prim.touchRadius = dfc.touchRadius;
             prim.pointScale = dfc.pointScale;
-            prim.colors = { dfc.color0, dfc.color1, dfc.color2, dfc.color3 };
+            prim.colors = {dfc.color0, dfc.color1, dfc.color2, dfc.color3};
             if (worldMatrixManager_->HasComponent(prim.entity)) {
                 WorldMatrixComponent wc = worldMatrixManager_->Get(prim.entity);
                 prim.matrix = wc.matrix;
@@ -246,7 +249,7 @@ bool DotfieldSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t d
                 materialHandle->materialShader.shader = shader_;
                 BASE_NS::CloneData(
                     &materialHandle->textures[1].factor, sizeof(Math::Vec4), &prim.colors, sizeof(Math::UVec4));
-                materialHandle->textures[2].factor = { dsTime, dfc.pointScale, 0.f, 0.f }; // 2: texture idx
+                materialHandle->textures[2].factor = {dsTime, dfc.pointScale, 0.f, 0.f};  // 2: texture idx
             }
         }
     }
@@ -276,8 +279,8 @@ void DotfieldSystem::OnComponentEvent(
                     prim.touch = dfc.touchPosition;
                     prim.touchDirection = dfc.touchDirection;
                     prim.touchRadius = dfc.touchRadius;
-                    prim.colors = { dfc.color0, dfc.color1, dfc.color2, dfc.color3 };
-                    prim.size = { static_cast<uint32_t>(dfc.size.x), static_cast<uint32_t>(dfc.size.y) };
+                    prim.colors = {dfc.color0, dfc.color1, dfc.color2, dfc.color3};
+                    prim.size = {static_cast<uint32_t>(dfc.size.x), static_cast<uint32_t>(dfc.size.y)};
                     const auto index = static_cast<uint32_t>(dsDefaultDotfield_->GetDotfieldPrimitives().size());
                     dsDefaultDotfield_->AddDotfieldPrimitive(prim);
 
@@ -287,24 +290,24 @@ void DotfieldSystem::OnComponentEvent(
                         materialHandle->materialShader.shader = shader_;
                         BASE_NS::CloneData(
                             &materialHandle->textures[1].factor, sizeof(Math::Vec4), &prim.colors, sizeof(Math::UVec4));
-                        materialHandle->textures[2].factor = { 0.f, dfc.pointScale, 0.f, 0.f }; // 2: texture idx
+                        materialHandle->textures[2].factor = {0.f, dfc.pointScale, 0.f, 0.f};  // 2: texture idx
                     }
                     meshManager_->Create(entity);
                     if (auto meshHandle = meshManager_->Write(entity)) {
                         auto& submesh = meshHandle->submeshes.emplace_back();
                         submesh.material = entity;
-                        submesh.aabbMin = { -10.f, -10.f, -10.f };
-                        submesh.aabbMin = { 10.f, 10.f, 10.f };
+                        submesh.aabbMin = {-10.f, -10.f, -10.f};
+                        submesh.aabbMax = {10.f, 10.f, 10.f};
                         submesh.instanceCount = prim.size.x * prim.size.y;
                         submesh.vertexCount = 1;
 
-                        meshHandle->aabbMin = { -10.f, -10.f, -10.f };
-                        meshHandle->aabbMin = { 10.f, 10.f, 10.f };
+                        meshHandle->aabbMin = {-10.f, -10.f, -10.f};
+                        meshHandle->aabbMax = {10.f, 10.f, 10.f};
                     }
 
                     renderMeshManager_->Create(entity);
                     renderMeshManager_->Write(entity)->mesh = entity;
-                    renderMeshManager_->Write(entity)->customData[0] = { prim.size.x, prim.size.y, index, 0U };
+                    renderMeshManager_->Write(entity)->customData[0] = {prim.size.x, prim.size.y, index, 0U};
                 }
             }
             break;
@@ -336,7 +339,7 @@ void DotfieldSystem::UpdateRenderDataStore()
         }
     }
 }
-} // namespace
+}  // namespace
 
 namespace Dotfield {
 CORE_NS::ISystem* IDotfieldSystemInstance(IEcs& ecs)
@@ -347,4 +350,4 @@ void IDotfieldSystemDestroy(CORE_NS::ISystem* instance)
 {
     delete static_cast<DotfieldSystem*>(instance);
 }
-} // namespace Dotfield
+}  // namespace Dotfield

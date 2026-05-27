@@ -27,4 +27,4 @@
 #pragma GCC diagnostic pop
 #endif
 
-#endif // API_BASE_MATH_WARNING_DISABLE_FOOTER_H
+#endif  // API_BASE_MATH_WARNING_DISABLE_FOOTER_H

@@ -27,13 +27,16 @@ META_BEGIN_NAMESPACE()
 class IResourceQuery : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IResourceQuery, "712c2161-0885-47b2-9547-8ff3d0eb0767")
 public:
-    virtual uint32_t GetAliveCount(const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const = 0;
+    virtual uint32_t GetAliveCount(const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection,
+        const CORE_NS::ResourceContextPtr&) const = 0;
     virtual BASE_NS::vector<CORE_NS::IResource::Ptr> FindAliveResources(
-        const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection) const = 0;
+        const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection,
+        const CORE_NS::ResourceContextPtr&) const = 0;
+    virtual size_t GetResourceCount() const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IResourceQuery)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IResourceQuery)
 
 #endif

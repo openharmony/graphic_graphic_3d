@@ -114,7 +114,7 @@ enum PrimitiveTopology : i32 {
     TRIANGLE_STRIP = 1
 }
 
-enum ShadowAlgorithmType : i32 {
+enum ShadowAlgorithmType  : i32 {
     PCF = 0
 }
 

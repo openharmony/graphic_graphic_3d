@@ -16,7 +16,6 @@
 #include "MeshResourceJS.h"
 
 #include <scene/interface/intf_create_mesh.h>
-#include <scene/interface/intf_mesh_resource.h>
 #include <scene/interface/intf_scene.h>
 
 #include "JsObjectCache.h"
@@ -42,12 +41,12 @@ MeshResourceJS::MeshResourceJS(napi_env e, napi_callback_info i)
         renderContextJS->GetResources()->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), ctx.This());
     }
 
-    auto resourceParams = NapiApi::Object { ctx.Arg<1>() };
+    auto resourceParams = NapiApi::Object{ctx.Arg<1>()};
     if (auto nameParam = resourceParams.Get<BASE_NS::string>("name"); nameParam.IsDefined()) {
         ctx.This().Set("name", nameParam);
     }
 
-    GeometryDefinition::GeometryDefinition* geomDef {};
+    GeometryDefinition::GeometryDefinition* geomDef{};
     napi_get_value_external(e, resourceParams.Get("GeometryDefinition"), (void**)&geomDef);
     geometryDefinition_.reset(geomDef);
 }
@@ -82,11 +81,11 @@ SCENE_NS::IMesh::Ptr MeshResourceJS::CreateMesh(const SCENE_NS::IScene::Ptr& sce
 
     const auto meshCreator = scene->CreateObject<SCENE_NS::ICreateMesh>(SCENE_NS::ClassId::MeshCreator).GetResult();
     // Name and material aren't set here. Name is set in the constructor. Material needs to be manually set later.
-    auto meshConfig = SCENE_NS::MeshConfig {};
+    auto meshConfig = SCENE_NS::MeshConfig{};
     return geometryDefinition_->CreateMesh(meshCreator, meshConfig);
 }
 
-void MeshResourceJS::DisposeNative(void* /*scene*/)
+void MeshResourceJS::DisposeNative()
 {
     if (disposed_) {
         return;
@@ -111,6 +110,6 @@ void MeshResourceJS::DisposeNative(void* /*scene*/)
 
 void MeshResourceJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
 }

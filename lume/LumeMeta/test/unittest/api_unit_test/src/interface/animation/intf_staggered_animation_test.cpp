@@ -46,7 +46,7 @@ protected:
         ASSERT_NE(t1_, nullptr);
     }
 
-    template<class A, class T>
+    template <class A, class T>
     void SetProperties(A& target, const IProperty::Ptr& property, T from, T to, TimeSpan duration)
     {
         target.SetProperty(property);
@@ -103,8 +103,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelSingleChild, testing::ext::TestS
     auto staggered = CreateObjectInstance<IParallelAnimation>();
     auto anim1 = CreateObjectInstance<IKeyframeAnimation, BASE_NS::Math::Vec3>();
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to { 100, 50, 0 };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to{100, 50, 0};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to, TimeSpan::Milliseconds(100));
 
@@ -119,7 +119,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelSingleChild, testing::ext::TestS
     BASE_NS::Math::Vec3 previous = from;
     float previousProgress = 0.f;
 
-    StepAnimations({ staggered }, 10, 10, [&](uint32_t frame) {
+    StepAnimations({staggered}, 10, 10, [&](uint32_t frame) {
         auto progress = staggered.GetProgress();
         // Check that progress of ParallelAnimation moves forward
         EXPECT_GT(progress, previousProgress);
@@ -152,8 +152,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Parallel, testing::ext::TestSize.Level1)
     auto anim2 = CreateObjectInstance<IKeyframeAnimation, BASE_NS::Math::Vec3>();
     auto anim3 = CreateObjectInstance<IKeyframeAnimation, BASE_NS::Math::Vec3>();
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], TimeSpan::Milliseconds(100));
     SetProperties(anim2, t1_->Vec3Property2(), from, to[1], TimeSpan::Milliseconds(50));
@@ -172,10 +172,10 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Parallel, testing::ext::TestSize.Level1)
     EXPECT_TRUE(anim3.GetRunning());
     EXPECT_EQ(staggered.GetTotalDuration(), TimeSpan::Milliseconds(100));
 
-    BASE_NS::Math::Vec3 previous[3] = { from, from, from };
+    BASE_NS::Math::Vec3 previous[3] = {from, from, from};
     float previousProgress = 0.f;
 
-    StepAnimations({ staggered }, 10, 10, [&](uint32_t frame) {
+    StepAnimations({staggered}, 10, 10, [&](uint32_t frame) {
         auto progress = staggered.GetProgress();
         // Check that progress of ParallelAnimation moves forward
         EXPECT_GT(progress, previousProgress);
@@ -227,12 +227,15 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelStopsItsChildrenWhenNotRunning, 
     auto staggered = META_NS::ParallelAnimation(CreateInstance(ClassId::ParallelAnimation));
     auto childAnim = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    SetProperties(childAnim, t1_->Vec3Property1(), BASE_NS::Math::Vec3 { 0, 0, 0 }, BASE_NS::Math::Vec3 { 100, 50, 0 },
+    SetProperties(childAnim,
+        t1_->Vec3Property1(),
+        BASE_NS::Math::Vec3{0, 0, 0},
+        BASE_NS::Math::Vec3{100, 50, 0},
         TimeSpan::Milliseconds(100));
 
     Container(staggered).Add(childAnim);
     staggered.Start();
-    StepAnimations({ staggered }, 10, 10, [](uint32_t /*frame*/) {});
+    StepAnimations({staggered}, 10, 10, [](uint32_t /*frame*/) {});
     staggered.Stop();
 
     EXPECT_FALSE(staggered.GetRunning());
@@ -247,8 +250,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelStopsItsChildrenWhenNotRunning, 
 UNIT_TEST_F(API_StaggeredAnimationTest, ParallelSerialization, testing::ext::TestSize.Level1)
 {
     TestSerialiser ser;
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
     {
         auto staggered = META_NS::ParallelAnimation(CreateInstance(ClassId::ParallelAnimation));
         auto anim1 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
@@ -302,10 +305,10 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelSerialization, testing::ext::Tes
     staggered.Start();
     staggered.Step(GetTestClock());
 
-    BASE_NS::Math::Vec3 previous[3] = { from, from, from };
+    BASE_NS::Math::Vec3 previous[3] = {from, from, from};
     float previousProgress = 0.f;
 
-    StepAnimations({ staggered }, 10, 10, [&](uint32_t frame) {
+    StepAnimations({staggered}, 10, 10, [&](uint32_t frame) {
         auto progress = staggered.GetProgress();
         // Check that progress of ParallelAnimation moves forward
         EXPECT_GT(progress, previousProgress);
@@ -364,8 +367,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelLoop, testing::ext::TestSize.Lev
 
     AttachmentContainer(staggered).Attach(loop);
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], TimeSpan::Milliseconds(100));
     SetProperties(anim2, t1_->Vec3Property2(), from, to[1], TimeSpan::Milliseconds(50));
@@ -387,10 +390,10 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelLoop, testing::ext::TestSize.Lev
     for (int i = 0; i < loopCount; ++i) {
         float previousProgress = -1.f;
         auto initFrom = from - BASE_NS::Math::Vec3(1, 1, 1);
-        BASE_NS::Math::Vec3 previous[3] = { initFrom, initFrom, initFrom };
+        BASE_NS::Math::Vec3 previous[3] = {initFrom, initFrom, initFrom};
         auto loop = i + 1;
 
-        StepAnimations({ staggered }, 10, 10, [&](uint32_t frame) {
+        StepAnimations({staggered}, 10, 10, [&](uint32_t frame) {
             auto progress = staggered.GetProgress();
             // Check that progress of ParallelAnimation moves forward
             EXPECT_GT(progress, previousProgress) << "Frame " << frame << ", Loop: " << loop;
@@ -427,7 +430,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelLoop, testing::ext::TestSize.Lev
             EXPECT_FALSE(staggered.GetRunning());
         } else {
             EXPECT_TRUE(staggered.GetRunning());
-            staggered.Step(GetTestClock()); // One extra step to let the animations jump back to beginning
+            staggered.Step(GetTestClock());  // One extra step to let the animations jump back to beginning
         }
     }
 
@@ -458,8 +461,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelReverse, testing::ext::TestSize.
 
     AttachmentContainer(staggered).Attach(reverse);
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], TimeSpan::Milliseconds(100));
     SetProperties(anim2, t1_->Vec3Property2(), from, to[1], TimeSpan::Milliseconds(30));
@@ -484,9 +487,9 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelReverse, testing::ext::TestSize.
 
     float previousProgress = -1.f;
     auto initFrom = to[2] + BASE_NS::Math::Vec3(1, 1, 1);
-    BASE_NS::Math::Vec3 previous[3] = { initFrom, initFrom, initFrom };
+    BASE_NS::Math::Vec3 previous[3] = {initFrom, initFrom, initFrom};
 
-    StepAnimations({ staggered }, 10, 10, [&](uint32_t frame) {
+    StepAnimations({staggered}, 10, 10, [&](uint32_t frame) {
         auto progress = staggered.GetProgress();
         // Check that progress of ParallelAnimation moves forward
         EXPECT_GT(progress, previousProgress) << "Frame " << frame;
@@ -556,12 +559,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, LoopPastEnd, testing::ext::TestSize.Leve
     ASSERT_TRUE(staggered.GetRunning());
 
     float expectedProgress = 0.f;
-    float expectedProgressStep = 20.f / 200.f; // 200ms animation with 20ms step
+    float expectedProgressStep = 20.f / 200.f;  // 200ms animation with 20ms step
 
     // Run the animation once so that our steps hit 1.0
     for (auto loop = 1; loop <= 3; loop++) {
         staggered.Step(GetTestClock());
-        StepAnimations({ staggered }, 10, 20, [&](uint32_t frame) {
+        StepAnimations({staggered}, 10, 20, [&](uint32_t frame) {
             auto progress = staggered.GetProgress();
             expectedProgress += expectedProgressStep;
             expectedProgress = expectedProgress - BASE_NS::Math::floor(expectedProgress);
@@ -574,12 +577,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, LoopPastEnd, testing::ext::TestSize.Leve
     staggered.Restart();
     staggered.Step(GetTestClock());
     expectedProgress = 0.f;
-    expectedProgressStep = 30.f / 200.f; // 200ms animation with 30ms step
+    expectedProgressStep = 30.f / 200.f;  // 200ms animation with 30ms step
 
     // Run again but now so that we step past 1.0
     for (auto loop = 1; loop <= 3; loop++) {
         auto frameCount = loop == 1 ? 6 : 7;
-        StepAnimations({ staggered }, frameCount, 30, [&](uint32_t frame) {
+        StepAnimations({staggered}, frameCount, 30, [&](uint32_t frame) {
             auto progress = staggered.GetProgress();
             expectedProgress += expectedProgressStep;
             expectedProgress = expectedProgress - BASE_NS::Math::floor(expectedProgress);
@@ -608,8 +611,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Sequential, testing::ext::TestSize.Level
     auto anim2 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
     auto anim3 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
 
     // In total 150ms of animations
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], TimeSpan::Milliseconds(50));
@@ -685,8 +688,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Sequential, testing::ext::TestSize.Level
 UNIT_TEST_F(API_StaggeredAnimationTest, SequentialSerialization, testing::ext::TestSize.Level1)
 {
     TestSerialiser ser;
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
     {
         auto staggered = META_NS::SequentialAnimation(CreateInstance(ClassId::SequentialAnimation));
         auto anim1 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
@@ -801,8 +804,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialWithSameAnimation, testing::ex
     auto staggered = META_NS::SequentialAnimation(CreateInstance(ClassId::SequentialAnimation));
     auto anim = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to = { 100, 50, 0 };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to = {100, 50, 0};
 
     SetProperties(anim, t1_->Vec3Property1(), from, to, TimeSpan::Milliseconds(50));
 
@@ -823,7 +826,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialWithSameAnimation, testing::ex
 
     // 20 frames + 10ms sleep at end of each frame -> Should be enough time
     // for all animations to run
-    StepAnimations({ staggered }, 15, 10, [&](uint32_t frame) {
+    StepAnimations({staggered}, 15, 10, [&](uint32_t frame) {
         EXPECT_EQ(staggered.GetRunning(), frame < 15) << "Frame: " << frame;
         auto progress = staggered.GetProgress();
 
@@ -854,8 +857,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialModified, testing::ext::TestSi
         META_NS::AnimationModifiers::Loop(CreateInstance(ClassId::LoopAnimationModifier)).SetLoopCount(loopCount);
     AttachmentContainer(staggered).Attach(loop);
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
 
     // In total 150ms of animations
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], TimeSpan::Milliseconds(50));
@@ -878,7 +881,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialModified, testing::ext::TestSi
         float previousProgress = -1;
         auto loop = i + 1;
 
-        StepAnimations({ staggered }, 15, 10, [&](uint32_t frame) {
+        StepAnimations({staggered}, 15, 10, [&](uint32_t frame) {
             auto progress = staggered.GetProgress();
 
             // Each frame should progress the animation
@@ -915,7 +918,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialModified, testing::ext::TestSi
             EXPECT_FALSE(staggered.GetRunning());
         } else {
             EXPECT_TRUE(staggered.GetRunning());
-            staggered.Step(GetTestClock()); // One extra step to let the animations jump back to beginning
+            staggered.Step(GetTestClock());  // One extra step to let the animations jump back to beginning
         }
     }
 
@@ -942,12 +945,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, DurationParallel, testing::ext::TestSize
     auto anim2 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
     auto anim3 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
     TimeSpan baseDuration = TimeSpan::Milliseconds(50);
 
     // Last animation has the longest duration
-    std::vector<TimeSpan> duration = { baseDuration, baseDuration, baseDuration * 12 };
+    std::vector<TimeSpan> duration = {baseDuration, baseDuration, baseDuration * 12};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], duration[0]);
     SetProperties(anim2, t1_->Vec3Property2(), from, to[1], duration[1]);
@@ -972,8 +975,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelWithSameAnimation, testing::ext:
     auto staggered = META_NS::ParallelAnimation(CreateInstance(ClassId::ParallelAnimation));
     auto anim = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to = { 100, 50, 0 };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to = {100, 50, 0};
 
     SetProperties(anim, t1_->Vec3Property1(), from, to, TimeSpan::Milliseconds(50));
 
@@ -1003,12 +1006,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, DurationParallelModified, testing::ext::
             META_NS::AnimationModifiers::Loop(CreateInstance(ClassId::LoopAnimationModifier)).SetLoopCount(loopCount);
         AttachmentContainer(staggered).Attach(loop);
 
-        BASE_NS::Math::Vec3 from { 0, 0, 0 };
-        BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+        BASE_NS::Math::Vec3 from{0, 0, 0};
+        BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
         TimeSpan baseDuration = TimeSpan::Milliseconds(50);
 
         // Last animation has the longest duration
-        std::vector<TimeSpan> duration = { baseDuration, baseDuration, baseDuration * 12 };
+        std::vector<TimeSpan> duration = {baseDuration, baseDuration, baseDuration * 12};
 
         SetProperties(anim1, t1_->Vec3Property1(), from, to[0], duration[0]);
         SetProperties(anim2, t1_->Vec3Property2(), from, to[1], duration[1]);
@@ -1046,12 +1049,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, DurationSequential, testing::ext::TestSi
     auto anim2 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
     auto anim3 = META_NS::KeyframeAnimation<BASE_NS::Math::Vec3>(CreateInstance(ClassId::KeyframeAnimation));
 
-    BASE_NS::Math::Vec3 from { 0, 0, 0 };
-    BASE_NS::Math::Vec3 to[3] = { { 100, 50, 0 }, { 20, 20, 100 }, { 200, 200, 0 } };
+    BASE_NS::Math::Vec3 from{0, 0, 0};
+    BASE_NS::Math::Vec3 to[3] = {{100, 50, 0}, {20, 20, 100}, {200, 200, 0}};
     TimeSpan baseDuration = TimeSpan::Milliseconds(50);
 
     // Last animation has the longest duration
-    std::vector<TimeSpan> duration = { baseDuration, baseDuration, baseDuration * 12 };
+    std::vector<TimeSpan> duration = {baseDuration, baseDuration, baseDuration * 12};
 
     SetProperties(anim1, t1_->Vec3Property1(), from, to[0], duration[0]);
     SetProperties(anim2, t1_->Vec3Property2(), from, to[1], duration[1]);
@@ -1101,8 +1104,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Hierarchy, testing::ext::TestSize.Level1
     auto a3 = META_NS::KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation));
     auto a4 = META_NS::KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation));
 
-    float from[4] = { 0, 5, 10, 20 };
-    float to[4] = { 10, 10, 25, 40 };
+    float from[4] = {0, 5, 10, 20};
+    float to[4] = {10, 10, 25, 40};
 
     SetProperties(a1, p1, from[0], to[0], TimeSpan::Milliseconds(30));
     SetProperties(a2, p2, from[1], to[1], TimeSpan::Milliseconds(30));
@@ -1119,7 +1122,7 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Hierarchy, testing::ext::TestSize.Level1
 
     float previousProgress = 0.f;
 
-    StepAnimations({ par1 }, 15, 10, [&](uint32_t frame) {
+    StepAnimations({par1}, 15, 10, [&](uint32_t frame) {
         EXPECT_EQ(par1.GetRunning(), frame < 15) << "Frame " << frame;
 
         auto progress = par1.GetProgress();
@@ -1162,9 +1165,9 @@ UNIT_TEST_F(API_StaggeredAnimationTest, Reparent, testing::ext::TestSize.Level1)
     ASSERT_NE(a1cont, nullptr);
     ASSERT_NE(a2cont, nullptr);
 
-    float from[2] = { 0, 5 };
-    float to[2] = { 10, 50 };
-    TimeSpan duration[2] = { TimeSpan::Milliseconds(100), TimeSpan::Milliseconds(200) };
+    float from[2] = {0, 5};
+    float to[2] = {10, 50};
+    TimeSpan duration[2] = {TimeSpan::Milliseconds(100), TimeSpan::Milliseconds(200)};
 
     SetProperties(a1, p1, from[0], to[0], duration[0]);
     SetProperties(a2, p2, from[1], to[1], duration[1]);
@@ -1285,8 +1288,8 @@ UNIT_TEST_F(API_StaggeredAnimationTest, SequentialMove, testing::ext::TestSize.L
  */
 UNIT_TEST_F(API_StaggeredAnimationTest, ParallelWithTrackAnimationSeeking, testing::ext::TestSize.Level1)
 {
-    static BASE_NS::vector<float> trackTimestamps = { 0.0f, 1.f };
-    static BASE_NS::vector<int> trackKeyframes = { 0, 10 };
+    static BASE_NS::vector<float> trackTimestamps = {0.0f, 1.f};
+    static BASE_NS::vector<int> trackKeyframes = {0, 10};
 
     auto property = ConstructProperty<int>("Prop");
     auto parallel = META_NS::ParallelAnimation(CreateInstance(ClassId::ParallelAnimation));
@@ -1314,12 +1317,12 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelWithTrackAnimationSeeking, testi
     }));
 
     // should do nothing
-    StepAnimations({ parallel }, 10, [](uint32_t frame) {});
+    StepAnimations({parallel}, 10, [](uint32_t frame) {});
 
     parallel.Seek(0.1f);
 
     // should do nothing
-    StepAnimations({ parallel }, 10, [](uint32_t frame) {});
+    StepAnimations({parallel}, 10, [](uint32_t frame) {});
 
     EXPECT_EQ(property->GetValue(), 1);
     EXPECT_EQ(count, 1);
@@ -1331,6 +1334,6 @@ UNIT_TEST_F(API_StaggeredAnimationTest, ParallelWithTrackAnimationSeeking, testi
     EXPECT_EQ(count, 3);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

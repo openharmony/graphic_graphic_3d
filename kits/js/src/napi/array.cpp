@@ -77,4 +77,4 @@ void Array::Set_value(size_t index, napi_value v) const
     napi_set_element(env_, array_, index, v);
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

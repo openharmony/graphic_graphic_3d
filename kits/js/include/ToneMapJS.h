@@ -15,9 +15,13 @@
 
 #ifndef TONEMAPJS_H
 #define TONEMAPJS_H
-#include "BaseObjectJS.h"
 
-class ToneMapJS final : public BaseObject {
+#include <optional>
+
+#include "BaseObjectJS.h"
+#include "export.h"
+
+class SCENE_ADDON_PUBLIC ToneMapJS final : public BaseObject {
 public:
     enum ToneMappingType {
         NOT_SET = -1,
@@ -40,19 +44,20 @@ public:
     // Start using the native as the backing object and sync our members to it.
     void BindToNative(SCENE_NS::ITonemap::Ptr native);
     void* GetInstanceImpl(uint32_t) override;
+
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     // JS properties
 
     // type?: TonemapType;
     napi_value GetType(NapiApi::FunctionContext<>& ctx);
-    void SetType(NapiApi::FunctionContext<uint32_t>& ctx);
+    void SetType(NapiApi::FunctionContext<std::optional<uint32_t>>& ctx);
 
     // exposure?: number;
     napi_value GetExposure(NapiApi::FunctionContext<>& ctx);
-    void SetExposure(NapiApi::FunctionContext<float>& ctx);
+    void SetExposure(NapiApi::FunctionContext<std::optional<float>>& ctx);
 
     ToneMappingType type_;
     float exposure_;

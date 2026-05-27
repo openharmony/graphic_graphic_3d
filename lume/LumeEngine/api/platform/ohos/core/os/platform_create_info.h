@@ -49,6 +49,6 @@ struct PlatformCreateInfo {
 };
 CORE_END_NAMESPACE()
 
-#endif // __OHOS__
+#endif  // __OHOS__
 
-#endif // API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H
+#endif  // API_CORE_OS_OHOS_PLATFORM_CREATE_INFO_H

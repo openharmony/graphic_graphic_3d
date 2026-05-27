@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,7 +33,7 @@
 #include "ecs/systems/boids_swarm_system.h"
 
 CORE_BEGIN_NAMESPACE()
-IPluginRegister* gPluginRegistry { nullptr };
+IPluginRegister* gPluginRegistry{nullptr};
 IPluginRegister& GetPluginRegister()
 {
     return *gPluginRegistry;
@@ -60,10 +60,10 @@ void IBoidsSwarmSystemDestroy(ISystem*);
 
 const char* GetVersionInfo();
 
-constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = { CORE3D_NS::UID_3D_PLUGIN };
+constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = {CORE3D_NS::UID_3D_PLUGIN};
 
 constexpr ComponentManagerTypeInfo BoidsSwarmComponentTypeInfo = {
-    { ComponentManagerTypeInfo::UID },
+    {ComponentManagerTypeInfo::UID},
     IBoidsSwarmComponentManager::UID,
     CORE_NS::GetName<IBoidsSwarmComponentManager>().data(),
     IBoidsSwarmComponentManagerInstance,
@@ -71,7 +71,7 @@ constexpr ComponentManagerTypeInfo BoidsSwarmComponentTypeInfo = {
 };
 
 constexpr ComponentManagerTypeInfo BoidsSwarmGravityComponentTypeInfo = {
-    { ComponentManagerTypeInfo::UID },
+    {ComponentManagerTypeInfo::UID},
     IBoidsSwarmGravityComponentManager::UID,
     CORE_NS::GetName<IBoidsSwarmGravityComponentManager>().data(),
     IBoidsSwarmGravityComponentManagerInstance,
@@ -79,7 +79,7 @@ constexpr ComponentManagerTypeInfo BoidsSwarmGravityComponentTypeInfo = {
 };
 
 constexpr ComponentManagerTypeInfo BoidsSwarmRepulsionComponentTypeInfo = {
-    { ComponentManagerTypeInfo::UID },
+    {ComponentManagerTypeInfo::UID},
     IBoidsSwarmRepulsionComponentManager::UID,
     CORE_NS::GetName<IBoidsSwarmRepulsionComponentManager>().data(),
     IBoidsSwarmRepulsionComponentManagerInstance,
@@ -87,7 +87,7 @@ constexpr ComponentManagerTypeInfo BoidsSwarmRepulsionComponentTypeInfo = {
 };
 
 constexpr ComponentManagerTypeInfo BoidsSwarmStateComponentTypeInfo = {
-    { ComponentManagerTypeInfo::UID },
+    {ComponentManagerTypeInfo::UID},
     IBoidsSwarmStateComponentManager::UID,
     CORE_NS::GetName<IBoidsSwarmStateComponentManager>().data(),
     IBoidsSwarmStateComponentManagerInstance,
@@ -114,7 +114,7 @@ constexpr ComponentManagerTypeInfo gComponentManagers[] = {
 
 constexpr SystemTypeInfo gSystems[] = {
     {
-        { SystemTypeInfo::UID },
+        {SystemTypeInfo::UID},
         IBoidsSwarmSystem::UID,
         CORE_NS::GetName<IBoidsSwarmSystem>().data(),
         IBoidsSwarmSystemInstance,
@@ -155,13 +155,13 @@ void UnregisterInterfaces(PluginToken token)
 BOIDSSWARM_END_NAMESPACE()
 
 extern "C" {
-PLUGIN_DATA(PluginBoidsSwarm) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(PluginBoidsSwarm){
+    {CORE_NS::IPlugin::UID},
     "AGP Boids Swarm",
-    { BOIDSSWARM_NS::UID_BOIDS_SWARM_PLUGIN, BOIDSSWARM_NS::GetVersionInfo },
+    {BOIDSSWARM_NS::UID_BOIDS_SWARM_PLUGIN, BOIDSSWARM_NS::GetVersionInfo},
     BOIDSSWARM_NS::RegisterInterfaces,
     BOIDSSWARM_NS::UnregisterInterfaces,
-    { BOIDSSWARM_NS::PLUGIN_DEPENDENCIES },
+    {BOIDSSWARM_NS::PLUGIN_DEPENDENCIES},
 };
 DEFINE_STATIC_PLUGIN(PluginBoidsSwarm);
 }

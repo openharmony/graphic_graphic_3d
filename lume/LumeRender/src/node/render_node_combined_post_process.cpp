@@ -25,12 +25,12 @@ RENDER_BEGIN_NAMESPACE()
 void RenderNodeCombinedPostProcess::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
-    rnPostProcessUtil_.Init(*renderNodeContextMgr_, { true, {} });
+    rnPostProcessUtil_.Init(*renderNodeContextMgr_, {true, {}});
 }
 
 void RenderNodeCombinedPostProcess::PreExecuteFrame()
 {
-    rnPostProcessUtil_.PreExecute({ true, {} });
+    rnPostProcessUtil_.PreExecute({true, {}});
 }
 
 void RenderNodeCombinedPostProcess::ExecuteFrame(IRenderCommandList& cmdList)

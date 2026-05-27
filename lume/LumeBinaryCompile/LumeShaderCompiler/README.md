@@ -16,6 +16,18 @@ as `<input>.lsb`.
 
 `--monitor`, keep monitoring the source path for file changes and recompile modified shaders.
 
+
+## Testing on Windows
+
+When running the unit tests on Windows, the operating system must have long path support enabled in the registry
+(`LongPathsEnabled`). Without that setting, the long path coverage for the compiler executable is expected to fail
+even if the executable itself is built with long path awareness enabled.
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+-Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+```
+
 # LSB format, version 0
 
 ## Header:

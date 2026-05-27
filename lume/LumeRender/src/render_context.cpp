@@ -54,6 +54,10 @@
 #include "gles/swapchain_gles.h"
 #endif
 
+#if RENDER_HAS_MALEOON_BACKEND
+#include "maleoon/device_mln.h"
+#endif
+
 #include <algorithm>
 
 using namespace BASE_NS;
@@ -66,12 +70,12 @@ struct RegisterPathStrings {
     string_view uri;
 };
 constexpr RegisterPathStrings RENDER_DATA_PATHS[] = {
-    { "rendershaders", "rofsRndr://shaders/" },
-    { "rendershaderstates", "rofsRndr://shaderstates/" },
-    { "rendervertexinputdeclarations", "rofsRndr://vertexinputdeclarations/" },
-    { "renderpipelinelayouts", "rofsRndr://pipelinelayouts/" },
-    { "renderrenderdataconfigurations", "rofsRndr://renderdataconfigurations/" },
-    { "renderrendernodegraphs", "rofsRndr://rendernodegraphs/" },
+    {"rendershaders", "rofsRndr://shaders/"},
+    {"rendershaderstates", "rofsRndr://shaderstates/"},
+    {"rendervertexinputdeclarations", "rofsRndr://vertexinputdeclarations/"},
+    {"renderpipelinelayouts", "rofsRndr://pipelinelayouts/"},
+    {"renderrenderdataconfigurations", "rofsRndr://renderdataconfigurations/"},
+    {"renderrendernodegraphs", "rofsRndr://rendernodegraphs/"},
 };
 
 #if (RENDER_EMBEDDED_ASSETS_ENABLED == 1)
@@ -90,11 +94,11 @@ void LogRenderBuildInfo()
     PLUGIN_LOG_I("RENDER_PERF_ENABLED=" RENDER_TO_STRING(RENDER_PERF_ENABLED));
 }
 
-template<class RenderDataStoreType>
+template <class RenderDataStoreType>
 RenderDataStoreTypeInfo FillRenderDataStoreTypeInfo()
 {
     return {
-        { RenderDataStoreTypeInfo::UID },
+        {RenderDataStoreTypeInfo::UID},
         RenderDataStoreType::UID,
         RenderDataStoreType::TYPE_NAME,
         RenderDataStoreType::Create,
@@ -114,7 +118,7 @@ void RegisterCoreRenderDataStores(RenderDataStoreManager& renderDataStoreManager
     renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreRenderPostProcesses>());
 }
 
-template<typename DataStoreType>
+template <typename DataStoreType>
 refcnt_ptr<IRenderDataStore> CreateDataStore(IRenderDataStoreManager& renderDataStoreManager, const string_view name)
 {
     refcnt_ptr<IRenderDataStore> renderDataStore = renderDataStoreManager.Create(DataStoreType::UID, name.data());
@@ -135,7 +139,7 @@ vector<refcnt_ptr<IRenderDataStore>> CreateDefaultRenderDataStores(
         if (renderDataStorePod) {
             auto* renderDataStorePodTyped = static_cast<IRenderDataStorePod*>(renderDataStorePod.get());
 
-            NodeGraphBackBufferConfiguration backBufferConfig {};
+            NodeGraphBackBufferConfiguration backBufferConfig{};
             const auto len =
                 DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER.copy(backBufferConfig.backBufferName,
                     NodeGraphBackBufferConfiguration::CORE_MAX_BACK_BUFFER_NAME_LENGTH - 1);
@@ -164,12 +168,14 @@ vector<refcnt_ptr<IRenderDataStore>> CreateDefaultRenderDataStores(
 void CreateDefaultBuffers(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
     defResources.resources.push_back(gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_BUFFER,
-        GpuBufferDesc { CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
-                            CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
-                            CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                            CORE_BUFFER_USAGE_INDEX_BUFFER_BIT | CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                            CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
-            (CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT), 0u, 1024u }));
+        GpuBufferDesc{CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
+                          CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+                          CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT | CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                          CORE_BUFFER_USAGE_INDEX_BUFFER_BIT | CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                          CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+            0u,
+            1024u}));
     defResources.defGpuBuffer = defResources.resources.back().GetHandle();
 }
 
@@ -178,22 +184,30 @@ void CreateDefaultTextures(IGpuResourceManager& gpuResourceMgr, RenderContext::D
     // NOTE: render context color space settings do not affect these
     // Pure black and white are used
 
-    GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-        Format::BASE_FORMAT_R8G8B8A8_UNORM, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+    GpuImageDesc desc{ImageType::CORE_IMAGE_TYPE_2D,
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+        Format::BASE_FORMAT_R8G8B8A8_UNORM,
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        0, // ImageCreateFlags
-        0, // EngineImageCreationFlags
-        2, 2, 1, 1, 1, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+        0,  // ImageCreateFlags
+        0,  // EngineImageCreationFlags
+        2,
+        2,
+        1,
+        1,
+        1,
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+        {}};
 
     constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
-    constexpr const uint32_t rgbData[4u] = { 0x0, 0x0, 0x0, 0x0 };
+    constexpr const uint32_t rgbData[4u] = {0x0, 0x0, 0x0, 0x0};
     const auto rgbDataView = array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeOfUint32 * countof(rgbData));
     defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE, desc, rgbDataView));
     defResources.defGpuImage = defResources.resources.back().GetHandle();
 
-    constexpr const uint32_t rgbDataWhite[4u] = { 0xFFFFffff, 0xFFFFffff, 0xFFFFffff, 0xFFFFffff };
+    constexpr const uint32_t rgbDataWhite[4u] = {0xFFFFffff, 0xFFFFffff, 0xFFFFffff, 0xFFFFffff};
     const auto rgbDataViewWhite =
         array_view(reinterpret_cast<const uint8_t*>(rgbDataWhite), sizeOfUint32 * countof(rgbDataWhite));
     defResources.resources.push_back(
@@ -205,16 +219,16 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, RenderContext::De
     {
         // hard-coded default backbuffer
         // all presentations and swapchain semaphore syncs are done automatically for this client handle
-        GpuImageDesc desc {
+        GpuImageDesc desc{
             ImageType::CORE_IMAGE_TYPE_2D,
             ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
             Format::BASE_FORMAT_R8G8B8A8_UNORM,
             ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
             ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            0, // ImageCreateFlags
+            0,  // ImageCreateFlags
             EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS |
-                EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, // EngineImageCreationFlags
+                EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,  // EngineImageCreationFlags
             2,
             2,
             1,
@@ -229,7 +243,7 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, RenderContext::De
             {}, DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, desc));
     }
     {
-        GpuImageDesc desc {
+        GpuImageDesc desc{
             ImageType::CORE_IMAGE_TYPE_2D,
             ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
             Format::BASE_FORMAT_D16_UNORM,
@@ -238,8 +252,8 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, RenderContext::De
                 ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
             MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                 MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
-            0,                                                                        // ImageCreateFlags
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, // EngineImageCreationFlags
+            0,                                                                         // ImageCreateFlags
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,  // EngineImageCreationFlags
             2,
             2,
             1,
@@ -256,77 +270,77 @@ void CreateDefaultTargets(IGpuResourceManager& gpuResourceMgr, RenderContext::De
 void CreateDefaultSamplers(IGpuResourceManager& gpuResourceMgr, RenderContext::DefaultGpuResources& defResources)
 {
     defResources.resources.push_back(gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_SAMPLER,
-        GpuSamplerDesc {
-            Filter::CORE_FILTER_NEAREST,                                 // magFilter
-            Filter::CORE_FILTER_NEAREST,                                 // minFilter
-            Filter::CORE_FILTER_NEAREST,                                 // mipMapMode
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        GpuSamplerDesc{
+            Filter::CORE_FILTER_NEAREST,                                  // magFilter
+            Filter::CORE_FILTER_NEAREST,                                  // minFilter
+            Filter::CORE_FILTER_NEAREST,                                  // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
         }));
     defResources.defGpuSampler = defResources.resources.back().GetHandle();
 
     defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_NEAREST_REPEAT,
-            GpuSamplerDesc {
-                Filter::CORE_FILTER_NEAREST,                          // magFilter
-                Filter::CORE_FILTER_NEAREST,                          // minFilter
-                Filter::CORE_FILTER_NEAREST,                          // mipMapMode
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeU
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeV
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeW
+            GpuSamplerDesc{
+                Filter::CORE_FILTER_NEAREST,                           // magFilter
+                Filter::CORE_FILTER_NEAREST,                           // minFilter
+                Filter::CORE_FILTER_NEAREST,                           // mipMapMode
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeU
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeV
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeW
             }));
     defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_NEAREST_CLAMP,
-            GpuSamplerDesc {
-                Filter::CORE_FILTER_NEAREST,                                 // magFilter
-                Filter::CORE_FILTER_NEAREST,                                 // minFilter
-                Filter::CORE_FILTER_NEAREST,                                 // mipMapMode
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+            GpuSamplerDesc{
+                Filter::CORE_FILTER_NEAREST,                                  // magFilter
+                Filter::CORE_FILTER_NEAREST,                                  // minFilter
+                Filter::CORE_FILTER_NEAREST,                                  // mipMapMode
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
             }));
 
     defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_REPEAT,
-            GpuSamplerDesc {
-                Filter::CORE_FILTER_LINEAR,                           // magFilter
-                Filter::CORE_FILTER_LINEAR,                           // minFilter
-                Filter::CORE_FILTER_LINEAR,                           // mipMapMode
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeU
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeV
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeW
+            GpuSamplerDesc{
+                Filter::CORE_FILTER_LINEAR,                            // magFilter
+                Filter::CORE_FILTER_LINEAR,                            // minFilter
+                Filter::CORE_FILTER_LINEAR,                            // mipMapMode
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeU
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeV
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeW
             }));
     defResources.resources.push_back(
         gpuResourceMgr.Create(DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_CLAMP,
-            GpuSamplerDesc {
-                Filter::CORE_FILTER_LINEAR,                                  // magFilter
-                Filter::CORE_FILTER_LINEAR,                                  // minFilter
-                Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+            GpuSamplerDesc{
+                Filter::CORE_FILTER_LINEAR,                                   // magFilter
+                Filter::CORE_FILTER_LINEAR,                                   // minFilter
+                Filter::CORE_FILTER_LINEAR,                                   // mipMapMode
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+                SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
             }));
 
-    GpuSamplerDesc linearMipmapRepeat {
-        Filter::CORE_FILTER_LINEAR,                           // magFilter
-        Filter::CORE_FILTER_LINEAR,                           // minFilter
-        Filter::CORE_FILTER_LINEAR,                           // mipMapMode
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeU
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeV
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT, // addressModeW
+    GpuSamplerDesc linearMipmapRepeat{
+        Filter::CORE_FILTER_LINEAR,                            // magFilter
+        Filter::CORE_FILTER_LINEAR,                            // minFilter
+        Filter::CORE_FILTER_LINEAR,                            // mipMapMode
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeU
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeV
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT,  // addressModeW
     };
     linearMipmapRepeat.minLod = 0.0f;
     linearMipmapRepeat.maxLod = 32.0f;
     defResources.resources.push_back(gpuResourceMgr.Create(
         DefaultEngineGpuResourceConstants::CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT, linearMipmapRepeat));
-    GpuSamplerDesc linearMipmapClamp {
-        Filter::CORE_FILTER_LINEAR,                                  // magFilter
-        Filter::CORE_FILTER_LINEAR,                                  // minFilter
-        Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+    GpuSamplerDesc linearMipmapClamp{
+        Filter::CORE_FILTER_LINEAR,                                   // magFilter
+        Filter::CORE_FILTER_LINEAR,                                   // minFilter
+        Filter::CORE_FILTER_LINEAR,                                   // mipMapMode
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+        SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
     };
     linearMipmapClamp.minLod = 0.0f;
     linearMipmapClamp.maxLod = 32.0f;
@@ -343,17 +357,109 @@ string_view GetPipelineCacheUri(DeviceBackendType backendType)
             return "cache://deviceGLESCache.bin";
         case DeviceBackendType::OPENGL:
             return "cache://deviceGLCache.bin";
+        case DeviceBackendType::MALEOON:
+            return "cache://deviceMlnCache.bin";
         default:
             break;
     }
     return "";
 }
-} // namespace
+
+string_view GetPipelineCacheSeedUri(DeviceBackendType backendType)
+{
+    switch (backendType) {
+        case DeviceBackendType::VULKAN:
+            return "assets://deviceVkCache.bin";
+        case DeviceBackendType::OPENGLES:
+            return "assets://deviceGLESCache.bin";
+        case DeviceBackendType::OPENGL:
+            return "assets://deviceGLCache.bin";
+        default:
+            break;
+    }
+    return "";
+}
+
+vector<uint8_t> ReadPipelineCacheFile(IFile& file)
+{
+    vector<uint8_t> data(static_cast<size_t>(file.GetLength()));
+    if (data.empty()) {
+        return {};
+    }
+    if (file.Read(data.data(), data.size()) != data.size()) {
+        data.clear();
+    }
+    return data;
+}
+
+bool WritePipelineCacheFile(IFileManager& fileManager, const string_view uri, const array_view<const uint8_t> data)
+{
+    bool writeSucceeded = false;
+    {
+        auto file = fileManager.CreateFile(uri);
+        writeSucceeded = file && (file->Write(data.data(), data.size()) == data.size());
+    }
+    if (!writeSucceeded) {
+        fileManager.DeleteFile(uri);
+    }
+    return writeSucceeded;
+}
+
+vector<uint8_t> SeedPipelineCache(IFileManager& fileManager, const string_view cacheUri, const string_view seedUri)
+{
+    if (seedUri.empty()) {
+        return {};
+    }
+    auto seedFile = fileManager.OpenFile(seedUri);
+    if (!seedFile) {
+        return {};
+    }
+    auto data = ReadPipelineCacheFile(*seedFile);
+    if (data.empty()) {
+        return {};
+    }
+    return WritePipelineCacheFile(fileManager, cacheUri, data) ? data : vector<uint8_t>{};
+}
+
+vector<uint8_t> LoadPipelineCache(IFileManager& fileManager, DeviceBackendType backendType)
+{
+    const auto cacheUri = GetPipelineCacheUri(backendType);
+    if (cacheUri.empty()) {
+        return {};
+    }
+    if (auto cacheFile = fileManager.OpenFile(cacheUri); cacheFile && (cacheFile->GetLength() != 0)) {
+        auto data = ReadPipelineCacheFile(*cacheFile);
+        if (!data.empty()) {
+            PLUGIN_LOG_I("Pipeline cache loaded from %.*s (%zu bytes).",
+                static_cast<int>(cacheUri.size()),
+                cacheUri.data(),
+                data.size());
+        } else {
+            PLUGIN_LOG_I(
+                "Pipeline cache failed to load from %.*s.", static_cast<int>(cacheUri.size()), cacheUri.data());
+        }
+        return data;
+    }
+
+    const auto seedUri = GetPipelineCacheSeedUri(backendType);
+    if (auto data = SeedPipelineCache(fileManager, cacheUri, seedUri); !data.empty()) {
+        PLUGIN_LOG_I("Pipeline cache seeded from %.*s to %.*s and loaded (%zu bytes).",
+            static_cast<int>(seedUri.size()),
+            seedUri.data(),
+            static_cast<int>(cacheUri.size()),
+            cacheUri.data(),
+            data.size());
+        return data;
+    }
+    PLUGIN_LOG_I("Pipeline cache not loaded from %.*s.", static_cast<int>(cacheUri.size()), cacheUri.data());
+    return {};
+}
+}  // namespace
 
 IRenderContext* RenderPluginState::CreateInstance(IEngine& engine)
 {
     if (!context_) {
-        context_ = IRenderContext::Ptr { new RenderContext(*this, engine) };
+        context_ = IRenderContext::Ptr{new RenderContext(*this, engine)};
     }
     return context_.get();
 }
@@ -380,7 +486,7 @@ RenderContext::RenderContext(RenderPluginState& pluginState, IEngine& engine)
 
 RenderContext::~RenderContext()
 {
-    GetPluginRegister().RemoveListener(*this);
+    RENDER_NS::GetPluginRegister().RemoveListener(*this);
     if (device_) {
         device_->Activate();
         device_->WaitForIdle();
@@ -398,7 +504,7 @@ RenderContext::~RenderContext()
     renderer_.reset();
     renderNodeGraphMgr_.reset();
     renderDataStoreMgr_.reset();
-    renderUtil_.reset(); // GLES semaphore/fence destruction device needs to be active
+    renderUtil_.reset();  // GLES semaphore/fence destruction device needs to be active
     if (device_) {
         device_->Deactivate();
     }
@@ -420,12 +526,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
 
         // Initialize the pipeline/ program cache.
         if (device_->GetDeviceConfiguration().configurationFlags & CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT) {
-            vector<uint8_t> pipelineCache;
-            if (auto file = fileManager_->OpenFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
-                pipelineCache.resize(static_cast<size_t>(file->GetLength()));
-                file->Read(pipelineCache.data(), pipelineCache.size());
-            }
-            device_->InitializePipelineCache(pipelineCache);
+            device_->InitializePipelineCache(LoadPipelineCache(*fileManager_, device_->GetBackendType()));
         }
 
         // set engine file manager with registered paths
@@ -447,7 +548,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         RegisterCoreRenderDataStores(*renderDataStoreMgr_);
 
         // Add render data stores from plugins
-        for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(RenderDataStoreTypeInfo::UID)) {
+        for (auto info : RENDER_NS::GetPluginRegister().GetTypeInfos(RenderDataStoreTypeInfo::UID)) {
             renderDataStoreMgr_->AddRenderDataStoreFactory(*static_cast<const RenderDataStoreTypeInfo*>(info));
         }
 
@@ -459,7 +560,7 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         auto& renderNodeMgr = renderNodeGraphMgr_->GetRenderNodeManager();
         RegisterCoreRenderNodes(renderNodeMgr);
         // Add render nodes from plugins
-        for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(RenderNodeTypeInfo::UID)) {
+        for (auto info : RENDER_NS::GetPluginRegister().GetTypeInfos(RenderNodeTypeInfo::UID)) {
             renderNodeMgr.AddRenderNodeFactory(*static_cast<const RenderNodeTypeInfo*>(info));
         }
 
@@ -473,18 +574,19 @@ RenderResultCode RenderContext::Init(const RenderCreateInfo& createInfo)
         CreateDefaultTargets(gpuResourceMgr, defaultGpuResources_);
         CreateDefaultSamplers(gpuResourceMgr, defaultGpuResources_);
         ((GpuResourceManager&)gpuResourceMgr)
-            .SetDefaultResources({ defaultGpuResources_.defGpuBuffer, defaultGpuResources_.defGpuImage,
-                defaultGpuResources_.defGpuSampler });
+            .SetDefaultResources({defaultGpuResources_.defGpuBuffer,
+                defaultGpuResources_.defGpuImage,
+                defaultGpuResources_.defGpuSampler});
 
         device_->Deactivate();
 
         GetPluginRegister().AddListener(*this);
 
-        for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(IRenderPlugin::UID)) {
+        for (auto info : RENDER_NS::GetPluginRegister().GetTypeInfos(IRenderPlugin::UID)) {
             if (auto renderPlugin = static_cast<const IRenderPlugin*>(info);
                 renderPlugin && renderPlugin->createPlugin) {
                 auto token = renderPlugin->createPlugin(*this);
-                plugins_.push_back({ token, renderPlugin });
+                plugins_.push_back({token, renderPlugin});
             }
         }
 
@@ -576,6 +678,12 @@ unique_ptr<Device> RenderContext::CreateDevice(const RenderCreateInfo& createInf
 #else
             return nullptr;
 #endif
+        case DeviceBackendType::MALEOON:
+#if (RENDER_HAS_MALEOON_BACKEND)
+            return CreateDeviceMln(*this);
+#else
+            return nullptr;
+#endif
         default:
             break;
     }
@@ -607,9 +715,10 @@ void RenderContext::WritePipelineCacheInternal(bool activate) const
         if (activate) {
             device_->Activate();
         }
-        vector<uint8_t> pipelineCache = device_->GetPipelineCache();
-        if (auto file = fileManager_->CreateFile(GetPipelineCacheUri(device_->GetBackendType())); file) {
-            file->Write(pipelineCache.data(), pipelineCache.size());
+        const auto cacheUri = GetPipelineCacheUri(device_->GetBackendType());
+        if (!cacheUri.empty()) {
+            vector<uint8_t> pipelineCache = device_->GetPipelineCache();
+            WritePipelineCacheFile(*fileManager_, cacheUri, pipelineCache);
         }
         if (activate) {
             device_->Deactivate();
@@ -646,12 +755,13 @@ IInterface* RenderContext::GetInterface(const Uid& uid)
 
 void RenderContext::Ref()
 {
-    refCount_++;
+    BASE_NS::AtomicIncrementRelaxed(&refCount_);
 }
 
 void RenderContext::Unref()
 {
-    if (--refCount_ == 1) {
+    if (BASE_NS::AtomicDecrementRelease(&refCount_) == 1) {
+        BASE_NS::AtomicFenceAcquire();
         pluginState_.Destroy();
         delete this;
     }
@@ -661,7 +771,7 @@ IInterface::Ptr RenderContext::CreateInstance(const Uid& uid)
 {
     const auto& data = GetInterfaceMetadata(uid);
     if (data.createInterface) {
-        return IInterface::Ptr { data.createInterface(*this, data.token) };
+        return IInterface::Ptr{data.createInterface(*this, data.token)};
     }
     return {};
 }
@@ -669,7 +779,9 @@ IInterface::Ptr RenderContext::CreateInstance(const Uid& uid)
 void RenderContext::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     // keep interfaceTypeInfos_ sorted according to UIDs
-    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(),
+        interfaceTypeInfos_.cend(),
+        interfaceInfo.uid,
         [](Uid value, const InterfaceTypeInfo* element) { return value < element->uid; });
     interfaceTypeInfos_.insert(pos, &interfaceInfo);
 }
@@ -677,7 +789,9 @@ void RenderContext::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo
 void RenderContext::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
@@ -692,10 +806,12 @@ array_view<const InterfaceTypeInfo* const> RenderContext::GetInterfaceMetadata()
 
 const InterfaceTypeInfo& RenderContext::GetInterfaceMetadata(const Uid& uid) const
 {
-    static InterfaceTypeInfo invalidType {};
+    static InterfaceTypeInfo invalidType{};
 
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
@@ -720,12 +836,13 @@ void RenderContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* 
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == IRenderPlugin::UID && static_cast<const IRenderPlugin*>(info)->createPlugin) {
                 auto renderPlugin = static_cast<const IRenderPlugin*>(info);
-                if (std::none_of(plugins_.begin(), plugins_.end(),
+                if (std::none_of(plugins_.begin(),
+                        plugins_.end(),
                         [renderPlugin](const pair<PluginToken, const IRenderPlugin*>& pluginData) {
                             return pluginData.second == renderPlugin;
                         })) {
                     auto token = renderPlugin->createPlugin(*this);
-                    plugins_.push_back({ token, renderPlugin });
+                    plugins_.push_back({token, renderPlugin});
                 }
             } else if (info && info->typeUid == RenderDataStoreTypeInfo::UID) {
                 renderDataStoreMgr_->AddRenderDataStoreFactory(*static_cast<const RenderDataStoreTypeInfo*>(info));
@@ -737,7 +854,8 @@ void RenderContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* 
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == IRenderPlugin::UID) {
                 auto renderPlugin = static_cast<const IRenderPlugin*>(info);
-                if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
+                if (auto pos = std::find_if(plugins_.begin(),
+                        plugins_.end(),
                         [renderPlugin](const pair<PluginToken, const IRenderPlugin*>& pluginData) {
                             return pluginData.second == renderPlugin;
                         });

@@ -30,6 +30,11 @@
 #include "CameraJS.h"
 #include "JsObjectCache.h"
 #include "ToneMapJS.h"
+
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+#include "histogram_plugin_macros.h"
+#endif
+
 using IntfPtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
 using IntfWeakPtr = BASE_NS::weak_ptr<CORE_NS::IInterface>;
 using namespace SCENE_NS;
@@ -50,8 +55,14 @@ void PostProcJS::Init(napi_env env, napi_value exports)
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, PostProcJS, &PostProcJS::Dispose>("destroy"));
 
     napi_value func;
-    auto status = napi_define_class(env, "PostProcessSettings", NAPI_AUTO_LENGTH, BaseObject::ctor<PostProcJS>(),
-        nullptr, node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "PostProcessSettings",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<PostProcJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -68,7 +79,7 @@ napi_value PostProcJS::Dispose(NapiApi::FunctionContext<>& ctx)
     LOG_V("PostProcJS::Dispose");
     // see if we have "scenejs" as ext (prefer one given as argument)
     napi_status stat;
-    CameraJS* ptr { nullptr };
+    CameraJS* ptr{nullptr};
     NapiApi::FunctionContext<NapiApi::Object> args(ctx);
     if (args) {
         if (NapiApi::Object obj = args.Arg<0>()) {
@@ -81,17 +92,11 @@ napi_value PostProcJS::Dispose(NapiApi::FunctionContext<>& ctx)
         ptr = camera_.GetJsWrapper<CameraJS>();
     }
 
-    DisposeNative(ptr);
+    DisposeNative();
     return {};
 }
-void PostProcJS::DisposeNative(void* cam)
+void PostProcJS::DisposeNative()
 {
-    if (cam == nullptr) {
-        if (!disposed_) {
-            LOG_F("PostProcJS::DisposeNative but argument NULL");
-        }
-        return;
-    }
     if (!disposed_) {
         disposed_ = true;
         DisposeBridge(this);
@@ -116,7 +121,7 @@ void PostProcJS::DisposeNative(void* cam)
             if (const auto cam = camera_.GetJsWrapper<CameraJS>()) {
                 ExecSyncTask([cam, post = BASE_NS::move(post)]() {
                     cam->ReleaseObject(interface_pointer_cast<META_NS::IObject>(post));
-                    return META_NS::IAny::Ptr {};
+                    return META_NS::IAny::Ptr{};
                 });
             }
         }
@@ -133,7 +138,7 @@ void* PostProcJS::GetInstanceImpl(uint32_t id)
 }
 void PostProcJS::Finalize(napi_env env)
 {
-    DisposeNative(camera_.GetJsWrapper<CameraJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -141,6 +146,9 @@ void PostProcJS::Finalize(napi_env env)
 PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
     LOG_V("PostProcJS ++");
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+    HISTOGRAM_BOOLEAN("Arkgraphics3d.TestApipostProcess", 1);
+#endif
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
         // no arguments. so internal create.
@@ -150,7 +158,7 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
     // camera that we bind to..
     NapiApi::Object cameraJS = fromJs.Arg<0>();
-    camera_ = { cameraJS };
+    camera_ = {cameraJS};
 
     auto postproc = GetNativeObject<SCENE_NS::IPostProcess>();
     if (!postproc) {
@@ -165,15 +173,16 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
     // now, based on parameters, create correct objects.
     if (NapiApi::Object args = fromJs.Arg<1>()) {
         if (auto prm = args.Get("toneMapping")) {
-            // enable tonemap.
-            napi_value innerArgs[] = { prm };
-            const auto tone = postproc->Tonemap()->GetValue();
-            // The tonemap is a part of the PostProcess object, so we own it. TonemapJS get only a weak ref.
-            const auto tonemapJS = CreateFromNativeInstance(e, tone, PtrType::WEAK, innerArgs);
-            meJs.Set("toneMapping", tonemapJS);
+            meJs.Set("toneMapping", prm);
         }
         if (auto prm = args.Get("bloom")) {
             meJs.Set("bloom", prm);
+        }
+        if (auto prm = args.Get("vignette")) {
+            meJs.Set("vignette", prm);
+        }
+        if (auto prm = args.Get("colorFringe")) {
+            meJs.Set("colorFringe", prm);
         }
     }
 }
@@ -181,7 +190,7 @@ PostProcJS::PostProcJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 PostProcJS::~PostProcJS()
 {
     LOG_V("PostProcJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
@@ -222,7 +231,7 @@ void PostProcJS::SetToneMapping(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         toneMap_ = NapiApi::StrongRef(argObj);
     } else if (argObj) {
         // The arg is a raw JS object.
-        napi_value args[] = { argObj.ToNapiValue() };
+        napi_value args[] = {argObj.ToNapiValue()};
         auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), target, PtrType::WEAK, args);
         // ToneMapJS constructor sets native properties from the given args only once.
         // After first creation, the same cached wrapper is used, so the constructor isn't being run.
@@ -256,7 +265,7 @@ napi_value PostProcJS::GetToneMapping(NapiApi::FunctionContext<>& ctx)
         }
 
         auto tonemapJS = CreateFromNativeInstance(ctx.GetEnv(), tone, PtrType::WEAK, {});
-        toneMap_ = NapiApi::StrongRef(tonemapJS); // take ownership of the object.
+        toneMap_ = NapiApi::StrongRef(tonemapJS);  // take ownership of the object.
         return tonemapJS.ToNapiValue();
     }
     toneMap_.Reset();
@@ -297,7 +306,7 @@ void PostProcJS::SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     }
 
     bool enabled = false;
-    if (const auto bloomJs = NapiApi::Object { ctx.Arg<0>() }) {
+    if (const auto bloomJs = NapiApi::Object{ctx.Arg<0>()}) {
         enabled = true;
         // is it wrapped?
         if (auto wrapper = BloomConfiguration::Unwrap(bloomJs)) {
@@ -320,7 +329,7 @@ void PostProcJS::SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         auto oldBloom = bloom_.GetObject();
         if (auto oldWrapper = BloomConfiguration::Unwrap(oldBloom)) {
             // detaches native and javascript object.
-            oldWrapper->SetPostProc(nullptr); // detach from object
+            oldWrapper->SetPostProc(nullptr);  // detach from object
         }
         // release our reference to the current bloom settings (JS)
         bloom_.Reset();
@@ -334,7 +343,7 @@ void PostProcJS::SetBloom(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 
 napi_value PostProcJS::GetVignette(NapiApi::FunctionContext<>& ctx)
 {
-    auto vignette = SCENE_NS::IVignette::Ptr {};
+    auto vignette = SCENE_NS::IVignette::Ptr{};
     if (const auto postProcess = ctx.This().GetNative<SCENE_NS::IPostProcess>()) {
         vignette = postProcess->Vignette()->GetValue();
     }
@@ -351,7 +360,7 @@ napi_value PostProcJS::GetVignette(NapiApi::FunctionContext<>& ctx)
 
 void PostProcJS::SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto vignette = SCENE_NS::IVignette::Ptr {};
+    auto vignette = SCENE_NS::IVignette::Ptr{};
     if (const auto postProcess = ctx.This().GetNative<SCENE_NS::IPostProcess>()) {
         vignette = postProcess->Vignette()->GetValue();
     }
@@ -361,19 +370,19 @@ void PostProcJS::SetVignette(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         return;
     }
 
-    if (auto newVignette = NapiApi::Object { ctx.Arg<0>() }) {
+    if (auto newVignette = NapiApi::Object{ctx.Arg<0>()}) {
         if (!vignetteProxy_.GetObject()) {
             SetupVignetteProxy(ctx.GetEnv(), vignette);
         }
         vignetteProxy_.ReplaceObject(newVignette);
+        vignette->Enabled()->SetValue(true);
     } else {
-        // Setting to undefined means to not disable, but rather use defaults.
+        // Disable vignette when set to undefined
         vignetteProxy_.Reset();
         vignette->Power()->Reset();
         vignette->Coefficient()->Reset();
+        vignette->Enabled()->SetValue(false);
     }
-    // Due to backwards-compatibility requirements in the TS user-facing side, the default is to enable.
-    vignette->Enabled()->SetValue(true);
 }
 
 void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vignette)
@@ -383,9 +392,9 @@ void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vigne
     const auto roundnessToNative = [vignette](napi_env env, napi_value jsVal) {
         if (auto value = NapiApi::Value<double>(env, jsVal); value.IsValid()) {
             constexpr auto offset = VIGNETTE_LOG_OFFSET;
-            auto nativeValue = BASE_NS::Math::max(double { value }, 0.0);
+            auto nativeValue = BASE_NS::Math::max(double{value}, 0.0);
             nativeValue = BASE_NS::Math::clamp(-std::log2(nativeValue + offset), 0.0, 1024.0);
-            jsVal = NapiApi::Env { env }.GetNumber(nativeValue);
+            jsVal = NapiApi::Env{env}.GetNumber(nativeValue);
         } else if (value.IsUndefined()) {
             vignette->Coefficient()->Reset();
         }
@@ -394,9 +403,9 @@ void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vigne
     const auto roundnessToJs = [](napi_env env, napi_value jsVal) {
         if (auto value = NapiApi::Value<double>(env, jsVal); value.IsValid()) {
             constexpr auto offset = VIGNETTE_LOG_OFFSET;
-            auto nativeValue = double { value };
+            auto nativeValue = double{value};
             nativeValue = BASE_NS::Math::clamp01(BASE_NS::Math::pow(2, -nativeValue) - offset);
-            jsVal = NapiApi::Env { env }.GetNumber(nativeValue);
+            jsVal = NapiApi::Env{env}.GetNumber(nativeValue);
         }
         return jsVal;
     };
@@ -408,15 +417,16 @@ void PostProcJS::SetupVignetteProxy(napi_env env, SCENE_NS::IVignette::Ptr vigne
         return jsVal;
     };
 #undef VIGNETTE_LOG_OFFSET
-    vignetteProxy_.Init(env, {
-                                 { "roundness", vignette->Coefficient(), roundnessToNative, roundnessToJs },
-                                 { "intensity", vignette->Power(), intensityToNative },
-                             });
+    vignetteProxy_.Init(env,
+        {
+            {"roundness", vignette->Coefficient(), roundnessToNative, roundnessToJs},
+            {"intensity", vignette->Power(), intensityToNative},
+        });
 }
 
 napi_value PostProcJS::GetColorFringe(NapiApi::FunctionContext<>& ctx)
 {
-    auto colorFringe = SCENE_NS::IColorFringe::Ptr {};
+    auto colorFringe = SCENE_NS::IColorFringe::Ptr{};
     if (const auto postProcess = ctx.This().GetNative<SCENE_NS::IPostProcess>()) {
         colorFringe = postProcess->ColorFringe()->GetValue();
     }
@@ -433,7 +443,7 @@ napi_value PostProcJS::GetColorFringe(NapiApi::FunctionContext<>& ctx)
 
 void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
-    auto colorFringe = SCENE_NS::IColorFringe::Ptr {};
+    auto colorFringe = SCENE_NS::IColorFringe::Ptr{};
     if (const auto postProcess = ctx.This().GetNative<SCENE_NS::IPostProcess>()) {
         colorFringe = postProcess->ColorFringe()->GetValue();
     }
@@ -443,7 +453,7 @@ void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
         return;
     }
 
-    if (auto newColorFringe = NapiApi::Object { ctx.Arg<0>() }) {
+    if (auto newColorFringe = NapiApi::Object{ctx.Arg<0>()}) {
         if (!colorFringeProxy_.GetObject()) {
             SetupColorFringeProxy(ctx.GetEnv(), colorFringe);
         }
@@ -452,7 +462,7 @@ void PostProcJS::SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     } else {
         colorFringeProxy_.Reset();
         colorFringe->DistanceCoefficient()->Reset();
-        colorFringe->Enabled()->Reset();
+        colorFringe->Enabled()->SetValue(false);
     }
 }
 
@@ -461,8 +471,8 @@ void PostProcJS::SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr
 #define COLOR_FRINGE_FACTOR (10)
     const auto scaleToNative = [colorFringe](napi_env env, napi_value jsVal) {
         if (auto value = NapiApi::Value<double>(env, jsVal); value.IsValid()) {
-            auto nativeValue = double { value } * COLOR_FRINGE_FACTOR;
-            jsVal = NapiApi::Env { env }.GetNumber(nativeValue);
+            auto nativeValue = double{value} * COLOR_FRINGE_FACTOR;
+            jsVal = NapiApi::Env{env}.GetNumber(nativeValue);
         } else if (value.IsUndefined()) {
             colorFringe->DistanceCoefficient()->Reset();
         }
@@ -470,11 +480,11 @@ void PostProcJS::SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr
     };
     const auto scaleToJs = [](napi_env env, napi_value jsVal) {
         if (auto value = NapiApi::Value<double>(env, jsVal); value.IsValid()) {
-            auto nativeValue = double { value } / COLOR_FRINGE_FACTOR;
-            jsVal = NapiApi::Env { env }.GetNumber(nativeValue);
+            auto nativeValue = double{value} / COLOR_FRINGE_FACTOR;
+            jsVal = NapiApi::Env{env}.GetNumber(nativeValue);
         }
         return jsVal;
     };
 #undef COLOR_FRINGE_FACTOR
-    colorFringeProxy_.Init(env, { { "intensity", colorFringe->DistanceCoefficient(), scaleToNative, scaleToJs } });
+    colorFringeProxy_.Init(env, {{"intensity", colorFringe->DistanceCoefficient(), scaleToNative, scaleToJs}});
 }

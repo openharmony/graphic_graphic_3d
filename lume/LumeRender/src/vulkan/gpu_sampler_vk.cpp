@@ -41,30 +41,30 @@ VkSamplerYcbcrConversion CreateYcbcrConversion(const DeviceVk& deviceVk)
 
     return samplerYcbcrConversion;
 }
-} // namespace
+}  // namespace
 
 GpuSamplerVk::GpuSamplerVk(Device& device, const GpuSamplerDesc& desc) : device_(device), desc_(desc)
 {
     const bool portabilitySubset = static_cast<const DeviceVk&>(device).GetCommonDeviceExtensions().portabilitySubset;
     VkSamplerCreateInfo samplerCreateInfo = {
-        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,               // sType
-        nullptr,                                             // pNext
-        0,                                                   // flags
-        (VkFilter)desc.magFilter,                            // magFilter
-        (VkFilter)desc.minFilter,                            // minFilter
-        (VkSamplerMipmapMode)desc.mipMapMode,                // mipmapMode
-        (VkSamplerAddressMode)desc.addressModeU,             // addressModeU
-        (VkSamplerAddressMode)desc.addressModeV,             // addressModeV
-        (VkSamplerAddressMode)desc.addressModeW,             // addressModeW
-        desc.mipLodBias,                                     // mipLodBias
-        desc.enableAnisotropy,                               // anisotropyEnable
-        desc.maxAnisotropy,                                  // maxAnisotropy
-        portabilitySubset ? VK_FALSE : desc.enableCompareOp, // compareEnabled
-        (VkCompareOp)desc.compareOp,                         // compareOp
-        desc.minLod,                                         // minLod
-        desc.maxLod,                                         // maxLod
-        (VkBorderColor)desc.borderColor,                     // borderColor
-        desc.enableUnnormalizedCoordinates,                  // unnormalizedCoordinates
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,                // sType
+        nullptr,                                              // pNext
+        0,                                                    // flags
+        (VkFilter)desc.magFilter,                             // magFilter
+        (VkFilter)desc.minFilter,                             // minFilter
+        (VkSamplerMipmapMode)desc.mipMapMode,                 // mipmapMode
+        (VkSamplerAddressMode)desc.addressModeU,              // addressModeU
+        (VkSamplerAddressMode)desc.addressModeV,              // addressModeV
+        (VkSamplerAddressMode)desc.addressModeW,              // addressModeW
+        desc.mipLodBias,                                      // mipLodBias
+        desc.enableAnisotropy,                                // anisotropyEnable
+        desc.maxAnisotropy,                                   // maxAnisotropy
+        portabilitySubset ? VK_FALSE : desc.enableCompareOp,  // compareEnabled
+        (VkCompareOp)desc.compareOp,                          // compareOp
+        desc.minLod,                                          // minLod
+        desc.maxLod,                                          // maxLod
+        (VkBorderColor)desc.borderColor,                      // borderColor
+        desc.enableUnnormalizedCoordinates,                   // unnormalizedCoordinates
     };
 
 #if (RENDER_VULKAN_VALIDATION_ENABLED == 1)
@@ -80,21 +80,21 @@ GpuSamplerVk::GpuSamplerVk(Device& device, const GpuSamplerDesc& desc) : device_
     if ((desc.engineCreationFlags & CORE_ENGINE_SAMPLER_CREATION_YCBCR) &&
         deviceVk.GetCommonDeviceExtensions().samplerYcbcrConversion) {
         samplerConversion_ = CreateYcbcrConversion(deviceVk);
-        VkSamplerYcbcrConversionInfo yCbcrConversionInfo {
-            VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO, // sType
-            nullptr,                                         // pNext
-            samplerConversion_,                              // conversion
+        VkSamplerYcbcrConversionInfo yCbcrConversionInfo{
+            VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,  // sType
+            nullptr,                                          // pNext
+            samplerConversion_,                               // conversion
         };
         samplerCreateInfo.pNext = &yCbcrConversionInfo;
-        VALIDATE_VK_RESULT(vkCreateSampler(vkDevice, // device
-            &samplerCreateInfo,                      // pCreateInfo
-            nullptr,                                 // pAllocator
-            &plat_.sampler));                        // pSampler
+        VALIDATE_VK_RESULT(vkCreateSampler(vkDevice,  // device
+            &samplerCreateInfo,                       // pCreateInfo
+            nullptr,                                  // pAllocator
+            &plat_.sampler));                         // pSampler
     } else {
-        VALIDATE_VK_RESULT(vkCreateSampler(vkDevice, // device
-            &samplerCreateInfo,                      // pCreateInfo
-            nullptr,                                 // pAllocator
-            &plat_.sampler));                        // pSampler
+        VALIDATE_VK_RESULT(vkCreateSampler(vkDevice,  // device
+            &samplerCreateInfo,                       // pCreateInfo
+            nullptr,                                  // pAllocator
+            &plat_.sampler));                         // pSampler
     }
 }
 
@@ -104,13 +104,13 @@ GpuSamplerVk::~GpuSamplerVk()
     if (samplerConversion_ != VK_NULL_HANDLE) {
         ((const DeviceVk&)device_)
             .GetExtFunctions()
-            .vkDestroySamplerYcbcrConversion(device, // device
-                samplerConversion_,                  // ycbcrConversion
-                nullptr);                            // pAllocator
+            .vkDestroySamplerYcbcrConversion(device,  // device
+                samplerConversion_,                   // ycbcrConversion
+                nullptr);                             // pAllocator
     }
-    vkDestroySampler(device, // device
-        plat_.sampler,       // sampler
-        nullptr);            // pAllocator
+    vkDestroySampler(device,  // device
+        plat_.sampler,        // sampler
+        nullptr);             // pAllocator
 }
 
 const GpuSamplerDesc& GpuSamplerVk::GetDesc() const

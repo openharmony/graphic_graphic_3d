@@ -26,13 +26,13 @@ BOIDSSWARM_BEGIN_NAMESPACE()
 
 class IBoidsSwarmSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "c3d4e5f6-a7b8-4901-c234-56789012def0" };
+    static constexpr BASE_NS::Uid UID{"c3d4e5f6-a7b8-4901-c234-56789012def0"};
 
     static constexpr float DEFAULT_TIME_STEP_SEC = 0.016f;
     static constexpr float DEFAULT_PLAY_SPEED = 1.f;
     static constexpr float MIN_PLAY_SPEED = 0.125f;
     static constexpr float MAX_PLAY_SPEED = 8.f;
-    static constexpr BASE_NS::Math::IVec3 DEFAULT_AXIS_MASK { 1, 0, 1 };
+    static constexpr BASE_NS::Math::IVec3 DEFAULT_AXIS_MASK{1, 0, 1};
     static constexpr float DEFAULT_VELOCITY_SMOOTHING_FACTOR = 0.5f;
 
     virtual void SetTimeStepSec(float timeStepSec) = 0;

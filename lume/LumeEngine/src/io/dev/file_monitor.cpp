@@ -68,7 +68,7 @@ void FileMonitor::RecursivelyCollectAllFiles(string& path)
             }
         } else {
             // This is a new file or directory, start tracking it.
-            files_.insert({ path, { entry.timestamp, FileInfo::ADDED } });
+            files_.insert({path, {entry.timestamp, FileInfo::ADDED}});
         }
         if (entry.type == IDirectory::Entry::DIRECTORY) {
             RecursivelyCollectAllFiles(path);
@@ -76,7 +76,8 @@ void FileMonitor::RecursivelyCollectAllFiles(string& path)
         path.resize(oldLength);
     }
 }
-FileMonitor::FileMonitor(IFileManager& manager) : fileManager_(manager) {}
+FileMonitor::FileMonitor(IFileManager& manager) : fileManager_(manager)
+{}
 void FileMonitor::CleanPath(const string_view inPath, string& path)
 {
     // cleanup slashes. (partial sanitation, path needs to end with '/' and slashes must be '/' (not '\\')

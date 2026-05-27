@@ -65,9 +65,9 @@ protected:
 private:
     bool IsValidPath(const BASE_NS::string_view path);
 
-    Mode mode_ { Mode::INVALID };
+    Mode mode_{Mode::INVALID};
     mutable std::fstream file_;
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_STD_FILE_H
+#endif  // CORE_IO_STD_FILE_H

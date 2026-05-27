@@ -1,0 +1,23 @@
+{
+    "version": "1.0",
+    "description": "outer template overriding inner attachment property via deep path",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "outer",
+            "source": {
+                "type": "nodeTemplate",
+                "url": "node_template_att_child.json"
+            },
+            "resourceGroup": "nested-att-override-group",
+            "overrides": [
+                {
+                    "path": ".//AnimatedCube!ChildAtt.Float",
+                    "value": 77.0
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

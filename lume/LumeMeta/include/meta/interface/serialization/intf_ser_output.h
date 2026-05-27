@@ -29,8 +29,8 @@ public:
     virtual BASE_NS::string Process(const ISerNode::Ptr& tree) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::ISerOutput)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::ISerOutput)
 
 #endif

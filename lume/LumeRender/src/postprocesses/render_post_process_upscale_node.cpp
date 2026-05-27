@@ -17,7 +17,6 @@
 
 #include <base/containers/unique_ptr.h>
 #include <base/math/matrix_util.h>
-#include <core/log.h>
 #include <core/property/property_handle_util.h>
 #include <core/property_tools/property_api_impl.inl>
 #include <core/property_tools/property_macros.h>
@@ -55,13 +54,13 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
 constexpr string_view UPSCALE_GRADIENT_SHADER_NAME = "rendershaders://shader/tfs_upscaler_gradients.shader";
 constexpr string_view UPSCALE_STRUCTURE_TENSOR_SHADER_NAME =
     "rendershaders://shader/tfs_upscaler_structure_tensor.shader";
 constexpr string_view UPSCALE_FINAL_SHADER_NAME = "rendershaders://shader/tfs_upscaler_tensor_field.shader";
-} // namespace
+}  // namespace
 
 RenderPostProcessUpscaleNode::RenderPostProcessUpscaleNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -81,13 +80,13 @@ IPropertyHandle* RenderPostProcessUpscaleNode::GetRenderOutputProperties()
 
 DescriptorCounts RenderPostProcessUpscaleNode::GetRenderDescriptorCounts() const
 {
-    return DescriptorCounts { {
-        { CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3u },
-        { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4u },
-        { CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0u },
-        { CORE_DESCRIPTOR_TYPE_SAMPLER, 6u },
-        { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-    } };
+    return DescriptorCounts{{
+        {CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3u},
+        {CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4u},
+        {CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0u},
+        {CORE_DESCRIPTOR_TYPE_SAMPLER, 6u},
+        {CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u},
+    }};
 }
 
 void RenderPostProcessUpscaleNode::SetRenderAreaRequest(const RenderAreaRequest& renderAreaRequest)
@@ -105,10 +104,12 @@ void RenderPostProcessUpscaleNode::InitNode(IRenderNodeContextManager& renderNod
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
     samplerNearestHandle_ = gpuResourceMgr.Create(samplerNearestHandle_,
-        GpuSamplerDesc { Filter::CORE_FILTER_NEAREST, Filter::CORE_FILTER_NEAREST, Filter::CORE_FILTER_NEAREST,
+        GpuSamplerDesc{Filter::CORE_FILTER_NEAREST,
+            Filter::CORE_FILTER_NEAREST,
+            Filter::CORE_FILTER_NEAREST,
             SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE });
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE});
 
     binders_.gradientPass.reset();
     binders_.structureTensorPass.reset();
@@ -179,7 +180,7 @@ void RenderPostProcessUpscaleNode::ExecuteFrame(IRenderCommandList& cmdList)
 void RenderPostProcessUpscaleNode::RenderGradientPass(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(nodeInputsData.input.handle)) {
-        CORE_LOG_E("RenderGradientPass inputs invalid!");
+        PLUGIN_LOG_E("RenderGradientPass inputs invalid!");
         return;
     }
 
@@ -194,8 +195,8 @@ void RenderPostProcessUpscaleNode::RenderGradientPass(IRenderCommandList& cmdLis
     cmdList.BindPipeline(psos_.gradientPass);
 
     binder->ClearBindings();
-    binder->BindImage(0u, { nodeInputsData.input.handle });
-    binder->BindSampler(1u, { samplerNearestHandle_.GetHandle() });
+    binder->BindImage(0u, {nodeInputsData.input.handle});
+    binder->BindSampler(1u, {samplerNearestHandle_.GetHandle()});
 
     cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0u, binder->GetDescriptorSetHandle());
@@ -229,7 +230,7 @@ void RenderPostProcessUpscaleNode::RenderStructureTensorPass(IRenderCommandList&
 {
     if (!RenderHandleUtil::IsValid(nodeInputsData.input.handle) ||
         !RenderHandleUtil::IsValid(targets_.gradientTexture.GetHandle())) {
-        CORE_LOG_E("RenderStructureTensorPass inputs invalid!");
+        PLUGIN_LOG_E("RenderStructureTensorPass inputs invalid!");
         return;
     }
 
@@ -244,8 +245,8 @@ void RenderPostProcessUpscaleNode::RenderStructureTensorPass(IRenderCommandList&
     cmdList.BindPipeline(psos_.structureTensorPass);
 
     binder->ClearBindings();
-    binder->BindImage(0u, { targets_.gradientTexture.GetHandle() });
-    binder->BindSampler(1u, { samplerNearestHandle_.GetHandle() });
+    binder->BindImage(0u, {targets_.gradientTexture.GetHandle()});
+    binder->BindSampler(1u, {samplerNearestHandle_.GetHandle()});
 
     cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0u, binder->GetDescriptorSetHandle());
@@ -279,7 +280,7 @@ void RenderPostProcessUpscaleNode::TensorFieldUpscalePass(IRenderCommandList& cm
 {
     if (!RenderHandleUtil::IsValid(nodeInputsData.input.handle) ||
         !RenderHandleUtil::IsValid(targets_.tensorDataTexture.GetHandle())) {
-        CORE_LOG_E("TensorFieldUpscalePass inputs invalid!");
+        PLUGIN_LOG_E("TensorFieldUpscalePass inputs invalid!");
         return;
     }
 
@@ -294,9 +295,9 @@ void RenderPostProcessUpscaleNode::TensorFieldUpscalePass(IRenderCommandList& cm
     cmdList.BindPipeline(psos_.finalUpscalePass);
 
     binder->ClearBindings();
-    binder->BindImage(0u, { nodeInputsData.input.handle });
-    binder->BindImage(1u, { targets_.tensorDataTexture.GetHandle() });
-    binder->BindSampler(2u, { samplerNearestHandle_.GetHandle() });
+    binder->BindImage(0u, {nodeInputsData.input.handle});
+    binder->BindImage(1u, {targets_.tensorDataTexture.GetHandle()});
+    binder->BindSampler(2u, {samplerNearestHandle_.GetHandle()});
 
     cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0u, binder->GetDescriptorSetHandle());
@@ -332,7 +333,7 @@ RenderPass RenderPostProcessUpscaleNode::CreateRenderPass(
     rp.renderPassDesc.attachmentHandles[0u] = output;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, resolution.x, resolution.y };
+    rp.renderPassDesc.renderArea = {0, 0, resolution.x, resolution.y};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -358,21 +359,38 @@ void RenderPostProcessUpscaleNode::CreateTargets(const BASE_NS::Math::UVec2 base
 #endif
 
         // gradient texture
-        const GpuImageDesc gradientDesc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            Format::BASE_FORMAT_R16G16_SFLOAT, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
-            CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, targets_.inputResolution.x,
-            targets_.inputResolution.y, 1u, 1u, 1u, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
-
-        // structure tensor components
-        const GpuImageDesc tensorDataTextureDesc { ImageType::CORE_IMAGE_TYPE_2D,
-            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, Format::BASE_FORMAT_R16G16B16A16_SFLOAT,
+        const GpuImageDesc gradientDesc{ImageType::CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+            Format::BASE_FORMAT_R16G16_SFLOAT,
             ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
             CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, targets_.inputResolution.x,
-            targets_.inputResolution.y, 1u, 1u, 1u, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            0,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            targets_.inputResolution.x,
+            targets_.inputResolution.y,
+            1u,
+            1u,
+            1u,
+            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+            {}};
+
+        // structure tensor components
+        const GpuImageDesc tensorDataTextureDesc{ImageType::CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+            Format::BASE_FORMAT_R16G16B16A16_SFLOAT,
+            ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+            CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            0,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            targets_.inputResolution.x,
+            targets_.inputResolution.y,
+            1u,
+            1u,
+            1u,
+            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+            {}};
 
 #if (RENDER_VALIDATION_ENABLED == 1)
         const auto gradientName = nodeName + "_gradient";
@@ -410,22 +428,34 @@ void RenderPostProcessUpscaleNode::CreatePsos()
 
     if (!RenderHandleUtil::IsValid(psos_.gradientPass)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.gradientPass.shader);
-        psos_.gradientPass = psoMgr.GetGraphicsPsoHandle(shaderData_.gradientPass.shader, gfxHandle,
-            shaderData_.gradientPass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.gradientPass = psoMgr.GetGraphicsPsoHandle(shaderData_.gradientPass.shader,
+            gfxHandle,
+            shaderData_.gradientPass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.structureTensorPass)) {
         const RenderHandle gfxHandle =
             shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.structureTensorPass.shader);
-        psos_.structureTensorPass = psoMgr.GetGraphicsPsoHandle(shaderData_.structureTensorPass.shader, gfxHandle,
-            shaderData_.structureTensorPass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.structureTensorPass = psoMgr.GetGraphicsPsoHandle(shaderData_.structureTensorPass.shader,
+            gfxHandle,
+            shaderData_.structureTensorPass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.finalUpscalePass)) {
         const RenderHandle gfxHandle =
             shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.finalUpscalePass.shader);
-        psos_.finalUpscalePass = psoMgr.GetGraphicsPsoHandle(shaderData_.finalUpscalePass.shader, gfxHandle,
-            shaderData_.finalUpscalePass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.finalUpscalePass = psoMgr.GetGraphicsPsoHandle(shaderData_.finalUpscalePass.shader,
+            gfxHandle,
+            shaderData_.finalUpscalePass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 }
 

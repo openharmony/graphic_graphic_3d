@@ -62,7 +62,7 @@ constexpr const string_view RENDER_NODE_CAMERA_WEATHER_STR = "RenderNodeCameraWe
 constexpr const string_view RENDER_NODE_DEFAULT_MATERIAL_OBJECTS_STR = "RenderNodeDefaultMaterialObjects";
 constexpr const string_view RENDER_NODE_SCENE_WEATHER_SIMULATION_STR = "RenderNodeWeatherSimulation";
 
-constexpr bool ENABLE_WEATHER_INJECT { true };
+constexpr bool ENABLE_WEATHER_INJECT{true};
 
 RenderNodeGraphDesc LoadRenderNodeGraph(IRenderNodeGraphLoader& rngLoader, const string_view rng)
 {
@@ -103,27 +103,27 @@ inline RenderNodeDesc GetDefaultSceneWeatherSimulationNode()
 
 inline json::standalone_value GetPodPostProcess(const string_view name)
 {
-    auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
+    auto renderDataStore = json::standalone_value{json::standalone_value::object{}};
     renderDataStore["dataStoreName"] = "RenderDataStorePod";
-    renderDataStore["typeName"] = "RenderDataStorePod"; // This is render data store typeName
+    renderDataStore["typeName"] = "RenderDataStorePod";  // This is render data store TYPE_NAME
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
 
 inline json::standalone_value GetPostProcess(const string_view name)
 {
-    auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
+    auto renderDataStore = json::standalone_value{json::standalone_value::object{}};
     renderDataStore["dataStoreName"] = "RenderDataStorePostProcess";
-    renderDataStore["typeName"] = "RenderDataStorePostProcess"; // This is render data store typeName
+    renderDataStore["typeName"] = "RenderDataStorePostProcess";  // This is render data store TYPE_NAME
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
 
 inline json::standalone_value GetRenderPostProcesses(const string_view name)
 {
-    auto renderDataStore = json::standalone_value { json::standalone_value::object {} };
+    auto renderDataStore = json::standalone_value{json::standalone_value::object{}};
     renderDataStore["dataStoreName"] = "RenderDataStoreRenderPostProcesses";
-    renderDataStore["typeName"] = "RenderDataStoreRenderPostProcesses"; // This is render data store typeName
+    renderDataStore["typeName"] = "RenderDataStoreRenderPostProcesses";  // This is render data store TYPE_NAME
     renderDataStore["configurationName"] = string(name);
     return renderDataStore;
 }
@@ -167,7 +167,7 @@ vector<const RENDER_NS::RenderNodeTypeInfo*> GetRenderNodesWithDependencies()
     for (auto* info : typeInfos) {
         if (info && (info->typeUid == RenderNodeTypeInfo::UID)) {
             auto* renderNodeTypeInfo = static_cast<const RenderNodeTypeInfo*>(info);
-            if ((renderNodeTypeInfo->afterNode != Uid {}) || (renderNodeTypeInfo->beforeNode != Uid {})) {
+            if ((renderNodeTypeInfo->afterNode != Uid{}) || (renderNodeTypeInfo->beforeNode != Uid{})) {
                 renderNodesWithDependencies.push_back(renderNodeTypeInfo);
             }
         }
@@ -204,35 +204,38 @@ void InjectRenderNodes(RenderNodeGraphDesc& desc, IRenderNodeGraphManager& manag
     const auto renderNodesWithDependencies = GetRenderNodesWithDependencies();
     for (const auto* depending : renderNodesWithDependencies) {
         // Try adding only if node isn't already there.
-        if (std::any_of(desc.nodes.cbegin(), desc.nodes.cend(),
+        if (std::any_of(desc.nodes.cbegin(),
+                desc.nodes.cend(),
                 [typeName = depending->typeName](const RenderNodeDesc& desc) { return desc.typeName == typeName; })) {
             continue;
         }
         dependencies.clear();
-        if (depending->afterNode != Uid {}) {
+        if (depending->afterNode != Uid{}) {
             // Find the typeinfo of the dependency UID
-            auto info = std::find_if(renderNodeTypeInfos.cbegin(), renderNodeTypeInfos.cend(),
+            auto info = std::find_if(renderNodeTypeInfos.cbegin(),
+                renderNodeTypeInfos.cend(),
                 [uid = depending->afterNode](const RenderNodeTypeInfo* info) { return info->uid == uid; });
             if (info != renderNodeTypeInfos.cend()) {
                 dependencies.push_back(
-                    RenderNodeDependency { (*info)->typeName, RenderNodeDependency ::Position::AFTER_LAST });
+                    RenderNodeDependency{(*info)->typeName, RenderNodeDependency ::Position::AFTER_LAST});
             }
         }
-        if (depending->beforeNode != Uid {}) {
+        if (depending->beforeNode != Uid{}) {
             // Find the typeinfo of the dependency UID
-            auto info = std::find_if(renderNodeTypeInfos.cbegin(), renderNodeTypeInfos.cend(),
+            auto info = std::find_if(renderNodeTypeInfos.cbegin(),
+                renderNodeTypeInfos.cend(),
                 [uid = depending->beforeNode](const RenderNodeTypeInfo* info) { return info->uid == uid; });
             if (info != renderNodeTypeInfos.cend()) {
                 dependencies.push_back(
-                    RenderNodeDependency { (*info)->typeName, RenderNodeDependency ::Position::BEFORE_LAST });
+                    RenderNodeDependency{(*info)->typeName, RenderNodeDependency ::Position::BEFORE_LAST});
             }
         }
         const auto nodeName = RenderDataConstants::RenderDataFixedString("CORE3D_RN_SCENE_") + depending->typeName;
         // Create the new render node descriptor
-        json::standalone_value jsonVal(json::standalone_value::object {});
+        json::standalone_value jsonVal(json::standalone_value::object{});
         jsonVal["typeName"] = depending->typeName;
         jsonVal["nodeName"] = string(nodeName);
-        requests.push_back(RenderNodeDesc { depending->typeName, nodeName, {}, to_string(jsonVal) });
+        requests.push_back(RenderNodeDesc{depending->typeName, nodeName, {}, to_string(jsonVal)});
 
         manager.AddRenderNodeInsertion(requests.back(), dependencies);
     }
@@ -286,10 +289,10 @@ void FillCameraDescsData(const RenderCamera& renderCamera, const string& customC
 
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
-        jsonVal["customCameraId"] = renderCamera.id; // cam id
+        jsonVal["customCameraId"] = renderCamera.id;  // cam id
         jsonVal["customCameraName"] = customCameraName;
         if (renderCamera.flags & RenderCamera::CAMERA_FLAG_REFLECTION_BIT) {
-            jsonVal["nodeFlags"] = 7u; // NOTE: hard coded
+            jsonVal["nodeFlags"] = 7u;  // NOTE: hard coded
         }
         if (auto dataStore = jsonVal.find("renderDataStore"); dataStore) {
             if (auto config = dataStore->find("configurationName");
@@ -320,7 +323,7 @@ void FillCameraPostProcessDescsData(const RenderCamera& renderCamera, const uint
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
         // add camera info as well
-        jsonVal["customCameraId"] = renderCamera.id; // cam id
+        jsonVal["customCameraId"] = renderCamera.id;  // cam id
         jsonVal["customCameraName"] = customCameraName;
         jsonVal["multiviewBaseCameraId"] = baseCameraId;
         if (auto dataStore = jsonVal.find("renderDataStore"); dataStore) {
@@ -342,7 +345,7 @@ void FillCameraPostProcessDescsData(const RenderCamera& renderCamera, const uint
         rnRef.nodeJson = to_string(jsonVal);
     }
 }
-} // namespace
+}  // namespace
 
 RenderUtil::RenderUtil(IGraphicsContext& graphicsContext)
     : context_(graphicsContext.GetRenderContext()), backendType_(context_.GetDevice().GetBackendType())
@@ -486,8 +489,12 @@ IRenderUtil::CameraRenderNodeGraphDescs RenderUtil::GetRenderNodeGraphDescs(cons
         }
         if (!desc.nodes.empty()) {
             desc.renderNodeGraphName = renderScene.name + to_hex(renderCamera.id);
-            FillCameraPostProcessDescsData(renderCamera, RenderSceneDataConstants::INVALID_ID, customCameraName,
-                customPostProcess, desc, rngManager);
+            FillCameraPostProcessDescsData(renderCamera,
+                RenderSceneDataConstants::INVALID_ID,
+                customCameraName,
+                customPostProcess,
+                desc,
+                rngManager);
         }
 #if (CORE3D_VALIDATION_ENABLED == 1)
         if (renderCamera.multiViewCameraCount != static_cast<uint32_t>(multiviewCameras.size())) {
@@ -547,7 +554,7 @@ RenderNodeGraphDesc RenderUtil::GetRenderNodeGraphDesc(const RenderScene& render
     desc.renderNodeGraphName = combinedStr;
     for (auto& rnRef : desc.nodes) {
         json::standalone_value jsonVal = CORE_NS::json::parse(rnRef.nodeJson.data());
-        jsonVal[string_view("customId")] = renderScene.id; // cam id
+        jsonVal[string_view("customId")] = renderScene.id;  // cam id
         jsonVal[string_view("customName")] = customSceneName;
         rnRef.nodeJson = to_string(jsonVal);
     }

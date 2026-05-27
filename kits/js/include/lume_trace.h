@@ -44,7 +44,7 @@ public:
     {
         static bool debugTraceEnable = (OHOS::system::GetIntParameter("persist.sys.graphic.openDebugTrace", 0) != 0);
         if (debugTraceEnable) {
-            std::string name { "Lume#" };
+            std::string name{"Lume#"};
             CutPrettyFunction(traceStr);
             name.append(traceStr);
             StartTrace(HITRACE_TAG_GRAPHIC_AGP | HITRACE_TAG_COMMERCIAL, name);
@@ -77,7 +77,7 @@ public:
         for (; rIter != str.rend(); ++rIter) {
             if (*rIter == ':') {
                 count += 1;
-                if (count == 3) { // 3 means to stop iterating when reaching the third ':'
+                if (count == 3) {  // 3 means to stop iterating when reaching the third ':'
                     startIndex = str.rend() - rIter;
                     break;
                 }

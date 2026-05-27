@@ -32,16 +32,16 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IGraphicsStateComponentManager, GraphicsStateComponent)
 
-    /** Graphics state.
-     */
-    DEFINE_PROPERTY(RENDER_NS::GraphicsState, graphicsState, "Graphics State", 0, VALUE())
+/** Graphics state.
+ */
+DEFINE_PROPERTY(RENDER_NS::GraphicsState, graphicsState, "Graphics State", 0, VALUE())
 
-    /** Render slot in which the state will be used. If empty default material render slot will be used.
-     */
-    DEFINE_PROPERTY(BASE_NS::string, renderSlot, "Render Slot", 0, VALUE())
+/** Render slot in which the state will be used. If empty default material render slot will be used.
+ */
+DEFINE_PROPERTY(BASE_NS::string, renderSlot, "Render Slot", 0, VALUE())
 
 END_COMPONENT(IGraphicsStateComponentManager, GraphicsStateComponent, "6c1c672f-162b-4ae1-95d5-2be474ef835c")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()
 #endif
-#endif // API_3D_ECS_COMPONENTS_GRAPHICS_STATE_COMPONENT_H
+#endif  // API_3D_ECS_COMPONENTS_GRAPHICS_STATE_COMPONENT_H

@@ -68,7 +68,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, CreateTest, testing::ext::Te
         ASSERT_TRUE(ppConfManager->HasComponent(entity));
         auto id = ppConfManager->GetComponentId(entity);
         ASSERT_NE(IComponentManager::INVALID_COMPONENT_ID, id);
-        EXPECT_EQ(IComponentManager::INVALID_COMPONENT_ID, ppConfManager->GetComponentId(Entity {}));
+        EXPECT_EQ(IComponentManager::INVALID_COMPONENT_ID, ppConfManager->GetComponentId(Entity{}));
         ASSERT_EQ(entity, ppConfManager->GetEntity(id));
         generation = ppConfManager->GetComponentGeneration(id);
         EXPECT_LE(generation, ppConfManager->GetGenerationCounter());
@@ -107,7 +107,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetTest, testing::ext::Te
         PostProcessConfigurationComponent ppConf;
         ppConf.postProcesses.resize(5);
         ppConf.postProcesses[0].enabled = true;
-        ppConf.postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+        ppConf.postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
         ppConf.postProcesses[0].flags = 15u;
         ppConf.postProcesses[0].name = "Effect0";
         ppConf.customRenderNodeGraphFile = "RngFile";
@@ -126,7 +126,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetTest, testing::ext::Te
         PostProcessConfigurationComponent ppConf;
         ppConf.postProcesses.resize(5);
         ppConf.postProcesses[0].enabled = true;
-        ppConf.postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+        ppConf.postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
         ppConf.postProcesses[0].flags = 15u;
         ppConf.postProcesses[0].name = "Effect0";
         ppConf.customRenderNodeGraphFile = "RngFile";
@@ -147,7 +147,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetTest, testing::ext::Te
         PostProcessConfigurationComponent ppConf;
         ppConf.postProcesses.resize(5);
         ppConf.postProcesses[0].enabled = true;
-        ppConf.postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+        ppConf.postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
         ppConf.postProcesses[0].flags = 15u;
         ppConf.postProcesses[0].name = "Effect0";
         ppConf.customRenderNodeGraphFile = "RngFile";
@@ -162,15 +162,15 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetTest, testing::ext::Te
     }
     // Get with invalid Entity
     {
-        PostProcessConfigurationComponent defaultConf {};
-        auto result = ppConfManager->Get(Entity {});
+        PostProcessConfigurationComponent defaultConf{};
+        auto result = ppConfManager->Get(Entity{});
         ASSERT_EQ(defaultConf.postProcesses.size(), result.postProcesses.size());
         ASSERT_EQ(defaultConf.customRenderNodeGraphFile, result.customRenderNodeGraphFile);
     }
     // Get with invalid ComponentId
     {
-        PostProcessConfigurationComponent defaultConf {};
-        auto componentId = ppConfManager->GetComponentId(Entity {});
+        PostProcessConfigurationComponent defaultConf{};
+        auto componentId = ppConfManager->GetComponentId(Entity{});
         auto result = ppConfManager->Get(componentId);
         ASSERT_EQ(defaultConf.postProcesses.size(), result.postProcesses.size());
         ASSERT_EQ(defaultConf.customRenderNodeGraphFile, result.customRenderNodeGraphFile);
@@ -192,7 +192,7 @@ CORE_NS::EntityReference CreateShader(CORE_NS::IEcs& ecs, RENDER_NS::IRenderCont
     uriManager->Write(shader)->uri = uri;
     return shader;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CustomPropertyMetadataTest
@@ -340,7 +340,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, ReadWriteTest, testing::ext:
         if (auto scopedHandle = ppConfManager->Write(entity); scopedHandle) {
             scopedHandle->postProcesses.resize(5);
             scopedHandle->postProcesses[0].enabled = true;
-            scopedHandle->postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+            scopedHandle->postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
             scopedHandle->postProcesses[0].flags = 15u;
             scopedHandle->postProcesses[0].name = "Effect0";
             scopedHandle->customRenderNodeGraphFile = "RngFile";
@@ -365,7 +365,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, ReadWriteTest, testing::ext:
         if (auto scopedHandle = ppConfManager->Write(componentId); scopedHandle) {
             scopedHandle->postProcesses.resize(5);
             scopedHandle->postProcesses[0].enabled = true;
-            scopedHandle->postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+            scopedHandle->postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
             scopedHandle->postProcesses[0].flags = 15u;
             scopedHandle->postProcesses[0].name = "Effect0";
             scopedHandle->customRenderNodeGraphFile = "RngFile";
@@ -384,12 +384,12 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, ReadWriteTest, testing::ext:
     }
     // Read with invalid Entity
     {
-        auto result = ppConfManager->Read(Entity {});
+        auto result = ppConfManager->Read(Entity{});
         ASSERT_FALSE(result);
     }
     // Read with invalid ComponentId
     {
-        auto componentId = ppConfManager->GetComponentId(Entity {});
+        auto componentId = ppConfManager->GetComponentId(Entity{});
         auto result = ppConfManager->Read(componentId);
         ASSERT_FALSE(result);
     }
@@ -472,7 +472,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetDataTest, testing::ext
         PostProcessConfigurationComponent ppConf;
         ppConf.postProcesses.resize(5);
         ppConf.postProcesses[0].enabled = true;
-        ppConf.postProcesses[0].factor = Math::Vec4 { 1.0f, 0.5f, 0.3f, 1.0f };
+        ppConf.postProcesses[0].factor = Math::Vec4{1.0f, 0.5f, 0.3f, 1.0f};
         ppConf.postProcesses[0].flags = 15u;
         ppConf.postProcesses[0].name = "Effect0";
         ppConf.customRenderNodeGraphFile = "RngFile";
@@ -509,7 +509,7 @@ UNIT_TEST(API_EcsPostProcessConfigurationComponent, GetSetDataTest, testing::ext
         }
         // GetData with invalid ComponentId
         {
-            auto componentId = ppConfManager->GetComponentId(Entity {});
+            auto componentId = ppConfManager->GetComponentId(Entity{});
             ASSERT_EQ(nullptr, ppConfManager->GetData(componentId));
         }
     }

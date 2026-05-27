@@ -1,0 +1,21 @@
+{
+	"version": "1.0",
+	"description": "test scene with frustum projection camera node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "camera",
+					"name": "test",
+					"projection": "frustum",
+					"offset": [2.0, 3.0],
+					"nearPlane": 0.1,
+					"farPlane": 500.0
+				}
+			]
+		}
+	}
+}

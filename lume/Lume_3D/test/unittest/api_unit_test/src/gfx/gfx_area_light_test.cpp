@@ -80,31 +80,43 @@ void AreaLightTest(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 2.75f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+            Math::Vec3(0.0f, 2.75f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
+        cameraComponent->environment = cameraEntity;
+    }
+    {
+        auto ecm = GetManager<IEnvironmentComponentManager>(res.GetEcs());
+        ecm->Create(cameraEntity);
+        auto handle = ecm->Write(cameraEntity);
+        handle->background = EnvironmentComponent::Background::CUBEMAP;
+        handle->envMapFactor = {};
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 90.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
 
     // Reflection plane
     Entity reflectionPlaneMaterial = em.Create();
     Entity reflectionPlane;
     {
         nameManager->Create(reflectionPlaneMaterial);
-        nameManager->Set(reflectionPlaneMaterial, { { "ReflectionPlaneMaterial" } });
+        nameManager->Set(reflectionPlaneMaterial, {{"ReflectionPlaneMaterial"}});
         materialManager->Create(reflectionPlaneMaterial);
         reflectionPlane =
             meshUtil.GeneratePlane(res.GetEcs(), "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
+            node->SetScale(Math::Vec3(10, 0.01f, 10));  // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(res.GetEcs(), reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {
@@ -119,14 +131,14 @@ void AreaLightTest(UTest::TestResources& res)
     {
         LightComponent lc;
         lc.type = LightComponent::Type::RECT;
-        lc.color = { 1.0f, 0.0f, 0.0f };
+        lc.color = {1.0f, 0.0f, 0.0f};
         lc.intensity = 50.0f;
         lc.range = 50.0f;
         lc.rectLight.height = 2.0f;
         lc.rectLight.width = 2.0f;
         lc.rectLight.twoSided = false;
 
-        const Math::Vec3 position = { 3.0f, 1.0f, -1.5f };
+        const Math::Vec3 position = {3.0f, 1.0f, -1.5f};
         const Math::Quat rotation = Math::Euler(0.0f, 130.0f, 0.0f);
 
         const Entity lightEnt = sceneUtil.CreateLight(res.GetEcs(), lc, position, rotation);
@@ -136,8 +148,10 @@ void AreaLightTest(UTest::TestResources& res)
 
     // Gltf model
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/FlightHelmet/FlightHelmet.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/FlightHelmet/FlightHelmet.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     // Load and import all gltf files.
@@ -168,16 +182,16 @@ void AreaLightTest(UTest::TestResources& res)
             }
             res.AppendResources(gltfImportResult.data);
             ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-            Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, Math::DEG2RAD * 30.f, 0.f });
+            Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, Math::DEG2RAD * 30.f, 0.f});
             model->SetScale(Math::Vec3(10.0f));
-            model->SetPosition(Math::Vec3 { 0.0f, 1.0f, -3.0f });
+            model->SetPosition(Math::Vec3{0.0f, 1.0f, -3.0f});
             model->SetRotation(rot);
         } else {
             CORE_LOG_E("Importing of '%s' failed: %s", info.filename, gltfImportResult.error.c_str());
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -193,10 +207,14 @@ UNIT_TEST(API_GfxTest, AreaLightTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/area_light.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/area_light.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

@@ -27,7 +27,7 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct LowLevelFenceGLES {
-    void* aFence { nullptr };
+    void* aFence{nullptr};
 };
 
 class RenderFrameSyncGLES final : public RenderFrameSync {
@@ -42,8 +42,8 @@ public:
 
 private:
     BASE_NS::vector<LowLevelFenceGLES> frameFences_;
-    uint32_t bufferingIndex_ { 0 };
+    uint32_t bufferingIndex_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_RENDER_FRAME_SYNC_GLES_H
+#endif  // GLES_RENDER_FRAME_SYNC_GLES_H

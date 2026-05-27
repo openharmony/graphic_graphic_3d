@@ -58,37 +58,38 @@ void CreateCubeObjects(UTest::TestResources& res)
     ISceneNode* scene = nodeSystem->CreateNode();
     const Entity sceneRoot = scene->GetEntity();
 
-    constexpr float planeSize { 2.0f };
+    constexpr float planeSize{2.0f};
 
-    const Math::Vec3 basePos = { 0.0f, 0.0f, -10.0f };
+    const Math::Vec3 basePos = {0.0f, 0.0f, -10.0f};
 
-    auto createCube = [&res, &ecs, &shaderMgr, &em, &materialManager, &nodeSystem](const Math::Vec4 col,
-                          const Math::Vec3 pos, const bool sort, const uint8_t layer, const uint8_t order) {
-        Entity materialEntity = em.Create();
-        materialManager->Create(materialEntity);
-        if (auto handle = materialManager->Write(materialEntity); handle) {
-            handle->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = col;
-            handle->customRenderSlotId =
-                shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
+    auto createCube =
+        [&res, &ecs, &shaderMgr, &em, &materialManager, &nodeSystem](
+            const Math::Vec4 col, const Math::Vec3 pos, const bool sort, const uint8_t layer, const uint8_t order) {
+            Entity materialEntity = em.Create();
+            materialManager->Create(materialEntity);
+            if (auto handle = materialManager->Write(materialEntity); handle) {
+                handle->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = col;
+                handle->customRenderSlotId =
+                    shaderMgr.GetRenderSlotId(DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
 
-            if (sort) {
-                handle->renderSort.renderSortLayer = layer;
-                handle->renderSort.renderSortLayerOrder = order;
+                if (sort) {
+                    handle->renderSort.renderSortLayer = layer;
+                    handle->renderSort.renderSortLayerOrder = order;
+                }
             }
-        }
-        const Entity cubeEntity =
-            res.GetGraphicsContext().GetMeshUtil().GenerateCube(ecs, "", materialEntity, 2.0f, 2.0f, 2.0f);
-        nodeSystem->GetNode(cubeEntity)->SetPosition(pos);
-    };
+            const Entity cubeEntity =
+                res.GetGraphicsContext().GetMeshUtil().GenerateCube(ecs, "", materialEntity, 2.0f, 2.0f, 2.0f);
+            nodeSystem->GetNode(cubeEntity)->SetPosition(pos);
+        };
     // sort to correct transparent order (final first)
-    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, 0.0f }, true, 63, 0); // 63: parm
-    createCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -1.0f }, true, 1, 0);
-    createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { -5.0f, 0.0f, -2.0f }, true, 0, 0);
+    createCube({1.0f, 0.0f, 0.0f, 0.5f}, basePos + Math::Vec3{-5.0f, 0.0f, 0.0f}, true, 63, 0);  // 63: parm
+    createCube({0.0f, 1.0f, 0.0f, 0.5f}, basePos + Math::Vec3{-5.0f, 0.0f, -1.0f}, true, 1, 0);
+    createCube({0.0f, 0.0f, 1.0f, 0.5f}, basePos + Math::Vec3{-5.0f, 0.0f, -2.0f}, true, 0, 0);
 
     // sort to wrong transparent order with center flip
-    createCube({ 1.0f, 0.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, 0.0f }, true, 32, 0);  // 32: parm
-    createCube({ 0.0f, 1.0f, 0.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -1.0f }, true, 36, 0); // 36: parm
-    createCube({ 0.0f, 0.0f, 1.0f, 0.5f }, basePos + Math::Vec3 { 5.0f, 0.0f, -2.0f }, true, 36, 1); // 36: parm
+    createCube({1.0f, 0.0f, 0.0f, 0.5f}, basePos + Math::Vec3{5.0f, 0.0f, 0.0f}, true, 32, 0);   // 32: parm
+    createCube({0.0f, 1.0f, 0.0f, 0.5f}, basePos + Math::Vec3{5.0f, 0.0f, -1.0f}, true, 36, 0);  // 36: parm
+    createCube({0.0f, 0.0f, 1.0f, 0.5f}, basePos + Math::Vec3{5.0f, 0.0f, -2.0f}, true, 36, 1);  // 36: parm
 }
 
 /*  Similar test case as we have the Hello world application
@@ -128,7 +129,7 @@ void HelloWorldTest(UTest::TestResources& res)
 
     auto tcm = GetManager<ITransformComponentManager>(ecs);
     tcm->Create(cameraEntity);
-    tcm->Write(cameraEntity)->position = { 0.0f, 0.0f, 2.5f };
+    tcm->Write(cameraEntity)->position = {0.0f, 0.0f, 2.5f};
 
     auto ccm = GetManager<ICameraComponentManager>(ecs);
     ccm->Create(cameraEntity);
@@ -151,11 +152,11 @@ void HelloWorldTest(UTest::TestResources& res)
 
     const Entity materialEntity = em.Create();
     materialManager->Create(materialEntity);
-    uriManager->Set(materialEntity, { string("test://red_material") });
-    nameManager->Set(materialEntity, { string("Red Material") });
+    uriManager->Set(materialEntity, {string("test://red_material")});
+    nameManager->Set(materialEntity, {string("Red Material")});
 
-    materialManager->Write(materialEntity)->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = { 1.f, 0.f,
-        0.f, 1.f };
+    materialManager->Write(materialEntity)->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = {
+        1.f, 0.f, 0.f, 1.f};
 
     const Entity cubeEntity =
         res.GetGraphicsContext().GetMeshUtil().GenerateCube(ecs, "TheCube", materialEntity, 2.0f, 2.0f, 2.0f);
@@ -189,4 +190,4 @@ IPerformanceDataManager::ComparisonData ComparePerformanceDataCounters(const str
     }
     return cd;
 }
-} // namespace HelloWorldBoilerplate
+}  // namespace HelloWorldBoilerplate

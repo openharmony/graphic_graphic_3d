@@ -26,7 +26,7 @@
 BASE_BEGIN_NAMESPACE()
 namespace Math {
 class Mat4X4;
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
@@ -59,7 +59,7 @@ struct Frustum {
 
 class IFrustumUtil : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "3defee25-af81-4c20-b8d0-e1c3419556b2" };
+    static constexpr auto UID = BASE_NS::Uid{"3defee25-af81-4c20-b8d0-e1c3419556b2"};
 
     using Ptr = BASE_NS::refcnt_ptr<IFrustumUtil>;
 
@@ -86,4 +86,4 @@ protected:
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_UTIL_FRUSTUM_UTIL_H
+#endif  // API_CORE_UTIL_FRUSTUM_UTIL_H

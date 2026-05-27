@@ -1,0 +1,95 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "92f9297c-e3cf-453d-b1d3-71adcbc170ee",
+        "uri": "project://packages/studio-asset-library/environment/dusk/Environment.gltf",
+        "xxh3": "ac052d0517d036744c106656e87d9583",
+        "spec": {
+            "$meta": {
+                "meta-version": "2.0"
+            },
+            "$root": {
+                "$classId": "c1b8a9d8-2b56-4c42-9e39-043ced9dfb83",
+                "$className": "ModelAsset",
+                "$instanceId": "00022cd2-5eb6-1020-1645-4c0f6dd5b6af",
+                "__attachments": [
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Iid",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "92f9297c-e3cf-453d-b1d3-71adcbc170ee"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Uri",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "project://packages/studio-asset-library/environment/dusk/Environment.gltf"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Name",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "Environment.gltf"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "MediaType",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "model/gltf+json"
+                            }
+                        ],
+                        "modifiers": []
+                    }
+                ]
+            }
+        }
+    }
+}

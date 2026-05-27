@@ -172,5 +172,5 @@ UNIT_TEST(API_TimeSpan, DivisionResultIsRoundedToMicroseconds, testing::ext::Tes
     EXPECT_EQ(TimeSpan::Microseconds(0), TimeSpan::Microseconds(1) / 10.f);
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

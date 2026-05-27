@@ -1,0 +1,32 @@
+{
+	"version": "1.0",
+	"description": "test scene with 3 levels of nested node templates",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"children": [
+				{
+					"type": "external",
+					"name": "ext1",
+					"source": {
+						"type": "nodeTemplate",
+						"url": "scene23_level1.nodeTemplate"
+					},
+					"resourceGroup": "grp1",
+				"overrides": [
+					{
+						"path": ".Position",
+						"value": {
+							"type": "vec3",
+							"value": [10, 20, 30]
+						}
+					}
+				]
+				}
+			]
+		}
+	}
+}

@@ -20,10 +20,9 @@
 #include <core/namespace.h>
 
 namespace JPGPlugin {
-static const CORE_NS::IImageLoaderManager::ImageType IMAGE_TYPES[] = { { "image/jpeg", "jpeg" },
-    { "image/jpeg", "jpg" } };
+static const CORE_NS::IImageLoaderManager::ImageType IMAGE_TYPES[] = {{"image/jpeg", "jpeg"}, {"image/jpeg", "jpg"}};
 
 CORE_NS::IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderJPG(CORE_NS::PluginToken);
-} // namespace JPGPlugin
+}  // namespace JPGPlugin
 
-#endif //  PLUGIN_IMAGE_LOADER_JPG_H
+#endif  //  PLUGIN_IMAGE_LOADER_JPG_H

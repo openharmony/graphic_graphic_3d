@@ -16,5 +16,8 @@
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
-const char* GetVersionInfo() { return "GIT_REVISION: 95d9847"; }
+const char* GetVersionInfo()
+{
+    return "GIT_REVISION: 95d9847";
+}
 RENDER_END_NAMESPACE()

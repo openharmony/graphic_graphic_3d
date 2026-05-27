@@ -135,7 +135,7 @@ struct Uid {
         }
         return 0;
     }
-    uint64_t data[2u] {};
+    uint64_t data[2u]{};
 };
 
 inline constexpr bool operator<(const Uid& lhs, const Uid& rhs)
@@ -162,11 +162,11 @@ inline constexpr bool operator!=(const Uid& lhs, const Uid& rhs)
     return !(lhs == rhs);
 }
 
-template<>
+template <>
 inline uint64_t hash(const Uid& value)
 {
     return Hash(value.data[0], value.data[1]);
 }
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_UTIL_UID_H
+#endif  // API_BASE_UTIL_UID_H

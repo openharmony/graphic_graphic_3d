@@ -44,8 +44,10 @@ public:
         }
     }
 
-    void SetUp() {}
-    void TearDown() {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 // Message Tests
@@ -334,15 +336,9 @@ HWTEST_F(GraphicsTaskUT, PushAsyncMessage_ChainedExecution, TestSize.Level1)
     std::atomic<int> order{0};
     int step1 = 0, step2 = 0, step3 = 0;
 
-    auto future1 = task.PushAsyncMessage([&]() {
-        step1 = ++order;
-    });
-    auto future2 = task.PushAsyncMessage([&]() {
-        step2 = ++order;
-    });
-    auto future3 = task.PushAsyncMessage([&]() {
-        step3 = ++order;
-    });
+    auto future1 = task.PushAsyncMessage([&]() { step1 = ++order; });
+    auto future2 = task.PushAsyncMessage([&]() { step2 = ++order; });
+    auto future3 = task.PushAsyncMessage([&]() { step3 = ++order; });
 
     future1.wait();
     future2.wait();
@@ -444,9 +440,7 @@ HWTEST_F(GraphicsTaskUT, PushAsyncMessage_ImmediateExecution, TestSize.Level1)
     auto& task = GraphicsTask::GetInstance();
     std::atomic<bool> started{false};
 
-    auto future = task.PushAsyncMessage([&started]() {
-        started = true;
-    });
+    auto future = task.PushAsyncMessage([&started]() { started = true; });
 
     future.wait();
     EXPECT_TRUE(started.load());
@@ -537,4 +531,4 @@ HWTEST_F(GraphicsTaskUT, Message_ReuseAfterMove, TestSize.Level1)
     EXPECT_TRUE(executed2.load());
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

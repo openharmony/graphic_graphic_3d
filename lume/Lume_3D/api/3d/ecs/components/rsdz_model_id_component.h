@@ -22,19 +22,19 @@
 #include <core/ecs/intf_component_manager.h>
 
 CORE3D_BEGIN_NAMESPACE()
-#endif // IMPLEMENT_MANAGER
+#endif  // IMPLEMENT_MANAGER
 
 /** RSDZ model id is used to store extra id from glTF2.
  */
 BEGIN_COMPONENT(IRSDZModelIdComponentManager, RSDZModelIdComponent)
-    /** Model id value in string format
-     */
-    DEFINE_ARRAY_PROPERTY(char, 64u, modelId, "Model ID", 0, "")
+/** Model id value in string format
+ */
+DEFINE_ARRAY_PROPERTY(char, 64u, modelId, "Model ID", 0, "")
 
 END_COMPONENT(IRSDZModelIdComponentManager, RSDZModelIdComponent, "a4b1877f-0feb-4d24-88a8-3d08eb5f535e")
 
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()
-#endif // IMPLEMENT_MANAGER
+#endif  // IMPLEMENT_MANAGER
 
-#endif // API_3D_ECS_COMPONENTS_RSDZ_MODEL_ID_COMPONENT_H
+#endif  // API_3D_ECS_COMPONENTS_RSDZ_MODEL_ID_COMPONENT_H

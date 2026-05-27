@@ -292,7 +292,7 @@ IMPLEMENT_EASING_CURVE(InOutBounce)
 IMPLEMENT_EASING_CURVE(StepStart)
 IMPLEMENT_EASING_CURVE(StepEnd)
 
-} // namespace Easing
-} // namespace Curves
+}  // namespace Easing
+}  // namespace Curves
 
 META_END_NAMESPACE()

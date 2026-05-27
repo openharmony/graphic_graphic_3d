@@ -14,6 +14,7 @@
  */
 
 #include <3d/gltf/gltf.h>
+#include <3d/gltf/gltf_data.h>
 #include <core/image/intf_image_container.h>
 #include <core/image/intf_image_loader_manager.h>
 #include <core/io/intf_file_manager.h>
@@ -50,22 +51,22 @@ bool isExpectedAttribute(const GLTF2::AttributeBase& aAttribute, const GLTF2::At
 }
 void validateWaterBottle(GLTF2::Data const& aData)
 {
-    ASSERT_EQ(aData.accessors.size(), 5); // 5: parm
+    ASSERT_EQ(aData.accessors.size(), 5);  // 5: parm
     ASSERT_EQ(aData.animations.size(), 0);
     ASSERT_EQ(aData.materials.size(), 1);
     ASSERT_EQ(aData.meshes.size(), 1);
     ASSERT_EQ(aData.buffers.size(), 1);
-    ASSERT_EQ(aData.textures.size(), 4); // 4: parm
+    ASSERT_EQ(aData.textures.size(), 4);  // 4: parm
     ASSERT_EQ(aData.nodes.size(), 1);
-    ASSERT_EQ(aData.images.size(), 4);      // 4: parm
-    ASSERT_EQ(aData.bufferViews.size(), 9); // 9: parm
+    ASSERT_EQ(aData.images.size(), 4);       // 4: parm
+    ASSERT_EQ(aData.bufferViews.size(), 9);  // 9: parm
     ASSERT_EQ(aData.scenes.size(), 1);
 }
 
 void validateMonster(GLTF2::Data const& aData)
 {
     ASSERT_EQ(aData.scenes.size(), 1);
-    ASSERT_EQ(aData.nodes.size(), 35); // 35: parm
+    ASSERT_EQ(aData.nodes.size(), 35);  // 35: parm
     ASSERT_EQ(aData.meshes.size(), 1);
     ASSERT_EQ(aData.animations.size(), 1);
     ASSERT_EQ(aData.skins.size(), 1);
@@ -74,8 +75,8 @@ void validateMonster(GLTF2::Data const& aData)
     ASSERT_EQ(aData.textures.size(), 1);
     ASSERT_EQ(aData.images.size(), 1);
     ASSERT_EQ(aData.samplers.size(), 1);
-    ASSERT_EQ(aData.bufferViews.size(), 8); // 8: parm
-    ASSERT_EQ(aData.accessors.size(), 135); // 135: parm
+    ASSERT_EQ(aData.bufferViews.size(), 8);  // 8: parm
+    ASSERT_EQ(aData.accessors.size(), 135);  // 135: parm
 
     // Every primitive should have these attributes.
     GLTF2::AttributeType expectedAttributes[] = {
@@ -121,18 +122,18 @@ void validateMonster(GLTF2::Data const& aData)
 
     const auto& animation = *(aData.animations[0]);
 
-    ASSERT_EQ(animation.samplers.size(), 96); // 96: parm
-    ASSERT_EQ(animation.tracks.size(), 96);   // 96: parm
+    ASSERT_EQ(animation.samplers.size(), 96);  // 96: parm
+    ASSERT_EQ(animation.tracks.size(), 96);    // 96: parm
 
-    ASSERT_EQ(animation.samplers[0]->input, aData.accessors[6].get()); // 6: index
+    ASSERT_EQ(animation.samplers[0]->input, aData.accessors[6].get());  // 6: index
     ASSERT_EQ(animation.samplers[0]->interpolation, GLTF2::AnimationInterpolation::LINEAR);
-    ASSERT_EQ(animation.samplers[0]->output, aData.accessors[7].get()); // 7: index
+    ASSERT_EQ(animation.samplers[0]->output, aData.accessors[7].get());  // 7: index
 
     ASSERT_EQ(animation.tracks[0].sampler, animation.samplers[0].get());
-    ASSERT_EQ(animation.tracks[0].channel.node, aData.nodes[2].get()); // 2: index
+    ASSERT_EQ(animation.tracks[0].channel.node, aData.nodes[2].get());  // 2: index
     ASSERT_EQ(animation.tracks[0].channel.path, GLTF2::AnimationPath::TRANSLATION);
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: loadGlbFile
@@ -313,7 +314,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, loadGltfWithExtensions, testing::ext::TestSize.Lev
     ASSERT_EQ(gltf.data->accessors.size(), 77);
 
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
-    ASSERT_EQ(gltf.data->lights.size(), 0); // IGFX Lights extension is not supported anylonger so light count is zero.
+    ASSERT_EQ(gltf.data->lights.size(), 0);  // IGFX Lights extension is not supported anylonger so light count is zero.
 #endif
 }
 
@@ -1574,9 +1575,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidSamplerTest, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
 {
-    constexpr string_view expectedJsonChunkError = "Parsing GLTF failed: expected JSON chunk";
-    constexpr uint32_t glbVersion = 2;
-    constexpr uint32_t chunkAlignment = 4u;
+    constexpr string_view EXPECTED_JSON_CHUNK_ERROR = "Parsing GLTF failed: expected JSON chunk";
 
     UTest::TestContext* testContext = UTest::GetTestContext();
     auto engine = testContext->engine;
@@ -1611,7 +1610,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = 1000;
         vector<uint8_t> data;
         data.resize(100);
@@ -1629,7 +1628,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = 2;
         vector<uint8_t> data;
         data.resize(2);
@@ -1647,7 +1646,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = 2;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = 7;
@@ -1669,7 +1668,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = 2;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
@@ -1691,7 +1690,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = 128;
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
@@ -1714,8 +1713,8 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
-        header.length = sizeof(GLTF2::GLBHeader); // 12: header only
+        header.version = 2;
+        header.length = sizeof(GLTF2::GLBHeader);  // 12: header only
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
         chunk.chunkLength = 0xFFFFFFF0u;
@@ -1726,7 +1725,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
 
         auto gltf = gltf2->LoadGLTF("cache://tmp.glb");
         EXPECT_FALSE(gltf.success);
-        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
+        EXPECT_NE(gltf.error.find(EXPECTED_JSON_CHUNK_ERROR), BASE_NS::string::npos);
 
         engine->GetFileManager().DeleteFile("cache://tmp.glb");
     }
@@ -1734,12 +1733,12 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
+        header.version = 2;
         header.length = static_cast<uint32_t>(sizeof(GLTF2::GLBHeader) + sizeof(GLTF2::GLBChunk) - 1u);
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
-        chunk.chunkLength = chunkAlignment;
-        vector<uint8_t> data(chunkAlignment, 0u);
+        chunk.chunkLength = 4u;
+        vector<uint8_t> data(4u, 0u);
         auto tmpFile = engine->GetFileManager().CreateFile("cache://tmp.glb");
         tmpFile->Write(reinterpret_cast<uint8_t*>(&header), sizeof(header));
         tmpFile->Write(reinterpret_cast<uint8_t*>(&chunk), sizeof(chunk));
@@ -1748,7 +1747,7 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
 
         auto gltf = gltf2->LoadGLTF("cache://tmp.glb");
         EXPECT_FALSE(gltf.success);
-        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
+        EXPECT_NE(gltf.error.find(EXPECTED_JSON_CHUNK_ERROR), BASE_NS::string::npos);
 
         engine->GetFileManager().DeleteFile("cache://tmp.glb");
     }
@@ -1756,21 +1755,183 @@ UNIT_TEST(SRC_GLTFLoaderTest, InvalidGlbTest, testing::ext::TestSize.Level1)
     {
         GLTF2::GLBHeader header;
         header.magic = GLTF2::GLTF_MAGIC;
-        header.version = glbVersion;
-        header.length = sizeof(GLTF2::GLBHeader); // 12: header only
+        header.version = 2;
+        header.length = sizeof(GLTF2::GLBHeader);  // 12: header only
         GLTF2::GLBChunk chunk;
         chunk.chunkType = static_cast<uint32_t>(GLTF2::ChunkType::JSON);
         chunk.chunkLength = 0xFFFFFFF0u;
         vector<uint8_t> data;
-        data.insert(data.end(), reinterpret_cast<uint8_t const*>(&header),
+        data.insert(data.end(),
+            reinterpret_cast<uint8_t const*>(&header),
             reinterpret_cast<uint8_t const*>(&header) + sizeof(header));
-        data.insert(data.end(), reinterpret_cast<uint8_t const*>(&chunk),
+        data.insert(data.end(),
+            reinterpret_cast<uint8_t const*>(&chunk),
             reinterpret_cast<uint8_t const*>(&chunk) + sizeof(chunk));
 
         auto gltf = gltf2->LoadGLTF(array_view<uint8_t const>(data.data(), data.size()));
         EXPECT_FALSE(gltf.success);
-        EXPECT_NE(gltf.error.find(expectedJsonChunkError), BASE_NS::string::npos);
+        EXPECT_NE(gltf.error.find(EXPECTED_JSON_CHUNK_ERROR), BASE_NS::string::npos);
     }
 
     delete gltf2;
+}
+
+/**
+ * @tc.name: testGetDataPublicApi
+ * @tc.desc: Tests that IGLTFData::GetData() returns valid parsed data via the public API.
+ *           Mirrors the internal loadGltfWithExternallyReferencedData test but uses the public API.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFLoaderTest, testGetDataPublicApi, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+
+    // Test with FlightHelmet (externally referenced data, multiple meshes/materials).
+    {
+        string_view filename = "test://gltf/FlightHelmet/FlightHelmet.gltf";
+
+        auto gltf = GLTF2::LoadGLTF(files, filename);
+        ASSERT_TRUE(gltf.success);
+        ASSERT_TRUE(gltf.data->LoadBuffers());
+
+        const GLTF2::GltfData& assets = gltf.data->GetData();
+
+        // Verify counts.
+        ASSERT_EQ(assets.materials.size(), 5);  // 5: parm
+        ASSERT_EQ(assets.meshes.size(), 5);     // 5: parm
+        ASSERT_EQ(assets.nodes.size(), 6);      // 6: parm
+        ASSERT_EQ(assets.textures.size(), 15);  // 15: parm
+        ASSERT_EQ(assets.scenes.size(), 1);
+
+        // Verify filepath is set.
+        ASSERT_FALSE(assets.filepath.empty());
+
+        // Verify mesh primitives and attribute accessors.
+        for (const auto& mesh : assets.meshes) {
+            ASSERT_EQ(mesh->primitives.size(), 1);
+            const auto& primitive = mesh->primitives[0];
+            ASSERT_FALSE(primitive.attributes.empty());
+            ASSERT_TRUE(primitive.indices != nullptr);
+            ASSERT_TRUE(primitive.indices->count > 0);
+
+            for (const auto& attribute : primitive.attributes) {
+                ASSERT_TRUE(attribute.accessor != nullptr);
+                ASSERT_TRUE(attribute.accessor->count > 0);
+                ASSERT_TRUE(attribute.accessor->bufferView != nullptr);
+                ASSERT_TRUE(attribute.accessor->bufferView->data != nullptr);
+            }
+        }
+
+        // Verify materials have names.
+        for (const auto& material : assets.materials) {
+            ASSERT_FALSE(material->name.empty());
+        }
+
+        // Verify scene has root nodes.
+        ASSERT_FALSE(assets.scenes[0]->nodes.empty());
+    }
+
+    // Test with WaterBottle GLB (embedded data).
+    {
+        string_view filename = "test://gltf/WaterBottle/WaterBottle.glb";
+
+        auto gltf = GLTF2::LoadGLTF(files, filename);
+        ASSERT_TRUE(gltf.success);
+
+        const GLTF2::GltfData& assets = gltf.data->GetData();
+
+        // Verify counts (same as validateWaterBottle).
+        ASSERT_EQ(assets.accessors.size(), 5);  // 5: parm
+        ASSERT_EQ(assets.animations.size(), 0);
+        ASSERT_EQ(assets.materials.size(), 1);
+        ASSERT_EQ(assets.meshes.size(), 1);
+        ASSERT_EQ(assets.buffers.size(), 1);
+        ASSERT_EQ(assets.textures.size(), 4);  // 4: parm
+        ASSERT_EQ(assets.nodes.size(), 1);
+        ASSERT_EQ(assets.images.size(), 4);       // 4: parm
+        ASSERT_EQ(assets.bufferViews.size(), 9);  // 9: parm
+        ASSERT_EQ(assets.scenes.size(), 1);
+    }
+
+    // Test with AnimatedCube (has animations).
+    {
+        string_view filename = "test://gltf/AnimatedCube/glTF/AnimatedCube.gltf";
+
+        auto gltf = GLTF2::LoadGLTF(files, filename);
+        ASSERT_TRUE(gltf.success);
+
+        const GLTF2::GltfData& assets = gltf.data->GetData();
+
+        ASSERT_FALSE(assets.animations.empty());
+        const auto& anim = *assets.animations[0];
+        ASSERT_FALSE(anim.tracks.empty());
+        ASSERT_FALSE(anim.samplers.empty());
+
+        // Verify animation track references are valid.
+        for (const auto& track : anim.tracks) {
+            ASSERT_TRUE(track.channel.node != nullptr);
+            ASSERT_TRUE(track.sampler != nullptr);
+            ASSERT_TRUE(track.sampler->input != nullptr);
+            ASSERT_TRUE(track.sampler->output != nullptr);
+        }
+
+        // Verify node transforms are accessible.
+        for (const auto& node : assets.nodes) {
+            if (node->usesTRS) {
+                // Just verify the fields are readable (no crash).
+                (void)node->translation;
+                (void)node->rotation;
+                (void)node->scale;
+            }
+        }
+    }
+
+    // Test ReadAccessorData with sparse accessor data.
+    {
+        string_view filename = "test://gltf/SimpleSparseAccessor/SimpleSparseAccessor.gltf";
+
+        auto gltf = GLTF2::LoadGLTF(files, filename);
+        ASSERT_TRUE(gltf.success);
+        ASSERT_TRUE(gltf.data->LoadBuffers());
+
+        const GLTF2::GltfData& assets = gltf.data->GetData();
+        ASSERT_FALSE(assets.meshes.empty());
+
+        const auto& mesh = *assets.meshes[0];
+        for (const auto& prim : mesh.primitives) {
+            for (const auto& attr : prim.attributes) {
+                ASSERT_TRUE(attr.accessor != nullptr);
+                auto data = gltf.data->ReadAccessorData(*attr.accessor);
+                ASSERT_TRUE(data.success);
+                ASSERT_FALSE(data.data.empty());
+            }
+        }
+    }
+
+    // Test ReadAccessorData with meshopt compressed data.
+    {
+        string_view filename = "test://gltf/BrainStem/glTF-Meshopt/BrainStem.gltf";
+
+        auto gltf = GLTF2::LoadGLTF(files, filename);
+        ASSERT_TRUE(gltf.success);
+        ASSERT_TRUE(gltf.data->LoadBuffers());
+
+        const GLTF2::GltfData& assets = gltf.data->GetData();
+        ASSERT_FALSE(assets.meshes.empty());
+
+        const auto& mesh = *assets.meshes[0];
+        for (const auto& prim : mesh.primitives) {
+            for (const auto& attr : prim.attributes) {
+                ASSERT_TRUE(attr.accessor != nullptr);
+                auto data = gltf.data->ReadAccessorData(*attr.accessor);
+                ASSERT_TRUE(data.success);
+                ASSERT_FALSE(data.data.empty());
+            }
+            if (prim.indices) {
+                auto data = gltf.data->ReadAccessorData(*prim.indices);
+                ASSERT_TRUE(data.success);
+                ASSERT_FALSE(data.data.empty());
+            }
+        }
+    }
 }

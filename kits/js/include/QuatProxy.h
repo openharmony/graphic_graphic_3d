@@ -20,14 +20,15 @@
 #include <base/math/quaternion.h>
 
 #include "PropertyProxy.h"
-class QuatProxy : public ObjectPropertyProxy {
+#include "export.h"
+class SCENE_ADDON_PUBLIC QuatProxy : public ObjectPropertyProxy {
 public:
     QuatProxy(napi_env env, META_NS::Property<BASE_NS::Math::Quat> prop);
     ~QuatProxy() override;
     void SetValue(NapiApi::Object obj) override;
 
 protected:
-    void SetValue(const BASE_NS::Math::Quat& v);
+    void SetNativeValue(const BASE_NS::Math::Quat& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };

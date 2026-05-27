@@ -50,30 +50,25 @@ public:
     SceneResourceFactoryImpl(const std::shared_ptr<SceneETS> sceneETS) : sceneETS_(sceneETS)
     {}
 
-    ~SceneResourceFactoryImpl()
-    {
-        sceneETS_.reset();
-    }
-
-    ::SceneNodes::Camera createCameraSync(::SceneTH::SceneNodeParameters const &params);
+    ::SceneNodes::Camera createCameraSync(::SceneTH::SceneNodeParameters const& params);
 
     ::SceneNodes::Camera createCameraSyncWithCameraParams(
-        ::SceneTH::SceneNodeParameters const &params, ::SceneTH::CameraParameters const &cameraParams);
+        ::SceneTH::SceneNodeParameters const& params, ::SceneTH::CameraParameters const& cameraParams);
 
     ::SceneNodes::LightTypeUnion createLightSync(
-        ::SceneTH::SceneNodeParameters const &params, ::SceneNodes::LightType lightType);
+        ::SceneTH::SceneNodeParameters const& params, ::SceneNodes::LightType lightType);
 
-    ::SceneNodes::Node createNodeSync(::SceneTH::SceneNodeParameters const &params);
+    ::SceneNodes::Node createNodeSync(::SceneTH::SceneNodeParameters const& params);
 
     ::SceneResources::VariousMaterial createMaterialSync(
-        ::SceneTH::SceneResourceParameters const &params, ::SceneResources::MaterialType materialType);
+        ::SceneTH::SceneResourceParameters const& params, ::SceneResources::MaterialType materialType);
 
-    ::SceneResources::Environment createEnvironmentSync(::SceneTH::SceneResourceParameters const &params);
+    ::SceneResources::Environment createEnvironmentSync(::SceneTH::SceneResourceParameters const& params);
 
     ::SceneNodes::Geometry createGeometrySync(
-        ::SceneTH::SceneNodeParameters const &params, ::SceneResources::weak::MeshResource mesh);
+        ::SceneTH::SceneNodeParameters const& params, ::SceneResources::weak::MeshResource mesh);
 
-    ::SceneResources::Effect createEffectSync(::SceneTH::EffectParameters const &params);
+    ::SceneResources::Effect createEffectSync(::SceneTH::EffectParameters const& params);
 
     ::taihe::optional<int64_t> getImpl()
     {
@@ -88,5 +83,5 @@ public:
 private:
     std::shared_ptr<SceneETS> sceneETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SCENE_RESOURCE_FACTORY_IMPL_H

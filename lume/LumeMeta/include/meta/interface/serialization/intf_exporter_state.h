@@ -41,8 +41,8 @@ public:
     virtual META_NS::IObject::Ptr GetUserContext() const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IExporterState)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IExporterState)
 
 #endif

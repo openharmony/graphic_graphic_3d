@@ -71,8 +71,8 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-} // namespace
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+}  // namespace
 
 RenderPostProcessBloomNode::RenderPostProcessBloomNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -103,13 +103,13 @@ void RenderPostProcessBloomNode::InitNode(IRenderNodeContextManager& renderNodeC
 
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     samplerHandle_ = gpuResourceMgr.Create(samplerHandle_,
-        GpuSamplerDesc {
-            Filter::CORE_FILTER_LINEAR,                                  // magFilter
-            Filter::CORE_FILTER_LINEAR,                                  // minFilter
-            Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        GpuSamplerDesc{
+            Filter::CORE_FILTER_LINEAR,                                   // magFilter
+            Filter::CORE_FILTER_LINEAR,                                   // minFilter
+            Filter::CORE_FILTER_LINEAR,                                   // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
         });
 
     binders_.downscaleAndThreshold.reset();
@@ -215,17 +215,17 @@ void RenderPostProcessBloomNode::CreateTargets(const Math::UVec2 baseSize)
                                      CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 
         if (effectProperties_.bloomConfiguration.useCompute) {
-            format_ = Format::BASE_FORMAT_R16G16B16A16_SFLOAT; // used due to GLES
+            format_ = Format::BASE_FORMAT_R16G16B16A16_SFLOAT;  // used due to GLES
             usageFlags = CORE_IMAGE_USAGE_STORAGE_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT;
         } else {
-            baseViewportDesc_ = { 0.0f, 0.0f, static_cast<float>(baseSize.x), static_cast<float>(baseSize.y), 0.0f,
-                1.0f };
-            baseScissorDesc_ = { 0, 0, baseSize.x, baseSize.y };
+            baseViewportDesc_ = {
+                0.0f, 0.0f, static_cast<float>(baseSize.x), static_cast<float>(baseSize.y), 0.0f, 1.0f};
+            baseScissorDesc_ = {0, 0, baseSize.x, baseSize.y};
         }
 
         // create target image
         const Math::UVec2 startTargetSize = baseSize_;
-        GpuImageDesc desc {
+        GpuImageDesc desc{
             ImageType::CORE_IMAGE_TYPE_2D,
             ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
             format_,
@@ -274,12 +274,12 @@ void RenderPostProcessBloomNode::CreateTargets(const Math::UVec2 baseSize)
 DescriptorCounts RenderPostProcessBloomNode::GetRenderDescriptorCounts() const
 {
     // NOTE: when added support for various bloom target counts, might need to be calculated for max
-    return DescriptorCounts { {
-        { CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 32u },
-        { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 32u },
-        { CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 32u },
-        { CORE_DESCRIPTOR_TYPE_SAMPLER, 24u },
-    } };
+    return DescriptorCounts{{
+        {CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 32u},
+        {CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 32u},
+        {CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 32u},
+        {CORE_DESCRIPTOR_TYPE_SAMPLER, 24u},
+    }};
 }
 
 RenderHandle RenderPostProcessBloomNode::GetFinalTarget() const
@@ -295,8 +295,8 @@ RenderHandle RenderPostProcessBloomNode::GetFinalTarget() const
 
 void RenderPostProcessBloomNode::ComputeBloom(IRenderCommandList& cmdList)
 {
-    constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT,
-        sizeof(LocalPostProcessPushConstantStruct) };
+    constexpr PushConstant pc{
+        ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(LocalPostProcessPushConstantStruct)};
 
     if (effectProperties_.enabled) {
         ComputeDownscaleAndThreshold(pc, cmdList);
@@ -317,9 +317,9 @@ void RenderPostProcessBloomNode::ComputeDownscaleAndThreshold(const PushConstant
     auto& binder = *binders_.downscaleAndThreshold;
     binder.ClearBindings();
     uint32_t binding = 0;
-    binder.BindImage(binding++, { targets_.tex1[0].GetHandle() });
-    binder.BindImage(binding++, { nodeInputsData.input });
-    binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+    binder.BindImage(binding++, {targets_.tex1[0].GetHandle()});
+    binder.BindImage(binding++, {nodeInputsData.input});
+    binder.BindSampler(binding++, {samplerHandle_.GetHandle()});
 
     cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0U, binder.GetDescriptorSetHandle());
@@ -328,8 +328,10 @@ void RenderPostProcessBloomNode::ComputeDownscaleAndThreshold(const PushConstant
 
     LocalPostProcessPushConstantStruct uPc;
     uPc.factor = bloomParameters_;
-    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-        1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+        static_cast<float>(targetSize.y),
+        1.0f / static_cast<float>(targetSize.x),
+        1.0f / static_cast<float>(targetSize.y));
 
     cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
@@ -348,9 +350,9 @@ void RenderPostProcessBloomNode::ComputeDownscale(const PushConstant& pc, IRende
             binder.ClearBindings();
 
             uint32_t binding = 0;
-            binder.BindImage(binding++, { targets_.tex1[i].GetHandle() });
-            binder.BindImage(binding++, { targets_.tex1[i - 1].GetHandle() });
-            binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+            binder.BindImage(binding++, {targets_.tex1[i].GetHandle()});
+            binder.BindImage(binding++, {targets_.tex1[i - 1].GetHandle()});
+            binder.BindSampler(binding++, {samplerHandle_.GetHandle()});
 
             cmdList.UpdateDescriptorSet(
                 binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
@@ -363,8 +365,10 @@ void RenderPostProcessBloomNode::ComputeDownscale(const PushConstant& pc, IRende
         uPc.factor = bloomParameters_;
         // factor.x is the bloom type here
         uPc.factor.x = static_cast<float>(effectProperties_.bloomConfiguration.bloomType);
-        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-            1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+            static_cast<float>(targetSize.y),
+            1.0f / static_cast<float>(targetSize.x),
+            1.0f / static_cast<float>(targetSize.y));
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
         cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
@@ -387,9 +391,9 @@ void RenderPostProcessBloomNode::ComputeUpscale(const PushConstant& pc, IRenderC
             const RenderHandle setHandle = binder.GetDescriptorSetHandle();
             binder.ClearBindings();
 
-            binder.BindImage(0u, { targets_.tex1[i - 1].GetHandle() });
-            binder.BindImage(1u, { targets_.tex1[i].GetHandle() });
-            binder.BindSampler(2u, { samplerHandle_.GetHandle() });
+            binder.BindImage(0u, {targets_.tex1[i - 1].GetHandle()});
+            binder.BindImage(1u, {targets_.tex1[i].GetHandle()});
+            binder.BindSampler(2u, {samplerHandle_.GetHandle()});
 
             cmdList.UpdateDescriptorSet(
                 binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
@@ -402,8 +406,10 @@ void RenderPostProcessBloomNode::ComputeUpscale(const PushConstant& pc, IRenderC
         uPc.factor = bloomParameters_;
         //  factor.x is the bloom type here
         uPc.factor.x = static_cast<float>(effectProperties_.bloomConfiguration.bloomType);
-        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-            1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+            static_cast<float>(targetSize.y),
+            1.0f / static_cast<float>(targetSize.x),
+            1.0f / static_cast<float>(targetSize.y));
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
         cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
@@ -421,10 +427,10 @@ void RenderPostProcessBloomNode::ComputeCombine(const PushConstant& pc, IRenderC
         binder.ClearBindings();
 
         uint32_t binding = 0;
-        binder.BindImage(binding++, { nodeOutputsData.output });
-        binder.BindImage(binding++, { nodeInputsData.input });
-        binder.BindImage(binding++, { targets_.tex1[0].GetHandle() });
-        binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+        binder.BindImage(binding++, {nodeOutputsData.output});
+        binder.BindImage(binding++, {nodeInputsData.input});
+        binder.BindImage(binding++, {targets_.tex1[0].GetHandle()});
+        binder.BindSampler(binding++, {samplerHandle_.GetHandle()});
 
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
         cmdList.BindDescriptorSet(0U, setHandle);
@@ -434,8 +440,10 @@ void RenderPostProcessBloomNode::ComputeCombine(const PushConstant& pc, IRenderC
 
     LocalPostProcessPushConstantStruct uPc;
     uPc.factor = bloomParameters_;
-    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-        1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+        static_cast<float>(targetSize.y),
+        1.0f / static_cast<float>(targetSize.x),
+        1.0f / static_cast<float>(targetSize.y));
     cmdList.PushConstantData(pc, arrayviewU8(uPc));
 
     cmdList.Dispatch((targetSize.x + tgs.x - 1) / tgs.x, (targetSize.y + tgs.y - 1) / tgs.y, 1);
@@ -453,8 +461,8 @@ void RenderPostProcessBloomNode::GraphicsBloom(IRenderCommandList& cmdList)
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.colorAttachmentIndices[0] = 0;
 
-    constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT,
-        sizeof(LocalPostProcessPushConstantStruct) };
+    constexpr PushConstant pc{
+        ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT, sizeof(LocalPostProcessPushConstantStruct)};
 
     if (effectProperties_.enabled) {
         RenderDownscaleAndThreshold(renderPass, pc, cmdList);
@@ -471,11 +479,11 @@ void RenderPostProcessBloomNode::RenderDownscaleAndThreshold(
     RenderPass& renderPass, const PushConstant& pc, IRenderCommandList& cmdList)
 {
     const auto targetSize = targets_.tex1Size[0];
-    const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
-    const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
+    const ViewportDesc viewportDesc{0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y)};
+    const ScissorDesc scissorDesc = {0, 0, targetSize.x, targetSize.y};
 
     renderPass.renderPassDesc.attachmentHandles[0] = targets_.tex1[0].GetHandle();
-    renderPass.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, targetSize.x, targetSize.y};
     cmdList.BeginRenderPass(renderPass.renderPassDesc, 0, renderPass.subpassDesc);
 
     cmdList.SetDynamicStateViewport(viewportDesc);
@@ -487,16 +495,18 @@ void RenderPostProcessBloomNode::RenderDownscaleAndThreshold(
         const RenderHandle setHandle = binder.GetDescriptorSetHandle();
         binder.ClearBindings();
 
-        binder.BindImage(0U, { nodeInputsData.input });
-        binder.BindSampler(1U, { samplerHandle_.GetHandle() });
+        binder.BindImage(0U, {nodeInputsData.input});
+        binder.BindSampler(1U, {samplerHandle_.GetHandle()});
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
         cmdList.BindDescriptorSet(0U, setHandle);
     }
 
     LocalPostProcessPushConstantStruct uPc;
     uPc.factor = bloomParameters_;
-    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-        1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+        static_cast<float>(targetSize.y),
+        1.0f / static_cast<float>(targetSize.x),
+        1.0f / static_cast<float>(targetSize.y));
 
     cmdList.PushConstantData(pc, arrayviewU8(uPc));
     cmdList.Draw(3u, 1u, 0u, 0u);
@@ -511,11 +521,11 @@ void RenderPostProcessBloomNode::RenderDownscale(
 
     for (size_t idx = 1U; idx < frameScaleMaxCount_; ++idx) {
         const auto targetSize = targets_.tex1Size[idx];
-        const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
-        const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
+        const ViewportDesc viewportDesc{0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y)};
+        const ScissorDesc scissorDesc = {0, 0, targetSize.x, targetSize.y};
 
         renderPass.renderPassDesc.attachmentHandles[0] = targets_.tex1[idx].GetHandle();
-        renderPass.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
+        renderPass.renderPassDesc.renderArea = {0, 0, targetSize.x, targetSize.y};
         cmdList.BeginRenderPass(renderPass.renderPassDesc, 0, renderPass.subpassDesc);
 
         cmdList.SetDynamicStateViewport(viewportDesc);
@@ -527,16 +537,18 @@ void RenderPostProcessBloomNode::RenderDownscale(
             auto& binder = *binders_.downscale[idx];
             const RenderHandle setHandle = binder.GetDescriptorSetHandle();
             binder.ClearBindings();
-            binder.BindImage(0u, { targets_.tex1[idx - 1].GetHandle() });
-            binder.BindSampler(1u, { samplerHandle_.GetHandle() });
+            binder.BindImage(0u, {targets_.tex1[idx - 1].GetHandle()});
+            binder.BindSampler(1u, {samplerHandle_.GetHandle()});
             cmdList.UpdateDescriptorSet(
                 binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
             cmdList.BindDescriptorSet(0U, setHandle);
         }
         // factor.x is the bloom type here
         uPc.factor.x = static_cast<float>(effectProperties_.bloomConfiguration.bloomType);
-        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-            1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+            static_cast<float>(targetSize.y),
+            1.0f / static_cast<float>(targetSize.x),
+            1.0f / static_cast<float>(targetSize.y));
 
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Draw(3u, 1u, 0u, 0u);
@@ -559,12 +571,12 @@ void RenderPostProcessBloomNode::RenderUpscale(
     RenderHandle input = targets_.tex1[frameScaleMaxCount_ - 1].GetHandle();
     for (size_t idx = frameScaleMaxCount_ - 1U; idx != 0U; --idx) {
         const auto targetSize = targets_.tex1Size[idx - 1];
-        const ViewportDesc viewportDesc { 0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y) };
-        const ScissorDesc scissorDesc = { 0, 0, targetSize.x, targetSize.y };
+        const ViewportDesc viewportDesc{0, 0, static_cast<float>(targetSize.x), static_cast<float>(targetSize.y)};
+        const ScissorDesc scissorDesc = {0, 0, targetSize.x, targetSize.y};
 
         // tex2 as output
         renderPassUpscale.renderPassDesc.attachmentHandles[0] = targets_.tex2[idx - 1].GetHandle();
-        renderPassUpscale.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
+        renderPassUpscale.renderPassDesc.renderArea = {0, 0, targetSize.x, targetSize.y};
         cmdList.BeginRenderPass(renderPassUpscale.renderPassDesc, 0, renderPassUpscale.subpassDesc);
 
         cmdList.SetDynamicStateViewport(viewportDesc);
@@ -578,9 +590,9 @@ void RenderPostProcessBloomNode::RenderUpscale(
             binder.ClearBindings();
 
             uint32_t binding = 0;
-            binder.BindImage(binding++, { input });
-            binder.BindImage(binding++, { targets_.tex1[idx - 1].GetHandle() });
-            binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+            binder.BindImage(binding++, {input});
+            binder.BindImage(binding++, {targets_.tex1[idx - 1].GetHandle()});
+            binder.BindSampler(binding++, {samplerHandle_.GetHandle()});
             cmdList.UpdateDescriptorSet(
                 binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
             cmdList.BindDescriptorSet(0U, setHandle);
@@ -589,8 +601,10 @@ void RenderPostProcessBloomNode::RenderUpscale(
         uPc.factor = bloomParameters_;
         // factor.x is the bloom type here
         uPc.factor.x = static_cast<float>(effectProperties_.bloomConfiguration.bloomType);
-        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-            1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+        uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+            static_cast<float>(targetSize.y),
+            1.0f / static_cast<float>(targetSize.x),
+            1.0f / static_cast<float>(targetSize.y));
 
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Draw(3u, 1u, 0u, 0u);
@@ -607,7 +621,7 @@ void RenderPostProcessBloomNode::RenderCombine(
     const auto targetSize = baseSize_;
 
     renderPass.renderPassDesc.attachmentHandles[0] = nodeOutputsData.output.handle;
-    renderPass.renderPassDesc.renderArea = { 0, 0, targetSize.x, targetSize.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, targetSize.x, targetSize.y};
     cmdList.BeginRenderPass(renderPass.renderPassDesc, 0, renderPass.subpassDesc);
 
     cmdList.SetDynamicStateViewport(baseViewportDesc_);
@@ -621,10 +635,10 @@ void RenderPostProcessBloomNode::RenderCombine(
         binder.ClearBindings();
 
         uint32_t binding = 0;
-        binder.BindImage(binding++, { nodeInputsData.input });
+        binder.BindImage(binding++, {nodeInputsData.input});
         // tex2 handle has the final result
-        binder.BindImage(binding++, { targets_.tex2[0].GetHandle() });
-        binder.BindSampler(binding++, { samplerHandle_.GetHandle() });
+        binder.BindImage(binding++, {targets_.tex2[0].GetHandle()});
+        binder.BindSampler(binding++, {samplerHandle_.GetHandle()});
 
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
         cmdList.BindDescriptorSet(0U, setHandle);
@@ -632,8 +646,10 @@ void RenderPostProcessBloomNode::RenderCombine(
 
     LocalPostProcessPushConstantStruct uPc;
     uPc.factor = bloomParameters_;
-    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x), static_cast<float>(targetSize.y),
-        1.0f / static_cast<float>(targetSize.x), 1.0f / static_cast<float>(targetSize.y));
+    uPc.viewportSizeInvSize = Math::Vec4(static_cast<float>(targetSize.x),
+        static_cast<float>(targetSize.y),
+        1.0f / static_cast<float>(targetSize.x),
+        1.0f / static_cast<float>(targetSize.y));
 
     cmdList.PushConstantData(pc, arrayviewU8(uPc));
     cmdList.Draw(3u, 1u, 0u, 0u);
@@ -660,18 +676,17 @@ void RenderPostProcessBloomNode::CreateComputePsos()
     INodeContextDescriptorSetManager& dSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
 
     constexpr BASE_NS::pair<BloomConfiguration::BloomQualityType, uint32_t> configurations[] = {
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, CORE_BLOOM_QUALITY_LOW },
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, CORE_BLOOM_QUALITY_NORMAL },
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, CORE_BLOOM_QUALITY_HIGH }
-    };
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, CORE_BLOOM_QUALITY_LOW},
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, CORE_BLOOM_QUALITY_NORMAL},
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, CORE_BLOOM_QUALITY_HIGH}};
     for (const auto& configuration : configurations) {
         {
             auto shader = shaderMgr.GetShaderHandle("rendershaders://computeshader/bloom_downscale.shader");
             const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
             ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
-            const ShaderSpecializationConstantDataView specDataView {
-                { specializations.constants.data(), specializations.constants.size() },
-                { &configuration.second, 1u },
+            const ShaderSpecializationConstantDataView specDataView{
+                {specializations.constants.data(), specializations.constants.size()},
+                {&configuration.second, 1u},
             };
 
             psos_.downscaleHandlesCompute[configuration.first].regular =
@@ -682,9 +697,9 @@ void RenderPostProcessBloomNode::CreateComputePsos()
             const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
 
             ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
-            const ShaderSpecializationConstantDataView specDataView {
-                { specializations.constants.data(), specializations.constants.size() },
-                { &configuration.second, 1u },
+            const ShaderSpecializationConstantDataView specDataView{
+                {specializations.constants.data(), specializations.constants.size()},
+                {&configuration.second, 1u},
             };
             psos_.downscaleHandlesCompute[configuration.first].threshold =
                 psoMgr.GetComputePsoHandle(shader, pl, specDataView);
@@ -751,8 +766,8 @@ std::pair<RenderHandle, const PipelineLayout&> RenderPostProcessBloomNode::Creat
 
     auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
     const RenderHandle pso = psoMgr.GetGraphicsPsoHandle(
-        shaderHandle, graphicsStateHandle, pl, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-    return { pso, pl };
+        shaderHandle, graphicsStateHandle, pl, {}, {}, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
+    return {pso, pl};
 }
 
 void RenderPostProcessBloomNode::CreateRenderPsos()
@@ -762,10 +777,9 @@ void RenderPostProcessBloomNode::CreateRenderPsos()
     }
 
     constexpr BASE_NS::pair<BloomConfiguration::BloomQualityType, uint32_t> configurations[] = {
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, CORE_BLOOM_QUALITY_LOW },
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, CORE_BLOOM_QUALITY_NORMAL },
-        { BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, CORE_BLOOM_QUALITY_HIGH }
-    };
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_LOW, CORE_BLOOM_QUALITY_LOW},
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL, CORE_BLOOM_QUALITY_NORMAL},
+        {BloomConfiguration::BloomQualityType::QUALITY_TYPE_HIGH, CORE_BLOOM_QUALITY_HIGH}};
 
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr_->GetShaderManager();
     INodeContextPsoManager& psoMgr = renderNodeContextMgr_->GetPsoManager();
@@ -775,31 +789,31 @@ void RenderPostProcessBloomNode::CreateRenderPsos()
             auto shader = shaderMgr.GetShaderHandle("rendershaders://shader/bloom_downscale.shader");
             const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
             ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
-            const ShaderSpecializationConstantDataView specDataView {
-                { specializations.constants.data(), specializations.constants.size() },
-                { &configuration.second, 1u },
+            const ShaderSpecializationConstantDataView specDataView{
+                {specializations.constants.data(), specializations.constants.size()},
+                {&configuration.second, 1u},
             };
             const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader);
             psos_.downscaleHandles[configuration.first].regular = psoMgr.GetGraphicsPsoHandle(
-                shader, graphicsState, pl, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+                shader, graphicsState, pl, {}, specDataView, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
 
         {
             auto shader = shaderMgr.GetShaderHandle("rendershaders://shader/bloom_downscale_threshold.shader");
             const PipelineLayout& pl = shaderMgr.GetReflectionPipelineLayout(shader);
             ShaderSpecializationConstantView specializations = shaderMgr.GetReflectionSpecialization(shader);
-            const ShaderSpecializationConstantDataView specDataView {
-                { specializations.constants.data(), specializations.constants.size() },
-                { &configuration.second, 1u },
+            const ShaderSpecializationConstantDataView specDataView{
+                {specializations.constants.data(), specializations.constants.size()},
+                {&configuration.second, 1u},
             };
             const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader);
             psos_.downscaleHandles[configuration.first].threshold = psoMgr.GetGraphicsPsoHandle(
-                shader, graphicsState, pl, {}, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+                shader, graphicsState, pl, {}, specDataView, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
     }
 
     INodeContextDescriptorSetManager& dSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
-    constexpr uint32_t localSet { 0U };
+    constexpr uint32_t localSet{0U};
     // the first one creates the global set as well
     {
         const auto [pso, pipelineLayout] =

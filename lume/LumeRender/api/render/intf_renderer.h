@@ -106,11 +106,11 @@ public:
      */
     struct RenderStatus {
         /** Processed front-end frame index (count of frames) */
-        uint64_t frontEndIndex { 0ULL };
+        uint64_t frontEndIndex{0ULL};
         /** Processed backend-end frame index (count of frames) */
-        uint64_t backEndIndex { 0ULL };
+        uint64_t backEndIndex{0ULL};
         /** Processed present-end frame index (count of frames) */
-        uint64_t presentIndex { 0ULL };
+        uint64_t presentIndex{0ULL};
     };
     /** Get status of rendering.
      * @return RenderStatus
@@ -120,4 +120,4 @@ public:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDERER_H
+#endif  // API_RENDER_IRENDERER_H

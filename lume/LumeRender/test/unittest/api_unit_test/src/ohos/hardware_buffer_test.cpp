@@ -38,9 +38,9 @@
 namespace {
 
 constexpr BASE_NS::Math::Mat3X3 bt709(
-    { 0.2126f, -0.1146f, 0.5f }, { 0.7152f, -0.3854f, -0.4542f }, { 0.0722f, 0.5f, -0.0458f });
+    {0.2126f, -0.1146f, 0.5f}, {0.7152f, -0.3854f, -0.4542f}, {0.0722f, 0.5f, -0.0458f});
 constexpr BASE_NS::Math::Mat3X3 bt601(
-    { 65.481f, -37.797f, 112.f }, { 128.553f, -74.203f, -93.786f }, { 24.966, 112.f, -18.214f });
+    {65.481f, -37.797f, 112.f}, {128.553f, -74.203f, -93.786f}, {24.966, 112.f, -18.214f});
 
 constexpr BASE_NS::Math::Vec3 red(1.f, 0.f, 0.f);
 constexpr BASE_NS::Math::Vec3 green(0.f, 1.f, 0.f);
@@ -62,9 +62,9 @@ struct TestData {
     RENDER_NS::RenderHandleReference renderNodeGraph;
     TestResources resources;
 
-    uint32_t windowWidth { 0u };
-    uint32_t windowHeight { 0u };
-    uint32_t elementByteSize { 4u };
+    uint32_t windowWidth{0u};
+    uint32_t windowHeight{0u};
+    uint32_t elementByteSize{4u};
 };
 RENDER_NS::RenderHandleReference CreateColorImage(RENDER_NS::IRenderContext& renderContext)
 {
@@ -93,17 +93,32 @@ RENDER_NS::RenderHandleReference CreateColorImage(RENDER_NS::IRenderContext& ren
     constexpr auto blueYCrCb = (bt709 * blue) * range + offset;
     constexpr auto whiteYCrCb = (bt709 * white) * range + offset;
 
-    constexpr const uint8_t dataY[] = { uint8_t(redYCrCb.x), uint8_t(redYCrCb.x), uint8_t(greenYCrCb.x),
-        uint8_t(greenYCrCb.x), uint8_t(redYCrCb.x), uint8_t(redYCrCb.x), uint8_t(greenYCrCb.x), uint8_t(greenYCrCb.x),
-        uint8_t(blueYCrCb.x), uint8_t(blueYCrCb.x), uint8_t(whiteYCrCb.x), uint8_t(whiteYCrCb.x), uint8_t(blueYCrCb.x),
-        uint8_t(blueYCrCb.x), uint8_t(whiteYCrCb.x), uint8_t(whiteYCrCb.x) };
-    constexpr const uint8_t dataCb[] = { uint8_t(redYCrCb.y), uint8_t(greenYCrCb.y), uint8_t(blueYCrCb.y),
-        uint8_t(whiteYCrCb.y) };
-    constexpr const uint8_t dataCr[] = { uint8_t(redYCrCb.z), uint8_t(greenYCrCb.z), uint8_t(blueYCrCb.z),
-        uint8_t(whiteYCrCb.z) };
+    constexpr const uint8_t dataY[] = {uint8_t(redYCrCb.x),
+        uint8_t(redYCrCb.x),
+        uint8_t(greenYCrCb.x),
+        uint8_t(greenYCrCb.x),
+        uint8_t(redYCrCb.x),
+        uint8_t(redYCrCb.x),
+        uint8_t(greenYCrCb.x),
+        uint8_t(greenYCrCb.x),
+        uint8_t(blueYCrCb.x),
+        uint8_t(blueYCrCb.x),
+        uint8_t(whiteYCrCb.x),
+        uint8_t(whiteYCrCb.x),
+        uint8_t(blueYCrCb.x),
+        uint8_t(blueYCrCb.x),
+        uint8_t(whiteYCrCb.x),
+        uint8_t(whiteYCrCb.x)};
+    constexpr const uint8_t dataCb[] = {
+        uint8_t(redYCrCb.y), uint8_t(greenYCrCb.y), uint8_t(blueYCrCb.y), uint8_t(whiteYCrCb.y)};
+    constexpr const uint8_t dataCr[] = {
+        uint8_t(redYCrCb.z), uint8_t(greenYCrCb.z), uint8_t(blueYCrCb.z), uint8_t(whiteYCrCb.z)};
 
-    OH_NativeBuffer_Config config { 4, 4, OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_YCBCR_420_SP,
-        OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_HW_TEXTURE, 8 };
+    OH_NativeBuffer_Config config{4,
+        4,
+        OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_YCBCR_420_SP,
+        OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_HW_TEXTURE,
+        8};
 
     OH_NativeBuffer* buffer = OH_NativeBuffer_Alloc(&config);
     if (!buffer) {
@@ -112,7 +127,7 @@ RENDER_NS::RenderHandleReference CreateColorImage(RENDER_NS::IRenderContext& ren
     }
     OH_NativeBuffer_GetConfig(buffer, &config);
     void* ptr = nullptr;
-    OH_NativeBuffer_Planes planes {};
+    OH_NativeBuffer_Planes planes{};
     if (auto err = OH_NativeBuffer_MapPlanes(buffer, &ptr, &planes); err || !ptr) {
         CORE_LOG_E("OH_NativeBuffer_Map failed %d", err);
         return {};
@@ -147,27 +162,38 @@ RENDER_NS::RenderHandleReference CreateColorImage(RENDER_NS::IRenderContext& ren
     }
 
     IGpuResourceManager& gpuResourceMgr = renderContext.GetDevice().GetGpuResourceManager();
-    constexpr GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-        Format::BASE_FORMAT_UNDEFINED, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
-        ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT, MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        0, // ImageCreateFlags
-        0, // EngineImageCreationFlags
-        4, 4, 1, 1, 1, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+    constexpr GpuImageDesc desc{ImageType::CORE_IMAGE_TYPE_2D,
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+        Format::BASE_FORMAT_UNDEFINED,
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT,
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        0,  // ImageCreateFlags
+        0,  // EngineImageCreationFlags
+        4,
+        4,
+        1,
+        1,
+        1,
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+        {}};
 
     if (renderContext.GetDevice().GetBackendType() == RENDER_NS::DeviceBackendType::VULKAN) {
-        const RENDER_NS::ImageDescVk plat { {}, VK_NULL_HANDLE, VK_NULL_HANDLE, reinterpret_cast<uintptr_t>(buffer) };
+        const RENDER_NS::ImageDescVk plat{{}, VK_NULL_HANDLE, VK_NULL_HANDLE, reinterpret_cast<uintptr_t>(buffer)};
         return gpuResourceMgr.CreateView("", gpuImageDesc, plat);
     } else {
-        const RENDER_NS::ImageDescGLES plat { {}, {}, {}, {}, {}, {}, {}, {}, reinterpret_cast<uintptr_t>(buffer) };
+        const RENDER_NS::ImageDescGLES plat{{}, {}, {}, {}, {}, {}, {}, {}, reinterpret_cast<uintptr_t>(buffer)};
         return gpuResourceMgr.CreateView("", gpuImageDesc, plat);
     }
 }
 
 RENDER_NS::RenderHandleReference CreateBuffer(RENDER_NS::IRenderContext& renderContext)
 {
-    OH_NativeBuffer_Config config { 256, 1, OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_BLOB,
+    OH_NativeBuffer_Config config{256,
+        1,
+        OH_NativeBuffer_Format::NATIVEBUFFER_PIXEL_FMT_BLOB,
         OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_CPU_WRITE | OH_NativeBuffer_Usage::NATIVEBUFFER_USAGE_HW_TEXTURE,
-        256 };
+        256};
 
     OH_NativeBuffer* buffer = OH_NativeBuffer_Alloc(&config);
     if (!buffer) {
@@ -185,11 +211,13 @@ RENDER_NS::RenderHandleReference CreateBuffer(RENDER_NS::IRenderContext& renderC
     OH_NativeBuffer_Unmap(buffer);
 
     IGpuResourceManager& gpuResourceMgr = renderContext.GetDevice().GetGpuResourceManager();
-    const GpuBufferDesc gpuBufferDesc { BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-                                            BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_DST_BIT,
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, static_cast<uint32_t>(config.width),
-        Format::BASE_FORMAT_UNDEFINED };
-    const BufferDescVk plat { {}, VK_NULL_HANDLE, reinterpret_cast<uintptr_t>(buffer) };
+    const GpuBufferDesc gpuBufferDesc{BufferUsageFlagBits::CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                                          BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_DST_BIT,
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        0,
+        static_cast<uint32_t>(config.width),
+        Format::BASE_FORMAT_UNDEFINED};
+    const BufferDescVk plat{{}, VK_NULL_HANDLE, reinterpret_cast<uintptr_t>(buffer)};
     return gpuResourceMgr.Create("uNativeBuffer", plat);
 }
 
@@ -207,7 +235,7 @@ void TestNativeBuffer(RENDER_NS::DeviceBackendType backend)
     auto res = CreateColorImage(*testData.engine.context);
     testData.engine.context->GetRenderer().RenderFrame({});
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -219,7 +247,7 @@ UNIT_TEST(API_GfxGpuResourceManagerTest, NativeBufferTestVulkan, testing::ext::T
 {
     TestNativeBuffer(RENDER_NS::DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -231,4 +259,4 @@ UNIT_TEST(API_GfxGpuResourceManagerTest, NativeBufferTestOpenGL, testing::ext::T
 {
     TestNativeBuffer(RENDER_NS::UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

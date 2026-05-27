@@ -40,9 +40,9 @@ layout(location = 1) out vec4 outVelocityNormal;
 
 #define KERNEL_SIZE 1
 // Values are temporarily boosted to help with artifacts
-const float DEPTH_SIGMA = 0.30;  // was 0.1
-const float SPATIAL_SIGMA = 1.7; // was 1.1
-const float COLOR_SIGMA = 2.0;   // was 0.1
+const float DEPTH_SIGMA = 0.30;   // was 0.1
+const float SPATIAL_SIGMA = 1.7;  // was 1.1
+const float COLOR_SIGMA = 2.0;    // was 0.1
 
 // In bindless the texture indices are offset by 1
 #if (CORE3D_DM_BINDLESS_FRAG_LAYOUT == 1)
@@ -122,4 +122,4 @@ void CloudMain()
     outColor = totalColor / totalWeight;
 }
 
-#endif // CORE3D_DM_FW_CLOUD_FRAG_H
+#endif  // CORE3D_DM_FW_CLOUD_FRAG_H

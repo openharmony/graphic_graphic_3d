@@ -32,29 +32,34 @@ namespace {
 struct FormatInfo {
     Format format;
     uint32_t r, g, b, a;
-    GLenum glFormat;  // texture
-    GLenum glFormat2; // renderable
+    GLenum glFormat;   // texture
+    GLenum glFormat2;  // renderable
 };
 
 // NOTE: add more mappings if needed.
-constexpr FormatInfo FORMATS[] = { { BASE_FORMAT_R8G8B8_UNORM, 8, 8, 8, 0, GL_RGB8, GL_RGB8 },
-    { BASE_FORMAT_R8G8B8A8_UNORM, 8, 8, 8, 8, GL_RGBA8, GL_RGBA8 },
-    { BASE_FORMAT_A2B10G10R10_UNORM_PACK32, 10U, 10U, 10U, 2U, GL_RGB10_A2, GL_RGB10_A2 },
+constexpr FormatInfo FORMATS[] = {{BASE_FORMAT_R8G8B8_UNORM, 8, 8, 8, 0, GL_RGB8, GL_RGB8},
+    {BASE_FORMAT_R8G8B8A8_UNORM, 8, 8, 8, 8, GL_RGBA8, GL_RGBA8},
+    {BASE_FORMAT_A2B10G10R10_UNORM_PACK32, 10U, 10U, 10U, 2U, GL_RGB10_A2, GL_RGB10_A2},
 #if RENDER_HAS_GL_BACKEND
-    { BASE_FORMAT_R16G16B16_UNORM, 16, 16, 16, 0, GL_RGB16, GL_RGB16 },
-    { BASE_FORMAT_R16G16B16A16_UNORM, 16, 16, 16, 16, GL_RGBA16, GL_RGBA16 },
+    {BASE_FORMAT_R16G16B16_UNORM, 16, 16, 16, 0, GL_RGB16, GL_RGB16},
+    {BASE_FORMAT_R16G16B16A16_UNORM, 16, 16, 16, 16, GL_RGBA16, GL_RGBA16},
 #endif
-    { BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE } };
+    {BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE}};
 
-constexpr FormatInfo FORMATS_SRGB[] = { { BASE_FORMAT_R8G8B8_SRGB, 8, 8, 8, 0, GL_SRGB8, GL_SRGB8_ALPHA8 },
-    { BASE_FORMAT_R8G8B8A8_SRGB, 8, 8, 8, 8, GL_SRGB8_ALPHA8, GL_SRGB8_ALPHA8 },
-    { BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE } };
+constexpr FormatInfo FORMATS_SRGB[] = {{BASE_FORMAT_R8G8B8_SRGB, 8, 8, 8, 0, GL_SRGB8, GL_SRGB8_ALPHA8},
+    {BASE_FORMAT_R8G8B8A8_SRGB, 8, 8, 8, 8, GL_SRGB8_ALPHA8, GL_SRGB8_ALPHA8},
+    {BASE_FORMAT_UNDEFINED, 0, 0, 0, 0, GL_NONE, GL_NONE}};
 
 SampleCountFlags SamplesToSampleCountFlags(uint32_t samples)
 {
     SampleCountFlags sampleCount = 0;
-    const SampleCountFlagBits bits[] = { CORE_SAMPLE_COUNT_1_BIT, CORE_SAMPLE_COUNT_2_BIT, CORE_SAMPLE_COUNT_4_BIT,
-        CORE_SAMPLE_COUNT_8_BIT, CORE_SAMPLE_COUNT_16_BIT, CORE_SAMPLE_COUNT_32_BIT, CORE_SAMPLE_COUNT_64_BIT };
+    const SampleCountFlagBits bits[] = {CORE_SAMPLE_COUNT_1_BIT,
+        CORE_SAMPLE_COUNT_2_BIT,
+        CORE_SAMPLE_COUNT_4_BIT,
+        CORE_SAMPLE_COUNT_8_BIT,
+        CORE_SAMPLE_COUNT_16_BIT,
+        CORE_SAMPLE_COUNT_32_BIT,
+        CORE_SAMPLE_COUNT_64_BIT};
     for (int id = 0;; id++) {
         if (bits[id] == 0) {
             break;
@@ -122,7 +127,7 @@ Format RgbToFormat(uint32_t r, uint32_t g, uint32_t b, uint32_t a, bool srgb)
 #if RENDER_GL_FLIP_Y_SWAPCHAIN
 GLenum FormatToGlFormat(Format colorFormat)
 {
-    const FormatInfo* steps[] = { FORMATS, FORMATS_SRGB, nullptr };
+    const FormatInfo* steps[] = {FORMATS, FORMATS_SRGB, nullptr};
     for (int step = 0;; step++) {
         const FormatInfo* format = steps[step];
         if (steps[step] == nullptr) {
@@ -181,21 +186,21 @@ GlesImplementation::SurfaceInfo ExtractInfo(DeviceGLES& device, const uint64_t s
 GpuImageDesc GenerateDescriptor(bool depth, Format format, uint32_t width, uint32_t height, uint32_t samples) noexcept
 {
     GpuImageDesc res = {
-        ImageType::CORE_IMAGE_TYPE_2D,                                            // imageType
-        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,                                   // imageViewType
-        format,                                                                   // format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                                   // imageTiling
-        0,                                                                        // usageFlags
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,            // memoryPropertyFlags
-        0,                                                                        // createFlags
-        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, // engineCreationFlags
-        width,                                                                    // width
-        height,                                                                   // height
-        1,                                                                        // depth
-        1,                                                                        // mipCount
-        1,                                                                        // layerCount
-        SamplesToSampleCountFlags(samples),                                       // sampleCountFlags
-        {}                                                                        // componentMapping
+        ImageType::CORE_IMAGE_TYPE_2D,                                             // imageType
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,                                    // imageViewType
+        format,                                                                    // format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                                    // imageTiling
+        0,                                                                         // usageFlags
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,             // memoryPropertyFlags
+        0,                                                                         // createFlags
+        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,  // engineCreationFlags
+        width,                                                                     // width
+        height,                                                                    // height
+        1,                                                                         // depth
+        1,                                                                         // mipCount
+        1,                                                                         // layerCount
+        SamplesToSampleCountFlags(samples),                                        // sampleCountFlags
+        {}                                                                         // componentMapping
     };
     if (depth) {
         res.usageFlags = ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
@@ -213,15 +218,15 @@ GpuImageDesc GenerateDescriptor(bool depth, Format format, uint32_t width, uint3
 void GenerateTextures(
     DeviceGLES& device, uint32_t count, GLenum colorf, uint32_t sampleCount, SwapchainPlatformDataGL& plat)
 {
-    constexpr const uint32_t TEMP_BIND_UNIT = 15; // Use texture unit 15 as a temporary bind spot.
+    constexpr const uint32_t TEMP_BIND_UNIT = 15;  // Use texture unit 15 as a temporary bind spot.
     uint32_t binding;
     if (sampleCount > 1) {
         binding = device.BoundTexture(TEMP_BIND_UNIT, GL_TEXTURE_2D_MULTISAMPLE);
     } else {
         binding = device.BoundTexture(TEMP_BIND_UNIT, GL_TEXTURE_2D);
     }
-    Math::UVec2 size { plat.swapchainImages.width, plat.swapchainImages.height };
-    plat.swapchainImages.images.resize(1); // Supports multiple images, see if it helps performance.
+    Math::UVec2 size{plat.swapchainImages.width, plat.swapchainImages.height};
+    plat.swapchainImages.images.resize(1);  // Supports multiple images, see if it helps performance.
 
     glGenTextures(static_cast<GLsizei>(plat.swapchainImages.images.size()), plat.swapchainImages.images.data());
     for (size_t i = 0; i < plat.swapchainImages.images.size(); i++) {
@@ -266,7 +271,7 @@ void GenerateFBO(DeviceGLES& device, SwapchainPlatformDataGL& plat, bool msaa)
     device.BindFrameBuffer(0);
 }
 #endif
-} // namespace
+}  // namespace
 
 SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchainCreateInfo)
     : device_((DeviceGLES&)device), flags_(swapchainCreateInfo.swapchainFlags)
@@ -288,8 +293,17 @@ SwapchainGLES::SwapchainGLES(Device& device, const SwapchainCreateInfo& swapchai
     }
     const Format colorFormat = RgbToFormat(info.red_size, info.green_size, info.blue_size, info.alpha_size, info.srgb);
     PLUGIN_LOG_I("Input surface for swapchain is [%x] %dx%d R:%d G:%d B:%d A:%d D:%d S:%d samples:%d srgb:%s",
-        info.configId, info.width, info.height, info.red_size, info.green_size, info.blue_size, info.alpha_size,
-        info.depth_size, info.stencil_size, info.samples, info.srgb ? "true" : "false");
+        info.configId,
+        info.width,
+        info.height,
+        info.red_size,
+        info.green_size,
+        info.blue_size,
+        info.alpha_size,
+        info.depth_size,
+        info.stencil_size,
+        info.samples,
+        info.srgb ? "true" : "false");
     info.width = Math::max(info.width, 1u);
     info.height = Math::max(info.height, 1u);
     plat_.swapchainImageIndex = 0;

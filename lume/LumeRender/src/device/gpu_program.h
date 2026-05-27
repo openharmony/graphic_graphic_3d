@@ -33,11 +33,11 @@ struct ComputeShaderReflection {
     ShaderSpecializationConstantView shaderSpecializationConstantView;
 
     /** Thread group size X */
-    uint32_t threadGroupSizeX { 0 };
+    uint32_t threadGroupSizeX{0};
     /** Thread group size Y */
-    uint32_t threadGroupSizeY { 0 };
+    uint32_t threadGroupSizeY{0};
     /** Thread group size Z */
-    uint32_t threadGroupSizeZ { 0 };
+    uint32_t threadGroupSizeZ{0};
 };
 
 /** Shader reflection */
@@ -51,8 +51,8 @@ struct ShaderReflection {
 };
 
 struct GpuShaderProgramCreateData {
-    ShaderModule* vertShaderModule { nullptr };
-    ShaderModule* fragShaderModule { nullptr };
+    ShaderModule* vertShaderModule{nullptr};
+    ShaderModule* fragShaderModule{nullptr};
 };
 
 /** Shader program.
@@ -71,7 +71,7 @@ public:
 };
 
 struct GpuComputeProgramCreateData {
-    ShaderModule* compShaderModule { nullptr };
+    ShaderModule* compShaderModule{nullptr};
 };
 
 /** Compute shader program.
@@ -90,4 +90,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_PROGRAM_H
+#endif  // DEVICE_GPU_PROGRAM_H

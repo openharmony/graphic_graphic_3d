@@ -19,9 +19,9 @@
 #include <scene/ext/component.h>
 #include <scene/interface/intf_material.h>
 
-#include "shader_compare.h"
-
 #include <meta/ext/object.h>
+
+#include "shader_compare.h"
 
 META_TYPE(CORE3D_NS::MaterialComponent::Type)
 META_TYPE(CORE3D_NS::MaterialComponent::Shader)
@@ -51,9 +51,10 @@ public:
     META_PROPERTY(CORE_NS::IPropertyHandle*, CustomProperties)
 
     struct ActiveTextureSlotInfo {
-        size_t count {};
+        size_t count{};
         struct TextureSlot {
             BASE_NS::string name;
+            bool active{};
         };
         BASE_NS::vector<TextureSlot> slots;
     };
@@ -115,8 +116,8 @@ public:
 
 private:
     struct CachedShader {
-        RENDER_NS::RenderHandle shader {};
-        uint64_t frameIndex {};
+        RENDER_NS::RenderHandle shader{};
+        uint64_t frameIndex{};
     };
     CachedShader cachedShader_;
 };

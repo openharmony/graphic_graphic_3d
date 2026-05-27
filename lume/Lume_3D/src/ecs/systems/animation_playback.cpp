@@ -36,7 +36,9 @@ using namespace CORE_NS;
 
 AnimationPlayback::AnimationPlayback(
     const Entity animationEntity, const array_view<const Entity> targetEntities, IEcs& ecs)
-    : animation_(animationEntity), ecs_(ecs), animationManager_(GetManager<IAnimationComponentManager>(ecs)),
+    : animation_(animationEntity),
+      ecs_(ecs),
+      animationManager_(GetManager<IAnimationComponentManager>(ecs)),
       animationStateManager_(GetManager<IAnimationStateComponentManager>(ecs)),
       nameManager_(GetManager<INameComponentManager>(ecs))
 {}

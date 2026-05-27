@@ -39,7 +39,7 @@ void main()
     } else if (uPc.factor.x == CORE_BLOOM_TYPE_HORIZONTAL) {
         color = BloomUpscaleHorizontal(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
     } else if (uPc.factor.x == CORE_BLOOM_TYPE_VERTICAL) {
-        color = BloomDownScaleVertical(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
+        color = BloomUpscaleVertical(uv, uPc.viewportSizeInvSize.zw, uTex, uSampler);
     }
     const vec3 baseColor = textureLod(sampler2D(uInputColor, uSampler), uv, 0).xyz;
     const float scatter = uPc.factor.w;

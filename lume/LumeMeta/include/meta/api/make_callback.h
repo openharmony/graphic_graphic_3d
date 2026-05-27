@@ -25,13 +25,14 @@ META_BEGIN_NAMESPACE();
 
 namespace {
 
-template<typename Callable, typename Func, typename Signature = typename Callable::FunctionType>
+template <typename Callable, typename Func, typename Signature = typename Callable::FunctionType>
 class Callback;
 
-template<typename Callable, typename Func, typename R, typename... ARG>
+template <typename Callable, typename Func, typename R, typename... ARG>
 class Callback<Callable, Func, R(ARG...)> : public IntroduceInterfaces<Callable> {
 public:
-    Callback(Func f) : func_(BASE_NS::move(f)) {}
+    Callback(Func f) : func_(BASE_NS::move(f))
+    {}
 
 protected:
     Func func_;
@@ -41,13 +42,13 @@ protected:
     }
 };
 
-} // namespace
+}  // namespace
 
 /**
  * @brief MakeCallable creates a generic callable from callable entity (e.g. lambda).
  * @param CallableType Type that defines the callable interface, e.g. ITaskQueueTask
  */
-template<typename CallableType, typename Func>
+template <typename CallableType, typename Func>
 auto MakeCallback(Func f)
 {
     return typename CallableType::Ptr(new Callback<CallableType, Func>(BASE_NS::move(f)));
@@ -56,7 +57,7 @@ auto MakeCallback(Func f)
 /**
  * @brief As above MakeCallable but using capture helper. @see Capture.
  */
-template<typename CallableType, typename Func, typename... Args>
+template <typename CallableType, typename Func, typename... Args>
 auto MakeCallback(Func f, Args&&... args)
 {
     return MakeCallback<CallableType>(Capture(BASE_NS::move(f), BASE_NS::forward<Args>(args)...));
@@ -66,7 +67,7 @@ auto MakeCallback(Func f, Args&&... args)
  * @brief Creates a generic callable from a class method.
  * Note: User needs to ensure that the lifetime of the class is longer than the created callback.
  */
-template<typename CallableType, typename o, typename R, typename... ARG>
+template <typename CallableType, typename o, typename R, typename... ARG>
 auto MakeCallback(o* instance, R (o::*func)(ARG...))
 {
     return MakeCallback<CallableType>([instance, func](ARG... args) { return (instance->*func)(args...); });
@@ -79,7 +80,7 @@ auto MakeCallback(o* instance, R (o::*func)(ARG...))
  * @param args Capture helper support.
  * @see Capture
  */
-template<typename CallableType, typename Func, typename... Args>
+template <typename CallableType, typename Func, typename... Args>
 auto MakeCallbackSafe(Func f, Args&&... args)
 {
     return MakeCallback<CallableType>(CaptureSafe(BASE_NS::move(f), BASE_NS::forward<Args>(args)...));

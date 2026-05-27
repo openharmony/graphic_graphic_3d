@@ -171,7 +171,7 @@ uint32_t HighestBit(uint32_t value)
     }
     return count;
 }
-} // namespace
+}  // namespace
 
 GraphicsPipelineStateObjectGLES::GraphicsPipelineStateObjectGLES(Device& device,
     const GpuShaderProgram& gpuShaderProgram, const GraphicsState& graphicsState, const PipelineLayout& pipelineLayout,
@@ -223,14 +223,14 @@ GpuShaderProgramGLES* GraphicsPipelineStateObjectGLES::GetOESProgram(array_view<
         return it->second.get();
     }
     // create new one.
-    return oesPrograms_.insert({ key, specialized_->OesPatch(oesBinds, plat_.views) }).first->second.get();
+    return oesPrograms_.insert({key, specialized_->OesPatch(oesBinds, plat_.views)}).first->second.get();
 }
 
 void GraphicsPipelineStateObjectGLES::MakeVAO() noexcept
 {
     PLUGIN_ASSERT(device_.IsActive());
     if (plat_.vao != 0) {
-        return; // early out
+        return;  // early out
     }
     const auto& shaderdata = (const GpuShaderProgramPlatformDataGL&)plat_.graphicsShader->GetPlatformData();
     PLUGIN_ASSERT(shaderdata.program != 0);

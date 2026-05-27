@@ -25,7 +25,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/node_context_descriptor_set_manager_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 using namespace BASE_NS;
 using CORE_NS::IEngine;
@@ -38,11 +38,10 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
     {
         DescriptorCounts descCounts;
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2});
+        descCounts.counts.emplace_back(DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1});
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1 });
-        descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1});
         nodeContextDescriptorSetMgr->ResetAndReserve(descCounts);
         nodeContextDescriptorSetMgr->BeginFrame();
     }
@@ -50,7 +49,7 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
     {
         DescriptorSetLayoutBindings bindings[2];
         for (uint32_t i = 0; i < countof(bindings); ++i) {
-            bindings[i] = DescriptorSetLayoutBindings {};
+            bindings[i] = DescriptorSetLayoutBindings{};
             {
                 DescriptorSetLayoutBinding binding;
                 binding.binding = 0;
@@ -73,18 +72,18 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
             }
         }
         {
-            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({ bindings, countof(bindings) });
+            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({bindings, countof(bindings)});
             ASSERT_EQ(countof(bindings), handles.size());
             for (uint32_t i = 0; i < countof(bindings); ++i) {
-                ASSERT_NE(RenderHandle {}, handles[i]);
+                ASSERT_NE(RenderHandle{}, handles[i]);
                 allHandles.emplace_back(handles[i]);
             }
         }
         {
-            auto handles = nodeContextDescriptorSetMgr->CreateOneFrameDescriptorSets({ bindings, countof(bindings) });
+            auto handles = nodeContextDescriptorSetMgr->CreateOneFrameDescriptorSets({bindings, countof(bindings)});
             ASSERT_EQ(countof(bindings), handles.size());
             for (uint32_t i = 0; i < countof(bindings); ++i) {
-                ASSERT_NE(RenderHandle {}, handles[i]);
+                ASSERT_NE(RenderHandle{}, handles[i]);
                 allHandles.emplace_back(handles[i]);
             }
             PipelineLayout pipelineLayout;
@@ -93,7 +92,7 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
             pipelineLayout.descriptorSetLayouts[0].set = 0;
             pipelineLayout.descriptorSetLayouts[0].bindings = bindings[0].binding;
             auto handle = nodeContextDescriptorSetMgr->CreateOneFrameDescriptorSet(0u, pipelineLayout);
-            ASSERT_NE(RenderHandle {}, handle);
+            ASSERT_NE(RenderHandle{}, handle);
             allHandles.emplace_back(handle);
         }
         {
@@ -108,15 +107,14 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
         if (engine.backend == DeviceBackendType::VULKAN) {
 #if RENDER_HAS_VULKAN_BACKEND
             ((NodeContextDescriptorSetManagerVk&)(*nodeContextDescriptorSetMgr)).BeginBackendFrame();
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
         }
     }
     {
         DescriptorCounts descCounts;
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 });
-        descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2});
+        descCounts.counts.emplace_back(DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1});
         nodeContextDescriptorSetMgr->ResetAndReserve(descCounts);
         nodeContextDescriptorSetMgr->BeginFrame();
         auto conversionHandle = RenderHandleUtil::CreateHandle(
@@ -129,35 +127,34 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
         binding.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_ALL_GRAPHICS;
         bindings.binding.emplace_back(binding);
 
-        auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({ &bindings, 1 });
+        auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({&bindings, 1});
         ASSERT_EQ(1, handles.size());
         auto setHandle = handles[0];
-        ASSERT_NE(RenderHandle {}, setHandle);
+        ASSERT_NE(RenderHandle{}, setHandle);
         auto binder = nodeContextDescriptorSetMgr->CreateDescriptorSetBinder(setHandle, bindings.binding);
         BindableImage bindableImage;
         bindableImage.handle = conversionHandle;
         bindableImage.samplerHandle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 0);
         binder->BindImage(
             0, bindableImage, AdditionalDescriptorFlagBits::CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-        GpuQueue gpuQueue { GpuQueue::QueueType::GRAPHICS, 0 };
+        GpuQueue gpuQueue{GpuQueue::QueueType::GRAPHICS, 0};
         nodeContextDescriptorSetMgr->UpdateCpuDescriptorSet(
             setHandle, binder->GetDescriptorSetLayoutBindingResources(), gpuQueue);
         if (engine.backend == DeviceBackendType::VULKAN) {
 #if RENDER_HAS_VULKAN_BACKEND
             ((NodeContextDescriptorSetManagerVk&)(*nodeContextDescriptorSetMgr)).BeginBackendFrame();
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
         }
     }
     {
         DescriptorCounts descCounts;
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3});
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3});
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 3 });
-        descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 3 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 3});
+        descCounts.counts.emplace_back(DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 3});
         nodeContextDescriptorSetMgr->ResetAndReserve(descCounts);
         nodeContextDescriptorSetMgr->BeginFrame();
         auto conversionHandle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0, 0);
@@ -205,43 +202,48 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
             bindings.binding.emplace_back(binding);
         }
 
-        auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({ &bindings, 1 });
+        auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({&bindings, 1});
         ASSERT_EQ(1, handles.size());
         auto setHandle = handles[0];
-        ASSERT_NE(RenderHandle {}, setHandle);
+        ASSERT_NE(RenderHandle{}, setHandle);
         auto binder = nodeContextDescriptorSetMgr->CreateDescriptorSetBinder(setHandle, bindings.binding);
         BindableImage bindableImage;
         bindableImage.handle = conversionHandle;
         bindableImage.samplerHandle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 0, 1);
         binder->BindImage(
             0, bindableImage, AdditionalDescriptorFlagBits::CORE_ADDITIONAL_DESCRIPTOR_IMMUTABLE_SAMPLER_BIT);
-        GpuQueue gpuQueue { GpuQueue::QueueType::GRAPHICS, 0 };
+        GpuQueue gpuQueue{GpuQueue::QueueType::GRAPHICS, 0};
         nodeContextDescriptorSetMgr->UpdateCpuDescriptorSet(
             setHandle, binder->GetDescriptorSetLayoutBindingResources(), gpuQueue);
         nodeContextDescriptorSetMgr->UpdateDescriptorSetGpuHandle(setHandle);
         if (engine.backend == DeviceBackendType::VULKAN) {
 #if RENDER_HAS_VULKAN_BACKEND
             ((NodeContextDescriptorSetManagerVk&)(*nodeContextDescriptorSetMgr)).BeginBackendFrame();
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
         }
     }
 #if NDEBUG
     {
         DescriptorCounts descCounts;
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2});
+        descCounts.counts.emplace_back(DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1});
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1 });
-        descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1});
         nodeContextDescriptorSetMgr->ResetAndReserve(descCounts);
         nodeContextDescriptorSetMgr->BeginFrame();
-        for (auto type : { CORE_DESCRIPTOR_TYPE_SAMPLER, CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                 CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                 CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                 CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                 CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-                 CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE }) {
+        for (auto type : {CORE_DESCRIPTOR_TYPE_SAMPLER,
+                 CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                 CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                 CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                 CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+                 CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+                 CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                 CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                 CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                 CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+                 CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+                 CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE}) {
             DescriptorSetLayoutBindings bindings;
             DescriptorSetLayoutBinding binding;
             binding.binding = 0;
@@ -249,36 +251,35 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
             binding.descriptorType = type;
             binding.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_ALL_GRAPHICS;
             bindings.binding.emplace_back(binding);
-            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({ &bindings, 1 });
+            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({&bindings, 1});
             ASSERT_EQ(1, handles.size());
         }
     }
-#endif // NDEBUG
+#endif  // NDEBUG
     {
         DescriptorCounts descCounts;
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2});
+        descCounts.counts.emplace_back(DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1});
         descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER, 1 });
-        descCounts.counts.emplace_back(
-            DescriptorCounts::TypedCount { DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 });
+            DescriptorCounts::TypedCount{DescriptorType::CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1});
         nodeContextDescriptorSetMgr->ResetAndReserve(descCounts);
         nodeContextDescriptorSetMgr->BeginFrame();
         {
             auto handle = nodeContextDescriptorSetMgr->CreateDescriptorSet(16u, {});
-            ASSERT_EQ(RenderHandle {}, handle);
+            ASSERT_EQ(RenderHandle{}, handle);
         }
         {
             PipelineLayout pl;
             pl.descriptorSetLayouts[0].set = 1u;
             auto handle = nodeContextDescriptorSetMgr->CreateDescriptorSet(0u, pl);
-            ASSERT_EQ(RenderHandle {}, handle);
+            ASSERT_EQ(RenderHandle{}, handle);
         }
         {
             PipelineLayout pl;
             pl.descriptorSetLayouts[0].set = 1u;
             auto handle = nodeContextDescriptorSetMgr->CreateOneFrameDescriptorSet(0u, pl);
-            ASSERT_EQ(RenderHandle {}, handle);
+            ASSERT_EQ(RenderHandle{}, handle);
         }
         {
             auto binder = nodeContextDescriptorSetMgr->CreatePipelineDescriptorSetBinder({}, {}, {});
@@ -300,15 +301,15 @@ void TestNodeContextDescriptorSetManager(const UTest::EngineResources& engine)
             binding.descriptorType = CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             binding.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_ALL_GRAPHICS;
             bindings.binding.emplace_back(binding);
-            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({ &bindings, 1 });
+            auto handles = nodeContextDescriptorSetMgr->CreateDescriptorSets({&bindings, 1});
             ASSERT_EQ(1, handles.size());
 #if NDEBUG
             nodeContextDescriptorSetMgr->UpdateCpuDescriptorSet(handles[0], {}, {});
-#endif // NDEBUG
+#endif  // NDEBUG
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -325,7 +326,7 @@ UNIT_TEST(SRC_NodeContextDescriptorSetManager, NodeContextDescriptorSetManagerTe
     TestNodeContextDescriptorSetManager(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -343,4 +344,4 @@ UNIT_TEST(SRC_NodeContextDescriptorSetManager, NodeContextDescriptorSetManagerTe
     TestNodeContextDescriptorSetManager(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

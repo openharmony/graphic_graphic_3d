@@ -58,8 +58,8 @@ RenderVertexBuffer GetBuffer(
     const MeshComponent::Submesh::BufferAccess& bufferAccess, const IRenderHandleComponentManager& bufferManager)
 {
     if (EntityUtil::IsValid(bufferAccess.buffer)) {
-        return { bufferManager.GetRenderHandleReference(bufferAccess.buffer), bufferAccess.offset,
-            bufferAccess.byteSize };
+        return {
+            bufferManager.GetRenderHandleReference(bufferAccess.buffer), bufferAccess.offset, bufferAccess.byteSize};
     }
     return {};
 }
@@ -73,7 +73,7 @@ void AddMorphSubmesh(IRenderDataStoreMorph& dataStore, const MeshComponent::Subm
     submesh.vertexBuffers[1U] = GetBuffer(submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_NOR], bufferManager);
     submesh.vertexBuffers[2U] = GetBuffer(submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_TAN], bufferManager);
 
-    submesh.vertexBufferCount = 3U; // 3: count of vertex buffer
+    submesh.vertexBufferCount = 3U;  // 3: count of vertex buffer
 
     submesh.morphTargetBuffer = GetBuffer(submeshDesc.morphTargetBuffer, bufferManager);
 
@@ -82,11 +82,15 @@ void AddMorphSubmesh(IRenderDataStoreMorph& dataStore, const MeshComponent::Subm
     // don't touch submesh.activeTargets as it's same for each submesh
     dataStore.AddSubmesh(submesh);
 }
-} // namespace
+}  // namespace
 
 MorphingSystem::MorphingSystem(IEcs& ecs)
-    : active_(true), ecs_(ecs), dataStore_(nullptr), nodeManager_(*GetManager<INodeComponentManager>(ecs)),
-      meshManager_(*GetManager<IMeshComponentManager>(ecs)), morphManager_(*GetManager<IMorphComponentManager>(ecs)),
+    : active_(true),
+      ecs_(ecs),
+      dataStore_(nullptr),
+      nodeManager_(*GetManager<INodeComponentManager>(ecs)),
+      meshManager_(*GetManager<IMeshComponentManager>(ecs)),
+      morphManager_(*GetManager<IMorphComponentManager>(ecs)),
       renderMeshManager_(*GetManager<IRenderMeshComponentManager>(ecs)),
       gpuHandleManager_(*GetManager<IRenderHandleComponentManager>(ecs)),
       MORPHING_SYSTEM_PROPERTIES(&properties_, ComponentMetadata)
@@ -98,7 +102,8 @@ MorphingSystem::MorphingSystem(IEcs& ecs)
     }
 }
 
-MorphingSystem::~MorphingSystem() {}
+MorphingSystem::~MorphingSystem()
+{}
 
 void MorphingSystem::SetActive(bool state)
 {
@@ -125,8 +130,8 @@ void MorphingSystem::Initialize()
     ecs_.AddListener(static_cast<IEcs::EntityListener&>(*this));
     ecs_.AddListener(morphManager_, *this);
     nodeQuery_.SetEcsListenersEnabled(true);
-    ComponentQuery::Operation operations[] = { { renderMeshManager_, ComponentQuery::Operation::Method::REQUIRE },
-        { nodeManager_, ComponentQuery::Operation::Method::REQUIRE } };
+    ComponentQuery::Operation operations[] = {{renderMeshManager_, ComponentQuery::Operation::Method::REQUIRE},
+        {nodeManager_, ComponentQuery::Operation::Method::REQUIRE}};
     nodeQuery_.SetupQuery(morphManager_, operations, true);
 }
 
@@ -217,13 +222,14 @@ bool MorphingSystem::Morph(const MeshComponent& mesh, const MorphComponent& mc, 
     activeTargets.reserve(weights.size());
     for (size_t ti = 0; ti < weights.size(); ti++) {
         if (weights[ti] > 0.0f) {
-            activeTargets.push_back({ static_cast<uint32_t>(ti), weights[ti] });
+            activeTargets.push_back({static_cast<uint32_t>(ti), weights[ti]});
         }
     }
 
     // sort according to weight (highest influence first)
-    std::sort(activeTargets.begin(), activeTargets.end(),
-        [](auto const& lhs, auto const& rhs) { return (lhs.weight > rhs.weight); });
+    std::sort(activeTargets.begin(), activeTargets.end(), [](auto const& lhs, auto const& rhs) {
+        return (lhs.weight > rhs.weight);
+    });
 
     if ((!activeTargets.empty()) || (dirty)) {
         for (const auto& submesh : mesh.submeshes) {

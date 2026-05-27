@@ -30,9 +30,9 @@ public:
     ~RenderLightHelper() = default;
 
     // offset to DefaultMaterialSingleLightStruct
-    static constexpr uint32_t LIGHT_LIST_OFFSET { 16u * 6u };
+    static constexpr uint32_t LIGHT_LIST_OFFSET{16u * 6u};
 
-    static constexpr bool ENABLE_CLUSTERED_LIGHTING { false };
+    static constexpr bool ENABLE_CLUSTERED_LIGHTING{false};
 
     static constexpr uint32_t LIGHT_SORT_BITS = RenderLight::LightUsageFlagBits::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT |
                                                 RenderLight::LightUsageFlagBits::LIGHT_USAGE_POINT_LIGHT_BIT |
@@ -40,25 +40,25 @@ public:
                                                 RenderLight::LightUsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT;
 
     struct LightCounts {
-        uint32_t directionalLightCount { 0u };
-        uint32_t pointLightCount { 0u };
-        uint32_t spotLightCount { 0u };
-        uint32_t rectLightCount { 0u };
+        uint32_t directionalLightCount{0u};
+        uint32_t pointLightCount{0u};
+        uint32_t spotLightCount{0u};
+        uint32_t rectLightCount{0u};
     };
 
     static BASE_NS::Math::Vec4 GetShadowAtlasSizeInvSize(const IRenderDataStoreDefaultLight& dsLight)
     {
         const BASE_NS::Math::UVec2 shadowQualityRes = dsLight.GetShadowQualityResolution();
         const uint32_t shadowCount = dsLight.GetLightCounts().shadowCount;
-        BASE_NS::Math::Vec2 size = { float(shadowQualityRes.x * shadowCount), float(shadowQualityRes.y) };
+        BASE_NS::Math::Vec2 size = {float(shadowQualityRes.x * shadowCount), float(shadowQualityRes.y)};
         size.x = BASE_NS::Math::max(1.0f, size.x);
         size.y = BASE_NS::Math::max(1.0f, size.y);
-        return { size.x, size.y, 1.0f / size.x, 1.0f / size.y };
+        return {size.x, size.y, 1.0f / size.x, 1.0f / size.y};
     }
 
     struct SortData {
-        RenderLight::LightUsageFlags lightUsageFlags { 0u };
-        uint32_t index { 0u };
+        RenderLight::LightUsageFlags lightUsageFlags{0u};
+        uint32_t index{0u};
     };
 
     static BASE_NS::vector<SortData> SortLights(
@@ -89,25 +89,25 @@ public:
         const BASE_NS::Math::Vec4 pos = currLight.pos;
         const BASE_NS::Math::Vec4 dir = currLight.dir;
         memLight->pos = pos;
-        memLight->dir = dir; // for rect light x-dir
-        constexpr float epsilonForMinDivisor { 0.0001f };
+        memLight->dir = dir;  // for rect light x-dir
+        constexpr float epsilonForMinDivisor{0.0001f};
         memLight->dir.w = BASE_NS::Math::max(epsilonForMinDivisor, currLight.range);
         memLight->color =
             BASE_NS::Math::Vec4(BASE_NS::Math::Vec3(currLight.color) * currLight.color.w, currLight.color.w);
         if (currLight.lightUsageFlags & RenderLight::LightUsageFlagBits::LIGHT_USAGE_SPOT_LIGHT_BIT) {
             memLight->spotLightParams = currLight.spotLightParams;
         } else if (currLight.lightUsageFlags & RenderLight::LightUsageFlagBits::LIGHT_USAGE_RECT_LIGHT_BIT) {
-            memLight->spotLightParams = currLight.spotLightParams; // y-dir with baked size
+            memLight->spotLightParams = currLight.spotLightParams;  // y-dir with baked size
         } else {
-            memLight->spotLightParams = { 0.0f, 0.0f, 0.0f, 0.0f };
+            memLight->spotLightParams = {0.0f, 0.0f, 0.0f, 0.0f};
         }
-        memLight->shadowFactors = { currLight.shadowFactors.x, currLight.shadowFactors.y, currLight.shadowFactors.z,
-            shadowStepSize };
-        memLight->flags = { currLight.lightUsageFlags, currLight.shadowCameraIndex, currLight.shadowIndex,
-            shadowCount };
-        memLight->indices = { static_cast<uint32_t>(currLight.id >> 32U),
-            static_cast<uint32_t>(currLight.id & 0xFFFFffff), static_cast<uint32_t>(currLight.layerMask >> 32U),
-            static_cast<uint32_t>(currLight.layerMask & 0xFFFFffff) };
+        memLight->shadowFactors = {
+            currLight.shadowFactors.x, currLight.shadowFactors.y, currLight.shadowFactors.z, shadowStepSize};
+        memLight->flags = {currLight.lightUsageFlags, currLight.shadowCameraIndex, currLight.shadowIndex, shadowCount};
+        memLight->indices = {static_cast<uint32_t>(currLight.id >> 32U),
+            static_cast<uint32_t>(currLight.id & 0xFFFFffff),
+            static_cast<uint32_t>(currLight.layerMask >> 32U),
+            static_cast<uint32_t>(currLight.layerMask & 0xFFFFffff)};
     }
 
     static void EvaluateLightCounts(const RenderLight::LightUsageFlags lightUsageFlags, LightCounts& lightCounts)
@@ -126,4 +126,4 @@ public:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER__NODE__RENDER_LIGHT_HELPER_H
+#endif  // CORE3D_RENDER__NODE__RENDER_LIGHT_HELPER_H

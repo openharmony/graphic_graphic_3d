@@ -43,7 +43,7 @@ UNIT_TEST(SRC_GpuResourceCache, GpuResourceCacheBasicTest, testing::ext::TestSiz
     ASSERT_TRUE(er.device != nullptr);
 
     unique_ptr<GpuResourceManager> gpuResourceMgr =
-        make_unique<GpuResourceManager>(*(Device*)er.device, GpuResourceManager::CreateInfo {});
+        make_unique<GpuResourceManager>(*(Device*)er.device, GpuResourceManager::CreateInfo{});
     ASSERT_TRUE(gpuResourceMgr != nullptr);
 
     IGpuResourceCache& gpuResourceCache = gpuResourceMgr->GetGpuResourceCache();
@@ -73,11 +73,9 @@ UNIT_TEST(SRC_GpuResourceCache, GpuResourceCacheBasicTest, testing::ext::TestSiz
         descs.emplace_back(desc);
         descs.emplace_back(desc);
 
-        const vector<RenderHandleReference> handles0 =
-            gpuResourceCache.ReserveGpuImages({ descs.data(), descs.size() });
+        const vector<RenderHandleReference> handles0 = gpuResourceCache.ReserveGpuImages({descs.data(), descs.size()});
 
-        const vector<RenderHandleReference> handles1 =
-            gpuResourceCache.ReserveGpuImages({ descs.data(), descs.size() });
+        const vector<RenderHandleReference> handles1 = gpuResourceCache.ReserveGpuImages({descs.data(), descs.size()});
 
         for (size_t idx = 0; idx < handles0.size(); ++idx) {
             for (size_t jdx = 0; jdx < handles0.size(); ++jdx) {

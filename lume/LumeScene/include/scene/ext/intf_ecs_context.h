@@ -33,12 +33,21 @@ public:
     virtual CORE_NS::IEcs::Ptr GetNativeEcs() const = 0;
     virtual CORE_NS::IComponentManager* FindComponent(BASE_NS::string_view name) const = 0;
 
-    template<typename ComponentType>
+    /**
+     * @brief Find a component manager by name. If the component is not registered in the
+     *        EcsContext, fall back to searching the entity's actual components.
+     * @param name Component name
+     * @param entity Entity whose components to search as fallback
+     */
+    virtual CORE_NS::IComponentManager* FindComponent(BASE_NS::string_view name, CORE_NS::Entity entity) const = 0;
+
+    template <typename ComponentType>
     CORE_NS::IComponentManager* FindComponent() const
     {
         return FindComponent(CORE_NS::GetName<ComponentType>());
     }
 
+    virtual bool IsDefaultComponent(BASE_NS::string_view name) const = 0;
     virtual void AddDefaultComponents(CORE_NS::Entity ent) const = 0;
     virtual BASE_NS::string GetPath(CORE_NS::Entity ent) const = 0;
     virtual IEcsObject::Ptr GetEcsObject(CORE_NS::Entity) = 0;
@@ -46,6 +55,7 @@ public:
     virtual CORE_NS::Entity GetRootEntity() const = 0;
     virtual CORE_NS::Entity GetParent(CORE_NS::Entity ent) const = 0;
     virtual CORE_NS::EntityReference GetRenderHandleEntity(const RENDER_NS::RenderHandleReference& handle) = 0;
+    virtual bool IsNodeEntity(CORE_NS::Entity ent) const = 0;
     virtual bool RemoveEntity(CORE_NS::Entity ent) = 0;
 };
 

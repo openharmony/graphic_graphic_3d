@@ -17,7 +17,6 @@
 
 #include <base/containers/unique_ptr.h>
 #include <base/math/matrix_util.h>
-#include <core/log.h>
 #include <core/property/property_handle_util.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
@@ -48,17 +47,17 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr string_view SHADER_NAME { "rendershaders://shader/fullscreen_flare.shader" };
+constexpr string_view SHADER_NAME{"rendershaders://shader/fullscreen_flare.shader"};
 
 RenderPassDesc::RenderArea GetImageRenderArea(
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle handle)
 {
     const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(handle);
-    return { 0U, 0U, desc.width, desc.height };
+    return {0U, 0U, desc.width, desc.height};
 }
-} // namespace
+}  // namespace
 
 RenderPostProcessFlareNode::RenderPostProcessFlareNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -144,7 +143,7 @@ IRenderNode::ExecuteFlags RenderPostProcessFlareNode::GetExecuteFlags() const
 
 void RenderPostProcessFlareNode::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    CORE_ASSERT(effectProperties_.enabled);
+    PLUGIN_ASSERT(effectProperties_.enabled);
 
     EvaluateOutput();
 
@@ -171,7 +170,7 @@ void RenderPostProcessFlareNode::ExecuteFrame(IRenderCommandList& cmdList)
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = CORE_ATTACHMENT_LOAD_OP_LOAD;
     renderPass.renderPassDesc.attachments[0].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
-    renderPass.renderPassDesc.attachmentHandles[0] = { currOutput.handle };
+    renderPass.renderPassDesc.attachmentHandles[0] = {currOutput.handle};
     renderPass.subpassStartIndex = 0;
     auto& subpass = renderPass.subpassDesc;
     subpass.colorAttachmentCount = 1;
@@ -211,8 +210,8 @@ RenderPostProcessFlareNode::PushConstantStruct RenderPostProcessFlareNode::GetPu
     }
 
     const float time = renderNodeContextMgr_->GetRenderNodeGraphData().renderingConfiguration.renderTimings.z;
-    PushConstantStruct pcV { { time, flarePos.x, flarePos.y, flarePos.z },
-        { static_cast<float>(width), static_cast<float>(height), intensity, 0.0f } };
+    PushConstantStruct pcV{{time, flarePos.x, flarePos.y, flarePos.z},
+        {static_cast<float>(width), static_cast<float>(height), intensity, 0.0f}};
 
     return pcV;
 }

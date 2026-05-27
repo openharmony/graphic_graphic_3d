@@ -33,10 +33,11 @@ class Data;
 /** Describes result of the parsing operation. */
 struct LoadResult {
     LoadResult() = default;
-    explicit LoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    explicit LoadResult(BASE_NS::string&& error) : success(false), error(error)
+    {}
 
     /** Indicates, whether the loading operation is successful. */
-    bool success { true };
+    bool success{true};
 
     /** In case of parsing error, contains the description of the error. */
     BASE_NS::string error;
@@ -47,7 +48,7 @@ struct LoadResult {
 LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri);
 LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri, size_t offset);
 LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, const BASE_NS::array_view<uint8_t const> data);
-} // namespace GLTF2
+}  // namespace GLTF2
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__GLTF__GLTF2_LOADER_H
+#endif  // CORE__GLTF__GLTF2_LOADER_H

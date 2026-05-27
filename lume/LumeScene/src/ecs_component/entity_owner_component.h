@@ -27,8 +27,8 @@ SCENE_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(IEntityOwnerComponentManager, EntityOwnerComponent)
-    /** Owned entity. */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, entity, "Entity", 0, )
+/** Owned entity. */
+DEFINE_PROPERTY(CORE_NS::EntityReference, entity, "Entity", 0, )
 END_COMPONENT(IEntityOwnerComponentManager, EntityOwnerComponent, "aa74aebf-58d5-46bf-b6f2-bdcb55274e9e")
 #if !defined(IMPLEMENT_MANAGER)
 SCENE_END_NAMESPACE()

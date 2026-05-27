@@ -61,6 +61,6 @@ private:
     std::unordered_map<std::string, FileInfo> mFiles;
 };
 
-} // namespace ige
+}  // namespace ige
 
-#endif // IGE_FILEMONITOR_H
+#endif  // IGE_FILEMONITOR_H

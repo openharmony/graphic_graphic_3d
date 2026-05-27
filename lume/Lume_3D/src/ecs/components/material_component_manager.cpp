@@ -15,6 +15,7 @@
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/render_handle_component.h>
+#include <base/containers/atomics.h>
 #include <base/containers/refcnt_ptr.h>
 #include <base/containers/unordered_map.h>
 #include <base/util/compile_time_hashes.h>
@@ -126,20 +127,20 @@ constexpr string_view DISPLAY_NAME = "displayName";
 constexpr string_view MATERIAL_COMPONENT_NAME = CORE_NS::GetName<MaterialComponent>();
 
 // RenderDataDefaultMaterial::MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE
-constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE { 256u };
+constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE{256u};
 constexpr string_view CUSTOM_PROPERTIES = "customProperties";
 constexpr string_view CUSTOM_BINDING_PROPERTIES = "customBindingProperties";
 constexpr string_view CUSTOM_PROPERTY_DATA = "data";
 
 constexpr uint32_t MODIFIED = 0x80000000;
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
 {
     return std::find_if(container.cbegin(), container.cend(), forward<Predicate>(predicate));
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline typename Container::iterator FindIf(Container& container, Predicate&& predicate)
 {
     return std::find_if(container.begin(), container.end(), forward<Predicate>(predicate));
@@ -219,7 +220,8 @@ void AppendProperties(vector<Property>& newProperties, vector<string>& newString
         if (propertyObject.value.is_array() && propertyIt->type.isArray &&
             propertyObject.value.array_.size() > propertyIt->count) {
             PLUGIN_LOG_W("CORE3D_VALIDATION: material property metadata count mismatch (%u <= %u)",
-                uint32_t(propertyObject.value.array_.size()), uint32_t(propertyIt->count));
+                uint32_t(propertyObject.value.array_.size()),
+                uint32_t(propertyIt->count));
         }
 #endif
         if (propertyObject.value.is_array() && propertyIt->type.isArray &&
@@ -235,17 +237,17 @@ void MapTextureSlots(array_view<MaterialComponent::TextureInfo> textures, size_t
     array_view<const Property> newProperties, array_view<const Property> oldProperties)
 {
     MaterialComponent::TextureInfo tmp[MaterialComponent::TextureIndex::TEXTURE_COUNT] = {
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_BASE_COLOR, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_NORMAL_SCALE, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_MATERIAL, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_EMISSIVE, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAILT_AO, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT_ROUGHNESS, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_CLEARCOAT_NORMAL, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_SHEEN, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_TRANSMISSION, {} },
-        MaterialComponent::TextureInfo { {}, {}, MaterialComponent::DEFAULT_SPECULAR, {} },
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_BASE_COLOR, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_NORMAL_SCALE, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_MATERIAL, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_EMISSIVE, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAILT_AO, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_CLEARCOAT, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_CLEARCOAT_ROUGHNESS, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_CLEARCOAT_NORMAL, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_SHEEN, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_TRANSMISSION, {}},
+        MaterialComponent::TextureInfo{{}, {}, MaterialComponent::DEFAULT_SPECULAR, {}},
     };
     for (const auto& newProp : newProperties) {
         if (newProp.type == CORE_NS::TEXTURE_INFO_T) {
@@ -370,7 +372,7 @@ BASE_NS::unique_ptr<CustomPropertyPodContainer> CreateCustomPropertyPodContainer
     }
     return newPod;
 }
-} // namespace
+}  // namespace
 
 class MaterialComponentManager : public IMaterialComponentManager, public IPropertyApi {
     using ComponentId = IComponentManager::ComponentId;
@@ -436,7 +438,7 @@ private:
 #include <3d/ecs/components/material_component.h>
     END_PROPERTY();
 
-    static constexpr array_view<const Property> componentMetaData_ { componentProperties_ };
+    static constexpr array_view<const Property> componentMetaData_{componentProperties_};
 
     static constexpr CORE_NS::Property texturesMetaData_[] = {
         RENAMED_MEMBER_PROPERTY(textures[MaterialComponent::TextureIndex::BASE_COLOR], baseColor, "Base Color", 0),
@@ -457,19 +459,20 @@ private:
         RENAMED_MEMBER_PROPERTY(textures[MaterialComponent::TextureIndex::SPECULAR], specular, "Specular", 0),
     };
 
-    static constexpr array_view<const Property> defaultMetaData_ { texturesMetaData_ };
+    static constexpr array_view<const Property> defaultMetaData_{texturesMetaData_};
 
     static constexpr uint64_t typeHash_ = BASE_NS::CompileTime::FNV1aHash(CORE_NS::GetName<MaterialComponent>().data());
 
     struct ReferencedProperties {
         void Ref()
         {
-            ++cnt;
+            BASE_NS::AtomicIncrementRelaxed(&cnt);
         }
 
         void Unref()
         {
-            if (--cnt == 0) {
+            if (BASE_NS::AtomicDecrementRelease(&cnt) == 0) {
+                BASE_NS::AtomicFenceAcquire();
                 delete this;
             }
         }
@@ -477,7 +480,7 @@ private:
         vector<Property> properties;
         // need to be stored to have a valid string_view in properties (for name and display name)
         vector<string> stringStorage;
-        uint32_t cnt { 0u };
+        int32_t cnt{0u};
     };
 
     class ComponentHandle;
@@ -502,7 +505,7 @@ private:
         }
 
     private:
-        MaterialComponentManager::ComponentHandle* componentHandle_ {};
+        MaterialComponentManager::ComponentHandle* componentHandle_{};
     };
 
     class MaterialPropertySignal final : public CustomPropertyWriteSignal {
@@ -523,7 +526,7 @@ private:
         }
 
     private:
-        MaterialComponentManager::ComponentHandle* componentHandle_ {};
+        MaterialComponentManager::ComponentHandle* componentHandle_{};
     };
 
     class ComponentHandle : public IPropertyHandle, IPropertyApi {
@@ -564,22 +567,22 @@ private:
         // NOTE: should use IShaderPipelineBinder later
         void BindBindingProperties();
 
-        MaterialComponentManager* manager_ { nullptr };
+        MaterialComponentManager* manager_{nullptr};
         Entity entity_;
         struct CachedShader {
             // we do not keep reference here, if it's not in use then it could be destroyed
-            RenderHandle shader {};
+            RenderHandle shader{};
             // frame index to see the shader "timestamp"
-            uint64_t frameIndex { ~0ULL };
+            uint64_t frameIndex{~0ULL};
         };
         CachedShader cachedShader_;
         refcnt_ptr<ReferencedProperties> metaData_;
-        uint32_t generation_ { 0 };
+        uint32_t generation_{0};
 #ifndef NDEBUG
-        mutable uint32_t rLocked_ { 0 };
-        mutable bool wLocked_ { false };
+        mutable uint32_t rLocked_{0};
+        mutable bool wLocked_{false};
 #endif
-        bool dirty_ { false };
+        bool dirty_{false};
         MaterialComponent data_;
         BASE_NS::unique_ptr<CustomPropertyPodContainer> custom_;
         BASE_NS::unique_ptr<CustomPropertyBindingContainer> customBindings_;
@@ -590,11 +593,11 @@ private:
     };
 
     IEcs& ecs_;
-    IRenderHandleComponentManager* renderHandleManager_ { nullptr };
-    IShaderManager* shaderManager_ { nullptr };
+    IRenderHandleComponentManager* renderHandleManager_{nullptr};
+    IShaderManager* shaderManager_{nullptr};
 
-    uint32_t generationCounter_ { 0 };
-    uint32_t modifiedFlags_ { 0 };
+    uint32_t generationCounter_{0};
+    uint32_t modifiedFlags_{0};
     unordered_map<Entity, ComponentId> entityComponent_;
     vector<ComponentHandle> components_;
     vector<Entity> added_;
@@ -626,7 +629,7 @@ MaterialComponentManager::MaterialComponentManager(IEcs& ecs) noexcept
     entityComponent_.reserve(initialComponentReserveSize);
 
     auto result =
-        properties_.insert_or_assign(RenderHandle {}, refcnt_ptr<ReferencedProperties>(new ReferencedProperties));
+        properties_.insert_or_assign(RenderHandle{}, refcnt_ptr<ReferencedProperties>(new ReferencedProperties));
     auto& properties = result.first->second->properties;
     properties.reserve(componentMetaData_.size() + defaultMetaData_.size());
     properties.append(componentMetaData_.begin(), componentMetaData_.end());
@@ -755,7 +758,7 @@ void MaterialComponentManager::Create(Entity entity)
 {
     if (CORE_NS::EntityUtil::IsValid(entity)) {
         if (auto it = entityComponent_.find(entity); it == entityComponent_.end()) {
-            entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            entityComponent_.insert({entity, static_cast<ComponentId>(components_.size())});
             const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity);
             if (components_.capacity() != oldCapacity) {
@@ -784,7 +787,7 @@ bool MaterialComponentManager::Destroy(Entity entity)
 {
     if (CORE_NS::EntityUtil::IsValid(entity)) {
         if (auto it = entityComponent_.find(entity); it != entityComponent_.end()) {
-            components_[it->second].entity_ = {}; // invalid entity. (marks it as ready for re-use)
+            components_[it->second].entity_ = {};  // invalid entity. (marks it as ready for re-use)
             entityComponent_.erase(it);
             removed_.push_back(entity);
             modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_REMOVED_BIT;
@@ -852,7 +855,7 @@ vector<Entity> MaterialComponentManager::GetUpdatedComponents()
     vector<Entity> updated;
     if (modifiedFlags_ & MODIFIED) {
         modifiedFlags_ &= ~MODIFIED;
-        updated.reserve(components_.size() / 2); // 2: half
+        updated.reserve(components_.size() / 2);  // 2: half
         for (auto& handle : components_) {
             if (handle.dirty_) {
                 handle.dirty_ = false;
@@ -960,7 +963,7 @@ MaterialComponent MaterialComponentManager::Get(ComponentId index) const
     if (auto handle = Read(index); handle) {
         return *handle;
     }
-    return MaterialComponent {};
+    return MaterialComponent{};
 }
 
 MaterialComponent MaterialComponentManager::Get(Entity entity) const
@@ -968,7 +971,7 @@ MaterialComponent MaterialComponentManager::Get(Entity entity) const
     if (auto handle = Read(entity); handle) {
         return *handle;
     }
-    return MaterialComponent {};
+    return MaterialComponent{};
 }
 
 void MaterialComponentManager::Set(ComponentId index, const MaterialComponent& data)
@@ -985,7 +988,7 @@ void MaterialComponentManager::Set(Entity entity, const MaterialComponent& data)
             *handle = data;
             // NOTE: customProperties are valid when updating itself
         } else {
-            entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            entityComponent_.insert({entity, static_cast<ComponentId>(components_.size())});
             const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity, data);
             if (components_.capacity() != oldCapacity) {
@@ -1008,22 +1011,22 @@ void MaterialComponentManager::Set(Entity entity, const MaterialComponent& data)
 
 ScopedHandle<const MaterialComponent> MaterialComponentManager::Read(ComponentId index) const
 {
-    return ScopedHandle<const MaterialComponent> { GetData(index) };
+    return ScopedHandle<const MaterialComponent>{GetData(index)};
 }
 
 ScopedHandle<const MaterialComponent> MaterialComponentManager::Read(Entity entity) const
 {
-    return ScopedHandle<const MaterialComponent> { GetData(entity) };
+    return ScopedHandle<const MaterialComponent>{GetData(entity)};
 }
 
 ScopedHandle<MaterialComponent> MaterialComponentManager::Write(ComponentId index)
 {
-    return ScopedHandle<MaterialComponent> { GetData(index) };
+    return ScopedHandle<MaterialComponent>{GetData(index)};
 }
 
 ScopedHandle<MaterialComponent> MaterialComponentManager::Write(Entity entity)
 {
-    return ScopedHandle<MaterialComponent> { GetData(entity) };
+    return ScopedHandle<MaterialComponent>{GetData(entity)};
 }
 
 // Internal
@@ -1057,13 +1060,20 @@ MaterialComponentManager::ComponentHandle::ComponentHandle(
 {}
 
 MaterialComponentManager::ComponentHandle::ComponentHandle(ComponentHandle&& other) noexcept
-    : manager_(other.manager_), entity_(exchange(other.entity_, {})), cachedShader_(exchange(other.cachedShader_, {})),
-      metaData_(exchange(other.metaData_, nullptr)), generation_(exchange(other.generation_, 0U)),
+    : manager_(other.manager_),
+      entity_(exchange(other.entity_, {})),
+      cachedShader_(exchange(other.cachedShader_, {})),
+      metaData_(exchange(other.metaData_, nullptr)),
+      generation_(exchange(other.generation_, 0U)),
 #ifndef NDEBUG
-      rLocked_(exchange(other.rLocked_, 0U)), wLocked_(exchange(other.wLocked_, false)),
+      rLocked_(exchange(other.rLocked_, 0U)),
+      wLocked_(exchange(other.wLocked_, false)),
 #endif
-      data_(exchange(other.data_, {})), custom_(exchange(other.custom_, {})),
-      customBindings_(exchange(other.customBindings_, {})), propertySignal_(this), propertyBindingSignal_(this)
+      data_(exchange(other.data_, {})),
+      custom_(exchange(other.custom_, {})),
+      customBindings_(exchange(other.customBindings_, {})),
+      propertySignal_(this),
+      propertyBindingSignal_(this)
 {
     if (custom_) {
         custom_->UpdateSignal(propertySignal_);
@@ -1259,14 +1269,17 @@ MaterialComponentManager::ComponentHandle& MaterialComponentManager::ComponentHa
                     manager_->renderHandleManager_->GetRenderHandleReference(data_.materialShader.shader);
                 const auto frameIndex = currentShader ? manager_->shaderManager_->GetFrameIndex(currentShader) : 0U;
                 const bool updatedShader = other.cachedShader_.frameIndex != frameIndex;
-                cachedShader_ = { currentShader.GetHandle(), frameIndex };
+                cachedShader_ = {currentShader.GetHandle(), frameIndex};
 
                 if (auto pos = manager_->properties_.find(cachedShader_.shader);
                     (pos != manager_->properties_.end()) && !updatedShader) {
                     metaData_ = pos->second;
                 } else {
-                    FillMetadata(currentShader, propertiesJson, propertiesBindingsJson, updatedShader,
-                        other.metaData_ ? other.metaData_->properties : array_view<const Property> {});
+                    FillMetadata(currentShader,
+                        propertiesJson,
+                        propertiesBindingsJson,
+                        updatedShader,
+                        other.metaData_ ? other.metaData_->properties : array_view<const Property>{});
                 }
             }
         }
@@ -1302,7 +1315,7 @@ MaterialComponentManager::ComponentHandle& MaterialComponentManager::ComponentHa
                 CreateCustomBindings(*propertiesBindingsJson, other.customBindings_.get());
             }
         } else if (!metaData_) {
-            if (auto pos = manager_->properties_.find(RenderHandle {}); pos != manager_->properties_.cend()) {
+            if (auto pos = manager_->properties_.find(RenderHandle{}); pos != manager_->properties_.cend()) {
                 metaData_ = pos->second;
             }
         }
@@ -1331,14 +1344,17 @@ void MaterialComponentManager::ComponentHandle::UpdateMetadata()
     const bool newShader = (cachedShader_.shader != currentShader.GetHandle());
     const bool updatedShader = !newShader && (cachedShader_.frameIndex != frameIndex);
     if (!metaData_ || newShader || updatedShader) {
-        cachedShader_ = { currentShader.GetHandle(), frameIndex };
+        cachedShader_ = {currentShader.GetHandle(), frameIndex};
 
         const CORE_NS::json::value* propertiesJson = nullptr;
         const CORE_NS::json::value* propertiesBindingsJson = nullptr;
         auto& propertyCache = manager_->properties_;
         if ((newShader || updatedShader) && currentShader) {
-            FillMetadata(currentShader, propertiesJson, propertiesBindingsJson, updatedShader,
-                metaData_ ? metaData_->properties : array_view<const Property> {});
+            FillMetadata(currentShader,
+                propertiesJson,
+                propertiesBindingsJson,
+                updatedShader,
+                metaData_ ? metaData_->properties : array_view<const Property>{});
         } else if (auto cached = propertyCache.find(cachedShader_.shader); cached != propertyCache.end()) {
             metaData_ = cached->second;
         }
@@ -1356,7 +1372,7 @@ void MaterialComponentManager::ComponentHandle::UpdateMetadata()
                 CreateCustomBindings(*propertiesBindingsJson, updatedShader ? customBindings_.get() : nullptr);
             }
         } else if (!metaData_) {
-            if (auto pos = manager_->properties_.find(RenderHandle {}); pos != manager_->properties_.cend()) {
+            if (auto pos = manager_->properties_.find(RenderHandle{}); pos != manager_->properties_.cend()) {
                 metaData_ = pos->second;
             }
         }
@@ -1373,7 +1389,7 @@ void MaterialComponentManager::ComponentHandle::FillMetadata(const RenderHandleR
     if (!currentShader) {
         // if there isn't a valid shader handle find the default metadata with an invalid handle and don't try to create
         // metadata and replace the existing.
-        if (auto pos = manager_->properties_.find(RenderHandle {}); pos != manager_->properties_.cend()) {
+        if (auto pos = manager_->properties_.find(RenderHandle{}); pos != manager_->properties_.cend()) {
             metaData_ = pos->second;
         }
         return;
@@ -1404,7 +1420,8 @@ void MaterialComponentManager::ComponentHandle::FillMetadata(const RenderHandleR
     }
     // if the material had metadata with customized TextureInfos try to map old locations to new ones.
     if (updatedShader && (oldProperties.size() > basicProperties) && (newProperties.size() > basicProperties)) {
-        MapTextureSlots(data_.textures, offsetof(MaterialComponent, textures),
+        MapTextureSlots(data_.textures,
+            offsetof(MaterialComponent, textures),
             array_view(newProperties.cbegin().ptr() + basicProperties, newProperties.cend().ptr()),
             array_view(oldProperties.cbegin().ptr() + basicProperties, oldProperties.cend().ptr()));
     }

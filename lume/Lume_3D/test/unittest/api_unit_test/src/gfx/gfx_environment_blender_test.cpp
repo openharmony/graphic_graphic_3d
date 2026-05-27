@@ -64,7 +64,7 @@ Cubemaps CreateEnvironmentCubemaps(IGpuResourceManager& gpuResManager)
     cubeDesc.height = 1;
     cubeDesc.width = 1;
     cubeDesc.depth = 1;
-    cubeDesc.layerCount = 6; // 6: parm
+    cubeDesc.layerCount = 6;  // 6: parm
     cubeDesc.createFlags = ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     cubeDesc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
     cubeDesc.imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE;
@@ -77,7 +77,7 @@ Cubemaps CreateEnvironmentCubemaps(IGpuResourceManager& gpuResManager)
 
     auto redRef = gpuResManager.Create("Red Cubemap", cubeDesc, redRawData);
     auto greenRef = gpuResManager.Create("Green Cubemap", cubeDesc, greenRawData);
-    return { redRef, greenRef };
+    return {redRef, greenRef};
 }
 
 EntityReference EnvironmentBlenderTest(UTest::TestResources& res)
@@ -140,8 +140,8 @@ EntityReference EnvironmentBlenderTest(UTest::TestResources& res)
                 blendComponent.environments.clear();
                 blendComponent.environments.push_back(envEntity1);
                 blendComponent.environments.push_back(envEntity2);
-                blendComponent.entryFactor = { 0.0f, 0.0f, 0.0f, 0.0f };
-                blendComponent.switchFactor = { 0.5f, 0.5f, 0.0f, 0.0f };
+                blendComponent.entryFactor = {0.0f, 0.0f, 0.0f, 0.0f};
+                blendComponent.switchFactor = {0.5f, 0.5f, 0.0f, 0.0f};
             }
         }
         renderConfiguration->environment = blendEnvEntity;
@@ -150,37 +150,41 @@ EntityReference EnvironmentBlenderTest(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 2.75f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+            Math::Vec3(0.0f, 2.75f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
         cameraComponent->environment = blendEnvEntity;
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 90.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
     return blendEnvEntity;
 }
 
 void Validate(array_view<uint8_t> data)
 {
-    for (uint32_t i = 0; i < data.size(); i += 4) { // 4: offset
+    for (uint32_t i = 0; i < data.size(); i += 4) {  // 4: offset
         uint8_t r = data[i + 0];
         uint8_t g = data[i + 1];
         uint8_t b = data[i + 2];
         uint8_t a = data[i + 3];
 
-        ASSERT_EQ(r, 186); // 186: parm
-        ASSERT_EQ(g, 186); // 186: parm
-        ASSERT_EQ(b, 186); // 186: parm
-        ASSERT_EQ(a, 255); // 255: parm
+        ASSERT_EQ(r, 186);  // 186: parm
+        ASSERT_EQ(g, 186);  // 186: parm
+        ASSERT_EQ(b, 186);  // 186: parm
+        ASSERT_EQ(a, 255);  // 255: parm
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -199,12 +203,16 @@ UNIT_TEST(API_GfxTest, EnvironmentBlenderTestVulkan, testing::ext::TestSize.Leve
 
 #if RENDER_SAVE_TEST_IMAGES == 1
             const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-            UTest::WritePng(BASE_NS::string(appDir + "/EnvironmentBlenderTestVulkan.png").c_str(), res.GetWindowWidth(),
-                res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+            UTest::WritePng(BASE_NS::string(appDir + "/EnvironmentBlenderTestVulkan.png").c_str(),
+                res.GetWindowWidth(),
+                res.GetWindowHeight(),
+                4,
+                res.GetByteArray()->GetData().data(),
+                res.GetWindowWidth() * 4);
 #endif
         }
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

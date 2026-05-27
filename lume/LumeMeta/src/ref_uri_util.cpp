@@ -133,7 +133,7 @@ IObject::Ptr DefaultResolveObject(const IObjectInstance::Ptr& base, const RefUri
         return nullptr;
     }
 
-    RefUri ref { uri.RelativeUri() };
+    RefUri ref{uri.RelativeUri()};
     if (ref.IsEmpty()) {
         return base;
     }

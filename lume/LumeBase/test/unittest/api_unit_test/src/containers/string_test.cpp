@@ -21,7 +21,7 @@
 
 namespace {
 constexpr const char* SHORT_STRING = "ABCDEF";
-constexpr const char* LONG_STRING = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"; // must exceed 30!!!
+constexpr const char* LONG_STRING = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";  // must exceed 30!!!
 constexpr const char* SHORT_STRING_LOWERCASE = "abcdef";
 constexpr const char* LONG_STRING_LOWERCASE = "abcdefghijklmnopqrstuvwxyz1234567890";
 
@@ -29,7 +29,7 @@ class CustomAllocator {
 public:
     // simple linear allocator.
     uint8_t buf[1024u * sizeof(char)];
-    size_t pos { 0 };
+    size_t pos{0};
     void reset()
     {
         pos = 0;
@@ -59,7 +59,7 @@ class ShortAllocator {
 public:
     // simple linear allocator.
     uint8_t buf[64u * sizeof(char)];
-    size_t pos { 0 };
+    size_t pos{0};
     void reset()
     {
         pos = 0;
@@ -86,7 +86,7 @@ public:
         ((ShortAllocator*)instance)->free(ptr);
     }
 };
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: EmptyString
@@ -117,7 +117,7 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         }
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
+        constexpr const char TEST_STRING[] = {'\0'};
         const BASE_NS::string testString(TEST_STRING);
 
         EXPECT_TRUE(testString.empty());
@@ -134,8 +134,8 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         */
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
-        constexpr const char NON_EMPTY_STRING[] = { "AAAAA" };
+        constexpr const char TEST_STRING[] = {'\0'};
+        constexpr const char NON_EMPTY_STRING[] = {"AAAAA"};
         BASE_NS::string testString(NON_EMPTY_STRING);
         testString.clear();
         EXPECT_TRUE(testString.empty());
@@ -147,8 +147,8 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         }
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
-        constexpr const char NON_EMPTY_STRING[] = { "AAAAA" };
+        constexpr const char TEST_STRING[] = {'\0'};
+        constexpr const char NON_EMPTY_STRING[] = {"AAAAA"};
         BASE_NS::string testString(NON_EMPTY_STRING);
         testString.assign(0, 'A');
         EXPECT_TRUE(testString.empty());
@@ -160,8 +160,8 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         }
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
-        constexpr const char NON_EMPTY_STRING[] = { "AAAAA" };
+        constexpr const char TEST_STRING[] = {'\0'};
+        constexpr const char NON_EMPTY_STRING[] = {"AAAAA"};
         BASE_NS::string testString(NON_EMPTY_STRING);
         testString.resize(0);
         EXPECT_TRUE(testString.empty());
@@ -173,7 +173,7 @@ UNIT_TEST(API_ContainersString, EmptyString, testing::ext::TestSize.Level1)
         }
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
+        constexpr const char TEST_STRING[] = {'\0'};
         BASE_NS::string testString(TEST_STRING);
         testString.resize(0);
         EXPECT_TRUE(testString.empty());
@@ -223,8 +223,8 @@ UNIT_TEST(API_ContainersString, NonEmptyString, testing::ext::TestSize.Level1)
         EXPECT_EQ(*(TEST_STRING + 1), testString[0]);
     }
     {
-        constexpr const char BASE_STRING[] = { "CD" };
-        constexpr const char TEST_STRING[] = { "CDAAA" };
+        constexpr const char BASE_STRING[] = {"CD"};
+        constexpr const char TEST_STRING[] = {"CDAAA"};
         BASE_NS::string testString(BASE_STRING);
         testString.resize(5, 'A');
         EXPECT_EQ(strlen(TEST_STRING), testString.size());
@@ -327,43 +327,41 @@ UNIT_TEST(API_ContainersString, Assign, testing::ext::TestSize.Level1)
     AssingString(BASE_NS::default_allocator(), BASE_NS::default_allocator());
     {
         CustomAllocator custom;
-        BASE_NS::allocator alloc { &custom, CustomAllocator::alloc, CustomAllocator::free };
+        BASE_NS::allocator alloc{&custom, CustomAllocator::alloc, CustomAllocator::free};
         AssingString(alloc, BASE_NS::default_allocator());
     }
     {
         CustomAllocator custom;
-        BASE_NS::allocator alloc { &custom, CustomAllocator::alloc, CustomAllocator::free };
+        BASE_NS::allocator alloc{&custom, CustomAllocator::alloc, CustomAllocator::free};
         AssingString(BASE_NS::default_allocator(), alloc);
     }
     {
         CustomAllocator custom;
-        BASE_NS::allocator alloc { &custom, CustomAllocator::alloc, CustomAllocator::free };
+        BASE_NS::allocator alloc{&custom, CustomAllocator::alloc, CustomAllocator::free};
         AssingString(alloc, alloc);
     }
-#ifdef DISABLED_TESTS_ON
     {
         ShortAllocator customShort;
         char hugeCharArray[256] = "";
-        BASE_NS::allocator alloc { &customShort, ShortAllocator::alloc, ShortAllocator::free };
+        BASE_NS::allocator alloc{&customShort, ShortAllocator::alloc, ShortAllocator::free};
         memset(hugeCharArray, 'A', 200);
         const char* p = &hugeCharArray[0];
         const BASE_NS::string valDefault = BASE_NS::string(p, 200);
         BASE_NS::string valCustom = BASE_NS::string(valDefault, alloc);
         EXPECT_EQ(valCustom.size(), 0);
-        EXPECT_EQ(valCustom.capacity(), 30); // const empty short string capacity
+        EXPECT_EQ(valCustom.capacity(), BASE_NS::string{}.capacity());  // empty short string capacity
     }
     {
         ShortAllocator customShort;
         char hugeCharArray[256] = "";
-        BASE_NS::allocator alloc { &customShort, ShortAllocator::alloc, ShortAllocator::free };
+        BASE_NS::allocator alloc{&customShort, ShortAllocator::alloc, ShortAllocator::free};
         memset(hugeCharArray, 'A', 200);
         const char* p = &hugeCharArray[0];
         const BASE_NS::string valDefault = BASE_NS::string(p, 200);
         BASE_NS::string valCustom(hugeCharArray, alloc);
         EXPECT_EQ(valCustom.size(), 0);
-        EXPECT_EQ(valCustom.capacity(), 30); // const empty short string capacity
+        EXPECT_EQ(valCustom.capacity(), BASE_NS::string{}.capacity());  // empty short string capacity
     }
-#endif
 }
 
 /**
@@ -455,16 +453,45 @@ void VerifyInsertResult(
     }
 }
 
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: Insert
  * @tc.desc: Tests for Insert. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_ContainersString, DISABLED_Insert, testing::ext::TestSize.Level1)
+UNIT_TEST(API_ContainersString, Insert, testing::ext::TestSize.Level1)
 {
+    // NOTE: need real tests. this is just a smoke test to call each insert overload once.
+    {
+        BASE_NS::string testString(SHORT_STRING);
+        testString.insert(3, SHORT_STRING_LOWERCASE);
+        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 3);
+    }
+    {
+        BASE_NS::string testString(SHORT_STRING);
+        testString.insert(3, LONG_STRING_LOWERCASE);
+        VerifyInsertResult(testString, SHORT_STRING, LONG_STRING_LOWERCASE, 3);
+    }
+    {
+        BASE_NS::string testString(SHORT_STRING);
+        testString.insert(3, SHORT_STRING_LOWERCASE, 2);
+        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 3, 2);
+    }
+    {
+        BASE_NS::string testString(SHORT_STRING);
+        testString.insert(3, LONG_STRING_LOWERCASE, 16);
+        VerifyInsertResult(testString, SHORT_STRING, LONG_STRING_LOWERCASE, 3, 16);
+    }
+    {
+        BASE_NS::string testString(SHORT_STRING);
+        testString.insert(99, SHORT_STRING_LOWERCASE, 2);
+        VerifyInsertResult(testString, SHORT_STRING, SHORT_STRING_LOWERCASE, 99, 2);
+    }
+    {
+        BASE_NS::string testString(LONG_STRING);
+        testString.insert(99, LONG_STRING_LOWERCASE, 16);
+        VerifyInsertResult(testString, LONG_STRING, LONG_STRING_LOWERCASE, 99, 16);
+    }
 }
-#endif
 
 void VerifyEraseResult(
     BASE_NS::string const& testString, const char* initialValue, const size_t index, const size_t count)
@@ -882,7 +909,7 @@ UNIT_TEST(API_ContainersString, NonMemberAppend, testing::ext::TestSize.Level1)
     NonMemberAppend(LONG_STRING, SHORT_STRING);
     NonMemberAppend(LONG_STRING, LONG_STRING);
 }
-template<typename AllT>
+template <typename AllT>
 void CustomAllocatorAppend(const char* initialValue, const char* appendValue, BASE_NS::allocator alloc,
     AllT* customAllocator, bool expectedResult = true)
 {
@@ -911,7 +938,7 @@ void CustomAllocatorAppend(const char* initialValue, const char* appendValue, BA
             customAllocator->reset();
             const BASE_NS::string lhs(initialValue);
             BASE_NS::string testString = BASE_NS::string(lhs, alloc);
-            testString.append(5, 'A'); // 5: len
+            testString.append(5, 'A');  // 5: len
             VerifyAppendResult(testString, initialValue, "AAAAA", expectedResult);
         }
     }
@@ -925,18 +952,18 @@ void CustomAllocatorAppend(const char* initialValue, const char* appendValue, BA
 UNIT_TEST(API_ContainersString, CustomAllocatorAppend, testing::ext::TestSize.Level1)
 {
     ShortAllocator customShort;
-    BASE_NS::allocator alloc { &customShort, ShortAllocator::alloc, ShortAllocator::free };
+    BASE_NS::allocator alloc{&customShort, ShortAllocator::alloc, ShortAllocator::free};
     CustomAllocatorAppend("", "", alloc, &customShort);
     CustomAllocatorAppend("", SHORT_STRING, alloc, &customShort);
     CustomAllocatorAppend("", LONG_STRING, alloc, &customShort);
 
     CustomAllocatorAppend(SHORT_STRING, "", alloc, &customShort);
     CustomAllocatorAppend(SHORT_STRING, SHORT_STRING, alloc, &customShort);
-    CustomAllocatorAppend(SHORT_STRING, LONG_STRING, alloc, &customShort); // 6 + 55 < 64
+    CustomAllocatorAppend(SHORT_STRING, LONG_STRING, alloc, &customShort);  // 6 + 55 < 64
 
     CustomAllocatorAppend(LONG_STRING, "", alloc, &customShort);
-    CustomAllocatorAppend(LONG_STRING, SHORT_STRING, alloc, &customShort, false); // 36 + 55 > 64
-    CustomAllocatorAppend(LONG_STRING, LONG_STRING, alloc, &customShort, false);  // 36 + 36 + 36 > 64
+    CustomAllocatorAppend(LONG_STRING, SHORT_STRING, alloc, &customShort, false);  // 36 + 55 > 64
+    CustomAllocatorAppend(LONG_STRING, LONG_STRING, alloc, &customShort, false);   // 36 + 36 + 36 > 64
 }
 
 void Compare(BASE_NS::string const& lhs, BASE_NS::string_view rhs)
@@ -950,18 +977,38 @@ void Compare(BASE_NS::string const& lhs, BASE_NS::string_view rhs)
     }
 }
 
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: Resize
  * @tc.desc: Tests for Resize. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_ContainersString, DISABLED_Resize, testing::ext::TestSize.Level1)
+UNIT_TEST(API_ContainersString, Resize, testing::ext::TestSize.Level1)
 {
-}
-#endif
+    BASE_NS::string testString;
 
-template<typename Lhs, typename Rhs>
+    testString.resize(5, 'A');
+    Compare(testString, BASE_NS::string_view("AAAAA", 5));
+
+    testString.resize(10, 'B');
+    Compare(testString, BASE_NS::string_view("AAAAABBBBB", 10));
+
+    testString.resize(5, 'C');
+    Compare(testString, BASE_NS::string_view("AAAAA", 5));
+
+    testString.resize(6);
+    Compare(testString, BASE_NS::string_view("AAAAA\0", 6));
+
+    testString.resize(7, 'C');
+    Compare(testString, BASE_NS::string_view("AAAAA\0C", 7));
+
+    testString.resize(2, 'D');
+    Compare(testString, BASE_NS::string_view("AA", 2));
+
+    testString.resize(0, 'E');
+    Compare(testString, BASE_NS::string_view("", 0));
+}
+
+template <typename Lhs, typename Rhs>
 void CompareTest(Lhs lhs, Rhs rhs)
 {
     EXPECT_TRUE(lhs == lhs);
@@ -1044,7 +1091,8 @@ void ReplaceString(
 {
     BASE_NS::string testString(initialValue);
     testString.replace(testString.begin() + static_cast<std::string::iterator::difference_type>(index),
-        testString.begin() + static_cast<std::string::iterator::difference_type>(index + count), replacedValue);
+        testString.begin() + static_cast<std::string::iterator::difference_type>(index + count),
+        replacedValue);
     Compare(testString, resultValue);
 }
 
@@ -1058,8 +1106,10 @@ void Replace(const char* initialValue, const char* replacedValue)
         BASE_NS::CloneData(result + index, sizeof(result) - index, replacedValue, REPLACE_SIZE);
 
         for (size_t count = 0; count <= INITIAL_SIZE - index; ++count) {
-            BASE_NS::CloneData(result + index + REPLACE_SIZE, sizeof(result) - index - REPLACE_SIZE,
-                initialValue + index + count, INITIAL_SIZE - index - count);
+            BASE_NS::CloneData(result + index + REPLACE_SIZE,
+                sizeof(result) - index - REPLACE_SIZE,
+                initialValue + index + count,
+                INITIAL_SIZE - index - count);
             result[INITIAL_SIZE - count + REPLACE_SIZE] = '\0';
             ReplaceString(initialValue, replacedValue, index, count, result);
         }
@@ -1098,7 +1148,7 @@ UNIT_TEST(API_ContainersString, Copy, testing::ext::TestSize.Level1)
     }
     {
         BASE_NS::string testString(SHORT_STRING);
-        char buffer[256] {};
+        char buffer[256]{};
         EXPECT_EQ(testString.copy(buffer, 3), 3);
         const char* str = SHORT_STRING;
         for (size_t i = 0; i < 3; ++i) {
@@ -1107,7 +1157,7 @@ UNIT_TEST(API_ContainersString, Copy, testing::ext::TestSize.Level1)
     }
     {
         BASE_NS::string testString(SHORT_STRING);
-        char buffer[256] {};
+        char buffer[256]{};
         EXPECT_EQ(testString.copy(buffer, BASE_NS::countof(buffer)), testString.length());
         const char* str = SHORT_STRING;
         for (const auto c : testString) {
@@ -1204,7 +1254,7 @@ UNIT_TEST(API_ContainersString, Search, testing::ext::TestSize.Level1)
         BASE_NS::string testString2("BC");
         EXPECT_EQ(checkString.find_first_of(testString2), 1);
         EXPECT_EQ(checkString.find_first_of(testString2, 0), 1);
-        EXPECT_EQ(checkString.find_first_of(testString2, 2), 2); // C == C
+        EXPECT_EQ(checkString.find_first_of(testString2, 2), 2);  // C == C
         EXPECT_EQ(checkString.find_first_of(testString2, 3), 7);
 
         // ERROR?

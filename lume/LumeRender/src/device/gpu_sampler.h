@@ -33,4 +33,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_SAMPLER_H
+#endif  // DEVICE_GPU_SAMPLER_H

@@ -24,15 +24,15 @@
 CORE3D_BEGIN_NAMESPACE()
 #endif
 BEGIN_COMPONENT(IPhysicalCameraComponentManager, PhysicalCameraComponent)
-    /** Defines the size of the aperture */
-    DEFINE_PROPERTY(float, aperture, "Aperture", 0, VALUE(16.f))
-    /** Defines the shutter speed */
-    DEFINE_PROPERTY(float, shutterSpeed, "Shutter Speed", 0, VALUE(1.0f / 125.0f))
-    /** Sensitivity is similar to ISO value in photography,
-     *  If the ISO value is high (film is more sensitive to the light), the image is brighter.
-     *  Lower ISO values mean that the film is less sensitive and produces a darker image.
-     */
-    DEFINE_PROPERTY(float, sensitivity, "Sensitivity", 0, VALUE(100.f))
+/** Defines the size of the aperture */
+DEFINE_PROPERTY(float, aperture, "Aperture", 0, VALUE(16.f))
+/** Defines the shutter speed */
+DEFINE_PROPERTY(float, shutterSpeed, "Shutter Speed", 0, VALUE(1.0f / 125.0f))
+/** Sensitivity is similar to ISO value in photography,
+ *  If the ISO value is high (film is more sensitive to the light), the image is brighter.
+ *  Lower ISO values mean that the film is less sensitive and produces a darker image.
+ */
+DEFINE_PROPERTY(float, sensitivity, "Sensitivity", 0, VALUE(100.f))
 END_COMPONENT(IPhysicalCameraComponentManager, PhysicalCameraComponent, "4badb6a5-77c6-49ca-a5c3-f788f8ad5534")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

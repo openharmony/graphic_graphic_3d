@@ -21,8 +21,8 @@
 #include "test_framework.h"
 
 #ifndef NDEBUG
-#define NDEBUG // matrix_util assert
-#endif         // !NDEBUG
+#define NDEBUG  // matrix_util assert
+#endif          // !NDEBUG
 
 #include <base/math/float_packer.h>
 #include <base/math/mathf.h>
@@ -338,7 +338,7 @@ UNIT_TEST(API_Mathf, Acos, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_Mathf, Epsilon, testing::ext::TestSize.Level1)
 {
-    ASSERT_FLOAT_EQ(Math::EPSILON, 1.1920929e-07f); // 32bit epsilon
+    ASSERT_FLOAT_EQ(Math::EPSILON, 1.1920929e-07f);  // 32bit epsilon
 }
 
 /**
@@ -398,7 +398,7 @@ UNIT_TEST(API_Mathf, Sign, testing::ext::TestSize.Level1)
 }
 
 // Vector2
-template<typename T>
+template <typename T>
 void TestCopyableMovable()
 {
     static_assert(std::is_copy_assignable_v<T>);
@@ -1937,7 +1937,7 @@ UNIT_TEST(API_MathVectorUtil, Vector3distance, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Vector3Distance2. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_MathVectorUtil, Vector3distance2, testing::ext::TestSize.Level1) // squared
+UNIT_TEST(API_MathVectorUtil, Vector3distance2, testing::ext::TestSize.Level1)  // squared
 {
     constexpr Math::Vec3 vector1st = Math::Vec3(1.0f, 0.0f, -1.0f);
     constexpr Math::Vec3 vector2nd = Math::Vec3(0.0f, 1.0f, -2.0f);
@@ -2092,7 +2092,7 @@ UNIT_TEST(API_MathVectorUtil, Vector3squareMagnitude, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_MathVectorUtil, Vector3magnitude, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 vector = Math::Vec3(0.0f, 3.0f, 4.0f); // squareroot from 25 = 5
+    constexpr Math::Vec3 vector = Math::Vec3(0.0f, 3.0f, 4.0f);  // squareroot from 25 = 5
     const float magnitude = Math::Magnitude(vector);
 
     ASSERT_FLOAT_EQ(magnitude, 5.0f);
@@ -2159,7 +2159,7 @@ UNIT_TEST(API_MathVectorUtil, Vector4distance, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Vector4distance2. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_MathVectorUtil, Vector4distance2, testing::ext::TestSize.Level1) // squared
+UNIT_TEST(API_MathVectorUtil, Vector4distance2, testing::ext::TestSize.Level1)  // squared
 {
     constexpr Math::Vec4 vector1st = Math::Vec4(1.0f, 0.0f, -1.0f, 1.0f);
     constexpr Math::Vec4 vector2nd = Math::Vec4(0.0f, 1.0f, -2.0f, 0.0f);
@@ -2719,10 +2719,10 @@ UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorMultiplication, testing
 
     constexpr auto quaternion3 = quaternion1 * quaternion2;
 
-    ASSERT_FLOAT_EQ(quaternion3.x, 0.7f); // i
-    ASSERT_FLOAT_EQ(quaternion3.y, 0.6f); // j
-    ASSERT_FLOAT_EQ(quaternion3.z, 0.4f); // k
-    ASSERT_FLOAT_EQ(quaternion3.w, 0.9f); // real
+    ASSERT_FLOAT_EQ(quaternion3.x, 0.7f);  // i
+    ASSERT_FLOAT_EQ(quaternion3.y, 0.6f);  // j
+    ASSERT_FLOAT_EQ(quaternion3.z, 0.4f);  // k
+    ASSERT_FLOAT_EQ(quaternion3.w, 0.9f);  // real
 }
 
 /**
@@ -2736,19 +2736,19 @@ UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorMultiplicationScalar, t
     {
         constexpr auto temp = quaternion * 0.001f;
 
-        ASSERT_FLOAT_EQ(temp.x, 0.0005f); // i
-        ASSERT_FLOAT_EQ(temp.y, 0.0005f); // j
-        ASSERT_FLOAT_EQ(temp.z, 0.0005f); // k
-        ASSERT_FLOAT_EQ(temp.w, 0.001f);  // real
+        ASSERT_FLOAT_EQ(temp.x, 0.0005f);  // i
+        ASSERT_FLOAT_EQ(temp.y, 0.0005f);  // j
+        ASSERT_FLOAT_EQ(temp.z, 0.0005f);  // k
+        ASSERT_FLOAT_EQ(temp.w, 0.001f);   // real
     }
 
     {
         constexpr auto temp = 0.001f * quaternion;
 
-        ASSERT_FLOAT_EQ(temp.x, 0.0005f); // i
-        ASSERT_FLOAT_EQ(temp.y, 0.0005f); // j
-        ASSERT_FLOAT_EQ(temp.z, 0.0005f); // k
-        ASSERT_FLOAT_EQ(temp.w, 0.001f);  // real
+        ASSERT_FLOAT_EQ(temp.x, 0.0005f);  // i
+        ASSERT_FLOAT_EQ(temp.y, 0.0005f);  // j
+        ASSERT_FLOAT_EQ(temp.z, 0.0005f);  // k
+        ASSERT_FLOAT_EQ(temp.w, 0.001f);   // real
     }
 }
 
@@ -2764,10 +2764,10 @@ UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorFloatDivision, testing:
 
     quaternion = quaternion / divider;
 
-    ASSERT_FLOAT_EQ(quaternion.x, 0.1f); // i
-    ASSERT_FLOAT_EQ(quaternion.y, 0.2f); // j
-    ASSERT_FLOAT_EQ(quaternion.z, 0.0f); // k
-    ASSERT_FLOAT_EQ(quaternion.w, 0.5f); // real
+    ASSERT_FLOAT_EQ(quaternion.x, 0.1f);  // i
+    ASSERT_FLOAT_EQ(quaternion.y, 0.2f);  // j
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f);  // k
+    ASSERT_FLOAT_EQ(quaternion.w, 0.5f);  // real
 }
 
 /**
@@ -2782,10 +2782,10 @@ UNIT_TEST(API_MathQuaternionOperators, QuaternionOperatorFloatDivisionAssignment
 
     quaternion /= divider;
 
-    ASSERT_FLOAT_EQ(quaternion.x, 0.1f); // i
-    ASSERT_FLOAT_EQ(quaternion.y, 0.2f); // j
-    ASSERT_FLOAT_EQ(quaternion.z, 0.0f); // k
-    ASSERT_FLOAT_EQ(quaternion.w, 0.5f); // real
+    ASSERT_FLOAT_EQ(quaternion.x, 0.1f);  // i
+    ASSERT_FLOAT_EQ(quaternion.y, 0.2f);  // j
+    ASSERT_FLOAT_EQ(quaternion.z, 0.0f);  // k
+    ASSERT_FLOAT_EQ(quaternion.w, 0.5f);  // real
 }
 
 // Quaternion Util
@@ -2952,7 +2952,7 @@ UNIT_TEST(API_MathQuaternionUtil, VectorMultiplication, testing::ext::TestSize.L
  */
 UNIT_TEST(API_MathQuaternionUtil, Normalize, testing::ext::TestSize.Level1)
 {
-    { // Bad input
+    {  // Bad input
 
         constexpr Math::Quat quat = Math::Quat(0.0f, 0.0f, 0.0f, 0.0f);
         const Math::Quat quaternion = Math::Normalize(quat);
@@ -3034,107 +3034,13 @@ UNIT_TEST(API_MathQuaternionUtil, NormalizeAngles, testing::ext::TestSize.Level1
 }
 
 /**
- * @tc.name: NormalizeAngleRad
- * @tc.desc: Tests for Normalize Angle Rad. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_MathQuaternionUtil, NormalizeAngleRad, testing::ext::TestSize.Level1)
-{
-    {
-        constexpr float angle = 0.0f;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_FLOAT_EQ(normalized, 0.0f);
-    }
-    {
-        constexpr float angle = Math::PI / 2.0f;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_FLOAT_EQ(normalized, Math::PI / 2.0f);
-    }
-    {
-        constexpr float angle = -Math::PI / 2.0f;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_FLOAT_EQ(normalized, -Math::PI / 2.0f);
-    }
-    {
-        constexpr float angle = Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_FLOAT_EQ(normalized, Math::PI);
-    }
-    {
-        constexpr float angle = -Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_FLOAT_EQ(normalized, -Math::PI);
-    }
-    {
-        constexpr float angle = 3.0f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, Math::PI, 0.0001f);
-    }
-    {
-        constexpr float angle = -3.0f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, -Math::PI, 0.0001f);
-    }
-    {
-        constexpr float angle = 5.0f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, Math::PI, 0.0001f);
-    }
-    {
-        constexpr float angle = -5.0f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, -Math::PI, 0.0001f);
-    }
-    {
-        constexpr float angle = 2.5f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, 0.5f * Math::PI, 0.0001f);
-    }
-    {
-        constexpr float angle = -2.5f * Math::PI;
-        const float normalized = Math::NormalizeAngleRad(angle);
-        ASSERT_NEAR(normalized, -0.5f * Math::PI, 0.0001f);
-    }
-}
-
-/**
- * @tc.name: NormalizeAnglesRad
- * @tc.desc: Tests for Normalize Angles Rad. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_MathQuaternionUtil, NormalizeAnglesRad, testing::ext::TestSize.Level1)
-{
-    {
-        constexpr Math::Vec3 angles = Math::Vec3(0.0f, Math::PI / 2.0f, -Math::PI / 2.0f);
-        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
-        ASSERT_FLOAT_EQ(normalized.x, 0.0f);
-        ASSERT_FLOAT_EQ(normalized.y, Math::PI / 2.0f);
-        ASSERT_FLOAT_EQ(normalized.z, -Math::PI / 2.0f);
-    }
-    {
-        constexpr Math::Vec3 angles = Math::Vec3(3.0f * Math::PI, -3.0f * Math::PI, 5.0f * Math::PI);
-        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
-        ASSERT_NEAR(normalized.x, Math::PI, 0.0001f);
-        ASSERT_NEAR(normalized.y, -Math::PI, 0.0001f);
-        ASSERT_NEAR(normalized.z, Math::PI, 0.0001f);
-    }
-    {
-        constexpr Math::Vec3 angles = Math::Vec3(2.5f * Math::PI, -2.5f * Math::PI, 0.5f * Math::PI);
-        const Math::Vec3 normalized = Math::NormalizeAnglesRad(angles);
-        ASSERT_NEAR(normalized.x, 0.5f * Math::PI, 0.0001f);
-        ASSERT_NEAR(normalized.y, -0.5f * Math::PI, 0.0001f);
-        ASSERT_NEAR(normalized.z, 0.5f * Math::PI, 0.0001f);
-    }
-}
-
-/**
  * @tc.name: ToEulerRad
  * @tc.desc: Tests for To Euler Rad. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 UNIT_TEST(API_MathQuaternionUtil, ToEulerRad, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Quat qRot = Math::Quat(0.0f, 0.383f, 0.0f, 0.9235f); // Should be near Y 45 degrees
+    constexpr Math::Quat qRot = Math::Quat(0.0f, 0.383f, 0.0f, 0.9235f);  // Should be near Y 45 degrees
     const Math::Vec3 rotation = Math::ToEulerRad(qRot);
 
     ASSERT_FLOAT_EQ(rotation.y, 0.78581429f);
@@ -3843,19 +3749,6 @@ UNIT_TEST(API_MathMatrix4x4operators, Matrix4x4operatorMultiplicationWithScalar,
     ASSERT_FLOAT_EQ(result.data[15], multiplier * 3.3f);
 }
 
-#ifdef DISABLED_TESTS_ON
-/**
- * @tc.name: VectorMultipliedByMatrix4x4
- * @tc.desc: Tests for Vector Multiplied By Matrix4X4. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_MathMatrix4x4operators, DISABLED_VectorMultipliedByMatrix4x4, testing::ext::TestSize.Level1)
-{
-    // This test was here to test against GLM matrix implementation that
-    // has been removed as it was an unneeded extra dependency.
-}
-#endif
-
 /**
  * @tc.name: Matrix4x4operatorAssigment
  * @tc.desc: Tests for Matrix4X4Operator Assigment. [AUTO-GENERATED]
@@ -3869,10 +3762,10 @@ UNIT_TEST(API_MathMatrix4x4operators, Matrix4x4operatorAssigment, testing::ext::
     constexpr Math::Vec4 col4 = Math::Vec4(0.3f, 1.3f, 2.3f, 3.3f);
     constexpr Math::Mat4X4 mat = Math::Mat4X4(col1, col2, col3, col4);
 
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
 
     Math::Mat4X4 mat2nd(identity);
@@ -3907,10 +3800,10 @@ UNIT_TEST(API_MathMatrix4x4operators, Matrix4x4operatorAssigment, testing::ext::
  */
 UNIT_TEST(API_MathMatrix4x4, Identity, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat = identity;
 
@@ -4021,10 +3914,10 @@ UNIT_TEST(API_MathMatrix4x3operators, Matrix4x3operatorAssigment, testing::ext::
     constexpr Math::Vec3 col4 = Math::Vec3(0.3f, 1.3f, 2.3f);
     constexpr Math::Mat4X3 mat = Math::Mat4X3(col1, col2, col3, col4);
 
-    constexpr Math::Vec3 C1 = { 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
-    constexpr Math::Vec3 C4 = { 0.0f, 0.0f, 0.0f };
+    constexpr Math::Vec3 C1 = {1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
+    constexpr Math::Vec3 C4 = {0.0f, 0.0f, 0.0f};
     constexpr Math::Mat4X3 identity(C1, C2, C3, C4);
 
     Math::Mat4X3 mat2nd(identity);
@@ -4055,10 +3948,10 @@ UNIT_TEST(API_MathMatrix4x3operators, Matrix4x3operatorAssigment, testing::ext::
  */
 UNIT_TEST(API_MathMatrix4x3, Identity, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
-    constexpr Math::Vec3 C4 = { 0.0f, 0.0f, 0.0f };
+    constexpr Math::Vec3 C1 = {1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
+    constexpr Math::Vec3 C4 = {0.0f, 0.0f, 0.0f};
     constexpr Math::Mat4X3 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X3 mat = identity;
 
@@ -4527,10 +4420,10 @@ UNIT_TEST(API_MathMatrixUtil, Mat4Cast, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, Translate, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 2.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 5.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 6.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 2.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 5.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 6.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
 
     Math::Mat4X4 tMat(identity);
@@ -4551,9 +4444,9 @@ UNIT_TEST(API_MathMatrixUtil, Translate, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[10], 1.0f);
     ASSERT_FLOAT_EQ(mat.data[11], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[12], 2.0f); // x
-    ASSERT_FLOAT_EQ(mat.data[13], 5.0f); // y
-    ASSERT_FLOAT_EQ(mat.data[14], 6.0f); // z
+    ASSERT_FLOAT_EQ(mat.data[12], 2.0f);  // x
+    ASSERT_FLOAT_EQ(mat.data[13], 5.0f);  // y
+    ASSERT_FLOAT_EQ(mat.data[14], 6.0f);  // z
     ASSERT_FLOAT_EQ(mat.data[15], 1.0f);
 
     ASSERT_FLOAT_EQ(Math::Determinant(mat), Math::Determinant(tMat));
@@ -4566,10 +4459,10 @@ UNIT_TEST(API_MathMatrixUtil, Translate, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, Translate2x4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec4 C4 = { 2.0f, 5.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec4 C4 = {2.0f, 5.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 tMat = Math::Mat4X4(C1, C2, C3, C4);
 
     constexpr Math::Vec2 translation(2.0f, 5.0f);
@@ -4588,8 +4481,8 @@ UNIT_TEST(API_MathMatrixUtil, Translate2x4, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[10], 1.0f);
     ASSERT_FLOAT_EQ(mat.data[11], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[12], 2.0f); // x
-    ASSERT_FLOAT_EQ(mat.data[13], 5.0f); // y
+    ASSERT_FLOAT_EQ(mat.data[12], 2.0f);  // x
+    ASSERT_FLOAT_EQ(mat.data[13], 5.0f);  // y
     ASSERT_FLOAT_EQ(mat.data[14], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[15], 1.0f);
 
@@ -4603,15 +4496,15 @@ UNIT_TEST(API_MathMatrixUtil, Translate2x4, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, SkewXY2x4, testing::ext::TestSize.Level1)
 {
-    constexpr float skewX = 0.5f; // skew angle on x in radian
-    constexpr float skewY = 0.8f; // skew angle on y in radian
+    constexpr float skewX = 0.5f;  // skew angle on x in radian
+    constexpr float skewY = 0.8f;  // skew angle on y in radian
     constexpr Math::Vec4 col1 = Math::Vec4(1.1f, 1.2f, 1.3f, 1.4f);
     constexpr Math::Vec4 col2 = Math::Vec4(2.1f, 2.2f, 2.3f, 2.4f);
     constexpr Math::Vec4 col3 = Math::Vec4(3.1f, 3.2f, 3.3f, 3.4f);
     constexpr Math::Vec4 col4 = Math::Vec4(4.1f, 4.2f, 4.3f, 4.4f);
     constexpr Math::Mat4X4 mat(col1, col2, col3, col4);
 
-    const Math::Mat4X4 result = Math::SkewXY(mat, { skewX, skewY });
+    const Math::Mat4X4 result = Math::SkewXY(mat, {skewX, skewY});
 
     const float tanX = tanf(skewX);
     const float tanY = tanf(skewY);
@@ -4634,7 +4527,7 @@ UNIT_TEST(API_MathMatrixUtil, SkewXY2x4, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, RotateZCWRadians, testing::ext::TestSize.Level1)
 {
-    constexpr float alpha = 0.5f; // rotation angle in radian
+    constexpr float alpha = 0.5f;  // rotation angle in radian
     constexpr Math::Vec4 col1 = Math::Vec4(1.1f, 1.2f, 1.3f, 1.4f);
     constexpr Math::Vec4 col2 = Math::Vec4(2.1f, 2.2f, 2.3f, 2.4f);
     constexpr Math::Vec4 col3 = Math::Vec4(3.1f, 3.2f, 3.3f, 3.4f);
@@ -4664,9 +4557,9 @@ UNIT_TEST(API_MathMatrixUtil, RotateZCWRadians, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, TranslateM3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 1.0f, 0.0f, 2.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 1.0f, 5.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 C1 = {1.0f, 0.0f, 2.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 1.0f, 5.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
     constexpr Math::Mat3X3 tMat = Math::Mat3X3(C1, C2, C3);
 
     constexpr Math::Vec2 translation(2.0f, 5.0f);
@@ -4679,12 +4572,12 @@ UNIT_TEST(API_MathMatrixUtil, TranslateM3, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[3], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[4], 1.0f);
     ASSERT_FLOAT_EQ(mat.data[5], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[6], 2.0f); // x
-    ASSERT_FLOAT_EQ(mat.data[7], 5.0f); // y
+    ASSERT_FLOAT_EQ(mat.data[6], 2.0f);  // x
+    ASSERT_FLOAT_EQ(mat.data[7], 5.0f);  // y
     ASSERT_FLOAT_EQ(mat.data[8], 1.0f);
 
     ASSERT_FLOAT_EQ(
-        Math::Determinant(Math::DimensionalShift(mat)), Math::Determinant(Math::DimensionalShift(tMat))); // to 4x4
+        Math::Determinant(Math::DimensionalShift(mat)), Math::Determinant(Math::DimensionalShift(tMat)));  // to 4x4
 }
 /**
  * @tc.name: EigenDecompositionM3
@@ -4693,30 +4586,30 @@ UNIT_TEST(API_MathMatrixUtil, TranslateM3, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, EigenDecompositionM3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 M1C1 = { 1.0f, 1.0f, 1.0f };
-    constexpr Math::Vec3 M1C2 = { 0.0f, 1.0f, 1.0f };
-    constexpr Math::Vec3 M1C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 M1C1 = {1.0f, 1.0f, 1.0f};
+    constexpr Math::Vec3 M1C2 = {0.0f, 1.0f, 1.0f};
+    constexpr Math::Vec3 M1C3 = {0.0f, 0.0f, 1.0f};
 
-    constexpr Math::Vec3 M2C1 = { 2.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 M2C2 = { 0.0f, 3.0f, 1.0f };
-    constexpr Math::Vec3 M2C3 = { 0.0f, 0.0f, 3.0f };
+    constexpr Math::Vec3 M2C1 = {2.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 M2C2 = {0.0f, 3.0f, 1.0f};
+    constexpr Math::Vec3 M2C3 = {0.0f, 0.0f, 3.0f};
 
-    constexpr Math::Vec3 M3C1 = { 3.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 M3C2 = { 0.0f, 2.0f, 0.0f };
-    constexpr Math::Vec3 M3C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 M3C1 = {3.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 M3C2 = {0.0f, 2.0f, 0.0f};
+    constexpr Math::Vec3 M3C3 = {0.0f, 0.0f, 1.0f};
 
-    constexpr Math::Mat3X3 matrices[] = { Math::Mat3X3(M1C1, M1C2, M1C3), Math::Mat3X3(M2C1, M2C2, M2C3),
-        Math::Mat3X3(M3C1, M3C2, M3C3) };
+    constexpr Math::Mat3X3 matrices[] = {
+        Math::Mat3X3(M1C1, M1C2, M1C3), Math::Mat3X3(M2C1, M2C2, M2C3), Math::Mat3X3(M3C1, M3C2, M3C3)};
 
-    constexpr Math::Vec3 expectedEigenvalues[] = { Math::Vec3 { 1.0f, NAN, NAN }, Math::Vec3 { 2.0f, 3.0f, NAN },
-        Math::Vec3 { 1.0f, 2.0f, 3.0f } };
+    constexpr Math::Vec3 expectedEigenvalues[] = {
+        Math::Vec3{1.0f, NAN, NAN}, Math::Vec3{2.0f, 3.0f, NAN}, Math::Vec3{1.0f, 2.0f, 3.0f}};
 
     for (size_t i = 0; i < std::size(matrices); ++i) {
         Math::Vec3 eigenvalues = Math::EigenvalueDecompositionAnalytical(matrices[i]);
 
-        std::array<float, 3> sortedEigen = { eigenvalues.x, eigenvalues.y, eigenvalues.z };
-        std::array<float, 3> sortedExpected = { expectedEigenvalues[i].x, expectedEigenvalues[i].y,
-            expectedEigenvalues[i].z };
+        std::array<float, 3> sortedEigen = {eigenvalues.x, eigenvalues.y, eigenvalues.z};
+        std::array<float, 3> sortedExpected = {
+            expectedEigenvalues[i].x, expectedEigenvalues[i].y, expectedEigenvalues[i].z};
         std::sort(sortedEigen.begin(), sortedEigen.end());
         std::sort(sortedExpected.begin(), sortedExpected.end());
 
@@ -4737,9 +4630,9 @@ UNIT_TEST(API_MathMatrixUtil, EigenDecompositionM3, testing::ext::TestSize.Level
  */
 UNIT_TEST(API_MathMatrixUtil, ExtractEigenVectorM3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 3.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 2.0f, 0.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 C1 = {3.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 2.0f, 0.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
 
     constexpr Math::Mat3X3 mat = Math::Mat3X3(C1, C2, C3);
 
@@ -4749,9 +4642,9 @@ UNIT_TEST(API_MathMatrixUtil, ExtractEigenVectorM3, testing::ext::TestSize.Level
 
     // Returns the vectors in this order, could do sorting but is complicated for vectors
     // and this is only one test case anyways
-    constexpr Math::Vec3 EX1 = { 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 EX2 = { 0.0f, 0.0f, 1.0f };
-    constexpr Math::Vec3 EX3 = { 0.0f, 1.0f, 0.0f };
+    constexpr Math::Vec3 EX1 = {1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 EX2 = {0.0f, 0.0f, 1.0f};
+    constexpr Math::Vec3 EX3 = {0.0f, 1.0f, 0.0f};
 
     Math::Mat3X3 expectedEigenVectors = Math::Mat3X3(EX1, EX2, EX3);
 
@@ -4772,10 +4665,11 @@ UNIT_TEST(API_MathMatrixUtil, ExtractEigenVectorM3, testing::ext::TestSize.Level
  */
 UNIT_TEST(API_MathMatrixUtil, TRS, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    // TODO: add rotation equality check
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     [[maybe_unused]] constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
 
     constexpr Math::Vec3 translation(12.0f, 13.0f, 14.0f);
@@ -4884,10 +4778,10 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyVector, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 0.1f, 0.2f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.4f, 0.5f, 0.0f };
+    constexpr Math::Vec3 C1 = {0.1f, 0.2f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.4f, 0.5f, 0.0f};
     // w' = P.x*M02+P.y*M12+M22, but this function does not do Perspective division => w'=1 => Mrow[2]=[0,0,1]
-    constexpr Math::Vec3 C3 = { 0.7f, 0.8f, 1.0f };
+    constexpr Math::Vec3 C3 = {0.7f, 0.8f, 1.0f};
     constexpr Math::Mat3X3 identity(C1, C2, C3);
     constexpr Math::Mat3X3 mat(identity);
 
@@ -4896,6 +4790,12 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X3, testing::ext::TestSize.Level1)
     const Math::Vec2 result = Math::MultiplyPoint2X3(mat, position);
 
     // NOTE: vertice array which we multiply
+
+    // for (int i = 0; i < 3; i++)
+    //{
+    //    printf("%f %i \n", result.data[i], i);
+    //}
+
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.4f + 0.7f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.5f + 0.8f);
 }
@@ -4907,12 +4807,12 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X3, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 0.1f, 0.2f, 0.3f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.5f, 0.6f, 0.7f, 0.0f };
+    constexpr Math::Vec4 C1 = {0.1f, 0.2f, 0.3f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.5f, 0.6f, 0.7f, 0.0f};
     // Unimportant column+row at index 3, z=0 => does not affect result
-    constexpr Math::Vec4 C3 = { 0.8f, 0.9f, 1.0f, 1.1f };
+    constexpr Math::Vec4 C3 = {0.8f, 0.9f, 1.0f, 1.1f};
     // w' = P.x*M03+P.y*M13+M33, but this function does not do Perspective division => w'=1 => Mrow[3]=[0,0,any,1]
-    constexpr Math::Vec4 C4 = { 1.2f, 1.3f, 1.4f, 1.0f };
+    constexpr Math::Vec4 C4 = {1.2f, 1.3f, 1.4f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat(identity);
 
@@ -4921,6 +4821,12 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X4, testing::ext::TestSize.Level1)
     const Math::Vec2 result = Math::MultiplyPoint2X4(mat, position);
 
     // NOTE: vertice array which we multiply
+
+    // for (int i = 0; i < 3; i++)
+    //{
+    //    printf("%f %i \n", result.data[i], i);
+    //}
+
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.5f + 1.2f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.6f + 1.3f);
 }
@@ -4933,10 +4839,10 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint2X4, testing::ext::TestSize.Level1)
 UNIT_TEST(API_MathMatrixUtil, MultiplyVector2X4, testing::ext::TestSize.Level1)
 {
     // same as MultiplyPoint2X4 but without translation
-    constexpr Math::Vec4 C1 = { 0.1f, 0.2f, 0.3f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.5f, 0.6f, 0.7f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.8f, 0.9f, 1.0f, 1.1f };
-    constexpr Math::Vec4 C4 = { 1.2f, 1.3f, 1.4f, 1.0f };
+    constexpr Math::Vec4 C1 = {0.1f, 0.2f, 0.3f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.5f, 0.6f, 0.7f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.8f, 0.9f, 1.0f, 1.1f};
+    constexpr Math::Vec4 C4 = {1.2f, 1.3f, 1.4f, 1.0f};
     constexpr Math::Mat4X4 mat(C1, C2, C3, C4);
 
     constexpr Math::Vec2 direction(1.1f, 2.2f);
@@ -4954,11 +4860,11 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyVector2X4, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, MultiplyPoint3X4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 0.1f, 0.2f, 0.3f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.5f, 0.6f, 0.7f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.8f, 0.9f, 1.0f, 0.0f };
+    constexpr Math::Vec4 C1 = {0.1f, 0.2f, 0.3f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.5f, 0.6f, 0.7f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.8f, 0.9f, 1.0f, 0.0f};
     // w' = P.x*M03+P.y*M13+M33, but this function does not do Perspective division => w'=1 => Mrow[3]=[0,0,0,1]
-    constexpr Math::Vec4 C4 = { 1.2f, 1.3f, 1.4f, 1.0f };
+    constexpr Math::Vec4 C4 = {1.2f, 1.3f, 1.4f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat(identity);
 
@@ -4967,6 +4873,12 @@ UNIT_TEST(API_MathMatrixUtil, MultiplyPoint3X4, testing::ext::TestSize.Level1)
     const Math::Vec3 result = Math::MultiplyPoint3X4(mat, position);
 
     // NOTE: vertice array which we multiply
+
+    // for (int i = 0; i < 3; i++)
+    //{
+    //    printf("%f %i \n", result.data[i], i);
+    //}
+
     ASSERT_FLOAT_EQ(result.data[0], 1.1f * 0.1f + 2.2f * 0.5f + 3.3f * 0.8f + 1.2f);
     ASSERT_FLOAT_EQ(result.data[1], 1.1f * 0.2f + 2.2f * 0.6f + 3.3f * 0.9f + 1.3f);
     ASSERT_FLOAT_EQ(result.data[2], 1.1f * 0.3f + 2.2f * 0.7f + 3.3f * 1.0f + 1.4f);
@@ -5257,10 +5169,10 @@ UNIT_TEST(API_MathFloatPacker, PackAndUnpackHalf, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationIdentity4X4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5275,10 +5187,10 @@ UNIT_TEST(API_MathMatrixUtil, HasRotationIdentity4X4, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationTranslated4X4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 1.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 1.0f, 0.0f, 2.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 3.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 1.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 1.0f, 0.0f, 2.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 3.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5293,10 +5205,10 @@ UNIT_TEST(API_MathMatrixUtil, HasRotationTranslated4X4, testing::ext::TestSize.L
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationRotated4X4, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr Math::Vec4 C2 = { 0.0f, 0.5f, -0.5f, 0.0f };
-    constexpr Math::Vec4 C3 = { 0.0f, 0.5f, 0.5f, 0.0f };
-    constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr Math::Vec4 C2 = {0.0f, 0.5f, -0.5f, 0.0f};
+    constexpr Math::Vec4 C3 = {0.0f, 0.5f, 0.5f, 0.0f};
+    constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
     constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
     constexpr Math::Mat4X4 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5311,9 +5223,9 @@ UNIT_TEST(API_MathMatrixUtil, HasRotationRotated4X4, testing::ext::TestSize.Leve
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationIdentity3X3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 1.0f, 0.0f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 1.0f, 0.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 C1 = {1.0f, 0.0f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 1.0f, 0.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
     constexpr Math::Mat3X3 identity(C1, C2, C3);
     constexpr Math::Mat3X3 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5328,9 +5240,9 @@ UNIT_TEST(API_MathMatrixUtil, HasRotationIdentity3X3, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationTranslated3X3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 1.0f, 0.0f, 2.0f };
-    constexpr Math::Vec3 C2 = { 0.0f, 1.0f, 3.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 C1 = {1.0f, 0.0f, 2.0f};
+    constexpr Math::Vec3 C2 = {0.0f, 1.0f, 3.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
     constexpr Math::Mat3X3 identity(C1, C2, C3);
     constexpr Math::Mat3X3 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5345,9 +5257,9 @@ UNIT_TEST(API_MathMatrixUtil, HasRotationTranslated3X3, testing::ext::TestSize.L
  */
 UNIT_TEST(API_MathMatrixUtil, HasRotationRotated3X3, testing::ext::TestSize.Level1)
 {
-    constexpr Math::Vec3 C1 = { 0.5f, -0.5f, 0.0f };
-    constexpr Math::Vec3 C2 = { 0.5f, 0.5f, 0.0f };
-    constexpr Math::Vec3 C3 = { 0.0f, 0.0f, 1.0f };
+    constexpr Math::Vec3 C1 = {0.5f, -0.5f, 0.0f};
+    constexpr Math::Vec3 C2 = {0.5f, 0.5f, 0.0f};
+    constexpr Math::Vec3 C3 = {0.0f, 0.0f, 1.0f};
     constexpr Math::Mat3X3 identity(C1, C2, C3);
     constexpr Math::Mat3X3 mat(identity);
     bool hasRotation = Math::HasRotation(mat);
@@ -5487,11 +5399,11 @@ UNIT_TEST(API_MathMatrixUtil, PerspectiveRhNo, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[7], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[8], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[10], -HUGE_VALF); // error + filp
-    ASSERT_FLOAT_EQ(mat.data[11], -1.0f);      // error + flip
+    ASSERT_FLOAT_EQ(mat.data[10], -HUGE_VALF);  // error + filp
+    ASSERT_FLOAT_EQ(mat.data[11], -1.0f);       // error + flip
     ASSERT_FLOAT_EQ(mat.data[12], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[13], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF); // error
+    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF);  // error
     ASSERT_FLOAT_EQ(mat.data[15], 0.0f);
 }
 
@@ -5547,11 +5459,11 @@ UNIT_TEST(API_MathMatrixUtil, PerspectiveLhNo, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[7], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[8], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[10], HUGE_VALF); // error
-    ASSERT_FLOAT_EQ(mat.data[11], 1.0f);      // error
+    ASSERT_FLOAT_EQ(mat.data[10], HUGE_VALF);  // error
+    ASSERT_FLOAT_EQ(mat.data[11], 1.0f);       // error
     ASSERT_FLOAT_EQ(mat.data[12], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[13], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF); // error
+    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF);  // error
     ASSERT_FLOAT_EQ(mat.data[15], 0.0f);
 }
 
@@ -5615,11 +5527,11 @@ UNIT_TEST(API_MathMatrixUtil, PerspectiveLhZo, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[7], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[8], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[10], HUGE_VALF); // error
-    ASSERT_FLOAT_EQ(mat.data[11], 1.0f);      // error
+    ASSERT_FLOAT_EQ(mat.data[10], HUGE_VALF);  // error
+    ASSERT_FLOAT_EQ(mat.data[11], 1.0f);       // error
     ASSERT_FLOAT_EQ(mat.data[12], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[13], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF); // error
+    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF);  // error
     ASSERT_FLOAT_EQ(mat.data[15], 0.0f);
 }
 
@@ -5673,11 +5585,11 @@ UNIT_TEST(API_MathMatrixUtil, PerspectiveRhZo, testing::ext::TestSize.Level1)
     ASSERT_FLOAT_EQ(mat.data[7], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[8], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[9], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[10], -HUGE_VALF); // error + flip
-    ASSERT_FLOAT_EQ(mat.data[11], -1.0f);      // error + flip
+    ASSERT_FLOAT_EQ(mat.data[10], -HUGE_VALF);  // error + flip
+    ASSERT_FLOAT_EQ(mat.data[11], -1.0f);       // error + flip
     ASSERT_FLOAT_EQ(mat.data[12], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[13], 0.0f);
-    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF); // error
+    ASSERT_FLOAT_EQ(mat.data[14], HUGE_VALF);  // error
     ASSERT_FLOAT_EQ(mat.data[15], 0.0f);
 }
 
@@ -5708,7 +5620,7 @@ UNIT_TEST(API_MathMatrixUtil, OrthoLhNo, testing::ext::TestSize.Level1)
 
     Math::Mat4X4 mat = Math::OrthoLhNo(1.0f, 3.0f, -2.0f, 8.0f, 2.0f, 5.0f);
 
-    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON); // 2/(3-1)
+    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON);  // 2/(3-1)
     ASSERT_FLOAT_EQ(mat.data[1], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[2], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[3], 0.0f);
@@ -5736,7 +5648,7 @@ UNIT_TEST(API_MathMatrixUtil, OrthoRhNo, testing::ext::TestSize.Level1)
     // swap column Z
     Math::Mat4X4 mat = Math::OrthoRhNo(1.0f, 3.0f, -2.0f, 8.0f, 2.0f, 5.0f);
 
-    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON); // 2/(3-1)
+    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON);  // 2/(3-1)
     ASSERT_FLOAT_EQ(mat.data[1], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[2], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[3], 0.0f);
@@ -5769,7 +5681,7 @@ UNIT_TEST(API_MathMatrixUtil, OrthoLhZo, testing::ext::TestSize.Level1)
 
     Math::Mat4X4 mat = Math::OrthoLhZo(1.0f, 3.0f, -2.0f, 8.0f, 2.0f, 5.0f);
 
-    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON); // 2/(3-1)
+    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON);  // 2/(3-1)
     ASSERT_FLOAT_EQ(mat.data[1], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[2], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[3], 0.0f);
@@ -5796,7 +5708,7 @@ UNIT_TEST(API_MathMatrixUtil, OrthoRhZo, testing::ext::TestSize.Level1)
 {
     Math::Mat4X4 mat = Math::OrthoRhZo(1.0f, 3.0f, -2.0f, 8.0f, 2.0f, 5.0f);
 
-    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON); // 2/(3-1)
+    ASSERT_NEAR(mat.data[0], 1.0f, Math::EPSILON);  // 2/(3-1)
     ASSERT_FLOAT_EQ(mat.data[1], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[2], 0.0f);
     ASSERT_FLOAT_EQ(mat.data[3], 0.0f);
@@ -5836,23 +5748,23 @@ UNIT_TEST(API_MathMatrixUtil, LookAtRh, testing::ext::TestSize.Level1)
     //  Y=normalize(Y)
     //  -X dot eye = transformation of potionion to object
 
-    Math::Vec3 eye = Math::Vec3(3.0f, -5.0f, 10.0f); // sum 8
-    Math::Vec3 at = Math::Vec3(-3.0f, 2.0f, -1.0f);  // sum 2
-    Math::Vec3 up = Math::Vec3(1.0f, 2.0f, -3.0f);   // 1,1,1 will look at the other side from object => inf
+    Math::Vec3 eye = Math::Vec3(3.0f, -5.0f, 10.0f);  // sum 8
+    Math::Vec3 at = Math::Vec3(-3.0f, 2.0f, -1.0f);   // sum 2
+    Math::Vec3 up = Math::Vec3(1.0f, 2.0f, -3.0f);    // 1,1,1 will look at the other side from object => inf
     Math::Mat4X4 mat = Math::LookAtRh(eye, at, up);
 
     float Zlen = Math::sqrt(static_cast<float>(6 * 6 + 7 * 7 + 11 * 11));
     Math::Vec3 Z = Math::Vec3(6.0f / Zlen, -7.0f / Zlen, 11.0f / Zlen);
     Math::Vec3 X = Math::Vec3(2.0f * Z.z + 3.0f * Z.y, 1.0f * Z.z + 3.0f * Z.x, 1.0f * Z.y - 2.0f * Z.x);
     float Xlen = Math::sqrt(X.x * X.x + X.y * X.y + X.z * X.z);
-    X.x = X.x / Xlen;  //-1 * sign of column
-    X.y = -X.y / Xlen; //-1 * sign of column
-    X.z = X.z / Xlen;  //-1 * sign of column
+    X.x = X.x / Xlen;   //-1 * sign of column
+    X.y = -X.y / Xlen;  //-1 * sign of column
+    X.z = X.z / Xlen;   //-1 * sign of column
     Math::Vec3 Y = Math::Vec3(Z.y * X.z - Z.z * X.y, Z.x * X.z - Z.z * X.x, Z.x * X.y - Z.y * X.x);
     float Ylen = Math::sqrt(Y.x * Y.x + Y.y * Y.y + Y.z * Y.z);
-    Y.x = Y.x / Ylen;  //-1 * sign of column
-    Y.y = -Y.y / Ylen; //-1 * sign of column
-    Y.z = Y.z / Ylen;  //-1 * sign of column
+    Y.x = Y.x / Ylen;   //-1 * sign of column
+    Y.y = -Y.y / Ylen;  //-1 * sign of column
+    Y.z = Y.z / Ylen;   //-1 * sign of column
 
     ASSERT_NEAR(mat.data[0], X.x, 0.000001f);
     ASSERT_NEAR(mat.data[1], Y.x, 0.000001f);
@@ -5887,23 +5799,23 @@ UNIT_TEST(API_MathMatrixUtil, LookAtRh, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_MathMatrixUtil, LookAtLh, testing::ext::TestSize.Level1)
 {
-    Math::Vec3 eye = Math::Vec3(3.0f, -5.0f, 10.0f); // sum 8
-    Math::Vec3 at = Math::Vec3(-3.0f, 2.0f, -1.0f);  // sum 2
-    Math::Vec3 up = Math::Vec3(1.0f, 2.0f, -3.0f);   // 1,1,1 will look at the other side from object => inf
+    Math::Vec3 eye = Math::Vec3(3.0f, -5.0f, 10.0f);  // sum 8
+    Math::Vec3 at = Math::Vec3(-3.0f, 2.0f, -1.0f);   // sum 2
+    Math::Vec3 up = Math::Vec3(1.0f, 2.0f, -3.0f);    // 1,1,1 will look at the other side from object => inf
     Math::Mat4X4 mat = Math::LookAtLh(eye, at, up);
 
     float Zlen = Math::sqrt(static_cast<float>(6 * 6 + 7 * 7 + 11 * 11));
-    Math::Vec3 Z = Math::Vec3(-6.0f / Zlen, 7.0f / Zlen, -11.0f / Zlen); // Swaped values
+    Math::Vec3 Z = Math::Vec3(-6.0f / Zlen, 7.0f / Zlen, -11.0f / Zlen);  // Swaped values
     Math::Vec3 X = Math::Vec3(2.0f * Z.z + 3.0f * Z.y, 1.0f * Z.z + 3.0f * Z.x, 1.0f * Z.y - 2.0f * Z.x);
     float Xlen = Math::sqrt(X.x * X.x + X.y * X.y + X.z * X.z);
-    X.x = X.x / Xlen;  //-1 * sign of column
-    X.y = -X.y / Xlen; //-1 * sign of column
-    X.z = X.z / Xlen;  //-1 * sign of column
+    X.x = X.x / Xlen;   //-1 * sign of column
+    X.y = -X.y / Xlen;  //-1 * sign of column
+    X.z = X.z / Xlen;   //-1 * sign of column
     Math::Vec3 Y = Math::Vec3(Z.y * X.z - Z.z * X.y, Z.x * X.z - Z.z * X.x, Z.x * X.y - Z.y * X.x);
     float Ylen = Math::sqrt(Y.x * Y.x + Y.y * Y.y + Y.z * Y.z);
-    Y.x = Y.x / Ylen;  //-1 * sign of column
-    Y.y = -Y.y / Ylen; //-1 * sign of column
-    Y.z = Y.z / Ylen;  //-1 * sign of column
+    Y.x = Y.x / Ylen;   //-1 * sign of column
+    Y.y = -Y.y / Ylen;  //-1 * sign of column
+    Y.z = Y.z / Ylen;   //-1 * sign of column
 
     ASSERT_NEAR(mat.data[0], X.x, 0.000001f);
     ASSERT_NEAR(mat.data[1], Y.x, 0.000001f);
@@ -5943,7 +5855,7 @@ UNIT_TEST(API_MathMatrixUtil, LookAtLh, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Decompose. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // RotationScaleTranslation z>x>y
+UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1)  // RotationScaleTranslation z>x>y
 {
     // Mat4X4 const& modelMatrix, Vec3& scale, Quat& orientation, Vec3& translation, Vec3& skew, Vec4& perspective
     Math::Vec3 scale;
@@ -5952,7 +5864,7 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
     Math::Vec3 skew;
     Math::Vec4 perspective;
 
-    { // Identity decompose
+    {  // Identity decompose
 
         constexpr Math::Mat4X4 mat = Math::IDENTITY_4X4;
         bool dec = Math::Decompose(mat, scale, orientation, translation, skew, perspective);
@@ -5981,12 +5893,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_FLOAT_EQ(perspective.data[3], 1.0f);
     }
 
-    { // W, Scale, Rotation, Translation, Skew,
+    {  // W, Scale, Rotation, Translation, Skew,
 
-        constexpr Math::Vec4 C1 = { 2.0f, 0.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C2 = { 3.0f, 3.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C3 = { -4.0f, 5.0f, 4.0f, 0.0f };
-        constexpr Math::Vec4 C4 = { 1.0f, 2.0f, 3.0f, -10.0f };
+        constexpr Math::Vec4 C1 = {2.0f, 0.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C2 = {3.0f, 3.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C3 = {-4.0f, 5.0f, 4.0f, 0.0f};
+        constexpr Math::Vec4 C4 = {1.0f, 2.0f, 3.0f, -10.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6001,9 +5913,9 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_FLOAT_EQ(translation.data[1], -0.2f);
         ASSERT_FLOAT_EQ(translation.data[2], -0.3f);
 
-        ASSERT_FLOAT_EQ(skew.data[0], 5.0f / 4.0f);  // y,z
-        ASSERT_FLOAT_EQ(skew.data[1], -4.0f / 4.0f); // x,z
-        ASSERT_FLOAT_EQ(skew.data[2], 3.0f / 3.0f);  // x,y
+        ASSERT_FLOAT_EQ(skew.data[0], 5.0f / 4.0f);   // y,z
+        ASSERT_FLOAT_EQ(skew.data[1], -4.0f / 4.0f);  // x,z
+        ASSERT_FLOAT_EQ(skew.data[2], 3.0f / 3.0f);   // x,y
 
         ASSERT_FLOAT_EQ(orientation.data[0], 0.0f);
         ASSERT_FLOAT_EQ(orientation.data[1], 0.0f);
@@ -6016,12 +5928,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_FLOAT_EQ(perspective.data[3], 1.0f);
     }
 
-    { // no W component
+    {  // no W component
 
-        constexpr Math::Vec4 C1 = { 2.0f, 0.0f, 0.0f, 1.0f };
-        constexpr Math::Vec4 C2 = { 0.0f, 3.0f, 0.0f, 2.0f };
-        constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 4.0f, 3.0f };
-        constexpr Math::Vec4 C4 = { 1.0f, 2.0f, 3.0f, 0.0f };
+        constexpr Math::Vec4 C1 = {2.0f, 0.0f, 0.0f, 1.0f};
+        constexpr Math::Vec4 C2 = {0.0f, 3.0f, 0.0f, 2.0f};
+        constexpr Math::Vec4 C3 = {0.0f, 0.0f, 4.0f, 3.0f};
+        constexpr Math::Vec4 C4 = {1.0f, 2.0f, 3.0f, 0.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6030,12 +5942,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         EXPECT_FALSE(dec);
     }
 
-    { // Perspectives
+    {  // Perspectives
 
-        constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, -2.0f };
-        constexpr Math::Vec4 C2 = { 0.0f, 0.2f, 0.0f, 0.6f };
-        constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 2.0f, -7.0f };
-        constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 2.0f };
+        constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, -2.0f};
+        constexpr Math::Vec4 C2 = {0.0f, 0.2f, 0.0f, 0.6f};
+        constexpr Math::Vec4 C3 = {0.0f, 0.0f, 2.0f, -7.0f};
+        constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 2.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6048,12 +5960,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_FLOAT_EQ(perspective.data[3], 1.0f);
     }
 
-    { // Determinant 0
+    {  // Determinant 0
 
-        constexpr Math::Vec4 C1 = { 1.0f, 1.0f, 1.0f, 1.0f };
-        constexpr Math::Vec4 C2 = { 1.0f, 1.0f, 1.0f, 1.0f };
-        constexpr Math::Vec4 C3 = { 1.0f, 1.0f, 1.0f, 1.0f };
-        constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr Math::Vec4 C1 = {1.0f, 1.0f, 1.0f, 1.0f};
+        constexpr Math::Vec4 C2 = {1.0f, 1.0f, 1.0f, 1.0f};
+        constexpr Math::Vec4 C3 = {1.0f, 1.0f, 1.0f, 1.0f};
+        constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6061,12 +5973,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
 
         EXPECT_FALSE(dec);
     }
-    { // 90 deg xy
+    {  // 90 deg xy
 
-        constexpr Math::Vec4 C1 = { 0.0f, 1.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C2 = { -1.0f, 0.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-        constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr Math::Vec4 C1 = {0.0f, 1.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C2 = {-1.0f, 0.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+        constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6080,17 +5992,17 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_NEAR(orientation.data[3], 1.f / Math::sqrt(2.f), 0.001f);
     }
 
-    { // RotationScaleTranslation z>x>y
+    {  // RotationScaleTranslation z>x>y
 
         // constexpr Math::Vec3 translationIn(1.0f, 2.0f, 3.0f);
         // constexpr Math::Vec3 scaleIn(Math::Vec3(5.0f, 4.0f, 3.0f));
         // const Math::Quat rotationIn = Math::Quat(0.627f, -0.353f, 0.659f, -0.219f);
         // Math::Mat4X4 mat = Math::Trs(translationIn, rotationIn, scaleIn);
 
-        constexpr Math::Vec4 C1 = { -0.588899f, -3.656520f, 3.358860f, 0.000000f };
-        constexpr Math::Vec4 C2 = { -0.616080f, -2.619279f, -2.959520f, 0.000000f };
-        constexpr Math::Vec4 C3 = { 2.943000f, -0.571884f, -0.106428f, 0.000000f };
-        constexpr Math::Vec4 C4 = { 1.000000f, 2.000000f, 3.000000f, 1.000000f };
+        constexpr Math::Vec4 C1 = {-0.588899f, -3.656520f, 3.358860f, 0.000000f};
+        constexpr Math::Vec4 C2 = {-0.616080f, -2.619279f, -2.959520f, 0.000000f};
+        constexpr Math::Vec4 C3 = {2.943000f, -0.571884f, -0.106428f, 0.000000f};
+        constexpr Math::Vec4 C4 = {1.000000f, 2.000000f, 3.000000f, 1.000000f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6110,17 +6022,17 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
         ASSERT_NEAR(translation.data[2], 3.0f, 0.001f);
     }
 
-    { // RotationScaleTranslation z>y>x
+    {  // RotationScaleTranslation z>y>x
 
         // constexpr Math::Vec3 translationIn(1.0f, 2.0f, 3.0f);
         // constexpr Math::Vec3 scaleIn(Math::Vec3(3.0f, 4.0f, 5.0f));
         // const Math::Quat rotationIn = Math::Quat(-0.353f, 0.627f, 0.659f, -0.219f);
         // Math::Mat4X4 mat = Math::Trs(translationIn, rotationIn, scaleIn);
 
-        constexpr Math::Vec4 C1 = { -1.964460f, -2.193912f, -0.571884f, 0.000000f };
-        constexpr Math::Vec4 C2 = { -0.616080f, -0.471119f, 3.924000f, 0.000000f };
-        constexpr Math::Vec4 C3 = { -3.699400f, 3.358860f, -0.177379f, 0.000000f };
-        constexpr Math::Vec4 C4 = { 1.000000f, 2.000000f, 3.000000f, 1.000000f };
+        constexpr Math::Vec4 C1 = {-1.964460f, -2.193912f, -0.571884f, 0.000000f};
+        constexpr Math::Vec4 C2 = {-0.616080f, -0.471119f, 3.924000f, 0.000000f};
+        constexpr Math::Vec4 C3 = {-3.699400f, 3.358860f, -0.177379f, 0.000000f};
+        constexpr Math::Vec4 C4 = {1.000000f, 2.000000f, 3.000000f, 1.000000f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6146,14 +6058,14 @@ UNIT_TEST(API_MathMatrixUtil, Decompose, testing::ext::TestSize.Level1) // Rotat
  * @tc.desc: Tests for Decompose2. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // RotationScaleTranslation z>x>y
+UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1)  // RotationScaleTranslation z>x>y
 {
     // Mat4X4 const& modelMatrix, Vec3& scale, Quat& orientation, Vec3& translation
     Math::Vec3 scale;
     Math::Quat orientation;
     Math::Vec3 translation;
 
-    { // Identity decompose
+    {  // Identity decompose
 
         constexpr Math::Mat4X4 mat = Math::IDENTITY_4X4;
         bool dec = Math::Decompose(mat, scale, orientation, translation);
@@ -6173,7 +6085,7 @@ UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // Rota
         ASSERT_FLOAT_EQ(orientation.data[3], 1.0f);
     }
 
-    { // Scale, Rotation, Translation
+    {  // Scale, Rotation, Translation
         constexpr auto inT = Math::Vec3(-0.1f, -0.2f, -0.3f);
         const auto inR = Math::AngleAxis(45.f * Math::DEG2RAD, Math::Vec3(0.f, 1.f, 0.f));
         constexpr auto inS = Math::Vec3(0.2f, 0.3f, 0.4f);
@@ -6196,12 +6108,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // Rota
         ASSERT_FLOAT_EQ(orientation.data[3], inR.data[3]);
     }
 
-    { // Perspectives
+    {  // Perspectives
 
-        constexpr Math::Vec4 C1 = { 1.0f, 0.0f, 0.0f, -2.0f };
-        constexpr Math::Vec4 C2 = { 0.0f, 0.2f, 0.0f, 0.6f };
-        constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 2.0f, -7.0f };
-        constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 2.0f };
+        constexpr Math::Vec4 C1 = {1.0f, 0.0f, 0.0f, -2.0f};
+        constexpr Math::Vec4 C2 = {0.0f, 0.2f, 0.0f, 0.6f};
+        constexpr Math::Vec4 C3 = {0.0f, 0.0f, 2.0f, -7.0f};
+        constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 2.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6210,12 +6122,12 @@ UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // Rota
         EXPECT_TRUE(dec);
     }
 
-    { // 90 deg xy
+    {  // 90 deg xy
 
-        constexpr Math::Vec4 C1 = { 0.0f, 1.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C2 = { -1.0f, 0.0f, 0.0f, 0.0f };
-        constexpr Math::Vec4 C3 = { 0.0f, 0.0f, 1.0f, 0.0f };
-        constexpr Math::Vec4 C4 = { 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr Math::Vec4 C1 = {0.0f, 1.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C2 = {-1.0f, 0.0f, 0.0f, 0.0f};
+        constexpr Math::Vec4 C3 = {0.0f, 0.0f, 1.0f, 0.0f};
+        constexpr Math::Vec4 C4 = {0.0f, 0.0f, 0.0f, 1.0f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6229,17 +6141,17 @@ UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // Rota
         ASSERT_NEAR(orientation.data[3], 1.f / Math::sqrt(2.f), 0.001f);
     }
 
-    { // RotationScaleTranslation z>x>y
+    {  // RotationScaleTranslation z>x>y
 
         // constexpr Math::Vec3 translationIn(1.0f, 2.0f, 3.0f);
         // constexpr Math::Vec3 scaleIn(Math::Vec3(5.0f, 4.0f, 3.0f));
         // const Math::Quat rotationIn = Math::Quat(0.627f, -0.353f, 0.659f, -0.219f);
         // Math::Mat4X4 mat = Math::Trs(translationIn, rotationIn, scaleIn);
 
-        constexpr Math::Vec4 C1 = { -0.588899f, -3.656520f, 3.358860f, 0.000000f };
-        constexpr Math::Vec4 C2 = { -0.616080f, -2.619279f, -2.959520f, 0.000000f };
-        constexpr Math::Vec4 C3 = { 2.943000f, -0.571884f, -0.106428f, 0.000000f };
-        constexpr Math::Vec4 C4 = { 1.000000f, 2.000000f, 3.000000f, 1.000000f };
+        constexpr Math::Vec4 C1 = {-0.588899f, -3.656520f, 3.358860f, 0.000000f};
+        constexpr Math::Vec4 C2 = {-0.616080f, -2.619279f, -2.959520f, 0.000000f};
+        constexpr Math::Vec4 C3 = {2.943000f, -0.571884f, -0.106428f, 0.000000f};
+        constexpr Math::Vec4 C4 = {1.000000f, 2.000000f, 3.000000f, 1.000000f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 
@@ -6259,17 +6171,17 @@ UNIT_TEST(API_MathMatrixUtil, Decompose2, testing::ext::TestSize.Level1) // Rota
         ASSERT_NEAR(translation.data[2], 3.0f, 0.001f);
     }
 
-    { // RotationScaleTranslation z>y>x
+    {  // RotationScaleTranslation z>y>x
 
         // constexpr Math::Vec3 translationIn(1.0f, 2.0f, 3.0f);
         // constexpr Math::Vec3 scaleIn(Math::Vec3(3.0f, 4.0f, 5.0f));
         // const Math::Quat rotationIn = Math::Quat(-0.353f, 0.627f, 0.659f, -0.219f);
         // Math::Mat4X4 mat = Math::Trs(translationIn, rotationIn, scaleIn);
 
-        constexpr Math::Vec4 C1 = { -1.964460f, -2.193912f, -0.571884f, 0.000000f };
-        constexpr Math::Vec4 C2 = { -0.616080f, -0.471119f, 3.924000f, 0.000000f };
-        constexpr Math::Vec4 C3 = { -3.699400f, 3.358860f, -0.177379f, 0.000000f };
-        constexpr Math::Vec4 C4 = { 1.000000f, 2.000000f, 3.000000f, 1.000000f };
+        constexpr Math::Vec4 C1 = {-1.964460f, -2.193912f, -0.571884f, 0.000000f};
+        constexpr Math::Vec4 C2 = {-0.616080f, -0.471119f, 3.924000f, 0.000000f};
+        constexpr Math::Vec4 C3 = {-3.699400f, 3.358860f, -0.177379f, 0.000000f};
+        constexpr Math::Vec4 C4 = {1.000000f, 2.000000f, 3.000000f, 1.000000f};
         constexpr Math::Mat4X4 identity(C1, C2, C3, C4);
         constexpr Math::Mat4X4 mat(identity);
 

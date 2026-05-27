@@ -41,12 +41,12 @@ UNIT_TEST(API_ArrayPropertyTest, Values, testing::ext::TestSize.Level1)
     auto p = ConstructArrayProperty<int>("test");
 
     EXPECT_EQ(p->GetSize(), 0);
-    EXPECT_TRUE(p->SetDefaultValue({ 1, 2, 3 }));
+    EXPECT_TRUE(p->SetDefaultValue({1, 2, 3}));
     EXPECT_EQ(p->GetSize(), 3);
-    EXPECT_EQ(p->GetDefaultValue(), (BASE_NS::vector<int> { 1, 2, 3 }));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 1, 2, 3 }));
-    EXPECT_TRUE(p->SetValue({ 1, 2 }));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 1, 2 }));
+    EXPECT_EQ(p->GetDefaultValue(), (BASE_NS::vector<int>{1, 2, 3}));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{1, 2, 3}));
+    EXPECT_TRUE(p->SetValue({1, 2}));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{1, 2}));
     EXPECT_EQ(p->GetValueAt(0), 1);
     EXPECT_EQ(p->GetValueAt(1), 2);
     EXPECT_TRUE(p->AddValue(5));
@@ -55,12 +55,12 @@ UNIT_TEST(API_ArrayPropertyTest, Values, testing::ext::TestSize.Level1)
     EXPECT_TRUE(p->InsertValueAt(1, 7));
     EXPECT_EQ(p->GetSize(), 4);
     EXPECT_EQ(p->GetValueAt(1), 7);
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 1, 7, 2, 5 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{1, 7, 2, 5}));
     EXPECT_TRUE(p->RemoveAt(0));
     EXPECT_EQ(p->GetSize(), 3);
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 7, 2, 5 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{7, 2, 5}));
     EXPECT_TRUE(p->SetValueAt(1, 11));
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 7, 11, 5 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{7, 11, 5}));
 }
 
 /**
@@ -72,15 +72,15 @@ UNIT_TEST(API_ArrayPropertyTest, ValuesTypeless, testing::ext::TestSize.Level1)
 {
     auto p = ConstructArrayProperty<int>("test");
 
-    Any<int> value1 { 1 };
-    Any<int> value2 { 2 };
-    Any<int> value3 { 3 };
+    Any<int> value1{1};
+    Any<int> value2{2};
+    Any<int> value3{3};
     p->AddAny(value1);
     EXPECT_EQ(p->GetSize(), 1);
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 1 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{1}));
     p->AddAny(value3);
     p->InsertAnyAt(1, value2);
-    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int> { 1, 2, 3 }));
+    EXPECT_EQ(p->GetValue(), (BASE_NS::vector<int>{1, 2, 3}));
     Any<int> v;
     EXPECT_TRUE(p->GetAnyAt(0, v));
     EXPECT_EQ(GetValue<int>(v), 1);
@@ -93,7 +93,7 @@ UNIT_TEST(API_ArrayPropertyTest, ValuesTypeless, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ArrayPropertyTest, ArrayElementBind, testing::ext::TestSize.Level1)
 {
-    auto arr = ConstructArrayProperty<int>("test", BASE_NS::vector<int> { 1, 2, 3 });
+    auto arr = ConstructArrayProperty<int>("test", BASE_NS::vector<int>{1, 2, 3});
     auto p = ConstructProperty<int>("p");
     AddArrayElementBind(p, arr, 1);
 
@@ -103,16 +103,16 @@ UNIT_TEST(API_ArrayPropertyTest, ArrayElementBind, testing::ext::TestSize.Level1
     int p_count = 0;
     p->OnChanged()->AddHandler(MakeCallback<IOnChanged>([&] { ++p_count; }));
 
-    EXPECT_EQ(arr->GetValue(), (BASE_NS::vector<int> { 1, 2, 3 }));
+    EXPECT_EQ(arr->GetValue(), (BASE_NS::vector<int>{1, 2, 3}));
     EXPECT_TRUE(p->SetValue(4));
     EXPECT_EQ(p_count, 1);
     EXPECT_EQ(arr_count, 1);
-    EXPECT_EQ(arr->GetValue(), (BASE_NS::vector<int> { 1, 4, 3 }));
-    EXPECT_TRUE(arr->SetValue({ 1, 1, 1 }));
+    EXPECT_EQ(arr->GetValue(), (BASE_NS::vector<int>{1, 4, 3}));
+    EXPECT_TRUE(arr->SetValue({1, 1, 1}));
     EXPECT_EQ(p_count, 2);
     EXPECT_EQ(arr_count, 2);
     EXPECT_EQ(p->GetValue(), 1);
-    EXPECT_TRUE(arr->SetValue({ 1, 1, 4 }));
+    EXPECT_TRUE(arr->SetValue({1, 1, 4}));
     EXPECT_EQ(p->GetValue(), 1);
 }
 
@@ -125,34 +125,34 @@ UNIT_TEST(API_ArrayPropertyTest, ValidArrayPropertyLock, testing::ext::TestSize.
 {
     {
         auto p = ConstructArrayProperty<int>("p").GetProperty();
-        ArrayPropertyLock lock { p };
+        ArrayPropertyLock lock{p};
         EXPECT_TRUE(lock);
         EXPECT_TRUE(lock.IsValid());
         EXPECT_TRUE(lock.GetProperty());
 
-        TypedArrayPropertyLock<int> typedLock { p };
+        TypedArrayPropertyLock<int> typedLock{p};
         EXPECT_TRUE(typedLock);
         EXPECT_TRUE(typedLock.IsValid());
         EXPECT_TRUE(typedLock.GetProperty());
 
-        TypedArrayPropertyLock<float> bad { p };
+        TypedArrayPropertyLock<float> bad{p};
         EXPECT_FALSE(bad);
         EXPECT_FALSE(bad.IsValid());
         EXPECT_FALSE(bad.GetProperty());
     }
     {
         auto p = ConstructProperty<int>("p").GetProperty();
-        ArrayPropertyLock lock { p };
+        ArrayPropertyLock lock{p};
         EXPECT_FALSE(lock);
         EXPECT_FALSE(lock.IsValid());
         EXPECT_FALSE(lock.GetProperty());
 
-        TypedArrayPropertyLock<int> typedLock { p };
+        TypedArrayPropertyLock<int> typedLock{p};
         EXPECT_FALSE(typedLock);
         EXPECT_FALSE(typedLock.IsValid());
         EXPECT_FALSE(typedLock.GetProperty());
 
-        TypedArrayPropertyLock<float> bad { p };
+        TypedArrayPropertyLock<float> bad{p};
         EXPECT_FALSE(bad);
         EXPECT_FALSE(bad.IsValid());
         EXPECT_FALSE(bad.GetProperty());
@@ -166,7 +166,7 @@ UNIT_TEST(API_ArrayPropertyTest, ValidArrayPropertyLock, testing::ext::TestSize.
  */
 UNIT_TEST(API_ArrayPropertyTest, TypelessAccess, testing::ext::TestSize.Level1)
 {
-    auto p = ConstructArrayProperty<int>("p", { 1, 2, 3, 4, 5 });
+    auto p = ConstructArrayProperty<int>("p", {1, 2, 3, 4, 5});
     {
         auto any = p->GetAnyAt(0);
         ASSERT_TRUE(any);
@@ -190,11 +190,11 @@ UNIT_TEST(API_ArrayPropertyTest, TypelessAccessCompatibility, testing::ext::Test
 {
     Object a(CreateInstance(ClassId::Object)), b(CreateInstance(ClassId::Object)), c(CreateInstance(ClassId::Object)),
         d(CreateInstance(ClassId::Object));
-    auto p = ConstructArrayProperty<SharedPtrIInterface>("p", { a.GetPtr(), b.GetPtr(), c.GetPtr() });
+    auto p = ConstructArrayProperty<SharedPtrIInterface>("p", {a.GetPtr(), b.GetPtr(), c.GetPtr()});
     {
-        ArrayPropertyLock l { p.GetProperty() };
+        ArrayPropertyLock l{p.GetProperty()};
 
-        EXPECT_TRUE(l->SetAnyAt(0, Any<IObject::Ptr> { d.GetPtr() }));
+        EXPECT_TRUE(l->SetAnyAt(0, Any<IObject::Ptr>{d.GetPtr()}));
 
         auto any = l->GetAnyAt(0);
         ASSERT_TRUE(any);
@@ -211,7 +211,7 @@ UNIT_TEST(API_ArrayPropertyTest, TypelessAccessCompatibility, testing::ext::Test
 UNIT_TEST(API_ArrayPropertyTest, PropertyHelpers, testing::ext::TestSize.Level1)
 {
     Object a(CreateInstance(ClassId::Object)), b(CreateInstance(ClassId::Object)), c(CreateInstance(ClassId::Object));
-    auto p = ConstructArrayProperty<SharedPtrIInterface>("p", { a.GetPtr(), b.GetPtr(), c.GetPtr() });
+    auto p = ConstructArrayProperty<SharedPtrIInterface>("p", {a.GetPtr(), b.GetPtr(), c.GetPtr()});
 
     EXPECT_FALSE(IsGetPointer(p));
     EXPECT_FALSE(IsSetPointer(p));
@@ -228,7 +228,7 @@ UNIT_TEST(API_ArrayPropertyTest, PropertyHelpers, testing::ext::TestSize.Level1)
     EXPECT_TRUE(SetPointerAt(0, p, other));
     EXPECT_EQ(GetPointerAt(0, p), interface_pointer_cast<CORE_NS::IInterface>(other));
 
-    auto cp = ConstructArrayProperty<IObject::ConstPtr>("p", { a.GetPtr(), b.GetPtr(), c.GetPtr() });
+    auto cp = ConstructArrayProperty<IObject::ConstPtr>("p", {a.GetPtr(), b.GetPtr(), c.GetPtr()});
     EXPECT_TRUE(IsGetPointerArray(cp));
     EXPECT_TRUE(IsSetPointerArray(cp));
     EXPECT_TRUE(SetPointerAt(0, cp, other));
@@ -239,6 +239,6 @@ UNIT_TEST(API_ArrayPropertyTest, PropertyHelpers, testing::ext::TestSize.Level1)
     EXPECT_EQ(GetConstPointerAt(0, cp), interface_pointer_cast<CORE_NS::IInterface>(some));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

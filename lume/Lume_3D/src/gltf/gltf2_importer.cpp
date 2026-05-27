@@ -15,6 +15,7 @@
 
 #include "gltf/gltf2_importer.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <functional>
@@ -59,6 +60,7 @@
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
 #include <core/perf/intf_performance_data_manager.h>
@@ -67,6 +69,7 @@
 #include <core/property/property_types.h>
 #include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_manager.h>
+#include <render/datastore/intf_render_data_store_pod.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/implementation_uids.h>
@@ -87,12 +90,16 @@ using namespace RENDER_NS;
 namespace {
 // How many threads the GLTF2Importer will use to run tasks.
 constexpr const uint32_t IMPORTER_THREADS = 2u;
+constexpr string_view POD_DATA_STORE_NAME{"RenderDataStorePod"};
+constexpr string_view VERTEX_INPUT_DECLARATIONS{"VertexInputDeclarations"};
+constexpr string_view BASE_COLOR_FLAGS{"BaseColorFlags"};
+constexpr string_view MIPMAPS_FLAG{"MipmapsFlag"};
 
 // Helper class for running lambda as a ThreadPool task.
-template<typename Fn>
+template <typename Fn>
 class FunctionTask final : public IThreadPool::ITask {
 public:
-    explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)) {};
+    explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)){};
 
     void operator()() override
     {
@@ -109,13 +116,13 @@ private:
     Fn func_;
 };
 
-template<typename Fn>
+template <typename Fn>
 inline IThreadPool::ITask::Ptr CreateFunctionTask(Fn&& func)
 {
-    return IThreadPool::ITask::Ptr { new FunctionTask<Fn>(BASE_NS::move(func)) };
+    return IThreadPool::ITask::Ptr{new FunctionTask<Fn>(BASE_NS::move(func))};
 }
 
-template<class T>
+template <class T>
 size_t FindIndex(const vector<unique_ptr<T>>& container, T const* item)
 {
     for (size_t i = 0; i < container.size(); ++i) {
@@ -126,36 +133,78 @@ size_t FindIndex(const vector<unique_ptr<T>>& container, T const* item)
     return GLTF2::GLTF_INVALID_INDEX;
 }
 
+using NodeIndexLookup = unordered_map<const GLTF2::Node*, size_t>;
+using NodeTraversalStack = vector<const GLTF2::Node*>;
+
+size_t FindNodeIndex(const NodeIndexLookup& nodeIndices, const GLTF2::Node* node)
+{
+    if (const auto pos = nodeIndices.find(node); pos != nodeIndices.end()) {
+        return pos->second;
+    }
+    return GLTF2::GLTF_INVALID_INDEX;
+}
+
+void CopyVertexInputDeclaration(
+    const VertexInputDeclarationView& source, VertexInputDeclarationData& destination) noexcept
+{
+    destination = {};
+    destination.bindingDescriptionCount = Math::min(
+        static_cast<uint32_t>(source.bindingDescriptions.size()), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+    destination.attributeDescriptionCount = Math::min(
+        static_cast<uint32_t>(source.attributeDescriptions.size()), PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT);
+
+    if (destination.bindingDescriptionCount > 0U) {
+        std::copy(source.bindingDescriptions.cbegin(),
+            source.bindingDescriptions.cbegin() + destination.bindingDescriptionCount,
+            destination.bindingDescriptions);
+    }
+    if (destination.attributeDescriptionCount > 0U) {
+        std::copy(source.attributeDescriptions.cbegin(),
+            source.attributeDescriptions.cbegin() + destination.attributeDescriptionCount,
+            destination.attributeDescriptions);
+    }
+}
+
+NodeIndexLookup CreateNodeIndexLookup(const GLTF2::Data& data)
+{
+    NodeIndexLookup nodeIndices;
+    nodeIndices.reserve(data.nodes.size());
+    for (size_t index = 0; index < data.nodes.size(); ++index) {
+        nodeIndices[data.nodes[index].get()] = index;
+    }
+    return nodeIndices;
+}
+
 constexpr auto MAX_COMPONENTS = 4U;
 constexpr Format BYTE_FORMATS[2U][MAX_COMPONENTS] = {
-    { BASE_FORMAT_R8_SINT, BASE_FORMAT_R8G8_SINT, BASE_FORMAT_R8G8B8_SINT, BASE_FORMAT_R8G8B8A8_SINT },
-    { BASE_FORMAT_R8_SNORM, BASE_FORMAT_R8G8_SNORM, BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R8G8B8A8_SNORM },
+    {BASE_FORMAT_R8_SINT, BASE_FORMAT_R8G8_SINT, BASE_FORMAT_R8G8B8_SINT, BASE_FORMAT_R8G8B8A8_SINT},
+    {BASE_FORMAT_R8_SNORM, BASE_FORMAT_R8G8_SNORM, BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R8G8B8A8_SNORM},
 };
 constexpr Format UNSIGNED_BYTE_FORMATS[2U][MAX_COMPONENTS] = {
-    { BASE_FORMAT_R8_UINT, BASE_FORMAT_R8G8_UINT, BASE_FORMAT_R8G8B8_UINT, BASE_FORMAT_R8G8B8A8_UINT },
-    { BASE_FORMAT_R8_UNORM, BASE_FORMAT_R8G8_UNORM, BASE_FORMAT_R8G8B8_UNORM, BASE_FORMAT_R8G8B8A8_UNORM },
+    {BASE_FORMAT_R8_UINT, BASE_FORMAT_R8G8_UINT, BASE_FORMAT_R8G8B8_UINT, BASE_FORMAT_R8G8B8A8_UINT},
+    {BASE_FORMAT_R8_UNORM, BASE_FORMAT_R8G8_UNORM, BASE_FORMAT_R8G8B8_UNORM, BASE_FORMAT_R8G8B8A8_UNORM},
 };
 
 constexpr Format SHORT_FORMATS[2U][MAX_COMPONENTS] = {
-    { BASE_FORMAT_R16_SINT, BASE_FORMAT_R16G16_SINT, BASE_FORMAT_R16G16B16_SINT, BASE_FORMAT_R16G16B16A16_SINT },
-    { BASE_FORMAT_R16_SNORM, BASE_FORMAT_R16G16_SNORM, BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R16G16B16A16_SNORM },
+    {BASE_FORMAT_R16_SINT, BASE_FORMAT_R16G16_SINT, BASE_FORMAT_R16G16B16_SINT, BASE_FORMAT_R16G16B16A16_SINT},
+    {BASE_FORMAT_R16_SNORM, BASE_FORMAT_R16G16_SNORM, BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R16G16B16A16_SNORM},
 };
 constexpr Format UNSIGNED_SHORT_FORMATS[2U][MAX_COMPONENTS] = {
-    { BASE_FORMAT_R16_UINT, BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R16G16B16A16_UINT },
-    { BASE_FORMAT_R16_UNORM, BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16B16_UNORM, BASE_FORMAT_R16G16B16A16_UNORM },
+    {BASE_FORMAT_R16_UINT, BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R16G16B16A16_UINT},
+    {BASE_FORMAT_R16_UNORM, BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16B16_UNORM, BASE_FORMAT_R16G16B16A16_UNORM},
 };
 
-constexpr Format INT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_SINT, BASE_FORMAT_R32G32_SINT,
-    BASE_FORMAT_R32G32B32_SINT, BASE_FORMAT_R32G32B32A32_SINT };
-constexpr Format UNSIGNED_INT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_UINT, BASE_FORMAT_R32G32_UINT,
-    BASE_FORMAT_R32G32B32_UINT, BASE_FORMAT_R32G32B32A32_UINT };
+constexpr Format INT_FORMATS[MAX_COMPONENTS] = {
+    BASE_FORMAT_R32_SINT, BASE_FORMAT_R32G32_SINT, BASE_FORMAT_R32G32B32_SINT, BASE_FORMAT_R32G32B32A32_SINT};
+constexpr Format UNSIGNED_INT_FORMATS[MAX_COMPONENTS] = {
+    BASE_FORMAT_R32_UINT, BASE_FORMAT_R32G32_UINT, BASE_FORMAT_R32G32B32_UINT, BASE_FORMAT_R32G32B32A32_UINT};
 
-constexpr Format FLOAT_FORMATS[MAX_COMPONENTS] = { BASE_FORMAT_R32_SFLOAT, BASE_FORMAT_R32G32_SFLOAT,
-    BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R32G32B32A32_SFLOAT };
+constexpr Format FLOAT_FORMATS[MAX_COMPONENTS] = {
+    BASE_FORMAT_R32_SFLOAT, BASE_FORMAT_R32G32_SFLOAT, BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R32G32B32A32_SFLOAT};
 
 constexpr Format Convert(GLTF2::ComponentType componentType, size_t componentCount, bool normalized)
 {
-    if (componentCount <= MAX_COMPONENTS) {
+    if (componentCount > 0 && componentCount <= MAX_COMPONENTS) {
         switch (componentType) {
             case GLTF2::ComponentType::INVALID:
                 break;
@@ -226,9 +275,12 @@ void ConvertNormalizedDataToFloat(GLTF2::GLTFLoadDataResult const& result, float
         dstComponentCount = result.componentCount;
     }
 
-    PLUGIN_ASSERT_MSG(dstComponentCount >= result.componentCount,
-        "Padding count cannot be negative. Make sure expected component count is equal or greater than source "
-        "component count.");
+    if (dstComponentCount < result.componentCount) {
+        PLUGIN_LOG_E("Padding count underflow: dstComponentCount=%zu < componentCount=%zu",
+            dstComponentCount,
+            result.componentCount);
+        return;
+    }
 
     // Amount of padding.
     const size_t paddingCount = dstComponentCount - result.componentCount;
@@ -289,9 +341,12 @@ void ConvertDataToFloat(GLTF2::GLTFLoadDataResult const& result, float* destinat
         dstComponentCount = result.componentCount;
     }
 
-    PLUGIN_ASSERT_MSG(dstComponentCount >= result.componentCount,
-        "Padding count cannot be negative. Make sure expected component count is equal or greater than source "
-        "component count.");
+    if (dstComponentCount < result.componentCount) {
+        PLUGIN_LOG_E("Padding count underflow: dstComponentCount=%zu < componentCount=%zu",
+            dstComponentCount,
+            result.componentCount);
+        return;
+    }
 
     // Amount of padding.
     const size_t paddingCount = dstComponentCount - result.componentCount;
@@ -434,7 +489,8 @@ struct GatherMeshDataResult {
     GatherMeshDataResult() = default;
     ~GatherMeshDataResult() = default;
     GatherMeshDataResult(const GatherMeshDataResult& aOther) = delete;
-    explicit GatherMeshDataResult(const string& error) : success(false), error(error) {}
+    explicit GatherMeshDataResult(const string& error) : success(false), error(error)
+    {}
     GatherMeshDataResult(GatherMeshDataResult&& other) noexcept
         : success(other.success), error(move(other.error)), meshBuilder(move(other.meshBuilder))
     {}
@@ -448,7 +504,7 @@ struct GatherMeshDataResult {
     }
 
     /** Indicates, whether the load operation is successful. */
-    bool success { true };
+    bool success{true};
 
     /** In case of import error, contains the description of the error. */
     string error;
@@ -473,7 +529,7 @@ void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f
     data.data = move(converted);
 }
 
-template<typename T>
+template <typename T>
 void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, bool& primitiveRestart)
 {
     const auto elementCount = Math::min(indices.elementCount, indices.data.size_in_bytes() / sizeof(T));
@@ -588,12 +644,16 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
     PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
 #endif
+    if (loadDataResult.elementCount != importInfo.vertexCount) {
+        PLUGIN_LOG_E("Morph target element count mismatch");
+        return;
+    }
     if (finalDataResult.componentCount > 0U) {
         finalDataResult.data.append(loadDataResult.data.begin(), loadDataResult.data.end());
-        for (size_t i = 0; i < finalDataResult.min.size(); i++) {
+        for (size_t i = 0; i < std::min(finalDataResult.min.size(), loadDataResult.min.size()); i++) {
             finalDataResult.min[i] = std::min(finalDataResult.min[i], loadDataResult.min[i]);
         }
-        for (size_t i = 0; i < finalDataResult.max.size(); i++) {
+        for (size_t i = 0; i < std::min(finalDataResult.max.size(), loadDataResult.max.size()); i++) {
             finalDataResult.max[i] = std::max(finalDataResult.max[i], loadDataResult.max[i]);
         }
     } else {
@@ -676,7 +736,8 @@ IndexType GetPrimitiveIndexType(const GLTF2::MeshPrimitive& primitive)
 
 bool ContainsAttribute(const GLTF2::MeshPrimitive& primitive, GLTF2::AttributeType type)
 {
-    return std::any_of(primitive.attributes.begin(), primitive.attributes.end(),
+    return std::any_of(primitive.attributes.begin(),
+        primitive.attributes.end(),
         [type](const GLTF2::Attribute& attribute) { return attribute.attribute.type == type; });
 }
 
@@ -707,7 +768,8 @@ IMeshBuilder::Submesh CreatePrimitiveImportInfo(const GLTFImportResult& importRe
         // Therefore we must have tangents defined for this primitive.
         info.tangents = primitive.targets.size() > 0;
     }
-    if (const auto pos = std::find_if(primitive.attributes.begin(), primitive.attributes.end(),
+    if (const auto pos = std::find_if(primitive.attributes.begin(),
+            primitive.attributes.end(),
             [](const GLTF2::Attribute& attribute) {
                 return attribute.attribute.type == GLTF2::AttributeType::POSITION;
             });
@@ -742,7 +804,7 @@ string GatherErrorStrings(size_t primitiveIndex, const GLTF2::GLTFLoadDataResult
 
 struct IndicesResult {
     GLTF2::GLTFLoadDataResult loadDataResult;
-    bool primitiveRestart { false };
+    bool primitiveRestart{false};
 };
 
 IndicesResult LoadIndices(GatherMeshDataResult& result, const GLTF2::MeshPrimitive& primitive, IndexType indexType,
@@ -782,7 +844,7 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         uint32_t const loadedVertexCount = static_cast<uint32_t>(position.elementCount);
 
         auto fillDataBuffer = [](GLTF2::GLTFLoadDataResult& attribute) {
-            return IMeshBuilder::DataBuffer {
+            return IMeshBuilder::DataBuffer{
                 Convert(attribute.componentType, attribute.componentCount, attribute.normalized),
                 static_cast<uint32_t>(attribute.elementSize),
                 attribute.data,
@@ -801,11 +863,12 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
         IndicesResult indices = LoadIndices(result, primitive, importInfo.indexType, loadedVertexCount);
         if (!indices.loadDataResult.data.empty()) {
             const auto elementSize = indices.loadDataResult.elementSize;
-            const IMeshBuilder::DataBuffer data { (elementSize == sizeof(uint32_t))
-                                                      ? BASE_FORMAT_R32_UINT
-                                                      : ((elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT
-                                                                                           : BASE_FORMAT_R8_UINT),
-                static_cast<uint32_t>(elementSize), { indices.loadDataResult.data } };
+            const IMeshBuilder::DataBuffer data{
+                (elementSize == sizeof(uint32_t))
+                    ? BASE_FORMAT_R32_UINT
+                    : ((elementSize == sizeof(uint16_t)) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R8_UINT),
+                static_cast<uint32_t>(elementSize),
+                {indices.loadDataResult.data}};
             result.meshBuilder->SetIndexData(primitiveIndex, data);
             if (indices.primitiveRestart) {
                 result.meshBuilder->EnablePrimitiveRestart(primitiveIndex);
@@ -814,8 +877,8 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
 
         // Set AABB.
         if (position.min.size() == 3 && position.max.size() == 3) {
-            const Math::Vec3 min = { position.min[0], position.min[1], position.min[2] };
-            const Math::Vec3 max = { position.max[0], position.max[1], position.max[2] };
+            const Math::Vec3 min = {position.min[0], position.min[1], position.min[2]};
+            const Math::Vec3 max = {position.max[0], position.max[1], position.max[2]};
             result.meshBuilder->SetAABB(primitiveIndex, min, max);
         } else {
             result.meshBuilder->CalculateAABB(primitiveIndex, positions);
@@ -841,29 +904,33 @@ void ProcessPrimitives(GatherMeshDataResult& result, uint32_t flags, array_view<
     }
 }
 
+string_view GetVertexInputDeclarationPath(const Render::IRenderContext& context)
+{
+    auto dataStore = Base::refcnt_ptr<Render::IRenderDataStorePod>(
+        context.GetRenderDataStoreManager().GetRenderDataStore(POD_DATA_STORE_NAME));
+    if (dataStore) {
+        auto pod = Base::refcnt_ptr<Render::IRenderDataStorePod>(dataStore.get());
+        auto const dataView = pod->Get(VERTEX_INPUT_DECLARATIONS);
+        if (!dataView.empty() && dataView.data()) {
+            auto path = string_view((const char*)dataView.data(), dataView.size());
+            return path;
+        }
+    }
+    return DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD;
+}
+
 GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportResult& importResult, uint32_t flags,
-    const IMaterialComponentManager& materialManager, const IDevice& device, IEngine& engine)
+    const IMaterialComponentManager& materialManager, IRenderContext& context,
+    const VertexInputDeclarationView& vertexInputDeclaration)
 {
     GatherMeshDataResult result;
-    auto intf = engine.GetInterface<IClassRegister>();
-    if (!intf) {
-        result.success = false;
-        result.error = "Class register unavailable.";
-        return result;
-    }
-    auto context = CORE3D_NS::GetInstance<IRenderContext>(*engine.GetInterface<IClassRegister>(), UID_RENDER_CONTEXT);
-    if (!context) {
-        result.success = false;
-        result.error = "RenderContext not found.";
-        return result;
-    }
-    auto& shaderManager = device.GetShaderManager();
-    const VertexInputDeclarationView vertexInputDeclaration =
-        shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(
-            DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD));
-
     result.meshBuilder.reset(
-        static_cast<MeshBuilder*>(CORE3D_NS::CreateInstance<IMeshBuilder>(*context, UID_MESH_BUILDER).get()));
+        static_cast<MeshBuilder*>(CORE3D_NS::CreateInstance<IMeshBuilder>(context, UID_MESH_BUILDER).get()));
+    if (!result.meshBuilder) {
+        result.success = false;
+        result.error += "MeshBuilder not found.";
+        return result;
+    }
     result.meshBuilder->Initialize(vertexInputDeclaration, mesh.primitives.size());
 
     // Create primitive import info for mesh builder.
@@ -878,7 +945,7 @@ GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportRes
     // Feed primitive data for builder.
     ProcessPrimitives(result, flags, mesh.primitives);
 
-    if (result.meshBuilder->GetVertexCount()) {
+    if (result.meshBuilder->GetVertexCount() && !(flags & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS)) {
         result.meshBuilder->CreateGpuResources();
     }
 
@@ -910,7 +977,8 @@ string ResolveNodePath(GLTF2::Node const& node)
     length -= node.name.size();
     const auto begin = path.begin();
     path.replace(begin + static_cast<string::difference_type>(length),
-        begin + static_cast<string::difference_type>(length + node.name.size()), node.name);
+        begin + static_cast<string::difference_type>(length + node.name.size()),
+        node.name);
 
     parent = node.parent;
     while (parent) {
@@ -918,7 +986,8 @@ string ResolveNodePath(GLTF2::Node const& node)
         path[length] = '/';
         length -= parent->name.size();
         path.replace(begin + static_cast<string::difference_type>(length),
-            begin + static_cast<string::difference_type>(length + parent->name.size()), parent->name);
+            begin + static_cast<string::difference_type>(length + parent->name.size()),
+            parent->name);
         parent = parent->parent;
     }
 
@@ -928,7 +997,6 @@ string ResolveNodePath(GLTF2::Node const& node)
 bool BuildSkinIbmComponent(GLTF2::Skin const& skin, SkinIbmComponent& skinIbm)
 {
     skinIbm.matrices.reserve(skin.joints.size());
-    bool failed = false;
     bool useIdentityMatrix = true;
     if (skin.inverseBindMatrices) {
         GLTF2::GLTFLoadDataResult loadDataResult = GLTF2::LoadData(*skin.inverseBindMatrices);
@@ -937,10 +1005,9 @@ bool BuildSkinIbmComponent(GLTF2::Skin const& skin, SkinIbmComponent& skinIbm)
             auto ibls = array_view(
                 reinterpret_cast<Math::Mat4X4 const*>(loadDataResult.data.data()), loadDataResult.elementCount);
             skinIbm.matrices.append(ibls.begin(), ibls.end());
+        } else {
+            return false;
         }
-    }
-    if (failed) {
-        return false;
     }
 
     if (useIdentityMatrix) {
@@ -971,12 +1038,11 @@ inline bool operator==(const GLTF2::TextureInfo& info, const GLTF2::Image& image
     return info.texture && info.texture->image == &image;
 }
 
-inline void BaseColorFlags(
-    const GLTF2::Material& material, const GLTF2::Image& image, uint32_t& result, uint32_t& usage)
+inline void BaseColorFlags(const GLTF2::Material& material, const GLTF2::Image& image, uint32_t& result,
+    uint32_t& usage, uint32_t baseColorFlags)
 {
     if (material.metallicRoughness.baseColorTexture == image) {
-        result |= (IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT |
-                   IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_PREMULTIPLY_ALPHA);
+        result |= baseColorFlags;
         usage |= IMAGE_USAGE_BASE_COLOR_BIT;
     }
 }
@@ -1109,8 +1175,103 @@ inline void TransmissionFlags(
 }
 #endif
 
-uint32_t ResolveImageLoadFlags(
-    GLTF2::Image const& image, GLTF2::Data const& data, const ColorSpaceFlags colorSpaceFlags)
+void ResolveMaterialImageUsage(const GLTF2::Material& material, const GLTF2::Image& image, uint32_t& result,
+    uint32_t& usage, uint32_t baseColorLoadFlags)
+{
+    BaseColorFlags(material, image, result, usage, baseColorLoadFlags);
+    MetallicRoughnessFlags(material, image, result, usage);
+    NormalFlags(material, image, result, usage);
+    EmissiveFlags(material, image, result, usage);
+    OcclusionFlags(material, image, result, usage);
+
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
+    SpecularGlossinessFlags(material, image, result, usage);
+#endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT)
+    ClearcoatFlags(material, image, result, usage);
+    ClearcoatRoughnessFlags(material, image, result, usage);
+    ClearcoatNormalFlags(material, image, result, usage);
+#endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_SHEEN)
+    SheenFlags(material, image, result, usage);
+    SheenRoughnessFlags(material, image, result, usage);
+#endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_SPECULAR)
+    SpecularColorFlags(material, image, result, usage);
+    SpecularStrengthFlags(material, image, result, usage);
+#endif
+#if defined(GLTF2_EXTENSION_KHR_MATERIALS_TRANSMISSION)
+    TransmissionFlags(material, image, result, usage);
+#endif
+}
+
+void ApplySrgbAsLinear(ColorSpaceFlags colorSpaceFlags, uint32_t& result)
+{
+    if (colorSpaceFlags & ColorSpaceFlagBits::COLOR_SPACE_SRGB_AS_LINEAR_BIT) {
+        result &= (~IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT);
+        result |= IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
+    }
+}
+
+void ApplyForcedBaseColorColorSpace(
+    uint32_t usage, uint32_t baseColorLoadFlags, bool forceBaseColorTextureColorSpace, uint32_t& result)
+{
+    if (forceBaseColorTextureColorSpace && (usage & IMAGE_USAGE_BASE_COLOR_BIT)) {
+        constexpr uint32_t colorSpaceLoadFlags =
+            IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT |
+            IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
+        result = (result & ~colorSpaceLoadFlags) | baseColorLoadFlags;
+    }
+}
+
+void WarnAmbiguousColorSpace(const GLTF2::Image& image)
+{
+    if (GLTF2::IsDataURI(image.uri)) {
+        PLUGIN_LOG_W("Unable to resolve color space for Image, defaulting to SRGB.");
+    } else {
+        PLUGIN_LOG_W("Unable to resolve color space for Image %s, defaulting to SRGB.", image.uri.c_str());
+    }
+}
+
+uint32_t GetMipmapsLevel(const RENDER_NS::IRenderContext& context)
+{
+    auto dataStore = Base::refcnt_ptr<Render::IRenderDataStorePod>(
+        context.GetRenderDataStoreManager().GetRenderDataStore(POD_DATA_STORE_NAME));
+    if (dataStore) {
+        auto pod = Base::refcnt_ptr<Render::IRenderDataStorePod>(dataStore.get());
+        auto const dataView = pod->Get(MIPMAPS_FLAG);
+        if (!dataView.empty() && dataView.data() && dataView.size_bytes() == sizeof(uint32_t)) {
+            uint32_t flag = *((uint32_t*)dataView.data());
+            return flag;
+        }
+    }
+    return IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_GENERATE_MIPS;
+}
+
+uint32_t GetBaseColorFlags(const RENDER_NS::IRenderContext& context)
+{
+    auto dataStore = Base::refcnt_ptr<Render::IRenderDataStorePod>(
+        context.GetRenderDataStoreManager().GetRenderDataStore(POD_DATA_STORE_NAME));
+    if (dataStore) {
+        auto pod = Base::refcnt_ptr<Render::IRenderDataStorePod>(dataStore.get());
+        auto const dataView = pod->Get(BASE_COLOR_FLAGS);
+        if (!dataView.empty() && dataView.data() && dataView.size_bytes() == sizeof(uint32_t)) {
+            uint32_t flag = *((uint32_t*)dataView.data());
+            return flag;
+        }
+    }
+    return (IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT |
+            IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_PREMULTIPLY_ALPHA);
+}
+
+struct ImageLoadConfig {
+    ColorSpaceFlags colorSpaceFlags;
+    uint32_t mipLoadFlags;
+    uint32_t baseColorLoadFlags;
+    bool forceBaseColorTextureColorSpace;
+};
+
+uint32_t ResolveImageLoadFlags(GLTF2::Image const& image, GLTF2::Data const& data, const ImageLoadConfig& config)
 {
     // Resolve whether image should be imported as SRGB or LINEAR.
     uint32_t result = 0;
@@ -1118,42 +1279,16 @@ uint32_t ResolveImageLoadFlags(
     uint32_t usage = 0;
 
     // Generating mipmaps for all textures (if not already contained in the image).
-    result |= IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_GENERATE_MIPS;
+    result |= config.mipLoadFlags;
 
     for (const auto& material : data.materials) {
-        BaseColorFlags(*material, image, result, usage);
-        MetallicRoughnessFlags(*material, image, result, usage);
-        NormalFlags(*material, image, result, usage);
-        EmissiveFlags(*material, image, result, usage);
-        OcclusionFlags(*material, image, result, usage);
-
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
-        SpecularGlossinessFlags(*material, image, result, usage);
-#endif
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT)
-        ClearcoatFlags(*material, image, result, usage);
-        ClearcoatRoughnessFlags(*material, image, result, usage);
-        ClearcoatNormalFlags(*material, image, result, usage);
-#endif
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_SHEEN)
-        SheenFlags(*material, image, result, usage);
-        SheenRoughnessFlags(*material, image, result, usage);
-#endif
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_SPECULAR)
-        SpecularColorFlags(*material, image, result, usage);
-        SpecularStrengthFlags(*material, image, result, usage);
-#endif
-#if defined(GLTF2_EXTENSION_KHR_MATERIALS_TRANSMISSION)
-        TransmissionFlags(*material, image, result, usage);
-#endif
-        // possible color space conversions
-        if (colorSpaceFlags & ColorSpaceFlagBits::COLOR_SPACE_SRGB_AS_LINEAR_BIT) {
-            // remove srgb
-            result &= (~IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT);
-            // add forcing of linear
-            result |= IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
-        }
+        ResolveMaterialImageUsage(*material, image, result, usage, config.baseColorLoadFlags);
     }
+
+    if (!data.materials.empty()) {
+        ApplySrgbAsLinear(config.colorSpaceFlags, result);
+    }
+    ApplyForcedBaseColorColorSpace(usage, config.baseColorLoadFlags, config.forceBaseColorTextureColorSpace, result);
 
     // In case the texture is only used in occlusion channel, we can convert it to grayscale R8.
     if ((usage & (IMAGE_USAGE_SINGLE_CHANNEL)) && !(usage & ~(IMAGE_USAGE_SINGLE_CHANNEL))) {
@@ -1165,12 +1300,7 @@ uint32_t ResolveImageLoadFlags(
     if (isSRGB && isLinear) {
         // In case the texture has both SRGB & LINEAR set, default to SRGB and print a warning.
         result &= ~IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
-
-        if (GLTF2::IsDataURI(image.uri)) {
-            PLUGIN_LOG_W("Unable to resolve color space for Image, defaulting to SRGB.");
-        } else {
-            PLUGIN_LOG_W("Unable to resolve color space for Image %s, defaulting to SRGB.", image.uri.c_str());
-        }
+        WarnAmbiguousColorSpace(image);
     }
 
     return result;
@@ -1192,12 +1322,12 @@ EntityReference ResolveSampler(
 inline EntityReference ResolveSampler(
     const GLTF2::TextureInfo& textureInfo, GLTF2::Data const& data, GLTFImportResult const& importResult)
 {
-    return textureInfo.texture ? ResolveSampler(*textureInfo.texture, data, importResult) : EntityReference {};
+    return textureInfo.texture ? ResolveSampler(*textureInfo.texture, data, importResult) : EntityReference{};
 }
 
 // Textures
 IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data const& data, IFileManager& fileManager,
-    IImageLoaderManager& imageManager, uint32_t loadFlags, ColorSpaceFlags colorSpaceFlags)
+    IImageLoaderManager& imageManager, uint32_t loadFlags, const ImageLoadConfig& config)
 {
     vector<uint8_t> raw;
 
@@ -1212,13 +1342,13 @@ IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data
         const auto result = GLTF2::LoadUri(image.uri, "image", data.filepath, fileManager, extension, raw);
         switch (result) {
             case GLTF2::URI_LOAD_FAILED_TO_DECODE_BASE64:
-                return IImageLoaderManager::LoadResult { false, "Base64 decoding failed.", nullptr };
+                return IImageLoaderManager::LoadResult{false, "Base64 decoding failed.", nullptr};
 
             case GLTF2::URI_LOAD_FAILED_TO_READ_FILE:
-                return IImageLoaderManager::LoadResult { false, "Failed to read file.", nullptr };
+                return IImageLoaderManager::LoadResult{false, "Failed to read file.", nullptr};
 
             case GLTF2::URI_LOAD_FAILED_INVALID_MIME_TYPE:
-                return IImageLoaderManager::LoadResult { false, "Image data is not image type.", nullptr };
+                return IImageLoaderManager::LoadResult{false, "Image data is not image type.", nullptr};
 
             default:
             case GLTF2::URI_LOAD_SUCCESS:
@@ -1227,9 +1357,9 @@ IImageLoaderManager::LoadResult GatherImageData(GLTF2::Image& image, GLTF2::Data
     }
 
     // Resolve image usage and determine flags.
-    const uint32_t flags = ResolveImageLoadFlags(image, data, colorSpaceFlags) | loadFlags;
+    const uint32_t flags = ResolveImageLoadFlags(image, data, config) | loadFlags;
 
-    array_view<const uint8_t> rawdata { raw };
+    array_view<const uint8_t> rawdata{raw};
     return imageManager.LoadImage(rawdata, flags);
 }
 
@@ -1280,7 +1410,7 @@ AnimationTrackComponent::Interpolation ConvertAnimationInterpolation(GLTF2::Anim
     return AnimationTrackComponent::Interpolation::LINEAR;
 }
 
-template<class T>
+template <class T>
 void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vector<T>& destination)
 {
     destination.resize(animationFrameDataResult.elementCount);
@@ -1288,7 +1418,15 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
         PLUGIN_ASSERT(animationFrameDataResult.elementSize == sizeof(T));
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
-        if (!CloneData(destination.data(), destination.size() * sizeof(T), animationFrameDataResult.data.data(),
+        if (animationFrameDataResult.elementSize != sizeof(T)) {
+            PLUGIN_LOG_E("Animation element size mismatch: expected %u, got %zu",
+                static_cast<uint32_t>(sizeof(T)),
+                animationFrameDataResult.elementSize);
+            return;
+        }
+        if (!CloneData(destination.data(),
+                destination.size() * sizeof(T),
+                animationFrameDataResult.data.data(),
                 dataSizeInBytes)) {
             PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
@@ -1302,7 +1440,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
     }
 }
 
-template<>
+template <>
 void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vector<bool>& destination)
 {
     destination.resize(animationFrameDataResult.elementCount);
@@ -1311,7 +1449,9 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
         PLUGIN_ASSERT(animationFrameDataResult.elementSize == sizeof(bool));
 
         const size_t dataSizeInBytes = animationFrameDataResult.elementSize * animationFrameDataResult.elementCount;
-        if (!CloneData(destination.data(), destination.size() * sizeof(bool), animationFrameDataResult.data.data(),
+        if (!CloneData(destination.data(),
+                destination.size() * sizeof(bool),
+                animationFrameDataResult.data.data(),
                 dataSizeInBytes)) {
             PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
@@ -1336,7 +1476,7 @@ bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLT
     return animationInputDataResult.success;
 }
 
-template<typename ReadType>
+template <typename ReadType>
 void AppendAnimationOutputData(uint64_t outputTypeHash, const GLTF2::GLTFLoadDataResult& animationOutputDataResult,
     AnimationOutputComponent& outputComponent)
 {
@@ -1412,69 +1552,125 @@ void FillTextureParams(const GLTF2::TextureInfo& textureInfo, const GLTFImportRe
     }
 }
 
-RenderHandleReference ImportTexture(const string_view uri, IImageContainer::Ptr image,
-    IRenderDataStoreDefaultStaging& staging, IGpuResourceManager& gpuResourceManager)
+void ApplyTextureMipLimit(GpuImageDesc& gpuImageDesc, uint32_t maxTextureMipLevels)
+{
+    if (maxTextureMipLevels > 0U) {
+        gpuImageDesc.mipCount = Math::max(1U, Math::min(gpuImageDesc.mipCount, maxTextureMipLevels));
+    }
+    if (gpuImageDesc.mipCount <= 1U) {
+        gpuImageDesc.engineCreationFlags &= ~EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_GENERATE_MIPS;
+        gpuImageDesc.usageFlags &= ~ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+}
+
+GpuImageDesc CreateImportTextureDesc(
+    const IImageContainer& image, IGpuResourceManager& gpuResourceManager, uint32_t maxTextureMipLevels)
+{
+    GpuImageDesc gpuImageDesc = gpuResourceManager.CreateGpuImageDesc(image.GetImageDesc());
+    ApplyTextureMipLimit(gpuImageDesc, maxTextureMipLevels);
+    return gpuImageDesc;
+}
+
+RenderHandleReference CreateImageUploadBuffer(array_view<const uint8_t> data, IGpuResourceManager& gpuResourceManager)
+{
+    GpuBufferDesc gpuBufferDesc;
+    gpuBufferDesc.usageFlags = BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    gpuBufferDesc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    gpuBufferDesc.engineCreationFlags = EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
+                                        EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
+                                        EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
+    gpuBufferDesc.byteSize = static_cast<uint32_t>(data.size_bytes());
+
+    auto bufferHandle = gpuResourceManager.Create(gpuBufferDesc);
+    if (auto buffer = static_cast<uint8_t*>(gpuResourceManager.MapBufferMemory(bufferHandle)); buffer) {
+        const auto count = Math::min(static_cast<uint32_t>(data.size_bytes()), gpuBufferDesc.byteSize);
+        std::copy(data.data(), data.data() + count, buffer);
+    }
+    gpuResourceManager.UnmapBuffer(bufferHandle);
+    return bufferHandle;
+}
+
+BufferImageCopy CreateBufferImageCopy(const IImageContainer::SubImageDesc& subImageDesc)
+{
+    return {
+        subImageDesc.bufferOffset,       // bufferOffset
+        subImageDesc.bufferRowLength,    // bufferRowLength
+        subImageDesc.bufferImageHeight,  // bufferImageHeight
+        {
+            CORE_IMAGE_ASPECT_COLOR_BIT,                               // imageAspectFlags
+            subImageDesc.mipLevel,                                     // mipLevel
+            0,                                                         // baseArrayLayer
+            subImageDesc.layerCount,                                   // layerCount
+        },                                                             // imageSubresource
+        {},                                                            // imageOffset
+        {subImageDesc.width, subImageDesc.height, subImageDesc.depth}  // imageExtent
+    };
+}
+
+void CopyImageSubresources(IRenderDataStoreDefaultStaging& staging, const RenderHandleReference& bufferHandle,
+    const RenderHandleReference& imageHandle, array_view<const IImageContainer::SubImageDesc> subImageDescs,
+    uint32_t mipCount)
+{
+    if ((subImageDescs.size() == 1U) && (subImageDescs[0].mipLevel < mipCount)) {
+        const BufferImageCopy copy = CreateBufferImageCopy(subImageDescs[0]);
+        staging.CopyBufferToImage(bufferHandle, imageHandle, array_view<const BufferImageCopy>(&copy, 1U));
+        return;
+    }
+
+    vector<BufferImageCopy> copies;
+    copies.reserve(subImageDescs.size());
+    for (const auto& subImageDesc : subImageDescs) {
+        if (subImageDesc.mipLevel < mipCount) {
+            copies.push_back(CreateBufferImageCopy(subImageDesc));
+        }
+    }
+    if (!copies.empty()) {
+        staging.CopyBufferToImage(bufferHandle, imageHandle, copies);
+    }
+}
+
+struct TextureImportContext {
+    IRenderDataStoreDefaultStaging& staging;
+    IGpuResourceManager& gpuResourceManager;
+    uint32_t maxTextureMipLevels;
+    bool useUriCache;
+};
+
+RenderHandleReference ImportTexture(const string_view uri, IImageContainer::Ptr image, const TextureImportContext& ctx)
 {
     RenderHandleReference imageHandle;
     if (!image) {
         return imageHandle;
     }
     // return if image created already with the uri
-    imageHandle = gpuResourceManager.GetImageHandle(uri);
+    if (ctx.useUriCache) {
+        imageHandle = ctx.gpuResourceManager.GetImageHandle(uri);
+    }
     if (imageHandle) {
         return imageHandle;
     }
 
-    const auto& imageDesc = image->GetImageDesc();
-    const auto& subImageDescs = image->GetBufferImageCopies();
     const auto data = image->GetData();
 
     // Create image according to the image container's description. (expects that conversion handles everything)
-    const GpuImageDesc gpuImageDesc = gpuResourceManager.CreateGpuImageDesc(imageDesc);
-    imageHandle = gpuResourceManager.Create(uri, gpuImageDesc);
+    GpuImageDesc gpuImageDesc = CreateImportTextureDesc(*image, ctx.gpuResourceManager, ctx.maxTextureMipLevels);
+    imageHandle = ctx.useUriCache ? ctx.gpuResourceManager.Create(uri, gpuImageDesc)
+                                  : ctx.gpuResourceManager.Create(gpuImageDesc);
 
     if (imageHandle) {
-        // Create buffer for uploading image data
-        GpuBufferDesc gpuBufferDesc;
-        gpuBufferDesc.usageFlags = BufferUsageFlagBits::CORE_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        gpuBufferDesc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        gpuBufferDesc.engineCreationFlags =
-            EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
-            EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
-            EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
-        gpuBufferDesc.byteSize = static_cast<uint32_t>(data.size_bytes());
-        auto bufferHandle = gpuResourceManager.Create(gpuBufferDesc);
-        // Ideally ImageLoader would decode directly to the buffer to save one copy.
-        if (auto buffer = static_cast<uint8_t*>(gpuResourceManager.MapBufferMemory(bufferHandle)); buffer) {
-            const auto count = Math::min(static_cast<uint32_t>(data.size_bytes()), gpuBufferDesc.byteSize);
-            std::copy(data.data(), data.data() + count, buffer);
+        if (data.size_bytes() > UINT32_MAX) {
+            return {};
         }
-        gpuResourceManager.UnmapBuffer(bufferHandle);
-
+        const auto bufferHandle = CreateImageUploadBuffer(data, ctx.gpuResourceManager);
         // Gather copy operations for all the sub images (mip levels, cube faces)
-        vector<BufferImageCopy> copies;
-        copies.reserve(subImageDescs.size());
-        for (const auto& subImageDesc : subImageDescs) {
-            const BufferImageCopy bufferImageCopy {
-                subImageDesc.bufferOffset,      // bufferOffset
-                subImageDesc.bufferRowLength,   // bufferRowLength
-                subImageDesc.bufferImageHeight, // bufferImageHeight
-                {
-                    CORE_IMAGE_ASPECT_COLOR_BIT,                                // imageAspectFlags
-                    subImageDesc.mipLevel,                                      // mipLevel
-                    0,                                                          // baseArrayLayer
-                    subImageDesc.layerCount,                                    // layerCount
-                },                                                              // imageSubresource
-                {},                                                             // imageOffset
-                { subImageDesc.width, subImageDesc.height, subImageDesc.depth } // imageExtent
-            };
-            copies.push_back(bufferImageCopy);
-        }
-        staging.CopyBufferToImage(bufferHandle, imageHandle, copies);
+        CopyImageSubresources(
+            ctx.staging, bufferHandle, imageHandle, image->GetBufferImageCopies(), gpuImageDesc.mipCount);
     } else {
         PLUGIN_LOG_W("Creating an import image failed (format:%u, width:%u, height:%u)",
-            static_cast<uint32_t>(gpuImageDesc.format), gpuImageDesc.width, gpuImageDesc.height);
+            static_cast<uint32_t>(gpuImageDesc.format),
+            gpuImageDesc.width,
+            gpuImageDesc.height);
     }
     return imageHandle;
 }
@@ -1483,12 +1679,20 @@ void FillMetallicRoughness(MaterialComponent& desc, const GLTFImportResult& impo
     const GLTF2::Material& gltfMaterial, IEntityManager& em)
 {
     desc.type = MaterialComponent::Type::METALLIC_ROUGHNESS;
-    FillTextureParams(gltfMaterial.metallicRoughness.baseColorTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.metallicRoughness.baseColorTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::BASE_COLOR);
     desc.textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = gltfMaterial.metallicRoughness.baseColorFactor;
 
     // Metallic-roughness.
-    FillTextureParams(gltfMaterial.metallicRoughness.metallicRoughnessTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.metallicRoughness.metallicRoughnessTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::MATERIAL);
     desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.y = gltfMaterial.metallicRoughness.roughnessFactor;
     desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.z = gltfMaterial.metallicRoughness.metallicFactor;
@@ -1499,15 +1703,23 @@ void FillSpecularGlossiness(MaterialComponent& desc, const GLTFImportResult& imp
 {
     desc.type = MaterialComponent::Type::SPECULAR_GLOSSINESS;
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
-    FillTextureParams(gltfMaterial.specularGlossiness.diffuseTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.specularGlossiness.diffuseTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::BASE_COLOR);
     desc.textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = gltfMaterial.specularGlossiness.diffuseFactor;
 
     // Glossiness.
-    FillTextureParams(gltfMaterial.specularGlossiness.specularGlossinessTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.specularGlossiness.specularGlossinessTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::MATERIAL);
-    desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor = { gltfMaterial.specularGlossiness.specularFactor,
-        gltfMaterial.specularGlossiness.glossinessFactor };
+    desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor = {
+        gltfMaterial.specularGlossiness.specularFactor, gltfMaterial.specularGlossiness.glossinessFactor};
 #endif
 }
 
@@ -1516,7 +1728,11 @@ void FillUnlit(MaterialComponent& desc, const GLTFImportResult& importResult, co
 {
     desc.type = MaterialComponent::Type::UNLIT;
 
-    FillTextureParams(gltfMaterial.metallicRoughness.baseColorTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.metallicRoughness.baseColorTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::BASE_COLOR);
     desc.textures[MaterialComponent::TextureIndex::BASE_COLOR].factor = gltfMaterial.metallicRoughness.baseColorFactor;
 }
@@ -1530,9 +1746,17 @@ void FillClearcoat(MaterialComponent& desc, const GLTFImportResult& importResult
     FillTextureParams(
         gltfMaterial.clearcoat.texture, importResult, data, em, desc, MaterialComponent::TextureIndex::CLEARCOAT);
     desc.textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].factor.y = gltfMaterial.clearcoat.roughness;
-    FillTextureParams(gltfMaterial.clearcoat.roughnessTexture, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.clearcoat.roughnessTexture,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS);
-    FillTextureParams(gltfMaterial.clearcoat.normalTexture.textureInfo, importResult, data, em, desc,
+    FillTextureParams(gltfMaterial.clearcoat.normalTexture.textureInfo,
+        importResult,
+        data,
+        em,
+        desc,
         MaterialComponent::TextureIndex::CLEARCOAT_NORMAL);
     desc.textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].factor.x =
         gltfMaterial.clearcoat.normalTexture.scale;
@@ -1545,8 +1769,12 @@ void FillIor(MaterialComponent& desc, const GLTFImportResult& importResult, cons
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
     // IOR.
     if (gltfMaterial.ior.ior != 1.5f) {
-        auto reflectance = (gltfMaterial.ior.ior - 1.f) / (gltfMaterial.ior.ior + 1.f);
-        desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.w = reflectance * reflectance;
+        if (Math::abs(gltfMaterial.ior.ior + 1.0f) < Math::EPSILON) {
+            desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.w = 0.0f;
+        } else {
+            auto reflectance = (gltfMaterial.ior.ior - 1.f) / (gltfMaterial.ior.ior + 1.f);
+            desc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.w = reflectance * reflectance;
+        }
     }
 #endif
 }
@@ -1580,15 +1808,27 @@ void FillSpecular(MaterialComponent& desc, const GLTFImportResult& importResult,
         desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_COLOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index == GLTF2::GLTF_INVALID_INDEX &&
                gltfMaterial.specular.colorTexture.index != GLTF2::GLTF_INVALID_INDEX) {
-        FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
+        FillTextureParams(gltfMaterial.specular.colorTexture,
+            importResult,
+            data,
+            em,
+            desc,
             MaterialComponent::TextureIndex::SPECULAR);
         desc.extraRenderingFlags |= MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE;
     } else if (gltfMaterial.specular.texture.index != gltfMaterial.specular.colorTexture.index) {
         PLUGIN_LOG_W("Separate specular strength and color textures are not supported!");
-        FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
+        FillTextureParams(gltfMaterial.specular.colorTexture,
+            importResult,
+            data,
+            em,
+            desc,
             MaterialComponent::TextureIndex::SPECULAR);
-    } else { // both textures valid
-        FillTextureParams(gltfMaterial.specular.colorTexture, importResult, data, em, desc,
+    } else {  // both textures valid
+        FillTextureParams(gltfMaterial.specular.colorTexture,
+            importResult,
+            data,
+            em,
+            desc,
             MaterialComponent::TextureIndex::SPECULAR);
         desc.extraRenderingFlags &= ~(MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_COLOR_TEXTURE |
                                       MaterialComponent::ExtraRenderingFlagBits::IGNORE_SPECULAR_FACTOR_TEXTURE);
@@ -1616,10 +1856,10 @@ void SelectShaders(MaterialComponent& desc, const GLTF2::Material& gltfMaterial,
         desc.materialShader.shader = dmShaderData.blend.shader;
         // no support for double-sideness with default material and transmission
         desc.materialShader.graphicsState = dmShaderData.blend.gfxState;
-        if (gltfMaterial.alphaMode == GLTF2::AlphaMode::BLEND) { // blending -> no shadows
+        if (gltfMaterial.alphaMode == GLTF2::AlphaMode::BLEND_ALPHA) {  // blending -> no shadows
             desc.materialLightingFlags &= (~MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT);
         }
-    } else if (gltfMaterial.alphaMode == GLTF2::AlphaMode::BLEND) {
+    } else if (gltfMaterial.alphaMode == GLTF2::AlphaMode::BLEND_ALPHA) {
         desc.materialShader.shader = dmShaderData.blend.shader;
         desc.materialShader.graphicsState =
             gltfMaterial.doubleSided ? dmShaderData.blend.gfxStateDoubleSided : dmShaderData.blend.gfxState;
@@ -1686,7 +1926,7 @@ bool ImportMaterial(GLTFImportResult const& importResult, GLTF2::Data const& dat
     desc.materialLightingFlags |= MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT;
     desc.materialLightingFlags |= MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT;
 
-    if (gltfMaterial.alphaMode == GLTF2::AlphaMode::MASK) {
+    if (gltfMaterial.alphaMode == GLTF2::AlphaMode::MASK_ALPHA) {
         // we "enable" if it's set
         desc.alphaCutoff = gltfMaterial.alphaCutoff;
     }
@@ -1752,19 +1992,27 @@ SamplerAddressMode ConvertToCoreWrapMode(GLTF2::WrapMode mode)
     }
 }
 
-void RecursivelyCreateEntities(IEntityManager& entityManager, GLTF2::Data const& data, GLTF2::Node const& node,
-    unordered_map<size_t, Entity>& sceneEntities)
+void CreateEntitiesForHierarchy(IEntityManager& entityManager, const GLTF2::Node& rootNode,
+    unordered_map<size_t, Entity>& sceneEntities, const NodeIndexLookup& nodeIndices, NodeTraversalStack& nodeStack)
 {
-    // Look up node index nodes array.
-    if (size_t const nodeIndex = FindIndex(data.nodes, &node); nodeIndex != GLTF2::GLTF_INVALID_INDEX) {
-        // Create entity for this node in this scene.
-        sceneEntities[nodeIndex] = entityManager.Create();
-    } else {
-        // NOTE: Failed to find given node.
-    }
+    nodeStack.clear();
+    nodeStack.push_back(&rootNode);
 
-    for (auto child : node.children) {
-        RecursivelyCreateEntities(entityManager, data, *child, sceneEntities);
+    while (!nodeStack.empty()) {
+        const auto* node = nodeStack.back();
+        nodeStack.pop_back();
+
+        if (size_t const nodeIndex = FindNodeIndex(nodeIndices, node); nodeIndex != GLTF2::GLTF_INVALID_INDEX) {
+            // Create entity for this node in this scene.
+            sceneEntities[nodeIndex] = entityManager.Create();
+        } else {
+            // NOTE: Failed to find given node.
+        }
+
+        // Preserve the previous preorder traversal by visiting children in source order.
+        for (size_t childIndex = node->children.size(); childIndex > 0; --childIndex) {
+            nodeStack.push_back(node->children[childIndex - 1U]);
+        }
     }
 }
 
@@ -1777,7 +2025,7 @@ Entity FindEntity(unordered_map<size_t, Entity> const& sceneEntities, size_t nod
     }
 }
 
-void CreateNode(IEcs& ecs, const GLTF2::Node& node, const Entity entity, const GLTF2::Data& data,
+void CreateNode(IEcs& ecs, const GLTF2::Node& node, const Entity entity, const NodeIndexLookup& nodeIndices,
     const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity, const uint32_t sceneId)
 {
     INodeComponentManager& nodeManager = *(GetManager<INodeComponentManager>(ecs));
@@ -1785,7 +2033,7 @@ void CreateNode(IEcs& ecs, const GLTF2::Node& node, const Entity entity, const G
 
     ScopedHandle<NodeComponent> component = nodeManager.Write(entity);
     component->sceneId = sceneId;
-    if (const size_t parentIndex = FindIndex(data.nodes, node.parent); parentIndex != GLTF2::GLTF_INVALID_INDEX) {
+    if (const size_t parentIndex = FindNodeIndex(nodeIndices, node.parent); parentIndex != GLTF2::GLTF_INVALID_INDEX) {
         component->parent = FindEntity(sceneEntities, parentIndex);
     } else {
         // Set as child of scene.
@@ -1821,9 +2069,9 @@ void CreateTransform(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
 
         if (!Math::Decompose(
                 node.matrix, component->scale, component->rotation, component->position, skew, perspective)) {
-            component->position = { 0.f, 0.f, 0.f };
-            component->rotation = { 0.f, 0.f, 0.f, 1.f };
-            component->scale = { 1.f, 1.f, 1.f };
+            component->position = {0.f, 0.f, 0.f};
+            component->rotation = {0.f, 0.f, 0.f, 1.f};
+            component->scale = {1.f, 1.f, 1.f};
         }
     }
 }
@@ -1875,7 +2123,7 @@ void CreateLight(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
 
         component.type = ConvertToCoreLightType(node.light->type);
         component.intensity = node.light->intensity;
-        component.color = { node.light->color.x, node.light->color.y, node.light->color.z };
+        component.color = {node.light->color.x, node.light->color.y, node.light->color.z};
 
         if (component.type == LightComponent::Type::POINT || component.type == LightComponent::Type::SPOT) {
             // Positional parameters.
@@ -1893,58 +2141,67 @@ void CreateLight(IEcs& ecs, const GLTF2::Node& node, const Entity entity)
 }
 #endif
 
-void RecursivelyCreateComponents(IEcs& ecs, const GLTF2::Data& data, const GLTF2::Node& node,
-    const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity, const uint32_t sceneId,
-    const Entity environmentEntity, const GLTFResourceData& gltfResourceData, Entity& defaultCamera, uint32_t flags)
+void CreateComponentsForHierarchy(IEcs& ecs, const GLTF2::Data& data, const GLTF2::Node& rootNode,
+    const NodeIndexLookup& nodeIndices, const unordered_map<size_t, Entity>& sceneEntities, const Entity sceneEntity,
+    const uint32_t sceneId, const Entity environmentEntity, const GLTFResourceData& gltfResourceData,
+    Entity& defaultCamera, uint32_t flags, NodeTraversalStack& nodeStack)
 {
-    const size_t nodeIndex = FindIndex(data.nodes, &node);
-    PLUGIN_ASSERT_MSG(nodeIndex != GLTF2::GLTF_INVALID_INDEX, "Cannot find node: %s", node.name.c_str());
+    nodeStack.clear();
+    nodeStack.push_back(&rootNode);
 
-    const Entity entity = FindEntity(sceneEntities, nodeIndex);
+    while (!nodeStack.empty()) {
+        const auto* node = nodeStack.back();
+        nodeStack.pop_back();
 
-    // Apply to node hierarchy.
-    CreateNode(ecs, node, entity, data, sceneEntities, sceneEntity, sceneId);
+        const size_t nodeIndex = FindNodeIndex(nodeIndices, node);
+        PLUGIN_ASSERT_MSG(nodeIndex != GLTF2::GLTF_INVALID_INDEX, "Cannot find node: %s", node->name.c_str());
 
-    // Add name.
-    CreateName(ecs, node, entity);
+        const Entity entity = FindEntity(sceneEntities, nodeIndex);
 
-    // Apply transform.
-    CreateTransform(ecs, node, entity);
+        // Apply to node hierarchy.
+        CreateNode(ecs, *node, entity, nodeIndices, sceneEntities, sceneEntity, sceneId);
 
-    // Apply mesh.
-    if (node.mesh && (flags & CORE_GLTF_IMPORT_COMPONENT_MESH)) {
-        CreateMesh(ecs, node, entity, data, gltfResourceData);
-    }
+        // Add name.
+        CreateName(ecs, *node, entity);
 
-    // Apply camera.
-    if (flags & CORE_GLTF_IMPORT_COMPONENT_CAMERA) {
-        CreateCamera(ecs, node, entity, environmentEntity);
+        // Apply transform.
+        CreateTransform(ecs, *node, entity);
 
-        if (!EntityUtil::IsValid(defaultCamera)) {
-            defaultCamera = entity;
+        // Apply mesh.
+        if (node->mesh && (flags & CORE_GLTF_IMPORT_COMPONENT_MESH)) {
+            CreateMesh(ecs, *node, entity, data, gltfResourceData);
         }
-    }
+
+        // Apply camera.
+        if (flags & CORE_GLTF_IMPORT_COMPONENT_CAMERA) {
+            CreateCamera(ecs, *node, entity, environmentEntity);
+
+            if (!EntityUtil::IsValid(defaultCamera)) {
+                defaultCamera = entity;
+            }
+        }
 
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
-    // Apply light.
-    if (flags & CORE_GLTF_IMPORT_COMPONENT_LIGHT) {
-        CreateLight(ecs, node, entity);
-    }
+        // Apply light.
+        if (flags & CORE_GLTF_IMPORT_COMPONENT_LIGHT) {
+            CreateLight(ecs, *node, entity);
+        }
 #endif
 
 #if defined(GLTF2_EXTRAS_RSDZ)
-    if (!node.modelIdRSDZ.empty()) {
-        IRSDZModelIdComponentManager& rsdzManager = *(GetManager<IRSDZModelIdComponentManager>(ecs));
-        RSDZModelIdComponent component = CreateComponent(rsdzManager, entity);
-        StringUtil::CopyStringToArray(
-            node.modelIdRSDZ, component.modelId, StringUtil::MaxStringLengthFromArray(component.modelId));
-        rsdzManager.Set(entity, component);
-    }
+        if (!node->modelIdRSDZ.empty()) {
+            IRSDZModelIdComponentManager& rsdzManager = *(GetManager<IRSDZModelIdComponentManager>(ecs));
+            RSDZModelIdComponent component = CreateComponent(rsdzManager, entity);
+            StringUtil::CopyStringToArray(
+                node->modelIdRSDZ, component.modelId, StringUtil::MaxStringLengthFromArray(component.modelId));
+            rsdzManager.Set(entity, component);
+        }
 #endif
 
-    for (auto child : node.children) {
-        RecursivelyCreateComponents(ecs, data, *child, sceneEntities, sceneEntity, sceneId, environmentEntity,
-            gltfResourceData, defaultCamera, flags);
+        // Preserve the previous preorder traversal by visiting children in source order.
+        for (size_t childIndex = node->children.size(); childIndex > 0; --childIndex) {
+            nodeStack.push_back(node->children[childIndex - 1U]);
+        }
     }
 }
 
@@ -1961,8 +2218,10 @@ void AddSkinJointsComponents(const GLTF2::Data& data, const GLTFResourceData& gl
             auto jointsHandle = skinJointsManager->Write(*skinEntityIt);
             jointsHandle->count = Math::min(countof(jointsHandle->jointEntities), skin->joints.size());
             auto jointEntities = array_view(jointsHandle->jointEntities, jointsHandle->count);
-            std::transform(skin->joints.begin(), skin->joints.begin() + static_cast<ptrdiff_t>(jointsHandle->count),
-                jointEntities.begin(), [&data, &sceneEntities](const auto& jointNode) {
+            std::transform(skin->joints.begin(),
+                skin->joints.begin() + static_cast<ptrdiff_t>(jointsHandle->count),
+                jointEntities.begin(),
+                [&data, &sceneEntities](const auto& jointNode) {
                     size_t const jointNodeIndex = FindIndex(data.nodes, jointNode);
                     return FindEntity(sceneEntities, jointNodeIndex);
                 });
@@ -1989,7 +2248,7 @@ void CreateSkinComponents(const GLTF2::Data& data, const GLTFResourceData& gltfR
                 continue;
             }
 
-            Entity skeleton {};
+            Entity skeleton{};
             if (node->skin->skeleton) {
                 size_t const skeletonIndex = FindIndex(data.nodes, node->skin->skeleton);
                 skeleton = FindEntity(sceneEntities, skeletonIndex);
@@ -2000,7 +2259,9 @@ void CreateSkinComponents(const GLTF2::Data& data, const GLTFResourceData& gltfR
                 joints.append(jointsHandle->jointEntities, jointsHandle->jointEntities + jointsHandle->count);
             } else {
                 joints.reserve(node->skin->joints.size());
-                std::transform(node->skin->joints.begin(), node->skin->joints.end(), std::back_inserter(joints),
+                std::transform(node->skin->joints.begin(),
+                    node->skin->joints.end(),
+                    std::back_inserter(joints),
                     [&data, &sceneEntities](const auto& jointNode) {
                         size_t const jointNodeIndex = FindIndex(data.nodes, jointNode);
                         return FindEntity(sceneEntities, jointNodeIndex);
@@ -2032,27 +2293,32 @@ void CreateMorphComponents(const GLTF2::Data& data, const GLTFResourceData& gltf
         // Assert that all primitives have the same targets. (the spec is a bit confusing here or i just
         // can't read.)
         for (const auto& primitive : node->mesh->primitives) {
-            PLUGIN_UNUSED(primitive);
+            CORE_UNUSED(primitive);
             PLUGIN_ASSERT(primitive.targets.size() == weightCount);
         }
 
         // We have targets, so prepare the morph system/component.
         vector<string> names;
         names.reserve(weightCount);
-        std::transform(node->mesh->primitives[0].targets.cbegin(), node->mesh->primitives[0].targets.cend(),
-            std::back_inserter(names), [](const GLTF2::MorphTarget& target) { return target.name; });
+        std::transform(node->mesh->primitives[0].targets.cbegin(),
+            node->mesh->primitives[0].targets.cend(),
+            std::back_inserter(names),
+            [](const GLTF2::MorphTarget& target) { return target.name; });
 
         // Apparently the node/mesh weight list is a concatenation of all primitives targets weights....
         vector<float> weights;
         weights.reserve(weightCount);
         if (!node->weights.empty()) {
             // Use instance weight (if there is one)
-            weights.append(node->weights.cbegin(),
-                node->weights.cbegin() + static_cast<decltype(node->weights)::difference_type>(weightCount));
+            const size_t copyCount = std::min(weightCount, node->weights.size());
+            weights.append(node->weights.cbegin(), node->weights.cbegin() + static_cast<ptrdiff_t>(copyCount));
+            weights.append(weightCount - copyCount, 0.f);
         } else if (!node->mesh->weights.empty()) {
             // Use mesh weight (if there is one)
-            weights.append(node->mesh->weights.cbegin(),
-                node->mesh->weights.cbegin() + static_cast<decltype(node->weights)::difference_type>(weightCount));
+            const size_t copyCount = std::min(weightCount, node->mesh->weights.size());
+            weights.append(
+                node->mesh->weights.cbegin(), node->mesh->weights.cbegin() + static_cast<ptrdiff_t>(copyCount));
+            weights.append(weightCount - copyCount, 0.f);
         } else {
             // Default to zero weight.
             weights.append(weightCount, 0.f);
@@ -2074,12 +2340,98 @@ EntityReference GetImageEntity(IEcs& ecs, const GLTFResourceData& gltfResourceDa
     return {};
 }
 
-Entity CreateEnvironmentComponent(IGpuResourceManager& gpuResourceManager, const GLTF2::Data& data,
-    const GLTFResourceData& gltfResourceData, IEcs& ecs, Entity sceneEntity, const size_t lightIndex)
+#if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
+bool GetImportedImageDesc(
+    IGpuResourceManager& gpuResourceManager, IEcs& ecs, const EntityReference& imageEntity, GpuImageDesc& imageDesc)
+{
+    IRenderHandleComponentManager& gpuHandleManager = *(GetManager<IRenderHandleComponentManager>(ecs));
+    if (const auto handle = gpuHandleManager.Read(imageEntity); handle) {
+        if (const auto& imageHandle = handle->reference; imageHandle) {
+            imageDesc = gpuResourceManager.GetImageDescriptor(imageHandle);
+            return true;
+        }
+    }
+    return false;
+}
+
+void FillEnvironmentLighting(EnvironmentComponent& environment, const GLTF2::ImageBasedLight& light)
+{
+    environment.indirectDiffuseFactor.w = light.intensity;
+    environment.indirectSpecularFactor.w = light.intensity;
+    environment.envMapFactor.w = light.intensity;
+    environment.environmentRotation = light.rotation;
+
+    PLUGIN_ASSERT(light.irradianceCoefficients.size() == 0u || light.irradianceCoefficients.size() == 9u);
+    std::transform(light.irradianceCoefficients.begin(),
+        light.irradianceCoefficients.end(),
+        environment.irradianceCoefficients,
+        [](const GLTF2::ImageBasedLight::LightingCoeff& coeff) {
+            PLUGIN_ASSERT(coeff.size() == 3u);
+            return Math::Vec3(coeff[0u], coeff[1u], coeff[2u]);
+        });
+}
+
+void AssignGeneratedRadianceCubemap(IGpuResourceManager& gpuResourceManager, IEcs& ecs,
+    EnvironmentComponent& environment, const GLTFResourceData& gltfResourceData, const GLTF2::ImageBasedLight& light,
+    size_t lightIndex)
+{
+    if (lightIndex >= gltfResourceData.specularRadianceCubemaps.size() ||
+        !EntityUtil::IsValid(gltfResourceData.specularRadianceCubemaps[lightIndex])) {
+        return;
+    }
+
+    environment.radianceCubemap = gltfResourceData.specularRadianceCubemaps[lightIndex];
+    environment.radianceCubemapMipCount = (uint32_t)light.specularImages.size();
+    GpuImageDesc imageDesc;
+    if (GetImportedImageDesc(gpuResourceManager, ecs, environment.radianceCubemap, imageDesc)) {
+        environment.radianceCubemapMipCount = Math::min(environment.radianceCubemapMipCount, imageDesc.mipCount);
+    }
+}
+
+void AssignSpecularCubeImage(IGpuResourceManager& gpuResourceManager, IEcs& ecs, EnvironmentComponent& environment,
+    const GLTFResourceData& gltfResourceData, const GLTF2::ImageBasedLight& light)
+{
+    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light.specularCubeImage); imageEntity) {
+        environment.radianceCubemap = imageEntity;
+        GpuImageDesc imageDesc;
+        if (GetImportedImageDesc(gpuResourceManager, ecs, imageEntity, imageDesc)) {
+            environment.radianceCubemapMipCount = imageDesc.mipCount;
+        }
+    }
+}
+
+void AssignSkymapImage(IGpuResourceManager& gpuResourceManager, IEcs& ecs, EnvironmentComponent& environment,
+    const GLTFResourceData& gltfResourceData, const GLTF2::ImageBasedLight& light)
+{
+    environment.envMapLodLevel = light.skymapImageLodLevel;
+    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light.skymapImage); imageEntity) {
+        environment.envMap = imageEntity;
+        GpuImageDesc imageDesc;
+        if (GetImportedImageDesc(gpuResourceManager, ecs, imageEntity, imageDesc)) {
+            environment.background = (imageDesc.imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE)
+                                         ? EnvironmentComponent::Background::CUBEMAP
+                                         : EnvironmentComponent::Background::EQUIRECTANGULAR;
+            if (imageDesc.mipCount > 0U) {
+                environment.envMapLodLevel =
+                    Math::min(environment.envMapLodLevel, static_cast<float>(imageDesc.mipCount - 1U));
+            }
+        }
+    }
+}
+#endif
+
+struct EnvironmentSource {
+    const GLTF2::Data& data;
+    const GLTFResourceData& gltfResourceData;
+    size_t lightIndex;
+};
+
+Entity CreateEnvironmentComponent(
+    IGpuResourceManager& gpuResourceManager, IEcs& ecs, const EnvironmentSource& source, Entity sceneEntity)
 {
     Entity environmentEntity;
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
-    if (lightIndex == GLTF2::GLTF_INVALID_INDEX || lightIndex >= data.imageBasedLights.size()) {
+    if (source.lightIndex == GLTF2::GLTF_INVALID_INDEX || source.lightIndex >= source.data.imageBasedLights.size()) {
         return environmentEntity;
     }
     // Create the component to the sceneEntity for convinience.
@@ -2088,47 +2440,12 @@ Entity CreateEnvironmentComponent(IGpuResourceManager& gpuResourceManager, const
     envManager.Create(environmentEntity);
     auto envHandle = envManager.Write(environmentEntity);
 
-    GLTF2::ImageBasedLight* light = data.imageBasedLights[lightIndex].get();
-    envHandle->indirectDiffuseFactor.w = light->intensity;
-    envHandle->indirectSpecularFactor.w = light->intensity;
-    envHandle->envMapFactor.w = light->intensity;
-
-    envHandle->environmentRotation = light->rotation;
-
-    // Either we have full set of coefficients or there are no coefficients at all.
-    PLUGIN_ASSERT(light->irradianceCoefficients.size() == 0u || light->irradianceCoefficients.size() == 9u);
-
-    std::transform(light->irradianceCoefficients.begin(), light->irradianceCoefficients.end(),
-        envHandle->irradianceCoefficients, [](const GLTF2::ImageBasedLight::LightingCoeff& coeff) {
-            // Each coefficient needs to have three components.
-            PLUGIN_ASSERT(coeff.size() == 3u);
-
-            // Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
-            return Math::Vec3(coeff[0u], coeff[1u], coeff[2u]);
-        });
-
-    if (lightIndex < gltfResourceData.specularRadianceCubemaps.size() &&
-        EntityUtil::IsValid(gltfResourceData.specularRadianceCubemaps[lightIndex])) {
-        envHandle->radianceCubemap = gltfResourceData.specularRadianceCubemaps[lightIndex];
-        envHandle->radianceCubemapMipCount = (uint32_t)light->specularImages.size();
-    }
-
-    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->specularCubeImage); imageEntity) {
-        envHandle->radianceCubemap = imageEntity;
-    }
-
-    envHandle->envMapLodLevel = light->skymapImageLodLevel;
-
-    if (auto imageEntity = GetImageEntity(ecs, gltfResourceData, light->skymapImage); imageEntity) {
-        envHandle->envMap = imageEntity;
-        IRenderHandleComponentManager& gpuHandleManager = *(GetManager<IRenderHandleComponentManager>(ecs));
-        if (const auto& envMapHandle = gpuHandleManager.Read(imageEntity)->reference; envMapHandle) {
-            const ImageViewType imageViewType = gpuResourceManager.GetImageDescriptor(envMapHandle).imageViewType;
-            envHandle->background = (imageViewType == CORE_IMAGE_VIEW_TYPE_CUBE)
-                                        ? EnvironmentComponent::Background::CUBEMAP
-                                        : EnvironmentComponent::Background::EQUIRECTANGULAR;
-        }
-    }
+    GLTF2::ImageBasedLight* light = source.data.imageBasedLights[source.lightIndex].get();
+    FillEnvironmentLighting(*envHandle, *light);
+    AssignGeneratedRadianceCubemap(
+        gpuResourceManager, ecs, *envHandle, source.gltfResourceData, *light, source.lightIndex);
+    AssignSpecularCubeImage(gpuResourceManager, ecs, *envHandle, source.gltfResourceData, *light);
+    AssignSkymapImage(gpuResourceManager, ecs, *envHandle, source.gltfResourceData, *light);
 
 #endif
     return environmentEntity;
@@ -2149,14 +2466,15 @@ struct ImageData {
 ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const GpuImageDesc& imageDesc)
 {
     ImageData data;
-    const size_t availableMipLayerCount = imageLoadResults.size() / imageDesc.layerCount;
+    const size_t availableMipLayerCount =
+        Math::min(imageLoadResults.size() / imageDesc.layerCount, static_cast<size_t>(imageDesc.mipCount));
     data.copyInfo.resize(availableMipLayerCount);
 
     // For all mip levels.
     size_t byteOffset = 0;
     for (size_t mipIndex = 0; mipIndex < availableMipLayerCount; ++mipIndex) {
         {
-            const auto& imageLoadResult = imageLoadResults[(mipIndex * 6u)];
+            const auto& imageLoadResult = imageLoadResults[(mipIndex * imageDesc.layerCount)];
             if (!imageLoadResult.image) {
                 continue;
             }
@@ -2192,8 +2510,8 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
     return data;
 }
 
-RenderHandleReference CreateCubemapFromImages(
-    uint32_t imageSize, const ImageLoadResultVector& imageLoadResults, IGpuResourceManager& gpuResourceManager)
+RenderHandleReference CreateCubemapFromImages(uint32_t imageSize, const ImageLoadResultVector& imageLoadResults,
+    IGpuResourceManager& gpuResourceManager, uint32_t maxTextureMipLevels)
 {
     if (!imageLoadResults[0].image) {
         return {};
@@ -2206,26 +2524,34 @@ RenderHandleReference CreateCubemapFromImages(
         ++totalMipCount;
         mipsize >>= 1;
     }
+    if (maxTextureMipLevels > 0U) {
+        totalMipCount = Math::max(1U, Math::min(totalMipCount, maxTextureMipLevels));
+    }
 
-    const ImageUsageFlags usageFlags =
+    ImageUsageFlags usageFlags =
         CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT | CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    EngineImageCreationFlags engineCreationFlags = CORE_ENGINE_IMAGE_CREATION_GENERATE_MIPS;
+    if (totalMipCount <= 1U) {
+        usageFlags &= ~ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        engineCreationFlags = 0U;
+    }
 
     const GpuImageDesc imageDesc = {
-        ImageType::CORE_IMAGE_TYPE_2D,                                 // imageType
-        CORE_IMAGE_VIEW_TYPE_CUBE,                                     // imageViewType
-        imageLoadResults[0].image->GetImageDesc().format,              // format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                        // imageTiling
-        usageFlags,                                                    // usageFlags
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // memoryPropertyFlags
-        ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,    // createFlags
-        CORE_ENGINE_IMAGE_CREATION_GENERATE_MIPS,                      // engineCreationFlags
-        imageSize,                                                     // width
-        imageSize,                                                     // height
-        1,                                                             // depth
-        totalMipCount,                                                 // mipCount
-        6,                                                             // layerCount
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                  // sampleCountFlags
-        {},                                                            // componentMapping
+        ImageType::CORE_IMAGE_TYPE_2D,                                  // imageType
+        CORE_IMAGE_VIEW_TYPE_CUBE,                                      // imageViewType
+        imageLoadResults[0].image->GetImageDesc().format,               // format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                         // imageTiling
+        usageFlags,                                                     // usageFlags
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,  // memoryPropertyFlags
+        ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,     // createFlags
+        engineCreationFlags,                                            // engineCreationFlags
+        imageSize,                                                      // width
+        imageSize,                                                      // height
+        1,                                                              // depth
+        totalMipCount,                                                  // mipCount
+        6,                                                              // layerCount
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                   // sampleCountFlags
+        {},                                                             // componentMapping
     };
 
     const auto data = PrepareImageData(imageLoadResults, imageDesc);
@@ -2233,10 +2559,54 @@ RenderHandleReference CreateCubemapFromImages(
     auto handle = gpuResourceManager.Create("", imageDesc, data.data, data.copyInfo);
     if (!handle) {
         PLUGIN_LOG_W("Creating an import cubemap image failed (format:%u, width:%u, height:%u)",
-            static_cast<uint32_t>(imageDesc.format), imageDesc.width, imageDesc.height);
+            static_cast<uint32_t>(imageDesc.format),
+            imageDesc.width,
+            imageDesc.height);
     }
     return handle;
 }
+
+#if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
+bool GatherImageBasedLightMipLevels(const GLTF2::Data& data, IEngine& engine, const GLTF2::ImageBasedLight& light,
+    ColorSpaceFlags colorSpaceFlags, uint32_t imageMipLoadFlags, uint32_t baseColorImageLoadFlags,
+    bool forceBaseColorTextureColorSpace, uint32_t maxTextureMipLevels, ImageLoadResultVector& mipLevels)
+{
+    bool success = true;
+    const size_t mipLevelCount = (maxTextureMipLevels > 0U)
+                                     ? Math::min(light.specularImages.size(), static_cast<size_t>(maxTextureMipLevels))
+                                     : light.specularImages.size();
+    mipLevels.reserve(mipLevelCount * 6U);
+    for (size_t mipIndex = 0; mipIndex < mipLevelCount; ++mipIndex) {
+        const auto& mipLevel = light.specularImages[mipIndex];
+        for (const auto& cubeFace : mipLevel) {
+            if (cubeFace >= data.images.size()) {
+                success = false;
+                break;
+            }
+            auto& image = data.images[cubeFace];
+            if (!image) {
+                success = false;
+                break;
+            }
+            const ImageLoadConfig config{
+                colorSpaceFlags, imageMipLoadFlags, baseColorImageLoadFlags, forceBaseColorTextureColorSpace};
+            auto loadResult = GatherImageData(*image,
+                data,
+                engine.GetFileManager(),
+                engine.GetImageLoaderManager(),
+                IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT,
+                config);
+            if (!loadResult.success) {
+                success = false;
+                PLUGIN_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), loadResult.error);
+                break;
+            }
+            mipLevels.push_back(move(loadResult));
+        }
+    }
+    return success;
+}
+#endif
 
 auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
     IRenderHandleComponentManager& renderHandleMgr, const string_view renderSlot,
@@ -2259,7 +2629,7 @@ auto FillShaderData(IEntityManager& em, IUriComponentManager& uriManager,
         PLUGIN_LOG_ONCE_W(renderSlot, "GLTF2 importer cannot find default shader data.");
     }
 }
-} // namespace
+}  // namespace
 
 Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
     const GLTFResourceData& gltfResourceData, IEcs& ecs, Entity rootEntity, uint32_t sceneId,
@@ -2316,22 +2686,36 @@ Entity ImportScene(IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
         const size_t lightIndex = scene->imageBasedLightIndex;
 #else
-        const size_t lightIndex = 0; // Not used.
+        const size_t lightIndex = 0;  // Not used.
 #endif
-        environment = CreateEnvironmentComponent(
-            device.GetGpuResourceManager(), data, gltfResourceData, ecs, sceneEntity, lightIndex);
+        const EnvironmentSource envSource{data, gltfResourceData, lightIndex};
+        environment = CreateEnvironmentComponent(device.GetGpuResourceManager(), ecs, envSource, sceneEntity);
     }
 
     // Create entities for nodes in scene.
+    const auto nodeIndices = CreateNodeIndexLookup(data);
+    NodeTraversalStack nodeStack;
+    nodeStack.reserve(nodeIndices.size());
     unordered_map<size_t, Entity> sceneEntities;
+    sceneEntities.reserve(nodeIndices.size());
     for (auto node : scene->nodes) {
-        RecursivelyCreateEntities(em, data, *node, sceneEntities);
+        CreateEntitiesForHierarchy(em, *node, sceneEntities, nodeIndices, nodeStack);
     }
 
     // Create components for all nodes in this scene.
     for (auto node : scene->nodes) {
-        RecursivelyCreateComponents(
-            ecs, data, *node, sceneEntities, sceneEntity, sceneId, environment, gltfResourceData, defaultCamera, flags);
+        CreateComponentsForHierarchy(ecs,
+            data,
+            *node,
+            nodeIndices,
+            sceneEntities,
+            sceneEntity,
+            sceneId,
+            environment,
+            gltfResourceData,
+            defaultCamera,
+            flags,
+            nodeStack);
     }
 
     // Apply skins only after the node hiearachy is complete.
@@ -2361,19 +2745,19 @@ struct GLTF2Importer::ImporterTask {
     string name;
     string errors;
     uint64_t id;
-    bool success { true };
+    bool success{true};
 
     std::function<bool()> gather;
     std::function<bool()> import;
     std::function<void()> finished;
 
-    State state { State::Queued };
-    ImportPhase phase { ImportPhase::FINISHED };
+    State state{State::Queued};
+    ImportPhase phase{ImportPhase::FINISHED};
 };
 
 class GLTF2Importer::GatherThreadTask final : public IThreadPool::ITask {
 public:
-    explicit GatherThreadTask(GLTF2Importer& importer, ImporterTask& task) : importer_(importer), task_(task) {};
+    explicit GatherThreadTask(GLTF2Importer& importer, ImporterTask& task) : importer_(importer), task_(task){};
 
     void operator()() override
     {
@@ -2393,7 +2777,7 @@ private:
 
 class GLTF2Importer::ImportThreadTask final : public IThreadPool::ITask {
 public:
-    explicit ImportThreadTask(GLTF2Importer& importer, ImporterTask& task) : importer_(importer), task_(task) {};
+    explicit ImportThreadTask(GLTF2Importer& importer, ImporterTask& task) : importer_(importer), task_(task){};
 
     void operator()() override
     {
@@ -2411,12 +2795,12 @@ private:
     ImporterTask& task_;
 };
 
-template<class T>
+template <class T>
 struct GLTF2Importer::GatheredDataTask : GLTF2Importer::ImporterTask {
     T data;
 };
 
-template<typename Component>
+template <typename Component>
 struct GLTF2Importer::ComponentTaskData {
     EntityReference entity;
     Component component;
@@ -2528,12 +2912,17 @@ struct GLTF2Importer::AnimationTaskData {
 };
 
 GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEcs& ecs, IThreadPool& pool)
-    : engine_(engine), renderContext_(renderContext), device_(renderContext.GetDevice()),
-      gpuResourceManager_(device_.GetGpuResourceManager()), ecs_(&ecs),
+    : engine_(engine),
+      renderContext_(renderContext),
+      device_(renderContext.GetDevice()),
+      gpuResourceManager_(device_.GetGpuResourceManager()),
+      ecs_(&ecs),
       renderHandleManager_(GetManager<IRenderHandleComponentManager>(*ecs_)),
       materialManager_(GetManager<IMaterialComponentManager>(*ecs_)),
-      meshManager_(GetManager<IMeshComponentManager>(*ecs_)), nameManager_(GetManager<INameComponentManager>(*ecs_)),
-      uriManager_(GetManager<IUriComponentManager>(*ecs_)), threadPool_(&pool)
+      meshManager_(GetManager<IMeshComponentManager>(*ecs_)),
+      nameManager_(GetManager<INameComponentManager>(*ecs_)),
+      uriManager_(GetManager<IUriComponentManager>(*ecs_)),
+      threadPool_(&pool)
 {
     auto classRegister = renderContext_.GetInterface<IClassRegister>();
     if (classRegister) {
@@ -2551,12 +2940,21 @@ GLTF2Importer::GLTF2Importer(IEngine& engine, IRenderContext& renderContext, IEc
     if (renderHandleManager_ && uriManager_) {
         // fetch default shaders and graphics states
         auto& entityMgr = ecs_->GetEntityManager();
-        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
-            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, dmShaderData_.opaque);
-        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
-            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT, dmShaderData_.blend);
-        FillShaderData(entityMgr, *uriManager_, *renderHandleManager_,
-            DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH, dmShaderData_.depth);
+        FillShaderData(entityMgr,
+            *uriManager_,
+            *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE,
+            dmShaderData_.opaque);
+        FillShaderData(entityMgr,
+            *uriManager_,
+            *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT,
+            dmShaderData_.blend);
+        FillShaderData(entityMgr,
+            *uriManager_,
+            *renderHandleManager_,
+            DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH,
+            dmShaderData_.depth);
     }
 }
 
@@ -2572,8 +2970,93 @@ GLTF2Importer::~GLTF2Importer()
 
 void GLTF2Importer::ImportGLTF(const IGLTFData& data, GltfResourceImportFlags flags)
 {
+    GltfImportOptions options;
+    options.flags = flags;
+    ImportGLTF(data, options);
+}
+
+bool GLTF2Importer::ResolveVertexInputDeclaration(string_view vertexInputDeclarationPath)
+{
+    auto& shaderManager = renderContext_.GetDevice().GetShaderManager();
+    const auto vertexInputDeclarationHandle = shaderManager.GetVertexInputDeclarationHandle(vertexInputDeclarationPath);
+    const VertexInputDeclarationView resolvedVertexInputDeclaration =
+        shaderManager.GetVertexInputDeclarationView(vertexInputDeclarationHandle);
+    if (!vertexInputDeclarationHandle || resolvedVertexInputDeclaration.bindingDescriptions.empty() ||
+        resolvedVertexInputDeclaration.attributeDescriptions.empty()) {
+        result_.success = false;
+        result_.error += "Invalid vertex input declaration for ImportGLTF.";
+        return false;
+    }
+
+    CopyVertexInputDeclaration(resolvedVertexInputDeclaration, vertexInputDeclarationData_);
+    vertexInputDeclarationResolved_ = true;
+    return true;
+}
+
+bool GLTF2Importer::ResolveImportOptions(const GltfImportOptions& options)
+{
+    flags_ = options.flags;
+    const bool explicitMipLevels = options.maxTextureMipLevels != CORE_GLTF_IMPORT_TEXTURE_MIP_LEVELS_DEFAULT;
+    const bool explicitBaseColor = options.baseColorTextureColorSpace != GltfBaseColorTextureColorSpace::DEFAULT;
+    const bool explicitVertexInputDeclaration = !options.vertexInputDeclarationPath.empty();
+    maxTextureMipLevels_ = explicitMipLevels ? options.maxTextureMipLevels : 0U;
+    forceBaseColorTextureColorSpace_ = explicitBaseColor;
+    vertexInputDeclarationData_ = {};
+    vertexInputDeclarationResolved_ = false;
+
+    if ((flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH) && explicitVertexInputDeclaration) {
+        if (!ResolveVertexInputDeclaration(options.vertexInputDeclarationPath)) {
+            return false;
+        }
+    }
+
+    switch (options.baseColorTextureColorSpace) {
+        case GltfBaseColorTextureColorSpace::DEFAULT:
+            baseColorImageLoadFlags_ = GetBaseColorFlags(renderContext_);
+            break;
+        case GltfBaseColorTextureColorSpace::LINEAR:
+            baseColorImageLoadFlags_ = IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT |
+                                       IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_PREMULTIPLY_ALPHA;
+            break;
+        case GltfBaseColorTextureColorSpace::SRGB:
+        default:
+            baseColorImageLoadFlags_ = IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_FORCE_SRGB_BIT |
+                                       IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_PREMULTIPLY_ALPHA;
+            break;
+    }
+
+    if (!explicitMipLevels) {
+        imageMipLoadFlags_ = GetMipmapsLevel(renderContext_);
+    } else {
+        imageMipLoadFlags_ =
+            (maxTextureMipLevels_ == 1U) ? 0U : IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_GENERATE_MIPS;
+    }
+
+    const bool explicitTextureOptions = explicitMipLevels || explicitBaseColor;
+    useUriCacheForImages_ = !explicitTextureOptions;
+    useUriCacheForMaterials_ = !explicitTextureOptions;
+    const bool materialImportUsesTextureOptions =
+        explicitTextureOptions && ((flags_ & CORE_GLTF_IMPORT_RESOURCE_MATERIAL) != 0U);
+    useUriCacheForMeshes_ = !explicitVertexInputDeclaration && !materialImportUsesTextureOptions;
+    return true;
+}
+
+void GLTF2Importer::ImportGLTF(const IGLTFData& data, const GltfImportOptions& options)
+{
     Cancel();
     cancelled_ = false;
+    result_.success = true;
+    result_.error.clear();
+    result_.data.samplers.clear();
+    result_.data.images.clear();
+    result_.data.textures.clear();
+    result_.data.materials.clear();
+    result_.data.meshes.clear();
+    result_.data.skins.clear();
+    result_.data.animations.clear();
+    result_.data.specularRadianceCubemaps.clear();
+    meshData_ = {};
+    meshDataBuffers_.clear();
 
     if (!renderHandleManager_ || !materialManager_ || !meshManager_ || !nameManager_ || !uriManager_) {
         result_.success = false;
@@ -2587,23 +3070,15 @@ void GLTF2Importer::ImportGLTF(const IGLTFData& data, GltfResourceImportFlags fl
         return;
     }
 
-    flags_ = flags;
+    if (!ResolveImportOptions(options)) {
+        return;
+    }
     for (auto& pendingGatherTasks : pendingGatherTasks_) {
         pendingGatherTasks = 0U;
     }
     for (auto& finishedGatherTasks : finishedGatherTasks_) {
         finishedGatherTasks.clear();
     }
-    result_.data.samplers.clear();
-    result_.data.images.clear();
-    result_.data.textures.clear();
-    result_.data.materials.clear();
-    result_.data.meshes.clear();
-    result_.data.skins.clear();
-    result_.data.animations.clear();
-    result_.data.specularRadianceCubemaps.clear();
-
-    meshBuilders_.clear();
 
     // Build tasks.
     Prepare();
@@ -2621,8 +3096,27 @@ void GLTF2Importer::ImportGLTF(const IGLTFData& data, GltfResourceImportFlags fl
 
 void GLTF2Importer::ImportGLTFAsync(const IGLTFData& data, GltfResourceImportFlags flags, Listener* listener)
 {
+    GltfImportOptions options;
+    options.flags = flags;
+    ImportGLTFAsync(data, options, listener);
+}
+
+void GLTF2Importer::ImportGLTFAsync(const IGLTFData& data, const GltfImportOptions& options, Listener* listener)
+{
     Cancel();
     cancelled_ = false;
+    result_.success = true;
+    result_.error.clear();
+    result_.data.samplers.clear();
+    result_.data.images.clear();
+    result_.data.textures.clear();
+    result_.data.materials.clear();
+    result_.data.meshes.clear();
+    result_.data.skins.clear();
+    result_.data.animations.clear();
+    result_.data.specularRadianceCubemaps.clear();
+    meshData_ = {};
+    meshDataBuffers_.clear();
 
     if (!renderHandleManager_ || !materialManager_ || !meshManager_ || !nameManager_ || !uriManager_) {
         result_.success = false;
@@ -2637,22 +3131,11 @@ void GLTF2Importer::ImportGLTFAsync(const IGLTFData& data, GltfResourceImportFla
         return;
     }
 
-    flags_ = flags;
-
-    result_.success = true;
-    result_.error.clear();
-    result_.data.samplers.clear();
-    result_.data.images.clear();
-    result_.data.textures.clear();
-    result_.data.materials.clear();
-    result_.data.meshes.clear();
-    result_.data.skins.clear();
-    result_.data.animations.clear();
-    result_.data.specularRadianceCubemaps.clear();
-
-    meshBuilders_.clear();
-
     listener_ = listener;
+    if (!ResolveImportOptions(options)) {
+        StartPhase(ImportPhase::FINISHED);
+        return;
+    }
 
     // Build tasks.
     Prepare();
@@ -2707,7 +3190,7 @@ void GLTF2Importer::LaunchGatherTasks(size_t firstTask, ImportPhase phase)
         auto& task = **first;
         if (task.phase == phase) {
             task.state = ImporterTask::State::Gather;
-            auto threadTask = IThreadPool::ITask::Ptr { new GatherThreadTask(*this, task) };
+            auto threadTask = IThreadPool::ITask::Ptr{new GatherThreadTask(*this, task)};
             tasks.push_back(threadTask.get());
             threadPool_->PushNoWait(BASE_NS::move(threadTask), BASE_NS::array_view(&bufferTask_, 1U));
         }
@@ -2716,7 +3199,7 @@ void GLTF2Importer::LaunchGatherTasks(size_t firstTask, ImportPhase phase)
     // Add a task which waits for all the gather tasks for this cateory.
     if (!tasks.empty()) {
         gatherResults_[static_cast<uint32_t>(phase)] =
-            threadPool_->Push(IThreadPool::ITask::Ptr { CreateFunctionTask([]() {}) }, tasks);
+            threadPool_->Push(IThreadPool::ITask::Ptr{CreateFunctionTask([]() {})}, tasks);
     }
 }
 
@@ -2787,7 +3270,7 @@ bool GLTF2Importer::ProgressTask(ImporterTask& task)
         task.state = ImporterTask::State::Import;
         if (task.import) {
             pendingImportTasks_++;
-            mainThreadQueue_->Submit(task.id, IThreadPool::ITask::Ptr { new ImportThreadTask(*this, task) });
+            mainThreadQueue_->Submit(task.id, IThreadPool::ITask::Ptr{new ImportThreadTask(*this, task)});
             return false;
         }
     }
@@ -2840,6 +3323,163 @@ void GLTF2Importer::CompleteTask(ImporterTask& task)
     }
 }
 
+array_view<const uint8_t> GetMeshBufferView(
+    array_view<const uint8_t> data, const MeshComponent::Submesh::BufferAccess& buffer)
+{
+    if (buffer.byteSize == 0U || buffer.byteSize == MeshComponent::Submesh::MAX_BUFFER_ACCESS_BYTE_SIZE ||
+        !data.data() || buffer.offset > data.size() || buffer.byteSize > (data.size() - buffer.offset)) {
+        return {};
+    }
+    return {data.data() + buffer.offset, buffer.byteSize};
+}
+
+array_view<const uint8_t> GetAbsoluteMeshBufferView(
+    array_view<const uint8_t> data, size_t dataOffset, uint32_t offset, uint32_t byteSize)
+{
+    if (offset < dataOffset) {
+        return {};
+    }
+    const MeshComponent::Submesh::BufferAccess buffer{{}, static_cast<uint32_t>(offset - dataOffset), byteSize};
+    return GetMeshBufferView(data, buffer);
+}
+
+const VertexInputDeclaration::VertexInputAttributeDescription* FindVertexAttribute(
+    const VertexInputDeclarationData& vertexInputDeclaration, uint32_t location)
+{
+    for (uint32_t i = 0U; i < vertexInputDeclaration.attributeDescriptionCount; ++i) {
+        if (vertexInputDeclaration.attributeDescriptions[i].location == location) {
+            return &vertexInputDeclaration.attributeDescriptions[i];
+        }
+    }
+    return nullptr;
+}
+
+bool UsesBindingBufferAccess(
+    const MeshComponent::Submesh& submesh, const VertexInputDeclarationData& vertexInputDeclaration)
+{
+    if (submesh.morphTargetCount > 0U) {
+        return false;
+    }
+    for (uint32_t i = 0U; i < vertexInputDeclaration.attributeDescriptionCount; ++i) {
+        const auto& attribute = vertexInputDeclaration.attributeDescriptions[i];
+        if (attribute.location < MeshComponent::Submesh::BUFFER_COUNT && attribute.binding != attribute.location) {
+            return true;
+        }
+    }
+    return false;
+}
+
+array_view<const uint8_t> GetVertexAttributeView(const MeshComponent::Submesh& submesh,
+    const VertexInputDeclarationData& vertexInputDeclaration, uint32_t location, array_view<const uint8_t> vertexData)
+{
+    const auto* attribute = FindVertexAttribute(vertexInputDeclaration, location);
+    if (!attribute) {
+        return {};
+    }
+    if (UsesBindingBufferAccess(submesh, vertexInputDeclaration)) {
+        if (attribute->binding >= MeshComponent::Submesh::BUFFER_COUNT) {
+            return {};
+        }
+        const auto& binding = submesh.bufferAccess[attribute->binding];
+        if (attribute->offset >= binding.byteSize) {
+            return {};
+        }
+        const uint64_t offset = static_cast<uint64_t>(binding.offset) + attribute->offset;
+        if (offset > UINT32_MAX) {
+            return {};
+        }
+        const MeshComponent::Submesh::BufferAccess buffer{
+            {}, static_cast<uint32_t>(offset), binding.byteSize - attribute->offset};
+        return GetMeshBufferView(vertexData, buffer);
+    }
+    return GetMeshBufferView(vertexData, submesh.bufferAccess[location]);
+}
+
+struct MeshBufferViews {
+    array_view<const uint8_t> vertex;
+    array_view<const uint8_t> index;
+    array_view<const uint8_t> joint;
+};
+
+array_view<const uint8_t> GetJointAttributeView(
+    const MeshComponent::Submesh& submesh, uint32_t location, const MeshBufferViews& buffers)
+{
+    const auto& buffer = submesh.bufferAccess[location];
+    return GetAbsoluteMeshBufferView(
+        buffers.joint, buffers.vertex.size() + buffers.index.size(), buffer.offset, buffer.byteSize);
+}
+
+void FillMeshAttributeViews(GltfMeshData::SubMesh& target, const MeshComponent::Submesh& source,
+    const VertexInputDeclarationData& vertexInputDeclaration, const MeshBufferViews& buffers)
+{
+    target.attributeBuffers[MeshComponent::Submesh::DM_VB_POS] =
+        GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_POS, buffers.vertex);
+    target.attributeBuffers[MeshComponent::Submesh::DM_VB_NOR] =
+        GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_NOR, buffers.vertex);
+    target.attributeBuffers[MeshComponent::Submesh::DM_VB_UV0] =
+        GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_UV0, buffers.vertex);
+    if (source.flags & MeshComponent::Submesh::SECOND_TEXCOORD_BIT) {
+        target.attributeBuffers[MeshComponent::Submesh::DM_VB_UV1] =
+            GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_UV1, buffers.vertex);
+    }
+    if (source.flags & MeshComponent::Submesh::TANGENTS_BIT) {
+        target.attributeBuffers[MeshComponent::Submesh::DM_VB_TAN] =
+            GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_TAN, buffers.vertex);
+    }
+    if (source.flags & MeshComponent::Submesh::VERTEX_COLORS_BIT) {
+        target.attributeBuffers[MeshComponent::Submesh::DM_VB_COL] =
+            GetVertexAttributeView(source, vertexInputDeclaration, MeshComponent::Submesh::DM_VB_COL, buffers.vertex);
+    }
+    if (source.flags & MeshComponent::Submesh::SKIN_BIT) {
+        target.attributeBuffers[MeshComponent::Submesh::DM_VB_JOI] =
+            GetJointAttributeView(source, MeshComponent::Submesh::DM_VB_JOI, buffers);
+        target.attributeBuffers[MeshComponent::Submesh::DM_VB_JOW] =
+            GetJointAttributeView(source, MeshComponent::Submesh::DM_VB_JOW, buffers);
+    }
+}
+
+void FillMeshDataSubMesh(GltfMeshData::SubMesh& target, const MeshComponent::Submesh& source,
+    const VertexInputDeclarationData& vertexInputDeclaration, const MeshBufferViews& buffers)
+{
+    target.indices = source.indexCount;
+    target.vertices = source.vertexCount;
+    target.indexBuffer = GetAbsoluteMeshBufferView(
+        buffers.index, buffers.vertex.size(), source.indexBuffer.offset, source.indexBuffer.byteSize);
+    FillMeshAttributeViews(target, source, vertexInputDeclaration, buffers);
+}
+
+array_view<const uint8_t> CopyMeshBuffer(array_view<const uint8_t> source, vector<uint8_t>& storage)
+{
+    storage.clear();
+    if (source.empty() || !source.data()) {
+        return {};
+    }
+    storage.resize(source.size());
+    std::copy(source.data(), source.data() + source.size(), storage.data());
+    return {storage.data(), storage.size()};
+}
+
+void FillMeshDataForCpuAccess(
+    GltfMeshData& meshData, vector<MeshDataBufferStorage>& buffers, uint32_t mesh, const IMeshBuilder& meshBuilder)
+{
+    if (mesh >= meshData.meshes.size() || mesh >= buffers.size()) {
+        return;
+    }
+    auto& bufferStorage = buffers[mesh];
+    auto& currentMesh = meshData.meshes[mesh];
+    const MeshBufferViews bufferViews{
+        CopyMeshBuffer(meshBuilder.GetVertexData(), bufferStorage.vertexBuffer),
+        CopyMeshBuffer(meshBuilder.GetIndexData(), bufferStorage.indexBuffer),
+        CopyMeshBuffer(meshBuilder.GetJointData(), bufferStorage.jointBuffer),
+    };
+    const auto submeshes = meshBuilder.GetSubmeshes();
+    currentMesh.subMeshes.resize(submeshes.size());
+    for (uint32_t subMesh = 0U; subMesh < submeshes.size(); ++subMesh) {
+        FillMeshDataSubMesh(
+            currentMesh.subMeshes[subMesh], submeshes[subMesh], meshData.vertexInputDeclaration, bufferViews);
+    }
+}
+
 void GLTF2Importer::StartPhase(ImportPhase phase)
 {
     phase_ = phase;
@@ -2847,76 +3487,6 @@ void GLTF2Importer::StartPhase(ImportPhase phase)
     completedTasks_ = 0;
 
     if (phase == ImportPhase::FINISHED) {
-        if ((flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS) && !meshBuilders_.empty()) {
-            {
-                auto& shaderManager = renderContext_.GetDevice().GetShaderManager();
-                const VertexInputDeclarationView vertexInputDeclaration =
-                    shaderManager.GetVertexInputDeclarationView(shaderManager.GetVertexInputDeclarationHandle(
-                        DefaultMaterialShaderConstants::VERTEX_INPUT_DECLARATION_FORWARD));
-                meshData_.vertexInputDeclaration.bindingDescriptionCount =
-                    static_cast<uint32_t>(vertexInputDeclaration.bindingDescriptions.size());
-                meshData_.vertexInputDeclaration.attributeDescriptionCount =
-                    static_cast<uint32_t>(vertexInputDeclaration.attributeDescriptions.size());
-                std::copy(vertexInputDeclaration.bindingDescriptions.cbegin(),
-                    vertexInputDeclaration.bindingDescriptions.cend(),
-                    meshData_.vertexInputDeclaration.bindingDescriptions);
-                std::copy(vertexInputDeclaration.attributeDescriptions.cbegin(),
-                    vertexInputDeclaration.attributeDescriptions.cend(),
-                    meshData_.vertexInputDeclaration.attributeDescriptions);
-            }
-            meshData_.meshes.resize(meshBuilders_.size());
-            for (uint32_t mesh = 0U; mesh < meshBuilders_.size(); ++mesh) {
-                if (!meshBuilders_[mesh]) {
-                    continue;
-                }
-                auto& currentMesh = meshData_.meshes[mesh];
-                auto vertexData = meshBuilders_[mesh]->GetVertexData();
-                auto indexData = meshBuilders_[mesh]->GetIndexData();
-                auto jointData = meshBuilders_[mesh]->GetJointData();
-                auto submeshes = meshBuilders_[mesh]->GetSubmeshes();
-                currentMesh.subMeshes.resize(submeshes.size());
-                for (uint32_t subMesh = 0U; subMesh < submeshes.size(); ++subMesh) {
-                    auto& currentSubMesh = currentMesh.subMeshes[subMesh];
-                    currentSubMesh.indices = submeshes[subMesh].indexCount;
-                    currentSubMesh.vertices = submeshes[subMesh].vertexCount;
-
-                    currentSubMesh.indexBuffer = array_view(indexData.data() + submeshes[subMesh].indexBuffer.offset,
-                        submeshes[subMesh].indexBuffer.byteSize);
-
-                    auto& bufferAccess = submeshes[subMesh].bufferAccess;
-                    auto fill = [](array_view<const uint8_t> data, const MeshComponent::Submesh::BufferAccess& buffer) {
-                        if (buffer.offset > data.size() || buffer.offset + buffer.byteSize > data.size()) {
-                            return array_view<const uint8_t> {};
-                        }
-                        return array_view(data.data() + buffer.offset, buffer.byteSize);
-                    };
-                    currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_POS] =
-                        fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_POS]);
-                    currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_NOR] =
-                        fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_NOR]);
-                    currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_UV0] =
-                        fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_UV0]);
-                    if (submeshes[subMesh].flags & MeshComponent::Submesh::SECOND_TEXCOORD_BIT) {
-                        currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_UV1] =
-                            fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_UV1]);
-                    }
-                    if (submeshes[subMesh].flags & MeshComponent::Submesh::TANGENTS_BIT) {
-                        currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_TAN] =
-                            fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_TAN]);
-                    }
-                    if (submeshes[subMesh].flags & MeshComponent::Submesh::VERTEX_COLORS_BIT) {
-                        currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_COL] =
-                            fill(vertexData, bufferAccess[MeshComponent::Submesh::DM_VB_COL]);
-                    }
-                    if (submeshes[subMesh].flags & MeshComponent::Submesh::SKIN_BIT) {
-                        currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_JOI] =
-                            fill(jointData, bufferAccess[MeshComponent::Submesh::DM_VB_JOI]);
-                        currentSubMesh.attributeBuffers[MeshComponent::Submesh::DM_VB_JOW] =
-                            fill(jointData, bufferAccess[MeshComponent::Submesh::DM_VB_JOW]);
-                    }
-                }
-            }
-        }
         // All tasks are done.
         if (listener_) {
             listener_->OnImportFinished();
@@ -3068,7 +3638,7 @@ void GLTF2Importer::PrepareBufferTasks()
     // We're loading all the buffers in one gather. This is probably fine as typical glTF files have just one binary
     // blob.
     (*(tasks_.begin() + firstTask))->state = ImporterTask::State::Gather;
-    auto threadTask = IThreadPool::ITask::Ptr { new GatherThreadTask(*this, *(*(tasks_.begin() + firstTask))) };
+    auto threadTask = IThreadPool::ITask::Ptr{new GatherThreadTask(*this, *(*(tasks_.begin() + firstTask)))};
     bufferTask_ = threadTask.get();
     ++pendingGatherTasks_[static_cast<uint32_t>(ImportPhase::BUFFERS)];
     gatherResults_[static_cast<uint32_t>(ImportPhase::BUFFERS)] = threadPool_->Push(BASE_NS::move(threadTask));
@@ -3110,34 +3680,44 @@ void GLTF2Importer::PrepareSamplerTasks()
     }
 }
 
+struct ImageTaskData {
+    GLTF2Importer* importer;
+    size_t index;
+    string uri;
+    string name;
+    refcnt_ptr<IRenderDataStoreDefaultStaging> staging;
+    RenderHandleReference imageHandle;
+    bool useUriCache;
+};
+
 void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
 {
-    struct ImageTaskData {
-        GLTF2Importer* importer;
-        size_t index;
-        string uri;
-        string name;
-        refcnt_ptr<IRenderDataStoreDefaultStaging> staging;
-        RenderHandleReference imageHandle;
-    };
-
     constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 
     auto staging = refcnt_ptr<IRenderDataStoreDefaultStaging>(
         renderContext_.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING.data()));
     // Does not exist, which means it needs to be imported.
     auto task = make_unique<GatheredDataTask<ImageTaskData>>();
-    task->data = ImageTaskData { this, i, move(uri), move(name), staging, {} };
+    task->data = ImageTaskData{this, i, move(uri), move(name), staging, {}, useUriCacheForImages_};
     task->name = "Import image";
     task->phase = ImportPhase::IMAGES;
     task->gather = [t = task.get(), colorSpaceFlags = colorSpaceFlags_]() -> bool {
         GLTF2Importer* importer = t->data.importer;
         auto const& image = importer->data_->images[t->data.index];
-        IImageLoaderManager::LoadResult result = GatherImageData(*image, *importer->data_,
-            importer->engine_.GetFileManager(), importer->engine_.GetImageLoaderManager(), 0U, colorSpaceFlags);
+        const ImageLoadConfig config{colorSpaceFlags,
+            importer->imageMipLoadFlags_,
+            importer->baseColorImageLoadFlags_,
+            importer->forceBaseColorTextureColorSpace_};
+        IImageLoaderManager::LoadResult result = GatherImageData(*image,
+            *importer->data_,
+            importer->engine_.GetFileManager(),
+            importer->engine_.GetImageLoaderManager(),
+            0U,
+            config);
         if (result.success) {
-            t->data.imageHandle =
-                ImportTexture(t->data.uri, move(result.image), *t->data.staging, importer->gpuResourceManager_);
+            const TextureImportContext ctx{
+                *t->data.staging, importer->gpuResourceManager_, importer->maxTextureMipLevels_, t->data.useUriCache};
+            t->data.imageHandle = ImportTexture(t->data.uri, move(result.image), ctx);
         } else {
             PLUGIN_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), result.error);
             t->errors += result.error;
@@ -3153,7 +3733,7 @@ void GLTF2Importer::QueueImage(size_t i, string&& uri, string&& name)
             auto imageEntity = importer->ecs_->GetEntityManager().CreateReferenceCounted();
             importer->renderHandleManager_->Create(imageEntity);
             importer->renderHandleManager_->Write(imageEntity)->reference = move(t->data.imageHandle);
-            if (!t->data.uri.empty()) {
+            if (t->data.useUriCache && !t->data.uri.empty()) {
                 importer->uriManager_->Create(imageEntity);
                 importer->uriManager_->Write(imageEntity)->uri = move(t->data.uri);
             }
@@ -3206,13 +3786,15 @@ void GLTF2Importer::PrepareImageTasks()
             uri = data_->filepath + "/" + image->uri;
         }
 
-        // See if this resource already exists.
-        Entity imageEntity = LookupResourceByUri(uri, *uriManager_, *renderHandleManager_);
-        if (EntityUtil::IsValid(imageEntity)) {
-            // Already exists.
-            result_.data.images[i] = ecs_->GetEntityManager().GetReferenceCounted(imageEntity);
-            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
-            continue;
+        if (useUriCacheForImages_) {
+            // See if this resource already exists.
+            Entity imageEntity = LookupResourceByUri(uri, *uriManager_, *renderHandleManager_);
+            if (EntityUtil::IsValid(imageEntity)) {
+                // Already exists.
+                result_.data.images[i] = ecs_->GetEntityManager().GetReferenceCounted(imageEntity);
+                PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+                continue;
+            }
         }
 
         QueueImage(i, move(uri), move(name));
@@ -3256,37 +3838,19 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
         task->phase = ImportPhase::IMAGES;
 
         task->gather = [this, &light, t = task.get()]() -> bool {
-            bool success = true;
             vector<IImageLoaderManager::LoadResult> mipLevels;
-            // For all mip levels.
-            for (const auto& mipLevel : light->specularImages) {
-                // For all cube faces.
-                for (const auto& cubeFace : mipLevel) {
-                    if (cubeFace >= data_->images.size()) {
-                        success = false;
-                        break;
-                    }
-                    // Get image for this cube face.
-                    auto& image = data_->images[cubeFace];
-                    if (!image) {
-                        success = false;
-                        break;
-                    }
-                    // Load image.
-                    auto loadResult =
-                        GatherImageData(*image, *data_, engine_.GetFileManager(), engine_.GetImageLoaderManager(),
-                            IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT, colorSpaceFlags_);
-                    if (!loadResult.success) {
-                        success = false;
-                        PLUGIN_LOG_W("Loading image '%s' failed: %s", image->uri.c_str(), loadResult.error);
-                        break;
-                    }
-
-                    mipLevels.push_back(move(loadResult));
-                }
-            }
+            const bool success = GatherImageBasedLightMipLevels(*data_,
+                engine_,
+                *light,
+                colorSpaceFlags_,
+                imageMipLoadFlags_,
+                baseColorImageLoadFlags_,
+                forceBaseColorTextureColorSpace_,
+                maxTextureMipLevels_,
+                mipLevels);
             if (!mipLevels.empty()) {
-                t->data = CreateCubemapFromImages(light->specularImageSize, mipLevels, gpuResourceManager_);
+                t->data = CreateCubemapFromImages(
+                    light->specularImageSize, mipLevels, gpuResourceManager_, maxTextureMipLevels_);
             }
             return success;
         };
@@ -3308,6 +3872,26 @@ void GLTF2Importer::PrepareImageBasedLightTasks()
 #endif
 }
 
+EntityReference GetOrCreateMaterialEntity(IEcs& ecs, IUriComponentManager& uriManager,
+    IMaterialComponentManager& materialManager, string&& uri, bool useUriCache)
+{
+    Entity materialEntity;
+    if (useUriCache) {
+        materialEntity = LookupResourceByUri(uri, uriManager, materialManager);
+        if (EntityUtil::IsValid(materialEntity)) {
+            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+        }
+    }
+    if (!EntityUtil::IsValid(materialEntity)) {
+        materialEntity = ecs.GetEntityManager().Create();
+        if (useUriCache && !uri.empty()) {
+            uriManager.Create(materialEntity);
+            uriManager.Write(materialEntity)->uri = BASE_NS::move(uri);
+        }
+    }
+    return ecs.GetEntityManager().GetReferenceCounted(materialEntity);
+}
+
 void GLTF2Importer::PrepareMaterialTasks()
 {
     // Create EntityReferences for materials already at this stage. This allows assigning materials to meshes before
@@ -3324,18 +3908,8 @@ void GLTF2Importer::PrepareMaterialTasks()
         uri += data_->defaultResources;
         uri += materialsPath;
         uri += to_string(i);
-        auto materialEntity = LookupResourceByUri(uri, *uriManager_, *materialManager_);
-        if (EntityUtil::IsValid(materialEntity)) {
-            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
-        } else {
-            materialEntity = ecs_->GetEntityManager().Create();
-            if (!uri.empty()) {
-                uriManager_->Create(materialEntity);
-                uriManager_->Write(materialEntity)->uri = BASE_NS::move(uri);
-            }
-        }
-
-        result_.data.materials.push_back(ecs_->GetEntityManager().GetReferenceCounted(materialEntity));
+        result_.data.materials.push_back(
+            GetOrCreateMaterialEntity(*ecs_, *uriManager_, *materialManager_, move(uri), useUriCacheForMaterials_));
     }
 
     auto task = make_unique<ImporterTask>();
@@ -3357,8 +3931,13 @@ void GLTF2Importer::PrepareMaterialTasks()
                 nameManager_->Write(materialEntity)->name = gltfMaterial.name;
             }
             materialManager_->Create(materialEntity);
-            success = ImportMaterial(result_, *data_, gltfMaterial, materialEntity, *materialManager_,
-                          gpuResourceManager_, dmShaderData_) &&
+            success = ImportMaterial(result_,
+                          *data_,
+                          gltfMaterial,
+                          materialEntity,
+                          *materialManager_,
+                          gpuResourceManager_,
+                          dmShaderData_) &&
                       success;
         }
 
@@ -3368,24 +3947,112 @@ void GLTF2Importer::PrepareMaterialTasks()
     QueueTask(move(task));
 }
 
+EntityReference LookupCachedMeshEntity(IEcs& ecs, IUriComponentManager& uriManager, IMeshComponentManager& meshManager,
+    const string& uri, bool useUriCache)
+{
+    if (!useUriCache) {
+        return {};
+    }
+    const Entity meshEntity = LookupResourceByUri(uri, uriManager, meshManager);
+    if (!EntityUtil::IsValid(meshEntity)) {
+        return {};
+    }
+    PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+    return ecs.GetEntityManager().GetReferenceCounted(meshEntity);
+}
+
+VertexInputDeclarationView CreateVertexInputDeclarationView(const VertexInputDeclarationData& vertexInputDeclaration)
+{
+    return {
+        array_view<const VertexInputDeclaration::VertexInputBindingDescription>(
+            vertexInputDeclaration.bindingDescriptions, vertexInputDeclaration.bindingDescriptionCount),
+        array_view<const VertexInputDeclaration::VertexInputAttributeDescription>(
+            vertexInputDeclaration.attributeDescriptions, vertexInputDeclaration.attributeDescriptionCount),
+    };
+}
+
+struct MeshImportEnv {
+    IEcs& ecs;
+    IUriComponentManager& uriManager;
+    INameComponentManager& nameManager;
+};
+
+struct MeshImportItem {
+    size_t index;
+    GatherMeshDataResult& meshData;
+    string uri;
+    string_view name;
+    bool useUriCache;
+    EntityReference cachedMesh;
+};
+
+struct CpuMeshTarget {
+    GltfMeshData& meshData;
+    vector<MeshDataBufferStorage>& buffers;
+    bool cpuAccess;
+};
+
+bool ImportMeshTask(const MeshImportEnv& env, GLTFImportResult& result, MeshImportItem& item)
+{
+    if (!item.meshData.success) {
+        return false;
+    }
+    auto meshEntity = ImportMesh(env.ecs, item.meshData);
+    if (!EntityUtil::IsValid(meshEntity)) {
+        return false;
+    }
+    if (item.useUriCache && !item.uri.empty()) {
+        env.uriManager.Create(meshEntity);
+        env.uriManager.Write(meshEntity)->uri = move(item.uri);
+    }
+    if (!item.name.empty()) {
+        env.nameManager.Create(meshEntity);
+        env.nameManager.Write(meshEntity)->name = item.name;
+    }
+    result.data.meshes[item.index] = env.ecs.GetEntityManager().GetReferenceCounted(meshEntity);
+    return true;
+}
+
+bool ImportMeshTaskWithCpuData(
+    const MeshImportEnv& env, GLTFImportResult& result, const CpuMeshTarget& cpu, MeshImportItem& item)
+{
+    if (cpu.cpuAccess && item.meshData.meshBuilder) {
+        item.meshData.meshBuilder->FinalizeCpuData();
+        FillMeshDataForCpuAccess(
+            cpu.meshData, cpu.buffers, static_cast<uint32_t>(item.index), *item.meshData.meshBuilder);
+    }
+    if (item.cachedMesh) {
+        result.data.meshes[item.index] = move(item.cachedMesh);
+        return true;
+    }
+    return ImportMeshTask(env, result, item);
+}
+
 void GLTF2Importer::PrepareMeshTasks()
 {
     result_.data.meshes.resize(data_->meshes.size(), {});
-    if (flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS) {
-        meshBuilders_.resize(data_->meshes.size());
+    const bool cpuAccess = (flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS) != 0U;
+    if (cpuAccess) {
+        meshData_.meshes.resize(data_->meshes.size());
+        meshDataBuffers_.resize(data_->meshes.size());
     }
 
     for (size_t i = 0; i < data_->meshes.size(); ++i) {
         string uri = data_->filepath + '/' + data_->defaultResources + "/meshes/" + to_string(i);
         const string_view name = data_->meshes[i]->name;
 
-        // See if this resource already exists.
-        const auto meshEntity = LookupResourceByUri(uri, *uriManager_, *meshManager_);
-        if (EntityUtil::IsValid(meshEntity)) {
-            // Already exists.
-            result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
-            PLUGIN_LOG_D("Resource already exists, skipping ('%s')", uri.c_str());
+        EntityReference cachedMesh =
+            LookupCachedMeshEntity(*ecs_, *uriManager_, *meshManager_, uri, useUriCacheForMeshes_);
+        if (cachedMesh && !cpuAccess) {
+            result_.data.meshes[i] = move(cachedMesh);
             continue;
+        }
+        if (!vertexInputDeclarationResolved_ &&
+            !ResolveVertexInputDeclaration(GetVertexInputDeclarationPath(renderContext_))) {
+            return;
+        }
+        if (cpuAccess) {
+            meshData_.vertexInputDeclaration = vertexInputDeclarationData_;
         }
 
         auto task = make_unique<GatheredDataTask<GatherMeshDataResult>>();
@@ -3393,52 +4060,34 @@ void GLTF2Importer::PrepareMeshTasks()
         task->phase = ImportPhase::MESHES;
         task->gather = [this, i, t = task.get()]() -> bool {
             const GLTF2::Mesh& mesh = *(data_->meshes[i]);
+            const VertexInputDeclarationView vertexInputDeclaration =
+                CreateVertexInputDeclarationView(vertexInputDeclarationData_);
 
             // Gather mesh data.
-            t->data = GatherMeshData(mesh, result_, flags_, *materialManager_, device_, engine_);
+            t->data = GatherMeshData(mesh, result_, flags_, *materialManager_, renderContext_, vertexInputDeclaration);
             t->errors = t->data.error;
             return t->data.success;
         };
 
-        task->import = [this, i, uri = move(uri), name, t = task.get()]() mutable -> bool {
-            if (!t->data.success) {
-                return false;
-            }
-            // Import mesh.
-            auto meshEntity = ImportMesh(*ecs_, t->data);
-            if (!EntityUtil::IsValid(meshEntity)) {
-                return false;
-            }
-            if (!uri.empty()) {
-                uriManager_->Create(meshEntity);
-                uriManager_->Write(meshEntity)->uri = move(uri);
-            }
-            if (!name.empty()) {
-                nameManager_->Create(meshEntity);
-                nameManager_->Write(meshEntity)->name = name;
-            }
+        task->import =
+            [this, i, uri = move(uri), name, cpuAccess, cachedMesh = move(cachedMesh), t = task.get()]() mutable {
+                const MeshImportEnv env{*ecs_, *uriManager_, *nameManager_};
+                const CpuMeshTarget cpu{meshData_, meshDataBuffers_, cpuAccess};
+                MeshImportItem item{i, t->data, move(uri), name, useUriCacheForMeshes_, move(cachedMesh)};
+                return ImportMeshTaskWithCpuData(env, result_, cpu, item);
+            };
 
-            result_.data.meshes[i] = ecs_->GetEntityManager().GetReferenceCounted(meshEntity);
-            return true;
-        };
-
-        task->finished = [this, i, t = task.get()]() {
-            if (flags_ & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS) {
-                meshBuilders_[i] = BASE_NS::move(t->data.meshBuilder);
-            } else {
-                t->data.meshBuilder.reset();
-            }
-        };
+        task->finished = [t = task.get()]() { t->data.meshBuilder.reset(); };
 
         QueueTask(move(task));
     }
 }
 
-template<>
+template <>
 GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationInputComponent>>*
-GLTF2Importer::PrepareAnimationInputTask(
-    unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationInputComponent>>*>& inputs,
-    const AnimationTrack& track, IAnimationInputComponentManager* animationInputManager)
+    GLTF2Importer::PrepareAnimationInputTask(
+        unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationInputComponent>>*>& inputs,
+        const AnimationTrack& track, IAnimationInputComponentManager* animationInputManager)
 {
     GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationInputComponent>>* result = nullptr;
     if (auto pos = inputs.find(track.sampler->input); pos == inputs.end()) {
@@ -3453,7 +4102,7 @@ GLTF2Importer::PrepareAnimationInputTask(
             animationInputManager->Set(t->data.entity, t->data.component);
             return true;
         };
-        inputs.insert({ track.sampler->input, task.get() });
+        inputs.insert({track.sampler->input, task.get()});
         result = task.get();
         QueueTask(move(task));
     } else {
@@ -3462,11 +4111,11 @@ GLTF2Importer::PrepareAnimationInputTask(
     return result;
 }
 
-template<>
+template <>
 GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationOutputComponent>>*
-GLTF2Importer::PrepareAnimationOutputTask(
-    unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationOutputComponent>>*>& outputs,
-    const AnimationTrack& track, IAnimationOutputComponentManager* animationOutputManager)
+    GLTF2Importer::PrepareAnimationOutputTask(
+        unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationOutputComponent>>*>& outputs,
+        const AnimationTrack& track, IAnimationOutputComponentManager* animationOutputManager)
 {
     GatheredDataTask<ComponentTaskData<AnimationOutputComponent>>* result = nullptr;
     if (auto pos = outputs.find(track.sampler->output); pos == outputs.end()) {
@@ -3481,7 +4130,7 @@ GLTF2Importer::PrepareAnimationOutputTask(
             animationOutputManager->Set(t->data.entity, t->data.component);
             return true;
         };
-        outputs.insert({ track.sampler->output, task.get() });
+        outputs.insert({track.sampler->output, task.get()});
         result = task.get();
         QueueTask(move(task));
     } else {
@@ -3526,8 +4175,8 @@ void GLTF2Importer::PrepareAnimationTasks()
         auto task = make_unique<ImporterTask>();
         task->name = "Import animation";
         task->phase = ImportPhase::ANIMATIONS;
-        task->import = AnimationTaskData { this, i, uri, name, animationManager, animationTrackManager,
-            move(inputResults), move(outputResults) };
+        task->import = AnimationTaskData{
+            this, i, uri, name, animationManager, animationTrackManager, move(inputResults), move(outputResults)};
         task->finished = [t = task.get()]() { t->import = {}; };
 
         QueueTask(move(task));
@@ -3733,53 +4382,21 @@ void Gltf2SceneImporter::UpdateResults()
         auto& dstMesh = meshData_.meshes[i];
         const auto& srcMesh = meshData.meshes[i];
         dstMesh.subMeshes.resize(srcMesh.subMeshes.size());
-        std::transform(srcMesh.subMeshes.cbegin(), srcMesh.subMeshes.cend(), dstMesh.subMeshes.begin(),
+        std::transform(srcMesh.subMeshes.cbegin(),
+            srcMesh.subMeshes.cend(),
+            dstMesh.subMeshes.begin(),
             [](const GltfMeshData::SubMesh& gltfSubmesh) {
                 MeshData::SubMesh submesh;
                 submesh.indices = gltfSubmesh.indices;
                 submesh.vertices = gltfSubmesh.vertices;
                 submesh.indexBuffer = gltfSubmesh.indexBuffer;
-                std::copy(std::begin(gltfSubmesh.attributeBuffers), std::end(gltfSubmesh.attributeBuffers),
+                std::copy(std::begin(gltfSubmesh.attributeBuffers),
+                    std::end(gltfSubmesh.attributeBuffers),
                     std::begin(submesh.attributeBuffers));
                 return submesh;
             });
     }
     meshData_.vertexInputDeclaration = meshData.vertexInputDeclaration;
-}
-
-// IInterface
-const IInterface* Gltf2SceneImporter::GetInterface(const BASE_NS::Uid& uid) const
-{
-    if (uid == ISceneImporter::UID) {
-        return static_cast<const ISceneImporter*>(this);
-    }
-    if (uid == IInterface::UID) {
-        return static_cast<const IInterface*>(this);
-    }
-    return nullptr;
-}
-
-IInterface* Gltf2SceneImporter::GetInterface(const BASE_NS::Uid& uid)
-{
-    if (uid == ISceneImporter::UID) {
-        return static_cast<ISceneImporter*>(this);
-    }
-    if (uid == IInterface::UID) {
-        return static_cast<IInterface*>(this);
-    }
-    return nullptr;
-}
-
-void Gltf2SceneImporter::Ref()
-{
-    ++refcnt_;
-}
-
-void Gltf2SceneImporter::Unref()
-{
-    if (--refcnt_ == 0) {
-        delete this;
-    }
 }
 
 void Gltf2SceneImporter::OnImportStarted()
@@ -3802,6 +4419,6 @@ void Gltf2SceneImporter::OnImportProgressed(size_t taskIndex, size_t taskCount)
         listener_->OnImportProgressed(taskIndex, taskCount);
     }
 }
-} // namespace GLTF2
+}  // namespace GLTF2
 
 CORE3D_END_NAMESPACE()

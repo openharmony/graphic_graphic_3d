@@ -49,7 +49,7 @@ RenderHandleDesc RenderUtil::GetRenderHandleDesc(const RenderHandleReference& ha
         if ((handleType >= RenderHandleType::GPU_BUFFER) && (handleType <= RenderHandleType::GPU_SAMPLER)) {
             const IGpuResourceManager& mgr = renderContext_.GetDevice().GetGpuResourceManager();
             desc.name = mgr.GetName(handle);
-            desc.refCount -= 1; // one count in mgr
+            desc.refCount -= 1;  // one count in mgr
         } else if ((handleType >= RenderHandleType::SHADER_STATE_OBJECT) &&
                    (handleType <= RenderHandleType::GRAPHICS_STATE)) {
             const IShaderManager& mgr = renderContext_.GetDevice().GetShaderManager();
@@ -61,7 +61,7 @@ RenderHandleDesc RenderUtil::GetRenderHandleDesc(const RenderHandleReference& ha
             const RenderNodeGraphDescInfo info = mgr.GetInfo(handle);
             desc.name = info.renderNodeGraphUri;
             desc.additionalName = info.renderNodeGraphName;
-            desc.refCount -= 1; // one count in mgr
+            desc.refCount -= 1;  // one count in mgr
         }
     }
     return desc;

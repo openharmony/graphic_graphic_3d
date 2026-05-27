@@ -37,24 +37,46 @@ public:
      * @return The child node added or null if failed
      */
     virtual Future<INode::Ptr> ImportChild(const INode::ConstPtr& node) = 0;
-
+    /**
+     * @brief Options for ImportChildScene.
+     */
+    struct ImportOptions {
+        /// Name for the scene's root that is copied.
+        BASE_NS::string_view nodeName;
+        /// Associated resource group for the resources imported from the scene (empty will generate one if needed)
+        BASE_NS::string_view resourceGroup;
+        enum class NamingBehavior : uint8_t {
+            /// Make sure nodeName is unique. Generate a new unique name if the a child with nodeName already exists.
+            ENFORCE_UNIQUE_NAME = 0,
+            /// remove existing child node with the same name (if any)
+            REMOVE_EXISTING,
+            /// Do nothing for nodeName, may lead to duplicate child names.
+            NAME_AS_IS
+        };
+        NamingBehavior namingBehavior{NamingBehavior::REMOVE_EXISTING};
+        /// Share resources if same scene is imported multiple times.
+        bool shareResources{true};
+    };
     /**
      * @brief Adds whole scene node hierarchy as child of this node.
      *        The scenes must share the same context.
      *        This will make a deep copy of the node and all children/resources it references.
      *        This will also copy animations
      * @param scene Scene to import
-     * @param nodeName Name for the scene's root that is copied (the name is usually empty so you can give better name
-     * here)
-     * @param resourceGroup Associated resource group for the resources imported from the scene (empty will generate one
-     * if needed)
+     * @param options Import options.
      * @return The child node added (which was the root in given scene) or null if failed
      */
-    virtual Future<INode::Ptr> ImportChildScene(
-        const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup) = 0;
+    virtual Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, const ImportOptions& options) = 0;
+    /// Helper for ImportChildScene.
+    Future<INode::Ptr> ImportChildScene(
+        const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup)
+    {
+        return ImportChildScene(scene, {nodeName, resourceGroup});
+    }
+    /// Helper for ImportChildScene.
     Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, BASE_NS::string_view nodeName)
     {
-        return ImportChildScene(scene, nodeName, "");
+        return ImportChildScene(scene, {nodeName, ""});
     }
     /**
      * @brief Adds whole scene node hierarchy as child of this node.
@@ -69,7 +91,12 @@ public:
      * @brief Instantiate object template as part of this scene using this node as parent
      * @param templ Object template containing node hierarchy
      */
-    virtual Future<INode::Ptr> ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ) = 0;
+    virtual Future<INode::Ptr> ImportTemplate(
+        const META_NS::IObjectTemplate::ConstPtr& templ, BASE_NS::string_view resourceGroup) = 0;
+    Future<INode::Ptr> ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ)
+    {
+        return ImportTemplate(templ, "");
+    }
 };
 
 SCENE_END_NAMESPACE()

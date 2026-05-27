@@ -22,17 +22,18 @@
 
 #include <base/containers/vector.h>
 #include <meta/interface/property/property.h>
+#include "export.h"
 
-template<typename SourceType, uint32_t SourceIndex, typename Fn>
+template <typename SourceType, uint32_t SourceIndex, typename Fn>
 bool SetPropertyValue(NapiApi::FunctionContext<std::optional<SourceType>>& ctx, Fn&& callback)
 {
     std::optional<SourceType> opt = ctx.template Arg<SourceIndex>();
     bool defined = opt.has_value();
-    SourceType value = opt.value_or(SourceType {});
+    SourceType value = opt.value_or(SourceType{});
     return callback(value, defined);
 }
 
-template<typename SourceType, uint32_t SourceIndex, typename TargetType>
+template <typename SourceType, uint32_t SourceIndex, typename TargetType>
 bool SetPropertyValue(NapiApi::FunctionContext<std::optional<SourceType>>& ctx,
     const META_NS::Property<TargetType>& property, std::optional<TargetType> defaultValue = {})
 {
@@ -53,8 +54,7 @@ bool SetPropertyValue(NapiApi::FunctionContext<std::optional<SourceType>>& ctx,
     return false;
 }
 
-
-class SceneResourceImpl {
+class SCENE_ADDON_PUBLIC SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 1;
     enum SceneResourceType {
@@ -126,10 +126,10 @@ protected:
     bool validateSceneRef() const;
     // flagged to true, IF user directly called "destroy" to the resource.
     // used to identify if we want FULL cleanup or just release the "handle".
-    bool userDisposed_ { false };
+    bool userDisposed_{false};
 
 private:
     SceneResourceType type_;
-    BASE_NS::string name_; // Cache for name if object does not support naming
+    BASE_NS::string name_;  // Cache for name if object does not support naming
 };
 #endif

@@ -1,0 +1,31 @@
+{
+    "version": "1.0",
+    "description": "scene with component on child of external node template",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_ext_component.json"
+                    },
+                    "resourceGroup": "comp-nt-group",
+                    "components": [
+                        {
+                            "path": ".//AnimatedCube",
+                            "name": "RenderConfigurationComponent",
+                            "properties": [
+                                { "name": "ShadowQuality", "value": 3 }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

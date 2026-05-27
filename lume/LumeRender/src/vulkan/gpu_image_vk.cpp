@@ -38,10 +38,12 @@ namespace {
 #if (RENDER_PERF_ENABLED == 1)
 void RecordAllocation(const int64_t alignedByteSize)
 {
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize,
+        pdm->UpdateData("AllGpuImages",
+            "GPU_IMAGE",
+            alignedByteSize,
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
@@ -52,9 +54,9 @@ void ValidateFormat(const DevicePlatformDataVk& devicePlat, const GpuImageDesc& 
 {
     const VkFormat format = (VkFormat)desc.format;
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice, // physicalDevice
-        format,                                                    // format
-        &formatProperties);                                        // pFormatProperties
+    vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice,  // physicalDevice
+        format,                                                     // format
+        &formatProperties);                                         // pFormatProperties
     const VkFormatFeatureFlags optimalTilingFeatureFlags = formatProperties.optimalTilingFeatures;
     bool valid = true;
     if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -80,11 +82,10 @@ void ValidateFormat(const DevicePlatformDataVk& devicePlat, const GpuImageDesc& 
 }
 #endif
 
-constexpr uint32_t IMAGE_VIEW_USAGE_FLAGS {
+constexpr uint32_t IMAGE_VIEW_USAGE_FLAGS{
     CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_STORAGE_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
     CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-    CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT
-};
+    CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT};
 
 bool IsStencilFormat(const BASE_NS::Format format)
 {
@@ -138,8 +139,12 @@ inline VkImageViewType GetBaseImageViewType(const VkImageViewType imageViewType)
 
 inline GpuResourceMemoryVk GetPlatMemory(const VmaAllocationInfo& allocationInfo, const VkMemoryPropertyFlags flags)
 {
-    return GpuResourceMemoryVk { allocationInfo.deviceMemory, allocationInfo.offset, allocationInfo.size,
-        allocationInfo.pMappedData, allocationInfo.memoryType, flags };
+    return GpuResourceMemoryVk{allocationInfo.deviceMemory,
+        allocationInfo.offset,
+        allocationInfo.size,
+        allocationInfo.pMappedData,
+        allocationInfo.memoryType,
+        flags};
 }
 
 inline bool InvalidFboSwizzle(const VkComponentMapping& componentMapping)
@@ -155,7 +160,7 @@ void FillImageDescVk(const GpuImageDesc& desc, GpuImagePlatformDataVk& plat)
     plat.format = static_cast<VkFormat>(desc.format);
     plat.aspectFlags = GpuImageUtilsVk::GetImageAspectFlagsFromFormat(plat.format);
     plat.usage = static_cast<VkImageUsageFlags>(desc.usageFlags);
-    plat.extent = { desc.width, desc.height, desc.depth };
+    plat.extent = {desc.width, desc.height, desc.depth};
     plat.tiling = static_cast<VkImageTiling>(desc.imageTiling);
     plat.type = static_cast<VkImageType>(desc.imageType);
     plat.samples = static_cast<VkSampleCountFlagBits>(desc.sampleCountFlags);
@@ -164,43 +169,43 @@ void FillImageDescVk(const GpuImageDesc& desc, GpuImagePlatformDataVk& plat)
 }
 
 struct ImageInputStruct {
-    VkImage image { VK_NULL_HANDLE };
-    VkFormat format { VK_FORMAT_UNDEFINED };
-    VkComponentMapping componentMapping {};
+    VkImage image{VK_NULL_HANDLE};
+    VkFormat format{VK_FORMAT_UNDEFINED};
+    VkComponentMapping componentMapping{};
 };
 
 VkImageView CreateImageView(const VkDevice device, const VkSamplerYcbcrConversionInfo* ycbcrConversionInfo,
     const ImageInputStruct& imageInput, const VkImageViewType imageViewType, const VkImageAspectFlags imageAspectFlags,
     const uint32_t baseMipLevel, const uint32_t levelCount, const uint32_t baseArrayLayer, const uint32_t layerCount)
 {
-    const VkImageSubresourceRange imageSubresourceRange {
-        imageAspectFlags, // aspectMask
-        baseMipLevel,     // baseMipLevel
-        levelCount,       // levelCount
-        baseArrayLayer,   // baseArrayLayer
-        layerCount        // layerCount
+    const VkImageSubresourceRange imageSubresourceRange{
+        imageAspectFlags,  // aspectMask
+        baseMipLevel,      // baseMipLevel
+        levelCount,        // levelCount
+        baseArrayLayer,    // baseArrayLayer
+        layerCount         // layerCount
     };
 
-    const VkImageViewCreateInfo imageViewCreateInfo {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
-        ycbcrConversionInfo,                      // pNext
-        0,                                        // flags
-        imageInput.image,                         // image
-        imageViewType,                            // viewType
-        imageInput.format,                        // format
-        imageInput.componentMapping,              // components
-        imageSubresourceRange,                    // subresourceRange
+    const VkImageViewCreateInfo imageViewCreateInfo{
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,  // sType
+        ycbcrConversionInfo,                       // pNext
+        0,                                         // flags
+        imageInput.image,                          // image
+        imageViewType,                             // viewType
+        imageInput.format,                         // format
+        imageInput.componentMapping,               // components
+        imageSubresourceRange,                     // subresourceRange
     };
 
     VkImageView imageView = VK_NULL_HANDLE;
-    VALIDATE_VK_RESULT(vkCreateImageView(device, // device
-        &imageViewCreateInfo,                    // pCreateInfo
-        nullptr,                                 // pAllocator
-        &imageView));                            // pView
+    VALIDATE_VK_RESULT(vkCreateImageView(device,  // device
+        &imageViewCreateInfo,                     // pCreateInfo
+        nullptr,                                  // pAllocator
+        &imageView));                             // pView
 
     return imageView;
 }
-} // namespace
+}  // namespace
 
 GpuImageVk::GpuImageVk(Device& device, const GpuImageDesc& desc) : GpuImage(), device_(device), desc_(desc)
 {
@@ -236,9 +241,12 @@ GpuImageVk::GpuImageVk(Device& device, const GpuImageDesc& desc) : GpuImage(), d
 
 GpuImageVk::GpuImageVk(
     Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData, const uintptr_t hwBuffer)
-    : device_(device), plat_((const GpuImagePlatformDataVk&)platformData),
-      desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc), ownsResources_(false),
-      ownsImage_(hwBuffer ? false : (plat_.image == VK_NULL_HANDLE)), ownsImageViews_(plat_.imageView == VK_NULL_HANDLE)
+    : device_(device),
+      plat_((const GpuImagePlatformDataVk&)platformData),
+      desc_(hwBuffer ? GetImageDescFromHwBufferDesc(hwBuffer) : desc),
+      ownsResources_(false),
+      ownsImage_(hwBuffer ? false : (plat_.image == VK_NULL_HANDLE)),
+      ownsImageViews_(plat_.imageView == VK_NULL_HANDLE)
 {
     // with platform data the resources can be created from hwbuffer and/or direct platform images
     // the destruction happens based on ownsImage_ and ownsImageViews_
@@ -255,8 +263,9 @@ GpuImageVk::GpuImageVk(
     } else if (plat_.imageView) {
         plat_.imageViewBase = plat_.imageView;
     }
+
+    plat_.platformHwBuffer = hwBuffer;
     if (hwBuffer) {
-        plat_.platformHwBuffer = hwBuffer;
         CreatePlatformHwBuffer();
     }
 }
@@ -265,9 +274,9 @@ GpuImageVk::~GpuImageVk()
 {
     auto destroyImageViews = [](VkDevice device, auto& vec) {
         for (auto& ref : vec) {
-            vkDestroyImageView(device, // device
-                ref,                   // imageView
-                nullptr);              // pAllocator
+            vkDestroyImageView(device,  // device
+                ref,                    // imageView
+                nullptr);               // pAllocator
             ref = VK_NULL_HANDLE;
         }
         vec.clear();
@@ -275,14 +284,14 @@ GpuImageVk::~GpuImageVk()
     // high level view might own image views
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     if (ownsResources_ || ownsImageViews_) {
-        vkDestroyImageView(device, // device
-            plat_.imageView,       // imageView
-            nullptr);              // pAllocator
+        vkDestroyImageView(device,  // device
+            plat_.imageView,        // imageView
+            nullptr);               // pAllocator
         plat_.imageView = VK_NULL_HANDLE;
         if (destroyImageViewBase_) {
-            vkDestroyImageView(device, // device
-                plat_.imageViewBase,   // imageView
-                nullptr);              // pAllocator
+            vkDestroyImageView(device,  // device
+                plat_.imageViewBase,    // imageView
+                nullptr);               // pAllocator
         }
         plat_.imageViewBase = VK_NULL_HANDLE;
         destroyImageViews(device, platViews_.mipImageViews);
@@ -311,22 +320,22 @@ GpuImageVk::~GpuImageVk()
 
 void GpuImageVk::CreateVkImage()
 {
-    const VkImageCreateInfo imageCreateInfo {
-        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,                // sType
-        nullptr,                                            // pNext
-        static_cast<VkImageCreateFlags>(desc_.createFlags), // flags
-        plat_.type,                                         // imageType
-        plat_.format,                                       // format
-        plat_.extent,                                       // extent
-        plat_.mipLevels,                                    // mipLevels
-        plat_.arrayLayers,                                  // arrayLayers
-        plat_.samples,                                      // samples
-        plat_.tiling,                                       // tiling
-        plat_.usage,                                        // usage
-        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,           // sharingMode
-        0,                                                  // queueFamilyIndexCount
-        nullptr,                                            // pQueueFamilyIndices
-        VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,           // initialLayout
+    const VkImageCreateInfo imageCreateInfo{
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,                 // sType
+        nullptr,                                             // pNext
+        static_cast<VkImageCreateFlags>(desc_.createFlags),  // flags
+        plat_.type,                                          // imageType
+        plat_.format,                                        // format
+        plat_.extent,                                        // extent
+        plat_.mipLevels,                                     // mipLevels
+        plat_.arrayLayers,                                   // arrayLayers
+        plat_.samples,                                       // samples
+        plat_.tiling,                                        // tiling
+        plat_.usage,                                         // usage
+        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,            // sharingMode
+        0,                                                   // queueFamilyIndexCount
+        nullptr,                                             // pQueueFamilyIndices
+        VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,            // initialLayout
     };
 
     auto memoryPropertyFlags = static_cast<VkMemoryPropertyFlags>(desc_.memoryPropertyFlags);
@@ -340,20 +349,20 @@ void GpuImageVk::CreateVkImage()
         // can be null handle -> default allocator
         const VmaPool customPool = gpuMemAllocator->GetImagePool(desc_);
 
-        const VmaAllocationCreateInfo allocationCreateInfo {
-            0, // flags
+        const VmaAllocationCreateInfo allocationCreateInfo{
+            0,  // flags
 #ifdef USE_NEW_VMA
-            VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, // usage
+            VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,  // usage
 #else
-            VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY, // usage
+            VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY,  // usage
 #endif
-            requiredFlags,  // requiredFlags
-            preferredFlags, // preferredFlags
-            0,              // memoryTypeBits
-            customPool,     // pool
-            nullptr,        // pUserData
+            requiredFlags,   // requiredFlags
+            preferredFlags,  // preferredFlags
+            0,               // memoryTypeBits
+            customPool,      // pool
+            nullptr,         // pUserData
 #ifdef USE_NEW_VMA
-            0.f, // priority
+            0.f,  // priority
 #endif
         };
 
@@ -380,10 +389,17 @@ void GpuImageVk::CreateVkImageViews(
         (VkComponentSwizzle)desc_.componentMapping.a,
     };
 
-    const ImageInputStruct imageInput = { plat_.image, plat_.format, componentMapping };
+    const ImageInputStruct imageInput = {plat_.image, plat_.format, componentMapping};
     // Create basic image view for sampling and general usage
-    plat_.imageView = CreateImageView(vkDevice, ycbcrConversionInfo, imageInput, imageViewType,
-        shaderViewImageAspectFlags, 0, plat_.mipLevels, 0, plat_.arrayLayers);
+    plat_.imageView = CreateImageView(vkDevice,
+        ycbcrConversionInfo,
+        imageInput,
+        imageViewType,
+        shaderViewImageAspectFlags,
+        0,
+        plat_.mipLevels,
+        0,
+        plat_.arrayLayers);
     plat_.imageViewBase = plat_.imageView;
 
     const bool invalidFboSwizzle = InvalidFboSwizzle(componentMapping);
@@ -396,7 +412,7 @@ void GpuImageVk::CreateVkImageViews(
         const VkImageViewType baseImageViewType = GetBaseImageViewType(imageViewType);
         {
             ImageInputStruct imageInputIdentity = imageInput;
-            imageInputIdentity.componentMapping = {}; // identity needed for fbo
+            imageInputIdentity.componentMapping = {};  // identity needed for fbo
             plat_.imageViewBase = CreateImageView(
                 vkDevice, ycbcrConversionInfo, imageInputIdentity, baseImageViewType, imageAspectFlags, 0U, 1U, 0U, 1U);
         }
@@ -410,24 +426,45 @@ void GpuImageVk::CreateVkImageViews(
                 platViews_.mipImageViews[mipIdx] = CreateImageView(
                     vkDevice, ycbcrConversionInfo, imageInput, baseImageViewType, imageAspectFlags, mipIdx, 1U, 0U, 1U);
                 if (plat_.arrayLayers > 1U) {
-                    platViews_.mipImageAllLayerViews[mipIdx] = CreateImageView(vkDevice, ycbcrConversionInfo,
-                        imageInput, VK_IMAGE_VIEW_TYPE_2D_ARRAY, imageAspectFlags, mipIdx, 1U, 0U, plat_.arrayLayers);
+                    platViews_.mipImageAllLayerViews[mipIdx] = CreateImageView(vkDevice,
+                        ycbcrConversionInfo,
+                        imageInput,
+                        VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+                        imageAspectFlags,
+                        mipIdx,
+                        1U,
+                        0U,
+                        plat_.arrayLayers);
                 }
             }
         }
         if (plat_.arrayLayers > 1) {
             platViews_.layerImageViews.resize(plat_.arrayLayers);
             for (uint32_t layerIdx = 0; layerIdx < plat_.arrayLayers; ++layerIdx) {
-                platViews_.layerImageViews[layerIdx] = CreateImageView(vkDevice, ycbcrConversionInfo, imageInput,
-                    baseImageViewType, imageAspectFlags, 0U, 1U, layerIdx, 1U);
+                platViews_.layerImageViews[layerIdx] = CreateImageView(vkDevice,
+                    ycbcrConversionInfo,
+                    imageInput,
+                    baseImageViewType,
+                    imageAspectFlags,
+                    0U,
+                    1U,
+                    layerIdx,
+                    1U);
             }
         }
         if (imageViewType == VK_IMAGE_VIEW_TYPE_CUBE) {
             if (platViews_.mipImageAllLayerViews.empty()) {
                 platViews_.mipImageAllLayerViews.resize(plat_.mipLevels);
                 for (uint32_t mipIdx = 0; mipIdx < plat_.mipLevels; ++mipIdx) {
-                    platViews_.mipImageAllLayerViews[mipIdx] = CreateImageView(vkDevice, ycbcrConversionInfo,
-                        imageInput, VK_IMAGE_VIEW_TYPE_2D_ARRAY, imageAspectFlags, mipIdx, 1U, 0U, plat_.arrayLayers);
+                    platViews_.mipImageAllLayerViews[mipIdx] = CreateImageView(vkDevice,
+                        ycbcrConversionInfo,
+                        imageInput,
+                        VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+                        imageAspectFlags,
+                        mipIdx,
+                        1U,
+                        0U,
+                        plat_.arrayLayers);
                 }
             }
         }
@@ -467,7 +504,7 @@ GpuImage::AdditionalFlags GpuImageVk::GetAdditionalFlags() const
 namespace GpuImageUtilsVk {
 VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format)
 {
-    VkImageAspectFlags flags {};
+    VkImageAspectFlags flags{};
 
     const bool isDepthFormat =
         ((format == VkFormat::VK_FORMAT_D16_UNORM) || (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32) ||
@@ -492,5 +529,5 @@ VkImageAspectFlags GetImageAspectFlagsFromFormat(const VkFormat format)
 
     return flags;
 }
-} // namespace GpuImageUtilsVk
+}  // namespace GpuImageUtilsVk
 RENDER_END_NAMESPACE()

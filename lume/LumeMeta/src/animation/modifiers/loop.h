@@ -32,10 +32,10 @@ namespace AnimationModifiers {
 class LoopModifier final
     : public IntroduceInterfaces<AnimationModifierFwd, AnimationModifiers::ILoop, INotifyOnChange> {
     META_OBJECT(LoopModifier, META_NS::ClassId::LoopAnimationModifier, IntroduceInterfaces, ClassId::Object)
-public: // ILifecycle
+public:  // ILifecycle
     bool Build(const IMetadata::Ptr& data) override;
 
-public: // IAnimationModifier
+public:  // IAnimationModifier
     bool ProcessOnGetDuration(DurationData& duration) const override;
     bool ProcessOnStep(StepData& step) const override;
 
@@ -56,8 +56,8 @@ private:
     META_NS::IManualClock::Ptr manualClock_;
 };
 
-} // namespace AnimationModifiers
+}  // namespace AnimationModifiers
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_LOOP_ANIMATION_MODIFIER_H
+#endif  // META_SRC_LOOP_ANIMATION_MODIFIER_H

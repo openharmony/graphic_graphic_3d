@@ -46,7 +46,7 @@ public:
         /** Name of the entry */
         BASE_NS::string name;
         /** timestamp, 0 if not applicable. */
-        uint64_t timestamp { 0 };
+        uint64_t timestamp{0};
     };
 
     /** Close the directory. */
@@ -73,4 +73,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IO_IDIRECTORY_H
+#endif  // API_CORE_IO_IDIRECTORY_H

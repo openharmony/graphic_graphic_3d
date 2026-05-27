@@ -90,9 +90,11 @@ void PostprocessEffectSsao(UTest::TestResources& res)
                 CreateInstance<IRenderPostProcess>(*renderClassFactory, RENDER_NS::UID_RENDER_POST_PROCESS_COMBINED);
             auto combinedProps = combined->GetProperties();
             CORE_NS::SetPropertyValue(combinedProps, "enabled", true);
-            CORE_NS::SetPropertyValue(combinedProps, "postProcessConfiguration.enableFlags",
+            CORE_NS::SetPropertyValue(combinedProps,
+                "postProcessConfiguration.enableFlags",
                 uint32_t(RENDER_NS::PostProcessConfiguration::ENABLE_TONEMAP_BIT));
-            CORE_NS::SetPropertyValue(combinedProps, "postProcessConfiguration.tonemapConfiguration.tonemapType",
+            CORE_NS::SetPropertyValue(combinedProps,
+                "postProcessConfiguration.tonemapConfiguration.tonemapType",
                 RENDER_NS::TonemapConfiguration::TONEMAP_PBR_NEUTRAL);
             CORE_NS::SetPropertyValue(combinedProps, "postProcessConfiguration.tonemapConfiguration.exposure", 1.f);
 
@@ -112,8 +114,12 @@ void PostprocessEffectSsao(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 0.75f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+            Math::Vec3(0.0f, 0.75f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -122,11 +128,11 @@ void PostprocessEffectSsao(UTest::TestResources& res)
                                           CameraComponent::PipelineFlagBits::DEPTH_OUTPUT_BIT |
                                           CameraComponent::PipelineFlagBits::VELOCITY_OUTPUT_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
         cameraComponent->postProcess = postprocessEntity;
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 60.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 60.0f, 1.0f);
 
     // objects
     {
@@ -141,7 +147,7 @@ void PostprocessEffectSsao(UTest::TestResources& res)
                     BASE_NS::Math::Vec4(0.0f, 0.0f, 0.9f, 1.f);
             }
             auto plane = nodeSystem->GetNode(meshUtil.GeneratePlane(ecs, "plane", material, 5.0f, 5.0f));
-            plane->SetPosition({ 0.0f, -1.0f, 0.0f });
+            plane->SetPosition({0.0f, -1.0f, 0.0f});
             plane->SetParent(*rootNode);
         }
         {
@@ -157,7 +163,7 @@ void PostprocessEffectSsao(UTest::TestResources& res)
                     BASE_NS::Math::Vec4(0.0f, 0.0f, 0.9f, 1.f);
             }
             auto sphere = nodeSystem->GetNode(meshUtil.GenerateSphere(ecs, "sphere", material, 1.f, 32.f, 32.f));
-            sphere->SetPosition({ 1.0f, 0.0f, 0.0f });
+            sphere->SetPosition({1.0f, 0.0f, 0.0f});
             sphere->SetParent(*rootNode);
         }
         {
@@ -170,12 +176,12 @@ void PostprocessEffectSsao(UTest::TestResources& res)
                     BASE_NS::Math::Vec4(0.0f, 0.0f, 0.9f, 1.f);
             }
             auto cube = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "cube", material, 1.f, 1.f, 1.f));
-            cube->SetPosition({ -1.0f, -0.5f, 0.0f });
+            cube->SetPosition({-1.0f, -0.5f, 0.0f});
             cube->SetParent(*rootNode);
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -192,13 +198,17 @@ UNIT_TEST(API_GfxTest, PostprocessEffectSsaoVulkan, testing::ext::TestSize.Level
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/PostprocessEffectSsaoVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/PostprocessEffectSsaoVulkan.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: PostprocessEffectSsaoOpenGL
@@ -214,8 +224,12 @@ UNIT_TEST(API_GfxTest, PostprocessEffectSsaoOpenGL, testing::ext::TestSize.Level
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/PostprocessEffectSsaoOpenGL.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/PostprocessEffectSsaoOpenGL.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();

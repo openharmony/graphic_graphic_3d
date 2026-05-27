@@ -48,17 +48,27 @@ using namespace RENDER_NS;
 
 CORE3D_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr uint32_t MAX_MIP_COUNT { 16U };
-constexpr string_view CORE_DEFAULT_GPU_IMAGE_BLACK { "CORE_DEFAULT_GPU_IMAGE" };
-constexpr string_view DEFAULT_CUBEMAP_BLENDER_SHADER { "3dshaders://shader/core3d_dm_camera_cubemap_blender.shader" };
+constexpr uint32_t MAX_MIP_COUNT{16U};
+constexpr string_view CORE_DEFAULT_GPU_IMAGE_BLACK{"CORE_DEFAULT_GPU_IMAGE"};
+constexpr string_view DEFAULT_CUBEMAP_BLENDER_SHADER{"3dshaders://shader/core3d_dm_camera_cubemap_blender.shader"};
 
-constexpr GpuImageDesc CUBEMAP_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE,
-    BASE_FORMAT_B10G11R11_UFLOAT_PACK32, CORE_IMAGE_TILING_OPTIMAL,
-    CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT, CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-    CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 256U, 256U, 1U, 9U, 6U,
-    CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+constexpr GpuImageDesc CUBEMAP_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_CUBE,
+    BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+    CORE_IMAGE_TILING_OPTIMAL,
+    CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    256U,
+    256U,
+    1U,
+    9U,
+    6U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
 
 RenderNodeDefaultEnvironmentBlender::DefaultImagesAndSamplers GetDefaultImagesAndSamplers(
     const IRenderNodeGpuResourceManager& gpuResourceMgr)
@@ -78,7 +88,7 @@ RenderHandleReference CreateRadianceCubemap(IRenderNodeGpuResourceManager& gpuRe
 {
     return gpuResourceMgr.Create(name, CUBEMAP_DEFAULT_DESC);
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultEnvironmentBlender::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -110,7 +120,7 @@ void RenderNodeDefaultEnvironmentBlender::PreExecuteFrame()
     if (!dataStoreCamera->HasBlendEnvironments()) {
         // need to clear targets
         envTargetData_ = {};
-        return; // early out
+        return;  // early out
     }
 
     hasBlendEnvironments_ = true;
@@ -133,8 +143,9 @@ void RenderNodeDefaultEnvironmentBlender::PreExecuteFrame()
                     const string name = string(stores_.dataStoreNameScene) +
                                         DefaultMaterialSceneConstants::ENVIRONMENT_RADIANCE_CUBEMAP_PREFIX_NAME +
                                         to_hex(currEnv.id);
-                    envTargetData_.push_back({ currEnv.id,
-                        CreateRadianceCubemap(renderNodeContextMgr_->GetGpuResourceManager(), name.c_str()), true });
+                    envTargetData_.push_back({currEnv.id,
+                        CreateRadianceCubemap(renderNodeContextMgr_->GetGpuResourceManager(), name.c_str()),
+                        true});
                 }
             }
         }
@@ -189,12 +200,13 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteFrame(IRenderCommandList& cmdLi
 }
 
 namespace {
-constexpr ImageResourceBarrier SRC_UNDEFINED { 0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED };
-constexpr ImageResourceBarrier COL_ATTACHMENT { CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-constexpr ImageResourceBarrier SHDR_READ { CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-} // namespace
+constexpr ImageResourceBarrier SRC_UNDEFINED{0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED};
+constexpr ImageResourceBarrier COL_ATTACHMENT{CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+constexpr ImageResourceBarrier SHDR_READ{
+    CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+}  // namespace
 
 RenderHandle RenderNodeDefaultEnvironmentBlender::GetEnvironmentTargetHandle(
     const RenderCamera::Environment& environment)
@@ -262,13 +274,13 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
         return;
     }
 
-    RenderHandle blendEnvironments[2U] { defaultImagesAndSamplers_.skyBoxRadianceCubemapHandle,
-        defaultImagesAndSamplers_.skyBoxRadianceCubemapHandle };
-    array_view<RenderHandle> beView { blendEnvironments, countof(blendEnvironments) };
+    RenderHandle blendEnvironments[2U]{
+        defaultImagesAndSamplers_.skyBoxRadianceCubemapHandle, defaultImagesAndSamplers_.skyBoxRadianceCubemapHandle};
+    array_view<RenderHandle> beView{blendEnvironments, countof(blendEnvironments)};
     FillBlendEnvironments(environments, envIdx, beView);
 
     const GpuImageDesc desc = renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(target);
-    Math::UVec2 currSize = { desc.width, desc.height };
+    Math::UVec2 currSize = {desc.width, desc.height};
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     RenderPass renderPass;
@@ -277,7 +289,7 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
     renderPass.renderPassDesc.attachments[0U].loadOp = CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPass.renderPassDesc.attachments[0U].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
     renderPass.renderPassDesc.attachments[0U].layer = 0U;
-    renderPass.renderPassDesc.renderArea = { 0U, 0U, currSize.x, currSize.y };
+    renderPass.renderPassDesc.renderArea = {0U, 0U, currSize.x, currSize.y};
     renderPass.renderPassDesc.subpassCount = 1U;
     renderPass.subpassDesc.viewMask = 0x3f;
     renderPass.subpassDesc.colorAttachmentCount = 1U;
@@ -295,8 +307,11 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
 
     // change all the layouts accordingly
     {
-        ImageSubresourceRange imageSubresourceRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        ImageSubresourceRange imageSubresourceRange{CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
         cmdList.CustomImageBarrier(target, SRC_UNDEFINED, COL_ATTACHMENT, imageSubresourceRange);
         cmdList.AddCustomBarrierPoint();
     }
@@ -307,7 +322,7 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
             currSize.x = Math::max(1U, currSize.x / 2U);
             currSize.y = Math::max(1U, currSize.y / 2U);
         }
-        renderPass.renderPassDesc.renderArea = { 0U, 0U, currSize.x, currSize.y };
+        renderPass.renderPassDesc.renderArea = {0U, 0U, currSize.x, currSize.y};
 
         cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
 
@@ -323,7 +338,7 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
 
         if (pipelineLayout_.pushConstant.byteSize > 0U) {
             // mipIdx as lodlevel
-            Math::UVec4 indices { envIdx, mipIdx, 0U, 0U };
+            Math::UVec4 indices{envIdx, mipIdx, 0U, 0U};
             cmdList.PushConstantData(pipelineLayout_.pushConstant, arrayviewU8(indices));
         }
 
@@ -333,8 +348,11 @@ void RenderNodeDefaultEnvironmentBlender::ExecuteSingleEnvironment(
 
     // change all the layouts accordingly
     {
-        ImageSubresourceRange imageSubresourceRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+        ImageSubresourceRange imageSubresourceRange{CORE_IMAGE_ASPECT_COLOR_BIT,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+            0,
+            PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
         cmdList.CustomImageBarrier(target, COL_ATTACHMENT, SHDR_READ, imageSubresourceRange);
         cmdList.AddCustomBarrierPoint();
     }
@@ -353,7 +371,7 @@ void RenderNodeDefaultEnvironmentBlender::UpdateSet0(IRenderCommandList& cmdList
 
     const uint32_t maxCount = Math::min(DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT, 2U);
     uint32_t binding = 0U;
-    binder.BindBuffer(binding++, { environmentUbo_ });
+    binder.BindBuffer(binding++, {environmentUbo_});
     BindableImage bi;
     // additional cubemaps from first index
     for (uint32_t resIdx = 0U; resIdx < maxCount; ++resIdx) {
@@ -378,7 +396,7 @@ void RenderNodeDefaultEnvironmentBlender::InitializeShaderData()
         if (handleType == RenderHandleType::SHADER_STATE_OBJECT) {
             const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader_);
             psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
-                shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+                shader_, graphicsState, pipelineLayout_, {}, {}, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         } else {
             PLUGIN_LOG_E("RenderNode:%s needs a valid shader handle", renderNodeContextMgr_->GetName().data());
         }

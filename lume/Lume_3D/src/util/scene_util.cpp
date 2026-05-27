@@ -69,7 +69,7 @@
 #include "util/log.h"
 
 namespace {
-constexpr uint32_t REFLECTION_PROBE_DEFAULT_SIZE { 256U };
+constexpr uint32_t REFLECTION_PROBE_DEFAULT_SIZE{256U};
 }
 
 CORE3D_BEGIN_NAMESPACE()
@@ -82,9 +82,13 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
 {
     switch (cameraComponent.projection) {
         case CameraComponent::Projection::ORTHOGRAPHIC: {
-            auto orthoProj = Math::OrthoRhZo(cameraComponent.xMag * -0.5f, cameraComponent.xMag * 0.5f,
-                cameraComponent.yMag * -0.5f, cameraComponent.yMag * 0.5f, cameraComponent.zNear, cameraComponent.zFar);
-            orthoProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+            auto orthoProj = Math::OrthoRhZo(cameraComponent.xMag * -0.5f,
+                cameraComponent.xMag * 0.5f,
+                cameraComponent.yMag * -0.5f,
+                cameraComponent.yMag * 0.5f,
+                cameraComponent.zNear,
+                cameraComponent.zFar);
+            orthoProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
             return orthoProj;
         }
         case CameraComponent::Projection::PERSPECTIVE: {
@@ -97,7 +101,7 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
             }
             auto persProj =
                 Math::PerspectiveRhZo(cameraComponent.yFov, aspect, cameraComponent.zNear, cameraComponent.zFar);
-            persProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+            persProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
             return persProj;
         }
         case CameraComponent::Projection::FRUSTUM: {
@@ -116,9 +120,13 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
             float right = aspect * scale;
             float bottom = -scale;
             float top = scale;
-            auto persProj = Math::PerspectiveRhZo(left + xOffset, right + xOffset, bottom + yOffset, top + yOffset,
-                cameraComponent.zNear, cameraComponent.zFar);
-            persProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+            auto persProj = Math::PerspectiveRhZo(left + xOffset,
+                right + xOffset,
+                bottom + yOffset,
+                top + yOffset,
+                cameraComponent.zNear,
+                cameraComponent.zFar);
+            persProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
             return persProj;
         }
         case CameraComponent::Projection::CUSTOM: {
@@ -129,9 +137,10 @@ Math::Mat4X4 CalculateProjectionMatrix(const CameraComponent& cameraComponent, b
             return Math::IDENTITY_4X4;
     }
 }
-} // namespace CameraMatrixUtil
+}  // namespace CameraMatrixUtil
 
-SceneUtil::SceneUtil(IGraphicsContext& graphicsContext) : graphicsContext_(graphicsContext) {}
+SceneUtil::SceneUtil(IGraphicsContext& graphicsContext) : graphicsContext_(graphicsContext)
+{}
 
 Entity SceneUtil::CreateCamera(
     IEcs& ecs, const Math::Vec3& position, const Math::Quat& rotation, float zNear, float zFar, float fovDegrees) const
@@ -240,15 +249,16 @@ void SceneUtil::CameraLookAt(
         if (auto nodeHandle = ncm->Read(entity)) {
             return nodeHandle->parent;
         }
-        return Entity {};
+        return Entity{};
     };
 
     // walk up the hierachy to get an up-to-date world matrix.
     for (Entity node = getParent(entity); EntityUtil::IsValid(node); node = getParent(node)) {
         if (auto parentTransformHandle = tcm->Read(node)) {
-            parentWorld = Math::Trs(parentTransformHandle->position, parentTransformHandle->rotation,
-                              parentTransformHandle->scale) *
-                          parentWorld;
+            parentWorld =
+                Math::Trs(
+                    parentTransformHandle->position, parentTransformHandle->rotation, parentTransformHandle->scale) *
+                parentWorld;
         }
     }
 
@@ -309,7 +319,7 @@ Entity SceneUtil::CreateLight(
 // reflection plane helpers
 namespace {
 // default size, updated in render system based on main scene camera
-constexpr Math::UVec2 DEFAULT_PLANE_TARGET_SIZE { 2u, 2u };
+constexpr Math::UVec2 DEFAULT_PLANE_TARGET_SIZE{2u, 2u};
 
 SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     IEcs& ecs, IGraphicsContext& graphicsContext, const Entity& nodeEntity)
@@ -331,7 +341,7 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
     const auto meshHandle = [&]() {
         const auto rmcHandle = renderMeshCM->Read(nodeEntity);
         if (!rmcHandle) {
-            return ScopedHandle<const MeshComponent> {};
+            return ScopedHandle<const MeshComponent>{};
         }
         return meshCM->Read(rmcHandle->mesh);
     }();
@@ -358,7 +368,7 @@ SceneUtil::ReflectionPlane CreateReflectionPlaneObjectFromEntity(
 
     return plane;
 }
-} // namespace
+}  // namespace
 
 void SceneUtil::CreateReflectionPlaneComponent(IEcs& ecs, const Entity& nodeEntity)
 {
@@ -464,7 +474,7 @@ vector<Entity> CreateJointMapping(
         const auto pos = std::find(dstJointNamesBegin, dstJointNamesEnd, srcJointName);
         srcToDstJointMapping.push_back(
             (pos != dstJointNamesEnd) ? dstJointEntities[static_cast<size_t>(std::distance(dstJointNamesBegin, pos))]
-                                      : Entity {});
+                                      : Entity{});
         if (pos == dstJointNamesEnd) {
             PLUGIN_LOG_W("Target skin missing joint %s", srcJointName.data());
         }
@@ -485,13 +495,20 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
     trackTargets.reserve(sourceTracks.size());
     auto& entityManager = ecs.GetEntityManager();
     // update tracks to point to target skin's joints.
-    std::transform(sourceTracks.begin(), sourceTracks.end(), targetTracks.begin(),
-        [&entityManager, animationTrackManager, animationOutputManager, &srcJointEntities, &srcToDstJointMapping,
-            &trackTargets, scale](const EntityReference& srcTrackEntity) {
+    std::transform(sourceTracks.begin(),
+        sourceTracks.end(),
+        targetTracks.begin(),
+        [&entityManager,
+            animationTrackManager,
+            animationOutputManager,
+            &srcJointEntities,
+            &srcToDstJointMapping,
+            &trackTargets,
+            scale](const EntityReference& srcTrackEntity) {
             const auto srcTrackId = animationTrackManager->GetComponentId(srcTrackEntity);
             const auto srcTargetEntity = (srcTrackId != IComponentManager::INVALID_COMPONENT_ID)
                                              ? animationTrackManager->Read(srcTrackId)->target
-                                             : Entity {};
+                                             : Entity{};
             if (EntityUtil::IsValid(srcTargetEntity)) {
                 // check that the src track target is one of the src joints
                 if (const auto pos = std::find(srcJointEntities.begin(), srcJointEntities.end(), srcTargetEntity);
@@ -523,7 +540,9 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
                             const auto srcPositions =
                                 array_view(reinterpret_cast<const Math::Vec3*>(src.data()), count);
                             auto dstPositions = array_view(reinterpret_cast<Math::Vec3*>(dst.data()), count);
-                            std::transform(srcPositions.begin(), srcPositions.end(), dstPositions.begin(),
+                            std::transform(srcPositions.begin(),
+                                srcPositions.end(),
+                                dstPositions.begin(),
                                 [scale](const Math::Vec3 position) { return position * scale; });
                         }
                     }
@@ -535,7 +554,7 @@ vector<Entity> UpdateTracks(IEcs& ecs, array_view<EntityReference> targetTracks,
         });
     return trackTargets;
 }
-} // namespace
+}  // namespace
 
 IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
     IEcs& ecs, Entity targetEntity, Entity sourceEntity, Entity animationEntity) const
@@ -598,8 +617,12 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
         }
         // copy the src animation.
         *dstAnimationComponent = *srcAnimationComponent;
-        trackTargets = UpdateTracks(ecs, dstAnimationComponent->tracks, srcAnimationComponent->tracks, srcJointEntities,
-            srcToDstJointMapping, scale);
+        trackTargets = UpdateTracks(ecs,
+            dstAnimationComponent->tracks,
+            srcAnimationComponent->tracks,
+            srcJointEntities,
+            srcToDstJointMapping,
+            scale);
     }
 
     return animationSystem->CreatePlayback(dstAnimationEntity, trackTargets);
@@ -711,7 +734,8 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
 
 void SceneUtil::RegisterSceneLoader(const ISceneLoader::Ptr& loader)
 {
-    if (auto pos = std::find_if(sceneLoaders_.cbegin(), sceneLoaders_.cend(),
+    if (auto pos = std::find_if(sceneLoaders_.cbegin(),
+            sceneLoaders_.cend(),
             [newLoader = loader.get()](const ISceneLoader::Ptr& registered) { return registered.get() == newLoader; });
         pos == sceneLoaders_.cend()) {
         sceneLoaders_.push_back(loader);
@@ -720,7 +744,8 @@ void SceneUtil::RegisterSceneLoader(const ISceneLoader::Ptr& loader)
 
 void SceneUtil::UnregisterSceneLoader(const ISceneLoader::Ptr& loader)
 {
-    if (auto pos = std::find_if(sceneLoaders_.cbegin(), sceneLoaders_.cend(),
+    if (auto pos = std::find_if(sceneLoaders_.cbegin(),
+            sceneLoaders_.cend(),
             [toBeRemoved = loader.get()](
                 const ISceneLoader::Ptr& registered) { return registered.get() == toBeRemoved; });
         pos != sceneLoaders_.cend()) {
@@ -747,11 +772,21 @@ EntityReference CreateTargetGpuImageEnv(IGpuResourceManager& gpuResourceMgr, IEc
     if (!renderHandleManager) {
         return {};
     }
-    GpuImageDesc envDesc { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE, BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
-        CORE_IMAGE_TILING_OPTIMAL, CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-        CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, size.x, size.y, 1U, 1U, 6U, CORE_SAMPLE_COUNT_1_BIT,
-        ComponentMapping {} };
+    GpuImageDesc envDesc{CORE_IMAGE_TYPE_2D,
+        CORE_IMAGE_VIEW_TYPE_CUBE,
+        BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+        CORE_IMAGE_TILING_OPTIMAL,
+        CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+        size.x,
+        size.y,
+        1U,
+        1U,
+        6U,
+        CORE_SAMPLE_COUNT_1_BIT,
+        ComponentMapping{}};
     auto handle = gpuResourceMgr.Create(envDesc);
     return GetOrCreateEntityReference(ecs.GetEntityManager(), *renderHandleManager, handle);
 }
@@ -762,12 +797,21 @@ EntityReference CreateTargetGpuImageDepth(IGpuResourceManager& gpuResourceMgr, I
     if (!renderHandleManager) {
         return {};
     }
-    GpuImageDesc depthDesc { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_CUBE, BASE_FORMAT_D16_UNORM,
+    GpuImageDesc depthDesc{CORE_IMAGE_TYPE_2D,
+        CORE_IMAGE_VIEW_TYPE_CUBE,
+        BASE_FORMAT_D16_UNORM,
         CORE_IMAGE_TILING_OPTIMAL,
         CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
         CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
-        CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, size.x, size.y, 1U, 1U, 6U,
-        CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+        CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+        size.x,
+        size.y,
+        1U,
+        1U,
+        6U,
+        CORE_SAMPLE_COUNT_1_BIT,
+        ComponentMapping{}};
     auto handle = gpuResourceMgr.Create(depthDesc);
     return GetOrCreateEntityReference(ecs.GetEntityManager(), *renderHandleManager, handle);
 }
@@ -790,9 +834,9 @@ CORE_NS::EntityReference CreateReflectionProbeCamera(
     auto& gpuResourceMgr = graphicsContext.GetRenderContext().GetDevice().GetGpuResourceManager();
 
     auto envEntityRef =
-        CreateTargetGpuImageEnv(gpuResourceMgr, ecs, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE });
-    auto depthEntityRef = CreateTargetGpuImageDepth(
-        gpuResourceMgr, ecs, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE });
+        CreateTargetGpuImageEnv(gpuResourceMgr, ecs, {REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE});
+    auto depthEntityRef =
+        CreateTargetGpuImageDepth(gpuResourceMgr, ecs, {REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE});
     cc.customColorTargets.push_back(envEntityRef);
     cc.customDepthTarget = depthEntityRef;
     cc.pipelineFlags = CameraComponent::PipelineFlagBits::CUBEMAP_BIT |
@@ -810,7 +854,7 @@ CORE_NS::EntityReference CreateReflectionProbeCamera(
 
     TransformComponent tc;
     tc.position = position;
-    tc.rotation = Math::Quat { 0.f, 0.f, 0.f, 1.f };
+    tc.rotation = Math::Quat{0.f, 0.f, 0.f, 1.f};
     tcm->Set(camera, tc);
 
     lmm->Create(camera);
@@ -819,7 +863,7 @@ CORE_NS::EntityReference CreateReflectionProbeCamera(
 
     return camera;
 }
-} // namespace
+}  // namespace
 
 CORE_NS::EntityReference SceneUtil::CreateReflectionProbe(CORE_NS::IEcs& ecs, const BASE_NS::Math::Vec3& position) const
 {
@@ -834,11 +878,15 @@ CORE_NS::EntityReference SceneUtil::CreateReflectionProbe(CORE_NS::IEcs& ecs, co
     }
 
     // cube cam should always have 90 degrees of fov
-    const float viewportAngle { 90.0f };
+    const float viewportAngle{90.0f};
     // orthographic multiplier, should not matter with perspective view but for clarity, setting with no scale.
-    const float distortionMultiplier { 0.5f };
-    UpdateCameraViewport(ecs, camera, { REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE }, true,
-        Math::DEG2RAD * viewportAngle, viewportAngle * distortionMultiplier);
+    const float distortionMultiplier{0.5f};
+    UpdateCameraViewport(ecs,
+        camera,
+        {REFLECTION_PROBE_DEFAULT_SIZE, REFLECTION_PROBE_DEFAULT_SIZE},
+        true,
+        Math::DEG2RAD * viewportAngle,
+        viewportAngle * distortionMultiplier);
 
     EntityReference probe = ecs.GetEntityManager().CreateReferenceCounted();
 
@@ -850,33 +898,67 @@ CORE_NS::EntityReference SceneUtil::CreateReflectionProbe(CORE_NS::IEcs& ecs, co
 }
 
 namespace {
-constexpr uint64_t TYPES[] = { CORE_NS::PropertyType::BOOL_T, CORE_NS::PropertyType::CHAR_T,
-    CORE_NS::PropertyType::INT8_T, CORE_NS::PropertyType::INT16_T, CORE_NS::PropertyType::INT32_T,
-    CORE_NS::PropertyType::INT64_T, CORE_NS::PropertyType::UINT8_T, CORE_NS::PropertyType::UINT16_T,
-    CORE_NS::PropertyType::UINT32_T, CORE_NS::PropertyType::UINT64_T,
+constexpr uint64_t TYPES[] = {CORE_NS::PropertyType::BOOL_T,
+    CORE_NS::PropertyType::CHAR_T,
+    CORE_NS::PropertyType::INT8_T,
+    CORE_NS::PropertyType::INT16_T,
+    CORE_NS::PropertyType::INT32_T,
+    CORE_NS::PropertyType::INT64_T,
+    CORE_NS::PropertyType::UINT8_T,
+    CORE_NS::PropertyType::UINT16_T,
+    CORE_NS::PropertyType::UINT32_T,
+    CORE_NS::PropertyType::UINT64_T,
 #ifdef __APPLE__
     CORE_NS::PropertyType::SIZE_T,
 #endif
-    CORE_NS::PropertyType::FLOAT_T, CORE_NS::PropertyType::DOUBLE_T, CORE_NS::PropertyType::BOOL_ARRAY_T,
-    CORE_NS::PropertyType::CHAR_ARRAY_T, CORE_NS::PropertyType::INT8_ARRAY_T, CORE_NS::PropertyType::INT16_ARRAY_T,
-    CORE_NS::PropertyType::INT32_ARRAY_T, CORE_NS::PropertyType::INT64_ARRAY_T, CORE_NS::PropertyType::UINT8_ARRAY_T,
-    CORE_NS::PropertyType::UINT16_ARRAY_T, CORE_NS::PropertyType::UINT32_ARRAY_T, CORE_NS::PropertyType::UINT64_ARRAY_T,
+    CORE_NS::PropertyType::FLOAT_T,
+    CORE_NS::PropertyType::DOUBLE_T,
+    CORE_NS::PropertyType::BOOL_ARRAY_T,
+    CORE_NS::PropertyType::CHAR_ARRAY_T,
+    CORE_NS::PropertyType::INT8_ARRAY_T,
+    CORE_NS::PropertyType::INT16_ARRAY_T,
+    CORE_NS::PropertyType::INT32_ARRAY_T,
+    CORE_NS::PropertyType::INT64_ARRAY_T,
+    CORE_NS::PropertyType::UINT8_ARRAY_T,
+    CORE_NS::PropertyType::UINT16_ARRAY_T,
+    CORE_NS::PropertyType::UINT32_ARRAY_T,
+    CORE_NS::PropertyType::UINT64_ARRAY_T,
 #ifdef __APPLE__
     CORE_NS::PropertyType::SIZE_ARRAY_T,
 #endif
-    CORE_NS::PropertyType::FLOAT_ARRAY_T, CORE_NS::PropertyType::DOUBLE_ARRAY_T, CORE_NS::PropertyType::IVEC2_T,
-    CORE_NS::PropertyType::IVEC3_T, CORE_NS::PropertyType::IVEC4_T, CORE_NS::PropertyType::VEC2_T,
-    CORE_NS::PropertyType::VEC3_T, CORE_NS::PropertyType::VEC4_T, CORE_NS::PropertyType::UVEC2_T,
-    CORE_NS::PropertyType::UVEC3_T, CORE_NS::PropertyType::UVEC4_T, CORE_NS::PropertyType::QUAT_T,
-    CORE_NS::PropertyType::MAT3X3_T, CORE_NS::PropertyType::MAT4X4_T, CORE_NS::PropertyType::UID_T,
-    CORE_NS::PropertyType::STRING_T, CORE_NS::PropertyType::IVEC2_ARRAY_T, CORE_NS::PropertyType::IVEC3_ARRAY_T,
-    CORE_NS::PropertyType::IVEC4_ARRAY_T, CORE_NS::PropertyType::VEC2_ARRAY_T, CORE_NS::PropertyType::VEC3_ARRAY_T,
-    CORE_NS::PropertyType::VEC4_ARRAY_T, CORE_NS::PropertyType::UVEC2_ARRAY_T, CORE_NS::PropertyType::UVEC3_ARRAY_T,
-    CORE_NS::PropertyType::UVEC4_ARRAY_T, CORE_NS::PropertyType::QUAT_ARRAY_T, CORE_NS::PropertyType::MAT3X3_ARRAY_T,
-    CORE_NS::PropertyType::MAT4X4_ARRAY_T, CORE_NS::PropertyType::UID_ARRAY_T, CORE_NS::PropertyType::FLOAT_VECTOR_T,
-    CORE_NS::PropertyType::MAT4X4_VECTOR_T };
+    CORE_NS::PropertyType::FLOAT_ARRAY_T,
+    CORE_NS::PropertyType::DOUBLE_ARRAY_T,
+    CORE_NS::PropertyType::IVEC2_T,
+    CORE_NS::PropertyType::IVEC3_T,
+    CORE_NS::PropertyType::IVEC4_T,
+    CORE_NS::PropertyType::VEC2_T,
+    CORE_NS::PropertyType::VEC3_T,
+    CORE_NS::PropertyType::VEC4_T,
+    CORE_NS::PropertyType::UVEC2_T,
+    CORE_NS::PropertyType::UVEC3_T,
+    CORE_NS::PropertyType::UVEC4_T,
+    CORE_NS::PropertyType::QUAT_T,
+    CORE_NS::PropertyType::MAT3X3_T,
+    CORE_NS::PropertyType::MAT4X4_T,
+    CORE_NS::PropertyType::UID_T,
+    CORE_NS::PropertyType::STRING_T,
+    CORE_NS::PropertyType::IVEC2_ARRAY_T,
+    CORE_NS::PropertyType::IVEC3_ARRAY_T,
+    CORE_NS::PropertyType::IVEC4_ARRAY_T,
+    CORE_NS::PropertyType::VEC2_ARRAY_T,
+    CORE_NS::PropertyType::VEC3_ARRAY_T,
+    CORE_NS::PropertyType::VEC4_ARRAY_T,
+    CORE_NS::PropertyType::UVEC2_ARRAY_T,
+    CORE_NS::PropertyType::UVEC3_ARRAY_T,
+    CORE_NS::PropertyType::UVEC4_ARRAY_T,
+    CORE_NS::PropertyType::QUAT_ARRAY_T,
+    CORE_NS::PropertyType::MAT3X3_ARRAY_T,
+    CORE_NS::PropertyType::MAT4X4_ARRAY_T,
+    CORE_NS::PropertyType::UID_ARRAY_T,
+    CORE_NS::PropertyType::FLOAT_VECTOR_T,
+    CORE_NS::PropertyType::MAT4X4_VECTOR_T};
 
-template<typename EntityHandler, typename EntityReferenceHandler>
+template <typename EntityHandler, typename EntityReferenceHandler>
 void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHandler&& entityFunc,
     EntityReferenceHandler&& entityRefFunc)
 {
@@ -890,8 +972,9 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
         if (ptr && EntityUtil::IsValid(*ptr)) {
             entityRefFunc(ptr);
         }
-    } else if (std::any_of(std::begin(TYPES), std::end(TYPES),
-                   [&current = property.type](const uint64_t type) { return type == current; })) {
+    } else if (std::any_of(std::begin(TYPES), std::end(TYPES), [&current = property.type](const uint64_t type) {
+                   return type == current;
+               })) {
         // One of the basic types so no further processing needed.
     } else if (property.metaData.containerMethods) {
         auto& containerProperty = property.metaData.containerMethods->property;
@@ -899,7 +982,9 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
             // Array of properties.
             for (size_t i = 0; i < property.count; i++) {
                 uintptr_t ptr = offset + i * containerProperty.size;
-                FindEntities(containerProperty, ptr, BASE_NS::forward<EntityHandler>(entityFunc),
+                FindEntities(containerProperty,
+                    ptr,
+                    BASE_NS::forward<EntityHandler>(entityFunc),
                     BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
             }
         } else {
@@ -908,7 +993,9 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
             const auto count = property.metaData.containerMethods->size(offset);
             for (size_t i = 0; i < count; i++) {
                 uintptr_t ptr = property.metaData.containerMethods->get(offset, i);
-                FindEntities(containerProperty, ptr, BASE_NS::forward<EntityHandler>(entityFunc),
+                FindEntities(containerProperty,
+                    ptr,
+                    BASE_NS::forward<EntityHandler>(entityFunc),
                     BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
             }
         }
@@ -918,7 +1005,9 @@ void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHan
             const auto ptr = offset;
             offset += property.size / property.count;
             for (const auto& child : property.metaData.memberProperties) {
-                FindEntities(child, ptr + child.offset, BASE_NS::forward<EntityHandler>(entityFunc),
+                FindEntities(child,
+                    ptr + child.offset,
+                    BASE_NS::forward<EntityHandler>(entityFunc),
                     BASE_NS::forward<EntityReferenceHandler>(entityRefFunc));
             }
         }
@@ -967,7 +1056,8 @@ vector<Entity> GatherEntities(const IEcs& source, const Entity sourceEntity)
                 if (const auto base = reinterpret_cast<uintptr_t>(data->RLock())) {
                     for (const auto& property : data->Owner()->MetaData()) {
                         FindEntities(
-                            property, base + property.offset,
+                            property,
+                            base + property.offset,
                             [&stack](const Entity* entity) { stack.push_back(*entity); },
                             [&stack](const EntityReference* entity) { stack.push_back(*entity); });
                     }
@@ -1024,7 +1114,8 @@ void UpdateEntities(IComponentManager* manager, Entity entity,
 
     for (const auto& property : data->Owner()->MetaData()) {
         FindEntities(
-            property, base + property.offset,
+            property,
+            base + property.offset,
             [&oldToNew, data, &updatedProperties](Entity* entity) {
                 if (updatedProperties.count(reinterpret_cast<uintptr_t>(entity))) {
                     return;
@@ -1110,9 +1201,9 @@ CloneResults CloneEntities(IEcs& destination, const IEcs& source, vector<Entity>
             UpdateEntities(dstManager, newEntity, srcToDst);
         }
     }
-    return CloneResults { BASE_NS::move(newEntities), BASE_NS::move(srcToDst), BASE_NS::move(extMapEntities) };
+    return CloneResults{BASE_NS::move(newEntities), BASE_NS::move(srcToDst), BASE_NS::move(extMapEntities)};
 }
-} // namespace
+}  // namespace
 
 ISceneUtil::ClonedEntities SceneUtil::Clone(
     IEcs& destination, const Entity parentEntity, const IEcs& source, const Entity sourceEntity) const
@@ -1137,7 +1228,7 @@ ISceneUtil::ClonedEntities SceneUtil::Clone(
     } else {
         PLUGIN_LOG_W("Failed to reparent: missing INodeComponentManager");
     }
-    return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
+    return ISceneUtil::ClonedEntities{destinationEntity, BASE_NS::move(result.newEntities)};
 }
 
 ISceneUtil::ClonedEntities SceneUtil::Clone(IEcs& source, Entity sourceEntity, Entity parentEntity) const
@@ -1159,7 +1250,7 @@ ISceneUtil::ClonedEntities SceneUtil::Clone(IEcs& source, Entity sourceEntity, E
     } else {
         PLUGIN_LOG_W("Failed to reparent: missing INodeComponentManager");
     }
-    return ISceneUtil::ClonedEntities { destinationEntity, BASE_NS::move(result.newEntities) };
+    return ISceneUtil::ClonedEntities{destinationEntity, BASE_NS::move(result.newEntities)};
 }
 
 vector<Entity> SceneUtil::Clone(IEcs& destination, const IEcs& source) const
@@ -1178,7 +1269,7 @@ ISceneUtil::PartialClonedEntities SceneUtil::Clone(CORE_NS::IEcs& destination, c
         return {};
     }
     auto result = CloneEntities(destination, source, GatherEntities(source), BASE_NS::move(srcToDst));
-    return { result.newEntities, result.extMapEntities };
+    return {result.newEntities, result.extMapEntities};
 }
 
 bool SceneUtil::IsSphereInsideCameraFrustum(

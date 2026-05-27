@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #ifndef OHOS_RENDER_3D_FG_MODULE_H
 #define OHOS_RENDER_3D_FG_MODULE_H
 
@@ -42,16 +41,16 @@
 #include "scene_adapter/fg_component.h"
 
 #define FG_BEGIN_NAMESPACE() namespace FG {
-#define FG_END_NAMESPACE() } //FG
+#define FG_END_NAMESPACE() }  // FG
 
 FG_BEGIN_NAMESPACE()
-constexpr BASE_NS::string_view RENDER_DATA_STORE_FG_NAME { "RenderDataStoreFG" };
-static constexpr BASE_NS::Uid UID_FG_PLUGIN { "f62d40d0-2d52-4e7c-9f11-34d1f1978f59" };
-static constexpr BASE_NS::Uid UID_FG_COMPONENT_MANAGER { "b8dc6863-7347-432e-8503-06a373c0ef8f" };
+constexpr BASE_NS::string_view RENDER_DATA_STORE_FG_NAME{"RenderDataStoreFG"};
+static constexpr BASE_NS::Uid UID_FG_PLUGIN{"f62d40d0-2d52-4e7c-9f11-34d1f1978f59"};
+static constexpr BASE_NS::Uid UID_FG_COMPONENT_MANAGER{"b8dc6863-7347-432e-8503-06a373c0ef8f"};
 struct FGData {
     bool enable_ = false;
     bool withSR_ = false;
-    BASE_NS::string name_ {"fg_name_1"};
+    BASE_NS::string name_{"fg_name_1"};
     float rate_ = 1.0;
     FGDetailConfiguration::FGQualityType quality_ = FGDetailConfiguration::FGQualityType::QUALITY_TYPE_NORMAL;
     FGDetailConfiguration::FGAlgorithm algorithm_ = FGDetailConfiguration::FGAlgorithm::FG_HYDRA;
@@ -64,12 +63,11 @@ public:
     FGModule();
 
     void Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
-        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext,
-        BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
+        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext, BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
         BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs);
-    
-    static void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
-        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc);
+
+    static void Update(
+        BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene, BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc);
 
     static const FGData InitConfig();
     static const FGData GetConfig();
@@ -80,11 +78,9 @@ public:
 
     static RENDER_NS::RenderHandleReference CreateGpuResource(
         BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, float width, float height);
-    
-    static void CreateGpuImages(
-        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, float width, float height,
-        const FGData& fg,
-        RENDER_NS::RenderHandleReference& FGColorOutputHandle_,
+
+    static void CreateGpuImages(BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, float width, float height,
+        const FGData& fg, RENDER_NS::RenderHandleReference& FGColorOutputHandle_,
         RENDER_NS::RenderHandleReference& FGPredictOutputHandle_,
         RENDER_NS::RenderHandleReference& FGDepthOutputHandle_);
     inline static bool fgInitialized_ = false;
@@ -98,4 +94,4 @@ private:
     inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
 };
 FG_END_NAMESPACE()
-#endif // OHOS_RENDER_3D_FG_MODULE_H
+#endif  // OHOS_RENDER_3D_FG_MODULE_H

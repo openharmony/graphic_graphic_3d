@@ -413,7 +413,7 @@ enum Format {
     BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM = 1000156006,
 };
 
-template<>
+template <>
 inline uint64_t hash(const Format& value)
 {
     return Hash(static_cast<uint32_t>(value));
@@ -421,4 +421,4 @@ inline uint64_t hash(const Format& value)
 /** @} */
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_FORMATS_H
+#endif  // API_BASE_FORMATS_H

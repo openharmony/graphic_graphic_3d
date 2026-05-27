@@ -47,18 +47,18 @@
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
 #include <render/shaders/common/render_post_process_structs_common.h>
-} // namespace
+}  // namespace
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr bool USE_IMMUTABLE_SAMPLERS { false };
+constexpr bool USE_IMMUTABLE_SAMPLERS{false};
 
-constexpr string_view RENDER_DATA_STORE_POD_NAME { "RenderDataStorePod" };
-constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME { "RenderDataStorePostProcess" };
-constexpr uint32_t BUILT_IN_SETS_COUNT { 2u };
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr string_view RENDER_DATA_STORE_POD_NAME{"RenderDataStorePod"};
+constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME{"RenderDataStorePostProcess"};
+constexpr uint32_t BUILT_IN_SETS_COUNT{2u};
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
 RenderNodeDefaultMaterialDeferredShading::ShadowBuffers GetShadowBufferNodeData(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const string_view sceneName)
@@ -89,13 +89,13 @@ RenderHandleReference CreatePostProcessDataUniformBuffer(
     PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
     PLUGIN_STATIC_ASSERT(
         sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
+    return gpuResourceMgr.Create(handle,
+        GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct)});
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultMaterialDeferredShading::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -178,7 +178,7 @@ void RenderNodeDefaultMaterialDeferredShading::RenderData(IRenderCommandList& cm
     }
     const RenderHandle psoHandle = GetPsoHandle();
     if (!RenderHandleUtil::IsValid(psoHandle)) {
-        return; // early out
+        return;  // early out
     }
     cmdList.BindPipeline(psoHandle);
 
@@ -209,15 +209,15 @@ void RenderNodeDefaultMaterialDeferredShading::RenderData(IRenderCommandList& cm
             descriptorSets[setCount] = allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetHandle(setCount);
             setCount++;
         }
-        cmdList.BindDescriptorSets(0u, { descriptorSets, setCount });
+        cmdList.BindDescriptorSets(0u, {descriptorSets, setCount});
     }
 
     // push constants
     if (pipelineLayout_.pushConstant.byteSize > 0) {
         const float fWidth = static_cast<float>(renderPass_.renderPassDesc.renderArea.extentWidth);
         const float fHeight = static_cast<float>(renderPass_.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-            ppLocalConfig_.variables.factor };
+        const LocalPostProcessPushConstantStruct pc{
+            {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, ppLocalConfig_.variables.factor};
         cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
     }
 
@@ -231,9 +231,9 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateSet01(IRenderCommandList& c
     {
         uint32_t bindingIndex = 0;
         // global
-        binder0.BindBuffer(bindingIndex++, BindableBuffer { ubos_.postProcess.GetHandle() });
+        binder0.BindBuffer(bindingIndex++, BindableBuffer{ubos_.postProcess.GetHandle()});
         binder0.BindBuffer(
-            bindingIndex++, BindableBuffer { ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct) });
+            bindingIndex++, BindableBuffer{ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct)});
 
         // scene and camera global
         binder0.BindBuffer(bindingIndex++, sceneBuffers_.camera, 0u);
@@ -278,9 +278,9 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateSet01(IRenderCommandList& c
         }
     }
 
-    const RenderHandle handles[] { binder0.GetDescriptorSetHandle(), binder1.GetDescriptorSetHandle() };
-    const DescriptorSetLayoutBindingResources resources[] { binder0.GetDescriptorSetLayoutBindingResources(),
-        binder1.GetDescriptorSetLayoutBindingResources() };
+    const RenderHandle handles[]{binder0.GetDescriptorSetHandle(), binder1.GetDescriptorSetHandle()};
+    const DescriptorSetLayoutBindingResources resources[]{
+        binder0.GetDescriptorSetLayoutBindingResources(), binder1.GetDescriptorSetLayoutBindingResources()};
     cmdList.UpdateDescriptorSets(handles, resources);
 }
 
@@ -317,7 +317,7 @@ void RenderNodeDefaultMaterialDeferredShading::UpdateCurrentScene(const IRenderD
 
     const auto scene = dataStoreScene.GetScene();
     bool hasCustomCamera = false;
-    bool isNamedCamera = false; // NOTE: legacy support will be removed
+    bool isNamedCamera = false;  // NOTE: legacy support will be removed
     uint32_t cameraIdx = scene.cameraIndex;
     if (jsonInputs_.customCameraId != INVALID_CAM_ID) {
         cameraIdx = dataStoreCamera.GetCameraIndex(jsonInputs_.customCameraId);
@@ -370,7 +370,7 @@ RenderHandle RenderNodeDefaultMaterialDeferredShading::GetPsoHandle()
     // only lighting flags can currently change dynamically
     allShaderData_.psoHash = hash;
 
-    constexpr size_t maxFlagCount { 16u };
+    constexpr size_t maxFlagCount{16u};
     uint32_t specializationFlags[maxFlagCount];
     const size_t maxSpecializations = Math::min(maxFlagCount, allShaderData_.defaultSpecilizationConstants.size());
     for (size_t idx = 0; idx < maxSpecializations; ++idx) {
@@ -389,11 +389,14 @@ RenderHandle RenderNodeDefaultMaterialDeferredShading::GetPsoHandle()
         }
     }
 
-    const ShaderSpecializationConstantDataView specialization { allShaderData_.defaultSpecilizationConstants,
-        specializationFlags };
+    const ShaderSpecializationConstantDataView specialization{
+        allShaderData_.defaultSpecilizationConstants, specializationFlags};
     allShaderData_.psoHandle = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(allShaderData_.shaderHandle,
-        allShaderData_.stateHandle, allShaderData_.plHandle, {}, specialization,
-        { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        allShaderData_.stateHandle,
+        allShaderData_.plHandle,
+        {},
+        specialization,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
     return allShaderData_.psoHandle;
 }
@@ -439,8 +442,8 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
     if (compatibilityFlags != 0) {
         valid_ = true;
     } else {
-        PLUGIN_LOG_W("RenderNode: %s incompatible pipeline layout for given shader",
-            renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W(
+            "RenderNode: %s incompatible pipeline layout for given shader", renderNodeContextMgr_->GetName().data());
     }
 
     // currently we allocate just in case based on both layouts to make sure that we have enough descriptors
@@ -453,20 +456,20 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
     // add built-in set from the first set (if user set was missing something)
     dc.counts.reserve(dc.counts.size() + plDef.descriptorSetLayouts[0U].bindings.size());
     for (const auto& bindingRef : plDef.descriptorSetLayouts[0U].bindings) {
-        dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+        dc.counts.push_back(DescriptorCounts::TypedCount{bindingRef.descriptorType, bindingRef.descriptorCount});
     }
     descriptorSetMgr.ResetAndReserve(dc);
 
     {
         // set 0 descriptors are fixed at the moment
-        constexpr uint32_t set { 0u };
+        constexpr uint32_t set{0u};
         const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, plDef);
         allDescriptorSets_.set0 =
             descriptorSetMgr.CreateDescriptorSetBinder(descriptorSetHandle, plDef.descriptorSetLayouts[set].bindings);
     }
     {
         // input attachment count is allowed to change, so we need to create the descriptor set based on shader
-        constexpr uint32_t set { 1u };
+        constexpr uint32_t set{1u};
         const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(set, pipelineLayout_);
         allDescriptorSets_.set1 = descriptorSetMgr.CreateDescriptorSetBinder(
             descriptorSetHandle, pipelineLayout_.descriptorSetLayouts[set].bindings);
@@ -490,7 +493,8 @@ void RenderNodeDefaultMaterialDeferredShading::CreateDescriptorSets()
         valid = valid && CheckBindingValidity(BUILT_IN_SETS_COUNT, inputResources_.samplers);
         if (!valid) {
             PLUGIN_LOG_W("RenderNode: %s does not support user bindings for sets <= %u",
-                renderNodeContextMgr_->GetName().data(), BUILT_IN_SETS_COUNT);
+                renderNodeContextMgr_->GetName().data(),
+                BUILT_IN_SETS_COUNT);
         }
         allDescriptorSets_.hasUserSet2 = !(
             allDescriptorSets_.pipelineDescriptorSetBinder->GetDescriptorSetLayoutBindingResources(BUILT_IN_SETS_COUNT)

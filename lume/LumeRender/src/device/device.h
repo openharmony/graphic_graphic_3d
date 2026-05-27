@@ -76,15 +76,14 @@ struct LowLevelRenderPassData {};
 struct LowLevelPipelineLayoutData {};
 
 struct DeviceFormatSupportConstants {
-    static constexpr uint32_t ALL_FLAGS_SUPPORTED { 0xFFFFu };
-    static constexpr uint32_t LINEAR_FORMAT_MAX_IDX { BASE_NS::Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK };
-    static constexpr uint32_t LINEAR_FORMAT_MAX_COUNT { LINEAR_FORMAT_MAX_IDX + 1u };
-    static constexpr uint32_t ADDITIONAL_FORMAT_START_NUMBER { BASE_NS::Format::BASE_FORMAT_G8B8G8R8_422_UNORM };
-    static constexpr uint32_t ADDITIONAL_FORMAT_END_NUMBER { BASE_NS::Format::BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM };
-    static constexpr uint32_t ADDITIONAL_FORMAT_MAX_COUNT {
-        (ADDITIONAL_FORMAT_END_NUMBER - ADDITIONAL_FORMAT_START_NUMBER) + 1u
-    };
-    static constexpr uint32_t ADDITIONAL_FORMAT_BASE_IDX { LINEAR_FORMAT_MAX_COUNT };
+    static constexpr uint32_t ALL_FLAGS_SUPPORTED{0xFFFFu};
+    static constexpr uint32_t LINEAR_FORMAT_MAX_IDX{BASE_NS::Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK};
+    static constexpr uint32_t LINEAR_FORMAT_MAX_COUNT{LINEAR_FORMAT_MAX_IDX + 1u};
+    static constexpr uint32_t ADDITIONAL_FORMAT_START_NUMBER{BASE_NS::Format::BASE_FORMAT_G8B8G8R8_422_UNORM};
+    static constexpr uint32_t ADDITIONAL_FORMAT_END_NUMBER{BASE_NS::Format::BASE_FORMAT_G8_B8_R8_3PLANE_444_UNORM};
+    static constexpr uint32_t ADDITIONAL_FORMAT_MAX_COUNT{
+        (ADDITIONAL_FORMAT_END_NUMBER - ADDITIONAL_FORMAT_START_NUMBER) + 1u};
+    static constexpr uint32_t ADDITIONAL_FORMAT_BASE_IDX{LINEAR_FORMAT_MAX_COUNT};
 };
 
 class Device : public IDevice {
@@ -160,26 +159,26 @@ public:
     const Swapchain* GetSwapchain(RenderHandle handle) const;
 
     struct SwapchainData {
-        static constexpr uint32_t MAX_IMAGE_VIEW_COUNT { 5U };
+        static constexpr uint32_t MAX_IMAGE_VIEW_COUNT{5U};
 
-        RenderHandle remappableSwapchainImage {};
+        RenderHandle remappableSwapchainImage{};
         RenderHandle imageViews[MAX_IMAGE_VIEW_COUNT];
-        uint32_t imageViewCount { 0U };
+        uint32_t imageViewCount{0U};
     };
 
     struct InternalSwapchainData {
-        static constexpr uint32_t MAX_IMAGE_VIEW_COUNT { 5U };
+        static constexpr uint32_t MAX_IMAGE_VIEW_COUNT{5U};
 
-        uint64_t surfaceHandle { 0 };
-        uintptr_t window { 0 };
+        uint64_t surfaceHandle{0};
+        uintptr_t window{0};
 
         BASE_NS::string globalName;
         BASE_NS::string name;
-        RenderHandleReference remappableSwapchainImage {};
-        RenderHandleReference additionalDepthBufferHandle {};
-        RenderHandle remappableAdditionalSwapchainImage {}; // Not owned
+        RenderHandleReference remappableSwapchainImage{};
+        RenderHandleReference additionalDepthBufferHandle{};
+        RenderHandle remappableAdditionalSwapchainImage{};  // Not owned
         RenderHandleReference imageViews[MAX_IMAGE_VIEW_COUNT];
-        uint32_t imageViewCount { 0U };
+        uint32_t imageViewCount{0U};
 
         BASE_NS::unique_ptr<Swapchain> swapchain;
     };
@@ -254,6 +253,7 @@ public:
     virtual BASE_NS::vector<uint8_t> GetPipelineCache() const = 0;
 
 protected:
+    void InvalidateGpuImageHandle(const RenderHandleReference& handle);
     RenderContext& renderContext_;
     DeviceConfiguration deviceConfiguration_;
 
@@ -265,14 +265,14 @@ protected:
     BASE_NS::vector<InternalSwapchainData> swapchains_;
     RenderHandleReference defaultSwapchainHandle_;
 
-    std::atomic<bool> deviceStatus_ { false };
-    uint64_t frameCount_ { 0 };
+    std::atomic<bool> deviceStatus_{false};
+    uint64_t frameCount_{0};
 
-    bool isRenderbackendRunning_ { false };
-    bool isBackendResourceAccessLocked_ { false };
-    bool isRenderFrameRunning_ { false };
+    bool isRenderbackendRunning_{false};
+    bool isBackendResourceAccessLocked_{false};
+    bool isRenderFrameRunning_{false};
 
-    MemoryPropertyFlags deviceSharedMemoryPropertyFlags_ { 0 };
+    MemoryPropertyFlags deviceSharedMemoryPropertyFlags_{0};
     CommonDeviceProperties commonDeviceProperties_;
 
     BASE_NS::unordered_map<BASE_NS::Format, BASE_NS::Format> colorSpaceLinearFormats_;
@@ -284,4 +284,4 @@ GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer);
 GpuBufferDesc GetBufferDescFromHwBufferDesc(uintptr_t platformHwBuffer);
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_DEVICE_H
+#endif  // DEVICE_DEVICE_H

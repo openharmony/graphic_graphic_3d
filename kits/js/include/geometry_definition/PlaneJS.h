@@ -37,9 +37,9 @@ public:
 private:
     explicit PlaneJS(const BASE_NS::Math::Vec2& size);
 
-    BASE_NS::Math::Vec2 size_ {};
+    BASE_NS::Math::Vec2 size_{};
 };
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition
 
 #endif

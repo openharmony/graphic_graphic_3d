@@ -18,7 +18,6 @@
 #include <cinttypes>
 
 #include <base/math/vector.h>
-#include <core/log.h>
 #include <core/property/intf_property_handle.h>
 #include <core/property/property_types.h>
 #include <core/property_tools/core_metadata.inl>
@@ -40,7 +39,7 @@ constexpr size_t MAX_STRUCT_HANDLE_REF_BYTE_SIZE =
 
 uint32_t GetPropertyTypeByteSize(const PropertyTypeDecl& typeDecl)
 {
-    uint32_t byteSize = 0; // zero means that un-supported property type
+    uint32_t byteSize = 0;  // zero means that un-supported property type
     switch (typeDecl) {
         case PropertyType::UINT32_T:
         case PropertyType::INT32_T:
@@ -114,7 +113,7 @@ constexpr MetaData GetMetaData(const PropertyTypeDecl& typeDecl)
     }
     return {};
 }
-} // namespace
+}  // namespace
 
 CustomPropertyPodContainer::CustomPropertyPodContainer(size_t reserveByteSize)
 {
@@ -137,7 +136,7 @@ const Property* CustomPropertyPodContainer::MetaData(size_t index) const
 
 array_view<const Property> CustomPropertyPodContainer::MetaData() const
 {
-    return { metaData_ };
+    return {metaData_};
 }
 
 uint64_t CustomPropertyPodContainer::Type() const
@@ -155,7 +154,8 @@ IPropertyHandle* CustomPropertyPodContainer::Clone(const IPropertyHandle* src) c
     return nullptr;
 }
 
-void CustomPropertyPodContainer::Release(IPropertyHandle* handle) const {}
+void CustomPropertyPodContainer::Release(IPropertyHandle* handle) const
+{}
 
 void CustomPropertyPodContainer::Reset()
 {
@@ -187,14 +187,16 @@ const void* CustomPropertyPodContainer::RLock() const
     return data_.data();
 }
 
-void CustomPropertyPodContainer::RUnlock() const {}
+void CustomPropertyPodContainer::RUnlock() const
+{}
 
 void* CustomPropertyPodContainer::WLock()
 {
     return data_.data();
 }
 
-void CustomPropertyPodContainer::WUnlock() {}
+void CustomPropertyPodContainer::WUnlock()
+{}
 
 //
 
@@ -204,23 +206,23 @@ void CustomPropertyPodContainer::AddOffsetProperty(const string_view propertyNam
     const size_t byteSize = GetPropertyTypeByteSize(typeDecl);
     const bool reserved = (metaStrings_.size() < reservePropertyCount_);
     if ((byteSize > 0) && reserved) {
-        metaStrings_.push_back({ string { propertyName }, string { displayName } });
+        metaStrings_.push_back({string{propertyName}, string{displayName}});
         const auto& strings = metaStrings_.back();
-        const Property meta {
-            strings.name,                                        // name
-            FNV1aHash(strings.name.data(), strings.name.size()), // hash
-            typeDecl,                                            // type
-            1U,                                                  // count
-            byteSize,                                            // size
-            offset,                                              // offset
-            strings.displayName,                                 // displayName
-            0U,                                                  // flags
-            GetMetaData(typeDecl),                               // metaData
+        const Property meta{
+            strings.name,                                         // name
+            FNV1aHash(strings.name.data(), strings.name.size()),  // hash
+            typeDecl,                                             // type
+            1U,                                                   // count
+            byteSize,                                             // size
+            offset,                                               // offset
+            strings.displayName,                                  // displayName
+            0U,                                                   // flags
+            GetMetaData(typeDecl),                                // metaData
         };
         metaData_.push_back(meta);
         data_.resize(Math::max(data_.size(), meta.offset + meta.size));
     } else {
-        CORE_LOG_W("unsupported property addition for custom property POD container");
+        PLUGIN_LOG_W("unsupported property addition for custom property POD container");
     }
 }
 
@@ -230,26 +232,26 @@ void CustomPropertyPodContainer::AddOffsetProperty(const string_view propertyNam
     const size_t byteSize = GetPropertyTypeByteSize(typeDecl);
     const bool reserved = (metaStrings_.size() < reservePropertyCount_);
     if ((byteSize > 0) && reserved) {
-        metaStrings_.push_back({ string { propertyName }, string { displayName } });
+        metaStrings_.push_back({string{propertyName}, string{displayName}});
         const auto& strings = metaStrings_.back();
-        const Property meta {
-            strings.name,                                        // name
-            FNV1aHash(strings.name.data(), strings.name.size()), // hash
-            typeDecl,                                            // type
-            1U,                                                  // count
-            byteSize,                                            // size
-            offset,                                              // offset
-            strings.displayName,                                 // displayName
-            0U,                                                  // flags
-            GetMetaData(typeDecl),                               // metaData
+        const Property meta{
+            strings.name,                                         // name
+            FNV1aHash(strings.name.data(), strings.name.size()),  // hash
+            typeDecl,                                             // type
+            1U,                                                   // count
+            byteSize,                                             // size
+            offset,                                               // offset
+            strings.displayName,                                  // displayName
+            0U,                                                   // flags
+            GetMetaData(typeDecl),                                // metaData
         };
         metaData_.push_back(meta);
         data_.resize(data_.size() + meta.size);
         if (data.size_bytes() == byteSize) {
-            CloneData(data_.data() + offset, data_.size_in_bytes(), data.data(), data.size_bytes());
+            CloneData(data_.data() + offset, data_.size_in_bytes() - offset, data.data(), data.size_bytes());
         }
     } else {
-        CORE_LOG_W("unsupported property addition for custom property POD container");
+        PLUGIN_LOG_W("unsupported property addition for custom property POD container");
     }
 }
 
@@ -259,7 +261,10 @@ bool CustomPropertyPodContainer::SetValue(const string_view propertyName, const 
         if ((metaRef.displayName == propertyName) && (metaRef.size == data.size_bytes())) {
             const size_t endData = metaRef.offset + metaRef.size;
             if (endData <= data_.size_in_bytes()) {
-                CloneData(data_.data() + metaRef.offset, data_.size_in_bytes(), data.data(), data.size_bytes());
+                CloneData(data_.data() + metaRef.offset,
+                    data_.size_in_bytes() - metaRef.offset,
+                    data.data(),
+                    data.size_bytes());
                 return true;
             }
         }
@@ -269,12 +274,11 @@ bool CustomPropertyPodContainer::SetValue(const string_view propertyName, const 
 
 bool CustomPropertyPodContainer::SetValue(const size_t byteOffset, const array_view<uint8_t> data)
 {
-    const size_t endData = byteOffset + data.size_bytes();
-    if (endData <= data_.size_in_bytes()) {
-        CloneData(data_.data() + byteOffset, data_.size_in_bytes(), data.data(), data.size_bytes());
-        return true;
+    if (byteOffset > data_.size_in_bytes() || data.size_bytes() > data_.size_in_bytes() - byteOffset) {
+        return false;
     }
-    return false;
+    CloneData(data_.data() + byteOffset, data_.size_in_bytes() - byteOffset, data.data(), data.size_bytes());
+    return true;
 }
 
 array_view<const uint8_t> CustomPropertyPodContainer::GetValue(const string_view propertyName) const
@@ -283,7 +287,7 @@ array_view<const uint8_t> CustomPropertyPodContainer::GetValue(const string_view
         if (metaRef.displayName == propertyName) {
             const size_t endData = metaRef.offset + metaRef.size;
             if (endData <= data_.size_in_bytes()) {
-                return { data_.data() + metaRef.offset, metaRef.size };
+                return {data_.data() + metaRef.offset, metaRef.size};
             }
         }
     }
@@ -335,8 +339,8 @@ PropertyTypeDecl CustomPropertyPodHelper::GetPropertyTypeDeclaration(const strin
     } else if (type == "mat4x4") {
         return PropertyType::MAT4X4_T;
     } else {
-        CORE_LOG_W("RENDER_VALIDATION: Invalid property type only int, uint, float, bool, and XvecX variants, and "
-                   "mat3x3 and mat4x4 are supported");
+        PLUGIN_LOG_W("RENDER_VALIDATION: Invalid property type only int, uint, float, bool, and XvecX variants, and "
+                     "mat3x3 and mat4x4 are supported");
     }
     // NOTE: does not handle invalid types
     return PropertyType::INVALID;
@@ -348,35 +352,35 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     static_assert(sizeof(float) == sizeof(uint32_t) && sizeof(float) == sizeof(int32_t));
     switch (propertyType) {
         case PropertyType::FLOAT_T:
-            [[fallthrough]]; // float
+            [[fallthrough]];  // float
         case PropertyType::UINT32_T:
-            [[fallthrough]]; // float
+            [[fallthrough]];  // float
         case PropertyType::INT32_T:
-            [[fallthrough]]; // float
+            [[fallthrough]];  // float
         case PropertyType::BOOL_T:
             align = sizeof(float);
             break;
         case PropertyType::VEC2_T:
-            [[fallthrough]]; // two float
+            [[fallthrough]];  // two float
         case PropertyType::UVEC2_T:
-            [[fallthrough]]; // two float
+            [[fallthrough]];  // two float
         case PropertyType::IVEC2_T:
             align = sizeof(float) * 2U;
             break;
         case PropertyType::VEC3_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::UVEC3_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::IVEC3_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::VEC4_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::UVEC4_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::IVEC4_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::MAT3X3_T:
-            [[fallthrough]]; // four float
+            [[fallthrough]];  // four float
         case PropertyType::MAT4X4_T:
             align = sizeof(float) * 4U;
             break;
@@ -384,7 +388,7 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     return align;
 }
 
-template<typename T>
+template <typename T>
 inline void SafeFromJsonValue(const json::value* value, T& val)
 {
     if (value) {
@@ -396,79 +400,79 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
     CustomPropertyPodContainer& customProperties, const size_t offset)
 {
     if (value == nullptr) {
-        CORE_LOG_E("json value is nullptr");
+        PLUGIN_LOG_E("json value is nullptr");
         return;
     }
     if (propertyType == PropertyType::VEC4_T) {
         Math::Vec4 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4)});
     } else if (propertyType == PropertyType::UVEC4_T) {
         Math::UVec4 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4)});
     } else if (propertyType == PropertyType::IVEC4_T) {
         Math::IVec4 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec4)});
     } else if (propertyType == PropertyType::VEC3_T) {
         Math::Vec3 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3)});
     } else if (propertyType == PropertyType::UVEC3_T) {
         Math::UVec3 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3)});
     } else if (propertyType == PropertyType::IVEC3_T) {
         Math::IVec3 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec3)});
     } else if (propertyType == PropertyType::VEC2_T) {
         Math::Vec2 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2)});
     } else if (propertyType == PropertyType::UVEC2_T) {
         Math::UVec2 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2)});
     } else if (propertyType == PropertyType::IVEC2_T) {
         Math::IVec2 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Vec2)});
     } else if (propertyType == PropertyType::FLOAT_T) {
-        float val {};
+        float val{};
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(float) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(float)});
     } else if (propertyType == PropertyType::UINT32_T) {
-        uint32_t val {};
+        uint32_t val{};
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t)});
     } else if (propertyType == PropertyType::INT32_T) {
-        int32_t val {};
+        int32_t val{};
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(int32_t) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(int32_t)});
     } else if (propertyType == PropertyType::BOOL_T) {
-        bool tmpVal {};
+        bool tmpVal{};
         SafeFromJsonValue(value, tmpVal);
         uint32_t val = tmpVal;
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(uint32_t)});
     } else if (propertyType == PropertyType::MAT3X3_T) {
         Math::Mat3X3 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat3X3) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat3X3)});
     } else if (propertyType == PropertyType::MAT4X4_T) {
         Math::Mat4X4 val;
         SafeFromJsonValue(value, val);
-        customProperties.SetValue(offset, array_view { reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat4X4) });
+        customProperties.SetValue(offset, array_view{reinterpret_cast<uint8_t*>(&val), sizeof(Math::Mat4X4)});
     } else {
-        CORE_LOG_W("RENDER_VALIDATION: Invalid property type only int, uint, float, and XvecX variants supported");
+        PLUGIN_LOG_W("RENDER_VALIDATION: Invalid property type only int, uint, float, and XvecX variants supported");
     }
     // NOTE: does not handle invalid types
 }
 
 // bindings
 
-template<typename T>
+template <typename T>
 inline void DestroyHelper(T& t)
 {
     {
@@ -485,7 +489,7 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
     if (!data_.empty()) {
         PLUGIN_ASSERT(metaData_.size() <= data_.size());
         for (const auto& meta : metaData_) {
-            CORE_ASSERT(meta.offset < data_.size_in_bytes());
+            PLUGIN_ASSERT(meta.offset < data_.size_in_bytes());
             switch (meta.type) {
                 case PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T: {
                     PLUGIN_ASSERT(meta.size == BUFFER_HANDLE_REF_BYTE_SIZE);
@@ -509,7 +513,7 @@ CustomPropertyBindingContainer::~CustomPropertyBindingContainer()
                     break;
                 }
                 default: {
-                    CORE_LOG_E("custom property binding destruction error");
+                    PLUGIN_LOG_E("custom property binding destruction error");
                     break;
                 }
             }
@@ -533,7 +537,7 @@ const Property* CustomPropertyBindingContainer::MetaData(size_t index) const
 
 array_view<const Property> CustomPropertyBindingContainer::MetaData() const
 {
-    return { metaData_ };
+    return {metaData_};
 }
 
 uint64_t CustomPropertyBindingContainer::Type() const
@@ -551,7 +555,8 @@ IPropertyHandle* CustomPropertyBindingContainer::Clone(const IPropertyHandle* sr
     return nullptr;
 }
 
-void CustomPropertyBindingContainer::Release(IPropertyHandle* handle) const {}
+void CustomPropertyBindingContainer::Release(IPropertyHandle* handle) const
+{}
 
 void CustomPropertyBindingContainer::ReservePropertyCount(size_t propertyCount)
 {
@@ -578,7 +583,8 @@ const void* CustomPropertyBindingContainer::RLock() const
     return data_.data();
 }
 
-void CustomPropertyBindingContainer::RUnlock() const {}
+void CustomPropertyBindingContainer::RUnlock() const
+{}
 
 void* CustomPropertyBindingContainer::WLock()
 {
@@ -613,18 +619,18 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
         }
     }
     if ((byteSize > 0) && reserved) {
-        metaStrings_.push_back({ string { propertyName }, string { displayName } });
+        metaStrings_.push_back({string{propertyName}, string{displayName}});
         const auto& strings = metaStrings_.back();
-        const Property meta {
-            strings.name,                                        // name
-            FNV1aHash(strings.name.data(), strings.name.size()), // hash
-            typeDecl,                                            // type
-            1U,                                                  // count
-            byteSize,                                            // size
-            offset,                                              // offset
-            strings.displayName,                                 // displayName
-            0U,                                                  // flags
-            GetMetaData(typeDecl),                               // metaData
+        const Property meta{
+            strings.name,                                         // name
+            FNV1aHash(strings.name.data(), strings.name.size()),  // hash
+            typeDecl,                                             // type
+            1U,                                                   // count
+            byteSize,                                             // size
+            offset,                                               // offset
+            strings.displayName,                                  // displayName
+            0U,                                                   // flags
+            GetMetaData(typeDecl),                                // metaData
         };
         metaData_.push_back(meta);
         // the data has already been reserved in ReservePropertyCount()
@@ -644,7 +650,7 @@ void CustomPropertyBindingContainer::AddOffsetProperty(const string_view propert
             }
         }
     } else {
-        CORE_LOG_W("unsupported property addition for custom property binding container");
+        PLUGIN_LOG_W("unsupported property addition for custom property binding container");
     }
 }
 
@@ -664,7 +670,7 @@ PropertyTypeDecl CustomPropertyBindingHelper::GetPropertyTypeDeclaration(const s
     } else if (type == "sampler") {
         return PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T;
     } else {
-        CORE_LOG_W("RENDER_VALIDATION: Invalid property type only buffer, image, and sampler supported (not %s)",
+        PLUGIN_LOG_W("RENDER_VALIDATION: Invalid property type only buffer, image, and sampler supported (not %s)",
             string(type).c_str());
     }
     // NOTE: does not handle invalid types

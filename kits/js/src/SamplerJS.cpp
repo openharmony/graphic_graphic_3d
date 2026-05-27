@@ -39,13 +39,13 @@ void SamplerJS::RegisterEnums(NapiApi::Object exports)
     NapiApi::Object SceneFilter(env);
     NapiApi::Object SceneSamplerAddressMode(env);
 
-    using SCENE_NS::SamplerFilter;
     using SCENE_NS::SamplerAddressMode;
+    using SCENE_NS::SamplerFilter;
 
-#define DECL_ENUM(enu, type, value)                                                 \
-    {                                                                               \
-        napi_create_uint32(enu.GetEnv(), static_cast<uint32_t>(type::value), &v);   \
-        enu.Set(#value, v);                                                         \
+#define DECL_ENUM(enu, type, value)                                               \
+    {                                                                             \
+        napi_create_uint32(enu.GetEnv(), static_cast<uint32_t>(type::value), &v); \
+        enu.Set(#value, v);                                                       \
     }
     DECL_ENUM(SceneFilter, SamplerFilter, NEAREST);
     DECL_ENUM(SceneFilter, SamplerFilter, LINEAR);
@@ -113,8 +113,14 @@ void SamplerJS::Init(napi_env env, napi_value exports)
     node_props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, SamplerJS, &SamplerJS::Dispose>("destroy"));
 
     napi_value func;
-    auto status = napi_define_class(env, "Sampler", NAPI_AUTO_LENGTH, BaseObject::ctor<SamplerJS>(),
-        nullptr, node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Sampler",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<SamplerJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -130,10 +136,10 @@ void SamplerJS::Init(napi_env env, napi_value exports)
 napi_value SamplerJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     LOG_V("SamplerJS::Dispose");
-    DisposeNative(nullptr);
+    DisposeNative();
     return {};
 }
-void SamplerJS::DisposeNative(void*)
+void SamplerJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -146,7 +152,7 @@ void SamplerJS::DisposeNative(void*)
 }
 void SamplerJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
 }
 void* SamplerJS::GetInstanceImpl(uint32_t id)
@@ -161,11 +167,11 @@ napi_value SamplerJS::CreateRawJsObject(napi_env env)
 {
     // Ei ky tmmnen. Sit ku tn assignaa kohdilleen, ni joo se tekee jotain vissiin.
     // mutta tn kautta ei voi en muuttaa mitn. Tytyy tehd sama bind ja unbind ku postproc-kamoissa.
-    auto sampler = NapiApi::Object { env };
-    for (auto&& propName : { "magFilter", "minFilter", "mipMapMode" }) {
+    auto sampler = NapiApi::Object{env};
+    for (auto&& propName : {"magFilter", "minFilter", "mipMapMode"}) {
         sampler.Set(propName, NapiApi::Value<uint32_t>(env, static_cast<uint32_t>(DEFAULT_FILTER)));
     }
-    for (auto&& propName : { "addressModeU", "addressModeV", "addressModeW" }) {
+    for (auto&& propName : {"addressModeU", "addressModeV", "addressModeW"}) {
         sampler.Set(propName, NapiApi::Value<uint32_t>(env, static_cast<uint32_t>(DEFAULT_ADDESS_MODE)));
     }
 
@@ -174,7 +180,11 @@ napi_value SamplerJS::CreateRawJsObject(napi_env env)
     napi_value destroyFunc;
     // If nullptr isn't ok for cb, use this no-op: [](napi_env, napi_callback_info) { return napi_value {}; }
     napi_create_function(
-        env, "destroy", NAPI_AUTO_LENGTH, [](napi_env, napi_callback_info) { return napi_value {}; }, nullptr,
+        env,
+        "destroy",
+        NAPI_AUTO_LENGTH,
+        [](napi_env, napi_callback_info) { return napi_value{}; },
+        nullptr,
         &destroyFunc);
     sampler.Set("destroy", destroyFunc);
     return sampler.ToNapiValue();
@@ -192,7 +202,7 @@ SamplerJS::SamplerJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 SamplerJS::~SamplerJS()
 {
     LOG_V("Sampler --");
-    DisposeNative(nullptr);
+    DisposeNative();
 }
 
 SCENE_NS::ISampler::Ptr SamplerJS::GetSampler() const

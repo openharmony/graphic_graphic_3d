@@ -1,0 +1,93 @@
+{
+	"version": "1.0",
+	"description": "test scene with child node in root",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",
+			"attachments": [
+				{
+					"objectUid": "9694bdab-29ae-4e56-8d49-b8158fe0339d",
+					"properties": [
+						{
+							"name": "Bool",
+							"value": true
+						},
+						{
+							"name": "SmallUint",
+							"value": 64
+						},
+						{
+							"name": "BigUint",
+							"value": 1234565778
+						},
+						{
+							"name": "SmallInt",
+							"value": -8000
+						},
+						{
+							"name": "BigInt",
+							"value": -71234565778
+						},
+						{
+							"name": "Float",
+							"value": 1.0
+						},
+						{
+							"name": "Double",
+							"value": 2.0
+						},
+						{
+							"name": "String",
+							"value": "hips hops"
+						},
+						{
+							"name": "Null",
+							"value": null
+						},
+						{
+							"name": "Object",
+							"value": {
+								"objectUid": "b2377edc-27ec-4aa1-b071-636d78db63e2"
+							}
+						},
+						{
+							"name": "Vec3",
+							"value": {
+								"type": "vec3",
+								"value": [1, 2, 3]
+							}
+						},
+						{
+							"name": "Enum1",
+							"value": 2
+						},
+						{
+							"name": "Enum2",
+							"value": 2
+						},
+						{
+							"name": "UintArray",
+							"value": [1, 2, 3, 4]
+						},
+						{
+							"name": "Vec3Array",
+							"value": [
+								{
+									"type": "vec3",
+									"value": [1, 2, 3]
+								},
+								{
+									"type": "vec3",
+									"value": [4, 4, 4]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	}
+}

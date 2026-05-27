@@ -30,12 +30,12 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename T>
+template <typename T>
 inline T DefaultResult()
 {
-    return T {};
+    return T{};
 }
-template<>
+template <>
 inline void DefaultResult<void>()
 {}
 #define META_IMPL_CALL_BASE(Interface, Function)                \
@@ -159,7 +159,7 @@ protected:
         return META_EXT_CALL_BASE(IMetadata, GetEvent(name, q));
     }
 
-protected: // IAttach
+protected:  // IAttach
     bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) override
     {
         return META_EXT_CALL_BASE(IAttach, Attach(attachment, dataContext));

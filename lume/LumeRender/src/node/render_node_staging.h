@@ -46,7 +46,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "22a56820-befb-4e12-83ee-3cad3f685b0a" };
+    static constexpr BASE_NS::Uid UID{"22a56820-befb-4e12-83ee-3cad3f685b0a"};
     static constexpr const char* TYPE_NAME = "CORE_RN_STAGING";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -54,11 +54,11 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderStaging renderStaging;
     BASE_NS::string dataStoreNameStaging_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_STAGING_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_STAGING_H

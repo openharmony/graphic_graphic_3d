@@ -85,18 +85,24 @@ void Validate(const UTest::EngineResources& er)
             ASSERT_TRUE(bindingProperties);
             {
                 BindableImageWithHandleReference bindable;
-                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uImage",
-                    CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T, bindable));
+                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties,
+                    "uImage",
+                    CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T,
+                    bindable));
             }
             {
                 BindableSamplerWithHandleReference bindable;
-                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uSampler",
-                    CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T, bindable));
+                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties,
+                    "uSampler",
+                    CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T,
+                    bindable));
             }
             {
                 BindableSamplerWithHandleReference bindable;
-                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties, "uBuffer",
-                    CORE_NS::PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T, bindable));
+                EXPECT_TRUE(CORE_NS::SetPropertyValue(*bindingProperties,
+                    "uBuffer",
+                    CORE_NS::PropertyType::BINDABLE_BUFFER_WITH_HANDLE_REFERENCE_T,
+                    bindable));
             }
         }
 
@@ -106,7 +112,7 @@ void Validate(const UTest::EngineResources& er)
             ASSERT_TRUE(customProperties);
 
             float param0 = 5.0f;
-            Math::Vec2 param1 = { 2.0, 3.0 };
+            Math::Vec2 param1 = {2.0, 3.0};
 
             EXPECT_TRUE(
                 CORE_NS::SetPropertyValue(*customProperties, "param_0", CORE_NS::PropertyType::FLOAT_T, param0));
@@ -118,7 +124,7 @@ void Validate(const UTest::EngineResources& er)
     ASSERT_EQ("RenderDataStoreShaderPasses_My", dataStoreFs->GetName());
     ASSERT_EQ(IRenderDataStoreShaderPasses::UID, dataStoreFs->GetUid());
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderDataStoreFullscreenShaderTest

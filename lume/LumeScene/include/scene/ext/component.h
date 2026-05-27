@@ -19,7 +19,11 @@
 #include <scene/base/namespace.h>
 #include <scene/ext/ecs_lazy_property.h>
 #include <scene/ext/intf_component.h>
+#include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/scene_property.h>
+#include <scene/ext/util.h>
+
+#include <meta/api/engine/util.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -27,6 +31,8 @@ class Component : public META_NS::IntroduceInterfaces<EcsLazyProperty, IComponen
     using Super = IntroduceInterfaces;
 
 public:
+    using IComponent::GetName;
+
     bool PopulateAllProperties() override
     {
         if (populated_) {
@@ -35,6 +41,40 @@ public:
         populated_ =
             this->object_->AddAllProperties(this->template GetSelf<META_NS::IMetadata>(), this->GetName()).GetResult();
         return populated_;
+    }
+
+    using IMetadata::GetProperty;
+    META_NS::IProperty::Ptr GetProperty(BASE_NS::string_view name, META_NS::MetadataQuery q) override
+    {
+        auto p = Super::GetProperty(name, q);
+        if (!p && this->object_) {
+            p = this->object_->ResolveProperty(GetSelf<META_NS::IMetadata>(), name, q).GetResult();
+        }
+        return p;
+    }
+    META_NS::IProperty::ConstPtr GetProperty(BASE_NS::string_view name, META_NS::MetadataQuery q) const override
+    {
+        auto p = Super::GetProperty(name, q);
+        if (!p && this->object_) {
+            p = this->object_->ResolveProperty(GetSelf<META_NS::IMetadata>(), name, q).GetResult();
+        }
+        return p;
+    }
+
+    BASE_NS::vector<META_NS::EnginePropertyInfo> EnumerateProperties(
+        const META_NS::EnginePropertyInfoConfig& config) override
+    {
+        BASE_NS::vector<META_NS::EnginePropertyInfo> result;
+        if (auto scene = this->GetInternalScene()) {
+            scene->RunDirectlyOrInTask([this, &result, scene, config] {
+                auto compName = SCENE_NS::ComponentName(this->GetName());
+                if (auto m = scene->GetEcsContext().FindComponent(compName, this->GetEntity())) {
+                    META_NS::EnumerateEngineProperties(*m, compName, result, config);
+                }
+                return true;
+            });
+        }
+        return result;
     }
 
     IObject::Ptr Resolve(const META_NS::RefUri& uri) const override
@@ -57,7 +97,7 @@ public:
     }
 
 private:
-    bool populated_ {};
+    bool populated_{};
     IAttach::WeakPtr parent_;
 };
 

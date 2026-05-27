@@ -30,7 +30,7 @@ namespace UTest {
 
 class API_ScenePluginMeshComponentTest : public ScenePluginComponentTest<CORE3D_NS::IMeshComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestIMeshPropertyGetters(T* mesh)
     {
         EXPECT_TRUE(mesh->AABBMin());
@@ -61,13 +61,13 @@ UNIT_TEST_F(API_ScenePluginMeshComponentTest, Members, testing::ext::TestSize.Le
     ASSERT_TRUE(AddComponent<CORE3D_NS::IMeshComponentManager>(node));
     SetComponent(node, "MeshComponent");
 
-    TestEngineProperty<BASE_NS::Math::Vec3>("AABBMax", { 1.0f, 2.0f, 3.0f }, nativeComponent.aabbMax);
-    TestEngineProperty<BASE_NS::Math::Vec3>("AABBMin", { 4.0f, 5.0f, 6.0f }, nativeComponent.aabbMin);
+    TestEngineProperty<BASE_NS::Math::Vec3>("AABBMax", {1.0f, 2.0f, 3.0f}, nativeComponent.aabbMax);
+    TestEngineProperty<BASE_NS::Math::Vec3>("AABBMin", {4.0f, 5.0f, 6.0f}, nativeComponent.aabbMin);
     {
         auto prop = GetArrayProperty<CORE3D_NS::MeshComponent::Submesh>("SubMeshes");
-        auto submeshes = BASE_NS::vector<CORE3D_NS::MeshComponent::Submesh> {};
+        auto submeshes = BASE_NS::vector<CORE3D_NS::MeshComponent::Submesh>{};
         for (int i = 0; i < 3; ++i) {
-            auto submesh = CORE3D_NS::MeshComponent::Submesh {};
+            auto submesh = CORE3D_NS::MeshComponent::Submesh{};
             // Use any simple member to store data for differentiating between the submeshes.
             submesh.indexCount = i;
             submeshes.emplace_back(submesh);
@@ -84,7 +84,7 @@ UNIT_TEST_F(API_ScenePluginMeshComponentTest, Members, testing::ext::TestSize.Le
     }
     {
         const auto prop = GetArrayProperty<float>("JointBounds");
-        const auto jointBounds = BASE_NS::vector<float> { 1.0f, 2.0f, 3.0f };
+        const auto jointBounds = BASE_NS::vector<float>{1.0f, 2.0f, 3.0f};
         prop->SetValue(jointBounds);
 
         UpdateComponentMembers();
@@ -134,8 +134,8 @@ UNIT_TEST_F(API_ScenePluginMeshComponentTest, SubMesh, testing::ext::TestSize.Le
     AddSubMesh(mesh);
     auto submesh = mesh->SubMeshes()->GetValueAt(0);
     ASSERT_TRUE(submesh);
-    submesh->AABBMin()->SetValue({ -1, -1, -1 });
-    submesh->AABBMax()->SetValue({ 1, 1, 1 });
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
     auto mat = CreateMaterial();
     submesh->Material()->SetValue(mat);
     EXPECT_EQ(submesh->Material()->GetValue(), mat);
@@ -155,7 +155,7 @@ UNIT_TEST_F(API_ScenePluginMeshComponentTest, MaterialOverride, testing::ext::Te
 {
     auto getEntity = [](const BASE_NS::shared_ptr<CORE_NS::IInterface>& ptr) {
         auto ecso = interface_cast<IEcsObjectAccess>(ptr);
-        return ecso ? ecso->GetEcsObject()->GetEntity() : CORE_NS::Entity {};
+        return ecso ? ecso->GetEcsObject()->GetEntity() : CORE_NS::Entity{};
     };
 
     auto getSubMeshMaterialEntity = [](const BASE_NS::shared_ptr<CORE_NS::IInterface>& ptr, size_t index) {
@@ -254,6 +254,6 @@ UNIT_TEST_F(API_ScenePluginMeshComponentTest, MaterialOverride, testing::ext::Te
     EXPECT_EQ(getSubMeshMaterialEntity(mesh, 0), getEntity(submeshChangedMaterial));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

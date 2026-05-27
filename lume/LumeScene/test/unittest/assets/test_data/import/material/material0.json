@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "metallicRoughnessMaterial",
+		"alphaCutoff": 0.5,
+		"lightingFlags": ["shadowCaster"],
+		"renderSort": {
+			"layer": 3,
+			"order": 1
+		}
+	}
+}

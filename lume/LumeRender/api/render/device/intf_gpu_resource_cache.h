@@ -34,32 +34,32 @@ RENDER_BEGIN_NAMESPACE()
  */
 struct CacheGpuImageDesc {
     /** format */
-    BASE_NS::Format format { BASE_NS::BASE_FORMAT_R8G8B8A8_SRGB };
+    BASE_NS::Format format{BASE_NS::BASE_FORMAT_R8G8B8A8_SRGB};
 
     /** width */
-    uint32_t width { 0u };
+    uint32_t width{0u};
     /** height */
-    uint32_t height { 0u };
+    uint32_t height{0u};
 
     /** mip count */
-    uint32_t mipCount { 1u };
+    uint32_t mipCount{1u};
     /** layer count */
-    uint32_t layerCount { 1u };
+    uint32_t layerCount{1u};
 
     /** MSAA sample count */
-    SampleCountFlags sampleCountFlags { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT };
+    SampleCountFlags sampleCountFlags{SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT};
 
     /** component mapping */
-    ComponentMapping componentMapping {};
+    ComponentMapping componentMapping{};
 };
 
 /** Cache GPU image pair
  */
 struct CacheGpuImagePair {
     /** First image */
-    RenderHandleReference firstImage {};
+    RenderHandleReference firstImage{};
     /** Second image */
-    RenderHandleReference secondImage {};
+    RenderHandleReference secondImage{};
 };
 
 /** Gpu resource cache.
@@ -106,4 +106,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_IGPU_RESOURCE_MANAGER_H
+#endif  // API_RENDER_DEVICE_IGPU_RESOURCE_MANAGER_H

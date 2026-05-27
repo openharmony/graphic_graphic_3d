@@ -36,7 +36,7 @@ public:
     META_IMPLEMENT_PROPERTY(IAny::Ptr, From)
     META_IMPLEMENT_PROPERTY(IAny::Ptr, To)
 
-protected: // IStartableAnimation
+protected:  // IStartableAnimation
     void Pause() override;
     void Restart() override;
     void Seek(float position) override;
@@ -44,7 +44,7 @@ protected: // IStartableAnimation
     void Stop() override;
     void Finish() override;
 
-public: // IModifier
+public:  // IModifier
     EvaluationResult ProcessOnGet(IAny& value) override;
 
     META_NS::ObjectId GetDefaultAccess() const override
@@ -52,7 +52,7 @@ public: // IModifier
         return ClassId::KeyframeAnimationTemplateAccess;
     }
 
-protected: // IAnimationInternal
+protected:  // IAnimationInternal
     void OnAnimationStateChanged(const AnimationStateChangedInfo& info) override;
 
     ReturnError Finalize(IImportFunctions&) override;
@@ -65,8 +65,8 @@ private:
     IAny::Ptr currentValue_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_KEYFRAME_ANIMATION_H
+#endif  // META_SRC_KEYFRAME_ANIMATION_H

@@ -30,7 +30,7 @@
 namespace LoggerUtils {
 namespace {
 constexpr int MS_WIDTH = 3;
-} // namespace
+}  // namespace
 
 BASE_NS::string_view GetFilename(BASE_NS::string_view path)
 {
@@ -47,17 +47,24 @@ void PrintTimeStamp(std::ostream& outputStream)
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
                     std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
-    outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.");
+    std::tm localTime{};
+#if defined(_WIN32)
+    localtime_s(&localTime, &time);
+#else
+    localtime_r(&time, &localTime);
+#endif
+    outputStream << std::put_time(&localTime, "%D %H:%M:%S.");
     outputStream << std::right << std::setfill('0') << std::setw(MS_WIDTH) << ms.count() << std::setfill(' ');
 }
-} // namespace LoggerUtils
+}  // namespace LoggerUtils
 
 CORE_BEGIN_NAMESPACE()
 using BASE_NS::string_view;
 
 class FileOutput final : public ILogger::IOutput {
 public:
-    explicit FileOutput(const string_view filePath) : IOutput(), outputStream_(filePath.data(), std::ios::app) {}
+    explicit FileOutput(const string_view filePath) : IOutput(), outputStream_(filePath.data(), std::ios::app)
+    {}
 
     void Write(
         ILogger::LogLevel logLevel, const string_view filename, int linenumber, const string_view message) override
@@ -92,6 +99,6 @@ private:
 
 ILogger::IOutput::Ptr CreateLoggerFileOutput(const string_view filename)
 {
-    return ILogger::IOutput::Ptr { new FileOutput(filename) };
+    return ILogger::IOutput::Ptr{new FileOutput(filename)};
 }
 CORE_END_NAMESPACE()

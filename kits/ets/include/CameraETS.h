@@ -36,7 +36,7 @@ public:
         FORWARD = 1,
     };
     static std::shared_ptr<CameraETS> FromJS(
-        const SCENE_NS::ICamera::Ptr camera, const std::string &name, const std::string &uri = "");
+        const SCENE_NS::ICamera::Ptr camera, const std::string& name, const std::string& uri = "");
 
     struct RaycastResult {
         std::shared_ptr<NodeETS> node;
@@ -64,25 +64,25 @@ public:
     void SetMSAA(const bool msaaEnabled);
 
     InvokeReturn<std::shared_ptr<Vec4Proxy>> GetClearColor();
-    void SetClearColor(const bool enabled, const BASE_NS::Math::Vec4 &color);
+    void SetClearColor(const bool enabled, const BASE_NS::Math::Vec4& color);
 
     CameraETS::RenderingPipelineType GetRenderingPipeline();
     void SetRenderingPipeline(const RenderingPipelineType pipeline);
 
     META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> GetEffectsContainer();
 
-    BASE_NS::Math::Vec3 WorldToScreen(const BASE_NS::Math::Vec3 &world);
-    BASE_NS::Math::Vec3 ScreenToWorld(const BASE_NS::Math::Vec3 &screen);
+    BASE_NS::Math::Vec3 WorldToScreen(const BASE_NS::Math::Vec3& world);
+    BASE_NS::Math::Vec3 ScreenToWorld(const BASE_NS::Math::Vec3& screen);
 
-    InvokeReturn<std::vector<CameraETS::RaycastResult>> Raycast(const BASE_NS::Math::Vec2 &position,
+    InvokeReturn<std::vector<CameraETS::RaycastResult>> Raycast(const BASE_NS::Math::Vec2& position,
         const std::shared_ptr<NodeETS> rootNode = nullptr, const std::shared_ptr<NodeETS> layerMask = nullptr);
 
     BASE_NS::Math::Mat4X4 GetViewMatrix();
     BASE_NS::Math::Mat4X4 GetProjectionMatrix();
 
 private:
-    inline SCENE_NS::CameraPipeline ToInternalType(const CameraETS::RenderingPipelineType &pipeline);
-    inline CameraETS::RenderingPipelineType FromInternalType(const SCENE_NS::CameraPipeline &pipeline);
+    inline SCENE_NS::CameraPipeline ToInternalType(const CameraETS::RenderingPipelineType& pipeline);
+    inline CameraETS::RenderingPipelineType FromInternalType(const SCENE_NS::CameraPipeline& pipeline);
 
     SCENE_NS::ICamera::WeakPtr camera_{nullptr};
     bool msaaEnabled_{false};

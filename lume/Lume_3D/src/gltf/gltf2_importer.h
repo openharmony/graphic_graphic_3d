@@ -29,10 +29,11 @@
 #include <core/ecs/entity_reference.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/namespace.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <core/threading/intf_thread_pool.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class Key, class T>
+template <class Key, class T>
 class unordered_map;
 BASE_END_NAMESPACE()
 
@@ -63,6 +64,13 @@ namespace GLTF2 {
 class Data;
 struct Accessor;
 struct AnimationTrack;
+
+struct MeshDataBufferStorage {
+    BASE_NS::vector<uint8_t> vertexBuffer;
+    BASE_NS::vector<uint8_t> indexBuffer;
+    BASE_NS::vector<uint8_t> jointBuffer;
+};
+
 enum class ImportPhase {
     BUFFERS = 0,
     SAMPLERS,
@@ -85,7 +93,9 @@ public:
     ~GLTF2Importer() override;
 
     void ImportGLTF(const IGLTFData& data, GltfResourceImportFlags flags) override;
+    void ImportGLTF(const IGLTFData& data, const GltfImportOptions& options) override;
     void ImportGLTFAsync(const IGLTFData& data, GltfResourceImportFlags flags, Listener* listener) override;
+    void ImportGLTFAsync(const IGLTFData& data, const GltfImportOptions& options, Listener* listener) override;
     bool Execute(uint32_t timeBudget) override;
 
     void Cancel() override;
@@ -115,9 +125,9 @@ private:
     friend class Gltf2;
 
     struct ImporterTask;
-    template<typename T>
+    template <typename T>
     struct GatheredDataTask;
-    template<typename Component>
+    template <typename Component>
     struct ComponentTaskData;
     struct AnimationTaskData;
 
@@ -134,10 +144,10 @@ private:
     void PrepareAnimationTasks();
     void PrepareSkinTasks();
     void PrepareMeshTasks();
-    template<typename T>
+    template <typename T>
     GatheredDataTask<T>* PrepareAnimationInputTask(BASE_NS::unordered_map<GLTF2::Accessor*, GatheredDataTask<T>*>&,
         const GLTF2::AnimationTrack&, IAnimationInputComponentManager*);
-    template<typename T>
+    template <typename T>
     GatheredDataTask<T>* PrepareAnimationOutputTask(BASE_NS::unordered_map<GLTF2::Accessor*, GatheredDataTask<T>*>&,
         const GLTF2::AnimationTrack&, IAnimationOutputComponentManager*);
     void QueueImage(size_t i, BASE_NS::string&& uri, BASE_NS::string&& name);
@@ -151,13 +161,15 @@ private:
     void StartPhase(ImportPhase phase);
     void HandleGatherTasks();
     void HandleImportTasks();
+    bool ResolveImportOptions(const GltfImportOptions& options);
+    bool ResolveVertexInputDeclaration(BASE_NS::string_view vertexInputDeclarationPath);
 
     ImporterTask* FindTaskById(uint64_t id);
 
-    ImportPhase phase_ { ImportPhase::BUFFERS };
-    GltfResourceImportFlags flags_ { CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL };
+    ImportPhase phase_{ImportPhase::BUFFERS};
+    GltfResourceImportFlags flags_{CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL};
 
-    const CORE_NS::IThreadPool::ITask* bufferTask_ { nullptr };
+    const CORE_NS::IThreadPool::ITask* bufferTask_{nullptr};
     BASE_NS::vector<BASE_NS::unique_ptr<ImporterTask>> tasks_;
     CORE_NS::IThreadPool::IResult::Ptr gatherResults_[static_cast<uint32_t>(ImportPhase::FINISHED)];
 
@@ -175,29 +187,38 @@ private:
     // assigned to material in import
     DefaultMaterialShaderData dmShaderData_;
 
-    const Data* data_ { nullptr };
+    const Data* data_{nullptr};
 
     CORE_NS::IThreadPool::Ptr threadPool_;
     CORE_NS::IDispatcherTaskQueue::Ptr mainThreadQueue_;
-    Listener* listener_ { nullptr };
+    Listener* listener_{nullptr};
 
     GLTFImportResult result_;
 
     std::mutex gatherTasksLock_;
     BASE_NS::vector<uint64_t> finishedGatherTasks_[static_cast<uint32_t>(ImportPhase::FINISHED)];
 
-    size_t pendingGatherTasks_[static_cast<uint32_t>(ImportPhase::FINISHED)] {};
-    size_t pendingImportTasks_ { 0 };
-    size_t completedTasks_ { 0 };
+    size_t pendingGatherTasks_[static_cast<uint32_t>(ImportPhase::FINISHED)]{};
+    size_t pendingImportTasks_{0};
+    size_t completedTasks_{0};
 
-    BASE_NS::vector<IMeshBuilder::Ptr> meshBuilders_;
     GltfMeshData meshData_;
+    BASE_NS::vector<MeshDataBufferStorage> meshDataBuffers_;
+    RENDER_NS::VertexInputDeclarationData vertexInputDeclarationData_;
+    bool vertexInputDeclarationResolved_{false};
+    uint32_t baseColorImageLoadFlags_{0U};
+    uint32_t imageMipLoadFlags_{0U};
+    uint32_t maxTextureMipLevels_{0U};
+    bool forceBaseColorTextureColorSpace_{false};
+    bool useUriCacheForImages_{true};
+    bool useUriCacheForMaterials_{true};
+    bool useUriCacheForMeshes_{true};
 
-    BASE_NS::ColorSpaceFlags colorSpaceFlags_ { 0U };
-    std::atomic_bool cancelled_ { false };
+    BASE_NS::ColorSpaceFlags colorSpaceFlags_{0U};
+    std::atomic_bool cancelled_{false};
 };
 
-class Gltf2SceneImporter final : public ISceneImporter, IGLTF2Importer::Listener {
+class Gltf2SceneImporter final : public CORE_NS::IInterfaceHelper<ISceneImporter>, IGLTF2Importer::Listener {
 public:
     Gltf2SceneImporter(CORE_NS::IEngine& engine, RENDER_NS::IRenderContext& renderContext, CORE_NS::IEcs& ecs);
     Gltf2SceneImporter(CORE_NS::IEngine& engine, RENDER_NS::IRenderContext& renderContext, CORE_NS::IEcs& ecs,
@@ -218,12 +239,6 @@ public:
     CORE_NS::Entity ImportScene(size_t sceneIndex, CORE_NS::Entity parentEntity, SceneImportFlags flags) override;
     CORE_NS::Entity ImportScene(size_t sceneIndex, uint32_t sceneId, SceneImportFlags flags) override;
 
-    // IInterface
-    const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-    void Ref() override;
-    void Unref() override;
-
     // IGLTF2Importer::Listener
     void OnImportStarted() override;
     void OnImportFinished() override;
@@ -233,19 +248,18 @@ private:
     void UpdateResults();
 
     CORE_NS::IEcs& ecs_;
-    IGraphicsContext* graphicsContext_ { nullptr };
+    IGraphicsContext* graphicsContext_{nullptr};
     GLTF2Importer::Ptr importer_;
     ISceneData::Ptr data_;
-    uint32_t refcnt_ { 0 };
     Result result_;
     MeshData meshData_;
-    ISceneImporter::Listener* listener_ { nullptr };
+    ISceneImporter::Listener* listener_{nullptr};
 };
-} // namespace GLTF2
+}  // namespace GLTF2
 
 CORE_NS::Entity ImportScene(RENDER_NS::IDevice& device, size_t sceneIndex, const GLTF2::Data& data,
     const GLTFResourceData& gltfResourceData, CORE_NS::IEcs& ecs, CORE_NS::Entity rootEntity, uint32_t level,
     GltfSceneImportFlags flags);
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__GLTF__GLTF2_IMPORTER_H
+#endif  // CORE__GLTF__GLTF2_IMPORTER_H

@@ -1,0 +1,31 @@
+{
+	"version": "1.0",
+	"description": "test scene with perspective camera node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "camera",
+					"name": "test",
+					"projection": "perspective",
+					"fov": 60.0,
+					"aspectRatio": 1.5,
+					"nearPlane": 0.1,
+					"farPlane": 100.0,
+					"culling": "viewFrustum",
+					"renderingPipeline": "forward",
+					"sceneFlags": ["active"],
+					"pipelineFlags": ["clearDepth", "clearColor"],
+					"viewport": [0.0, 0.0, 1.0, 1.0],
+					"scissor": [0.0, 0.0, 1.0, 1.0],
+					"clearColor": [0.2, 0.3, 0.4, 1.0],
+					"clearDepth": 0.9,
+					"cameraLayerMask": 255
+				}
+			]
+		}
+	}
+}

@@ -24,7 +24,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
     const GpuImageDesc& desc, const BackendSpecificImageDesc& platformData)
 {
     PLUGIN_ASSERT(IsActive());
-    GpuImagePlatformDataGL data {};
+    GpuImagePlatformDataGL data{};
 #if RENDER_HAS_GLES_BACKEND
     if (backendType_ == DeviceBackendType::OPENGLES) {
         const ImageDescGLES& tmp = (const ImageDescGLES&)platformData;
@@ -49,7 +49,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
         data.internalFormat = tmp.internalFormat;
     }
 #endif
-    data.swizzle = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+    data.swizzle = {GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
     return CreateGpuImageView(desc, data);
 }
 

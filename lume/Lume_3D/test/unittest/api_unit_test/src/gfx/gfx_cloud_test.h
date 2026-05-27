@@ -24,6 +24,6 @@ namespace Cloud {
 /*  Similar test case as we have the Hello world application */
 void CloudTest(CORE3D_NS::UTest::TestResources& res);
 void TickTest(CORE3D_NS::UTest::TestResources& res, int frameCountToTick);
-} // namespace Cloud
+}  // namespace Cloud
 
-#endif // CORE3D_TEST_API_GFX_CLOUD_TEST_H
+#endif  // CORE3D_TEST_API_GFX_CLOUD_TEST_H

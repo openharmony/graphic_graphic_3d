@@ -23,13 +23,11 @@
 namespace OHOS::Render3D {
 class ImageProxy : public PropertyProxy<SCENE_NS::IImage::Ptr> {
 public:
-    explicit ImageProxy(const META_NS::Property<SCENE_NS::IImage::Ptr> &prop) : PropertyProxy(prop)
-    {
-    }
+    explicit ImageProxy(const META_NS::Property<SCENE_NS::IImage::Ptr>& prop) : PropertyProxy(prop)
+    {}
 
     ~ImageProxy() override
-    {
-    }
+    {}
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_IMAGE_PROXY_H

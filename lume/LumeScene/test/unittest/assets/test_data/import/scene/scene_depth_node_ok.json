@@ -1,0 +1,260 @@
+{
+	"version": "1.0",
+	"description": "scene with node hierarchy at the 128-level depth limit (should succeed)",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":
+{"type": "node", "name": "n0", "children": [
+{"type": "node", "name": "n1", "children": [
+{"type": "node", "name": "n2", "children": [
+{"type": "node", "name": "n3", "children": [
+{"type": "node", "name": "n4", "children": [
+{"type": "node", "name": "n5", "children": [
+{"type": "node", "name": "n6", "children": [
+{"type": "node", "name": "n7", "children": [
+{"type": "node", "name": "n8", "children": [
+{"type": "node", "name": "n9", "children": [
+{"type": "node", "name": "n10", "children": [
+{"type": "node", "name": "n11", "children": [
+{"type": "node", "name": "n12", "children": [
+{"type": "node", "name": "n13", "children": [
+{"type": "node", "name": "n14", "children": [
+{"type": "node", "name": "n15", "children": [
+{"type": "node", "name": "n16", "children": [
+{"type": "node", "name": "n17", "children": [
+{"type": "node", "name": "n18", "children": [
+{"type": "node", "name": "n19", "children": [
+{"type": "node", "name": "n20", "children": [
+{"type": "node", "name": "n21", "children": [
+{"type": "node", "name": "n22", "children": [
+{"type": "node", "name": "n23", "children": [
+{"type": "node", "name": "n24", "children": [
+{"type": "node", "name": "n25", "children": [
+{"type": "node", "name": "n26", "children": [
+{"type": "node", "name": "n27", "children": [
+{"type": "node", "name": "n28", "children": [
+{"type": "node", "name": "n29", "children": [
+{"type": "node", "name": "n30", "children": [
+{"type": "node", "name": "n31", "children": [
+{"type": "node", "name": "n32", "children": [
+{"type": "node", "name": "n33", "children": [
+{"type": "node", "name": "n34", "children": [
+{"type": "node", "name": "n35", "children": [
+{"type": "node", "name": "n36", "children": [
+{"type": "node", "name": "n37", "children": [
+{"type": "node", "name": "n38", "children": [
+{"type": "node", "name": "n39", "children": [
+{"type": "node", "name": "n40", "children": [
+{"type": "node", "name": "n41", "children": [
+{"type": "node", "name": "n42", "children": [
+{"type": "node", "name": "n43", "children": [
+{"type": "node", "name": "n44", "children": [
+{"type": "node", "name": "n45", "children": [
+{"type": "node", "name": "n46", "children": [
+{"type": "node", "name": "n47", "children": [
+{"type": "node", "name": "n48", "children": [
+{"type": "node", "name": "n49", "children": [
+{"type": "node", "name": "n50", "children": [
+{"type": "node", "name": "n51", "children": [
+{"type": "node", "name": "n52", "children": [
+{"type": "node", "name": "n53", "children": [
+{"type": "node", "name": "n54", "children": [
+{"type": "node", "name": "n55", "children": [
+{"type": "node", "name": "n56", "children": [
+{"type": "node", "name": "n57", "children": [
+{"type": "node", "name": "n58", "children": [
+{"type": "node", "name": "n59", "children": [
+{"type": "node", "name": "n60", "children": [
+{"type": "node", "name": "n61", "children": [
+{"type": "node", "name": "n62", "children": [
+{"type": "node", "name": "n63", "children": [
+{"type": "node", "name": "n64", "children": [
+{"type": "node", "name": "n65", "children": [
+{"type": "node", "name": "n66", "children": [
+{"type": "node", "name": "n67", "children": [
+{"type": "node", "name": "n68", "children": [
+{"type": "node", "name": "n69", "children": [
+{"type": "node", "name": "n70", "children": [
+{"type": "node", "name": "n71", "children": [
+{"type": "node", "name": "n72", "children": [
+{"type": "node", "name": "n73", "children": [
+{"type": "node", "name": "n74", "children": [
+{"type": "node", "name": "n75", "children": [
+{"type": "node", "name": "n76", "children": [
+{"type": "node", "name": "n77", "children": [
+{"type": "node", "name": "n78", "children": [
+{"type": "node", "name": "n79", "children": [
+{"type": "node", "name": "n80", "children": [
+{"type": "node", "name": "n81", "children": [
+{"type": "node", "name": "n82", "children": [
+{"type": "node", "name": "n83", "children": [
+{"type": "node", "name": "n84", "children": [
+{"type": "node", "name": "n85", "children": [
+{"type": "node", "name": "n86", "children": [
+{"type": "node", "name": "n87", "children": [
+{"type": "node", "name": "n88", "children": [
+{"type": "node", "name": "n89", "children": [
+{"type": "node", "name": "n90", "children": [
+{"type": "node", "name": "n91", "children": [
+{"type": "node", "name": "n92", "children": [
+{"type": "node", "name": "n93", "children": [
+{"type": "node", "name": "n94", "children": [
+{"type": "node", "name": "n95", "children": [
+{"type": "node", "name": "n96", "children": [
+{"type": "node", "name": "n97", "children": [
+{"type": "node", "name": "n98", "children": [
+{"type": "node", "name": "n99", "children": [
+{"type": "node", "name": "n100", "children": [
+{"type": "node", "name": "n101", "children": [
+{"type": "node", "name": "n102", "children": [
+{"type": "node", "name": "n103", "children": [
+{"type": "node", "name": "n104", "children": [
+{"type": "node", "name": "n105", "children": [
+{"type": "node", "name": "n106", "children": [
+{"type": "node", "name": "n107", "children": [
+{"type": "node", "name": "n108", "children": [
+{"type": "node", "name": "n109", "children": [
+{"type": "node", "name": "n110", "children": [
+{"type": "node", "name": "n111", "children": [
+{"type": "node", "name": "n112", "children": [
+{"type": "node", "name": "n113", "children": [
+{"type": "node", "name": "n114", "children": [
+{"type": "node", "name": "n115", "children": [
+{"type": "node", "name": "n116", "children": [
+{"type": "node", "name": "n117", "children": [
+{"type": "node", "name": "n118", "children": [
+{"type": "node", "name": "n119", "children": [
+{"type": "node", "name": "n120", "children": [
+{"type": "node", "name": "n121", "children": [
+{"type": "node", "name": "n122", "children": [
+{"type": "node", "name": "n123", "children": [
+{"type": "node", "name": "n124", "children": [
+{"type": "node", "name": "n125"}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+]}
+	}
+}

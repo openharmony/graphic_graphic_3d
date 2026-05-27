@@ -1,0 +1,95 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "a389245d-6d82-49df-b0ae-65dd7c1e9992",
+        "uri": "project://packages/studio-asset-library/3d/plane/plane.gltf",
+        "xxh3": "b11cbc8c2fe2056302ec91067aa37b88",
+        "spec": {
+            "$meta": {
+                "meta-version": "2.0"
+            },
+            "$root": {
+                "$classId": "c1b8a9d8-2b56-4c42-9e39-043ced9dfb83",
+                "$className": "ModelAsset",
+                "$instanceId": "00022cd2-5d7f-0a40-0c04-bb9cdf536212",
+                "__attachments": [
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Iid",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "a389245d-6d82-49df-b0ae-65dd7c1e9992"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Uri",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "project://packages/studio-asset-library/3d/plane/plane.gltf"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Name",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "plane.gltf"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "MediaType",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "model/gltf+json"
+                            }
+                        ],
+                        "modifiers": []
+                    }
+                ]
+            }
+        }
+    }
+}

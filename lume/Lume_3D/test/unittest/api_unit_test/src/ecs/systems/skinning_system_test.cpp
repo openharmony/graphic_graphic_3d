@@ -168,7 +168,7 @@ UNIT_TEST(API_EcsSkinningSystem, CreateInvalidInstanceTest, testing::ext::TestSi
     for (uint32_t i = 0; i < numJoints; ++i) {
         joints[i] = joint;
     }
-    skinningSystem->CreateInstance(skinIbm, { joints, countof(joints) }, entity, skeleton);
+    skinningSystem->CreateInstance(skinIbm, {joints, countof(joints)}, entity, skeleton);
     EXPECT_FALSE(skinManager->HasComponent(entity));
     EXPECT_FALSE(jointMatricesManager->HasComponent(entity));
     EXPECT_FALSE(skinJointsManager->HasComponent(entity));
@@ -211,8 +211,8 @@ UNIT_TEST(API_EcsSkinningSystem, SkinTasksTest, testing::ext::TestSize.Level1)
     constexpr const uint32_t numSkins = 17u;
 
     vector<Entity> entities;
-    const Math::Mat4X4 matrix = Math::Trs(Math::Vec3 { 1.0f, 2.0f, 1.0f },
-        Math::FromEulerRad(Math::Vec3(0.4f, 0.1f, 0.5f)), Math::Vec3 { 1.0f, 1.0f, 1.0f });
+    const Math::Mat4X4 matrix = Math::Trs(
+        Math::Vec3{1.0f, 2.0f, 1.0f}, Math::FromEulerRad(Math::Vec3(0.4f, 0.1f, 0.5f)), Math::Vec3{1.0f, 1.0f, 1.0f});
     for (uint32_t i = 0; i < numSkins; ++i) {
         Entity entity = ecs->GetEntityManager().Create();
         Entity skeleton = ecs->GetEntityManager().Create();
@@ -226,7 +226,7 @@ UNIT_TEST(API_EcsSkinningSystem, SkinTasksTest, testing::ext::TestSize.Level1)
         Entity skinIbm = ecs->GetEntityManager().Create();
         skinIbmManager->Create(skinIbm);
         if (auto scopedHandle = skinIbmManager->Write(skinIbm); scopedHandle) {
-            scopedHandle->matrices.push_back(Math::Mat4X4 { 1.0f });
+            scopedHandle->matrices.push_back(Math::Mat4X4{1.0f});
         }
         skinJointsManager->Create(skinIbm);
         if (auto scopedHandle = skinJointsManager->Write(skinIbm); scopedHandle) {

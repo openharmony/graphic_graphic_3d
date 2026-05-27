@@ -59,7 +59,7 @@ UNIT_TEST(SRC_RenderDataStoreMorph, AddSubmashTest, testing::ext::TestSize.Level
     ASSERT_TRUE(dataStore);
     auto dataStoreMorph = static_cast<RenderDataStoreMorph*>(dataStore.get());
 
-    dataStoreMorph->Init({ 2u });
+    dataStoreMorph->Init({2u});
     {
         RenderDataMorph::Submesh submesh;
         submesh.vertexCount = 16u;

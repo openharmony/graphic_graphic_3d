@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": { "name": "uneven-anim" },
+				"type": "trackAnimation",
+				"options": {
+					"name": "unevenAnim",
+					"duration": 2000.0,
+					"timestamps": [0.0, 0.1, 0.15, 0.8, 1.0],
+					"keyframes": [0.0, 10.0, 15.0, 80.0, 100.0]
+				}
+			}
+		]
+	}
+}

@@ -24,7 +24,7 @@ BASE_NS::string GetConstructorName(const META_NS::IObject::Ptr& obj)
     if (!obj) {
         return "";
     }
-    BASE_NS::string name { obj->GetClassName() };
+    BASE_NS::string name{obj->GetClassName()};
     // specialize/remap class names & interfaces.
     if (name == "Bitmap") {
         name = "Image";
@@ -68,14 +68,13 @@ BASE_NS::string GetConstructorName(const META_NS::IObject::Ptr& obj)
     return name;
 }
 
-
 NapiApi::Object CreateFromNativeInstance(napi_env env, const META_NS::IObject::Ptr& obj, PtrType ptrType,
     const NapiApi::JsFuncArgs& args, BASE_NS::string_view pname)
 {
     if (!obj) {
         napi_value null;
         napi_get_null(env, &null);
-        return { env, null };
+        return {env, null};
     }
     auto name = GetConstructorName(obj);
     return CreateFromNativeInstance(env, name, obj, ptrType, args, pname);
@@ -87,7 +86,7 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& na
     napi_value null;
     napi_get_null(env, &null);
     if (obj == nullptr) {
-        return { env, null };
+        return {env, null};
     }
     using namespace META_NS;
     if (const auto cached = FetchJsObj(obj, pname)) {
@@ -96,9 +95,9 @@ NapiApi::Object CreateFromNativeInstance(napi_env env, const BASE_NS::string& na
     }
 
     // Ensure we have at least one arg for injection.
-    napi_value dummyArg[] = { NapiApi::Object { env }.ToNapiValue() };
-    auto argsToUse = args.argc > 0 ? args : NapiApi::JsFuncArgs { dummyArg };
+    napi_value dummyArg[] = {NapiApi::Object{env}.ToNapiValue()};
+    auto argsToUse = args.argc > 0 ? args : NapiApi::JsFuncArgs{dummyArg};
     TrueRootObject::InjectNativeObject(env, obj, ptrType, argsToUse);
-    const auto newJsObj = NapiApi::Object { env, name, argsToUse };
+    const auto newJsObj = NapiApi::Object{env, name, argsToUse};
     return StoreJsObj(obj, newJsObj, pname);
 }

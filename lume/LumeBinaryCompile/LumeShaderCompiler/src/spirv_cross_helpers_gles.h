@@ -47,6 +47,6 @@ void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, uint32_
 
 void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base, uint32_t structTypeId,
     std::vector<PushConstantReflection>& reflections);
-} // namespace Gles
+}  // namespace Gles
 
-#endif // GLES_SPIRV_CROSS_HELPERS_H
+#endif  // GLES_SPIRV_CROSS_HELPERS_H

@@ -54,7 +54,7 @@ UNIT_TEST(API_ContainersStringView, emptyStringView, testing::ext::TestSize.Leve
         }
     }
     {
-        constexpr const char TEST_STRING[] = { '\0' };
+        constexpr const char TEST_STRING[] = {'\0'};
         const BASE_NS::string_view testString(TEST_STRING);
 
         EXPECT_TRUE(testString.empty());
@@ -106,7 +106,7 @@ UNIT_TEST(API_ContainersStringView, stringView, testing::ext::TestSize.Level1)
         }
     }
     {
-        constexpr const char TEST_STRING[] = { 'A', 'B', 'C', 'D', 'E', 'F' };
+        constexpr const char TEST_STRING[] = {'A', 'B', 'C', 'D', 'E', 'F'};
         const BASE_NS::string_view testString(TEST_STRING, BASE_NS::countof(TEST_STRING));
 
         EXPECT_FALSE(testString.empty());
@@ -351,7 +351,7 @@ UNIT_TEST(API_ContainersFixedString, toString, testing::ext::TestSize.Level1)
         EXPECT_EQ(str, "-1234567890123456789");
     }
     {
-        constexpr auto someStr { "Test_" };
+        constexpr auto someStr{"Test_"};
 
         constexpr auto str0 = BASE_NS::basic_fixed_string("Test_");
         constexpr auto str1 = BASE_NS::fixed_string<BASE_NS::constexpr_strlen(someStr)>(someStr);
@@ -364,7 +364,7 @@ UNIT_TEST(API_ContainersFixedString, toString, testing::ext::TestSize.Level1)
     }
 
     {
-        constexpr auto someStr { "" };
+        constexpr auto someStr{""};
         constexpr auto str0 = BASE_NS::basic_fixed_string("");
         constexpr auto str1 = BASE_NS::fixed_string<BASE_NS::constexpr_strlen(someStr)>(someStr);
         EXPECT_TRUE(str0.empty());
@@ -549,7 +549,7 @@ UNIT_TEST(API_ContainersFixedString, construct, testing::ext::TestSize.Level1)
     }
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 void fixed_string_compare()
 {
     {
@@ -664,7 +664,7 @@ UNIT_TEST(API_ContainersFixedString, compare, testing::ext::TestSize.Level1)
     fixed_string_compare<BASE_NS::basic_fixed_string<char, 30>, BASE_NS::basic_string_view<char>>();
 }
 
-template<typename T>
+template <typename T>
 void findTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -826,7 +826,7 @@ UNIT_TEST(API_ContainersFixedString, find, testing::ext::TestSize.Level1)
     findTest<BASE_NS::fixed_string<20>>();
 }
 
-template<typename T>
+template <typename T>
 void testFindFirstOfAndLastOf()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -914,7 +914,7 @@ UNIT_TEST(API_ContainersFixedString, findFirstOfAndLastOf, testing::ext::TestSiz
     testFindFirstOfAndLastOf<BASE_NS::fixed_string<20>>();
 }
 
-template<typename T>
+template <typename T>
 void startWithTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -971,7 +971,7 @@ void startWithTest()
         EXPECT_TRUE(res1);
         constexpr const bool res2 = testString.starts_with("");
         EXPECT_TRUE(res2);
-        constexpr const bool res3 = testString.starts_with(BASE_NS::string_view {});
+        constexpr const bool res3 = testString.starts_with(BASE_NS::string_view{});
         EXPECT_TRUE(res3);
     }
 }
@@ -986,7 +986,7 @@ UNIT_TEST(API_ContainersStringView, startsWith, testing::ext::TestSize.Level1)
     startWithTest<BASE_NS::string_view>();
 }
 
-template<typename T>
+template <typename T>
 void endsWithTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -1041,7 +1041,7 @@ void endsWithTest()
         EXPECT_TRUE(res1);
         constexpr const bool res2 = testString.ends_with("");
         EXPECT_TRUE(res2);
-        constexpr const bool res3 = testString.ends_with(BASE_NS::string_view {});
+        constexpr const bool res3 = testString.ends_with(BASE_NS::string_view{});
         EXPECT_TRUE(res3);
     }
 }
@@ -1066,7 +1066,7 @@ UNIT_TEST(API_ContainersStringView, UserDefinedLiteral_QualifiedNamespace, testi
     using namespace BASE_NS::literals::string_literals;
     auto myString = "hello"_sv;
     static_assert(BASE_NS::is_same_v<BASE_NS::string_view, decltype(myString)>);
-    ASSERT_EQ(BASE_NS::string_view { "hello" }, myString);
+    ASSERT_EQ(BASE_NS::string_view{"hello"}, myString);
 }
 
 /**
@@ -1079,7 +1079,7 @@ UNIT_TEST(API_ContainersStringView, UserDefinedLiteral, testing::ext::TestSize.L
     using namespace BASE_NS::literals;
     auto myString = "hello"_sv;
     static_assert(BASE_NS::is_same_v<BASE_NS::string_view, decltype(myString)>);
-    ASSERT_EQ(BASE_NS::string_view { "hello" }, myString);
+    ASSERT_EQ(BASE_NS::string_view{"hello"}, myString);
 }
 
 /**

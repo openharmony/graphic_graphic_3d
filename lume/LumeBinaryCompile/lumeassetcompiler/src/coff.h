@@ -73,4 +73,4 @@ struct IMAGE_SYMBOL {
     uint8_t numberOfAuxSymbols;
 };
 #pragma pack(pop)
-#endif // LUME_COFF_H
+#endif  // LUME_COFF_H

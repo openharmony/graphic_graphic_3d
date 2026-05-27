@@ -19,8 +19,9 @@
 #include "BaseObjectJS.h"
 #include "ColorProxy.h"
 #include "NodeImpl.h"
+#include "export.h"
 
-class BaseLight : public NodeImpl {
+class SCENE_ADDON_PUBLIC BaseLight : public NodeImpl {
 public:
     static constexpr uint32_t ID = 10;
     enum LightType {
@@ -46,7 +47,7 @@ protected:
     BaseLight(LightType lt);
     ~BaseLight() override;
     void Create(napi_env e, napi_callback_info i);
-    void DisposeNative(void* /*scenejs*/, BaseObject*);
+    void DisposeNative(BaseObject* tro);
 
 private:
     napi_value GetlightType(NapiApi::FunctionContext<>& ctx);
@@ -66,12 +67,12 @@ private:
     BASE_NS::unique_ptr<ColorProxy> colorProxy_;
 };
 
-class SpotLightJS final : BaseObject, BaseLight {
+class SCENE_ADDON_PUBLIC SpotLightJS final : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 11;
     static void Init(napi_env env, napi_value exports);
     SpotLightJS(napi_env, napi_callback_info);
-     ~SpotLightJS() override;
+    ~SpotLightJS() override;
     void* GetInstanceImpl(uint32_t) override;
     napi_value GetInnerAngle(NapiApi::FunctionContext<>& ctx);
     void SetInnerAngle(NapiApi::FunctionContext<float>& ctx);
@@ -79,33 +80,36 @@ public:
     void SetOuterAngle(NapiApi::FunctionContext<float>& ctx);
     napi_value GetRange(NapiApi::FunctionContext<>& ctx);
     void SetRange(NapiApi::FunctionContext<float>& ctx);
+
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 };
 
-class DirectionalLightJS final : BaseObject, BaseLight {
+class SCENE_ADDON_PUBLIC DirectionalLightJS final : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 12;
     static void Init(napi_env env, napi_value exports);
     DirectionalLightJS(napi_env, napi_callback_info);
     ~DirectionalLightJS() override;
     void* GetInstanceImpl(uint32_t) override;
+
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     napi_value GetNear(NapiApi::FunctionContext<>& ctx);
     void SetNear(NapiApi::FunctionContext<float>& ctx);
 };
-class PointLightJS final : BaseObject, BaseLight {
+class SCENE_ADDON_PUBLIC PointLightJS final : BaseObject, BaseLight {
 public:
     static constexpr uint32_t ID = 13;
     static void Init(napi_env env, napi_value exports);
     PointLightJS(napi_env, napi_callback_info);
     ~PointLightJS() override;
     void* GetInstanceImpl(uint32_t) override;
+
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 };
 

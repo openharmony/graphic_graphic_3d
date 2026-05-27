@@ -36,6 +36,6 @@ declare(PFNEGLCREATEIMAGEKHRPROC, eglCreateImageKHR);
 declare(PFNEGLDESTROYIMAGEKHRPROC, eglDestroyImageKHR);
 #endif
 
-#endif // RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GLES_BACKEND
 #undef declare
-#endif // EGL_FUNCTIONS_H
+#endif  // EGL_FUNCTIONS_H

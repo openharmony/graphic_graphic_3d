@@ -45,26 +45,26 @@ struct DefaultWaterRippleDataStruct {
 
 #else
 
-constexpr uint32_t MAX_NUM_RIPPLE { 8u };
-constexpr uint32_t WATER_RIPPLE_TGS { 8u };
+constexpr uint32_t MAX_NUM_RIPPLE{8u};
+constexpr uint32_t WATER_RIPPLE_TGS{8u};
 
 struct DefaultWaterRippleDataStruct {
     uvec4 inArgs;
     uvec2 newRipplePositions[MAX_NUM_RIPPLE];
 
     // new ripple depth in meters
-    float newRippleDepth { 0.019f };
+    float newRippleDepth{0.019f};
     // radius of the new ripple in pixels
-    int rippleRadius { 6 };
-    float waterDepth { 0.02f };
-    float rippleFormationSpeed { 20.0f };
+    int rippleRadius{6};
+    float waterDepth{0.02f};
+    float rippleFormationSpeed{20.0f};
 
     // .x oscillations, .y smoothness
-    vec2 turbulenceFactors { 5.0f, 0.1f };
+    vec2 turbulenceFactors{5.0f, 0.1f};
 
     // Fade inner and outer border/radiuses (in range [0, 1])
-    vec2 innerOutterRadius { 0.97f, 1.0f };
+    vec2 innerOutterRadius{0.97f, 1.0f};
 };
 
-#endif // VULKAN
-#endif // WATER_RIPPLE_COMMON_H
+#endif  // VULKAN
+#endif  // WATER_RIPPLE_COMMON_H

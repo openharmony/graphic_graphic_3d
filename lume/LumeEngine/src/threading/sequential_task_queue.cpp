@@ -27,7 +27,8 @@
 
 CORE_BEGIN_NAMESPACE()
 // -- Sequential task queue.
-SequentialTaskQueue::SequentialTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool) {}
+SequentialTaskQueue::SequentialTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool)
+{}
 
 SequentialTaskQueue::~SequentialTaskQueue()
 {

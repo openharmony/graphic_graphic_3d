@@ -44,14 +44,14 @@ struct PointerEvent {
         /// Normalized input position between [0,0]..[1,1] in view space.
         BASE_NS::Math::Vec2 position;
         /// Pointer state
-        PointerState state { PointerState::POINTER_UP };
+        PointerState state{PointerState::POINTER_UP};
     };
     /// List of pointer ids that changed as a result of this event
     BASE_NS::vector<Pointer> pointers;
     /// Event timestamp
-    META_NS::TimeSpan time { META_NS::TimeSpan::Zero() };
+    META_NS::TimeSpan time{META_NS::TimeSpan::Zero()};
     /// If true after receiver handling, no further IInputReceivers should receive the event.
-    bool handled {};
+    bool handled{};
 };
 
 /**
@@ -71,4 +71,4 @@ public:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_INTERFACE_IINPUT_RECEIVER_H
+#endif  // SCENE_INTERFACE_IINPUT_RECEIVER_H

@@ -26,8 +26,9 @@ RENDER_BEGIN_NAMESPACE()
 
 namespace EGLHelpers {
 
-void EGLHelpers::EGLState::PlatformInitialize() {}
-} // namespace EGLHelpers
+void EGLHelpers::EGLState::PlatformInitialize()
+{}
+}  // namespace EGLHelpers
 
 RENDER_END_NAMESPACE()
 

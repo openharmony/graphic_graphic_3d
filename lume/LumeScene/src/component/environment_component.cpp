@@ -32,10 +32,9 @@ bool EnvironmentComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p,
     auto name = p->GetName();
     if (name == "RadianceImage" || name == "EnvironmentImage") {
         auto ep = object_->CreateProperty(path).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(
-                   META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, { GetInternalScene(), ClassId::Image })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, {GetInternalScene(), ClassId::Image})));
     }
     return AttachEngineProperty(p, path);
 }

@@ -18,8 +18,9 @@
 #include <meta/interface/intf_object.h>
 #include "BaseObjectJS.h"
 #include "NodeImpl.h"
+#include "export.h"
 
-class NodeJS final : public BaseObject, NodeImpl {
+class SCENE_ADDON_PUBLIC NodeJS final : public BaseObject, NodeImpl {
 public:
     static constexpr uint32_t ID = 130;
     static void Init(napi_env env, napi_value exports);
@@ -28,7 +29,7 @@ public:
     void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env) override;
 };
 

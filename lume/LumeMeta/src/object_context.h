@@ -36,10 +36,10 @@ public:
     ObjectContext() = default;
     ~ObjectContext() override = default;
 
-public: // ILifecycle
+public:  // ILifecycle
     void SetSuperInstance(const META_NS::IObject::Ptr& aggr, const META_NS::IObject::Ptr& super) override;
 
-public: // IProxyObject
+public:  // IProxyObject
     META_FORWARD_PROPERTY(ProxyModeBitsValue, Mode, proxy_->Mode())
     META_FORWARD_PROPERTY(bool, Dynamic, proxy_->Dynamic())
     const IObject::Ptr GetTarget() const override;
@@ -50,7 +50,7 @@ public: // IProxyObject
     IProperty::ConstPtr GetProxyProperty(BASE_NS::string_view name) const override;
     void AddInternalProxy(BASE_NS::string_view propertyPropertyName, BASE_NS::string_view sourcePropertyName) override;
 
-public: // IMetadata
+public:  // IMetadata
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery) override;
     IProperty::ConstPtr GetProperty(BASE_NS::string_view name, MetadataQuery) const override;
@@ -58,16 +58,16 @@ public: // IMetadata
     BASE_NS::vector<IProperty::Ptr> GetProperties() override;
     BASE_NS::vector<IProperty::ConstPtr> GetProperties() const override;
 
-public: // IObjectContext
+public:  // IObjectContext
     IObjectRegistry& GetObjectRegistry() override;
 
 private:
-    META_NS::IProxyObject* proxy_ { nullptr };
-    META_NS::IMetadata* metadata_ { nullptr };
+    META_NS::IProxyObject* proxy_{nullptr};
+    META_NS::IMetadata* metadata_{nullptr};
     IObject::WeakPtr target_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

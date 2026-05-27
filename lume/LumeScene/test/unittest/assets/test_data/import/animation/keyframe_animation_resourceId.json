@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "keyframeAnimation",
+		"name": "kfAnimResourceId",
+		"duration": 500.0,
+		"from": { "type": "resourceId", "name": "from-ref", "group": "g1" },
+		"to": { "type": "resourceId", "name": "to-ref" }
+	}
+}

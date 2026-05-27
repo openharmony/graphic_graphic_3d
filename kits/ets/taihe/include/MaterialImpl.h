@@ -63,9 +63,9 @@ public:
     }
 
 protected:
-    template<size_t Index>
+    template <size_t Index>
     ::SceneResources::MaterialProperty getProperty();
-    template<size_t Index>
+    template <size_t Index>
     void setProperty(::SceneResources::weak::MaterialProperty prop);
 
 private:
@@ -77,12 +77,12 @@ template <size_t Index>
 {
     if (!materialETS_) {
         WIDGET_LOGE("get property[%zu] failed, internal material is null", Index);
-        return ::taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(nullptr);
+        return ::SceneResources::MaterialProperty({nullptr, nullptr});
     }
     std::shared_ptr<MaterialPropertyETS> prop = materialETS_->GetProperty(Index);
     if (!prop) {
         WIDGET_LOGE("get property[%zu] failed, property is null", Index);
-        return ::taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(nullptr);
+        return ::SceneResources::MaterialProperty({nullptr, nullptr});
     }
     return taihe::make_holder<MaterialPropertyImpl, ::SceneResources::MaterialProperty>(prop);
 }
@@ -99,7 +99,7 @@ void MaterialImpl::setProperty(::SceneResources::weak::MaterialProperty prop)
         WIDGET_LOGE("set property[%zu] failed, can't get internal material property", Index);
         return;
     }
-    MaterialPropertyImpl *mpi = reinterpret_cast<MaterialPropertyImpl *>(implOp.value());
+    MaterialPropertyImpl* mpi = reinterpret_cast<MaterialPropertyImpl*>(implOp.value());
     if (mpi == nullptr) {
         WIDGET_LOGE("set property[%zu] failed, internal material property is null", Index);
         return;
@@ -107,5 +107,5 @@ void MaterialImpl::setProperty(::SceneResources::weak::MaterialProperty prop)
     auto internalProp = mpi->getInternalMaterialProperty();
     materialETS_->SetProperty(Index, internalProp);
 }
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_IMPL_H

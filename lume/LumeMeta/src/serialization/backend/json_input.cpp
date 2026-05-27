@@ -94,7 +94,7 @@ ISerNode::Ptr JsonInput::ImportObject(const json::value& value)
         if (!n) {
             return nullptr;
         }
-        members.push_back(NamedNode { key, BASE_NS::move(n) });
+        members.push_back(NamedNode{key, BASE_NS::move(n)});
     }
     auto map = CreateShared<MapNode>(BASE_NS::move(members));
     if (oid.IsValid()) {
@@ -182,7 +182,7 @@ bool JsonInput::ReadMetadata(const json::value& value)
         for (auto&& v : value.object_) {
             if (v.value.is_string()) {
                 metadata_.push_back(
-                    SerMetadataEntity { BASE_NS::string(v.key), CORE_NS::json::unescape(v.value.string_) });
+                    SerMetadataEntity{BASE_NS::string(v.key), CORE_NS::json::unescape(v.value.string_)});
             }
         }
     } else {
@@ -207,8 +207,8 @@ ISerNode::Ptr JsonInput::ImportRootObject(const json::value& value)
     json::value root;
 
     // is it legacy version?
-    if (metaVersion_ == Version {}) {
-        metaVersion_ = Version { 1, 0 };
+    if (metaVersion_ == Version{}) {
+        metaVersion_ = Version{1, 0};
         root = value;
     } else if (auto v = value.find("$root")) {
         if (v->is_object()) {
@@ -250,6 +250,6 @@ void JsonInput::SetMetaV1Compatibility()
     };
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 
 META_END_NAMESPACE()

@@ -47,7 +47,7 @@ public:
         return Attach(attachment, {});
     }
     /** Type helper for Attach */
-    template<class T>
+    template <class T>
     bool Attach(const T& object)
     {
         return Attach(interface_pointer_cast<IObject>(object), {});
@@ -61,7 +61,7 @@ public:
      */
     virtual bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) = 0;
     /** Type helper for Attach */
-    template<class T, class U>
+    template <class T, class U>
     bool Attach(const T& object, const U& dataContext)
     {
         return Attach(interface_pointer_cast<IObject>(object), interface_pointer_cast<IObject>(dataContext));
@@ -73,7 +73,7 @@ public:
      */
     virtual bool Detach(const IObject::Ptr& attachment) = 0;
     /** Type helper for Detach */
-    template<class T>
+    template <class T>
     bool Detach(const T& object)
     {
         return Detach(interface_pointer_cast<IObject>(object));
@@ -120,10 +120,10 @@ public:
      * @brief A helper template which can be used to retrieve a list of attachments which implement a given interface.
      *        The returned list contains the found attachments pre-casted to T::Ptr.
      */
-    template<class T>
+    template <class T>
     BASE_NS::vector<typename T::Ptr> GetAttachments() const
     {
-        return PtrArrayCast<T>(GetAttachments({ T::UID }, false));
+        return PtrArrayCast<T>(GetAttachments({T::UID}, false));
     }
 };
 

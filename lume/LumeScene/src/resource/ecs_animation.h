@@ -23,6 +23,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/resource/resource.h>
 #include <meta/interface/animation/intf_animation.h>
+#include <meta/interface/animation/modifiers/intf_speed.h>
 
 #include "../component/animation_component.h"
 
@@ -42,7 +43,7 @@ public:
 
     BASE_NS::string GetName() const override;
 
-public: // ITimedAnimation
+public:  // ITimedAnimation
     META_BEGIN_STATIC_DATA()
     META_STATIC_PROPERTY_DATA(META_NS::IAnimation, bool, Enabled, true)
     META_STATIC_PROPERTY_DATA(META_NS::IAnimation, bool, Valid, false)
@@ -82,7 +83,8 @@ public: // ITimedAnimation
     META_IMPLEMENT_PROPERTY(BASE_NS::weak_ptr<META_NS::IAnimationController>, Controller)
 
     //--- not supported
-    void Step(const META_NS::IClock::ConstPtr&) override {}
+    void Step(const META_NS::IClock::ConstPtr&) override
+    {}
     //---
 
     META_NS::IProperty::Ptr GetNameProperty() const
@@ -91,7 +93,7 @@ public: // ITimedAnimation
         return i ? i->Name() : nullptr;
     }
 
-public: // IStartableAnimation
+public:  // IStartableAnimation
     void Pause() override;
     void Restart() override;
     void Seek(float position) override;
@@ -117,6 +119,9 @@ private:
     void UpdateTotalDuration();
     void InternalStop();
     void SetProgress(float);
+    void InitializeModifiers();
+    void UpdateSpeed();
+    void UpdateSpeedForAttachment(const META_NS::IObject::Ptr& attachment, bool add);
 
 private:
     IInternalAnimation::Ptr animation_;
@@ -146,6 +151,13 @@ private:
     META_NS::PropertyChangedEventHandler repeatCountChanged_;
     META_NS::PropertyChangedEventHandler durationChanged_;
     META_NS::PropertyChangedEventHandler completedChanged_;
+    META_NS::IOnChanged::InterfaceTypePtr updateSpeed_;
+    struct SpeedModifier {
+        META_NS::AnimationModifiers::ISpeedModifier::WeakPtr modifier;
+        META_NS::IEvent::Token token{};
+    };
+    BASE_NS::vector<SpeedModifier> speedModifiers_;
+    float defaultSpeed_{1.f};
 };
 
 SCENE_END_NAMESPACE()

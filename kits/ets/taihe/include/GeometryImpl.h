@@ -42,6 +42,6 @@ public:
 private:
     std::shared_ptr<GeometryETS> geometryETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_GEOMETRY_IMPL_H

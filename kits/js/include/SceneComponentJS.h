@@ -19,25 +19,44 @@
 #include "BaseObjectJS.h"
 #include "PropertyProxy.h"
 
-#include <base/containers/unordered_map.h>
+#include <base/containers/unique_ptr.h>
+#include <base/containers/vector.h>
 
-class SceneComponentJS final : public BaseObject {
+#include "export.h"
+
+class SCENE_ADDON_PUBLIC SceneComponentJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 200;
     static void Init(napi_env env, napi_value exports);
 
     SceneComponentJS(napi_env, napi_callback_info);
+    SceneComponentJS(const SceneComponentJS&) = delete;
+    SceneComponentJS& operator=(const SceneComponentJS&) = delete;
     ~SceneComponentJS() override;
     void* GetInstanceImpl(uint32_t) override;
 
+    struct LazyProperty {
+        LazyProperty() = default;
+        LazyProperty(const LazyProperty&) = delete;
+        LazyProperty& operator=(const LazyProperty&) = delete;
+
+        SceneComponentJS* owner;
+        BASE_NS::shared_ptr<PropertyProxy> proxy;
+        BASE_NS::string name;      // short JS property name (e.g. "position")
+        BASE_NS::string fullPath;  // full dotted path for CreateProperty (e.g. "TransformComponent.position")
+
+        PropertyProxy* GetOrCreateProxy();
+        bool IsValid() const;
+    };
+
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void *) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     void AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj);
     NapiApi::StrongRef jsProps_;
     NapiApi::WeakObjectRef scene_;
-    BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<PropertyProxy>> proxies_;
+    BASE_NS::vector<BASE_NS::unique_ptr<LazyProperty>> lazyProps_;
 };
 #endif

@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/array_view.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <render/datastore/render_data_store_render_pods.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/device/pipeline_state_desc.h>
@@ -68,13 +69,13 @@ private:
     struct JsonInputs {
         RenderNodeGraphInputs::InputResources resources;
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
-        bool hasChangeableResourceHandles { false };
+        bool hasChangeableResourceHandles{false};
 
-        uint32_t colorIndex { ~0u };
-        uint32_t depthIndex { ~0u };
-        uint32_t velocityIndex { ~0u };
-        uint32_t historyIndex { ~0u };
-        uint32_t historyNextIndex { ~0u };
+        uint32_t colorIndex{~0u};
+        uint32_t depthIndex{~0u};
+        uint32_t velocityIndex{~0u};
+        uint32_t historyIndex{~0u};
+        uint32_t historyNextIndex{~0u};
     };
     JsonInputs jsonInputs_;
     RenderNodeHandles::InputResources inputResources_;
@@ -111,12 +112,12 @@ private:
 
     IRenderNodePostProcessUtil::PostProcessInfo postProcessInfo_;
 
-    BASE_NS::Math::UVec2 outputSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 outputSize_{0U, 0U};
 
-    bool validInputs_ { true };
-    bool validInputsForTaa_ { false };
-    bool validInputsForDof_ { false };
-    bool validInputsForMb_ { false };
+    bool validInputs_{true};
+    bool validInputsForTaa_{false};
+    bool validInputsForDof_{false};
+    bool validInputsForMb_{false};
 
     BASE_NS::vector<InputOutput> framePostProcessInOut_;
 
@@ -132,7 +133,7 @@ private:
         uint32_t idx = 0U;
         uint32_t imageCount = 0U;
         RenderHandleReference images[2U];
-        BASE_NS::Math::Vec4 targetSize { 0.0f, 0.0f, 0.0f, 0.0f };
+        BASE_NS::Math::Vec4 targetSize{0.0f, 0.0f, 0.0f, 0.0f};
 
         RenderHandleReference layerCopyImage;
     };
@@ -145,7 +146,7 @@ private:
         if (input == ti_.images[ti_.idx].GetHandle()) {
             ti_.idx = (ti_.idx + 1) % static_cast<uint32_t>(ti_.imageCount);
         }
-        return { ti_.images[ti_.idx].GetHandle() };
+        return {ti_.images[ti_.idx].GetHandle()};
     }
 
     struct AllBinders {
@@ -153,12 +154,12 @@ private:
     };
     AllBinders binders_;
 
-    DeviceBackendType deviceBackendType_ { DeviceBackendType::VULKAN };
+    DeviceBackendType deviceBackendType_{DeviceBackendType::VULKAN};
 
-    bool glOptimizedLayerCopyEnabled_ { false };
+    bool glOptimizedLayerCopyEnabled_{false};
 };
 
-class RenderNodePostProcessUtilImpl final : public IRenderNodePostProcessUtil {
+class RenderNodePostProcessUtilImpl final : public CORE_NS::IInterfaceHelper<IRenderNodePostProcessUtil> {
 public:
     RenderNodePostProcessUtilImpl() = default;
     ~RenderNodePostProcessUtilImpl() override = default;
@@ -168,17 +169,9 @@ public:
     void PreExecute(const IRenderNodePostProcessUtil::PostProcessInfo& postProcessInfo) override;
     void Execute(IRenderCommandList& cmdList) override;
 
-    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-
-    void Ref() override;
-    void Unref() override;
-
 private:
     RenderNodePostProcessUtil rn_;
-
-    uint32_t refCount_ { 0U };
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER__RENDER_NODE_POST_PROCESS_UTIL_H
+#endif  // RENDER__RENDER_NODE_POST_PROCESS_UTIL_H

@@ -48,7 +48,7 @@ void EffectsContainerETS::ClearChildren()
 }
 
 void EffectsContainerETS::InsertChildAfter(
-    const std::shared_ptr<EffectETS> &childEffect, const std::shared_ptr<EffectETS> &siblingEffect)
+    const std::shared_ptr<EffectETS>& childEffect, const std::shared_ptr<EffectETS>& siblingEffect)
 {
     if (!childEffect) {
         return;
@@ -65,7 +65,7 @@ void EffectsContainerETS::InsertChildAfter(
     effects_->InsertValueAt(index + 1, child);
 }
 
-void EffectsContainerETS::AppendChild(const std::shared_ptr<EffectETS> &childEffect)
+void EffectsContainerETS::AppendChild(const std::shared_ptr<EffectETS>& childEffect)
 {
     if (!childEffect) {
         return;
@@ -77,7 +77,7 @@ void EffectsContainerETS::AppendChild(const std::shared_ptr<EffectETS> &childEff
     effects_->AddValue(child);
 }
 
-void EffectsContainerETS::RemoveChild(const std::shared_ptr<EffectETS> &childEffect)
+void EffectsContainerETS::RemoveChild(const std::shared_ptr<EffectETS>& childEffect)
 {
     if (!childEffect) {
         return;
@@ -139,7 +139,7 @@ BASE_NS::string EffectETS::GetEffectId()
 
 void EffectETS::AddProperties()
 {
-    auto meta =  interface_cast<META_NS::IMetadata>(effect_);
+    auto meta = interface_cast<META_NS::IMetadata>(effect_);
     if (!effect_ || !meta) {
         return;
     }
@@ -147,19 +147,19 @@ void EffectETS::AddProperties()
     keys_.clear();
     proxies_.clear();
 
-    for (auto &&p : meta->GetProperties()) {
+    for (auto&& p : meta->GetProperties()) {
         if (auto proxy = PropertyToProxy(p)) {
             proxies_.insert_or_assign(SCENE_NS::PropertyName(p->GetName()).data(), std::move(proxy));
         }
     }
     keys_.reserve(proxies_.size());
-    for (auto &pair : proxies_) {
+    for (auto& pair : proxies_) {
         keys_.push_back(pair.first);
     }
 }
 
-std::shared_ptr<IPropertyProxy> EffectETS::GetProperty(const std::string &key)
+std::shared_ptr<IPropertyProxy> EffectETS::GetProperty(const std::string& key)
 {
     return proxies_[key];
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

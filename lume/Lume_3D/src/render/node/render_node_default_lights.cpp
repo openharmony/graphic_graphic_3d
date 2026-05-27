@@ -36,19 +36,19 @@
 
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-template<typename DataType>
+template <typename DataType>
 DataType* MapBuffer(IRenderNodeGpuResourceManager& gpuResourceManager, const RenderHandle handle)
 {
     return reinterpret_cast<DataType*>(gpuResourceManager.MapBuffer(handle));
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultLights::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -64,23 +64,23 @@ void RenderNodeDefaultLights::InitNode(IRenderNodeContextManager& renderNodeCont
         stores_.dataStoreNameScene.c_str() + DefaultMaterialLightingConstants::LIGHT_CLUSTER_DATA_BUFFER_NAME;
 
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
-    lightBufferHandle_ = gpuResourceMgr.Create(
-        bufferName, {
-                        CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                        CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                        sizeof(DefaultMaterialLightStruct),
-                    });
-    lightClusterBufferHandle_ = gpuResourceMgr.Create(
-        clusterBufferName, {
-                               CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                               (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                               CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                               sizeof(uint32_t) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT,
-                           });
+    lightBufferHandle_ = gpuResourceMgr.Create(bufferName,
+        {
+            CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(DefaultMaterialLightStruct),
+        });
+    lightClusterBufferHandle_ = gpuResourceMgr.Create(clusterBufferName,
+        {
+            CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(uint32_t) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT,
+        });
     if (lightBufferHandle_ && lightClusterBufferHandle_) {
         IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
-        const RenderHandle handles[] = { lightBufferHandle_.GetHandle(), lightClusterBufferHandle_.GetHandle() };
+        const RenderHandle handles[] = {lightBufferHandle_.GetHandle(), lightClusterBufferHandle_.GetHandle()};
         rngShareMgr.RegisterRenderNodeOutputs(handles);
     }
 }
@@ -90,7 +90,7 @@ void RenderNodeDefaultLights::PreExecuteFrame()
     if (lightBufferHandle_) {
         IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
         const RenderHandle handle = lightBufferHandle_.GetHandle();
-        rngShareMgr.RegisterRenderNodeOutputs({ &handle, 1u });
+        rngShareMgr.RegisterRenderNodeOutputs({&handle, 1u});
     }
 }
 
@@ -150,7 +150,7 @@ void RenderNodeDefaultLights::ExecuteFrame(IRenderCommandList& cmdList)
             lightStruct->clusterSizes = Math::UVec4(0, 0, 0, 0);
             lightStruct->clusterFactors = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
             lightStruct->atlasSizeInvSize = shadowAtlasSizeInvSize;
-            lightStruct->additionalFactors = { 0.0f, 0.0f, 0.0f, 0.0f };
+            lightStruct->additionalFactors = {0.0f, 0.0f, 0.0f, 0.0f};
 
             gpuResourceMgr.UnmapBuffer(lightBufferHandle_.GetHandle());
         }

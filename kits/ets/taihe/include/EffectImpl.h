@@ -28,18 +28,19 @@ public:
     explicit EffectsContainerImpl(const std::shared_ptr<EffectsContainerETS> EffectsContainerETS);
     ~EffectsContainerImpl();
     void append(::SceneResources::weak::Effect item);
-    void insertAfter(::SceneResources::weak::Effect item, ::SceneNodes::EffectOrNull const &sibling);
+    void insertAfter(::SceneResources::weak::Effect item, ::SceneNodes::EffectOrNull const& sibling);
     void remove(::SceneResources::weak::Effect item);
     ::SceneNodes::EffectOrNull get(int32_t index);
     void clear();
     int32_t count();
+
 private:
     std::shared_ptr<EffectsContainerETS> effectsContainerETS_{nullptr};
 };
 
 class EffectImpl : public SceneResourceImpl {
 public:
-    static ::SceneNodes::EffectOrNull MakeEffectOrNull(const std::shared_ptr<EffectETS> &effectETS);
+    static ::SceneNodes::EffectOrNull MakeEffectOrNull(const std::shared_ptr<EffectETS>& effectETS);
 
     explicit EffectImpl(const std::shared_ptr<EffectETS> effectETS);
     ~EffectImpl();
@@ -47,7 +48,7 @@ public:
     void setEnabled(bool enabled);
     ::taihe::string getEffectId();
     ::SceneResources::EffectPropertyOutputValue getPropertyValue(::taihe::string_view key);
-    bool setPropertyValue(::taihe::string_view key, ::SceneResources::EffectPropertyInputValue const &value);
+    bool setPropertyValue(::taihe::string_view key, ::SceneResources::EffectPropertyInputValue const& value);
 
     std::shared_ptr<EffectETS> GetInternalEffect()
     {
@@ -57,5 +58,5 @@ public:
 private:
     std::shared_ptr<EffectETS> effectETS_{nullptr};
 };
-} // namespace OHOS::Render3D::KITETS
-#endif // OHOS_3D_EFFECT_IMPL_H
+}  // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_EFFECT_IMPL_H

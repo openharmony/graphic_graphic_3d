@@ -41,22 +41,40 @@ protected:
     void SetControlPoints()
     {
         // Set control points to create a steeply rising curve
-        BASE_NS::Math::Vec2 cp1 = { 1.f, 0.f };
-        BASE_NS::Math::Vec2 cp2 = { 0.0f, 1.f };
-        bezier_.SetControlPoint1({ 1.f, 0.f }).SetControlPoint2({ 0.0f, 1.f });
+        BASE_NS::Math::Vec2 cp1 = {1.f, 0.f};
+        BASE_NS::Math::Vec2 cp2 = {0.0f, 1.f};
+        bezier_.SetControlPoint1({1.f, 0.f}).SetControlPoint2({0.0f, 1.f});
         ASSERT_EQ(bezier_.GetControlPoint1(), cp1);
         ASSERT_EQ(bezier_.GetControlPoint2(), cp2);
     }
 
-    META_NS::ICurve1D* curve_ {};
-    META_NS::Curves::CubicBezier bezier_ { META_NS::CreateNew };
+    META_NS::ICurve1D* curve_{};
+    META_NS::Curves::CubicBezier bezier_{META_NS::CreateNew};
 
     static constexpr float epsilon_ = 0.001f;
     static constexpr auto frames_ = 20;
     // Pre-calculated 20 cubic bezier curve values for cp1=[1.f,0.f] and cp2=[0.f, 1.f]
-    static constexpr float expected_[] = { 0.000000, 0.000882, 0.003711, 0.009070, 0.017385, 0.029723, 0.047319,
-        0.072904, 0.111333, 0.176019, 0.500000, 0.823981, 0.888667, 0.927096, 0.952681, 0.970277, 0.982615, 0.990930,
-        0.996289, 0.999118, 1.000000 };
+    static constexpr float expected_[] = {0.000000,
+        0.000882,
+        0.003711,
+        0.009070,
+        0.017385,
+        0.029723,
+        0.047319,
+        0.072904,
+        0.111333,
+        0.176019,
+        0.500000,
+        0.823981,
+        0.888667,
+        0.927096,
+        0.952681,
+        0.970277,
+        0.982615,
+        0.990930,
+        0.996289,
+        0.999118,
+        1.000000};
 };
 
 /**
@@ -111,12 +129,12 @@ UNIT_TEST_F(API_BezierCurveTest, BezierAnimation, testing::ext::TestSize.Level1)
     animation.SetFrom(start).SetTo(end).SetProperty(property).SetDuration(1_s).SetCurve(bezier_);
 
     animation.Start();
-    StepAnimations({ animation }, frames_, frameMs, [&](uint32_t frame) {
+    StepAnimations({animation}, frames_, frameMs, [&](uint32_t frame) {
         auto expected = start + expected_[frame - 1] * diff;
         EXPECT_NEAR(GetValue(property), expected, 0.1f) << "Frame: " << frame;
     });
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

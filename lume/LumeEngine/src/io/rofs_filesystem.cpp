@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 #include <base/containers/allocator.h>
 #include <base/containers/array_view.h>
@@ -50,7 +51,8 @@ struct FsEntry {
 class ROFSMemoryFile final : public IFile {
 public:
     ~ROFSMemoryFile() override = default;
-    ROFSMemoryFile(const uint8_t* const data, const size_t size) : data_(data), size_(size) {}
+    ROFSMemoryFile(const uint8_t* const data, const size_t size) : data_(data), size_(size)
+    {}
     ROFSMemoryFile(const ROFSMemoryFile&) = delete;
     ROFSMemoryFile(ROFSMemoryFile&&) = delete;
     ROFSMemoryFile& operator=(const ROFSMemoryFile&) = delete;
@@ -61,7 +63,8 @@ public:
         return IFile::Mode::READ_ONLY;
     }
 
-    void Close() override {}
+    void Close() override
+    {}
 
     uint64_t Read(void* buffer, uint64_t count) override
     {
@@ -121,7 +124,7 @@ protected:
     }
 
 private:
-    uint64_t index_ { 0 };
+    uint64_t index_{0};
     const uint8_t* const data_;
     const size_t size_;
 };
@@ -130,14 +133,16 @@ class ROFSMemoryDirectory final : public IDirectory {
 public:
     ~ROFSMemoryDirectory() override = default;
 
-    explicit ROFSMemoryDirectory(const vector<IDirectory::Entry>& contents) : contents_(contents) {}
+    explicit ROFSMemoryDirectory(const vector<IDirectory::Entry>& contents) : contents_(contents)
+    {}
 
     ROFSMemoryDirectory(const ROFSMemoryDirectory&) = delete;
     ROFSMemoryDirectory(ROFSMemoryDirectory&&) = delete;
     ROFSMemoryDirectory& operator=(const ROFSMemoryDirectory&) = delete;
     ROFSMemoryDirectory& operator=(ROFSMemoryDirectory&&) = delete;
 
-    void Close() override {}
+    void Close() override
+    {}
 
     vector<Entry> GetEntries() const override
     {
@@ -169,16 +174,21 @@ string_view Trim(string_view path)
     }
     return path;
 }
-} // namespace
+}  // namespace
 
 RoFileSystem::RoFileSystem(const void* const blob, size_t blobSize)
 {
-    for (const auto& romEntry : array_view(static_cast<const FsEntry*>(blob), blobSize)) {
+    const size_t entryCount = blobSize / sizeof(FsEntry);
+    for (const auto& romEntry : array_view(static_cast<const FsEntry*>(blob), entryCount)) {
         if (romEntry.fname[0] == 0) {
             break;
         }
+        // Validate that the entry's data range falls within the blob.
+        if (romEntry.offset + romEntry.size > blobSize || romEntry.offset + romEntry.size < romEntry.offset) {
+            continue;
+        }
         IDirectory::Entry entry;
-        const string_view tmp = romEntry.fname;
+        const string_view tmp(romEntry.fname, strnlen(romEntry.fname, sizeof(romEntry.fname)));
         size_t t = 0;
         string path;
         // parse the rom entry name and add all missing directories.
@@ -230,12 +240,12 @@ IDirectory::Entry RoFileSystem::GetEntry(const string_view uri)
     // check if it's a file first...
     const auto it = files_.find(t);
     if (it != files_.end()) {
-        return { IDirectory::Entry::FILE, string(uri), 0 };
+        return {IDirectory::Entry::FILE, string(uri), 0};
     }
     // is it a directory then
     const auto it2 = directories_.find(t);
     if (it2 != directories_.end()) {
-        return { IDirectory::Entry::DIRECTORY, string(uri), 0 };
+        return {IDirectory::Entry::DIRECTORY, string(uri), 0};
     }
     // nope. does not exist.
     return {};
@@ -246,7 +256,7 @@ IFile::Ptr RoFileSystem::OpenFile(const string_view path, const IFile::Mode mode
     if (mode == IFile::Mode::READ_ONLY) {
         auto it = files_.find(Trim(path));
         if (it != files_.end()) {
-            return IFile::Ptr { new ROFSMemoryFile(it->second.data(), it->second.size()) };
+            return IFile::Ptr{new ROFSMemoryFile(it->second.data(), it->second.size())};
         }
     }
     return {};
@@ -271,7 +281,7 @@ IDirectory::Ptr RoFileSystem::OpenDirectory(const string_view path)
 {
     auto it = directories_.find(Trim(path));
     if (it != directories_.end()) {
-        return IDirectory::Ptr { new ROFSMemoryDirectory(it->second) };
+        return IDirectory::Ptr{new ROFSMemoryDirectory(it->second)};
     }
     return {};
 }

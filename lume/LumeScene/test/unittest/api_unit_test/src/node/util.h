@@ -37,20 +37,20 @@ inline void TestNodeMetadata(const ISceneManager::Ptr& manager, const META_NS::C
     auto obj = interface_cast<META_NS::IMetadata>(node);
     ASSERT_TRUE(obj);
 
-    META_NS::MetadataInfo nameMetaInfo { META_NS::MetadataType::PROPERTY, "Name", META_NS::INamed::UID, false,
-        META_NS::GetTypeId<BASE_NS::string>() };
-    META_NS::MetadataInfo positionMetaInfo { META_NS::MetadataType::PROPERTY, "Position", ITransform::UID, false,
-        META_NS::GetTypeId<BASE_NS::Math::Vec3>() };
-    META_NS::MetadataInfo scaleMetaInfo { META_NS::MetadataType::PROPERTY, "Scale", ITransform::UID, false,
-        META_NS::GetTypeId<BASE_NS::Math::Vec3>() };
-    META_NS::MetadataInfo rotationMetaInfo { META_NS::MetadataType::PROPERTY, "Rotation", ITransform::UID, false,
-        META_NS::GetTypeId<BASE_NS::Math::Quat>() };
-    META_NS::MetadataInfo enabledMetaInfo { META_NS::MetadataType::PROPERTY, "Enabled", INode::UID, false,
-        META_NS::GetTypeId<bool>() };
-    META_NS::MetadataInfo layerMaskInfo { META_NS::MetadataType::PROPERTY, "LayerMask", ILayer::UID, false,
-        META_NS::GetTypeId<uint64_t>() };
-    META_NS::MetadataInfo onChangedMetaInfo { META_NS::MetadataType::EVENT, "OnContainerChanged",
-        META_NS::IContainer::UID };
+    META_NS::MetadataInfo nameMetaInfo{
+        META_NS::MetadataType::PROPERTY, "Name", META_NS::INamed::UID, false, META_NS::GetTypeId<BASE_NS::string>()};
+    META_NS::MetadataInfo positionMetaInfo{
+        META_NS::MetadataType::PROPERTY, "Position", ITransform::UID, false, META_NS::GetTypeId<BASE_NS::Math::Vec3>()};
+    META_NS::MetadataInfo scaleMetaInfo{
+        META_NS::MetadataType::PROPERTY, "Scale", ITransform::UID, false, META_NS::GetTypeId<BASE_NS::Math::Vec3>()};
+    META_NS::MetadataInfo rotationMetaInfo{
+        META_NS::MetadataType::PROPERTY, "Rotation", ITransform::UID, false, META_NS::GetTypeId<BASE_NS::Math::Quat>()};
+    META_NS::MetadataInfo enabledMetaInfo{
+        META_NS::MetadataType::PROPERTY, "Enabled", INode::UID, false, META_NS::GetTypeId<bool>()};
+    META_NS::MetadataInfo layerMaskInfo{
+        META_NS::MetadataType::PROPERTY, "LayerMask", ILayer::UID, false, META_NS::GetTypeId<uint64_t>()};
+    META_NS::MetadataInfo onChangedMetaInfo{
+        META_NS::MetadataType::EVENT, "OnContainerChanged", META_NS::IContainer::UID};
 
     {
         auto vec = obj->GetAllMetadatas(META_NS::MetadataType::PROPERTY);
@@ -89,7 +89,7 @@ inline void TestNodeMetadata(const ISceneManager::Ptr& manager, const META_NS::C
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_TEST_UTIL
+#endif  // SCENE_TEST_UTIL

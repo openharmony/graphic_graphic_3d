@@ -26,15 +26,15 @@ class IInterface;
 CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
+template <typename T>
 class shared_ptr;
-template<typename T>
+template <typename T>
 class weak_ptr;
 
 /**
  * @brief C++ standard like weak_ptr.
  */
-template<typename T>
+template <typename T>
 class weak_ptr final : public Internals::PtrCountedBase<T> {
 public:
     using element_type = BASE_NS::remove_extent_t<T>;
@@ -46,7 +46,8 @@ public:
         }
     }
 
-    weak_ptr(nullptr_t) {}
+    weak_ptr(nullptr_t)
+    {}
     weak_ptr(const shared_ptr<T>& p) : Internals::PtrCountedBase<T>(p)
     {
         if (this->control_) {
@@ -117,25 +118,25 @@ public:
     }
 
     /*"implicit" casting constructors */
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     weak_ptr(const shared_ptr<U>& p)
         // handle casting by using functionality in shared_ptr. (creates an aliased shared_ptr to original.)
         : weak_ptr(shared_ptr<T>(p))
     {}
 
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     weak_ptr(const weak_ptr<U>& p) : weak_ptr(shared_ptr<T>(p.lock()))
     {}
 
     /* "implicit" casting move */
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     weak_ptr(weak_ptr<U>&& p) noexcept : weak_ptr(shared_ptr<T>(p.lock()))
     {
         p.reset();
     }
 
     /* "implicit" casting operators */
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     weak_ptr& operator=(const shared_ptr<U>& p)
     {
         // handle casting by using functionality in shared_ptr. (creates an aliased shared_ptr to original.)
@@ -143,7 +144,7 @@ public:
         return *this;
     }
 
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     weak_ptr& operator=(const weak_ptr<U>& p)
     {
         // first lock the given weak ptr. (to see if it has expired, and to get a pointer that can be cast)
@@ -159,21 +160,22 @@ public:
 
 private:
     friend class shared_ptr<T>;
-    template<typename>
+    template <typename>
     friend class weak_ptr;
 };
 
 /**
  * @brief C++ standard like shared_ptr with IInterface support for reference counting.
  */
-template<typename T>
+template <typename T>
 class shared_ptr final : public Internals::PtrCountedBase<T> {
 public:
     using element_type = BASE_NS::remove_extent_t<T>;
     using weak_type = weak_ptr<T>;
 
     constexpr shared_ptr() noexcept = default;
-    constexpr shared_ptr(nullptr_t) noexcept {}
+    constexpr shared_ptr(nullptr_t) noexcept
+    {}
     shared_ptr(const shared_ptr& p) noexcept : Internals::PtrCountedBase<T>(p)
     {
         if (this->control_) {
@@ -191,7 +193,7 @@ public:
         }
     }
 
-    template<typename Deleter>
+    template <typename Deleter>
     shared_ptr(T* ptr, Deleter deleter)
     {
         if (ptr) {
@@ -207,7 +209,7 @@ public:
             }
         }
     }
-    template<class Y>
+    template <class Y>
     shared_ptr(const shared_ptr<Y>& r, T* ptr) noexcept : Internals::PtrCountedBase<T>(r.control_)
     {
         if (this->control_ && ptr) {
@@ -217,7 +219,7 @@ public:
             this->InternalReset();
         }
     }
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
     shared_ptr(shared_ptr<U>&& p) noexcept : Internals::PtrCountedBase<T>(p.control_)
     {
         if (this->control_) {
@@ -242,11 +244,11 @@ public:
             }
         }
     }
-    template<class U, class = Internals::EnableIfPointerConvertible<U, T>>
-    shared_ptr(const shared_ptr<U>& p) noexcept : shared_ptr(shared_ptr<U>(p)) // use the above move constructor
+    template <class U, class = Internals::EnableIfPointerConvertible<U, T>>
+    shared_ptr(const shared_ptr<U>& p) noexcept : shared_ptr(shared_ptr<U>(p))  // use the above move constructor
     {}
 
-    template<class U, class D, class = Internals::EnableIfPointerConvertible<U, T>>
+    template <class U, class D, class = Internals::EnableIfPointerConvertible<U, T>>
     shared_ptr(unique_ptr<U, D>&& p) noexcept
     {
         if (p) {
@@ -298,7 +300,7 @@ public:
             }
         }
     }
-    template<typename Deleter>
+    template <typename Deleter>
     // NOLINTNEXTLINE(readability-identifier-naming) to keep std like syntax
     void reset(T* ptr, Deleter deleter)
     {
@@ -380,20 +382,20 @@ private:
         }
         this->pointer_ = ptr;
     }
-    template<typename Deleter>
+    template <typename Deleter>
     void ConstructBlock(T* ptr, Deleter deleter)
     {
         this->control_ = new Internals::StorageBlockWithDeleter(ptr, BASE_NS::move(deleter));
         this->pointer_ = ptr;
     }
 
-    template<typename>
+    template <typename>
     friend class weak_ptr;
-    template<typename>
+    template <typename>
     friend class shared_ptr;
 };
 
-template<typename T, typename... Args>
+template <typename T, typename... Args>
 BASE_NS::shared_ptr<T> make_shared(Args&&... args)
 {
     return BASE_NS::shared_ptr<T>(new T(BASE_NS::forward<Args>(args)...));
@@ -401,7 +403,7 @@ BASE_NS::shared_ptr<T> make_shared(Args&&... args)
 BASE_END_NAMESPACE()
 
 // NOLINTNEXTLINE(readability-identifier-naming) to keep std like syntax
-template<class U, class T>
+template <class U, class T>
 BASE_NS::shared_ptr<U> static_pointer_cast(const BASE_NS::shared_ptr<T>& ptr)
 {
     if (ptr) {
@@ -410,9 +412,9 @@ BASE_NS::shared_ptr<U> static_pointer_cast(const BASE_NS::shared_ptr<T>& ptr)
     return {};
 }
 
-template<typename T, typename... Args>
+template <typename T, typename... Args>
 BASE_NS::shared_ptr<T> CreateShared(Args&&... args)
 {
     return BASE_NS::make_shared<T>(BASE_NS::forward<Args>(args)...);
 }
-#endif // API_BASE_CONTAINERS_SHARED_PTR_H
+#endif  // API_BASE_CONTAINERS_SHARED_PTR_H

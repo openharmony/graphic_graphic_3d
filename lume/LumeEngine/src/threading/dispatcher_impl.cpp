@@ -24,7 +24,8 @@ using BASE_NS::vector;
 
 DispatcherImpl::~DispatcherImpl() = default;
 
-DispatcherImpl::DispatcherImpl(const IThreadPool::Ptr& threads) : queue_(threads) {}
+DispatcherImpl::DispatcherImpl(const IThreadPool::Ptr& threads) : queue_(threads)
+{}
 
 vector<uint64_t> DispatcherImpl::CollectFinishedTasks()
 {

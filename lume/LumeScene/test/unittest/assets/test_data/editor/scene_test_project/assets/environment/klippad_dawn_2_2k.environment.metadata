@@ -1,0 +1,95 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "ab8fe9df-2c31-4c15-a26b-0590907d0c4e",
+        "uri": "project://assets/environment/klippad_dawn_2_2k.environment",
+        "xxh3": "388904bac3d9c41bf67ead8f780e7699",
+        "spec": {
+            "$meta": {
+                "meta-version": "2.0"
+            },
+            "$root": {
+                "$classId": "168c580f-a962-40de-8809-ff91e0b5a1dd",
+                "$className": "EnvironmentAsset",
+                "$instanceId": "00022cd2-5977-fdd0-2782-3bda802e1497",
+                "__attachments": [
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Iid",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "ab8fe9df-2c31-4c15-a26b-0590907d0c4e"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Uri",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "project://assets/environment/klippad_dawn_2_2k.environment"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Name",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "klippad_dawn_2_2k.environment"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "MediaType",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "application/vnd.ark.environment+json"
+                            }
+                        ],
+                        "modifiers": []
+                    }
+                ]
+            }
+        }
+    }
+}

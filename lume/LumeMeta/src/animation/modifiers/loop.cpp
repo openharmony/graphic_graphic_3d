@@ -48,6 +48,6 @@ bool LoopModifier::ProcessOnStep(StepData& step) const
     return true;
 }
 
-} // namespace AnimationModifiers
+}  // namespace AnimationModifiers
 
 META_END_NAMESPACE()

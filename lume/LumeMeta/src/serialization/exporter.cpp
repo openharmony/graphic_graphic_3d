@@ -96,7 +96,7 @@ ISerNode::Ptr Exporter::Export(const IObject::ConstPtr& object, ExportOptions op
             refUriBuilder_ = options_.refUriBuilder;
         }
         ISerNode::Ptr node;
-        auto r = ExportObject(object, node);
+        auto r = ExportObject(object, node, true);
         if (r) {
             // resolve deferred weak ptr exports
             for (auto&& d : deferred_) {
@@ -104,7 +104,7 @@ ISerNode::Ptr Exporter::Export(const IObject::ConstPtr& object, ExportOptions op
                     CORE_LOG_E("Failed to resolve deferred weak ptr export");
                 }
             }
-            res.reset(new RootNode { BASE_NS::move(node), metadata_ });
+            res.reset(new RootNode{BASE_NS::move(node), metadata_});
         }
     }
     return res;
@@ -129,7 +129,7 @@ ISerNode::Ptr Exporter::CreateObjectRefNode(const RefUri& ref)
 {
     RefUri uri(ref);
     uri.SetBaseObjectUid(ConvertInstanceId(uri.BaseObjectUid()).ToUid());
-    return ISerNode::Ptr(new RefNode { uri });
+    return ISerNode::Ptr(new RefNode{uri});
 }
 
 ISerNode::Ptr Exporter::CreateObjectRefNode(const IObject::ConstPtr& object)
@@ -142,14 +142,14 @@ ISerNode::Ptr Exporter::CreateObjectRefNode(const IObject::ConstPtr& object)
     return res;
 }
 
-ReturnError Exporter::ExportObject(const IObject::ConstPtr& object, ISerNode::Ptr& res)
+ReturnError Exporter::ExportObject(const IObject::ConstPtr& object, ISerNode::Ptr& res, bool toplevel)
 {
     ReturnError err = GenericError::SUCCESS;
     if (ShouldSerialize(object)) {
         if (MarkExported(object)) {
             res = CreateObjectRefNode(object);
         } else if (auto ser = interface_cast<ISerializable>(object)) {
-            ExportContext context(*this, object);
+            ExportContext context(*this, object, toplevel);
             err = ser->Export(context);
             if (err) {
                 res = context.GetSubstitution();
@@ -178,7 +178,7 @@ ReturnError Exporter::AutoExportObjectMembers(const IObject::ConstPtr& object, B
             ISerNode::Ptr node;
             auto res = ExportValue(Any<uint64_t>(flags->GetObjectFlags().GetValue()), node);
             if (res && node) {
-                members.push_back(NamedNode { "__flags", node });
+                members.push_back(NamedNode{"__flags", node});
             }
         }
     }
@@ -186,7 +186,7 @@ ReturnError Exporter::AutoExportObjectMembers(const IObject::ConstPtr& object, B
         if (IsFlagSet(object, ObjectFlagBits::SERIALIZE_ATTACHMENTS)) {
             if (auto cont = attach->GetAttachmentContainer()) {
                 if (auto node = ExportIContainer(*cont)) {
-                    members.push_back(NamedNode { "__attachments", node });
+                    members.push_back(NamedNode{"__attachments", node});
                 }
             }
         }
@@ -194,7 +194,7 @@ ReturnError Exporter::AutoExportObjectMembers(const IObject::ConstPtr& object, B
     if (auto cont = interface_cast<IContainer>(object)) {
         if (IsFlagSet(object, ObjectFlagBits::SERIALIZE_HIERARCHY)) {
             if (auto node = ExportIContainer(*cont)) {
-                members.push_back(NamedNode { "__children", node });
+                members.push_back(NamedNode{"__children", node});
             }
         }
     }
@@ -213,7 +213,7 @@ ISerNode::Ptr Exporter::ExportIContainer(const IContainer& cont)
     return ISerNode::Ptr(new ArrayNode(BASE_NS::move(elements)));
 }
 
-template<typename... Builtins>
+template <typename... Builtins>
 static ISerNode::Ptr ExportSingleBuiltinValue(TypeList<Builtins...>, const IAny& value)
 {
     ISerNode::Ptr res;
@@ -225,7 +225,7 @@ static ISerNode::Ptr ExportSingleBuiltinValue(TypeList<Builtins...>, const IAny&
 ISerNode::Ptr Exporter::ExportArray(const IArrayAny& array)
 {
     ISerNode::Ptr res;
-    auto any = array.Clone(AnyCloneOptions { CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM });
+    auto any = array.Clone(AnyCloneOptions{CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM});
     if (any) {
         BASE_NS::vector<ISerNode::Ptr> elements;
         for (size_t i = 0; i != array.GetSize(); ++i) {
@@ -250,9 +250,9 @@ ISerNode::Ptr Exporter::ExportBuiltinValue(const IAny& value)
     } else {
         if (value.GetTypeId() == UidFromType<float>()) {
             // handle as double
-            res = ExportSingleBuiltinValue(SupportedBuiltins {}, Any<double>(GetValue<float>(value)));
+            res = ExportSingleBuiltinValue(SupportedBuiltins{}, Any<double>(GetValue<float>(value)));
         } else {
-            res = ExportSingleBuiltinValue(SupportedBuiltins {}, value);
+            res = ExportSingleBuiltinValue(SupportedBuiltins{}, value);
         }
     }
     return res;
@@ -299,7 +299,8 @@ ReturnError Exporter::ExportValue(const IAny& entity, ISerNode::Ptr& res)
         if (res) {
             return GenericError::SUCCESS;
         }
-        CORE_LOG_W("Value export registered for type [%s, %s] but it failed", entity.GetTypeIdString().c_str(),
+        CORE_LOG_W("Value export registered for type [%s, %s] but it failed",
+            entity.GetTypeIdString().c_str(),
             entity.GetTypeId().ToString().c_str());
     }
     res = ExportBuiltinValue(entity);
@@ -319,7 +320,9 @@ ReturnError Exporter::ExportAny(const IAny::ConstPtr& any, ISerNode::Ptr& res)
     ReturnError err = GenericError::SUCCESS;
     if (any && !registry_.GetPropertyRegister().IsAnyRegistered(any->GetClassId())) {
         CORE_LOG_W("Exporting any that is not registered [class id=%s, type=%s, type id=%s]",
-            any->GetClassId().ToString().c_str(), any->GetTypeIdString().c_str(), any->GetTypeId().ToString().c_str());
+            any->GetClassId().ToString().c_str(),
+            any->GetTypeIdString().c_str(),
+            any->GetTypeId().ToString().c_str());
     }
     if (!any) {
         res = ISerNode::Ptr(new NilNode);
@@ -337,7 +340,7 @@ ReturnError Exporter::ExportAny(const IAny::ConstPtr& any, ISerNode::Ptr& res)
         ISerNode::Ptr node;
         err = ExportValue(*any, node);
         if (err && node) {
-            auto members = CreateShared<MapNode>(BASE_NS::vector<NamedNode> { NamedNode { "value", node } });
+            auto members = CreateShared<MapNode>(BASE_NS::vector<NamedNode>{NamedNode{"value", node}});
             res = ISerNode::Ptr(
                 new ObjectNode(BASE_NS::string("Any"), {}, any->GetClassId(), {}, BASE_NS::move(members)));
         }
@@ -355,7 +358,9 @@ ReturnError Exporter::ResolveDeferredWeakPtr(const DeferredWeakPtrResolve& d)
             res = GenericError::SUCCESS;
         } else {
             CORE_LOG_E("Failed to create refuri when serializing weak_ptr [%s, %s, %s]",
-                BASE_NS::string(p->GetClassName()).c_str(), p->GetName().c_str(), p->GetClassId().ToString().c_str());
+                BASE_NS::string(p->GetClassName()).c_str(),
+                p->GetName().c_str(),
+                p->GetClassId().ToString().c_str());
         }
     }
     return res;
@@ -364,9 +369,9 @@ ReturnError Exporter::ResolveDeferredWeakPtr(const DeferredWeakPtrResolve& d)
 ReturnError Exporter::ExportWeakPtr(const IObject::ConstWeakPtr& ptr, ISerNode::Ptr& res)
 {
     if (auto p = ptr.lock()) {
-        auto node = CreateShared<RefNode>(RefUri {});
+        auto node = CreateShared<RefNode>(RefUri{});
         res = ISerNode::Ptr(node);
-        deferred_.push_back(DeferredWeakPtrResolve { node, ptr });
+        deferred_.push_back(DeferredWeakPtrResolve{node, ptr});
     } else {
         res = ISerNode::Ptr(new NilNode);
     }
@@ -383,7 +388,7 @@ ReturnError ExportContext::Export(BASE_NS::string_view name, const IAny& entity)
     ISerNode::Ptr node;
     auto res = exporter_.ExportValue(entity, node);
     if (res && node) {
-        elements_.push_back(NamedNode { BASE_NS::string(name), BASE_NS::move(node) });
+        elements_.push_back(NamedNode{BASE_NS::string(name), BASE_NS::move(node)});
     }
     if (!res) {
         CORE_LOG_W("Failed to export member with name '%s'", BASE_NS::string(name).c_str());
@@ -396,7 +401,7 @@ ReturnError ExportContext::ExportAny(BASE_NS::string_view name, const IAny::Ptr&
     ISerNode::Ptr node;
     auto res = exporter_.ExportAny(any, node);
     if (res && node) {
-        elements_.push_back(NamedNode { BASE_NS::string(name), BASE_NS::move(node) });
+        elements_.push_back(NamedNode{BASE_NS::string(name), BASE_NS::move(node)});
     }
     if (!res) {
         CORE_LOG_W("Failed to export member with name '%s'", BASE_NS::string(name).c_str());
@@ -409,7 +414,7 @@ ReturnError ExportContext::ExportWeakPtr(BASE_NS::string_view name, const IObjec
     ISerNode::Ptr node;
     auto res = exporter_.ExportWeakPtr(ptr, node);
     if (res && node) {
-        elements_.push_back(NamedNode { BASE_NS::string(name), BASE_NS::move(node) });
+        elements_.push_back(NamedNode{BASE_NS::string(name), BASE_NS::move(node)});
     }
     if (!res) {
         CORE_LOG_W("Failed to export member with name '%s'", BASE_NS::string(name).c_str());
@@ -433,7 +438,7 @@ ReturnError ExportContext::AutoExport()
 
 BASE_NS::shared_ptr<MapNode> ExportContext::ExtractNode()
 {
-    return BASE_NS::shared_ptr<MapNode>(new MapNode { BASE_NS::move(elements_) });
+    return BASE_NS::shared_ptr<MapNode>(new MapNode{BASE_NS::move(elements_)});
 }
 
 ReturnError ExportContext::ExportToNode(const IAny& entity, ISerNode::Ptr& res)
@@ -469,5 +474,5 @@ SerMetadata ExportContext::GetMetadata() const
     return exporter_.GetMetadata();
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

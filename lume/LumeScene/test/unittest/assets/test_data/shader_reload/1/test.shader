@@ -27,7 +27,19 @@
                             "displayName" : "var1",
                             "type" : "uint",
                             "value" : 1
-						}
+						},
+                        {
+                            "name" : "var2",
+                            "displayName" : "var2",
+                            "type" : "uint",
+                            "value" : 2
+                        },
+                        {
+                            "name" : "var4",
+                            "displayName" : "var4",
+                            "type" : "uint",
+                            "value" : 10
+                        }
 					]
                 }
             ]

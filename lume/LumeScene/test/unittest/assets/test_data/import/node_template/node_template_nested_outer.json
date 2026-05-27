@@ -1,0 +1,27 @@
+{
+    "version": "1.0",
+    "description": "outer template wrapping inner template with deep attachment",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "outer",
+            "source": {
+                "type": "nodeTemplate",
+                "url": "node_template_nested_inner.json"
+            },
+            "resourceGroup": "nested-outer-group",
+            "attachments": [
+                {
+                    "path": ".//AnimatedCube",
+                    "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                    "properties": [
+                        { "name": "Name", "value": "DeepAtt" },
+                        { "name": "Float", "value": 42.0 }
+                    ]
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

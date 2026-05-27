@@ -38,7 +38,7 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
 RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle input)
 {
@@ -48,7 +48,7 @@ RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr,
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -72,9 +72,9 @@ RenderHandle CreatePso(IRenderNodeContextManager& renderNodeContextMgr, const Re
         binder = descriptorSetMgr.CreateDescriptorSetBinder(descHandle, bindings);
     }
     return psoMgr.GetGraphicsPsoHandle(
-        shader, graphicsStateHandle, pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        shader, graphicsStateHandle, pipelineLayout, {}, {}, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 }
-} // namespace
+}  // namespace
 
 void RenderNodeCopyUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -93,7 +93,8 @@ void RenderNodeCopyUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
     binder_.reset();
 }
 
-void RenderNodeCopyUtil::PreExecute() {}
+void RenderNodeCopyUtil::PreExecute()
+{}
 
 void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& copyInfo)
 {
@@ -148,8 +149,8 @@ void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& co
         if (pl.pushConstant.byteSize > 0) {
             const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
             const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-            const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-                { static_cast<float>(copyInfo_.input.layer), 0.0f, 0.0f, 0.0f } };
+            const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight},
+                {static_cast<float>(copyInfo_.input.layer), 0.0f, 0.0f, 0.0f}};
             cmdList.PushConstantData(pl.pushConstant, arrayviewU8(pc));
         }
 
@@ -161,37 +162,10 @@ void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& co
 DescriptorCounts RenderNodeCopyUtil::GetRenderDescriptorCounts() const
 {
     // prepare only for a single copy operation per frame
-    return DescriptorCounts { {
-        { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U },
-        { CORE_DESCRIPTOR_TYPE_SAMPLER, 1U },
-    } };
+    return DescriptorCounts{{
+        {CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+        {CORE_DESCRIPTOR_TYPE_SAMPLER, 1U},
+    }};
 }
 
-const CORE_NS::IInterface* RenderNodeCopyUtil::GetInterface(const Uid& uid) const
-{
-    if ((uid == IRenderNodeCopyUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-CORE_NS::IInterface* RenderNodeCopyUtil::GetInterface(const Uid& uid)
-{
-    if ((uid == IRenderNodeCopyUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void RenderNodeCopyUtil::Ref()
-{
-    refCount_++;
-}
-
-void RenderNodeCopyUtil::Unref()
-{
-    if (--refCount_ == 0) {
-        delete this;
-    }
-}
 RENDER_END_NAMESPACE()

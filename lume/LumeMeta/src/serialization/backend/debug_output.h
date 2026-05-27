@@ -50,11 +50,11 @@ private:
     void NewLine();
 
 private:
-    size_t indent_ {};
+    size_t indent_{};
     BASE_NS::string result_;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

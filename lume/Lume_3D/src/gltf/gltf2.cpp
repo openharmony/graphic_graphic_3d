@@ -35,11 +35,13 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 Gltf2::Gltf2(IGraphicsContext& graphicsContext)
-    : engine_(&(graphicsContext.GetRenderContext().GetEngine())), renderContext_(&graphicsContext.GetRenderContext()),
+    : engine_(&(graphicsContext.GetRenderContext().GetEngine())),
+      renderContext_(&graphicsContext.GetRenderContext()),
       fileManager_(engine_->GetFileManager())
 {}
 
-Gltf2::Gltf2(IFileManager& fileManager) : fileManager_(fileManager) {}
+Gltf2::Gltf2(IFileManager& fileManager) : fileManager_(fileManager)
+{}
 
 // Internal helper.
 GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
@@ -48,7 +50,7 @@ GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t
     GLTFLoadResult result;
     result.error = move(loadResult.error);
     result.success = loadResult.success;
-    result.data = IGLTFData::Ptr { loadResult.data.release() };
+    result.data = IGLTFData::Ptr{loadResult.data.release()};
 
     return result;
 }
@@ -75,7 +77,7 @@ GLTFLoadResult Gltf2::LoadGLTF(array_view<uint8_t const> data)
     GLTFLoadResult result;
     result.error = move(loadResult.error);
     result.success = loadResult.success;
-    result.data = IGLTFData::Ptr { loadResult.data.release() };
+    result.data = IGLTFData::Ptr{loadResult.data.release()};
     return result;
 }
 
@@ -111,7 +113,7 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs)
         }
         auto ret = BASE_NS::make_unique<GLTF2::GLTF2Importer>(*engine_, *renderContext_, ecs);
         if (ret->IsValid()) {
-            return IGLTF2Importer::Ptr { ret.release() };
+            return IGLTF2Importer::Ptr{ret.release()};
         }
     }
     return nullptr;
@@ -123,7 +125,7 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs, IThreadPool& pool)
     if (engine_ && renderContext_) {
         auto ret = BASE_NS::make_unique<GLTF2::GLTF2Importer>(*engine_, *renderContext_, ecs, pool);
         if (ret->IsValid()) {
-            return IGLTF2Importer::Ptr { ret.release() };
+            return IGLTF2Importer::Ptr{ret.release()};
         }
     }
     return nullptr;
@@ -148,7 +150,7 @@ ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs)
 {
     PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
-        return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs) };
+        return ISceneImporter::Ptr{new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs)};
     }
     return nullptr;
 }
@@ -157,14 +159,14 @@ ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs, IThreadPool& pool)
 {
     PLUGIN_ASSERT(engine_ && renderContext_);
     if (engine_ && renderContext_) {
-        return ISceneImporter::Ptr { new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs, pool) };
+        return ISceneImporter::Ptr{new GLTF2::Gltf2SceneImporter(*engine_, *renderContext_, ecs, pool)};
     }
     return nullptr;
 }
 
 array_view<const string_view> Gltf2::GetSupportedExtensions() const
 {
-    static constexpr string_view extensions[] = { "gltf", "glb", "mp4" };
+    static constexpr string_view extensions[] = {"gltf", "glb", "mp4"};
     return extensions;
 }
 
@@ -191,9 +193,11 @@ IInterface* Gltf2::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void Gltf2::Ref() {}
+void Gltf2::Ref()
+{}
 
-void Gltf2::Unref() {}
+void Gltf2::Unref()
+{}
 
 // Api exporting function.
 bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)
@@ -212,7 +216,11 @@ bool Gltf2::SaveGLTF(IEcs& ecs, const string_view uri)
     }
 
     auto const ext = uri.rfind('.');
-    auto const extension = string_view(uri.data() + ext + 1);
+    if (ext == string_view::npos) {
+        GLTF2::SaveGLB(*result.data, *file, engine_->GetVersion());
+        return true;
+    }
+    auto const extension = uri.substr(ext + 1);
     if (extension == "gltf") {
         for (auto const& buffer : result.data->buffers) {
             string dataFileUri = uri.substr(0, ext) + ".bin";

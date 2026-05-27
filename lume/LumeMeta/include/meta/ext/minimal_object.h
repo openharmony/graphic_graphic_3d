@@ -30,8 +30,10 @@ META_BEGIN_NAMESPACE()
 /// Simple object implementation that implements minimal set of interfaces for object
 class MinimalObject : public IntroduceInterfaces<IObject, IObjectFlags, IStaticMetadata> {
 public:
-    MinimalObject() : flags_(ObjectFlagBits::DEFAULT_FLAGS) {}
-    MinimalObject(const ObjectFlagBitsValue& value) : flags_(value) {}
+    MinimalObject() : flags_(ObjectFlagBits::DEFAULT_FLAGS)
+    {}
+    MinimalObject(const ObjectFlagBitsValue& value) : flags_(value)
+    {}
 
     BASE_NS::string GetName() const override
     {
@@ -54,7 +56,7 @@ public:
     }
 
     // this allows to use the same macros for minimal objects too
-    inline static const nullptr_t STATIC_METADATA {};
+    inline static const nullptr_t STATIC_METADATA{};
     static const StaticObjectMetadata* StaticMetadata()
     {
         return nullptr;
@@ -65,7 +67,7 @@ public:
     }
 
 private:
-    ObjectFlagBitsValue flags_ {};
+    ObjectFlagBitsValue flags_{};
 };
 
 META_END_NAMESPACE()

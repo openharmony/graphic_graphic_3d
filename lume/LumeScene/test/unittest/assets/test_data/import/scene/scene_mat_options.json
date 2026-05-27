@@ -1,0 +1,19 @@
+{
+	"version": "1.0",
+	"description": "test scene with a material that carries graphics-state options",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_mat_options.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"children": [
+				{
+					"type": "geometry",
+					"name": "geom"
+				}
+			]
+		}
+	}
+}

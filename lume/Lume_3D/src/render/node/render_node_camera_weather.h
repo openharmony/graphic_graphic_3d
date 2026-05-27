@@ -94,8 +94,8 @@ public:
     void ComputeSkyViewCubemapMips(RENDER_NS::IRenderCommandList& cmdList);
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "c269fda6-9b07-481c-8227-a74ad7b91d2e" };
-    static constexpr const char* typeName = "RenderNodeCameraWeather";
+    static constexpr BASE_NS::Uid UID{"c269fda6-9b07-481c-8227-a74ad7b91d2e"};
+    static constexpr const char* TYPE_NAME = "RenderNodeCameraWeather";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
 
@@ -104,7 +104,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
 
     void ParseRenderNodeInputs();
 
@@ -116,7 +116,7 @@ private:
 
     void UpdateAerialPerspectiveParams(const BASE_NS::Math::Mat4X4& viewProj);
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     operator RENDER_NS::IRenderNodeContextManager*() const final
     {
@@ -126,7 +126,7 @@ private:
     // Json resources which might need re-fetching
     struct JsonInputs {
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
     };
 
     struct ImageData {
@@ -145,7 +145,7 @@ private:
         RENDER_NS::RenderHandle defSampler;
 
         // the flag for the post built-in post process
-        uint32_t postProcessFlag { 0u };
+        uint32_t postProcessFlag{0u};
     };
     BuiltInVariables builtInVariables_;
 
@@ -154,12 +154,12 @@ private:
         RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::RenderHandle prePassColorTarget;
 
-        bool hasShadow { false };
-        CORE3D_NS::IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
-        CORE3D_NS::IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
+        bool hasShadow{false};
+        CORE3D_NS::IRenderDataStoreDefaultLight::ShadowTypes shadowTypes{};
+        CORE3D_NS::IRenderDataStoreDefaultLight::LightingFlags lightingFlags{0u};
 
         // used the fetch the new handle for new environment
-        uint64_t envId { 0xFFFFFFFFffffffffULL };
+        uint64_t envId{0xFFFFFFFFffffffffULL};
     };
     CurrentScene currentScene_;
 
@@ -172,7 +172,7 @@ private:
     BASE_NS::string dsWeatherName_;
     BASE_NS::string cameraName_;
 
-    CORE3D_NS::IRenderNodeSceneUtil* renderNodeSceneUtil_ { nullptr };
+    CORE3D_NS::IRenderNodeSceneUtil* renderNodeSceneUtil_{nullptr};
 
     struct UboHandles {
         // first 512 aligned is global post process
@@ -181,8 +181,8 @@ private:
     };
     UboHandles ubos_;
 
-    bool valid_ { false };
-    bool isDefaultImageInUse_ { false };
+    bool valid_{false};
+    bool isDefaultImageInUse_{false};
 
     RENDER_NS::RenderHandle transmittanceShader_;
     RENDER_NS::RenderHandle multipleScatteringShader_;
@@ -238,6 +238,7 @@ private:
     PSOs skyPso_;
 
     struct DefaultSamplers {
+        RENDER_NS::RenderHandle nearestHandle;
         RENDER_NS::RenderHandle linearHandle;
         RENDER_NS::RenderHandle cubemapHandle;
     };
@@ -272,13 +273,13 @@ private:
 
     RENDER_NS::RenderHandleReference aerialPerspectiveBuffer_;
 
-    bool clear_ { true };
-    BASE_NS::Math::UVec2 cloudPrevTexSize_ { 0U, 0U };
-    bool generateCloudWeatherMap_ { false };
+    bool clear_{true};
+    BASE_NS::Math::UVec2 cloudPrevTexSize_{0U, 0U};
+    bool generateCloudWeatherMap_{false};
 
-    int32_t downscale_ { 0 };
-    uint32_t cubeMapMipCount { 0 };
-    uint64_t uniformHash_ { 0 };
+    int32_t downscale_{0};
+    uint32_t cubeMapMipCount{0};
+    uint64_t uniformHash_{0};
 
     RenderDataStoreWeather::WeatherSettings settings_;
     Render::DeviceBackendType deviceBackendType_;
@@ -290,7 +291,7 @@ private:
     bool needsFullMipUpdate = false;
 
     size_t frameNumber = 0;
-    float prevTimeOfDay_;
+    BASE_NS::Math::Vec4 prevSunDirElevation_;
 
     struct AtmosphericConfig {
         BASE_NS::Math::Vec3 rayleighScatteringBase;
@@ -302,9 +303,18 @@ private:
     };
     AtmosphericConfig atmosphericConfigPrev_;
 
+    struct SkyAppearanceConfig {
+        float skySunSize;
+        BASE_NS::Math::Vec3 skySunTint;
+        float skySunOpacity;
+    };
+    SkyAppearanceConfig skyAppearanceConfigPrev_;
+
     bool IsAtmosphericConfigChanged();
     void UpdateAtmosphericConfig();
+    bool IsSkyAppearanceConfigChanged();
+    void UpdateSkyAppearanceConfig();
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER_NODE_RENDER_NODE_CAMERA_CLOUDS_H
+#endif  // CORE3D_RENDER_NODE_RENDER_NODE_CAMERA_CLOUDS_H

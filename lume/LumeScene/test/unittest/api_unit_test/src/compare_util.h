@@ -18,10 +18,10 @@
 
 #include <scene/interface/intf_node.h>
 
+#include <gtest/gtest.h>
+
 #include <base/containers/unordered_map.h>
 #include <core/resources/intf_resource_manager.h>
-
-#include <gtest/gtest.h>
 
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
@@ -39,10 +39,10 @@ inline void CompareTrees(INode::Ptr left, INode::Ptr right, bool ignoreRootName 
     }
 }
 
-inline void ExpectResources(
-    CORE_NS::IResourceManager::Ptr res, const BASE_NS::vector<CORE_NS::ResourceInfo>& list, bool exact = true)
+inline void ExpectResources(CORE_NS::IResourceManager::Ptr res, CORE_NS::ResourceContextPtr context,
+    const BASE_NS::vector<CORE_NS::ResourceInfo>& list, bool exact = true)
 {
-    auto infos = res->GetResourceInfos();
+    auto infos = res->GetResourceInfos(context);
     if (exact) {
         EXPECT_EQ(infos.size(), list.size());
     }
@@ -59,15 +59,19 @@ inline void ExpectResources(
         if (hasResource) {
             EXPECT_EQ(v.path, it->second.path);
             EXPECT_EQ(v.type, it->second.type);
-            EXPECT_EQ(v.optionData.size(), it->second.optionData.size());
+            auto op1 = interface_cast<META_NS::IObjectResourceOptions>(v.options);
+            auto op2 = interface_cast<META_NS::IObjectResourceOptions>(it->second.options);
+            if (op1 && op2) {
+                EXPECT_EQ(op1->GetOptionData().size(), op2->GetOptionData().size());
+            }
         }
     }
 }
 
-inline void ExpectAtleastResources(
-    CORE_NS::IResourceManager::Ptr res, const BASE_NS::vector<CORE_NS::ResourceInfo>& list)
+inline void ExpectAtleastResources(CORE_NS::IResourceManager::Ptr res, CORE_NS::ResourceContextPtr context,
+    const BASE_NS::vector<CORE_NS::ResourceInfo>& list)
 {
-    return ExpectResources(res, list, false);
+    return ExpectResources(res, context, list, false);
 }
 
 inline auto ChangeGroup(BASE_NS::vector<CORE_NS::ResourceInfo> list, BASE_NS::string_view group)
@@ -86,7 +90,7 @@ inline auto AddToResourceName(BASE_NS::vector<CORE_NS::ResourceInfo> list, BASE_
     return list;
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_TEST_UTIL
+#endif  // SCENE_TEST_UTIL

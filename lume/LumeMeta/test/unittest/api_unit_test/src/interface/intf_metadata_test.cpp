@@ -79,7 +79,7 @@ UNIT_TEST(API_MetadataTest, Events, testing::ext::TestSize.Level1)
     ASSERT_TRUE(e);
 }
 
-template<typename Set, typename Get>
+template <typename Set, typename Get>
 void TestGetSetValue(Set sp, Get gp)
 {
     ASSERT_TRUE(SetValue(sp, "First", 1));
@@ -94,13 +94,13 @@ void TestGetSetValue(Set sp, Get gp)
     ASSERT_EQ(GetValue<float>(gp, "First"), 0);
     ASSERT_EQ(GetValue<float>(gp, "First", 1), 1);
 
-    ASSERT_FALSE(SetValue(Set {}, "First", 3));
-    Get nil {};
+    ASSERT_FALSE(SetValue(Set{}, "First", 3));
+    Get nil{};
     ASSERT_EQ(GetValue(nil, "First", 3), 3);
     ASSERT_EQ(GetValue<int>(nil, "First", 3), 3);
 }
 
-template<typename Type>
+template <typename Type>
 void TestGetSetValue(BASE_NS::shared_ptr<Type> p)
 {
     BASE_NS::shared_ptr<const Type> c_p = p;
@@ -163,8 +163,8 @@ UNIT_TEST(API_MetadataTest, StaticMetadata, testing::ext::TestSize.Level1)
 }
 
 struct MData {
-    const StaticMetadata* data {};
-    CORE_NS::IInterface* pointer {};
+    const StaticMetadata* data{};
+    CORE_NS::IInterface* pointer{};
 };
 
 class IMetadataTest : public CORE_NS::IInterface {
@@ -196,11 +196,12 @@ public:
     META_IMPLEMENT_READONLY_PROPERTY(int, ReadValue)
     META_IMPLEMENT_EVENT(IOnChanged, OnChanged)
 
-    void Func() override {}
+    void Func() override
+    {}
 
     void OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i) override
     {
-        datas_.push_back(MData { &m, &i });
+        datas_.push_back(MData{&m, &i});
     }
 
     BASE_NS::vector<MData> GetDatas() const override
@@ -215,7 +216,7 @@ class EmptyMetadataTest : public MetadataTest {
     META_OBJECT(EmptyMetadataTest, ClassId::EmptyMetadataTest, MetadataTest)
 };
 
-template<typename Type>
+template <typename Type>
 void TestMetadata(const ClassInfo& info)
 {
     auto& r = META_NS::GetObjectRegistry();
@@ -224,12 +225,11 @@ void TestMetadata(const ClassInfo& info)
     auto obj = r.Create<IMetadata>(info);
     ASSERT_TRUE(obj);
 
-    MetadataInfo valueMetaInfo { MetadataType::PROPERTY, "Value", IMetadataTest::UID, false,
-        TypeId(UidFromType<int>()) };
-    MetadataInfo readValueMetaInfo { MetadataType::PROPERTY, "ReadValue", IMetadataTest::UID, true,
-        TypeId(UidFromType<int>()) };
-    MetadataInfo onChangedMetaInfo { MetadataType::EVENT, "OnChanged", IMetadataTest::UID };
-    MetadataInfo funcMetaInfo { MetadataType::FUNCTION, "Func", IMetadataTest::UID };
+    MetadataInfo valueMetaInfo{MetadataType::PROPERTY, "Value", IMetadataTest::UID, false, TypeId(UidFromType<int>())};
+    MetadataInfo readValueMetaInfo{
+        MetadataType::PROPERTY, "ReadValue", IMetadataTest::UID, true, TypeId(UidFromType<int>())};
+    MetadataInfo onChangedMetaInfo{MetadataType::EVENT, "OnChanged", IMetadataTest::UID};
+    MetadataInfo funcMetaInfo{MetadataType::FUNCTION, "Func", IMetadataTest::UID};
 
     {
         auto vec = obj->GetAllMetadatas(MetadataType::PROPERTY);
@@ -264,8 +264,8 @@ void TestMetadata(const ClassInfo& info)
         ASSERT_EQ(vec.size(), 3);
         EXPECT_THAT(vec, testing::Contains(valueMetaInfo));
         EXPECT_THAT(vec, testing::Contains(readValueMetaInfo));
-        EXPECT_THAT(vec, testing::Contains(
-                             MetadataInfo { MetadataType::PROPERTY, "Test", {}, false, TypeId(UidFromType<float>()) }));
+        EXPECT_THAT(vec,
+            testing::Contains(MetadataInfo{MetadataType::PROPERTY, "Test", {}, false, TypeId(UidFromType<float>())}));
     }
     {
         interface_cast<IMetadataTest>(obj)->Value()->SetValue(1);
@@ -273,8 +273,8 @@ void TestMetadata(const ClassInfo& info)
         ASSERT_EQ(vec.size(), 3);
         EXPECT_THAT(vec, testing::Contains(valueMetaInfo));
         EXPECT_THAT(vec, testing::Contains(readValueMetaInfo));
-        EXPECT_THAT(vec, testing::Contains(
-                             MetadataInfo { MetadataType::PROPERTY, "Test", {}, false, TypeId(UidFromType<float>()) }));
+        EXPECT_THAT(vec,
+            testing::Contains(MetadataInfo{MetadataType::PROPERTY, "Test", {}, false, TypeId(UidFromType<float>())}));
     }
     {
         auto m = obj->GetMetadata(MetadataType::PROPERTY, "Value");
@@ -418,7 +418,8 @@ public:
     META_FORWARD_READONLY_PROPERTY(int, ReadValue, object_->ReadValue())
     META_FORWARD_EVENT(IOnChanged, OnChanged, object_->EventOnChanged)
 
-    void Func() override {}
+    void Func() override
+    {}
 
     bool Build(const IMetadata::Ptr& d) override
     {
@@ -489,5 +490,144 @@ UNIT_TEST(API_MetadataTest, StaticDataWithForwardingSerialise, testing::ext::Tes
     r.UnregisterObjectType<MetadataForwardTest>();
 }
 
-} // namespace UTest
+/**
+ * @tc.name: RemoveProperty
+ * @tc.desc: Tests that AddProperty then RemoveProperty removes the property.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MetadataTest, RemoveProperty, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+    r.RegisterObjectType<MetadataTest>();
+
+    auto obj = r.Create<IMetadata>(ClassId::MetadataTest);
+    ASSERT_TRUE(obj);
+
+    auto p = ConstructProperty<float>("DynProp");
+    ASSERT_TRUE(obj->AddProperty(p));
+    EXPECT_TRUE(obj->GetProperty("DynProp"));
+
+    EXPECT_TRUE(obj->RemoveProperty(p));
+    EXPECT_FALSE(obj->GetProperty<float>("DynProp"));
+
+    r.UnregisterObjectType<MetadataTest>();
+}
+
+/**
+ * @tc.name: RemoveFunction
+ * @tc.desc: Tests that a function can be retrieved and then removed.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MetadataTest, RemoveFunction, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+    r.RegisterObjectType<MetadataTest>();
+
+    auto obj = r.Create<IMetadata>(ClassId::MetadataTest);
+    ASSERT_TRUE(obj);
+
+    auto f = obj->GetFunction("Func");
+    ASSERT_TRUE(f);
+    EXPECT_TRUE(obj->RemoveFunction(f));
+    // After removal from metadata container, GetFunction with CONSTRUCT_ON_REQUEST may reconstruct it
+    // but with NO_CONSTRUCT it should be gone
+    auto fns = obj->GetFunctions();
+    bool found = false;
+    for (auto& fn : fns) {
+        if (fn->GetName() == "Func") {
+            found = true;
+        }
+    }
+    EXPECT_FALSE(found);
+
+    r.UnregisterObjectType<MetadataTest>();
+}
+
+/**
+ * @tc.name: RemoveEvent
+ * @tc.desc: Tests that an event can be retrieved and then removed.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MetadataTest, RemoveEvent, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+    r.RegisterObjectType<MetadataTest>();
+
+    auto obj = r.Create<IMetadata>(ClassId::MetadataTest);
+    ASSERT_TRUE(obj);
+
+    auto e = obj->GetEvent("OnChanged");
+    ASSERT_TRUE(e);
+    EXPECT_TRUE(obj->RemoveEvent(e));
+    auto evts = obj->GetEvents();
+    bool found = false;
+    for (auto& ev : evts) {
+        if (ev->GetName() == "OnChanged") {
+            found = true;
+        }
+    }
+    EXPECT_FALSE(found);
+
+    r.UnregisterObjectType<MetadataTest>();
+}
+
+/**
+ * @tc.name: GetMetadataForDynamicMember
+ * @tc.desc: Tests GetMetadata for dynamically added property.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MetadataTest, GetMetadataForDynamicMember, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+    r.RegisterObjectType<MetadataTest>();
+
+    auto obj = r.Create<IMetadata>(ClassId::MetadataTest);
+    ASSERT_TRUE(obj);
+
+    auto p = ConstructProperty<float>("DynamicProp");
+    obj->AddProperty(p);
+
+    auto m = obj->GetMetadata(MetadataType::PROPERTY, "DynamicProp");
+    EXPECT_TRUE(m.IsValid());
+    EXPECT_EQ(m.type, MetadataType::PROPERTY);
+    EXPECT_EQ(m.name, "DynamicProp");
+
+    r.UnregisterObjectType<MetadataTest>();
+}
+
+/**
+ * @tc.name: ConstGetters
+ * @tc.desc: Tests const overloads of GetProperties/GetFunctions/GetEvents.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_MetadataTest, ConstGetters, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+    r.RegisterObjectType<MetadataTest>();
+
+    auto obj = r.Create<IMetadata>(ClassId::MetadataTest);
+    ASSERT_TRUE(obj);
+
+    // Trigger construction of all static members
+    obj->GetProperty("Value");
+    obj->GetProperty("ReadValue");
+    obj->GetFunction("Func");
+    obj->GetEvent("OnChanged");
+
+    const IMetadata::Ptr& constObj = obj;
+    const IMetadata* constPtr = constObj.get();
+
+    auto props = constPtr->GetProperties();
+    EXPECT_GE(props.size(), 2);
+
+    auto fns = constPtr->GetFunctions();
+    EXPECT_GE(fns.size(), 1);
+
+    auto evts = constPtr->GetEvents();
+    EXPECT_GE(evts.size(), 1);
+
+    r.UnregisterObjectType<MetadataTest>();
+}
+
+}  // namespace UTest
 META_END_NAMESPACE()

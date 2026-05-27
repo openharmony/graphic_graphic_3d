@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ constexpr const char str_invalid[][7] = {
     { '\xED', '\xAF', '\xBF', '\xED', '\xBF', '\xBF' },
 };
 // clang-format on
-} // namespace
+}  // namespace
 
 UNIT_TEST(API_UnitTest_utf8, Count, testing::ext::TestSize.Level1)
 {

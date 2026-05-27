@@ -20,6 +20,7 @@
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_render_resource.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_mesh.h>
@@ -30,6 +31,7 @@
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/mesh_component.h>
+#include <3d/ecs/components/name_component.h>
 #include <core/property/scoped_handle.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_renderer.h>
@@ -49,11 +51,11 @@ META_TYPE(CORE3D_NS::MeshComponent::Submesh)
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
 
-template<typename Type>
+template <typename Type>
 Type ReadValueFromEngine(const META_NS::EnginePropertyParams& params)
 {
-    Type res {};
-    if (CORE_NS::ScopedHandle<const Type> guard { params.handle.Handle() }) {
+    Type res{};
+    if (CORE_NS::ScopedHandle<const Type> guard{params.handle.Handle()}) {
         res = *(const Type*)((uintptr_t) & *guard + params.Offset());
     }
     return res;
@@ -66,20 +68,25 @@ public:
     META_NS::IMetadata::Ptr params;
     CORE_NS::IResourceManager::Ptr resources;
     META_NS::IManualClock::Ptr clock;
-
+    /// Returns an empty scene. The Scene is stored in a member variable ScenePluginTest::scene.
     IScene::Ptr CreateEmptyScene()
     {
-        if (auto m = GetSceneManager()) {
-            scene = m->CreateScene().GetResult();
-        }
+        scene = CreateStandaloneScene();
         return scene;
     }
+    /// Returns a scene loaded from url. The Scene is stored in a member variable ScenePluginTest::scene.
     IScene::Ptr LoadScene(BASE_NS::string_view url)
     {
         if (auto m = GetSceneManager()) {
             scene = m->CreateScene(url).GetResult();
         }
         return scene;
+    }
+    /// Creates a scene instance and returns the instance without storing it internally.
+    IScene::Ptr CreateStandaloneScene()
+    {
+        auto m = GetSceneManager();
+        return m ? m->CreateScene().GetResult() : nullptr;
     }
     META_NS::IMetadata::Ptr GetSceneParams() const
     {
@@ -119,7 +126,7 @@ public:
         META_NS::GetAnimationController()->Step(clock);
         if (sc) {
             sc->GetInternalScene()
-                ->AddTask([&] {
+                ->AddTaskOrRunDirectly([&] {
                     IInternalScene::UpdateInfo info;
                     info.syncProperties = true;
                     info.clock = clock;
@@ -127,23 +134,28 @@ public:
                     context->GetRenderer()->GetRenderer().RenderDeferredFrame();
                 })
                 .Wait();
+            // Wait twice: the engine and app queues share the same ThreadedTaskQueue in tests,
+            // so deferred tasks (e.g. startable Start) posted before Update may still be pending
+            // after the first wait due to task timestamp ordering in the shared queue.
+            WaitForUserQueue();
             WaitForUserQueue();
         }
     }
 
-    template<typename Type>
+    template <typename Type>
     void CheckNativePropertyValue(META_NS::IProperty::ConstPtr p, const Type& v)
     {
         CheckNativePropertyValue<Type>(p, v, [](const Type& a, const Type& b) { return a == b; });
     }
 
-    template<typename Type>
+    template <typename Type>
     void CheckNativePropertyValue(
         META_NS::IProperty::ConstPtr p, const Type& v, std::function<bool(const Type&, const Type&)> isEqual)
     {
         if (auto ev = interface_cast<META_NS::IEngineValueInternal>(META_NS::GetEngineValueFromProperty(p))) {
             auto pv = scene->GetInternalScene()
-                          ->AddTask([&] { return isEqual(v, ReadValueFromEngine<Type>(ev->GetPropertyParams())); })
+                          ->AddTaskOrRunDirectly(
+                              [&] { return isEqual(v, ReadValueFromEngine<Type>(ev->GetPropertyParams())); })
                           .GetResult();
             EXPECT_TRUE(pv);
         }
@@ -171,7 +183,7 @@ public:
         }
 
         EXPECT_TRUE(shaderRef && graphicsStateRef);
-        return CORE3D_NS::MaterialComponent::Shader { shaderRef, graphicsStateRef };
+        return CORE3D_NS::MaterialComponent::Shader{shaderRef, graphicsStateRef};
     }
 
     IImage::Ptr CreateTestBitmap()
@@ -185,7 +197,8 @@ public:
             desc.format = BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT;
             desc.imageType = RENDER_NS::ImageType::CORE_IMAGE_TYPE_2D;
             desc.memoryPropertyFlags = RENDER_NS::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-            desc.usageFlags = RENDER_NS::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            desc.usageFlags =
+                RENDER_NS::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | RENDER_NS::CORE_IMAGE_USAGE_SAMPLED_BIT;
             auto handle =
                 scene->GetInternalScene()->GetRenderContext().GetDevice().GetGpuResourceManager().Create(desc);
             if (auto res = interface_cast<IRenderResource>(bmap)) {
@@ -198,7 +211,7 @@ public:
 
     void WaitForUserQueue()
     {
-        context->AddTask([] {}, context->GetApplicationQueue()).Wait();
+        context->AddTaskOrRunDirectly([] {}, context->GetApplicationQueue()).Wait();
     }
 
     void AddSubMesh(IMesh::Ptr mesh)
@@ -218,9 +231,12 @@ public:
         WaitForUserQueue();
     }
 
-    size_t GetEntityCount() const
+    size_t GetEntityCount(IScene::Ptr scene = nullptr) const
     {
-        size_t size {};
+        if (!scene) {
+            scene = this->scene;
+        }
+        size_t size{};
         auto& m = scene->GetInternalScene()->GetEcsContext().GetNativeEcs()->GetEntityManager();
 
         {
@@ -240,17 +256,33 @@ public:
 
     void LogAliveEntities(IScene::Ptr scene) const
     {
-        size_t size {};
-        auto& m = scene->GetInternalScene()->GetEcsContext().GetNativeEcs()->GetEntityManager();
-
+        size_t size{};
+        auto& context = scene->GetInternalScene()->GetEcsContext();
+        auto& m = context.GetNativeEcs()->GetEntityManager();
+        auto nameMan =
+            static_cast<CORE3D_NS::INameComponentManager*>(context.FindComponent<CORE3D_NS::NameComponent>());
         {
             auto it = m.Begin(CORE_NS::IEntityManager::IteratorType::ALIVE);
             auto end = m.End(CORE_NS::IEntityManager::IteratorType::ALIVE);
             for (; it && !it->Compare(end); it->Next(), ++size) {
-                CORE_LOG_I("Entity %zu %" PRIx64, size, it->Get().id);
+                BASE_NS::string components;
+                BASE_NS::vector<CORE_NS::IComponentManager*> managers;
+                context.GetNativeEcs()->GetComponents(it->Get(), managers);
+                for (auto&& man : managers) {
+                    components += man->GetName() + " ";
+                }
+                if (auto n = nameMan->Read(it->Get())) {
+                    CORE_LOG_I(
+                        "Entity %zu %" PRIx64 " name=%s [%s]", size, it->Get().id, n->name.c_str(), components.c_str());
+                } else {
+                    CORE_LOG_I("Entity %zu %" PRIx64 " [%s]", size, it->Get().id, components.c_str());
+                }
             }
         }
     }
+
+    void LogResources(CORE_NS::IResourceManager::Ptr resources) const
+    {}
 
 protected:
     void SetUp() override
@@ -276,6 +308,7 @@ protected:
 
     void TearDown() override
     {
+        resources->RemoveAllResources();
         context.reset();
         params.reset();
         scene.reset();
@@ -295,7 +328,11 @@ inline void CheckNativeEcsPath(INode::Ptr node, const BASE_NS::string& path)
 inline void PrintHierarchy(INode::Ptr n, size_t depth = 0)
 {
     BASE_NS::string tab(depth, '-');
-    printf("%s%s\n", tab.c_str(), n->GetName().c_str());
+    printf("%s%s", tab.c_str(), n->GetName().c_str());
+    if (GetExternalNodeAttachment(n)) {
+        printf(" <external>");
+    }
+    printf("\n");
     META_NS::Internal::ConstIterate(
         interface_cast<META_NS::IIterable>(n),
         [&](META_NS::IObject::Ptr nodeObj) {
@@ -304,10 +341,10 @@ inline void PrintHierarchy(INode::Ptr n, size_t depth = 0)
             }
             return true;
         },
-        META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
+        META_NS::IterateStrategy{META_NS::TraversalType::NO_HIERARCHY});
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
 #endif

@@ -33,22 +33,15 @@
 
 #include "datastore/render_data_store_shader_passes.h"
 #include "device/shader_pipeline_binder.h"
+#include "util/align_util.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t OFFSET_ALIGNMENT { PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE };
-constexpr uint32_t OVERESTIMATE_COUNT { 4U };
-
-constexpr uint32_t Align(uint32_t value, uint32_t align)
-{
-    if (value == 0) {
-        return 0;
-    }
-    return ((value + align) / align) * align;
-}
+constexpr uint32_t OFFSET_ALIGNMENT{PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE};
+constexpr uint32_t OVERESTIMATE_COUNT{4U};
 
 RenderPass ConvertToLowLevelRenderPass(const RenderPassWithHandleReference& renderPassInput)
 {
@@ -58,8 +51,10 @@ RenderPass ConvertToLowLevelRenderPass(const RenderPassWithHandleReference& rend
     const uint32_t attachmentCount = Math::min(
         PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT, renderPassInput.renderPassDesc.attachmentCount);
     rp.renderPassDesc.attachmentCount = attachmentCount;
-    CloneData(rp.renderPassDesc.attachments, sizeof(rp.renderPassDesc.attachments),
-        renderPassInput.renderPassDesc.attachments, sizeof(renderPassInput.renderPassDesc.attachments));
+    CloneData(rp.renderPassDesc.attachments,
+        sizeof(rp.renderPassDesc.attachments),
+        renderPassInput.renderPassDesc.attachments,
+        sizeof(renderPassInput.renderPassDesc.attachments));
     rp.renderPassDesc.renderArea = renderPassInput.renderPassDesc.renderArea;
     rp.renderPassDesc.subpassCount = renderPassInput.renderPassDesc.subpassCount;
     for (uint32_t idx = 0U; idx < attachmentCount; ++idx) {
@@ -67,7 +62,7 @@ RenderPass ConvertToLowLevelRenderPass(const RenderPassWithHandleReference& rend
     }
     return rp;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeShaderPassesGeneric::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -111,10 +106,11 @@ void RenderNodeShaderPassesGeneric::PreExecuteFrame()
         uboData_.byteSize = static_cast<uint32_t>(Align(uboData_.byteSize, OFFSET_ALIGNMENT));
 
         IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        uboData_.handle = gpuResourceMgr.Create(
-            uboData_.handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                 (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, uboData_.byteSize });
+        uboData_.handle = gpuResourceMgr.Create(uboData_.handle,
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                uboData_.byteSize});
     }
 }
 
@@ -169,16 +165,16 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
     for (const auto& ref : rpData) {
         if (ValidRenderPass(ref.renderPass)) {
             const RenderPass renderPass = ConvertToLowLevelRenderPass(ref.renderPass);
-            cmdList.BeginRenderPass(renderPass.renderPassDesc, { &renderPass.subpassDesc, 1U });
+            cmdList.BeginRenderPass(renderPass.renderPassDesc, {&renderPass.subpassDesc, 1U});
 
             const ViewportDesc viewportDesc = renderNodeUtil.CreateDefaultViewport(renderPass);
             const ScissorDesc scissorDesc = renderNodeUtil.CreateDefaultScissor(renderPass);
             cmdList.SetDynamicStateViewport(viewportDesc);
             cmdList.SetDynamicStateScissor(scissorDesc);
             if (ref.renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
-                cmdList.SetDynamicStateFragmentShadingRate(
-                    { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                                    CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
+                cmdList.SetDynamicStateFragmentShadingRate({1u, 1u},
+                    FragmentShadingRateCombinerOps{CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
+                        CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE});
             }
 
             for (const auto& shaderRef : ref.shaderBinders) {
@@ -207,7 +203,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
                 }
 
                 // create single frame descriptor sets
-                RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] {};
+                RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
                 uint32_t setCount = 0U;
                 for (uint32_t setIdx = 0U; setIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++setIdx) {
                     const auto& currSet = pl.descriptorSetLayouts[setIdx];
@@ -218,7 +214,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
                         setCount++;
                     }
                 }
-                cmdList.BindDescriptorSets(binder->GetFirstSet(), { descriptorSetHandles, setCount });
+                cmdList.BindDescriptorSets(binder->GetFirstSet(), {descriptorSetHandles, setCount});
 
                 // vertex buffers and draw
                 const array_view<const VertexBufferWithHandleReference> vb = sRef.GetVertexBuffers();
@@ -230,15 +226,14 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameGraphics(IRenderCommandList& cmd
                         Math::min(PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT, static_cast<uint32_t>(vb.size()));
                     for (uint32_t vbIdx = 0; vbIdx < vbCount; ++vbIdx) {
                         const auto& vr = vb[vbIdx];
-                        vbs[vbIdx] = { vr.bufferHandle.GetHandle(), vr.bufferOffset, vr.byteSize };
+                        vbs[vbIdx] = {vr.bufferHandle.GetHandle(), vr.bufferOffset, vr.byteSize};
                     }
-                    cmdList.BindVertexBuffers({ vbs, vbCount });
+                    cmdList.BindVertexBuffers({vbs, vbCount});
                 }
                 const RenderHandle iaHandle = dc.argsHandle.GetHandle();
                 const bool indirectDraw = RenderHandleUtil::IsValid(iaHandle);
                 if (ib.bufferHandle) {
-                    cmdList.BindIndexBuffer(
-                        { ib.bufferHandle.GetHandle(), ib.bufferOffset, ib.byteSize, ib.indexType });
+                    cmdList.BindIndexBuffer({ib.bufferHandle.GetHandle(), ib.bufferOffset, ib.byteSize, ib.indexType});
                     if (indirectDraw) {
                         cmdList.DrawIndexedIndirect(iaHandle, dc.argsOffset, 1U, 0U);
                     } else {
@@ -297,7 +292,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameCompute(IRenderCommandList& cmdL
             }
 
             // create single frame descriptor sets
-            RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] {};
+            RenderHandle descriptorSetHandles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
             uint32_t setCount = 0U;
             for (uint32_t setIdx = 0U; setIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++setIdx) {
                 const auto& currSet = pl.descriptorSetLayouts[setIdx];
@@ -308,7 +303,7 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameCompute(IRenderCommandList& cmdL
                     setCount++;
                 }
             }
-            cmdList.BindDescriptorSets(binder->GetFirstSet(), { descriptorSetHandles, setCount });
+            cmdList.BindDescriptorSets(binder->GetFirstSet(), {descriptorSetHandles, setCount});
 
             const IShaderPipelineBinder::DispatchCommand dc = sRef.GetDispatchCommand();
             const RenderHandle dcHandle = dc.handle.GetHandle();
@@ -318,9 +313,10 @@ void RenderNodeShaderPassesGeneric::ExecuteFrameCompute(IRenderCommandList& cmdL
             } else if (handleType == RenderHandleType::GPU_IMAGE) {
                 const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
                 const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dcHandle);
-                const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
+                const Math::UVec3 targetSize = {desc.width, desc.height, desc.depth};
                 const ShaderThreadGroup tgs = shaderMgr.GetReflectionThreadGroupSize(shaderHandle);
-                cmdList.Dispatch((targetSize.x + tgs.x - 1u) / tgs.x, (targetSize.y + tgs.y - 1u) / tgs.y,
+                cmdList.Dispatch((targetSize.x + tgs.x - 1u) / tgs.x,
+                    (targetSize.y + tgs.y - 1u) / tgs.y,
                     (targetSize.z + tgs.z - 1u) / tgs.z);
             } else {
                 cmdList.Dispatch(dc.threadGroupCount.x, dc.threadGroupCount.y, dc.threadGroupCount.z);
@@ -351,13 +347,14 @@ RenderHandle RenderNodeShaderPassesGeneric::GetPsoHandleGraphics(
     const RenderPass& renderPass, const RenderHandle& shader, const PipelineLayout& pipelineLayout)
 {
     // controlled by count
-    constexpr DynamicStateEnum dynamicStates[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR,
-        CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
+    constexpr DynamicStateEnum dynamicStates[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT,
+        CORE_DYNAMIC_STATE_ENUM_SCISSOR,
+        CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE};
     const uint32_t dynamicStateCount = (renderPass.subpassDesc.fragmentShadingRateAttachmentIndex != ~0u) ? 3u : 2u;
     const RenderHandle gfxStateHandle =
         renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shader);
     return renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
-        shader, gfxStateHandle, pipelineLayout, {}, {}, { dynamicStates, dynamicStateCount });
+        shader, gfxStateHandle, pipelineLayout, {}, {}, {dynamicStates, dynamicStateCount});
 }
 
 RenderHandle RenderNodeShaderPassesGeneric::GetPsoHandleCompute(
@@ -379,7 +376,8 @@ bool RenderNodeShaderPassesGeneric::ValidRenderPass(const RenderPassWithHandleRe
         return true;
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_invalid_rp", "Invalid render pass in node: %s",
+        PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_invalid_rp",
+            "Invalid render pass in node: %s",
             renderNodeContextMgr_->GetNodeName().data());
 #endif
         return false;

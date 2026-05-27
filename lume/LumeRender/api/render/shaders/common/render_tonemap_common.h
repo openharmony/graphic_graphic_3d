@@ -101,4 +101,4 @@ vec3 TonemapPbrNeutral(vec3 color)
     return mix(color, vec3(newPeak), g);
 }
 
-#endif // API_RENDER_SHADERS_COMMON_TONEMAP_COMMON_H
+#endif  // API_RENDER_SHADERS_COMMON_TONEMAP_COMMON_H

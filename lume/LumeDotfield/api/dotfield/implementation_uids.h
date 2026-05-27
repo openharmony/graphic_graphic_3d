@@ -19,7 +19,7 @@
 #include <base/util/uid.h>
 
 namespace Dotfield {
-static constexpr BASE_NS::Uid UID_DOTFIELD_PLUGIN { "8430021d-a57f-d9ff-7770-c24fb3f6321c" };
+static constexpr BASE_NS::Uid UID_DOTFIELD_PLUGIN{"8430021d-a57f-d9ff-7770-c24fb3f6321c"};
 }
 
-#endif // PLUGIN_API_DOTFIELD_IMPLEMENTATION_UIDS_H
+#endif  // PLUGIN_API_DOTFIELD_IMPLEMENTATION_UIDS_H

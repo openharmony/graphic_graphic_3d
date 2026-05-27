@@ -19,6 +19,7 @@
 #include <scene/base/types.h>
 #include <scene/interface/postprocess/intf_bloom.h>
 #include <scene/interface/postprocess/intf_blur.h>
+#include <scene/interface/postprocess/intf_color_adjustments.h>
 #include <scene/interface/postprocess/intf_color_conversion.h>
 #include <scene/interface/postprocess/intf_color_fringe.h>
 #include <scene/interface/postprocess/intf_dof.h>
@@ -26,7 +27,6 @@
 #include <scene/interface/postprocess/intf_lens_flare.h>
 #include <scene/interface/postprocess/intf_motion_blur.h>
 #include <scene/interface/postprocess/intf_taa.h>
-#include <scene/interface/postprocess/intf_color_adjustments.h>
 #include <scene/interface/postprocess/intf_tonemap.h>
 #include <scene/interface/postprocess/intf_upscale.h>
 #include <scene/interface/postprocess/intf_vignette.h>

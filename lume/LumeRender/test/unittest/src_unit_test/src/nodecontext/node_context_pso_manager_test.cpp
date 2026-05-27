@@ -37,7 +37,7 @@ void TestNodeContextPsoManager(const UTest::EngineResources& engine)
 {
     ShaderManager& shaderMgr = static_cast<ShaderManager&>(engine.device->GetShaderManager());
     Device& device = *static_cast<Device*>(engine.device);
-    NodeContextPsoManager psoMgr { device, shaderMgr };
+    NodeContextPsoManager psoMgr{device, shaderMgr};
     {
         PipelineLayout pl;
         auto handle0 = psoMgr.GetComputePsoHandle({}, pl, {});
@@ -45,34 +45,34 @@ void TestNodeContextPsoManager(const UTest::EngineResources& engine)
         ASSERT_EQ(handle0, handle1);
     }
     {
-        RenderHandle plHandle {};
+        RenderHandle plHandle{};
         auto handle = psoMgr.GetComputePsoHandle({}, plHandle, {});
-        ASSERT_EQ(RenderHandle {}, handle);
+        ASSERT_EQ(RenderHandle{}, handle);
     }
     {
         RenderHandleReference shaderHandle =
             shaderMgr.GetShaderHandle("rendershaders://computeshader/GfxComputeGenericRenderNodeTest.shader");
         RenderHandleReference plHandle = shaderMgr.GetReflectionPipelineLayoutHandle(shaderHandle);
         auto handle = psoMgr.GetComputePsoHandle(shaderHandle.GetHandle(), plHandle.GetHandle(), {});
-        ASSERT_NE(RenderHandle {}, handle);
+        ASSERT_NE(RenderHandle{}, handle);
     }
     {
         GraphicsState gs;
         PipelineLayout pl;
         VertexInputDeclarationView vid;
         ShaderSpecializationConstantDataView spec;
-        constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT,
-            CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-        auto handle0 = psoMgr.GetGraphicsPsoHandle({}, gs, pl, vid, spec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
-        auto handle1 = psoMgr.GetGraphicsPsoHandle({}, gs, pl, vid, spec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        constexpr DynamicStateEnum DYNAMIC_STATES[] = {
+            CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+        auto handle0 = psoMgr.GetGraphicsPsoHandle({}, gs, pl, vid, spec, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
+        auto handle1 = psoMgr.GetGraphicsPsoHandle({}, gs, pl, vid, spec, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         ASSERT_EQ(handle0, handle1);
     }
     {
         RenderHandleReference shaderHandle =
             shaderMgr.GetShaderHandle("rendershaders://shader/ShaderPipelineBinderTest.shader");
-        auto handle = psoMgr.GetGraphicsPsoHandle(shaderHandle.GetHandle(), shaderHandle.GetHandle(), PipelineLayout {},
-            VertexInputDeclarationView {}, {}, {});
-        ASSERT_NE(RenderHandle {}, handle);
+        auto handle = psoMgr.GetGraphicsPsoHandle(
+            shaderHandle.GetHandle(), shaderHandle.GetHandle(), PipelineLayout{}, VertexInputDeclarationView{}, {}, {});
+        ASSERT_NE(RenderHandle{}, handle);
     }
 #if (RENDER_VALIDATION_ENABLED == 1)
     {
@@ -89,7 +89,7 @@ void TestNodeContextPsoManager(const UTest::EngineResources& engine)
     }
 #endif
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: NodeContextPsoManagerTest

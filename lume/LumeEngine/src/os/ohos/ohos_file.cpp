@@ -78,7 +78,8 @@ std::shared_ptr<OHOS::Global::Resource::ResourceManager> OhosResMgr::GetResMgr()
     return resourceManager_;
 }
 
-OhosFileDirectory::OhosFileDirectory(BASE_NS::refcnt_ptr<OhosResMgr> resMgr) : dirResMgr_(resMgr) {}
+OhosFileDirectory::OhosFileDirectory(BASE_NS::refcnt_ptr<OhosResMgr> resMgr) : dirResMgr_(resMgr)
+{}
 
 OhosFileDirectory::~OhosFileDirectory()
 {
@@ -115,6 +116,9 @@ bool OhosFileDirectory::IsFile(BASE_NS::string_view path) const
 
 bool OhosFileDirectory::Open(const BASE_NS::string_view pathIn)
 {
+    if (pathIn.empty()) {
+        return false;
+    }
     auto path = pathIn;
     if (path.back() == '/') {
         path.remove_suffix(1);
@@ -160,8 +164,8 @@ IDirectory::Entry OhosFileDirectory::GetEntry(BASE_NS::string_view uriIn) const
         }
         // timestamp set 0
         uint64_t timestamp = 0;
-        BASE_NS::string entryName { uriIn };
-        return IDirectory::Entry { type, entryName, timestamp };
+        BASE_NS::string entryName{uriIn};
+        return IDirectory::Entry{type, entryName, timestamp};
     }
     return {};
 }
@@ -181,7 +185,8 @@ IFile::Mode OhosFile::GetMode() const
     return IFile::Mode::READ_ONLY;
 }
 
-void OhosFile::Close() {}
+void OhosFile::Close()
+{}
 
 uint64_t OhosFile::Read(void* buffer, uint64_t count)
 {
@@ -284,7 +289,7 @@ bool OhosFile::GetResourceName(const std::string& uri, std::string& resName) con
 
 bool OhosFile::OpenRawFile(BASE_NS::string_view uriIn, size_t& dataLen, std::unique_ptr<uint8_t[]>& dest)
 {
-    std::string uri(uriIn.data());
+    std::string uri(uriIn.data(), uriIn.size());
     std::string rawFile;
     if (GetResourceId(uri, rawFile)) {
         auto state = fileResMgr_->GetResMgr()->GetRawFileFromHap(rawFile.c_str(), dataLen, dest);

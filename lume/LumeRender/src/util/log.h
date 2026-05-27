@@ -20,8 +20,13 @@
 
 #include <core/implementation_uids.h>
 #include <core/intf_logger.h>
+#include <core/plugin/intf_class_factory.h>
 #include <core/plugin/intf_class_register.h>
 #include <render/namespace.h>
+
+RENDER_BEGIN_NAMESPACE()
+CORE_NS::IPluginRegister& GetPluginRegister();
+RENDER_END_NAMESPACE()
 
 #define PLUGIN_ONCE_RESET RENDER_NS::PluginCheckOnceReset
 
@@ -140,11 +145,52 @@
 #endif
 
 RENDER_BEGIN_NAMESPACE()
+/** Get class instance from specified class registry */
+template <class T>
+auto GetInstance(const CORE_NS::IClassRegister& registry, const BASE_NS::Uid& uid)
+{
+    CORE_NS::IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
+    if (instance) {
+        return static_cast<T*>(instance->GetInterface(T::UID));
+    }
+    return static_cast<T*>(nullptr);
+}
+
+/** Get class instance from specified class registry */
+template <class T>
+auto GetInstance(const CORE_NS::IClassRegister* registry, const BASE_NS::Uid& uid)
+{
+    if (!registry) {
+        return static_cast<T*>(nullptr);
+    }
+    return RENDER_NS::GetInstance<T>(*registry, uid);
+}
+
+/** Get interface from global registry */
+template <class T>
+auto GetInstance(const BASE_NS::Uid& uid)
+{
+    return RENDER_NS::GetInstance<T>(RENDER_NS::GetPluginRegister().GetClassRegister(), uid);
+}
+
+/** Create interface from specified interface registry */
+template <class T>
+auto CreateInstance(CORE_NS::IClassFactory& factory, const BASE_NS::Uid& uid)
+{
+    // Create the instance
+    if (auto res = factory.CreateInstance(uid)) {
+        // Ask for the interface.
+        return typename T::Ptr(res->GetInterface<T>());
+    }
+    return typename T::Ptr();
+}
+
 inline CORE_NS::ILogger* GetPluginLogger()
 {
-    static CORE_NS::ILogger* gPluginGlobalLogger { nullptr };
+    static CORE_NS::ILogger* gPluginGlobalLogger{nullptr};
     if (gPluginGlobalLogger == nullptr) {
-        gPluginGlobalLogger = CORE_NS::GetInstance<CORE_NS::ILogger>(CORE_NS::UID_LOGGER);
+        gPluginGlobalLogger = RENDER_NS::GetInstance<CORE_NS::ILogger>(
+            RENDER_NS::GetPluginRegister().GetClassRegister(), CORE_NS::UID_LOGGER);
     }
     return gPluginGlobalLogger;
 }
@@ -196,4 +242,4 @@ inline void PluginCheckOnceReset(const BASE_NS::string_view /* id */)
 }
 RENDER_END_NAMESPACE()
 
-#endif // UTIL_PLUGIN_LOG_H
+#endif  // UTIL_PLUGIN_LOG_H

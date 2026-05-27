@@ -34,8 +34,8 @@ META_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-#define DECL_NO(A, B) { ObjectTypeInfo::UID }, ClassId::A, B
-#define DECL_AN(A, B) { ObjectTypeInfo::UID }, ClassId::A, B
+#define DECL_NO(A, B) {ObjectTypeInfo::UID}, ClassId::A, B
+#define DECL_AN(A, B) {ObjectTypeInfo::UID}, ClassId::A, B
 
 static constexpr ObjectTypeInfo OBJECTS[] = {
     AnimationController::OBJECT_INFO,
@@ -100,5 +100,5 @@ void UnRegisterBuiltInAnimations(IObjectRegistry& registry)
 
     UnRegisterDefaultInterpolators(registry);
 }
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

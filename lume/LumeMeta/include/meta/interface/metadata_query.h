@@ -21,8 +21,8 @@
 META_BEGIN_NAMESPACE()
 
 enum class MetadataQuery {
-    EXISTING,            /// Only return existing metadata objects
-    CONSTRUCT_ON_REQUEST /// Create on request if not exist yet (lazy)
+    EXISTING,             /// Only return existing metadata objects
+    CONSTRUCT_ON_REQUEST  /// Create on request if not exist yet (lazy)
 };
 
 META_END_NAMESPACE()

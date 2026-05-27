@@ -90,7 +90,7 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, DefaultMaterialTest, testing::ext:
     auto dataStoreDefaultMaterial = dsManager.Create(IRenderDataStoreDefaultMaterial::UID, dataStoreName.data());
     ASSERT_TRUE(dataStoreDefaultMaterial);
 
-    const uint32_t invalidId = ~0U; // built-in invalid
+    const uint32_t invalidId = ~0U;  // built-in invalid
     auto ds = static_cast<IRenderDataStoreDefaultMaterial*>(dataStoreDefaultMaterial.get());
     const uint32_t materialIndex = ds->GetMaterialIndex(invalidId);
     EXPECT_EQ(0U, materialIndex);
@@ -114,14 +114,16 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, DefaultMaterialTest, testing::ext:
             MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT |
             MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT |
             MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT |
-            MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT;
+            MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT |
+            MaterialComponent::LightingFlagBits::LIGHT_PROBE_RECEIVER_BIT;
         EXPECT_EQ(mcLightingFlags, expectedDefaultMc);
         // needs to match
         const RenderDataDefaultMaterial::MaterialData mdDefault;
         const uint32_t dsLightingFlags = mdDefault.renderMaterialFlags;
         constexpr uint32_t expectedDefaultDs = RENDER_MATERIAL_SHADOW_RECEIVER_BIT | RENDER_MATERIAL_SHADOW_CASTER_BIT |
                                                RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT |
-                                               RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT;
+                                               RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT |
+                                               RENDER_MATERIAL_LIGHT_PROBE_RECEIVER_BIT;
         EXPECT_EQ(dsLightingFlags, expectedDefaultDs);
     }
 
@@ -163,7 +165,7 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, UpdateMaterialTest, testing::ext::
     RenderDataDefaultMaterial::InputMaterialUniforms imu;
     imu.alphaCutoff = 0.25f;
     imu.texCoordSetBits = 1U;
-    imu.textureData[2U].factor = { 0.25f, 0.25f, 0.25f, 0.25f };
+    imu.textureData[2U].factor = {0.25f, 0.25f, 0.25f, 0.25f};
     const uint32_t matIdx = ds->UpdateMaterialData(matId, imu, {}, {}, {});
     {
         const auto& matUniforms = ds->GetMaterialUniforms();
@@ -204,9 +206,9 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, GetSetRenderSlotsTest, testing::ex
     auto dataStoreDefaultMaterial = static_cast<IRenderDataStoreDefaultMaterial*>(dataStore.get());
 
     {
-        uint32_t slots[] = { 0u, 3u, 12u };
+        uint32_t slots[] = {0u, 3u, 12u};
         dataStoreDefaultMaterial->SetRenderSlots(
-            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_OPAQUE, { slots, countof(slots) });
+            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_OPAQUE, {slots, countof(slots)});
         auto slotMask =
             dataStoreDefaultMaterial->GetRenderSlotMask(RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_OPAQUE);
         for (uint32_t slot : slots) {
@@ -214,9 +216,9 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, GetSetRenderSlotsTest, testing::ex
         }
     }
     {
-        uint32_t slots[] = { 1u, 15u, 2u, 4u };
+        uint32_t slots[] = {1u, 15u, 2u, 4u};
         dataStoreDefaultMaterial->SetRenderSlots(
-            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_DEPTH, { slots, countof(slots) });
+            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_DEPTH, {slots, countof(slots)});
         auto slotMask =
             dataStoreDefaultMaterial->GetRenderSlotMask(RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_DEPTH);
         for (uint32_t slot : slots) {
@@ -224,9 +226,9 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, GetSetRenderSlotsTest, testing::ex
         }
     }
     {
-        uint32_t slots[] = { 11u, 10u };
+        uint32_t slots[] = {11u, 10u};
         dataStoreDefaultMaterial->SetRenderSlots(
-            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_TRANSLUCENT, { slots, countof(slots) });
+            RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_TRANSLUCENT, {slots, countof(slots)});
         auto slotMask = dataStoreDefaultMaterial->GetRenderSlotMask(
             RenderDataDefaultMaterial::MaterialSlotType::SLOT_TYPE_TRANSLUCENT);
         for (uint32_t slot : slots) {
@@ -270,9 +272,9 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, AddMaterialDataTest, testing::ext:
         const uint64_t dummyEntityIndex = 6ULL;
 
         auto materialIndex = dataStoreDefaultMaterial->UpdateMaterialData(
-            entityIndex, uniforms, handles, data, { customPropertyData, countof(customPropertyData) });
+            entityIndex, uniforms, handles, data, {customPropertyData, countof(customPropertyData)});
         materialIndex = dataStoreDefaultMaterial->UpdateMaterialData(
-            entityIndex, uniforms, handles, data, { customPropertyData, countof(customPropertyData) }, {});
+            entityIndex, uniforms, handles, data, {customPropertyData, countof(customPropertyData)}, {});
         const auto matIdx = dataStoreDefaultMaterial->GetMaterialIndex(entityIndex);
         EXPECT_EQ(materialIndex, matIdx);
         EXPECT_EQ(materialIndex, dataStoreDefaultMaterial->UpdateMaterialData(entityIndex, uniforms, handles, data));
@@ -281,8 +283,12 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, AddMaterialDataTest, testing::ext:
         EXPECT_EQ(
             0, dataStoreDefaultMaterial->GetMaterialCustomPropertyData(RenderSceneDataConstants::INVALID_INDEX).size());
         RenderHandleReference rhr[3];
-        auto resIndex = dataStoreDefaultMaterial->UpdateMaterialData(entityIndex, uniforms, handles, data,
-            { customPropertyData, countof(customPropertyData) }, { rhr, countof(rhr) });
+        auto resIndex = dataStoreDefaultMaterial->UpdateMaterialData(entityIndex,
+            uniforms,
+            handles,
+            data,
+            {customPropertyData, countof(customPropertyData)},
+            {rhr, countof(rhr)});
         EXPECT_NE(RenderSceneDataConstants::INVALID_INDEX, resIndex);
 
         const auto frameIndices = dataStoreDefaultMaterial->GetMaterialFrameIndices();
@@ -325,7 +331,7 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, AddInstanceMaterialDataTest, testi
         const uint32_t meshEntityId = 6ULL;
 
         const auto materialIndex = dataStoreDefaultMaterial->UpdateMaterialData(
-            entityId, uniforms, {}, data, { customPropertyData, countof(customPropertyData) });
+            entityId, uniforms, {}, data, {customPropertyData, countof(customPropertyData)});
 
         MeshDataWithHandleReference meshData;
         meshData.meshId = meshEntityId;
@@ -403,10 +409,10 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
         Math::Mat4X4 matrices[16];
         Math::Mat4X4 prevMatrices[16];
         for (uint32_t i = 0; i < countof(matrices); ++i) {
-            matrices[i] = Math::Mat4X4 { 1.0f };
+            matrices[i] = Math::Mat4X4{1.0f};
         }
         for (uint32_t i = 0; i < countof(prevMatrices); ++i) {
-            prevMatrices[i] = Math::Mat4X4 { 2.0f };
+            prevMatrices[i] = Math::Mat4X4{2.0f};
         }
 
         const uint64_t meshId = 6;
@@ -419,8 +425,8 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
         rmd.id = 5;
         rmd.meshId = meshId;
         RenderMeshSkinData rmsd;
-        rmsd.skinJointMatrices = { matrices, countof(matrices) };
-        rmsd.prevSkinJointMatrices = { prevMatrices, countof(prevMatrices) };
+        rmsd.skinJointMatrices = {matrices, countof(matrices)};
+        rmsd.prevSkinJointMatrices = {prevMatrices, countof(prevMatrices)};
         dataStoreDefaultMaterial->AddFrameRenderMeshData(rmd, rmsd);
         dataStoreDefaultMaterial->SubmitFrameMeshData();
 
@@ -430,9 +436,9 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
             auto result = dataStoreDefaultMaterial->GetSubmeshJointMatrixData(submeshes[0].indices.skinJointIndex);
             ASSERT_EQ(countof(matrices) * 2, result.size());
             for (uint32_t matIdx = 0; matIdx < result.size(); ++matIdx) {
-                Math::Mat4X4 expectedMatrix { 1.0f };
+                Math::Mat4X4 expectedMatrix{1.0f};
                 if (matIdx >= countof(matrices)) {
-                    expectedMatrix = Math::Mat4X4 { 2.0f };
+                    expectedMatrix = Math::Mat4X4{2.0f};
                 }
                 for (uint32_t i = 0; i < 4u; ++i) {
                     for (uint32_t j = 0; j < 4u; ++j) {
@@ -449,10 +455,10 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
         Math::Mat4X4 matrices[16];
         Math::Mat4X4 prevMatrices[17];
         for (uint32_t i = 0; i < countof(matrices); ++i) {
-            matrices[i] = Math::Mat4X4 { 1.0f };
+            matrices[i] = Math::Mat4X4{1.0f};
         }
         for (uint32_t i = 0; i < countof(prevMatrices); ++i) {
-            prevMatrices[i] = Math::Mat4X4 { 2.0f };
+            prevMatrices[i] = Math::Mat4X4{2.0f};
         }
 
         const uint64_t meshId = 6;
@@ -465,8 +471,8 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
         rmd.id = 5;
         rmd.meshId = meshId;
         RenderMeshSkinData rmsd;
-        rmsd.skinJointMatrices = { matrices, countof(matrices) };
-        rmsd.prevSkinJointMatrices = { prevMatrices, countof(prevMatrices) };
+        rmsd.skinJointMatrices = {matrices, countof(matrices)};
+        rmsd.prevSkinJointMatrices = {prevMatrices, countof(prevMatrices)};
         dataStoreDefaultMaterial->AddFrameRenderMeshData(rmd, rmsd);
 
         dataStoreDefaultMaterial->SubmitFrameMeshData();
@@ -477,7 +483,54 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, SubmeshJointsTest, testing::ext::T
             auto result = dataStoreDefaultMaterial->GetSubmeshJointMatrixData(submeshes[0].indices.skinJointIndex);
             ASSERT_EQ(countof(matrices) * 2, result.size());
             for (uint32_t matIdx = 0; matIdx < result.size(); ++matIdx) {
-                Math::Mat4X4 expectedMatrix { 1.0f };
+                Math::Mat4X4 expectedMatrix{1.0f};
+                for (uint32_t i = 0; i < 4u; ++i) {
+                    for (uint32_t j = 0; j < 4u; ++j) {
+                        EXPECT_EQ(expectedMatrix[i][j], result[matIdx][i][j]);
+                    }
+                }
+            }
+        }
+    }
+    // If the skin needs more than the shared current+previous layout can hold, current matrices are kept and
+    // skinned velocity is disabled for the submesh.
+    {
+        dataStoreDefaultMaterial->Clear();
+
+        constexpr uint32_t jointCount = RenderDataDefaultMaterial::MAX_SKIN_MATRIX_COUNT_WITH_PREVIOUS + 1u;
+        Math::Mat4X4 matrices[jointCount];
+        Math::Mat4X4 prevMatrices[jointCount];
+        for (uint32_t i = 0; i < countof(matrices); ++i) {
+            matrices[i] = Math::Mat4X4{1.0f};
+            prevMatrices[i] = Math::Mat4X4{2.0f};
+        }
+
+        const uint64_t meshId = 6;
+        MeshDataWithHandleReference meshData;
+        meshData.meshId = meshId;
+        meshData.submeshes.push_back({});
+        meshData.submeshes[0].submeshFlags =
+            RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT | RenderSubmeshFlagBits::RENDER_SUBMESH_VELOCITY_BIT;
+        dataStoreDefaultMaterial->UpdateMeshData(meshId, meshData);
+
+        RenderMeshData rmd;
+        rmd.id = 5;
+        rmd.meshId = meshId;
+        RenderMeshSkinData rmsd;
+        rmsd.skinJointMatrices = {matrices, countof(matrices)};
+        rmsd.prevSkinJointMatrices = {prevMatrices, countof(prevMatrices)};
+        dataStoreDefaultMaterial->AddFrameRenderMeshData(rmd, rmsd);
+
+        dataStoreDefaultMaterial->SubmitFrameMeshData();
+
+        const auto submeshes = dataStoreDefaultMaterial->GetSubmeshes();
+        ASSERT_EQ(submeshes.size(), size_t(1));
+        if (!submeshes.empty()) {
+            EXPECT_EQ(0u, submeshes[0].submeshFlags & RenderSubmeshFlagBits::RENDER_SUBMESH_VELOCITY_BIT);
+            auto result = dataStoreDefaultMaterial->GetSubmeshJointMatrixData(submeshes[0].indices.skinJointIndex);
+            ASSERT_EQ(countof(matrices), result.size());
+            const Math::Mat4X4 expectedMatrix{1.0f};
+            for (uint32_t matIdx = 0; matIdx < result.size(); ++matIdx) {
                 for (uint32_t i = 0; i < 4u; ++i) {
                     for (uint32_t j = 0; j < 4u; ++j) {
                         EXPECT_EQ(expectedMatrix[i][j], result[matIdx][i][j]);
@@ -624,8 +677,8 @@ UNIT_TEST(API_RenderDataStoreDefaultMaterial, RenderSceneBoundingTest, testing::
         mesh.meshId = 1ULL;
         mesh.submeshes.resize(1U);
         mesh.submeshes[0].materialId = entityId;
-        mesh.submeshes[0].aabbMin = { -0.25f, -0.25f, -0.25f };
-        mesh.submeshes[0].aabbMax = { 0.75f, 0.75f, 0.75f };
+        mesh.submeshes[0].aabbMin = {-0.25f, -0.25f, -0.25f};
+        mesh.submeshes[0].aabbMax = {0.75f, 0.75f, 0.75f};
         dataStoreDefaultMaterial->UpdateMeshData(1ULL, mesh);
     }
     {

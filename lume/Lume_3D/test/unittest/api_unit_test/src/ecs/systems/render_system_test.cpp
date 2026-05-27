@@ -70,15 +70,14 @@ UNIT_TEST(API_EcsRenderSystem, GetRenderNodeGraphsTest, testing::ext::TestSize.L
 
     // Increment some component counter before updating render system
     LightComponent lightInfo;
-    Entity light = graphicsContext->GetSceneUtil().CreateLight(*ecs, lightInfo, Math::Vec3 {}, Math::Quat {});
+    Entity light = graphicsContext->GetSceneUtil().CreateLight(*ecs, lightInfo, Math::Vec3{}, Math::Quat{});
 
     EXPECT_TRUE(renderSystem->Update(false, 1u, 1u));
 
     // only scene render node graph expected
     EXPECT_EQ(1, renderSystem->GetRenderNodeGraphs().size());
 
-    Entity camera =
-        graphicsContext->GetSceneUtil().CreateCamera(*ecs, Math::Vec3 {}, Math::Quat {}, 0.1f, 100.0f, 75.0f);
+    Entity camera = graphicsContext->GetSceneUtil().CreateCamera(*ecs, Math::Vec3{}, Math::Quat{}, 0.1f, 100.0f, 75.0f);
 
     // Update all systems
     ecs->Update(2u, 1u);

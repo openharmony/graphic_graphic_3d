@@ -42,8 +42,13 @@
 #undef VMA_NOT_NULL
 #define VMA_NOT_NULL
 #endif
+#define VMA_IMPLEMENTATION
 #if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
-#include "vk_mem_alloc.h"
+#ifdef USE_M133_SKIA
+#include <third_party/externals/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#else
+#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#endif
 #else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
@@ -72,7 +77,7 @@
 
 using namespace BASE_NS;
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::GpuBufferDesc& desc)
 {
     const uint64_t importantEngineCreationFlags =
@@ -86,7 +91,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GpuBufferDesc& desc)
     return seed;
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::GpuImageDesc& desc)
 {
     const uint64_t importantImageUsageFlags =
@@ -107,25 +112,31 @@ CORE_PROFILER_SYMBOL(MEMORY_MAPPED_POOL, "mapped_memory");
 
 void LogStats(VmaAllocator aAllocator)
 {
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
         if (!pdm) {
             return;
         }
 
-        VmaBudget budgets[VK_MAX_MEMORY_HEAPS] {};
+        VmaBudget budgets[VK_MAX_MEMORY_HEAPS]{};
         vmaGetHeapBudgets(aAllocator, budgets);
-        VmaStatistics stats {};
+        VmaStatistics stats{};
         for (const VmaBudget& budget : budgets) {
             stats.blockBytes += budget.statistics.blockBytes;
             stats.allocationBytes += budget.statistics.allocationBytes;
         }
-        pdm->UpdateData("VMA Memory", "AllGraphicsMemory", int64_t(stats.blockBytes),
+        pdm->UpdateData("VMA Memory",
+            "AllGraphicsMemory",
+            int64_t(stats.blockBytes),
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
-        pdm->UpdateData("VMA Memory", "GraphicsMemoryInUse", int64_t(stats.allocationBytes),
+        pdm->UpdateData("VMA Memory",
+            "GraphicsMemoryInUse",
+            int64_t(stats.allocationBytes),
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
-        pdm->UpdateData("VMA Memory", "GraphicsMemoryNotInUse", int64_t(stats.blockBytes - stats.allocationBytes),
+        pdm->UpdateData("VMA Memory",
+            "GraphicsMemoryNotInUse",
+            int64_t(stats.blockBytes - stats.allocationBytes),
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
@@ -133,7 +144,7 @@ void LogStats(VmaAllocator aAllocator)
 
 VmaVulkanFunctions GetVmaVulkanFunctions(VkInstance instance, VkDevice device)
 {
-    VmaVulkanFunctions funs {};
+    VmaVulkanFunctions funs{};
 #ifdef USE_NEW_VMA
     funs.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
     funs.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
@@ -181,7 +192,7 @@ VmaVulkanFunctions GetVmaVulkanFunctions(VkInstance instance, VkDevice device)
 #endif
     return funs;
 }
-} // namespace
+}  // namespace
 
 PlatformGpuMemoryAllocator::PlatformGpuMemoryAllocator(VkInstance instance, VkPhysicalDevice physicalDevice,
     VkDevice device, const GpuMemoryAllocatorCreateInfo& createInfo)
@@ -232,14 +243,14 @@ PlatformGpuMemoryAllocator::~PlatformGpuMemoryAllocator()
 
     for (auto ref : customGpuBufferPools_) {
         if (ref != VK_NULL_HANDLE) {
-            vmaDestroyPool(allocator_, // allocator
-                ref);                  // pool
+            vmaDestroyPool(allocator_,  // allocator
+                ref);                   // pool
         }
     }
     for (auto ref : customGpuImagePools_) {
         if (ref != VK_NULL_HANDLE) {
-            vmaDestroyPool(allocator_, // allocator
-                ref);                  // pool
+            vmaDestroyPool(allocator_,  // allocator
+                ref);                   // pool
         }
     }
 
@@ -250,12 +261,12 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
     const VmaAllocationCreateInfo& allocationCreateInfo, VkBuffer& buffer, VmaAllocation& allocation,
     VmaAllocationInfo& allocationInfo)
 {
-    VkResult result = vmaCreateBuffer(allocator_, // allocator,
-        &bufferCreateInfo,                        // pBufferCreateInfo
-        &allocationCreateInfo,                    // pAllocationCreateInfo
-        &buffer,                                  // pBuffer
-        &allocation,                              // pAllocation
-        &allocationInfo);                         // pAllocationInfo
+    VkResult result = vmaCreateBuffer(allocator_,  // allocator,
+        &bufferCreateInfo,                         // pBufferCreateInfo
+        &allocationCreateInfo,                     // pAllocationCreateInfo
+        &buffer,                                   // pBuffer
+        &allocation,                               // pAllocation
+        &allocationInfo);                          // pAllocationInfo
     if (result != VK_SUCCESS) {
         if ((result == VK_ERROR_OUT_OF_DEVICE_MEMORY) && (allocationCreateInfo.pool != VK_NULL_HANDLE)) {
             PLUGIN_LOG_D(
@@ -270,7 +281,8 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
         if (result != VK_SUCCESS) {
             PLUGIN_LOG_E(
                 "VKResult not VK_SUCCESS in buffer memory allocation(result : %i), (allocation bytesize : %" PRIu64 ")",
-                (int32_t)result, bufferCreateInfo.size);
+                (int32_t)result,
+                bufferCreateInfo.size);
         }
     }
 
@@ -293,9 +305,9 @@ void PlatformGpuMemoryAllocator::DestroyBuffer(VkBuffer buffer, VmaAllocation al
     }
 #endif
 
-    vmaDestroyBuffer(allocator_, // allocator
-        buffer,                  // buffer
-        allocation);             // allocation
+    vmaDestroyBuffer(allocator_,  // allocator
+        buffer,                   // buffer
+        allocation);              // allocation
 
 #if (RENDER_PERF_ENABLED == 1)
     if (allocation) {
@@ -310,12 +322,12 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
     const VmaAllocationCreateInfo& allocationCreateInfo, VkImage& image, VmaAllocation& allocation,
     VmaAllocationInfo& allocationInfo)
 {
-    VkResult result = vmaCreateImage(allocator_, // allocator,
-        &imageCreateInfo,                        // pImageCreateInfo
-        &allocationCreateInfo,                   // pAllocationCreateInfo
-        &image,                                  // pImage
-        &allocation,                             // pAllocation
-        &allocationInfo);                        // pAllocationInfo
+    VkResult result = vmaCreateImage(allocator_,  // allocator,
+        &imageCreateInfo,                         // pImageCreateInfo
+        &allocationCreateInfo,                    // pAllocationCreateInfo
+        &image,                                   // pImage
+        &allocation,                              // pAllocation
+        &allocationInfo);                         // pAllocationInfo
     if ((result == VK_ERROR_OUT_OF_DEVICE_MEMORY) && (allocationCreateInfo.pool != VK_NULL_HANDLE)) {
         PLUGIN_LOG_D("Out of memory for image with custom memory pool (i.e. block size might be exceeded), falling "
                      "back to default memory pool");
@@ -326,7 +338,8 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
     }
     if (result != VK_SUCCESS) {
         PLUGIN_LOG_E("VKResult not VK_SUCCESS in image memory allocation(result : %i) (bytesize : %" PRIu64 ")",
-            (int32_t)result, allocationInfo.size);
+            (int32_t)result,
+            allocationInfo.size);
     }
 
 #if (RENDER_PERF_ENABLED == 1)
@@ -348,9 +361,9 @@ void PlatformGpuMemoryAllocator::DestroyImage(VkImage image, VmaAllocation alloc
     }
 #endif
 
-    vmaDestroyImage(allocator_, // allocator
-        image,                  // image
-        allocation);            // allocation
+    vmaDestroyImage(allocator_,  // allocator
+        image,                   // image
+        allocation);             // allocation
 
 #if (RENDER_PERF_ENABLED == 1)
     if (allocation) {
@@ -404,7 +417,7 @@ VmaPool PlatformGpuMemoryAllocator::GetImagePool(const GpuImageDesc& desc) const
 
 void* PlatformGpuMemoryAllocator::MapMemory(VmaAllocation allocation)
 {
-    void* data { nullptr };
+    void* data{nullptr};
     VALIDATE_VK_RESULT(vmaMapMemory(allocator_, allocation, &data));
 #if RENDER_PERF_ENABLED
     CORE_PROFILER_ALLOC_N(data, (uint64_t)allocation->GetSize(), MEMORY_MAPPED_POOL);
@@ -438,13 +451,13 @@ void PlatformGpuMemoryAllocator::CreatePoolForBuffers(const GpuMemoryAllocatorCu
     bufferCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferCreateInfo.usage = VkBufferUsageFlagBits(buf.usageFlags);
     bufferCreateInfo.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.size = 1024u; // default reference size
+    bufferCreateInfo.size = 1024u;  // default reference size
 
     uint32_t memoryTypeIndex = 0;
-    VALIDATE_VK_RESULT(vmaFindMemoryTypeIndexForBufferInfo(allocator_, // pImageCreateInfo
-        &bufferCreateInfo,                                             // pBufferCreateInfo
-        &allocationCreateInfo,                                         // pAllocationCreateInfo
-        &memoryTypeIndex));                                            // pMemoryTypeIndex
+    VALIDATE_VK_RESULT(vmaFindMemoryTypeIndexForBufferInfo(allocator_,  // pImageCreateInfo
+        &bufferCreateInfo,                                              // pBufferCreateInfo
+        &allocationCreateInfo,                                          // pAllocationCreateInfo
+        &memoryTypeIndex));                                             // pMemoryTypeIndex
 
     VmaPoolCreateInfo poolCreateInfo = {};
     poolCreateInfo.flags = (customPool.linearAllocationAlgorithm)
@@ -459,9 +472,9 @@ void PlatformGpuMemoryAllocator::CreatePoolForBuffers(const GpuMemoryAllocatorCu
     PLUGIN_ASSERT_MSG(hashCount == 0, "similar buffer pool already created");
     if (hashCount == 0) {
         VmaPool pool = VK_NULL_HANDLE;
-        VALIDATE_VK_RESULT(vmaCreatePool(allocator_, // allocator
-            &poolCreateInfo,                         // pCreateInfo
-            &pool));                                 // pPool
+        VALIDATE_VK_RESULT(vmaCreatePool(allocator_,  // allocator
+            &poolCreateInfo,                          // pCreateInfo
+            &pool));                                  // pPool
 
         customGpuBufferPools_.push_back(pool);
         hashToGpuBufferPoolIndex_[hash] = (uint32_t)customGpuBufferPools_.size() - 1;
@@ -487,16 +500,16 @@ void PlatformGpuMemoryAllocator::CreatePoolForImages(const GpuMemoryAllocatorCus
     imageCreateInfo.imageType = VkImageType(img.imageType);
     imageCreateInfo.format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
     imageCreateInfo.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-    imageCreateInfo.extent = VkExtent3D { 1024u, 1024u, 1 }; // default reference size
+    imageCreateInfo.extent = VkExtent3D{1024u, 1024u, 1};  // default reference size
     imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.mipLevels = 1;
     imageCreateInfo.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
     uint32_t memoryTypeIndex = 0;
-    VALIDATE_VK_RESULT(vmaFindMemoryTypeIndexForImageInfo(allocator_, // pImageCreateInfo
-        &imageCreateInfo,                                             // pImageCreateInfo
-        &allocationCreateInfo,                                        // pAllocationCreateInfo
-        &memoryTypeIndex));                                           // pMemoryTypeIndex
+    VALIDATE_VK_RESULT(vmaFindMemoryTypeIndexForImageInfo(allocator_,  // pImageCreateInfo
+        &imageCreateInfo,                                              // pImageCreateInfo
+        &allocationCreateInfo,                                         // pAllocationCreateInfo
+        &memoryTypeIndex));                                            // pMemoryTypeIndex
 
     VmaPoolCreateInfo poolCreateInfo = {};
     poolCreateInfo.flags = (customPool.linearAllocationAlgorithm)
@@ -510,9 +523,9 @@ void PlatformGpuMemoryAllocator::CreatePoolForImages(const GpuMemoryAllocatorCus
     PLUGIN_ASSERT_MSG(hashCount == 0, "similar image pool already created");
     if (hashCount == 0) {
         VmaPool pool = VK_NULL_HANDLE;
-        VALIDATE_VK_RESULT(vmaCreatePool(allocator_, // allocator
-            &poolCreateInfo,                         // pCreateInfo
-            &pool));                                 // pPool
+        VALIDATE_VK_RESULT(vmaCreatePool(allocator_,  // allocator
+            &poolCreateInfo,                          // pCreateInfo
+            &pool));                                  // pPool
 
         customGpuImagePools_.push_back(pool);
         hashToGpuImagePoolIndex_[hash] = (uint32_t)customGpuImagePools_.size() - 1;

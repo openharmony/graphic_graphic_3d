@@ -87,9 +87,10 @@ std::filesystem::path U8Path(string_view str)
     return std::filesystem::u8path(str.begin().ptr(), str.end().ptr());
 }
 #endif
-} // namespace
+}  // namespace
 
-StdFile::StdFile(Mode mode, std::fstream&& stream) : mode_(mode), file_(BASE_NS::move(stream)) {}
+StdFile::StdFile(Mode mode, std::fstream&& stream) : mode_(mode), file_(BASE_NS::move(stream))
+{}
 
 StdFile::~StdFile()
 {
@@ -121,16 +122,18 @@ IFile::Ptr StdFile::Open(const string_view path, Mode mode)
     }
 
     if (auto stream = std::fstream(canonicalPath, OpenFileAccessMode(mode)); stream) {
-        return IFile::Ptr { BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release() };
+        return IFile::Ptr{BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release()};
     }
 #else
-    char canonicalPath[CORE_MAX_PATH] = { 0 };
+    char canonicalPath[CORE_MAX_PATH] = {0};
     if (realpath(string(path).c_str(), canonicalPath) == nullptr) {
         return {};
     }
-
+    if (!FileExists(canonicalPath)) {
+        return {};
+    }
     if (auto stream = std::fstream(canonicalPath, OpenFileAccessMode(mode)); stream) {
-        return IFile::Ptr { BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release() };
+        return IFile::Ptr{BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release()};
     }
 
 #endif
@@ -151,13 +154,13 @@ IFile::Ptr StdFile::Create(const string_view path, Mode mode)
     }
     // Create the file.
     if (auto stream = std::fstream(canonicalPath, CreateFileAccessMode(mode)); stream) {
-        return IFile::Ptr { BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release() };
+        return IFile::Ptr{BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release()};
     }
 #else
     // NOTE: As realpath requires that the path exists, we check that the
     // parent dir is valid instead of the full path of the file being created.
     const string parentDir = StdDirectory::GetDirName(path);
-    char canonicalParentPath[CORE_MAX_PATH] = { 0 };
+    char canonicalParentPath[CORE_MAX_PATH] = {0};
     if (realpath(parentDir.c_str(), canonicalParentPath) == nullptr) {
         return {};
     }
@@ -166,7 +169,7 @@ IFile::Ptr StdFile::Create(const string_view path, Mode mode)
 
     // Create the file.
     if (auto stream = std::fstream(fullPath.data(), CreateFileAccessMode(mode)); stream) {
-        return IFile::Ptr { BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release() };
+        return IFile::Ptr{BASE_NS::make_unique<StdFile>(mode, BASE_NS::move(stream)).release()};
     }
 #endif
     return {};
@@ -202,8 +205,18 @@ uint64_t StdFile::Read(void* buffer, uint64_t count)
 uint64_t StdFile::Write(const void* buffer, uint64_t count)
 {
     const auto pos = file_.tellp();
+    if (pos < 0) {
+        return 0;
+    }
     file_.write(static_cast<const char*>(buffer), static_cast<std::streamsize>(count));
-    return static_cast<uint64_t>(file_.tellp() - pos);
+    if (!file_.good()) {
+        return 0;
+    }
+    const auto endPos = file_.tellp();
+    if (endPos < 0) {
+        return 0;
+    }
+    return static_cast<uint64_t>(endPos - pos);
 }
 
 uint64_t StdFile::Append(const void* buffer, uint64_t count, uint64_t flushSize)

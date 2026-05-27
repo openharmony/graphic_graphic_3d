@@ -1,0 +1,27 @@
+{
+	"version": "1.0",
+	"description": "attachment with NodeRef objectRef pointing at a non-node resource (a material)",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_att_objref_wrong_type.index",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "node",
+					"name": "host",
+					"attachments": [
+						{
+							"objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+							"properties": [
+								{ "name": "Name", "value": "RefAtt" },
+								{ "name": "NodeRef", "value": { "type": "objectRef", "path": "@someMat" } }
+							]
+						}
+					]
+				}
+			]
+		}
+	}
+}

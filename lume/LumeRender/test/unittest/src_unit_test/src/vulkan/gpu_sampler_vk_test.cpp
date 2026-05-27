@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/gpu_sampler_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -48,7 +48,7 @@ UNIT_TEST(SRC_GpuSampler, GpuSamplerTestVulkan, testing::ext::TestSize.Level1)
         desc.enableCompareOp = true;
         desc.borderColor = CORE_BORDER_COLOR_INT_OPAQUE_WHITE;
         desc.engineCreationFlags = 0;
-        GpuSamplerVk sampler { device, desc };
+        GpuSamplerVk sampler{device, desc};
         auto realDesc = sampler.GetDesc();
         ASSERT_EQ(desc.enableCompareOp, realDesc.enableCompareOp);
         ASSERT_EQ(desc.borderColor, realDesc.borderColor);
@@ -57,7 +57,7 @@ UNIT_TEST(SRC_GpuSampler, GpuSamplerTestVulkan, testing::ext::TestSize.Level1)
         GpuSamplerDesc desc;
         desc.enableCompareOp = true;
         desc.borderColor = CORE_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-        GpuSamplerVk sampler { device, desc };
+        GpuSamplerVk sampler{device, desc};
         auto realDesc = sampler.GetDesc();
         ASSERT_EQ(desc.enableCompareOp, realDesc.enableCompareOp);
         ASSERT_EQ(desc.borderColor, realDesc.borderColor);
@@ -65,4 +65,4 @@ UNIT_TEST(SRC_GpuSampler, GpuSamplerTestVulkan, testing::ext::TestSize.Level1)
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

@@ -66,9 +66,9 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 constexpr string_view TAA_SHADER_NAME = "rendershaders://shader/fullscreen_taa.shader";
-} // namespace
+}  // namespace
 
 RenderPostProcessTaaNode::RenderPostProcessTaaNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -144,7 +144,7 @@ RenderPass RenderPostProcessTaaNode::CreateRenderPass(const RenderHandle input) 
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -173,8 +173,10 @@ BASE_NS::Math::Vec4 RenderPostProcessTaaNode::GetFactorTaa() const
 
     const float vcb = *(reinterpret_cast<float*>(&varianceClippingBicubic));
 
-    return { static_cast<float>(effectProperties_.taaConfiguration.sharpness),
-        static_cast<float>(effectProperties_.taaConfiguration.quality), vcb, alpha };
+    return {static_cast<float>(effectProperties_.taaConfiguration.sharpness),
+        static_cast<float>(effectProperties_.taaConfiguration.quality),
+        vcb,
+        alpha};
 }
 
 void RenderPostProcessTaaNode::ExecuteFrame(IRenderCommandList& cmdList)
@@ -188,8 +190,12 @@ void RenderPostProcessTaaNode::ExecuteFrame(IRenderCommandList& cmdList)
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.shader);
-        pso_ = psoMgr.GetGraphicsPsoHandle(shaderData_.shader, gfxHandle, shaderData_.pipelineLayout, {}, {},
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        pso_ = psoMgr.GetGraphicsPsoHandle(shaderData_.shader,
+            gfxHandle,
+            shaderData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
@@ -215,8 +221,7 @@ void RenderPostProcessTaaNode::ExecuteFrame(IRenderCommandList& cmdList)
     if (shaderData_.pipelineLayoutData.pushConstant.byteSize > 0U) {
         const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
         const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-            GetFactorTaa() };
+        const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, GetFactorTaa()};
         cmdList.PushConstantData(shaderData_.pipelineLayoutData.pushConstant, arrayviewU8(pc));
     }
 

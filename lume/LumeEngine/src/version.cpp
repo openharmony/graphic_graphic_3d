@@ -32,12 +32,12 @@ CORE_PUBLIC BASE_NS::string_view GetVersionBranch()
 #ifdef NDEBUG
 CORE_PUBLIC bool IsDebugBuild()
 {
-    return true;
+    return false;
 }
 #else
 CORE_PUBLIC bool IsDebugBuild()
 {
-    return false;
+    return true;
 }
 #endif
 CORE_END_NAMESPACE()

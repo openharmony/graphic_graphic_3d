@@ -317,7 +317,7 @@ interface Camera: Node {
     @get getRenderingPipeline(): Optional<RenderingPipelineType>;
     @set setRenderingPipeline(renderingPipeline: Optional<RenderingPipelineType>): void;
 
-    @gen_promise("raycast")
+    @promise @rename("raycast")
     raycastSync(viewPosition: Vec2, params: RaycastParameters): Array<RaycastResult>;
 
     worldToScreen(worldPosition: Vec3): Vec3;

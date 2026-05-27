@@ -35,37 +35,37 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IPostProcessConfigurationComponentManager, PostProcessConfigurationComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    /** Custom post process effect */
-    struct PostProcessEffect {
-        /** Name of the post process (e.g. "custom_effect"). The name enables finding of the data. */
-        BASE_NS::string name {};
-        /** Optional: global user factor index if the post process factor is to be used in generic pipelines. */
-        uint32_t globalUserFactorIndex { ~0u };
-        /** Optional: custom post process shader from which the custom properties are tried to fetch. */
-        CORE_NS::EntityReference shader {};
+/** Custom post process effect */
+struct PostProcessEffect {
+    /** Name of the post process (e.g. "custom_effect"). The name enables finding of the data. */
+    BASE_NS::string name{};
+    /** Optional: global user factor index if the post process factor is to be used in generic pipelines. */
+    uint32_t globalUserFactorIndex{~0u};
+    /** Optional: custom post process shader from which the custom properties are tried to fetch. */
+    CORE_NS::EntityReference shader{};
 
-        /** Enabled. The built-in post processing render nodes support enabling these effects. */
-        bool enabled { false };
+    /** Enabled. The built-in post processing render nodes support enabling these effects. */
+    bool enabled{false};
 
-        /** Additional customization flags. */
-        uint32_t flags { 0u };
+    /** Additional customization flags. */
+    uint32_t flags{0u};
 
-        /** Factor data. Used in global user factor and in local post process push data. */
-        BASE_NS::Math::Vec4 factor { 0.0f, 0.0f, 0.0f, 0.0f };
-        /** Custom effect property data. Used in local factors. Tries to fetch these from the shader. */
-        CORE_NS::IPropertyHandle* customProperties { nullptr };
-    };
+    /** Factor data. Used in global user factor and in local post process push data. */
+    BASE_NS::Math::Vec4 factor{0.0f, 0.0f, 0.0f, 0.0f};
+    /** Custom effect property data. Used in local factors. Tries to fetch these from the shader. */
+    CORE_NS::IPropertyHandle* customProperties{nullptr};
+};
 #endif
 
-    /** Post processes.
-     */
-    DEFINE_PROPERTY(BASE_NS::vector<PostProcessEffect>, postProcesses, "Post Processes", 0, )
+/** Post processes.
+ */
+DEFINE_PROPERTY(BASE_NS::vector<PostProcessEffect>, postProcesses, "Post Processes", 0, )
 
-    /** Custom post process render node graph file. (Can be patched with e.g. post process ids etc.)
-     * Chosen automatically to camera post processes if the entity of the component is attached
-     * to CameraComponent::postProcess
-     */
-    DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Post Process RNG File", 0, )
+/** Custom post process render node graph file. (Can be patched with e.g. post process ids etc.)
+ * Chosen automatically to camera post processes if the entity of the component is attached
+ * to CameraComponent::postProcess
+ */
+DEFINE_PROPERTY(BASE_NS::string, customRenderNodeGraphFile, "Custom Post Process RNG File", 0, )
 
 END_COMPONENT(IPostProcessConfigurationComponentManager, PostProcessConfigurationComponent,
     "050af984-be02-49ae-b950-19b829252769")

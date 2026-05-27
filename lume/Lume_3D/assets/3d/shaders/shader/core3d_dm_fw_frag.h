@@ -47,9 +47,10 @@ ClearcoatShadingVariables GetUnpackedAndSampledClearcoat(const uint matInstanceI
     const float cc = GetUnpackClearcoat(matInstanceIdx);
     const float ccRoughness = GetUnpackClearcoatRoughness(matInstanceIdx);
     ClearcoatShadingVariables ccsv;
-    ccsv.cc = clamp(GetClearcoatSample(inUv, matInstanceIdx) * cc, 0.0, 1.0); // 0.0 - 1.0
+    ccsv.cc = clamp(GetClearcoatSample(inUv, matInstanceIdx) * cc, 0.0, 1.0);  // 0.0 - 1.0
     ccsv.ccNormal = ccNormal;
-    ccsv.ccRoughness = GetClearcoatRoughnessSample(inUv, matInstanceIdx) * ccRoughness; // CORE_BRDF_MIN_ROUGHNESS - 1.0
+    ccsv.ccRoughness =
+        GetClearcoatRoughnessSample(inUv, matInstanceIdx) * ccRoughness;  // CORE_BRDF_MIN_ROUGHNESS - 1.0
     // geometric correction doesn't behave that well with clearcoat due to it being basically 0 roughness
     ccsv.ccRoughness = clamp(ccsv.ccRoughness, CORE_BRDF_MIN_ROUGHNESS, 1.0);
     CORE_RELAXEDP const float ccAlpha = ccsv.ccRoughness * ccsv.ccRoughness;
@@ -62,7 +63,7 @@ SheenShadingVariables GetUnpackedAndSampledSheen(const uint matInstanceIdx)
     const vec4 sheen = GetUnpackSheen(matInstanceIdx);
     SheenShadingVariables ssv;
     ssv.sheenColor = GetSheenSample(inUv, matInstanceIdx) * sheen.xyz;
-    ssv.sheenRoughness = GetSheenRoughnessSample(inUv, matInstanceIdx) * sheen.w; // CORE_BRDF_MIN_ROUGHNESS - 1.0
+    ssv.sheenRoughness = GetSheenRoughnessSample(inUv, matInstanceIdx) * sheen.w;  // CORE_BRDF_MIN_ROUGHNESS - 1.0
     ssv.sheenColorMax = max(ssv.sheenColor.r, max(ssv.sheenColor.g, ssv.sheenColor.b));
     return ssv;
 }
@@ -128,11 +129,11 @@ vec4 unlitShadowAlpha()
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
     CORE_RELAXEDP float fullShadowCoeff = 1.0;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = min(1.0, dot(N, L));
         if (NoL <= 0.0) {
             continue;
@@ -143,11 +144,12 @@ vec4 unlitShadowAlpha()
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(inPos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -181,12 +183,13 @@ vec4 unlitShadowAlpha()
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(inPos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                               CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                         shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                             shadowCoord,
                             NoL,
@@ -233,6 +236,7 @@ vec4 pbrBasic()
     const CORE_RELAXEDP vec4 baseColor = GetUnpackBaseColorFinalValue(inColor, inUv, matInstanceIdx);
 
     const vec3 normNormal = normalize(inNormal.xyz);
+
     vec3 N = normNormal;
     vec3 clearcoatN = normNormal;
     // clear coat normal is calculated if normal_map_bit and if clearcoat_bit
@@ -305,7 +309,7 @@ vec4 pbrBasic()
     shadingData.cameraIdx = cameraIdx;
     CORE_RELAXEDP const float roughness = brdfData.roughness;
 
-    vec3 color = vec3(0.0); // brdfData.diffuseColor
+    vec3 color = vec3(0.0);  // brdfData.diffuseColor
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) ==
         CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
         color += CalculateLightingInplace(shadingData, clearcoatSV, sheenSV);
@@ -321,6 +325,17 @@ vec4 pbrBasic()
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT) ==
             CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT) {
             irradiance = CoreGetIrradianceSample(shadingData.N) * shadingData.diffuseColor * ao;
+        } else if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_LIGHT_PROBE_RECEIVER_BIT) ==
+                   CORE_MATERIAL_LIGHT_PROBE_RECEIVER_BIT) {
+            // light probe
+            irradiance = GetLightProbeShCoefficients(shadingData.N, uLightProbeDataIndexData.lightProbeDataIndex);
+#if 0
+            CORE_RELAXEDP float occlusion =
+            GetLightProbeOcclusion(shadingData.N, uLightProbeDataIndexData.lightProbeDataIndex);
+#else
+            CORE_RELAXEDP float occlusion = 1.0f;
+#endif
+            irradiance *= occlusion * shadingData.diffuseColor;
         } else {
             // get only the environment sample
             irradiance = GetIrradianceIndirectLambertSample() * shadingData.diffuseColor * ao;
@@ -345,9 +360,9 @@ vec4 pbrBasic()
             CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
             // Approximate double refraction by assuming a solid sphere beneath the point.
             const float ior = 1.0;
-            const float eta = (1.0 / 1.5); // expecting glass
+            const float eta = (1.0 / 1.5);  // expecting glass
             // NOTE: ATM use direct refract (no sphere mapping)
-            const vec3 rr = -V; // refract(-V, N, 1.0 / ior);
+            const vec3 rr = -V;  // refract(-V, N, 1.0 / ior);
             const CORE_RELAXEDP vec3 transmissionRadianceSample = GetTransmissionRadianceSample(fragUv, rr, roughness);
 
             AppendIndirectTransmission(transmissionRadianceSample, baseColor.rgb, transmission, irradiance);
@@ -377,4 +392,4 @@ vec4 pbrBasic()
     return GetPackPbrColor(color.rgb, baseColor.a);
 }
 
-#endif // CORE3D_DM_FW_FRAG_H
+#endif  // CORE3D_DM_FW_FRAG_H

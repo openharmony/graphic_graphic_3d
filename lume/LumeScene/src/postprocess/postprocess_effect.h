@@ -30,7 +30,7 @@ SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template<typename PPInterface, uint32_t PPBit>
+template <typename PPInterface, uint32_t PPBit>
 class PostProcessEffect : public META_NS::IntroduceInterfaces<EcsLazyProperty, IPPEffectInit, META_NS::IContainable,
                               META_NS::IMutableContainable, PPInterface> {
 public:
@@ -57,8 +57,8 @@ public:
         }
         if (p->GetName() == "Enabled") {
             return flags_ &&
-                   PushPropertyValue(p, META_NS::IValue::Ptr {
-                                            new ConvertingValue<PPEffectEnabledConverter<PPBit>>(flags_, { flags_ }) });
+                   PushPropertyValue(
+                       p, META_NS::IValue::Ptr{new ConvertingValue<PPEffectEnabledConverter<PPBit>>(flags_, {flags_})});
         }
         return this->AttachEngineProperty(p, GetPropertyPath(path));
     }
@@ -74,8 +74,8 @@ private:
     META_NS::Property<uint32_t> flags_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_POSTPROCESS_EFFECT_H
+#endif  // SCENE_SRC_POSTPROCESS_EFFECT_H

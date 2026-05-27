@@ -65,25 +65,25 @@
 #include "util/json_util.h"
 #include "util/log.h"
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const bool& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::ComponentType& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::DataType& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::BufferTarget& val)
 {
     return static_cast<uint64_t>(val);
@@ -220,7 +220,7 @@ inline bool operator<(const RenderHandleReference& lhs, const RenderHandleRefere
 }
 
 /* Returns the index where the given object is in the vector. */
-template<typename T>
+template <typename T>
 int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 {
     const auto comparePointers = [ptr = &object](const auto& aUniqueObject) { return aUniqueObject.get() == ptr; };
@@ -232,7 +232,7 @@ int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 }
 
 /* Returns the index where the given handle is in the vector. */
-template<typename T>
+template <typename T>
 uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 {
     if (const auto handlePos = std::find(handles.begin(), handles.end(), handle); handlePos != handles.end()) {
@@ -242,7 +242,7 @@ uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 }
 
 /* Returns the index where the given handle is in the vector. If the handle was not in the vector it is added. */
-template<typename T>
+template <typename T>
 uint32_t FindOrAddIndex(vector<T>& handles, const T& handle)
 {
     if (const auto handlePos =
@@ -259,7 +259,7 @@ class BufferHelper {
 public:
     BufferHelper(
         Buffer& buffer, vector<unique_ptr<BufferView>>& usedBufferViews, vector<unique_ptr<Accessor>>& usedAccessors)
-        : usedBufferViews_(usedBufferViews), usedAccessors_(usedAccessors), buffer_(buffer) {};
+        : usedBufferViews_(usedBufferViews), usedAccessors_(usedAccessors), buffer_(buffer){};
 
     ~BufferHelper() = default;
 
@@ -291,10 +291,18 @@ public:
         if (accessor.bufferView) {
             bufferView = StoreBufferView(*accessor.bufferView, GetComponentByteSize(accessor.componentType));
         }
-        const auto accessorHash = BASE_NS::Hash(bufferView, accessor.componentType, accessor.count, accessor.type,
-            accessor.byteOffset, accessor.normalized, accessor.sparse.count, accessor.sparse.indices.bufferView,
-            accessor.sparse.indices.byteOffset, accessor.sparse.indices.componentType,
-            accessor.sparse.values.bufferView, accessor.sparse.values.byteOffset);
+        const auto accessorHash = BASE_NS::Hash(bufferView,
+            accessor.componentType,
+            accessor.count,
+            accessor.type,
+            accessor.byteOffset,
+            accessor.normalized,
+            accessor.sparse.count,
+            accessor.sparse.indices.bufferView,
+            accessor.sparse.indices.byteOffset,
+            accessor.sparse.indices.componentType,
+            accessor.sparse.values.bufferView,
+            accessor.sparse.values.byteOffset);
 
         const auto accessorIndex = FindOrAddIndex(accessorHashes_, accessorHash);
         if ((accessorIndex + 1) > usedAccessors_.size()) {
@@ -343,7 +351,7 @@ public:
         const auto textureIndex = FindOrAddIndex(textureHashes_, textureHash);
         if ((textureIndex + 1) >= usedTextures_.size()) {
             usedTextures_.resize(textureIndex + 1);
-            usedTextures_[textureIndex] = { samplerIndex, imageIndex };
+            usedTextures_[textureIndex] = {samplerIndex, imageIndex};
         }
         return textureIndex;
     }
@@ -390,7 +398,9 @@ public:
         for (const auto& gpuImageHandle : usedImages_) {
             auto& exportImage = imageArray.emplace_back(make_unique<Image>());
             // sorted for find performance
-            if (const auto pos = std::lower_bound(resourceEnties.begin(), resourceEnties.end(), gpuImageHandle,
+            if (const auto pos = std::lower_bound(resourceEnties.begin(),
+                    resourceEnties.end(),
+                    gpuImageHandle,
                     [](ResourceEntity const& info, const RenderHandleReference& gpuImageHandle) {
                         return info.handle < gpuImageHandle;
                     });
@@ -434,11 +444,13 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
     string_view uri, IFileManager& fileManager, unordered_map<string, IGLTFData::Ptr>& originalGltfs)
 {
     const auto resolveGltfAndResourceIndex =
-        [](string_view originalUri, string_view extension, IFileManager& fileManager,
+        [](string_view originalUri,
+            string_view extension,
+            IFileManager& fileManager,
             unordered_map<string, IGLTFData::Ptr>& originalGltfs) -> std::pair<Data*, size_t> {
         const auto gltfPos = originalUri.find(extension);
         if (gltfPos == string_view::npos) {
-            return { nullptr, GLTF_INVALID_INDEX };
+            return {nullptr, GLTF_INVALID_INDEX};
         }
         auto uri = string_view(originalUri);
         const auto resourceIndexString = uri.substr(uri.rfind('/') + 1);
@@ -448,22 +460,22 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
         if (const auto result = std::from_chars(
                 resourceIndexString.data(), resourceIndexString.data() + resourceIndexString.size(), resourceIndex);
             result.ec != std::errc()) {
-            return { nullptr, GLTF_INVALID_INDEX };
+            return {nullptr, GLTF_INVALID_INDEX};
         }
 
         auto pos = originalGltfs.find(uri);
         if (pos == originalGltfs.end()) {
             auto loadResult = LoadGLTF(fileManager, uri);
             if (!loadResult.success || !loadResult.data->LoadBuffers()) {
-                return { nullptr, GLTF_INVALID_INDEX };
+                return {nullptr, GLTF_INVALID_INDEX};
             }
-            auto inserted = originalGltfs.insert({ uri, move(loadResult.data) });
+            auto inserted = originalGltfs.insert({uri, move(loadResult.data)});
             pos = inserted.first;
         }
         if (pos != originalGltfs.end()) {
-            return { static_cast<Data*>(pos->second.get()), resourceIndex };
+            return {static_cast<Data*>(pos->second.get()), resourceIndex};
         } else {
-            return { nullptr, GLTF_INVALID_INDEX };
+            return {nullptr, GLTF_INVALID_INDEX};
         }
     };
     if (auto result = resolveGltfAndResourceIndex(uri, ".gltf", fileManager, originalGltfs); result.first) {
@@ -474,7 +486,7 @@ std::pair<Data*, size_t> ResolveGltfAndResourceIndex(
         return result;
     }
 
-    return { nullptr, GLTF_INVALID_INDEX };
+    return {nullptr, GLTF_INVALID_INDEX};
 }
 
 void ExportGltfCameras(const IEcs& ecs, const Entities& entities, ExportResult& result)
@@ -622,7 +634,7 @@ Node* FindSkeletonRoot(array_view<GLTF2::Node*> joints)
             for (Node* parent = joint->parent; parent; parent = parent->parent) {
                 ++depth;
             }
-            depths.push_back({ depth, joint });
+            depths.push_back({depth, joint});
         }
 
         // sort by depth and node
@@ -631,8 +643,10 @@ Node* FindSkeletonRoot(array_view<GLTF2::Node*> joints)
         // reduce the numer of nodes until one remains (or there are multiple roots)
         for (auto start = depths.begin(); depths.size() > 1 && start->depth; start = depths.begin()) {
             // select a range of nodes at an equal depth
-            auto end = std::upper_bound(start, depths.end(), start->depth,
-                [](uint32_t depth, const NodeDepth& current) { return current.depth < depth; });
+            auto end =
+                std::upper_bound(start, depths.end(), start->depth, [](uint32_t depth, const NodeDepth& current) {
+                    return current.depth < depth;
+                });
             // replace each node with its parent
             for (auto& data : array_view(start.ptr(), end.ptr())) {
                 data.node = data.node->parent;
@@ -815,7 +829,8 @@ unique_ptr<AnimationSampler> CreateAnimationSampler(const AnimationTrackComponen
 void CleanupAnimation(Animation& exportAnimation)
 {
     // Remove all tracks that don't have a node, sampler or sampler is missing input or output.
-    exportAnimation.tracks.erase(std::find_if(exportAnimation.tracks.begin(), exportAnimation.tracks.end(),
+    exportAnimation.tracks.erase(std::remove_if(exportAnimation.tracks.begin(),
+                                     exportAnimation.tracks.end(),
                                      [](const AnimationTrack& track) {
                                          return !track.channel.node || !track.sampler || !track.sampler->input ||
                                                 !track.sampler->output;
@@ -824,7 +839,8 @@ void CleanupAnimation(Animation& exportAnimation)
 
     // Remove all samplers missing input or output.
     exportAnimation.samplers.erase(
-        std::find_if(exportAnimation.samplers.begin(), exportAnimation.samplers.end(),
+        std::remove_if(exportAnimation.samplers.begin(),
+            exportAnimation.samplers.end(),
             [](const unique_ptr<AnimationSampler>& sampler) { return !sampler->input || !sampler->output; }),
         exportAnimation.samplers.end());
 }
@@ -832,7 +848,8 @@ void CleanupAnimation(Animation& exportAnimation)
 uint64_t Hash(const AnimationTrackComponent& trackComponent)
 {
     return BASE_NS::Hash(static_cast<const Entity&>(trackComponent.timestamps).id,
-        static_cast<const Entity&>(trackComponent.data).id, static_cast<uint32_t>(trackComponent.interpolationMode));
+        static_cast<const Entity&>(trackComponent.data).id,
+        static_cast<uint32_t>(trackComponent.interpolationMode));
 }
 
 void ExportGltfAnimations(const IEcs& ecs, const Entities& entities, ExportResult& result, BufferHelper& bufferHelper)
@@ -851,7 +868,8 @@ void ExportGltfAnimations(const IEcs& ecs, const Entities& entities, ExportResul
     const auto animationCount = animationManager->GetComponentCount();
     auto& animationArray = result.data->animations;
     animationArray.reserve(animationCount);
-    auto exportTracks = [&](const array_view<const EntityReference> tracks, vector<uint64_t>& samplerHashes,
+    auto exportTracks = [&](const array_view<const EntityReference> tracks,
+                            vector<uint64_t>& samplerHashes,
                             Animation& exportAnimation) {
         for (const auto& trackEntity : tracks) {
             const auto trackHandle = animationTrackManager->Read(trackEntity);
@@ -866,8 +884,8 @@ void ExportGltfAnimations(const IEcs& ecs, const Entities& entities, ExportResul
             }
             const auto target =
                 GetAnimationTarget(*nodeSystem, *nameManager, entities, result.data->nodes, trackEntity, *trackHandle);
-            exportAnimation.tracks.push_back(AnimationTrack {
-                { target, GetAnimationPath(*trackHandle) }, exportAnimation.samplers[samplerIndex].get() });
+            exportAnimation.tracks.push_back(
+                AnimationTrack{{target, GetAnimationPath(*trackHandle)}, exportAnimation.samplers[samplerIndex].get()});
         }
     };
     for (IComponentManager::ComponentId i = 0U; i < animationCount; ++i) {
@@ -905,16 +923,15 @@ struct MeshPrimitiveGenerator {
             copy.indices = buffer.StoreAccessor(*original.indices);
         }
         for (const auto& attrib : original.attributes) {
-            copy.attributes.push_back(Attribute { attrib.attribute, buffer.StoreAccessor(*attrib.accessor) });
+            copy.attributes.push_back(Attribute{attrib.attribute, buffer.StoreAccessor(*attrib.accessor)});
         }
         if (materialManager.HasComponent(submesh.material)) {
             copy.materialIndex = FindOrAddIndex(usedMaterials, submesh.material);
         }
         for (const auto& target : original.targets) {
-            MorphTarget morphTarget { target.name, {} };
+            MorphTarget morphTarget{target.name, {}};
             for (const auto& attribute : target.target) {
-                morphTarget.target.push_back(
-                    Attribute { attribute.attribute, buffer.StoreAccessor(*attribute.accessor) });
+                morphTarget.target.push_back(Attribute{attribute.attribute, buffer.StoreAccessor(*attribute.accessor)});
             }
             copy.targets.push_back(move(morphTarget));
         }
@@ -960,9 +977,11 @@ vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const 
 
             const auto& submeshes = meshHandle->submeshes;
             const auto& originalPrimitives = originalGltf->meshes[meshIndex]->primitives;
-            std::transform(submeshes.cbegin(), submeshes.cend(), originalPrimitives.cbegin(),
+            std::transform(submeshes.cbegin(),
+                submeshes.cend(),
+                originalPrimitives.cbegin(),
                 std::back_inserter(exportMesh->primitives),
-                MeshPrimitiveGenerator { materialManager, buffer, usedMaterials });
+                MeshPrimitiveGenerator{materialManager, buffer, usedMaterials});
 
             if (const auto nameHandle = nameManager.Read(meshEntity)) {
                 exportMesh->name = nameHandle->name;
@@ -1044,7 +1063,11 @@ void ExportGltfMaterialIor(Material& exportMaterial, const MaterialComponent& ma
     // IOR (must not be used with pbrSpecularGlossiness or unlit).
     if (materialDesc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.w != 0.04f) {
         const auto refSqr = Math::sqrt(materialDesc.textures[MaterialComponent::TextureIndex::MATERIAL].factor.w);
-        exportMaterial.ior.ior = (1.f + refSqr) / (1.f - refSqr);
+        if (Math::abs(1.0f - refSqr) < Math::EPSILON) {
+            exportMaterial.ior.ior = 1.5f;
+        } else {
+            exportMaterial.ior.ior = (1.f + refSqr) / (1.f - refSqr);
+        }
     }
 }
 #endif
@@ -1129,17 +1152,17 @@ void UpdateShaderStateToGltfMaterial(const IDevice* device, Material& exportMate
     if ((!materialDesc.materialShader.shader && !materialDesc.materialShader.graphicsState) || !device) {
         return;
     }
-    auto update = [](const IShaderManager& shaderMgr, const RenderHandleReference& gfxHandle,
-                      Material& exportMaterial) {
-        const GraphicsState gfxState = shaderMgr.GetGraphicsState(gfxHandle);
-        exportMaterial.doubleSided =
-            (gfxState.rasterizationState.cullModeFlags == CullModeFlagBits::CORE_CULL_MODE_NONE);
+    auto update =
+        [](const IShaderManager& shaderMgr, const RenderHandleReference& gfxHandle, Material& exportMaterial) {
+            const GraphicsState gfxState = shaderMgr.GetGraphicsState(gfxHandle);
+            exportMaterial.doubleSided =
+                (gfxState.rasterizationState.cullModeFlags == CullModeFlagBits::CORE_CULL_MODE_NONE);
 
-        if ((gfxState.colorBlendState.colorAttachmentCount > 0) &&
-            (gfxState.colorBlendState.colorAttachments[0].enableBlend)) {
-            exportMaterial.alphaMode = AlphaMode::BLEND;
-        }
-    };
+            if ((gfxState.colorBlendState.colorAttachmentCount > 0) &&
+                (gfxState.colorBlendState.colorAttachments[0].enableBlend)) {
+                exportMaterial.alphaMode = AlphaMode::BLEND_ALPHA;
+            }
+        };
     const IShaderManager& shaderMgr = device->GetShaderManager();
     if (materialDesc.materialShader.graphicsState) {
         const auto handle = gpuHandleManager.GetRenderHandleReference(materialDesc.materialShader.graphicsState);
@@ -1202,13 +1225,13 @@ void ExportGltfMaterial(const IDevice* device, Material& exportMaterial, const M
 
     exportMaterial.emissiveFactor = materialDesc.textures[MaterialComponent::TextureIndex::EMISSIVE].factor;
     exportMaterial.alphaCutoff = materialDesc.alphaCutoff;
-    exportMaterial.alphaMode = AlphaMode::OPAQUE;
+    exportMaterial.alphaMode = AlphaMode::OPAQUE_ALPHA;
 
     UpdateShaderStateToGltfMaterial(device, exportMaterial, materialDesc, gpuHandleManager);
 
     // check if alpha is using cutoff / mask (Lume default is 1.0 -> no mask)
     if (materialDesc.alphaCutoff < 1.0f) {
-        exportMaterial.alphaMode = AlphaMode::MASK;
+        exportMaterial.alphaMode = AlphaMode::MASK_ALPHA;
     }
 }
 
@@ -1250,9 +1273,10 @@ void ExportGltfMaterials(const IEngine& engine, const IMaterialComponentManager&
         resourceEnties.reserve(gpuHandleComponents);
         // sorted for find performance
         for (auto i = 0u; i < gpuHandleComponents; ++i) {
-            resourceEnties.push_back({ gpuHandleManager.GetEntity(i), gpuHandleManager.Get(i).reference });
+            resourceEnties.push_back({gpuHandleManager.GetEntity(i), gpuHandleManager.Get(i).reference});
         }
-        std::sort(resourceEnties.begin(), resourceEnties.end(),
+        std::sort(resourceEnties.begin(),
+            resourceEnties.end(),
             [](const ResourceEntity& lhs, const ResourceEntity& rhs) { return lhs.handle < rhs.handle; });
 
         // Create Samplers
@@ -1338,18 +1362,18 @@ void ExportImageData(IFileManager& fileManager, ExportResult& result, BufferHelp
 // The following Export* functions return a JSON object containing the related parts of the GLTF2::Data.
 json::value ExportAccessorSparse(const Data& data, const Accessor& accessor)
 {
-    json::value jsonSparse = json::value::object {};
+    json::value jsonSparse = json::value::object{};
     {
         jsonSparse["count"] = accessor.sparse.count;
         {
-            json::value jsonSparseIndices = json::value::array {};
+            json::value jsonSparseIndices = json::value::array{};
             jsonSparseIndices["bufferView"] = FindObjectIndex(data.bufferViews, *accessor.sparse.indices.bufferView);
             jsonSparseIndices["byteOffset"] = accessor.sparse.indices.byteOffset;
             jsonSparseIndices["componentType"] = static_cast<int>(accessor.sparse.indices.componentType);
             jsonSparse["indices"] = move(jsonSparseIndices);
         }
         {
-            json::value jsonSparseValues = json::value::array {};
+            json::value jsonSparseValues = json::value::array{};
             jsonSparseValues["bufferView"] = FindObjectIndex(data.bufferViews, *accessor.sparse.values.bufferView);
             jsonSparseValues["byteOffset"] = accessor.sparse.values.byteOffset;
             jsonSparse["values"] = move(jsonSparseValues);
@@ -1360,9 +1384,9 @@ json::value ExportAccessorSparse(const Data& data, const Accessor& accessor)
 
 void ExportAccessors(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonAccessors = json::value::array {};
+    json::value jsonAccessors = json::value::array{};
     for (const auto& accessor : data.accessors) {
-        json::value jsonAccessor = json::value::object {};
+        json::value jsonAccessor = json::value::object{};
         if (accessor->bufferView) {
             jsonAccessor["bufferView"] = FindObjectIndex(data.bufferViews, *accessor->bufferView);
         }
@@ -1398,13 +1422,13 @@ void ExportAccessors(json::value& jsonGltf, const Data& data)
 
 void ExportAnimations(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonAnimations = json::value::array {};
+    json::value jsonAnimations = json::value::array{};
     for (const auto& animation : data.animations) {
-        json::value jsonAnimation = json::value::object {};
+        json::value jsonAnimation = json::value::object{};
         {
-            json::value jsonSamplers = json::value::array {};
+            json::value jsonSamplers = json::value::array{};
             for (const auto& sampler : animation->samplers) {
-                json::value jsonSampler = json::value::object {};
+                json::value jsonSampler = json::value::object{};
                 jsonSampler["input"] = FindObjectIndex(data.accessors, *sampler->input);
                 if (sampler->interpolation != AnimationInterpolation::LINEAR) {
                     jsonSampler["interpolation"] = GetAnimationInterpolation(sampler->interpolation);
@@ -1415,12 +1439,12 @@ void ExportAnimations(json::value& jsonGltf, const Data& data)
             jsonAnimation["samplers"] = move(jsonSamplers);
         }
         {
-            json::value jsonChannels = json::value::array {};
+            json::value jsonChannels = json::value::array{};
             for (const auto& track : animation->tracks) {
-                json::value jsonChannel = json::value::object {};
+                json::value jsonChannel = json::value::object{};
                 jsonChannel["sampler"] = FindObjectIndex(animation->samplers, *track.sampler);
                 {
-                    json::value jsonTarget = json::value::object {};
+                    json::value jsonTarget = json::value::object{};
                     if (const auto nodeIndex = FindObjectIndex(data.nodes, *track.channel.node); 0 <= nodeIndex) {
                         jsonTarget["node"] = nodeIndex;
                     }
@@ -1441,9 +1465,9 @@ void ExportAnimations(json::value& jsonGltf, const Data& data)
 
 void ExportBuffers(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonBuffers = json::value::array {};
+    json::value jsonBuffers = json::value::array{};
     for (const auto& buffer : data.buffers) {
-        json::value jsonBuffer = json::value::object {};
+        json::value jsonBuffer = json::value::object{};
         if (!buffer->uri.empty()) {
             jsonBuffer["uri"] = string_view(buffer->uri);
         }
@@ -1460,11 +1484,11 @@ void ExportBuffers(json::value& jsonGltf, const Data& data)
 
 void ExportBufferViews(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonBufferViews = json::value::array {};
+    json::value jsonBufferViews = json::value::array{};
     for (const auto& bufferView : data.bufferViews) {
-        json::value jsonBufferView = json::value::object {};
+        json::value jsonBufferView = json::value::object{};
         if (!bufferView->buffer) {
-            continue; // defensive: skip malformed bufferView without a buffer (VULN-038)
+            continue;  // defensive: skip malformed bufferView without a buffer (VULN-038)
         }
         jsonBufferView["buffer"] = FindObjectIndex(data.buffers, *bufferView->buffer);
         if (bufferView->byteOffset) {
@@ -1489,17 +1513,17 @@ void ExportBufferViews(json::value& jsonGltf, const Data& data)
 
 void ExportCameras(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonCameras = json::value::array {};
+    json::value jsonCameras = json::value::array{};
 
     for (const auto& camera : data.cameras) {
-        json::value jsonCamera = json::value::object {};
-        jsonCamera["type"] = json::value { GetCameraType(camera->type) };
+        json::value jsonCamera = json::value::object{};
+        jsonCamera["type"] = json::value{GetCameraType(camera->type)};
 
         if (!camera->name.empty()) {
-            jsonCamera["name"] = json::value { camera->name };
+            jsonCamera["name"] = json::value{camera->name};
         }
         if (camera->type == CameraType::PERSPECTIVE) {
-            json::value jsonPerspective = json::value::object {};
+            json::value jsonPerspective = json::value::object{};
             if (camera->attributes.perspective.aspect > 0.f) {
                 jsonPerspective["aspectRatio"] = camera->attributes.perspective.aspect;
             }
@@ -1510,9 +1534,9 @@ void ExportCameras(json::value& jsonGltf, const Data& data)
             jsonPerspective["znear"] = camera->attributes.perspective.znear;
             jsonCamera["perspective"] = move(jsonPerspective);
         } else if (camera->type == CameraType::ORTHOGRAPHIC) {
-            json::value jsonOrthographic = json::value::object {};
-            jsonOrthographic["xmag"] = json::value { camera->attributes.ortho.xmag };
-            jsonOrthographic["ymag"] = json::value { camera->attributes.ortho.ymag };
+            json::value jsonOrthographic = json::value::object{};
+            jsonOrthographic["xmag"] = json::value{camera->attributes.ortho.xmag};
+            jsonOrthographic["ymag"] = json::value{camera->attributes.ortho.ymag};
             jsonOrthographic["zfar"] = camera->attributes.ortho.zfar;
             jsonOrthographic["znear"] = camera->attributes.ortho.znear;
             jsonCamera["orthographic"] = move(jsonOrthographic);
@@ -1526,9 +1550,9 @@ void ExportCameras(json::value& jsonGltf, const Data& data)
 
 void ExportImages(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonImages = json::value::array {};
+    json::value jsonImages = json::value::array{};
     for (const auto& image : data.images) {
-        json::value jsonImage = json::value::object {};
+        json::value jsonImage = json::value::object{};
 
         if (!image->uri.empty()) {
             jsonImage["uri"] = string_view(image->uri);
@@ -1548,7 +1572,7 @@ void ExportImages(json::value& jsonGltf, const Data& data)
 
 json::value ExportTextureInfo(TextureInfo const& textureInfo)
 {
-    json::value jsonTextureInfo = json::value::object {};
+    json::value jsonTextureInfo = json::value::object{};
     jsonTextureInfo["index"] = textureInfo.index;
     if (textureInfo.texCoordIndex != 0 && textureInfo.texCoordIndex != GLTF_INVALID_INDEX) {
         jsonTextureInfo["texCoord"] = textureInfo.texCoordIndex;
@@ -1558,7 +1582,7 @@ json::value ExportTextureInfo(TextureInfo const& textureInfo)
 
 json::value ExportMetallicRoughness(const Material& material)
 {
-    json::value jsonMetallicRoughness = json::value::object {};
+    json::value jsonMetallicRoughness = json::value::object{};
     if (material.metallicRoughness.baseColorFactor != DEFAULT_BASECOLOR_FACTOR) {
         jsonMetallicRoughness["baseColorFactor"] = material.metallicRoughness.baseColorFactor.data;
     }
@@ -1581,7 +1605,7 @@ json::value ExportMetallicRoughness(const Material& material)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
 json::value ExportSpecularGlossiness(const Material& material)
 {
-    json::value jsonSpecularGlossiness = json::value::object {};
+    json::value jsonSpecularGlossiness = json::value::object{};
     if (material.specularGlossiness.diffuseFactor != DEFAULT_DIFFUSE_FACTOR) {
         jsonSpecularGlossiness["diffuseFactor"] = material.specularGlossiness.diffuseFactor.data;
     }
@@ -1605,7 +1629,7 @@ json::value ExportSpecularGlossiness(const Material& material)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_CLEARCOAT)
 json::value ExportClearcoat(const Material::Clearcoat& clearcoat)
 {
-    json::value jsonClearcoat = json::value::object {};
+    json::value jsonClearcoat = json::value::object{};
     if (clearcoat.factor != 0.f) {
         jsonClearcoat["clearcoatFactor"] = clearcoat.factor;
     }
@@ -1632,7 +1656,7 @@ json::value ExportClearcoat(const Material::Clearcoat& clearcoat)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_EMISSIVE_STRENGTH)
 json::value ExportEmissiveStrength(const float strength)
 {
-    json::value jsonEmissiveStrength = json::value::object {};
+    json::value jsonEmissiveStrength = json::value::object{};
     if (strength != 1.f) {
         jsonEmissiveStrength["emissiveStrength"] = strength;
     }
@@ -1643,7 +1667,7 @@ json::value ExportEmissiveStrength(const float strength)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_IOR)
 json::value ExportIor(const Material::Ior& ior)
 {
-    json::value jsonIor = json::value::object {};
+    json::value jsonIor = json::value::object{};
     if (ior.ior != 1.5f) {
         jsonIor["ior"] = ior.ior;
     }
@@ -1654,8 +1678,8 @@ json::value ExportIor(const Material::Ior& ior)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_SHEEN)
 json::value ExportSheen(const Material::Sheen& sheen)
 {
-    json::value jsonSheen = json::value::object {};
-    if (sheen.factor != Math::Vec3 {}) {
+    json::value jsonSheen = json::value::object{};
+    if (sheen.factor != Math::Vec3{}) {
         jsonSheen["sheenColorFactor"] = sheen.factor.data;
     }
     if (sheen.texture.index != GLTF_INVALID_INDEX) {
@@ -1674,7 +1698,7 @@ json::value ExportSheen(const Material::Sheen& sheen)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_SPECULAR)
 json::value ExportSpecular(const Material::Specular& specular)
 {
-    json::value jsonSpecular = json::value::object {};
+    json::value jsonSpecular = json::value::object{};
     if (specular.factor != 1.f) {
         jsonSpecular["specularFactor"] = specular.factor;
     }
@@ -1693,7 +1717,7 @@ json::value ExportSpecular(const Material::Specular& specular)
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_TRANSMISSION)
 json::value ExportTransmission(const Material::Transmission& transmission)
 {
-    json::value jsonTransmission = json::value::object {};
+    json::value jsonTransmission = json::value::object{};
     if (transmission.factor != 0.f) {
         jsonTransmission["transmissionFactor"] = transmission.factor;
     }
@@ -1707,7 +1731,7 @@ json::value ExportTransmission(const Material::Transmission& transmission)
 json::value ExportMaterialExtensions(
     const Material& material, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonExtensions = json::value::object {};
+    json::value jsonExtensions = json::value::object{};
     if (material.type == Material::Type::SpecularGlossiness) {
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_PBRSPECULARGLOSSINESS)
         jsonExtensions["KHR_materials_pbrSpecularGlossiness"] = ExportSpecularGlossiness(material);
@@ -1715,7 +1739,7 @@ json::value ExportMaterialExtensions(
 #endif
     } else if (material.type == Material::Type::Unlit) {
 #if defined(GLTF2_EXTENSION_KHR_MATERIALS_UNLIT)
-        jsonExtensions["KHR_materials_unlit"] = json::value::object {};
+        jsonExtensions["KHR_materials_unlit"] = json::value::object{};
         AppendUnique(jsonExtensionsUsed, "KHR_materials_unlit");
 #endif
     }
@@ -1760,16 +1784,16 @@ json::value ExportMaterialExtensions(
 
 json::value ExportMaterialExtras(const Material& material)
 {
-    auto jsonExtras = json::value::object {};
+    auto jsonExtras = json::value::object{};
     return jsonExtras;
 }
 
 void ExportMaterials(
     json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonMaterials = json::value::array {};
+    json::value jsonMaterials = json::value::array{};
     for (const auto& material : data.materials) {
-        json::value jsonMaterial = json::value::object {};
+        json::value jsonMaterial = json::value::object{};
         if (!material->name.empty()) {
             jsonMaterial["name"] = string_view(material->name);
         }
@@ -1803,7 +1827,7 @@ void ExportMaterials(
             emissiveFactor != DEFAULT_EMISSIVE_FACTOR) {
             jsonMaterial["emissiveFactor"] = emissiveFactor.data;
         }
-        if (material->alphaMode != AlphaMode::OPAQUE) {
+        if (material->alphaMode != AlphaMode::OPAQUE_ALPHA) {
             jsonMaterial["alphaMode"] = GetAlphaMode(material->alphaMode);
         }
         if (material->alphaCutoff != 0.5f) {
@@ -1823,9 +1847,9 @@ void ExportMaterials(
 json::value ExportMeshPrimitive(
     const MeshPrimitive& primitive, const vector<unique_ptr<Accessor>>& accessors, json::value& jsonTargetNames)
 {
-    json::value jsonPrimitive = json::value::object {};
+    json::value jsonPrimitive = json::value::object{};
     {
-        json::value jsonAttributes = json::value::object {};
+        json::value jsonAttributes = json::value::object{};
         for (const auto& attribute : primitive.attributes) {
             auto type = GetAttributeType(attribute.attribute);
             jsonAttributes[type] = FindObjectIndex(accessors, *attribute.accessor);
@@ -1842,9 +1866,9 @@ json::value ExportMeshPrimitive(
         jsonPrimitive["mode"] = static_cast<int>(primitive.mode);
     }
     if (!primitive.targets.empty()) {
-        json::value jsonTargets = json::value::array {};
+        json::value jsonTargets = json::value::array{};
         for (const auto& target : primitive.targets) {
-            json::value jsonTarget = json::value::object {};
+            json::value jsonTarget = json::value::object{};
             for (const auto& attribute : target.target) {
                 auto type = GetAttributeType(attribute.attribute);
                 jsonTarget[type] = FindObjectIndex(accessors, *attribute.accessor);
@@ -1861,13 +1885,13 @@ json::value ExportMeshPrimitive(
 
 void ExportMeshes(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonMeshes = json::value::array {};
+    json::value jsonMeshes = json::value::array{};
     for (const auto& mesh : data.meshes) {
-        json::value jsonMesh = json::value::object {};
-        json::value jsonExtras = json::value::object {};
+        json::value jsonMesh = json::value::object{};
+        json::value jsonExtras = json::value::object{};
         {
-            json::value jsonPrimitives = json::value::array {};
-            json::value jsonTargetNames = json::value::array {};
+            json::value jsonPrimitives = json::value::array{};
+            json::value jsonTargetNames = json::value::array{};
             for (const auto& primitive : mesh->primitives) {
                 jsonPrimitives.array_.push_back(ExportMeshPrimitive(primitive, data.accessors, jsonTargetNames));
             }
@@ -1893,10 +1917,10 @@ void ExportMeshes(json::value& jsonGltf, const Data& data)
 json::value ExportNodeExtensions(
     const Data& data, const Node& node, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonExtensions = json::value::object {};
+    json::value jsonExtensions = json::value::object{};
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
     if (node.light) {
-        json::value jsonKHRLights = json::value::object {};
+        json::value jsonKHRLights = json::value::object{};
         jsonKHRLights["light"] = FindObjectIndex(data.lights, *node.light);
         jsonExtensions["KHR_lights_punctual"] = move(jsonKHRLights);
         AppendUnique(jsonExtensionsUsed, "KHR_lights_punctual");
@@ -1908,10 +1932,10 @@ json::value ExportNodeExtensions(
 void ExportNodes(
     json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonNodes = json::value::array {};
+    json::value jsonNodes = json::value::array{};
 
     for (const auto& node : data.nodes) {
-        json::value jsonNodeObject = json::value::object {};
+        json::value jsonNodeObject = json::value::object{};
 
         if (node->camera) {
             jsonNodeObject["camera"] = FindObjectIndex(data.cameras, *node->camera);
@@ -1966,9 +1990,9 @@ void ExportNodes(
 
 void ExportSamplers(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonSamplers = json::value::array {};
+    json::value jsonSamplers = json::value::array{};
     for (const auto& sampler : data.samplers) {
-        json::value jsonSampler = json::value::object {};
+        json::value jsonSampler = json::value::object{};
         if (sampler->magFilter != FilterMode::LINEAR) {
             jsonSampler["magFilter"] = static_cast<int>(sampler->magFilter);
         }
@@ -1993,15 +2017,15 @@ void ExportSamplers(json::value& jsonGltf, const Data& data)
 
 void ExportScenes(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonScenes = json::value::array {};
+    json::value jsonScenes = json::value::array{};
     for (const auto& scene : data.scenes) {
-        json::value jsonScene = json::value::object {};
+        json::value jsonScene = json::value::object{};
 
         if (!scene->name.empty()) {
             jsonScene["name"] = string_view(scene->name);
         }
 
-        json::value jsonNodes = json::value::array {};
+        json::value jsonNodes = json::value::array{};
         for (const auto node : scene->nodes) {
             jsonNodes.array_.push_back(FindObjectIndex(data.nodes, *node));
         }
@@ -2009,9 +2033,9 @@ void ExportScenes(json::value& jsonGltf, const Data& data)
 
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
         if (scene->light) {
-            json::value jsonExtensions = json::value::object {};
+            json::value jsonExtensions = json::value::object{};
 
-            json::value jsonKHRLights = json::value::object {};
+            json::value jsonKHRLights = json::value::object{};
             jsonKHRLights["light"] = FindObjectIndex(data.lights, *scene->light);
             jsonExtensions["KHR_lights_punctual"] = move(jsonKHRLights);
 
@@ -2026,16 +2050,16 @@ void ExportScenes(json::value& jsonGltf, const Data& data)
 
 void ExportSkins(json::value& jsonGltf, const Data& data)
 {
-    json::value jsonSkins = json::value::array {};
+    json::value jsonSkins = json::value::array{};
     for (const auto& skin : data.skins) {
-        json::value jsonSkin = json::value::object {};
+        json::value jsonSkin = json::value::object{};
         if (skin->inverseBindMatrices) {
             jsonSkin["inverseBindMatrices"] = FindObjectIndex(data.accessors, *skin->inverseBindMatrices);
         }
         if (skin->skeleton) {
             jsonSkin["skeleton"] = FindObjectIndex(data.nodes, *skin->skeleton);
         }
-        json::value jsonJoints = json::value::array {};
+        json::value jsonJoints = json::value::array{};
         for (const auto joint : skin->joints) {
             jsonJoints.array_.push_back(FindObjectIndex(data.nodes, *joint));
         }
@@ -2051,9 +2075,9 @@ void ExportSkins(json::value& jsonGltf, const Data& data)
 void ExportTextures(
     json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonTextures = json::value::array {};
+    json::value jsonTextures = json::value::array{};
     for (const auto& texture : data.textures) {
-        json::value jsonTexture = json::value::object {};
+        json::value jsonTexture = json::value::object{};
         if (texture->sampler) {
             jsonTexture["sampler"] = FindObjectIndex(data.samplers, *texture->sampler);
         }
@@ -2063,14 +2087,14 @@ void ExportTextures(
                 case MimeType::INVALID:
                 case MimeType::JPEG:
                 case MimeType::PNG:
-                case MimeType::KTX: // NOTE: this is incorrect, but there's no extension for .ktx
+                case MimeType::KTX:  // NOTE: this is incorrect, but there's no extension for .ktx
                     jsonTexture["source"] = FindObjectIndex(data.images, *texture->image);
                     break;
                 case MimeType::DDS: {
-                    json::value jsonMsftTextureDds = json::value::object {};
+                    json::value jsonMsftTextureDds = json::value::object{};
                     jsonMsftTextureDds["source"] = FindObjectIndex(data.images, *texture->image);
 
-                    json::value jsonExtensions = json::value::object {};
+                    json::value jsonExtensions = json::value::object{};
                     jsonExtensions["MSFT_texture_dds"] = move(jsonMsftTextureDds);
 
                     jsonTexture["extensions"] = move(jsonExtensions);
@@ -2080,10 +2104,10 @@ void ExportTextures(
                     break;
                 }
                 case MimeType::KTX2: {
-                    json::value jsonKHRtextureBasisU = json::value::object {};
+                    json::value jsonKHRtextureBasisU = json::value::object{};
                     jsonKHRtextureBasisU["source"] = FindObjectIndex(data.images, *texture->image);
 
-                    json::value jsonExtensions = json::value::object {};
+                    json::value jsonExtensions = json::value::object{};
                     jsonExtensions["KHR_texture_basisu"] = move(jsonKHRtextureBasisU);
 
                     jsonTexture["extensions"] = move(jsonExtensions);
@@ -2106,7 +2130,7 @@ void ExportTextures(
 
 json::value ExportKHRLights(const Data& data)
 {
-    json::value jsonLightArray = json::value::array {};
+    json::value jsonLightArray = json::value::array{};
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
 
     for (const auto& light : data.lights) {
@@ -2114,7 +2138,7 @@ json::value ExportKHRLights(const Data& data)
             continue;
         }
 
-        json::value jsonLightObject = json::value::object {};
+        json::value jsonLightObject = json::value::object{};
         if (!light->name.empty()) {
             jsonLightObject["name"] = string_view(light->name);
         }
@@ -2129,7 +2153,7 @@ json::value ExportKHRLights(const Data& data)
             jsonLightObject["range"] = light->positional.range;
         }
         if (light->type == LightType::SPOT) {
-            json::value jsonSpotObject = json::value::object {};
+            json::value jsonSpotObject = json::value::object{};
             if (light->positional.spot.innerAngle != 0.f) {
                 jsonSpotObject["innerConeAngle"] = light->positional.spot.innerAngle;
             }
@@ -2143,7 +2167,7 @@ json::value ExportKHRLights(const Data& data)
         jsonLightArray.array_.push_back(move(jsonLightObject));
     }
 #endif
-    json::value jsonLights = json::value::object {};
+    json::value jsonLights = json::value::object{};
     jsonLights["lights"] = move(jsonLightArray);
     return jsonLights;
 }
@@ -2151,7 +2175,7 @@ json::value ExportKHRLights(const Data& data)
 void ExportExtensions(
     json::value& jsonGltf, const Data& data, json::value& jsonExtensionsUsed, json::value& jsonExtensionsRequired)
 {
-    json::value jsonExtensions = json::value::object {};
+    json::value jsonExtensions = json::value::object{};
 
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
     if (!data.lights.empty()) {
@@ -2168,7 +2192,7 @@ void ExportExtensions(
 
 void ExportAsset(json::value& jsonGltf, string_view versionString, vector<string>& strings)
 {
-    auto jsonAsset = json::value { json::value::object {} };
+    auto jsonAsset = json::value{json::value::object{}};
     jsonAsset["version"] = string_view("2.0");
     strings.push_back("CoreEngine " + versionString);
     jsonAsset["generator"] = string_view(strings.back());
@@ -2180,10 +2204,10 @@ void ExportAsset(json::value& jsonGltf, string_view versionString, vector<string
 auto ExportGLTFData(const Data& data, string_view versionString)
 {
     vector<string> strings;
-    auto jsonGltf = json::value { json::value::object {} };
+    auto jsonGltf = json::value{json::value::object{}};
 
-    auto jsonExtensionsUsed = json::value { json::value::array {} };
-    auto jsonExtensionsRequired = json::value { json::value::array {} };
+    auto jsonExtensionsUsed = json::value{json::value::array{}};
+    auto jsonExtensionsRequired = json::value{json::value::array{}};
 
     ExportAsset(jsonGltf, versionString, strings);
     ExportAccessors(jsonGltf, data);
@@ -2210,7 +2234,7 @@ auto ExportGLTFData(const Data& data, string_view versionString)
 
     return to_string(jsonGltf);
 }
-} // namespace
+}  // namespace
 
 /* Writes the GLTF2::Data as a GLB file. */
 void SaveGLB(const Data& data, IFile& file, string_view versionString)
@@ -2243,20 +2267,21 @@ void SaveGLB(const Data& data, IFile& file, string_view versionString)
         PLUGIN_LOG_E("GLB export: total size exceeds 4 GB uint32_t limit, aborting.");
         return;
     }
-    constexpr uint32_t glbVersion = 2;
-    const auto header = GLBHeader { GLTF_MAGIC, glbVersion, static_cast<uint32_t>(totalSize64) };
+    const auto header = GLBHeader{GLTF_MAGIC, 2, static_cast<uint32_t>(totalSize64)};
     file.Write(&header, sizeof(header));
 
-    const auto jsonChunk = GLBChunk { jsonSize, static_cast<uint32_t>(ChunkType::JSON) };
+    const auto jsonChunk = GLBChunk{jsonSize, static_cast<uint32_t>(ChunkType::JSON)};
     file.Write(&jsonChunk, sizeof(jsonChunk));
 
     file.Write(jsonString.data(), jsonSize);
 
-    const auto binarySize32 = static_cast<uint32_t>(binarySize); // safe: checked above
-    const auto binaryChunk = GLBChunk { binarySize32, static_cast<uint32_t>(ChunkType::BIN) };
+    const auto binarySize32 = static_cast<uint32_t>(binarySize);  // safe: checked above
+    const auto binaryChunk = GLBChunk{binarySize32, static_cast<uint32_t>(ChunkType::BIN)};
     file.Write(&binaryChunk, sizeof(binaryChunk));
 
-    file.Write(data.buffers.front()->data.data(), binarySize32);
+    for (const auto& buffer : data.buffers) {
+        file.Write(buffer->data.data(), buffer->data.size());
+    }
 }
 
 /* Writes the GLTF2::Data as a glTF file. */
@@ -2307,14 +2332,19 @@ void CombineSkippedParentTransformations(
                 const auto parentTransformComponent = transformManager->Get(parent->GetEntity());
 
                 const auto transformation =
-                    Math::Trs(parentTransformComponent.position, parentTransformComponent.rotation,
+                    Math::Trs(parentTransformComponent.position,
+                        parentTransformComponent.rotation,
                         parentTransformComponent.scale) *
                     Math::Trs(transformComponent.position, transformComponent.rotation, transformComponent.scale);
 
                 Math::Vec3 skew;
                 Math::Vec4 perspective;
-                Math::Decompose(transformation, transformComponent.scale, transformComponent.rotation,
-                    transformComponent.position, skew, perspective);
+                Math::Decompose(transformation,
+                    transformComponent.scale,
+                    transformComponent.rotation,
+                    transformComponent.position,
+                    skew,
+                    perspective);
             }
             parent = parent->GetParent();
         }
@@ -2381,7 +2411,8 @@ void AttachParent(const ISceneNode& node, const IEcs& ecs, Scene& scene, Node& e
             parentIndex < nodeArray.size()) {
             // Parent has been exported -> node has a parent and will be added to the parents list of children.
             exportNode.parent = nodeArray[parentIndex].get();
-            if (std::none_of(exportNode.parent->children.begin(), exportNode.parent->children.end(),
+            if (std::none_of(exportNode.parent->children.begin(),
+                    exportNode.parent->children.end(),
                     [&exportNode](const auto childNode) { return childNode == &exportNode; })) {
                 exportNode.parent->children.push_back(&exportNode);
                 exportNode.parent->tmpChildren.push_back(nodeIndex);
@@ -2477,7 +2508,7 @@ void RecursivelyExportNode(ISceneNode const& node, IEcs const& ecs, Scene& scene
 
     // NOTE: weights, defaults are not exported
 }
-} // namespace
+}  // namespace
 
 // Internal exporting function.
 ExportResult ExportGLTF(IEngine& engine, const IEcs& ecs)
@@ -2533,8 +2564,15 @@ ExportResult ExportGLTF(IEngine& engine, const IEcs& ecs)
     auto meshManager = GetManager<IMeshComponentManager>(ecs);
     auto materialManager = GetManager<IMaterialComponentManager>(ecs);
     auto uriManager = GetManager<IUriComponentManager>(ecs);
-    auto usedMaterials = ExportGltfMeshes(*meshManager, *nameManager, *uriManager, *materialManager,
-        engine.GetFileManager(), usedMeshes, result, bufferHelper, originalGltfs);
+    auto usedMaterials = ExportGltfMeshes(*meshManager,
+        *nameManager,
+        *uriManager,
+        *materialManager,
+        engine.GetFileManager(),
+        usedMeshes,
+        result,
+        bufferHelper,
+        originalGltfs);
 
     ExportGltfMaterials(engine, *materialManager, *nameManager, *uriManager, usedMaterials, result, bufferHelper);
 
@@ -2545,6 +2583,6 @@ ExportResult ExportGLTF(IEngine& engine, const IEcs& ecs)
 
     return result;
 }
-} // namespace GLTF2
+}  // namespace GLTF2
 
 CORE3D_END_NAMESPACE()

@@ -54,7 +54,7 @@ public:
     NodeContainerImpl(const std::shared_ptr<NodeETS> nodeETS);
     ~NodeContainerImpl();
     void append(::SceneNodes::weak::Node item);
-    void insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling);
+    void insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const& sibling);
     void remove(::SceneNodes::weak::Node item);
     ::SceneNodes::VariousNodesOrNull get(int32_t index);
     void clear();
@@ -66,8 +66,8 @@ private:
 
 class NodeImpl : public SceneResourceImpl {
 public:
-    static ::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node);
-    static ::SceneNodes::VariousNodes MakeVariousNodes(const std::shared_ptr<NodeETS> &node);
+    static ::SceneNodes::VariousNodesOrNull MakeVariousNodesOrNull(const std::shared_ptr<NodeETS>& node);
+    static ::SceneNodes::VariousNodes MakeVariousNodes(const std::shared_ptr<NodeETS>& node);
 
     explicit NodeImpl(const std::shared_ptr<NodeETS> nodeETS);
     ~NodeImpl();
@@ -95,5 +95,5 @@ public:
 private:
     std::shared_ptr<NodeETS> nodeETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_NODE_IMPL_H

@@ -28,7 +28,7 @@ bool StaggeredAnimationState::Initialize(AnimationStateParams&& params)
     if (container_ = CreateContainer(); container_) {
         if (auto required = interface_cast<IRequiredInterfaces>(container_)) {
             // Require all children to implement IAnimation
-            required->SetRequiredInterfaces({ IAnimation::UID, IStartableAnimation::UID });
+            required->SetRequiredInterfaces({IAnimation::UID, IStartableAnimation::UID});
         }
         if (auto proxy = interface_cast<IContainerProxyParent>(container_)) {
             // The container should use our parent animation as the parent object for children (and not itself)
@@ -68,7 +68,7 @@ void StaggeredAnimationState::Uninitialize()
 
 void StaggeredAnimationState::UpdateTotalDuration()
 {
-    baseDuration_ = TimeSpan::Zero(); // Reset base duration
+    baseDuration_ = TimeSpan::Zero();  // Reset base duration
     Super::UpdateTotalDuration();
 }
 
@@ -97,7 +97,7 @@ void StaggeredAnimationState::ChildAdded(const ChildChangedInfo& info)
         }
     }
 
-    AnimationSegment segment { animation, controller };
+    AnimationSegment segment{animation, controller};
     if (inContainerCount == 0) {
         segment.durationChanged_.Subscribe(animation->TotalDuration(), childrenChanged_);
         segment.validChanged_.Subscribe(animation->Valid(), childrenChanged_);
@@ -318,11 +318,11 @@ SequentialAnimationState::ActiveAnimation SequentialAnimationState::GetActiveAni
     for (const auto& anim : GetChildren()) {
         const auto transform = TransformChild(anim, progress, GetAnimationTargetState(), reverse);
         if (transform.state == IAnimationInternal::AnimationTargetState::RUNNING) {
-            return { &anim, index };
+            return {&anim, index};
         }
         index++;
     }
-    return { nullptr, children.empty() ? -1 : index };
+    return {nullptr, children.empty() ? -1 : index};
 }
 
 AnyReturnValue SequentialAnimationState::Evaluate()
@@ -361,6 +361,6 @@ AnyReturnValue SequentialAnimationState::Evaluate()
     return status;
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

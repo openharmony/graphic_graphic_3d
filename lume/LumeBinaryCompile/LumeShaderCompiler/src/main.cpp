@@ -18,6 +18,7 @@
 
 #ifdef WIN32
 
+#include <climits>
 #include <Windows.h>
 
 namespace {
@@ -37,10 +38,13 @@ char* AllocateUtf8String(const wchar_t* text, const int length)
 
     // Allocate enough space for the utf-8 string + null terminator
     auto* resultUtf8String = static_cast<char*>(malloc(sizeof(char) * (utf8ByteCount + 1)));
+    if (!resultUtf8String) {
+        return nullptr;
+    }
 
     if (!WideCharToMultiByte(CP_UTF8, 0, text, length, resultUtf8String, utf8ByteCount, nullptr, nullptr)) {
         free(resultUtf8String);
-        return {};
+        return nullptr;
     }
     resultUtf8String[utf8ByteCount] = '\0';
     return resultUtf8String;
@@ -57,8 +61,12 @@ struct CommandLineArgs {
         this->argc = argc;
         this->argvUtf8 = new char*[argc];
         for (int i = 0; i < argc; i++) {
-            // ReSharper disable once CppDFAMemoryLeak
-            argvUtf8[i] = AllocateUtf8String(argv[i], static_cast<int>(wcslen(argv[i])));
+            const size_t len = wcslen(argv[i]);
+            if (len > INT_MAX) {
+                argvUtf8[i] = nullptr;
+                continue;
+            }
+            argvUtf8[i] = AllocateUtf8String(argv[i], static_cast<int>(len));
         }
     }
 
@@ -73,7 +81,7 @@ struct CommandLineArgs {
         argc = 0;
     }
 };
-} // namespace
+}  // namespace
 
 int wmain(const int argc, PWCHAR argv[])
 {

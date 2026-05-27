@@ -36,7 +36,7 @@ constexpr Uid StringToUid(string_view value)
 {
     constexpr size_t UID_LENGTH = 36U;
     BASE_ASSERT(value.size() == UID_LENGTH);
-    char str[UID_LENGTH + 1] {};
+    char str[UID_LENGTH + 1]{};
     str[UID_LENGTH] = '\0';
     value.copy(str, UID_LENGTH, 0);
     return Uid(str);
@@ -83,4 +83,4 @@ constexpr fixed_string<36u> to_string(const Uid& value)
 }
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_UTIL_UID_UTIL_H
+#endif  // API_BASE_UTIL_UID_UTIL_H

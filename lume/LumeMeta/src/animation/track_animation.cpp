@@ -34,7 +34,7 @@ AnimationState::AnimationStateParams TrackAnimation::GetParams()
 bool TrackAnimation::Build(const IMetadata::Ptr& data)
 {
     if (Super::Build(data)) {
-        TrackAnimationState::TrackDataParams params { META_ACCESS_PROPERTY(Timestamps) };
+        TrackAnimationState::TrackDataParams params{META_ACCESS_PROPERTY(Timestamps)};
         GetState().SetTrackDataParams(BASE_NS::move(params));
 
         auto updateKf = MakeCallback<IOnChanged>(this, &TrackAnimation::UpdateKeyframes);
@@ -63,7 +63,7 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]]; // follow the same procedure as STOPPED
+                [[fallthrough]];  // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 // Evaluate current value
                 Evaluate();
@@ -71,7 +71,7 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
                 RemoveModifier(p.stack);
                 // Then set the correct keyframe value to the underlying property
                 if (auto value = GetState().GetCurrentValue()) {
-                    PropertyLock lock { p.property };
+                    PropertyLock lock{p.property};
                     lock->SetValueAny(*value);
                 }
                 break;
@@ -86,7 +86,7 @@ void TrackAnimation::OnAnimationStateChanged(const IAnimationInternal::Animation
                 Evaluate();
                 // Make sure we are in the target property's stack
                 auto mymod = GetSelf<IModifier>();
-                for (auto&& v : p.stack->GetModifiers({ ITrackAnimation::UID }, false)) {
+                for (auto&& v : p.stack->GetModifiers({ITrackAnimation::UID}, false)) {
                     if (v == mymod) {
                         mymod.reset();
                     }
@@ -154,15 +154,17 @@ void TrackAnimation::Evaluate()
         progress = curve->Transform(progress);
     }
     const auto trackState = GetState().UpdateIndex(progress);
-    const PropertyAnimationState::EvaluationData data { GetState().GetCurrentValue(), GetState().GetCurrentTrackStart(),
-        GetState().GetCurrentTrackEnd(), trackState.second,
-        META_ACCESS_PROPERTY(KeyframeCurves)->GetValueAt(trackState.first) };
+    const PropertyAnimationState::EvaluationData data{GetState().GetCurrentValue(),
+        GetState().GetCurrentTrackStart(),
+        GetState().GetCurrentTrackEnd(),
+        trackState.second,
+        META_ACCESS_PROPERTY(KeyframeCurves)->GetValueAt(trackState.first)};
     const auto status = GetState().EvaluateValue(data);
     UpdateCurrentTrack(trackState.first);
     if (status == AnyReturn::SUCCESS) {
         NotifyChanged();
         if (auto prop = GetTargetProperty()) {
-            PropertyLock lock { prop.property };
+            PropertyLock lock{prop.property};
             prop.stack->EvaluateAndStore();
         }
     }
@@ -181,7 +183,7 @@ void TrackAnimation::OnPropertyChanged(const TargetProperty& property, const ISt
         // Property changed while running, clean up previous property's stack
         RemoveModifier(previous);
         if (auto p = interface_cast<IProperty>(previous)) {
-            PropertyLock lock { p };
+            PropertyLock lock{p};
             lock->SetValueAny(*GetState().GetCurrentValue());
         }
     }
@@ -189,14 +191,14 @@ void TrackAnimation::OnPropertyChanged(const TargetProperty& property, const ISt
     Initialize();
 
     if (auto p = GetTargetProperty()) {
-        PropertyLock lock { p.property };
+        PropertyLock lock{p.property};
         auto& value = lock->GetValueAny();
         bool alreadyCompatible = value.GetTypeId() == GetState().GetKeyframeItemTypeId();
         if (!alreadyCompatible) {
-            IAny::Ptr array {};
+            IAny::Ptr array{};
             if (!value.IsArray()) {
                 // Clone the target property's value to an array of the value's underlying type
-                array = value.Clone(AnyCloneOptions { CloneValueType::DEFAULT_VALUE, TypeIdRole::ARRAY });
+                array = value.Clone(AnyCloneOptions{CloneValueType::DEFAULT_VALUE, TypeIdRole::ARRAY});
             } else {
                 CORE_LOG_E("TrackAnimation: Cannot animate array types");
             }
@@ -316,6 +318,6 @@ ReturnError TrackAnimation::Finalize(IImportFunctions& f)
     }
     return res;
 }
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

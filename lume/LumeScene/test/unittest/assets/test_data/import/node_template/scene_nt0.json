@@ -1,0 +1,31 @@
+{
+    "version": "1.0",
+    "description": "scene loading a node template with user position override",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext-instance",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template0.json"
+                    },
+                    "resourceGroup": "ext-group",
+                    "overrides": [
+                        {
+                            "path": ".//AnimatedCube.Position",
+                            "value": {
+                                "type": "vec3",
+                                "value": [7.0, 8.0, 9.0]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

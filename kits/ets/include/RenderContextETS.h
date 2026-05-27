@@ -36,13 +36,13 @@ public:
 
     std::shared_ptr<RenderResourcesETS> GetResources();
 
-    bool LoadPlugin(const std::string &name);
+    bool LoadPlugin(const std::string& name);
 
-    bool RegisterResourcePath(const std::string &protocol, const std::string &uri);
+    bool RegisterResourcePath(const std::string& protocol, const std::string& uri);
 
-    InvokeReturn<std::shared_ptr<ShaderETS>> CreateShader(const std::string &name, const std::string &uri);
-    std::shared_ptr<ImageETS> CreateImage(const std::string &name, const std::string &uri);
-    std::shared_ptr<ImageETS> CreateImageStream(const std::string &name, const std::string &uri);
+    InvokeReturn<std::shared_ptr<ShaderETS>> CreateShader(const std::string& name, const std::string& uri);
+    std::shared_ptr<ImageETS> CreateImage(const std::string& name, const std::string& uri);
+    std::shared_ptr<ImageETS> CreateImageStream(const std::string& name, const std::string& uri);
 
 private:
     RenderContextETS();

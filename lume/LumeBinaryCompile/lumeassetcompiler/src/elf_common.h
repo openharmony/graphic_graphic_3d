@@ -26,7 +26,7 @@
 #define ELFCLASS32 1
 #define ELFCLASS64 2
 #define ELFDATA2LSB 1
-#define ELFDATA2MSB 1
+#define ELFDATA2MSB 2
 #define ELFOSABI_NONE 0
 
 #define EM_NONE 0
@@ -61,4 +61,4 @@ struct ElfIdent {
     uint8_t EI_PAD[EI_NIDENT - 8];
 };
 
-#endif // LUME_ELF_COMMON_H
+#endif  // LUME_ELF_COMMON_H

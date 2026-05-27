@@ -28,15 +28,15 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 class DeviceGLES;
 struct GpuBufferPlatformDataGL final : public GpuBufferPlatformData {
-    uint32_t buffer { 0 };
-    uint32_t alignedBindByteSize { 0 };
-    uint32_t alignedByteSize { 0 };
+    uint32_t buffer{0};
+    uint32_t alignedBindByteSize{0};
+    uint32_t alignedByteSize{0};
     // map changes offset if buffered
-    uint32_t currentByteOffset { 0 };
+    uint32_t currentByteOffset{0};
     // alignedByteSize / mapBufferingCount (if no buffering alignedByteSize == bindMemoryByteSize)
-    uint32_t bindMemoryByteSize { 0 };
+    uint32_t bindMemoryByteSize{0};
     // For creating image from EGLClientBuffer
-    uintptr_t eglClientBuffer { 0 };
+    uintptr_t eglClientBuffer{0};
 };
 
 class GpuBufferGLES final : public GpuBuffer {
@@ -47,6 +47,7 @@ public:
 
     const GpuBufferDesc& GetDesc() const override;
     const GpuBufferPlatformDataGL& GetPlatformData() const;
+    uint64_t GetDeviceAddress() const override;
 
     void* Map() override;
     void* MapMemory() override;
@@ -59,14 +60,14 @@ private:
     GpuBufferDesc desc_;
 
     // debug assert usage only
-    mutable bool isMapped_ { false };
+    mutable bool isMapped_{false};
 
-    bool isPersistantlyMapped_ { false };
-    bool isMappable_ { false };
-    bool isRingBuffer_ { false };
+    bool isPersistantlyMapped_{false};
+    bool isMappable_{false};
+    bool isRingBuffer_{false};
 
-    uint8_t* data_ { nullptr };
+    uint8_t* data_{nullptr};
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_GPU_BUFFER_GLES_H
+#endif  // GLES_GPU_BUFFER_GLES_H

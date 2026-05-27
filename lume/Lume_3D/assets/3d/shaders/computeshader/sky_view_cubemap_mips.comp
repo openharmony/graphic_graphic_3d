@@ -4,27 +4,59 @@
 
 // sets and specializations
 
-layout(set = 0, binding = 0) uniform sampler2DArray uCubemapSampler;
-layout(set = 0, binding = 1, r11f_g11f_b10f) uniform writeonly image2DArray uOutputCubemap;
+layout(set = 0, binding = 0) uniform sampler2DArray uCubemapHiRes;
+layout(set = 0, binding = 1, r11f_g11f_b10f) uniform writeonly image2DArray uCubemapLoRes;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+// based on "Downsample Cubemap HLSL Code" from Activision
+// https://research.activision.com/publications/archives/fast-filtering-of-reflection-probes
+
+float CalcWeight(float u, float v)
+{
+    float val = u*u + v*v + 1.0;
+    return val * sqrt(val);
+}
+
 void main()
 {
-    ivec3 globalID = ivec3(gl_GlobalInvocationID);
-    ivec3 dimensions = imageSize(uOutputCubemap);
+    ivec3 gid = ivec3(gl_GlobalInvocationID);
+    ivec3 loResSize = imageSize(uCubemapLoRes);
     
-    if (any(greaterThanEqual(globalID.xy, dimensions.xy))) {
+    if (any(greaterThanEqual(gid.xy, loResSize.xy)) || gid.z > 5u) {
         return;
-    }
+	}
 
-    vec2 uv = vec2(globalID.xy) / vec2(dimensions.xy);
-    uint face = gl_GlobalInvocationID.z;
-    if (face > 5) {
-        return;
-    }
-    
-    vec4 color = texture(uCubemapSampler, vec3(uv, float(face)));
+    uint face = gid.z;
+    ivec2 srcBase = gid.xy * 2;
 
-    imageStore(uOutputCubemap, ivec3(globalID.xy, face), color);
+	vec4 c00 = texelFetch(uCubemapHiRes, ivec3(srcBase + ivec2(0, 0), face), 0);
+	vec4 c10 = texelFetch(uCubemapHiRes, ivec3(srcBase + ivec2(1, 0), face), 0);
+	vec4 c01 = texelFetch(uCubemapHiRes, ivec3(srcBase + ivec2(0, 1), face), 0);
+	vec4 c11 = texelFetch(uCubemapHiRes, ivec3(srcBase + ivec2(1, 1), face), 0);
+
+	float invRes = 1.0 / float(loResSize.x);
+
+	float u0 = ((float(gid.x) * 2.0 + 1.0 - 0.75) *  invRes - 1.0);
+	float u1 = ((float(gid.x) * 2.0 + 1.0 + 0.75) *  invRes - 1.0);
+	float v0 = ((float(gid.y) * 2.0 + 1.0 - 0.75) * -invRes + 1.0);
+	float v1 = ((float(gid.y) * 2.0 + 1.0 + 0.75) * -invRes + 1.0);
+
+	float weights[4];
+	weights[0] = CalcWeight(u0, v0);
+	weights[1] = CalcWeight(u1, v0);
+	weights[2] = CalcWeight(u0, v1);
+	weights[3] = CalcWeight(u1, v1);
+
+	const float wsum = 0.5 / (weights[0] + weights[1] + weights[2] + weights[3]);
+	for (int i = 0; i < 4; i++) {
+		weights[i] = weights[i] * wsum + 0.125;
+	}
+
+	vec4 color = c00 * weights[0] +
+				 c10 * weights[1] +
+				 c01 * weights[2] +
+				 c11 * weights[3];
+
+	imageStore(uCubemapLoRes, gid, color);
 }

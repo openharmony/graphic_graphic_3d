@@ -43,4 +43,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_SWAPCHAIN_H
+#endif  // DEVICE_SWAPCHAIN_H

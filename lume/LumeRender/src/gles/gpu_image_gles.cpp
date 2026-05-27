@@ -34,10 +34,12 @@ namespace {
 #if (RENDER_PERF_ENABLED == 1)
 void RecordAllocation(const int64_t alignedByteSize)
 {
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuImages", "GPU_IMAGE", alignedByteSize,
+        pdm->UpdateData("AllGpuImages",
+            "GPU_IMAGE",
+            alignedByteSize,
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
@@ -45,7 +47,7 @@ void RecordAllocation(const int64_t alignedByteSize)
 
 GpuImagePlatformDataGL ConvertFormat(const DeviceGLES::ImageFormat& fmt)
 {
-    GpuImagePlatformDataGL result {};
+    GpuImagePlatformDataGL result{};
     if (fmt.coreFormat == BASE_FORMAT_UNDEFINED) {
         PLUGIN_ASSERT_MSG(false, "Unsupported texture format in GpuImageGLES::convertFormat!");
     }
@@ -53,8 +55,8 @@ GpuImagePlatformDataGL ConvertFormat(const DeviceGLES::ImageFormat& fmt)
     result.dataType = fmt.dataType;
     result.format = fmt.format;
     result.internalFormat = fmt.internalFormat;
-    result.compression = { fmt.compression.compressed, fmt.compression.blockW, fmt.compression.blockH,
-        fmt.compression.bytesperblock };
+    result.compression = {
+        fmt.compression.compressed, fmt.compression.blockW, fmt.compression.blockH, fmt.compression.bytesperblock};
     result.swizzle = fmt.swizzle;
     return result;
 }
@@ -110,7 +112,7 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
     }
 #endif
 
-    const Math::UVec2 size2D { desc.width, desc.height };
+    const Math::UVec2 size2D{desc.width, desc.height};
     switch (desc.imageViewType) {
         case CORE_IMAGE_VIEW_TYPE_2D: {
             PLUGIN_ASSERT_MSG(desc.layerCount == 1, "layerCount != 1 for normal texture!");
@@ -135,19 +137,26 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
             if (sampleCount > 1 && device.HasExtension("GL_EXT_multiview_texture_multisample")) {
                 plat.type = GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
                 // must use fixed sample locations so that renderbuffer/texture fbos work.
-                device.TexStorage3DMultisample(plat.image, plat.type, sampleCount, plat.internalFormat,
-                    { desc.width, desc.height, desc.layerCount }, true);
+                device.TexStorage3DMultisample(plat.image,
+                    plat.type,
+                    sampleCount,
+                    plat.internalFormat,
+                    {desc.width, desc.height, desc.layerCount},
+                    true);
             } else {
                 plat.type = GL_TEXTURE_2D_ARRAY;
-                device.TexStorage3D(plat.image, plat.type, desc.mipCount, plat.internalFormat,
-                    { desc.width, desc.height, desc.layerCount });
+                device.TexStorage3D(plat.image,
+                    plat.type,
+                    desc.mipCount,
+                    plat.internalFormat,
+                    {desc.width, desc.height, desc.layerCount});
             }
             break;
         }
         case CORE_IMAGE_VIEW_TYPE_3D: {
             plat.type = GL_TEXTURE_3D;
             device.TexStorage3D(
-                plat.image, plat.type, desc.mipCount, plat.internalFormat, { desc.width, desc.height, desc.depth });
+                plat.image, plat.type, desc.mipCount, plat.internalFormat, {desc.width, desc.height, desc.depth});
             break;
         }
         case CORE_IMAGE_VIEW_TYPE_1D:
@@ -162,7 +171,7 @@ void GenerateImageStorage(DeviceGLES& device, const GpuImageDesc& desc, GpuImage
     DoSwizzle(desc, plat);
     device.TexSwizzle(plat.image, plat.type, plat.swizzle);
 }
-} // namespace
+}  // namespace
 
 GpuImagePlatformDataGL GpuImageGLES::GetPlatformData(const DeviceGLES& device, Format format)
 {
@@ -214,15 +223,24 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
             // to the same FBO with FramebufferTexture2DMultisampleEXT attachments, so in order to use that on Mali
             // render buffer must also use the EXT function.
             if (device_.HasExtension("GL_EXT_multisampled_render_to_texture2")) {
-                glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, (GLsizei)sampleCount, plat_.internalFormat,
-                    (GLsizei)desc_.width, (GLsizei)desc_.height);
+                glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER,
+                    (GLsizei)sampleCount,
+                    plat_.internalFormat,
+                    (GLsizei)desc_.width,
+                    (GLsizei)desc_.height);
             } else {
-                glRenderbufferStorageMultisample(GL_RENDERBUFFER, (GLsizei)sampleCount, plat_.internalFormat,
-                    (GLsizei)desc_.width, (GLsizei)desc_.height);
+                glRenderbufferStorageMultisample(GL_RENDERBUFFER,
+                    (GLsizei)sampleCount,
+                    plat_.internalFormat,
+                    (GLsizei)desc_.width,
+                    (GLsizei)desc_.height);
             }
 #else
-            glRenderbufferStorageMultisample(GL_RENDERBUFFER, (GLsizei)sampleCount, plat_.internalFormat,
-                (GLsizei)desc_.width, (GLsizei)desc_.height);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER,
+                (GLsizei)sampleCount,
+                plat_.internalFormat,
+                (GLsizei)desc_.width,
+                (GLsizei)desc_.height);
 #endif
         } else {
             glRenderbufferStorage(GL_RENDERBUFFER, plat_.internalFormat, (GLsizei)desc_.width, (GLsizei)desc_.height);
@@ -231,12 +249,16 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc)
         GenerateImageStorage(device_, desc_, plat_);
     }
 #if (RENDER_PERF_ENABLED == 1)
-    RecordAllocation(static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height * desc_.depth));
+    RecordAllocation(
+        static_cast<int64_t>(static_cast<uint64_t>(plat_.bytesperpixel) * desc_.width * desc_.height * desc_.depth));
 #endif
 }
 
 GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData)
-    : GpuImage(), device_((DeviceGLES&)device), plat_((const GpuImagePlatformDataGL&)platformData), desc_(desc),
+    : GpuImage(),
+      device_((DeviceGLES&)device),
+      plat_((const GpuImagePlatformDataGL&)platformData),
+      desc_(desc),
       ownsResources_(false)
 {
     PLUGIN_ASSERT(device_.IsActive());
@@ -267,7 +289,7 @@ GpuImageGLES::GpuImageGLES(Device& device, const GpuImageDesc& desc, const GpuIm
         // restore previous tex id.
         device_.BindTexture(TEMP_BIND_UNIT, GL_TEXTURE_EXTERNAL_OES, oldTex);
     }
-#endif // RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GLES_BACKEND
 }
 
 GpuImageGLES::~GpuImageGLES()
@@ -288,7 +310,8 @@ GpuImageGLES::~GpuImageGLES()
         }
 
 #if (RENDER_PERF_ENABLED == 1)
-        RecordAllocation(-static_cast<int64_t>(plat_.bytesperpixel * desc_.width * desc_.height * desc_.depth));
+        RecordAllocation(-static_cast<int64_t>(
+            static_cast<uint64_t>(plat_.bytesperpixel) * desc_.width * desc_.height * desc_.depth));
 #endif
     }
 #if (RENDER_HAS_GLES_BACKEND == 1)

@@ -27,18 +27,20 @@ struct GpuImageDesc;
 
 namespace PlatformHardwareBufferUtil {
 struct HardwareBufferProperties {
-    VkDeviceSize allocationSize { 0 };
-    uint32_t memoryTypeBits { 0 };
+    VkDeviceSize allocationSize{0};
+    uint32_t memoryTypeBits{0};
 
-    VkFormat format { VK_FORMAT_UNDEFINED };
-    uint64_t externalFormat { 0 };
-    VkFormatFeatureFlags formatFeatures { 0 };
-    VkComponentMapping samplerYcbcrConversionComponents { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
-    VkSamplerYcbcrModelConversion suggestedYcbcrModel { VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY };
-    VkSamplerYcbcrRange suggestedYcbcrRange { VK_SAMPLER_YCBCR_RANGE_ITU_FULL };
-    VkChromaLocation suggestedXChromaOffset { VK_CHROMA_LOCATION_COSITED_EVEN };
-    VkChromaLocation suggestedYChromaOffset { VK_CHROMA_LOCATION_COSITED_EVEN };
+    VkFormat format{VK_FORMAT_UNDEFINED};
+    uint64_t externalFormat{0};
+    VkFormatFeatureFlags formatFeatures{0};
+    VkComponentMapping samplerYcbcrConversionComponents{VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY};
+    VkSamplerYcbcrModelConversion suggestedYcbcrModel{VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY};
+    VkSamplerYcbcrRange suggestedYcbcrRange{VK_SAMPLER_YCBCR_RANGE_ITU_FULL};
+    VkChromaLocation suggestedXChromaOffset{VK_CHROMA_LOCATION_COSITED_EVEN};
+    VkChromaLocation suggestedYChromaOffset{VK_CHROMA_LOCATION_COSITED_EVEN};
 };
 
 HardwareBufferProperties QueryHwBufferFormatProperties(const DeviceVk& deviceVk, uintptr_t hwBuffer);
@@ -66,7 +68,7 @@ struct HardwareBufferBuffer {
 HardwareBufferBuffer CreateHwPlatformBuffer(const DeviceVk& deviceVk,
     const HardwareBufferProperties& hwBufferProperties, const GpuBufferDesc& desc, uintptr_t hwBuffer);
 void DestroyHwPlatformBuffer(const DeviceVk& deviceVk, VkBuffer buffer, VkDeviceMemory deviceMemory);
-} // namespace PlatformHardwareBufferUtil
+}  // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_PLATFORM_HARDWARE_BUFFER_UTIL_VK_H
+#endif  // VULKAN_PLATFORM_HARDWARE_BUFFER_UTIL_VK_H

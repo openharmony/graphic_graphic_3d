@@ -38,14 +38,14 @@ struct FormatConverter {
 
     static SourceType ConvertToSource(META_NS::IAny&, const TargetType& v)
     {
-        return ColorFormat { v.format, v.usageFlags };
+        return ColorFormat{v.format, v.usageFlags};
     }
     static TargetType ConvertToTarget(const SourceType& v)
     {
-        return CORE3D_NS::CameraComponent::TargetUsage { v.format, v.usageFlags };
+        return CORE3D_NS::CameraComponent::TargetUsage{v.format, v.usageFlags};
     }
 };
-} // namespace
+}  // namespace
 
 bool CameraComponent::Build(const META_NS::IMetadata::Ptr& d)
 {
@@ -59,15 +59,16 @@ bool CameraComponent::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE
     const auto name = p->GetName();
     if (name == "PostProcess") {
         auto ep = CreateProperty(path);
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(
-                   new InterfacePtrEntityValue<IPostProcess>(ep, { GetInternalScene(), ClassId::PostProcess })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(
+                new InterfacePtrEntityValue<IPostProcess>(ep, {GetInternalScene(), ClassId::PostProcess})));
     }
     if (name == "ColorTargetCustomization") {
         auto ep = CreateProperty(path);
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingArrayValue<FormatConverter>(ep)));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingArrayValue<FormatConverter>(ep)));
     }
     return false;
 }
@@ -91,7 +92,14 @@ Future<bool> CameraComponent::SetActive(bool active)
 Future<bool> CameraComponent::SetRenderTarget(const IRenderTarget::Ptr& target)
 {
     auto scene = GetInternalScene();
-    return scene->AddTaskOrRunDirectly([=] {
+    if (!scene) {
+        return {};
+    }
+    return scene->AddTaskOrRunDirectly([this, scene, target, weak = BASE_NS::weak_ptr{GetSelf()}] {
+        auto self = weak.lock();
+        if (!self) {
+            return false;
+        }
         bool res = UpdateCameraRenderTarget(object_, target);
         if (res) {
             if (target) {
@@ -135,7 +143,7 @@ bool CameraComponent::Attaching(const IAttach::Ptr& target, const IObject::Ptr& 
     if (target) {
         META_NS::IContainer::FindOptions options;
         options.behavior = META_NS::TraversalType::NO_HIERARCHY;
-        options.uids = { IInputReceiver::UID };
+        options.uids = {IInputReceiver::UID};
         options.strict = false;
         inputReceivers_.SetTarget(target->GetAttachmentContainer(), options);
     }
@@ -164,7 +172,14 @@ void CameraComponent::SendInputEvent(PointerEvent& event)
 Future<NodeHits> CameraComponent::CastRay(const BASE_NS::Math::Vec2& pos, const RayCastOptions& options) const
 {
     auto scene = GetInternalScene();
-    return scene->AddTaskOrRunDirectly([=] {
+    if (!scene) {
+        return {};
+    }
+    return scene->AddTaskOrRunDirectly([this, scene, pos, options, weak = BASE_NS::weak_ptr{GetSelf()}] {
+        auto self = weak.lock();
+        if (!self) {
+            return NodeHits{};
+        }
         RayCastOptions ops = options;
         if (ops.layerMask == NONE_LAYER_MASK) {
             ops.layerMask = CameraLayerMask()->GetValue();
@@ -179,7 +194,14 @@ Future<NodeHits> CameraComponent::CastRay(const BASE_NS::Math::Vec2& pos, const 
 Future<BASE_NS::Math::Vec3> CameraComponent::ScreenPositionToWorld(const BASE_NS::Math::Vec3& pos) const
 {
     auto scene = GetInternalScene();
-    return scene->AddTaskOrRunDirectly([=] {
+    if (!scene) {
+        return {};
+    }
+    return scene->AddTaskOrRunDirectly([this, scene, pos, weak = BASE_NS::weak_ptr{GetSelf()}] {
+        auto self = weak.lock();
+        if (!self) {
+            return BASE_NS::Math::Vec3{};
+        }
         BASE_NS::Math::Vec3 result;
         if (auto ir = interface_cast<IInternalRayCast>(scene)) {
             result = ir->ScreenPositionToWorld(object_, pos);
@@ -190,7 +212,14 @@ Future<BASE_NS::Math::Vec3> CameraComponent::ScreenPositionToWorld(const BASE_NS
 Future<BASE_NS::Math::Vec3> CameraComponent::WorldPositionToScreen(const BASE_NS::Math::Vec3& pos) const
 {
     auto scene = GetInternalScene();
-    return scene->AddTaskOrRunDirectly([=] {
+    if (!scene) {
+        return {};
+    }
+    return scene->AddTaskOrRunDirectly([this, scene, pos, weak = BASE_NS::weak_ptr{GetSelf()}] {
+        auto self = weak.lock();
+        if (!self) {
+            return BASE_NS::Math::Vec3{};
+        }
         BASE_NS::Math::Vec3 result;
         if (auto ir = interface_cast<IInternalRayCast>(scene)) {
             result = ir->WorldPositionToScreen(object_, pos);

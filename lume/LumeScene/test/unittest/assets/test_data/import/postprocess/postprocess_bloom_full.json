@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "postProcess",
+		"bloom": {
+			"enabled": true,
+			"type": "bilateral",
+			"quality": "low",
+			"thresholdHard": 1.0,
+			"thresholdSoft": 0.5,
+			"amountCoefficient": 0.8,
+			"dirtMaskCoefficient": 0.3,
+			"scatter": 0.6,
+			"scaleFactor": 0.75,
+			"useCompute": true
+		}
+	}
+}

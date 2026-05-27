@@ -82,11 +82,11 @@ private:
 
     IMorphingSystem::Properties properties_;
     CORE_NS::PropertyApiImpl<IMorphingSystem::Properties> MORPHING_SYSTEM_PROPERTIES;
-    uint32_t lastGeneration_ { 0 };
+    uint32_t lastGeneration_{0};
     BASE_NS::unordered_map<CORE_NS::Entity, bool> dirty_;
     BASE_NS::vector<CORE_NS::Entity> reset_;
     CORE_NS::ComponentQuery nodeQuery_;
     RenderDataMorph::Submesh currentMorphSubmesh_;
 };
 CORE3D_END_NAMESPACE()
-#endif // CORE_ECS_MORPHINGSYSTEM_H
+#endif  // CORE_ECS_MORPHINGSYSTEM_H

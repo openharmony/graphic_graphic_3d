@@ -1,0 +1,11 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "metallicRoughnessMaterial",
+		"options": {
+			"cullMode": "back",
+			"polygonMode": "fill",
+			"blend": true
+		}
+	}
+}

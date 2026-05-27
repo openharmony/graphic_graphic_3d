@@ -23,6 +23,7 @@
 #include <3d/render/intf_render_data_store_default_light.h>
 #include <3d/render/intf_render_data_store_default_material.h>
 #include <3d/render/intf_render_data_store_default_scene.h>
+#include <3d/render/intf_render_data_store_light_probe.h>
 #include <3d/render/intf_render_data_store_morph.h>
 #include <core/implementation_uids.h>
 #include <core/intf_engine.h>
@@ -48,16 +49,18 @@ using namespace CORE_NS;
 PROPERTY_LIST(IRenderPreprocessorSystem::Properties, ComponentMetadata,
     MEMBER_PROPERTY(dataStoreScene, "dataStoreScene", 0), MEMBER_PROPERTY(dataStoreCamera, "dataStoreCamera", 0),
     MEMBER_PROPERTY(dataStoreLight, "dataStoreLight", 0), MEMBER_PROPERTY(dataStoreMaterial, "dataStoreMaterial", 0),
-    MEMBER_PROPERTY(dataStoreMorph, "dataStoreMorph", 0), MEMBER_PROPERTY(dataStorePrefix, "", 0));
+    MEMBER_PROPERTY(dataStoreMorph, "dataStoreMorph", 0),
+    MEMBER_PROPERTY(dataStoreLightProbe, "dataStoreLightProbe", 0), MEMBER_PROPERTY(dataStorePrefix, "", 0));
 
 namespace {
-static constexpr string_view DEFAULT_DS_SCENE_NAME { "RenderDataStoreDefaultScene" };
-static constexpr string_view DEFAULT_DS_CAMERA_NAME { "RenderDataStoreDefaultCamera" };
-static constexpr string_view DEFAULT_DS_LIGHT_NAME { "RenderDataStoreDefaultLight" };
-static constexpr string_view DEFAULT_DS_MATERIAL_NAME { "RenderDataStoreDefaultMaterial" };
-static constexpr string_view DEFAULT_DS_MORPH_NAME { "RenderDataStoreMorph" };
+static constexpr string_view DEFAULT_DS_SCENE_NAME{"RenderDataStoreDefaultScene"};
+static constexpr string_view DEFAULT_DS_CAMERA_NAME{"RenderDataStoreDefaultCamera"};
+static constexpr string_view DEFAULT_DS_LIGHT_NAME{"RenderDataStoreDefaultLight"};
+static constexpr string_view DEFAULT_DS_MATERIAL_NAME{"RenderDataStoreDefaultMaterial"};
+static constexpr string_view DEFAULT_DS_LIGHT_PROBE_NAME{"RenderDataStoreLightProbe"};
+static constexpr string_view DEFAULT_DS_MORPH_NAME{"RenderDataStoreMorph"};
 
-template<typename DataStoreType>
+template <typename DataStoreType>
 inline auto CreateIfNeeded(
     IRenderDataStoreManager& manager, refcnt_ptr<DataStoreType>& dataStore, string_view dataStoreName)
 {
@@ -66,7 +69,7 @@ inline auto CreateIfNeeded(
     }
     return dataStore;
 }
-} // namespace
+}  // namespace
 
 RenderPreprocessorSystem::RenderPreprocessorSystem(IEcs& ecs)
     : ecs_(ecs), RENDER_PREPROCESSOR_SYSTEM_PROPERTIES(&properties_, array_view(ComponentMetadata))
@@ -126,6 +129,7 @@ void RenderPreprocessorSystem::SetProperties(const IPropertyHandle& data)
         properties_.dataStoreCamera = in->dataStoreCamera;
         properties_.dataStoreLight = in->dataStoreLight;
         properties_.dataStoreMaterial = in->dataStoreMaterial;
+        properties_.dataStoreLightProbe = in->dataStoreLightProbe;
         properties_.dataStoreMorph = in->dataStoreMorph;
 
         const bool hasDefaultNames = CheckIfDefaultDataStoreNames();
@@ -137,6 +141,7 @@ void RenderPreprocessorSystem::SetProperties(const IPropertyHandle& data)
             properties_.dataStoreCamera = properties_.dataStorePrefix + properties_.dataStoreCamera;
             properties_.dataStoreLight = properties_.dataStorePrefix + properties_.dataStoreLight;
             properties_.dataStoreMaterial = properties_.dataStorePrefix + properties_.dataStoreMaterial;
+            properties_.dataStoreLightProbe = properties_.dataStorePrefix + properties_.dataStoreLightProbe;
             properties_.dataStoreMorph = properties_.dataStorePrefix + properties_.dataStoreMorph;
         }
 
@@ -154,6 +159,7 @@ void RenderPreprocessorSystem::SetDataStorePointers(IRenderDataStoreManager& man
     dsLight_ = CreateIfNeeded(manager, dsLight_, properties_.dataStoreLight);
     dsMaterial_ = CreateIfNeeded(manager, dsMaterial_, properties_.dataStoreMaterial);
     dsMorph_ = CreateIfNeeded(manager, dsMorph_, properties_.dataStoreMorph);
+    dsLightProbe_ = CreateIfNeeded(manager, dsLightProbe_, properties_.dataStoreLightProbe);
 }
 
 const IEcs& RenderPreprocessorSystem::GetECS() const
@@ -167,7 +173,8 @@ bool RenderPreprocessorSystem::CheckIfDefaultDataStoreNames() const
         (properties_.dataStoreCamera == DEFAULT_DS_CAMERA_NAME) &&
         (properties_.dataStoreLight == DEFAULT_DS_LIGHT_NAME) &&
         (properties_.dataStoreMaterial == DEFAULT_DS_MATERIAL_NAME) &&
-        (properties_.dataStoreMorph == DEFAULT_DS_MORPH_NAME)) {
+        (properties_.dataStoreMorph == DEFAULT_DS_MORPH_NAME) &&
+        (properties_.dataStoreLightProbe == DEFAULT_DS_LIGHT_PROBE_NAME)) {
         return true;
     } else {
         return false;
@@ -186,6 +193,7 @@ void RenderPreprocessorSystem::Initialize()
             properties_.dataStoreCamera = properties_.dataStorePrefix + properties_.dataStoreCamera;
             properties_.dataStoreLight = properties_.dataStorePrefix + properties_.dataStoreLight;
             properties_.dataStoreMaterial = properties_.dataStorePrefix + properties_.dataStoreMaterial;
+            properties_.dataStoreLightProbe = properties_.dataStorePrefix + properties_.dataStoreLightProbe;
             properties_.dataStoreMorph = properties_.dataStorePrefix + properties_.dataStoreMorph;
         }
         SetDataStorePointers(renderContext_->GetRenderDataStoreManager());

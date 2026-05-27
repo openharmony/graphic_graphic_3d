@@ -70,18 +70,18 @@ struct DescriptorSetLayoutBindingResourcesHandler {
     BASE_NS::array_view<const SamplerDescriptorHandler> samplers;
 
     /** Mask of bindings in the descriptor set. Max uint is value which means that not set */
-    uint32_t descriptorSetBindingMask { ~0u };
+    uint32_t descriptorSetBindingMask{~0u};
     /** Current binding mask. Max uint is value which means that not set */
-    uint32_t bindingMask { ~0u };
+    uint32_t bindingMask{~0u};
 };
 
 struct CpuDescriptorSet {
-    uint32_t currentGpuBufferingIndex { 0 };
-    bool gpuDescriptorSetCreated { false };
-    bool isDirty { false };
-    bool hasDynamicBarrierResources { false };
-    bool hasPlatformConversionBindings { false }; // e.g. hwbuffers with ycbcr / OES
-    bool hasImmutableSamplers { false };
+    uint32_t currentGpuBufferingIndex{0};
+    bool gpuDescriptorSetCreated{false};
+    bool isDirty{false};
+    bool hasDynamicBarrierResources{false};
+    bool hasPlatformConversionBindings{false};  // e.g. hwbuffers with ycbcr / OES
+    bool hasImmutableSamplers{false};
 
     BASE_NS::vector<DescriptorSetLayoutBindingResource> bindings;
 
@@ -95,11 +95,11 @@ struct CpuDescriptorSet {
 
 // storage counts
 struct LowLevelDescriptorCounts {
-    uint32_t writeDescriptorCount { 0u };
-    uint32_t bufferCount { 0u };
-    uint32_t imageCount { 0u };
-    uint32_t samplerCount { 0u };
-    uint32_t accelCount { 0u };
+    uint32_t writeDescriptorCount{0u};
+    uint32_t bufferCount{0u};
+    uint32_t imageCount{0u};
+    uint32_t samplerCount{0u};
+    uint32_t accelCount{0u};
 };
 
 enum DescriptorSetUpdateInfoFlagBits {
@@ -162,7 +162,7 @@ public:
 
     struct GlobalDescriptorSetData {
         // should only be updated from a single place per frame
-        bool frameWriteLocked { false };
+        bool frameWriteLocked{false};
         CpuDescriptorSet cpuDescriptorSet;
         RenderHandleReference renderHandleReference;
     };
@@ -191,7 +191,7 @@ protected:
     BASE_NS::vector<RenderHandle> descriptorSetHandlesForUpdate_;
 
     // lock creation after pre execute done for render nodes
-    bool creationLocked_ { true };
+    bool creationLocked_{true};
 
     // used to lock shared data which could be accessed from multiple threads
     mutable std::shared_mutex mutex_;
@@ -217,7 +217,7 @@ public:
         if (addBits & NodeContextDescriptorSetManager::ONE_FRAME_DESC_SET_BIT) {
             return NodeContextDescriptorSetManager::DescriptorSetIndexType::DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME;
         } else if (addBits & NodeContextDescriptorSetManager::GLOBAL_DESCRIPTOR_BIT) {
-            return ~0U; // invalid
+            return ~0U;  // invalid
         } else {
             return NodeContextDescriptorSetManager::DescriptorSetIndexType::DESCRIPTOR_SET_INDEX_TYPE_STATIC;
         }
@@ -292,8 +292,8 @@ public:
     void SetValidationDebugName(const BASE_NS::string_view debugName);
 #endif
 
-    static constexpr uint32_t ONE_FRAME_DESC_SET_BIT { 1U << 0U };
-    static constexpr uint32_t GLOBAL_DESCRIPTOR_BIT { 1U << 1U };
+    static constexpr uint32_t ONE_FRAME_DESC_SET_BIT{1U << 0U};
+    static constexpr uint32_t GLOBAL_DESCRIPTOR_BIT{1U << 1U};
 
     enum DescriptorSetIndexType : uint8_t {
         DESCRIPTOR_SET_INDEX_TYPE_STATIC = 0,
@@ -307,9 +307,9 @@ protected:
 
     BASE_NS::vector<CpuDescriptorSet> cpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_COUNT];
 
-    uint32_t maxSets_ { 0 };
+    uint32_t maxSets_{0};
     // indicates if there are some sets updated on CPU which have platfrom conversion bindings
-    bool hasPlatformConversionBindings_ { false };
+    bool hasPlatformConversionBindings_{false};
 
     DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSetImpl(const uint32_t index,
         const DescriptorSetLayoutBindingResources& bindingResources, const GpuQueue& gpuQueue,
@@ -335,4 +335,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_H
+#endif  // CORE__RENDER__NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_H

@@ -25,22 +25,22 @@ namespace UTest2 {
 const char* GetVersionInfo();
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
 void UnregisterInterfaces(CORE_NS::PluginToken);
-} // namespace UTest2
+}  // namespace UTest2
 
 namespace {
 extern "C" {
-PLUGIN_DATA(CoreTestShared) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(CoreTestShared){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "Shared Test Plugin v2",
     // Version information of the plugin.
-    { UTest2::UID_SHARED_PLUGIN, UTest2::GetVersionInfo },
+    {UTest2::UID_SHARED_PLUGIN, UTest2::GetVersionInfo},
     UTest2::RegisterInterfaces,
     UTest2::UnregisterInterfaces,
     {},
 };
 }
-} // namespace
+}  // namespace
 
 namespace UTest2 {
 using namespace CORE_NS;
@@ -49,7 +49,7 @@ namespace {
 struct GlobalToken {
     IPluginRegister& pluginRegistry;
     SharedGlobalTest test;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_SHARED_GLOBAL_TEST_IMPL,
         CORE_NS::GetName<UTest::ITest>().data(),
@@ -58,12 +58,12 @@ struct GlobalToken {
             return &static_cast<GlobalToken*>(token)->test;
         },
     };
-    bool optionalPluginLoaded { false };
+    bool optionalPluginLoaded{false};
 };
 
 struct EngineToken {
     IEngine& engine;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_SHARED_ENGINE_TEST_IMPL,
         CORE_NS::GetName<UTest::ITest>().data(),
@@ -74,7 +74,7 @@ struct EngineToken {
 
 PluginToken CreatePlugin(IEngine& engine)
 {
-    EngineToken* token = new EngineToken { engine };
+    EngineToken* token = new EngineToken{engine};
 
     auto& registry = *engine.GetInterface<IClassRegister>();
 
@@ -95,7 +95,7 @@ void DestroyPlugin(PluginToken token)
 }
 
 constexpr IEnginePlugin ENGINE_PLUGIN(CreatePlugin, DestroyPlugin);
-} // namespace
+}  // namespace
 
 const char* GetVersionInfo()
 {
@@ -104,11 +104,11 @@ const char* GetVersionInfo()
 
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister& pluginRegistry)
 {
-    GlobalToken* token = new GlobalToken { pluginRegistry };
+    GlobalToken* token = new GlobalToken{pluginRegistry};
 
     // listing a plugin in IPlugin::pluginDependencies is a hard dependency. only way to have optional dependencies is
     // to call Load/UnloadPlugins from the plugin and keep track is the optional dependency available or not.
-    token->optionalPluginLoaded = pluginRegistry.LoadPlugins({ UTest::UID_SHARED_PLUGIN });
+    token->optionalPluginLoaded = pluginRegistry.LoadPlugins({UTest::UID_SHARED_PLUGIN});
 
     pluginRegistry.RegisterTypeInfo(ENGINE_PLUGIN);
     pluginRegistry.GetClassRegister().RegisterInterfaceType(token->interfaceInfo);
@@ -123,8 +123,8 @@ void UnregisterInterfaces(PluginToken token)
     state->pluginRegistry.GetClassRegister().UnregisterInterfaceType(state->interfaceInfo);
     state->pluginRegistry.UnregisterTypeInfo(ENGINE_PLUGIN);
     if (state->optionalPluginLoaded) {
-        state->pluginRegistry.UnloadPlugins({ UTest::UID_SHARED_PLUGIN });
+        state->pluginRegistry.UnloadPlugins({UTest::UID_SHARED_PLUGIN});
     }
     delete state;
 }
-} // namespace UTest2
+}  // namespace UTest2

@@ -28,19 +28,19 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
     PLUGIN_ASSERT(device_.IsActive());
     // NOTE: delay Create?
     constexpr GLint magFilter[] = {
-        GL_NEAREST, // min is CORE_FILTER_NEAREST
-        GL_LINEAR   // min is CORE_FILTER_LINEAR
+        GL_NEAREST,  // min is CORE_FILTER_NEAREST
+        GL_LINEAR    // min is CORE_FILTER_LINEAR
     };
     constexpr GLint minFilter[] = {
-        GL_NEAREST_MIPMAP_NEAREST, // min = CORE_FILTER_NEAREST mip = CORE_FILTER_NEAREST
-        GL_LINEAR_MIPMAP_NEAREST,  // min = CORE_FILTER_LINEAR mip = CORE_FILTER_NEAREST
-        GL_NEAREST_MIPMAP_LINEAR,  // min = CORE_FILTER_NEAREST mip = CORE_FILTER_LINEAR
-        GL_LINEAR_MIPMAP_LINEAR,   // min = CORE_FILTER_LINEAR mip = CORE_FILTER_LINEAR
+        GL_NEAREST_MIPMAP_NEAREST,  // min = CORE_FILTER_NEAREST mip = CORE_FILTER_NEAREST
+        GL_LINEAR_MIPMAP_NEAREST,   // min = CORE_FILTER_LINEAR mip = CORE_FILTER_NEAREST
+        GL_NEAREST_MIPMAP_LINEAR,   // min = CORE_FILTER_NEAREST mip = CORE_FILTER_LINEAR
+        GL_LINEAR_MIPMAP_LINEAR,    // min = CORE_FILTER_LINEAR mip = CORE_FILTER_LINEAR
     };
     constexpr GLint addressMode[] = {
-        GL_REPEAT,          // CORE_SAMPLER_ADDRESS_MODE_REPEAT = 0,
-        GL_MIRRORED_REPEAT, // CORE_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT = 1,
-        GL_CLAMP_TO_EDGE,   // CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE = 2,
+        GL_REPEAT,           // CORE_SAMPLER_ADDRESS_MODE_REPEAT = 0,
+        GL_MIRRORED_REPEAT,  // CORE_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT = 1,
+        GL_CLAMP_TO_EDGE,    // CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE = 2,
 
         // requires gles 3.2
         // CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER = 3, requires GL_EXT_texture_border_clamp
@@ -48,17 +48,17 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
         GL_CLAMP_TO_BORDER,
 
         // Not supported in gles
-        GL_CLAMP_TO_EDGE, // GL_MIRROR_CLAMP_TO_EDGE,//CORE_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE = 4,
+        GL_CLAMP_TO_EDGE,  // GL_MIRROR_CLAMP_TO_EDGE,//CORE_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE = 4,
     };
     constexpr GLint compareMode[] = {
-        GL_NEVER,    // CORE_COMPARE_OP_NEVER is 0,
-        GL_LESS,     // CORE_COMPARE_OP_LESS is 1,
-        GL_EQUAL,    // CORE_COMPARE_OP_EQUAL is 2,
-        GL_LEQUAL,   // CORE_COMPARE_OP_LESS_OR_EQUAL is 3,
-        GL_GREATER,  // CORE_COMPARE_OP_GREATER is 4,
-        GL_NOTEQUAL, // CORE_COMPARE_OP_NOT_EQUAL is 5,
-        GL_GEQUAL,   // CORE_COMPARE_OP_GREATER_OR_EQUAL is 6,
-        GL_ALWAYS    // CORE_COMPARE_OP_ALWAYS is 7,
+        GL_NEVER,     // CORE_COMPARE_OP_NEVER is 0,
+        GL_LESS,      // CORE_COMPARE_OP_LESS is 1,
+        GL_EQUAL,     // CORE_COMPARE_OP_EQUAL is 2,
+        GL_LEQUAL,    // CORE_COMPARE_OP_LESS_OR_EQUAL is 3,
+        GL_GREATER,   // CORE_COMPARE_OP_GREATER is 4,
+        GL_NOTEQUAL,  // CORE_COMPARE_OP_NOT_EQUAL is 5,
+        GL_GEQUAL,    // CORE_COMPARE_OP_GREATER_OR_EQUAL is 6,
+        GL_ALWAYS     // CORE_COMPARE_OP_ALWAYS is 7,
         // CORE_COMPARE_OP_MAX_ENUM is 0x7FFFFFFF
     };
 
@@ -84,7 +84,7 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
     glSamplerParameterf(plat_.sampler, GL_TEXTURE_MIN_LOD, desc.minLod);
     glSamplerParameterf(plat_.sampler, GL_TEXTURE_MAX_LOD, desc.maxLod);
 
-    float color[4] = { 0.f };
+    float color[4] = {0.f};
     switch (desc.borderColor) {
         case CORE_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK:
         case CORE_BORDER_COLOR_INT_TRANSPARENT_BLACK: {

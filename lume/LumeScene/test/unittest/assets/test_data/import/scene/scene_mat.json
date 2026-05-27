@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_mat.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"children": [
+				{
+					"type": "geometry",
+					"name": "geom"
+				}
+			]
+		}
+	}
+}

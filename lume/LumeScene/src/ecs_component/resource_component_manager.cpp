@@ -16,8 +16,9 @@
 #include <algorithm>
 #include <ComponentTools/base_manager.h>
 #include <ComponentTools/base_manager.inl>
+#include <scene/interface/ecs/resource_component.h>
 
-#include "resource_component.h"
+#include <core/ecs/intf_ecs.h>
 
 #define IMPLEMENT_MANAGER
 #include <core/property_tools/property_macros.h>
@@ -28,6 +29,8 @@ CORE_BEGIN_NAMESPACE()
 DECLARE_PROPERTY_TYPE(CORE_NS::ResourceId);
 DATA_TYPE_METADATA(CORE_NS::ResourceId, MEMBER_PROPERTY(name, "Name", 0), MEMBER_PROPERTY(group, "Group", 0))
 CORE_END_NAMESPACE()
+
+#include <meta/interface/resource/intf_resource.h>
 
 SCENE_BEGIN_NAMESPACE()
 using BASE_NS::array_view;
@@ -40,7 +43,7 @@ using CORE_NS::Property;
 
 class ResourcerComponentManager final : public BaseManager<ResourceComponent, IResourceComponentManager> {
     BEGIN_PROPERTY(ResourceComponent, componentMetaData_)
-#include "resource_component.h"
+#include <scene/interface/ecs/resource_component.h>
     END_PROPERTY();
 
 public:
@@ -68,22 +71,53 @@ public:
         return componentMetaData_;
     }
 
-    CORE_NS::Entity GetEntityWithResource(const CORE_NS::ResourceId& rid) const override
+    CORE_NS::Entity GetEntity(const CORE_NS::ResourceId& rid) const override
     {
-        if (const auto pos = std::find_if(components_.begin(), components_.end(),
-            [&rid](const BaseComponentHandle& component) {
-                return component.data_.resourceId.name == rid.name && component.data_.resourceId.group == rid.group;
-            });
+        if (const auto pos = std::find_if(components_.begin(),
+                components_.end(),
+                [&](const BaseComponentHandle& component) {
+                    return ecs_.GetEntityManager().IsAlive(component.entity_) &&
+                           component.data_.resourceId.name == rid.name && component.data_.resourceId.group == rid.group;
+                });
             pos != components_.end()) {
             return pos->entity_;
         }
         return {};
     }
 
+    BASE_NS::vector<CORE_NS::Entity> GetEntities(
+        const BASE_NS::array_view<const CORE_NS::MatchingResourceId> list) const override
+    {
+        BASE_NS::vector<CORE_NS::Entity> res;
+        for (auto&& c : components_) {
+            if (META_NS::IsResourceMatch(list, c.data_.resourceId)) {
+                if (ecs_.GetEntityManager().IsAlive(c.entity_)) {
+                    res.push_back(c.entity_);
+                }
+            }
+        }
+        return res;
+    }
+
+    BASE_NS::vector<CORE_NS::Entity> GetEntities(
+        const BASE_NS::array_view<const CORE_NS::ResourceId> arr) const override
+    {
+        BASE_NS::vector<CORE_NS::Entity> res;
+        for (auto&& id : arr) {
+            auto ent = GetEntity(id);
+            if (ecs_.GetEntityManager().IsAlive(ent)) {
+                res.push_back(ent);
+            }
+        }
+        return res;
+    }
+
     bool HasGroup(BASE_NS::string_view group) const override
     {
-        const auto pos = std::find_if(components_.begin(), components_.end(),
-            [&](const BaseComponentHandle& component) { return component.data_.resourceId.group == group; });
+        const auto pos =
+            std::find_if(components_.begin(), components_.end(), [&](const BaseComponentHandle& component) {
+                return ecs_.GetEntityManager().IsAlive(component.entity_) && component.data_.resourceId.group == group;
+            });
         return pos != components_.end();
     }
 };

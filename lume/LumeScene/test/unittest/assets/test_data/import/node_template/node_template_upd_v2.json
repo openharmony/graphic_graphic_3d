@@ -1,0 +1,27 @@
+{
+    "version": "1.0",
+    "description": "node template update v2: changed Position + new Scale override",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "upd-group",
+            "overrides": [
+                {
+                    "path": ".//AnimatedCube.Position",
+                    "value": { "type": "vec3", "value": [10.0, 20.0, 30.0] }
+                },
+                {
+                    "path": ".//AnimatedCube.Scale",
+                    "value": { "type": "vec3", "value": [2.0, 2.0, 2.0] }
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

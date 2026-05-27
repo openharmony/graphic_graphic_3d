@@ -29,8 +29,8 @@ constexpr const int32_t PLATFORM_EXTENSION_TRACE_EXTENSION = 2;
 class IPerformanceTrace;
 
 struct PlatformCreateExtensionInfo {
-    PlatformCreateExtensionInfo* next { nullptr };
-    int32_t type { PLATFORM_EXTENSION_UNDEFINED };
+    PlatformCreateExtensionInfo* next{nullptr};
+    int32_t type{PLATFORM_EXTENSION_UNDEFINED};
 };
 
 /** could be used to expose settings for a user-defined tracing api */
@@ -40,9 +40,9 @@ struct PlatformTraceInfoUsr : public PlatformCreateExtensionInfo {
 
 /** could be used to expose settings from an standard plugin */
 struct PlatformTraceInfoExt : public PlatformCreateExtensionInfo {
-    BASE_NS::Uid plugin { "6151083a-d86f-4037-9059-97f8d0616161" };
-    BASE_NS::Uid type { GetDefaultTrace() };
+    BASE_NS::Uid plugin{"6151083a-d86f-4037-9059-97f8d0616161"};
+    BASE_NS::Uid type{GetDefaultTrace()};
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_OS_COMMON_PLATFORM_CREATE_INFO_H
+#endif  // API_CORE_OS_COMMON_PLATFORM_CREATE_INFO_H

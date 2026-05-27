@@ -38,7 +38,7 @@
 #include "Vec3Proxy.h"
 #include "nodejstaskqueue.h"
 
-static constexpr uint32_t ACTIVE_RENDER_BIT = 1; //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
+static constexpr uint32_t ACTIVE_RENDER_BIT = 1;  //  CameraComponent::ACTIVE_RENDER_BIT  comes from lume3d...
 const float CAM_INDEX_RENDER = 15.7f;
 static constexpr BASE_NS::Math::Mat4X4 ZERO_4X4 = {};
 
@@ -48,11 +48,11 @@ napi_value ConvertMatrixToJs(napi_env env, const BASE_NS::Math::Mat4X4& m)
 {
     NapiApi::Object result(env);
 
-    const char* vecNames[] = { "x", "y", "z", "w" };
+    const char* vecNames[] = {"x", "y", "z", "w"};
 
-    for (int j = 0; j < 4; ++j) {
+    for (int j = 0; j < 4; ++j) {  // 4: len
         NapiApi::Object columnVector(env);
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {  // 4: len
             NapiApi::Value<float> number(env, m[j][i]);
             columnVector.Set(vecNames[i], number.ToNapiValue());
         }
@@ -63,7 +63,7 @@ napi_value ConvertMatrixToJs(napi_env env, const BASE_NS::Math::Mat4X4& m)
     return result.ToNapiValue();
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 void* CameraJS::GetInstanceImpl(uint32_t id)
 {
@@ -75,7 +75,7 @@ void* CameraJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void CameraJS::DisposeNative(void* sc)
+void CameraJS::DisposeNative()
 {
     if (!disposed_) {
         LOG_V("CameraJS::DisposeNative");
@@ -86,8 +86,8 @@ void CameraJS::DisposeNative(void* sc)
         }
         auto cam = interface_pointer_cast<SCENE_NS::ICamera>(GetNativeObject());
 
-        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         // make sure we release postProc settings
@@ -128,7 +128,9 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(
         GetSetProperty<uint32_t, CameraJS, &CameraJS::GetRenderingPipeline, &CameraJS::SetRenderingPipeline>(
             "renderingPipeline"));
-    node_props.push_back(GetSetProperty<uint32_t, CameraJS, &CameraJS::GetRenderTargetColorFormat,
+    node_props.push_back(GetSetProperty<uint32_t,
+        CameraJS,
+        &CameraJS::GetRenderTargetColorFormat,
         &CameraJS::SetRenderTargetColorFormat>("defaultRenderTargetFormat"));
     node_props.push_back(
         GetSetProperty<Object, CameraJS, &CameraJS::GetPostProcess, &CameraJS::SetPostProcess>("postProcess"));
@@ -143,8 +145,14 @@ void CameraJS::Init(napi_env env, napi_value exports)
     node_props.push_back(Method<FunctionContext<>, CameraJS, &CameraJS::GetViewMatrix>("getViewMatrix"));
 
     napi_value func;
-    auto status = napi_define_class(env, "Camera", NAPI_AUTO_LENGTH, BaseObject::ctor<CameraJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Camera",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<CameraJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -159,9 +167,9 @@ void CameraJS::Init(napi_env env, napi_value exports)
 void CameraJS::RegisterEnums(NapiApi::Object exports)
 {
     const auto env = exports.GetEnv();
-    auto tmp = napi_value {};
+    auto tmp = napi_value{};
 
-    auto colorFormat = NapiApi::Object { env };
+    auto colorFormat = NapiApi::Object{env};
 #define DECL_ENUM(enu, x)                                                \
     {                                                                    \
         napi_create_uint32(env, BASE_NS::Format::BASE_FORMAT_##x, &tmp); \
@@ -175,7 +183,7 @@ void CameraJS::RegisterEnums(NapiApi::Object exports)
 #undef DECL_ENUM
     exports.Set("ColorFormat", colorFormat);
 
-    auto renderingPipelineType = NapiApi::Object { env };
+    auto renderingPipelineType = NapiApi::Object{env};
     napi_create_uint32(env, static_cast<uint32_t>(SCENE_NS::CameraPipeline::LIGHT_FORWARD), &tmp);
     renderingPipelineType.Set("FORWARD_LIGHTWEIGHT", tmp);
     napi_create_uint32(env, static_cast<uint32_t>(SCENE_NS::CameraPipeline::FORWARD), &tmp);
@@ -203,7 +211,7 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
     }
 
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("CameraJS",meJs);
+    AddBridge("CameraJS", meJs);
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
@@ -215,7 +223,7 @@ CameraJS::CameraJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImp
         return;
     }
 
-    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    auto sceneNodeParameters = NapiApi::Object{fromJs.Arg<1>()};
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
     }
@@ -228,7 +236,7 @@ void CameraJS::Finalize(napi_env env)
             camera->SetActive(false);
         }
     }
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -297,7 +305,7 @@ void CameraJS::SetEnabled(NapiApi::FunctionContext<bool>& ctx)
                 camera->SceneFlags()->SetValue(flags);
                 camera->SetActive(activ);
             }
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         });
     }
 }
@@ -354,7 +362,7 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
     if (auto camera = interface_cast<SCENE_NS::ICamera>(GetNativeObject())) {
         auto postproc = camera->PostProcess()->GetValue();
         if (!postproc) {
-            if (auto cameraJs = static_cast<CameraJS *>(ctx.This().GetRoot())) {
+            if (auto cameraJs = static_cast<CameraJS*>(ctx.This().GetRoot())) {
                 postproc = interface_pointer_cast<SCENE_NS::IPostProcess>(
                     cameraJs->CreateObject(SCENE_NS::ClassId::PostProcess));
                 camera->PostProcess()->SetValue(postproc);
@@ -362,7 +370,7 @@ napi_value CameraJS::GetPostProcess(NapiApi::FunctionContext<>& ctx)
         }
         NapiApi::Env env(ctx.Env());
         NapiApi::Object parms(env);
-        napi_value args[] = { ctx.This().ToNapiValue(), parms.ToNapiValue() };
+        napi_value args[] = {ctx.This().ToNapiValue(), parms.ToNapiValue()};
         // take ownership of the object.
         postProc_ = NapiApi::StrongRef(CreateFromNativeInstance(env, postproc, PtrType::WEAK, args));
         return postProc_.GetValue();
@@ -411,9 +419,9 @@ void CameraJS::SetPostProcess(NapiApi::FunctionContext<NapiApi::Object>& ctx)
             }
 
             napi_value args[] = {
-                ctx.This().ToNapiValue(), // Camera..
+                ctx.This().ToNapiValue(),  // Camera..
                 psp ? ctx.Arg<0>().ToNapiValue()
-                    : NapiApi::Object(ctx.Env()).ToNapiValue() // "javascript object for values"
+                    : NapiApi::Object(ctx.Env()).ToNapiValue()  // "javascript object for values"
             };
 
             // PostProcessSettings will store a weak ref of its native. We, the camera, own it.
@@ -454,7 +462,7 @@ void CameraJS::SetRenderingPipeline(NapiApi::FunctionContext<uint32_t>& ctx)
 
 napi_value CameraJS::GetRenderTargetColorFormat(NapiApi::FunctionContext<>& ctx)
 {
-    auto colorFormat = SCENE_NS::ColorFormat {};
+    auto colorFormat = SCENE_NS::ColorFormat{};
     if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
         if (const auto formats = camera->ColorTargetCustomization()->GetValue(); !formats.empty()) {
             colorFormat = formats.front();
@@ -469,10 +477,10 @@ void CameraJS::SetRenderTargetColorFormat(NapiApi::FunctionContext<uint32_t>& ct
 {
     if (const auto camera = ctx.This().GetNative<SCENE_NS::ICamera>()) {
         const uint32_t format = ctx.Arg<0>();
-        auto colorFormat = SCENE_NS::ColorFormat {};
+        auto colorFormat = SCENE_NS::ColorFormat{};
         colorFormat.format = static_cast<BASE_NS::Format>(format);
         // Just overwrite whatever the array had with our single value.
-        camera->ColorTargetCustomization()->SetValue({ colorFormat });
+        camera->ColorTargetCustomization()->SetValue({colorFormat});
     } else {
         LOG_E("Native camera unset. Setting render target color format has no effect");
     }
@@ -538,10 +546,10 @@ napi_value CameraJS::GetEffects(NapiApi::FunctionContext<>& ctx)
 {
     if (effects_.IsEmpty()) {
         NapiApi::Env env(ctx.Env());
-        napi_value args[] = { ctx.This().ToNapiValue(),
-            scene_.GetObject<SCENE_NS::IScene>() ? scene_.GetValue() : ctx.GetUndefined() };
+        napi_value args[] = {
+            ctx.This().ToNapiValue(), scene_.GetObject<SCENE_NS::IScene>() ? scene_.GetValue() : ctx.GetUndefined()};
 
-        effects_ = NapiApi::StrongRef { NapiApi::Object { env, "EffectsContainer", args } };
+        effects_ = NapiApi::StrongRef{NapiApi::Object{env, "EffectsContainer", args}};
     }
     return effects_.GetValue();
 }
@@ -556,7 +564,7 @@ napi_value CameraJS::ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ct
     return ProjectCoords<ProjectionDirection::SCREEN_TO_WORLD>(ctx);
 }
 
-template<CameraJS::ProjectionDirection dir>
+template <CameraJS::ProjectionDirection dir>
 napi_value CameraJS::ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     auto inCoordJs = ctx.Arg<0>();
@@ -566,7 +574,7 @@ napi_value CameraJS::ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ct
         return {};
     }
 
-    auto outCoord = BASE_NS::Math::Vec3 {};
+    auto outCoord = BASE_NS::Math::Vec3{};
     if constexpr (dir == ProjectionDirection::WORLD_TO_SCREEN) {
         outCoord = res.raycastSelf->WorldPositionToScreen(res.nativeCoord).GetResult();
     } else {
@@ -625,11 +633,11 @@ napi_value CameraJS::GetViewMatrix(NapiApi::FunctionContext<>& ctx)
     return ConvertMatrixToJs(ctx.Env(), cameraMatrixAccessor->GetViewMatrix());
 }
 
-template<typename CoordType>
+template <typename CoordType>
 CameraJS::RaycastResources<CoordType> CameraJS::GetRaycastResources(const NapiApi::Object& jsCoord)
 {
-    auto res = RaycastResources<CoordType> {};
-    res.scene = NapiApi::StrongRef { scene_.GetNapiObject() };
+    auto res = RaycastResources<CoordType>{};
+    res.scene = NapiApi::StrongRef{scene_.GetNapiObject()};
     if (!res.scene.GetValue()) {
         res.errorMsg = "Scene is gone. ";
     }

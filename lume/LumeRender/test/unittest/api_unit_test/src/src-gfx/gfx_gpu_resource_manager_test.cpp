@@ -38,15 +38,15 @@ using namespace RENDER_NS;
 #define TEST_WRITE_PNG 0
 
 namespace {
-static constexpr uint32_t TEST_IMAGE_COUNT { 2u };
-static constexpr uint32_t TEST_COLOR_COUNT { 5u };
+static constexpr uint32_t TEST_IMAGE_COUNT{2u};
+static constexpr uint32_t TEST_COLOR_COUNT{5u};
 // red, green, blue, yellow, violet
-static constexpr uint32_t TEST_IMAGE_COLORS[] = { 0xFF0000ff, 0xFF00ff00, 0xFFff0000, 0xFF00ffff, 0xFFFFff00 };
-static constexpr string_view TEST_IMAGE_NAME { "TestImage" };
-static constexpr string_view TEST_BUFFER_NAME { "TestBuffer" };
+static constexpr uint32_t TEST_IMAGE_COLORS[] = {0xFF0000ff, 0xFF00ff00, 0xFFff0000, 0xFF00ffff, 0xFFFFff00};
+static constexpr string_view TEST_IMAGE_NAME{"TestImage"};
+static constexpr string_view TEST_BUFFER_NAME{"TestBuffer"};
 
 struct TestImage {
-    uint32_t color { 0u };
+    uint32_t color{0u};
     RenderHandleReference imageHandle;
 };
 struct TestResources {
@@ -71,9 +71,9 @@ struct TestData {
         return TEST_IMAGE_COLORS[currentColorIndex];
     };
 
-    uint32_t windowWidth { 0u };
-    uint32_t windowHeight { 0u };
-    uint32_t elementByteSize { 4u };
+    uint32_t windowWidth{0u};
+    uint32_t windowHeight{0u};
+    uint32_t elementByteSize{4u};
 };
 
 TestResources CreateTestResources(TestData& td)
@@ -110,7 +110,7 @@ TestResources CreateTestResources(TestData& td)
             auto& image = res.images[idx];
             const uint32_t col = td.GetTestColor();
             image.color = col;
-            const uint32_t rgbData[4u] = { col, col, col, col };
+            const uint32_t rgbData[4u] = {col, col, col, col};
             const auto rgbDataView =
                 array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeof(uint32_t) * countof(rgbData));
             const auto name = TEST_IMAGE_NAME + to_string(idx);
@@ -132,7 +132,7 @@ TestResources CreateTestResources(TestData& td)
     bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const vector<uint8_t> bufferDefaultData(bufferDesc.byteSize, 0);
     res.cpuCopyBufferHandle =
-        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, { bufferDefaultData });
+        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, {bufferDefaultData});
 
     auto& rdsMgr = td.engine.context->GetRenderDataStoreManager();
 
@@ -194,7 +194,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
             for (uint32_t newIdx = 0; newIdx < 3; ++newIdx) {
                 const uint32_t col = td.GetTestColor();
                 image.color = col;
-                const uint32_t rgbData[4u] = { col, col, col, col };
+                const uint32_t rgbData[4u] = {col, col, col, col};
                 const auto rgbDataView =
                     array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeof(uint32_t) * countof(rgbData));
                 RenderHandleReference newHandle =
@@ -216,14 +216,14 @@ void TickTest(TestData& td, int32_t frameCountToTick)
             }
         }
 
-        const RenderHandleReference renderNodeGraphs[] = { td.renderNodeGraph };
-        er.context->GetRenderer().RenderFrame({ renderNodeGraphs, 1u });
+        const RenderHandleReference renderNodeGraphs[] = {td.renderNodeGraph};
+        er.context->GetRenderer().RenderFrame({renderNodeGraphs, 1u});
 
 #ifdef __OHOS__
         if (td.engine.backend != DeviceBackendType::VULKAN) {
             er.device->WaitForIdle();
         }
-#endif // __OHOS__
+#endif  // __OHOS__
 
         if (idx == frameCountToTick - 1) {
             er.device->GetGpuResourceManager().WaitForIdleAndDestroyGpuResources();
@@ -231,7 +231,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         {
             // Gpu image test create and destroy in the same frame
             const uint32_t col = td.GetTestColor();
-            const uint32_t rgbData[4u] = { col, col, col, col };
+            const uint32_t rgbData[4u] = {col, col, col, col};
             const auto rgbDataView =
                 array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeof(uint32_t) * countof(rgbData));
             const auto name = TEST_IMAGE_NAME + to_string(1000 + idx);
@@ -251,7 +251,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         {
             // Gpu buffer test create and destroy in the same frame
             const uint32_t col = td.GetTestColor();
-            const uint32_t rgbData[4u] = { col, col, col, col };
+            const uint32_t rgbData[4u] = {col, col, col, col};
             const auto rgbDataView =
                 array_view(reinterpret_cast<const uint8_t*>(rgbData), sizeof(uint32_t) * countof(rgbData));
             const auto name = TEST_BUFFER_NAME + to_string(1000 + idx);
@@ -302,8 +302,12 @@ void TestGpuResourceManager(DeviceBackendType backend)
     TickTest(testData, 10);
     ValidateData(testData);
 #if (TEST_WRITE_PNG == 1)
-    UTest::WritePng("./GfxGpuResourceManagerTest.png", testData.windowWidth, testData.windowHeight, 4,
-        testData.resources.byteArray.get(), testData.windowWidth * 4);
+    UTest::WritePng("./GfxGpuResourceManagerTest.png",
+        testData.windowWidth,
+        testData.windowHeight,
+        4,
+        testData.resources.byteArray.get(),
+        testData.windowWidth * 4);
 #endif
     {
         testData.renderNodeGraph = {};
@@ -311,7 +315,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -323,7 +327,7 @@ UNIT_TEST(API_GfxGpuResourceManagerTest, GpuResourceManagerTestVulkan, testing::
 {
     TestGpuResourceManager(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -335,4 +339,4 @@ UNIT_TEST(API_GfxGpuResourceManagerTest, GpuResourceManagerTestOpenGL, testing::
 {
     TestGpuResourceManager(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -230,7 +230,7 @@ UNIT_TEST(SRC_GLTFUtilTest, GetLightTypeTest, testing::ext::TestSize.Level1)
     EXPECT_EQ(GLTF2::LightType::INVALID, lightType);
     EXPECT_EQ("INVALID", GLTF2::GetLightType(GLTF2::LightType::INVALID));
 }
-#endif // defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
+#endif  // defined(GLTF2_EXTENSION_KHR_LIGHTS) || defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
 
 /**
  * @tc.name: GetAlphaModeTest
@@ -241,16 +241,16 @@ UNIT_TEST(SRC_GLTFUtilTest, GetAlphaModeTest, testing::ext::TestSize.Level1)
 {
     GLTF2::AlphaMode alphaMode;
     EXPECT_TRUE(GLTF2::GetAlphaMode("BLEND", alphaMode));
-    EXPECT_EQ(GLTF2::AlphaMode::BLEND, alphaMode);
-    EXPECT_EQ("BLEND", GLTF2::GetAlphaMode(GLTF2::AlphaMode::BLEND));
+    EXPECT_EQ(GLTF2::AlphaMode::BLEND_ALPHA, alphaMode);
+    EXPECT_EQ("BLEND", GLTF2::GetAlphaMode(GLTF2::AlphaMode::BLEND_ALPHA));
 
     EXPECT_TRUE(GLTF2::GetAlphaMode("MASK", alphaMode));
-    EXPECT_EQ(GLTF2::AlphaMode::MASK, alphaMode);
-    EXPECT_EQ("MASK", GLTF2::GetAlphaMode(GLTF2::AlphaMode::MASK));
+    EXPECT_EQ(GLTF2::AlphaMode::MASK_ALPHA, alphaMode);
+    EXPECT_EQ("MASK", GLTF2::GetAlphaMode(GLTF2::AlphaMode::MASK_ALPHA));
 
     EXPECT_TRUE(GLTF2::GetAlphaMode("OPAQUE", alphaMode));
-    EXPECT_EQ(GLTF2::AlphaMode::OPAQUE, alphaMode);
-    EXPECT_EQ("OPAQUE", GLTF2::GetAlphaMode(GLTF2::AlphaMode::OPAQUE));
+    EXPECT_EQ(GLTF2::AlphaMode::OPAQUE_ALPHA, alphaMode);
+    EXPECT_EQ("OPAQUE", GLTF2::GetAlphaMode(GLTF2::AlphaMode::OPAQUE_ALPHA));
 
     EXPECT_FALSE(GLTF2::GetAlphaMode("invalid alpha mode", alphaMode));
 }
@@ -288,8 +288,8 @@ UNIT_TEST(SRC_GLTFUtilTest, ComponentAndDataTypesTest, testing::ext::TestSize.Le
     EXPECT_EQ(GLTF2::ComponentType::INT, GLTF2::GetAlternativeType(GLTF2::ComponentType::BYTE, 4u));
     EXPECT_EQ(GLTF2::ComponentType::FLOAT, GLTF2::GetAlternativeType(GLTF2::ComponentType::FLOAT, 4u));
 
-    EXPECT_EQ("COLOR_0", GLTF2::GetAttributeType(GLTF2::AttributeBase { GLTF2::AttributeType::COLOR, 0 }));
-    EXPECT_EQ("INVALID", GLTF2::GetAttributeType(GLTF2::AttributeBase { GLTF2::AttributeType::INVALID, 0 }));
+    EXPECT_EQ("COLOR_0", GLTF2::GetAttributeType(GLTF2::AttributeBase{GLTF2::AttributeType::COLOR, 0}));
+    EXPECT_EQ("INVALID", GLTF2::GetAttributeType(GLTF2::AttributeBase{GLTF2::AttributeType::INVALID, 0}));
 }
 
 /**
@@ -375,7 +375,7 @@ UNIT_TEST(SRC_GLTFUtilTest, ValidateTest, testing::ext::TestSize.Level1)
     EXPECT_TRUE(GLTF2::ValidateMorphTargetAttributeQuantization(
         GLTF2::AttributeType::NORMAL, GLTF2::DataType::VEC3, GLTF2::ComponentType::FLOAT)
                     .empty());
-#endif // defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
+#endif  // defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
 }
 
 /**
@@ -460,14 +460,14 @@ UNIT_TEST(SRC_GLTFUtilTest, DataUriTest, testing::ext::TestSize.Level1)
 UNIT_TEST(SRC_GLTFUtilTest, GltfDataTest, testing::ext::TestSize.Level1)
 {
     auto& fileManager = UTest::GetTestContext()->engine->GetFileManager();
-    GLTF2::Data data { fileManager };
+    GLTF2::Data data{fileManager};
     data.filepath = "test://image";
 
-    data.buffers.push_back(unique_ptr<GLTF2::Buffer> { new GLTF2::Buffer {} });
+    data.buffers.push_back(unique_ptr<GLTF2::Buffer>{new GLTF2::Buffer{}});
     data.buffers.back()->byteLength = 4;
     data.buffers.back()->uri = "data:image/jpeg;base64,TFVNRQ==";
 
-    data.bufferViews.push_back(unique_ptr<GLTF2::BufferView> { new GLTF2::BufferView {} });
+    data.bufferViews.push_back(unique_ptr<GLTF2::BufferView>{new GLTF2::BufferView{}});
     data.bufferViews.back()->buffer = data.buffers[0].get();
     data.bufferViews.back()->byteLength = 2u;
     data.bufferViews.back()->byteOffset = 2u;
@@ -482,26 +482,25 @@ UNIT_TEST(SRC_GLTFUtilTest, GltfDataTest, testing::ext::TestSize.Level1)
     data.thumbnails[3].extension = "png";
     data.thumbnails[3].uri = "data:text/plain;base64,eHl6";
 
-    data.images.push_back(unique_ptr<GLTF2::Image> { new GLTF2::Image {} });
+    data.images.push_back(unique_ptr<GLTF2::Image>{new GLTF2::Image{}});
     data.images.back()->uri = "image.png";
 
     EXPECT_TRUE(data.LoadBuffers());
     data.ReleaseBuffers();
 
-    data.buffers.push_back(unique_ptr<GLTF2::Buffer> { new GLTF2::Buffer {} });
+    data.buffers.push_back(unique_ptr<GLTF2::Buffer>{new GLTF2::Buffer{}});
 
     data.buffers.back()->byteLength = 4u;
     data.buffers.back()->uri = "data:image/jpeg;base64,";
     data.buffers.back()->data.clear();
     EXPECT_FALSE(data.LoadBuffers());
 
-    // When file is smaller than byteLength, byteLength is clamped
+    // When file is smaller than byteLength, loading fails
     constexpr const uint32_t bigByteSize = 5000000u;
     data.buffers.back()->byteLength = bigByteSize;
     data.buffers.back()->uri = "canine_512x512.png";
     data.buffers.back()->data.clear();
-    EXPECT_TRUE(data.LoadBuffers());
-    EXPECT_GT(bigByteSize, data.buffers.back()->byteLength);
+    EXPECT_FALSE(data.LoadBuffers());
 
     // Load buffer from memory file
     data.memoryFile_ = fileManager.OpenFile("test://image/canine_512x512.png");
@@ -512,8 +511,7 @@ UNIT_TEST(SRC_GLTFUtilTest, GltfDataTest, testing::ext::TestSize.Level1)
     data.buffers.back()->data.clear();
     EXPECT_FALSE(data.LoadBuffers());
     data.defaultResourcesOffset = 0;
-    EXPECT_TRUE(data.LoadBuffers());
-    EXPECT_GT(bigByteSize, data.buffers.back()->byteLength);
+    EXPECT_FALSE(data.LoadBuffers());
 
     data.memoryFile_.reset();
     data.buffers.back()->byteLength = 4u;
@@ -541,11 +539,11 @@ UNIT_TEST(SRC_GLTFUtilTest, GltfDataSeekFailureTest, testing::ext::TestSize.Leve
 {
     auto& fileManager = UTest::GetTestContext()->engine->GetFileManager();
 
-    GLTF2::Data data { fileManager };
-    data.defaultResourcesOffset = 1; // equal to file length below
+    GLTF2::Data data{fileManager};
+    data.defaultResourcesOffset = 1;  // equal to file length below
     data.defaultResources = "cache://seek_fail_buffer.bin";
 
-    data.buffers.push_back(unique_ptr<GLTF2::Buffer> { new GLTF2::Buffer {} });
+    data.buffers.push_back(unique_ptr<GLTF2::Buffer>{new GLTF2::Buffer{}});
     data.buffers.back()->byteLength = 1;
     data.buffers.back()->uri = "";
 
@@ -641,6 +639,7 @@ UNIT_TEST(SRC_GLTFUtilTest, LoadDataTest, testing::ext::TestSize.Level1)
         GLTF2::BufferView bufferView2;
         bufferView2.buffer = &buffer;
         bufferView2.data = buffer.data.data();
+        bufferView2.byteLength = buffer.byteLength;
 
         GLTF2::Accessor accessor;
         accessor.bufferView = &bufferView1;
@@ -735,20 +734,21 @@ UNIT_TEST(SRC_GLTFUtilTest, LoadDataTest, testing::ext::TestSize.Level1)
         GLTF2::Buffer sparseIndicesBuffer;
         sparseIndicesBuffer.byteLength = 1u;
         sparseIndicesBuffer.data.resize(sparseIndicesBuffer.byteLength);
-        sparseIndicesBuffer.data[0u] = 1u; // out of range for accessor.count == 1
+        sparseIndicesBuffer.data[0u] = 1u;  // out of range for accessor.count == 1
 
-        constexpr uint32_t sparseValuesSize = 4u;
         GLTF2::Buffer sparseValuesBuffer;
-        sparseValuesBuffer.byteLength = sparseValuesSize;
+        sparseValuesBuffer.byteLength = 4u;
         sparseValuesBuffer.data.resize(sparseValuesBuffer.byteLength);
 
         GLTF2::BufferView sparseIndicesBufferView;
         sparseIndicesBufferView.buffer = &sparseIndicesBuffer;
         sparseIndicesBufferView.data = sparseIndicesBuffer.data.data();
+        sparseIndicesBufferView.byteLength = sparseIndicesBuffer.byteLength;
 
         GLTF2::BufferView sparseValuesBufferView;
         sparseValuesBufferView.buffer = &sparseValuesBuffer;
         sparseValuesBufferView.data = sparseValuesBuffer.data.data();
+        sparseValuesBufferView.byteLength = sparseValuesBuffer.byteLength;
 
         GLTF2::Accessor accessor;
         accessor.count = 1u;

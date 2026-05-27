@@ -145,10 +145,10 @@ UNIT_TEST(API_EcsNodeSystem, CloneTest, testing::ext::TestSize.Level1)
     {
         auto parentNode = nodeSystem->CreateNode();
         parentNode->SetName("Node0");
-        parentNode->SetPosition(Math::Vec3 { 1.0f, 2.0f, 3.0f });
-        auto quat = Math::FromEulerRad(Math::Vec3 { 0.5f, 0.2f, 0.1f });
+        parentNode->SetPosition(Math::Vec3{1.0f, 2.0f, 3.0f});
+        auto quat = Math::FromEulerRad(Math::Vec3{0.5f, 0.2f, 0.1f});
         parentNode->SetRotation(quat);
-        parentNode->SetScale(Math::Vec3 { 1.0f, 2.0f, 1.0f });
+        parentNode->SetScale(Math::Vec3{1.0f, 2.0f, 1.0f});
         parentNode->SetEnabled(true);
         auto childNode = nodeSystem->CreateNode();
         childNode->SetParent(*parentNode);
@@ -170,14 +170,14 @@ UNIT_TEST(API_EcsNodeSystem, CloneTest, testing::ext::TestSize.Level1)
     {
         auto parentNode = nodeSystem->CreateNode();
         parentNode->SetName("Node0");
-        parentNode->SetPosition(Math::Vec3 { 1.0f, 2.0f, 3.0f });
-        auto quat = Math::FromEulerRad(Math::Vec3 { 0.5f, 0.2f, 0.1f });
+        parentNode->SetPosition(Math::Vec3{1.0f, 2.0f, 3.0f});
+        auto quat = Math::FromEulerRad(Math::Vec3{0.5f, 0.2f, 0.1f});
         parentNode->SetRotation(quat);
-        parentNode->SetScale(Math::Vec3 { 1.0f, 2.0f, 1.0f });
+        parentNode->SetScale(Math::Vec3{1.0f, 2.0f, 1.0f});
         parentNode->SetEnabled(true);
         auto childNode = nodeSystem->CreateNode();
         childNode->SetName("Node1");
-        childNode->SetPosition(Math::Vec3 { 5.0f, 4.0f, 3.0f });
+        childNode->SetPosition(Math::Vec3{5.0f, 4.0f, 3.0f});
         childNode->SetEnabled(false);
         childNode->SetParent(*parentNode);
         auto clonedNode = nodeSystem->CloneNode(*parentNode, true);
@@ -361,7 +361,7 @@ UNIT_TEST(API_EcsSceneNode, GetNode, testing::ext::TestSize.Level1)
     ASSERT_NE(nullptr, nodeSystem);
 
     // getting with a invalid/default entity should not find anything
-    EXPECT_FALSE(nodeSystem->GetNode(Entity {}));
+    EXPECT_FALSE(nodeSystem->GetNode(Entity{}));
 
     // getting with an entity without NodeComponent should not find anything
     const auto entity = ecs->GetEntityManager().Create();
@@ -565,7 +565,7 @@ UNIT_TEST(API_EcsNodeSystem, EffectivelyEnabledTest, testing::ext::TestSize.Leve
 
         auto oldWorld = wcm->Get(node5->GetEntity());
         EXPECT_EQ(oldWorld.matrix.w, BASE_NS::Math::Vec4(0.f, 3.f, 0.f, 1.f));
-        node2->SetEnabled(false); // disables 2, and its children 3 and 5
+        node2->SetEnabled(false);  // disables 2, and its children 3 and 5
         node2->SetPosition(BASE_NS::Math::Vec3());
 
         ecs->ProcessEvents();
@@ -585,11 +585,11 @@ UNIT_TEST(API_EcsNodeSystem, EffectivelyEnabledTest, testing::ext::TestSize.Leve
         EXPECT_FALSE(node5->GetEffectivelyEnabled());
 
         node2->SetPosition(BASE_NS::Math::Vec3(0.f, 1.f, 0.f));
-        graphicsContext->UpdateEcs(*ecs, IGraphicsContext::UpdateOptions { true });
+        graphicsContext->UpdateEcs(*ecs, IGraphicsContext::UpdateOptions{true});
         auto newWorld3 = wcm->Get(node5->GetEntity());
         EXPECT_EQ(newWorld3.matrix, oldWorld.matrix);
 
-        node3->SetEnabled(false); // disables 3, but already disabled due to parent
+        node3->SetEnabled(false);  // disables 3, but already disabled due to parent
         ecs->Update(3u, 1u);
 
         EXPECT_TRUE(node1->GetEffectivelyEnabled());
@@ -598,7 +598,7 @@ UNIT_TEST(API_EcsNodeSystem, EffectivelyEnabledTest, testing::ext::TestSize.Leve
         EXPECT_TRUE(node4->GetEffectivelyEnabled());
         EXPECT_FALSE(node5->GetEffectivelyEnabled());
 
-        node3->SetEnabled(true); // enables 3, but still disabled due to parent
+        node3->SetEnabled(true);  // enables 3, but still disabled due to parent
         ecs->Update(4u, 1u);
 
         EXPECT_TRUE(node1->GetEffectivelyEnabled());
@@ -607,7 +607,7 @@ UNIT_TEST(API_EcsNodeSystem, EffectivelyEnabledTest, testing::ext::TestSize.Leve
         EXPECT_TRUE(node4->GetEffectivelyEnabled());
         EXPECT_FALSE(node5->GetEffectivelyEnabled());
 
-        node2->SetEnabled(true); // enables 2, and its children 3 and 5
+        node2->SetEnabled(true);  // enables 2, and its children 3 and 5
         ecs->Update(5u, 1u);
 
         EXPECT_TRUE(node1->GetEffectivelyEnabled());
@@ -713,10 +713,10 @@ UNIT_TEST(API_EcsNodeSystem, InsertChild, testing::ext::TestSize.Level1)
     auto node3 = nodeSystem->CreateNode();
     auto node4 = nodeSystem->CreateNode();
     auto node5 = nodeSystem->CreateNode();
-    node1->InsertChild(0U, *node2); // 2
-    node1->InsertChild(1U, *node3); // 2 3
-    node1->InsertChild(1U, *node4); // 2 4 3
-    node1->InsertChild(2U, *node5); // 2 4 5 3
+    node1->InsertChild(0U, *node2);  // 2
+    node1->InsertChild(1U, *node3);  // 2 3
+    node1->InsertChild(1U, *node4);  // 2 4 3
+    node1->InsertChild(2U, *node5);  // 2 4 5 3
     {
         auto children = node1->GetChildren();
         ASSERT_EQ(children.size(), 4U);
@@ -725,10 +725,10 @@ UNIT_TEST(API_EcsNodeSystem, InsertChild, testing::ext::TestSize.Level1)
         EXPECT_EQ(children[2U], node5);
         EXPECT_EQ(children[3U], node3);
     }
-    node1->RemoveChild(2U);         // 2 4 3
-    node1->InsertChild(3U, *node5); // 2 4 3 5
-    node1->RemoveChild(1U);         // 2 3 5
-    node1->InsertChild(2U, *node4); // 2 3 4 5
+    node1->RemoveChild(2U);          // 2 4 3
+    node1->InsertChild(3U, *node5);  // 2 4 3 5
+    node1->RemoveChild(1U);          // 2 3 5
+    node1->InsertChild(2U, *node4);  // 2 3 4 5
     {
         auto children = node1->GetChildren();
         ASSERT_EQ(children.size(), 4U);
@@ -786,7 +786,7 @@ UNIT_TEST(API_EcsNodeSystem, SceneNodeListener, testing::ext::TestSize.Level1)
     auto nodeSystem = GetSystem<INodeSystem>(*ecs);
     ASSERT_NE(nullptr, nodeSystem);
 
-    auto listener = Listener {};
+    auto listener = Listener{};
     nodeSystem->AddListener(listener);
 
     constexpr uint32_t numNodes = 5;

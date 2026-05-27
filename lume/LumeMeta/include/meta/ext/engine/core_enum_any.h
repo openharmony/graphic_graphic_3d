@@ -28,14 +28,15 @@ META_BEGIN_NAMESPACE()
  * Supports compatibility with the primary type and additional types via conversion traits.
  * Implements the IEnum and IEngineType interfaces to get information about the Core enum type.
  */
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 class CoreEnumAny : public IntroduceInterfaces<MultiTypeAny<Type, Conv, CoreType..., int64_t>, IEnum, IEngineType> {
 public:
     using Super = IntroduceInterfaces<MultiTypeAny<Type, Conv, CoreType..., int64_t>, IEnum, IEngineType>;
     using RealType = RealType_t<Type>;
 
     explicit CoreEnumAny(const CORE_NS::Property& p, const Type& v = {})
-        : value_(v), prop_(p),
+        : value_(v),
+          prop_(p),
           type_(p.flags & uint32_t(CORE_NS::PropertyFlags::IS_BITFIELD) ? META_NS::EnumType::BIT_FIELD
                                                                         : META_NS::EnumType::SINGLE_VALUE)
     {}
@@ -61,7 +62,7 @@ public:
     {
         BASE_NS::vector<EnumValue> values;
         for (auto&& v : prop_.metaData.enumMetaData) {
-            values.push_back(EnumValue { v.name, v.displayName });
+            values.push_back(EnumValue{v.name, v.displayName});
         }
         return values;
     }
@@ -144,18 +145,19 @@ private:
     }
 
 private:
-    Type value_ {};
+    Type value_{};
     const CORE_NS::Property prop_;
     const META_NS::EnumType type_;
 };
 
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 class ArrayCoreEnumAny : public ArrayMultiTypeAnyBase<Type> {
     using Super = ArrayMultiTypeAnyBase<Type>;
     using typename Super::ArrayType;
 
 public:
-    explicit ArrayCoreEnumAny(const CORE_NS::Property& p, ArrayType v = {}) : Super(BASE_NS::move(v)), prop_(p) {}
+    explicit ArrayCoreEnumAny(const CORE_NS::Property& p, ArrayType v = {}) : Super(BASE_NS::move(v)), prop_(p)
+    {}
 
     const BASE_NS::array_view<const TypeId> GetItemCompatibleTypes(CompatibilityDirection dir) const override
     {
@@ -167,21 +169,21 @@ public:
         if (options.role == TypeIdRole::ITEM) {
             return IAny::Ptr(new CoreEnumAny<Type, Conv, CoreType...>(prop_));
         }
-        return IAny::Ptr(new ArrayCoreEnumAny {
-            prop_, options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType {} });
+        return IAny::Ptr(new ArrayCoreEnumAny{
+            prop_, options.value == CloneValueType::COPY_VALUE ? this->value_ : typename Super::ArrayType{}});
     }
 
 private:
     const CORE_NS::Property prop_;
 };
 
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 IAny::Ptr CoreEnumAny<Type, Conv, CoreType...>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {
         return IAny::Ptr(new ArrayCoreEnumAny<Type, Conv, CoreType...>(prop_));
     }
-    return IAny::Ptr(new CoreEnumAny { prop_, options.value == CloneValueType::COPY_VALUE ? this->value_ : Type {} });
+    return IAny::Ptr(new CoreEnumAny{prop_, options.value == CloneValueType::COPY_VALUE ? this->value_ : Type{}});
 }
 
 META_END_NAMESPACE()

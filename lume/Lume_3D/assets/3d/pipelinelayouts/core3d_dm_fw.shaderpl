@@ -5,6 +5,7 @@
     },
     "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
     "renderSlotDefault": true,
+    "pushConstant": { "size" : 8, "shaderStageFlags" : "vertex_bit|fragment_bit" },
     "descriptorSetLayouts": [
         {
             "set" : 0,
@@ -29,7 +30,8 @@
                 { "binding" : 1, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
                 { "binding" : 2, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }, 
                 { "binding" : 3, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
-                { "binding" : 4, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" }
+                { "binding" : 4, "descriptorType" : "uniform_buffer_dynamic", "descriptorCount": 1, "shaderStageFlags" : "vertex_bit|fragment_bit" },
+                { "binding" : 5, "descriptorType" : "storage_buffer", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" }
             ]
         },
         {

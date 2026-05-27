@@ -20,7 +20,11 @@
 // clang-format off
 #include <vulkan/vulkan_core.h>
 #if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
-#include "vk_mem_alloc.h"
+#ifdef USE_M133_SKIA
+#include <third_party/externals/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#else
+#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
+#endif
 #else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
@@ -41,16 +45,16 @@ RENDER_BEGIN_NAMESPACE()
 class PlatformGpuMemoryAllocator final {
 public:
     enum class MemoryAllocatorResourceType : uint8_t {
-        UNDEFINED = 0, // not supported ATM, needs to be buffer or image
+        UNDEFINED = 0,  // not supported ATM, needs to be buffer or image
         GPU_BUFFER = 1,
         GPU_IMAGE = 2,
     };
     struct GpuMemoryAllocatorCustomPool {
         BASE_NS::string name;
 
-        MemoryAllocatorResourceType resourceType { MemoryAllocatorResourceType::UNDEFINED };
-        uint32_t blockSize { 0 }; // zero fallbacks to default
-        bool linearAllocationAlgorithm { false };
+        MemoryAllocatorResourceType resourceType{MemoryAllocatorResourceType::UNDEFINED};
+        uint32_t blockSize{0};  // zero fallbacks to default
+        bool linearAllocationAlgorithm{false};
 
         union GpuResourceDesc {
             GpuBufferDesc buffer;
@@ -61,14 +65,14 @@ public:
 
     struct GpuMemoryAllocatorCreateInfo {
         // set to zero for default (vma default 256 MB)
-        uint32_t preferredLargeHeapBlockSize { 32 * 1024 * 1024 };
+        uint32_t preferredLargeHeapBlockSize{32 * 1024 * 1024};
 
         enum CreateInfoFlagBits : uint32_t {
             ENABLE_DEVICE_ADDRESSES_BIT = (1 << 0),
         };
         using CreateInfoFlags = uint32_t;
 
-        CreateInfoFlags createFlags { 0U };
+        CreateInfoFlags createFlags{0U};
         BASE_NS::vector<GpuMemoryAllocatorCustomPool> customPools;
     };
 
@@ -102,7 +106,7 @@ public:
 private:
     void CreatePoolForBuffers(const GpuMemoryAllocatorCustomPool& customPool);
     void CreatePoolForImages(const GpuMemoryAllocatorCustomPool& customPool);
-    VmaAllocator allocator_ {};
+    VmaAllocator allocator_{};
 
     BASE_NS::vector<VmaPool> customGpuBufferPools_;
     BASE_NS::vector<VmaPool> customGpuImagePools_;
@@ -115,12 +119,12 @@ private:
     BASE_NS::vector<BASE_NS::string> customGpuImagePoolNames_;
 
     struct MemoryDebugStruct {
-        uint64_t buffer { 0 };
-        uint64_t image { 0 };
+        uint64_t buffer{0};
+        uint64_t image{0};
     };
     MemoryDebugStruct memoryDebugStruct_;
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_MEMORY_ALLOCATOR_VK_H
+#endif  // VULKAN_GPU_MEMORY_ALLOCATOR_VK_H

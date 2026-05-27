@@ -19,14 +19,11 @@
 
 namespace OHOS::Render3D::KITETS {
 ShaderMaterialImpl::ShaderMaterialImpl(const std::shared_ptr<MaterialETS> mat) : MaterialImpl(mat), materialETS_(mat)
-{
-}
+{}
 
 ShaderMaterialImpl::~ShaderMaterialImpl()
 {
-    if (materialETS_) {
-        materialETS_.reset();
-    }
+    materialETS_.reset();
 }
 
 ::taihe::optional<::SceneResources::Shader> ShaderMaterialImpl::getColorShader()
@@ -53,7 +50,7 @@ void ShaderMaterialImpl::setColorShader(::taihe::optional_view<::SceneResources:
             return;
         }
         ::taihe::optional<int64_t> implOp = static_cast<::SceneResources::SceneResource>(sd)->getImpl();
-        ShaderImpl *shaderImpl = GetImplPointer<ShaderImpl>(implOp);
+        ShaderImpl* shaderImpl = GetImplPointer<ShaderImpl>(implOp);
         if (shaderImpl == nullptr) {
             WIDGET_LOGE("set color shader failed, get shader pointer failed");
         } else {

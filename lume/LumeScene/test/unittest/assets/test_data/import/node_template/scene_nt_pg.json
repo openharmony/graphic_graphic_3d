@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "description": "scene loading a node template with primaryGroup resource re-grouping",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_pg.json"
+                    },
+                    "resourceGroup": "scene-runtime-group"
+                }
+            ]
+        }
+    }
+}

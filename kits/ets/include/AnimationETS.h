@@ -40,8 +40,6 @@ public:
     }
 
     META_NS::IObject::Ptr GetNativeObj() const override;
-    BASE_NS::string GetName();
-    void SetName(const BASE_NS::string &name);
 
     bool GetEnabled();
     void SetEnabled(bool enabled);
@@ -53,8 +51,8 @@ public:
     bool GetRunning() const;
     float GetProgress() const;
 
-    void OnStarted(const std::function<void()> &onStartedCB);
-    void OnFinished(const std::function<void()> &onFinishedCB);
+    void OnStarted(const std::function<void()>& onStartedCB);
+    void OnFinished(const std::function<void()>& onFinishedCB);
 
     void Pause();
     void Restart();
@@ -65,7 +63,7 @@ public:
 
 private:
     META_NS::IAnimation::WeakPtr animation_{nullptr};
-    SCENE_NS::IScene::WeakPtr scene_{nullptr}; // Store a weak ref
+    SCENE_NS::IScene::WeakPtr scene_{nullptr};  // Store a weak ref
 
     META_NS::IEvent::Token OnFinishedToken_{0};
     META_NS::IEvent::Token OnStartedToken_{0};

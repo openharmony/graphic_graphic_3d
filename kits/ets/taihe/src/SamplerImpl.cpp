@@ -16,7 +16,7 @@
 #include "SamplerImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-::SceneResources::SamplerFilter FromNativeFilter(const SCENE_NS::SamplerFilter &filter)
+::SceneResources::SamplerFilter FromNativeFilter(const SCENE_NS::SamplerFilter& filter)
 {
     switch (filter) {
         case SCENE_NS::SamplerFilter::LINEAR:
@@ -27,7 +27,7 @@ namespace OHOS::Render3D::KITETS {
     }
 }
 
-SCENE_NS::SamplerFilter ToNativeFilter(const ::SceneResources::SamplerFilter &filter)
+SCENE_NS::SamplerFilter ToNativeFilter(const ::SceneResources::SamplerFilter& filter)
 {
     switch (filter.get_key()) {
         case ::SceneResources::SamplerFilter::key_t::LINEAR:
@@ -38,7 +38,7 @@ SCENE_NS::SamplerFilter ToNativeFilter(const ::SceneResources::SamplerFilter &fi
     }
 }
 
-::SceneResources::SamplerAddressMode FromNativeAddressMode(const SCENE_NS::SamplerAddressMode &mode)
+::SceneResources::SamplerAddressMode FromNativeAddressMode(const SCENE_NS::SamplerAddressMode& mode)
 {
     switch (mode) {
         case SCENE_NS::SamplerAddressMode::MIRRORED_REPEAT:
@@ -50,7 +50,7 @@ SCENE_NS::SamplerFilter ToNativeFilter(const ::SceneResources::SamplerFilter &fi
     }
 }
 
-SCENE_NS::SamplerAddressMode ToNativeAddressMode(const ::SceneResources::SamplerAddressMode &mode)
+SCENE_NS::SamplerAddressMode ToNativeAddressMode(const ::SceneResources::SamplerAddressMode& mode)
 {
     switch (mode.get_key()) {
         case ::SceneResources::SamplerAddressMode::key_t::MIRRORED_REPEAT:
@@ -62,15 +62,12 @@ SCENE_NS::SamplerAddressMode ToNativeAddressMode(const ::SceneResources::Sampler
     }
 }
 
-SamplerImpl::SamplerImpl(const std::shared_ptr<SamplerETS> &sampler) : sampler_(sampler)
-{
-}
+SamplerImpl::SamplerImpl(const std::shared_ptr<SamplerETS>& sampler) : sampler_(sampler)
+{}
 
 SamplerImpl::~SamplerImpl()
 {
-    if (sampler_) {
-        sampler_.reset();
-    }
+    sampler_.reset();
 }
 
 ::taihe::optional<::SceneResources::SamplerFilter> SamplerImpl::getMagFilter()

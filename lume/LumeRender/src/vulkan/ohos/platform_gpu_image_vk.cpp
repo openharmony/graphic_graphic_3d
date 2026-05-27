@@ -24,28 +24,28 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 VkSamplerCreateInfo CreateYcbcrSamplerCreateInfo()
 {
-    return VkSamplerCreateInfo {
-        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, // sType
-        nullptr,                               // pNext
-        0,                                     // flags
-        VK_FILTER_NEAREST,                     // magFilter
-        VK_FILTER_NEAREST,                     // minFilter
-        VK_SAMPLER_MIPMAP_MODE_NEAREST,        // mipmapMode
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
-        0.0f,                                  // mipLodBias
-        false,                                 // anisotropyEnable
-        1.0f,                                  // maxAnisotropy
-        false,                                 // compareEnabled
-        VK_COMPARE_OP_NEVER,                   // compareOp
-        0.0f,                                  // minLod
-        0.0f,                                  // maxLod
-        VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,    // borderColor
-        false,                                 // unnormalizedCoordinates
+    return VkSamplerCreateInfo{
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,  // sType
+        nullptr,                                // pNext
+        0,                                      // flags
+        VK_FILTER_NEAREST,                      // magFilter
+        VK_FILTER_NEAREST,                      // minFilter
+        VK_SAMPLER_MIPMAP_MODE_NEAREST,         // mipmapMode
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
+        0.0f,                                   // mipLodBias
+        false,                                  // anisotropyEnable
+        1.0f,                                   // maxAnisotropy
+        false,                                  // compareEnabled
+        VK_COMPARE_OP_NEVER,                    // compareOp
+        0.0f,                                   // minLod
+        0.0f,                                   // maxLod
+        VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,     // borderColor
+        false,                                  // unnormalizedCoordinates
     };
 }
-} // namespace
+}  // namespace
 
 void GpuImageVk::CreatePlatformHwBuffer()
 {
@@ -72,10 +72,10 @@ void GpuImageVk::CreatePlatformHwBuffer()
             VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo;
             PlatformHardwareBufferUtil::FillYcbcrConversionInfo(hwBufferProperties, ycbcrConversionCreateInfo);
 
-            VkExternalFormatOHOS externalFormat {
-                VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS, // sType
-                nullptr,                                // pNext
-                hwBufferProperties.externalFormat,      // externalFormat
+            VkExternalFormatOHOS externalFormat{
+                VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS,  // sType
+                nullptr,                                 // pNext
+                hwBufferProperties.externalFormat,       // externalFormat
             };
             ycbcrConversionCreateInfo.pNext = &externalFormat;
 
@@ -85,18 +85,18 @@ void GpuImageVk::CreatePlatformHwBuffer()
             VALIDATE_VK_RESULT(deviceVk.GetExtFunctions().vkCreateSamplerYcbcrConversion(
                 vkDevice, &ycbcrConversionCreateInfo, nullptr, &platConversion_.samplerConversion));
 
-            const VkSamplerYcbcrConversionInfo yCbcrConversionInfo {
-                VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO, // sType
-                nullptr,                                         // pNext
-                platConversion_.samplerConversion,               // conversion
+            const VkSamplerYcbcrConversionInfo yCbcrConversionInfo{
+                VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,  // sType
+                nullptr,                                          // pNext
+                platConversion_.samplerConversion,                // conversion
             };
 
             VkSamplerCreateInfo samplerCreateInfo = CreateYcbcrSamplerCreateInfo();
             samplerCreateInfo.pNext = &yCbcrConversionInfo;
-            VALIDATE_VK_RESULT(vkCreateSampler(vkDevice, // device
-                &samplerCreateInfo,                      // pCreateInfo
-                nullptr,                                 // pAllocator
-                &platConversion_.sampler));              // pSampler
+            VALIDATE_VK_RESULT(vkCreateSampler(vkDevice,  // device
+                &samplerCreateInfo,                       // pCreateInfo
+                nullptr,                                  // pAllocator
+                &platConversion_.sampler));               // pSampler
 
             CreateVkImageViews(VK_IMAGE_ASPECT_COLOR_BIT, &yCbcrConversionInfo);
         } else {
@@ -114,14 +114,14 @@ void GpuImageVk::DestroyPlatformHwBuffer()
     const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
     const VkDevice device = devicePlat.device;
     if (platConversion_.samplerConversion != VK_NULL_HANDLE) {
-        deviceVk.GetExtFunctions().vkDestroySamplerYcbcrConversion(device, // device
-            platConversion_.samplerConversion,                             // ycbcrConversion
-            nullptr);                                                      // pAllocator
+        deviceVk.GetExtFunctions().vkDestroySamplerYcbcrConversion(device,  // device
+            platConversion_.samplerConversion,                              // ycbcrConversion
+            nullptr);                                                       // pAllocator
     }
     if (platConversion_.sampler != VK_NULL_HANDLE) {
-        vkDestroySampler(device,     // device
-            platConversion_.sampler, // sampler
-            nullptr);                // pAllocator
+        vkDestroySampler(device,      // device
+            platConversion_.sampler,  // sampler
+            nullptr);                 // pAllocator
     }
 }
 RENDER_END_NAMESPACE()

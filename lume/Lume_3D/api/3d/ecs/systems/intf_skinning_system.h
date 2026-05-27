@@ -30,7 +30,7 @@ CORE3D_BEGIN_NAMESPACE()
 /** ISkinning system */
 class ISkinningSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "06931e7e-cd68-43b4-8f89-40652dade9fa" };
+    static constexpr BASE_NS::Uid UID{"06931e7e-cd68-43b4-8f89-40652dade9fa"};
 
     /** Creates a skin instance for the given entity.
      *  @param skinIbmEntity Entity where we get skin ibm matrices.
@@ -73,4 +73,4 @@ inline constexpr BASE_NS::string_view GetName(const ISkinningSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_ISKINNING_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_ISKINNING_SYSTEM_H

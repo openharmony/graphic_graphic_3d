@@ -23,7 +23,7 @@
 namespace OHOS::Render3D {
 class ColorProxy : public PropertyProxy<BASE_NS::Color> {
 public:
-    explicit ColorProxy(const META_NS::Property<BASE_NS::Color> &prop);
+    explicit ColorProxy(const META_NS::Property<BASE_NS::Color>& prop);
     ~ColorProxy() override;
 
     float GetR() const;

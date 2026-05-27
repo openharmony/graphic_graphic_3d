@@ -58,7 +58,8 @@ namespace Dotfield {
 namespace UTest {
 
 class API_DotfieldNodeTest : public ::testing::Test {
-    void SetUp() override {}
+    void SetUp() override
+    {}
 
     void TearDown() override
     {
@@ -122,7 +123,7 @@ protected:
 
             cameraEntity = sceneUtil.CreateCamera(
                 *ecsContext, BASE_NS::Math::Vec3(0, 0, 0), BASE_NS::Math::Quat(0, 0, 0, 1), 0.1f, 100.0f, 60.0f);
-            nameManager->Set(cameraEntity, { "MainCamera" });
+            nameManager->Set(cameraEntity, {"MainCamera"});
 
             auto node = nodeSystem->GetNode(cameraEntity);
             node->SetParent(*rootNode);
@@ -135,13 +136,13 @@ protected:
                 cameraComponent.pipelineFlags |= CORE3D_NS::CameraComponent::PipelineFlagBits::CLEAR_COLOR_BIT |
                                                  CORE3D_NS::CameraComponent::PipelineFlagBits::DEPTH_OUTPUT_BIT;
                 cameraComponent.renderingPipeline = CORE3D_NS::CameraComponent::RenderingPipeline::LIGHT_FORWARD;
-                cameraComponent.clearColorValue = { 0.0f, 0.0f, 0.0f, 0.0f };
+                cameraComponent.clearColorValue = {0.0f, 0.0f, 0.0f, 0.0f};
                 cameraComponent.layerMask = CORE3D_NS::LayerConstants::ALL_LAYER_MASK;
 
                 yfov = cameraComponent.yFov;
             }
 
-            sceneUtil.UpdateCameraViewport(*ecsContext, cameraEntity, { 512, 512 }, true, yfov, 1.0f);
+            sceneUtil.UpdateCameraViewport(*ecsContext, cameraEntity, {512, 512}, true, yfov, 1.0f);
         }
 
         // create dotfield
@@ -160,10 +161,10 @@ protected:
 
                 gsComponentManager->Create(entity);
                 CORE_NS::ScopedHandle<Dotfield::DotfieldComponent> data(gsComponentManager->GetData(entity));
-                data->size = { 64.f, 64.f };
+                data->size = {64.f, 64.f};
                 data->pointScale = 60.f;
-                data->touchPosition = { 0.f, 0.f };
-                data->touchDirection = { 0.f, 0.f, 0.f };
+                data->touchPosition = {0.f, 0.f};
+                data->touchDirection = {0.f, 0.f, 0.f};
                 data->touchRadius = 0.f;
                 data->color0 = 0xffffffff;
                 data->color1 = 0xffff0000;
@@ -189,8 +190,8 @@ protected:
 
         // image and buffer descriptors
         RENDER_NS::GpuImageDesc imageDesc;
-        imageDesc.width = 512; // 512: width
-        imageDesc.height = 512; // 512: height
+        imageDesc.width = 512;   // 512: width
+        imageDesc.height = 512;  // 512: height
         imageDesc.depth = 1;
         imageDesc.engineCreationFlags = RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
         imageDesc.format = BASE_NS::Format::BASE_FORMAT_R8G8B8A8_UNORM;
@@ -203,7 +204,7 @@ protected:
         m_imageHandle = renderContext->GetDevice().GetGpuResourceManager().Create("TestOutputImage", imageDesc);
 
         RENDER_NS::GpuBufferDesc bufferDesc;
-        bufferDesc.byteSize = 512 * 512 * 4; // 512: heigth、width 4: bytes per pixel
+        bufferDesc.byteSize = 512 * 512 * 4;  // 512: heigth、width 4: bytes per pixel
         bufferDesc.engineCreationFlags = RENDER_NS::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
         bufferDesc.usageFlags = RENDER_NS::CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags =
@@ -278,5 +279,5 @@ UNIT_TEST_F(API_DotfieldNodeTest, DotfieldNodeRenderGL, testing::ext::TestSize.L
 }
 #endif
 
-} // namespace UTest
-} // namespace Dotfield
+}  // namespace UTest
+}  // namespace Dotfield

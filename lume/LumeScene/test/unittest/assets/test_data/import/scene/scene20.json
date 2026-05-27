@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "description": "test scene with camera color targets",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "camera",
+                    "name": "test",
+                    "projection": "perspective",
+                    "colorTargets": [
+                        { "format": "r8g8b8a8Srgb", "flags": ["sampled", "colorAttachment"] },
+                        { "format": "r16g16b16a16Sfloat" }
+                    ]
+                }
+            ]
+        }
+    }
+}

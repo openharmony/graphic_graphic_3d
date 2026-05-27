@@ -89,7 +89,8 @@ class OcclusionMaterialTemplateAccess
     : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
     META_OBJECT(OcclusionMaterialTemplateAccess, ClassId::OcclusionMaterialTemplateAccess, IntroduceInterfaces)
 public:
-    OcclusionMaterialTemplateAccess() : Super(ClassId::OcclusionMaterial, ClassId::OcclusionMaterialResourceTemplate) {}
+    OcclusionMaterialTemplateAccess() : Super(ClassId::OcclusionMaterial, ClassId::OcclusionMaterialResourceTemplate)
+    {}
 
     bool SetValuesFromTemplate(
         const CORE_NS::IResource::ConstPtr& templ, const CORE_NS::IResource::Ptr& resource) const override;
@@ -97,4 +98,4 @@ public:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_RESOURCE_OCCLUSION_MATERIAL_H
+#endif  // SCENE_SRC_RESOURCE_OCCLUSION_MATERIAL_H

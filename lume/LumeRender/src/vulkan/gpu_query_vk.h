@@ -27,7 +27,7 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct GpuQueryPlatformDataVk : public GpuQueryPlatformData {
-    VkQueryPool queryPool { VK_NULL_HANDLE };
+    VkQueryPool queryPool{VK_NULL_HANDLE};
 };
 
 /** GpuQueryVk. */
@@ -44,13 +44,13 @@ public:
 private:
     Device& device_;
 
-    static constexpr const uint32_t QUERY_COUNT_PER_POOL { 2 };
+    static constexpr const uint32_t QUERY_COUNT_PER_POOL{2};
 
-    uint32_t queryIndex_ { 0 };
+    uint32_t queryIndex_{0};
     BASE_NS::vector<GpuQueryPlatformDataVk> plats_;
     GpuQueryDesc desc_;
 };
 BASE_NS::unique_ptr<GpuQuery> CreateGpuQueryVk(Device& device, const GpuQueryDesc& desc);
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_QUERY_VK_H
+#endif  // VULKAN_GPU_QUERY_VK_H

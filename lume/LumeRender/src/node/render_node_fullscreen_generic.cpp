@@ -127,9 +127,9 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     cmdList.SetDynamicStateViewport(viewportDesc);
     cmdList.SetDynamicStateScissor(scissorDesc);
     if (renderPass.subpassDesc.fragmentShadingRateAttachmentCount > 0) {
-        cmdList.SetDynamicStateFragmentShadingRate(
-            { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                            CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
+        cmdList.SetDynamicStateFragmentShadingRate({1u, 1u},
+            FragmentShadingRateCombinerOps{
+                CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE, CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE});
     }
 
     // push constants
@@ -145,15 +145,16 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
         }
     }
 
-    cmdList.Draw(3u, 1u, 0u, 0u); // vertex count, instance count, first vertex, first instance
+    cmdList.Draw(3u, 1u, 0u, 0u);  // vertex count, instance count, first vertex, first instance
     cmdList.EndRenderPass();
 }
 
 RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
 {
     // controlled by count
-    constexpr DynamicStateEnum dynamicStates[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR,
-        CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
+    constexpr DynamicStateEnum dynamicStates[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT,
+        CORE_DYNAMIC_STATE_ENUM_SCISSOR,
+        CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE};
     if (useDataStoreShaderSpecialization_) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
         const auto dataStore = static_cast<const IRenderDataStorePod*>(
@@ -179,15 +180,18 @@ RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
                 }
             }
             if (valuesChanged) {
-                const ShaderSpecializationConstantDataView specialization {
-                    { shaderSpecializationData_.constants.data(), specializationCount },
-                    { shaderSpecializationData_.data.data(), specializationCount }
-                };
+                const ShaderSpecializationConstantDataView specialization{
+                    {shaderSpecializationData_.constants.data(), specializationCount},
+                    {shaderSpecializationData_.data.data(), specializationCount}};
                 const uint32_t dynamicStateCount =
                     (inputRenderPass_.fragmentShadingRateAttachmentIndex != ~0u) ? 3u : 2u;
-                pipelineData_.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
-                    pipelineData_.gsd.shader, pipelineData_.gsd.graphicsState, pipelineData_.gsd.pipelineLayout, {},
-                    specialization, { dynamicStates, dynamicStateCount });
+                pipelineData_.pso =
+                    renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(pipelineData_.gsd.shader,
+                        pipelineData_.gsd.graphicsState,
+                        pipelineData_.gsd.pipelineLayout,
+                        {},
+                        specialization,
+                        {dynamicStates, dynamicStateCount});
             }
         } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -204,8 +208,11 @@ RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
     } else if (!RenderHandleUtil::IsValid(pipelineData_.pso)) {
         const uint32_t dynamicStateCount = (inputRenderPass_.fragmentShadingRateAttachmentIndex != ~0u) ? 3u : 2u;
         pipelineData_.pso = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(pipelineData_.gsd.shader,
-            pipelineData_.gsd.graphicsState, pipelineData_.gsd.pipelineLayout, {}, {},
-            { dynamicStates, dynamicStateCount });
+            pipelineData_.gsd.graphicsState,
+            pipelineData_.gsd.pipelineLayout,
+            {},
+            {},
+            {dynamicStates, dynamicStateCount});
     }
     return pipelineData_.pso;
 }

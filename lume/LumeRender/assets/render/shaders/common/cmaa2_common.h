@@ -23,8 +23,8 @@
 #include "render/shaders/common/render_compatibility_common.h"
 #include "render/shaders/common/render_post_process_structs_common.h"
 
-#define CMAA2_EXTRA_SHARPNESS 0 // 1 to preserve more text clarity
-#define CMAA2_SKIP_WEAK_EDGES 0 // 1 to skip weak edges, slight optimization
+#define CMAA2_EXTRA_SHARPNESS 0  // 1 to preserve more text clarity
+#define CMAA2_SKIP_WEAK_EDGES 0  // 1 to skip weak edges, slight optimization
 
 #define CMAA2_CS_INPUT_KERNEL_SIZE_X 16
 #define CMAA2_CS_INPUT_KERNEL_SIZE_Y 16
@@ -74,7 +74,9 @@ struct DispatchIndirectCommand {
 
 uvec4 UnpackEdges(const uint value)
 {
-    return uvec4((value & 0x01u) != 0u ? 1u : 0u, (value & 0x02u) != 0u ? 1u : 0u, (value & 0x04u) != 0u ? 1u : 0u,
+    return uvec4((value & 0x01u) != 0u ? 1u : 0u,
+        (value & 0x02u) != 0u ? 1u : 0u,
+        (value & 0x04u) != 0u ? 1u : 0u,
         (value & 0x08u) != 0u ? 1u : 0u);
 }
 
@@ -140,4 +142,4 @@ float RgbToLuma(const vec3 rgb)
     return luma;
 }
 
-#endif // SHADERS__COMMON__CMAA2_COMMON_H
+#endif  // SHADERS__COMMON__CMAA2_COMMON_H

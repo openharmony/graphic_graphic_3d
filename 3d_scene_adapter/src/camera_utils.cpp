@@ -22,15 +22,15 @@ std::string CameraConfigs::Dump() const
 {
     std::string ret = "Camera:[";
     ret += " position_: " + std::to_string(position_.x) + '\t' + std::to_string(position_.y) + '\t' +
-        std::to_string(position_.z) + '\t';
+           std::to_string(position_.z) + '\t';
     ret += " rotation_: " + std::to_string(rotation_.x) + '\t' + std::to_string(rotation_.y) + '\t' +
-            std::to_string(rotation_.z) + '\t' + std::to_string(rotation_.w) + '\t';
+           std::to_string(rotation_.z) + '\t' + std::to_string(rotation_.w) + '\t';
     ret += "clearColor: " + std::to_string(clearColor_.x) + '\t' + std::to_string(clearColor_.y) + '\t' +
-        std::to_string(clearColor_.z) + '\t' + std::to_string(clearColor_.w) + '\t';
+           std::to_string(clearColor_.z) + '\t' + std::to_string(clearColor_.w) + '\t';
     ret += "fov: " + std::to_string(intrinsics_.fov_) + "near: " + std::to_string(intrinsics_.near_) +
-        "far: " + std::to_string(intrinsics_.far_);
+           "far: " + std::to_string(intrinsics_.far_);
     ret += "]";
     return ret;
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

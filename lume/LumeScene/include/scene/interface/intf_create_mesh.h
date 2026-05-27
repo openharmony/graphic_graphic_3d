@@ -38,7 +38,7 @@ enum class PrimitiveTopology {
 
 /// Custom data to create mesh. Normals, uvs and colors are optional.
 struct CustomMeshData {
-    PrimitiveTopology topology { PrimitiveTopology::TRIANGLE_LIST };
+    PrimitiveTopology topology{PrimitiveTopology::TRIANGLE_LIST};
     BASE_NS::vector<BASE_NS::Math::Vec3> vertices;
     BASE_NS::vector<uint32_t> indices;
     BASE_NS::vector<BASE_NS::Math::Vec3> normals;

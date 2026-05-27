@@ -35,7 +35,7 @@ public:
     ~RenderNodeBackBuffer() override = default;
 
     void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override;
-    void PreExecuteFrame() override {};
+    void PreExecuteFrame() override{};
     void ExecuteFrame(IRenderCommandList& cmdList) override;
     ExecuteFlags GetExecuteFlags() const override
     {
@@ -43,7 +43,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "f1dc030b-1081-4ca5-a195-1d8bfc1a036c" };
+    static constexpr BASE_NS::Uid UID{"f1dc030b-1081-4ca5-a195-1d8bfc1a036c"};
     static constexpr const char* TYPE_NAME = "RenderNodeBackBuffer";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -51,7 +51,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void CheckForPsoSpecilization(const PostProcessConfiguration& postProcessConfiguration);
     PostProcessConfiguration GetPostProcessConfiguration(const IRenderNodeRenderDataStoreManager& dataStoreMgr) const;
@@ -65,8 +65,8 @@ private:
 
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
-        bool hasChangeableRenderPassHandles { false };
-        bool hasChangeableResourceHandles { false };
+        bool hasChangeableRenderPassHandles{false};
+        bool hasChangeableResourceHandles{false};
     };
     JsonInputs jsonInputs_;
 
@@ -77,9 +77,9 @@ private:
     RenderPass renderPass_;
 
     struct BackBufferDefinition {
-        uint32_t width { 0 };
-        uint32_t height { 0 };
-        BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+        uint32_t width{0};
+        uint32_t height{0};
+        BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
     };
     BackBufferDefinition currentBackBuffer_;
     ViewportDesc currentViewportDesc_;
@@ -91,4 +91,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_BACK_BUFFER_H
+#endif  // RENDER_NODE_RENDER_NODE_BACK_BUFFER_H

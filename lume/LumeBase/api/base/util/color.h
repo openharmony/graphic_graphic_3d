@@ -47,18 +47,22 @@ public:
             float a;
         };
 
-        float data[4] { 0.0f };
+        float data[4]{0.0f};
     };
 
-    constexpr Color() noexcept : x(1.f), y(1.f), z(1.f), w(1.f) {}
+    constexpr Color() noexcept : x(1.f), y(1.f), z(1.f), w(1.f)
+    {}
 
-    constexpr explicit Color(float val) noexcept : x(val), y(val), z(val), w(val) {}
+    constexpr explicit Color(float val) noexcept : x(val), y(val), z(val), w(val)
+    {}
 
     /** Will set the alpha channel to 1.0
      */
-    constexpr Color(float x, float y, float z) noexcept : x(x), y(y), z(z), w(1.0f) {}
+    constexpr Color(float x, float y, float z) noexcept : x(x), y(y), z(z), w(1.0f)
+    {}
 
-    constexpr Color(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w) {}
+    constexpr Color(float x, float y, float z, float w) noexcept : x(x), y(y), z(z), w(w)
+    {}
 
     /** Constructs Color from ARGB format (uint32_t)
      */
@@ -185,37 +189,37 @@ public:
     constexpr float& operator[](const uint32_t index) noexcept
     {
         switch (index) {
-            case 0: // 0: index
+            case 0:  // 0: index
                 return x;
-            case 1: // 1: index
+            case 1:  // 1: index
                 return y;
-            case 2: // 2: index
+            case 2:  // 2: index
                 return z;
-            case 3: // 3: index
+            case 3:  // 3: index
                 return w;
-            default: // do nothing
+            default:  // do nothing
                 break;
         }
 
-        return x; // dummy
+        return x;  // dummy
     }
 
     constexpr const float& operator[](const uint32_t index) const noexcept
     {
         switch (index) {
-            case 0: // 0: index
+            case 0:  // 0: index
                 return x;
-            case 1: // 1: index
+            case 1:  // 1: index
                 return y;
-            case 2: // 2: index
+            case 2:  // 2: index
                 return z;
-            case 3: // 3: index
+            case 3:  // 3: index
                 return w;
-            default: // do nothing
+            default:  // do nothing
                 break;
         }
 
-        return x; // dummy
+        return x;  // dummy
     }
 
     /** Returns Color's members as Math::Vec4
@@ -238,52 +242,52 @@ public:
 
     inline uint32_t GetRgba32() const noexcept
     {
-        uint32_t c = (uint8_t)Math::round(x * 255.0f);
+        uint32_t c = static_cast<uint8_t>(Math::clamp(Math::round(x * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(y * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(y * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(z * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(z * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(w * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(w * 255.0f), 0.0f, 255.0f));
 
         return c;
     }
 
     inline uint64_t GetRgba64() const noexcept
     {
-        uint64_t c = (uint16_t)Math::round(x * 65535.0f);
+        uint64_t c = static_cast<uint16_t>(Math::clamp(Math::round(x * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(y * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(y * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(z * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(z * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(w * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(w * 65535.0f), 0.0f, 65535.0f));
 
         return c;
     }
 
     inline uint32_t GetArgb32() const noexcept
     {
-        uint32_t c = (uint8_t)Math::round(w * 255.0f);
+        uint32_t c = static_cast<uint8_t>(Math::clamp(Math::round(w * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(x * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(x * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(y * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(y * 255.0f), 0.0f, 255.0f));
         c <<= COLOR_SHIFT_8;
-        c |= (uint8_t)Math::round(z * 255.0f);
+        c |= static_cast<uint8_t>(Math::clamp(Math::round(z * 255.0f), 0.0f, 255.0f));
 
         return c;
     }
 
     inline uint64_t GetArgb64() const noexcept
     {
-        uint64_t c = (uint16_t)Math::round(w * 65535.0f);
+        uint64_t c = static_cast<uint16_t>(Math::clamp(Math::round(w * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(x * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(x * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(y * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(y * 65535.0f), 0.0f, 65535.0f));
         c <<= COLOR_SHIFT_16;
-        c |= (uint16_t)Math::round(z * 65535.0f);
+        c |= static_cast<uint16_t>(Math::clamp(Math::round(z * 65535.0f), 0.0f, 65535.0f));
 
         return c;
     }
@@ -386,7 +390,7 @@ inline Color MakeColorFromSRGB(const uint32_t color)
     uint8_t r = (color >> COLOR_SHIFT_16) & UINT8_MAX;
     uint8_t a = (color >> COLOR_SHIFT_24) & UINT8_MAX;
 
-    return { SRGBToLinearConv(r / 255.0f), SRGBToLinearConv(g / 255.0f), SRGBToLinearConv(b / 255.0f), a / 255.0f };
+    return {SRGBToLinearConv(r / 255.0f), SRGBToLinearConv(g / 255.0f), SRGBToLinearConv(b / 255.0f), a / 255.0f};
 }
 
 /** Input color in linear (Vec4)
@@ -466,4 +470,4 @@ static const Color BLACK_COLOR = MakeColorFromLinear(0xFF000000);
 static const Color WHITE_COLOR = MakeColorFromLinear(0xFFFFFFFF);
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_UTIL_COLOR_H
+#endif  // API_BASE_UTIL_COLOR_H

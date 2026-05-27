@@ -1,0 +1,23 @@
+{
+    "version": "1.0",
+    "description": "test scene with camera postProcess objectRef",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "index": "scene22.index",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "camera",
+                    "name": "test",
+                    "projection": "perspective",
+                    "postProcess": {
+                        "type": "objectRef",
+                        "path": "@myPostProcess"
+                    }
+                }
+            ]
+        }
+    }
+}

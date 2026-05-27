@@ -24,7 +24,7 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief The PropertyEventHandler class is a helper class for adding event handlers to property events.
  */
-template<typename EventType, BASE_NS::shared_ptr<IEvent> (INotifyOnChange::*EventFunc)(MetadataQuery) const>
+template <typename EventType, BASE_NS::shared_ptr<IEvent> (INotifyOnChange::*EventFunc)(MetadataQuery) const>
 class PropertyEventHandler {
 public:
     using CallableTypePtr = typename EventType::InterfaceTypePtr;
@@ -52,14 +52,14 @@ public:
             (property.get()->*EventFunc)(MetadataQuery::CONSTRUCT_ON_REQUEST), onInvoked, queueId);
     }
 
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
+    template <typename Func, typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const IProperty::ConstPtr& property, Func func, const ITaskQueue::Ptr& queue = nullptr)
     {
         return handler_.Subscribe<EventType>(
             (property.get()->*EventFunc)(MetadataQuery::CONSTRUCT_ON_REQUEST), BASE_NS::move(func), queue);
     }
 
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
+    template <typename Func, typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const IProperty::ConstPtr& property, Func func, const BASE_NS::Uid& queueId)
     {
         return handler_.Subscribe<EventType>(

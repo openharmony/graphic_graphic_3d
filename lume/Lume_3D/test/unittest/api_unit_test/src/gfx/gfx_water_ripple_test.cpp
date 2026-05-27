@@ -83,18 +83,22 @@ void WaterRippleTest(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 3.0f, 5.0f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(ecs,
+            Math::Vec3(0.0f, 3.0f, 5.0f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(ecs);
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
     }
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 90.0f, 1.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
 
     auto* wcm = GetManager<IWeatherComponentManager>(ecs);
     wcm->Create(sceneRoot);
@@ -103,13 +107,13 @@ void WaterRippleTest(UTest::TestResources& res)
     Entity reflectionPlane;
     {
         nameManager->Create(reflectionPlaneMaterial);
-        nameManager->Set(reflectionPlaneMaterial, { { "ReflectionPlaneMaterial" } });
+        nameManager->Set(reflectionPlaneMaterial, {{"ReflectionPlaneMaterial"}});
         materialManager->Create(reflectionPlaneMaterial);
         reflectionPlane = meshUtil.GeneratePlane(ecs, "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
             node->SetScale(Math::Vec3(planeDims.x, 0.01f, planeDims.y));
-            node->SetRotation(Math::AngleAxis(10 * Math::DEG2RAD, Math::Vec3(1, 0, 0))); // 10: parm
+            node->SetRotation(Math::AngleAxis(10 * Math::DEG2RAD, Math::Vec3(1, 0, 0)));  // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(ecs, reflectionPlane);
 
@@ -130,8 +134,10 @@ void WaterRippleTest(UTest::TestResources& res)
 
     // Gltf model
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/Environment/glTF/Environment.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/Environment/glTF/Environment.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     // Load and import all gltf files.
@@ -199,7 +205,7 @@ void WaterRippleTest(UTest::TestResources& res)
     for (uint32_t i = 0; i < NUM_CUBES; i++) {
         auto cube =
             nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Cube" + to_string(i), whiteMaterial, 1.0f, 1.0f, 1.0f));
-        cube->SetPosition(startLoc + Math::Vec3(i * 3, 0.0f, 0.0f)); // 3: parm
+        cube->SetPosition(startLoc + Math::Vec3(i * 3, 0.0f, 0.0f));  // 3: parm
         if (auto* waterRippleManager = GetManager<IWaterRippleComponentManager>(ecs); waterRippleManager) {
             waterRippleManager->Create(cube->GetEntity());
             if (auto ripple = waterRippleManager->Write(cube->GetEntity())) {
@@ -209,10 +215,18 @@ void WaterRippleTest(UTest::TestResources& res)
         }
     }
 }
+
+bool TickEcs(IEcs& ecs, uint64_t totalTimeUs, uint64_t deltaTimeUs)
+{
+    ecs.ProcessEvents();
+    const bool needRender = ecs.Update(totalTimeUs, deltaTimeUs);
+    ecs.ProcessEvents();
+    return needRender;
+}
+
 void TickTest(UTest::TestResources& res, int frameCountToTick)
 {
     auto* ecs = &res.GetEcs();
-    auto& engine = res.GetEngine();
     auto& renderContext = res.GetRenderContext();
     auto nodeSystem = GetSystem<INodeSystem>(*ecs);
     auto rootNode = nodeSystem->CreateNode();
@@ -230,15 +244,17 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
 
     for (uint ii = 0; ii < steps; ii++) {
         const float t = float(ii) / steps;
-        if (t < 0.5) {                                     // 0.5: parm
-            cubeYPos[ii] = Math::lerp(2.0f, -2.0f, t * 2); // 2: parm
+        if (t < 0.5) {                                      // 0.5: parm
+            cubeYPos[ii] = Math::lerp(2.0f, -2.0f, t * 2);  // 2: parm
         } else {
-            cubeYPos[ii] = Math::lerp(-2.0f, 2.0f, (t - 0.5f) * 2); // 2: parm
+            cubeYPos[ii] = Math::lerp(-2.0f, 2.0f, (t - 0.5f) * 2);  // 2: parm
         }
     }
-
+    constexpr uint64_t fixedDeltaUs = 16667u;  // 60 fps fixed step
+    uint64_t totalTimeUs = 0;
     for (int i = 0; i < frameCountToTick; i++) {
-        const bool needsRender = engine.TickFrame(array_view(&ecs, 1));
+        totalTimeUs += fixedDeltaUs;
+        const bool needsRender = TickEcs(*ecs, totalTimeUs, fixedDeltaUs);
         IRenderer& renderer = renderContext.GetRenderer();
 
         if (i == frameCountToTick - 1) {
@@ -283,12 +299,16 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
 
     if (byteArray) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/WaterRippleTestVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4); // 4: parm
+        UTest::WritePng(BASE_NS::string(appDir + "/WaterRippleTestVulkan.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            byteArray->GetData().data(),
+            res.GetWindowWidth() * 4);  // 4: parm
     }
 }
 
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -304,4 +324,4 @@ UNIT_TEST(API_GfxTest, WaterRippleTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

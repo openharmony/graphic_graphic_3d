@@ -120,8 +120,10 @@ struct TestClass : IntroduceInterfaces<IObjectInstance> {
     {
         return a + 10 * b;
     }
-    void TestFunc3(int a, int b, float c) {}
-    void ConstFunc() const {}
+    void TestFunc3(int a, int b, float c)
+    {}
+    void ConstFunc() const
+    {}
     void RefFunc(const int& in, int& out)
     {
         out = in + 1;
@@ -157,9 +159,9 @@ struct TestClass : IntroduceInterfaces<IObjectInstance> {
         return {};
     }
 
-    IObject::WeakPtr self_ {};
+    IObject::WeakPtr self_{};
 };
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CreateCallContext
@@ -168,7 +170,7 @@ struct TestClass : IntroduceInterfaces<IObjectInstance> {
  */
 UNIT_TEST(API_CallContextTest, CreateCallContext, testing::ext::TestSize.Level1)
 {
-    BASE_NS::string_view arr[] = { "1", "2", "3" };
+    BASE_NS::string_view arr[] = {"1", "2", "3"};
     EXPECT_FALSE(CreateCallContext(&TestClass::TestFunc2, arr));
     auto c = CreateCallContext(&TestClass::TestFunc, arr);
     ASSERT_TRUE(c);
@@ -184,7 +186,7 @@ UNIT_TEST(API_CallContextTest, CreateCallContext, testing::ext::TestSize.Level1)
     BASE_NS::shared_ptr<TestClass> t(new TestClass);
     t->self_ = t;
     auto f = CreateFunction("test", t, &TestClass::TestFunc, [] {
-        BASE_NS::string_view arr[] = { "1", "2", "3" };
+        BASE_NS::string_view arr[] = {"1", "2", "3"};
         return META_NS::ConstructAny<META_NS::ICallContext::Ptr>(CreateCallContext(&TestClass::TestFunc, arr));
     });
     ASSERT_TRUE(f);
@@ -200,7 +202,7 @@ UNIT_TEST(API_CallContextTest, CreateCallContext, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_CallContextTest, BadCallFunction, testing::ext::TestSize.Level1)
 {
-    BASE_NS::string_view arr[] = { "1", "2", "3" };
+    BASE_NS::string_view arr[] = {"1", "2", "3"};
     auto c = CreateCallContext(&TestClass::TestFunc, arr);
     BASE_NS::shared_ptr<TestClass> t(new TestClass);
     t->self_ = t;
@@ -243,7 +245,7 @@ UNIT_TEST(API_CallContextTest, ConstFunctions, testing::ext::TestSize.Level1)
 UNIT_TEST(API_CallContextTest, ReferenceArgs, testing::ext::TestSize.Level1)
 {
     auto context = [] {
-        BASE_NS::string_view arr[] = { "in", "out" };
+        BASE_NS::string_view arr[] = {"in", "out"};
         return META_NS::ConstructAny<META_NS::ICallContext::Ptr>(CreateCallContext(&TestClass::RefFunc, arr));
     };
     auto c = context();
@@ -270,7 +272,7 @@ UNIT_TEST(API_CallContextTest, ReferenceArgs, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_CallContextTest, CallArgumentOrder, testing::ext::TestSize.Level1)
 {
-    BASE_NS::string_view arr[] = { "1", "2" };
+    BASE_NS::string_view arr[] = {"1", "2"};
 
     {
         auto c = CreateCallContext(&TestClass::TestFunc2, arr);
@@ -289,7 +291,7 @@ UNIT_TEST(API_CallContextTest, CallArgumentOrder, testing::ext::TestSize.Level1)
         Set<int>(c, "2", 2);
         BASE_NS::shared_ptr<TestClass> t(new TestClass);
         t->self_ = t;
-        BASE_NS::string_view order[] = { "2", "1" };
+        BASE_NS::string_view order[] = {"2", "1"};
         EXPECT_TRUE(CallFunction(c, t.get(), &TestClass::TestFunc2, order));
         auto res = GetResult<int>(c);
         ASSERT_TRUE(res);
@@ -297,5 +299,79 @@ UNIT_TEST(API_CallContextTest, CallArgumentOrder, testing::ext::TestSize.Level1)
     }
 }
 
-} // namespace UTest
+/**
+ * @tc.name: CopyConstructorViaClone
+ * @tc.desc: Tests for copy construction via ICloneable with params and result.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_CallContextTest, CopyConstructorViaClone, testing::ext::TestSize.Level1)
+{
+    auto context = GetObjectRegistry().ConstructDefaultCallContext();
+    // Use DefineParameter via interface directly with ConstructAny (which supports ICloneable via Clone())
+    EXPECT_TRUE(context->DefineParameter("p1", ConstructAny<int>(42)));
+    EXPECT_TRUE(context->DefineParameter("p2", ConstructAny<int>(99)));
+    EXPECT_TRUE(DefineResult<void>(context));
+    EXPECT_TRUE(SetResult(context));
+    EXPECT_TRUE(context->Succeeded());
+
+    auto cloneable = interface_cast<ICloneable>(context);
+    ASSERT_TRUE(cloneable);
+    auto cloned = interface_pointer_cast<ICallContext>(cloneable->GetClone());
+    ASSERT_TRUE(cloned);
+
+    // Verify params are present in clone with correct names
+    auto params = cloned->GetParameters();
+    ASSERT_EQ(params.size(), 2);
+    EXPECT_EQ(params[0].name, "p1");
+    EXPECT_EQ(params[1].name, "p2");
+
+    // Verify succeeded state is copied
+    EXPECT_TRUE(cloned->Succeeded());
+}
+
+/**
+ * @tc.name: ResetContext
+ * @tc.desc: Tests that Reset() clears the succeeded flag.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_CallContextTest, ResetContext, testing::ext::TestSize.Level1)
+{
+    auto context = GetObjectRegistry().ConstructDefaultCallContext();
+    EXPECT_TRUE(DefineResult<void>(context));
+    EXPECT_TRUE(SetResult(context));
+    EXPECT_TRUE(context->Succeeded());
+
+    context->Reset();
+    EXPECT_FALSE(context->Succeeded());
+}
+
+/**
+ * @tc.name: SetResultVoidFail
+ * @tc.desc: Tests that SetResult() (void) fails when result type is non-void.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_CallContextTest, SetResultVoidFail, testing::ext::TestSize.Level1)
+{
+    auto context = GetObjectRegistry().ConstructDefaultCallContext();
+    EXPECT_TRUE(DefineResult<int>(context));
+
+    // SetResult() (void overload) should fail because result is int, not void
+    EXPECT_FALSE(SetResult(context));
+    EXPECT_FALSE(context->Succeeded());
+}
+
+/**
+ * @tc.name: DefineParameterDuplicate
+ * @tc.desc: Tests that DefineParameter with the same name twice returns false.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_CallContextTest, DefineParameterDuplicate, testing::ext::TestSize.Level1)
+{
+    auto context = GetObjectRegistry().ConstructDefaultCallContext();
+    EXPECT_TRUE(DefineParameter<int>(context, "dup"));
+    EXPECT_FALSE(DefineParameter<int>(context, "dup"));
+    EXPECT_EQ(context->GetParameters().size(), 1);
+}
+
+}  // namespace UTest
 META_END_NAMESPACE()

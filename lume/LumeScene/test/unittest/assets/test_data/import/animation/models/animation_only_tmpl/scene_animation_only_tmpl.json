@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "host",
+                    "source": { "type": "nodeTemplate", "url": "templates/animation_only_tmpl.template" },
+                    "resourceGroup": "animOnlyTmplGrp"
+                }
+            ]
+        }
+    }
+}

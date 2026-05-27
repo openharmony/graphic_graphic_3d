@@ -90,7 +90,7 @@ bool VignetteETS::IsEnabled()
     if (auto vignette = vignette_.lock()) {
         return vignette->Enabled()->GetValue();
     }
-    return false;
+    return true;
 }
 
 void VignetteETS::SetEnabled(const bool enable)

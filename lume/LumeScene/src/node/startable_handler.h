@@ -30,7 +30,8 @@ public:
     };
 
     StartableHandler() = delete;
-    StartableHandler(const INode::Ptr& node) : node_(node) {}
+    StartableHandler(const INode::Ptr& node) : node_(node)
+    {}
     virtual ~StartableHandler() = default;
     bool Start(const META_NS::IObject::Ptr& attachment, StartType type);
     bool Stop(const META_NS::IObject::Ptr& attachment);
@@ -53,8 +54,8 @@ bool StartAllStartables(
     const IInternalScene::Ptr& scene, StartableHandler::StartType type, const META_NS::IObject::Ptr& object);
 bool StopAllStartables(const META_NS::IObject::Ptr& object);
 
-} // namespace Internal
+}  // namespace Internal
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_STARTABLE_HANDLER_H
+#endif  // SCENE_SRC_STARTABLE_HANDLER_H

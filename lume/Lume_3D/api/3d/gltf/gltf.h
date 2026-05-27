@@ -41,6 +41,11 @@ CORE3D_BEGIN_NAMESPACE()
 /** No scene explicitly defined in import options. */
 const unsigned long CORE_GLTF_INVALID_INDEX = 0x7FFFFFFF;
 
+namespace GLTF2 {
+struct GltfData;
+struct Accessor;
+}  // namespace GLTF2
+
 /** Interface to GLTF data. */
 class IGLTFData {
 public:
@@ -86,6 +91,25 @@ public:
      */
     virtual ThumbnailImage GetThumbnailImage(size_t thumbnailIndex) = 0;
 
+    /** Retrieve parsed glTF data (scenes, nodes, meshes, materials, animations, etc.). */
+    virtual const GLTF2::GltfData& GetData() const = 0;
+
+    /** Result of reading accessor data. */
+    struct AccessorData {
+        /** True if data was successfully read. */
+        bool success{false};
+        /** Fully resolved accessor data (decompressed, sparse substitutions applied). */
+        BASE_NS::vector<uint8_t> data;
+    };
+
+    /** Read fully resolved data for an accessor.
+     *  Handles decompression (meshopt) and sparse accessor resolution.
+     *  Buffers must be loaded (via LoadBuffers) before calling this.
+     *  @param accessor The accessor to read data from.
+     *  @return Resolved accessor data, or empty with success=false on failure.
+     */
+    virtual AccessorData ReadAccessorData(const GLTF2::Accessor& accessor) const = 0;
+
     struct Deleter {
         constexpr Deleter() noexcept = default;
         void operator()(IGLTFData* ptr) const
@@ -104,10 +128,11 @@ protected:
 /** Describes result of the loading operation. */
 struct GLTFLoadResult {
     GLTFLoadResult() = default;
-    explicit GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error) {}
+    explicit GLTFLoadResult(BASE_NS::string&& error) : success(false), error(error)
+    {}
 
     /** Indicates, whether the loading operation is successful. */
-    bool success { true };
+    bool success{true};
 
     /** In case of parsing error, contains the description of the error. */
     BASE_NS::string error;
@@ -170,6 +195,31 @@ enum GltfResourceImportFlagBits {
 /** Container for flags for resource import. */
 using GltfResourceImportFlags = uint32_t;
 
+/** Use importer default mip level behavior. */
+const uint32_t CORE_GLTF_IMPORT_TEXTURE_MIP_LEVELS_DEFAULT = 0xFFFFFFFFU;
+
+/** Base color texture color space used during glTF image import. */
+enum class GltfBaseColorTextureColorSpace : uint32_t {
+    /** Use the importer default behavior. */
+    DEFAULT = 0,
+    /** Import base color textures as sRGB. */
+    SRGB = 1,
+    /** Import base color textures as linear RGB. */
+    LINEAR = 2,
+};
+
+/** Per-call GLTF2 import options. */
+struct GltfImportOptions {
+    /** Resources to import. */
+    GltfResourceImportFlags flags{CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL};
+    /** Vertex input declaration path. Empty means importer default behavior. */
+    BASE_NS::string_view vertexInputDeclarationPath;
+    /** Maximum GPU texture mip levels. DEFAULT means importer default behavior, 0 means full/current chain. */
+    uint32_t maxTextureMipLevels{CORE_GLTF_IMPORT_TEXTURE_MIP_LEVELS_DEFAULT};
+    /** Base color texture color space. */
+    GltfBaseColorTextureColorSpace baseColorTextureColorSpace{GltfBaseColorTextureColorSpace::DEFAULT};
+};
+
 /** Flags for scene / ecs component import. */
 enum GltfSceneImportFlagBits {
     /** Scene, Deprecated value used for environment */
@@ -196,7 +246,7 @@ using GltfSceneImportFlags = uint32_t;
 /** Describes result of the import operation. */
 struct GLTFImportResult {
     /** Indicates, whether the import operation is successful. */
-    bool success { true };
+    bool success{true};
 
     /** In case of import error, contains the description of the error. */
     BASE_NS::string error;
@@ -264,6 +314,13 @@ public:
     /** Returns CPU accessible mesh data. Data is available when CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS was included
      * in import flags. Unless copied, the data is valid until a new import is started or the imported is destroyed. */
     virtual const GltfMeshData& GetMeshData() const = 0;
+
+    /** Import GLTF2 data synchronously. The previous imported data will be discarded. */
+    virtual void ImportGLTF(const IGLTFData& data, const GltfImportOptions& options) = 0;
+
+    /** Import GLTF2 data asynchronously, user is required to call Execute() from main thread until it returns true.
+     * The previous imported data will be discarded. */
+    virtual void ImportGLTFAsync(const IGLTFData& data, const GltfImportOptions& options, Listener* listener) = 0;
 
     struct Deleter {
         constexpr Deleter() noexcept = default;
@@ -361,4 +418,4 @@ protected:
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_GLTF_GLTF_H
+#endif  // API_3D_GLTF_GLTF_H

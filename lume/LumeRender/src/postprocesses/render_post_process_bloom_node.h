@@ -64,7 +64,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -84,7 +84,7 @@ public:
     static constexpr const char* TYPE_NAME = "RenderPostProcessBloomNode";
 
     struct EffectProperties {
-        bool enabled { false };
+        bool enabled{false};
         BloomConfiguration bloomConfiguration;
     };
 
@@ -102,7 +102,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ComputeBloom(IRenderCommandList& cmdList);
     void ComputeDownscaleAndThreshold(const PushConstant& pc, IRenderCommandList& cmdList);
@@ -124,11 +124,11 @@ private:
 
     std::pair<RenderHandle, const PipelineLayout&> CreateAndReflectRenderPso(const BASE_NS::string_view shader);
 
-    static constexpr uint32_t TARGET_COUNT { 7u };
-    static constexpr uint32_t CORE_BLOOM_QUALITY_LOW { 1u };
-    static constexpr uint32_t CORE_BLOOM_QUALITY_NORMAL { 2u };
-    static constexpr uint32_t CORE_BLOOM_QUALITY_HIGH { 4u };
-    static constexpr int CORE_BLOOM_QUALITY_COUNT { 3u };
+    static constexpr uint32_t TARGET_COUNT{7u};
+    static constexpr uint32_t CORE_BLOOM_QUALITY_LOW{1u};
+    static constexpr uint32_t CORE_BLOOM_QUALITY_NORMAL{2u};
+    static constexpr uint32_t CORE_BLOOM_QUALITY_HIGH{4u};
+    static constexpr int CORE_BLOOM_QUALITY_COUNT{3u};
 
     struct Targets {
         std::array<RenderHandleReference, TARGET_COUNT> tex1;
@@ -152,10 +152,10 @@ private:
         RenderHandle upscale;
         RenderHandle combine;
 
-        ShaderThreadGroup downscaleAndThresholdTGS { 1, 1, 1 };
-        ShaderThreadGroup downscaleTGS { 1, 1, 1 };
-        ShaderThreadGroup upscaleTGS { 1, 1, 1 };
-        ShaderThreadGroup combineTGS { 1, 1, 1 };
+        ShaderThreadGroup downscaleAndThresholdTGS{1, 1, 1};
+        ShaderThreadGroup downscaleTGS{1, 1, 1};
+        ShaderThreadGroup upscaleTGS{1, 1, 1};
+        ShaderThreadGroup combineTGS{1, 1, 1};
     };
     PSOs psos_;
 
@@ -168,10 +168,10 @@ private:
     Binders binders_;
 
     // calculated from the amount of textures and scale factor
-    size_t frameScaleMaxCount_ { 0 };
+    size_t frameScaleMaxCount_{0};
 
     RenderHandleReference samplerHandle_;
-    BASE_NS::Format format_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format format_{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
 
     ViewportDesc baseViewportDesc_;
     ScissorDesc baseScissorDesc_;
@@ -179,17 +179,17 @@ private:
     RenderHandleReference postProcessUbo_;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
-    BASE_NS::Math::UVec2 baseSize_ { 0U, 0U };
-    BASE_NS::Math::Vec4 bloomParameters_ { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::UVec2 baseSize_{0U, 0U};
+    BASE_NS::Math::Vec4 bloomParameters_{0.0f, 0.0f, 0.0f, 0.0f};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_BLOOM_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_BLOOM_NODE_H

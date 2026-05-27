@@ -26,14 +26,26 @@
                             "name" : "var1",
                             "displayName" : "var1",
                             "type" : "uint",
-                            "value" : 1
+                            "value" : 2
 						},
 						{
                             "name" : "var2",
                             "displayName" : "var2",
                             "type" : "uint",
                             "value" : 2
-						}
+						},
+                        {
+                            "name" : "var3",
+                            "displayName" : "var3",
+                            "type" : "uint",
+                            "value" : 3
+                        },
+                        {
+                            "name" : "var4",
+                            "displayName" : "var4",
+                            "type" : "uint",
+                            "value" : 20
+                        }
 					]
                 }
             ]

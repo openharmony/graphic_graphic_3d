@@ -21,7 +21,7 @@
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T = void>
+template <class T = void>
 struct Less {
     constexpr bool operator()(const T& lhs, const T& rhs) const noexcept
     {
@@ -29,16 +29,16 @@ struct Less {
     }
 };
 
-template<>
+template <>
 struct Less<void> {
-    template<typename T1, typename T2>
+    template <typename T1, typename T2>
     constexpr bool operator()(const T1& lhs, const T2& rhs) const noexcept
     {
         return lhs < rhs;
     }
 };
 
-template<typename It, typename Comparison>
+template <typename It, typename Comparison>
 void InsertionSort(It first, const It last, Comparison&& func)
 {
     const auto len = last - first;
@@ -53,13 +53,13 @@ void InsertionSort(It first, const It last, Comparison&& func)
     }
 }
 
-template<typename It>
+template <typename It>
 inline void InsertionSort(It first, const It last)
 {
-    InsertionSort(first, last, BASE_NS::Less<decltype(*first)> {});
+    InsertionSort(first, last, BASE_NS::Less<decltype(*first)>{});
 }
 
-template<typename Iter, typename T, typename Comparison>
+template <typename Iter, typename T, typename Comparison>
 constexpr Iter LinearLowerBound(Iter first, Iter last, const T& value, Comparison&& pred) noexcept
 {
     while ((first != last)) {
@@ -71,7 +71,7 @@ constexpr Iter LinearLowerBound(Iter first, Iter last, const T& value, Compariso
     return first;
 }
 
-template<typename Iter, typename T, typename Comparison, std::ptrdiff_t limit = 10>
+template <typename Iter, typename T, typename Comparison, std::ptrdiff_t limit = 10>
 constexpr Iter LowerBound(Iter first, Iter last, const T& value, Comparison&& pred) noexcept
 {
     auto size = (last - first);
@@ -93,11 +93,11 @@ constexpr Iter LowerBound(Iter first, Iter last, const T& value, Comparison&& pr
     return first;
 }
 
-template<typename Iter, typename T, std::ptrdiff_t limit = 10>
+template <typename Iter, typename T, std::ptrdiff_t limit = 10>
 constexpr Iter LowerBound(Iter first, Iter last, const T& value) noexcept
 {
-    return LowerBound<Iter, T, BASE_NS::Less<>, limit>(first, last, value, BASE_NS::Less<> {});
+    return LowerBound<Iter, T, BASE_NS::Less<>, limit>(first, last, value, BASE_NS::Less<>{});
 }
 
 BASE_END_NAMESPACE()
-#endif // API_BASE_UTIL_ALGORITHM_H
+#endif  // API_BASE_UTIL_ALGORITHM_H

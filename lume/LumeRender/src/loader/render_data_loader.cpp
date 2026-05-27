@@ -28,7 +28,8 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-RenderDataLoader::RenderDataLoader(IFileManager& fileManager) : fileManager_(fileManager) {}
+RenderDataLoader::RenderDataLoader(IFileManager& fileManager) : fileManager_(fileManager)
+{}
 
 void RenderDataLoader::Load(const BASE_NS::string_view pathPrefix, IRenderDataStorePod& renderDataStorePod)
 {
@@ -68,7 +69,8 @@ void RenderDataLoader::RecurseDirectory(const string_view currentPath, const IDi
                     }
 
                     if (!result.success) {
-                        PLUGIN_LOG_E("unable to load renderer data configuration json %s : %s", file.c_str(),
+                        PLUGIN_LOG_E("unable to load renderer data configuration json %s : %s",
+                            file.c_str(),
                             result.error.c_str());
                     }
                 }

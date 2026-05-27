@@ -38,7 +38,7 @@ RenderNodeCreateGpuImages::DependencyList GetDependencyList(
     using DependencyFlagBits = RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc::DependencyFlagBits;
     RenderNodeCreateGpuImages::DependencyList depList;
     if (dependencyFlags == 0) {
-        constexpr GpuImageDesc defDesc {};
+        constexpr GpuImageDesc defDesc{};
         if (desc.format == defDesc.format) {
             depList.format = true;
         }
@@ -139,17 +139,19 @@ void CheckFormat(const IRenderNodeGpuResourceManager& gpuResourceMgr, const stri
                                         ? Format::BASE_FORMAT_D32_SFLOAT
                                         : Format::BASE_FORMAT_R8G8B8A8_UNORM;
         PLUGIN_LOG_W("Format flags not supported for format: %u, in render node %s, backup format: %u",
-            static_cast<uint32_t>(desc.format), nodeName.data(), static_cast<uint32_t>(backupFormat));
+            static_cast<uint32_t>(desc.format),
+            nodeName.data(),
+            static_cast<uint32_t>(backupFormat));
         desc.format = backupFormat;
     }
 }
 
 inline constexpr Size2D LocalClamp(const Size2D val, const Size2D minVal, const Size2D maxVal)
 {
-    return Size2D { Math::max(minVal.width, Math::min(val.width, maxVal.width)),
-        Math::max(minVal.height, Math::min(val.height, maxVal.height)) };
+    return Size2D{Math::max(minVal.width, Math::min(val.width, maxVal.width)),
+        Math::max(minVal.height, Math::min(val.height, maxVal.height))};
 }
-} // namespace
+}  // namespace
 
 void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -189,7 +191,7 @@ void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeCo
         dependencyList_.push_back(dependencyList);
         shadingRateTexelSizes_.push_back(GetClampedShadingRateTexelSize(ref.shadingRateTexelSize));
 
-        names_.push_back({ string(ref.name), string(ref.shareName) });
+        names_.push_back({string(ref.name), string(ref.shareName)});
         descs_.push_back(desc);
 
         // NOTE: shading rate is not in the desc
@@ -231,7 +233,7 @@ void RenderNodeCreateGpuImages::PreExecuteFrame()
         resourceHandles_[idx] = gpuResourceMgr.Create(resourceHandles_[idx], descRef);
         if (jsonInputs_.gpuImageDescs[idx].clearWhenCreated) {
             clearImages_.push_back(
-                { resourceHandles_[idx].GetHandle(), jsonInputs_.gpuImageDescs[idx].clearValue.color });
+                {resourceHandles_[idx].GetHandle(), jsonInputs_.gpuImageDescs[idx].clearValue.color});
         }
     }
     // broadcast the resources
@@ -243,8 +245,11 @@ void RenderNodeCreateGpuImages::PreExecuteFrame()
 
 void RenderNodeCreateGpuImages::ExecuteFrame(IRenderCommandList& cmdList)
 {
-    constexpr ImageSubresourceRange range[] = { { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0U,
-        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0U, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS } };
+    constexpr ImageSubresourceRange range[] = {{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+        0U,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        0U,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS}};
     for (const auto& clear : clearImages_) {
         cmdList.ClearColorImage(clear.handle, clear.value, range);
     }
@@ -262,7 +267,7 @@ IRenderNode::ExecuteFlags RenderNodeCreateGpuImages::GetExecuteFlags() const
 
 Size2D RenderNodeCreateGpuImages::GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize)
 {
-    Size2D srts = { 1u, 1u };
+    Size2D srts = {1u, 1u};
     if ((shadingRateTexelSize.width > 1u) || (shadingRateTexelSize.height > 1u)) {
         const IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
         auto fsrProps = device.GetCommonDeviceProperties().fragmentShadingRateProperties;
@@ -274,7 +279,8 @@ Size2D RenderNodeCreateGpuImages::GetClampedShadingRateTexelSize(const Size2D& s
             Math::max(1U, fsrProps.maxFragmentShadingRateAttachmentTexelSize.width);
         fsrProps.maxFragmentShadingRateAttachmentTexelSize.height =
             Math::max(1U, fsrProps.maxFragmentShadingRateAttachmentTexelSize.height);
-        srts = LocalClamp(shadingRateTexelSize, fsrProps.minFragmentShadingRateAttachmentTexelSize,
+        srts = LocalClamp(shadingRateTexelSize,
+            fsrProps.minFragmentShadingRateAttachmentTexelSize,
             fsrProps.maxFragmentShadingRateAttachmentTexelSize);
     }
     return srts;

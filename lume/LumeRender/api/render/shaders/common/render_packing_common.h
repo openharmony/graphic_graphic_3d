@@ -55,4 +55,4 @@ void UnpackVec42Half2x16(const uvec4 packed, inout vec4 up0, inout vec4 up1)
 
 #endif
 
-#endif // API_RENDER_SHADERS_COMMON_CORE_PACKING_COMMON_H
+#endif  // API_RENDER_SHADERS_COMMON_CORE_PACKING_COMMON_H

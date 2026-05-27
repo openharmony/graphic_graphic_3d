@@ -65,7 +65,7 @@ public:
         IAnimationModifier::StepData step;
         /** Target state. If AnimationState::UNDEFINED, a suitable state shall be
             decided automatically by the Move() operation. */
-        AnimationTargetState state { AnimationTargetState::UNDEFINED };
+        AnimationTargetState state{AnimationTargetState::UNDEFINED};
         /** Returns a MoveParams object with given progress */
         constexpr static MoveParams FromProgress(float progress) noexcept
         {
@@ -100,4 +100,4 @@ public:
 
 META_END_NAMESPACE()
 
-#endif // META_INTF_ANIMATION_INTERNAL_H
+#endif  // META_INTF_ANIMATION_INTERNAL_H

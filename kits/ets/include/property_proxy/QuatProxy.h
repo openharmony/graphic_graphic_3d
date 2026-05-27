@@ -23,7 +23,7 @@
 namespace OHOS::Render3D {
 class QuatProxy : public PropertyProxy<BASE_NS::Math::Quat> {
 public:
-    explicit QuatProxy(const META_NS::Property<BASE_NS::Math::Quat> &prop);
+    explicit QuatProxy(const META_NS::Property<BASE_NS::Math::Quat>& prop);
     ~QuatProxy() override;
 
     float GetX() const;

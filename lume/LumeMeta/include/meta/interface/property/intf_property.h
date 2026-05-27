@@ -21,6 +21,7 @@
 #include <meta/base/namespace.h>
 #include <meta/base/types.h>
 #include <meta/interface/intf_any.h>
+#include <meta/interface/intf_event.h>
 #include <meta/interface/intf_notify_on_change.h>
 #include <meta/interface/intf_object_flags.h>
 #include <meta/interface/intf_owner.h>
@@ -64,6 +65,30 @@ public:
         return !IsDefaultValue();
     }
 };
+
+/**
+ * @brief Adds an OnChanged handler for a target property.
+ * @param property The property to add the handler to.
+ * @param callback The callback function to add.
+ * @param userToken Optional handler token. Automatically generated if none is given.
+ * @return An identifier token for the handler which should be used when removing the handler.
+ */
+inline IEvent::Token AddOnChangedHandler(
+    const IProperty::Ptr& property, const ICallable::Ptr& callback, IEvent::Token userToken = {})
+{
+    return property ? AddHandler(property->OnChanged(), callback, userToken) : IEvent::Token{};
+}
+
+/**
+ * @brief Removes a previously added OnChanged handler for a property.
+ * @param property The property whose OnChanged handler to remove.
+ * @param token Token of the callback.
+ * @return True if the callback was successfully removed, false otherwise.
+ */
+inline bool RemoveOnChangedHandler(const IProperty::Ptr& property, IEvent::Token token)
+{
+    return property && RemoveHandler(property->OnChanged(), token);
+}
 
 META_END_NAMESPACE()
 

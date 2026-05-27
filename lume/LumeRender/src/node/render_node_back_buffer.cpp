@@ -38,7 +38,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
 PostProcessTonemapStruct FillPushConstant(
     const GpuImageDesc& dstImageDesc, const RenderPostProcessConfiguration& currentRenderPostProcessConfiguration_)
@@ -59,7 +59,7 @@ PostProcessTonemapStruct FillPushConstant(
     pushData.dither = currentRenderPostProcessConfiguration_.factors[PostProcessConfiguration::INDEX_DITHER];
     return pushData;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeBackBuffer::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -130,7 +130,7 @@ void RenderNodeBackBuffer::ExecuteFrame(IRenderCommandList& cmdList)
         cmdList.PushConstant(pipelineLayout_.pushConstant, reinterpret_cast<const uint8_t*>(&pushData));
     }
 
-    cmdList.Draw(3u, 1u, 0u, 0u); // vertexCount 3, drawing one triangle
+    cmdList.Draw(3u, 1u, 0u, 0u);  // vertexCount 3, drawing one triangle
     cmdList.EndRenderPass();
 }
 
@@ -143,7 +143,7 @@ void RenderNodeBackBuffer::CheckForPsoSpecilization(const PostProcessConfigurati
         const RenderHandle graphicsState =
             renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shader_);
         psoHandle_ = psoMgr.GetGraphicsPsoHandle(
-            shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, BASE_NS::countof(DYNAMIC_STATES) });
+            shader_, graphicsState, pipelineLayout_, {}, {}, {DYNAMIC_STATES, BASE_NS::countof(DYNAMIC_STATES)});
     }
 
     // store new values

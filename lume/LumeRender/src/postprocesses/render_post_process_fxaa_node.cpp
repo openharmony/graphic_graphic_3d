@@ -66,10 +66,10 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 constexpr string_view FXAA_SHADER_NAME = "rendershaders://shader/fullscreen_fxaa.shader";
 
-} // namespace
+}  // namespace
 
 RenderPostProcessFxaaNode::RenderPostProcessFxaaNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -145,7 +145,7 @@ RenderPass RenderPostProcessFxaaNode::CreateRenderPass(const RenderHandle input)
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -156,8 +156,10 @@ RenderPass RenderPostProcessFxaaNode::CreateRenderPass(const RenderHandle input)
 
 BASE_NS::Math::Vec4 RenderPostProcessFxaaNode::GetFactorFxaa() const
 {
-    return { static_cast<float>(effectProperties_.fxaaConfiguration.sharpness),
-        static_cast<float>(effectProperties_.fxaaConfiguration.quality), 0.0f, 0.0f };
+    return {static_cast<float>(effectProperties_.fxaaConfiguration.sharpness),
+        static_cast<float>(effectProperties_.fxaaConfiguration.quality),
+        0.0f,
+        0.0f};
 }
 
 void RenderPostProcessFxaaNode::ExecuteFrame(IRenderCommandList& cmdList)
@@ -171,8 +173,12 @@ void RenderPostProcessFxaaNode::ExecuteFrame(IRenderCommandList& cmdList)
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.shader);
-        pso_ = psoMgr.GetGraphicsPsoHandle(shaderData_.shader, gfxHandle, shaderData_.pipelineLayout, {}, {},
-            { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        pso_ = psoMgr.GetGraphicsPsoHandle(shaderData_.shader,
+            gfxHandle,
+            shaderData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
@@ -193,7 +199,7 @@ void RenderPostProcessFxaaNode::ExecuteFrame(IRenderCommandList& cmdList)
     }
 
     if (shaderData_.pipelineLayoutData.pushConstant.byteSize > 0U) {
-        const LocalPostProcessPushConstantStruct pc { effectProperties_.targetSize, GetFactorFxaa() };
+        const LocalPostProcessPushConstantStruct pc{effectProperties_.targetSize, GetFactorFxaa()};
         cmdList.PushConstantData(shaderData_.pipelineLayoutData.pushConstant, arrayviewU8(pc));
     }
 

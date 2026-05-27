@@ -1,0 +1,11 @@
+{
+	"version": "1.0",
+	"description": "image with an unrecognised loadFlags name",
+	"data": {
+		"type": "image",
+		"loadFlags": [
+			"generateMips",
+			"thisFlagIsNotReal"
+		]
+	}
+}

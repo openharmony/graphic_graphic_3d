@@ -36,14 +36,14 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 5u, 5u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{5u, 5u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(float);
 float imageData[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
-static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
+static constexpr string_view COPY_BUFFER_NAME_0{"CopyBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -66,16 +66,16 @@ array_view<const uint8_t> CreateImageDataView()
 {
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = 4.f; // R
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = 2.f; // G
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 3.f; // B
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f; // A
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = 4.f;  // R
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = 2.f;  // G
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 3.f;  // B
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f;  // A
         }
     }
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage("BackBufferTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, imageData);
-#endif // RENDER_SAVE_TEST_IMAGES
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+#endif  // RENDER_SAVE_TEST_IMAGES
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResources(UTest::EngineResources& er)
@@ -129,7 +129,7 @@ TestResources CreateTestResources(UTest::EngineResources& er)
         ppConf.taaConfiguration.quality = TaaConfiguration::Quality::HIGH;
         ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView);
     }
     // render node graph
@@ -167,9 +167,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = TEST_DATA_SIZE.x;
                 bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE.y;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME_0);
@@ -191,12 +191,12 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -218,7 +218,7 @@ void ValidateDataTest(const TestData& td)
     float* outputImageData = reinterpret_cast<float*>(td.resources.byteArray->GetData().data());
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage(GetFileName(td.engine), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, outputImageData);
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             float R = outputImageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u];
@@ -253,7 +253,7 @@ void TestBackBufferRenderNode(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -267,7 +267,7 @@ UNIT_TEST(API_GfxBackBufferRenderNodeTest, GfxBackBufferRenderNodeTestVulkan, te
 {
     TestBackBufferRenderNode(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -281,4 +281,4 @@ UNIT_TEST(API_GfxBackBufferRenderNodeTest, GfxBackBufferRenderNodeTestOpenGL, te
 {
     TestBackBufferRenderNode(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

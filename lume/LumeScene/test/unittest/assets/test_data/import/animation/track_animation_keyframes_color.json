@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "colorKeyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [
+			{ "type": "color", "value": [0.1, 0.2, 0.3, 1.0] },
+			{ "type": "color", "value": [0.5, 0.6, 0.7, 0.8] }
+		]
+	}
+}

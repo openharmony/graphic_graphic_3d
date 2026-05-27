@@ -38,7 +38,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreDefaultAccelerationStructureStaging : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "6c2fe0b6-3bba-4048-8177-2853f2431b60" };
+    static constexpr BASE_NS::Uid UID{"6c2fe0b6-3bba-4048-8177-2853f2431b60"};
 
     /** Build acceleration structure.
      * @param buildData Build info for acceleration structure. (Optional scratchBuffer)
@@ -75,4 +75,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H

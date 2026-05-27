@@ -44,8 +44,8 @@ public:
     virtual void Refresh() = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IDynamicResource)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IDynamicResource)
 
 #endif

@@ -34,7 +34,7 @@ public:
     AttachmentContainer();
     ~AttachmentContainer() override;
 
-protected: // IContainer
+protected:  // IContainer
     bool Add(const IObject::Ptr& object) override;
     bool Insert(IContainer::SizeType index, const IObject::Ptr& object) override;
     bool Remove(IContainer::SizeType index) override;
@@ -43,7 +43,7 @@ protected: // IContainer
     void RemoveAll() override;
     bool SetRequiredInterfaces(const BASE_NS::vector<TypeId>& interfaces) override;
 
-protected: // IAttachmentContainer
+protected:  // IAttachmentContainer
     bool Initialize(const META_NS::IAttach::Ptr& owner) override;
     using IAttachmentContainer::Attach;
     bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) override;
@@ -54,7 +54,7 @@ protected: // IAttachmentContainer
     void RemoveAllAttachments() override;
     IObject::Ptr FindByName(const BASE_NS::string& name) const override;
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr GetOwner() const
     {
         return interface_pointer_cast<Interface>(owner_);
@@ -62,7 +62,7 @@ protected: // IAttachmentContainer
 
     bool DetachFromOld(const IAttach::Ptr& me, const IObject::Ptr& attachment, bool& mine);
     bool InternalAttach(const IObject::Ptr& attachment);
-    template<typename T>
+    template <typename T>
     bool InternalAttach(const T& obj)
     {
         return InternalAttach(interface_pointer_cast<IObject>(obj));

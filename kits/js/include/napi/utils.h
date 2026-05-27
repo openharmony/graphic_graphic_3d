@@ -24,6 +24,8 @@
 
 #include <core/log.h>
 
+#include "export.h"
+
 #define LOG_F(...) CORE_LOG_F(__VA_ARGS__)
 #define LOG_E(...) CORE_LOG_E(__VA_ARGS__)
 
@@ -33,7 +35,7 @@
 
 namespace NapiApi {
 
-class MyInstanceState {
+class SCENE_ADDON_PUBLIC MyInstanceState {
 public:
     MyInstanceState(napi_env env, napi_value obj);
     ~MyInstanceState();
@@ -50,9 +52,9 @@ private:
     napi_env env_;
 };
 
-template<typename type>
-bool ValidateType(napi_valuetype jstype, bool isArray);
+template <typename type>
+SCENE_ADDON_PUBLIC bool ValidateType(napi_valuetype jstype, bool isArray);
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

@@ -25,7 +25,8 @@
 #include "SceneJS.h"
 
 using namespace NapiApi;
-BaseLight::BaseLight(LightType lt) : NodeImpl(NodeImpl::NodeType::LIGHT), lightType_(lt) {}
+BaseLight::BaseLight(LightType lt) : NodeImpl(NodeImpl::NodeType::LIGHT), lightType_(lt)
+{}
 void BaseLight::RegisterEnums(NapiApi::Object exports)
 {
     napi_value v;
@@ -61,7 +62,7 @@ void BaseLight::Create(napi_env e, napi_callback_info i)
         return;
     }
 
-    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    auto sceneNodeParameters = NapiApi::Object{fromJs.Arg<1>()};
     NapiApi::Object meJs(fromJs.This());
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         meJs.Set("name", name);
@@ -111,16 +112,16 @@ void* BaseLight::GetInstanceImpl(uint32_t id)
     return NodeImpl::GetInstanceImpl(id);
 }
 
-void BaseLight::DisposeNative(void* scn, BaseObject* tro)
+void BaseLight::DisposeNative(BaseObject* tro)
 {
     LOG_V("BaseLight::DisposeNative");
 
-    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
-        sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
+    if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJs->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     colorProxy_.reset();
-    if (auto native = interface_pointer_cast<META_NS::IObject>(tro->GetNativeObject())){
+    if (auto native = interface_pointer_cast<META_NS::IObject>(tro->GetNativeObject())) {
         DetachJsObj(native, "_JSW");
         CleanupNode(tro, IsAttached());
     }
@@ -132,7 +133,7 @@ napi_value BaseLight::GetlightType(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    uint32_t type = -1; // return -1 if the object does not exist anymore
+    uint32_t type = -1;  // return -1 if the object does not exist anymore
     if (auto node = ctx.This().GetNative<SCENE_NS::ILight>()) {
         type = lightType_;
     }
@@ -241,8 +242,7 @@ void BaseLight::SetIntensity(NapiApi::FunctionContext<float>& ctx)
     }
 }
 
-SpotLightJS::SpotLightJS(napi_env e, napi_callback_info i)
-    : BaseObject(e, i), BaseLight(BaseLight::LightType::SPOT)
+SpotLightJS::SpotLightJS(napi_env e, napi_callback_info i) : BaseObject(e, i), BaseLight(BaseLight::LightType::SPOT)
 {
     Create(e, i);
     AddBridge("SpotLightJS", NapiApi::FunctionContext(e, i).This());
@@ -261,8 +261,7 @@ void SpotLightJS::Init(napi_env env, napi_value exports)
         GetSetProperty<float, SpotLightJS, &SpotLightJS::GetInnerAngle, &SpotLightJS::SetInnerAngle>("innerAngle"));
     node_props.push_back(
         GetSetProperty<float, SpotLightJS, &SpotLightJS::GetOuterAngle, &SpotLightJS::SetOuterAngle>("outerAngle"));
-    node_props.push_back(
-        GetSetProperty<float, SpotLightJS, &SpotLightJS::GetRange, &SpotLightJS::SetRange>("range"));
+    node_props.push_back(GetSetProperty<float, SpotLightJS, &SpotLightJS::GetRange, &SpotLightJS::SetRange>("range"));
     BaseLight::Init("SpotLight", env, exports, node_props, BaseObject::ctor<SpotLightJS>());
 }
 
@@ -276,18 +275,18 @@ void* SpotLightJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void SpotLightJS::DisposeNative(void* scn)
+void SpotLightJS::DisposeNative()
 {
     if (disposed_) {
         return;
     }
-    BaseLight::DisposeNative(scn, this);
+    BaseLight::DisposeNative(this);
     DisposeBridge(this);
     disposed_ = true;
 }
 void SpotLightJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -361,8 +360,7 @@ void SpotLightJS::SetRange(NapiApi::FunctionContext<float>& ctx)
     }
 }
 
-PointLightJS::PointLightJS(napi_env e, napi_callback_info i)
-    : BaseObject(e, i), BaseLight(BaseLight::LightType::POINT)
+PointLightJS::PointLightJS(napi_env e, napi_callback_info i) : BaseObject(e, i), BaseLight(BaseLight::LightType::POINT)
 {
     Create(e, i);
     AddBridge("PointLightJS", NapiApi::FunctionContext(e, i).This());
@@ -384,18 +382,18 @@ void* PointLightJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void PointLightJS::DisposeNative(void* scn)
+void PointLightJS::DisposeNative()
 {
     if (disposed_) {
         return;
     }
-    BaseLight::DisposeNative(scn, this);
+    BaseLight::DisposeNative(this);
     DisposeBridge(this);
     disposed_ = true;
 }
 void PointLightJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -428,18 +426,18 @@ void* DirectionalLightJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void DirectionalLightJS::DisposeNative(void* scn)
+void DirectionalLightJS::DisposeNative()
 {
     if (disposed_) {
         return;
     }
-    BaseLight::DisposeNative(scn, this);
+    BaseLight::DisposeNative(this);
     DisposeBridge(this);
     disposed_ = true;
 }
 void DirectionalLightJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }

@@ -30,21 +30,24 @@ void InplacePostProcess(in vec2 fragUv, inout vec4 color)
         uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_WHITE_BALANCE], color.rgb, color.rgb);
     PostProcessColorAdjustmentsBlock(uPostProcessData.flags.x,
         uPostProcessData.factors[POST_PROCESS_INDEX_COLOR_ADJUSTMENTS],
-        uPostProcessData.userFactors[POST_PROCESS_USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR], // filterColor
-        color.rgb, color.rgb);
+        uPostProcessData.userFactors[POST_PROCESS_USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR],  // filterColor
+        color.rgb,
+        color.rgb);
     PostProcessTonemapBlock(
         uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_TONEMAP], color.rgb, color.rgb);
 
-    const float tickDelta = uPostProcessData.renderTimings.y; // tick delta time (ms)
+    const float tickDelta = uPostProcessData.renderTimings.y;  // tick delta time (ms)
     const vec2 vecCoeffs = fragUv.xy * tickDelta;
     PostProcessDitherBlock(
         uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_DITHER], vecCoeffs, color.rgb, color.rgb);
     PostProcessVignetteBlock(
         uPostProcessData.flags.x, uPostProcessData.factors[POST_PROCESS_INDEX_VIGNETTE], fragUv, color.rgb, color.rgb);
     PostProcessColorConversionBlock(uPostProcessData.flags.x,
-        uPostProcessData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], color.rgba, color.rgba);
+        uPostProcessData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION],
+        color.rgba,
+        color.rgba);
 }
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DM_INPLACE_POST_PROCESS_H
+#endif  // SHADERS_COMMON_3D_DM_INPLACE_POST_PROCESS_H

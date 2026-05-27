@@ -75,7 +75,7 @@ public:
         stopCount_++;
     }
 
-protected: // ITestStartable
+protected:  // ITestStartable
     uint32_t GetAttachCount() const override
     {
         return attachCount_;
@@ -94,10 +94,10 @@ protected: // ITestStartable
     }
 
 private:
-    uint32_t attachCount_ {};
-    uint32_t detachCount_ {};
-    uint32_t startCount_ {};
-    uint32_t stopCount_ {};
+    uint32_t attachCount_{};
+    uint32_t detachCount_{};
+    uint32_t startCount_{};
+    uint32_t stopCount_{};
 };
 
 class API_ScenePluginNodeStartableTest : public ScenePluginTest {
@@ -129,9 +129,19 @@ public:
         return scene_;
     }
 
+protected:
+    void CheckStartableCounts(ITestStartable* ts, uint32_t attach, uint32_t detach, uint32_t start, uint32_t stop)
+    {
+        ASSERT_TRUE(ts);
+        EXPECT_EQ(ts->GetAttachCount(), attach);
+        EXPECT_EQ(ts->GetDetachCount(), detach);
+        EXPECT_EQ(ts->GetStartCount(), start);
+        EXPECT_EQ(ts->GetStopCount(), stop);
+    }
+
 private:
-    Node parent_ { nullptr };
-    Scene scene_ { nullptr };
+    Node parent_{nullptr};
+    Scene scene_{nullptr};
 };
 
 /**
@@ -144,23 +154,21 @@ UNIT_TEST_F(API_ScenePluginNodeStartableTest, StartableState, testing::ext::Test
     auto& scene = GetScene();
     auto factory = scene.GetResourceFactory();
     auto camera = factory.CreateCameraNode("//camera");
-
+    UpdateScene();
     auto object = META_NS::CreateObjectInstance(ClassId::TestStartable);
     auto startable = interface_cast<META_NS::IStartable>(object);
     ASSERT_TRUE(startable);
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::DETACHED);
     EXPECT_TRUE(META_NS::AttachmentContainer(camera).Attach(object));
-    EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::ATTACHED);
+    // State can be either ATTACHED or STARTED depending on thread scheduling for the deferred startable Start operation
+    // posted by Attach
+    auto state = META_NS::GetValue(startable->StartableState());
+    EXPECT_TRUE(state == META_NS::StartableState::ATTACHED || state == META_NS::StartableState::STARTED);
     UpdateScene();
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::STARTED);
     EXPECT_TRUE(META_NS::AttachmentContainer(camera).Detach(object));
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::DETACHED);
-    auto ts = interface_cast<ITestStartable>(object);
-    ASSERT_TRUE(ts);
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 1);
-    EXPECT_EQ(ts->GetStartCount(), 1);
-    EXPECT_EQ(ts->GetStopCount(), 1);
+    CheckStartableCounts(interface_cast<ITestStartable>(object), 1, 1, 1, 1);
 }
 
 /**
@@ -173,35 +181,29 @@ UNIT_TEST_F(API_ScenePluginNodeStartableTest, SceneStartableState, testing::ext:
     auto& scene = GetScene();
     auto factory = scene.GetResourceFactory();
     auto camera = factory.CreateCameraNode("//camera");
-
+    UpdateScene();
     auto object = META_NS::CreateObjectInstance(ClassId::TestStartable);
     auto startable = interface_cast<META_NS::IStartable>(object);
     ASSERT_TRUE(startable);
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::DETACHED);
     EXPECT_TRUE(META_NS::AttachmentContainer(camera).Attach(object));
-    EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::ATTACHED);
+    // State can be either ATTACHED or STARTED depending on thread scheduling for the deferred startable Start operation
+    // posted by Attach
+    auto state = META_NS::GetValue(startable->StartableState());
+    EXPECT_TRUE(state == META_NS::StartableState::ATTACHED || state == META_NS::StartableState::STARTED);
     UpdateScene();
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::STARTED);
     auto ts = interface_cast<ITestStartable>(object);
-    ASSERT_TRUE(ts);
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 0);
-    EXPECT_EQ(ts->GetStartCount(), 1);
-    EXPECT_EQ(ts->GetStopCount(), 0);
+
+    CheckStartableCounts(ts, 1, 0, 1, 0);
 
     auto internal = scene.GetPtr<IScene>()->GetInternalScene();
     internal->StopAllStartables(META_NS::IStartableController::ControlBehavior::CONTROL_AUTOMATIC);
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 0);
-    EXPECT_EQ(ts->GetStartCount(), 1);
-    EXPECT_EQ(ts->GetStopCount(), 1);
+    CheckStartableCounts(ts, 1, 0, 1, 1);
 
     internal->StartAllStartables(META_NS::IStartableController::ControlBehavior::CONTROL_AUTOMATIC);
     UpdateScene();
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 0);
-    EXPECT_EQ(ts->GetStartCount(), 2);
-    EXPECT_EQ(ts->GetStopCount(), 1);
+    CheckStartableCounts(ts, 1, 0, 2, 1);
 }
 
 /**
@@ -244,10 +246,7 @@ UNIT_TEST_F(API_ScenePluginNodeStartableTest, StartableHierarchyState, testing::
     UpdateScene();
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::STARTED);
 
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 0);
-    EXPECT_EQ(ts->GetStartCount(), 3);
-    EXPECT_EQ(ts->GetStopCount(), 2);
+    CheckStartableCounts(ts, 1, 0, 3, 2);
 }
 
 /**
@@ -276,14 +275,88 @@ UNIT_TEST_F(API_ScenePluginNodeStartableTest, DisableStartables, testing::ext::T
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::ATTACHED);
     EXPECT_TRUE(META_NS::AttachmentContainer(camera).Detach(object));
     EXPECT_EQ(META_NS::GetValue(startable->StartableState()), META_NS::StartableState::DETACHED);
-    auto ts = interface_cast<ITestStartable>(object);
-    ASSERT_TRUE(ts);
-    EXPECT_EQ(ts->GetAttachCount(), 1);
-    EXPECT_EQ(ts->GetDetachCount(), 1);
-    EXPECT_EQ(ts->GetStartCount(), 0);
-    EXPECT_EQ(ts->GetStopCount(), 0);
+
+    CheckStartableCounts(interface_cast<ITestStartable>(object), 1, 1, 0, 0);
 }
 
-} // namespace UTest
+/**
+ * @tc.name: RemoveNode
+ * @tc.desc: Test IStartable behavior during IScene::RemoveNode
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginNodeStartableTest, RemoveNode, testing::ext::TestSize.Level1)
+{
+    auto& sc = GetScene();
+    auto factory = sc.GetResourceFactory();
+    auto parent = factory.CreateNode("//hierarchy_root");
+    auto node1obj = factory.CreateNode("//hierarchy_root/node1");
+    auto node2obj = factory.CreateNode("//hierarchy_root/node2");
+    auto node3obj = factory.CreateNode("//hierarchy_root/node3");
+    INode::Ptr node1 = node1obj.GetPtr<INode>();
+    INode::Ptr node2 = node2obj.GetPtr<INode>();
+    INode::Ptr node3 = node3obj.GetPtr<INode>();
+    node1obj.Release();
+    node2obj.Release();
+    node3obj.Release();
+
+    auto checkChildCount = [&](size_t count) { EXPECT_EQ(parent.GetChildren().size(), count); };
+
+    IScene::Ptr scene = sc.GetPtr<IScene>();
+    ASSERT_TRUE(scene);
+
+    auto startable1 = META_NS::CreateObjectInstance<META_NS::IStartable>(ClassId::TestStartable);
+    auto startable2 = META_NS::CreateObjectInstance<META_NS::IStartable>(ClassId::TestStartable);
+    auto startable3 = META_NS::CreateObjectInstance<META_NS::IStartable>(ClassId::TestStartable);
+    UpdateScene();
+    ASSERT_TRUE(startable1);
+    EXPECT_TRUE(META_NS::AttachmentContainer(node1).Attach(startable1));
+    EXPECT_TRUE(META_NS::AttachmentContainer(node2).Attach(startable2));
+    EXPECT_TRUE(META_NS::AttachmentContainer(node3).Attach(startable3));
+    auto ts1 = interface_cast<ITestStartable>(startable1);
+    auto ts2 = interface_cast<ITestStartable>(startable2);
+    auto ts3 = interface_cast<ITestStartable>(startable3);
+
+    checkChildCount(3);
+    UpdateScene();
+    // Take a strong reference to node1 so that the node stays alive even after being removed from scene
+    auto extend_lifetime = node1;
+    // Remove node1 from scene
+    EXPECT_TRUE(scene->RemoveNode(BASE_NS::move(node1)).GetResult());
+
+    checkChildCount(2);
+
+    // node1 is still alive (due to extend_lifetime), but OnStop should have been called regardless
+    CheckStartableCounts(ts1, 1, 0, 1, 1);
+    CheckStartableCounts(ts2, 1, 0, 1, 0);
+
+    extend_lifetime.reset();  // Release (last) strong reference to node1, node1 should die now
+
+    // Ensure OnDetach was called during destruction
+    CheckStartableCounts(ts1, 1, 1, 1, 1);
+
+    // Remove node2 (and since it is the last strong reference node2 dies as a result)
+    EXPECT_TRUE(scene->RemoveNode(BASE_NS::move(node2)).GetResult());
+    // Ensure OnStop and OnDetach were both called
+    CheckStartableCounts(ts2, 1, 1, 1, 1);
+    checkChildCount(1);
+
+    // Check RemoveChild API
+    CheckStartableCounts(ts3, 1, 0, 1, 0);
+    EXPECT_TRUE(parent.RemoveChild(node3));
+    checkChildCount(0);
+    CheckStartableCounts(ts3, 1, 0, 1, 1);
+    auto* ptr = node3.get();
+    node3.reset();
+    // No detach as the Node instance stays cached inside Scene
+    CheckStartableCounts(ts3, 1, 0, 1, 1);
+    // Let the scene die
+    scene.reset();
+    sc.Release();
+    ScenePluginTest::scene.reset();
+    // Expect OnDetach was called
+    CheckStartableCounts(ts3, 1, 1, 1, 1);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

@@ -29,24 +29,24 @@ GpuQueryVk::GpuQueryVk(Device& device, const GpuQueryDesc& desc) : device_(devic
 {
     plats_.resize(device_.GetCommandBufferingCount() + 1);
 
-    constexpr VkQueryPoolCreateFlags createFlags { 0 };
+    constexpr VkQueryPoolCreateFlags createFlags{0};
     const auto queryType = (VkQueryType)desc_.queryType;
     const auto pipelineStatisticsFlags = (VkQueryPipelineStatisticFlags)desc_.queryPipelineStatisticsFlags;
-    const VkQueryPoolCreateInfo createInfo {
-        VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, // sType
-        nullptr,                                  // pNext
-        createFlags,                              // flags
-        queryType,                                // queryType
-        QUERY_COUNT_PER_POOL,                     // queryCount
-        pipelineStatisticsFlags,                  // pipelineStatistics
+    const VkQueryPoolCreateInfo createInfo{
+        VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,  // sType
+        nullptr,                                   // pNext
+        createFlags,                               // flags
+        queryType,                                 // queryType
+        QUERY_COUNT_PER_POOL,                      // queryCount
+        pipelineStatisticsFlags,                   // pipelineStatistics
     };
 
     const VkDevice vkDevice = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     for (auto& ref : plats_) {
-        VALIDATE_VK_RESULT(vkCreateQueryPool(vkDevice, // device
-            &createInfo,                               // pCreateInfo
-            nullptr,                                   // pAllocator
-            &ref.queryPool));                          // pQueryPool
+        VALIDATE_VK_RESULT(vkCreateQueryPool(vkDevice,  // device
+            &createInfo,                                // pCreateInfo
+            nullptr,                                    // pAllocator
+            &ref.queryPool));                           // pQueryPool
     }
 }
 
@@ -55,9 +55,9 @@ GpuQueryVk::~GpuQueryVk()
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     for (auto& ref : plats_) {
         if (ref.queryPool) {
-            vkDestroyQueryPool(device, // device
-                ref.queryPool,         // queryPool
-                nullptr);              // pAllocator
+            vkDestroyQueryPool(device,  // device
+                ref.queryPool,          // queryPool
+                nullptr);               // pAllocator
         }
     }
 }

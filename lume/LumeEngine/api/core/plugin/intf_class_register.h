@@ -28,7 +28,7 @@ struct InterfaceTypeInfo;
 
 class IClassRegister : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "fcdce31c-1208-4a4e-9ccf-292f87c9dbe0" };
+    static constexpr BASE_NS::Uid UID{"fcdce31c-1208-4a4e-9ccf-292f87c9dbe0"};
 
     /** Register interface type
      * @param interfaceInfo InterfaceTypeInfo to be registered
@@ -55,7 +55,7 @@ protected:
 };
 
 /** Get class instance from specified class registry */
-template<class T>
+template <class T>
 auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
 {
     IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
@@ -66,7 +66,7 @@ auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
 }
 
 /** Get class instance from specified class registry */
-template<class T>
+template <class T>
 auto GetInstance(const IClassRegister* registry, const BASE_NS::Uid& uid)
 {
     if (!registry) {
@@ -76,7 +76,7 @@ auto GetInstance(const IClassRegister* registry, const BASE_NS::Uid& uid)
 }
 
 /** Get interface from global registry */
-template<class T>
+template <class T>
 auto GetInstance(const BASE_NS::Uid& uid)
 {
     return GetInstance<T>(CORE_NS::GetPluginRegister().GetClassRegister(), uid);
@@ -85,4 +85,4 @@ auto GetInstance(const BASE_NS::Uid& uid)
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PLUGIN_ICLASS_REGISTER_H
+#endif  // API_CORE_PLUGIN_ICLASS_REGISTER_H

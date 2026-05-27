@@ -60,8 +60,8 @@ public:
     struct EffectProperties {
         enum class Quality { LOW = 0, MEDIUM = 1, HIGH = 2, ULTRA = 3 };
 
-        bool enabled { true };
-        Quality quality { EffectProperties::Quality::LOW };
+        bool enabled{true};
+        Quality quality{EffectProperties::Quality::LOW};
     };
 
     void SetData(BASE_NS::array_view<const uint8_t> data) override
@@ -73,7 +73,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData_), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData_), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -88,10 +88,10 @@ public:
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
 
     struct ShaderParameters {
-        float resX { 0.0f };
-        float resY { 0.0f };
-        float edgeThreshold { 0.07f };
-        float padding { 0.0f };
+        float resX{0.0f};
+        float resY{0.0f};
+        float edgeThreshold{0.07f};
+        float padding{0.0f};
     };
 
     struct NodeInputs {
@@ -102,20 +102,20 @@ public:
         RENDER_NS::BindableImage output;
     };
 
-    const float EDGE_THRESHOLD_LOW { 0.25f };
-    const float EDGE_THRESHOLD_MEDIUM { 0.10f };
-    const float EDGE_THRESHOLD_HIGH { 0.07f };
-    const float EDGE_THRESHOLD_ULTRA { 0.05f };
+    const float EDGE_THRESHOLD_LOW{0.25f};
+    const float EDGE_THRESHOLD_MEDIUM{0.10f};
+    const float EDGE_THRESHOLD_HIGH{0.07f};
+    const float EDGE_THRESHOLD_ULTRA{0.05f};
 
     struct ControlBufferData {
-        uint32_t itemCount { 0 };
-        uint32_t shapeCandidateCount { 0 };
-        uint32_t blendLocationCount { 0 };
-        uint32_t deferredBlendItemCount { 0 };
+        uint32_t itemCount{0};
+        uint32_t shapeCandidateCount{0};
+        uint32_t blendLocationCount{0};
+        uint32_t deferredBlendItemCount{0};
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
     RENDER_NS::IRenderPostProcess::Ptr postProcess_;
 
     void EvaluateOutputImageCreation();
@@ -135,7 +135,7 @@ private:
     void UpdateIndirectArgs(RENDER_NS::IRenderCommandList& cmdList);
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     EffectProperties propertiesData_;
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
@@ -182,7 +182,7 @@ private:
     ComputeBuffers computeBuffers_;
 
     struct Targets {
-        BASE_NS::Math::UVec2 resolution { 0u, 0u };
+        BASE_NS::Math::UVec2 resolution{0u, 0u};
         RENDER_NS::RenderHandleReference edgeImage;
         RENDER_NS::RenderHandleReference blendItemHeads;
         RENDER_NS::RenderHandleReference outComp;
@@ -191,7 +191,7 @@ private:
 
     RENDER_NS::RenderHandleReference dispatchIndirectHandle_;
 
-    BASE_NS::Math::UVec2 baseSize_ { 0u, 0u };
+    BASE_NS::Math::UVec2 baseSize_{0u, 0u};
 
     NodeInputs nodeInputsData_;
     NodeOutputs nodeOutputsData_;
@@ -205,16 +205,16 @@ private:
     RENDER_NS::BindableImage defaultSampler_;
 
     struct OwnOutputImageData {
-        uint32_t width { 0u };
-        uint32_t height { 0u };
+        uint32_t width{0u};
+        uint32_t height{0u};
         RENDER_NS::RenderHandleReference handle;
     };
     OwnOutputImageData ownOutputImageData_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool enabled_ { false };
-    bool valid_ { false };
+    bool enabled_{false};
+    bool valid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // APP__SRC__RENDER_POST_PROCESS_CMAA2_NODE_H
+#endif  // APP__SRC__RENDER_POST_PROCESS_CMAA2_NODE_H

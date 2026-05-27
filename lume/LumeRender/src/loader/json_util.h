@@ -17,6 +17,7 @@
 #define LOADER_JSON_UTIL_H
 
 #include <cerrno>
+#include <charconv>
 #include <cstdlib>
 
 #include <base/containers/array_view.h>
@@ -36,31 +37,32 @@
 #include "util/string_util.h"
 
 RENDER_BEGIN_NAMESPACE()
-#define RENDER_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                 \
-    template<typename BasicJsonType>                                                               \
-    inline bool FromJson(const BasicJsonType& j, ENUM_TYPE& e)                                     \
-    {                                                                                              \
-        static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");             \
-        using StorageType = std::underlying_type_t<ENUM_TYPE>;                                     \
-        struct Pair {                                                                              \
-            constexpr Pair(StorageType v, const char* c) : value(v), name(c)                       \
-            {}                                                                                     \
-            constexpr Pair(ENUM_TYPE v, const char* c) : value(StorageType(v)), name(c)            \
-            {}                                                                                     \
-            StorageType value;                                                                     \
-            BASE_NS::string_view name;                                                             \
-        };                                                                                         \
-        static constexpr Pair m[] = __VA_ARGS__;                                                   \
-        if (j.is_string()) {                                                                       \
-            auto it = std::find_if(std::begin(m), std::end(m),                                     \
-                [name = j.string_](const Pair& ej_pair) -> bool { return ej_pair.name == name; }); \
-            e = static_cast<ENUM_TYPE>(((it != std::end(m)) ? it : std::begin(m))->value);         \
-            return true;                                                                           \
-        }                                                                                          \
-        return false;                                                                              \
+#define RENDER_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                               \
+    template <typename BasicJsonType>                                                                            \
+    inline bool FromJson(const BasicJsonType& j, ENUM_TYPE& e)                                                   \
+    {                                                                                                            \
+        static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                           \
+        using StorageType = std::underlying_type_t<ENUM_TYPE>;                                                   \
+        struct Pair {                                                                                            \
+            constexpr Pair(StorageType v, const char* c) : value(v), name(c)                                     \
+            {}                                                                                                   \
+            constexpr Pair(ENUM_TYPE v, const char* c) : value(StorageType(v)), name(c)                          \
+            {}                                                                                                   \
+            StorageType value;                                                                                   \
+            BASE_NS::string_view name;                                                                           \
+        };                                                                                                       \
+        static constexpr Pair m[] = __VA_ARGS__;                                                                 \
+        if (j.is_string()) {                                                                                     \
+            auto it = std::find_if(std::begin(m), std::end(m), [name = j.string_](const Pair& ej_pair) -> bool { \
+                return ej_pair.name == name;                                                                     \
+            });                                                                                                  \
+            e = static_cast<ENUM_TYPE>(((it != std::end(m)) ? it : std::begin(m))->value);                       \
+            return true;                                                                                         \
+        }                                                                                                        \
+        return false;                                                                                            \
     }
 
-template<class T>
+template <class T>
 struct JsonContext {
     T data;
     BASE_NS::string error;
@@ -69,11 +71,9 @@ struct JsonContext {
 inline bool ParseHex(BASE_NS::string_view str, uint32_t& val)
 {
     if (!str.empty()) {
-        errno = 0;
-        char* end;
-        constexpr const int hexadecimalBase = 16;
-        const unsigned long result = std::strtoul(str.data(), &end, hexadecimalBase);
-        if ((result <= UINT32_MAX) && (end == str.end().ptr()) && (errno == 0)) {
+        uint32_t result = 0;
+        auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result, 16);
+        if (ec == std::errc{} && ptr == str.data() + str.size()) {
             val = result;
             return true;
         }
@@ -82,7 +82,7 @@ inline bool ParseHex(BASE_NS::string_view str, uint32_t& val)
     return false;
 }
 
-template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
+template <class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
 bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -94,7 +94,8 @@ bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view eleme
     return true;
 }
 
-template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
+template <class JsonType, class T,
+    BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
 bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -106,7 +107,7 @@ bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view eleme
     return true;
 }
 
-template<class JsonType, class T>
+template <class JsonType, class T>
 bool SafeGetJsonEnum(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -118,7 +119,7 @@ bool SafeGetJsonEnum(const JsonType& jsonData, const BASE_NS::string_view elemen
     return true;
 }
 
-template<class T, class JsonType>
+template <class T, class JsonType>
 bool SafeGetJsonBitfield(
     const JsonType& jData, const BASE_NS::string_view element, BASE_NS::string& error, uint32_t& output)
 {
@@ -141,14 +142,14 @@ bool SafeGetJsonBitfield(
     return true;
 }
 
-template<class JsonType>
+template <class JsonType>
 bool SafeGetJsonUidValue(
     const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, BASE_NS::Uid& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
         output = {};
         if (pos->is_string()) {
-            constexpr size_t uidLength { to_string(BASE_NS::Uid {}).size() }; // default uid length
+            constexpr size_t uidLength{to_string(BASE_NS::Uid{}).size()};  // default uid length
             if (pos->string_.size() == uidLength) {
                 output = StringToUid(pos->string_);
                 return true;
@@ -162,7 +163,7 @@ bool SafeGetJsonUidValue(
     return false;
 }
 
-template<class ArrayType, class JsonType, class ResultType>
+template <class ArrayType, class JsonType, class ResultType>
 void ParseArray(JsonType const& jData, const char* element, BASE_NS::vector<ArrayType>& out, ResultType& res)
 {
     if (auto const array = jData.find(element); array && array->is_array()) {
@@ -178,7 +179,7 @@ void ParseArray(JsonType const& jData, const char* element, BASE_NS::vector<Arra
     }
 }
 
-template<class JsonType>
+template <class JsonType>
 void SafeGetJsonMask(
     const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, uint32_t& output)
 {
@@ -193,4 +194,4 @@ void SafeGetJsonMask(
 }
 RENDER_END_NAMESPACE()
 
-#endif // LOADER_JSON_UTIL_H
+#endif  // LOADER_JSON_UTIL_H

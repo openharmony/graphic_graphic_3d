@@ -21,7 +21,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename Type>
+template <typename Type>
 class ArrayProperty final {
 public:
     using ValueType = BASE_NS::remove_const_t<Type>;
@@ -30,9 +30,10 @@ public:
     using IndexType = typename ArrayPropertyInterface<Type>::IndexType;
 
     ArrayProperty() = default;
-    ArrayProperty(nullptr_t) {}
+    ArrayProperty(nullptr_t)
+    {}
 
-    template<typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
+    template <typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
     ArrayProperty(BASE_NS::shared_ptr<Prop> p) : p_(BASE_NS::move(p))
     {
         if (p_ && !p_->IsCompatible(ArrayUidFromType<ValueType>())) {
@@ -40,7 +41,7 @@ public:
             p_ = nullptr;
         }
     }
-    template<typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
+    template <typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
     ArrayProperty(NoCheckT, BASE_NS::shared_ptr<Prop> p) : p_(p)
     {}
 
@@ -101,16 +102,16 @@ private:
     PropertyType p_;
 };
 
-template<typename T>
+template <typename T>
 using ConstArrayProperty = ArrayProperty<const T>;
 
-template<typename T>
+template <typename T>
 inline bool operator==(const ArrayProperty<T>& l, const ArrayProperty<T>& r)
 {
     return l.GetProperty() == r.GetProperty();
 }
 
-template<typename T>
+template <typename T>
 inline bool operator!=(const ArrayProperty<T>& l, const ArrayProperty<T>& r)
 {
     return !(l == r);

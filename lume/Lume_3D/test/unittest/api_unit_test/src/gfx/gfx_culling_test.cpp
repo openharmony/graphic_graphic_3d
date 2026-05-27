@@ -79,8 +79,12 @@ void CullingTest(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 2.75f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+            Math::Vec3(0.0f, 2.75f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -88,35 +92,43 @@ void CullingTest(UTest::TestResources& res)
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 90.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
 
     // Gltf models
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/FlightHelmet/FlightHelmet.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/BrainStem/glTF/BrainStem.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/WaterBottle/WaterBottle.glb", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/AnimatedCube/glTF/AnimatedCube.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/FlightHelmet/FlightHelmet.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/BrainStem/glTF/BrainStem.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/WaterBottle/WaterBottle.glb",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/AnimatedCube/glTF/AnimatedCube.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     std::vector<Math::Vec3> modelPositions = {
-        { -1.0f, 1.0f, -5.0f },  // FlightHelmet, Visible
-        { 1.0f, 1.0f, 0.0f },    // BrainStem, Visible
-        { 0.0f, 25.0f, -15.0f }, // WaterBottle, Culled (Outside View Frustum)
-        { 0.0f, 0.0f, -101.0f }, // AnimatedCube, Culled (Exceeds Camera zFar)
+        {-1.0f, 1.0f, -5.0f},   // FlightHelmet, Visible
+        {1.0f, 1.0f, 0.0f},     // BrainStem, Visible
+        {0.0f, 25.0f, -15.0f},  // WaterBottle, Culled (Outside View Frustum)
+        {0.0f, 0.0f, -101.0f},  // AnimatedCube, Culled (Exceeds Camera zFar)
     };
 
     std::vector<Math::Vec3> modelScales = {
-        { 8.0f, 8.0f, 8.0f },
-        { 2.0f, 2.0f, 2.0f },
-        { 10.0f, 10.0f, 10.0f },
-        { 2.0f, 2.0f, 2.0f },
+        {8.0f, 8.0f, 8.0f},
+        {2.0f, 2.0f, 2.0f},
+        {10.0f, 10.0f, 10.0f},
+        {2.0f, 2.0f, 2.0f},
     };
 
     // Load and import all gltf files.
@@ -147,7 +159,7 @@ void CullingTest(UTest::TestResources& res)
             }
             res.AppendResources(gltfImportResult.data);
             ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-            Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
+            Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
             model->SetScale(modelScales[importedFileIndex]);
             model->SetPosition(modelPositions[importedFileIndex]);
             model->SetRotation(rot);
@@ -156,4 +168,4 @@ void CullingTest(UTest::TestResources& res)
         }
     }
 }
-} // namespace Culling
+}  // namespace Culling

@@ -86,7 +86,8 @@ struct Owner : public CORE_NS::IPropertyApi {
         return nullptr;
     }
 
-    void Release(CORE_NS::IPropertyHandle* handle) const override {}
+    void Release(CORE_NS::IPropertyHandle* handle) const override
+    {}
 
     uint64_t Type() const override
     {
@@ -109,14 +110,16 @@ struct Owner : public CORE_NS::IPropertyApi {
             return nullptr;
         }
 
-        void RUnlock() const override {}
+        void RUnlock() const override
+        {}
 
         void* WLock() override
         {
             return nullptr;
         }
 
-        void WUnlock() override {}
+        void WUnlock() override
+        {}
     };
 };
 
@@ -134,7 +137,7 @@ struct ThingProperty final : public CORE_NS::PropertyApiImpl<Thing> {
 UNIT_TEST(API_PropertyHandleUtil, MakeScopedHandle, testing::ext::TestSize.Level1)
 {
     Thing thing;
-    thing.others.push_back(OtherThing { BASE_NS::Math::Vec4 { 0.f, 0.f, 5.f, 6.f }, {} });
+    thing.others.push_back(OtherThing{BASE_NS::Math::Vec4{0.f, 0.f, 5.f, 6.f}, {}});
     ThingProperty thingProperty(&thing, CORE_NS::PropertyType::DataType<Thing>::MetaDataFromType());
 
     // non-const types (writable)
@@ -277,7 +280,7 @@ UNIT_TEST(API_PropertyHandleUtil, MakeScopedHandle, testing::ext::TestSize.Level
 UNIT_TEST(API_PropertyHandleUtil, GetSetPropertyValue, testing::ext::TestSize.Level1)
 {
     Thing thing;
-    thing.others.push_back(OtherThing { BASE_NS::Math::Vec4 { 0.f, 0.f, 5.f, 6.f }, {} });
+    thing.others.push_back(OtherThing{BASE_NS::Math::Vec4{0.f, 0.f, 5.f, 6.f}, {}});
 
     ThingProperty thingProperty(&thing, CORE_NS::PropertyType::DataType<Thing>::MetaDataFromType());
 
@@ -320,7 +323,7 @@ UNIT_TEST(API_PropertyHandleUtil, GetSetPropertyValue, testing::ext::TestSize.Le
 UNIT_TEST(API_UtilPropertyToolsTest, FindPropertyWithHandle, testing::ext::TestSize.Level1)
 {
     Thing thing;
-    thing.others.push_back(OtherThing { BASE_NS::Math::Vec4 { 0.f, 0.f, 5.f, 6.f }, {} });
+    thing.others.push_back(OtherThing{BASE_NS::Math::Vec4{0.f, 0.f, 5.f, 6.f}, {}});
     ThingProperty thingProperty(&thing, CORE_NS::PropertyType::DataType<Thing>::MetaDataFromType());
     {
         const auto intValueProperty = CORE_NS::PropertyData::FindProperty(*thingProperty.GetData(), "intVal");

@@ -79,7 +79,7 @@ static bool UnlockMutex(MutexHandle& handle)
 
 static uint64_t GetThreadId()
 {
-    thread_local const char variable {};
+    thread_local const char variable{};
     return reinterpret_cast<uint64_t>(&variable);
 }
 
@@ -92,7 +92,7 @@ void RegisterAnys(IObjectRegistry& registry);
 void UnRegisterAnys(IObjectRegistry& registry);
 void RegisterEngineTypes(IObjectRegistry& registry);
 void UnRegisterEngineTypes(IObjectRegistry& registry);
-} // namespace Internal
+}  // namespace Internal
 
 const CORE_NS::IInterface* MetaObjectLib::GetInterface(const BASE_NS::Uid& uid) const
 {
@@ -111,8 +111,7 @@ CORE_NS::IInterface* MetaObjectLib::GetInterface(const BASE_NS::Uid& uid)
     return const_cast<CORE_NS::IInterface*>(p->MetaObjectLib::GetInterface(uid));
 }
 
-MetaObjectLib::MetaObjectLib()
-    : sapi_ { { CreateMutex, DestroyMutex, LockMutex, UnlockMutex }, GetThreadId }
+MetaObjectLib::MetaObjectLib() : sapi_{{CreateMutex, DestroyMutex, LockMutex, UnlockMutex}, GetThreadId}
 {
     if (USE_IN_PLACE_MUTEX) {
         CORE_LOG_D("Using in-place mutex");

@@ -31,7 +31,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreDefaultStaging : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "6f3af7c1-5e6e-49c9-8364-c454a872d228" };
+    static constexpr BASE_NS::Uid UID{"6f3af7c1-5e6e-49c9-8364-c454a872d228"};
 
     /** Copy info to copy begin of frame or end of frame
      */
@@ -159,4 +159,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_DEFAULT_STAGING_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_DEFAULT_STAGING_H

@@ -30,4 +30,4 @@ public:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_OS_PLATFORM_H
+#endif  // CORE_OS_PLATFORM_H

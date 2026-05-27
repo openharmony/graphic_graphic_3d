@@ -38,12 +38,12 @@ public:
         return ExportToNode(entity, node) ? node : nullptr;
     }
     /// Export given value to serialisation node
-    template<typename Type>
+    template <typename Type>
     ReturnError ExportValueToNode(const Type& value, ISerNode::Ptr& out)
     {
         return ExportToNode(static_cast<const IAny&>(Any<BASE_NS::remove_const_t<Type>>(value)), out);
     }
-    template<typename Type>
+    template <typename Type>
     ISerNode::Ptr ExportValueToNode(const Type& value)
     {
         ISerNode::Ptr node;
@@ -67,13 +67,13 @@ public:
     virtual ReturnError AutoExport() = 0;
 
     /// Export given value with name
-    template<typename Type>
+    template <typename Type>
     ReturnError ExportValue(BASE_NS::string_view name, const Type& value)
     {
         return Export(name, static_cast<const IAny&>(Any<BASE_NS::remove_const_t<Type>>(value)));
     }
     /// Export given array of values with name
-    template<typename Type>
+    template <typename Type>
     ReturnError ExportValue(BASE_NS::string_view name, const BASE_NS::vector<Type>& value)
     {
         return Export(name, static_cast<const IAny&>(ArrayAny<Type>(value)));
@@ -85,10 +85,12 @@ public:
     virtual ReturnError SubstituteThis(ISerNode::Ptr) = 0;
     /// Get Metadata
     virtual SerMetadata GetMetadata() const = 0;
+    // Is this the top level object being exported (top level is the one that was given to export function)
+    virtual bool IsTopLevelObject() const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IExportContext)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IExportContext)
 
 #endif

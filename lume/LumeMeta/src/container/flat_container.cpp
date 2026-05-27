@@ -54,7 +54,7 @@ bool FlatContainer::Insert(SizeType index, const IObject::Ptr& object)
         index = BASE_NS::Math::min(index, children_.size());
         children_.insert(children_.begin() + index, object);
     }
-    ChildChangedInfo info { ContainerChangeType::ADDED, object, parent_, size_t(-1), index };
+    ChildChangedInfo info{ContainerChangeType::ADDED, object, parent_, size_t(-1), index};
     SetObjectParent(object, interface_pointer_cast<IObject>(parent_));
     Invoke<IOnChildChanged>(EventOnContainerChanged(MetadataQuery::EXISTING), info);
     return true;
@@ -89,8 +89,8 @@ bool FlatContainer::Replace(const IObject::Ptr& child, const IObject::Ptr& repla
             added = replaceWith;
         }
     }
-    ChildChangedInfo addedInfo { ContainerChangeType::ADDED, added, parent_, size_t(-1), index };
-    ChildChangedInfo removedInfo { ContainerChangeType::REMOVED, removed, parent_, index };
+    ChildChangedInfo addedInfo{ContainerChangeType::ADDED, added, parent_, size_t(-1), index};
+    ChildChangedInfo removedInfo{ContainerChangeType::REMOVED, removed, parent_, index};
     if (removed) {
         SetObjectParent(removed, nullptr);
         Invoke<IOnChildChanged>(EventOnContainerChanged(MetadataQuery::EXISTING), removedInfo);
@@ -134,7 +134,7 @@ BASE_NS::shared_ptr<IEvent> FlatContainer::EventOnContainerChanged(MetadataQuery
 {
     std::unique_lock lock(this->mutex_);
     if (!onChanged_ && q == MetadataQuery::CONSTRUCT_ON_REQUEST) {
-        onChanged_ = { CreateShared<EventImpl<IOnChildChanged>>("OnContainerChanged") };
+        onChanged_ = {CreateShared<EventImpl<IOnChildChanged>>("OnContainerChanged")};
     }
     return onChanged_;
 }

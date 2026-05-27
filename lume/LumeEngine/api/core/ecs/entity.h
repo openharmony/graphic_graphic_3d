@@ -34,7 +34,7 @@ constexpr const uint32_t INVALID_ENTITY = ~0u;
 */
 struct Entity {
     /** ID */
-    uint64_t id { INVALID_ENTITY };
+    uint64_t id{INVALID_ENTITY};
 };
 
 constexpr bool operator==(const Entity& lhs, const Entity& rhs)
@@ -72,22 +72,22 @@ namespace EntityUtil {
 /** Returns true if entity is valid */
 inline bool IsValid(const Entity entity)
 {
-    return entity != Entity {};
+    return entity != Entity{};
 }
-} // namespace EntityUtil
+}  // namespace EntityUtil
 /** @} */
 
 CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
+template <typename T>
 uint64_t hash(const T&);
 
-template<>
+template <>
 inline uint64_t hash(const CORE_NS::Entity& value)
 {
     return value.id;
 }
 BASE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_ENTITY_H
+#endif  // API_CORE_ECS_ENTITY_H

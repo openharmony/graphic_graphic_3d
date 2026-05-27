@@ -367,5 +367,5 @@ ShaderStateResult LoadStates(const json::value& jsonData)
     }
     return ssr;
 }
-} // namespace ShaderStateLoaderUtil
+}  // namespace ShaderStateLoaderUtil
 RENDER_END_NAMESPACE()

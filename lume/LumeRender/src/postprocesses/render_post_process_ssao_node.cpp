@@ -45,21 +45,22 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr string_view DOWNSCALE_SHADER_NAME { "rendershaders://shader/ssao/ssao_downscale.shader" };
-constexpr string_view SSAO_SHADER_NAME { "rendershaders://shader/ssao/ssao.shader" };
-constexpr string_view BLUR_SHADER_NAME { "rendershaders://shader/ssao/ssao_bilateral_blend.shader" };
-constexpr string_view AREA_NOISE_SHADER_NAME { "rendershaders://shader/ssao/ssao_blur.shader" };
+constexpr string_view DOWNSCALE_SHADER_NAME{"rendershaders://shader/ssao/ssao_downscale.shader"};
+constexpr string_view SSAO_SHADER_NAME{"rendershaders://shader/ssao/ssao.shader"};
+constexpr string_view BLUR_SHADER_NAME{"rendershaders://shader/ssao/ssao_bilateral_blend.shader"};
+constexpr string_view AREA_NOISE_SHADER_NAME{"rendershaders://shader/ssao/ssao_blur.shader"};
 
 constexpr float SSAO_RENDER_RATIO = 0.5f;
 
-constexpr int32_t SHADER_PARAM_COUNT { 2 };
+constexpr int32_t SHADER_PARAM_COUNT{2};
 constexpr int32_t BUFFER_SIZE_IN_BYTES = SHADER_PARAM_COUNT * 4 * sizeof(float);
 
-constexpr GpuBufferDesc UBO_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc UBO_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
 
 RenderHandleReference CreateGpuBuffers(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
@@ -73,12 +74,14 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
     const RenderPostProcessSsaoNode::ShaderParameters& shaderParameters)
 {
     if (void* data = gpuResourceMgr.MapBuffer(handle); data) {
-        CloneData(data, sizeof(RenderPostProcessSsaoNode::ShaderParameters), &shaderParameters,
+        CloneData(data,
+            sizeof(RenderPostProcessSsaoNode::ShaderParameters),
+            &shaderParameters,
             sizeof(RenderPostProcessSsaoNode::ShaderParameters));
         gpuResourceMgr.UnmapBuffer(handle);
     }
 }
-} // namespace
+}  // namespace
 
 RenderPostProcessSsaoNode::RenderPostProcessSsaoNode()
     : properties_(&propertiesData_, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -276,7 +279,7 @@ void RenderPostProcessSsaoNode::RenderDownscalePass(IRenderCommandList& cmdList)
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
     rp.renderPassDesc.attachments[1u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[1u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, targets_.ssaoResolution.x, targets_.ssaoResolution.y };
+    rp.renderPassDesc.renderArea = {0, 0, targets_.ssaoResolution.x, targets_.ssaoResolution.y};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 2u;
@@ -432,7 +435,7 @@ RenderPass RenderPostProcessSsaoNode::CreateRenderPass(
     rp.renderPassDesc.attachmentHandles[0u] = output;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, resolution.x, resolution.y };
+    rp.renderPassDesc.renderArea = {0, 0, resolution.x, resolution.y};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -453,26 +456,53 @@ void RenderPostProcessSsaoNode::CreateTargets(const BASE_NS::Math::UVec2 baseSiz
 
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
-        const GpuImageDesc halfDepthDesc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            Format::BASE_FORMAT_R32_SFLOAT, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        const GpuImageDesc halfDepthDesc{ImageType::CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+            Format::BASE_FORMAT_R32_SFLOAT,
+            ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
             CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, targets_.ssaoResolution.x,
-            targets_.ssaoResolution.y, 1u, 1u, 1u, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            0,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            targets_.ssaoResolution.x,
+            targets_.ssaoResolution.y,
+            1u,
+            1u,
+            1u,
+            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+            {}};
 
-        const GpuImageDesc halfColorDesc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        const GpuImageDesc halfColorDesc{ImageType::CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+            Format::BASE_FORMAT_R8G8B8A8_SRGB,
+            ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
             CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, targets_.ssaoResolution.x,
-            targets_.ssaoResolution.y, 1u, 1u, 1u, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            0,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            targets_.ssaoResolution.x,
+            targets_.ssaoResolution.y,
+            1u,
+            1u,
+            1u,
+            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+            {}};
 
-        const GpuImageDesc ssaoDesc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-            Format::BASE_FORMAT_R8_UNORM, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+        const GpuImageDesc ssaoDesc{ImageType::CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+            Format::BASE_FORMAT_R8_UNORM,
+            ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
             CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0,
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, targets_.ssaoResolution.x,
-            targets_.ssaoResolution.y, 1u, 1u, 1u, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            0,
+            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            targets_.ssaoResolution.x,
+            targets_.ssaoResolution.y,
+            1u,
+            1u,
+            1u,
+            SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+            {}};
 
         targets_.halfResDepth = gpuResourceMgr.Create(halfDepthDesc);
         targets_.halfResColor = gpuResourceMgr.Create(halfColorDesc);
@@ -493,26 +523,42 @@ void RenderPostProcessSsaoNode::CreatePsos()
 
     if (!RenderHandleUtil::IsValid(psos_.downscalePass)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.downscalePass.shader);
-        psos_.downscalePass = psoMgr.GetGraphicsPsoHandle(shaderData_.downscalePass.shader, gfxHandle,
-            shaderData_.downscalePass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.downscalePass = psoMgr.GetGraphicsPsoHandle(shaderData_.downscalePass.shader,
+            gfxHandle,
+            shaderData_.downscalePass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.ssaoPass)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.ssaoPass.shader);
-        psos_.ssaoPass = psoMgr.GetGraphicsPsoHandle(shaderData_.ssaoPass.shader, gfxHandle,
-            shaderData_.ssaoPass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.ssaoPass = psoMgr.GetGraphicsPsoHandle(shaderData_.ssaoPass.shader,
+            gfxHandle,
+            shaderData_.ssaoPass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.areaNoisePass)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.areaNoisePass.shader);
-        psos_.areaNoisePass = psoMgr.GetGraphicsPsoHandle(shaderData_.areaNoisePass.shader, gfxHandle,
-            shaderData_.areaNoisePass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.areaNoisePass = psoMgr.GetGraphicsPsoHandle(shaderData_.areaNoisePass.shader,
+            gfxHandle,
+            shaderData_.areaNoisePass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.blurPass)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.blurPass.shader);
-        psos_.blurPass = psoMgr.GetGraphicsPsoHandle(shaderData_.blurPass.shader, gfxHandle,
-            shaderData_.blurPass.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.blurPass = psoMgr.GetGraphicsPsoHandle(shaderData_.blurPass.shader,
+            gfxHandle,
+            shaderData_.blurPass.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 }
 
@@ -551,10 +597,10 @@ void RenderPostProcessSsaoNode::EvaluateOutputImageCreation()
         currOutput_ = nodeOutputsData_.output;
     } else {
         IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        Math::UVec2 size { 1U, 1U };
+        Math::UVec2 size{1U, 1U};
         if (useRequestedRenderArea_) {
             const RenderPassDesc::RenderArea& area = renderAreaRequest_.area;
-            size = { area.offsetX + area.extentWidth, area.offsetY + area.extentHeight };
+            size = {area.offsetX + area.extentWidth, area.offsetY + area.extentHeight};
         }
         if ((size.x != ownOutputImageData_.width) || (size.y != ownOutputImageData_.height)) {
             GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(currInput_.handle);

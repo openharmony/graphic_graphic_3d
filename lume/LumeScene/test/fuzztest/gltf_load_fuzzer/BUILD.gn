@@ -1,0 +1,70 @@
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/config/features.gni")
+import("//build/test.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+ohos_fuzztest("GltfLoadFuzzTest") {
+  module_out_path = "graphic_3d/lume_scene"
+  fuzz_config_file = "."
+
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_CORE_PATH}:lume_default",
+  ]
+
+  sources = [ "gltf_load_fuzzer.cpp" ]
+
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
+
+  deps = [
+    "${LUME_ECS_HELPER_PATH}:libAGPEcshelper",
+  ]
+
+  external_deps = [
+    "bounds_checking_function:libsec_shared",
+    "c_utils:utils",
+    "hilog:libhilog",
+  ]
+
+  if (RENDER_BUILD_GLES) {
+    external_deps += [
+      "graphic_2d:EGL",
+      "graphic_2d:GLESv3",
+    ]
+  }
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+group("fuzztest") {
+  testonly = true
+  deps = [ ":GltfLoadFuzzTest" ]
+}

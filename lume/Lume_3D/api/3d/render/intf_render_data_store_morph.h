@@ -33,24 +33,24 @@ RenderDataMorph.
 */
 struct RenderDataMorph {
     /** Max vertex buffer count */
-    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 3 };
+    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT{3};
 
     /** Submesh */
     struct Submesh {
         /** Vertex count */
-        uint32_t vertexCount { 0 };
+        uint32_t vertexCount{0};
 
         /** {0 = position, 1 = normal, 2 = tangent} */
         RenderVertexBuffer vertexBuffers[MAX_VERTEX_BUFFER_COUNT];
 
         /** Vertex buffer count */
-        uint32_t vertexBufferCount { 0 };
+        uint32_t vertexBufferCount{0};
 
         /** Buffer contains base position/normal/tangent and all morph target deltas (position/normal/tangent) */
         RenderVertexBuffer morphTargetBuffer;
 
         /** Number of morph targets */
-        uint32_t morphTargetCount { 0 };
+        uint32_t morphTargetCount{0};
 
         struct Target {
             /** Target ID */
@@ -70,12 +70,12 @@ Not internally syncronized.
 */
 class IRenderDataStoreMorph : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "230e8df1-9465-4894-af8f-f47f38413000" };
+    static constexpr BASE_NS::Uid UID{"230e8df1-9465-4894-af8f-f47f38413000"};
 
     /** Reserve size */
     struct ReserveSize {
         /** Submesh count */
-        uint32_t submeshCount { 0 };
+        uint32_t submeshCount{0};
     };
 
     ~IRenderDataStoreMorph() override = default;
@@ -93,4 +93,4 @@ protected:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_DATA_STORE_MORPH_H
+#endif  // API_3D_RENDER_IRENDER_DATA_STORE_MORPH_H

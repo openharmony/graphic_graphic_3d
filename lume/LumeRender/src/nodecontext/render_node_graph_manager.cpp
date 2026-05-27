@@ -27,6 +27,7 @@
 #endif
 
 #include <render/namespace.h>
+#include <render/nodecontext/intf_render_backend_node.h>
 #include <render/resource_handle.h>
 
 #include "device/device.h"
@@ -38,7 +39,7 @@
 
 using namespace BASE_NS;
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const RENDER_NS::InsertionKey& v)
 {
     return BASE_NS::Hash(v.typeName, v.nodeName);
@@ -69,10 +70,11 @@ void ValidateBackendFlags(
     }
 #endif
 }
-} // namespace
+}  // namespace
 
 RenderNodeGraphManager::RenderNodeGraphManager(Device& device, CORE_NS::IFileManager& fileMgr)
-    : device_(device), renderNodeMgr_(make_unique<RenderNodeManager>()),
+    : device_(device),
+      renderNodeMgr_(make_unique<RenderNodeManager>()),
       renderNodeGraphLoader_(make_unique<RenderNodeGraphLoader>(fileMgr))
 {}
 
@@ -104,7 +106,7 @@ RenderHandleReference RenderNodeGraphManager::Get(const RenderHandle& handle) co
             PLUGIN_LOG_E("invalid render node graph handle (id: %" PRIu64 ")", handle.id);
         }
     }
-    return RenderHandleReference {};
+    return RenderHandleReference{};
 }
 
 RenderHandleReference RenderNodeGraphManager::LoadAndCreate(const RenderNodeGraphUsageType usage, const string_view uri)
@@ -130,16 +132,16 @@ void RenderNodeGraphManager::AddRenderNodeInsertion(
     }
     const auto lock = std::lock_guard(mutex_);
 
-    auto key = InsertionKey { string { renderNodeDesc.typeName }, string { renderNodeDesc.nodeName } };
+    auto key = InsertionKey{string{renderNodeDesc.typeName}, string{renderNodeDesc.nodeName}};
     auto pos = insertionRequests_.find(key);
     if (pos != insertionRequests_.cend()) {
         pos->second.renderNodeDesc = renderNodeDesc;
         pos->second.position.clear();
         pos->second.position.append(position.cbegin().ptr(), position.cend().ptr());
     } else {
-        insertionRequests_.insert(pair { BASE_NS::move(key),
-            RenderNodeInsertion {
-                renderNodeDesc, vector<RenderNodeDependency> { position.cbegin().ptr(), position.cend().ptr() } } });
+        insertionRequests_.insert(pair{BASE_NS::move(key),
+            RenderNodeInsertion{
+                renderNodeDesc, vector<RenderNodeDependency>{position.cbegin().ptr(), position.cend().ptr()}}});
     }
 }
 
@@ -147,7 +149,7 @@ void RenderNodeGraphManager::RemoveRenderNodeInsertion(const RenderNodeDesc& ren
 {
     const auto lock = std::lock_guard(mutex_);
 
-    auto key = InsertionKey { string { renderNodeDesc.typeName }, string { renderNodeDesc.nodeName } };
+    auto key = InsertionKey{string{renderNodeDesc.typeName}, string{renderNodeDesc.nodeName}};
     insertionRequests_.erase(key);
 }
 
@@ -202,7 +204,7 @@ RenderHandleReference RenderNodeGraphManager::Create(const RenderNodeGraphUsageT
 
     uint64_t handleId = INVALID_RESOURCE_HANDLE;
     bool newHandle = true;
-    if (availableHandleIds_.empty()) { // no available indices
+    if (availableHandleIds_.empty()) {  // no available indices
         handleId = static_cast<uint64_t>(nodeGraphData_.size()) << RenderHandleUtil::RES_HANDLE_ID_SHIFT;
         newHandle = true;
     } else {
@@ -212,20 +214,20 @@ RenderHandleReference RenderNodeGraphManager::Create(const RenderNodeGraphUsageT
     }
 
     const uint32_t indexPart = RenderHandleUtil::GetIndexPart(handleId);
-    const uint32_t generationIndexPart = RenderHandleUtil::GetGenerationIndexPart(handleId) + 1; // next gen
+    const uint32_t generationIndexPart = RenderHandleUtil::GetGenerationIndexPart(handleId) + 1;  // next gen
 
     const RenderHandle handle =
         RenderHandleUtil::CreateHandle(RenderHandleType::RENDER_NODE_GRAPH, indexPart, generationIndexPart);
-    RenderHandleReference rhr {
+    RenderHandleReference rhr{
         handle,
         IRenderReferenceCounter::Ptr(new RenderReferenceCounter()),
     };
     if (newHandle) {
-        nodeGraphData_.emplace_back(); // deferred
+        nodeGraphData_.emplace_back();  // deferred
         nodeGraphHandles_.push_back(move(rhr));
         nodeGraphShareData_.emplace_back();
     } else {
-        nodeGraphData_[indexPart] = {}; // deferred
+        nodeGraphData_[indexPart] = {};  // deferred
         nodeGraphHandles_[indexPart] = move(rhr);
         nodeGraphShareData_[indexPart] = {};
     }
@@ -266,7 +268,7 @@ void RenderNodeGraphManager::Destroy(const RenderHandle handle)
                 RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
             // ignore if not correct generation index
             if (generationIdx == storedGenerationIdx) {
-                pendingRenderNodeGraphs_.push_back({ PendingRenderNodeGraph::Type::DEALLOC, handle, "", "", {}, {} });
+                pendingRenderNodeGraphs_.push_back({PendingRenderNodeGraph::Type::DEALLOC, handle, "", "", {}, {}});
             }
         }
     }
@@ -317,16 +319,16 @@ void RenderNodeGraphManager::HandlePendingAllocations()
 
         // render node graph destruction
         if (!pendingRenderNodeGraphDestructions_.empty()) {
-            const auto oldResources =
-                std::partition(pendingRenderNodeGraphDestructions_.begin(), pendingRenderNodeGraphDestructions_.end(),
-                    [ageLimit](const auto& destructionQueue) { return destructionQueue.frameIndex >= ageLimit; });
+            const auto oldResources = std::partition(pendingRenderNodeGraphDestructions_.begin(),
+                pendingRenderNodeGraphDestructions_.end(),
+                [ageLimit](const auto& destructionQueue) { return destructionQueue.frameIndex >= ageLimit; });
             pendingRenderNodeGraphDestructions_.erase(oldResources, pendingRenderNodeGraphDestructions_.end());
         }
         // individual render node destruction
         if (!pendingRenderNodeDestructions_.empty()) {
-            const auto oldResources =
-                std::partition(pendingRenderNodeDestructions_.begin(), pendingRenderNodeDestructions_.end(),
-                    [ageLimit](const auto& destructionQueue) { return destructionQueue.frameIndex >= ageLimit; });
+            const auto oldResources = std::partition(pendingRenderNodeDestructions_.begin(),
+                pendingRenderNodeDestructions_.end(),
+                [ageLimit](const auto& destructionQueue) { return destructionQueue.frameIndex >= ageLimit; });
             pendingRenderNodeDestructions_.erase(oldResources, pendingRenderNodeDestructions_.end());
         }
     }
@@ -367,11 +369,12 @@ void RenderNodeGraphManager::PendingCreate(const PendingRenderNodeGraph& renderN
             const IRenderNode::ClassType backendNode = static_cast<IRenderNode::ClassType>(typeInfoFlags.classType);
             contextRef.renderBackendNode =
                 (backendNode == IRenderNode::ClassType::CLASS_TYPE_BACKEND_NODE)
-                    ? reinterpret_cast<IRenderBackendNode*>(nodeStore->renderNodeData.back().node.get())
+                    ? static_cast<IRenderBackendNode*>(nodeStore->renderNodeData.back().node.get())
                     : nullptr;
             ValidateBackendFlags(combinedNodeName, device_.GetBackendType(), typeInfoFlags.backendFlags);
         } else {
-            PLUGIN_LOG_W("render node type: %s, named: %s, not found and not used", nodeDesc.typeName.c_str(),
+            PLUGIN_LOG_W("render node type: %s, named: %s, not found and not used",
+                nodeDesc.typeName.c_str(),
                 nodeDesc.nodeName.c_str());
         }
     }
@@ -388,16 +391,16 @@ void RenderNodeGraphManager::PendingDestroy(const RenderHandle handle)
     const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
     if (index >= nodeGraphData_.size()) {
         PLUGIN_LOG_E("invalid handle (%" PRIu64 ") given to render node Destroy", handle.id);
-        return; // early out
+        return;  // early out
     }
     const uint32_t generationIdx = RenderHandleUtil::GetGenerationIndexPart(handle);
     const uint32_t storedGenerationIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
     // silently ignore if not correct generation (might be destroyed already)
     if ((generationIdx != storedGenerationIdx) || (!nodeGraphData_[index])) {
-        return; // early out
+        return;  // early out
     }
 #if (RENDER_PERF_ENABLED == 1)
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         if (CORE_NS::IPerformanceDataManager* perfData = inst->Get("RenderNode"); perfData) {
             for (const auto& rnRef : nodeGraphData_[index]->renderNodeData)
@@ -407,8 +410,8 @@ void RenderNodeGraphManager::PendingDestroy(const RenderHandle handle)
 #endif
     // destroy all expect RenderNodeContextData which has command buffers and such
     // add to destruction queue
-    pendingRenderNodeGraphDestructions_.push_back(PendingRenderNodeGraphDestruction {
-        device_.GetFrameCount(), move(nodeGraphData_[index]->renderNodeContextData) });
+    pendingRenderNodeGraphDestructions_.push_back(
+        PendingRenderNodeGraphDestruction{device_.GetFrameCount(), move(nodeGraphData_[index]->renderNodeContextData)});
     nodeGraphData_[index] = nullptr;
     nodeGraphHandles_[index] = {};
     nodeGraphShareData_[index] = {};
@@ -425,19 +428,19 @@ void RenderNodeGraphManager::PendingDeallocRenderNode(
 {
     const uint32_t index = RenderHandleUtil::GetIndexPart(nodeGraphHandle);
     if (index >= nodeGraphData_.size()) {
-        return; // early out
+        return;  // early out
     }
     const uint32_t generationIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandle);
     const uint32_t storedGenerationIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
     // silently ignore if not correct generation (render node graph might be destroyed already)
     if (generationIdx != storedGenerationIdx) {
-        return; // early out
+        return;  // early out
     }
     PLUGIN_ASSERT(nodeGraphData_[index]);
     auto& nodeStoreRef = *nodeGraphData_[index];
     if (!nodeStoreRef.dynamic) {
         PLUGIN_LOG_E("RN (name:%s) cannot be erased from non-dynamic render node graph", renderNodeName.data());
-        return; // early out
+        return;  // early out
     }
 
     uint32_t eraseIndex = ~0u;
@@ -451,7 +454,7 @@ void RenderNodeGraphManager::PendingDeallocRenderNode(
     if (eraseIndex <= nodeStoreRef.renderNodeData.size()) {
 #if (RENDER_PERF_ENABLED == 1)
         if (auto* inst =
-                CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+                RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
             inst) {
             if (CORE_NS::IPerformanceDataManager* perfData = inst->Get("RenderNode"); perfData) {
                 perfData->RemoveData(nodeStoreRef.renderNodeData[eraseIndex].fullName);
@@ -478,20 +481,20 @@ void RenderNodeGraphManager::PendingAllocRenderNode(
 {
     const uint32_t index = RenderHandleUtil::GetIndexPart(nodeGraphHandle);
     if (index >= nodeGraphData_.size()) {
-        return; // early out
+        return;  // early out
     }
     const uint32_t genIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandle);
     const uint32_t sGenIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
     // silently ignore if not correct generation (render node graph might be destroyed already)
     const auto& desc = pendingNode.renderNodeDesc;
     if (genIdx != sGenIdx) {
-        return; // early out
+        return;  // early out
     }
     PLUGIN_ASSERT(nodeGraphData_[index]);
     auto& nsRef = *nodeGraphData_[index];
     if (!nsRef.dynamic) {
         PLUGIN_LOG_E("RN (name:%s) cannot be add to non-dynamic render node graph", desc.nodeName.c_str());
-        return; // early out
+        return;  // early out
     }
     const RenderDataConstants::RenderDataFixedString combinedNodeName =
         string_view(nsRef.renderNodeGraphName + desc.nodeName);
@@ -514,15 +517,19 @@ void RenderNodeGraphManager::PendingAllocRenderNode(
             const IRenderNode::ClassType backendNode = static_cast<IRenderNode::ClassType>(tiFlags.classType);
             RenderNodeContextData rncd;
             rncd.renderBackendNode = (backendNode == IRenderNode::ClassType::CLASS_TYPE_BACKEND_NODE)
-                                         ? reinterpret_cast<IRenderBackendNode*>(node.get())
+                                         ? static_cast<IRenderBackendNode*>(node.get())
                                          : nullptr;
             rncd.initialized = false;
             ValidateBackendFlags(desc.typeName, device_.GetBackendType(), tiFlags.backendFlags);
             nsRef.renderNodeContextData.insert(
                 nsRef.renderNodeContextData.cbegin() + static_cast<ptrdiff_t>(pos), move(rncd));
             nsRef.renderNodeData.insert(nsRef.renderNodeData.cbegin() + static_cast<ptrdiff_t>(pos),
-                { move(node), desc.typeName, combinedNodeName, desc.nodeName,
-                    make_unique<RenderNodeGraphInputs>(desc.description), desc.nodeJson });
+                {move(node),
+                    desc.typeName,
+                    combinedNodeName,
+                    desc.nodeName,
+                    make_unique<RenderNodeGraphInputs>(desc.description),
+                    desc.nodeJson});
             // new node needs initialization and info on top-level (render node graph)
             nsRef.initialized = false;
         } else {
@@ -545,10 +552,10 @@ void RenderNodeGraphManager::UpdateRenderNodeGraphResources()
             dstData.inputCount = srcData.inputCount;
             dstData.outputCount = srcData.outputCount;
             for (uint32_t idx = 0; idx < dstData.inputCount; ++idx) {
-                dstData.inputs[idx] = { "", srcData.inputs[idx].GetHandle() };
+                dstData.inputs[idx] = {"", srcData.inputs[idx].GetHandle()};
             }
             for (uint32_t idx = 0; idx < dstData.outputCount; ++idx) {
-                dstData.outputs[idx] = { "", srcData.outputs[idx].GetHandle() };
+                dstData.outputs[idx] = {"", srcData.outputs[idx].GetHandle()};
             }
         }
     }
@@ -567,7 +574,7 @@ void RenderNodeGraphManager::DynamicRenderNodeOpImpl(const RenderHandle handle, 
                 RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
             // silently ignored if not current generation
             if (generationIdx == storedGenerationIdx) {
-                pendingRenderNodes_.push_back({ type, handle, renderNodeDesc, posType, renderNodeName });
+                pendingRenderNodes_.push_back({type, handle, renderNodeDesc, posType, renderNodeName});
             }
         }
     } else {
@@ -634,7 +641,9 @@ RenderNodeGraphDescInfo RenderNodeGraphManager::GetInfo(const RenderHandleRefere
             RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
         if ((generationIdx != storedGenerationIdx) || (!nodeGraphData_[index])) {
             PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
-                generationIdx, storedGenerationIdx, rawHandle.id);
+                generationIdx,
+                storedGenerationIdx,
+                rawHandle.id);
             return {};
         }
         const auto& ngd = *nodeGraphData_[index];
@@ -647,7 +656,7 @@ RenderNodeGraphDescInfo RenderNodeGraphManager::GetInfo(const RenderHandleRefere
             if (ngd.renderNodeData[nodeIdx].node) {
                 rngdi.nodes[nodeIdx].typeName = ngd.renderNodeData[nodeIdx].typeName;
                 rngdi.nodes[nodeIdx].nodeName = ngd.renderNodeData[nodeIdx].nodeName;
-                rngdi.nodes[nodeIdx].flags = 0u; // NOTE: not yet used
+                rngdi.nodes[nodeIdx].flags = 0u;  // NOTE: not yet used
             }
         }
         return rngdi;
@@ -667,24 +676,28 @@ void RenderNodeGraphManager::SetRenderNodeGraphResources(const RenderHandleRefer
 
     // NOTE: should lock and handle/touch only the client side data
     if (index >= nodeGraphShareData_.size()) {
-        return; // early out
+        return;  // early out
     }
     const uint32_t generationIdx = RenderHandleUtil::GetGenerationIndexPart(rawHandle);
     const uint32_t storedGenerationIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
     if (generationIdx != storedGenerationIdx) {
-        PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")", generationIdx,
-            storedGenerationIdx, rawHandle.id);
-        return; // early out
+        PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
+            generationIdx,
+            storedGenerationIdx,
+            rawHandle.id);
+        return;  // early out
     }
 
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (inputs.size() > RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT) {
         PLUGIN_LOG_W("RENDER_VALIDATION: render node graph resource input count (%u) exceeds limit (%u)",
-            static_cast<uint32_t>(inputs.size()), RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT);
+            static_cast<uint32_t>(inputs.size()),
+            RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT);
     }
     if (outputs.size() > RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT) {
         PLUGIN_LOG_W("RENDER_VALIDATION: render node graph resource output count (%u) exceeds limit (%u)",
-            static_cast<uint32_t>(outputs.size()), RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT);
+            static_cast<uint32_t>(outputs.size()),
+            RenderNodeGraphShareData::MAX_RENDER_NODE_GRAPH_RES_COUNT);
     }
 #endif
     auto& clientData = nodeGraphShareData_[index];
@@ -726,7 +739,7 @@ RenderNodeGraphResourceInfo RenderNodeGraphManager::GetRenderNodeGraphResources(
 
     // NOTE: should lock and handle/touch only the client side data
     if (index >= nodeGraphShareData_.size()) {
-        return info; // early out
+        return info;  // early out
     }
     const uint32_t generationIdx = RenderHandleUtil::GetGenerationIndexPart(rawHandle);
     const uint32_t storedGenerationIdx = RenderHandleUtil::GetGenerationIndexPart(nodeGraphHandles_[index].GetHandle());
@@ -741,8 +754,10 @@ RenderNodeGraphResourceInfo RenderNodeGraphManager::GetRenderNodeGraphResources(
             }
         }
     } else {
-        PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")", generationIdx,
-            storedGenerationIdx, rawHandle.id);
+        PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
+            generationIdx,
+            storedGenerationIdx,
+            rawHandle.id);
     }
     return info;
 }
@@ -766,7 +781,9 @@ RenderNodeGraphNodeStore* RenderNodeGraphManager::Get(RenderHandle handle)
                 return nodeGraphData_[index].get();
             } else {
                 PLUGIN_LOG_E("invalid generation index (%u != %u) with render node graph handle (%" PRIu64 ")",
-                    generationIdx, storedGenerationIdx, handle.id);
+                    generationIdx,
+                    storedGenerationIdx,
+                    handle.id);
             }
         }
     }
@@ -787,7 +804,8 @@ void RenderNodeGraphManager::Destroy(const string_view typeName)
             continue;
         }
         for (;;) {
-            auto pos = std::find_if(store->renderNodeData.begin(), store->renderNodeData.end(),
+            auto pos = std::find_if(store->renderNodeData.begin(),
+                store->renderNodeData.end(),
                 [typeName](const RenderNodeGraphNodeStore::RenderNodeData& data) { return data.typeName == typeName; });
             if (pos != store->renderNodeData.end()) {
                 const auto index = std::distance(store->renderNodeData.begin(), pos);

@@ -58,14 +58,14 @@ public:
 
 private:
     struct FileInfo {
-        uint64_t timestamp { 0 };
+        uint64_t timestamp{0};
         // removed is a file left over from last scan. which means it should be removed.
         enum {
             REMOVED = 0,
             NOCHANGE = 1,
             MODIFIED = 2,
             ADDED = 3,
-        } state { REMOVED };
+        } state{REMOVED};
     };
 
     bool IsWatchingDirectory(BASE_NS::string_view path);
@@ -80,4 +80,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_DEV__FILEMONITOR_H
+#endif  // CORE_IO_DEV__FILEMONITOR_H

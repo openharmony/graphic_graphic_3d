@@ -25,6 +25,6 @@
 namespace Culling {
 /*  Similar test case as we have the Hello world application */
 void CullingTest(CORE3D_NS::UTest::TestResources& res);
-} // namespace Culling
+}  // namespace Culling
 
-#endif // CORE3D_TEST_API_GFX_CULLING_TEST_H
+#endif  // CORE3D_TEST_API_GFX_CULLING_TEST_H

@@ -48,4 +48,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_UTIL_RENDER_UTIL_H
+#endif  // RENDER_UTIL_RENDER_UTIL_H

@@ -40,7 +40,7 @@ CpuDescriptorSet CreateCpuDescriptorSetData(
     LowLevelDescriptorCounts descriptorCounts;
     for (const auto& refBinding : descriptorSetLayoutBindings) {
         // NOTE: sort from 0 to n
-        newSet.bindings.push_back({ refBinding, {} });
+        newSet.bindings.push_back({refBinding, {}});
         NodeContextDescriptorSetManager::IncreaseDescriptorSetCounts(refBinding, descriptorCounts, dynamicOffsetCount);
     }
     newSet.buffers.resize(descriptorCounts.bufferCount);
@@ -49,6 +49,26 @@ CpuDescriptorSet CreateCpuDescriptorSetData(
 
     newSet.dynamicOffsetDescriptors.resize(dynamicOffsetCount);
     return newSet;
+}
+
+// GLES backend stores per-binding resources in a flat array indexed by the binding slot (see
+// ConvertDescSetToResource: dst[bindings.binding.binding]), so size by max-slot+1.
+inline uint32_t MaxBindingSlotPlusOne(const array_view<const DescriptorSetLayoutBinding> bindings)
+{
+    uint32_t maxSlot = 0;
+    for (const auto& b : bindings) {
+        maxSlot = Math::max(b.binding + 1U, maxSlot);
+    }
+    return maxSlot;
+}
+
+inline uint32_t MaxBindingSlotPlusOne(const vector<DescriptorSetLayoutBindingResource>& bindings)
+{
+    uint32_t maxSlot = 0;
+    for (const auto& b : bindings) {
+        maxSlot = Math::max(b.binding.binding + 1U, maxSlot);
+    }
+    return maxSlot;
 }
 
 constexpr uint32_t GetArrayOffset(const CpuDescriptorSet& data, const DescriptorSetLayoutBindingResource& res)
@@ -107,7 +127,7 @@ inline void BindImageSampler(GpuResourceManager& gpuResourceMgr, const BindableI
     const GpuResourceState& resState, Gles::Bind& obj, uint32_t index)
 {
     BindImage(gpuResourceMgr, res, resState, obj, index);
-    BindSampler(gpuResourceMgr, BindableSampler { res.samplerHandle }, obj, index);
+    BindSampler(gpuResourceMgr, BindableSampler{res.samplerHandle}, obj, index);
 }
 
 void BindBuffer(GpuResourceManager& gpuResourceMgr, const BindableBuffer& res, Gles::Bind& obj, uint32_t index)
@@ -117,6 +137,7 @@ void BindBuffer(GpuResourceManager& gpuResourceMgr, const BindableBuffer& res, G
         const uint32_t baseOffset = res.byteOffset;
         obj.resources[index].buffer.offset = baseOffset + plat.currentByteOffset;
         obj.resources[index].buffer.size = Math::min(plat.bindMemoryByteSize - baseOffset, res.byteSize);
+        obj.resources[index].buffer.totalSize = plat.alignedByteSize;
         obj.resources[index].buffer.bufferId = plat.buffer;
     } else {
         obj.resources[index].buffer = {};
@@ -175,9 +196,10 @@ void ConvertDescSetToResource(GpuResourceManager& gpuResMgr, const CpuDescriptor
         }
     }
 }
-} // namespace
+}  // namespace
 
-DescriptorSetManagerGles::DescriptorSetManagerGles(Device& device) : DescriptorSetManager(device) {}
+DescriptorSetManagerGles::DescriptorSetManagerGles(Device& device) : DescriptorSetManager(device)
+{}
 
 void DescriptorSetManagerGles::BeginFrame()
 {
@@ -255,7 +277,7 @@ bool DescriptorSetManagerGles::UpdateDescriptorSetGpuHandle(const RenderHandle& 
     }
     const auto& srcSet = descriptorSets_[arrayIndex]->data[additionalIndex].cpuDescriptorSet;
     auto& dst = resources_[arrayIndex][additionalIndex];
-    dst.resize(srcSet.bindings.size());
+    dst.resize(MaxBindingSlotPlusOne(srcSet.bindings));
     ConvertDescSetToResource(gpuResMgr, srcSet, dst);
 
     return true;
@@ -279,7 +301,7 @@ array_view<const Gles::Bind> DescriptorSetManagerGles::GetResources(RenderHandle
 }
 
 NodeContextDescriptorSetManagerGles::NodeContextDescriptorSetManagerGles(Device& device)
-    : NodeContextDescriptorSetManager(device), device_ { device }
+    : NodeContextDescriptorSetManager(device), device_{device}
 {
     PLUGIN_UNUSED(device_);
 }
@@ -314,7 +336,7 @@ RenderHandle NodeContextDescriptorSetManagerGles::CreateDescriptorSet(
         const auto arrayIndex = (uint32_t)cpuDescriptorSets.size();
         cpuDescriptorSets.push_back(CreateCpuDescriptorSetData(descriptorSetLayoutBindings));
         auto& resources = resources_[DESCRIPTOR_SET_INDEX_TYPE_STATIC].emplace_back();
-        resources.resize(descriptorSetLayoutBindings.size());
+        resources.resize(MaxBindingSlotPlusOne(descriptorSetLayoutBindings));
         // NOTE: can be used directly to index
         clientHandle = RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, arrayIndex, 0);
     }
@@ -330,7 +352,7 @@ RenderHandle NodeContextDescriptorSetManagerGles::CreateOneFrameDescriptorSet(
     const auto arrayIndex = static_cast<uint32_t>(cpuDescriptorSets.size());
     cpuDescriptorSets.push_back(CreateCpuDescriptorSetData(descriptorSetLayoutBindings));
     auto& resources = resources_[DESCRIPTOR_SET_INDEX_TYPE_ONE_FRAME].emplace_back();
-    resources.resize(descriptorSetLayoutBindings.size());
+    resources.resize(MaxBindingSlotPlusOne(descriptorSetLayoutBindings));
     //  NOTE: can be used directly to index
     clientHandle = RenderHandleUtil::CreateHandle(
         RenderHandleType::DESCRIPTOR_SET, arrayIndex, oneFrameDescSetGeneration_, ONE_FRAME_DESC_SET_BIT);
@@ -365,9 +387,10 @@ bool NodeContextDescriptorSetManagerGles::UpdateDescriptorSetGpuHandle(const Ren
     }
     const auto& srcSet = cpuDescriptorSets[arrayIndex];
     auto& dst = resources[arrayIndex];
-    if (srcSet.bindings.size() > dst.size()) {
+    const uint32_t requiredSize = MaxBindingSlotPlusOne(srcSet.bindings);
+    if (requiredSize > dst.size()) {
         // This shouldn't happen unless CreateDescriptorSet hasn't been called.
-        dst.resize(srcSet.bindings.size());
+        dst.resize(requiredSize);
     }
 
     auto& gpuResMgr = static_cast<GpuResourceManager&>(device_.GetGpuResourceManager());

@@ -57,6 +57,7 @@
 #include <3d/util/intf_mesh_util.h>
 #include <3d/util/intf_scene_util.h>
 
+#include "ecs/systems/light_probe_baker_system.h"
 #include "ecs/systems/local_matrix_system.h"
 #include "gltf/gltf2.h"
 #include "render/render_node_scene_util.h"
@@ -81,24 +82,24 @@ struct RegisterPathStrings {
     string_view uri;
 };
 static constexpr RegisterPathStrings RENDER_DATA_PATHS[] = {
-    { "3dshaders", "rofs3D://shaders/" },
-    { "3dshaderstates", "rofs3D://shaderstates/" },
-    { "3dvertexinputdeclarations", "rofs3D://vertexinputdeclarations/" },
-    { "3dpipelinelayouts", "rofs3D://pipelinelayouts/" },
-    { "3drenderdataconfigurations", "rofs3D://renderdataconfigurations/" },
-    { "3drendernodegraphs", "rofs3D://rendernodegraphs/" },
+    {"3dshaders", "rofs3D://shaders/"},
+    {"3dshaderstates", "rofs3D://shaderstates/"},
+    {"3dvertexinputdeclarations", "rofs3D://vertexinputdeclarations/"},
+    {"3dpipelinelayouts", "rofs3D://pipelinelayouts/"},
+    {"3drenderdataconfigurations", "rofs3D://renderdataconfigurations/"},
+    {"3drendernodegraphs", "rofs3D://rendernodegraphs/"},
 };
 
-static constexpr IShaderManager::ShaderFilePathDesc SHADER_FILE_PATHS {
+static constexpr IShaderManager::ShaderFilePathDesc SHADER_FILE_PATHS{
     "3dshaders://",
     "3dshaderstates://",
     "3dpipelinelayouts://",
     "3dvertexinputdeclarations://",
 };
 
-static constexpr string_view POST_PROCESS_PATH { "3drenderdataconfigurations://postprocess/" };
-static constexpr string_view POST_PROCESS_DATA_STORE_NAME { "RenderDataStorePod" };
-static constexpr string_view POST_PROCESS_NAME { "PostProcess" };
+static constexpr string_view POST_PROCESS_PATH{"3drenderdataconfigurations://postprocess/"};
+static constexpr string_view POST_PROCESS_DATA_STORE_NAME{"RenderDataStorePod"};
+static constexpr string_view POST_PROCESS_NAME{"PostProcess"};
 
 void LogCore3dBuildInfo()
 {
@@ -114,16 +115,26 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
     IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
 
     // default material gpu images
-    GpuImageDesc desc { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-        Format::BASE_FORMAT_R8G8B8A8_SRGB, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+    GpuImageDesc desc{ImageType::CORE_IMAGE_TYPE_2D,
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+        Format::BASE_FORMAT_R8G8B8A8_SRGB,
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSFER_DST_BIT,
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 0, 2, 2, 1, 1, 1,
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT, {} };
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        0,
+        0,
+        2,
+        2,
+        1,
+        1,
+        1,
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+        {}};
     constexpr uint32_t sizeOfUint32 = sizeof(uint32_t);
 
     desc.format = Format::BASE_FORMAT_R8G8B8A8_UNORM;
     {
-        constexpr const uint32_t normalData[4u] = { 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f };
+        constexpr const uint32_t normalData[4u] = {0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f, 0xFFFF7f7f};
         const auto normalDataView =
             array_view(reinterpret_cast<const uint8_t*>(normalData), sizeOfUint32 * countof(normalData));
         defaultGpuResources.push_back(gpuResourceMgr.Create(
@@ -132,7 +143,7 @@ void CreateDefaultImages(IDevice& device, vector<RenderHandleReference>& default
 
     desc.format = Format::BASE_FORMAT_R8_UNORM;
     {
-        constexpr const uint8_t byteData[4u] = { 0xff, 0xff, 0xff, 0xff };
+        constexpr const uint8_t byteData[4u] = {0xff, 0xff, 0xff, 0xff};
         const auto byteDataView =
             array_view(reinterpret_cast<const uint8_t*>(byteData), sizeof(uint8_t) * countof(byteData));
         defaultGpuResources.push_back(
@@ -162,28 +173,28 @@ void CreateDefaultSamplers(IDevice& device, vector<RenderHandleReference>& defau
 {
     IGpuResourceManager& gpuResourceMgr = device.GetGpuResourceManager();
     {
-        GpuSamplerDesc sampler {
-            Filter::CORE_FILTER_LINEAR,                                  // magFilter
-            Filter::CORE_FILTER_LINEAR,                                  // minFilter
-            Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        GpuSamplerDesc sampler{
+            Filter::CORE_FILTER_LINEAR,                                   // magFilter
+            Filter::CORE_FILTER_LINEAR,                                   // minFilter
+            Filter::CORE_FILTER_LINEAR,                                   // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
         };
-        constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
+        constexpr float CUBE_MAP_LOD_COEFF{8.0f};
         sampler.minLod = 0.0f;
         sampler.maxLod = CUBE_MAP_LOD_COEFF;
         defaultGpuResources.push_back(
             gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER, sampler));
     }
     {
-        GpuSamplerDesc sampler {
-            Filter::CORE_FILTER_LINEAR,                                  // magFilter
-            Filter::CORE_FILTER_LINEAR,                                  // minFilter
-            Filter::CORE_FILTER_LINEAR,                                  // mipMapMode
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeU
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeV
-            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // addressModeW
+        GpuSamplerDesc sampler{
+            Filter::CORE_FILTER_LINEAR,                                   // magFilter
+            Filter::CORE_FILTER_LINEAR,                                   // minFilter
+            Filter::CORE_FILTER_LINEAR,                                   // mipMapMode
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeU
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeV
+            SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // addressModeW
         };
         defaultGpuResources.push_back(
             gpuResourceMgr.Create(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_VSM_SHADOW_SAMPLER, sampler));
@@ -200,7 +211,7 @@ void CreateDefaultResources(IDevice& device, vector<RenderHandleReference>& defa
     CreateDefaultImages(device, defaultGpuResources);
     CreateDefaultSamplers(device, defaultGpuResources);
 }
-} // namespace
+}  // namespace
 
 // Core Rofs Data.
 extern "C" {
@@ -210,15 +221,16 @@ extern const uint64_t SIZE_OF_DATA_FOR_3D;
 
 struct Agp3DPluginState {
     IRenderContext& renderContext;
-    unique_ptr<GraphicsContext> context;
+    unique_ptr<GraphicsContext> graphicsContext;
 
     vector<RenderHandleReference> defaultGpuResources;
     vector<string> defaultPostProcesses;
 
     Picking picker_;
     RenderNodeSceneUtilImpl renderNodeSceneUtil;
-    InterfaceTypeInfo interfaces[4] = {
-        InterfaceTypeInfo {
+    LightProbeBaker::Ptr lightProbeBaker;
+    InterfaceTypeInfo interfaces[5] = {
+        InterfaceTypeInfo{
             this,
             UID_MESH_BUILDER,
             CORE_NS::GetName<IMeshBuilder>().data(),
@@ -231,7 +243,7 @@ struct Agp3DPluginState {
             },
             nullptr,
         },
-        InterfaceTypeInfo {
+        InterfaceTypeInfo{
             this,
             UID_PICKING,
             CORE_NS::GetName<IPicking>().data(),
@@ -244,7 +256,7 @@ struct Agp3DPluginState {
                 return nullptr;
             },
         },
-        InterfaceTypeInfo {
+        InterfaceTypeInfo{
             this,
             UID_RENDER_NODE_SCENE_UTIL,
             CORE_NS::GetName<IRenderNodeSceneUtil>().data(),
@@ -257,24 +269,46 @@ struct Agp3DPluginState {
                 return nullptr;
             },
         },
-        InterfaceTypeInfo {
+        InterfaceTypeInfo{
             this,
-            UID_GRAPHICS_CONTEXT,
-            CORE_NS::GetName<IGraphicsContext>().data(),
+            UID_LIGHT_PROBE_BAKER,
+            CORE_NS::GetName<ILightProbeBaker>().data(),
             [](IClassFactory& registry, PluginToken token) -> IInterface* {
                 if (token) {
                     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
-                    if (!state->context) {
-                        state->context = make_unique<GraphicsContext>(*state, state->renderContext);
+                    if (!state->lightProbeBaker) {
+                        state->lightProbeBaker.reset(new LightProbeBaker);
                     }
-                    return state->context->GetInterface(IInterface::UID);
+                    return state->lightProbeBaker->GetInterface(IInterface::UID);
                 }
                 return nullptr;
             },
             [](IClassRegister& registry, PluginToken token) -> IInterface* {
                 if (token) {
                     Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
-                    return state->context->GetInterface(IInterface::UID);
+                    return state->lightProbeBaker->GetInterface(IInterface::UID);
+                }
+                return nullptr;
+            },
+        },
+        InterfaceTypeInfo{
+            this,
+            UID_GRAPHICS_CONTEXT,
+            CORE_NS::GetName<IGraphicsContext>().data(),
+            [](IClassFactory& registry, PluginToken token) -> IInterface* {
+                if (token) {
+                    Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
+                    if (!state->graphicsContext) {
+                        state->graphicsContext = make_unique<GraphicsContext>(*state, state->renderContext);
+                    }
+                    return state->graphicsContext->GetInterface(IInterface::UID);
+                }
+                return nullptr;
+            },
+            [](IClassRegister& registry, PluginToken token) -> IInterface* {
+                if (token) {
+                    Agp3DPluginState* state = static_cast<Agp3DPluginState*>(token);
+                    return state->graphicsContext->GetInterface(IInterface::UID);
                 }
                 return nullptr;
             },
@@ -283,12 +317,12 @@ struct Agp3DPluginState {
 
     void Destroy()
     {
-        context.reset();
+        graphicsContext.reset();
     }
 };
 
-GraphicsContext::GraphicsContext(struct Agp3DPluginState& factory, IRenderContext& context)
-    : factory_(factory), context_(context)
+GraphicsContext::GraphicsContext(struct Agp3DPluginState& factory, IRenderContext& renderContext)
+    : factory_(factory), renderContext_(renderContext)
 {
     LogCore3dBuildInfo();
 }
@@ -303,7 +337,7 @@ GraphicsContext ::~GraphicsContext()
         }
     }
     if (sceneUtil_ && gltf2_) {
-        sceneUtil_->UnregisterSceneLoader(IInterface::Ptr { gltf2_->GetInterface(ISceneLoader::UID) });
+        sceneUtil_->UnregisterSceneLoader(IInterface::Ptr{gltf2_->GetInterface(ISceneLoader::UID)});
     }
 }
 
@@ -315,7 +349,7 @@ void GraphicsContext::Init(const CreateInfo& createInfo)
     if (initialized_) {
         return;
     }
-    auto& engine = context_.GetEngine();
+    auto& engine = renderContext_.GetEngine();
 
     createInfo_ = createInfo;
     if (auto classFactory = engine.GetInterface<CORE_NS::IClassFactory>(); classFactory) {
@@ -324,7 +358,7 @@ void GraphicsContext::Init(const CreateInfo& createInfo)
     gltf2_ = make_unique<Gltf2>(*this);
     sceneUtil_ = make_unique<SceneUtil>(*this);
     renderUtil_ = make_unique<RenderUtil>(*this);
-    sceneUtil_->RegisterSceneLoader(IInterface::Ptr { gltf2_->GetInterface(ISceneLoader::UID) });
+    sceneUtil_->RegisterSceneLoader(IInterface::Ptr{gltf2_->GetInterface(ISceneLoader::UID)});
     initialized_ = true;
 
     GetPluginRegister().AddListener(*this);
@@ -332,7 +366,7 @@ void GraphicsContext::Init(const CreateInfo& createInfo)
     for (auto info : CORE3D_NS::GetPluginRegister().GetTypeInfos(I3DPlugin::UID)) {
         if (auto plugin = static_cast<const I3DPlugin*>(info); plugin && plugin->createPlugin) {
             auto token = plugin->createPlugin(*this);
-            plugins_.push_back({ token, plugin });
+            plugins_.push_back({token, plugin});
         }
     }
 }
@@ -344,7 +378,7 @@ void GraphicsContext::Init()
 
 IRenderContext& GraphicsContext::GetRenderContext() const
 {
-    return context_;
+    return renderContext_;
 }
 
 array_view<const RenderHandleReference> GraphicsContext::GetRenderNodeGraphs(const IEcs& ecs) const
@@ -429,12 +463,13 @@ IInterface* GraphicsContext::GetInterface(const Uid& uid)
 
 void GraphicsContext::Ref()
 {
-    refcnt_++;
+    BASE_NS::AtomicIncrementRelaxed(&refcnt_);
 }
 
 void GraphicsContext::Unref()
 {
-    if (--refcnt_ == 0) {
+    if (BASE_NS::AtomicDecrementRelease(&refcnt_) == 0) {
+        BASE_NS::AtomicFenceAcquire();
         factory_.Destroy();
     }
 }
@@ -442,7 +477,9 @@ void GraphicsContext::Unref()
 void GraphicsContext::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     // keep interfaceTypeInfos_ sorted according to UIDs
-    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(),
+        interfaceTypeInfos_.cend(),
+        interfaceInfo.uid,
         [](Uid value, const InterfaceTypeInfo* element) { return value < element->uid; });
     interfaceTypeInfos_.insert(pos, &interfaceInfo);
 }
@@ -450,7 +487,9 @@ void GraphicsContext::RegisterInterfaceType(const InterfaceTypeInfo& interfaceIn
 void GraphicsContext::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
@@ -465,10 +504,12 @@ array_view<const InterfaceTypeInfo* const> GraphicsContext::GetInterfaceMetadata
 
 const InterfaceTypeInfo& GraphicsContext::GetInterfaceMetadata(const Uid& uid) const
 {
-    static InterfaceTypeInfo invalidType {};
+    static InterfaceTypeInfo invalidType{};
 
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
@@ -490,9 +531,9 @@ IInterface::Ptr GraphicsContext::CreateInstance(const BASE_NS::Uid& uid)
 {
     const auto& data = GetInterfaceMetadata(uid);
     if (data.createInterface) {
-        return IInterface::Ptr { data.createInterface(*this, data.token) };
+        return IInterface::Ptr{data.createInterface(*this, data.token)};
     }
-    return IInterface::Ptr {};
+    return IInterface::Ptr{};
 }
 
 void GraphicsContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typeInfos)
@@ -501,12 +542,13 @@ void GraphicsContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == I3DPlugin::UID && static_cast<const I3DPlugin*>(info)->createPlugin) {
                 auto plugin = static_cast<const I3DPlugin*>(info);
-                if (std::none_of(plugins_.begin(), plugins_.end(),
+                if (std::none_of(plugins_.begin(),
+                        plugins_.end(),
                         [plugin](const pair<PluginToken, const I3DPlugin*>& pluginData) {
                             return pluginData.second == plugin;
                         })) {
                     auto token = plugin->createPlugin(*this);
-                    plugins_.push_back({ token, plugin });
+                    plugins_.push_back({token, plugin});
                 }
             }
         }
@@ -514,7 +556,8 @@ void GraphicsContext::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == I3DPlugin::UID) {
                 auto plugin = static_cast<const I3DPlugin*>(info);
-                if (auto pos = std::find_if(plugins_.begin(), plugins_.end(),
+                if (auto pos = std::find_if(plugins_.begin(),
+                        plugins_.end(),
                         [plugin](const pair<PluginToken, const I3DPlugin*>& pluginData) {
                             return pluginData.second == plugin;
                         });
@@ -533,17 +576,17 @@ void RegisterTypes(IPluginRegister& pluginRegistry);
 void UnregisterTypes(IPluginRegister& pluginRegistry);
 
 namespace {
-PluginToken CreatePlugin3D(IRenderContext& context)
+PluginToken CreatePlugin3D(IRenderContext& renderContext)
 {
     CORE_CPU_PERF_SCOPE("CORE3D", "CreatePlugin3D", "", CORE3D_PROFILER_DEFAULT_COLOR);
 
-    Agp3DPluginState* token = new Agp3DPluginState { context, {}, {}, {}, {}, {} };
-    auto& registry = *context.GetInterface<IClassRegister>();
+    Agp3DPluginState* token = new Agp3DPluginState{renderContext, {}, {}, {}, {}, {}, {}};
+    auto& registry = *renderContext.GetInterface<IClassRegister>();
     for (const auto& info : token->interfaces) {
         registry.RegisterInterfaceType(info);
     }
 
-    IFileManager& fileManager = context.GetEngine().GetFileManager();
+    IFileManager& fileManager = renderContext.GetEngine().GetFileManager();
 #if (CORE3D_EMBEDDED_ASSETS_ENABLED == 1)
     // Create rofs3D:// protocol that points to embedded asset files.
     fileManager.RegisterFilesystem("rofs3D", fileManager.CreateROFilesystem(BINARY_DATA_FOR_3D, SIZE_OF_DATA_FOR_3D));
@@ -551,15 +594,15 @@ PluginToken CreatePlugin3D(IRenderContext& context)
     for (uint32_t idx = 0; idx < countof(RENDER_DATA_PATHS); ++idx) {
         fileManager.RegisterPath(RENDER_DATA_PATHS[idx].protocol, RENDER_DATA_PATHS[idx].uri, false);
     }
-    context.GetDevice().GetShaderManager().LoadShaderFiles(SHADER_FILE_PATHS);
+    renderContext.GetDevice().GetShaderManager().LoadShaderFiles(SHADER_FILE_PATHS);
 
-    CreateDefaultResources(context.GetDevice(), token->defaultGpuResources);
+    CreateDefaultResources(renderContext.GetDevice(), token->defaultGpuResources);
     {
         auto* renderDataConfigurationLoader = CORE_NS::GetInstance<IRenderDataConfigurationLoader>(
-            *context.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
-        auto dataStore = context.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
+            *renderContext.GetInterface<IClassRegister>(), UID_RENDER_DATA_CONFIGURATION_LOADER);
+        auto dataStore = renderContext.GetRenderDataStoreManager().GetRenderDataStore(POST_PROCESS_DATA_STORE_NAME);
         if (renderDataConfigurationLoader && dataStore) {
-            auto& fileMgr = context.GetEngine().GetFileManager();
+            auto& fileMgr = renderContext.GetEngine().GetFileManager();
             constexpr string_view ppPath = POST_PROCESS_PATH;
             if (auto dir = fileMgr.OpenDirectory(ppPath); dir) {
                 for (const auto& entry : dir->GetEntries()) {
@@ -622,11 +665,12 @@ PluginToken CreateEcsPlugin3D(IEcs& ecs)
     return {};
 }
 
-void DestroyEcsPlugin3D(PluginToken token) {}
+void DestroyEcsPlugin3D(PluginToken token)
+{}
 
 constexpr IRenderPlugin RENDER_PLUGIN(CreatePlugin3D, DestroyPlugin3D);
 constexpr IEcsPlugin ECS_PLUGIN(CreateEcsPlugin3D, DestroyEcsPlugin3D);
-} // namespace
+}  // namespace
 
 PluginToken RegisterInterfaces3D(IPluginRegister& pluginRegistry)
 {

@@ -33,7 +33,7 @@ namespace {
 void TestGpuResourceCache(const UTest::EngineResources& er)
 {
     GpuResourceManager& gpuResourceMgr = static_cast<GpuResourceManager&>(er.device->GetGpuResourceManager());
-    GpuResourceCache gpuResourceCache { gpuResourceMgr };
+    GpuResourceCache gpuResourceCache{gpuResourceMgr};
 
     gpuResourceCache.BeginFrame(0u);
     CacheGpuImageDesc desc;
@@ -66,7 +66,7 @@ void TestGpuResourceCache(const UTest::EngineResources& er)
         ASSERT_EQ(0, images.size());
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: GpuResourceCacheTest

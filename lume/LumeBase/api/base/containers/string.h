@@ -27,13 +27,13 @@
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class CharT>
+template <class CharT>
 class basic_string;
 
 using string = BASE_NS::basic_string<char>;
 using wstring = BASE_NS::basic_string<wchar_t>;
 
-template<class CharT>
+template <class CharT>
 class basic_string {
 public:
     using string_view = basic_string_view<CharT>;
@@ -51,14 +51,15 @@ public:
 
     static constexpr size_type npos = size_type(-1);
 
-    template<typename T>
+    template <typename T>
     using StringViewLikeNotCStr =
         enable_if_t<is_convertible_v<const T&, string_view> && !is_convertible_v<const T&, const_pointer>>;
 
-    template<typename T>
+    template <typename T>
     using StringViewLike = enable_if_t<is_convertible_v<const T&, string_view>>;
 
-    basic_string() noexcept : basic_string(default_allocator()) {}
+    basic_string() noexcept : basic_string(default_allocator())
+    {}
 
     ~basic_string()
     {
@@ -74,7 +75,8 @@ public:
         data_.shortString.size = static_cast<value_type>(shortCapacity);
     }
 
-    basic_string(const basic_string& str) : basic_string(str, default_allocator()) {}
+    basic_string(const basic_string& str) : basic_string(str, default_allocator())
+    {}
 
     basic_string(const basic_string& str, allocator& alloc) : allocator_(alloc)
     {
@@ -105,18 +107,22 @@ public:
         a.data_.shortString.size = static_cast<value_type>(shortCapacity);
     }
 
-    basic_string(const_pointer const str) : basic_string(str, default_allocator()) {}
+    basic_string(const_pointer const str) : basic_string(str, default_allocator())
+    {}
 
-    basic_string(const_pointer const str, allocator& alloc) : basic_string(str, constexpr_strlen(str), alloc) {}
+    basic_string(const_pointer const str, allocator& alloc) : basic_string(str, constexpr_strlen(str), alloc)
+    {}
 
-    basic_string(const_pointer const str, size_type count) : basic_string(str, count, default_allocator()) {}
+    basic_string(const_pointer const str, size_type count) : basic_string(str, count, default_allocator())
+    {}
 
     basic_string(const_pointer const str, size_type count, allocator& alloc) : allocator_(alloc)
     {
         construct(str, count);
     }
 
-    basic_string(size_type count, const value_type a) : basic_string(count, a, default_allocator()) {}
+    basic_string(size_type count, const value_type a) : basic_string(count, a, default_allocator())
+    {}
 
     basic_string(size_type count, const value_type a, allocator& alloc) : allocator_(alloc)
     {
@@ -125,11 +131,11 @@ public:
         assign(count, a);
     }
 
-    template<class StringT, class = StringViewLikeNotCStr<StringT>>
+    template <class StringT, class = StringViewLikeNotCStr<StringT>>
     explicit basic_string(const StringT& a) : basic_string(a, default_allocator())
     {}
 
-    template<class StringT, class = StringViewLikeNotCStr<StringT>>
+    template <class StringT, class = StringViewLikeNotCStr<StringT>>
     explicit basic_string(const StringT& a, allocator& alloc) : allocator_(alloc)
     {
         if constexpr (is_same_v<StringT, string_view>) {
@@ -140,11 +146,11 @@ public:
         }
     }
 
-    template<class StringT, class = StringViewLike<StringT>>
+    template <class StringT, class = StringViewLike<StringT>>
     basic_string(const StringT& a, size_type pos, size_type n) : basic_string(a, pos, n, default_allocator())
     {}
 
-    template<class StringT, class = StringViewLike<StringT>>
+    template <class StringT, class = StringViewLike<StringT>>
     basic_string(const StringT& a, size_type pos, size_type n, allocator& alloc)
         : basic_string(string_view(a).substr(pos, n), alloc)
     {}
@@ -161,21 +167,25 @@ public:
 
     value_type& back()
     {
+        BASE_ASSERT(!empty());
         return *(data() + size() - 1);
     }
 
     const value_type& back() const
     {
+        BASE_ASSERT(!empty());
         return *(data() + size() - 1);
     }
 
     value_type& front()
     {
+        BASE_ASSERT(!empty());
         return *data();
     }
 
     const value_type& front() const
     {
+        BASE_ASSERT(!empty());
         return *data();
     }
 
@@ -243,7 +253,7 @@ public:
         return *this;
     }
 
-    template<class StringT, class = StringViewLikeNotCStr<StringT>>
+    template <class StringT, class = StringViewLikeNotCStr<StringT>>
     basic_string& operator=(const StringT& a)
     {
         const auto view = string_view(a);
@@ -402,7 +412,7 @@ public:
         resize(size, '\0');
     }
 
-    template<class StringT, class = StringViewLikeNotCStr<StringT>>
+    template <class StringT, class = StringViewLikeNotCStr<StringT>>
     basic_string& operator+=(const StringT& a)
     {
         const auto view = string_view(a);
@@ -518,12 +528,17 @@ public:
         if (pos > oldSize) {
             pos = oldSize;
         }
+        if (n > npos - oldSize) {
+            return *this;
+        }
         const auto newSize = oldSize + n;
         if (newSize > capacity()) {
             if (const auto ptr = allocator_.alloc(newSize + 1)) {
                 const auto oldPtr = data();
                 CloneData(ptr, newSize * sizeof(value_type), oldPtr, pos * sizeof(value_type));
-                CloneData(ptr + pos + n, (newSize - pos - n) * sizeof(value_type), oldPtr + pos,
+                CloneData(ptr + pos + n,
+                    (newSize - pos - n) * sizeof(value_type),
+                    oldPtr + pos,
                     (oldSize - pos) * sizeof(value_type));
                 CloneData(ptr + pos, (newSize - pos) * sizeof(value_type), str, n * sizeof(value_type));
                 ptr[newSize] = '\0';
@@ -575,6 +590,9 @@ public:
     {
         if (count) {
             const auto oldSize = size();
+            if (count > npos - oldSize) {
+                return *this;
+            }
             const auto newSize = oldSize + count;
             if (size_type cap = capacity(); cap < newSize) {
                 if (!grow(newSize)) {
@@ -614,6 +632,9 @@ public:
                 dst = data_.longString.begin;
             }
 
+            if (count > npos - oldSize) {
+                return *this;
+            }
             const auto newSize = oldSize + count;
             if (oldCapacity < newSize) {
                 oldCapacity += oldCapacity / 2U;
@@ -841,7 +862,7 @@ protected:
     inline bool grow(const size_type minCapacity)
     {
         auto cap = capacity();
-        cap += cap / 2U; // increase by half the capacity
+        cap += cap / 2U;  // increase by half the capacity
         return allocate(minCapacity < cap ? cap : minCapacity);
     }
 
@@ -923,7 +944,8 @@ protected:
     // Wrapper to create a "re-seatable" reference.
     class Wrapper {
     public:
-        inline Wrapper(allocator& a) : allocator_(&a) {}
+        inline Wrapper(allocator& a) : allocator_(&a)
+        {}
         inline Wrapper& operator=(allocator& a)
         {
             allocator_ = &a;
@@ -954,7 +976,7 @@ protected:
         }
 
     private:
-        allocator* allocator_ { nullptr };
+        allocator* allocator_{nullptr};
     } allocator_;
     Data data_;
 };
@@ -1062,115 +1084,115 @@ inline string operator+(char a, string&& b)
     return move(b.insert(0, &a, 1));
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator==(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) == string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator==(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) == rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator==(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs == string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator!=(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) != string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator!=(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) != rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator!=(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs != string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) < string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) < rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs < string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<=(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) <= string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<=(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) <= rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator<=(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs <= string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) > string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) > rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs > string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>=(const basic_string<CharT>& lhs, const basic_string<CharT>& rhs) noexcept
 {
     return string_view(lhs) >= string_view(rhs);
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>=(const basic_string<CharT>& lhs, const CharT* const rhs) noexcept
 {
     return string_view(lhs) >= rhs;
 }
 
-template<class CharT>
+template <class CharT>
 inline bool operator>=(const CharT* const lhs, const basic_string<CharT>& rhs) noexcept
 {
     return lhs >= string_view(rhs);
 }
 
-template<>
+template <>
 inline uint64_t hash(const string& value)
 {
     return BASE_NS::FNV1aHash(value.data(), value.size());
@@ -1181,10 +1203,10 @@ inline namespace string_literals {
 /// User-defined literal to allow the following syntax to construct a string: "myLiteral"_s
 [[nodiscard]] inline BASE_NS::string operator""_s(const char* literal, const size_t length)
 {
-    return { literal, length };
+    return {literal, length};
 }
-} // namespace string_literals
-} // namespace literals
+}  // namespace string_literals
+}  // namespace literals
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_STRING_H
+#endif  // API_BASE_CONTAINERS_STRING_H

@@ -24,10 +24,10 @@
 CORE_BEGIN_NAMESPACE()
 
 // Helper class for running lambda as a ThreadPool task.
-template<typename Fn>
+template <typename Fn>
 class FunctionTask final : public IThreadPool::ITask {
 public:
-    explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)) {};
+    explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)){};
 
     void operator()() override
     {
@@ -44,13 +44,13 @@ private:
     Fn func_;
 };
 
-template<typename Fn>
+template <typename Fn>
 inline IThreadPool::ITask::Ptr CreateFunctionTask(Fn&& func)
 {
-    return IThreadPool::ITask::Ptr { new FunctionTask<Fn>(BASE_NS::move(func)) };
+    return IThreadPool::ITask::Ptr{new FunctionTask<Fn>(BASE_NS::move(func))};
 }
 
-template<class RandomIt, class Compare>
+template <class RandomIt, class Compare>
 void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* threadPool)
 {
     const auto totalSize = std::distance(first, last);
@@ -73,7 +73,7 @@ void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* thre
             partEnd = last;
         }
 
-        partitions.push_back({ partStart, partEnd });
+        partitions.push_back({partStart, partEnd});
         partStart = partEnd;
     }
 
@@ -107,7 +107,7 @@ void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* thre
             auto result = threadPool->Push(BASE_NS::move(task));
             mergeResults.push_back(BASE_NS::move(result));
 
-            newPartitions.push_back({ begin1, end2 });
+            newPartitions.push_back({begin1, end2});
         }
 
         if (partitions.size() % 2U == 1U) {
@@ -123,7 +123,7 @@ void ParallelSort(RandomIt first, RandomIt last, Compare comp, IThreadPool* thre
     }
 }
 
-template<class RandomIt>
+template <class RandomIt>
 void ParallelSort(RandomIt first, RandomIt last, IThreadPool* threadPool)
 {
     using ValueType = typename std::iterator_traits<RandomIt>::value_type;

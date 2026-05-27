@@ -57,6 +57,25 @@ public:
         return LoadImage(uri, DEFAULT_IMAGE_LOAD_INFO);
     }
 
+    /**
+     * @brief Start loading an image asynchronously on a shared worker pool.
+     * Returns a shell IImage immediately; the render handle is populated later
+     * when the decode + GPU create finishes. The caller MUST call
+     * WaitAllPendingLoads() before any consumer reads GetRenderHandle() on the
+     * returned image.
+     */
+    virtual IImage::Ptr LoadImageDeferred(BASE_NS::string_view uri, const ImageLoadInfo&) = 0;
+    IImage::Ptr LoadImageDeferred(BASE_NS::string_view uri)
+    {
+        return LoadImageDeferred(uri, DEFAULT_IMAGE_LOAD_INFO);
+    }
+
+    /**
+     * @brief Block until all LoadImageDeferred calls issued by any
+     * RenderResourceManager have completed. Drains the shared worker pool.
+     */
+    virtual void WaitAllPendingLoads() = 0;
+
     virtual Future<IShader::Ptr> LoadShader(BASE_NS::string_view uri) = 0;
 };
 

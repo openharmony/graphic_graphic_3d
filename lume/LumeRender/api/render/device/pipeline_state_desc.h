@@ -31,29 +31,29 @@ RENDER_BEGIN_NAMESPACE()
 /** Size 2D */
 struct Size2D {
     /** Width */
-    uint32_t width { 0 };
+    uint32_t width{0};
     /** Height */
-    uint32_t height { 0 };
+    uint32_t height{0};
 };
 
 /** Size 3D */
 struct Size3D {
     /** Width */
-    uint32_t width { 0 };
+    uint32_t width{0};
     /** Height */
-    uint32_t height { 0 };
+    uint32_t height{0};
     /** Depth */
-    uint32_t depth { 0 };
+    uint32_t depth{0};
 };
 
 /** Offset 3D */
 struct Offset3D {
     /** X offset */
-    int32_t x { 0 };
+    int32_t x{0};
     /** Y offset */
-    int32_t y { 0 };
+    int32_t y{0};
     /** Z offset */
-    int32_t z { 0 };
+    int32_t z{0};
 };
 
 /** Surface transform flag bits */
@@ -136,13 +136,13 @@ using FormatFeatureFlags = uint32_t;
 /** Format properties */
 struct FormatProperties {
     /** Linear tiling feature flags */
-    FormatFeatureFlags linearTilingFeatures { 0u };
+    FormatFeatureFlags linearTilingFeatures{0u};
     /** Optimal tiling feature flags */
-    FormatFeatureFlags optimalTilingFeatures { 0u };
+    FormatFeatureFlags optimalTilingFeatures{0u};
     /** Buffer feature flags */
-    FormatFeatureFlags bufferFeatures { 0u };
+    FormatFeatureFlags bufferFeatures{0u};
     /** Bytes per pixel */
-    uint32_t bytesPerPixel { 0u };
+    uint32_t bytesPerPixel{0u};
 };
 
 /** Fragment shading rate properties */
@@ -314,9 +314,9 @@ struct GpuQueue {
     };
 
     /** Type of queue */
-    QueueType type { QueueType::UNDEFINED };
+    QueueType type{QueueType::UNDEFINED};
     /** Index of queue */
-    uint32_t index { 0 };
+    uint32_t index{0};
 };
 
 /** Descriptor type */
@@ -667,9 +667,9 @@ enum AttachmentStoreOp {
 union ClearColorValue {
     ClearColorValue() = default;
     ~ClearColorValue() = default;
-    constexpr ClearColorValue(float r, float g, float b, float a) : float32 { r, g, b, a } {};
-    constexpr ClearColorValue(int32_t r, int32_t g, int32_t b, int32_t a) : int32 { r, g, b, a } {};
-    constexpr ClearColorValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) : uint32 { r, g, b, a } {};
+    constexpr ClearColorValue(float r, float g, float b, float a) : float32{r, g, b, a} {};
+    constexpr ClearColorValue(int32_t r, int32_t g, int32_t b, int32_t a) : int32{r, g, b, a} {};
+    constexpr ClearColorValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) : uint32{r, g, b, a} {};
     /** Float32 array of 4 */
     float float32[4];
     /** int32 array of 4 */
@@ -690,12 +690,12 @@ struct ClearDepthStencilValue {
 union ClearValue {
     ClearValue() = default;
     ~ClearValue() = default;
-    constexpr explicit ClearValue(const ClearColorValue& color) : color { color } {};
-    constexpr explicit ClearValue(const ClearDepthStencilValue& depthStencil) : depthStencil { depthStencil } {};
-    constexpr ClearValue(float r, float g, float b, float a) : color { r, g, b, a } {};
-    constexpr ClearValue(int32_t r, int32_t g, int32_t b, int32_t a) : color { r, g, b, a } {};
-    constexpr ClearValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) : color { r, g, b, a } {};
-    constexpr ClearValue(float depth, uint32_t stencil) : depthStencil { depth, stencil } {};
+    constexpr explicit ClearValue(const ClearColorValue& color) : color{color} {};
+    constexpr explicit ClearValue(const ClearDepthStencilValue& depthStencil) : depthStencil{depthStencil} {};
+    constexpr ClearValue(float r, float g, float b, float a) : color{r, g, b, a} {};
+    constexpr ClearValue(int32_t r, int32_t g, int32_t b, int32_t a) : color{r, g, b, a} {};
+    constexpr ClearValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) : color{r, g, b, a} {};
+    constexpr ClearValue(float depth, uint32_t stencil) : depthStencil{depth, stencil} {};
 
     /** Color */
     ClearColorValue color;
@@ -811,91 +811,91 @@ enum FragmentShadingRateCombinerOp {
 /** Fragment shading rate combiner operations for commands */
 struct FragmentShadingRateCombinerOps {
     /** First combiner (combine pipeline and primitive shading rates) */
-    FragmentShadingRateCombinerOp op1 { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP };
+    FragmentShadingRateCombinerOp op1{CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP};
     /** Second combiner (combine the first with attachment fragment shading rate) */
-    FragmentShadingRateCombinerOp op2 { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP };
+    FragmentShadingRateCombinerOp op2{CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP};
 };
 
 /** Pipeline state constants */
 struct PipelineStateConstants {
     /** GPU buffer whole size */
-    static constexpr uint32_t GPU_BUFFER_WHOLE_SIZE { ~0u };
+    static constexpr uint32_t GPU_BUFFER_WHOLE_SIZE{~0u};
     /** GPU image all mip levels */
-    static constexpr uint32_t GPU_IMAGE_ALL_MIP_LEVELS { ~0u };
+    static constexpr uint32_t GPU_IMAGE_ALL_MIP_LEVELS{~0u};
     /** GPU image all layers */
-    static constexpr uint32_t GPU_IMAGE_ALL_LAYERS { ~0u };
+    static constexpr uint32_t GPU_IMAGE_ALL_LAYERS{~0u};
     /** Max vertex buffer count */
-    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT { 8u };
+    static constexpr uint32_t MAX_VERTEX_BUFFER_COUNT{8u};
 
     /** Max input attachment count */
-    static constexpr uint32_t MAX_INPUT_ATTACHMENT_COUNT { 8u };
+    static constexpr uint32_t MAX_INPUT_ATTACHMENT_COUNT{8u};
     /** Max color attachment count */
-    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT { 8u };
+    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT{8u};
     /** Max resolve attachment count */
-    static constexpr uint32_t MAX_RESOLVE_ATTACHMENT_COUNT { 4u };
+    static constexpr uint32_t MAX_RESOLVE_ATTACHMENT_COUNT{4u};
     /** Max render pass attachment count */
-    static constexpr uint32_t MAX_RENDER_PASS_ATTACHMENT_COUNT { 8u };
+    static constexpr uint32_t MAX_RENDER_PASS_ATTACHMENT_COUNT{8u};
     /** Max render node gpu wait signals */
-    static constexpr uint32_t MAX_RENDER_NODE_GPU_WAIT_SIGNALS { 4u };
+    static constexpr uint32_t MAX_RENDER_NODE_GPU_WAIT_SIGNALS{4u};
 
     /** Acceleration structure instance byte size */
-    static constexpr uint32_t ACCELERATION_STRUCTURE_INSTANCE_SIZE { 64u };
+    static constexpr uint32_t ACCELERATION_STRUCTURE_INSTANCE_SIZE{64u};
 };
 
 /** Viewport descriptor
  * x and y are upper left corner (x,y) */
 struct ViewportDesc {
     /** X point */
-    float x { 0.0f };
+    float x{0.0f};
     /** Y point */
-    float y { 0.0f };
+    float y{0.0f};
     /** Width */
-    float width { 0.0f };
+    float width{0.0f};
     /** Height */
-    float height { 0.0f };
+    float height{0.0f};
 
     /** Min depth (0.0f - 1.0f) */
-    float minDepth { 0.0f };
+    float minDepth{0.0f};
     /** Max depth (0.0f - 1.0f) */
-    float maxDepth { 1.0f };
+    float maxDepth{1.0f};
 };
 
 /** Scissor descriptor */
 struct ScissorDesc {
     /** X offset */
-    int32_t offsetX { 0 };
+    int32_t offsetX{0};
     /** Y offset */
-    int32_t offsetY { 0 };
+    int32_t offsetY{0};
     /** Extent width */
-    uint32_t extentWidth { 0 };
+    uint32_t extentWidth{0};
     /** Extent height */
-    uint32_t extentHeight { 0 };
+    uint32_t extentHeight{0};
 };
 
 /** Image subresource layers */
 struct ImageSubresourceLayers {
     /** Image aspect flags */
-    ImageAspectFlags imageAspectFlags { 0 };
+    ImageAspectFlags imageAspectFlags{0};
     /** Mip level */
-    uint32_t mipLevel { 0 };
+    uint32_t mipLevel{0};
     /** Base array layer */
-    uint32_t baseArrayLayer { 0 };
+    uint32_t baseArrayLayer{0};
     /** Layer count */
-    uint32_t layerCount { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    uint32_t layerCount{PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 };
 
 /** Image subresource range */
 struct ImageSubresourceRange {
     /** Image aspect flags */
-    ImageAspectFlags imageAspectFlags { 0 };
+    ImageAspectFlags imageAspectFlags{0};
     /** Base mip level */
-    uint32_t baseMipLevel { 0 };
+    uint32_t baseMipLevel{0};
     /** Level count */
-    uint32_t levelCount { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t levelCount{PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS};
     /** Base array layer */
-    uint32_t baseArrayLayer { 0 };
+    uint32_t baseArrayLayer{0};
     /** Layer count */
-    uint32_t layerCount { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    uint32_t layerCount{PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 };
 
 /** Image blit */
@@ -913,47 +913,47 @@ struct ImageBlit {
 /** Memory barrier with pipeline stages */
 struct GeneralBarrier {
     /** Access flags */
-    AccessFlags accessFlags { 0 };
+    AccessFlags accessFlags{0};
     /** Pipeline stage flags */
-    PipelineStageFlags pipelineStageFlags { 0 };
+    PipelineStageFlags pipelineStageFlags{0};
 };
 
 /** Buffer resource barrier */
 struct BufferResourceBarrier {
     /** Access flags */
-    AccessFlags accessFlags { 0 };
+    AccessFlags accessFlags{0};
     /** Pipeline stage flags */
-    PipelineStageFlags pipelineStageFlags { 0 };
+    PipelineStageFlags pipelineStageFlags{0};
 };
 
 /** Image resource barrier */
 struct ImageResourceBarrier {
     /** Access flags */
-    AccessFlags accessFlags { 0 };
+    AccessFlags accessFlags{0};
     /** Pipeline stage flags */
-    PipelineStageFlags pipelineStageFlags { 0 };
+    PipelineStageFlags pipelineStageFlags{0};
     /** Image layout */
-    ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+    ImageLayout imageLayout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
 };
 
 /** Buffer copy */
 struct BufferCopy {
     /** Offset to source buffer */
-    uint32_t srcOffset { 0 };
+    uint32_t srcOffset{0};
     /** Offset to destination buffer */
-    uint32_t dstOffset { 0 };
+    uint32_t dstOffset{0};
     /** Size of copy */
-    uint32_t size { 0 };
+    uint32_t size{0};
 };
 
 /** Buffer image copy */
 struct BufferImageCopy {
     /** Buffer offset */
-    uint32_t bufferOffset { 0 };
+    uint32_t bufferOffset{0};
     /** Buffer row length */
-    uint32_t bufferRowLength { 0 };
+    uint32_t bufferRowLength{0};
     /** Buffer image height */
-    uint32_t bufferImageHeight { 0 };
+    uint32_t bufferImageHeight{0};
     /** Image subresource */
     ImageSubresourceLayers imageSubresource;
     /** Image offset */
@@ -979,15 +979,15 @@ struct ImageCopy {
 /** GPU resource state in pipeline */
 struct GpuResourceState {
     /** Shader stage flags */
-    ShaderStageFlags shaderStageFlags { 0 };
+    ShaderStageFlags shaderStageFlags{0};
 
     /** Access flags */
-    AccessFlags accessFlags { 0 };
+    AccessFlags accessFlags{0};
     /** Pipeline stage flags */
-    PipelineStageFlags pipelineStageFlags { 0 };
+    PipelineStageFlags pipelineStageFlags{0};
 
     /** GPU queue */
-    GpuQueue gpuQueue {};
+    GpuQueue gpuQueue{};
 };
 
 /** Render pass descriptor */
@@ -995,39 +995,39 @@ struct RenderPassDesc {
     /** Render area */
     struct RenderArea {
         /** X offset */
-        int32_t offsetX { 0 };
+        int32_t offsetX{0};
         /** Y offset */
-        int32_t offsetY { 0 };
+        int32_t offsetY{0};
         /** Extent width */
-        uint32_t extentWidth { 0u };
+        uint32_t extentWidth{0u};
         /** Extent height */
-        uint32_t extentHeight { 0u };
+        uint32_t extentHeight{0u};
     };
 
     /** Attachment descriptor */
     struct AttachmentDesc {
         /** Layer for layered image */
-        uint32_t layer { 0u };
+        uint32_t layer{0u};
         /** Mip level to target on mipped image */
-        uint32_t mipLevel { 0u };
+        uint32_t mipLevel{0u};
 
         // following values are not needed in render pass compatibility
         /** Load operation */
-        AttachmentLoadOp loadOp { AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE };
+        AttachmentLoadOp loadOp{AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE};
         /** Store operation */
-        AttachmentStoreOp storeOp { AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE };
+        AttachmentStoreOp storeOp{AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE};
 
         /** Stencil load operation */
-        AttachmentLoadOp stencilLoadOp { AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE };
+        AttachmentLoadOp stencilLoadOp{AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE};
         /** Stencil store operation */
-        AttachmentStoreOp stencilStoreOp { AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE };
+        AttachmentStoreOp stencilStoreOp{AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_DONT_CARE};
 
         /** Clear value (union ClearColorValue or ClearDepthStencilValue) */
-        ClearValue clearValue {};
+        ClearValue clearValue{};
     };
 
     /** Attachment count */
-    uint32_t attachmentCount { 0u };
+    uint32_t attachmentCount{0u};
 
     /** Attachment handles */
     RenderHandle attachmentHandles[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
@@ -1038,15 +1038,15 @@ struct RenderPassDesc {
     RenderArea renderArea;
 
     /** Subpass count */
-    uint32_t subpassCount { 0u };
+    uint32_t subpassCount{0u};
     /** Subpass contents */
-    SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
+    SubpassContents subpassContents{SubpassContents::CORE_SUBPASS_CONTENTS_INLINE};
 };
 
 /** Render pass descriptor with render handle references */
 struct RenderPassDescWithHandleReference {
     /** Attachment count */
-    uint32_t attachmentCount { 0u };
+    uint32_t attachmentCount{0u};
 
     /** Attachment handles */
     RenderHandleReference attachmentHandles[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
@@ -1057,54 +1057,54 @@ struct RenderPassDescWithHandleReference {
     RenderPassDesc::RenderArea renderArea;
 
     /** Subpass count */
-    uint32_t subpassCount { 0u };
+    uint32_t subpassCount{0u};
     /** Subpass contents */
-    SubpassContents subpassContents { SubpassContents::CORE_SUBPASS_CONTENTS_INLINE };
+    SubpassContents subpassContents{SubpassContents::CORE_SUBPASS_CONTENTS_INLINE};
 };
 
 /** Render pass subpass descriptor */
 struct RenderPassSubpassDesc {
     // indices to render pass attachments
     /** Depth attachment index */
-    uint32_t depthAttachmentIndex { ~0u };
+    uint32_t depthAttachmentIndex{~0u};
     /** Depth resolve attachment index */
-    uint32_t depthResolveAttachmentIndex { ~0u };
+    uint32_t depthResolveAttachmentIndex{~0u};
     /** Input attachment indices */
-    uint32_t inputAttachmentIndices[PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT] {};
+    uint32_t inputAttachmentIndices[PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT]{};
     /** Color attachment indices */
-    uint32_t colorAttachmentIndices[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] {};
+    uint32_t colorAttachmentIndices[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT]{};
     /** Resolve attachment indices */
-    uint32_t resolveAttachmentIndices[PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT] {};
+    uint32_t resolveAttachmentIndices[PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT]{};
     /** Fragment shading rate attachment index */
-    uint32_t fragmentShadingRateAttachmentIndex { ~0u };
+    uint32_t fragmentShadingRateAttachmentIndex{~0u};
 
     // attachment counts in this subpass
     /** Depth attachment count in this subpass */
-    uint32_t depthAttachmentCount { 0u };
+    uint32_t depthAttachmentCount{0u};
     /** Depth resolve attachment count in this subpass */
-    uint32_t depthResolveAttachmentCount { 0u };
+    uint32_t depthResolveAttachmentCount{0u};
     /** Input attachment count in this subpass */
-    uint32_t inputAttachmentCount { 0u };
+    uint32_t inputAttachmentCount{0u};
     /** Color attachment count in this subpass */
-    uint32_t colorAttachmentCount { 0u };
+    uint32_t colorAttachmentCount{0u};
     /** Resolve attachment count in this subpass */
-    uint32_t resolveAttachmentCount { 0u };
+    uint32_t resolveAttachmentCount{0u};
     /** Fragment shading rate attachment count in this subpass */
-    uint32_t fragmentShadingRateAttachmentCount { 0u };
+    uint32_t fragmentShadingRateAttachmentCount{0u};
 
     /** Depth resolve mode flag bit */
-    ResolveModeFlags depthResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+    ResolveModeFlags depthResolveModeFlags{ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE};
     /** Stencil resolve mode flag bit */
-    ResolveModeFlags stencilResolveModeFlags { ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE };
+    ResolveModeFlags stencilResolveModeFlags{ResolveModeFlagBits::CORE_RESOLVE_MODE_NONE};
 
     /** Shading rate texel size for subpass (will be clamped to device limits automatically if not set accordingly) */
-    Size2D shadingRateTexelSize { 1u, 1u };
+    Size2D shadingRateTexelSize{1u, 1u};
 
     /** Multi-view bitfield of view indices. Multi-view is ignored while zero. */
-    uint32_t viewMask { 0u };
+    uint32_t viewMask{0u};
 
     /** Subpass flags */
-    SubpassFlags subpassFlags { 0u };
+    SubpassFlags subpassFlags{0u};
 };
 
 /** Render pass */
@@ -1112,7 +1112,7 @@ struct RenderPass {
     /** Render pass descriptor */
     RenderPassDesc renderPassDesc;
     /** Subpass start index */
-    uint32_t subpassStartIndex { 0u };
+    uint32_t subpassStartIndex{0u};
     /** Subpass descriptor */
     RenderPassSubpassDesc subpassDesc;
 };
@@ -1122,7 +1122,7 @@ struct RenderPassWithHandleReference {
     /** Render pass descriptor */
     RenderPassDescWithHandleReference renderPassDesc;
     /** Subpass start index */
-    uint32_t subpassStartIndex { 0u };
+    uint32_t subpassStartIndex{0u};
     /** Subpass descriptor */
     RenderPassSubpassDesc subpassDesc;
 };
@@ -1146,70 +1146,70 @@ struct GraphicsState {
     /** Stencil operation state */
     struct StencilOpState {
         /** Fail operation */
-        StencilOp failOp { StencilOp::CORE_STENCIL_OP_KEEP };
+        StencilOp failOp{StencilOp::CORE_STENCIL_OP_KEEP};
         /** Pass operation */
-        StencilOp passOp { StencilOp::CORE_STENCIL_OP_KEEP };
+        StencilOp passOp{StencilOp::CORE_STENCIL_OP_KEEP};
         /** Depth fail operation */
-        StencilOp depthFailOp { StencilOp::CORE_STENCIL_OP_KEEP };
+        StencilOp depthFailOp{StencilOp::CORE_STENCIL_OP_KEEP};
         /** Compare operation */
-        CompareOp compareOp { CompareOp::CORE_COMPARE_OP_NEVER };
+        CompareOp compareOp{CompareOp::CORE_COMPARE_OP_NEVER};
         /** Compare mask */
-        uint32_t compareMask { 0 };
+        uint32_t compareMask{0};
         /** Write mask */
-        uint32_t writeMask { 0 };
+        uint32_t writeMask{0};
         /** Reference */
-        uint32_t reference { 0 };
+        uint32_t reference{0};
     };
 
     /** Rasterization state */
     struct RasterizationState {
         /** Enable depth clamp */
-        bool enableDepthClamp { false };
+        bool enableDepthClamp{false};
         /** Enable depth bias */
-        bool enableDepthBias { false };
+        bool enableDepthBias{false};
         /** Enable rasterizer discard */
-        bool enableRasterizerDiscard { false };
+        bool enableRasterizerDiscard{false};
 
         /** Polygon mode */
-        PolygonMode polygonMode { PolygonMode::CORE_POLYGON_MODE_FILL };
+        PolygonMode polygonMode{PolygonMode::CORE_POLYGON_MODE_FILL};
         /** Cull mode flags */
-        CullModeFlags cullModeFlags { CullModeFlagBits::CORE_CULL_MODE_NONE };
+        CullModeFlags cullModeFlags{CullModeFlagBits::CORE_CULL_MODE_NONE};
         /** Front face */
-        FrontFace frontFace { FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE };
+        FrontFace frontFace{FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE};
 
         /** Depth bias constant factor */
-        float depthBiasConstantFactor { 0.0f };
+        float depthBiasConstantFactor{0.0f};
         /** Depth bias clamp */
-        float depthBiasClamp { 0.0f };
+        float depthBiasClamp{0.0f};
         /** Depth bias slope factor */
-        float depthBiasSlopeFactor { 0.0f };
+        float depthBiasSlopeFactor{0.0f};
 
         /** Line width */
-        float lineWidth { 1.0f };
+        float lineWidth{1.0f};
     };
 
     /** Depth stencil state */
     struct DepthStencilState {
         /** Enable depth test */
-        bool enableDepthTest { false };
+        bool enableDepthTest{false};
         /** Enable depth write */
-        bool enableDepthWrite { false };
+        bool enableDepthWrite{false};
         /** Enable depth bounds test */
-        bool enableDepthBoundsTest { false };
+        bool enableDepthBoundsTest{false};
         /** Enable stencil test */
-        bool enableStencilTest { false };
+        bool enableStencilTest{false};
 
         /** Min depth bounds */
-        float minDepthBounds { 0.0f };
+        float minDepthBounds{0.0f};
         /** Max depth bounds */
-        float maxDepthBounds { 1.0f };
+        float maxDepthBounds{1.0f};
 
         /** Depth compare operation */
-        CompareOp depthCompareOp { CompareOp::CORE_COMPARE_OP_NEVER };
+        CompareOp depthCompareOp{CompareOp::CORE_COMPARE_OP_NEVER};
         /** Front stencil operation state */
-        StencilOpState frontStencilOpState {};
+        StencilOpState frontStencilOpState{};
         /** Back stencil operation state */
-        StencilOpState backStencilOpState {};
+        StencilOpState backStencilOpState{};
     };
 
     /** Color blend state */
@@ -1217,37 +1217,37 @@ struct GraphicsState {
         /** Attachment */
         struct Attachment {
             /** Enable blend */
-            bool enableBlend { false };
+            bool enableBlend{false};
             /** Color write mask */
-            ColorComponentFlags colorWriteMask { ColorComponentFlagBits::CORE_COLOR_COMPONENT_R_BIT |
-                                                 ColorComponentFlagBits::CORE_COLOR_COMPONENT_G_BIT |
-                                                 ColorComponentFlagBits::CORE_COLOR_COMPONENT_B_BIT |
-                                                 ColorComponentFlagBits::CORE_COLOR_COMPONENT_A_BIT };
+            ColorComponentFlags colorWriteMask{ColorComponentFlagBits::CORE_COLOR_COMPONENT_R_BIT |
+                                               ColorComponentFlagBits::CORE_COLOR_COMPONENT_G_BIT |
+                                               ColorComponentFlagBits::CORE_COLOR_COMPONENT_B_BIT |
+                                               ColorComponentFlagBits::CORE_COLOR_COMPONENT_A_BIT};
 
             /** Source color blend factor */
-            BlendFactor srcColorBlendFactor { BlendFactor::CORE_BLEND_FACTOR_ONE };
+            BlendFactor srcColorBlendFactor{BlendFactor::CORE_BLEND_FACTOR_ONE};
             /** Destination color blend factor */
-            BlendFactor dstColorBlendFactor { BlendFactor::CORE_BLEND_FACTOR_ONE };
+            BlendFactor dstColorBlendFactor{BlendFactor::CORE_BLEND_FACTOR_ONE};
             /** Color blend operation */
-            BlendOp colorBlendOp { BlendOp::CORE_BLEND_OP_ADD };
+            BlendOp colorBlendOp{BlendOp::CORE_BLEND_OP_ADD};
 
             /** Source alpha blend factor */
-            BlendFactor srcAlphaBlendFactor { BlendFactor::CORE_BLEND_FACTOR_ONE };
+            BlendFactor srcAlphaBlendFactor{BlendFactor::CORE_BLEND_FACTOR_ONE};
             /** Destination alpha blend factor */
-            BlendFactor dstAlphaBlendFactor { BlendFactor::CORE_BLEND_FACTOR_ONE };
+            BlendFactor dstAlphaBlendFactor{BlendFactor::CORE_BLEND_FACTOR_ONE};
             /** Alpha blend operation */
-            BlendOp alphaBlendOp { BlendOp::CORE_BLEND_OP_ADD };
+            BlendOp alphaBlendOp{BlendOp::CORE_BLEND_OP_ADD};
         };
 
         /** Enable logic operation */
-        bool enableLogicOp { false };
+        bool enableLogicOp{false};
         /** Logic operation */
-        LogicOp logicOp { LogicOp::CORE_LOGIC_OP_NO_OP };
+        LogicOp logicOp{LogicOp::CORE_LOGIC_OP_NO_OP};
 
         /** Color blend constants (R, G, B, A) */
-        float colorBlendConstants[4u] { 0.0f, 0.0f, 0.0f, 0.0f };
+        float colorBlendConstants[4u]{0.0f, 0.0f, 0.0f, 0.0f};
         /** Color attachment count */
-        uint32_t colorAttachmentCount { 0 };
+        uint32_t colorAttachmentCount{0};
         /** Color attachments */
         Attachment colorAttachments[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT];
     };
@@ -1255,9 +1255,9 @@ struct GraphicsState {
     /** Input assembly */
     struct InputAssembly {
         /** Enable primitive restart */
-        bool enablePrimitiveRestart { false };
+        bool enablePrimitiveRestart{false};
         /** Primitive topology */
-        PrimitiveTopology primitiveTopology { PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
+        PrimitiveTopology primitiveTopology{PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
     };
 
     /** Input assembly */
@@ -1275,32 +1275,32 @@ struct VertexInputDeclaration {
     /** Vertex input binding description */
     struct VertexInputBindingDescription {
         /** Binding */
-        uint32_t binding { ~0u };
+        uint32_t binding{~0u};
         /** Stride */
-        uint32_t stride { 0u };
+        uint32_t stride{0u};
         /** Vertex input rate */
-        VertexInputRate vertexInputRate { VertexInputRate::CORE_VERTEX_INPUT_RATE_VERTEX };
+        VertexInputRate vertexInputRate{VertexInputRate::CORE_VERTEX_INPUT_RATE_VERTEX};
     };
 
     /** Vertex input attribute description */
     struct VertexInputAttributeDescription {
         /** Location */
-        uint32_t location { ~0u };
+        uint32_t location{~0u};
         /** Binding */
-        uint32_t binding { ~0u };
+        uint32_t binding{~0u};
         /** Format */
-        BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+        BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
         /** Offset */
-        uint32_t offset { 0u };
+        uint32_t offset{0u};
     };
 };
 
 /** Vertex input declaration data */
 struct VertexInputDeclarationData {
     /** Binding description count */
-    uint32_t bindingDescriptionCount { 0 };
+    uint32_t bindingDescriptionCount{0};
     /** Attribute description count */
-    uint32_t attributeDescriptionCount { 0 };
+    uint32_t attributeDescriptionCount{0};
 
     /** Array of binding descriptions */
     VertexInputDeclaration::VertexInputBindingDescription
@@ -1334,13 +1334,13 @@ struct ShaderSpecialization {
             FLOAT = 4,
         };
         /** Shader stage */
-        ShaderStageFlags shaderStage {};
+        ShaderStageFlags shaderStage{};
         /** ID */
-        uint32_t id { 0U };
+        uint32_t id{0U};
         /** Type */
-        Type type { Type::INVALID };
+        Type type{Type::INVALID};
         /** Offset */
-        uint32_t offset { 0U };
+        uint32_t offset{0U};
     };
 };
 
@@ -1363,7 +1363,7 @@ struct BufferOffset {
     /** Buffer handle */
     RenderHandle handle;
     /** Buffer offset in bytes */
-    uint32_t offset { 0U };
+    uint32_t offset{0U};
 };
 
 /** Buffer offset with render handle reference */
@@ -1371,7 +1371,7 @@ struct BufferOffsetWithHandleReference {
     /** Buffer handle */
     RenderHandleReference handle;
     /** Buffer offset in bytes */
-    uint32_t offset { 0U };
+    uint32_t offset{0U};
 };
 
 /** Acceleration structure types */
@@ -1385,10 +1385,10 @@ enum AccelerationStructureType : uint32_t {
 };
 
 struct AsBuildRangeInfo {
-    uint32_t primitiveCount { 0U };
-    uint32_t primitiveOffset { 0U };
-    uint32_t firstVertex { 0U };
-    uint32_t transformOffset { 0U };
+    uint32_t primitiveCount{0U};
+    uint32_t primitiveOffset{0U};
+    uint32_t firstVertex{0U};
+    uint32_t transformOffset{0U};
 };
 
 /** Additional parameters for geometry */
@@ -1406,18 +1406,18 @@ using GeometryFlags = uint32_t;
 /** Acceleration structure geometry triangles data */
 struct AsGeometryTrianglesInfo {
     /** Vertex format */
-    BASE_NS::Format vertexFormat { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format vertexFormat{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
     /** Vertex stride, bytes between each vertex */
-    uint32_t vertexStride { 0u };
+    uint32_t vertexStride{0u};
     /** Highest index of a vertex for building geom */
-    uint32_t maxVertex { 0u };
+    uint32_t maxVertex{0u};
     /** Index type */
-    IndexType indexType { IndexType::CORE_INDEX_TYPE_UINT32 };
+    IndexType indexType{IndexType::CORE_INDEX_TYPE_UINT32};
     /** Index count */
-    uint32_t indexCount { 0u };
+    uint32_t indexCount{0u};
 
     /** Geometry flags */
-    GeometryFlags geometryFlags { 0U };
+    GeometryFlags geometryFlags{0U};
 };
 
 /** Acceleration structure geometry triangles data */
@@ -1449,10 +1449,10 @@ struct AsGeometryTrianglesDataWithHandleReference {
 /** Acceleration structure geometry AABBs info */
 struct AsGeometryAabbsInfo {
     /** Stride, bytes between each AABB (must be a multiple of 8) */
-    uint32_t stride { 0u };
+    uint32_t stride{0u};
 
     /** Geometry flags */
-    GeometryFlags geometryFlags { 0U };
+    GeometryFlags geometryFlags{0U};
 };
 
 /** Acceleration structure geometry AABBs data */
@@ -1474,12 +1474,12 @@ struct AsGeometryAabbsDataWithHandleReference {
 /** Acceleration structure geometry instances info */
 struct AsGeometryInstancesInfo {
     /** Specifies whether data is used as an array of addresses or just an array */
-    bool arrayOfPointers { false };
+    bool arrayOfPointers{false};
 
     /** Geometry flags */
-    GeometryFlags geometryFlags { 0U };
+    GeometryFlags geometryFlags{0U};
     /** Primitive count (the instance count) */
-    uint32_t primitiveCount { 0U };
+    uint32_t primitiveCount{0U};
 };
 
 /** Acceleration structure geometry instances data */
@@ -1527,13 +1527,11 @@ enum BuildAccelerationStructureMode : uint32_t {
 /** Acceleration structure build geometry info */
 struct AsBuildGeometryInfo {
     /** Acceleration structure type */
-    AccelerationStructureType type { AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL };
+    AccelerationStructureType type{AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL};
     /** Additional flags */
-    BuildAccelerationStructureFlags flags { 0 };
+    BuildAccelerationStructureFlags flags{0};
     /** Build mode */
-    BuildAccelerationStructureMode mode {
-        BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD
-    };
+    BuildAccelerationStructureMode mode{BuildAccelerationStructureMode::CORE_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD};
 };
 
 /** Acceleration structure build geometry data */
@@ -1567,11 +1565,11 @@ struct AsBuildGeometryDataWithHandleReference {
  */
 struct AsBuildSizes {
     /** Acceleration structure size */
-    uint32_t accelerationStructureSize { 0u };
+    uint32_t accelerationStructureSize{0u};
     /** Update scratch size */
-    uint32_t updateScratchSize { 0u };
+    uint32_t updateScratchSize{0u};
     /** Build scratch size */
-    uint32_t buildScratchSize { 0u };
+    uint32_t buildScratchSize{0u};
 };
 
 /** Geometry type.
@@ -1603,38 +1601,38 @@ using GeometryInstanceFlags = uint32_t;
  */
 struct AsInstance {
     /** Transform matrix */
-    BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
+    BASE_NS::Math::Mat4X3 transform{BASE_NS::Math::IDENTITY_4X3};
     /** User specified index accessible in ray shaders with InstanceCustomIndexKHR (24 bits) */
-    uint32_t instanceCustomIndex { 0U };
+    uint32_t instanceCustomIndex{0U};
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
-    uint8_t mask { 0U };
+    uint8_t mask{0U};
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
-    uint32_t shaderBindingTableOffset { 0U };
+    uint32_t shaderBindingTableOffset{0U};
     /** GeometryInstanceFlags for this instance */
-    GeometryInstanceFlags flags { 0U };
+    GeometryInstanceFlags flags{0U};
 
     /** Acceleration structure. (Typically bottom level AS) */
-    RenderHandle accelerationStructure {};
+    RenderHandle accelerationStructure{};
 };
 
 /** Acceleration structure instance with reference
  */
 struct AsInstanceWithHandleReference {
     /** Transform matrix */
-    BASE_NS::Math::Mat4X3 transform { BASE_NS::Math::IDENTITY_4X3 };
+    BASE_NS::Math::Mat4X3 transform{BASE_NS::Math::IDENTITY_4X3};
     /** User specified index accessible in ray shaders with InstanceCustomIndexKHR (24 bits) */
-    uint32_t instanceCustomIndex { 0U };
+    uint32_t instanceCustomIndex{0U};
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
-    uint8_t mask { 0U };
+    uint8_t mask{0U};
     /** Mask, a visibility mask for geometry (8 bits). Instance may only be hit if cull mask & instance.mask != 0. */
-    uint32_t shaderBindingTableOffset { 0U };
+    uint32_t shaderBindingTableOffset{0U};
     /** GeometryInstanceFlags for this instance */
-    GeometryInstanceFlags flags { 0U };
+    GeometryInstanceFlags flags{0U};
 
     /** Acceleration structure. (Typically bottom level AS) */
-    RenderHandleReference accelerationStructure {};
+    RenderHandleReference accelerationStructure{};
 };
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_PIPELINE_STATE_DESC_H
+#endif  // API_RENDER_DEVICE_PIPELINE_STATE_DESC_H

@@ -45,7 +45,7 @@ constexpr const char* LOG_LEVEL_NAMES_SHORT[LOG_LEVEL_COUNT] = {
     "F",
     "N",
 };
-} // namespace
+}  // namespace
 
 const char* Logger::GetLogLevelName(LogLevel logLevel, bool shortName)
 {
@@ -166,11 +166,11 @@ void Logger::AddOutput(std::unique_ptr<IOutput> output)
 }
 
 namespace {
-Logger g_loggerInstance(true); // Global logger instance.
+Logger g_loggerInstance(true);  // Global logger instance.
 
-std::set<std::string> g_registeredOnce; // Global set of ids used by the LUME_ONCE macro.
+std::set<std::string> g_registeredOnce;  // Global set of ids used by the LUME_ONCE macro.
 std::mutex g_onceMutex;
-} // namespace
+}  // namespace
 
 ILogger& GetLogger()
 {
@@ -193,4 +193,4 @@ void CheckOnceReset()
     std::lock_guard<std::mutex> guard(g_onceMutex);
     g_registeredOnce.clear();
 }
-} // namespace lume
+}  // namespace lume

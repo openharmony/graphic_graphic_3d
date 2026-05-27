@@ -81,26 +81,26 @@ inline const StaticMetadata* FindStaticMetadata(
     return base ? FindStaticMetadata(*base, name, type) : nullptr;
 }
 
-template<typename Interface>
+template <typename Interface>
 struct MetadataObject {
-    typename Interface::Ptr object {};
-    bool isForward {};
+    typename Interface::Ptr object{};
+    bool isForward{};
 };
 
 /// Construct entity from given metadata
-template<typename Interface>
+template <typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(const IOwner::Ptr& self, const StaticMetadata& pm)
 {
     auto res = pm.create(self, pm);
     if (!res) {
         CORE_LOG_W("Failed to create entity from static metadata [name=%s]", pm.name);
     }
-    return MetadataObject<Interface> { interface_pointer_cast<Interface>(res),
-        bool(pm.flags & uint8_t(Internal::StaticMetaFlag::FORWARD)) };
+    return MetadataObject<Interface>{
+        interface_pointer_cast<Interface>(res), bool(pm.flags & uint8_t(Internal::StaticMetaFlag::FORWARD))};
 }
 
 /// Find and construct entity with given criteria starting search from static metadata
-template<typename Interface>
+template <typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(
     const IOwner::Ptr& self, const StaticObjectMetadata& sm, BASE_NS::string_view name, MetadataType type)
 {
@@ -111,7 +111,7 @@ MetadataObject<Interface> ConstructFromMetadata(
 }
 
 /// Find and construct entity with given criteria for object
-template<typename Interface>
+template <typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(const IOwner::Ptr& self, BASE_NS::string_view name, MetadataType type)
 {
     if (auto s = interface_cast<IStaticMetadata>(self)) {
@@ -139,7 +139,7 @@ inline BASE_NS::vector<MetadataInfo> GetAllStaticMetadataInClass(const StaticObj
     for (size_t i = 0; i != data.size; ++i) {
         auto& p = data.metadata[i];
         if (uint8_t(p.type) & uint8_t(type)) {
-            MetadataInfo info { p.type, p.name, p.interfaceInfo };
+            MetadataInfo info{p.type, p.name, p.interfaceInfo};
             if (p.type == MetadataType::PROPERTY) {
                 info.propertyType = GetMetaPropertyType(p);
                 info.readOnly = p.flags & static_cast<uint8_t>(Internal::PropertyFlag::READONLY);

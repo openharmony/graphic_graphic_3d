@@ -100,22 +100,22 @@ struct SceneLoadParams {
 }
 
 interface RenderResourceFactory {
-    @gen_promise("createShader")
+    @promise @rename("createShader")
     createShaderSync(params: SceneResourceParameters): Shader;
 
-    @gen_promise("createImage")
+    @promise @rename("createImage")
     createImageSync(params: SceneResourceParameters): Image;
 
-    @gen_promise("createImageStream")
+    @promise @rename("createImageStream")
     createImageStreamSync(params: SceneResourceParameters): ImageStream;
 
-    @gen_promise("createMesh")
+    @promise @rename("createMesh")
     createMeshSync(params: SceneResourceParameters, geometry: GeometryDefinitionType): MeshResource;
 
-    @gen_promise("createSampler")
+    @promise @rename("createSampler")
     createSamplerSync(params:SceneResourceParameters): Sampler;
 
-    @gen_promise("createScene")
+    @promise @rename("createScene")
     createSceneSync(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
 
     @gen_promise("createScene")
@@ -132,28 +132,28 @@ struct EffectParameters {
 }
 
 interface SceneResourceFactory : RenderResourceFactory {
-    @gen_promise("createCamera")
+    @promise @rename("createCamera")
     createCameraSync(params: SceneNodeParameters): Camera;
 
-    @gen_promise("createCamera")
+    @promise @rename("createCamera")
     createCameraSyncWithCameraParams(params: SceneNodeParameters, cameraParams: CameraParameters): Camera;
 
-    @gen_promise("createLight")
+    @promise @rename("createLight")
     createLightSync(params: SceneNodeParameters, lightType: LightType): LightTypeUnion;
 
-    @gen_promise("createNode")
+    @promise @rename("createNode")
     createNodeSync(params: SceneNodeParameters): Node;
 
-    @gen_promise("createMaterial")
+    @promise @rename("createMaterial")
     createMaterialSync(params: SceneResourceParameters, materialType: MaterialType): VariousMaterial;
 
-    @gen_promise("createEnvironment")
+    @promise @rename("createEnvironment")
     createEnvironmentSync(params: SceneResourceParameters): Environment;
 
-    @gen_promise("createGeometry")
+    @promise @rename("createGeometry")
     createGeometrySync(params: SceneNodeParameters, mesh: MeshResource): Geometry;
 
-    @gen_promise("createEffect")
+    @promise @rename("createEffect")
     createEffectSync(params: EffectParameters): Effect;
 
     @get getImpl(): Optional<i64>;
@@ -204,7 +204,7 @@ interface SceneComponent {
 interface RenderContext {
     getRenderResourceFactory(): RenderResourceFactory;
 
-    @gen_promise("loadPlugin")
+    @promise @rename("loadPlugin")
     loadPluginSync(name: String): bool;
 
     registerResourcePath(protocol: String, uri: String): bool;
@@ -213,7 +213,6 @@ interface RenderContext {
 interface SoftShadowConfig {
     @get getShadowAlgorithmType(): ShadowAlgorithmType;
 }
-
 @class
 interface PCFConfig : SoftShadowConfig {
     @get getShadowSampleRadius(): Optional<f64>;
@@ -224,7 +223,6 @@ interface PCFConfig : SoftShadowConfig {
 
     getPCFConfigImpl(): i64;
 }
-
 @ctor("PCFConfig")
 function CreatePCFConfig(): PCFConfig;
 
@@ -271,7 +269,7 @@ interface Scene {
 
     renderFrame(params: Optional<RenderParameters>): bool;
 
-    @gen_promise("createComponent")
+    @promise @rename("createComponent")
     createComponentSync(node: Node, name: String): SceneComponent;
 
     @get getRenderConfiguration(): RenderConfiguration;
@@ -294,7 +292,7 @@ union RenderContextOrNull {
 function getDefaultRenderContext(): RenderContextOrNull;
 
 @static("Scene")
-@gen_promise("load")
+@promise @rename("load")
 function loadScene(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
 
 @static("Scene")

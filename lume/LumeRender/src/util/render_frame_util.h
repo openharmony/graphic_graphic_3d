@@ -52,9 +52,9 @@ public:
 
 private:
     struct InternalFrameCopyData {
-        uint64_t frameIndex { 0 };
-        RenderHandleReference handle {};
-        CopyFlags copyFlags { 0u };
+        uint64_t frameIndex{0};
+        RenderHandleReference handle{};
+        CopyFlags copyFlags{0u};
     };
     struct CopyData {
         BASE_NS::vector<InternalFrameCopyData> copyData;
@@ -70,8 +70,8 @@ private:
     const IRenderContext& renderContext_;
     IDevice& device_;
 
-    IRenderDataStoreDefaultStaging* dsStaging_ { nullptr };
-    IRenderDataStoreDefaultGpuResourceDataCopy* dsCpuToGpuCopy_ { nullptr };
+    IRenderDataStoreDefaultStaging* dsStaging_{nullptr};
+    IRenderDataStoreDefaultGpuResourceDataCopy* dsCpuToGpuCopy_{nullptr};
 
     // used for all
     mutable std::mutex mutex_;
@@ -80,7 +80,7 @@ private:
     CopyData postFrame_;
     // buffered for non-wait-for-idle copies, resized for command buffering count + 1
     BASE_NS::vector<CopyData> bufferedPostFrame_;
-    uint32_t bufferedIndex_ { 0u };
+    uint32_t bufferedIndex_{0u};
 
     // will hold the actual results from where the array_view is created for the user
     BASE_NS::vector<FrameCopyData> thisFrameCopiedData_;
@@ -97,20 +97,20 @@ private:
 
     struct FrameBackBufferConfiguration {
         BackBufferConfiguration bbc;
-        bool force { false };
+        bool force{false};
     };
     FrameBackBufferConfiguration preBackBufferConfig_;
     FrameBackBufferConfiguration postBackBufferConfig_;
 
     struct GpuSignalBufferedDestroy {
-        uint64_t frameUseIndex { 0 };
+        uint64_t frameUseIndex{0};
         BASE_NS::unique_ptr<GpuSemaphore> gpuSemaphore;
     };
     BASE_NS::vector<GpuSignalBufferedDestroy> gpuSignalDeferredDestroy_;
 
     // if there's even a single copy operation with wait we can copy all data
-    bool frameHasWaitForIdle_ { false };
+    bool frameHasWaitForIdle_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_UTIL_RENDER_FRAME_UTIL_H
+#endif  // RENDER_UTIL_RENDER_FRAME_UTIL_H

@@ -30,7 +30,8 @@ SCENE_BEGIN_NAMESPACE()
 namespace {
 
 struct SamplerConverter {
-    SamplerConverter(const IInternalScene::Ptr& scene) : scene_(scene) {}
+    SamplerConverter(const IInternalScene::Ptr& scene) : scene_(scene)
+    {}
 
     using SourceType = ISampler::Ptr;
     using TargetType = CORE_NS::EntityReference;
@@ -76,7 +77,7 @@ private:
     IInternalScene::WeakPtr scene_;
 };
 
-} // namespace
+}  // namespace
 
 bool Texture::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
@@ -88,18 +89,27 @@ bool Texture::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::str
 
     if (p->GetName() == "Image") {
         auto ep = object_->CreateProperty(cpath).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(
-                   META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, { GetInternalScene(), ClassId::Image })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new RenderResourceValue<IImage>(ep, {GetInternalScene(), ClassId::Image})));
     }
     if (p->GetName() == "Sampler") {
         auto ep = object_->CreateProperty(cpath).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<SamplerConverter>(ep, { GetInternalScene() })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<SamplerConverter>(ep, {GetInternalScene()})));
     }
     return AttachEngineProperty(p, cpath);
+}
+
+bool Texture::IsInUse() const
+{
+    return inUse_;
+}
+
+void Texture::SetInUse(bool inUse)
+{
+    inUse_ = inUse;
 }
 
 SCENE_END_NAMESPACE()

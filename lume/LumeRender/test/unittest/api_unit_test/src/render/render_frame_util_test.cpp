@@ -39,7 +39,7 @@ void TestRenderFrameUtil(const UTest::EngineResources& er)
     {
         rfUtil.CopyToCpu({}, IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE);
         const auto& copyData = rfUtil.GetFrameCopyData({});
-        ASSERT_EQ(RenderHandle {}, copyData.handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, copyData.handle.GetHandle());
         ASSERT_EQ(0u, copyData.copyFlags);
     }
     {
@@ -53,7 +53,7 @@ void TestRenderFrameUtil(const UTest::EngineResources& er)
         // Buffer doesn't have CORE_BUFFER_USAGE_TRANSFER_SRC_BIT so copy is invalid
         rfUtil.CopyToCpu(bufferHandle, IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE);
         const auto& copyData = rfUtil.GetFrameCopyData(bufferHandle);
-        ASSERT_EQ(RenderHandle {}, copyData.handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, copyData.handle.GetHandle());
         ASSERT_EQ(0u, copyData.copyFlags);
     }
     {
@@ -72,21 +72,21 @@ void TestRenderFrameUtil(const UTest::EngineResources& er)
         // Image doesn't have CORE_IMAGE_USAGE_TRANSFER_SRC_BIT so copy is invalid
         rfUtil.CopyToCpu(imageHandle, IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE);
         const auto& copyData = rfUtil.GetFrameCopyData(imageHandle);
-        ASSERT_EQ(RenderHandle {}, copyData.handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, copyData.handle.GetHandle());
         ASSERT_EQ(0u, copyData.copyFlags);
     }
     {
         auto samplerHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
         rfUtil.CopyToCpu(samplerHandle, IRenderFrameUtil::CopyFlagBits::WAIT_FOR_IDLE);
         auto& copyData = rfUtil.GetFrameCopyData(samplerHandle);
-        ASSERT_EQ(RenderHandle {}, copyData.handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, copyData.handle.GetHandle());
     }
     {
         auto copyData = rfUtil.GetFrameCopyData();
         ASSERT_EQ(0, copyData.size());
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderFrameUtilTest

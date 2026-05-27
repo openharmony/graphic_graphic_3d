@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "image",
+		"loadFlags": ["generateMips", "forceSrgb"],
+		"info": {
+			"usageFlags": ["sampled", "transferDestination"],
+			"memoryFlags": ["deviceLocal"],
+			"creationFlags": ["generateMips"]
+		}
+	}
+}

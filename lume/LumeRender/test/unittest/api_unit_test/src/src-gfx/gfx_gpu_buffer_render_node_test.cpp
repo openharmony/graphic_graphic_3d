@@ -32,19 +32,19 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr uint32_t TEST_ELEMENT_ELEMENT_COUNT { 4u };
-static constexpr uint32_t TEST_INPUT_BUFFER_COLOR[] = { 0xFF, 0x1, 0x1, 0xFFFFffff };
-static constexpr uint32_t BUFFER_BYTE_SIZE { sizeof(uint32_t) * TEST_ELEMENT_ELEMENT_COUNT };
-static constexpr string_view INPUT_BUFFER_NAME_0 { "InputBuffer0" };
-static constexpr string_view INDIRECT_BUFFER_NAME_0 { "IndirectBuffer0" };
+static constexpr uint32_t TEST_ELEMENT_ELEMENT_COUNT{4u};
+static constexpr uint32_t TEST_INPUT_BUFFER_COLOR[] = {0xFF, 0x1, 0x1, 0xFFFFffff};
+static constexpr uint32_t BUFFER_BYTE_SIZE{sizeof(uint32_t) * TEST_ELEMENT_ELEMENT_COUNT};
+static constexpr string_view INPUT_BUFFER_NAME_0{"InputBuffer0"};
+static constexpr string_view INDIRECT_BUFFER_NAME_0{"IndirectBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_BUFFER_NAME_0 { "OutputBuffer0" };
+static constexpr string_view OUTPUT_BUFFER_NAME_0{"OutputBuffer0"};
 
 struct TestResources {
     RenderHandleReference inputBufferHandle0;
     RenderHandleReference indirectBufferHandle0;
 
-    uint32_t outputBufferColor[4u] = { 0, 0, 0, 0 };
+    uint32_t outputBufferColor[4u] = {0, 0, 0, 0};
 
     RenderHandleReference renderNodeGraph;
 };
@@ -64,17 +64,17 @@ TestResources CreateTestResources(UTest::EngineResources& er)
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT | CORE_BUFFER_USAGE_TRANSFER_SRC_BIT;
         bufferDesc.byteSize = BUFFER_BYTE_SIZE;
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(TEST_INPUT_BUFFER_COLOR),
-            BUFFER_BYTE_SIZE };
+        const array_view<const uint8_t> dataView = {
+            reinterpret_cast<const uint8_t*>(TEST_INPUT_BUFFER_COLOR), BUFFER_BYTE_SIZE};
         res.inputBufferHandle0 = er.device->GetGpuResourceManager().Create(INPUT_BUFFER_NAME_0, bufferDesc, dataView);
     }
     // Indirect args buffer
     {
         struct DispatchIndirectArgs {
-            uint32_t x { 0u };
-            uint32_t y { 0u };
-            uint32_t z { 0u };
-            uint32_t w { 0u };
+            uint32_t x{0u};
+            uint32_t y{0u};
+            uint32_t z{0u};
+            uint32_t w{0u};
         };
 
         GpuBufferDesc bufferDesc;
@@ -83,9 +83,9 @@ TestResources CreateTestResources(UTest::EngineResources& er)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT | CORE_BUFFER_USAGE_TRANSFER_SRC_BIT |
                                 CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         bufferDesc.byteSize = sizeof(DispatchIndirectArgs);
-        const DispatchIndirectArgs dia { 4u, 1u, 1u, 0u };
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&dia),
-            sizeof(DispatchIndirectArgs) };
+        const DispatchIndirectArgs dia{4u, 1u, 1u, 0u};
+        const array_view<const uint8_t> dataView = {
+            reinterpret_cast<const uint8_t*>(&dia), sizeof(DispatchIndirectArgs)};
         res.indirectBufferHandle0 =
             er.device->GetGpuResourceManager().Create(INDIRECT_BUFFER_NAME_0, bufferDesc, dataView);
     }
@@ -123,16 +123,16 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+        er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
 
         if (copyThisFrame) {
             // Copy data from the output buffer for evaluation
             IRenderFrameUtil& rfUtil = er.context->GetRenderUtil().GetRenderFrameUtil();
             const IRenderFrameUtil::FrameCopyData& data = rfUtil.GetFrameCopyData(bufferHandle);
             if (data.byteBuffer) {
-                const array_view<const uint32_t> uintData = { reinterpret_cast<const uint32_t*>(
-                                                                  data.byteBuffer->GetData().data()),
-                    data.byteBuffer->GetData().size_bytes() / sizeof(uint32_t) };
+                const array_view<const uint32_t> uintData = {
+                    reinterpret_cast<const uint32_t*>(data.byteBuffer->GetData().data()),
+                    data.byteBuffer->GetData().size_bytes() / sizeof(uint32_t)};
                 ASSERT_TRUE(uintData.size_bytes() == sizeof(tr.outputBufferColor));
                 if (uintData.size_bytes() == sizeof(tr.outputBufferColor)) {
                     for (size_t idx = 0; idx < TEST_ELEMENT_ELEMENT_COUNT; ++idx) {
@@ -169,7 +169,7 @@ void TestBufferRenderNode(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -183,7 +183,7 @@ UNIT_TEST(API_GfxGpuBufferRenderNodeTest, GpuBufferRenderNodeTestVulkan, testing
 {
     TestBufferRenderNode(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -197,4 +197,4 @@ UNIT_TEST(API_GfxGpuBufferRenderNodeTest, GpuBufferRenderNodeTestOpenGL, testing
 {
     TestBufferRenderNode(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

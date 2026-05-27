@@ -39,7 +39,7 @@ RENDER_BEGIN_NAMESPACE()
 
 class IRenderDataStoreShaderPasses : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "1e85fc6d-09e0-4d2d-9422-3165f486c92d" };
+    static constexpr BASE_NS::Uid UID{"1e85fc6d-09e0-4d2d-9422-3165f486c92d"};
 
     /** Compute pass data */
     struct ComputePassData {
@@ -55,7 +55,7 @@ public:
         /** Aligned byte size needed for binding data which is not in local GPU buffers
          * Alignment is based on minimum UBO dynamic binding offsets.
          */
-        uint32_t alignedByteSize { 0U };
+        uint32_t alignedByteSize{0U};
     };
 
     /** Add data to named block for fetching.
@@ -120,4 +120,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_SHADER_PASSES_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_SHADER_PASSES_H

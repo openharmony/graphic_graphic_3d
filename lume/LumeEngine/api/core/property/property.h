@@ -96,11 +96,11 @@ struct EnumMetaData {
     int64_t value;
 };
 
-struct Property; // Forward declare the struct.
+struct Property;  // Forward declare the struct.
 
 /** Metadata of a type. */
 struct MetaData {
-    BASE_NS::array_view<const Property> memberProperties; // properties of the actual "type"
+    BASE_NS::array_view<const Property> memberProperties;  // properties of the actual "type"
     const struct ContainerApi* containerMethods;
     BASE_NS::array_view<const EnumMetaData> enumMetaData;
 };
@@ -110,11 +110,11 @@ struct Property {
     BASE_NS::string_view name;
     uint64_t hash;
     PropertyTypeDecl type;
-    size_t count;     // Count of elements in array, 1 if not an array
-    size_t size;      // Size of property in bytes.
-    uintptr_t offset; // Offset to data blob
+    size_t count;      // Count of elements in array, 1 if not an array
+    size_t size;       // Size of property in bytes.
+    uintptr_t offset;  // Offset to data blob
     BASE_NS::string_view displayName;
-    uint32_t flags; // PropertyFlags combination.
+    uint32_t flags;  // PropertyFlags combination.
     MetaData metaData;
 };
 
@@ -138,11 +138,14 @@ struct ContainerApi {
  * @param baseName String used as the type's name. typeHash and compareHash are based on this string.
  * @return PropertyTypeDecl for the given type.
  */
-template<typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>>>
+template <typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>>>
 constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName)
 {
-    return CORE_NS::PropertyTypeDecl { false, static_cast<uint32_t>(sizeof(T)),
-        BASE_NS::CompileTime::FNV1aHash(baseName), BASE_NS::CompileTime::FNV1aHash(baseName), baseName };
+    return CORE_NS::PropertyTypeDecl{false,
+        static_cast<uint32_t>(sizeof(T)),
+        BASE_NS::CompileTime::FNV1aHash(baseName),
+        BASE_NS::CompileTime::FNV1aHash(baseName),
+        baseName};
 }
 
 /** Fills a PropertyTypeDecl for the given array type.
@@ -150,11 +153,14 @@ constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName)
  * @param arrayTypeName compareHash is based on this string.
  * @return PropertyTypeDecl for the given type.
  */
-template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_array_v<T>>>
+template <typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_array_v<T>>>
 constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName, const char* arrayTypeName)
 {
-    return CORE_NS::PropertyTypeDecl { true, static_cast<uint32_t>(sizeof(BASE_NS::remove_extent_t<T>)),
-        BASE_NS::CompileTime::FNV1aHash(baseName), BASE_NS::CompileTime::FNV1aHash(arrayTypeName), baseName };
+    return CORE_NS::PropertyTypeDecl{true,
+        static_cast<uint32_t>(sizeof(BASE_NS::remove_extent_t<T>)),
+        BASE_NS::CompileTime::FNV1aHash(baseName),
+        BASE_NS::CompileTime::FNV1aHash(arrayTypeName),
+        baseName};
 }
 
 #define PROPERTYNAME(b) #b
@@ -168,13 +174,13 @@ constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName, c
 CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
+template <typename T>
 uint64_t hash(const T&);
 
-template<>
+template <>
 inline uint64_t hash(const CORE_NS::PropertyTypeDecl& value)
 {
     return value.compareHash;
 }
 BASE_END_NAMESPACE()
-#endif // API_CORE_PROPERTY_PROPERTY_H
+#endif  // API_CORE_PROPERTY_PROPERTY_H

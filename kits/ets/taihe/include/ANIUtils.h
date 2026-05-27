@@ -24,25 +24,19 @@
 
 #include "SceneTH.proj.hpp"
 #include "SceneTH.impl.hpp"
+#include "taihe/array.hpp"
 #include "taihe/optional.hpp"
 #include "taihe/runtime.hpp"
-#include "taihe/array.hpp"
 
 #include "SceneETS.h"
 
 namespace OHOS::Render3D::KITETS {
-enum AniObjectType {
-    TYPE_INT = 0,
-    TYPE_DOUBLE = 1,
-    TYPE_BOOLEAN = 2,
-    TYPE_COLOR = 3,
-    TYPE_UNKNOWN = -1
-};
+enum AniObjectType { TYPE_INT = 0, TYPE_DOUBLE = 1, TYPE_BOOLEAN = 2, TYPE_COLOR = 3, TYPE_UNKNOWN = -1 };
 
 /**
  * Determine whether the actual type of ResourceStr is String
  */
-inline bool IsString(uintptr_t resourceStr, ani_env *env = nullptr)
+inline bool IsString(uintptr_t resourceStr, ani_env* env = nullptr)
 {
     if (env == nullptr) {
         env = taihe::get_env();
@@ -59,7 +53,7 @@ inline bool IsString(uintptr_t resourceStr, ani_env *env = nullptr)
     return isStr;
 }
 
-inline std::string ToStdString(const ani_string &ani_str, ani_env *env = nullptr)
+inline std::string ToStdString(const ani_string& ani_str, ani_env* env = nullptr)
 {
     if (env == nullptr) {
         env = taihe::get_env();
@@ -78,7 +72,7 @@ inline std::string ToStdString(const ani_string &ani_str, ani_env *env = nullptr
     return result;
 }
 
-inline ani_string ToANIString(std::string str, ani_env *env = nullptr)
+inline ani_string ToANIString(std::string str, ani_env* env = nullptr)
 {
     if (env == nullptr) {
         env = taihe::get_env();
@@ -90,25 +84,25 @@ inline ani_string ToANIString(std::string str, ani_env *env = nullptr)
     return result_string;
 }
 
-ani_object WrapDoubleAsObj(const ani_double value, ani_env *env = nullptr);
+ani_object WrapDoubleAsObj(const ani_double value, ani_env* env = nullptr);
 
-ani_double ParseObjToDouble(ani_object obj, ani_env *env = nullptr);
+ani_double ParseObjToDouble(ani_object obj, ani_env* env = nullptr);
 
-ani_object WrapIntAsObj(const ani_int value, ani_env *env = nullptr);
+ani_object WrapIntAsObj(const ani_int value, ani_env* env = nullptr);
 
-ani_int ParseObjToInt(ani_object obj, ani_env *env = nullptr);
+ani_int ParseObjToInt(ani_object obj, ani_env* env = nullptr);
 
-ani_object WrapBoolAsObj(const ani_boolean value, ani_env *env = nullptr);
+ani_object WrapBoolAsObj(const ani_boolean value, ani_env* env = nullptr);
 
-ani_boolean ParseObjToBool(ani_object obj, ani_env *env = nullptr);
+ani_boolean ParseObjToBool(ani_object obj, ani_env* env = nullptr);
 
-ani_object WrapColorAsObj(::SceneTypes::Color value, ani_env *env = nullptr);
+ani_object WrapColorAsObj(::SceneTypes::Color value, ani_env* env = nullptr);
 
-BASE_NS::Color ParseObjToColor(ani_object obj, ani_env *env = nullptr);
+BASE_NS::Color ParseObjToColor(ani_object obj, ani_env* env = nullptr);
 
-AniObjectType HandleAniObject(ani_object obj, ani_env *env = nullptr);
+AniObjectType HandleAniObject(ani_object obj, ani_env* env = nullptr);
 
-std::string ResourceToString(ani_object ani_obj, ani_env *env = nullptr);
+std::string ResourceToString(ani_object ani_obj, ani_env* env = nullptr);
 
 std::string ExtractUri(uintptr_t uri, ani_env *env = nullptr);
 
@@ -119,7 +113,7 @@ SceneETS::RenderParameters ExtractRenderParameters(::taihe::optional_view<::Scen
 SceneETS::SceneLoadParams ExtractSceneLoadParams(::SceneTH::SceneLoadParams params);
 
 template <typename F, typename T>
-inline BASE_NS::vector<T> ArrayToVector(const taihe::array<F> &arry, const std::function<T(const F &)> &conv)
+inline BASE_NS::vector<T> ArrayToVector(const taihe::array<F>& arry, const std::function<T(const F&)>& conv)
 {
     BASE_NS::vector<T> items;
     items.resize(arry.size());
@@ -129,7 +123,7 @@ inline BASE_NS::vector<T> ArrayToVector(const taihe::array<F> &arry, const std::
 
 template <typename F, typename T>
 inline BASE_NS::vector<T> ArrayToVector(
-    const taihe::optional<taihe::array<F>> &arrayOp, const std::function<T(const F &)> &conv)
+    const taihe::optional<taihe::array<F>>& arrayOp, const std::function<T(const F&)>& conv)
 {
     if (arrayOp.has_value()) {
         return ArrayToVector<F, T>(arrayOp.value(), conv);
@@ -138,21 +132,21 @@ inline BASE_NS::vector<T> ArrayToVector(
     }
 }
 
-inline BASE_NS::string ToBaseString(const taihe::string &str)
+inline BASE_NS::string ToBaseString(const taihe::string& str)
 {
     return BASE_NS::string(str.c_str());
 }
 
-inline taihe::string ToTaiheString(const BASE_NS::string &str)
+inline taihe::string ToTaiheString(const BASE_NS::string& str)
 {
     return taihe::string(str.c_str());
 }
 
-template<typename T>
-inline T *GetImplPointer(const ::taihe::optional<int64_t> &implOp)
+template <typename T>
+inline T* GetImplPointer(const ::taihe::optional<int64_t>& implOp)
 {
     if (implOp.has_value()) {
-        return reinterpret_cast<T *>(implOp.value());
+        return reinterpret_cast<T*>(implOp.value());
     } else {
         return nullptr;
     }

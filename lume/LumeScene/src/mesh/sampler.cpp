@@ -30,7 +30,7 @@ static constexpr BASE_NS::string_view ADDRESS_MODE_V_PROPERTY = "AddressModeV";
 static constexpr BASE_NS::string_view ADDRESS_MODE_W_PROPERTY = "AddressModeW";
 static constexpr BASE_NS::string_view DEFAULT_SAMPLER_NAME = "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT";
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool SetSamplerValue(META_NS::IProperty* p, const U& f, bool setToDefault = false)
 {
     if (p) {
@@ -45,22 +45,22 @@ bool SetSamplerValue(META_NS::IProperty* p, const U& f, bool setToDefault = fals
     return false;
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool InitializeSamplerValue(META_NS::IProperty* p, const U& value, const U& defaultValue, bool setValue)
 {
-    auto success = SetSamplerValue<T, U>(p, defaultValue, true); // Set default
+    auto success = SetSamplerValue<T, U>(p, defaultValue, true);  // Set default
     if (setValue) {
-        success &= SetSamplerValue<T, U>(p, value, false); // Set value if required
+        success &= SetSamplerValue<T, U>(p, value, false);  // Set value if required
     }
     return success;
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool GetSamplerValue(const META_NS::IProperty* p, U& value)
 {
     if (p && p->IsValueSet()) {
         // Value has been set
-        T v {};
+        T v{};
         p->GetValue().GetValue(v);
         if (value != static_cast<U>(v)) {
             value = static_cast<U>(v);
@@ -106,7 +106,7 @@ bool Sampler::CanNotifyChanged()
 {
     CORE_NS::UniqueLock lock(transaction_);
     if (!setting_) {
-        return true; // No transaction ongoing so can notify
+        return true;  // No transaction ongoing so can notify
     }
     // Set flag that we had a changed event during transaction
     changedDuringTransaction_ = true;
@@ -146,7 +146,7 @@ void Sampler::ResetObject()
         changed |= ResetSamplerProperty(GetExistingProperty(ADDRESS_MODE_U_PROPERTY));
         changed |= ResetSamplerProperty(GetExistingProperty(ADDRESS_MODE_V_PROPERTY));
         changed |= ResetSamplerProperty(GetExistingProperty(ADDRESS_MODE_W_PROPERTY));
-        EndTransaction(false); // Delay notification about change
+        EndTransaction(false);  // Delay notification about change
         return changed;
     };
     auto scene = scene_.lock();
@@ -207,7 +207,7 @@ Sampler::SamplerInfo Sampler::GetDefaultSampler() const
 
 RENDER_NS::RenderHandleReference Sampler::GetSamplerHandle(const SamplerInfo& info) const noexcept
 {
-    return info.isDefault ? RENDER_NS::RenderHandleReference {} : info.handle;
+    return info.isDefault ? RENDER_NS::RenderHandleReference{} : info.handle;
 }
 
 bool Sampler::UpdateSamplerFromHandle(

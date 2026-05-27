@@ -25,6 +25,7 @@
 CORE_BEGIN_NAMESPACE()
 using RENDER_NS::BloomConfiguration;
 using RENDER_NS::BlurConfiguration;
+using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::ColorConversionConfiguration;
 using RENDER_NS::ColorFringeConfiguration;
 using RENDER_NS::DitherConfiguration;
@@ -33,7 +34,6 @@ using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::LensFlareConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
-using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
@@ -47,8 +47,7 @@ ENUM_TYPE_METADATA(PostProcessComponent::FlagBits, ENUM_VALUE(TONEMAP_BIT, "Tone
     ENUM_VALUE(COLOR_CONVERSION_BIT, "Color Conversion"), ENUM_VALUE(FXAA_BIT, "Fast Approximate Anti-Aliasing"),
     ENUM_VALUE(TAA_BIT, "Temporal Anti-Aliasing"), ENUM_VALUE(DOF_BIT, "Depth of Field"),
     ENUM_VALUE(MOTION_BLUR_BIT, "Motion Blur"), ENUM_VALUE(LENS_FLARE_BIT, "Lens Flare"),
-    ENUM_VALUE(WHITE_BALANCE_BIT, "White Balance"),
-    ENUM_VALUE(COLOR_ADJUSTMENTS_BIT, "Color Adjustments"))
+    ENUM_VALUE(WHITE_BALANCE_BIT, "White Balance"), ENUM_VALUE(COLOR_ADJUSTMENTS_BIT, "Color Adjustments"))
 
 /** Extend propertysystem with the enums */
 

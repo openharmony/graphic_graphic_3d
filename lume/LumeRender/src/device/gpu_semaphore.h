@@ -35,4 +35,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_SEMAPHORE_H
+#endif  // DEVICE_GPU_SEMAPHORE_H

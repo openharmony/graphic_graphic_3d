@@ -54,19 +54,19 @@ using SwapchainFlags = uint32_t;
 /** Swapchain create info */
 struct SwapchainCreateInfo {
     /** Surface handle */
-    uint64_t surfaceHandle { 0 };
+    uint64_t surfaceHandle{0};
     /** Swapchain flags */
-    SwapchainFlags swapchainFlags { SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
-                                    SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT |
-                                    SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT };
+    SwapchainFlags swapchainFlags{SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+                                  SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT |
+                                  SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT};
     /** Needed image usage flags for swapchain color image. Checked against supported */
-    ImageUsageFlags imageUsageFlags { ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT };
+    ImageUsageFlags imageUsageFlags{ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT};
 
     struct SwapchainWindow {
         /** Platform window pointer */
-        uintptr_t window { 0 };
+        uintptr_t window{0};
         /** Platform instance (hInstance, connection, display) */
-        uintptr_t instance { 0 };
+        uintptr_t instance{0};
     };
     /** Window handles. Creates surface automatically.
      * NOTE: do not create surface for surfaceHandle if the window and instance is provided
@@ -79,11 +79,11 @@ struct DeviceConfiguration {
      * default value is 3, supported values depends from the backend.
      * Should always be bigger or equal to swapchain count. Waits earlier in the frame.
      */
-    uint32_t bufferingCount { 3u };
+    uint32_t bufferingCount{3u};
     /** Maps to desired swapchain count default value is 3,
      * and supported values depend from the backend.
      */
-    uint32_t swapchainImageCount { 3u };
+    uint32_t swapchainImageCount{3u};
 
     /**
      * Integrated devices (mobile gpus, integrated desktop chips) expose all memory pools with host visible flags.
@@ -91,12 +91,12 @@ struct DeviceConfiguration {
      * staging buffers are not used for this data. The data is directly mapped once for writing.
      * Set to zero (0u) to disable all staging optimizations.
      */
-    uint32_t requiredIntegratedMemoryFlags { CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                                             CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT };
+    uint32_t requiredIntegratedMemoryFlags{
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT};
 
     /** Additional options for device creation.
      */
-    uint32_t configurationFlags { CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT };
+    uint32_t configurationFlags{CORE_DEVICE_CONFIGURATION_PIPELINE_CACHE_BIT};
 };
 
 /** Device backend type */
@@ -106,18 +106,20 @@ enum class DeviceBackendType {
     /** GLES backend */
     OPENGLES,
     /** OpenGL backend */
-    OPENGL
+    OPENGL,
+    /** Maleoon backend */
+    MALEOON
 };
 
 /** @ingroup group_idevice */
 /** Device create info */
 struct DeviceCreateInfo {
     /** Backend type to be created */
-    DeviceBackendType backendType { DeviceBackendType::VULKAN };
+    DeviceBackendType backendType{DeviceBackendType::VULKAN};
     /** Device configuration */
     DeviceConfiguration deviceConfiguration;
     /** Backend configuration pointer */
-    const BackendExtra* backendConfiguration { nullptr };
+    const BackendExtra* backendConfiguration{nullptr};
 };
 
 /** Common device properties for various features */
@@ -246,4 +248,4 @@ struct GpuSamplerPlatformData {};
 struct GpuAccelerationStructurePlatformData {};
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_IDEVICE_H
+#endif  // API_RENDER_DEVICE_IDEVICE_H

@@ -66,7 +66,7 @@ MinAndMax GetWorldAABB(const Math::Mat4X4& world, const Math::Vec3& aabbMin, con
 
     const auto extentsW = absWorld * extents;
 
-    return MinAndMax { centerW - extentsW, centerW + extentsW };
+    return MinAndMax{centerW - extentsW, centerW + extentsW};
 }
 
 constexpr bool IntersectAabb(
@@ -170,8 +170,13 @@ void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentM
     if (isRecursive) {
         for (ISceneNode* child : sceneNode.GetChildren()) {
             if (child) {
-                UpdateRecursiveAABB(renderMeshComponentManager, worldMatrixComponentManager,
-                    jointMatricesComponentManager, meshManager, *child, isRecursive, mamInOut);
+                UpdateRecursiveAABB(renderMeshComponentManager,
+                    worldMatrixComponentManager,
+                    jointMatricesComponentManager,
+                    meshManager,
+                    *child,
+                    isRecursive,
+                    mamInOut);
             }
         }
     }
@@ -207,8 +212,14 @@ void UpdateRecursiveAABB(const IRenderMeshComponentManager& renderMeshComponentM
     if (isRecursive) {
         for (ISceneNode* child : sceneNode.GetChildren()) {
             if (child) {
-                UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, localMatrixComponentManager,
-                    meshManager, *child, worldMatrix, isRecursive, mamInOut);
+                UpdateRecursiveAABB(renderMeshComponentManager,
+                    transformComponentManager,
+                    localMatrixComponentManager,
+                    meshManager,
+                    *child,
+                    worldMatrix,
+                    isRecursive,
+                    mamInOut);
             }
         }
     }
@@ -265,7 +276,7 @@ Math::Vec3 ScreenToWorld(
         (projToView * Math::Vec4(screenCoordinate.x, screenCoordinate.y, screenCoordinate.z, 1.f));
     auto worldCoordinate = worldFromView * viewCoordinate;
     worldCoordinate /= worldCoordinate.w;
-    return Math::Vec3 { worldCoordinate.x, worldCoordinate.y, worldCoordinate.z };
+    return Math::Vec3{worldCoordinate.x, worldCoordinate.y, worldCoordinate.z};
 }
 
 struct Ray {
@@ -277,17 +288,18 @@ Ray RayFromCamera(const CameraComponent& cameraComponent, const WorldMatrixCompo
     Math::Vec2 screenCoordinate)
 {
     if (cameraComponent.projection == CORE3D_NS::CameraComponent::Projection::ORTHOGRAPHIC) {
-        const Math::Vec3 worldPos = CORE3D_NS::ScreenToWorld(cameraComponent, cameraWorldMatrixComponent.matrix,
+        const Math::Vec3 worldPos = CORE3D_NS::ScreenToWorld(cameraComponent,
+            cameraWorldMatrixComponent.matrix,
             Math::Vec3(screenCoordinate.x, screenCoordinate.y, 0.0f));
         const auto direction = cameraWorldMatrixComponent.matrix * Math::Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-        return Ray { worldPos, direction };
+        return Ray{worldPos, direction};
     }
     // Ray origin is the camera world position.
     const Math::Vec3& rayOrigin = Math::Vec3(cameraWorldMatrixComponent.matrix.w);
     const Math::Vec3 targetPos = CORE3D_NS::ScreenToWorld(
         cameraComponent, cameraWorldMatrixComponent.matrix, Math::Vec3(screenCoordinate.x, screenCoordinate.y, 1.0f));
     const Math::Vec3 direction = Math::Normalize(targetPos - rayOrigin);
-    return Ray { rayOrigin, direction };
+    return Ray{rayOrigin, direction};
 }
 
 Math::Mat4X4 GetWorldMatrix(
@@ -313,7 +325,7 @@ Math::Mat4X4 GetWorldMatrix(
     }
     return GetWorldMatrix(transformComponentManager, nodeSystem, parent->GetEntity()) * local;
 }
-} // namespace
+}  // namespace
 
 Math::Vec3 Picking::ScreenToWorld(IEcs const& ecs, Entity cameraEntity, Math::Vec3 screenCoordinate) const
 {
@@ -322,13 +334,17 @@ Math::Vec3 Picking::ScreenToWorld(IEcs const& ecs, Entity cameraEntity, Math::Ve
     }
 
     auto cameraComponentManager = GetManager<ICameraComponentManager>(ecs);
+    auto transformComponentManager = GetManager<ITransformComponentManager>(ecs);
+    auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    if (!cameraComponentManager || !transformComponentManager || !nodeSystem) {
+        return {};
+    }
     const auto cameraId = cameraComponentManager->GetComponentId(cameraEntity);
     if (cameraId == IComponentManager::INVALID_COMPONENT_ID) {
         return {};
     }
 
-    const Math::Mat4X4 worldMatrix =
-        GetWorldMatrix(*GetManager<ITransformComponentManager>(ecs), *GetSystem<INodeSystem>(ecs), cameraEntity);
+    const Math::Mat4X4 worldMatrix = GetWorldMatrix(*transformComponentManager, *nodeSystem, cameraEntity);
     return CORE3D_NS::ScreenToWorld(*cameraComponentManager->Read(cameraId), worldMatrix, screenCoordinate);
 }
 
@@ -338,12 +354,19 @@ Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Ve
         return {};
     }
 
-    const Math::Mat4X4 worldMatrix =
-        GetWorldMatrix(*GetManager<ITransformComponentManager>(ecs), *GetSystem<INodeSystem>(ecs), cameraEntity);
+    auto transformComponentManager = GetManager<ITransformComponentManager>(ecs);
+    auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    if (!transformComponentManager || !nodeSystem) {
+        return {};
+    }
+    const Math::Mat4X4 worldMatrix = GetWorldMatrix(*transformComponentManager, *nodeSystem, cameraEntity);
     auto const worldToView = Math::Inverse(worldMatrix);
     const auto viewCoordinate = worldToView * Math::Vec4(worldCoordinate.x, worldCoordinate.y, worldCoordinate.z, 1.f);
 
     auto cameraComponentManager = GetManager<ICameraComponentManager>(ecs);
+    if (!cameraComponentManager) {
+        return {};
+    }
     const auto cameraId = cameraComponentManager->GetComponentId(cameraEntity);
     if (cameraId == IComponentManager::INVALID_COMPONENT_ID) {
         return {};
@@ -365,7 +388,7 @@ Math::Vec3 Picking::WorldToScreen(IEcs const& ecs, Entity cameraEntity, Math::Ve
     screenCoordinate.x = screenCoordinate.x * 0.5f + 0.5f;
     screenCoordinate.y = screenCoordinate.y * 0.5f + 0.5f;
 
-    return Math::Vec3 { screenCoordinate.x, screenCoordinate.y, screenCoordinate.z };
+    return Math::Vec3{screenCoordinate.x, screenCoordinate.y, screenCoordinate.z};
 }
 
 vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start, const Math::Vec3& direction) const
@@ -373,10 +396,15 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
     vector<RayCastResult> result;
 
     auto nodeSystem = GetSystem<INodeSystem>(ecs);
-    auto const& renderMeshComponentManager = GetManager<IRenderMeshComponentManager>(ecs);
-    auto const& worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
-    auto const& jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
-    auto const& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
+    auto const renderMeshComponentManager = GetManager<IRenderMeshComponentManager>(ecs);
+    auto const worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
+    auto const jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
+    auto const meshComponentManagerPtr = GetManager<IMeshComponentManager>(ecs);
+    if (!nodeSystem || !renderMeshComponentManager || !worldMatrixComponentManager || !jointMatricesComponentManager ||
+        !meshComponentManagerPtr) {
+        return result;
+    }
+    auto const& meshComponentManager = *meshComponentManagerPtr;
     float distance = 0;
 
     auto const invDir = DirectionVectorInverse(direction);
@@ -389,12 +417,15 @@ vector<RayCastResult> Picking::RayCast(const IEcs& ecs, const Math::Vec3& start,
         if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
             // Use the skinned aabb's.
             const auto& jointMatricesComponent = *jointMatrices;
-            if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start, invDir,
+            if (IntersectAabb(jointMatricesComponent.jointsAabbMin,
+                    jointMatricesComponent.jointsAabbMax,
+                    start,
+                    invDir,
                     distance)) {
                 const float centerDistance = Math::Magnitude(
                     (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f - start);
                 const Math::Vec3 hitPosition = start + direction * distance;
-                result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
+                result.push_back(RayCastResult{node, centerDistance, distance, hitPosition});
             }
         } else if (const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(id);
                    worldMatrixId != IComponentManager::INVALID_COMPONENT_ID) {
@@ -424,11 +455,16 @@ vector<RayCastResult> Picking::RayCast(
     vector<RayCastResult> result;
 
     auto nodeSystem = GetSystem<INodeSystem>(ecs);
-    auto const& renderMeshComponentManager = GetManager<IRenderMeshComponentManager>(ecs);
-    auto const& layerComponentManager = GetManager<ILayerComponentManager>(ecs);
-    auto const& worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
-    auto const& jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
-    auto const& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
+    auto const renderMeshComponentManager = GetManager<IRenderMeshComponentManager>(ecs);
+    auto const layerComponentManager = GetManager<ILayerComponentManager>(ecs);
+    auto const worldMatrixComponentManager = GetManager<IWorldMatrixComponentManager>(ecs);
+    auto const jointMatricesComponentManager = GetManager<IJointMatricesComponentManager>(ecs);
+    auto const meshComponentManagerPtr = GetManager<IMeshComponentManager>(ecs);
+    if (!nodeSystem || !renderMeshComponentManager || !layerComponentManager || !worldMatrixComponentManager ||
+        !jointMatricesComponentManager || !meshComponentManagerPtr) {
+        return result;
+    }
+    auto const& meshComponentManager = *meshComponentManagerPtr;
 
     auto const invDir = DirectionVectorInverse(direction);
     float distance = 0;
@@ -439,13 +475,16 @@ vector<RayCastResult> Picking::RayCast(
                 if (const auto jointMatrices = jointMatricesComponentManager->Read(id); jointMatrices) {
                     // Use the skinned aabb's.
                     const auto& jointMatricesComponent = *jointMatrices;
-                    if (IntersectAabb(jointMatricesComponent.jointsAabbMin, jointMatricesComponent.jointsAabbMax, start,
-                            invDir, distance)) {
+                    if (IntersectAabb(jointMatricesComponent.jointsAabbMin,
+                            jointMatricesComponent.jointsAabbMax,
+                            start,
+                            invDir,
+                            distance)) {
                         const float centerDistance = Math::Magnitude(
                             (jointMatricesComponent.jointsAabbMax + jointMatricesComponent.jointsAabbMin) * 0.5f -
                             start);
                         const Math::Vec3 hitPosition = start + direction * distance;
-                        result.push_back(RayCastResult { node, centerDistance, distance, hitPosition });
+                        result.push_back(RayCastResult{node, centerDistance, distance, hitPosition});
                     }
                 } else {
                     if (const auto worldMatrixId = worldMatrixComponentManager->GetComponentId(id);
@@ -459,7 +498,8 @@ vector<RayCastResult> Picking::RayCast(
                                 result.push_back(raycastResult);
                             }
                         } else {
-                            PLUGIN_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64, id.id,
+                            PLUGIN_LOG_W("no mesh resource for entity %" PRIx64 ", resource %" PRIx64,
+                                id.id,
                                 renderMeshComponent.mesh.id);
                         }
                     }
@@ -490,7 +530,7 @@ BASE_NS::vector<RayTriangleCastResult> Core3D::Picking::RayCast(const BASE_NS::M
         if (IntersectTriangle(&triangles[ii], start, direction, distance, uv)) {
             const Math::Vec3 hitPosition = start + direction * distance;
 
-            result.push_back(RayTriangleCastResult { distance, hitPosition, uv, static_cast<uint64_t>(ii / 3) });
+            result.push_back(RayTriangleCastResult{distance, hitPosition, uv, static_cast<uint64_t>(ii / 3)});
         }
     }
 
@@ -570,14 +610,16 @@ MinAndMax Picking::GetWorldMatrixComponentAABB(Entity entity, bool isRecursive, 
 {
     MinAndMax mam;
 
-    if (ISceneNode* node = GetSystem<INodeSystem>(ecs)->GetNode(entity); node) {
-        auto& renderMeshComponentManager = *GetManager<IRenderMeshComponentManager>(ecs);
-        auto& worldMatrixComponentManager = *GetManager<IWorldMatrixComponentManager>(ecs);
-        auto& jointworldMatrixComponentManager = *GetManager<IJointMatricesComponentManager>(ecs);
-        auto& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
-
-        UpdateRecursiveAABB(renderMeshComponentManager, worldMatrixComponentManager, jointworldMatrixComponentManager,
-            meshComponentManager, *node, isRecursive, mam);
+    auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    auto renderMeshMgr = GetManager<IRenderMeshComponentManager>(ecs);
+    auto worldMatrixMgr = GetManager<IWorldMatrixComponentManager>(ecs);
+    auto jointMatricesMgr = GetManager<IJointMatricesComponentManager>(ecs);
+    auto meshMgr = GetManager<IMeshComponentManager>(ecs);
+    if (!nodeSystem || !renderMeshMgr || !worldMatrixMgr || !jointMatricesMgr || !meshMgr) {
+        return mam;
+    }
+    if (ISceneNode* node = nodeSystem->GetNode(entity); node) {
+        UpdateRecursiveAABB(*renderMeshMgr, *worldMatrixMgr, *jointMatricesMgr, *meshMgr, *node, isRecursive, mam);
     }
 
     return mam;
@@ -587,14 +629,17 @@ MinAndMax Picking::GetTransformComponentAABB(Entity entity, bool isRecursive, IE
 {
     MinAndMax mam;
 
-    if (ISceneNode* node = GetSystem<INodeSystem>(ecs)->GetNode(entity); node) {
-        auto& renderMeshComponentManager = *GetManager<IRenderMeshComponentManager>(ecs);
-        auto& transformComponentManager = *GetManager<ITransformComponentManager>(ecs);
-        auto& localMatrixComponentManager = *GetManager<ILocalMatrixComponentManager>(ecs);
-        auto& meshComponentManager = *GetManager<IMeshComponentManager>(ecs);
-
-        UpdateRecursiveAABB(renderMeshComponentManager, transformComponentManager, localMatrixComponentManager,
-            meshComponentManager, *node, Math::Mat4X4(1.0f), isRecursive, mam);
+    auto nodeSystem = GetSystem<INodeSystem>(ecs);
+    auto renderMeshMgr = GetManager<IRenderMeshComponentManager>(ecs);
+    auto transformMgr = GetManager<ITransformComponentManager>(ecs);
+    auto localMatrixMgr = GetManager<ILocalMatrixComponentManager>(ecs);
+    auto meshMgr = GetManager<IMeshComponentManager>(ecs);
+    if (!nodeSystem || !renderMeshMgr || !transformMgr || !localMatrixMgr || !meshMgr) {
+        return mam;
+    }
+    if (ISceneNode* node = nodeSystem->GetNode(entity); node) {
+        UpdateRecursiveAABB(
+            *renderMeshMgr, *transformMgr, *localMatrixMgr, *meshMgr, *node, Math::Mat4X4(1.0f), isRecursive, mam);
     }
 
     return mam;
@@ -616,7 +661,9 @@ IInterface* Picking::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void Picking::Ref() {}
+void Picking::Ref()
+{}
 
-void Picking::Unref() {}
+void Picking::Unref()
+{}
 CORE3D_END_NAMESPACE()

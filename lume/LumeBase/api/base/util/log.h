@@ -29,4 +29,4 @@
 #define BASE_LOG_E(...) ((void)0)
 #endif
 
-#endif // API_BASE_UTIL_LOG_H
+#endif  // API_BASE_UTIL_LOG_H

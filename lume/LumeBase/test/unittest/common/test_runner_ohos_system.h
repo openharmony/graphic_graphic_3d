@@ -31,13 +31,15 @@ namespace UTest {
 namespace {
 class TestRunnerEnv : public ::testing::Environment {
 public:
-    void SetUp() override {}
+    void SetUp() override
+    {}
 
-    void TearDown() override {}
+    void TearDown() override
+    {}
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 BASE_END_NAMESPACE()
 
-#endif // TEST_ENVIRONMENT
+#endif  // TEST_ENVIRONMENT

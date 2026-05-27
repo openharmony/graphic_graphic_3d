@@ -93,4 +93,4 @@ private:
     void DisposeNative(void*) override;
 };
 
-#endif // BOIDS_SWARM_PLUGIN_JS_H
+#endif  // BOIDS_SWARM_PLUGIN_JS_H

@@ -23,27 +23,25 @@
 
 namespace OHOS::Render3D {
 using namespace ShadowConfiguration;
+
 class RenderConfigurationETS {
 public:
-
     RenderConfigurationETS(SCENE_NS::IRenderConfiguration::Ptr rc, const SCENE_NS::IScene::Ptr scene);
-
-    SCENE_NS::IScene::Ptr GetScene() const
-    {
-        return scene_.lock();
-    }
 
     ~RenderConfigurationETS();
 
     META_NS::IObject::Ptr GetNativeObj() const;
 
     std::shared_ptr<UVec2Proxy> GetShadowResolution();
-    void SetShadowResolution(const BASE_NS::Math::UVec2 &res);
+    void SetShadowResolution(const BASE_NS::Math::UVec2& res);
 
     std::shared_ptr<SoftShadowConfigETS> GetSoftShadowConfig();
     void SetSoftShadowConfig(const std::shared_ptr<SoftShadowConfigETS> softShadowConfigETS);
 
-    void SetDefaultSoftShadowConfig() { SetSoftShadowConfig(nullptr); }
+    void SetDefaultSoftShadowConfig()
+    {
+        SetSoftShadowConfig(nullptr);
+    }
 
 private:
     SCENE_NS::IRenderConfiguration::Ptr rc_{nullptr};

@@ -18,25 +18,28 @@
 
 #include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/scene_utils.h>
+#include <scene/interface/ecs/resource_component.h>
 #include <scene/interface/intf_scene.h>
+#include <scene/interface/resource/intf_resource_context.h>
 
 #include <core/resources/intf_resource_manager.h>
 
+#include <meta/base/memfile.h>
 #include <meta/interface/resource/intf_owned_resource_groups.h>
 #include <meta/interface/resource/intf_resource.h>
-
-#include "../ecs_component/resource_component.h"
-#include "../serialization/util.h"
+#include <meta/interface/resource/intf_resource_manager_extension.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 // Checks only groups in the resource manager
-inline BASE_NS::string UniqueGroupName(const CORE_NS::IResourceManager::Ptr& resources, BASE_NS::string_view base)
+inline BASE_NS::string UniqueGroupName(const CORE_NS::IResourceManager::Ptr& resources, BASE_NS::string_view base,
+    const CORE_NS::ResourceContextPtr& context)
 {
     // try to find group name that is not in use
-    std::size_t index {};
-    BASE_NS::string group { base };
-    while (!resources->GetResourceInfos(group).empty()) {
+    std::size_t index{};
+    BASE_NS::string group{base};
+    while (!resources->GetResourceInfos(group, context).empty()) {
         group = BASE_NS::string(base) + " (" + BASE_NS::to_string(++index) + ")";
     }
     return group;
@@ -59,127 +62,71 @@ inline BASE_NS::string UniqueGroupName(const IInternalScene::Ptr& scene, BASE_NS
         return BASE_NS::string(base);
     }
     auto& ecs = scene->GetEcsContext();
+    auto associated = scene->GetResourceGroups();
     // try to find group name that is not in use
-    std::size_t index {};
-    BASE_NS::string group { base };
-    while (!resources->GetResourceInfos(group).empty() || !UniqueGroupInEcs(ecs, group)) {
+    std::size_t index{};
+    BASE_NS::string group{base};
+    while (associated.GetHandle(group) || !resources->GetResourceInfos(group, scene->GetScene()).empty() ||
+           !UniqueGroupInEcs(ecs, group)) {
         group = BASE_NS::string(base) + " (" + BASE_NS::to_string(++index) + ")";
     }
     return group;
 }
-inline CORE_NS::ResourceId UniqueResourceName(
-    const CORE_NS::IResourceManager::Ptr& resources, const CORE_NS::ResourceId& id)
+inline CORE_NS::ResourceIdContext UniqueResourceName(
+    const CORE_NS::IResourceManager::Ptr& resources, const CORE_NS::ResourceIdContext& id)
 {
-    // try to find group name that is not in use
-    std::size_t index {};
-    CORE_NS::ResourceId nid = id;
+    std::size_t index{};
+    auto nid = id;
     while (resources->GetResourceInfo(nid).id.IsValid()) {
-        nid.name = id.name + " (" + BASE_NS::to_string(++index) + ")";
+        nid.id.name = id.id.name + " (" + BASE_NS::to_string(++index) + ")";
     }
     return nid;
 }
 
-inline void AddGroup(const IScene::Ptr& scene, BASE_NS::string_view group)
+static bool IsEcsResourceInUse(const CORE_NS::Entity& ent, const CORE_NS::Entity& existing)
 {
-    if (auto iScene = scene->GetInternalScene()) {
-        if (auto c = iScene->GetContext()) {
-            if (auto res = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
-                auto bundle = iScene->GetResourceGroups();
-                if (!bundle.GetHandle(group)) {
-                    auto handle = res->GetGroupHandle(group);
-                    bundle.PushGroupHandleToBack(handle);
-                    iScene->SetResourceGroups(BASE_NS::move(bundle));
-                }
-            }
-        }
-    }
+    return CORE_NS::EntityUtil::IsValid(ent) && ent != existing;
 }
-inline void ChangePrimaryGroup(const IScene::Ptr& scene, BASE_NS::string_view primary)
+
+inline CORE_NS::ResourceIdContext FirstUnusedEcsResourceName(
+    const IInternalScene::Ptr& scene, const CORE_NS::ResourceIdContext& id, const CORE_NS::Entity& ent)
 {
-    if (auto iScene = scene->GetInternalScene()) {
-        if (auto c = iScene->GetContext()) {
-            if (auto res = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
-                auto handle = res->GetGroupHandle(primary);
-                auto bundle = iScene->GetResourceGroups();
-                bundle.RemoveHandle(primary);
-                bundle.PushGroupHandleToFront(handle);
-                iScene->SetResourceGroups(BASE_NS::move(bundle));
-            }
-        }
+    const auto resManager = CORE_NS::GetManager<IResourceComponentManager>(*scene->GetEcsContext().GetNativeEcs());
+    if (!resManager) {
+        return {};
     }
+
+    std::size_t index{};
+    auto nid = id;
+    while (IsEcsResourceInUse(resManager->GetEntity(nid.id), ent)) {
+        nid.id.name = id.id.name + " (" + BASE_NS::to_string(++index) + ")";
+    }
+    return nid;
 }
+
 inline void SetPrimaryGroupOnly(const IScene::Ptr& scene, BASE_NS::string_view primary)
 {
     if (auto iScene = scene->GetInternalScene()) {
         if (auto c = iScene->GetContext()) {
             if (auto res = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
-                auto handle = res->GetGroupHandle(primary);
+                auto handle = res->GetGroupHandle(primary, scene);
                 auto bundle = iScene->GetResourceGroups();
-                bundle = ResourceGroupBundle({ handle });
+                bundle = ResourceGroupBundle({handle});
                 iScene->SetResourceGroups(BASE_NS::move(bundle));
             }
         }
     }
 }
 inline ResourceGroupBundle StringToResourceGroupBundle(
-    const IRenderContext::Ptr& c, const BASE_NS::vector<BASE_NS::string>& groups)
+    const IScene::Ptr& scene, const BASE_NS::vector<BASE_NS::string>& groups)
 {
     ResourceGroupBundle bundle;
-    if (auto res = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
+    if (auto res = interface_pointer_cast<META_NS::IOwnedResourceGroups>(GetResourceManager(scene))) {
         for (auto&& g : groups) {
-            bundle.PushGroupHandleToBack(res->GetGroupHandle(g));
+            bundle.PushGroupHandleToBack(res->GetGroupHandle(g, scene));
         }
     }
     return bundle;
-}
-
-inline bool CreateObjectResourceOptions(
-    const CORE_NS::IResource::ConstPtr& p, const CORE_NS::ResourceManagerPtr& rm, CORE_NS::IFile& options)
-{
-    bool res = false;
-    if (auto opts = META_NS::GetObjectRegistry().Create<META_NS::IObjectResourceOptions>(
-            META_NS::ClassId::ObjectResourceOptions)) {
-        auto in = interface_cast<META_NS::IMetadata>(p);
-        auto out = interface_cast<META_NS::IMetadata>(opts);
-        if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(p)) {
-            auto resource = i->GetTemplateId();
-            opts->SetBaseResource(resource);
-            res = resource.IsValid();
-        }
-        if (in && out) {
-            res |= SerCloneAllToDefaultIfSet(*in, *out);
-            if (res) {
-                opts->Save(options, rm, nullptr);
-            }
-        }
-    }
-    return res;
-}
-
-inline void ApplyObjectResourceOptions(const CORE_NS::ResourceId& id, const CORE_NS::IResource::Ptr& res,
-    CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rm, const CORE_NS::ResourceContextPtr& context)
-{
-    if (auto opts = META_NS::GetObjectRegistry().Create<META_NS::IObjectResourceOptions>(
-            META_NS::ClassId::ObjectResourceOptions)) {
-        opts->Load(options, rm, context);
-        if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
-            auto base = opts->GetBaseResource();
-            if (base.IsValid()) {
-                auto r = rm->GetResource(base, context);
-                if (!r) {
-                    CORE_LOG_W("Could not load base resource for %s", id.ToString().c_str());
-                }
-                if (!i->SetTemplate(r)) {
-                    CORE_LOG_W("Failed to apply template for resource %s", id.ToString().c_str());
-                }
-            }
-        }
-        auto in = interface_cast<META_NS::IMetadata>(opts);
-        auto out = interface_cast<META_NS::IMetadata>(res);
-        if (in && out) {
-            SerCopy(*in, *out);
-        }
-    }
 }
 
 SCENE_END_NAMESPACE()

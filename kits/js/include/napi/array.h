@@ -24,11 +24,12 @@
 
 #include <base/containers/string.h>
 
+#include "export.h"
 #include "value.h"
 
 namespace NapiApi {
 
-class Array {
+class SCENE_ADDON_PUBLIC Array {
 public:
     Array() = default;
     Array(napi_env env, size_t count);
@@ -43,23 +44,23 @@ public:
     napi_value Get_value(size_t index) const;
     void Set_value(size_t index, napi_value v) const;
 
-    template<typename T>
+    template <typename T>
     Value<T> Get(size_t index) const
     {
-        return Value<T> { env_, Get_value(index) };
+        return Value<T>{env_, Get_value(index)};
     }
 
-    template<typename T>
+    template <typename T>
     void Set(size_t index, T t) const
     {
         Set_value(index, Value<T>(env_, t).ToNapiValue());
     }
 
 private:
-    napi_env env_ { nullptr };
-    napi_value array_ { nullptr };
+    napi_env env_{nullptr};
+    napi_value array_{nullptr};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

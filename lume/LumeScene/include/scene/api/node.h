@@ -18,6 +18,7 @@
 
 #include <scene/api/post_process.h>
 #include <scene/ext/intf_component.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_environment.h>
 #include <scene/interface/intf_layer.h>
@@ -26,13 +27,14 @@
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_node_import.h>
 #include <scene/interface/intf_scene.h>
+#include <scene/interface/resource/util.h>
 
 #include <meta/api/util.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
-template<const META_NS::AsyncCallType& CallType, typename SyncReturnType, typename FutureType>
+template <const META_NS::AsyncCallType& CallType, typename SyncReturnType, typename FutureType>
 constexpr auto UnwrapFuture(FutureType&& f)
 {
     if constexpr (CallType.async) {
@@ -41,7 +43,7 @@ constexpr auto UnwrapFuture(FutureType&& f)
         return SyncReturnType(f.GetResult());
     }
 }
-template<typename Type>
+template <typename Type>
 bool CheckName(const Type& target, BASE_NS::string_view name) noexcept
 {
     if constexpr (BASE_NS::is_same_v<Type, META_NS::IObject::Ptr>) {
@@ -51,7 +53,7 @@ bool CheckName(const Type& target, BASE_NS::string_view name) noexcept
         return o && o->GetName() == name;
     }
 }
-template<typename Result, typename Input>
+template <typename Result, typename Input>
 BASE_NS::shared_ptr<Result> FindFromContainer(
     const BASE_NS::vector<BASE_NS::shared_ptr<Input>>& container, BASE_NS::string_view name) noexcept
 {
@@ -63,7 +65,7 @@ BASE_NS::shared_ptr<Result> FindFromContainer(
     return nullptr;
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 class Layer : public META_NS::Named {
 public:
@@ -169,7 +171,7 @@ public:
             params.maxCount = 1;
             params.root = GetPtr<INode>();
             params.traversalType = traversalType;
-            return scene ? scene->FindNamedNode(params) : decltype(scene->FindNamedNode(params)) {};
+            return scene ? scene->FindNamedNode(params) : decltype(scene->FindNamedNode(params)){};
         });
         return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
@@ -181,7 +183,8 @@ public:
      */
     META_API_ASYNC auto ImportScene(const IScene::Ptr& scene, BASE_NS::string_view name)
     {
-        auto f = CallPtr<INodeImport>([=](auto& ni) { return ni.ImportChildScene(scene, name); });
+        auto f = CallPtr<INodeImport>(
+            [scene, n = BASE_NS::string(name)](auto& ni) { return ni.ImportChildScene(scene, n); });
         return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
     /**
@@ -192,13 +195,30 @@ public:
      */
     META_API_ASYNC auto ImportScene(BASE_NS::string_view uri, BASE_NS::string_view name)
     {
-        auto f = CallPtr<INodeImport>([=](auto& ni) { return ni.ImportChildScene(uri, name); });
+        auto f = CallPtr<INodeImport>(
+            [u = BASE_NS::string(uri), n = BASE_NS::string(name)](auto& ni) { return ni.ImportChildScene(u, n); });
         return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
     /// @see INode::Clone.
     META_API_ASYNC auto Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent = {})
     {
-        auto f = CallPtr<INode>([=](auto& n) { return n.Clone(nodeName, parent); });
+        auto f = CallPtr<INode>([parent, name = BASE_NS::string(nodeName)](auto& n) { return n.Clone(name, parent); });
+        return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
+    }
+    /**
+     * @brief Instantiates a template as a new child node of this node.
+     * @param uri Path to load the template from.
+     * @return The instantiated node template or invalid node if importing failed.
+     */
+    META_API_ASYNC auto ImportTemplate(BASE_NS::string_view uri)
+    {
+        auto f = CallPtr<INodeImport>([scene = GetScene(), path = BASE_NS::string(uri)](auto& n) {
+            META_NS::IObjectTemplate::Ptr t;
+            if (const auto resourceManager = ::SCENE_NS::GetResourceManager(scene)) {
+                t = ::SCENE_NS::LoadNodeTemplate(*resourceManager, path);
+            }
+            return n.ImportTemplate(t);
+        });
         return Internal::UnwrapFuture<CallType, Node>(BASE_NS::move(f));
     }
 };
@@ -313,7 +333,7 @@ private:
     {
         SCENE_NS::PointerEvent event;
         event.time = time;
-        event.pointers = { { pointerId, position, state } };
+        event.pointers = {{pointerId, position, state}};
         SendInputEvent(event);
     }
 };
@@ -373,4 +393,4 @@ public:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_API_NODE_H
+#endif  // SCENE_API_NODE_H

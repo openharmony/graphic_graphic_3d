@@ -24,16 +24,16 @@
 #include <meta/interface/property/array_property.h>
 #include <meta/interface/property/property.h>
 
-#define META_READONLY_PROPERTY_TYPED_IMPL(type, name)                   \
-    META_NS::ConstProperty<type> name() const noexcept                  \
-    {                                                                   \
-        return META_NS::ConstProperty<type> { this->Property##name() }; \
+#define META_READONLY_PROPERTY_TYPED_IMPL(type, name)                \
+    META_NS::ConstProperty<type> name() const noexcept               \
+    {                                                                \
+        return META_NS::ConstProperty<type>{this->Property##name()}; \
     }
 
-#define META_PROPERTY_TYPED_IMPL(type, name)                       \
-    META_NS::Property<type> name() noexcept                        \
-    {                                                              \
-        return META_NS::Property<type> { this->Property##name() }; \
+#define META_PROPERTY_TYPED_IMPL(type, name)                    \
+    META_NS::Property<type> name() noexcept                     \
+    {                                                           \
+        return META_NS::Property<type>{this->Property##name()}; \
     }
 
 #define META_EVENT_TYPED_IMPL(type, name)                                 \
@@ -59,16 +59,16 @@
     virtual BASE_NS::shared_ptr<META_NS::IProperty> Property##name() = 0; \
     META_PROPERTY_TYPED_IMPL(type, name)
 
-#define META_READONLY_ARRAY_PROPERTY_TYPED_IMPL(type, name)                  \
-    META_NS::ConstArrayProperty<type> name() const noexcept                  \
-    {                                                                        \
-        return META_NS::ConstArrayProperty<type> { this->Property##name() }; \
+#define META_READONLY_ARRAY_PROPERTY_TYPED_IMPL(type, name)               \
+    META_NS::ConstArrayProperty<type> name() const noexcept               \
+    {                                                                     \
+        return META_NS::ConstArrayProperty<type>{this->Property##name()}; \
     }
 
-#define META_ARRAY_PROPERTY_TYPED_IMPL(type, name)                      \
-    META_NS::ArrayProperty<type> name() noexcept                        \
-    {                                                                   \
-        return META_NS::ArrayProperty<type> { this->Property##name() }; \
+#define META_ARRAY_PROPERTY_TYPED_IMPL(type, name)                   \
+    META_NS::ArrayProperty<type> name() noexcept                     \
+    {                                                                \
+        return META_NS::ArrayProperty<type>{this->Property##name()}; \
     }
 
 /**

@@ -28,6 +28,7 @@ public:
 
     virtual SCENE_NS::IRenderConfiguration::Ptr GetRenderConfiguration() const = 0;
     virtual void SetRenderConfiguration(SCENE_NS::IRenderConfiguration::Ptr rc) = 0;
+
 protected:
     SoftShadowConfigETS() = default;
     SCENE_NS::IRenderConfiguration::WeakPtr renderConfiguration_;

@@ -25,22 +25,22 @@ namespace UTest {
 const char* GetVersionInfo();
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
 void UnregisterInterfaces(CORE_NS::PluginToken);
-} // namespace UTest
+}  // namespace UTest
 
 namespace {
 extern "C" {
-PLUGIN_DATA(CoreTestShared) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(CoreTestShared){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "Shared Test Plugin",
     // Version information of the plugin.
-    { UTest::UID_SHARED_PLUGIN, UTest::GetVersionInfo },
+    {UTest::UID_SHARED_PLUGIN, UTest::GetVersionInfo},
     UTest::RegisterInterfaces,
     UTest::UnregisterInterfaces,
     {},
 };
 }
-} // namespace
+}  // namespace
 
 namespace UTest {
 using namespace CORE_NS;
@@ -49,7 +49,7 @@ namespace {
 struct GlobalToken {
     IPluginRegister& pluginRegistry;
     SharedGlobalTest test;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_SHARED_GLOBAL_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -62,7 +62,7 @@ struct GlobalToken {
 
 struct EngineToken {
     IEngine& engine;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_SHARED_ENGINE_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -73,7 +73,7 @@ struct EngineToken {
 
 PluginToken CreatePlugin(IEngine& engine)
 {
-    EngineToken* token = new EngineToken { engine };
+    EngineToken* token = new EngineToken{engine};
 
     auto& registry = *engine.GetInterface<IClassRegister>();
 
@@ -94,7 +94,7 @@ void DestroyPlugin(PluginToken token)
 }
 
 constexpr IEnginePlugin ENGINE_PLUGIN(CreatePlugin, DestroyPlugin);
-} // namespace
+}  // namespace
 
 const char* GetVersionInfo()
 {
@@ -103,7 +103,7 @@ const char* GetVersionInfo()
 
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister& pluginRegistry)
 {
-    GlobalToken* token = new GlobalToken { pluginRegistry };
+    GlobalToken* token = new GlobalToken{pluginRegistry};
 
     pluginRegistry.RegisterTypeInfo(ENGINE_PLUGIN);
     pluginRegistry.GetClassRegister().RegisterInterfaceType(token->interfaceInfo);
@@ -120,4 +120,4 @@ void UnregisterInterfaces(PluginToken token)
 
     delete state;
 }
-} // namespace UTest
+}  // namespace UTest

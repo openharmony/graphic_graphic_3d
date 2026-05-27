@@ -35,18 +35,16 @@ public:
     virtual META_NS::IProperty::Ptr GetPropertyPtr() const = 0;
 };
 
-std::shared_ptr<IPropertyProxy> PropertyToProxy(const META_NS::IProperty::Ptr &prop);
+std::shared_ptr<IPropertyProxy> PropertyToProxy(const META_NS::IProperty::Ptr& prop);
 
 template <typename Type>
 class PropertyProxy : public IPropertyProxy {
 public:
-    explicit PropertyProxy(const META_NS::Property<Type> &prop) : prop_(prop.GetProperty())
-    {
-    }
+    explicit PropertyProxy(const META_NS::Property<Type>& prop) : prop_(prop.GetProperty())
+    {}
 
-    explicit PropertyProxy(const META_NS::IProperty::Ptr &prop) : prop_(prop)
-    {
-    }
+    explicit PropertyProxy(const META_NS::IProperty::Ptr& prop) : prop_(prop)
+    {}
 
     virtual ~PropertyProxy()
     {
@@ -58,7 +56,7 @@ public:
         return prop_;
     }
 
-    void SetValue(const Type &value)
+    void SetValue(const Type& value)
     {
         META_NS::Property<Type>(prop_)->SetValue(value);
     }
@@ -75,13 +73,11 @@ protected:
 template <typename Type>
 class ArrayPropertyProxy : public IPropertyProxy {
 public:
-    explicit ArrayPropertyProxy(const META_NS::ArrayProperty<Type> &prop) : prop_(prop.GetProperty())
-    {
-    }
+    explicit ArrayPropertyProxy(const META_NS::ArrayProperty<Type>& prop) : prop_(prop.GetProperty())
+    {}
 
-    explicit ArrayPropertyProxy(const META_NS::IProperty::Ptr &prop) : prop_(prop)
-    {
-    }
+    explicit ArrayPropertyProxy(const META_NS::IProperty::Ptr& prop) : prop_(prop)
+    {}
 
     virtual ~ArrayPropertyProxy()
     {
@@ -93,7 +89,7 @@ public:
         return prop_;
     }
 
-    void SetValue(const BASE_NS::vector<Type> &value)
+    void SetValue(const BASE_NS::vector<Type>& value)
     {
         META_NS::ArrayProperty<Type>(prop_)->SetValue(value);
     }
@@ -130,35 +126,27 @@ std::string GetTypeName()
 #endif
 }
 
-template<typename From, typename To,
-    typename = std::enable_if_t<(std::is_same_v<From, float> || std::is_same_v<From, int32_t>) &&
-                                (std::is_same_v<To, uint32_t> || std::is_same_v<To, uint64_t>)>>
+template <typename From, typename To,
+    typename = std::enable_if_t<(std::is_same_v<From, float> || std::is_same_v<From, int32_t>)&&(
+        std::is_same_v<To, uint32_t> || std::is_same_v<To, uint64_t>)>>
 To convertValue(const From value)
 {
-    if (std::isnan(value) || std::isinf(value) || value < 0) {
+    if (std::isnan(value) || std::isinf(value)) {
         return 0;
     }
-    if constexpr (std::is_same_v<From, int32_t>) {
-        return static_cast<To>(value);
-    } else {
-        if constexpr (std::is_same_v<To, uint32_t>) {
-            if (value >= static_cast<float>(std::numeric_limits<uint32_t>::max())) {
-                return std::numeric_limits<uint32_t>::max();
-            } else {
-                return static_cast<uint32_t>(value);
-            }
-        } else {
-            if (value >= static_cast<float>(std::numeric_limits<uint64_t>::max())) {
-                return std::numeric_limits<uint64_t>::max();
-            } else {
-                return static_cast<uint64_t>(value);
-            }
-        }
+    if (value < 0) {
+        return 0;
     }
+    const double doubleValue = static_cast<double>(value);
+    const double maxDoubleValue = static_cast<double>(std::numeric_limits<To>::max());
+    if (doubleValue >= maxDoubleValue) {
+        return std::numeric_limits<To>::max();
+    }
+    return static_cast<To>(value);
 }
 
 template <typename Type>
-bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, const std::string &key)
+bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type& value, const std::string& key)
 {
     if (!proxy) {
         CORE_LOG_E("set proxy failed, proxy doesn't exist");
@@ -200,14 +188,16 @@ bool ProxySetProperty(std::shared_ptr<IPropertyProxy> proxy, const Type &value, 
         }
     }
     auto any = META_NS::GetInternalAny(prop);
-    CORE_LOG_E("property [%s] has type [%s], but get [%s]", key.c_str(),
-               any ? any->GetTypeIdString().c_str() : "<Unknown>", GetTypeName<Type>().c_str());
+    CORE_LOG_E("property [%s] has type [%s], but get [%s]",
+        key.c_str(),
+        any ? any->GetTypeIdString().c_str() : "<Unknown>",
+        GetTypeName<Type>().c_str());
     return false;
 }
 
 template <typename Type>
-void ProxySetArrayProperty(std::shared_ptr<IPropertyProxy> proxy, const BASE_NS::vector<Type> &value,
-                           const std::string &key)
+void ProxySetArrayProperty(
+    std::shared_ptr<IPropertyProxy> proxy, const BASE_NS::vector<Type>& value, const std::string& key)
 {
     if (!proxy) {
         CORE_LOG_E("set proxy failed, proxy doesn't exist");
@@ -223,8 +213,10 @@ void ProxySetArrayProperty(std::shared_ptr<IPropertyProxy> proxy, const BASE_NS:
         static_pointer_cast<ArrayPropertyProxy<Type>>(proxy)->SetValue(value);
     } else {
         auto any = META_NS::GetInternalAny(prop);
-        CORE_LOG_E("property [%s] has type [%s], but get [%s]", key.c_str(),
-                   any ? any->GetTypeIdString().c_str() : "<Unknown>", GetTypeName<Type>().c_str());
+        CORE_LOG_E("property [%s] has type [%s], but get [%s]",
+            key.c_str(),
+            any ? any->GetTypeIdString().c_str() : "<Unknown>",
+            GetTypeName<Type>().c_str());
     }
 }
 }  // namespace OHOS::Render3D

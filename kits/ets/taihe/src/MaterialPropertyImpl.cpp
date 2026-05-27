@@ -21,14 +21,11 @@
 namespace OHOS::Render3D::KITETS {
 MaterialPropertyImpl::MaterialPropertyImpl(const std::shared_ptr<MaterialPropertyETS> matProp)
     : materialPropertyETS_(matProp)
-{
-}
+{}
 
 MaterialPropertyImpl::~MaterialPropertyImpl()
 {
-    if (materialPropertyETS_) {
-        materialPropertyETS_.reset();
-    }
+    materialPropertyETS_.reset();
 }
 
 ::SceneResources::ImageOrNull MaterialPropertyImpl::getImage()
@@ -42,7 +39,7 @@ MaterialPropertyImpl::~MaterialPropertyImpl()
     return ::SceneResources::ImageOrNull::make_image(image);
 }
 
-void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const &img)
+void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const& img)
 {
     if (!materialPropertyETS_) {
         WIDGET_LOGE("set image failed, internal material property is null");
@@ -59,7 +56,7 @@ void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const &img)
             WIDGET_LOGE("set image failed, can't get internal image");
             return;
         }
-        ImageImpl *imageImpl = reinterpret_cast<ImageImpl *>(implOp.value());
+        ImageImpl* imageImpl = reinterpret_cast<ImageImpl*>(implOp.value());
         if (imageImpl == nullptr) {
             WIDGET_LOGE("set image failed, can't get image impl");
             return;
@@ -73,12 +70,12 @@ void MaterialPropertyImpl::setImage(::SceneResources::ImageOrNull const &img)
 {
     if (!materialPropertyETS_) {
         WIDGET_LOGE("get factor failed, can't get internal material property");
-        return ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4);
+        return ::SceneTypes::Vec4({nullptr, nullptr});
     }
     return taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(materialPropertyETS_->GetFactor());
 }
 
-void MaterialPropertyImpl::setFactor(::SceneTypes::weak::Vec4 const &factor)
+void MaterialPropertyImpl::setFactor(::SceneTypes::weak::Vec4 const& factor)
 {
     if (!materialPropertyETS_) {
         WIDGET_LOGE("set factor failed, can't get internal material property");
@@ -116,7 +113,7 @@ void MaterialPropertyImpl::setSampler(::taihe::optional_view<::SceneResources::S
         return;
     }
     if (sampler) {
-        SamplerImpl *si = GetImplPointer<SamplerImpl>(sampler.value()->getImpl());
+        SamplerImpl* si = GetImplPointer<SamplerImpl>(sampler.value()->getImpl());
         if (si == nullptr) {
             WIDGET_LOGE("set sampler failed, parameter is invalid");
             return;

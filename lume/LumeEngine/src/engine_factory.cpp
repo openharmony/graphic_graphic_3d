@@ -31,7 +31,7 @@ IEngine::Ptr CreateEngine(EngineCreateInfo const& createInfo);
 
 IEngine::Ptr EngineFactory::Create(const EngineCreateInfo& engineCreateInfo)
 {
-    return IEngine::Ptr { CreateEngine(engineCreateInfo) };
+    return IEngine::Ptr{CreateEngine(engineCreateInfo)};
 }
 
 Uid EngineFactory::GetClassUid() const
@@ -66,7 +66,9 @@ IInterface* EngineFactory::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void EngineFactory::Ref() {}
+void EngineFactory::Ref()
+{}
 
-void EngineFactory::Unref() {}
+void EngineFactory::Unref()
+{}
 CORE_END_NAMESPACE()

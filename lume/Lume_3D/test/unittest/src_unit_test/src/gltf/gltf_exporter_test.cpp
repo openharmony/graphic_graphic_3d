@@ -81,7 +81,11 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
         GLTFImportResult result = importer->GetResult();
         EXPECT_TRUE(result.success);
         if (result.success) {
-            root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(), *gltf.data, result.data, ecs, {},
+            root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(),
+                *gltf.data,
+                result.data,
+                ecs,
+                {},
                 CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL);
             EXPECT_TRUE(EntityUtil::IsValid(root));
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
@@ -92,7 +96,7 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
     error.success = false;
     return error;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ExportGltfAnimation
@@ -203,7 +207,7 @@ void CreateScene(IEcs& ecs, IGraphicsContext& graphicsContext)
 
     const auto& sceneUtil = graphicsContext.GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
-    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, { 128u, 128u }, true, Math::DEG2RAD * 75.0f, 10.0f);
+    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, {128u, 128u}, true, Math::DEG2RAD * 75.0f, 10.0f);
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -219,11 +223,13 @@ void CreateScene(IEcs& ecs, IGraphicsContext& graphicsContext)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -239,9 +245,9 @@ void CreateScene(IEcs& ecs, IGraphicsContext& graphicsContext)
         if (auto materialHandle = materialManager->Write(material); materialHandle) {
             materialHandle->type = MaterialComponent::Type::METALLIC_ROUGHNESS;
             materialHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT].factor =
-                Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
             materialHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor =
-                Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
         }
     }
 
@@ -255,18 +261,18 @@ void CreateScene(IEcs& ecs, IGraphicsContext& graphicsContext)
 
         {
             auto cube = nodeSystem->GetNode(meshUtil.GenerateCube(
-                ecs, "Cube", CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f }), 1.0f, 1.0f, 1.0f));
-            cube->SetPosition({ -3.0f, -2.0f, -5.5f });
+                ecs, "Cube", CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f}), 1.0f, 1.0f, 1.0f));
+            cube->SetPosition({-3.0f, -2.0f, -5.5f});
             cube->SetParent(*scene);
         }
         {
             auto cube = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Cube", material, 1.0f, 1.0f, 1.0f));
-            cube->SetPosition({ -3.0f, -2.0f, -5.5f });
+            cube->SetPosition({-3.0f, -2.0f, -5.5f});
             cube->SetParent(*scene);
         }
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ExportManuallyCreatedScene
@@ -360,9 +366,9 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
             if (auto samplerHandle = rhManager->Write(samplers[i]); samplerHandle) {
                 GpuSamplerDesc desc;
                 desc.magFilter = CORE_FILTER_LINEAR;
-                desc.mipMapMode = (i % 2 == 0) ? CORE_FILTER_NEAREST : CORE_FILTER_LINEAR;   // 2: parm
-                desc.minFilter = (i < 2) ? CORE_FILTER_LINEAR : CORE_FILTER_NEAREST;         // 2: parm
-                desc.addressModeU = (i % 2 == 0) ? CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : // 2: parm
+                desc.mipMapMode = (i % 2 == 0) ? CORE_FILTER_NEAREST : CORE_FILTER_LINEAR;    // 2: parm
+                desc.minFilter = (i < 2) ? CORE_FILTER_LINEAR : CORE_FILTER_NEAREST;          // 2: parm
+                desc.addressModeU = (i % 2 == 0) ? CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE :  // 2: parm
                                         CORE_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
                 desc.addressModeV = CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
                 desc.addressModeW = CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -397,15 +403,15 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
                 if (auto matHandle = materialManager->Write(material); matHandle) {
                     matHandle->type = MaterialComponent::Type::SPECULAR_GLOSSINESS;
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplers[0];
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].sampler = samplers[1];
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].image = image;
                     matHandle->materialShader.shader = CreateShader(ecs, renderContext, "test://shader/test.shader");
-                    matHandle->materialShader.graphicsState = EntityReference {};
+                    matHandle->materialShader.graphicsState = EntityReference{};
                 }
             }
         }
@@ -420,57 +426,57 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
                 Entity material = meshHandle->submeshes[0].material;
                 if (auto matHandle = materialManager->Write(material); matHandle) {
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 1.0f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 1.0f};
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 1.0f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 1.0f};
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].factor.w = 0.03f;
                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 1.0f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 1.0f};
                     matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 1.0f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 1.0f};
 
-                    matHandle->textures[MaterialComponent::TextureIndex::AO].sampler = samplers[2]; // 2: index
+                    matHandle->textures[MaterialComponent::TextureIndex::AO].sampler = samplers[2];  // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::AO].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::AO].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
 
-                    matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplers[3]; // 3: index
+                    matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplers[3];  // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].sampler = samplers[0];
                     matHandle->textures[MaterialComponent::TextureIndex::MATERIAL].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT].sampler = samplers[1];
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].sampler =
-                        samplers[2]; // 2: index
+                        samplers[2];  // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_NORMAL].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].sampler =
-                        samplers[3]; // 3: index
+                        samplers[3];  // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::CLEARCOAT_ROUGHNESS].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].sampler = samplers[0];
                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::SPECULAR].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                     matHandle->textures[MaterialComponent::TextureIndex::SPECULAR].sampler = samplers[1];
                     matHandle->textures[MaterialComponent::TextureIndex::SPECULAR].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].sampler =
-                        samplers[2]; // 2: index
+                        samplers[2];  // 2: index
                     matHandle->textures[MaterialComponent::TextureIndex::TRANSMISSION].image = image;
 
                     matHandle->textures[MaterialComponent::TextureIndex::EMISSIVE].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
 
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].transform.scale =
-                        Math::Vec2 { 0.5f, 0.5f };
-                    matHandle->textures[MaterialComponent::TextureIndex::NORMAL].sampler = samplers[3]; // 3: index
+                        Math::Vec2{0.5f, 0.5f};
+                    matHandle->textures[MaterialComponent::TextureIndex::NORMAL].sampler = samplers[3];  // 3: index
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].image = image;
                     matHandle->textures[MaterialComponent::TextureIndex::NORMAL].factor =
-                        Math::Vec4 { 0.5f, 0.5f, 0.5f, 0.5f };
+                        Math::Vec4{0.5f, 0.5f, 0.5f, 0.5f};
                 }
             }
         }
@@ -491,7 +497,7 @@ void EditScene(IEcs& ecs, IRenderContext& renderContext, Entity root)
         }
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ExportEditedScene
@@ -544,11 +550,13 @@ UNIT_TEST(SRC_GLTFExporterTest, ExportInvalidLight, testing::ext::TestSize.Level
 
     LightComponent lc;
     lc.type = static_cast<LightComponent::Type>(53u);
-    lc.color = { 0.5f, 1.0f, 8.0f };
+    lc.color = {0.5f, 1.0f, 8.0f};
     lc.intensity = 4.0f;
     lc.shadowEnabled = true;
 
-    graphicsContext->GetSceneUtil().CreateLight(*ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+    graphicsContext->GetSceneUtil().CreateLight(*ecs,
+        lc,
+        Math::Vec3(0.0f, 0.0f, 3.0f),
         Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
 
     constexpr string_view exportFilename = "cache://Scene.gltf";

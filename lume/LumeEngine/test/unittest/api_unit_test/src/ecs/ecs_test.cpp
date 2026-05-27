@@ -51,7 +51,7 @@ END_COMPONENT(ITestComponentManager, TestComponent, "b8d0c322-228e-4a77-94f6-ac5
 
 BEGIN_COMPONENT(ITestComponent2Manager, TestComponent2)
 DEFINE_PROPERTY(float, value, "Value", 0, VALUE(0))
-DEFINE_PROPERTY(EntityReference, ref, "Reference", 0,)
+DEFINE_PROPERTY(EntityReference, ref, "Reference", 0, )
 END_COMPONENT(ITestComponent2Manager, TestComponent2, "b8d0c322-228e-4a77-94f6-ac530e7f4e3d")
 
 // Definition of the component manager.
@@ -86,9 +86,9 @@ public:
 
 private:
     BEGIN_PROPERTY(TestComponent, ComponentMetadata)
-    DEFINE_PROPERTY(uint32_t, value, "Value", 0,)
+    DEFINE_PROPERTY(uint32_t, value, "Value", 0, )
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
+    const array_view<const Property> ComponentMetaData{ComponentMetadata, countof(ComponentMetadata)};
 };
 
 class TestComponent2Manager final : public BaseManager<TestComponent2, ITestComponent2Manager> {
@@ -119,29 +119,29 @@ public:
 
 private:
     BEGIN_PROPERTY(TestComponent2, ComponentMetadata)
-    DEFINE_PROPERTY(float, value, "Value", 0,)
+    DEFINE_PROPERTY(float, value, "Value", 0, )
     END_PROPERTY();
-    const array_view<const Property> ComponentMetaData { ComponentMetadata, countof(ComponentMetadata) };
+    const array_view<const Property> ComponentMetaData{ComponentMetadata, countof(ComponentMetadata)};
 };
 
-constexpr ComponentManagerTypeInfo testComponentInfo {
-    { ComponentManagerTypeInfo::UID },
+constexpr ComponentManagerTypeInfo testComponentInfo{
+    {ComponentManagerTypeInfo::UID},
     ITestComponentManager::UID,
     CORE_NS::GetName<ITestComponentManager>().data(),
     [](IEcs& ecs) -> IComponentManager* { return new TestComponentManager(ecs); },
     [](IComponentManager* instance) { delete static_cast<TestComponentManager*>(instance); },
 };
 
-constexpr ComponentManagerTypeInfo testComponent2Info {
-    { ComponentManagerTypeInfo::UID },
+constexpr ComponentManagerTypeInfo testComponent2Info{
+    {ComponentManagerTypeInfo::UID},
     ITestComponent2Manager::UID,
     CORE_NS::GetName<ITestComponent2Manager>().data(),
     [](IEcs& ecs) -> IComponentManager* { return new TestComponent2Manager(ecs); },
     [](IComponentManager* instance) { delete static_cast<TestComponent2Manager*>(instance); },
 };
 
-constexpr ComponentManagerTypeInfo duplicatedTestComponentInfo {
-    { ComponentManagerTypeInfo::UID },
+constexpr ComponentManagerTypeInfo duplicatedTestComponentInfo{
+    {ComponentManagerTypeInfo::UID},
     ITestComponentManager::UID,
     CORE_NS::GetName<ITestComponentManager>().data(),
     [](IEcs& ecs) -> IComponentManager* { return new TestComponentManager(ecs); },
@@ -151,9 +151,10 @@ constexpr ComponentManagerTypeInfo duplicatedTestComponentInfo {
 // Definition of a system
 class TestSystem final : public ISystem {
 public:
-    static constexpr Uid UID { "03700b48-4ff3-44ff-8bbf-3b0effe7e25d" };
+    static constexpr Uid UID{"03700b48-4ff3-44ff-8bbf-3b0effe7e25d"};
 
-    TestSystem(IEcs& ecs) : ecs_(ecs), testManager_(GetManager<ITestComponentManager>(ecs_)) {}
+    TestSystem(IEcs& ecs) : ecs_(ecs), testManager_(GetManager<ITestComponentManager>(ecs_))
+    {}
 
     string_view GetName() const override
     {
@@ -268,58 +269,205 @@ private:
         char prop21[2];
     };
     IEcs& ecs_;
-    PropertyData props_ {};
-    MetaData tmp {};
+    PropertyData props_{};
+    MetaData tmp{};
 
     Property propsArray[21] = {
-        Property { BASE_NS::string_view { "prop 1" }, 1, PropertyType::BOOL_T, 1, sizeof(bool),
-            offsetof(PropertyData, prop1), BASE_NS::string_view { "property 1" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 2" }, 2, PropertyType::CHAR_T, 1, sizeof(char),
-            offsetof(PropertyData, prop2), BASE_NS::string_view { "property 2" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 3" }, 3, PropertyType::INT8_T, 1, sizeof(int8_t),
-            offsetof(PropertyData, prop3), BASE_NS::string_view { "property 3" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 4" }, 4, PropertyType::INT16_T, 1, sizeof(int16_t),
-            offsetof(PropertyData, prop4), BASE_NS::string_view { "property 4" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 5" }, 5, PropertyType::INT32_T, 1, sizeof(int32_t),
-            offsetof(PropertyData, prop5), BASE_NS::string_view { "property 5" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 6" }, 6, PropertyType::INT64_T, 1, sizeof(int64_t),
-            offsetof(PropertyData, prop6), BASE_NS::string_view { "property 6" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 7" }, 7, PropertyType::UINT8_T, 1, sizeof(uint8_t),
-            offsetof(PropertyData, prop7), BASE_NS::string_view { "property 7" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 8" }, 8, PropertyType::UINT16_T, 1, sizeof(uint16_t),
-            offsetof(PropertyData, prop8), BASE_NS::string_view { "property 8" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 9" }, 9, PropertyType::UINT32_T, 1, sizeof(uint32_t),
-            offsetof(PropertyData, prop9), BASE_NS::string_view { "property 9" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 10" }, 10, PropertyType::UINT64_T, 1, sizeof(uint64_t),
-            offsetof(PropertyData, prop10), BASE_NS::string_view { "property 10" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 11" }, 11, PropertyType::DOUBLE_T, 1, sizeof(double),
-            offsetof(PropertyData, prop11), BASE_NS::string_view { "property 11" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 12" }, 12, PropertyType::ENTITY_T, 1, sizeof(Entity),
-            offsetof(PropertyData, prop12), BASE_NS::string_view { "property 12" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 13" }, 13, PropertyType::VEC2_T, 1, sizeof(Math::Vec2),
-            offsetof(PropertyData, prop13), BASE_NS::string_view { "property 13" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 14" }, 14, PropertyType::VEC3_T, 1, sizeof(Math::Vec3),
-            offsetof(PropertyData, prop14), BASE_NS::string_view { "property 14" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 15" }, 15, PropertyType::VEC4_T, 1, sizeof(Math::Vec4),
-            offsetof(PropertyData, prop15), BASE_NS::string_view { "property 15" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 16" }, 16, PropertyType::QUAT_T, 1, sizeof(Math::Quat),
-            offsetof(PropertyData, prop16), BASE_NS::string_view { "property 16" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 17" }, 17, PropertyType::FLOAT_T, 1, sizeof(float),
-            offsetof(PropertyData, prop17), BASE_NS::string_view { "property 17" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 18" }, 18, PropertyType::STRING_T, 1, sizeof(BASE_NS::string),
-            offsetof(PropertyData, prop18), BASE_NS::string_view { "property 18" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 19" }, 1, PropertyType::BOOL_ARRAY_T, 2, sizeof(bool) * 2U,
-            offsetof(PropertyData, prop19), BASE_NS::string_view { "property 19" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 20" }, 1, PropertyType::CHAR_ARRAY_T, 2, sizeof(char) * 2U,
-            offsetof(PropertyData, prop20), BASE_NS::string_view { "property 20" }, 1, tmp },
-        Property { BASE_NS::string_view { "prop 21" }, 1, PropertyType::CHAR_T, 2, sizeof(char),
-            offsetof(PropertyData, prop21), BASE_NS::string_view { "property 21" }, 1, tmp },
+        Property{BASE_NS::string_view{"prop 1"},
+            1,
+            PropertyType::BOOL_T,
+            1,
+            sizeof(bool),
+            offsetof(PropertyData, prop1),
+            BASE_NS::string_view{"property 1"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 2"},
+            2,
+            PropertyType::CHAR_T,
+            1,
+            sizeof(char),
+            offsetof(PropertyData, prop2),
+            BASE_NS::string_view{"property 2"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 3"},
+            3,
+            PropertyType::INT8_T,
+            1,
+            sizeof(int8_t),
+            offsetof(PropertyData, prop3),
+            BASE_NS::string_view{"property 3"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 4"},
+            4,
+            PropertyType::INT16_T,
+            1,
+            sizeof(int16_t),
+            offsetof(PropertyData, prop4),
+            BASE_NS::string_view{"property 4"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 5"},
+            5,
+            PropertyType::INT32_T,
+            1,
+            sizeof(int32_t),
+            offsetof(PropertyData, prop5),
+            BASE_NS::string_view{"property 5"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 6"},
+            6,
+            PropertyType::INT64_T,
+            1,
+            sizeof(int64_t),
+            offsetof(PropertyData, prop6),
+            BASE_NS::string_view{"property 6"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 7"},
+            7,
+            PropertyType::UINT8_T,
+            1,
+            sizeof(uint8_t),
+            offsetof(PropertyData, prop7),
+            BASE_NS::string_view{"property 7"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 8"},
+            8,
+            PropertyType::UINT16_T,
+            1,
+            sizeof(uint16_t),
+            offsetof(PropertyData, prop8),
+            BASE_NS::string_view{"property 8"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 9"},
+            9,
+            PropertyType::UINT32_T,
+            1,
+            sizeof(uint32_t),
+            offsetof(PropertyData, prop9),
+            BASE_NS::string_view{"property 9"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 10"},
+            10,
+            PropertyType::UINT64_T,
+            1,
+            sizeof(uint64_t),
+            offsetof(PropertyData, prop10),
+            BASE_NS::string_view{"property 10"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 11"},
+            11,
+            PropertyType::DOUBLE_T,
+            1,
+            sizeof(double),
+            offsetof(PropertyData, prop11),
+            BASE_NS::string_view{"property 11"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 12"},
+            12,
+            PropertyType::ENTITY_T,
+            1,
+            sizeof(Entity),
+            offsetof(PropertyData, prop12),
+            BASE_NS::string_view{"property 12"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 13"},
+            13,
+            PropertyType::VEC2_T,
+            1,
+            sizeof(Math::Vec2),
+            offsetof(PropertyData, prop13),
+            BASE_NS::string_view{"property 13"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 14"},
+            14,
+            PropertyType::VEC3_T,
+            1,
+            sizeof(Math::Vec3),
+            offsetof(PropertyData, prop14),
+            BASE_NS::string_view{"property 14"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 15"},
+            15,
+            PropertyType::VEC4_T,
+            1,
+            sizeof(Math::Vec4),
+            offsetof(PropertyData, prop15),
+            BASE_NS::string_view{"property 15"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 16"},
+            16,
+            PropertyType::QUAT_T,
+            1,
+            sizeof(Math::Quat),
+            offsetof(PropertyData, prop16),
+            BASE_NS::string_view{"property 16"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 17"},
+            17,
+            PropertyType::FLOAT_T,
+            1,
+            sizeof(float),
+            offsetof(PropertyData, prop17),
+            BASE_NS::string_view{"property 17"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 18"},
+            18,
+            PropertyType::STRING_T,
+            1,
+            sizeof(BASE_NS::string),
+            offsetof(PropertyData, prop18),
+            BASE_NS::string_view{"property 18"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 19"},
+            1,
+            PropertyType::BOOL_ARRAY_T,
+            2,
+            sizeof(bool) * 2U,
+            offsetof(PropertyData, prop19),
+            BASE_NS::string_view{"property 19"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 20"},
+            1,
+            PropertyType::CHAR_ARRAY_T,
+            2,
+            sizeof(char) * 2U,
+            offsetof(PropertyData, prop20),
+            BASE_NS::string_view{"property 20"},
+            1,
+            tmp},
+        Property{BASE_NS::string_view{"prop 21"},
+            1,
+            PropertyType::CHAR_T,
+            2,
+            sizeof(char),
+            offsetof(PropertyData, prop21),
+            BASE_NS::string_view{"property 21"},
+            1,
+            tmp},
     };
-    PropertyApiImpl<PropertyData> properties_ { &props_, propsArray };
+    PropertyApiImpl<PropertyData> properties_{&props_, propsArray};
     ITestComponentManager* testManager_;
-    bool active_ { false };
-    size_t updateCalls_ { 0U };
-    uint64_t delta_ { 0U };
+    bool active_{false};
+    size_t updateCalls_{0U};
+    uint64_t delta_{0U};
 };
 
 vector<TestSystem*> TestSystem::updated_;
@@ -329,10 +477,10 @@ inline constexpr const string_view GetName(const TestSystem*)
     return "TestSystem";
 }
 
-constexpr Uid testSystemDependencies[] = { ITestComponentManager::UID };
+constexpr Uid testSystemDependencies[] = {ITestComponentManager::UID};
 
-constexpr SystemTypeInfo testSystemInfo {
-    { SystemTypeInfo::UID },
+constexpr SystemTypeInfo testSystemInfo{
+    {SystemTypeInfo::UID},
     TestSystem::UID,
     CORE_NS::GetName<TestSystem>().data(),
     [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
@@ -340,8 +488,8 @@ constexpr SystemTypeInfo testSystemInfo {
     testSystemDependencies,
 };
 
-constexpr SystemTypeInfo duplicateTestSystemInfo {
-    { SystemTypeInfo::UID },
+constexpr SystemTypeInfo duplicateTestSystemInfo{
+    {SystemTypeInfo::UID},
     TestSystem::UID,
     CORE_NS::GetName<TestSystem>().data(),
     [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
@@ -351,7 +499,7 @@ constexpr SystemTypeInfo duplicateTestSystemInfo {
 
 class EntityListener final : IEcs::EntityListener {
 public:
-    EntityListener(IEcs& ecs) : ecs_ { ecs }
+    EntityListener(IEcs& ecs) : ecs_{ecs}
     {
         ecs.AddListener(*this);
     }
@@ -363,7 +511,7 @@ public:
 
     void OnEntityEvent(EventType type, const array_view<const Entity> entities)
     {
-        events_.push_back(Event { type, vector<Entity> { entities.begin(), entities.end() } });
+        events_.push_back(Event{type, vector<Entity>{entities.begin(), entities.end()}});
     }
 
     IEcs& ecs_;
@@ -384,7 +532,7 @@ bool operator==(const EntityListener::Event& lhs, const EntityListener::Event& r
 
 class ComponentListener final : IEcs::ComponentListener {
 public:
-    ComponentListener(IEcs& ecs, IComponentManager* manager) : ecs_ { ecs }, manager_ { manager }
+    ComponentListener(IEcs& ecs, IComponentManager* manager) : ecs_{ecs}, manager_{manager}
     {
         if (manager) {
             ecs.AddListener(*manager, *this);
@@ -405,7 +553,7 @@ public:
     void OnComponentEvent(
         EventType type, const IComponentManager& componentManager, const array_view<const Entity> entities)
     {
-        events_.push_back(Event { type, componentManager, vector<Entity> { entities.begin(), entities.end() } });
+        events_.push_back(Event{type, componentManager, vector<Entity>{entities.begin(), entities.end()}});
     }
 
     IEcs& ecs_;
@@ -421,9 +569,9 @@ public:
 bool operator==(const ComponentListener::Event& lhs, const ComponentListener::Event& rhs)
 {
     return lhs.type == rhs.type && &lhs.manager == &rhs.manager && lhs.entities.size() == rhs.entities.size() &&
-        std::all_of(std::begin(lhs.entities), std::end(lhs.entities), [&re = rhs.entities](const Entity& le) {
-            return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
-        });
+           std::all_of(std::begin(lhs.entities), std::end(lhs.entities), [&re = rhs.entities](const Entity& le) {
+               return std::any_of(std::begin(re), std::end(re), [&le](const Entity& re) { return le == re; });
+           });
 }
 
 constexpr const string_view systemGraph = "test://systemGraph.json";
@@ -441,9 +589,9 @@ UNIT_TEST(API_EcsTest, create, testing::ext::TestSize.Level1)
     if (instance) {
         const auto& consIns = *instance;
         EXPECT_TRUE(consIns.GetInterface(ITaskQueueFactory::UID) != nullptr);
-        EXPECT_FALSE(consIns.GetInterface(Uid { "00000000-0000-0000-0000-000000000000" }) != nullptr);
+        EXPECT_FALSE(consIns.GetInterface(Uid{"00000000-0000-0000-0000-000000000000"}) != nullptr);
         auto& norIns = *instance;
-        EXPECT_FALSE(norIns.GetInterface(Uid { "00000000-0000-0000-0000-000000000000" }) != nullptr);
+        EXPECT_FALSE(norIns.GetInterface(Uid{"00000000-0000-0000-0000-000000000000"}) != nullptr);
         norIns.Ref();
         norIns.Unref();
     }
@@ -487,7 +635,7 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
         const CORE_NS::IPlatform* platObj = &engine->GetPlatform();
 
 #if defined(__OHOS_PLATFORM__)
-        // need notice
+        EXPECT_TRUE(engine->GetVersion().empty());
 #else
         EXPECT_FALSE(engine->GetVersion().empty());
 #endif
@@ -495,8 +643,8 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
         EXPECT_TRUE(platObj != nullptr);
     }
     IEcs::Ptr ecs = engine->CreateEcs();
-    auto entityListener = EntityListener { *ecs };
-    auto componentListener = ComponentListener { *ecs, nullptr };
+    auto entityListener = EntityListener{*ecs};
+    auto componentListener = ComponentListener{*ecs, nullptr};
     EXPECT_EQ(&ecs->GetClassFactory(), engine->GetInterface<IClassFactory>());
     const auto& consEng = *engine;
     EXPECT_EQ(&ecs->GetClassFactory(), consEng.GetInterface<IClassFactory>());
@@ -534,12 +682,12 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
 
     auto* testManager = GetManager<ITestComponentManager>(*ecs);
     ASSERT_TRUE(testManager);
-    auto testCompListener = ComponentListener { *ecs, testManager };
+    auto testCompListener = ComponentListener{*ecs, testManager};
     // test repeatedly adding
-    ComponentListener { *ecs, testManager };
+    ComponentListener{*ecs, testManager};
 
     size_t updates = testSystem->UpdateCalls();
-    IEcs* ecsArr[] = { ecs.get() };
+    IEcs* ecsArr[] = {ecs.get()};
 
     // Initially mode is render always IEcs::Update/ IEngine::TickFrame will return true
     EXPECT_EQ(ecs->GetRenderMode(), IEcs::RenderMode::RENDER_ALWAYS);
@@ -602,13 +750,13 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     ecs->ProcessEvents();
     {
         EXPECT_EQ(entityListener.events_.size(), 1);
-        auto event = EntityListener::Event { IEcs::EntityListener::EventType::CREATED, vector<Entity>(1, entity) };
+        auto event = EntityListener::Event{IEcs::EntityListener::EventType::CREATED, vector<Entity>(1, entity)};
         EXPECT_EQ(entityListener.events_[0], event);
         entityListener.events_.clear();
 
         EXPECT_EQ(componentListener.events_.size(), 1);
-        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
-            vector<Entity>(1, entity) };
+        auto cEvent = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::CREATED, *testManager, vector<Entity>(1, entity)};
         EXPECT_EQ(componentListener.events_[0], cEvent);
         componentListener.events_.clear();
 
@@ -623,8 +771,8 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     EXPECT_EQ(ecs->NeedRender(), true);
     {
         EXPECT_EQ(entityListener.events_.size(), 0);
-        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
-            vector<Entity>(1, entity) };
+        auto cEvent = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::MODIFIED, *testManager, vector<Entity>(1, entity)};
         EXPECT_EQ(componentListener.events_.size(), 1);
         EXPECT_EQ(componentListener.events_[0], cEvent);
         componentListener.events_.clear();
@@ -641,8 +789,8 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     {
         EXPECT_EQ(entityListener.events_.size(), 0);
         EXPECT_EQ(componentListener.events_.size(), 1);
-        auto cEvent = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
-            vector<Entity>(1, entity) };
+        auto cEvent = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::DESTROYED, *testManager, vector<Entity>(1, entity)};
         EXPECT_EQ(componentListener.events_[0], cEvent);
         componentListener.events_.clear();
         EXPECT_EQ(testCompListener.events_[0], cEvent);
@@ -657,10 +805,10 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     EXPECT_EQ(ecs->NeedRender(), true);
     {
         EXPECT_EQ(componentListener.events_.size(), 2);
-        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
-            vector<Entity>(1, entity) };
-        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
-            vector<Entity>(1, entity) };
+        auto cEvent0 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::CREATED, *testManager, vector<Entity>(1, entity)};
+        auto cEvent1 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::MODIFIED, *testManager, vector<Entity>(1, entity)};
         EXPECT_EQ(componentListener.events_[0], cEvent0);
         EXPECT_EQ(componentListener.events_[1], cEvent1);
         componentListener.events_.clear();
@@ -684,16 +832,16 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     {
         EXPECT_EQ(entityListener.events_.size(), 1);
 
-        auto event = EntityListener::Event { IEcs::EntityListener::EventType::CREATED, vector<Entity>(1, clone) };
+        auto event = EntityListener::Event{IEcs::EntityListener::EventType::CREATED, vector<Entity>(1, clone)};
         EXPECT_EQ(entityListener.events_[0], event);
         entityListener.events_.clear();
         EXPECT_EQ(componentListener.events_.size(), 3);
-        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::CREATED, *testManager,
-            vector<Entity>(1, clone) };
-        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
-            vector<Entity>(1, clone) };
-        auto cEvent2 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
-            vector<Entity>({ entity, clone }) };
+        auto cEvent0 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::CREATED, *testManager, vector<Entity>(1, clone)};
+        auto cEvent1 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::MODIFIED, *testManager, vector<Entity>(1, clone)};
+        auto cEvent2 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::MODIFIED, *testManager, vector<Entity>({entity, clone})};
         EXPECT_EQ(componentListener.events_[0], cEvent0);
         EXPECT_EQ(componentListener.events_[1], cEvent1);
         EXPECT_EQ(componentListener.events_[2], cEvent2);
@@ -724,16 +872,16 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     EXPECT_FALSE(testManager->HasComponent(entity));
     {
         EXPECT_EQ(entityListener.events_.size(), 1);
-        auto event = EntityListener::Event { IEcs::EntityListener::EventType::DESTROYED, vector<Entity>(1, entity) };
+        auto event = EntityListener::Event{IEcs::EntityListener::EventType::DESTROYED, vector<Entity>(1, entity)};
         EXPECT_EQ(entityListener.events_[0], event);
         entityListener.events_.clear();
         EXPECT_EQ(componentListener.events_.size(), 3);
-        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::MOVED, *testManager,
-            vector<Entity>(1, clone) };
-        auto cEvent1 = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
-            vector<Entity>(1, entity) };
-        auto cEvent2 = ComponentListener::Event { IEcs::ComponentListener::EventType::MODIFIED, *testManager,
-            vector<Entity>(1, clone) };
+        auto cEvent0 =
+            ComponentListener::Event{IEcs::ComponentListener::EventType::MOVED, *testManager, vector<Entity>(1, clone)};
+        auto cEvent1 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::DESTROYED, *testManager, vector<Entity>(1, entity)};
+        auto cEvent2 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::MODIFIED, *testManager, vector<Entity>(1, clone)};
         EXPECT_EQ(componentListener.events_[0], cEvent0);
         EXPECT_EQ(componentListener.events_[1], cEvent1);
         EXPECT_EQ(componentListener.events_[2], cEvent2);
@@ -753,12 +901,12 @@ UNIT_TEST(API_EcsTest, createAndUpdate, testing::ext::TestSize.Level1)
     EXPECT_EQ(ecs->NeedRender(), false);
     {
         EXPECT_EQ(entityListener.events_.size(), 1);
-        auto event = EntityListener::Event { IEcs::EntityListener::EventType::DESTROYED, vector<Entity>(1, clone) };
+        auto event = EntityListener::Event{IEcs::EntityListener::EventType::DESTROYED, vector<Entity>(1, clone)};
         EXPECT_EQ(entityListener.events_[0], event);
         entityListener.events_.clear();
         EXPECT_EQ(componentListener.events_.size(), 1);
-        auto cEvent0 = ComponentListener::Event { IEcs::ComponentListener::EventType::DESTROYED, *testManager,
-            vector<Entity>(1, clone) };
+        auto cEvent0 = ComponentListener::Event{
+            IEcs::ComponentListener::EventType::DESTROYED, *testManager, vector<Entity>(1, clone)};
         EXPECT_EQ(componentListener.events_[0], cEvent0);
         componentListener.events_.clear();
         EXPECT_EQ(testCompListener.events_.size(), 1);
@@ -789,7 +937,7 @@ UNIT_TEST(API_EcsTest, createAndDestroyEntity, testing::ext::TestSize.Level1)
 {
     IEngine::Ptr engine = UTest::CreateEngine();
     IEcs::Ptr ecs = engine->CreateEcs();
-    auto entityListener = EntityListener { *ecs };
+    auto entityListener = EntityListener{*ecs};
     ecs->Initialize();
     auto& entityManager = ecs->GetEntityManager();
 
@@ -896,7 +1044,7 @@ UNIT_TEST(API_EcsTest, generationCount, testing::ext::TestSize.Level1)
 {
     IEngine::Ptr engine = UTest::CreateEngine();
     IEcs::Ptr ecs = engine->CreateEcs();
-    auto entityListener = EntityListener { *ecs };
+    auto entityListener = EntityListener{*ecs};
     ecs->Initialize();
     auto& entityManager = ecs->GetEntityManager();
     Entity entities[4U];
@@ -912,8 +1060,9 @@ UNIT_TEST(API_EcsTest, generationCount, testing::ext::TestSize.Level1)
             entityManager.Destroy(entities[i]);
             EXPECT_GT(entityManager.GetGenerationCounter(), genCount);
         }
-        EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities),
-            [&entityManager](const Entity& entity) { return entityManager.IsAlive(entity); }));
+        EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities), [&entityManager](const Entity& entity) {
+            return entityManager.IsAlive(entity);
+        }));
     }
     ecs->ProcessEvents();
     {
@@ -925,13 +1074,15 @@ UNIT_TEST(API_EcsTest, generationCount, testing::ext::TestSize.Level1)
         }
 
         // Check that previous entities are still dead.
-        EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities),
-            [&entityManager](const Entity& entity) { return entityManager.IsAlive(entity); }));
+        EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities), [&entityManager](const Entity& entity) {
+            return entityManager.IsAlive(entity);
+        }));
 
         // Check that none of the new entities are the same as previous ones.
         for (const auto& entity : entities2) {
-            EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities),
-                [entity](const Entity& originalEntity) { return originalEntity == entity; }));
+            EXPECT_TRUE(std::none_of(std::begin(entities), std::end(entities), [entity](const Entity& originalEntity) {
+                return originalEntity == entity;
+            }));
         }
     }
 }
@@ -962,11 +1113,11 @@ UNIT_TEST(API_EcsTest, timeScale, testing::ext::TestSize.Level1)
     auto* testManager = GetManager<ITestComponentManager>(*ecs);
     ASSERT_TRUE(testManager);
 
-    IEcs* ecsArr[] = { ecs.get() };
+    IEcs* ecsArr[] = {ecs.get()};
     EXPECT_FLOAT_EQ(ecs->GetTimeScale(), 1.f);
     EXPECT_EQ(engine->TickFrame(ecsArr), true);
 
-    static constexpr const float scales[] = { 1.f, 0.5f, 0.25f, 1.25f, 2.f, 1.f };
+    static constexpr const float scales[] = {1.f, 0.5f, 0.25f, 1.25f, 2.f, 1.f};
     for (auto scale : scales) {
         ecs->SetTimeScale(scale);
         EXPECT_FLOAT_EQ(ecs->GetTimeScale(), scale);
@@ -987,7 +1138,7 @@ UNIT_TEST(API_EcsTest, createAndDestroyEntityReference, testing::ext::TestSize.L
 {
     IEngine::Ptr engine = UTest::CreateEngine();
     IEcs::Ptr ecs = engine->CreateEcs();
-    auto entityListener = EntityListener { *ecs };
+    auto entityListener = EntityListener{*ecs};
     ecs->Initialize();
     auto& entityManager = ecs->GetEntityManager();
     {
@@ -1132,7 +1283,7 @@ size_t GetEntityCount(IEcs& ecs)
 
     return entityCount;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: destroyEntityReferenceDependencyTree
@@ -1192,7 +1343,7 @@ void DestroyTestEcsPlugin(PluginToken token)
 {
     g_destroyEcsPlugin = true;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ecsPluginTest
@@ -1201,7 +1352,7 @@ void DestroyTestEcsPlugin(PluginToken token)
  */
 UNIT_TEST(API_EcsTest, ecsPluginTest, testing::ext::TestSize.Level1)
 {
-    constexpr IEcsPlugin EcsInfo { CreateTestEcsPlugin, DestroyTestEcsPlugin };
+    constexpr IEcsPlugin EcsInfo{CreateTestEcsPlugin, DestroyTestEcsPlugin};
 
     GetPluginRegister().RegisterTypeInfo(EcsInfo);
     {
@@ -1269,14 +1420,14 @@ UNIT_TEST(API_EcsTest, componentQuery, testing::ext::TestSize.Level1)
     EXPECT_FALSE(queryBase.IsValid());
 
     ComponentQuery queryBasePlusRequire;
-    const ComponentQuery::Operation operationsRequire[] = { { *test2Manager,
-        ComponentQuery::Operation ::Method::REQUIRE } };
+    const ComponentQuery::Operation operationsRequire[] = {
+        {*test2Manager, ComponentQuery::Operation ::Method::REQUIRE}};
     queryBasePlusRequire.SetupQuery(*testManager, operationsRequire, true);
     EXPECT_FALSE(queryBasePlusRequire.IsValid());
 
     ComponentQuery queryBasePlusOptional;
-    const ComponentQuery::Operation operationsOptional[] = { { *test2Manager,
-        ComponentQuery::Operation ::Method::OPTIONAL } };
+    const ComponentQuery::Operation operationsOptional[] = {
+        {*test2Manager, ComponentQuery::Operation ::Method::OPTIONAL}};
     queryBasePlusOptional.SetupQuery(*testManager, operationsOptional, false);
     EXPECT_FALSE(queryBasePlusOptional.IsValid());
 
@@ -1313,7 +1464,7 @@ UNIT_TEST(API_EcsTest, componentQuery, testing::ext::TestSize.Level1)
     EXPECT_EQ(queryBasePlusOptional.GetResults()[0].entity, entity1);
     EXPECT_EQ(queryBasePlusOptional.GetResults()[1].entity, entity2);
 
-    IEcs* ecsArr[] = { ecs.get() };
+    IEcs* ecsArr[] = {ecs.get()};
     EXPECT_EQ(engine->TickFrame(ecsArr), true);
 
     // listeners are not enabled by default so queries should be still "valid"
@@ -1381,8 +1532,8 @@ UNIT_TEST(API_EcsTest, componentQuery, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_EcsTest, entityComparison, testing::ext::TestSize.Level1)
 {
-    constexpr Entity e1 { 1 };
-    constexpr Entity e2 { 2 };
+    constexpr Entity e1{1};
+    constexpr Entity e2{2};
 
     EXPECT_TRUE(e1 == e1);
     EXPECT_FALSE(e1 == e2);
@@ -1416,77 +1567,6 @@ UNIT_TEST(API_EcsTest, entityComparison, testing::ext::TestSize.Level1)
     static_assert(!(e1 >= e2));
     static_assert(e2 >= e2);
 }
-
-#ifdef DISABLED_TESTS_ON
-/**
- * @tc.name: systemAfterBefore
- * @tc.desc: Tests for System After Before. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_EcsTest, DISABLED_systemAfterBefore, testing::ext::TestSize.Level1)
-{
-    // define systems with varying order dependencies
-    constexpr auto systemA = Uid { "115ff0ad-fd0a-4c4e-8a08-9a351a09fba3" };
-    constexpr auto systemB = Uid { "604ed6ce-6a2e-42fb-af1e-f62c1f85b727" };
-    constexpr auto systemC = Uid { "241c7bb4-30f7-4101-95b3-4e796d3c710e" };
-    constexpr auto systemD = Uid { "15e3d279-4f3d-421c-82f2-2c5f1ce75e70" };
-    constexpr SystemTypeInfo testSystemAInfo {
-        { SystemTypeInfo::UID }, systemA, CORE_NS::GetName<TestSystem>().data(),
-        [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
-        [](ISystem* instance) { delete static_cast<TestSystem*>(instance); }, testSystemDependencies, {}, {},
-        systemD // before D
-    };
-    constexpr SystemTypeInfo testSystemBInfo {
-        { SystemTypeInfo::UID }, systemB, CORE_NS::GetName<TestSystem>().data(),
-        [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
-        [](ISystem* instance) { delete static_cast<TestSystem*>(instance); }, testSystemDependencies, {},
-        systemA, // after A
-        systemC  // before C
-    };
-    constexpr SystemTypeInfo testSystemCInfo {
-        { SystemTypeInfo::UID }, systemC, CORE_NS::GetName<TestSystem>().data(),
-        [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
-        [](ISystem* instance) { delete static_cast<TestSystem*>(instance); }, testSystemDependencies, {},
-        systemB, // after B
-        systemD  // before D
-    };
-    constexpr SystemTypeInfo testSystemDInfo { { SystemTypeInfo::UID }, systemD, CORE_NS::GetName<TestSystem>().data(),
-        [](IEcs& ecs) -> ISystem* { return new TestSystem(ecs); },
-        [](ISystem* instance) { delete static_cast<TestSystem*>(instance); }, testSystemDependencies, {}, {}, {} };
-    auto& pluginRegister = GetPluginRegister();
-    pluginRegister.RegisterTypeInfo(testSystemDInfo);
-    pluginRegister.RegisterTypeInfo(testSystemAInfo);
-    pluginRegister.RegisterTypeInfo(testSystemCInfo);
-    pluginRegister.RegisterTypeInfo(testSystemBInfo);
-    pluginRegister.RegisterTypeInfo(testComponentInfo);
-    {
-        IEngine::Ptr engine = UTest::CreateEngine();
-        ASSERT_TRUE(engine);
-        IEcs::Ptr ecs = engine->CreateEcs();
-        ASSERT_TRUE(engine != nullptr);
-        ISystem* systems[4] {};
-        // create systems in D, A, C, B order. however due to dependencies update should be done in A, B, C, D order.
-        systems[3] = ecs->CreateSystem(testSystemDInfo);
-        systems[0] = ecs->CreateSystem(testSystemAInfo);
-        systems[2] = ecs->CreateSystem(testSystemCInfo);
-        systems[1] = ecs->CreateSystem(testSystemBInfo);
-        TestSystem::updated_.clear();
-        ecs->Initialize();
-        ecs->Update(42U, 42U);
-        ASSERT_EQ(TestSystem::updated_.size(), 4U);
-        EXPECT_EQ(TestSystem::updated_[0], systems[0]);
-        EXPECT_EQ(TestSystem::updated_[1], systems[1]);
-        EXPECT_EQ(TestSystem::updated_[2], systems[2]);
-        EXPECT_EQ(TestSystem::updated_[3], systems[3]);
-    }
-
-    pluginRegister.UnregisterTypeInfo(testSystemAInfo);
-    pluginRegister.UnregisterTypeInfo(testSystemBInfo);
-    pluginRegister.UnregisterTypeInfo(testSystemCInfo);
-    pluginRegister.UnregisterTypeInfo(testSystemDInfo);
-    pluginRegister.UnregisterTypeInfo(testComponentInfo);
-}
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: sharedPtr

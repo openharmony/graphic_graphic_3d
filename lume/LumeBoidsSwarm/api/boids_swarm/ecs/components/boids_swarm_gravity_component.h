@@ -27,12 +27,12 @@ BOIDSSWARM_BEGIN_NAMESPACE()
 #endif
 
 BEGIN_COMPONENT(IBoidsSwarmGravityComponentManager, BoidsSwarmGravityComponent)
-    // Radius of influence; boids within this distance from the entity are attracted.
-    // Default: 0.0f. Range: [0, +inf).
-    DEFINE_PROPERTY(float, radius, "Radius", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
-    // Magnitude of gravitational acceleration applied toward the entity.
-    // Default: 0.0f. Range: [0, +inf).
-    DEFINE_PROPERTY(float, accelerationMag, "Acceleration Magnitude", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
+// Radius of influence; boids within this distance from the entity are attracted.
+// Default: 0.0f. Range: [0, +inf).
+DEFINE_PROPERTY(float, radius, "Radius", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
+// Magnitude of gravitational acceleration applied toward the entity.
+// Default: 0.0f. Range: [0, +inf).
+DEFINE_PROPERTY(float, accelerationMag, "Acceleration Magnitude", CORE_NS::PropertyFlags::HAS_MIN, 0.0f)
 END_COMPONENT(IBoidsSwarmGravityComponentManager, BoidsSwarmGravityComponent, "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 
 #if !defined(IMPLEMENT_MANAGER)

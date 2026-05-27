@@ -45,8 +45,7 @@ namespace OHOS::Render3D::KITETS {
 
 namespace {
 
-SCENE_NS::IComponent::Ptr FindComponentOnNode(
-    const SCENE_NS::INode::Ptr& node, BASE_NS::string_view componentName)
+SCENE_NS::IComponent::Ptr FindComponentOnNode(const SCENE_NS::INode::Ptr& node, BASE_NS::string_view componentName)
 {
     if (!node) {
         return {};
@@ -214,17 +213,17 @@ BASE_NS::Math::Quat ReadQuatProperty(
 {
     auto meta = interface_cast<META_NS::IMetadata>(comp);
     if (!meta) {
-        return BASE_NS::Math::Quat {};
+        return BASE_NS::Math::Quat{};
     }
     auto fullName = BASE_NS::string(compName) + "." + BASE_NS::string(propName);
     auto p = meta->GetProperty(fullName);
     if (!p) {
-        return BASE_NS::Math::Quat {};
+        return BASE_NS::Math::Quat{};
     }
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Quat>(p)) {
         return META_NS::GetValue(META_NS::Property<BASE_NS::Math::Quat>(p));
     }
-    return BASE_NS::Math::Quat {};
+    return BASE_NS::Math::Quat{};
 }
 
 ::SceneTypes::Vec3 MakeTaiheVec3(const BASE_NS::Math::Vec3& v)
@@ -237,66 +236,76 @@ BASE_NS::Math::Quat ReadQuatProperty(
     return taihe::make_holder<QuaternionImpl, ::SceneTypes::Quaternion>(q);
 }
 
-void ApplyBoidsSwarmParams(
-    const SCENE_NS::IComponent::Ptr& comp, const ::SceneBoidsSwarm::BoidsSimParameters& params)
+void ApplyBoidsSwarmParams(const SCENE_NS::IComponent::Ptr& comp, const ::SceneBoidsSwarm::BoidsSimParameters& params)
 {
     constexpr BASE_NS::string_view compName = "BoidsSwarmComponent";
     if (params.initialVelocity) {
         auto v = params.initialVelocity.value();
-        SetVec3Property(comp, compName, "initialVelocity",
-            BASE_NS::Math::Vec3 { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()) });
+        SetVec3Property(comp,
+            compName,
+            "initialVelocity",
+            BASE_NS::Math::Vec3{
+                static_cast<float>(v->getX()), static_cast<float>(v->getY()), static_cast<float>(v->getZ())});
     }
     if (params.initialPosition) {
         auto v = params.initialPosition.value();
-        SetVec3Property(comp, compName, "initialPosition",
-            BASE_NS::Math::Vec3 { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()) });
+        SetVec3Property(comp,
+            compName,
+            "initialPosition",
+            BASE_NS::Math::Vec3{
+                static_cast<float>(v->getX()), static_cast<float>(v->getY()), static_cast<float>(v->getZ())});
     }
     if (params.initialRotation) {
         auto v = params.initialRotation.value();
-        SetQuatProperty(comp, compName, "initialRotation",
-            BASE_NS::Math::Quat { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()), static_cast<float>(v->getW()) });
+        SetQuatProperty(comp,
+            compName,
+            "initialRotation",
+            BASE_NS::Math::Quat{static_cast<float>(v->getX()),
+                static_cast<float>(v->getY()),
+                static_cast<float>(v->getZ()),
+                static_cast<float>(v->getW())});
     }
     if (params.boundaryMinPos) {
         auto v = params.boundaryMinPos.value();
-        SetVec3Property(comp, compName, "boundaryMinPos",
-            BASE_NS::Math::Vec3 { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()) });
+        SetVec3Property(comp,
+            compName,
+            "boundaryMinPos",
+            BASE_NS::Math::Vec3{
+                static_cast<float>(v->getX()), static_cast<float>(v->getY()), static_cast<float>(v->getZ())});
     }
     if (params.boundaryMaxPos) {
         auto v = params.boundaryMaxPos.value();
-        SetVec3Property(comp, compName, "boundaryMaxPos",
-            BASE_NS::Math::Vec3 { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()) });
+        SetVec3Property(comp,
+            compName,
+            "boundaryMaxPos",
+            BASE_NS::Math::Vec3{
+                static_cast<float>(v->getX()), static_cast<float>(v->getY()), static_cast<float>(v->getZ())});
     }
     if (params.maxTurnRate) {
         auto v = params.maxTurnRate.value();
-        SetVec3Property(comp, compName, "maxTurnRate",
-            BASE_NS::Math::Vec3 { static_cast<float>(v->getX()), static_cast<float>(v->getY()),
-                static_cast<float>(v->getZ()) });
+        SetVec3Property(comp,
+            compName,
+            "maxTurnRate",
+            BASE_NS::Math::Vec3{
+                static_cast<float>(v->getX()), static_cast<float>(v->getY()), static_cast<float>(v->getZ())});
     }
     if (params.maxVelocityMag) {
         SetFloatProperty(comp, compName, "maxVelocityMag", static_cast<float>(params.maxVelocityMag.value()));
     }
     if (params.maxAccelerationMag) {
-        SetFloatProperty(
-            comp, compName, "maxAccelerationMag", static_cast<float>(params.maxAccelerationMag.value()));
+        SetFloatProperty(comp, compName, "maxAccelerationMag", static_cast<float>(params.maxAccelerationMag.value()));
     }
     if (params.separationWeight) {
         SetFloatProperty(comp, compName, "separationWeight", static_cast<float>(params.separationWeight.value()));
     }
     if (params.separationDistance) {
-        SetFloatProperty(
-            comp, compName, "separationDistance", static_cast<float>(params.separationDistance.value()));
+        SetFloatProperty(comp, compName, "separationDistance", static_cast<float>(params.separationDistance.value()));
     }
     if (params.alignmentWeight) {
         SetFloatProperty(comp, compName, "alignmentWeight", static_cast<float>(params.alignmentWeight.value()));
     }
     if (params.alignmentDistance) {
-        SetFloatProperty(
-            comp, compName, "alignmentDistance", static_cast<float>(params.alignmentDistance.value()));
+        SetFloatProperty(comp, compName, "alignmentDistance", static_cast<float>(params.alignmentDistance.value()));
     }
     if (params.cohesionWeight) {
         SetFloatProperty(comp, compName, "cohesionWeight", static_cast<float>(params.cohesionWeight.value()));
@@ -314,8 +323,7 @@ void ApplyBoidsSwarmParams(
         SetFloatProperty(comp, compName, "repulsionWeight", static_cast<float>(params.repulsionWeight.value()));
     }
     if (params.boundaryDistance) {
-        SetFloatProperty(
-            comp, compName, "boundaryDistance", static_cast<float>(params.boundaryDistance.value()));
+        SetFloatProperty(comp, compName, "boundaryDistance", static_cast<float>(params.boundaryDistance.value()));
     }
 }
 
@@ -343,9 +351,10 @@ void ApplyBoidsSwarmRepulsionParams(
     }
 }
 
-} // namespace
+}  // namespace
 
-BoidsSimWorldImpl::BoidsSimWorldImpl(SCENE_NS::IScene::Ptr scene) : scene_(BASE_NS::move(scene)) {}
+BoidsSimWorldImpl::BoidsSimWorldImpl(SCENE_NS::IScene::Ptr scene) : scene_(BASE_NS::move(scene))
+{}
 
 BoidsSimWorldImpl::~BoidsSimWorldImpl()
 {
@@ -465,8 +474,7 @@ void BoidsSimWorldImpl::setBoidsSimComponent(
     ApplyBoidsSwarmParams(comp, params);
 }
 
-::SceneBoidsSwarm::BoidsSimParametersOrNull BoidsSimWorldImpl::getBoidsSimComponent(
-    ::SceneNodes::weak::Node node)
+::SceneBoidsSwarm::BoidsSimParametersOrNull BoidsSimWorldImpl::getBoidsSimComponent(::SceneNodes::weak::Node node)
 {
     auto iNode = GetINodeFromTaiheNode(node);
     if (!iNode) {
@@ -497,38 +505,34 @@ void BoidsSimWorldImpl::setBoidsSimComponent(
     result.maxTurnRate = ::taihe::optional<::SceneTypes::Vec3>(
         std::in_place, MakeTaiheVec3(ReadVec3Property(comp, compName, "maxTurnRate")));
 
-    result.maxVelocityMag = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "maxVelocityMag"));
-    result.maxAccelerationMag = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "maxAccelerationMag"));
-    result.separationWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "separationWeight"));
-    result.separationDistance = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "separationDistance"));
-    result.alignmentWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "alignmentWeight"));
-    result.alignmentDistance = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "alignmentDistance"));
-    result.cohesionWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "cohesionWeight"));
-    result.cohesionDistance = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "cohesionDistance"));
-    result.boundaryWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "boundaryWeight"));
-    result.gravityWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "gravityWeight"));
-    result.repulsionWeight = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "repulsionWeight"));
-    result.boundaryDistance = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "boundaryDistance"));
+    result.maxVelocityMag = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "maxVelocityMag"));
+    result.maxAccelerationMag =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "maxAccelerationMag"));
+    result.separationWeight =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "separationWeight"));
+    result.separationDistance =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "separationDistance"));
+    result.alignmentWeight =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "alignmentWeight"));
+    result.alignmentDistance =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "alignmentDistance"));
+    result.cohesionWeight = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "cohesionWeight"));
+    result.cohesionDistance =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "cohesionDistance"));
+    result.boundaryWeight = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "boundaryWeight"));
+    result.gravityWeight = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "gravityWeight"));
+    result.repulsionWeight =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "repulsionWeight"));
+    result.boundaryDistance =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "boundaryDistance"));
 
     return ::SceneBoidsSwarm::BoidsSimParametersOrNull::make_rc(result);
 }
 
 void BoidsSimWorldImpl::removeBoidsSimComponent(::SceneNodes::weak::Node node)
 {
-    RemoveComponent(GetINodeFromTaiheNode(node), "BoidsSwarmComponent",
-        BOIDSSWARM_NS::IBoidsSwarmComponentManager::UID);
+    RemoveComponent(
+        GetINodeFromTaiheNode(node), "BoidsSwarmComponent", BOIDSSWARM_NS::IBoidsSwarmComponentManager::UID);
 }
 
 void BoidsSimWorldImpl::addBoidsSimGravityComponent(
@@ -595,15 +599,16 @@ void BoidsSimWorldImpl::setBoidsSimGravityComponent(
     constexpr BASE_NS::string_view compName = "BoidsSwarmGravityComponent";
 
     result.radius = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "radius"));
-    result.accelerationMag = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "accelerationMag"));
+    result.accelerationMag =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "accelerationMag"));
 
     return ::SceneBoidsSwarm::BoidsSimGravityParametersOrNull::make_rc(result);
 }
 
 void BoidsSimWorldImpl::removeBoidsSimGravityComponent(::SceneNodes::weak::Node node)
 {
-    RemoveComponent(GetINodeFromTaiheNode(node), "BoidsSwarmGravityComponent",
+    RemoveComponent(GetINodeFromTaiheNode(node),
+        "BoidsSwarmGravityComponent",
         BOIDSSWARM_NS::IBoidsSwarmGravityComponentManager::UID);
 }
 
@@ -650,8 +655,8 @@ void BoidsSimWorldImpl::setBoidsSimRepulsionComponent(
     ApplyBoidsSwarmRepulsionParams(comp, params);
 }
 
-::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull
-BoidsSimWorldImpl::getBoidsSimRepulsionComponent(::SceneNodes::weak::Node node)
+::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull BoidsSimWorldImpl::getBoidsSimRepulsionComponent(
+    ::SceneNodes::weak::Node node)
 {
     auto iNode = GetINodeFromTaiheNode(node);
     if (!iNode) {
@@ -662,7 +667,7 @@ BoidsSimWorldImpl::getBoidsSimRepulsionComponent(::SceneNodes::weak::Node node)
     auto comp = FindComponentOnNode(iNode, "BoidsSwarmRepulsionComponent");
     if (!comp) {
         WIDGET_LOGE("BoidsSimWorldImpl::getBoidsSimRepulsionComponent: "
-            "component 'BoidsSwarmRepulsionComponent' not found on node");
+                    "component 'BoidsSwarmRepulsionComponent' not found on node");
         return ::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull::make_nValue();
     }
 
@@ -671,15 +676,16 @@ BoidsSimWorldImpl::getBoidsSimRepulsionComponent(::SceneNodes::weak::Node node)
     constexpr BASE_NS::string_view compName = "BoidsSwarmRepulsionComponent";
 
     result.radius = ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "radius"));
-    result.accelerationMag = ::taihe::optional<f64>(
-        std::in_place, ReadFloatProperty(comp, compName, "accelerationMag"));
+    result.accelerationMag =
+        ::taihe::optional<f64>(std::in_place, ReadFloatProperty(comp, compName, "accelerationMag"));
 
     return ::SceneBoidsSwarm::BoidsSimRepulsionParametersOrNull::make_rc(result);
 }
 
 void BoidsSimWorldImpl::removeBoidsSimRepulsionComponent(::SceneNodes::weak::Node node)
 {
-    RemoveComponent(GetINodeFromTaiheNode(node), "BoidsSwarmRepulsionComponent",
+    RemoveComponent(GetINodeFromTaiheNode(node),
+        "BoidsSwarmRepulsionComponent",
         BOIDSSWARM_NS::IBoidsSwarmRepulsionComponentManager::UID);
 }
 
@@ -697,15 +703,15 @@ void BoidsSimWorldImpl::RemoveComponent(
 
     auto ecsAccess = interface_cast<SCENE_NS::IEcsObjectAccess>(comp);
     if (!ecsAccess) {
-        WIDGET_LOGE("Component '%.*s' does not have IEcsObjectAccess",
-            static_cast<int>(compName.size()), compName.data());
+        WIDGET_LOGE(
+            "Component '%.*s' does not have IEcsObjectAccess", static_cast<int>(compName.size()), compName.data());
         return;
     }
 
     auto ecsObj = ecsAccess->GetEcsObject();
     if (!ecsObj) {
-        WIDGET_LOGE("ECS object not available for component '%.*s'",
-            static_cast<int>(compName.size()), compName.data());
+        WIDGET_LOGE(
+            "ECS object not available for component '%.*s'", static_cast<int>(compName.size()), compName.data());
         return;
     }
 
@@ -713,30 +719,30 @@ void BoidsSimWorldImpl::RemoveComponent(
         auto entity = ecsObj->GetEntity();
         if (!CORE_NS::EntityUtil::IsValid(entity)) {
             WIDGET_LOGE("Invalid entity for component '%.*s'", static_cast<int>(compName.size()), compName.data());
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto internalScene = ecsObj->GetScene();
         if (!internalScene) {
             WIDGET_LOGE("Internal scene is not available");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto* ecs = internalScene->GetEcsContext().GetNativeEcs().get();
         if (!ecs) {
             WIDGET_LOGE("Native ECS is not available");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto* mgr = ecs->GetComponentManager(uid);
         if (!mgr || !mgr->HasComponent(entity)) {
-            WIDGET_LOGE("ECS manager or component not found for '%.*s'",
-                static_cast<int>(compName.size()), compName.data());
-            return META_NS::IAny::Ptr {};
+            WIDGET_LOGE(
+                "ECS manager or component not found for '%.*s'", static_cast<int>(compName.size()), compName.data());
+            return META_NS::IAny::Ptr{};
         }
 
         mgr->Destroy(entity);
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 
     auto attach = interface_cast<META_NS::IAttach>(node);
@@ -768,12 +774,11 @@ void BoidsSimWorldImpl::RemoveComponent(
         return ::SceneBoidsSwarm::BoidsSimWorldOrNull::make_nValue();
     }
 
-    auto rc = taihe::make_holder<BoidsSimWorldImpl, ::SceneBoidsSwarm::BoidsSimWorld>(
-        BASE_NS::move(nativeScene));
+    auto rc = taihe::make_holder<BoidsSimWorldImpl, ::SceneBoidsSwarm::BoidsSimWorld>(BASE_NS::move(nativeScene));
     return ::SceneBoidsSwarm::BoidsSimWorldOrNull::make_rc(rc);
 }
 
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
 using namespace OHOS::Render3D::KITETS;
 // NOLINTBEGIN

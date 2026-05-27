@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": { "name": "anim-template" },
+				"type": "animationTemplate",
+				"path": "test://import/animation/track_animation0.json"
+			}
+		]
+	}
+}

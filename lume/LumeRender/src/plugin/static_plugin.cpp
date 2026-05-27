@@ -55,7 +55,7 @@ constexpr string_view RENDERDATA_PATH = "rofsRndr://renderdataconfigurations/";
 
 PluginToken CreatePlugin(IEngine& engine)
 {
-    auto* token = new RenderPluginState { engine, {} };
+    auto* token = new RenderPluginState{engine, {}};
     auto& registry = *engine.GetInterface<IClassRegister>();
 
     registry.RegisterInterfaceType(token->interfaceInfo_);
@@ -95,7 +95,7 @@ void DestroyPlugin(PluginToken token)
 }
 
 constexpr IEnginePlugin ENGINE_PLUGIN(CreatePlugin, DestroyPlugin);
-} // namespace
+}  // namespace
 
 extern "C" void InitRegistry(CORE_NS::IPluginRegister& pluginRegistry);
 

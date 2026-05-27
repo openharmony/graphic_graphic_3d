@@ -34,28 +34,28 @@ struct RenderPassBeginInfo;
 class GpuResourceManager;
 
 struct LowLevelDescriptorSetVk {
-    VkDescriptorSet descriptorSet { VK_NULL_HANDLE };
+    VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
     // NOTE: descriptorSetLayout could be only one for buffering descriptor sets
-    VkDescriptorSetLayout descriptorSetLayout { VK_NULL_HANDLE };
+    VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 
     enum DescriptorSetLayoutFlagBits : uint32_t {
         // immutable samplers bound in to the set (atm used only for ycbcr conversions which might need new psos)
         DESCRIPTOR_SET_LAYOUT_IMMUTABLE_SAMPLER_BIT = 0x00000001,
     };
-    uint32_t flags { 0u };
+    uint32_t flags{0u};
     // has a bit set for the ones in 16 bindings that have immutable sampler
-    uint16_t immutableSamplerBitmask { 0u };
+    uint16_t immutableSamplerBitmask{0u};
 };
 
 struct LowLevelContextDescriptorPoolVk {
     // buffering count of 3 (max) is used often with vulkan triple buffering
     // gets the real used buffering count from the device
-    static constexpr uint32_t MAX_BUFFERING_COUNT { DeviceConstants::MAX_BUFFERING_COUNT };
+    static constexpr uint32_t MAX_BUFFERING_COUNT{DeviceConstants::MAX_BUFFERING_COUNT};
 
-    VkDescriptorPool descriptorPool { VK_NULL_HANDLE };
+    VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
     // additional descriptor pool for one frame descriptor sets with platform buffer bindings
     // reset and reserved every frame if needed, does not live through frames
-    VkDescriptorPool additionalPlatformDescriptorPool { VK_NULL_HANDLE };
+    VkDescriptorPool additionalPlatformDescriptorPool{VK_NULL_HANDLE};
 
     struct DescriptorSetData {
         LowLevelDescriptorCounts descriptorCounts;
@@ -80,10 +80,10 @@ struct LowLevelContextDescriptorWriteDataVk {
     BASE_NS::vector<VkWriteDescriptorSetAccelerationStructureKHR> descriptorAccelInfos;
 #endif
 
-    uint32_t writeBindingCount { 0U };
-    uint32_t bufferBindingCount { 0U };
-    uint32_t imageBindingCount { 0U };
-    uint32_t samplerBindingCount { 0U };
+    uint32_t writeBindingCount{0U};
+    uint32_t bufferBindingCount{0U};
+    uint32_t imageBindingCount{0U};
+    uint32_t samplerBindingCount{0U};
 
     void Clear()
     {
@@ -103,15 +103,15 @@ struct LowLevelContextDescriptorWriteDataVk {
 };
 
 struct PendingDeallocations {
-    uint64_t frameIndex { 0 };
+    uint64_t frameIndex{0};
     LowLevelContextDescriptorPoolVk descriptorPool;
 };
 
 struct OneFrameDescriptorNeed {
     // the acceleration structure is the eleventh
-    static constexpr uint32_t ACCELERATION_LOCAL_TYPE { 11U };
+    static constexpr uint32_t ACCELERATION_LOCAL_TYPE{11U};
     static constexpr uint32_t DESCRIPTOR_ARRAY_SIZE = CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT + 2U;
-    uint32_t descriptorCount[DESCRIPTOR_ARRAY_SIZE] { 0 };
+    uint32_t descriptorCount[DESCRIPTOR_ARRAY_SIZE]{0};
 };
 
 class DescriptorSetManagerVk final : public DescriptorSetManager {
@@ -137,7 +137,7 @@ private:
 
     BASE_NS::vector<PendingDeallocations> pendingDeallocations_;
 
-    uint32_t bufferingCount_ { LowLevelContextDescriptorPoolVk::MAX_BUFFERING_COUNT };
+    uint32_t bufferingCount_{LowLevelContextDescriptorPoolVk::MAX_BUFFERING_COUNT};
 
     BASE_NS::vector<LowLevelContextDescriptorPoolVk> lowLevelDescriptorPools_;
 
@@ -178,7 +178,7 @@ private:
     void ClearDescriptorSetWriteData();
     void ResizeDescriptorSetWriteData();
 
-    uint32_t bufferingCount_ { 0 };
+    uint32_t bufferingCount_{0};
     LowLevelContextDescriptorPoolVk descriptorPool_[DESCRIPTOR_SET_INDEX_TYPE_COUNT];
 
     BASE_NS::vector<PendingDeallocations> pendingDeallocations_;
@@ -191,12 +191,12 @@ private:
 
     LowLevelContextDescriptorWriteDataVk lowLevelDescriptorWriteData_;
 
-    uint32_t oneFrameDescSetGeneration_ { 0u };
+    uint32_t oneFrameDescSetGeneration_{0u};
 
 #if (RENDER_VALIDATION_ENABLED == 1)
-    static constexpr uint32_t MAX_ONE_FRAME_GENERATION_IDX { 16u };
+    static constexpr uint32_t MAX_ONE_FRAME_GENERATION_IDX{16u};
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_VK_H
+#endif  // VULKAN_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_VK_H

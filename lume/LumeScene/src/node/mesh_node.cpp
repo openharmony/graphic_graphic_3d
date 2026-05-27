@@ -97,7 +97,7 @@ bool MeshNode::Init(const IEcsObject::Ptr& ecsobj)
             return false;
         }
     }
-    if (auto morph = GetAttachments({ IMorpher::UID }, false); !morph.empty()) {
+    if (auto morph = GetAttachments({IMorpher::UID}, false); !morph.empty()) {
         Morpher()->SetValue(interface_pointer_cast<IMorpher>(morph.front()));
     }
     return true;
@@ -129,7 +129,11 @@ Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
         if (!scene) {
             return {};
         }
-        return scene->AddTaskOrRunDirectly([=] {
+        return scene->AddTaskOrRunDirectly([this, scene, m, weak = BASE_NS::weak_ptr{GetSelf()}] {
+            auto self = weak.lock();
+            if (!self) {
+                return false;
+            }
             IMesh::Ptr mesh = m;
             // in case it is mesh node, use the embedded mesh
             if (auto acc = interface_cast<IMeshAccess>(mesh)) {
@@ -160,7 +164,8 @@ Future<IMesh::Ptr> MeshNode::GetMesh() const
         if (!scene) {
             return {};
         }
-        return scene->AddTaskOrRunDirectly([=] { return mesh_; });
+        return scene->AddTaskOrRunDirectly(
+            [this, weak = BASE_NS::weak_ptr{GetSelf()}] { return weak.lock() ? mesh_ : IMesh::Ptr{}; });
     }
     return {};
 }

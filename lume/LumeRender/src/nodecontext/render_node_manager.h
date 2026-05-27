@@ -46,8 +46,8 @@ public:
         const char* nodeType);
 
     struct RenderNodeTypeInfoFlags {
-        RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeBackendFlags backendFlags { 0 };
-        RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeClassType classType { 0 };
+        RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeBackendFlags backendFlags{0};
+        RENDER_NS::RenderNodeTypeInfo::PluginRenderNodeClassType classType{0};
     };
     RenderNodeTypeInfoFlags GetRenderNodeTypeInfoFlags(const char* nodeType);
 
@@ -59,4 +59,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__RENDER_NODE_MANAGER_H
+#endif  // CORE__RENDER__RENDER_NODE_MANAGER_H

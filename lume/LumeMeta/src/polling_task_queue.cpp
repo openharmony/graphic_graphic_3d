@@ -27,9 +27,9 @@
 
 META_BEGIN_NAMESPACE()
 
-// notice, this is object only so we can construct it via object registery
-class PollingTaskQueue :
-    public IntroduceInterfaces<MetaObject, IPollingTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
+// notice, this is object only so we can construct it via object registry
+class PollingTaskQueue
+    : public IntroduceInterfaces<MetaObject, IPollingTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
     META_OBJECT(PollingTaskQueue, ClassId::PollingTaskQueue, IntroduceInterfaces)
 public:
     using Token = ITaskQueue::Token;
@@ -42,15 +42,17 @@ public:
         }
         return ret;
     }
-    uint64_t CurrentThread() const {
-        return std::hash<std::thread::id> {}(std::this_thread::get_id());
+    uint64_t CurrentThread() const
+    {
+        return std::hash<std::thread::id>{}(std::this_thread::get_id());
     }
-    bool SetExecutionThread() {
+    bool SetExecutionThread()
+    {
         auto id = CurrentThread();
         if (threadId_ != 0) {
-            return (threadId_==id);
+            return (threadId_ == id);
         }
-        threadId_=id;
+        threadId_ = id;
         return true;
     }
     bool CurrentThreadIsExecutionThread() const override
@@ -96,7 +98,7 @@ public:
             return;
         }
         TimeSpan ctime = Time();
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         if (ctime != lastTime_) {
             lastTime_ = ctime;
             execThread_ = std::this_thread::get_id();
@@ -109,7 +111,9 @@ public:
     }
 
 private:
+    // clang-format off
     uint64_t threadId_{0};
+    // clang-format on
     TimeSpan lastTime_;
 };
 // Internal api for engine task queue
@@ -120,6 +124,6 @@ IObjectFactory::Ptr GetPollingTaskQueueFactory()
     return PollingTaskQueue::GetFactory();
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

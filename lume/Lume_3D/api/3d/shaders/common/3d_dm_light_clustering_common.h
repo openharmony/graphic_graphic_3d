@@ -65,7 +65,7 @@ vec2 WorldPointToScreen(const vec3 worldPoint, const mat4 view, const mat4 proj,
     const vec3 ndcPoint = clipPoint.xyz / clipPoint.w;
 
     vec2 screenPoint;
-    screenPoint.x = (ndcPoint.x * 0.5 + 0.5) * resolution.x; // 0.5: parm
+    screenPoint.x = (ndcPoint.x * 0.5 + 0.5) * resolution.x;  // 0.5: parm
     screenPoint.y = (1.0 - (ndcPoint.y * 0.5 + 0.5)) * resolution.y;
     return screenPoint;
 }
@@ -198,4 +198,4 @@ bool ConeClusterIntersect(const vec3 coneOrigin, const vec3 coneDirection, const
     return !(cullAngle || cullFront || cullBack);
 }
 
-#endif // SHADERS_COMMON_3D_DM_LIGHT_CLUSTERING_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_LIGHT_CLUSTERING_COMMON_H

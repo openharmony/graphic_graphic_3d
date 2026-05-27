@@ -136,20 +136,20 @@ class API_ObjectHierarchyObserverTest : public ::testing::Test {
 
 public:
     struct ExpectedCallCount {
-        size_t addingChildren {};
-        size_t addedChildren {};
-        size_t removingChildren {};
-        size_t removedChildren {};
-        size_t movedChildren {};
-        size_t addingContent {};
-        size_t addedContent {};
-        size_t removingContent {};
-        size_t removedContent {};
-        size_t addingAttachments {};
-        size_t addedAttachments {};
-        size_t removingAttachments {};
-        size_t removedAttachments {};
-        size_t movedAttachments {};
+        size_t addingChildren{};
+        size_t addedChildren{};
+        size_t removingChildren{};
+        size_t removedChildren{};
+        size_t movedChildren{};
+        size_t addingContent{};
+        size_t addedContent{};
+        size_t removingContent{};
+        size_t removedContent{};
+        size_t addingAttachments{};
+        size_t addedAttachments{};
+        size_t removingAttachments{};
+        size_t removedAttachments{};
+        size_t movedAttachments{};
 
         void ExpectAddChildren(size_t count = 1)
         {
@@ -223,8 +223,8 @@ protected:
     IContainer::Ptr container_;
     IContainer::Ptr container1_1_;
     IContainer::Ptr container2_1_;
-    META_NS::ContentObject contentObject_ { CreateInstance(META_NS::ClassId::ContentObject) };
-    META_NS::ObjectHierarchyObserver observer_ { CreateInstance(META_NS::ClassId::ObjectHierarchyObserver) };
+    META_NS::ContentObject contentObject_{CreateInstance(META_NS::ClassId::ContentObject)};
+    META_NS::ObjectHierarchyObserver observer_{CreateInstance(META_NS::ClassId::ObjectHierarchyObserver)};
 };
 
 /**
@@ -366,8 +366,8 @@ UNIT_TEST_F(API_ObjectHierarchyObserverTest, ContainerPreTransaction, testing::e
     ASSERT_TRUE(pre);
     bool succeed = true;
 
-    uint32_t addingCount {};
-    uint32_t removingCount {};
+    uint32_t addingCount{};
+    uint32_t removingCount{};
     pre->ContainerAboutToChange()->AddHandler(
         MakeCallback<IOnChildChanging>([&](const ChildChangedInfo& info, bool& success) {
             switch (info.type) {
@@ -384,7 +384,7 @@ UNIT_TEST_F(API_ObjectHierarchyObserverTest, ContainerPreTransaction, testing::e
             }
         }));
 
-    uint32_t changeCount {};
+    uint32_t changeCount{};
     observer_.SetTarget(interface_pointer_cast<IObject>(tc));
     observer_.OnHierarchyChanged([&](const HierarchyChangedInfo& info) { changeCount++; });
 
@@ -630,11 +630,13 @@ UNIT_TEST(API_ObjectHierarchyObserver, DestroyEvents, testing::ext::TestSize.Lev
         EXPECT_TRUE(container->Insert(1, childObject4));
         EXPECT_TRUE(childContainer->Add(childObject));
         obs.SetTarget(containerObject);
-        EXPECT_THAT(obs.GetAllObserved(), testing::UnorderedElementsAre(containerObject, childContainerObject,
-                                              childObject, childObject4, childObject2, childObject3));
+        EXPECT_THAT(obs.GetAllObserved(),
+            testing::UnorderedElementsAre(
+                containerObject, childContainerObject, childObject, childObject4, childObject2, childObject3));
         container->Remove(childObject3);
-        EXPECT_THAT(obs.GetAllObserved(), testing::UnorderedElementsAre(containerObject, childContainerObject,
-                                              childObject, childObject4, childObject2));
+        EXPECT_THAT(obs.GetAllObserved(),
+            testing::UnorderedElementsAre(
+                containerObject, childContainerObject, childObject, childObject4, childObject2));
     }
 
     obs.OnHierarchyChanged([&](const HierarchyChangedInfo& info) {
@@ -714,5 +716,5 @@ UNIT_TEST(API_ObjectHierarchyObserver, DoNotSerialise, testing::ext::TestSize.Le
     EXPECT_EQ(obj->GetAttachments<IObjectHierarchyObserver>().size(), 0);
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

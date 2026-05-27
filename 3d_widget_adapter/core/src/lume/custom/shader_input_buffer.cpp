@@ -69,15 +69,17 @@ void ShaderInputBuffer::Delete()
     floatSize_ = 0u;
 }
 
-void ShaderInputBuffer::Update(float *buffer, uint32_t floatSize)
+void ShaderInputBuffer::Update(float* buffer, uint32_t floatSize)
 {
     if (!Map(floatSize)) {
         WIDGET_LOGE("Update(buffer, size) map error!");
         return;
     }
 
-    auto ret = memcpy_s(reinterpret_cast<void *>(buffer_), floatSize_ * sizeof(float),
-        reinterpret_cast<void *>(buffer), floatSize * sizeof(float));
+    auto ret = memcpy_s(reinterpret_cast<void*>(buffer_),
+        floatSize_ * sizeof(float),
+        reinterpret_cast<void*>(buffer),
+        floatSize * sizeof(float));
     if (ret != EOK) {
         WIDGET_LOGE("ShaderInputBuffer Update memory copy error");
     }
@@ -97,7 +99,6 @@ void ShaderInputBuffer::Update(float value, uint32_t index)
     buffer_[index] = value;
 }
 
-
 bool ShaderInputBuffer::IsValid() const
 {
     return buffer_ && floatSize_;
@@ -107,4 +108,4 @@ ShaderInputBuffer::~ShaderInputBuffer()
 {
     Delete();
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

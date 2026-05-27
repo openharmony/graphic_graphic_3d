@@ -21,9 +21,9 @@
 #include "intf_test.h"
 
 namespace UTest3 {
-constexpr BASE_NS::Uid UID_SHARED_PLUGIN { "12345678-1234-1234-1234-deadbeef0040" };
+constexpr BASE_NS::Uid UID_SHARED_PLUGIN{"12345678-1234-1234-1234-deadbeef0040"};
 
-constexpr BASE_NS::Uid UID_SHARED_GLOBAL_TEST_IMPL { "12345678-1234-1234-1234-deadbeef0041" };
+constexpr BASE_NS::Uid UID_SHARED_GLOBAL_TEST_IMPL{"12345678-1234-1234-1234-deadbeef0041"};
 
 class SharedTest final : public UTest::Test {
 public:
@@ -45,5 +45,5 @@ public:
     }
 };
 
-} // namespace UTest3
-#endif // CORE_TEST_PLUGIN_DYNAMIC_WITH_DEPENDENCY3_UIDS
+}  // namespace UTest3
+#endif  // CORE_TEST_PLUGIN_DYNAMIC_WITH_DEPENDENCY3_UIDS

@@ -17,7 +17,8 @@
 
 namespace Test {
 
-DynamicLibrary::DynamicLibrary() : m_handle(nullptr) {}
+DynamicLibrary::DynamicLibrary() : m_handle(nullptr)
+{}
 
 DynamicLibrary::~DynamicLibrary()
 {
@@ -42,7 +43,7 @@ DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& other) noexcept
 
 bool DynamicLibrary::Load(const BASE_NS::string& libraryPath)
 {
-    Unload(); // Unload any previously loaded library
+    Unload();  // Unload any previously loaded library
 
     // Try to load with and without extension
 #if defined(_WIN32)
@@ -104,7 +105,12 @@ BASE_NS::string DynamicLibrary::GetLastErrorAsString()
     LPSTR messageBuffer = nullptr;
     size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
                                      FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+        NULL,
+        errorMessageID,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPSTR)&messageBuffer,
+        0,
+        NULL);
 
     BASE_NS::string message(messageBuffer, size);
 
@@ -114,4 +120,4 @@ BASE_NS::string DynamicLibrary::GetLastErrorAsString()
 }
 #endif
 
-} // namespace Test
+}  // namespace Test

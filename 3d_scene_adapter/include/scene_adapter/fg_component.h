@@ -37,21 +37,16 @@ struct FGDetailConfiguration {
         QUALITY_TYPE_BAD = 3,
     };
 
-    enum FGAlgorithm {
-        FG_HYDRA = 0,
-        FG_GRIDWARP = 1,
-        FG_IOI = 2,
-        FG_ALGO_COUNT
-    };
+    enum FGAlgorithm { FG_HYDRA = 0, FG_GRIDWARP = 1, FG_IOI = 2, FG_ALGO_COUNT };
 
     /** frame generation quality type */
-    FGQualityType qualityType { FGQualityType::QUALITY_TYPE_NORMAL };
-    FGAlgorithm algorithm { FGAlgorithm::FG_HYDRA };
+    FGQualityType qualityType{FGQualityType::QUALITY_TYPE_NORMAL};
+    FGAlgorithm algorithm{FGAlgorithm::FG_HYDRA};
 
-    int32_t FGWidth {0};
-    int32_t FGHeight {0};
+    int32_t FGWidth{0};
+    int32_t FGHeight{0};
 
-    bool withSR {false};
+    bool withSR{false};
 };
 
 /* FG effect component
@@ -59,26 +54,26 @@ struct FGDetailConfiguration {
  */
 BEGIN_COMPONENT(IFGComponentManager, FGComponent)
 #ifndef IMPLEMENT_MANAGER
-    enum FlagBits : uint32_t {
-      FG1_BIT = (1 << 0),
-      FG2_BIT = (1 << 1),
-      FG3_BIT = (1 << 2),
-    };
-  
-    /** Container for frame_generation flag bits */
-    using Flags = uint32_t;
+enum FlagBits : uint32_t {
+    FG1_BIT = (1 << 0),
+    FG2_BIT = (1 << 1),
+    FG3_BIT = (1 << 2),
+};
+
+/** Container for frame_generation flag bits */
+using Flags = uint32_t;
 #endif
 
-    /** The method of frame_generation fill when rendering.
-    */
-    DEFINE_BITFIELD_PROPERTY(
-        Flags, enableFlags, "Enabled FrameGeration", PropertyFlags::IS_BITFIELD, VALUE(0), FGComponent::FlagBits)
-    
-    /** FG detail configuration.
-    */
-    DEFINE_PROPERTY(FGDetailConfiguration, fgDetailConfiguration, "FG Detail Configuration", 0, ARRAY_VALUE())
-    DEFINE_PROPERTY(uint32_t, algorithm, "algorithm", 0, 0u)
-    DEFINE_PROPERTY(uint32_t, quality, "quality", 0, 1u)
+/** The method of frame_generation fill when rendering.
+ */
+DEFINE_BITFIELD_PROPERTY(
+    Flags, enableFlags, "Enabled FrameGeration", PropertyFlags::IS_BITFIELD, VALUE(0), FGComponent::FlagBits)
+
+/** FG detail configuration.
+ */
+DEFINE_PROPERTY(FGDetailConfiguration, fgDetailConfiguration, "FG Detail Configuration", 0, ARRAY_VALUE())
+DEFINE_PROPERTY(uint32_t, algorithm, "algorithm", 0, 0u)
+DEFINE_PROPERTY(uint32_t, quality, "quality", 0, 1u)
 
 END_COMPONENT(IFGComponentManager, FGComponent, "6b45abd1-5ce4-49ba-b6c6-2c282e20a7cf")
 

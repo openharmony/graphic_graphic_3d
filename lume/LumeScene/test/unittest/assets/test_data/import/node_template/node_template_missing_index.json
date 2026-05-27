@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"description": "node template referencing an index file that does not exist",
+	"data": {
+		"type": "nodeTemplate",
+		"index": "this_file_does_not_exist.index",
+		"node": {
+			"type": "node",
+			"name": "root"
+		}
+	},
+	"primaryGroup": ""
+}

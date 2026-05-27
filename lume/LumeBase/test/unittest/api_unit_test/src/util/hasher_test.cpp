@@ -110,11 +110,11 @@ UNIT_TEST(API_UtilHasherTest, HashCombine, testing::ext::TestSize.Level1)
     }
 
     {
-        uint64_t seeds[] = { 1, 2, 3 };
+        uint64_t seeds[] = {1, 2, 3};
         auto itBegin = std::begin(seeds);
         auto itEnd = std::end(seeds);
         auto res = HashRange(itBegin, itEnd);
-        uint64_t t = 0; // seeds[0];
+        uint64_t t = 0;  // seeds[0];
         HashCombine(t, seeds[0]);
         HashCombine(t, seeds[1]);
         HashCombine(t, seeds[2]);

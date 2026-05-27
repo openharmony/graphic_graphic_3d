@@ -43,16 +43,16 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr string_view OUTPUT_IMAGE_NAME { "OutputImage" };
-static constexpr string_view COPY_BUFFER_NAME { "CopyBuffer" };
-static constexpr string_view VERTEX_BUFFER_NAME { "VertexBuffer" };
-static constexpr string_view INDEX_BUFFER_NAME { "IndexBuffer" };
+static constexpr string_view OUTPUT_IMAGE_NAME{"OutputImage"};
+static constexpr string_view COPY_BUFFER_NAME{"CopyBuffer"};
+static constexpr string_view VERTEX_BUFFER_NAME{"VertexBuffer"};
+static constexpr string_view INDEX_BUFFER_NAME{"IndexBuffer"};
 static constexpr uint32_t WIDTH = 201u;
 static constexpr uint32_t HEIGHT = 201u;
 static constexpr uint32_t NUM_BYTES = WIDTH * HEIGHT * 4u * 4u;
 
-static constexpr float VERTEX_BUFFER_DATA[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f };
-static constexpr uint32_t INDEX_BUFFER_DATA[] = { 0, 1, 2, 2, 3, 0 };
+static constexpr float VERTEX_BUFFER_DATA[] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+static constexpr uint32_t INDEX_BUFFER_DATA[] = {0, 1, 2, 2, 3, 0};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -75,15 +75,23 @@ void CreateTestResources(TestData& td, bool useSwapchain)
             static_cast<RenderNodeGraphManager&>(td.engine.context->GetRenderNodeGraphManager());
         RenderNodeManager& renderNodeMgr = renderNodeGraphMgr.GetRenderNodeManager();
         {
-            RenderNodeTypeInfo info { { RenderNodeDrawIndexed::UID }, RenderNodeDrawIndexed::UID,
-                RenderNodeDrawIndexed::TYPE_NAME, RenderNodeDrawIndexed::Create, RenderNodeDrawIndexed::Destroy,
-                RenderNodeDrawIndexed::BACKEND_FLAGS, RenderNodeDrawIndexed::CLASS_TYPE };
+            RenderNodeTypeInfo info{{RenderNodeDrawIndexed::UID},
+                RenderNodeDrawIndexed::UID,
+                RenderNodeDrawIndexed::TYPE_NAME,
+                RenderNodeDrawIndexed::Create,
+                RenderNodeDrawIndexed::Destroy,
+                RenderNodeDrawIndexed::BACKEND_FLAGS,
+                RenderNodeDrawIndexed::CLASS_TYPE};
             renderNodeMgr.AddRenderNodeFactory(info);
         }
         {
-            RenderNodeTypeInfo info { { RenderNodeDraw::UID }, RenderNodeDraw::UID, RenderNodeDraw::TYPE_NAME,
-                RenderNodeDraw::Create, RenderNodeDraw::Destroy, RenderNodeDraw::BACKEND_FLAGS,
-                RenderNodeDraw::CLASS_TYPE };
+            RenderNodeTypeInfo info{{RenderNodeDraw::UID},
+                RenderNodeDraw::UID,
+                RenderNodeDraw::TYPE_NAME,
+                RenderNodeDraw::Create,
+                RenderNodeDraw::Destroy,
+                RenderNodeDraw::BACKEND_FLAGS,
+                RenderNodeDraw::CLASS_TYPE};
             renderNodeMgr.AddRenderNodeFactory(info);
         }
     }
@@ -145,8 +153,9 @@ void CreateTestResources(TestData& td, bool useSwapchain)
             CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS | CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE;
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        td.vertexBufferHandle = td.engine.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA) });
+        td.vertexBufferHandle = td.engine.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA)});
     }
     // Index buffer
     {
@@ -158,8 +167,9 @@ void CreateTestResources(TestData& td, bool useSwapchain)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
                                 CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        td.indexBufferHandle = td.engine.device->GetGpuResourceManager().Create(INDEX_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(INDEX_BUFFER_DATA), sizeof(INDEX_BUFFER_DATA) });
+        td.indexBufferHandle = td.engine.device->GetGpuResourceManager().Create(INDEX_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(INDEX_BUFFER_DATA), sizeof(INDEX_BUFFER_DATA)});
     }
     td.byteArray = make_unique<ByteArray>(NUM_BYTES);
 }
@@ -191,9 +201,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = WIDTH;
                 bufferImageCopy.bufferImageHeight = HEIGHT;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { WIDTH, HEIGHT, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {WIDTH, HEIGHT, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME);
@@ -220,7 +230,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderFrame({ &td.renderNodeGraph, 1 });
+            er.context->GetRenderer().RenderFrame({&td.renderNodeGraph, 1});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -242,7 +252,7 @@ void Validate(const TestData& td)
     float* outputImageData = reinterpret_cast<float*>(td.byteArray->GetData().data());
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage(GetFileName(td.engine), WIDTH, HEIGHT, outputImageData);
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     int32_t x = WIDTH / 2;
     int32_t y = HEIGHT / 2;
     for (int32_t i = 0; i < WIDTH; ++i) {
@@ -283,7 +293,7 @@ void TestMultiRenderPass(DeviceBackendType backend, bool useSwapchain)
     UTest::CreateEngineSetup(testData.engine);
     uint64_t surfaceHandle = 0;
     if (useSwapchain) {
-        SwapchainCreateInfo swapchainInfo {};
+        SwapchainCreateInfo swapchainInfo{};
 #if defined(__OHOS__)
         swapchainInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_ohosApp->GetWindowHandle());
         ASSERT_NE(::Test::g_ohosApp->GetWindowHandle(), nullptr);
@@ -313,7 +323,7 @@ void TestMultiRenderPass(DeviceBackendType backend, bool useSwapchain)
     }
     UTest::DestroyEngine(testData.engine);
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -335,7 +345,7 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeMultiRenderPassWithSwapchainTestVulkan
 {
     TestMultiRenderPass(DeviceBackendType::VULKAN, true);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -356,4 +366,4 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeMultiRenderPassWithSwapchainTestOpenGL
 {
     TestMultiRenderPass(UTest::GetOpenGLBackend(), true);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -25,7 +25,7 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T1, class T2>
+template <class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
 
@@ -121,4 +121,4 @@ inline CORE_NS::EntityIterator end(const CORE_NS::IEntityManager& manager)
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_IENTITY_MANAGER_H
+#endif  // API_CORE_ECS_IENTITY_MANAGER_H

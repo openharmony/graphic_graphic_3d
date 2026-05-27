@@ -31,7 +31,7 @@
 #include "device/shader_manager.h"
 #include "util/log.h"
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::ShaderSpecializationConstantDataView& specialization)
 {
     uint64_t seed = BASE_NS::FNV_OFFSET_BASIS;
@@ -95,17 +95,17 @@ void validateSSO(
     }
 }
 #endif
-} // namespace
+}  // namespace
 
 NodeContextPsoManager::NodeContextPsoManager(Device& device, ShaderManager& shaderManager)
-    : device_ { device }, shaderMgr_ { shaderManager }
+    : device_{device}, shaderMgr_{shaderManager}
 {}
 
 void NodeContextPsoManager::BeginBackendFrame()
 {
     // destroy pending
     const uint64_t frameCount = device_.GetFrameCount();
-    constexpr uint64_t additionalFrameCount { 2u };
+    constexpr uint64_t additionalFrameCount{2u};
     const auto minAge = device_.GetCommandBufferingCount() + additionalFrameCount;
     const auto ageLimit = (frameCount < minAge) ? 0 : (frameCount - minAge);
     {
@@ -150,7 +150,7 @@ void NodeContextPsoManager::ProcessReloadedShaders()
                             if (ref.shaderHandle.id == refHandle.id) {
                                 // move pso and set as null
                                 gpCache.pendingPsoDestroys.push_back(
-                                    { move(gpCache.pipelineStateObjects[idx]), frameCount });
+                                    {move(gpCache.pipelineStateObjects[idx]), frameCount});
                                 gpCache.pipelineStateObjects[idx] = nullptr;
                                 break;
                             }
@@ -170,7 +170,7 @@ void NodeContextPsoManager::ProcessReloadedShaders()
                         }
                         if (erase) {
                             // move pso and erase
-                            gpCache.pendingPsoDestroys.push_back({ move(iter->second.pso), frameCount });
+                            gpCache.pendingPsoDestroys.push_back({move(iter->second.pso), frameCount});
                             iter = pso.erase(iter);
                         } else {
                             ++iter;
@@ -191,7 +191,7 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_E("RENDER_VALIDATION: invalid shader handle given to compute pso creation");
 #endif
-        return {}; // early out
+        return {};  // early out
     }
     // if not matching pso -> deferred creation in render backend
     RenderHandle psoHandle;
@@ -233,12 +233,12 @@ RenderHandle NodeContextPsoManager::GetComputePsoHandle(const RenderHandle shade
             ++dst;
         }
 
-        ShaderSpecializationConstantDataWrapper ssw {
+        ShaderSpecializationConstantDataWrapper ssw{
             vector<ShaderSpecialization::Constant>(
                 shaderSpecialization.constants.begin(), shaderSpecialization.constants.end()),
             vector<uint32_t>(shaderSpecialization.data.begin(), shaderSpecialization.data.end()),
         };
-        cache.psoCreationData.push_back({ shaderHandle, move(pl), move(ssw) });
+        cache.psoCreationData.push_back({shaderHandle, move(pl), move(ssw)});
     } else {
         psoHandle = iter->second;
     }
@@ -275,7 +275,7 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
     }
 #endif
     if (RenderHandleUtil::GetHandleType(shader) != RenderHandleType::SHADER_STATE_OBJECT) {
-        return {}; // early out
+        return {};  // early out
     }
     // if not matching pso -> deferred creation in render backend
     RenderHandle psoHandle;
@@ -303,15 +303,15 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
         cache.hashToHandle[hash] = psoHandle;
 
         // store needed data for render backend pso creation
-        ShaderSpecializationConstantDataWrapper ssw {
-            { shaderSpecialization.constants.begin(), shaderSpecialization.constants.end() },
-            { shaderSpecialization.data.begin(), shaderSpecialization.data.end() },
+        ShaderSpecializationConstantDataWrapper ssw{
+            {shaderSpecialization.constants.begin(), shaderSpecialization.constants.end()},
+            {shaderSpecialization.data.begin(), shaderSpecialization.data.end()},
         };
-        VertexInputDeclarationDataWrapper vidw {
-            { vertexInputDeclarationView.bindingDescriptions.begin(),
-                vertexInputDeclarationView.bindingDescriptions.end() },
-            { vertexInputDeclarationView.attributeDescriptions.begin(),
-                vertexInputDeclarationView.attributeDescriptions.end() },
+        VertexInputDeclarationDataWrapper vidw{
+            {vertexInputDeclarationView.bindingDescriptions.begin(),
+                vertexInputDeclarationView.bindingDescriptions.end()},
+            {vertexInputDeclarationView.attributeDescriptions.begin(),
+                vertexInputDeclarationView.attributeDescriptions.end()},
         };
 #if (RENDER_VALIDATION_ENABLED == 1)
         validateSSO(shaderMgr_, shader, vidw);
@@ -327,7 +327,7 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandleImpl(const RenderHandle 
         psoCreationData.vertexInputDeclaration = move(vidw);
         psoCreationData.shaderSpecialization = move(ssw);
         psoCreationData.customGraphicsState = move(customGraphicsStatePtr);
-        psoCreationData.dynamicStates = { dynamicStates.cbegin(), dynamicStates.cend() };
+        psoCreationData.dynamicStates = {dynamicStates.cbegin(), dynamicStates.cend()};
         cache.psoCreationData.push_back(move(psoCreationData));
     } else {
         psoHandle = iter->second;
@@ -358,8 +358,13 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shad
     const ShaderSpecializationConstantDataView& shaderSpecialization,
     const array_view<const DynamicStateEnum> dynamicStates)
 {
-    return GetGraphicsPsoHandleImpl(shader, graphicsState, pipelineLayout, vertexInputDeclarationView,
-        shaderSpecialization, dynamicStates, nullptr);
+    return GetGraphicsPsoHandleImpl(shader,
+        graphicsState,
+        pipelineLayout,
+        vertexInputDeclarationView,
+        shaderSpecialization,
+        dynamicStates,
+        nullptr);
 }
 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shader, const GraphicsState& graphicsState,
@@ -367,8 +372,13 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const RenderHandle shad
     const ShaderSpecializationConstantDataView& shaderSpecialization,
     const array_view<const DynamicStateEnum> dynamicStates)
 {
-    return GetGraphicsPsoHandleImpl(shader, RenderHandle {}, pipelineLayout, vertexInputDeclarationView,
-        shaderSpecialization, dynamicStates, &graphicsState);
+    return GetGraphicsPsoHandleImpl(shader,
+        RenderHandle{},
+        pipelineLayout,
+        vertexInputDeclarationView,
+        shaderSpecialization,
+        dynamicStates,
+        &graphicsState);
 }
 
 RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const IShaderManager::GraphicsShaderData& shaderData,
@@ -376,8 +386,13 @@ RenderHandle NodeContextPsoManager::GetGraphicsPsoHandle(const IShaderManager::G
     const BASE_NS::array_view<const DynamicStateEnum> dynamicStates)
 {
     const VertexInputDeclarationView vidv = shaderMgr_.GetVertexInputDeclarationView(shaderData.vertexInputDeclaration);
-    return GetGraphicsPsoHandleImpl(shaderData.shader, shaderData.graphicsState, shaderData.pipelineLayoutData, vidv,
-        shaderSpecialization, dynamicStates, nullptr);
+    return GetGraphicsPsoHandleImpl(shaderData.shader,
+        shaderData.graphicsState,
+        shaderData.pipelineLayoutData,
+        vidv,
+        shaderSpecialization,
+        dynamicStates,
+        nullptr);
 }
 
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -415,11 +430,11 @@ const ComputePipelineStateObject* NodeContextPsoManager::GetComputePso(
         "Check that IRenderNode::InitNode clears cached handles.");
 
     auto& cache = computePipelineStateCache_;
-    if (cache.pipelineStateObjects[index] == nullptr) { // pso needs to be created
+    if (cache.pipelineStateObjects[index] == nullptr) {  // pso needs to be created
         PLUGIN_ASSERT(index < static_cast<uint32_t>(cache.psoCreationData.size()));
         const auto& psoDataRef = cache.psoCreationData[index];
         if (const GpuComputeProgram* gcp = shaderMgr_.GetGpuComputeProgram(psoDataRef.shaderHandle); gcp) {
-            const ShaderSpecializationConstantDataView sscdv {
+            const ShaderSpecializationConstantDataView sscdv{
                 psoDataRef.shaderSpecialization.constants,
                 psoDataRef.shaderSpecialization.data,
             };
@@ -456,7 +471,8 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (subpassIndex >= renderPassSubpassDescs.size()) {
                 PLUGIN_LOG_ONCE_I("node_context_pso_subpass_index",
-                    "RENDER_VALIDATION: subpassIndex (%u) out-of-bounds (%zu)", subpassIndex,
+                    "RENDER_VALIDATION: subpassIndex (%u) out-of-bounds (%zu)",
+                    subpassIndex,
                     renderPassSubpassDescs.size());
             } else if (graphicsState.colorBlendState.colorAttachmentCount !=
                        renderPassSubpassDescs[subpassIndex].colorAttachmentCount) {
@@ -468,17 +484,24 @@ const GraphicsPipelineStateObject* NodeContextPsoManager::GetGraphicsPso(const R
             }
 #endif
             const auto& vertexInput = psoDataRef.vertexInputDeclaration;
-            const VertexInputDeclarationView vidv { vertexInput.bindingDescriptions,
-                vertexInput.attributeDescriptions };
+            const VertexInputDeclarationView vidv{vertexInput.bindingDescriptions, vertexInput.attributeDescriptions};
 
             const auto& shaderSpec = psoDataRef.shaderSpecialization;
-            const ShaderSpecializationConstantDataView sscdv { shaderSpec.constants, shaderSpec.data };
+            const ShaderSpecializationConstantDataView sscdv{shaderSpec.constants, shaderSpec.data};
 
             auto& newPsoRef = cache.pipelineStateObjects[hash];
             newPsoRef.shaderHandle = psoDataRef.shaderHandle;
-            newPsoRef.pso = device_.CreateGraphicsPipelineStateObject(*gsp, graphicsState, psoDataRef.pipelineLayout,
-                vidv, sscdv, psoDataRef.dynamicStates, renderPassDesc, renderPassSubpassDescs, subpassIndex,
-                renderPassData, pipelineLayoutData);
+            newPsoRef.pso = device_.CreateGraphicsPipelineStateObject(*gsp,
+                graphicsState,
+                psoDataRef.pipelineLayout,
+                vidv,
+                sscdv,
+                psoDataRef.dynamicStates,
+                renderPassDesc,
+                renderPassSubpassDescs,
+                subpassIndex,
+                renderPassData,
+                pipelineLayoutData);
             return newPsoRef.pso.get();
         }
     }

@@ -36,7 +36,7 @@ namespace UTest {
 UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedSharedPtr, testing::ext::TestSize.Level1)
 {
     {
-        BASE_NS::shared_ptr<int> sp(new int { 6 });
+        BASE_NS::shared_ptr<int> sp(new int{6});
         auto f = CaptureSafe([](auto p) { *p = 1; }, sp);
 
         EXPECT_EQ(*sp, 6);
@@ -45,7 +45,7 @@ UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedSharedPtr, testing::ext::T
     }
 
     {
-        const BASE_NS::shared_ptr<int> sp(new int { 6 });
+        const BASE_NS::shared_ptr<int> sp(new int{6});
         auto f = CaptureSafe([](auto p) { *p = 1; }, sp);
 
         EXPECT_EQ(*sp, 6);
@@ -62,7 +62,7 @@ UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedSharedPtr, testing::ext::T
 UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedWeakPtr, testing::ext::TestSize.Level1)
 {
     {
-        BASE_NS::shared_ptr<int> sp(new int { 6 });
+        BASE_NS::shared_ptr<int> sp(new int{6});
         auto wp = BASE_NS::weak_ptr(sp);
         auto f = CaptureSafe([](auto p) { *p = 1; }, wp);
 
@@ -72,7 +72,7 @@ UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedWeakPtr, testing::ext::Tes
     }
 
     {
-        BASE_NS::shared_ptr<int> sp(new int { 6 });
+        BASE_NS::shared_ptr<int> sp(new int{6});
         const auto wp = BASE_NS::weak_ptr(sp);
         auto f = CaptureSafe([](auto p) { *p = 1; }, wp);
 
@@ -90,7 +90,7 @@ UNIT_TEST(API_CaptureBindTest, LambdaAutoLocksCapturedWeakPtr, testing::ext::Tes
 UNIT_TEST(API_CaptureBindTest, LambdaNotThrowsWhenCapturedSharedPointerIsReleased, testing::ext::TestSize.Level1)
 {
     {
-        BASE_NS::shared_ptr<int> p(new int {});
+        BASE_NS::shared_ptr<int> p(new int{});
 
         auto f = CaptureSafe([](auto p) { *p = 1; }, p);
         p.reset();
@@ -108,7 +108,7 @@ UNIT_TEST(
     API_CaptureBindTest, LambdaNotThrowsWhenCapturedWeakPointerPointsToInvalidResource, testing::ext::TestSize.Level1)
 {
     {
-        BASE_NS::shared_ptr<int> sp(new int {});
+        BASE_NS::shared_ptr<int> sp(new int{});
 
         auto f = CaptureSafe([](auto p) { *p = 1; }, BASE_NS::weak_ptr(sp));
         sp.reset();
@@ -117,7 +117,7 @@ UNIT_TEST(
     }
 
     {
-        BASE_NS::shared_ptr<int> sp(new int {});
+        BASE_NS::shared_ptr<int> sp(new int{});
         BASE_NS::weak_ptr<int> wp = BASE_NS::weak_ptr(sp);
 
         auto f = CaptureSafe([](auto p) { *p = 1; }, wp);
@@ -134,7 +134,7 @@ UNIT_TEST(
  */
 UNIT_TEST(API_CaptureBindTest, SimpleLambda, testing::ext::TestSize.Level1)
 {
-    BASE_NS::shared_ptr<int> p(new int {});
+    BASE_NS::shared_ptr<int> p(new int{});
 
     {
         auto f = Capture([](auto pp) { *pp = 1; }, p);
@@ -163,7 +163,7 @@ UNIT_TEST(API_CaptureBindTest, SimpleLambda, testing::ext::TestSize.Level1)
         EXPECT_EQ(i, 1);
     }
     {
-        BASE_NS::shared_ptr<int> p(new int {});
+        BASE_NS::shared_ptr<int> p(new int{});
         auto f = Capture([](auto p) { return (bool)p; }, p);
         EXPECT_TRUE(f());
         p.reset();
@@ -172,14 +172,14 @@ UNIT_TEST(API_CaptureBindTest, SimpleLambda, testing::ext::TestSize.Level1)
     {
         std::function<bool()> func;
         {
-            const BASE_NS::shared_ptr<int> p(new int {});
+            const BASE_NS::shared_ptr<int> p(new int{});
             func = Capture([](auto p) { return (bool)p; }, p);
             EXPECT_TRUE(func());
         }
         EXPECT_FALSE(func());
     }
     {
-        BASE_NS::shared_ptr<int> p(new int {});
+        BASE_NS::shared_ptr<int> p(new int{});
         auto other = p;
         auto f = Capture([](auto p) { return (bool)p; }, BASE_NS::move(p));
         EXPECT_TRUE(f());
@@ -198,7 +198,7 @@ UNIT_TEST(API_CaptureBindTest, MakeCallback, testing::ext::TestSize.Level1)
     auto& registry = GetObjectRegistry();
     auto p = META_NS::ConstructProperty<int>(registry, "P1", 0);
 
-    BASE_NS::shared_ptr<int> count(new int {});
+    BASE_NS::shared_ptr<int> count(new int{});
     p->OnChanged()->AddHandler(MakeCallback<IOnChanged>(
         [](auto i) {
             if (i) {
@@ -221,7 +221,7 @@ UNIT_TEST(API_CaptureBindTest, MakeCallable, testing::ext::TestSize.Level1)
     auto& registry = GetObjectRegistry();
     auto c = CreateTestContainer<IContainer>("Test");
 
-    BASE_NS::shared_ptr<int> count(new int {});
+    BASE_NS::shared_ptr<int> count(new int{});
     c->OnContainerChanged()->AddHandler(MakeCallback<IOnChildChanged>(
         [](auto i, const ChildChangedInfo& info) {
             if (i) {
@@ -248,7 +248,7 @@ class TestAttachment : public META_NS::AttachmentFwd {
         return true;
     }
 };
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: IObject
@@ -276,5 +276,5 @@ UNIT_TEST(API_CaptureBindTest, IObject, testing::ext::TestSize.Level1)
     UnregisterObjectType<TestAttachment>();
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

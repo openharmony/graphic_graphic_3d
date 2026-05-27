@@ -15,6 +15,7 @@
 
 #include "render_node_dotfield_simulation.h"
 
+#include <algorithm>
 #include <array>
 
 #include <3d/implementation_uids.h>
@@ -43,7 +44,7 @@
 namespace {
 #include "app/shaders/common/dotfield_common.h"
 #include "app/shaders/common/dotfield_struct_common.h"
-} // namespace
+}  // namespace
 
 using namespace BASE_NS;
 using namespace CORE_NS;
@@ -60,21 +61,24 @@ void CreateBinders(const IRenderNodeShaderManager& shaderMgr, INodeContextDescri
         constexpr uint32_t prevBuffersSet1 = 0;
         constexpr uint32_t currBuffersset2 = 1;
 
-        auto createDescriptorSet = [](INodeContextDescriptorSetManager& descriptorSetMgr, PipelineLayout& pl,
-                                       uint32_t bufferSetIndex, IDescriptorSetBinder::Ptr& setBinder) {
+        auto createDescriptorSet = [](INodeContextDescriptorSetManager& descriptorSetMgr,
+                                       PipelineLayout& pl,
+                                       uint32_t bufferSetIndex,
+                                       IDescriptorSetBinder::Ptr& setBinder) {
             const RenderHandle setDescHandle = descriptorSetMgr.CreateDescriptorSet(bufferSetIndex, pl);
             setBinder = descriptorSetMgr.CreateDescriptorSetBinder(
                 setDescHandle, pl.descriptorSetLayouts[bufferSetIndex].bindings);
         };
 
         auto createDescriptorSets = [&createDescriptorSet](INodeContextDescriptorSetManager& descriptorSetMgr,
-                                        PipelineLayout& pl, uint32_t bufferSetIndex,
+                                        PipelineLayout& pl,
+                                        uint32_t bufferSetIndex,
                                         vector<IDescriptorSetBinder::Ptr>& setBinders) {
             for (auto& binder : setBinders) {
                 createDescriptorSet(descriptorSetMgr, pl, bufferSetIndex, binder);
             }
         };
-        { // simulate
+        {  // simulate
             auto& currBinders = binders.simulate;
             currBinders.prevBuffersSet1.resize(DOTFIELD_EFFECT_MAX_COUNT);
             currBinders.currBuffersSet2.resize(DOTFIELD_EFFECT_MAX_COUNT);
@@ -88,7 +92,7 @@ void CreateBinders(const IRenderNodeShaderManager& shaderMgr, INodeContextDescri
         }
     }
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDotfieldSimulation::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -96,9 +100,9 @@ void RenderNodeDotfieldSimulation::InitNode(IRenderNodeContextManager& renderNod
     {
         // (sim(currFrame + prevFrame) * effectcount;
         constexpr uint32_t dataBufferCountPerFrame = (2u + 2u) * DOTFIELD_EFFECT_MAX_COUNT;
-        const DescriptorCounts dc { {
-            { CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, dataBufferCountPerFrame },
-        } };
+        const DescriptorCounts dc{{
+            {CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, dataBufferCountPerFrame},
+        }};
         renderNodeContextMgr.GetDescriptorSetManager().ResetAndReserve(dc);
     }
 
@@ -120,10 +124,14 @@ void RenderNodeDotfieldSimulation::InitNode(IRenderNodeContextManager& renderNod
     }
 }
 
-void RenderNodeDotfieldSimulation::PreExecuteFrame() {}
+void RenderNodeDotfieldSimulation::PreExecuteFrame()
+{}
 
 void RenderNodeDotfieldSimulation::ExecuteFrame(IRenderCommandList& cmdList)
 {
+    if (!renderNodeContextMgr_) {
+        return;
+    }
     ComputeSimulate(*renderNodeContextMgr_, cmdList);
 }
 
@@ -145,7 +153,11 @@ void RenderNodeDotfieldSimulation::ComputeSimulate(
 
     const uint32_t currFrameIndex = bufferData.currFrameIndex;
     const uint32_t prevFrameIndex = 1 - currFrameIndex;
-    const uint32_t primitiveCount = static_cast<uint32_t>(dotfieldPrimitives.size());
+    // AddDotfieldPrimitive caps primitives_ at DOTFIELD_EFFECT_MAX_COUNT and grows buffers 1:1,
+    // but clamp defensively in case producer/consumer ever drift.
+    const uint32_t primitiveCount = std::min({static_cast<uint32_t>(dotfieldPrimitives.size()),
+        static_cast<uint32_t>(bufferData.buffers.size()),
+        DOTFIELD_EFFECT_MAX_COUNT});
 
     const auto& currBinders = binders_.simulate;
 
@@ -171,15 +183,17 @@ void RenderNodeDotfieldSimulation::ComputeSimulate(
             cmdList.UpdateDescriptorSet(
                 currBinder.GetDescriptorSetHandle(), currBinder.GetDescriptorSetLayoutBindingResources());
 
-            const RenderHandle descHandles[2] = { prevBinder.GetDescriptorSetHandle(),
-                currBinder.GetDescriptorSetHandle() };
-            cmdList.BindDescriptorSets(0, { descHandles, 2u });
+            const RenderHandle descHandles[2] = {
+                prevBinder.GetDescriptorSetHandle(), currBinder.GetDescriptorSetHandle()};
+            cmdList.BindDescriptorSets(0, {descHandles, 2u});
         }
         // push constant
-        const DotfieldSimulationPushConstantStruct pc = { { dotfieldPrimitive.size.x, dotfieldPrimitive.size.y, 0, 0 },
-            { dotfieldPrimitive.touch.x, dotfieldPrimitive.touch.y, dotfieldPrimitive.touchRadius, 0.f },
-            { dotfieldPrimitive.touchDirection.x, dotfieldPrimitive.touchDirection.y,
-                dotfieldPrimitive.touchDirection.z, 0.f } };
+        const DotfieldSimulationPushConstantStruct pc = {{dotfieldPrimitive.size.x, dotfieldPrimitive.size.y, 0, 0},
+            {dotfieldPrimitive.touch.x, dotfieldPrimitive.touch.y, dotfieldPrimitive.touchRadius, 0.f},
+            {dotfieldPrimitive.touchDirection.x,
+                dotfieldPrimitive.touchDirection.y,
+                dotfieldPrimitive.touchDirection.z,
+                0.f}};
         cmdList.PushConstant(psoData.pushConstant, reinterpret_cast<const uint8_t*>(&pc));
 
         const uint32_t tgcX = (dotfieldPrimitive.size.x * dotfieldPrimitive.size.y + (DOTFIELD_SIMULATION_TGS - 1)) /
@@ -188,10 +202,10 @@ void RenderNodeDotfieldSimulation::ComputeSimulate(
 
         {
             // add custom memory barrier
-            constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-            constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT,
-                PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT };
+            constexpr GeneralBarrier src{AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+            constexpr GeneralBarrier dst{AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT,
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT};
 
             cmdList.CustomMemoryBarrier(src, dst);
             cmdList.AddCustomBarrierPoint();
@@ -208,16 +222,16 @@ RenderNodeDotfieldSimulation::PsoData RenderNodeDotfieldSimulation::GetPsoData(
 
     if (const auto iter = specializationToPsoData_.find(constantData); iter != specializationToPsoData_.cend()) {
         return iter->second;
-    } else { // new
+    } else {  // new
         const ShaderSpecializationConstantView sscv =
             renderNodeContextMgr.GetShaderManager().GetReflectionSpecialization(shaderHandle);
-        const ShaderSpecializationConstantDataView specDataView {
+        const ShaderSpecializationConstantDataView specDataView{
             sscv.constants,
-            { &constantData, 1 },
+            {&constantData, 1},
         };
         RenderHandle psoHandle =
             renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(shaderHandle, pl, specDataView);
-        PsoData psoData = { psoHandle, pl.pushConstant };
+        PsoData psoData = {psoHandle, pl.pushConstant};
         specializationToPsoData_[constantData] = psoData;
         return psoData;
     }
@@ -233,4 +247,4 @@ void RenderNodeDotfieldSimulation::Destroy(IRenderNode* instance)
 {
     delete (RenderNodeDotfieldSimulation*)instance;
 }
-} // namespace Dotfield
+}  // namespace Dotfield

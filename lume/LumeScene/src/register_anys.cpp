@@ -18,6 +18,7 @@
 #include <scene/interface/intf_light.h>
 #include <scene/interface/intf_material.h>
 #include <scene/interface/intf_mesh.h>
+#include <scene/interface/intf_node.h>
 #include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_render_configuration.h>
 #include <scene/interface/intf_texture.h>
@@ -36,6 +37,7 @@ using BasicTypes = META_NS::TypeList<
     SamplerAddressMode,
     MaterialType,
     LightingFlags,
+    NodeFlags,
     RenderSort,
     ImageLoadFlags,
     CameraProjection,
@@ -56,7 +58,8 @@ using BasicTypes = META_NS::TypeList<
     SceneShadowQuality,
     SceneShadowSmoothness,
     ColorConversionFunctionType,
-    BlurType
+    BlurType,
+    CameraSampleCount
     >;
 using ObjectTypes = META_NS::TypeList<
     ISampler::Ptr,
@@ -81,6 +84,7 @@ using ObjectTypes = META_NS::TypeList<
     ITaa::Ptr,
     IVignette::Ptr,
     IWhiteBalance::Ptr,
+    IEffect::Ptr,
     INode::WeakPtr,
     ICamera::WeakPtr,
     IMesh::WeakPtr,
@@ -113,14 +117,14 @@ public:
     }
 };
 
-template<typename... List>
+template <typename... List>
 static void RegisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<List...>)
 {
     (META_NS::RegisterTypeForBuiltinAny<List>(), ...);
     (META_NS::RegisterTypeForBuiltinArrayAny<List>(), ...);
 }
 
-template<typename... List>
+template <typename... List>
 static void UnregisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<List...>)
 {
     (META_NS::UnregisterTypeForBuiltinAny<List>(), ...);
@@ -130,8 +134,8 @@ static void UnregisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<Li
 void RegisterAnys()
 {
     auto& pr = META_NS::GetObjectRegistry().GetPropertyRegister();
-    RegisterTypes(pr, BasicTypes {});
-    RegisterTypes(pr, ObjectTypes {});
+    RegisterTypes(pr, BasicTypes{});
+    RegisterTypes(pr, ObjectTypes{});
 
     // for compatibility
     pr.RegisterAny(CreateShared<BitmapAnyBuilder>());
@@ -140,11 +144,11 @@ void RegisterAnys()
 void UnRegisterAnys()
 {
     auto& pr = META_NS::GetObjectRegistry().GetPropertyRegister();
-    UnregisterTypes(pr, ObjectTypes {});
-    UnregisterTypes(pr, BasicTypes {});
+    UnregisterTypes(pr, ObjectTypes{});
+    UnregisterTypes(pr, BasicTypes{});
 
     pr.UnregisterAny(BitmapAnyBuilder::StaticGetClassId());
 }
 
-} // namespace Internal
+}  // namespace Internal
 SCENE_END_NAMESPACE()

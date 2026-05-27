@@ -34,69 +34,8 @@
 META_BEGIN_NAMESPACE()
 namespace UTest {
 
-MemFile::MemFile(BASE_NS::vector<uint8_t> vec) : data_(BASE_NS::move(vec)) {}
-
-MemFile::Mode MemFile::GetMode() const
-{
-    return Mode::READ_WRITE;
-}
-void MemFile::Close()
-{
-    data_.clear();
-}
-uint64_t MemFile::Read(void* buffer, uint64_t count)
-{
-    size_t read = std::min<size_t>(count, data_.size() - pos_);
-    if (read) {
-        std::memcpy(buffer, &data_[pos_], read);
-        pos_ += read;
-    }
-    return read;
-}
-uint64_t MemFile::Write(const void* buffer, uint64_t count)
-{
-    if (data_.size() < pos_ + count) {
-        data_.resize(pos_ + count);
-    }
-    std::memcpy(&data_[pos_], buffer, count);
-    pos_ += count;
-    return count;
-}
-uint64_t MemFile::Append(const void* buffer, uint64_t count, uint64_t flushSize)
-{
-    if (data_.size() < pos_ + count) {
-        data_.resize(pos_ + count);
-    }
-    std::memcpy(&data_[pos_], buffer, count);
-    pos_ += count;
-    return count;
-}
-uint64_t MemFile::GetLength() const
-{
-    return data_.size();
-}
-bool MemFile::Seek(uint64_t offset)
-{
-    bool ret = offset < data_.size();
-    if (ret) {
-        pos_ = offset;
-    }
-    return ret;
-}
-uint64_t MemFile::GetPosition() const
-{
-    return pos_;
-}
-BASE_NS::vector<uint8_t> MemFile::Data() const
-{
-    return data_;
-}
-void MemFile::Destroy()
-{
-    delete this;
-}
-
-TestSerialiser::TestSerialiser(BASE_NS::vector<uint8_t> vec) : data_(BASE_NS::move(vec)) {}
+TestSerialiser::TestSerialiser(BASE_NS::vector<uint8_t> vec) : data_(BASE_NS::move(vec))
+{}
 
 bool TestSerialiser::Export(const IObject::Ptr& object)
 {
@@ -104,6 +43,7 @@ bool TestSerialiser::Export(const IObject::Ptr& object)
     auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter);
     exporter->SetInstanceIdMapping(mapping_);
     exporter->SetResourceManager(resources_);
+    exporter->SetUserContext(userContext_);
     exporter->SetMetadata(metadata_);
     bool ret = exporter->Export(data_, object);
     writePos_ = data_.GetPosition();
@@ -121,6 +61,7 @@ IObject::Ptr TestSerialiser::Import()
     data_.Seek(readPos_);
     auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter);
     importer->SetResourceManager(resources_);
+    importer->SetUserContext(userContext_);
     IObject::Ptr result = importer->Import(data_);
     readPos_ = data_.GetPosition();
     mapping_ = importer->GetInstanceIdMapping();
@@ -138,7 +79,7 @@ bool TestSerialiser::LoadFile(BASE_NS::string_view path)
     BASE_NS::vector<uint8_t> vec;
     vec.resize(f->GetLength());
     f->Read(vec.data(), vec.size());
-    data_ = MemFile { BASE_NS::move(vec) };
+    data_ = MemFile{BASE_NS::move(vec)};
     return true;
 }
 
@@ -170,6 +111,10 @@ void TestSerialiser::SetResourceManager(CORE_NS::IResourceManager::Ptr p)
 {
     resources_ = BASE_NS::move(p);
 }
+void TestSerialiser::SetUserContext(IObject::Ptr c)
+{
+    userContext_ = BASE_NS::move(c);
+}
 void TestSerialiser::SetMetadata(SerMetadata m)
 {
     metadata_ = BASE_NS::move(m);
@@ -188,6 +133,6 @@ void WriteToFile(const BASE_NS::vector<uint8_t>& vec, BASE_NS::string_view file)
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

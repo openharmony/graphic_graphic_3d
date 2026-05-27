@@ -30,8 +30,9 @@
 #include "BaseObjectJS.h"
 #include "DisposeContainer.h"
 #include "RenderContextJS.h"
+#include "export.h"
 
-class SceneJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC SceneJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 4;
     static void Init(napi_env env, napi_value exports);
@@ -54,7 +55,7 @@ private:
     // Helpers
     static void FlushScenes();
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     // Helper for different Node types.
     napi_value CreateNode(

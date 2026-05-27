@@ -1,0 +1,32 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name" : "scene"
+				},
+				"name": "some",
+				"type": "scene",
+				"path": "myscenepath"
+			},
+			{
+				"resourceId": {
+					"name" : "test",
+					"group": "some"
+				},
+				"name": "some test",
+				"type": "gltfAnimation",
+				"options": {
+					"properties": [
+						{
+							"name": "Bool",
+							"value": true
+						}
+					]
+				}
+			}
+		]
+	}
+}

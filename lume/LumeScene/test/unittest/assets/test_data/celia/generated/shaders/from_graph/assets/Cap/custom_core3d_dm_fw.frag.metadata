@@ -1,0 +1,128 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "f7559ee7-769b-47e0-87a3-a8b6d8bd0845",
+        "uri": "project://assets/generated/shaders/from_graph/assets/Cap/custom_core3d_dm_fw.frag",
+        "sha1": "5155c6afd2db78796e4ada91186fa0ed3ad7923f",
+        "spec": {
+            "$meta": {
+                "version": "1.0"
+            },
+            "$root": {
+                "$classId": "5af14b09-98e9-412d-9e1b-105e81e2347f",
+                "$name": "ShaderSourceAsset",
+                "$instanceId": "000544fc-4d3d-6420-b189-2d42ee42ef58",
+                "$properties": {
+                    "MediaType": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "application/vnd.ark.glsl.fragment-shader",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AutoCompile": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "IncludePaths": {
+                        "$classId": "02387d17-c1f3-d90f-5072-6f7065727479",
+                        "defaultValue": [],
+                        "flags": 163
+                    },
+                    "GeneratorSourceUri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/Cap.shadergraph",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsGenerated": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Iid": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "f7559ee7-769b-47e0-87a3-a8b6d8bd0845",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsBuiltIn": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Size": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "OutputDirectory": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/Cap/",
+                        "defaultValue": "project://assets/generated/shaders/from_graph/assets/Cap/",
+                        "flags": 227
+                    },
+                    "Uri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/Cap/custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "Category": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "AddSdkIncludes": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    },
+                    "CompileOptions": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 227
+                    },
+                    "IsValid": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "defaultValue": true,
+                        "flags": 171
+                    },
+                    "Name": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "custom_core3d_dm_fw.frag",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "ModifiedTimestamp": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "133579973821353616",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Optimize": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": true,
+                        "defaultValue": true,
+                        "flags": 227
+                    }
+                },
+                "Thumbnail": {
+                    "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                    "defaultValue": "",
+                    "flags": 33
+                }
+            }
+        }
+    }
+}

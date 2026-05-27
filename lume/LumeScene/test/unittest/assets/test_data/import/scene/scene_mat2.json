@@ -1,0 +1,19 @@
+{
+	"version": "1.0",
+	"description": "test scene with material shader and texture references",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_mat2.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"children": [
+				{
+					"type": "geometry",
+					"name": "geom"
+				}
+			]
+		}
+	}
+}

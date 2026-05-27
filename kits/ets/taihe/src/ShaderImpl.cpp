@@ -25,10 +25,9 @@
 #include "property_proxy/Vec4Proxy.h"
 
 namespace OHOS::Render3D::KITETS {
-ShaderImpl::ShaderImpl(const std::shared_ptr<ShaderETS> &shader)
+ShaderImpl::ShaderImpl(const std::shared_ptr<ShaderETS>& shader)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::SHADER, shader), shaderETS_(shader)
-{
-}
+{}
 
 ShaderImpl::~ShaderImpl()
 {
@@ -121,7 +120,7 @@ int32_t ShaderImpl::getInputsSize()
     return std::nullopt;
 }
 
-void ShaderImpl::setInput(::taihe::string_view key, ::SceneResources::ShaderInputType const &value)
+void ShaderImpl::setInput(::taihe::string_view key, ::SceneResources::ShaderInputType const& value)
 {
     if (!shaderETS_) {
         WIDGET_LOGE("set input failed, internal shader is null");
@@ -151,7 +150,7 @@ void ShaderImpl::setInput(::taihe::string_view key, ::SceneResources::ShaderInpu
             WIDGET_LOGE("failed to set input, image is not initialized");
             return;
         }
-        ImageImpl *imgImpl = reinterpret_cast<ImageImpl *>(implOp.value());
+        ImageImpl* imgImpl = reinterpret_cast<ImageImpl*>(implOp.value());
         if (imgImpl == nullptr) {
             WIDGET_LOGE("failed to set input, image is not initialized");
             return;

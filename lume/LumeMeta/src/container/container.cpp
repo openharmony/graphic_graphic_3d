@@ -59,7 +59,7 @@ bool Container::Insert(SizeType index, const IObject::Ptr& object)
         index = BASE_NS::Math::min(index, children_.size());
         children_.insert(children_.begin() + index, object);
     }
-    ChildChangedInfo info { ContainerChangeType::ADDED, object, parent_, size_t(-1), index };
+    ChildChangedInfo info{ContainerChangeType::ADDED, object, parent_, size_t(-1), index};
     SetObjectParent(object, interface_pointer_cast<IObject>(parent_));
     Invoke<IOnChildChanged>(EventOnContainerChanged(MetadataQuery::EXISTING), info);
     return true;
@@ -72,7 +72,7 @@ bool Container::Replace(const META_NS::IObject::Ptr& child, const META_NS::IObje
     IObject::Ptr moved;
     IContainer::SizeType fromIndex = 0;
     IContainer::SizeType toIndex = 0;
-    bool changed = false; // True if any changes were made
+    bool changed = false;  // True if any changes were made
     {
         std::unique_lock lock(mutex_);
         if (replaceWith && (!IsCompatible(replaceWith) || !CheckLoop(replaceWith))) {
@@ -131,8 +131,8 @@ bool Container::Replace(const META_NS::IObject::Ptr& child, const META_NS::IObje
     }
     if (changed) {
         // We did some changes to the container
-        ChildChangedInfo addedInfo { ContainerChangeType::ADDED, added, parent_, size_t(-1), toIndex };
-        ChildChangedInfo removedInfo { ContainerChangeType::REMOVED, removed, parent_, toIndex };
+        ChildChangedInfo addedInfo{ContainerChangeType::ADDED, added, parent_, size_t(-1), toIndex};
+        ChildChangedInfo removedInfo{ContainerChangeType::REMOVED, removed, parent_, toIndex};
         SetObjectParent(removed, nullptr);
         SetObjectParent(added, interface_pointer_cast<IObject>(parent_));
         if (removed) {
@@ -143,7 +143,7 @@ bool Container::Replace(const META_NS::IObject::Ptr& child, const META_NS::IObje
         }
         if (moved) {
             Invoke<IOnChildChanged>(EventOnContainerChanged(MetadataQuery::EXISTING),
-                ChildChangedInfo { ContainerChangeType::MOVED, moved, parent_, fromIndex, toIndex });
+                ChildChangedInfo{ContainerChangeType::MOVED, moved, parent_, fromIndex, toIndex});
         }
     }
     return changed;
@@ -177,7 +177,8 @@ bool Container::CheckLoop(const IObject::Ptr& object) const
     if (const auto cc = interface_cast<const IContainer>(object)) {
         if (const auto me = interface_cast<IObjectInstance>(impl_)) {
             if (cc->IsAncestorOf(me->GetSelf())) {
-                CORE_LOG_E("Adding '%s' to '%s' would lead to a loop in the container", object->GetName().c_str(),
+                CORE_LOG_E("Adding '%s' to '%s' would lead to a loop in the container",
+                    object->GetName().c_str(),
                     me->GetName().c_str());
                 return false;
             }

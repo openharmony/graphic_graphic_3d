@@ -116,7 +116,7 @@ BASE_NS::Math::Mat4X4 CameraNode::GetOrthoProjectionMatrix() const
     const auto yMagnification = META_ACCESS_PROPERTY_VALUE(YMagnification);
     auto orthoProj = BASE_NS::Math::OrthoRhZo(
         xMagnification * -0.5f, xMagnification * 0.5f, yMagnification * -0.5f, yMagnification * 0.5f, zNear, zFar);
-    orthoProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+    orthoProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
     return orthoProj;
 }
 
@@ -126,7 +126,7 @@ BASE_NS::Math::Mat4X4 CameraNode::GetPerspectiveProjectionMatrix() const
     const auto zFar = META_ACCESS_PROPERTY_VALUE(FarPlane);
     const auto yFov = META_ACCESS_PROPERTY_VALUE(FoV);
     auto persProj = BASE_NS::Math::PerspectiveRhZo(yFov, GetAspectRatio(), zNear, zFar);
-    persProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+    persProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
     return persProj;
 }
 
@@ -148,7 +148,7 @@ BASE_NS::Math::Mat4X4 CameraNode::GetFrustumProjectionMatrix() const
     float top = scale;
     auto persProj =
         BASE_NS::Math::PerspectiveRhZo(left + xOffset, right + xOffset, bottom + yOffset, top + yOffset, zNear, zFar);
-    persProj[1][1] *= -1.f; // left-hand NDC while Vulkan right-handed -> flip y
+    persProj[1][1] *= -1.f;  // left-hand NDC while Vulkan right-handed -> flip y
     return persProj;
 }
 

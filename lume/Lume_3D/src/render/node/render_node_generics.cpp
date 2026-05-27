@@ -92,9 +92,9 @@ RenderPass RenderNodeMixin::CreateRenderPass(const RenderHandle input)
     rp.renderPassDesc.attachmentCount = 1u;
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
-    rp.renderPassDesc.attachments[0u].clearValue.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    rp.renderPassDesc.attachments[0u].clearValue.color = {1.0f, 1.0f, 1.0f, 1.0f};
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;

@@ -167,7 +167,7 @@ UNIT_TEST_P(API_ContainerCommonTest, AddChild, testing::ext::TestSize.Level1)
     ASSERT_THAT(addedCalls_, testing::SizeIs(1));
     ASSERT_THAT(removedCalls_, testing::SizeIs(0));
     ASSERT_THAT(movedCalls_, testing::SizeIs(0));
-    auto expected = ChildChangedInfo { ContainerChangeType::ADDED, object, container_, size_t(-1), NumDirectChildren };
+    auto expected = ChildChangedInfo{ContainerChangeType::ADDED, object, container_, size_t(-1), NumDirectChildren};
     EXPECT_EQ(addedCalls_[0], expected);
 }
 
@@ -182,7 +182,7 @@ UNIT_TEST_P(API_ContainerCommonTest, ContainsObject, testing::ext::TestSize.Leve
     const auto notFound = CreateTestType();
     EXPECT_TRUE(container_->Add(object));
     EXPECT_FALSE(ContainsObject(nullptr, object));
-    EXPECT_FALSE(ContainsObject(container_, IObject::Ptr {}));
+    EXPECT_FALSE(ContainsObject(container_, IObject::Ptr{}));
     EXPECT_TRUE(ContainsObject(container_, object));
     EXPECT_FALSE(ContainsObject(container_, notFound));
 }
@@ -222,9 +222,9 @@ UNIT_TEST_P(API_ContainerCommonTest, Insert, testing::ext::TestSize.Level1)
     ASSERT_THAT(addedCalls_, testing::SizeIs(3));
     ASSERT_THAT(removedCalls_, testing::SizeIs(0));
     ASSERT_THAT(movedCalls_, testing::SizeIs(0));
-    auto expected1 = ChildChangedInfo { ContainerChangeType::ADDED, item1, container_, size_t(-1), NumDirectChildren };
-    auto expected2 = ChildChangedInfo { ContainerChangeType::ADDED, item2, container_, size_t(-1), 0 };
-    auto expected3 = ChildChangedInfo { ContainerChangeType::ADDED, item3, container_, size_t(-1), expectedSize - 1 };
+    auto expected1 = ChildChangedInfo{ContainerChangeType::ADDED, item1, container_, size_t(-1), NumDirectChildren};
+    auto expected2 = ChildChangedInfo{ContainerChangeType::ADDED, item2, container_, size_t(-1), 0};
+    auto expected3 = ChildChangedInfo{ContainerChangeType::ADDED, item3, container_, size_t(-1), expectedSize - 1};
     EXPECT_THAT(addedCalls_, testing::ElementsAre(expected1, expected2, expected3));
 }
 
@@ -264,9 +264,9 @@ UNIT_TEST_P(API_ContainerCommonTest, RemoveChild, testing::ext::TestSize.Level1)
     auto baseIndex = expectedCount / 3;
 
     while (!children.empty()) {
-        auto index = ++baseIndex % expectedCount; // To add variation to the index
+        auto index = ++baseIndex % expectedCount;  // To add variation to the index
         const auto child = children[index];
-        removed.push_back({ ContainerChangeType::REMOVED, child, container_, index });
+        removed.push_back({ContainerChangeType::REMOVED, child, container_, index});
         EXPECT_TRUE(container_->Remove(child));
 
         expectedCount--;
@@ -305,9 +305,9 @@ UNIT_TEST_P(API_ContainerCommonTest, RemoveIndex, testing::ext::TestSize.Level1)
     auto baseIndex = expectedCount / 3;
 
     while (!children.empty()) {
-        auto index = ++baseIndex % expectedCount; // To add variation to the index
+        auto index = ++baseIndex % expectedCount;  // To add variation to the index
         const auto child = children[index];
-        removed.push_back({ ContainerChangeType::REMOVED, child, container_, index });
+        removed.push_back({ContainerChangeType::REMOVED, child, container_, index});
         EXPECT_TRUE(container_->Remove(index));
 
         expectedCount--;
@@ -387,8 +387,8 @@ UNIT_TEST_P(API_ContainerCommonTest, Replace, testing::ext::TestSize.Level1)
     EXPECT_THAT(container_->GetAll(), testing::Not(testing::Contains(replace)));
     // Check events
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
-    const auto removed = ChildChangedInfo { ContainerChangeType::REMOVED, replace, container_, index };
-    const auto added = ChildChangedInfo { ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), index };
+    const auto removed = ChildChangedInfo{ContainerChangeType::REMOVED, replace, container_, index};
+    const auto added = ChildChangedInfo{ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), index};
     EXPECT_THAT(addedCalls_, testing::ElementsAre(added));
     EXPECT_THAT(removedCalls_, testing::ElementsAre(removed));
 }
@@ -434,7 +434,7 @@ UNIT_TEST_P(API_ContainerCommonTest, ReplaceSame, testing::ext::TestSize.Level1)
     // The item should have been added
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
-    const auto added = ChildChangedInfo { ContainerChangeType::ADDED, notThere, container_, size_t(-1), expectedCount };
+    const auto added = ChildChangedInfo{ContainerChangeType::ADDED, notThere, container_, size_t(-1), expectedCount};
     EXPECT_THAT(addedCalls_, testing::ElementsAre(added));
 }
 
@@ -472,7 +472,7 @@ UNIT_TEST_P(API_ContainerCommonTest, ReplaceNull, testing::ext::TestSize.Level1)
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
     const auto added =
-        ChildChangedInfo { ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), NumDirectChildren };
+        ChildChangedInfo{ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), NumDirectChildren};
     EXPECT_THAT(addedCalls_, testing::ElementsAre(added));
     addedCalls_.clear();
     // Replace valid object with null should remove the object regardless of addAlways
@@ -482,11 +482,10 @@ UNIT_TEST_P(API_ContainerCommonTest, ReplaceNull, testing::ext::TestSize.Level1)
     EXPECT_EQ(container_->GetSize(), NumDirectChildren + 1);
     EXPECT_TRUE(container_->Replace(replaceWith2, {}, true));
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
-    const auto removed1 = ChildChangedInfo { ContainerChangeType::REMOVED, replaceWith, container_, NumDirectChildren };
-    const auto removed2 =
-        ChildChangedInfo { ContainerChangeType::REMOVED, replaceWith2, container_, NumDirectChildren };
+    const auto removed1 = ChildChangedInfo{ContainerChangeType::REMOVED, replaceWith, container_, NumDirectChildren};
+    const auto removed2 = ChildChangedInfo{ContainerChangeType::REMOVED, replaceWith2, container_, NumDirectChildren};
     const auto added2 =
-        ChildChangedInfo { ContainerChangeType::ADDED, replaceWith2, container_, size_t(-1), NumDirectChildren };
+        ChildChangedInfo{ContainerChangeType::ADDED, replaceWith2, container_, size_t(-1), NumDirectChildren};
     EXPECT_THAT(removedCalls_, testing::ElementsAre(removed1, removed2));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
     EXPECT_THAT(addedCalls_, testing::ElementsAre(added2));
@@ -524,8 +523,7 @@ UNIT_TEST_P(API_ContainerCommonTest, ReplaceAdd, testing::ext::TestSize.Level1)
     // Check events
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
-    const auto added =
-        ChildChangedInfo { ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), expectedCount };
+    const auto added = ChildChangedInfo{ContainerChangeType::ADDED, replaceWith, container_, size_t(-1), expectedCount};
     EXPECT_THAT(addedCalls_, testing::ElementsAre(added));
 }
 
@@ -560,7 +558,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveBack, testing::ext::TestSize.Level1)
     size_t from = NumDirectChildren - 1;
     size_t to = 0;
     auto moveItem = container_->GetAt(from);
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, moveItem, container_, from, to };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, moveItem, container_, from, to};
     EXPECT_TRUE(container_->Move(from, to));
     EXPECT_EQ(container_->GetAt(to), moveItem);
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
@@ -581,7 +579,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveForward, testing::ext::TestSize.Level1)
     size_t from = 0;
     size_t to = NumDirectChildren - 1;
     auto moveItem = container_->GetAt(from);
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, moveItem, container_, from, to };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, moveItem, container_, from, to};
     EXPECT_TRUE(container_->Move(from, to));
 
     EXPECT_EQ(container_->GetAt(to), moveItem);
@@ -600,7 +598,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveNext, testing::ext::TestSize.Level1)
     size_t from = NumDirectChildren / 2;
     size_t to = from + 1;
     auto moveItem = container_->GetAt(from);
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, moveItem, container_, from, to };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, moveItem, container_, from, to};
     EXPECT_TRUE(container_->Move(from, to));
     EXPECT_EQ(container_->GetAt(to), moveItem);
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
@@ -623,7 +621,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveSame, testing::ext::TestSize.Level1)
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
-    EXPECT_THAT(movedCalls_, testing::SizeIs(0)); // No move as the indices are the same
+    EXPECT_THAT(movedCalls_, testing::SizeIs(0));  // No move as the indices are the same
 }
 
 /**
@@ -642,7 +640,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveFromBiggerThanSize, testing::ext::TestS
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, moveItem, container_, NumDirectChildren - 1, to };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, moveItem, container_, NumDirectChildren - 1, to};
     EXPECT_THAT(movedCalls_, testing::ElementsAre(moved));
 }
 
@@ -662,7 +660,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveToBiggerThanSize, testing::ext::TestSiz
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, moveItem, container_, from, NumDirectChildren - 1 };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, moveItem, container_, from, NumDirectChildren - 1};
     EXPECT_THAT(movedCalls_, testing::ElementsAre(moved));
 }
 
@@ -695,7 +693,7 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveObject, testing::ext::TestSize.Level1)
     size_t from = NumDirectChildren - 1;
     size_t to = 0;
     const auto child = container_->GetAt(from);
-    auto moved = ChildChangedInfo { ContainerChangeType::MOVED, child, container_, from, to };
+    auto moved = ChildChangedInfo{ContainerChangeType::MOVED, child, container_, from, to};
     EXPECT_TRUE(container_->Move(child, to));
     EXPECT_EQ(container_->GetAt(to), child);
     EXPECT_EQ(container_->GetSize(), NumDirectChildren);
@@ -713,9 +711,9 @@ UNIT_TEST_P(API_ContainerCommonTest, MoveObject, testing::ext::TestSize.Level1)
 UNIT_TEST_P(API_ContainerCommonTest, FindAllNameDirect, testing::ext::TestSize.Level1)
 {
     // Direct child
-    auto result1 = container_->FindAll({ "Object1_1", TraversalType::NO_HIERARCHY, {}, false });
+    auto result1 = container_->FindAll({"Object1_1", TraversalType::NO_HIERARCHY, {}, false});
     // Child of child
-    auto result2 = container_->FindAll({ "Object2_1", TraversalType::NO_HIERARCHY, {}, false });
+    auto result2 = container_->FindAll({"Object2_1", TraversalType::NO_HIERARCHY, {}, false});
 
     // Should find direct child but not child of child
     EXPECT_THAT(result1, testing::SizeIs(1));
@@ -734,7 +732,7 @@ UNIT_TEST_P(API_ContainerCommonTest, SetRequiredInterfacesReplace, testing::ext:
 {
     auto req = interface_cast<IRequiredInterfaces>(container_);
     ASSERT_TRUE(req);
-    EXPECT_TRUE(req->SetRequiredInterfaces({ ITestType::UID }));
+    EXPECT_TRUE(req->SetRequiredInterfaces({ITestType::UID}));
     EXPECT_EQ(container_->GetSize(), NumDirectChildTestTypes);
 
     const auto children = container_->GetAll();
@@ -769,9 +767,9 @@ UNIT_TEST_P(API_ContainerCommonTest, SetRequiredInterfacesReplace, testing::ext:
 UNIT_TEST_P(API_ContainerCommonTest, FindAnyNameDirect, testing::ext::TestSize.Level1)
 {
     // Direct child
-    auto result1 = container_->FindAny({ "Object1_1", TraversalType::NO_HIERARCHY, {}, false });
+    auto result1 = container_->FindAny({"Object1_1", TraversalType::NO_HIERARCHY, {}, false});
     // Child of child
-    auto result2 = container_->FindAny({ "Object2_1", TraversalType::NO_HIERARCHY, {}, false });
+    auto result2 = container_->FindAny({"Object2_1", TraversalType::NO_HIERARCHY, {}, false});
 
     // Should find direct child but not child of child
     EXPECT_NE(result1, nullptr);
@@ -792,10 +790,10 @@ UNIT_TEST_P(API_ContainerCommonTest, SetRequiredInterfaces, testing::ext::TestSi
     ASSERT_TRUE(req);
     EXPECT_EQ(container_->GetSize(), NumDirectChildContainers + NumDirectChildTestTypes);
     // Should remove all items not implementing ITestType
-    EXPECT_TRUE(req->SetRequiredInterfaces({ ITestType::UID }));
+    EXPECT_TRUE(req->SetRequiredInterfaces({ITestType::UID}));
     EXPECT_EQ(container_->GetSize(), NumDirectChildTestTypes);
     // Should remove all items not implementing ITestContainer, leaving no items in the container
-    EXPECT_TRUE(req->SetRequiredInterfaces({ ITestContainer::UID }));
+    EXPECT_TRUE(req->SetRequiredInterfaces({ITestContainer::UID}));
     EXPECT_EQ(container_->GetSize(), 0);
     // TestType does not implement ITestContainer so this should fail and nothing should be added
     EXPECT_FALSE(container_->Add(interface_pointer_cast<IObject>(CreateTestType())));
@@ -896,10 +894,10 @@ UNIT_TEST_F(API_ContainerTest, ReplaceWithExistingAddAlways, testing::ext::TestS
 
     // Check events
     const auto moved =
-        ChildChangedInfo { ContainerChangeType::MOVED, replaceWith, container_, indexReplaceWith, indexReplace };
+        ChildChangedInfo{ContainerChangeType::MOVED, replaceWith, container_, indexReplaceWith, indexReplace};
     EXPECT_THAT(movedCalls_, testing::ElementsAre(moved));
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
-    const auto removed = ChildChangedInfo { ContainerChangeType::REMOVED, replace, container_, indexReplace };
+    const auto removed = ChildChangedInfo{ContainerChangeType::REMOVED, replace, container_, indexReplace};
     EXPECT_THAT(removedCalls_, testing::ElementsAre(removed));
 }
 
@@ -925,10 +923,10 @@ UNIT_TEST_F(API_ContainerTest, ReplaceWithExistingDontAddAlways, testing::ext::T
 
     // Check events
     const auto moved =
-        ChildChangedInfo { ContainerChangeType::MOVED, replaceWith, container_, indexReplaceWith, indexReplace };
+        ChildChangedInfo{ContainerChangeType::MOVED, replaceWith, container_, indexReplaceWith, indexReplace};
     EXPECT_THAT(movedCalls_, testing::ElementsAre(moved));
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
-    const auto removed = ChildChangedInfo { ContainerChangeType::REMOVED, replace, container_, indexReplace };
+    const auto removed = ChildChangedInfo{ContainerChangeType::REMOVED, replace, container_, indexReplace};
     EXPECT_THAT(removedCalls_, testing::ElementsAre(removed));
 }
 
@@ -947,7 +945,7 @@ UNIT_TEST_F(API_ContainerTest, AddChildTwice, testing::ext::TestSize.Level1)
     EXPECT_FALSE(container_->Add(child));
     EXPECT_EQ(container_->GetSize(), NumDirectChildren + 1);
 
-    const auto children = container_->FindAll({ "Twice", TraversalType::NO_HIERARCHY });
+    const auto children = container_->FindAll({"Twice", TraversalType::NO_HIERARCHY});
     ASSERT_THAT(children, testing::SizeIs(1));
     EXPECT_EQ(children[0], child);
 
@@ -955,7 +953,7 @@ UNIT_TEST_F(API_ContainerTest, AddChildTwice, testing::ext::TestSize.Level1)
     ASSERT_THAT(addedCalls_, testing::SizeIs(1));
     ASSERT_THAT(removedCalls_, testing::SizeIs(0));
     ASSERT_THAT(movedCalls_, testing::SizeIs(0));
-    auto expected = ChildChangedInfo { ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren };
+    auto expected = ChildChangedInfo{ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren};
     EXPECT_EQ(addedCalls_[0], expected);
 }
 
@@ -966,15 +964,15 @@ UNIT_TEST_F(API_ContainerTest, AddChildTwice, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ContainerTest, FindAllEmptyName, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
-    auto result2 = container_->FindAll({ "", TraversalType::NO_HIERARCHY, { ITestContainer::UID }, false });
-    auto result3 = container_->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
-    auto result4 = container_->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID }, false });
+    auto result1 = container_->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
+    auto result2 = container_->FindAll({"", TraversalType::NO_HIERARCHY, {ITestContainer::UID}, false});
+    auto result3 = container_->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
+    auto result4 = container_->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID}, false});
 
-    EXPECT_THAT(result1, testing::SizeIs(NumChildContainers + NumChildTestTypes)); // All children of container_
-    EXPECT_THAT(result2, testing::SizeIs(1));                  // The one direct container child of container_
-    EXPECT_THAT(result3, testing::SizeIs(NumChildContainers)); // All container children of container_
-    EXPECT_THAT(result4, testing::SizeIs(NumChildTestTypes));  // Rest of the items
+    EXPECT_THAT(result1, testing::SizeIs(NumChildContainers + NumChildTestTypes));  // All children of container_
+    EXPECT_THAT(result2, testing::SizeIs(1));                   // The one direct container child of container_
+    EXPECT_THAT(result3, testing::SizeIs(NumChildContainers));  // All container children of container_
+    EXPECT_THAT(result4, testing::SizeIs(NumChildTestTypes));   // Rest of the items
     EXPECT_THAT(addedCalls_, testing::SizeIs(0));
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
@@ -988,9 +986,9 @@ UNIT_TEST_F(API_ContainerTest, FindAllEmptyName, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_ContainerTest, FindAllNameRecursive, testing::ext::TestSize.Level1)
 {
     // Direct child
-    auto result1 = container_->FindAll({ "Object1_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result1 = container_->FindAll({"Object1_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
     // Child of child
-    auto result2 = container_->FindAll({ "Object2_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result2 = container_->FindAll({"Object2_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
 
     // Should find direct child and child of child
     EXPECT_THAT(result1, testing::SizeIs(1));
@@ -1007,8 +1005,8 @@ UNIT_TEST_F(API_ContainerTest, FindAllNameRecursive, testing::ext::TestSize.Leve
  */
 UNIT_TEST_F(API_ContainerTest, FindAllNameDuplicate, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAll({ "ObjectDupe", TraversalType::NO_HIERARCHY, {}, false });
-    auto result2 = container_->FindAll({ "ObjectDupe", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result1 = container_->FindAll({"ObjectDupe", TraversalType::NO_HIERARCHY, {}, false});
+    auto result2 = container_->FindAll({"ObjectDupe", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
 
     // DIRECT should find only the direct child
     EXPECT_THAT(result1, testing::SizeIs(1));
@@ -1026,11 +1024,11 @@ UNIT_TEST_F(API_ContainerTest, FindAllNameDuplicate, testing::ext::TestSize.Leve
  */
 UNIT_TEST_F(API_ContainerTest, FindAllUid, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAll({ "", TraversalType::NO_HIERARCHY, { ITestContainer::UID }, false });
-    auto result2 = container_->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
-    auto result3 = container_->FindAll({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result1 = container_->FindAll({"", TraversalType::NO_HIERARCHY, {ITestContainer::UID}, false});
+    auto result2 = container_->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
+    auto result3 = container_->FindAll({"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
     auto result4 = container_->FindAll(
-        { "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
 
     // DIRECT should find only the direct children
     EXPECT_THAT(result1, testing::SizeIs(1));
@@ -1052,12 +1050,12 @@ UNIT_TEST_F(API_ContainerTest, FindAllUid, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ContainerTest, FindAllUidStrict, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAll({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER,
-        { ITestType::UID, ITestContainer::UID }, true });
+    auto result1 = container_->FindAll(
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, ITestContainer::UID}, true});
     auto result2 =
-        container_->FindAll({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID }, true });
-    auto result3 = container_->FindAll({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER,
-        { ITestType::UID, ITestContainer::UID }, false });
+        container_->FindAll({"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID}, true});
+    auto result3 = container_->FindAll(
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, ITestContainer::UID}, false});
     // No object implements both ITestType and ITestContainer
     EXPECT_THAT(result1, testing::SizeIs(0));
     // Only one of the objects has name "SameNameDifferentUid" and implements ITestType
@@ -1077,13 +1075,12 @@ UNIT_TEST_F(API_ContainerTest, FindAllUidStrict, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_ContainerTest, FindAllInvalid, testing::ext::TestSize.Level1)
 {
     // Direct child
-    auto result1 = container_->FindAll({ "InvalidObject", TraversalType::NO_HIERARCHY, {}, false });
+    auto result1 = container_->FindAll({"InvalidObject", TraversalType::NO_HIERARCHY, {}, false});
     // Child of child
-    auto result2 = container_->FindAll({ "InvalidObject", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
-    auto result3 =
-        container_->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { META_NS::IAttachment::UID }, false });
+    auto result2 = container_->FindAll({"InvalidObject", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
+    auto result3 = container_->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {META_NS::IAttachment::UID}, false});
     auto result4 = container_->FindAll(
-        { "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID, META_NS::IAttachment::UID }, true });
+        {"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, META_NS::IAttachment::UID}, true});
 
     EXPECT_THAT(result1, testing::SizeIs(0));
     EXPECT_THAT(result2, testing::SizeIs(0));
@@ -1101,9 +1098,9 @@ UNIT_TEST_F(API_ContainerTest, FindAllInvalid, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ContainerTest, FindAnyEmptyName, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAny({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
-    auto result2 = container_->FindAny({ "", TraversalType::NO_HIERARCHY, { ITestContainer::UID }, false });
-    auto result3 = container_->FindAny({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
+    auto result1 = container_->FindAny({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
+    auto result2 = container_->FindAny({"", TraversalType::NO_HIERARCHY, {ITestContainer::UID}, false});
+    auto result3 = container_->FindAny({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
 
     EXPECT_NE(result1, nullptr);
     EXPECT_NE(result2, nullptr);
@@ -1121,9 +1118,9 @@ UNIT_TEST_F(API_ContainerTest, FindAnyEmptyName, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_ContainerTest, FindAnyNameRecursive, testing::ext::TestSize.Level1)
 {
     // Direct child
-    auto result1 = container_->FindAny({ "Object1_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result1 = container_->FindAny({"Object1_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
     // Child of child
-    auto result2 = container_->FindAny({ "Object2_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result2 = container_->FindAny({"Object2_1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
     // Same as above but with helper template
     auto result3 = container_->FindAnyFromHierarchy<IObject>("Object2_1");
 
@@ -1143,8 +1140,8 @@ UNIT_TEST_F(API_ContainerTest, FindAnyNameRecursive, testing::ext::TestSize.Leve
  */
 UNIT_TEST_F(API_ContainerTest, FindAnyNameDuplicate, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAny({ "ObjectDupe", TraversalType::NO_HIERARCHY, {}, false });
-    auto result2 = container_->FindAny({ "ObjectDupe", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+    auto result1 = container_->FindAny({"ObjectDupe", TraversalType::NO_HIERARCHY, {}, false});
+    auto result2 = container_->FindAny({"ObjectDupe", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
 
     EXPECT_NE(result1, nullptr);
     EXPECT_NE(result2, nullptr);
@@ -1160,11 +1157,11 @@ UNIT_TEST_F(API_ContainerTest, FindAnyNameDuplicate, testing::ext::TestSize.Leve
  */
 UNIT_TEST_F(API_ContainerTest, FindAnyUid, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAny({ "", TraversalType::NO_HIERARCHY, { ITestContainer::UID }, false });
-    auto result2 = container_->FindAny({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
-    auto result3 = container_->FindAny({ "SameNameDifferentUid", TraversalType::NO_HIERARCHY, {}, false });
+    auto result1 = container_->FindAny({"", TraversalType::NO_HIERARCHY, {ITestContainer::UID}, false});
+    auto result2 = container_->FindAny({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
+    auto result3 = container_->FindAny({"SameNameDifferentUid", TraversalType::NO_HIERARCHY, {}, false});
     auto result4 = container_->FindAny(
-        { "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestContainer::UID }, false });
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestContainer::UID}, false});
 
     EXPECT_NE(result1, nullptr);
     EXPECT_NE(result2, nullptr);
@@ -1182,12 +1179,12 @@ UNIT_TEST_F(API_ContainerTest, FindAnyUid, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ContainerTest, FindAnyUidStrict, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAny({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER,
-        { ITestType::UID, ITestContainer::UID }, true });
+    auto result1 = container_->FindAny(
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, ITestContainer::UID}, true});
     auto result2 =
-        container_->FindAny({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID }, true });
-    auto result3 = container_->FindAny({ "SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER,
-        { ITestType::UID, ITestContainer::UID }, false });
+        container_->FindAny({"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID}, true});
+    auto result3 = container_->FindAny(
+        {"SameNameDifferentUid", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, ITestContainer::UID}, false});
     EXPECT_EQ(result1, nullptr);
     EXPECT_NE(result2, nullptr);
     EXPECT_NE(result3, nullptr);
@@ -1203,12 +1200,11 @@ UNIT_TEST_F(API_ContainerTest, FindAnyUidStrict, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ContainerTest, FindAnyInvalid, testing::ext::TestSize.Level1)
 {
-    auto result1 = container_->FindAny({ "InvalidObject", TraversalType::NO_HIERARCHY, {}, false });
-    auto result2 = container_->FindAny({ "InvalidObject", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
-    auto result3 =
-        container_->FindAny({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { META_NS::IAttachment::UID }, false });
+    auto result1 = container_->FindAny({"InvalidObject", TraversalType::NO_HIERARCHY, {}, false});
+    auto result2 = container_->FindAny({"InvalidObject", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
+    auto result3 = container_->FindAny({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {META_NS::IAttachment::UID}, false});
     auto result4 = container_->FindAny(
-        { "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID, META_NS::IAttachment::UID }, true });
+        {"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID, META_NS::IAttachment::UID}, true});
 
     EXPECT_EQ(result1, nullptr);
     EXPECT_EQ(result2, nullptr);
@@ -1218,6 +1214,49 @@ UNIT_TEST_F(API_ContainerTest, FindAnyInvalid, testing::ext::TestSize.Level1)
     EXPECT_THAT(removedCalls_, testing::SizeIs(0));
     EXPECT_THAT(movedCalls_, testing::SizeIs(0));
 }
+
+/**
+ * @tc.name: ObjectFlagsDefault
+ * @tc.desc: Tests for Object Flags Default. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+/*
+ UNIT_TEST_F(API_ContainerTest, ObjectFlagsDefault, testing::ext::TestSize.Level1)
+{
+    TestSerialiser ser;
+    ASSERT_TRUE(ser.Export(container_));
+
+    auto imported = ser.Import<IContainer>();
+    ASSERT_TRUE(imported);
+
+    EXPECT_EQ(imported->GetAll().size(), NumDirectChildren);
+}
+*/
+
+/**
+ * @tc.name: ObjectFlagsNoHierarchy
+ * @tc.desc: Tests for Object Flags No Hierarchy. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+/*
+UNIT_TEST_F(API_ContainerTest, ObjectFlagsNoHierarchy, testing::ext::TestSize.Level1)
+{
+    TestSerialiser ser;
+    auto flags = interface_cast<IObjectFlags>(container_);
+    ASSERT_TRUE(flags);
+
+    auto objectFlags = flags->GetObjectFlags();
+    objectFlags.Clear(ObjectFlagBits::SERIALIZE_HIERARCHY);
+    flags->SetObjectFlags(objectFlags);
+
+    ASSERT_TRUE(ser.Export(container_));
+
+    auto imported = ser.Import<IContainer>();
+    ASSERT_TRUE(imported);
+
+    EXPECT_EQ(imported->GetAll().size(), 0);
+}
+*/
 
 /**
  * @tc.name: IterationSupport
@@ -1287,29 +1326,32 @@ UNIT_TEST_F(API_ContainerTest, IterationSupport, testing::ext::TestSize.Level1)
     }
     {
         int count = 0;
-        ConstIterate(container_, MakeIterationConstCallable([&](const IObject::Ptr&) {
-            ++count;
-            return true;
-        }),
-            IterateStrategy { TraversalType::DEPTH_FIRST_PRE_ORDER, LockType::NO_LOCK });
+        ConstIterate(container_,
+            MakeIterationConstCallable([&](const IObject::Ptr&) {
+                ++count;
+                return true;
+            }),
+            IterateStrategy{TraversalType::DEPTH_FIRST_PRE_ORDER, LockType::NO_LOCK});
         EXPECT_EQ(count, NumChildContainers + NumChildTestTypes);
     }
     {
         int count = 0;
-        ConstIterate(container_, MakeIterationConstCallable([&](const IObject::Ptr&) {
-            ++count;
-            return true;
-        }),
-            IterateStrategy { TraversalType::FULL_HIERARCHY, LockType::UNIQUE_LOCK });
+        ConstIterate(container_,
+            MakeIterationConstCallable([&](const IObject::Ptr&) {
+                ++count;
+                return true;
+            }),
+            IterateStrategy{TraversalType::FULL_HIERARCHY, LockType::UNIQUE_LOCK});
         EXPECT_EQ(count, NumChildContainers + NumChildTestTypes);
     }
     {
         int count = 0;
-        ConstIterate(container_, MakeIterationConstCallable([&](const IObject::Ptr&) {
-            ++count;
-            return true;
-        }),
-            IterateStrategy { TraversalType::BREADTH_FIRST_ORDER, LockType::UNIQUE_LOCK });
+        ConstIterate(container_,
+            MakeIterationConstCallable([&](const IObject::Ptr&) {
+                ++count;
+                return true;
+            }),
+            IterateStrategy{TraversalType::BREADTH_FIRST_ORDER, LockType::UNIQUE_LOCK});
         EXPECT_EQ(count, NumChildContainers + NumChildTestTypes);
     }
 }
@@ -1367,20 +1409,23 @@ UNIT_TEST_F(API_ContainerTest, IterationSupportNonIterable, testing::ext::TestSi
     }
     {
         auto f = fnr;
-        ConstIterate(nonContainer, MakeIterationConstCallable(BASE_NS::move(f)),
-            IterateStrategy { TraversalType::DEPTH_FIRST_PRE_ORDER, LockType::NO_LOCK });
+        ConstIterate(nonContainer,
+            MakeIterationConstCallable(BASE_NS::move(f)),
+            IterateStrategy{TraversalType::DEPTH_FIRST_PRE_ORDER, LockType::NO_LOCK});
         EXPECT_EQ(count, 0);
     }
     {
         auto f = fnr;
-        ConstIterate(nonContainer, MakeIterationConstCallable(BASE_NS::move(f)),
-            IterateStrategy { TraversalType::FULL_HIERARCHY, LockType::UNIQUE_LOCK });
+        ConstIterate(nonContainer,
+            MakeIterationConstCallable(BASE_NS::move(f)),
+            IterateStrategy{TraversalType::FULL_HIERARCHY, LockType::UNIQUE_LOCK});
         EXPECT_EQ(count, 0);
     }
     {
         auto f = fnr;
-        ConstIterate(nonContainer, MakeIterationConstCallable(BASE_NS::move(f)),
-            IterateStrategy { TraversalType::BREADTH_FIRST_ORDER, LockType::UNIQUE_LOCK });
+        ConstIterate(nonContainer,
+            MakeIterationConstCallable(BASE_NS::move(f)),
+            IterateStrategy{TraversalType::BREADTH_FIRST_ORDER, LockType::UNIQUE_LOCK});
         EXPECT_EQ(count, 0);
     }
 }
@@ -1417,64 +1462,64 @@ UNIT_TEST_F(API_ContainerTest, FindOrder, testing::ext::TestSize.Level1)
 
     // 1
     {
-        auto r = c->FindAny({ "1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+        auto r = c->FindAny({"1", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, interface_pointer_cast<IObject>(c1));
     }
     {
-        auto r = c->FindAny({ "1", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false });
+        auto r = c->FindAny({"1", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c1_2);
     }
     {
-        auto r = c->FindAny({ "1", TraversalType::BREADTH_FIRST_ORDER, {}, false });
+        auto r = c->FindAny({"1", TraversalType::BREADTH_FIRST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, interface_pointer_cast<IObject>(c1));
     }
     {
-        auto r = c->FindAny({ "1", TraversalType::NO_HIERARCHY, {}, false });
+        auto r = c->FindAny({"1", TraversalType::NO_HIERARCHY, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, interface_pointer_cast<IObject>(c1));
     }
     // 3
     {
-        auto r = c->FindAny({ "3", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+        auto r = c->FindAny({"3", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c1_1);
     }
     {
-        auto r = c->FindAny({ "3", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false });
+        auto r = c->FindAny({"3", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c1_1);
     }
     {
-        auto r = c->FindAny({ "3", TraversalType::BREADTH_FIRST_ORDER, {}, false });
+        auto r = c->FindAny({"3", TraversalType::BREADTH_FIRST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c3);
     }
     {
-        auto r = c->FindAny({ "3", TraversalType::NO_HIERARCHY, {}, false });
+        auto r = c->FindAny({"3", TraversalType::NO_HIERARCHY, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, interface_pointer_cast<IObject>(c3));
     }
     // 4
     {
-        auto r = c->FindAny({ "4", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false });
+        auto r = c->FindAny({"4", TraversalType::DEPTH_FIRST_PRE_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, interface_pointer_cast<IObject>(c2_2_1));
     }
     {
-        auto r = c->FindAny({ "4", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false });
+        auto r = c->FindAny({"4", TraversalType::DEPTH_FIRST_POST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c2_2_1_1);
     }
     {
-        auto r = c->FindAny({ "4", TraversalType::BREADTH_FIRST_ORDER, {}, false });
+        auto r = c->FindAny({"4", TraversalType::BREADTH_FIRST_ORDER, {}, false});
         ASSERT_TRUE(r);
         EXPECT_EQ(r, c2_3);
     }
     {
-        auto r = c->FindAny({ "4", TraversalType::NO_HIERARCHY, {}, false });
+        auto r = c->FindAny({"4", TraversalType::NO_HIERARCHY, {}, false});
         ASSERT_FALSE(r);
     }
 }
@@ -1493,7 +1538,7 @@ UNIT_TEST_F(API_FlatContainerTest, SameItemMultipleTimes, testing::ext::TestSize
     EXPECT_TRUE(container_->Add(child));
     EXPECT_EQ(container_->GetSize(), NumDirectChildren + 2);
 
-    const auto children = container_->FindAll({ "Twice", TraversalType::NO_HIERARCHY });
+    const auto children = container_->FindAll({"Twice", TraversalType::NO_HIERARCHY});
     ASSERT_THAT(children, testing::SizeIs(2));
     EXPECT_EQ(children[0], child);
     EXPECT_EQ(children[1], child);
@@ -1502,9 +1547,8 @@ UNIT_TEST_F(API_FlatContainerTest, SameItemMultipleTimes, testing::ext::TestSize
     ASSERT_THAT(addedCalls_, testing::SizeIs(2));
     ASSERT_THAT(removedCalls_, testing::SizeIs(0));
     ASSERT_THAT(movedCalls_, testing::SizeIs(0));
-    auto expected1 = ChildChangedInfo { ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren };
-    auto expected2 =
-        ChildChangedInfo { ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren + 1 };
+    auto expected1 = ChildChangedInfo{ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren};
+    auto expected2 = ChildChangedInfo{ContainerChangeType::ADDED, child, container_, size_t(-1), NumDirectChildren + 1};
     EXPECT_EQ(addedCalls_[0], expected1);
     EXPECT_EQ(addedCalls_[1], expected2);
 }
@@ -1539,5 +1583,5 @@ static std::string BuildTestName(const testing::TestParamInfo<API_ContainerCommo
 INSTANTIATE_TEST_SUITE_P(API_ContainerTests, API_ContainerCommonTest,
     testing::Values(META_NS::ClassId::TestContainer, META_NS::ClassId::TestFlatContainer), BuildTestName);
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

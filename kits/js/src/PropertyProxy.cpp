@@ -69,8 +69,10 @@ void PropertyProxy::ResetValue()
     }
 }
 
-ObjectPropertyProxy::MemberProxy::MemberProxy(ObjectPropertyProxy* p, BASE_NS::string m) : proxy_(p), memb_(m) {}
-ObjectPropertyProxy::MemberProxy::~MemberProxy() {}
+ObjectPropertyProxy::MemberProxy::MemberProxy(ObjectPropertyProxy* p, BASE_NS::string m) : proxy_(p), memb_(m)
+{}
+ObjectPropertyProxy::MemberProxy::~MemberProxy()
+{}
 const BASE_NS::string_view ObjectPropertyProxy::MemberProxy::Name() const
 {
     return memb_;
@@ -98,7 +100,7 @@ napi_value ObjectPropertyProxy::MemberProxy::Setter(napi_env e, napi_callback_in
 void ObjectPropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
 {
     if (jsName.empty()) {
-        obj_ = NapiApi::StrongRef { NapiApi::Object(env) };
+        obj_ = NapiApi::StrongRef{NapiApi::Object(env)};
     } else {
         NapiApi::MyInstanceState* mis;
         NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -111,7 +113,7 @@ void ObjectPropertyProxy::Create(napi_env env, const BASE_NS::string jsName)
         if (cl) {
             napi_value value;
             napi_new_instance(env, cl, 0, nullptr, &value);
-            obj_ = NapiApi::StrongRef { NapiApi::Object(env, value) };
+            obj_ = NapiApi::StrongRef{NapiApi::Object(env, value)};
         }
     }
     if (obj_.IsEmpty()) {
@@ -127,8 +129,14 @@ void ObjectPropertyProxy::Hook(const BASE_NS::string member)
     auto ValueObject = obj_.GetObject();
     auto* accessor = new MemberProxy(this, member);
     accessors_.push_back(BASE_NS::unique_ptr<MemberProxy>(accessor));
-    ValueObject.AddProperty({ accessor->Name().data(), nullptr, nullptr, MemberProxy::Getter, MemberProxy::Setter,
-        nullptr, napi_default_jsproperty, static_cast<void*>(accessor) });
+    ValueObject.AddProperty({accessor->Name().data(),
+        nullptr,
+        nullptr,
+        MemberProxy::Getter,
+        MemberProxy::Setter,
+        nullptr,
+        napi_default_jsproperty,
+        static_cast<void*>(accessor)});
 }
 
 void ObjectPropertyProxy::Reset()
@@ -177,13 +185,14 @@ napi_value ObjectPropertyProxy::Value()
 
 void ObjectPropertyProxy::SetValue(NapiApi::FunctionContext<>& info)
 {
-    NapiApi::FunctionContext<NapiApi::Object> data { info };
+    NapiApi::FunctionContext<NapiApi::Object> data{info};
     if (data) {
         SetValue(data.Arg<0>());
     }
 }
 
-ObjectPropertyProxy::ObjectPropertyProxy(META_NS::IProperty::Ptr prop) : PropertyProxy(prop) {}
+ObjectPropertyProxy::ObjectPropertyProxy(META_NS::IProperty::Ptr prop) : PropertyProxy(prop)
+{}
 
 ObjectPropertyProxy::~ObjectPropertyProxy()
 {
@@ -192,8 +201,7 @@ ObjectPropertyProxy::~ObjectPropertyProxy()
 
 EntityProxy::EntityProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<CORE_NS::Entity> prop)
     : PropertyProxy(prop), obj_(obj), scene_(scn)
-{
-}
+{}
 
 EntityProxy::~EntityProxy()
 {
@@ -211,7 +219,7 @@ void EntityProxy::Reset()
     scene_.Reset();
 }
 
-void EntityProxy::SetValue(const CORE_NS::Entity v)
+void EntityProxy::SetNativeValue(const CORE_NS::Entity v)
 {
     META_NS::SetValue(GetProperty<CORE_NS::Entity>(), v);
 }
@@ -238,7 +246,7 @@ napi_value EntityProxy::Value()
 
                 if (node) {
                     NapiApi::Object parms(env);
-                    napi_value args[] = { scene_.GetValue(), parms.ToNapiValue() };
+                    napi_value args[] = {scene_.GetValue(), parms.ToNapiValue()};
                     return CreateFromNativeInstance(env, node, PtrType::WEAK, args).ToNapiValue();
                 } else {
                     LOG_E("Unable to determine the type of the entity stored in the property");
@@ -251,7 +259,7 @@ napi_value EntityProxy::Value()
 
 void EntityProxy::SetValue(NapiApi::FunctionContext<>& info)
 {
-    NapiApi::FunctionContext<NapiApi::Object> data { info };
+    NapiApi::FunctionContext<NapiApi::Object> data{info};
     if (data) {
         NapiApi::Object val = data.Arg<0>();
         CORE_NS::Entity entity;
@@ -286,14 +294,13 @@ void ImageProxy::Reset()
 
 ImageProxy::ImageProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IImage::Ptr> prop)
     : PropertyProxy(prop), obj_(obj), scene_(scn)
-{
-}
+{}
 ImageProxy::~ImageProxy()
 {
     // Unhook the objects.
     Reset();
 }
-void ImageProxy::SetValue(const SCENE_NS::IBitmap::Ptr& v)
+void ImageProxy::SetNativeValue(const SCENE_NS::IBitmap::Ptr& v)
 {
     META_NS::SetValue(GetProperty<SCENE_NS::IBitmap::Ptr>(), v);
 }
@@ -303,7 +310,7 @@ napi_value ImageProxy::Value()
     NapiApi::Env env(obj_.GetEnv());
     if (value) {
         NapiApi::Object parms(env);
-        napi_value args[] = { scene_.GetValue(), parms.ToNapiValue() };
+        napi_value args[] = {scene_.GetValue(), parms.ToNapiValue()};
         BASE_NS::string uri;
         if (auto m = interface_cast<META_NS::IMetadata>(value)) {
             if (auto p = m->GetProperty<BASE_NS::string>("Uri")) {
@@ -317,7 +324,7 @@ napi_value ImageProxy::Value()
 }
 void ImageProxy::SetValue(NapiApi::FunctionContext<>& info)
 {
-    NapiApi::FunctionContext<NapiApi::Object> data { info };
+    NapiApi::FunctionContext<NapiApi::Object> data{info};
     if (data) {
         NapiApi::Object val = data.Arg<0>();
         auto bitmap = val.GetNative<SCENE_NS::IImage>();
@@ -325,9 +332,9 @@ void ImageProxy::SetValue(NapiApi::FunctionContext<>& info)
     }
 }
 
-#define SET_AND_RETURN(cc) \
-    if (META_NS::IsCompatibleWith<cc>(t)) {\
-        return BASE_NS::shared_ptr { new TypeProxy<cc>(obj, t) };\
+#define SET_AND_RETURN(cc)                                     \
+    if (META_NS::IsCompatibleWith<cc>(t)) {                    \
+        return BASE_NS::shared_ptr{new TypeProxy<cc>(obj, t)}; \
     }
 
 BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
@@ -344,25 +351,25 @@ BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     SET_AND_RETURN(uint64_t)
     SET_AND_RETURN(BASE_NS::string)
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec2>(t)) {
-        return BASE_NS::shared_ptr { new Vec2Proxy(obj.GetEnv(), t) };
+        return BASE_NS::shared_ptr{new Vec2Proxy(obj.GetEnv(), t)};
     }
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec3>(t)) {
-        return BASE_NS::shared_ptr { new Vec3Proxy(obj.GetEnv(), t) };
+        return BASE_NS::shared_ptr{new Vec3Proxy(obj.GetEnv(), t)};
     }
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Vec4>(t)) {
-        return BASE_NS::shared_ptr { new Vec4Proxy(obj.GetEnv(), t) };
+        return BASE_NS::shared_ptr{new Vec4Proxy(obj.GetEnv(), t)};
     }
     if (META_NS::IsCompatibleWith<BASE_NS::Math::Quat>(t)) {
-        return BASE_NS::shared_ptr { new QuatProxy(obj.GetEnv(), t) };
+        return BASE_NS::shared_ptr{new QuatProxy(obj.GetEnv(), t)};
     }
     if (META_NS::IsCompatibleWith<BASE_NS::Color>(t)) {
-        return BASE_NS::shared_ptr { new ColorProxy(obj.GetEnv(), META_NS::Property<BASE_NS::Color>(t)) };
+        return BASE_NS::shared_ptr{new ColorProxy(obj.GetEnv(), META_NS::Property<BASE_NS::Color>(t))};
     }
     if (META_NS::IsCompatibleWith<SCENE_NS::IImage::Ptr>(t)) {
-        return BASE_NS::shared_ptr { new ImageProxy(scene, obj, t) };
+        return BASE_NS::shared_ptr{new ImageProxy(scene, obj, t)};
     }
     if (META_NS::IsCompatibleWith<CORE_NS::Entity>(t)) {
-        return BASE_NS::shared_ptr { new EntityProxy(scene, obj, t) };
+        return BASE_NS::shared_ptr{new EntityProxy(scene, obj, t)};
     }
     SET_AND_RETURN(bool)
     auto any = META_NS::GetInternalAny(t);
@@ -386,17 +393,17 @@ static napi_value PropProxGet(napi_env e, napi_callback_info i)
 };
 static napi_value PropProxSet(napi_env e, napi_callback_info i)
 {
-    NapiApi::FunctionContext<>info (e, i);
+    NapiApi::FunctionContext<> info(e, i);
     auto pc = static_cast<PropertyProxy*>(info.GetData());
     if (pc) {
         pc->SetValue(info);
     }
     return info.GetUndefined();
 };
-napi_property_descriptor CreateProxyDesc(const char* name, BASE_NS::shared_ptr<PropertyProxy> proxy)
+SCENE_ADDON_PUBLIC napi_property_descriptor CreateProxyDesc(const char* name, BASE_NS::shared_ptr<PropertyProxy> proxy)
 {
-    napi_property_descriptor desc { name, nullptr, nullptr, nullptr, nullptr, nullptr, napi_default_jsproperty,
-        static_cast<void*>(proxy.get()) };
+    napi_property_descriptor desc{
+        name, nullptr, nullptr, nullptr, nullptr, nullptr, napi_default_jsproperty, static_cast<void*>(proxy.get())};
     if (proxy) {
         desc.getter = PropProxGet;
         desc.setter = PropProxSet;

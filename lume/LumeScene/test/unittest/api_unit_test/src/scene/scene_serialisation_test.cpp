@@ -27,6 +27,7 @@
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/intf_render_resource.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_light.h>
@@ -40,11 +41,12 @@
 #include <scene/interface/resource/intf_render_resource_manager.h>
 #include <scene/interface/resource/types.h>
 #include <scene/interface/resource/util.h>
-#include <scene/interface/serialization/intf_scene_exporter.h>
-#include <scene/interface/serialization/intf_scene_importer.h>
+#include <scene_metadata_importer/interface/intf_scene_exporter.h>
+#include <scene_metadata_importer/interface/intf_scene_importer.h>
 
 #include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/name_component.h>
+#include <3d/ecs/components/render_handle_component.h>
 #include <core/intf_engine.h>
 #include <core/io/intf_file_manager.h>
 #include <core/io/intf_filesystem_api.h>
@@ -87,7 +89,7 @@ public:
         ScenePluginTest::TearDown();
     }
 
-    template<typename Obj>
+    template <typename Obj>
     bool Export(const Obj& obj, BASE_NS::string_view file)
     {
         auto exporter = META_NS::GetObjectRegistry().Create<META_NS::IFileExporter>(META_NS::ClassId::JsonExporter);
@@ -95,7 +97,7 @@ public:
         auto f = GetTestEnv()->engine->GetFileManager().CreateFile(file);
         return exporter->Export(*f, interface_pointer_cast<META_NS::IObject>(obj));
     }
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr Import(BASE_NS::string_view file, META_NS::SharedPtrIInterface userContext = nullptr)
     {
         if (auto f = GetTestEnv()->engine->GetFileManager().OpenFile(file)) {
@@ -112,10 +114,11 @@ public:
         auto bitmap = renderman_->LoadImage("test://images/logo.png").GetResult();
         EXPECT_TRUE(bitmap);
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(bitmap)) {
-            i->SetResourceId("image");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"image"});
         }
         if (bitmap) {
-            EXPECT_TRUE(resources->AddResource("image", ClassId::ImageResource.Id().ToUid(), "test://images/logo.png"));
+            EXPECT_TRUE(resources->AddResource(
+                CORE_NS::ResourceIdContext{"image"}, ClassId::ImageResource.Id().ToUid(), "test://images/logo.png"));
         }
         return bitmap;
     }
@@ -125,17 +128,18 @@ public:
         auto shader = renderman_->LoadShader("test://shaders/test.shader").GetResult();
         EXPECT_TRUE(shader);
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(shader)) {
-            i->SetResourceId("shader");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"shader"});
         }
         if (shader) {
-            EXPECT_TRUE(
-                resources->AddResource("shader", ClassId::ShaderResource.Id().ToUid(), "test://shaders/test.shader"));
+            EXPECT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"shader"},
+                ClassId::ShaderResource.Id().ToUid(),
+                "test://shaders/test.shader"));
         }
         return shader;
     }
 
-    template<typename Res>
-    bool CreateAndSetTemplate(const META_NS::ClassInfo& acc, const CORE_NS::ResourceId& id, const Res& resource)
+    template <typename Res>
+    bool CreateAndSetTemplate(const META_NS::ClassInfo& acc, const CORE_NS::ResourceIdContext& id, const Res& resource)
     {
         if (auto res = interface_pointer_cast<CORE_NS::IResource>(resource)) {
             if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(resource)) {
@@ -151,7 +155,7 @@ public:
         }
         return false;
     }
-    template<typename Res>
+    template <typename Res>
     bool SetTemplate(const META_NS::ClassInfo& acc, const CORE_NS::IResource::Ptr& templ, const Res& resource)
     {
         if (auto res = interface_pointer_cast<CORE_NS::IResource>(resource)) {
@@ -183,12 +187,12 @@ UNIT_TEST_F(API_SceneSerialisationTest, Basic, testing::ext::TestSize.Level1)
         auto n3 = scene->CreateNode("//test/some").GetResult();
         auto n4 = scene->CreateNode("//test/some/disabled").GetResult();
 
-        n1->Scale()->SetValue({ 2.0, 2.0, 2.0 });
+        n1->Scale()->SetValue({2.0, 2.0, 2.0});
         n1->Position();
         n4->Enabled()->SetValue(false);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://test.scene"});
         }
 
         auto res =
@@ -253,7 +257,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, Bitmap, testing::ext::TestSize.Level1)
             META_NS::GetObjectRegistry().Create<IRenderResourceManager>(ClassId::RenderResourceManager, params);
         ASSERT_TRUE(renderman);
 
-        ASSERT_TRUE(resources->AddResource("image", ClassId::ImageResource.Id().ToUid(), "test://images/logo.png"));
+        ASSERT_TRUE(resources->AddResource(
+            CORE_NS::ResourceIdContext{"image"}, ClassId::ImageResource.Id().ToUid(), "test://images/logo.png"));
         ASSERT_EQ(resources->Export("app://bitmap_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
         auto bitmap = CreateTestBitmap();
@@ -284,8 +289,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, Shader, testing::ext::TestSize.Level1)
             META_NS::GetObjectRegistry().Create<IRenderResourceManager>(ClassId::RenderResourceManager, params);
         ASSERT_TRUE(renderman);
 
-        ASSERT_TRUE(
-            resources->AddResource("shader", ClassId::ShaderResource.Id().ToUid(), "test://shaders/test.shader"));
+        ASSERT_TRUE(resources->AddResource(
+            CORE_NS::ResourceIdContext{"shader"}, ClassId::ShaderResource.Id().ToUid(), "test://shaders/test.shader"));
         ASSERT_EQ(resources->Export("app://shader_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
         auto shader = CreateTestShader();
@@ -333,7 +338,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Attachment, testing::ext::TestSize.Level
         interface_cast<META_NS::IAttach>(n1)->Attach(obj2.GetPtr());
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://att_test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://att_test.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
@@ -342,7 +347,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Attachment, testing::ext::TestSize.Level
         ASSERT_EQ(resources->Export("app://att_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(cont, "app://att_test.json"));
-        resources->PurgeResource("app://att_test.scene");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://att_test.scene"});
     }
 
     auto obj = Import<META_NS::IContainer>("app://att_test.json");
@@ -362,6 +367,68 @@ UNIT_TEST_F(API_SceneSerialisationTest, Attachment, testing::ext::TestSize.Level
 }
 
 /**
+ * @tc.name: ExtNodeNotSerAttachment
+ * @tc.desc: Tests for Ext Node not serialised attachment. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeNotSerAttachment, testing::ext::TestSize.Level1)
+{
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+
+        auto root = scene->GetRootNode().GetResult();
+        ASSERT_TRUE(root);
+
+        {
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ClassId::GltfSceneResource.Id().ToUid(),
+                "test://AnimatedCube/AnimatedCube.gltf"));
+
+            INode::Ptr node;
+            if (auto i = interface_cast<INodeImport>(root)) {
+                node = i->ImportChildScene(interface_pointer_cast<IScene>(
+                                               resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                            "ext")
+                           .GetResult();
+                ASSERT_TRUE(node);
+            }
+        }
+
+        auto n = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
+        ASSERT_TRUE(n);
+
+        {
+            META_NS::Object obj = META_NS::CreateObjectInstance<META_NS::IObject>();
+            META_NS::SetName(obj, "TestAttachment");
+            META_NS::SetObjectFlags(obj.GetPtr(), META_NS::ObjectFlagBits::SERIALIZE, false);
+            interface_cast<META_NS::IAttach>(n)->Attach(obj.GetPtr());
+        }
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://ext_node_not_ser_att.scene"});
+        }
+
+        ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
+        ASSERT_EQ(resources->Export("app://ext_node_not_ser_att.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://ext_node_not_ser_att.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://ext_node_not_ser_att.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(
+        resources->GetResource(CORE_NS::ResourceIdContext{"app://ext_node_not_ser_att.scene"}));
+    ASSERT_TRUE(scene);
+
+    auto n = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    auto att2 = interface_cast<META_NS::IAttach>(n)->GetAttachmentContainer()->FindByName("TestAttachment");
+    ASSERT_FALSE(att2);
+}
+
+/**
  * @tc.name: ReadOnlyProps
  * @tc.desc: Tests for Read Only Props. [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -375,14 +442,14 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReadOnlyProps, testing::ext::TestSize.Le
         scene->RenderConfiguration()->GetValue()->RenderNodeGraphUri()->SetValue("hips hops haps");
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://readonly_test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://readonly_test.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
         ASSERT_EQ(resources->Export("app://readonly_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(scene, "app://readonly_test.json"));
-        resources->PurgeResource("app://readonly_test.scene");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://readonly_test.scene"});
     }
     auto scene = Import<IScene>("app://readonly_test.json");
     ASSERT_TRUE(scene);
@@ -406,24 +473,27 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExternalNode, testing::ext::TestSize.Lev
         auto n1 = scene->CreateNode("//test").GetResult();
         ASSERT_TRUE(n1);
 
-        ASSERT_TRUE(resources->AddResource(
-            "test://celia/Celia.gltf", ClassId::GltfSceneResource.Id().ToUid(), "test://celia/Celia.gltf"));
+        ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"test://celia/Celia.gltf"},
+            ClassId::GltfSceneResource.Id().ToUid(),
+            "test://celia/Celia.gltf"));
 
         if (auto i = interface_cast<INodeImport>(n1)) {
-            ASSERT_TRUE(i->ImportChildScene(
-                             interface_pointer_cast<IScene>(resources->GetResource("test://celia/Celia.gltf")), "ext")
+            ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource(
+                                                CORE_NS::ResourceIdContext{"test://celia/Celia.gltf"})),
+                             "ext")
                             .GetResult());
         }
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://external_test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://external_test.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
-        ASSERT_EQ(resources->Export("app://external_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://external_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://external_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(scene, "app://external_test.json"));
-        resources->PurgeResource("app://external_test.scene");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://external_test.scene"});
     }
 
     auto scene = Import<IScene>("app://external_test.json");
@@ -462,30 +532,33 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExternalNodeWithChanges, testing::ext::T
             ASSERT_TRUE(n);
 
             if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene2)) {
-                i->SetResourceId("scene2");
+                i->SetResourceId(CORE_NS::ResourceIdContext{"scene2"});
             }
 
             ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene2), ""));
         }
 
         if (auto i = interface_cast<INodeImport>(n1)) {
-            ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext")
+            ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                             "ext")
                             .GetResult());
         }
 
         auto n = scene->FindNode("//test/ext/mesh").GetResult();
         ASSERT_TRUE(n);
-        n->Scale()->SetValue({ 2.0, 2.0, 2.0 });
+        n->Scale()->SetValue({2.0, 2.0, 2.0});
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://external_test_c.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://external_test_c.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
-        ASSERT_EQ(resources->Export("app://external_test_c.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://external_test_c.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://external_test_c.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(scene, "app://external_test_c.json"));
-        resources->PurgeResource("app://external_test_c.scene");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://external_test_c.scene"});
     }
 
     auto scene = Import<IScene>("app://external_test_c.json");
@@ -524,31 +597,30 @@ UNIT_TEST_F(API_SceneSerialisationTest, Environment, testing::ext::TestSize.Leve
         env->Background()->SetValue(EnvBackgroundType::IMAGE);
         env->EnvironmentImage()->SetValue(bitmap);
 
-        ASSERT_TRUE(CreateAndSetTemplate(ClassId::EnvironmentTemplateAccess, "app://env_res.resource", env));
+        ASSERT_TRUE(CreateAndSetTemplate(
+            ClassId::EnvironmentTemplateAccess, CORE_NS::ResourceIdContext{"app://env_res.resource"}, env));
 
         // change it after making the pure resource
         env->RadianceCubemapMipCount()->SetValue(4);
-        env->IrradianceCoefficients()->SetValue({ BASE_NS::Math::Vec3(1, 1, 1), BASE_NS::Math::Vec3(1, 2, 3) });
+        env->IrradianceCoefficients()->SetValue({BASE_NS::Math::Vec3(1, 1, 1), BASE_NS::Math::Vec3(1, 2, 3)});
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(env)) {
-            r->SetResourceId(CORE_NS::ResourceId { "env", "app://env_test.scene" });
+            r->SetResourceId({CORE_NS::ResourceId{"env", "app://env_test.scene"}, scene});
             ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(env), ""));
         }
 
         scene->RenderConfiguration()->GetValue()->Environment()->SetValue(env);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://env_test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://env_test.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
-        ASSERT_EQ(resources->Export("app://env_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://env_test.res", scene), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(scene, "app://env_test.json"));
-        resources->RemoveAllResources();
+        resources->RemoveAllResources(scene);
     }
-    ASSERT_EQ(resources->Import("app://env_test.resources"), CORE_NS::IResourceManager::Result::OK);
-
     auto scene = Import<IScene>("app://env_test.json");
     ASSERT_TRUE(scene);
 
@@ -602,13 +674,13 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateEnvironmentResource, testing::ext:
         }
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(res)) {
-            r->SetResourceId("app://create_env.resource");
+            r->SetResourceId(CORE_NS::ResourceIdContext{"app://create_env.resource", scene});
         }
         ASSERT_TRUE(resources->AddResource(res));
 
-        ASSERT_EQ(resources->Export("app://create_env.resources"), CORE_NS::IResourceManager::Result::OK);
-        resources->PurgeResource("app://create_env.resource");
-        resources->PurgeResource("image");
+        ASSERT_EQ(resources->Export("app://create_env.res", scene), CORE_NS::IResourceManager::Result::OK);
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://create_env.resource", scene});
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"image"});
     }
 
     auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
@@ -616,7 +688,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateEnvironmentResource, testing::ext:
 
     env->RadianceCubemapMipCount()->SetValue(1);
 
-    auto res = resources->GetResource("app://create_env.resource");
+    auto res = resources->GetResource(CORE_NS::ResourceIdContext{"app://create_env.resource", scene});
     ASSERT_TRUE(res);
     ASSERT_TRUE(SetTemplate(ClassId::EnvironmentTemplateAccess, res, env));
 
@@ -639,7 +711,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, Material, testing::ext::TestSize.Level1)
         ASSERT_TRUE(material);
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
-            r->SetResourceId(CORE_NS::ResourceId { "material", "app://mat_test.scene" });
+            r->SetResourceId(
+                CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"material", "app://mat_test.scene"}, scene});
         }
 
         material->LightingFlags()->SetValue(LightingFlags::SHADOW_CASTER_BIT);
@@ -659,15 +732,15 @@ UNIT_TEST_F(API_SceneSerialisationTest, Material, testing::ext::TestSize.Level1)
         ASSERT_TRUE(inputs);
         auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(prop);
-        prop->SetValue({ 1.0, 1.0, 1.0, 1.0 });
+        prop->SetValue({1.0, 1.0, 1.0, 1.0});
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
-        ASSERT_EQ(resources->Export("app://mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://mat_test.res", scene), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(material, "app://mat_test.json"));
-        resources->RemoveAllResources();
+        resources->RemoveAllResources(scene);
     }
-    ASSERT_EQ(resources->Import("app://mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://mat_test.res", scene), CORE_NS::IResourceManager::Result::OK);
 
     auto mat = Import<IMaterial>("app://mat_test.json", scene);
     ASSERT_TRUE(mat);
@@ -676,7 +749,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Material, testing::ext::TestSize.Level1)
     {
         auto i = interface_cast<CORE_NS::IResource>(shader);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "shader" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"shader"});
     }
 
     auto rSort = interface_cast<IRenderSort>(mat);
@@ -691,7 +764,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Material, testing::ext::TestSize.Level1)
     ASSERT_TRUE(inputs);
     auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
     ASSERT_TRUE(prop);
-    EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4 { 1.0, 1.0, 1.0, 1.0 }));
+    EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4{1.0, 1.0, 1.0, 1.0}));
 
     auto t1 = mat->Textures()->GetValueAt(0);
     ASSERT_TRUE(t1);
@@ -700,7 +773,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Material, testing::ext::TestSize.Level1)
     {
         auto i = interface_cast<CORE_NS::IResource>(bitmap);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "image" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"image"});
     }
 }
 
@@ -722,24 +795,29 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialType, testing::ext::TestSize.Lev
     auto type = scene->CreateObject<CORE_NS::IResourceType>(ClassId::MaterialResource).GetResult();
     ASSERT_TRUE(type);
 
-    auto f = GetTestEnv()->engine->GetFileManager().CreateFile("app://material_type.json");
-    ASSERT_TRUE(f);
-    CORE_NS::IResourceType::StorageInfo info { &*f, nullptr, CORE_NS::ResourceId { "some" }, "", nullptr,
-        interface_pointer_cast<CORE_NS::IInterface>(scene) };
+    // auto f = GetTestEnv()->engine->GetFileManager().CreateFile("app://material_type.json");
+    // ASSERT_TRUE(f);
 
-    f->Seek(0);
+    auto opts =
+        META_NS::GetObjectRegistry().Create<META_NS::IObjectResourceOptions>(META_NS::ClassId::ObjectResourceOptions);
+    ASSERT_TRUE(opts);
+
+    CORE_NS::IResourceType::StorageInfo info{
+        opts, nullptr, CORE_NS::ResourceId{"some"}, "", nullptr, interface_pointer_cast<CORE_NS::IInterface>(scene)};
+
+    // f->Seek(0);
     ASSERT_TRUE(type->SaveResource(res, info));
     {
-        f->Seek(0);
+        // f->Seek(0);
         res = type->LoadResource(info);
         ASSERT_TRUE(res);
         auto mat = interface_cast<IMaterial>(res);
         EXPECT_EQ(mat->LightingFlags()->GetValue(), LightingFlags::SHADOW_CASTER_BIT);
     }
-    f->Seek(0);
+    // f->Seek(0);
     ASSERT_TRUE(type->SaveResource(res, info));
     {
-        f->Seek(0);
+        // f->Seek(0);
         res = type->LoadResource(info);
         ASSERT_TRUE(res);
         auto mat = interface_cast<IMaterial>(res);
@@ -761,7 +839,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterial, testing::ext::TestSize.
         ASSERT_TRUE(material);
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
-            r->SetResourceId(CORE_NS::ResourceId { "material", "app://der_mat_test.scene" });
+            r->SetResourceId(
+                CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"material", "app://der_mat_test.scene"}, scene});
         }
 
         material->LightingFlags()->SetValue(LightingFlags::SHADOW_CASTER_BIT);
@@ -772,16 +851,17 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterial, testing::ext::TestSize.
         t1->Rotation()->SetValue(1.0f);
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
-        ASSERT_TRUE(CreateAndSetTemplate(ClassId::MaterialTemplateAccess, "app://der_mat_res.resource", material));
+        ASSERT_TRUE(CreateAndSetTemplate(
+            ClassId::MaterialTemplateAccess, CORE_NS::ResourceIdContext{"app://der_mat_res.resource"}, material));
 
         t1->Rotation()->SetValue(2.0f);
 
-        ASSERT_EQ(resources->Export("app://der_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://der_mat_test.res", scene), CORE_NS::IResourceManager::Result::OK);
 
         ASSERT_TRUE(Export(material, "app://der_mat_test.json"));
-        resources->RemoveAllResources();
+        resources->RemoveAllResources(scene);
     }
-    ASSERT_EQ(resources->Import("app://der_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://der_mat_test.res", scene), CORE_NS::IResourceManager::Result::OK);
 
     auto mat = Import<IMaterial>("app://der_mat_test.json", scene);
     ASSERT_TRUE(mat);
@@ -790,7 +870,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterial, testing::ext::TestSize.
     {
         auto i = interface_cast<CORE_NS::IResource>(shader);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "shader" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"shader"});
     }
 
     auto t1 = mat->Textures()->GetValueAt(0);
@@ -800,7 +880,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterial, testing::ext::TestSize.
     {
         auto i = interface_cast<CORE_NS::IResource>(bitmap);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "image" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"image"});
     }
 }
 
@@ -819,11 +899,14 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterialFromTemplate, testing::ex
         ASSERT_TRUE(root);
 
         {
-            ASSERT_TRUE(resources->AddResource(
-                "scene2", ClassId::GltfSceneResource.Id().ToUid(), "test://AnimatedCube/AnimatedCube.gltf"));
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ClassId::GltfSceneResource.Id().ToUid(),
+                "test://AnimatedCube/AnimatedCube.gltf"));
 
             if (auto i = interface_cast<INodeImport>(root)) {
-                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext")
+                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                    resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                                 "ext")
                                 .GetResult());
             }
         }
@@ -851,12 +934,12 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterialFromTemplate, testing::ex
         ASSERT_TRUE(material);
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
-            r->SetResourceId(CORE_NS::ResourceId { "material", "app://der_mat_template_test.scene" });
+            r->SetResourceId({CORE_NS::ResourceId{"material", "app://der_mat_template_test.scene"}, scene});
         }
 
         if (auto i = interface_pointer_cast<CORE_NS::IResource>(material)) {
             if (auto r = interface_cast<CORE_NS::ISetResourceId>(res)) {
-                r->SetResourceId("app://der_mat_template_res.resource");
+                r->SetResourceId(CORE_NS::ResourceIdContext{"app://der_mat_template_res.resource"});
             }
             access->SetValuesFromTemplate(res, i);
             ASSERT_TRUE(resources->AddResource(res));
@@ -864,19 +947,20 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterialFromTemplate, testing::ex
         subs[0]->Material()->SetValue(material);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
         ASSERT_TRUE(resources->AddResource(
             interface_pointer_cast<CORE_NS::IResource>(scene), "app://der_mat_template_test.scene"));
-        ASSERT_EQ(resources->Export("app://der_mat_template_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://der_mat_template_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://der_mat_template_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://der_mat_template_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://der_mat_template_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
     ASSERT_TRUE(scene->FindNode("//ext").GetResult());
 
@@ -911,6 +995,62 @@ UNIT_TEST_F(API_SceneSerialisationTest, DerivedMaterialFromTemplate, testing::ex
 }
 
 /**
+ * @tc.name: MaterialTemplateReload
+ * @tc.desc: Tests for Material Template Reload. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, MaterialTemplateReload, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto access =
+        META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::MaterialTemplateAccess);
+    ASSERT_TRUE(access);
+    auto templ = access->CreateEmptyTemplate();
+    ASSERT_TRUE(templ);
+
+    auto m = interface_cast<META_NS::IMetadata>(templ);
+    ASSERT_TRUE(m);
+    {
+        auto p = m->GetProperty<float>("AlphaCutoff", META_NS::MetadataQuery::EXISTING);
+        ASSERT_TRUE(p);
+        p->SetValue(0.5f);
+    }
+
+    auto material = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
+    ASSERT_TRUE(material);
+
+    if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
+        r->SetResourceId({CORE_NS::ResourceId{"material"}, scene});
+    }
+
+    if (auto r = interface_cast<CORE_NS::ISetResourceId>(templ)) {
+        r->SetResourceId(CORE_NS::ResourceIdContext{"app://mat_template_reload.resource"});
+    }
+    if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(material)) {
+        i->SetTemplate(templ);
+    }
+    ASSERT_TRUE(resources->AddResource(templ));
+    material->RenderSort()->SetValue(RenderSort{23});
+
+    ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
+
+    EXPECT_EQ(material->AlphaCutoff()->GetValue(), 0.5f);
+    {
+        auto p = m->GetProperty<float>("AlphaCutoff", META_NS::MetadataQuery::EXISTING);
+        ASSERT_TRUE(p);
+        p->SetValue(1.0f);
+    }
+    if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(material)) {
+        i->SetTemplate(templ);
+    }
+    resources->ReloadResource(interface_pointer_cast<CORE_NS::IResource>(material));
+    EXPECT_EQ(material->AlphaCutoff()->GetValue(), 1.0f);
+    EXPECT_EQ(material->RenderSort()->GetValue().renderSortLayer, 23);
+}
+
+/**
  * @tc.name: ExtNodeMaterial
  * @tc.desc: Tests for Ext Node Material. [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -925,12 +1065,15 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
         ASSERT_TRUE(root);
 
         {
-            ASSERT_TRUE(resources->AddResource(
-                "scene2", ClassId::GltfSceneResource.Id().ToUid(), "test://AnimatedCube/AnimatedCube.gltf"));
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ClassId::GltfSceneResource.Id().ToUid(),
+                "test://AnimatedCube/AnimatedCube.gltf"));
 
             INode::Ptr node;
             if (auto i = interface_cast<INodeImport>(root)) {
-                node = i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext")
+                node = i->ImportChildScene(interface_pointer_cast<IScene>(
+                                               resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                            "ext")
                            .GetResult();
                 ASSERT_TRUE(node);
             }
@@ -952,14 +1095,14 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
         auto subs = n->SubMeshes()->GetValue();
         ASSERT_TRUE(!subs.empty());
 
-        { // material
+        {  // material
             auto material = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
             ASSERT_TRUE(material);
 
             META_NS::SetName(material, "hipshops");
 
             if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
-                r->SetResourceId(CORE_NS::ResourceId { "material", "app://ext_mat_test.scene" });
+                r->SetResourceId({CORE_NS::ResourceId{"material", "app://ext_mat_test.scene"}, scene});
             }
 
             material->LightingFlags()->SetValue(LightingFlags::SHADOW_CASTER_BIT);
@@ -973,25 +1116,26 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
             ASSERT_TRUE(inputs);
             auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
             ASSERT_TRUE(prop);
-            prop->SetValue({ 1.0, 1.0, 1.0, 1.0 });
+            prop->SetValue({1.0, 1.0, 1.0, 1.0});
 
             ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
             subs[0]->Material()->SetValue(material);
         }
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("app://ext_mat_test.scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"app://ext_mat_test.scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene)));
-        ASSERT_EQ(resources->Export("app://ext_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://ext_mat_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://ext_mat_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-        ASSERT_TRUE(Export(scene, "app://ext_mat_test.json"));
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://ext_mat_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://ext_mat_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = Import<IScene>("app://ext_mat_test.json");
+    auto scene =
+        interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"app://ext_mat_test.scene"}));
     ASSERT_TRUE(scene);
     auto extNode = scene->FindNode("//ext").GetResult();
     ASSERT_TRUE(extNode);
@@ -1018,7 +1162,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
     {
         auto i = interface_cast<CORE_NS::IResource>(shader);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "shader" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"shader"});
     }
 
     {
@@ -1026,7 +1170,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
         ASSERT_TRUE(inputs);
         auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(prop);
-        EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4 { 1.0, 1.0, 1.0, 1.0 }));
+        EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4{1.0, 1.0, 1.0, 1.0}));
     }
 
     auto t1 = mat->Textures()->GetValueAt(0);
@@ -1036,7 +1180,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ExtNodeMaterial, testing::ext::TestSize.
     {
         auto i = interface_cast<CORE_NS::IResource>(bitmap);
         ASSERT_TRUE(i);
-        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId { "image" });
+        EXPECT_EQ(i->GetResourceId(), CORE_NS::ResourceId{"image"});
     }
 
     {
@@ -1079,19 +1223,19 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateMaterialResource, testing::ext::Te
         }
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(resource)) {
-            r->SetResourceId("app://create_material.resource");
+            r->SetResourceId(CORE_NS::ResourceIdContext{"app://create_material.resource"});
         }
         resources->AddResource(resource);
         resources->ExportResourcePayload(resource);
 
         ASSERT_EQ(resources->Export("app://create_material.resources"), CORE_NS::IResourceManager::Result::OK);
-        resources->PurgeResource("app://create_material.resource");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"app://create_material.resource"});
     }
 
     auto mat = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
     ASSERT_TRUE(mat);
 
-    auto res = resources->GetResource("app://create_material.resource");
+    auto res = resources->GetResource(CORE_NS::ResourceIdContext{"app://create_material.resource"});
     ASSERT_TRUE(res);
 
     ASSERT_TRUE(SetTemplate(ClassId::MaterialTemplateAccess, res, mat));
@@ -1132,7 +1276,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, SaveEnvironmentOptions, testing::ext::Te
         }
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(res)) {
-            r->SetResourceId("app://save_env_opts.resource");
+            r->SetResourceId(CORE_NS::ResourceIdContext{"app://save_env_opts.resource"});
         }
         ASSERT_TRUE(resources->AddResource(res));
 
@@ -1142,7 +1286,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, SaveEnvironmentOptions, testing::ext::Te
 
     ASSERT_EQ(resources->Import("app://save_env_opts.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto res = resources->GetResource("app://save_env_opts.resource");
+    auto res = resources->GetResource(CORE_NS::ResourceIdContext{"app://save_env_opts.resource"});
     ASSERT_TRUE(res);
 
     auto env = interface_cast<META_NS::IMetadata>(res);
@@ -1173,13 +1317,14 @@ UNIT_TEST_F(API_SceneSerialisationTest, Camera, testing::ext::TestSize.Level1)
         cam->CameraLayerMask()->SetValue(111);
         ASSERT_TRUE(cam->SceneFlags()->GetValue() != int(CameraSceneFlag::MAIN_CAMERA_BIT));
         cam->SceneFlags()->SetValue(int(CameraSceneFlag::MAIN_CAMERA_BIT));
+        cam->MSAASampleCount()->SetValue(CameraSampleCount::COUNT_2);
 
         {
             auto pp = scene->CreateObject<IPostProcess>(ClassId::PostProcess).GetResult();
             ASSERT_TRUE(pp);
 
             if (auto r = interface_cast<CORE_NS::ISetResourceId>(pp)) {
-                r->SetResourceId(CORE_NS::ResourceId { "postprocess" });
+                r->SetResourceId({CORE_NS::ResourceId{"postprocess"}, scene});
             }
 
             auto tm = pp->Tonemap()->GetValue();
@@ -1207,25 +1352,26 @@ UNIT_TEST_F(API_SceneSerialisationTest, Camera, testing::ext::TestSize.Level1)
             cam->PostProcess()->SetValue(pp);
         }
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            r->SetResourceId("scene");
+            r->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         ASSERT_TRUE(
             resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://cam_test.resource"));
-        ASSERT_EQ(resources->Export("app://cam_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://cam_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://cam_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-        ASSERT_TRUE(Export(scene, "app://cam_test.json"));
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://cam_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://cam_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = Import<IScene>("app://cam_test.json");
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto cam = scene->FindNode<ICamera>("//test").GetResult();
     ASSERT_TRUE(cam);
     EXPECT_EQ(cam->CameraLayerMask()->GetValue(), 111);
     EXPECT_EQ(cam->SceneFlags()->GetValue(), int(CameraSceneFlag::MAIN_CAMERA_BIT));
+    EXPECT_EQ(cam->MSAASampleCount()->GetValue(), CameraSampleCount::COUNT_2);
 
     auto pp = cam->PostProcess()->GetValue();
 
@@ -1294,39 +1440,41 @@ UNIT_TEST_F(API_SceneSerialisationTest, EscapedNames, testing::ext::TestSize.Lev
             ASSERT_TRUE(n2);
 
             if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene2)) {
-                i->SetResourceId("scene2");
+                i->SetResourceId(CORE_NS::ResourceIdContext{"scene2"});
             }
             ASSERT_TRUE(resources->AddResource(
                 interface_pointer_cast<CORE_NS::IResource>(scene2), "app://escaped_names.scene2"));
         }
 
         if (auto i = interface_cast<INodeImport>(root)) {
-            ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext")
+            ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                             "ext")
                             .GetResult());
         }
 
         auto n = scene->FindNode("//ext/../.te.st[1]").GetResult();
         ASSERT_TRUE(n);
-        n->Scale()->SetValue({ 2.0, 2.0, 2.0 });
+        n->Scale()->SetValue({2.0, 2.0, 2.0});
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         ASSERT_TRUE(
             resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://escaped_names.scene"));
         ASSERT_EQ(resources->Export("app://escaped_names.resources"), CORE_NS::IResourceManager::Result::OK);
-        resources->PurgeResource("scene");
+        resources->PurgeResource(CORE_NS::ResourceIdContext{"scene"});
     }
     ASSERT_EQ(resources->Import("app://escaped_names.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto n = scene->FindNode("//ext/../.te.st[1]").GetResult();
     ASSERT_TRUE(n);
 
-    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3 { 2.0, 2.0, 2.0 }));
+    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3{2.0, 2.0, 2.0}));
 }
 
 /**
@@ -1347,8 +1495,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, SaveImageOptions, testing::ext::TestSize
 
         opts->SetProperty("ImageLoadInfo", info);
 
-        EXPECT_TRUE(
-            resources->AddResource("image", ClassId::ImageResource.Id().ToUid(), "test://images/logo.png", opts));
+        EXPECT_TRUE(resources->AddResource(
+            CORE_NS::ResourceIdContext{"image"}, ClassId::ImageResource.Id().ToUid(), "test://images/logo.png", opts));
 
         ASSERT_EQ(resources->Export("app://save_image_opts.resources"), CORE_NS::IResourceManager::Result::OK);
         resources->RemoveAllResources();
@@ -1356,10 +1504,10 @@ UNIT_TEST_F(API_SceneSerialisationTest, SaveImageOptions, testing::ext::TestSize
 
     ASSERT_EQ(resources->Import("app://save_image_opts.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto res = resources->GetResource("image");
+    auto res = resources->GetResource(CORE_NS::ResourceIdContext{"image"});
     ASSERT_TRUE(res);
 
-    ImageLoadInfo flags {};
+    ImageLoadInfo flags{};
     auto att = interface_cast<META_NS::IAttach>(res);
     ASSERT_TRUE(att);
     auto cont = att->GetAttachmentContainer(true);
@@ -1390,12 +1538,12 @@ UNIT_TEST_F(API_SceneSerialisationTest, Animation, testing::ext::TestSize.Level1
     auto anim = anims[0];
 
     if (auto i = interface_cast<CORE_NS::ISetResourceId>(anim)) {
-        i->SetResourceId("animation");
+        i->SetResourceId(CORE_NS::ResourceIdContext{"animation", scene});
     }
 
     ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(anim), ""));
 
-    auto res = resources->GetResource("animation");
+    auto res = resources->GetResource(CORE_NS::ResourceIdContext{"animation", scene});
     ASSERT_TRUE(res);
 }
 
@@ -1443,12 +1591,12 @@ UNIT_TEST_F(API_SceneSerialisationTest, Behavior, testing::ext::TestSize.Level1)
         ASSERT_TRUE(node);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         auto obj = registry.Create<ITestBehavior>(ClassId::TestBehavior);
         ASSERT_TRUE(obj);
-        obj->Array()->SetValue({ 1.0, 2.0, 4.0 });
+        obj->Array()->SetValue({1.0, 2.0, 4.0});
         obj->Pointer()->SetValue(node);
 
         if (auto i = interface_cast<META_NS::IAttach>(node)) {
@@ -1463,7 +1611,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, Behavior, testing::ext::TestSize.Level1)
     }
     ASSERT_EQ(resources->Import("app://behaviour_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto n = scene->FindNode("//test").GetResult();
@@ -1497,7 +1645,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaKeyframeAnimation, testing::ext::Tes
         ASSERT_TRUE(node);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         auto delay = META_NS::TimeSpan::Milliseconds(1);
@@ -1506,10 +1654,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaKeyframeAnimation, testing::ext::Tes
 
         META_NS::KeyframeAnimation<BASE_NS::Math::Vec3> anim(META_NS::CreateNew);
 
-        anim.SetFrom(value)
-            .SetTo({ 10, 10, 10 })
-            .SetProperty(property)
-            .SetDuration(META_NS::TimeSpan::Milliseconds(100));
+        anim.SetFrom(value).SetTo({10, 10, 10}).SetProperty(property).SetDuration(META_NS::TimeSpan::Milliseconds(100));
         EXPECT_TRUE(anim.GetValid());
 
         if (auto i = interface_cast<META_NS::IAttach>(node)) {
@@ -1524,13 +1669,13 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaKeyframeAnimation, testing::ext::Tes
     }
     ASSERT_EQ(resources->Import("app://keyframe_animation_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto n = scene->FindNode("//test").GetResult();
     ASSERT_TRUE(n);
 
-    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
+    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
 
     auto i = interface_cast<META_NS::IAttach>(n);
     ASSERT_TRUE(i);
@@ -1541,7 +1686,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaKeyframeAnimation, testing::ext::Tes
     interface_cast<META_NS::IStartableAnimation>(anim)->Start();
     UpdateScene();
     UpdateScene(META_NS::TimeSpan::Milliseconds(100));
-    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3 { 10, 10, 10 }));
+    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3{10, 10, 10}));
 }
 
 /**
@@ -1559,15 +1704,15 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaTrackAnimation, testing::ext::TestSi
         ASSERT_TRUE(node);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         auto delay = META_NS::TimeSpan::Milliseconds(1);
         auto property = node->Scale();
         auto value = property->GetValue();
 
-        BASE_NS::vector<float> timestamps = { 0.0f, 0.5f, 1.f };
-        BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 10, 10, 10 }, { 50, 50, 50 }, { 100, 100, 100 } };
+        BASE_NS::vector<float> timestamps = {0.0f, 0.5f, 1.f};
+        BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{10, 10, 10}, {50, 50, 50}, {100, 100, 100}};
 
         META_NS::TrackAnimation<BASE_NS::Math::Vec3> anim(META_NS::CreateNew);
         anim.SetKeyframes(keyframes)
@@ -1589,13 +1734,13 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaTrackAnimation, testing::ext::TestSi
     }
     ASSERT_EQ(resources->Import("app://track_animation_test.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto n = scene->FindNode("//test").GetResult();
     ASSERT_TRUE(n);
 
-    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
+    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
 
     auto i = interface_cast<META_NS::IAttach>(n);
     ASSERT_TRUE(i);
@@ -1607,7 +1752,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaTrackAnimation, testing::ext::TestSi
     interface_cast<META_NS::IStartableAnimation>(anim)->Start();
     UpdateScene();
     UpdateScene(META_NS::TimeSpan::Milliseconds(100));
-    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3 { 100, 100, 100 }));
+    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3{100, 100, 100}));
 }
 
 /**
@@ -1625,15 +1770,15 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaTrackAnimationAsResource, testing::e
         ASSERT_TRUE(node);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         auto delay = META_NS::TimeSpan::Milliseconds(1);
         auto property = node->Scale();
         auto value = property->GetValue();
 
-        BASE_NS::vector<float> timestamps = { 0.0f, 0.5f, 1.f };
-        BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 10, 10, 10 }, { 50, 50, 50 }, { 100, 100, 100 } };
+        BASE_NS::vector<float> timestamps = {0.0f, 0.5f, 1.f};
+        BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{10, 10, 10}, {50, 50, 50}, {100, 100, 100}};
 
         META_NS::TrackAnimation<BASE_NS::Math::Vec3> anim(META_NS::CreateNew);
         anim.SetKeyframes(keyframes)
@@ -1644,34 +1789,37 @@ UNIT_TEST_F(API_SceneSerialisationTest, MetaTrackAnimationAsResource, testing::e
         ASSERT_TRUE(anim.GetValid());
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(anim)) {
-            i->SetResourceId("animation");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"animation", scene});
         }
 
         ASSERT_TRUE(resources->AddResource(
             interface_pointer_cast<CORE_NS::IResource>(scene), "app://track_animation_res_test.scene"));
         ASSERT_TRUE(resources->AddResource(
             interface_pointer_cast<CORE_NS::IResource>(anim), "app://track_animation_res_test.anim"));
-        ASSERT_EQ(resources->Export("app://track_animation_res_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(
+            resources->Export("app://track_animation_res_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://track_animation_res_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://track_animation_res_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://track_animation_res_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto n = scene->FindNode("//test").GetResult();
     ASSERT_TRUE(n);
 
-    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
+    EXPECT_EQ(n->Position()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
 
-    auto anim = interface_pointer_cast<META_NS::IAnimation>(resources->GetResource("animation", scene));
+    auto anim = interface_pointer_cast<META_NS::IAnimation>(
+        resources->GetResource(CORE_NS::ResourceIdContext{"animation", scene}));
     ASSERT_TRUE(anim);
     EXPECT_TRUE(anim->Valid()->GetValue());
     interface_cast<META_NS::IStartableAnimation>(anim)->Start();
     UpdateScene();
     UpdateScene(META_NS::TimeSpan::Milliseconds(100));
-    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3 { 100, 100, 100 }));
+    EXPECT_EQ(n->Scale()->GetValue(), (BASE_NS::Math::Vec3{100, 100, 100}));
 }
 
 /**
@@ -1689,7 +1837,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, WeakRefFromOutside, testing::ext::TestSi
         ASSERT_TRUE(node);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         ASSERT_TRUE(
@@ -1741,13 +1889,15 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
         ASSERT_TRUE(camera);
 
         {
-            ASSERT_TRUE(resources->AddResource("scene2", ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
                 "test://AnimatedCube/AnimatedCube.gltf"));
 
             if (auto i = interface_cast<INodeImport>(root)) {
-                ASSERT_TRUE(
-                    i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "test")
-                        .GetResult());
+                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                    resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                                 "test")
+                                .GetResult());
             }
         }
 
@@ -1761,7 +1911,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
         ASSERT_TRUE(material);
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(material)) {
-            r->SetResourceId(CORE_NS::ResourceId { "material" });
+            r->SetResourceId(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"material"}, scene});
         }
 
         material->MaterialShader()->SetValue(CreateTestShader());
@@ -1774,7 +1924,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
         ASSERT_TRUE(inputs);
         auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(prop);
-        prop->SetValue({ 1.0, 1.0, 1.0, 1.0 });
+        prop->SetValue({1.0, 1.0, 1.0, 1.0});
 
         subs[0]->Material()->SetValue(material);
 
@@ -1787,7 +1937,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
         ASSERT_TRUE(pp);
 
         if (auto r = interface_cast<CORE_NS::ISetResourceId>(pp)) {
-            r->SetResourceId(CORE_NS::ResourceId { "postprocess" });
+            r->SetResourceId({CORE_NS::ResourceId{"postprocess"}, scene});
         }
         camera->PostProcess()->SetValue(pp);
 
@@ -1809,19 +1959,20 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
         META_NS::AttachmentContainer(scene).Attach(obj);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(material), ""));
         ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(pp), ""));
         ASSERT_TRUE(
             resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://ref_tex_test.scene"));
-        ASSERT_EQ(resources->Export("app://ref_tex_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://ref_tex_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://ref_tex_test.g-res"), CORE_NS::IResourceManager::Result::OK);
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://ref_tex_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://ref_tex_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto i = interface_cast<META_NS::IAttach>(scene);
@@ -1869,7 +2020,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, ReferenceToTexture, testing::ext::TestSi
     ASSERT_TRUE(inputs);
     auto prop = inputs->GetProperty<BASE_NS::Math::Vec4>("v4_");
     ASSERT_TRUE(prop);
-    EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4 { 1.0, 1.0, 1.0, 1.0 }));
+    EXPECT_EQ(prop->GetValue(), (BASE_NS::Math::Vec4{1.0, 1.0, 1.0, 1.0}));
     EXPECT_EQ(prop.GetProperty(), p2->GetValue().lock());
 
     auto t1 = mat->Textures()->GetValueAt(0);
@@ -1908,7 +2059,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, DupNodeNames, testing::ext::TestSize.Lev
         ASSERT_TRUE(node2);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
 
         auto named = interface_cast<META_NS::INamed>(node2);
@@ -1921,7 +2072,7 @@ UNIT_TEST_F(API_SceneSerialisationTest, DupNodeNames, testing::ext::TestSize.Lev
     }
     ASSERT_EQ(resources->Import("app://dup_node_names.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     auto root = scene->GetRootNode().GetResult();
@@ -1944,15 +2095,18 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImported, testing::ex
 
         auto root = scene->GetRootNode().GetResult();
         {
-            ASSERT_TRUE(resources->AddResource("scene2", ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
                 "test://AnimatedCube/AnimatedCube.gltf"));
 
             if (auto i = interface_cast<INodeImport>(root)) {
-                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext")
+                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                    resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                                 "ext")
                                 .GetResult());
             }
 
-            EXPECT_TRUE(!resources->GetResourceInfos("scene2").empty());
+            EXPECT_TRUE(!resources->GetResourceInfos({"scene2"}, scene).empty());
         }
 
         auto n = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
@@ -1968,25 +2122,28 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImported, testing::ex
 
         // this will serialise in to the resource options
         material->Type()->SetValue(MaterialType::CUSTOM);
+        material->MaterialShader()->SetValue(CreateTestShader());
+        material->Textures()->GetValue()[0]->Factor()->SetValue({1, 0, 0, 0});
 
         subs[0]->Material()->SetValue(material);
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
         ASSERT_TRUE(resources->AddResource(
             interface_pointer_cast<CORE_NS::IResource>(scene), "app://mat_opt_imported_test.scene"));
-        ASSERT_EQ(resources->Export("app://mat_opt_imported_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://mat_opt_imported_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://mat_opt_imported_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://mat_opt_imported_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://mat_opt_imported_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 
     // make sure the import purges the external scene used for external node
-    EXPECT_TRUE(resources->GetResourceInfos("scene2").empty());
+    EXPECT_TRUE(resources->GetResourceInfos({"scene2"}, nullptr).empty());
 
     auto n = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
     ASSERT_TRUE(n);
@@ -2000,6 +2157,8 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImported, testing::ex
         auto ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
         auto meshM = CORE_NS::GetManager<CORE3D_NS::IMeshComponentManager>(*ecs);
         auto materialM = CORE_NS::GetManager<CORE3D_NS::IMaterialComponentManager>(*ecs);
+        auto rmanager = CORE_NS::GetManager<CORE3D_NS::IRenderHandleComponentManager>(*ecs);
+
         auto m = meshM->Read(ecsObject->GetEntity());
         ASSERT_TRUE(m);
         ASSERT_TRUE(!m->submeshes.empty());
@@ -2008,10 +2167,21 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImported, testing::ex
         ASSERT_TRUE(mat);
         EXPECT_EQ(mat->type, CORE3D_NS::MaterialComponent::Type::CUSTOM);
 
+        auto shader = resources->GetResource({"shader", nullptr});
+        ASSERT_TRUE(shader);
+        auto renderRes = interface_cast<IRenderResource>(shader);
+        ASSERT_TRUE(renderRes);
+        auto graphicsState = interface_cast<IGraphicsState>(shader);
+        ASSERT_TRUE(graphicsState);
+        EXPECT_EQ(renderRes->GetRenderHandle().GetHandle(),
+            rmanager->GetRenderHandleReference(mat->materialShader.shader).GetHandle());
+        EXPECT_EQ(graphicsState->GetGraphicsState().GetHandle(),
+            rmanager->GetRenderHandleReference(mat->materialShader.graphicsState).GetHandle());
+
         auto nameM = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*ecs);
         auto n = nameM->Read(m->submeshes[0].material);
         ASSERT_TRUE(n);
-        ASSERT_EQ(n->name, "AnimatedCube");
+        EXPECT_EQ(n->name, "AnimatedCube");
     }
 
     auto sm = n->SubMeshes()->GetValueAt(0);
@@ -2035,20 +2205,23 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImportedTwice, testin
 
         auto root = scene->GetRootNode().GetResult();
         {
-            ASSERT_TRUE(resources->AddResource("scene2", ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+                ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
                 "test://AnimatedCube/AnimatedCube.gltf"));
 
             if (auto i = interface_cast<INodeImport>(root)) {
-                ASSERT_TRUE(
-                    i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext1")
-                        .GetResult());
+                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                    resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                                 "ext1")
+                                .GetResult());
 
-                ASSERT_TRUE(
-                    i->ImportChildScene(interface_pointer_cast<IScene>(resources->GetResource("scene2")), "ext2")
-                        .GetResult());
+                ASSERT_TRUE(i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                    resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                                 "ext2")
+                                .GetResult());
             }
 
-            EXPECT_TRUE(!resources->GetResourceInfos("scene2").empty());
+            EXPECT_TRUE(!resources->GetResourceInfos({"scene2"}, scene).empty());
         }
 
         {
@@ -2079,22 +2252,20 @@ UNIT_TEST_F(API_SceneSerialisationTest, MaterialOptionsFromImportedTwice, testin
         }
 
         if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
-            i->SetResourceId("scene");
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
         }
         ASSERT_TRUE(resources->AddResource(
             interface_pointer_cast<CORE_NS::IResource>(scene), "app://mat_opt_imported_twice_test.scene"));
         ASSERT_EQ(
-            resources->Export("app://mat_opt_imported_twice_test.resources"), CORE_NS::IResourceManager::Result::OK);
+            resources->Export("app://mat_opt_imported_twice_test.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://mat_opt_imported_twice_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
         resources->RemoveAllResources();
     }
-    ASSERT_EQ(resources->Import("app://mat_opt_imported_twice_test.resources"), CORE_NS::IResourceManager::Result::OK);
+    ASSERT_EQ(resources->Import("app://mat_opt_imported_twice_test.g-res"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
-
-    // make sure the import purges the external scene used for external node
-    EXPECT_TRUE(resources->GetResourceInfos("scene2").empty());
 
     UpdateScene(scene);
     {
@@ -2177,8 +2348,467 @@ UNIT_TEST_F(API_SceneSerialisationTest, NodeHierarchyDuplicateImport, testing::e
     auto importer = META_NS::GetObjectRegistry().Create<ISceneImporter>(::SCENE_NS::ClassId::SceneImporter);
     auto n = importer->ImportNode(*f, test);
     ASSERT_TRUE(n);
+    ASSERT_TRUE(n->GetNode());
 
-    EXPECT_EQ(n->GetChildren().GetResult().size(), 1);
+    EXPECT_EQ(test->GetChildren().GetResult().size(), 2);
 }
-} // namespace UTest
+
+/**
+ * @tc.name: NodeHierarchyImportRename
+ * @tc.desc: Tests for Node Hierarchy Import Rename. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, NodeHierarchyImportRename, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    auto test = scene->CreateNode("//test").GetResult();
+    ASSERT_TRUE(test);
+    auto some = scene->CreateNode("//test/some").GetResult();
+    ASSERT_TRUE(some);
+    ASSERT_TRUE(scene->CreateNode("//test/some/other").GetResult());
+
+    auto f = GetTestEnv()->engine->GetFileManager().CreateFile("app://dup_test.json");
+    ASSERT_TRUE(f);
+
+    auto exporter = META_NS::GetObjectRegistry().Create<ISceneExporter>(::SCENE_NS::ClassId::SceneExporter);
+    ASSERT_TRUE(exporter->ExportNode(*f, some));
+
+    f->Seek(0);
+
+    auto importer = META_NS::GetObjectRegistry().Create<ISceneImporter>(::SCENE_NS::ClassId::SceneImporter);
+    NodeImportOptions opts;
+    opts.name = test->GetUniqueChildName(some->GetName()).GetResult();
+    auto n = importer->ImportNode(*f, test, opts);
+    ASSERT_TRUE(n);
+    ASSERT_TRUE(n->GetNode());
+
+    EXPECT_EQ(test->GetChildren().GetResult().size(), 2);
+    EXPECT_TRUE(scene->FindNode("//test/" + opts.name).GetResult());
+    // PrintHierarchy(scene->GetRootNode().GetResult());
+}
+
+/**
+ * @tc.name: NodeHierarchyImportExtRename
+ * @tc.desc: Tests for Node Hierarchy Import Ext Rename. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, NodeHierarchyImportExtRename, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    auto test = scene->CreateNode("//test").GetResult();
+    ASSERT_TRUE(test);
+
+    ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+        ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+        "test://AnimatedCube/AnimatedCube.gltf"));
+
+    INode::Ptr node;
+    if (auto i = interface_cast<INodeImport>(test)) {
+        node = i->ImportChildScene(
+                    interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})), "ext")
+                   .GetResult();
+        ASSERT_TRUE(node);
+    }
+
+    auto f = GetTestEnv()->engine->GetFileManager().CreateFile("app://dup_test.json");
+    ASSERT_TRUE(f);
+
+    auto exporter = META_NS::GetObjectRegistry().Create<ISceneExporter>(::SCENE_NS::ClassId::SceneExporter);
+    ASSERT_TRUE(exporter->ExportNode(*f, node));
+
+    f->Seek(0);
+
+    auto importer = META_NS::GetObjectRegistry().Create<ISceneImporter>(::SCENE_NS::ClassId::SceneImporter);
+    NodeImportOptions opts;
+    opts.name = test->GetUniqueChildName(node->GetName()).GetResult();
+    auto n = importer->ImportNode(*f, test, opts);
+    ASSERT_TRUE(n);
+    ASSERT_TRUE(n->GetNode());
+
+    EXPECT_EQ(test->GetChildren().GetResult().size(), 2);
+    EXPECT_TRUE(scene->FindNode("//test/" + opts.name).GetResult());
+    // PrintHierarchy(scene->GetRootNode().GetResult());
+}
+
+static BASE_NS::vector<CORE_NS::ResourceIdContext> GetSceneAnimations(const IScene::Ptr& scene)
+{
+    BASE_NS::vector<CORE_NS::ResourceIdContext> anims;
+    auto resources = GetResourceManager(scene);
+    for (auto&& v : resources->GetResourceInfos(scene)) {
+        if (v.type == ::SCENE_NS::ClassId::AnimationResource.Id().ToUid()) {
+            anims.push_back({v.id, scene});
+        }
+    }
+    return anims;
+}
+
+/**
+ * @tc.name: AnimationResourcesWithSer
+ * @tc.desc: Tests count of animation resources after res. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, AnimationResourcesWithSer, testing::ext::TestSize.Level1)
+{
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+        auto test1 = scene->CreateNode("//test1").GetResult();
+        ASSERT_TRUE(test1);
+        auto test2 = scene->CreateNode("//test2").GetResult();
+        ASSERT_TRUE(test2);
+
+        ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+            ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            "test://AnimatedCube/AnimatedCube.gltf"));
+
+        {
+            auto i = interface_cast<INodeImport>(test1);
+            i->ImportChildScene(
+                 interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})), "ext")
+                .GetResult();
+        }
+        {
+            auto i = interface_cast<INodeImport>(test2);
+            i->ImportChildScene(
+                 interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})), "ext")
+                .GetResult();
+        }
+
+        ASSERT_EQ(GetSceneAnimations(scene).size(), 2);
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+        ASSERT_TRUE(
+            resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://anim_res_with_ser.scene"));
+        ASSERT_EQ(resources->Export("app://anim_res_with_ser.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://anim_res_with_ser.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://anim_res_with_ser.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+    ASSERT_TRUE(scene);
+
+    ASSERT_EQ(GetSceneAnimations(scene).size(), 2);
+}
+
+UNIT_TEST_F(API_SceneSerialisationTest, GenericComponent, testing::ext::TestSize.Level1)
+{
+    float defaultValue{};
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+
+        auto node = scene->CreateNode("//test").GetResult();
+        ASSERT_TRUE(node);
+
+        {
+            // use component that is not built-in to scene
+            ASSERT_FALSE(scene->GetInternalScene()->GetEcsContext().FindComponent("FogComponent"));
+            auto component = scene->CreateComponent(node, "FogComponent").GetResult();
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            defaultValue = p->GetDefaultValue();
+            p->SetValue(1.0);
+        }
+        {
+            auto root = scene->GetRootNode().GetResult();
+            // use component that is not built-in to scene
+            auto component = scene->CreateComponent(root, "FogComponent").GetResult();
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            p->SetValue(1.0);
+        }
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+
+        ASSERT_TRUE(
+            resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://generic_comp.scene"));
+        ASSERT_EQ(resources->Export("app://generic_comp.resources"), CORE_NS::IResourceManager::Result::OK);
+        resources->RemoveAllResources();
+    }
+    // first import
+    {
+        ASSERT_EQ(resources->Import("app://generic_comp.resources"), CORE_NS::IResourceManager::Result::OK);
+
+        auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+        ASSERT_TRUE(scene);
+
+        auto n = scene->FindNode("//test").GetResult();
+        ASSERT_TRUE(n);
+
+        auto component = scene->GetComponent(n, "FogComponent");
+        ASSERT_TRUE(component);
+        auto md = interface_cast<META_NS::IMetadata>(component);
+        ASSERT_TRUE(md);
+        auto p = md->GetProperty<float>("FogComponent.density");
+        ASSERT_TRUE(p);
+        EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+        EXPECT_FALSE(p->IsDefaultValue());
+
+        component->PopulateAllProperties();
+        EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+        EXPECT_FLOAT_EQ(p->GetDefaultValue(), defaultValue);
+        EXPECT_FALSE(p->IsDefaultValue());
+    }
+    {
+        // export again
+        ASSERT_EQ(resources->Export("app://generic_comp.resources"), CORE_NS::IResourceManager::Result::OK);
+        resources->RemoveAllResources();
+    }
+    // second import
+    {
+        ASSERT_EQ(resources->Import("app://generic_comp.resources"), CORE_NS::IResourceManager::Result::OK);
+
+        auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+        ASSERT_TRUE(scene);
+
+        {
+            auto n = scene->FindNode("//test").GetResult();
+            ASSERT_TRUE(n);
+
+            auto component = scene->GetComponent(n, "FogComponent");
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+            EXPECT_FALSE(p->IsDefaultValue());
+        }
+        {
+            auto root = scene->GetRootNode().GetResult();
+            ASSERT_TRUE(root);
+            auto component = scene->GetComponent(root, "FogComponent");
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+            EXPECT_FALSE(p->IsDefaultValue());
+        }
+    }
+}
+
+UNIT_TEST_F(API_SceneSerialisationTest, GenericComponentExternalNode, testing::ext::TestSize.Level1)
+{
+    float defaultValue{};
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+
+        ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+            ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            "test://AnimatedCube/AnimatedCube.gltf"));
+
+        {
+            auto i = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+            auto node = i->ImportChildScene(interface_pointer_cast<IScene>(
+                                                resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})),
+                             "test")
+                            .GetResult();
+
+            ASSERT_TRUE(node);
+            // use component that is not built-in to scene
+            ASSERT_FALSE(scene->GetInternalScene()->GetEcsContext().FindComponent("FogComponent"));
+            auto component = scene->CreateComponent(node, "FogComponent").GetResult();
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            defaultValue = p->GetDefaultValue();
+            p->SetValue(1.0);
+        }
+        {
+            auto node = scene->FindNode("//test//AnimatedCube").GetResult();
+            ASSERT_TRUE(node);
+            auto component = scene->CreateComponent(node, "FogComponent").GetResult();
+            ASSERT_TRUE(component);
+            auto md = interface_cast<META_NS::IMetadata>(component);
+            ASSERT_TRUE(md);
+            auto p = md->GetProperty<float>("FogComponent.density");
+            ASSERT_TRUE(p);
+            p->SetValue(1.0);
+        }
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+
+        ASSERT_TRUE(
+            resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://generic_comp_ext.scene"));
+        ASSERT_EQ(resources->Export("app://generic_comp_ext.res", scene), CORE_NS::IResourceManager::Result::OK);
+        ASSERT_EQ(resources->Export("app://generic_comp_ext.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://generic_comp_ext.g-res"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+    ASSERT_TRUE(scene);
+
+    {
+        auto n = scene->FindNode("//test").GetResult();
+        ASSERT_TRUE(n);
+
+        auto component = scene->GetComponent(n, "FogComponent");
+        ASSERT_TRUE(component);
+        auto md = interface_cast<META_NS::IMetadata>(component);
+        ASSERT_TRUE(md);
+        auto p = md->GetProperty<float>("FogComponent.density");
+        ASSERT_TRUE(p);
+        EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+        EXPECT_FALSE(p->IsDefaultValue());
+    }
+    {
+        auto n = scene->FindNode("//test//AnimatedCube").GetResult();
+        ASSERT_TRUE(n);
+
+        auto component = scene->GetComponent(n, "FogComponent");
+        ASSERT_TRUE(component);
+        auto md = interface_cast<META_NS::IMetadata>(component);
+        ASSERT_TRUE(md);
+        auto p = md->GetProperty<float>("FogComponent.density");
+        ASSERT_TRUE(p);
+        EXPECT_FLOAT_EQ(p->GetValue(), 1.0);
+        EXPECT_FALSE(p->IsDefaultValue());
+    }
+}
+
+/**
+ * @tc.name: NodeSerializeFlag
+ * @tc.desc: Tests for Object Serialize flag for node.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, NodeSerializeFlag, testing::ext::TestSize.Level1)
+{
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+        auto test = scene->CreateNode("//test").GetResult();
+        ASSERT_TRUE(test);
+        auto some = scene->CreateNode("//test/some").GetResult();
+        ASSERT_TRUE(some);
+        ASSERT_TRUE(scene->CreateNode("//test/some/other").GetResult());
+
+        EXPECT_TRUE(META_NS::IsFlagSet(some, META_NS::ObjectFlagBits::SERIALIZE));
+        META_NS::SetObjectFlags(some, META_NS::ObjectFlagBits::SERIALIZE, false);
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+
+        ASSERT_TRUE(
+            resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://ser_node_test.scene"));
+        ASSERT_EQ(resources->Export("app://ser_node_test.resources"), CORE_NS::IResourceManager::Result::OK);
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://ser_node_test.resources"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+    ASSERT_TRUE(scene);
+
+    EXPECT_TRUE(scene->FindNode("//test").GetResult());
+    EXPECT_FALSE(scene->FindNode("//test/some").GetResult());
+    EXPECT_FALSE(scene->FindNode("//test/some/other").GetResult());
+}
+
+/**
+ * @tc.name: NodeSerializeFlagExternal
+ * @tc.desc: Tests for Object Serialize flag for node.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, NodeSerializeFlagExternal, testing::ext::TestSize.Level1)
+{
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+
+        ASSERT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"scene2"},
+            ::SCENE_NS::ClassId::GltfSceneResource.Id().ToUid(),
+            "test://AnimatedCube/AnimatedCube.gltf"));
+
+        auto i = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+        auto node =
+            i->ImportChildScene(
+                 interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene2"})), "test")
+                .GetResult();
+
+        ASSERT_TRUE(node);
+
+        EXPECT_TRUE(META_NS::IsFlagSet(node, META_NS::ObjectFlagBits::SERIALIZE));
+        META_NS::SetObjectFlags(node, META_NS::ObjectFlagBits::SERIALIZE, false);
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+
+        ASSERT_TRUE(
+            resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(scene), "app://ser_node_test_ext.scene"));
+        ASSERT_EQ(resources->Export("app://ser_node_test_ext.resources"), CORE_NS::IResourceManager::Result::OK);
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://ser_node_test_ext.resources"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+    ASSERT_TRUE(scene);
+
+    EXPECT_FALSE(scene->FindNode("//test").GetResult());
+}
+
+/**
+ * @tc.name: NodeSerializeFlagRoot
+ * @tc.desc: Tests for Object Serialize flag for node.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, NodeSerializeFlagRoot, testing::ext::TestSize.Level1)
+{
+    {
+        auto scene = CreateEmptyScene();
+        ASSERT_TRUE(scene);
+        auto test = scene->CreateNode("//test").GetResult();
+        ASSERT_TRUE(test);
+
+        auto root = scene->GetRootNode().GetResult();
+        root->Position()->SetValue({1.f, 2.f, 3.f});
+
+        META_NS::SetObjectFlags(root, META_NS::ObjectFlagBits::SERIALIZE, false);
+
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(scene)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{"scene"});
+        }
+
+        ASSERT_TRUE(resources->AddResource(
+            interface_pointer_cast<CORE_NS::IResource>(scene), "app://ser_node_test_root.scene"));
+        ASSERT_EQ(resources->Export("app://ser_node_test_root.resources"), CORE_NS::IResourceManager::Result::OK);
+        resources->RemoveAllResources();
+    }
+    ASSERT_EQ(resources->Import("app://ser_node_test_root.resources"), CORE_NS::IResourceManager::Result::OK);
+
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
+    ASSERT_TRUE(scene);
+
+    // root is there always even if you say to not serialise it (just the data you might have added is not serialised)
+    auto root = scene->GetRootNode().GetResult();
+    ASSERT_TRUE(root);
+    EXPECT_EQ(root->Position()->GetValue(), BASE_NS::Math::Vec3());
+
+    EXPECT_FALSE(scene->FindNode("//test").GetResult());
+}
+
+}  // namespace UTest
 SCENE_END_NAMESPACE()

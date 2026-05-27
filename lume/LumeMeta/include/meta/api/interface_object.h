@@ -71,7 +71,7 @@ namespace Internal {
  * @param from The vector to convert from
  * @return Returns a vector of InterfaceObjects initialized with elements from source array.
  */
-template<class To, class From>
+template <class To, class From>
 constexpr auto ArrayCast(BASE_NS::vector<From>&& from) noexcept
 {
     if constexpr (BASE_NS::is_same_v<To, From>) {
@@ -88,13 +88,13 @@ constexpr auto ArrayCast(BASE_NS::vector<From>&& from) noexcept
     }
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 /**
  * @brief The InterfaceObject class is the base BASE_NS::shared_ptr<T> wrapper inherited by actual interface wrapper
  * objects.
  */
-template<typename T>
+template <typename T>
 class InterfaceObject : public InterfaceObjectBase {
     static_assert(
         BASE_NS::is_base_of<CORE_NS::IInterface, T>(), "InterfaceObject type must be derived from CORE_NS::IInterface");
@@ -105,8 +105,10 @@ public:
     using WeakPtr = BASE_NS::weak_ptr<UnderlyingType>;
     using IInterfacePtr = BASE_NS::shared_ptr<CORE_NS::IInterface>;
     InterfaceObject() = delete;
-    explicit InterfaceObject(const Ptr& p) noexcept : ptr_(p) {}
-    explicit InterfaceObject(const IInterfacePtr& p) : ptr_(interface_pointer_cast<UnderlyingType>(p)) {}
+    explicit InterfaceObject(const Ptr& p) noexcept : ptr_(p)
+    {}
+    explicit InterfaceObject(const IInterfacePtr& p) : ptr_(interface_pointer_cast<UnderlyingType>(p))
+    {}
     /// Assignment operator
     auto& operator=(const IInterfacePtr& p) noexcept
     {
@@ -129,7 +131,7 @@ public:
         return ptr_;
     }
     /// Return the underlying BASE_NS::shared_ptr<T> converted to BASE_NS::shared_ptr<Interface>
-    template<typename Interface>
+    template <typename Interface>
     BASE_NS::shared_ptr<Interface> GetPtr() const
     {
         return interface_pointer_cast<Interface>(ptr_);
@@ -142,13 +144,13 @@ public:
 
 protected:
     /// Helper method for safely calling a method from the underlying interface
-    template<typename Interface, typename Fn>
+    template <typename Interface, typename Fn>
     auto CallPtr(Fn&& fn) const
     {
         auto* p = interface_cast<Interface>(ptr_);
         using Result = BASE_NS::remove_reference_t<decltype(fn(*p))>;
         if constexpr (!BASE_NS::is_void_v<Result>) {
-            return p ? fn(*p) : Result {};
+            return p ? fn(*p) : Result{};
         } else if (p) {
             fn(*p);
         }
@@ -217,7 +219,7 @@ public:                                                        \
     {                                                                                                     \
         auto pr = PropertyName();                                                                         \
         using ReturnType = decltype(pr->GetValue());                                                      \
-        auto value = pr ? pr->GetValue() : ReturnType {};                                                 \
+        auto value = pr ? pr->GetValue() : ReturnType{};                                                  \
         return META_NS::Internal::ArrayCast<Type, typename ReturnType::value_type>(BASE_NS::move(value)); \
     }                                                                                                     \
     auto Get##AccessorName##Count() const                                                                 \
@@ -228,7 +230,7 @@ public:                                                        \
     auto Get##AccessorName##At(size_t index) const                                                        \
     {                                                                                                     \
         auto pr = PropertyName();                                                                         \
-        return Type(pr ? pr->GetValueAt(index) : decltype(pr->GetValueAt(index)) {});                     \
+        return Type(pr ? pr->GetValueAt(index) : decltype(pr->GetValueAt(index)){});                      \
     }
 
 // InterfaceObject default array property wrapper
@@ -269,14 +271,14 @@ constexpr InitializationType CreateNew;
 /// Some methods support specifying whether the call should be asynchronous or synchronous through AsyncCallType
 /// template parameter.
 struct AsyncCallType {
-    bool async {};
+    bool async{};
 };
 /// Call should be synchronous and directly return the asynchronous call return value.
-constexpr AsyncCallType Sync { false };
+constexpr AsyncCallType Sync{false};
 /// Call should be asynchronous and return a Future object as its return value.
-constexpr AsyncCallType Async { true };
+constexpr AsyncCallType Async{true};
 
-#define META_API_ASYNC template<const META_NS::AsyncCallType& CallType = META_NS::Sync>
+#define META_API_ASYNC template <const META_NS::AsyncCallType& CallType = META_NS::Sync>
 
 #define META_INTERFACE_OBJECT_ASYNC_CALL_PTR(SyncReturnType, Function) \
     [&]() -> auto                                                      \
@@ -294,14 +296,14 @@ META_END_NAMESPACE()
 
 // NOLINTBEGIN(readability-identifier-naming) to keep std like syntax
 
-template<typename T, typename S>
+template <typename T, typename S>
 BASE_NS::shared_ptr<T> interface_pointer_cast(const META_NS::InterfaceObject<S>& io)
 {
     static_assert(META_NS::HasGetInterfaceMethod_v<T>, "T::GetInterface not defined");
     return interface_pointer_cast<T>(io.GetPtr());
 }
 
-template<typename T, typename S>
+template <typename T, typename S>
 T* interface_cast(const META_NS::InterfaceObject<S>& io)
 {
     static_assert(META_NS::HasGetInterfaceMethod_v<T>, "T::GetInterface not defined");
@@ -310,4 +312,4 @@ T* interface_cast(const META_NS::InterfaceObject<S>& io)
 
 // NOLINTEND(readability-identifier-naming) to keep std like syntax
 
-#endif // META_API_INTERFACE_OBJECT_H
+#endif  // META_API_INTERFACE_OBJECT_H

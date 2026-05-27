@@ -41,9 +41,9 @@ PROPERTY_LIST(Test, TestProperties,
     MEMBER_PROPERTY(fValue, "Float Value", 0U),
     MEMBER_PROPERTY(vec2Vector, "Vector of Vec2 Value", 0U))
 // clang-format on
-} // namespace
+}  // namespace
 
-template<typename To, typename From>
+template <typename To, typename From>
 auto Cast(From* f)
 {
     if constexpr (BASE_NS::is_const_v<From>) {
@@ -60,7 +60,7 @@ auto Cast(From* f)
  */
 UNIT_TEST(API_UtilPropertyToolsTest, FindProperty, testing::ext::TestSize.Level1)
 {
-    ::Test t { 42.f, { 1.f, 2.f, 3.f, 4.f }, { { 5.f, 6.f }, { 7.f, 8.f }, { 9.f, 10.f }, { 11.f, 12.f } } };
+    ::Test t{42.f, {1.f, 2.f, 3.f, 4.f}, {{5.f, 6.f}, {7.f, 8.f}, {9.f, 10.f}, {11.f, 12.f}}};
     t.fVector.push_back(13.f);
     const auto* tStart = Cast<const uint8_t>(&t);
     // direct member
@@ -103,7 +103,7 @@ UNIT_TEST(API_UtilPropertyToolsTest, FindProperty, testing::ext::TestSize.Level1
  */
 UNIT_TEST(API_UtilPropertyToolsTest, FindPropertyMember, testing::ext::TestSize.Level1)
 {
-    ::Test t { 42.f, { 1.f, 2.f, 3.f, 4.f }, { { 5.f, 6.f }, { 7.f, 8.f }, { 9.f, 10.f }, { 11.f, 12.f } } };
+    ::Test t{42.f, {1.f, 2.f, 3.f, 4.f}, {{5.f, 6.f}, {7.f, 8.f}, {9.f, 10.f}, {11.f, 12.f}}};
     t.fVector.push_back(13.f);
     const auto* tStart = Cast<const uint8_t>(&t);
 
@@ -139,10 +139,10 @@ UNIT_TEST(API_UtilPropertyToolsTest, FindPropertyMember, testing::ext::TestSize.
  */
 UNIT_TEST(API_UtilPropertyToolsTest, FindPropertyArray, testing::ext::TestSize.Level1)
 {
-    ::Test t { 42.f, { 1.f, 2.f, 3.f, 4.f }, { { 5.f, 6.f }, { 7.f, 8.f }, { 9.f, 10.f }, { 11.f, 12.f } } };
+    ::Test t{42.f, {1.f, 2.f, 3.f, 4.f}, {{5.f, 6.f}, {7.f, 8.f}, {9.f, 10.f}, {11.f, 12.f}}};
     t.fVector.push_back(13.f);
-    t.vec2Vector.push_back({ 14.f, 15.f });
-    t.vec2Vector.push_back({ 16.f, 17.f });
+    t.vec2Vector.push_back({14.f, 15.f});
+    t.vec2Vector.push_back({16.f, 17.f});
 
     const auto* tStart = Cast<const uint8_t>(&t);
 

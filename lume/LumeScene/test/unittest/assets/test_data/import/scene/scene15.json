@@ -1,0 +1,30 @@
+{
+	"version": "1.0",
+	"description": "test scene with directional light node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "light",
+					"name": "test",
+					"lightType": "directional",
+					"color": [1.0, 0.8, 0.6, 0.0],
+					"intensity": 2.5,
+					"nearPlane": 0.1,
+					"additionalFactor": [0.1, 0.2, 0.3, 0.4],
+					"lightLayerMask": 15,
+					"shadow": {
+						"enabled": false,
+						"strength": 0.5,
+						"depthBias": 0.05,
+						"normalBias": 0.1,
+						"layerMask": 3
+					}
+				}
+			]
+		}
+	}
+}

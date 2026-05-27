@@ -23,6 +23,16 @@ SCENE_BEGIN_NAMESPACE()
 
 class IScene;
 
+enum class NodeFlags : uint32_t {
+    /** Defines whether the node contributes to global illumination (e.g. baked into light probes). */
+    CONTRIBUTE_GI_BIT = (1 << 0),
+};
+
+inline NodeFlags operator|(NodeFlags l, NodeFlags r)
+{
+    return NodeFlags(static_cast<uint32_t>(l) | static_cast<uint32_t>(r));
+}
+
 class INode : public ITransform {
     META_INTERFACE(ITransform, INode, "b875c0d3-e974-4106-bbd3-4dae92fe0a50")
 public:
@@ -30,6 +40,11 @@ public:
      * @brief Enable node in 3D scene.
      */
     META_PROPERTY(bool, Enabled)
+
+    /**
+     * @brief Bitfield of per-node flags.
+     */
+    META_PROPERTY(SCENE_NS::NodeFlags, NodeFlags)
 
     /// true if the node is enabled and all its parents are enabled
     virtual Future<bool> IsEnabledInHierarchy() const = 0;
@@ -72,6 +87,7 @@ META_REGISTER_CLASS(Node, "4e5561d1-0313-4922-b91a-816f388efbbf", META_NS::Objec
 
 SCENE_END_NAMESPACE()
 
+META_TYPE(SCENE_NS::NodeFlags)
 META_INTERFACE_TYPE(SCENE_NS::INode)
 
 #endif

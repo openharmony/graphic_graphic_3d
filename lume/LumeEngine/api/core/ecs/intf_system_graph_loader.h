@@ -39,10 +39,11 @@ public:
     /** Describes result of the loading operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(BASE_NS::string&& error) : success(false), error(BASE_NS::move(error)) {}
+        explicit LoadResult(BASE_NS::string&& error) : success(false), error(BASE_NS::move(error))
+        {}
 
         /** Indicates, whether the parsing operation is successful. */
-        bool success { true };
+        bool success{true};
 
         /** In case of parsing error, contains the description of the error. */
         BASE_NS::string error;
@@ -80,7 +81,7 @@ protected:
 // factory inteface.
 class ISystemGraphLoaderFactory : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "26f8f9de-53e9-4a09-85a6-45b69eb3efb6" };
+    static constexpr auto UID = BASE_NS::Uid{"26f8f9de-53e9-4a09-85a6-45b69eb3efb6"};
 
     using Ptr = BASE_NS::refcnt_ptr<ISystemGraphLoaderFactory>;
 
@@ -97,4 +98,4 @@ inline constexpr BASE_NS::string_view GetName(const ISystemGraphLoaderFactory*)
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_ISYSTEM_GRAPH_H
+#endif  // API_CORE_ECS_ISYSTEM_GRAPH_H

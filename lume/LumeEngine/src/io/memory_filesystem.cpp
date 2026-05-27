@@ -35,7 +35,7 @@ using BASE_NS::vector;
 IDirectory::Entry MemoryFilesystem::GetEntry(const string_view path)
 {
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
-        return { IDirectory::Entry::FILE, string(path), 0 };
+        return {IDirectory::Entry::FILE, string(path), 0};
     }
     return {};
 }
@@ -45,7 +45,7 @@ IFile::Ptr MemoryFilesystem::OpenFile(const string_view path, const IFile::Mode 
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
         auto storage = pos->second.lock();
         if (storage) {
-            return IFile::Ptr { new MemoryFile(BASE_NS::move(storage), mode) };
+            return IFile::Ptr{new MemoryFile(BASE_NS::move(storage), mode)};
         }
     }
     return {};
@@ -54,12 +54,12 @@ IFile::Ptr MemoryFilesystem::OpenFile(const string_view path, const IFile::Mode 
 IFile::Ptr MemoryFilesystem::CreateFile(const string_view path)
 {
     if (auto const pos = memoryFiles_.find(path); pos != memoryFiles_.end()) {
-        return IFile::Ptr { new MemoryFile(pos->second.lock(), IFile::Mode::READ_WRITE) };
+        return IFile::Ptr{new MemoryFile(pos->second.lock(), IFile::Mode::READ_WRITE)};
     }
     auto storage = BASE_NS::make_shared<MemoryFileStorage>();
     memoryFiles_[path] = storage;
 
-    return IFile::Ptr { new MemoryFile(BASE_NS::move(storage), IFile::Mode::READ_WRITE) };
+    return IFile::Ptr{new MemoryFile(BASE_NS::move(storage), IFile::Mode::READ_WRITE)};
 }
 
 bool MemoryFilesystem::DeleteFile(const string_view path)

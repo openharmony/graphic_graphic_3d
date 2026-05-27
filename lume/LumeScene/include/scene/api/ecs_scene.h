@@ -48,13 +48,13 @@ public:
      * @param fn The function to execute.
      * @return A future object that can be waited on for task completion and result.
      */
-    template<typename Fn>
+    template <typename Fn>
     auto AddEcsThreadTask(Fn&& fn)
     {
         auto is = META_INTERFACE_OBJECT_CALL_PTR(GetInternalScene());
-        auto ctx = is ? is->GetContext() : IRenderContext::Ptr {};
+        auto ctx = is ? is->GetContext() : IRenderContext::Ptr{};
         return ctx ? AddTask(is, BASE_NS::forward<Fn>(fn), ctx->GetRenderQueue())
-                   : Future<META_NS::PlainType_t<decltype(fn())>> {};
+                   : Future<META_NS::PlainType_t<decltype(fn())>>{};
     }
     /**
      * @brief Add a task to be run in application thread.
@@ -62,21 +62,21 @@ public:
      * @param fn The function to execute.
      * @return A future object that can be waited on for task completion and result.
      */
-    template<typename Fn>
+    template <typename Fn>
     auto AddApplicationThreadTask(Fn&& fn)
     {
         auto is = META_INTERFACE_OBJECT_CALL_PTR(GetInternalScene());
-        auto ctx = is ? is->GetContext() : IRenderContext::Ptr {};
+        auto ctx = is ? is->GetContext() : IRenderContext::Ptr{};
         return ctx ? AddTask(is, BASE_NS::forward<Fn>(fn), ctx->GetApplicationQueue())
-                   : Future<META_NS::PlainType_t<decltype(fn())>> {};
+                   : Future<META_NS::PlainType_t<decltype(fn())>>{};
     }
 
 private:
-    template<typename Fn>
+    template <typename Fn>
     auto AddTask(const IInternalScene::Ptr& is, Fn&& fn, const META_NS::ITaskQueue::Ptr& queue)
     {
         return is ? is->AddTaskOrRunDirectly(BASE_NS::forward<Fn>(fn), queue)
-                  : Future<META_NS::PlainType_t<decltype(fn())>> {};
+                  : Future<META_NS::PlainType_t<decltype(fn())>>{};
     }
 };
 
@@ -94,10 +94,10 @@ public:
     CORE_NS::Entity GetEntity() const
     {
         auto ecso = META_INTERFACE_OBJECT_CALL_PTR(GetEcsObject());
-        return ecso ? ecso->GetEntity() : CORE_NS::Entity {};
+        return ecso ? ecso->GetEntity() : CORE_NS::Entity{};
     }
 };
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_API_ECS_SCENE_H
+#endif  // SCENE_API_ECS_SCENE_H

@@ -35,7 +35,7 @@ class IRenderNode;
  */
 /** Information needed from the plugin for managing RenderDataStores. */
 struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
-    static constexpr BASE_NS::Uid UID { "946e0b9c-5619-46a9-a087-cd0b34807179" };
+    static constexpr BASE_NS::Uid UID{"946e0b9c-5619-46a9-a087-cd0b34807179"};
 
     using CreateRenderDataStoreFn = BASE_NS::refcnt_ptr<IRenderDataStore> (*)(
         IRenderContext& renderContext, const char* instanceName);
@@ -43,7 +43,7 @@ struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
     /** Unique ID of the render data store. */
     const BASE_NS::Uid uid;
     /** Name used during data store creation to identify the type of the data store. */
-    const char* const typeName { "" };
+    const char* const typeName{""};
     /** Pointer to function which is used to create data store instances. */
     const CreateRenderDataStoreFn createDataStore;
 };
@@ -51,7 +51,7 @@ struct RenderDataStoreTypeInfo : public CORE_NS::ITypeInfo {
 /** Information needed from the plugin for managing RenderNodes. */
 struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
     /** TypeInfo UID for render node. */
-    static constexpr BASE_NS::Uid UID { "d54d3800-7378-43e6-bde8-8095660dd7f1" };
+    static constexpr BASE_NS::Uid UID{"d54d3800-7378-43e6-bde8-8095660dd7f1"};
 
     using CreateRenderNodeFn = IRenderNode* (*)();
     using DestroyRenderNodeFn = void (*)(IRenderNode* instance);
@@ -61,16 +61,16 @@ struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
     /** Unique ID of the render node. */
     const BASE_NS::Uid uid;
     /** Name used during node creation to identify the type of the node. */
-    const char* const typeName { "" };
+    const char* const typeName{""};
     /** Pointer to function which is used to create node instances. */
     const CreateRenderNodeFn createNode;
     /** Pointer to function which is used to destroy node instances. */
     const DestroyRenderNodeFn destroyNode;
 
     /** Render node backend flags (see IRenderNode) */
-    PluginRenderNodeBackendFlags renderNodeBackendFlags { 0u };
+    PluginRenderNodeBackendFlags renderNodeBackendFlags{0u};
     /** Render node class type (see IRenderNode) */
-    PluginRenderNodeClassType renderNodeClassType { 0u };
+    PluginRenderNodeClassType renderNodeClassType{0u};
 
     /** Optional unique ID of a render node, which should be before this node. */
     const BASE_NS::Uid afterNode;
@@ -81,7 +81,7 @@ struct RenderNodeTypeInfo : public CORE_NS::ITypeInfo {
 /** A plugin which adds new render data store and render node types. */
 struct IRenderPlugin : public CORE_NS::ITypeInfo {
     /** TypeInfo UID for render plugin. */
-    static constexpr BASE_NS::Uid UID { "303e3ffe-36fd-4e1b-82f3-349844fab2eb" };
+    static constexpr BASE_NS::Uid UID{"303e3ffe-36fd-4e1b-82f3-349844fab2eb"};
 
     /*
     Plugin lifecycle.
@@ -93,7 +93,7 @@ struct IRenderPlugin : public CORE_NS::ITypeInfo {
     using DestroyPluginFn = void (*)(CORE_NS::PluginToken);
 
     constexpr IRenderPlugin(CreatePluginFn create, DestroyPluginFn destroy)
-        : ITypeInfo { UID }, createPlugin { create }, destroyPlugin { destroy }
+        : ITypeInfo{UID}, createPlugin{create}, destroyPlugin{destroy}
     {}
 
     /** Initialize function for render plugin.
@@ -101,15 +101,15 @@ struct IRenderPlugin : public CORE_NS::ITypeInfo {
      * Is expected to register its own named interfaces (IInterface) which are tied to the context instance.
      * Called when attaching to engine.
      */
-    const CreatePluginFn createPlugin { nullptr };
+    const CreatePluginFn createPlugin{nullptr};
 
     /** Deinitialize function for render plugin.
      * Called when plugin is about to be unloaded by context.
      * Called when detaching from context.
      */
-    const DestroyPluginFn destroyPlugin { nullptr };
+    const DestroyPluginFn destroyPlugin{nullptr};
 };
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IPLUGIN_H
+#endif  // API_RENDER_IPLUGIN_H

@@ -44,9 +44,9 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 inline BindableImage GetBindableImage(const RenderNodeResource& res)
 {
-    return BindableImage { res.handle, res.mip, res.layer, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, res.secondHandle };
+    return BindableImage{res.handle, res.mip, res.layer, ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, res.secondHandle};
 }
-} // namespace
+}  // namespace
 
 void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -61,7 +61,8 @@ void RenderNodeBloom::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
     }
     if (jsonInputs_.renderDataStore.typeName != RenderDataStorePod::TYPE_NAME) {
         PLUGIN_LOG_E("RenderNodeBloom: render data store type name not supported (%s != %s)",
-            jsonInputs_.renderDataStore.typeName.data(), RenderDataStorePod::TYPE_NAME);
+            jsonInputs_.renderDataStore.typeName.data(),
+            RenderDataStorePod::TYPE_NAME);
         valid_ = false;
     }
 
@@ -108,7 +109,7 @@ void RenderNodeBloom::CreatePostProcessInterface()
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
         auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
-            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
+            ppNode = RENDER_NS::CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
         CreatePostProcessInterface(RenderPostProcessBloomNode::UID, ppRenderBloomInterface_.postProcessNode);

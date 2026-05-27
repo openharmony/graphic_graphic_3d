@@ -1,0 +1,155 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "19904a3b-fc14-4334-9c3b-c7f7ad41a57c",
+        "uri": "project://packages/studio-asset-library/environment/dusk/images/Dusk_Env_skybox.ktx",
+        "xxh3": "60973e124b0a5c09b1c1db6bc8c60881",
+        "spec": {
+            "$meta": {
+                "meta-version": "2.0"
+            },
+            "$root": {
+                "$classId": "12708a3c-ff66-4ead-acbf-58d0a16db05e",
+                "$className": "ImageAsset",
+                "$instanceId": "00022cd2-5f79-f364-7a4a-33b7fbc487fc",
+                "__attachments": [
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "GenerateMipmaps",
+                        "defaultValue": {
+                            "$classId": "cd2fd49b-c6b0-14bd-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": true
+                        },
+                        "values": [],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "ColorSpace",
+                        "defaultValue": {
+                            "$classId": "a6c66c82-e2b9-7488-4d75-6c7469416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Iid",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "19904a3b-fc14-4334-9c3b-c7f7ad41a57c"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Uri",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "project://packages/studio-asset-library/environment/dusk/images/Dusk_Env_skybox.ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Name",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "Dusk_Env_skybox.ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "MediaType",
+                        "defaultValue": {
+                            "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": ""
+                        },
+                        "values": [
+                            {
+                                "$classId": "4c56efce-a00b-20a3-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": "image/ktx"
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Width",
+                        "defaultValue": {
+                            "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [
+                            {
+                                "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": 512
+                            }
+                        ],
+                        "modifiers": []
+                    },
+                    {
+                        "$classId": "14366762-0c46-4225-8bfc-1240aba457c6",
+                        "$className": "Property",
+                        "$name": "Height",
+                        "defaultValue": {
+                            "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                            "$className": "Any",
+                            "value": 0
+                        },
+                        "values": [
+                            {
+                                "$classId": "b6a8d81c-22be-419c-4275-696c74416e79",
+                                "$className": "Any",
+                                "value": 512
+                            }
+                        ],
+                        "modifiers": []
+                    }
+                ]
+            }
+        }
+    }
+}

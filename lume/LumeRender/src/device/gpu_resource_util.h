@@ -36,7 +36,7 @@ void CopyGpuResource(const IDevice& device, const GpuResourceManager& gpuResourc
 void DebugBufferName(const IDevice& device, const GpuBuffer& buffer, BASE_NS::string_view name);
 void DebugImageName(const IDevice& device, const GpuImage& image, BASE_NS::string_view name);
 void DebugSamplerName(const IDevice& device, const GpuSampler& sampler, BASE_NS::string_view name);
-} // namespace GpuResourceUtil
+}  // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_RESOURCE_UTIL_H
+#endif  // DEVICE_GPU_RESOURCE_UTIL_H

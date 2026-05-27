@@ -43,7 +43,7 @@ struct ShadingData {
     float NoV;
     vec3 V;
     float alpha2;
-    vec4 f0; // f0 = f0.xyz, f90 = f0.w
+    vec4 f0;  // f0 = f0.xyz, f90 = f0.w
     vec3 diffuseColor;
 };
 
@@ -53,7 +53,7 @@ struct ShadingDataInplace {
     float NoV;
     vec3 V;
     float alpha2;
-    vec4 f0; // f0 = f0.xyz, f90 = f0.w
+    vec4 f0;  // f0 = f0.xyz, f90 = f0.w
     vec3 diffuseColor;
     uint materialFlags;
     uvec2 layers;
@@ -167,8 +167,8 @@ InputBrdfData CalcBRDFMetallicRoughness(CORE_RELAXEDP vec4 baseColor, vec3 polyg
     InputBrdfData bd;
     {
         const CORE_RELAXEDP float metallic = clamp(material.b, 0.0, 1.0);
-        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic); // f0 reflectance
-        bd.f0.w = 1.0;                                              // f90
+        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic);  // f0 reflectance
+        bd.f0.w = 1.0;                                               // f90
         // spec and glTF-Sample-Viewer don't use f0 here, but reflectance:
         bd.diffuseColor = mix(baseColor.rgb * (1.0 - bd.f0.xyz), vec3(0.0), vec3(metallic));
         bd.roughness = material.g;
@@ -184,8 +184,8 @@ InputBrdfData CalcBRDFMetallicRoughness(CORE_RELAXEDP vec4 baseColor, CORE_RELAX
     InputBrdfData bd;
     {
         const CORE_RELAXEDP float metallic = clamp(material.b, 0.0, 1.0);
-        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic); // f0 reflectance
-        bd.f0.w = 1.0;                                              // f90
+        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic);  // f0 reflectance
+        bd.f0.w = 1.0;                                               // f90
         // spec and glTF-Sample-Viewer don't use f0 here, but reflectance:
         bd.diffuseColor = mix(baseColor.rgb * (1.0 - bd.f0.xyz), vec3(0.0), vec3(metallic));
         bd.roughness = material.g;
@@ -200,8 +200,8 @@ InputBrdfData CalcBRDFSpecularGlossiness(CORE_RELAXEDP vec4 baseColor, vec3 poly
 {
     InputBrdfData bd;
     {
-        bd.f0.xyz = material.xyz; // f0 reflectance
-        bd.f0.w = 1.0;            // f90
+        bd.f0.xyz = material.xyz;  // f0 reflectance
+        bd.f0.w = 1.0;             // f90
         bd.diffuseColor = baseColor.rgb * (1.0 - max(bd.f0.x, max(bd.f0.y, bd.f0.z)));
         bd.roughness = 1.0 - clamp(material.a, 0.0, 1.0);
     }
@@ -218,7 +218,7 @@ InputBrdfData CalcBRDFSpecular(
     {
         const CORE_RELAXEDP float metallic = clamp(material.b, 0.0, 1.0);
         // start with metal-rough dielectricSpecularF0:
-        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic); // f0 reflectance
+        bd.f0.xyz = mix(vec3(material.a), baseColor.rgb, metallic);  // f0 reflectance
 
         // tint by specular color and multiply by strength:
         bd.f0.xyz = min(bd.f0.xyz * specular.rgb, vec3(1.0)) * specular.a;
@@ -228,7 +228,7 @@ InputBrdfData CalcBRDFSpecular(
 
         // final f0
         bd.f0.xyz = mix(bd.f0.xyz, baseColor.rgb, metallic);
-        bd.f0.w = mix(specular.a, 1.0, metallic); // f90
+        bd.f0.w = mix(specular.a, 1.0, metallic);  // f90
         bd.roughness = material.g;
     }
     // NOTE: diffuse color is already premultiplied
@@ -303,7 +303,7 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
     if ((materialFlags & CORE_MATERIAL_SHEEN_BIT) == CORE_MATERIAL_SHEEN_BIT) {
         const float sheenD = dCharlie(ssv.sheenRoughness, NoH);
         const float sheenV = vAshikhmin(sd.NoV, NoL);
-        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV); // F = 1.0
+        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV);  // F = 1.0
 
         extAttenuation *= (1.0 - (ssv.sheenColorMax * ssv.sheenBRDFApprox));
         calculatedColor += (sheenSpec * NoL);
@@ -317,7 +317,7 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
 
         const float ccD = dGGX(ccsv.ccAlpha2, ccNoH);
         const float ccG = vKelemen(ccLoH);
-        const float ccF = fSchlickSingle(ccf0, ccNoV) * ccsv.cc; // NOTE: cc in ccF
+        const float ccF = fSchlickSingle(ccf0, ccNoV) * ccsv.cc;  // NOTE: cc in ccF
         const float ccSpec = ccF * ccD * ccG;
 
         extAttenuation *= (1.0 - ccF);
@@ -344,10 +344,10 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
         // NOTE: could check for NoL > 0.0 and NoV > 0.0
         CORE_RELAXEDP float shadowCoeff = 1.0;
@@ -360,7 +360,7 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -395,12 +395,13 @@ vec3 CalculateLighting(ShadingData sd, const uint materialFlags)
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                               CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                         shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                             shadowCoord,
                             NoL,
@@ -477,10 +478,10 @@ vec3 CalculateLighting(
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
         // NOTE: could check for NoL > 0.0 and NoV > 0.0
         CORE_RELAXEDP float shadowCoeff = 1.0;
@@ -489,11 +490,12 @@ vec3 CalculateLighting(
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -528,12 +530,13 @@ vec3 CalculateLighting(
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                               CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                         shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                             shadowCoord,
                             NoL,
@@ -613,7 +616,7 @@ vec3 CalculateLight(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, float N
     if ((materialFlags & CORE_MATERIAL_SHEEN_BIT) == CORE_MATERIAL_SHEEN_BIT) {
         const float sheenD = dCharlie(ssv.sheenRoughness, NoH);
         const float sheenV = vAshikhmin(sd.NoV, NoL);
-        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV); // F = 1.0
+        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV);  // F = 1.0
 
         extAttenuation *= (1.0 - (ssv.sheenColorMax * ssv.sheenBRDFApprox));
         calculatedColor += (sheenSpec * NoL);
@@ -661,10 +664,10 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
         // NOTE: could check for NoL > 0.0 and NoV > 0.0
         CORE_RELAXEDP float shadowCoeff = 1.0;
@@ -673,11 +676,12 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -713,12 +717,13 @@ vec3 CalculateLighting(ShadingData sd, AnisotropicShadingVariables asv, Clearcoa
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                               CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                         shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                             shadowCoord,
                             NoL,
@@ -828,10 +833,10 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
         const uint currLightIdx = directionalLightBeginIndex + lightIdx;
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
         // NOTE: could check for NoL > 0.0 and NoV > 0.0
         CORE_RELAXEDP float shadowCoeff = 1.0;
@@ -840,11 +845,12 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -879,12 +885,13 @@ vec3 CalculateLighting(ShadingData sd, SubsurfaceScatterShadingVariables sssv, c
                 if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                     const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                     const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                     if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                         CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                         shadowCoeff = CalcVsmShadow(
                             uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                     } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                               CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                         shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                             shadowCoord,
                             NoL,
@@ -965,7 +972,7 @@ vec3 CalculateLightInplace(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, 
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_SHEEN_BIT) == CORE_MATERIAL_SHEEN_BIT) {
         const float sheenD = dCharlie(ssv.sheenRoughness, NoH);
         const float sheenV = vAshikhmin(sd.NoV, NoL);
-        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV); // F = 1.0
+        const vec3 sheenSpec = ssv.sheenColor * (sheenD * sheenV);  // F = 1.0
 
         extAttenuation *= (1.0 - (ssv.sheenColorMax * ssv.sheenBRDFApprox));
         calculatedColor += (sheenSpec * NoL);
@@ -979,7 +986,7 @@ vec3 CalculateLightInplace(uint currLightIdx, vec3 materialDiffuseBRDF, vec3 L, 
 
         const float ccD = dGGX(ccsv.ccAlpha2, ccNoH);
         const float ccG = vKelemen(ccLoH);
-        const float ccF = fSchlickSingle(ccf0, ccNoV) * ccsv.cc; // NOTE: cc in ccF
+        const float ccF = fSchlickSingle(ccf0, ccNoV) * ccsv.cc;  // NOTE: cc in ccF
         const float ccSpec = ccF * ccD * ccG;
 
         extAttenuation *= (1.0 - ccF);
@@ -1010,7 +1017,9 @@ bool CheckLightLayerMask(uint currLightIdx, uvec2 layers)
 vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables ccsv, SheenShadingVariables ssv)
 {
 #if (CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING == 1)
-    const uint clusterIdx = PointToClusterIdx(sd.pos.xyz, uCameras[sd.cameraIdx].view, uCameras[sd.cameraIdx].proj,
+    const uint clusterIdx = PointToClusterIdx(sd.pos.xyz,
+        uCameras[sd.cameraIdx].view,
+        uCameras[sd.cameraIdx].proj,
         uGeneralData.viewportSizeInvViewportSize.xy);
     const DefaultMaterialLightClusterData cluster = uLightClusterData[clusterIdx];
 #endif
@@ -1021,7 +1030,7 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
     const uint directionalLightBeginIndex = uLightData.directionalLightBeginIndex;
     const vec4 atlasSizeInvSize = uLightData.atlasSizeInvSize;
     const float vpcfRadius = uLightData.vpcfRadius;
-    const int vpcfSampleCount = uLightData.vpcfSampleCount;
+    const uint vpcfSampleCount = uLightData.vpcfSampleCount;
 
     // directional lights
     for (uint lightIdx = 0; lightIdx < directionalLightCount; ++lightIdx) {
@@ -1031,7 +1040,7 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
             continue;
         }
 
-        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz; // normalization already done in c-code
+        const vec3 L = -uLightData.lights[currLightIdx].dir.xyz;  // normalization already done in c-code
         const float NoL = clamp(dot(sd.N, L), 0.0, 1.0);
         // NOTE: could check for NoL > 0.0 and NoV > 0.0
         CORE_RELAXEDP float shadowCoeff = 1.0;
@@ -1040,11 +1049,12 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
             if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                 const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                 const vec4 shadowFactors = uLightData.lights[currLightIdx].shadowFactors;
+
                 if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) == CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                     shadowCoeff = CalcVsmShadow(
                         uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                 } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                            CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                           CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                     shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                         shadowCoord,
                         NoL,
@@ -1091,12 +1101,13 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
                     if ((lightFlags.x & CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) == CORE_LIGHT_USAGE_SHADOW_LIGHT_BIT) {
                         const vec4 shadowCoord = GetShadowMatrix(lightFlags.y) * vec4(sd.pos.xyz, 1.0);
                         const vec4 shadowFactors = uLightData.lights[lightIdx].shadowFactors;
+
                         if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) ==
                             CORE_LIGHTING_SHADOW_TYPE_VSM_BIT) {
                             shadowCoeff = CalcVsmShadow(
                                 uSampColorShadow, shadowCoord, NoL, shadowFactors, atlasSizeInvSize, lightFlags.zw);
                         } else if ((CORE_LIGHTING_FLAGS & CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) ==
-                                    CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
+                                   CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT) {
                             shadowCoeff = CalcVariablePcfShadow(uSampColorShadow,
                                 shadowCoord,
                                 NoL,
@@ -1192,4 +1203,4 @@ vec3 CalculateLightingInplace(ShadingDataInplace sd, ClearcoatShadingVariables c
     return color;
 }
 
-#endif // SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_LIGHTING_COMMON_H

@@ -43,6 +43,7 @@ struct SceneRenderDataStores {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMaterial;
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameCamera;
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameLight;
+    BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameLightProbe;
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMorph;
 
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNamePrefix;
@@ -94,9 +95,9 @@ using SceneRenderCameraDataFlags = uint32_t;
 
 struct SceneRenderCameraData {
     /* Selected camera index */
-    uint32_t cameraIdx { ~0U };
+    uint32_t cameraIdx{~0U};
     /* Additional processing for flags */
-    SceneRenderCameraDataFlags flags { 0U };
+    SceneRenderCameraDataFlags flags{0U};
     /* Render camera */
     RenderCamera camera;
 };
@@ -107,20 +108,20 @@ Helper class with scene util functions.
 */
 class IRenderNodeSceneUtil : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "78b61c97-6ccc-4f1d-aa27-af3cb63cff6d" };
+    static constexpr BASE_NS::Uid UID{"78b61c97-6ccc-4f1d-aa27-af3cb63cff6d"};
 
     /** Render slot info for render mesh fetching.
      */
     struct RenderSlotInfo {
         /** Render slot id */
-        uint32_t id { ~0u };
+        uint32_t id{~0u};
         /** Sort type */
-        RENDER_NS::RenderSlotSortType sortType { RENDER_NS::RenderSlotSortType::NONE };
+        RENDER_NS::RenderSlotSortType sortType{RENDER_NS::RenderSlotSortType::NONE};
         /** Cull type */
-        RENDER_NS::RenderSlotCullType cullType { RENDER_NS::RenderSlotCullType::NONE };
+        RENDER_NS::RenderSlotCullType cullType{RENDER_NS::RenderSlotCullType::NONE};
         /** One can discard render meshes by material flags
          * (e.g. RENDER_MATERIAL_COMPLEX_BIT or RENDER_MATERIAL_BASIC_BIT)  */
-        RenderMaterialFlags materialDiscardFlags { 0u };
+        RenderMaterialFlags materialDiscardFlags{0u};
     };
 
     /** Get render data store names mathing the given scene render data store.
@@ -237,4 +238,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderNodeSceneUtil*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_NODE_SCENE_UTIL_H
+#endif  // API_3D_RENDER_IRENDER_NODE_SCENE_UTIL_H

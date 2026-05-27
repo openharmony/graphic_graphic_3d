@@ -22,6 +22,7 @@
 #include <core/log.h>
 #include <core/resources/intf_resource_manager.h>
 
+#include <meta/base/memfile.h>
 #include <meta/ext/object.h>
 #include <meta/interface/intf_object.h>
 #include <meta/interface/serialization/intf_global_serialization_data.h>
@@ -29,39 +30,19 @@
 META_BEGIN_NAMESPACE()
 namespace UTest {
 
-struct MemFile : public CORE_NS::IFile {
-    explicit MemFile(BASE_NS::vector<uint8_t> vec = {});
-
-    Mode GetMode() const override;
-    void Close() override;
-    uint64_t Read(void* buffer, uint64_t count) override;
-    uint64_t Write(const void* buffer, uint64_t count) override;
-    uint64_t Append(const void* buffer, uint64_t count, uint64_t flushSize) override;
-    uint64_t GetLength() const override;
-    bool Seek(uint64_t offset) override;
-    uint64_t GetPosition() const override;
-
-    BASE_NS::vector<uint8_t> Data() const;
-
-private:
-    void Destroy() override;
-    BASE_NS::vector<uint8_t> data_;
-    size_t pos_ {};
-};
-
 struct TestSerialiser {
     explicit TestSerialiser(BASE_NS::vector<uint8_t> data = {});
 
     bool Export(const IObject::Ptr& object);
     IObject::Ptr Import();
 
-    template<typename Interface>
+    template <typename Interface>
     bool Export(const BASE_NS::shared_ptr<Interface>& p)
     {
         return Export(interface_pointer_cast<IObject>(p));
     }
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr Import()
     {
         return interface_pointer_cast<Interface>(Import());
@@ -78,23 +59,25 @@ struct TestSerialiser {
     void SetInstanceIdMapping(BASE_NS::unordered_map<InstanceId, InstanceId>);
 
     void SetResourceManager(CORE_NS::IResourceManager::Ptr);
+    void SetUserContext(IObject::Ptr);
 
     void SetMetadata(SerMetadata);
     SerMetadata GetMetadata() const;
 
 private:
     MemFile data_;
-    std::size_t writePos_ {};
-    std::size_t readPos_ {};
+    std::size_t writePos_{};
+    std::size_t readPos_{};
     BASE_NS::unordered_map<InstanceId, InstanceId> mapping_;
     CORE_NS::IResourceManager::Ptr resources_;
+    IObject::Ptr userContext_;
     SerMetadata metadata_;
 };
 
 void WriteToFile(const BASE_NS::vector<uint8_t>&, BASE_NS::string_view file);
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()
 
-#endif // META_TEST_SERIALISATION_UTILS_HEADER
+#endif  // META_TEST_SERIALISATION_UTILS_HEADER

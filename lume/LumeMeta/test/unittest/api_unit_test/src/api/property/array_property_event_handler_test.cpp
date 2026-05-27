@@ -27,7 +27,7 @@ META_BEGIN_NAMESPACE()
 
 namespace UTest {
 
-template<typename Type>
+template <typename Type>
 static void ExpectChanges(ArrayChanges<Type> a1, ArrayChanges<Type> a2)
 {
     EXPECT_EQ(a1.indexesRemoved, a2.indexesRemoved);
@@ -42,49 +42,48 @@ static void ExpectChanges(ArrayChanges<Type> a1, ArrayChanges<Type> a2)
  */
 UNIT_TEST(API_ArrayPropertyEventHandlerTest, Diff, testing::ext::TestSize.Level1)
 {
-    auto p = ConstructArrayProperty<int>("test", BASE_NS::vector<int> { 1, 2, 3 });
+    auto p = ConstructArrayProperty<int>("test", BASE_NS::vector<int>{1, 2, 3});
     ArrayPropertyChangedEventHandler<int> h;
     ArrayChanges<int> change;
     h.Subscribe(p, [&](ArrayChanges<int> c) { change = c; });
 
-    p->SetValue({ 1, 2 });
-    ExpectChanges(change, { { 2 } });
+    p->SetValue({1, 2});
+    ExpectChanges(change, {{2}});
 
-    p->SetValue({ 1, 2, 3, 4 });
-    ExpectChanges(change, { {}, { { 3, 2 }, { 4, 3 } } });
+    p->SetValue({1, 2, 3, 4});
+    ExpectChanges(change, {{}, {{3, 2}, {4, 3}}});
 
-    p->SetValue({ 1, 5, 6, 4 });
-    ExpectChanges(change, { { 1, 2 }, { { 5, 1 }, { 6, 2 } } });
+    p->SetValue({1, 5, 6, 4});
+    ExpectChanges(change, {{1, 2}, {{5, 1}, {6, 2}}});
 
-    p->SetValue({ 1, 4, 5, 6 });
-    ExpectChanges(change, { {}, {}, { { 3, 1 }, { 1, 2 }, { 2, 3 } } });
+    p->SetValue({1, 4, 5, 6});
+    ExpectChanges(change, {{}, {}, {{3, 1}, {1, 2}, {2, 3}}});
 
-    p->SetValue({ 0, 1, 6, 5 });
-    ExpectChanges(change, { { 1 }, { { 0, 0 } }, { { 0, 1 }, { 3, 2 }, { 2, 3 } } });
+    p->SetValue({0, 1, 6, 5});
+    ExpectChanges(change, {{1}, {{0, 0}}, {{0, 1}, {3, 2}, {2, 3}}});
 
-    p->SetValue({ 0, 1, 0 });
-    p->SetValue({ 1, 0 });
-    ExpectChanges(change, { { 2 }, {}, { { 1, 0 }, { 0, 1 } } });
+    p->SetValue({0, 1, 0});
+    p->SetValue({1, 0});
+    ExpectChanges(change, {{2}, {}, {{1, 0}, {0, 1}}});
 
-    p->SetValue({ 0, 1, 0 });
-    p->SetValue({ 2, 1, 0 });
-    ExpectChanges(change, { { 2 }, { { 2, 0 } }, { { 0, 2 } } });
+    p->SetValue({0, 1, 0});
+    p->SetValue({2, 1, 0});
+    ExpectChanges(change, {{2}, {{2, 0}}, {{0, 2}}});
 
-    p->SetValue({ 0 });
-    p->SetValue(BASE_NS::vector<int> { 0, 0 });
-    ExpectChanges(change, { {}, { { 0, 1 } } });
+    p->SetValue({0});
+    p->SetValue(BASE_NS::vector<int>{0, 0});
+    ExpectChanges(change, {{}, {{0, 1}}});
 
-    p->SetValue({ 0, 1, 2, 2, 1, 0, 1, 0, 1, 0 });
-    p->SetValue({ 0, 0, 2, 1, 0, 0, 1, 0, 1, 0 });
-    ExpectChanges(
-        change, { { 3, 8 }, { { 0, 7 }, { 0, 9 } }, { { 5, 1 }, { 1, 3 }, { 7, 4 }, { 9, 5 }, { 4, 6 }, { 6, 8 } } });
+    p->SetValue({0, 1, 2, 2, 1, 0, 1, 0, 1, 0});
+    p->SetValue({0, 0, 2, 1, 0, 0, 1, 0, 1, 0});
+    ExpectChanges(change, {{3, 8}, {{0, 7}, {0, 9}}, {{5, 1}, {1, 3}, {7, 4}, {9, 5}, {4, 6}, {6, 8}}});
 
     change = {};
     h.Unsubscribe();
-    p->SetValue({ -1, 0 });
+    p->SetValue({-1, 0});
     ExpectChanges(change, {});
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

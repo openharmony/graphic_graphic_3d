@@ -159,7 +159,7 @@ void TestRenderHandle(const UTest::EngineResources& er)
     {
         IShaderManager& shaderMgr = er.device->GetShaderManager();
         GraphicsState state;
-        IShaderManager::GraphicsStateCreateInfo info { "state0", state };
+        IShaderManager::GraphicsStateCreateInfo info{"state0", state};
         auto stateHandle = shaderMgr.CreateGraphicsState(info);
         RenderHandleDesc desc;
         desc.type = RenderHandleType::GRAPHICS_STATE;
@@ -169,7 +169,7 @@ void TestRenderHandle(const UTest::EngineResources& er)
     {
         IShaderManager& shaderMgr = er.device->GetShaderManager();
         PipelineLayout pipelineLayout;
-        IShaderManager::PipelineLayoutCreateInfo info { "pl0", pipelineLayout };
+        IShaderManager::PipelineLayoutCreateInfo info{"pl0", pipelineLayout};
         auto plHandle = shaderMgr.CreatePipelineLayout(info);
         RenderHandleDesc desc;
         desc.type = RenderHandleType::PIPELINE_LAYOUT;
@@ -179,7 +179,7 @@ void TestRenderHandle(const UTest::EngineResources& er)
     {
         IShaderManager& shaderMgr = er.device->GetShaderManager();
         VertexInputDeclarationView vid;
-        IShaderManager::VertexInputDeclarationCreateInfo info { "vid0", vid };
+        IShaderManager::VertexInputDeclarationCreateInfo info{"vid0", vid};
         auto vidHandle = shaderMgr.CreateVertexInputDeclaration(info);
         RenderHandleDesc desc;
         desc.type = RenderHandleType::VERTEX_INPUT_DECLARATION;
@@ -187,7 +187,7 @@ void TestRenderHandle(const UTest::EngineResources& er)
         ASSERT_EQ(vidHandle.GetHandle(), renderUtil.GetRenderHandle(desc).GetHandle());
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderTimingsTest

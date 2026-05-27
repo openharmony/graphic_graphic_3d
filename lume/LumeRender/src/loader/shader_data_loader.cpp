@@ -30,9 +30,9 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr size_t VERSION_SIZE { 5u };
-constexpr uint32_t VERSION_MAJOR { 22u };
-constexpr uint64_t MAX_SHADER_DATA_FILE_BYTE_SIZE { 16ull * 1024ull * 1024ull };
+constexpr size_t VERSION_SIZE{5u};
+constexpr uint32_t VERSION_MAJOR{22u};
+constexpr uint64_t MAX_SHADER_DATA_FILE_BYTE_SIZE{16ULL * 1024ULL * 1024ULL};
 
 void LoadState(const json::value& jsonData, GraphicsState& graphicsState, GraphicsStateFlags& stateFlags,
     ShaderDataLoader::LoadResult& result)
@@ -60,9 +60,9 @@ void LoadSingleShaderVariant(const json::value& jsonData, const string& material
     SafeGetJsonValue(jsonData, "displayName", result.error, data.displayName);
     SafeGetJsonValue(jsonData, "baseShader", result.error, data.addBaseShader);
 
-    string vertexShader { "" };
-    string fragmentShader { "" };
-    string computeShader { "" };
+    string vertexShader{""};
+    string fragmentShader{""};
+    string computeShader{""};
 
     SafeGetJsonValue(jsonData, "vert", result.error, vertexShader);
     SafeGetJsonValue(jsonData, "frag", result.error, fragmentShader);
@@ -72,13 +72,13 @@ void LoadSingleShaderVariant(const json::value& jsonData, const string& material
     }
 
     if (!vertexShader.empty()) {
-        data.shaders.push_back({ vertexShader, CORE_SHADER_STAGE_VERTEX_BIT });
+        data.shaders.push_back({vertexShader, CORE_SHADER_STAGE_VERTEX_BIT});
     }
     if (!fragmentShader.empty()) {
-        data.shaders.push_back({ fragmentShader, CORE_SHADER_STAGE_FRAGMENT_BIT });
+        data.shaders.push_back({fragmentShader, CORE_SHADER_STAGE_FRAGMENT_BIT});
     }
     if (!computeShader.empty()) {
-        data.shaders.push_back({ computeShader, CORE_SHADER_STAGE_COMPUTE_BIT });
+        data.shaders.push_back({computeShader, CORE_SHADER_STAGE_COMPUTE_BIT});
     }
 
     {
@@ -109,8 +109,8 @@ ShaderDataLoader::LoadResult LoadFunc(const string_view uri, const json::value& 
     {
         string ver;
         string type;
-        uint32_t verMajor { ~0u };
-        uint32_t verMinor { ~0u };
+        uint32_t verMajor{~0u};
+        uint32_t verMinor{~0u};
         if (const json::value* iter = jsonData.find("compatibility_info"); iter) {
             SafeGetJsonValue(*iter, "type", result.error, type);
             SafeGetJsonValue(*iter, "version", result.error, ver);
@@ -177,7 +177,7 @@ ShaderDataLoader::LoadResult LoadFunc(const string_view uri, const json::value& 
     result.success = result.error.empty();
     return result;
 }
-} // namespace
+}  // namespace
 
 string_view ShaderDataLoader::GetUri() const
 {

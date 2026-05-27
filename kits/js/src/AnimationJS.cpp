@@ -25,7 +25,41 @@
 
 #include "SceneJS.h"
 #include "JsObjectCache.h"
+#ifdef __SCENE_ADAPTER__
+#include "scene_adapter/scene_adapter.h"
+#endif
+#if defined(RES_SCHED_ENABLE)
+#include <unistd.h>
+#include <sys/types.h>
+#include "res_sched_client.h"
+#endif
 
+namespace {
+#if defined(RES_SCHED_ENABLE)
+constexpr uint32_t RES_TYPE_EXT_THEMES_SET_QOS = 10026;
+auto GetSceneAdapterTid()
+{
+    return
+#ifdef __SCENE_ADAPTER__
+        OHOS::Render3D::SceneAdapter::GetEngineThreadTid();
+#else
+        0;
+#endif
+}
+void ApplyThemeQoS(pid_t pid, uint32_t tid)
+{
+    LOG_V("ApplyThemeQoS %d %d", (int)pid, (int)tid);
+    if (tid == 0) {
+        return;
+    }
+    std::unordered_map<std::string, std::string> mapPayload{
+        {"pid", std::to_string(pid)},
+        {"tid", std::to_string(tid)},
+    };
+    OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(RES_TYPE_EXT_THEMES_SET_QOS, 1, mapPayload);
+}
+#endif
+}  // namespace
 class OnCallJS : public ThreadSafeCallback {
     NapiApi::StrongRef jsThis_;
     NapiApi::StrongRef ref_;
@@ -83,10 +117,10 @@ AnimationJS::AnimationJS(napi_env e, napi_callback_info i)
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("AnimationJS",meJs);
-    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
-    NapiApi::Object args = fromJs.Arg<1>();  // access to params.
-    scene_ = { scene };
+    AddBridge("AnimationJS", meJs);
+    NapiApi::Object scene = fromJs.Arg<0>();  // access to owning scene...
+    NapiApi::Object args = fromJs.Arg<1>();   // access to params.
+    scene_ = {scene};
     if (!scene.GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
@@ -112,7 +146,8 @@ AnimationJS::AnimationJS(napi_env e, napi_callback_info i)
         }
     }
 }
-void AnimationJS::InitOnComplete() {
+void AnimationJS::InitOnComplete()
+{
     if (OnCompletedEvent_) {
         return;
     }
@@ -147,17 +182,17 @@ void* AnimationJS::GetInstanceImpl(uint32_t id)
 void AnimationJS::Finalize(napi_env env)
 {
     FinalizeBridge(this);
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
 }
 AnimationJS::~AnimationJS()
 {
     LOG_V("AnimationJS -- ");
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
 }
 
-void AnimationJS::DisposeNative(void* sc)
+void AnimationJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -199,10 +234,10 @@ void AnimationJS::DisposeNative(void* sc)
                 OnFinishedCB_ = nullptr;
             }
         }
-        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
-            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-            if (auto isc = interface_pointer_cast<SCENE_NS::IScene>(sceneJS->GetNativeObject())) {
-                isc->RemoveAnimation(interface_pointer_cast<META_NS::IAnimation>(GetNativeObject())).Wait();
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+            if (auto nativeScene = sceneJs->GetNativeObject<SCENE_NS::IScene>()) {
+                nativeScene->RemoveAnimation(interface_pointer_cast<META_NS::IAnimation>(GetNativeObject())).Wait();
             }
         }
         scene_.Reset();
@@ -231,8 +266,7 @@ void AnimationJS::SetSpeed(NapiApi::FunctionContext<float>& ctx)
     if (auto a = interface_cast<META_NS::IAnimation>(GetNativeObject())) {
         using namespace META_NS;
         if (!speedModifier_) {
-            speedModifier_ =
-                GetObjectRegistry().Create<AnimationModifiers::ISpeed>(ClassId::SpeedAnimationModifier);
+            speedModifier_ = GetObjectRegistry().Create<AnimationModifiers::ISpeed>(ClassId::SpeedAnimationModifier);
             interface_cast<IAttach>(a)->Attach(speedModifier_);
         }
         speedModifier_->SpeedFactor()->SetValue(speed);
@@ -245,7 +279,7 @@ napi_value AnimationJS::GetEnabled(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    bool enabled { false };
+    bool enabled{false};
     if (auto a = interface_cast<META_NS::IAnimation>(GetNativeObject())) {
         enabled = a->Enabled()->GetValue();
     }
@@ -279,7 +313,7 @@ napi_value AnimationJS::GetRunning(NapiApi::FunctionContext<>& ctx)
     if (!validateSceneRef()) {
         return ctx.GetUndefined();
     }
-    bool running { false };
+    bool running{false};
     if (auto a = interface_cast<META_NS::IAnimation>(GetNativeObject())) {
         running = a->Running()->GetValue();
     }
@@ -388,6 +422,10 @@ napi_value AnimationJS::Restart(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto a = interface_cast<META_NS::IStartableAnimation>(GetNativeObject())) {
+#if defined(RES_SCHED_ENABLE)
+        static auto pid = getpid();
+        ApplyThemeQoS(pid, GetSceneAdapterTid());
+#endif
         a->Restart();
     }
     return ctx.GetUndefined();
@@ -409,6 +447,10 @@ napi_value AnimationJS::Start(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     if (auto a = interface_cast<META_NS::IStartableAnimation>(GetNativeObject())) {
+#if defined(RES_SCHED_ENABLE)
+        static auto pid = getpid();
+        ApplyThemeQoS(pid, GetSceneAdapterTid());
+#endif
         a->Start();
     }
     return ctx.GetUndefined();

@@ -33,8 +33,8 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 inline constexpr Size2D LocalClamp(const Size2D val, const Size2D minVal, const Size2D maxVal)
 {
-    return Size2D { Math::max(minVal.width, Math::min(val.width, maxVal.width)),
-        Math::max(minVal.height, Math::min(val.height, maxVal.height)) };
+    return Size2D{Math::max(minVal.width, Math::min(val.width, maxVal.width)),
+        Math::max(minVal.height, Math::min(val.height, maxVal.height))};
 }
 
 inline Size2D ClampShadingRateAttachmentTexelSize(const DeviceVk& deviceVk, const Size2D val)
@@ -63,17 +63,17 @@ void CreateAttachmentDescriptions(const array_view<const RenderPassDesc::Attachm
         const ImageLayout finalLayout = *itFinalImageLayouts++;
         PLUGIN_ASSERT(compatibilityAttachmentRef.format != VkFormat::VK_FORMAT_UNDEFINED);
 
-        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
+        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags{0};
         *itNewAttachments++ = {
-            attachmentDescriptionFlags,                        // flags
-            compatibilityAttachmentRef.format,                 // format
-            compatibilityAttachmentRef.sampleCountFlags,       // samples
-            (VkAttachmentLoadOp)attachmentRef.loadOp,          // loadOp
-            (VkAttachmentStoreOp)attachmentRef.storeOp,        // storeOp
-            (VkAttachmentLoadOp)attachmentRef.stencilLoadOp,   // stencilLoadOp
-            (VkAttachmentStoreOp)attachmentRef.stencilStoreOp, // stencilStoreOp
-            (VkImageLayout)initialLayout,                      // initialLayout
-            (VkImageLayout)finalLayout,                        // finalLayout
+            attachmentDescriptionFlags,                         // flags
+            compatibilityAttachmentRef.format,                  // format
+            compatibilityAttachmentRef.sampleCountFlags,        // samples
+            (VkAttachmentLoadOp)attachmentRef.loadOp,           // loadOp
+            (VkAttachmentStoreOp)attachmentRef.storeOp,         // storeOp
+            (VkAttachmentLoadOp)attachmentRef.stencilLoadOp,    // stencilLoadOp
+            (VkAttachmentStoreOp)attachmentRef.stencilStoreOp,  // stencilStoreOp
+            (VkImageLayout)initialLayout,                       // initialLayout
+            (VkImageLayout)finalLayout,                         // finalLayout
         };
     }
 }
@@ -101,19 +101,19 @@ void CreateAttachmentDescriptions2(const array_view<const RenderPassDesc::Attach
         }
 #endif
 
-        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
+        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags{0};
         *itNewAttachments++ = {
-            VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2_KHR,    // sType
-            nullptr,                                           // pNext
-            attachmentDescriptionFlags,                        // flags
-            compatibilityAttachmentRef.format,                 // format
-            compatibilityAttachmentRef.sampleCountFlags,       // samples
-            (VkAttachmentLoadOp)attachmentRef.loadOp,          // loadOp
-            (VkAttachmentStoreOp)attachmentRef.storeOp,        // storeOp
-            (VkAttachmentLoadOp)attachmentRef.stencilLoadOp,   // stencilLoadOp
-            (VkAttachmentStoreOp)attachmentRef.stencilStoreOp, // stencilStoreOp
-            (VkImageLayout)initialLayout,                      // initialLayout
-            (VkImageLayout)finalLayout,                        // finalLayout
+            VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2_KHR,     // sType
+            nullptr,                                            // pNext
+            attachmentDescriptionFlags,                         // flags
+            compatibilityAttachmentRef.format,                  // format
+            compatibilityAttachmentRef.sampleCountFlags,        // samples
+            (VkAttachmentLoadOp)attachmentRef.loadOp,           // loadOp
+            (VkAttachmentStoreOp)attachmentRef.storeOp,         // storeOp
+            (VkAttachmentLoadOp)attachmentRef.stencilLoadOp,    // stencilLoadOp
+            (VkAttachmentStoreOp)attachmentRef.stencilStoreOp,  // stencilStoreOp
+            (VkImageLayout)initialLayout,                       // initialLayout
+            (VkImageLayout)finalLayout,                         // finalLayout
         };
     }
 }
@@ -129,17 +129,17 @@ void CreateAttachmentDescriptionsCompatibility(const array_view<const RenderPass
         const auto& compatibilityAttachmentRef = compatibilityAttachmentDescs[idx];
         PLUGIN_ASSERT(compatibilityAttachmentRef.format != VkFormat::VK_FORMAT_UNDEFINED);
 
-        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
+        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags{0};
         *itNewAttachments++ = {
-            attachmentDescriptionFlags,                            // flags
-            compatibilityAttachmentRef.format,                     // format
-            compatibilityAttachmentRef.sampleCountFlags,           // samples
-            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // loadOp
-            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE, // storeOp
-            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // stencilLoadOp
-            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencilStoreOp
-            VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,              // initialLayout
-            VkImageLayout::VK_IMAGE_LAYOUT_GENERAL,                // finalLayout
+            attachmentDescriptionFlags,                             // flags
+            compatibilityAttachmentRef.format,                      // format
+            compatibilityAttachmentRef.sampleCountFlags,            // samples
+            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,    // loadOp
+            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE,  // storeOp
+            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,    // stencilLoadOp
+            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE,  // stencilStoreOp
+            VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,               // initialLayout
+            VkImageLayout::VK_IMAGE_LAYOUT_GENERAL,                 // finalLayout
         };
     }
 }
@@ -158,25 +158,25 @@ void CreateAttachmentDescriptionsCompatibility2(const array_view<const RenderPas
             PLUGIN_LOG_E("RENDER_VALIDATION: VK_FORMAT_UNDEFINED with PSO attachment descriptions");
         }
 #endif
-        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags { 0 };
+        constexpr VkAttachmentDescriptionFlags attachmentDescriptionFlags{0};
         *itNewAttachments++ = {
-            VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2_KHR,        // sType
-            nullptr,                                               // pNext
-            attachmentDescriptionFlags,                            // flags
-            compatibilityAttachmentRef.format,                     // format
-            compatibilityAttachmentRef.sampleCountFlags,           // samples
-            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // loadOp
-            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE, // storeOp
-            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // stencilLoadOp
-            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencilStoreOp
-            VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,              // initialLayout
-            VkImageLayout::VK_IMAGE_LAYOUT_GENERAL,                // finalLayout
+            VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2_KHR,         // sType
+            nullptr,                                                // pNext
+            attachmentDescriptionFlags,                             // flags
+            compatibilityAttachmentRef.format,                      // format
+            compatibilityAttachmentRef.sampleCountFlags,            // samples
+            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,    // loadOp
+            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE,  // storeOp
+            VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE,    // stencilLoadOp
+            VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE,  // stencilStoreOp
+            VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,               // initialLayout
+            VkImageLayout::VK_IMAGE_LAYOUT_GENERAL,                 // finalLayout
         };
     }
 }
 
 void CreateAttachmentReferences(const uint32_t* attachmentIndices,
-    const ImageLayout* layouts, // can be null if compatibility
+    const ImageLayout* layouts,  // can be null if compatibility
     const uint32_t attachmentCount, const uint32_t attachmentStartIndex, const bool createCompatibility,
     VkAttachmentReference* newAttachments)
 {
@@ -193,14 +193,14 @@ void CreateAttachmentReferences(const uint32_t* attachmentIndices,
             imageLayout = (VkImageLayout)layouts[attachmentIndex];
         }
         newAttachments[attachmentStartIndex + idx] = {
-            attachmentIndex, // attachment
-            imageLayout,     // layout
+            attachmentIndex,  // attachment
+            imageLayout,      // layout
         };
     }
 }
 
 void CreateAttachmentReferences2(const uint32_t* attachmentIndices,
-    const ImageLayout* layouts, // null if compatibility
+    const ImageLayout* layouts,  // null if compatibility
     const array_view<const LowLevelRenderPassCompatibilityDescVk::Attachment> compatibilityAttachmentDescs,
     const uint32_t attachmentCount, const uint32_t attachmentStartIndex, const bool createCompatibility,
     VkAttachmentReference2KHR* newAttachments)
@@ -220,11 +220,11 @@ void CreateAttachmentReferences2(const uint32_t* attachmentIndices,
             imageLayout = (VkImageLayout)layouts[attachmentIndex];
         }
         newAttachments[attachmentStartIndex + idx] = {
-            VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2_KHR, // sType
-            nullptr,                                      // pNext
-            attachmentIndex,                              // attachment
-            imageLayout,                                  // layout
-            imageAspectFlags,                             // aspectMask
+            VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2_KHR,  // sType
+            nullptr,                                       // pNext
+            attachmentIndex,                               // attachment
+            imageLayout,                                   // layout
+            imageAspectFlags,                              // aspectMask
         };
     }
 }
@@ -233,7 +233,7 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
     const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc> subpassDescs,
     const RenderPassAttachmentResourceStates* subpassResourceStates,
     const RenderPassAttachmentResourceStates* inputResourceStates,
-    const RenderPassImageLayouts* imageLayouts, // null when using compatibility
+    const RenderPassImageLayouts* imageLayouts,  // null when using compatibility
     const uint32_t maxAttachmentReferenceCountPerSubpass, const bool createRenderPassCompatibility,
     RenderPassCreatorVk::RenderPassStorage1& rps1)
 {
@@ -286,24 +286,35 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
             (createRenderPassCompatibility) ? nullptr : subpassResourceStates[subpassIdx].layouts;
         if (subpassDesc.inputAttachmentCount > 0) {
             inputAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences(subpassDesc.inputAttachmentIndices, layouts, subpassDesc.inputAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences(subpassDesc.inputAttachmentIndices,
+                layouts,
+                subpassDesc.inputAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.inputAttachmentCount;
         }
 
         VkAttachmentReference* colorAttachments = nullptr;
         if (subpassDesc.colorAttachmentCount > 0) {
             colorAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences(subpassDesc.colorAttachmentIndices, layouts, subpassDesc.colorAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences(subpassDesc.colorAttachmentIndices,
+                layouts,
+                subpassDesc.colorAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.colorAttachmentCount;
         }
 
         VkAttachmentReference* resolveAttachments = nullptr;
         if (subpassDesc.resolveAttachmentCount > 0) {
             resolveAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences(subpassDesc.resolveAttachmentIndices, layouts,
-                subpassDesc.resolveAttachmentCount, referenceIndex, createRenderPassCompatibility,
+            CreateAttachmentReferences(subpassDesc.resolveAttachmentIndices,
+                layouts,
+                subpassDesc.resolveAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.resolveAttachmentCount;
         }
@@ -312,8 +323,12 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
         VkAttachmentReference* depthAttachment = nullptr;
         if (subpassDesc.depthAttachmentCount > 0) {
             depthAttachment = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences(&subpassDesc.depthAttachmentIndex, layouts, subpassDesc.depthAttachmentCount,
-                referenceIndex, createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences(&subpassDesc.depthAttachmentIndex,
+                layouts,
+                subpassDesc.depthAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.depthAttachmentCount;
         }
 
@@ -322,18 +337,18 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
             hasMultiView = true;
         }
 
-        constexpr VkSubpassDescriptionFlags subpassDescriptionFlags { 0 };
+        constexpr VkSubpassDescriptionFlags subpassDescriptionFlags{0};
         subpassDescriptions[subpassIdx] = {
-            subpassDescriptionFlags,                              // flags
-            VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
-            subpassDesc.inputAttachmentCount,                     // inputAttachmentCount
-            inputAttachments,                                     // pInputAttachments
-            subpassDesc.colorAttachmentCount,                     // colorAttachmentCount
-            colorAttachments,                                     // pColorAttachments
-            resolveAttachments,                                   // pResolveAttachments
-            depthAttachment,                                      // pDepthStencilAttachment
-            0,                                                    // preserveAttachmentCount
-            nullptr,                                              // pPreserveAttachments
+            subpassDescriptionFlags,                               // flags
+            VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,  // pipelineBindPoint
+            subpassDesc.inputAttachmentCount,                      // inputAttachmentCount
+            inputAttachments,                                      // pInputAttachments
+            subpassDesc.colorAttachmentCount,                      // colorAttachmentCount
+            colorAttachments,                                      // pColorAttachments
+            resolveAttachments,                                    // pResolveAttachments
+            depthAttachment,                                       // pDepthStencilAttachment
+            0,                                                     // preserveAttachmentCount
+            nullptr,                                               // pPreserveAttachments
         };
 
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -355,16 +370,16 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
             srcResourceStates = &dstResourceStates;
         }
 
-        constexpr VkDependencyFlags dependencyFlags { VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT };
+        constexpr VkDependencyFlags dependencyFlags{VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT};
         const uint32_t dstSubpass = subpassIdx;
         subpassDependencies[subpassIdx] = {
-            srcSubpass,      // srcSubpass
-            subpassIdx,      // dstSubpass
-            srcStageMask,    // srcStageMask
-            dstStageMask,    // dstStageMask
-            srcAccessMask,   // srcAccessMask
-            dstAccessMask,   // dstAccessMask
-            dependencyFlags, // dependencyFlags
+            srcSubpass,       // srcSubpass
+            subpassIdx,       // dstSubpass
+            srcStageMask,     // srcStageMask
+            dstStageMask,     // dstStageMask
+            srcAccessMask,    // srcAccessMask
+            dstAccessMask,    // dstAccessMask
+            dependencyFlags,  // dependencyFlags
         };
         srcSubpass = dstSubpass;
     }
@@ -374,36 +389,36 @@ VkRenderPass CreateRenderPassCombined(const DeviceVk& deviceVk, const RenderPass
     if (hasMultiView && deviceVk.GetCommonDeviceExtensions().multiView) {
         PLUGIN_ASSERT(renderPassDesc.subpassCount == static_cast<uint32_t>(multiViewMasks.size()));
         multiViewCreateInfo = {
-            VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO, // sType
-            nullptr,                                             // pNext
-            renderPassDesc.subpassCount,                         // subpassCount
-            multiViewMasks.data(),                               // pViewMasks
-            0u,                                                  // dependencyCount
-            nullptr,                                             // pViewOffsets
-            0u,                                                  // correlationMaskCount
-            nullptr,                                             // pCorrelationMasks
+            VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO,  // sType
+            nullptr,                                              // pNext
+            renderPassDesc.subpassCount,                          // subpassCount
+            multiViewMasks.data(),                                // pViewMasks
+            0u,                                                   // dependencyCount
+            nullptr,                                              // pViewOffsets
+            0u,                                                   // correlationMaskCount
+            nullptr,                                              // pCorrelationMasks
         };
         pMultiviewCreateInfo = &multiViewCreateInfo;
     }
 
-    constexpr VkRenderPassCreateFlags renderPassCreateFlags { 0 };
-    const VkRenderPassCreateInfo renderPassCreateInfo {
-        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
-        pMultiviewCreateInfo,                      // pNext
-        renderPassCreateFlags,                     // flags
-        attachmentCount,                           // attachmentCount
-        attachmentDescriptions,                    // pAttachments
-        (uint32_t)subpassDescriptions.size(),      // subpassCount
-        subpassDescriptions.data(),                // pSubpasses
-        (uint32_t)subpassDependencies.size(),      // dependencyCount
-        subpassDependencies.data(),                // pDependencies
+    constexpr VkRenderPassCreateFlags renderPassCreateFlags{0};
+    const VkRenderPassCreateInfo renderPassCreateInfo{
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,  // sType
+        pMultiviewCreateInfo,                       // pNext
+        renderPassCreateFlags,                      // flags
+        attachmentCount,                            // attachmentCount
+        attachmentDescriptions,                     // pAttachments
+        (uint32_t)subpassDescriptions.size(),       // subpassCount
+        subpassDescriptions.data(),                 // pSubpasses
+        (uint32_t)subpassDependencies.size(),       // dependencyCount
+        subpassDependencies.data(),                 // pDependencies
     };
 
-    VkRenderPass renderPass { VK_NULL_HANDLE };
-    VALIDATE_VK_RESULT(vkCreateRenderPass(device, // device
-        &renderPassCreateInfo,                    // pCreateInfo
-        nullptr,                                  // pAllocator
-        &renderPass));                            // pRenderPass
+    VkRenderPass renderPass{VK_NULL_HANDLE};
+    VALIDATE_VK_RESULT(vkCreateRenderPass(device,  // device
+        &renderPassCreateInfo,                     // pCreateInfo
+        nullptr,                                   // pAllocator
+        &renderPass));                             // pRenderPass
 
     return renderPass;
 }
@@ -412,7 +427,7 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
     const LowLevelRenderPassDataVk& lowLevelRenderPassData, const array_view<const RenderPassSubpassDesc> subpassDescs,
     const RenderPassAttachmentResourceStates* subpassResourceStates,
     const RenderPassAttachmentResourceStates* inputResourceStates,
-    const RenderPassImageLayouts* imageLayouts, // null when using compatibility
+    const RenderPassImageLayouts* imageLayouts,  // null when using compatibility
     const uint32_t maxAttachmentReferenceCountPerSubpass, const bool createRenderPassCompatibility,
     RenderPassCreatorVk::RenderPassStorage2& rps2)
 {
@@ -468,8 +483,12 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
             (createRenderPassCompatibility) ? nullptr : subpassResourceStates[subpassIdx].layouts;
         if (subpassDesc.inputAttachmentCount > 0) {
             inputAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.inputAttachmentIndices, layouts, compatibilityAttachments,
-                subpassDesc.inputAttachmentCount, referenceIndex, createRenderPassCompatibility,
+            CreateAttachmentReferences2(subpassDesc.inputAttachmentIndices,
+                layouts,
+                compatibilityAttachments,
+                subpassDesc.inputAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.inputAttachmentCount;
         }
@@ -477,8 +496,12 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         VkAttachmentReference2KHR* colorAttachments = nullptr;
         if (subpassDesc.colorAttachmentCount > 0) {
             colorAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.colorAttachmentIndices, layouts, compatibilityAttachments,
-                subpassDesc.colorAttachmentCount, referenceIndex, createRenderPassCompatibility,
+            CreateAttachmentReferences2(subpassDesc.colorAttachmentIndices,
+                layouts,
+                compatibilityAttachments,
+                subpassDesc.colorAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.colorAttachmentCount;
         }
@@ -486,8 +509,12 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         VkAttachmentReference2KHR* resolveAttachments = nullptr;
         if (subpassDesc.resolveAttachmentCount > 0) {
             resolveAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(subpassDesc.resolveAttachmentIndices, layouts, compatibilityAttachments,
-                subpassDesc.resolveAttachmentCount, referenceIndex, createRenderPassCompatibility,
+            CreateAttachmentReferences2(subpassDesc.resolveAttachmentIndices,
+                layouts,
+                compatibilityAttachments,
+                subpassDesc.resolveAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.resolveAttachmentCount;
         }
@@ -498,9 +525,13 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
         if (subpassDesc.fragmentShadingRateAttachmentCount > 0) {
             VkAttachmentReference2KHR* fragmentShadingRateAttachments = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(&subpassDesc.fragmentShadingRateAttachmentIndex, layouts,
-                compatibilityAttachments, subpassDesc.fragmentShadingRateAttachmentCount, referenceIndex,
-                createRenderPassCompatibility, attachmentReferences.data());
+            CreateAttachmentReferences2(&subpassDesc.fragmentShadingRateAttachmentIndex,
+                layouts,
+                compatibilityAttachments,
+                subpassDesc.fragmentShadingRateAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
+                attachmentReferences.data());
             referenceIndex += subpassDesc.fragmentShadingRateAttachmentCount;
 
             VkFragmentShadingRateAttachmentInfoKHR& fragmentShadingRateAttachmentInfo =
@@ -508,7 +539,7 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
             fragmentShadingRateAttachmentInfo.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
             fragmentShadingRateAttachmentInfo.pNext = nullptr;
             const Size2D srats = ClampShadingRateAttachmentTexelSize(deviceVk, subpassDesc.shadingRateTexelSize);
-            fragmentShadingRateAttachmentInfo.shadingRateAttachmentTexelSize = { srats.width, srats.height };
+            fragmentShadingRateAttachmentInfo.shadingRateAttachmentTexelSize = {srats.width, srats.height};
             fragmentShadingRateAttachmentInfo.pFragmentShadingRateAttachment = fragmentShadingRateAttachments;
             if (!pFirstExt) {
                 pFirstExt = &fragmentShadingRateAttachmentInfo;
@@ -524,8 +555,12 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
         VkAttachmentReference2KHR* depthAttachment = nullptr;
         if (subpassDesc.depthAttachmentCount > 0) {
             depthAttachment = &attachmentReferences[referenceIndex];
-            CreateAttachmentReferences2(&subpassDesc.depthAttachmentIndex, layouts, compatibilityAttachments,
-                subpassDesc.depthAttachmentCount, referenceIndex, createRenderPassCompatibility,
+            CreateAttachmentReferences2(&subpassDesc.depthAttachmentIndex,
+                layouts,
+                compatibilityAttachments,
+                subpassDesc.depthAttachmentCount,
+                referenceIndex,
+                createRenderPassCompatibility,
                 attachmentReferences.data());
             referenceIndex += subpassDesc.depthAttachmentCount;
             // cannot resolve mode NONE
@@ -533,8 +568,12 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
                 (subpassDesc.depthResolveModeFlags || subpassDesc.stencilResolveModeFlags)) {
                 VkAttachmentReference2KHR* depthResolveAttachment = nullptr;
                 depthResolveAttachment = &attachmentReferences[referenceIndex];
-                CreateAttachmentReferences2(&subpassDesc.depthResolveAttachmentIndex, layouts, compatibilityAttachments,
-                    subpassDesc.depthResolveAttachmentCount, referenceIndex, createRenderPassCompatibility,
+                CreateAttachmentReferences2(&subpassDesc.depthResolveAttachmentIndex,
+                    layouts,
+                    compatibilityAttachments,
+                    subpassDesc.depthResolveAttachmentCount,
+                    referenceIndex,
+                    createRenderPassCompatibility,
                     attachmentReferences.data());
                 referenceIndex += subpassDesc.depthResolveAttachmentCount;
                 VkSubpassDescriptionDepthStencilResolveKHR& subpassDescriptionDepthStencilResolve =
@@ -559,21 +598,21 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
             }
         }
 
-        constexpr VkSubpassDescriptionFlags subpassDescriptionFlags { 0 };
+        constexpr VkSubpassDescriptionFlags subpassDescriptionFlags{0};
         subpassDescriptions[subpassIdx] = {
-            VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2_KHR,          // sType
-            pFirstExt,                                            // pNext
-            subpassDescriptionFlags,                              // flags
-            VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
-            supportsMultiView ? subpassDesc.viewMask : 0,         // viewMask
-            subpassDesc.inputAttachmentCount,                     // inputAttachmentCount
-            inputAttachments,                                     // pInputAttachments
-            subpassDesc.colorAttachmentCount,                     // colorAttachmentCount
-            colorAttachments,                                     // pColorAttachments
-            resolveAttachments,                                   // pResolveAttachments
-            depthAttachment,                                      // pDepthStencilAttachment
-            0,                                                    // preserveAttachmentCount
-            nullptr,                                              // pPreserveAttachments
+            VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2_KHR,           // sType
+            pFirstExt,                                             // pNext
+            subpassDescriptionFlags,                               // flags
+            VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,  // pipelineBindPoint
+            supportsMultiView ? subpassDesc.viewMask : 0,          // viewMask
+            subpassDesc.inputAttachmentCount,                      // inputAttachmentCount
+            inputAttachments,                                      // pInputAttachments
+            subpassDesc.colorAttachmentCount,                      // colorAttachmentCount
+            colorAttachments,                                      // pColorAttachments
+            resolveAttachments,                                    // pResolveAttachments
+            depthAttachment,                                       // pDepthStencilAttachment
+            0,                                                     // preserveAttachmentCount
+            nullptr,                                               // pPreserveAttachments
         };
 
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -595,49 +634,49 @@ VkRenderPass CreateRenderPassCombined2(const DeviceVk& deviceVk, const RenderPas
             srcResourceStates = &dstResourceStates;
         }
 
-        constexpr VkDependencyFlags dependencyFlags { VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT };
+        constexpr VkDependencyFlags dependencyFlags{VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT};
         const uint32_t dstSubpass = subpassIdx;
         subpassDependencies[subpassIdx] = {
-            VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2_KHR, // sType
-            nullptr,                                    // pNext
-            srcSubpass,                                 // srcSubpass
-            subpassIdx,                                 // dstSubpass
-            srcStageMask,                               // srcStageMask
-            dstStageMask,                               // dstStageMask
-            srcAccessMask,                              // srcAccessMask
-            dstAccessMask,                              // dstAccessMask
-            dependencyFlags,                            // dependencyFlags
-            0,                                          // viewOffset
+            VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2_KHR,  // sType
+            nullptr,                                     // pNext
+            srcSubpass,                                  // srcSubpass
+            subpassIdx,                                  // dstSubpass
+            srcStageMask,                                // srcStageMask
+            dstStageMask,                                // dstStageMask
+            srcAccessMask,                               // srcAccessMask
+            dstAccessMask,                               // dstAccessMask
+            dependencyFlags,                             // dependencyFlags
+            0,                                           // viewOffset
         };
         srcSubpass = dstSubpass;
     }
 
-    constexpr VkRenderPassCreateFlags renderPassCreateFlags { 0 };
-    const VkRenderPassCreateInfo2KHR renderPassCreateInfo {
-        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2_KHR, // sType
-        nullptr,                                         // pNext
-        renderPassCreateFlags,                           // flags
-        attachmentCount,                                 // attachmentCount
-        attachmentDescriptions,                          // pAttachments
-        (uint32_t)subpassDescriptions.size(),            // subpassCount
-        subpassDescriptions.data(),                      // pSubpasses
-        (uint32_t)subpassDependencies.size(),            // dependencyCount
-        subpassDependencies.data(),                      // pDependencies
-        0u,                                              // correlatedViewMaskCount
-        nullptr,                                         // pCorrelatedViewMasks
+    constexpr VkRenderPassCreateFlags renderPassCreateFlags{0};
+    const VkRenderPassCreateInfo2KHR renderPassCreateInfo{
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2_KHR,  // sType
+        nullptr,                                          // pNext
+        renderPassCreateFlags,                            // flags
+        attachmentCount,                                  // attachmentCount
+        attachmentDescriptions,                           // pAttachments
+        (uint32_t)subpassDescriptions.size(),             // subpassCount
+        subpassDescriptions.data(),                       // pSubpasses
+        (uint32_t)subpassDependencies.size(),             // dependencyCount
+        subpassDependencies.data(),                       // pDependencies
+        0u,                                               // correlatedViewMaskCount
+        nullptr,                                          // pCorrelatedViewMasks
     };
 
-    VkRenderPass renderPass { VK_NULL_HANDLE };
+    VkRenderPass renderPass{VK_NULL_HANDLE};
     const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
-    PLUGIN_ASSERT(extFunctions.vkCreateRenderPass2KHR);            // required here
-    VALIDATE_VK_RESULT(extFunctions.vkCreateRenderPass2KHR(device, // device
-        &renderPassCreateInfo,                                     // pCreateInfo
-        nullptr,                                                   // pAllocator
-        &renderPass));                                             // pRenderPass
+    PLUGIN_ASSERT(extFunctions.vkCreateRenderPass2KHR);             // required here
+    VALIDATE_VK_RESULT(extFunctions.vkCreateRenderPass2KHR(device,  // device
+        &renderPassCreateInfo,                                      // pCreateInfo
+        nullptr,                                                    // pAllocator
+        &renderPass));                                              // pRenderPass
 
     return renderPass;
 }
-} // namespace
+}  // namespace
 
 VkRenderPass RenderPassCreatorVk::CreateRenderPass(const DeviceVk& deviceVk,
     const RenderCommandBeginRenderPass& beginRenderPass, const LowLevelRenderPassDataVk& lowLevelRenderPassData)
@@ -655,15 +694,27 @@ VkRenderPass RenderPassCreatorVk::CreateRenderPass(const DeviceVk& deviceVk,
     const DeviceVk::CommonDeviceExtensions& deviceExtensions = deviceVk.GetCommonDeviceExtensions();
     // use renderPass2 when ever the extension is present (to make extensions work)
     if (deviceExtensions.renderPass2) {
-        return CreateRenderPassCombined2(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
-            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
-            &beginRenderPass.inputResourceStates, &beginRenderPass.imageLayouts, maxAttachmentReferenceCountPerSubpass,
-            false, rps2_);
+        return CreateRenderPassCombined2(deviceVk,
+            beginRenderPass.renderPassDesc,
+            lowLevelRenderPassData,
+            beginRenderPass.subpasses,
+            beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates,
+            &beginRenderPass.imageLayouts,
+            maxAttachmentReferenceCountPerSubpass,
+            false,
+            rps2_);
     } else {
-        return CreateRenderPassCombined(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
-            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
-            &beginRenderPass.inputResourceStates, &beginRenderPass.imageLayouts, maxAttachmentReferenceCountPerSubpass,
-            false, rps1_);
+        return CreateRenderPassCombined(deviceVk,
+            beginRenderPass.renderPassDesc,
+            lowLevelRenderPassData,
+            beginRenderPass.subpasses,
+            beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates,
+            &beginRenderPass.imageLayouts,
+            maxAttachmentReferenceCountPerSubpass,
+            false,
+            rps1_);
     }
 }
 
@@ -683,13 +734,27 @@ VkRenderPass RenderPassCreatorVk::CreateRenderPassCompatibility(const DeviceVk& 
     const DeviceVk::CommonDeviceExtensions& deviceExtensions = deviceVk.GetCommonDeviceExtensions();
     // use renderPass2 when ever the extension is present (to make extensions work)
     if (deviceExtensions.renderPass2) {
-        return CreateRenderPassCombined2(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
-            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
-            &beginRenderPass.inputResourceStates, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps2_);
+        return CreateRenderPassCombined2(deviceVk,
+            beginRenderPass.renderPassDesc,
+            lowLevelRenderPassData,
+            beginRenderPass.subpasses,
+            beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates,
+            nullptr,
+            maxAttachmentReferenceCountPerSubpass,
+            true,
+            rps2_);
     } else {
-        return CreateRenderPassCombined(deviceVk, beginRenderPass.renderPassDesc, lowLevelRenderPassData,
-            beginRenderPass.subpasses, beginRenderPass.subpassResourceStates.data(),
-            &beginRenderPass.inputResourceStates, nullptr, maxAttachmentReferenceCountPerSubpass, true, rps1_);
+        return CreateRenderPassCombined(deviceVk,
+            beginRenderPass.renderPassDesc,
+            lowLevelRenderPassData,
+            beginRenderPass.subpasses,
+            beginRenderPass.subpassResourceStates.data(),
+            &beginRenderPass.inputResourceStates,
+            nullptr,
+            maxAttachmentReferenceCountPerSubpass,
+            true,
+            rps1_);
     }
 }
 
@@ -698,9 +763,9 @@ void RenderPassCreatorVk::DestroyRenderPass(VkDevice device, VkRenderPass render
     PLUGIN_ASSERT(device);
     PLUGIN_ASSERT(renderPass);
 
-    vkDestroyRenderPass(device, // device
-        renderPass,             // renderPass
-        nullptr);               // pAllocator
+    vkDestroyRenderPass(device,  // device
+        renderPass,              // renderPass
+        nullptr);                // pAllocator
 }
 
 RENDER_END_NAMESPACE()

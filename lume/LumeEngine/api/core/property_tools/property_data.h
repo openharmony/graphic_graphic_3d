@@ -43,15 +43,15 @@ public:
         {
             return property != nullptr;
         }
-        const Property* property { nullptr };
-        uintptr_t offset { 0U };
-        size_t index { 0 };
+        const Property* property{nullptr};
+        uintptr_t offset{0U};
+        size_t index{0};
     };
 
-    bool WLock(IPropertyHandle& handle);         // no-copy direct-access (Locks the datahandle);
-    bool WUnlock(const IPropertyHandle& handle); // (releases the datahandle lock, and removes ref)
-    bool RLock(const IPropertyHandle& handle);   // no-copy direct-access (Locks the datahandle);
-    bool RUnlock(const IPropertyHandle& handle); // (releases the datahandle lock, and removes ref)
+    bool WLock(IPropertyHandle& handle);          // no-copy direct-access (Locks the datahandle);
+    bool WUnlock(const IPropertyHandle& handle);  // (releases the datahandle lock, and removes ref)
+    bool RLock(const IPropertyHandle& handle);    // no-copy direct-access (Locks the datahandle);
+    bool RUnlock(const IPropertyHandle& handle);  // (releases the datahandle lock, and removes ref)
 
     /**  no-copy direct write access
      * Searches for property and locks the handle
@@ -118,4 +118,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PROPERTY_TOOLS_PROPERTY_DATA_H
+#endif  // API_CORE_PROPERTY_TOOLS_PROPERTY_DATA_H

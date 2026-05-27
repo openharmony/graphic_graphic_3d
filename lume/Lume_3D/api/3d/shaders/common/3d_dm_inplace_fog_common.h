@@ -36,7 +36,7 @@ float CalculateLineIntegral(in FogLayer layer, in float rayDirY, in float rayOri
     const float falloff = max(-127.0f, layer.fallOff * rayDirY);
 
     const float lineIntegral = (1.0f - exp2(-falloff)) / falloff;
-    const float lineIntegralTaylor = log(2.0) - (0.5 * (log(2.0) * log(2.0))) * falloff; // Taylor expansion around 0
+    const float lineIntegralTaylor = log(2.0) - (0.5 * (log(2.0) * log(2.0))) * falloff;  // Taylor expansion around 0
 
     return layer.density * exp2(-exponent) * (abs(falloff) > epsilon ? lineIntegral : lineIntegralTaylor);
 }
@@ -94,4 +94,4 @@ void InplaceFogBlock(in uint flags, in vec3 worldPos, in vec3 camWorldPos, in ve
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DM_INPLACE_FOG_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_INPLACE_FOG_COMMON_H

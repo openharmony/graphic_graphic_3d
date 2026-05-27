@@ -110,6 +110,7 @@
 #define CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT (1 << 10)
 #define CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT (1 << 11)
 #define CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT (1 << 19)
+#define CORE_MATERIAL_LIGHT_PROBE_RECEIVER_BIT (1 << 21)
 // basic (1 << 12)
 // complex (1 << 13)
 #define CORE_MATERIAL_GPU_INSTANCING_BIT (1 << 14)
@@ -120,20 +121,24 @@
 #define CORE_MATERIAL_SPECULAR_FACTOR_TEXTURE_BIT (1 << 17)
 #define CORE_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT (1 << 18)
 
-// needs to match api/core/render/intf_render_data_store_default_light LightingFlagBits
+// needs to match api/3d/render/intf_render_data_store_default_light LightingFlagBits
 #define CORE_LIGHTING_SHADOW_TYPE_VSM_BIT (1 << 0)
 #define CORE_LIGHTING_POINT_ENABLED_BIT (1 << 1)
 #define CORE_LIGHTING_SPOT_ENABLED_BIT (1 << 2)
 #define CORE_LIGHTING_RECT_ENABLED_BIT (1 << 3)
 #define CORE_LIGHTING_SHADOW_TYPE_VARIABLE_PCF_BIT (1 << 4)
 
-// needs to match LumeEngine/3D/api/3d/render/render_data_defines_3d.h RenderSubmeshFlagBits
+// needs to match api/3d/render/render_data_defines_3d.h RenderSubmeshFlagBits
 #define CORE_SUBMESH_TANGENTS_BIT (1 << 0)
 #define CORE_SUBMESH_VERTEX_COLORS_BIT (1 << 1)
 #define CORE_SUBMESH_SKIN_BIT (1 << 2)
 #define CORE_SUBMESH_SECOND_TEXCOORD_BIT (1 << 3)
-#define CORE_SUBMESH_INVERSE_WINDING_BIT (1 << 4) // usually not controlled in shader
-#define CORE_SUBMESH_VELOCITY_BIT (1 << 5)        // defines that one should calculate correct velocity
+#define CORE_SUBMESH_INVERSE_WINDING_BIT (1 << 4)  // usually not controlled in shader
+#define CORE_SUBMESH_VELOCITY_BIT (1 << 5)         // defines that one should calculate correct velocity
+
+// needs to match api/3d/render/render_data_defines_3d.h RenderMeshFlagBits
+// packed into uMeshMatrix.mesh[i].layers.w (high 32 bits of RenderMeshData::sceneId)
+#define CORE_RENDER_MESH_CONTRIBUTE_GI_BIT (1u << 0u)  // marks the instance as a GI contributor (e.g. light probes)
 
 // needs to match render_data_defines.h LightUsageFlagBits
 #define CORE_LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT (1 << 0)
@@ -146,6 +151,7 @@
 // CORE_CAMERA_FLAGS related to render_data_defines_3d.h CameraShaderFlags
 #define CORE_CAMERA_FOG_BIT (1 << 0)
 #define CORE_CAMERA_VELOCITY_OUT_BIT (1 << 1)
+#define CORE_CAMERA_LIGHT_PROBE_BAKE_BIT (1 << 2)
 
 // needs to match api/core/render/render_data_defines.h BackgroundType
 #define CORE_BACKGROUND_TYPE_IMAGE 1
@@ -187,7 +193,7 @@
 #define LIGHT_CLUSTERS_X 16
 #define LIGHT_CLUSTERS_Y 9
 #define LIGHT_CLUSTERS_Z 24
-#define CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT LIGHT_CLUSTERS_X* LIGHT_CLUSTERS_Y* LIGHT_CLUSTERS_Z
+#define CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT (LIGHT_CLUSTERS_X * LIGHT_CLUSTERS_Y * LIGHT_CLUSTERS_Z)
 #define LIGHT_CLUSTER_TGS 64
 #define CORE_DEFAULT_ENABLE_LIGHT_CLUSTERING 0
 
@@ -202,93 +208,97 @@
 #define CORE_DM_CONSTANT_ID_CAMERA_FLAGS 4
 #define CORE_DM_CONSTANT_ID_ENV_TYPE 5
 #define CORE_DM_CONSTANT_ID_SUBMESH_FLAGS 6
+#define CORE_LIGHT_PROBE_SH_COEFFICIENTS_MAX_COUNT 1024
+#define CORE_MAX_NUM_LIGHT_PROBE_BAKES_PER_ITERATION 24
 
 #else
 
 // aligned for 256 with indices uvec4 bytes
-constexpr uint32_t CORE_MATERIAL_FACTOR_UNIFORM_VEC4_COUNT { 15u };
-constexpr uint32_t CORE_MATERIAL_PACKED_UNIFORM_UVEC4_COUNT { 15u };
+constexpr uint32_t CORE_MATERIAL_FACTOR_UNIFORM_VEC4_COUNT{15u};
+constexpr uint32_t CORE_MATERIAL_PACKED_UNIFORM_UVEC4_COUNT{15u};
 
 // factor indices
-constexpr uint32_t CORE_MATERIAL_FACTOR_BASE_IDX { 0u };
-constexpr uint32_t CORE_MATERIAL_FACTOR_NORMAL_IDX { 1 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_MATERIAL_IDX { 2 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_EMISSIVE_IDX { 3 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_AO_IDX { 4 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_IDX { 5 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_ROUGHNESS_IDX { 6 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_NORMAL_IDX { 7 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_SHEEN_IDX { 8 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_TRANSMISSION_IDX { 9 };
-constexpr uint32_t CORE_MATERIAL_FACTOR_SPECULAR_IDX { 10 };
+constexpr uint32_t CORE_MATERIAL_FACTOR_BASE_IDX{0u};
+constexpr uint32_t CORE_MATERIAL_FACTOR_NORMAL_IDX{1};
+constexpr uint32_t CORE_MATERIAL_FACTOR_MATERIAL_IDX{2};
+constexpr uint32_t CORE_MATERIAL_FACTOR_EMISSIVE_IDX{3};
+constexpr uint32_t CORE_MATERIAL_FACTOR_AO_IDX{4};
+constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_IDX{5};
+constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_ROUGHNESS_IDX{6};
+constexpr uint32_t CORE_MATERIAL_FACTOR_CLEARCOAT_NORMAL_IDX{7};
+constexpr uint32_t CORE_MATERIAL_FACTOR_SHEEN_IDX{8};
+constexpr uint32_t CORE_MATERIAL_FACTOR_TRANSMISSION_IDX{9};
+constexpr uint32_t CORE_MATERIAL_FACTOR_SPECULAR_IDX{10};
 
-constexpr uint32_t CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX { 12 };
+constexpr uint32_t CORE_MATERIAL_FACTOR_MAT_TEX_START_IDX{12};
 
 // packed texture transforms
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX { 0u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_NORMAL_UV_IDX { 1u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_MATERIAL_UV_IDX { 2u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_EMISSIVE_UV_IDX { 3u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_AO_UV_IDX { 4u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_UV_IDX { 5u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX { 6u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX { 7u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX { 8u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_TRANSMISSION_UV_IDX { 9u };
-constexpr uint32_t CORE_MATERIAL_PACK_TEX_SPECULAR_UV_IDX { 10u };
-constexpr uint32_t CORE_MATERIAL_PACK_ADDITIONAL_IDX { 11u };
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_BASE_COLOR_UV_IDX{0u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_NORMAL_UV_IDX{1u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_MATERIAL_UV_IDX{2u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_EMISSIVE_UV_IDX{3u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_AO_UV_IDX{4u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_UV_IDX{5u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX{6u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX{7u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX{8u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_TRANSMISSION_UV_IDX{9u};
+constexpr uint32_t CORE_MATERIAL_PACK_TEX_SPECULAR_UV_IDX{10u};
+constexpr uint32_t CORE_MATERIAL_PACK_ADDITIONAL_IDX{11u};
 
 // matches PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE
-constexpr uint32_t CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT { 256u };
-constexpr uint32_t CORE_UNIFORM_BUFFER_MAX_BIND_SIZE { 1024u * 16u };
+constexpr uint32_t CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT{256u};
+constexpr uint32_t CORE_UNIFORM_BUFFER_MAX_BIND_SIZE{1024u * 16u};
 // 16kB min limit
-constexpr uint32_t CORE_MAX_MESH_MATRIX_UBO_ELEMENT_COUNT { 64u };
-constexpr uint32_t CORE_MAX_MESH_MATRIX_UBO_USER_DATA_COUNT { 2u };
-constexpr uint32_t CORE_MAX_MATERIAL_UBO_ELEMENT_COUNT { 64u };
+constexpr uint32_t CORE_MAX_MESH_MATRIX_UBO_ELEMENT_COUNT{64u};
+constexpr uint32_t CORE_MAX_MESH_MATRIX_UBO_USER_DATA_COUNT{2u};
+constexpr uint32_t CORE_MAX_MATERIAL_UBO_ELEMENT_COUNT{64u};
 
 // 16 * sizeof(uvec4) -> 256 (CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT)
-constexpr uint32_t CORE_MAX_MATERIAL_UBO_USER_DATA_COUNT { 16u };
+constexpr uint32_t CORE_MAX_MATERIAL_UBO_USER_DATA_COUNT{16u};
 
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT { 256u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET { 128u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT{256u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_PREV_JOINT_OFFSET{128u};
 
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT { 64u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT { 15u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT { 16u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT { 8u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT{64u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTER_LIGHT_COUNT{15u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT{16u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT{8u};
 
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT { 9u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT{9u};
 
-constexpr uint32_t CORE_DEFAULT_MATERIAL_TEXTURE_TRANSFORM_COUNT { 5u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_USER_DATA_VEC4_COUNT { 8u };
+constexpr uint32_t CORE_DEFAULT_MATERIAL_TEXTURE_TRANSFORM_COUNT{5u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_USER_DATA_VEC4_COUNT{8u};
 
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_LEFT { 0u };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_RIGHT { 1 };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_BOTTOM { 2 };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_TOP { 3 };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR { 4 };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR { 5 };
-constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT { 6 };
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_LEFT{0u};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_RIGHT{1};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_BOTTOM{2};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_TOP{3};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_NEAR{4};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_FAR{5};
+constexpr uint32_t CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT{6};
 
-constexpr uint32_t CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION { 1u };
+constexpr uint32_t CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION{1u};
 
-constexpr uint32_t LIGHT_CLUSTERS_X { 16u };
-constexpr uint32_t LIGHT_CLUSTERS_Y { 9u };
-constexpr uint32_t LIGHT_CLUSTERS_Z { 24u };
-constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT { LIGHT_CLUSTERS_X * LIGHT_CLUSTERS_Y * LIGHT_CLUSTERS_Z };
-constexpr uint32_t LIGHT_CLUSTER_TGS { 64u };
+constexpr uint32_t LIGHT_CLUSTERS_X{16u};
+constexpr uint32_t LIGHT_CLUSTERS_Y{9u};
+constexpr uint32_t LIGHT_CLUSTERS_Z{24u};
+constexpr uint32_t CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT{LIGHT_CLUSTERS_X * LIGHT_CLUSTERS_Y * LIGHT_CLUSTERS_Z};
+constexpr uint32_t LIGHT_CLUSTER_TGS{64u};
 
-constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_SHIFT { 16U };
-constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MASK { 0xffffU };
-constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MODULO { 4U };
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_SHIFT{16U};
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MASK{0xffffU};
+constexpr uint32_t CORE_MULTI_VIEW_VIEW_INDEX_MODULO{4U};
 
-constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_TYPE { 0 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_FLAGS { 1 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_LIGHTING_FLAGS { 2 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS { 3 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_CAMERA_FLAGS { 4 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_ENV_TYPE { 5 };
-constexpr uint32_t CORE_DM_CONSTANT_ID_SUBMESH_FLAGS { 6 };
+constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_TYPE{0};
+constexpr uint32_t CORE_DM_CONSTANT_ID_MATERIAL_FLAGS{1};
+constexpr uint32_t CORE_DM_CONSTANT_ID_LIGHTING_FLAGS{2};
+constexpr uint32_t CORE_DM_CONSTANT_ID_POST_PROCESS_FLAGS{3};
+constexpr uint32_t CORE_DM_CONSTANT_ID_CAMERA_FLAGS{4};
+constexpr uint32_t CORE_DM_CONSTANT_ID_ENV_TYPE{5};
+constexpr uint32_t CORE_DM_CONSTANT_ID_SUBMESH_FLAGS{6};
+constexpr uint32_t CORE_LIGHT_PROBE_SH_COEFFICIENTS_MAX_COUNT{1024};
+constexpr uint32_t CORE_MAX_NUM_LIGHT_PROBE_BAKES_PER_ITERATION{24U};
 
 #endif
 
@@ -296,12 +306,14 @@ struct DefaultMaterialSingleMeshStruct {
     // currently using offsets in binding CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT
 
     mat4 world;
-    mat4 normalWorld; // NOTE: not implemented yet
+    mat4 normalWorld;  // NOTE: not implemented yet
     mat4 prevWorld;
 
     // .xy render mesh id, .zw mesh id (64 bit id, with 32 bit info usually meaningfull)
     uvec4 indices;
-    // layers, .xy layer mask
+    // .xy layer mask (64 bit), .z scene id (NodeComponent::sceneId, low 32 bits of RenderMeshData::sceneId),
+    // .w per-instance RenderMeshFlagBits (high 32 bits of RenderMeshData::sceneId, e.g.
+    // CORE_RENDER_MESH_CONTRIBUTE_GI_BIT)
     uvec4 layers;
     // custom data
     uvec4 customData[CORE_MAX_MESH_MATRIX_UBO_USER_DATA_COUNT];
@@ -337,6 +349,16 @@ struct DefaultMaterialUserMaterialStruct {
     DefaultMaterialSingleUserMaterialStruct material[CORE_MAX_MATERIAL_UBO_ELEMENT_COUNT];
 };
 
+struct DefaultSingleLightProbeStruct {
+    vec4 shCoefficientsData[CORE_DEFAULT_MATERIAL_MAX_SH_VEC3_VALUE_COUNT];
+    vec4 bentNormalAo;
+};
+
+struct DefaultLightProbeDataIndexStruct {
+    uint lightProbeDataIndex;
+};
+
+// by default GPU instancing enablers are active
 struct DefaultMaterialSingleLightStruct {
     vec4 pos;
     // .w is range (for rect this is x-dir with baked size)
@@ -379,7 +401,7 @@ struct DefaultMaterialLightStruct {
     DefaultMaterialSingleLightStruct lights[CORE_DEFAULT_MATERIAL_MAX_LIGHT_COUNT];
 
     float vpcfRadius;
-    int vpcfSampleCount;
+    uint vpcfSampleCount;
 
     // for byte alignment
     uint paddings0;
@@ -438,7 +460,7 @@ struct DefaultMaterialEnvironmentStruct {
     // .xyz = sun position, .w = is BG_TYPE_SKY flag used
     vec4 packedSun;
 
-    // .x = time of day, .y = moon brightness, .z = glow intensity, .w = skyViewBrightness
+    // .x = time of day, .y = moon brightness, .z = glow intensity, .w = effective sky exposure
     vec4 packedPhases;
 
     // .xyz = groundColor
@@ -447,8 +469,19 @@ struct DefaultMaterialEnvironmentStruct {
     // .x = world scale, .y = max aerial perspective
     vec4 aerialPerspectiveParams;
 
-    // padding to keep DefaultMaterialEnvironmentStruct at 512 bytes
-    vec4 padding[8];
+    // .x = visible sun angular diameter in degrees, .y = opacity
+    vec4 skySunParams;
+    // .rgb = visible sun tint
+    vec4 skySunColor;
+
+    // .x = visible moon angular diameter in degrees, .y = opacity
+    // .z = stars intensity, .w = night sky intensity
+    vec4 skyMoonNightParams;
+    // .rgb = visible moon tint
+    vec4 skyMoonColor;
+
+    // remaining entries keep DefaultMaterialEnvironmentStruct at 512 bytes
+    vec4 padding[4];
 };
 
 struct DefaultMaterialFogStruct {
@@ -743,8 +776,8 @@ uint GetUnpackTexCoordInfo(const DefaultMaterialTransformMaterialStruct dmms)
     return dmms.material[0].packed[CORE_MATERIAL_PACK_ADDITIONAL_IDX].y;
 }
 
-#endif // CORE3D_USE_DEPRECATED_UNPACK_METHODS
+#endif  // CORE3D_USE_DEPRECATED_UNPACK_METHODS
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H
+#endif  // SHADERS_COMMON_3D_DEFAULT_MATERIAL_STRUCTURES_COMMON_H

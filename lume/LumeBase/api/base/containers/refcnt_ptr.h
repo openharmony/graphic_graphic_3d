@@ -20,15 +20,17 @@
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class refcnt_ptr {
 public:
     using pointer = BASE_NS::remove_reference_t<T>*;
     using element_type = T;
 
-    constexpr refcnt_ptr() noexcept {}
+    constexpr refcnt_ptr() noexcept
+    {}
 
-    constexpr refcnt_ptr(nullptr_t) noexcept {}
+    constexpr refcnt_ptr(nullptr_t) noexcept
+    {}
 
     explicit constexpr refcnt_ptr(pointer ptr) noexcept : ptr_(ptr)
     {
@@ -37,15 +39,17 @@ public:
         }
     }
 
-    refcnt_ptr(const refcnt_ptr& ptr) : refcnt_ptr(ptr.get()) {}
+    refcnt_ptr(const refcnt_ptr& ptr) : refcnt_ptr(ptr.get())
+    {}
 
-    template<class U>
+    template <class U>
     refcnt_ptr(const refcnt_ptr<U>& ptr) : refcnt_ptr(static_cast<T*>(ptr.get()))
     {}
 
-    refcnt_ptr(refcnt_ptr&& ptr) noexcept : ptr_(exchange(ptr.ptr_, nullptr)) {}
+    refcnt_ptr(refcnt_ptr&& ptr) noexcept : ptr_(exchange(ptr.ptr_, nullptr))
+    {}
 
-    template<class U>
+    template <class U>
     refcnt_ptr(refcnt_ptr<U>&& ptr) noexcept : ptr_(static_cast<T*>(ptr.release()))
     {}
 
@@ -94,7 +98,7 @@ public:
         return *this;
     }
 
-    template<class U>
+    template <class U>
     refcnt_ptr& operator=(const refcnt_ptr<U>& r) noexcept
     {
         reset(r.get());
@@ -108,7 +112,7 @@ public:
         return *this;
     }
 
-    template<class U>
+    template <class U>
     refcnt_ptr& operator=(refcnt_ptr<U>&& r) noexcept
     {
         reset();
@@ -157,8 +161,8 @@ public:
     }
 
 protected:
-    pointer ptr_ { nullptr };
+    pointer ptr_{nullptr};
 };
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_REFCNT_PTR_H
+#endif  // API_BASE_CONTAINERS_REFCNT_PTR_H

@@ -35,9 +35,9 @@ struct RenderPassSubpassDesc;
 
 struct LowLevelRenderPassCompatibilityDescVk final {
     struct Attachment {
-        VkFormat format { VkFormat::VK_FORMAT_UNDEFINED };
-        VkSampleCountFlagBits sampleCountFlags { VK_SAMPLE_COUNT_1_BIT };
-        VkImageAspectFlags aspectFlags { 0u };
+        VkFormat format{VkFormat::VK_FORMAT_UNDEFINED};
+        VkSampleCountFlagBits sampleCountFlags{VK_SAMPLE_COUNT_1_BIT};
+        VkImageAspectFlags aspectFlags{0u};
     };
     Attachment attachments[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT];
 };
@@ -46,28 +46,28 @@ struct LowLevelRenderPassDataVk final : public LowLevelRenderPassData {
     LowLevelRenderPassCompatibilityDescVk renderPassCompatibilityDesc;
 
     // these are not dynamic state values
-    VkViewport viewport { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    VkRect2D scissor { { 0, 0 }, { 0, 0 } };
-    VkExtent2D framebufferSize { 0, 0 };
-    uint32_t viewMask { 0u };
+    VkViewport viewport{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    VkRect2D scissor{{0, 0}, {0, 0}};
+    VkExtent2D framebufferSize{0, 0};
+    uint32_t viewMask{0u};
 
-    uint64_t renderPassCompatibilityHash { 0 };
-    uint64_t renderPassHash { 0 };
+    uint64_t renderPassCompatibilityHash{0};
+    uint64_t renderPassHash{0};
 
-    VkRenderPass renderPassCompatibility { VK_NULL_HANDLE };
-    VkRenderPass renderPass { VK_NULL_HANDLE };
-    uint32_t subpassIndex { 0u };
+    VkRenderPass renderPassCompatibility{VK_NULL_HANDLE};
+    VkRenderPass renderPass{VK_NULL_HANDLE};
+    uint32_t subpassIndex{0u};
 
-    uint64_t frameBufferHash { 0 };
+    uint64_t frameBufferHash{0};
 
-    VkFramebuffer framebuffer { VK_NULL_HANDLE };
+    VkFramebuffer framebuffer{VK_NULL_HANDLE};
 
-    bool isSwapchain { false };
-    SurfaceTransformFlags surfaceTransformFlags { 0U };
+    bool isSwapchain{false};
+    SurfaceTransformFlags surfaceTransformFlags{0U};
 };
 
 struct LowLevelPipelineLayoutDataVk final : public LowLevelPipelineLayoutData {
-    VkPipelineLayout pipelineLayout { VK_NULL_HANDLE };
+    VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
     PLUGIN_STATIC_ASSERT(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT == 4u);
     LowLevelDescriptorSetVk descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
 };
@@ -109,4 +109,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VUKAN_PIPELINE_CREATE_FUNCTIONS_VK_H
+#endif  // VUKAN_PIPELINE_CREATE_FUNCTIONS_VK_H

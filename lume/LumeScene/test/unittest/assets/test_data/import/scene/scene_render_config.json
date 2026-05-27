@@ -1,0 +1,26 @@
+{
+	"version": "1.0",
+	"description": "test scene with inline renderConfiguration",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_render_config.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root"
+		},
+		"renderConfiguration": {
+			"environment": {
+				"name": "myEnv"
+			},
+			"renderNodeGraphUri": "rng://custom",
+			"postRenderNodeGraphUri": "rng://post",
+			"shadowType": "variablePcf",
+			"shadowQuality": "high",
+			"shadowSmoothness": "soft",
+			"shadowResolution": [2048, 2048],
+			"variablePcfRadius": 2.5,
+			"variablePcfSampleCount": 8
+		}
+	}
+}

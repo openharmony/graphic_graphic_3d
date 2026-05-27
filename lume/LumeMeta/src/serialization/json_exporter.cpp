@@ -57,5 +57,5 @@ void JsonExporter::SetMetadata(SerMetadata m)
     exp_.SetMetadata(BASE_NS::move(m));
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

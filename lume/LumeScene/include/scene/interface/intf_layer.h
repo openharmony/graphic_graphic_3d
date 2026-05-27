@@ -31,9 +31,9 @@ constexpr uint64_t LayerMask(uint16_t bit)
     return 1ULL << bit;
 }
 
-constexpr uint64_t DEFAULT_LAYER_MASK { LayerMask(0) };
-constexpr uint64_t ALL_LAYER_MASK { 0xFFFFFFFFffffffffULL };
-constexpr uint64_t NONE_LAYER_MASK { 0ULL };
+constexpr uint64_t DEFAULT_LAYER_MASK{LayerMask(0)};
+constexpr uint64_t ALL_LAYER_MASK{0xFFFFFFFFffffffffULL};
+constexpr uint64_t NONE_LAYER_MASK{0ULL};
 
 SCENE_END_NAMESPACE()
 

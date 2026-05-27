@@ -1,0 +1,25 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "mesh",
+        "bufferUri": "triangle.bin",
+        "vertexAttributes": [
+            { "semantic": "position", "format": "r32g32b32Sfloat", "stride": 12 }
+        ],
+        "submeshes": [
+            {
+                "vertexCount": 3,
+                "indexCount": 3,
+                "indexType": "uint16",
+                "buffers": [
+                    { "semantic": "position", "offset": 16, "size": 36 }
+                ],
+                "indexBuffer": { "offset": 52, "size": 6 },
+                "aabb": {
+                    "min": [-1.0, -1.0, 0.0],
+                    "max": [1.0, 1.0, 0.0]
+                }
+            }
+        ]
+    }
+}

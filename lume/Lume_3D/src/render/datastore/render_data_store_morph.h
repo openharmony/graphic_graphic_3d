@@ -43,11 +43,14 @@ public:
     void Init(const IRenderDataStoreMorph::ReserveSize& reserveSize);
 
     // IRenderDataStore
-    void PreRender() override {}
+    void PreRender() override
+    {}
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -56,7 +59,7 @@ public:
 
     BASE_NS::string_view GetTypeName() const override
     {
-        return typeName;
+        return TYPE_NAME;
     }
 
     BASE_NS::string_view GetName() const override
@@ -79,7 +82,7 @@ public:
     BASE_NS::array_view<const RenderDataMorph::Submesh> GetSubmeshes() const override;
 
     // for plugin / factory interface
-    static constexpr const char* const typeName = "RenderDataStoreMorph";
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreMorph";
     static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, const char* name);
 
 private:
@@ -87,8 +90,8 @@ private:
 
     BASE_NS::vector<RenderDataMorph::Submesh> submeshes_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_MORPH_H
+#endif  // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_MORPH_H

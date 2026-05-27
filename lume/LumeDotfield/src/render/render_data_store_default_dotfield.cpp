@@ -21,6 +21,7 @@
 
 #include <base/containers/array_view.h>
 #include <core/intf_engine.h>
+#include <core/log.h>
 #include <core/namespace.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/resource_handle.h>
@@ -45,7 +46,8 @@ void RenderDataStoreDefaultDotfield::PostRender()
     bufferData_.currFrameIndex = 1u - bufferData_.currFrameIndex;
 }
 
-void RenderDataStoreDefaultDotfield::Clear() {}
+void RenderDataStoreDefaultDotfield::Clear()
+{}
 
 void RenderDataStoreDefaultDotfield::Ref()
 {
@@ -67,17 +69,31 @@ int32_t RenderDataStoreDefaultDotfield::GetRefCount()
 
 void RenderDataStoreDefaultDotfield::AddDotfieldPrimitive(const RenderDataDefaultDotfield::DotfieldPrimitive& primitive)
 {
+    if (primitives_.size() >= DOTFIELD_EFFECT_MAX_COUNT) {
+        CORE_LOG_E("dotfield: primitive count exceeds DOTFIELD_EFFECT_MAX_COUNT (%u), dropping primitive",
+            DOTFIELD_EFFECT_MAX_COUNT);
+        return;
+    }
+
+    constexpr uint64_t bytesPerDot = sizeof(float) * 2ULL;
+    const uint64_t dotfieldCount = static_cast<uint64_t>(primitive.size.x) * primitive.size.y;
+    if (dotfieldCount == 0 || dotfieldCount > UINT32_MAX / bytesPerDot) {
+        CORE_LOG_E("dotfield: primitive size %ux%u overflows buffer sizing, dropping primitive",
+            primitive.size.x,
+            primitive.size.y);
+        return;
+    }
+    const uint32_t bufferByteSize = static_cast<uint32_t>(bytesPerDot * dotfieldCount);
+
     primitives_.emplace_back(primitive);
 
-    const uint32_t dotfieldCount = primitive.size.x * primitive.size.y;
-
     // data buffers
-    const GpuBufferDesc desc {
+    const GpuBufferDesc desc{
         BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             BufferUsageFlagBits::CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS,
-        static_cast<uint32_t>(sizeof(float) * 2 * dotfieldCount),
+        bufferByteSize,
     };
     RenderDataDefaultDotfield::BufferData::Buffer buffer;
     buffer.dataBuffer[0] = gpuResourceMgr_.Create(desc);
@@ -87,13 +103,13 @@ void RenderDataStoreDefaultDotfield::AddDotfieldPrimitive(const RenderDataDefaul
 
 array_view<RenderDataDefaultDotfield::DotfieldPrimitive> RenderDataStoreDefaultDotfield::GetDotfieldPrimitives()
 {
-    return { primitives_.data(), primitives_.size() };
+    return {primitives_.data(), primitives_.size()};
 }
 
-array_view<const RenderDataDefaultDotfield::DotfieldPrimitive>
-RenderDataStoreDefaultDotfield::GetDotfieldPrimitives() const
+array_view<const RenderDataDefaultDotfield::DotfieldPrimitive> RenderDataStoreDefaultDotfield::GetDotfieldPrimitives()
+    const
 {
-    return { primitives_.data(), primitives_.size() };
+    return {primitives_.data(), primitives_.size()};
 }
 
 void RenderDataStoreDefaultDotfield::RemoveDotfieldPrimitive(const Entity& entity)
@@ -138,4 +154,4 @@ refcnt_ptr<IRenderDataStore> RenderDataStoreDefaultDotfield::Create(IRenderConte
 {
     return refcnt_ptr<IRenderDataStore>(new RenderDataStoreDefaultDotfield(context, name));
 }
-} // namespace Dotfield
+}  // namespace Dotfield

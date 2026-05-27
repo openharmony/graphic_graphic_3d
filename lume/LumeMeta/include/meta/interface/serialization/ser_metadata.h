@@ -29,7 +29,8 @@ using SerMetadata = BASE_NS::vector<SerMetadataEntity>;
 
 struct SerMetadataValues : SerMetadata {
     SerMetadataValues() = default;
-    SerMetadataValues(SerMetadata m) : SerMetadata(BASE_NS::move(m)) {}
+    SerMetadataValues(SerMetadata m) : SerMetadata(BASE_NS::move(m))
+    {}
 
     SerMetadataValues& Set(BASE_NS::string_view key, BASE_NS::string_view data)
     {
@@ -39,7 +40,7 @@ struct SerMetadataValues : SerMetadata {
                 return *this;
             }
         }
-        push_back({ BASE_NS::string(key), BASE_NS::string(data) });
+        push_back({BASE_NS::string(key), BASE_NS::string(data)});
         return *this;
     }
     BASE_NS::string_view Get(BASE_NS::string_view key) const

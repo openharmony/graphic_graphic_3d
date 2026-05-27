@@ -46,20 +46,20 @@ struct BackendExtraGLES : public BackendExtra {
         *WARNING* GLES state caching might cause issues in this case.
         (application can change engine GL state and engine can change application GL state)
     */
-    EGLContext applicationContext { EGL_NO_CONTEXT };
+    EGLContext applicationContext{EGL_NO_CONTEXT};
     /** Shared context If != EGL_NO_CONTEXT the device/engine will create it's own context with context sharing enabled.
      */
-    EGLContext sharedContext { EGL_NO_CONTEXT };
+    EGLContext sharedContext{EGL_NO_CONTEXT};
     /** Display to use */
-    NativeDisplayType display { EGL_DEFAULT_DISPLAY };
+    NativeDisplayType display{EGL_DEFAULT_DISPLAY};
     /** MSAA samples, 0 no MSAA, 4 = 4xMSAA backbuffer, 8 = 8X MSAA */
-    uint32_t MSAASamples { 0 };
+    uint32_t MSAASamples{0};
     /** Alpha bits, request 8 bits of alpha to backbuffer by default */
-    uint32_t alphaBits { 8 };
+    uint32_t alphaBits{8};
     /** Depth bits, request NO depth buffer by default. */
-    uint32_t depthBits { 0 };
+    uint32_t depthBits{0};
     /** Stencil bits, request NO stencil buffer by default. */
-    uint32_t stencilBits { 0 };
+    uint32_t stencilBits{0};
 };
 
 struct DevicePropertiesGLES {
@@ -170,20 +170,20 @@ struct DevicePropertiesGLES {
 /** Device platform data gles */
 struct DevicePlatformDataGLES : DevicePlatformData {
     /** Display */
-    EGLDisplay display { EGL_NO_DISPLAY };
+    EGLDisplay display{EGL_NO_DISPLAY};
     /** Config */
-    EGLConfig config { nullptr };
+    EGLConfig config{nullptr};
     /** Context */
-    EGLContext context { EGL_NO_CONTEXT };
+    EGLContext context{EGL_NO_CONTEXT};
     /** EGL Version */
-    uint32_t majorVersion { 0 };
-    uint32_t minorVersion { 0 };
+    uint32_t majorVersion{0};
+    uint32_t minorVersion{0};
     /** Does EGL have EGL_KHR_gl_colorspace **/
-    bool hasColorSpaceExt { false };
+    bool hasColorSpaceExt{false};
     /** Context created by us, also destroy it */
-    bool contextCreated { false };
+    bool contextCreated{false};
     /** Call eglInitialize/eglTerminate or not */
-    bool eglInitialized { false };
+    bool eglInitialized{false};
     /** Device name reported by the driver. */
     const char* deviceName;
     /** Version string reported by the driver. */
@@ -209,14 +209,14 @@ struct ImageDescGLES : BackendSpecificImageDesc {
     uint32_t bytesperpixel;
 
     /** If non-zero should ba a valid EGLImage handle to be used as the source for the image. */
-    uintptr_t eglImage { 0u };
+    uintptr_t eglImage{0u};
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 };
 
 struct BufferDescGLES : BackendSpecificBufferDesc {
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 };
 
 struct BackendConfigGLES final : BackendConfig {
@@ -232,18 +232,18 @@ struct BackendConfigGLES final : BackendConfig {
 /** Backend extra gl */
 struct BackendExtraGL : public BackendExtra {
     /** MSAA samples, 0 no MSAA, 4 = 4xMSAA backbuffer, 8 = 8X MSAA */
-    uint32_t MSAASamples { 0 };
+    uint32_t MSAASamples{0};
     /** Alpha bits, request 8 bits of alpha to backbuffer by default */
-    uint32_t alphaBits { 8 };
+    uint32_t alphaBits{8};
     /** Depth bits, request NO depth buffer by default. */
-    uint32_t depthBits { 0 };
+    uint32_t depthBits{0};
     /** Stencil bits, request NO stencil buffer by default. */
-    uint32_t stencilBits { 0 };
+    uint32_t stencilBits{0};
 #if _WIN32 || DOXYGEN
     /** Handle to window. If no window is given, backend will try to use the current active window. */
-    HWND window { nullptr };
+    HWND window{nullptr};
     /** Shared context If != nullptr the device/engine will create it's own context with context sharing enabled. */
-    HGLRC sharedContext { nullptr };
+    HGLRC sharedContext{nullptr};
 #endif
 };
 
@@ -414,4 +414,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_GLES_IDEVICE_GLES_H
+#endif  // API_RENDER_GLES_IDEVICE_GLES_H

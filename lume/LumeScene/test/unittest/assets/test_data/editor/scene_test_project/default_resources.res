@@ -1,16 +1,3 @@
-# Copyright (C) 2025 Huawei Device Co., Ltd.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 # Lume Resource Index Version 1
 "project://packages/studio-asset-library/effect/particles/particle_effect_billboard.collection" "" "project://packages/studio-asset-library/effect/particles/particle_effect_billboard.collection" e5c20c22-e646-4b78-9458-39f7c8d32f29 eyIkbWV0YSI6eyJtZXRhLXZlcnNpb24iOiIyLjAiLCJ2ZXJzaW9uIjoiMS4wIiwidHlwZSI6Ik9iamVjdFJlc291cmNlT3B0aW9ucyJ9LCIkcm9vdCI6eyIkY2xhc3NJZCI6IjE5NjIxM2I2LWViNjMtNGEyOS04OWJlLTFlYzEwZWQ2ODU5NiIsIiRjbGFzc05hbWUiOiJPYmplY3RSZXNvdXJjZU9wdGlvbnMiLCIkaW5zdGFuY2VJZCI6IjAwMDIyY2QyLTVlM2MtNjYwOC0zZDhiLTkzMzdmMjg3ZjhhNiIsIl9fYXR0YWNobWVudHMiOltdLCJiYXNlUmVzb3VyY2UubmFtZSI6IiIsImJhc2VSZXNvdXJjZS5ncm91cCI6IiJ9fQ==
 "project://packages/studio-asset-library/environment/dusk/images/Dusk_Env_radiance(spec).ktx" "" "project://packages/studio-asset-library/environment/dusk/images/Dusk_Env_radiance(spec).ktx" 586f9a9d-4041-407e-bbdc-92a2a87f76b0 eyIkbWV0YSI6eyJtZXRhLXZlcnNpb24iOiIyLjAiLCJ2ZXJzaW9uIjoiMS4wIiwidHlwZSI6Ik9iamVjdFJlc291cmNlT3B0aW9ucyJ9LCIkcm9vdCI6eyIkY2xhc3NJZCI6IjE5NjIxM2I2LWViNjMtNGEyOS04OWJlLTFlYzEwZWQ2ODU5NiIsIiRjbGFzc05hbWUiOiJPYmplY3RSZXNvdXJjZU9wdGlvbnMiLCIkaW5zdGFuY2VJZCI6IjAwMDIyY2QyLTVmMDEtODc0NC0xODYxLWQ4ZTEwNjM2ZDlhNCIsIl9fYXR0YWNobWVudHMiOlt7IiRjbGFzc0lkIjoiMTQzNjY3NjItMGM0Ni00MjI1LThiZmMtMTI0MGFiYTQ1N2M2IiwiJGNsYXNzTmFtZSI6IlByb3BlcnR5IiwiJG5hbWUiOiJJbWFnZUxvYWRJbmZvIiwiZGVmYXVsdFZhbHVlIjp7IiRjbGFzc0lkIjoiZDdmMjc0NTEtOGQ2OS0zZjJjLTQyNzUtNjk2Yzc0NDE2ZTc5IiwiJGNsYXNzTmFtZSI6IkFueSIsInZhbHVlIjp7IiRjbGFzc0lkIjoiZDdmMjc0NTEtOGQ2OS0zZjJjLTUwNzItNmY3MDY1NzI3NDc5IiwiJGNsYXNzTmFtZSI6IkltYWdlTG9hZEluZm8iLCIkaW5zdGFuY2VJZCI6IjAwMDIyY2QyLTVmMDMtNmQ5OC02NDUwLWMyMTI5OWYwZDU0NiIsIkxvYWRGbGFncyI6MSwiVXNhZ2VGbGFncyI6NywiTWVtb3J5RmxhZ3MiOjEsIkNyZWF0aW9uRmxhZ3MiOjR9fSwidmFsdWVzIjpbXSwibW9kaWZpZXJzIjpbXX1dLCJiYXNlUmVzb3VyY2UubmFtZSI6IiIsImJhc2VSZXNvdXJjZS5ncm91cCI6IiJ9fQ==

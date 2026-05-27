@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "mesh",
+        "bufferUri": "triangle.bin",
+        "vertexAttributes": [
+            { "semantic": "position", "format": "r32g32b32Sfloat", "stride": 12 },
+            { "semantic": "BOGUS_SEMANTIC", "format": "r32g32b32Sfloat", "stride": 12 }
+        ],
+        "submeshes": [
+            {
+                "vertexCount": 3,
+                "indexCount": 3,
+                "indexType": "uint16",
+                "buffers": [
+                    { "semantic": "position", "offset": 0, "size": 36 }
+                ],
+                "indexBuffer": { "offset": 36, "size": 6 }
+            }
+        ]
+    }
+}

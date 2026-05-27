@@ -22,7 +22,7 @@
 namespace Dotfield {
 class IDotfieldSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "3288bb8a-4d6f-479c-b1b5-aeca5b26522d" };
+    static constexpr BASE_NS::Uid UID{"3288bb8a-4d6f-479c-b1b5-aeca5b26522d"};
 
 protected:
     IDotfieldSystem() = default;
@@ -36,5 +36,5 @@ inline constexpr const char* GetName(const IDotfieldSystem*)
 {
     return "DotfieldSystem";
 }
-} // namespace Dotfield
+}  // namespace Dotfield
 #endif

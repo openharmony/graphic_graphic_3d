@@ -30,9 +30,9 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr string_view IMAGE_NAME_0 { "Image0" };
+static constexpr string_view IMAGE_NAME_0{"Image0"};
 // NOTE: created in render node graph
-static constexpr string_view IMAGE_NAME_1 { "Image1" };
+static constexpr string_view IMAGE_NAME_1{"Image1"};
 
 struct TestResources {
     RenderHandleReference imageHandle0;
@@ -92,7 +92,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         tr.imageHandle0 = er.device->GetGpuResourceManager().Create(IMAGE_NAME_0, imageDesc);
 
         er.engine->TickFrame();
-        er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+        er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
 
         auto imageHandle1 = er.device->GetGpuResourceManager().GetImageHandle(IMAGE_NAME_1);
         auto imageDesc1 = er.device->GetGpuResourceManager().GetImageDescriptor(imageHandle1);
@@ -123,7 +123,7 @@ void TestCreateGpuImagesRenderNode(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -135,7 +135,7 @@ UNIT_TEST(API_GfxCreateGpuImagesRenderNode, GfxCreateGpuImagesRenderNodeTestVulk
 {
     TestCreateGpuImagesRenderNode(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -147,4 +147,4 @@ UNIT_TEST(API_GfxCreateGpuImagesRenderNode, GfxCreateGpuImagesRenderNodeTestOpen
 {
     TestCreateGpuImagesRenderNode(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

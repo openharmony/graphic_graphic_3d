@@ -40,8 +40,8 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr string_view GRAPHICS_IMAGE_NAME { "GraphicsImage" };
-static constexpr string_view COMPUTE_IMAGE_NAME { "ComputeImage" };
+static constexpr string_view GRAPHICS_IMAGE_NAME{"GraphicsImage"};
+static constexpr string_view COMPUTE_IMAGE_NAME{"ComputeImage"};
 static constexpr uint32_t WIDTH = 2U;
 static constexpr uint32_t HEIGHT = 2U;
 static constexpr uint32_t MIP_COUNT = 2U;
@@ -74,9 +74,13 @@ void CreateTestResources(TestData& td)
             static_cast<RenderNodeGraphManager&>(td.engine.context->GetRenderNodeGraphManager());
         RenderNodeManager& renderNodeMgr = renderNodeGraphMgr.GetRenderNodeManager();
         {
-            RenderNodeTypeInfo info { { RenderNodeMipAndLayer::UID }, RenderNodeMipAndLayer::UID,
-                RenderNodeMipAndLayer::TYPE_NAME, RenderNodeMipAndLayer::Create, RenderNodeMipAndLayer::Destroy,
-                RenderNodeMipAndLayer::BACKEND_FLAGS, RenderNodeMipAndLayer::CLASS_TYPE };
+            RenderNodeTypeInfo info{{RenderNodeMipAndLayer::UID},
+                RenderNodeMipAndLayer::UID,
+                RenderNodeMipAndLayer::TYPE_NAME,
+                RenderNodeMipAndLayer::Create,
+                RenderNodeMipAndLayer::Destroy,
+                RenderNodeMipAndLayer::BACKEND_FLAGS,
+                RenderNodeMipAndLayer::CLASS_TYPE};
             renderNodeMgr.AddRenderNodeFactory(info);
         }
     }
@@ -162,9 +166,9 @@ void TickTest(const TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = WIDTH;
                 bufferImageCopy.bufferImageHeight = HEIGHT;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { WIDTH, HEIGHT, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {WIDTH, HEIGHT, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 {
@@ -198,7 +202,7 @@ void TickTest(const TestData& td, int32_t frameCountToTick)
         }
 
         if (idx < (frameCountToTick - 2)) {
-            er.context->GetRenderer().RenderFrame({ &td.renderNodeGraph, 1 });
+            er.context->GetRenderer().RenderFrame({&td.renderNodeGraph, 1});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -220,11 +224,11 @@ void Validate(const TestData& td)
     ASSERT_EQ(NUM_BYTES, td.byteArrayCompute->GetData().size());
     {
         const array_view<uint8_t> data = td.byteArrayGraphics->GetData();
-        const array_view<const uint32_t> outputImageData = { reinterpret_cast<const uint32_t*>(data.data()),
-            data.size_bytes() / 4U };
+        const array_view<const uint32_t> outputImageData = {
+            reinterpret_cast<const uint32_t*>(data.data()), data.size_bytes() / 4U};
 #if RENDER_SAVE_TEST_IMAGES == 1
         UTest::WritePng(GetFileName(td.engine), WIDTH, HEIGHT, 4U, outputImageData.data(), outputImageData.size());
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
         for (uint32_t idx = 0; idx < 4U; ++idx) {
             const uint32_t col = outputImageData[idx];
             ASSERT_EQ(GetOutputColorReference(), col);
@@ -232,8 +236,8 @@ void Validate(const TestData& td)
     }
     {
         const array_view<uint8_t> data = td.byteArrayCompute->GetData();
-        const array_view<const uint32_t> outputImageData = { reinterpret_cast<const uint32_t*>(data.data()),
-            data.size_bytes() / 4U };
+        const array_view<const uint32_t> outputImageData = {
+            reinterpret_cast<const uint32_t*>(data.data()), data.size_bytes() / 4U};
         for (uint32_t idx = 0; idx < 4U; ++idx) {
             const uint32_t col = outputImageData[idx];
             ASSERT_EQ(GetOutputColorReference(), col);
@@ -259,7 +263,7 @@ void TestRenderNodeMipAndLayer(DeviceBackendType backend)
         UTest::DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -271,7 +275,7 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeMipAndLayerTestVulkan, testing::ext::T
 {
     TestRenderNodeMipAndLayer(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -283,4 +287,4 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeMipAndLayerTestOpenGL, testing::ext::T
 {
     TestRenderNodeMipAndLayer(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

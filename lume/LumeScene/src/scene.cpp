@@ -15,6 +15,7 @@
 
 #include "scene.h"
 
+#include <scene/ext/scene_utils.h>
 #include <scene/ext/util.h>
 
 #include <render/intf_render_context.h>
@@ -71,7 +72,7 @@ bool SceneObject::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS:
         // of the Scene. When RenderConfiguration property is initialized, attach the component wrapper into the
         // Scene's root node for it to be available from JS.
         return internal_->RunDirectlyOrInTask([&]() -> bool {
-            if (META_NS::Property<IRenderConfiguration::Ptr> t { p }) {
+            if (META_NS::Property<IRenderConfiguration::Ptr> t{p}) {
                 if (auto root = internal_->GetRootNode()) {
                     if (auto component = internal_->CreateEcsComponent(root, "RenderConfigurationComponent")) {
                         return t->SetValue(interface_pointer_cast<IRenderConfiguration>(component));
@@ -198,7 +199,7 @@ Future<NodeHits> SceneObject::CastRay(
     const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const
 {
     return internal_->AddTaskOrRunDirectly([=] {
-        RayCastOptions ops;
+        RayCastOptions ops = options;
         if (ops.layerMask == NONE_LAYER_MASK) {
             ops.layerMask = ALL_LAYER_MASK;
         }
@@ -212,6 +213,11 @@ Future<NodeHits> SceneObject::CastRay(
 ResourceGroupBundle SceneObject::GetResourceGroups() const
 {
     return internal_->GetResourceGroups();
+}
+CORE_NS::IResource::Ptr SceneObject::GetResource(const CORE_NS::ResourceId& res)
+{
+    auto resources = GetResourceManager(internal_);
+    return resources ? resources->GetResource({res, internal_->GetScene()}) : nullptr;
 }
 
 SCENE_END_NAMESPACE()

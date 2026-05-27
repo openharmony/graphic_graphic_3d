@@ -92,7 +92,30 @@ public:
     virtual bool HasHandlers() const = 0;
 };
 
-template<typename EventType, typename Ret, typename... Args>
+/**
+ * @brief Adds an handler callback to an event.
+ * @param event The event to add a handler to.
+ * @param callback The handler callback callable.
+ * @param userToken Optional handler token. Automatically generated if none is given.
+ * @return An identifier token for the handler which should be used when removing the handler.
+ */
+inline IEvent::Token AddHandler(const IEvent::Ptr& event, const ICallable::Ptr& callback, IEvent::Token userToken = {})
+{
+    return event && callback ? event->AddHandler(callback, userToken) : IEvent::Token{};
+}
+
+/**
+ * @brief Removes a handler from an event.
+ * @param event The event to remove the handler from.
+ * @param token Token of the handler.
+ * @return True if successful, false otherwise.
+ */
+inline bool RemoveHandler(const IEvent::Ptr& event, IEvent::Token token)
+{
+    return event && event->RemoveHandler(token);
+}
+
+template <typename EventType, typename Ret, typename... Args>
 class IEventCallable : public ICallable {
     META_INTERFACE(ICallable, IEventCallable, EventType::UID)
 public:
@@ -103,7 +126,7 @@ public:
     virtual Ret Invoke(Args...) = 0;
 };
 
-template<typename MyEvent, typename... Args>
+template <typename MyEvent, typename... Args>
 inline auto Invoke(const IEvent::Ptr& event, Args&&... args)
 {
     // interpret null as the event not being constructed as not needed
@@ -114,7 +137,7 @@ inline auto Invoke(const IEvent::Ptr& event, Args&&... args)
         CORE_LOG_W("Trying to Invoke wrong type of event");
     }
     if constexpr (!BASE_NS::is_same_v<typename MyEvent::ReturnType, void>) {
-        return typename MyEvent::ReturnType {};
+        return typename MyEvent::ReturnType{};
     }
 }
 
@@ -136,8 +159,8 @@ public:
     }
 
 private:
-    BASE_NS::shared_ptr<IEvent> event_ {};
-    IEvent::Token token_ {};
+    BASE_NS::shared_ptr<IEvent> event_{};
+    IEvent::Token token_{};
 };
 
 META_END_NAMESPACE()

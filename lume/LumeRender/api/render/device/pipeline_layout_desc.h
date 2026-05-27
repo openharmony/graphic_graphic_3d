@@ -30,21 +30,21 @@ RENDER_BEGIN_NAMESPACE()
 /** Pipeline layout constants */
 struct PipelineLayoutConstants {
     /** Max descriptor set count */
-    static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT { 4u };
+    static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT{4u};
     /** Max dynamic descriptor offset count */
-    static constexpr uint32_t MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT { 16u };
+    static constexpr uint32_t MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT{16u};
     /** Invalid index */
-    static constexpr uint32_t INVALID_INDEX { ~0u };
+    static constexpr uint32_t INVALID_INDEX{~0u};
     /** Max push constant byte size */
-    static constexpr uint32_t MAX_PUSH_CONSTANT_BYTE_SIZE { 128u };
+    static constexpr uint32_t MAX_PUSH_CONSTANT_BYTE_SIZE{128u};
     /** Max binding count in a set */
-    static constexpr uint32_t MAX_DESCRIPTOR_SET_BINDING_COUNT { 16u };
+    static constexpr uint32_t MAX_DESCRIPTOR_SET_BINDING_COUNT{16u};
     /** Max push constant ranges */
-    static constexpr uint32_t MAX_PUSH_CONSTANT_RANGE_COUNT { 1u };
+    static constexpr uint32_t MAX_PUSH_CONSTANT_RANGE_COUNT{1u};
     /** Max UBO bind byte size */
-    static constexpr uint32_t MAX_UBO_BIND_BYTE_SIZE { 16u * 1024u };
+    static constexpr uint32_t MAX_UBO_BIND_BYTE_SIZE{16u * 1024u};
     /** UBO bind offset alignment */
-    static constexpr uint32_t MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE { 256u };
+    static constexpr uint32_t MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE{256u};
 };
 
 enum AdditionalDescriptorTypeImageFlagBits {
@@ -79,15 +79,15 @@ using AdditionalDescriptorTypeFlags = uint32_t;
 /** Descriptor set layout binding */
 struct DescriptorSetLayoutBinding {
     /** Binding */
-    uint32_t binding { PipelineLayoutConstants::INVALID_INDEX };
+    uint32_t binding{PipelineLayoutConstants::INVALID_INDEX};
     /** Descriptor type */
-    DescriptorType descriptorType { DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM };
+    DescriptorType descriptorType{DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM};
     /** Descriptor count */
-    uint32_t descriptorCount { 0U };
+    uint32_t descriptorCount{0U};
     /** Stage flags */
-    ShaderStageFlags shaderStageFlags { 0U };
+    ShaderStageFlags shaderStageFlags{0U};
     /** Additional flags by type, all packed to a single uint */
-    AdditionalDescriptorTypeFlags additionalDescriptorTypeFlags { 0U };
+    AdditionalDescriptorTypeFlags additionalDescriptorTypeFlags{0U};
 };
 
 /** Descriptor set layout bindings */
@@ -101,37 +101,37 @@ struct DescriptorSetLayoutBindingResource {
     /** Binding */
     DescriptorSetLayoutBinding binding;
     /** Resource index to typed data */
-    uint32_t resourceIndex { PipelineLayoutConstants::INVALID_INDEX };
+    uint32_t resourceIndex{PipelineLayoutConstants::INVALID_INDEX};
 };
 
 /** Bindable buffer */
 struct BindableBuffer {
     /** Handle */
-    RenderHandle handle {};
+    RenderHandle handle{};
     /** Byte offset to buffer */
-    uint32_t byteOffset { 0u };
+    uint32_t byteOffset{0u};
     /** Byte size for buffer binding */
-    uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+    uint32_t byteSize{PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE};
 };
 
 /** Bindable image */
 struct BindableImage {
     /** Handle */
-    RenderHandle handle {};
+    RenderHandle handle{};
     /** Mip level for specific binding */
-    uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t mip{PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS};
     /** Layer level for specific binding */
-    uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    uint32_t layer{PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     /** Custom image layout */
-    ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+    ImageLayout imageLayout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
     /** Sampler handle for combined image sampler */
-    RenderHandle samplerHandle {};
+    RenderHandle samplerHandle{};
 };
 
 /** Bindable sampler */
 struct BindableSampler {
     /** Handle */
-    RenderHandle handle {};
+    RenderHandle handle{};
 };
 
 /** Bindable buffer with render handle reference */
@@ -139,9 +139,9 @@ struct BindableBufferWithHandleReference {
     /** Handle */
     RenderHandleReference handle;
     /** Byte offset to buffer */
-    uint32_t byteOffset { 0u };
+    uint32_t byteOffset{0u};
     /** Byte size for buffer binding */
-    uint32_t byteSize { PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+    uint32_t byteSize{PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE};
 };
 
 /** Bindable image with render handle reference */
@@ -149,11 +149,11 @@ struct BindableImageWithHandleReference {
     /** Handle */
     RenderHandleReference handle;
     /** Mip level for specific binding */
-    uint32_t mip { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
+    uint32_t mip{PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS};
     /** Layer level for specific binding */
-    uint32_t layer { PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    uint32_t layer{PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     /** Custom image layout */
-    ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
+    ImageLayout imageLayout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
     /** Sampler handle for combined image sampler */
     RenderHandleReference samplerHandle;
 };
@@ -167,47 +167,47 @@ struct BindableSamplerWithHandleReference {
 /** Descriptor structure for buffer */
 struct BufferDescriptor {
     /** Descriptor set layout binding */
-    DescriptorSetLayoutBinding binding {};
+    DescriptorSetLayoutBinding binding{};
     /** Bindable resource structure with handle */
-    BindableBuffer resource {};
+    BindableBuffer resource{};
     /** Resource state in the pipeline */
-    GpuResourceState state {};
+    GpuResourceState state{};
 
     /** Array offset to resources for array descriptors */
-    uint32_t arrayOffset { 0 };
+    uint32_t arrayOffset{0};
 
     /** Additional flags */
-    AdditionalDescriptorFlags additionalFlags { 0u };
+    AdditionalDescriptorFlags additionalFlags{0u};
 };
 
 /** Descriptor structure for image */
 struct ImageDescriptor {
     /** Descriptor set layout binding */
-    DescriptorSetLayoutBinding binding {};
+    DescriptorSetLayoutBinding binding{};
     /** Bindable resource structure with handle */
-    BindableImage resource {};
+    BindableImage resource{};
     /** Resource state in the pipeline */
-    GpuResourceState state {};
+    GpuResourceState state{};
 
     /** Array offset to resources for array descriptors */
-    uint32_t arrayOffset { 0 };
+    uint32_t arrayOffset{0};
 
     /** Additional flags */
-    AdditionalDescriptorFlags additionalFlags { 0u };
+    AdditionalDescriptorFlags additionalFlags{0u};
 };
 
 /** Descriptor structure for sampler */
 struct SamplerDescriptor {
     /** Descriptor set layout binding */
-    DescriptorSetLayoutBinding binding {};
+    DescriptorSetLayoutBinding binding{};
     /** Bindable resource structure with handle */
-    BindableSampler resource {};
+    BindableSampler resource{};
 
     /** Array offset to resources for array descriptors */
-    uint32_t arrayOffset { 0 };
+    uint32_t arrayOffset{0};
 
     /** Additional flags */
-    AdditionalDescriptorFlags additionalFlags { 0u };
+    AdditionalDescriptorFlags additionalFlags{0u};
 };
 
 /** Descriptor set layout binding resources */
@@ -223,15 +223,15 @@ struct DescriptorSetLayoutBindingResources {
     BASE_NS::array_view<const SamplerDescriptor> samplers;
 
     /** Mask of bindings in the descriptor set. Max uint is value which means that not set */
-    uint32_t descriptorSetBindingMask { ~0u };
+    uint32_t descriptorSetBindingMask{~0u};
     /** Current binding mask. Max uint is value which means that not set */
-    uint32_t bindingMask { ~0u };
+    uint32_t bindingMask{~0u};
 };
 
 /** Descriptor set layout */
 struct DescriptorSetLayout {
     /** Set */
-    uint32_t set { PipelineLayoutConstants::INVALID_INDEX };
+    uint32_t set{PipelineLayoutConstants::INVALID_INDEX};
     /** Bindings */
     BASE_NS::vector<DescriptorSetLayoutBinding> bindings;
 };
@@ -239,9 +239,9 @@ struct DescriptorSetLayout {
 /** Push constant */
 struct PushConstant {
     /** Shader stage flags */
-    ShaderStageFlags shaderStageFlags { 0 };
+    ShaderStageFlags shaderStageFlags{0};
     /** Byte size */
-    uint32_t byteSize { 0 };
+    uint32_t byteSize{0};
 };
 
 /** Pipeline layout */
@@ -249,19 +249,19 @@ struct PipelineLayout {
     /** Push constant */
     PushConstant pushConstant;
     /** Descriptor sets */
-    DescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] {};
+    DescriptorSetLayout descriptorSetLayouts[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
 };
 
 /** Shader thread group variables (can be used with group count and group sizes */
 struct ShaderThreadGroup {
     /** Thread group variable X */
-    uint32_t x { 1u };
+    uint32_t x{1u};
     /** Thread group variable Y */
-    uint32_t y { 1u };
+    uint32_t y{1u};
     /** Thread group variable Z */
-    uint32_t z { 1u };
+    uint32_t z{1u};
 };
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_PIPELINE_LAYOUT_DESC_H
+#endif  // API_RENDER_DEVICE_PIPELINE_LAYOUT_DESC_H

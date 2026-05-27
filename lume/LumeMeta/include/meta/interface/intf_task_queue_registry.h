@@ -96,4 +96,4 @@ inline META_NS::ITaskQueueRegistry& GetTaskQueueRegistry()
 
 META_END_NAMESPACE()
 
-#endif // META_INTERFACE_ITASKQUEUE_REGISTRY_H
+#endif  // META_INTERFACE_ITASKQUEUE_REGISTRY_H

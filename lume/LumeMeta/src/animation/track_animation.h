@@ -43,10 +43,10 @@ public:
     META_IMPLEMENT_ARRAY_PROPERTY(IFunction::Ptr, KeyframeHandlers)
     META_IMPLEMENT_READONLY_PROPERTY(uint32_t, CurrentKeyframeIndex)
 
-protected: // IAnimation
+protected:  // IAnimation
     void Step(const IClock::ConstPtr& clock) override;
 
-protected: // ITrackAnimation
+protected:  // ITrackAnimation
     IProperty::Ptr Keyframes() const override
     {
         return keyframes_;
@@ -55,7 +55,7 @@ protected: // ITrackAnimation
     bool RemoveKeyframe(size_t index) override;
     void RemoveAllKeyframes() override;
 
-protected: // IStartableAnimation
+protected:  // IStartableAnimation
     void Pause() override;
     void Restart() override;
     void Seek(float position) override;
@@ -63,7 +63,7 @@ protected: // IStartableAnimation
     void Stop() override;
     void Finish() override;
 
-public: // IModifier
+public:  // IModifier
     EvaluationResult ProcessOnGet(IAny& value) override;
 
     TrackAnimationState& GetState() noexcept override
@@ -76,7 +76,7 @@ public: // IModifier
         return ClassId::TrackAnimationTemplateAccess;
     }
 
-protected: // IAnimationInternal
+protected:  // IAnimationInternal
     void OnAnimationStateChanged(const IAnimationInternal::AnimationStateChangedInfo& info) override;
 
 protected:
@@ -98,13 +98,13 @@ private:
 
 private:
     void Evaluate() override;
-    IProperty::Ptr keyframes_; // Array property containing the keyframes
+    IProperty::Ptr keyframes_;  // Array property containing the keyframes
 
     TrackAnimationState state_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_TRACK_ANIMATION_H
+#endif  // META_SRC_ANIMATION_TRACK_ANIMATION_H

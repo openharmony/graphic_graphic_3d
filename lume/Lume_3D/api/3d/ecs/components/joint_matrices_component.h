@@ -34,40 +34,38 @@ SkinJointsComponent contains the entities which match the joint names in the hie
 */
 BEGIN_COMPONENT(IJointMatricesComponentManager, JointMatricesComponent)
 
-    /**
-     * Number of valid entries in jointMatrices array.
-     */
-    DEFINE_PROPERTY(size_t, count, "Number of Matrices", 0, 0)
+/**
+ * Number of valid entries in jointMatrices array.
+ */
+DEFINE_PROPERTY(size_t, count, "Number of Matrices", 0, 0)
 
-    /**
-     * Joint matrices for the skinned entity. SkinningSystem calculates the joint matrices
-     */
-    DEFINE_ARRAY_PROPERTY(
-        BASE_NS::Math::Mat4X4, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointMatrices, "Joint Matrices", 0, ARRAY_VALUE())
+/**
+ * Joint matrices for the skinned entity. SkinningSystem calculates the joint matrices
+ */
+DEFINE_ARRAY_PROPERTY(
+    BASE_NS::Math::Mat4X4, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointMatrices, "Joint Matrices", 0, ARRAY_VALUE())
 
-    /**
-     * Array of AABB minimum values for each joint in world space. Updated each frame by the SkinningSystem.
-     */
-    DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointAabbMinArray,
-        "Joint AABB Min Values", 0, ARRAY_VALUE())
+/**
+ * Array of AABB minimum values for each joint in world space. Updated each frame by the SkinningSystem.
+ */
+DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointAabbMinArray,
+    "Joint AABB Min Values", 0, ARRAY_VALUE())
 
-    /**
-     * Array of AABB maximium values for each joint in world space. Updated each frame by the SkinningSystem.
-     */
-    DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointAabbMaxArray,
-        "Joint AABB Max Values", 0, ARRAY_VALUE())
+/**
+ * Array of AABB maximium values for each joint in world space. Updated each frame by the SkinningSystem.
+ */
+DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointAabbMaxArray,
+    "Joint AABB Max Values", 0, ARRAY_VALUE())
 
-    /**
-     * Minimum corner for the AABB that contains all the joints.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::Math::Vec3, jointsAabbMin, "Combined Joint AABB Min Values", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
+/**
+ * Minimum corner for the AABB that contains all the joints.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, jointsAabbMin, "Combined Joint AABB Min Values", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
 
-    /**
-     * Maximum corner for the AABB that contains all the joints.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::Math::Vec3, jointsAabbMax, "Combined Joint AABB Max Values", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
+/**
+ * Maximum corner for the AABB that contains all the joints.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, jointsAabbMax, "Combined Joint AABB Max Values", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f))
 
 END_COMPONENT(IJointMatricesComponentManager, JointMatricesComponent, "59d701be-f741-4faa-b5d6-a4f20ad4e317")
 #if !defined(IMPLEMENT_MANAGER)

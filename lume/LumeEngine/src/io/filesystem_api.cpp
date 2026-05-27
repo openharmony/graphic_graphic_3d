@@ -42,7 +42,7 @@
 #include "io/std_filesystem.h"
 #ifdef _WIN32
 #include "util/string_util.h"
-#endif // _WIN32
+#endif  // _WIN32
 
 CORE_BEGIN_NAMESPACE();
 namespace {
@@ -71,7 +71,8 @@ class FilesystemApi final : public IFileSystemApi {
 public:
     string basePath_;
     IFilesystem::Ptr rootFs_;
-    FilesystemApi() : basePath_(GetCurrentDirectory()), rootFs_(CreateStdFileSystem()) {}
+    FilesystemApi() : basePath_(GetCurrentDirectory()), rootFs_(CreateStdFileSystem())
+    {}
 
     const IInterface* GetInterface(const Uid& uid) const override
     {
@@ -84,8 +85,10 @@ public:
         }
         return nullptr;
     }
-    void Ref() override {}
-    void Unref() override {}
+    void Ref() override
+    {}
+    void Unref() override
+    {}
 
     IInterface::Ptr CreateInstance(const Uid& uid) override
     {
@@ -108,6 +111,9 @@ public:
     }
     string ResolvePath(string_view inPathRaw) const
     {
+        if (inPathRaw.empty()) {
+            return {};
+        }
 #if _WIN32
         string_view curDrive;
         string_view curPath;
@@ -115,9 +121,6 @@ public:
         string_view curExt;
         SplitPath(basePath_, curDrive, curPath, curFilename, curExt);
 
-        if (inPathRaw.empty()) {
-            return {};
-        }
         // fix slashes. (just change \\ to /)
         string_view pathIn = inPathRaw;
         string tmp;
@@ -192,10 +195,10 @@ public:
     }
     IFilesystem::Ptr CreateROFilesystem(const void* const data, uint64_t size) override
     {
-        return IFilesystem::Ptr { new RoFileSystem(data, static_cast<size_t>(size)) };
+        return IFilesystem::Ptr{new RoFileSystem(data, static_cast<size_t>(size))};
     }
 };
-} // namespace
+}  // namespace
 
 void FileMonitorImpl::Initialize(IFileManager& manager)
 {

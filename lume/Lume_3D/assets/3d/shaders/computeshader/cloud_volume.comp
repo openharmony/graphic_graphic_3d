@@ -10,6 +10,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // disable set 1 and 2
 // Set 0: global descriptor sets (mainly for camera matrices)
 #define CORE3D_ENVIRONMENT_FRAG_LAYOUT
+#define PUSH_CONSTANT_IN_SHADER
 #include "3d/shaders/common/3d_dm_frag_layout_common.h"
 
 // Needs to match the values defined in weather_component.h

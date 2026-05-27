@@ -66,12 +66,12 @@ inline void FillTriplet(uint8_t* dst, const uint8_t*& src, signed left)
 inline void EncodeTail(char* dst, const uint8_t* src, signed left)
 {
     if (left) {
-        uint8_t rest[3] { 0, 0, 0 };
+        uint8_t rest[3]{0, 0, 0};
         FillTriplet(rest, src, left);
         Detail::ToBase64(rest, dst, left);
     }
 }
-} // namespace Detail
+}  // namespace Detail
 
 /** Base 64 encode data.
  * @param binaryData Data to encode.
@@ -95,4 +95,4 @@ inline string Base64Encode(array_view<const uint8_t> binaryData)
     return encodedString;
 }
 BASE_END_NAMESPACE()
-#endif // API_BASE_UTIL_BASE64_ENCODE_H
+#endif  // API_BASE_UTIL_BASE64_ENCODE_H

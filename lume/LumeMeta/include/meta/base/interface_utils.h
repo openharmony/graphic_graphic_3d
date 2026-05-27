@@ -119,7 +119,7 @@ static bool CheckInterfaces(
  *       The result will never contain more items than input.
  * @param from The vector to convert from.
  */
-template<class To, class From>
+template <class To, class From>
 BASE_NS::vector<typename To::Ptr> PtrArrayCast(BASE_NS::vector<From>&& from)
 {
     static_assert(IsKindOfPointer_v<From>, "Conversion source array must contain shared_ptrs.");
@@ -140,4 +140,4 @@ BASE_NS::vector<typename To::Ptr> PtrArrayCast(BASE_NS::vector<From>&& from)
 
 META_END_NAMESPACE()
 
-#endif // META_BASE_INTERFACE_UTILS_H
+#endif  // META_BASE_INTERFACE_UTILS_H

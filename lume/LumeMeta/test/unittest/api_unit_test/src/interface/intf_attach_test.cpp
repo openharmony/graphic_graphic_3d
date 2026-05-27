@@ -97,8 +97,8 @@ class MyAttachment : public IntroduceInterfaces<META_NS::AttachmentFwd, IMyAttac
 
 private:
     META_NS::Property<float> property_;
-    uint32_t attachCount_ {};
-    uint32_t detachCount_ {};
+    uint32_t attachCount_{};
+    uint32_t detachCount_{};
 };
 
 class MySecondAttachment : public META_NS::AttachmentFwd {
@@ -150,7 +150,7 @@ protected:
     META_NS::IAttachment::Ptr attachment3_;
     IMyAttachment::Ptr myAttachment_;
 
-    META_NS::Object dataContext_ { CreateInstance(META_NS::ClassId::Object) };
+    META_NS::Object dataContext_{CreateInstance(META_NS::ClassId::Object)};
     META_NS::Property<float> dataContextProperty_;
 };
 
@@ -234,19 +234,19 @@ UNIT_TEST_F(API_AttachTest, GetAttachments, testing::ext::TestSize.Level1)
     // Get all attachments
     auto attachmentsAll = object.GetAttachments<IAttachment>();
     // Get attachments that implement IMyAttachment
-    auto attachmentsMy = PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID }));
+    auto attachmentsMy = PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID}));
     // Get attachments that implement both IMyAttachment and IMyInvalidAttachment (there are none)
     auto attachmentsStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, IMyInvalidAttachment::UID }, true));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, IMyInvalidAttachment::UID}, true));
     // Get attachments that implement either IMyAttachment or IMyInvalidAttachment
     auto attachmentsNotStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, IMyInvalidAttachment::UID }, false));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, IMyInvalidAttachment::UID}, false));
     // Get attachments that implement both IMyAttachment and IObject
     auto attachmentsObjectStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, META_NS::IObject::UID }, true));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, META_NS::IObject::UID}, true));
     // Get attachments that implement any of IMyAttachment or IObject
     auto attachmentsObjectNotStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, META_NS::IObject::UID }, false));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, META_NS::IObject::UID}, false));
 
     EXPECT_THAT(attachmentsAll, testing::UnorderedElementsAre(attachment_, attachment2_));
     EXPECT_THAT(attachmentsStrict, testing::IsEmpty());
@@ -259,9 +259,9 @@ UNIT_TEST_F(API_AttachTest, GetAttachments, testing::ext::TestSize.Level1)
     EXPECT_TRUE(object.Detach(attachment2_));
     attachmentsAll = object.GetAttachments<IAttachment>();
     attachmentsObjectStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, META_NS::IObject::UID }, true));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, META_NS::IObject::UID}, true));
     attachmentsObjectNotStrict =
-        PtrArrayCast<IAttachment>(object.GetAttachments({ IMyAttachment::UID, META_NS::IObject::UID }, false));
+        PtrArrayCast<IAttachment>(object.GetAttachments({IMyAttachment::UID, META_NS::IObject::UID}, false));
     EXPECT_THAT(attachmentsAll, testing::UnorderedElementsAre(attachment_));
     EXPECT_THAT(attachmentsObjectStrict, testing::UnorderedElementsAre(attachment_));
     EXPECT_THAT(attachmentsObjectNotStrict, testing::UnorderedElementsAre(attachment_));
@@ -300,7 +300,7 @@ UNIT_TEST_F(API_AttachTest, ObjectAttachment, testing::ext::TestSize.Level1)
 
     ASSERT_FALSE(attach->HasAttachments());
     META_NS::Object attachment(CreateInstance(
-        META_NS::ClassId::Object)); // Attachment which does not implement IAttachment, should still be able to attach
+        META_NS::ClassId::Object));  // Attachment which does not implement IAttachment, should still be able to attach
     ASSERT_TRUE(attach->Attach(attachment));
 
     ASSERT_TRUE(attach->HasAttachments());
@@ -624,7 +624,7 @@ public:
     }
 };
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: DuplicateAttachmentFromSerialization
@@ -716,8 +716,8 @@ UNIT_TEST(API_AttachmentTest, ResolveFinalClass, testing::ext::TestSize.Level1)
         object.Attach(registry.Create<IAttachment>(ClassId::MyTypedAttachment1));
         object.Attach(registry.Create<IAttachment>(ClassId::MyTypedAttachment2));
 
-        MyTypedAttachment1* typed1 {};
-        MyTypedAttachment2* typed2 {};
+        MyTypedAttachment1* typed1{};
+        MyTypedAttachment2* typed2{};
         auto attachments = object.GetAttachments();
 
         for (auto&& attachment : attachments) {
@@ -742,17 +742,15 @@ UNIT_TEST(API_AttachmentTest, ResolveFinalClass, testing::ext::TestSize.Level1)
     UnregisterObjectType<MyTypedAttachment2>();
 }
 #else
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ResolveFinalClass
  * @tc.desc: Tests for Resolve Final Class. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_AttachmentTest, DISABLED_ResolveFinalClass, testing::ext::TestSize.Level1)
+UNIT_TEST(API_AttachmentTest, ResolveFinalClass, testing::ext::TestSize.Level1)
 {
     // Skip
 }
-#endif // DISABLED_TESTS_ON
 #endif
 
 /**
@@ -775,8 +773,8 @@ UNIT_TEST(API_AttachmentTest, AttachProperty, testing::ext::TestSize.Level1)
 }
 
 struct TestEventInfo {
-    constexpr static BASE_NS::Uid UID { "4c6fd37c-1d8a-4319-b95f-e2219560c1c5" };
-    constexpr static char const* NAME { "test" };
+    constexpr static BASE_NS::Uid UID{"4c6fd37c-1d8a-4319-b95f-e2219560c1c5"};
+    constexpr static char const* NAME{"test"};
 };
 using TestEvent = SimpleEvent<TestEventInfo, void()>;
 
@@ -818,5 +816,5 @@ UNIT_TEST(API_AttachmentTest, AttachmentsWithSameName, testing::ext::TestSize.Le
     UnregisterObjectType<TestAttachment>();
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

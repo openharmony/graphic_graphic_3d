@@ -20,7 +20,6 @@
 #include <png/implementation_uids.h>
 #include <scene/base/namespace.h>
 #include <scene/interface/intf_application_context.h>
-#include <text_3d/implementation_uids.h>
 
 #include <3d/intf_graphics_context.h>
 #include <base/util/uid.h>
@@ -71,7 +70,7 @@ private:
     CORE_NS::ILogger* logger_;
     CORE_NS::ILogger::LogLevel oldLevel_;
 };
-} // namespace Test
+}  // namespace Test
 
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
@@ -83,11 +82,11 @@ struct TestEnvironment {
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext;
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D;
 #if RENDER_HAS_VULKAN_BACKEND
-    const RENDER_NS::DeviceBackendType backend { RENDER_NS::DeviceBackendType::VULKAN };
+    const RENDER_NS::DeviceBackendType backend{RENDER_NS::DeviceBackendType::VULKAN};
 #elif RENDER_HAS_GLES_BACKEND
-    const RENDER_NS::DeviceBackendType backend { RENDER_NS::DeviceBackendType::OPENGLES };
-#else // RENDER_HAS_GL_BACKEND
-    const RENDER_NS::DeviceBackendType backend { RENDER_NS::DeviceBackendType::OPENGL };
+    const RENDER_NS::DeviceBackendType backend{RENDER_NS::DeviceBackendType::OPENGLES};
+#else  // RENDER_HAS_GL_BACKEND
+    const RENDER_NS::DeviceBackendType backend{RENDER_NS::DeviceBackendType::OPENGL};
 #endif
     IApplicationContext::Ptr appContext;
 };
@@ -113,19 +112,19 @@ CORE_NS::IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
     void SetUp() override
     {
-        CORE_NS::PlatformCreateInfo info {};
+        CORE_NS::PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
         info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         // Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -137,8 +136,7 @@ public:
 
         CORE_NS::CreatePluginRegistry(info);
 
-        constexpr BASE_NS::Uid uids[] { JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN,
-            SCENE_NS::UID_SCENE_PLUGIN };
+        constexpr BASE_NS::Uid uids[]{JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN, SCENE_NS::UID_SCENE_PLUGIN};
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
 
         g_testEnv = std::make_unique<TestEnvironment>();
@@ -167,6 +165,8 @@ public:
         rc.reset();
 
         g_testEnv.reset();
+
+        CORE_NS::GetPluginRegister().UnloadPlugins({});
     }
 
 private:
@@ -174,9 +174,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_TEST_RUNNER
+#endif  // SCENE_TEST_RUNNER

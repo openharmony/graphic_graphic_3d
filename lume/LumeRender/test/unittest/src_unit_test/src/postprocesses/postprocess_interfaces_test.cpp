@@ -69,8 +69,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.bloomConfiguration.scatter);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -100,8 +99,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.blurConfiguration.maxMipLevel);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -128,8 +126,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.postProcessConfiguration.tonemapConfiguration.exposure);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -161,8 +158,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.dofConfiguration.farBlur);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -187,8 +183,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
         EXPECT_FLOAT_EQ(CORE_NS::GetPropertyValue<float>(propertyHandle, "intensity"), properties.intensity);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -213,8 +208,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
         EXPECT_EQ(CORE_NS::GetPropertyValue<BASE_NS::Math::Vec4>(propertyHandle, "targetSize"), properties.targetSize);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -242,8 +236,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
         EXPECT_EQ(CORE_NS::GetPropertyValue<BASE_NS::Math::UVec2>(propertyHandle, "size"), properties.size);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -268,8 +261,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
         EXPECT_FLOAT_EQ(CORE_NS::GetPropertyValue<float>(propertyHandle, "radius"), properties.radius);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -299,8 +291,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.taaConfiguration.ignoreBicubicEdges);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());
@@ -325,8 +316,7 @@ UNIT_TEST(SRC_Postprocesses, Interfaces, testing::ext::TestSize.Level1)
             properties.upscaleConfiguration.ratio);
 
         auto* node = static_cast<IRenderPostProcessNode*>(pp->GetInterface(IRenderPostProcessNode::UID));
-        node->SetRenderAreaRequest(
-            IRenderPostProcessNode::RenderAreaRequest { RenderPassDesc::RenderArea { 0, 0, 1, 1 } });
+        node->SetRenderAreaRequest(IRenderPostProcessNode::RenderAreaRequest{RenderPassDesc::RenderArea{0, 0, 1, 1}});
         EXPECT_EQ(IRenderNode::ExecuteFlagBits::EXECUTE_FLAG_BITS_DO_NOT_EXECUTE, node->GetExecuteFlags());
         EXPECT_NE(nullptr, node->GetRenderOutputProperties());
         EXPECT_NE(nullptr, node->GetRenderInputProperties());

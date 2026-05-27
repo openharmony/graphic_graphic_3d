@@ -18,24 +18,93 @@
 
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
+#include <base/math/mathf.h>
 #include <base/namespace.h>
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
 namespace Detail {
 static constexpr const uint8_t FROM_BASE64[] = {
-    62U,                                              // '+' (ascii 43)
-    0, 0, 0,                                          // invalid
-    63U,                                              // '/' (ascii 47)
-    52U, 53U, 54U, 55U, 56U, 57U, 58U, 59U, 60U, 61U, //'0' '9' (ascii 48-57)
-    0, 0, 0,                                          // invalid
-    0,                                                // '=' padding (ascii 61)
-    0, 0, 0,                                          // invalid
-    0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 11U, 12U, 13U, 14U, 15U, 16U, 17U, 18U, 19U, 20U, 21U, 22U, 23U, 24U,
-    25U,              //'A' 'Z' (ascii 65-90)
-    0, 0, 0, 0, 0, 0, // invalid
-    26U, 27U, 28U, 29U, 30U, 31U, 32U, 33U, 34U, 35U, 36U, 37U, 38U, 39U, 40U, 41U, 42U, 43U, 44U, 45U, 46U, 47U, 48U,
-    49U, 50U, 51U //'a' 'z' (ascii 97-122)
+    62U,  // '+' (ascii 43)
+    0,
+    0,
+    0,    // invalid
+    63U,  // '/' (ascii 47)
+    52U,
+    53U,
+    54U,
+    55U,
+    56U,
+    57U,
+    58U,
+    59U,
+    60U,
+    61U,  //'0' '9' (ascii 48-57)
+    0,
+    0,
+    0,  // invalid
+    0,  // '=' padding (ascii 61)
+    0,
+    0,
+    0,  // invalid
+    0U,
+    1U,
+    2U,
+    3U,
+    4U,
+    5U,
+    6U,
+    7U,
+    8U,
+    9U,
+    10U,
+    11U,
+    12U,
+    13U,
+    14U,
+    15U,
+    16U,
+    17U,
+    18U,
+    19U,
+    20U,
+    21U,
+    22U,
+    23U,
+    24U,
+    25U,  //'A' 'Z' (ascii 65-90)
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,  // invalid
+    26U,
+    27U,
+    28U,
+    29U,
+    30U,
+    31U,
+    32U,
+    33U,
+    34U,
+    35U,
+    36U,
+    37U,
+    38U,
+    39U,
+    40U,
+    41U,
+    42U,
+    43U,
+    44U,
+    45U,
+    46U,
+    47U,
+    48U,
+    49U,
+    50U,
+    51U  //'a' 'z' (ascii 97-122)
 };
 
 inline uint8_t FromBase64(uint8_t c)
@@ -57,9 +126,9 @@ inline uint32_t FromBase64(const char*& src)
     return bits;
 }
 
-inline void DecodeQuartets(uint8_t* dst, const char* src, signed left)
+inline void DecodeQuartets(uint8_t* dst, const char* src, size_t left)
 {
-    for (; left >= 4; left -= 4) {
+    for (; left >= 4u; left -= 4u) {
         auto bits = FromBase64(src);
         *dst++ = uint8_t((bits >> 16u) & 0xff);
         *dst++ = uint8_t((bits >> 8u) & 0xff);
@@ -69,14 +138,20 @@ inline void DecodeQuartets(uint8_t* dst, const char* src, signed left)
 
 inline size_t CountPadding(string_view encodedString)
 {
-    auto end = encodedString.end();
-    auto first = --end;
-    while (*first == '=') {
+    if (encodedString.empty()) {
+        return 0;
+    }
+    auto last = encodedString.end() - 1;
+    auto first = last;
+    while (first != encodedString.begin() && *first == '=') {
         --first;
     }
-    return static_cast<size_t>(end - first);
+    if (*first == '=') {
+        return static_cast<size_t>(last - first + 1);
+    }
+    return static_cast<size_t>(last - first);
 }
-} // namespace Detail
+}  // namespace Detail
 
 /** Decode base64 encoded data.
  * A base64 encoded string should be padded to the next four bytes with '=' characters.
@@ -88,10 +163,29 @@ inline vector<uint8_t> Base64Decode(string_view encodedString)
     // the length of the decoded binary data will be 3/4 of the encoded string.
     vector<uint8_t> decodedBinary(encodedString.size() * 3u / 4u);
 
-    Detail::DecodeQuartets(decodedBinary.data(), encodedString.data(), static_cast<signed>(encodedString.size()));
-    decodedBinary.erase(
-        decodedBinary.cend() - static_cast<ptrdiff_t>(Detail::CountPadding(encodedString)), decodedBinary.cend());
+    Detail::DecodeQuartets(decodedBinary.data(), encodedString.data(), encodedString.size());
+
+    // Handle remaining 2-3 bytes of non-padded base64 input
+    const size_t remaining = encodedString.size() % 4u;
+    const size_t quartetBytes = (encodedString.size() / 4u) * 3u;
+    if (remaining >= 2u) {
+        const char* src = encodedString.data() + (encodedString.size() - remaining);
+        uint32_t bits = static_cast<uint32_t>(Detail::FromBase64(static_cast<uint8_t>(src[0]))) << 18u;
+        bits |= static_cast<uint32_t>(Detail::FromBase64(static_cast<uint8_t>(src[1]))) << 12u;
+        if (quartetBytes < decodedBinary.size()) {
+            decodedBinary[quartetBytes] = static_cast<uint8_t>((bits >> 16u) & 0xffu);
+        }
+        if (remaining == 3u) {
+            bits |= static_cast<uint32_t>(Detail::FromBase64(static_cast<uint8_t>(src[2]))) << 6u;
+            if (quartetBytes + 1u < decodedBinary.size()) {
+                decodedBinary[quartetBytes + 1u] = static_cast<uint8_t>((bits >> 8u) & 0xffu);
+            }
+        }
+    }
+
+    const auto padding = BASE_NS::Math::min(decodedBinary.size(), Detail::CountPadding(encodedString));
+    decodedBinary.erase(decodedBinary.cend() - static_cast<ptrdiff_t>(padding), decodedBinary.cend());
     return decodedBinary;
 }
 BASE_END_NAMESPACE()
-#endif // API_BASE_UTIL_BASE64_DECODE_H
+#endif  // API_BASE_UTIL_BASE64_DECODE_H

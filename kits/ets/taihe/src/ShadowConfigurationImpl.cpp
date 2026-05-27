@@ -20,7 +20,9 @@
 #endif
 
 namespace OHOS::Render3D::KITETS {
-PCFConfigImpl::PCFConfigImpl(const std::shared_ptr<PCFConfigETS> pcfConfigETS) : pcfConfigETS_(pcfConfigETS) {}
+
+PCFConfigImpl::PCFConfigImpl(const std::shared_ptr<PCFConfigETS> pcfConfigETS) : pcfConfigETS_(pcfConfigETS)
+{}
 
 PCFConfigImpl::~PCFConfigImpl()
 {
@@ -92,5 +94,4 @@ int64_t PCFConfigImpl::getPCFConfigImpl()
 {
     return reinterpret_cast<uintptr_t>(this);
 }
-
 }  // namespace OHOS::Render3D::KITETS

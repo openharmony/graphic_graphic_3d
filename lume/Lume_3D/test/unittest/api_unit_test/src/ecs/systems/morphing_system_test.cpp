@@ -70,7 +70,7 @@ UNIT_TEST(API_EcsMorphingSystem, MorphingTest, testing::ext::TestSize.Level1)
     EXPECT_NE(nullptr, ((const IMorphingSystem*)morphingSystem)->GetProperties());
     EXPECT_EQ(ecs.get(), &morphingSystem->GetECS());
 
-    Entity cube = graphicsContext->GetMeshUtil().GenerateCube(*ecs, "myCube", Entity {}, 1.0f, 1.0f, 1.0f);
+    Entity cube = graphicsContext->GetMeshUtil().GenerateCube(*ecs, "myCube", Entity{}, 1.0f, 1.0f, 1.0f);
     auto meshManager = GetManager<IMeshComponentManager>(*ecs);
     auto renderMeshManager = GetManager<IRenderMeshComponentManager>(*ecs);
     if (auto scopedHandle = meshManager->Write(renderMeshManager->Read(cube)->mesh); scopedHandle) {
@@ -80,8 +80,8 @@ UNIT_TEST(API_EcsMorphingSystem, MorphingTest, testing::ext::TestSize.Level1)
     }
     morphManager->Create(cube);
     if (auto scopedHandle = morphManager->Write(cube); scopedHandle) {
-        scopedHandle->morphNames = { "name0", "name1", "name2" };
-        scopedHandle->morphWeights = { 1.0f, 2.0f, 3.0f };
+        scopedHandle->morphNames = {"name0", "name1", "name2"};
+        scopedHandle->morphWeights = {1.0f, 2.0f, 3.0f};
     }
 
     auto dsMorph = refcnt_ptr<IRenderDataStoreMorph>(

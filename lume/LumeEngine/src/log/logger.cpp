@@ -64,13 +64,15 @@ constexpr const char* LOG_LEVEL_NAMES_SHORT[LOG_LEVEL_COUNT] = {
     "N",
 };
 constexpr const size_t MAX_BUFFER_SIZE = 1024;
-} // namespace
+}  // namespace
 
 string_view Logger::GetLogLevelName(LogLevel logLevel, bool shortName)
 {
     const int level = static_cast<int>(logLevel);
     CORE_ASSERT(level >= 0 && level < LOG_LEVEL_COUNT);
-
+    if (level < 0 || level >= LOG_LEVEL_COUNT) {
+        return "UNKNOWN";
+    }
     return shortName ? LOG_LEVEL_NAMES_SHORT[level] : LOG_LEVEL_NAMES[level];
 }
 
@@ -99,7 +101,7 @@ void Logger::VLog(
 {
     CORE_ASSERT_MSG(logLevel != LogLevel::LOG_NONE, "'None' is not a valid log level for writing to the log.");
 
-    if (logLevel_ > logLevel) {
+    if (logLevel_.load(std::memory_order_relaxed) > logLevel) {
         return;
     }
 
@@ -203,20 +205,22 @@ bool Logger::LogAssert(const string_view filename, int lineNumber, bool expressi
 
 ILogger::LogLevel Logger::GetLogLevel() const
 {
-    return logLevel_;
+    return logLevel_.load(std::memory_order_relaxed);
 }
 
 void Logger::SetLogLevel(LogLevel logLevel)
 {
-    logLevel_ = logLevel;
+    logLevel_.store(logLevel, std::memory_order_relaxed);
 }
 
 uint64_t Logger::AddOutput(IOutput::Ptr output)
 {
     if (output) {
         std::lock_guard<std::mutex> guard(loggerMutex_);
+        const uint64_t id = nextOutputId_++;
+        outputIds_.push_back(id);
         outputs_.push_back(move(output));
-        return reinterpret_cast<uint64_t>(outputs_.back().get());
+        return id;
     }
     return 0;
 }
@@ -225,9 +229,13 @@ void Logger::RemoveOutput(uint64_t id)
 {
     std::lock_guard<std::mutex> guard(loggerMutex_);
 
-    outputs_.erase(std::remove_if(outputs_.begin(), outputs_.end(),
-                       [id](const auto& output) { return reinterpret_cast<uint64_t>(output.get()) == id; }),
-        outputs_.end());
+    for (size_t i = 0; i < outputIds_.size(); ++i) {
+        if (outputIds_[i] == id) {
+            outputIds_.erase(outputIds_.begin() + static_cast<ptrdiff_t>(i));
+            outputs_.erase(outputs_.begin() + static_cast<ptrdiff_t>(i));
+            break;
+        }
+    }
 }
 
 const IInterface* Logger::GetInterface(const Uid& uid) const
@@ -246,7 +254,9 @@ IInterface* Logger::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void Logger::Ref() {}
+void Logger::Ref()
+{}
 
-void Logger::Unref() {}
+void Logger::Unref()
+{}
 CORE_END_NAMESPACE()

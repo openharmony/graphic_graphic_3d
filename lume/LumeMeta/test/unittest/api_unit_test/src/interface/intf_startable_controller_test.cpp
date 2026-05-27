@@ -90,9 +90,9 @@ protected:
     IContainer::Ptr container_;
     IContainer::Ptr container1_1_;
     IContainer::Ptr container2_1_;
-    META_NS::Object containerChild_ { CreateInstance(ClassId::Object) };
-    META_NS::ContentObject contentObject_ { CreateInstance(ClassId::ContentObject) };
-    META_NS::Object contentChild_ { CreateInstance(ClassId::Object) };
+    META_NS::Object containerChild_{CreateInstance(ClassId::Object)};
+    META_NS::ContentObject contentObject_{CreateInstance(ClassId::ContentObject)};
+    META_NS::Object contentChild_{CreateInstance(ClassId::Object)};
     META_NS::IStartableController::Ptr controller_;
 };
 
@@ -195,10 +195,11 @@ UNIT_TEST_F(API_StartableControllerTest, InvalidState, testing::ext::TestSize.Le
     auto testController = [](const IStartableController::Ptr& controller, bool expectSuccess) {
         EXPECT_EQ(controller->StartAll(), expectSuccess);
         EXPECT_EQ(
-            controller->StartAll(static_cast<IStartableController::ControlBehavior>(-1)), expectSuccess); // NOLINT
+            controller->StartAll(static_cast<IStartableController::ControlBehavior>(-1)), expectSuccess);  // NOLINT
 
         EXPECT_EQ(controller->StopAll(), expectSuccess);
-        EXPECT_EQ(controller->StopAll(static_cast<IStartableController::ControlBehavior>(-1)), expectSuccess); // NOLINT
+        EXPECT_EQ(
+            controller->StopAll(static_cast<IStartableController::ControlBehavior>(-1)), expectSuccess);  // NOLINT
     };
     testController(controller_, false);
     AttachController();
@@ -206,7 +207,7 @@ UNIT_TEST_F(API_StartableControllerTest, InvalidState, testing::ext::TestSize.Le
     SetValue(controller_->TraversalType(), TraversalType::BREADTH_FIRST_ORDER);
     testController(controller_, true);
 
-    static constexpr auto invalidQueueId = BASE_NS::Uid { "11111111-1111-1111-1111-111111111111" };
+    static constexpr auto invalidQueueId = BASE_NS::Uid{"11111111-1111-1111-1111-111111111111"};
     controller_->SetStartableQueueId(invalidQueueId, invalidQueueId);
     testController(controller_, true);
 }
@@ -224,7 +225,7 @@ UNIT_TEST_F(API_StartableControllerTest, DynamicStart, testing::ext::TestSize.Le
     // when the container becomes part of a hierarchy controller by our controller
     auto container = CreateTestContainer("TestContainer");
     auto startable = CreateTestStartable("Startable");
-    auto startable2 = CreateTestStartable("Startable2"); // Manual
+    auto startable2 = CreateTestStartable("Startable2");  // Manual
     auto startableIntf = interface_pointer_cast<IStartable>(startable);
     auto startable2Intf = interface_pointer_cast<IStartable>(startable2);
     auto startableAttachment = interface_pointer_cast<IAttachment>(startable);
@@ -602,10 +603,10 @@ UNIT_TEST_F(API_StartableControllerTest, QueueAddingInsideStart, testing::ext::T
     EXPECT_THAT(startOrder, IsEmpty());
     AttachController();
     startQueue->ProcessTasks();
-    startQueue->ProcessTasks(); // needs second run if things got queued after first run
+    startQueue->ProcessTasks();  // needs second run if things got queued after first run
     EXPECT_THAT(startOrder, ElementsAre(1, 2, 3));
     controller_->StopAll();
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

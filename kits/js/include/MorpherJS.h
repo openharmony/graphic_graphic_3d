@@ -20,8 +20,9 @@
 #include "ArrayPropertyProxy.h"
 
 #include <base/containers/unordered_map.h>
+#include "export.h"
 
-class MorpherJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC MorpherJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 666;
     static void Init(napi_env env, napi_value exports);
@@ -32,7 +33,7 @@ public:
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void *) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     void AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj);

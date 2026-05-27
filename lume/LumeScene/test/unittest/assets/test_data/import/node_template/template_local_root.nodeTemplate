@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "description": "node template using /-anchored objectRef to reference a sibling inside the template",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "node",
+            "name": "tmplRoot",
+            "children": [
+                { "type": "node", "name": "inner" },
+                {
+                    "type": "node",
+                    "name": "ext_with_ref",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "RefAtt" },
+                                { "name": "NodeRef", "value": { "type": "objectRef", "path": "/inner" } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

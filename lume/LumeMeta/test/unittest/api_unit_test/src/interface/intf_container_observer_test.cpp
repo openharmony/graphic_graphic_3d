@@ -81,7 +81,7 @@ protected:
     IContainer::Ptr container_;
     IContainer::Ptr container1_1_;
     IContainer::Ptr container2_1_;
-    META_NS::ContainerObserver observer_ { CreateInstance(ClassId::ContainerObserver) };
+    META_NS::ContainerObserver observer_{CreateInstance(ClassId::ContainerObserver)};
 };
 
 /**
@@ -191,5 +191,5 @@ UNIT_TEST_F(API_ContainerObserverTest, RemoveDescendant, testing::ext::TestSize.
     ASSERT_THAT(movedCalls_, testing::SizeIs(0));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

@@ -56,7 +56,7 @@ void ShaderCustomPropertiesTest(CORE3D_NS::UTest::TestResources& res)
     // when shader is set, after that the .shader containing custom properties should be found from .customProperties
     if (auto materialHandle = materialManager->Read(materialEntity); materialHandle) {
         if (materialHandle->customProperties) {
-            Math::Vec4 expectance {};
+            Math::Vec4 expectance{};
             expectance = GetPropertyValue<Math::Vec4>(materialHandle->customProperties, "test");
             EXPECT_FLOAT_EQ(expectance.x, 0.1f);
             EXPECT_FLOAT_EQ(expectance.y, 0.2f);
@@ -71,7 +71,7 @@ void ShaderCustomPropertiesTest(CORE3D_NS::UTest::TestResources& res)
         return;
     }
 
-    Math::Vec4 newValues { 1, 2, 3, 4 };
+    Math::Vec4 newValues{1, 2, 3, 4};
     // setting same shader again, should keep the values what has been set in the .customProperties
     if (auto materialHandle = materialManager->Write(materialEntity); materialHandle) {
         if (materialHandle->customProperties) {
@@ -86,7 +86,7 @@ void ShaderCustomPropertiesTest(CORE3D_NS::UTest::TestResources& res)
         return;
     }
     // .. then set the shader and check that the old set was still there.
-    res.TickTest(1); // search pos "iiii"
+    res.TickTest(1);  // search pos "iiii"
     shaderManager.LoadShaderFile("test://shader/custom_shader.shader");
     shaderHandle = shaderManager.GetShaderHandle("test://shader/custom_shader.shader");
     materialComponent.materialShader.shader =
@@ -137,7 +137,7 @@ void ShaderCustomPropertiesTest(CORE3D_NS::UTest::TestResources& res)
         return;
     }
 }
-}; // namespace
+};  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -154,4 +154,4 @@ UNIT_TEST(API_GfxTest, ShaderCustomProperties, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

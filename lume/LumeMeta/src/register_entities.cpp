@@ -38,5 +38,5 @@ void UnRegisterEntities(IObjectRegistry& registry)
     Internal::UnRegisterBuiltInObjects(registry);
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

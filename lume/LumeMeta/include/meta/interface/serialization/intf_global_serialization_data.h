@@ -51,8 +51,8 @@ public:
     virtual IValueSerializer::Ptr GetValueSerializer(const TypeId& id) const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IGlobalSerializationData)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IGlobalSerializationData)
 
 #endif

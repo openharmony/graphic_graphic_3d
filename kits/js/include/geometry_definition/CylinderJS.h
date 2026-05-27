@@ -42,6 +42,6 @@ private:
     uint32_t segmentCount_;
 };
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition
 
 #endif

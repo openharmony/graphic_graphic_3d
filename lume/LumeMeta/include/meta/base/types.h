@@ -185,9 +185,9 @@ inline bool operator<(const ClassInfo& lhs, const ClassInfo& rhs) noexcept
  * can be constructed via ObjectRegistry. Example: META_REGISTER_CLASS(AnimationController,
  * "32ccf293-e684-46e3-b733-85f9bbcc703c", ObjectCategoryBits::NO_CATEGORY)
  */
-#define META_REGISTER_IMPL_CLASS4(singleton, name, id, cat, readable)                                                  \
-    namespace ClassId {                                                                                                \
-    [[maybe_unused]] inline constexpr ::META_NS::ClassInfo name { BASE_NS::Uid(id), #name, cat, singleton, readable }; \
+#define META_REGISTER_IMPL_CLASS4(singleton, name, id, cat, readable)                                               \
+    namespace ClassId {                                                                                             \
+    [[maybe_unused]] inline constexpr ::META_NS::ClassInfo name{BASE_NS::Uid(id), #name, cat, singleton, readable}; \
     }
 
 #define META_REGISTER_IMPL_CLASS3(singleton, name, id, cat) META_REGISTER_IMPL_CLASS4(singleton, name, id, cat, #name)
@@ -214,9 +214,9 @@ inline bool operator<(const ClassInfo& lhs, const ClassInfo& rhs) noexcept
  *         META_INTERFACE(CORE_NS::IInterface, IAttach)
  *   Here the META_INTERFACE macro will find the UID using the name "IAttach".
  */
-#define META_REGISTER_INTERFACE3(name, id, readable)                                                          \
-    namespace InterfaceId {                                                                                   \
-    [[maybe_unused]] inline constexpr ::META_NS::InterfaceInfo name { META_NS::TypeId(id), #name, readable }; \
+#define META_REGISTER_INTERFACE3(name, id, readable)                                                       \
+    namespace InterfaceId {                                                                                \
+    [[maybe_unused]] inline constexpr ::META_NS::InterfaceInfo name{META_NS::TypeId(id), #name, readable}; \
     }
 
 #define META_REGISTER_INTERFACE2(name, id) META_REGISTER_INTERFACE3(name, id, #name)

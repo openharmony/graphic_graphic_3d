@@ -48,16 +48,17 @@
 #include "ecs_component/resource_component_info.h"
 #include "mesh/mesh.h"
 #include "mesh/mesh_creator.h"
-#include "mesh/mesh_resource.h"
 #include "mesh/sampler.h"
 #include "mesh/submesh.h"
 #include "mesh/texture.h"
 #include "node/camera_node.h"
 #include "node/light_node.h"
+#include "node/light_probe_group_node.h"
 #include "node/mesh_node.h"
 #include "node/node.h"
 #include "postprocess/bloom.h"
 #include "postprocess/blur.h"
+#include "postprocess/color_adjustments.h"
 #include "postprocess/color_conversion.h"
 #include "postprocess/color_fringe.h"
 #include "postprocess/dof.h"
@@ -66,7 +67,6 @@
 #include "postprocess/motion_blur.h"
 #include "postprocess/postprocess.h"
 #include "postprocess/taa.h"
-#include "postprocess/color_adjustments.h"
 #include "postprocess/tonemap.h"
 #include "postprocess/upscale.h"
 #include "postprocess/vignette.h"
@@ -78,27 +78,22 @@
 #include "resource/environment.h"
 #include "resource/image.h"
 #include "resource/material.h"
-#include "resource/node_instantiator.h"
+#include "resource/node_template.h"
 #include "resource/occlusion_material.h"
 #include "resource/render_resource_manager.h"
 #include "resource/shader.h"
-#include "resource/types/animation_type.h"
-#include "resource/types/environment_type.h"
-#include "resource/types/gltf_scene_type.h"
-#include "resource/types/image_type.h"
-#include "resource/types/material_type.h"
-#include "resource/types/postprocess_type.h"
-#include "resource/types/scene_type.h"
-#include "resource/types/shader_type.h"
 #include "scene.h"
 #include "scene_manager.h"
 #include "serialization/external_node.h"
-#include "serialization/scene_exporter.h"
-#include "serialization/scene_importer.h"
-#include "serialization/scene_ser.h"
+#include "template/animation_template.h"
+#include "template/environment_template.h"
+#include "template/image_template.h"
+#include "template/material_template.h"
+#include "template/mesh_template.h"
+#include "template/postprocess_template.h"
 #include "util.h"
 
-static CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
+static CORE_NS::IPluginRegister* gPluginRegistry{nullptr};
 
 CORE_BEGIN_NAMESPACE()
 IPluginRegister& GetPluginRegister()
@@ -116,34 +111,9 @@ void RegisterPostProcessEngineAccess();
 void UnregisterPostProcessEngineAccess();
 void RegisterAnys();
 void UnRegisterAnys();
-void RegisterSerializers();
-void UnRegisterSerializers();
-} // namespace Internal
 
-using namespace CORE_NS;
-
-static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
+void RegisterComponentTypes()
 {
-    // Initializing dynamic plugin.
-    // Plugin registry access via the provided registry instance which is saved here.
-    gPluginRegistry = &pluginRegistry;
-
-    pluginRegistry.RegisterTypeInfo(ENTITY_OWNER_COMPONENT_TYPE_INFO);
-    pluginRegistry.RegisterTypeInfo(RESOURCE_COMPONENT_TYPE_INFO);
-
-    Internal::RegisterAnys();
-    Internal::RegisterEngineAccess();
-    Internal::RegisterPostProcessEngineAccess();
-    Internal::RegisterSerializers();
-
-    META_NS::RegisterObjectType<SceneManager>();
-    META_NS::RegisterObjectType<SceneObject>();
-
-    META_NS::RegisterObjectType<Node>();
-    META_NS::RegisterObjectType<CameraNode>();
-    META_NS::RegisterObjectType<LightNode>();
-    META_NS::RegisterObjectType<MeshNode>();
-
     META_NS::RegisterObjectType<GenericComponent>();
     META_NS::RegisterObjectType<CameraComponent>();
     META_NS::RegisterObjectType<TransformComponent>();
@@ -157,10 +127,61 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<RenderMeshComponent>();
     META_NS::RegisterObjectType<NodeComponent>();
     META_NS::RegisterObjectType<MorphComponent>();
+}
 
-    META_NS::RegisterObjectType<EcsObject>();
-    META_NS::RegisterObjectType<Image>();
-    META_NS::RegisterObjectType<ExternalImage>();
+void UnregisterComponentTypes()
+{
+    META_NS::UnregisterObjectType<GenericComponent>();
+    META_NS::UnregisterObjectType<CameraComponent>();
+    META_NS::UnregisterObjectType<TransformComponent>();
+    META_NS::UnregisterObjectType<PostProcessComponent>();
+    META_NS::UnregisterObjectType<AnimationComponent>();
+    META_NS::UnregisterObjectType<EnvironmentComponent>();
+    META_NS::UnregisterObjectType<LayerComponent>();
+    META_NS::UnregisterObjectType<LightComponent>();
+    META_NS::UnregisterObjectType<MaterialComponent>();
+    META_NS::UnregisterObjectType<MeshComponent>();
+    META_NS::UnregisterObjectType<RenderMeshComponent>();
+    META_NS::UnregisterObjectType<NodeComponent>();
+    META_NS::UnregisterObjectType<MorphComponent>();
+}
+
+void RegisterTemplateTypes()
+{
+    META_NS::RegisterObjectType<AnimationTemplate>();
+    META_NS::RegisterObjectType<MaterialTemplate>();
+    META_NS::RegisterObjectType<MeshTemplate>();
+    META_NS::RegisterObjectType<EnvironmentTemplate>();
+    META_NS::RegisterObjectType<ImageTemplate>();
+    META_NS::RegisterObjectType<PostProcessTemplate>();
+
+    META_NS::RegisterObjectType<EnvironmentTemplateAccess>();
+    META_NS::RegisterObjectType<MaterialTemplateAccess>();
+    META_NS::RegisterObjectType<PostProcessTemplateAccess>();
+    META_NS::RegisterObjectType<OcclusionMaterialTemplateAccess>();
+    META_NS::RegisterObjectType<NodeTemplate>();
+    META_NS::RegisterObjectType<NodeTemplateContext>();
+}
+
+void UnregisterTemplateTypes()
+{
+    META_NS::UnregisterObjectType<AnimationTemplate>();
+    META_NS::UnregisterObjectType<MaterialTemplate>();
+    META_NS::UnregisterObjectType<MeshTemplate>();
+    META_NS::UnregisterObjectType<EnvironmentTemplate>();
+    META_NS::UnregisterObjectType<ImageTemplate>();
+    META_NS::UnregisterObjectType<PostProcessTemplate>();
+
+    META_NS::UnregisterObjectType<EnvironmentTemplateAccess>();
+    META_NS::UnregisterObjectType<MaterialTemplateAccess>();
+    META_NS::UnregisterObjectType<PostProcessTemplateAccess>();
+    META_NS::UnregisterObjectType<OcclusionMaterialTemplateAccess>();
+    META_NS::UnregisterObjectType<NodeTemplate>();
+    META_NS::UnregisterObjectType<NodeTemplateContext>();
+}
+
+void RegisterPostProcessTypes()
+{
     META_NS::RegisterObjectType<Bloom>();
     META_NS::RegisterObjectType<ColorAdjustments>();
     META_NS::RegisterObjectType<Tonemap>();
@@ -176,83 +197,10 @@ static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
     META_NS::RegisterObjectType<Upscale>();
     META_NS::RegisterObjectType<WhiteBalance>();
     META_NS::RegisterObjectType<PostProcess>();
-
-    META_NS::RegisterObjectType<Environment>();
-    META_NS::RegisterObjectType<EcsAnimation>();
-    META_NS::RegisterObjectType<RenderConfiguration>();
-    META_NS::RegisterObjectType<Material>();
-    META_NS::RegisterObjectType<Shader>();
-    META_NS::RegisterObjectType<SubMesh>();
-    META_NS::RegisterObjectType<Mesh>();
-    META_NS::RegisterObjectType<MeshCreator>();
-    META_NS::RegisterObjectType<MeshResource>();
-    META_NS::RegisterObjectType<Texture>();
-    META_NS::RegisterObjectType<Sampler>();
-    META_NS::RegisterObjectType<OcclusionMaterial>();
-
-    META_NS::RegisterObjectType<AssetObject>();
-
-    META_NS::RegisterObjectType<AnimationResourceType>();
-    META_NS::RegisterObjectType<SceneResourceType>();
-    META_NS::RegisterObjectType<GltfSceneResourceType>();
-    META_NS::RegisterObjectType<ImageResourceType>();
-    META_NS::RegisterObjectType<ShaderResourceType>();
-    META_NS::RegisterObjectType<EnvironmentResourceType>();
-    META_NS::RegisterObjectType<MaterialResourceType>();
-    META_NS::RegisterObjectType<OcclusionMaterialResourceType>();
-    META_NS::RegisterObjectType<PostProcessResourceType>();
-    META_NS::RegisterObjectType<SceneSer>();
-    META_NS::RegisterObjectType<SceneNodeSer>();
-    META_NS::RegisterObjectType<SceneExternalNodeSer>();
-    META_NS::RegisterObjectType<ExternalAttachment>();
-    META_NS::RegisterObjectType<SceneExporter>();
-    META_NS::RegisterObjectType<SceneImporter>();
-    META_NS::RegisterObjectType<RenderResourceManager>();
-    META_NS::RegisterObjectType<ExternalNode>();
-
-    META_NS::RegisterObjectType<EnvironmentTemplateAccess>();
-    META_NS::RegisterObjectType<MaterialTemplateAccess>();
-    META_NS::RegisterObjectType<PostProcessTemplateAccess>();
-    META_NS::RegisterObjectType<OcclusionMaterialTemplateAccess>();
-
-    META_NS::RegisterObjectType<ApplicationContext>();
-    META_NS::RegisterObjectType<RenderContext>();
-
-    META_NS::RegisterObjectType<ContainableObject>();
-    META_NS::RegisterObjectType<CameraEffectComponent>();
-    META_NS::RegisterObjectType<Effect>();
-    META_NS::RegisterObjectType<NodeInstantiator>();
-    META_NS::RegisterObjectType<NodeTemplate>();
-
-    return {};
 }
-static void UnregisterInterfaces(PluginToken)
+
+void UnregisterPostProcessTypes()
 {
-    META_NS::UnregisterObjectType<SceneManager>();
-    META_NS::UnregisterObjectType<SceneObject>();
-
-    META_NS::UnregisterObjectType<Node>();
-    META_NS::UnregisterObjectType<CameraNode>();
-    META_NS::UnregisterObjectType<LightNode>();
-    META_NS::UnregisterObjectType<MeshNode>();
-
-    META_NS::UnregisterObjectType<GenericComponent>();
-    META_NS::UnregisterObjectType<CameraComponent>();
-    META_NS::UnregisterObjectType<TransformComponent>();
-    META_NS::UnregisterObjectType<PostProcessComponent>();
-    META_NS::UnregisterObjectType<AnimationComponent>();
-    META_NS::UnregisterObjectType<EnvironmentComponent>();
-    META_NS::UnregisterObjectType<LayerComponent>();
-    META_NS::UnregisterObjectType<LightComponent>();
-    META_NS::UnregisterObjectType<MaterialComponent>();
-    META_NS::UnregisterObjectType<MeshComponent>();
-    META_NS::UnregisterObjectType<RenderMeshComponent>();
-    META_NS::UnregisterObjectType<NodeComponent>();
-    META_NS::UnregisterObjectType<MorphComponent>();
-
-    META_NS::UnregisterObjectType<EcsObject>();
-    META_NS::UnregisterObjectType<ExternalImage>();
-    META_NS::UnregisterObjectType<Image>();
     META_NS::UnregisterObjectType<Bloom>();
     META_NS::UnregisterObjectType<ColorAdjustments>();
     META_NS::UnregisterObjectType<Tonemap>();
@@ -268,7 +216,26 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<Upscale>();
     META_NS::UnregisterObjectType<WhiteBalance>();
     META_NS::UnregisterObjectType<PostProcess>();
+}
 
+void RegisterAssetTypes()
+{
+    META_NS::RegisterObjectType<Environment>();
+    META_NS::RegisterObjectType<EcsAnimation>();
+    META_NS::RegisterObjectType<RenderConfiguration>();
+    META_NS::RegisterObjectType<Material>();
+    META_NS::RegisterObjectType<Shader>();
+    META_NS::RegisterObjectType<SubMesh>();
+    META_NS::RegisterObjectType<Mesh>();
+    META_NS::RegisterObjectType<MeshCreator>();
+    META_NS::RegisterObjectType<Texture>();
+    META_NS::RegisterObjectType<Sampler>();
+    META_NS::RegisterObjectType<OcclusionMaterial>();
+    META_NS::RegisterObjectType<AssetObject>();
+}
+
+void UnregisterAssetTypes()
+{
     META_NS::UnregisterObjectType<Environment>();
     META_NS::UnregisterObjectType<EcsAnimation>();
     META_NS::UnregisterObjectType<RenderConfiguration>();
@@ -277,35 +244,90 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<SubMesh>();
     META_NS::UnregisterObjectType<Mesh>();
     META_NS::UnregisterObjectType<MeshCreator>();
-    META_NS::UnregisterObjectType<MeshResource>();
     META_NS::UnregisterObjectType<Texture>();
     META_NS::UnregisterObjectType<Sampler>();
     META_NS::UnregisterObjectType<OcclusionMaterial>();
-
     META_NS::UnregisterObjectType<AssetObject>();
+}
 
-    META_NS::UnregisterObjectType<AnimationResourceType>();
-    META_NS::UnregisterObjectType<SceneResourceType>();
-    META_NS::UnregisterObjectType<GltfSceneResourceType>();
-    META_NS::UnregisterObjectType<ImageResourceType>();
-    META_NS::UnregisterObjectType<ShaderResourceType>();
-    META_NS::UnregisterObjectType<EnvironmentResourceType>();
-    META_NS::UnregisterObjectType<MaterialResourceType>();
-    META_NS::UnregisterObjectType<OcclusionMaterialResourceType>();
-    META_NS::UnregisterObjectType<PostProcessResourceType>();
-    META_NS::UnregisterObjectType<SceneSer>();
-    META_NS::UnregisterObjectType<SceneNodeSer>();
-    META_NS::UnregisterObjectType<SceneExternalNodeSer>();
-    META_NS::UnregisterObjectType<ExternalAttachment>();
-    META_NS::UnregisterObjectType<SceneExporter>();
-    META_NS::UnregisterObjectType<SceneImporter>();
+}  // namespace Internal
+
+using namespace CORE_NS;
+
+static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
+{
+    // Initializing dynamic plugin.
+    // Plugin registry access via the provided registry instance which is saved here.
+    gPluginRegistry = &pluginRegistry;
+
+    pluginRegistry.RegisterTypeInfo(ENTITY_OWNER_COMPONENT_TYPE_INFO);
+    pluginRegistry.RegisterTypeInfo(RESOURCE_COMPONENT_TYPE_INFO);
+
+    Internal::RegisterAnys();
+    Internal::RegisterEngineAccess();
+    Internal::RegisterPostProcessEngineAccess();
+
+    META_NS::RegisterObjectType<SceneManager>();
+    META_NS::RegisterObjectType<SceneObject>();
+
+    META_NS::RegisterObjectType<Node>();
+    META_NS::RegisterObjectType<CameraNode>();
+    META_NS::RegisterObjectType<LightNode>();
+    META_NS::RegisterObjectType<MeshNode>();
+    META_NS::RegisterObjectType<LightProbeGroupNode>();
+
+    Internal::RegisterComponentTypes();
+
+    META_NS::RegisterObjectType<EcsObject>();
+    META_NS::RegisterObjectType<Image>();
+    META_NS::RegisterObjectType<ExternalImage>();
+
+    Internal::RegisterPostProcessTypes();
+    Internal::RegisterAssetTypes();
+
+    META_NS::RegisterObjectType<RenderResourceManager>();
+    META_NS::RegisterObjectType<ExternalNode>();
+
+    Internal::RegisterTemplateTypes();
+
+    META_NS::RegisterObjectType<ApplicationContext>();
+    META_NS::RegisterObjectType<RenderContext>();
+
+    META_NS::RegisterObjectType<ContainableObject>();
+    META_NS::RegisterObjectType<CameraEffectComponent>();
+    META_NS::RegisterObjectType<Effect>();
+
+    return {};
+}
+static void UnregisterInterfaces(PluginToken)
+{
+    // Tear down the deferred-load thread pool while LumeEngine is still
+    // loaded — the pool's worker join uses ITaskQueueFactory code paths
+    // owned by that plugin.
+    RenderResourceManager::Shutdown();
+
+    META_NS::UnregisterObjectType<SceneManager>();
+    META_NS::UnregisterObjectType<SceneObject>();
+
+    META_NS::UnregisterObjectType<Node>();
+    META_NS::UnregisterObjectType<CameraNode>();
+    META_NS::UnregisterObjectType<LightNode>();
+    META_NS::UnregisterObjectType<MeshNode>();
+    META_NS::UnregisterObjectType<LightProbeGroupNode>();
+
+    Internal::UnregisterComponentTypes();
+
+    META_NS::UnregisterObjectType<EcsObject>();
+    META_NS::UnregisterObjectType<ExternalImage>();
+    META_NS::UnregisterObjectType<Image>();
+
+    Internal::UnregisterPostProcessTypes();
+    Internal::UnregisterAssetTypes();
+
     META_NS::UnregisterObjectType<RenderResourceManager>();
     META_NS::UnregisterObjectType<ExternalNode>();
 
-    META_NS::UnregisterObjectType<EnvironmentTemplateAccess>();
-    META_NS::UnregisterObjectType<MaterialTemplateAccess>();
-    META_NS::UnregisterObjectType<PostProcessTemplateAccess>();
-    META_NS::UnregisterObjectType<OcclusionMaterialTemplateAccess>();
+    Internal::UnregisterTemplateTypes();
 
     META_NS::UnregisterObjectType<ApplicationContext>();
     META_NS::UnregisterObjectType<RenderContext>();
@@ -313,10 +335,7 @@ static void UnregisterInterfaces(PluginToken)
     META_NS::UnregisterObjectType<ContainableObject>();
     META_NS::UnregisterObjectType<CameraEffectComponent>();
     META_NS::UnregisterObjectType<Effect>();
-    META_NS::UnregisterObjectType<NodeInstantiator>();
-    META_NS::UnregisterObjectType<NodeTemplate>();
 
-    Internal::UnRegisterSerializers();
     Internal::UnregisterPostProcessEngineAccess();
     Internal::UnregisterEngineAccess();
     Internal::UnRegisterAnys();
@@ -332,8 +351,11 @@ static const char* VersionString()
     return "2.0";
 }
 
-const BASE_NS::Uid plugin_deps[] { RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN,
-    META_NS::META_OBJECT_PLUGIN_UID };
+static constexpr BASE_NS::Uid UID_SCENE_METADATA_IMPORTER_PLUGIN{"a959e575-0394-4189-95f9-e0f34b747cca"};
+static constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[]{RENDER_NS::UID_RENDER_PLUGIN,
+    CORE3D_NS::UID_3D_PLUGIN,
+    META_NS::META_OBJECT_PLUGIN_UID,
+    UID_SCENE_METADATA_IMPORTER_PLUGIN};
 
 SCENE_END_NAMESPACE()
 
@@ -343,8 +365,11 @@ _declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-    CORE_NS::IPlugin gPluginData { { CORE_NS::IPlugin::UID }, "Scene",
+    CORE_NS::IPlugin gPluginData{{CORE_NS::IPlugin::UID},
+        "Scene",
         /** Version information of the plugin. */
-        CORE_NS::Version { SCENE_NS::UID_SCENE_PLUGIN, SCENE_NS::VersionString }, SCENE_NS::RegisterInterfaces,
-        SCENE_NS::UnregisterInterfaces, SCENE_NS::plugin_deps };
+        CORE_NS::Version{SCENE_NS::UID_SCENE_PLUGIN, SCENE_NS::VersionString},
+        SCENE_NS::RegisterInterfaces,
+        SCENE_NS::UnregisterInterfaces,
+        SCENE_NS::PLUGIN_DEPENDENCIES};
 }

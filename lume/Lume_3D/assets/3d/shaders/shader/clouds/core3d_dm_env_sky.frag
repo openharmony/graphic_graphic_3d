@@ -152,6 +152,55 @@ vec3 GetSunPos()
     return uEnvironmentDataArray[0U].packedSun.xyz;
 }
 
+float GetSkySunAngularRadiusRadians()
+{
+    return 0.5 * radians(clamp(uEnvironmentDataArray[0U].skySunParams.x, 0.01, 20.0));
+}
+
+float GetSkySunOpacity()
+{
+    return clamp(uEnvironmentDataArray[0U].skySunParams.y, 0.0, 1.0);
+}
+
+vec3 GetSkySunTint()
+{
+    return max(uEnvironmentDataArray[0U].skySunColor.rgb, vec3(0.0));
+}
+
+float GetMoonAngularRadiusRadians()
+{
+    return 0.5 * radians(clamp(uEnvironmentDataArray[0U].skyMoonNightParams.x, 0.01, 20.0));
+}
+
+float GetMoonOpacity()
+{
+    return clamp(uEnvironmentDataArray[0U].skyMoonNightParams.y, 0.0, 1.0);
+}
+
+float GetStarsIntensity()
+{
+    return max(uEnvironmentDataArray[0U].skyMoonNightParams.z, 0.0);
+}
+
+float GetNightSkyIntensity()
+{
+    return max(uEnvironmentDataArray[0U].skyMoonNightParams.w, 0.0);
+}
+
+vec3 GetMoonTint()
+{
+    return max(uEnvironmentDataArray[0U].skyMoonColor.rgb, vec3(0.0));
+}
+
+vec3 GetSkyEnvTint()
+{
+    const vec4 envFactor = uEnvironmentDataArray[0U].envMapColorFactor;
+    if (envFactor.w > 1e-6) {
+        return max(envFactor.xyz / envFactor.w, vec3(0.0));
+    }
+    return vec3(1.0);
+}
+
 vec3 GetValFromTransmittanceLUT(vec3 viewPos, vec3 sunDir)
 {
     ivec2 bufferRes = textureSize(uImgTLutSampler, 0);
@@ -234,19 +283,18 @@ float ComputeShadow(vec3 N, vec3 V, vec3 L)
 
 vec3 CalculateMoonBloom(vec3 dir, vec3 moonDir, vec3 moonColor)
 {
-    const float moonSolidAngle = acos(0.9999);
-    const float minMoonCosTheta = cos(moonSolidAngle);
-    
-    float cosTheta = dot(dir, moonDir);
-    if (cosTheta >= minMoonCosTheta) {
-        return vec3(0.0); // Inside moon disc
+    const float moonAngularRadius = GetMoonAngularRadiusRadians();
+    float theta = Safeacos(clamp(dot(dir, moonDir), -1.0, 1.0));
+    if (theta < moonAngularRadius) {
+        return vec3(0.0);
     }
-    
-    float offset = minMoonCosTheta - cosTheta;
-    float gaussianBloom = exp(-offset * 5000.0) * 0.3;
-    float invBloom = 1.0 / (0.001 + offset * 50.0) * 0.005;
-    
-    float bloomIntensity = clamp(uEnvironmentDataArray[0U].packedPhases.y, 0.1, 1.0);
+
+    float edgeDist = theta - moonAngularRadius;
+    float gaussianBloom = exp(-edgeDist * 5000.0) * 0.3;
+    float invBloom = 1.0 / (0.001 + edgeDist * 50.0) * 0.005;
+
+    float bloomIntensity = max(uEnvironmentDataArray[0U].packedPhases.y, 0.0);
+    bloomIntensity *= GetMoonOpacity() * GetNightSkyIntensity();
     return moonColor * (gaussianBloom + invBloom) * bloomIntensity;
 }
 
@@ -254,12 +302,13 @@ vec4 RenderMoon(vec3 dir, vec3 moonDir, vec3 moonColor)
 {
     // Normalized position on the moon's disc using angular offset
     float cosTheta = dot(dir, moonDir);
-    if (cosTheta < 0.9998) {
+    const float moonAngularRadius = GetMoonAngularRadiusRadians();
+    float theta = Safeacos(clamp(cosTheta, -1.0, 1.0));
+    float aaWidth = max(fwidth(theta), 1e-4);
+    if (theta > moonAngularRadius + aaWidth) {
         return vec4(0.0);
     }
-    
-    float theta = sqrt(2.0 * (1.0 - cosTheta));
-    const float moonAngularRadius = acos(0.9998);
+
     float normRadius = theta / moonAngularRadius;
     
     vec3 up = abs(moonDir.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
@@ -272,9 +321,7 @@ vec4 RenderMoon(vec3 dir, vec3 moonDir, vec3 moonColor)
     uv.x = dot(offsetDir, right) * normRadius;
     uv.y = dot(offsetDir, up) * normRadius;
     uv *= 0.5;
-    
-    float dist = length(uv);
-    
+
     vec2 moonTexCoords = uv / 0.44;
     moonTexCoords = moonTexCoords * 2.0;
     
@@ -290,14 +337,13 @@ vec4 RenderMoon(vec3 dir, vec3 moonDir, vec3 moonColor)
     surfaceColor *= 0.7 + 0.2 * vor;   // Range: 0.7 to 0.9 (softer craters)
     surfaceColor *= 0.85 + 0.1 * tex2; // Range: 0.85 to 0.95
     
-    float bloomIntensity = clamp(uEnvironmentDataArray[0U].packedPhases.y, 0.1, 1.0);
+    float bloomIntensity = max(uEnvironmentDataArray[0U].packedPhases.y, 0.0) * GetNightSkyIntensity();
     vec3 surfaceBloom = moonColor * bloomIntensity; 
     
     surfaceColor += surfaceBloom;
-    
-    float discAlpha = smoothstep(0.46, 0.42, dist);
-    // Edge fade for antialiasing
-    discAlpha *= smoothstep(0.0, 0.05, 1.0 - normRadius);
+
+    float discAlpha = 1.0 - smoothstep(moonAngularRadius - aaWidth, moonAngularRadius + aaWidth, theta);
+    discAlpha *= GetMoonOpacity() * GetNightSkyIntensity();
     
     return vec4(surfaceColor, discAlpha);
 }
@@ -308,21 +354,18 @@ vec4 RenderScene(
     // the color to use, w is the scene depth
     vec4 color = vec4(0.0, 0.0, 0.0, 1e12);
     
-    // Configurable angular threshold for sun disc
-    const float celestialBodyAngularThreshold = 0.9998; // ~1.15 degrees angular radius
-    bool isMoon = dot(dir, -light.dir) > celestialBodyAngularThreshold;
-    vec4 moonColor = vec4(0.8f, 0.8f, 0.85, 1.0);
+    vec4 moonColor = vec4(GetMoonTint(), 1.0);
     vec3 bluishTint = vec3(0.1, 0.15, 0.3);
 
     vec3 upVector = normalize(viewPos - params.planetPosition);
     float sunElevation = dot(upVector, light.dir);
     bool isNight = sunElevation < 0.0;
-    float brightness = clamp(uEnvironmentDataArray[0U].packedPhases.w, 0.1, 1.0);
+    float brightness = clamp(uEnvironmentDataArray[0U].packedPhases.w, 0.0, 1.0);
 
     // Fade stars based on sun position
     float starsFadeFactor = smoothstep(0.1, -0.15, sunElevation);
     float glowFadeFactor = smoothstep(0.1, -0.3, sunElevation);
-    float maxStarsIntensity = 0.4;
+    float maxStarsIntensity = 0.4 * GetStarsIntensity() * GetNightSkyIntensity();
     float starsIntensity = starsFadeFactor * maxStarsIntensity;
 
     if (planetIntersect >= 0.0) {
@@ -338,9 +381,10 @@ vec4 RenderScene(
             float moonFactor = max(0.0, dot(surfaceNormal, -light.dir));
             moonLight = moonColor.xyz * moonFactor * moonIntensity;
             moonLight *= ComputeShadow(surfaceNormal, -dir, -light.dir) * brightness;
+            moonLight *= GetMoonOpacity() * GetNightSkyIntensity();
 
             float glowIntensity = clamp(uEnvironmentDataArray[0U].packedPhases.z, 0.0, 0.1);
-            nightSkyHorizonColor = glowIntensity * bluishTint;
+            nightSkyHorizonColor = glowIntensity * bluishTint * GetNightSkyIntensity();
         }
         else {
             sunLight *= ComputeShadow(surfaceNormal, -dir, light.dir) * brightness;
@@ -351,21 +395,22 @@ vec4 RenderScene(
     } else {
         vec3 moonBloom = CalculateMoonBloom(dir, -light.dir, moonColor.xyz);
         color.xyz += moonBloom;
+        vec4 moonResult = RenderMoon(dir, -light.dir, moonColor.xyz);
+        moonResult.w = clamp(moonResult.w, 0.0, 1.0);
 
         // Render moon disc on top of bloom
-        if (isMoon) {
-            vec4 moonResult = clamp(RenderMoon(dir, -light.dir, moonColor.xyz), vec4(0.0), vec4(1.0));
+        if (moonResult.w > 0.0) {
             color.xyz = color.xyz * (1.0 - moonResult.w) + moonResult.xyz * moonResult.w;
         }
 
-        if (!isMoon) {
+        if (moonResult.w <= 0.0) {
             color.xyz += CalculateStars(dir, sunElevation, uGeneralData.sceneTimingData.z) * starsIntensity;
         }
 
         if (isNight) {
             float horizonGlow = exp(2.0 * (1.0 - dir.y));
             float glowIntensity = clamp(uEnvironmentDataArray[0U].packedPhases.z, 0.0, 0.1);
-            color.xyz += horizonGlow * glowIntensity * glowFadeFactor * bluishTint;
+            color.xyz += horizonGlow * glowIntensity * glowFadeFactor * bluishTint * GetNightSkyIntensity();
         }
     }
     return color;
@@ -412,8 +457,9 @@ vec3 GetValFromSkyLUT(vec3 rayDir, vec3 sunDir, vec3 viewPos)
 
 // Function is from the image tab https://www.shadertoy.com/view/slSXRW
 vec3 SunWithBloom(vec3 rayDir, vec3 sunDir) {
-    const float sunSolidAngle = 0.53 * PI / 180.0;
-    const float minSunCosTheta = cos(sunSolidAngle);
+    const float defaultSunAngularRadius = 0.5 * radians(0.53);
+    float sunAngularRadius = GetSkySunAngularRadiusRadians();
+    float minSunCosTheta = cos(sunAngularRadius);
 
     float cosTheta = dot(rayDir, sunDir);
 
@@ -421,7 +467,7 @@ vec3 SunWithBloom(vec3 rayDir, vec3 sunDir) {
         return vec3(1.0);
     }
     
-    float offset = minSunCosTheta - cosTheta;
+    float offset = (minSunCosTheta - cosTheta) * (defaultSunAngularRadius / max(sunAngularRadius, 1e-6));
     float gaussianBloom = exp(-offset * 50000.0) * 0.5;
     float invBloom = 1.0 / (0.02 + offset * 300.0) * 0.01;
 
@@ -468,6 +514,7 @@ void main(void)
     vec3 sunLum = SunWithBloom(ray.dir, light_dir);
     // Use smoothstep to limit the effect, so it drops off to actual zero
     sunLum = smoothstep(0.002, 1.0, sunLum);
+    sunLum *= GetSkySunTint() * GetSkySunOpacity();
     highp float planetIntersect = RayIntersectSphere(viewPos, ray.dir, GROUND_RADIUS_KM);
     
     if (length(sunLum) > 0.0) {
@@ -484,7 +531,7 @@ void main(void)
         RenderScene(ray.o, ray.dir, ScatteringLightSource(light_dir, vec3(40)), params, viewPos, planetIntersect);
 
     lum += scene.xyz;
-    outColor = vec4(lum, 1.0);
+    outColor = vec4(lum * GetSkyEnvTint(), 1.0);
 
     gl_FragDepth = 1.0;
 

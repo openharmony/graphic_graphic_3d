@@ -29,23 +29,23 @@ META_BEGIN_NAMESPACE()
 namespace UTest {
 namespace {
 
-constexpr BASE_NS::Uid uid1 { "234b88b1-84db-46c2-b837-d294d9f806a2" };
-constexpr BASE_NS::Uid uid2 { "637b87b2-845b-4652-b857-d29459f806a2" };
+constexpr BASE_NS::Uid uid1{"234b88b1-84db-46c2-b837-d294d9f806a2"};
+constexpr BASE_NS::Uid uid2{"637b87b2-845b-4652-b857-d29459f806a2"};
 
 struct test1Info {
-    constexpr static BASE_NS::Uid UID { uid1 };
-    constexpr static char const* NAME { "Test" };
+    constexpr static BASE_NS::Uid UID{uid1};
+    constexpr static char const* NAME{"Test"};
 };
 
 struct test2Info {
-    constexpr static BASE_NS::Uid UID { uid2 };
-    constexpr static char const* NAME { "Test" };
+    constexpr static BASE_NS::Uid UID{uid2};
+    constexpr static char const* NAME{"Test"};
 };
 
 using Event1 = SimpleEvent<test1Info>;
 using Event2 = SimpleEvent<test2Info, void(int, int)>;
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CreateSimpleEvent
@@ -71,15 +71,15 @@ UNIT_TEST(API_EventTest, Methods, testing::ext::TestSize.Level1)
     EXPECT_EQ(event->GetHandlers().size(), 0);
     ChildChangedInfo info;
     META_NS::Invoke<META_NS::IOnChildChanged>(event, info);
-    META_NS::Invoke<META_NS::IOnChanged>(event); // Wrong type
+    META_NS::Invoke<META_NS::IOnChanged>(event);  // Wrong type
     event->AddHandler(META_NS::MakeCallback<META_NS::IOnChildChanged>([](const ChildChangedInfo&) {}));
     EXPECT_EQ(event->GetHandlers().size(), 1);
     EXPECT_TRUE(event->HasHandlers());
     EXPECT_FALSE(event->GetEventTypeName().empty());
-    EXPECT_NE(event->GetCallableUid(), BASE_NS::Uid {});
+    EXPECT_NE(event->GetCallableUid(), BASE_NS::Uid{});
     auto object = interface_pointer_cast<META_NS::IObject>(event.GetEvent());
     ASSERT_TRUE(object);
-    EXPECT_EQ(object->GetClassId(), BASE_NS::Uid {});
+    EXPECT_EQ(object->GetClassId(), BASE_NS::Uid{});
     EXPECT_EQ(object->GetClassName(), "Event");
     EXPECT_FALSE(object->GetInterfaces().empty());
     auto cloneable = interface_pointer_cast<ICloneable>(object);
@@ -96,7 +96,7 @@ UNIT_TEST(API_EventTest, DestroyAtInvoke, testing::ext::TestSize.Level1)
 {
     constexpr auto name = "DestroyedEvent";
     size_t callCount = 0;
-    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event { new EventImpl<IOnChanged>(name) };
+    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event{new EventImpl<IOnChanged>(name)};
     auto* ptr = event.get();
     event->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>([&]() {
         event.reset();
@@ -111,6 +111,6 @@ UNIT_TEST(API_EventTest, DestroyAtInvoke, testing::ext::TestSize.Level1)
     EXPECT_FALSE(event);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

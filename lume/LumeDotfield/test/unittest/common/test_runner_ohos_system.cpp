@@ -27,9 +27,28 @@
 #include <render/vulkan/intf_device_vk.h>
 #endif
 
+namespace Test {
+
+void OHOSApp::CreateNativeWindow()
+{
+    // Using graphic_2d native image and getting NativeWindow from it
+    m_nativeImage = OH_NativeImage_Create(0, 0);
+    ASSERT_NE(m_nativeImage, nullptr);
+    m_nativeWindow = OH_NativeImage_AcquireNativeWindow(m_nativeImage);
+    ASSERT_NE(m_nativeWindow, nullptr);
+}
+
+void OHOSApp::Terminate()
+{
+    // Destroy native image and native window
+    OH_NativeImage_Destroy(&m_nativeImage);
+}
+
+}  // namespace Test
+
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)() { nullptr };
-void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo) { nullptr };
+CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)(){nullptr};
+void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo){nullptr};
 #endif
 
 namespace Dotfield {
@@ -55,7 +74,8 @@ void RegisterPaths(CORE_NS::IEngine& engine)
     }
     CORE_ASSERT(fileManager.OpenDirectory(cacheDirectory) != nullptr);
 
-    // Create app:// protocol that points to application root directory or application private data directory.
+    // Create app:// protocol that points to application root directory or
+    // application private data directory.
     fileManager.RegisterPath("app", applicationDirectory, true);
     // Create cache:// protocol that points to application cache directory.
     fileManager.RegisterPath("cache", cacheDirectory, true);
@@ -75,16 +95,16 @@ CORE_NS::IEngine::Ptr CreateEngine()
     const ::Test::LogLevelScope logLevel =
         ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_ERROR);
 
-    const CORE_NS::EngineCreateInfo engineCreateInfo { GetTestEnv()->platformCreateInfo,
+    const CORE_NS::EngineCreateInfo engineCreateInfo{GetTestEnv()->platformCreateInfo,
         // applicationVersion
         {
-            "dotfiled_test", // name
-            0,               // versionMajor
-            1,               // versionMinor
-            0,               // versionPatch
+            "dotfiled_test",  // name
+            0,                // versionMajor
+            1,                // versionMinor
+            0,                // versionPatch
         },
         // applicationContext
-        {} };
+        {}};
 
     auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
     auto engine = factory->Create(engineCreateInfo);
@@ -113,25 +133,25 @@ RENDER_NS::IRenderContext::Ptr CreateContext(CORE_NS::IEngine& engine, const REN
     glesExtra.applicationContext = EGL_NO_CONTEXT;
     glesExtra.sharedContext = EGL_NO_CONTEXT;
     glesExtra.MSAASamples = 0;
-    glesExtra.depthBits = 24; // 24 bits of depth buffer.
+    glesExtra.depthBits = 24;  // 24 bits of depth buffer.
     deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
     deviceCreateInfo.backendConfiguration = &glesExtra;
 #elif RENDER_HAS_GL_BACKEND
     RENDER_NS::BackendExtraGL glExtra;
     glExtra.MSAASamples = 0;
-    glExtra.depthBits = 24; // 24: param
-    glExtra.alphaBits = 8; // 8: param
+    glExtra.depthBits = 24;  // 24: param
+    glExtra.alphaBits = 8;   // 8: param
     glExtra.stencilBits = 0;
     deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGL;
     deviceCreateInfo.backendConfiguration = &glExtra;
 #endif
 
-    const RENDER_NS::RenderCreateInfo info {
+    const RENDER_NS::RenderCreateInfo info{
         {
-            "dotfiled_test", // name
-            1,               // versionMajor
-            0,               // versionMinor
-            0,               // versionPatch
+            "dotfiled_test",  // name
+            1,                // versionMajor
+            0,                // versionMinor
+            0,                // versionPatch
         },
         deviceCreateInfo,
     };
@@ -198,7 +218,7 @@ TestContext::~TestContext()
     engine.reset();
 }
 
-} // namespace UTest
-} // namespace Dotfield
+}  // namespace UTest
+}  // namespace Dotfield
 
 testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new Dotfield::UTest::TestRunnerEnv);

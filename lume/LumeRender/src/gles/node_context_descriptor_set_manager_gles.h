@@ -34,6 +34,7 @@ struct BufferType {
     uint32_t bufferId;
     uint32_t offset;
     uint32_t size;
+    uint32_t totalSize;
 };
 
 struct ImageType {
@@ -49,16 +50,16 @@ struct SamplerType {
 struct Bind {
     struct Resource {
         union {
-            BufferType buffer { 0U, 0U, 0U };
+            BufferType buffer{0U, 0U, 0U, 0U};
             ImageType image;
         };
-        SamplerType sampler { 0U };
+        SamplerType sampler{0U};
     };
 
-    DescriptorType descriptorType { CORE_DESCRIPTOR_TYPE_MAX_ENUM };
+    DescriptorType descriptorType{CORE_DESCRIPTOR_TYPE_MAX_ENUM};
     BASE_NS::vector<Resource> resources;
 };
-} // namespace Gles
+}  // namespace Gles
 struct RenderPassBeginInfo;
 class GpuResourceManager;
 
@@ -105,11 +106,11 @@ private:
     // common descriptor sets and one frame descriptor sets
     BASE_NS::vector<BASE_NS::vector<Gles::Bind>>
         resources_[NodeContextDescriptorSetManager::DESCRIPTOR_SET_INDEX_TYPE_COUNT];
-    uint32_t oneFrameDescSetGeneration_ { 0u };
+    uint32_t oneFrameDescSetGeneration_{0u};
 #if (RENDER_VALIDATION_ENABLED == 1)
-    static constexpr uint32_t MAX_ONE_FRAME_GENERATION_IDX { 16u };
+    static constexpr uint32_t MAX_ONE_FRAME_GENERATION_IDX{16u};
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_GLES_H
+#endif  // GLES_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_GLES_H

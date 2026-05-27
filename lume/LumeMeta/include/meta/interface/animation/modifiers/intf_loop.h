@@ -40,10 +40,10 @@ public:
     META_PROPERTY(int32_t, LoopCount)
 };
 
-} // namespace AnimationModifiers
+}  // namespace AnimationModifiers
 
 META_END_NAMESPACE()
 
 META_TYPE(META_NS::AnimationModifiers::ILoop::Ptr)
 
-#endif // META_INTERFACE_ANIMATION_MODIFIERS_INTF_LOOP_H
+#endif  // META_INTERFACE_ANIMATION_MODIFIERS_INTF_LOOP_H

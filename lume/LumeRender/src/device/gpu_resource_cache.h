@@ -52,7 +52,7 @@ public:
 
     struct ImageData {
         RenderHandleReference handle;
-        uint64_t hash { 0 };
+        uint64_t hash{0};
     };
     // access read handles when remapping in render graph
     BASE_NS::array_view<const ImageData> GetImageData() const;
@@ -72,14 +72,14 @@ private:
     FrameData frameData_[2u];
 
     struct GpuBackedData {
-        uint64_t hash { 0 };
-        uint64_t frameUseIndex { 0 };
+        uint64_t hash{0};
+        uint64_t frameUseIndex{0};
         RenderHandleReference handle;
     };
     BASE_NS::vector<GpuBackedData> gpuBackedImages_;
 
-    uint32_t writeIdx_ { 0 };
-    uint64_t frameCounter_ { 0 };
+    uint32_t writeIdx_{0};
+    uint64_t frameCounter_{0};
 };
 RENDER_END_NAMESPACE()
-#endif // RENDER_DEVICE_GPU_RESOURCE_CACHE_H
+#endif  // RENDER_DEVICE_GPU_RESOURCE_CACHE_H

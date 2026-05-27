@@ -31,7 +31,7 @@ inline bool CheckRequiredContainerInterfaces(const IContainer::Ptr& container, c
     if (auto req = interface_cast<IRequiredInterfaces>(container)) {
         const auto reqs = req->GetRequiredInterfaces();
         if (reqs.empty()) {
-            return true; // Container has no requirements related to the interfaces it accepts
+            return true;  // Container has no requirements related to the interfaces it accepts
         }
         size_t matches = 0;
         for (const auto& req : reqs) {

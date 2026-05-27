@@ -23,11 +23,12 @@ namespace spvtools {
 // This is a private implementation from glslang declared in optimizer.cpp reimplementation here
 // allows us to register our own modified optimisation passes.
 struct Optimizer::PassToken::Impl {
-    explicit Impl(std::unique_ptr<opt::Pass> p) : pass(std::move(p)) {}
-    std::unique_ptr<opt::Pass> pass; // Internal implementation pass.
+    explicit Impl(std::unique_ptr<opt::Pass> p) : pass(std::move(p))
+    {}
+    std::unique_ptr<opt::Pass> pass;  // Internal implementation pass.
 };
 
-} // namespace spvtools
+}  // namespace spvtools
 
 void RegisterStripPreprocessorDebugInfoPass(std::optional<spvtools::Optimizer>& optimizer)
 {

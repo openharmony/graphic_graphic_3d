@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "keyframeAnimation",
+		"name": "kfAnimBuiltinCurve",
+		"duration": 1000.0,
+		"from": 0.0,
+		"to": 100.0,
+		"curve": {
+			"type": "inOutCubic"
+		}
+	}
+}

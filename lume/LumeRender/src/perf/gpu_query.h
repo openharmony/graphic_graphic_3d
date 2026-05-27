@@ -25,8 +25,8 @@
 RENDER_BEGIN_NAMESPACE()
 class Device;
 struct GpuQueryDesc {
-    QueryType queryType { QueryType::CORE_QUERY_TYPE_TIMESTAMP };
-    QueryPipelineStatisticFlags queryPipelineStatisticsFlags { 0 };
+    QueryType queryType{QueryType::CORE_QUERY_TYPE_TIMESTAMP};
+    QueryPipelineStatisticFlags queryPipelineStatisticsFlags{0};
 };
 struct GpuQueryPlatformData {};
 
@@ -51,4 +51,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_PERF_GPU_QUERY_H
+#endif  // RENDER_PERF_GPU_QUERY_H

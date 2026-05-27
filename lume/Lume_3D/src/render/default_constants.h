@@ -25,9 +25,9 @@ CORE3D_BEGIN_NAMESPACE()
 /** Default debug constants */
 struct DefaultDebugConstants {
     /** Render debug marker colors */
-    static constexpr const BASE_NS::Math::Vec4 DEFAULT_DEBUG_COLOR { 0.25f, 0.75f, 0.75f, 1.0f };
+    static constexpr const BASE_NS::Math::Vec4 DEFAULT_DEBUG_COLOR{0.25f, 0.75f, 0.75f, 1.0f};
 };
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER_DEFAULT_CONSTANTS_H
+#endif  // CORE3D_RENDER_DEFAULT_CONSTANTS_H

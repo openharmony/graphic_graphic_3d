@@ -114,7 +114,7 @@ UNIT_TEST(SRC_RenderDataStorePostProcess, RenderDataStorePostProcessTest, testin
         ppConf.taaConfiguration.quality = TaaConfiguration::Quality::HIGH;
         ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView);
 
         dataStorePostProcess->Create("PostProcessConfiguration");
@@ -134,7 +134,7 @@ UNIT_TEST(SRC_RenderDataStorePostProcess, RenderDataStorePostProcessTest, testin
     {
         IRenderDataStorePostProcess::PostProcess::Variables vars;
         vars.userFactorIndex = 1u;
-        vars.factor = { 1.f, 2.f, 3.f, 4.f };
+        vars.factor = {1.f, 2.f, 3.f, 4.f};
         dataStorePostProcess->Create("testPP0", "testPP0", {});
         dataStorePostProcess->Set("testPP0", "testPP0", vars);
         {
@@ -145,14 +145,24 @@ UNIT_TEST(SRC_RenderDataStorePostProcess, RenderDataStorePostProcessTest, testin
             auto globalFactors = dataStorePostProcess->GetGlobalFactors("testPP0");
             ASSERT_EQ(vars.factor, globalFactors.userFactors[vars.userFactorIndex]);
         }
-        dataStorePostProcess->Set("testPP0", { &vars, 1 });
+        dataStorePostProcess->Set("testPP0", {&vars, 1});
     }
     {
         IShaderManager& shaderMgr = engine.device->GetShaderManager();
-        string types[12] = { "vec4", "uvec4", "ivec4", "vec3", "uvec3", "ivec3", "vec2", "uvec2", "ivec2", "float",
-            "uint", "int" };
-        string values[12] = { "[0.0, 1.0, 2.0, 3.0]", "[0, 1, 2, 3]", "[0, 1, 2, 3]", "[0.0, 1.0, 2.0]", "[0, 1, 2]",
-            "[0, 1, 2]", "[0.0, 1.0]", "[0, 1]", "[0, 1]", "0.4", "2", "3" };
+        string types[12] = {
+            "vec4", "uvec4", "ivec4", "vec3", "uvec3", "ivec3", "vec2", "uvec2", "ivec2", "float", "uint", "int"};
+        string values[12] = {"[0.0, 1.0, 2.0, 3.0]",
+            "[0, 1, 2, 3]",
+            "[0, 1, 2, 3]",
+            "[0.0, 1.0, 2.0]",
+            "[0, 1, 2]",
+            "[0, 1, 2]",
+            "[0.0, 1.0]",
+            "[0, 1]",
+            "[0, 1]",
+            "0.4",
+            "2",
+            "3"};
         for (uint32_t i = 0; i < countof(types); ++i) {
             ShaderCreateData data;
             data.path = "rendershaders://shader/SinglePostProcessRenderNodeTest.shader";
@@ -164,11 +174,11 @@ UNIT_TEST(SRC_RenderDataStorePostProcess, RenderDataStorePostProcessTest, testin
             pair += "]";
             string metadata = "[{\"globalFactor\": " + pair + "}, {\"customProperties\": [{\"data\":" + pair + "}]}]";
             data.materialMetadata = metadata;
-            auto shaderHandle = ((ShaderManager&)shaderMgr).Create(data, { to_string(i), "" }, {});
-            ASSERT_NE(RenderHandle {}, shaderHandle.GetHandle());
+            auto shaderHandle = ((ShaderManager&)shaderMgr).Create(data, {to_string(i), ""}, {});
+            ASSERT_NE(RenderHandle{}, shaderHandle.GetHandle());
             IRenderDataStorePostProcess::PostProcess::Variables vars;
             vars.userFactorIndex = 1u;
-            vars.factor = { 1.f, 2.f, 3.f, 4.f };
+            vars.factor = {1.f, 2.f, 3.f, 4.f};
             dataStorePostProcess->Create("testPP1", "testPP1", shaderHandle);
             dataStorePostProcess->Set("testPP1", "testPP1", vars);
             auto globalFactors = dataStorePostProcess->GetGlobalFactors("testPP0");

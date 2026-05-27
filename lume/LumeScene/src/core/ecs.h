@@ -29,6 +29,7 @@
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/layer_component.h>
 #include <3d/ecs/components/light_component.h>
+#include <3d/ecs/components/light_probe_group_component.h>
 #include <3d/ecs/components/local_matrix_component.h>
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/mesh_component.h>
@@ -52,8 +53,6 @@
 #include "../ecs_component/resource_component_info.h"
 #include "ecs_listener.h"
 
-#include <thread>
-
 SCENE_BEGIN_NAMESPACE()
 
 class Ecs : public META_NS::IntroduceInterfaces<IEcsContext>,
@@ -69,11 +68,11 @@ public:
     CORE3D_NS::ISceneNode* FindNode(BASE_NS::string_view path);
     CORE3D_NS::ISceneNode* FindNodeParent(BASE_NS::string_view path);
 
-    bool SetNodeName(CORE_NS::Entity ent, BASE_NS::string_view name); // fix
+    bool SetNodeName(CORE_NS::Entity ent, BASE_NS::string_view name);  // fix
     bool SetNodeParentAndName(CORE_NS::Entity ent, BASE_NS::string_view name, CORE3D_NS::ISceneNode* parent);
 
     BASE_NS::string GetPath(const CORE3D_NS::ISceneNode* node) const;
-    bool IsNodeEntity(CORE_NS::Entity ent) const;
+    bool IsNodeEntity(CORE_NS::Entity ent) const override;
     bool RemoveEntity(CORE_NS::Entity ent) override;
 
     void ListenNodeChanges(bool enabled);
@@ -86,11 +85,13 @@ public:
     bool CreateUnnamedRootNode() override;
 
     CORE_NS::IComponentManager* FindComponent(BASE_NS::string_view name) const override;
+    CORE_NS::IComponentManager* FindComponent(BASE_NS::string_view name, CORE_NS::Entity entity) const override;
     CORE_NS::IEcs::Ptr GetNativeEcs() const override
     {
         return ecs;
     }
 
+    bool IsDefaultComponent(BASE_NS::string_view name) const override;
     void AddDefaultComponents(CORE_NS::Entity ent) const override;
     BASE_NS::string GetPath(CORE_NS::Entity ent) const override;
     IEcsObject::Ptr GetEcsObject(CORE_NS::Entity) override;
@@ -102,41 +103,42 @@ public:
 public:
     CORE_NS::IEcs::Ptr ecs;
 
-    CORE3D_NS::IAnimationComponentManager* animationComponentManager {};
-    CORE3D_NS::IAnimationStateComponentManager* animationStateComponentManager {};
-    CORE3D_NS::ICameraComponentManager* cameraComponentManager {};
+    CORE3D_NS::IAnimationComponentManager* animationComponentManager{};
+    CORE3D_NS::IAnimationStateComponentManager* animationStateComponentManager{};
+    CORE3D_NS::ICameraComponentManager* cameraComponentManager{};
 
-    CORE3D_NS::IEnvironmentComponentManager* envComponentManager {};
-    CORE3D_NS::ILayerComponentManager* layerComponentManager {};
-    CORE3D_NS::ILightComponentManager* lightComponentManager {};
-    CORE3D_NS::IMaterialComponentManager* materialComponentManager {};
-    CORE3D_NS::IMeshComponentManager* meshComponentManager {};
-    CORE3D_NS::INameComponentManager* nameComponentManager {};
-    CORE3D_NS::INodeComponentManager* nodeComponentManager {};
-    CORE3D_NS::IRenderMeshComponentManager* renderMeshComponentManager {};
-    CORE3D_NS::IRenderHandleComponentManager* rhComponentManager {};
-    CORE3D_NS::ITransformComponentManager* transformComponentManager {};
-    CORE3D_NS::IUriComponentManager* uriComponentManager {};
-    CORE3D_NS::IRenderConfigurationComponentManager* renderConfigComponentManager {};
-    CORE3D_NS::IPostProcessComponentManager* postProcessComponentManager {};
-    CORE3D_NS::ILocalMatrixComponentManager* localMatrixComponentManager {};
-    CORE3D_NS::IWorldMatrixComponentManager* worldMatrixComponentManager {};
-    CORE3D_NS::IMorphComponentManager* morphComponentManager {};
+    CORE3D_NS::IEnvironmentComponentManager* envComponentManager{};
+    CORE3D_NS::ILayerComponentManager* layerComponentManager{};
+    CORE3D_NS::ILightComponentManager* lightComponentManager{};
+    CORE3D_NS::ILightProbeGroupComponentManager* lightProbeComponentManager{};
+    CORE3D_NS::IMaterialComponentManager* materialComponentManager{};
+    CORE3D_NS::IMeshComponentManager* meshComponentManager{};
+    CORE3D_NS::INameComponentManager* nameComponentManager{};
+    CORE3D_NS::INodeComponentManager* nodeComponentManager{};
+    CORE3D_NS::IRenderMeshComponentManager* renderMeshComponentManager{};
+    CORE3D_NS::IRenderHandleComponentManager* rhComponentManager{};
+    CORE3D_NS::ITransformComponentManager* transformComponentManager{};
+    CORE3D_NS::IUriComponentManager* uriComponentManager{};
+    CORE3D_NS::IRenderConfigurationComponentManager* renderConfigComponentManager{};
+    CORE3D_NS::IPostProcessComponentManager* postProcessComponentManager{};
+    CORE3D_NS::ILocalMatrixComponentManager* localMatrixComponentManager{};
+    CORE3D_NS::IWorldMatrixComponentManager* worldMatrixComponentManager{};
+    CORE3D_NS::IMorphComponentManager* morphComponentManager{};
 
-    SCENE_NS::IEntityOwnerComponentManager* entityOwnerComponentManager {};
-    SCENE_NS::IResourceComponentManager* resourceComponentManager {};
+    SCENE_NS::IEntityOwnerComponentManager* entityOwnerComponentManager{};
+    SCENE_NS::IResourceComponentManager* resourceComponentManager{};
 
-    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> meshQuery {};
-    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> materialQuery {};
-    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> animationQuery {};
+    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> meshQuery{};
+    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> materialQuery{};
+    BASE_NS::unique_ptr<CORE_NS::ComponentQuery> animationQuery{};
 
-    CORE3D_NS::INodeSystem* nodeSystem {};
-    CORE3D_NS::IPicking* picking {};
+    CORE3D_NS::INodeSystem* nodeSystem{};
+    CORE3D_NS::IPicking* picking{};
 
     BASE_NS::vector<CORE3D_NS::IPicking*> GetPicking();
 
 private:
-    template<typename Manager>
+    template <typename Manager>
     Manager* GetCoreManager();
 
     void OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSystem::SceneNodeListener::EventType type,
@@ -150,11 +152,13 @@ private:
 
     void GetNodeDescendants(CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>&) const;
 
+    void InitializeComponentManagers();
+
 private:
     std::optional<CORE3D_NS::IPicking::Ptr> externalPicking_;
     std::thread::id thread_;
     BASE_NS::weak_ptr<IInternalScene> scene_;
-    CORE_NS::Entity rootEntity_ {};
+    CORE_NS::Entity rootEntity_{};
     BASE_NS::unordered_map<BASE_NS::string, CORE_NS::IComponentManager*> components_;
 };
 
@@ -162,10 +166,12 @@ struct EcsCopyResult {
     CORE_NS::Entity entity;
     BASE_NS::vector<CORE_NS::Entity> newEntities;
     BASE_NS::string resourceGroup;
+    BASE_NS::vector<CORE_NS::ResourceIdContext> associatedResources;
 };
 
 EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IEcsObject& extChild);
-EcsCopyResult CopyExternalAsChild(const IEcsObject& parent, const IScene& extScene, BASE_NS::string_view rgroup);
+EcsCopyResult CopyExternalAsChild(
+    const IEcsObject& parent, const IScene& extScene, BASE_NS::string_view rgroup, bool shareResources);
 EcsCopyResult CloneAsChild(const IEcsObject& node, const IEcsObject::Ptr& parentNode = nullptr);
 
 SCENE_END_NAMESPACE()

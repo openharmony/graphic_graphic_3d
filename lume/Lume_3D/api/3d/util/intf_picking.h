@@ -31,7 +31,7 @@
 BASE_BEGIN_NAMESPACE()
 namespace Math {
 class Mat4X4;
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
@@ -47,44 +47,44 @@ class ISceneNode;
  */
 struct MinAndMax {
 #define CORE_FMAX std::numeric_limits<float>::max()
-    BASE_NS::Math::Vec3 minAABB { CORE_FMAX, CORE_FMAX, CORE_FMAX };
-    BASE_NS::Math::Vec3 maxAABB { -CORE_FMAX, -CORE_FMAX, -CORE_FMAX };
+    BASE_NS::Math::Vec3 minAABB{CORE_FMAX, CORE_FMAX, CORE_FMAX};
+    BASE_NS::Math::Vec3 maxAABB{-CORE_FMAX, -CORE_FMAX, -CORE_FMAX};
 #undef CORE_FMAX
 };
 
 /** Raycast result. */
 struct RayCastResult {
     /** Node that was hit. */
-    ISceneNode* node { nullptr };
+    ISceneNode* node{nullptr};
 
     /** Distance to AABB center. */
-    float centerDistance { 0.0f };
+    float centerDistance{0.0f};
 
     /** Distance to the hit position. */
-    float distance { 0.0f };
+    float distance{0.0f};
 
     /** Position of the hit. */
-    BASE_NS::Math::Vec3 worldPosition { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 worldPosition{0.0f, 0.0f, 0.0f};
 };
 
 /** Raycast result for ray-triangle intersection. */
 struct RayTriangleCastResult {
     /** Distance to the hit position. */
-    float distance { 0.0f };
+    float distance{0.0f};
 
     /** Position of the hit. */
-    BASE_NS::Math::Vec3 worldPosition { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 worldPosition{0.0f, 0.0f, 0.0f};
 
     /** Ray hit UV for ray-triangle intersection. */
-    BASE_NS::Math::Vec2 hitUv { 0.0f, 0.0f };
+    BASE_NS::Math::Vec2 hitUv{0.0f, 0.0f};
 
     /** The index of the triangle hit. */
-    uint64_t triangleIndex { 0 };
+    uint64_t triangleIndex{0};
 };
 
 class IPicking : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "9a4791d7-19e2-4dc0-a4fd-b0804d153d70" };
+    static constexpr auto UID = BASE_NS::Uid{"9a4791d7-19e2-4dc0-a4fd-b0804d153d70"};
 
     using Ptr = BASE_NS::refcnt_ptr<IPicking>;
 
@@ -206,4 +206,4 @@ protected:
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_UTIL_IPICKING_H
+#endif  // API_3D_UTIL_IPICKING_H

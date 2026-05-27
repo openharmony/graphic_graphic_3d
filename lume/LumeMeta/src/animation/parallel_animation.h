@@ -57,8 +57,8 @@ private:
     Internal::ParallelAnimationState state_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_PARALLEL_ANIMATION_H
+#endif  // META_SRC_ANIMATION_PARALLEL_ANIMATION_H

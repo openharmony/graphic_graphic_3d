@@ -27,7 +27,8 @@ CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
-RenderDataStoreDefaultScene::RenderDataStoreDefaultScene(const string_view name) : name_(name) {}
+RenderDataStoreDefaultScene::RenderDataStoreDefaultScene(const string_view name) : name_(name)
+{}
 
 void RenderDataStoreDefaultScene::PostRender()
 {

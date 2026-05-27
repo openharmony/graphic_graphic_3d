@@ -1,0 +1,20 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": { "name": "triangle-template" },
+                "type": "meshTemplate",
+                "path": "test://import/mesh/triangle.json"
+            },
+            {
+                "resourceId": { "name": "triangle-mesh" },
+                "type": "mesh",
+                "options": {
+                    "derivedFrom": { "name": "triangle-template" }
+                }
+            }
+        ]
+    }
+}

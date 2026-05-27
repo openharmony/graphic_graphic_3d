@@ -60,12 +60,12 @@ layout(set = 0, binding = 8, std430) buffer uLightClusterIndexData
     DefaultMaterialLightClusterData uLightClusterData[];
 };
 layout(set = 0, binding = 9) uniform CORE_RELAXEDP sampler2D uSampColorPrePass;
-layout(set = 0, binding = 10) uniform sampler2D uSampColorShadow;       // VSM or other
-layout(set = 0, binding = 11) uniform sampler2DShadow uSampDepthShadow; // PCF
+layout(set = 0, binding = 10) uniform sampler2D uSampColorShadow;        // VSM or other
+layout(set = 0, binding = 11) uniform sampler2DShadow uSampDepthShadow;  // PCF
 layout(set = 0, binding = 12) uniform samplerCube uSampRadiance;
 
 #else
 
 #endif
 
-#endif // SHADERS_COMMON_3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H
+#endif  // SHADERS_COMMON_3D_POST_PROCESS_FRAGMENT_LAYOUT_COMMON_H

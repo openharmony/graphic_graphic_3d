@@ -82,7 +82,7 @@ public:
      */
     virtual IObject::Ptr Resolve(const RefUri& uri) const = 0;
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr Resolve(const RefUri& uri) const
     {
         return interface_pointer_cast<Interface>(Resolve(uri));
@@ -93,7 +93,7 @@ public:
      */
     virtual IObject::Ptr GetSelf() const = 0;
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr GetSelf() const
     {
         return interface_pointer_cast<Interface>(GetSelf());
@@ -133,7 +133,7 @@ inline IObject::Ptr IObject::GetSelf() const
     return nullptr;
 }
 
-template<typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
+template <typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
 IObject::Ptr GetSelf(const T& object)
 {
     if (auto o = interface_cast<IObjectInstance>(object)) {
@@ -142,7 +142,7 @@ IObject::Ptr GetSelf(const T& object)
     return nullptr;
 }
 
-template<typename Intf, typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
+template <typename Intf, typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
 typename Intf::Ptr GetSelf(const T& object)
 {
     if (auto o = interface_cast<IObjectInstance>(object)) {
@@ -151,7 +151,7 @@ typename Intf::Ptr GetSelf(const T& object)
     return nullptr;
 }
 
-template<typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
+template <typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
 IObject::Ptr Resolve(const T& object, const RefUri& uri)
 {
     if (auto o = interface_cast<IObjectInstance>(object)) {
@@ -160,7 +160,7 @@ IObject::Ptr Resolve(const T& object, const RefUri& uri)
     return nullptr;
 }
 
-template<typename Intf, typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
+template <typename Intf, typename T, typename = BASE_NS::enable_if<IsInterfacePtr_v<T>>>
 typename Intf::Ptr Resolve(const T& object, const RefUri& uri)
 {
     if (auto o = interface_cast<IObjectInstance>(object)) {
@@ -169,9 +169,9 @@ typename Intf::Ptr Resolve(const T& object, const RefUri& uri)
     return nullptr;
 }
 
+META_END_NAMESPACE()
+
 META_INTERFACE_TYPE(META_NS::IObject)
 META_INTERFACE_TYPE(META_NS::IObjectInstance)
-
-META_END_NAMESPACE()
 
 #endif

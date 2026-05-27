@@ -61,8 +61,12 @@ void recursivelyGenerateChildNodes(Entity aParentEntity, IEntityManager& aEntity
         aNameComponentManager.Set(entity, nameData);
 
         if (aRecursionCount > 0) {
-            recursivelyGenerateChildNodes(entity, aEntityManager, aNodeComponentManager, aNameComponentManager,
-                aGeneratedChildNodeCount, aRecursionCount - 1);
+            recursivelyGenerateChildNodes(entity,
+                aEntityManager,
+                aNodeComponentManager,
+                aNameComponentManager,
+                aGeneratedChildNodeCount,
+                aRecursionCount - 1);
         }
     }
 }
@@ -101,7 +105,7 @@ void recursivelyValidateHierarchyFromRoot(ISceneNode& aRootNode, string_view con
         }
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: nodeLookup
@@ -132,8 +136,12 @@ UNIT_TEST(API_GpuTest_NodeSystemTest, nodeLookup, testing::ext::TestSize.Level1)
     size_t recursionCount = 2;
 
     // Add nodes through ecs interface.
-    recursivelyGenerateChildNodes(rootNode.GetEntity(), entityManager, nodeComponentManager, nameComponentManager,
-        generatedChildNodeCount, recursionCount);
+    recursivelyGenerateChildNodes(rootNode.GetEntity(),
+        entityManager,
+        nodeComponentManager,
+        nameComponentManager,
+        generatedChildNodeCount,
+        recursionCount);
 
     // Ensure that it is possible to access nodes through nodesystem API.
     recursivelyValidateHierarchy(rootNode, nodeSystem, generatedChildNodeCount, recursionCount);
@@ -171,8 +179,12 @@ UNIT_TEST(API_GpuTest_NodeSystemTest, nodeReparenting, testing::ext::TestSize.Le
     size_t recursionCount = 0;
 
     // Add nodes through ecs interface.
-    recursivelyGenerateChildNodes(rootNode.GetEntity(), entityManager, nodeComponentManager, nameComponentManager,
-        generatedChildNodeCount, recursionCount);
+    recursivelyGenerateChildNodes(rootNode.GetEntity(),
+        entityManager,
+        nodeComponentManager,
+        nameComponentManager,
+        generatedChildNodeCount,
+        recursionCount);
 
     // Grab node0 and node1
     ISceneNode* node0 = rootNode.LookupNodeByPath("node 0");
@@ -240,8 +252,12 @@ UNIT_TEST(API_GpuTest_NodeSystemTest, nodeRemove, testing::ext::TestSize.Level1)
     ISceneNode& rootNode = nodeSystem.GetRootNode();
 
     // Add nodes through ecs interface.
-    recursivelyGenerateChildNodes(rootNode.GetEntity(), entityManager, nodeComponentManager, nameComponentManager,
-        generatedChildNodeCount, recursionCount);
+    recursivelyGenerateChildNodes(rootNode.GetEntity(),
+        entityManager,
+        nodeComponentManager,
+        nameComponentManager,
+        generatedChildNodeCount,
+        recursionCount);
 
     // Grab node, ensure it is there.
     ISceneNode* node = rootNode.LookupNodeByPath("node 0");
@@ -285,8 +301,12 @@ UNIT_TEST(API_GpuTest_NodeSystemTest, nodeLookupByNameAndComponent, testing::ext
     size_t recursionCount = 2;
 
     // Add nodes through ecs interface.
-    recursivelyGenerateChildNodes(rootNode.GetEntity(), entityManager, nodeComponentManager, nameComponentManager,
-        generatedChildNodeCount, recursionCount);
+    recursivelyGenerateChildNodes(rootNode.GetEntity(),
+        entityManager,
+        nodeComponentManager,
+        nameComponentManager,
+        generatedChildNodeCount,
+        recursionCount);
 
     // Check that we can find nodes by name from the hierarchy.
     ISceneNode* node1 = rootNode.LookupNodeByName("node 1");

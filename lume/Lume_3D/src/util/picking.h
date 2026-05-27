@@ -75,8 +75,8 @@ protected:
     /** Safely compute the inverse of a direction 1/direction with zero checking. */
     inline BASE_NS::Math::Vec3 DirectionVectorInverse(const BASE_NS::Math::Vec3& direction) const
     {
-        BASE_NS::Math::Vec3 invDir { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::max() };
+        BASE_NS::Math::Vec3 invDir{
+            std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
         if (direction.x != 0.f) {
             invDir.x = 1.f / direction.x;
         }
@@ -97,4 +97,4 @@ inline constexpr BASE_NS::string_view GetName(const IPicking*)
 
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_PICKING_H
+#endif  // CORE_UTIL_PICKING_H

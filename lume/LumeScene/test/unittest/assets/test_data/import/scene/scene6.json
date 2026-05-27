@@ -1,0 +1,17 @@
+{
+	"version": "1.0",
+	"description": "test scene with node component uid",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",
+			"components": [
+				{
+					"componentUid": "fa191fb1-311d-419c-b359-1737496a0305"
+				}
+			]
+		}
+	}
+}

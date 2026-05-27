@@ -63,16 +63,16 @@
 
 namespace {
 #include <render/shaders/common/render_post_process_common.h>
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr bool USE_IMMUTABLE_SAMPLERS { false };
-constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
-constexpr string_view POD_DATA_STORE_NAME { "RenderDataStorePod" };
+constexpr bool USE_IMMUTABLE_SAMPLERS{false};
+constexpr float CUBE_MAP_LOD_COEFF{8.0f};
+constexpr string_view POD_DATA_STORE_NAME{"RenderDataStorePod"};
 
 void ValidateRenderCamera(RenderCamera& camera)
 {
@@ -81,7 +81,8 @@ void ValidateRenderCamera(RenderCamera& camera)
             camera.flags = camera.flags & (~RenderCamera::CameraFlagBits::CAMERA_FLAG_MSAA_BIT);
 #if (CORE3D_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_I("valid_r_c_" + to_string(camera.id),
-                "MSAA flag with deferred pipeline dropped (cam id %" PRIu64 ")", camera.id);
+                "MSAA flag with deferred pipeline dropped (cam id %" PRIu64 ")",
+                camera.id);
 #endif
         }
     }
@@ -120,45 +121,115 @@ Format GetValidDepthFormat(const IRenderNodeGpuResourceManager& gpuResourceMgr, 
     return outFormat;
 }
 
-constexpr GpuImageDesc OUTPUT_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D, BASE_FORMAT_R8G8B8A8_SRGB,
+constexpr GpuImageDesc OUTPUT_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_R8G8B8A8_SRGB,
     CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0U, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U,
-    CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
-constexpr GpuImageDesc COLOR_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D,
-    BASE_FORMAT_R16G16B16A16_SFLOAT, CORE_IMAGE_TILING_OPTIMAL,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
+constexpr GpuImageDesc COLOR_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_R16G16B16A16_SFLOAT,
+    CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0U, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U,
-    CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
-constexpr GpuImageDesc VELOCITY_NORMAL_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D,
-    BASE_FORMAT_R16G16B16A16_SFLOAT, CORE_IMAGE_TILING_OPTIMAL,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
+constexpr GpuImageDesc VELOCITY_NORMAL_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_R16G16B16A16_SFLOAT,
+    CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, 0U,
-    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
-constexpr GpuImageDesc HISTORY_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D,
-    BASE_FORMAT_B10G11R11_UFLOAT_PACK32, CORE_IMAGE_TILING_OPTIMAL,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
+constexpr GpuImageDesc HISTORY_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+    CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | CORE_IMAGE_USAGE_SAMPLED_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0U, CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U,
-    CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
-constexpr GpuImageDesc BASE_COLOR_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D, BASE_FORMAT_R8G8B8A8_SRGB,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
+constexpr GpuImageDesc BASE_COLOR_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_R8G8B8A8_SRGB,
     CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
         CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, 0U,
-    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
-constexpr GpuImageDesc MATERIAL_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D, BASE_FORMAT_R8G8B8A8_UNORM,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
+constexpr GpuImageDesc MATERIAL_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_R8G8B8A8_UNORM,
     CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
         CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, 0U,
-    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
 
-constexpr GpuImageDesc DEPTH_DEFAULT_DESC { CORE_IMAGE_TYPE_2D, CORE_IMAGE_VIEW_TYPE_2D, BASE_FORMAT_D32_SFLOAT,
+constexpr GpuImageDesc DEPTH_DEFAULT_DESC{CORE_IMAGE_TYPE_2D,
+    CORE_IMAGE_VIEW_TYPE_2D,
+    BASE_FORMAT_D32_SFLOAT,
     CORE_IMAGE_TILING_OPTIMAL,
     CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
         CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, 0U,
-    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, 1U, 1U, 1U, 1U, 1U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT,
+    0U,
+    CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+    1U,
+    1U,
+    1U,
+    1U,
+    1U,
+    CORE_SAMPLE_COUNT_1_BIT,
+    ComponentMapping{}};
 
 RenderNodeDefaultCameraController::ShadowBuffers GetShadowBufferNodeData(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const string_view sceneName)
@@ -289,7 +360,7 @@ struct CreatedTargetHandles {
 
 CreatedTargetHandles FillCreatedTargets(const RenderNodeDefaultCameraController::CreatedTargets& targets)
 {
-    return CreatedTargetHandles {
+    return CreatedTargetHandles{
         targets.outputColor.GetHandle(),
         targets.depth.GetHandle(),
         targets.colorResolve.GetHandle(),
@@ -304,7 +375,7 @@ CreatedTargetHandles FillCreatedTargets(const RenderNodeDefaultCameraController:
 
 inline constexpr Math::UVec2 GetPacked64(const uint64_t value)
 {
-    return { static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff) };
+    return {static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff)};
 }
 
 void CreateBaseColorTarget(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderCamera& camera,
@@ -531,9 +602,9 @@ void CreateDepthTargets(IRenderNodeGpuResourceManager& gpuResourceMgr, const Ren
 bool ColorTargetsRecreationNeeded(const RenderCamera& camera,
     const RenderNodeDefaultCameraController::CameraResourceSetup& camRes, const GpuImageDesc& desc)
 {
-    constexpr RenderCamera::Flags importantFlags { RenderCamera::CAMERA_FLAG_HISTORY_BIT |
-                                                   RenderCamera::CAMERA_FLAG_OUTPUT_DEPTH_BIT |
-                                                   RenderCamera::CAMERA_FLAG_OUTPUT_VELOCITY_NORMAL_BIT };
+    constexpr RenderCamera::Flags importantFlags{RenderCamera::CAMERA_FLAG_HISTORY_BIT |
+                                                 RenderCamera::CAMERA_FLAG_OUTPUT_DEPTH_BIT |
+                                                 RenderCamera::CAMERA_FLAG_OUTPUT_VELOCITY_NORMAL_BIT};
     const RenderCamera::Flags newFlags = camera.flags & importantFlags;
     const RenderCamera::Flags oldFlags = camRes.camFlags & importantFlags;
     const bool creationFlagsChanged = newFlags != oldFlags;
@@ -558,7 +629,7 @@ bool ColorTargetsRecreationNeeded(const RenderCamera& camera,
 bool DepthTargetsRecreationNeeded(const RenderCamera& camera,
     const RenderNodeDefaultCameraController::CameraResourceSetup& camRes, const GpuImageDesc& desc)
 {
-    constexpr RenderCamera::Flags importantFlags { RenderCamera::CAMERA_FLAG_OUTPUT_DEPTH_BIT };
+    constexpr RenderCamera::Flags importantFlags{RenderCamera::CAMERA_FLAG_OUTPUT_DEPTH_BIT};
     const bool formatChanged =
         (!RenderHandleUtil::IsValid(camRes.depthTarget)) ? (desc.format != camRes.inputImageDescs.depth.format) : false;
     const bool resChanged = ((desc.width != camRes.outResolution.x) || (desc.height != camRes.outResolution.y));
@@ -575,7 +646,7 @@ bool DepthTargetsRecreationNeeded(const RenderCamera& camera,
     }
     return changed;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -622,7 +693,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::typeName);
+    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
     currentScene_ = {};
     currentScene_.customCamRngName = jsonInputs_.customCameraName + '_' + to_hex(jsonInputs_.customCameraId);
@@ -656,7 +727,7 @@ void RenderNodeDefaultCameraController::InitNode(IRenderNodeContextManager& rend
 
     if (dataStoreScene && dataStoreCamera && dataStoreLight) {
         UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
-        prevCameraResolution_ = { currentScene_.camera.renderResolution };
+        prevCameraResolution_ = {currentScene_.camera.renderResolution};
         CreateResources();
         CreateBuffers();
 
@@ -751,15 +822,15 @@ void RenderNodeDefaultCameraController::UpdateGlobalDescriptorSets(IRenderComman
                                               : defaultColorPrePassHandle_;
 
         binder.BindBuffer(
-            bindingIndex++, { uboHandles_.environment.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+            bindingIndex++, {uboHandles_.environment.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE});
         binder.BindBuffer(
-            bindingIndex++, { uboHandles_.fog.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+            bindingIndex++, {uboHandles_.fog.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE});
         binder.BindBuffer(
-            bindingIndex++, { uboHandles_.light.GetHandle(), 0u, PipelineStateConstants ::GPU_BUFFER_WHOLE_SIZE });
+            bindingIndex++, {uboHandles_.light.GetHandle(), 0u, PipelineStateConstants ::GPU_BUFFER_WHOLE_SIZE});
         binder.BindBuffer(
-            bindingIndex++, { uboHandles_.postProcess.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
-        binder.BindBuffer(bindingIndex++,
-            { uboHandles_.lightCluster.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+            bindingIndex++, {uboHandles_.postProcess.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE});
+        binder.BindBuffer(
+            bindingIndex++, {uboHandles_.lightCluster.GetHandle(), 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE});
         // use immutable samplers for all set 0 samplers
         AdditionalDescriptorFlags descFlags = 0U;
         if constexpr (USE_IMMUTABLE_SAMPLERS) {
@@ -785,8 +856,8 @@ void RenderNodeDefaultCameraController::UpdateGlobalDescriptorSets(IRenderComman
         }
     }
 
-    const RenderHandle handles[] { binder.GetDescriptorSetHandle() };
-    const DescriptorSetLayoutBindingResources resources[] { binder.GetDescriptorSetLayoutBindingResources() };
+    const RenderHandle handles[]{binder.GetDescriptorSetHandle()};
+    const DescriptorSetLayoutBindingResources resources[]{binder.GetDescriptorSetLayoutBindingResources()};
     cmdList.UpdateDescriptorSets(handles, resources);
 }
 
@@ -816,8 +887,8 @@ void RenderNodeDefaultCameraController::UpdateCurrentScene(const IRenderDataStor
     }
 
     currentScene_.cameraIdx = cameraIdx;
-    currentScene_.sceneTimingData = { scene.sceneDeltaTime, scene.deltaTime, scene.totalTime,
-        *reinterpret_cast<const float*>(&scene.frameIndex) };
+    currentScene_.sceneTimingData = {
+        scene.sceneDeltaTime, scene.deltaTime, scene.totalTime, *reinterpret_cast<const float*>(&scene.frameIndex)};
     screenPercentage_ = Math::clamp(currentScene_.camera.screenPercentage, 0.25f, 1.0f);
 
     ValidateRenderCamera(currentScene_.camera);
@@ -900,6 +971,18 @@ void RenderNodeDefaultCameraController::RegisterOutputs()
         shrMgr.RegisterGlobalRenderNodeOutput(DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_HISTORY_NEXT,
             createdTargets_.history[nextIndex].GetHandle());
         camRes_.historyFlipFrame = nextIndex;
+    }
+
+    // output custom targets
+    for (const auto& name : camRes_.inputImageDescs.customTargets) {
+        const auto& gpuResMgr = renderNodeContextMgr_->GetGpuResourceManager();
+        auto handle = gpuResMgr.GetImageHandle(name);
+        if (!RenderHandleUtil::IsValid(handle)) {
+            PLUGIN_LOG_E("custom Targets: img handle is invalid for %s", name.c_str());
+            continue;
+        }
+        shrMgr.RegisterRenderNodeOutput(name, handle);
+        shrMgr.RegisterGlobalRenderNodeOutput(name, handle);
     }
 }
 
@@ -984,8 +1067,10 @@ void RenderNodeDefaultCameraController::CreateResources()
 #if (CORE3D_VALIDATION_ENABLED == 1)
             const string_view nodeName = renderNodeContextMgr_->GetName();
             PLUGIN_LOG_ONCE_E(nodeName + "cam_controller_renRes",
-                "CORE3D_VALIDATION: RN:%s camera render resolution resized to match target %ux%u", nodeName.data(),
-                camRes_.renResolution.x, camRes_.renResolution.y);
+                "CORE3D_VALIDATION: RN:%s camera render resolution resized to match target %ux%u",
+                nodeName.data(),
+                camRes_.renResolution.x,
+                camRes_.renResolution.y);
 #endif
         }
 
@@ -1000,8 +1085,14 @@ void RenderNodeDefaultCameraController::CreateResources()
         // all decisions are done based on color and depth targets
         const string_view us = stores_.dataStoreNameScene;
         if (colorTargetChanged) {
-            CreateColorTargets(gpuResMgr, camera, colorDesc, us, currentScene_.customCamRngName, camRes_,
-                createdTargets_, upscaleRatio);
+            CreateColorTargets(gpuResMgr,
+                camera,
+                colorDesc,
+                us,
+                currentScene_.customCamRngName,
+                camRes_,
+                createdTargets_,
+                upscaleRatio);
         }
         if (depthTargetChanged) {
             CreateDepthTargets(
@@ -1043,7 +1134,8 @@ void RenderNodeDefaultCameraController::CreateResourceBaseTargets()
             camRes_.colorTarget = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_BACKBUFFER");
 #if (CORE3D_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_I(renderNodeContextMgr_->GetName() + "using_def_backbuffer",
-                "CORE3D_VALIDATION: camera (%s) using CORE_DEFAULT_BACKBUFFER", currentScene_.customCamRngName.data());
+                "CORE3D_VALIDATION: camera (%s) using CORE_DEFAULT_BACKBUFFER",
+                currentScene_.customCamRngName.data());
 #endif
         }
     }
@@ -1075,35 +1167,44 @@ void RenderNodeDefaultCameraController::CreateBuffers()
     const string_view us = stores_.dataStoreNameScene;
     uboHandles_.generalData =
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_GENERAL_BUFFER_PREFIX_NAME + camName,
-            GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                memPropertyFlags,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                static_cast<uint32_t>(sizeof(DefaultMaterialGeneralDataStruct)) });
+                static_cast<uint32_t>(sizeof(DefaultMaterialGeneralDataStruct))});
     uboHandles_.environment =
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_ENVIRONMENT_BUFFER_PREFIX_NAME + camName,
-            GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                memPropertyFlags,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
                 static_cast<uint32_t>(sizeof(DefaultMaterialEnvironmentStruct)) *
-                    CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT });
-    uboHandles_.fog = gpuResourceMgr.Create(
-        us + DefaultMaterialCameraConstants::CAMERA_FOG_BUFFER_PREFIX_NAME + camName,
-        GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, static_cast<uint32_t>(sizeof(DefaultMaterialFogStruct)) });
-    uboHandles_.postProcess = gpuResourceMgr.Create(
-        us + DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_BUFFER_PREFIX_NAME + camName,
-        GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
-            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, static_cast<uint32_t>(sizeof(GlobalPostProcessStruct)) });
+                    CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT});
+    uboHandles_.fog =
+        gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_FOG_BUFFER_PREFIX_NAME + camName,
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                memPropertyFlags,
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                static_cast<uint32_t>(sizeof(DefaultMaterialFogStruct))});
+    uboHandles_.postProcess =
+        gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_POST_PROCESS_BUFFER_PREFIX_NAME + camName,
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                memPropertyFlags,
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                static_cast<uint32_t>(sizeof(GlobalPostProcessStruct))});
 
     uboHandles_.light =
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_LIGHT_BUFFER_PREFIX_NAME + camName,
-            GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memPropertyFlags,
-                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, sizeof(DefaultMaterialLightStruct) });
+            GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                memPropertyFlags,
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                sizeof(DefaultMaterialLightStruct)});
 
     // NOTE: storage buffer
     uboHandles_.lightCluster =
         gpuResourceMgr.Create(us + DefaultMaterialCameraConstants::CAMERA_LIGHT_CLUSTER_BUFFER_PREFIX_NAME + camName,
-            GpuBufferDesc { CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, memPropertyFlags,
+            GpuBufferDesc{CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                memPropertyFlags,
                 CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                sizeof(DefaultMaterialLightClusterData) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT });
+                sizeof(DefaultMaterialLightClusterData) * CORE_DEFAULT_MATERIAL_MAX_CLUSTERS_COUNT});
 }
 
 void RenderNodeDefaultCameraController::UpdateBuffers()
@@ -1118,11 +1219,11 @@ void RenderNodeDefaultCameraController::UpdateBuffers()
 void RenderNodeDefaultCameraController::UpdateGeneralUniformBuffer()
 {
     const auto& camera = currentScene_.camera;
-    const Math::Vec2 viewportSize = { static_cast<float>(camera.renderResolution.x),
-        static_cast<float>(camera.renderResolution.y) };
-    DefaultMaterialGeneralDataStruct dataStruct {
-        { currentScene_.cameraIdx, 0u, 0u, 0u },
-        { viewportSize.x, viewportSize.y, 1.0f / viewportSize.x, 1.0f / viewportSize.y },
+    const Math::Vec2 viewportSize = {
+        static_cast<float>(camera.renderResolution.x), static_cast<float>(camera.renderResolution.y)};
+    DefaultMaterialGeneralDataStruct dataStruct{
+        {currentScene_.cameraIdx, 0u, 0u, 0u},
+        {viewportSize.x, viewportSize.y, 1.0f / viewportSize.x, 1.0f / viewportSize.y},
         currentScene_.sceneTimingData,
     };
 
@@ -1153,7 +1254,7 @@ namespace {
 Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
 {
     if (cam.environment.multiEnvCount > 0U) {
-        Math::UVec4 multiEnvIndices = { 0U, 0U, 0U, 0U };
+        Math::UVec4 multiEnvIndices = {0U, 0U, 0U, 0U};
         // the first value in multiEnvIndices is the count
         // first index is the main environment, next indices are the blend environments
         for (uint32_t idx = 1U; idx < cam.environment.multiEnvCount + 1U; ++idx) {
@@ -1162,7 +1263,7 @@ Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
         }
         return multiEnvIndices;
     } else {
-        return { 0U, 0U, 0U, 0U };
+        return {0U, 0U, 0U, 0U};
     }
 }
 
@@ -1176,13 +1277,13 @@ inline RenderDataStoreWeather::WeatherSettings GetWeatherSettings(
     }
 }
 
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
 {
-    BASE_NS::Math::Vec4
-        defaultSHIndirectCoefficients[9u] {}; // nine vectors which are used in spherical harmonics calculations
-    defaultSHIndirectCoefficients[0] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    BASE_NS::Math::Vec4 defaultSHIndirectCoefficients[9u]{};  // nine vectors which are used in spherical harmonics
+                                                              // calculations
+    defaultSHIndirectCoefficients[0] = {1.0f, 1.0f, 1.0f, 1.0f};
     constexpr uint32_t envByteSize =
         sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT;
 
@@ -1214,7 +1315,7 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     (currEnv.radianceCubemapMipCount != 0)
                         ? Math::min(CUBE_MAP_LOD_COEFF, static_cast<float>(currEnv.radianceCubemapMipCount))
                         : CUBE_MAP_LOD_COEFF;
-                DefaultMaterialEnvironmentStruct envStruct {
+                DefaultMaterialEnvironmentStruct envStruct{
                     Math::Vec4((Math::Vec3(currEnv.indirectSpecularFactor) * currEnv.indirectSpecularFactor.w),
                         currEnv.indirectSpecularFactor.w),
                     Math::Vec4(Math::Vec3(currEnv.indirectDiffuseFactor) * currEnv.indirectDiffuseFactor.w,
@@ -1226,6 +1327,10 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     Math::UVec4(id.x, id.y, layer.x, layer.y),
                     {},
                     multiEnvIndices,
+                    {},
+                    {},
+                    {},
+                    {},
                     {},
                     {},
                     {},
@@ -1251,8 +1356,13 @@ void RenderNodeDefaultCameraController::UpdateEnvironmentUniformBuffer()
                     envStruct.packedSun.w = 0.0f;
                 }
 
-                envStruct.packedPhases =
-                    Math::Vec4(ws.timeOfDay, ws.moonBrightness, ws.nightGlow, ws.skyViewBrightness);
+                const float skyExposure = Math::max(0.0f, ws.skyViewBrightness * currEnv.envMapFactor.w);
+                envStruct.packedPhases = Math::Vec4(ws.timeOfDay, ws.moonBrightness, ws.nightGlow, skyExposure);
+                envStruct.skySunParams = Math::Vec4(ws.skySunSize, ws.skySunOpacity, 0.0f, 0.0f);
+                envStruct.skySunColor = Math::Vec4(ws.skySunTint.x, ws.skySunTint.y, ws.skySunTint.z, 1.0f);
+                envStruct.skyMoonNightParams =
+                    Math::Vec4(ws.moonSize, ws.moonOpacity, ws.starsIntensity, ws.nightSkyIntensity);
+                envStruct.skyMoonColor = Math::Vec4(ws.moonTint.x, ws.moonTint.y, ws.moonTint.z, 0.0f);
 
                 if (!CloneData(data, size_t(dataEnd - data), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
                     PLUGIN_LOG_E("environment ubo copying failed.");
@@ -1270,8 +1380,8 @@ void RenderNodeDefaultCameraController::UpdateFogUniformBuffer()
     const RenderCamera::Fog& fog = camera.fog;
     const Math::UVec2 id = GetPacked64(fog.id);
     const Math::UVec2 layer = GetPacked64(fog.layerMask);
-    const DefaultMaterialFogStruct fogStruct {
-        Math::UVec4 { id.x, id.y, layer.x, layer.y },
+    const DefaultMaterialFogStruct fogStruct{
+        Math::UVec4{id.x, id.y, layer.x, layer.y},
         fog.firstLayer,
         fog.secondLayer,
         fog.baseFactors,
@@ -1304,6 +1414,7 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
         const uint32_t sceneId = currentScene_.camera.sceneId;
         const auto& lights = dataStoreLight->GetLights();
         const IRenderDataStoreDefaultLight::ShadowTypes st = dataStoreLight->GetShadowTypes();
+
         const Math::Vec4 shadowAtlasSizeInvSize = RenderLightHelper::GetShadowAtlasSizeInvSize(*dataStoreLight);
         const uint32_t shadowCount = dataStoreLight->GetLightCounts().shadowCount;
         // light buffer update (needs to be updated every frame)
@@ -1347,7 +1458,7 @@ void RenderNodeDefaultCameraController::UpdateLightBuffer()
             lightStruct->clusterSizes = Math::UVec4(0, 0, 0, 0);
             lightStruct->clusterFactors = Math::Vec4(0.0f, 0.0f, 0.0f, 0.0f);
             lightStruct->atlasSizeInvSize = shadowAtlasSizeInvSize;
-            lightStruct->additionalFactors = { 0.0f, 0.0f, 0.0f, 0.0f };
+            lightStruct->additionalFactors = {0.0f, 0.0f, 0.0f, 0.0f};
 
             lightStruct->vpcfRadius = st.vpcfRadius;
             lightStruct->vpcfSampleCount = st.vpcfSampleCount;
@@ -1397,12 +1508,12 @@ void RenderNodeDefaultCameraController::ClusterLights(RENDER_NS::IRenderCommandL
 
     {
         // add barrier for memory
-        constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-            PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-        constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
-                                           AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+        constexpr GeneralBarrier src{AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+            PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+        constexpr GeneralBarrier dst{
+            AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
             PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
-                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
 
         cmdList.CustomMemoryBarrier(src, dst);
         cmdList.AddCustomBarrierPoint();
@@ -1448,6 +1559,22 @@ void RenderNodeDefaultCameraController::ParseRenderNodeInputs()
             camRes_.inputImageDescs.baseColor = ref.desc;
         } else if (ref.name == DefaultMaterialRenderNodeConstants::CORE_DM_CAMERA_MATERIAL) {
             camRes_.inputImageDescs.material = ref.desc;
+        } else {
+            // Custom targets, validate existance immediately, do not validate its format
+            const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+            auto handle = gpuResourceMgr.GetImageHandle(ref.name);
+
+            bool valid = true;
+            if (!RenderHandleUtil::IsValid(handle)) {
+                valid = false;
+#if (CORE3D_VALIDATION_ENABLED == 1)
+                PLUGIN_LOG_W("CORE_VALIDATION: gpuImageDescs:%s not found", ref.name.c_str());
+#endif
+            }
+
+            if (valid) {
+                camRes_.inputImageDescs.customTargets.push_back(ref.name);
+            }
         }
     }
 

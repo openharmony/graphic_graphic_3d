@@ -33,7 +33,7 @@ public:
     void SetImage(const std::shared_ptr<ImageETS> img);
 
     std::shared_ptr<Vec4Proxy> GetFactor();
-    void SetFactor(const BASE_NS::Math::Vec4 &factor);
+    void SetFactor(const BASE_NS::Math::Vec4& factor);
 
     std::shared_ptr<SamplerETS> GetSampler();
     void SetSampler(const std::shared_ptr<SamplerETS> sampler);

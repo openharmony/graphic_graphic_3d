@@ -43,7 +43,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "377f5d6c-3951-4a0b-9d5b-7ef8d5e6f235" };
+    static constexpr BASE_NS::Uid UID{"377f5d6c-3951-4a0b-9d5b-7ef8d5e6f235"};
     static constexpr const char* TYPE_NAME = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS =
         IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_EXPLICIT_VULKAN;
@@ -58,18 +58,18 @@ private:
         IRenderCommandList& cmdList, const AsConsumeStruct& fullData, const AsConsumeStruct::AsData& data);
     void ExecuteFrameProcessScratch(const AsConsumeStruct& fullData);
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     BASE_NS::string dsName_;
 
     // helper vector
     BASE_NS::vector<AsInstance> asInstanceHelper_;
     BASE_NS::vector<uint32_t> scratchOffsetHelper_;
-    uint32_t frameScratchOffsetIndex_ { 0U };
+    uint32_t frameScratchOffsetIndex_{0U};
 
     RenderHandleReference scratchBuffer_;
     RenderHandle rawScratchBuffer_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#endif  // RENDER_NODE_RENDER_NODE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H

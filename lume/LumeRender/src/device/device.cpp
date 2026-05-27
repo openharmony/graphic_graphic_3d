@@ -89,7 +89,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R5G5B5A1_UNORM_PACK16,
 
     // R8 UNORM
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // R8 SNORM
     BASE_FORMAT_R8_UNORM,
     // R8 USCALED
@@ -104,7 +104,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R8_UNORM,
 
     // R8G8 UNORM
-    BASE_FORMAT_R8G8B8A8_UNORM, // fallback to 32 bits
+    BASE_FORMAT_R8G8B8A8_UNORM,  // fallback to 32 bits
     // R8G8 SNORM
     BASE_FORMAT_R8G8_UNORM,
     // R8G8 USCALED
@@ -119,7 +119,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R8G8_UNORM,
 
     // R8G8B8 UNORM
-    BASE_FORMAT_R8G8B8A8_UNORM, // fallback to 32 bits
+    BASE_FORMAT_R8G8B8A8_UNORM,  // fallback to 32 bits
     // R8G8B8 SNORM
     BASE_FORMAT_R8G8B8_UNORM,
     // R8G8B8 USCALED
@@ -134,7 +134,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R8G8B8_UNORM,
 
     // B8G8R8 UNORM
-    BASE_FORMAT_B8G8R8A8_UNORM, // fallback to 32 bits
+    BASE_FORMAT_B8G8R8A8_UNORM,  // fallback to 32 bits
     // B8G8R8 SNORM
     BASE_FORMAT_B8G8R8_UNORM,
     // B8G8R8 USCALED
@@ -149,7 +149,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_B8G8R8_UNORM,
 
     // R8G8B8A8 UNORM
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // R8G8B8A8 SNORM
     BASE_FORMAT_R8G8B8A8_UNORM,
     // R8G8B8A8 USCALED
@@ -220,7 +220,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_A2B10G10R10_UINT_PACK32,
 
     // R16 UNORM
-    BASE_FORMAT_R8_UNORM, // fallback to 8 bit channel
+    BASE_FORMAT_R8_UNORM,  // fallback to 8 bit channel
     // R16 SNORM
     BASE_FORMAT_R16_UNORM,
     // R16 USCALED
@@ -235,7 +235,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R16_UNORM,
 
     // R16G16 UNORM
-    BASE_FORMAT_R16G16B16A16_UNORM, // fallback to 4 channel
+    BASE_FORMAT_R16G16B16A16_UNORM,  // fallback to 4 channel
     // R16G16 SNORM
     BASE_FORMAT_R16G16_UNORM,
     // R16G16 USCALED
@@ -250,7 +250,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R16G16_UNORM,
 
     // R16G16B16 UNORM
-    BASE_FORMAT_R16G16B16A16_UNORM, // fallback to 4 channel
+    BASE_FORMAT_R16G16B16A16_UNORM,  // fallback to 4 channel
     // R16G16B16 SNORM
     BASE_FORMAT_R16G16B16_UNORM,
     // R16G16B16 USCALED
@@ -265,7 +265,7 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R16G16B16_UNORM,
 
     // R16G16B16A16 UNORM
-    BASE_FORMAT_R8G8B8A8_UNORM, // fallback to 8 bit channels
+    BASE_FORMAT_R8G8B8A8_UNORM,  // fallback to 8 bit channels
     // R16G16B16A16 SNORM
     BASE_FORMAT_R16G16B16A16_UNORM,
     // R16G16B16A16 USCALED
@@ -280,69 +280,69 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_R16G16B16A16_UNORM,
 
     // R32 UINT
-    BASE_FORMAT_R16_UINT, // fallback to 16 bit channel
+    BASE_FORMAT_R16_UINT,  // fallback to 16 bit channel
     // R32 SINT
     BASE_FORMAT_R32_UINT,
     // R32 SFLOAT
     BASE_FORMAT_R32_UINT,
 
     // R32G32 UINT
-    BASE_FORMAT_R16G16_UINT, // fallback to 16 bit channels
+    BASE_FORMAT_R16G16_UINT,  // fallback to 16 bit channels
     // R32G32 SINT
     BASE_FORMAT_R32G32_UINT,
     // R32G32 SFLOAT
     BASE_FORMAT_R32G32_UINT,
 
     // R32G32B32 UINT
-    BASE_FORMAT_R32G32B32A32_UINT, // fallback to 4 channels
+    BASE_FORMAT_R32G32B32A32_UINT,  // fallback to 4 channels
     // R32G32B32 SINT
     BASE_FORMAT_R32G32B32_UINT,
     // R32G32B32 SFLOAT
     BASE_FORMAT_R32G32B32_UINT,
 
     // R32G32B32A32 UINT
-    BASE_FORMAT_R16G16B16A16_UINT, // fallback to 16 bit channels
+    BASE_FORMAT_R16G16B16A16_UINT,  // fallback to 16 bit channels
     // R32G32B32A32 SINT
     BASE_FORMAT_R32G32B32A32_UINT,
     // R32G32B32A32 SFLOAT
     BASE_FORMAT_R32G32B32A32_UINT,
 
     // R64 UINT
-    BASE_FORMAT_R32_UINT, // fallback to 32 bit channel
+    BASE_FORMAT_R32_UINT,  // fallback to 32 bit channel
     // R64 SINT
     BASE_FORMAT_R64_UINT,
     // R64 SFLOAT
     BASE_FORMAT_R64_UINT,
 
     // R64G64 UINT
-    BASE_FORMAT_R64G64B64A64_UINT, // fallback to 4 channels
+    BASE_FORMAT_R64G64B64A64_UINT,  // fallback to 4 channels
     // R64G64 SINT
     BASE_FORMAT_R64G64_UINT,
     // R64G64 SFLOAT
     BASE_FORMAT_R64G64_UINT,
 
     // R64G64B64 UINT
-    BASE_FORMAT_R64G64B64A64_UINT, // fallback to 4 channels
+    BASE_FORMAT_R64G64B64A64_UINT,  // fallback to 4 channels
     // R64G64B64 SINT
     BASE_FORMAT_R64G64B64_UINT,
     // R64G64B64 SFLOAT
     BASE_FORMAT_R64G64B64_UINT,
 
     // R64G64B64A64 UINT
-    BASE_FORMAT_R32G32B32A32_UINT, // fallback to 32 bit channels
+    BASE_FORMAT_R32G32B32A32_UINT,  // fallback to 32 bit channels
     // R64G64B64A64 SINT
     BASE_FORMAT_R64G64B64A64_UINT,
     // R32G32B32A32 SFLOAT
     BASE_FORMAT_R64G64B64A64_UINT,
 
     // B10G11R11 UFLOAT PACK32
-    BASE_FORMAT_R16G16B16A16_SFLOAT, // fallback to 4 channel, 16 bit HDR
+    BASE_FORMAT_R16G16B16A16_SFLOAT,  // fallback to 4 channel, 16 bit HDR
 
     // E5B9G9R9 UFLOAT PACK32
-    BASE_FORMAT_R16G16B16A16_SFLOAT, // fallback to 4 channel, 16 bit HDR
+    BASE_FORMAT_R16G16B16A16_SFLOAT,  // fallback to 4 channel, 16 bit HDR
 
     // D16 UNORM
-    BASE_FORMAT_D32_SFLOAT, // fallback to 32 bit depth only
+    BASE_FORMAT_D32_SFLOAT,  // fallback to 32 bit depth only
     // X8 D24 UNORM PACK32
     BASE_FORMAT_D32_SFLOAT,
     // D32 SFLOAT
@@ -357,40 +357,40 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_D24_UNORM_S8_UINT,
 
     // BC1 RGB UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC1 RGB SRGB BLOCK
     BASE_FORMAT_BC1_RGB_UNORM_BLOCK,
     // BC1 RGBA UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC1 RGBA SRGB BLOCK
     BASE_FORMAT_BC1_RGBA_UNORM_BLOCK,
     // BC2 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC2 SRGB BLOCK
     BASE_FORMAT_BC2_UNORM_BLOCK,
     // BC3 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC3 SRGB BLOCK
     BASE_FORMAT_BC3_UNORM_BLOCK,
     // BC4 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC4 SNORM BLOCK
     BASE_FORMAT_BC4_UNORM_BLOCK,
     // BC5 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC5 SNORM BLOCK
     BASE_FORMAT_BC5_UNORM_BLOCK,
     // BC6H UFLOAT BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC6H SFLOAT BLOCK
     BASE_FORMAT_BC6H_UFLOAT_BLOCK,
     // BC7 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // BC7 SRGB BLOCK
     BASE_FORMAT_BC7_UNORM_BLOCK,
 
     // ETC2 R8G8B8 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ETC2 R8G8B8 SRGB BLOCK
     BASE_FORMAT_ETC2_R8G8B8_UNORM_BLOCK,
     // ETC2 R8G8B8A1 UNORM BLOCK
@@ -403,68 +403,68 @@ constexpr const Format FALLBACK_FORMATS[] = {
     BASE_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK,
 
     // EAC R11 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // EAC R11 SNORM BLOCK
     BASE_FORMAT_EAC_R11_UNORM_BLOCK,
     // EAC R11G11 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // EAC R11G11 SNORM BLOCK
     BASE_FORMAT_EAC_R11G11_UNORM_BLOCK,
 
     // ASTC 4x4 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 4x4 SRGB BLOCK
     BASE_FORMAT_ASTC_4x4_UNORM_BLOCK,
     // ASTC 5x4 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 5x4 SRGB BLOCK
     BASE_FORMAT_ASTC_5x4_UNORM_BLOCK,
     // ASTC 5x5 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 5x5 SRGB BLOCK
     BASE_FORMAT_ASTC_5x5_UNORM_BLOCK,
     // ASTC 6x5 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 6x5 SRGB BLOCK
     BASE_FORMAT_ASTC_6x5_UNORM_BLOCK,
     // ASTC 6x6 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 6x6 SRGB BLOCK
     BASE_FORMAT_ASTC_6x6_UNORM_BLOCK,
     // ASTC 8x5 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 8x5 SRGB BLOCK
     BASE_FORMAT_ASTC_8x5_UNORM_BLOCK,
     // ASTC 8x6 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 8x6 SRGB BLOCK
     BASE_FORMAT_ASTC_8x6_UNORM_BLOCK,
     // ASTC 8x8 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 8x8 SRGB BLOCK
     BASE_FORMAT_ASTC_8x8_UNORM_BLOCK,
     // ASTC 10x5 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 10x5 SRGB BLOCK
     BASE_FORMAT_ASTC_10x5_UNORM_BLOCK,
     // ASTC 10x6 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 10x6 SRGB BLOCK
     BASE_FORMAT_ASTC_10x6_UNORM_BLOCK,
     // ASTC 10x8 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 10x8 SRGB BLOCK
     BASE_FORMAT_ASTC_10x8_UNORM_BLOCK,
     // ASTC 10x10 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 10x10 SRGB BLOCK
     BASE_FORMAT_ASTC_10x10_UNORM_BLOCK,
     // ASTC 12x10 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 12x10 SRGB BLOCK
     BASE_FORMAT_ASTC_12x10_UNORM_BLOCK,
     // ASTC 12x12 UNORM BLOCK
-    BASE_FORMAT_UNDEFINED, // undefined
+    BASE_FORMAT_UNDEFINED,  // undefined
     // ASTC 12x12 SRGB BLOCK
     BASE_FORMAT_ASTC_12x12_UNORM_BLOCK,
 };
@@ -556,7 +556,8 @@ void ConfigureDefaultSwapchainPod(IRenderContext& renderContext, const bool vali
         auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
         PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
         NodeGraphBackBufferConfiguration ngbbc = *(const NodeGraphBackBufferConfiguration*)dataView.data();
-        StringUtil::CopyStringToArray(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER, ngbbc.backBufferName,
+        StringUtil::CopyStringToArray(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER,
+            ngbbc.backBufferName,
             NodeGraphBackBufferConfiguration::CORE_MAX_BACK_BUFFER_NAME_LENGTH);
         ngbbc.backBufferType = valid ? NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN
                                      : NodeGraphBackBufferConfiguration::BackBufferType::UNDEFINED;
@@ -564,7 +565,7 @@ void ConfigureDefaultSwapchainPod(IRenderContext& renderContext, const bool vali
         dataStorePod->Set("NodeGraphBackBufferConfiguration", arrayviewU8(ngbbc));
     }
 }
-} // namespace
+}  // namespace
 
 Device::Device(RenderContext& renderContext)
     : renderContext_(renderContext),
@@ -573,7 +574,8 @@ Device::Device(RenderContext& renderContext)
     if ((deviceConfiguration_.bufferingCount < DeviceConstants::MIN_BUFFERING_COUNT) ||
         (deviceConfiguration_.bufferingCount > DeviceConstants::MAX_BUFFERING_COUNT)) {
         deviceConfiguration_.bufferingCount = std::clamp(deviceConfiguration_.bufferingCount,
-            DeviceConstants::MIN_BUFFERING_COUNT, DeviceConstants::MAX_BUFFERING_COUNT);
+            DeviceConstants::MIN_BUFFERING_COUNT,
+            DeviceConstants::MAX_BUFFERING_COUNT);
         PLUGIN_LOG_D("buffering count clamped to: %u", deviceConfiguration_.bufferingCount);
     }
     FillColorSpaceLinearFormats(colorSpaceLinearFormats_);
@@ -618,7 +620,7 @@ RenderHandleReference Device::CreateSwapchainImpl(
                 swapchainIdx = idx;
                 finalReplaceHandle = swapchains_[swapchainIdx].remappableSwapchainImage;
                 swapchains_[swapchainIdx] = {};
-                DestroyDeviceSwapchain(); // NOTE: GLES handling
+                DestroyDeviceSwapchain();  // NOTE: GLES handling
                 break;
             }
         }
@@ -719,6 +721,40 @@ void Device::CreateSwapchain(const SwapchainCreateInfo& swapchainCreateInfo)
     CreateSwapchainImpl(swapchainCreateInfo, {}, {});
 }
 
+void Device::InvalidateGpuImageHandle(const RenderHandleReference& handle)
+{
+    const auto iter = std::find_if(
+        swapchains_.cbegin(), swapchains_.cend(), [rawHandle = handle.GetHandle()](const InternalSwapchainData& data) {
+            return data.remappableSwapchainImage.GetHandle() == rawHandle;
+        });
+    if (iter == swapchains_.cend()) {
+        return;
+    }
+    const auto defaultBackbuffer =
+        gpuResourceMgr_->GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_BACKBUFFER).GetHandle();
+
+    Activate();
+    WaitForIdle();
+
+    // We invalidate GPU handles before destroying the swapchain.
+    // This prevents dangling image views still holds a RenderHandleReference.
+    gpuResourceMgr_->InvalidateGpuImageHandle(iter->remappableSwapchainImage.GetHandle());
+    for (uint32_t imgIdx = 0; imgIdx < iter->imageViewCount; ++imgIdx) {
+        gpuResourceMgr_->InvalidateGpuImageHandle(iter->imageViews[imgIdx].GetHandle());
+    }
+
+    if (RenderHandleUtil::IsValid(iter->remappableAdditionalSwapchainImage) &&
+        (iter->remappableAdditionalSwapchainImage != defaultBackbuffer)) {
+        gpuResourceMgr_->InvalidateGpuImageHandle(iter->remappableAdditionalSwapchainImage);
+    }
+
+    if (iter->additionalDepthBufferHandle) {
+        gpuResourceMgr_->InvalidateGpuImageHandle(iter->additionalDepthBufferHandle.GetHandle());
+    }
+
+    swapchains_.erase(iter);
+}
+
 void Device::DestroySwapchainImpl(const RenderHandleReference& handle)
 {
     // NOTE: the destruction should be deferred, but we expect this to be called from rendering thread
@@ -727,44 +763,33 @@ void Device::DestroySwapchainImpl(const RenderHandleReference& handle)
         PLUGIN_LOG_E("DestroySwapchain called while RenderFrame is running");
     }
 
-    if (handle) {
-        const RenderHandle rawHandle = handle.GetHandle();
-        for (auto iter = swapchains_.cbegin(); iter != swapchains_.cend(); ++iter) {
-            if (iter->remappableSwapchainImage.GetHandle() == rawHandle) {
-                Activate();
-                WaitForIdle();
+    if (!handle) {
+        return;
+    }
 
-                swapchains_.erase(iter);
+    InvalidateGpuImageHandle(handle);
 
-                DestroyDeviceSwapchain();
-                // remove swapchain configuration from the backbuffer
-                if ((handle.GetHandle() == defaultSwapchainHandle_.GetHandle()) || (!handle)) {
-                    IRenderDataStoreManager& rdsm = renderContext_.GetRenderDataStoreManager();
-                    refcnt_ptr<IRenderDataStorePod> dataStorePod =
-                        rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
-                    if (dataStorePod) {
-                        auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
-                        PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
-                        NodeGraphBackBufferConfiguration ngbbc =
-                            *(const NodeGraphBackBufferConfiguration*)dataView.data();
-                        if (ngbbc.backBufferType == NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN) {
-                            ngbbc.backBufferType = NodeGraphBackBufferConfiguration::BackBufferType::UNDEFINED;
-                            ngbbc.present = false;
-                        }
-                        dataStorePod->Set("NodeGraphBackBufferConfiguration", arrayviewU8(ngbbc));
-                    }
-                }
-                Deactivate();
-
-                // destroy default swapchain handle if it was in use
-                if (handle.GetHandle() == defaultSwapchainHandle_.GetHandle()) {
-                    defaultSwapchainHandle_ = {};
-                }
-
-                // element erased -> break
-                break;
+    DestroyDeviceSwapchain();
+    // remove swapchain configuration from the backbuffer
+    if ((handle.GetHandle() == defaultSwapchainHandle_.GetHandle()) || (!handle)) {
+        IRenderDataStoreManager& rdsm = renderContext_.GetRenderDataStoreManager();
+        refcnt_ptr<IRenderDataStorePod> dataStorePod = rdsm.GetRenderDataStore(RenderDataStorePod::TYPE_NAME);
+        if (dataStorePod) {
+            auto const dataView = dataStorePod->Get("NodeGraphBackBufferConfiguration");
+            PLUGIN_ASSERT(dataView.size_bytes() == sizeof(NodeGraphBackBufferConfiguration));
+            NodeGraphBackBufferConfiguration ngbbc = *(const NodeGraphBackBufferConfiguration*)dataView.data();
+            if (ngbbc.backBufferType == NodeGraphBackBufferConfiguration::BackBufferType::SWAPCHAIN) {
+                ngbbc.backBufferType = NodeGraphBackBufferConfiguration::BackBufferType::UNDEFINED;
+                ngbbc.present = false;
             }
+            dataStorePod->Set("NodeGraphBackBufferConfiguration", arrayviewU8(ngbbc));
         }
+    }
+    Deactivate();
+
+    // destroy default swapchain handle if it was in use
+    if (handle.GetHandle() == defaultSwapchainHandle_.GetHandle()) {
+        defaultSwapchainHandle_ = {};
     }
 }
 
@@ -799,7 +824,8 @@ void Device::FrameStart()
     ++frameCount_;
 }
 
-void Device::FrameEnd() {}
+void Device::FrameEnd()
+{}
 
 void Device::SetDeviceStatus(const bool status)
 {
@@ -919,7 +945,8 @@ DescriptorSetManager& Device::GetDescriptorSetManager() const
     return *globalDescriptorSetMgr_;
 }
 
-void Device::SetBackendConfig(const BackendConfig& config) {}
+void Device::SetBackendConfig(const BackendConfig& config)
+{}
 
 Format Device::GetFormatOrFallback(const Format inputFormat) const
 {
@@ -940,7 +967,8 @@ Format Device::GetFormatOrFallback(const Format inputFormat) const
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (fallbackCount > 0U) {
             PLUGIN_LOG_I("RENDER_VALIDATION: input format (%u) fallback format (%u)",
-                static_cast<uint32_t>(inputFormat), static_cast<uint32_t>(format));
+                static_cast<uint32_t>(inputFormat),
+                static_cast<uint32_t>(format));
         }
 #endif
     }

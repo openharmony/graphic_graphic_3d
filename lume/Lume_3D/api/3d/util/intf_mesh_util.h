@@ -180,4 +180,4 @@ protected:
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_UTIL_IMESH_UTIL_H
+#endif  // API_3D_UTIL_IMESH_UTIL_H

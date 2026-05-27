@@ -1,0 +1,16 @@
+{
+    "version": "1.0",
+    "description": "scene loaded via JsonImporter v1 dispatch",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "json_importer_root",
+            "children": [
+                { "type": "node", "name": "child_a" },
+                { "type": "node", "name": "child_b" }
+            ]
+        }
+    }
+}

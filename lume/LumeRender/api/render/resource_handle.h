@@ -27,12 +27,12 @@ RENDER_BEGIN_NAMESPACE()
 /** \addtogroup group_resourcehandle
  *  @{
  */
-constexpr const uint64_t INVALID_RESOURCE_HANDLE { 0xFFFFFFFFffffffff };
+constexpr const uint64_t INVALID_RESOURCE_HANDLE{0xFFFFFFFFffffffff};
 
 /** Render handle (used for various renderer and rendering related handles) */
 struct RenderHandle {
     /** ID */
-    uint64_t id { INVALID_RESOURCE_HANDLE };
+    uint64_t id{INVALID_RESOURCE_HANDLE};
 };
 /** @} */
 
@@ -92,17 +92,17 @@ enum class RenderHandleType : uint8_t {
 /** Render handle util */
 namespace RenderHandleUtil {
 /** Render handle type mask */
-constexpr const uint64_t RENDER_HANDLE_TYPE_MASK { 0xf };
+constexpr const uint64_t RENDER_HANDLE_TYPE_MASK{0xf};
 /** Render handle generation mask */
-constexpr const uint64_t RENDER_HANDLE_GENERATION_MASK { 0xFF000000 };
+constexpr const uint64_t RENDER_HANDLE_GENERATION_MASK{0xFF000000};
 /** Render handle mask which shows that the handle needs always descriptor set update
  * This might be related to backend updating the underlaying resource etc.
  */
-constexpr const uint64_t RENDER_HANDLE_NEEDS_UPDATE_MASK { 0x0000034000000000 };
+constexpr const uint64_t RENDER_HANDLE_NEEDS_UPDATE_MASK{0x0000034000000000};
 /** Render handle id mask */
-constexpr const uint64_t RENDER_HANDLE_ID_MASK { 0x00FFfff0 };
+constexpr const uint64_t RENDER_HANDLE_ID_MASK{0x00FFfff0};
 /** Render handle id shift */
-constexpr const uint64_t RENDER_HANDLE_ID_SHIFT { 4ULL };
+constexpr const uint64_t RENDER_HANDLE_ID_SHIFT{4ULL};
 
 /** Checks validity of a handle */
 inline constexpr bool IsValid(const RenderHandle handle)
@@ -126,7 +126,7 @@ inline constexpr uint32_t GetIndex(const RenderHandle handle)
 {
     return (handle.id & RENDER_HANDLE_ID_MASK) >> RENDER_HANDLE_ID_SHIFT;
 }
-}; // namespace RenderHandleUtil
+};  // namespace RenderHandleUtil
 
 class RenderHandleReference;
 
@@ -205,7 +205,7 @@ public:
     inline IRenderReferenceCounter::Ptr GetCounter() const noexcept;
 
 private:
-    RenderHandle handle_ {};
+    RenderHandle handle_{};
     IRenderReferenceCounter::Ptr counter_;
 };
 
@@ -277,10 +277,10 @@ inline constexpr PropertyTypeDecl RENDER_HANDLE_ARRAY_T = PROPERTYTYPE_ARRAY(REN
 inline constexpr PropertyTypeDecl RENDER_HANDLE_REFERENCE_T = PROPERTYTYPE(RENDER_NS::RenderHandleReference);
 inline constexpr PropertyTypeDecl RENDER_HANDLE_REFERENCE_ARRAY_T =
     PROPERTYTYPE_ARRAY(RENDER_NS::RenderHandleReference);
-} // namespace PropertyType
+}  // namespace PropertyType
 #ifdef DECLARE_PROPERTY_TYPE
 DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandle);
 DECLARE_PROPERTY_TYPE(RENDER_NS::RenderHandleReference);
 #endif
 CORE_END_NAMESPACE()
-#endif // API_RENDER_RESOURCE_HANDLE_H
+#endif  // API_RENDER_RESOURCE_HANDLE_H

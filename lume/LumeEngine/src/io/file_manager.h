@@ -81,4 +81,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_FILEMANAGER_H
+#endif  // CORE_IO_FILEMANAGER_H

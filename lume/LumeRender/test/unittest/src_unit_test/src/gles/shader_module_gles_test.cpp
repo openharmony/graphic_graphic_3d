@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/shader_module_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include <device/device.h>
 #include <device/shader_manager.h>
@@ -78,10 +78,10 @@ UNIT_TEST(SRC_ShaderModule, ShaderModuleTestOpenGL, testing::ext::TestSize.Level
         createInfo.reflectionData = refData;
         createInfo.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_ALL;
         createInfo.spvData = spvData;
-        ShaderModuleGLES shader { device, createInfo };
+        ShaderModuleGLES shader{device, createInfo};
         ASSERT_EQ(ShaderStageFlagBits::CORE_SHADER_STAGE_ALL, shader.GetShaderStageFlags());
     }
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

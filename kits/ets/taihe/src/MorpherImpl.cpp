@@ -17,14 +17,11 @@
 
 namespace OHOS::Render3D::KITETS {
 MorpherImpl::MorpherImpl(const std::shared_ptr<MorpherETS> morpherETS) : morpherETS_(morpherETS)
-{
-}
+{}
 
 MorpherImpl::~MorpherImpl()
 {
-    if (morpherETS_) {
-        morpherETS_.reset();
-    }
+    morpherETS_.reset();
 }
 
 int32_t MorpherImpl::getTargetsSize()
@@ -55,7 +52,7 @@ int32_t MorpherImpl::getTargetsSize()
     }
 }
 
-void MorpherImpl::setTarget(::taihe::string_view key, double const &value)
+void MorpherImpl::setTarget(::taihe::string_view key, double const& value)
 {
     if (morpherETS_) {
         morpherETS_->Set(std::string(key), value);

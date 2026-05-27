@@ -85,7 +85,7 @@ OH_NativeBuffer_ColorSpace ConvertColorGamutToColorSpace(OHOS::GraphicColorGamut
             return OH_COLORSPACE_SRGB_FULL;
     }
 }
-}
+}  // namespace
 
 bool SurfaceStream::Build(const META_NS::IMetadata::Ptr& metadata)
 {
@@ -220,7 +220,7 @@ void SurfaceStream::OnBufferAvailable()
         OHOS::sptr<OHOS::SurfaceBuffer> acquireSurfaceBuffer = nullptr;
         OHOS::sptr<OHOS::SyncFence> acquireFence = OHOS::SyncFence::INVALID_FENCE;
         int64_t timestamp = 0;
-        OHOS::Rect damage = { 0, 0, 0, 0 };
+        OHOS::Rect damage = {0, 0, 0, 0};
         auto success = consumerSurface_->AcquireBuffer(acquireSurfaceBuffer, acquireFence, timestamp, damage);
         if ((success != OHOS::SURFACE_ERROR_OK) || acquireSurfaceBuffer == nullptr || !acquireFence->IsValid()) {
             CORE_LOG_E("consumer surface acquire surface buffer failed: %d", success);
@@ -253,8 +253,8 @@ void SurfaceStream::OnBufferAvailable()
     }).Wait();
 }
 
-void SurfaceStream::UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height,
-    OHOS::GraphicColorGamut colorGamut)
+void SurfaceStream::UpdateView(
+    OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut)
 {
     if (renderContext_ == nullptr) {
         CORE_LOG_E("invalid render context");
@@ -265,23 +265,23 @@ void SurfaceStream::UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t
     OH_NativeBuffer_SetColorSpace(buffer, colorSpace);
     auto& device = renderContext_->GetDevice();
     auto& grm = device.GetGpuResourceManager();
-    RENDER_NS::GpuImageDesc imageDesc {};
+    RENDER_NS::GpuImageDesc imageDesc{};
     imageDesc.usageFlags = RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT;
     imageDesc.width = width;
     imageDesc.height = height;
     RENDER_NS::RenderHandleReference handle;
     BASE_NS::string frameId = "Internal://SurfaceStream_";
-    frameId += BASE_NS::to_string(surfaceId_) + "_" +
-        BASE_NS::to_string(frameIndex_.fetch_add(1, std::memory_order_relaxed));
+    frameId +=
+        BASE_NS::to_string(surfaceId_) + "_" + BASE_NS::to_string(frameIndex_.fetch_add(1, std::memory_order_relaxed));
 
     if (backendType_ == RENDER_NS::DeviceBackendType::VULKAN) {
-        RENDER_NS::ImageDescVk vkImageDesc {};
+        RENDER_NS::ImageDescVk vkImageDesc{};
         vkImageDesc.platformHwBuffer = (uintptr_t)buffer;
         vkImageDesc.isFormatEffectivelySet = true;
         handle = grm.CreateView(frameId, imageDesc, vkImageDesc);
     }
     if (backendType_ == RENDER_NS::DeviceBackendType::OPENGLES) {
-        RENDER_NS::ImageDescGLES glImageDesc {};
+        RENDER_NS::ImageDescGLES glImageDesc{};
         glImageDesc.type = GL_TEXTURE_EXTERNAL_OES;
         glImageDesc.platformHwBuffer = (uintptr_t)buffer;
         handle = grm.CreateView(frameId, imageDesc, glImageDesc);
@@ -317,4 +317,4 @@ SurfaceStream::~SurfaceStream()
     engineQueue_ = nullptr;
 }
 
-}
+}  // namespace OHOS::Render3D

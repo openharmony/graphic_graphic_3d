@@ -1,0 +1,54 @@
+{
+	"version": "1.0",
+	"description": "test scene for builtin value types",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"attachments": [
+				{
+					"objectUid": "e7a1c3b5-4d2f-48e6-9f0a-1b3c5d7e9f01",
+					"properties": [
+						{
+							"name": "Vec4",
+							"value": {
+								"type": "vec4",
+								"value": [1, 2, 3, 4]
+							}
+						},
+						{
+							"name": "Color",
+							"value": {
+								"type": "color",
+								"value": [0.1, 0.2, 0.3, 1.0]
+							}
+						},
+						{
+							"name": "Quat",
+							"value": {
+								"type": "quat",
+								"value": [0, 0, 0, 1]
+							}
+						},
+						{
+							"name": "UVec2",
+							"value": {
+								"type": "uvec2",
+								"value": [100, 200]
+							}
+						},
+						{
+							"name": "Mat4x4",
+							"value": {
+								"type": "mat4x4",
+								"value": [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 1]]
+							}
+						}
+					]
+				}
+			]
+		}
+	}
+}

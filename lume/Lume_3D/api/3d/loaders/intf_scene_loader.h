@@ -38,7 +38,7 @@ const unsigned long CORE_SCENE_INVALID_INDEX = 0x7FFFFFFF;
 
 class ISceneData : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "eb6381c1-36a3-4709-8031-c37c1b9cd76e" };
+    static constexpr auto UID = BASE_NS::Uid{"eb6381c1-36a3-4709-8031-c37c1b9cd76e"};
     using Ptr = BASE_NS::refcnt_ptr<ISceneData>;
 
     /** Retrieve default scene index. */
@@ -147,13 +147,13 @@ struct MeshData {
 
 class ISceneImporter : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "6dd26fca-9ef1-40f1-ba67-1bbcc1740885" };
+    static constexpr auto UID = BASE_NS::Uid{"6dd26fca-9ef1-40f1-ba67-1bbcc1740885"};
 
     using Ptr = BASE_NS::refcnt_ptr<ISceneImporter>;
 
     struct Result {
         /** Indicates, whether the import operation is successful. */
-        int32_t error { 0 };
+        int32_t error{0};
 
         /** In case of import error, contains the description of the error. */
         BASE_NS::string message;
@@ -254,13 +254,13 @@ protected:
 
 class ISceneLoader : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "61997694-aa64-4753-9d01-17d18aad4822" };
+    static constexpr auto UID = BASE_NS::Uid{"61997694-aa64-4753-9d01-17d18aad4822"};
 
     using Ptr = BASE_NS::refcnt_ptr<ISceneLoader>;
 
     struct Result {
         /** Indicates, whether the loading was successful. */
-        int32_t error { 0 };
+        int32_t error{0};
 
         /** In case of an error, contains the description of the error. */
         BASE_NS::string message;
@@ -310,4 +310,4 @@ protected:
     virtual ~ISceneLoader() = default;
 };
 CORE3D_END_NAMESPACE()
-#endif // API_3D_LOADERS_ISCENE_LOADER_H
+#endif  // API_3D_LOADERS_ISCENE_LOADER_H

@@ -67,7 +67,7 @@ static IMesh::Ptr CreateMesh(const IInternalScene::Ptr& scene, CORE_NS::Entity e
     return mesh;
 }
 
-template<typename T>
+template <typename T>
 constexpr static CORE3D_NS::IMeshBuilder::DataBuffer FillData(const BASE_NS::vector<T>& c) noexcept
 {
     using namespace BASE_NS;
@@ -83,8 +83,8 @@ constexpr static CORE3D_NS::IMeshBuilder::DataBuffer FillData(const BASE_NS::vec
     } else if constexpr (is_same_v<T, uint32_t>) {
         format = BASE_FORMAT_R32_UINT;
     }
-    return CORE3D_NS::IMeshBuilder::DataBuffer { format, sizeof(T),
-        { reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T) } };
+    return CORE3D_NS::IMeshBuilder::DataBuffer{
+        format, sizeof(T), {reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T)}};
 }
 
 static CORE3D_NS::IMeshBuilder::Ptr CreateMeshBuilder(
@@ -107,11 +107,11 @@ static CORE3D_NS::IMeshBuilder::Ptr CreateMeshBuilder(
 Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
 {
     if (auto scene = scene_.lock()) {
-        return scene->AddTaskOrRunDirectly([=, data = BASE_NS::move(d)] {
+        return scene->AddTaskOrRunDirectly([scene, c, data = BASE_NS::move(d)] {
             CORE3D_NS::IMeshBuilder::Submesh submesh;
             submesh.inputAssembly =
-                RENDER_NS::GraphicsState::InputAssembly { false, RENDER_NS::PrimitiveTopology(data.topology) };
-            submesh.material = CORE_NS::Entity {}; // material will be set later in CreateMesh()
+                RENDER_NS::GraphicsState::InputAssembly{false, RENDER_NS::PrimitiveTopology(data.topology)};
+            submesh.material = CORE_NS::Entity{};  // material will be set later in CreateMesh()
             submesh.vertexCount = static_cast<uint32_t>(data.vertices.size());
             submesh.indexCount = static_cast<uint32_t>(data.indices.size());
             submesh.colors = true;
@@ -128,7 +128,7 @@ Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
                 colors.emplace_back(color.r, color.g, color.b, color.a);
             }
             auto colorData = FillData(colors);
-            CORE3D_NS::IMeshBuilder::DataBuffer dummy {};
+            CORE3D_NS::IMeshBuilder::DataBuffer dummy{};
 
             builder->SetVertexData(0, positionData, normalData, uvData, dummy, dummy, colorData);
             builder->CalculateAABB(0, positionData);
@@ -139,9 +139,9 @@ Future<IMesh::Ptr> MeshCreator::Create(const MeshConfig& c, CustomMeshData d)
             auto ent = builder->CreateMesh(*scene->GetEcsContext().GetNativeEcs());
             if (!c.name.empty()) {
                 CORE_NS::GetManager<CORE3D_NS::IUriComponentManager>(*scene->GetEcsContext().GetNativeEcs())
-                    ->Set(ent, { c.name });
+                    ->Set(ent, {c.name});
                 CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*scene->GetEcsContext().GetNativeEcs())
-                    ->Set(ent, { c.name });
+                    ->Set(ent, {c.name});
             }
             return CreateMesh(scene, ent, c.material);
         });

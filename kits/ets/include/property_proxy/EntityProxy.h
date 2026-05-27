@@ -23,13 +23,11 @@
 namespace OHOS::Render3D {
 class EntityProxy : public PropertyProxy<CORE_NS::Entity> {
 public:
-    explicit EntityProxy(const META_NS::Property<CORE_NS::Entity> &prop) : PropertyProxy(prop)
-    {
-    }
+    explicit EntityProxy(const META_NS::Property<CORE_NS::Entity>& prop) : PropertyProxy(prop)
+    {}
 
     ~EntityProxy() override
-    {
-    }
+    {}
 };
 }  // namespace OHOS::Render3D
 #endif  // OHOS_3D_ENTITY_PROXY_H

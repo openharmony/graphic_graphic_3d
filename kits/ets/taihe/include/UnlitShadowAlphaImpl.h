@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H
-#define OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H
+#ifndef OHOS_3D_UNLIT_SHADOW_ALPHA_IMPL_H
+#define OHOS_3D_UNLIT_SHADOW_ALPHA_IMPL_H
 
 #include "MaterialImpl.h"
 #include "SceneResources.user.hpp"
@@ -34,5 +34,5 @@ public:
 private:
     std::shared_ptr<MaterialETS> materialETS_;
 };
-} // namespace OHOS::Render3D::KITETS
-#endif  // OHOS_3D_UNLIT_SHADOW_ALPHA_MATERIAL_IMPL_H
+}  // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_UNLIT_SHADOW_ALPHA_IMPL_H

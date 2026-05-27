@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    template<typename T>
+    template <typename T>
     bool InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id);
     META_NS::IObject::Ptr CreateEffect(
         const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id, BASE_NS::Uid pid);
@@ -95,7 +95,8 @@ class PostProcessTemplateAccess
     : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
     META_OBJECT(PostProcessTemplateAccess, ClassId::PostProcessTemplateAccess, IntroduceInterfaces)
 public:
-    PostProcessTemplateAccess() : Super(ClassId::PostProcess, ClassId::PostProcessResourceTemplate) {}
+    PostProcessTemplateAccess() : Super(ClassId::PostProcess, ClassId::PostProcessResourceTemplate)
+    {}
 };
 
 SCENE_END_NAMESPACE()

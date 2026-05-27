@@ -56,13 +56,13 @@ bool operator>=(const BASE_NS::Math::Vec3& lhs, const BASE_NS::Math::Vec3& rhs);
 bool operator<=(const BASE_NS::Math::Vec3& lhs, const BASE_NS::Math::Vec3& rhs);
 bool operator>=(const BASE_NS::Math::Vec2& lhs, const BASE_NS::Math::Vec2& rhs);
 bool operator<=(const BASE_NS::Math::Vec2& lhs, const BASE_NS::Math::Vec2& rhs);
-} // namespace Math
-} // namespace BASE_NS
+}  // namespace Math
+}  // namespace BASE_NS
 
 namespace META_NS {
 std::ostream& operator<<(std::ostream& os, const META_NS::TimeSpan& vec);
 
-template<typename Type>
+template <typename Type>
 bool ContainsObjectWithName(const BASE_NS::vector<Type>& vec, const BASE_NS::string& name)
 {
     for (auto c : vec) {
@@ -77,14 +77,14 @@ bool ContainsObjectWithName(const BASE_NS::vector<Type>& vec, const BASE_NS::str
 
 namespace UTest {
 
-template<typename T>
+template <typename T>
 bool IsEqual(const BASE_NS::vector<T>& a, const BASE_NS::vector<T>& b);
 
-template<class A>
+template <class A>
 inline bool IsEqual(const A& a, const A& b)
 {
     if constexpr (BASE_NS::is_floating_point_v<A>) {
-        double mul = std::max({ A(1.0), std::fabs(a), std::fabs(b) });
+        double mul = std::max({A(1.0), std::fabs(a), std::fabs(b)});
         return std::fabs(a - b) <= std::numeric_limits<A>::epsilon() * mul;
     } else {
         return a == b;
@@ -130,8 +130,8 @@ inline bool IsEqual(const IArrayAny::Ptr& a, const IArrayAny::Ptr& b)
         return false;
     }
     for (size_t i = 0; i != a->GetSize(); ++i) {
-        auto anya = a->Clone(AnyCloneOptions { CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM });
-        auto anyb = b->Clone(AnyCloneOptions { CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM });
+        auto anya = a->Clone(AnyCloneOptions{CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM});
+        auto anyb = b->Clone(AnyCloneOptions{CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM});
         if (!a->GetAnyAt(i, *anya) || !b->GetAnyAt(i, *anyb)) {
             return false;
         }
@@ -201,7 +201,7 @@ inline bool IsEqual(IProperty::Ptr a, IProperty::Ptr b)
            as->GetModifiers({}, false).size() == bs->GetModifiers({}, false).size();
 }
 
-template<typename T>
+template <typename T>
 inline bool IsEqual(const BASE_NS::vector<T>& a, const BASE_NS::vector<T>& b)
 {
     if (a.size() != b.size()) {
@@ -226,7 +226,7 @@ inline bool IsEqual(IMetadata::Ptr a, IMetadata::Ptr b)
     return IsEqual(SortByName(a->GetProperties()), SortByName(b->GetProperties()));
 }
 
-} // namespace UTest
-} // namespace META_NS
+}  // namespace UTest
+}  // namespace META_NS
 
-#endif // META_TEST_TEST_UTILS_H
+#endif  // META_TEST_TEST_UTILS_H

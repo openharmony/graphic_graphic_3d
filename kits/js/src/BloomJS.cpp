@@ -17,47 +17,66 @@
 #include "BaseObjectJS.h"
 #include <scene/interface/postprocess/intf_bloom.h>
 
-static constexpr napi_type_tag BLOOM_CONFIG_TAG = { SCENE_NS::IBloom::UID.data[0], SCENE_NS::IBloom::UID.data[1] };
+static constexpr napi_type_tag BLOOM_CONFIG_TAG = {SCENE_NS::IBloom::UID.data[0], SCENE_NS::IBloom::UID.data[1]};
 
-template<napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
+namespace {
+template <typename T, typename U>
+U SetValue(const typename META_NS::Property<T>& p, const std::optional<U>& value)
+{
+    if (p) {
+        if (value) {
+            p->SetValue(*value);
+        } else {
+            p->Reset();
+        }
+
+        return p->GetValue();
+    }
+
+    return value.value_or(U{});
+}
+}  // anonymous namespace
+
+template <napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
 napi_value BloomConfiguration::Method(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
-        if (impl) {
+        if (auto impl =
+                NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG)) {
             return (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 }
 
-template<napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
+template <napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
 napi_value BloomConfiguration::Getter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
-        if (impl) {
+        if (auto impl =
+                NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG)) {
             return (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 }
-template<typename Type, void (BloomConfiguration::*F)(NapiApi::FunctionContext<Type>&)>
+template <typename Type, void (BloomConfiguration::*F)(NapiApi::FunctionContext<Type>&)>
 inline napi_value BloomConfiguration::Setter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc && fc.This()) {
-        auto impl = NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG);
-        if (impl) {
+        if (auto impl =
+                NapiApi::UnwrapTagged<BloomConfiguration>(fc.GetEnv(), fc.This().ToNapiValue(), BLOOM_CONFIG_TAG)) {
             (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 };
 
-BloomConfiguration::BloomConfiguration() {}
+BloomConfiguration::BloomConfiguration()
+{}
 
 void BloomConfiguration::Detach()
 {
@@ -65,14 +84,14 @@ void BloomConfiguration::Detach()
         SCENE_NS::IBloom::WeakPtr tmpb = bloom_;
         SCENE_NS::IPostProcess::WeakPtr tmpp = postproc_;
         if (bloom_) {
-            bloom_.reset(); // release it.
+            bloom_.reset();  // release it.
             //* can verify if the object actually died by trying to lock it.
             if (!tmpb.lock()) {
                 LOG_V("bloom instance destroyed");
             }
         }
         if (postproc_) {
-            postproc_.reset(); // release it.
+            postproc_.reset();  // release it.
             if (!tmpp.lock()) {
                 LOG_V("postprocess instance destroyed");
             }
@@ -90,7 +109,7 @@ void BloomConfiguration::SetFrom(NapiApi::Object obj)
     type_ = (Type)obj.Get<uint32_t>("type").valueOrDefault((uint32_t)Type::NORMAL);
     quality_ = (Quality)obj.Get<uint32_t>("quality").valueOrDefault((uint32_t)Quality::NORMAL);
     thresholdHard_ = obj.Get<float>("thresholdHard").valueOrDefault(1.0);
-    thresholdSoft_ = obj.Get<float>("thresholdSoft").valueOrDefault(2.0); // 2.0: param
+    thresholdSoft_ = obj.Get<float>("thresholdSoft").valueOrDefault(2.0);  // 2.0: param
     scatter_ = obj.Get<float>("scatter").valueOrDefault(1.0);
     scaleFactor_ = obj.Get<float>("scaleFactor").valueOrDefault(1.0);
     amountCoefficient_ = obj.Get<float>("amountCoefficient").valueOrDefault(0.25f);
@@ -117,7 +136,7 @@ void BloomConfiguration::SetFrom(SCENE_NS::IBloom::Ptr bloom)
         scatter_ = bloom->Scatter()->GetValue();
         scaleFactor_ = bloom->ScaleFactor()->GetValue();
         amountCoefficient_ = bloom->AmountCoefficient()->GetValue();
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 }
 
@@ -133,7 +152,7 @@ void BloomConfiguration::SetTo(SCENE_NS::IBloom::Ptr bloom)
         bloom->ScaleFactor()->SetValue(scaleFactor_);
         bloom->AmountCoefficient()->SetValue(amountCoefficient_);
         // Poke postProc so that the changes to bloom are updated.
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 }
 
@@ -150,14 +169,13 @@ napi_value BloomConfiguration::Dispose(NapiApi::FunctionContext<>& ctx)
 
 NapiApi::StrongRef BloomConfiguration::Wrap(NapiApi::Object obj)
 {
-    //  wrap it..
     auto DTOR = [](napi_env env, void* nativeObject, void* finalize) {
         BloomConfiguration* ptr = static_cast<BloomConfiguration*>(nativeObject);
         delete ptr;
     };
 
-    NapiApi::WrapTagged<BloomConfiguration>(obj.GetEnv(), obj.ToNapiValue(), this, DTOR, nullptr, BLOOM_CONFIG_TAG,
-        nullptr);
+    auto value = obj.ToNapiValue();
+    NapiApi::WrapTagged<BloomConfiguration>(obj.GetEnv(), value, this, DTOR, nullptr, BLOOM_CONFIG_TAG, nullptr);
 
     // clang-format off
     napi_property_descriptor descs[] = {
@@ -168,18 +186,21 @@ NapiApi::StrongRef BloomConfiguration::Wrap(NapiApi::Object obj)
         { "amountCoefficient", nullptr, nullptr, Getter<&BloomConfiguration::GetAmount>,
             Setter<float, &BloomConfiguration::SetAmount>, nullptr, napi_default_jsproperty, this },
         { "thresholdSoft", nullptr, nullptr, Getter<&BloomConfiguration::GetThresholdSoft>,
-            Setter<float, &BloomConfiguration::SetThresholdSoft>, nullptr, napi_default_jsproperty, this },
+            Setter<std::optional<float>, &BloomConfiguration::SetThresholdSoft>, nullptr, napi_default_jsproperty,
+            this },
         { "thresholdHard", nullptr, nullptr, Getter<&BloomConfiguration::GetThresholdHard>,
-            Setter<float, &BloomConfiguration::SetThresholdHard>, nullptr, napi_default_jsproperty, this },
+            Setter<std::optional<float>, &BloomConfiguration::SetThresholdHard>, nullptr, napi_default_jsproperty,
+            this },
         { "scatter", nullptr, nullptr, Getter<&BloomConfiguration::GetScatter>,
-            Setter<float, &BloomConfiguration::SetScatter>, nullptr, napi_default_jsproperty, this },
+            Setter<std::optional<float>, &BloomConfiguration::SetScatter>, nullptr, napi_default_jsproperty, this },
         { "scaleFactor", nullptr, nullptr, Getter<&BloomConfiguration::GetScaleFactor>,
-            Setter<float, &BloomConfiguration::SetScaleFactor>, nullptr, napi_default_jsproperty, this },
+            Setter<std::optional<float>, &BloomConfiguration::SetScaleFactor>, nullptr, napi_default_jsproperty,
+            this },
         { "destroy", nullptr, Method<&BloomConfiguration::Dispose>,
             nullptr, nullptr, nullptr, napi_default_jsproperty, this }
     };
     // clang-format on
-    napi_define_properties(obj.GetEnv(), obj.ToNapiValue(), BASE_NS::countof(descs), descs);
+    napi_define_properties(obj.GetEnv(), value, BASE_NS::countof(descs), descs);
 
     SetTo(obj);
     return NapiApi::StrongRef(obj);
@@ -210,7 +231,7 @@ napi_value BloomConfiguration::GetScatter(NapiApi::FunctionContext<>& ctx)
     if (bloom_) {
         ExecSyncTask([bl = bloom_, &amount]() {
             amount = bl->Scatter()->GetValue();
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         });
     }
     return ctx.GetNumber(amount);
@@ -222,7 +243,7 @@ napi_value BloomConfiguration::GetScaleFactor(NapiApi::FunctionContext<>& ctx)
     if (bloom_) {
         ExecSyncTask([bl = bloom_, &amount]() {
             amount = bl->ScaleFactor()->GetValue();
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         });
     }
     return ctx.GetNumber(amount);
@@ -268,32 +289,28 @@ void BloomConfiguration::SetQuality(NapiApi::FunctionContext<uint32_t>& ctx)
         bloom_->Quality()->SetValue(GetQuality(quality_));
     }
 }
-void BloomConfiguration::SetThresholdHard(NapiApi::FunctionContext<float>& ctx)
+void BloomConfiguration::SetThresholdHard(NapiApi::FunctionContext<std::optional<float>>& ctx)
 {
-    thresholdHard_ = ctx.Arg<0>();
     if (bloom_) {
-        bloom_->ThresholdHard()->SetValue(thresholdHard_);
+        thresholdHard_ = SetValue(bloom_->ThresholdHard(), ctx.Arg<0>().valueOrDefault());
     }
 }
-void BloomConfiguration::SetScatter(NapiApi::FunctionContext<float>& ctx)
+void BloomConfiguration::SetScatter(NapiApi::FunctionContext<std::optional<float>>& ctx)
 {
-    scatter_ = ctx.Arg<0>();
     if (bloom_) {
-        bloom_->Scatter()->SetValue(scatter_);
+        scatter_ = SetValue(bloom_->Scatter(), ctx.Arg<0>().valueOrDefault());
     }
 }
-void BloomConfiguration::SetScaleFactor(NapiApi::FunctionContext<float>& ctx)
+void BloomConfiguration::SetScaleFactor(NapiApi::FunctionContext<std::optional<float>>& ctx)
 {
-    scaleFactor_ = ctx.Arg<0>();
     if (bloom_) {
-        bloom_->ScaleFactor()->SetValue(scaleFactor_);
+        scaleFactor_ = SetValue(bloom_->ScaleFactor(), ctx.Arg<0>().valueOrDefault());
     }
 }
-void BloomConfiguration::SetThresholdSoft(NapiApi::FunctionContext<float>& ctx)
+void BloomConfiguration::SetThresholdSoft(NapiApi::FunctionContext<std::optional<float>>& ctx)
 {
-    thresholdSoft_ = ctx.Arg<0>();
     if (bloom_) {
-        bloom_->ThresholdSoft()->SetValue(thresholdSoft_);
+        thresholdSoft_ = SetValue(bloom_->ThresholdSoft(), ctx.Arg<0>().valueOrDefault());
     }
 }
 void BloomConfiguration::SetAmount(NapiApi::FunctionContext<float>& ctx)

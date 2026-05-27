@@ -16,7 +16,7 @@
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/spirv_cross_helper_structs_gles.h>
 #include <gles/spirv_cross_helpers_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include "test_framework.h"
 #if defined(UNIT_TESTS_USE_HCPPTEST)
@@ -60,7 +60,7 @@ UNIT_TEST(SRC_SpirvCrossHelpers, SpirvCrossHelpersTestOpenGL, testing::ext::Test
             string result = "";
             int intValue = 6;
             bool ok = Gles::DefineForSpec(
-                { constants, countof(constants) }, 0u, reinterpret_cast<uintptr_t>(&intValue), result);
+                {constants, countof(constants)}, 0u, reinterpret_cast<uintptr_t>(&intValue), result);
             ASSERT_TRUE(ok);
             ASSERT_EQ("#define SPIRV_CROSS_CONSTANT_ID_0 6\n", result);
         }
@@ -68,7 +68,7 @@ UNIT_TEST(SRC_SpirvCrossHelpers, SpirvCrossHelpersTestOpenGL, testing::ext::Test
             string result = "";
             float floatValue = 6.2f;
             bool ok = Gles::DefineForSpec(
-                { constants, countof(constants) }, 1u, reinterpret_cast<uintptr_t>(&floatValue), result);
+                {constants, countof(constants)}, 1u, reinterpret_cast<uintptr_t>(&floatValue), result);
             ASSERT_TRUE(ok);
             string expected = "#define SPIRV_CROSS_CONSTANT_ID_1 6.2";
             ASSERT_LE(expected.size(), result.size());
@@ -87,28 +87,28 @@ UNIT_TEST(SRC_SpirvCrossHelpers, SpirvCrossHelpersTestOpenGL, testing::ext::Test
 
         Gles::PushConstantReflection reflection2 = reflection;
         reflection2.name = "name1";
-        ASSERT_EQ(-1, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-1, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.name = "name0";
-        ASSERT_EQ(0, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(0, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.matrixStride = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.arrayStride = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.arraySize = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.size = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.offset = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
 
         reflection2.type = 1u;
-        ASSERT_EQ(-2, Gles::FindConstant({ &reflection, 1 }, reflection2));
+        ASSERT_EQ(-2, Gles::FindConstant({&reflection, 1}, reflection2));
     }
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -60,7 +60,7 @@ public:
         SPECULAR = 10,
     };
     MaterialETS(const SCENE_NS::IMaterial::Ptr mat);
-    MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string &name, const std::string &uri);
+    MaterialETS(const SCENE_NS::IMaterial::Ptr mat, const std::string& name, const std::string& uri);
     ~MaterialETS() override;
     void Destroy() override;
 
@@ -84,7 +84,7 @@ public:
     void SetAlphaCutoff(const float cutoff);
 
     MaterialETS::RenderSort GetRenderSort();
-    void SetRenderSort(const MaterialETS::RenderSort &renderSort);
+    void SetRenderSort(const MaterialETS::RenderSort& renderSort);
 
     std::shared_ptr<ShaderETS> GetColorShader();
     void SetColorShader(const std::shared_ptr<ShaderETS> shader);

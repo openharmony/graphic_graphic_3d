@@ -37,15 +37,15 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr uint32_t TEST_ELEMENT_ELEMENT_COUNT { 8u };
-static constexpr uint32_t TEST_INPUT_BUFFER_COLOR[] = { 4u, 1u, 1u, 0u, 1u, 4u, 11u, 0u };
-static constexpr uint32_t BUFFER_BYTE_SIZE { sizeof(uint32_t) * TEST_ELEMENT_ELEMENT_COUNT };
-static constexpr string_view INPUT_BUFFER_NAME_0 { "InputBuffer0" };
-static constexpr string_view INDIRECT_IMAGE_NAME_0 { "IndirectImage0" };
-static constexpr string_view INDIRECT_BUFFER_NAME_0 { "IndirectBuffer0" };
-static constexpr uint32_t PUSH_CONSTANT { 1u };
+static constexpr uint32_t TEST_ELEMENT_ELEMENT_COUNT{8u};
+static constexpr uint32_t TEST_INPUT_BUFFER_COLOR[] = {4u, 1u, 1u, 0u, 1u, 4u, 11u, 0u};
+static constexpr uint32_t BUFFER_BYTE_SIZE{sizeof(uint32_t) * TEST_ELEMENT_ELEMENT_COUNT};
+static constexpr string_view INPUT_BUFFER_NAME_0{"InputBuffer0"};
+static constexpr string_view INDIRECT_IMAGE_NAME_0{"IndirectImage0"};
+static constexpr string_view INDIRECT_BUFFER_NAME_0{"IndirectBuffer0"};
+static constexpr uint32_t PUSH_CONSTANT{1u};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_BUFFER_NAME_0 { "OutputBuffer0" };
+static constexpr string_view OUTPUT_BUFFER_NAME_0{"OutputBuffer0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -76,8 +76,8 @@ TestResources CreateTestResources(UTest::EngineResources& er, uint32_t constValu
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT | CORE_BUFFER_USAGE_TRANSFER_SRC_BIT |
                                 CORE_BUFFER_USAGE_TRANSFER_DST_BIT | CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         bufferDesc.byteSize = BUFFER_BYTE_SIZE;
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(TEST_INPUT_BUFFER_COLOR),
-            BUFFER_BYTE_SIZE };
+        const array_view<const uint8_t> dataView = {
+            reinterpret_cast<const uint8_t*>(TEST_INPUT_BUFFER_COLOR), BUFFER_BYTE_SIZE};
         res.inputBufferHandle0 = er.device->GetGpuResourceManager().Create(INPUT_BUFFER_NAME_0, bufferDesc, dataView);
     }
     {
@@ -104,10 +104,10 @@ TestResources CreateTestResources(UTest::EngineResources& er, uint32_t constValu
         ShaderSpecializationRenderPod conf;
         conf.specializationConstantCount = 1;
         conf.specializationFlags[0].value = constValue;
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&conf), sizeof(conf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&conf), sizeof(conf)};
         res.dataStorePod->CreatePod("ShaderSpecializationRenderPod", "computeConfig", dataView);
         res.dataStorePod->CreatePod(
-            "pushConstants", "pushConstants", { reinterpret_cast<const uint8_t*>(&PUSH_CONSTANT), sizeof(uint32_t) });
+            "pushConstants", "pushConstants", {reinterpret_cast<const uint8_t*>(&PUSH_CONSTANT), sizeof(uint32_t)});
     }
 
     return res;
@@ -138,10 +138,10 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        RenderHandleReference inputs[] = { tr.indirectImageHandle0, tr.inputBufferHandle0 };
+        RenderHandleReference inputs[] = {tr.indirectImageHandle0, tr.inputBufferHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
-        er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
+        er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
 
         if (copyThisFrame) {
             // Copy data from the output buffer for evaluation
@@ -150,9 +150,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
             const RenderHandleReference bufferHandle = gpuResourceMgr.GetBufferHandle(OUTPUT_BUFFER_NAME_0);
             const IRenderFrameUtil::FrameCopyData& data = rfUtil.GetFrameCopyData(bufferHandle);
             if (data.byteBuffer) {
-                const array_view<const uint32_t> uintData = { reinterpret_cast<const uint32_t*>(
-                                                                  data.byteBuffer->GetData().data()),
-                    data.byteBuffer->GetData().size_bytes() / sizeof(uint32_t) };
+                const array_view<const uint32_t> uintData = {
+                    reinterpret_cast<const uint32_t*>(data.byteBuffer->GetData().data()),
+                    data.byteBuffer->GetData().size_bytes() / sizeof(uint32_t)};
                 EXPECT_EQ(uintData.size_bytes(), sizeof(tr.outputBufferColor));
                 if (uintData.size_bytes() == sizeof(tr.outputBufferColor)) {
                     for (size_t idx = 0; idx < TEST_ELEMENT_ELEMENT_COUNT; ++idx) {
@@ -197,7 +197,7 @@ void TestComputeGenericRenderNode(DeviceBackendType backend, uint32_t constValue
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -212,10 +212,9 @@ UNIT_TEST(API_GfxComputeGenericRenderNode, GfxComputeGenericRenderNodeTestVulkan
     TestComputeGenericRenderNode(DeviceBackendType::VULKAN, 0u);
     TestComputeGenericRenderNode(DeviceBackendType::VULKAN, 1u);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: GfxComputeGenericRenderNodeTestOpenGL
  * @tc.desc: Tests RenderNodeComputeGeneric by issuing a compute shader with input data and push constants. The output
@@ -223,13 +222,11 @@ UNIT_TEST(API_GfxComputeGenericRenderNode, GfxComputeGenericRenderNodeTestVulkan
  * valitated in the end. Not Enabled on OpenGL due to lack of shader specialization ability.
  * @tc.type: FUNC
  */
-UNIT_TEST(
-    API_GfxComputeGenericRenderNode, DISABLED_GfxComputeGenericRenderNodeTestOpenGL, testing::ext::TestSize.Level1)
+UNIT_TEST(API_GfxComputeGenericRenderNode, GfxComputeGenericRenderNodeTestOpenGL, testing::ext::TestSize.Level1)
 {
     // NOTE: Test fails on windows machines
 
     // Shader specialization doesn't work with OpenGL
     TestComputeGenericRenderNode(UTest::GetOpenGLBackend(), 0u);
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

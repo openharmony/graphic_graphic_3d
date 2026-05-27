@@ -37,7 +37,7 @@ void TestSwapchainCreation(DeviceBackendType backend)
     UTest::CreateEngineSetup(engine);
     ASSERT_NE(nullptr, engine.device);
 
-    SwapchainCreateInfo swapchainInfo {};
+    SwapchainCreateInfo swapchainInfo{};
 #if defined(__OHOS__)
     swapchainInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_ohosApp->GetWindowHandle());
     ASSERT_NE(::Test::g_ohosApp->GetWindowHandle(), nullptr);
@@ -65,7 +65,80 @@ void TestSwapchainCreation(DeviceBackendType backend)
         UTest::DestroyEngine(engine);
     }
 }
-} // namespace
+
+void TestSwapchainCreationFromWindow(DeviceBackendType backend)
+{
+    UTest::EngineResources engine;
+    engine.backend = backend;
+    engine.createWindow = true;
+    UTest::CreateEngineSetup(engine);
+    ASSERT_NE(nullptr, engine.device);
+
+    SwapchainCreateInfo swapchainInfo{};
+    swapchainInfo.surfaceHandle = 0;
+
+#if defined(_WIN32)
+    const HWND hwnd = ::Test::g_windowsApp->GetWindowHandle(UTest::TEST_NATIVE_WINDOW_NAME);
+    HINSTANCE hinstance = GetModuleHandle(nullptr);
+    ASSERT_NE(hwnd, nullptr);
+    swapchainInfo.window.window = reinterpret_cast<uintptr_t>(hwnd);
+    swapchainInfo.window.instance = reinterpret_cast<uintptr_t>(hinstance);
+#elif defined(__linux__)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+    // XCB backend: instance = xcb_connection_t*, window = xcb_window_t
+    auto* connection = ::Test::g_linuxApp->GetWindowConnection(UTest::TEST_NATIVE_WINDOW_NAME);
+    auto windowId = ::Test::g_linuxApp->GetWindowID(UTest::TEST_NATIVE_WINDOW_NAME);
+
+    ASSERT_NE(connection, nullptr);
+    ASSERT_NE(windowId, 0u);
+
+    swapchainInfo.window.instance = reinterpret_cast<uintptr_t>(connection);  // xcb_connection_t*
+    swapchainInfo.window.window = static_cast<uintptr_t>(windowId);           // xcb_window_t
+
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    // Xlib backend: instance = Display*, window = ::Window
+    auto* display = ::Test::g_linuxApp->GetWindowDisplay(UTest::TEST_NATIVE_WINDOW_NAME);
+    auto window = ::Test::g_linuxApp->GetWindowID(UTest::TEST_NATIVE_WINDOW_NAME);
+
+    ASSERT_NE(display, nullptr);
+    ASSERT_NE(window, 0u);
+
+    swapchainInfo.window.instance = reinterpret_cast<uintptr_t>(display);  // Display*
+    swapchainInfo.window.window = static_cast<uintptr_t>(window);          // ::Window
+
+#elif defined(__OHOS__)
+    swapchainInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_ohosApp->GetWindowHandle());
+    swapchainInfo.window.instance = 0;
+    ASSERT_NE(::Test::g_ohosApp->GetWindowHandle(), nullptr);
+
+#elif defined(__ANDROID__)
+    swapchainInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_androidApp->GetWindowHandle());
+    swapchainInfo.window.instance = 0;
+    ASSERT_NE(::Test::g_androidApp->GetWindowHandle(), nullptr);
+#endif
+#else
+    GTEST_SKIP() << "Window-based swapchain creation not available on this platform yet.";
+#endif
+
+    swapchainInfo.swapchainFlags = RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_COLOR_BUFFER_BIT |
+                                   RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT |
+                                   RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_VSYNC_BIT |
+                                   RENDER_NS::SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT;
+
+    engine.device->CreateSwapchain(swapchainInfo);
+
+    const RenderHandle defaultSwapchain;
+    ASSERT_NE(nullptr, ((Device*)engine.device)->GetSwapchain(defaultSwapchain));
+    const Swapchain* swapchain = ((Device*)engine.device)->GetSwapchain(defaultSwapchain);
+    uint32_t swapchainFlags = swapchain->GetFlags();
+    CORE_LOG_I("Swapchain flags (window path): %d", swapchainFlags);
+
+    engine.device->DestroySwapchain();
+    ASSERT_EQ(nullptr, ((Device*)engine.device)->GetSwapchain(defaultSwapchain));
+
+    UTest::DestroyEngine(engine);
+}
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -77,7 +150,17 @@ UNIT_TEST(SRC_Swapchain, SwapchainCreateTestVulkan, testing::ext::TestSize.Level
 {
     TestSwapchainCreation(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+
+/**
+ * @tc.name: SwapchainCreateFromWindowTestVulkan
+ * @tc.desc: Tests the creation of a swapchain via the device in Vulkan using a native window handle.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_Swapchain, SwapchainCreateFromWindowTestVulkan, testing::ext::TestSize.Level1)
+{
+    TestSwapchainCreationFromWindow(DeviceBackendType::VULKAN);
+}
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -89,4 +172,14 @@ UNIT_TEST(SRC_Swapchain, SwapchainCreateTestOpenGL, testing::ext::TestSize.Level
 {
     TestSwapchainCreation(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+
+/**
+ * @tc.name: SwapchainCreateFromWindowTestOpenGL
+ * @tc.desc: Tests the creation of a swapchain via the device in OpenGL using a native window handle.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_Swapchain, SwapchainCreateFromWindowTestOpenGL, testing::ext::TestSize.Level1)
+{
+    TestSwapchainCreationFromWindow(UTest::GetOpenGLBackend());
+}
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -73,11 +73,11 @@ void ReduceAndValidateDescriptorCounts(const DescriptorType descriptorType, cons
 }
 #endif
 
-constexpr uint64_t RENDER_HANDLE_REMAPPABLE_MASK_ID { (
-    uint64_t(RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE |
-             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE |
-             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION)
-    << RenderHandleUtil::RES_HANDLE_ADDITIONAL_INFO_SHIFT) };
+constexpr uint64_t RENDER_HANDLE_REMAPPABLE_MASK_ID{
+    (uint64_t(RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SHALLOW_RESOURCE |
+              RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_SWAPCHAIN_RESOURCE |
+              RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION)
+        << RenderHandleUtil::RES_HANDLE_ADDITIONAL_INFO_SHIFT)};
 
 inline bool IsTheSameBufferBinding(const BindableBuffer& src, const BindableBuffer& dst,
     const EngineResourceHandle& srcHandle, const EngineResourceHandle& dstHandle)
@@ -133,6 +133,9 @@ DescriptorSetUpdateInfoFlags CopyAndProcessBuffers(const GpuResourceManager& gpu
         }
         if (NodeContextDescriptorSetManager::IsDynamicDescriptor(dstRef.binding.descriptorType)) {
             PLUGIN_ASSERT(dynamicOffsetIndex < (uint32_t)dst.dynamicOffsetDescriptors.size());
+            if (dynamicOffsetIndex >= dst.dynamicOffsetDescriptors.size()) {
+                break;
+            }
             dst.dynamicOffsetDescriptors[dynamicOffsetIndex++] = dstRef.resource.handle;
         }
     }
@@ -254,9 +257,10 @@ DescriptorSetUpdateInfoFlags UpdateCpuDescriptorSetFunc(const GpuResourceManager
     hasPlatformConversionBindings = (hasPlatformConversionBindings || cpuSet.hasPlatformConversionBindings);
     return updateFlags;
 }
-} // namespace
+}  // namespace
 
-DescriptorSetManager::DescriptorSetManager(Device& device) : device_(device) {}
+DescriptorSetManager::DescriptorSetManager(Device& device) : device_(device)
+{}
 
 void DescriptorSetManager::BeginFrame()
 {
@@ -325,7 +329,10 @@ vector<RenderHandleReference> DescriptorSetManager::CreateDescriptorSets(const s
                     for (uint32_t idx = 0; idx < descCount; ++idx) {
                         const uint32_t additionalIndex = idx;
                         const RenderHandle rawHandle = RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET,
-                            arrayIndex, generationCounter, additionalData, additionalIndex);
+                            arrayIndex,
+                            generationCounter,
+                            additionalData,
+                            additionalIndex);
                         ref->data[idx].frameWriteLocked = false;
                         ref->data[idx].renderHandleReference = RenderHandleReference(
                             rawHandle, IRenderReferenceCounter::Ptr(new RenderReferenceCounter()));
@@ -426,7 +433,7 @@ DescriptorSetLayoutBindingResourcesHandler DescriptorSetManager::GetCpuDescripto
     const RenderHandle& handle) const
 {
     if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
-        return DescriptorSetLayoutBindingResourcesHandler {
+        return DescriptorSetLayoutBindingResourcesHandler{
             cpuDescriptorSet->bindings,
             cpuDescriptorSet->buffers,
             cpuDescriptorSet->images,
@@ -443,7 +450,7 @@ DescriptorSetLayoutBindingResourcesHandler DescriptorSetManager::GetCpuDescripto
 DynamicOffsetDescriptors DescriptorSetManager::GetDynamicOffsetDescriptors(const RenderHandle& handle) const
 {
     if (const CpuDescriptorSet* cpuDescriptorSet = GetCpuDescriptorSet(handle); cpuDescriptorSet) {
-        return DynamicOffsetDescriptors {
+        return DynamicOffsetDescriptors{
             array_view<const RenderHandle>(
                 cpuDescriptorSet->dynamicOffsetDescriptors.data(), cpuDescriptorSet->dynamicOffsetDescriptors.size()),
         };
@@ -516,7 +523,10 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
                     // NOTE: not used at the moment
                     bool hasPlatformConversionBindings = false;
                     updateFlags = UpdateCpuDescriptorSetFunc((const GpuResourceManager&)device_.GetGpuResourceManager(),
-                        bindingResources, gpuQueue, ref.cpuDescriptorSet, hasPlatformConversionBindings);
+                        bindingResources,
+                        gpuQueue,
+                        ref.cpuDescriptorSet,
+                        hasPlatformConversionBindings);
                     // set for update, these needs to be locked
                     if ((updateFlags & 0xFFFFffffU) == validUpdateFlags) {
                         descriptorSetHandlesForUpdate_.push_back(handle);
@@ -532,7 +542,8 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
 #if (RENDER_VALIDATION_ENABLED)
             if (!validWrite) {
                 const string tmpName = string(to_string(handle.id)) + descriptorSets_[index]->name.c_str();
-                PLUGIN_LOG_ONCE_W(tmpName, "RENDER_VALIDATION: Global descriptor set already updated this frame (%s)",
+                PLUGIN_LOG_ONCE_W(tmpName,
+                    "RENDER_VALIDATION: Global descriptor set already updated this frame (%s)",
                     descriptorSets_[index]->name.c_str());
             }
 #else
@@ -545,7 +556,7 @@ DescriptorSetUpdateInfoFlags DescriptorSetManager::UpdateCpuDescriptorSet(
 
 array_view<const RenderHandle> DescriptorSetManager::GetUpdateDescriptorSetHandles() const
 {
-    return { descriptorSetHandlesForUpdate_.data(), descriptorSetHandlesForUpdate_.size() };
+    return {descriptorSetHandlesForUpdate_.data(), descriptorSetHandlesForUpdate_.size()};
 }
 
 NodeContextDescriptorSetManager::NodeContextDescriptorSetManager(Device& device)
@@ -698,7 +709,7 @@ array_view<const RenderHandle> NodeContextDescriptorSetManager::GetGlobalDescrip
 IDescriptorSetBinder::Ptr NodeContextDescriptorSetManager::CreateDescriptorSetBinder(
     const RenderHandle handle, const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
 {
-    return IDescriptorSetBinder::Ptr { new DescriptorSetBinder(handle, descriptorSetLayoutBindings) };
+    return IDescriptorSetBinder::Ptr{new DescriptorSetBinder(handle, descriptorSetLayoutBindings)};
 }
 
 IDescriptorSetBinder::Ptr NodeContextDescriptorSetManager::CreateDescriptorSetBinder(
@@ -715,7 +726,7 @@ IPipelineDescriptorSetBinder::Ptr NodeContextDescriptorSetManager::CreatePipelin
     RenderHandle handles[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
     for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
         if (pipelineLayout.descriptorSetLayouts[idx].set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-            descriptorSetLayoutBindings[idx] = { pipelineLayout.descriptorSetLayouts[idx].bindings };
+            descriptorSetLayoutBindings[idx] = {pipelineLayout.descriptorSetLayouts[idx].bindings};
             handles[idx] = CreateDescriptorSet(descriptorSetLayoutBindings[idx].binding);
 #if (RENDER_VALIDATION_ENABLED == 1)
             for (const auto& bindingRef : descriptorSetLayoutBindings[idx].binding) {
@@ -726,16 +737,16 @@ IPipelineDescriptorSetBinder::Ptr NodeContextDescriptorSetManager::CreatePipelin
         }
     }
     // pass max amount to binder, it will check validity of sets and their set indices
-    return IPipelineDescriptorSetBinder::Ptr { new PipelineDescriptorSetBinder(
-        pipelineLayout, handles, descriptorSetLayoutBindings) };
+    return IPipelineDescriptorSetBinder::Ptr{
+        new PipelineDescriptorSetBinder(pipelineLayout, handles, descriptorSetLayoutBindings)};
 }
 
 IPipelineDescriptorSetBinder::Ptr NodeContextDescriptorSetManager::CreatePipelineDescriptorSetBinder(
     const PipelineLayout& pipelineLayout, const array_view<const RenderHandle> handles,
     const array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings)
 {
-    return IPipelineDescriptorSetBinder::Ptr { new PipelineDescriptorSetBinder(
-        pipelineLayout, handles, descriptorSetsLayoutBindings) };
+    return IPipelineDescriptorSetBinder::Ptr{
+        new PipelineDescriptorSetBinder(pipelineLayout, handles, descriptorSetsLayoutBindings)};
 }
 
 DescriptorSetLayoutBindingResourcesHandler NodeContextDescriptorSetManager::GetCpuDescriptorSetData(
@@ -827,7 +838,10 @@ DescriptorSetUpdateInfoFlags NodeContextDescriptorSetManager::UpdateCpuDescripto
     if (index < (uint32_t)cpuDescriptorSets.size()) {
         auto& refCpuSet = cpuDescriptorSets[index];
         updateFlags = UpdateCpuDescriptorSetFunc((const GpuResourceManager&)device_.GetGpuResourceManager(),
-            bindingResources, gpuQueue, refCpuSet, hasPlatformConversionBindings_);
+            bindingResources,
+            gpuQueue,
+            refCpuSet,
+            hasPlatformConversionBindings_);
         // update platform data for local
         UpdateCpuDescriptorSetPlatform(bindingResources);
     } else {
@@ -842,7 +856,7 @@ DescriptorSetLayoutBindingResourcesHandler NodeContextDescriptorSetManager::GetC
     const uint32_t index, const vector<CpuDescriptorSet>& cpuDescriptorSet)
 {
     if (index < cpuDescriptorSet.size()) {
-        return DescriptorSetLayoutBindingResourcesHandler {
+        return DescriptorSetLayoutBindingResourcesHandler{
             cpuDescriptorSet[index].bindings,
             cpuDescriptorSet[index].buffers,
             cpuDescriptorSet[index].images,
@@ -860,7 +874,7 @@ DynamicOffsetDescriptors NodeContextDescriptorSetManager::GetDynamicOffsetDescri
     const uint32_t index, const vector<CpuDescriptorSet>& cpuDescriptorSet)
 {
     if (index < cpuDescriptorSet.size()) {
-        return DynamicOffsetDescriptors {
+        return DynamicOffsetDescriptors{
             array_view<const RenderHandle>(cpuDescriptorSet[index].dynamicOffsetDescriptors.data(),
                 cpuDescriptorSet[index].dynamicOffsetDescriptors.size()),
         };

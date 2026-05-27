@@ -43,7 +43,8 @@ void RenderNodeTestUtil::InitNode(IRenderNodeContextManager& renderNodeContextMg
     ParseRenderNodeInputs();
 }
 
-void RenderNodeTestUtil::PreExecuteFrame() {}
+void RenderNodeTestUtil::PreExecuteFrame()
+{}
 
 void RenderNodeTestUtil::ExecuteFrame(IRenderCommandList& cmdList)
 {

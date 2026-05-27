@@ -59,7 +59,7 @@ public:
 
 private:
     BASE_NS::array_view<const uint8_t> reflectionData_;
-    uint16_t size_[5U] {};
+    uint16_t size_[5U]{};
 };
 RENDER_END_NAMESPACE()
 #endif

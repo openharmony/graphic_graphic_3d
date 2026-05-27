@@ -52,32 +52,32 @@ uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& physicalDevi
 VkImageCreateInfo GetHwBufferImageCreateInfo(const GpuImageDesc& desc)
 {
     // NOTE: undefined layout
-    return VkImageCreateInfo {
-        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,            // sType
-        nullptr,                                        // pNext
-        0,                                              // flags
-        (VkImageType)desc.imageType,                    // imageType
-        (VkFormat)desc.format,                          // format
-        { desc.width, desc.height, desc.depth },        // extent
-        desc.mipCount,                                  // mipLevels
-        desc.layerCount,                                // arrayLayers
-        (VkSampleCountFlagBits)(desc.sampleCountFlags), // samples
-        (VkImageTiling)desc.imageTiling,                // tiling
-        (VkImageUsageFlags)desc.usageFlags,             // usage
-        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,       // sharingMode
-        0,                                              // queueFamilyIndexCount
-        nullptr,                                        // pQueueFamilyIndices
-        VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,       // initialLayout
+    return VkImageCreateInfo{
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,             // sType
+        nullptr,                                         // pNext
+        0,                                               // flags
+        (VkImageType)desc.imageType,                     // imageType
+        (VkFormat)desc.format,                           // format
+        {desc.width, desc.height, desc.depth},           // extent
+        desc.mipCount,                                   // mipLevels
+        desc.layerCount,                                 // arrayLayers
+        (VkSampleCountFlagBits)(desc.sampleCountFlags),  // samples
+        (VkImageTiling)desc.imageTiling,                 // tiling
+        (VkImageUsageFlags)desc.usageFlags,              // usage
+        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,        // sharingMode
+        0,                                               // queueFamilyIndexCount
+        nullptr,                                         // pQueueFamilyIndices
+        VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,        // initialLayout
     };
 }
 
 VkMemoryRequirements GetImageMemoryRequirements(const DeviceVk& deviceVk, const VkImage image,
     const VkImageAspectFlags imageAspectFlags, const bool useMemoryRequirements2)
 {
-    VkMemoryRequirements memoryRequirements {
-        0, // size
-        0, // alignment
-        0, // memoryTypeBits
+    VkMemoryRequirements memoryRequirements{
+        0,  // size
+        0,  // alignment
+        0,  // memoryTypeBits
     };
     const DevicePlatformDataVk& devicePlat = ((const DevicePlatformDataVk&)deviceVk.GetPlatformData());
     VkDevice device = devicePlat.device;
@@ -86,31 +86,31 @@ VkMemoryRequirements GetImageMemoryRequirements(const DeviceVk& deviceVk, const 
     const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
     if (deviceExtensions.getMemoryRequirements2 && useMemoryRequirements2) {
         if (extFunctions.vkGetImageMemoryRequirements2) {
-            VkImagePlaneMemoryRequirementsInfo planeMemoryRequirementsInfo {
-                VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO, // sType
-                nullptr,                                                // pNext
-                (VkImageAspectFlagBits)(imageAspectFlags),              // planeAspect
+            VkImagePlaneMemoryRequirementsInfo planeMemoryRequirementsInfo{
+                VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO,  // sType
+                nullptr,                                                 // pNext
+                (VkImageAspectFlagBits)(imageAspectFlags),               // planeAspect
             };
-            VkImageMemoryRequirementsInfo2 imageMemoryRequirementsInfo {
-                VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2, // sType
-                &planeMemoryRequirementsInfo,                       // pNext
-                image,                                              // image
+            VkImageMemoryRequirementsInfo2 imageMemoryRequirementsInfo{
+                VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,  // sType
+                &planeMemoryRequirementsInfo,                        // pNext
+                image,                                               // image
             };
-            VkMemoryRequirements2 memoryRequirements2 {
-                VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, // sType
-                nullptr,                                 // pNext
-                {},                                      // memoryRequirements
+            VkMemoryRequirements2 memoryRequirements2{
+                VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,  // sType
+                nullptr,                                  // pNext
+                {},                                       // memoryRequirements
             };
 
-            extFunctions.vkGetImageMemoryRequirements2(device, // device
-                &imageMemoryRequirementsInfo,                  // pInfo
-                &memoryRequirements2);                         // pMemoryRequirements
+            extFunctions.vkGetImageMemoryRequirements2(device,  // device
+                &imageMemoryRequirementsInfo,                   // pInfo
+                &memoryRequirements2);                          // pMemoryRequirements
             memoryRequirements = memoryRequirements2.memoryRequirements;
         }
     } else {
-        vkGetImageMemoryRequirements(device, // device
-            image,                           // image
-            &memoryRequirements);            // pMemoryRequirements
+        vkGetImageMemoryRequirements(device,  // device
+            image,                            // image
+            &memoryRequirements);             // pMemoryRequirements
     }
 
     return memoryRequirements;
@@ -119,48 +119,48 @@ VkMemoryRequirements GetImageMemoryRequirements(const DeviceVk& deviceVk, const 
 void DestroyHwPlatformImage(const DeviceVk& deviceVk, VkImage image, VkDeviceMemory deviceMemory)
 {
     VkDevice device = ((const DevicePlatformDataVk&)deviceVk.GetPlatformData()).device;
-    vkDestroyImage(device, // device
-        image,             // image
-        nullptr);          // pAllocator
-    vkFreeMemory(device,   // device
-        deviceMemory,      // memory
-        nullptr);          // pAllocator
+    vkDestroyImage(device,  // device
+        image,              // image
+        nullptr);           // pAllocator
+    vkFreeMemory(device,    // device
+        deviceMemory,       // memory
+        nullptr);           // pAllocator
 }
 
 void FillYcbcrConversionInfo(
     const HardwareBufferProperties& hwBufferProperties, VkSamplerYcbcrConversionCreateInfo& ycbcrConversionCreateInfo)
 {
-    constexpr VkComponentMapping componentMapping {
-        VK_COMPONENT_SWIZZLE_IDENTITY, // r
-        VK_COMPONENT_SWIZZLE_IDENTITY, // g
-        VK_COMPONENT_SWIZZLE_IDENTITY, // b
-        VK_COMPONENT_SWIZZLE_IDENTITY, // a
+    constexpr VkComponentMapping componentMapping{
+        VK_COMPONENT_SWIZZLE_IDENTITY,  // r
+        VK_COMPONENT_SWIZZLE_IDENTITY,  // g
+        VK_COMPONENT_SWIZZLE_IDENTITY,  // b
+        VK_COMPONENT_SWIZZLE_IDENTITY,  // a
     };
     // NOTE: might not support linear (needs to be checked)
     constexpr VkFilter hardcodedFilter = VK_FILTER_NEAREST;
     ycbcrConversionCreateInfo = {
-        VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO, // sType
-        nullptr,                                                // pNext
-        hwBufferProperties.format,                              // format
-        hwBufferProperties.suggestedYcbcrModel,                 // ycbcrModel
-        hwBufferProperties.suggestedYcbcrRange,                 // ycbcrRange
-        componentMapping,                                       // components
-        hwBufferProperties.suggestedXChromaOffset,              // xChromaOffset
-        hwBufferProperties.suggestedYChromaOffset,              // yChromaOffset
-        hardcodedFilter,                                        // chromaFilter
-        false,                                                  // forceExplicitReconstruction
+        VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,  // sType
+        nullptr,                                                 // pNext
+        hwBufferProperties.format,                               // format
+        hwBufferProperties.suggestedYcbcrModel,                  // ycbcrModel
+        hwBufferProperties.suggestedYcbcrRange,                  // ycbcrRange
+        componentMapping,                                        // components
+        hwBufferProperties.suggestedXChromaOffset,               // xChromaOffset
+        hwBufferProperties.suggestedYChromaOffset,               // yChromaOffset
+        hardcodedFilter,                                         // chromaFilter
+        false,                                                   // forceExplicitReconstruction
     };
 }
 
 void DestroyHwPlatformBuffer(const DeviceVk& deviceVk, VkBuffer buffer, VkDeviceMemory deviceMemory)
 {
     VkDevice device = ((const DevicePlatformDataVk&)deviceVk.GetPlatformData()).device;
-    vkDestroyBuffer(device, // device
-        buffer,             // buffer
-        nullptr);           // pAllocator
-    vkFreeMemory(device,    // device
-        deviceMemory,       // memory
-        nullptr);           // pAllocator
+    vkDestroyBuffer(device,  // device
+        buffer,              // buffer
+        nullptr);            // pAllocator
+    vkFreeMemory(device,     // device
+        deviceMemory,        // memory
+        nullptr);            // pAllocator
 }
-} // namespace PlatformHardwareBufferUtil
+}  // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()

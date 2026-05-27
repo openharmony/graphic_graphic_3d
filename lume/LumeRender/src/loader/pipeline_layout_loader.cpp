@@ -100,7 +100,7 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
     PipelineLayout& pl, string& renderSlotName, bool& defaultRenderSlot)
 {
     PipelineLayoutLoader::LoadResult result;
-    pl = {}; // reset
+    pl = {};  // reset
 
     SafeGetJsonValue(jsonData, "renderSlot", result.error, renderSlotName);
     SafeGetJsonValue(jsonData, "renderSlotDefault", result.error, defaultRenderSlot);
@@ -116,7 +116,9 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (pl.pushConstant.byteSize > PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) {
             PLUGIN_LOG_W("RENDER_VALIDATION: Invalid push constant size clamped (name:%s). push constant size %u <= %u",
-                uri.data(), pl.pushConstant.byteSize, PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
+                uri.data(),
+                pl.pushConstant.byteSize,
+                PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
         }
 #endif
         pl.pushConstant.byteSize =
@@ -131,19 +133,24 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
 #if (RENDER_VALIDATION_ENABLED == 1)
         if (inputDescriptorSetCount > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
             PLUGIN_LOG_W("RENDER_VALIDATION: Invalid pipeline layout sizes clamped (name:%s). Set count %u <= %u",
-                uri.data(), inputDescriptorSetCount, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
+                uri.data(),
+                inputDescriptorSetCount,
+                PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
         }
         for (const auto& descRef : descriptorSetLayouts) {
             if (descRef.bindings.size() > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
                 PLUGIN_LOG_W(
                     "RENDER_VALIDATION: Binding count exceeds the maximum (name:%s). Binding count count %u <= %u",
-                    uri.data(), static_cast<uint32_t>(descRef.bindings.size()),
+                    uri.data(),
+                    static_cast<uint32_t>(descRef.bindings.size()),
                     PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
             }
             for (const auto& bindingRef : descRef.bindings) {
                 if (bindingRef.descriptorType == DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM) {
                     PLUGIN_LOG_W("RENDER_VALIDATION: Unknown descriptor type (name:%s) (set:%u, binding:%u).",
-                        uri.data(), descRef.set, bindingRef.binding);
+                        uri.data(),
+                        descRef.set,
+                        bindingRef.binding);
                 }
             }
         }

@@ -31,7 +31,21 @@ public:
 
     Future<IImage::Ptr> CreateImage(const ImageCreateInfo& info, BASE_NS::vector<uint8_t> data) override;
     Future<IImage::Ptr> LoadImage(BASE_NS::string_view uri, const ImageLoadInfo&) override;
+    IImage::Ptr LoadImageDeferred(BASE_NS::string_view uri, const ImageLoadInfo&) override;
+    void WaitAllPendingLoads() override;
     Future<IShader::Ptr> LoadShader(BASE_NS::string_view uri) override;
+
+    /**
+     * @brief Drain the process-wide deferred-load queue and tear down the
+     * shared decode thread pool. Must be called while the LumeEngine plugin
+     * (which owns the ITaskQueueFactory used to construct the pool) is still
+     * loaded; otherwise the pool's destructor joins worker threads via code
+     * that has already been unmapped, causing a segfault at process exit.
+     *
+     * Safe to call multiple times — second and later calls are no-ops.
+     * Called from the LumeScene plugin's UnregisterInterfaces.
+     */
+    static void Shutdown();
 
 private:
     IRenderContext::Ptr context_;

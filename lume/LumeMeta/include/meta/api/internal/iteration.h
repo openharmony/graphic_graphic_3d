@@ -25,7 +25,7 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template<template<typename> class InterableCallable, typename Iterable, typename Func>
+template <template <typename> class InterableCallable, typename Iterable, typename Func>
 IterationResult IterateImpl(const Iterable& ite, Func&& func, IterateStrategy is)
 {
     if (!ite) {
@@ -47,43 +47,43 @@ IterationResult IterateImpl(const Iterable& ite, Func&& func, IterateStrategy is
     return IterationResult::FAILED;
 }
 
-template<typename Iterable, typename Func, typename = DisableIfCallable<Func>>
+template <typename Iterable, typename Func, typename = DisableIfCallable<Func>>
 IterationResult Iterate(const BASE_NS::shared_ptr<Iterable>& c, Func&& func, IterateStrategy is)
 {
     return IterateImpl<IIterableCallable>(interface_pointer_cast<IIterable>(c), BASE_NS::forward<Func>(func), is);
 }
 
-template<typename Iterable>
+template <typename Iterable>
 IterationResult Iterate(const BASE_NS::shared_ptr<Iterable>& c, const ICallable::Ptr& func, IterateStrategy is)
 {
     return IterateImpl<IIterableCallable>(interface_pointer_cast<IIterable>(c), *func, is);
 }
 
-template<typename Iterable, typename Func, typename = DisableIfCallable<Func>>
+template <typename Iterable, typename Func, typename = DisableIfCallable<Func>>
 IterationResult ConstIterate(const BASE_NS::shared_ptr<Iterable>& c, Func&& func, IterateStrategy is)
 {
     return IterateImpl<IIterableConstCallable>(interface_pointer_cast<IIterable>(c), BASE_NS::forward<Func>(func), is);
 }
 
-template<typename Iterable>
+template <typename Iterable>
 IterationResult ConstIterate(const BASE_NS::shared_ptr<Iterable>& c, const ICallable::Ptr& func, IterateStrategy is)
 {
     return IterateImpl<IIterableConstCallable>(interface_pointer_cast<IIterable>(c), *func, is);
 }
 
-template<typename Func, typename = DisableIfCallable<Func>>
+template <typename Func, typename = DisableIfCallable<Func>>
 IterationResult Iterate(IIterable* c, Func&& func, IterateStrategy is)
 {
     return IterateImpl<IIterableCallable>(c, BASE_NS::forward<Func>(func), is);
 }
 
-template<typename Func, typename = DisableIfCallable<Func>>
+template <typename Func, typename = DisableIfCallable<Func>>
 IterationResult ConstIterate(const IIterable* c, Func&& func, IterateStrategy is)
 {
     return IterateImpl<IIterableConstCallable>(c, BASE_NS::forward<Func>(func), is);
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

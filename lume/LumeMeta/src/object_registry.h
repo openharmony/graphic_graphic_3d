@@ -119,7 +119,7 @@ public:
     IObject::Ptr DefaultResolveObject(const IObjectInstance::Ptr& base, const RefUri& uri) const override;
     IMetadata::Ptr ConstructObjectDataContainer() override;
 
-protected: // IObjectUtil
+protected:  // IObjectUtil
     BASE_NS::string GetUniqueName(
         BASE_NS::string_view name, BASE_NS::array_view<BASE_NS::string_view> names) const override;
 
@@ -129,7 +129,7 @@ protected:
     void Ref() override;
     void Unref() override;
 
-protected: // ITaskQueueRegistry
+protected:  // ITaskQueueRegistry
     ITaskQueue::Ptr GetTaskQueue(const BASE_NS::Uid& queueId) const override;
     bool RegisterTaskQueue(const ITaskQueue::Ptr& queue, const BASE_NS::Uid& queueId) override;
     bool UnregisterTaskQueue(const BASE_NS::Uid& queueId) override;
@@ -163,7 +163,7 @@ private:
 
     struct ObjectInstance {
         IObject::WeakPtr ptr;
-        uint64_t category {};
+        uint64_t category{};
     };
 
     mutable std::shared_mutex mutex_;
@@ -177,7 +177,7 @@ private:
     mutable IObjectContext::Ptr defaultContext_;
 
     mutable std::atomic_flag disposalInProgress_ = ATOMIC_FLAG_INIT;
-    mutable std::atomic<size_t> purgeCounter_ {};
+    mutable std::atomic<size_t> purgeCounter_{};
     mutable BASE_NS::vector<InstanceId> disposals_;
     mutable BASE_NS::vector<InstanceId> disposalsStorage_;
 

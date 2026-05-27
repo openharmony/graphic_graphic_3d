@@ -44,19 +44,19 @@ constexpr auto NODE_INDEX = 0U;
 constexpr auto LOCAL_INDEX = 1U;
 constexpr auto WORLD_INDEX = 2U;
 
-template<typename ListType, typename ValueType>
+template <typename ListType, typename ValueType>
 inline auto Find(ListType&& list, ValueType&& value)
 {
     return std::find(list.begin(), list.end(), BASE_NS::forward<ValueType>(value));
 }
 
-template<typename ListType, typename Predicate>
+template <typename ListType, typename Predicate>
 inline auto FindIf(ListType&& list, Predicate&& pred)
 {
     return std::find_if(list.begin(), list.end(), BASE_NS::forward<Predicate>(pred));
 }
 
-template<class T>
+template <class T>
 T* LookupNodeByPath(T& node, array_view<const string_view> path)
 {
     T* current = &node;
@@ -79,7 +79,7 @@ T* LookupNodeByPath(T& node, array_view<const string_view> path)
     return nullptr;
 }
 
-template<class T>
+template <class T>
 T* LookupNodeByName(T& node, string_view name)
 {
     BASE_NS::vector<T*> stack(1U, &node);
@@ -100,7 +100,7 @@ T* LookupNodeByName(T& node, string_view name)
     return nullptr;
 }
 
-template<class T>
+template <class T>
 bool LookupNodesByComponent(
     T& node, const IComponentManager& componentManager, vector<T*>& results, bool singleNodeLookup)
 {
@@ -147,7 +147,7 @@ void UpdateWorldMatrix(
         worldMatrixHandle->matrix = pm;
     }
 }
-} // namespace
+}  // namespace
 
 // Interface that allows nodes to access other nodes and request cache updates.
 class NodeSystem::NodeAccess {
@@ -184,17 +184,18 @@ public:
 class NodeSystem::SceneNode final : public ISceneNode {
 public:
     struct NodeState {
-        Entity parent { 0U };
-        SceneNode* parentNode { nullptr };
-        uint32_t localMatrixGeneration { 0U };
-        uint16_t depth { 0U };
-        bool enabled { false };
+        Entity parent{0U};
+        SceneNode* parentNode{nullptr};
+        uint32_t localMatrixGeneration{0U};
+        uint16_t depth{0U};
+        bool enabled{false};
     };
 
     SceneNode(const SceneNode& other) = delete;
     SceneNode& operator=(const SceneNode& node) = delete;
 
-    SceneNode(Entity entity, NodeAccess& nodeAccess) : entity_(entity), nodeAccess_(nodeAccess) {}
+    SceneNode(Entity entity, NodeAccess& nodeAccess) : entity_(entity), nodeAccess_(nodeAccess)
+    {}
 
     ~SceneNode() override = default;
 
@@ -264,7 +265,7 @@ public:
     array_view<ISceneNode* const> GetChildren() const override
     {
         nodeAccess_.Refresh();
-        return { reinterpret_cast<ISceneNode* const*>(children_.data()), children_.size() };
+        return {reinterpret_cast<ISceneNode* const*>(children_.data()), children_.size()};
     }
 
     array_view<ISceneNode*> GetChildren() override
@@ -532,7 +533,7 @@ private:
     NodeAccess& nodeAccess_;
 
     vector<SceneNode*> children_;
-    NodeState lastState_ {};
+    NodeState lastState_{};
 
     friend NodeSystem;
     friend NodeSystem::NodeCache;
@@ -543,8 +544,10 @@ class NodeSystem::NodeCache final : public NodeAccess {
 public:
     NodeCache(IEntityManager& entityManager, INameComponentManager& nameComponentManager,
         INodeComponentManager& nodeComponentManager, ITransformComponentManager& transformComponentManager)
-        : nameComponentManager_(nameComponentManager), nodeComponentManager_(nodeComponentManager),
-          transformComponentManager_(transformComponentManager), entityManager_(entityManager)
+        : nameComponentManager_(nameComponentManager),
+          nodeComponentManager_(nodeComponentManager),
+          transformComponentManager_(transformComponentManager),
+          entityManager_(entityManager)
     {
         // Add root node.
         AddNode(Entity());
@@ -652,7 +655,7 @@ public:
             nameId != IComponentManager::INVALID_COMPONENT_ID) {
             return transformComponentManager_.Get(entity).scale;
         } else {
-            return Math::Vec3 { 1.0f, 1.0f, 1.0f };
+            return Math::Vec3{1.0f, 1.0f, 1.0f};
         }
     }
 
@@ -1010,7 +1013,8 @@ public:
                         sceneNode->lastState_.depth = 0U;
                         if (SceneNode* newParent = GetNode(nodeComponent->parent)) {
                             // Set parent / child relationship.
-                            if (std::none_of(newParent->children_.cbegin(), newParent->children_.cend(),
+                            if (std::none_of(newParent->children_.cbegin(),
+                                    newParent->children_.cend(),
                                     [sceneNode](const SceneNode* childNode) { return childNode == sceneNode; })) {
                                 newParent->children_.push_back(sceneNode);
                             }
@@ -1073,8 +1077,8 @@ private:
     vector<unique_ptr<SceneNode>> nodes_;
     unordered_map<Entity, SceneNode*> lookUp_;
 
-    uint32_t nodeComponentGenerationId_ = { 0 };
-    uint32_t entityGenerationId_ = { 0 };
+    uint32_t nodeComponentGenerationId_ = {0};
+    uint32_t entityGenerationId_ = {0};
 
     INameComponentManager& nameComponentManager_;
     INodeComponentManager& nodeComponentManager_;
@@ -1108,7 +1112,8 @@ bool NodeSystem::IsActive() const
 }
 
 NodeSystem::NodeSystem(IEcs& ecs)
-    : ecs_(ecs), nameManager_(*(GetManager<INameComponentManager>(ecs))),
+    : ecs_(ecs),
+      nameManager_(*(GetManager<INameComponentManager>(ecs))),
       nodeManager_(*(GetManager<INodeComponentManager>(ecs))),
       transformManager_(*(GetManager<ITransformComponentManager>(ecs))),
       localMatrixManager_(*(GetManager<ILocalMatrixComponentManager>(ecs))),
@@ -1136,7 +1141,8 @@ const IPropertyHandle* NodeSystem::GetProperties() const
     return nullptr;
 }
 
-void NodeSystem::SetProperties(const IPropertyHandle&) {}
+void NodeSystem::SetProperties(const IPropertyHandle&)
+{}
 
 const IEcs& NodeSystem::GetECS() const
 {
@@ -1190,10 +1196,13 @@ ISceneNode* NodeSystem::CloneNode(const ISceneNode& node, bool recursive)
     unordered_map<Entity, Entity> oldToNew;
     oldToNew.reserve(nodes.size());
     for (const Entity& originalEntity : nodes) {
-        oldToNew.insert({ originalEntity, ecs_.CloneEntity(originalEntity) });
+        oldToNew.insert({originalEntity, ecs_.CloneEntity(originalEntity)});
     }
-    auto update = [](const unordered_map<Entity, Entity>& oldToNew, const Property& property, IPropertyHandle* handle,
-                      Entity current, size_t entityIdx) {
+    auto update = [](const unordered_map<Entity, Entity>& oldToNew,
+                      const Property& property,
+                      IPropertyHandle* handle,
+                      Entity current,
+                      size_t entityIdx) {
         if (EntityUtil::IsValid(current)) {
             if (const auto pos = oldToNew.find(current); pos != oldToNew.end()) {
                 reinterpret_cast<Entity*>(reinterpret_cast<uintptr_t>(handle->WLock()) + property.offset)[entityIdx] =
@@ -1289,7 +1298,7 @@ void NodeSystem::RefreshAllNodes()
     stack_.reserve(nodeManager_.GetComponentCount());
     for (auto* child : GetRootNode().GetChildren()) {
         if (child) {
-            stack_.push_back(State { static_cast<SceneNode*>(child), Math::IDENTITY_4X4, child->GetEnabled() });
+            stack_.push_back(State{static_cast<SceneNode*>(child), Math::IDENTITY_4X4, child->GetEnabled()});
         }
     }
     while (!stack_.empty()) {
@@ -1320,7 +1329,7 @@ void NodeSystem::RefreshAllNodes()
             if (!child) {
                 continue;
             }
-            stack_.push_back(State { static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled });
+            stack_.push_back(State{static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled});
         }
     }
 
@@ -1389,8 +1398,8 @@ void NodeSystem::OnComponentEvent(IEcs::ComponentListener::EventType type, const
 void NodeSystem::Initialize()
 {
     ComponentQuery::Operation operations[] = {
-        { localMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL },
-        { worldMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL },
+        {localMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL},
+        {worldMatrixManager_, ComponentQuery::Operation::Method::OPTIONAL},
     };
     PLUGIN_ASSERT(&operations[LOCAL_INDEX - 1U].target == &localMatrixManager_);
     PLUGIN_ASSERT(&operations[WORLD_INDEX - 1U].target == &worldMatrixManager_);
@@ -1494,7 +1503,7 @@ vector<ISceneNode*> NodeSystem::CollectChangedNodes()
     }
 
     // sort enities and remove duplicates
-    std::sort(modifiedEntities_.begin().ptr(), modifiedEntities_.end().ptr(), std::less {});
+    std::sort(modifiedEntities_.begin().ptr(), modifiedEntities_.end().ptr(), std::less{});
     modifiedEntities_.erase(
         decltype(modifiedEntities_)::const_iterator(std::unique(modifiedEntities_.begin(), modifiedEntities_.end())),
         modifiedEntities_.cend());
@@ -1567,7 +1576,7 @@ void NodeSystem::UpdateTransformations(ISceneNode& node, Math::Mat4X4 const& mat
 #endif
     stack_.clear();
     stack_.reserve(nodeManager_.GetComponentCount());
-    stack_.push_back(State { static_cast<SceneNode*>(&node), matrix, enabled });
+    stack_.push_back(State{static_cast<SceneNode*>(&node), matrix, enabled});
     while (!stack_.empty()) {
         auto state = stack_.back();
         stack_.pop_back();
@@ -1595,7 +1604,7 @@ void NodeSystem::UpdateTransformations(ISceneNode& node, Math::Mat4X4 const& mat
         if (nodeInfo.isEffectivelyEnabled || nodeInfo.effectivelyEnabledChanged) {
             for (auto* child : state.node->GetChildren()) {
                 if (child) {
-                    stack_.push_back(State { static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled });
+                    stack_.push_back(State{static_cast<SceneNode*>(child), pm, nodeInfo.isEffectivelyEnabled});
                 }
             }
         }

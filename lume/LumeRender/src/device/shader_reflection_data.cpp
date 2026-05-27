@@ -17,12 +17,13 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 
 #include <base/util/algorithm.h>
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint8_t REFLECTION_TAG[] = { 'r', 'f', 'l', 1 };
+constexpr uint8_t REFLECTION_TAG[] = {'r', 'f', 'l', 1};
 struct ReflectionHeader {
     uint8_t tag[sizeof(REFLECTION_TAG)];
     uint16_t type;
@@ -45,12 +46,12 @@ struct Data {
 
 std::array<Data, 5U> CalculateDataSizes(const ReflectionHeader& header, uint32_t totalSize)
 {
-    std::array<Data, 5U> data {
-        Data { INDEX_PUSH_CONSTANTS, header.offsetPushConstants, 0U },
-        Data { INDEX_SPECIALIZATION_CONSTANTS, header.offsetSpecializationConstants, 0U },
-        Data { INDEX_DESCRIPTOR_SETS, header.offsetDescriptorSets, 0U },
-        Data { INDEX_INPUTS, header.offsetInputs, 0U },
-        Data { INDEX_LOCAL_SIZE, header.offsetLocalSize, 0U },
+    std::array<Data, 5U> data{
+        Data{INDEX_PUSH_CONSTANTS, header.offsetPushConstants, 0U},
+        Data{INDEX_SPECIALIZATION_CONSTANTS, header.offsetSpecializationConstants, 0U},
+        Data{INDEX_DESCRIPTOR_SETS, header.offsetDescriptorSets, 0U},
+        Data{INDEX_INPUTS, header.offsetInputs, 0U},
+        Data{INDEX_LOCAL_SIZE, header.offsetLocalSize, 0U},
     };
     // first sort by offsets
     BASE_NS::InsertionSort(
@@ -60,12 +61,17 @@ std::array<Data, 5U> CalculateDataSizes(const ReflectionHeader& header, uint32_t
     // left zero.
     for (auto i = 0LLU, end = data.size() - 1LLU; i < end; ++i) {
         const auto size = data[i + 1LLU].offset - data[i].offset;
-        if ((size > 0) && ((data[i].offset + size_t(size)) < totalSize)) {
+        // Validate size fits in uint16_t before truncating cast.
+        if ((size > 0) && ((data[i].offset + size_t(size)) < totalSize) &&
+            (size <= std::numeric_limits<uint16_t>::max())) {
             data[i].size = uint16_t(size);
         }
     }
     if (data.back().offset < totalSize) {
-        data.back().size = uint16_t(totalSize - data.back().offset);
+        const auto backSize = totalSize - data.back().offset;
+        if (backSize <= std::numeric_limits<uint16_t>::max()) {
+            data.back().size = uint16_t(backSize);
+        }
     }
     // sort be index so that the data is easily usable.
     BASE_NS::InsertionSort(
@@ -88,7 +94,8 @@ inline uint16_t Read16U(const uint8_t*& ptr)
 }
 inline uint32_t Read32U(const uint8_t*& ptr)
 {
-    auto ret = static_cast<uint32_t>(*ptr | *(ptr + 1) << 8U | *(ptr + 2) << 16U | *(ptr + 3) << 24U);
+    auto ret = static_cast<uint32_t>(*ptr) | static_cast<uint32_t>(*(ptr + 1)) << 8U |
+               static_cast<uint32_t>(*(ptr + 2)) << 16U | static_cast<uint32_t>(*(ptr + 3)) << 24U;
     ptr += sizeof(ret);
     return ret;
 }
@@ -227,7 +234,7 @@ bool ReadDescriptorSetsV1(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
     }
     return true;
 }
-} // namespace
+}  // namespace
 
 ShaderReflectionData::ShaderReflectionData(BASE_NS::array_view<const uint8_t> reflectionData)
     : reflectionData_(reflectionData)
@@ -336,8 +343,8 @@ BASE_NS::vector<ShaderSpecialization::Constant> ShaderReflectionData::GetSpecial
     return constants;
 }
 
-BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription>
-ShaderReflectionData::GetInputDescriptions() const
+BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> ShaderReflectionData::GetInputDescriptions()
+    const
 {
     BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> inputs;
     if (reflectionData_.size() < sizeof(ReflectionHeader)) {

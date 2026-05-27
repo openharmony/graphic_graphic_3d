@@ -30,14 +30,14 @@ constexpr float LIGHT_COMPONENT_USER_SET_MIN_LIGHT_RANGE = 0.0001f;
 inline float CalculateSafeLightRange(const float lightRange, const float lightIntensity)
 {
     float range = lightRange;
-    if (range <= LIGHT_COMPONENT_USER_SET_MIN_LIGHT_RANGE) { // calculate range
+    if (range <= LIGHT_COMPONENT_USER_SET_MIN_LIGHT_RANGE) {  // calculate range
         constexpr float minLightIntensityAdd = 20.0f;
         constexpr float powValue = 1.5f;
         range = BASE_NS::Math::sqrt(BASE_NS::Math::pow(lightIntensity + minLightIntensityAdd, powValue));
     }
     return range;
 }
-} // namespace ComponentUtilFunctions
+}  // namespace ComponentUtilFunctions
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_COMPONENT_UTIL_FUNCTIONS_H
+#endif  // CORE_UTIL_COMPONENT_UTIL_FUNCTIONS_H

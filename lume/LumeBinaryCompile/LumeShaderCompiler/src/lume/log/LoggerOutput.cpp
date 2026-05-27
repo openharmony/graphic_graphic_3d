@@ -77,7 +77,7 @@ std::string GetFilename(const std::string& path)
     return path;
 }
 
-} // namespace
+}  // namespace
 
 #if !defined(__ANDROID__)
 
@@ -167,7 +167,7 @@ public:
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
         static constexpr std::streamsize digitSize = 3;
         outputStream << std::put_time(std::localtime(&time), "%H:%M:%S.") << std::setw(digitSize) << std::left
                      << ms.count() << " " << Logger::GetLogLevelName(logLevel, true);
@@ -199,7 +199,7 @@ private:
     const char* mCurrentColorString;
 };
 
-#endif // !defined(__ANDROID__)
+#endif  // !defined(__ANDROID__)
 
 #if defined(_WIN32) && !defined(NDEBUG)
 class WindowsDebugOutput : public ILogger::IOutput {
@@ -217,7 +217,7 @@ public:
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-            std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                  std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
         outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
                      << Logger::GetLogLevelName(logLevel, true);
@@ -238,7 +238,8 @@ public:
 
 class FileOutput : public ILogger::IOutput {
 public:
-    explicit FileOutput(const std::string& aFilePath) : IOutput(), mOutputStream(aFilePath, std::ios::app) {}
+    explicit FileOutput(const std::string& aFilePath) : IOutput(), mOutputStream(aFilePath, std::ios::app)
+    {}
 
     ~FileOutput() override = default;
 
@@ -250,7 +251,7 @@ public:
             auto now = std::chrono::system_clock::now();
             auto time = std::chrono::system_clock::to_time_t(now);
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) -
-                std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+                      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
             outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.") << ms.count() << " "
                          << Logger::GetLogLevelName(logLevel, false);
@@ -339,4 +340,4 @@ std::unique_ptr<ILogger::IOutput> CreateLoggerFileOutput(const char* filename)
 {
     return std::make_unique<FileOutput>(filename);
 }
-} // namespace lume
+}  // namespace lume

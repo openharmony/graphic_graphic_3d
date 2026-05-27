@@ -59,7 +59,7 @@ vec3 CoreGetIrradianceSample(const vec3 worldNormal)
 {
     vec3 worldNormalEnv = mat3(uEnvironmentData.envRotation) * worldNormal;
     vec3 irradiance;
-    if (uEnvironmentData.packedSun.w == 1.0f) { // then BG_TYPE_SKY is used
+    if (uEnvironmentData.packedSun.w == 1.0f) {  // then BG_TYPE_SKY is used
         irradiance = CoreGetRadianceSample(worldNormalEnv, 1.0f);
     } else {
         irradiance = unpackIblIrradianceSH(worldNormalEnv, uEnvironmentData.shIndirectCoefficients) *
@@ -67,6 +67,23 @@ vec3 CoreGetIrradianceSample(const vec3 worldNormal)
     }
 
     return irradiance;
+}
+DefaultSingleLightProbeStruct GetUnpackLightProbeData(const uint instanceIdx)
+{
+    return uLightProbeData[instanceIdx];
+}
+
+vec3 GetLightProbeShCoefficients(const vec3 worldNormal, const uint index)
+{
+    DefaultSingleLightProbeStruct lightProbeData = GetUnpackLightProbeData(index);
+    vec3 irradiance = unpackIblIrradianceSH(worldNormal, lightProbeData.shCoefficientsData);
+    return irradiance;
+}
+
+float GetLightProbeOcclusion(const vec3 worldNormal, const uint index)
+{
+    DefaultSingleLightProbeStruct lightProbeData = GetUnpackLightProbeData(index);
+    return clamp(dot(worldNormal, lightProbeData.bentNormalAo.xyz), 0.0, 1.0) * lightProbeData.bentNormalAo.w;
 }
 
 vec3 GetIrradianceIndirectLambertSample()
@@ -213,8 +230,10 @@ float GetClearcoatSample(const vec4 uvInput, const uint instanceIdx)
 
 float GetClearcoatRoughnessSample(const vec4 uvInput, const uint instanceIdx)
 {
-    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
-        CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX, instanceIdx);
+    const vec2 uv = GetFinalSamplingUV(uvInput,
+        CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX,
+        instanceIdx);
 
     const uint matTexIdx = CORE_MATERIAL_TEX_CLEARCOAT_ROUGHNESS_IDX + 1;
     BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
@@ -223,8 +242,10 @@ float GetClearcoatRoughnessSample(const vec4 uvInput, const uint instanceIdx)
 
 vec3 GetClearcoatNormalSample(const vec4 uvInput, const uint instanceIdx)
 {
-    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_NORMAL_BIT,
-        CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX, instanceIdx);
+    const vec2 uv = GetFinalSamplingUV(uvInput,
+        CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_NORMAL_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX,
+        instanceIdx);
 
     const uint matTexIdx = CORE_MATERIAL_TEX_CLEARCOAT_NORMAL_IDX + 1;
     BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
@@ -250,7 +271,7 @@ float GetSheenRoughnessSample(const vec4 uvInput, const uint instanceIdx)
     const uint matTexIdx = CORE_MATERIAL_TEX_SHEEN_IDX + 1;
     BindlessImageAndSamplerIndex bi = GetImageAndSamplerIndex(instanceIdx, matTexIdx);
     return texture(sampler2D(uImages[nonuniformEXT(bi.imageIdx)], uSamplers[nonuniformEXT(bi.samplerIdx)]), uv)
-        .a; // alpha
+        .a;  // alpha
 }
 
 float GetTransmissionSample(const vec4 uvInput, const uint instanceIdx)
@@ -364,14 +385,17 @@ float GetClearcoatSample(const vec4 uvInput, const uint instanceIdx)
 
 float GetClearcoatRoughnessSample(const vec4 uvInput)
 {
-    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
+    const vec2 uv = GetFinalSamplingUV(uvInput,
+        CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
         CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX);
     return texture(uSampTextures[CORE_MATERIAL_TEX_CLEARCOAT_ROUGHNESS_IDX], uv).y;
 }
 float GetClearcoatRoughnessSample(const vec4 uvInput, const uint instanceIdx)
 {
-    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
-        CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX, instanceIdx);
+    const vec2 uv = GetFinalSamplingUV(uvInput,
+        CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_ROUGHNESS_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_ROUGHNESS_UV_IDX,
+        instanceIdx);
     return texture(uSampTextures[CORE_MATERIAL_TEX_CLEARCOAT_ROUGHNESS_IDX], uv).y;
 }
 
@@ -383,8 +407,10 @@ vec3 GetClearcoatNormalSample(const vec4 uvInput)
 }
 vec3 GetClearcoatNormalSample(const vec4 uvInput, const uint instanceIdx)
 {
-    const vec2 uv = GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_NORMAL_BIT,
-        CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX, instanceIdx);
+    const vec2 uv = GetFinalSamplingUV(uvInput,
+        CORE_MATERIAL_TEXCOORD_INFO_CLEARCOAT_NORMAL_BIT,
+        CORE_MATERIAL_PACK_TEX_CLEARCOAT_NORMAL_UV_IDX,
+        instanceIdx);
     return texture(uSampTextures[CORE_MATERIAL_TEX_CLEARCOAT_NORMAL_IDX], uv).xyz;
 }
 
@@ -406,13 +432,13 @@ float GetSheenRoughnessSample(const vec4 uvInput)
 {
     const vec2 uv =
         GetFinalSamplingUV(uvInput, CORE_MATERIAL_TEXCOORD_INFO_SHEEN_BIT, CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX);
-    return texture(uSampTextures[CORE_MATERIAL_TEX_SHEEN_IDX], uv).a; // alpha
+    return texture(uSampTextures[CORE_MATERIAL_TEX_SHEEN_IDX], uv).a;  // alpha
 }
 float GetSheenRoughnessSample(const vec4 uvInput, const uint instanceIdx)
 {
     const vec2 uv = GetFinalSamplingUV(
         uvInput, CORE_MATERIAL_TEXCOORD_INFO_SHEEN_BIT, CORE_MATERIAL_PACK_TEX_SHEEN_UV_IDX, instanceIdx);
-    return texture(uSampTextures[CORE_MATERIAL_TEX_SHEEN_IDX], uv).a; // alpha
+    return texture(uSampTextures[CORE_MATERIAL_TEX_SHEEN_IDX], uv).a;  // alpha
 }
 
 float GetTransmissionSample(const vec4 uvInput)
@@ -441,7 +467,7 @@ vec4 GetSpecularSample(const vec4 uvInput, const uint instanceIdx)
     return texture(uSampTextures[CORE_MATERIAL_TEX_SPECULAR_IDX], uv);
 }
 
-#endif // CORE3D_DM_BINDLESS_FRAG_LAYOUT
+#endif  // CORE3D_DM_BINDLESS_FRAG_LAYOUT
 
 /*
  * Inplace sampling of material data, similar functions with ubo input in 3d_dm_structures_common.h
@@ -603,4 +629,4 @@ vec2 GetFinalCalculatedVelocity(in vec3 pos, in vec3 prevPos, in uint cameraIdx)
     // better precision for fp16 and expected in parts of engine
     return (uvPos - oldUvPos) * uGeneralData.viewportSizeInvViewportSize.xy;
 }
-#endif // SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_COMMON_H

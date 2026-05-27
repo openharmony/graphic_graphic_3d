@@ -17,7 +17,8 @@
 
 namespace NapiApi {
 
-Env::Env(napi_env env) : env_(env) {}
+Env::Env(napi_env env) : env_(env)
+{}
 
 Env::operator bool() const
 {
@@ -126,4 +127,4 @@ napi_value Env::GetNumber(double value) const
     return val;
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

@@ -34,8 +34,10 @@ public:
     Binding() noexcept = default;
     virtual ~Binding() = default;
 
-    explicit Binding(const IProperty::ConstPtr& source) noexcept : source_(source) {}
-    explicit Binding(const IFunction::ConstPtr& binding) noexcept : binding_(binding) {}
+    explicit Binding(const IProperty::ConstPtr& source) noexcept : source_(source)
+    {}
+    explicit Binding(const IFunction::ConstPtr& binding) noexcept : binding_(binding)
+    {}
 
     /**
      * @brief Called by the framework to initialize the binding.
@@ -68,7 +70,7 @@ protected:
  *        to use the Binding class, TypedBinding is mostly helpful for cleaner syntax when defining
  *        bindings with a lambda function.
  */
-template<class Type>
+template <class Type>
 class TypedBinding : public Binding {
 public:
     using PropertyType = Property<BASE_NS::remove_const_t<Type>>;
@@ -78,10 +80,12 @@ public:
     ~TypedBinding() override = default;
     TypedBinding() noexcept = default;
 
-    explicit TypedBinding(const Property<const Type>& source) noexcept : Binding(source) {}
-    explicit TypedBinding(const PropertyType& source) noexcept : Binding(source) {}
+    explicit TypedBinding(const Property<const Type>& source) noexcept : Binding(source)
+    {}
+    explicit TypedBinding(const PropertyType& source) noexcept : Binding(source)
+    {}
 
-    template<class Callback, typename = EnableIfBindFunction<Callback>>
+    template <class Callback, typename = EnableIfBindFunction<Callback>>
     explicit TypedBinding(Callback&& callback) : Binding(META_NS::CreateBindFunction(BASE_NS::move(callback)))
     {}
 };

@@ -37,100 +37,99 @@ CORE3D_BEGIN_NAMESPACE()
 /** Render data constants */
 namespace RenderSceneDataConstants {
 /** Max morph target count */
-static constexpr uint32_t MAX_MORPH_TARGET_COUNT { 64u };
+static constexpr uint32_t MAX_MORPH_TARGET_COUNT{64u};
 
 /** Mesh indices in index */
-static constexpr uint32_t MESH_INDEX_INDEX { 5u };
+static constexpr uint32_t MESH_INDEX_INDEX{5u};
 /** Mesh weights in index */
-static constexpr uint32_t MESH_WEIGHT_INDEX { 6u };
+static constexpr uint32_t MESH_WEIGHT_INDEX{6u};
 
 /** Max vec3 count for 3 bands */
-static constexpr uint32_t MAX_SH_VEC3_COUNT { 9u };
+static constexpr uint32_t MAX_SH_VEC3_COUNT{9u};
 
 /** Max camera target buffer count */
-static constexpr uint32_t MAX_CAMERA_COLOR_TARGET_COUNT { 8u };
+static constexpr uint32_t MAX_CAMERA_COLOR_TARGET_COUNT{8u};
 
 /** Max custom push constant data size */
-static constexpr uint32_t MAX_CUSTOM_PUSH_CONSTANT_DATA_SIZE {
-    RENDER_NS::PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE
-};
+static constexpr uint32_t MAX_CUSTOM_PUSH_CONSTANT_DATA_SIZE{
+    RENDER_NS::PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE};
 
 /** Max default material env custom resources */
-static constexpr uint32_t MAX_ENV_CUSTOM_RESOURCE_COUNT { 4u };
+static constexpr uint32_t MAX_ENV_CUSTOM_RESOURCE_COUNT{4u};
 
 /** Additional custom data size which is bind with render mesh structure to shader
  * Should match api/shaders/common/3d_dm_structures_common.h DefaultMaterialSingleMeshStruct userData
  */
-static constexpr uint32_t MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
+static constexpr uint32_t MESH_CUSTOM_DATA_VEC4_COUNT{2u};
 
 /** Max multi-view layer camera count. Max layers is 8 -> additional cameras 7 */
-static constexpr uint32_t MAX_MULTI_VIEW_LAYER_CAMERA_COUNT { 7u };
+static constexpr uint32_t MAX_MULTI_VIEW_LAYER_CAMERA_COUNT{7u};
 
 /** Invalid index with default material indices */
-static constexpr uint32_t INVALID_INDEX { ~0u };
+static constexpr uint32_t INVALID_INDEX{~0u};
 
 /** Invalid 64 bit id */
-static constexpr uint64_t INVALID_ID { 0xFFFFFFFFffffffff };
+static constexpr uint64_t INVALID_ID{0xFFFFFFFFffffffff};
 
 /** Default render sort layer id */
-static constexpr uint8_t DEFAULT_RENDER_SORT_LAYER_ID { 32u };
+static constexpr uint8_t DEFAULT_RENDER_SORT_LAYER_ID{32u};
 
 /** Default layer mask */
-static constexpr uint64_t DEFAULT_LAYER_MASK { 0x1 };
-} // namespace RenderSceneDataConstants
+static constexpr uint64_t DEFAULT_LAYER_MASK{0x1};
+}  // namespace RenderSceneDataConstants
 
 /** Render draw command */
 struct RenderDrawCommand {
     /** Vertex count */
-    uint32_t vertexCount { 0U };
+    uint32_t vertexCount{0U};
     /** Index count */
-    uint32_t indexCount { 0U };
+    uint32_t indexCount{0U};
     /** Instance count */
-    uint32_t instanceCount { 1U };
+    uint32_t instanceCount{1U};
     /** Indirect draw count */
-    uint32_t drawCountIndirect { 0U };
+    uint32_t drawCountIndirect{0U};
     /** Indirect draw stride */
-    uint32_t strideIndirect { 0U };
+    uint32_t strideIndirect{0U};
     /** First index in draw */
-    uint32_t firstIndex { 0U };
+    uint32_t firstIndex{0U};
     /** First vertex offset in draw */
-    uint32_t vertexOffset { 0U };
+    uint32_t vertexOffset{0U};
     /** First instance in draw */
-    uint32_t firstInstance { 0U };
+    uint32_t firstInstance{0U};
 };
 
 /** Render vertex buffer */
 struct RenderVertexBuffer {
     /** Buffer handle */
-    RENDER_NS::RenderHandleReference bufferHandle {};
+    RENDER_NS::RenderHandleReference bufferHandle{};
     /** Buffer offset */
-    uint32_t bufferOffset { 0 };
+    uint32_t bufferOffset{0};
     /** Byte size */
-    uint32_t byteSize { RENDER_NS::PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+    uint32_t byteSize{RENDER_NS::PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE};
 };
 
 /** Render index buffer */
 struct RenderIndexBuffer {
     /** Buffer handle */
-    RENDER_NS::RenderHandleReference bufferHandle {};
+    RENDER_NS::RenderHandleReference bufferHandle{};
     /** Buffer offset */
-    uint32_t bufferOffset { 0 };
+    uint32_t bufferOffset{0};
     /** Byte size */
-    uint32_t byteSize { 0 };
+    uint32_t byteSize{0};
     /** Index type */
-    RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32 };
+    RENDER_NS::IndexType indexType{RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32};
 };
 
 /** Convert RenderVertexBuffer to Renderer VertexBuffer */
 inline RENDER_NS::VertexBuffer ConvertVertexBuffer(const RenderVertexBuffer& rvb)
 {
-    return RENDER_NS::VertexBuffer { rvb.bufferHandle.GetHandle(), rvb.bufferOffset, rvb.byteSize };
+    return RENDER_NS::VertexBuffer{rvb.bufferHandle.GetHandle(), rvb.bufferOffset, rvb.byteSize};
 }
 
 /** Convert RenderIndexBuffer to Renderer IndexBuffer */
 inline RENDER_NS::IndexBuffer ConvertIndexBuffer(const RenderIndexBuffer& rib)
 {
-    return RENDER_NS::IndexBuffer { rib.bufferHandle.GetHandle(), rib.bufferOffset, rib.byteSize, rib.indexType };
+    return RENDER_NS::IndexBuffer{rib.bufferHandle.GetHandle(), rib.bufferOffset, rib.byteSize, rib.indexType};
 }
 
 /** Render mesh data
@@ -146,25 +145,27 @@ struct RenderMeshData {
     BASE_NS::Math::Mat4X4 prevWorld;
 
     /** 64 bit id for render instance. Can be used for rendering time identification. RenderMeshComponent entity. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
     /** 64 bit id for mesh instance. MeshComponent entity. */
-    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t meshId{RenderSceneDataConstants::INVALID_ID};
 
     /** layer mask. */
-    uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
-    /** scene ID */
-    uint64_t sceneId { 0LLU };
+    uint64_t layerMask{RenderSceneDataConstants::DEFAULT_LAYER_MASK};
+    /** Low 32 bits: scene ID (NodeComponent::sceneId, uint32_t).
+     * High 32 bits: RenderMeshFlagBits.
+     * Maps to uMeshMatrix.mesh[i].layers.zw — sceneId in .z, RenderMeshFlagBits in .w. */
+    uint64_t sceneId{0LLU};
 
     /** Custom data. */
-    BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT] {};
+    BASE_NS::Math::UVec4 customData[RenderSceneDataConstants::MESH_CUSTOM_DATA_VEC4_COUNT]{};
 };
 
 /** Render min and max AABB
  */
 struct RenderMinAndMax {
 #define CORE_FMAX std::numeric_limits<float>::max()
-    BASE_NS::Math::Vec3 minAabb { CORE_FMAX, CORE_FMAX, CORE_FMAX };
-    BASE_NS::Math::Vec3 maxAabb { -CORE_FMAX, -CORE_FMAX, -CORE_FMAX };
+    BASE_NS::Math::Vec3 minAabb{CORE_FMAX, CORE_FMAX, CORE_FMAX};
+    BASE_NS::Math::Vec3 maxAabb{-CORE_FMAX, -CORE_FMAX, -CORE_FMAX};
 #undef CORE_FMAX
 };
 
@@ -174,12 +175,12 @@ struct RenderFrameMaterialIndices {
     /** Index to material data
      * This data is unique and has the material handles and uniform data.
      */
-    uint32_t index { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t index{RenderSceneDataConstants::INVALID_INDEX};
     /** Offset to frame material data processing
      * There might be duplicates of material uniform data for e.g. GPU instancing
      * With this one can get the correct offset to rendering time material uniform data processing
      */
-    uint32_t frameOffset { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t frameOffset{RenderSceneDataConstants::INVALID_INDEX};
 };
 
 /** The rendering material specialization flag bits
@@ -235,12 +236,15 @@ enum RenderMaterialFlagBits : uint32_t {
     /** Defines whether to use the specular color (rgb channels) from the specular texture */
     RENDER_MATERIAL_SPECULAR_COLOR_TEXTURE_BIT = (1 << 18),
     /** Defines whether this material will receive irradiance indirect light */
+
     RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_IRRADIANCE_BIT = (1 << 19),
     /** Defines whether this material is an occlusion material */
     RENDER_MATERIAL_OCCLUSION_BIT = (1 << 20),
+    /* Defines whether this material is effected by light probe */
+    RENDER_MATERIAL_LIGHT_PROBE_RECEIVER_BIT = (1 << 21),
 };
 /** Container for material flag bits */
-using RenderMaterialFlags = uint32_t;
+using RenderMaterialFlags = uint64_t;
 
 /** Render material type enumeration */
 enum class RenderMaterialType : uint8_t {
@@ -286,7 +290,17 @@ enum RenderSubmeshFlagBits : uint32_t {
     RENDER_SUBMESH_VELOCITY_BIT = (1 << 5),
 };
 /** Container for submesh flag bits */
-using RenderSubmeshFlags = uint32_t;
+using RenderSubmeshFlags = uint64_t;
+
+/** Per-instance render mesh flag bits.
+ *  Packed into the high 32 bits of RenderMeshData::sceneId so the per-instance UBO
+ *  (DefaultMaterialSingleMeshStruct) does not grow. Reaches the shader as layers.w. */
+enum RenderMeshFlagBits : uint32_t {
+    /** Instance contributes to global illumination (e.g. baked into light probes). */
+    RENDER_MESH_CONTRIBUTE_GI_BIT = (1u << 0),
+};
+/** Container for render mesh flag bits */
+using RenderMeshFlags = uint32_t;
 
 /** Rendering flags (specialized rendering flags) */
 enum RenderExtraRenderingFlagBits : uint32_t {
@@ -298,15 +312,15 @@ using RenderExtraRenderingFlags = uint32_t;
 
 struct RenderBoundingSphere {
     /** Center of the sphere */
-    BASE_NS::Math::Vec3 center { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 center{0.0f, 0.0f, 0.0f};
     /** Radius of the sphere */
-    float radius { 0.0f };
+    float radius{0.0f};
 };
 
 /** Additional info for processed render mesh data */
 struct RenderFrameObjectInfo {
     /** Render material flags from processing */
-    RenderMaterialFlags renderMaterialFlags { 0U };
+    RenderMaterialFlags renderMaterialFlags{0U};
     /** Shadow caster bounding sphere */
     RenderBoundingSphere shadowCasterBoundingSphere;
 };
@@ -315,11 +329,11 @@ struct RenderFrameObjectInfo {
  */
 struct RenderMeshBatchData {
     /** Render mesh id */
-    uint64_t renderMeshId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t renderMeshId{RenderSceneDataConstants::INVALID_ID};
     /** Mesh id, needs to match actual mesh id of the batch component render mesh id */
-    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t meshId{RenderSceneDataConstants::INVALID_ID};
     /** Additional material flags. */
-    RenderMaterialFlags materialFlags { 0U };
+    RenderMaterialFlags materialFlags{0U};
 };
 
 /** Render mesh AABB data
@@ -335,7 +349,7 @@ struct RenderMeshAabbData {
  */
 struct RenderMeshSkinData {
     /** Skin id */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
     /** AABB in world space already */
     RenderMinAndMax aabb;
     /** Skin joint matrices */
@@ -350,14 +364,14 @@ struct RenderSubmeshBuffersWithHandleReference {
     /** Vertex buffers */
     RenderVertexBuffer vertexBuffers[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
     /** Vertex buffer count */
-    uint32_t vertexBufferCount { 0 };
+    uint32_t vertexBufferCount{0};
 
     /* Optional indirect args buffer for indirect draw. */
     RenderVertexBuffer indirectArgsBuffer;
 
     /* Optional input assembly which overrides the graphics state one. */
-    RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
-        RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
+    RENDER_NS::GraphicsState::InputAssembly inputAssembly{
+        false, RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM};
 };
 
 struct RenderSubmeshBuffers {
@@ -366,71 +380,71 @@ struct RenderSubmeshBuffers {
     /** Vertex buffers */
     RENDER_NS::VertexBuffer vertexBuffers[RENDER_NS::PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
     /** Vertex buffer count */
-    uint32_t vertexBufferCount { 0 };
+    uint32_t vertexBufferCount{0};
 
     /* Optional indirect args buffer for indirect draw. */
     RENDER_NS::VertexBuffer indirectArgsBuffer;
 
     /* Optional input assembly which overrides the graphics state one. */
-    RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
-        RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
+    RENDER_NS::GraphicsState::InputAssembly inputAssembly{
+        false, RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM};
 };
 
 struct RenderSubmeshIndices {
     /** 64 bit id for render instance. Can be used for rendering time identification. RenderMeshComponent entity. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
     /** 64 bit id for mesh instance. MeshComponent entity. */
-    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t meshId{RenderSceneDataConstants::INVALID_ID};
     /** Submesh index. */
-    uint32_t subMeshIndex { 0 };
+    uint32_t subMeshIndex{0};
 
     /** A valid index to mesh (matrix). Get from AddMeshData() */
-    uint32_t meshIndex { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t meshIndex{RenderSceneDataConstants::INVALID_INDEX};
     /** A valid index to skin joint matrices if has skin. Get from AddSkinJointMatrices() */
-    uint32_t skinJointIndex { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t skinJointIndex{RenderSceneDataConstants::INVALID_INDEX};
 
     /** Material index to data store material data */
-    uint32_t materialIndex { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t materialIndex{RenderSceneDataConstants::INVALID_INDEX};
     /** Material frame offset to processed data (i.e. uniform data offset index) */
-    uint32_t materialFrameOffset { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t materialFrameOffset{RenderSceneDataConstants::INVALID_INDEX};
 };
 
 struct RenderSubmeshBounds {
     /** World center vector */
-    BASE_NS::Math::Vec3 worldCenter { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 worldCenter{0.0f, 0.0f, 0.0f};
     /** World radius */
-    float worldRadius { 0.0f };
+    float worldRadius{0.0f};
 };
 
 struct RenderSubmeshLayers {
     /** Layer mask. */
-    uint64_t layerMask { RenderSceneDataConstants::DEFAULT_LAYER_MASK };
+    uint64_t layerMask{RenderSceneDataConstants::DEFAULT_LAYER_MASK};
 
     /** Scene ID. */
-    uint32_t sceneId { 0U };
+    uint32_t sceneId{0U};
 
     /** Mesh render sort layer id. Valid values are 0 - 63 */
-    uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    uint8_t meshRenderSortLayer{RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID};
     /** Mesh render sort layer id. Valid values are 0 - 255 */
-    uint8_t meshRenderSortLayerOrder { 0 };
+    uint8_t meshRenderSortLayerOrder{0};
 
     /** Material render sort layer id. Valid values are 0 - 63
      * Typically filled automatically by the data store based on selected material.
      */
-    uint8_t materialRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    uint8_t materialRenderSortLayer{RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID};
     /** Material render sort layer id. Valid values are 0 - 255 */
-    uint8_t materialRenderSortLayerOrder { 0 };
+    uint8_t materialRenderSortLayerOrder{0};
 };
 
 /** Render submesh with handle references */
 struct RenderSubmeshWithHandleReference {
     /** Submesh flags */
-    RenderSubmeshFlags submeshFlags { 0U };
+    RenderSubmeshFlags submeshFlags{0U};
 
     /** Additional rendering flags for this submesh material. Typically zero.
      * Use case could be adding some specific flags for e.g. pso creation / specialization.
      */
-    RenderMaterialFlags renderSubmeshMaterialFlags { 0U };
+    RenderMaterialFlags renderSubmeshMaterialFlags{0U};
 
     /** Indices */
     RenderSubmeshIndices indices;
@@ -451,11 +465,11 @@ struct RenderSubmeshWithHandleReference {
 /** Render submesh */
 struct RenderSubmesh {
     /** Submesh flags */
-    RenderSubmeshFlags submeshFlags { 0 };
+    RenderSubmeshFlags submeshFlags{0};
     /** Additional rendering flags for this submesh material. Typically zero.
      * Use case could be adding some specific flags for e.g. pso creation / specialization.
      */
-    RenderMaterialFlags renderSubmeshMaterialFlags { 0U };
+    RenderMaterialFlags renderSubmeshMaterialFlags{0U};
 
     /** Indices */
     RenderSubmeshIndices indices;
@@ -476,17 +490,17 @@ struct RenderSubmesh {
 /** Render submesh with handle references */
 struct RenderSubmeshDataWithHandleReference {
     /** Submesh flags */
-    RenderSubmeshFlags submeshFlags { 0U };
+    RenderSubmeshFlags submeshFlags{0U};
 
     /** Mesh render sort layer id. Valid values are 0 - 63 */
-    uint8_t meshRenderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+    uint8_t meshRenderSortLayer{RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID};
     /** Mesh render sort layer id. Valid values are 0 - 255 */
-    uint8_t meshRenderSortLayerOrder { 0 };
+    uint8_t meshRenderSortLayerOrder{0};
 
     /** AABB min */
-    BASE_NS::Math::Vec3 aabbMin { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 aabbMin{0.0f, 0.0f, 0.0f};
     /** AABB max */
-    BASE_NS::Math::Vec3 aabbMax { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 aabbMax{0.0f, 0.0f, 0.0f};
 
     /** Draw command */
     RenderDrawCommand drawCommand;
@@ -495,7 +509,7 @@ struct RenderSubmeshDataWithHandleReference {
     RenderSubmeshBuffersWithHandleReference buffers;
 
     /** basic material id -> invalid uses the default material */
-    uint64_t materialId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t materialId{RenderSceneDataConstants::INVALID_ID};
 
     /** additional materials for multi-pass */
     BASE_NS::array_view<const uint64_t> additionalMaterials;
@@ -507,12 +521,12 @@ struct RenderSubmeshDataWithHandleReference {
  */
 struct MeshDataWithHandleReference {
     /** 64 bit id for mesh instance. MeshComponent entity. */
-    uint64_t meshId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t meshId{RenderSceneDataConstants::INVALID_ID};
 
     /** AABB min (local) */
-    BASE_NS::Math::Vec3 aabbMin { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 aabbMin{0.0f, 0.0f, 0.0f};
     /** AABB max (local) */
-    BASE_NS::Math::Vec3 aabbMax { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 aabbMax{0.0f, 0.0f, 0.0f};
 
     /** Submeshes */
     BASE_NS::vector<RenderSubmeshDataWithHandleReference> submeshes;
@@ -539,39 +553,39 @@ struct RenderLight {
     using LightUsageFlags = uint32_t;
 
     /** Unique id. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
 
     /** Layer mask (light affect mask). All enabled by default */
-    uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
+    uint64_t layerMask{RenderSceneDataConstants::INVALID_ID};
 
     /** Position */
-    BASE_NS::Math::Vec4 pos { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec4 pos{0.0f, 0.0f, 0.0f, 0.0f};
     /** Direction (for rect light x-dir with baked width, and width in .w) */
-    BASE_NS::Math::Vec4 dir { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec4 dir{0.0f, 0.0f, 0.0f, 0.0f};
     /** Color, w is intensity */
-    BASE_NS::Math::Vec4 color { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec4 color{0.0f, 0.0f, 0.0f, 0.0f};
 
     /* Spot light params. .x = angleScale, .y = angleOffset, .z = innerAngle, .w = outerAngle
      * For rect light .xyz = y dir with baked height, .w = height
      */
-    BASE_NS::Math::Vec4 spotLightParams { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec4 spotLightParams{0.0f, 0.0f, 0.0f, 0.0f};
     /* Point and spot params. */
-    float range { 0.0f };
+    float range{0.0f};
     // .x = shadow factor, .y = depth bias, .z = normal bias, .w = empty (filled later with step size)
-    BASE_NS::Math::Vec4 shadowFactors { 1.0f, 0.005f, 0.02f, 0.0f };
+    BASE_NS::Math::Vec4 shadowFactors{1.0f, 0.005f, 0.02f, 0.0f};
 
     /** Object ID */
-    uint32_t objectId { ~0u };
+    uint32_t objectId{~0u};
     /** Light usage flags */
-    LightUsageFlags lightUsageFlags { 0u };
+    LightUsageFlags lightUsageFlags{0u};
 
     /** Shadow camera index in render lights */
-    uint32_t shadowCameraIndex { ~0u };
+    uint32_t shadowCameraIndex{~0u};
     /** Filled by the data store */
-    uint32_t shadowIndex { ~0u };
+    uint32_t shadowIndex{~0u};
 
     /** Scene ID */
-    uint32_t sceneId { 0U };
+    uint32_t sceneId{0U};
 };
 
 /** Render camera */
@@ -615,6 +629,8 @@ struct RenderCamera {
         CAMERA_FLAG_CUBEMAP_BIT = (1 << 17),
         /** Use list of IRenderPostProcess instead of fixed built-in. */
         CAMERA_FLAG_POST_PROCESS_EFFECTS_BIT = (1 << 18),
+        /** Camera is used for light probe rasterization */
+        CAMERA_FLAG_LIGHT_PROBE_BAKE_BIT = (1 << 19),
     };
     using Flags = uint32_t;
 
@@ -623,6 +639,8 @@ struct RenderCamera {
         CAMERA_SHADER_FOG_BIT = (1 << 0),
         /** Camera velocity computation enabled in the shader. */
         CAMERA_SHADER_VELOCITY_OUT_BIT = (1 << 1),
+        /** Camera is rasterizing a light probe */
+        CAMERA_SHADER_LIGHT_PROBE_BAKE_BIT = (1 << 2),
     };
     using ShaderFlags = uint32_t;
 
@@ -685,42 +703,42 @@ struct RenderCamera {
         using EnvironmentFlags = uint32_t;
 
         /** Unique id. */
-        uint64_t id { RenderSceneDataConstants::INVALID_ID };
+        uint64_t id{RenderSceneDataConstants::INVALID_ID};
 
         /** Layer mask (camera render mask). All enabled by default */
-        uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
+        uint64_t layerMask{RenderSceneDataConstants::INVALID_ID};
 
         /** Unique id. */
-        EnvironmentFlags flags { 0U };
+        EnvironmentFlags flags{0U};
 
         /** Radiance cubemap resource handle */
         RENDER_NS::RenderHandleReference radianceCubemap;
         /** Radiance cubemap mip count. Zero indicates that full mipchain is available */
-        uint32_t radianceCubemapMipCount { 0u };
+        uint32_t radianceCubemapMipCount{0u};
 
         /** Environment map resource handle */
         RENDER_NS::RenderHandleReference envMap;
         /** Environment map lod level for sampling */
-        float envMapLodLevel { 0.0f };
+        float envMapLodLevel{0.0f};
 
         /** Spherical harmonic coefficients for indirect diffuse (irradiance)
          * Prescaled with 1.0 / PI. */
         BASE_NS::Math::Vec4 shIndirectCoefficients[RenderSceneDataConstants::MAX_SH_VEC3_COUNT];
 
         /** Indirect diffuse color factor (.rgb = tint, .a = intensity) */
-        BASE_NS::Math::Vec4 indirectDiffuseFactor { 1.0f, 1.0f, 1.0f, 1.0f };
+        BASE_NS::Math::Vec4 indirectDiffuseFactor{1.0f, 1.0f, 1.0f, 1.0f};
         /** Indirect specular color factor (.rgb = tint, .a = intensity) */
-        BASE_NS::Math::Vec4 indirectSpecularFactor { 1.0f, 1.0f, 1.0f, 1.0f };
+        BASE_NS::Math::Vec4 indirectSpecularFactor{1.0f, 1.0f, 1.0f, 1.0f};
         /** Env map color factor (.rgb = tint, .a = intensity) */
-        BASE_NS::Math::Vec4 envMapFactor { 1.0f, 1.0f, 1.0f, 1.0f };
+        BASE_NS::Math::Vec4 envMapFactor{1.0f, 1.0f, 1.0f, 1.0f};
         /** Additional blend factor for multiple cubemaps. .x blends 0-1, .y blends 1-2 ... */
-        BASE_NS::Math::Vec4 blendFactor { 0.0f, 0.0f, 0.0f, 0.0f };
+        BASE_NS::Math::Vec4 blendFactor{0.0f, 0.0f, 0.0f, 0.0f};
 
         /** Environment rotation */
-        BASE_NS::Math::Quat rotation { 0.0f, 0.0f, 0.0f, 1.0f };
+        BASE_NS::Math::Quat rotation{0.0f, 0.0f, 0.0f, 1.0f};
 
         /** Background type */
-        BackgroundType backgroundType { BackgroundType::BG_TYPE_NONE };
+        BackgroundType backgroundType{BackgroundType::BG_TYPE_NONE};
 
         /** Custom shader handle */
         RENDER_NS::RenderHandleReference shader;
@@ -729,70 +747,71 @@ struct RenderCamera {
 
         RENDER_NS::RenderHandleReference graphicsState;
         /** Blended environment count. */
-        uint32_t multiEnvCount { 0U };
+        uint32_t multiEnvCount{0U};
         /** 64bit environment id of environments. */
-        uint64_t multiEnvIds[DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT] {
-            RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID,
-            RenderSceneDataConstants::INVALID_ID, RenderSceneDataConstants::INVALID_ID
-        };
+        uint64_t multiEnvIds[DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT]{
+            RenderSceneDataConstants::INVALID_ID,
+            RenderSceneDataConstants::INVALID_ID,
+            RenderSceneDataConstants::INVALID_ID,
+            RenderSceneDataConstants::INVALID_ID};
     };
 
     /** Fog setup */
     struct Fog {
         /** Unique id. */
-        uint64_t id { RenderSceneDataConstants::INVALID_ID };
+        uint64_t id{RenderSceneDataConstants::INVALID_ID};
 
         /** Layer mask (camera render mask). All enabled by default */
-        uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
+        uint64_t layerMask{RenderSceneDataConstants::INVALID_ID};
 
         /** .x = density, .y = heightFalloff, .z = heightFogOffset */
-        BASE_NS::Math::Vec4 firstLayer { 1.0f, 1.0f, 1.0f, 0.0f };
+        BASE_NS::Math::Vec4 firstLayer{1.0f, 1.0f, 1.0f, 0.0f};
         /** .x = density, .y = heightFalloff, .z = heightFogOffset */
-        BASE_NS::Math::Vec4 secondLayer { 1.0f, 1.0f, 1.0f, 0.0f };
+        BASE_NS::Math::Vec4 secondLayer{1.0f, 1.0f, 1.0f, 0.0f};
 
         /** .x = startDistance, .y = cutoffDistance, .z = maxOpacity */
-        BASE_NS::Math::Vec4 baseFactors { 1.0f, -1.0f, 1.0f, 0.0f };
+        BASE_NS::Math::Vec4 baseFactors{1.0f, -1.0f, 1.0f, 0.0f};
 
         /** Primary color for the fog (.rgb = tint, .a = intensity) */
-        BASE_NS::Math::Vec4 inscatteringColor { 1.0f, -1.0f, 1.0f, 0.0f };
+        BASE_NS::Math::Vec4 inscatteringColor{1.0f, -1.0f, 1.0f, 0.0f};
         /** Env map color factor (.rgb = tint, .a = intensity) */
-        BASE_NS::Math::Vec4 envMapFactor { 1.0f, -1.0f, 1.0f, 0.0f };
+        BASE_NS::Math::Vec4 envMapFactor{1.0f, -1.0f, 1.0f, 0.0f};
 
         /** Additional factor */
-        BASE_NS::Math::Vec4 additionalFactor { 0.0f, 0.0f, 0.0f, 0.0f };
+        BASE_NS::Math::Vec4 additionalFactor{0.0f, 0.0f, 0.0f, 0.0f};
     };
 
     /** Unique id. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
     /** Shadow id. (Can be invalid) */
-    uint64_t shadowId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t shadowId{RenderSceneDataConstants::INVALID_ID};
 
     /** Layer mask (camera render mask). All enabled by default */
-    uint64_t layerMask { RenderSceneDataConstants::INVALID_ID };
+    uint64_t layerMask{RenderSceneDataConstants::INVALID_ID};
 
     /** Main camera to this camera id. (e.g. reflection camera has info of the main camera) */
-    uint64_t mainCameraId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t mainCameraId{RenderSceneDataConstants::INVALID_ID};
 
     /** Matrices (Contains view, projection, view of previous frame and projection of previous frame) */
     Matrices matrices;
 
     /** Viewport (relative to render resolution) */
-    BASE_NS::Math::Vec4 viewport { 0.0f, 0.0f, 1.0f, 1.0f };
+    BASE_NS::Math::Vec4 viewport{0.0f, 0.0f, 1.0f, 1.0f};
     /** Scissor (relative to render resolution) */
-    BASE_NS::Math::Vec4 scissor { 0.0f, 0.0f, 1.0f, 1.0f };
+    BASE_NS::Math::Vec4 scissor{0.0f, 0.0f, 1.0f, 1.0f};
     /** Render resolution */
-    BASE_NS::Math::UVec2 renderResolution { 0u, 0u };
+    BASE_NS::Math::UVec2 renderResolution{0u, 0u};
 
     /** Downsample percentage of camera resolution */
-    float screenPercentage { 1.0f };
+    float screenPercentage{1.0f};
 
     /** Z near value */
-    float zNear { 0.0f };
+    float zNear{0.0f};
     /** Z far value */
-    float zFar { 0.0f };
+    float zFar{0.0f};
 
     /** Custom depth target */
-    RENDER_NS::RenderHandleReference depthTarget {};
+    RENDER_NS::RenderHandleReference depthTarget{};
     /** Custom color targets */
     RENDER_NS::RenderHandleReference colorTargets[RenderSceneDataConstants::MAX_CAMERA_COLOR_TARGET_COUNT];
 
@@ -800,28 +819,28 @@ struct RenderCamera {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> prePassColorTargetName;
 
     /** Flags for camera */
-    Flags flags { 0u };
+    Flags flags{0u};
     /** Shader flags for camera */
-    ShaderFlags shaderFlags { 0u };
+    ShaderFlags shaderFlags{0u};
 
     /** Which scene the camera belongs to. */
-    uint32_t sceneId { 0U };
+    uint32_t sceneId{0U};
     /** For reflection cameras ID of the mesh showing the reflection. */
-    uint32_t reflectionId { 0U };
+    uint32_t reflectionId{0U};
 
     /** Flags for camera render pipeline */
-    RenderPipelineType renderPipelineType { RenderPipelineType::FORWARD };
+    RenderPipelineType renderPipelineType{RenderPipelineType::FORWARD};
 
     /** Clear depth / stencil values. Clear enabled if flags set. */
-    RENDER_NS::ClearDepthStencilValue clearDepthStencil { 1.0f, 0u };
+    RENDER_NS::ClearDepthStencilValue clearDepthStencil{1.0f, 0u};
     /** Clear color values. Clear enabled if flags set */
-    RENDER_NS::ClearColorValue clearColorValues { 0.0f, 0.0f, 0.0f, 0.0f };
+    RENDER_NS::ClearColorValue clearColorValues{0.0f, 0.0f, 0.0f, 0.0f};
 
     /** Camera cull type */
-    CameraCullType cullType { CameraCullType::CAMERA_CULL_VIEW_FRUSTUM };
+    CameraCullType cullType{CameraCullType::CAMERA_CULL_VIEW_FRUSTUM};
 
     /** MSAA sample count */
-    RENDER_NS::SampleCountFlags msaaSampleCountFlags { RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT };
+    RENDER_NS::SampleCountFlags msaaSampleCountFlags{RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT};
 
     /** Default environment setup for camera */
     Environment environment;
@@ -841,9 +860,9 @@ struct RenderCamera {
     /** Target customization */
     struct TargetUsage {
         /** Target format */
-        BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+        BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
         /** Usage flags hints for optimizing resource creation */
-        RENDER_NS::ImageUsageFlags usageFlags { 0 };
+        RENDER_NS::ImageUsageFlags usageFlags{0};
     };
 
     /** Depth target customization */
@@ -858,9 +877,9 @@ struct RenderCamera {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> postProcessName;
 
     /** Multi-view extra camera count. */
-    uint32_t multiViewCameraCount { 0U };
+    uint32_t multiViewCameraCount{0U};
     /** 64bit camera id of multi-view layer cameras. */
-    uint64_t multiViewCameraIds[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT] {
+    uint64_t multiViewCameraIds[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT]{
         RenderSceneDataConstants::INVALID_ID,
         RenderSceneDataConstants::INVALID_ID,
         RenderSceneDataConstants::INVALID_ID,
@@ -868,8 +887,26 @@ struct RenderCamera {
         RenderSceneDataConstants::INVALID_ID,
     };
     /** Hash of the multi-view camera IDs */
-    uint64_t multiViewCameraHash { 0U };
-    uint64_t multiViewParentCameraId { RenderSceneDataConstants::INVALID_ID };
+    uint64_t multiViewCameraHash{0U};
+    uint64_t multiViewParentCameraId{RenderSceneDataConstants::INVALID_ID};
+
+    /** Inputs for light probe baking */
+    struct LightProbeBakingData {
+        struct PerProbeData {
+            uint32_t probeIndex{};
+            BASE_NS::Math::Vec3 probePosition{};
+            struct {
+                int32_t offsetX{};
+                int32_t offsetY{};
+                uint32_t extentWidth{};
+                uint32_t extentHeight{};
+            } probeAtlasRenderAreas[6]{};
+        };
+        BASE_NS::vector<PerProbeData> perProbeData;
+        uint32_t probeAtlasWidth{};
+        uint32_t probeAtlasHeight{};
+    };
+    LightProbeBakingData lightProbeBakingData{};
 };
 
 /** Render scene */
@@ -881,7 +918,7 @@ struct RenderScene {
     using Flags = uint32_t;
 
     /** Unique id. */
-    uint64_t id { RenderSceneDataConstants::INVALID_ID };
+    uint64_t id{RenderSceneDataConstants::INVALID_ID};
     /** Unique scene name (If name is empty a default id/name is created with index) */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> name;
 
@@ -895,28 +932,30 @@ struct RenderScene {
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMaterial;
     /** Morphing data store name */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameMorph;
+    /** light probe data store name */
+    BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNameLightProbe;
     /** Data store name prefix */
     BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> dataStoreNamePrefix;
 
     /** World scene center */
-    BASE_NS::Math::Vec3 worldSceneCenter { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 worldSceneCenter{0.0f, 0.0f, 0.0f};
     /** World scene bounding sphere radius */
-    float worldSceneBoundingSphereRadius { 0.0f };
+    float worldSceneBoundingSphereRadius{0.0f};
 
     /** Index of scene camera in rendering cameras */
-    uint32_t cameraIndex { RenderSceneDataConstants::INVALID_INDEX };
+    uint32_t cameraIndex{RenderSceneDataConstants::INVALID_INDEX};
 
     /** Scene delta time in milliseconds */
-    float sceneDeltaTime { 0 };
+    float sceneDeltaTime{0};
     /** Real total tick time in seconds */
-    float totalTime { 0u };
+    float totalTime{0u};
     /** Real delta tick time in milliseconds */
-    float deltaTime { 0u };
+    float deltaTime{0u};
 
     /** Render scene frame index */
-    uint32_t frameIndex { 0u };
+    uint32_t frameIndex{0u};
     /** Scene flags*/
-    Flags flags { 0u };
+    Flags flags{0u};
     /** Custom render node graph file from scene component */
     BASE_NS::string customRenderNodeGraphFile;
     /** Custom post scene render node graph file from scene component */
@@ -924,10 +963,10 @@ struct RenderScene {
 };
 
 struct SlotSubmeshIndex {
-    uint32_t submeshIndex { 0 };
+    uint32_t submeshIndex{0};
 
-    uint32_t sortLayerKey { 0 };
-    uint64_t sortKey { 0 };
+    uint32_t sortLayerKey{0};
+    uint64_t sortKey{0};
     RENDER_NS::RenderHandle shaderHandle;
     RENDER_NS::RenderHandle gfxStateHandle;
 };
@@ -943,4 +982,4 @@ using RenderSceneFlags = uint32_t;
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_RENDER_DATA_DEFINES_H
+#endif  // API_3D_RENDER_RENDER_DATA_DEFINES_H

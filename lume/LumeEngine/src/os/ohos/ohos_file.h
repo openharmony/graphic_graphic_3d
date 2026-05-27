@@ -31,7 +31,7 @@
 #include <core/io/intf_file.h>
 #include <core/namespace.h>
 
-#include "resource_manager.h"
+#include "base/global/resource_management/interfaces/inner_api/include/resource_manager.h"
 
 CORE_BEGIN_NAMESPACE()
 struct OhosDirImpl {
@@ -55,7 +55,8 @@ struct PlatformHapInfo {
 
 class OhosResMgr {
 public:
-    explicit OhosResMgr(const PlatformHapInfo& hapInfo) : hapInfo_(hapInfo) {}
+    explicit OhosResMgr(const PlatformHapInfo& hapInfo) : hapInfo_(hapInfo)
+    {}
     std::shared_ptr<OHOS::Global::Resource::ResourceManager> GetResMgr() const;
     void UpdateResManager(const PlatformHapInfo& hapInfo);
     void Ref()
@@ -71,9 +72,9 @@ public:
     }
 
 private:
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
     PlatformHapInfo hapInfo_;
-    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager_ { nullptr };
+    std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager_{nullptr};
     BASE_NS::unordered_map<BASE_NS::string, std::shared_ptr<OHOS::Global::Resource::ResourceManager>> resourceManagers_;
 };
 
@@ -103,7 +104,8 @@ private:
 
 class OhosFileStorage {
 public:
-    explicit OhosFileStorage(std::unique_ptr<uint8_t[]> buffer) : buffer_(std::move(buffer)) {}
+    explicit OhosFileStorage(std::unique_ptr<uint8_t[]> buffer) : buffer_(std::move(buffer))
+    {}
     ~OhosFileStorage() = default;
 
     const std::unique_ptr<uint8_t[]>& GetStorage() const
@@ -124,7 +126,7 @@ public:
 
 private:
     std::unique_ptr<uint8_t[]> buffer_;
-    size_t size_ { 0 };
+    size_t size_{0};
 };
 
 class OhosFile final : public IFile {
@@ -157,9 +159,9 @@ private:
     bool GetResourceId(const std::string& uri, std::string& path) const;
     bool GetResourceName(const std::string& uri, std::string& resName) const;
 
-    uint64_t index_ { 0 };
+    uint64_t index_{0};
     std::shared_ptr<OhosFileStorage> buffer_;
     BASE_NS::refcnt_ptr<OhosResMgr> fileResMgr_;
 };
 CORE_END_NAMESPACE()
-#endif // CORE_OS_OHOS_OHOS_FILE_H
+#endif  // CORE_OS_OHOS_OHOS_FILE_H

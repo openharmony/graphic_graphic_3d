@@ -46,24 +46,24 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-static constexpr string_view CMD_LIST_DEBUG_NAME { "CMD_LIST_DEBUG_NAME" };
-static constexpr string_view RENDER_NODE_DEBUG_NAME { "RENDER_NODE_DEBUG_NAME" };
+static constexpr string_view CMD_LIST_DEBUG_NAME{"CMD_LIST_DEBUG_NAME"};
+static constexpr string_view RENDER_NODE_DEBUG_NAME{"RENDER_NODE_DEBUG_NAME"};
 
-static constexpr string_view VERTEX_BUFFER_NAME { "vertexBuffer" };
-static constexpr string_view INDEX_BUFFER_NAME { "indexBuffer" };
-static constexpr string_view INDIRECT_BUFFER_NAME { "indirectBuffer" };
-static constexpr string_view COLOR_ATTACHMENT_NAME { "colorAttachment" };
-static constexpr string_view DEPTH_ATTACHMENT_NAME { "depthAttachment" };
-static constexpr string_view RESOLVE_ATTACHMENT_NAME { "resolveAttachment" };
-static constexpr string_view DEPTH_RESOLVE_ATTACHMENT_NAME { "depthResolveAttachment" };
+static constexpr string_view VERTEX_BUFFER_NAME{"vertexBuffer"};
+static constexpr string_view INDEX_BUFFER_NAME{"indexBuffer"};
+static constexpr string_view INDIRECT_BUFFER_NAME{"indirectBuffer"};
+static constexpr string_view COLOR_ATTACHMENT_NAME{"colorAttachment"};
+static constexpr string_view DEPTH_ATTACHMENT_NAME{"depthAttachment"};
+static constexpr string_view RESOLVE_ATTACHMENT_NAME{"resolveAttachment"};
+static constexpr string_view DEPTH_RESOLVE_ATTACHMENT_NAME{"depthResolveAttachment"};
 
 static constexpr uint32_t NUM_VERTICES = 4;
 static constexpr uint32_t NUM_TRIANGLES = 2;
-static constexpr float VERTEX_BUFFER_DATA[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f };
-static constexpr uint32_t INDEX_BUFFER_DATA[] = { 0, 1, 2, 2, 3, 0 };
-static constexpr uint32_t INDIRECT_BUFFER_DATA[] = { 3, 1, 0, 0, 6, 1, 0, 0, 0 };
+static constexpr float VERTEX_BUFFER_DATA[] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+static constexpr uint32_t INDEX_BUFFER_DATA[] = {0, 1, 2, 2, 3, 0};
+static constexpr uint32_t INDIRECT_BUFFER_DATA[] = {3, 1, 0, 0, 6, 1, 0, 0, 0};
 static constexpr uint32_t WIDTH = 128;
 static constexpr uint32_t HEIGHT = 128;
 
@@ -79,8 +79,8 @@ struct TestResources {
 
     uint32_t width;
     uint32_t height;
-    Format colorFormat { BASE_FORMAT_R8G8B8A8_SRGB };
-    Format depthFormat { BASE_FORMAT_D24_UNORM_S8_UINT };
+    Format colorFormat{BASE_FORMAT_R8G8B8A8_SRGB};
+    Format depthFormat{BASE_FORMAT_D24_UNORM_S8_UINT};
 };
 void CreateTestResources(UTest::EngineResources& er, TestResources& res)
 {
@@ -92,8 +92,9 @@ void CreateTestResources(UTest::EngineResources& er, TestResources& res)
             CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS | CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE;
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        res.vertexBufferHandle = er.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA) });
+        res.vertexBufferHandle = er.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA)});
     }
     // Index buffer
     {
@@ -105,8 +106,9 @@ void CreateTestResources(UTest::EngineResources& er, TestResources& res)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
                                 CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        res.indexBufferHandle = er.device->GetGpuResourceManager().Create(INDEX_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(INDEX_BUFFER_DATA), sizeof(INDEX_BUFFER_DATA) });
+        res.indexBufferHandle = er.device->GetGpuResourceManager().Create(INDEX_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(INDEX_BUFFER_DATA), sizeof(INDEX_BUFFER_DATA)});
     }
     // Indirect buffer
     {
@@ -118,8 +120,9 @@ void CreateTestResources(UTest::EngineResources& er, TestResources& res)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT |
                                 CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        res.indirectBufferHandle = er.device->GetGpuResourceManager().Create(INDIRECT_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(INDIRECT_BUFFER_DATA), sizeof(INDIRECT_BUFFER_DATA) });
+        res.indirectBufferHandle = er.device->GetGpuResourceManager().Create(INDIRECT_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(INDIRECT_BUFFER_DATA), sizeof(INDIRECT_BUFFER_DATA)});
     }
     // Color attachment
     {
@@ -201,12 +204,12 @@ void DestroyTestResources(TestResources& res)
 void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& res)
 {
     Device& device = static_cast<Device&>(*engine.device);
-    GpuQueue queue = device.GetValidGpuQueue({ GpuQueue::QueueType::GRAPHICS, 0 });
+    GpuQueue queue = device.GetValidGpuQueue({GpuQueue::QueueType::GRAPHICS, 0});
     bool enableMultiQueue = true;
 
     ShaderManager& shaderMgr = (ShaderManager&)device.GetShaderManager();
     GpuResourceManager& gpuResourceMgr = (GpuResourceManager&)device.GetGpuResourceManager();
-    NodeContextPsoManager nodeContextPsoMgr { device, shaderMgr };
+    NodeContextPsoManager nodeContextPsoMgr{device, shaderMgr};
     unique_ptr<NodeContextDescriptorSetManager> nodeContextDescriptorSetMgr =
         move(device.CreateNodeContextDescriptorSetManager());
 
@@ -215,12 +218,20 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
     const auto& graphicsState = shaderMgr.GetGraphicsState(stateHandle);
     const auto& pipelineLayout = shaderMgr.GetReflectionPipelineLayout(shaderHandle);
     const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle.GetHandle());
-    ShaderSpecializationConstantDataView shaderSpec {};
-    RenderHandle psoHandle = nodeContextPsoMgr.GetGraphicsPsoHandle(shaderHandle.GetHandle(), stateHandle.GetHandle(),
-        pipelineLayout, inputLayout, shaderSpec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    ShaderSpecializationConstantDataView shaderSpec{};
+    RenderHandle psoHandle = nodeContextPsoMgr.GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+        stateHandle.GetHandle(),
+        pipelineLayout,
+        inputLayout,
+        shaderSpec,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         ASSERT_TRUE(cmdList.GetInterface(CORE_NS::IInterface::UID));
         ASSERT_TRUE(cmdList.GetInterface(CORE_NS::IInterface::UID)->GetInterface<IRenderCommandList>());
         ASSERT_TRUE(cmdList.GetInterface(IRenderCommandList::UID));
@@ -233,8 +244,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(constCmdList.GetInterface(BASE_NS::Uid("12345678-1234-1234-1234-1234567890ab")));
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.SetValidGpuQueueReleaseAcquireBarriers();
         cmdList.BeforeRenderNodeExecuteFrame();
@@ -242,31 +257,39 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_TRUE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
-        RenderPassDesc renderPassDesc {};
+        RenderPassDesc renderPassDesc{};
         renderPassDesc.subpassCount = 2;
         cmdList.BeginRenderPass(renderPassDesc, {});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         RenderPassDesc renderPassDesc;
         renderPassDesc.attachmentCount = 4;
         renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
-        renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[0].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[1] = res.depthHandle.GetHandle();
-        renderPassDesc.attachments[1].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[1].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[1].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[2] = res.resolveHandle.GetHandle();
-        renderPassDesc.attachments[2].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[2].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[2].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[3] = res.depthResolveHandle.GetHandle();
-        renderPassDesc.attachments[3].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[3].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[3].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.subpassCount = 2;
         renderPassDesc.subpassContents = SubpassContents::CORE_SUBPASS_CONTENTS_SECONDARY_COMMAND_LISTS;
@@ -292,20 +315,28 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         subpassDesc[1].depthResolveAttachmentCount = 1;
         subpassDesc[1].depthResolveAttachmentIndex = 3;
         subpassDesc[1].depthResolveModeFlags = ResolveModeFlagBits::CORE_RESOLVE_MODE_MAX_BIT;
-        cmdList.BeginRenderPass(renderPassDesc, { subpassDesc, 2 });
-        cmdList.BeginRenderPass(renderPassDesc, { subpassDesc, 2 });
+        cmdList.BeginRenderPass(renderPassDesc, {subpassDesc, 2});
+        cmdList.BeginRenderPass(renderPassDesc, {subpassDesc, 2});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.EndRenderPass();
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         GeneralBarrier barrier1;
         barrier1.accessFlags = AccessFlagBits::CORE_ACCESS_COLOR_ATTACHMENT_READ_BIT;
@@ -317,8 +348,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BindPipeline(psoHandle);
         ImageResourceBarrier barrier;
@@ -335,8 +370,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         Size2D fragmentSize;
         fragmentSize.width = 8;
@@ -348,16 +387,24 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
-        float blendConstants[7] = { 0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f };
-        cmdList.SetDynamicStateBlendConstants({ blendConstants, countof(blendConstants) });
+        float blendConstants[7] = {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f};
+        cmdList.SetDynamicStateBlendConstants({blendConstants, countof(blendConstants)});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.SetExecuteBackendFramePosition();
         cmdList.SetExecuteBackendFramePosition();
@@ -365,16 +412,24 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BeginRenderPass({}, {});
         cmdList.BlitImage({}, {}, {}, {});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.CopyImageToImage({}, {}, {});
         cmdList.CopyImageToBuffer({}, {}, {});
@@ -383,8 +438,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BeginRenderPass({}, {});
         cmdList.CustomImageBarrier({}, {}, {});
@@ -394,26 +453,38 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
     }
 #if NDEBUG
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.EndDisableAutomaticBarrierPoints();
         cmdList.BeginDisableAutomaticBarrierPoints();
         cmdList.BeginDisableAutomaticBarrierPoints();
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
-#endif // NDEBUG
+#endif  // NDEBUG
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BeginRenderPass({}, 0u, {});
         cmdList.BeginRenderPass({}, 0u, {});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BindIndexBuffer({});
         VertexBuffer vbos[10];
@@ -422,12 +493,16 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
             vbos[i].bufferOffset = 0;
             vbos[i].byteSize = 0;
         }
-        cmdList.BindVertexBuffers({ vbos, countof(vbos) });
+        cmdList.BindVertexBuffers({vbos, countof(vbos)});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         PushConstant pc;
         pc.byteSize = 256u;
@@ -435,8 +510,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BindPipeline({});
         cmdList.Draw(0u, 0u, 0u, 0u);
@@ -448,8 +527,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         cmdList.BeginRenderPass({}, {});
         cmdList.BeginDisableAutomaticBarrierPoints();
@@ -457,8 +540,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         ScissorDesc scissor;
         scissor.extentHeight = 0u;
@@ -471,8 +558,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         ImageSubresourceRange range;
         range.baseMipLevel = 6;
@@ -484,8 +575,12 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
     }
 #if NDEBUG
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         RenderPassDesc renderPass;
         renderPass.renderArea.extentHeight = 0u;
@@ -527,10 +622,14 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         cmdList.BeginRenderPass(renderPass, 1u, {});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
-#endif // NDEBUG
+#endif  // NDEBUG
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         DescriptorSetLayoutBindingResources bindingRes;
         bindingRes.bindingMask = 0u;
@@ -538,11 +637,11 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         SamplerDescriptor samplers[2];
         samplers[0].binding.descriptorType = CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE;
         samplers[1].binding.descriptorType = CORE_DESCRIPTOR_TYPE_SAMPLER;
-        bindingRes.samplers = { samplers, countof(samplers) };
+        bindingRes.samplers = {samplers, countof(samplers)};
         ImageDescriptor images[2];
         images[0].binding.descriptorType = CORE_DESCRIPTOR_TYPE_SAMPLER;
         images[1].binding.descriptorType = CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        bindingRes.images = { images, countof(images) };
+        bindingRes.images = {images, countof(images)};
         BufferDescriptor buffers[6];
         buffers[0].binding.descriptorType = CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
         buffers[1].binding.descriptorType = CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
@@ -550,51 +649,63 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         buffers[3].binding.descriptorType = CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         buffers[4].binding.descriptorType = CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE;
         buffers[5].binding.descriptorType = CORE_DESCRIPTOR_TYPE_SAMPLER;
-        bindingRes.buffers = { buffers, countof(buffers) };
+        bindingRes.buffers = {buffers, countof(buffers)};
         cmdList.UpdateDescriptorSet({}, bindingRes);
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
-        RenderHandle handles[9] = { {}, {}, {}, {}, {}, {}, {}, {}, {} };
-        cmdList.BindDescriptorSets(0u, { handles, countof(handles) });
+        RenderHandle handles[9] = {{}, {}, {}, {}, {}, {}, {}, {}, {}};
+        cmdList.BindDescriptorSets(0u, {handles, countof(handles)});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         uint32_t offsets[32];
         for (uint32_t i = 0; i < countof(offsets); ++i) {
             offsets[i] = 0u;
         }
-        cmdList.BindDescriptorSet(0u, {}, { offsets, countof(offsets) });
+        cmdList.BindDescriptorSet(0u, {}, {offsets, countof(offsets)});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
     {
-        RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr,
-            nodeContextPsoMgr, queue, enableMultiQueue };
+        RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr,
+            gpuResourceMgr,
+            nodeContextPsoMgr,
+            queue,
+            enableMultiQueue};
         cmdList.BeginFrame();
         RenderPassDesc renderPassDesc;
         renderPassDesc.attachmentCount = 4;
         renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
-        renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[0].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[1] = res.depthHandle.GetHandle();
-        renderPassDesc.attachments[1].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[1].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[1].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[1].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[3].stencilStoreOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[2] = {};
-        renderPassDesc.attachments[2].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[2].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[2].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[2].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[3] = res.depthResolveHandle.GetHandle();
-        renderPassDesc.attachments[3].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[3].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[3].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[3].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -625,7 +736,7 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         subpassDesc[1].depthResolveAttachmentIndex = 3;
         subpassDesc[1].depthResolveModeFlags = ResolveModeFlagBits::CORE_RESOLVE_MODE_MAX_BIT;
         subpassDesc[1].stencilResolveModeFlags = ResolveModeFlagBits::CORE_RESOLVE_MODE_MIN_BIT;
-        cmdList.BeginRenderPass(renderPassDesc, { subpassDesc, 2 });
+        cmdList.BeginRenderPass(renderPassDesc, {subpassDesc, 2});
         ASSERT_FALSE(cmdList.HasValidRenderCommands());
     }
 }
@@ -634,28 +745,36 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
     const vector<RenderHandleReference>& swapchains = {})
 {
     Device& device = static_cast<Device&>(*engine.device);
-    GpuQueue queue = device.GetValidGpuQueue({ GpuQueue::QueueType::GRAPHICS, 0 });
+    GpuQueue queue = device.GetValidGpuQueue({GpuQueue::QueueType::GRAPHICS, 0});
     bool enableMultiQueue = true;
 
     ShaderManager& shaderMgr = (ShaderManager&)device.GetShaderManager();
     GpuResourceManager& gpuResourceMgr = (GpuResourceManager&)device.GetGpuResourceManager();
-    NodeContextPsoManager nodeContextPsoMgr { device, shaderMgr };
+    NodeContextPsoManager nodeContextPsoMgr{device, shaderMgr};
     unique_ptr<NodeContextDescriptorSetManager> nodeContextDescriptorSetMgr =
         move(device.CreateNodeContextDescriptorSetManager());
     unique_ptr<NodeContextPoolManager> nodeContextPoolMgr = device.CreateNodeContextPoolManager(gpuResourceMgr, queue);
     unique_ptr<RenderBarrierList> renderBarrierList = make_unique<RenderBarrierList>(0U);
 
-    RenderCommandList cmdList { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr, gpuResourceMgr, nodeContextPsoMgr,
-        queue, enableMultiQueue };
+    RenderCommandList cmdList{RENDER_NODE_DEBUG_NAME,
+        *nodeContextDescriptorSetMgr,
+        gpuResourceMgr,
+        nodeContextPsoMgr,
+        queue,
+        enableMultiQueue};
 
     auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/RenderCommandListTest.shader");
     auto stateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderHandle.GetHandle());
     const auto& graphicsState = shaderMgr.GetGraphicsState(stateHandle);
     const auto& pipelineLayout = shaderMgr.GetReflectionPipelineLayout(shaderHandle);
     const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle.GetHandle());
-    ShaderSpecializationConstantDataView shaderSpec {};
-    RenderHandle psoHandle = nodeContextPsoMgr.GetGraphicsPsoHandle(shaderHandle.GetHandle(), stateHandle.GetHandle(),
-        pipelineLayout, inputLayout, shaderSpec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    ShaderSpecializationConstantDataView shaderSpec{};
+    RenderHandle psoHandle = nodeContextPsoMgr.GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+        stateHandle.GetHandle(),
+        pipelineLayout,
+        inputLayout,
+        shaderSpec,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
     nodeContextPoolMgr->BeginFrame();
     {
@@ -672,23 +791,23 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         cmdList.BuildAccelerationStructures(geom, {}, {}, {});
 
         RenderPassDesc renderPassDesc;
-        renderPassDesc.attachmentCount = 4; // 4: param
+        renderPassDesc.attachmentCount = 4;  // 4: param
         renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
-        renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[0].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[1] = res.depthHandle.GetHandle();
-        renderPassDesc.attachments[1].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[1].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[1].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[1].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[3].stencilStoreOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[2] = res.resolveHandle.GetHandle();
-        renderPassDesc.attachments[2].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+        renderPassDesc.attachments[2].clearValue.color = {0.f, 0.f, 0.f, 1.f};
         renderPassDesc.attachments[2].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[2].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachmentHandles[3] = res.depthResolveHandle.GetHandle();
-        renderPassDesc.attachments[3].clearValue.depthStencil = { 1.f, 0u };
+        renderPassDesc.attachments[3].clearValue.depthStencil = {1.f, 0u};
         renderPassDesc.attachments[3].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
         renderPassDesc.attachments[3].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
         renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -719,7 +838,7 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         subpassDesc[1].depthResolveAttachmentIndex = 3;
         subpassDesc[1].depthResolveModeFlags = ResolveModeFlagBits::CORE_RESOLVE_MODE_MAX_BIT;
         subpassDesc[1].stencilResolveModeFlags = ResolveModeFlagBits::CORE_RESOLVE_MODE_MIN_BIT;
-        cmdList.BeginRenderPass(renderPassDesc, { subpassDesc, 2 });
+        cmdList.BeginRenderPass(renderPassDesc, {subpassDesc, 2});
 
         cmdList.BindPipeline(psoHandle);
 
@@ -741,7 +860,7 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
 
         VertexBuffer vbo;
         vbo.bufferHandle = res.vertexBufferHandle.GetHandle();
-        cmdList.BindVertexBuffers({ &vbo, 1 });
+        cmdList.BindVertexBuffers({&vbo, 1});
         cmdList.Draw(3, 1, 0, 0);
 
         IndexBuffer ibo;
@@ -761,8 +880,8 @@ void TestRenderCommandList(const UTest::EngineResources& engine, TestResources& 
         }
         cmdList.SetDynamicStateLineWidth(1.2f);
         if (engine.backend == DeviceBackendType::VULKAN) {
-            float blendConstants[] = { 1.f, 1.f, 1.f, 1.f };
-            cmdList.SetDynamicStateBlendConstants({ blendConstants, countof(blendConstants) });
+            float blendConstants[] = {1.f, 1.f, 1.f, 1.f};
+            cmdList.SetDynamicStateBlendConstants({blendConstants, countof(blendConstants)});
         }
         cmdList.SetDynamicStateStencilCompareMask(StencilFaceFlagBits::CORE_STENCIL_FACE_FRONT_BIT, 1u);
         cmdList.SetDynamicStateStencilCompareMask(StencilFaceFlagBits::CORE_STENCIL_FACE_BACK_BIT, 1u);
@@ -876,7 +995,7 @@ void TestRenderCommandListWithSwapchain(DeviceBackendType backend, uint32_t swap
     engine.height = HEIGHT;
     UTest::CreateEngineSetup(engine);
 
-#if defined(__OHOS__) || defined(__ANDROID__) // Can't create multiple windows per app on mobile
+#if defined(__OHOS__) || defined(__ANDROID__)  // Can't create multiple windows per app on mobile
     if (swapchainCount > 1) {
         return;
     }
@@ -895,12 +1014,12 @@ void TestRenderCommandListWithSwapchain(DeviceBackendType backend, uint32_t swap
     vector<uint64_t> surfaces = {};
     for (const string& name : windowNames) {
         uint64_t& surface = surfaces.emplace_back(UTest::CreateSurface(engine, name));
-#if !defined(__OHOS__) // no surfaces in OHOS, only windows
+#if !defined(__OHOS__)  // no surfaces in OHOS, only windows
         ASSERT_NE(surface, 0);
 #endif
     }
 
-    SwapchainCreateInfo swapchainInfo {};
+    SwapchainCreateInfo swapchainInfo{};
 #if defined(__OHOS__)
     swapchainInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_ohosApp->GetWindowHandle());
     ASSERT_NE(::Test::g_ohosApp->GetWindowHandle(), nullptr);
@@ -918,7 +1037,7 @@ void TestRenderCommandListWithSwapchain(DeviceBackendType backend, uint32_t swap
         for (uint32_t i = 0; i < swapchainCount; i++) {
             swapchainInfo.surfaceHandle = surfaces[i];
             auto& swapchain = swapchains.emplace_back(
-                engine.device->CreateSwapchainHandle(swapchainInfo, RenderHandleReference {}, BASE_NS::to_string(i)));
+                engine.device->CreateSwapchainHandle(swapchainInfo, RenderHandleReference{}, BASE_NS::to_string(i)));
             ASSERT_NE(nullptr, ((Device*)engine.device)->GetSwapchain(swapchain.GetHandle()));
         }
         ASSERT_EQ(swapchains.size(), swapchainCount);
@@ -975,17 +1094,21 @@ void TestSecondaryCommandList(DeviceBackendType backend)
 
     {
         Device& device = static_cast<Device&>(*er.device);
-        GpuQueue queue = device.GetValidGpuQueue({ GpuQueue::QueueType::GRAPHICS, 0 });
+        GpuQueue queue = device.GetValidGpuQueue({GpuQueue::QueueType::GRAPHICS, 0});
         bool enableMultiQueue = true;
 
         ShaderManager& shaderMgr = (ShaderManager&)device.GetShaderManager();
         GpuResourceManager& gpuResourceMgr = (GpuResourceManager&)device.GetGpuResourceManager();
-        NodeContextPsoManager nodeContextPsoMgr1 { device, shaderMgr };
+        NodeContextPsoManager nodeContextPsoMgr1{device, shaderMgr};
         unique_ptr<NodeContextDescriptorSetManager> nodeContextDescriptorSetMgr1 =
             move(device.CreateNodeContextDescriptorSetManager());
 
-        RenderCommandList cmdList1 { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr1, gpuResourceMgr,
-            nodeContextPsoMgr1, queue, enableMultiQueue };
+        RenderCommandList cmdList1{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr1,
+            gpuResourceMgr,
+            nodeContextPsoMgr1,
+            queue,
+            enableMultiQueue};
         const auto& nodeContextPoolMgr1 = device.CreateNodeContextPoolManager(gpuResourceMgr, queue);
 
         auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/RenderCommandListTest.shader");
@@ -993,10 +1116,13 @@ void TestSecondaryCommandList(DeviceBackendType backend)
         const auto& graphicsState = shaderMgr.GetGraphicsState(stateHandle);
         const auto& pipelineLayout = shaderMgr.GetReflectionPipelineLayout(shaderHandle);
         const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle.GetHandle());
-        ShaderSpecializationConstantDataView shaderSpec {};
-        RenderHandle psoHandle1 =
-            nodeContextPsoMgr1.GetGraphicsPsoHandle(shaderHandle.GetHandle(), stateHandle.GetHandle(), pipelineLayout,
-                inputLayout, shaderSpec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        ShaderSpecializationConstantDataView shaderSpec{};
+        RenderHandle psoHandle1 = nodeContextPsoMgr1.GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+            stateHandle.GetHandle(),
+            pipelineLayout,
+            inputLayout,
+            shaderSpec,
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
         nodeContextPoolMgr1->BeginFrame();
         {
@@ -1005,21 +1131,21 @@ void TestSecondaryCommandList(DeviceBackendType backend)
             RenderPassDesc renderPassDesc;
             renderPassDesc.attachmentCount = 4;
             renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
-            renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+            renderPassDesc.attachments[0].clearValue.color = {0.f, 0.f, 0.f, 1.f};
             renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[1] = res.depthHandle.GetHandle();
-            renderPassDesc.attachments[1].clearValue.depthStencil = { 1.f, 0u };
+            renderPassDesc.attachments[1].clearValue.depthStencil = {1.f, 0u};
             renderPassDesc.attachments[1].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[1].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[3].stencilStoreOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[2] = res.resolveHandle.GetHandle();
-            renderPassDesc.attachments[2].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+            renderPassDesc.attachments[2].clearValue.color = {0.f, 0.f, 0.f, 1.f};
             renderPassDesc.attachments[2].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[2].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[3] = res.depthResolveHandle.GetHandle();
-            renderPassDesc.attachments[3].clearValue.depthStencil = { 1.f, 0u };
+            renderPassDesc.attachments[3].clearValue.depthStencil = {1.f, 0u};
             renderPassDesc.attachments[3].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[3].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1063,7 +1189,7 @@ void TestSecondaryCommandList(DeviceBackendType backend)
 
             VertexBuffer vbo;
             vbo.bufferHandle = res.vertexBufferHandle.GetHandle();
-            cmdList1.BindVertexBuffers({ &vbo, 1 });
+            cmdList1.BindVertexBuffers({&vbo, 1});
             cmdList1.Draw(3, 1, 0, 0);
 
             cmdList1.EndRenderPass();
@@ -1089,16 +1215,23 @@ void TestSecondaryCommandList(DeviceBackendType backend)
         auto renderBackend =
             device.CreateRenderBackend(gpuResourceMgr, static_cast<CORE_NS::ITaskQueue*>(parallelQueue.get()));
 
-        NodeContextPsoManager nodeContextPsoMgr2 { device, shaderMgr };
+        NodeContextPsoManager nodeContextPsoMgr2{device, shaderMgr};
         unique_ptr<NodeContextDescriptorSetManager> nodeContextDescriptorSetMgr2 =
             move(device.CreateNodeContextDescriptorSetManager());
         const auto& nodeContextPoolMgr2 = device.CreateNodeContextPoolManager(gpuResourceMgr, queue);
 
-        RenderCommandList cmdList2 { RENDER_NODE_DEBUG_NAME, *nodeContextDescriptorSetMgr2, gpuResourceMgr,
-            nodeContextPsoMgr2, queue, enableMultiQueue };
-        RenderHandle psoHandle2 =
-            nodeContextPsoMgr2.GetGraphicsPsoHandle(shaderHandle.GetHandle(), stateHandle.GetHandle(), pipelineLayout,
-                inputLayout, shaderSpec, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        RenderCommandList cmdList2{RENDER_NODE_DEBUG_NAME,
+            *nodeContextDescriptorSetMgr2,
+            gpuResourceMgr,
+            nodeContextPsoMgr2,
+            queue,
+            enableMultiQueue};
+        RenderHandle psoHandle2 = nodeContextPsoMgr2.GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+            stateHandle.GetHandle(),
+            pipelineLayout,
+            inputLayout,
+            shaderSpec,
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
         nodeContextPoolMgr2->BeginFrame();
         {
@@ -1107,21 +1240,21 @@ void TestSecondaryCommandList(DeviceBackendType backend)
             RenderPassDesc renderPassDesc;
             renderPassDesc.attachmentCount = 4;
             renderPassDesc.attachmentHandles[0] = res.colorHandle.GetHandle();
-            renderPassDesc.attachments[0].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+            renderPassDesc.attachments[0].clearValue.color = {0.f, 0.f, 0.f, 1.f};
             renderPassDesc.attachments[0].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[0].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[1] = res.depthHandle.GetHandle();
-            renderPassDesc.attachments[1].clearValue.depthStencil = { 1.f, 0u };
+            renderPassDesc.attachments[1].clearValue.depthStencil = {1.f, 0u};
             renderPassDesc.attachments[1].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[1].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[3].stencilStoreOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[2] = res.resolveHandle.GetHandle();
-            renderPassDesc.attachments[2].clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+            renderPassDesc.attachments[2].clearValue.color = {0.f, 0.f, 0.f, 1.f};
             renderPassDesc.attachments[2].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[2].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachmentHandles[3] = res.depthResolveHandle.GetHandle();
-            renderPassDesc.attachments[3].clearValue.depthStencil = { 1.f, 0u };
+            renderPassDesc.attachments[3].clearValue.depthStencil = {1.f, 0u};
             renderPassDesc.attachments[3].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
             renderPassDesc.attachments[3].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
             renderPassDesc.attachments[3].stencilLoadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1165,7 +1298,7 @@ void TestSecondaryCommandList(DeviceBackendType backend)
 
             VertexBuffer vbo;
             vbo.bufferHandle = res.vertexBufferHandle.GetHandle();
-            cmdList2.BindVertexBuffers({ &vbo, 1 });
+            cmdList2.BindVertexBuffers({&vbo, 1});
             cmdList2.Draw(3, 1, 0, 0);
 
             cmdList2.EndRenderPass();
@@ -1232,7 +1365,7 @@ void TestSecondaryCommandList(DeviceBackendType backend)
         UTest::DestroyEngine(er);
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderCommandListTest
@@ -1303,7 +1436,7 @@ UNIT_TEST(SRC_RenderCommandList, SecondaryCommandListTestVulkan, testing::ext::T
 {
     TestSecondaryCommandList(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -1348,4 +1481,4 @@ UNIT_TEST(SRC_RenderCommandList, SecondaryCommandListTestOpenGL, testing::ext::T
 {
     TestSecondaryCommandList(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

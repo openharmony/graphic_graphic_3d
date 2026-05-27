@@ -44,7 +44,7 @@ extern "C" const uint64_t DOTFIELD_BIN_SIZE;
 
 CORE_BEGIN_NAMESPACE()
 #if defined(CORE_PLUGIN) && (CORE_PLUGIN == 1)
-IPluginRegister* gPluginRegistry { nullptr };
+IPluginRegister* gPluginRegistry{nullptr};
 IPluginRegister& GetPluginRegister()
 {
     return *gPluginRegistry;
@@ -53,7 +53,7 @@ IPluginRegister& GetPluginRegister()
 CORE_END_NAMESPACE()
 
 namespace {
-static constexpr RENDER_NS::IShaderManager::ShaderFilePathDesc SHADER_FILE_PATHS {
+static constexpr RENDER_NS::IShaderManager::ShaderFilePathDesc SHADER_FILE_PATHS{
     "dotfieldshaders://",
     "dotfieldshaderstates://",
     "dotfieldpipelinelayouts://",
@@ -88,7 +88,7 @@ constexpr string_view VID_PATH = "dotfieldrofs://vertexinputdeclarations/";
 constexpr string_view PID_PATH = "dotfieldrofs://pipelinelayouts/";
 constexpr string_view SHADER_STATE_PATH = "dotfieldrofs://shaderstates/";
 
-constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = { RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN };
+constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = {RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN};
 
 IComponentManager* IDotfieldComponentManagerInstance(IEcs&);
 ISystem* IDotfieldSystemInstance(IEcs&);
@@ -97,7 +97,7 @@ void IDotfieldComponentManagerDestroy(IComponentManager*);
 void IDotfieldSystemDestroy(ISystem*);
 
 constexpr RenderDataStoreTypeInfo RenderDataDefaultDotfieldTypeInfo = {
-    { RenderDataStoreTypeInfo::UID },
+    {RenderDataStoreTypeInfo::UID},
     RenderDataStoreDefaultDotfield::UID,
     RenderDataStoreDefaultDotfield::TYPE_NAME,
     RenderDataStoreDefaultDotfield::Create,
@@ -108,7 +108,7 @@ constexpr RenderDataStoreTypeInfo gRenderDataStores[] = {
 };
 
 constexpr RenderNodeTypeInfo RenderNodeDotfieldSimulationTypeInfo = {
-    { RenderNodeTypeInfo::UID },
+    {RenderNodeTypeInfo::UID},
     RenderNodeDotfieldSimulation::UID,
     RenderNodeDotfieldSimulation::TYPE_NAME,
     RenderNodeDotfieldSimulation::Create,
@@ -116,7 +116,7 @@ constexpr RenderNodeTypeInfo RenderNodeDotfieldSimulationTypeInfo = {
     RenderNodeDotfieldSimulation::BACKEND_FLAGS,
     RenderNodeDotfieldSimulation::CLASS_TYPE,
     // after
-    BASE_NS::Uid { "a25b27ea-a4ff-4b64-87c7-a7865cccfd92" },
+    BASE_NS::Uid{"a25b27ea-a4ff-4b64-87c7-a7865cccfd92"},
     // before
     {},
 };
@@ -126,14 +126,14 @@ constexpr RenderNodeTypeInfo gRenderNodes[] = {
 };
 
 constexpr ComponentManagerTypeInfo DotfieldComponentTypeInfo = {
-    { ComponentManagerTypeInfo::UID },
+    {ComponentManagerTypeInfo::UID},
     IDotfieldComponentManager::UID,
     GetName<IDotfieldComponentManager>().data(),
     IDotfieldComponentManagerInstance,
     IDotfieldComponentManagerDestroy,
 };
 
-constexpr ComponentManagerTypeInfo gComponentManagers[] = { DotfieldComponentTypeInfo };
+constexpr ComponentManagerTypeInfo gComponentManagers[] = {DotfieldComponentTypeInfo};
 
 constexpr Uid DotfieldSourceSystemRDeps[] = {
     ITransformComponentManager::UID,
@@ -142,7 +142,7 @@ constexpr Uid DotfieldSourceSystemRDeps[] = {
 
 constexpr SystemTypeInfo gSystems[] = {
     {
-        { SystemTypeInfo::UID },
+        {SystemTypeInfo::UID},
         IDotfieldSystem::UID,
         GetName<IDotfieldSystem>().data(),
         IDotfieldSystemInstance,
@@ -174,7 +174,7 @@ PluginToken Initialize(IRenderContext& context)
             renderDataStoreManager.Create(IRenderDataStorePod::UID, "DotfieldPodStore"));
         if (rsp) {
             struct {
-                Math::Vec4 texSizeInvTexSize { 2.f, 2.f, 1.f / 2.f, 1.f / 2.f };
+                Math::Vec4 texSizeInvTexSize{2.f, 2.f, 1.f / 2.f, 1.f / 2.f};
             } config;
             rsp->CreatePod("TexSizeConfig", "TexSizeShaderConfig", arrayviewU8(config));
         }
@@ -200,7 +200,8 @@ PluginToken InitializeEcs(IEcs&)
     return {};
 }
 
-void UninitializeEcs(PluginToken) {}
+void UninitializeEcs(PluginToken)
+{}
 
 static constexpr IRenderPlugin RENDER_PLUGIN(Initialize, Uninitialize);
 
@@ -247,15 +248,15 @@ void UnregisterInterfaces(PluginToken token)
     pluginRegistry.UnregisterTypeInfo(RENDER_PLUGIN);
 }
 
-} // namespace Dotfield
+}  // namespace Dotfield
 
 extern "C" {
-PLUGIN_DATA(DotfieldPlugin) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(DotfieldPlugin){
+    {CORE_NS::IPlugin::UID},
     "DotfieldPlugin",
-    { Dotfield::UID_DOTFIELD_PLUGIN, Dotfield::GetVersionInfo },
+    {Dotfield::UID_DOTFIELD_PLUGIN, Dotfield::GetVersionInfo},
     Dotfield::RegisterInterfaces,
     Dotfield::UnregisterInterfaces,
-    { Dotfield::PLUGIN_DEPENDENCIES },
+    {Dotfield::PLUGIN_DEPENDENCIES},
 };
 }

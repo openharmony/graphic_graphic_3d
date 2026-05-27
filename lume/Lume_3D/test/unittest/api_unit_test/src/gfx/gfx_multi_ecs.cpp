@@ -72,7 +72,7 @@ EntityReference LoadImage(IImageLoaderManager& imageManager, const string_view& 
 {
     auto result = imageManager.LoadImage(uri, 0);
     if (!result.success || !result.image) {
-        return EntityReference {};
+        return EntityReference{};
     }
     CORE_ASSERT(result.success);
     GpuImageDesc gpuImageDesc = gpuResourceMgr.CreateGpuImageDesc(result.image->GetImageDesc());
@@ -148,17 +148,21 @@ vector<GLTFResourceData> MultiEcsTest(
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 2.0f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -20.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(ecs,
+            Math::Vec3(0.0f, 2.0f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -20.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(ecs);
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
     }
-    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, { WIDTH, HEIGHT }, true, Math::DEG2RAD * 90.0f, 1.0f);
+    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, {WIDTH, HEIGHT}, true, Math::DEG2RAD * 90.0f, 1.0f);
 
     // render configuration component
     {
@@ -188,12 +192,12 @@ vector<GLTFResourceData> MultiEcsTest(
     Entity reflectionPlane;
     {
         nameManager->Create(reflectionPlaneMaterial);
-        nameManager->Set(reflectionPlaneMaterial, { { "ReflectionPlaneMaterial" } });
+        nameManager->Set(reflectionPlaneMaterial, {{"ReflectionPlaneMaterial"}});
         materialManager->Create(reflectionPlaneMaterial);
         reflectionPlane = meshUtil.GeneratePlane(ecs, "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
+            node->SetScale(Math::Vec3(10, 0.01f, 10));  // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(ecs, reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {
@@ -206,15 +210,19 @@ vector<GLTFResourceData> MultiEcsTest(
     }
     // Gltf model
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/BrainStem/glTF/BrainStem.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/MorphStressTest/MorphStressTest.glb", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/BrainStem/glTF/BrainStem.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/MorphStressTest/MorphStressTest.glb",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     const Math::Vec3 modelPositions[] = {
-        { 2.0f, 0.0f, -1.0f },
-        { -2.0f, 0.0f, -1.0f },
+        {2.0f, 0.0f, -1.0f},
+        {-2.0f, 0.0f, -1.0f},
     };
 
     // Load and import all gltf files.
@@ -245,7 +253,7 @@ vector<GLTFResourceData> MultiEcsTest(
             }
             outResourceRefs.push_back(gltfImportResult.data);
             ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-            Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
+            Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
             model->SetPosition(modelPositions[importedFileIndex]);
             model->SetRotation(rot);
 
@@ -292,7 +300,7 @@ vector<GLTFResourceData> MultiEcsTest(
     }
     return outResourceRefs;
 }
-} // namespace
+}  // namespace
 
 struct NodeContainer {
     string type;
@@ -312,8 +320,9 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
     auto& engine = res.GetEngine();
 
     // refs
-    IEcs::Ptr pEcs[] = { UTest::CreateAndInitializeDefaultEcs(res.GetEngine()),
-        UTest::CreateAndInitializeDefaultEcs(res.GetEngine()), UTest::CreateAndInitializeDefaultEcs(res.GetEngine()) };
+    IEcs::Ptr pEcs[] = {UTest::CreateAndInitializeDefaultEcs(res.GetEngine()),
+        UTest::CreateAndInitializeDefaultEcs(res.GetEngine()),
+        UTest::CreateAndInitializeDefaultEcs(res.GetEngine())};
     IEcs& renderEcs = *pEcs[1];
 
     // Keeps them alive
@@ -324,7 +333,7 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
     uint32_t numEcsForRender = 0;
     for (IEcs::Ptr ecs : pEcs) {
         string expectedRDSName = "";
-        if (ecs->GetId() != 0) { // 0 id isn't appended into the name
+        if (ecs->GetId() != 0) {  // 0 id isn't appended into the name
             // to_string returns fixed 21 char long string, so this is a hacky way to convert it to a full string.
             expectedRDSName = to_string(ecs->GetId()).c_str();
         }
@@ -335,9 +344,10 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
 
         auto rngs = gc.GetRenderNodeGraphs(*ecs);
         if (!rngs.empty()) {
-            vector<NodeContainer> expectedNodeTypes = { { "RenderNodeMorph", false },
-                { "RenderNodeWeatherSimulation", false }, { "RenderNodeDefaultLights", false },
-                { "RenderNodeCameraWeather", false } };
+            vector<NodeContainer> expectedNodeTypes = {{"RenderNodeMorph", false},
+                {"RenderNodeWeatherSimulation", false},
+                {"RenderNodeDefaultLights", false},
+                {"RenderNodeCameraWeather", false}};
 
             for (auto& rng : rngs) {
                 auto info = rc.GetRenderNodeGraphManager().GetInfo(rng);
@@ -350,7 +360,8 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
                 }
             }
 
-            uint32_t numNodesFound = std::count_if(expectedNodeTypes.begin(), expectedNodeTypes.end(),
+            uint32_t numNodesFound = std::count_if(expectedNodeTypes.begin(),
+                expectedNodeTypes.end(),
                 [](NodeContainer& container) { return container.found; });
             EXPECT_EQ(numNodesFound, expectedNodeTypes.size());
 
@@ -362,4 +373,4 @@ UNIT_TEST(API_GfxTest, MultiEcs, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

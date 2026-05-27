@@ -89,14 +89,13 @@
 #include <parameters.h>
 #include "param/sys_param.h"
 namespace OHOS::Render3D {
-static constexpr BASE_NS::Uid ENGINE_THREAD{ "2070e705-d061-40e4-bfb7-90fad2c280af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
 
 static bool GetOffscreenDFXEnabled()
 {
     // only read parameter upon restart of the process
     // avoid numerous IO load
-    static bool dfxEnabled =
-        std::atoi(system::GetParameter("sys.graphic3D.offscreenRenderDFX", "0").c_str()) == 1;
+    static bool dfxEnabled = std::atoi(system::GetParameter("sys.graphic3D.offscreenRenderDFX", "0").c_str()) == 1;
     return dfxEnabled;
 }
 
@@ -126,8 +125,7 @@ public:
     bool OnWindowChange(const WindowChangeInfo& windowChangeInfo) override
     {
         if (GetOffscreenDFXEnabled()) {
-            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %" PRIx64,
-                windowChangeInfo.producerSurfaceId);
+            WIDGET_LOGI("OffScreenScene::OnWindowChange with surfaceId %" PRIx64, windowChangeInfo.producerSurfaceId);
         }
         sceneAdapter_->OnWindowChange(windowChangeInfo);
         return true;
@@ -177,8 +175,8 @@ public:
 
         const auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
         auto camera = scene->CreateNode<SCENE_NS::ICamera>("/", SCENE_NS::ClassId::CameraNode)
-                            .Then(BASE_NS::move(deactivateCamera), engineQ)
-                            .GetResult();
+                          .Then(BASE_NS::move(deactivateCamera), engineQ)
+                          .GetResult();
         CHECK_NULL_RET_LOGE(camera, false);
 
         camera->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
@@ -203,10 +201,10 @@ public:
             return camera;
         }).GetResult();
 
-        auto &clearColor = p.clearColor_;
-        camera->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});   // RGBA
+        auto& clearColor = p.clearColor_;
+        camera->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});  // RGBA
 
-        uint32_t curBits = camera->PipelineFlags()->GetValue(); // enable camera clear
+        uint32_t curBits = camera->PipelineFlags()->GetValue();  // enable camera clear
         curBits |= static_cast<uint32_t>(SCENE_NS::CameraPipelineFlag::CLEAR_COLOR_BIT);
         camera->PipelineFlags()->SetValue(curBits);
         return true;
@@ -224,16 +222,16 @@ public:
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
         node->Rotation()->SetValue({p.rotation_.x, p.rotation_.y, p.rotation_.z, p.rotation_.w});
 
-        auto &clearColor = p.clearColor_;
-        cameraPtr_->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});   // RGBA
+        auto& clearColor = p.clearColor_;
+        cameraPtr_->ClearColor()->SetValue({clearColor.x, clearColor.y, clearColor.z, clearColor.w});  // RGBA
 
         if (GetOffscreenDFXEnabled()) {
             WIDGET_LOGI("OffScreenScene::SetCameraConfigs camera info: %{public}s", p.Dump().c_str());
         }
-        
+
         return true;
     }
-    
+
     bool LoadPluginByUid(const std::string& uid) override
     {
         // check input
@@ -254,7 +252,7 @@ public:
             }
             return ret;
         }).GetResult();
-        
+
         WIDGET_LOGI("load plugin by uid %s %s", uid.c_str(), ret ? "success" : "failed");
         // start initialize the scene
         sceneAdapter_->CreateEmptyScene();
@@ -307,12 +305,12 @@ private:
         auto sceneObj = sceneAdapter_->GetSceneObj();
         auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
         struct rr {
-        uint32_t id_ = 1;
+            uint32_t id_ = 1;
             // not actual tree, but map of entities, and their children.
             BASE_NS::unordered_map<CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>> tree;
             BASE_NS::vector<CORE_NS::Entity> roots;
-            CORE3D_NS::INodeComponentManager *cm;
-            CORE3D_NS::INameComponentManager *nm;
+            CORE3D_NS::INodeComponentManager* cm;
+            CORE3D_NS::INameComponentManager* nm;
             explicit rr(SCENE_NS::IScene::Ptr scene)
             {
                 CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
@@ -388,4 +386,4 @@ BASE_NS::shared_ptr<IOffScreenScene> GetOffscreenSceneInstance()
     return BASE_NS::make_shared<OffScreenScene>();
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

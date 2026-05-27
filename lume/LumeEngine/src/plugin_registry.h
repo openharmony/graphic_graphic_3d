@@ -16,7 +16,10 @@
 #ifndef CORE_PLUGIN_REGISTRY_H
 #define CORE_PLUGIN_REGISTRY_H
 
+#include <cstdint>
+
 #include <base/containers/array_view.h>
+#include <base/containers/string.h>
 #include <base/containers/unordered_map.h>
 #include <base/containers/vector.h>
 #include <core/plugin/intf_class_factory.h>
@@ -36,6 +39,13 @@
 #include "util/frustum_util.h"
 
 CORE_BEGIN_NAMESPACE()
+struct DynamicPluginInfo {
+    BASE_NS::string uri;
+    BASE_NS::Uid uid;
+    BASE_NS::vector<BASE_NS::Uid> dependencies;
+    uint64_t timestamp{0};
+};
+
 /**
     Registry for interfaces that are engine independent.
 */
@@ -101,7 +111,7 @@ protected:
 
     BASE_NS::vector<ITypeInfoListener*> typeInfoListeners_;
 
-    Logger logger_ { true };
+    Logger logger_{true};
     EngineFactory engineFactory_;
     SystemGraphLoaderFactory systemGraphLoadeFactory;
     FrustumUtil frustumUtil_;
@@ -109,13 +119,15 @@ protected:
 #if (CORE_PERF_ENABLED == 1)
     PerformanceDataManagerFactory perfManFactory_;
     BASE_NS::Uid perfTracePlugin_;
-    uint64_t perfLoggerId_ {};
+    uint64_t perfLoggerId_{};
 #endif
+    BASE_NS::vector<DynamicPluginInfo> dynamicPluginInfos_;
     BASE_NS::vector<InterfaceTypeInfo> ownInterfaceInfos_;
     FileManager fileManager_;
-    bool fileProtocolRegistered_ { false };
-    bool loading_ { false };
+    bool fileProtocolRegistered_{false};
+    bool dynamicPluginInfosDirty_{false};
+    uint32_t loadingDepth_{0};
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_PLUGIN_REGISTRY_H
+#endif  // CORE_PLUGIN_REGISTRY_H

@@ -18,6 +18,7 @@
 
 #include <ComponentTools/component_query.h>
 #include <limits>
+#include <util/light_probe_util.h>
 
 #include <3d/ecs/components/layer_defines.h>
 #include <3d/ecs/components/render_configuration_component.h>
@@ -33,7 +34,7 @@
 BASE_BEGIN_NAMESPACE()
 namespace Math {
 class Mat4X4;
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
@@ -53,6 +54,7 @@ class IEnvironmentComponentManager;
 class IFogComponentManager;
 class IGraphicsStateComponentManager;
 class IRenderHandleComponentManager;
+class IWeatherComponentManager;
 class INameComponentManager;
 class INodeComponentManager;
 class IRenderMeshComponentManager;
@@ -61,6 +63,7 @@ class IRenderConfigurationComponentManager;
 class ICameraComponentManager;
 class ILayerComponentManager;
 class ILightComponentManager;
+class ILightProbeGroupComponentManager;
 class IJointMatricesComponentManager;
 class ISkinComponentManager;
 class IMaterialComponentManager;
@@ -74,11 +77,12 @@ class IPostProcessEffectComponentManager;
 class IUriComponentManager;
 class IRenderDataStoreDefaultCamera;
 class IRenderDataStoreDefaultLight;
+class IRenderDataStoreLightProbe;
 class IRenderDataStoreDefaultMaterial;
 class IRenderDataStoreDefaultScene;
 
 class IRenderPreprocessorSystem;
-
+class ITransformComponentManager;
 class IMesh;
 class IMaterial;
 class IPicking;
@@ -136,22 +140,23 @@ public:
         CameraRenderNodeGraphs rngs;
         // multi-view post processes
         RENDER_NS::RenderHandleReference
-            multiviewPpHandles[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT] { {}, {}, {} };
+            multiviewPpHandles[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT]{{}, {}, {}};
     };
 
 private:
     struct LightProcessData {
-        const uint64_t layerMask { 0 };
-        uint32_t sceneId { 0U };
+        const uint64_t layerMask{0};
+        uint32_t sceneId{0U};
         const CORE_NS::Entity& entity;
         const LightComponent& lightComponent;
         const BASE_NS::Math::Mat4X4& world;
         RenderScene& renderScene;
         uint32_t& spotLightIndex;
     };
+
     struct SkinProcessData {
-        const JointMatricesComponent* const jointMatricesComponent { nullptr };
-        const PreviousJointMatricesComponent* const prevJointMatricesComponent { nullptr };
+        const JointMatricesComponent* const jointMatricesComponent{nullptr};
+        const PreviousJointMatricesComponent* const prevJointMatricesComponent{nullptr};
     };
     void OnComponentEvent(EventType type, const CORE_NS::IComponentManager& componentManager,
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
@@ -179,6 +184,7 @@ private:
     void EvaluateRenderDataStoreOutput();
 
     void ProcessRenderNodeGraphs(const RenderConfigurationComponent& renderConfig, const RenderScene& renderScene);
+    void ProcessLightProbeShRecalculate() noexcept;
     void DestroyRenderDataStores();
     CameraRngsOutput GetCameraRenderNodeGraphs(const RenderScene& renderScene, const RenderCamera& renderCamera);
     RENDER_NS::RenderHandleReference GetSceneRenderNodeGraph(const RenderScene& renderScene);
@@ -190,6 +196,10 @@ private:
 
     void HandleMaterialEvents() noexcept;
     void HandleMeshEvents() noexcept;
+    void HandleBuildTetrahedronEvents() noexcept;
+    void HandleLightProbeDestroyEvents() noexcept;
+    void HandleRecalculateCertainLightProbeShEvents() noexcept;
+
     void HandleGraphicsStateEvents() noexcept;
     void UpdateMaterialProperties();
     void UpdateSingleMaterial(CORE_NS::Entity matEntity, const MaterialComponent* materialHandle);
@@ -204,6 +214,7 @@ private:
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultLight> dsLight_;
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultMaterial> dsMaterial_;
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultScene> dsScene_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreLightProbe> dsLightProbe_;
     BASE_NS::refcnt_ptr<RENDER_NS::IRenderDataStoreRenderPostProcesses> dsRenderPostProcesses_;
     RENDER_NS::IShaderManager* shaderMgr_ = nullptr;
     RENDER_NS::IGpuResourceManager* gpuResourceMgr_ = nullptr;
@@ -222,6 +233,7 @@ private:
     IUriComponentManager* uriMgr_ = nullptr;
     INameComponentManager* nameMgr_ = nullptr;
     IEnvironmentComponentManager* environmentMgr_ = nullptr;
+    IWeatherComponentManager* weatherMgr_ = nullptr;
     IFogComponentManager* fogMgr_ = nullptr;
     IRenderHandleComponentManager* gpuHandleMgr_ = nullptr;
     ILayerComponentManager* layerMgr_ = nullptr;
@@ -236,6 +248,8 @@ private:
     IPostProcessEffectComponentManager* postProcessEffectMgr_ = nullptr;
 
     IGraphicsStateComponentManager* graphicsStateMgr_ = nullptr;
+    ILightProbeGroupComponentManager* lightProbeMgr_ = nullptr;
+    ITransformComponentManager* transformMgr_ = nullptr;
 
     uint32_t renderConfigurationGeneration_ = 0;
     uint32_t cameraGeneration_ = 0;
@@ -262,6 +276,11 @@ private:
     BASE_NS::vector<CORE_NS::Entity> meshModifiedEvents_;
     BASE_NS::vector<CORE_NS::Entity> meshDestroyedEvents_;
 
+    BASE_NS::vector<CORE_NS::Entity> buildTetrahedralEvents_;
+    BASE_NS::vector<CORE_NS::Entity> lightProbeDestroyedEvents_;
+    BASE_NS::vector<CORE_NS::Entity> recalculateCertainLightProbeShEvents_;
+    BASE_NS::vector<CORE_NS::Entity> updateEnvironmentLightProbeEvents_;
+
     IPicking* picking_ = nullptr;
 
     IGraphicsContext* graphicsContext_ = nullptr;
@@ -274,16 +293,17 @@ private:
     CORE_NS::ComponentQuery renderableQuery_;
     CORE_NS::ComponentQuery reflectionsQuery_;
     CORE_NS::ComponentQuery cameraQuery_;
-    uint32_t reflectionMaxMipBlur_ { 0U };
+    CORE_NS::ComponentQuery lightProbeSubMeshesQuery_;
+    uint32_t reflectionMaxMipBlur_{0U};
 
-    BASE_NS::Math::Vec3 sceneBoundingSpherePosition_ { 0.0f, 0.0f, 0.0f };
-    float sceneBoundingSphereRadius_ { 0.0f };
+    BASE_NS::Math::Vec3 sceneBoundingSpherePosition_{0.0f, 0.0f, 0.0f};
+    float sceneBoundingSphereRadius_{0.0f};
 
     CORE_NS::PropertyApiImpl<IRenderSystem::Properties> RENDER_SYSTEM_PROPERTIES;
 
-    uint64_t totalTime_ { 0u };
-    uint64_t deltaTime_ { 0u };
-    uint64_t frameIndex_ { 0u };
+    uint64_t totalTime_{0u};
+    uint64_t deltaTime_{0u};
+    uint64_t frameIndex_{0u};
 
     // additionally these could be stored to somewhere else
     // though this is ECS render system and the render node graphs are owned by ECS (RS)
@@ -291,18 +311,20 @@ private:
     struct RenderProcessing {
         struct AdditionalCameraContainer {
             CameraRenderNodeGraphs rngs;
-            RenderCamera::Flags flags { 0 };
-            RenderCamera::RenderPipelineType renderPipelineType { RenderCamera::RenderPipelineType::FORWARD };
-            uint64_t lastFrameIndex { 0 }; // frame when used
+            RenderCamera::Flags flags{0};
+            RenderCamera::Environment::EnvironmentFlags environmentFlags{0U};
+            RenderCamera::RenderPipelineType renderPipelineType{RenderCamera::RenderPipelineType::FORWARD};
+            uint64_t lastFrameIndex{0};  // frame when used
             BASE_NS::fixed_string<RENDER_NS::RenderDataConstants::MAX_DEFAULT_NAME_LENGTH> postProcessName;
             BASE_NS::string customRngFile;
             BASE_NS::string customPostProcessRngFile;
-            uint32_t multiViewCameraCount { 0U };
-            uint64_t multiViewCameraHash { 0U };
+            uint32_t multiViewCameraCount{0U};
+            uint64_t multiViewCameraHash{0U};
         };
         struct SceneRngContainer {
             BASE_NS::string customRngFile;
             BASE_NS::string customPostSceneRngFile;
+            RenderScene::Flags flags{0U};
 
             RENDER_NS::RenderHandleReference rng;
             RENDER_NS::RenderHandleReference customRng;
@@ -315,24 +337,24 @@ private:
         BASE_NS::unordered_map<uint64_t, AdditionalCameraContainer> camIdToRng;
 
         SceneRngContainer sceneRngs;
-        uint64_t sceneMainCamId { 0 };
+        uint64_t sceneMainCamId{0};
 
         // reset every frame (flags for rendering hints)
-        uint32_t frameFlags { 0u };
+        uint32_t frameFlags{0u};
 
         // store created pods
         BASE_NS::vector<BASE_NS::string> postProcessPods;
         // store created post process data stores
         BASE_NS::vector<BASE_NS::string> postProcessConfigs;
 
-        bool frameProcessed { false };
+        bool frameProcessed{false};
     };
     RenderProcessing renderProcessing_;
 
     struct CameraData {
         BASE_NS::Math::Mat4X4 view;
         BASE_NS::Math::Mat4X4 proj;
-        uint64_t lastFrameIndex { 0 }; // frame when used
+        uint64_t lastFrameIndex{0};  // frame when used
     };
     // store previous frame matrices
     BASE_NS::unordered_map<CORE_NS::Entity, CameraData> cameraData_;
@@ -348,4 +370,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ECS_RENDERSYSTEM_H
+#endif  // CORE_ECS_RENDERSYSTEM_H

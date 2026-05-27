@@ -26,7 +26,8 @@
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-RenderDataStorePod::RenderDataStorePod(const string_view name) : name_(name) {}
+RenderDataStorePod::RenderDataStorePod(const string_view name) : name_(name)
+{}
 
 void RenderDataStorePod::Ref()
 {
@@ -68,10 +69,14 @@ void RenderDataStorePod::CreatePod(
             }
 
             auto& typeNameRef = typeNameToPodNames_[tpName];
-            nameToDataOffset_[name] = { static_cast<uint32_t>(prevByteSize), static_cast<uint32_t>(srcData.size()) };
+            if (prevByteSize > UINT32_MAX || srcData.size() > UINT32_MAX) {
+                PLUGIN_LOG_E("RenderDataStorePod data exceeds uint32_t limit");
+                return;
+            }
+            nameToDataOffset_[name] = {static_cast<uint32_t>(prevByteSize), static_cast<uint32_t>(srcData.size())};
             typeNameRef.emplace_back(name);
         }
-    } // end of lock
+    }  // end of lock
 
     // already created, set data
     if (contains) {
@@ -93,7 +98,7 @@ void RenderDataStorePod::DestroyPod(const string_view typeName, const string_vie
         nameToDataOffset_.erase(iter);
         // move the index of pods after the destroyed pod by the size of the pod
         for (auto& nameToOffset : nameToDataOffset_) {
-            if (nameToOffset.second.index > offsetToData.index) {
+            if (nameToOffset.second.index >= offsetToData.index + offsetToData.byteSize) {
                 nameToOffset.second.index -= offsetToData.byteSize;
             }
         }
@@ -132,6 +137,10 @@ void RenderDataStorePod::Set(const string_view name, const array_view<const uint
     }
 }
 
+// WARNING: Returned view is only valid while no concurrent CreatePod/DestroyPod/Set occurs.
+// The view holds a raw pointer into internal storage that can be invalidated by concurrent
+// mutations (resize/erase). Callers MUST ensure no concurrent pod mutations during view lifetime,
+// or copy the data immediately after this call returns.
 array_view<const uint8_t> RenderDataStorePod::Get(const string_view name) const
 {
     const auto lock = std::lock_guard(mutex_);
@@ -149,13 +158,16 @@ array_view<const uint8_t> RenderDataStorePod::Get(const string_view name) const
     return view;
 }
 
+// WARNING: Returned view holds raw pointers into internal storage that can be invalidated
+// by concurrent CreatePod/DestroyPod. Callers MUST copy the data or ensure no concurrent
+// pod mutations during view lifetime.
 array_view<const string> RenderDataStorePod::GetPodNames(const string_view tpName) const
 {
     const auto lock = std::lock_guard(mutex_);
 
     const auto iter = typeNameToPodNames_.find(tpName);
     if (iter != typeNameToPodNames_.cend()) {
-        return { iter->second.data(), iter->second.size() };
+        return {iter->second.data(), iter->second.size()};
     } else {
         PLUGIN_LOG_I("render data store pod type (%s), not found", tpName.data());
         return {};

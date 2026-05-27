@@ -23,6 +23,7 @@
 #include <render/nodecontext/intf_render_node.h>
 #include <render/resource_handle.h>
 
+#include "render/datastore/render_data_store_weather.h"
 #include "render/render_node_scene_util.h"
 
 CORE_BEGIN_NAMESPACE()
@@ -47,8 +48,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "b42910bb-33c4-4790-a257-3f1837415fce" };
-    static constexpr const char* typeName = "RenderNodeDefaultCameras";
+    static constexpr BASE_NS::Uid UID{"b42910bb-33c4-4790-a257-3f1837415fce"};
+    static constexpr const char* TYPE_NAME = "RenderNodeDefaultCameras";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -56,15 +57,16 @@ public:
 
 private:
     struct JitterProjection {
-        BASE_NS::Math::Mat4X4 baseProj { BASE_NS::Math::IDENTITY_4X4 };
-        BASE_NS::Math::Mat4X4 proj { BASE_NS::Math::IDENTITY_4X4 };
-        BASE_NS::Math::Vec4 jitter { 0.0f, 0.0f, 0.0f, 0.0f };
+        BASE_NS::Math::Mat4X4 baseProj{BASE_NS::Math::IDENTITY_4X4};
+        BASE_NS::Math::Mat4X4 proj{BASE_NS::Math::IDENTITY_4X4};
+        BASE_NS::Math::Vec4 jitter{0.0f, 0.0f, 0.0f, 0.0f};
     };
 
     void AddCameras(const IRenderDataStoreDefaultCamera* dsCamera, const IRenderDataStoreDefaultLight* dsLight,
         const BASE_NS::array_view<const RenderCamera> cameras, uint8_t* const data, const uint32_t cameraOffset);
     void AddEnvironments(const IRenderDataStoreDefaultCamera* dsCamera,
-        const BASE_NS::array_view<const RenderCamera::Environment> environments, uint8_t* const data);
+        const BASE_NS::array_view<const RenderCamera::Environment> environments, uint8_t* const data,
+        const RenderDataStoreWeather::WeatherSettings& ws);
     // get projection matrix with possible jittering
     JitterProjection GetProjectionMatrix(const RenderCamera& camera, const bool prevFrame) const;
     BASE_NS::Math::Mat4X4 GetShadowBiasMatrix(
@@ -73,18 +75,19 @@ private:
         const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, uint32_t cameraCount);
     BASE_NS::Math::Mat4X4 ResolveViewMatrix(const RenderCamera& camera) const;
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
-    CORE_NS::IFrustumUtil* frustumUtil_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
+    CORE_NS::IFrustumUtil* frustumUtil_{nullptr};
 
     SceneRenderDataStores stores_;
+    BASE_NS::string dsWeatherName_;
 
     RENDER_NS::RenderHandleReference camHandle_;
     RENDER_NS::RenderHandleReference envHandle_;
-    uint32_t jitterIndex_ { 0U };
+    uint32_t jitterIndex_{0U};
 
     BASE_NS::vector<RenderCamera> cubemapCameras_;
     BASE_NS::vector<BASE_NS::Math::Mat4X4> cubemapMatrices_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_CAMERAS_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_CAMERAS_H

@@ -34,7 +34,7 @@ enum : uint32_t {
 };
 
 enum : uint32_t {
-    CPU_ARCH_ABI64 = 0x01000000, // 64 bit ABI
+    CPU_ARCH_ABI64 = 0x01000000,  // 64 bit ABI
 };
 
 // Constants for the cputype field.
@@ -159,4 +159,4 @@ enum : uint32_t {
 enum {
     REFERENCE_FLAG_DEFINED = 2,
 };
-#endif // LUME_MACO_H
+#endif  // LUME_MACO_H

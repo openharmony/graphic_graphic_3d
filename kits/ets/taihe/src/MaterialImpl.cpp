@@ -18,8 +18,7 @@
 namespace OHOS::Render3D::KITETS {
 MaterialImpl::MaterialImpl(const std::shared_ptr<MaterialETS> mat)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::MATERIAL, mat), materialETS_(mat)
-{
-}
+{}
 
 MaterialImpl::~MaterialImpl()
 {
@@ -201,8 +200,7 @@ void MaterialImpl::setAlphaCutoff(::taihe::optional_view<double> cutoff)
         return std::nullopt;
     }
     MaterialETS::RenderSort innerRenderSort = materialETS_->GetRenderSort();
-    ::SceneResources::RenderSort renderSort{
-        ::taihe::optional<int32_t>(std::in_place, innerRenderSort.renderSortLayer),
+    ::SceneResources::RenderSort renderSort{::taihe::optional<int32_t>(std::in_place, innerRenderSort.renderSortLayer),
         ::taihe::optional<int32_t>(std::in_place, innerRenderSort.renderSortLayerOrder)};
     return ::taihe::optional<::SceneResources::RenderSort>(std::in_place, std::move(renderSort));
 }

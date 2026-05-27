@@ -23,7 +23,7 @@
 CORE3D_BEGIN_NAMESPACE()
 class IWeatherSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "12345678-4ebc-2d3d-b93d-3cef38fc5045" };
+    static constexpr BASE_NS::Uid UID{"12345678-4ebc-2d3d-b93d-3cef38fc5045"};
 
 protected:
     IWeatherSystem() = default;
@@ -39,4 +39,4 @@ inline constexpr const char* GetName(const IWeatherSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_IWEATHER_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_IWEATHER_SYSTEM_H

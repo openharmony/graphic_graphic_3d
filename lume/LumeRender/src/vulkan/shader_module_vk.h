@@ -29,7 +29,7 @@ class Device;
 struct ShaderModuleCreateInfo;
 
 struct ShaderModulePlatformDataVk : ShaderModulePlatformData {
-    VkShaderModule shaderModule { VK_NULL_HANDLE };
+    VkShaderModule shaderModule{VK_NULL_HANDLE};
 };
 
 class ShaderModuleVk final : public ShaderModule {
@@ -50,7 +50,7 @@ public:
 private:
     Device& device_;
 
-    ShaderStageFlags shaderStageFlags_ { 0u };
+    ShaderStageFlags shaderStageFlags_{0u};
     ShaderModulePlatformDataVk plat_;
 
     BASE_NS::vector<VertexInputDeclaration::VertexInputBindingDescription> vertexInputBindingDescriptions_;
@@ -64,4 +64,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_SHADER_MODULE_VK_H
+#endif  // VULKAN_SHADER_MODULE_VK_H

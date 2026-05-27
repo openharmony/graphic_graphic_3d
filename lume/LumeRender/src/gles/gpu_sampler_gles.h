@@ -26,7 +26,7 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 class DeviceGLES;
 struct GpuSamplerPlatformDataGL final : public GpuSamplerPlatformData {
-    uint32_t sampler { 0 };
+    uint32_t sampler{0};
 };
 
 struct GpuSamplerDesc;
@@ -47,4 +47,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_GPU_SAMPLER_GLES_H
+#endif  // GLES_GPU_SAMPLER_GLES_H
