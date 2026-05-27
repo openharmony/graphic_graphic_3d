@@ -50,7 +50,7 @@ int32_t PCFConfigETS::GetCount()
 
 void PCFConfigETS::SetCount(int32_t shadowSampleCount)
 {
-    if (!std::isfinite(shadowSampleCount) || shadowSampleCount < 0.0f) {
+    if (shadowSampleCount < 0) {
         CORE_LOG_E("Invalid shadow sample count given");
         return;
     }
@@ -72,7 +72,7 @@ float PCFConfigETS::GetRadius()
 
 void PCFConfigETS::SetRadius(float shadowSampleRadius)
 {
-    if (shadowSampleRadius < 0) {
+    if (!std::isfinite(shadowSampleRadius) || shadowSampleRadius < 0.0f) {
         CORE_LOG_E("Invalid shadow sample radius given");
         return;
     }

@@ -37,18 +37,37 @@ napi_value Getter(napi_env env, napi_callback_info info)
     return fc.GetUndefined();
 }
 
-template<typename Class, typename Type, void (Class::*F)(NapiApi::FunctionContext<Type>&)>
-inline napi_value Setter(napi_env env, napi_callback_info info)
+template <typename Class, typename ValueType, void (Class::*SetDefaultFunc)(), void (Class::*SetValueFunc)(ValueType)>
+napi_value GenericSetter(napi_env env, napi_callback_info info)
 {
-    NapiApi::FunctionContext<Type> fc(env, info);
-    if (fc && fc.This()) {
-        auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), Class::TYPE_TAG);
-        if (impl) {
-            (impl->*F)(fc);
+    napi_value undefined = nullptr;
+    napi_get_undefined(env, &undefined);
+    size_t argc = 1;
+    napi_value args[1] = { nullptr };
+    napi_value jsThis = nullptr;
+    napi_get_cb_info(env, info, &argc, args, &jsThis, nullptr);
+    Class* impl = nullptr;
+    napi_unwrap(env, jsThis, reinterpret_cast<void**>(&impl));
+    if (!impl || argc != 1) {
+        return undefined;
+    }
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType == napi_undefined || valueType == napi_null) {
+        (impl->*SetDefaultFunc)();
+    } else if (valueType == napi_number) {
+        if constexpr (std::is_same_v<ValueType, float>) {
+            double value;
+            napi_get_value_double(env, args[0], &value);
+            (impl->*SetValueFunc)(static_cast<float>(value));
+        } else if constexpr (std::is_same_v<ValueType, int32_t>) {
+            int32_t value;
+            napi_get_value_int32(env, args[0], &value);
+            (impl->*SetValueFunc)(value);
         }
     }
-    return fc.GetUndefined();
-};
+    return undefined;
+}
 
 class SoftShadowConfigJS {
 public:

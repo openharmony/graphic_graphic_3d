@@ -76,9 +76,11 @@ NapiApi::StrongRef PCFConfigJS::Wrap(NapiApi::Object obj)
         { "shadowAlgorithmType", nullptr, nullptr, Getter<PCFConfigJS, &PCFConfigJS::GetType>,
             nullptr, nullptr, napi_default, this },
         { "shadowSampleRadius", nullptr, nullptr, Getter<PCFConfigJS, &PCFConfigJS::GetRadius>,
-            Setter<PCFConfigJS, float, &PCFConfigJS::SetRadius>, nullptr, napi_default, this },
+            GenericSetter<PCFConfigJS, float, &PCFConfigJS::SetDefaultShadowSampleRadius, &PCFConfigJS::SetRadius>,
+            nullptr, napi_default, this },
         { "shadowSampleCount", nullptr, nullptr, Getter<PCFConfigJS, &PCFConfigJS::GetCount>,
-            Setter<PCFConfigJS, int32_t, &PCFConfigJS::SetCount>, nullptr, napi_default, this },
+            GenericSetter<PCFConfigJS, int32_t, &PCFConfigJS::SetDefaultShadowSampleCount, &PCFConfigJS::SetCount>,
+            nullptr, napi_default, this },
     };
     // clang-format on
     napi_define_properties(obj.GetEnv(), obj.ToNapiValue(), sizeof(methods) / sizeof(methods[0]), methods);
@@ -98,23 +100,25 @@ napi_value PCFConfigJS::GetRadius(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(radius_);
 }
 
-void PCFConfigJS::SetRadius(NapiApi::FunctionContext<float>& ctx)
+void PCFConfigJS::SetDefaultShadowSampleRadius()
 {
     auto rc = GetRenderConfiguration();
     if (!rc) {
         LOG_E("no rc return it");
         return;
     }
+    LOG_E("Undefined shadow sample radius given, lume engine back to default value, js value as undefined.");
+    rc->VariablePcfRadius()->SetValue(DEFAULT_RADIUS);
+    isRadiusUndefined_ = true;
+}
 
-    auto arg0 = ctx.Arg<0>();
-    if (arg0.IsUndefinedOrNull()) {
-        LOG_E("Undefined shadow sample radius given, lume engine back to default value, js value as undefined.");
-        rc->VariablePcfRadius()->SetValue(DEFAULT_RADIUS);
-        isRadiusUndefined_ = true;
+void PCFConfigJS::SetRadius(float radius)
+{
+    auto rc = GetRenderConfiguration();
+    if (!rc) {
+        LOG_E("no rc return it");
         return;
     }
-
-    float radius = arg0.valueOrDefault();
     if (!std::isfinite(radius) || radius < 0.0f) {
         LOG_E("Invalid shadow sample radius given, return it.");
         return;
@@ -133,23 +137,25 @@ napi_value PCFConfigJS::GetCount(NapiApi::FunctionContext<>& ctx)
     return ctx.GetNumber(count_);
 }
 
-void PCFConfigJS::SetCount(NapiApi::FunctionContext<int32_t>& ctx)
+void PCFConfigJS::SetDefaultShadowSampleCount()
 {
     auto rc = GetRenderConfiguration();
     if (!rc) {
         LOG_E("no rc return it");
         return;
     }
+    LOG_E("Undefined shadow sample count given, lume engine back to default value, js value as undefined.");
+    rc->VariablePcfSampleCount()->SetValue(DEFAULT_COUNT);
+    isCountUndefined_ = true;
+}
 
-    auto arg0 = ctx.Arg<0>();
-    if (arg0.IsUndefinedOrNull()) {
-        LOG_E("Undefined shadow sample count given, lume engine back to default value, js value as undefined.");
-        rc->VariablePcfSampleCount()->SetValue(DEFAULT_COUNT);
-        isCountUndefined_ = true;
+void PCFConfigJS::SetCount(int32_t count)
+{
+    auto rc = GetRenderConfiguration();
+    if (!rc) {
+        LOG_E("no rc return it");
         return;
     }
-
-    int32_t count = arg0.valueOrDefault();
     if (count < 0) {
         LOG_E("Invalid shadow sample count given, return it.");
         return;
