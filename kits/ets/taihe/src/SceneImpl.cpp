@@ -29,7 +29,17 @@ namespace OHOS::Render3D::KITETS {
 SceneImpl::SceneImpl(const std::string &uriStr)
 {
     sceneETS_ = std::make_shared<SceneETS>();
-    if (!sceneETS_->Load(uriStr)) {
+    SceneETS::SceneLoadParams sceneLoadParams;
+    if (!sceneETS_->Load(uriStr, sceneLoadParams)) {
+        WIDGET_LOGE("ohos_lume loadScene fail");
+    }
+}
+
+SceneImpl::SceneImpl(const std::string &uriStr, ::SceneTH::SceneLoadParams params)
+{
+    sceneETS_ = std::make_shared<SceneETS>();
+    SceneETS::SceneLoadParams sceneLoadParams = ExtractSceneLoadParams(params);
+    if (!sceneETS_->Load(uriStr, sceneLoadParams)) {
         WIDGET_LOGE("ohos_lume loadScene fail");
     }
 }
@@ -124,6 +134,41 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
         uriStr = "scene://empty";
     }
     ::SceneTH::Scene scene = taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr);
+    return scene;
+}
+
+::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams params)
+{
+    double val = 0.0;
+    if (params.offset) {
+        val = params.offset.value();
+    }
+
+    std::string uriStr;
+    if (val < 0.0) {
+        WIDGET_LOGE("offset must not be negative");
+        uriStr.insert(0, "file://");
+        return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
+    }
+
+    if (val != static_cast<double>(static_cast<uint64_t>(val))) {
+        WIDGET_LOGE("offset must be an integer, got a float");
+        uriStr.insert(0, "file://");
+        return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
+    }
+
+    if (val > static_cast<double>(SIZE_MAX)) {
+        WIDGET_LOGE("offset exceeds uint32 range");
+        uriStr.insert(0, "file://");
+        return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
+    }
+
+    uriStr = ExtractUri(uri);
+    if (uriStr.empty()) {
+        uriStr = "scene://empty";
+    }
+
+    ::SceneTH::Scene scene = taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
     return scene;
 }
 
@@ -440,6 +485,7 @@ using namespace OHOS::Render3D::KITETS;
 // NOLINTBEGIN
 TH_EXPORT_CPP_API_getDefaultRenderContext(getDefaultRenderContext);
 TH_EXPORT_CPP_API_loadScene(loadScene);
+TH_EXPORT_CPP_API_loadSceneWithLoadParams(loadSceneWithLoadParams);
 TH_EXPORT_CPP_API_sceneTransferStaticImpl(sceneTransferStaticImpl);
 TH_EXPORT_CPP_API_sceneTransferDynamicImpl(sceneTransferDynamicImpl);
 TH_EXPORT_CPP_API_CreatePCFConfig(CreatePCFConfig);

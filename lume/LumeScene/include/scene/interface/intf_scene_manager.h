@@ -29,6 +29,7 @@ public:
     virtual Future<IScene::Ptr> CreateScene() = 0;
     virtual Future<IScene::Ptr> CreateScene(SceneOptions) = 0;
     virtual Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri) = 0;
+    virtual Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, size_t offset) = 0;
     virtual Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, SceneOptions) = 0;
 
     virtual IRenderContext::Ptr GetContext() const = 0;

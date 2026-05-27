@@ -95,6 +95,10 @@ struct RaycastParameters {
     rootNode: Optional<Node>;
 }
 
+struct SceneLoadParams {
+    offset: Optional<i64>;
+}
+
 interface RenderResourceFactory {
     @gen_promise("createShader")
     createShaderSync(params: SceneResourceParameters): Shader;
@@ -113,6 +117,9 @@ interface RenderResourceFactory {
 
     @gen_promise("createScene")
     createSceneSync(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
+
+    @gen_promise("createScene")
+    createSceneSyncWithLoadParams(uri: @sts_type("ResourceStr") Opaque, params: SceneLoadParams): Scene;
 }
 
 struct CameraParameters {
@@ -289,3 +296,7 @@ function getDefaultRenderContext(): RenderContextOrNull;
 @static("Scene")
 @gen_promise("load")
 function loadScene(uri: Optional<@sts_type("ResourceStr") Opaque>): Scene;
+
+@static("Scene")
+@gen_promise("load")
+function loadSceneWithLoadParams(uri: @sts_type("ResourceStr") Opaque, params: SceneLoadParams): Scene;

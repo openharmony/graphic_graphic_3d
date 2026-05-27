@@ -52,11 +52,15 @@ public:
         bool alwaysRender_ = true;
     };
 
+    struct SceneLoadParams {
+        size_t offset = 0;
+    };
+
 public:
     SceneETS();
     SceneETS(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
     ~SceneETS();
-    bool Load(std::string uri);
+    bool Load(std::string uri, SceneLoadParams sceneLoadParams);
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> *GetSceneAdapter()
     {
         return &sceneAdapter_;

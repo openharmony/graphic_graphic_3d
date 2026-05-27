@@ -72,6 +72,11 @@ public:
         // as the parameters in the constructor of the actual implementation class.
         return SceneTH::loadScene(uri);
     }
+
+    ::SceneTH::Scene createSceneSyncWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams param)
+    {
+        return SceneTH::loadSceneWithLoadParams(uri, param);
+    }
 };
 } // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_RENDER_RESOURCE_FACTORY_IMPL_H

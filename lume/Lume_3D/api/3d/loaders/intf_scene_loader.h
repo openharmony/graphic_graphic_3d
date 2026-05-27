@@ -277,6 +277,15 @@ public:
      */
     virtual Result Load(BASE_NS::string_view uri) = 0;
 
+    /** Load scene data from URI with offset.
+     * @param uri URI pointing to the scene data.
+     * @param offset Byte offset to start loading from.
+     * @return If the scene data could be parsed LoadResult::result will be zero and LoadResult::data is valid. If
+     * parsing fails LoadResult::result will be a non-zero, loader specific error code and LoadResult::error will give
+     * more details on the failure.
+     */
+    virtual Result Load(BASE_NS::string_view uri, size_t offset) = 0;
+
     /** Create an importer that builds 3D resources and scenes from loaded scene data.
      *  The importer will create a thread pool where import task are executed.
      * @param ecs ECS that contains all required subsystems that are needed for resource creation.

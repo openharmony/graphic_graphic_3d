@@ -110,9 +110,13 @@ AniObjectType HandleAniObject(ani_object obj, ani_env *env = nullptr);
 
 std::string ResourceToString(ani_object ani_obj, ani_env *env = nullptr);
 
+std::string ExtractUri(uintptr_t uri, ani_env *env = nullptr);
+
 std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env = nullptr);
 
 SceneETS::RenderParameters ExtractRenderParameters(::taihe::optional_view<::SceneTH::RenderParameters> params);
+
+SceneETS::SceneLoadParams ExtractSceneLoadParams(::SceneTH::SceneLoadParams params);
 
 template <typename F, typename T>
 inline BASE_NS::vector<T> ArrayToVector(const taihe::array<F> &arry, const std::function<T(const F &)> &conv)

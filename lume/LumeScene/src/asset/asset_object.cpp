@@ -190,15 +190,15 @@ void UpdateAnimationTrackTargets(
 }
 } // namespace
 
-bool AssetObject::Load(
-    const IScene::Ptr& sc, BASE_NS::string_view uri, bool createResources, const CORE_NS::ResourceId& rid)
+bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool createResources,
+    const CORE_NS::ResourceId& rid, size_t offset)
 {
     auto scene = sc->GetInternalScene();
     auto& ecs = scene->GetEcsContext();
     graphicsContext_ = &scene->GetGraphicsContext();
 
     auto& gltf = graphicsContext_->GetGltf();
-    auto gltfLoadResult = gltf.LoadGLTF(uri);
+    auto gltfLoadResult = gltf.LoadGLTF(uri, offset);
     if (!gltfLoadResult.success) {
         CORE_LOG_E("Loaded '%s' with errors:\n%s", BASE_NS::string(uri).c_str(), gltfLoadResult.error.c_str());
     }

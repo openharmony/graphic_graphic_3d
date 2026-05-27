@@ -42,9 +42,9 @@ Gltf2::Gltf2(IGraphicsContext& graphicsContext)
 Gltf2::Gltf2(IFileManager& fileManager) : fileManager_(fileManager) {}
 
 // Internal helper.
-GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
+GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
 {
-    auto loadResult = GLTF2::LoadGLTF(fileManager, uri);
+    auto loadResult = GLTF2::LoadGLTF(fileManager, uri, offset);
     GLTFLoadResult result;
     result.error = move(loadResult.error);
     result.success = loadResult.success;
@@ -53,10 +53,20 @@ GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
     return result;
 }
 
+GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
+{
+    return LoadGLTF(fileManager, uri, 0);
+}
+
 // Api loading function.
 GLTFLoadResult Gltf2::LoadGLTF(const string_view uri)
 {
     return CORE3D_NS::LoadGLTF(fileManager_, uri);
+}
+
+GLTFLoadResult Gltf2::LoadGLTF(const string_view uri, size_t offset)
+{
+    return CORE3D_NS::LoadGLTF(fileManager_, uri, offset);
 }
 
 GLTFLoadResult Gltf2::LoadGLTF(array_view<uint8_t const> data)
@@ -121,8 +131,13 @@ IGLTF2Importer::Ptr Gltf2::CreateGLTF2Importer(IEcs& ecs, IThreadPool& pool)
 
 ISceneLoader::Result Gltf2::Load(string_view uri)
 {
+    return Load(uri, 0);
+}
+
+ISceneLoader::Result Gltf2::Load(string_view uri, size_t offset)
+{
     ISceneLoader::Result sceneResult;
-    auto loadResult = GLTF2::LoadGLTF(fileManager_, uri);
+    auto loadResult = GLTF2::LoadGLTF(fileManager_, uri, offset);
     sceneResult.error = loadResult.success ? 0 : 1;
     sceneResult.message = BASE_NS::move(loadResult.error);
     sceneResult.data.reset(new GLTF2::SceneData(BASE_NS::move(loadResult.data)));
@@ -149,7 +164,7 @@ ISceneImporter::Ptr Gltf2::CreateSceneImporter(IEcs& ecs, IThreadPool& pool)
 
 array_view<const string_view> Gltf2::GetSupportedExtensions() const
 {
-    static constexpr string_view extensions[] = { "gltf", "glb" };
+    static constexpr string_view extensions[] = { "gltf", "glb", "mp4" };
     return extensions;
 }
 

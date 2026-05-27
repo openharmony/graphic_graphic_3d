@@ -31,6 +31,8 @@ struct SceneOptions {
     bool createResources { true };
     /// Resource id if this is loaded via resource manager
     CORE_NS::ResourceId resourceId;
+    /// Offset for loading glb from mp4 container
+    size_t dataOffset { 0 };
 };
 
 SCENE_END_NAMESPACE()
