@@ -44,9 +44,13 @@ private:
 
     napi_value GetType(NapiApi::FunctionContext<>& ctx);
     napi_value GetRadius(NapiApi::FunctionContext<>& ctx);
-    void SetRadius(NapiApi::FunctionContext<float>& ctx);
     napi_value GetCount(NapiApi::FunctionContext<>& ctx);
-    void SetCount(NapiApi::FunctionContext<int32_t>& ctx);
+
+    void SetDefaultShadowSampleCount();
+    void SetDefaultShadowSampleRadius();
+
+    void SetRadius(float radius);
+    void SetCount(int32_t count);
 };
 
 } // namespace ShadowConfiguration
