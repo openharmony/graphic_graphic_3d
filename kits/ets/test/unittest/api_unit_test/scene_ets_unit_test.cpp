@@ -33,7 +33,8 @@ class SceneETSUnitTest : public EtsTest {
 HWTEST_F(SceneETSUnitTest, SceneETS_Load_001, TestSize.Level1)
 {
     auto sceneETS = std::make_shared<SceneETS>();
-    bool result = sceneETS->Load("");
+    SceneLoadParams param;
+    bool result = sceneETS->Load("", param);
     EXPECT_TRUE(result);
     sceneETS->Destroy();
 }

@@ -45,6 +45,7 @@ struct LoadResult {
     BASE_NS::unique_ptr<Data> data;
 };
 LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri);
+LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, BASE_NS::string_view uri, size_t offset);
 LoadResult LoadGLTF(CORE_NS::IFileManager& fileManager, const BASE_NS::array_view<uint8_t const> data);
 } // namespace GLTF2
 CORE3D_END_NAMESPACE()

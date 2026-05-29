@@ -45,6 +45,8 @@ private:
 public:
     explicit SceneImpl(const std::string &uriStr);
 
+    SceneImpl(const std::string &uriStr, ::SceneTH::SceneLoadParams params);
+
     SceneImpl(SCENE_NS::IScene::Ptr scene, std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter);
 
     ~SceneImpl();
@@ -100,6 +102,8 @@ public:
 ::SceneTH::RenderContextOrNull getDefaultRenderContext();
 
 ::SceneTH::Scene loadScene(::taihe::optional_view<uintptr_t> uri);
+
+::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams params);
 
 ::SceneTH::Scene sceneTransferStaticImpl(uintptr_t input);
 

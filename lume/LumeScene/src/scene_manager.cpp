@@ -104,12 +104,12 @@ Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
     });
 }
 
-static IScene::Ptr Load(
-    const IScene::Ptr& scene, BASE_NS::string_view uri, bool createResources, const CORE_NS::ResourceId& rid)
+static IScene::Ptr Load(const IScene::Ptr& scene, BASE_NS::string_view uri, bool createResources,
+    const CORE_NS::ResourceId& rid, size_t offset)
 {
     CORE_LOG_I("Loading scene: '%s'", BASE_NS::string(uri).c_str());
     if (auto assets = META_NS::GetObjectRegistry().Create<IAssetObject>(ClassId::AssetObject)) {
-        if (assets->Load(scene, uri, createResources, rid)) {
+        if (assets->Load(scene, uri, createResources, rid, offset)) {
             if (auto att = interface_cast<META_NS::IAttach>(scene)) {
                 att->Attach(assets);
             }
@@ -124,6 +124,12 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri)
     return CreateScene(uri, opts_);
 }
 
+Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, size_t offset)
+{
+    opts_.dataOffset = offset;
+    return CreateScene(uri, opts_);
+}
+
 Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOptions opts)
 {
     if (uri == "" || uri == "scene://empty") {
@@ -134,14 +140,16 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     }
     bool createRes = opts.createResources;
     CORE_NS::ResourceId rid = opts.resourceId;
+    size_t offset = opts.dataOffset;
     return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri), renderContext = context_,
-                                              args = CreateContext(BASE_NS::move(opts)), createRes, rid] {
+                                              args = CreateContext(BASE_NS::move(opts)), createRes, rid, offset] {
         IScene::Ptr result;
         const auto pathLowerCase = path.toLower();
-        if (pathLowerCase.ends_with(".gltf") || pathLowerCase.ends_with(".glb")) {
-            // Try loading a scene from a glTF file
+        if (pathLowerCase.ends_with(".gltf") || pathLowerCase.ends_with(".glb") || pathLowerCase.ends_with(".mp4")) {
             result = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, args);
-            Load(result, path, createRes, rid);
+            if (result) {
+                result = Load(result, path, createRes, rid, offset);
+            }
         } else {
             // Try loading as an editor scene with resources
             if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {

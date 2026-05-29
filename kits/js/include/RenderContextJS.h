@@ -31,6 +31,10 @@
 
 struct GlobalResources;
 
+struct SceneLoadParams {
+    size_t offset = 0;
+};
+
 class RenderResources {
 public:
     RenderResources(napi_env env);
@@ -91,6 +95,8 @@ public:
     napi_value RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx);
 
 private:
+    napi_value CreateSceneCommon(napi_env env, BASE_NS::string uri, const SceneLoadParams& params);
+
     CORE_NS::Mutex mutex_;
     napi_env env_;
     SCENE_NS::IRenderResourceManager::Ptr renderManager_;

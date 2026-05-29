@@ -3018,7 +3018,7 @@ bool ReadJsonChunk(LoadResult& loadResult, IFile& file, const uint64_t headerLen
     return true;
 }
 
-bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength)
+bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength, size_t offset)
 {
     constexpr uint64_t glbDataOffsetPrefix = sizeof(GLBHeader) + (2u * sizeof(GLBChunk));
     const uint64_t dataOffset = glbDataOffsetPrefix + chunkJsonLength;
@@ -3026,8 +3026,13 @@ bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const ui
         dataOffset > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: data part offset is out of file");
     }
-    loadResult.data->defaultResourcesOffset = static_cast<int32_t>(dataOffset);
+    loadResult.data->defaultResourcesOffset = static_cast<int32_t>(dataOffset) + offset;
     return true;
+}
+
+bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength)
+{
+    return SetDataOffset(loadResult, headerLength, chunkJsonLength, 0);
 }
 
 bool ReadJsonChunkData(LoadResult& loadResult, IFile& file, const uint32_t chunkLength, string& jsonString)
@@ -3063,7 +3068,7 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
     ParseGLTF(loadResult, jsonObject);
 }
 
-bool LoadGLB(LoadResult& loadResult, IFile& file)
+bool LoadGLB(LoadResult& loadResult, IFile& file, size_t offset)
 {
     GLBHeader header;
     if (!ReadGLBHeader(loadResult, file, header)) {
@@ -3077,7 +3082,7 @@ bool LoadGLB(LoadResult& loadResult, IFile& file)
         return false;
     }
 
-    if (!SetDataOffset(loadResult, headerLength, static_cast<uint64_t>(chunkJson.chunkLength))) {
+    if (!SetDataOffset(loadResult, headerLength, static_cast<uint64_t>(chunkJson.chunkLength), offset)) {
         return false;
     }
 
@@ -3096,7 +3101,7 @@ bool LoadGLB(LoadResult& loadResult, IFile& file)
 } // namespace
 
 // Internal loading function.
-LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
+LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
 {
     LoadResult result;
 
@@ -3108,11 +3113,19 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
         return LoadResult("Failed to open file.");
     }
 
-    const uint64_t fileLength = file->GetLength();
-    if (fileLength > SIZE_MAX) {
+    const size_t fileTotalLength = static_cast<size_t>(file->GetLength());
+
+    if (fileTotalLength > SIZE_MAX) {
         PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
         return LoadResult("Failed to open file, file size larger than SIZE_MAX");
     }
+
+    if (offset > fileTotalLength) {
+        PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
+        return LoadResult("offset exceeds data length");
+    }
+
+    const size_t fileLength = fileTotalLength - offset;
 
     string_view baseName;
     string_view path;
@@ -3129,16 +3142,27 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
 
     string extension(extensionView.size(), '\0');
     std::transform(extensionView.begin(), extensionView.end(), extension.begin(),
-        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    if (offset != 0) {
+        file->Seek(offset);
+    }
 
     if (extension == "gltf" || extension == "glt") {
         LoadGLTF(result, *file);
     } else if (extension == "glb") {
-        LoadGLB(result, *file);
+        LoadGLB(result, *file, 0);
+    } else if (extension == "mp4") {
+        LoadGLB(result, *file, offset);
     } else {
-        LoadGLB(result, *file);
+        LoadGLB(result, *file, 0);
     }
     return result;
+}
+
+LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri)
+{
+    return LoadGLTF(fileManager, uri, 0);
 }
 
 LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)

@@ -194,7 +194,7 @@ BASE_NS::string_view SceneETS::ExtractPathToProject(BASE_NS::string_view uri)
     return uri.substr(0, secondToLastSlashPos);
 }
 
-bool SceneETS::Load(std::string uri)
+bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
 {
     if (uri.empty()) {
         uri = "scene://empty";
@@ -256,7 +256,7 @@ bool SceneETS::Load(std::string uri)
     auto params = interface_pointer_cast<META_NS::IMetadata>(META_NS::GetObjectRegistry().GetDefaultObjectContext());
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
 
-    sceneManager->CreateScene(uri.c_str())
+    sceneManager->CreateScene(uri.c_str(), sceneLoadParams.offset)
         .Then(BASE_NS::move(engineThreadTask), engineQ)
         .Wait();
 

@@ -289,7 +289,7 @@ std::string ResourceToString(ani_object ani_obj, ani_env *env)
     return resourceStr;
 }
 
-std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env)
+std::string ExtractUri(uintptr_t uri, ani_env *env)
 {
     std::string uriStr;
     if (!uri) {
@@ -299,9 +299,9 @@ std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env)
     if (env == nullptr) {
         env = taihe::get_env();
     }
-    if (IsString(*uri, env)) {
+    if (IsString(uri, env)) {
         // actually not supported anymore.
-        uriStr = ToStdString(reinterpret_cast<ani_string>(*uri), env);
+        uriStr = ToStdString(reinterpret_cast<ani_string>(uri), env);
         WIDGET_LOGD("uri is string, %{public}s", uriStr.c_str());
         // check if there is a protocol
         auto t = uriStr.find("://");
@@ -314,12 +314,21 @@ std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env)
 
     WIDGET_LOGD("uri is resource");
     // rawfile
-    uriStr = ResourceToString(reinterpret_cast<ani_object>(*uri), env);
+    uriStr = ResourceToString(reinterpret_cast<ani_object>(uri), env);
     if (!uriStr.empty()) {
         // add the schema then
         uriStr.insert(0, "OhosRawFile://");
     }
     return uriStr;
+}
+
+std::string ExtractUri(::taihe::optional_view<uintptr_t> uri, ani_env *env)
+{
+    std::string uriStr;
+    if (!uri) {
+        return uriStr;
+    }
+    return ExtractUri(uri.value(), env);
 }
 
 SceneETS::RenderParameters ExtractRenderParameters(::taihe::optional_view<::SceneTH::RenderParameters> params)
@@ -333,5 +342,14 @@ SceneETS::RenderParameters ExtractRenderParameters(::taihe::optional_view<::Scen
         renderParams.valid_ = true;
     }
     return renderParams;
+}
+
+SceneETS::SceneLoadParams ExtractSceneLoadParams(::SceneTH::SceneLoadParams params)
+{
+    SceneETS::SceneLoadParams loadParams;
+    if (params.offset) {
+        loadParams.offset = params.offset.value();
+    }
+    return loadParams;
 }
 }  // namespace OHOS::Render3D::KITETS

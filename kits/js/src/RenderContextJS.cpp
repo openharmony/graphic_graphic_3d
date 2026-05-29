@@ -63,6 +63,7 @@
 #include "lume_trace.h"
 
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
+static constexpr size_t MIN_SCENE_LOAD_ARG_COUNT { 2 };
 
 META_TYPE(BASE_NS::shared_ptr<CORE_NS::IImageLoaderManager::LoadResult>);
 
@@ -660,10 +661,9 @@ napi_value RenderContextJS::CreateSampler(NapiApi::FunctionContext<NapiApi::Obje
     return Promise(ctx.GetEnv()).Resolve(SamplerJS::CreateRawJsObject(ctx.GetEnv()));
 }
 
-napi_value RenderContextJS::CreateScene(NapiApi::FunctionContext<>& ctx)
+napi_value RenderContextJS::CreateSceneCommon(napi_env env, BASE_NS::string uri, const SceneLoadParams& sceneLoadParams)
 {
     LUME_TRACE_FUNC()
-    const auto env = ctx.Env();
     auto promise = Promise(env);
 
     // A SceneJS instance keeps a NodeJS task queue acquired, but we're in a static method creating a SceneJS.
@@ -676,7 +676,7 @@ napi_value RenderContextJS::CreateScene(NapiApi::FunctionContext<>& ctx)
         return promise.Reject("Error creating a JS task queue");
     }
 
-    BASE_NS::string uri = ExtractUri(ctx);
+    CORE_LOG_I("createScene [%s]", uri.c_str());
     if (uri.empty()) {
         uri = "scene://empty";
     }
@@ -755,16 +755,91 @@ napi_value RenderContextJS::CreateScene(NapiApi::FunctionContext<>& ctx)
     auto params = interface_pointer_cast<META_NS::IMetadata>(META_NS::GetObjectRegistry().GetDefaultObjectContext());
 
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
-    /* REMOVED DUE TO SCENE API CHANGE
-    if (uri.ends_with(".scene2")) {
-        const auto scene = SCENE_NS::LoadScene(sceneManager->GetContext(), uri);
-        META_NS::AddFutureTaskOrRunDirectly(engineQ, [=]() {
-            return massageScene(scene);
-        }).Then(BASE_NS::move(convertToJs), jsQ);
-    } else {*/
-    sceneManager->CreateScene(uri).Then(BASE_NS::move(massageScene), engineQ).Then(BASE_NS::move(convertToJs), jsQ);
-    // }
+
+    sceneManager->CreateScene(uri, sceneLoadParams.offset)
+        .Then(BASE_NS::move(massageScene), engineQ)
+        .Then(BASE_NS::move(convertToJs), jsQ);
+
     return promise;
+}
+
+static const char* ParseSceneLoadParams(NapiApi::FunctionContext<>& ctx, napi_env env, SceneLoadParams& param)
+{
+    if (ctx.ArgCount() < MIN_SCENE_LOAD_ARG_COUNT) {
+        return nullptr;
+    }
+
+    {
+        napi_valuetype type1 = napi_undefined;
+        napi_typeof(env, ctx.Value(1), &type1);
+        if (type1 != napi_object) {
+            return "The second argument must be an object";
+        }
+    }
+
+    NapiApi::Object options(env, ctx.Value(1));
+
+    if (options.IsUndefinedOrNull("offset")) {
+        return nullptr;
+    }
+
+    {
+        napi_valuetype offsetType = napi_undefined;
+        auto offsetNapi = options.Get("offset");
+        napi_typeof(env, offsetNapi, &offsetType);
+        if (offsetType != napi_number) {
+            return "offset must be a number";
+        }
+    }
+
+    {
+        double val = 0.0;
+        napi_get_value_double(env, options.Get("offset"), &val);
+
+        if (val < 0.0) {
+            return "offset must not be negative";
+        }
+        if (val != static_cast<double>(static_cast<uint64_t>(val))) {
+            return "offset must be an integer, got a float";
+        }
+        if (val > static_cast<double>(SIZE_MAX)) {
+            return "offset exceeds size_t range";
+        }
+
+        param.offset = static_cast<size_t>(val);
+    }
+
+    return nullptr;
+}
+
+napi_value RenderContextJS::CreateScene(NapiApi::FunctionContext<>& ctx)
+{
+    const auto env = ctx.GetEnv();
+    const auto info = ctx.GetInfo();
+    auto promise = Promise(env);
+
+    BASE_NS::string uri;
+    SceneLoadParams sceneLoadParams;
+
+    if (ctx.ArgCount() > 0) {
+        napi_valuetype type0 = napi_undefined;
+        napi_typeof(env, ctx.Value(0), &type0);
+
+        if (type0 == napi_string) {
+            NapiApi::Value<BASE_NS::string> val(env, ctx.Value(0));
+            if (val.IsDefinedAndNotNull()) {
+                uri = ExtractUri(static_cast<BASE_NS::string>(val));
+            }
+        } else if (type0 == napi_object) {
+            NapiApi::Object obj(env, ctx.Value(0));
+            uri = ExtractUri(obj);
+        }
+    }
+
+    if (const char* err = ParseSceneLoadParams(ctx, env, sceneLoadParams)) {
+        return promise.Reject(err);
+    }
+    return CreateSceneCommon(ctx.Env(), uri, sceneLoadParams);
 }
 
 napi_value RenderContextJS::RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx)

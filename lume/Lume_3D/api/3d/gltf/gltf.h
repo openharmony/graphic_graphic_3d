@@ -290,6 +290,15 @@ public:
      */
     virtual GLTFLoadResult LoadGLTF(BASE_NS::string_view uri) = 0;
 
+    /** Load GLTF data from a file with offset for embedded glb in container (e.g., mp4).
+     *  @param uri URI pointing to the glTF/glb/mp4 data.
+     *  @param offset Byte offset where glb data starts within the container file.
+     *  @return If the glTF data could be parsed GLTFLoadResult::success will be true and GLTFLoadResult::data is valid.
+     *  If parsing fails GLTFLoadResult::success will be false and GLTFLoadResult::error will give more details on the
+     *  failure.
+     */
+    virtual GLTFLoadResult LoadGLTF(BASE_NS::string_view uri, size_t offset) = 0;
+
     /** Load GLTF data from memory.
      *  @param data Contents of a GLB or a glTF file with embedded data.
      *  The memory should not be released until loading and importing have been completed.

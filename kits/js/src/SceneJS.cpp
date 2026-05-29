@@ -29,6 +29,7 @@
 #include "EffectJS.h"
 #include "RenderConfigurationJS.h"
 static constexpr BASE_NS::Uid IO_QUEUE { "be88e9a0-9cd8-45ab-be48-937953dc258f" };
+static constexpr size_t MAX_LOAD_ARG_COUNT { 2 };
 
 #include <meta/api/make_callback.h>
 #include <meta/interface/animation/intf_animation.h>
@@ -181,7 +182,20 @@ napi_value SceneJS::Load(NapiApi::FunctionContext<>& ctx)
     if (status != napi_ok) {
         n = 0;
     }
-    return renderContext.Invoke("createScene", { n, &param });
+    if (n == 0) {
+        return renderContext.Invoke("createScene", { 0, nullptr });
+    } else if (n == 1) {
+        napi_value argv[1];
+        napi_get_cb_info(ctx.GetEnv(), ctx.GetInfo(), &n, argv, nullptr, nullptr);
+        return renderContext.Invoke("createScene", { n, argv });
+    } else if (n == MAX_LOAD_ARG_COUNT) {
+        napi_value argv[MAX_LOAD_ARG_COUNT];
+        napi_get_cb_info(ctx.GetEnv(), ctx.GetInfo(), &n, argv, nullptr, nullptr);
+        return renderContext.Invoke("createScene", { n, argv });
+    } else {
+        auto promise = Promise(ctx.GetEnv());
+        return promise.Reject("Invalid arguments");
+    }
 }
 
 napi_value SceneJS::Dispose(NapiApi::FunctionContext<>& ctx)
