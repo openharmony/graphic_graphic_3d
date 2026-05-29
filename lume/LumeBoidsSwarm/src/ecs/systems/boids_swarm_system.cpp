@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,7 @@
 #include <core/log.h>
 #include <core/namespace.h>
 #include <core/perf/cpu_perf_scope.h>
+#include <core/property/property_types.h>
 #include <core/property_tools/property_api_impl.inl>
 
 namespace {
@@ -36,6 +37,29 @@ static constexpr auto VELOCITY_CURRENT_INDEX { BOIDSSWARM_NS::BoidsSwarmStateCom
 
 struct GravityField {};
 struct RepulsionField {};
+
+void ValidateComponentHasMin(void* componentData, BASE_NS::array_view<const CORE_NS::Property> metadata)
+{
+    for (const auto& prop : metadata) {
+        if (!(prop.flags & static_cast<uint32_t>(CORE_NS::PropertyFlags::HAS_MIN))) {
+            continue;
+        }
+
+        bool isClmapable =
+            prop.type == CORE_NS::PropertyType::FLOAT_T || prop.type == CORE_NS::PropertyType::VEC2_ARRAY_T ||
+            prop.type == CORE_NS::PropertyType::VEC3_ARRAY_T || prop.type == CORE_NS::PropertyType::VEC4_ARRAY_T;
+        if (!isClmapable) {
+            continue;
+        }
+        auto* const floats = reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(componentData) + prop.offset);
+        const size_t floatCount = prop.size / sizeof(float);
+        for (size_t i = 0; i < floatCount; ++i) {
+            if (floats[i] < 0.0f) {
+                floats[i] = 0.0f;
+            }
+        }
+    }
+}
 
 struct QueryRowIndices {
     enum class SwarmEntity : uint32_t { BOIDS_SWARM_COMP = 0, TRANSFORM_COMP = 1, BOIDS_SWARM_STATE_COMP = 2 };
@@ -56,6 +80,26 @@ BASE_NS::Math::Vec3 ClampMagnitude(const BASE_NS::Math::Vec3& v, float maxMagnit
         return BASE_NS::Math::Normalize(v) * maxMagnitude;
     }
     return v;
+}
+
+BASE_NS::Math::Vec3 ComputeUpVector(const BASE_NS::Math::IVec3& axisMask)
+{
+    if (axisMask.x == 0 && axisMask.y != 0 && axisMask.z != 0) {
+        return { 1.f, 0.f, 0.f };
+    }
+    if (axisMask.x != 0 && axisMask.y != 0 && axisMask.z == 0) {
+        return { 0.f, 0.f, 1.f };
+    }
+    return { 0.f, 1.f, 0.f };
+}
+
+BASE_NS::Math::Quat ClampRotationDelta(
+    const BASE_NS::Math::Quat& source, const BASE_NS::Math::Quat& target, const BASE_NS::Math::Vec3& maxTurnRate)
+{
+    BASE_NS::Math::Quat delta = target * BASE_NS::Math::Inverse(source);
+    BASE_NS::Math::Vec3 eulerDelta = BASE_NS::Math::ToEulerRad(delta);
+    eulerDelta = BASE_NS::Math::Clamp(eulerDelta, -maxTurnRate, maxTurnRate);
+    return BASE_NS::Math::Normalize(BASE_NS::Math::FromEulerRad(eulerDelta) * source);
 }
 
 CORE3D_NS::TransformComponent& operator>>(
@@ -85,7 +129,6 @@ BOIDSSWARM_NS::BoidsSwarmSystem::BoidsSwarmFrameData& operator<<(
     const auto& state = std::get<2>(components);
 
     frameData.rotation = transform.rotation;
-    frameData.collisionDisplacement = Math::ZERO_VEC3;
     if (auto len = Math::Magnitude(state.velocities[VELOCITY_CURRENT_INDEX]); len > Math::EPSILON) {
         frameData.forward = state.velocities[VELOCITY_CURRENT_INDEX] / len;
     } else {
@@ -101,7 +144,7 @@ BOIDSSWARM_NS::BoidsSwarmSystem::BoidsSwarmFrameData& operator<<(
     frameData.boundaryMaxPos = swarm.boundaryMaxPos;
     frameData.maxTurnRate = swarm.maxTurnRate;
     for (size_t i = 0; i < VELOCITY_COUNT; ++i) {
-        frameData.velocities[i] = state.velocities[i];
+        frameData.velocities[i + 1] = state.velocities[i];
     }
     frameData.totalWeight = 0.f;
     frameData.separationDistance = swarm.separationDistance;
@@ -112,13 +155,13 @@ BOIDSSWARM_NS::BoidsSwarmSystem::BoidsSwarmFrameData& operator<<(
     frameData.cohesionWeight = swarm.cohesionWeight;
     frameData.maxVelocityMag = swarm.maxVelocityMag;
     frameData.maxAccelerationMag = swarm.maxAccelerationMag;
-    frameData.boundingSphereRadius = swarm.boundingSphereRadius;
     frameData.boundaryDistance = swarm.boundaryDistance;
     frameData.boundaryWeight = swarm.boundaryWeight;
     frameData.gravityWeight = swarm.gravityWeight;
     frameData.repulsionWeight = swarm.repulsionWeight;
     frameData.drivenForce = swarm.drivenForce;
     frameData.drivenForceWeight = swarm.drivenForceWeight;
+    frameData.velDirIsFwd = swarm.velDirIsFwd;
 
     return frameData;
 }
@@ -128,6 +171,18 @@ CORE3D_NS::TransformComponent& operator>>(
 {
     transform.rotation = frameData.rotation;
     return transform;
+}
+
+BOIDSSWARM_NS::BoidsSwarmStateComponent& operator>>(
+    const BOIDSSWARM_NS::BoidsSwarmSystem::BoidsSwarmFrameData& frameData,
+    BOIDSSWARM_NS::BoidsSwarmStateComponent& state)
+{
+    for (size_t i = VELOCITY_COUNT - 1; i > 0; --i) {
+        state.velocities[i] = state.velocities[i - 1];
+    }
+    state.velocities[VELOCITY_CURRENT_INDEX] = frameData.velocities[VELOCITY_CURRENT_INDEX];
+    state.velocityMag = BASE_NS::Math::Magnitude(frameData.velocities[VELOCITY_CURRENT_INDEX]);
+    return state;
 }
 } // namespace
 
@@ -222,7 +277,7 @@ void BoidsSwarmSystem::Stop()
 
     notPlayedEntities_.clear();
     for (const auto& row : results) {
-        notPlayedEntities_.push_back(row.entity);
+        notPlayedEntities_[row.entity] = true;
     }
 }
 
@@ -235,6 +290,8 @@ void BoidsSwarmSystem::SetPlaySpeed(float speed)
 void BoidsSwarmSystem::Initialize()
 {
     ecs_.AddListener(boidsSwarmManager_, *this);
+    ecs_.AddListener(boidsSwarmGravityManager_, *this);
+    ecs_.AddListener(boidsSwarmRepulsionManager_, *this);
 
     const ComponentQuery::Operation operations[] = {
         { transformManager_, ComponentQuery::Operation::REQUIRE },
@@ -259,9 +316,35 @@ void BoidsSwarmSystem::Initialize()
 void BoidsSwarmSystem::Uninitialize()
 {
     ecs_.RemoveListener(boidsSwarmManager_, *this);
+    ecs_.RemoveListener(boidsSwarmGravityManager_, *this);
+    ecs_.RemoveListener(boidsSwarmRepulsionManager_, *this);
     swarmEntityQuery_.SetEcsListenersEnabled(false);
     gravityEntityQuery_.SetEcsListenersEnabled(false);
     repulsionEntityQuery_.SetEcsListenersEnabled(false);
+}
+
+bool BoidsSwarmSystem::ValidateBoidsSwarmComponent(BoidsSwarmComponent& swarm)
+{
+    ValidateComponentHasMin(&swarm, boidsSwarmManager_.GetPropertyApi().MetaData());
+
+    auto nanEq = [](float a, float b) -> bool { return (std::isnan(a) && std::isnan(b)) || (a == b); };
+    bool changed = false;
+    if (!nanEq(swarm.initialVelocity.x, swarm.prevInitialVelocity.x) ||
+        !nanEq(swarm.initialVelocity.y, swarm.prevInitialVelocity.y) ||
+        !nanEq(swarm.initialVelocity.z, swarm.prevInitialVelocity.z) ||
+        !nanEq(swarm.initialPosition.x, swarm.prevInitialPosition.x) ||
+        !nanEq(swarm.initialPosition.y, swarm.prevInitialPosition.y) ||
+        !nanEq(swarm.initialPosition.z, swarm.prevInitialPosition.z) ||
+        !nanEq(swarm.initialRotation.x, swarm.prevInitialRotation.x) ||
+        !nanEq(swarm.initialRotation.y, swarm.prevInitialRotation.y) ||
+        !nanEq(swarm.initialRotation.z, swarm.prevInitialRotation.z) ||
+        !nanEq(swarm.initialRotation.w, swarm.prevInitialRotation.w)) {
+        changed = true;
+    }
+    swarm.prevInitialVelocity = swarm.initialVelocity;
+    swarm.prevInitialPosition = swarm.initialPosition;
+    swarm.prevInitialRotation = swarm.initialRotation;
+    return changed;
 }
 
 void BoidsSwarmSystem::ResetBoid(
@@ -272,11 +355,13 @@ void BoidsSwarmSystem::ResetBoid(
     for (size_t i = 0; i < VELOCITY_COUNT; ++i) {
         state.velocities[i] = swarm.initialVelocity;
     }
+    state.velocityMag = Math::Magnitude(swarm.initialVelocity);
 }
 
 void BoidsSwarmSystem::Reset()
 {
-    for (const auto entity : notPlayedEntities_) {
+    for (const auto& entry : notPlayedEntities_) {
+        const auto& entity = entry.first;
         auto swarmComp = boidsSwarmManager_.Write(entity);
         const auto transformComp = transformManager_.Write(entity);
         const auto stateComp = boidsSwarmStateManager_.Write(entity);
@@ -535,19 +620,10 @@ void BoidsSwarmSystem::Run()
         }
         force = ClampMagnitude(force, frameData.maxAccelerationMag);
 
-        frameData.velocities[VELOCITY_CURRENT_INDEX] += force * timeStepSec_;
-        frameData.velocities[VELOCITY_CURRENT_INDEX] =
-            ClampMagnitude(frameData.velocities[VELOCITY_CURRENT_INDEX], frameData.maxVelocityMag);
-
-        Math::Vec3 avgHistory = Math::ZERO_VEC3;
-        for (size_t i = VELOCITY_CURRENT_INDEX + 1; i < VELOCITY_COUNT; ++i) {
-            avgHistory += frameData.velocities[i];
-        }
-        avgHistory /= static_cast<float>(VELOCITY_COUNT - VELOCITY_CURRENT_INDEX - 1);
-        frameData.velocities[VELOCITY_CURRENT_INDEX] =
-            Math::Lerp(frameData.velocities[VELOCITY_CURRENT_INDEX], avgHistory, velocitySmoothingFactor_);
-
-        positions_[i] += frameData.velocities[VELOCITY_CURRENT_INDEX] * timeStepSec_;
+        Math::Vec3& currVel = frameData.velocities[VELOCITY_CURRENT_INDEX];
+        const Math::Vec3& prevVel = frameData.velocities[VELOCITY_CURRENT_INDEX + 1];
+        currVel = prevVel + force * timeStepSec_;
+        currVel = ClampMagnitude(currVel, frameData.maxVelocityMag);
     }
 }
 
@@ -559,92 +635,30 @@ void BoidsSwarmSystem::PostRun()
     const auto results = swarmEntityQuery_.GetResults();
     const size_t count = results.size();
 
-    if (collisionTestEnabled_) {
-#if (BOIDSSWARM_DEV_ENABLED == 1)
-        CORE_CPU_PERF_SCOPE("BOIDSSWARM", "BoidsSwarmSystem", "CollisionTest", BOIDSSWARM_PROFILER_DEFAULT_COLOR);
-#endif
-        for (size_t i = 0; i < count; ++i) {
-            auto& frameData = frameDatas_[i];
-            Math::Vec3& position = positions_[i];
-
-            if (frameData.boundingSphereRadius <= Math::EPSILON) {
-                continue;
-            }
-
-            const float margin = frameData.boundingSphereRadius;
-
-            for (size_t xyz = 0; xyz < 3; ++xyz) {
-                if (axisMask_[xyz] == 0) {
-                    continue;
-                }
-                const float minBoundary = frameData.boundaryMinPos[xyz] + margin;
-                const float maxBoundary = frameData.boundaryMaxPos[xyz] - margin;
-
-                if (position[xyz] < minBoundary) {
-                    frameData.collisionDisplacement[xyz] += minBoundary - position[xyz];
-                } else if (position[xyz] > maxBoundary) {
-                    frameData.collisionDisplacement[xyz] += maxBoundary - position[xyz];
-                }
-            }
-
-            for (size_t j = 0; j < count; ++j) {
-                if (i == j || frameDatas_[j].boundingSphereRadius <= Math::EPSILON) {
-                    continue;
-                }
-
-                const Math::Vec3 delta = (positions_[j] - positions_[i]) * axisMaskFloat_;
-                const float distSq = Math::Dot(delta, delta);
-                const float minDist = margin + frameDatas_[j].boundingSphereRadius;
-
-                if (distSq < minDist * minDist && distSq >= 0.f) {
-                    const float dist = Math::sqrt(distSq);
-                    const float overlap = minDist - dist;
-                    const Math::Vec3 normal = delta / Math::max(dist, Math::EPSILON);
-                    frameData.collisionDisplacement -= normal * overlap;
-                }
-            }
-        }
-    }
-
-    auto limitTurnRate = [&](BoidsSwarmFrameData& frameData, const Math::Vec3& velocities) {
-#if (BOIDSSWARM_DEV_ENABLED == 1)
-        CORE_CPU_PERF_SCOPE("BOIDSSWARM", "BoidsSwarmSystem", "LimitTurnRate", BOIDSSWARM_PROFILER_DEFAULT_COLOR);
-#endif
-        const float velocityMag = Math::Magnitude(velocities);
-        if (velocityMag <= Math::EPSILON) {
-            return;
-        }
-
-        Math::Vec3 up;
-        if (axisMask_.x == 0 && axisMask_.y != 0 && axisMask_.z != 0) {
-            up = Math::Vec3(1.f, 0.f, 0.f);
-        } else if (axisMask_.x != 0 && axisMask_.y != 0 && axisMask_.z == 0) {
-            up = Math::Vec3(0.f, 0.f, 1.f);
-        } else {
-            up = Math::Vec3(0.f, 1.f, 0.f);
-        }
-
-        Math::Quat targetRotation = Math::LookRotation(velocities, up);
-        Math::Quat deltaRotation = targetRotation * Math::Inverse(frameData.rotation);
-
-        Math::Vec3 eulerDelta = Math::ToEulerRad(deltaRotation);
-        eulerDelta = Math::Clamp(eulerDelta, -frameData.maxTurnRate, frameData.maxTurnRate);
-
-        Math::Quat clampedRotation = Math::FromEulerRad(eulerDelta);
-        frameData.rotation = Math::Normalize(clampedRotation * frameData.rotation);
-    };
-
     for (size_t i = 0; i < count; ++i) {
         using SwarmEntity = QueryRowIndices::SwarmEntity;
 
         auto& frameData = frameDatas_[i];
         Math::Vec3& position = positions_[i];
 
-        if (collisionTestEnabled_ && frameData.boundingSphereRadius >= 0.f) {
-            position += frameData.collisionDisplacement;
+        const Math::Vec3 up = ComputeUpVector(axisMask_);
+        LimitTurnRate(frameData, up);
+
+        Math::Vec3 avgHistory = Math::ZERO_VEC3;
+        for (size_t vi = VELOCITY_CURRENT_INDEX + 1; vi < VELOCITY_COUNT + 1; ++vi) {
+            avgHistory += frameData.velocities[vi];
+        }
+        avgHistory /= static_cast<float>(VELOCITY_COUNT);
+        frameData.velocities[VELOCITY_CURRENT_INDEX] =
+            Math::Lerp(frameData.velocities[VELOCITY_CURRENT_INDEX], avgHistory, velocitySmoothingFactor_);
+
+        // Separatedly set rotation here if velDirIsFwd
+        if (float velMag = Math::Magnitude(frameData.velocities[VELOCITY_CURRENT_INDEX]);
+            frameData.velDirIsFwd && velMag > Math::EPSILON) {
+            frameData.rotation = Math::LookRotation(frameData.velocities[VELOCITY_CURRENT_INDEX], up);
         }
 
-        limitTurnRate(frameData, frameData.velocities[0]);
+        positions_[i] += frameData.velocities[VELOCITY_CURRENT_INDEX] * timeStepSec_;
 
         const auto& row = results[i];
         const uint32_t transformCompId = row.components[GetQueryRowIndex(SwarmEntity::TRANSFORM_COMP)];
@@ -652,13 +666,36 @@ void BoidsSwarmSystem::PostRun()
         auto transformComp = transformManager_.Write(transformCompId);
         auto stateComp = boidsSwarmStateManager_.Write(stateCompId);
 
-        for (size_t i = VELOCITY_COUNT - 1; i > 0; --i) {
-            stateComp->velocities[i] = stateComp->velocities[i - 1];
-        }
-        stateComp->velocities[VELOCITY_CURRENT_INDEX] = frameData.velocities[VELOCITY_CURRENT_INDEX];
-        stateComp->velocityMag = Math::Magnitude(frameData.velocities[VELOCITY_CURRENT_INDEX]);
+        frameData >> *stateComp;
         frameData >> *transformComp;
         transformComp->position = position;
+    }
+}
+
+void BoidsSwarmSystem::LimitTurnRate(BoidsSwarmFrameData& frameData, const Math::Vec3& up)
+{
+#if (BOIDSSWARM_DEV_ENABLED == 1)
+    CORE_CPU_PERF_SCOPE("BOIDSSWARM", "BoidsSwarmSystem", "LimitTurnRate", BOIDSSWARM_PROFILER_DEFAULT_COLOR);
+#endif
+    Math::Vec3& currVel = frameData.velocities[VELOCITY_CURRENT_INDEX];
+    const float currVelMag = Math::Magnitude(currVel);
+    if (currVelMag <= Math::EPSILON) {
+        return;
+    }
+
+    if (frameData.velDirIsFwd) {
+        const Math::Quat curRot = Math::LookRotation(currVel / currVelMag, up);
+        const Math::Vec3& prevVel = frameData.velocities[VELOCITY_CURRENT_INDEX + 1];
+        const float prevVelMag = Math::Magnitude(prevVel);
+        if (prevVelMag > Math::EPSILON) {
+            const Math::Vec3 prevDir = prevVel / prevVelMag;
+            Math::Quat clamped = ClampRotationDelta(Math::LookRotation(prevDir, up), curRot, frameData.maxTurnRate);
+            currVel = clamped * Math::Vec3(0.f, 0.f, currVelMag);
+            currVel *= axisMaskFloat_; // avoid drifting on locked axes due to rotation
+        }
+    } else {
+        frameData.rotation =
+            ClampRotationDelta(frameData.rotation, Math::LookRotation(currVel, up), frameData.maxTurnRate);
     }
 }
 
@@ -698,44 +735,41 @@ void BoidsSwarmSystem::OnComponentEvent(CORE_NS::IEcs::ComponentListener::EventT
 {
     switch (type) {
         case CORE_NS::IEcs::ComponentListener::EventType::CREATED:
-            for (const auto entity : entities) {
-                boidsSwarmStateManager_.Create(entity);
-                notPlayedEntities_.push_back(entity);
+            if (&componentManager == static_cast<const CORE_NS::IComponentManager*>(&boidsSwarmManager_)) {
+                for (const auto entity : entities) {
+                    boidsSwarmStateManager_.Create(entity);
+                    notPlayedEntities_[entity] = true;
+                }
             }
             break;
         case CORE_NS::IEcs::ComponentListener::EventType::DESTROYED:
-            for (const auto entity : entities) {
-                boidsSwarmStateManager_.Destroy(entity);
-                notPlayedEntities_.erase(std::remove(notPlayedEntities_.begin(), notPlayedEntities_.end(), entity),
-                    notPlayedEntities_.end());
+            if (&componentManager == static_cast<const CORE_NS::IComponentManager*>(&boidsSwarmManager_)) {
+                for (const auto entity : entities) {
+                    boidsSwarmStateManager_.Destroy(entity);
+                    notPlayedEntities_.erase(entity);
+                }
             }
             break;
         case CORE_NS::IEcs::ComponentListener::EventType::MODIFIED: {
             for (const auto entity : entities) {
-                auto swarmComp = boidsSwarmManager_.Write(entity);
-                if (!swarmComp) {
-                    continue;
-                }
-                auto& swarm = *swarmComp;
-                auto nanEq = [](float a, float b) -> bool { return (std::isnan(a) && std::isnan(b)) || (a == b); };
-                bool changed = false;
-                if (!nanEq(swarm.initialVelocity.x, swarm.prevInitialVelocity.x) ||
-                    !nanEq(swarm.initialVelocity.y, swarm.prevInitialVelocity.y) ||
-                    !nanEq(swarm.initialVelocity.z, swarm.prevInitialVelocity.z) ||
-                    !nanEq(swarm.initialPosition.x, swarm.prevInitialPosition.x) ||
-                    !nanEq(swarm.initialPosition.y, swarm.prevInitialPosition.y) ||
-                    !nanEq(swarm.initialPosition.z, swarm.prevInitialPosition.z) ||
-                    !nanEq(swarm.initialRotation.x, swarm.prevInitialRotation.x) ||
-                    !nanEq(swarm.initialRotation.y, swarm.prevInitialRotation.y) ||
-                    !nanEq(swarm.initialRotation.z, swarm.prevInitialRotation.z) ||
-                    !nanEq(swarm.initialRotation.w, swarm.prevInitialRotation.w)) {
-                    changed = true;
-                }
-                swarm.prevInitialVelocity = swarm.initialVelocity;
-                swarm.prevInitialPosition = swarm.initialPosition;
-                swarm.prevInitialRotation = swarm.initialRotation;
-                if (changed) {
-                    notPlayedEntities_.push_back(entity);
+                if (&componentManager == static_cast<const CORE_NS::IComponentManager*>(&boidsSwarmManager_)) {
+                    auto swarmComp = boidsSwarmManager_.Write(entity);
+                    bool initialPropChanged = ValidateBoidsSwarmComponent(*swarmComp);
+                    if (swarmComp && initialPropChanged) {
+                        notPlayedEntities_[entity] = true;
+                    }
+                } else if (&componentManager ==
+                           static_cast<const CORE_NS::IComponentManager*>(&boidsSwarmGravityManager_)) {
+                    auto gravComp = boidsSwarmGravityManager_.Write(entity);
+                    if (gravComp) {
+                        ValidateComponentHasMin(&*gravComp, boidsSwarmGravityManager_.GetPropertyApi().MetaData());
+                    }
+                } else if (&componentManager ==
+                           static_cast<const CORE_NS::IComponentManager*>(&boidsSwarmRepulsionManager_)) {
+                    auto repComp = boidsSwarmRepulsionManager_.Write(entity);
+                    if (repComp) {
+                        ValidateComponentHasMin(&*repComp, boidsSwarmRepulsionManager_.GetPropertyApi().MetaData());
+                    }
                 }
             }
             break;

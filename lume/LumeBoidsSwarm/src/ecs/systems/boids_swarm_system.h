@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,6 +24,7 @@
 #include <boids_swarm/ecs/systems/intf_boids_swarm_system.h>
 #include <boids_swarm/namespace.h>
 #include <random>
+#include <unordered_set>
 
 #include <3d/ecs/components/transform_component.h>
 #include <base/containers/array_view.h>
@@ -44,7 +45,6 @@ public:
 
     struct BoidsSwarmFrameData {
         BASE_NS::Math::Quat rotation;
-        BASE_NS::Math::Vec3 collisionDisplacement;
         BASE_NS::Math::Vec3 forward;
         BASE_NS::Math::Vec3 separationForce;
         BASE_NS::Math::Vec3 alignmentForce;
@@ -56,7 +56,7 @@ public:
         BASE_NS::Math::Vec3 boundaryMinPos;
         BASE_NS::Math::Vec3 boundaryMaxPos;
         BASE_NS::Math::Vec3 maxTurnRate;
-        BASE_NS::Math::Vec3 velocities[BoidsSwarmStateComponent::VELOCITY_COUNT];
+        BASE_NS::Math::Vec3 velocities[BoidsSwarmStateComponent::VELOCITY_COUNT + 1];
         float totalWeight;
         float separationDistance;
         float alignmentDistance;
@@ -66,12 +66,12 @@ public:
         float cohesionWeight;
         float maxVelocityMag;
         float maxAccelerationMag;
-        float boundingSphereRadius;
         float boundaryDistance;
         float boundaryWeight;
         float gravityWeight;
         float repulsionWeight;
         float drivenForceWeight;
+        bool velDirIsFwd;
     };
 
     explicit BoidsSwarmSystem(CORE_NS::IEcs& ecs);
@@ -112,11 +112,6 @@ public:
         return playSpeed_;
     }
 
-    void EnableCollisionTest(bool enabled) override
-    {
-        collisionTestEnabled_ = enabled;
-    }
-
     void SetVelocitySmoothingFactor(float factor) override
     {
         velocitySmoothingFactor_ = factor;
@@ -131,17 +126,18 @@ private:
     void ResetBoid(
         const BoidsSwarmComponent& swarm, CORE3D_NS::TransformComponent& transform, BoidsSwarmStateComponent& state);
     void Reset();
+    bool ValidateBoidsSwarmComponent(BoidsSwarmComponent& swarm);
 
     void PreRun();
     void Run();
     void PostRun();
+    void LimitTurnRate(BoidsSwarmFrameData& frameData, const BASE_NS::Math::Vec3& up);
 
     void OnComponentEvent(CORE_NS::IEcs::ComponentListener::EventType type,
         const CORE_NS::IComponentManager& componentManager,
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
     bool active_ { true };
-    bool collisionTestEnabled_ { false };
     float velocitySmoothingFactor_ { DEFAULT_VELOCITY_SMOOTHING_FACTOR };
     CORE_NS::IEcs& ecs_;
 
@@ -157,7 +153,7 @@ private:
 
     BASE_NS::vector<BASE_NS::Math::Vec3> positions_;
     BASE_NS::vector<BoidsSwarmFrameData> frameDatas_;
-    BASE_NS::vector<CORE_NS::Entity> notPlayedEntities_;
+    BASE_NS::unordered_map<CORE_NS::Entity, bool> notPlayedEntities_;
     BASE_NS::unordered_map<CORE_NS::Entity, size_t> entity2indices_;
 
     float timeStepSec_ { DEFAULT_TIME_STEP_SEC };
