@@ -32,7 +32,7 @@ CORE_BEGIN_NAMESPACE()
 class IResourceType : public IInterface {
 public:
     using base = IInterface;
-    static constexpr BASE_NS::Uid UID { "f8553f78-a286-4d5b-9b63-a3aa13477f82" };
+    static constexpr BASE_NS::Uid UID{"f8553f78-a286-4d5b-9b63-a3aa13477f82"};
     using Ptr = BASE_NS::shared_ptr<IResourceType>;
     using ConstPtr = BASE_NS::shared_ptr<const IResourceType>;
 
@@ -42,10 +42,10 @@ public:
     virtual ResourceType GetResourceType() const = 0;
 
     struct StorageInfo {
-        /// Pointer to file containing the options data.
-        IFile* options {};
+        /// Options data.
+        IResourceOptions::Ptr options;
         /// Pointer to file containing the payload data.
-        IFile* payload {};
+        IFile* payload{};
         /// The resource id.
         const ResourceId& id;
         /// Path of the resource payload.
@@ -71,6 +71,11 @@ public:
      */
     virtual bool ReloadResource(const StorageInfo&, const IResource::Ptr&) const = 0;
 
+    /**
+     * @brief Get version of this loader
+     */
+    virtual BASE_NS::string GetVersion() const = 0;
+
 protected:
     IResourceType() = default;
     virtual ~IResourceType() = default;
@@ -88,8 +93,10 @@ struct ResourceInfo {
     CORE_NS::ResourceType type;
     /// Path of the resource payload if exists
     BASE_NS::string path;
-    /// Option of the resource as serialised data
-    BASE_NS::vector<uint8_t> optionData;
+    /// Option of the resource
+    IResourceOptions::Ptr options;
+    /// Optional resource name
+    BASE_NS::string name;
 };
 
 /**
@@ -98,8 +105,11 @@ struct ResourceInfo {
 class IResourceManager : public IInterface {
 public:
     using base = IInterface;
-    static constexpr BASE_NS::Uid UID { "6f9f705d-7f9f-4b5c-83ab-45bb2466d974" };
+    static constexpr BASE_NS::Uid UID{"6f9f705d-7f9f-4b5c-83ab-45bb2466d974"};
     using Ptr = BASE_NS::shared_ptr<IResourceManager>;
+    using ConstPtr = BASE_NS::shared_ptr<const IResourceManager>;
+    using WeakPtr = BASE_NS::weak_ptr<IResourceManager>;
+    using ConstWeakPtr = BASE_NS::weak_ptr<const IResourceManager>;
 
     enum class Result {
         OK,
@@ -135,7 +145,7 @@ public:
          * @param type Event type.
          * @param ids Resource ids.
          */
-        virtual void OnResourceEvent(EventType type, const BASE_NS::array_view<const ResourceId>& ids) = 0;
+        virtual void OnResourceEvent(EventType type, const BASE_NS::array_view<const ResourceIdContext>& ids) = 0;
 
     protected:
         IResourceListener() = default;
@@ -157,7 +167,7 @@ public:
     /**
      * @brief Remove resource type
      */
-    virtual bool RemoveResourceType(const ResourceType& type) = 0;
+    virtual bool RemoveResourceType(const ResourceType& type, BASE_NS::string_view version) = 0;
     /**
      * @brief Get list of all resource types supported by with manager
      */
@@ -167,28 +177,32 @@ public:
      * @note  The imported index is merged with the current one, already existing resource info is overwritten.
      * @return Result of the import process
      */
-    virtual Result Import(BASE_NS::string_view url) = 0;
+    virtual Result Import(BASE_NS::string_view url, const ResourceContextPtr& context) = 0;
+    Result Import(BASE_NS::string_view url)
+    {
+        return Import(url, nullptr);
+    }
     /**
      * @brief Get the resource infos for all resources or for specific group
      */
     virtual BASE_NS::vector<ResourceInfo> GetResourceInfos(
-        const BASE_NS::array_view<const MatchingResourceId>& selection) const = 0;
-    BASE_NS::vector<ResourceInfo> GetResourceInfos(BASE_NS::string_view group) const
+        const BASE_NS::array_view<const MatchingResourceId>& selection, const ResourceContextPtr& context) const = 0;
+    BASE_NS::vector<ResourceInfo> GetResourceInfos(BASE_NS::string_view group, const ResourceContextPtr& context) const
     {
-        return GetResourceInfos({ MatchingResourceId(group) });
+        return GetResourceInfos({MatchingResourceId(group)}, context);
     }
-    BASE_NS::vector<ResourceInfo> GetResourceInfos() const
+    BASE_NS::vector<ResourceInfo> GetResourceInfos(const ResourceContextPtr& context) const
     {
-        return GetResourceInfos({ MatchingResourceId() });
+        return GetResourceInfos({MatchingResourceId()}, context);
     }
     /**
      * @brief Get resource info for single resource
      */
-    virtual ResourceInfo GetResourceInfo(const ResourceId&) const = 0;
+    virtual ResourceInfo GetResourceInfo(const ResourceIdContext&) const = 0;
     /**
      * @brief Get all resource groups
      */
-    virtual BASE_NS::vector<BASE_NS::string> GetResourceGroups() const = 0;
+    virtual BASE_NS::vector<BASE_NS::string> GetResourceGroups(const ResourceContextPtr& context) const = 0;
     /**
      * @brief Get a resource matching the resource id.
      * @param id resource id.
@@ -196,11 +210,7 @@ public:
      * such resources).
      * @return Resource
      */
-    virtual IResource::Ptr GetResource(const ResourceId& id, const ResourceContextPtr& context) = 0;
-    IResource::Ptr GetResource(const ResourceId& id)
-    {
-        return GetResource(id, nullptr);
-    }
+    virtual IResource::Ptr GetResource(const ResourceIdContext&) = 0;
     /**
      * @brief Get all resources in a group
      * @param selection resources to return.
@@ -212,22 +222,26 @@ public:
     BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources(
         BASE_NS::string_view group, const ResourceContextPtr& context = nullptr)
     {
-        return GetResources({ MatchingResourceId(group) }, context);
+        return GetResources({MatchingResourceId(group)}, context);
     }
-    BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources()
+    BASE_NS::vector<CORE_NS::IResource::Ptr> GetResources(const ResourceContextPtr& context)
     {
-        return GetResources({ MatchingResourceId() }, nullptr);
+        return GetResources({MatchingResourceId()}, context);
     }
     /** Exports selected resources into a resource file.
      * @param filePath File to write to.
      * @param selection Selected resources
      * @return Result of the export process
      */
-    virtual Result Export(
-        BASE_NS::string_view filePath, const BASE_NS::array_view<const MatchingResourceId>& selection) = 0;
+    virtual Result Export(BASE_NS::string_view filePath, const BASE_NS::array_view<const MatchingResourceId>& selection,
+        const ResourceContextPtr& context) = 0;
+    virtual Result Export(BASE_NS::string_view filePath, const ResourceContextPtr& context)
+    {
+        return Export(filePath, {MatchingResourceId{}}, context);
+    }
     virtual Result Export(BASE_NS::string_view filePath)
     {
-        return Export(filePath, { MatchingResourceId {} });
+        return Export(filePath, nullptr);
     }
 
     /** Add a resource into the resource manager.
@@ -248,51 +262,60 @@ public:
      * @param opts Resource options
      * @return true on success
      */
-    virtual bool AddResource(const ResourceId& id, const ResourceType& type, BASE_NS::string_view path,
-        const IResourceOptions::ConstPtr& opts) = 0;
-    bool AddResource(const ResourceId& id, const ResourceType& type, BASE_NS::string_view path)
+    virtual bool AddResource(const ResourceIdContext& id, const ResourceType& type, BASE_NS::string_view path,
+        const IResourceOptions::Ptr& opts) = 0;
+    bool AddResource(const ResourceIdContext& id, const ResourceType& type, BASE_NS::string_view path)
     {
         return AddResource(id, type, path, nullptr);
     }
     /**
+     * @brief Set resource name
+     * @return true if resources exists
+     */
+    virtual bool SetResourceName(const ResourceIdContext& id, const BASE_NS::string& name) = 0;
+    /**
+     * @brief GetResource based on the name
+     * @return Resource
+     */
+    virtual IResource::Ptr GetResourceByName(BASE_NS::string_view name, const ResourceContextPtr& context) = 0;
+    /**
      * @brief Reload resource
      * @param resource Resource to be reloaded
-     * @param context resource context for resources that can only exists in specific context (required to construct
-     * such resources).
      * @return true on success
      */
-    virtual bool ReloadResource(const IResource::Ptr& resource, const ResourceContextPtr& context) = 0;
-    bool ReloadResource(const IResource::Ptr& resource)
-    {
-        return ReloadResource(resource, nullptr);
-    }
+    virtual bool ReloadResource(const IResource::Ptr& resource) = 0;
     /**
      * @brief Rename resource
      * @param id Resource to rename
      * @param newId New resource id
      * @return true on success
      */
-    virtual bool RenameResource(const ResourceId& id, const ResourceId& newId) = 0;
+    virtual bool RenameResource(const ResourceIdContext& id, const ResourceIdContext& newId) = 0;
     /**
      * @brief Remove the resource object from cache, the resource is not removed from the index
      */
-    virtual bool PurgeResource(const ResourceId&) = 0;
+    virtual bool PurgeResource(const ResourceIdContext&) = 0;
     /**
      * @brief Remove the resource object from cache for group, the resources are not removed from the index
      */
-    virtual size_t PurgeGroup(BASE_NS::string_view group) = 0;
+    virtual size_t PurgeGroup(BASE_NS::string_view group, const ResourceContextPtr& context) = 0;
     /**
      * @brief Remove resource from the index (along the object cache)
      */
-    virtual bool RemoveResource(const ResourceId&) = 0;
+    virtual bool RemoveResource(const ResourceIdContext&) = 0;
     /**
      * @brief Remove all resource in a group from the index (along the object cache)
      */
-    virtual bool RemoveGroup(BASE_NS::string_view group) = 0;
+    virtual bool RemoveGroup(BASE_NS::string_view group, const ResourceContextPtr& context) = 0;
     /**
-     * @brief Remove all resources
+     * @brief Remove all resources (no matter what context)
+     * @notice This does not notify about the removed resources
      */
     virtual void RemoveAllResources() = 0;
+    /**
+     * @brief Remove all resources for context; nullptr is context as well.
+     */
+    virtual void RemoveAllResources(const ResourceContextPtr& context) = 0;
     /**
      * @brief Export resource's payload (if supported for the resource)
      */
@@ -302,6 +325,10 @@ public:
      * using the standard file system.
      */
     virtual void SetFileManager(CORE_NS::IFileManager::Ptr fileManager) = 0;
+    /**
+     * @brief Get file manager that is used to access files
+     */
+    virtual CORE_NS::IFileManager::Ptr GetFileManager() const = 0;
 
 protected:
     IResourceManager() = default;
@@ -311,4 +338,4 @@ protected:
     void operator=(const IResourceManager&) = delete;
 };
 CORE_END_NAMESPACE()
-#endif // API_CORE_RESOURCES_IRESOURCE_MANAGER_H
+#endif  // API_CORE_RESOURCES_IRESOURCE_MANAGER_H

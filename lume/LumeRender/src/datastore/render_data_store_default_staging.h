@@ -60,8 +60,10 @@ public:
     // IRenderDataStore
     void PreRender() override;
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -157,8 +159,8 @@ private:
     BASE_NS::vector<RenderHandleReference> stagingGpuBuffers_;
     BASE_NS::vector<RenderHandleReference> frameStagingConsumeGpuBuffers_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_STAGING_H
+#endif  // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_STAGING_H

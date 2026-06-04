@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "keyframeAnimation",
+		"name": "kfAnimColor",
+		"duration": 500.0,
+		"from": { "type": "color", "value": [0.1, 0.2, 0.3, 1.0] },
+		"to": { "type": "color", "value": [0.5, 0.6, 0.7, 0.8] }
+	}
+}

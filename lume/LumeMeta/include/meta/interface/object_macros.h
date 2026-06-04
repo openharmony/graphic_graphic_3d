@@ -24,7 +24,7 @@
  * @brief Implement reference counting with ILifecycle support for destruction.
  */
 #define META_IMPLEMENT_REF_COUNT()                                         \
-    int32_t refcnt_ { 0 };                                                 \
+    int32_t refcnt_{0};                                                    \
     void Ref() override                                                    \
     {                                                                      \
         BASE_NS::AtomicIncrement(&refcnt_);                                \

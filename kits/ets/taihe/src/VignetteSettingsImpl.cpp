@@ -21,7 +21,7 @@
 
 namespace OHOS::Render3D::KITETS {
 std::shared_ptr<VignetteETS> VignetteSettingsImpl::CreateInternal(
-    const ScenePostProcessSettings::VignetteSettings &data)
+    const ScenePostProcessSettings::VignetteSettings& data)
 {
     float roundness;
     if (data->getRoundness().has_value()) {
@@ -52,7 +52,7 @@ VignetteSettingsImpl::~VignetteSettingsImpl()
     if (vignetteETS_) {
         return taihe::optional<double>(std::in_place, vignetteETS_->GetRoundness());
     } else {
-        return taihe::optional<double>(std::in_place, 0.0);
+        return taihe::optional<double>(std::in_place, 0.0F);
     }
 }
 
@@ -72,7 +72,7 @@ void VignetteSettingsImpl::setRoundness(::taihe::optional_view<double> roundness
     if (vignetteETS_) {
         return taihe::optional<double>(std::in_place, vignetteETS_->GetIntensity());
     } else {
-        return taihe::optional<double>(std::in_place, 0.0);
+        return taihe::optional<double>(std::in_place, 0.0F);
     }
 }
 

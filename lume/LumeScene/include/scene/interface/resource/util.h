@@ -17,31 +17,44 @@
 #define SCENE_INTERFACE_RESOURCE_UTIL_H
 
 #include <scene/interface/intf_node.h>
+#include <scene/interface/resource/intf_exported_node.h>
 #include <scene/interface/resource/types.h>
-#include <scene/interface/serialization/intf_scene_exporter.h>
 
+#include <core/resources/intf_resource_manager.h>
+
+#include <meta/api/util.h>
 #include <meta/interface/builtin_objects.h>
 #include <meta/interface/resource/intf_object_template.h>
 
 SCENE_BEGIN_NAMESPACE()
 
-inline META_NS::IObjectTemplate::Ptr CreateNodeTemplate(const CORE_NS::ResourceId& id, const INode::ConstPtr& node)
+inline INode::Ptr ApplyAsNonTemplate(const META_NS::IObjectTemplate::ConstPtr& templ, const INode::Ptr& node)
 {
-    auto templ = META_NS::GetObjectRegistry().Create<META_NS::IObjectTemplate>(META_NS::ClassId::ObjectTemplate);
     if (templ) {
-        if (auto exporter = META_NS::GetObjectRegistry().Create<ISceneExporter>(ClassId::SceneExporter)) {
-            if (auto obj = exporter->ExportNode(node)) {
-                templ->Instantiator()->SetValue(ClassId::NodeInstantiator);
-                templ->SetContent(obj);
-                if (auto i = interface_cast<CORE_NS::ISetResourceId>(templ)) {
-                    i->SetResourceId(id);
-                }
-            } else {
-                templ.reset();
-            }
+        auto ntcontext = META_NS::GetObjectRegistry().Create<INodeTemplateContext>(ClassId::NodeTemplateContext);
+        if (!ntcontext) {
+            CORE_LOG_W("Invalid state");
+            return INode::Ptr{};
+        }
+        ntcontext->SetTargetNode(node);
+        ntcontext->SetApplyAsTemplate(false);
+
+        auto nodeRes = interface_pointer_cast<INodeImportResult>(templ->Instantiate(ntcontext));
+        return nodeRes ? nodeRes->GetNode() : nullptr;
+    }
+    return {};
+}
+
+inline META_NS::IObjectTemplate::Ptr LoadNodeTemplate(CORE_NS::IResourceManager& manager, BASE_NS::string_view path)
+{
+    auto res = manager.GetResource(CORE_NS::ResourceIdContext{BASE_NS::string(path)});
+    if (!res) {
+        if (manager.AddResource(
+                CORE_NS::ResourceIdContext{BASE_NS::string(path)}, ClassId::NodeTemplateResource.Id().ToUid(), path)) {
+            res = manager.GetResource(CORE_NS::ResourceIdContext{BASE_NS::string(path)});
         }
     }
-    return templ;
+    return interface_pointer_cast<META_NS::IObjectTemplate>(res);
 }
 
 SCENE_END_NAMESPACE()

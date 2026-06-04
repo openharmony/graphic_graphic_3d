@@ -58,7 +58,8 @@ static BASE_NS::Uid GenerateInstanceId(uint64_t random)
     return uid;
 }
 
-ObjectRegistry::ObjectRegistry() : random_(CreateXoroshiro128(BASE_NS::FNV1aHash("ToolKitObjectRegistry"))) {}
+ObjectRegistry::ObjectRegistry() : random_(CreateXoroshiro128(BASE_NS::FNV1aHash("ToolKitObjectRegistry")))
+{}
 
 ObjectRegistry::~ObjectRegistry()
 {
@@ -154,7 +155,7 @@ ObjectRegistry::CreateResult ObjectRegistry::CreateInternal(
     const IObjectFactory::ConstPtr fac, BASE_NS::vector<IObject::Ptr>& classes) const
 {
     ClassInfo info = fac->GetClassInfo();
-    return CreateResult { ConstructObjectInternal(fac, classes), info.category, info.IsSingleton() };
+    return CreateResult{ConstructObjectInternal(fac, classes), info.category, info.IsSingleton()};
 }
 
 ObjectRegistry::CreateResult ObjectRegistry::CreateInternal(
@@ -163,14 +164,14 @@ ObjectRegistry::CreateResult ObjectRegistry::CreateInternal(
     if (auto fac = classRegistry_.GetObjectFactory(uid)) {
         return CreateInternal(fac, classes);
     }
-    return { false, 0, false };
+    return {false, 0, false};
 }
 
 static ObjectId GetBaseClass(const IObjectFactory::ConstPtr& fac)
 {
     if (auto sdata = fac->GetClassStaticMetadata()) {
         if (auto m = GetBaseClassMeta(sdata)) {
-            return m->classInfo ? m->classInfo->Id() : ObjectId {};
+            return m->classInfo ? m->classInfo->Id() : ObjectId{};
         }
     }
     return {};
@@ -208,7 +209,8 @@ void ObjectRegistry::SetObjectInstanceIds(const BASE_NS::vector<IObject::Ptr>& c
         }
         if (auto der = (*it)->GetInterface<IDerived>()) {
             if (base) {
-                OBJ_REG_LOG("\tAssigning instance of %s as super to %s", BASE_NS::string(base->GetClassName()).c_str(),
+                OBJ_REG_LOG("\tAssigning instance of %s as super to %s",
+                    BASE_NS::string(base->GetClassName()).c_str(),
                     BASE_NS::string((*it)->GetClassName()).c_str());
             }
             der->SetSuperInstance(obj, base);
@@ -252,14 +254,14 @@ IObject::Ptr ObjectRegistry::Create(ObjectId uid, const CreateInfo& createInfo, 
 
     auto instid = createInfo.instanceId;
 
-    if (instid == BASE_NS::Uid {}) {
-        std::unique_lock lock { mutex_ };
+    if (instid == BASE_NS::Uid{}) {
+        std::unique_lock lock{mutex_};
         if (auto so = FindSingleton(uid.ToUid())) {
             return so;
         }
         instid = GenerateInstanceId(random_->GetRandom());
     } else {
-        std::shared_lock lock { mutex_ };
+        std::shared_lock lock{mutex_};
         if (auto so = FindSingleton(uid.ToUid())) {
             return so;
         }
@@ -293,17 +295,17 @@ bool ObjectRegistry::PostCreate(const BASE_NS::Uid& uid, InstanceId instid, cons
         return false;
     }
 
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     auto& i = instancesByUid_[instid];
     if (!i.ptr.expired()) {
         // seems someone beat us to it
         CORE_LOG_F("Object with instance id %s already exists.", instid.ToString().c_str());
         return false;
     }
-    i = ObjectInstance { classes.front(), t.category };
+    i = ObjectInstance{classes.front(), t.category};
 
     if (t.singleton) {
-        singletons_[uid] = classes.front(); // Store singleton weakref
+        singletons_[uid] = classes.front();  // Store singleton weakref
     }
     if (createInfo.isGloballyAvailable) {
         CORE_LOG_V("Registering global object: %s [%s]", GetClassName(uid).c_str(), instid.ToString().c_str());
@@ -324,26 +326,29 @@ IObject::Ptr ObjectRegistry::Create(const META_NS::ClassInfo& info, const Create
 
 BASE_NS::vector<ObjectCategoryItem> ObjectRegistry::GetAllCategories() const
 {
-    static const BASE_NS::vector<ObjectCategoryItem> items = { { ObjectCategoryBits::WIDGET, "Widgets" },
-        { ObjectCategoryBits::ANIMATION, "Animations" }, { ObjectCategoryBits::LAYOUT, "Layouts" },
-        { ObjectCategoryBits::CURVE, "Curves" }, { ObjectCategoryBits::SHAPE, "Shapes" },
-        { ObjectCategoryBits::CONTAINER, "Containers" }, { ObjectCategoryBits::INTERNAL, "Internals" },
-        { ObjectCategoryBits::APPLICATION, "Application specifics" },
-        { ObjectCategoryBits::ANIMATION_MODIFIER, "Animation modifier" },
-        { ObjectCategoryBits::NO_CATEGORY, "Not categorized" } };
+    static const BASE_NS::vector<ObjectCategoryItem> items = {{ObjectCategoryBits::WIDGET, "Widgets"},
+        {ObjectCategoryBits::ANIMATION, "Animations"},
+        {ObjectCategoryBits::LAYOUT, "Layouts"},
+        {ObjectCategoryBits::CURVE, "Curves"},
+        {ObjectCategoryBits::SHAPE, "Shapes"},
+        {ObjectCategoryBits::CONTAINER, "Containers"},
+        {ObjectCategoryBits::INTERNAL, "Internals"},
+        {ObjectCategoryBits::APPLICATION, "Application specifics"},
+        {ObjectCategoryBits::ANIMATION_MODIFIER, "Animation modifier"},
+        {ObjectCategoryBits::NO_CATEGORY, "Not categorized"}};
     return items;
 }
 
 IObjectFactory::ConstPtr ObjectRegistry::GetObjectFactory(const ObjectId& uid) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return classRegistry_.GetObjectFactory(uid.ToUid());
 }
 
 BASE_NS::vector<IClassInfo::ConstPtr> ObjectRegistry::GetAllTypes(
     ObjectCategoryBits category, bool strict, bool excludeDeprecated) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return classRegistry_.GetAllTypes(category, strict, excludeDeprecated);
 }
 
@@ -351,7 +356,7 @@ void ObjectRegistry::CheckGC() const
 {
     if (purgeCounter_ > DISPOSAL_THRESHOLD && disposalInProgress_.test_and_set()) {
         {
-            std::unique_lock lock { disposalMutex_ };
+            std::unique_lock lock{disposalMutex_};
             disposalsStorage_.swap(disposals_);
             purgeCounter_ = 0;
         }
@@ -388,13 +393,13 @@ void ObjectRegistry::GC() const
 
 void ObjectRegistry::Purge()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     GC();
 }
 
 void ObjectRegistry::DoDisposal(const BASE_NS::vector<InstanceId>& uids) const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     for (auto&& v : uids) {
         auto it = instancesByUid_.find(v);
         if (it != instancesByUid_.end()) {
@@ -414,21 +419,21 @@ void ObjectRegistry::DoDisposal(const BASE_NS::vector<InstanceId>& uids) const
 
 void ObjectRegistry::DisposeObject(const InstanceId& uid) const
 {
-    std::unique_lock lock { disposalMutex_ };
+    std::unique_lock lock{disposalMutex_};
     disposals_.push_back(uid);
     ++purgeCounter_;
 }
 
 ICallContext::Ptr ObjectRegistry::ConstructDefaultCallContext() const
 {
-    return ICallContext::Ptr { new DefaultCallContext };
+    return ICallContext::Ptr{new DefaultCallContext};
 }
 
 BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetAllObjectInstances() const
 {
     CheckGC();
     BASE_NS::vector<IObject::Ptr> result;
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     result.reserve(instancesByUid_.size());
     for (auto& v : instancesByUid_) {
         if (auto strong = v.second.ptr.lock()) {
@@ -442,7 +447,7 @@ BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetAllSingletonObjectInstances() c
 {
     CheckGC();
     BASE_NS::vector<IObject::Ptr> result;
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     if (!singletons_.empty()) {
         result.reserve(singletons_.size());
         for (auto& s : singletons_) {
@@ -459,7 +464,7 @@ BASE_NS::vector<IObject::Ptr> ObjectRegistry::GetObjectInstancesByCategory(
 {
     CheckGC();
     BASE_NS::vector<IObject::Ptr> result;
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     for (auto& i : instancesByUid_) {
         if (CheckCategoryBits(static_cast<ObjectCategoryBits>(i.second.category), category, strict)) {
             if (auto strong = i.second.ptr.lock()) {
@@ -485,7 +490,7 @@ IObject::Ptr ObjectRegistry::GetObjectInstanceByInstanceId(InstanceId uid) const
 
     CheckGC();
 
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
 
     // See if it's an singleton.
     auto sing = FindSingleton(uid.ToUid());
@@ -514,16 +519,16 @@ BASE_NS::string ObjectRegistry::ExportToString(const IObjectRegistryExporter::Pt
 IObjectContext::Ptr ObjectRegistry::GetDefaultObjectContext() const
 {
     {
-        std::shared_lock lock { mutex_ };
+        std::shared_lock lock{mutex_};
         if (defaultContext_) {
             return defaultContext_;
         }
     }
 
     IObjectContext::Ptr context = interface_pointer_cast<IObjectContext>(
-        Create(ClassId::ObjectContext, { GlobalObjectInstance::DEFAULT_OBJECT_CONTEXT, true }));
+        Create(ClassId::ObjectContext, {GlobalObjectInstance::DEFAULT_OBJECT_CONTEXT, true}));
 
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     // still not set?
     if (!defaultContext_) {
         defaultContext_ = context;
@@ -534,7 +539,7 @@ IObjectContext::Ptr ObjectRegistry::GetDefaultObjectContext() const
 
 ITaskQueue::Ptr ObjectRegistry::GetTaskQueue(const BASE_NS::Uid& queueId) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     if (auto queue = queues_.find(queueId); queue != queues_.end()) {
         return queue->second;
     }
@@ -544,7 +549,7 @@ ITaskQueue::Ptr ObjectRegistry::GetTaskQueue(const BASE_NS::Uid& queueId) const
 
 bool ObjectRegistry::RegisterTaskQueue(const ITaskQueue::Ptr& queue, const BASE_NS::Uid& queueId)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (!queue) {
         if (auto existing = queues_.find(queueId); existing != queues_.end()) {
             queues_.erase(existing);
@@ -555,7 +560,7 @@ bool ObjectRegistry::RegisterTaskQueue(const ITaskQueue::Ptr& queue, const BASE_
     }
     // warn if the thread info interface is not implemented
     if (!interface_cast<ITaskQueueThreadInfo>(queue)) {
-        CORE_LOG_W("The registered task queue does not implement the ITaskQueueThreadInfo."\
+        CORE_LOG_W("The registered task queue does not implement the ITaskQueueThreadInfo."
                    " This may cause issues when matching threads.");
     }
     queues_[queueId] = queue;
@@ -564,7 +569,7 @@ bool ObjectRegistry::RegisterTaskQueue(const ITaskQueue::Ptr& queue, const BASE_
 
 bool ObjectRegistry::UnregisterTaskQueue(const BASE_NS::Uid& queueId)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (auto existing = queues_.find(queueId); existing != queues_.end()) {
         queues_.erase(existing);
         return true;
@@ -574,13 +579,13 @@ bool ObjectRegistry::UnregisterTaskQueue(const BASE_NS::Uid& queueId)
 
 bool ObjectRegistry::HasTaskQueue(const BASE_NS::Uid& queueId) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return queues_.find(queueId) != queues_.end();
 }
 
 bool ObjectRegistry::UnregisterAllTaskQueues()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     queues_.clear();
     return true;
 }
@@ -608,16 +613,16 @@ namespace {
 static thread_local ITaskQueue::WeakPtr* CurrentTaskQueueStorage = nullptr;
 std::mutex gInstanceLock;
 struct link {
-    ITaskQueue::WeakPtr* data {};
-    link* next {};
+    ITaskQueue::WeakPtr* data{};
+    link* next{};
 };
 link* gInstances = nullptr;
-} // namespace
+}  // namespace
 
 void __attribute__((destructor)) ObjectRegistryCalledAtExit()
 {
     // we HOPE that no one is still trying to use anything, as full shutdown is in progress.
-    link* cur {};
+    link* cur{};
     link* next = gInstances;
     gInstances = nullptr;
     while (next) {
@@ -642,9 +647,9 @@ static void RemoveNode(link* prev, link* cur, link* next)
 }
 static void RemoveTaskQueueTLS(META_NS::ITaskQueue::WeakPtr* remove)
 {
-    std::unique_lock lock { gInstanceLock };
-    link* prev {};
-    link* cur {};
+    std::unique_lock lock{gInstanceLock};
+    link* prev{};
+    link* cur{};
     link* next = gInstances;
     while (next) {
         cur = next;
@@ -661,8 +666,8 @@ static ITaskQueue::WeakPtr& GetCurrentTaskQueueImpl()
 {
     if (!CurrentTaskQueueStorage) {
         CurrentTaskQueueStorage = new ITaskQueue::WeakPtr();
-        std::unique_lock lock { gInstanceLock };
-        gInstances = new link { CurrentTaskQueueStorage, gInstances };
+        std::unique_lock lock{gInstanceLock};
+        gInstances = new link{CurrentTaskQueueStorage, gInstances};
     }
     return *CurrentTaskQueueStorage;
 }
@@ -683,8 +688,8 @@ ITaskQueue::WeakPtr ObjectRegistry::SetCurrentTaskQueue(ITaskQueue::WeakPtr q)
     } else {
         if (!CurrentTaskQueueStorage) {
             CurrentTaskQueueStorage = new ITaskQueue::WeakPtr();
-            std::unique_lock lock { gInstanceLock };
-            gInstances = new link { CurrentTaskQueueStorage, gInstances };
+            std::unique_lock lock{gInstanceLock};
+            gInstances = new link{CurrentTaskQueueStorage, gInstances};
         }
         *CurrentTaskQueueStorage = q;
     }
@@ -705,19 +710,19 @@ IFuture::Ptr ObjectRegistry::ConstructFutureWithValue(const IAny::Ptr& value)
 
 void ObjectRegistry::RegisterInterpolator(TypeId propertyTypeUid, BASE_NS::Uid interpolatorClassUid)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     interpolatorConstructors_[propertyTypeUid] = interpolatorClassUid;
 }
 
 void ObjectRegistry::UnregisterInterpolator(TypeId propertyTypeUid)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     interpolatorConstructors_.erase(propertyTypeUid);
 }
 
 bool ObjectRegistry::HasInterpolator(TypeId propertyTypeUid) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return interpolatorConstructors_.contains(propertyTypeUid);
 }
 
@@ -725,13 +730,13 @@ IInterpolator::Ptr ObjectRegistry::CreateInterpolator(TypeId propertyTypeUid)
 {
     TypeId uid;
     {
-        std::shared_lock lock { mutex_ };
+        std::shared_lock lock{mutex_};
         if (auto it = interpolatorConstructors_.find(propertyTypeUid); it != interpolatorConstructors_.end()) {
             uid = it->second;
         }
     }
-    if (uid != TypeId {}) {
-        return interface_pointer_cast<IInterpolator>(Create(uid.ToUid(), CreateInfo {}));
+    if (uid != TypeId{}) {
+        return interface_pointer_cast<IInterpolator>(Create(uid.ToUid(), CreateInfo{}));
     }
     // We don't have an interpolator for the given property type, return the default interpolator (which just steps the
     // value)
@@ -770,8 +775,10 @@ CORE_NS::IInterface* ObjectRegistry::GetInterface(const BASE_NS::Uid& uid)
     }
     return result;
 }
-void ObjectRegistry::Ref() {}
-void ObjectRegistry::Unref() {}
+void ObjectRegistry::Ref()
+{}
+void ObjectRegistry::Unref()
+{}
 
 META_NS::IPropertyRegister& ObjectRegistry::GetPropertyRegister()
 {
@@ -794,7 +801,7 @@ META_NS::IProperty::Ptr ObjectRegistry::Create(const ObjectId& object, BASE_NS::
 }
 IBind::Ptr ObjectRegistry::CreateBind() const
 {
-    return interface_pointer_cast<IBind>(Create(ClassId::Bind, CreateInfo {}));
+    return interface_pointer_cast<IBind>(Create(ClassId::Bind, CreateInfo{}));
 }
 IAny& ObjectRegistry::InvalidAny() const
 {
@@ -803,35 +810,37 @@ IAny& ObjectRegistry::InvalidAny() const
 }
 IAny::Ptr ObjectRegistry::ConstructAny(const ObjectId& id) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = anyBuilders_.find(id);
     return it != anyBuilders_.end() ? it->second->Construct() : nullptr;
 }
 bool ObjectRegistry::IsAnyRegistered(const ObjectId& id) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return anyBuilders_.find(id) != anyBuilders_.end();
 }
 void ObjectRegistry::RegisterAny(BASE_NS::shared_ptr<AnyBuilder> builder)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (anyBuilders_.find(builder->GetObjectId()) != anyBuilders_.end()) {
-        CORE_LOG_W("Any already registered [id=%s, type=%s]", builder->GetObjectId().ToString().c_str(),
+        CORE_LOG_W("Any already registered [id=%s, type=%s]",
+            builder->GetObjectId().ToString().c_str(),
             builder->GetTypeName().c_str());
     }
-    CORE_LOG_V("Registering Any [%s] for type '%s'", builder->GetObjectId().ToString().c_str(),
+    CORE_LOG_V("Registering Any [%s] for type '%s'",
+        builder->GetObjectId().ToString().c_str(),
         builder->GetTypeName().c_str());
     anyBuilders_[builder->GetObjectId()] = builder;
 }
 void ObjectRegistry::UnregisterAny(const ObjectId& id)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     anyBuilders_.erase(id);
 }
 BASE_NS::vector<ObjectId> ObjectRegistry::GetAllRegisteredAnyTypes() const
 {
     BASE_NS::vector<ObjectId> all;
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     all.reserve(anyBuilders_.size());
     for (auto&& b : anyBuilders_) {
         all.push_back(b.first);
@@ -845,66 +854,66 @@ IGlobalSerializationData& ObjectRegistry::GetGlobalSerializationData()
 }
 SerializationSettings ObjectRegistry::GetDefaultSettings() const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return defaultSettings_;
 }
 void ObjectRegistry::SetDefaultSettings(const SerializationSettings& settings)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     defaultSettings_ = settings;
 }
 void ObjectRegistry::RegisterGlobalObject(const IObject::Ptr& object)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (auto p = interface_cast<IObjectInstance>(object)) {
         globalObjects_[p->GetInstanceId()] = object;
     }
 }
 void ObjectRegistry::UnregisterGlobalObject(const IObject::Ptr& object)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (auto p = interface_cast<IObjectInstance>(object)) {
         globalObjects_.erase(p->GetInstanceId());
     }
 }
 IObject::Ptr ObjectRegistry::GetGlobalObject(const InstanceId& id) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = globalObjects_.find(id);
     return it != globalObjects_.end() ? it->second.lock() : nullptr;
 }
 void ObjectRegistry::RegisterValueSerializer(const IValueSerializer::Ptr& s)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     valueSerializers_[s->GetTypeId()] = s;
 }
 void ObjectRegistry::UnregisterValueSerializer(const TypeId& id)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     valueSerializers_.erase(id);
 }
 IValueSerializer::Ptr ObjectRegistry::GetValueSerializer(const TypeId& id) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = valueSerializers_.find(id);
     return it != valueSerializers_.end() ? it->second : nullptr;
 }
 
 IEngineInternalValueAccess::Ptr ObjectRegistry::GetInternalValueAccess(const CORE_NS::PropertyTypeDecl& type) const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     auto it = engineInternalAccess_.find(type);
     return it != engineInternalAccess_.end() ? it->second : nullptr;
 }
 void ObjectRegistry::RegisterInternalValueAccess(
     const CORE_NS::PropertyTypeDecl& type, IEngineInternalValueAccess::Ptr ptr)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     engineInternalAccess_[type] = BASE_NS::move(ptr);
 }
 void ObjectRegistry::UnregisterInternalValueAccess(const CORE_NS::PropertyTypeDecl& type)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     engineInternalAccess_.erase(type);
 }
 IEngineData& ObjectRegistry::GetEngineData()
@@ -915,7 +924,7 @@ BASE_NS::vector<CORE_NS::PropertyTypeDecl> ObjectRegistry::GetAllRegisteredValue
 {
     BASE_NS::vector<CORE_NS::PropertyTypeDecl> all;
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         all.reserve(engineInternalAccess_.size());
         for (auto&& v : engineInternalAccess_) {
             all.push_back(v.first);
@@ -949,7 +958,7 @@ void MakeNameUnique(const BASE_NS::array_view<BASE_NS::string_view>& names, BASE
         // Name is already unique
         return;
     }
-    constexpr uint32_t POSTFIX_MIN_LENGTH = 3; // 3 chars: "(x)"
+    constexpr uint32_t POSTFIX_MIN_LENGTH = 3;  // 3 chars: "(x)"
     const auto length = name.length();
     bool remove = length >= POSTFIX_MIN_LENGTH && name.ends_with(')');
 
@@ -970,7 +979,7 @@ void MakeNameUnique(const BASE_NS::array_view<BASE_NS::string_view>& names, BASE
     MakeNameUnique(names, name, index);
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 BASE_NS::string ObjectRegistry::GetUniqueName(
     BASE_NS::string_view name, BASE_NS::array_view<BASE_NS::string_view> names) const

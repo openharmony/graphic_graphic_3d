@@ -1,0 +1,42 @@
+{
+    "version": "1.0",
+    "description": "deeply nested node carries an attachment whose objectRef path '/target' must resolve to scene root's target child, not to the immediate parent",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "node",
+                    "name": "A",
+                    "children": [
+                        {
+                            "type": "node",
+                            "name": "B",
+                            "children": [
+                                {
+                                    "type": "node",
+                                    "name": "C",
+                                    "attachments": [
+                                        {
+                                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                                            "properties": [
+                                                { "name": "Name", "value": "RefAtt" },
+                                                { "name": "NodeRef", "value": { "type": "objectRef", "path": "/target" } }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "node",
+                    "name": "target"
+                }
+            ]
+        }
+    }
+}

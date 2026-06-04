@@ -29,7 +29,7 @@
 META_BEGIN_NAMESPACE()
 
 struct ImportOptions {
-    bool manualDeferredResolve {};
+    bool manualDeferredResolve{};
 };
 
 /// Interface to import serialisation hierarchy as object

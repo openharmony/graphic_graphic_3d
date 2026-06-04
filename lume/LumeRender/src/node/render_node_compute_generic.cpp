@@ -37,8 +37,8 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace {
 struct DispatchResources {
-    RenderHandle buffer {};
-    RenderHandle image {};
+    RenderHandle buffer{};
+    RenderHandle image{};
 };
 
 DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& ir)
@@ -52,7 +52,7 @@ DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& 
     }
     return dr;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeComputeGeneric::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -108,7 +108,7 @@ void RenderNodeComputeGeneric::PreExecuteFrame()
 void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 {
     if (!RenderHandleUtil::IsValid(pipelineData_.sd.shader)) {
-        return; // invalid shader
+        return;  // invalid shader
     }
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
@@ -123,9 +123,10 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     if ((!RenderHandleUtil::IsValid(dr.buffer)) && (!RenderHandleUtil::IsValid(dr.image))) {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(renderNodeContextMgr_->GetName() + "_no_dr",
-            "RENDER_VALIDATION: RN: %s, no valid dispatch resource", renderNodeContextMgr_->GetName().data());
+            "RENDER_VALIDATION: RN: %s, no valid dispatch resource",
+            renderNodeContextMgr_->GetName().data());
 #endif
-        return; // no way to evaluate dispatch size
+        return;  // no way to evaluate dispatch size
     }
     const uint32_t firstSetIndex = pipelineDescriptorSetBinder_->GetFirstSet();
     {
@@ -171,7 +172,7 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     } else if (RenderHandleUtil::IsValid(dr.image)) {
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
         const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dr.image);
-        const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
+        const Math::UVec3 targetSize = {desc.width, desc.height, desc.depth};
         cmdList.Dispatch((targetSize.x + threadGroupSize_.x - 1u) / threadGroupSize_.x,
             (targetSize.y + threadGroupSize_.y - 1u) / threadGroupSize_.y,
             (targetSize.z + threadGroupSize_.z - 1u) / threadGroupSize_.z);
@@ -181,13 +182,13 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
 RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& renderNodeContextMgr)
 {
     if (!useDataStoreShaderSpecialization_) {
-        return pipelineData_.pso; // early out
+        return pipelineData_.pso;  // early out
     }
     const auto& renderDataStoreMgr = renderNodeContextMgr.GetRenderDataStoreManager();
     const auto dataStore = static_cast<const IRenderDataStorePod*>(
         renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName.c_str()));
     if (!dataStore) {
-        return pipelineData_.pso; // early out
+        return pipelineData_.pso;  // early out
     }
     const auto dataView = dataStore->Get(jsonInputs_.renderDataStoreSpecialization.configurationName);
     if (dataView.data() && (dataView.size_bytes() == sizeof(ShaderSpecializationRenderPod))) {
@@ -206,9 +207,9 @@ RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& r
             }
         }
         if (valuesChanged) {
-            const ShaderSpecializationConstantDataView specialization {
+            const ShaderSpecializationConstantDataView specialization{
                 constantsView,
-                { shaderSpecializationData_.data.data(), specializationCount },
+                {shaderSpecializationData_.data.data(), specializationCount},
             };
             pipelineData_.pso = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(
                 pipelineData_.sd.shader, pipelineData_.sd.pipelineLayout, specialization);
@@ -221,7 +222,8 @@ RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& r
             "RENDER_VALIDATION: RenderNodeComputeGeneric shader specilization render data store size mismatch, "
             "name: %s, size:%u, podsize%u",
             jsonInputs_.renderDataStoreSpecialization.configurationName.c_str(),
-            static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)), static_cast<uint32_t>(dataView.size_bytes()));
+            static_cast<uint32_t>(sizeof(ShaderSpecializationRenderPod)),
+            static_cast<uint32_t>(dataView.size_bytes()));
 #endif
     }
     return pipelineData_.pso;

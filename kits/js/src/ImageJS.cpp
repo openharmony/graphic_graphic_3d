@@ -40,22 +40,24 @@ void ImageJS::Init(napi_env env, napi_value exports)
     auto status = napi_define_class(
         env, "Image", NAPI_AUTO_LENGTH, BaseObject::ctor<ImageJS>(), nullptr, props.size(), props.data(), &func);
 
-    NapiApi::MyInstanceState *mis;
-    NapiApi::MyInstanceState::GetInstance(env, (void **)&mis);
+    NapiApi::MyInstanceState* mis;
+    NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         mis->StoreCtor("Image", func);
     }
 }
 
-void ImageJS::DisposeNative(void *sc)
+void ImageJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
         LOG_V("ImageJS::DisposeNative");
         DestroyBridge(this);
+        // don't move this line down, we need to keep native object alive for DetachJsObj
+        auto native = GetNativeObject<META_NS::IObject>();
         if (resources_) {
             auto uri = ExtractUri(uri_.GetObject());
-            LOG_V("#### dispoose uri: %s", uri.c_str());
+            LOG_V("dispoose uri: %s", uri.c_str());
             if (!uri.empty()) {
                 ExecSyncTask([uri, resources = resources_]() -> META_NS::IAny::Ptr {
                     if (resources) {
@@ -64,9 +66,12 @@ void ImageJS::DisposeNative(void *sc)
                     return {};
                 });
             } else {
-                LOG_V("### No uri for image resource when disposing");
+                LOG_V("No uri for image resource when disposing");
             }
             resources_->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+        }
+        if (native) {
+            DetachJsObj(native, "_JSW");
         }
 
         UnsetNativeObject();
@@ -87,7 +92,7 @@ void* ImageJS::GetInstanceImpl(uint32_t id)
 void ImageJS::Finalize(napi_env env)
 {
     FinalizeBridge(this);
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
 }
 
@@ -95,18 +100,18 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
 {
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
-    NapiApi::Object renderContext = fromJs.Arg<0>(); // access to owning context...
+    NapiApi::Object renderContext = fromJs.Arg<0>();  // access to owning context...
     // This is awkward (and unfair to base class)
     scene_ = renderContext;
     // Not sure if using a render context here and scene elsewhere is optimal solution in a long run
     if (!renderContext.GetJsWrapper<RenderContextJS>()) {
-        CORE_LOG_V("### Not RenderContext");
+        CORE_LOG_V("Not RenderContext");
         if (renderContext.GetJsWrapper<SceneJS>()) {
-            LOG_V("### Render Context is scene");
-            if (NapiApi::Function func = renderContext.Get<NapiApi::Function>("getRenderContext")){
+            LOG_V("Render Context is scene");
+            if (NapiApi::Function func = renderContext.Get<NapiApi::Function>("getRenderContext")) {
                 if (auto rc = NapiApi::Object(e, func.Invoke(renderContext, {}))) {
                     scene_ = rc;
-                    LOG_V("### remapped render context to scene_");
+                    LOG_V("remapped render context to scene_");
                 }
             }
         } else {
@@ -150,18 +155,18 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
     if (args.Get("uri")) {
         SetUri(args);
     } else {
-        LOG_E("### building image without uri");
+        LOG_E("building image without uri");
     }
 
     auto uri = ExtractUri(uri_.GetObject());
-    LOG_V("### uri: %s", uri.c_str());
+    LOG_V("uri: %s", uri.c_str());
     if (auto* m = interface_cast<META_NS::IMetadata>(bitmap)) {
-        if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING)) {
+        if (auto p = m->GetProperty("Uri", META_NS::MetadataQuery::EXISTING); !p) {
             auto prop = META_NS::ConstructProperty<BASE_NS::string>(
                 "Uri", uri, META_NS::ObjectFlagBits::INTERNAL | META_NS::ObjectFlagBits::NATIVE);
             m->AddProperty(prop);
         } else {
-            LOG_V("### meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
+            LOG_V("meta-uri: %s", META_NS::GetValue<BASE_NS::string>(p).c_str());
         }
     }
     if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
@@ -181,7 +186,7 @@ ImageJS::ImageJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneReso
 
 ImageJS::~ImageJS()
 {
-    DisposeNative(nullptr);
+    DisposeNative();
 }
 
 napi_value ImageJS::GetWidth(NapiApi::FunctionContext<>& ctx)

@@ -33,11 +33,11 @@ class NodeETS : public SceneResourceETS, public std::enable_shared_from_this<Nod
     friend class CameraETS;
 
 public:
-    static std::shared_ptr<NodeETS> FromNative(const SCENE_NS::INode::Ptr &node);
+    static std::shared_ptr<NodeETS> FromNative(const SCENE_NS::INode::Ptr& node);
     enum NodeType { NODE = 1, GEOMETRY = 2, CAMERA = 3, LIGHT = 4, CUSTOM = 255 };
 
-    NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node);
-    explicit NodeETS(const SCENE_NS::INode::Ptr &node);
+    NodeETS(const NodeType& type, const SCENE_NS::INode::Ptr& node);
+    explicit NodeETS(const SCENE_NS::INode::Ptr& node);
     virtual ~NodeETS();
     void Destroy() override;
 
@@ -48,18 +48,18 @@ public:
     std::string GetName() const override;
 
     std::shared_ptr<Vec3Proxy> GetPosition();
-    void SetPosition(const BASE_NS::Math::Vec3 &position);
+    void SetPosition(const BASE_NS::Math::Vec3& position);
 
     std::shared_ptr<Vec3Proxy> GetScale();
-    void SetScale(const BASE_NS::Math::Vec3 &scale);
+    void SetScale(const BASE_NS::Math::Vec3& scale);
 
     std::shared_ptr<QuatProxy> GetRotation();
-    void SetRotation(const BASE_NS::Math::Quat &rotation);
+    void SetRotation(const BASE_NS::Math::Quat& rotation);
 
     std::string GetPath();
     std::shared_ptr<NodeETS> GetParent();
 
-    std::shared_ptr<NodeETS> GetNodeByPath(const std::string &path);
+    std::shared_ptr<NodeETS> GetNodeByPath(const std::string& path);
 
     std::shared_ptr<NodeETS> GetChildContainer();  // returns a container object.
 
@@ -75,9 +75,9 @@ public:
     std::shared_ptr<NodeETS> GetChild(const uint32_t index);
 
     void ClearChildren();
-    void InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const std::shared_ptr<NodeETS> &siblingNode);
-    void AppendChild(const std::shared_ptr<NodeETS> &childNode);
-    void RemoveChild(const std::shared_ptr<NodeETS> &childNode);
+    void InsertChildAfter(const std::shared_ptr<NodeETS>& childNode, const std::shared_ptr<NodeETS>& siblingNode);
+    void AppendChild(const std::shared_ptr<NodeETS>& childNode);
+    void RemoveChild(const std::shared_ptr<NodeETS>& childNode);
     bool IsAttached() const;
     virtual void Attached(bool attached);
 
@@ -90,7 +90,7 @@ public:
     }
 
 private:
-    NodeType type_;
+    NodeType type_{NodeType::NODE};
     SCENE_NS::INode::WeakPtr node_{nullptr};
     std::shared_ptr<Vec3Proxy> posProxy_{nullptr};
     std::shared_ptr<Vec3Proxy> sclProxy_{nullptr};

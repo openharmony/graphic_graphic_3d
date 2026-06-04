@@ -123,5 +123,5 @@ void DebugOutput::DecIndentEndLine()
     result_ += "\n";
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

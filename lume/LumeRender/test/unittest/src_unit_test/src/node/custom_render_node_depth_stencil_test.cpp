@@ -40,16 +40,16 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr string_view OUTPUT_IMAGE_NAME { "OutputImage" };
-static constexpr string_view DEPTH_IMAGE_NAME { "DepthImage" };
-static constexpr string_view COPY_BUFFER_NAME { "CopyBuffer" };
-static constexpr string_view VERTEX_BUFFER_NAME { "VertexBuffer" };
+static constexpr string_view OUTPUT_IMAGE_NAME{"OutputImage"};
+static constexpr string_view DEPTH_IMAGE_NAME{"DepthImage"};
+static constexpr string_view COPY_BUFFER_NAME{"CopyBuffer"};
+static constexpr string_view VERTEX_BUFFER_NAME{"VertexBuffer"};
 static constexpr uint32_t WIDTH = 15u;
 static constexpr uint32_t HEIGHT = 15u;
 static constexpr uint32_t NUM_BYTES = WIDTH * HEIGHT * 4u * 4u;
 
-static constexpr float VERTEX_BUFFER_DATA[] = { -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.6f, 0.5f, 0.5f, 0.7f, -0.5f, 0.5f,
-    0.8f };
+static constexpr float VERTEX_BUFFER_DATA[] = {
+    -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.6f, 0.5f, 0.5f, 0.7f, -0.5f, 0.5f, 0.8f};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -72,9 +72,13 @@ void CreateTestResources(TestData& td, bool onlyStencil)
             static_cast<RenderNodeGraphManager&>(td.engine.context->GetRenderNodeGraphManager());
         RenderNodeManager& renderNodeMgr = renderNodeGraphMgr.GetRenderNodeManager();
         {
-            RenderNodeTypeInfo info { { RenderNodeDepthStencil::UID }, RenderNodeDepthStencil::UID,
-                RenderNodeDepthStencil::TYPE_NAME, RenderNodeDepthStencil::Create, RenderNodeDepthStencil::Destroy,
-                RenderNodeDepthStencil::BACKEND_FLAGS, RenderNodeDepthStencil::CLASS_TYPE };
+            RenderNodeTypeInfo info{{RenderNodeDepthStencil::UID},
+                RenderNodeDepthStencil::UID,
+                RenderNodeDepthStencil::TYPE_NAME,
+                RenderNodeDepthStencil::Create,
+                RenderNodeDepthStencil::Destroy,
+                RenderNodeDepthStencil::BACKEND_FLAGS,
+                RenderNodeDepthStencil::CLASS_TYPE};
             renderNodeMgr.AddRenderNodeFactory(info);
         }
     }
@@ -139,8 +143,9 @@ void CreateTestResources(TestData& td, bool onlyStencil)
             CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS | CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE;
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_VERTEX_BUFFER_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        td.vertexBufferHandle = td.engine.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME, bufferDesc,
-            { reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA) });
+        td.vertexBufferHandle = td.engine.device->GetGpuResourceManager().Create(VERTEX_BUFFER_NAME,
+            bufferDesc,
+            {reinterpret_cast<const uint8_t*>(VERTEX_BUFFER_DATA), sizeof(VERTEX_BUFFER_DATA)});
     }
     td.byteArray = make_unique<ByteArray>(NUM_BYTES);
 }
@@ -172,9 +177,9 @@ void TickTest(const TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = WIDTH;
                 bufferImageCopy.bufferImageHeight = HEIGHT;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { WIDTH, HEIGHT, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {WIDTH, HEIGHT, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME);
@@ -196,7 +201,7 @@ void TickTest(const TestData& td, int32_t frameCountToTick)
         }
 
         if (idx < 2) {
-            er.context->GetRenderer().RenderFrame({ &td.renderNodeGraph, 1 });
+            er.context->GetRenderer().RenderFrame({&td.renderNodeGraph, 1});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -225,7 +230,7 @@ void Validate(const TestData& td, bool onlyStencil)
     float* outputImageData = reinterpret_cast<float*>(td.byteArray->GetData().data());
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage(GetFileName(td.engine, onlyStencil), WIDTH, HEIGHT, outputImageData);
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     int32_t x = WIDTH / 2;
     int32_t y = HEIGHT / 2;
     for (int32_t i = 0; i < WIDTH; ++i) {
@@ -258,7 +263,7 @@ void TestRenderNodeDepthStencil(DeviceBackendType backend, bool onlyStencil)
         UTest::DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -271,7 +276,7 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeDepthStencilTestVulkan, testing::ext::
     TestRenderNodeDepthStencil(DeviceBackendType::VULKAN, false);
     TestRenderNodeDepthStencil(DeviceBackendType::VULKAN, true);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -284,4 +289,4 @@ UNIT_TEST(SRC_CustomRenderNode, RenderNodeDepthStencilTestOpenGL, testing::ext::
     TestRenderNodeDepthStencil(UTest::GetOpenGLBackend(), false);
     TestRenderNodeDepthStencil(UTest::GetOpenGLBackend(), true);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

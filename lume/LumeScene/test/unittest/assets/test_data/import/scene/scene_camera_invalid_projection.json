@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"description": "scene with camera using an invalid projection enum value",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "camera",
+					"name": "test",
+					"projection": "isometric"
+				}
+			]
+		}
+	}
+}

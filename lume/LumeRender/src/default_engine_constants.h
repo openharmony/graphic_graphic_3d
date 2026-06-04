@@ -27,61 +27,54 @@ RENDER_BEGIN_NAMESPACE()
 /** Default GPU resource constants */
 struct DefaultEngineGpuResourceConstants {
     /** Default built-in backbuffer/swapchain */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER { "CORE_DEFAULT_BACKBUFFER" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER{"CORE_DEFAULT_BACKBUFFER"};
     /** Default backbuffer/swapchain depth (when rendering scene directly to backbuffer) */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER_DEPTH { "CORE_DEFAULT_BACKBUFFER_DEPTH" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_BACKBUFFER_DEPTH{"CORE_DEFAULT_BACKBUFFER_DEPTH"};
 
     /** Default swapchain prefix */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SWAPCHAIN { "CORE_DEFAULT_SWAPCHAIN_" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SWAPCHAIN{"CORE_DEFAULT_SWAPCHAIN_"};
 
     /** Default GPU image, black */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_IMAGE { "CORE_DEFAULT_GPU_IMAGE" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_IMAGE{"CORE_DEFAULT_GPU_IMAGE"};
     /** Default GPU image, white */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_IMAGE_WHITE { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_IMAGE_WHITE{"CORE_DEFAULT_GPU_IMAGE_WHITE"};
 
     /** Default GPU buffer, 1024 bytes */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_BUFFER { "CORE_DEFAULT_GPU_BUFFER" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_BUFFER{"CORE_DEFAULT_GPU_BUFFER"};
 
     /** Default GPU sampler, nearest clamp */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_SAMPLER { "CORE_DEFAULT_GPU_SAMPLER" };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_GPU_SAMPLER{"CORE_DEFAULT_GPU_SAMPLER"};
 
     /** Default sampler, nearest repeat */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_NEAREST_REPEAT {
-        "CORE_DEFAULT_SAMPLER_NEAREST_REPEAT"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_NEAREST_REPEAT{
+        "CORE_DEFAULT_SAMPLER_NEAREST_REPEAT"};
     /** Default sampler, nearest clamp */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_NEAREST_CLAMP {
-        "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_NEAREST_CLAMP{
+        "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP"};
     /** Default sampler, linear repeat */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_REPEAT {
-        "CORE_DEFAULT_SAMPLER_LINEAR_REPEAT"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_REPEAT{
+        "CORE_DEFAULT_SAMPLER_LINEAR_REPEAT"};
     /** Default sampler, linear clamp */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_CLAMP {
-        "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_CLAMP{"CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"};
     /** Default sampler, linear mipmap repeat */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT {
-        "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT{
+        "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT"};
     /** Default sampler, linear mipmap clamp */
-    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP {
-        "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP"
-    };
+    static constexpr const BASE_NS::string_view CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP{
+        "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_CLAMP"};
 };
 
 struct DefaultDebugConstants {
     /** Default color used for e.g. debug markers inside render */
-    static constexpr const BASE_NS::Math::Vec4 CORE_DEFAULT_DEBUG_COLOR { 1.0f, 0.5f, 1.0f, 1.0f };
+    static constexpr const BASE_NS::Math::Vec4 CORE_DEFAULT_DEBUG_COLOR{1.0f, 0.5f, 1.0f, 1.0f};
 };
 
 struct DeviceConstants {
-    static constexpr uint32_t MIN_BUFFERING_COUNT { 2U };
+    static constexpr uint32_t MIN_BUFFERING_COUNT{2U};
     /** definitely a bit high number, prefer e.g. 3. */
-    static constexpr uint32_t MAX_BUFFERING_COUNT { 6U };
+    static constexpr uint32_t MAX_BUFFERING_COUNT{6U};
 };
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // DEFAULT_ENGINE_CONSTANTS_H
+#endif  // DEFAULT_ENGINE_CONSTANTS_H

@@ -35,12 +35,11 @@ CORE_END_NAMESPACE()
 SCENE_BEGIN_NAMESPACE()
 
 static constexpr auto SHADOW_RESOLUTION_PROP_NAME = "ShadowResolution";
-
 static constexpr auto SHADOW_QUALITY_PROP_NAME = "ShadowQuality";
 
 CORE_NS::Entity RenderConfiguration::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    CORE_NS::Entity entity {};
+    CORE_NS::Entity entity{};
     if (!scene) {
         return entity;
     }
@@ -69,10 +68,10 @@ bool RenderConfiguration::InitDynamicProperty(const META_NS::IProperty::Ptr& p, 
 {
     if (p->GetName() == "Environment") {
         auto ep = object_->CreateProperty(path).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(
-                   new InterfacePtrEntityValue<IEnvironment>(ep, { GetInternalScene(), ClassId::Environment })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(
+                new InterfacePtrEntityValue<IEnvironment>(ep, {GetInternalScene(), ClassId::Environment})));
     }
     return AttachEngineProperty(p, path);
 }
@@ -127,7 +126,7 @@ void RenderConfiguration::OnPropertyChanged(const META_NS::IProperty& property)
         if (isset) {
             value = META_NS::GetValue<BASE_NS::Math::UVec2>(property.GetValue());
         }
-        isset &= value.x > 0 && value.y > 0; // Require size to be larger than 0x0 even if set
+        isset &= value.x > 0 && value.y > 0;  // Require size to be larger than 0x0 even if set
         auto scene = GetInternalScene();
         if (scene) {
             scene->RunDirectlyOrInTask(
@@ -161,7 +160,7 @@ BASE_NS::refcnt_ptr<CORE3D_NS::IRenderDataStoreDefaultLight> RenderConfiguration
 void RenderConfiguration::UpdateShadowResolution(IInternalScene& scene, bool isset, BASE_NS::Math::UVec2 value)
 {
     if (const auto store = GetDefaultLightRenderDataStore(scene)) {
-        CORE3D_NS::IRenderDataStoreDefaultLight::ShadowQualityResolutions resolutions; // defaults
+        CORE3D_NS::IRenderDataStoreDefaultLight::ShadowQualityResolutions resolutions;  // defaults
         if (isset) {
             // If an override value is set, place the value as the resolution for every shadow
             // quality, effectively setting the shadow map resolution to the desired value

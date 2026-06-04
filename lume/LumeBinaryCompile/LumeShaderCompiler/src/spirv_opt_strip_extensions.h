@@ -31,6 +31,6 @@ public:
     Status Process() override;
 };
 
-} // namespace spvtools::opt
+}  // namespace spvtools::opt
 
-#endif // SOURCE_OPT_STRIP_PREPROCESSOR_DEBUG_INFO_PASS_H_
+#endif  // SOURCE_OPT_STRIP_PREPROCESSOR_DEBUG_INFO_PASS_H_

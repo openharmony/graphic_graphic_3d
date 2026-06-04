@@ -42,7 +42,7 @@ void CombineSpecializationConstants(BASE_NS::array_view<const ShaderSpecializati
 void CombinePipelineLayouts(BASE_NS::array_view<const PipelineLayout> inPl, PipelineLayout& outPl);
 
 uint32_t FormatByteSize(BASE_NS::Format format);
-} // namespace GpuProgramUtil
+}  // namespace GpuProgramUtil
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_PROGRAM_UTIL_H
+#endif  // DEVICE_GPU_PROGRAM_UTIL_H

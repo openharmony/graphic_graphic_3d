@@ -39,24 +39,24 @@ RENDER_BEGIN_NAMESPACE()
 /** Backend extra vulkan */
 struct BackendExtraVk final : public BackendExtra {
     /* Enable multiple gpu queues for usage */
-    bool enableMultiQueue { false };
+    bool enableMultiQueue{false};
 
-    VkInstance instance { VK_NULL_HANDLE };
-    VkPhysicalDevice physicalDevice { VK_NULL_HANDLE };
-    VkDevice device { VK_NULL_HANDLE };
+    VkInstance instance{VK_NULL_HANDLE};
+    VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
+    VkDevice device{VK_NULL_HANDLE};
 
     struct DeviceExtensions {
         BASE_NS::vector<BASE_NS::string_view> extensionNames;
-        VkPhysicalDeviceFeatures2* physicalDeviceFeaturesToEnable { nullptr };
+        VkPhysicalDeviceFeatures2* physicalDeviceFeaturesToEnable{nullptr};
     };
     /* Additional extensions */
     DeviceExtensions extensions;
 
     struct GpuMemoryAllocatorSizes {
         /* Set default allocation block size in bytes, used if the value is not ~0u */
-        uint32_t defaultAllocationBlockSize { ~0u };
+        uint32_t defaultAllocationBlockSize{~0u};
         /* Set custom dynamic (ring buffer) UBO allocation block size in bytes , used if the value is not ~0u */
-        uint32_t customAllocationDynamicUboBlockSize { ~0u };
+        uint32_t customAllocationDynamicUboBlockSize{~0u};
     };
     /* Memory sizes might not be used if the sizes are not valid/sane */
     GpuMemoryAllocatorSizes gpuMemoryAllocatorSizes;
@@ -75,145 +75,145 @@ struct PhysicalDevicePropertiesVk final {
 /** Device platform data vulkan */
 struct DevicePlatformDataVk final : DevicePlatformData {
     /** Instance */
-    VkInstance instance { VK_NULL_HANDLE };
+    VkInstance instance{VK_NULL_HANDLE};
     /** Physical device */
-    VkPhysicalDevice physicalDevice { VK_NULL_HANDLE };
+    VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
     /** Device */
-    VkDevice device { VK_NULL_HANDLE };
+    VkDevice device{VK_NULL_HANDLE};
     /** Physical device properties */
-    PhysicalDevicePropertiesVk physicalDeviceProperties {};
+    PhysicalDevicePropertiesVk physicalDeviceProperties{};
     /** Available physical device extensions */
-    BASE_NS::vector<VkExtensionProperties> physicalDeviceExtensions {};
+    BASE_NS::vector<VkExtensionProperties> physicalDeviceExtensions{};
 
     /** Enabled physical device features */
-    VkPhysicalDeviceFeatures enabledPhysicalDeviceFeatures {};
+    VkPhysicalDeviceFeatures enabledPhysicalDeviceFeatures{};
 
-    uint32_t deviceApiMajor { 0u };
-    uint32_t deviceApiMinor { 0u };
+    uint32_t deviceApiMajor{0u};
+    uint32_t deviceApiMinor{0u};
 
-    VkPipelineCache pipelineCache { VK_NULL_HANDLE };
+    VkPipelineCache pipelineCache{VK_NULL_HANDLE};
 };
 
 struct RenderBackendRecordingStateVk final : public RenderBackendRecordingState {
-    VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
+    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
 
-    VkRenderPass renderPass { VK_NULL_HANDLE };
-    VkFramebuffer framebuffer { VK_NULL_HANDLE };
-    VkExtent2D framebufferSize { 0, 0 };
-    uint32_t subpassIndex { 0u };
+    VkRenderPass renderPass{VK_NULL_HANDLE};
+    VkFramebuffer framebuffer{VK_NULL_HANDLE};
+    VkExtent2D framebufferSize{0, 0};
+    uint32_t subpassIndex{0u};
 
-    VkPipelineLayout pipelineLayout { VK_NULL_HANDLE };
+    VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 };
 
 /** Image desc vulkan for creating engine GpuImage based on given data */
 struct ImageDescVk final : BackendSpecificImageDesc {
     /** Image */
-    VkImage image { VK_NULL_HANDLE };
+    VkImage image{VK_NULL_HANDLE};
     /** Image view */
-    VkImageView imageView { VK_NULL_HANDLE };
+    VkImageView imageView{VK_NULL_HANDLE};
 
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 
     /** Whether to set the format of the platform specific hardware buffer */
-    bool isFormatEffectivelySet { false };
+    bool isFormatEffectivelySet{false};
 };
 
 /** Buffer descriptor vulkan for creating engine GpuBuffer based on given data */
 struct BufferDescVk : BackendSpecificBufferDesc {
     /** Buffer */
-    VkBuffer buffer { VK_NULL_HANDLE };
+    VkBuffer buffer{VK_NULL_HANDLE};
 
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 };
 
 /** Low level vk memory access. (Usable only with low level engine use-cases) */
 struct GpuResourceMemoryVk final {
     /* Vulkan memory handle */
-    VkDeviceMemory deviceMemory { VK_NULL_HANDLE };
+    VkDeviceMemory deviceMemory{VK_NULL_HANDLE};
     /* Offset into deviceMemory object to the beginning of this allocation */
-    VkDeviceSize offset { 0 };
+    VkDeviceSize offset{0};
     /* Size of this allocation */
-    VkDeviceSize size { 0 };
+    VkDeviceSize size{0};
     /* Null if not mappable */
-    void* mappedData { nullptr };
+    void* mappedData{nullptr};
 
     /* Memory type */
-    uint32_t memoryTypeIndex { 0 };
+    uint32_t memoryTypeIndex{0};
     /* Memory flags */
-    VkMemoryPropertyFlags memoryPropertyFlags { 0 };
+    VkMemoryPropertyFlags memoryPropertyFlags{0};
 };
 
 /** Low level vk buffer access. (Usable only with low level engine use-cases) */
 struct GpuBufferPlatformDataVk final : public GpuBufferPlatformData {
     /* Buffer handle */
-    VkBuffer buffer { VK_NULL_HANDLE };
+    VkBuffer buffer{VK_NULL_HANDLE};
 
     /* Bindable memory block byte size */
-    uint32_t bindMemoryByteSize { 0u };
+    uint32_t bindMemoryByteSize{0u};
     /* Full byte size of this buffer, i.e. might be 3 x bindMemoryByteSize for dynamic ring buffers.
      * If no buffering fullByteSize == bindMemoryByteSize.
      */
-    uint32_t fullByteSize { 0u };
+    uint32_t fullByteSize{0u};
     /* Current offset with ring buffers (advanced with map), otherwise 0 */
-    uint32_t currentByteOffset { 0u };
+    uint32_t currentByteOffset{0u};
 
     /* Usage flags */
-    VkBufferUsageFlags usage { 0 };
+    VkBufferUsageFlags usage{0};
 
     /* Device address */
-    uint64_t deviceAddress { 0 };
+    uint64_t deviceAddress{0};
 
     /* Memory */
     GpuResourceMemoryVk memory;
 
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 };
 
 /** Low level vk image access. (Usable only with low level engine use-cases) */
 struct GpuImagePlatformDataVk final : public GpuImagePlatformData {
     /* Image handle */
-    VkImage image { VK_NULL_HANDLE };
+    VkImage image{VK_NULL_HANDLE};
     /* Image view */
-    VkImageView imageView { VK_NULL_HANDLE };
+    VkImageView imageView{VK_NULL_HANDLE};
     /* Image view base for mip level 0 and layer 0 for attachments */
-    VkImageView imageViewBase { VK_NULL_HANDLE };
+    VkImageView imageViewBase{VK_NULL_HANDLE};
 
     /* Format */
-    VkFormat format { VK_FORMAT_UNDEFINED };
+    VkFormat format{VK_FORMAT_UNDEFINED};
     /* Extent */
-    VkExtent3D extent { 0u, 0u, 0u };
+    VkExtent3D extent{0u, 0u, 0u};
     /* Image type */
-    VkImageType type { VK_IMAGE_TYPE_2D };
+    VkImageType type{VK_IMAGE_TYPE_2D};
     /* Aspect flags */
-    VkImageAspectFlags aspectFlags { 0 };
+    VkImageAspectFlags aspectFlags{0};
     /* Usage flags */
-    VkImageUsageFlags usage { 0 };
+    VkImageUsageFlags usage{0};
     /* Sample count flag bits */
-    VkSampleCountFlagBits samples { VK_SAMPLE_COUNT_1_BIT };
+    VkSampleCountFlagBits samples{VK_SAMPLE_COUNT_1_BIT};
     /* Image tiling */
-    VkImageTiling tiling { VK_IMAGE_TILING_OPTIMAL };
+    VkImageTiling tiling{VK_IMAGE_TILING_OPTIMAL};
     /* Mip levels */
-    uint32_t mipLevels { 0u };
+    uint32_t mipLevels{0u};
     /* Layer count */
-    uint32_t arrayLayers { 0u };
+    uint32_t arrayLayers{0u};
 
     /* Memory */
     GpuResourceMemoryVk memory;
 
     /** Platform specific hardware buffer */
-    uintptr_t platformHwBuffer { 0u };
+    uintptr_t platformHwBuffer{0u};
 
     /** Whether to set the format of the platform specific hardware buffer */
-    bool isFormatEffectivelySet { false };
+    bool isFormatEffectivelySet{false};
 };
 
 /** Low level vk sampler access. (Usable only with low level engine use-cases) */
 struct GpuSamplerPlatformDataVk final : public GpuSamplerPlatformData {
     /* Sampler handle */
-    VkSampler sampler { VK_NULL_HANDLE };
+    VkSampler sampler{VK_NULL_HANDLE};
 };
 
 /** Provides interface for low-level access.
@@ -235,7 +235,7 @@ protected:
     ~ILowLevelDeviceVk() = default;
 };
 
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /** Helper for converting between engine and Vulkan handles.
  * On 32 bit platforms Vulkan handles are uint64_t, but on 64 bit platforms they are pointers. For the engine handles
@@ -243,7 +243,7 @@ protected:
  * @param handle Handle to convert.
  * @return Handle cast to the desired type.
  */
-template<typename OutHandle, typename InHandle>
+template <typename OutHandle, typename InHandle>
 inline OutHandle VulkanHandleCast(InHandle handle)
 {
     // based on current use-cases we could assert that is_pointer_v<OutHandle> != is_pointer_v<InHandle> and not cover
@@ -266,4 +266,4 @@ inline OutHandle VulkanHandleCast(InHandle handle)
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_VULKAN_IDEVICE_VK_H
+#endif  // API_RENDER_VULKAN_IDEVICE_VK_H

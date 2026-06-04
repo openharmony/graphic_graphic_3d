@@ -55,10 +55,10 @@ public:
     void setEnabled(bool enabled);
 
     ::SceneNodes::PostProcessSettingsOrNull getPostProcess();
-    void setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &process);
+    void setPostProcess(::SceneNodes::PostProcessSettingsOrNull const& process);
 
     ::SceneNodes::ColorOrNull getClearColor();
-    void setClearColor(::SceneNodes::ColorOrNull const &color);
+    void setClearColor(::SceneNodes::ColorOrNull const& color);
 
     ::taihe::optional<bool> getMsaa();
     void setMsaa(::taihe::optional_view<bool> msaa);
@@ -69,7 +69,7 @@ public:
     ::SceneNodes::EffectsContainer getEffectsContainer();
 
     ::taihe::array<::SceneTH::RaycastResult> raycastSync(
-        ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const &params);
+        ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const& params);
 
     ::SceneTypes::Vec3 worldToScreen(::SceneTypes::weak::Vec3 worldPosition);
     ::SceneTypes::Vec3 screenToWorld(::SceneTypes::weak::Vec3 viewPosition);
@@ -85,5 +85,5 @@ public:
 private:
     std::shared_ptr<CameraETS> cameraETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_CAMERA_IMPL_H

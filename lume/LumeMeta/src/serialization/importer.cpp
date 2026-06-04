@@ -150,10 +150,12 @@ void Importer::MapInstance(const InstanceId& iid, const IObject::ConstPtr& objec
         if (iid.IsValid()) {
             auto& mi = mapInstanceIds_[iid];
             if (mi.IsValid()) {
-                CORE_LOG_D("re-mapping object [%s] -> [%s]", iid.ToString().c_str(),
+                CORE_LOG_D("re-mapping object [%s] -> [%s]",
+                    iid.ToString().c_str(),
                     instance->GetInstanceId().ToString().c_str());
             } else {
-                CORE_LOG_D("mapping object [%s] -> [%s]", iid.ToString().c_str(),
+                CORE_LOG_D("mapping object [%s] -> [%s]",
+                    iid.ToString().c_str(),
                     instance->GetInstanceId().ToString().c_str());
             }
             mi = instance->GetInstanceId();
@@ -248,7 +250,7 @@ ReturnError Importer::ImportIObjectFlags(const ISerNode::ConstPtr& node, IObject
 {
     Any<uint64_t> any;
     if (ImportValue(node, any)) {
-        uint64_t v {};
+        uint64_t v{};
         if (any.GetValue(v)) {
             flags.SetObjectFlags(v);
             return GenericError::SUCCESS;
@@ -325,7 +327,7 @@ ReturnError Importer::ImportIContainer(const ISerNode::ConstPtr& node, IContaine
     return GenericError::SUCCESS;
 }
 
-template<typename... Builtins>
+template <typename... Builtins>
 static ReturnError ImportSingleBuiltinValue(TypeList<Builtins...>, const ISerNode::ConstPtr& n, IAny& value)
 {
     AnyReturnValue res = AnyReturn::FAIL;
@@ -339,7 +341,7 @@ ReturnError Importer::ImportArray(const ISerNode::ConstPtr& n, IArrayAny& array)
     if (auto node = interface_cast<IArrayNode>(n)) {
         array.RemoveAll();
         for (auto&& m : node->GetMembers()) {
-            if (auto any = array.Clone(AnyCloneOptions { CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM })) {
+            if (auto any = array.Clone(AnyCloneOptions{CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM})) {
                 if (!ImportValue(m, *any) || !array.InsertAnyAt(-1, *any)) {
                     return GenericError::FAIL;
                 }
@@ -360,19 +362,19 @@ ReturnError Importer::ImportBuiltinValue(const ISerNode::ConstPtr& n, IAny& enti
     if (entity.GetTypeId() == UidFromType<float>()) {
         // handle as double
         Any<double> d;
-        auto ret = ImportSingleBuiltinValue(SupportedBuiltins {}, n, d);
+        auto ret = ImportSingleBuiltinValue(SupportedBuiltins{}, n, d);
         if (ret) {
             entity.SetValue(static_cast<float>(d.InternalGetValue()));
         }
         return ret;
     }
-    return ImportSingleBuiltinValue(SupportedBuiltins {}, n, entity);
+    return ImportSingleBuiltinValue(SupportedBuiltins{}, n, entity);
 }
 
 ReturnError Importer::ImportPointer(const ISerNode::ConstPtr& n, IAny& entity)
 {
     if (auto nil = interface_cast<INilNode>(n)) {
-        entity.SetValue(SharedPtrIInterface {});
+        entity.SetValue(SharedPtrIInterface{});
         return GenericError::SUCCESS;
     }
     if (auto intf = GetPointer(entity)) {
@@ -427,12 +429,12 @@ ReturnError Importer::ImportValue(const ISerNode::ConstPtr& n, IAny& entity)
 ReturnError Importer::ImportWeakPtrInAny(const ISerNode::ConstPtr& node, const IAny::Ptr& any)
 {
     if (auto nil = interface_cast<INilNode>(node)) {
-        any->SetValue(SharedPtrIInterface {});
+        any->SetValue(SharedPtrIInterface{});
         return GenericError::SUCCESS;
     }
     if (auto n = interface_cast<IRefUriNode>(node)) {
         // defer resolving the ref uri, might point to object that has not been imported yet.
-        deferred_.push_back(DeferredUriResolve { any, n->GetValue() });
+        deferred_.push_back(DeferredUriResolve{any, n->GetValue()});
         return GenericError::SUCCESS;
     }
     CORE_LOG_F("Cannot import something else than ref uri to weak ptr");
@@ -442,7 +444,10 @@ ReturnError Importer::ImportWeakPtrInAny(const ISerNode::ConstPtr& node, const I
 ReturnError Importer::ImportAny(const IObjectNode::ConstPtr& node, const IAny::Ptr& any)
 {
     if (auto ser = interface_cast<ISerializable>(any)) {
-        ImportContext context(*this, node->GetObjectName(), interface_pointer_cast<IObject>(any), node->GetInstanceId(),
+        ImportContext context(*this,
+            node->GetObjectName(),
+            interface_pointer_cast<IObject>(any),
+            node->GetInstanceId(),
             interface_pointer_cast<IMapNode>(node->GetMembers()));
         if (ser->Import(context)) {
             return GenericError::SUCCESS;
@@ -479,7 +484,8 @@ IAny::Ptr Importer::ImportAny(const ISerNode::ConstPtr& n)
             }
         } else {
             CORE_LOG_F("No such any-type registered [%s, classname=%s, name=%s]",
-                node->GetObjectId().ToString().c_str(), node->GetObjectClassName().c_str(),
+                node->GetObjectId().ToString().c_str(),
+                node->GetObjectClassName().c_str(),
                 node->GetObjectName().c_str());
         }
     }
@@ -589,5 +595,5 @@ SerMetadata ImportContext::GetMetadata() const
 {
     return importer_.GetMetadata();
 }
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -72,7 +72,7 @@ struct SerType : public IntroduceInterfaces<ObjectFwd, ISerType, ISerializable> 
     META_END_STATIC_DATA()
     META_IMPLEMENT_PROPERTY(uint32_t, IntProp)
 
-    int32_t value { 0 };
+    int32_t value{0};
     BASE_NS::vector<BASE_NS::string> strings;
 };
 
@@ -168,7 +168,7 @@ UNIT_TEST(API_SerializationTest, JsonExportExplicitSer, testing::ext::TestSize.L
         auto obj = reg.Create<ISerType>(ClassId::ExplicitSerType);
         ASSERT_TRUE(obj);
         obj->SetValue(2);
-        obj->SetStrings({ "hips", "hops" });
+        obj->SetStrings({"hips", "hops"});
         obj->IntProp()->SetDefaultValue(2);
         obj->IntProp()->SetValue(3);
 
@@ -178,7 +178,7 @@ UNIT_TEST(API_SerializationTest, JsonExportExplicitSer, testing::ext::TestSize.L
     auto obj = ser.Import<ISerType>();
     ASSERT_TRUE(obj);
     EXPECT_EQ(obj->GetValue(), 2);
-    EXPECT_EQ(obj->GetStrings(), (BASE_NS::vector<BASE_NS::string> { "hips", "hops" }));
+    EXPECT_EQ(obj->GetStrings(), (BASE_NS::vector<BASE_NS::string>{"hips", "hops"}));
     EXPECT_EQ(obj->IntProp()->GetDefaultValue(), 2);
     EXPECT_EQ(obj->IntProp()->GetValue(), 3);
 
@@ -200,7 +200,7 @@ UNIT_TEST(API_SerializationTest, JsonExportAutoSer, testing::ext::TestSize.Level
         auto obj = reg.Create<ISerType>(ClassId::AutoSerType);
         ASSERT_TRUE(obj);
         obj->SetValue(2);
-        obj->SetStrings({ "hips", "hops" });
+        obj->SetStrings({"hips", "hops"});
         obj->IntProp()->SetDefaultValue(2);
         obj->IntProp()->SetValue(3);
 
@@ -210,12 +210,66 @@ UNIT_TEST(API_SerializationTest, JsonExportAutoSer, testing::ext::TestSize.Level
     auto obj = ser.Import<ISerType>();
     ASSERT_TRUE(obj);
     EXPECT_EQ(obj->GetValue(), 2);
-    EXPECT_EQ(obj->GetStrings(), (BASE_NS::vector<BASE_NS::string> { "hips", "hops" }));
+    EXPECT_EQ(obj->GetStrings(), (BASE_NS::vector<BASE_NS::string>{"hips", "hops"}));
     EXPECT_EQ(obj->IntProp()->GetDefaultValue(), 2);
     EXPECT_EQ(obj->IntProp()->GetValue(), 3);
 
     reg.UnregisterObjectType<AutoSerType>();
 }
 
-} // namespace UTest
+META_REGISTER_CLASS(SecondLevelSerType, "cea942b1-cd61-4528-b743-8c0d659d3fe2", ObjectCategoryBits::NO_CATEGORY)
+META_REGISTER_CLASS(TopLevelSerType, "fff48440-77fd-4110-8f8e-3a4089b73b88", ObjectCategoryBits::NO_CATEGORY)
+
+struct SecondLevelSerType : public IntroduceInterfaces<MetaObject, ISerializable> {
+    META_OBJECT(SecondLevelSerType, ClassId::SecondLevelSerType, IntroduceInterfaces)
+    ReturnError Export(IExportContext& c) const override
+    {
+        EXPECT_FALSE(c.IsTopLevelObject());
+        return c.IsTopLevelObject() ? GenericError::FAIL : GenericError::SUCCESS;
+    }
+    ReturnError Import(IImportContext& c) override
+    {
+        return GenericError::SUCCESS;
+    }
+};
+
+struct TopLevelSerType : public IntroduceInterfaces<MetaObject, ISerializable> {
+    META_OBJECT(TopLevelSerType, ClassId::TopLevelSerType, IntroduceInterfaces)
+public:
+    TopLevelSerType() : obj(GetObjectRegistry().Create(ClassId::SecondLevelSerType))
+    {}
+
+    ReturnError Export(IExportContext& c) const override
+    {
+        EXPECT_TRUE(c.IsTopLevelObject());
+        return Serializer(c) & NamedValue("value", obj);
+    }
+    ReturnError Import(IImportContext& c) override
+    {
+        return Serializer(c) & NamedValue("value", obj);
+    }
+
+    IObject::Ptr obj;
+};
+
+UNIT_TEST(API_SerializationTest, TopLevelObject, testing::ext::TestSize.Level1)
+{
+    auto& reg = GetObjectRegistry();
+    reg.RegisterObjectType<TopLevelSerType>();
+    reg.RegisterObjectType<SecondLevelSerType>();
+
+    TestSerialiser ser;
+    {
+        auto obj = reg.Create(ClassId::TopLevelSerType);
+        ASSERT_TRUE(obj);
+        ASSERT_TRUE(ser.Export(obj));
+    }
+    auto obj = ser.Import();
+    ASSERT_TRUE(obj);
+
+    reg.UnregisterObjectType<TopLevelSerType>();
+    reg.UnregisterObjectType<SecondLevelSerType>();
+}
+
+}  // namespace UTest
 META_END_NAMESPACE()

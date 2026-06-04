@@ -28,7 +28,7 @@
 #include <core/plugin/intf_interface.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -45,9 +45,9 @@ class IThreadPool;
 /** Engine time (totaltime and deltatime in microseconds) */
 struct EngineTime {
     /** Total time */
-    uint64_t totalTimeUs { 0 };
+    uint64_t totalTimeUs{0};
     /** Delta time */
-    uint64_t deltaTimeUs { 0 };
+    uint64_t deltaTimeUs{0};
 };
 
 /** Engine interface.
@@ -55,7 +55,7 @@ struct EngineTime {
 */
 class IEngine : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "738721c3-2f74-472e-b55e-94f83dd25110" };
+    static constexpr BASE_NS::Uid UID{"738721c3-2f74-472e-b55e-94f83dd25110"};
 
     using Ptr = BASE_NS::refcnt_ptr<IEngine>;
 
@@ -120,7 +120,7 @@ inline constexpr BASE_NS::string_view GetName(const IEngine*)
 // factory inteface.
 class IEngineFactory : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "aab968d9-683e-42bf-be4d-6482a0b3d215" };
+    static constexpr BASE_NS::Uid UID{"aab968d9-683e-42bf-be4d-6482a0b3d215"};
 
     using Ptr = BASE_NS::refcnt_ptr<IEngineFactory>;
 
@@ -150,4 +150,4 @@ CORE_PUBLIC bool IsDebugBuild();
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IENGINE_H
+#endif  // API_CORE_IENGINE_H

@@ -67,7 +67,7 @@ public:
  * @brief The ITaskQueueThreadInfo interface defines an interface to be implemented
  *        by task queues to provide information on which thread they execute in.
  */
-class ITaskQueueThreadInfo : public CORE_NS::IInterface  {
+class ITaskQueueThreadInfo : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ITaskQueueThreadInfo)
 
 public:
@@ -178,4 +178,4 @@ META_REGISTER_CLASS(ThreadedTaskQueue, "009bf37a-d490-4a01-b7bb-f3365cc0a8da", O
 
 META_END_NAMESPACE()
 
-#endif // META_INTERFACE_ITASKQUEUE_H
+#endif  // META_INTERFACE_ITASKQUEUE_H

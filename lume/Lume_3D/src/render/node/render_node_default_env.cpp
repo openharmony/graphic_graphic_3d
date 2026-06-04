@@ -47,29 +47,29 @@
 namespace {
 #include <3d/shaders/common/3d_dm_structures_common.h>
 #include <render/shaders/common/render_post_process_structs_common.h>
-} // namespace
+}  // namespace
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr string_view POST_PROCESS_DATA_STORE_TYPE_NAME { "RenderDataStorePod" };
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR,
-    CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE };
+constexpr string_view POST_PROCESS_DATA_STORE_TYPE_NAME{"RenderDataStorePod"};
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+constexpr DynamicStateEnum DYNAMIC_STATES_FSR[] = {
+    CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR, CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE};
 
-constexpr string_view DEFAULT_SKY_SHADER_NAME { "3dshaders://shader/clouds/core3d_dm_env_sky.shader" };
+constexpr string_view DEFAULT_SKY_SHADER_NAME{"3dshaders://shader/clouds/core3d_dm_env_sky.shader"};
 // our light weight straight to screen post processes are only interested in these
-static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK { 0xffU };
-static constexpr uint32_t FIXED_CUSTOM_SET3 { 3U };
-static constexpr uint32_t FIXED_CUSTOM_SET1 { 1U };
+static constexpr uint32_t POST_PROCESS_IMPORTANT_FLAGS_MASK{0xffU};
+static constexpr uint32_t FIXED_CUSTOM_SET3{3U};
+static constexpr uint32_t FIXED_CUSTOM_SET1{1U};
 
 struct InputEnvironmentDataHandles {
     RenderHandle cubeHandle;
     RenderHandle cubeBlenderHandle;
     RenderHandle texHandle;
     RenderHandle tlutTexHandle;
-    float lodLevel { 0.0f };
+    float lodLevel{0.0f};
 };
 
 InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefaultCamera& dsCamera,
@@ -128,7 +128,7 @@ InputEnvironmentDataHandles GetEnvironmentDataHandles(const IRenderDataStoreDefa
 
     return iedh;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -140,7 +140,7 @@ void RenderNodeDefaultEnv::InitNode(IRenderNodeContextManager& renderNodeContext
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
 
     currentScene_ = {};
-    currentBgType_ = { RenderCamera::Environment::BG_TYPE_NONE };
+    currentBgType_ = {RenderCamera::Environment::BG_TYPE_NONE};
 
     if ((jsonInputs_.nodeFlags & RenderSceneFlagBits::RENDER_SCENE_DIRECT_POST_PROCESS_BIT) &&
         jsonInputs_.renderDataStore.dataStoreName.empty()) {
@@ -206,7 +206,9 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
 {
     // re-fetch global descriptor sets every frame
     RenderNodeSceneUtil::FrameGlobalDescriptorSets fgds =
-        RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_, stores_, cameraName_,
+        RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_,
+            stores_,
+            cameraName_,
             RenderNodeSceneUtil::FrameGlobalDescriptorSetFlagBits::GLOBAL_SET_0);
     if (!fgds.valid) {
         return;
@@ -215,9 +217,9 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
     cmdList.SetDynamicStateViewport(currentScene_.viewportDesc);
     cmdList.SetDynamicStateScissor(currentScene_.scissorDesc);
     if (fsrEnabled_) {
-        cmdList.SetDynamicStateFragmentShadingRate(
-            { 1u, 1u }, FragmentShadingRateCombinerOps { CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE,
-                            CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE });
+        cmdList.SetDynamicStateFragmentShadingRate({1u, 1u},
+            FragmentShadingRateCombinerOps{
+                CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE, CORE_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE});
     }
 
     const auto& cam = currentScene_.camData.camera;
@@ -227,7 +229,7 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
                                            ? defaultSkyShader_
                                            : defaultShaderData_.shader;
     const RenderHandle shaderHandle = renderEnv.shader ? renderEnv.shader.GetHandle() : defaultShader;
-    const RenderHandle stateHandle = renderEnv.graphicsState ? renderEnv.graphicsState.GetHandle() : RenderHandle {};
+    const RenderHandle stateHandle = renderEnv.graphicsState ? renderEnv.graphicsState.GetHandle() : RenderHandle{};
     // check for pso changes
     if ((renderEnv.backgroundType != currentBgType_) || (currShaderData_.shader.id != shaderHandle.id) ||
         (currShaderData_.state.id != stateHandle.id) ||
@@ -243,9 +245,13 @@ void RenderNodeDefaultEnv::RenderData(const IRenderDataStoreDefaultCamera& dsCam
 
     if ((!currShaderData_.customSet) && builtInSet3_) {
         const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        const auto envDataHandles =
-            GetEnvironmentDataHandles(dsCamera, gpuResourceMgr, defaultImages_, currentScene_.camData.camera,
-                stores_.dataStoreNameScene, jsonInputs_.customCameraName, jsonInputs_.customCameraId);
+        const auto envDataHandles = GetEnvironmentDataHandles(dsCamera,
+            gpuResourceMgr,
+            defaultImages_,
+            currentScene_.camData.camera,
+            stores_.dataStoreNameScene,
+            jsonInputs_.customCameraName,
+            jsonInputs_.customCameraId);
         // set 1, bind combined image samplers
         auto& binder = *builtInSet3_;
         {
@@ -413,7 +419,7 @@ RenderNodeDefaultEnv::ShaderData RenderNodeDefaultEnv::GetPso(const RenderHandle
             }
         }
 
-        const ShaderSpecializationConstantDataView specialization { sscv.constants, flags };
+        const ShaderSpecializationConstantDataView specialization{sscv.constants, flags};
         // NOTE: we cannot use the reflected pipeline layout as it needs to match the real pipeline layout
         // need to use the default as the set 0 is default material pipeline set
         RenderHandle plHandle = defaultShaderData_.pl;
@@ -487,9 +493,9 @@ void RenderNodeDefaultEnv::UpdatePostProcessConfiguration()
 array_view<const DynamicStateEnum> RenderNodeDefaultEnv::GetDynamicStates() const
 {
     if (fsrEnabled_) {
-        return { DYNAMIC_STATES_FSR, countof(DYNAMIC_STATES_FSR) };
+        return {DYNAMIC_STATES_FSR, countof(DYNAMIC_STATES_FSR)};
     } else {
-        return { DYNAMIC_STATES, countof(DYNAMIC_STATES) };
+        return {DYNAMIC_STATES, countof(DYNAMIC_STATES)};
     }
 }
 

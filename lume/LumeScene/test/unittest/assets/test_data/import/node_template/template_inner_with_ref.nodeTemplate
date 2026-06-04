@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "description": "inner template uses /-anchored objectRef to reference its own sibling",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "node",
+            "name": "innerRoot",
+            "children": [
+                { "type": "node", "name": "innerInner" },
+                {
+                    "type": "node",
+                    "name": "innerExt",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "InnerRefAtt" },
+                                { "name": "NodeRef", "value": { "type": "objectRef", "path": "/innerInner" } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

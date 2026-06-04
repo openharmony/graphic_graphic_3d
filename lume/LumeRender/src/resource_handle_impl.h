@@ -36,7 +36,7 @@ public:
     int32_t GetRefCount() const override;
 
 private:
-    std::atomic<int32_t> refcnt_ { 0 };
+    std::atomic<int32_t> refcnt_{0};
 };
 RENDER_END_NAMESPACE()
-#endif // RENDER_RESOURCE_HANDLE_IMPL_H
+#endif  // RENDER_RESOURCE_HANDLE_IMPL_H

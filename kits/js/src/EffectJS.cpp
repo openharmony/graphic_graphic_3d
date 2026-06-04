@@ -15,49 +15,45 @@
 
 #include "EffectJS.h"
 
+#include <cctype>
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
+#include <scene/ext/util.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_scene.h>
-#include <scene/ext/util.h>
-#include "PropertyProxy.h"
-#include "SceneResourceImpl.h"
 
 #include <render/intf_render_context.h>
 
+#include "PropertyProxy.h"
 #include "SceneJS.h"
-
-#include <cctype>
+#include "SceneResourceImpl.h"
+#include "class_definition_helpers.h"
 
 using namespace SCENE_NS;
 
-static constexpr napi_type_tag EFFECTS_CONTAINER_TAG = { SCENE_NS::ICameraEffect::UID.data[0],
-    SCENE_NS::ICameraEffect::UID.data[1] };
+static constexpr napi_type_tag EFFECTS_CONTAINER_TAG = {
+    SCENE_NS::ICameraEffect::UID.data[0], SCENE_NS::ICameraEffect::UID.data[1]};
 
-// EffectsContainerJS
-
-template<typename FC, napi_value (EffectsContainerJS::*F)(FC&)>
+template <typename FC, napi_value (EffectsContainerJS::*F)(FC&)>
 static inline napi_value ECMethodI(napi_env env, napi_callback_info info)
 {
     FC fc(env, info);
     if (auto value = fc.RawThis()) {
-        auto me = NapiApi::UnwrapTagged<EffectsContainerJS>(env, value, EFFECTS_CONTAINER_TAG);
-        if (me) {
+        if (auto me = NapiApi::UnwrapTagged<EffectsContainerJS>(env, value, EFFECTS_CONTAINER_TAG)) {
             return (me->*F)(fc);
         }
     }
     return fc.GetUndefined();
 };
 
-template<typename FC, napi_value (EffectsContainerJS::*F)(FC&)>
+template <typename FC, napi_value (EffectsContainerJS::*F)(FC&)>
 static inline napi_property_descriptor ECMethod(
     const char* const name, napi_property_attributes flags = napi_default_method)
 {
-    return napi_property_descriptor { name, nullptr, ECMethodI<FC, F>, nullptr, nullptr, nullptr, flags,
-        nullptr };
+    return napi_property_descriptor{name, nullptr, ECMethodI<FC, F>, nullptr, nullptr, nullptr, flags, nullptr};
 }
 
 void EffectsContainerJS::Init(napi_env env, napi_value exports)
@@ -68,9 +64,9 @@ void EffectsContainerJS::Init(napi_env env, napi_value exports)
         ECMethod<FunctionContext<Object>, &EffectsContainerJS::AppendChild>("append"),
         ECMethod<FunctionContext<Object, Object>, &EffectsContainerJS::InsertChildAfter>("insertAfter"),
         ECMethod<FunctionContext<Object>, &EffectsContainerJS::RemoveChild>("remove"),
-        ECMethod<FunctionContext<uint32_t>,  &EffectsContainerJS::GetChild>("get"),
+        ECMethod<FunctionContext<uint32_t>, &EffectsContainerJS::GetChild>("get"),
         ECMethod<FunctionContext<>, &EffectsContainerJS::ClearChildren>("clear"),
-        ECMethod<FunctionContext<>, &EffectsContainerJS::GetCount>("count")
+        ECMethod<FunctionContext<>, &EffectsContainerJS::GetCount>("count"),
     };
     napi_callback ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         napi_value thisVar = nullptr;
@@ -83,8 +79,8 @@ void EffectsContainerJS::Init(napi_env env, napi_value exports)
     };
 
     napi_value func;
-    auto status = napi_define_class(env, "EffectsContainer", NAPI_AUTO_LENGTH, ctor,
-                        nullptr, sizeof(props) / sizeof(props[0]), props, &func);
+    auto status = napi_define_class(
+        env, "EffectsContainer", NAPI_AUTO_LENGTH, ctor, nullptr, sizeof(props) / sizeof(props[0]), props, &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -113,8 +109,8 @@ EffectsContainerJS::EffectsContainerJS(napi_env e, napi_callback_info i)
         LOG_E("Unable to get napi callback info");
     }
 
-    NapiApi::WrapTagged<EffectsContainerJS>(e, thisVar, reinterpret_cast<void*>((EffectsContainerJS*)this), dtor,
-        nullptr, EFFECTS_CONTAINER_TAG, nullptr);
+    NapiApi::WrapTagged<EffectsContainerJS>(
+        e, thisVar, reinterpret_cast<void*>((EffectsContainerJS*)this), dtor, nullptr, EFFECTS_CONTAINER_TAG, nullptr);
 
     if (auto fromJs = NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>(e, i)) {
         camera_ = NapiApi::Object(fromJs.Arg<0>());
@@ -150,8 +146,8 @@ napi_value EffectsContainerJS::GetChild(NapiApi::FunctionContext<uint32_t>& ctx)
         uint32_t index = ctx.Arg<0>();
         if (auto effect = effects->GetValueAt(index)) {
             const auto env = ctx.GetEnv();
-            auto argJS = NapiApi::Object { env };
-            napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+            auto argJS = NapiApi::Object{env};
+            napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
             // These are owned by the underlying camera effect array property, so store only weak reference.
             return CreateFromNativeInstance(ctx.Env(), effect, PtrType::WEAK, args).ToNapiValue();
         }
@@ -233,8 +229,6 @@ SCENE_NS::IEffect::Ptr EffectJS::CreateEffectInstance()
 
 static inline napi_value CallSetProperty(napi_env env, napi_callback_info info)
 {
-    // Require PARTIAL arg count since we need 2 args (and only one is defined for FunctionContext), SetEffectProperty
-    // handles the second one at runtime.
     NapiApi::FunctionContext<BASE_NS::string> fc(env, info, NapiApi::ArgCount::PARTIAL);
     if (auto value = fc.RawThis()) {
         auto me = NapiApi::UnwrapTagged<EffectJS>(env, value, TrueRootObject::TYPE_TAG);
@@ -250,18 +244,18 @@ void EffectJS::Init(napi_env env, napi_value exports)
     using namespace NapiApi;
 
     BASE_NS::vector<napi_property_descriptor> props;
+    SceneResourceImpl::GetPropertyDescs(props);
     props.push_back(GetSetProperty<bool, EffectJS, &EffectJS::GetEnabled, &EffectJS::SetEnabled>("enabled"));
     props.push_back(GetProperty<BASE_NS::string, EffectJS, &EffectJS::GetEffectId>("effectId"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, EffectJS, &EffectJS::Dispose>("destroy"));
 
-    props.push_back(Method<NapiApi::FunctionContext<BASE_NS::string>, EffectJS, &EffectJS::GetEffectProperty>(
-        "getPropertyValue"));
-    props.push_back(napi_property_descriptor {
-        "setPropertyValue", nullptr, CallSetProperty, nullptr, nullptr, nullptr, napi_default_method, nullptr });
+    props.push_back(
+        Method<NapiApi::FunctionContext<BASE_NS::string>, EffectJS, &EffectJS::GetEffectProperty>("getPropertyValue"));
+    props.push_back(napi_property_descriptor{
+        "setPropertyValue", nullptr, CallSetProperty, nullptr, nullptr, nullptr, napi_default_method, nullptr});
 
     napi_value func;
-    auto status = napi_define_class(env, "Effect", NAPI_AUTO_LENGTH, BaseObject::ctor<EffectJS>(),
-        nullptr, props.size(), props.data(), &func);
+    auto status = napi_define_class(
+        env, "Effect", NAPI_AUTO_LENGTH, BaseObject::ctor<EffectJS>(), nullptr, props.size(), props.data(), &func);
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -270,19 +264,13 @@ void EffectJS::Init(napi_env env, napi_value exports)
     }
 }
 
-napi_value EffectJS::Dispose(NapiApi::FunctionContext<>& ctx)
-{
-    LOG_V("EffectJS::Dispose");
-    DisposeNative(nullptr);
-    return {};
-}
-void EffectJS::DisposeNative(void* scene)
+void EffectJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
         LOG_V("EffectJS::DisposeNative");
-        if (auto* sceneJS = static_cast<SceneJS*>(scene)) {
-            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
         scene_.Reset();
         proxies_.clear();
@@ -292,25 +280,29 @@ void EffectJS::DisposeNative(void* scene)
 void* EffectJS::GetInstanceImpl(uint32_t id)
 {
     if (id == EffectJS::ID) {
-        return this;
+        return static_cast<EffectJS*>(this);
     }
-    return nullptr;
+    if (auto ret = SceneResourceImpl::GetInstanceImpl(id)) {
+        return ret;
+    }
+    return BaseObject::GetInstanceImpl(id);
 }
 
 void EffectJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
+    FinalizeBridge(this);
 }
 
-EffectJS::EffectJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
+EffectJS::EffectJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::EFFECT)
 {
     LOG_V("EffectJS ++");
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     if (!fromJs) {
         return;
     }
-    scene_ = { NapiApi::Object(fromJs.Arg<0>()) };
+    scene_ = {NapiApi::Object(fromJs.Arg<0>())};
     const auto native = GetNativeObject();
     if (!native) {
         return;
@@ -318,16 +310,18 @@ EffectJS::EffectJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
     NapiApi::Object meJs(fromJs.This());
 
-    BASE_NS::string name = native->GetName();
-    meJs.Set("name", name);
-    meJs.Set("resourceType", NapiApi::Value<uint32_t>(e, SceneResourceImpl::SceneResourceType::EFFECT));
+    AddBridge("EffectJS", meJs);
+    if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
+    }
     AddProperties(meJs, native);
 }
 
 EffectJS::~EffectJS()
 {
     LOG_V("EffectJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
+    DestroyBridge(this);
 }
 
 SCENE_NS::IEffect::Ptr EffectJS::GetEffect(NapiApi::Object o) const
@@ -415,10 +409,13 @@ napi_value EffectJS::GetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>
     // Value is an object, do a clone
     NapiApi::Object result(env);
     napi_value allProps;
-    if (napi_get_all_property_names(env, currentValue, napi_key_collection_mode::napi_key_own_only,
-            napi_key_filter::napi_key_all_properties, napi_key_conversion::napi_key_keep_numbers,
+    if (napi_get_all_property_names(env,
+            currentValue,
+            napi_key_collection_mode::napi_key_own_only,
+            napi_key_filter::napi_key_all_properties,
+            napi_key_conversion::napi_key_keep_numbers,
             &allProps) == napi_ok) {
-        uint32_t len {};
+        uint32_t len{};
         napi_get_array_length(env, allProps, &len);
         for (uint32_t i = 0; i < len; i++) {
             napi_value key;
@@ -439,10 +436,13 @@ bool MatchType(napi_env env, napi_value source, napi_value reference)
 {
     napi_value allProps;
     // Get all properties from reference
-    if (napi_get_all_property_names(env, reference, napi_key_collection_mode::napi_key_own_only,
-            napi_key_filter::napi_key_all_properties, napi_key_conversion::napi_key_keep_numbers,
+    if (napi_get_all_property_names(env,
+            reference,
+            napi_key_collection_mode::napi_key_own_only,
+            napi_key_filter::napi_key_all_properties,
+            napi_key_conversion::napi_key_keep_numbers,
             &allProps) == napi_ok) {
-        uint32_t len {};
+        uint32_t len{};
         napi_get_array_length(env, allProps, &len);
         for (uint32_t i = 0; i < len; i++) {
             napi_value key;
@@ -477,7 +477,7 @@ napi_value EffectJS::SetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>
     auto meJS = ctx.This();
     if (meJS && ctx.ArgCount() > 1) {
         BASE_NS::string propertyName = ctx.Arg<0>();
-        napi_value value = ctx.Value(1); // Take raw napi_value of the 'value' parameter
+        napi_value value = ctx.Value(1);  // Take raw napi_value of the 'value' parameter
         if (meJS.Has(propertyName)) {
             auto env = meJS.GetEnv();
             auto object = meJS.ToNapiValue();

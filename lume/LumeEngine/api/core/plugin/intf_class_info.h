@@ -28,7 +28,7 @@ CORE_BEGIN_NAMESPACE()
  */
 class IClassInfo : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "237773cf-7a76-4e39-a067-f454183b036c" };
+    static constexpr BASE_NS::Uid UID{"237773cf-7a76-4e39-a067-f454183b036c"};
 
     using Ptr = BASE_NS::refcnt_ptr<IClassInfo>;
 
@@ -46,4 +46,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PLUGIN_ICLASS_INFO_H
+#endif  // API_CORE_PLUGIN_ICLASS_INFO_H

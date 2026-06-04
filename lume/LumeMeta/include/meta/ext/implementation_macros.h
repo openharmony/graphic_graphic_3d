@@ -42,14 +42,14 @@
 #define META_VALUE_PTR(interface, classId) ::META_NS::ValuePtrImpl<interface>::Instance<classId>
 
 META_BEGIN_NAMESPACE()
-constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS = ObjectFlagBitsValue { ObjectFlagBits::SERIALIZE };
-constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS_NO_SER = ObjectFlagBitsValue { ObjectFlagBits::NONE };
+constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS = ObjectFlagBitsValue{ObjectFlagBits::SERIALIZE};
+constexpr ObjectFlagBitsValue DEFAULT_PROPERTY_FLAGS_NO_SER = ObjectFlagBitsValue{ObjectFlagBits::NONE};
 
 namespace Internal {
 
 inline IAny::Ptr AnyFromValue(Internal::MetaValue* def)
 {
-    return def ? def() : IAny::Ptr {};
+    return def ? def() : IAny::Ptr{};
 }
 
 inline BASE_NS::shared_ptr<CORE_NS::IInterface> ConstructMetadata(
@@ -79,9 +79,9 @@ inline BASE_NS::shared_ptr<CORE_NS::IInterface> CreateFunctionConstructorObject(
     return ConstructMetadata(owner, d, BASE_NS::move(ret));
 }
 
-} // namespace Internal
+}  // namespace Internal
 
-template<typename Type>
+template <typename Type>
 IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue* def, ObjectFlagBitsValue flags)
 {
     flags |= ObjectFlagBits::NATIVE;
@@ -95,16 +95,17 @@ IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue
     }
 }
 
-template<typename Type, uint64_t Flags>
+template <typename Type, uint64_t Flags>
 Internal::MetadataCtor* CreatePropertyConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        return Internal::CreatePropertyConstructorObject(owner, d,
+        return Internal::CreatePropertyConstructorObject(owner,
+            d,
             BASE_NS::move(META_NS::CreatePropertyImpl<Type>(d.name, d.runtimeValue, ObjectFlagBitsValue(Flags))));
     };
 }
 
-template<typename Type>
+template <typename Type>
 Internal::MetadataCtor* CreateEventConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
@@ -112,16 +113,17 @@ Internal::MetadataCtor* CreateEventConstructor()
     };
 }
 
-template<typename Interface, auto MemFun>
+template <typename Interface, auto MemFun>
 Internal::MetadataCtor* CreateFunctionConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
-        return Internal::CreateFunctionConstructorObject(owner, d,
+        return Internal::CreateFunctionConstructorObject(owner,
+            d,
             BASE_NS::move(CreateFunction(d.name, interface_pointer_cast<Interface>(owner), MemFun, d.runtimeValue)));
     };
 }
 
-template<size_t Size>
+template <size_t Size>
 constexpr size_t MetadataArraySize(const StaticMetadata (&)[Size])
 {
     return Size;
@@ -142,11 +144,11 @@ constexpr StaticObjectMetadata CreateStaticMetadataObject(const ClassInfo* class
     const size_t size)
 {
     bool baseDataSame = size && baseclass && metadata == baseclass->metadata;
-    return StaticObjectMetadata { classInfo, baseclass, aggregate, baseDataSame ? nullptr : metadata,
-        baseDataSame ? 0 : size };
+    return StaticObjectMetadata{
+        classInfo, baseclass, aggregate, baseDataSame ? nullptr : metadata, baseDataSame ? 0 : size};
 }
 
-template<typename Type, typename Base, typename Data>
+template <typename Type, typename Base, typename Data>
 inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticObjectMetadata* base,
     const ClassInfo* classInfo, const StaticObjectMetadata* aggregate)
 {
@@ -154,13 +156,13 @@ inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticO
     return CreateStaticMetadataObject(classInfo, base, aggregate, data, size);
 }
 
-template<typename T>
+template <typename T>
 inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<META_NS::IProperty> (T::*)(), int)
 {
     return 0;
 }
 
-template<typename T>
+template <typename T>
 inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<const META_NS::IProperty> (T::*)() const, short)
 {
     return static_cast<uint8_t>(Internal::PropertyFlag::READONLY);
@@ -168,37 +170,39 @@ inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<const META_NS::IProperty>
 
 META_END_NAMESPACE()
 
-#define META_IMPLEMENT_STATIC_DATA_DEPIMPL(myClass, classInfo, baseClass)                                       \
-private:                                                                                                        \
-    using Super = baseClass;                                                                                    \
-                                                                                                                \
-public:                                                                                                         \
-    static const META_NS::StaticObjectMetadata* StaticMetadata()                                                \
-    {                                                                                                           \
-        static const META_NS::StaticObjectMetadata objdata { META_NS::CreateStaticMetadata<myClass, baseClass>( \
-            myClass::STATIC_METADATA, baseClass::StaticMetadata(), classInfo, nullptr) };                       \
-        return &objdata;                                                                                        \
-    }                                                                                                           \
-    const META_NS::StaticObjectMetadata* GetStaticMetadata() const override                                     \
-    {                                                                                                           \
-        return StaticMetadata();                                                                                \
+#define META_IMPLEMENT_STATIC_DATA_DEPIMPL(myClass, classInfo, baseClass)                                     \
+private:                                                                                                      \
+    using Super = baseClass;                                                                                  \
+                                                                                                              \
+public:                                                                                                       \
+    static const META_NS::StaticObjectMetadata* StaticMetadata()                                              \
+    {                                                                                                         \
+        static const META_NS::StaticObjectMetadata objdata{META_NS::CreateStaticMetadata<myClass, baseClass>( \
+            myClass::STATIC_METADATA, baseClass::StaticMetadata(), classInfo, nullptr)};                      \
+        return &objdata;                                                                                      \
+    }                                                                                                         \
+    const META_NS::StaticObjectMetadata* GetStaticMetadata() const override                                   \
+    {                                                                                                         \
+        return StaticMetadata();                                                                              \
     }
 
-#define META_IMPLEMENT_STATIC_DATA_AGGRIMPL(myClass, classInfo, baseClass, aggrClass)                           \
-private:                                                                                                        \
-    using Super = baseClass;                                                                                    \
-                                                                                                                \
-public:                                                                                                         \
-    static const META_NS::StaticObjectMetadata* StaticMetadata()                                                \
-    {                                                                                                           \
-        static const META_NS::StaticObjectMetadata objdata { META_NS::CreateStaticMetadata<myClass, baseClass>( \
-            myClass::STATIC_METADATA, baseClass::StaticMetadata(), classInfo,                                   \
-            META_NS::GetAggregateMetadata(aggrClass)) };                                                        \
-        return &objdata;                                                                                        \
-    }                                                                                                           \
-    const META_NS::StaticObjectMetadata* GetStaticMetadata() const override                                     \
-    {                                                                                                           \
-        return StaticMetadata();                                                                                \
+#define META_IMPLEMENT_STATIC_DATA_AGGRIMPL(myClass, classInfo, baseClass, aggrClass)   \
+private:                                                                                \
+    using Super = baseClass;                                                            \
+                                                                                        \
+public:                                                                                 \
+    static const META_NS::StaticObjectMetadata* StaticMetadata()                        \
+    {                                                                                   \
+        static const META_NS::StaticObjectMetadata objdata{                             \
+            META_NS::CreateStaticMetadata<myClass, baseClass>(myClass::STATIC_METADATA, \
+                baseClass::StaticMetadata(),                                            \
+                classInfo,                                                              \
+                META_NS::GetAggregateMetadata(aggrClass))};                             \
+        return &objdata;                                                                \
+    }                                                                                   \
+    const META_NS::StaticObjectMetadata* GetStaticMetadata() const override             \
+    {                                                                                   \
+        return StaticMetadata();                                                        \
     }
 
 #define META_BEGIN_STATIC_DATA() inline static const META_NS::StaticMetadata STATIC_METADATA[] = {
@@ -240,8 +244,9 @@ public:                                                                         
 #define META_IMPLEMENT_OBJECT_BASE_NO_CLASSINFO(myClass, baseClass) \
     META_IMPLEMENT_STATIC_DATA_DEPIMPL(myClass, nullptr, baseClass)
 
-#define META_OBJECT_NO_CLASSINFO(...)                                                           \
-    META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__, META_IMPLEMENT_OBJECT_BASE_AGGR_NO_CLASSINFO, \
+#define META_OBJECT_NO_CLASSINFO(...)                 \
+    META_EXPAND(META_GET_MACRO3_IMPL(__VA_ARGS__,     \
+        META_IMPLEMENT_OBJECT_BASE_AGGR_NO_CLASSINFO, \
         META_IMPLEMENT_OBJECT_BASE_NO_CLASSINFO)(__VA_ARGS__))
 
 #define META_INTF_CHECK(interface, type, name) interface::INTERFACE_INFO
@@ -249,104 +254,128 @@ public:                                                                         
 // todo: check in META_STATIC_PROPERTY_DATA and META_STATIC_EVENT_DATA that name is part of the given interface
 //--- PROPERTY DATA
 #define META_IMPL_PROPERTY_DATA_VALUE_FLAGS_SMDF(intfuid, type, name, value, flags, smdflags)       \
-    { META_NS::MetadataType::PROPERTY, intfuid, #name,                                              \
+    {META_NS::MetadataType::PROPERTY,                                                               \
+        intfuid,                                                                                    \
+        #name,                                                                                      \
         META_NS::CreatePropertyConstructor<type, META_NS::ObjectFlagBitsValue(flags).GetValue()>(), \
-        [] { return META_NS::ConstructAnyHelper<type>(value); }, nullptr, smdflags },
+        [] { return META_NS::ConstructAnyHelper<type>(value); },                                    \
+        nullptr,                                                                                    \
+        smdflags},
 
-#define META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, flags)                               \
-    META_IMPL_PROPERTY_DATA_VALUE_FLAGS_SMDF(META_INTF_CHECK(intf, type, name), type, name, value, flags, \
+#define META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, flags)     \
+    META_IMPL_PROPERTY_DATA_VALUE_FLAGS_SMDF(META_INTF_CHECK(intf, type, name), \
+        type,                                                                   \
+        name,                                                                   \
+        value,                                                                  \
+        flags,                                                                  \
         META_NS::GetPropertySMDFlags(&intf::Property##name, 0))
 #define META_IMPL_PROPERTY_DATA_VALUE(intf, type, name, value) \
     META_IMPL_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, META_NS::DEFAULT_PROPERTY_FLAGS)
 #define META_IMPL_PROPERTY_DATA(intf, type, name) META_IMPL_PROPERTY_DATA_VALUE(intf, type, name, {})
 
-#define META_STATIC_PROPERTY_DATA(...)                                                                                \
-    META_EXPAND(META_GET_MACRO5_IMPL(__VA_ARGS__, META_IMPL_PROPERTY_DATA_VALUE_FLAGS, META_IMPL_PROPERTY_DATA_VALUE, \
-        META_IMPL_PROPERTY_DATA)(__VA_ARGS__))
+#define META_STATIC_PROPERTY_DATA(...)                                                                             \
+    META_EXPAND(META_GET_MACRO5_IMPL(                                                                              \
+        __VA_ARGS__, META_IMPL_PROPERTY_DATA_VALUE_FLAGS, META_IMPL_PROPERTY_DATA_VALUE, META_IMPL_PROPERTY_DATA)( \
+        __VA_ARGS__))
 //---
 
 //--- ARRAY PROPERTY DATA
 #define META_IMPL_ARRAY_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, flags)                     \
-    { META_NS::MetadataType::PROPERTY, META_INTF_CHECK(intf, type, name), #name,                      \
+    {META_NS::MetadataType::PROPERTY,                                                                 \
+        META_INTF_CHECK(intf, type, name),                                                            \
+        #name,                                                                                        \
         META_NS::CreatePropertyConstructor<type[], META_NS::ObjectFlagBitsValue(flags).GetValue()>(), \
-        [] { return META_NS::IAny::Ptr(META_NS::ConstructArrayAnyHelper<type>(value)); } },
+        [] { return META_NS::IAny::Ptr(META_NS::ConstructArrayAnyHelper<type>(value)); }},
 
 #define META_IMPL_ARRAY_PROPERTY_DATA_VALUE(intf, type, name, value) \
     META_IMPL_ARRAY_PROPERTY_DATA_VALUE_FLAGS(intf, type, name, value, META_NS::DEFAULT_PROPERTY_FLAGS)
 #define META_IMPL_ARRAY_PROPERTY_DATA(intf, type, name) META_IMPL_ARRAY_PROPERTY_DATA_VALUE(intf, type, name, {})
 
-#define META_STATIC_ARRAY_PROPERTY_DATA(...)                                                 \
-    META_EXPAND(META_GET_MACRO5_IMPL(__VA_ARGS__, META_IMPL_ARRAY_PROPERTY_DATA_VALUE_FLAGS, \
-        META_IMPL_ARRAY_PROPERTY_DATA_VALUE, META_IMPL_ARRAY_PROPERTY_DATA)(__VA_ARGS__))
+#define META_STATIC_ARRAY_PROPERTY_DATA(...)       \
+    META_EXPAND(META_GET_MACRO5_IMPL(__VA_ARGS__,  \
+        META_IMPL_ARRAY_PROPERTY_DATA_VALUE_FLAGS, \
+        META_IMPL_ARRAY_PROPERTY_DATA_VALUE,       \
+        META_IMPL_ARRAY_PROPERTY_DATA)(__VA_ARGS__))
 //---
 
 //--- Property forwarding
 #define META_STATIC_FORWARDED_PROPERTY_DATA(intf, type, name)                                                  \
-    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                                            \
+    {META_NS::MetadataType::PROPERTY,                                                                          \
+        intf::INTERFACE_INFO,                                                                                  \
+        #name,                                                                                                 \
         [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) {                \
             auto i = interface_cast<intf>(owner);                                                              \
             auto p = interface_pointer_cast<::CORE_NS::IInterface>(i ? i->Property##name() : nullptr);         \
             return BASE_NS::shared_ptr<::CORE_NS::IInterface>(p, const_cast<::CORE_NS::IInterface*>(p.get())); \
         },                                                                                                     \
-        [] { return META_NS::ConstructAnyHelper<type>({}); }, nullptr,                                         \
+        [] { return META_NS::ConstructAnyHelper<type>({}); },                                                  \
+        nullptr,                                                                                               \
         uint8_t(uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) |                                          \
-                META_NS::GetPropertySMDFlags(&intf::Property##name, 0)) },
+                META_NS::GetPropertySMDFlags(&intf::Property##name, 0))},
 
 #define META_STATIC_FORWARDED_ARRAY_PROPERTY_DATA(intf, type, name)                                            \
-    { META_NS::MetadataType::PROPERTY, intf::INTERFACE_INFO, #name,                                            \
+    {META_NS::MetadataType::PROPERTY,                                                                          \
+        intf::INTERFACE_INFO,                                                                                  \
+        #name,                                                                                                 \
         [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) {                \
             auto i = interface_cast<intf>(owner);                                                              \
             auto p = interface_pointer_cast<::CORE_NS::IInterface>(i ? i->Property##name() : nullptr);         \
             return BASE_NS::shared_ptr<::CORE_NS::IInterface>(p, const_cast<::CORE_NS::IInterface*>(p.get())); \
         },                                                                                                     \
-        [] { return META_NS::ConstructArrayAnyHelper<type>({}); }, nullptr,                                    \
+        [] { return META_NS::ConstructArrayAnyHelper<type>({}); },                                             \
+        nullptr,                                                                                               \
         uint8_t(uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) |                                          \
-                META_NS::GetPropertySMDFlags(&intf::Property##name, 0)) },
+                META_NS::GetPropertySMDFlags(&intf::Property##name, 0))},
 //---
 
 #define META_STATIC_EVENT_DATA(intf, type, name) \
-    { META_NS::MetadataType::EVENT, intf::INTERFACE_INFO, #name, META_NS::CreateEventConstructor<type>(), nullptr },
+    {META_NS::MetadataType::EVENT, intf::INTERFACE_INFO, #name, META_NS::CreateEventConstructor<type>(), nullptr},
 
 //--- Event forwarding
 #define META_STATIC_FORWARDED_EVENT_DATA(intf, type, name)                                      \
-    { META_NS::MetadataType::EVENT, intf::INTERFACE_INFO, #name,                                \
+    {META_NS::MetadataType::EVENT,                                                              \
+        intf::INTERFACE_INFO,                                                                   \
+        #name,                                                                                  \
         [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata&) { \
             auto i = interface_cast<intf>(owner);                                               \
             return interface_pointer_cast<::CORE_NS::IInterface>(                               \
                 i ? i->Event##name(META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) : nullptr);    \
         },                                                                                      \
-        nullptr, nullptr, uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD) },
+        nullptr,                                                                                \
+        nullptr,                                                                                \
+        uint8_t(META_NS::Internal::StaticMetaFlag::FORWARD)},
 //---
 
 #define META_STATIC_FUNCTION_DATA(intf, func, ...)                                          \
-    { META_NS::MetadataType::FUNCTION, intf::INTERFACE_INFO, #func,                         \
-        META_NS::CreateFunctionConstructor<intf, &intf ::func>(), [] {                      \
-            ::BASE_NS::string_view arr[] = { "", __VA_ARGS__ };                             \
+    {META_NS::MetadataType::FUNCTION,                                                       \
+        intf::INTERFACE_INFO,                                                               \
+        #func,                                                                              \
+        META_NS::CreateFunctionConstructor<intf, &intf ::func>(),                           \
+        [] {                                                                                \
+            ::BASE_NS::string_view arr[] = {"", __VA_ARGS__};                               \
             return META_NS::ConstructAny<META_NS::ICallContext::Ptr>(                       \
                 META_NS::CreateCallContext(&intf ::func, ::META_NS::ParamNameToView(arr))); \
-        } },
+        }},
 
-#define META_PRIVATE_PROPERTY_TYPED_IMPL(type, name)                                                               \
-    META_NS::Property<type> name() noexcept                                                                        \
-    {                                                                                                              \
-        return META_NS::Property<type> { this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) }; \
-    }                                                                                                              \
-    META_NS::ConstProperty<type> name() const noexcept                                                             \
-    {                                                                                                              \
-        return META_NS::ConstProperty<type> { this->GetProperty(                                                   \
-            #name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) };                                                \
+#define META_PRIVATE_PROPERTY_TYPED_IMPL(type, name)                                                                 \
+    META_NS::Property<type> name() noexcept                                                                          \
+    {                                                                                                                \
+        return META_NS::Property<type>{this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST)};      \
+    }                                                                                                                \
+    META_NS::ConstProperty<type> name() const noexcept                                                               \
+    {                                                                                                                \
+        return META_NS::ConstProperty<type>{this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST)}; \
     }
 
-#define META_PRIVATE_ARRAY_PROPERTY_TYPED_IMPL(type, name)            \
-    META_NS::ConstArrayProperty<type> name() const noexcept           \
-    {                                                                 \
-        return META_NS::ConstArrayProperty<type> { this->GetProperty( \
-            #name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) };   \
-    }                                                                 \
-    META_NS::ArrayProperty<type> name() noexcept                      \
-    {                                                                 \
-        return META_NS::ArrayProperty<type> { this->GetProperty(      \
-            #name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST) };   \
+#define META_PRIVATE_ARRAY_PROPERTY_TYPED_IMPL(type, name)                                                           \
+    META_NS::ConstArrayProperty<type> name() const noexcept                                                          \
+    {                                                                                                                \
+        return META_NS::ConstArrayProperty<type>{                                                                    \
+            this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST)};                                 \
+    }                                                                                                                \
+    META_NS::ArrayProperty<type> name() noexcept                                                                     \
+    {                                                                                                                \
+        return META_NS::ArrayProperty<type>{this->GetProperty(#name, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST)}; \
     }
 
 #define META_IMPLEMENT_READONLY_PROPERTY(type, name)                        \

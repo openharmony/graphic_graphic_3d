@@ -1,0 +1,17 @@
+{
+	"version": "1.0",
+	"description": "test scene with named node component",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",
+			"components": [
+				{
+					"name": "RenderConfigurationComponent"
+				}
+			]
+		}
+	}
+}

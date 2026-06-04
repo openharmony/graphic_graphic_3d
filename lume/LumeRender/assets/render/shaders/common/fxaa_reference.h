@@ -138,4 +138,4 @@ vec4 FxaaPixelShader(vec2 fragCoord, vec4 neighborCoords, texture2D texture, sam
     return blendedB;
 }
 
-#endif // SHADERS_COMMON_FXAA_REFERENCE_H
+#endif  // SHADERS_COMMON_FXAA_REFERENCE_H

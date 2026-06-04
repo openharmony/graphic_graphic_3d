@@ -34,25 +34,25 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 2, 2 };
-static constexpr Math::UVec2 TEST_DATA_SIZE_1 { 16, 16 };
-static constexpr uint32_t TEST_ELEMENT_BYTE_SIZE { 1 };
-static constexpr uint8_t TEST_INPUT_IMAGE_COLOR[] = { 0x1, 0x9, 0xf, 0xff };
+static constexpr Math::UVec2 TEST_DATA_SIZE{2, 2};
+static constexpr Math::UVec2 TEST_DATA_SIZE_1{16, 16};
+static constexpr uint32_t TEST_ELEMENT_BYTE_SIZE{1};
+static constexpr uint8_t TEST_INPUT_IMAGE_COLOR[] = {0x1, 0x9, 0xf, 0xff};
 static constexpr uint32_t BYTE_SIZE = TEST_DATA_SIZE_1.x * TEST_DATA_SIZE_1.y * TEST_ELEMENT_BYTE_SIZE;
 static uint8_t TEST_IMAGE_DATA[BYTE_SIZE];
-static constexpr string_view TEST_IMAGE_NAME_0 { "TestImage0" };
-static constexpr string_view TEST_IMAGE_NAME_1 { "TestImage1" };
-static constexpr string_view TEST_IMAGE_NAME_2 { "TestImage2" };
-static constexpr string_view TEST_IMAGE_NAME_3 { "TestImage3" };
-static constexpr string_view TEST_IMAGE_NAME_4 { "TestImage4" };
-static constexpr string_view TEST_BUFFER_NAME_0 { "TestBuffer0" };
-static constexpr string_view TEST_BUFFER_NAME_1 { "TestBuffer1" };
-static constexpr string_view TEST_BUFFER_NAME_2 { "TestBuffer2" };
-static constexpr string_view TEST_BUFFER_NAME_3 { "TestBuffer3" };
-static constexpr string_view TEST_BUFFER_NAME_4 { "TestBuffer4" };
-static constexpr string_view TEST_BUFFER_NAME_5 { "TestBuffer5" };
-static constexpr string_view TEST_BUFFER_NAME_6 { "TestBuffer6" };
-static constexpr string_view TEST_BUFFER_NAME_7 { "TestBuffer7" };
+static constexpr string_view TEST_IMAGE_NAME_0{"TestImage0"};
+static constexpr string_view TEST_IMAGE_NAME_1{"TestImage1"};
+static constexpr string_view TEST_IMAGE_NAME_2{"TestImage2"};
+static constexpr string_view TEST_IMAGE_NAME_3{"TestImage3"};
+static constexpr string_view TEST_IMAGE_NAME_4{"TestImage4"};
+static constexpr string_view TEST_BUFFER_NAME_0{"TestBuffer0"};
+static constexpr string_view TEST_BUFFER_NAME_1{"TestBuffer1"};
+static constexpr string_view TEST_BUFFER_NAME_2{"TestBuffer2"};
+static constexpr string_view TEST_BUFFER_NAME_3{"TestBuffer3"};
+static constexpr string_view TEST_BUFFER_NAME_4{"TestBuffer4"};
+static constexpr string_view TEST_BUFFER_NAME_5{"TestBuffer5"};
+static constexpr string_view TEST_BUFFER_NAME_6{"TestBuffer6"};
+static constexpr string_view TEST_BUFFER_NAME_7{"TestBuffer7"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -102,7 +102,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useMipmap)
         imageDesc.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
         imageDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         imageDesc.usageFlags = CORE_IMAGE_USAGE_TRANSFER_SRC_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT;
-        const array_view<const uint8_t> dataView = { TEST_INPUT_IMAGE_COLOR, countof(TEST_INPUT_IMAGE_COLOR) };
+        const array_view<const uint8_t> dataView = {TEST_INPUT_IMAGE_COLOR, countof(TEST_INPUT_IMAGE_COLOR)};
         res.testImageHandle0 = er.device->GetGpuResourceManager().Create(TEST_IMAGE_NAME_0, imageDesc, dataView);
     }
     // test image 1
@@ -182,7 +182,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useMipmap)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         res.copyBufferHandle0 =
-            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_0, bufferDesc, { bufferDefaultData });
+            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_0, bufferDesc, {bufferDefaultData});
     }
     // buffer 1
     {
@@ -194,7 +194,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useMipmap)
         bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_SRC_BIT | CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         res.copyBufferHandle1 =
-            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_1, bufferDesc, { bufferDefaultData });
+            er.device->GetGpuResourceManager().Create(TEST_BUFFER_NAME_1, bufferDesc, {bufferDefaultData});
     }
     // buffer 2
     {
@@ -290,7 +290,7 @@ array_view<const uint8_t> GetTestImageData()
             TEST_IMAGE_DATA[i * TEST_DATA_SIZE_1.y + j] = ((i + j) % 2 == 0) ? 0x00 : 0xff;
         }
     }
-    return { TEST_IMAGE_DATA, countof(TEST_IMAGE_DATA) };
+    return {TEST_IMAGE_DATA, countof(TEST_IMAGE_DATA)};
 }
 
 void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
@@ -307,13 +307,11 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     rdsMgr.GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING)) {
                 {
                     ImageCopy imageCopy;
-                    imageCopy.srcSubresource = { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                        1u };
-                    imageCopy.srcOffset = { 0, 0, 0 };
-                    imageCopy.dstSubresource = { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                        1u };
-                    imageCopy.dstOffset = { 0, 0, 0 };
-                    imageCopy.extent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    imageCopy.srcSubresource = {RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    imageCopy.srcOffset = {0, 0, 0};
+                    imageCopy.dstSubresource = {RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    imageCopy.dstOffset = {0, 0, 0};
+                    imageCopy.extent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                     dsStaging->CopyImageToImage(tr.testImageHandle0, tr.testImageHandle1, imageCopy);
                 }
                 {
@@ -322,10 +320,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = 0;
                     bufferImageCopy.bufferImageHeight = 0;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle0, tr.copyBufferHandle0, bufferImageCopy);
                 }
             }
@@ -349,9 +346,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                 bufferImageCopy.bufferRowLength = 0;
                 bufferImageCopy.bufferImageHeight = 0;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
                 dsStaging->CopyImageToBuffer(tr.testImageHandle1, tr.copyBufferHandle1, bufferImageCopy);
             }
         }
@@ -366,10 +363,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u};
                     auto dataView = GetTestImageData();
                     dsStaging->CopyDataToImage(dataView, tr.testImageHandle2, bufferImageCopy);
                 }
@@ -405,10 +401,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle2, tr.copyBufferHandle2, bufferImageCopy);
                 }
                 {
@@ -417,10 +412,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u};
                     dsStaging->CopyBufferToImage(tr.copyBufferHandle3, tr.testImageHandle3, bufferImageCopy);
                 }
                 {
@@ -429,11 +423,10 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u };
-                    dsStaging->CopyBufferToImage(tr.copyBufferHandle3, tr.testImageHandle4, { &bufferImageCopy, 1 });
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u};
+                    dsStaging->CopyBufferToImage(tr.copyBufferHandle3, tr.testImageHandle4, {&bufferImageCopy, 1});
                 }
                 if (useMipmap) {
                     BufferImageCopy bufferImageCopy;
@@ -441,10 +434,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x / 2u;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y / 2u;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 1, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x / 2u, TEST_DATA_SIZE_1.y / 2u, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 1, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x / 2u, TEST_DATA_SIZE_1.y / 2u, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle2, tr.copyBufferHandle5, bufferImageCopy);
                 }
             }
@@ -477,10 +469,9 @@ void TickTest(TestData& td, int32_t frameCountToTick, bool useMipmap)
                     bufferImageCopy.bufferRowLength = TEST_DATA_SIZE_1.x;
                     bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE_1.y;
                     bufferImageCopy.imageSubresource =
-                        ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0,
-                            1u };
-                    bufferImageCopy.imageOffset = { 0, 0, 0 };
-                    bufferImageCopy.imageExtent = { TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u };
+                        ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                    bufferImageCopy.imageOffset = {0, 0, 0};
+                    bufferImageCopy.imageExtent = {TEST_DATA_SIZE_1.x, TEST_DATA_SIZE_1.y, 1u};
                     dsStaging->CopyImageToBuffer(tr.testImageHandle3, tr.copyBufferHandle4, bufferImageCopy);
                 }
                 {
@@ -620,7 +611,7 @@ void TestGpuResourceCopy(DeviceBackendType backend, bool useMipmap)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -647,7 +638,7 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceMipmapCopyTestVulkan, testing::
 {
     TestGpuResourceCopy(DeviceBackendType::VULKAN, true);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -672,4 +663,4 @@ UNIT_TEST(API_GfxGpuResourceCopyTest, GpuResourceMipmapCopyTestOpenGL, testing::
 {
     TestGpuResourceCopy(UTest::GetOpenGLBackend(), true);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

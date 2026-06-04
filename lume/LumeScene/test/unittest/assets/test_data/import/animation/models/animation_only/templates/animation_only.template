@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "description": "Imported from glTF",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "../animation_only.index",
+        "node": {
+            "type": "node",
+            "name": "AnimOnlyScene",
+            "children": [
+                {
+                    "type": "node",
+                    "name": "AnimatedEmpty"
+                }
+            ]
+        }
+    }
+}

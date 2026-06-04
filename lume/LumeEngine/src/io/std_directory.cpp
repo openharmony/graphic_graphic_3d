@@ -58,22 +58,29 @@ using BASE_NS::vector;
 
 // Hiding the directory implementation from the header.
 struct DirImpl {
-    explicit DirImpl(string_view path) : path_(path) {}
+    explicit DirImpl(string_view path) : path_(path)
+    {}
     string path_;
 };
 
 namespace {
 uint64_t GetTimeStamp(const std::filesystem::directory_entry& entry)
 {
-    return static_cast<uint64_t>(entry.last_write_time().time_since_epoch().count());
+    std::error_code ec;
+    auto time = entry.last_write_time(ec);
+    if (ec) {
+        return 0;
+    }
+    return static_cast<uint64_t>(time.time_since_epoch().count());
 }
 
 IDirectory::Entry::Type GetEntryType(const std::filesystem::directory_entry& entry)
 {
-    if (entry.is_directory()) {
+    std::error_code ec;
+    if (entry.is_directory(ec)) {
         return IDirectory::Entry::DIRECTORY;
     }
-    if (entry.is_regular_file()) {
+    if (entry.is_regular_file(ec)) {
         return IDirectory::Entry::FILE;
     }
 
@@ -84,9 +91,10 @@ std::filesystem::path U8Path(string_view str)
 {
     return std::filesystem::u8path(str.begin().ptr(), str.end().ptr());
 }
-} // namespace
+}  // namespace
 
-StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir)) {}
+StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir))
+{}
 
 StdDirectory::~StdDirectory()
 {
@@ -105,7 +113,7 @@ IDirectory::Ptr StdDirectory::Create(BASE_NS::string_view path)
     std::error_code ec;
     if (std::filesystem::create_directory(U8Path(path), ec)) {
         // Directory creation successful.
-        return IDirectory::Ptr { BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release() };
+        return IDirectory::Ptr{BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release()};
     }
     return {};
 }
@@ -114,7 +122,7 @@ IDirectory::Ptr StdDirectory::Open(const string_view path)
 {
     std::error_code ec;
     if (std::filesystem::is_directory(U8Path(path), ec)) {
-        return IDirectory::Ptr { BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release() };
+        return IDirectory::Ptr{BASE_NS::make_unique<StdDirectory>(make_unique<DirImpl>(path)).release()};
     }
     return {};
 }
@@ -134,18 +142,19 @@ vector<IDirectory::Entry> StdDirectory::GetEntries() const
         for (auto& iter : std::filesystem::directory_iterator(U8Path(dir_->path_), ec)) {
             const auto filename = iter.path().filename().u8string();
             auto str = string(filename.c_str(), filename.length());
-            result.push_back(IDirectory::Entry { GetEntryType(iter), move(str), GetTimeStamp(iter) });
+            result.push_back(IDirectory::Entry{GetEntryType(iter), move(str), GetTimeStamp(iter)});
         }
     }
 
     return result;
 }
 
-#else // HAS_FILESYSTEM not defined
+#else  // HAS_FILESYSTEM not defined
 
 // Hiding the directory implementation from the header.
 struct DirImpl {
-    DirImpl(const string_view path, DIR* aDir) : path_(path), dir_(aDir) {}
+    DirImpl(const string_view path, DIR* aDir) : path_(path), dir_(aDir)
+    {}
     string path_;
     DIR* dir_;
 };
@@ -186,11 +195,12 @@ IDirectory::Entry CreateEntry(const string_view path, const dirent& entry)
         timestamp = static_cast<uint64_t>(statBuf.st_mtime);
     }
 
-    return IDirectory::Entry { type, entry.d_name, timestamp };
+    return IDirectory::Entry{type, entry.d_name, timestamp};
 }
-} // namespace
+}  // namespace
 
-StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir)) {}
+StdDirectory::StdDirectory(BASE_NS::unique_ptr<DirImpl> dir) : dir_(BASE_NS::move(dir))
+{}
 
 StdDirectory::~StdDirectory()
 {
@@ -219,7 +229,7 @@ IDirectory::Ptr StdDirectory::Open(const string_view path)
 {
     DIR* dir = opendir(string(path).c_str());
     if (dir) {
-        return IDirectory::Ptr { make_unique<StdDirectory>(make_unique<DirImpl>(path, dir)).release() };
+        return IDirectory::Ptr{make_unique<StdDirectory>(make_unique<DirImpl>(path, dir)).release()};
     }
     return {};
 }
@@ -251,7 +261,7 @@ vector<IDirectory::Entry> StdDirectory::GetEntries() const
     return result;
 }
 
-#endif // HAS_FILESYSTEM
+#endif  // HAS_FILESYSTEM
 
 string StdDirectory::ResolveAbsolutePath(const string_view pathIn, bool isDirectory)
 {

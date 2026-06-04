@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"description": "test scene with child node in root",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",
+			"children": [
+				{
+					"type": "node",
+					"name": "1"
+				}
+			]
+		}
+	}
+}

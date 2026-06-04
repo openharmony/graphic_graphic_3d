@@ -26,9 +26,9 @@ struct SceneOptions {
     /// Set custom system graph, empty one uses system default
     BASE_NS::string systemGraphUri;
     /// If true, scene will control any startables attached to nodes in the scene
-    bool enableStartables { true };
+    bool enableStartables{true};
     /// Create and add all resources when loading scene
-    bool createResources { true };
+    bool createResources{true};
     /// Resource id if this is loaded via resource manager
     CORE_NS::ResourceId resourceId;
     /// Offset for loading glb from mp4 container

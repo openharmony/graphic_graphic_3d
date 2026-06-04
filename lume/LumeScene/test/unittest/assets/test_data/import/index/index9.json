@@ -1,0 +1,26 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": { "name": "env" },
+                "type": "environment",
+                "options": {
+                    "background": "cubemap",
+                    "radianceCubemapMipCount": 5,
+                    "indirectDiffuseFactor": [0.1, 0.2, 0.3, 1.0],
+                    "indirectSpecularFactor": [0.4, 0.5, 0.6, 1.0],
+                    "envMapFactor": [1.0, 1.0, 1.0, 0.5],
+                    "environmentMapLodLevel": 2.5,
+                    "environmentRotation": [0.0, 0.0, 0.0, 1.0],
+                    "irradianceCoefficients": [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0]
+                    ]
+                }
+            }
+        ]
+    }
+}

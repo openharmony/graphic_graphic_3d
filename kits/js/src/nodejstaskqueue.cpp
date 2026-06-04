@@ -47,6 +47,7 @@ private:
     bool Acquire() override;
     bool Release() override;
     bool IsReleased() override;
+    void Finalize() override;
 
     // ILifecycle
     bool Build(const IMetadata::Ptr& data) override;
@@ -78,28 +79,44 @@ private:
             : token(t), delay(d), executeTime(e), operation(p)
         {}
 
-        Token token { 0 };
+        Token token{0};
         TimeSpan delay;
         TimeSpan executeTime;
-        ITaskQueueTask::Ptr operation { nullptr };
+        ITaskQueueTask::Ptr operation{nullptr};
     };
 
-    std::chrono::high_resolution_clock::duration epoch_ { 0 };
-    napi_env env_ { nullptr };
-    napi_threadsafe_function tsf_ { nullptr };
+    std::chrono::high_resolution_clock::duration epoch_{0};
+    napi_env env_{nullptr};
+    napi_threadsafe_function tsf_{nullptr};
     NapiApi::StrongRef curTimeout_;
     NapiApi::StrongRef RunFunc_;
 
     std::recursive_mutex mutex_;
     std::thread::id execThread_;
     // currently running task..
-    Token execToken_ { nullptr };
+    Token execToken_{nullptr};
     std::deque<Task> tasks_;
     bool scheduled_ = false;
-    uint32_t refcnt_ { 0 };
+    uint32_t refcnt_{0};
 };
 
-NodeJSTaskQueue::NodeJSTaskQueue() {}
+NodeJSTaskQueue::NodeJSTaskQueue()
+{}
+
+void NodeJSTaskQueue::Finalize()
+{
+    std::unique_lock lock{mutex_};
+    if (!tsf_) {
+        return;
+    }
+    auto tsf = tsf_;
+    tsf_ = nullptr;
+    scheduled_ = false;
+    RunFunc_.Reset();
+    curTimeout_.Reset();
+    lock.unlock();
+    napi_release_threadsafe_function(tsf, napi_threadsafe_function_release_mode::napi_tsfn_abort);
+}
 
 NodeJSTaskQueue::~NodeJSTaskQueue()
 {
@@ -113,7 +130,7 @@ NodeJSTaskQueue::~NodeJSTaskQueue()
 
 bool NodeJSTaskQueue::Acquire()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     assert(execThread_ == std::this_thread::get_id());
     if (execThread_ != std::this_thread::get_id()) {
         // called from incorrect thread. do nothing.
@@ -123,7 +140,7 @@ bool NodeJSTaskQueue::Acquire()
         if (tsf_ == nullptr) {
             napi_value func;
             napi_create_function(env_, "NodeJsTaskQueueRun", 0, Run, this, &func);
-            RunFunc_ = { env_, func };
+            RunFunc_ = {env_, func};
 
             napi_value name;
             napi_create_string_latin1(env_, "NodeJSTaskQueue", 1, &name);
@@ -136,7 +153,7 @@ bool NodeJSTaskQueue::Acquire()
 
 bool NodeJSTaskQueue::Release()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     assert(execThread_ == std::this_thread::get_id());
     if (execThread_ != std::this_thread::get_id()) {
         // called from incorrect thread. do nothing.
@@ -148,16 +165,13 @@ bool NodeJSTaskQueue::Release()
     }
     if (refcnt_ == 1) {
         refcnt_ = 0;
-        // fully released, we may be allowed to release the resources
-        if (tasks_.empty()) {
-            // queue empty, we can finalize.
-            auto tsf = tsf_;
-            tsf_ = nullptr;
-            RunFunc_.Reset();
-            curTimeout_.Reset();
-            lock.unlock();
-            napi_release_threadsafe_function(tsf, napi_threadsafe_function_release_mode::napi_tsfn_abort);
-        }
+        // NOTE: intentionally do NOT tear down tsf_/RunFunc_/curTimeout_ here.
+        // During fast view switching the queue can momentarily reach refcnt==0 with an
+        // empty task list, while engine-thread continuations are about to enqueue
+        // themselves via .Then(..., jsQ). If we abort the TSF at that instant, those
+        // continuations get silently dropped in RescheduleTimer (tsf_==nullptr path)
+        // and the corresponding promises never resolve. The TSF is now released only
+        // in DeinitNodeTaskQueue at real shutdown.
         return true;
     }
     refcnt_--;
@@ -166,7 +180,7 @@ bool NodeJSTaskQueue::Release()
 
 bool NodeJSTaskQueue::IsReleased()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     assert(execThread_ == std::this_thread::get_id());
     if (execThread_ != std::this_thread::get_id()) {
         // called from incorrect thread.
@@ -178,9 +192,8 @@ bool NodeJSTaskQueue::IsReleased()
     if (!tasks_.empty()) {
         return false;
     }
-    if (tsf_) {
-        return false;
-    }
+    // NOTE: tsf_ is intentionally not checked here. The TSF now lives until
+    // Finalize() is called at real shutdown, so it being non-null is expected.
     if (scheduled_) {
         // still busy..
         return false;
@@ -217,7 +230,7 @@ napi_value NodeJSTaskQueue::Run(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     auto me = static_cast<NodeJSTaskQueue*>(fc.GetData());
-    std::unique_lock lock { me->mutex_ };
+    std::unique_lock lock{me->mutex_};
     me->curTimeout_.Reset();
     me->Schedule(env, lock);
     return {};
@@ -232,9 +245,9 @@ void NodeJSTaskQueue::SetTimeout(napi_env env, uint32_t trigger)
     napi_value args[2];
     args[0] = RunFunc_.GetValue();
     args[1] = e.GetNumber(trigger);
-    napi_value res { nullptr };
+    napi_value res{nullptr};
     res = g.Invoke("setTimeout", args);
-    curTimeout_ = { e, res };
+    curTimeout_ = {e, res};
 }
 void NodeJSTaskQueue::CancelTimeout(napi_env env)
 {
@@ -257,7 +270,7 @@ void NodeJSTaskQueue::Schedule(napi_env env, std::unique_lock<std::recursive_mut
 
     // running in javascript side.
     BASE_NS::vector<Task> rearm;
-    auto curTime = TimeFloor(); // round down the time..
+    auto curTime = TimeFloor();  // round down the time..
     // 1. see how long until the first scheduled task. (looping through the queue ,executing tasks if needed)
     for (;;) {
         if (tasks_.empty()) {
@@ -282,7 +295,7 @@ void NodeJSTaskQueue::Schedule(napi_env env, std::unique_lock<std::recursive_mut
             if (ret && execToken_) {
                 rearm.emplace_back(front.token, front.delay, front.executeTime, BASE_NS::move(front.operation));
             }
-            execToken_ = { 0 };
+            execToken_ = {0};
             continue;
         }
         break;
@@ -320,23 +333,14 @@ void NodeJSTaskQueue::Schedule(napi_env env, std::unique_lock<std::recursive_mut
         SetTimeout(env, trigger);
     }
 
-    if (tasks_.empty()) {
-        // queue empty, we may be allowed to release resourcec.
-        if (refcnt_ == 0) {
-            if (tsf_) {
-                // release the TSF, we have given permission to terminate.
-                auto tsf = tsf_;
-                tsf_ = nullptr;
-                napi_release_threadsafe_function(tsf, napi_threadsafe_function_release_mode::napi_tsfn_abort);
-            }
-            RunFunc_.Reset();
-        }
-    }
+    // NOTE: previously this released tsf_/RunFunc_ when tasks_ drained while refcnt_==0.
+    // That caused continuations posted from other threads to be silently dropped during
+    // fast view switching. Resource teardown is now deferred to DeinitNodeTaskQueue.
 }
 
 bool NodeJSTaskQueue::RescheduleTimer()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     if (IsInQueue()) {
         // call directly as we are in JS thread.
         Schedule(env_, lock);
@@ -354,17 +358,24 @@ bool NodeJSTaskQueue::RescheduleTimer()
             // could not acquire the function anymore.
             // (most likely cleanup already in progress)
             // fail.
+            LOG_E("NodeJSTaskQueue: napi_acquire_threadsafe_function failed (res=%d)", (int)res);
             return false;
         }
         void* data = nullptr;
         scheduled_ = true;
         res = napi_call_threadsafe_function(tsf_, data, napi_threadsafe_function_call_mode::napi_tsfn_blocking);
-        if (res == napi_closing) {
-            // clean up in progress.
+        if (res != napi_ok) {
+            // call failed; make sure scheduled_ does not get stuck as true, otherwise
+            // every subsequent RescheduleTimer call will short-circuit and silently
+            // skip dispatching.
+            scheduled_ = false;
+            napi_release_threadsafe_function(tsf_, napi_threadsafe_function_release_mode::napi_tsfn_release);
+            LOG_E("NodeJSTaskQueue: napi_call_threadsafe_function failed (res=%d)", (int)res);
             return false;
         }
         res = napi_release_threadsafe_function(tsf_, napi_threadsafe_function_release_mode::napi_tsfn_release);
         if (res != napi_ok) {
+            LOG_E("NodeJSTaskQueue: napi_release_threadsafe_function failed (res=%d)", (int)res);
             return false;
         }
     }
@@ -380,7 +391,7 @@ void NodeJSTaskQueue::Invoke(napi_env env, napi_value js_callback, void* context
 {
     auto* me = static_cast<NodeJSTaskQueue*>(context);
     if (me) {
-        std::unique_lock lock { me->mutex_ };
+        std::unique_lock lock{me->mutex_};
         me->scheduled_ = false;
         me->Schedule(env, lock);
     }
@@ -408,10 +419,10 @@ void NodeJSTaskQueue::CancelTask(Token token)
         // currently executing tasks in this thread.
         sameThread = true;
     }
-    if (curThread != execThread_) {
+    if (curThread == execThread_) {
         sameThread = true;
     }
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     Token executingToken = execToken_;
     if (token == execToken_) {
         // Currently executing task is requested to cancel.
@@ -471,7 +482,7 @@ void NodeJSTaskQueue::AddTaskImpl(Token ret, ITaskQueueTask::Ptr p, const TimeSp
         for (auto it = tasks_.begin(); it != tasks_.end(); ++it) {
             if (it->executeTime <= excTime) {
                 // task in list should execute after us, so insert there.
-                tasks_.insert(it, { ret, delay, excTime, BASE_NS::move(p) });
+                tasks_.insert(it, {ret, delay, excTime, BASE_NS::move(p)});
                 break;
             }
         }
@@ -487,7 +498,7 @@ Token NodeJSTaskQueue::AddTask(ITaskQueueTask::Ptr p, const TimeSpan& delay, con
     if (!p) {
         return nullptr;
     }
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     // unique
     Token result = MakeToken(p);
     AddTaskImpl(result, BASE_NS::move(p), delay, excTime);
@@ -502,7 +513,12 @@ Token NodeJSTaskQueue::AddTask(ITaskQueueTask::Ptr p, const TimeSpan& delay, con
                 break;
             }
         }
-        result = { nullptr };
+        LOG_E("NodeJSTaskQueue::AddTask DROPPED task: RescheduleTimer failed "
+              "(refcnt=%u, tsf=%p, scheduled=%d) - .Then continuation will never run",
+            refcnt_,
+            (void*)tsf_,
+            (int)scheduled_);
+        result = {nullptr};
     }
     return result;
 }
@@ -585,10 +601,15 @@ bool DeinitNodeTaskQueue()
         // already deinitialized
         return true;
     }
-    if (!tq->GetInterface<INodeJSTaskQueue>()->IsReleased()) {
+    auto* nq = tq->GetInterface<INodeJSTaskQueue>();
+    if (!(nq && nq->IsReleased())) {
         // Unsafe deinitialize
         return false;
     }
+    // Final teardown of the threadsafe function. Release() no longer does this so that
+    // continuations posted during fast view switching are not silently dropped; the only
+    // place we actually abort the TSF is here, at real shutdown.
+    nq->Finalize();
     // can be safely unregistered.
     // expect the instance to be destroyed now.
     tr.UnregisterTaskQueue(JS_THREAD_DEP);

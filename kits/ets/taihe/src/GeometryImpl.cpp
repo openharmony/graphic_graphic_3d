@@ -22,9 +22,7 @@ GeometryImpl::GeometryImpl(const std::shared_ptr<GeometryETS> geometryETS)
 
 GeometryImpl::~GeometryImpl()
 {
-    if (geometryETS_) {
-        geometryETS_.reset();
-    }
+    geometryETS_.reset();
 }
 
 ::SceneResources::Mesh GeometryImpl::getMesh()
@@ -32,7 +30,7 @@ GeometryImpl::~GeometryImpl()
     if (geometryETS_) {
         return taihe::make_holder<MeshImpl, SceneResources::Mesh>(geometryETS_->GetMesh());
     } else {
-        return ::taihe::make_holder<MeshImpl, SceneResources::Mesh>(nullptr);
+        return SceneResources::Mesh({nullptr, nullptr});
     }
 }
 

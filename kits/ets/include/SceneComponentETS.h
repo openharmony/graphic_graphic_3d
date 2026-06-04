@@ -16,13 +16,15 @@
 #ifndef OHOS_3D_SCENE_COMPONENT_ETS_H
 #define OHOS_3D_SCENE_COMPONENT_ETS_H
 
-#include "property_proxy/PropertyProxy.h"
+#include "PropertyProxy.h"
 #include "Utils.h"
+
+#include <base/containers/string.h>
 
 namespace OHOS::Render3D {
 class SceneComponentETS {
 public:
-    SceneComponentETS(SCENE_NS::IComponent::Ptr comp, const std::string &name);
+    SceneComponentETS(SCENE_NS::IComponent::Ptr comp, const std::string& name);
     ~SceneComponentETS();
 
     std::string GetName();
@@ -30,7 +32,7 @@ public:
 
     int32_t GetPropertySize() const
     {
-        return proxies_.size();
+        return propertyPaths_.size();
     }
 
     std::vector<std::string> GetPropertyKeys() const
@@ -38,28 +40,31 @@ public:
         return keys_;
     }
 
-    std::shared_ptr<IPropertyProxy> GetProperty(const std::string &key);
+    std::shared_ptr<IPropertyProxy> GetProperty(const std::string& key);
 
-    void ClearArrayProperty(const std::string &key);
+    void ClearArrayProperty(const std::string& key);
 
-    template<typename Type>
-    void SetProperty(const std::string &key, const Type &value)
+    template <typename Type>
+    void SetProperty(const std::string& key, const Type& value)
     {
-        ProxySetProperty(proxies_[key], value, key);
+        ProxySetProperty(GetOrCreateProxy(key), value, key);
     }
 
-    template<typename Type>
-    void SetArrayProperty(const std::string &key, const BASE_NS::vector<Type> &value)
+    template <typename Type>
+    void SetArrayProperty(const std::string& key, const BASE_NS::vector<Type>& value)
     {
-        ProxySetArrayProperty(proxies_[key], value, key);
+        ProxySetArrayProperty(GetOrCreateProxy(key), value, key);
     }
 
 protected:
     void AddProperties();
 
 private:
+    std::shared_ptr<IPropertyProxy> GetOrCreateProxy(const std::string& key);
+
     std::string name_;
     SCENE_NS::IComponent::WeakPtr comp_;
+    std::unordered_map<std::string, BASE_NS::string> propertyPaths_;
     std::unordered_map<std::string, std::shared_ptr<IPropertyProxy>> proxies_;
     std::vector<std::string> keys_;
 };

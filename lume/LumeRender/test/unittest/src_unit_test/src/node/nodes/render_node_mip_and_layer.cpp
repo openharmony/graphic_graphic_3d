@@ -37,14 +37,14 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 
 namespace {
-static constexpr string_view GRAPHICS_IMAGE_NAME { "GraphicsImage" };
-static constexpr string_view COMPUTE_IMAGE_NAME { "ComputeImage" };
+static constexpr string_view GRAPHICS_IMAGE_NAME{"GraphicsImage"};
+static constexpr string_view COMPUTE_IMAGE_NAME{"ComputeImage"};
 
 struct PushDataStruct {
-    Math::Vec4 texSizeInvSize { 1.0f, 1.0f, 1.0f, 1.0f };
-    Math::Vec4 color { 0.0f, 0.0f, 0.0f, 0.0f };
+    Math::Vec4 texSizeInvSize{1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vec4 color{0.0f, 0.0f, 0.0f, 0.0f};
 };
-} // namespace
+}  // namespace
 
 void RenderNodeMipAndLayer::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -55,10 +55,10 @@ void RenderNodeMipAndLayer::InitNode(IRenderNodeContextManager& renderNodeContex
     INodeContextDescriptorSetManager& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
 
     {
-        const DescriptorCounts dc { {
-            { CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2U },
-            { CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4U },
-        } };
+        const DescriptorCounts dc{{
+            {CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2U},
+            {CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4U},
+        }};
         descriptorSetMgr.ResetAndReserve(dc);
     }
 
@@ -67,16 +67,20 @@ void RenderNodeMipAndLayer::InitNode(IRenderNodeContextManager& renderNodeContex
 
         const RenderHandle shaderHandle =
             shaderMgr.GetShaderHandle("rendershaders://shader/RenderNodeMipAndLayerGraphicsTest.shader");
-        const ShaderSpecializationConstantDataView specialization { {}, {} };
-        constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT,
-            CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+        const ShaderSpecializationConstantDataView specialization{{}, {}};
+        constexpr DynamicStateEnum DYNAMIC_STATES[] = {
+            CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
         const RenderHandle graphicsState =
             renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shaderHandle);
         const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
         dat.pipelineLayout = renderNodeUtil.CreatePipelineLayout(shaderHandle);
         const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle);
-        dat.psoHandle = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(shaderHandle, graphicsState,
-            dat.pipelineLayout, inputLayout, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        dat.psoHandle = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(shaderHandle,
+            graphicsState,
+            dat.pipelineLayout,
+            inputLayout,
+            specialization,
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 
         {
             const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(0U, dat.pipelineLayout);
@@ -91,14 +95,14 @@ void RenderNodeMipAndLayer::InitNode(IRenderNodeContextManager& renderNodeContex
 
         dat.image = gpuResourceMgr.GetImageHandle(GRAPHICS_IMAGE_NAME);
         const auto desc = gpuResourceMgr.GetImageDescriptor(dat.image);
-        dat.imageSize = { desc.width, desc.height };
+        dat.imageSize = {desc.width, desc.height};
     }
     {
         auto& dat = computeData_;
 
         auto shaderHandle =
             shaderMgr.GetShaderHandle("rendershaders://computeshader/RenderNodeMipAndLayerComputeTest.shader");
-        const ShaderSpecializationConstantDataView specialization { {}, {} };
+        const ShaderSpecializationConstantDataView specialization{{}, {}};
         const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
         dat.pipelineLayout = renderNodeUtil.CreatePipelineLayout(shaderHandle);
         dat.psoHandle =
@@ -117,14 +121,15 @@ void RenderNodeMipAndLayer::InitNode(IRenderNodeContextManager& renderNodeContex
 
         dat.image = gpuResourceMgr.GetImageHandle(COMPUTE_IMAGE_NAME);
         const auto desc = gpuResourceMgr.GetImageDescriptor(dat.image);
-        dat.imageSize = { desc.width, desc.height };
+        dat.imageSize = {desc.width, desc.height};
     }
 
     defaultImage_ = gpuResourceMgr.GetImageHandle("CORE_DEFAULT_GPU_IMAGE");
     defaultSampler_ = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
 }
 
-void RenderNodeMipAndLayer::PreExecuteFrame() {}
+void RenderNodeMipAndLayer::PreExecuteFrame()
+{}
 
 void RenderNodeMipAndLayer::ExecuteFrame(IRenderCommandList& cmdList)
 {
@@ -145,7 +150,7 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
 
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
-    renderPass.renderPassDesc.renderArea = { 0, 0, dat.imageSize.x, dat.imageSize.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, dat.imageSize.x, dat.imageSize.y};
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPass.renderPassDesc.attachments[0].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
@@ -164,7 +169,7 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
         const float fCurrWidth = static_cast<float>(currWidth);
         const float fCurrHeight = static_cast<float>(currHeight);
 
-        renderPass.renderPassDesc.renderArea = { 0, 0, currWidth, currHeight };
+        renderPass.renderPassDesc.renderArea = {0, 0, currWidth, currHeight};
         renderPass.renderPassDesc.attachments[0].mipLevel = mipLevel;
 
         const ViewportDesc viewportDesc = renderNodeUtil.CreateDefaultViewport(renderPass);
@@ -187,8 +192,8 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
         }
         if (dat.pipelineLayout.pushConstant.byteSize > 0) {
             PushDataStruct pds;
-            pds.texSizeInvSize = { fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight };
-            pds.color = { 1.0f, 0.0, 0.0, 0.501f };
+            pds.texSizeInvSize = {fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight};
+            pds.color = {1.0f, 0.0, 0.0, 0.501f};
             cmdList.PushConstantData(dat.pipelineLayout.pushConstant, arrayviewU8(pds));
         }
         cmdList.Draw(3u, 1u, 0u, 0u);
@@ -203,7 +208,7 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
         const float fCurrWidth = static_cast<float>(currWidth);
         const float fCurrHeight = static_cast<float>(currHeight);
 
-        renderPass.renderPassDesc.renderArea = { 0, 0, currWidth, currHeight };
+        renderPass.renderPassDesc.renderArea = {0, 0, currWidth, currHeight};
         renderPass.renderPassDesc.attachments[0].mipLevel = mipLevel;
 
         const ViewportDesc viewportDesc = renderNodeUtil.CreateDefaultViewport(renderPass);
@@ -218,7 +223,7 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
             auto& binder = *dat.descriptorSet1;
             BindableImage bi;
             bi.handle = dat.image;
-            bi.mip = 0U; // NOTE
+            bi.mip = 0U;  // NOTE
             bi.samplerHandle = defaultSampler_;
             binder.BindImage(0, bi);
             cmdList.UpdateDescriptorSet(
@@ -227,8 +232,8 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
         }
         if (dat.pipelineLayout.pushConstant.byteSize > 0) {
             PushDataStruct pds;
-            pds.texSizeInvSize = { fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight };
-            pds.color = { 0.0f, 1.0, 0.0, 0.501f };
+            pds.texSizeInvSize = {fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight};
+            pds.color = {0.0f, 1.0, 0.0, 0.501f};
             cmdList.PushConstantData(dat.pipelineLayout.pushConstant, arrayviewU8(pds));
         }
         cmdList.Draw(3u, 1u, 0u, 0u);
@@ -239,7 +244,7 @@ void RenderNodeMipAndLayer::ExecuteGraphics(IRenderCommandList& cmdList)
 
 void RenderNodeMipAndLayer::ExecuteCompute(IRenderCommandList& cmdList)
 {
-    constexpr uint32_t threadGroupSize { 8U };
+    constexpr uint32_t threadGroupSize{8U};
 
     uint32_t mipLevel = 0;
     auto& dat = computeData_;
@@ -271,12 +276,13 @@ void RenderNodeMipAndLayer::ExecuteCompute(IRenderCommandList& cmdList)
         }
         if (dat.pipelineLayout.pushConstant.byteSize > 0) {
             PushDataStruct pds;
-            pds.texSizeInvSize = { fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight };
-            pds.color = { 1.0f, 0.0, 0.0, 0.501f };
+            pds.texSizeInvSize = {fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight};
+            pds.color = {1.0f, 0.0, 0.0, 0.501f};
             cmdList.PushConstantData(dat.pipelineLayout.pushConstant, arrayviewU8(pds));
         }
         cmdList.Dispatch((currWidth + threadGroupSize - 1u) / threadGroupSize,
-            (currHeight + threadGroupSize - 1u) / threadGroupSize, 1U);
+            (currHeight + threadGroupSize - 1u) / threadGroupSize,
+            1U);
     }
     mipLevel++;
     // second pass
@@ -308,12 +314,13 @@ void RenderNodeMipAndLayer::ExecuteCompute(IRenderCommandList& cmdList)
         }
         if (dat.pipelineLayout.pushConstant.byteSize > 0) {
             PushDataStruct pds;
-            pds.texSizeInvSize = { fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight };
-            pds.color = { 0.0f, 1.0, 0.0, 0.501f };
+            pds.texSizeInvSize = {fCurrWidth, fCurrHeight, 1.0f / fCurrWidth, 1.0f / fCurrHeight};
+            pds.color = {0.0f, 1.0, 0.0, 0.501f};
             cmdList.PushConstantData(dat.pipelineLayout.pushConstant, arrayviewU8(pds));
         }
         cmdList.Dispatch((currWidth + threadGroupSize - 1u) / threadGroupSize,
-            (currHeight + threadGroupSize - 1u) / threadGroupSize, 1U);
+            (currHeight + threadGroupSize - 1u) / threadGroupSize,
+            1U);
     }
 }
 

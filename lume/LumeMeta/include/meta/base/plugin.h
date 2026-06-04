@@ -26,7 +26,7 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief UID for the meta object library plugin, used to identify the dynamic library.
  */
-constexpr BASE_NS::Uid META_OBJECT_PLUGIN_UID { "532f7256-8849-472a-933a-d73efc232b01" };
+constexpr BASE_NS::Uid META_OBJECT_PLUGIN_UID{"532f7256-8849-472a-933a-d73efc232b01"};
 constexpr const char* META_VERSION_STRING = "2.0";
 constexpr Version META_VERSION(META_VERSION_STRING);
 

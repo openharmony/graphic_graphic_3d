@@ -59,7 +59,7 @@ Object::Object(napi_env env, napi_value v) : env_(env), object_(v)
 
 Object::Object(napi_env env, BASE_NS::string_view className, const JsFuncArgs& args) : env_(env)
 {
-    NapiApi::MyInstanceState* mis {};
+    NapiApi::MyInstanceState* mis{};
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         const auto ctor = NapiApi::Function(env, mis->FetchCtor(className));
@@ -238,7 +238,7 @@ bool Object::DeleteProperty(const BASE_NS::string_view name)
     }
     // remove property from object.
     napi_status status;
-    bool result { false };
+    bool result{false};
     napi_value key = MakeTempString(name);
     status = napi_delete_property(env_, object_, key, &result);
     return result;
@@ -250,14 +250,14 @@ Object::NameAndType Object::GetNamedPropertyAndType(const BASE_NS::string_view n
     napi_status status;
     napi_valuetype jstype;
     if (!env_ || !object_) {
-        return { false, nullptr, napi_undefined };
+        return {false, nullptr, napi_undefined};
     }
     status = napi_get_named_property(env_, object_, BASE_NS::string(name).c_str(), &res);
     if ((!res) || (napi_ok != status)) {
-        return { false, nullptr, napi_undefined };
+        return {false, nullptr, napi_undefined};
     }
     napi_typeof(env_, res, &jstype);
-    return { true, res, jstype };
+    return {true, res, jstype};
 }
 
 napi_value Object::MakeTempString(const BASE_NS::string_view v)
@@ -265,4 +265,4 @@ napi_value Object::MakeTempString(const BASE_NS::string_view v)
     return env_.GetString(v);
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

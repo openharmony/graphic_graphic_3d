@@ -37,16 +37,16 @@ RENDER_END_NAMESPACE()
 
 namespace {
 extern "C" {
-PLUGIN_DATA(AGPRender) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(AGPRender){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "AGP Render",
     // Version information of the plugin.
-    { RENDER_NS::UID_RENDER_PLUGIN, RENDER_NS::GetVersionInfo },
+    {RENDER_NS::UID_RENDER_PLUGIN, RENDER_NS::GetVersionInfo},
     RENDER_NS::RegisterInterfaces,
     RENDER_NS::UnregisterInterfaces,
     {},
 };
 DEFINE_STATIC_PLUGIN(AGPRender);
 }
-} // namespace
+}  // namespace

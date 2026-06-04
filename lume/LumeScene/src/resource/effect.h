@@ -41,30 +41,27 @@ public:
     META_STATIC_PROPERTY_DATA(IEffect, bool, Enabled, true)
     META_END_STATIC_DATA()
 
-public: // IEffect
+public:  // IEffect
     META_IMPLEMENT_PROPERTY(bool, Enabled)
 
     Future<bool> InitializeEffect(const BASE_NS::shared_ptr<IScene>& scene, META_NS::ObjectId effectClassId) override;
     META_NS::ObjectId GetEffectClassId() const override;
     RENDER_NS::IRenderPostProcess::Ptr GetEffect() const override;
 
-public: // IEnginePropertySync
+public:  // IEnginePropertySync
     void SyncProperties() override;
 
 private:
     bool CreateEffect();
     void PopulateProperties();
     void AddProperties(BASE_NS::array_view<const META_NS::IEngineValue::Ptr> values);
-    void AddPropertyUpdateHook(const META_NS::IProperty::Ptr& prop);
-
-    BASE_NS::Uid effectClassId_ {};
+    BASE_NS::Uid effectClassId_{};
     mutable RENDER_NS::IRenderPostProcess::Ptr pp_;
     mutable META_NS::IEngineValueManager::Ptr valueManager_;
-    META_NS::IOnChanged::InterfaceTypePtr syncPropertiesCallable_;
     mutable IInternalScene::WeakPtr scene_;
-    bool initialized_ {};
+    bool initialized_{};
 };
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_EFFECT_H
+#endif  // SCENE_SRC_EFFECT_H

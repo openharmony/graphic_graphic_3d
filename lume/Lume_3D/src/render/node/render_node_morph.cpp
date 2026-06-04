@@ -37,9 +37,9 @@ constexpr const uint32_t SET_WEIGHTS = 0u;
 constexpr const uint32_t SET_INPUTS = 1u;
 constexpr const uint32_t SET_OUTPUTS = 2u;
 
-constexpr const uint32_t BUFFER_ALIGN = 0x100; // on Nvidia = 0x20, on Mali and Intel = 0x10, SBO on Mali = 0x100
+constexpr const uint32_t BUFFER_ALIGN = 0x100;  // on Nvidia = 0x20, on Mali and Intel = 0x10, SBO on Mali = 0x100
 
-inline size_t Align(size_t value, size_t align)
+constexpr size_t Align(size_t value, size_t align) noexcept
 {
     if (align == 0U) {
         return value;
@@ -47,7 +47,7 @@ inline size_t Align(size_t value, size_t align)
 
     return ((value + align - 1U) / align) * align;
 }
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -95,8 +95,8 @@ void RenderNodeMorph::PreExecuteFrame()
         maxObjectCount_ = static_cast<uint32_t>(submeshes.size() + submeshes.size() / 2u);
 
         auto& descriptorSetMgr = renderNodeContextMgr_->GetDescriptorSetManager();
-        const DescriptorCounts dc { { // weight/indexset for all prims + number of inputs and outputs
-            { CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u + (2u + 3u) * maxObjectCount_ } } };
+        const DescriptorCounts dc{{// weight/indexset for all prims + number of inputs and outputs
+            {CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u + (2u + 3u) * maxObjectCount_}}};
         descriptorSetMgr.ResetAndReserve(dc);
         {
             const RenderHandle descriptorSetHandle = descriptorSetMgr.CreateDescriptorSet(SET_WEIGHTS, pipelineLayout_);
@@ -125,7 +125,11 @@ void RenderNodeMorph::PreExecuteFrame()
 
     uint32_t structCount = 0u;
     for (const auto& submesh : submeshes) {
-        structCount += (static_cast<uint32_t>(submesh.activeTargets.size()) + 3u) / 4u;
+        const uint32_t increment = (static_cast<uint32_t>(submesh.activeTargets.size()) + 3u) / 4u;
+        if (structCount > UINT32_MAX / sizeof(::MorphTargetInfoStruct)) {
+            break;
+        }
+        structCount += increment;
     }
     if (maxStructCount_ < structCount) {
         maxStructCount_ = structCount + structCount / 2u;
@@ -134,9 +138,10 @@ void RenderNodeMorph::PreExecuteFrame()
             bufferSize_ = static_cast<uint32_t>(Align(sizeOfBuffer, BUFFER_ALIGN));
             auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
             morphTargetBufferHandle_ = gpuResourceMgr.Create(morphTargetBufferHandle_,
-                GpuBufferDesc { CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                GpuBufferDesc{CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, bufferSize_ });
+                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                    bufferSize_});
         }
     }
 }
@@ -232,24 +237,29 @@ void RenderNodeMorph::ComputeMorphs(IRenderCommandList& cmdList, array_view<cons
             // Bind outputs = pos/nor/tangent buffers (set 2)
             auto& outputBinder = *allDescriptorSets_.outputs[outputIdx++];
             {
-                outputBinder.BindBuffer(0u, submesh.vertexBuffers[0u].bufferHandle.GetHandle(),
+                outputBinder.BindBuffer(0u,
+                    submesh.vertexBuffers[0u].bufferHandle.GetHandle(),
                     submesh.vertexBuffers[0u].bufferOffset,
-                    submesh.vertexBuffers[0u].byteSize); // position
-                outputBinder.BindBuffer(1u, submesh.vertexBuffers[1u].bufferHandle.GetHandle(),
+                    submesh.vertexBuffers[0u].byteSize);  // position
+                outputBinder.BindBuffer(1u,
+                    submesh.vertexBuffers[1u].bufferHandle.GetHandle(),
                     submesh.vertexBuffers[1u].bufferOffset,
-                    submesh.vertexBuffers[1u].byteSize); // normal
-                outputBinder.BindBuffer(2u, submesh.vertexBuffers[2u].bufferHandle.GetHandle(),
+                    submesh.vertexBuffers[1u].byteSize);  // normal
+                outputBinder.BindBuffer(2u,
+                    submesh.vertexBuffers[2u].bufferHandle.GetHandle(),
                     submesh.vertexBuffers[2u].bufferOffset,
-                    submesh.vertexBuffers[2u].byteSize); // tangent
+                    submesh.vertexBuffers[2u].byteSize);  // tangent
 
                 cmdList.UpdateDescriptorSet(
                     outputBinder.GetDescriptorSetHandle(), outputBinder.GetDescriptorSetLayoutBindingResources());
             }
-            const RenderHandle sets[] = { inputBinder.GetDescriptorSetHandle(), outputBinder.GetDescriptorSetHandle() };
+            const RenderHandle sets[] = {inputBinder.GetDescriptorSetHandle(), outputBinder.GetDescriptorSetHandle()};
             cmdList.BindDescriptorSets(SET_INPUTS, sets);
 
-            const ::MorphObjectPushConstantStruct pushData { offset, submesh.vertexCount, submesh.morphTargetCount,
-                static_cast<uint32_t>(submesh.activeTargets.size()) };
+            const ::MorphObjectPushConstantStruct pushData{offset,
+                submesh.vertexCount,
+                submesh.morphTargetCount,
+                static_cast<uint32_t>(submesh.activeTargets.size())};
             cmdList.PushConstant(pipelineLayout_.pushConstant, reinterpret_cast<const uint8_t*>(&pushData));
             cmdList.Dispatch((submesh.vertexCount + threadGroupSize_.x - 1) / threadGroupSize_.x, 1, 1);
         }

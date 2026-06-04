@@ -65,5 +65,5 @@ void DebugSamplerNameGLES([[maybe_unused]] const IDevice& device, const GpuSampl
         glObjectLabel(GL_SAMPLER, plat.sampler, (GLsizei)name.length(), name.data());
     }
 }
-} // namespace GpuResourceUtil
+}  // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()

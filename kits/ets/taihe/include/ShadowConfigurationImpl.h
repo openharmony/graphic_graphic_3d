@@ -31,6 +31,7 @@
 
 namespace OHOS::Render3D::KITETS {
 using namespace ShadowConfiguration;
+
 class SoftShadowConfigImpl {
 public:
     SoftShadowConfigImpl() = default;
@@ -63,5 +64,6 @@ private:
     bool isRadiusUndefined_{false};
     bool isCountUndefined_{false};
 };
-} // namespace OHOS::Render3D::KITETS
+
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SHADOW_CONFIGURATION_IMPL_H

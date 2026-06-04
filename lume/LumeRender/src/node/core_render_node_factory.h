@@ -24,4 +24,4 @@ class RenderNodeManager;
 void RegisterCoreRenderNodes(RenderNodeManager& renderNodeManager);
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__CORE_RENDER_NODE_FACTORY_H
+#endif  // CORE__RENDER__NODE__CORE_RENDER_NODE_FACTORY_H

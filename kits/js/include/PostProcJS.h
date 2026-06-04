@@ -18,8 +18,9 @@
 
 #include "BaseObjectJS.h"
 #include "ObjectProxy.h"
+#include "export.h"
 
-class PostProcJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC PostProcJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 20;
     static void Init(napi_env env, napi_value exports);
@@ -30,7 +31,7 @@ public:
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     // JS properties
@@ -46,9 +47,9 @@ private:
     void SetColorFringe(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     void SetupColorFringeProxy(napi_env env, SCENE_NS::IColorFringe::Ptr colorFringe);
 
-    NapiApi::StrongRef toneMap_; // We own the tonemap.
-    NapiApi::WeakObjectRef camera_;    // The camera owns us.
-    NapiApi::StrongRef bloom_;   // We own the bloom.
+    NapiApi::StrongRef toneMap_;     // We own the tonemap.
+    NapiApi::WeakObjectRef camera_;  // The camera owns us.
+    NapiApi::StrongRef bloom_;       // We own the bloom.
     ObjectProxy vignetteProxy_;
     ObjectProxy colorFringeProxy_;
 };

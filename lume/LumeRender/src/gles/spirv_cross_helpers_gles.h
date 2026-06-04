@@ -36,6 +36,6 @@ BASE_NS::string Specialize(ShaderStageFlags mask, BASE_NS::string_view shaderTem
 int32_t FindConstant(
     BASE_NS::array_view<const PushConstantReflection> reflections, const PushConstantReflection& reflection);
 
-} // namespace Gles
+}  // namespace Gles
 RENDER_END_NAMESPACE()
-#endif // GLES_SPIRV_CROSS_HELPERS_H
+#endif  // GLES_SPIRV_CROSS_HELPERS_H

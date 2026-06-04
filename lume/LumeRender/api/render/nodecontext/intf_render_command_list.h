@@ -47,13 +47,12 @@ public:
 
     using Ptr = BASE_NS::refcnt_ptr<IRenderBackendCommand>;
 
-    /** ExecuteBackendCommand method to be implemented
+    /** Legacy const-state path. Pure virtual — every subclass must implement.
      * @device ILowLevelDevice which can be casted to backend device
-     * @recordingState A recording state
+     * @recordingState A recording state (read-only)
      */
     virtual void ExecuteBackendCommand(
         const ILowLevelDevice& device, const RenderBackendRecordingState& recordingState) = 0;
-
 protected:
     IRenderBackendCommand() = default;
     virtual ~IRenderBackendCommand() = default;
@@ -563,4 +562,4 @@ inline RenderCommandListDebugMarkerScope::~RenderCommandListDebugMarkerScope()
 #endif
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_COMMAND_LIST_H
+#endif  // API_RENDER_IRENDER_COMMAND_LIST_H

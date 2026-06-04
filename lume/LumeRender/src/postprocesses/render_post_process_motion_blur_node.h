@@ -64,7 +64,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -75,8 +75,8 @@ public:
     IRenderNode::ExecuteFlags GetExecuteFlags() const override;
 
     struct EffectProperties {
-        bool enabled { false };
-        BASE_NS::Math::UVec2 size { 0U, 0U };
+        bool enabled{false};
+        BASE_NS::Math::UVec2 size{0U, 0U};
         MotionBlurConfiguration motionBlurConfiguration;
     };
 
@@ -105,7 +105,7 @@ private:
 
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     BASE_NS::Math::Vec4 GetFactorMotionBlur() const;
     void ExecuteTileVelocity(IRenderCommandList& cmdList);
@@ -126,7 +126,7 @@ private:
         RenderHandle psoNeighborhood;
         RenderHandle psoHorizontal;
         RenderHandle psoVertical;
-        bool doublePass { true };
+        bool doublePass{true};
     };
     RenderDataHandlesTileNeighborhood renderTileNeighborData_;
 
@@ -143,18 +143,18 @@ private:
     RENDER_NS::RenderHandleReference gpuBuffer_;
 
     RenderHandleReference tileVelocityImages_[2U];
-    BASE_NS::Math::UVec2 tileImageSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 tileImageSize_{0U, 0U};
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_MOTION_BLUR_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_MOTION_BLUR_NODE_H

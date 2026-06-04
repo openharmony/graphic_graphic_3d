@@ -26,6 +26,7 @@
 
 using RENDER_NS::BloomConfiguration;
 using RENDER_NS::BlurConfiguration;
+using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::ColorConversionConfiguration;
 using RENDER_NS::ColorFringeConfiguration;
 using RENDER_NS::DitherConfiguration;
@@ -34,7 +35,6 @@ using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::LensFlareConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
-using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
@@ -74,7 +74,7 @@ SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template<typename Prop>
+template <typename Prop>
 void RegisterEngineAccessImpl()
 {
     static_assert(CORE_NS::PropertySystem::is_defined<Prop>().value);
@@ -82,7 +82,7 @@ void RegisterEngineAccessImpl()
         META_NS::MetaType<Prop>::coreType, CreateShared<META_NS::EngineInternalValueAccess<Prop>>());
 }
 
-template<typename Prop, typename AccessType>
+template <typename Prop, typename AccessType>
 void RegisterMapEngineAccessImpl()
 {
     static_assert(CORE_NS::PropertySystem::is_defined<Prop>().value);
@@ -92,7 +92,7 @@ void RegisterMapEngineAccessImpl()
         META_NS::MetaType<Prop>::coreType, CreateShared<META_NS::EngineInternalValueAccess<Prop, AccessType>>());
 }
 
-template<typename Prop>
+template <typename Prop>
 void UnregisterEngineAccessImpl()
 {
     META_NS::GetObjectRegistry().GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<Prop>::coreType);
@@ -166,5 +166,5 @@ void UnregisterPostProcessEngineAccess()
     UnregisterEngineAccessImpl<WhiteBalanceConfiguration>();
 }
 
-} // namespace Internal
+}  // namespace Internal
 SCENE_END_NAMESPACE()

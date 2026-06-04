@@ -26,10 +26,9 @@ AnimationETS::AnimationETS(const META_NS::IAnimation::Ptr animation, const SCENE
     : SceneResourceETS(SceneResourceETS::SceneResourceType::ANIMATION), animation_(animation), scene_(scene)
 {
     using namespace META_NS;
-    auto attach = interface_cast<META_NS::IAttach>(animation);
-    if (animation && attach) {
+    if (animation) {
         // check if there is a speed controller already.(and use that)
-        auto attachments = attach->GetAttachments();
+        auto attachments = interface_cast<META_NS::IAttach>(animation)->GetAttachments();
         for (auto at : attachments) {
             if (auto modifier = interface_pointer_cast<AnimationModifiers::ISpeed>(at)) {
                 // yes.. (expect at most one)
@@ -60,7 +59,7 @@ AnimationETS::~AnimationETS()
     Cleanup();
 }
 
-META_NS::IAny::Ptr RemoveAnimationEntry(bool d, META_NS::IAnimation::Ptr &a)
+META_NS::IAny::Ptr RemoveAnimationEntity(bool d, META_NS::IAnimation::Ptr& a)
 {
     CORE_NS::Entity entity;
     SCENE_NS::IInternalScene::Ptr isce;
@@ -85,7 +84,7 @@ void AnimationETS::Destroy()
     if (!anim) {
         return;
     }
-    ExecSyncTask([a = BASE_NS::move(anim)]() mutable { return RemoveAnimationEntry(true, a); });
+    ExecSyncTask([a = BASE_NS::move(anim)]() mutable { return RemoveAnimationEntity(true, a); });
     Cleanup();
 }
 
@@ -111,21 +110,6 @@ void AnimationETS::Cleanup()
 META_NS::IObject::Ptr AnimationETS::GetNativeObj() const
 {
     return interface_pointer_cast<META_NS::IObject>(animation_);
-}
-
-BASE_NS::string AnimationETS::GetName()
-{
-    if (auto named = interface_cast<META_NS::INamed>(animation_.lock())) {
-        return META_NS::GetValue(named->Name());
-    } else {
-        return "";
-    }
-}
-void AnimationETS::SetName(const BASE_NS::string &name)
-{
-    if (auto named = interface_cast<META_NS::INamed>(animation_.lock())) {
-        named->Name()->SetValue(name);
-    }
 }
 
 bool AnimationETS::GetEnabled()
@@ -192,7 +176,7 @@ float AnimationETS::GetProgress() const
     return progress;
 }
 
-void AnimationETS::OnStarted(const std::function<void()> &onStartedCB)
+void AnimationETS::OnStarted(const std::function<void()>& onStartedCB)
 {
     META_NS::IAnimation::Ptr anim = animation_.lock();
     if (!anim) {
@@ -206,7 +190,7 @@ void AnimationETS::OnStarted(const std::function<void()> &onStartedCB)
     OnStartedToken_ = anim->OnStarted()->AddHandler(META_NS::MakeCallback<META_NS::IOnChanged>(onStartedCB));
 }
 
-void AnimationETS::OnFinished(const std::function<void()> &onFinishedCB)
+void AnimationETS::OnFinished(const std::function<void()>& onFinishedCB)
 {
     if (!OnCompletedEvent_) {
         CORE_LOG_E("There is no completed event for animation");

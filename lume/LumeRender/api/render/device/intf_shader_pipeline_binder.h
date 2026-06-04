@@ -41,7 +41,7 @@ public:
          * 1. If image -> imageSize / tgs
          * 2. If buffer -> dispatch indirect
          */
-        RenderHandleReference handle {};
+        RenderHandleReference handle{};
         /**
          * Thread group count.
          * Only used if the handle is invalid.
@@ -49,28 +49,28 @@ public:
         ShaderThreadGroup threadGroupCount;
 
         /** Indirect args buffer offset */
-        uint32_t argsOffset { 0U };
+        uint32_t argsOffset{0U};
     };
     /** Draw command */
     struct DrawCommand {
         /** Vertex count */
-        uint32_t vertexCount { 0U };
+        uint32_t vertexCount{0U};
         /** Index count */
-        uint32_t indexCount { 0U };
+        uint32_t indexCount{0U};
         /** Instance count */
-        uint32_t instanceCount { 1U };
+        uint32_t instanceCount{1U};
 
         /** Indirect args */
-        RenderHandleReference argsHandle {};
+        RenderHandleReference argsHandle{};
         /** Indirect args buffer offset */
-        uint32_t argsOffset { 0U };
+        uint32_t argsOffset{0U};
     };
     /** Property binding data */
     struct PropertyBindingView {
         /** Descriptor set index */
-        uint32_t set { ~0U };
+        uint32_t set{~0U};
         /** Descriptor set binding index */
-        uint32_t binding { ~0U };
+        uint32_t binding{~0U};
 
         /** Array view to data */
         BASE_NS::array_view<const uint8_t> data;
@@ -78,13 +78,13 @@ public:
     /** Resource binding */
     struct ResourceBinding {
         /** Descriptor set index */
-        uint32_t set { PipelineLayoutConstants::INVALID_INDEX };
+        uint32_t set{PipelineLayoutConstants::INVALID_INDEX};
         /** Descriptor set binding index */
-        uint32_t binding { PipelineLayoutConstants::INVALID_INDEX };
+        uint32_t binding{PipelineLayoutConstants::INVALID_INDEX};
         /** Descriptor count */
-        uint32_t descriptorCount { 0U };
+        uint32_t descriptorCount{0U};
         /** Descriptor set binding array offset for array resources. Offset to first array resource. */
-        uint32_t arrayOffset { 0U };
+        uint32_t arrayOffset{0U};
 
         /** Resource handle */
         RenderHandleReference handle;
@@ -269,4 +269,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_ISHADER_PIPELINE_BINDER_H
+#endif  // API_RENDER_DEVICE_ISHADER_PIPELINE_BINDER_H

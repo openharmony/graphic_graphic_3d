@@ -19,8 +19,10 @@
 #include <scene/interface/intf_raycast.h>
 
 #include "napi_api.h"
+#include "export.h"
 
-NapiApi::Object CreateRaycastResult(NapiApi::StrongRef scene, napi_env env, SCENE_NS::NodeHit hitResult);
-SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastParameters);
+SCENE_ADDON_PUBLIC NapiApi::Object CreateRaycastResult(
+    NapiApi::StrongRef scene, napi_env env, SCENE_NS::NodeHit hitResult);
+SCENE_ADDON_PUBLIC SCENE_NS::RayCastOptions ToNativeOptions(napi_env env, NapiApi::Object raycastParameters);
 
 #endif

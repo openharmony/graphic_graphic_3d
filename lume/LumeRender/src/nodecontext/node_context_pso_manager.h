@@ -120,7 +120,7 @@ private:
 
         struct DestroyData {
             BASE_NS::unique_ptr<ComputePipelineStateObject> pso;
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
         };
         BASE_NS::vector<DestroyData> pendingPsoDestroys;
 
@@ -155,7 +155,7 @@ private:
 
         struct DestroyData {
             BASE_NS::unique_ptr<GraphicsPipelineStateObject> pso;
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
         };
         BASE_NS::vector<DestroyData> pendingPsoDestroys;
 
@@ -166,8 +166,8 @@ private:
     GraphicsPipelineStateCache graphicsPipelineStateCache_;
 
     // pso re-creation based on reloaded shaders
-    uint64_t lastReloadedShadersFrameIndex_ { 0 };
+    uint64_t lastReloadedShadersFrameIndex_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_CONTEXT_PSO_MANAGER_H
+#endif  // CORE__RENDER__NODE_CONTEXT_PSO_MANAGER_H

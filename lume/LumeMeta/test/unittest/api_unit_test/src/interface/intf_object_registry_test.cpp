@@ -110,9 +110,9 @@ UNIT_TEST_P(API_ObjectRegistryAPI, Create, testing::ext::TestSize.Level1)
 
     auto testBaseInterfaces = [](const IObject::Ptr& o) {
         if (auto instance = interface_cast<IObjectInstance>(o)) {
-            EXPECT_NE(instance->GetInstanceId(), BASE_NS::Uid {});
+            EXPECT_NE(instance->GetInstanceId(), BASE_NS::Uid{});
             EXPECT_TRUE(instance->GetSelf());
-            EXPECT_NE(instance->GetClassId(), BASE_NS::Uid {});
+            EXPECT_NE(instance->GetClassId(), BASE_NS::Uid{});
             EXPECT_FALSE(instance->GetInterfaces().empty());
             EXPECT_FALSE(instance->GetName().empty());
         }
@@ -127,7 +127,7 @@ UNIT_TEST_P(API_ObjectRegistryAPI, Create, testing::ext::TestSize.Level1)
     for (auto& t : types) {
         IObject::Ptr o;
         BASE_NS::weak_ptr<IObject> weak;
-        CORE_NS::IInterface* oo {};
+        CORE_NS::IInterface* oo{};
         {
             o = objectRegistry.Create(t->GetClassInfo());
             ASSERT_TRUE(o);
@@ -135,14 +135,14 @@ UNIT_TEST_P(API_ObjectRegistryAPI, Create, testing::ext::TestSize.Level1)
             weak = o;
             oo = interface_cast<CORE_NS::IInterface>(o.get());
             ASSERT_TRUE(oo);
-            oo->Ref(); // +1
+            oo->Ref();  // +1
         }
-        oo->Ref();                    // +1
-        EXPECT_FALSE(weak.expired()); // Still alive
+        oo->Ref();                     // +1
+        EXPECT_FALSE(weak.expired());  // Still alive
         o.reset();
-        oo->Unref();                 // -1
-        EXPECT_TRUE(weak.expired()); // shared_ptr died
-        oo->Unref();                 // -1
+        oo->Unref();                  // -1
+        EXPECT_TRUE(weak.expired());  // shared_ptr died
+        oo->Unref();                  // -1
     }
 }
 
@@ -182,10 +182,10 @@ UNIT_TEST(API_ObjectRegistryTest, Singleton, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ObjectRegistryTest, Global, testing::ext::TestSize.Level1)
 {
-    constexpr BASE_NS::Uid uid { "11140d0f-4ec5-455c-a66d-dcd749b08194" };
+    constexpr BASE_NS::Uid uid{"11140d0f-4ec5-455c-a66d-dcd749b08194"};
 
     auto& objectRegistry = GetObjectRegistry();
-    auto obj = objectRegistry.Create<IObjectInstance>(META_NS::ClassId::Object, { uid, true });
+    auto obj = objectRegistry.Create<IObjectInstance>(META_NS::ClassId::Object, {uid, true});
     ASSERT_TRUE(obj);
     auto g = objectRegistry.GetGlobalSerializationData().GetGlobalObject(obj->GetInstanceId());
     ASSERT_EQ(g, obj);
@@ -198,14 +198,14 @@ UNIT_TEST(API_ObjectRegistryTest, Global, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ObjectRegistryTest, Invalid, testing::ext::TestSize.Level1)
 {
-    static constexpr BASE_NS::Uid invalid { "852f8748-e6fb-4b9b-bd49-b48d13c0d1d6" };
+    static constexpr BASE_NS::Uid invalid{"852f8748-e6fb-4b9b-bd49-b48d13c0d1d6"};
     auto& objectRegistry = GetObjectRegistry();
 
     constexpr size_t bits = std::numeric_limits<std::underlying_type_t<META_NS::ObjectCategoryBits>>::digits;
 
     std::bitset<bits> invalidBits;
     invalidBits.reset();
-    invalidBits[bits - 2] = true; // Assume that bit at index 62 is not used in ObjectCategoryBits
+    invalidBits[bits - 2] = true;  // Assume that bit at index 62 is not used in ObjectCategoryBits
 
     auto invalidCategory = static_cast<META_NS::ObjectCategoryBits>(invalidBits.to_ullong());
 
@@ -484,8 +484,8 @@ UNIT_TEST(API_ObjectRegistryTest, GetObjectInstancesByCategory, testing::ext::Te
     // Get all instances using a bitmask, in both strictness modes
     auto combo = static_cast<META_NS::ObjectCategoryBits>(
         META_NS::ObjectCategoryBits::ANIMATION | META_NS::ObjectCategoryBits::WIDGET);
-    auto instancesStrict = objectRegistry.GetObjectInstancesByCategory(combo);  // Exact category match
-    auto instances = objectRegistry.GetObjectInstancesByCategory(combo, false); // Any bit
+    auto instancesStrict = objectRegistry.GetObjectInstancesByCategory(combo);   // Exact category match
+    auto instances = objectRegistry.GetObjectInstancesByCategory(combo, false);  // Any bit
     auto animationInstances = objectRegistry.GetObjectInstancesByCategory(META_NS::ObjectCategoryBits::ANIMATION);
     auto widgetInstances = objectRegistry.GetObjectInstancesByCategory(META_NS::ObjectCategoryBits::WIDGET);
 
@@ -494,15 +494,15 @@ UNIT_TEST(API_ObjectRegistryTest, GetObjectInstancesByCategory, testing::ext::Te
     // In lenient mode the returned list should contain all objects which have either WIDGET and ANIMATION category set
     EXPECT_EQ(instances.size(), widgetCountAfter + animationCountAfter);
 
-    BASE_NS::vector<META_NS::IObject::Ptr> objects = { widgetObject, animObject };
+    BASE_NS::vector<META_NS::IObject::Ptr> objects = {widgetObject, animObject};
     // ANIMATION | WIDGET bitmask in non-strict mode, should contain both objects
     auto result = CheckObjectList(instances, objects);
     EXPECT_TRUE(result[0]);
     EXPECT_TRUE(result[1]);
-    result = CheckObjectList(animationInstances, objects); // Animations, should contain the animation object
+    result = CheckObjectList(animationInstances, objects);  // Animations, should contain the animation object
     EXPECT_FALSE(result[0]);
     EXPECT_TRUE(result[1]);
-    result = CheckObjectList(widgetInstances, objects); // Widgets, should contain the widget object
+    result = CheckObjectList(widgetInstances, objects);  // Widgets, should contain the widget object
     EXPECT_TRUE(result[0]);
     EXPECT_FALSE(result[1]);
 
@@ -545,7 +545,8 @@ public:
     META_IMPLEMENT_PROPERTY(uint32_t, Prop2)
     META_IMPLEMENT_EVENT(IOnChanged, OnChanged)
 
-    void MyFunc() override {}
+    void MyFunc() override
+    {}
 
 public:
     bool Build(const IMetadata::Ptr& data) override
@@ -561,9 +562,9 @@ public:
         superSetSuperInstanceCount_++;
     }
 
-    uint32_t superBuildCount_ { 0 };
-    uint32_t superSetSuperInstanceCount_ { 0 };
-    IObject* superClass_ { nullptr };
+    uint32_t superBuildCount_{0};
+    uint32_t superSetSuperInstanceCount_{0};
+    IObject* superClass_{nullptr};
     IMetadata::Ptr buildParam_;
 };
 
@@ -580,7 +581,8 @@ public:
     META_IMPLEMENT_PROPERTY(uint32_t, DerProp2)
     META_IMPLEMENT_EVENT(IOnChanged, OtherOnChanged)
 
-    void MyFoo(float) const override {}
+    void MyFoo(float) const override
+    {}
 
 public:
     bool Build(const IMetadata::Ptr& data) override
@@ -596,9 +598,9 @@ public:
         derivedSetSuperInstanceCount_++;
     }
 
-    uint32_t derivedBuildCount_ { 0 };
-    uint32_t derivedSetSuperInstanceCount_ { 0 };
-    TestSuper* superClass_ { nullptr };
+    uint32_t derivedBuildCount_{0};
+    uint32_t derivedSetSuperInstanceCount_{0};
+    TestSuper* superClass_{nullptr};
     IMetadata::Ptr buildParam_;
 };
 
@@ -643,7 +645,7 @@ static bool Contains(const BASE_NS::vector<BASE_NS::Uid>& vec, const BASE_NS::Ui
     return false;
 }
 
-template<typename Type>
+template <typename Type>
 static bool ContainsName(const BASE_NS::vector<Type>& vec, const BASE_NS::string& name)
 {
     for (size_t i = 0; i != vec.size(); ++i) {
@@ -840,13 +842,13 @@ UNIT_TEST(API_ObjectRegistryTest, SameObjectInstanceId, testing::ext::TestSize.L
 
     InstanceId id("4aa8aaf4-c42f-4aa5-8482-fa6d8602574a");
 
-    auto obj1 = r.Create(META_NS::ClassId::Object, IObjectRegistry::CreateInfo { id, true });
+    auto obj1 = r.Create(META_NS::ClassId::Object, IObjectRegistry::CreateInfo{id, true});
     ASSERT_TRUE(obj1);
 
     ASSERT_EQ(r.GetObjectInstanceByInstanceId(id), obj1);
     obj1.reset();
 
-    auto obj2 = r.Create(META_NS::ClassId::Object, IObjectRegistry::CreateInfo { id, true });
+    auto obj2 = r.Create(META_NS::ClassId::Object, IObjectRegistry::CreateInfo{id, true});
     ASSERT_TRUE(obj2);
 
     // destroy some objects so that the registry "auto" disposal kicks in
@@ -893,7 +895,7 @@ UNIT_TEST(API_ObjectRegistryTest, GetInstances, testing::ext::TestSize.Level1)
     auto singletonInstanceId = interface_cast<IObjectInstance>(singleton)->GetInstanceId();
     EXPECT_FALSE(all.empty());
     EXPECT_THAT(all, ::testing::Contains(singleton));
-    static constexpr auto invalidInstanceId = InstanceId { "11111111-1111-1111-1111-111111111111" };
+    static constexpr auto invalidInstanceId = InstanceId{"11111111-1111-1111-1111-111111111111"};
 
     EXPECT_FALSE(r.GetObjectInstanceByInstanceId({}));
     EXPECT_TRUE(r.GetObjectInstanceByInstanceId(singletonInstanceId));
@@ -930,7 +932,7 @@ UNIT_TEST(API_ObjectRegistryTest, HasInterpolator, testing::ext::TestSize.Level1
 {
     auto& r = GetObjectRegistry();
     EXPECT_TRUE(r.HasInterpolator(UidFromType<float>()));
-    EXPECT_FALSE(r.HasInterpolator(TypeId {}));
+    EXPECT_FALSE(r.HasInterpolator(TypeId{}));
 }
 
 /**
@@ -1029,8 +1031,8 @@ UNIT_TEST(API_ObjectRegistryTest, ObjectContext, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ObjectRegistryTest, GetUniqueName, testing::ext::TestSize.Level1)
 {
     auto& util = GetObjectUtil();
-    BASE_NS::vector<BASE_NS::string_view> names = { "child", "child(1)", "child (2)", "child (3)", "child 2)", "(2)",
-        "child (2", "xx)" };
+    BASE_NS::vector<BASE_NS::string_view> names = {
+        "child", "child(1)", "child (2)", "child (3)", "child 2)", "(2)", "child (2", "xx)"};
 
     EXPECT_EQ(util.GetUniqueName("child", names), "child (1)");
     EXPECT_EQ(util.GetUniqueName("child1", names), "child1");
@@ -1047,7 +1049,7 @@ UNIT_TEST(API_ObjectRegistryTest, GetUniqueName, testing::ext::TestSize.Level1)
     EXPECT_EQ(util.GetUniqueName("yy)", names), "yy)");
 
     // Test empty name in list
-    BASE_NS::vector<BASE_NS::string_view> names2 = { "", "child", "()" };
+    BASE_NS::vector<BASE_NS::string_view> names2 = {"", "child", "()"};
     EXPECT_EQ(util.GetUniqueName("", names2), "(1)");
     EXPECT_EQ(util.GetUniqueName("child", names2), "child (1)");
     EXPECT_EQ(util.GetUniqueName("()", names2), "() (1)");
@@ -1057,5 +1059,5 @@ UNIT_TEST(API_ObjectRegistryTest, GetUniqueName, testing::ext::TestSize.Level1)
     EXPECT_EQ(util.GetUniqueName("", {}), "");
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

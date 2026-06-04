@@ -46,7 +46,7 @@ bool ObjectDataContainer::RemoveEvent(const IEvent::Ptr& p)
 }
 BASE_NS::vector<IProperty::Ptr> ObjectDataContainer::GetProperties()
 {
-    return PtrArrayCast<IProperty>(FindAll({ "", TraversalType::NO_HIERARCHY, { TypeId(IProperty::UID) } }));
+    return PtrArrayCast<IProperty>(FindAll({"", TraversalType::NO_HIERARCHY, {TypeId(IProperty::UID)}}));
 }
 BASE_NS::vector<IProperty::ConstPtr> ObjectDataContainer::GetProperties() const
 {
@@ -57,7 +57,7 @@ BASE_NS::vector<IProperty::ConstPtr> ObjectDataContainer::GetProperties() const
 }
 BASE_NS::vector<IFunction::Ptr> ObjectDataContainer::GetFunctions()
 {
-    return PtrArrayCast<IFunction>(FindAll({ "", TraversalType::NO_HIERARCHY, { TypeId(IFunction::UID) } }));
+    return PtrArrayCast<IFunction>(FindAll({"", TraversalType::NO_HIERARCHY, {TypeId(IFunction::UID)}}));
 }
 BASE_NS::vector<IFunction::ConstPtr> ObjectDataContainer::GetFunctions() const
 {
@@ -68,7 +68,7 @@ BASE_NS::vector<IFunction::ConstPtr> ObjectDataContainer::GetFunctions() const
 }
 BASE_NS::vector<IEvent::Ptr> ObjectDataContainer::GetEvents()
 {
-    return PtrArrayCast<IEvent>(FindAll({ "", TraversalType::NO_HIERARCHY, { TypeId(IEvent::UID) } }));
+    return PtrArrayCast<IEvent>(FindAll({"", TraversalType::NO_HIERARCHY, {TypeId(IEvent::UID)}}));
 }
 BASE_NS::vector<IEvent::ConstPtr> ObjectDataContainer::GetEvents() const
 {
@@ -116,12 +116,12 @@ BASE_NS::vector<MetadataInfo> ObjectDataContainer::GetAllMetadatas(MetadataType 
         }
     }
     BASE_NS::vector<TypeId> ids = ConvertToTypeIds(types);
-    for (auto&& v : FindAll({ "", TraversalType::NO_HIERARCHY, ids })) {
+    for (auto&& v : FindAll({"", TraversalType::NO_HIERARCHY, ids})) {
         // only compare name and type
         if (std::find_if(res.begin(), res.end(), [name = v->GetName(), type = GetMetadataType(v)](const auto& e) {
                 return e.name == name && e.type == type;
             }) == res.end()) {
-            MetadataInfo info { GetMetadataType(v), v->GetName() };
+            MetadataInfo info{GetMetadataType(v), v->GetName()};
             if (auto prop = interface_cast<IProperty>(v)) {
                 info.propertyType = prop->GetTypeId();
             }
@@ -136,7 +136,7 @@ MetadataInfo ObjectDataContainer::GetMetadata(MetadataType type, BASE_NS::string
     if (auto s = GetOwner<IStaticMetadata>()) {
         if (auto pm = s->GetStaticMetadata()) {
             if (auto p = FindStaticMetadata(*pm, name, type)) {
-                MetadataInfo info { p->type, p->name, p->interfaceInfo };
+                MetadataInfo info{p->type, p->name, p->interfaceInfo};
                 if (p->type == MetadataType::PROPERTY) {
                     info.propertyType = GetMetaPropertyType(*p);
                     info.readOnly = p->flags & static_cast<uint8_t>(Internal::PropertyFlag::READONLY);
@@ -147,8 +147,8 @@ MetadataInfo ObjectDataContainer::GetMetadata(MetadataType type, BASE_NS::string
         }
     }
     BASE_NS::vector<TypeId> ids = ConvertToTypeIds(type);
-    if (auto v = FindAny({ BASE_NS::string(name), TraversalType::NO_HIERARCHY, ids })) {
-        MetadataInfo info { GetMetadataType(v), v->GetName() };
+    if (auto v = FindAny({BASE_NS::string(name), TraversalType::NO_HIERARCHY, ids})) {
+        MetadataInfo info{GetMetadataType(v), v->GetName()};
         if (auto prop = interface_cast<IProperty>(v)) {
             info.propertyType = prop->GetTypeId();
         }
@@ -160,7 +160,7 @@ MetadataInfo ObjectDataContainer::GetMetadata(MetadataType type, BASE_NS::string
 IProperty::Ptr ObjectDataContainer::GetProperty(BASE_NS::string_view name, MetadataQuery q)
 {
     IProperty::Ptr p = interface_pointer_cast<IProperty>(
-        FindAny({ BASE_NS::string(name), TraversalType::NO_HIERARCHY, { TypeId(IProperty::UID) } }));
+        FindAny({BASE_NS::string(name), TraversalType::NO_HIERARCHY, {TypeId(IProperty::UID)}}));
 
     if (!p && q == MetadataQuery::CONSTRUCT_ON_REQUEST) {
         auto res = ConstructFromMetadata<IProperty>(GetOwner<IOwner>(), name, MetadataType::PROPERTY);
@@ -178,7 +178,7 @@ IProperty::ConstPtr ObjectDataContainer::GetProperty(BASE_NS::string_view name, 
 IFunction::Ptr ObjectDataContainer::GetFunction(BASE_NS::string_view name, MetadataQuery q)
 {
     IFunction::Ptr p = interface_pointer_cast<IFunction>(
-        FindAny({ BASE_NS::string(name), TraversalType::NO_HIERARCHY, { TypeId(IFunction::UID) } }));
+        FindAny({BASE_NS::string(name), TraversalType::NO_HIERARCHY, {TypeId(IFunction::UID)}}));
 
     if (!p && q == MetadataQuery::CONSTRUCT_ON_REQUEST) {
         auto res = ConstructFromMetadata<IFunction>(GetOwner<IOwner>(), name, MetadataType::FUNCTION);
@@ -196,7 +196,7 @@ IFunction::ConstPtr ObjectDataContainer::GetFunction(BASE_NS::string_view name, 
 IEvent::Ptr ObjectDataContainer::GetEvent(BASE_NS::string_view name, MetadataQuery q)
 {
     IEvent::Ptr p = interface_pointer_cast<IEvent>(
-        FindAny({ BASE_NS::string(name), TraversalType::NO_HIERARCHY, { TypeId(IEvent::UID) } }));
+        FindAny({BASE_NS::string(name), TraversalType::NO_HIERARCHY, {TypeId(IEvent::UID)}}));
 
     if (!p && q == MetadataQuery::CONSTRUCT_ON_REQUEST) {
         auto res = ConstructFromMetadata<IEvent>(GetOwner<IOwner>(), name, MetadataType::EVENT);
@@ -212,6 +212,6 @@ IEvent::ConstPtr ObjectDataContainer::GetEvent(BASE_NS::string_view name, Metada
     return const_cast<ObjectDataContainer&>(*this).GetEvent(name, q);
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

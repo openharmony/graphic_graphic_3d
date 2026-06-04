@@ -37,7 +37,7 @@ void PropertyAnimation::OnAnimationStateChanged(const IAnimationInternal::Animat
     if (auto p = GetTargetProperty()) {
         switch (info.state) {
             case AnimationTargetState::FINISHED:
-                [[fallthrough]]; // follow the same procedure as STOPPED
+                [[fallthrough]];  // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 // Evaluate current value
                 Evaluate();
@@ -52,13 +52,13 @@ void PropertyAnimation::OnAnimationStateChanged(const IAnimationInternal::Animat
 
 void PropertyAnimation::Evaluate()
 {
-    const PropertyAnimationState::EvaluationData data { currentValue_, from_, to_, META_ACCESS_PROPERTY_VALUE(Progress),
-        META_ACCESS_PROPERTY_VALUE(Curve) };
+    const PropertyAnimationState::EvaluationData data{
+        currentValue_, from_, to_, META_ACCESS_PROPERTY_VALUE(Progress), META_ACCESS_PROPERTY_VALUE(Curve)};
     if (GetState().EvaluateValue(data) == AnyReturn::SUCCESS) {
         evalChanged_ = true;
         NotifyChanged();
         if (auto prop = GetTargetProperty()) {
-            PropertyLock lock { prop.property };
+            PropertyLock lock{prop.property};
             prop.stack->EvaluateAndStore();
         }
     }
@@ -113,5 +113,5 @@ AnimationState::AnimationStateParams PropertyAnimation::GetParams()
     return params;
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

@@ -36,12 +36,12 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 2u, 2u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{2u, 2u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(uint16_t);
 uint16_t imageData[IMAGE_SIZE];
-static constexpr string_view TEST_IMAGE_NAME_0 { "TestImage0" };
-static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
+static constexpr string_view TEST_IMAGE_NAME_0{"TestImage0"};
+static constexpr string_view COPY_BUFFER_NAME_0{"CopyBuffer0"};
 
 static constexpr Math::Vec4 COLOR0 = Math::Vec4(0.2f, 0.3f, 0.5f, 1.0f);
 static constexpr Math::Vec4 COLOR1 = Math::Vec4(0.4f, 0.7f, -0.2f, 0.0f);
@@ -70,13 +70,13 @@ array_view<const uint8_t> CreateImageDataView()
 {
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f); // R
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f); // G
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f); // B
-            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(0.0f); // A
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
+            imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(0.0f);  // A
         }
     }
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResources(UTest::EngineResources& er)
@@ -117,9 +117,9 @@ TestResources CreateTestResources(UTest::EngineResources& er)
         res.dataStorePod = refcnt_ptr<IRenderDataStorePod>(
             er.context->GetRenderDataStoreManager().Create(IRenderDataStorePod::UID, "dataStore"));
         res.dataStorePod->CreatePod(
-            "color0", "color0", { reinterpret_cast<const uint8_t*>(&COLOR0), sizeof(Math::Vec4) });
+            "color0", "color0", {reinterpret_cast<const uint8_t*>(&COLOR0), sizeof(Math::Vec4)});
         res.dataStorePod->CreatePod(
-            "color1", "color1", { reinterpret_cast<const uint8_t*>(&COLOR1), sizeof(Math::Vec4) });
+            "color1", "color1", {reinterpret_cast<const uint8_t*>(&COLOR1), sizeof(Math::Vec4)});
     }
 
     res.byteArray = make_unique<ByteArray>(NUM_BYTES);
@@ -151,9 +151,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = TEST_DATA_SIZE.x;
                 bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE.y;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(TEST_IMAGE_NAME_0);
@@ -175,12 +175,12 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -209,7 +209,7 @@ void Validate(const TestData& td)
 void TestMultiQueue()
 {
     TestData testData;
-    testData.engine.backend = DeviceBackendType::VULKAN; // Vulkan only test
+    testData.engine.backend = DeviceBackendType::VULKAN;  // Vulkan only test
     testData.engine.enableMultiQueue = true;
 
     // Would be nice to skip if there are no two queues,
@@ -226,7 +226,7 @@ void TestMultiQueue()
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -239,4 +239,4 @@ UNIT_TEST(API_GfxMultiQueueTest, GfxMultiQueueTestVulkan, testing::ext::TestSize
 {
     TestMultiQueue();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

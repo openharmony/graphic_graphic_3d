@@ -22,7 +22,7 @@
 
 using namespace BASE_NS;
 
-template<typename T>
+template <typename T>
 struct Node {
     T x, y, z;
     // Constructor
@@ -84,26 +84,26 @@ UNIT_TEST(API_ContainersUnorderedMap, PairVerification, testing::ext::TestSize.L
     ASSERT_EQ(original3.first, 12);
     ASSERT_EQ(original3.second, 15);
     {
-        pair<int, string> data[] { { 2, "baz" }, { 2, "bar" }, { 1, "foo" } };
+        pair<int, string> data[]{{2, "baz"}, {2, "bar"}, {1, "foo"}};
         BASE_NS::InsertionSort(data, data + countof(data));
-        constexpr pair<int, string_view> first { 1, "foo" };
-        constexpr pair<int, string_view> second { 2, "bar" };
-        EXPECT_EQ(data[0], first);  // both eq
-        EXPECT_EQ(data[1], second); // both eq
+        constexpr pair<int, string_view> first{1, "foo"};
+        constexpr pair<int, string_view> second{2, "bar"};
+        EXPECT_EQ(data[0], first);   // both eq
+        EXPECT_EQ(data[1], second);  // both eq
 
-        EXPECT_LE(data[0], data[0]); // both eq
-        EXPECT_LE(data[0], data[1]); // first lt, second gt
-        EXPECT_LE(data[1], data[2]); // first eq, second lt
+        EXPECT_LE(data[0], data[0]);  // both eq
+        EXPECT_LE(data[0], data[1]);  // first lt, second gt
+        EXPECT_LE(data[1], data[2]);  // first eq, second lt
 
-        EXPECT_GE(data[0], data[0]); // both eq
-        EXPECT_GE(data[1], data[0]); // first gt, second lt
-        EXPECT_GE(data[2], data[1]); // first eq, second gt
+        EXPECT_GE(data[0], data[0]);  // both eq
+        EXPECT_GE(data[1], data[0]);  // first gt, second lt
+        EXPECT_GE(data[2], data[1]);  // first eq, second gt
 
-        EXPECT_LT(data[0], data[1]); // first lt, second gt
-        EXPECT_LT(data[1], data[2]); // first eq, second lt
+        EXPECT_LT(data[0], data[1]);  // first lt, second gt
+        EXPECT_LT(data[1], data[2]);  // first eq, second lt
 
-        EXPECT_GT(data[1], data[0]); // first gt, second lt
-        EXPECT_GT(data[2], data[1]); // first eq, second gt
+        EXPECT_GT(data[1], data[0]);  // first gt, second lt
+        EXPECT_GT(data[2], data[1]);  // first eq, second gt
     }
 }
 
@@ -154,11 +154,11 @@ UNIT_TEST(API_ContainersUnorderedMap, Initialization, testing::ext::TestSize.Lev
 
     auto string_int = unordered_map<string, int>();
     string_int["First"] = 10;
-    string_int.insert({ "Second", 456 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"Second", 456});
+    string_int.insert({"Third", 0});
     const string cKey = "Key";
     const int cValue = 987;
-    const pair<string_view, int> cPair = { cKey, cValue };
+    const pair<string_view, int> cPair = {cKey, cValue};
     string_int.insert(cPair);
     ASSERT_EQ(string_int["First"], 10);
     ASSERT_EQ(string_int["Second"], 456);
@@ -167,19 +167,19 @@ UNIT_TEST(API_ContainersUnorderedMap, Initialization, testing::ext::TestSize.Lev
     ASSERT_EQ(string_int[cKey], cValue);
 
     auto int_string = unordered_map<int, string>();
-    int_string.insert({ 10, "First" });
-    int_string.insert({ 456, "Second" });
+    int_string.insert({10, "First"});
+    int_string.insert({456, "Second"});
     ASSERT_EQ(int_string[10], "First");
     ASSERT_EQ(int_string[456], "Second");
 
     auto int_char = unordered_map<int, char>();
-    int_char.insert({ 10, 'a' });
-    int_char.insert({ 456, 'b' });
+    int_char.insert({10, 'a'});
+    int_char.insert({456, 'b'});
     ASSERT_EQ(int_char[10], 'a');
     ASSERT_EQ(int_char[456], 'b');
 
     auto int_node = unordered_map<int, Node<float>>();
-    int_node.insert({ 1, Node(5.f, 10.f, 20.f) });
+    int_node.insert({1, Node(5.f, 10.f, 20.f)});
     ASSERT_EQ(int_node[1].x, 5.f);
     ASSERT_EQ(int_node[1].y, 10.f);
     ASSERT_EQ(int_node[1].z, 20.f);
@@ -192,15 +192,15 @@ UNIT_TEST(API_ContainersUnorderedMap, Initialization, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_ContainersUnorderedMap, InitializerList, testing::ext::TestSize.Level1)
 {
-    unordered_map<int, int> int_int({ { 1, 10 }, { 2, 20 }, { 3, 30 } });
+    unordered_map<int, int> int_int({{1, 10}, {2, 20}, {3, 30}});
     ASSERT_EQ(int_int[1], 10);
     ASSERT_EQ(int_int[2], 20);
     ASSERT_EQ(int_int[3], 30);
-    unordered_map<string, int> string_int({ { "First", 10 }, { "Second", 20 }, { "Third", 30 } });
+    unordered_map<string, int> string_int({{"First", 10}, {"Second", 20}, {"Third", 30}});
     ASSERT_EQ(string_int["First"], 10);
     ASSERT_EQ(string_int["Second"], 20);
     ASSERT_EQ(string_int["Third"], 30);
-    string_int = { { "A", 1 }, { "B", 2 }, { "C", 3 } };
+    string_int = {{"A", 1}, {"B", 2}, {"C", 3}};
     ASSERT_EQ(string_int[string_view("A")], 1);
     ASSERT_EQ(string_int["B"], 2);
     ASSERT_EQ(string_int["C"], 3);
@@ -251,9 +251,9 @@ UNIT_TEST(API_ContainersUnorderedMap, PointerActions, testing::ext::TestSize.Lev
     ASSERT_EQ(p2->begin(), p[1].begin());
     ASSERT_EQ(p2->end(), p[1].end());
     ASSERT_EQ(p[0][42], p[1][42]);
-    ASSERT_NE(p[0].begin(), p[1].begin()); // copy
-    ASSERT_EQ(p[2].begin(), p[2].end());   // empty
-    ASSERT_EQ(p[2].cbegin(), p[2].cend()); // empty
+    ASSERT_NE(p[0].begin(), p[1].begin());  // copy
+    ASSERT_EQ(p[2].begin(), p[2].end());    // empty
+    ASSERT_EQ(p[2].cbegin(), p[2].cend());  // empty
     delete[] p;
 }
 
@@ -266,16 +266,16 @@ UNIT_TEST(API_ContainersUnorderedMap, Capacity, testing::ext::TestSize.Level1)
 {
     // Size
     auto int_int = unordered_map<int, int>();
-    int_int.insert({ 10, 20 });
-    int_int.insert({ 10, 30 });
-    int_int.insert({ 10, 40 });
+    int_int.insert({10, 20});
+    int_int.insert({10, 30});
+    int_int.insert({10, 40});
     ASSERT_TRUE(int_int.size() == 1);
     ASSERT_EQ(int_int[10], 20);
 
     auto string_int = unordered_map<string, int>();
-    string_int.insert({ "One", 20 });
-    string_int.insert({ "ONE", 30 });
-    string_int.insert({ "one", 40 });
+    string_int.insert({"One", 20});
+    string_int.insert({"ONE", 30});
+    string_int.insert({"one", 40});
     ASSERT_TRUE(string_int.size() == 3);
 
     // Empty
@@ -292,15 +292,15 @@ UNIT_TEST(API_ContainersUnorderedMap, Iterators, testing::ext::TestSize.Level1)
 {
     // Test iterator
     auto string_int = unordered_map<string, int>();
-    string_int.insert({ "First", 10 });
-    string_int.insert({ "Second", 500 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"First", 10});
+    string_int.insert({"Second", 500});
+    string_int.insert({"Third", 0});
 
     // Values to match the order of unordered map (assigned hash values)
     vector<pair<string, int>> keyValVec;
-    keyValVec.push_back({ "First", 10 });
-    keyValVec.push_back({ "Third", 0 });
-    keyValVec.push_back({ "Second", 500 });
+    keyValVec.push_back({"First", 10});
+    keyValVec.push_back({"Third", 0});
+    keyValVec.push_back({"Second", 500});
 
     // Iterator pointing to begining of map
     unordered_map<string, int>::iterator it = string_int.begin();
@@ -341,14 +341,14 @@ UNIT_TEST(API_ContainersUnorderedMap, Modifiers, testing::ext::TestSize.Level1)
 {
     auto original = unordered_map<int, int>();
     // Insert
-    original.insert({ 15, 0 });
-    original.insert({ 20, 15 });
-    original.insert({ 70, 77 });
+    original.insert({15, 0});
+    original.insert({20, 15});
+    original.insert({70, 77});
     ASSERT_EQ(original[15], 0);
     ASSERT_EQ(original[20], 15);
     ASSERT_EQ(original[70], 77);
     // Assign value to a key that already exists using "insert"
-    ASSERT_NO_FATAL_FAILURE(original.insert({ 70, 80 }));
+    ASSERT_NO_FATAL_FAILURE(original.insert({70, 80}));
     // Confirm no value change for already existing key
     ASSERT_EQ(original[70], 77);
 
@@ -407,8 +407,8 @@ UNIT_TEST(API_ContainersUnorderedMap, Modifiers, testing::ext::TestSize.Level1)
     ASSERT_EQ(original.size(), 2);
 
     // Add more elements
-    original.insert({ 44, -80 });
-    original.insert({ 55, 80 });
+    original.insert({44, -80});
+    original.insert({55, 80});
     ASSERT_EQ(original.size(), 4);
 
     // Extract
@@ -439,9 +439,9 @@ UNIT_TEST(API_ContainersUnorderedMap, Modifiers, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersUnorderedMap, Lookup, testing::ext::TestSize.Level1)
 {
     auto string_int = unordered_map<string, int>();
-    string_int.insert({ "First", 10 });
-    string_int.insert({ "Second", 456 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"First", 10});
+    string_int.insert({"Second", 456});
+    string_int.insert({"Third", 0});
 
     // Find
     unordered_map<string, int>::const_iterator got = string_int.find("Second");
@@ -473,7 +473,7 @@ UNIT_TEST(API_ContainersUnorderedMap, Lookup, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersUnorderedMap, ExtractInsertBug, testing::ext::TestSize.Level1)
 {
     auto original = unordered_map<int, int>();
-    original.insert({ 20, 15 });
+    original.insert({20, 15});
 
     // This is a bit brittle and will break if implementation changes. Find a key which will have the same bucket index
     // as 20.
@@ -490,7 +490,7 @@ UNIT_TEST(API_ContainersUnorderedMap, ExtractInsertBug, testing::ext::TestSize.L
     for (uint32_t index = bucketIndex(key); index != index20; index = bucketIndex(++key))
         ;
 
-    original.insert({ key, 81 });
+    original.insert({key, 81});
 
     // Extract
     auto currentNodeHandle = original.extract(20);
@@ -534,37 +534,45 @@ UNIT_TEST(API_ContainersUnorderedMap, ExtractInsertBug2, testing::ext::TestSize.
     map.erase(id2);
     map.erase(id1);
 
-    ASSERT_TRUE(map.find(id1) == map.end()); // Should not be in the map.
-    ASSERT_TRUE(map.find(id2) == map.end()); // Should not be in the map.
-    ASSERT_TRUE(map.find(id3) != map.end()); // Should still be in the map.
+    ASSERT_TRUE(map.find(id1) == map.end());  // Should not be in the map.
+    ASSERT_TRUE(map.find(id2) == map.end());  // Should not be in the map.
+    ASSERT_TRUE(map.find(id3) != map.end());  // Should still be in the map.
 }
 
-// Improves coverage but takes calculation time. OpenCppCoverage works terable with it.
-
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: HashPolicy
  * @tc.desc: Tests for Hash Policy. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_ContainersUnorderedMap, DISABLED_HashPolicy, testing::ext::TestSize.Level1)
+UNIT_TEST(API_ContainersUnorderedMap, HashPolicy, testing::ext::TestSize.Level1)
 {
     // Reserve
     auto originalReserve = unordered_map<int, int>();
     auto originalNoReserve = unordered_map<int, int>();
-    const int count = 1000000;
+    const int count = 2000000;
     double durationReserve = 0;
     double durationNoReserve = 0;
 
-    // Reserve - no rehash
-    originalReserve.reserve(count);
+    // Measure performance (without pre memory allocation)
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < count; ++i) {
+            originalNoReserve.insert({i, i % 2});
+        }
+        auto stop = std::chrono::high_resolution_clock::now();
+        durationNoReserve =
+            std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1U, 1U>>>(stop - start).count();
+    }
 
     // Measure performance (with pre memory allocation)
     {
+        // Reserve - no rehash
+        originalReserve.reserve(count);
+
         auto start = std::chrono::high_resolution_clock::now();
 
         for (int i = 0; i < count; ++i) {
-            originalReserve.insert({ i, i % 2 });
+            originalReserve.insert({i, i % 2});
         }
 
         // Get ending timepoint
@@ -573,23 +581,11 @@ UNIT_TEST(API_ContainersUnorderedMap, DISABLED_HashPolicy, testing::ext::TestSiz
             std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1U, 1U>>>(stop - start).count();
     }
 
-    // Measure performance (without pre memory allocation)
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        for (int i = 0; i < count; ++i) {
-            originalNoReserve.insert({ i, i % 2 });
-        }
-        auto stop = std::chrono::high_resolution_clock::now();
-        durationReserve =
-            std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1U, 1U>>>(stop - start).count();
-    }
-
     printf("Reserve - Time measured: %.6f seconds.\n", durationReserve);
     printf("No reserve - Time measured : %.6f seconds.\n", durationNoReserve);
-
-    ASSERT_TRUE(durationReserve <= durationNoReserve);
+    // comparing the time is not reliable. The test however increases coverage so we still run it.
+    EXPECT_EQ(originalReserve.size(), originalNoReserve.size());
 }
-#endif
 
 /**
  * @tc.name: StringView
@@ -606,9 +602,9 @@ UNIT_TEST(API_ContainersUnorderedMap, StringView, testing::ext::TestSize.Level1)
         string_int.insert({ "Third", 0 });
         string_int.insert({ string_view("Forth"), 234 });*/
     const string_view fifth = "Fifth";
-    string_int.insert({ fifth, 345 });
+    string_int.insert({fifth, 345});
     const string_view sixth = "Sixth";
-    const pair<string_view, int> sixth_pair = { sixth, 6 };
+    const pair<string_view, int> sixth_pair = {sixth, 6};
     string_int.insert(sixth_pair);
 
     /*	Error for androuid build
@@ -620,7 +616,7 @@ UNIT_TEST(API_ContainersUnorderedMap, StringView, testing::ext::TestSize.Level1)
     ASSERT_EQ(string_int[fifth], 345);
     ASSERT_EQ(string_int[sixth], 6);
 
-    ASSERT_EQ((string_int.insert({ fifth, 345 })).second, false);
+    ASSERT_EQ((string_int.insert({fifth, 345})).second, false);
     ASSERT_EQ((string_int.insert(sixth_pair)).second, false);
 
     {
@@ -656,14 +652,14 @@ UNIT_TEST(API_ContainersUnorderedMap, StringView, testing::ext::TestSize.Level1)
     ASSERT_EQ(string_int[fifth], false);
     ASSERT_EQ(true, string_int.contains(fifth));
     ASSERT_EQ(1, string_int.count(fifth));
-    string_int.insert({ fifth, 345 });
+    string_int.insert({fifth, 345});
     // As a result adding it with proper key will not overrite it
     ASSERT_EQ(1, string_int.count(fifth));
     ASSERT_EQ(string_int[fifth], false);
     string_int[fifth] = 345;
     ASSERT_EQ(string_int[fifth], 345);
 
-    static constexpr auto seventh = string_view { "Seventh" };
+    static constexpr auto seventh = string_view{"Seventh"};
     auto inserted = string_int.insert_or_assign(seventh, 346);
     EXPECT_EQ(inserted.first->first, seventh);
     EXPECT_EQ(inserted.first->second, 346);

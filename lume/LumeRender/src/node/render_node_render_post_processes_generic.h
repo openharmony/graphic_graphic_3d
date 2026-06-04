@@ -38,7 +38,7 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "0e82f5f1-9122-40f2-bd5e-5e43728417ab" };
+    static constexpr BASE_NS::Uid UID{"0e82f5f1-9122-40f2-bd5e-5e43728417ab"};
     static constexpr const char* TYPE_NAME = "RenderNodeRenderPostProcessesGeneric";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -46,10 +46,10 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderNodePostProcessInterfaceUtil ppInterfaceUtil_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_RENDER_POST_PROCESSES_GENERIC_H
+#endif  // RENDER_NODE_RENDER_NODE_RENDER_POST_PROCESSES_GENERIC_H

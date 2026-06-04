@@ -60,7 +60,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 constexpr uint32_t GL_LAYER_CANNOT_OPT_FLAGS = PostProcessConfiguration::ENABLE_BLOOM_BIT |
                                                PostProcessConfiguration::ENABLE_TAA_BIT |
                                                PostProcessConfiguration::ENABLE_DOF_BIT;
@@ -81,7 +81,7 @@ RenderPass CreateRenderPass(const IRenderNodeGpuResourceManager& gpuResourceMgr,
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -108,7 +108,7 @@ inline bool IsValidHandle(const BindableImage& img)
 {
     return RenderHandleUtil::IsValid(img.handle);
 }
-} // namespace
+}  // namespace
 
 void RenderNodePostProcessUtil::Init(
     IRenderNodeContextManager& renderNodeContextMgr, const IRenderNodePostProcessUtil::PostProcessInfo& postProcessInfo)
@@ -142,7 +142,8 @@ void RenderNodePostProcessUtil::Init(
     }
     if (jsonInputs_.renderDataStore.typeName != RenderDataStorePod::TYPE_NAME) {
         PLUGIN_LOG_E("RenderNodeCombinedPostProcess: render data store type name not supported (%s != %s)",
-            jsonInputs_.renderDataStore.typeName.data(), RenderDataStorePod::TYPE_NAME);
+            jsonInputs_.renderDataStore.typeName.data(),
+            RenderDataStorePod::TYPE_NAME);
         validInputs_ = false;
     }
 
@@ -180,11 +181,11 @@ void RenderNodePostProcessUtil::Init(
         vector<DescriptorCounts> descriptorCounts;
         descriptorCounts.reserve(16U);
         // pre-set custom descriptor sets
-        descriptorCounts.push_back(DescriptorCounts { {
-            { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 8u },
-            { CORE_DESCRIPTOR_TYPE_SAMPLER, 8u },
-            { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8u },
-        } });
+        descriptorCounts.push_back(DescriptorCounts{{
+            {CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 8u},
+            {CORE_DESCRIPTOR_TYPE_SAMPLER, 8u},
+            {CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8u},
+        }});
         descriptorCounts.push_back(renderCopyLayer_.GetRenderDescriptorCounts());
         descriptorCounts.push_back(renderNodeUtil.GetDescriptorCounts(copyData_.sd.pipelineLayoutData));
         // interfaces
@@ -287,7 +288,7 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     const bool basicImagesNeeded = upscaleEnabled || fxaaEnabled || motionBlurEnabled || dofEnabled;
     const bool sizeChanged = (outputDesc.width != outputSize_.x) || (outputDesc.height != outputSize_.y);
     if (sizeChanged) {
-        outputSize_ = { Math::max(1U, outputDesc.width), Math::max(1U, outputDesc.height) };
+        outputSize_ = {Math::max(1U, outputDesc.width), Math::max(1U, outputDesc.height)};
         ti_.targetSize.x = static_cast<float>(outputSize_.x);
         ti_.targetSize.y = static_cast<float>(outputSize_.y);
         ti_.targetSize.z = 1.f / ti_.targetSize.x;
@@ -296,7 +297,8 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     if (basicImagesNeeded) {
         if ((!ti_.images[0U]) || sizeChanged) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-            PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary images re-created (size:%ux%u)", outputSize_.x,
+            PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary images re-created (size:%ux%u)",
+                outputSize_.x,
                 outputSize_.y);
 #endif
             GpuImageDesc tmpDesc = outputDesc;
@@ -327,7 +329,7 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
             glOptimizedLayerCopyEnabled_ = true;
         } else {
             if (sizeChanged || (!ti_.layerCopyImage)) {
-                GpuImageDesc tmpDesc = inputDesc; // NOTE: input desc
+                GpuImageDesc tmpDesc = inputDesc;  // NOTE: input desc
                 FillTmpImageDesc(tmpDesc);
                 ti_.layerCopyImage = gpuResourceMgr.Create(ti_.layerCopyImage, tmpDesc);
             }
@@ -367,7 +369,7 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
     const bool sameInputOutput = (currentInput.handle == images_.output.handle);
 
     if (upscaleEnabled) {
-        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        framePostProcessInOut_.push_back({currentInput, GetIntermediateImage(currentInput.handle)});
         currentInput = framePostProcessInOut_.back().output;
     }
 
@@ -377,27 +379,27 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
         const BindableImage output = (fxaaEnabled || motionBlurEnabled || dofEnabled)
                                          ? GetIntermediateImage(currentInput.handle)
                                          : images_.output;
-        framePostProcessInOut_.push_back({ currentInput, output });
+        framePostProcessInOut_.push_back({currentInput, output});
         currentInput = framePostProcessInOut_.back().output;
     }
 
     if (fxaaEnabled) {
-        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        framePostProcessInOut_.push_back({currentInput, GetIntermediateImage(currentInput.handle)});
         currentInput = framePostProcessInOut_.back().output;
     }
 
     if (motionBlurEnabled) {
-        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        framePostProcessInOut_.push_back({currentInput, GetIntermediateImage(currentInput.handle)});
         currentInput = framePostProcessInOut_.back().output;
     }
 
     if (dofEnabled) {
-        framePostProcessInOut_.push_back({ currentInput, GetIntermediateImage(currentInput.handle) });
+        framePostProcessInOut_.push_back({currentInput, GetIntermediateImage(currentInput.handle)});
         currentInput = framePostProcessInOut_.back().output;
     }
 
     if (ppConfig_.enableFlags & PostProcessConfiguration::PostProcessEnableFlagBits::ENABLE_BLUR_BIT) {
-        framePostProcessInOut_.push_back({ currentInput, currentInput });
+        framePostProcessInOut_.push_back({currentInput, currentInput});
         currentInput = framePostProcessInOut_.back().output;
     }
 
@@ -535,6 +537,7 @@ void RenderNodePostProcessUtil::PreExecute(const IRenderNodePostProcessUtil::Pos
             ppNode.propertiesData.blurConfiguration = ppConfig_.blurConfiguration;
 
             ppNode.nodeInputsData.input = inOut.output;
+            ppNode.nodeOutputsData.output = inOut.output;
             ppNode.PreExecuteFrame();
         }
         ppIdx++;
@@ -595,7 +598,7 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
 
     const bool postProcessNeeded = (ppConfig_.enableFlags != 0);
     const bool sameInputOutput = (currentInput.handle == images_.output.handle);
-    uint32_t ppIdx = 0U;
+    [[maybe_unused]] uint32_t ppIdx = 0U;
 
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (postProcessNeeded && sameInputOutput) {
@@ -667,7 +670,7 @@ void RenderNodePostProcessUtil::Execute(IRenderCommandList& cmdList)
     // if all flags are zero and output is different than input
     // we need to execute a copy
     if ((!postProcessNeeded) && (!sameInputOutput)) {
-        ExecuteBlit(cmdList, { images_.input, images_.output });
+        ExecuteBlit(cmdList, {images_.input, images_.output});
     }
 }
 
@@ -690,8 +693,12 @@ void RenderNodePostProcessUtil::ExecuteBlit(IRenderCommandList& cmdList, const I
             auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
             const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
             const RenderHandle graphicsStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(effect.sd.shader);
-            effect.pso = psoMgr.GetGraphicsPsoHandle(effect.sd.shader, graphicsStateHandle, effect.sd.pipelineLayout,
-                {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            effect.pso = psoMgr.GetGraphicsPsoHandle(effect.sd.shader,
+                graphicsStateHandle,
+                effect.sd.pipelineLayout,
+                {},
+                {},
+                {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
 
         cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
@@ -795,7 +802,7 @@ void RenderNodePostProcessUtil::UpdateImageData()
 
     if (postProcessInfo_.parseRenderNodeInputs) {
         if (inputResources_.customInputImages.empty() || inputResources_.customOutputImages.empty()) {
-            return; // early out
+            return;  // early out
         }
 
         images_.input.handle = inputResources_.customInputImages[0].handle;
@@ -836,7 +843,7 @@ void RenderNodePostProcessUtil::UpdateImageData()
             validDepth = true;
         }
     } else {
-        images_.depth.handle = aimg_.white; // default depth
+        images_.depth.handle = aimg_.white;  // default depth
     }
     if (IsValidHandle(images_.velocity) && (images_.velocity.handle != aimg_.black)) {
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -845,7 +852,7 @@ void RenderNodePostProcessUtil::UpdateImageData()
             validVelocity = true;
         }
     } else {
-        images_.velocity.handle = aimg_.black; // default velocity
+        images_.velocity.handle = aimg_.black;  // default velocity
     }
     if (IsValidHandle(images_.history) && IsValidHandle(images_.historyNext)) {
         const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
@@ -855,10 +862,10 @@ void RenderNodePostProcessUtil::UpdateImageData()
         }
     }
     if (!RenderHandleUtil::IsValid(images_.dirtMask)) {
-        images_.dirtMask = aimg_.black; // default dirt mask
+        images_.dirtMask = aimg_.black;  // default dirt mask
     }
 
-    validInputsForTaa_ = validDepth && validHistory; // TAA can be used without velocities
+    validInputsForTaa_ = validDepth && validHistory;  // TAA can be used without velocities
     validInputsForDof_ = validDepth;
     validInputsForMb_ = validVelocity;
 }
@@ -868,7 +875,7 @@ void RenderNodePostProcessUtil::CreatePostProcessInterfaces()
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
         auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
-            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
+            ppNode = RENDER_NS::CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
         CreatePostProcessInterface(RenderPostProcessFlareNode::UID, ppLensFlareInterface_.postProcessNode);
@@ -909,31 +916,4 @@ void RenderNodePostProcessUtilImpl::Execute(IRenderCommandList& cmdList)
     rn_.Execute(cmdList);
 }
 
-const IInterface* RenderNodePostProcessUtilImpl::GetInterface(const Uid& uid) const
-{
-    if ((uid == IRenderNodePostProcessUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-IInterface* RenderNodePostProcessUtilImpl::GetInterface(const Uid& uid)
-{
-    if ((uid == IRenderNodePostProcessUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void RenderNodePostProcessUtilImpl::Ref()
-{
-    refCount_++;
-}
-
-void RenderNodePostProcessUtilImpl::Unref()
-{
-    if (--refCount_ == 0) {
-        delete this;
-    }
-}
 RENDER_END_NAMESPACE()

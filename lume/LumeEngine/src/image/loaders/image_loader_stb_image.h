@@ -20,9 +20,9 @@
 
 CORE_BEGIN_NAMESPACE()
 static const CORE_NS::IImageLoaderManager::ImageType STB_IMAGE_TYPES[] = {
-    { "image/png", "png" },
-    { "image/jpeg", "jpeg" },
-    { "image/jpeg", "jpg" },
+    {"image/png", "png"},
+    {"image/jpeg", "jpeg"},
+    {"image/jpeg", "jpg"},
 };
 
 #if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
@@ -35,4 +35,4 @@ static inline IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage(P
 #endif
 CORE_END_NAMESPACE()
 
-#endif //  CORE_IMAGE_LOADERS_IMAGE_LOADER_STB_IMAGE_H
+#endif  //  CORE_IMAGE_LOADERS_IMAGE_LOADER_STB_IMAGE_H

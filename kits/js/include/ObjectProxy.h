@@ -23,12 +23,13 @@
 
 #include "PropertyProxy.h"
 #include "napi/napi_api.h"
+#include "export.h"
 
 /**
  * @brief Proxy members of a JS object to certain native properties.
  * @note This is a partial reimplementation of ObjectPropertyProxy and uses TypeProxies in an unoptimal way.
  */
-class ObjectProxy {
+class SCENE_ADDON_PUBLIC ObjectProxy {
 public:
     /// Convert values between JS API scale and native scale. Return undefined to skip setting native value.
     using ScalingFunc = std::function<napi_value(napi_env, napi_value)>;

@@ -39,8 +39,8 @@ public:
 
     RENDER_NS::GraphicsState CreateGraphicsState(const IRenderContext::Ptr& context,
         RENDER_NS::RenderHandleReference state, BASE_NS::string_view defaultRenderSlot);
-    bool UpdateGraphicsState(const IRenderContext::Ptr &context, const RENDER_NS::GraphicsState &gs,
-         bool blend, BASE_NS::string_view renderSlot);
+    bool UpdateGraphicsState(const IRenderContext::Ptr& context, const RENDER_NS::GraphicsState& gs, bool blend,
+        BASE_NS::string_view renderSlot);
     RENDER_NS::GraphicsState CreateNewGraphicsState(const IRenderContext::Ptr& context, bool blend);
     RENDER_NS::GraphicsState GetGraphicsState(const IRenderContext::Ptr& context) const;
 
@@ -81,6 +81,9 @@ public:
     bool SetRenderHandle(RENDER_NS::RenderHandleReference handle) override;
     bool SetShaderState(RENDER_NS::RenderHandleReference shader, RENDER_NS::RenderHandleReference graphics) override;
     bool GetBlend() const;
+
+private:
+    bool settingGraphicsState_{false};
 };
 
 SCENE_END_NAMESPACE()

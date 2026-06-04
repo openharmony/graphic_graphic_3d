@@ -192,7 +192,7 @@ UNIT_TEST(SRC_IoTest, customTests, testing::ext::TestSize.Level1)
         }
     };
     class TempFS : public CORE_NS::IFilesystem {
-        bool hasFile_ { false };
+        bool hasFile_{false};
 
     public:
         IDirectory::Entry GetEntry(const string_view uri) override
@@ -203,13 +203,13 @@ UNIT_TEST(SRC_IoTest, customTests, testing::ext::TestSize.Level1)
         IFile::Ptr OpenFile(const string_view path, IFile::Mode mode) override
         {
             CORE_ASSERT(path == "test_file01.dat");
-            return IFile::Ptr { new TempFile() };
+            return IFile::Ptr{new TempFile()};
         }
         IFile::Ptr CreateFile(const string_view path) override
         {
             CORE_ASSERT(path == "test_file01.dat");
             hasFile_ = true;
-            return IFile::Ptr { new TempFile() };
+            return IFile::Ptr{new TempFile()};
         }
         bool DeleteFile(const string_view path) override
         {
@@ -262,7 +262,7 @@ UNIT_TEST(SRC_IoTest, customTests, testing::ext::TestSize.Level1)
         }
     };
     auto files =
-        CreateInstance<IFileManager>(UID_FILE_MANAGER); // Uses GetInterface to get IClassFactory from global registry
+        CreateInstance<IFileManager>(UID_FILE_MANAGER);  // Uses GetInterface to get IClassFactory from global registry
     ASSERT_TRUE(files.get() != nullptr);
 
     EXPECT_FALSE(files->GetFilesystem("MyTemp"));
@@ -313,13 +313,14 @@ UNIT_TEST(SRC_IoTest, memoryFileSysTests, testing::ext::TestSize.Level1)
     ASSERT_FALSE(memP->OpenFile("io/test_directory/2.txt", CORE_NS::IFile::Mode::READ_ONLY) != nullptr);
     const auto& memFile1 = memP->CreateFile("io/test_directory/memIO.txt");
     ASSERT_TRUE(memFile1 != nullptr);
-    ASSERT_EQ(memFile1->GetMode(), IFile::Mode::READ_WRITE); // NOTE: writing even its read only?
+    ASSERT_EQ(memFile1->GetMode(), IFile::Mode::READ_WRITE);  // NOTE: writing even its read only?
     EXPECT_EQ(memFile1->Write(data.c_str(), data.length()), data.length());
     // length
     auto length = memFile1->GetLength();
     EXPECT_EQ(length, data.length());
 
-    // Read
+    // Read (seek back to start after write)
+    memFile1->Seek(0);
     auto buffer = std::make_unique<uint8_t[]>(static_cast<size_t>(length));
     auto read = memFile1->Read(buffer.get(), length);
     EXPECT_EQ(read, length);
@@ -346,7 +347,7 @@ UNIT_TEST(SRC_IoTest, memoryFileSysTests, testing::ext::TestSize.Level1)
     EXPECT_EQ(memFile1->GetPosition(), 0);
     memFile1->Close();
 
-    IDirectory::Entry emtEnt {};
+    IDirectory::Entry emtEnt{};
     EXPECT_NE(memP->GetEntry("io/test_directory/1.txt").name, emtEnt.name);
     EXPECT_TRUE(memP->DeleteFile("io/test_directory/1.txt"));
     EXPECT_TRUE(memP->DeleteFile("io/test_directory/memIO.txt"));
@@ -376,11 +377,11 @@ UNIT_TEST(SRC_IoTest, rofSysTest, testing::ext::TestSize.Level1)
     };
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
     // rof system test
-    test_entry testE1 { "/test1", 0, 50 };
-    test_entry testE2 { "test2/", 50, 50 };
-    test_entry testE3 { "./test3", 0, 50 };
-    test_entry tests[3] = { testE1, testE2, testE3 };
-    auto rofSys = factory->CreateROFilesystem(tests, countof(tests));
+    test_entry testE1{"/test1", 0, 50};
+    test_entry testE2{"test2/", 50, 50};
+    test_entry testE3{"./test3", 0, 50};
+    test_entry tests[3] = {testE1, testE2, testE3};
+    auto rofSys = factory->CreateROFilesystem(tests, sizeof(tests));
     auto ent1 = rofSys->GetEntry("/test1");
     auto ent2 = rofSys->GetEntry("test2");
     auto ent3 = rofSys->GetEntry("./test3");
@@ -840,15 +841,13 @@ UNIT_TEST(SRC_IoTest, directoryFilelist, testing::ext::TestSize.Level1)
     // Delete the test data.
     ASSERT_EQ(recursivelyDeleteDirectory(files.get(), directoryUri), true);
 }
-
-#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: fileMonitorTest
  * @tc.desc: Tests for File Monitor Test. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_fileMonitorTest, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, fileMonitorTest, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: fileMonitorTest
@@ -870,13 +869,26 @@ UNIT_TEST(SRC_IoTest, fileMonitorTest, testing::ext::TestSize.Level1)
     // Create root directory.
     ASSERT_TRUE(fileManager->CreateDirectory(testRootUri) != nullptr);
 
-    constexpr const string_view paths[] = { "/folder01", "/folder02", "/folder03/", "/folder04/", "/folder05//",
-        "/folder06//", "/\xf0\x9d\x93\xad\xf0\x9d\x93\xb2\xf0\x9d\x93\xbb" };
-    constexpr const string_view filenames[] = { "file01", "file02", "file03", "file04", "file05", "file06", "file07",
-        "file08", "file09", "\xf0\x9d\x96\x8b\xf0\x9d\x96\x8e\xf0\x9d\x96\x91\xf0\x9d\x96\x8a" };
+    constexpr const string_view paths[] = {"/folder01",
+        "/folder02",
+        "/folder03/",
+        "/folder04/",
+        "/folder05//",
+        "/folder06//",
+        "/\xf0\x9d\x93\xad\xf0\x9d\x93\xb2\xf0\x9d\x93\xbb"};
+    constexpr const string_view filenames[] = {"file01",
+        "file02",
+        "file03",
+        "file04",
+        "file05",
+        "file06",
+        "file07",
+        "file08",
+        "file09",
+        "\xf0\x9d\x96\x8b\xf0\x9d\x96\x8e\xf0\x9d\x96\x91\xf0\x9d\x96\x8a"};
 
     auto monitorPtr =
-        CreateInstance<IFileMonitor>(UID_FILE_MONITOR); // Uses GetInterface to get IClassFactory from global registry
+        CreateInstance<IFileMonitor>(UID_FILE_MONITOR);  // Uses GetInterface to get IClassFactory from global registry
     ASSERT_TRUE(monitorPtr.get() != nullptr);
     auto& monitor = *monitorPtr;
 
@@ -884,7 +896,7 @@ UNIT_TEST(SRC_IoTest, fileMonitorTest, testing::ext::TestSize.Level1)
     EXPECT_FALSE(monitor.AddPath(testRootUri + "/folder01"));
     EXPECT_FALSE(monitor.RemovePath(testRootUri + "/folder01"));
 
-    monitor.Initialize(*fileManager); // bind the manager and monitor.
+    monitor.Initialize(*fileManager);  // bind the manager and monitor.
 
     ASSERT_TRUE(fileManager->CreateDirectory(testRootUri + "/folder07") != nullptr);
     ASSERT_TRUE(fileManager->CreateDirectory(testRootUri + "/folder08") != nullptr);
@@ -987,7 +999,6 @@ UNIT_TEST(SRC_IoTest, fileMonitorTest, testing::ext::TestSize.Level1)
     // Delete the temp data.
     ASSERT_TRUE(recursivelyDeleteDirectory(fileManager.get(), testRootUri));
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: missingProtocol
@@ -1014,14 +1025,13 @@ UNIT_TEST(SRC_IoTest, missingProtocol, testing::ext::TestSize.Level1)
         ASSERT_TRUE(dir == nullptr);
     }
 }
-#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: missingFilesAndDirs
  * @tc.desc: Tests for Missing Files And Dirs. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_missingFilesAndDirs, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, missingFilesAndDirs, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: missingFilesAndDirs
@@ -1064,7 +1074,7 @@ UNIT_TEST(SRC_IoTest, missingFilesAndDirs, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Wrong Types. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_wrongTypes, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, wrongTypes, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: wrongTypes
@@ -1095,7 +1105,7 @@ UNIT_TEST(SRC_IoTest, wrongTypes, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Test Directory Listing. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_TestDirectoryListing, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, TestDirectoryListing, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: TestDirectoryListing
@@ -1146,7 +1156,6 @@ UNIT_TEST(SRC_IoTest, TestDirectoryListing, testing::ext::TestSize.Level1)
         }
     }
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: normalizePath
@@ -1185,14 +1194,13 @@ UNIT_TEST(SRC_IoTest, normalizePath, testing::ext::TestSize.Level1)
     EXPECT_EQ(NormalizePath("foo/../bar/../"), "/");
     EXPECT_EQ(NormalizePath("foo/../../bar/"), "");
 }
-#ifdef DISABLED_TESTS_ON
 
 /**
  * @tc.name: fileApiTest
  * @tc.desc: Tests for File Api Test. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_fileApiTest, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, fileApiTest, testing::ext::TestSize.Level1)
 {
     auto factory = CORE_NS::GetInstance<IFileSystemApi>(UID_FILESYSTEM_API_FACTORY);
     EXPECT_TRUE(factory != nullptr);
@@ -1210,7 +1218,7 @@ UNIT_TEST(SRC_IoTest, DISABLED_fileApiTest, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Path Tool Test. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_IoTest, DISABLED_pathToolTest, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_IoTest, pathToolTest, testing::ext::TestSize.Level1)
 {
 #ifdef WIN32
     string_view curDrive, curPath, curFName, curExt;
@@ -1221,7 +1229,6 @@ UNIT_TEST(SRC_IoTest, DISABLED_pathToolTest, testing::ext::TestSize.Level1)
 #endif
     EXPECT_TRUE(IsRelative(""));
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: fileModeTest

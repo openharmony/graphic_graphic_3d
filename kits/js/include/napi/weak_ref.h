@@ -22,11 +22,12 @@
 #include <node_api.h>
 #endif
 
+#include "export.h"
 #include "object.h"
 
 namespace NapiApi {
 
-class WeakRef {
+class SCENE_ADDON_PUBLIC WeakRef {
 public:
     WeakRef() = default;
     WeakRef(const NapiApi::WeakRef& ref);
@@ -46,11 +47,11 @@ public:
     NapiApi::Object GetObject() const;
 
 private:
-    napi_env env_ { nullptr };
-    napi_ref ref_ { nullptr };
+    napi_env env_{nullptr};
+    napi_ref ref_{nullptr};
 };
 
-class WeakObjectRef {
+class SCENE_ADDON_PUBLIC WeakObjectRef {
 public:
     WeakObjectRef() = default;
     explicit WeakObjectRef(NapiApi::Object obj)
@@ -70,16 +71,17 @@ public:
         }
         return *this;
     }
-    ~WeakObjectRef() {
+    ~WeakObjectRef()
+    {
         Reset();
     }
     NapiApi::Object GetNapiObject(BASE_NS::string_view name = "_JSW") const;
-    template<typename T>
+    template <typename T>
     typename T::Ptr GetObject() const
     {
         return interface_pointer_cast<T>(object_);
     }
-    template<typename T>
+    template <typename T>
     T* GetJsWrapper() const
     {
         return GetNapiObject().GetJsWrapper<T>();
@@ -93,11 +95,16 @@ public:
         object_.reset();
         napiObject_.Reset();
     }
- private:
+    bool IsEmpty() const
+    {
+        return object_.expired();
+    }
+
+private:
     META_NS::IObject::WeakPtr object_;
     NapiApi::WeakRef napiObject_;
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

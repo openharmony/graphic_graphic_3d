@@ -69,19 +69,20 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t CORE_SPREAD_TYPE_NEIGHBORHOOD { 0U };
-constexpr uint32_t CORE_SPREAD_TYPE_HORIZONTAL { 1U };
-constexpr uint32_t CORE_SPREAD_TYPE_VERTICAL { 2U };
-constexpr uint32_t VELOCITY_TILE_SIZE { 8U };
+constexpr uint32_t CORE_SPREAD_TYPE_NEIGHBORHOOD{0U};
+constexpr uint32_t CORE_SPREAD_TYPE_HORIZONTAL{1U};
+constexpr uint32_t CORE_SPREAD_TYPE_VERTICAL{2U};
+constexpr uint32_t VELOCITY_TILE_SIZE{8U};
 
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr uint32_t MAX_PASS_COUNT { 3u };
+constexpr uint32_t MAX_PASS_COUNT{3u};
 
 constexpr int32_t BUFFER_SIZE_IN_BYTES = sizeof(BASE_NS::Math::Vec4);
-constexpr GpuBufferDesc BUFFER_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc BUFFER_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
 
 RenderHandleReference CreateGpuBuffers(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
@@ -100,7 +101,7 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
         gpuResourceMgr.UnmapBuffer(handle);
     }
 }
-} // namespace
+}  // namespace
 
 RenderPostProcessMotionBlurNode::RenderPostProcessMotionBlurNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -143,8 +144,12 @@ void RenderPostProcessMotionBlurNode::InitNode(IRenderNodeContextManager& render
         renderData_.shader = shaderMgr.GetShaderHandle("rendershaders://shader/fullscreen_motion_blur.shader");
         renderData_.pipelineLayout = shaderMgr.GetReflectionPipelineLayout(renderData_.shader);
         const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(renderData_.shader);
-        renderData_.pso = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderData_.shader, graphicsState,
-            renderData_.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        renderData_.pso = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderData_.shader,
+            graphicsState,
+            renderData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
     {
         renderTileMaxData_ = {};
@@ -153,7 +158,11 @@ void RenderPostProcessMotionBlurNode::InitNode(IRenderNodeContextManager& render
         renderTileMaxData_.pipelineLayout = shaderMgr.GetReflectionPipelineLayout(renderTileMaxData_.shader);
         const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(renderTileMaxData_.shader);
         renderTileMaxData_.pso = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderTileMaxData_.shader,
-            graphicsState, renderTileMaxData_.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            graphicsState,
+            renderTileMaxData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
     {
         renderTileNeighborData_ = {};
@@ -165,25 +174,37 @@ void RenderPostProcessMotionBlurNode::InitNode(IRenderNodeContextManager& render
         const ShaderSpecializationConstantView specView =
             shaderMgr.GetReflectionSpecialization(renderTileNeighborData_.shader);
         {
-            const uint32_t specFlags[] = { CORE_SPREAD_TYPE_NEIGHBORHOOD };
-            const ShaderSpecializationConstantDataView specDataView { specView.constants, specFlags };
-            renderTileNeighborData_.psoNeighborhood = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                renderTileNeighborData_.shader, graphicsState, renderTileNeighborData_.pipelineLayout, {}, specDataView,
-                { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            const uint32_t specFlags[] = {CORE_SPREAD_TYPE_NEIGHBORHOOD};
+            const ShaderSpecializationConstantDataView specDataView{specView.constants, specFlags};
+            renderTileNeighborData_.psoNeighborhood =
+                renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderTileNeighborData_.shader,
+                    graphicsState,
+                    renderTileNeighborData_.pipelineLayout,
+                    {},
+                    specDataView,
+                    {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
         {
-            const uint32_t specFlags[] = { CORE_SPREAD_TYPE_HORIZONTAL };
-            const ShaderSpecializationConstantDataView specDataView { specView.constants, specFlags };
-            renderTileNeighborData_.psoHorizontal = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                renderTileNeighborData_.shader, graphicsState, renderTileNeighborData_.pipelineLayout, {}, specDataView,
-                { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            const uint32_t specFlags[] = {CORE_SPREAD_TYPE_HORIZONTAL};
+            const ShaderSpecializationConstantDataView specDataView{specView.constants, specFlags};
+            renderTileNeighborData_.psoHorizontal =
+                renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderTileNeighborData_.shader,
+                    graphicsState,
+                    renderTileNeighborData_.pipelineLayout,
+                    {},
+                    specDataView,
+                    {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
         {
-            const uint32_t specFlags[] = { CORE_SPREAD_TYPE_VERTICAL };
-            const ShaderSpecializationConstantDataView specDataView { specView.constants, specFlags };
-            renderTileNeighborData_.psoVertical = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-                renderTileNeighborData_.shader, graphicsState, renderTileNeighborData_.pipelineLayout, {}, specDataView,
-                { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            const uint32_t specFlags[] = {CORE_SPREAD_TYPE_VERTICAL};
+            const ShaderSpecializationConstantDataView specDataView{specView.constants, specFlags};
+            renderTileNeighborData_.psoVertical =
+                renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(renderTileNeighborData_.shader,
+                    graphicsState,
+                    renderTileNeighborData_.pipelineLayout,
+                    {},
+                    specDataView,
+                    {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
     }
 
@@ -219,7 +240,7 @@ RenderPass RenderPostProcessMotionBlurNode::CreateRenderPass()
 {
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
-    renderPass.renderPassDesc.renderArea = { 0, 0, effectProperties_.size.x, effectProperties_.size.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, effectProperties_.size.x, effectProperties_.size.y};
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPass.renderPassDesc.attachments[0].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
@@ -267,7 +288,7 @@ void RenderPostProcessMotionBlurNode::ExecuteMotionBlur(IRenderCommandList& cmdL
     if (renderData_.pipelineLayout.pushConstant.byteSize > 0) {
         const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
         const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
+        const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, {}};
         cmdList.PushConstantData(renderData_.pipelineLayout.pushConstant, arrayviewU8(pc));
     }
 
@@ -301,7 +322,7 @@ void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cm
 
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
-    renderPass.renderPassDesc.renderArea = { 0, 0, tileImageSize_.x, tileImageSize_.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, tileImageSize_.x, tileImageSize_.y};
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPass.renderPassDesc.attachments[0].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
@@ -318,7 +339,7 @@ void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cm
 
     const auto fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
     const auto fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-    const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
+    const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, {}};
 
     // tile max pass
     {
@@ -430,10 +451,10 @@ RenderHandle RenderPostProcessMotionBlurNode::GetTileVelocityForMotionBlur() con
 DescriptorCounts RenderPostProcessMotionBlurNode::GetRenderDescriptorCounts() const
 {
     // expected high max mip count
-    return DescriptorCounts { {
-        { CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_PASS_COUNT },
-        { CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u * MAX_PASS_COUNT },
-    } };
+    return DescriptorCounts{{
+        {CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_PASS_COUNT},
+        {CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u * MAX_PASS_COUNT},
+    }};
 }
 
 void RenderPostProcessMotionBlurNode::CheckTemporaryTargetNeed()
@@ -456,7 +477,7 @@ void RenderPostProcessMotionBlurNode::CheckTemporaryTargetNeed()
             tileVelocityImages_[0U] = gpuResourceMgr.Create(tileVelocityImages_[0U], desc);
             tileVelocityImages_[1U] = gpuResourceMgr.Create(tileVelocityImages_[1U], desc);
 
-            tileImageSize_ = { compSizeX, compSizeY };
+            tileImageSize_ = {compSizeX, compSizeY};
         }
     }
 }

@@ -32,7 +32,7 @@ static bool IsV1Property(ObjectId oid)
     return oid.ToUid().data[1] == propertyUid.data[1];
 }
 
-template<typename... Types>
+template <typename... Types>
 static bool CheckBasicMetaTypes(ObjectId oid, ObjectId& out, TypeList<Types...>)
 {
     return (false || ... ||
@@ -41,7 +41,7 @@ static bool CheckBasicMetaTypes(ObjectId oid, ObjectId& out, TypeList<Types...>)
 
 static bool IsV1BasicArray(ObjectId oid, ObjectId& out)
 {
-    return CheckBasicMetaTypes(oid, out, BasicMetaTypes {});
+    return CheckBasicMetaTypes(oid, out, BasicMetaTypes{});
 }
 
 static bool IsV1Any(ObjectId oid)
@@ -99,13 +99,16 @@ public:
     {
         if (auto n = interface_cast<IObjectNode>(node)) {
             if (IsV1Any(n->GetObjectId())) {
-                return ISerNode::Ptr(new ObjectNode("Any", n->GetObjectName(), MakeAny(n->GetObjectId()),
-                    n->GetInstanceId(), VisitNode(n->GetMembers())));
+                return ISerNode::Ptr(new ObjectNode("Any",
+                    n->GetObjectName(),
+                    MakeAny(n->GetObjectId()),
+                    n->GetInstanceId(),
+                    VisitNode(n->GetMembers())));
             }
         }
         BASE_NS::vector<NamedNode> m;
         if (auto n = VisitNode(node)) {
-            m.push_back(NamedNode { "value", n });
+            m.push_back(NamedNode{"value", n});
         }
         ObjectId any = MakeAny(property);
         ObjectId uid;
@@ -117,8 +120,8 @@ public:
 
     ISerNode::Ptr RewritePropertyFlags(ISerNode::Ptr n)
     {
-        uint64_t value {};
-        uint64_t converted { uint64_t(ObjectFlagBits::SERIALIZE) };
+        uint64_t value{};
+        uint64_t converted{uint64_t(ObjectFlagBits::SERIALIZE)};
         if (ExtractNumber(n, value)) {
             if (value & 8) {
                 converted |= 8;
@@ -181,7 +184,7 @@ public:
                     } else if (node.name == "value" || node.name == "valueObject") {
                         node.name = "values";
                         value = RewriteValueToAny(n.GetObjectId(), nn);
-                        nn = ISerNode::Ptr(new ArrayNode({ value }));
+                        nn = ISerNode::Ptr(new ArrayNode({value}));
                     } else {
                         nn = VisitNode(nn);
                     }
@@ -191,7 +194,7 @@ public:
                 }
             }
             if (!value) {
-                mapNode->AddNode("values", ISerNode::Ptr(new ArrayNode(BASE_NS::vector<ISerNode::Ptr> {})));
+                mapNode->AddNode("values", ISerNode::Ptr(new ArrayNode(BASE_NS::vector<ISerNode::Ptr>{})));
                 if (!hasDefaultValue) {
                     CORE_LOG_E("Invalid json file, property doesn't have value or defaultValue");
                 }
@@ -205,7 +208,7 @@ public:
                     }
                 }
             }
-            mapNode->AddNode("modifiers", ISerNode::Ptr(new ArrayNode(BASE_NS::vector<ISerNode::Ptr> {})));
+            mapNode->AddNode("modifiers", ISerNode::Ptr(new ArrayNode(BASE_NS::vector<ISerNode::Ptr>{})));
         }
         return ISerNode::Ptr(new ObjectNode("Property", name, ClassId::StackProperty, n.GetInstanceId(), mapNode));
     }
@@ -260,7 +263,7 @@ public:
                 p = VisitNode(m.node);
             }
             if (p) {
-                map.push_back(NamedNode { m.name, p });
+                map.push_back(NamedNode{m.name, p});
             }
         }
         auto mapNode = IMapNode::Ptr(new MapNode(BASE_NS::move(map)));
@@ -312,5 +315,5 @@ ISerNode::Ptr MetaMigrateV1::Process(ISerNode::Ptr tree)
     return v.node;
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

@@ -1,0 +1,28 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name": "cube"
+				},
+				"name": "Cube gltf",
+				"type": "gltf",
+				"path": "test_assets://AnimatedCube/AnimatedCube.gltf"
+			},
+			{
+				"resourceId": {
+					"name": "overrideMat"
+				},
+				"type": "metallicRoughnessMaterial",
+				"options": {
+					"alphaCutoff": 0.75,
+					"lightingFlags": [
+						"shadowCaster"
+					]
+				}
+			}
+		]
+	}
+}

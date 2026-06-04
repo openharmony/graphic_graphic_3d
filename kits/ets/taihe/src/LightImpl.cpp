@@ -18,11 +18,8 @@
 
 namespace OHOS::Render3D::KITETS {
 LightImpl::LightImpl(const std::shared_ptr<LightETS> lightETS) : NodeImpl(lightETS), lightETS_(lightETS)
-{}
-
-LightImpl::~LightImpl()
 {
-    lightETS_.reset();
+    WIDGET_LOGI("LightImpl ++");
 }
 
 SpotLightImpl::SpotLightImpl(const std::shared_ptr<LightETS> lightETS) : LightImpl(lightETS)
@@ -44,14 +41,14 @@ DirectionalLightImpl::DirectionalLightImpl(const std::shared_ptr<LightETS> light
 {
     if (!lightETS_) {
         WIDGET_LOGE("Invalid light");
-        return ::taihe::make_holder<ColorImpl, SceneTypes::Color>(BASE_NS::BLACK_COLOR);
+        return SceneTypes::Color({nullptr, nullptr});
     }
     auto color = lightETS_->GetColor();
     if (color) {
         return taihe::make_holder<ColorImpl, SceneTypes::Color>(color);
     } else {
         WIDGET_LOGE("lightETS_ GetColor fail");
-        return ::taihe::make_holder<ColorImpl, SceneTypes::Color>(BASE_NS::BLACK_COLOR);
+        return SceneTypes::Color({nullptr, nullptr});
     }
 }
 
@@ -159,7 +156,7 @@ void LightImpl::setOuterAngle(::taihe::optional_view<double> outerAngle)
     if (outerAngle.has_value()) {
         lightETS_->SetOuterAngle(outerAngle.value());
     } else {
-        constexpr float INV_PI4 = 3.14159265359 / 4.0f;    // 45 degree
+        constexpr float INV_PI4 = 3.14159265359 / 4.0f;  // 45 degree
         lightETS_->SetOuterAngle(INV_PI4);
     }
 }

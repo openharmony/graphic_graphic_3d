@@ -29,6 +29,7 @@
 
 META_TYPE(RENDER_NS::BloomConfiguration);
 META_TYPE(RENDER_NS::BlurConfiguration);
+META_TYPE(RENDER_NS::ColorAdjustmentsConfiguration);
 META_TYPE(RENDER_NS::ColorConversionConfiguration);
 META_TYPE(RENDER_NS::ColorFringeConfiguration);
 META_TYPE(RENDER_NS::DitherConfiguration);
@@ -36,7 +37,6 @@ META_TYPE(RENDER_NS::DofConfiguration);
 META_TYPE(RENDER_NS::FxaaConfiguration);
 META_TYPE(RENDER_NS::MotionBlurConfiguration);
 META_TYPE(RENDER_NS::TaaConfiguration);
-META_TYPE(RENDER_NS::ColorAdjustmentsConfiguration);
 META_TYPE(RENDER_NS::TonemapConfiguration);
 META_TYPE(RENDER_NS::VignetteConfiguration);
 META_TYPE(RENDER_NS::UpscaleConfiguration);
@@ -44,6 +44,7 @@ META_TYPE(RENDER_NS::WhiteBalanceConfiguration);
 
 using RENDER_NS::BloomConfiguration;
 using RENDER_NS::BlurConfiguration;
+using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::ColorConversionConfiguration;
 using RENDER_NS::ColorFringeConfiguration;
 using RENDER_NS::DitherConfiguration;
@@ -51,7 +52,6 @@ using RENDER_NS::DofConfiguration;
 using RENDER_NS::FxaaConfiguration;
 using RENDER_NS::MotionBlurConfiguration;
 using RENDER_NS::TaaConfiguration;
-using RENDER_NS::ColorAdjustmentsConfiguration;
 using RENDER_NS::TonemapConfiguration;
 using RENDER_NS::UpscaleConfiguration;
 using RENDER_NS::VignetteConfiguration;
@@ -64,13 +64,13 @@ class API_ScenePluginPostprocessComponentTest
     : public ScenePluginComponentTest<CORE3D_NS::IPostProcessComponentManager> {
 public:
 protected:
-    template<typename Interface>
+    template <typename Interface>
     void TestInterface(Interface* interface)
     {
         ASSERT_TRUE(interface);
     }
 
-    template<>
+    template <>
     void TestInterface(IBloom* interface)
     {
         ASSERT_TRUE(interface);
@@ -87,7 +87,7 @@ protected:
         EXPECT_TRUE(interface->ScaleFactor());
     }
 
-    template<>
+    template <>
     void TestInterface(IBlur* interface)
     {
         ASSERT_TRUE(interface);
@@ -96,19 +96,19 @@ protected:
         EXPECT_TRUE(interface->FilterSize());
         EXPECT_TRUE(interface->MaxMipmapLevel());
     }
-    template<>
+    template <>
     void TestInterface(IColorConversion* interface)
     {
         EXPECT_TRUE(interface->Function());
         EXPECT_TRUE(interface->MultiplyWithAlpha());
     }
 
-    template<>
+    template <>
     void TestInterface(IColorFringe* interface)
     {
         EXPECT_TRUE(interface->DistanceCoefficient());
     }
-    template<>
+    template <>
     void TestInterface(IDepthOfField* interface)
     {
         EXPECT_TRUE(interface->FocusPoint());
@@ -120,20 +120,20 @@ protected:
         EXPECT_TRUE(interface->NearPlane());
         EXPECT_TRUE(interface->FarPlane());
     }
-    template<>
+    template <>
     void TestInterface(IFxaa* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Sharpness());
     }
-    template<>
+    template <>
     void TestInterface(ILensFlare* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Intensity());
         EXPECT_TRUE(interface->FlarePosition());
     }
-    template<>
+    template <>
     void TestInterface(IMotionBlur* interface)
     {
         EXPECT_TRUE(interface->Quality());
@@ -141,13 +141,13 @@ protected:
         EXPECT_TRUE(interface->Alpha());
         EXPECT_TRUE(interface->VelocityCoefficient());
     }
-    template<>
+    template <>
     void TestInterface(ITaa* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Sharpness());
     }
-    template<>
+    template <>
     void TestInterface(IColorAdjustments* interface)
     {
         EXPECT_TRUE(interface->FilterColor());
@@ -156,13 +156,13 @@ protected:
         EXPECT_TRUE(interface->Brightness());
         EXPECT_TRUE(interface->Contrast());
     }
-    template<>
+    template <>
     void TestInterface(ITonemap* interface)
     {
         EXPECT_TRUE(interface->Type());
         EXPECT_TRUE(interface->Exposure());
     }
-    template<>
+    template <>
     void TestInterface(IUpscale* interface)
     {
         EXPECT_TRUE(interface->SmoothScale());
@@ -170,20 +170,20 @@ protected:
         EXPECT_TRUE(interface->EdgeSharpness());
         EXPECT_TRUE(interface->Ratio());
     }
-    template<>
+    template <>
     void TestInterface(IVignette* interface)
     {
         EXPECT_TRUE(interface->Coefficient());
         EXPECT_TRUE(interface->Power());
     }
-    template<>
+    template <>
     void TestInterface(IWhiteBalance* interface)
     {
         EXPECT_TRUE(interface->Temperature());
         EXPECT_TRUE(interface->Tint());
     }
 
-    template<typename Interface>
+    template <typename Interface>
     void TestPPComponent(META_NS::ObjectId classId)
     {
         auto& reg = META_NS::GetObjectRegistry();
@@ -230,8 +230,11 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, Members, testing::ext::Test
     TEST_COMPLEX_PROP(FxaaConfiguration, "Fxaa", nativeComponent.fxaaConfiguration, sharpness, fxaaSoft);
     TEST_COMPLEX_PROP(MotionBlurConfiguration, "MotionBlur", nativeComponent.motionBlurConfiguration, alpha, f);
     TEST_COMPLEX_PROP(TaaConfiguration, "Taa", nativeComponent.taaConfiguration, sharpness, taaSoft);
-    TEST_COMPLEX_PROP(ColorAdjustmentsConfiguration, "ColorAdjustments", nativeComponent.colorAdjustmentsConfiguration,
-        brightness, f);
+    TEST_COMPLEX_PROP(ColorAdjustmentsConfiguration,
+        "ColorAdjustments",
+        nativeComponent.colorAdjustmentsConfiguration,
+        brightness,
+        f);
     TEST_COMPLEX_PROP(TonemapConfiguration, "Tonemap", nativeComponent.tonemapConfiguration, exposure, f);
     TEST_COMPLEX_PROP(VignetteConfiguration, "Vignette", nativeComponent.vignetteConfiguration, power, f);
     TEST_COMPLEX_PROP(UpscaleConfiguration, "Upscale", nativeComponent.upscaleConfiguration, ratio, f);
@@ -253,7 +256,7 @@ public:
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, InvalidInit, testing::ext::TestSize.Level1)
 {
     auto& reg = META_NS::GetObjectRegistry();
-    auto allPPs = reg.GetClassRegistry().GetAllTypes({ IPostProcessEffect::UID });
+    auto allPPs = reg.GetClassRegistry().GetAllTypes({IPostProcessEffect::UID});
     ASSERT_FALSE(allPPs.empty());
     for (auto&& ppType : allPPs) {
         const auto clsi = ppType->GetClassInfo();
@@ -293,7 +296,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, InvalidInit, testing::ext::
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, BloomComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "6718b07d-c3d1-4036-bd0f-88d1380b846a" }; // ClassId::Bloom
+    static constexpr META_NS::ObjectId id{"6718b07d-c3d1-4036-bd0f-88d1380b846a"};  // ClassId::Bloom
     TestPPComponent<IBloom>(id);
 }
 
@@ -304,7 +307,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, BloomComponent, testing::ex
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, BlurComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "cf09372e-223a-4272-9063-38c0f07b2f4b" }; // ClassId::Blur
+    static constexpr META_NS::ObjectId id{"cf09372e-223a-4272-9063-38c0f07b2f4b"};  // ClassId::Blur
     TestPPComponent<IBlur>(id);
 }
 
@@ -315,7 +318,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, BlurComponent, testing::ext
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorConversionComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "f532feeb-0e71-454b-a1ac-99a05933c506" }; // ClassId::ColorConversion
+    static constexpr META_NS::ObjectId id{"f532feeb-0e71-454b-a1ac-99a05933c506"};  // ClassId::ColorConversion
     TestPPComponent<IColorConversion>(id);
 }
 
@@ -326,7 +329,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorConversionComponent, t
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorFringeComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "3e403293-8e0c-43bf-ae30-cb45d6ad2d65" }; // ClassId::ColorFringe
+    static constexpr META_NS::ObjectId id{"3e403293-8e0c-43bf-ae30-cb45d6ad2d65"};  // ClassId::ColorFringe
     TestPPComponent<IColorFringe>(id);
 }
 
@@ -337,7 +340,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorFringeComponent, testi
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, DoFComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "4165f797-a08b-4c81-af0b-14642eb1ed9c" }; // ClassId::DepthOfField
+    static constexpr META_NS::ObjectId id{"4165f797-a08b-4c81-af0b-14642eb1ed9c"};  // ClassId::DepthOfField
     TestPPComponent<IDepthOfField>(id);
 }
 
@@ -348,7 +351,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, DoFComponent, testing::ext:
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, FxaaComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "40e2b7ee-0e27-416f-9481-742eea521937" }; // ClassId::Fxaa
+    static constexpr META_NS::ObjectId id{"40e2b7ee-0e27-416f-9481-742eea521937"};  // ClassId::Fxaa
     TestPPComponent<IFxaa>(id);
 }
 
@@ -359,7 +362,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, FxaaComponent, testing::ext
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, LensFlareComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "72693514-26dc-4df4-86a7-cdaaa2d023f9" }; // ClassId::LensFlare
+    static constexpr META_NS::ObjectId id{"72693514-26dc-4df4-86a7-cdaaa2d023f9"};  // ClassId::LensFlare
     TestPPComponent<ILensFlare>(id);
 }
 
@@ -370,7 +373,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, LensFlareComponent, testing
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, MotionBlurComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "c2a00f4e-690c-4a76-9a32-92a3d9b76de2" }; // ClassId::MotionBlur
+    static constexpr META_NS::ObjectId id{"c2a00f4e-690c-4a76-9a32-92a3d9b76de2"};  // ClassId::MotionBlur
     TestPPComponent<IMotionBlur>(id);
 }
 
@@ -381,7 +384,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, MotionBlurComponent, testin
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, TaaComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "004fb0b2-4248-464b-bd43-dcab43ddb8d8" }; // ClassId::Taa
+    static constexpr META_NS::ObjectId id{"004fb0b2-4248-464b-bd43-dcab43ddb8d8"};  // ClassId::Taa
     TestPPComponent<ITaa>(id);
 }
 
@@ -392,7 +395,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, TaaComponent, testing::ext:
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorAdjustmentsComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "7b5d8e3f-9a4b-4c7d-8e3f-9a4b4c7d8e3f" }; // ClassId::ColorAdjustments
+    static constexpr META_NS::ObjectId id{"7b5d8e3f-9a4b-4c7d-8e3f-9a4b4c7d8e3f"};  // ClassId::ColorAdjustments
     TestPPComponent<IColorAdjustments>(id);
 }
 
@@ -403,7 +406,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, ColorAdjustmentsComponent, 
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, TonemapComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "56c1fc6e-90aa-486d-846e-c9a5c780a90a" }; // ClassId::Tonemap
+    static constexpr META_NS::ObjectId id{"56c1fc6e-90aa-486d-846e-c9a5c780a90a"};  // ClassId::Tonemap
     TestPPComponent<ITonemap>(id);
 }
 
@@ -414,7 +417,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, TonemapComponent, testing::
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, UpscaleComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "4bb7b52d-9ccc-40a5-8f47-510946410fb5" }; // ClassId::Upscale
+    static constexpr META_NS::ObjectId id{"4bb7b52d-9ccc-40a5-8f47-510946410fb5"};  // ClassId::Upscale
     TestPPComponent<IUpscale>(id);
 }
 
@@ -425,7 +428,7 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, UpscaleComponent, testing::
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, VignetteComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "af3eb8f6-b271-4fb5-b077-a4644942be89" }; // ClassId::Vignette
+    static constexpr META_NS::ObjectId id{"af3eb8f6-b271-4fb5-b077-a4644942be89"};  // ClassId::Vignette
     TestPPComponent<IVignette>(id);
 }
 
@@ -436,10 +439,10 @@ UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, VignetteComponent, testing:
  */
 UNIT_TEST_F(API_ScenePluginPostprocessComponentTest, WhiteBalanceComponent, testing::ext::TestSize.Level1)
 {
-    static constexpr META_NS::ObjectId id { "b8c7d6e5-f4a3-b2c1-d0e9-f8a7b6c5d4e3" }; // ClassId::WhiteBalance
+    static constexpr META_NS::ObjectId id{"b8c7d6e5-f4a3-b2c1-d0e9-f8a7b6c5d4e3"};  // ClassId::WhiteBalance
     TestPPComponent<IWhiteBalance>(id);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

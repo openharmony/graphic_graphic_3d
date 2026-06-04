@@ -16,6 +16,7 @@
 #include "plugin_registry.h"
 
 #include <algorithm>
+#include <mutex>
 #include <platform/common/core/os/extensions_create_info.h>
 
 #include <base/util/errors.h>
@@ -102,7 +103,7 @@ void RegisterStaticPlugin(const CORE_NS::IPlugin& plugin)
     g_staticPluginListCount = gGlobalPlugins.size();
 }
 #endif
-} // namespace StaticPluginRegistry
+}  // namespace StaticPluginRegistry
 
 constexpr bool operator==(const CORE_NS::IPlugin* lhs, const BASE_NS::Uid& rhs) noexcept
 {
@@ -112,27 +113,41 @@ constexpr bool operator==(const CORE_NS::IPlugin* lhs, const BASE_NS::Uid& rhs) 
 namespace {
 struct LibPlugin {
     ILibrary::Ptr lib;
-    const IPlugin* plugin;
+    const IPlugin* plugin{};
+    const DynamicPluginInfo* dynamicInfo{nullptr};
 };
 
-constexpr bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) noexcept
+Uid GetUid(const LibPlugin& libPlugin)
 {
-    return libPlugin.plugin->version.uid == rhs;
+    if (libPlugin.lib) {
+        return libPlugin.lib->GetPluginUid();
+    }
+    if (libPlugin.plugin) {
+        return libPlugin.plugin->version.uid;
+    }
+    if (libPlugin.dynamicInfo) {
+        return libPlugin.dynamicInfo->uid;
+    }
+    return {};
 }
 
-template<typename Container, typename Predicate>
+bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) noexcept
+{
+    return GetUid(libPlugin) == rhs;
+}
+template <typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
 {
     return std::find_if(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline bool NoneOf(const Container& container, Predicate&& predicate)
 {
     return std::none_of(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline bool AllOf(const Container& container, Predicate&& predicate)
 {
     return std::all_of(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));
@@ -152,74 +167,185 @@ void GatherStaticPlugins(vector<LibPlugin>& plugins)
     for (const auto plugin : staticPluginRegistry) {
         if (plugin && (plugin->typeUid == IPlugin::UID)) {
             CORE_LOG_V("\t%s", plugin->name);
-            plugins.push_back({ nullptr, plugin });
+            plugins.push_back({nullptr, plugin, nullptr});
         }
     }
 }
 
-void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager)
+void GatherDynamicPlugins(vector<LibPlugin>& plugins, IFileManager& fileManager, vector<DynamicPluginInfo>& pluginInfos)
 {
     CORE_LOG_V("Dynamic plugins:");
     const auto libraryFileExtension = ILibrary::GetFileExtension();
-    constexpr string_view pluginRoot { "plugins://" };
+    constexpr string_view pluginRoot{"plugins://"};
     IDirectory::Ptr pluginFiles = fileManager.OpenDirectory(pluginRoot);
     if (!pluginFiles) {
+        pluginInfos.clear();
         return;
     }
-    for (const auto& file : pluginFiles->GetEntries()) {
+    const auto& entries = pluginFiles->GetEntries();
+    plugins.reserve(plugins.size() + entries.size());
+    vector<DynamicPluginInfo> cachedPluginInfos = move(pluginInfos);
+    pluginInfos.clear();
+    pluginInfos.reserve(entries.size());
+    for (const auto& file : entries) {
         const string_view pluginFile = file.name;
         if (!pluginFile.ends_with(libraryFileExtension)) {
             continue;
         }
-        const string absoluteFile = fileManager.GetEntry(pluginRoot + file.name).name;
-        if (ILibrary::Ptr lib = ILibrary::Load(absoluteFile); lib) {
-            const IPlugin* plugin = lib->GetPlugin();
-            if (plugin && (plugin->typeUid == IPlugin::UID)) {
-                CORE_LOG_V("\t%s", plugin->name);
-                plugins.push_back({ move(lib), plugin });
+        const string pluginUri = pluginRoot + file.name;
+        if (file.timestamp) {
+            auto pos = std::find_if(cachedPluginInfos.begin(),
+                cachedPluginInfos.end(),
+                [&pluginUri, timestamp = file.timestamp](
+                    const DynamicPluginInfo& info) { return info.timestamp == timestamp && info.uri == pluginUri; });
+            if (pos != cachedPluginInfos.end()) {
+                pluginInfos.push_back(move(*pos));
+                CORE_LOG_V("\tUID %s", BASE_NS::to_string(pluginInfos.back().uid).data());
+                plugins.push_back({{}, nullptr, &pluginInfos.back()});
+                continue;
             }
+        }
+        auto filePtr = fileManager.OpenFile(pluginUri);
+        const string absoluteFile = fileManager.GetEntry(pluginUri).name;
+        ILibrary::Ptr lib = filePtr ? ILibrary::Load(absoluteFile, filePtr) : ILibrary::Load(absoluteFile);
+        if (lib) {
+            CORE_LOG_V("\tUID %s", BASE_NS::to_string(lib->GetPluginUid()).data());
+            const auto deps = lib->GetPluginDependencies();
+            pluginInfos.push_back(
+                {pluginUri, lib->GetPluginUid(), vector<Uid>(deps.cbegin().ptr(), deps.cend().ptr()), file.timestamp});
+            plugins.push_back({move(lib), {}, nullptr});
         }
     }
 }
 
-bool AddDependencies(vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins, const Uid& uidToLoad)
+vector<int32_t> CountPluginRequests(vector<Uid>& toLoad)
 {
-    bool found = true;
-    if (auto pos = FindIf(availablePlugins,
-            [&uidToLoad](const LibPlugin& libPlugin) { return libPlugin.plugin->version.uid == uidToLoad; });
-        pos != availablePlugins.end()) {
-        found = AllOf(pos->plugin->pluginDependencies,
-            [&](const Uid& dependency) { return AddDependencies(toBeLoaded, availablePlugins, dependency); });
-        if (found) {
-            toBeLoaded.push_back(uidToLoad);
-        } else {
-            CORE_LOG_E("Missing dependencies for: %s", to_string(uidToLoad).data());
+    vector<int32_t> counts;
+    counts.reserve(toLoad.size());
+    if (toLoad.size() > 1U) {
+        auto begin = toLoad.begin();
+        auto end = toLoad.end();
+        while ((begin + 1) != end) {
+            auto newEnd = std::remove_if(begin + 1, end, [current = *begin](const Uid& uid) { return uid == current; });
+            counts.push_back(static_cast<int32_t>(std::distance(newEnd, end)) + 1);
+            end = newEnd;
+            ++begin;
         }
-    } else {
-        CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
-        found = false;
+        toLoad.erase(end, toLoad.cend());
     }
-    return found;
+    counts.push_back(1);
+    return counts;
+}
+
+bool ResolvePlugin(LibPlugin& plugin, IFileManager& fileManager)
+{
+    if (plugin.plugin) {
+        return true;
+    }
+    if (plugin.lib) {
+        plugin.plugin = plugin.lib->GetPlugin();
+        return plugin.plugin != nullptr;
+    }
+    if (!plugin.dynamicInfo) {
+        return false;
+    }
+    const string absoluteFile = fileManager.GetEntry(plugin.dynamicInfo->uri).name;
+    auto filePtr = fileManager.OpenFile(plugin.dynamicInfo->uri);
+    plugin.lib = filePtr ? ILibrary::Load(absoluteFile, filePtr) : ILibrary::Load(absoluteFile);
+    if (!plugin.lib) {
+        return false;
+    }
+    plugin.plugin = plugin.lib->GetPlugin();
+    return plugin.plugin != nullptr;
+}
+
+auto FindPlugin(array_view<const LibPlugin> availablePlugins, const Uid& uid)
+{
+    return FindIf(availablePlugins, [&uid](const LibPlugin& lp) { return lp == uid; });
+}
+
+array_view<const Uid> GetDeps(const LibPlugin& lp)
+{
+    if (lp.lib) {
+        return lp.lib->GetPluginDependencies();
+    }
+    if (lp.plugin) {
+        return lp.plugin->pluginDependencies;
+    }
+    if (lp.dynamicInfo) {
+        return lp.dynamicInfo->dependencies;
+    }
+    return {};
+}
+
+bool AddDependencies(
+    vector<Uid>& toBeLoaded, array_view<const LibPlugin> availablePlugins, const Uid& uidToLoad, vector<Uid>& resolving)
+{
+    if (std::find(resolving.cbegin(), resolving.cend(), uidToLoad) != resolving.cend()) {
+        CORE_LOG_E("Circular plugin dependency: %s", to_string(uidToLoad).data());
+        return false;
+    }
+    auto rootPos = FindPlugin(availablePlugins, uidToLoad);
+    if (rootPos == availablePlugins.end()) {
+        CORE_LOG_E("Plugin not found: %s", to_string(uidToLoad).data());
+        return false;
+    }
+
+    struct Frame {
+        Uid uid;
+        array_view<const Uid> deps;
+        size_t depIndex;
+    };
+
+    const size_t resolvingBase = resolving.size();
+    resolving.push_back(uidToLoad);
+    vector<Frame> stack{{uidToLoad, GetDeps(*rootPos), 0}};
+
+    bool failed = false;
+    while (!stack.empty() && !failed) {
+        Frame& frame = stack.back();
+        if (frame.depIndex < frame.deps.size()) {
+            const Uid dep = frame.deps[frame.depIndex++];
+            if (std::find(resolving.cbegin(), resolving.cend(), dep) != resolving.cend()) {
+                CORE_LOG_E("Circular plugin dependency: %s", to_string(dep).data());
+                failed = true;
+            } else if (auto pos = FindPlugin(availablePlugins, dep); pos != availablePlugins.end()) {
+                resolving.push_back(dep);
+                stack.push_back({dep, GetDeps(*pos), 0});
+            } else {
+                CORE_LOG_E("Plugin not found: %s", to_string(dep).data());
+                failed = true;
+            }
+        } else {
+            toBeLoaded.push_back(frame.uid);
+            resolving.pop_back();
+            stack.pop_back();
+        }
+    }
+
+    if (failed) {
+        resolving.resize(resolvingBase);
+    }
+    return !failed;
 }
 
 vector<Uid> GatherRequiredPlugins(const array_view<const Uid> pluginUids, const array_view<const LibPlugin> plugins)
 {
-    vector<Uid> loadAll(pluginUids.cbegin(), pluginUids.cend());
-    if (pluginUids.empty()) {
-        loadAll.reserve(plugins.size());
-        for (auto& plugin : plugins) {
-            loadAll.push_back(plugin.plugin->version.uid);
-        }
-    }
-
-    if (loadAll.empty()) {
-        return {};
-    }
-
-    // Gather dependencies of each plugin. toLoad will contain all the dependencies in depth first order.
     vector<Uid> toLoad;
+    vector<Uid> resolving;
     toLoad.reserve(plugins.size());
-    if (!AllOf(loadAll, [&](const Uid& uid) { return AddDependencies(toLoad, plugins, uid); })) {
+    resolving.reserve(plugins.size());
+    if (pluginUids.empty()) {
+        for (const auto& plugin : plugins) {
+            vector<Uid> requiredPlugins;
+            requiredPlugins.reserve(plugins.size());
+            const Uid uid = GetUid(plugin);
+            if (AddDependencies(requiredPlugins, plugins, uid, resolving)) {
+                toLoad.insert(toLoad.cend(), requiredPlugins.cbegin(), requiredPlugins.cend());
+            }
+            resolving.clear();
+        }
+    } else if (!AllOf(pluginUids, [&](const Uid& uid) { return AddDependencies(toLoad, plugins, uid, resolving); })) {
         toLoad.clear();
     }
     return toLoad;
@@ -235,72 +361,95 @@ void Notify(const array_view<IPluginRegister::ITypeInfoListener*> listeners,
     }
 }
 
-constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo ASTC_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
+constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo ASTC_LOADER{
+    {CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID},
     nullptr,
-    BASE_NS::Uid { "5f9a6a0c-4759-4094-ac71-9192b11c93a9" },
+    BASE_NS::Uid{"5f9a6a0c-4759-4094-ac71-9192b11c93a9"},
     CreateImageLoaderAstc,
     ASTC_IMAGE_TYPES,
 };
 
-constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo KTX_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
+constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo KTX_LOADER{
+    {CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID},
     nullptr,
-    BASE_NS::Uid { "306357a4-d49c-4670-9746-5ccbba567dc9" },
+    BASE_NS::Uid{"306357a4-d49c-4670-9746-5ccbba567dc9"},
     CreateImageLoaderKtx,
     KTX_IMAGE_TYPES,
 };
 
-constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo STB_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
+#if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
+constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo STB_LOADER{
+    {CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID},
     nullptr,
-    BASE_NS::Uid { "a5049cb8-10bb-4047-b7f5-e9939d5bb3a5" },
+    BASE_NS::Uid{"a5049cb8-10bb-4047-b7f5-e9939d5bb3a5"},
     CreateImageLoaderStbImage,
     STB_IMAGE_TYPES,
 };
-} // namespace
+#endif
+}  // namespace
 
 vector<InterfaceTypeInfo> PluginRegistry::RegisterGlobalInterfaces(PluginRegistry& registry)
 {
     vector<InterfaceTypeInfo> interfaces = {
-        InterfaceTypeInfo { &registry, UID_LOGGER, GetName<ILogger>().data(), nullptr,
+        InterfaceTypeInfo{&registry,
+            UID_LOGGER,
+            GetName<ILogger>().data(),
+            nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return &static_cast<PluginRegistry*>(token)->logger_;
-            } },
-        InterfaceTypeInfo { &registry, UID_FRUSTUM_UTIL, GetName<IFrustumUtil>().data(), nullptr,
+            }},
+        InterfaceTypeInfo{&registry,
+            UID_FRUSTUM_UTIL,
+            GetName<IFrustumUtil>().data(),
+            nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return &static_cast<PluginRegistry*>(token)->frustumUtil_;
-            } },
-        InterfaceTypeInfo { &registry, UID_ENGINE_FACTORY, GetName<IEngineFactory>().data(), nullptr,
+            }},
+        InterfaceTypeInfo{&registry,
+            UID_ENGINE_FACTORY,
+            GetName<IEngineFactory>().data(),
+            nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return static_cast<PluginRegistry*>(token)->engineFactory_.GetInterface(IEngineFactory::UID);
-            } },
-        InterfaceTypeInfo { &registry, UID_SYSTEM_GRAPH_LOADER, GetName<ISystemGraphLoaderFactory>().data(), nullptr,
+            }},
+        InterfaceTypeInfo{&registry,
+            UID_SYSTEM_GRAPH_LOADER,
+            GetName<ISystemGraphLoaderFactory>().data(),
+            nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return &static_cast<PluginRegistry*>(token)->systemGraphLoadeFactory;
-            } },
-        InterfaceTypeInfo { &registry, UID_GLOBAL_FACTORY, "Global registry factory", nullptr,
+            }},
+        InterfaceTypeInfo{&registry,
+            UID_GLOBAL_FACTORY,
+            "Global registry factory",
+            nullptr,
             [](IClassRegister& registry, PluginToken /* token */) -> IInterface* {
                 return registry.GetInterface<IClassFactory>();
-            } },
-        InterfaceTypeInfo {
-            &registry, UID_FILESYSTEM_API_FACTORY, "Filesystem API factory", nullptr, GetFileApiFactory },
-        InterfaceTypeInfo { &registry, UID_FILE_MONITOR, "Filemonitor", CreateFileMonitor, nullptr },
-        InterfaceTypeInfo { &registry, UID_FILE_MANAGER, "FileManager",
+            }},
+        InterfaceTypeInfo{&registry, UID_FILESYSTEM_API_FACTORY, "Filesystem API factory", nullptr, GetFileApiFactory},
+        InterfaceTypeInfo{&registry, UID_FILE_MONITOR, "Filemonitor", CreateFileMonitor, nullptr},
+        InterfaceTypeInfo{&registry,
+            UID_FILE_MANAGER,
+            "FileManager",
             [](IClassFactory& /* factory */, PluginToken /* token */) -> IInterface* {
                 return new CORE_NS::FileManager();
             },
-            nullptr },
-        InterfaceTypeInfo { &registry, UID_TASK_QUEUE_FACTORY, "Task queue factory", nullptr,
+            nullptr},
+        InterfaceTypeInfo{&registry,
+            UID_TASK_QUEUE_FACTORY,
+            "Task queue factory",
+            nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return &static_cast<PluginRegistry*>(token)->taskQueueFactory_;
-            } },
+            }},
 #if (CORE_PERF_ENABLED == 1)
-        InterfaceTypeInfo { &registry, UID_PERFORMANCE_FACTORY, GetName<IPerformanceDataManagerFactory>().data(),
+        InterfaceTypeInfo{&registry,
+            UID_PERFORMANCE_FACTORY,
+            GetName<IPerformanceDataManagerFactory>().data(),
             nullptr,
             [](IClassRegister& /* registry */, PluginToken token) -> IInterface* {
                 return &static_cast<PluginRegistry*>(token)->perfManFactory_;
-            } }
+            }}
 #endif
     };
 
@@ -310,14 +459,18 @@ vector<InterfaceTypeInfo> PluginRegistry::RegisterGlobalInterfaces(PluginRegistr
 
     registry.RegisterTypeInfo(ASTC_LOADER);
     registry.RegisterTypeInfo(KTX_LOADER);
+#if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
     registry.RegisterTypeInfo(STB_LOADER);
+#endif
 
     return interfaces;
 }
 
 void PluginRegistry::UnregisterGlobalInterfaces()
 {
+#if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
     UnregisterTypeInfo(STB_LOADER);
+#endif
     UnregisterTypeInfo(KTX_LOADER);
     UnregisterTypeInfo(ASTC_LOADER);
 
@@ -330,7 +483,7 @@ WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST)
 PluginRegistry::PluginRegistry()
 #if CORE_PERF_ENABLED
     : perfManFactory_(*this)
-#endif // CORE_PERF_ENABLED
+#endif  // CORE_PERF_ENABLED
 {
     ownInterfaceInfos_ = RegisterGlobalInterfaces(*this);
 }
@@ -350,60 +503,46 @@ array_view<const IPlugin* const> PluginRegistry::GetPlugins() const
 
 bool PluginRegistry::LoadPlugins(const array_view<const Uid> pluginUids)
 {
-    // Gather all the available static and dynamic libraries.
+    const bool topLevelLoad = loadingDepth_ == 0;
     vector<LibPlugin> availablePlugins;
     GatherStaticPlugins(availablePlugins);
-    GatherDynamicPlugins(availablePlugins, fileManager_);
+    if (topLevelLoad) {
+        if (dynamicPluginInfosDirty_) {
+            dynamicPluginInfos_.clear();
+            dynamicPluginInfosDirty_ = false;
+        }
+        GatherDynamicPlugins(availablePlugins, fileManager_, dynamicPluginInfos_);
+    } else {
+        availablePlugins.reserve(availablePlugins.size() + dynamicPluginInfos_.size());
+        for (const auto& pluginInfo : dynamicPluginInfos_) {
+            availablePlugins.push_back({{}, nullptr, &pluginInfo});
+        }
+    }
 
     vector<Uid> toLoad = GatherRequiredPlugins(pluginUids, availablePlugins);
     if (toLoad.empty()) {
         return false;
     }
 
-    // Remove duplicates while counting how many times plugins were requested due to dependencies.
-    vector<int32_t> counts;
-    counts.reserve(toLoad.size());
+    vector<int32_t> counts = CountPluginRequests(toLoad);
 
-    if (toLoad.size() > 1U) {
-        auto begin = toLoad.begin();
-        auto end = toLoad.end();
-        while ((begin + 1) != end) {
-            auto newEnd = std::remove_if(begin + 1, end, [current = *begin](const Uid& uid) { return uid == current; });
-            auto count = static_cast<int32_t>(std::distance(newEnd, end)) + 1;
-            counts.push_back(count);
-            end = newEnd;
-            ++begin;
-        }
-        toLoad.erase(end, toLoad.cend());
-    }
-    counts.push_back(1);
-
-    loading_ = true;
+    ++loadingDepth_;
     auto itCounts = counts.cbegin();
     for (const Uid& uid : toLoad) {
         const auto currentCount = *itCounts++;
-        // If the plugin was already loaded just increase the reference count.
         if (auto pos = std::find(plugins_.begin(), plugins_.end(), uid); pos != plugins_.end()) {
             const auto index = static_cast<size_t>(std::distance(plugins_.begin(), pos));
             pluginDatas_[index].refcnt += currentCount;
             continue;
         }
-
         auto pos = std::find(availablePlugins.begin(), availablePlugins.end(), uid);
-        if (pos == availablePlugins.end()) {
-            // This shouldn't be possible as toLoad should contain UIDs which are found in plugins.
-            continue;
-        }
-        if (!pos->plugin) {
-            // This shouldn't be possible as GatherStatic/DynamicPlugins should add only valid plugin pointers, lib can
-            // be null.
+        if (pos == availablePlugins.end() || !ResolvePlugin(*pos, fileManager_)) {
             continue;
         }
         RegisterPlugin(BASE_NS::move(pos->lib), *(pos->plugin), currentCount);
     }
-    loading_ = false;
-
-    if (!newTypeInfos_.empty()) {
+    --loadingDepth_;
+    if ((loadingDepth_ == 0) && !newTypeInfos_.empty()) {
         Notify(typeInfoListeners_, ITypeInfoListener::EventType::ADDED, newTypeInfos_);
         newTypeInfos_.clear();
     }
@@ -416,8 +555,9 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
     CORE_LOG_D("Unload plugins:");
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
     if (perfLoggerId_) {
-        if (pluginUids.empty() || std::any_of(pluginUids.cbegin(), pluginUids.cend(),
-                                    [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
+        if (pluginUids.empty() || std::any_of(pluginUids.cbegin(),
+                                      pluginUids.cend(),
+                                      [&perfUid = perfTracePlugin_](const Uid& uid) { return uid == perfUid; })) {
             logger_.RemoveOutput(perfLoggerId_);
             perfLoggerId_ = 0U;
         }
@@ -442,11 +582,12 @@ void PluginRegistry::UnloadPlugins(const array_view<const Uid> pluginUids)
             if (pdIt->refcnt <= 0) {
                 removedPlugins.push_back(BASE_NS::move(*pos));
                 removedPluginDatas.push_back(BASE_NS::move(*pdIt));
-                plugins_.erase(pos.base() - 1);
-                pluginDatas_.erase(pdIt.base() - 1);
+                pos = reverse_iterator(plugins_.erase(pos.base() - 1));
+                pdIt = reverse_iterator(pluginDatas_.erase(pdIt.base() - 1));
+            } else {
+                ++pos;
+                ++pdIt;
             }
-            ++pos;
-            ++pdIt;
         }
     }
     // now it's safe to call unregisterInterfaces without messing up the iteration of pluginDatas_ and plugins_.
@@ -467,14 +608,14 @@ void PluginRegistry::RegisterTypeInfo(const ITypeInfo& type)
     if (const auto pos = typeInfos_.find(type.typeUid); pos != typeInfos_.cend()) {
         pos->second.push_back(&type);
     } else {
-        typeInfos_.insert({ type.typeUid, {} }).first->second.push_back(&type);
+        typeInfos_.insert({type.typeUid, {}}).first->second.push_back(&type);
     }
 
     // During plugin loading gather all the infos and send events once.
-    if (loading_) {
+    if (loadingDepth_ != 0) {
         newTypeInfos_.push_back(&type);
     } else {
-        const ITypeInfo* const infos[] = { &type };
+        const ITypeInfo* const infos[] = {&type};
         Notify(typeInfoListeners_, ITypeInfoListener::EventType::ADDED, infos);
     }
 }
@@ -488,7 +629,7 @@ void PluginRegistry::UnregisterTypeInfo(const ITypeInfo& type)
         }
     }
 
-    const ITypeInfo* const infos[] = { &type };
+    const ITypeInfo* const infos[] = {&type};
     Notify(typeInfoListeners_, ITypeInfoListener::EventType::REMOVED, infos);
 
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED)
@@ -508,8 +649,9 @@ array_view<const ITypeInfo* const> PluginRegistry::GetTypeInfos(const Uid& typeU
 
 void PluginRegistry::AddListener(ITypeInfoListener& listener)
 {
-    if (std::none_of(typeInfoListeners_.begin(), typeInfoListeners_.end(),
-            [adding = &listener](const auto& current) { return current == adding; })) {
+    if (std::none_of(typeInfoListeners_.begin(), typeInfoListeners_.end(), [adding = &listener](const auto& current) {
+            return current == adding;
+        })) {
         typeInfoListeners_.push_back(&listener);
     }
 }
@@ -526,7 +668,9 @@ void PluginRegistry::RemoveListener(const ITypeInfoListener& listener)
 void PluginRegistry::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     // keep interfaceTypeInfos_ sorted according to UIDs
-    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(),
+        interfaceTypeInfos_.cend(),
+        interfaceInfo.uid,
         [](Uid value, const InterfaceTypeInfo* element) { return value < element->uid; });
     interfaceTypeInfos_.insert(pos, &interfaceInfo);
 }
@@ -534,7 +678,9 @@ void PluginRegistry::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInf
 void PluginRegistry::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
@@ -544,15 +690,17 @@ void PluginRegistry::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceI
 
 array_view<const InterfaceTypeInfo* const> PluginRegistry::GetInterfaceMetadata() const
 {
-    return { interfaceTypeInfos_.data(), interfaceTypeInfos_.size() };
+    return {interfaceTypeInfos_.data(), interfaceTypeInfos_.size()};
 }
 
 const InterfaceTypeInfo& PluginRegistry::GetInterfaceMetadata(const Uid& uid) const
 {
-    static constexpr InterfaceTypeInfo invalidType {};
+    static constexpr InterfaceTypeInfo invalidType{};
 
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
@@ -575,7 +723,7 @@ IInterface::Ptr PluginRegistry::CreateInstance(const Uid& uid)
 {
     const auto& data = GetInterfaceMetadata(uid);
     if (data.createInterface) {
-        return IInterface::Ptr { data.createInterface(*this, data.token) };
+        return IInterface::Ptr{data.createInterface(*this, data.token)};
     }
     return {};
 }
@@ -597,16 +745,24 @@ IInterface* PluginRegistry::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void PluginRegistry::Ref() {}
+void PluginRegistry::Ref()
+{}
 
-void PluginRegistry::Unref() {}
+void PluginRegistry::Unref()
+{}
 
 // Public members
 void PluginRegistry::RegisterPluginPath(const string_view path)
 {
     if (!fileProtocolRegistered_) {
         fileProtocolRegistered_ = true;
-        fileManager_.RegisterFilesystem("file", IFilesystem::Ptr { new StdFilesystem("/") });
+        fileManager_.RegisterFilesystem("file", IFilesystem::Ptr{new StdFilesystem("/")});
+    }
+    if (loadingDepth_ == 0) {
+        dynamicPluginInfos_.clear();
+        dynamicPluginInfosDirty_ = false;
+    } else {
+        dynamicPluginInfosDirty_ = true;
     }
     fileManager_.RegisterPath("plugins", path, false);
 }
@@ -643,7 +799,7 @@ void PluginRegistry::HandlePerfTracePlugin(const PlatformCreateInfo& platformCre
         if (traceSettings->type == PLATFORM_EXTENSION_TRACE_USER) {
             // Provide a user applied performance tracer from the application
             perfManFactory_.SetPerformanceTrace(
-                {}, IPerformanceTrace::Ptr { static_cast<const PlatformTraceInfoUsr*>(traceSettings)->tracer });
+                {}, IPerformanceTrace::Ptr{static_cast<const PlatformTraceInfoUsr*>(traceSettings)->tracer});
         } else if (traceSettings->type == PLATFORM_EXTENSION_TRACE_EXTENSION) {
             // This load plugin call isn't really that ideal, basically dlopen/LoadLibrary is called all plugins
             // found. The order is undefined, so apotentional risks is that the modules could attempt to use
@@ -653,7 +809,7 @@ void PluginRegistry::HandlePerfTracePlugin(const PlatformCreateInfo& platformCre
             // /all/ plugins into memory space for example when two versions of same plugins exists,
             // (hot-)reloading of modules
             const PlatformTraceInfoExt* traceExtension = static_cast<const PlatformTraceInfoExt*>(traceSettings);
-            if (!LoadPlugins({ &traceExtension->plugin, 1U })) {
+            if (!LoadPlugins({&traceExtension->plugin, 1U})) {
                 CORE_LOG_V("Failed to load %s", to_string(traceExtension->plugin).data());
                 return;
             }
@@ -692,7 +848,7 @@ void PluginRegistry::RegisterPlugin(ILibrary::Ptr lib, const IPlugin& plugin, co
     // when a plugin is loaded/ registered due a requested plugin depends on it ref count starts from zero and it's
     // expected that some following plugin will place a reference. once that plugin releases its reference the
     // dependency is known to be a candidate for unloading.
-    PluginData pd { move(lib), {}, refCount };
+    PluginData pd{move(lib), {}, refCount};
     if (plugin.registerInterfaces) {
         pd.token = plugin.registerInterfaces(*static_cast<IPluginRegister*>(this));
     }
@@ -732,15 +888,14 @@ CORE_PUBLIC IPluginRegister& GetPluginRegister()
 
 CORE_PUBLIC void CreatePluginRegistry(const PlatformCreateInfo& platformCreateInfo)
 {
-    static bool once = false;
-    if (!once) {
-        once = true;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&platformCreateInfo]() {
         auto& registry = static_cast<PluginRegistry&>(GetPluginRegister());
 
         auto platform = Platform::Create(platformCreateInfo);
         platform->RegisterPluginLocations(registry);
 
         registry.HandlePerfTracePlugin(platformCreateInfo);
-    }
+    });
 }
 CORE_END_NAMESPACE()

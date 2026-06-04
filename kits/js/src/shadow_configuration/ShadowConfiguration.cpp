@@ -13,9 +13,7 @@
  * limitations under the License.
  */
 
-#include "shadow_configuration/ShadowConfiguration.h"
 #include "shadow_configuration/PCFConfigJS.h"
-#include <napi_api.h>
 
 namespace ShadowConfiguration {
 
@@ -48,7 +46,7 @@ BASE_NS::unique_ptr<SoftShadowConfigJS> SoftShadowConfigJS::FromJs(NapiApi::Obje
     } else {
         LOG_E("Invalid Soft Shadow Config given: shadowAlgorithmType missing");
     }
-    return BASE_NS::unique_ptr<SoftShadowConfigJS> { result };
+    return BASE_NS::unique_ptr<SoftShadowConfigJS>{result};
 }
 
-} // namespace ShadowConfiguration
+}  // namespace ShadowConfiguration

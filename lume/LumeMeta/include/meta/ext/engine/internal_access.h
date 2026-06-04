@@ -27,19 +27,19 @@
 META_BEGIN_NAMESPACE()
 
 namespace Internal {
-template<typename T>
+template <typename T>
 struct IsArray {
     static constexpr const bool VALUE = false;
     using ItemType = T;
 };
 
-template<typename T>
+template <typename T>
 struct IsArray<BASE_NS::vector<T>> {
     static constexpr const bool VALUE = true;
     using ItemType = T;
 };
 
-template<typename Type, typename... CompatType>
+template <typename Type, typename... CompatType>
 IAny::Ptr ConstructCoreAny(const CORE_NS::Property& p)
 {
     if constexpr (Internal::IsArray<Type>::VALUE) {
@@ -55,10 +55,10 @@ IAny::Ptr ConstructCoreAny(const CORE_NS::Property& p)
         return IAny::Ptr(new CoreAny<Type, StaticCastConv, CompatType...>(p));
     }
 }
-} // namespace Internal
+}  // namespace Internal
 
 /// Class that encapsulates the reading and writing to the core property and the any type used
-template<typename Type, typename AccessType = Type>
+template <typename Type, typename AccessType = Type>
 class EngineInternalValueAccess : public IntroduceInterfaces<IEngineInternalValueAccess> {
 public:
     IAny::Ptr CreateAny(const CORE_NS::Property& p) const override
@@ -73,16 +73,16 @@ public:
     {
         if constexpr (Internal::IsArray<AccessType>::VALUE) {
             using ItemType = typename Internal::IsArray<AccessType>::ItemType;
-            return IAny::Ptr(new ArrayAnyType<ItemType> {});
+            return IAny::Ptr(new ArrayAnyType<ItemType>{});
         } else {
-            return IAny::Ptr(new AnyType<AccessType> {});
+            return IAny::Ptr(new AnyType<AccessType>{});
         }
     }
     bool IsCompatible(const CORE_NS::PropertyTypeDecl& type) const override
     {
         return MetaType<Type>::coreType == type;
     }
-    template<typename T>
+    template <typename T>
     static T* CalcLocation(T* data, const EnginePropertyParams& params)
     {
         uintptr_t offset = uintptr_t(data) + params.Offset();
@@ -105,7 +105,7 @@ public:
         SyncTempType temp;
         AnyReturnValue res = temp.CopyFrom(value) ? SyncFromEngine(params, temp) : AnyReturn::FAIL;
         if (res == AnyReturn::SUCCESS) {
-            if (CORE_NS::ScopedHandle<Type> guard { params.handle.Handle() }) {
+            if (CORE_NS::ScopedHandle<Type> guard{params.handle.Handle()}) {
                 if (Type* location = CalcLocation(&*guard, params)) {
                     return value.GetData(
                         UidFromType<Type>(), location, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
@@ -117,7 +117,7 @@ public:
     }
     AnyReturnValue SyncFromEngine(const EnginePropertyParams& params, IAny& out) const override
     {
-        if (CORE_NS::ScopedHandle<const Type> guard { params.handle.Handle() }) {
+        if (CORE_NS::ScopedHandle<const Type> guard{params.handle.Handle()}) {
             if (const Type* location = CalcLocation(&*guard, params)) {
                 return out.SetData(UidFromType<Type>(), location, sizeof(Type)); /*NOLINT(bugprone-sizeof-expression)*/
             }
@@ -127,7 +127,7 @@ public:
 };
 
 /// Class that encapsulates the reading and writing to the core array property and the any type used
-template<typename Type>
+template <typename Type>
 class EngineInternalArrayValueAccess : public IntroduceInterfaces<IEngineInternalValueAccess> {
 public:
     using InternalType = BASE_NS::vector<Type>;
@@ -138,7 +138,7 @@ public:
     }
     IAny::Ptr CreateSerializableAny() const override
     {
-        return IAny::Ptr(new ArrayAnyType<Type> {});
+        return IAny::Ptr(new ArrayAnyType<Type>{});
     }
     bool IsCompatible(const CORE_NS::PropertyTypeDecl& type) const override
     {
@@ -149,7 +149,7 @@ public:
         AnyReturnValue res = AnyReturn::FAIL;
         ArrayAny<Type> temp;
         if (SyncFromEngine(params, temp) && (res = temp.CopyFrom(value)) == AnyReturn::SUCCESS) {
-            CORE_NS::ScopedHandle<Type[]> guard { params.handle.Handle() };
+            CORE_NS::ScopedHandle<Type[]> guard{params.handle.Handle()};
             if (guard && params.property.metaData.containerMethods) {
                 const BASE_NS::vector<Type>& vec = temp.InternalGetValue();
                 if (params.property.type.isArray) {
@@ -171,7 +171,7 @@ public:
     AnyReturnValue SyncFromEngine(const EnginePropertyParams& params, IAny& out) const override
     {
         AnyReturnValue res = AnyReturn::FAIL;
-        CORE_NS::ScopedHandle<const Type[]> guard { params.handle.Handle() };
+        CORE_NS::ScopedHandle<const Type[]> guard{params.handle.Handle()};
         if (guard && params.property.metaData.containerMethods) {
             BASE_NS::vector<Type> vec;
             if (params.property.type.isArray) {

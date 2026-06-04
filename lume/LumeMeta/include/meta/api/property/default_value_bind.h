@@ -29,7 +29,8 @@ META_BEGIN_NAMESPACE()
 class DefaultValueBind final {
 public:
     DefaultValueBind() = default;
-    explicit DefaultValueBind(const IProperty::Ptr& property) : property_(property) {}
+    explicit DefaultValueBind(const IProperty::Ptr& property) : property_(property)
+    {}
     DefaultValueBind(const IProperty::Ptr& property, const IProperty::ConstPtr& source) : property_(property)
     {
         Bind(source);
@@ -69,7 +70,7 @@ public:
     bool Bind(const IProperty::ConstPtr& source)
     {
         if (source == source_.lock()) {
-            return true; // No change
+            return true;  // No change
         }
         UnBind();
         const auto property = property_.lock();
@@ -113,7 +114,7 @@ public:
     {
         if (token_) {
             if (auto p = GetProperty()) {
-                PropertyLock s { p };
+                PropertyLock s{p};
                 return s.IsDefaultValue();
             }
         }
@@ -123,7 +124,7 @@ public:
 private:
     IProperty::WeakPtr property_;
     IProperty::ConstWeakPtr source_;
-    IEvent::Token token_ {};
+    IEvent::Token token_{};
 };
 
 META_END_NAMESPACE()

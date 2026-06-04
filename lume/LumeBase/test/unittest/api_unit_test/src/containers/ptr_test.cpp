@@ -27,7 +27,8 @@ struct TestPtr {
         ptr->deleted = true;
     }
 
-    void operator()(const TestPtr* ptr) const {}
+    void operator()(const TestPtr* ptr) const
+    {}
 
     void Ref()
     {
@@ -99,7 +100,7 @@ UNIT_TEST(API_ContainersUniquePtr, destructor, testing::ext::TestSize.Level1)
         TestPtrD test;
         {
             auto ptr = unique_ptr<TestPtrD&, TestPtrD&>(&test, test);
-            EXPECT_TRUE(test.deleted == ptr->deleted); // destructor not called yet
+            EXPECT_TRUE(test.deleted == ptr->deleted);  // destructor not called yet
         }
         EXPECT_TRUE(test.deleted);
     }
@@ -114,13 +115,13 @@ UNIT_TEST(API_ContainersUniquePtr, destructor, testing::ext::TestSize.Level1)
                 auto ptr = T(static_cast<T&&>(ptrT1));
                 // ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<unique_ptr<TestPtrD&, TestPtrD&>&&>(ptrT2));
             }
-            EXPECT_TRUE(test1.deleted);  // not destroyed
-            EXPECT_FALSE(test2.deleted); // destroyed
+            EXPECT_TRUE(test1.deleted);   // not destroyed
+            EXPECT_FALSE(test2.deleted);  // destroyed
             {
                 auto ptr = T(static_cast<T&&>(ptrT2));
             }
-            EXPECT_TRUE(test1.deleted); // released at ptr.opretator=
-            EXPECT_TRUE(test2.deleted); // released at ptr.opretator=
+            EXPECT_TRUE(test1.deleted);  // released at ptr.opretator=
+            EXPECT_TRUE(test2.deleted);  // released at ptr.opretator=
         }
     }
 
@@ -134,14 +135,14 @@ UNIT_TEST(API_ContainersUniquePtr, destructor, testing::ext::TestSize.Level1)
             {
                 auto ptr = T(static_cast<T&&>(ptrT2));
                 test1.value = 10;
-                ptr.operator*().value = 20; // jsut reference, does not change value
+                ptr.operator*().value = 20;  // jsut reference, does not change value
                 test2.value = 30;
                 EXPECT_TRUE(ptr.operator*().value == test2.value);
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT1));
                 EXPECT_TRUE(ptr.operator*().value == test1.value);
             }
-            EXPECT_TRUE(test1.deleted);  // destroyed
-            EXPECT_FALSE(test2.deleted); // set by operator *
+            EXPECT_TRUE(test1.deleted);   // destroyed
+            EXPECT_FALSE(test2.deleted);  // set by operator *
         }
     }
     // const constructor which does nothing
@@ -170,9 +171,9 @@ UNIT_TEST(API_ContainersUniquePtr, makeUnique, testing::ext::TestSize.Level1)
         auto ptr = make_unique<TestPtrD>(test);
         auto testPtr = ptr.get();
         EXPECT_EQ(test.value, testPtr->value);
-        EXPECT_FALSE(&test == testPtr); // it is a copy
+        EXPECT_FALSE(&test == testPtr);  // it is a copy
     }
-    EXPECT_FALSE(test.deleted); // it is a copy
+    EXPECT_FALSE(test.deleted);  // it is a copy
 }
 
 /**
@@ -315,17 +316,17 @@ UNIT_TEST(API_ContainersUniquePtr, assignNonPointer, testing::ext::TestSize.Leve
                 auto ptr = T(static_cast<T&&>(ptrT2));
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT1));
             }
-            EXPECT_TRUE(test1.deleted);  // destroyed
-            EXPECT_FALSE(test2.deleted); // released, not destroyed. It means, that it ptrT2 is NULL, and address of
-                                         // test2 cannot be recieved anymore
+            EXPECT_TRUE(test1.deleted);   // destroyed
+            EXPECT_FALSE(test2.deleted);  // released, not destroyed. It means, that it ptrT2 is NULL, and address of
+                                          // test2 cannot be recieved anymore
             EXPECT_TRUE(ptrT1 == nullptr);
             EXPECT_TRUE(ptrT2 == nullptr);
             {
                 auto ptr = T(static_cast<T&&>(ptrT2));
             }
-            EXPECT_FALSE(test2.deleted); // NULL pointer delete instead of test2
+            EXPECT_FALSE(test2.deleted);  // NULL pointer delete instead of test2
         }
-        EXPECT_FALSE(test2.deleted); // destruction of pointer to NULL does not help as well
+        EXPECT_FALSE(test2.deleted);  // destruction of pointer to NULL does not help as well
     }
     {
         TestPtrD test1;
@@ -337,17 +338,17 @@ UNIT_TEST(API_ContainersUniquePtr, assignNonPointer, testing::ext::TestSize.Leve
                 auto ptr = T(static_cast<T&&>(ptrT2));
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT1));
             }
-            EXPECT_TRUE(test1.deleted); // destroyed
+            EXPECT_TRUE(test1.deleted);  // destroyed
             EXPECT_FALSE(
-                test2.deleted); // released, not destroyed. It means, that it points to NULL, and value cannot be read
+                test2.deleted);  // released, not destroyed. It means, that it points to NULL, and value cannot be read
             {
                 auto ptr = T(static_cast<T&&>(ptrT2));
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT1));
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT2));
                 ptr.operator=<TestPtrD&, TestPtrD&>(static_cast<T&&>(ptrT1));
             }
-            EXPECT_TRUE(test2.deleted); // However multiple calls of operator will set value to deleted because poiter
-                                        // ptrT2 has its deleter unchanged
+            EXPECT_TRUE(test2.deleted);  // However multiple calls of operator will set value to deleted because poiter
+                                         // ptrT2 has its deleter unchanged
         }
     }
 }
@@ -652,7 +653,7 @@ UNIT_TEST(API_ContainersUniquePtr, assignNonNullArray, testing::ext::TestSize.Le
             EXPECT_TRUE(ptr != ptr2);
             ptr = move(ptr2);
             EXPECT_TRUE(ptr != nullptr);
-            EXPECT_TRUE(ptr != ptr2); // ptr2 NULL
+            EXPECT_TRUE(ptr != ptr2);  // ptr2 NULL
             EXPECT_TRUE(nullptr != ptr);
             EXPECT_FALSE(test[0].deleted);
             EXPECT_FALSE(test[1].deleted);
@@ -685,12 +686,12 @@ UNIT_TEST(API_ContainersUniquePtr, assignNonPointerArray, testing::ext::TestSize
             auto ptr2 = T(static_cast<T&&>(p2));
             auto ptr3 = T(static_cast<T&&>(p2));
             EXPECT_TRUE(ptr == ptr);
-            EXPECT_FALSE(ptr2 == ptr3); // only 1 assigment at time
+            EXPECT_FALSE(ptr2 == ptr3);  // only 1 assigment at time
             ptr.operator=<TestPtr[], TestPtr&>(T(static_cast<T&&>(p2)));
             ptr2.operator=<TestPtr[], TestPtr&>(T(static_cast<T&&>(p1)));
-            EXPECT_TRUE(ptr == ptr2); // both reseted
+            EXPECT_TRUE(ptr == ptr2);  // both reseted
         }
-        EXPECT_TRUE(test1[0].deleted); // Static array as for pointer. No tricks with pointers to NULL anymore
+        EXPECT_TRUE(test1[0].deleted);  // Static array as for pointer. No tricks with pointers to NULL anymore
         EXPECT_FALSE(test1[1].deleted);
 
         EXPECT_TRUE(test2[0].deleted);
@@ -809,7 +810,7 @@ UNIT_TEST(API_ContainersUniquePtr, staticPointerCastToNonDerivedNull, testing::e
     BASE_NS::unique_ptr<TestPtr> base = BASE_NS::unique_ptr<TestPtrD>(nullptr);
 
     struct Sibling : TestPtr {
-        int member {};
+        int member{};
     };
     // WHEN casting to a wrong type (e.g. sibling)
     auto res = static_pointer_cast<Sibling>(BASE_NS::move(base));
@@ -1066,13 +1067,13 @@ struct PtrTestData {
         destructCount_++;
     }
 
-    int data_ { 0 };
+    int data_{0};
     int& constructCount_;
     int& destructCount_;
 
     static constexpr int dataValue = 42;
 };
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: SharedPtr
@@ -1096,7 +1097,7 @@ UNIT_TEST(API_ContainersSharedPtr, SharedPtr, testing::ext::TestSize.Level1)
 
     EXPECT_EQ(destructCount, 0);
 
-    ptr = ptr2; // assign ptr2 to ptr, should cause original ptr to be destroyed
+    ptr = ptr2;  // assign ptr2 to ptr, should cause original ptr to be destroyed
     EXPECT_EQ(destructCount, 1);
     EXPECT_EQ(ptr->data_, ptr2->data_);
     ptr.reset();
@@ -1125,7 +1126,7 @@ UNIT_TEST(API_ContainersSharedPtr, WeakPtr, testing::ext::TestSize.Level1)
     EXPECT_EQ(ptr.use_count(), wptr.use_count());
 
     {
-        auto p = wptr.lock(); // Lock weak_ptr when ptr still exists, should get valid object
+        auto p = wptr.lock();  // Lock weak_ptr when ptr still exists, should get valid object
 
         ASSERT_NE(p.get(), nullptr);
         EXPECT_EQ(constructCount, 1);
@@ -1168,10 +1169,10 @@ UNIT_TEST(API_ContainersSharedPtr, WeakPtr, testing::ext::TestSize.Level1)
         EXPECT_EQ(ptr.weak_count(), 2);
     }
 
-    ptr.reset(); // destroy ptr
+    ptr.reset();  // destroy ptr
     EXPECT_EQ(destructCount, 1);
 
-    auto p = wptr.lock(); // wptr.lock() should still works but returns nullptr
+    auto p = wptr.lock();  // wptr.lock() should still works but returns nullptr
     EXPECT_EQ(p.get(), nullptr);
 }
 
@@ -1227,8 +1228,8 @@ UNIT_TEST(API_ContainersSharedPtr, NullTests, testing::ext::TestSize.Level1)
         BASE_NS::weak_ptr<PtrTestData> ptrBW = ptrB;
         ptrA.reset();
         ptrB.reset();
-        ASSERT_TRUE(ptrAW.lock() == ptrBW.lock()); // this is the same though, since both are NULL.
-        ASSERT_TRUE(empty.lock() == ptrBW.lock()); // this is the same though, since both are NULL.
+        ASSERT_TRUE(ptrAW.lock() == ptrBW.lock());  // this is the same though, since both are NULL.
+        ASSERT_TRUE(empty.lock() == ptrBW.lock());  // this is the same though, since both are NULL.
     }
 }
 
@@ -1417,7 +1418,7 @@ UNIT_TEST(API_ContainersSharedPtr, Swap, testing::ext::TestSize.Level1)
 }
 
 struct CountType {
-    int count { 1 };
+    int count{1};
 };
 
 void CountDeleter(void* p)
@@ -1634,7 +1635,7 @@ UNIT_TEST(API_ContainersSharedPtr, staticPointerCastToNonDerivedNull, testing::e
     BASE_NS::shared_ptr<TestPtr> base = BASE_NS::shared_ptr<TestPtrD>(nullptr);
 
     struct Sibling : TestPtr {
-        int member {};
+        int member{};
     };
     // WHEN casting to a wrong type (e.g. sibling)
     auto res = static_pointer_cast<Sibling>(BASE_NS::move(base));

@@ -17,11 +17,12 @@
 #define PROMISE_H
 
 #include <napi_api.h>
+#include "export.h"
 
 /**
  * @brief Wrap napi promise handling.
  */
-class Promise {
+class SCENE_ADDON_PUBLIC Promise {
 public:
     /**
      * @brief Whether to resolve or reject when settling a promise.
@@ -76,10 +77,10 @@ public:
     operator napi_value() const;
 
 private:
-    napi_env env_ { nullptr };
-    napi_deferred deferred_ { nullptr };
-    napi_value promise_ { nullptr };
-    bool alreadySettled_ { false };
+    napi_env env_{nullptr};
+    napi_deferred deferred_{nullptr};
+    napi_value promise_{nullptr};
+    bool alreadySettled_{false};
 };
 
 #endif

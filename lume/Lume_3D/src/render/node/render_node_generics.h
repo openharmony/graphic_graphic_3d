@@ -31,24 +31,25 @@ class IRenderNodeContextManager;
 RENDER_END_NAMESPACE()
 
 struct RenderSize {
-    int32_t w { 0 };
-    int32_t h { 0 };
-    constexpr explicit RenderSize(int32_t width, int32_t height) : w(width), h(height) {}
+    int32_t w{0};
+    int32_t h{0};
+    constexpr explicit RenderSize(int32_t width, int32_t height) : w(width), h(height)
+    {}
 };
 
-template<typename T>
+template <typename T>
 uint8_t* begin(T& s)
 {
     return reinterpret_cast<uint8_t*>(&s);
 }
 
-template<typename T>
+template <typename T>
 const uint8_t* cbegin(const T& s)
 {
     return reinterpret_cast<const uint8_t*>(&s);
 }
 
-template<typename T>
+template <typename T>
 const uint8_t* cend(const T& s)
 {
     return reinterpret_cast<const uint8_t*>(&s) + sizeof(s);
@@ -69,9 +70,9 @@ struct Pass {
         rp.renderPassDesc.attachmentCount = 1u;
         rp.renderPassDesc.attachmentHandles[0u] = output;
         rp.renderPassDesc.attachments[0u].loadOp = op;
-        rp.renderPassDesc.attachments[0u].clearValue.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+        rp.renderPassDesc.attachments[0u].clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f};
         rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-        rp.renderPassDesc.renderArea = { 0, 0, size.x, size.y };
+        rp.renderPassDesc.renderArea = {0, 0, size.x, size.y};
         rp.renderPassDesc.subpassCount = 1u;
         rp.subpassDesc.colorAttachmentCount = 1u;
         rp.subpassDesc.colorAttachmentIndices[0u] = 0u;
@@ -104,16 +105,16 @@ struct ComputeShaderData : public CommonShaderData {
     RENDER_NS::ShaderThreadGroup threadGroupSize;
 };
 
-template<typename T>
+template <typename T>
 struct PushContant {
     const T& pc;
     operator BASE_NS::array_view<const uint8_t>() const
     {
-        return { reinterpret_cast<const uint8_t*>(&pc), sizeof(pc) };
+        return {reinterpret_cast<const uint8_t*>(&pc), sizeof(pc)};
     }
 };
 
-template<typename T, class U = Pass>
+template <typename T, class U = Pass>
 struct BlurParams {
     const CommonShaderData& shader;
     RENDER_NS::IDescriptorSetBinder& binder;
@@ -137,7 +138,7 @@ protected:
     virtual ~RenderNodeMixin() = default;
 };
 
-template<typename T>
+template <typename T>
 void UpdateBufferData(
     const RENDER_NS::IRenderNodeGpuResourceManager& gpuResourceMgr, RENDER_NS::RenderHandle handle, const T& settings)
 {
@@ -148,4 +149,4 @@ void UpdateBufferData(
     }
 }
 
-#endif // CORE3D_RENDER_NODE_RENDER_NODE_GENERICS_H
+#endif  // CORE3D_RENDER_NODE_RENDER_NODE_GENERICS_H

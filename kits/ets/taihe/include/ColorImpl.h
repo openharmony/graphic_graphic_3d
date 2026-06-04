@@ -28,7 +28,7 @@ public:
     ColorImpl(const std::shared_ptr<Vec4Proxy> proxy) : vproxy_(proxy)
     {}
 
-    ColorImpl(const BASE_NS::Color &color) : stageData_(color)
+    ColorImpl(const BASE_NS::Color& color) : stageData_(color)
     {}
 
     ~ColorImpl()
@@ -132,5 +132,5 @@ private:
     // non meta property data
     BASE_NS::Color stageData_ = BASE_NS::BLACK_COLOR;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_COLOR_IMPL_H

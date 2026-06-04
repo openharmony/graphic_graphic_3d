@@ -28,7 +28,7 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct LowLevelFenceVk {
-    VkFence fence { VK_NULL_HANDLE };
+    VkFence fence{VK_NULL_HANDLE};
 };
 
 class RenderFrameSyncVk final : public RenderFrameSync {
@@ -47,12 +47,12 @@ private:
     Device& device_;
 
     struct FrameFence {
-        VkFence fence { VK_NULL_HANDLE };
-        bool signalled { true };
+        VkFence fence{VK_NULL_HANDLE};
+        bool signalled{true};
     };
     BASE_NS::vector<FrameFence> frameFences_;
-    uint32_t bufferingIndex_ { 0 };
+    uint32_t bufferingIndex_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_RENDER_FRAME_SYNC_VK_H
+#endif  // VULKAN_RENDER_FRAME_SYNC_VK_H

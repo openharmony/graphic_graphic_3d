@@ -1,0 +1,21 @@
+{
+    "version": "1.0",
+    "description": "scene with embedded index whose animation targets a node defined in rootNode",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "index": "scene_anim_index.index",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "light",
+                    "name": "testLight",
+                    "lightType": "point",
+                    "intensity": 1.0
+                }
+            ]
+        }
+    }
+}

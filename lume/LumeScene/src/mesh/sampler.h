@@ -65,20 +65,20 @@ public:
     void OnMetadataConstructed(const META_NS::StaticMetadata& m, CORE_NS::IInterface& i) override;
     void OnPropertyChanged(const META_NS::IProperty&) override;
 
-protected: // ISamplerInternal
+protected:  // ISamplerInternal
     void SetScene(const IInternalScene::Ptr& scene) override;
     bool UpdateSamplerFromHandle(
         RENDER_NS::IRenderContext& context, const RENDER_NS::RenderHandleReference& handle) override;
     RENDER_NS::RenderHandleReference GetHandleFromSampler(RENDER_NS::IRenderContext& context) const override;
 
-protected: // IResetableObject
+protected:  // IResetableObject
     void ResetObject() override;
 
 private:
     struct SamplerInfo {
         RENDER_NS::RenderHandleReference handle;
         RENDER_NS::GpuSamplerDesc descriptor;
-        bool isDefault {};
+        bool isDefault{};
     };
 
     const META_NS::IProperty* GetExistingProperty(BASE_NS::string_view name) const;
@@ -88,16 +88,16 @@ private:
     mutable SamplerInfo sampler_;
     IInternalScene::WeakPtr scene_;
 
-private: // Transaction related
+private:  // Transaction related
     bool CanNotifyChanged();
     void NotifyChanged();
     void StartTransaction();
     void EndTransaction(bool changed);
     mutable CORE_NS::Mutex transaction_;
-    uint32_t setting_ {};
-    bool changedDuringTransaction_ {};
+    uint32_t setting_{};
+    bool changedDuringTransaction_{};
 };
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_SRC_MESH_SAMPLER_H
+#endif  // SCENE_SRC_MESH_SAMPLER_H

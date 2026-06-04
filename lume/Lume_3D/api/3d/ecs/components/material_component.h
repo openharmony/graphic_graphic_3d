@@ -35,332 +35,333 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IMaterialComponentManager, MaterialComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    // base color opaque white
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_BASE_COLOR { 1.f, 1.f, 1.f, 1.f };
-    // normal scale 1
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_NORMAL_SCALE { 1.f, 0.f, 0.f, 0.f };
-    // material (0, roughness, metallic, reflectance)
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_MATERIAL { 0.f, 1.f, 1.f, 0.04f };
-    // emissive 0
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_EMISSIVE { 0.f, 0.f, 0.f, 1.f };
-    // ambient occlusion 1
-    static constexpr BASE_NS::Math::Vec4 DEFAILT_AO { 1.f, 0.f, 0.f, 0.f };
-    // clearcoat intensity 0
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT { 0.f, 0.f, 0.f, 0.f };
-    // clearcoat roughness 0
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_ROUGHNESS { 0.f, 0.f, 0.f, 0.f };
-    // clearcoat normal scale 1
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_NORMAL { 1.f, 0.f, 0.f, 0.f };
-    // sheen color black, roughness 0
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_SHEEN { 0.f, 0.f, 0.f, 0.f };
-    // transmission 0
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_TRANSMISSION { 0.f, 0.f, 0.f, 0.f };
-    // specular white
-    static constexpr BASE_NS::Math::Vec4 DEFAULT_SPECULAR { 1.f, 1.f, 1.f, 1.f };
+// base color opaque white
+static constexpr BASE_NS::Math::Vec4 DEFAULT_BASE_COLOR{1.f, 1.f, 1.f, 1.f};
+// normal scale 1
+static constexpr BASE_NS::Math::Vec4 DEFAULT_NORMAL_SCALE{1.f, 0.f, 0.f, 0.f};
+// material (0, roughness, metallic, reflectance)
+static constexpr BASE_NS::Math::Vec4 DEFAULT_MATERIAL{0.f, 1.f, 1.f, 0.04f};
+// emissive 0
+static constexpr BASE_NS::Math::Vec4 DEFAULT_EMISSIVE{0.f, 0.f, 0.f, 1.f};
+// ambient occlusion 1
+static constexpr BASE_NS::Math::Vec4 DEFAILT_AO{1.f, 0.f, 0.f, 0.f};
+// clearcoat intensity 0
+static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT{0.f, 0.f, 0.f, 0.f};
+// clearcoat roughness 0
+static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_ROUGHNESS{0.f, 0.f, 0.f, 0.f};
+// clearcoat normal scale 1
+static constexpr BASE_NS::Math::Vec4 DEFAULT_CLEARCOAT_NORMAL{1.f, 0.f, 0.f, 0.f};
+// sheen color black, roughness 0
+static constexpr BASE_NS::Math::Vec4 DEFAULT_SHEEN{0.f, 0.f, 0.f, 0.f};
+// transmission 0
+static constexpr BASE_NS::Math::Vec4 DEFAULT_TRANSMISSION{0.f, 0.f, 0.f, 0.f};
+// specular white
+static constexpr BASE_NS::Math::Vec4 DEFAULT_SPECULAR{1.f, 1.f, 1.f, 1.f};
 
-    /** Material type enumeration */
-    enum class Type : uint8_t {
-        /** Enumeration for Metallic roughness workflow */
-        METALLIC_ROUGHNESS = 0,
-        /** Enumeration for Specular glossiness workflow */
-        SPECULAR_GLOSSINESS = 1,
-        /** Enumeration for KHR materials unlit workflow */
-        UNLIT = 2,
-        /** Enumeration for special unlit shadow receiver */
-        UNLIT_SHADOW_ALPHA = 3,
-        /** Custom material. Could be used with custom material model e.g. with shader graph.
-         * Disables automatic factor based modifications for flags.
-         * Note: that base color is always automatically pre-multiplied in all cases
-         */
-        CUSTOM = 4,
-        /** Custom complex material. Could be used with custom material model e.g. with shader graph.
-         * Disables automatic factor based modifications for flags.
-         * Does not use deferred rendering path in any case due to complex material model.
-         * Note: that base color is always automatically pre-multiplied in all cases
-         */
-        CUSTOM_COMPLEX = 5,
-        /** Occlusion material. Occlusion material is invisible, but also blocks objects that are
-           behind it from being visible. */
-        OCCLUSION = 6,
-    };
-
-    /** Material specialization flags */
-    enum LightingFlagBits : uint32_t {
-        /** Defines whether this material receives shadow */
-        SHADOW_RECEIVER_BIT = (1 << 0),
-        /** Defines whether this material is a shadow caster */
-        SHADOW_CASTER_BIT = (1 << 1),
-        /** Defines whether this material will receive light from punctual lights (points, spots, directional) */
-        PUNCTUAL_LIGHT_RECEIVER_BIT = (1 << 2),
-        /** Defines whether this material will receive indirect light from SH and cubemaps */
-        INDIRECT_LIGHT_RECEIVER_BIT = (1 << 3),
-        /** Defines whether this material will receive irradiance indirect light */
-        INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT = (1 << 4),
-    };
-    /** Container for material flag bits */
-    using LightingFlags = uint32_t;
-
-    /** Rendering flags (specialized rendering flags) */
-    enum ExtraRenderingFlagBits : uint32_t {
-        /** Is an additional flag which can be used to discard some materials from rendering from render node graph */
-        DISCARD_BIT = (1 << 0),
-        /** (DEPRECATED) Is an additional flag which disables default render system push to render data stores and
-           rendering */
-        DISABLE_BIT = (1 << 1),
-        /** Allow rendering mutiple instances of the same mesh using GPU instancing. materialShader must support
-           instancing. */
-        ALLOW_GPU_INSTANCING_BIT = (1 << 2),
-        /** Camera "fullscreen" effect.
-         * Not view frustum culled in default material pipeline
-         * Designed to be used with "billboard/fullscreen" camera effects
-         */
-        CAMERA_EFFECT = (1 << 3),
-
-        /** Ignore alpha channel of the specular texture for the strength of the specular reflection. */
-        IGNORE_SPECULAR_FACTOR_TEXTURE = (1 << 4),
-        /** Ignore rgb channels of the specular texture for the F0 color of the specular reflection. */
-        IGNORE_SPECULAR_COLOR_TEXTURE = (1 << 5),
-    };
-    /** Container for extra material rendering flag bits */
-    using ExtraRenderingFlags = uint32_t;
-
-    /** Needs to match the texture ordering with default material shader pipeline layout. The names are for default
-     * materials.
-     *
-     * For other predefined material shaders included in 3D:
-     *
-     * "core3d_dm_fw_reflection_plane.shader":
-     * CLEARCOAT_ROUGHNESS index has been reserved for reflection image.
+/** Material type enumeration */
+enum class Type : uint8_t {
+    /** Enumeration for Metallic roughness workflow */
+    METALLIC_ROUGHNESS = 0,
+    /** Enumeration for Specular glossiness workflow */
+    SPECULAR_GLOSSINESS = 1,
+    /** Enumeration for KHR materials unlit workflow */
+    UNLIT = 2,
+    /** Enumeration for special unlit shadow receiver */
+    UNLIT_SHADOW_ALPHA = 3,
+    /** Custom material. Could be used with custom material model e.g. with shader graph.
+     * Disables automatic factor based modifications for flags.
+     * Note: that base color is always automatically pre-multiplied in all cases
      */
-    enum TextureIndex : uint8_t {
-        /** basecolor texture (expected to be premultiplied alpha) (aka. diffuse for specular-glossiness)*/
-        BASE_COLOR,
-        /** normal map texture */
-        NORMAL,
-        /** metallic-roughness or specular-glossiness texture */
-        MATERIAL,
-        /** emissive texture */
-        EMISSIVE,
-        /** ambient-occlusion texture */
-        AO,
-
-        /** clearcoat intensity texture */
-        CLEARCOAT,
-        /** clearcoat roughness texture */
-        CLEARCOAT_ROUGHNESS,
-        /** clearcoat normal map texture */
-        CLEARCOAT_NORMAL,
-
-        /** sheen color texture in rgb, sheen roughness in alpha */
-        SHEEN,
-
-        /** transmission percentage texture */
-        TRANSMISSION,
-
-        /** specular color and reflection strength texture */
-        SPECULAR,
-
-        /** number of textures */
-        TEXTURE_COUNT
-    };
-
-    /** Channel mapping for materials using Type::METALLIC_ROUGHNESS
-     *  that can be used to access a specific channel in a TextureIndex::MATERIAL texture.
+    CUSTOM = 4,
+    /** Custom complex material. Could be used with custom material model e.g. with shader graph.
+     * Disables automatic factor based modifications for flags.
+     * Does not use deferred rendering path in any case due to complex material model.
+     * Note: that base color is always automatically pre-multiplied in all cases
      */
-    enum MetallicRoughnessChannel : uint8_t {
-        /** Index of the roughness channel in the material texture. */
-        ROUGHNESS = 1,
+    CUSTOM_COMPLEX = 5,
+    /** Occlusion material. Occlusion material is invisible, but also blocks objects that are
+       behind it from being visible. */
+    OCCLUSION = 6,
+};
 
-        /** Index of the metallic channel in the material texture. */
-        METALLIC,
-    };
+/** Material specialization flags */
+enum LightingFlagBits : uint32_t {
+    /** Defines whether this material receives shadow */
+    SHADOW_RECEIVER_BIT = (1 << 0),
+    /** Defines whether this material is a shadow caster */
+    SHADOW_CASTER_BIT = (1 << 1),
+    /** Defines whether this material will receive light from punctual lights (points, spots, directional) */
+    PUNCTUAL_LIGHT_RECEIVER_BIT = (1 << 2),
+    /** Defines whether this material will receive indirect light from SH and cubemaps */
+    INDIRECT_LIGHT_RECEIVER_BIT = (1 << 3),
+    /** Defines whether this material will receive irradiance indirect light */
+    INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT = (1 << 4),
+    /** Defines whether this material will receive light probe */
+    LIGHT_PROBE_RECEIVER_BIT = (1 << 5),
+};
+/** Container for material flag bits */
+using LightingFlags = uint32_t;
 
-    /** Channel mapping for materials using Type::SPECULAR_GLOSSINESS
-     *  that can be used to access a specific channel in a TextureIndex::MATERIAL texture.
+/** Rendering flags (specialized rendering flags) */
+enum ExtraRenderingFlagBits : uint32_t {
+    /** Is an additional flag which can be used to discard some materials from rendering from render node graph */
+    DISCARD_BIT = (1 << 0),
+    /** (DEPRECATED) Is an additional flag which disables default render system push to render data stores and
+       rendering */
+    DISABLE_BIT = (1 << 1),
+    /** Allow rendering mutiple instances of the same mesh using GPU instancing. materialShader must support
+       instancing. */
+    ALLOW_GPU_INSTANCING_BIT = (1 << 2),
+    /** Camera "fullscreen" effect.
+     * Not view frustum culled in default material pipeline
+     * Designed to be used with "billboard/fullscreen" camera effects
      */
-    enum SpecularGlossinessChannel : uint8_t {
-        /** Index of the specular red channel in the material texture. */
-        SPECULAR_R = 0,
+    CAMERA_EFFECT = (1 << 3),
 
-        /** Index of the specular green channel in the material texture. */
-        SPECULAR_G,
+    /** Ignore alpha channel of the specular texture for the strength of the specular reflection. */
+    IGNORE_SPECULAR_FACTOR_TEXTURE = (1 << 4),
+    /** Ignore rgb channels of the specular texture for the F0 color of the specular reflection. */
+    IGNORE_SPECULAR_COLOR_TEXTURE = (1 << 5),
+};
+/** Container for extra material rendering flag bits */
+using ExtraRenderingFlags = uint32_t;
 
-        /** Index of the specular blue channel in the material texture. */
-        SPECULAR_B,
+/** Needs to match the texture ordering with default material shader pipeline layout. The names are for default
+ * materials.
+ *
+ * For other predefined material shaders included in 3D:
+ *
+ * "core3d_dm_fw_reflection_plane.shader":
+ * CLEARCOAT_ROUGHNESS index has been reserved for reflection image.
+ */
+enum TextureIndex : uint8_t {
+    /** basecolor texture (expected to be premultiplied alpha) (aka. diffuse for specular-glossiness)*/
+    BASE_COLOR,
+    /** normal map texture */
+    NORMAL,
+    /** metallic-roughness or specular-glossiness texture */
+    MATERIAL,
+    /** emissive texture */
+    EMISSIVE,
+    /** ambient-occlusion texture */
+    AO,
 
-        /** Index of the glossiness channel in the material texture. */
-        GLOSSINESS,
-    };
+    /** clearcoat intensity texture */
+    CLEARCOAT,
+    /** clearcoat roughness texture */
+    CLEARCOAT_ROUGHNESS,
+    /** clearcoat normal map texture */
+    CLEARCOAT_NORMAL,
 
-    /** Texture transform. */
-    struct TextureTransform {
-        /** Translation */
-        BASE_NS::Math::Vec2 translation { 0.f, 0.f };
-        /** Rotation */
-        float rotation { 0.f };
-        /** Scale */
-        BASE_NS::Math::Vec2 scale { 1.f, 1.f };
-    };
-    /** Texture info. */
-    struct TextureInfo {
-        /** Image */
-        CORE_NS::EntityReference image;
-        /** Sampler */
-        CORE_NS::EntityReference sampler;
-        /** Factor */
-        BASE_NS::Math::Vec4 factor { 1.f, 1.f, 1.f, 1.f };
-        /** Transforms */
-        TextureTransform transform;
-    };
+    /** sheen color texture in rgb, sheen roughness in alpha */
+    SHEEN,
 
-    /** Default render sort layer id */
-    static constexpr uint32_t DEFAULT_RENDER_SORT_LAYER_ID = 32u;
-    /** Render time sorting
-     * Material based sorting
-     * Submesh based sorting will overpass this
+    /** transmission percentage texture */
+    TRANSMISSION,
+
+    /** specular color and reflection strength texture */
+    SPECULAR,
+
+    /** number of textures */
+    TEXTURE_COUNT
+};
+
+/** Channel mapping for materials using Type::METALLIC_ROUGHNESS
+ *  that can be used to access a specific channel in a TextureIndex::MATERIAL texture.
+ */
+enum MetallicRoughnessChannel : uint8_t {
+    /** Index of the roughness channel in the material texture. */
+    ROUGHNESS = 1,
+
+    /** Index of the metallic channel in the material texture. */
+    METALLIC,
+};
+
+/** Channel mapping for materials using Type::SPECULAR_GLOSSINESS
+ *  that can be used to access a specific channel in a TextureIndex::MATERIAL texture.
+ */
+enum SpecularGlossinessChannel : uint8_t {
+    /** Index of the specular red channel in the material texture. */
+    SPECULAR_R = 0,
+
+    /** Index of the specular green channel in the material texture. */
+    SPECULAR_G,
+
+    /** Index of the specular blue channel in the material texture. */
+    SPECULAR_B,
+
+    /** Index of the glossiness channel in the material texture. */
+    GLOSSINESS,
+};
+
+/** Texture transform. */
+struct TextureTransform {
+    /** Translation */
+    BASE_NS::Math::Vec2 translation{0.f, 0.f};
+    /** Rotation */
+    float rotation{0.f};
+    /** Scale */
+    BASE_NS::Math::Vec2 scale{1.f, 1.f};
+};
+/** Texture info. */
+struct TextureInfo {
+    /** Image */
+    CORE_NS::EntityReference image;
+    /** Sampler */
+    CORE_NS::EntityReference sampler;
+    /** Factor */
+    BASE_NS::Math::Vec4 factor{1.f, 1.f, 1.f, 1.f};
+    /** Transforms */
+    TextureTransform transform;
+};
+
+/** Default render sort layer id */
+static constexpr uint32_t DEFAULT_RENDER_SORT_LAYER_ID = 32u;
+/** Render time sorting
+ * Material based sorting
+ * Submesh based sorting will overpass this
+ */
+struct RenderSort {
+    /** Render sort layer. Within a render slot a layer can define a sort layer order.
+     * There are 0-63 values available. Default id value is 32.
+     * 0 first, 63 last
+     * 1. Typical use case is to set render sort layer to objects which render with depth test without depth write.
+     * 2. Typical use case is to always render character and/or camera object first to cull large parts of the view.
+     * 3. Sort e.g. plane layers.
      */
-    struct RenderSort {
-        /** Render sort layer. Within a render slot a layer can define a sort layer order.
-         * There are 0-63 values available. Default id value is 32.
-         * 0 first, 63 last
-         * 1. Typical use case is to set render sort layer to objects which render with depth test without depth write.
-         * 2. Typical use case is to always render character and/or camera object first to cull large parts of the view.
-         * 3. Sort e.g. plane layers.
-         */
-        /** Sort layer used sorting submeshes in rendering in render slots. Valid ID values 0 - 63. */
-        uint8_t renderSortLayer { DEFAULT_RENDER_SORT_LAYER_ID };
-        /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
-        uint8_t renderSortLayerOrder { 0u };
-    };
+    /** Sort layer used sorting submeshes in rendering in render slots. Valid ID values 0 - 63. */
+    uint8_t renderSortLayer{DEFAULT_RENDER_SORT_LAYER_ID};
+    /** Sort layer order to describe fine order within sort layer. Valid order 0 - 255 */
+    uint8_t renderSortLayerOrder{0u};
+};
 
-    /** Default material component shader
-     * Render slot processing order:
-     * 1. If graphics state has render slot this defines the render slot
-     * 2. if graphics state did not have render slot then the shader render slot defines the actual render slot
+/** Default material component shader
+ * Render slot processing order:
+ * 1. If graphics state has render slot this defines the render slot
+ * 2. if graphics state did not have render slot then the shader render slot defines the actual render slot
+ */
+struct Shader {
+    /** Shader to be used. (If invalid, a default is chosen by the default material renderer)
+     * NOTE: the material medata and custom properties are updated when the shader is updated.
      */
-    struct Shader {
-        /** Shader to be used. (If invalid, a default is chosen by the default material renderer)
-         * NOTE: the material medata and custom properties are updated when the shader is updated.
-         */
-        CORE_NS::EntityReference shader;
-        /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer)
-         * If graphics state is given it's render slot is used to define where the material is send for rendering.
-         */
-        CORE_NS::EntityReference graphicsState;
-    };
+    CORE_NS::EntityReference shader;
+    /** Shader graphics state to be used. (If invalid, a default is chosen by the default material renderer)
+     * If graphics state is given it's render slot is used to define where the material is send for rendering.
+     */
+    CORE_NS::EntityReference graphicsState;
+};
 #endif
-    /** Material type which can be one of the following Type::METALLIC_ROUGHNESS, Type::SPECULAR_GLOSSINESS */
-    DEFINE_PROPERTY(Type, type, "Material Type", 0, VALUE(Type::METALLIC_ROUGHNESS))
+/** Material type which can be one of the following Type::METALLIC_ROUGHNESS, Type::SPECULAR_GLOSSINESS */
+DEFINE_PROPERTY(Type, type, "Material Type", 0, VALUE(Type::METALLIC_ROUGHNESS))
 
-    /** Alpha cut off value, set the cutting value for alpha (0.0 - 1.0). Below 1.0 starts to affect.
-     */
-    DEFINE_PROPERTY(float, alphaCutoff, "Alpha Cutoff", 0, VALUE(1.0f))
+/** Alpha cut off value, set the cutting value for alpha (0.0 - 1.0). Below 1.0 starts to affect.
+ */
+DEFINE_PROPERTY(float, alphaCutoff, "Alpha Cutoff", 0, VALUE(1.0f))
 
-    /** Material lighting flags that define the lighting related settings for this material */
-    DEFINE_BITFIELD_PROPERTY(LightingFlags, materialLightingFlags, "Material Lighting Flags",
-        PropertyFlags::IS_BITFIELD,
-        VALUE(MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT |
-              MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT |
-              MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT |
-              MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT |
-              MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT),
-        MaterialComponent::LightingFlagBits)
+/** Material lighting flags that define the lighting related settings for this material */
+DEFINE_BITFIELD_PROPERTY(LightingFlags, materialLightingFlags, "Material Lighting Flags", PropertyFlags::IS_BITFIELD,
+    VALUE(MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT |
+          MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT |
+          MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT |
+          MaterialComponent::LightingFlagBits::INDIRECT_LIGHT_RECEIVER_BIT |
+          MaterialComponent::LightingFlagBits::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT |
+          MaterialComponent::LightingFlagBits::LIGHT_PROBE_RECEIVER_BIT),
+    MaterialComponent::LightingFlagBits)
 
-    /** Material shader. Prefer using automatic selection (or editor selection) if no custom shaders.
-     * Needs to match default material layouts and specializations (api/3d/shaders/common).
-     * If no default slot given to shader default material shader slots are used automatically.
-     * Therefore, do not set slots and their graphics states if no special handling is needed.
-     * Use OPAQUE_FW core3d_dm_fw.shader as an example reference.
-     * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
-     * NOTE: when material shader is updated the possible material metadata and custom properties are updated
-     * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
-     */
-    DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
+/** Material shader. Prefer using automatic selection (or editor selection) if no custom shaders.
+ * Needs to match default material layouts and specializations (api/3d/shaders/common).
+ * If no default slot given to shader default material shader slots are used automatically.
+ * Therefore, do not set slots and their graphics states if no special handling is needed.
+ * Use OPAQUE_FW core3d_dm_fw.shader as an example reference.
+ * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
+ * NOTE: when material shader is updated the possible material metadata and custom properties are updated
+ * NOTE: one needs to reload the shader file(s) with shader manager to get dynamic updated custom property data
+ */
+DEFINE_PROPERTY(Shader, materialShader, "Material Shader", 0, )
 
-    /** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
-     * Needs to match default material layouts and specializations (api/3d/shaders/common).
-     * If no default slot given to shader default material shader slots are used automatically.
-     * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
-     */
-    DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
+/** Depth shader. Prefer using automatic selection (or editor selection) if no custom shaders.
+ * Needs to match default material layouts and specializations (api/3d/shaders/common).
+ * If no default slot given to shader default material shader slots are used automatically.
+ * (I.e. if one wants to things just work, do not specify slots or additional custom graphics states per slots)
+ */
+DEFINE_PROPERTY(Shader, depthShader, "Depth Shader", 0, )
 
-    /** Extra material rendering flags define special rendering hints */
-    DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags",
-        PropertyFlags::IS_BITFIELD, VALUE(0u), MaterialComponent::ExtraRenderingFlagBits)
+/** Extra material rendering flags define special rendering hints */
+DEFINE_BITFIELD_PROPERTY(ExtraRenderingFlags, extraRenderingFlags, "ExtraRenderingFlags", PropertyFlags::IS_BITFIELD,
+    VALUE(0u), MaterialComponent::ExtraRenderingFlagBits)
 
-    /** Array of texture information. With default shaders TextureIndex is used for identifying texures for different
-     * material properties. Use of TextureInfo::factor depends on the index.
-     *
-     * BASE_COLOR: RGBA, base color, if an image is specified, this value is multiplied with the texel values.
-     * NOTE: the pre-multiplication is done always, i.e. use only for base color with custom materials
-     * NOTE: the built-in default material shaders write out alpha values from 0.0 - 1.0
-     *       opaque flag is enabled to shader is graphics state's blending mode is not active -> alpha 1.0
-     *
-     * NORMAL: R, normal scale, scalar multiplier applied to each normal vector of the texture. (Ignored if image is not
-     * specified, this value is linear).
-     *
-     * MATERIAL: For Type::METALLIC_ROUGHNESS: G roughness (smooth 0.0 - 1.0 rough), B metallic (dielectric 0.0 - 1.0
-     * metallic)., and A reflectance at normal incidence
-     * For Type::SPECULAR_GLOSSINESS: RGB specular color (linear), A glossiness (rough 0.0 - 1.0 glossy). Texel values
-     * are multiplied with the corresponding factors.
-     *
-     * EMISSIVE: RGB, emissive color, A intensity, if an image is specified, this value is multiplied with the texel
-     * values.
-     *
-     * AO: R, ambient occlusion factor, this value is multiplied with the texel values (no ao 0.0 - 1.0 full ao)
-     *
-     * CLEARCOAT: R, clearcoat layer intensity, if an image is specified, this value is multiplied with the texel
-     * values.
-     *
-     * CLEARCOAT_ROUGHNESS: G, clearcoat layer roughness, if an image is specified, this value is multiplied with the
-     * texel values.
-     *
-     * CLEARCOAT_NORMAL: RGB, clearcoat normal scale, scalar multiplier applied to each normal vector of the clearcoat
-     * normal texture.
-     *
-     * SHEEN: RGB, sheen color, if an image is specified, this value is multiplied with the texel values.
-     * SHEEN: A, sheen roughness, if an image is specified, this value is multiplied with the texel values.
-     *
-     * TRANSMISSION: R, Percentage of light that is transmitted through the surface, if an image is specified, this
-     * value is multiplied with the texel values.
-     *
-     * SPECULAR: RGB color of the specular reflection, A strength of the specular reflection, if an image is specified,
-     * this value is multiplied with the texel values.
-     */
+/** Array of texture information. With default shaders TextureIndex is used for identifying texures for different
+ * material properties. Use of TextureInfo::factor depends on the index.
+ *
+ * BASE_COLOR: RGBA, base color, if an image is specified, this value is multiplied with the texel values.
+ * NOTE: the pre-multiplication is done always, i.e. use only for base color with custom materials
+ * NOTE: the built-in default material shaders write out alpha values from 0.0 - 1.0
+ *       opaque flag is enabled to shader is graphics state's blending mode is not active -> alpha 1.0
+ *
+ * NORMAL: R, normal scale, scalar multiplier applied to each normal vector of the texture. (Ignored if image is not
+ * specified, this value is linear).
+ *
+ * MATERIAL: For Type::METALLIC_ROUGHNESS: G roughness (smooth 0.0 - 1.0 rough), B metallic (dielectric 0.0 - 1.0
+ * metallic)., and A reflectance at normal incidence
+ * For Type::SPECULAR_GLOSSINESS: RGB specular color (linear), A glossiness (rough 0.0 - 1.0 glossy). Texel values
+ * are multiplied with the corresponding factors.
+ *
+ * EMISSIVE: RGB, emissive color, A intensity, if an image is specified, this value is multiplied with the texel
+ * values.
+ *
+ * AO: R, ambient occlusion factor, this value is multiplied with the texel values (no ao 0.0 - 1.0 full ao)
+ *
+ * CLEARCOAT: R, clearcoat layer intensity, if an image is specified, this value is multiplied with the texel
+ * values.
+ *
+ * CLEARCOAT_ROUGHNESS: G, clearcoat layer roughness, if an image is specified, this value is multiplied with the
+ * texel values.
+ *
+ * CLEARCOAT_NORMAL: RGB, clearcoat normal scale, scalar multiplier applied to each normal vector of the clearcoat
+ * normal texture.
+ *
+ * SHEEN: RGB, sheen color, if an image is specified, this value is multiplied with the texel values.
+ * SHEEN: A, sheen roughness, if an image is specified, this value is multiplied with the texel values.
+ *
+ * TRANSMISSION: R, Percentage of light that is transmitted through the surface, if an image is specified, this
+ * value is multiplied with the texel values.
+ *
+ * SPECULAR: RGB color of the specular reflection, A strength of the specular reflection, if an image is specified,
+ * this value is multiplied with the texel values.
+ */
 
-    DEFINE_ARRAY_PROPERTY(TextureInfo, TextureIndex::TEXTURE_COUNT, textures, "", PropertyFlags::IS_HIDDEN,
-        ARRAY_VALUE(TextureInfo { {}, {}, DEFAULT_BASE_COLOR, {} }, TextureInfo { {}, {}, DEFAULT_NORMAL_SCALE, {} },
-            TextureInfo { {}, {}, DEFAULT_MATERIAL, {} }, TextureInfo { {}, {}, DEFAULT_EMISSIVE, {} },
-            TextureInfo { {}, {}, DEFAILT_AO, {} }, TextureInfo { {}, {}, DEFAULT_CLEARCOAT, {} },
-            TextureInfo { {}, {}, DEFAULT_CLEARCOAT_ROUGHNESS, {} },
-            TextureInfo { {}, {}, DEFAULT_CLEARCOAT_NORMAL, {} }, TextureInfo { {}, {}, DEFAULT_SHEEN, {} },
-            TextureInfo { {}, {}, DEFAULT_TRANSMISSION, {} }, TextureInfo { {}, {}, DEFAULT_SPECULAR, {} }))
+DEFINE_ARRAY_PROPERTY(TextureInfo, TextureIndex::TEXTURE_COUNT, textures, "", PropertyFlags::IS_HIDDEN,
+    ARRAY_VALUE(TextureInfo{{}, {}, DEFAULT_BASE_COLOR, {}}, TextureInfo{{}, {}, DEFAULT_NORMAL_SCALE, {}},
+        TextureInfo{{}, {}, DEFAULT_MATERIAL, {}}, TextureInfo{{}, {}, DEFAULT_EMISSIVE, {}},
+        TextureInfo{{}, {}, DEFAILT_AO, {}}, TextureInfo{{}, {}, DEFAULT_CLEARCOAT, {}},
+        TextureInfo{{}, {}, DEFAULT_CLEARCOAT_ROUGHNESS, {}}, TextureInfo{{}, {}, DEFAULT_CLEARCOAT_NORMAL, {}},
+        TextureInfo{{}, {}, DEFAULT_SHEEN, {}}, TextureInfo{{}, {}, DEFAULT_TRANSMISSION, {}},
+        TextureInfo{{}, {}, DEFAULT_SPECULAR, {}}))
 
-    /** Texture coordinates from set 0 or 1. */
-    DEFINE_PROPERTY(uint32_t, useTexcoordSetBit, "Active Texture Coordinate", 0,
-        VALUE(0u)) // if uses set 1 (1 << enum TextureIndex)
+/** Texture coordinates from set 0 or 1. */
+DEFINE_PROPERTY(uint32_t, useTexcoordSetBit, "Active Texture Coordinate", 0,
+    VALUE(0u))  // if uses set 1 (1 << enum TextureIndex)
 
-    /** Custom forced render slot id. One can force rendering with e.g. opaque or translucent render slots */
-    DEFINE_PROPERTY(uint32_t, customRenderSlotId, "Custom Render Slot ID", ~0, VALUE(~0u))
+/** Custom forced render slot id. One can force rendering with e.g. opaque or translucent render slots */
+DEFINE_PROPERTY(uint32_t, customRenderSlotId, "Custom Render Slot ID", ~0, VALUE(~0u))
 
-    /** Custom material extension resources. Deprecates and prevents MaterialExtensionComponent usage.
-     * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+/** Custom material extension resources. Deprecates and prevents MaterialExtensionComponent usage.
+ * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
+ */
+DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
 
-    /** Per material additional user property data which is passed to shader UBO.
-     * Max size is 256 bytes.
-     */
-    DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customProperties, "Custom Properties", 0, VALUE(nullptr))
+/** Per material additional user property data which is passed to shader UBO.
+ * Max size is 256 bytes.
+ */
+DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customProperties, "Custom Properties", 0, VALUE(nullptr))
 
-    /** Per material additional user bindings properties.
-     */
-    DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customBindingProperties, "Custom Binding Properties", 0, VALUE(nullptr))
+/** Per material additional user bindings properties.
+ */
+DEFINE_PROPERTY(CORE_NS::IPropertyHandle*, customBindingProperties, "Custom Binding Properties", 0, VALUE(nullptr))
 
-    /** Render sorting for layers (sorting priority)
-     */
-    DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0, )
+/** Render sorting for layers (sorting priority)
+ */
+DEFINE_PROPERTY(RenderSort, renderSort, "Render Sort Layers", 0, )
 
 END_COMPONENT(IMaterialComponentManager, MaterialComponent, "56430c14-cb12-4320-80d3-2bef4f86a041")
 #if !defined(IMPLEMENT_MANAGER)

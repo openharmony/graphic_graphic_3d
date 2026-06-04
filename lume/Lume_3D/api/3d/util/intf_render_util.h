@@ -48,7 +48,7 @@ public:
         /* Camera based post process render node graph desc */
         RENDER_NS::RenderNodeGraphDesc postProcess;
         /* Multi-view camera count */
-        uint32_t multiViewCameraCount { 0U };
+        uint32_t multiViewCameraCount{0U};
         /* Multi-view camera post processes */
         RENDER_NS::RenderNodeGraphDesc
             multiViewCameraPostProcesses[RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT];
@@ -102,4 +102,4 @@ protected:
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_UTIL_RENDER_UTIL_H
+#endif  // API_3D_UTIL_RENDER_UTIL_H

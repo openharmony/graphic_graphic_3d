@@ -24,7 +24,6 @@ RENDER_TEST_ROFS = "testrofs"
 
 # Options
 RENDER_BUILD_GLES = true
-RENDER_BUILD_VULKAN = true
 
 #
 # LumeRender API test config
@@ -351,13 +350,19 @@ ohos_unittest("lume_render_src_test") {
     "src_unit_test/src/gles/pipeline_state_object_gles_test.cpp",
 
     # Vulkan
-    "src_unit_test/src/vulkan/shader_module_vk_test.cpp",
-    "src_unit_test/src/vulkan/gpu_buffer_vk_test.cpp",
-    "src_unit_test/src/vulkan/gpu_image_vk_test.cpp",
-    "src_unit_test/src/vulkan/gpu_sampler_vk_test.cpp",
-    "src_unit_test/src/vulkan/gpu_acceleration_structure_vk_test.cpp",
-    "src_unit_test/src/vulkan/gpu_memory_allocator_vk_test.cpp",
-    "src_unit_test/src/vulkan/platform_hardware_buffer_util_vk_test.cpp",
+  ]
+  if (RENDER_BUILD_VULKAN) {
+    sources += [
+      "src_unit_test/src/vulkan/shader_module_vk_test.cpp",
+      "src_unit_test/src/vulkan/gpu_buffer_vk_test.cpp",
+      "src_unit_test/src/vulkan/gpu_image_vk_test.cpp",
+      "src_unit_test/src/vulkan/gpu_sampler_vk_test.cpp",
+      "src_unit_test/src/vulkan/gpu_acceleration_structure_vk_test.cpp",
+      "src_unit_test/src/vulkan/gpu_memory_allocator_vk_test.cpp",
+      "src_unit_test/src/vulkan/platform_hardware_buffer_util_vk_test.cpp",
+    ]
+  }
+  sources += [
 
     # Node - Nodes
     "src_unit_test/src/node/nodes/render_node_draw_indexed.cpp",
@@ -423,7 +428,7 @@ ohos_unittest("lume_render_src_test") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
-      "vma:vma"
+      "skia:skia_canvaskit", # vk mem allocator
     ]
   }
   
@@ -463,7 +468,7 @@ ohos_source_set("lume_render_src_static") {
   
   sources = [
     #"../../src/plugin/static_plugin.cpp", # already in lume_render_src
-    "../../src/plugin/static_registry.cpp",
+    #"../../src/plugin/static_registry.cpp", # already in lume_render_src
   ]
 
   configs = [

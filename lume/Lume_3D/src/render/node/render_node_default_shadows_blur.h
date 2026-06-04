@@ -42,22 +42,22 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "6bf65ac3-6ede-4baa-a61a-2207085b235c" };
-    static constexpr const char* const typeName = "RenderNodeDefaultShadowsBlur";
+    static constexpr BASE_NS::Uid UID{"6bf65ac3-6ede-4baa-a61a-2207085b235c"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultShadowsBlur";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     struct TemporaryImage {
         RENDER_NS::RenderHandleReference imageHandle;
-        uint32_t width { 0u };
-        uint32_t height { 0u };
-        BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
-        RENDER_NS::SampleCountFlags sampleCountFlags { RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT };
+        uint32_t width{0u};
+        uint32_t height{0u};
+        BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
+        RENDER_NS::SampleCountFlags sampleCountFlags{RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT};
     };
 
     void ProcessSingleShadow(RENDER_NS::IRenderCommandList& cmdList, const uint32_t drawIdx,
@@ -98,8 +98,8 @@ private:
     SceneRenderDataStores stores_;
 
     IRenderDataStoreDefaultLight::ShadowTypes shadowTypes_;
-    uint32_t shadowCount_ { 0U };
+    uint32_t shadowCount_{0U};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_SHADOWS_BLUR_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_SHADOWS_BLUR_H

@@ -25,8 +25,8 @@ META_REGISTER_INTERFACE(IObjectHierarchyObserver, "6ffa83ee-716a-4cff-aa09-b87f8
 META_REGISTER_INTERFACE(IOnHierarchyChanged, "e7dfaaee-79fa-4dbe-9fb0-1e89a1025183")
 
 struct IOnHierarchyChangedInfo {
-    constexpr static BASE_NS::Uid UID { META_NS::InterfaceId::IOnHierarchyChanged };
-    constexpr static char const* NAME { "OnHierarchyChanged" };
+    constexpr static BASE_NS::Uid UID{META_NS::InterfaceId::IOnHierarchyChanged};
+    constexpr static char const* NAME{"OnHierarchyChanged"};
 };
 
 /**
@@ -89,7 +89,7 @@ struct HierarchyChangedInfo {
     HierarchyChangeObjectType objectType;
     /** Index of the object within the container where change happened if available, otherwise maximum value of size_t.
      *  Only valid for CHILD and ATTACHMENT object types */
-    size_t index { size_t(-1) };
+    size_t index{size_t(-1)};
     /** Parent object in the hierarchy. */
     IObject::WeakPtr parent;
 };
@@ -123,7 +123,7 @@ public:
     /**
      * @brief Returns all currently monitored objects which implement a given interface.
      */
-    template<class T>
+    template <class T>
     BASE_NS::vector<typename T::Ptr> GetAllObserved() const
     {
         return PtrArrayCast<T>(GetAllObserved());
@@ -138,4 +138,4 @@ META_END_NAMESPACE()
 
 META_TYPE(META_NS::HierarchyChangedInfo)
 
-#endif // META_INTERFACE_IOBJECT_HIERARCHY_OBSERVER_H
+#endif  // META_INTERFACE_IOBJECT_HIERARCHY_OBSERVER_H

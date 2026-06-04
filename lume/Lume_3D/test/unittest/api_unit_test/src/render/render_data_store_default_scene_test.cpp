@@ -92,9 +92,9 @@ UNIT_TEST(API_RenderDataStoreDefaultScene, GetSetSceneTest, testing::ext::TestSi
     auto dataStoreDefaultScene = static_cast<IRenderDataStoreDefaultScene*>(dataStore.get());
     {
         auto scene = dataStoreDefaultScene->GetScene();
-        EXPECT_EQ(RenderScene {}.cameraIndex, scene.cameraIndex);
-        EXPECT_EQ(RenderScene {}.totalTime, scene.totalTime);
-        EXPECT_EQ(RenderScene {}.frameIndex, scene.frameIndex);
+        EXPECT_EQ(RenderScene{}.cameraIndex, scene.cameraIndex);
+        EXPECT_EQ(RenderScene{}.totalTime, scene.totalTime);
+        EXPECT_EQ(RenderScene{}.frameIndex, scene.frameIndex);
     }
     {
         RenderScene scene;
@@ -120,9 +120,9 @@ UNIT_TEST(API_RenderDataStoreDefaultScene, GetSetSceneTest, testing::ext::TestSi
     }
     {
         auto scene = dataStoreDefaultScene->GetScene("NonExistingScene");
-        EXPECT_EQ(RenderScene {}.cameraIndex, scene.cameraIndex);
-        EXPECT_EQ(RenderScene {}.totalTime, scene.totalTime);
-        EXPECT_EQ(RenderScene {}.frameIndex, scene.frameIndex);
+        EXPECT_EQ(RenderScene{}.cameraIndex, scene.cameraIndex);
+        EXPECT_EQ(RenderScene{}.totalTime, scene.totalTime);
+        EXPECT_EQ(RenderScene{}.frameIndex, scene.frameIndex);
     }
     // Destruction is deferred
     dataStore.reset();

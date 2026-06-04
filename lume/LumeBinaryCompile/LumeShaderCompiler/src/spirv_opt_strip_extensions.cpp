@@ -41,4 +41,4 @@ Pass::Status StripPreprocessorDebugInfoPass::Process()
     return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
-} // namespace spvtools::opt
+}  // namespace spvtools::opt

@@ -82,4 +82,4 @@ private:
     SCENE_NS::IVignette::WeakPtr vignette_;  // vignette object from postproc_
 };
 }  // namespace OHOS::Render3D
-#endif // OHOS_3D_VIGNETTE_ETS_H
+#endif  // OHOS_3D_VIGNETTE_ETS_H

@@ -22,7 +22,7 @@ namespace Internal {
 class Object : public MetaObject {
     META_OBJECT(Object, ClassId::Object, MetaObject)
 };
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

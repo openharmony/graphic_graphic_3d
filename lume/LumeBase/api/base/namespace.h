@@ -22,7 +22,7 @@
 #define BASE_NS Base
 
 #define BASE_BEGIN_NAMESPACE() namespace Base {
-#define BASE_END_NAMESPACE() } // namespace Base
+#define BASE_END_NAMESPACE() }  // namespace Base
 
 #ifndef CORE_NS
 #define CORE_NS Core
@@ -31,7 +31,7 @@
 #define CORE_BEGIN_NAMESPACE() namespace Core {
 #endif
 #ifndef CORE_END_NAMESPACE
-#define CORE_END_NAMESPACE() } // namespace Core
+#define CORE_END_NAMESPACE() }  // namespace Core
 #endif
 
-#endif // API_BASE_NAMESPACE_H
+#endif  // API_BASE_NAMESPACE_H

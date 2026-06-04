@@ -43,11 +43,16 @@ public:
     ~RenderDataStorePostProcess() override = default;
 
     // IRenderDataStore
-    void PreRender() override {}
-    void PostRender() override {}
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
-    void Clear() override {}
+    void PreRender() override
+    {}
+    void PostRender() override
+    {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
+    void Clear() override
+    {}
 
     uint32_t GetFlags() const override
     {
@@ -115,7 +120,7 @@ private:
 
     mutable std::mutex mutex_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 
 /**
@@ -125,20 +130,24 @@ class PostProcessConversionHelper final {
 public:
     static inline BASE_NS::Math::Vec4 GetFactorTonemap(const PostProcessConfiguration& input)
     {
-        return { input.tonemapConfiguration.exposure, 0.0f, 0.0f,
-            static_cast<float>(input.tonemapConfiguration.tonemapType) };
+        return {input.tonemapConfiguration.exposure,
+            0.0f,
+            0.0f,
+            static_cast<float>(input.tonemapConfiguration.tonemapType)};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorWhiteBalance(const PostProcessConfiguration& input)
     {
-        return { input.whiteBalanceConfiguration.temperature, input.whiteBalanceConfiguration.tint, 0.0f, 0.0f };
+        return {input.whiteBalanceConfiguration.temperature, input.whiteBalanceConfiguration.tint, 0.0f, 0.0f};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorColorAdjustments(const PostProcessConfiguration& input)
     {
         // .x = brightness, .y = contrast, .z = saturation, .w = hueShift
-        return { input.colorAdjustmentsConfiguration.brightness, input.colorAdjustmentsConfiguration.contrast,
-            input.colorAdjustmentsConfiguration.saturation, input.colorAdjustmentsConfiguration.hueShift };
+        return {input.colorAdjustmentsConfiguration.brightness,
+            input.colorAdjustmentsConfiguration.contrast,
+            input.colorAdjustmentsConfiguration.saturation,
+            input.colorAdjustmentsConfiguration.hueShift};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorColorAdjustmentsFilterColor(const PostProcessConfiguration& input)
@@ -148,50 +157,60 @@ public:
 
     static inline BASE_NS::Math::Vec4 GetFactorVignette(const PostProcessConfiguration& input)
     {
-        return { input.vignetteConfiguration.coefficient, input.vignetteConfiguration.power, 0.0f, 0.0f };
+        return {input.vignetteConfiguration.coefficient, input.vignetteConfiguration.power, 0.0f, 0.0f};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorDither(const PostProcessConfiguration& input)
     {
-        return { input.ditherConfiguration.amountCoefficient, 0, 0,
-            static_cast<float>(input.ditherConfiguration.ditherType) };
+        return {input.ditherConfiguration.amountCoefficient,
+            0,
+            0,
+            static_cast<float>(input.ditherConfiguration.ditherType)};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorColorConversion(const PostProcessConfiguration& input)
     {
-        return { 0.0f, 0.0f, 0.0f, static_cast<float>(input.colorConversionConfiguration.conversionFunctionType) };
+        return {0.0f, 0.0f, 0.0f, static_cast<float>(input.colorConversionConfiguration.conversionFunctionType)};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorFringe(const PostProcessConfiguration& input)
     {
         // coefficient is deprecated and not exposed as a property. to be compatible with old behavior multiply
         // coefficient with distanceCoefficient as x and set y to 1. this way old shader instances can still do x * y.
-        return { input.colorFringeConfiguration.coefficient * input.colorFringeConfiguration.distanceCoefficient, 1.0f,
-            0.0f, 0.0f };
+        return {input.colorFringeConfiguration.coefficient * input.colorFringeConfiguration.distanceCoefficient,
+            1.0f,
+            0.0f,
+            0.0f};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorUpscaler(const PostProcessConfiguration& input)
     {
-        return { 0.0f, 0.0f, 0.0f, static_cast<float>(input.upscaleConfiguration.ratio) };
+        return {0.0f, 0.0f, 0.0f, static_cast<float>(input.upscaleConfiguration.ratio)};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorBlur(const PostProcessConfiguration& input)
     {
-        return { static_cast<float>(input.blurConfiguration.blurType),
-            static_cast<float>(input.blurConfiguration.blurQualityType), input.blurConfiguration.filterSize, 0 };
+        return {static_cast<float>(input.blurConfiguration.blurType),
+            static_cast<float>(input.blurConfiguration.blurQualityType),
+            input.blurConfiguration.filterSize,
+            0};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorBloom(const PostProcessConfiguration& input)
     {
         // the bloom global factor does not include scatter
-        return { input.bloomConfiguration.thresholdHard, input.bloomConfiguration.thresholdSoft,
-            input.bloomConfiguration.amountCoefficient, input.bloomConfiguration.dirtMaskCoefficient };
+        return {input.bloomConfiguration.thresholdHard,
+            input.bloomConfiguration.thresholdSoft,
+            input.bloomConfiguration.amountCoefficient,
+            input.bloomConfiguration.dirtMaskCoefficient};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorFxaa(const PostProcessConfiguration& input)
     {
-        return { static_cast<float>(input.fxaaConfiguration.sharpness),
-            static_cast<float>(input.fxaaConfiguration.quality), 0.0f, 0.0f };
+        return {static_cast<float>(input.fxaaConfiguration.sharpness),
+            static_cast<float>(input.fxaaConfiguration.quality),
+            0.0f,
+            0.0f};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorTaa(const PostProcessConfiguration& input)
@@ -214,8 +233,10 @@ public:
 
         const float* vcb = reinterpret_cast<float*>(&varianceClippingBicubic);
 
-        return { static_cast<float>(input.taaConfiguration.sharpness),
-            static_cast<float>(input.taaConfiguration.quality), *vcb, alpha };
+        return {static_cast<float>(input.taaConfiguration.sharpness),
+            static_cast<float>(input.taaConfiguration.quality),
+            *vcb,
+            alpha};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorDof(const PostProcessConfiguration& input)
@@ -225,13 +246,15 @@ public:
         const float nearTransitionStart = (focusStart - input.dofConfiguration.nearTransitionRange);
         const float farTransitionEnd = (focusEnd + input.dofConfiguration.farTransitionRange);
 
-        return { nearTransitionStart, focusStart, focusEnd, farTransitionEnd };
+        return {nearTransitionStart, focusStart, focusEnd, farTransitionEnd};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorDof2(const PostProcessConfiguration& input)
     {
-        return { input.dofConfiguration.nearBlur, input.dofConfiguration.farBlur, input.dofConfiguration.nearPlane,
-            input.dofConfiguration.farPlane };
+        return {input.dofConfiguration.nearBlur,
+            input.dofConfiguration.farBlur,
+            input.dofConfiguration.nearPlane,
+            input.dofConfiguration.farPlane};
     }
 
     static inline BASE_NS::Math::Vec4 GetFactorMotionBlur(const PostProcessConfiguration& input)
@@ -246,4 +269,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_POST_PROCESS_H
+#endif  // RENDER_DATA_STORE_RENDER_DATA_STORE_POST_PROCESS_H

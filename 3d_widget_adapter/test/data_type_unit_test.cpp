@@ -30,10 +30,14 @@ namespace OHOS::Render3D {
 
 class DataTypeUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 // Vec3 Tests
@@ -789,4 +793,4 @@ HWTEST_F(DataTypeUT, Light_SpotLightType_HandledCorrectly, TestSize.Level1)
     EXPECT_FALSE(light.GetLightShadow());
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

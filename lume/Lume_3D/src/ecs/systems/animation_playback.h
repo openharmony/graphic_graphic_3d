@@ -69,10 +69,10 @@ private:
 
     CORE_NS::IEcs& ecs_;
 
-    IAnimationComponentManager* animationManager_ { nullptr };
-    IAnimationStateComponentManager* animationStateManager_ { nullptr };
-    INameComponentManager* nameManager_ { nullptr };
+    IAnimationComponentManager* animationManager_{nullptr};
+    IAnimationStateComponentManager* animationStateManager_{nullptr};
+    INameComponentManager* nameManager_{nullptr};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ANIMATION_PLAYBACK_H
+#endif  // CORE_ANIMATION_PLAYBACK_H

@@ -50,15 +50,15 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 2u, 2u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{2u, 2u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y;
 static constexpr size_t IMAGE_BYTES = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 // red, green, blue, yellow, violet
-static constexpr uint32_t TEST_IMAGE_COLORS[] = { 0xFF0000ff, 0xFF00ff00, 0xFFff0000, 0xFF00ffff, 0xFFFFff00 };
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
-static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
+static constexpr uint32_t TEST_IMAGE_COLORS[] = {0xFF0000ff, 0xFF00ff00, 0xFFff0000, 0xFF00ffff, 0xFFFFff00};
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
+static constexpr string_view COPY_BUFFER_NAME_0{"CopyBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -95,7 +95,7 @@ TestResources CreateTestResources(UTest::EngineResources& er)
         imageDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         imageDesc.usageFlags = CORE_IMAGE_USAGE_TRANSFER_SRC_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT |
                                CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        const array_view<const uint8_t> dataView = { (uint8_t*)TEST_IMAGE_COLORS, sizeof(TEST_IMAGE_COLORS) };
+        const array_view<const uint8_t> dataView = {(uint8_t*)TEST_IMAGE_COLORS, sizeof(TEST_IMAGE_COLORS)};
         res.inputImageHandle0 = er.device->GetGpuResourceManager().Create(INPUT_IMAGE_NAME_0, imageDesc, dataView);
     }
     // Output image
@@ -157,9 +157,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = TEST_DATA_SIZE.x;
                 bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE.y;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
 
                 dsStaging->CopyImageToBuffer(td.resources.outputImageHandle0, tr.copyBufferHandle0, bufferImageCopy);
             }
@@ -187,7 +187,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 rfUtil.AddGpuSignal({});
             }
 
-            er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
 
             // wait for signals
             {
@@ -262,7 +262,7 @@ void TestGpuSignal(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -275,7 +275,7 @@ UNIT_TEST(API_GfxGpuSignal, GfxGpuSignalTestVulkan, testing::ext::TestSize.Level
 {
     TestGpuSignal(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -288,4 +288,4 @@ UNIT_TEST(API_GfxGpuSignal, GfxGpuSignalTestOpenGL, testing::ext::TestSize.Level
 {
     TestGpuSignal(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

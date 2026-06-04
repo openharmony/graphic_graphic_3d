@@ -62,7 +62,7 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_CreateFrustum_PerspectiveMatrix, test
     FrustumUtil frustumUtil;
 
     // Create a simple perspective projection matrix
-    const float fov = 1.57f; // ~90 degrees
+    const float fov = 1.57f;  // ~90 degrees
     const float aspect = 16.0f / 9.0f;
     const float nearPlane = 0.1f;
     const float farPlane = 100.0f;
@@ -152,7 +152,7 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumCollision_SphereBehind, 
     Frustum frustum = frustumUtil.CreateFrustum(projection);
 
     // Sphere behind near plane
-    Vec3 position(0.0f, 0.0f, 0.05f); // Too close, behind near plane
+    Vec3 position(0.0f, 0.0f, 0.05f);  // Too close, behind near plane
     float radius = 0.01f;
 
     bool result = frustumUtil.SphereFrustumCollision(frustum, position, radius);
@@ -177,7 +177,7 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumCollision_SphereBeyondFa
     Frustum frustum = frustumUtil.CreateFrustum(projection);
 
     // Sphere beyond far plane
-    Vec3 position(0.0f, 0.0f, -200.0f); // Beyond far plane
+    Vec3 position(0.0f, 0.0f, -200.0f);  // Beyond far plane
     float radius = 1.0f;
 
     bool result = frustumUtil.SphereFrustumCollision(frustum, position, radius);
@@ -409,17 +409,17 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumCollision_MultiplePositi
     };
 
     BASE_NS::vector<TestCase> testCases;
-    testCases.push_back({ Vec3(0.0f, 0.0f, -10.0f), 1.0f, true });   // Center
-    testCases.push_back({ Vec3(-5.0f, 0.0f, -10.0f), 1.0f, true });  // Slightly left
-    testCases.push_back({ Vec3(5.0f, 0.0f, -10.0f), 1.0f, true });   // Slightly right
-    testCases.push_back({ Vec3(0.0f, 3.0f, -10.0f), 1.0f, true });   // Slightly up
-    testCases.push_back({ Vec3(0.0f, -3.0f, -10.0f), 1.0f, true });  // Slightly down
-    testCases.push_back({ Vec3(0.0f, 0.0f, -1.0f), 1.0f, true });   // Close to near
-    testCases.push_back({ Vec3(0.0f, 0.0f, -50.0f), 1.0f, true });  // Close to far
-    testCases.push_back({ Vec3(-50.0f, 0.0f, -10.0f), 1.0f, false }); // Far left
-    testCases.push_back({ Vec3(50.0f, 0.0f, -10.0f), 1.0f, false });  // Far right
-    testCases.push_back({ Vec3(0.0f, 50.0f, -10.0f), 1.0f, false });  // Far up
-    testCases.push_back({ Vec3(0.0f, -50.0f, -10.0f), 1.0f, false }); // Far down
+    testCases.push_back({Vec3(0.0f, 0.0f, -10.0f), 1.0f, true});     // Center
+    testCases.push_back({Vec3(-5.0f, 0.0f, -10.0f), 1.0f, true});    // Slightly left
+    testCases.push_back({Vec3(5.0f, 0.0f, -10.0f), 1.0f, true});     // Slightly right
+    testCases.push_back({Vec3(0.0f, 3.0f, -10.0f), 1.0f, true});     // Slightly up
+    testCases.push_back({Vec3(0.0f, -3.0f, -10.0f), 1.0f, true});    // Slightly down
+    testCases.push_back({Vec3(0.0f, 0.0f, -1.0f), 1.0f, true});      // Close to near
+    testCases.push_back({Vec3(0.0f, 0.0f, -50.0f), 1.0f, true});     // Close to far
+    testCases.push_back({Vec3(-50.0f, 0.0f, -10.0f), 1.0f, false});  // Far left
+    testCases.push_back({Vec3(50.0f, 0.0f, -10.0f), 1.0f, false});   // Far right
+    testCases.push_back({Vec3(0.0f, 50.0f, -10.0f), 1.0f, false});   // Far up
+    testCases.push_back({Vec3(0.0f, -50.0f, -10.0f), 1.0f, false});  // Far down
 
     for (const auto& testCase : testCases) {
         bool result = frustumUtil.SphereFrustumCollision(frustum, testCase.position, testCase.radius);
@@ -495,7 +495,7 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumAllPlaneTests, testing::
     FrustumUtil frustumUtil;
 
     const float fov = 1.57f;
-    const float aspect = 1.0f; // Square aspect for simpler calculations
+    const float aspect = 1.0f;  // Square aspect for simpler calculations
     const float nearPlane = 1.0f;
     const float farPlane = 100.0f;
 
@@ -516,12 +516,12 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumAllPlaneTests, testing::
     };
 
     BASE_NS::vector<OutsideTest> outsideTests;
-    outsideTests.push_back({ Vec3(-(halfWidth + 2.0f), 0.0f, zPos), "left" });
-    outsideTests.push_back({ Vec3(halfWidth + 2.0f, 0.0f, zPos), "right" });
-    outsideTests.push_back({ Vec3(0.0f, -(halfHeight + 2.0f), zPos), "bottom" });
-    outsideTests.push_back({ Vec3(0.0f, halfHeight + 2.0f, zPos), "top" });
-    outsideTests.push_back({ Vec3(0.0f, 0.0f, -0.5f), "near" });
-    outsideTests.push_back({ Vec3(0.0f, 0.0f, -150.0f), "far" });
+    outsideTests.push_back({Vec3(-(halfWidth + 2.0f), 0.0f, zPos), "left"});
+    outsideTests.push_back({Vec3(halfWidth + 2.0f, 0.0f, zPos), "right"});
+    outsideTests.push_back({Vec3(0.0f, -(halfHeight + 2.0f), zPos), "bottom"});
+    outsideTests.push_back({Vec3(0.0f, halfHeight + 2.0f, zPos), "top"});
+    outsideTests.push_back({Vec3(0.0f, 0.0f, -0.5f), "near"});
+    outsideTests.push_back({Vec3(0.0f, 0.0f, -150.0f), "far"});
 
     for (const auto& test : outsideTests) {
         bool result = frustumUtil.SphereFrustumCollision(frustum, test.position, 0.1f);
@@ -535,12 +535,12 @@ UNIT_TEST(SRC_FrustumUtilTest, FrustumUtil_SphereFrustumAllPlaneTests, testing::
     };
 
     BASE_NS::vector<InsideTest> insideTests;
-    insideTests.push_back({ Vec3(-(halfWidth - 1.0f), 0.0f, zPos), "left" });
-    insideTests.push_back({ Vec3(halfWidth - 1.0f, 0.0f, zPos), "right" });
-    insideTests.push_back({ Vec3(0.0f, -(halfHeight - 1.0f), zPos), "bottom" });
-    insideTests.push_back({ Vec3(0.0f, halfHeight - 1.0f, zPos), "top" });
-    insideTests.push_back({ Vec3(0.0f, 0.0f, -1.5f), "near" });
-    insideTests.push_back({ Vec3(0.0f, 0.0f, -90.0f), "far" });
+    insideTests.push_back({Vec3(-(halfWidth - 1.0f), 0.0f, zPos), "left"});
+    insideTests.push_back({Vec3(halfWidth - 1.0f, 0.0f, zPos), "right"});
+    insideTests.push_back({Vec3(0.0f, -(halfHeight - 1.0f), zPos), "bottom"});
+    insideTests.push_back({Vec3(0.0f, halfHeight - 1.0f, zPos), "top"});
+    insideTests.push_back({Vec3(0.0f, 0.0f, -1.5f), "near"});
+    insideTests.push_back({Vec3(0.0f, 0.0f, -90.0f), "far"});
 
     for (const auto& test : insideTests) {
         bool result = frustumUtil.SphereFrustumCollision(frustum, test.position, 0.1f);

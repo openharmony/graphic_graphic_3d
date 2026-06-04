@@ -24,6 +24,11 @@
 
 CORE_BEGIN_NAMESPACE()
 
+class IResourceManager;
+using ResourceContextPtr = BASE_NS::shared_ptr<IInterface>;
+using ResourceContextWeakPtr = BASE_NS::weak_ptr<IInterface>;
+using ResourceManagerPtr = BASE_NS::shared_ptr<IResourceManager>;
+
 /**
  * @brief Type to identify resource
  */
@@ -32,9 +37,12 @@ struct ResourceId {
     BASE_NS::string group;
 
     ResourceId() = default;
-    ResourceId(const char* name) : name(name) {}
-    ResourceId(BASE_NS::string name) : name(BASE_NS::move(name)) {}
-    ResourceId(BASE_NS::string name, BASE_NS::string group) : name(BASE_NS::move(name)), group(BASE_NS::move(group)) {}
+    ResourceId(const char* name) : name(name)
+    {}
+    ResourceId(BASE_NS::string name) : name(BASE_NS::move(name))
+    {}
+    ResourceId(BASE_NS::string name, BASE_NS::string group) : name(BASE_NS::move(name)), group(BASE_NS::move(group))
+    {}
 
     bool IsValid() const
     {
@@ -60,21 +68,37 @@ struct ResourceId {
 };
 using ResourceType = BASE_NS::Uid;
 
+struct ResourceIdContext {
+    ResourceIdContext() = default;
+    explicit ResourceIdContext(ResourceId id) : id(BASE_NS::move(id))
+    {}
+    ResourceIdContext(ResourceId id, ResourceContextWeakPtr context)
+        : id(BASE_NS::move(id)), context(BASE_NS::move(context))
+    {}
+
+    ResourceId id;
+    ResourceContextWeakPtr context;
+};
+
 /**
  * @brief Type that is used to select resource ids
  */
 struct MatchingResourceId {
     /// Match all names and groups
-    MatchingResourceId() : hasWildCardName(true), hasWildCardGroup(true) {}
+    MatchingResourceId() : hasWildCardName(true), hasWildCardGroup(true)
+    {}
     /// Match all names in given group
-    MatchingResourceId(BASE_NS::string group) : hasWildCardName(true), group(BASE_NS::move(group)) {}
-    MatchingResourceId(BASE_NS::string_view group) : hasWildCardName(true), group(group) {}
+    MatchingResourceId(BASE_NS::string group) : hasWildCardName(true), group(BASE_NS::move(group))
+    {}
+    MatchingResourceId(BASE_NS::string_view group) : hasWildCardName(true), group(group)
+    {}
     /// Match specific resource
-    MatchingResourceId(const ResourceId& id) : name(id.name), group(id.group) {}
+    MatchingResourceId(const ResourceId& id) : name(id.name), group(id.group)
+    {}
 
-    bool hasWildCardName {};
+    bool hasWildCardName{};
     BASE_NS::string name;
-    bool hasWildCardGroup {};
+    bool hasWildCardGroup{};
     BASE_NS::string group;
 };
 
@@ -84,7 +108,7 @@ struct MatchingResourceId {
 class IResource : public IInterface {
 public:
     using base = IInterface;
-    static constexpr BASE_NS::Uid UID { "597e8395-4990-492c-9cac-ad32804c0dfd" };
+    static constexpr BASE_NS::Uid UID{"597e8395-4990-492c-9cac-ad32804c0dfd"};
     using Ptr = BASE_NS::shared_ptr<IResource>;
     using ConstPtr = BASE_NS::shared_ptr<const IResource>;
     using WeakPtr = BASE_NS::weak_ptr<IResource>;
@@ -100,6 +124,11 @@ public:
      */
     virtual ResourceId GetResourceId() const = 0;
 
+    /** Get context of this resource if any
+     * @return context object
+     */
+    virtual ResourceContextWeakPtr GetContext() const = 0;
+
 protected:
     IResource() = default;
     virtual ~IResource() = default;
@@ -113,13 +142,13 @@ protected:
 class ISetResourceId : public IInterface {
 public:
     using base = IInterface;
-    static constexpr BASE_NS::Uid UID { "1d2aa2c6-7a08-49bf-a360-aecf201a8681" };
+    static constexpr BASE_NS::Uid UID{"1d2aa2c6-7a08-49bf-a360-aecf201a8681"};
     using Ptr = BASE_NS::shared_ptr<ISetResourceId>;
     using ConstPtr = BASE_NS::shared_ptr<const ISetResourceId>;
     using WeakPtr = BASE_NS::weak_ptr<ISetResourceId>;
     using ConstWeakPtr = BASE_NS::weak_ptr<const ISetResourceId>;
 
-    virtual void SetResourceId(CORE_NS::ResourceId) = 0;
+    virtual void SetResourceId(ResourceIdContext) = 0;
 
 protected:
     ISetResourceId() = default;
@@ -128,24 +157,22 @@ protected:
     void operator=(const ISetResourceId&) = delete;
 };
 
-class IResourceManager;
-using ResourceContextPtr = BASE_NS::shared_ptr<IInterface>;
-using ResourceManagerPtr = BASE_NS::shared_ptr<IResourceManager>;
-
 /**
  * @brief Base class for options that can be used to construct resources
  */
 class IResourceOptions : public IInterface {
 public:
     using base = IInterface;
-    static constexpr BASE_NS::Uid UID { "c523171f-c6b8-40a2-939a-eb10672bb87c" };
+    static constexpr BASE_NS::Uid UID{"c523171f-c6b8-40a2-939a-eb10672bb87c"};
     using Ptr = BASE_NS::shared_ptr<IResourceOptions>;
     using ConstPtr = BASE_NS::shared_ptr<const IResourceOptions>;
     using WeakPtr = BASE_NS::weak_ptr<IResourceOptions>;
     using ConstWeakPtr = BASE_NS::weak_ptr<const IResourceOptions>;
 
-    virtual bool Load(IFile& options, const ResourceManagerPtr&, const ResourceContextPtr&) = 0;
-    virtual bool Save(IFile& options, const ResourceManagerPtr&, const ResourceContextPtr&) const = 0;
+    virtual bool ApplyOptions(IResource&, const ResourceContextPtr& context) const = 0;
+    virtual bool UpdateOptions(const IResource&, const ResourceContextPtr& context) = 0;
+    virtual bool Merge(const IResourceOptions&) = 0;
+    virtual IResourceOptions::Ptr Clone() const = 0;
 
 protected:
     IResourceOptions() = default;
@@ -156,10 +183,16 @@ protected:
 
 CORE_END_NAMESPACE()
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const CORE_NS::ResourceId& id)
 {
     return BASE_NS::Hash(id.name, id.group);
 }
 
-#endif // API_CORE_RESOURCES_IRESOURCE_H
+template <>
+inline uint64_t BASE_NS::hash(const CORE_NS::ResourceIdContext& idc)
+{
+    return BASE_NS::Hash(idc.id, idc.context.GetRawPointer());
+}
+
+#endif  // API_CORE_RESOURCES_IRESOURCE_H

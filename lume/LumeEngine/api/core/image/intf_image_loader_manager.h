@@ -29,7 +29,7 @@
 #include <core/plugin/intf_plugin.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -45,7 +45,7 @@ public:
     /** Describes result of the loading operation. */
     struct LoadResult {
         /** Load result was successful? */
-        bool success { false };
+        bool success{false};
         /** Load result error message if load was not successful. */
         char error[MAX_ERR_MSG_LEN];
 
@@ -56,7 +56,7 @@ public:
     /** Describes result of the animation loading operation. */
     struct LoadAnimatedResult {
         /** Load result was successful? */
-        bool success { false };
+        bool success{false};
         /** Load result error message if load was not successful. */
         char error[MAX_ERR_MSG_LEN];
 
@@ -115,7 +115,7 @@ public:
          */
         virtual LoadResult Load(IFile& file, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount) const
         {
-            return LoadResult {};
+            return LoadResult{};
         }
 
         /** Load image file from given data bytes
@@ -163,7 +163,7 @@ public:
     /** Information needed from the plugin for managing ImageLoaders. */
     struct ImageLoaderTypeInfo : public ITypeInfo {
         /** TypeInfo UID for image loader type info. */
-        static constexpr BASE_NS::Uid UID { "d6846818-5083-43fc-b9ff-28905a2b4ae2" };
+        static constexpr BASE_NS::Uid UID{"d6846818-5083-43fc-b9ff-28905a2b4ae2"};
 
         using CreateLoaderFn = IImageLoader::Ptr (*)(PluginToken);
         /* Token passed to loader creation (e.g. plugin specific data). */
@@ -184,7 +184,7 @@ public:
      * @param imageLoader Image loader to be registered
      */
     [[deprecated("Use IPluginRegister::Register/UnregisterTypeInfo with ImageLoaderTypeInfo.")]] virtual void
-    RegisterImageLoader(IImageLoader::Ptr imageLoader) = 0;
+        RegisterImageLoader(IImageLoader::Ptr imageLoader) = 0;
 
     /** Load image with given parameters
      * @param uri Uri to image
@@ -201,7 +201,7 @@ public:
     virtual LoadResult LoadImage(
         const BASE_NS::string_view uri, uint32_t loadFlags, uint32_t rowCount, uint32_t columnCount)
     {
-        return LoadResult {};
+        return LoadResult{};
     }
 
     /** Load image with given parameters
@@ -246,4 +246,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IMAGE_IIMAGE_LOADER_MANAGER_H
+#endif  // API_CORE_IMAGE_IIMAGE_LOADER_MANAGER_H

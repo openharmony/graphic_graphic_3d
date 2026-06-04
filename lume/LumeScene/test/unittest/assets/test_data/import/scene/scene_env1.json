@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"description": "test scene with environment image references",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_env1.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root"
+		}
+	}
+}

@@ -1,0 +1,26 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "comp-nt-group",
+            "components": [
+                {
+                    "path": ".//AnimatedCube",
+                    "name": "RenderConfigurationComponent",
+                    "properties": [
+                        { "name": "ShadowType", "value": 0 },
+                        { "name": "ShadowQuality", "value": 3 }
+                    ]
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

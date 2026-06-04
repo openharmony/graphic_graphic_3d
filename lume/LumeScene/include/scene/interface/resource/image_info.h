@@ -109,31 +109,34 @@ constexpr inline EngineImageCreationFlag operator|(EngineImageCreationFlag l, En
 }
 
 struct ImageInfo {
-    ImageUsageFlag usageFlags {};
-    MemoryPropertyFlag memoryFlags {};
-    EngineImageCreationFlag creationFlags {};
+    ImageUsageFlag usageFlags{};
+    MemoryPropertyFlag memoryFlags{};
+    EngineImageCreationFlag creationFlags{};
 };
 
 struct ImageLoadInfo {
-    ImageLoadFlags loadFlags {};
+    ImageLoadFlags loadFlags{};
     ImageInfo info;
 };
 
 struct ImageCreateInfo {
-    BASE_NS::Math::UVec2 size {};
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB };
+    BASE_NS::Math::UVec2 size{};
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB};
     ImageInfo info;
 };
 
-constexpr ImageCreateInfo DEFAULT_RENDER_TARGET_CREATE_INFO = { {}, BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB,
-    { ImageUsageFlag::COLOR_ATTACHMENT_BIT, MemoryPropertyFlag::DEVICE_LOCAL_BIT,
-        EngineImageCreationFlag::RESET_STATE_ON_FRAME_BORDERS | EngineImageCreationFlag::DYNAMIC_BARRIERS } };
+constexpr ImageCreateInfo DEFAULT_RENDER_TARGET_CREATE_INFO = {{},
+    BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB,
+    {ImageUsageFlag::COLOR_ATTACHMENT_BIT,
+        MemoryPropertyFlag::DEVICE_LOCAL_BIT,
+        EngineImageCreationFlag::RESET_STATE_ON_FRAME_BORDERS | EngineImageCreationFlag::DYNAMIC_BARRIERS}};
 
 constexpr ImageCreateInfo DEFAULT_IMAGE_CREATE_INFO = DEFAULT_RENDER_TARGET_CREATE_INFO;
 
-constexpr ImageLoadInfo DEFAULT_IMAGE_LOAD_INFO = { ImageLoadFlags::GENERATE_MIPS,
-    ImageInfo { ImageUsageFlag::SAMPLED_BIT | ImageUsageFlag::TRANSFER_DST_BIT | ImageUsageFlag::TRANSFER_SRC_BIT,
-        MemoryPropertyFlag::DEVICE_LOCAL_BIT, EngineImageCreationFlag::GENERATE_MIPS } };
+constexpr ImageLoadInfo DEFAULT_IMAGE_LOAD_INFO = {ImageLoadFlags::GENERATE_MIPS,
+    ImageInfo{ImageUsageFlag::SAMPLED_BIT | ImageUsageFlag::TRANSFER_DST_BIT | ImageUsageFlag::TRANSFER_SRC_BIT,
+        MemoryPropertyFlag::DEVICE_LOCAL_BIT,
+        EngineImageCreationFlag::GENERATE_MIPS}};
 
 SCENE_END_NAMESPACE()
 

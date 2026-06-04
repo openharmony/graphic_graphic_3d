@@ -46,8 +46,8 @@ RENDER_END_NAMESPACE()
  http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
 */
 
-const float CORE_BLUR_OFFSETS[CORE_BLUR_FILTER_SIZE] = { 0.0, 1.3846153846, 3.2307692308 };
-const float CORE_BLUR_WEIGHTS[CORE_BLUR_FILTER_SIZE] = { 0.2270270270, 0.3162162162, 0.0702702703 };
+const float CORE_BLUR_OFFSETS[CORE_BLUR_FILTER_SIZE] = {0.0, 1.3846153846, 3.2307692308};
+const float CORE_BLUR_WEIGHTS[CORE_BLUR_FILTER_SIZE] = {0.2270270270, 0.3162162162, 0.0702702703};
 
 vec4 GaussianBlurRGBA(
     texture2D tex, sampler sampl, const vec2 fragCoord, const vec2 uv, const vec2 dir, const vec2 invTexSize)
@@ -301,7 +301,7 @@ vec4 DownscaleRGBADof(
     vec4 color = vec4(0);
 
     // 1.0 / 8.0 = 0.125
-    float weights[5] = { 0.5, 0.125, 0.125, 0.125, 0.125 };
+    float weights[5] = {0.5, 0.125, 0.125, 0.125, 0.125};
     vec4 samples[5] = {
         // center
         textureLod(sampler2D(tex, sampl), uv, 0),
@@ -415,4 +415,4 @@ vec4 DownscaleRGBALayer(
 }
 #endif
 
-#endif // API_RENDER_SHADERS_COMMON_CORE_BLUR_COMMON_H
+#endif  // API_RENDER_SHADERS_COMMON_CORE_BLUR_COMMON_H

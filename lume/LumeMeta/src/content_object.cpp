@@ -25,7 +25,6 @@
 #include <meta/interface/intf_content.h>
 #include <meta/interface/intf_iterable.h>
 #include <meta/interface/intf_required_interfaces.h>
-#include <meta/interface/loaders/intf_dynamic_content_loader.h>
 
 #include "object.h"
 
@@ -72,7 +71,8 @@ public:
     void OnSerializeChanged()
     {
         if (auto cont = META_ACCESS_PROPERTY(Content)) {
-            META_NS::SetObjectFlags(cont.GetProperty(), ObjectFlagBits::SERIALIZE,
+            META_NS::SetObjectFlags(cont.GetProperty(),
+                ObjectFlagBits::SERIALIZE,
                 GetObjectFlags().IsSet(ObjectFlagBits::SERIALIZE_HIERARCHY));
         }
     }
@@ -116,7 +116,7 @@ public:
         return !object || CheckInterfaces(object, requiredInterfaces_, true);
     }
 
-    template<typename Func>
+    template <typename Func>
     IterationResult IterateImpl(const Func& f) const
     {
         if (!f) {

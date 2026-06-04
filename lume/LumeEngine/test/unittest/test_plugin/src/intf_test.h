@@ -24,7 +24,7 @@
 namespace UTest {
 class ITest : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "12345678-1234-1234-1234-deadbeef0000" };
+    static constexpr BASE_NS::Uid UID{"12345678-1234-1234-1234-deadbeef0000"};
     using Ptr = BASE_NS::refcnt_ptr<ITest>;
 
     enum class Type { STATIC, SHARED, STATIC_GLOBAL, SHARED_GLOBAL };
@@ -75,7 +75,7 @@ public:
     }
 
 private:
-    std::atomic<int32_t> refcnt_ { 0 };
+    std::atomic<int32_t> refcnt_{0};
 };
-} // namespace UTest
-#endif // CORE_TEST_PLUGIN_INTF_TEST
+}  // namespace UTest
+#endif  // CORE_TEST_PLUGIN_INTF_TEST

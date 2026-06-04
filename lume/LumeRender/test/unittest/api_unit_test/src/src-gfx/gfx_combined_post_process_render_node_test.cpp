@@ -37,13 +37,13 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 512u, 512u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{512u, 512u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(float) / 4u;
 float imageData[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -69,22 +69,22 @@ array_view<const uint8_t> CreateImageDataView()
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             constexpr float value = 15.f;
             if (i < TEST_DATA_SIZE.x / 2 && (i + j) % 2 == 0) {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = value; // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = 0.f;   // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 0.f;   // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f;   // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = value;  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = 0.f;    // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 0.f;    // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f;    // A
             } else {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = 0.f;   // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = value; // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 0.f;   // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f;   // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = 0.f;    // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = value;  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = 0.f;    // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = 1.f;    // A
             }
         }
     }
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage("CombinedPostProcessTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, imageData);
-#endif // RENDER_SAVE_TEST_IMAGES
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+#endif  // RENDER_SAVE_TEST_IMAGES
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResources(
@@ -144,7 +144,7 @@ TestResources CreateTestResources(
             ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
         }
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         res.dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView);
     }
     // Render node graph
@@ -189,12 +189,12 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderFrame({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderFrame({&tr.renderNodeGraph, 1u});
         } else {
             er.context->GetRenderer().RenderFrame({});
         }
@@ -252,7 +252,7 @@ void ValidateDataTest(const TestData& td, bool onlyBlit, bool useAa)
 #if RENDER_SAVE_TEST_IMAGES == 1
     UTest::SaveHdrImage(
         GetFileName(td.engine, onlyBlit, useAa), TEST_DATA_SIZE.x / 2u, TEST_DATA_SIZE.y / 2u, outputImageData);
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x / 2u; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y / 2u; ++j) {
             constexpr size_t stride = TEST_DATA_SIZE.y / 2u;
@@ -299,7 +299,7 @@ void TestCombinedPostProcessRenderNode(DeviceBackendType backend, bool onlyBlit,
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -341,7 +341,7 @@ UNIT_TEST(API_GfxCombinedPostProcessRenderNode, AntiAliasingTestVulkan, testing:
 {
     TestCombinedPostProcessRenderNode(DeviceBackendType::VULKAN, false, true, false);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -374,7 +374,6 @@ UNIT_TEST(API_GfxCombinedPostProcessRenderNode, MipmapBlurTestOpenGL, testing::e
 {
     TestCombinedPostProcessRenderNode(UTest::GetOpenGLBackend(), false, false, true);
 }
-#ifdef DISABLED_TESTS_ON
 #if NDEBUG
 /**
  * @tc.name: AntiAliasingTestOpenGL
@@ -388,10 +387,9 @@ UNIT_TEST(API_GfxCombinedPostProcessRenderNode, AntiAliasingTestOpenGL, testing:
  * @tc.desc: Tests for Anti Aliasing Test Open Gl. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_GfxCombinedPostProcessRenderNode, DISABLED_AntiAliasingTestOpenGL, testing::ext::TestSize.Level1)
-#endif // NDEBUG
+UNIT_TEST(API_GfxCombinedPostProcessRenderNode, AntiAliasingTestOpenGL, testing::ext::TestSize.Level1)
+#endif  // NDEBUG
 {
     TestCombinedPostProcessRenderNode(UTest::GetOpenGLBackend(), false, true, false);
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -135,22 +135,13 @@ static void CopyShaderFiles(CORE_NS::IFileManager& manager, BASE_NS::string_view
     CopyShaderFile(manager, dir, "test.shader");
 }
 
-#ifdef DISABLED_TESTS_ON
-#ifdef _WIN32
+#if !defined(__ANDROID__) && !defined(__OHOS__)
 /**
  * @tc.name: ShaderResourceReload
  * @tc.desc: Tests for Shader Resource Reload. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestSize.Level1)
-#else
-/**
- * @tc.name: ShaderResourceReload
- * @tc.desc: Tests for Shader Resource Reload. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestSize.Level1)
-#endif
 {
     CreateEmptyScene();
     auto material = CreateMaterial();
@@ -159,9 +150,10 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
     auto& manager = context->GetRenderer()->GetEngine().GetFileManager();
     CopyShaderFiles(manager, "1");
 
-    EXPECT_TRUE(
-        resources->AddResource("shader", ClassId::ShaderResource.Id().ToUid(), "file://shader_reload/test.shader"));
-    auto shader = interface_pointer_cast<IShader>(resources->GetResource("shader"));
+    EXPECT_TRUE(resources->AddResource(CORE_NS::ResourceIdContext{"shader"},
+        ClassId::ShaderResource.Id().ToUid(),
+        "file://shader_reload/test.shader"));
+    auto shader = interface_pointer_cast<IShader>(resources->GetResource(CORE_NS::ResourceIdContext{"shader"}));
     ASSERT_TRUE(shader);
 
     material->MaterialShader()->SetValue(shader);
@@ -170,10 +162,26 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
 
     {
         auto meta = material->CustomProperties()->GetValue();
-        EXPECT_EQ(meta->GetProperties().size(), 1);
+        EXPECT_EQ(meta->GetProperties().size(), 3);
         auto p1 = meta->GetProperty<uint32_t>("var1");
         ASSERT_TRUE(p1);
         EXPECT_EQ(p1->GetValue(), 1);
+        EXPECT_TRUE(p1->IsDefaultValue());
+
+        auto p2 = meta->GetProperty<uint32_t>("var2");
+        ASSERT_TRUE(p2);
+        EXPECT_EQ(p2->GetValue(), 2);
+        EXPECT_TRUE(p2->IsDefaultValue());
+
+        auto p4 = meta->GetProperty<uint32_t>("var4");
+        ASSERT_TRUE(p4);
+        EXPECT_EQ(p4->GetValue(), 10);
+        EXPECT_TRUE(p4->IsDefaultValue());
+
+        // set a user value on var4 to verify it survives reload
+        p4->SetValue(42);
+        EXPECT_EQ(p4->GetValue(), 42);
+        EXPECT_FALSE(p4->IsDefaultValue());
 
         auto textures = material->Textures()->GetValue();
         ASSERT_EQ(textures.size(), 11);
@@ -192,13 +200,29 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
 
     {
         auto meta = material->CustomProperties()->GetValue();
-        EXPECT_EQ(meta->GetProperties().size(), 2);
+        EXPECT_EQ(meta->GetProperties().size(), 4);
         auto p1 = meta->GetProperty<uint32_t>("var1");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), 1);
+        EXPECT_EQ(p1->GetValue(), 2);
+        EXPECT_TRUE(p1->IsDefaultValue());
+
         auto p2 = meta->GetProperty<uint32_t>("var2");
         ASSERT_TRUE(p2);
         EXPECT_EQ(p2->GetValue(), 2);
+        EXPECT_TRUE(p2->IsDefaultValue());
+
+        auto p3 = meta->GetProperty<uint32_t>("var3");
+        ASSERT_TRUE(p3);
+        EXPECT_EQ(p3->GetValue(), 3);
+        EXPECT_TRUE(p3->IsDefaultValue());
+
+        // var4 had a user-set value (42), so it should be preserved after reload
+        // but the default should update from 10 to 20
+        auto p4 = meta->GetProperty<uint32_t>("var4");
+        ASSERT_TRUE(p4);
+        EXPECT_EQ(p4->GetValue(), 42);
+        EXPECT_EQ(p4->GetDefaultValue(), 20);
+        EXPECT_FALSE(p4->IsDefaultValue());
 
         auto textures = material->Textures()->GetValue();
         ASSERT_EQ(textures.size(), 11);
@@ -208,5 +232,18 @@ UNIT_TEST_F(API_ScenePluginShaderTest, ShaderResourceReload, testing::ext::TestS
 }
 #endif
 
-} // namespace UTest
+/**
+ * @tc.name: LoadShaderEmptyUri
+ * @tc.desc: Tests that loading a shader with empty URI returns null.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginShaderTest, LoadShaderEmptyUri, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto man = scene->CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager).GetResult();
+    ASSERT_TRUE(man);
+    EXPECT_FALSE(man->LoadShader("").GetResult());
+}
+
+}  // namespace UTest
 SCENE_END_NAMESPACE()

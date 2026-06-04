@@ -19,8 +19,8 @@
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-static const CORE_NS::IImageLoaderManager::ImageType KTX_IMAGE_TYPES[] = { { "image/ktx", "ktx" } };
+static const CORE_NS::IImageLoaderManager::ImageType KTX_IMAGE_TYPES[] = {{"image/ktx", "ktx"}};
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderKtx(PluginToken);
 CORE_END_NAMESPACE()
 
-#endif //  CORE_IMAGE_LOADERS_IMAGE_LOADER_KTX_H
+#endif  //  CORE_IMAGE_LOADERS_IMAGE_LOADER_KTX_H

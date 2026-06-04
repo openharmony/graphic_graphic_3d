@@ -36,11 +36,11 @@ struct JsFuncArgs;
 
 namespace NapiApi {
 
-template<typename Class>
+template <typename Class>
 inline Class* UnwrapTagged(napi_env env, napi_value js_object, const napi_type_tag& type_tag);
 
-struct Scope {
-    Scope(napi_env env): env_(env)
+struct SCENE_ADDON_PUBLIC Scope {
+    Scope(napi_env env) : env_(env)
     {
         if (env_) {
             napi_open_handle_scope(env_, &scope_);
@@ -61,7 +61,7 @@ struct Scope {
     napi_handle_scope scope_{nullptr};
 };
 
-class Object {
+class SCENE_ADDON_PUBLIC Object {
 public:
     Object() = default;
     explicit Object(napi_env env);
@@ -73,7 +73,7 @@ public:
 
     TrueRootObject* GetRoot() const;
 
-    template<class T>
+    template <class T>
     T* GetJsWrapper() const
     {
         if (const auto tro = GetRoot()) {
@@ -83,13 +83,13 @@ public:
     }
 
     META_NS::IObject::Ptr GetNative() const;
-    template<typename T>
+    template <typename T>
     typename T::Ptr GetNative() const
     {
         return interface_pointer_cast<T>(GetNative());
     }
 
-    template<typename t>
+    template <typename t>
     NapiApi::Value<t> Get(const BASE_NS::string_view name)
     {
         return NapiApi::Value<t>(env_, Get(name));
@@ -98,7 +98,7 @@ public:
     napi_value Get(const BASE_NS::string_view name);
     napi_value Invoke(const BASE_NS::string_view memberFuncName, const JsFuncArgs& args);
 
-    template<typename type>
+    template <typename type>
     void Set(const BASE_NS::string_view name, NapiApi::Value<type> value)
     {
         Set(name, value.ToNapiValue());
@@ -127,15 +127,15 @@ public:
 
 protected:
     struct NameAndType {
-        bool success { false };
-        napi_value res { nullptr };
-        napi_valuetype jstype { napi_undefined };
+        bool success{false};
+        napi_value res{nullptr};
+        napi_valuetype jstype{napi_undefined};
     };
     NameAndType GetNamedPropertyAndType(const BASE_NS::string_view name);
     napi_value MakeTempString(const BASE_NS::string_view v);
 
 private:
-    template<class T>
+    template <class T>
     T* GetInterface() const
     {
         if (!env_ || !object_) {
@@ -145,10 +145,10 @@ private:
     }
 
     napi_valuetype jstype = napi_undefined;
-    Env env_ { nullptr };
-    napi_value object_ { nullptr };
+    Env env_{nullptr};
+    napi_value object_{nullptr};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

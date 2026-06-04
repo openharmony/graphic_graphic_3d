@@ -69,8 +69,8 @@ public:
     void Unref() override;
 
 private:
-    CORE_NS::IEngine* engine_ { nullptr };
-    RENDER_NS::IRenderContext* renderContext_ { nullptr };
+    CORE_NS::IEngine* engine_{nullptr};
+    RENDER_NS::IRenderContext* renderContext_{nullptr};
     CORE_NS::IFileManager& fileManager_;
 };
 inline constexpr BASE_NS::string_view GetName(const ISceneLoader*)
@@ -78,4 +78,4 @@ inline constexpr BASE_NS::string_view GetName(const ISceneLoader*)
     return "ISceneLoader";
 }
 CORE3D_END_NAMESPACE()
-#endif // CORE_GLTF_GLTF2_H
+#endif  // CORE_GLTF_GLTF2_H

@@ -27,10 +27,14 @@ namespace OHOS::Render3D {
 
 class TextureLayerUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 /**
@@ -123,10 +127,10 @@ HWTEST_F(TextureLayerUT, SetBackgroundColor002, TestSize.Level1)
     auto textureLayer = std::make_unique<TextureLayer>(key);
 
     // Test multiple color settings
-    textureLayer->SetBackgroundColor(0x00000000); // transparent
-    textureLayer->SetBackgroundColor(0xFFFFFFFF); // white
-    textureLayer->SetBackgroundColor(0xFF000000); // black
-    textureLayer->SetBackgroundColor(0x00FF00FF); // magenta
+    textureLayer->SetBackgroundColor(0x00000000);  // transparent
+    textureLayer->SetBackgroundColor(0xFFFFFFFF);  // white
+    textureLayer->SetBackgroundColor(0xFF000000);  // black
+    textureLayer->SetBackgroundColor(0x00FF00FF);  // magenta
 
     // Verify no crash
     EXPECT_NE(textureLayer, nullptr);
@@ -151,8 +155,8 @@ HWTEST_F(TextureLayerUT, OnWindowChange001, TestSize.Level1)
     bool recreateWindow = false;
     SurfaceType surfaceType = SurfaceType::SURFACE_TEXTURE;
 
-    TextureInfo textureInfo = textureLayer->OnWindowChange(
-        offsetX, offsetY, width, height, scale, recreateWindow, surfaceType);
+    TextureInfo textureInfo =
+        textureLayer->OnWindowChange(offsetX, offsetY, width, height, scale, recreateWindow, surfaceType);
 
     // Verify texture info is updated
     EXPECT_EQ(textureInfo.width_, static_cast<uint32_t>(width));
@@ -179,8 +183,8 @@ HWTEST_F(TextureLayerUT, OnWindowChange002, TestSize.Level1)
     bool recreateWindow = true;
     SurfaceType surfaceType = SurfaceType::SURFACE_WINDOW;
 
-    TextureInfo textureInfo = textureLayer->OnWindowChange(
-        offsetX, offsetY, width, height, scale, recreateWindow, surfaceType);
+    TextureInfo textureInfo =
+        textureLayer->OnWindowChange(offsetX, offsetY, width, height, scale, recreateWindow, surfaceType);
 
     // Verify texture info is updated
     EXPECT_EQ(textureInfo.width_, static_cast<uint32_t>(width));
@@ -273,7 +277,7 @@ HWTEST_F(TextureLayerUT, OnWindowChange005, TestSize.Level1)
     WindowChangeInfo windowChangeInfo;
     windowChangeInfo.width = 1024.0f;
     windowChangeInfo.height = 768.0f;
-    windowChangeInfo.surfaceType = SurfaceType::UNDEFINE; // Should default to SURFACE_WINDOW
+    windowChangeInfo.surfaceType = SurfaceType::UNDEFINE;  // Should default to SURFACE_WINDOW
 
     TextureInfo textureInfo = textureLayer->OnWindowChange(windowChangeInfo);
 
@@ -390,7 +394,7 @@ HWTEST_F(TextureLayerUT, RotationToTransform001, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.transformType = 0; // 0 degrees
+    windowChangeInfo.transformType = 0;  // 0 degrees
     textureLayer->OnWindowChange(windowChangeInfo);
 
     // Verify no crash
@@ -412,7 +416,7 @@ HWTEST_F(TextureLayerUT, RotationToTransform002, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.transformType = 90; // 90 degrees
+    windowChangeInfo.transformType = 90;  // 90 degrees
     textureLayer->OnWindowChange(windowChangeInfo);
 
     // Verify no crash
@@ -434,7 +438,7 @@ HWTEST_F(TextureLayerUT, RotationToTransform003, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.transformType = 180; // 180 degrees
+    windowChangeInfo.transformType = 180;  // 180 degrees
     textureLayer->OnWindowChange(windowChangeInfo);
 
     // Verify no crash
@@ -456,7 +460,7 @@ HWTEST_F(TextureLayerUT, RotationToTransform004, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.transformType = 270; // 270 degrees
+    windowChangeInfo.transformType = 270;  // 270 degrees
     textureLayer->OnWindowChange(windowChangeInfo);
 
     // Verify no crash
@@ -478,7 +482,7 @@ HWTEST_F(TextureLayerUT, RotationToTransform005, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.transformType = 45; // invalid rotation, should default to 0
+    windowChangeInfo.transformType = 45;  // invalid rotation, should default to 0
     textureLayer->OnWindowChange(windowChangeInfo);
 
     // Verify no crash
@@ -570,7 +574,7 @@ HWTEST_F(TextureLayerUT, CreateNativeWindow004, TestSize.Level1)
     windowChangeInfo.width = 800.0f;
     windowChangeInfo.height = 600.0f;
     windowChangeInfo.surfaceType = SurfaceType::SURFACE_TEXTURE;
-    windowChangeInfo.producerSurfaceId = 0x12345678; // non-zero surface ID
+    windowChangeInfo.producerSurfaceId = 0x12345678;  // non-zero surface ID
     textureLayer->OnWindowChange(windowChangeInfo);
 
     TextureInfo textureInfo = textureLayer->GetTextureInfo();
@@ -730,4 +734,4 @@ HWTEST_F(TextureLayerUT, OnWindowChange007, TestSize.Level1)
     EXPECT_EQ(textureInfo.height_, 600U);
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

@@ -36,7 +36,7 @@ ColorProxy::~ColorProxy()
 {
     Reset();
 }
-void ColorProxy::SetValue(const BASE_NS::Color& v)
+void ColorProxy::SetNativeValue(const BASE_NS::Color& v)
 {
     if (isColorType_) {
         META_NS::SetValue(GetProperty<BASE_NS::Color>(), v);
@@ -44,7 +44,7 @@ void ColorProxy::SetValue(const BASE_NS::Color& v)
         META_NS::SetValue(GetProperty<BASE_NS::Math::Vec4>(), BASE_NS::Math::Vec4(v.r, v.g, v.b, v.a));
     }
 }
-void ColorProxy::SetValue(const BASE_NS::Math::Vec4& v)
+void ColorProxy::SetNativeValue(const BASE_NS::Math::Vec4& v)
 {
     if (isColorType_) {
         META_NS::SetValue(GetProperty<BASE_NS::Color>(), BASE_NS::Color(v.x, v.y, v.z, v.w));
@@ -53,7 +53,7 @@ void ColorProxy::SetValue(const BASE_NS::Math::Vec4& v)
     }
 }
 
-template<class T>
+template <class T>
 auto SetColorMemberValue(META_NS::Property<T>& p, BASE_NS::string_view memb, float val)
 {
     auto value = META_NS::GetValue(p);
@@ -77,7 +77,7 @@ auto SetColorMemberValue(META_NS::Property<T>& p, BASE_NS::string_view memb, flo
     }
 }
 
-template<class T>
+template <class T>
 bool GetColorMemberValue(const NapiApi::Env& info, META_NS::Property<T>& p, BASE_NS::string_view memb, float& value)
 {
     auto val = META_NS::GetValue(p);
@@ -134,7 +134,7 @@ void ColorProxy::SetValue(NapiApi::Object obj)
     auto b = obj.Get<float>("b");
     auto a = obj.Get<float>("a");
     if (r.IsValid() && g.IsValid() && b.IsValid() && a.IsValid()) {
-        SetValue(BASE_NS::Color(r, g, b, a));
+        SetNativeValue(BASE_NS::Color(r, g, b, a));
     }
 }
 
@@ -145,7 +145,7 @@ BASE_NS::Color ColorProxy::ToNative(NapiApi::Object colorJs, bool& success)
     auto b = colorJs.Get<float>("b");
     auto a = colorJs.Get<float>("a");
     success = r.IsValid() && g.IsValid() && b.IsValid() && a.IsValid();
-    return BASE_NS::Color { r, g, b, a };
+    return BASE_NS::Color{r, g, b, a};
 }
 
 NapiApi::Object ColorProxy::ToNapiObject(BASE_NS::Color color, napi_env env)

@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"description": "image with loadFlags bits beyond generateMips/forceSrgb",
+	"data": {
+		"type": "image",
+		"loadFlags": [
+			"forceLinearRgb",
+			"forceGrayscale",
+			"flipVertically",
+			"premultiplyAlpha"
+		]
+	}
+}

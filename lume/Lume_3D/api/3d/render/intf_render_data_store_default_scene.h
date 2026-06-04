@@ -28,7 +28,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreDefaultScene : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "1f43a445-1e26-417b-878a-d3044fde6e2c" };
+    static constexpr BASE_NS::Uid UID{"1f43a445-1e26-417b-878a-d3044fde6e2c"};
 
     ~IRenderDataStoreDefaultScene() override = default;
 
@@ -53,4 +53,4 @@ protected:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_SCENE_H
+#endif  // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_SCENE_H

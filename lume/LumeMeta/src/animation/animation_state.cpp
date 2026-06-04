@@ -286,7 +286,7 @@ bool AnimationState::SetState(IAnimationInternal::AnimationTargetState state)
                 state_.ResetLastTick();
                 break;
             case AnimationTargetState::FINISHED:
-                [[fallthrough]]; // follow the same procedure as STOPPED
+                [[fallthrough]];  // follow the same procedure as STOPPED
             case AnimationTargetState::STOPPED:
                 ResetClock();
                 break;
@@ -322,8 +322,7 @@ BASE_NS::vector<IAnimationModifier::Ptr> AnimationState::GetModifiers() const
         // Do not create an attachment container unless one has already been created by someone
         if (const auto attach = interface_pointer_cast<IAttach>(params_.owner)) {
             if (const auto container = attach->GetAttachmentContainer(false)) {
-                modifierCache_.SetTarget(
-                    container, { "", TraversalType::NO_HIERARCHY, { IAnimationModifier::UID }, true });
+                modifierCache_.SetTarget(container, {"", TraversalType::NO_HIERARCHY, {IAnimationModifier::UID}, true});
             }
         }
     }
@@ -422,7 +421,7 @@ IInterpolator::Ptr PropertyAnimationState::GetInterpolator() const
 
 bool PropertyAnimationState::SetInterpolator(const TypeId& id)
 {
-    interpolator_ = id != TypeId {} ? GetObjectRegistry().CreateInterpolator(id) : nullptr;
+    interpolator_ = id != TypeId{} ? GetObjectRegistry().CreateInterpolator(id) : nullptr;
     return interpolator_ != nullptr;
 }
 
@@ -451,6 +450,6 @@ AnyReturnValue PropertyAnimationState::EvaluateValue(const EvaluationData& data)
     return AnyReturn::FAIL;
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

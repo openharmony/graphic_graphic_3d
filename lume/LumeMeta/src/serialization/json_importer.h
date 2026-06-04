@@ -49,7 +49,7 @@ private:
     BASE_NS::vector<ISerTransformation::Ptr> transformations_;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

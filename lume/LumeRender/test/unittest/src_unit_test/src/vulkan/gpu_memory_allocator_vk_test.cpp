@@ -16,7 +16,7 @@
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/device_vk.h>
 #include <vulkan/gpu_memory_allocator_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -58,16 +58,18 @@ UNIT_TEST(SRC_GpuMemoryAllocator, GpuMemoryAllocatorTestVulkan, testing::ext::Te
     imageDesc.layerCount = 1u;
     imageDesc.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
     imageDesc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    PlatformGpuMemoryAllocator::GpuMemoryAllocatorCustomPool::GpuResourceDesc desc { { 0 } };
+    PlatformGpuMemoryAllocator::GpuMemoryAllocatorCustomPool::GpuResourceDesc desc{{0}};
     desc.image = imageDesc;
-    PlatformGpuMemoryAllocator::GpuMemoryAllocatorCustomPool pool { "poolName",
-        PlatformGpuMemoryAllocator::MemoryAllocatorResourceType::GPU_IMAGE, 0, false, desc };
+    PlatformGpuMemoryAllocator::GpuMemoryAllocatorCustomPool pool{
+        "poolName", PlatformGpuMemoryAllocator::MemoryAllocatorResourceType::GPU_IMAGE, 0, false, desc};
     createInfo.customPools.push_back(pool);
     createInfo.preferredLargeHeapBlockSize = 0;
-    PlatformGpuMemoryAllocator allocator { deviceVk.GetPlatformDataVk().instance,
-        deviceVk.GetPlatformDataVk().physicalDevice, deviceVk.GetPlatformDataVk().device, createInfo };
+    PlatformGpuMemoryAllocator allocator{deviceVk.GetPlatformDataVk().instance,
+        deviceVk.GetPlatformDataVk().physicalDevice,
+        deviceVk.GetPlatformDataVk().device,
+        createInfo};
     VmaPool imgPool = allocator.GetImagePool(imageDesc);
-    ASSERT_NE(reinterpret_cast<VmaPool_T *>(VK_NULL_HANDLE), imgPool);
+    ASSERT_NE(nullptr, imgPool);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

@@ -17,7 +17,7 @@
 #include <gles/gpu_program_gles.h>
 #include <gles/pipeline_state_object_gles.h>
 #include <gles/shader_module_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include <device/device.h>
 #include <device/shader_manager.h>
@@ -100,7 +100,7 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
         createInfo.reflectionData = refData;
         createInfo.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT;
         createInfo.spvData = vertSpvData;
-        vertShader = new ShaderModuleGLES { device, createInfo };
+        vertShader = new ShaderModuleGLES{device, createInfo};
         ASSERT_EQ(ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT, vertShader->GetShaderStageFlags());
     }
     {
@@ -109,7 +109,7 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
         createInfo.reflectionData = refData;
         createInfo.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT;
         createInfo.spvData = fragSpvData;
-        fragShader = new ShaderModuleGLES { device, createInfo };
+        fragShader = new ShaderModuleGLES{device, createInfo};
         ASSERT_EQ(ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT, fragShader->GetShaderStageFlags());
     }
     GpuShaderProgramGLES* shader = nullptr;
@@ -117,7 +117,7 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
         GpuShaderProgramCreateData createData;
         createData.vertShaderModule = vertShader;
         createData.fragShaderModule = fragShader;
-        shader = new GpuShaderProgramGLES { device, createData };
+        shader = new GpuShaderProgramGLES{device, createData};
         ASSERT_EQ(vertShader, shader->GetPlatformData().vertShaderModule_);
         ASSERT_EQ(fragShader, shader->GetPlatformData().fragShaderModule_);
     }
@@ -138,10 +138,10 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
             attributes[i].location = i;
             attributes[i].binding = i;
         }
-        vidView.attributeDescriptions = { attributes, countof(attributes) };
+        vidView.attributeDescriptions = {attributes, countof(attributes)};
         ShaderSpecializationConstantDataView specConsts;
-        uint32_t specData[100] = { 0 };
-        specConsts.data = { specData, countof(specData) };
+        uint32_t specData[100] = {0};
+        specConsts.data = {specData, countof(specData)};
         DynamicStateEnum dynamicStates[6];
         dynamicStates[0] = DynamicStateEnum::CORE_DYNAMIC_STATE_ENUM_SCISSOR;
         dynamicStates[1] = DynamicStateEnum::CORE_DYNAMIC_STATE_ENUM_DEPTH_BIAS;
@@ -151,12 +151,19 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
         dynamicStates[5] = DynamicStateEnum::CORE_DYNAMIC_STATE_ENUM_STENCIL_COMPARE_MASK;
         RenderPassDesc renderPass;
         RenderPassSubpassDesc subpass;
-        GraphicsPipelineStateObjectGLES pso { device, *shader, graphicsState, pipelineLayout, vidView, specConsts,
-            dynamicStates, renderPass, { &subpass, 1 } };
+        GraphicsPipelineStateObjectGLES pso{device,
+            *shader,
+            graphicsState,
+            pipelineLayout,
+            vidView,
+            specConsts,
+            dynamicStates,
+            renderPass,
+            {&subpass, 1}};
         OES_Bind bind;
         bind.set = 0u;
         bind.bind = 0u;
-        pso.GetOESProgram({ &bind, 1U });
+        pso.GetOESProgram({&bind, 1U});
     }
     delete shader;
     delete vertShader;
@@ -164,4 +171,4 @@ UNIT_TEST(SRC_PipelineStateObject, PipelineStateObjectTestOpenGL, testing::ext::
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

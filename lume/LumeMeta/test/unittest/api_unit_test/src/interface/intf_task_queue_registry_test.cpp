@@ -24,7 +24,7 @@ META_BEGIN_NAMESPACE()
 
 namespace UTest {
 
-constexpr BASE_NS::Uid CustomTaskQueueId { "7a55939d-3b89-479f-9e6a-40a13b80434d" };
+constexpr BASE_NS::Uid CustomTaskQueueId{"7a55939d-3b89-479f-9e6a-40a13b80434d"};
 
 /**
  * @tc.name: Register
@@ -127,6 +127,6 @@ UNIT_TEST(API_TaskQueueRegistryTest, ConstructPromise, testing::ext::TestSize.Le
     EXPECT_TRUE(t.ConstructPromise());
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

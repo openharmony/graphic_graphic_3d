@@ -37,7 +37,7 @@ public:
     BASE_NS::string Process(const ISerNode::Ptr& tree) override;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 
 META_END_NAMESPACE()
 

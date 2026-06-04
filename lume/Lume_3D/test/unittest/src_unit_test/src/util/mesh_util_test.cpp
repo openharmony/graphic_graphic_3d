@@ -35,7 +35,7 @@ using namespace CORE_NS;
 using namespace CORE3D_NS;
 
 namespace {
-template<typename ComponentManager>
+template <typename ComponentManager>
 void EnsureComponentManager(IEcs& ecs)
 {
     if (GetManager<ComponentManager>(ecs)) {
@@ -43,7 +43,7 @@ void EnsureComponentManager(IEcs& ecs)
     }
 
     bool created = false;
-    for (const auto* component : CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID)) {
+    for (const auto* component : CORE_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID)) {
         const auto* info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (info->uid == ComponentManager::UID) {
             EXPECT_TRUE(ecs.CreateComponentManager(*info));
@@ -66,12 +66,12 @@ void EnsureMeshResourceManagers(IEcs& ecs)
 void ExpectMeshCreationFails(IEcs& ecs, const char* testCase, Entity meshEntity)
 {
     SCOPED_TRACE(testCase);
-    EXPECT_EQ(Entity {}, meshEntity);
-    if ((meshEntity != Entity {}) && ecs.GetEntityManager().IsAlive(meshEntity)) {
+    EXPECT_EQ(Entity{}, meshEntity);
+    if ((meshEntity != Entity{}) && ecs.GetEntityManager().IsAlive(meshEntity)) {
         ecs.GetEntityManager().Destroy(meshEntity);
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: GenerateCubeMeshCreatesNamedMeshResource
@@ -80,7 +80,7 @@ void ExpectMeshCreationFails(IEcs& ecs, const char* testCase, Entity meshEntity)
  */
 UNIT_TEST(SRC_UtilMeshUtil, GenerateCubeMeshCreatesNamedMeshResource, testing::ext::TestSize.Level1)
 {
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -90,7 +90,7 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateCubeMeshCreatesNamedMeshResource, testing::e
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
     const Entity meshEntity = meshUtil.GenerateCubeMesh(*ecs, "namedCube", {}, 1.0f, 2.0f, 3.0f);
 
-    ASSERT_NE(Entity {}, meshEntity);
+    ASSERT_NE(Entity{}, meshEntity);
     ASSERT_TRUE(ecs->GetEntityManager().IsAlive(meshEntity));
 
     auto meshManager = GetManager<IMeshComponentManager>(*ecs);
@@ -135,15 +135,15 @@ UNIT_TEST(SRC_UtilMeshUtil, GeneratePlaneMeshRejectsDegenerateAndNonFiniteDimens
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const PlaneCase testCases[] = {
-        { "zero_width", 0.0f, 1.0f },
-        { "zero_depth", 1.0f, 0.0f },
-        { "negative_width", -1.0f, 1.0f },
-        { "negative_depth", 1.0f, -1.0f },
-        { "infinite_width", inf, 1.0f },
-        { "nan_depth", 1.0f, nan },
+        {"zero_width", 0.0f, 1.0f},
+        {"zero_depth", 1.0f, 0.0f},
+        {"negative_width", -1.0f, 1.0f},
+        {"negative_depth", 1.0f, -1.0f},
+        {"infinite_width", inf, 1.0f},
+        {"nan_depth", 1.0f, nan},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -174,17 +174,17 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateCubeMeshRejectsDegenerateAndNonFiniteDimensi
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const CubeCase testCases[] = {
-        { "zero_width", 0.0f, 1.0f, 1.0f },
-        { "zero_height", 1.0f, 0.0f, 1.0f },
-        { "zero_depth", 1.0f, 1.0f, 0.0f },
-        { "negative_width", -1.0f, 1.0f, 1.0f },
-        { "negative_height", 1.0f, -1.0f, 1.0f },
-        { "negative_depth", 1.0f, 1.0f, -1.0f },
-        { "infinite_width", inf, 1.0f, 1.0f },
-        { "nan_height", 1.0f, nan, 1.0f },
+        {"zero_width", 0.0f, 1.0f, 1.0f},
+        {"zero_height", 1.0f, 0.0f, 1.0f},
+        {"zero_depth", 1.0f, 1.0f, 0.0f},
+        {"negative_width", -1.0f, 1.0f, 1.0f},
+        {"negative_height", 1.0f, -1.0f, 1.0f},
+        {"negative_depth", 1.0f, 1.0f, -1.0f},
+        {"infinite_width", inf, 1.0f, 1.0f},
+        {"nan_height", 1.0f, nan, 1.0f},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -193,7 +193,8 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateCubeMeshRejectsDegenerateAndNonFiniteDimensi
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
 
     for (const auto& testCase : testCases) {
-        ExpectMeshCreationFails(*ecs, testCase.name,
+        ExpectMeshCreationFails(*ecs,
+            testCase.name,
             meshUtil.GenerateCubeMesh(*ecs, "", {}, testCase.width, testCase.height, testCase.depth));
     }
 }
@@ -215,17 +216,17 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateSphereMeshRejectsInvalidRadiusAndTopology, t
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const SphereCase testCases[] = {
-        { "zero_radius", 0.0f, 8u, 8u },
-        { "negative_radius", -1.0f, 8u, 8u },
-        { "zero_rings", 1.0f, 0u, 8u },
-        { "one_ring", 1.0f, 1u, 8u },
-        { "zero_sectors", 1.0f, 8u, 0u },
-        { "one_sector", 1.0f, 8u, 1u },
-        { "infinite_radius", inf, 8u, 8u },
-        { "nan_radius", nan, 8u, 8u },
+        {"zero_radius", 0.0f, 8u, 8u},
+        {"negative_radius", -1.0f, 8u, 8u},
+        {"zero_rings", 1.0f, 0u, 8u},
+        {"one_ring", 1.0f, 1u, 8u},
+        {"zero_sectors", 1.0f, 8u, 0u},
+        {"one_sector", 1.0f, 8u, 1u},
+        {"infinite_radius", inf, 8u, 8u},
+        {"nan_radius", nan, 8u, 8u},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -234,7 +235,8 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateSphereMeshRejectsInvalidRadiusAndTopology, t
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
 
     for (const auto& testCase : testCases) {
-        ExpectMeshCreationFails(*ecs, testCase.name,
+        ExpectMeshCreationFails(*ecs,
+            testCase.name,
             meshUtil.GenerateSphereMesh(*ecs, "", {}, testCase.radius, testCase.rings, testCase.sectors));
     }
 }
@@ -256,18 +258,18 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateConeMeshRejectsInvalidRadiusLengthAndSectors
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const ConeCase testCases[] = {
-        { "zero_radius", 0.0f, 1.0f, 8u },
-        { "negative_radius", -1.0f, 1.0f, 8u },
-        { "zero_length", 1.0f, 0.0f, 8u },
-        { "negative_length", 1.0f, -1.0f, 8u },
-        { "zero_sectors", 1.0f, 1.0f, 0u },
-        { "one_sector", 1.0f, 1.0f, 1u },
-        { "two_sectors", 1.0f, 1.0f, 2u },
-        { "infinite_length", 1.0f, inf, 8u },
-        { "nan_radius", nan, 1.0f, 8u },
+        {"zero_radius", 0.0f, 1.0f, 8u},
+        {"negative_radius", -1.0f, 1.0f, 8u},
+        {"zero_length", 1.0f, 0.0f, 8u},
+        {"negative_length", 1.0f, -1.0f, 8u},
+        {"zero_sectors", 1.0f, 1.0f, 0u},
+        {"one_sector", 1.0f, 1.0f, 1u},
+        {"two_sectors", 1.0f, 1.0f, 2u},
+        {"infinite_length", 1.0f, inf, 8u},
+        {"nan_radius", nan, 1.0f, 8u},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -276,7 +278,8 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateConeMeshRejectsInvalidRadiusLengthAndSectors
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
 
     for (const auto& testCase : testCases) {
-        ExpectMeshCreationFails(*ecs, testCase.name,
+        ExpectMeshCreationFails(*ecs,
+            testCase.name,
             meshUtil.GenerateConeMesh(*ecs, "", {}, testCase.radius, testCase.length, testCase.sectors));
     }
 }
@@ -299,21 +302,21 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateTorusMeshRejectsInvalidRadiiAndSectorCounts,
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const TorusCase testCases[] = {
-        { "zero_major_radius", 0.0f, 0.25f, 8u, 8u },
-        { "zero_minor_radius", 1.0f, 0.0f, 8u, 8u },
-        { "negative_major_radius", -1.0f, 0.25f, 8u, 8u },
-        { "negative_minor_radius", 1.0f, -0.25f, 8u, 8u },
-        { "zero_major_sectors", 1.0f, 0.25f, 0u, 8u },
-        { "one_major_sector", 1.0f, 0.25f, 1u, 8u },
-        { "two_major_sectors", 1.0f, 0.25f, 2u, 8u },
-        { "zero_minor_sectors", 1.0f, 0.25f, 8u, 0u },
-        { "one_minor_sector", 1.0f, 0.25f, 8u, 1u },
-        { "two_minor_sectors", 1.0f, 0.25f, 8u, 2u },
-        { "infinite_major_radius", inf, 0.25f, 8u, 8u },
-        { "nan_minor_radius", 1.0f, nan, 8u, 8u },
+        {"zero_major_radius", 0.0f, 0.25f, 8u, 8u},
+        {"zero_minor_radius", 1.0f, 0.0f, 8u, 8u},
+        {"negative_major_radius", -1.0f, 0.25f, 8u, 8u},
+        {"negative_minor_radius", 1.0f, -0.25f, 8u, 8u},
+        {"zero_major_sectors", 1.0f, 0.25f, 0u, 8u},
+        {"one_major_sector", 1.0f, 0.25f, 1u, 8u},
+        {"two_major_sectors", 1.0f, 0.25f, 2u, 8u},
+        {"zero_minor_sectors", 1.0f, 0.25f, 8u, 0u},
+        {"one_minor_sector", 1.0f, 0.25f, 8u, 1u},
+        {"two_minor_sectors", 1.0f, 0.25f, 8u, 2u},
+        {"infinite_major_radius", inf, 0.25f, 8u, 8u},
+        {"nan_minor_radius", 1.0f, nan, 8u, 8u},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -322,8 +325,14 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateTorusMeshRejectsInvalidRadiiAndSectorCounts,
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
 
     for (const auto& testCase : testCases) {
-        ExpectMeshCreationFails(*ecs, testCase.name,
-            meshUtil.GenerateTorusMesh(*ecs, "", {}, testCase.majorRadius, testCase.minorRadius, testCase.majorSectors,
+        ExpectMeshCreationFails(*ecs,
+            testCase.name,
+            meshUtil.GenerateTorusMesh(*ecs,
+                "",
+                {},
+                testCase.majorRadius,
+                testCase.minorRadius,
+                testCase.majorSectors,
                 testCase.minorSectors));
     }
 }
@@ -347,18 +356,18 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateCylinderMeshRejectsInvalidRadiusHeightSegmen
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
     const CylinderCase testCases[] = {
-        { "zero_radius", 0.0f, 1.0f, 8u },
-        { "negative_radius", -1.0f, 1.0f, 8u },
-        { "zero_height", 1.0f, 0.0f, 8u },
-        { "negative_height", 1.0f, -1.0f, 8u },
-        { "zero_segments", 1.0f, 1.0f, 0u },
-        { "one_segment", 1.0f, 1.0f, 1u },
-        { "two_segments", 1.0f, 1.0f, 2u },
-        { "infinite_radius", inf, 1.0f, 8u },
-        { "nan_height", 1.0f, nan, 8u },
+        {"zero_radius", 0.0f, 1.0f, 8u},
+        {"negative_radius", -1.0f, 1.0f, 8u},
+        {"zero_height", 1.0f, 0.0f, 8u},
+        {"negative_height", 1.0f, -1.0f, 8u},
+        {"zero_segments", 1.0f, 1.0f, 0u},
+        {"one_segment", 1.0f, 1.0f, 1u},
+        {"two_segments", 1.0f, 1.0f, 2u},
+        {"infinite_radius", inf, 1.0f, 8u},
+        {"nan_height", 1.0f, nan, 8u},
     };
 
-    UTest::TestContext* testContext = UTest::RecreateTestContext();
+    UTest::TestContext* testContext = UTest::GetTestContext();
     ASSERT_NE(nullptr, testContext);
 
     auto ecs = testContext->ecs;
@@ -367,7 +376,8 @@ UNIT_TEST(SRC_UtilMeshUtil, GenerateCylinderMeshRejectsInvalidRadiusHeightSegmen
     auto& meshUtil = testContext->graphicsContext->GetMeshUtil();
 
     for (const auto& testCase : testCases) {
-        ExpectMeshCreationFails(*ecs, testCase.name,
+        ExpectMeshCreationFails(*ecs,
+            testCase.name,
             meshUtil.GenerateCylinderMesh(*ecs, "", {}, testCase.radius, testCase.height, testCase.segments));
     }
 }

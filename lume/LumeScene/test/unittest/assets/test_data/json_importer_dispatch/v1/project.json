@@ -1,0 +1,6 @@
+{
+    "importVersion": "JsonImporter v1",
+    "resources": [
+        "project://resources.res"
+    ]
+}

@@ -14,6 +14,7 @@
  */
 #include "engine_value_manager.h"
 
+#include <algorithm>
 #include <charconv>
 #include <mutex>
 
@@ -22,7 +23,6 @@
 
 #include <meta/api/engine/util.h>
 #include <meta/api/make_callback.h>
-#include <meta/ext/event_util.h>
 #include <meta/interface/engine/intf_engine_data.h>
 #include <meta/interface/intf_task_queue_registry.h>
 
@@ -30,11 +30,11 @@ META_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template<typename Type>
+template <typename Type>
 static Type ReadValueFromEngine(const EnginePropertyParams& params)
 {
-    Type res {};
-    if (CORE_NS::ScopedHandle<const Type> guard { params.handle.Handle() }) {
+    Type res{};
+    if (CORE_NS::ScopedHandle<const Type> guard{params.handle.Handle()}) {
         res = *(const Type*)((uintptr_t) & *guard + params.Offset());
     }
     return res;
@@ -42,10 +42,11 @@ static Type ReadValueFromEngine(const EnginePropertyParams& params)
 
 EngineValueManager::~EngineValueManager()
 {
+    EngineValueManager::RemoveAll();
     ITaskQueue::WeakPtr q;
-    ITaskQueue::Token token {};
+    ITaskQueue::Token token{};
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         q = queue_;
         token = task_token_;
     }
@@ -60,6 +61,36 @@ void EngineValueManager::SetNotificationQueue(const ITaskQueue::WeakPtr& q)
 {
     queue_ = q;
 }
+
+void EngineValueManager::SetDirtyNotifier(const IOnChanged::InterfaceTypePtr& notifier)
+{
+    dirtyNotifier_ = notifier;
+}
+
+void EngineValueManager::NotifyDirty()
+{
+    if (dirtyNotifier_) {
+        dirtyNotifier_->Invoke();
+    }
+}
+
+EngineValueManager::ValueList::iterator EngineValueManager::FindValue(BASE_NS::string_view name)
+{
+    auto it =
+        std::lower_bound(values_.begin(), values_.end(), name, [](const ValueEntry& entry, BASE_NS::string_view n) {
+            return entry.name < n;
+        });
+    return (it != values_.end() && it->name == name) ? it : values_.end();
+}
+
+EngineValueManager::ValueList::const_iterator EngineValueManager::FindValue(BASE_NS::string_view name) const
+{
+    auto it =
+        std::lower_bound(values_.cbegin(), values_.cend(), name, [](const ValueEntry& entry, BASE_NS::string_view n) {
+            return entry.name < n;
+        });
+    return (it != values_.cend() && it->name == name) ? it : values_.cend();
+}
 static IEngineValueInternal::Ptr GetCompatibleValueInternal(IEngineValue::Ptr p, EnginePropertyParams params)
 {
     IEngineValueInternal::Ptr ret;
@@ -72,9 +103,17 @@ static IEngineValueInternal::Ptr GetCompatibleValueInternal(IEngineValue::Ptr p,
     }
     return ret;
 }
+void EngineValueManager::RemoveDirtyValue(IEngineValue* value)
+{
+    std::lock_guard dirtyLock{dirtyList_.mutex};
+    dirtyList_.values.erase(
+        std::remove(dirtyList_.values.begin(), dirtyList_.values.end(), value), dirtyList_.values.end());
+    static_cast<EngineValue*>(value)->ClearDirtyList();
+}
+
 IEngineValue::Ptr EngineValueManager::AddValue(EnginePropertyParams p, EngineValueOptions options)
 {
-    BASE_NS::string name { p.property.name };
+    BASE_NS::string name{p.property.name};
     if (!options.namePrefix.empty()) {
         if (name.empty()) {
             name = options.namePrefix;
@@ -84,19 +123,26 @@ IEngineValue::Ptr EngineValueManager::AddValue(EnginePropertyParams p, EngineVal
     }
     if (auto access = META_NS::GetObjectRegistry().GetEngineData().GetInternalValueAccess(p.property.type)) {
         IEngineValue::Ptr v;
-        if (auto it = values_.find(name); it != values_.end()) {
-            if (auto acc = GetCompatibleValueInternal(it->second.value, p)) {
-                InterfaceUniqueLock valueLock { it->second.value };
+        auto pos =
+            std::lower_bound(values_.begin(), values_.end(), name, [](const ValueEntry& entry, BASE_NS::string_view n) {
+                return entry.name < n;
+            });
+        if (pos != values_.end() && pos->name == name) {
+            if (auto acc = GetCompatibleValueInternal(pos->value, p)) {
+                InterfaceUniqueLock valueLock{pos->value};
                 acc->SetPropertyParams(p);
-                v = it->second.value;
+                v = pos->value;
             } else {
-                values_.erase(it);
+                RemoveDirtyValue(pos->value.get());
+                pos = values_.erase(pos);
             }
         }
         if (!v) {
-            v = IEngineValue::Ptr(new EngineValue(name, access, p));
+            auto* ev = new EngineValue(name, access, p);
+            ev->SetDirtyList(&dirtyList_);
+            v = IEngineValue::Ptr(ev);
             v->Sync(META_NS::EngineSyncDirection::FROM_ENGINE);
-            values_[name] = ValueInfo { v };
+            values_.insert(pos, ValueEntry{name, v});
         }
         if (options.values) {
             options.values->push_back(v);
@@ -104,7 +150,8 @@ IEngineValue::Ptr EngineValueManager::AddValue(EnginePropertyParams p, EngineVal
         return v;
     }
     CORE_LOG_W("No engine internal access type registered for '%s' (required by '%s')",
-        BASE_NS::string(p.property.type.name).c_str(), name.c_str());
+        BASE_NS::string(p.property.type.name).c_str(),
+        name.c_str());
     return nullptr;
 }
 
@@ -112,7 +159,7 @@ bool EngineValueManager::ConstructValues(EnginePropertyHandle handle, EngineValu
 {
     if (auto rh = handle.Handle()) {
         if (auto api = rh->Owner()) {
-            std::unique_lock lock { mutex_ };
+            std::unique_lock lock{mutex_};
             for (auto& prop : api->MetaData()) {
                 EnginePropertyParams params(handle, prop, 0);
                 params.pushValueToEngineDirectly = options.pushValuesDirectlyToEngine;
@@ -144,17 +191,16 @@ bool EngineValueManager::ConstructValues(IValue::Ptr value, EngineValueOptions o
     }
     if (value->IsCompatible(UidFromType<CORE_NS::IPropertyHandle*>())) {
         if (auto p = GetValue<CORE_NS::IPropertyHandle*>(value->GetValue())) {
-            EnginePropertyHandle h { nullptr, {}, value };
-            return ConstructValues(
-                h, EngineValueOptions { prefix, options.values, options.pushValuesDirectlyToEngine });
+            EnginePropertyHandle h{nullptr, {}, value};
+            return ConstructValues(h, EngineValueOptions{prefix, options.values, options.pushValuesDirectlyToEngine});
         }
     }
     if (auto i = interface_cast<IEngineValueInternal>(value)) {
         auto params = i->GetPropertyParams();
         for (auto&& p : params.property.metaData.memberProperties) {
-            EnginePropertyParams propParams { params, p };
+            EnginePropertyParams propParams{params, p};
             propParams.pushValueToEngineDirectly = options.pushValuesDirectlyToEngine;
-            AddValue(propParams, EngineValueOptions { prefix, options.values });
+            AddValue(propParams, EngineValueOptions{prefix, options.values});
         }
     }
     return true;
@@ -162,7 +208,7 @@ bool EngineValueManager::ConstructValues(IValue::Ptr value, EngineValueOptions o
 
 bool EngineValueManager::ConstructValue(EnginePropertyParams property, EngineValueOptions options)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     AddValue(property, options);
     return true;
 }
@@ -179,9 +225,9 @@ bool EngineValueManager::ConstructValueImplArraySubs(
         CORE_LOG_W("Invalid property path");
         return false;
     }
-    size_t index {};
+    size_t index{};
     std::from_chars_result res = std::from_chars(path.data() + 1, path.data() + endPos, index);
-    if (res.ec != std::errc {} || res.ptr != path.data() + endPos) {
+    if (res.ec != std::errc{} || res.ptr != path.data() + endPos) {
         CORE_LOG_W("Invalid property path array index");
         return false;
     }
@@ -234,7 +280,7 @@ IEngineValue::Ptr EngineValueManager::ConstructValueImplAdd(
     }
     options.namePrefix += pathTaken;
 
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     return AddValue(params, options);
 }
 
@@ -261,7 +307,7 @@ bool EngineValueManager::ConstructValueImpl(
     if (params.property.type == PROPERTYTYPE(CORE_NS::IPropertyHandle*)) {
         if (CORE_NS::IPropertyHandle* phandle = ReadValueFromEngine<CORE_NS::IPropertyHandle*>(params)) {
             if (auto pv = ConstructValueImplAdd(params, previousPath, options)) {
-                EnginePropertyHandle h { nullptr, {}, pv };
+                EnginePropertyHandle h{nullptr, {}, pv};
                 return ConstructValueImpl(h, BASE_NS::move(pathTaken), path, options);
             }
             CORE_LOG_W("Failed to construct parent engine value");
@@ -306,10 +352,11 @@ bool EngineValueManager::ConstructValue(
 
 bool EngineValueManager::RemoveValue(BASE_NS::string_view name)
 {
-    std::unique_lock lock { mutex_ };
-    auto it = values_.find(name);
+    std::unique_lock lock{mutex_};
+    auto it = FindValue(name);
     bool ret = it != values_.end();
     if (ret) {
+        RemoveDirtyValue(it->value.get());
         values_.erase(it);
     }
     return ret;
@@ -317,7 +364,16 @@ bool EngineValueManager::RemoveValue(BASE_NS::string_view name)
 
 void EngineValueManager::RemoveAll()
 {
-    std::unique_lock lock { mutex_ };
+    {
+        std::lock_guard dirtyLock{dirtyList_.mutex};
+        dirtyList_.values.clear();
+    }
+    std::unique_lock lock{mutex_};
+    for (auto& v : values_) {
+        if (auto* ev = static_cast<EngineValue*>(v.value.get())) {
+            ev->ClearDirtyList();
+        }
+    }
     values_.clear();
 }
 
@@ -325,10 +381,10 @@ IProperty::Ptr EngineValueManager::ConstructProperty(BASE_NS::string_view name) 
 {
     IEngineValue::Ptr value;
     {
-        std::shared_lock lock { mutex_ };
-        auto it = values_.find(name);
+        std::shared_lock lock{mutex_};
+        auto it = FindValue(name);
         if (it != values_.end()) {
-            value = it->second.value;
+            value = it->value;
         }
     }
     return PropertyFromEngineValue(name, value);
@@ -337,87 +393,182 @@ IProperty::Ptr EngineValueManager::ConstructProperty(BASE_NS::string_view name) 
 BASE_NS::vector<IProperty::Ptr> EngineValueManager::ConstructAllProperties() const
 {
     BASE_NS::vector<IProperty::Ptr> ret;
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     for (auto&& v : values_) {
-        ret.push_back(PropertyFromEngineValue(v.first, v.second.value));
+        ret.push_back(PropertyFromEngineValue(v.name, v.value));
     }
     return ret;
 }
 
 IEngineValue::Ptr EngineValueManager::GetEngineValue(BASE_NS::string_view name) const
 {
-    std::shared_lock lock { mutex_ };
-    auto it = values_.find(name);
-    return it != values_.end() ? it->second.value : nullptr;
+    std::shared_lock lock{mutex_};
+    auto it = FindValue(name);
+    return it != values_.end() ? it->value : nullptr;
 }
 
 BASE_NS::vector<IEngineValue::Ptr> EngineValueManager::GetAllEngineValues() const
 {
     BASE_NS::vector<IEngineValue::Ptr> ret;
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     for (auto&& v : values_) {
-        ret.push_back(v.second.value);
+        ret.push_back(v.value);
     }
     return ret;
+}
+
+bool EngineValueManager::HasValues() const
+{
+    std::shared_lock lock{mutex_};
+    return !values_.empty();
 }
 
 void EngineValueManager::NotifySyncs()
 {
     BASE_NS::vector<IEngineValue::Ptr> values;
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         for (auto&& v : values_) {
-            if (auto i = interface_cast<IEngineValueInternal>(v.second.value); i && i->ResetPendingNotify()) {
-                values.push_back(v.second.value);
+            if (auto i = interface_cast<IEngineValueInternal>(v.value); i && i->ResetPendingNotify()) {
+                values.push_back(v.value);
             }
         }
         task_token_ = {};
     }
     for (auto&& v : values) {
-        if (auto noti = interface_cast<INotifyOnChange>(v)) {
-            Invoke<IOnChanged>(noti->OnChanged());
-        }
+        static_cast<EngineValue*>(v.get())->InvokeChangeCallbacks();
     }
 }
 
-static AnyReturnValue SyncValue(const IEngineValue::Ptr& value, EngineSyncDirection dir)
+static AnyReturnValue SyncValueParentDependency(IEngineValue* value)
 {
-    AnyReturnValue res = AnyReturn::SUCCESS;
-    InterfaceUniqueLock valueLock { value };
-    if (auto i = interface_pointer_cast<IEngineValueInternal>(value)) {
-        // if this engine value depends on another one, sync the dependency first
+    if (auto i = interface_cast<IEngineValueInternal>(value)) {
         if (auto pv = interface_pointer_cast<IEngineValue>(i->GetPropertyParams().handle.parentValue)) {
-            // make sure the parent is synchronised, either direction
-            res = SyncValue(pv, EngineSyncDirection::AUTO);
+            InterfaceUniqueLock parentLock{pv};
+            auto res = SyncValueParentDependency(pv.get());
+            if (!res) {
+                return res;
+            }
+            return pv->Sync(EngineSyncDirection::AUTO);
         }
     }
+    return AnyReturn::SUCCESS;
+}
+
+static AnyReturnValue SyncValue(IEngineValue* value, EngineSyncDirection dir)
+{
+    InterfaceUniqueLock valueLock{value};
+    auto res = SyncValueParentDependency(value);
     return res ? value->Sync(dir) : res;
 }
 
-bool EngineValueManager::Sync(EngineSyncDirection dir)
+static CORE_NS::IComponentManager* GetComponentManager(IEngineValue* value)
+{
+    if (auto i = interface_cast<IEngineValueInternal>(value)) {
+        return i->GetPropertyParams().handle.manager;
+    }
+    return nullptr;
+}
+
+BASE_NS::vector<IEngineValue*> EngineValueManager::StealDirtyValues(const CORE_NS::IComponentManager* componentManager)
+{
+    std::lock_guard dirtyLock{dirtyList_.mutex};
+    if (!componentManager) {
+        // No component manager specified, return all
+        return BASE_NS::move(dirtyList_.values);
+    }
+    BASE_NS::vector<IEngineValue*> result;
+    size_t write = 0;
+    // Extract matching values into result
+    for (size_t i = 0; i < dirtyList_.values.size(); ++i) {
+        if (Internal::GetComponentManager(dirtyList_.values[i]) == componentManager) {
+            result.push_back(dirtyList_.values[i]);
+        } else {
+            dirtyList_.values[write++] = dirtyList_.values[i];
+        }
+    }
+    dirtyList_.values.resize(write);
+    return result;
+}
+
+EngineValueManager::SyncResult EngineValueManager::SyncDirtyValues(
+    const CORE_NS::IComponentManager* componentManager, EngineSyncDirection dir)
+{
+    SyncResult result;
+    auto dirtyValues = StealDirtyValues(componentManager);
+    result.hadDirtyValues = !dirtyValues.empty();
+    for (auto* ev : dirtyValues) {
+        auto res = SyncValue(ev, dir);
+        if (res && res != AnyReturn::NOTHING_TO_DO) {
+            result.anyChanged = true;
+        }
+        result.allSucceeded = result.allSucceeded && res;
+    }
+    return result;
+}
+
+EngineValueManager::SyncResult EngineValueManager::SyncAllValues(
+    const CORE_NS::IComponentManager* componentManager, EngineSyncDirection dir, bool skipUnobserved)
+{
+    SyncResult result;
+    for (auto&& v : values_) {
+        bool skip = componentManager && Internal::GetComponentManager(v.value.get()) != componentManager;
+        if (!skip && skipUnobserved) {
+            skip = static_cast<EngineValue*>(v.value.get())->CanSkipFromEngineSync();
+        }
+        if (!skip) {
+            auto res = SyncValue(v.value.get(), dir);
+            if (res && res != AnyReturn::NOTHING_TO_DO) {
+                result.anyChanged = true;
+            }
+            result.allSucceeded = result.allSucceeded && res;
+        }
+    }
+    return result;
+}
+
+void EngineValueManager::ScheduleNotifySyncs()
+{
+    if (queue_.expired()) {
+        return;
+    }
+    if (auto queue = queue_.lock()) {
+        task_token_ = queue->AddTask(MakeCallback<ITaskQueueTask>([this] {
+            NotifySyncs();
+            return false;
+        }));
+    } else {
+        CORE_LOG_E("Invalid task queue id");
+    }
+}
+
+bool EngineValueManager::Sync(EngineSyncDirection dir, const CORE_NS::IComponentManager* componentManager)
 {
     bool ret = true;
     bool notify = false;
     {
-        std::unique_lock lock { mutex_ };
-        for (auto&& v : values_) {
-            auto res = SyncValue(v.second.value, dir);
-            if (res && res != AnyReturn::NOTHING_TO_DO) {
-                notify = true;
-            }
-            ret = ret && res;
+        std::unique_lock lock{mutex_};
+
+        if (dir == EngineSyncDirection::TO_ENGINE) {
+            auto result = SyncDirtyValues(componentManager, dir);
+            ret = result.allSucceeded;
+            notify = result.anyChanged;
+        } else if (dir == EngineSyncDirection::AUTO) {
+            auto dirtyResult = SyncDirtyValues(componentManager, EngineSyncDirection::AUTO);
+            auto allResult =
+                SyncAllValues(componentManager, EngineSyncDirection::FROM_ENGINE, !dirtyResult.hadDirtyValues);
+            ret = dirtyResult.allSucceeded && allResult.allSucceeded;
+            notify = dirtyResult.anyChanged || allResult.anyChanged;
+        } else {
+            auto result = SyncAllValues(componentManager, dir, false);
+            ret = result.allSucceeded;
+            notify = result.anyChanged;
         }
+
         notify = notify && !task_token_;
-        if (notify && !queue_.expired()) {
-            if (auto queue = queue_.lock()) {
-                task_token_ = queue->AddTask(MakeCallback<ITaskQueueTask>([this] {
-                    NotifySyncs();
-                    return false;
-                }));
-            } else {
-                CORE_LOG_E("Invalid task queue id");
-            }
-            notify = false;
+        if (notify) {
+            ScheduleNotifySyncs();
+            notify = !task_token_;
         }
     }
     if (notify) {
@@ -425,6 +576,6 @@ bool EngineValueManager::Sync(EngineSyncDirection dir)
     }
     return ret;
 }
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

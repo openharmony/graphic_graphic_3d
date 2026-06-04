@@ -38,11 +38,12 @@ public:
      */
     struct DurationData {
         constexpr DurationData() noexcept = default;
-        explicit constexpr DurationData(TimeSpan duration) noexcept : duration(duration) {}
+        explicit constexpr DurationData(TimeSpan duration) noexcept : duration(duration)
+        {}
         /** Duration of one loop of the animation */
-        TimeSpan duration { TimeSpan::Zero() };
+        TimeSpan duration{TimeSpan::Zero()};
         /** Loop count */
-        int32_t loopCount { 1 };
+        int32_t loopCount{1};
     };
     /**
      * @brief Called by an animation during initialization, allowing the modifier to change the
@@ -56,11 +57,12 @@ public:
      */
     struct StepData {
         constexpr StepData() noexcept = default;
-        explicit constexpr StepData(float progress) noexcept : progress(progress) {}
+        explicit constexpr StepData(float progress) noexcept : progress(progress)
+        {}
         /** Current progress. */
-        float progress {};
+        float progress{};
         /** Is the animation reversing */
-        bool reverse {};
+        bool reverse{};
     };
     /**
      * @brief Called by an animation during Step phase, allowing the modifier to change the
@@ -73,4 +75,4 @@ public:
 
 META_END_NAMESPACE()
 
-#endif // META_INTERFACE_INTF_ANIMATION_MODIFIER_H
+#endif  // META_INTERFACE_INTF_ANIMATION_MODIFIER_H

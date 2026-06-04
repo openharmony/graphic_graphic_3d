@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "vec4Keyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [
+			{ "type": "vec4", "value": [1.0, 2.0, 3.0, 4.0] },
+			{ "type": "vec4", "value": [5.0, 6.0, 7.0, 8.0] }
+		]
+	}
+}

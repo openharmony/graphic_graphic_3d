@@ -22,7 +22,8 @@ SCENE_BEGIN_NAMESPACE()
 namespace {
 
 struct ColorConversionFunctionConverter {
-    ColorConversionFunctionConverter(META_NS::ConstProperty<uint32_t> fn) : fn_(fn) {}
+    ColorConversionFunctionConverter(META_NS::ConstProperty<uint32_t> fn) : fn_(fn)
+    {}
     using SourceType = ColorConversionFunctionType;
     using TargetType = uint32_t;
 
@@ -46,7 +47,8 @@ private:
 };
 
 struct MultiplyWithAlphaConverter {
-    MultiplyWithAlphaConverter(META_NS::ConstProperty<uint32_t> fn) : fn_(fn) {}
+    MultiplyWithAlphaConverter(META_NS::ConstProperty<uint32_t> fn) : fn_(fn)
+    {}
     using SourceType = bool;
     using TargetType = uint32_t;
 
@@ -66,7 +68,7 @@ private:
     META_NS::ConstProperty<uint32_t> fn_;
 };
 
-} // namespace
+}  // namespace
 
 META_NS::Property<uint32_t> ColorConversion::GetFunctionProperty()
 {
@@ -87,12 +89,12 @@ bool ColorConversion::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE
     if (name == "Function") {
         auto fn = GetFunctionProperty();
         return fn && PushPropertyValue(
-            p, META_NS::IValue::Ptr { new ConvertingValue<ColorConversionFunctionConverter>(fn, { fn }) });
+                         p, META_NS::IValue::Ptr{new ConvertingValue<ColorConversionFunctionConverter>(fn, {fn})});
     }
     if (name == "MultiplyWithAlpha") {
         auto fn = GetFunctionProperty();
-        return fn && PushPropertyValue(
-            p, META_NS::IValue::Ptr { new ConvertingValue<MultiplyWithAlphaConverter>(fn, { fn }) });
+        return fn &&
+               PushPropertyValue(p, META_NS::IValue::Ptr{new ConvertingValue<MultiplyWithAlphaConverter>(fn, {fn})});
     }
     return PostProcessEffect::InitDynamicProperty(p, path);
 }

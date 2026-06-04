@@ -114,7 +114,7 @@ void CameraImpl::setEnabled(bool enabled)
     return SceneNodes::PostProcessSettingsOrNull::make_nValue();
 }
 
-void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &process)
+void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const& process)
 {
     if (!cameraETS_) {
         WIDGET_LOGE("The camera is null when set post process settings");
@@ -183,7 +183,7 @@ void CameraImpl::setPostProcess(::SceneNodes::PostProcessSettingsOrNull const &p
     }
 }
 
-void CameraImpl::setClearColor(::SceneNodes::ColorOrNull const &color)
+void CameraImpl::setClearColor(::SceneNodes::ColorOrNull const& color)
 {
     if (cameraETS_) {
         if (color.holds_color()) {
@@ -220,10 +220,9 @@ void CameraImpl::setMsaa(::taihe::optional_view<bool> msaa)
 {
     SceneTypes::RenderingPipelineType type = SceneTypes::RenderingPipelineType::key_t::FORWARD_LIGHTWEIGHT;
     if (cameraETS_) {
-        type =
-            SceneTypes::RenderingPipelineType::from_value(static_cast<int32_t>(cameraETS_->GetRenderingPipeline()));
+        type = SceneTypes::RenderingPipelineType::from_value(static_cast<int32_t>(cameraETS_->GetRenderingPipeline()));
     }
-    return ::taihe::optional<::SceneTypes::RenderingPipelineType>(std::in_place, type);
+    return taihe::optional<::SceneTypes::RenderingPipelineType>(std::in_place, type);
 }
 
 void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::RenderingPipelineType> renderingPipeline)
@@ -243,8 +242,8 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
         std::make_shared<EffectsContainerETS>(cameraETS_->GetEffectsContainer()));
 }
 
-::taihe::array<::SceneTH::RaycastResult> CameraImpl::raycastSync(::SceneTypes::weak::Vec2 viewPosition,
-    ::SceneTH::RaycastParameters const &params)
+::taihe::array<::SceneTH::RaycastResult> CameraImpl::raycastSync(
+    ::SceneTypes::weak::Vec2 viewPosition, ::SceneTH::RaycastParameters const& params)
 {
     if (!cameraETS_) {
         taihe::set_error("Invalid camera");
@@ -259,7 +258,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
             taihe::set_error("invalid node in taihe object");
             return {};
         }
-        auto ni = reinterpret_cast<NodeImpl *>(nodeOptional.value());
+        auto ni = reinterpret_cast<NodeImpl*>(nodeOptional.value());
         if (ni != nullptr) {
             rootNode = ni->GetInternalNode();
         }
@@ -285,7 +284,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 {
     if (!cameraETS_) {
         WIDGET_LOGE("cameraETS_ is null");
-        return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
+        return SceneTypes::Vec3({nullptr, nullptr});
     }
     BASE_NS::Math::Vec3 world{worldPosition->getX(), worldPosition->getY(), worldPosition->getZ()};
     return taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(cameraETS_->WorldToScreen(world));
@@ -295,7 +294,7 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 {
     if (!cameraETS_) {
         WIDGET_LOGE("cameraETS_ is null");
-        return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
+        return SceneTypes::Vec3({nullptr, nullptr});
     }
     BASE_NS::Math::Vec3 screen{viewPosition->getX(), viewPosition->getY(), viewPosition->getZ()};
     return taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(cameraETS_->ScreenToWorld(screen));
@@ -304,47 +303,46 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
 ::SceneTypes::Mat4x4 CameraImpl::getViewMatrix()
 {
     if (cameraETS_) {
-        BASE_NS::Math::Mat4X4 viewMatrix =  cameraETS_->GetViewMatrix();
-        return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[0]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[1]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[2]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(viewMatrix[3])};
+        BASE_NS::Math::Mat4X4 viewMatrix = cameraETS_->GetViewMatrix();
+        return SceneTypes::Mat4x4{taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(viewMatrix[0]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(viewMatrix[1]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(viewMatrix[2]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(viewMatrix[3])};
     }
-    return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
+    return SceneTypes::Mat4x4{taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
 }
 
 ::SceneTypes::Mat4x4 CameraImpl::getProjectionMatrix()
 {
     if (cameraETS_) {
-        BASE_NS::Math::Mat4X4 projectionMatrix =  cameraETS_->GetProjectionMatrix();
-        return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[0]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[1]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[2]),
-                                  ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(projectionMatrix[3])};
+        BASE_NS::Math::Mat4X4 projectionMatrix = cameraETS_->GetProjectionMatrix();
+        return SceneTypes::Mat4x4{taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(projectionMatrix[0]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(projectionMatrix[1]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(projectionMatrix[2]),
+            taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(projectionMatrix[3])};
     }
-    return SceneTypes::Mat4x4{::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
-                              ::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
+    return SceneTypes::Mat4x4{taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4),
+        taihe::make_holder<Vec4Impl, SceneTypes::Vec4>(BASE_NS::Math::ZERO_VEC4)};
 }
 
 ::SceneNodes::Camera cameraTransferStaticImpl(uintptr_t input)
 {
     WIDGET_LOGI("cameraTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
-    void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
-        nativePtr == nullptr) {
+    void* nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
-        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
+        return SceneNodes::Camera({nullptr, nullptr});
     }
-    TrueRootObject *tro = static_cast<TrueRootObject *>(nativePtr);
+    TrueRootObject* tro = reinterpret_cast<TrueRootObject*>(nativePtr);
     if (tro == nullptr) {
         WIDGET_LOGE("transfer camera failed");
-        return ::taihe::make_holder<CameraImpl, SceneNodes::Camera>(nullptr);
+        return SceneNodes::Camera({nullptr, nullptr});
     }
     SCENE_NS::ICamera::Ptr cam = tro->GetNativeObject<SCENE_NS::ICamera>();
     return taihe::make_holder<CameraImpl, ::SceneNodes::Camera>(std::make_shared<CameraETS>(cam));
@@ -356,7 +354,7 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
     RETURN_IF_NULL_WITH_VALUE(!input.is_error(), 0);
     taihe::optional<int64_t> implOp = static_cast<::SceneResources::weak::SceneResource>(input)->getImpl();
     RETURN_IF_NULL_WITH_VALUE(implOp.has_value(), 0);
-    CameraImpl *camera = reinterpret_cast<CameraImpl *>(implOp.value());
+    CameraImpl* camera = reinterpret_cast<CameraImpl*>(implOp.value());
     RETURN_IF_NULL_WITH_VALUE(camera, 0);
     std::shared_ptr<CameraETS> internalCamera = camera->getInternalCamera();
     RETURN_IF_NULL_WITH_VALUE(internalCamera, 0);
@@ -387,12 +385,6 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
     // causing the post-processing configuration to be lost.
     // Here, we temporarily store it and restore it after the CameraJS construction is completed.
     auto nativeCamera = interface_cast<SCENE_NS::ICamera>(nativeObj);
-    if (!nativeCamera) {
-        WIDGET_LOGE("nativeCamera cast failed.");
-        // An error has occurred, ignoring the function call result.
-        arkts_napi_scope_close_n(jsenv, 0, nullptr, nullptr);
-        return 0;
-    }
     auto postProc = META_NS::GetValue(nativeCamera->PostProcess());
 
     napi_value nullValue;

@@ -16,20 +16,29 @@
 #include "spirv_cross_helpers_gles.h"
 
 #include <glcorearb.h>
+// glcorearb.h pulls in Windows.h which defines ERROR as a macro, clashing with
+// lume::ILogger::LogLevel::ERROR used by LUME_LOG_E. Drop the macro before including Log.h.
+#ifdef ERROR
+#undef ERROR
+#endif
+#include "lume/Log.h"
 
 namespace Gles {
 namespace {
-constexpr GLenum UINT_TYPES[5][5] = { { 0, 0, 0, 0, 0 }, { 0, GL_UNSIGNED_INT, 0, 0, 0 },
-    { 0, GL_UNSIGNED_INT_VEC2, 0, 0, 0 }, { 0, GL_UNSIGNED_INT_VEC3, 0, 0, 0 }, { 0, GL_UNSIGNED_INT_VEC4, 0, 0, 0 } };
+constexpr GLenum UINT_TYPES[5][5] = {{0, 0, 0, 0, 0},
+    {0, GL_UNSIGNED_INT, 0, 0, 0},
+    {0, GL_UNSIGNED_INT_VEC2, 0, 0, 0},
+    {0, GL_UNSIGNED_INT_VEC3, 0, 0, 0},
+    {0, GL_UNSIGNED_INT_VEC4, 0, 0, 0}};
 constexpr GLenum FLOAT_TYPES[5][5] = {
-    { 0, 0, 0, 0, 0 },
-    { 0, GL_FLOAT, 0, 0, 0 },
-    { 0, GL_FLOAT_VEC2, GL_FLOAT_MAT2, GL_FLOAT_MAT3x2, GL_FLOAT_MAT4x2 },
-    { 0, GL_FLOAT_VEC3, GL_FLOAT_MAT2x3, GL_FLOAT_MAT3, GL_FLOAT_MAT4x3 },
-    { 0, GL_FLOAT_VEC4, GL_FLOAT_MAT2x4, GL_FLOAT_MAT3x4, GL_FLOAT_MAT4 },
+    {0, 0, 0, 0, 0},
+    {0, GL_FLOAT, 0, 0, 0},
+    {0, GL_FLOAT_VEC2, GL_FLOAT_MAT2, GL_FLOAT_MAT3x2, GL_FLOAT_MAT4x2},
+    {0, GL_FLOAT_VEC3, GL_FLOAT_MAT2x3, GL_FLOAT_MAT3, GL_FLOAT_MAT4x3},
+    {0, GL_FLOAT_VEC4, GL_FLOAT_MAT2x4, GL_FLOAT_MAT3x4, GL_FLOAT_MAT4},
 };
 
-template<typename T>
+template <typename T>
 constexpr T Max(T&& lhs, T&& rhs)
 {
     return lhs > rhs ? std::forward<T>(lhs) : std::forward<T>(rhs);
@@ -94,10 +103,11 @@ const spirv_cross::SPIRConstant& SpecConstByName(const spirv_cross::CompilerGLSL
     // is default invalid?
     return invalid;
 }
-} // namespace
+}  // namespace
 
 // inherit from CompilerGLSL to have better access
-CoreCompiler::CoreCompiler(const uint32_t* ir, size_t wordCount) : CompilerGLSL(ir, wordCount) {}
+CoreCompiler::CoreCompiler(const uint32_t* ir, size_t wordCount) : CompilerGLSL(ir, wordCount)
+{}
 
 std::vector<spirv_cross::SPIRConstant> CoreCompiler::GetConstants() const
 {
@@ -116,7 +126,7 @@ void ReflectPushConstants(spirv_cross::Compiler& compiler, const spirv_cross::Sh
     std::vector<PushConstantReflection>& reflections, const ShaderStageFlags stage)
 {
     static constexpr std::string_view pcName = "CORE_PC_00";
-    static constexpr auto nameBaseSize = pcName.size() - 2U; // length without the 2 digits
+    static constexpr auto nameBaseSize = pcName.size() - 2U;  // length without the 2 digits
     unsigned int id = 0;
     // There can be only one push_constant_buffer, but since spirv-cross has prepared for this to be relaxed, we will
     // too.
@@ -209,7 +219,7 @@ void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, const u
         "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(constantId) + " " + std::to_string(value) + "u");
 }
 
-void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base, // NOLINT(*-no-recursion)
+void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base,  // NOLINT(*-no-recursion)
     const uint32_t structTypeId, std::vector<PushConstantReflection>& reflections)
 {
     const auto& structType = compiler.get_type(structTypeId);
@@ -219,9 +229,15 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
         const auto& memberType = compiler.get_type(memberTypeId);
         const auto& name = compiler.get_member_name(structTypeId, bi);
 
-        PushConstantReflection t{ base.stage, INVALID_LOCATION, 0u, {},
+        PushConstantReflection t{base.stage,
+            INVALID_LOCATION,
+            0u,
+            {},
             base.offset + compiler.type_struct_member_offset(structType, bi),
-            compiler.get_declared_struct_member_size(structType, bi), 0u, 0u, 0u };
+            compiler.get_declared_struct_member_size(structType, bi),
+            0u,
+            0u,
+            0u};
         t.name.reserve(base.name.size() + 1U + name.size());
         t.name = base.name;
         t.name += '.';
@@ -229,7 +245,7 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
         if (!memberType.array.empty()) {
             // Get array stride, e.g. float4 foo[]; Will have array stride of 16 bytes.
             t.arrayStride = compiler.type_struct_member_array_stride(structType, bi);
-            t.arraySize = memberType.array[0]; // We don't support arrays of arrays. just use the size of first.
+            t.arraySize = memberType.array[0];  // We don't support arrays of arrays. just use the size of first.
         }
 
         if (memberType.columns > 1) {
@@ -238,8 +254,22 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
         }
 
         if (memberType.basetype == spirv_cross::SPIRType::UInt) {
+            if (memberType.vecsize >= countof(UINT_TYPES) || memberType.columns >= countof(UINT_TYPES[0U])) {
+                LUME_LOG_E("Unsupported uint push-constant shape (vec%u, cols%u) for '%s'",
+                    memberType.vecsize,
+                    memberType.columns,
+                    t.name.c_str());
+                continue;
+            }
             t.type = UINT_TYPES[memberType.vecsize][memberType.columns];
         } else if (memberType.basetype == spirv_cross::SPIRType::Float) {
+            if (memberType.vecsize >= countof(FLOAT_TYPES) || memberType.columns >= countof(FLOAT_TYPES[0U])) {
+                LUME_LOG_E("Unsupported float push-constant shape (vec%u, cols%u) for '%s'",
+                    memberType.vecsize,
+                    memberType.columns,
+                    t.name.c_str());
+                continue;
+            }
             t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
         } else if (memberType.basetype == spirv_cross::SPIRType::Struct) {
             ProcessStruct(compiler, t, memberTypeId, reflections);
@@ -253,4 +283,4 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
         }
     }
 }
-} // namespace Gles
+}  // namespace Gles

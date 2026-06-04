@@ -14,11 +14,11 @@
  */
 
 #include "shadow_configuration/PCFConfigJS.h"
-#include <napi_api.h>
 
 namespace ShadowConfiguration {
 
-PCFConfigJS::PCFConfigJS(float radius, int32_t count) : SoftShadowConfigJS(), radius_(radius), count_(count) {}
+PCFConfigJS::PCFConfigJS(float radius, int32_t count) : SoftShadowConfigJS(), radius_(radius), count_(count)
+{}
 
 void PCFConfigJS::Init(napi_env env, napi_value exports)
 {
@@ -29,25 +29,24 @@ void PCFConfigJS::Init(napi_env env, napi_value exports)
     napi_create_double(env, DEFAULT_RADIUS, &defaultRadius);
     napi_create_int32(env, DEFAULT_COUNT, &defaultCount);
 
-    const auto props = BASE_NS::vector<napi_property_descriptor> {
+    const auto props = BASE_NS::vector<napi_property_descriptor>{
         // clang-format off
         { "shadowAlgorithmType", nullptr, nullptr, nullptr, nullptr, defaultType, napi_default_jsproperty, nullptr },
         { "shadowSampleRadius", nullptr, nullptr, nullptr, nullptr, defaultRadius, napi_default_jsproperty, nullptr },
         { "shadowSampleCount", nullptr, nullptr, nullptr, nullptr, defaultCount, napi_default_jsproperty, nullptr },
         // clang-format on
     };
-
     napi_value jsClassCtor = nullptr;
     auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         return NapiApi::FunctionContext(env, info).This().ToNapiValue();
     };
     napi_define_class(env, "PCFConfig", NAPI_AUTO_LENGTH, ctor, nullptr, props.size(), props.data(), &jsClassCtor);
-    NapiApi::MyInstanceState* mis {};
+    NapiApi::MyInstanceState* mis{};
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         mis->StoreCtor("PCFConfig", jsClassCtor);
     }
-    NapiApi::Object { env, exports }.Set("PCFConfig", jsClassCtor);
+    NapiApi::Object{env, exports}.Set("PCFConfig", jsClassCtor);
 }
 
 SoftShadowConfigJS* PCFConfigJS::FromJs(NapiApi::Object& jsPCFConfig)
@@ -68,8 +67,7 @@ NapiApi::StrongRef PCFConfigJS::Wrap(NapiApi::Object obj)
         PCFConfigJS* ptr = static_cast<PCFConfigJS*>(nativeObject);
         delete ptr;
     };
-    NapiApi::WrapTagged<PCFConfigJS>(obj.GetEnv(), obj.ToNapiValue(), this, dtor, nullptr, PCFConfigJS::TYPE_TAG,
-        nullptr);
+    napi_wrap(obj.GetEnv(), obj.ToNapiValue(), this, dtor, nullptr, nullptr);
 
     // clang-format off
     napi_property_descriptor methods[] = {
@@ -119,6 +117,7 @@ void PCFConfigJS::SetRadius(float radius)
         LOG_E("no rc return it");
         return;
     }
+
     if (!std::isfinite(radius) || radius < 0.0f) {
         LOG_E("Invalid shadow sample radius given, return it.");
         return;
@@ -156,6 +155,7 @@ void PCFConfigJS::SetCount(int32_t count)
         LOG_E("no rc return it");
         return;
     }
+
     if (count < 0) {
         LOG_E("Invalid shadow sample count given, return it.");
         return;
@@ -184,4 +184,4 @@ void PCFConfigJS::SetRenderConfiguration(SCENE_NS::IRenderConfiguration::Ptr rc)
     renderConfiguration_ = rc;
 }
 
-} // namespace ShadowConfiguration
+}  // namespace ShadowConfiguration

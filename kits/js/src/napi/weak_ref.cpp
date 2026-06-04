@@ -133,4 +133,4 @@ NapiApi::Object WeakObjectRef::GetNapiObject(BASE_NS::string_view name) const
     return napiObject_.GetObject();
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

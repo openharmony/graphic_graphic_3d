@@ -1,0 +1,17 @@
+{
+    "version": "1.0",
+    "description": "scene index references a node declared after others in rootNode; deferred resolution must wait for full hierarchy",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "index": "scene_anim_index_backward.index",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                { "type": "light", "name": "firstLight", "lightType": "point", "intensity": 0.5 },
+                { "type": "light", "name": "secondLight", "lightType": "point", "intensity": 1.0 }
+            ]
+        }
+    }
+}

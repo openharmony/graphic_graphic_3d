@@ -37,19 +37,19 @@ namespace Gles {
 // subpass inputs) NOTE: The macro allows for 16 sets, with 16 binds per type (uniform buffer, storage buffer)
 struct ResourceLimits {
     // 4 slots and 16 binds = 64 possible binds.
-    static constexpr uint32_t MAX_SETS { 4 };
-    static constexpr uint32_t MAX_BIND_IN_SET { 16 };
-    static constexpr uint32_t MAX_BINDS { MAX_SETS * MAX_BIND_IN_SET };
+    static constexpr uint32_t MAX_SETS{4};
+    static constexpr uint32_t MAX_BIND_IN_SET{16};
+    static constexpr uint32_t MAX_BINDS{MAX_SETS * MAX_BIND_IN_SET};
 
-    static constexpr uint32_t MAX_VERTEXINPUT_ATTRIBUTES { 16 };
-    static constexpr uint32_t MAX_UNIFORM_BUFFERS_IN_STAGE { 12 };
-    static constexpr uint32_t MAX_STORAGE_BUFFERS_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_SAMPLERS_IN_STAGE { 16 };
-    static constexpr uint32_t MAX_IMAGES_IN_STAGE { 16 };
-    static constexpr uint32_t MAX_STORAGE_IMAGES_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_INPUT_ATTACHMENTS_IN_STAGE { 4 };
-    static constexpr uint32_t MAX_SAMPLERS_IN_PROGRAM { MAX_SAMPLERS_IN_STAGE + MAX_SAMPLERS_IN_STAGE };
-    static constexpr uint32_t MAX_IMAGES_IN_PROGRAM { MAX_IMAGES_IN_STAGE + MAX_IMAGES_IN_STAGE };
+    static constexpr uint32_t MAX_VERTEXINPUT_ATTRIBUTES{16};
+    static constexpr uint32_t MAX_UNIFORM_BUFFERS_IN_STAGE{12};
+    static constexpr uint32_t MAX_STORAGE_BUFFERS_IN_STAGE{4};
+    static constexpr uint32_t MAX_SAMPLERS_IN_STAGE{16};
+    static constexpr uint32_t MAX_IMAGES_IN_STAGE{16};
+    static constexpr uint32_t MAX_STORAGE_IMAGES_IN_STAGE{4};
+    static constexpr uint32_t MAX_INPUT_ATTACHMENTS_IN_STAGE{4};
+    static constexpr uint32_t MAX_SAMPLERS_IN_PROGRAM{MAX_SAMPLERS_IN_STAGE + MAX_SAMPLERS_IN_STAGE};
+    static constexpr uint32_t MAX_IMAGES_IN_PROGRAM{MAX_IMAGES_IN_STAGE + MAX_IMAGES_IN_STAGE};
 };
 static constexpr int32_t INVALID_LOCATION = -1;
 struct SpecConstantInfo {
@@ -62,7 +62,7 @@ struct SpecConstantInfo {
 };
 struct PushConstantReflection {
     ShaderStageFlags stage;
-    int32_t location { INVALID_LOCATION };
+    int32_t location{INVALID_LOCATION};
     uint32_t type;
     BASE_NS::string name;
     size_t offset;
@@ -71,6 +71,6 @@ struct PushConstantReflection {
     size_t arrayStride;
     size_t matrixStride;
 };
-} // namespace Gles
+}  // namespace Gles
 RENDER_END_NAMESPACE()
-#endif // GLES_SPIRV_CROSS_HELPER_STRUCTS_H
+#endif  // GLES_SPIRV_CROSS_HELPER_STRUCTS_H

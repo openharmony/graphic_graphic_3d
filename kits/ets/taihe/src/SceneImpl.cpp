@@ -26,7 +26,7 @@
 
 namespace OHOS::Render3D::KITETS {
 
-SceneImpl::SceneImpl(const std::string &uriStr)
+SceneImpl::SceneImpl(const std::string& uriStr)
 {
     sceneETS_ = std::make_shared<SceneETS>();
     SceneETS::SceneLoadParams sceneLoadParams;
@@ -69,14 +69,14 @@ bool SceneImpl::renderFrame(::taihe::optional_view<::SceneTH::RenderParameters> 
 ::SceneResources::Environment SceneImpl::getEnvironment()
 {
     if (!sceneETS_) {
-        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
+        return ::SceneResources::Environment({nullptr, nullptr});
     }
     InvokeReturn<std::shared_ptr<EnvironmentETS>> environemnt = sceneETS_->GetEnvironment();
     if (environemnt) {
         return taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(environemnt.value);
     } else {
         WIDGET_LOGE("getEnvironment error: %s", environemnt.error.c_str());
-        return ::taihe::make_holder<EnvironmentImpl, ::SceneResources::Environment>(nullptr);
+        return ::SceneResources::Environment({nullptr, nullptr});
     }
 }
 
@@ -137,7 +137,7 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     return scene;
 }
 
-::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams params)
+::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams const& params)
 {
     double val = 0.0;
     if (params.offset) {
@@ -213,8 +213,8 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     return NodeImpl::MakeVariousNodes(res);
 }
 
-::SceneNodes::VariousNodes SceneImpl::importScene(::taihe::string_view name, ::SceneTH::weak::Scene scene,
-    ::SceneNodes::NodeOrNull parent)
+::SceneNodes::VariousNodes SceneImpl::importScene(
+    ::taihe::string_view name, ::SceneTH::weak::Scene scene, ::SceneNodes::NodeOrNull parent)
 {
     if (!sceneETS_ || scene.is_error()) {
         WIDGET_LOGE("can't import scene, the scene or the scene to be imported is invalid!");
@@ -255,16 +255,15 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
 {
     WIDGET_LOGI("sceneTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
-    void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
-        nativePtr == nullptr) {
+    void* nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
-        return ::taihe::make_holder<SceneImpl, ::SceneTH::Scene>(nullptr, nullptr);
+        return ::SceneTH::Scene({nullptr, nullptr});
     }
-    auto sceneJS = static_cast<SceneJS *>(static_cast<TrueRootObject *>(nativePtr)->GetInstanceImpl(SceneJS::ID));
+    auto sceneJS = reinterpret_cast<SceneJS*>(nativePtr);
     if (!sceneJS) {
         WIDGET_LOGE("transfer scene failed");
-        return ::taihe::make_holder<SceneImpl, ::SceneTH::Scene>(nullptr, nullptr);
+        return ::SceneTH::Scene({nullptr, nullptr});
     }
     SCENE_NS::IScene::Ptr scene = sceneJS->GetNativeObject<SCENE_NS::IScene>();
     std::shared_ptr<OHOS::Render3D::ISceneAdapter> sceneAdapter = sceneJS->scene_;
@@ -283,7 +282,7 @@ uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input)
         WIDGET_LOGE("get SceneImpl failed");
         return 0;
     }
-    SceneImpl *si = reinterpret_cast<SceneImpl *>(implOp.value());
+    SceneImpl* si = reinterpret_cast<SceneImpl*>(implOp.value());
     if (si == nullptr) {
         WIDGET_LOGE("can't cast to SceneImpl");
         return 0;
@@ -370,30 +369,33 @@ void SceneImpl::destroy()
 {
     if (!sceneETS_ || node.is_error()) {
         taihe::set_error("Invalid parameters given");
-        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
+        return ::SceneTH::SceneComponent({nullptr, nullptr});
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         taihe::set_error("invalid node in taihe object");
-        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
+        return ::SceneTH::SceneComponent({nullptr, nullptr});
     }
     auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
     if (!nodeImpl) {
         taihe::set_error("Invalid node in createComponent");
-        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
+        return ::SceneTH::SceneComponent({nullptr, nullptr});
     }
     auto component = sceneETS_->CreateComponent(nodeImpl->GetInternalNode(), std::string(name));
     if (component) {
         return taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(component.value);
     } else {
         taihe::set_error(component.error);
-        return ::taihe::make_holder<SceneComponentImpl, ::SceneTH::SceneComponent>(nullptr);
+        return ::SceneTH::SceneComponent({nullptr, nullptr});
     }
 }
 
 ::SceneTH::SceneComponentOrNull SceneImpl::getComponent(::SceneNodes::weak::Node node, ::taihe::string_view name)
 {
     if (!sceneETS_ || node.is_error()) {
+        return ::SceneTH::SceneComponentOrNull::make_nValue();
+    }
+    if (node.is_error()) {
         return ::SceneTH::SceneComponentOrNull::make_nValue();
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
@@ -421,35 +423,35 @@ void SceneImpl::destroy()
 {
     WIDGET_LOGI("SceneImpl::cloneNode");
     if (!sceneETS_) {
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
 
     if (node.is_error()) {
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
     auto nodeOptional = static_cast<::SceneResources::weak::SceneResource>(node)->getImpl();
     if (!nodeOptional.has_value()) {
         WIDGET_LOGE("invalid node in taihe object");
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
     auto nodeImpl = reinterpret_cast<NodeImpl*>(nodeOptional.value());
     if (!nodeImpl) {
-        WIDGET_LOGE("Invalid node in importNode");
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        WIDGET_LOGE("Invalid node in cloneNode");
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
 
     if (parent.is_error()) {
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
     auto parentNodeOptional = static_cast<::SceneResources::weak::SceneResource>(parent)->getImpl();
     if (!parentNodeOptional.has_value()) {
-        WIDGET_LOGE("invalid node in taihe object");
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        WIDGET_LOGE("invalid parent in taihe object");
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
     auto parentNodeImpl = reinterpret_cast<NodeImpl*>(parentNodeOptional.value());
     if (!parentNodeImpl) {
-        WIDGET_LOGE("Invalid node in importNode");
-        return SceneNodes::VariousNodesOrNull::make_nValue();
+        WIDGET_LOGE("Invalid parent in cloneNode");
+        return ::SceneNodes::VariousNodesOrNull::make_nValue();
     }
 
     std::shared_ptr<NodeETS> clone =
@@ -478,14 +480,14 @@ void SceneImpl::destroy()
     return taihe::make_holder<PCFConfigImpl, ::SceneTH::PCFConfig>(pcfConfigETS);
 }
 
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
 using namespace OHOS::Render3D::KITETS;
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
 TH_EXPORT_CPP_API_getDefaultRenderContext(getDefaultRenderContext);
 TH_EXPORT_CPP_API_loadScene(loadScene);
-TH_EXPORT_CPP_API_loadSceneWithLoadParams(loadSceneWithLoadParams);
+TH_EXPORT_CPP_API_loadSceneWithLoadParams(::loadSceneWithLoadParams);
 TH_EXPORT_CPP_API_sceneTransferStaticImpl(sceneTransferStaticImpl);
 TH_EXPORT_CPP_API_sceneTransferDynamicImpl(sceneTransferDynamicImpl);
 TH_EXPORT_CPP_API_CreatePCFConfig(CreatePCFConfig);

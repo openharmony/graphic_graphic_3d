@@ -15,10 +15,12 @@
 #include "material.h"
 
 #include <mutex>
+#include <scene/ext/intf_ecs_context.h>
 #include <scene/ext/util.h>
 #include <set>
 
 #include <3d/ecs/components/name_component.h>
+#include <3d/ecs/components/render_handle_component.h>
 #include <core/log.h>
 
 #include <meta/api/engine/util.h>
@@ -29,11 +31,14 @@
 #include "../entity_converting_value.h"
 #include "../mesh/texture.h"
 #include "../util_interfaces.h"
+#include "custom_property_defaults.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace {
+
 struct ShaderConverter {
-    ShaderConverter(const IInternalScene::Ptr& scene) : scene_(scene) {}
+    ShaderConverter(const IInternalScene::Ptr& scene) : scene_(scene)
+    {}
 
     using SourceType = IShader::Ptr;
     using TargetType = CORE3D_NS::MaterialComponent::Shader;
@@ -97,18 +102,19 @@ struct RenderSortConverter {
 
     SourceType ConvertToSource(META_NS::IAny&, const TargetType& v) const
     {
-        return SourceType { v.renderSortLayer, v.renderSortLayerOrder };
+        return SourceType{v.renderSortLayer, v.renderSortLayerOrder};
     }
     TargetType ConvertToTarget(const SourceType& v) const
     {
-        return TargetType { v.renderSortLayer, v.renderSortLayerOrder };
+        return TargetType{v.renderSortLayer, v.renderSortLayerOrder};
     }
 };
 struct RenderSortLayerConverter {
     using SourceType = uint8_t;
     using TargetType = CORE3D_NS::MaterialComponent::RenderSort;
 
-    RenderSortLayerConverter(IInternalMaterial::Ptr mat) : mat_(mat) {}
+    RenderSortLayerConverter(IInternalMaterial::Ptr mat) : mat_(mat)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
@@ -122,7 +128,7 @@ struct RenderSortLayerConverter {
             auto r = renderSort->RenderSort()->GetValue();
             renderSortLayerOrder = r.renderSortLayerOrder;
         }
-        return TargetType { v, renderSortLayerOrder };
+        return TargetType{v, renderSortLayerOrder};
     }
 
     IInternalMaterial::WeakPtr mat_;
@@ -131,7 +137,8 @@ struct RenderSortLayerOrderConverter {
     using SourceType = uint8_t;
     using TargetType = CORE3D_NS::MaterialComponent::RenderSort;
 
-    RenderSortLayerOrderConverter(IInternalMaterial::Ptr mat) : mat_(mat) {}
+    RenderSortLayerOrderConverter(IInternalMaterial::Ptr mat) : mat_(mat)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
@@ -145,7 +152,7 @@ struct RenderSortLayerOrderConverter {
             auto r = renderSort->RenderSort()->GetValue();
             renderSortLayer = r.renderSortLayer;
         }
-        return TargetType { renderSortLayer, v };
+        return TargetType{renderSortLayer, v};
     }
 
     IInternalMaterial::WeakPtr mat_;
@@ -163,7 +170,7 @@ struct LightingFlagsConverter {
         return static_cast<TargetType>(v);
     }
 };
-} // namespace
+}  // namespace
 
 CORE_NS::Entity Material::CreateEntity(const IInternalScene::Ptr& scene)
 {
@@ -215,15 +222,15 @@ bool Material::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::st
 
         UpdateMetadata();
 
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { GetInternalScene() })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, {GetInternalScene()})));
     }
     if (name == "DepthShader") {
         auto ep = material_->DepthShader();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, { GetInternalScene() })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<ShaderConverter>(ep, {GetInternalScene()})));
     }
     if (name == "Textures") {
         InitTextures(p);
@@ -236,26 +243,27 @@ bool Material::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::st
     if (name == "RenderSort") {
         auto ep = material_->RenderSort();
         META_NS::SetObjectFlags(p, META_NS::ObjectFlagBits::INTERNAL, true);
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<RenderSortConverter>(ep)));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<RenderSortConverter>(ep)));
     }
     if (name == "RenderSortLayer") {
         auto ep = material_->RenderSort();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerConverter>(ep, { material_ })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerConverter>(ep, {material_})));
     }
     if (name == "RenderSortLayerOrder") {
         auto ep = material_->RenderSort();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(
-                   META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerOrderConverter>(ep, { material_ })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<RenderSortLayerOrderConverter>(ep, {material_})));
     }
     if (name == "LightingFlags") {
         auto ep = material_->LightingFlags();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i && i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<LightingFlagsConverter>(ep)));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<LightingFlagsConverter>(ep)));
     }
     return false;
 }
@@ -279,23 +287,31 @@ void Material::UpdateMetadata()
     auto textures = GetProperty("Textures", META_NS::MetadataQuery::EXISTING);
     auto customs = GetProperty("CustomProperties", META_NS::MetadataQuery::EXISTING);
 
-    if (const auto obj = GetEcsObject(); obj && (textures || customs)) {
-        if (!metadataUpdateScheduled_.exchange(true)) {
-            obj->GetScene()->RunDirectlyOrInTask([this, textures, customs]() {
-                if (metadataUpdateScheduled_.load()) {
-                    if (material_->UpdateMetadata()) {
-                        if (textures) {
-                            ConstructTextures(textures);
-                        }
-                        if (customs) {
-                            UpdateCustomProperties(customs);
-                        }
-                    }
-                    metadataUpdateScheduled_ = false;
-                }
-            });
-        }
+    auto obj = GetEcsObject();
+    if (!obj || (!textures && !customs)) {
+        return;
     }
+    auto scene = obj->GetScene();
+    if (!scene) {
+        return;
+    }
+    if (metadataUpdateScheduled_.exchange(true)) {
+        return;
+    }
+    scene->RunDirectlyOrInTask([this, textures, customs]() {
+        if (metadataUpdateScheduled_.load()) {
+            if (material_->UpdateMetadata()) {
+                if (textures) {
+                    ConstructTextures(textures);
+                }
+                if (customs) {
+                    UpdateCustomProperties(customs);
+                    UpdateCustomPropertyDefaultsFromShader();
+                }
+            }
+            metadataUpdateScheduled_ = false;
+        }
+    });
 }
 
 // clang-format off
@@ -344,6 +360,9 @@ bool Material::UpdateTextureNames(
                     // Different name to the default ecs texture slot name
                     updated |= nameProp->SetDefaultValue(name) == META_NS::AnyReturn::SUCCESS;
                 }
+            }
+            if (auto use = interface_cast<IInUse>(t)) {
+                use->SetInUse(tsi.slots[i].active);
             }
         }
     }
@@ -455,6 +474,33 @@ bool Material::UpdateCustomProperties(const META_NS::IProperty::Ptr& p)
     return true;
 }
 
+void Material::UpdateCustomPropertyDefaultsFromShader()
+{
+    auto meta = CustomProperties()->GetValue();
+    if (!meta) {
+        return;
+    }
+    auto scene = GetInternalScene();
+    if (!scene) {
+        return;
+    }
+    auto& ecsc = scene->GetEcsContext();
+    auto rhman =
+        static_cast<CORE3D_NS::IRenderHandleComponentManager*>(ecsc.FindComponent<CORE3D_NS::RenderHandleComponent>());
+    if (!rhman) {
+        return;
+    }
+    auto shaderEntity = material_->MaterialShader()->GetValue().shader;
+    auto shaderHandle = rhman->GetRenderHandleReference(shaderEntity);
+    if (!shaderHandle) {
+        return;
+    }
+    auto& sman = scene->GetRenderContext().GetDevice().GetShaderManager();
+    if (const auto* propsJson = FindCustomPropertiesJson(sman, shaderHandle)) {
+        UpdateCustomPropertyDefaults(meta, *propsJson);
+    }
+}
+
 META_NS::IMetadata::Ptr Material::GetCustomProperties() const
 {
     return CustomProperties()->GetValue();
@@ -487,13 +533,13 @@ bool Material::SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>*
     // syncing material shader updates the custom properties
     scene->SyncProperty(material_->MaterialShader(), META_NS::EngineSyncDirection::AUTO);
     scene->SyncProperty(material_->CustomProperties(), META_NS::EngineSyncDirection::FROM_ENGINE);
-    return manager->ConstructValues(allCustomProps, { "", synced_values });
+    return manager->ConstructValues(allCustomProps, {"", synced_values});
 }
 
 static void CopyTextureData(
     const META_NS::IProperty::ConstPtr& p, const META_NS::ArrayProperty<const ITexture::Ptr>& tex)
 {
-    if (META_NS::ArrayProperty<const ITexture::Ptr> arr { p }) {
+    if (META_NS::ArrayProperty<const ITexture::Ptr> arr{p}) {
         for (size_t i = 0; i != arr->GetSize(); ++i) {
             if (auto in = interface_cast<META_NS::IMetadata>(arr->GetValueAt(i))) {
                 if (auto out = interface_cast<META_NS::IMetadata>(tex->GetValueAt(i))) {

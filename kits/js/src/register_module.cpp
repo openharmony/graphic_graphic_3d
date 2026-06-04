@@ -50,7 +50,7 @@ napi_value BridgeDebugNativesHavingJS(napi_env env, napi_callback_info info)
     return nullptr;
 }
 
-void RegisterClasses(napi_env env, napi_value exports)
+SCENE_ADDON_PUBLIC void RegisterClasses(napi_env env, napi_value exports)
 {
     napi_value zero = nullptr;
     napi_value one = nullptr;
@@ -139,7 +139,13 @@ void RegisterClasses(napi_env env, napi_value exports)
             };
         // clang-format on
         napi_value quaternion_class = nullptr;
-        napi_define_class(env, "Quaternion", NAPI_AUTO_LENGTH, defaultCtor, nullptr, BASE_NS::countof(qdesc), qdesc,
+        napi_define_class(env,
+            "Quaternion",
+            NAPI_AUTO_LENGTH,
+            defaultCtor,
+            nullptr,
+            BASE_NS::countof(qdesc),
+            qdesc,
             &quaternion_class);
         if (mis) {
             mis->StoreCtor("Quaternion", quaternion_class);
@@ -182,17 +188,17 @@ void RegisterClasses(napi_env env, napi_value exports)
     EffectJS::Init(env, scene3dNS);
     EffectsContainerJS::Init(env, scene3dNS);
     OcclusionMaterial::Init(env, scene3dNS);
-    BoidsSwarmWorldJS::Init(env, scene3dNS);
-    BoidsSwarmPluginJS::Init(env, scene3dNS);
-    ShadowConfiguration::PCFConfigJS::Init(env, scene3dNS);
 
-    BaseLight::RegisterEnums({ env, scene3dNS });
-    CameraJS::RegisterEnums({ env, scene3dNS });
-    GeometryDefinition::CustomJS::RegisterEnums({ env, scene3dNS });
-    GeometryDefinition::RegisterEnums({ env, scene3dNS });
-    NodeImpl::RegisterEnums({ env, scene3dNS });
-    SceneResourceImpl::RegisterEnums({ env, scene3dNS });
-    SceneJS::RegisterEnums({ env, scene3dNS });
-    SamplerJS::RegisterEnums({ env, scene3dNS });
-    ShadowConfiguration::RegisterEnums({ env, scene3dNS });
+    BaseLight::RegisterEnums({env, scene3dNS});
+    CameraJS::RegisterEnums({env, scene3dNS});
+    GeometryDefinition::CustomJS::RegisterEnums({env, scene3dNS});
+    GeometryDefinition::RegisterEnums({env, scene3dNS});
+    NodeImpl::RegisterEnums({env, scene3dNS});
+    SceneResourceImpl::RegisterEnums({env, scene3dNS});
+    SceneJS::RegisterEnums({env, scene3dNS});
+    SamplerJS::RegisterEnums({env, scene3dNS});
+    BoidsSwarmPluginJS::Init(env, scene3dNS);
+    BoidsSwarmWorldJS::Init(env, scene3dNS);
+    ShadowConfiguration::RegisterEnums({env, scene3dNS});
+    ShadowConfiguration::PCFConfigJS::Init(env, scene3dNS);
 }

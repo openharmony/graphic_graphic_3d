@@ -39,12 +39,12 @@ class StaggeredAnimationState : public AnimationState {
 
 public:
     struct AnimationSegment {
-        IAnimation::Ptr animation_;                   // Animation in the segment
-        IAnimationController::WeakPtr controller_;    // The view animation was originally associated with (if any)
-        float startProgress_ {};                      // Progress [0..1] of the animation at start of the segment
-        float endProgress_ {};                        // Percentage [0..1] of the animation length in this segment
-        PropertyChangedEventHandler durationChanged_; // Handler for animation duration change
-        PropertyChangedEventHandler validChanged_;    // Handler for animation validity change
+        IAnimation::Ptr animation_;                    // Animation in the segment
+        IAnimationController::WeakPtr controller_;     // The view animation was originally associated with (if any)
+        float startProgress_{};                        // Progress [0..1] of the animation at start of the segment
+        float endProgress_{};                          // Percentage [0..1] of the animation length in this segment
+        PropertyChangedEventHandler durationChanged_;  // Handler for animation duration change
+        PropertyChangedEventHandler validChanged_;     // Handler for animation validity change
     };
 
     using SegmentVector = BASE_NS::vector<AnimationSegment>;
@@ -73,7 +73,7 @@ public:
 
     virtual void ChildrenChanged();
 
-protected: // AnimationState
+protected:  // AnimationState
     bool Initialize(AnimationStateParams&& params) override;
     void Uninitialize() override;
     void UpdateTotalDuration() override;
@@ -97,7 +97,7 @@ protected:
     virtual IContainer::Ptr CreateContainer() const = 0;
 
 protected:
-    TimeSpan baseDuration_ { TimeSpan::Zero() };
+    TimeSpan baseDuration_{TimeSpan::Zero()};
 
 private:
     IEvent::Ptr onChildrenChanged_;
@@ -139,8 +139,8 @@ protected:
     TimeSpan GetAnimationBaseDuration() const override;
 
     struct ActiveAnimation {
-        const AnimationSegment* segment {};
-        int64_t index {};
+        const AnimationSegment* segment{};
+        int64_t index{};
         explicit operator bool() const noexcept
         {
             return segment != nullptr;
@@ -150,8 +150,8 @@ protected:
     ActiveAnimation GetActiveAnimation(float progress, bool reverse) const;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_STAGGERED_ANIMATION_STATE_H
+#endif  // META_SRC_STAGGERED_ANIMATION_STATE_H

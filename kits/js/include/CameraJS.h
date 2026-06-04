@@ -25,8 +25,9 @@
 #include "BaseObjectJS.h"
 #include "ColorProxy.h"
 #include "NodeImpl.h"
+#include "export.h"
 
-class CameraJS final : public BaseObject, public NodeImpl {
+class SCENE_ADDON_PUBLIC CameraJS final : public BaseObject, public NodeImpl {
 public:
     static constexpr uint32_t ID = 80;
     static void Init(napi_env env, napi_value exports);
@@ -42,7 +43,7 @@ public:
     SCENE_NS::IPostProcess::Ptr MakeDefaultPostProcess();
 
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     napi_value GetFov(NapiApi::FunctionContext<>& ctx);
     void SetFov(NapiApi::FunctionContext<float>& ctx);
@@ -75,7 +76,7 @@ private:
     napi_value WorldToScreen(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     napi_value ScreenToWorld(NapiApi::FunctionContext<NapiApi::Object>& ctx);
     enum class ProjectionDirection { WORLD_TO_SCREEN, SCREEN_TO_WORLD };
-    template<ProjectionDirection dir>
+    template <ProjectionDirection dir>
     napi_value ProjectCoords(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     napi_value Raycast(NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>& ctx);
@@ -83,16 +84,16 @@ private:
     napi_value GetProjectionMatrix(NapiApi::FunctionContext<>& ctx);
     napi_value GetViewMatrix(NapiApi::FunctionContext<>& ctx);
 
-    template<typename CoordType>
+    template <typename CoordType>
     struct RaycastResources {
         CoordType nativeCoord;
         SCENE_NS::ICameraRayCast::Ptr raycastSelf;
         NapiApi::StrongRef scene;
 
-        bool hasEverything { false };
+        bool hasEverything{false};
         BASE_NS::string errorMsg;
     };
-    template<typename CoordType>
+    template <typename CoordType>
     RaycastResources<CoordType> GetRaycastResources(const NapiApi::Object& jsCoord);
 
     BASE_NS::unique_ptr<ColorProxy> clearColor_;
@@ -101,8 +102,8 @@ private:
 
     BASE_NS::unordered_map<uintptr_t, META_NS::IObject::Ptr> resources_;
 
-    bool msaaEnabled_ { false };
-    bool clearColorEnabled_ { false };
-    bool postProcSetToNull_ { false };
+    bool msaaEnabled_{false};
+    bool clearColorEnabled_{false};
+    bool postProcSetToNull_{false};
 };
 #endif

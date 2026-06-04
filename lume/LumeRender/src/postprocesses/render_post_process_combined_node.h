@@ -65,7 +65,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -82,8 +82,8 @@ public:
     };
 
     struct EffectProperties {
-        bool enabled { false };
-        bool glOptimizedLayerCopyEnabled { false };
+        bool enabled{false};
+        bool glOptimizedLayerCopyEnabled{false};
         PostProcessConfiguration postProcessConfiguration;
     };
 
@@ -110,7 +110,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderPass CreateRenderPass(const RenderHandle input);
     void UpdatePostProcessData(const PostProcessConfiguration& postProcessConfiguration);
@@ -120,6 +120,8 @@ private:
         IShaderManager::ShaderData sd;
         RenderHandle pso;
     };
+    void UpdatePso(EffectData& effect, uint32_t enableFlags);
+    void BindCombineDescriptors(IRenderCommandList& cmdList);
     EffectData combineData_;
     // additional optimized layer copy for GL(ES)
     EffectData combineDataLayer_;
@@ -140,16 +142,18 @@ private:
     DefaultSamplers samplers_;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
+
+    uint32_t currentEnableFlags_{~0u};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_COMBINED_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_COMBINED_NODE_H

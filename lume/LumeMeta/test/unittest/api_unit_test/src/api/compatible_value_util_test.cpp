@@ -32,17 +32,17 @@ using types = TypeList<bool, char, int16_t, int32_t>;
  */
 UNIT_TEST(API_CompatibleValueUtilTest, SetGet, testing::ext::TestSize.Level1)
 {
-    Any<int16_t> any { 2 };
+    Any<int16_t> any{2};
 
     int64_t v = 0;
-    EXPECT_TRUE(GetCompatibleValue(any, v, types {}));
+    EXPECT_TRUE(GetCompatibleValue(any, v, types{}));
     EXPECT_EQ(v, 2);
 
     size_t s = 3;
-    EXPECT_TRUE(SetCompatibleValue(s, any, types {}));
+    EXPECT_TRUE(SetCompatibleValue(s, any, types{}));
     EXPECT_EQ(any.InternalGetValue(), 3);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

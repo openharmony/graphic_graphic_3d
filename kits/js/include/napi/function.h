@@ -23,26 +23,30 @@
 #endif
 
 #include "env.h"
+#include "export.h"
 
 namespace NapiApi {
 
 class Object;
 
 // The args that will be passed to JavaScript functions (including constructors).
-struct JsFuncArgs {
-    JsFuncArgs() : argc(0), argv(nullptr) {}
-    JsFuncArgs(napi_value single) : argc(1), argv(&singleStorage), singleStorage(single) {}
-    JsFuncArgs(size_t argc, napi_value* argv) : argc(argc), argv(argv) {}
-    template<size_t N>
+struct SCENE_ADDON_PUBLIC JsFuncArgs {
+    JsFuncArgs() : argc(0), argv(nullptr)
+    {}
+    JsFuncArgs(napi_value single) : argc(1), argv(&singleStorage), singleStorage(single)
+    {}
+    JsFuncArgs(size_t argc, napi_value* argv) : argc(argc), argv(argv)
+    {}
+    template <size_t N>
     JsFuncArgs(napi_value (&argv)[N]) : argc(N), argv(argv)
     {}
 
     size_t argc;
     napi_value* argv;
-    napi_value singleStorage { nullptr };
+    napi_value singleStorage{nullptr};
 };
 
-class Function {
+class SCENE_ADDON_PUBLIC Function {
 public:
     Function() = default;
     Function(napi_env env, napi_value v);
@@ -57,11 +61,11 @@ public:
     bool IsNull();
 
 private:
-    NapiApi::Env env_ { nullptr };
-    napi_value func_ { nullptr };
-    napi_valuetype jstype { napi_undefined };
+    NapiApi::Env env_{nullptr};
+    napi_value func_{nullptr};
+    napi_valuetype jstype{napi_undefined};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

@@ -42,7 +42,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStorePod : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "b5dbde59-e733-4640-99e7-cc992840a0bd" };
+    static constexpr BASE_NS::Uid UID{"b5dbde59-e733-4640-99e7-cc992840a0bd"};
 
     /** Create a new pod store with a unique name and initial data.
      * If pod store with a same name already created. It is updated with new data.
@@ -82,4 +82,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_POD_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_POD_H

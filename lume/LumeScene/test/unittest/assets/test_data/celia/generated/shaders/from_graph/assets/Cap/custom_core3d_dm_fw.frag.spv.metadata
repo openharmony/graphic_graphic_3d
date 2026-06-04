@@ -1,0 +1,93 @@
+{
+    "compatibility_info": {
+        "version": "2.0",
+        "type": "metafile"
+    },
+    "metainfo": {
+        "iid": "f834192a-8778-437c-b5c7-635c3e2c30c6",
+        "uri": "project://assets/generated/shaders/from_graph/assets/Cap/custom_core3d_dm_fw.frag.spv",
+        "sha1": "6e635e1b2c347a9b5da461d619eb3ed404c64308",
+        "spec": {
+            "$meta": {
+                "version": "1.0"
+            },
+            "$root": {
+                "$classId": "7257b473-414c-471e-96c6-326a69d275a4",
+                "$name": "ShaderBinaryAsset",
+                "$instanceId": "000544fc-508f-7424-5b28-b32efba94937",
+                "$properties": {
+                    "Name": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "custom_core3d_dm_fw.frag.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "IsValid": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "defaultValue": true,
+                        "flags": 171
+                    },
+                    "MediaType": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "application/vnd.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "Size": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "GeneratorSourceUri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "IsBuiltIn": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "ModifiedTimestamp": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "133579973821386312",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Category": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "",
+                        "defaultValue": "",
+                        "flags": 225
+                    },
+                    "IsGenerated": {
+                        "$classId": "cd2fd49b-c6b0-14bd-5072-6f7065727479",
+                        "value": false,
+                        "defaultValue": false,
+                        "flags": 235
+                    },
+                    "Iid": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "f834192a-8778-437c-b5c7-635c3e2c30c6",
+                        "defaultValue": "",
+                        "flags": 235
+                    },
+                    "Uri": {
+                        "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                        "value": "project://assets/generated/shaders/from_graph/assets/Cap/custom_core3d_dm_fw.frag.spv",
+                        "defaultValue": "",
+                        "flags": 225
+                    }
+                },
+                "Thumbnail": {
+                    "$classId": "4c56efce-a00b-20a3-5072-6f7065727479",
+                    "defaultValue": "",
+                    "flags": 33
+                }
+            }
+        }
+    }
+}

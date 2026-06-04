@@ -28,7 +28,7 @@ CORE3D_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreDefaultCamera : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "9a13e890-2a33-4b45-beee-be39eaecce57" };
+    static constexpr BASE_NS::Uid UID{"9a13e890-2a33-4b45-beee-be39eaecce57"};
 
     ~IRenderDataStoreDefaultCamera() override = default;
 
@@ -102,4 +102,4 @@ protected:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_CAMERA_H
+#endif  // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_CAMERA_H

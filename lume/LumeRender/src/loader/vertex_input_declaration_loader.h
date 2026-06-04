@@ -36,10 +36,11 @@ public:
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(BASE_NS::string error) : success(false), error(BASE_NS::move(error)) {}
+        explicit LoadResult(BASE_NS::string error) : success(false), error(BASE_NS::move(error))
+        {}
 
         /** Indicates, whether the parsing operation is successful. */
-        bool success { true };
+        bool success{true};
 
         /** In case of parsing error, contains the description of the error. */
         BASE_NS::string error;
@@ -82,8 +83,8 @@ private:
     VertexInputDeclarationData vertexInputDeclarationData_;
     BASE_NS::string uri_;
     BASE_NS::string renderSlotName_;
-    bool renderSlotDefaultVid_ { false };
+    bool renderSlotDefaultVid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // LOADER_VERTEX_INPUT_DECLARATION_LOADER_H
+#endif  // LOADER_VERTEX_INPUT_DECLARATION_LOADER_H

@@ -28,7 +28,7 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -51,7 +51,7 @@ public:
             OPTIONAL
         };
         IComponentManager& target;
-        Method method { REQUIRE };
+        Method method{REQUIRE};
     };
 
     /** Sets up a component query to component managers.
@@ -133,16 +133,16 @@ private:
     void OnComponentEvent(IEcs::ComponentListener::EventType type, const IComponentManager& componentManager,
         BASE_NS::array_view<const Entity> entities) override;
 
-    CORE_NS::IEcs* ecs_ { nullptr };
+    CORE_NS::IEcs* ecs_{nullptr};
     BASE_NS::vector<ResultRow> result_;
     BASE_NS::vector<IComponentManager*> managers_;
     BASE_NS::vector<Operation::Method> operationMethods_;
     BASE_NS::unordered_map<Entity, size_t> mapping_;
-    bool enableLookup_ { false };
-    bool enableListeners_ { false };
-    bool registered_ { false };
-    bool valid_ { false };
+    bool enableLookup_{false};
+    bool enableListeners_{false};
+    bool registered_{false};
+    bool valid_{false};
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_UTIL_ECS_COMPONENT_QUERY
+#endif  // CORE_UTIL_ECS_COMPONENT_QUERY

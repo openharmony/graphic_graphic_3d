@@ -33,8 +33,8 @@ public:
     virtual CORE_NS::IResourceManager::Ptr GetResourceManager() const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IResourceConsumer)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IResourceConsumer)
 
 #endif

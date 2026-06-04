@@ -28,10 +28,11 @@ class IResourceGroupHandle : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IResourceGroupHandle, "17ddd64a-b6ed-44ab-bfe7-451bb36a992d")
 public:
     virtual BASE_NS::string GetGroup() const = 0;
+    virtual CORE_NS::ResourceContextPtr GetContext() const = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IResourceGroupHandle)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IResourceGroupHandle)
 
 #endif

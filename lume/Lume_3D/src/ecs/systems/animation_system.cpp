@@ -70,7 +70,7 @@ struct AnimationSystem::InterpolationData {
 
 class AnimationSystem::InitTask final : public IThreadPool::ITask {
 public:
-    InitTask(AnimationSystem& system, size_t offset, size_t count) : system_(system), offset_(offset), count_(count) {};
+    InitTask(AnimationSystem& system, size_t offset, size_t count) : system_(system), offset_(offset), count_(count){};
 
     void operator()() override
     {
@@ -81,7 +81,8 @@ public:
     }
 
 protected:
-    void Destroy() override {}
+    void Destroy() override
+    {}
 
 private:
     AnimationSystem& system_;
@@ -92,7 +93,7 @@ private:
 class AnimationSystem::FrameIndexTask final : public IThreadPool::ITask {
 public:
     FrameIndexTask(AnimationSystem& system, size_t offset, size_t count)
-        : system_(system), offset_(offset), count_(count) {};
+        : system_(system), offset_(offset), count_(count){};
 
     void operator()() override
     {
@@ -103,7 +104,8 @@ public:
     }
 
 protected:
-    void Destroy() override {}
+    void Destroy() override
+    {}
 
 private:
     AnimationSystem& system_;
@@ -114,7 +116,7 @@ private:
 class AnimationSystem::AnimateTask final : public IThreadPool::ITask {
 public:
     AnimateTask(AnimationSystem& system, size_t offset, size_t count)
-        : system_(system), offset_(offset), count_(count) {};
+        : system_(system), offset_(offset), count_(count){};
 
     void operator()() override
     {
@@ -125,7 +127,8 @@ public:
     }
 
 protected:
-    void Destroy() override {}
+    void Destroy() override
+    {}
 
 private:
     AnimationSystem& system_;
@@ -140,14 +143,14 @@ PROPERTY_LIST(
 constexpr PropertyTypeDecl PROPERTY_HANDLE_PTR_T = PROPERTYTYPE(CORE_NS::IPropertyHandle*);
 
 // values contain in-tangent, spline vertex, out-tangent.
-template<typename T>
+template <typename T>
 struct SplineValues {
     T inTangent;
     T splineVertex;
     T outTangent;
 };
 
-template<typename To, typename From>
+template <typename To, typename From>
 inline To Cast(From* from)
 {
     if constexpr (is_const_v<remove_pointer_t<From>>) {
@@ -157,7 +160,7 @@ inline To Cast(From* from)
     }
 }
 
-template<typename To, typename From>
+template <typename To, typename From>
 inline To Cast(From& from)
 {
     if constexpr (is_const_v<remove_reference_t<From>>) {
@@ -167,7 +170,7 @@ inline To Cast(From& from)
     }
 }
 
-template<typename To, typename From>
+template <typename To, typename From>
 static inline To Get(From&& from)
 {
     if constexpr (is_same_v<remove_const_t<remove_reference_t<To>>, float>) {
@@ -184,7 +187,7 @@ static inline To Get(From&& from)
     }
 }
 
-template<class T>
+template <class T>
 T Step(const T& start, const T& end, float offset)
 {
     return (offset > 0.5f) ? end : start;
@@ -250,14 +253,14 @@ void Assign(const PropertyTypeDecl& type, uint8_t* dst, const InitialTransformCo
     }
 }
 
-template<typename T>
+template <typename T>
 inline void Mult(uint8_t* dst, const T& src)
 {
     auto* dstType = Cast<T*>(dst);
     *dstType = src * *dstType;
 }
 
-template<typename T>
+template <typename T>
 inline void Add(uint8_t* dst, const T src)
 {
     auto* dstType = Cast<T*>(dst);
@@ -301,8 +304,9 @@ void Add(const PropertyTypeDecl& type, uint8_t* dst, const InitialTransformCompo
             auto& srcVector = src.initialData.floatVectorValue;
             const auto* srcF = srcVector.data();
             const auto count = Math::min(srcVector.size(), dstVector->size());
-            std::transform(srcF, srcF + count, dstVector->data(), dstVector->data(),
-                [](float initial, float result) { return initial + result; });
+            std::transform(srcF, srcF + count, dstVector->data(), dstVector->data(), [](float initial, float result) {
+                return initial + result;
+            });
             break;
         }
         default: {
@@ -317,13 +321,13 @@ struct AnimationKeyDataOffsets {
     size_t endKeyOffset;
 };
 
-template<typename T>
+template <typename T>
 void Interpolate(const AnimationSystem::InterpolationData& interpolation, array_view<const uint8_t> frameValues,
     const InitialTransformComponent& initialValue, InitialTransformComponent& animatedValue)
 {
     auto values = array_view(Cast<const T*>(frameValues.data()), frameValues.size() / sizeof(T));
     if ((interpolation.startIndex < values.size()) && (interpolation.endIndex < values.size())) {
-        T result;
+        T result{};
         switch (interpolation.mode) {
             case AnimationTrackComponent::Interpolation::STEP:
                 result = Step(values[interpolation.startIndex], values[interpolation.endIndex], interpolation.t);
@@ -335,6 +339,9 @@ void Interpolate(const AnimationSystem::InterpolationData& interpolation, array_
                 break;
 
             case AnimationTrackComponent::Interpolation::SPLINE: {
+                if (interpolation.startIndex + 2 >= values.size() || interpolation.endIndex + 2 >= values.size()) {
+                    break;
+                }
                 const auto& p0 = Cast<const SplineValues<T>&>(values[interpolation.startIndex]);
                 const auto& p1 = Cast<const SplineValues<T>&>(values[interpolation.endIndex]);
                 result = Math::Hermite(p0.splineVertex, p0.outTangent, p1.splineVertex, p1.inTangent, interpolation.t);
@@ -352,7 +359,7 @@ void Interpolate(const AnimationSystem::InterpolationData& interpolation, array_
     }
 }
 
-template<>
+template <>
 void Interpolate<Math::Quat>(const AnimationSystem::InterpolationData& interpolation,
     array_view<const uint8_t> frameValues, const InitialTransformComponent& initialValue,
     InitialTransformComponent& animatedValue)
@@ -365,18 +372,23 @@ void Interpolate<Math::Quat>(const AnimationSystem::InterpolationData& interpola
         switch (interpolation.mode) {
             case AnimationTrackComponent::Interpolation::STEP: {
                 result = Step(Cast<const Math::Quat&>(values[interpolation.startIndex]),
-                    Cast<const Math::Quat&>(values[interpolation.endIndex]), interpolation.t);
+                    Cast<const Math::Quat&>(values[interpolation.endIndex]),
+                    interpolation.t);
                 break;
             }
 
             default:
             case AnimationTrackComponent::Interpolation::LINEAR: {
                 result = Slerp(Cast<const Math::Quat&>(values[interpolation.startIndex]),
-                    Cast<const Math::Quat&>(values[interpolation.endIndex]), interpolation.t);
+                    Cast<const Math::Quat&>(values[interpolation.endIndex]),
+                    interpolation.t);
                 break;
             }
 
             case AnimationTrackComponent::Interpolation::SPLINE: {
+                if (interpolation.startIndex + 2 >= values.size() || interpolation.endIndex + 2 >= values.size()) {
+                    break;
+                }
                 auto const p0 = reinterpret_cast<const SplineValues<Math::Vec4>*>(&values[interpolation.startIndex]);
                 auto const p1 = reinterpret_cast<const SplineValues<Math::Vec4>*>(&values[interpolation.endIndex]);
                 result = InterpolateQuatSplineGLTF(
@@ -505,7 +517,7 @@ void FindFrameIndices(const bool forward, const float currentTimestamp, const ar
         next = current ? current - 1 : 0;
     }
 
-    // Clamp timestamps to valid range.
+    // Clamp timestamps to valid range. timestamps has been checked to not be empty by calling function.
     currentFrameIndex = std::clamp(current, size_t(0), timestamps.size() - 1);
     nextFrameIndex = std::clamp(next, size_t(0), timestamps.size() - 1);
 }
@@ -520,7 +532,7 @@ void UpdateStateAndTracks(IAnimationStateComponentManager& stateManager_,
     auto& entityManager = stateManager_.GetEcs().GetEntityManager();
     auto targetIt = targetEntities.begin();
     for (const auto& trackEntity : animationComponent.tracks) {
-        stateHandle->trackStates.push_back({ Entity(trackEntity), 0U });
+        stateHandle->trackStates.push_back({Entity(trackEntity), 0U});
         auto& trackState = stateHandle->trackStates.back();
 
         if (auto track = trackManager_.Write(trackEntity); track) {
@@ -606,17 +618,19 @@ void ResetTime(AnimationStateComponent& state, const AnimationComponent& animati
     // correct state.
     state.dirty = true;
 }
-} // namespace
+}  // namespace
 
 AnimationSystem::AnimationSystem(IEcs& ecs)
-    : ecs_(ecs), systemPropertyApi_(&systemProperties_, array_view(SystemMetadata)),
+    : ecs_(ecs),
+      systemPropertyApi_(&systemProperties_, array_view(SystemMetadata)),
       initialTransformManager_(*(GetManager<IInitialTransformComponentManager>(ecs_))),
       animationManager_(*(GetManager<IAnimationComponentManager>(ecs_))),
       inputManager_(*(GetManager<IAnimationInputComponentManager>(ecs_))),
       outputManager_(*(GetManager<IAnimationOutputComponentManager>(ecs_))),
       stateManager_(*(GetManager<IAnimationStateComponentManager>(ecs_))),
       animationTrackManager_(*(GetManager<IAnimationTrackComponentManager>(ecs_))),
-      nameManager_(*(GetManager<INameComponentManager>(ecs_))), threadPool_(ecs.GetThreadPool())
+      nameManager_(*(GetManager<INameComponentManager>(ecs_))),
+      threadPool_(ecs.GetThreadPool())
 {}
 
 void AnimationSystem::SetActive(bool state)
@@ -670,14 +684,14 @@ void AnimationSystem::Initialize()
     ecs_.AddListener(animationTrackManager_, *this);
     {
         const ComponentQuery::Operation operations[] = {
-            { animationTrackManager_, ComponentQuery::Operation::REQUIRE },
+            {animationTrackManager_, ComponentQuery::Operation::REQUIRE},
         };
         trackQuery_.SetEcsListenersEnabled(true);
         trackQuery_.SetupQuery(initialTransformManager_, operations, true);
     }
     {
         const ComponentQuery::Operation operations[] = {
-            { stateManager_, ComponentQuery::Operation::REQUIRE },
+            {stateManager_, ComponentQuery::Operation::REQUIRE},
         };
         animationQuery_.SetEcsListenersEnabled(true);
         animationQuery_.SetupQuery(animationManager_, operations, false);
@@ -814,8 +828,9 @@ IAnimationPlayback* AnimationSystem::CreatePlayback(
     // target entities must be valid.
     if (const auto animationHandle = animationManager_.Read(animationEntity);
         !animationHandle || (animationHandle->tracks.size() != targetEntities.size()) ||
-        !std::all_of(targetEntities.begin(), targetEntities.end(),
-            [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
+        !std::all_of(targetEntities.begin(), targetEntities.end(), [](const Entity& entity) {
+            return EntityUtil::IsValid(entity);
+        })) {
         return nullptr;
     } else {
         if (!stateManager_.HasComponent(animationEntity)) {
@@ -908,7 +923,7 @@ void AnimationSystem::OnAnimationComponentsCreated(BASE_NS::array_view<const COR
             state.trackStates.reserve(animationHandle->tracks.size());
 
             for (const auto& trackEntity : animationHandle->tracks) {
-                state.trackStates.push_back({ Entity(trackEntity), 0U });
+                state.trackStates.push_back({Entity(trackEntity), 0U});
                 AnimationStateComponent::TrackState& trackState = state.trackStates.back();
 
                 const uint32_t componentId = initialTransformManager_.GetComponentId(trackState.entity);
@@ -1060,8 +1075,8 @@ void AnimationSystem::UpdateAnimation(AnimationStateComponent& state, const Anim
     // All tracks completed?
     const auto timePosition = state.time + animation.startOffset;
     if ((timePosition >= (animation.duration + FLT_EPSILON)) || (timePosition <= -FLT_EPSILON)) {
-        const bool repeat = (animation.repeatCount == AnimationComponent::REPEAT_COUNT_INFINITE) || // Infinite repeat.
-                            animation.repeatCount > state.currentLoop; // Need to repeat until repeat count reached.
+        const bool repeat = (animation.repeatCount == AnimationComponent::REPEAT_COUNT_INFINITE) ||  // Infinite repeat.
+                            animation.repeatCount > state.currentLoop;  // Need to repeat until repeat count reached.
         if (repeat) {
             // Need to repeat, go to start.
             state.currentLoop++;
@@ -1104,13 +1119,13 @@ void AnimationSystem::InitializeTrackValues()
         initTaskStart_ = taskId_;
         for (size_t i = 0; i < tasks_; ++i) {
             auto& task = initTasks_.emplace_back(*this, i * taskSize_, taskSize_);
-            taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }));
+            taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr{&task}));
             ++taskId_;
         }
     }
     if (remaining_ >= systemProperties_.minTaskSize) {
         auto& task = initTasks_.emplace_back(*this, tasks_ * taskSize_, remaining_);
-        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }));
+        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr{&task}));
         ++taskId_;
     } else {
         InitializeTrackValues(array_view(static_cast<const uint32_t*>(trackOrder_.data()), remaining_));
@@ -1133,13 +1148,13 @@ void AnimationSystem::AnimateTrackValues()
     auto batch = [this](size_t i, size_t offset, size_t count) {
         // Start task for calculating which keyframes are used.
         auto& frameIndexTask = frameIndexTasks_.emplace_back(*this, offset, count);
-        threadPool_->PushNoWait(IThreadPool::ITask::Ptr { &frameIndexTask });
+        threadPool_->PushNoWait(IThreadPool::ITask::Ptr{&frameIndexTask});
 
         // Start task for interpolating between the selected keyframes.
         // This work requires the initial values as well as the keyframe indices.
         auto& task = animTasks_.emplace_back(*this, offset, count);
-        const IThreadPool::ITask* dependencies[] = { &initTasks_[i], &frameIndexTask };
-        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }, dependencies));
+        const IThreadPool::ITask* dependencies[] = {&initTasks_[i], &frameIndexTask};
+        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr{&task}, dependencies));
         ++taskId_;
     };
     for (size_t i = 0U; i < tasks_; ++i) {
@@ -1235,7 +1250,8 @@ void AnimationSystem::ResetTargetProperties(array_view<const uint32_t> resultInd
                     }
                 } else {
                     PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
-                        "ResetTargetProperties failed, type mismatch %" PRIx64, entry.property->type.typeHash);
+                        "ResetTargetProperties failed, type mismatch %" PRIx64,
+                        entry.property->type.typeHash);
                 }
             }
         }
@@ -1293,7 +1309,7 @@ void AnimationSystem::CalculateFrameIndices(array_view<const uint32_t> resultInd
                         currentOffset = std::clamp(currentOffset, 0.0f, 1.0f);
                     }
 
-                    frameIndices_[trackId] = FrameData { currentOffset, currentFrameIndex, nextFrameIndex };
+                    frameIndices_[trackId] = FrameData{currentOffset, currentFrameIndex, nextFrameIndex};
                 }
             }
         }
@@ -1340,7 +1356,8 @@ void AnimationSystem::AnimateTracks(array_view<const uint32_t> resultIndices)
                 if ((outputHandle->type != entry.property->type) || (outputHandle->type != trackValues.initial.type) ||
                     (outputHandle->type != trackValues.result.type)) {
                     PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, outputHandle->type)),
-                        "AnimateTrack failed, unexpected type %" PRIx64, outputHandle->type);
+                        "AnimateTrack failed, unexpected type %" PRIx64,
+                        outputHandle->type);
                     continue;
                 }
 
@@ -1348,9 +1365,11 @@ void AnimationSystem::AnimateTracks(array_view<const uint32_t> resultIndices)
                 const size_t inputCount =
                     (trackHandle->interpolationMode == AnimationTrackComponent::Interpolation::SPLINE) ? 3U : 1U;
                 const FrameData& currentFrame = frameIndices_[trackId];
-                const InterpolationData interpolationData { trackHandle->interpolationMode,
-                    currentFrame.currentFrameIndex * inputCount, currentFrame.nextFrameIndex * inputCount,
-                    currentFrame.currentOffset, trackValues.weight };
+                const InterpolationData interpolationData{trackHandle->interpolationMode,
+                    currentFrame.currentFrameIndex * inputCount,
+                    currentFrame.nextFrameIndex * inputCount,
+                    currentFrame.currentOffset,
+                    trackValues.weight};
 
                 // initial data is needed only when weight < 1 or there are multiple animations targeting the same
                 // property.
@@ -1397,7 +1416,8 @@ void AnimationSystem::ApplyResults(array_view<const uint32_t> resultIndices)
                         }
                     } else {
                         PLUGIN_LOG_ONCE_D(to_string(Hash(trackId, entry.property->type.typeHash)),
-                            "ApplyResults failed, type mismatch %" PRIx64, entry.property->type.typeHash);
+                            "ApplyResults failed, type mismatch %" PRIx64,
+                            entry.property->type.typeHash);
                     }
                 }
             }
@@ -1409,11 +1429,13 @@ const AnimationSystem::PropertyEntry& AnimationSystem::GetEntry(const AnimationT
 {
     // Cache component manager and property lookups
     const auto key = Hash(track.component, track.property);
-    auto pos = std::lower_bound(std::begin(propertyCache_), std::end(propertyCache_), key,
-        [](const PropertyEntry& element, uint64_t value) { return element.componentAndProperty < value; });
+    auto pos = std::lower_bound(
+        std::begin(propertyCache_), std::end(propertyCache_), key, [](const PropertyEntry& element, uint64_t value) {
+            return element.componentAndProperty < value;
+        });
     // Add new manager-propery combinations
     if ((pos == std::end(propertyCache_)) || (pos->componentAndProperty != key)) {
-        pos = propertyCache_.insert(pos, PropertyEntry { key, ecs_.GetComponentManager(track.component), 0U, nullptr });
+        pos = propertyCache_.insert(pos, PropertyEntry{key, ecs_.GetComponentManager(track.component), 0U, nullptr});
     }
     // Try to get the component manager if it's missing
     if (!pos->component) {

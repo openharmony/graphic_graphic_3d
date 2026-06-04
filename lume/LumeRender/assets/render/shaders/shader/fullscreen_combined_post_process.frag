@@ -49,32 +49,32 @@ void main(void)
     outColor = textureLod(uImgSampler, inUv, 0);
 
     //>FUNCTIONS_CORE_POST_PROCESS
-    PostProcessColorFringeBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_FRINGE], inUv,
+    PostProcessColorFringeBlock(CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_FRINGE], inUv,
         uPc.viewportSizeInvSize.zw, uImgSampler, outColor.rgb, outColor.rgb);
 
     PostProcessWhiteBalanceBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_WHITE_BALANCE], outColor.rgb, outColor.rgb);
+        CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_WHITE_BALANCE], outColor.rgb, outColor.rgb);
 
-    PostProcessBloomCombineBlock(uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_BLOOM], inUv,
+    PostProcessBloomCombineBlock(CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_BLOOM], inUv,
         uBloomSampler, uDirtSampler, outColor.rgb, outColor.rgb);
 
     PostProcessColorAdjustmentsBlock(
-        uGlobalData.flags.x,
+        CORE_POST_PROCESS_FLAGS,
         uGlobalData.factors[POST_PROCESS_INDEX_COLOR_ADJUSTMENTS],
         uGlobalData.userFactors[POST_PROCESS_USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR], // filterColor
         outColor.rgb,
         outColor.rgb);
 
     PostProcessTonemapBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);
+        CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_TONEMAP], outColor.rgb, outColor.rgb);
     const float tickDelta = uGlobalData.renderTimings.y; // tick delta time (ms)
     const vec2 vecCoeffs =
         inUv.xy +
         TIME_SCALE * tickDelta; // Offset uv randomly by a small number based on delta time to create temporal noise
     PostProcessDitherBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_DITHER], vecCoeffs, outColor.rgb, outColor.rgb);
+        CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_DITHER], vecCoeffs, outColor.rgb, outColor.rgb);
     PostProcessVignetteBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
+        CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
     PostProcessColorConversionBlock(
-        uGlobalData.flags.x, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgba, outColor.rgba);
+        CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgba, outColor.rgba);
 }

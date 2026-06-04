@@ -65,7 +65,7 @@ UNIT_TEST(API_ContainersArrayView, empty, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersArrayView, dataAccess, testing::ext::TestSize.Level1)
 {
-    int int_data[] = { 3, 2, 1, 0 };
+    int int_data[] = {3, 2, 1, 0};
     BASE_NS::array_view<int> int_av(int_data);
     ASSERT_TRUE(int_av.size() == 4);
     ASSERT_TRUE(int_av.size_bytes() == 4 * sizeof(int));
@@ -93,7 +93,7 @@ UNIT_TEST(API_ContainersArrayView, dataAccess, testing::ext::TestSize.Level1)
     ASSERT_TRUE(*(cint_av.end() - 1) == int_data[3]);
     ASSERT_TRUE(*(cint_av.cend() - 1) == int_data[3]);
 
-    bool bool_data[] = { true, false };
+    bool bool_data[] = {true, false};
     BASE_NS::array_view<bool> bool_av(bool_data);
     ASSERT_TRUE(bool_av.size() == 2);
     ASSERT_TRUE(bool_av.size_bytes() == 2 * sizeof(bool));
@@ -110,7 +110,7 @@ UNIT_TEST(API_ContainersArrayView, dataAccess, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
 {
-    int int_data[] = { 3, 2, 1, 0 };
+    int int_data[] = {3, 2, 1, 0};
     {
         BASE_NS::array_view<int> int_av = BASE_NS::array_view<int>();
         ASSERT_TRUE(int_av.size() == 0);
@@ -172,20 +172,20 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
         uint8_data[2] = 1;
         uint8_data[3] = 0;
         BASE_NS::array_view<const uint8_t> uint_av = BASE_NS::arrayviewU8<uint8_t>(*uint8_data);
-        ASSERT_TRUE(uint_av.size() == 1); // pointer size is 1 -> data is the same but size is always 1
+        ASSERT_TRUE(uint_av.size() == 1);  // pointer size is 1 -> data is the same but size is always 1
         ASSERT_TRUE(uint_av[0] == uint8_data[0]);
         delete[] uint8_data;
     }
     {
-        uint8_t uint8_data[4] = { 3, 2, 1, 0 };
+        uint8_t uint8_data[4] = {3, 2, 1, 0};
         BASE_NS::array_view<const uint8_t> uint_av = BASE_NS::arrayviewU8<uint8_t>(*uint8_data);
-        ASSERT_TRUE(uint_av.size() == 1); // pointer size is 1 -> data is the same but size is always 1
+        ASSERT_TRUE(uint_av.size() == 1);  // pointer size is 1 -> data is the same but size is always 1
         ASSERT_TRUE(uint_av[0] == uint8_data[0]);
     }
     {
-        uint8_t uint8_data[4] = { 3, 2, 1, 0 };
+        uint8_t uint8_data[4] = {3, 2, 1, 0};
         BASE_NS::array_view<const uint8_t> uint_av = BASE_NS::arrayviewU8(uint8_data);
-        ASSERT_TRUE(uint_av.size() == 4); // array as input
+        ASSERT_TRUE(uint_av.size() == 4);  // array as input
         ASSERT_TRUE(uint_av[0] == uint8_data[0]);
         ASSERT_TRUE(uint_av[1] == uint8_data[1]);
         ASSERT_TRUE(uint_av[2] == uint8_data[2]);
@@ -199,7 +199,7 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
             ASSERT_TRUE(int_av[2] == 1);
             ASSERT_TRUE(int_av[3] == 0);
         };
-        fun({ 3, 2, 1, 0 });
+        fun({3, 2, 1, 0});
     }
     {
         auto fun = [](BASE_NS::array_view<const BASE_NS::string> string_av) {
@@ -207,7 +207,7 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
             ASSERT_TRUE(string_av[0] == "foo");
             ASSERT_TRUE(string_av[1] == "A really, really, really long string.");
         };
-        fun({ BASE_NS::string("foo"), BASE_NS::string("A really, really, really long string.") });
+        fun({BASE_NS::string("foo"), BASE_NS::string("A really, really, really long string.")});
     }
 }
 
@@ -218,7 +218,7 @@ UNIT_TEST(API_ContainersArrayView, constructors, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersArrayView, hash, testing::ext::TestSize.Level1)
 {
-    static constexpr const int data[] = { 1, 2, 3, 4 };
+    static constexpr const int data[] = {1, 2, 3, 4};
     auto h1 = FNV1aHash(data);
     auto h2 = hash(array_view(data));
     EXPECT_EQ(h1, h2);

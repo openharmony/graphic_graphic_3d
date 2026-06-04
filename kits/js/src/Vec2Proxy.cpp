@@ -29,7 +29,7 @@ Vec2Proxy::~Vec2Proxy()
 {
     Reset();
 }
-void Vec2Proxy::SetValue(const BASE_NS::Math::Vec2& v)
+void Vec2Proxy::SetNativeValue(const BASE_NS::Math::Vec2& v)
 {
     META_NS::SetValue(GetProperty<BASE_NS::Math::Vec2>(), v);
 }
@@ -75,7 +75,7 @@ void Vec2Proxy::SetValue(NapiApi::Object obj)
     auto x = obj.Get<float>("x");
     auto y = obj.Get<float>("y");
     if (x.IsValid() && y.IsValid()) {
-        SetValue({ x, y });
+        SetNativeValue({x, y});
     }
 }
 
@@ -84,7 +84,7 @@ BASE_NS::Math::Vec2 Vec2Proxy::ToNative(NapiApi::Object vec2, bool& success)
     auto x = vec2.Get<float>("x");
     auto y = vec2.Get<float>("y");
     success = x.IsValid() && y.IsValid();
-    return BASE_NS::Math::Vec2 { x, y };
+    return BASE_NS::Math::Vec2{x, y};
 }
 
 NapiApi::Object Vec2Proxy::ToNapiObject(BASE_NS::Math::Vec2 vec2, napi_env env)
@@ -109,7 +109,7 @@ UVec2Proxy::~UVec2Proxy()
 {
     Reset();
 }
-void UVec2Proxy::SetValue(const BASE_NS::Math::UVec2& v)
+void UVec2Proxy::SetNativeValue(const BASE_NS::Math::UVec2& v)
 {
     META_NS::SetValue(GetProperty<BASE_NS::Math::UVec2>(), v);
 }
@@ -155,7 +155,7 @@ void UVec2Proxy::SetValue(NapiApi::Object obj)
     auto x = obj.Get<float>("x");
     auto y = obj.Get<float>("y");
     if (x.IsValid() && y.IsValid()) {
-        SetValue({ static_cast<uint32_t>(x), static_cast<uint32_t>(y) });
+        SetNativeValue({static_cast<uint32_t>(x), static_cast<uint32_t>(y)});
     }
 }
 
@@ -164,7 +164,7 @@ BASE_NS::Math::Vec2 UVec2Proxy::ToNative(NapiApi::Object vec2, bool& success)
     auto x = vec2.Get<float>("x");
     auto y = vec2.Get<float>("y");
     success = x.IsValid() && y.IsValid();
-    return BASE_NS::Math::Vec2 { x, y };
+    return BASE_NS::Math::Vec2{x, y};
 }
 
 NapiApi::Object UVec2Proxy::ToNapiObject(BASE_NS::Math::UVec2 vec2, napi_env env)

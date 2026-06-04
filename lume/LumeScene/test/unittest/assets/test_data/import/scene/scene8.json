@@ -1,0 +1,25 @@
+{
+	"version": "1.0",
+	"description": "test scene with external hierarchy using resource id",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene8.index",
+		"rootNode":	{
+			"type": "node",
+			"name": "mynode",
+			"children": [
+				{
+					"type": "external",
+					"name": "1",
+					"source": {
+						"resourceId": {
+							"name": "cube"
+						}
+					},
+					"resourceGroup": "cube-group"
+				}
+			]
+		}
+	}
+}

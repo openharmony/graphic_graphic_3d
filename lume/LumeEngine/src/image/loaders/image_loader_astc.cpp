@@ -48,7 +48,7 @@ using BASE_NS::unique_ptr;
 using BASE_NS::vector;
 
 constexpr const size_t ASTC_MAGIC_LENGTH = 4;
-constexpr const uint8_t ASTC_MAGIC[ASTC_MAGIC_LENGTH] = { 0x13, 0xAB, 0xA1, 0x5C };
+constexpr const uint8_t ASTC_MAGIC[ASTC_MAGIC_LENGTH] = {0x13, 0xAB, 0xA1, 0x5C};
 constexpr const uint8_t ASTC_HEADER_SIZE = 16u;
 constexpr const size_t ASTC_BYTES_PER_BLOCK = 16;
 constexpr const uint32_t MAX_DIMENSIONS = 16384u;
@@ -72,26 +72,20 @@ inline Format GetAstcBlockSizeFormat(uint32_t x, uint32_t y, bool srgb)
     };
 
     const BASE_NS::unordered_map<uint64_t, FormatPair> formatMap = {
-        { 0x0000000400000004U, { Format::BASE_FORMAT_ASTC_4x4_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_4x4_SRGB_BLOCK } },
-        { 0x0000000500000004U, { Format::BASE_FORMAT_ASTC_5x4_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_5x4_SRGB_BLOCK } },
-        { 0x0000000500000005U, { Format::BASE_FORMAT_ASTC_5x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_5x5_SRGB_BLOCK } },
-        { 0x0000000600000005U, { Format::BASE_FORMAT_ASTC_6x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_6x5_SRGB_BLOCK } },
-        { 0x0000000600000006U, { Format::BASE_FORMAT_ASTC_6x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_6x6_SRGB_BLOCK } },
-        { 0x0000000800000005U, { Format::BASE_FORMAT_ASTC_8x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x5_SRGB_BLOCK } },
-        { 0x0000000800000006U, { Format::BASE_FORMAT_ASTC_8x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x6_SRGB_BLOCK } },
-        { 0x0000000A00000005U,
-            { Format::BASE_FORMAT_ASTC_10x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x5_SRGB_BLOCK } },
-        { 0x0000000A00000006U,
-            { Format::BASE_FORMAT_ASTC_10x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x6_SRGB_BLOCK } },
-        { 0x0000000800000008U, { Format::BASE_FORMAT_ASTC_8x8_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x8_SRGB_BLOCK } },
-        { 0x0000000A00000008U,
-            { Format::BASE_FORMAT_ASTC_10x8_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x8_SRGB_BLOCK } },
-        { 0x0000000A0000000AU,
-            { Format::BASE_FORMAT_ASTC_10x10_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x10_SRGB_BLOCK } },
-        { 0x0000000C0000000AU,
-            { Format::BASE_FORMAT_ASTC_12x10_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_12x10_SRGB_BLOCK } },
-        { 0x0000000C0000000CU,
-            { Format::BASE_FORMAT_ASTC_12x12_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK } },
+        {0x0000000400000004U, {Format::BASE_FORMAT_ASTC_4x4_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_4x4_SRGB_BLOCK}},
+        {0x0000000500000004U, {Format::BASE_FORMAT_ASTC_5x4_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_5x4_SRGB_BLOCK}},
+        {0x0000000500000005U, {Format::BASE_FORMAT_ASTC_5x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_5x5_SRGB_BLOCK}},
+        {0x0000000600000005U, {Format::BASE_FORMAT_ASTC_6x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_6x5_SRGB_BLOCK}},
+        {0x0000000600000006U, {Format::BASE_FORMAT_ASTC_6x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_6x6_SRGB_BLOCK}},
+        {0x0000000800000005U, {Format::BASE_FORMAT_ASTC_8x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x5_SRGB_BLOCK}},
+        {0x0000000800000006U, {Format::BASE_FORMAT_ASTC_8x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x6_SRGB_BLOCK}},
+        {0x0000000A00000005U, {Format::BASE_FORMAT_ASTC_10x5_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x5_SRGB_BLOCK}},
+        {0x0000000A00000006U, {Format::BASE_FORMAT_ASTC_10x6_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x6_SRGB_BLOCK}},
+        {0x0000000800000008U, {Format::BASE_FORMAT_ASTC_8x8_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_8x8_SRGB_BLOCK}},
+        {0x0000000A00000008U, {Format::BASE_FORMAT_ASTC_10x8_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x8_SRGB_BLOCK}},
+        {0x0000000A0000000AU, {Format::BASE_FORMAT_ASTC_10x10_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_10x10_SRGB_BLOCK}},
+        {0x0000000C0000000AU, {Format::BASE_FORMAT_ASTC_12x10_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_12x10_SRGB_BLOCK}},
+        {0x0000000C0000000CU, {Format::BASE_FORMAT_ASTC_12x12_UNORM_BLOCK, Format::BASE_FORMAT_ASTC_12x12_SRGB_BLOCK}},
     };
 
     const uint64_t key = (static_cast<uint64_t>(x) << 32u) | y;
@@ -113,18 +107,18 @@ public:
 
     array_view<const uint8_t> GetData() const override
     {
-        return { fileBytes_.get() + ASTC_HEADER_SIZE, fileBytesLength_ - ASTC_HEADER_SIZE };
+        return {fileBytes_.get() + ASTC_HEADER_SIZE, fileBytesLength_ - ASTC_HEADER_SIZE};
     };
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
     {
-        return { &imageBuffer_, 1 };
+        return {&imageBuffer_, 1};
     };
 
     static AstcHeader ReadHeader(const uint8_t* data)
     {
         struct RawHeader {
-            uint8_t magic[4u]; //  4 byte file magic
+            uint8_t magic[4u];  //  4 byte file magic
             uint8_t block_x;
             uint8_t block_y;
             uint8_t block_z;
@@ -162,32 +156,32 @@ public:
         bool srgb = loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_SRGB_BIT;
         // Fill image descriptions, dimensions are already validated to be 2D before
         image->imageDesc_ = {
-            ImageFlags::FLAGS_COMPRESSED_BIT, // imageFlags
-            header.blockWidth,                // blockPixelWidth
-            header.blockHeight,               // blockPixelHeight
-            header.blockDepth,                // blockPixelDepth
-            ASTC_BYTES_PER_BLOCK * 8u,        // bitsPerBlock
+            ImageFlags::FLAGS_COMPRESSED_BIT,  // imageFlags
+            header.blockWidth,                 // blockPixelWidth
+            header.blockHeight,                // blockPixelHeight
+            header.blockDepth,                 // blockPixelDepth
+            ASTC_BYTES_PER_BLOCK * 8u,         // bitsPerBlock
 
-            ImageType::TYPE_2D,                                                  // imageType, only 2D support
-            ImageViewType::VIEW_TYPE_2D,                                         // imageViewType
-            GetAstcBlockSizeFormat(header.blockWidth, header.blockHeight, srgb), // format, defaults to linear rgb so
-                                                                                 // only check for srgb load flag
+            ImageType::TYPE_2D,                                                   // imageType, only 2D support
+            ImageViewType::VIEW_TYPE_2D,                                          // imageViewType
+            GetAstcBlockSizeFormat(header.blockWidth, header.blockHeight, srgb),  // format, defaults to linear rgb so
+                                                                                  // only check for srgb load flag
 
-            header.width,  // width
-            header.height, // height
-            header.depth,  // depth
+            header.width,   // width
+            header.height,  // height
+            header.depth,   // depth
 
-            1, // mipCount
-            1, // layerCount
+            1,  // mipCount
+            1,  // layerCount
         };
 
-        image->imageBuffer_ = SubImageDesc {
-            0,             // uint32_t bufferOffset
-            header.width,  // uint32_t bufferRowLength
-            header.height, // uint32_t bufferImageHeight
+        image->imageBuffer_ = SubImageDesc{
+            0,              // uint32_t bufferOffset
+            header.width,   // uint32_t bufferRowLength
+            header.height,  // uint32_t bufferImageHeight
 
-            0, // uint32_t mipLevel
-            1, // uint32_t layerCount
+            0,  // uint32_t mipLevel
+            1,  // uint32_t layerCount
 
             header.width,
             header.height,
@@ -241,11 +235,12 @@ public:
         }
 
         // Verify file has enough data for the payload declared by the header
-        const size_t blocksX = (header.width + header.blockWidth - 1u) / header.blockWidth;
-        const size_t blocksY = (header.height + header.blockHeight - 1u) / header.blockHeight;
-        const size_t blocksZ = (header.depth + header.blockDepth - 1u) / header.blockDepth;
-        const size_t expectedFileSize = ASTC_HEADER_SIZE + blocksX * blocksY * blocksZ * ASTC_BYTES_PER_BLOCK;
-        if (fileBytesLength < expectedFileSize) {
+        const uint64_t blocksX = (header.width + header.blockWidth - 1u) / header.blockWidth;
+        const uint64_t blocksY = (header.height + header.blockHeight - 1u) / header.blockHeight;
+        const uint64_t blocksZ = (header.depth + header.blockDepth - 1u) / header.blockDepth;
+        const uint64_t expectedFileSize =
+            ASTC_HEADER_SIZE + static_cast<uint64_t>(blocksX) * blocksY * blocksZ * ASTC_BYTES_PER_BLOCK;
+        if (expectedFileSize > SIZE_MAX || fileBytesLength < expectedFileSize) {
             CORE_LOG_D("Astc file too small for declared dimensions.");
             return ImageLoaderManager::ResultFailure("Invalid astc data.");
         }
@@ -261,7 +256,7 @@ protected:
 
 private:
     unique_ptr<uint8_t[]> fileBytes_;
-    size_t fileBytesLength_ { 0 };
+    size_t fileBytesLength_{0};
 
     ImageDesc imageDesc_;
     SubImageDesc imageBuffer_;
@@ -269,6 +264,8 @@ private:
 
 class ImageLoaderAstc final : public IImageLoaderManager::IImageLoader {
 public:
+    using IImageLoaderManager::IImageLoader::Load;
+
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
         return (imageFileBytes.size() >= ASTC_MAGIC_LENGTH &&
@@ -283,6 +280,9 @@ public:
     ImageLoaderManager::LoadResult Load(IFile& file, uint32_t loadFlags) const override
     {
         uint64_t byteLength = file.GetLength();
+        if (byteLength > SIZE_MAX) {
+            return ImageLoaderManager::ResultFailure("File too large for this platform.");
+        }
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) != 0) {
             // Only load header
             byteLength = ASTC_HEADER_SIZE;
@@ -339,7 +339,7 @@ public:
      */
     vector<ImageLoaderManager::ImageType> GetSupportedTypes() const override
     {
-        return { std::begin(ASTC_IMAGE_TYPES), std::end(ASTC_IMAGE_TYPES) };
+        return {std::begin(ASTC_IMAGE_TYPES), std::end(ASTC_IMAGE_TYPES)};
     }
 
 protected:
@@ -348,11 +348,11 @@ protected:
         delete this;
     }
 };
-} // namespace
+}  // namespace
 
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderAstc(PluginToken)
 {
-    return ImageLoaderManager::IImageLoader::Ptr { new ImageLoaderAstc() };
+    return ImageLoaderManager::IImageLoader::Ptr{new ImageLoaderAstc()};
 }
 
 CORE_END_NAMESPACE()

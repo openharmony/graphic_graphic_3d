@@ -58,7 +58,7 @@ UNIT_TEST(API_UnitTest_Color, T2LinearToSRGBConv, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_UnitTest_Color, T3MakeColorFromLinear, testing::ext::TestSize.Level1)
 {
-    const uint32_t srcCol { 0x00eb3425 };
+    const uint32_t srcCol{0x00eb3425};
     BASE_NS::Color dstCol = BASE_NS::MakeColorFromLinear(srcCol);
     EXPECT_FLOAT_EQ(dstCol.x, 0.921568632f);
     EXPECT_FLOAT_EQ(dstCol.y, 0.203921571f);
@@ -73,7 +73,7 @@ UNIT_TEST(API_UnitTest_Color, T3MakeColorFromLinear, testing::ext::TestSize.Leve
  */
 UNIT_TEST(API_UnitTest_Color, T4MakeColorFromSRGB, testing::ext::TestSize.Level1)
 {
-    const uint32_t srcCol { 0x00eb3425 };
+    const uint32_t srcCol{0x00eb3425};
     BASE_NS::Color dstCol = BASE_NS::MakeColorFromSRGB(srcCol);
     EXPECT_FLOAT_EQ(dstCol.x, 0.830769956f);
     EXPECT_FLOAT_EQ(dstCol.y, 0.0343398005f);
@@ -88,7 +88,7 @@ UNIT_TEST(API_UnitTest_Color, T4MakeColorFromSRGB, testing::ext::TestSize.Level1
  */
 UNIT_TEST(API_UnitTest_Color, T6FromColorToLinear, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 0.921568632f, 0.203921571f, 0.145098045f, 0.0f };
+    BASE_NS::Color srcCol{0.921568632f, 0.203921571f, 0.145098045f, 0.0f};
     uint32_t dstCol = BASE_NS::FromColorToLinear(srcCol);
     EXPECT_EQ(dstCol, 0x00eb3425);
 }
@@ -100,7 +100,7 @@ UNIT_TEST(API_UnitTest_Color, T6FromColorToLinear, testing::ext::TestSize.Level1
  */
 UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGB, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 0.830769956f, 0.0343398005f, 0.0185002182f, 0.0f };
+    BASE_NS::Color srcCol{0.830769956f, 0.0343398005f, 0.0185002182f, 0.0f};
     uint32_t dstCol = BASE_NS::FromColorToSRGB(srcCol);
     EXPECT_EQ(dstCol, 0x00eb3325);
 }
@@ -111,7 +111,7 @@ UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGB, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGBmaxValue, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 1.0f, 1.0f, 1.0f, 1.0f };
+    BASE_NS::Color srcCol{1.0f, 1.0f, 1.0f, 1.0f};
     uint32_t dstCol = BASE_NS::FromColorToSRGB(srcCol);
     EXPECT_EQ(dstCol, 0xffffffff);
 }
@@ -122,7 +122,7 @@ UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGBmaxValue, testing::ext::TestSize.
  */
 UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGBminValue, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { .0f, .0f, .0f, .0f };
+    BASE_NS::Color srcCol{.0f, .0f, .0f, .0f};
     uint32_t dstCol = BASE_NS::FromColorToSRGB(srcCol);
     EXPECT_EQ(dstCol, 0x00000000);
 }
@@ -134,9 +134,9 @@ UNIT_TEST(API_UnitTest_Color, T7FromColorToSRGBminValue, testing::ext::TestSize.
  */
 UNIT_TEST(API_UnitTest_Color, T9FromColorRGBAToLinear, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 0.25f, 0.5f, 0.75f, 1.0f };
+    BASE_NS::Color srcCol{0.25f, 0.5f, 0.75f, 1.0f};
     uint32_t dstCol = BASE_NS::FromColorRGBAToLinear(srcCol);
-    EXPECT_EQ(dstCol, 0xffbf7f3f); //TODO: Check if roundings are correct
+    EXPECT_EQ(dstCol, 0xffbf7f3f);
 }
 
 /**
@@ -146,9 +146,9 @@ UNIT_TEST(API_UnitTest_Color, T9FromColorRGBAToLinear, testing::ext::TestSize.Le
  */
 UNIT_TEST(API_UnitTest_Color, T10FromColorRGBAToSRGB, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 0.25f, 0.5f, 0.75f, 1.0f }; // 0.75 = 223.74, 0.5 = 186, 0.25 = 135.79
+    BASE_NS::Color srcCol{0.25f, 0.5f, 0.75f, 1.0f};  // 0.75 = 223.74, 0.5 = 186, 0.25 = 135.79
     uint32_t dstCol = BASE_NS::FromColorRGBAToSRGB(srcCol);
-    EXPECT_EQ(dstCol, 0xffe0bb88); //TODO: Check if roundings are correct
+    EXPECT_EQ(dstCol, 0xffe0bb88);
 }
 
 /**
@@ -158,12 +158,12 @@ UNIT_TEST(API_UnitTest_Color, T10FromColorRGBAToSRGB, testing::ext::TestSize.Lev
  */
 UNIT_TEST(API_UnitTest_Color, T11FromColorRGBA, testing::ext::TestSize.Level1)
 {
-    BASE_NS::Color srcCol { 0.25f, 0.5f, 0.75f, 1.0f };
+    BASE_NS::Color srcCol{0.25f, 0.5f, 0.75f, 1.0f};
     uint32_t dstCol = BASE_NS::FromColorRGBA(srcCol, 0U);
-    EXPECT_EQ(dstCol, 0xffbf7f3f); // result of T9
+    EXPECT_EQ(dstCol, 0xffbf7f3f);  // result of T9
 
     uint32_t dstCol2 = BASE_NS::FromColorRGBA(srcCol, 1U);
-    EXPECT_EQ(dstCol2, 0xffe0bb88); // result of T10
+    EXPECT_EQ(dstCol2, 0xffe0bb88);  // result of T10
 }
 
 /**
@@ -173,12 +173,12 @@ UNIT_TEST(API_UnitTest_Color, T11FromColorRGBA, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_UnitTest_Color, T12ConstructFromARGB, testing::ext::TestSize.Level1)
 {
-    const uint32_t srcCol { 0xAA112233 };
+    const uint32_t srcCol{0xAA112233};
     BASE_NS::Color color(srcCol);
-    EXPECT_FLOAT_EQ(color.x, 0x11 / 255.f); // R
-    EXPECT_FLOAT_EQ(color.y, 0x22 / 255.f); // G
-    EXPECT_FLOAT_EQ(color.z, 0x33 / 255.f); // B
-    EXPECT_FLOAT_EQ(color.w, 0xAA / 255.f); // A
+    EXPECT_FLOAT_EQ(color.x, 0x11 / 255.f);  // R
+    EXPECT_FLOAT_EQ(color.y, 0x22 / 255.f);  // G
+    EXPECT_FLOAT_EQ(color.z, 0x33 / 255.f);  // B
+    EXPECT_FLOAT_EQ(color.w, 0xAA / 255.f);  // A
 }
 
 /**
@@ -240,7 +240,7 @@ UNIT_TEST(API_UnitTest_Color, T16OperatorDivision, testing::ext::TestSize.Level1
     {
         BASE_NS::Color color2(0.0f, 0.6f, 0.5f, 0.8f);
         BASE_NS::Color result = color1 / color2;
-        EXPECT_FLOAT_EQ(result.x, 0.0f); // attempt to divide by 0
+        EXPECT_FLOAT_EQ(result.x, 0.0f);  // attempt to divide by 0
         EXPECT_FLOAT_EQ(result.y, 0.3333333f);
         EXPECT_FLOAT_EQ(result.z, 0.6f);
         EXPECT_FLOAT_EQ(result.w, 0.5f);
@@ -249,7 +249,7 @@ UNIT_TEST(API_UnitTest_Color, T16OperatorDivision, testing::ext::TestSize.Level1
         BASE_NS::Color color2(0.5f, 0.0f, 0.5f, 0.8f);
         BASE_NS::Color result = color1 / color2;
         EXPECT_FLOAT_EQ(result.x, 0.2f);
-        EXPECT_FLOAT_EQ(result.y, 0.0f); // attempt to divide by 0
+        EXPECT_FLOAT_EQ(result.y, 0.0f);  // attempt to divide by 0
         EXPECT_FLOAT_EQ(result.z, 0.6f);
         EXPECT_FLOAT_EQ(result.w, 0.5f);
     }
@@ -258,7 +258,7 @@ UNIT_TEST(API_UnitTest_Color, T16OperatorDivision, testing::ext::TestSize.Level1
         BASE_NS::Color result = color1 / color2;
         EXPECT_FLOAT_EQ(result.x, 0.2f);
         EXPECT_FLOAT_EQ(result.y, 0.3333333f);
-        EXPECT_FLOAT_EQ(result.z, 0.0f); // attempt to divide by 0
+        EXPECT_FLOAT_EQ(result.z, 0.0f);  // attempt to divide by 0
         EXPECT_FLOAT_EQ(result.w, 0.5f);
     }
     {
@@ -267,7 +267,7 @@ UNIT_TEST(API_UnitTest_Color, T16OperatorDivision, testing::ext::TestSize.Level1
         EXPECT_FLOAT_EQ(result.x, 0.2f);
         EXPECT_FLOAT_EQ(result.y, 0.3333333f);
         EXPECT_FLOAT_EQ(result.z, 0.6f);
-        EXPECT_FLOAT_EQ(result.w, 0.0f); // attempt to divide by 0
+        EXPECT_FLOAT_EQ(result.w, 0.0f);  // attempt to divide by 0
     }
 }
 
@@ -374,7 +374,7 @@ UNIT_TEST(API_UnitTest_Color, T21OperatorIndex, testing::ext::TestSize.Level1)
     EXPECT_FLOAT_EQ(color[1], 0.2f);
     EXPECT_FLOAT_EQ(color[2], 0.3f);
     EXPECT_FLOAT_EQ(color[3], 0.4f);
-    EXPECT_FLOAT_EQ(color[4], 0.1f); // out-of-bounds returns the first element
+    EXPECT_FLOAT_EQ(color[4], 0.1f);  // out-of-bounds returns the first element
 
     color[1] = 0.5f;
     EXPECT_FLOAT_EQ(color.y, 0.5f);

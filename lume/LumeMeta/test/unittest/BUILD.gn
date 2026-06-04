@@ -118,13 +118,7 @@ ohos_unittest("lume_meta_api_test") {
     "api_unit_test/src/interface/animation/sequential_animation_test.cpp",
     # Interface - Engine
     "api_unit_test/src/interface/engine/engine_value_test.cpp",
-    "api_unit_test/src/interface/engine/intf_engine_input_property_manager_test.cpp",
     "api_unit_test/src/interface/engine/intf_engine_value_manager_test.cpp",
-    # Interface - Loaders
-    "api_unit_test/src/interface/loaders/csv_string_resource_loader_test.cpp",
-    # Interface - Model
-    "api_unit_test/src/interface/model/intf_data_model_test.cpp",
-    "api_unit_test/src/interface/model/intf_object_provider_test.cpp",
     # Interface - Property
     "api_unit_test/src/interface/property/array_property_test.cpp",
     "api_unit_test/src/interface/property/intf_modifier_test.cpp",
@@ -132,6 +126,7 @@ ohos_unittest("lume_meta_api_test") {
     # Interface - Resource
     "api_unit_test/src/interface/resource/intf_resource_manager_test.cpp",
     # Interface - Serialization
+    "api_unit_test/src/interface/serialization/debug_output_test.cpp",
     "api_unit_test/src/interface/serialization/intf_serializable_test.cpp",
     "api_unit_test/src/interface/serialization/property_serialization_test.cpp",
     "api_unit_test/src/interface/serialization/resource_serialization_test.cpp",

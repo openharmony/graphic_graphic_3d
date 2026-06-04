@@ -38,10 +38,10 @@ public:
         return effect_;
     }
 
-    std::shared_ptr<IPropertyProxy> GetProperty(const std::string &key);
+    std::shared_ptr<IPropertyProxy> GetProperty(const std::string& key);
 
-    template<typename Type>
-    bool SetProperty(const std::string &key, const Type &value)
+    template <typename Type>
+    bool SetProperty(const std::string& key, const Type& value)
     {
         return ProxySetProperty(proxies_[key], value, key);
     }
@@ -65,12 +65,12 @@ public:
 
     void ClearChildren();
     void InsertChildAfter(
-        const std::shared_ptr<EffectETS> &childEffect, const std::shared_ptr<EffectETS> &siblingEffect);
-    void AppendChild(const std::shared_ptr<EffectETS> &childEffect);
-    void RemoveChild(const std::shared_ptr<EffectETS> &childEffect);
+        const std::shared_ptr<EffectETS>& childEffect, const std::shared_ptr<EffectETS>& siblingEffect);
+    void AppendChild(const std::shared_ptr<EffectETS>& childEffect);
+    void RemoveChild(const std::shared_ptr<EffectETS>& childEffect);
 
 private:
     META_NS::ArrayProperty<SCENE_NS::IEffect::Ptr> effects_;
 };
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D
 #endif  // OHOS_3D_EFFECT_ETS_H

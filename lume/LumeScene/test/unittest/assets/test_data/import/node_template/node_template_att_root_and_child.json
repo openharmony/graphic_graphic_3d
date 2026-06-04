@@ -1,0 +1,33 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "att-rc-group",
+            "attachments": [
+                {
+                    "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                    "properties": [
+                        { "name": "Name", "value": "RootAtt" },
+                        { "name": "Float", "value": 1.0 }
+                    ]
+                },
+                {
+                    "path": ".//AnimatedCube",
+                    "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                    "properties": [
+                        { "name": "Name", "value": "ChildAtt" },
+                        { "name": "Float", "value": 2.0 }
+                    ]
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

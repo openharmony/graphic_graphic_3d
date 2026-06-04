@@ -26,10 +26,14 @@ namespace OHOS::Render3D {
 
 class OffScreenContextHelperUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 // ============================================================================
@@ -90,7 +94,7 @@ HWTEST_F(OffScreenContextHelperUT, CreateOffScreenContext_MultipleHelpersIndepen
  * @tc.name: DestroyOffScreenContext_ResetsContext
  * @tc.desc: test DestroyOffScreenContext resets context to EGL_NO_CONTEXT
  * @tc.type: FUNC
-    */
+ */
 HWTEST_F(OffScreenContextHelperUT, DestroyOffScreenContext_ResetsContext, TestSize.Level1)
 {
     WIDGET_LOGD("DestroyOffScreenContext_ResetsContext");
@@ -225,4 +229,4 @@ HWTEST_F(OffScreenContextHelperUT, AutoRestore_NestedScope, TestSize.Level1)
     EXPECT_NE(context, EGL_NO_CONTEXT);
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

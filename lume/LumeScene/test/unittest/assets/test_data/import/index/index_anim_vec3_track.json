@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": { "name": "vec3-track-anim" },
+                "type": "trackAnimation",
+                "options": {
+                    "name": "vec3TrackAnim",
+                    "duration": 1000.0,
+                    "timestamps": [0.0, 0.5, 1.0],
+                    "keyframes": [
+                        { "type": "vec3", "value": [0.0, 0.0, 0.0] },
+                        { "type": "vec3", "value": [1.0, 2.0, 3.0] },
+                        { "type": "vec3", "value": [4.0, 5.0, 6.0] }
+                    ]
+                }
+            }
+        ]
+    }
+}

@@ -78,9 +78,9 @@ public:
     }
 
 private:
-    int value_ {};
-    mutable int getCalled_ {};
-    mutable int setCalled_ {};
+    int value_{};
+    mutable int getCalled_{};
+    mutable int setCalled_{};
 };
 
 /**
@@ -108,6 +108,6 @@ UNIT_TEST(API_CustomValueTest, GetSet, testing::ext::TestSize.Level1)
     UnregisterObjectType<GetSetTestType>();
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

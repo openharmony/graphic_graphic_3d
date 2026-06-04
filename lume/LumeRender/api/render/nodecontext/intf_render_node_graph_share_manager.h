@@ -38,7 +38,7 @@ public:
     static constexpr auto UID = BASE_NS::Uid("eef71d88-ddc0-41b8-b593-ac23c44ac086");
 
     /** Use simple resource names like: color, depth, velocity, alpha... */
-    static constexpr uint32_t MAX_NAME_LENGTH { 32u };
+    static constexpr uint32_t MAX_NAME_LENGTH{32u};
     using RenderNodeGraphShareName = BASE_NS::fixed_string<MAX_NAME_LENGTH>;
     /** Named resources struct */
     struct NamedResource {
@@ -156,4 +156,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_GRAPH_SHARE_H
+#endif  // API_RENDER_IRENDER_NODE_GRAPH_SHARE_H

@@ -78,7 +78,31 @@ UNIT_TEST_F(API_ScenePluginRenderConfigurationTest, InvalidState, testing::ext::
     auto config = reg.Create(ClassId::RenderConfiguration);
     auto create = interface_cast<ICreateEntity>(config);
     ASSERT_TRUE(create);
-    EXPECT_EQ(create->CreateEntity({}), CORE_NS::Entity {});
+    EXPECT_EQ(create->CreateEntity({}), CORE_NS::Entity{});
+}
+
+/**
+ * @tc.name: InvalidRoot
+ * @tc.desc: Tests RenderConfiguration creation with invalid root node in Scene
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginRenderConfigurationTest, InvalidRoot, testing::ext::TestSize.Level1)
+{
+    auto sc = CreateStandaloneScene();
+    ASSERT_TRUE(sc);
+    {
+        auto root = sc->GetRootNode().GetResult();
+        ASSERT_TRUE(root);
+        auto rootEntity = GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(root));
+        // Destroy root node from scene
+        sc->GetInternalScene()->GetEcsContext().GetNativeEcs()->GetEntityManager().Destroy(rootEntity);
+        UpdateScene(sc);
+    }
+    // Create a new RenderConfiguration to scene
+    auto config = sc->CreateObject(ClassId::RenderConfiguration).GetResult();
+    ASSERT_TRUE(config);
+    // Should have created a new entity (since root is not available anymore)
+    EXPECT_TRUE(CORE_NS::EntityUtil::IsValid(GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(config))));
 }
 
 /**
@@ -127,11 +151,11 @@ UNIT_TEST_F(API_ScenePluginRenderConfigurationTest, ShadowResolution, testing::e
     EXPECT_EQ(META_NS::GetValue(config->ShadowResolution()), defaults.normal);
 
     // If either component is 0, should revert to default
-    setShadowResolution({ 128, 0 });
+    setShadowResolution({128, 0});
     EXPECT_EQ(getShadowResolution(), defaults.normal);
-    setShadowResolution({ 0, 128 });
+    setShadowResolution({0, 128});
     EXPECT_EQ(getShadowResolution(), defaults.normal);
-    setShadowResolution({ 0, 0 });
+    setShadowResolution({0, 0});
     EXPECT_EQ(getShadowResolution(), defaults.normal);
 
     // Override shadow map resolution with 128x128
@@ -169,6 +193,6 @@ UNIT_TEST_F(API_ScenePluginRenderConfigurationTest, ShadowResolution, testing::e
     EXPECT_EQ(getShadowResolution(), defaults.ultra);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

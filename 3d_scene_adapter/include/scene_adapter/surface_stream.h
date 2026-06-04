@@ -38,15 +38,13 @@ namespace OHOS::Render3D {
 constexpr uint32_t SURFACE_QUEUE_SIZE = 5;
 
 class SurfaceStream final : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, ISurfaceStream>,
-    public OHOS::IBufferConsumerListenerClazz {
+                            public OHOS::IBufferConsumerListenerClazz {
     META_OBJECT(SurfaceStream, ClassId::SurfaceStream, IntroduceInterfaces)
-public:
-    META_NO_COPY_MOVE(SurfaceStream)
+    ~SurfaceStream();
 
-    SurfaceStream() = default;
-    ~SurfaceStream() override;
 protected:
     void OnBufferAvailable() override;
+
 private:
     bool Build(const META_NS::IMetadata::Ptr& metadata) override;
 
@@ -58,12 +56,28 @@ private:
 
     void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
 
-    void SetHeight(uint32_t height) override { height_ = height; }
-    uint32_t GetHeight() const override { return height_; }
-    void SetWidth(uint32_t width) override { width_ = width; }
-    uint32_t GetWidth() const override { return width_; }
+    void SetHeight(uint32_t height) override
+    {
+        height_ = height;
+    }
+    uint32_t GetHeight() const override
+    {
+        return height_;
+    }
+    void SetWidth(uint32_t width) override
+    {
+        width_ = width;
+    }
+    uint32_t GetWidth() const override
+    {
+        return width_;
+    }
 
-    uint64_t GetSurfaceId() const override { return surfaceId_; }
+    uint64_t GetSurfaceId() const override
+    {
+        return surfaceId_;
+    }
+
 private:
     RENDER_NS::DeviceBackendType backendType_ = RENDER_NS::DeviceBackendType::VULKAN;
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_ = nullptr;
@@ -75,11 +89,11 @@ private:
     uint32_t queueSize_ = SURFACE_QUEUE_SIZE;
     OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_ = nullptr;
     OHOS::sptr<OHOS::Surface> producerSurface_ = nullptr;
-    std::atomic<uint64_t> frameIndex_ { 0 };
+    std::atomic<uint64_t> frameIndex_{0};
 
     std::mutex surfaceBufferCacheMutex_;
     std::queue<OHOS::sptr<OHOS::SurfaceBuffer>> surfaceBufferCache_;
 };
 
-}
-#endif // OHOS_RENDER_3D_SURFACE_STREAM_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_SURFACE_STREAM_H

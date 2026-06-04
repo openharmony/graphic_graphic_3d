@@ -29,10 +29,14 @@ namespace OHOS::Render3D {
 
 class GeometryUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 // Base Geometry Tests
@@ -509,4 +513,4 @@ HWTEST_F(GeometryUT, Geometry_VectorOfGeometries_AllTypes, TestSize.Level1)
     EXPECT_EQ(geometries[2]->GetType(), GeometryType::CONE);
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

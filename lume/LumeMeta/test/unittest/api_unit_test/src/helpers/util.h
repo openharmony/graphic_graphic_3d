@@ -25,20 +25,20 @@
 META_BEGIN_NAMESPACE()
 namespace UTest {
 
-template<typename T>
+template <typename T>
 typename META_NS::Property<T> CreateProperty(BASE_NS::string_view name = "", T value = {})
 {
     return ConstructProperty<T>(name, value);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
 
 // our vector does not have op==
-template<typename T>
+template <typename T>
 bool operator==(const BASE_NS::vector<T>& l, const BASE_NS::vector<T>& r)
 {
     if (l.size() != r.size()) {
@@ -58,7 +58,7 @@ bool operator==(const BASE_NS::vector<T>& l, const BASE_NS::vector<T>& r)
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool operator!=(const BASE_NS::vector<T>& l, const BASE_NS::vector<T>& r)
 {
     return !(l == r);
@@ -66,4 +66,4 @@ bool operator!=(const BASE_NS::vector<T>& l, const BASE_NS::vector<T>& r)
 
 BASE_END_NAMESPACE()
 
-#endif // META_TEST_UTIL_HEADER
+#endif  // META_TEST_UTIL_HEADER

@@ -93,55 +93,55 @@ public:
     /** Image descriptor */
     struct ImageDesc {
         /** Flags for image descriptor */
-        uint32_t imageFlags { 0 };
+        uint32_t imageFlags{0};
 
         /** Pixel width of block */
-        uint32_t blockPixelWidth { 0 };
+        uint32_t blockPixelWidth{0};
         /** Pixel height of block */
-        uint32_t blockPixelHeight { 0 };
+        uint32_t blockPixelHeight{0};
         /** Pixel depth of block */
-        uint32_t blockPixelDepth { 0 };
+        uint32_t blockPixelDepth{0};
         /** Bits per block */
-        uint32_t bitsPerBlock { 0 };
+        uint32_t bitsPerBlock{0};
 
         /** Image type */
-        ImageType imageType { ImageType::TYPE_MAX_ENUM };
+        ImageType imageType{ImageType::TYPE_MAX_ENUM};
         /** Image view type */
-        ImageViewType imageViewType { ImageViewType::VIEW_TYPE_MAX_ENUM };
+        ImageViewType imageViewType{ImageViewType::VIEW_TYPE_MAX_ENUM};
         /** Format */
-        BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+        BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
 
         /** Width */
-        uint32_t width { 0 };
+        uint32_t width{0};
         /** Height */
-        uint32_t height { 0 };
+        uint32_t height{0};
         /** Depth */
-        uint32_t depth { 0 };
+        uint32_t depth{0};
 
         /** Mip count */
-        uint32_t mipCount { 1 };
+        uint32_t mipCount{1};
         /** Layer count */
-        uint32_t layerCount { 1 };
+        uint32_t layerCount{1};
     };
 
     /** Descriptor for each subimage (mip level, cube face etc.) */
     struct SubImageDesc {
         /** Buffer offset */
-        uint32_t bufferOffset { 0 };
+        uint32_t bufferOffset{0};
         /** Buffer row length */
-        uint32_t bufferRowLength { 0 };
+        uint32_t bufferRowLength{0};
         /** Buffer image height */
-        uint32_t bufferImageHeight { 0 };
+        uint32_t bufferImageHeight{0};
         /** Mip level */
-        uint32_t mipLevel { 0 };
+        uint32_t mipLevel{0};
         /** Layer count */
-        uint32_t layerCount { 0 };
+        uint32_t layerCount{0};
         /** Width */
-        uint32_t width { 0 };
+        uint32_t width{0};
         /** Height */
-        uint32_t height { 0 };
+        uint32_t height{0};
         /** Depth */
-        uint32_t depth { 0 };
+        uint32_t depth{0};
     };
 
     /** Preventing copy construction and assign. */
@@ -174,4 +174,4 @@ protected:
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IMAGE_IIMAGE_CONTAINER_H
+#endif  // API_CORE_IMAGE_IIMAGE_CONTAINER_H

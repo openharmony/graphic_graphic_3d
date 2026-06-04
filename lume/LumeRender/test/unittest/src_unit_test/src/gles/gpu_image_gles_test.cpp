@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/gpu_image_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include <device/device.h>
 
@@ -63,7 +63,7 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestOpenGL, testing::ext::TestSize.Level1)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.mipCount = 1u;
         desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        GpuImageGLES image { device, desc };
+        GpuImageGLES image{device, desc};
         auto realDesc = image.GetDesc();
         ASSERT_EQ(desc.width, realDesc.width);
         ASSERT_EQ(desc.height, realDesc.height);
@@ -88,7 +88,7 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestOpenGL, testing::ext::TestSize.Level1)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.mipCount = 1u;
         desc.usageFlags = CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        GpuImageGLES image { device, desc };
+        GpuImageGLES image{device, desc};
         auto realDesc = image.GetDesc();
         ASSERT_EQ(desc.width, realDesc.width);
         ASSERT_EQ(desc.height, realDesc.height);
@@ -113,7 +113,7 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestOpenGL, testing::ext::TestSize.Level1)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.mipCount = 1u;
         desc.usageFlags = CORE_IMAGE_USAGE_STORAGE_BIT;
-        GpuImageGLES image { device, desc };
+        GpuImageGLES image{device, desc};
         auto realDesc = image.GetDesc();
         ASSERT_EQ(desc.width, realDesc.width);
         ASSERT_EQ(desc.height, realDesc.height);
@@ -122,4 +122,4 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestOpenGL, testing::ext::TestSize.Level1)
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -70,7 +70,7 @@ IObject::Ptr ContainerBase::FindAnyImpl(const IContainer::FindOptions& options, 
             }
             return !res;
         },
-        IterateStrategy { isFlat ? TraversalType::NO_HIERARCHY : options.behavior, LockType::SHARED_LOCK });
+        IterateStrategy{isFlat ? TraversalType::NO_HIERARCHY : options.behavior, LockType::SHARED_LOCK});
     return res;
 }
 
@@ -85,7 +85,7 @@ BASE_NS::vector<IObject::Ptr> ContainerBase::FindAllImpl(const IContainer::FindO
             }
             return true;
         },
-        IterateStrategy { isFlat ? TraversalType::NO_HIERARCHY : options.behavior, LockType::SHARED_LOCK });
+        IterateStrategy{isFlat ? TraversalType::NO_HIERARCHY : options.behavior, LockType::SHARED_LOCK});
     return res;
 }
 
@@ -139,7 +139,7 @@ bool ContainerBase::Remove(SizeType index)
         child = *it;
         children_.erase(it);
     }
-    ChildChangedInfo info { ContainerChangeType::REMOVED, child, parent_, index };
+    ChildChangedInfo info{ContainerChangeType::REMOVED, child, parent_, index};
     SetObjectParent(child, nullptr);
     Invoke<IOnChildChanged>(impl_->EventOnContainerChanged(MetadataQuery::EXISTING), info);
     return true;
@@ -161,7 +161,7 @@ bool ContainerBase::Remove(const IObject::Ptr& child)
         }
         children_.erase(it);
     }
-    ChildChangedInfo info { ContainerChangeType::REMOVED, child, parent_, index };
+    ChildChangedInfo info{ContainerChangeType::REMOVED, child, parent_, index};
     SetObjectParent(child, nullptr);
     Invoke<IOnChildChanged>(impl_->EventOnContainerChanged(MetadataQuery::EXISTING), info);
     return true;
@@ -185,7 +185,7 @@ ChildChangedInfo ContainerBase::MoveInternal(SizeType fromIndex, SizeType toInde
         const auto last = children_.begin() + toIndex + 1;
         std::rotate(first, first + 1, last);
     }
-    return { ContainerChangeType::MOVED, child, parent_, fromIndex, toIndex };
+    return {ContainerChangeType::MOVED, child, parent_, fromIndex, toIndex};
 }
 
 bool ContainerBase::Move(SizeType fromIndex, SizeType toIndex)
@@ -236,7 +236,7 @@ void ContainerBase::RemoveAll()
     }
     SizeType index = 0;
     for (const auto& child : children) {
-        ChildChangedInfo info { ContainerChangeType::REMOVED, child, parent_, index++ };
+        ChildChangedInfo info{ContainerChangeType::REMOVED, child, parent_, index++};
         SetObjectParent(child, nullptr);
         Invoke<IOnChildChanged>(impl_->EventOnContainerChanged(MetadataQuery::EXISTING), info);
     }
@@ -314,7 +314,7 @@ BASE_NS::shared_ptr<IEvent> ContainerBase::EventOnContainerChanged(MetadataQuery
     return impl_->EventOnContainerChanged(q);
 }
 
-template<typename Cont, typename Func>
+template <typename Cont, typename Func>
 static IterationResult IterateImpl(Cont& cont, const Func& func)
 {
     for (auto&& child : cont) {

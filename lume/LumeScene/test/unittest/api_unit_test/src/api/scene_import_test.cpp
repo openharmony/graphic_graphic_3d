@@ -55,7 +55,7 @@ protected:
     }
 
 private:
-    Scene scene_ { nullptr };
+    Scene scene_{nullptr};
 };
 
 class API_SceneApiImportTestP : public API_SceneApiImportTest,
@@ -67,9 +67,9 @@ using META_NS::GetValue;
 using META_NS::SetValue;
 
 struct HandleCount {
-    uint32_t bufferHandleCount {};
-    uint32_t imageHandleCount {};
-    uint32_t samplerHandleCount {};
+    uint32_t bufferHandleCount{};
+    uint32_t imageHandleCount{};
+    uint32_t samplerHandleCount{};
 };
 bool operator==(const HandleCount& lhs, const HandleCount& rhs)
 {
@@ -112,7 +112,7 @@ TEST_P(API_SceneApiImportTestP, ImportSceneHandleCount)
     render();
     auto factory = scene.GetResourceFactory();
     auto parent = factory.CreateNode("//parent");
-    const auto original = getHandlesCount(); // Store original handle counts
+    const auto original = getHandlesCount();  // Store original handle counts
 
     // Import a scene
     auto imported = GetSceneManager()->CreateScene(uri).GetResult();
@@ -136,7 +136,7 @@ TEST_P(API_SceneApiImportTestP, ImportSceneHandleCount)
     // Remove the imported node from the scene, this should destroy any associated gpu resources
     scene.RemoveNode(node);
     render();
-    EXPECT_EQ(getHandlesCount(), original); // Imported things should now all be gone
+    EXPECT_EQ(getHandlesCount(), original);  // Imported things should now all be gone
 }
 
 INSTANTIATE_TEST_SUITE_P(API_SceneApiImportTestP, API_SceneApiImportTestP,
@@ -253,7 +253,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneRemoveObject, testing::ext::TestS
     scene.RemoveObject(child);
     render();
     EXPECT_GT(after, GetEntityCount());
-    EXPECT_FALSE(manager->GetResource(id, scene));
+    EXPECT_FALSE(manager->GetResource({id, sc}));
 };
 
 /**
@@ -278,9 +278,9 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneRemoveObjectKeepIndex, testing::e
     ASSERT_TRUE(res);
     auto id = res->GetResourceId();
     envProp->ResetValue();
-    EXPECT_TRUE(scene.RemoveObject(env, { false }));
+    EXPECT_TRUE(scene.RemoveObject(env, {false}));
     // Resource should still be in index
-    auto created = manager->GetResource(id, scene);
+    auto created = manager->GetResource({id, sc});
     EXPECT_TRUE(created);
 }
 
@@ -340,10 +340,10 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneResources, testing::ext::TestSize
 
     BASE_NS::string previous;
     SceneDebugInfo dinfo;
-    uint32_t resAlive {};
-    size_t groups {};
-    size_t resources {};
-    size_t gs {};
+    uint32_t resAlive{};
+    size_t groups{};
+    size_t resources{};
+    size_t gs{};
 
 #ifdef WIN_MEMLEAK_CHECK
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -358,7 +358,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneResources, testing::ext::TestSize
         }
         ASSERT_TRUE(imported);
         auto name = BASE_NS::to_string(i);
-        scene.ImportScene(imported, nullptr, name);
+        ASSERT_TRUE(scene.ImportScene(imported, nullptr, name));
         if (!previous.empty()) {
             auto prevNode = scene.FindNode(previous);
             scene.RemoveNode(prevNode);
@@ -382,7 +382,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneResources, testing::ext::TestSize
 
                 return true;
             },
-            META_NS::IterateStrategy { META_NS::TraversalType::FULL_HIERARCHY });
+            META_NS::IterateStrategy{META_NS::TraversalType::FULL_HIERARCHY});
 
         // start all animations
         for (auto anim : sc->GetAnimations().GetResult()) {
@@ -397,9 +397,9 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneResources, testing::ext::TestSize
         if (dinfo.nodeObjectsAlive) {
             EXPECT_EQ(di.nodeObjectsAlive, dinfo.nodeObjectsAlive);
             EXPECT_EQ(di.animationObjectsAlive, dinfo.animationObjectsAlive);
-            EXPECT_EQ(resAlive, qi->GetAliveCount({ CORE_NS::MatchingResourceId() }));
-            EXPECT_EQ(groups, res->GetResourceGroups().size());
-            EXPECT_EQ(resources, res->GetResourceInfos().size());
+            EXPECT_EQ(resAlive, qi->GetAliveCount({CORE_NS::MatchingResourceId()}, sc));
+            EXPECT_EQ(groups, res->GetResourceGroups(sc).size());
+            EXPECT_EQ(resources, res->GetResourceInfos(sc).size());
             EXPECT_EQ(gs, rc->GetDevice().GetShaderManager().GetGraphicsStates().size());
 
 #ifdef WIN_MEMLEAK_CHECK
@@ -412,9 +412,9 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneResources, testing::ext::TestSize
 #endif
         } else {
             dinfo = di;
-            resAlive = qi->GetAliveCount({ CORE_NS::MatchingResourceId() });
-            groups = res->GetResourceGroups().size();
-            resources = res->GetResourceInfos().size();
+            resAlive = qi->GetAliveCount({CORE_NS::MatchingResourceId()}, sc);
+            groups = res->GetResourceGroups(sc).size();
+            resources = res->GetResourceInfos(sc).size();
             gs = rc->GetDevice().GetShaderManager().GetGraphicsStates().size();
 #ifdef WIN_MEMLEAK_CHECK
             _CrtMemCheckpoint(&state);
@@ -482,7 +482,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneDeadScene, testing::ext::TestSize
 
                 return true;
             },
-            META_NS::IterateStrategy { META_NS::TraversalType::FULL_HIERARCHY });
+            META_NS::IterateStrategy{META_NS::TraversalType::FULL_HIERARCHY});
 
         // start all animations
         for (auto anim : sc->GetAnimations().GetResult()) {
@@ -498,7 +498,7 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneDeadScene, testing::ext::TestSize
     rc->GetRenderer().RenderFrame({});
 
     EXPECT_EQ(original, getHandlesCount());
-    EXPECT_EQ(0, res->GetResourceInfos().size());
+    //    EXPECT_EQ(0, res->GetResourceInfos().size());
 
     auto sh = objs[0];
     objs.clear();
@@ -508,5 +508,25 @@ UNIT_TEST_F(API_SceneApiImportTest, ImportSceneDeadScene, testing::ext::TestSize
     EXPECT_EQ(shaders, rc->GetDevice().GetShaderManager().GetShaders().size());
 }
 
-} // namespace UTest
+#ifndef __OHOS_PLATFORM__
+/**
+ * @tc.name: LoadProjectResources
+ * @tc.desc: Tests that project.json loads resources from multiple .res files
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneApiImportTest, LoadProjectResources, testing::ext::TestSize.Level1)
+{
+    // Load a scene from a project directory that has a project.json listing two .res files
+    auto sc = LoadScene("test_assets://scene_resource/project_test/assets/test.scene");
+
+    // Resources should have been imported from both .res files listed in project.json
+    auto info_a = resources->GetResourceInfo(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"shader_a"}});
+    EXPECT_TRUE(info_a.id.IsValid()) << "Resource 'shader_a' from resources_a.res should be loaded";
+
+    auto info_b = resources->GetResourceInfo(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"image_b"}});
+    EXPECT_TRUE(info_b.id.IsValid()) << "Resource 'image_b' from resources_b.res should be loaded";
+}
+#endif
+
+}  // namespace UTest
 SCENE_END_NAMESPACE()

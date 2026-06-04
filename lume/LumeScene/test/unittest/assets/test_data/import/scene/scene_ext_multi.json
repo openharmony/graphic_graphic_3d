@@ -1,0 +1,31 @@
+{
+	"version": "1.0",
+	"description": "test scene with multiple external nodes in separate resource groups",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "ext1",
+					"source": {
+						"type": "gltf",
+						"url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+					},
+					"resourceGroup": "grp1"
+				},
+				{
+					"type": "external",
+					"name": "ext2",
+					"source": {
+						"type": "gltf",
+						"url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+					},
+					"resourceGroup": "grp2"
+				}
+			]
+		}
+	}
+}

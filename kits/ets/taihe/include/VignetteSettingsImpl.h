@@ -28,7 +28,7 @@ class VignetteSettingsImpl {
     friend class PostProcessSettingsImpl;
 
 public:
-    static std::shared_ptr<VignetteETS> CreateInternal(const ScenePostProcessSettings::VignetteSettings &data);
+    static std::shared_ptr<VignetteETS> CreateInternal(const ScenePostProcessSettings::VignetteSettings& data);
 
     VignetteSettingsImpl(const std::shared_ptr<VignetteETS> vignetteETS);
     ~VignetteSettingsImpl();
@@ -40,5 +40,5 @@ public:
 private:
     std::shared_ptr<VignetteETS> vignetteETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_VIGNETTE_SETTINGS_IMPL_H

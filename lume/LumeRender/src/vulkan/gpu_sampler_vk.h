@@ -40,8 +40,8 @@ private:
 
     GpuSamplerPlatformDataVk plat_;
     GpuSamplerDesc desc_;
-    VkSamplerYcbcrConversion samplerConversion_ { VK_NULL_HANDLE };
+    VkSamplerYcbcrConversion samplerConversion_{VK_NULL_HANDLE};
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_SAMPLER_VK_H
+#endif  // VULKAN_GPU_SAMPLER_VK_H

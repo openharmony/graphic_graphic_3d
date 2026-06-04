@@ -27,4 +27,4 @@ void UnRegisterDefaultInterpolators(IObjectRegistry& registry);
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_INTERPOLATOR_H
+#endif  // META_SRC_INTERPOLATOR_H

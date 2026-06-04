@@ -40,7 +40,7 @@ protected:
         CORE_ASSERT_MSG(container_, "Invalid super object");
     }
 
-protected: // IContainer
+protected:  // IContainer
     BASE_NS::vector<IObject::Ptr> GetAll() const override
     {
         return container_->GetAll();
@@ -105,7 +105,7 @@ protected: // IContainer
         return container_->IsAncestorOf(object);
     }
 
-protected: // IRequiredInterfaces
+protected:  // IRequiredInterfaces
     bool SetRequiredInterfaces(const BASE_NS::vector<TypeId>& interfaces) override
     {
         return META_EXT_CALL_BASE(IRequiredInterfaces, SetRequiredInterfaces(interfaces));
@@ -115,13 +115,13 @@ protected: // IRequiredInterfaces
         return META_EXT_CALL_BASE(IRequiredInterfaces, GetRequiredInterfaces());
     }
 
-protected: // IContainerProxyParent
+protected:  // IContainerProxyParent
     bool SetProxyParent(const IContainer::Ptr& parent) override
     {
         return META_EXT_CALL_BASE(IContainerProxyParent, SetProxyParent(parent));
     }
 
-protected: // ILockable
+protected:  // ILockable
     void LockShared() const override
     {
         META_EXT_CALL_BASE(ILockable, LockShared());
@@ -139,7 +139,7 @@ protected: // ILockable
         META_EXT_CALL_BASE(ILockable, Unlock());
     }
 
-protected: // IIterable
+protected:  // IIterable
     IterationResult Iterate(const IterationParameters& params) override
     {
         return META_EXT_CALL_BASE(IIterable, Iterate(params));
@@ -150,7 +150,7 @@ protected: // IIterable
     }
 
 private:
-    IContainer* container_ {};
+    IContainer* container_{};
 };
 
 META_END_NAMESPACE()

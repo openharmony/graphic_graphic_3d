@@ -19,6 +19,6 @@
 #define CORE3D_NS Core3D
 
 #define CORE3D_BEGIN_NAMESPACE() namespace Core3D {
-#define CORE3D_END_NAMESPACE() } // namespace Core3D
+#define CORE3D_END_NAMESPACE() }  // namespace Core3D
 
-#endif // API_3D_NAMESPACE_H
+#endif  // API_3D_NAMESPACE_H

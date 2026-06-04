@@ -148,7 +148,7 @@ vec4 PlaneReflector(const vec2 fragUv)
     shadingData.cameraIdx = cameraIdx;
     CORE_RELAXEDP const float roughness = brdfData.roughness;
 
-    vec3 color = vec3(0.0); // brdfData.diffuseColor
+    vec3 color = vec3(0.0);  // brdfData.diffuseColor
     if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) ==
         CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
         color += CalculateLightingInplace(shadingData, clearcoatSV, sheenSV);
@@ -174,7 +174,7 @@ vec4 PlaneReflector(const vec2 fragUv)
         radiance *= fIndirect;
         if ((CORE_MATERIAL_FLAGS & CORE_MATERIAL_TRANSMISSION_BIT) == CORE_MATERIAL_TRANSMISSION_BIT) {
             // NOTE: ATM use direct refract (no sphere mapping)
-            const vec3 rr = -V; // refract(-V, N, 1.0 / ior);
+            const vec3 rr = -V;  // refract(-V, N, 1.0 / ior);
             const vec3 transmissionRadianceSample = GetTransmissionRadianceSample(fragUv, rr, roughness);
 
             AppendIndirectTransmission(transmissionRadianceSample, baseColor.rgb, transmission, irradiance);

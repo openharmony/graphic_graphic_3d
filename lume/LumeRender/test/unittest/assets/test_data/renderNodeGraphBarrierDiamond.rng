@@ -1,0 +1,68 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "DiamondPass0",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "ImageA"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "DiamondPass1",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "ImageA"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "DiamondPass2",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "name": "ImageA"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        }
+    ]
+}

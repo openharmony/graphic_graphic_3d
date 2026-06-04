@@ -45,7 +45,10 @@ void ValidateImageUsageFlags(const string_view nodeName, const GpuResourceManage
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateImageUsageFlags_",
             "RENDER_VALIDATION: gpu image (handle: %" PRIu64
             ") (name: %s), not created with needed flags: %s, (node: %s)",
-            handl.id, gpuResourceMgr.GetName(handl).c_str(), str.data(), nodeName.data());
+            handl.id,
+            gpuResourceMgr.GetName(handl).c_str(),
+            str.data(),
+            nodeName.data());
     }
 }
 
@@ -56,7 +59,10 @@ void ValidateBufferUsageFlags(const string_view nodeName, const GpuResourceManag
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateBufferUsageFlags_",
             "RENDER_VALIDATION: gpu buffer (handle: %" PRIu64
             ") (name: %s), not created with needed flags: %s, (node: %s)",
-            handl.id, gpuResourceMgr.GetName(handl).c_str(), str.data(), nodeName.data());
+            handl.id,
+            gpuResourceMgr.GetName(handl).c_str(),
+            str.data(),
+            nodeName.data());
     }
 }
 
@@ -68,23 +74,41 @@ void ValidateDescriptorTypeBinding(const string_view nodeName, const GpuResource
             PLUGIN_LOG_ONCE_E(nodeName + "_invalid_gpu_buffer_", "RENDER_VALIDATION: invalid GPU buffer");
         }
         if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            ValidateBufferUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
+            ValidateBufferUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                "CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE) {
         } else {
             PLUGIN_LOG_E("RENDER_VALIDATION: unsupported buffer descriptor type: %u", ref.binding.descriptorType);
@@ -93,14 +117,23 @@ void ValidateDescriptorTypeBinding(const string_view nodeName, const GpuResource
     for (const auto& ref : bindingRes.images) {
         if ((ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
             (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE)) {
-            ValidateImageUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle, CORE_IMAGE_USAGE_SAMPLED_BIT,
+            ValidateImageUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_IMAGE_USAGE_SAMPLED_BIT,
                 "CORE_IMAGE_USAGE_SAMPLED_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-            ValidateImageUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle, CORE_IMAGE_USAGE_STORAGE_BIT,
+            ValidateImageUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_IMAGE_USAGE_STORAGE_BIT,
                 "CORE_IMAGE_USAGE_STORAGE_BIT");
         } else if (ref.binding.descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-            ValidateImageUsageFlags(nodeName, gpuResourceMgr, ref.resource.handle,
-                CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
+            ValidateImageUsageFlags(nodeName,
+                gpuResourceMgr,
+                ref.resource.handle,
+                CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+                "CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
         } else {
             PLUGIN_LOG_E("RENDER_VALIDATION: unsupported image descriptor type: %u", ref.binding.descriptorType);
         }
@@ -149,14 +182,20 @@ void ValidateRenderPassAttachment(const string_view nodeName, const GpuResourceM
                         PLUGIN_LOG_ONCE_W(nodeName + "_RCL_ValidateSize1_",
                             "RENDER_VALIDATION: Depth and swapchain input missmatch: baseWidth:%u baseHeight:%u "
                             "currWidth:%u currHeight:%u",
-                            baseWidth, baseHeight, desc.width, desc.height);
+                            baseWidth,
+                            baseHeight,
+                            desc.width,
+                            desc.height);
                     } else {
                         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateSize1_",
                             "RENDER_VALIDATION: render pass attachment size does not match with attachment index: %u",
                             attachmentIdx);
                         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateSize1_",
-                            "RENDER_VALIDATION: baseWidth:%u baseHeight:%u currWidth:%u currHeight:%u", baseWidth,
-                            baseHeight, desc.width, desc.height);
+                            "RENDER_VALIDATION: baseWidth:%u baseHeight:%u currWidth:%u currHeight:%u",
+                            baseWidth,
+                            baseHeight,
+                            desc.width,
+                            desc.height);
                     }
                 }
             }
@@ -165,14 +204,19 @@ void ValidateRenderPassAttachment(const string_view nodeName, const GpuResourceM
     if ((renderPassDesc.renderArea.extentWidth == 0) || (renderPassDesc.renderArea.extentHeight == 0)) {
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateRaExtent_",
             "RENDER_VALIDATION: render area cannot be zero (width: %u, height: %u) (node: %s)",
-            renderPassDesc.renderArea.extentWidth, renderPassDesc.renderArea.extentHeight, nodeName.data());
+            renderPassDesc.renderArea.extentWidth,
+            renderPassDesc.renderArea.extentHeight,
+            nodeName.data());
     }
     if ((renderPassDesc.renderArea.offsetX >= static_cast<int32_t>(baseWidth)) ||
         (renderPassDesc.renderArea.offsetY >= static_cast<int32_t>(baseHeight))) {
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateRaOffset_",
             "RENDER_VALIDATION: render area offset cannot go out of screen (offsetX: %i, offsetY: %i) (baseWidth: "
             "%u, baseHeight: %u, (node: %s)",
-            renderPassDesc.renderArea.offsetX, renderPassDesc.renderArea.offsetY, baseWidth, baseHeight,
+            renderPassDesc.renderArea.offsetX,
+            renderPassDesc.renderArea.offsetY,
+            baseWidth,
+            baseHeight,
             nodeName.data());
     }
 }
@@ -183,11 +227,13 @@ void ValidateImageSubresourceRange(const GpuResourceManager& gpuResourceMgr, con
     const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(handle);
     if (imageSubresourceRange.baseMipLevel >= desc.mipCount) {
         PLUGIN_LOG_E("RENDER_VALIDATION : ImageSubresourceRange mipLevel: %u, is greater or equal to mipCount: %u",
-            imageSubresourceRange.baseMipLevel, desc.mipCount);
+            imageSubresourceRange.baseMipLevel,
+            desc.mipCount);
     }
     if (imageSubresourceRange.baseArrayLayer >= desc.layerCount) {
         PLUGIN_LOG_E("RENDER_VALIDATION : ImageSubresourceRange layer: %u, is greater or equal to layerCount: %u",
-            imageSubresourceRange.baseArrayLayer, desc.layerCount);
+            imageSubresourceRange.baseArrayLayer,
+            desc.layerCount);
     }
 }
 
@@ -195,8 +241,10 @@ void ValidateViewport(const string_view nodeName, const ViewportDesc& vd)
 {
     if ((vd.width < 1.0f) || (vd.height < 1.0f)) {
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateViewport_",
-            "RENDER_VALIDATION : viewport width (%f) and height (%f) must be one or larger (node: %s)", vd.width,
-            vd.height, nodeName.data());
+            "RENDER_VALIDATION : viewport width (%f) and height (%f) must be one or larger (node: %s)",
+            vd.width,
+            vd.height,
+            nodeName.data());
     }
 }
 
@@ -205,7 +253,9 @@ void ValidateScissor(const string_view nodeName, const ScissorDesc& sd)
     if ((sd.extentWidth == 0) || (sd.extentHeight == 0)) {
         PLUGIN_LOG_ONCE_E(nodeName + "_RCL_ValidateScissor_",
             "RENDER_VALIDATION : scissor extentWidth (%u) and scissor extentHeight (%u) cannot be zero (node: %s)",
-            sd.extentWidth, sd.extentHeight, nodeName.data());
+            sd.extentWidth,
+            sd.extentHeight,
+            nodeName.data());
     }
 }
 
@@ -222,19 +272,20 @@ void ValidateFragmentShadingRate(const Size2D& size)
     if (!valid) {
         PLUGIN_LOG_W("RENDER_VALIDATION_ENABLED: fragmentSize must be less than or equal to 4 and the value must be a "
                      "power of two (width = %u, height = %u)",
-            size.width, size.height);
+            size.width,
+            size.height);
     }
 }
-#endif // RENDER_VALIDATION_ENABLED
+#endif  // RENDER_VALIDATION_ENABLED
 
-constexpr uint32_t INVALID_CL_IDX { ~0u };
+constexpr uint32_t INVALID_CL_IDX{~0u};
 
-constexpr size_t BYTE_SIZE_ALIGNMENT { 64 };
-constexpr size_t FRAME_RESERVE_EXTRA_DIVIDE { 8 };
-constexpr size_t MIN_ALLOCATION_SIZE { 1024 * 2 };
+constexpr size_t BYTE_SIZE_ALIGNMENT{64};
+constexpr size_t FRAME_RESERVE_EXTRA_DIVIDE{8};
+constexpr size_t MIN_ALLOCATION_SIZE{1024 * 2};
 
 // automatic acquire and release barriers
-constexpr uint32_t INITIAL_MULTI_QUEUE_BARRIER_COUNT { 2u };
+constexpr uint32_t INITIAL_MULTI_QUEUE_BARRIER_COUNT{2u};
 
 size_t GetAlignedBytesize(const size_t byteSize, const size_t alignment)
 {
@@ -251,7 +302,7 @@ void* AllocateRenderData(
         rc = allocator.allocators[currentIndex]->Allocate(byteSz, alignment);
     }
 
-    if (rc == nullptr) { // current allocator is out of memory
+    if (rc == nullptr) {  // current allocator is out of memory
         size_t allocatorByteSize = Math::max(MIN_ALLOCATION_SIZE, GetAlignedBytesize(byteSz, BYTE_SIZE_ALIGNMENT));
         const size_t currentIndex = allocator.allocators.size();
         if (currentIndex > 0) {
@@ -269,33 +320,55 @@ void* AllocateRenderData(
     return rc;
 }
 
-template<typename T>
+template <typename T>
 T* AllocateRenderData(RenderCommandList::LinearAllocatorStruct& allocator, uint32_t count)
 {
+    if (count > SIZE_MAX / sizeof(T)) {
+        return nullptr;
+    }
     return static_cast<T*>(AllocateRenderData(allocator, std::alignment_of<T>::value, sizeof(T) * count));
 }
 
-template<typename T>
+template <typename T>
 T* AllocateRenderCommand(RenderCommandList::LinearAllocatorStruct& allocator)
 {
     return static_cast<T*>(AllocateRenderData(allocator, std::alignment_of<T>::value, sizeof(T)));
 }
-} // namespace
+
+template <typename T>
+bool CopyGeometryArray(RenderCommandList::LinearAllocatorStruct& allocator, const array_view<const T> src, T*& outData,
+    array_view<T>& outView)
+{
+    T* buf = AllocateRenderData<T>(allocator, static_cast<uint32_t>(src.size()));
+    if (!buf) {
+        return false;
+    }
+    outData = buf;
+    outView = {buf, src.size()};
+    for (size_t idx = 0; idx < src.size(); ++idx) {
+        outView[idx] = src[idx];
+    }
+    return true;
+}
+}  // namespace
 
 RenderCommandList::RenderCommandList(const BASE_NS::string_view nodeName,
     NodeContextDescriptorSetManager& nodeContextDescriptorSetMgr, const GpuResourceManager& gpuResourceMgr,
     const NodeContextPsoManager& nodeContextPsoMgr, const GpuQueue& queue, const bool enableMultiQueue)
-    : IRenderCommandList(), nodeName_(nodeName),
+    : IRenderCommandList(),
+      nodeName_(nodeName),
 #if (RENDER_VALIDATION_ENABLED == 1)
-      gpuResourceMgr_(gpuResourceMgr), psoMgr_(nodeContextPsoMgr),
+      gpuResourceMgr_(gpuResourceMgr),
+      psoMgr_(nodeContextPsoMgr),
 #endif
-      nodeContextDescriptorSetManager_(nodeContextDescriptorSetMgr), gpuQueue_(queue),
+      nodeContextDescriptorSetManager_(nodeContextDescriptorSetMgr),
+      gpuQueue_(queue),
       enableMultiQueue_(enableMultiQueue)
 {}
 
 void RenderCommandList::BeginFrame()
 {
-    if (allocator_.allocators.size() == 1) { // size is good for this frame
+    if (allocator_.allocators.size() == 1) {  // size is good for this frame
         allocator_.allocators[0]->Reset();
     } else if (allocator_.allocators.size() > 1) {
         size_t fullByteSize = 0;
@@ -392,11 +465,12 @@ array_view<const RenderCommandWithType> RenderCommandList::GetRenderCommands() c
     if ((!stateData_.validCommandList) || stateData_.renderPassHasBegun) {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_GetRenderCommands_",
-            "RenderCommandList: invalid state data in render command list (node: %s)", nodeName_.c_str());
+            "RenderCommandList: invalid state data in render command list (node: %s)",
+            nodeName_.c_str());
 #endif
         return {};
     } else {
-        return { renderCommands_.data(), renderCommands_.size() };
+        return {renderCommands_.data(), renderCommands_.size()};
     }
 }
 
@@ -409,7 +483,7 @@ bool RenderCommandList::HasValidRenderCommands() const
 #endif
     bool valid = false;
     if (enableMultiQueue_) {
-        if (renderCommandCount == INITIAL_MULTI_QUEUE_BARRIER_COUNT) { // only acquire and release barrier commands
+        if (renderCommandCount == INITIAL_MULTI_QUEUE_BARRIER_COUNT) {  // only acquire and release barrier commands
             // if there are patched explicit resource barriers, we need to execute this cmdlist in the backend
             valid = validReleaseAcquire_;
         } else if (renderCommandCount > INITIAL_MULTI_QUEUE_BARRIER_COUNT) {
@@ -454,40 +528,40 @@ bool RenderCommandList::HasGlobalDescriptorSetBindings() const
 
 array_view<const CommandBarrier> RenderCommandList::GetCustomBarriers() const
 {
-    return { customBarriers_.data(), customBarriers_.size() };
+    return {customBarriers_.data(), customBarriers_.size()};
 }
 
 array_view<const VertexBuffer> RenderCommandList::GetRenderpassVertexInputBufferBarriers() const
 {
-    return { rpVertexInputBufferBarriers_.data(), rpVertexInputBufferBarriers_.size() };
+    return {rpVertexInputBufferBarriers_.data(), rpVertexInputBufferBarriers_.size()};
 }
 
 array_view<const VertexBuffer> RenderCommandList::GetRenderpassIndirectBufferBarriers() const
 {
-    return { rpIndirectBufferBarriers_.data(), rpIndirectBufferBarriers_.size() };
+    return {rpIndirectBufferBarriers_.data(), rpIndirectBufferBarriers_.size()};
 }
 
 array_view<const RenderHandle> RenderCommandList::GetDescriptorSetHandles() const
 {
-    return { descriptorSetHandlesForBarriers_.data(), descriptorSetHandlesForBarriers_.size() };
+    return {descriptorSetHandlesForBarriers_.data(), descriptorSetHandlesForBarriers_.size()};
 }
 
 array_view<const RenderHandle> RenderCommandList::GetUpdateDescriptorSetHandles() const
 {
-    return { descriptorSetHandlesForUpdates_.data(), descriptorSetHandlesForUpdates_.size() };
+    return {descriptorSetHandlesForUpdates_.data(), descriptorSetHandlesForUpdates_.size()};
 }
 
 void RenderCommandList::AddBarrierPoint(const RenderCommandType renderCommandType)
 {
     if (!stateData_.automaticBarriersEnabled) {
-        return; // no barrier point added
+        return;  // no barrier point added
     }
 
     auto* data = AllocateRenderCommand<RenderCommandBarrierPoint>(allocator_);
     if (!data) {
-        return; // early out
+        return;  // early out
     }
-    *data = {}; // zero initialize
+    *data = {};  // zero initialize
 
     data->renderCommandType = renderCommandType;
     data->barrierPointIndex = stateData_.currentBarrierPointIndex++;
@@ -538,7 +612,7 @@ void RenderCommandList::AddBarrierPoint(const RenderCommandType renderCommandTyp
     // inside a render pass adds barriers directly to the RenderCommandBarrierPoint behind this pointer
     stateData_.currentBarrierPoint = data;
 
-    renderCommands_.push_back({ RenderCommandType::BARRIER_POINT, data });
+    renderCommands_.push_back({RenderCommandType::BARRIER_POINT, data});
 }
 
 void RenderCommandList::Draw(
@@ -551,7 +625,7 @@ void RenderCommandList::Draw(
     }
 #endif
 
-    if (vertexCount > 0 && stateData_.renderPassHasBegun) { // prevent zero draws
+    if (vertexCount > 0 && stateData_.renderPassHasBegun) {  // prevent zero draws
         ValidatePipeline();
         ValidatePipelineLayout();
 
@@ -566,7 +640,7 @@ void RenderCommandList::Draw(
             data->firstIndex = 0;
             data->vertexOffset = 0;
 
-            renderCommands_.push_back({ RenderCommandType::DRAW, data });
+            renderCommands_.push_back({RenderCommandType::DRAW, data});
         }
     }
 }
@@ -581,7 +655,7 @@ void RenderCommandList::DrawIndexed(const uint32_t indexCount, const uint32_t in
     }
 #endif
 
-    if (indexCount > 0 && stateData_.renderPassHasBegun) { // prevent zero draws
+    if (indexCount > 0 && stateData_.renderPassHasBegun) {  // prevent zero draws
         ValidatePipeline();
         ValidatePipelineLayout();
 
@@ -596,7 +670,7 @@ void RenderCommandList::DrawIndexed(const uint32_t indexCount, const uint32_t in
             data->firstIndex = firstIndex;
             data->vertexOffset = vertexOffset;
 
-            renderCommands_.push_back({ RenderCommandType::DRAW, data });
+            renderCommands_.push_back({RenderCommandType::DRAW, data});
         }
     }
 }
@@ -627,13 +701,13 @@ void RenderCommandList::DrawIndirect(
 
             // add possible indirect buffer barrier before render pass
             if (RenderHandleUtil::IsDynamicResource(bufferHandle)) {
-                constexpr uint32_t drawIndirectCommandSize { 4U * sizeof(uint32_t) };
+                constexpr uint32_t drawIndirectCommandSize{4U * sizeof(uint32_t)};
                 PLUGIN_ASSERT(stateData_.currentBarrierPoint);
                 stateData_.currentBarrierPoint->indirectBufferBarrierCount++;
-                rpIndirectBufferBarriers_.push_back({ bufferHandle, offset, drawIndirectCommandSize });
+                rpIndirectBufferBarriers_.push_back({bufferHandle, offset, drawIndirectCommandSize});
             }
 
-            renderCommands_.push_back({ RenderCommandType::DRAW_INDIRECT, data });
+            renderCommands_.push_back({RenderCommandType::DRAW_INDIRECT, data});
         }
     }
 }
@@ -664,20 +738,20 @@ void RenderCommandList::DrawIndexedIndirect(
 
             // add possible indirect buffer barrier before render pass
             if (RenderHandleUtil::IsDynamicResource(bufferHandle)) {
-                constexpr uint32_t drawIndirectCommandSize { 5U * sizeof(uint32_t) };
+                constexpr uint32_t drawIndirectCommandSize{5U * sizeof(uint32_t)};
                 PLUGIN_ASSERT(stateData_.currentBarrierPoint);
                 stateData_.currentBarrierPoint->indirectBufferBarrierCount++;
-                rpIndirectBufferBarriers_.push_back({ bufferHandle, offset, drawIndirectCommandSize });
+                rpIndirectBufferBarriers_.push_back({bufferHandle, offset, drawIndirectCommandSize});
             }
 
-            renderCommands_.push_back({ RenderCommandType::DRAW_INDIRECT, data });
+            renderCommands_.push_back({RenderCommandType::DRAW_INDIRECT, data});
         }
     }
 }
 
 void RenderCommandList::Dispatch(const uint32_t groupCountX, const uint32_t groupCountY, const uint32_t groupCountZ)
 {
-    if (groupCountX > 0 && groupCountY > 0 && groupCountZ > 0) { // prevent zero dispatches
+    if (groupCountX > 0 && groupCountY > 0 && groupCountZ > 0) {  // prevent zero dispatches
         ValidatePipeline();
         ValidatePipelineLayout();
 
@@ -689,7 +763,7 @@ void RenderCommandList::Dispatch(const uint32_t groupCountX, const uint32_t grou
             data->groupCountY = groupCountY;
             data->groupCountZ = groupCountZ;
 
-            renderCommands_.push_back({ RenderCommandType::DISPATCH, data });
+            renderCommands_.push_back({RenderCommandType::DISPATCH, data});
         }
     }
 }
@@ -706,7 +780,7 @@ void RenderCommandList::DispatchIndirect(const RenderHandle bufferHandle, const 
         data->argsHandle = bufferHandle;
         data->offset = offset;
 
-        renderCommands_.push_back({ RenderCommandType::DISPATCH_INDIRECT, data });
+        renderCommands_.push_back({RenderCommandType::DISPATCH_INDIRECT, data});
     }
 }
 
@@ -721,7 +795,7 @@ void RenderCommandList::BindPipeline(const RenderHandle psoHandle)
     bool valid = RenderHandleUtil::IsValid(psoHandle);
 
     const RenderHandleType handleType = RenderHandleUtil::GetHandleType(psoHandle);
-    PipelineBindPoint pipelineBindPoint {};
+    PipelineBindPoint pipelineBindPoint{};
     if (handleType == RenderHandleType::COMPUTE_PSO) {
         pipelineBindPoint = PipelineBindPoint::CORE_PIPELINE_BIND_POINT_COMPUTE;
     } else if (handleType == RenderHandleType::GRAPHICS_PSO) {
@@ -752,7 +826,7 @@ void RenderCommandList::BindPipeline(const RenderHandle psoHandle)
         data->psoHandle = psoHandle;
         data->pipelineBindPoint = pipelineBindPoint;
 
-        renderCommands_.push_back({ RenderCommandType::BIND_PIPELINE, data });
+        renderCommands_.push_back({RenderCommandType::BIND_PIPELINE, data});
     }
 }
 
@@ -777,7 +851,7 @@ void RenderCommandList::PushConstantData(
             const size_t minData = Math::min(static_cast<size_t>(pushConstant.byteSize), data.size_bytes());
             CloneData(rc->data, pushConstant.byteSize, data.data(), minData);
 
-            renderCommands_.push_back(RenderCommandWithType { RenderCommandType::PUSH_CONSTANT, rc });
+            renderCommands_.push_back(RenderCommandWithType{RenderCommandType::PUSH_CONSTANT, rc});
         }
     } else if (pushConstant.byteSize > 0) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -790,7 +864,7 @@ void RenderCommandList::PushConstantData(
 void RenderCommandList::PushConstant(const RENDER_NS::PushConstant& pushConstant, const uint8_t* data)
 {
     if ((pushConstant.byteSize > 0) && data) {
-        PushConstantData(pushConstant, { data, pushConstant.byteSize });
+        PushConstantData(pushConstant, {data, pushConstant.byteSize});
     }
 }
 
@@ -805,11 +879,11 @@ void RenderCommandList::BindVertexBuffers(const array_view<const VertexBuffer> v
 #endif
 
     if (vertexBuffers.empty()) {
-        return; // early out
+        return;  // early out
     }
     auto* data = AllocateRenderCommand<RenderCommandBindVertexBuffers>(allocator_);
     if (!data) {
-        return; // early out
+        return;  // early out
     }
 
     VertexBuffer dynamicBarrierVertexBuffers[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
@@ -817,15 +891,15 @@ void RenderCommandList::BindVertexBuffers(const array_view<const VertexBuffer> v
     const uint32_t vertexBufferCount =
         Math::min(PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT, (uint32_t)vertexBuffers.size());
     data->vertexBufferCount = vertexBufferCount;
-    RenderHandle previousVbHandle; // often all vertex buffers are withing the same buffer with offsets
+    RenderHandle previousVbHandle;  // often all vertex buffers are withing the same buffer with offsets
     for (size_t idx = 0; idx < vertexBufferCount; ++idx) {
         data->vertexBuffers[idx] = vertexBuffers[idx];
         const RenderHandle currVbHandle = vertexBuffers[idx].bufferHandle;
         if ((previousVbHandle.id != currVbHandle.id) && RenderHandleUtil::IsDynamicResource(currVbHandle) &&
             (vertexBuffers[idx].byteSize > 0)) {
             // NOTE: we do not try to create perfect barriers with vertex inputs (just barrier the whole rc)
-            dynamicBarrierVertexBuffers[dynamicBarrierVertexBufferCount++] = { currVbHandle, 0,
-                PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE };
+            dynamicBarrierVertexBuffers[dynamicBarrierVertexBufferCount++] = {
+                currVbHandle, 0, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE};
             previousVbHandle = currVbHandle;
         }
     }
@@ -841,7 +915,7 @@ void RenderCommandList::BindVertexBuffers(const array_view<const VertexBuffer> v
         }
     }
 
-    renderCommands_.push_back({ RenderCommandType::BIND_VERTEX_BUFFERS, data });
+    renderCommands_.push_back({RenderCommandType::BIND_VERTEX_BUFFERS, data});
 }
 
 void RenderCommandList::BindIndexBuffer(const IndexBuffer& indexBuffer)
@@ -861,9 +935,9 @@ void RenderCommandList::BindIndexBuffer(const IndexBuffer& indexBuffer)
         if (RenderHandleUtil::IsDynamicResource(indexBuffer.bufferHandle)) {
             stateData_.currentBarrierPoint->vertexIndexBarrierCount++;
             rpVertexInputBufferBarriers_.push_back(
-                { indexBuffer.bufferHandle, indexBuffer.bufferOffset, indexBuffer.byteSize });
+                {indexBuffer.bufferHandle, indexBuffer.bufferOffset, indexBuffer.byteSize});
         }
-        renderCommands_.push_back({ RenderCommandType::BIND_INDEX_BUFFER, data });
+        renderCommands_.push_back({RenderCommandType::BIND_INDEX_BUFFER, data});
     }
 }
 
@@ -879,7 +953,8 @@ void RenderCommandList::BeginRenderPass(
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_ValidateRenderPass_subpass_",
             "RENDER_VALIDATION: BeginRenderPass renderPassDesc.subpassCount (%u) must match subpassDescs size (%u)",
-            renderPassDesc.subpassCount, static_cast<uint32_t>(subpassDescs.size()));
+            renderPassDesc.subpassCount,
+            static_cast<uint32_t>(subpassDescs.size()));
 #endif
         stateData_.validCommandList = false;
     }
@@ -912,11 +987,11 @@ void RenderCommandList::BeginRenderPass(
         // if false -> initial layout is undefined
         data->enableAutomaticLayoutChanges = stateData_.automaticBarriersEnabled;
 
-        data->subpasses = { AllocateRenderData<RenderPassSubpassDesc>(allocator_, renderPassDesc.subpassCount),
-            renderPassDesc.subpassCount };
-        data->subpassResourceStates = { AllocateRenderData<RenderPassAttachmentResourceStates>(
-                                            allocator_, renderPassDesc.subpassCount),
-            renderPassDesc.subpassCount };
+        data->subpasses = {AllocateRenderData<RenderPassSubpassDesc>(allocator_, renderPassDesc.subpassCount),
+            renderPassDesc.subpassCount};
+        data->subpassResourceStates = {
+            AllocateRenderData<RenderPassAttachmentResourceStates>(allocator_, renderPassDesc.subpassCount),
+            renderPassDesc.subpassCount};
         if ((!data->subpasses.data()) || (!data->subpassResourceStates.data())) {
             return;
         }
@@ -944,7 +1019,7 @@ void RenderCommandList::BeginRenderPass(
         }
 
         // render pass layouts will be updated by render graph
-        renderCommands_.push_back({ RenderCommandType::BEGIN_RENDER_PASS, data });
+        renderCommands_.push_back({RenderCommandType::BEGIN_RENDER_PASS, data});
     }
 }
 
@@ -959,7 +1034,8 @@ void RenderCommandList::BeginRenderPass(
 
     if (subpassStartIdx >= renderPassDesc.subpassCount) {
         PLUGIN_LOG_E("RCL:BeginRenderPass: subpassStartIdx(%u) must be smaller than renderPassDesc.subpassCount (%u)",
-            subpassStartIdx, renderPassDesc.subpassCount);
+            subpassStartIdx,
+            renderPassDesc.subpassCount);
         stateData_.validCommandList = false;
     }
 
@@ -974,7 +1050,7 @@ void RenderCommandList::BeginRenderPass(
 
     if (renderPassDesc.attachmentCount > 0) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateRenderPassAttachment(nodeName_, gpuResourceMgr_, renderPassDesc, { &subpassDesc, 1u });
+        ValidateRenderPassAttachment(nodeName_, gpuResourceMgr_, renderPassDesc, {&subpassDesc, 1u});
 #endif
         AddBarrierPoint(RenderCommandType::BEGIN_RENDER_PASS);
 
@@ -1000,11 +1076,11 @@ void RenderCommandList::BeginRenderPass(
             // if false -> initial layout is undefined
             data->enableAutomaticLayoutChanges = stateData_.automaticBarriersEnabled;
 
-            data->subpasses = { AllocateRenderData<RenderPassSubpassDesc>(allocator_, renderPassDesc.subpassCount),
-                renderPassDesc.subpassCount };
-            data->subpassResourceStates = { AllocateRenderData<RenderPassAttachmentResourceStates>(
-                                                allocator_, renderPassDesc.subpassCount),
-                renderPassDesc.subpassCount };
+            data->subpasses = {AllocateRenderData<RenderPassSubpassDesc>(allocator_, renderPassDesc.subpassCount),
+                renderPassDesc.subpassCount};
+            data->subpassResourceStates = {
+                AllocateRenderData<RenderPassAttachmentResourceStates>(allocator_, renderPassDesc.subpassCount),
+                renderPassDesc.subpassCount};
             if ((!data->subpasses.data()) || (!data->subpassResourceStates.data())) {
                 return;
             }
@@ -1033,7 +1109,7 @@ void RenderCommandList::BeginRenderPass(
             }
 
             // render pass layouts will be updated by render graph
-            renderCommands_.push_back({ RenderCommandType::BEGIN_RENDER_PASS, data });
+            renderCommands_.push_back({RenderCommandType::BEGIN_RENDER_PASS, data});
         }
     }
 }
@@ -1065,8 +1141,11 @@ bool RenderCommandList::ProcessInputAttachments(const RenderPassDesc& renderPass
                                                                  : CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, "CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+            "CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
 #endif
     }
     return valid;
@@ -1083,8 +1162,11 @@ bool RenderCommandList::ProcessColorAttachments(const RenderPassDesc& renderPass
             valid = false;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, "CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            "CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
 #endif
 
         // NOTE: mipLevel and layers are not updated to GpuResourceState
@@ -1113,8 +1195,11 @@ bool RenderCommandList::ProcessResolveAttachments(const RenderPassDesc& renderPa
             valid = false;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, "CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
+            ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            "CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
 #endif
 
         // NOTE: mipLevel and layers are not updated to GpuResourceState
@@ -1139,7 +1224,9 @@ bool RenderCommandList::ProcessDepthAttachments(const RenderPassDesc& renderPass
             valid = false;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
             ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
 #endif
@@ -1160,7 +1247,9 @@ bool RenderCommandList::ProcessDepthAttachments(const RenderPassDesc& renderPass
             valid = false;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
             ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
 #endif
@@ -1187,7 +1276,9 @@ bool RenderCommandList::ProcessFragmentShadingRateAttachments(const RenderPassDe
             valid = false;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_, gpuResourceMgr_, handle,
+        ValidateImageUsageFlags(nodeName_,
+            gpuResourceMgr_,
+            handle,
             ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
             "CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT");
 #endif
@@ -1211,9 +1302,9 @@ void RenderCommandList::NextSubpass(const SubpassContents& subpassContents)
     auto* data = AllocateRenderCommand<RenderCommandNextSubpass>(allocator_);
     if (data) {
         data->subpassContents = subpassContents;
-        data->renderCommandListIndex = 0; // will be updated in the render graph
+        data->renderCommandListIndex = 0;  // will be updated in the render graph
 
-        renderCommands_.push_back({ RenderCommandType::NEXT_SUBPASS, data });
+        renderCommands_.push_back({RenderCommandType::NEXT_SUBPASS, data});
     }
 }
 
@@ -1239,7 +1330,7 @@ void RenderCommandList::EndRenderPass()
         data->subpassStartIndex = stateData_.renderPassStartIndex;
         data->subpassCount = stateData_.renderPassSubpassCount;
 
-        renderCommands_.push_back({ RenderCommandType::END_RENDER_PASS, data });
+        renderCommands_.push_back({RenderCommandType::END_RENDER_PASS, data});
     }
 
     stateData_.renderPassHasBegun = false;
@@ -1276,7 +1367,7 @@ void RenderCommandList::EndDisableAutomaticBarrierPoints()
 void RenderCommandList::AddCustomBarrierPoint()
 {
     const bool barrierState = stateData_.automaticBarriersEnabled;
-    stateData_.automaticBarriersEnabled = true; // flag checked in AddBarrierPoint
+    stateData_.automaticBarriersEnabled = true;  // flag checked in AddBarrierPoint
     AddBarrierPoint(RenderCommandType::BARRIER_POINT);
     stateData_.automaticBarriersEnabled = barrierState;
 }
@@ -1289,7 +1380,7 @@ void RenderCommandList::CustomMemoryBarrier(const GeneralBarrier& source, const 
     }
 #endif
 
-    CommandBarrier cb {
+    CommandBarrier cb{
         RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::UNDEFINED, 0, 0, 0, 0),
         {
             source.accessFlags,
@@ -1339,7 +1430,7 @@ void RenderCommandList::CustomBufferBarrier(const RenderHandle handle, const Buf
         dst.optionalByteOffset = byteOffset;
         dst.optionalByteSize = byteSize;
 
-        CommandBarrier cb {
+        CommandBarrier cb{
             handle,
             src,
             {},
@@ -1357,7 +1448,7 @@ void RenderCommandList::CustomImageBarrier(const RenderHandle handle, const Imag
     const ImageSubresourceRange& imageSubresourceRange)
 {
     // specific layout MAX_ENUM to state that we fetch the correct state
-    ImageResourceBarrier source { 0, 0, ImageLayout::CORE_IMAGE_LAYOUT_MAX_ENUM };
+    ImageResourceBarrier source{0, 0, ImageLayout::CORE_IMAGE_LAYOUT_MAX_ENUM};
     CustomImageBarrier(handle, source, destination, imageSubresourceRange);
 }
 
@@ -1389,7 +1480,7 @@ void RenderCommandList::CustomImageBarrier(const RenderHandle handle, const Imag
         dst.optionalImageLayout = destination.imageLayout;
         dst.optionalImageSubresourceRange = imageSubresourceRange;
 
-        CommandBarrier cb {
+        CommandBarrier cb{
             handle,
             src,
             {},
@@ -1419,7 +1510,7 @@ void RenderCommandList::CopyBufferToBuffer(
             data->dstHandle = destinationHandle;
             data->bufferCopy = bufferCopy;
 
-            renderCommands_.push_back({ RenderCommandType::COPY_BUFFER, data });
+            renderCommands_.push_back({RenderCommandType::COPY_BUFFER, data});
         }
     } else {
         PLUGIN_LOG_E("RenderCommandList: invalid CopyBufferToBuffer");
@@ -1443,7 +1534,7 @@ void RenderCommandList::CopyBufferToImage(
             data->dstHandle = destinationHandle;
             data->bufferImageCopy = bufferImageCopy;
 
-            renderCommands_.push_back({ RenderCommandType::COPY_BUFFER_IMAGE, data });
+            renderCommands_.push_back({RenderCommandType::COPY_BUFFER_IMAGE, data});
         }
     } else {
         PLUGIN_LOG_E("RenderCommandList: invalid CopyBufferToImage");
@@ -1467,7 +1558,7 @@ void RenderCommandList::CopyImageToBuffer(
             data->dstHandle = destinationHandle;
             data->bufferImageCopy = bufferImageCopy;
 
-            renderCommands_.push_back({ RenderCommandType::COPY_BUFFER_IMAGE, data });
+            renderCommands_.push_back({RenderCommandType::COPY_BUFFER_IMAGE, data});
         }
     } else {
         PLUGIN_LOG_E("RenderCommandList: invalid CopyImageToBuffer");
@@ -1490,7 +1581,7 @@ void RenderCommandList::CopyImageToImage(
             data->dstHandle = destinationHandle;
             data->imageCopy = imageCopy;
 
-            renderCommands_.push_back({ RenderCommandType::COPY_IMAGE, data });
+            renderCommands_.push_back({RenderCommandType::COPY_IMAGE, data});
         }
     } else {
         PLUGIN_LOG_E("RenderCommandList: invalid CopyImageToImage");
@@ -1517,7 +1608,7 @@ void RenderCommandList::BlitImage(const RenderHandle sourceHandle, const RenderH
                 data->srcImageLayout = ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                 data->dstImageLayout = ImageLayout::CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-                renderCommands_.push_back({ RenderCommandType::BLIT_IMAGE, data });
+                renderCommands_.push_back({RenderCommandType::BLIT_IMAGE, data});
             }
         }
     } else {
@@ -1546,7 +1637,8 @@ void RenderCommandList::UpdateDescriptorSets(const BASE_NS::array_view<const Ren
 #if (RENDER_VALIDATION_ENABLED == 1)
             if (bindingResRef.bindingMask != bindingResRef.descriptorSetBindingMask) {
                 PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_UpdateDescriptorSets_bm_",
-                    "RENDER_VALIDATION: invalid bindings in descriptor set update (node:%s)", nodeName_.c_str());
+                    "RENDER_VALIDATION: invalid bindings in descriptor set update (node:%s)",
+                    nodeName_.c_str());
             }
             if (handleType != RenderHandleType::DESCRIPTOR_SET) {
                 PLUGIN_LOG_E("RenderCommandList: invalid handle for UpdateDescriptorSet");
@@ -1561,7 +1653,8 @@ void RenderCommandList::UpdateDescriptorSets(const BASE_NS::array_view<const Ren
                 } else if (updateFlags & DescriptorSetUpdateInfoFlagBits::DESCRIPTOR_SET_UPDATE_INFO_INVALID_BIT) {
 #if (RENDER_VALIDATION_ENABLED == 1)
                     PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_UpdateDescriptorSet_invalid_",
-                        "RenderCommandList: invalid descriptor set bindings with update (node:%s)", nodeName_.c_str());
+                        "RenderCommandList: invalid descriptor set bindings with update (node:%s)",
+                        nodeName_.c_str());
 #endif
                 }
             }
@@ -1572,7 +1665,7 @@ void RenderCommandList::UpdateDescriptorSets(const BASE_NS::array_view<const Ren
 void RenderCommandList::UpdateDescriptorSet(
     const RenderHandle handle, const DescriptorSetLayoutBindingResources& bindingResources)
 {
-    UpdateDescriptorSets({ &handle, 1U }, { &bindingResources, 1U });
+    UpdateDescriptorSets({&handle, 1U}, {&bindingResources, 1U});
 }
 
 void RenderCommandList::BindDescriptorSets(
@@ -1584,7 +1677,8 @@ void RenderCommandList::BindDescriptorSets(
     const uint32_t maxSetNumber = firstSet + static_cast<uint32_t>(descriptorSetData.size());
     if (maxSetNumber > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
         PLUGIN_LOG_E("RenderCommandList::BindDescriptorSets: firstSet + handles.size() (%u) exceeds max count (%u)",
-            maxSetNumber, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
+            maxSetNumber,
+            PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
         return;
     }
 
@@ -1623,7 +1717,7 @@ void RenderCommandList::BindDescriptorSets(
         if (data = AllocateRenderCommand<RenderCommandBindDescriptorSets>(allocator_); data) {
             newAllocation = true;
 
-            *data = {}; // default
+            *data = {};  // default
 
             data->psoHandle = stateData_.currentPsoHandle;
             data->firstSet = firstSet;
@@ -1649,7 +1743,9 @@ void RenderCommandList::BindDescriptorSets(
                         auto& dynRef = data->descriptorSetDynamicOffsets[currSet];
                         dynRef.dynamicOffsets = doData;
                         dynRef.dynamicOffsetCount = dynCount;
-                        CloneData(dynRef.dynamicOffsets, dynCount * sizeof(uint32_t), ref.dynamicOffsets.data(),
+                        CloneData(dynRef.dynamicOffsets,
+                            dynCount * sizeof(uint32_t),
+                            ref.dynamicOffsets.data(),
                             ref.dynamicOffsets.size_bytes());
                     }
                 }
@@ -1672,7 +1768,7 @@ void RenderCommandList::BindDescriptorSets(
         }
 
         if (newAllocation) {
-            renderCommands_.push_back({ RenderCommandType::BIND_DESCRIPTOR_SETS, data });
+            renderCommands_.push_back({RenderCommandType::BIND_DESCRIPTOR_SETS, data});
         }
         // if the currentBarrierPoint is null there has been some invalid bindings earlier
         if (stateData_.renderPassHasBegun && stateData_.currentBarrierPoint) {
@@ -1686,7 +1782,7 @@ void RenderCommandList::BindDescriptorSets(
 
 void RenderCommandList::BindDescriptorSet(const uint32_t set, const BindDescriptorSetData& desriptorSetData)
 {
-    BindDescriptorSets(set, { &desriptorSetData, 1U });
+    BindDescriptorSets(set, {&desriptorSetData, 1U});
 }
 
 void RenderCommandList::BindDescriptorSets(const uint32_t firstSet, const array_view<const RenderHandle> handles)
@@ -1696,20 +1792,20 @@ void RenderCommandList::BindDescriptorSets(const uint32_t firstSet, const array_
     for (uint32_t idx = 0U; idx < count; ++idx) {
         bdsd[idx].handle = handles[idx];
     }
-    BindDescriptorSets(firstSet, { bdsd, count });
+    BindDescriptorSets(firstSet, {bdsd, count});
 }
 
 void RenderCommandList::BindDescriptorSet(const uint32_t set, const RenderHandle handle)
 {
-    BindDescriptorSetData bdsd = { handle, {} };
-    BindDescriptorSets(set, { &bdsd, 1U });
+    BindDescriptorSetData bdsd = {handle, {}};
+    BindDescriptorSets(set, {&bdsd, 1U});
 }
 
 void RenderCommandList::BindDescriptorSet(
     const uint32_t set, const RenderHandle handle, const array_view<const uint32_t> dynamicOffsets)
 {
-    BindDescriptorSetData bdsd = { handle, dynamicOffsets };
-    BindDescriptorSets(set, { &bdsd, 1U });
+    BindDescriptorSetData bdsd = {handle, dynamicOffsets};
+    BindDescriptorSets(set, {&bdsd, 1U});
 }
 
 void RenderCommandList::BuildAccelerationStructures(const AsBuildGeometryData& geometry,
@@ -1717,50 +1813,31 @@ void RenderCommandList::BuildAccelerationStructures(const AsBuildGeometryData& g
     const BASE_NS::array_view<const AsGeometryAabbsData> aabbs,
     const BASE_NS::array_view<const AsGeometryInstancesData> instances)
 {
-    if (!(triangles.empty() && aabbs.empty() && instances.empty())) {
-#if (RENDER_VULKAN_RT_ENABLED == 1)
-        AddBarrierPoint(RenderCommandType::BUILD_ACCELERATION_STRUCTURE);
-
-        RenderCommandBuildAccelerationStructure* data =
-            AllocateRenderCommand<RenderCommandBuildAccelerationStructure>(allocator_);
-        if (!data) {
-            return; // early out
-        }
-        *data = {};
-        data->geometry = geometry;
-
-        if (!triangles.empty()) {
-            AsGeometryTrianglesData* trianglesData =
-                static_cast<AsGeometryTrianglesData*>(AllocateRenderData(allocator_,
-                    std::alignment_of<AsGeometryTrianglesData>(), sizeof(AsGeometryTrianglesData) * triangles.size()));
-            data->trianglesData = trianglesData;
-            data->trianglesView = { data->trianglesData, triangles.size() };
-            for (size_t idx = 0; idx < triangles.size(); ++idx) {
-                data->trianglesView[idx] = triangles[idx];
-            }
-        }
-        if (!aabbs.empty()) {
-            AsGeometryAabbsData* aabbsData = static_cast<AsGeometryAabbsData*>(AllocateRenderData(
-                allocator_, std::alignment_of<AsGeometryAabbsData>(), sizeof(AsGeometryAabbsData) * aabbs.size()));
-            data->aabbsData = aabbsData;
-            data->aabbsView = { data->aabbsData, aabbs.size() };
-            for (size_t idx = 0; idx < aabbs.size(); ++idx) {
-                data->aabbsView[idx] = aabbs[idx];
-            }
-        }
-        if (!instances.empty()) {
-            AsGeometryInstancesData* instancesData =
-                static_cast<AsGeometryInstancesData*>(AllocateRenderData(allocator_,
-                    std::alignment_of<AsGeometryInstancesData>(), sizeof(AsGeometryInstancesData) * instances.size()));
-            data->instancesData = instancesData;
-            data->instancesView = { data->instancesData, instances.size() };
-            for (size_t idx = 0; idx < instances.size(); ++idx) {
-                data->instancesView[idx] = instances[idx];
-            }
-        }
-        renderCommands_.push_back({ RenderCommandType::BUILD_ACCELERATION_STRUCTURE, data });
-#endif
+    if (triangles.empty() && aabbs.empty() && instances.empty()) {
+        return;
     }
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    AddBarrierPoint(RenderCommandType::BUILD_ACCELERATION_STRUCTURE);
+
+    RenderCommandBuildAccelerationStructure* data =
+        AllocateRenderCommand<RenderCommandBuildAccelerationStructure>(allocator_);
+    if (!data) {
+        return;  // early out
+    }
+    *data = {};
+    data->geometry = geometry;
+
+    if (!triangles.empty() && !CopyGeometryArray(allocator_, triangles, data->trianglesData, data->trianglesView)) {
+        return;
+    }
+    if (!aabbs.empty() && !CopyGeometryArray(allocator_, aabbs, data->aabbsData, data->aabbsView)) {
+        return;
+    }
+    if (!instances.empty() && !CopyGeometryArray(allocator_, instances, data->instancesData, data->instancesView)) {
+        return;
+    }
+    renderCommands_.push_back({RenderCommandType::BUILD_ACCELERATION_STRUCTURE, data});
+#endif
 }
 
 void RenderCommandList::CopyAccelerationStructureInstances(
@@ -1773,18 +1850,18 @@ void RenderCommandList::CopyAccelerationStructureInstances(
         RenderCommandCopyAccelerationStructureInstances* data =
             AllocateRenderCommand<RenderCommandCopyAccelerationStructureInstances>(allocator_);
         if (!data) {
-            return; // early out
+            return;  // early out
         }
 
         data->destination = destination;
         data->instancesData = static_cast<AsInstance*>(
             AllocateRenderData(allocator_, std::alignment_of<AsInstance>(), sizeof(AsInstance) * instances.size()));
         if (data->instancesData) {
-            data->instancesView = { data->instancesData, instances.size() };
+            data->instancesView = {data->instancesData, instances.size()};
             for (size_t idx = 0; idx < data->instancesView.size(); ++idx) {
                 data->instancesView[idx] = instances[idx];
             }
-            renderCommands_.push_back({ RenderCommandType::COPY_ACCELERATION_STRUCTURE_INSTANCES, data });
+            renderCommands_.push_back({RenderCommandType::COPY_ACCELERATION_STRUCTURE_INSTANCES, data});
         }
 #endif
     }
@@ -1817,15 +1894,14 @@ void RenderCommandList::ClearColorImage(
             data->handle = handle;
             data->imageLayout = CORE_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             data->color = color;
-            data->ranges = { AllocateRenderData<ImageSubresourceRange>(
-                                 allocator_, static_cast<uint32_t>(ranges.size())),
-                ranges.size() };
+            data->ranges = {AllocateRenderData<ImageSubresourceRange>(allocator_, static_cast<uint32_t>(ranges.size())),
+                ranges.size()};
             if (!data->ranges.data()) {
                 return;
             }
             CloneData(data->ranges.data(), data->ranges.size_bytes(), ranges.data(), ranges.size_bytes());
 
-            renderCommands_.push_back({ RenderCommandType::CLEAR_COLOR_IMAGE, data });
+            renderCommands_.push_back({RenderCommandType::CLEAR_COLOR_IMAGE, data});
         }
     }
 }
@@ -1840,7 +1916,7 @@ void RenderCommandList::SetDynamicStateViewport(const ViewportDesc& viewportDesc
         data->viewportDesc = viewportDesc;
         data->viewportDesc.width = Math::max(1.0f, data->viewportDesc.width);
         data->viewportDesc.height = Math::max(1.0f, data->viewportDesc.height);
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_VIEWPORT, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_VIEWPORT, data});
     }
 }
 
@@ -1854,7 +1930,7 @@ void RenderCommandList::SetDynamicStateScissor(const ScissorDesc& scissorDesc)
         data->scissorDesc = scissorDesc;
         data->scissorDesc.extentWidth = Math::max(1u, data->scissorDesc.extentWidth);
         data->scissorDesc.extentHeight = Math::max(1u, data->scissorDesc.extentHeight);
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_SCISSOR, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_SCISSOR, data});
     }
 }
 
@@ -1863,7 +1939,7 @@ void RenderCommandList::SetDynamicStateLineWidth(const float lineWidth)
     auto* data = AllocateRenderCommand<RenderCommandDynamicStateLineWidth>(allocator_);
     if (data) {
         data->lineWidth = lineWidth;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_LINE_WIDTH, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_LINE_WIDTH, data});
     }
 }
 
@@ -1875,7 +1951,7 @@ void RenderCommandList::SetDynamicStateDepthBias(
         data->depthBiasConstantFactor = depthBiasConstantFactor;
         data->depthBiasClamp = depthBiasClamp;
         data->depthBiasSlopeFactor = depthBiasSlopeFactor;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_DEPTH_BIAS, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_DEPTH_BIAS, data});
     }
 }
 
@@ -1884,7 +1960,8 @@ void RenderCommandList::SetDynamicStateBlendConstants(const array_view<const flo
     constexpr uint32_t THRESHOLD = 4;
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (blendConstants.size() > THRESHOLD) {
-        PLUGIN_LOG_E("RenderCommandList: blend constant count (%zu) exceeds supported max (%u)", blendConstants.size(),
+        PLUGIN_LOG_E("RenderCommandList: blend constant count (%zu) exceeds supported max (%u)",
+            blendConstants.size(),
             THRESHOLD);
     }
 #endif
@@ -1895,7 +1972,7 @@ void RenderCommandList::SetDynamicStateBlendConstants(const array_view<const flo
         for (uint32_t idx = 0; idx < bcCount; ++idx) {
             data->blendConstants[idx] = blendConstants[idx];
         }
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_BLEND_CONSTANTS, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_BLEND_CONSTANTS, data});
     }
 }
 
@@ -1905,7 +1982,7 @@ void RenderCommandList::SetDynamicStateDepthBounds(const float minDepthBounds, c
     if (data) {
         data->minDepthBounds = minDepthBounds;
         data->maxDepthBounds = maxDepthBounds;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_DEPTH_BOUNDS, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_DEPTH_BOUNDS, data});
     }
 }
 
@@ -1916,7 +1993,7 @@ void RenderCommandList::SetDynamicStateStencilCompareMask(const StencilFaceFlags
         data->dynamicState = StencilDynamicState::COMPARE_MASK;
         data->faceMask = faceMask;
         data->mask = compareMask;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_STENCIL, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_STENCIL, data});
     }
 }
 
@@ -1927,7 +2004,7 @@ void RenderCommandList::SetDynamicStateStencilWriteMask(const StencilFaceFlags f
         data->dynamicState = StencilDynamicState::WRITE_MASK;
         data->faceMask = faceMask;
         data->mask = writeMask;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_STENCIL, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_STENCIL, data});
     }
 }
 
@@ -1938,7 +2015,7 @@ void RenderCommandList::SetDynamicStateStencilReference(const StencilFaceFlags f
         data->dynamicState = StencilDynamicState::REFERENCE;
         data->faceMask = faceMask;
         data->mask = reference;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_STENCIL, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_STENCIL, data});
     }
 }
 
@@ -1951,15 +2028,15 @@ void RenderCommandList::SetDynamicStateFragmentShadingRate(
         ValidateFragmentShadingRate(fragmentSize);
 #endif
         // valid values for sizes from 0-4
-        constexpr uint32_t maxValue { 4u };
-        constexpr uint32_t valueMapper[maxValue + 1u] = { 1u, 1u, 2u, 2u, 4u };
+        constexpr uint32_t maxValue{4u};
+        constexpr uint32_t valueMapper[maxValue + 1u] = {1u, 1u, 2u, 2u, 4u};
         Size2D fs = fragmentSize;
         fs.width = (fs.width <= maxValue) ? valueMapper[fs.width] : maxValue;
         fs.height = (fs.height <= maxValue) ? valueMapper[fs.height] : maxValue;
 
         data->fragmentSize = fs;
         data->combinerOps = combinerOps;
-        renderCommands_.push_back({ RenderCommandType::DYNAMIC_STATE_FRAGMENT_SHADING_RATE, data });
+        renderCommands_.push_back({RenderCommandType::DYNAMIC_STATE_FRAGMENT_SHADING_RATE, data});
     }
 }
 
@@ -1972,7 +2049,7 @@ void RenderCommandList::SetExecuteBackendFramePosition()
         if (data) {
             data->id = 0;
             data->command = nullptr;
-            renderCommands_.push_back({ RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data });
+            renderCommands_.push_back({RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data});
             stateData_.executeBackendFrameSet = true;
         }
     } else {
@@ -1989,7 +2066,7 @@ void RenderCommandList::SetExecuteBackendCommand(IRenderBackendCommand::Ptr back
         if (data) {
             data->id = 0;
             data->command = backendCommand.get();
-            renderCommands_.push_back({ RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data });
+            renderCommands_.push_back({RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION, data});
 
             backendCommands_.push_back(backendCommand);
         }
@@ -2000,7 +2077,7 @@ void RenderCommandList::SetBackendCommand(
     IRenderBackendPositionCommand::Ptr backendCommand, RenderBackendCommandPosition backendCommandPosition)
 {
     if (backendCommand) {
-        processBackendCommands_.push_back({ backendCommand, backendCommandPosition });
+        processBackendCommands_.push_back({backendCommand, backendCommandPosition});
     }
 }
 
@@ -2022,8 +2099,8 @@ void RenderCommandList::BeginDebugMarker(const BASE_NS::string_view name, const 
             }
 #endif
             data->name = name;
-            data->color = { color };
-            renderCommands_.push_back({ RenderCommandType::BEGIN_DEBUG_MARKER, data });
+            data->color = {color};
+            renderCommands_.push_back({RenderCommandType::BEGIN_DEBUG_MARKER, data});
             debugMarkerStack_.stackCounter++;
             debugMarkerStack_.commandCount++;
         }
@@ -2034,7 +2111,7 @@ void RenderCommandList::BeginDebugMarker(const BASE_NS::string_view name, const 
 void RenderCommandList::BeginDebugMarker(const BASE_NS::string_view name)
 {
 #if (RENDER_DEBUG_MARKERS_ENABLED == 1)
-    BeginDebugMarker(name, { 1.0f, 1.0f, 1.0f, 1.0f });
+    BeginDebugMarker(name, {1.0f, 1.0f, 1.0f, 1.0f});
 #endif
 }
 
@@ -2045,7 +2122,7 @@ void RenderCommandList::EndDebugMarker()
         RenderCommandEndDebugMarker* data = AllocateRenderCommand<RenderCommandEndDebugMarker>(allocator_);
         if (data) {
             data->id = 0;
-            renderCommands_.push_back({ RenderCommandType::END_DEBUG_MARKER, data });
+            renderCommands_.push_back({RenderCommandType::END_DEBUG_MARKER, data});
             debugMarkerStack_.stackCounter--;
             debugMarkerStack_.commandCount++;
         }
@@ -2068,7 +2145,8 @@ void RenderCommandList::ValidateRenderPass(const RenderPassDesc& renderPassDesc)
         if (!RenderHandleUtil::IsValid(renderPassDesc.attachmentHandles[idx])) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_ValidateRenderPass_attachments_",
-                "RenderCommandList: Invalid render pass attachment handle in index: %u (node:%s)", idx,
+                "RenderCommandList: Invalid render pass attachment handle in index: %u (node:%s)",
+                idx,
                 nodeName_.c_str());
 #endif
             stateData_.validCommandList = false;
@@ -2106,7 +2184,7 @@ void RenderCommandList::ValidatePipelineLayout()
                                        : psoMgr_.GetGraphicsPsoPipelineLayout(stateData_.currentPsoHandle);
         uint32_t plDescriptorSetCount = 0U;
         uint32_t bindCount = 0U;
-        uint32_t bindSetIndices[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { ~0u, ~0u, ~0u, ~0u };
+        uint32_t bindSetIndices[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{~0u, ~0u, ~0u, ~0u};
         for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
             const DescriptorSetBind& currSet = stateData_.currentBoundSets[idx];
             if (RenderHandleUtil::IsValid(currSet.descriptorSetHandle)) {
@@ -2142,7 +2220,9 @@ CORE_NS::IInterface* RenderCommandList::GetInterface(const BASE_NS::Uid& uid)
     return nullptr;
 }
 
-void RenderCommandList::Ref() {}
+void RenderCommandList::Ref()
+{}
 
-void RenderCommandList::Unref() {}
+void RenderCommandList::Unref()
+{}
 RENDER_END_NAMESPACE()

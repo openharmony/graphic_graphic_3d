@@ -173,7 +173,7 @@
 CORE_BEGIN_NAMESPACE()
 inline ILogger* GetLogger()
 {
-    static ILogger* gGlobalLogger { nullptr };
+    static ILogger* gGlobalLogger{nullptr};
     if (gGlobalLogger == nullptr) {
         gGlobalLogger = GetInstance<ILogger>(UID_LOGGER);
     }
@@ -227,4 +227,4 @@ inline void CheckOnceReset()
 }
 /** @} */
 CORE_END_NAMESPACE()
-#endif // API_CORE_LOG_H
+#endif  // API_CORE_LOG_H

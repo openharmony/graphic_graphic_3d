@@ -40,14 +40,14 @@ void TestRenderNodeContextManager(const UTest::EngineResources& engine)
     ShaderManager& shaderMgr = (ShaderManager&)engine.device->GetShaderManager();
     GpuResourceManager& gpuResourceMgr = (GpuResourceManager&)engine.device->GetGpuResourceManager();
     auto descSetMgr = ((Device*)engine.device)->CreateNodeContextDescriptorSetManager();
-    NodeContextPsoManager psoMgr { *(Device*)engine.device, shaderMgr };
+    NodeContextPsoManager psoMgr{*(Device*)engine.device, shaderMgr};
 
-    RenderCommandList cmdList { "TestRenderNode", *descSetMgr, gpuResourceMgr, psoMgr, {}, {} };
-    RenderNodeGraphShareDataManager dataMgr { {} };
+    RenderCommandList cmdList{"TestRenderNode", *descSetMgr, gpuResourceMgr, psoMgr, {}, {}};
+    RenderNodeGraphShareDataManager dataMgr{{}};
 
-    RenderNodeContextManager::CreateInfo createInfo { *engine.context, {}, {}, {}, {}, *descSetMgr, psoMgr, cmdList,
-        dataMgr };
-    RenderNodeContextManager contextMgr { createInfo };
+    RenderNodeContextManager::CreateInfo createInfo{
+        *engine.context, {}, {}, {}, {}, *descSetMgr, psoMgr, cmdList, dataMgr};
+    RenderNodeContextManager contextMgr{createInfo};
     ASSERT_NE(nullptr, contextMgr.GetRenderNodeContextInterface(RenderCommandList::UID));
 
     ASSERT_EQ(0, contextMgr.GetNodeName().size());
@@ -64,7 +64,7 @@ void TestRenderNodeContextManager(const UTest::EngineResources& engine)
     ASSERT_TRUE(constContextMgr.GetInterface(IRenderNodeContextManager::UID));
     ASSERT_FALSE(constContextMgr.GetInterface(BASE_NS::Uid("12345678-1234-1234-1234-1234567890ab")));
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeContextManagerTest

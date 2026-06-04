@@ -151,10 +151,13 @@ lume_rofs("lume_engine_test_rofs")
   size_name = "SIZEOFDATAFORTEST"
   base_name = CORE_TEST_ROFS
   script = "./../../tools/CompilerAsset.sh"
-  assets_path = "./assets"
+  assets_path = "${target_gen_dir}/test_rofs_assets"
   copy_path = "${target_gen_dir}/assets"
   file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
-  compileShader_deps=["${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile"]
+  compileShader_deps = [
+    "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
+    ":PushTestResource",
+  ]
   if (ohos_indep_compiler_enable) {
     tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile/"
     compileShader_deps -= [
@@ -250,6 +253,11 @@ ohos_unittest("lume_engine_src_test") {
     
     # Log
     "src_unit_test/src/log/logger_test.cpp",
+
+    # OS/OHOS
+    "src_unit_test/src/os/library_ohos_unit_test.cpp",
+    "src_unit_test/src/os/ohos_file_unit_test.cpp",
+    "src_unit_test/src/os/ohos_filesystem_unit_test.cpp",
     
     # Plugin
     "src_unit_test/src/plugin/plugin_test.cpp",
@@ -260,6 +268,7 @@ ohos_unittest("lume_engine_src_test") {
     # Util
     "src_unit_test/src/util/frustum_util_test.cpp",
     "src_unit_test/src/util/json_test.cpp",
+    "src_unit_test/src/util/json2_test.cpp",
     "src_unit_test/src/util/linear_allocator_test.cpp",
     "src_unit_test/src/util/string_util_test.cpp",
   ]
@@ -270,7 +279,7 @@ ohos_unittest("lume_engine_src_test") {
     "hilog:libhilog",
     "googletest:gtest",
     "googletest:gmock",
-    "icu:shared_icuuc",
+    "resource_management:global_resmgr"
   ]
 
   # Deps
@@ -447,16 +456,63 @@ ohos_shared_library("libCoreTestSharedPlugin3") {
   subsystem_name = "graphic"
 }
 
+ohos_source_set("test_plugin_circular_a_shared_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_shared_config"
+  ]
+
+  sources = [
+    "test_plugin/src/dynamic_circular_a_plugin.cpp",
+    "test_plugin/src/dynamic_circular_uids.h",
+  ]
+}
+
+ohos_shared_library("libCoreTestSharedPluginCircularA") {
+  deps = [
+    ":test_plugin_circular_a_shared_src"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_source_set("test_plugin_circular_b_shared_src") {
+  public_configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    ":test_plugin_shared_config"
+  ]
+
+  sources = [
+    "test_plugin/src/dynamic_circular_b_plugin.cpp",
+    "test_plugin/src/dynamic_circular_uids.h",
+  ]
+}
+
+ohos_shared_library("libCoreTestSharedPluginCircularB") {
+  deps = [
+    ":test_plugin_circular_b_shared_src"
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
 action("PushTestResource") {
   outputs = [ "$target_out_dir/out.txt" ]
   script = "${LUME_CORE_PATH}/test/unittest/assets/copy.sh"
   deps = [
     ":libCoreTestSharedPlugin",
     ":libCoreTestSharedPlugin2",
-    ":libCoreTestSharedPlugin3"
+    ":libCoreTestSharedPlugin3",
+    ":libCoreTestSharedPluginCircularA",
+    ":libCoreTestSharedPluginCircularB",
   ]
   args = [
     "$target_out_dir",
+    "${target_gen_dir}/test_rofs_assets",
   ]
 }
 

@@ -141,7 +141,7 @@ void AnimationController::Clear()
 
 IAnimationController::StepInfo AnimationController::Step(const IClock::ConstPtr& clock)
 {
-    StepInfo info { 0, 0 };
+    StepInfo info{0, 0};
 
     for (auto& anim : GetRunning()) {
         if (auto animation = anim.lock()) {

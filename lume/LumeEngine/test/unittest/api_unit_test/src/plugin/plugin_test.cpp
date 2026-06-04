@@ -37,7 +37,7 @@ namespace UTest {
 constexpr BASE_NS::string_view SHARED_PLUGIN_NAME = "Shared Test Plugin";
 constexpr BASE_NS::string_view SHARED_PLUGIN_V2_NAME = "Shared Test Plugin v2";
 
-constexpr BASE_NS::Uid UNKNOWN_UID { "c0ffee00-600d-1234-1234-deadbeef0bad" };
+constexpr BASE_NS::Uid UNKNOWN_UID{"c0ffee00-600d-1234-1234-deadbeef0bad"};
 
 class TypeInfoListener final : public CORE_NS::IPluginRegister::ITypeInfoListener {
 public:
@@ -56,7 +56,9 @@ public:
             typeInfos_.clear();
         }
         type_ = type;
-        std::transform(typeInfos.begin(), typeInfos.end(), std::back_inserter(typeInfos_),
+        std::transform(typeInfos.begin(),
+            typeInfos.end(),
+            std::back_inserter(typeInfos_),
             [](const CORE_NS::ITypeInfo* const typeInfo) {
                 CORE_LOG_D("%s", BASE_NS::to_string(typeInfo->typeUid).data());
                 return typeInfo->typeUid;
@@ -66,7 +68,7 @@ public:
     EventType type_;
     BASE_NS::vector<BASE_NS::Uid> typeInfos_;
 };
-} // namespace UTest
+}  // namespace UTest
 
 /**
  * @tc.name: GetPlugins
@@ -136,7 +138,7 @@ UNIT_TEST(API_PluginTest, LoadPluginsWithTransitiveDependencies, testing::ext::T
             EXPECT_EQ(plugins.size(), 0);
         }
 
-        constexpr BASE_NS::Uid uids[] = { UTest3::UID_SHARED_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {UTest3::UID_SHARED_PLUGIN};
         {
             const bool loaded = pluginRegister.LoadPlugins(uids);
             EXPECT_TRUE(loaded);
@@ -167,7 +169,7 @@ UNIT_TEST(API_PluginTest, LoadPluginsWithTransitiveDependencies2, testing::ext::
         }
 
         {
-            constexpr BASE_NS::Uid uids[] = { UTest3::UID_SHARED_PLUGIN };
+            constexpr BASE_NS::Uid uids[] = {UTest3::UID_SHARED_PLUGIN};
             const bool loaded = pluginRegister.LoadPlugins(uids);
             EXPECT_TRUE(loaded);
             const BASE_NS::array_view<const CORE_NS::IPlugin* const> plugins = pluginRegister.GetPlugins();
@@ -175,7 +177,7 @@ UNIT_TEST(API_PluginTest, LoadPluginsWithTransitiveDependencies2, testing::ext::
         }
 
         {
-            constexpr BASE_NS::Uid uids[] = { UTest3::UID_SHARED_PLUGIN };
+            constexpr BASE_NS::Uid uids[] = {UTest3::UID_SHARED_PLUGIN};
             const bool loaded = pluginRegister.LoadPlugins(uids);
             EXPECT_TRUE(loaded);
             const BASE_NS::array_view<const CORE_NS::IPlugin* const> plugins = pluginRegister.GetPlugins();
@@ -183,7 +185,7 @@ UNIT_TEST(API_PluginTest, LoadPluginsWithTransitiveDependencies2, testing::ext::
         }
 
         {
-            constexpr BASE_NS::Uid uids[] = { UTest3::UID_SHARED_PLUGIN };
+            constexpr BASE_NS::Uid uids[] = {UTest3::UID_SHARED_PLUGIN};
             pluginRegister.UnloadPlugins(uids);
         }
         {
@@ -191,7 +193,7 @@ UNIT_TEST(API_PluginTest, LoadPluginsWithTransitiveDependencies2, testing::ext::
             EXPECT_EQ(plugins.size(), 3);
         }
         {
-            constexpr BASE_NS::Uid uids[] = { UTest3::UID_SHARED_PLUGIN };
+            constexpr BASE_NS::Uid uids[] = {UTest3::UID_SHARED_PLUGIN};
             pluginRegister.UnloadPlugins(uids);
         }
         {
@@ -212,7 +214,7 @@ UNIT_TEST(API_PluginTest, LoadPlugins, testing::ext::TestSize.Level1)
 
     {
         // Load one plugin
-        constexpr BASE_NS::Uid uids[] = { UTest::UID_SHARED_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {UTest::UID_SHARED_PLUGIN};
         {
             const bool loaded = pluginRegister.LoadPlugins(uids);
             EXPECT_TRUE(loaded);
@@ -229,7 +231,7 @@ UNIT_TEST(API_PluginTest, LoadPlugins, testing::ext::TestSize.Level1)
         }
 
         // Load one more plugin
-        constexpr BASE_NS::Uid uids2[] = { UTest2::UID_SHARED_PLUGIN };
+        constexpr BASE_NS::Uid uids2[] = {UTest2::UID_SHARED_PLUGIN};
         {
             const bool loaded = pluginRegister.LoadPlugins(uids2);
             EXPECT_TRUE(loaded);
@@ -243,7 +245,7 @@ UNIT_TEST(API_PluginTest, LoadPlugins, testing::ext::TestSize.Level1)
 
     // Load multiple plugins in one go
     {
-        constexpr BASE_NS::Uid uids[] = { UTest::UID_SHARED_PLUGIN, UTest2::UID_SHARED_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {UTest::UID_SHARED_PLUGIN, UTest2::UID_SHARED_PLUGIN};
         const bool loaded = pluginRegister.LoadPlugins(uids);
         EXPECT_TRUE(loaded);
 
@@ -254,7 +256,7 @@ UNIT_TEST(API_PluginTest, LoadPlugins, testing::ext::TestSize.Level1)
     }
     // Try loading plugin with unknown UID (should fail)
     {
-        constexpr BASE_NS::Uid uids[] = { UTest::UNKNOWN_UID };
+        constexpr BASE_NS::Uid uids[] = {UTest::UNKNOWN_UID};
         const bool loaded = pluginRegister.LoadPlugins(uids);
         EXPECT_FALSE(loaded);
 
@@ -265,7 +267,7 @@ UNIT_TEST(API_PluginTest, LoadPlugins, testing::ext::TestSize.Level1)
     }
     // Try loading multiple plugins with one unknown UID (should fail)
     {
-        constexpr BASE_NS::Uid uids[] = { UTest::UID_SHARED_PLUGIN, UTest::UNKNOWN_UID, UTest2::UID_SHARED_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {UTest::UID_SHARED_PLUGIN, UTest::UNKNOWN_UID, UTest2::UID_SHARED_PLUGIN};
         const bool loaded = pluginRegister.LoadPlugins(uids);
         EXPECT_FALSE(loaded);
 
@@ -290,7 +292,7 @@ UNIT_TEST(API_ClassRegister, globalInterfaces, testing::ext::TestSize.Level1)
         EXPECT_NE(globalClassRegister.GetInterfaceMetadata(UTest::UID_SHARED_GLOBAL_TEST_IMPL).uid,
             UTest::UID_SHARED_GLOBAL_TEST_IMPL);
 
-        const bool loaded = pluginRegister.LoadPlugins({ &UTest::UID_SHARED_PLUGIN, 1 });
+        const bool loaded = pluginRegister.LoadPlugins({&UTest::UID_SHARED_PLUGIN, 1});
         EXPECT_TRUE(loaded);
         // Should have added one interface to the global
         EXPECT_EQ(globalClassRegister.GetInterfaceMetadata().size(), interfaceCount + 1);
@@ -310,7 +312,7 @@ UNIT_TEST(API_ClassRegister, globalInterfaces, testing::ext::TestSize.Level1)
         EXPECT_FALSE(info.createInterface);
         EXPECT_FALSE(CORE_NS::CreateInstance<UTest::ITest>(UTest::UID_SHARED_GLOBAL_TEST_IMPL));
 
-        const bool loaded2 = pluginRegister.LoadPlugins({ &UTest2::UID_SHARED_PLUGIN, 1 });
+        const bool loaded2 = pluginRegister.LoadPlugins({&UTest2::UID_SHARED_PLUGIN, 1});
 
         EXPECT_TRUE(loaded2);
         // Should have added one interface to the global
@@ -367,7 +369,7 @@ UNIT_TEST(API_ClassRegister, engineInterfaces, testing::ext::TestSize.Level1)
         UTest2::UID_SHARED_ENGINE_TEST_IMPL);
 
     // Loading v2 which has a dependency should also load UTest::UID_SHARED_PLUGIN
-    constexpr BASE_NS::Uid uids[] = { UTest2::UID_SHARED_PLUGIN };
+    constexpr BASE_NS::Uid uids[] = {UTest2::UID_SHARED_PLUGIN};
     const bool loaded = pluginRegister.LoadPlugins(uids);
     EXPECT_TRUE(loaded);
     EXPECT_EQ(listener.type_, CORE_NS::IPluginRegister::ITypeInfoListener::EventType::ADDED);

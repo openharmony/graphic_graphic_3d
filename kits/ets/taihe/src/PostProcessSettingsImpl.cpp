@@ -17,14 +17,15 @@
 
 namespace OHOS::Render3D::KITETS {
 std::shared_ptr<PostProcessETS> PostProcessSettingsImpl::CreateInternal(
-    const ScenePostProcessSettings::ToneMappingSettings &tonemapData,
-    const ScenePostProcessSettings::BloomSettings &bloomData,
-    const ScenePostProcessSettings::VignetteSettings &vignetteData,
-    const ScenePostProcessSettings::ColorFringeSettings &colorFringeData)
+    const ScenePostProcessSettings::ToneMappingSettings& tonemapData,
+    const ScenePostProcessSettings::BloomSettings& bloomData,
+    const ScenePostProcessSettings::VignetteSettings& vignetteData,
+    const ScenePostProcessSettings::ColorFringeSettings& colorFringeData)
 {
-    return std::make_shared<PostProcessETS>(
-        ToneMappingSettingsImpl::CreateInternal(tonemapData), BloomSettingsImpl::CreateInternal(bloomData),
-        VignetteSettingsImpl::CreateInternal(vignetteData), ColorFringeSettingsImpl::CreateInternal(colorFringeData));
+    return std::make_shared<PostProcessETS>(ToneMappingSettingsImpl::CreateInternal(tonemapData),
+        BloomSettingsImpl::CreateInternal(bloomData),
+        VignetteSettingsImpl::CreateInternal(vignetteData),
+        ColorFringeSettingsImpl::CreateInternal(colorFringeData));
 }
 
 PostProcessSettingsImpl::PostProcessSettingsImpl(const std::shared_ptr<PostProcessETS> postProcessETS)
@@ -33,9 +34,7 @@ PostProcessSettingsImpl::PostProcessSettingsImpl(const std::shared_ptr<PostProce
 
 PostProcessSettingsImpl::~PostProcessSettingsImpl()
 {
-    if (postProcessETS_) {
-        postProcessETS_.reset();
-    }
+    postProcessETS_.reset();
 }
 
 ::taihe::optional<::ScenePostProcessSettings::ToneMappingSettings> PostProcessSettingsImpl::getToneMapping()
@@ -96,6 +95,7 @@ void PostProcessSettingsImpl::setBloom(::taihe::optional_view<::ScenePostProcess
     } else {
         return std::nullopt;
     }
+    return std::nullopt;
 }
 
 void PostProcessSettingsImpl::setVignette(::taihe::optional_view<::ScenePostProcessSettings::VignetteSettings> vignette)

@@ -101,7 +101,7 @@ bool FilterError(
 {
     if (source == GL_DEBUG_SOURCE_OTHER) {
         if (type == GL_DEBUG_TYPE_PERFORMANCE) {
-            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) { // 2147483647: message id
+            if ((id == 2147483647) && (severity == GL_DEBUG_SEVERITY_HIGH)) {  // 2147483647: message id
                 /*  Ignore the following warning that Adreno drivers seem to spam.
                 source: GL_DEBUG_SOURCE_OTHER
                 type: GL_DEBUG_TYPE_PERFORMANCE
@@ -193,8 +193,7 @@ struct Attribute {
 void DumpEGLStrings(EGLDisplay dpy)
 {
     // extensions dumped later.
-    static constexpr Attribute strings[] = { ATTRIBUTE(EGL_CLIENT_APIS), ATTRIBUTE(EGL_VENDOR),
-        ATTRIBUTE(EGL_VERSION) };
+    static constexpr Attribute strings[] = {ATTRIBUTE(EGL_CLIENT_APIS), ATTRIBUTE(EGL_VENDOR), ATTRIBUTE(EGL_VERSION)};
     for (auto string : strings) {
         const char* const value = eglQueryString(dpy, string.attribute);
         if (value) {
@@ -208,25 +207,27 @@ void DumpEGLStrings(EGLDisplay dpy)
 #ifdef PLUGIN_UNUSED_EGL_HELPERS
 void DumpEGLConfigs(EGLDisplay dpy)
 {
-    EGLConfig* configs = nullptr;
     EGLint n = 0;
 
     eglGetConfigs(dpy, NULL, 0, &n);
-    configs = new EGLConfig[(size_t)n];
-    eglGetConfigs(dpy, configs, n, &n);
+    vector<EGLConfig> configs(static_cast<size_t>(n));
+    eglGetConfigs(dpy, configs.data(), n, &n);
     for (EGLint i = 0; i < n; i++) {
         PLUGIN_LOG_V("EGLConfig[%d]", i);
         DumpEGLConfig(dpy, configs[i]);
     }
-    delete[] configs;
 }
 #endif
 
 bool StringToUInt(string_view string, EGLint& value)
 {
     value = 0;
+    constexpr int base = 10;  // 10: decimal base
     for (auto digit : string) {
-        value *= 10; // 10: decimal base
+        if (value > (INT32_MAX - base - 1) / base) {
+            break;
+        }
+        value *= base;
         if ((digit >= '0') && (digit <= '9')) {
             value += digit - '0';
         } else {
@@ -284,8 +285,8 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         // Returns the same attribute value specified when the surface was created with  eglCreatePbufferSurface.For a
         // window or pixmap surface, value is not modified.
         ATTRIBUTE(EGL_LARGEST_PBUFFER),
-        ATTRIBUTE(EGL_MIPMAP_LEVEL),   // Returns which level of the mipmap to render to, if texture has mipmaps.
-        ATTRIBUTE(EGL_MIPMAP_TEXTURE), // Returns EGL_TRUE if texture has mipmaps, EGL_FALSE otherwise.
+        ATTRIBUTE(EGL_MIPMAP_LEVEL),    // Returns which level of the mipmap to render to, if texture has mipmaps.
+        ATTRIBUTE(EGL_MIPMAP_TEXTURE),  // Returns EGL_TRUE if texture has mipmaps, EGL_FALSE otherwise.
         // Returns the filter used when resolving the multisample buffer.The filter may be either
         // EGL_MULTISAMPLE_RESOLVE_DEFAULT or EGL_MULTISAMPLE_RESOLVE_BOX, as described for eglSurfaceAttrib.
         ATTRIBUTE(EGL_MULTISAMPLE_RESOLVE),
@@ -302,7 +303,8 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         ATTRIBUTE(EGL_SWAP_BEHAVIOR),
         // Returns format of texture.Possible values are EGL_NO_TEXTURE, EGL_TEXTURE_RGB, and EGL_TEXTURE_RGBA.
         ATTRIBUTE(EGL_TEXTURE_FORMAT),
-        ATTRIBUTE(EGL_TEXTURE_TARGET), // Returns type of texture.Possible values are EGL_NO_TEXTURE, or EGL_TEXTURE_2D.
+        ATTRIBUTE(
+            EGL_TEXTURE_TARGET),  // Returns type of texture.Possible values are EGL_NO_TEXTURE, or EGL_TEXTURE_2D.
         // Returns the vertical dot pitch of the display on which a window surface is visible.The value returned is
         // equal to the actual dot pitch, in pixels  / meter, multiplied by the constant value EGL_DISPLAY_SCALING.
         ATTRIBUTE(EGL_VERTICAL_RESOLUTION),
@@ -312,7 +314,7 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
         // Returns the color space used by OpenVG when rendering to the surface, either EGL_VG_COLORSPACE_sRGB or
         // EGL_VG_COLORSPACE_LINEAR.
         ATTRIBUTE(EGL_VG_COLORSPACE),
-        ATTRIBUTE(EGL_WIDTH), // Returns the width of the surface in pixels.
+        ATTRIBUTE(EGL_WIDTH),  // Returns the width of the surface in pixels.
     };
     for (auto attrib : attribs) {
         EGLint value;
@@ -325,13 +327,13 @@ void DumpEGLSurface(EGLDisplay dpy, EGLSurface surf)
 void DumpEGLConfig(EGLDisplay dpy, const EGLConfig& config)
 {
     static constexpr Attribute attributes[] = {
-        ATTRIBUTE(EGL_ALPHA_SIZE),      // Returns the number of bits of alpha stored in the color buffer.
-        ATTRIBUTE(EGL_ALPHA_MASK_SIZE), // Returns the number of bits in the alpha mask buffer.
+        ATTRIBUTE(EGL_ALPHA_SIZE),       // Returns the number of bits of alpha stored in the color buffer.
+        ATTRIBUTE(EGL_ALPHA_MASK_SIZE),  // Returns the number of bits in the alpha mask buffer.
         // Returns EGL_TRUE if color buffers can be bound to an RGB texture,  EGL_FALSE otherwise.
         ATTRIBUTE(EGL_BIND_TO_TEXTURE_RGB),
         // Returns EGL_TRUE if color buffers can be bound to an RGBA texture, EGL_FALSE otherwise.
         ATTRIBUTE(EGL_BIND_TO_TEXTURE_RGBA),
-        ATTRIBUTE(EGL_BLUE_SIZE), // Returns the number of bits of blue stored in the color buffer.
+        ATTRIBUTE(EGL_BLUE_SIZE),  // Returns the number of bits of blue stored in the color buffer.
         // Returns the depth of the color buffer.It is the sum of EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE, and
         // EGL_ALPHA_SIZE.
         ATTRIBUTE(EGL_BUFFER_SIZE),
@@ -340,38 +342,38 @@ void DumpEGLConfig(EGLDisplay dpy, const EGLConfig& config)
         // Returns the caveats for the frame buffer configuration.Possible caveat values  are EGL_NONE, EGL_SLOW_CONFIG,
         // and EGL_NON_CONFORMANT.
         ATTRIBUTE(EGL_CONFIG_CAVEAT),
-        ATTRIBUTE(EGL_CONFIG_ID), // Returns the ID of the frame buffer configuration.
+        ATTRIBUTE(EGL_CONFIG_ID),  // Returns the ID of the frame buffer configuration.
         // Returns a bitmask indicating which client API contexts created with respect to this
         // config are conformant.
         ATTRIBUTE(EGL_CONFORMANT),
-        ATTRIBUTE(EGL_DEPTH_SIZE), // Returns the number of bits in the depth buffer.
-        ATTRIBUTE(EGL_GREEN_SIZE), // Returns the number of bits of green stored in the color buffer.
+        ATTRIBUTE(EGL_DEPTH_SIZE),  // Returns the number of bits in the depth buffer.
+        ATTRIBUTE(EGL_GREEN_SIZE),  // Returns the number of bits of green stored in the color buffer.
         // Returns the frame buffer level.Level zero is the default frame buffer.Positive levels correspond to frame
         // buffers that overlay the default buffer and negative levels correspond to frame buffers that underlay the
         // default buffer.
         ATTRIBUTE(EGL_LEVEL),
-        ATTRIBUTE(EGL_LUMINANCE_SIZE),     // Returns the number of bits of luminance stored in the luminance buffer.
-        ATTRIBUTE(EGL_MAX_PBUFFER_WIDTH),  // Returns the maximum width of a pixel buffer surface in pixels.
-        ATTRIBUTE(EGL_MAX_PBUFFER_HEIGHT), // Returns the maximum height of a pixel buffer surface in pixels.
-        ATTRIBUTE(EGL_MAX_PBUFFER_PIXELS), // Returns the maximum size of a pixel buffer surface in pixels.
-        ATTRIBUTE(EGL_MAX_SWAP_INTERVAL),  // Returns the maximum value that can be passed to eglSwapInterval.
-        ATTRIBUTE(EGL_MIN_SWAP_INTERVAL),  // Returns the minimum value that can be passed to eglSwapInterval.
+        ATTRIBUTE(EGL_LUMINANCE_SIZE),      // Returns the number of bits of luminance stored in the luminance buffer.
+        ATTRIBUTE(EGL_MAX_PBUFFER_WIDTH),   // Returns the maximum width of a pixel buffer surface in pixels.
+        ATTRIBUTE(EGL_MAX_PBUFFER_HEIGHT),  // Returns the maximum height of a pixel buffer surface in pixels.
+        ATTRIBUTE(EGL_MAX_PBUFFER_PIXELS),  // Returns the maximum size of a pixel buffer surface in pixels.
+        ATTRIBUTE(EGL_MAX_SWAP_INTERVAL),   // Returns the maximum value that can be passed to eglSwapInterval.
+        ATTRIBUTE(EGL_MIN_SWAP_INTERVAL),   // Returns the minimum value that can be passed to eglSwapInterval.
         // Returns EGL_TRUE if native rendering APIs can render into the surface, EGL_FALSE otherwise.
         ATTRIBUTE(EGL_NATIVE_RENDERABLE),
-        ATTRIBUTE(EGL_NATIVE_VISUAL_ID),   // Returns the ID of the associated native visual.
-        ATTRIBUTE(EGL_NATIVE_VISUAL_TYPE), // Returns the type of the associated native visual.
-        ATTRIBUTE(EGL_RED_SIZE),           // Returns the number of bits of red stored in the color buffer.
-        ATTRIBUTE(EGL_RENDERABLE_TYPE),    // Returns a bitmask indicating the types of supported client API contexts.
-        ATTRIBUTE(EGL_SAMPLE_BUFFERS),     // Returns the number of multisample buffers.
-        ATTRIBUTE(EGL_SAMPLES),            // Returns the number of samples per pixel.
-        ATTRIBUTE(EGL_STENCIL_SIZE),       // Returns the number of bits in the stencil buffer.
-        ATTRIBUTE(EGL_SURFACE_TYPE),       // Returns a bitmask indicating the types of supported EGL surfaces.
+        ATTRIBUTE(EGL_NATIVE_VISUAL_ID),    // Returns the ID of the associated native visual.
+        ATTRIBUTE(EGL_NATIVE_VISUAL_TYPE),  // Returns the type of the associated native visual.
+        ATTRIBUTE(EGL_RED_SIZE),            // Returns the number of bits of red stored in the color buffer.
+        ATTRIBUTE(EGL_RENDERABLE_TYPE),     // Returns a bitmask indicating the types of supported client API contexts.
+        ATTRIBUTE(EGL_SAMPLE_BUFFERS),      // Returns the number of multisample buffers.
+        ATTRIBUTE(EGL_SAMPLES),             // Returns the number of samples per pixel.
+        ATTRIBUTE(EGL_STENCIL_SIZE),        // Returns the number of bits in the stencil buffer.
+        ATTRIBUTE(EGL_SURFACE_TYPE),        // Returns a bitmask indicating the types of supported EGL surfaces.
         // Returns the type of supported transparency.Possible transparency values are  EGL_NONE, and
         // EGL_TRANSPARENT_RGB.
         ATTRIBUTE(EGL_TRANSPARENT_TYPE),
-        ATTRIBUTE(EGL_TRANSPARENT_RED_VALUE),   // Returns the transparent red value.
-        ATTRIBUTE(EGL_TRANSPARENT_GREEN_VALUE), // Returns the transparent green value.
-        ATTRIBUTE(EGL_TRANSPARENT_BLUE_VALUE),  // Returns the transparent blue value.
+        ATTRIBUTE(EGL_TRANSPARENT_RED_VALUE),    // Returns the transparent red value.
+        ATTRIBUTE(EGL_TRANSPARENT_GREEN_VALUE),  // Returns the transparent green value.
+        ATTRIBUTE(EGL_TRANSPARENT_BLUE_VALUE),   // Returns the transparent blue value.
         // ATTRIBUTE(EGL_MATCH_NATIVE_PIXMAP),  While EGL_MATCH_NATIVE_PIXMAP can be specified in the attribute list
         // passed to eglChooseConfig, it is not an attribute of the resulting config and cannot be queried using
         // eglGetConfigAttrib.
@@ -461,11 +463,11 @@ void FillProperties(DevicePropertiesGLES& properties)
     glGetIntegerv(GL_MAX_COMPUTE_UNIFORM_COMPONENTS, &properties.maxComputeUniformComponents);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, properties.maxComputeWorkGroupCount);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, properties.maxComputeWorkGroupCount + 1);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2); // 2: index
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, properties.maxComputeWorkGroupCount + 2);  // 2: index
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &properties.maxComputeWorkGroupInvocations);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, properties.maxComputeWorkGroupSize);
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, properties.maxComputeWorkGroupSize + 1);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2); // 2: index
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, properties.maxComputeWorkGroupSize + 2);  // 2: index
     glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &properties.maxDepthTextureSamples);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, &properties.maxFragmentAtomicCounters);
     glGetIntegerv(GL_MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, &properties.maxFragmentAtomicCounterBuffers);
@@ -513,12 +515,12 @@ bool IsSurfaceColorspaceSupported(const DevicePlatformDataGLES& plat)
     // Check if the sRGB color space extension is supported.
     return plat.hasColorSpaceExt;
 }
-} // namespace
+}  // namespace
 
 #undef ATTRIBUTE
 void EGLState::HandleExtensions()
 {
-    if (plat_.minorVersion > 4) { // 4: egl version
+    if (plat_.minorVersion > 4) {  // 4: egl version
         cextensions_ = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
         CHECK_EGL_ERROR();
         PLUGIN_LOG_D("\t%-32s: %s", "EGL_EXTENSIONS (CLIENT)", cextensions_.c_str());
@@ -562,7 +564,7 @@ void EGLState::FillSurfaceInfo(const EGLDisplay display, const EGLSurface surfac
     res.samples = static_cast<uint32_t>(value);
 
     EGLint colorspace = 0;
-    if (IsVersionGreaterOrEqual(1, 5) || hasColorSpaceExt_) { // 1, 5: egl version
+    if (IsVersionGreaterOrEqual(1, 5) || hasColorSpaceExt_) {  // 1, 5: egl version
         static_assert(EGL_GL_COLORSPACE == EGL_GL_COLORSPACE_KHR);
         static_assert(EGL_GL_COLORSPACE_SRGB == EGL_GL_COLORSPACE_SRGB_KHR);
         if (eglQuerySurface(display, surface, EGL_GL_COLORSPACE, &colorspace)) {
@@ -596,14 +598,14 @@ BASE_NS::vector<EGLint> EGLState::BuildConfigAttributes(const BackendExtraGLES* 
 {
     // construct attribute list dynamically
     vector<EGLint> attributes;
-    const size_t ATTRIBUTE_RESERVE = 16;       // reserve 16 attributes
-    attributes.reserve(ATTRIBUTE_RESERVE * 2); // 2 EGLints per attribute
+    const size_t ATTRIBUTE_RESERVE = 16;        // reserve 16 attributes
+    attributes.reserve(ATTRIBUTE_RESERVE * 2);  // 2 EGLints per attribute
     auto addAttribute = [&attributes](EGLint a, EGLint b) {
         attributes.push_back(a);
         attributes.push_back(b);
     };
     // Request OpenGL ES 3.x configs
-    if (IsVersionGreaterOrEqual(1, 5)) { //  1, 5: egl version
+    if (IsVersionGreaterOrEqual(1, 5)) {  //  1, 5: egl version
         // EGL 1.5+
         addAttribute(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT);
         addAttribute(EGL_CONFORMANT, EGL_OPENGL_ES3_BIT);
@@ -618,9 +620,9 @@ BASE_NS::vector<EGLint> EGLState::BuildConfigAttributes(const BackendExtraGLES* 
     }
     addAttribute(EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     addAttribute(EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    addAttribute(EGL_RED_SIZE, 8);   // 8: bits per component
-    addAttribute(EGL_GREEN_SIZE, 8); // 8: bits per component
-    addAttribute(EGL_BLUE_SIZE, 8);  // 8: bits per component
+    addAttribute(EGL_RED_SIZE, 8);    // 8: bits per component
+    addAttribute(EGL_GREEN_SIZE, 8);  // 8: bits per component
+    addAttribute(EGL_BLUE_SIZE, 8);   // 8: bits per component
     addAttribute(EGL_CONFIG_CAVEAT, EGL_NONE);
     if (backendConfig) {
         if (backendConfig->MSAASamples > 1) {
@@ -630,12 +632,15 @@ BASE_NS::vector<EGLint> EGLState::BuildConfigAttributes(const BackendExtraGLES* 
         addAttribute(EGL_ALPHA_SIZE, (EGLint)backendConfig->alphaBits);
         addAttribute(EGL_DEPTH_SIZE, (EGLint)backendConfig->depthBits);
         addAttribute(EGL_STENCIL_SIZE, (EGLint)backendConfig->stencilBits);
-        PLUGIN_LOG_I("Samples:%d Alpha:%d Depth:%d Stencil:%d", backendConfig->MSAASamples, backendConfig->alphaBits,
-            backendConfig->depthBits, backendConfig->stencilBits);
+        PLUGIN_LOG_I("Samples:%d Alpha:%d Depth:%d Stencil:%d",
+            backendConfig->MSAASamples,
+            backendConfig->alphaBits,
+            backendConfig->depthBits,
+            backendConfig->stencilBits);
     } else {
-        addAttribute(EGL_ALPHA_SIZE, 8); // 8: bits per component
+        addAttribute(EGL_ALPHA_SIZE, 8);  // 8: bits per component
     }
-    addAttribute(EGL_NONE, EGL_NONE); // terminate list
+    addAttribute(EGL_NONE, EGL_NONE);  // terminate list
     return attributes;
 }
 
@@ -668,16 +673,16 @@ void EGLState::ChooseConfiguration(const BackendExtraGLES* backendConfig)
 void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
 {
     vector<EGLint> context_attributes;
-    const size_t ATTRIBUTE_RESERVE = 16;               // reserve 16 attributes
-    context_attributes.reserve(ATTRIBUTE_RESERVE * 2); // 2 EGLints per attribute
+    const size_t ATTRIBUTE_RESERVE = 16;                // reserve 16 attributes
+    context_attributes.reserve(ATTRIBUTE_RESERVE * 2);  // 2 EGLints per attribute
     auto addAttribute = [&context_attributes](EGLint a, EGLint b) {
         context_attributes.push_back(a);
         context_attributes.push_back(b);
     };
-    if (IsVersionGreaterOrEqual(1, 5)) { // 1, 5: egl version
+    if (IsVersionGreaterOrEqual(1, 5)) {  // 1, 5: egl version
         // egl 1.5 or greater.
-        addAttribute(EGL_CONTEXT_MAJOR_VERSION, 3); // Select an OpenGL ES 3.x context
-        addAttribute(EGL_CONTEXT_MINOR_VERSION, 2); // Select an OpenGL ES x.2 context
+        addAttribute(EGL_CONTEXT_MAJOR_VERSION, 3);  // Select an OpenGL ES 3.x context
+        addAttribute(EGL_CONTEXT_MINOR_VERSION, 2);  // Select an OpenGL ES x.2 context
 #if RENDER_GL_DEBUG
         // should use EGL_CONTEXT_OPENGL_DEBUG , but at least PowerVR simulator fails with this
         if (HasExtension("EGL_KHR_create_context")) {
@@ -687,14 +692,14 @@ void EGLState::CreateContext(const BackendExtraGLES* backendConfig)
 #endif
     } else if (HasExtension("EGL_KHR_create_context")) {
         // egl 1.4 with EGL_KHR_create_context
-        addAttribute(EGL_CONTEXT_MAJOR_VERSION_KHR, 3); // Select an OpenGL ES 3.x context
-        addAttribute(EGL_CONTEXT_MINOR_VERSION_KHR, 2); // Select an OpenGL ES x.2 context
+        addAttribute(EGL_CONTEXT_MAJOR_VERSION_KHR, 3);  // Select an OpenGL ES 3.x context
+        addAttribute(EGL_CONTEXT_MINOR_VERSION_KHR, 2);  // Select an OpenGL ES x.2 context
 #if RENDER_GL_DEBUG
         addAttribute(EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR);
 #endif
     } else {
         // fallback to non-extended or pre 1.5 EGL, we expect 3.2 OpenGL context, this is now checked later.
-        addAttribute(EGL_CONTEXT_CLIENT_VERSION, 3); // Select an OpenGL ES 3.x context
+        addAttribute(EGL_CONTEXT_CLIENT_VERSION, 3);  // Select an OpenGL ES 3.x context
     }
     addAttribute(EGL_NONE, EGL_NONE);
 
@@ -732,7 +737,7 @@ bool EGLState::VerifyVersion()
 {
     // Verify that we have at least 3.2 context.
     SaveContext();
-    SetContext(nullptr); // activate the context with the dummy PBuffer.
+    SetContext(nullptr);  // activate the context with the dummy PBuffer.
     EGLint glMajor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
     EGLint glMinor = 0;
@@ -749,10 +754,10 @@ bool EGLState::VerifyVersion()
         eglQueryContext(plat_.display, plat_.context, EGL_CONTEXT_MINOR_VERSION_KHR, &glMinor);
     }
 
-    if (glMajor < 3) { // 3: gl version
+    if (glMajor < 3) {  // 3: gl version
         fail = true;
-    } else if (glMajor == 3) { // 3: gl version
-        if (glMinor < 2) {     // 2: gl version
+    } else if (glMajor == 3) {  // 3: gl version
+        if (glMinor < 2) {      // 2: gl version
             // We do NOT support 3.0 or 3.1
             fail = true;
         }
@@ -802,7 +807,7 @@ static EGLConfig TryPattern(EGLDisplay dpy, const BackbufferReq& req, int r, int
     BASE_NS::vector<EGLint> at;
     Add(at, EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     Add(at, EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    Add(at, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT); // or ES2 fallback if needed
+    Add(at, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT);  // or ES2 fallback if needed
 
     Add(at, EGL_RED_SIZE, r);
     Add(at, EGL_GREEN_SIZE, g);
@@ -837,18 +842,21 @@ EGLConfig PickFirstWindowConfig(EGLDisplay dpy, const BackbufferReq& req, Desire
     bool havePixelFloatExt /* EGL_EXT_pixel_format_float */)
 {
     switch (desired) {
-        case DesiredOutput::HDR_SCRGB_F16:
+        case DesiredOutput::HDR_SCRGB_F16: {
             if (havePixelFloatExt) {
                 if (auto c = TryPattern(
-                    dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples))
+                        dpy, req, 16, 16, 16, 16, req.minDepthBits, req.minStencilBits, true, req.msaaSamples)) {
                     return c;
+                }
             }
             // fall-through
+        }
         case DesiredOutput::HDR_1010102: {
             // 10:10:10:2
             if (auto c =
-                    TryPattern(dpy, req, 10, 10, 10, 2, req.minDepthBits, req.minStencilBits, false, req.msaaSamples))
+                    TryPattern(dpy, req, 10, 10, 10, 2, req.minDepthBits, req.minStencilBits, false, req.msaaSamples)) {
                 return c;
+            }
             // fall-through
         }
         case DesiredOutput::SDR_SRGB:
@@ -903,7 +911,7 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
     plat_.minorVersion = static_cast<uint32_t>(minor);
     PLUGIN_LOG_I("EGL %d.%d Initialized", major, minor);
 
-    if (!IsVersionGreaterOrEqual(1, 4)) { // 1, 4: egl version
+    if (!IsVersionGreaterOrEqual(1, 4)) {  // 1, 4: egl version
         // we need at least egl 1.4
         PLUGIN_LOG_F("EGL version too old. 1.4 or later requried.");
         if (plat_.eglInitialized) {
@@ -949,7 +957,7 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
             // we need to choose a config for the surface..
             ChooseConfiguration(backendConfig);
         }
-        GLint surface_attribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+        GLint surface_attribs[] = {EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE};
         dummySurface_ = eglCreatePbufferSurface(plat_.display, plat_.config, surface_attribs);
         CHECK_EGL_ERROR();
 #if RENDER_GL_DEBUG
@@ -999,13 +1007,17 @@ void EGLState::GlInitialize()
         PLUGIN_LOG_E("Missing eglDestroyImageKHR");
     }
 
-    plat_.deviceName = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-    plat_.driverVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    if (const char* r = reinterpret_cast<const char*>(glGetString(GL_RENDERER))) {
+        plat_.deviceName = r;
+    }
+    if (const char* v = reinterpret_cast<const char*>(glGetString(GL_VERSION))) {
+        plat_.driverVersion = v;
+    }
     BASE_NS::ClearToValue(
         &plat_.deviceProperties, sizeof(plat_.deviceProperties), 0x00, sizeof(plat_.deviceProperties));
     FillProperties(plat_.deviceProperties);
 
-    SetSwapInterval(1); // default to vsync enabled.
+    SetSwapInterval(1);  // default to vsync enabled.
 }
 
 bool EGLState::IsValid() const
@@ -1162,7 +1174,7 @@ void EGLState::EnsureConfigSelected(uint32_t flags) const noexcept
             }
         }
         if (plat_.config == EGL_NO_CONFIG_KHR) {
-            BackbufferReq req {};
+            BackbufferReq req{};
             req.needDefaultDepthStencil = flags & SwapchainFlagBits::CORE_SWAPCHAIN_DEPTH_BUFFER_BIT;
             req.minDepthBits = 24;
             req.minStencilBits = 8;
@@ -1182,9 +1194,9 @@ uintptr_t EGLState::CreateSurface(uintptr_t window, uintptr_t /* instance */, ui
     // Check if sRGB colorspace is supported by EGL.
     const bool isSurfaceColorspaceSupported = IsSurfaceColorspaceSupported(plat_);
     EnsureConfigSelected(flags);
-    EGLint attribsSrgb[] = { EGL_NONE, EGL_NONE, EGL_NONE };
+    EGLint attribsSrgb[] = {EGL_NONE, EGL_NONE, EGL_NONE};
     if (isSurfaceColorspaceSupported) {
-        if (IsVersionGreaterOrEqual(1, 5)) { // 1, 5: egl version
+        if (IsVersionGreaterOrEqual(1, 5)) {  // 1, 5: egl version
             attribsSrgb[0] = EGL_GL_COLORSPACE;
             attribsSrgb[1] = (flags & SwapchainFlagBits::CORE_SWAPCHAIN_SRGB_BIT) ? EGL_GL_COLORSPACE_SRGB
                                                                                   : EGL_GL_COLORSPACE_LINEAR;
@@ -1237,7 +1249,7 @@ bool EGLState::GetSurfaceInformation(
 
     EGLConfig config = EGL_NO_CONFIG_KHR;
     EGLint numconfigs = 0;
-    EGLint attrs[] = { EGL_CONFIG_ID, configId, EGL_NONE };
+    EGLint attrs[] = {EGL_CONFIG_ID, configId, EGL_NONE};
     if (eglChooseConfig(display, attrs, &config, 1, &numconfigs) == false) {
         PLUGIN_LOG_E("EGLState::GetSurfaceInformation: Could not fetch surface config.");
         return false;
@@ -1267,6 +1279,6 @@ void EGLState::SwapBuffers(const SwapchainGLES& swapchain)
     const auto& platSwapchain = static_cast<const SwapchainPlatformDataGL&>(swapchain.GetPlatformData());
     eglSwapBuffers(plat_.display, (EGLSurface)platSwapchain.surface);
 }
-} // namespace EGLHelpers
+}  // namespace EGLHelpers
 RENDER_END_NAMESPACE()
 #endif

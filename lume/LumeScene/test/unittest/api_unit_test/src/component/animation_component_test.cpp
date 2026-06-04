@@ -73,6 +73,6 @@ UNIT_TEST_F(API_ScenePluginAnimationComponentTest, Duration, testing::ext::TestS
     EXPECT_EQ(animation.GetDuration(), META_NS::TimeSpan::Seconds(2));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

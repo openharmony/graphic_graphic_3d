@@ -43,7 +43,7 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         shaderHandle = engine.device->GetShaderManager().GetShaderHandle(
             "rendershaders://shader/PipelineDescriptorSetBinderTest2.shader");
     }
-    ASSERT_NE(RenderHandle {}, shaderHandle.GetHandle());
+    ASSERT_NE(RenderHandle{}, shaderHandle.GetHandle());
     auto pipelineLayout = engine.device->GetShaderManager().GetReflectionPipelineLayout(shaderHandle);
     DescriptorCounts dc;
     for (uint32_t setIdx = 0; setIdx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++setIdx) {
@@ -53,8 +53,7 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         }
         dc.counts.reserve(setRef.bindings.size());
         for (const auto& bindingRef : setRef.bindings) {
-            dc.counts.emplace_back(
-                DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+            dc.counts.emplace_back(DescriptorCounts::TypedCount{bindingRef.descriptorType, bindingRef.descriptorCount});
         }
     }
     nodeContextDescriptorSetMgr->ResetAndReserve(dc);
@@ -69,12 +68,12 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
     desc.format = BASE_FORMAT_R32_SFLOAT;
     desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     auto bufferHandle = gpuResourceMgr.Create(desc).GetHandle();
-    BindableSampler samplers[] = { { samplerHandle }, { samplerHandle } };
-    BindableImage images[] = { { imageHandle }, { imageHandle } };
-    BindableBuffer buffers[] = { { bufferHandle }, { bufferHandle } };
-    binder->BindSamplers(0, 0, { samplers, countof(samplers) });
-    binder->BindImages(0, 2, { images, countof(images) });
-    binder->BindBuffers(0, 4, { buffers, countof(buffers) });
+    BindableSampler samplers[] = {{samplerHandle}, {samplerHandle}};
+    BindableImage images[] = {{imageHandle}, {imageHandle}};
+    BindableBuffer buffers[] = {{bufferHandle}, {bufferHandle}};
+    binder->BindSamplers(0, 0, {samplers, countof(samplers)});
+    binder->BindImages(0, 2, {images, countof(images)});
+    binder->BindBuffers(0, 4, {buffers, countof(buffers)});
     ASSERT_TRUE(binder->GetPipelineDescriptorSetLayoutBindingValidity());
     ASSERT_EQ(1, binder->GetDescriptorSetCount());
     ASSERT_EQ(0, binder->GetFirstSet());
@@ -82,10 +81,10 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
     ASSERT_EQ(1, descSetHandles.size());
     ASSERT_EQ(descSetHandles[0], binder->GetDescriptorSetHandle(0u));
     binder->PrintPipelineDescriptorSetLayoutBindingValidation();
-    ASSERT_EQ(RenderHandle {}, binder->GetDescriptorSetHandle(100u));
+    ASSERT_EQ(RenderHandle{}, binder->GetDescriptorSetHandle(100u));
     ASSERT_EQ(0, binder->GetDescriptorSetLayoutBindingResources(100u).bindings.size());
     {
-        DescriptorSetBinder descSetBinder { {}, {} };
+        DescriptorSetBinder descSetBinder{{}, {}};
         BindableBuffer buffer;
         buffer.byteSize = 0;
         buffer.handle = {};
@@ -93,28 +92,28 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         buffer.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 0u);
         descSetBinder.BindBuffer(0u, buffer, 0u);
         descSetBinder.BindBuffer(0u, buffer.handle, buffer.byteOffset, buffer.byteSize);
-        descSetBinder.BindBuffers(0u, { &buffer, 1 });
-        descSetBinder.BindBuffers(0u, { &buffer.handle, 1 });
+        descSetBinder.BindBuffers(0u, {&buffer, 1});
+        descSetBinder.BindBuffers(0u, {&buffer.handle, 1});
         BindableImage image;
         image.handle = {};
         descSetBinder.BindImage(0u, image, 0u);
         image.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u);
         descSetBinder.BindImage(0u, image, 0u);
-        descSetBinder.BindImages(0u, { &image, 1 });
-        descSetBinder.BindImages(0u, { &image.handle, 1 });
+        descSetBinder.BindImages(0u, {&image, 1});
+        descSetBinder.BindImages(0u, {&image.handle, 1});
         BindableSampler sampler;
         sampler.handle = {};
         descSetBinder.BindSampler(0u, sampler, 0u);
         image.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u);
         descSetBinder.BindSampler(0u, sampler, 0u);
-        descSetBinder.BindSamplers(0u, { &sampler, 1 });
-        descSetBinder.BindSamplers(0u, { &sampler.handle, 1 });
+        descSetBinder.BindSamplers(0u, {&sampler, 1});
+        descSetBinder.BindSamplers(0u, {&sampler.handle, 1});
     }
     {
         DescriptorSetLayoutBinding binding;
         binding.binding = 0u;
         binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM;
-        DescriptorSetBinder descSetBinder { {}, { &binding, 1 } };
+        DescriptorSetBinder descSetBinder{{}, {&binding, 1}};
         BindableBuffer buffer;
         buffer.byteSize = 0;
         buffer.handle = {};
@@ -122,24 +121,24 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         buffer.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 0u);
         descSetBinder.BindBuffer(0u, buffer, 0u);
         descSetBinder.BindBuffer(0u, buffer.handle, buffer.byteOffset, buffer.byteSize);
-        descSetBinder.BindBuffers(0u, { &buffer, 1 });
-        descSetBinder.BindBuffers(0u, { &buffer.handle, 1 });
+        descSetBinder.BindBuffers(0u, {&buffer, 1});
+        descSetBinder.BindBuffers(0u, {&buffer.handle, 1});
         BindableImage image;
         image.handle = {};
         descSetBinder.BindImage(0u, image, 0u);
         descSetBinder.BindImage(5u, image, 0u);
         image.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u);
         descSetBinder.BindImage(0u, image, 0u);
-        descSetBinder.BindImages(0u, { &image, 1 });
-        descSetBinder.BindImages(0u, { &image.handle, 1 });
+        descSetBinder.BindImages(0u, {&image, 1});
+        descSetBinder.BindImages(0u, {&image.handle, 1});
         BindableSampler sampler;
         sampler.handle = {};
         descSetBinder.BindSampler(0u, sampler, 0u);
         descSetBinder.BindSampler(5u, sampler, 0u);
         sampler.handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 0u);
         descSetBinder.BindSampler(0u, sampler, 0u);
-        descSetBinder.BindSamplers(0u, { &sampler, 1 });
-        descSetBinder.BindSamplers(0u, { &sampler.handle, 1 });
+        descSetBinder.BindSamplers(0u, {&sampler, 1});
+        descSetBinder.BindSamplers(0u, {&sampler.handle, 1});
         descSetBinder.BindSampler(0u, sampler, 0u);
     }
     {
@@ -147,37 +146,37 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         binding.binding = 0u;
         binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLER;
         binding.descriptorCount = 2;
-        DescriptorSetBinder descSetBinder { {}, { &binding, 1 } };
+        DescriptorSetBinder descSetBinder{{}, {&binding, 1}};
         BindableSampler sampler;
         sampler.handle = {};
-        descSetBinder.BindSamplers(0u, { &sampler, 1 });
-        descSetBinder.BindSamplers(0u, { &sampler.handle, 1 });
+        descSetBinder.BindSamplers(0u, {&sampler, 1});
+        descSetBinder.BindSamplers(0u, {&sampler.handle, 1});
     }
     {
         DescriptorSetLayoutBinding binding;
         binding.binding = 0u;
         binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         binding.descriptorCount = 2;
-        DescriptorSetBinder descSetBinder { {}, { &binding, 1 } };
+        DescriptorSetBinder descSetBinder{{}, {&binding, 1}};
         BindableImage image;
         image.handle = {};
-        descSetBinder.BindImages(0u, { &image, 1 });
-        descSetBinder.BindImages(0u, { &image.handle, 1 });
+        descSetBinder.BindImages(0u, {&image, 1});
+        descSetBinder.BindImages(0u, {&image.handle, 1});
     }
     {
         DescriptorSetLayoutBinding binding;
         binding.binding = 0u;
         binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         binding.descriptorCount = 2;
-        DescriptorSetBinder descSetBinder { {}, { &binding, 1 } };
+        DescriptorSetBinder descSetBinder{{}, {&binding, 1}};
         BindableBuffer buffer;
         buffer.handle = {};
-        descSetBinder.BindBuffers(0u, { &buffer, 1 });
-        descSetBinder.BindBuffers(0u, { &buffer.handle, 1 });
+        descSetBinder.BindBuffers(0u, {&buffer, 1});
+        descSetBinder.BindBuffers(0u, {&buffer.handle, 1});
     }
     {
         PipelineLayout pl;
-        PipelineDescriptorSetBinder pdsBinder { pl, {}, {} };
+        PipelineDescriptorSetBinder pdsBinder{pl, {}, {}};
         {
             auto handles = pdsBinder.GetDescriptorSetHandles(8u, 3u);
             ASSERT_EQ(0u, handles.size());
@@ -197,7 +196,7 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         binding.binding = 1u;
         bindings.binding.push_back(binding);
         RenderHandle setHandle;
-        PipelineDescriptorSetBinder pdsBinder { pl, { &setHandle, 1 }, { &bindings, 1 } };
+        PipelineDescriptorSetBinder pdsBinder{pl, {&setHandle, 1}, {&bindings, 1}};
         {
             auto handles = pdsBinder.GetDescriptorSetHandles(8u, 3u);
             ASSERT_EQ(0u, handles.size());
@@ -208,7 +207,7 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -225,7 +224,7 @@ UNIT_TEST(SRC_PipelineDescriptorSetBinder, PipelineDescriptorSetBinderTestVulkan
     TestPipelineDescriptorSetBinder(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -243,4 +242,4 @@ UNIT_TEST(SRC_PipelineDescriptorSetBinder, PipelineDescriptorSetBinderTestOpenGL
     TestPipelineDescriptorSetBinder(engine);
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

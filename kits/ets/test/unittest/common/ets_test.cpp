@@ -54,17 +54,17 @@ using intfWeakPtr = META_NS::WeakPtrIInterface;
 
 CORE_BEGIN_NAMESPACE()
 /** Get plugin register */
-IPluginRegister &(*GetPluginRegister)() { nullptr };
+IPluginRegister& (*GetPluginRegister)(){nullptr};
 /** Setup the plugin registry */
-void (*CreatePluginRegistry)(const struct PlatformCreateInfo& platformCreateInfo) { nullptr };
+void (*CreatePluginRegistry)(const struct PlatformCreateInfo& platformCreateInfo){nullptr};
 /** Get where engine is build in debug mode */
-bool (*IsDebugBuild)() { nullptr };
+bool (*IsDebugBuild)(){nullptr};
 /** Get version */
-BASE_NS::string_view (*GetVersion)() { nullptr };
+BASE_NS::string_view (*GetVersion)(){nullptr};
 CORE_END_NAMESPACE()
 
-template<typename T>
-bool LoadFunc(T &fn, const char *fName, void *handle)
+template <typename T>
+bool LoadFunc(T& fn, const char* fName, void* handle)
 {
     fn = reinterpret_cast<T>(dlsym(handle, fName));
     return fn != nullptr;
@@ -78,7 +78,7 @@ void EtsTest::SetUp()
 #define PLATFORM_PATH_NAME(name) TO_STRING(name)
     CORE_NS::PlatformCreateInfo platformCreateInfo{
         PLATFORM_PATH_NAME(PLATFORM_CORE_ROOT_PATH),
-        PLATFORM_PATH_NAME(PLATOFRM_CORE_PLUGIN_PATH),
+        PLATFORM_PATH_NAME(PLATFORM_CORE_PLUGIN_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_ROOT_PATH),
         PLATFORM_PATH_NAME(PLATFORM_APP_PLUGIN_PATH),
     };
@@ -94,32 +94,33 @@ void EtsTest::SetUp()
 void EtsTest::LoadEngineLib()
 {
     libHandle_ = dlopen(LIB_ENGINE_CORE, RTLD_LAZY);
-    ASSERT_TRUE(LoadFunc(CORE_NS::CreatePluginRegistry, "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE", libHandle_));
+    ASSERT_TRUE(LoadFunc(
+        CORE_NS::CreatePluginRegistry, "_ZN4Core20CreatePluginRegistryERKNS_18PlatformCreateInfoE", libHandle_));
     ASSERT_TRUE(LoadFunc(CORE_NS::GetPluginRegister, "_ZN4Core17GetPluginRegisterEv", libHandle_));
     ASSERT_TRUE(LoadFunc(CORE_NS::IsDebugBuild, "_ZN4Core12IsDebugBuildEv", libHandle_));
     ASSERT_TRUE(LoadFunc(CORE_NS::GetVersion, "_ZN4Core13GetVersionRevEv", libHandle_));
 }
 
-void EtsTest::LoadPlugins(const CORE_NS::PlatformCreateInfo &platformCreateInfo)
+void EtsTest::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo)
 {
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
-    constexpr BASE_NS::Uid plugins[] = { SCENE_NS::UID_SCENE_PLUGIN };
+    constexpr BASE_NS::Uid plugins[] = {SCENE_NS::UID_SCENE_PLUGIN};
     ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(plugins));
 }
 
-void EtsTest::CreateEngine(const CORE_NS::PlatformCreateInfo &platformCreateInfo)
+void EtsTest::CreateEngine(const CORE_NS::PlatformCreateInfo& platformCreateInfo)
 {
     auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
     engine_ = factory->Create({platformCreateInfo, {"EtsTest", 0, 1, 0}, {}});
-    auto &fileManager = engine_->GetFileManager();
-    const auto &platform = engine_->GetPlatform();
+    auto& fileManager = engine_->GetFileManager();
+    const auto& platform = engine_->GetPlatform();
     platform.RegisterDefaultPaths(fileManager);
     engine_->Init();
 }
 
 void EtsTest::CreateRenderContext()
 {
-    renderContext_.reset(static_cast<RENDER_NS::IRenderContext *>(
+    renderContext_.reset(static_cast<RENDER_NS::IRenderContext*>(
         engine_->GetInterface<CORE_NS::IClassFactory>()->CreateInstance(RENDER_NS::UID_RENDER_CONTEXT).release()));
 
     RENDER_NS::DeviceCreateInfo deviceCreateInfo;
@@ -132,14 +133,14 @@ void EtsTest::CreateRenderContext()
     glesExtra.applicationContext = EGL_NO_CONTEXT;
     glesExtra.sharedContext = EGL_NO_CONTEXT;
     glesExtra.MSAASamples = 0;
-    glesExtra.depthBits = 24; // 24: bits of depth
+    glesExtra.depthBits = 24;  // 24: bits of depth
     deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGLES;
     deviceCreateInfo.backendConfiguration = &glesExtra;
 #elif RENDER_HAS_GL_BACKEND
     RENDER_NS::BackendExtraGL glExtra;
     glExtra.MSAASamples = 0;
-    glExtra.depthBits = 24; // 24: bits of depth
-    glExtra.alphaBits = 8; // 8: bits of alpha
+    glExtra.depthBits = 24;  // 24: bits of depth
+    glExtra.alphaBits = 8;   // 8: bits of alpha
     glExtra.stencilBits = 0;
     deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::OPENGL;
     deviceCreateInfo.backendConfiguration = &glExtra;
@@ -157,13 +158,13 @@ void EtsTest::CreateGraphicsContext()
 
 void EtsTest::CreateApplicationContext()
 {
-    auto &tr = META_NS::GetTaskQueueRegistry();
-    auto &obr = META_NS::GetObjectRegistry();
+    auto& tr = META_NS::GetTaskQueueRegistry();
+    auto& obr = META_NS::GetObjectRegistry();
     auto engineTaskQueue = obr.Create<META_NS::ITaskQueue>(META_NS::ClassId::ThreadedTaskQueue);
     tr.RegisterTaskQueue(engineTaskQueue, ENGINE_THREAD);
     auto appTaskQueue = engineTaskQueue;
     auto resources = obr.Create<CORE_NS::IResourceManager>(META_NS::ClassId::FileResourceManager);
-    auto &fileManager = engine_->GetFileManager();
+    auto& fileManager = engine_->GetFileManager();
     resources->SetFileManager(CORE_NS::IFileManager::Ptr(&fileManager));
 
     applicationContext_ = obr.Create<SCENE_NS::IApplicationContext>(SCENE_NS::ClassId::ApplicationContext);
@@ -183,7 +184,7 @@ void EtsTest::CreateApplicationContext()
 
 void EtsTest::TearDown()
 {
-    auto &tr = META_NS::GetTaskQueueRegistry();
+    auto& tr = META_NS::GetTaskQueueRegistry();
     tr.UnregisterAllTaskQueues();
 
     auto aq = applicationContext_->GetRenderContext()->GetApplicationQueue();
@@ -194,7 +195,7 @@ void EtsTest::TearDown()
     // flush the queue
     META_NS::AddFutureTaskOrRunDirectly(rq, [] {}).Wait();
 
-    auto &obr = META_NS::GetObjectRegistry();
+    auto& obr = META_NS::GetObjectRegistry();
     auto doc = interface_cast<META_NS::IMetadata>(obr.GetDefaultObjectContext());
     ASSERT_TRUE(doc);
     doc->RemoveProperty(doc->GetProperty<IntfPtr>("EngineQueue"));
@@ -216,5 +217,3 @@ void EtsTest::TearDown()
 }
 
 }  // namespace OHOS::Render3D
-
-

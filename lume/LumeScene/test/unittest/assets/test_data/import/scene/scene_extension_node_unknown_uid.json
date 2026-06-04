@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "description": "extensionNode whose nodeUid is not registered should fail to construct",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "deadbeef-1234-5678-9abc-def012345678"
+                }
+            ]
+        }
+    }
+}

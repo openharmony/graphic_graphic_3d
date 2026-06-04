@@ -37,7 +37,8 @@ protected:
         ASSERT_TRUE(proxy_);
         ASSERT_TRUE(proxy_->SetTarget(object_));
     }
-    void TearDown() override {}
+    void TearDown() override
+    {}
 
 protected:
     static constexpr auto Prop1 = "prop1";
@@ -48,7 +49,7 @@ protected:
         Metadata(object_).GetProperty<float>(propertyName)->SetValue(value);
     }
 
-    Object object_ { CreateInstance(ClassId::Object) };
+    Object object_{CreateInstance(ClassId::Object)};
     IProxyObject::Ptr proxy_;
 };
 
@@ -158,7 +159,7 @@ UNIT_TEST_F(API_ProxyObjectTest, RemoveProperty, testing::ext::TestSize.Level1)
 
     auto prop1Proxy = meta->GetProperty<float>(Prop1);
     ASSERT_TRUE(prop1Proxy);
-    prop1Proxy->SetValue(100.f); // Break default bind
+    prop1Proxy->SetValue(100.f);  // Break default bind
 
     // Remove property from object_, it should not be removed from proxy since
     // it has been set to a specific value
@@ -449,5 +450,5 @@ UNIT_TEST_F(
     EXPECT_THAT(internalProxyProp2->GetValue(), testing::FloatEq(800.0F));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

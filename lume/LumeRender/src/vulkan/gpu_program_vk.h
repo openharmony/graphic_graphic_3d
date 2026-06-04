@@ -30,8 +30,8 @@ class Device;
 
 struct GpuShaderProgramPlatformDataVk final {
     // modules are not owned by the GpuShaderProgram
-    VkShaderModule vert { VK_NULL_HANDLE };
-    VkShaderModule frag { VK_NULL_HANDLE };
+    VkShaderModule vert{VK_NULL_HANDLE};
+    VkShaderModule frag{VK_NULL_HANDLE};
 };
 
 class GpuShaderProgramVk final : public GpuShaderProgram {
@@ -43,8 +43,8 @@ public:
     const ShaderReflection& GetReflection() const override;
 
 private:
-    ShaderModuleVk* vertShaderModule_ { nullptr };
-    ShaderModuleVk* fragShaderModule_ { nullptr };
+    ShaderModuleVk* vertShaderModule_{nullptr};
+    ShaderModuleVk* fragShaderModule_{nullptr};
 
     GpuShaderProgramPlatformDataVk plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
@@ -54,7 +54,7 @@ private:
 
 struct GpuComputeProgramPlatformDataVk final {
     // module is not owned by the GpuShaderProgram
-    VkShaderModule comp { VK_NULL_HANDLE };
+    VkShaderModule comp{VK_NULL_HANDLE};
 };
 
 class GpuComputeProgramVk final : public GpuComputeProgram {
@@ -66,7 +66,7 @@ public:
     const ComputeShaderReflection& GetReflection() const override;
 
 private:
-    ShaderModuleVk* shaderModule_ { nullptr };
+    ShaderModuleVk* shaderModule_{nullptr};
 
     GpuComputeProgramPlatformDataVk plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
@@ -74,4 +74,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_PROGRAM_VK_H
+#endif  // VULKAN_GPU_PROGRAM_VK_H

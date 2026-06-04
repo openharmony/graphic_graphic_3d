@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/gpu_image_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -63,7 +63,7 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestVulkan, testing::ext::TestSize.Level1)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.mipCount = 1u;
         desc.usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        GpuImageVk image { device, desc };
+        GpuImageVk image{device, desc};
         auto realDesc = image.GetDesc();
         ASSERT_EQ(desc.width, realDesc.width);
         ASSERT_EQ(desc.height, realDesc.height);
@@ -83,7 +83,7 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestVulkan, testing::ext::TestSize.Level1)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.mipCount = 1u;
         desc.usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        GpuImageVk image { device, desc };
+        GpuImageVk image{device, desc};
         auto realDesc = image.GetDesc();
         ASSERT_EQ(desc.width, realDesc.width);
         ASSERT_EQ(desc.height, realDesc.height);
@@ -95,4 +95,4 @@ UNIT_TEST(SRC_GpuImage, GpuImageTestVulkan, testing::ext::TestSize.Level1)
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

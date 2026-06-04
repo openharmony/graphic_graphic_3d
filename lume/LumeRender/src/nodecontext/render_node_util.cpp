@@ -83,7 +83,8 @@ RenderHandle GetRoutedResource(const IRenderNodeGpuResourceManager& gpuResourceM
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (!RenderHandleUtil::IsValid(handle)) {
         PLUGIN_LOG_ONCE_W(string(nodeName + name),
-            "RENDER_VALIDATION: named render node GPU resource handle not found (name:%s) (type:%u)", name.c_str(),
+            "RENDER_VALIDATION: named render node GPU resource handle not found (name:%s) (type:%u)",
+            name.c_str(),
             static_cast<uint32_t>(handleType));
     }
 #endif
@@ -95,22 +96,36 @@ void SetupRenderNodeResourceHandles(const IRenderNodeGpuResourceManager& gpuReso
     RenderNodeHandles::InputResources& res)
 {
     const auto setHandles = [](const IRenderNodeGpuResourceManager& gpuResourceMgr,
-                                const IRenderNodeGraphShareManager& rngShareMgr, const RenderHandleType handleType,
-                                const auto& input, auto& output) {
+                                const IRenderNodeGraphShareManager& rngShareMgr,
+                                const RenderHandleType handleType,
+                                const auto& input,
+                                auto& output) {
         output.reserve(input.size());
         for (const auto& ref : input) {
-            const RenderHandle handle = GetRoutedResource(gpuResourceMgr, rngShareMgr, ref.name, ref.nodeName,
-                ref.resourceLocation, ref.resourceIndex, handleType);
-            output.push_back(RenderNodeResource { ref.set, ref.binding, handle, {}, ref.mip, ref.layer });
+            const RenderHandle handle = GetRoutedResource(gpuResourceMgr,
+                rngShareMgr,
+                ref.name,
+                ref.nodeName,
+                ref.resourceLocation,
+                ref.resourceIndex,
+                handleType);
+            output.push_back(RenderNodeResource{ref.set, ref.binding, handle, {}, ref.mip, ref.layer});
         }
     };
     const auto setImageHandles = [](const IRenderNodeGpuResourceManager& gpuResourceMgr,
                                      const IRenderNodeGraphShareManager& rngShareMgr,
-                                     vector<RenderNodeResource>& optionalSamplers, auto& input, auto& output) {
+                                     vector<RenderNodeResource>& optionalSamplers,
+                                     auto& input,
+                                     auto& output) {
         output.reserve(input.size());
         for (const auto& ref : input) {
-            const RenderHandle handle = GetRoutedResource(gpuResourceMgr, rngShareMgr, ref.name, ref.nodeName,
-                ref.resourceLocation, ref.resourceIndex, RenderHandleType::GPU_IMAGE);
+            const RenderHandle handle = GetRoutedResource(gpuResourceMgr,
+                rngShareMgr,
+                ref.name,
+                ref.nodeName,
+                ref.resourceLocation,
+                ref.resourceIndex,
+                RenderHandleType::GPU_IMAGE);
             RenderHandle secondHandle;
             for (auto sampIter = optionalSamplers.begin(); sampIter != optionalSamplers.end();) {
                 if ((sampIter->set == ref.set) && (sampIter->binding == ref.binding)) {
@@ -120,7 +135,7 @@ void SetupRenderNodeResourceHandles(const IRenderNodeGpuResourceManager& gpuReso
                     sampIter++;
                 }
             }
-            output.push_back(RenderNodeResource { ref.set, ref.binding, handle, secondHandle, ref.mip, ref.layer });
+            output.push_back(RenderNodeResource{ref.set, ref.binding, handle, secondHandle, ref.mip, ref.layer});
         }
     };
 
@@ -131,16 +146,22 @@ void SetupRenderNodeResourceHandles(const IRenderNodeGpuResourceManager& gpuReso
     // If found, moves the sampler handle from res.samplers to res.images.secondHandle
     setImageHandles(gpuResourceMgr, rngShareMgr, res.samplers, resources.images, res.images);
 
-    setHandles(gpuResourceMgr, rngShareMgr, RenderHandleType::GPU_BUFFER, resources.customInputBuffers,
+    setHandles(gpuResourceMgr,
+        rngShareMgr,
+        RenderHandleType::GPU_BUFFER,
+        resources.customInputBuffers,
         res.customInputBuffers);
-    setHandles(gpuResourceMgr, rngShareMgr, RenderHandleType::GPU_BUFFER, resources.customOutputBuffers,
+    setHandles(gpuResourceMgr,
+        rngShareMgr,
+        RenderHandleType::GPU_BUFFER,
+        resources.customOutputBuffers,
         res.customOutputBuffers);
 
     vector<RenderNodeResource> sams;
     setImageHandles(gpuResourceMgr, rngShareMgr, sams, resources.customInputImages, res.customInputImages);
     setImageHandles(gpuResourceMgr, rngShareMgr, sams, resources.customOutputImages, res.customOutputImages);
 }
-} // namespace
+}  // namespace
 
 RenderNodeUtil::RenderNodeUtil(IRenderNodeContextManager& renderNodeContextMgr)
     : renderNodeContextMgr_(renderNodeContextMgr)
@@ -155,10 +176,21 @@ RenderNodeHandles::InputRenderPass RenderNodeUtil::CreateInputRenderPass(
     if (!renderPass.attachments.empty()) {
         rp.attachments.reserve(renderPass.attachments.size());
         for (const auto& ref : renderPass.attachments) {
-            const RenderHandle handle = GetRoutedResource(gpuResourceMgr, rngShareMgr, ref.name, ref.nodeName,
-                ref.resourceLocation, ref.resourceIndex, RenderHandleType::GPU_IMAGE);
-            rp.attachments.push_back(RenderNodeAttachment { handle, ref.loadOp, ref.storeOp, ref.stencilLoadOp,
-                ref.stencilStoreOp, ref.clearValue, ref.mip, ref.layer });
+            const RenderHandle handle = GetRoutedResource(gpuResourceMgr,
+                rngShareMgr,
+                ref.name,
+                ref.nodeName,
+                ref.resourceLocation,
+                ref.resourceIndex,
+                RenderHandleType::GPU_IMAGE);
+            rp.attachments.push_back(RenderNodeAttachment{handle,
+                ref.loadOp,
+                ref.storeOp,
+                ref.stencilLoadOp,
+                ref.stencilStoreOp,
+                ref.clearValue,
+                ref.mip,
+                ref.layer});
         }
 
         rp.subpassIndex = renderPass.subpassIndex;
@@ -224,7 +256,7 @@ void RenderNodeUtil::BindResourcesToBinder(
         if (RenderHandleUtil::IsValid(ref.handle)) {
             BindableImage bindable;
             bindable.handle = ref.handle;
-            bindable.samplerHandle = ref.secondHandle; // might be combined image sampler if valid handle
+            bindable.samplerHandle = ref.secondHandle;  // might be combined image sampler if valid handle
             bindable.mip = ref.mip;
             bindable.layer = ref.layer;
             pipelineDescriptorSetBinder.BindImage(ref.set, ref.binding, bindable);
@@ -249,7 +281,7 @@ DescriptorCounts RenderNodeUtil::GetDescriptorCounts(const PipelineLayout& pipel
         }
         dc.counts.reserve(dc.counts.size() + setRef.bindings.size());
         for (const auto& bindingRef : setRef.bindings) {
-            dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+            dc.counts.push_back(DescriptorCounts::TypedCount{bindingRef.descriptorType, bindingRef.descriptorCount});
         }
     }
     return dc;
@@ -259,7 +291,7 @@ DescriptorCounts RenderNodeUtil::GetDescriptorCounts(const array_view<Descriptor
 {
     DescriptorCounts dc;
     for (const auto& bindingRef : bindings) {
-        dc.counts.push_back(DescriptorCounts::TypedCount { bindingRef.descriptorType, bindingRef.descriptorCount });
+        dc.counts.push_back(DescriptorCounts::TypedCount{bindingRef.descriptorType, bindingRef.descriptorCount});
     }
     return dc;
 }
@@ -277,10 +309,10 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
         rp.renderPassDesc.attachmentCount = attachmentCount;
         for (size_t idx = 0; idx < renderPass.attachments.size(); ++idx) {
             const auto& ref = renderPass.attachments[idx];
-            rpDesc.attachments[idx] = { ref.layer, ref.mip, ref.loadOp, ref.storeOp, ref.stencilLoadOp,
-                ref.stencilStoreOp, ref.clearValue };
+            rpDesc.attachments[idx] = {
+                ref.layer, ref.mip, ref.loadOp, ref.storeOp, ref.stencilLoadOp, ref.stencilStoreOp, ref.clearValue};
             rpDesc.attachmentHandles[idx] = ref.handle;
-            if (idx == 0) { // optimization, width and height must match (will end in error later)
+            if (idx == 0) {  // optimization, width and height must match (will end in error later)
                 const GpuImageDesc desc = renderNodeContextMgr_.GetGpuResourceManager().GetImageDescriptor(ref.handle);
                 width = desc.width;
                 height = desc.height;
@@ -329,14 +361,14 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             }
         }
     }
-    rpDesc.renderArea = { 0, 0, width, height };
+    rpDesc.renderArea = {0, 0, width, height};
 
     return rp;
 }
 
 ViewportDesc RenderNodeUtil::CreateDefaultViewport(const RenderPass& renderPass) const
 {
-    return ViewportDesc {
+    return ViewportDesc{
         0.0f,
         0.0f,
         static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth),
@@ -348,7 +380,7 @@ ViewportDesc RenderNodeUtil::CreateDefaultViewport(const RenderPass& renderPass)
 
 ScissorDesc RenderNodeUtil::CreateDefaultScissor(const RenderPass& renderPass) const
 {
-    return ScissorDesc {
+    return ScissorDesc{
         0,
         0,
         renderPass.renderPassDesc.renderArea.extentWidth,
@@ -360,7 +392,7 @@ RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration
     const PostProcessConfiguration& input) const
 {
     RenderPostProcessConfiguration output;
-    output.flags = { input.enableFlags, 0, 0, 0 };
+    output.flags = {input.enableFlags, 0, 0, 0};
     output.renderTimings = renderNodeContextMgr_.GetRenderNodeGraphData().renderingConfiguration.renderTimings;
     output.factors[PostProcessConfiguration::INDEX_TONEMAP] = PostProcessConversionHelper::GetFactorTonemap(input);
     output.factors[PostProcessConfiguration::INDEX_VIGNETTE] = PostProcessConversionHelper::GetFactorVignette(input);
@@ -391,7 +423,7 @@ RenderPostProcessConfiguration RenderNodeUtil::GetRenderPostProcessConfiguration
 {
     RenderPostProcessConfiguration output;
 
-    output.flags = { globalFactors.enableFlags, 0, 0, 0 };
+    output.flags = {globalFactors.enableFlags, 0, 0, 0};
     output.renderTimings = renderNodeContextMgr_.GetRenderNodeGraphData().renderingConfiguration.renderTimings;
 
     BASE_NS::CloneData(output.factors, sizeof(output.factors), globalFactors.factors, sizeof(globalFactors.factors));

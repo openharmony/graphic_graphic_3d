@@ -23,7 +23,7 @@
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
 #include "gles/gpu_image_gles.h"
-#include "nodecontext/render_command_list.h" // RenderPassBeginInfo...
+#include "nodecontext/render_command_list.h"  // RenderPassBeginInfo...
 #include "util/log.h"
 
 using namespace BASE_NS;
@@ -99,7 +99,8 @@ uint64_t HashRPD(const RenderCommandBeginRenderPass& beginRenderPass, GpuResourc
     if constexpr (HASH_LAYOUTS) {
         const RenderPassImageLayouts& renderPassImageLayouts = beginRenderPass.imageLayouts;
         for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
-            HashCombine(rpHash, renderPassImageLayouts.attachmentInitialLayouts[idx],
+            HashCombine(rpHash,
+                renderPassImageLayouts.attachmentInitialLayouts[idx],
                 renderPassImageLayouts.attachmentFinalLayouts[idx]);
         }
     }
@@ -193,14 +194,14 @@ bool IsDefaultAttachment(array_view<const BindImage> images, const RenderPassSub
         // okay, looks good. one color...
         if (const auto* color = images[sb.colorAttachmentIndices[0]].image) {
             const auto& plat = static_cast<const GpuImagePlatformDataGL&>(color->GetPlatformData());
-            if ((plat.image == 0) &&                // not texture
-                (plat.renderBuffer == 0))           // not renderbuffer
-            {                                       // Colorattachment is backbuffer
-                if (sb.depthAttachmentCount == 1) { // and has one depth.
+            if ((plat.image == 0) &&                 // not texture
+                (plat.renderBuffer == 0))            // not renderbuffer
+            {                                        // Colorattachment is backbuffer
+                if (sb.depthAttachmentCount == 1) {  // and has one depth.
                     const auto depth = images[sb.depthAttachmentIndex].image;
                     const auto& dPlat = static_cast<const GpuImagePlatformDataGL&>(depth->GetPlatformData());
                     // NOTE: CORE_DEFAULT_BACKBUFFER_DEPTH is not used legacy way anymore
-                    if ((dPlat.image == 0) && (dPlat.renderBuffer == 0)) { // depth attachment is backbuffer depth.
+                    if ((dPlat.image == 0) && (dPlat.renderBuffer == 0)) {  // depth attachment is backbuffer depth.
                         return true;
                     } else {
                         // Invalid configuration. (this should be caught earlier already)
@@ -367,8 +368,13 @@ void BindToFboMultisampled(GLenum attachType, const BindImage& image, const Bind
             const auto samples = (desc.sampleCountFlags & CORE_SAMPLE_COUNT_8_BIT)
                                      ? 8
                                      : ((desc.sampleCountFlags & CORE_SAMPLE_COUNT_4_BIT) ? 4 : 2);
-            glFramebufferTextureMultisampleMultiviewOVR(GL_FRAMEBUFFER, attachType, plat.image, GLint(image.mipLevel),
-                GLint(samples), GLint(image.layer), GLsizei(views));
+            glFramebufferTextureMultisampleMultiviewOVR(GL_FRAMEBUFFER,
+                attachType,
+                plat.image,
+                GLint(image.mipLevel),
+                GLint(samples),
+                GLint(image.layer),
+                GLsizei(views));
         } else {
 #endif
             if (views) {
@@ -430,7 +436,7 @@ uint32_t GenerateSubPassFBO(DeviceGLES& device, LowlevelFramebufferGL& framebuff
     PLUGIN_LOG_D("fbo id >: %u", fbo);
 #endif
     device.BindFrameBuffer(fbo);
-    GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = { GL_NONE };
+    GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = {GL_NONE};
     GLenum colorAttachmentCount = 0;
     const auto views = HighestBit(sb.viewMask);
     for (uint32_t idx = 0; idx < sb.colorAttachmentCount; ++idx) {
@@ -439,11 +445,20 @@ uint32_t GenerateSubPassFBO(DeviceGLES& device, LowlevelFramebufferGL& framebuff
         if (images[ci].image) {
             drawBuffers[idx] = GL_COLOR_ATTACHMENT0 + colorAttachmentCount;
             if (original == EMPTY_ATTACHMENT) {
-                BindToFbo(drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height, views,
+                BindToFbo(drawBuffers[idx],
+                    images[ci],
+                    framebuffer.width,
+                    framebuffer.height,
+                    views,
                     (colorAttachmentCount) || (resolveAttachmentCount));
             } else {
-                BindToFboMultisampled(drawBuffers[idx], images[original], images[ci], framebuffer.width,
-                    framebuffer.height, views, (colorAttachmentCount) || (resolveAttachmentCount),
+                BindToFboMultisampled(drawBuffers[idx],
+                    images[original],
+                    images[ci],
+                    framebuffer.width,
+                    framebuffer.height,
+                    views,
+                    (colorAttachmentCount) || (resolveAttachmentCount),
                     multisampledRenderToTexture);
             }
             ++colorAttachmentCount;
@@ -465,8 +480,14 @@ uint32_t GenerateSubPassFBO(DeviceGLES& device, LowlevelFramebufferGL& framebuff
         if (image) {
             const GLenum bindType = BindType(image);
             PLUGIN_ASSERT_MSG(bindType != GL_NONE, "Depth attachment has no stencil or depth");
-            BindToFboMultisampled(bindType, images[original], images[di], framebuffer.width, framebuffer.height, views,
-                (colorAttachmentCount) || (resolveAttachmentCount), multisampledRenderToTexture);
+            BindToFboMultisampled(bindType,
+                images[original],
+                images[di],
+                framebuffer.width,
+                framebuffer.height,
+                views,
+                (colorAttachmentCount) || (resolveAttachmentCount),
+                multisampledRenderToTexture);
         } else {
             PLUGIN_LOG_E("no image for depth attachment");
         }
@@ -474,15 +495,22 @@ uint32_t GenerateSubPassFBO(DeviceGLES& device, LowlevelFramebufferGL& framebuff
     if (!VerifyFBO()) {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_E("RENDER_VALIDATION: Failed to create subpass FBO size [%u %u] [color:%u depth:%u resolve:%u]",
-            framebuffer.width, framebuffer.height, sb.colorAttachmentCount, sb.depthAttachmentCount,
+            framebuffer.width,
+            framebuffer.height,
+            sb.colorAttachmentCount,
+            sb.depthAttachmentCount,
             sb.resolveAttachmentCount);
 #endif
         device.BindFrameBuffer(0U);
         glDeleteFramebuffers(1, &fbo);
         fbo = 0U;
     } else if constexpr (VERBOSE_LOGGING) {
-        PLUGIN_LOG_V("Created subpass FBO size [%u %u] [color:%u depth:%u resolve:%u]", framebuffer.width,
-            framebuffer.height, sb.colorAttachmentCount, sb.depthAttachmentCount, sb.resolveAttachmentCount);
+        PLUGIN_LOG_V("Created subpass FBO size [%u %u] [color:%u depth:%u resolve:%u]",
+            framebuffer.width,
+            framebuffer.height,
+            sb.colorAttachmentCount,
+            sb.depthAttachmentCount,
+            sb.resolveAttachmentCount);
     }
     return fbo;
 }
@@ -497,7 +525,7 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
 {
     // generate fbos for resolve attachments if needed.
     if ((sb.resolveAttachmentCount == 0) && (sb.depthResolveAttachmentCount == 0)) {
-        return { 0, 0 };
+        return {0, 0};
     }
 #if RENDER_GL_FLIP_Y_SWAPCHAIN == 0
     // currently resolving to backbuffer AND other attachments at the same time is not possible.
@@ -509,26 +537,30 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
             framebuffer.width = desc.width;
             framebuffer.height = desc.height;
         }
-        return { 1, 0 };
+        return {1, 0};
     }
 #endif
     // all subpasses with resolve will get a special resolve fbo.. (expecting that no more than one
     // subpass resolves to a single attachment. if more than one subpass resolves to a single
     // attachment we have extra fbos.)
-    ResolvePair rp { 0, 0 };
+    ResolvePair rp{0, 0};
     glGenFramebuffers(1, &rp.resolveFbo);
 #if (RENDER_DEBUG_GPU_RESOURCE_IDS == 1)
     PLUGIN_LOG_D("fbo id >: %u", rp.resolveFbo);
 #endif
     const auto views = HighestBit(sb.viewMask);
     device.BindFrameBuffer(rp.resolveFbo);
-    GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = { GL_NONE };
+    GLenum drawBuffers[PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT] = {GL_NONE};
     for (uint32_t idx = 0; idx < sb.resolveAttachmentCount; ++idx) {
         const uint32_t ci = sb.resolveAttachmentIndices[idx];
         const auto* image = images[ci].image;
         if (image) {
             drawBuffers[idx] = GL_COLOR_ATTACHMENT0 + rp.resolveAttachmentCount;
-            BindToFbo(drawBuffers[idx], images[ci], framebuffer.width, framebuffer.height, views,
+            BindToFbo(drawBuffers[idx],
+                images[ci],
+                framebuffer.width,
+                framebuffer.height,
+                views,
                 (rp.resolveAttachmentCount > 0));
             ++rp.resolveAttachmentCount;
         } else {
@@ -541,7 +573,11 @@ ResolvePair GenerateResolveFBO(DeviceGLES& device, LowlevelFramebufferGL& frameb
         const uint32_t ci = sb.depthResolveAttachmentIndex;
         const auto* image = images[ci].image;
         if (image) {
-            BindToFbo(BindType(image), images[ci], framebuffer.width, framebuffer.height, views,
+            BindToFbo(BindType(image),
+                images[ci],
+                framebuffer.width,
+                framebuffer.height,
+                views,
                 (rp.resolveAttachmentCount > 0));
         } else {
             PLUGIN_LOG_E("no image for depth resolve attachment %u %u", idx, ci);
@@ -568,12 +604,12 @@ LowlevelFramebufferGL::SubPassPair ProcessSubPass(DeviceGLES& device, LowlevelFr
         if (sb.resolveAttachmentCount != 0) {
             PLUGIN_LOG_E("No resolving from default framebuffer");
         }
-        return { 0, 0 };
+        return {0, 0};
     }
 #endif
     // This subpass uses custom render targets.
     PLUGIN_ASSERT((sb.colorAttachmentCount + sb.depthAttachmentCount) <
-                  (PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT + 1)); // +1 for depth
+                  (PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT + 1));  // +1 for depth
     uint32_t fbo = 0;
     const auto resolveResult = GenerateResolveFBO(device, framebuffer, sb, images);
     const uint64_t subHash = HashAttachments(sb);
@@ -583,11 +619,16 @@ LowlevelFramebufferGL::SubPassPair ProcessSubPass(DeviceGLES& device, LowlevelFr
         // matching fbo created already, re-use
         fbo = it->fbo;
     } else {
-        fbo = GenerateSubPassFBO(device, framebuffer, sb, images, resolveResult.resolveAttachmentCount, imageMap,
+        fbo = GenerateSubPassFBO(device,
+            framebuffer,
+            sb,
+            images,
+            resolveResult.resolveAttachmentCount,
+            imageMap,
             multisampledRenderToTexture);
-        fboMap.push_back({ subHash, fbo });
+        fboMap.push_back({subHash, fbo});
     }
-    return { fbo, resolveResult.resolveFbo };
+    return {fbo, resolveResult.resolveFbo};
 }
 
 #if RENDER_HAS_GLES_BACKEND
@@ -608,7 +649,8 @@ void MapColorAttachments([[maybe_unused]] array_view<RenderPassSubpassDesc>::ite
             PLUGIN_LOG_ONCE_W(unique,
                 "Subpass %u attachment %u might be used as input attachment, cannot render directly to "
                 "texture.",
-                subpassIdx, color);
+                subpassIdx,
+                color);
 #endif
             continue;
         }
@@ -637,7 +679,8 @@ void MapDepthAttachments([[maybe_unused]] array_view<RenderPassSubpassDesc>::ite
             PLUGIN_LOG_ONCE_W(unique,
                 "Subpass %u attachment %u might be used as input attachment, cannot render directly to "
                 "texture.",
-                subpassIdx, depth);
+                subpassIdx,
+                depth);
 #endif
             return;
         }
@@ -681,10 +724,10 @@ void UpdateSubpassAttachments(array_view<RenderPassSubpassDesc>::iterator begin,
     }
 }
 #endif
-} // namespace
+}  // namespace
 
 NodeContextPoolManagerGLES::NodeContextPoolManagerGLES(Device& device, GpuResourceManager& gpuResourceManager)
-    : NodeContextPoolManager(), device_ { (DeviceGLES&)device }, gpuResourceMgr_ { gpuResourceManager }
+    : NodeContextPoolManager(), device_{(DeviceGLES&)device}, gpuResourceMgr_{gpuResourceManager}
 {
     bufferingCount_ = device_.GetCommandBufferingCount();
 #if RENDER_HAS_GLES_BACKEND
@@ -718,7 +761,7 @@ void NodeContextPoolManagerGLES::BeginBackendFrame()
     const uint64_t frameCount = device_.GetFrameCount();
 
 #if (RENDER_VALIDATION_ENABLED == 1)
-    PLUGIN_ASSERT(frameIndexBack_ != frameCount); // prevent multiple calls per frame
+    PLUGIN_ASSERT(frameIndexBack_ != frameCount);  // prevent multiple calls per frame
     frameIndexBack_ = frameCount;
     PLUGIN_ASSERT(frameIndexFront_ == frameIndexBack_);
 #endif
@@ -774,11 +817,20 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
     // NOTE: we currently expect that resolve, color and depth attachments are regular 2d textures (or
     // renderbuffers)
     vector<FboHash> fboMap;
-    std::transform(std::begin(beginRenderPass.subpasses), std::begin(beginRenderPass.subpasses) + rpd.subpassCount,
+    std::transform(std::begin(beginRenderPass.subpasses),
+        std::begin(beginRenderPass.subpasses) + rpd.subpassCount,
         fb.fbos.data(),
-        [this, &fb, &fboMap, images = array_view<const BindImage>(images),
+        [this,
+            &fb,
+            &fboMap,
+            images = array_view<const BindImage>(images),
             imageMap = array_view<const uint32_t>(imageMap_)](const RenderPassSubpassDesc& subpass) {
-            return ProcessSubPass(device_, fb, fboMap, images, imageMap, subpass,
+            return ProcessSubPass(device_,
+                fb,
+                fboMap,
+                images,
+                imageMap,
+                subpass,
                 subpass.viewMask ? multiViewMultisampledRenderToTexture_ : multisampledRenderToTexture_);
         });
     if constexpr (VERBOSE_LOGGING) {
@@ -788,8 +840,9 @@ EngineResourceHandle NodeContextPoolManagerGLES::GetFramebufferHandle(
         return {};
     }
     uint32_t arrayIndex = 0;
-    if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(), framebufferCache_.framebuffers.end(),
-        [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
+    if (auto const pos = std::find_if(framebufferCache_.framebuffers.begin(),
+            framebufferCache_.framebuffers.end(),
+            [](auto const& framebuffer) { return framebuffer.fbos.empty(); });
         pos != framebufferCache_.framebuffers.end()) {
         arrayIndex = (uint32_t)std::distance(framebufferCache_.framebuffers.begin(), pos);
         *pos = move(fb);
@@ -841,7 +894,8 @@ void NodeContextPoolManagerGLES::FilterRenderPass(RenderCommandBeginRenderPass& 
         return;
     }
     if (!multiViewMultisampledRenderToTexture_ &&
-        std::any_of(beginRenderPass.subpasses.cbegin(), beginRenderPass.subpasses.cend(),
+        std::any_of(beginRenderPass.subpasses.cbegin(),
+            beginRenderPass.subpasses.cend(),
             [](const RenderPassSubpassDesc& subpass) { return subpass.viewMask != 0; })) {
         return;
     }

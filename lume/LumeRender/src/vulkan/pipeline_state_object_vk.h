@@ -34,8 +34,8 @@ struct LowLevelRenderPassData;
 struct LowLevelPipelineLayoutData;
 
 struct PipelineStateObjectPlatformDataVk final {
-    VkPipeline pipeline { VK_NULL_HANDLE };
-    VkPipelineLayout pipelineLayout { VK_NULL_HANDLE };
+    VkPipeline pipeline{VK_NULL_HANDLE};
+    VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 };
 
 class GraphicsPipelineStateObjectVk final : public GraphicsPipelineStateObject {
@@ -62,7 +62,7 @@ public:
         };
         ShaderSpecializationConstantData constantData;
 
-        SurfaceTransformFlags surfaceTransformFlags { 0U };
+        SurfaceTransformFlags surfaceTransformFlags{0U};
 
         void Clear()
         {
@@ -97,4 +97,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_PIPELINE_STATE_OBJECT_VK_H
+#endif  // VULKAN_PIPELINE_STATE_OBJECT_VK_H

@@ -74,9 +74,9 @@ UNIT_TEST(SRC_EcsLocalMatrixSystem, LocalMatrixSystemTest, testing::ext::TestSiz
     Entity entity = ecs->GetEntityManager().Create();
     transformManager->Create(entity);
     localMatrixManager->Create(entity);
-    Math::Vec3 position { 1.0f, 1.0f, 2.0f };
-    Math::Quat rotation { Math::FromEulerRad(Math::Vec3 { 0.0f, 1.0f, 3.14f }) };
-    Math::Vec3 scale { 1.0f, 2.0f, 0.5f };
+    Math::Vec3 position{1.0f, 1.0f, 2.0f};
+    Math::Quat rotation{Math::FromEulerRad(Math::Vec3{0.0f, 1.0f, 3.14f})};
+    Math::Vec3 scale{1.0f, 2.0f, 0.5f};
 
     if (auto scopedHandle = transformManager->Write(entity); scopedHandle) {
         scopedHandle->position = position;

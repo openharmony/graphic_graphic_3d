@@ -32,4 +32,4 @@ IShaderManager::ShaderOutWriteResult SavePipelineLayouts(const IShaderManager::S
 IShaderManager::ShaderOutWriteResult SaveVariants(const IShaderManager::ShaderVariantsSaveInfo& saveInfo);
 
 RENDER_END_NAMESPACE()
-#endif // RENDER_UTIL_SHADER_SAVER_H
+#endif  // RENDER_UTIL_SHADER_SAVER_H

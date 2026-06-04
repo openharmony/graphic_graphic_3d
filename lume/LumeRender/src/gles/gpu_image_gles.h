@@ -31,10 +31,10 @@ struct GpuImagePlatformDataGL final : public GpuImagePlatformData {
     // GL_TEXTURE_2D,GL_TEXTURE_CUBE_MAP,GL_TEXTURE_2D_MULTISAMPLE etc.
     // (ie. viewtype, can be 0. (no view, used for backbuffer "images" and renderbuffers))
     uint32_t type;
-    uint32_t image;          // Texture handle (0 for "no view")
-    uint32_t format;         // GL_RGB etc
-    uint32_t internalFormat; // GL_RGBA16F etc..
-    uint32_t dataType;       // GL_FLOAT etc
+    uint32_t image;           // Texture handle (0 for "no view")
+    uint32_t format;          // GL_RGB etc
+    uint32_t internalFormat;  // GL_RGBA16F etc..
+    uint32_t dataType;        // GL_FLOAT etc
     uint32_t bytesperpixel;
     struct {
         bool compressed;
@@ -43,12 +43,12 @@ struct GpuImagePlatformDataGL final : public GpuImagePlatformData {
         uint32_t bytesperblock;
     } compression;
     BASE_NS::Math::UVec4 swizzle;
-    uint32_t renderBuffer; // For render targets... (can not be sampled or used in compute)
-    uintptr_t eglImage;    // For creating image from EGLImage
-    uintptr_t hwBuffer;    // For creating image from AHardwareBuffer
-    uint32_t baseMipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
-    uint32_t maxMipLevel { PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS };
-    uint32_t mipCount { 1u };
+    uint32_t renderBuffer;  // For render targets... (can not be sampled or used in compute)
+    uintptr_t eglImage;     // For creating image from EGLImage
+    uintptr_t hwBuffer;     // For creating image from AHardwareBuffer
+    uint32_t baseMipLevel{PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS};
+    uint32_t maxMipLevel{PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS};
+    uint32_t mipCount{1u};
 };
 
 class GpuImageGLES final : public GpuImage {
@@ -71,8 +71,8 @@ private:
     GpuImagePlatformDataGL plat_;
     GpuImageDesc desc_;
     // in normal situations owns all the vulkan resources
-    bool ownsResources_ { true };
+    bool ownsResources_{true};
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_GPU_IMAGE_GLES_H
+#endif  // GLES_GPU_IMAGE_GLES_H

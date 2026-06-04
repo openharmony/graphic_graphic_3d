@@ -35,6 +35,7 @@ class IRenderDataStoreDefaultLight;
 class IRenderDataStoreDefaultMaterial;
 class IRenderDataStoreDefaultScene;
 class IRenderDataStoreMorph;
+class IRenderDataStoreLightProbe;
 
 class RenderPreprocessorSystem final : public IRenderPreprocessorSystem {
 public:
@@ -59,16 +60,17 @@ private:
     bool CheckIfDefaultDataStoreNames() const;
 
     CORE_NS::IEcs& ecs_;
-    IGraphicsContext* graphicsContext_ { nullptr };
-    RENDER_NS::IRenderContext* renderContext_ { nullptr };
-    bool active_ { true };
+    IGraphicsContext* graphicsContext_{nullptr};
+    RENDER_NS::IRenderContext* renderContext_{nullptr};
+    bool active_{true};
 
-    IRenderPreprocessorSystem::Properties properties_ {
+    IRenderPreprocessorSystem::Properties properties_{
         "RenderDataStoreDefaultScene",
         "RenderDataStoreDefaultCamera",
         "RenderDataStoreDefaultLight",
         "RenderDataStoreDefaultMaterial",
         "RenderDataStoreMorph",
+        "RenderDataStoreLightProbe",
         "",
     };
     CORE_NS::PropertyApiImpl<IRenderPreprocessorSystem::Properties> RENDER_PREPROCESSOR_SYSTEM_PROPERTIES;
@@ -78,7 +80,8 @@ private:
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultMaterial> dsMaterial_;
     BASE_NS::refcnt_ptr<IRenderDataStoreDefaultScene> dsScene_;
     BASE_NS::refcnt_ptr<IRenderDataStoreMorph> dsMorph_;
+    BASE_NS::refcnt_ptr<IRenderDataStoreLightProbe> dsLightProbe_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_ECS_RENDER_PREPROCESSOR_SYSTEM_H
+#endif  // CORE3D_ECS_RENDER_PREPROCESSOR_SYSTEM_H

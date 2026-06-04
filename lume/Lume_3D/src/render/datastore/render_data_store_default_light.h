@@ -40,11 +40,14 @@ public:
     ~RenderDataStoreDefaultLight() override = default;
 
     // IRenderDataStore
-    void PreRender() override {}
+    void PreRender() override
+    {}
     // clear in post render
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -53,7 +56,7 @@ public:
 
     BASE_NS::string_view GetTypeName() const override
     {
-        return typeName;
+        return TYPE_NAME;
     }
 
     BASE_NS::string_view GetName() const override
@@ -83,7 +86,7 @@ public:
     LightingFlags GetLightingFlags() const override;
 
     // for plugin / factory interface
-    static constexpr const char* const typeName = "RenderDataStoreDefaultLight";
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultLight";
     static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, const char* name);
 
 private:
@@ -95,8 +98,8 @@ private:
     IRenderDataStoreDefaultLight::ShadowTypes shadowTypes_;
     IRenderDataStoreDefaultLight::ShadowQualityResolutions resolutions_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_LIGHT_H
+#endif  // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_LIGHT_H

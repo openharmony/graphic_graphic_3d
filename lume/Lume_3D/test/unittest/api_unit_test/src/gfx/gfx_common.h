@@ -77,6 +77,7 @@ public:
 
     void LiftTestUp(int viewportSizeX, int viewportSizeY);
     void TickTest(int frameCountToTick);
+    void TickTest(int frameCountToTick, uint64_t deltaTimeUs);
     void TickTestAutoRng(int frameCountToTick);
     void ShutdownTest();
 
@@ -138,7 +139,7 @@ private:
 
 Entity CreateSolidColorMaterial(IEcs& ecs, Math::Vec4 color);
 
-} // namespace UTest
+}  // namespace UTest
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_TEST_GFX_COMMON_H
+#endif  // CORE3D_TEST_GFX_COMMON_H

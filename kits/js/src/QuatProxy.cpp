@@ -29,7 +29,7 @@ QuatProxy::~QuatProxy()
     Reset();
 }
 
-void QuatProxy::SetValue(const BASE_NS::Math::Quat& v)
+void QuatProxy::SetNativeValue(const BASE_NS::Math::Quat& v)
 {
     META_NS::SetValue(GetProperty<BASE_NS::Math::Quat>(), v);
 }
@@ -85,6 +85,6 @@ void QuatProxy::SetValue(NapiApi::Object obj)
     auto z = obj.Get<float>("z");
     auto w = obj.Get<float>("w");
     if (x.IsValid() && y.IsValid() && z.IsValid() && w.IsValid()) {
-        SetValue({ x, y, z, w });
+        SetNativeValue({x, y, z, w});
     }
 }

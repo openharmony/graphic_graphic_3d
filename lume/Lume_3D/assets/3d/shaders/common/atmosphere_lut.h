@@ -97,7 +97,7 @@ vec2 RayIntersectSphere2D(vec3 start, vec3 dir, float radius)
     if (d < 0.0) {
         return vec2(1e5, -1e5);
     }
-    return vec2((-b - sqrt(d)) / (2.0 * a), (-b + sqrt(d)) / (2.0 * a)); // 2.0: scale
+    return vec2((-b - sqrt(d)) / (2.0 * a), (-b + sqrt(d)) / (2.0 * a));  // 2.0: scale
 }
 
 vec3 GetSphericalDir(float theta, float phi)
@@ -157,8 +157,8 @@ vec2 GetTransmittanceTextureUvFromRMu(float r, float mu)
 
     float rho = sqrt(max(0.0, r * r - GROUND_RADIUS_KM * GROUND_RADIUS_KM));
 
-    float dMin = ATMOSPHERE_RADIUS_KM - r; // Minimum distance (straight up)
-    float dMax = rho + h;                  // Maximum distance (tangent to ground)
+    float dMin = ATMOSPHERE_RADIUS_KM - r;  // Minimum distance (straight up)
+    float dMax = rho + h;                   // Maximum distance (tangent to ground)
 
     // Solve for distance d using quadratic formula
     // Original: mu = (h^2 - rho^2 - d^2) / (2 * r * d)
@@ -175,8 +175,8 @@ vec2 GetTransmittanceTextureUvFromRMu(float r, float mu)
     float d = max(0.0, -r * mu + sqrt(max(0.0, discriminant)));
 
     // Convert back to normalized UV coordinates
-    float xMu = clamp((d - dMin) / (dMax - dMin), 0.0, 1.0); // Angle coordinate
-    float xR = clamp(rho / h, 0.0, 1.0);                     // Height coordinate
+    float xMu = clamp((d - dMin) / (dMax - dMin), 0.0, 1.0);  // Angle coordinate
+    float xR = clamp(rho / h, 0.0, 1.0);                      // Height coordinate
 
     return vec2(xMu, xR);
 }
@@ -218,4 +218,4 @@ vec3 ComputeTransmittanceToTopAtmosphereBoundary(float r, float mu, const Atmosp
     return transmittance;
 }
 
-#endif // ATMOSPHERE_LUT_H
+#endif  // ATMOSPHERE_LUT_H

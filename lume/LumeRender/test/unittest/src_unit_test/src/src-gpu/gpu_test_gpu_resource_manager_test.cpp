@@ -28,12 +28,12 @@
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/device_vk.h>
 #include <vulkan/gpu_image_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/device_gles.h>
 #include <gles/gpu_image_gles.h>
-#endif // RENDER_HAS_GL_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND
 
 #undef LoadImage
 
@@ -280,8 +280,8 @@ UNIT_TEST(SRC_GpuResourceManager, AccelerationStructureCreationTest, testing::ex
 
         ASSERT_EQ("Acc0", gpuResourceMgr.GetName(handle));
         ASSERT_EQ(result.GetHandle(), ((GpuResourceManager&)gpuResourceMgr).GetBufferRawHandle("Acc0"));
-        ASSERT_EQ(RenderHandle {}, ((GpuResourceManager&)gpuResourceMgr).GetBufferRawHandle(""));
-        ASSERT_EQ(RenderHandle {}, ((GpuResourceManager&)gpuResourceMgr).GetBufferHandle("").GetHandle());
+        ASSERT_EQ(RenderHandle{}, ((GpuResourceManager&)gpuResourceMgr).GetBufferRawHandle(""));
+        ASSERT_EQ(RenderHandle{}, ((GpuResourceManager&)gpuResourceMgr).GetBufferHandle("").GetHandle());
         ASSERT_EQ(result.GetHandle(), ((GpuResourceManager&)gpuResourceMgr).GetBufferHandle("Acc0").GetHandle());
     }
 
@@ -307,7 +307,7 @@ UNIT_TEST(SRC_GpuResourceManager, ImageCreationTest, testing::ext::TestSize.Leve
         auto loadResult = imgLoaderMgr.LoadImage(
             "test://images/ImageCreationTest_16x16.jpg", IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS);
         ASSERT_TRUE(loadResult.success);
-        IImageContainer::Ptr imageContainer { move(loadResult.image) };
+        IImageContainer::Ptr imageContainer{move(loadResult.image)};
 
         GpuImageDesc inputDesc;
         inputDesc = gpuResourceMgr.CreateGpuImageDesc(imageContainer->GetImageDesc());
@@ -338,7 +338,7 @@ UNIT_TEST(SRC_GpuResourceManager, ImageCreationTest, testing::ext::TestSize.Leve
     {
         auto loadResult = imgLoaderMgr.LoadImage("test://images/kloppenheim_evening_skybox_8x8.ktx", 0u);
         ASSERT_TRUE(loadResult.success);
-        IImageContainer::Ptr imageContainer { move(loadResult.image) };
+        IImageContainer::Ptr imageContainer{move(loadResult.image)};
         GpuImageDesc inputDesc;
         inputDesc = gpuResourceMgr.CreateGpuImageDesc(imageContainer->GetImageDesc());
         ASSERT_TRUE(inputDesc.createFlags & ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
@@ -364,7 +364,7 @@ UNIT_TEST(SRC_GpuResourceManager, LargeStagingSize, testing::ext::TestSize.Level
 
     IGpuResourceManager& gpuResourceMgr = er.device->GetGpuResourceManager();
 
-    constexpr uint32_t targetStagingSize = 1024 * 1024 * 512; // 512MB for images and buffer each, so 1GB in total
+    constexpr uint32_t targetStagingSize = 1024 * 1024 * 512;  // 512MB for images and buffer each, so 1GB in total
 
     // 2048x2048x4 floats is ~67MB
     constexpr uint32_t arraySize = 2048 * 2048;
@@ -375,7 +375,7 @@ UNIT_TEST(SRC_GpuResourceManager, LargeStagingSize, testing::ext::TestSize.Level
     const unique_ptr<uint8_t[]> rawMem = make_unique<uint8_t[]>(arrayByteSize);
     memset((void*)rawMem.get(), 0, arrayByteSize);
 
-    array_view<const uint8_t> memView = { reinterpret_cast<const uint8_t*>(rawMem.get()), arrayByteSize };
+    array_view<const uint8_t> memView = {reinterpret_cast<const uint8_t*>(rawMem.get()), arrayByteSize};
     vector<RenderHandleReference> resourceRefs = {};
 
     GpuImageDesc imgDesc = {};
@@ -450,15 +450,14 @@ UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestVulkan, testing::ext::Tes
         backendDesc.image = ((GpuImageVk&)*image).GetPlatformData().image;
 
         auto viewHandle = gpuResourceMgr.CreateView("view0", desc, backendDesc);
-        ASSERT_NE(RenderHandle {}, viewHandle.GetHandle());
+        ASSERT_NE(RenderHandle{}, viewHandle.GetHandle());
         ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
     }
     UTest::DestroyEngine(er);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
-#ifdef DISABLED_TESTS_ON
 #if NDEBUG
 /**
  * @tc.name: ImageViewCreationTestOpenGL
@@ -472,8 +471,8 @@ UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestOpenGL, testing::ext::Tes
  * @tc.desc: Tests IGpuResourceManager for creating an image view from an image in OpenGL.
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_GpuResourceManager, DISABLED_ImageViewCreationTestOpenGL, testing::ext::TestSize.Level1)
-#endif // NDEBUG
+UNIT_TEST(SRC_GpuResourceManager, ImageViewCreationTestOpenGL, testing::ext::TestSize.Level1)
+#endif  // NDEBUG
 {
     UTest::EngineResources er;
     er.createWindow = true;
@@ -503,20 +502,22 @@ UNIT_TEST(SRC_GpuResourceManager, DISABLED_ImageViewCreationTestOpenGL, testing:
 #elif RENDER_HAS_GLES_BACKEND
         ImageDescGLES backendDesc;
 #endif
+        ((DeviceGLES*)er.device)->Activate();
+        {
+            auto image = ((DeviceGLES*)er.device)->CreateGpuImage(desc);
+            backendDesc.image = ((GpuImageGLES&)*image).GetPlatformData().image;
 
-        auto image = ((DeviceGLES*)er.device)->CreateGpuImage(desc);
-        backendDesc.image = ((GpuImageGLES&)*image).GetPlatformData().image;
-
-        auto viewHandle = gpuResourceMgr.CreateView("view0", desc, backendDesc);
-        ASSERT_NE(RenderHandle {}, viewHandle.GetHandle());
-        ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
+            auto viewHandle = gpuResourceMgr.CreateView("view0", desc, backendDesc);
+            ASSERT_NE(RenderHandle{}, viewHandle.GetHandle());
+            ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
+        }
+        ((DeviceGLES*)er.device)->Deactivate();
     }
     {
         UTest::DestroyEngine(er);
     }
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 void TestGpuResourceManager(DeviceBackendType backend)
 {
@@ -535,7 +536,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
         auto loadResult = imgLoaderMgr.LoadImage(
             "test://images/ImageCreationTest_16x16.jpg", IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS);
         ASSERT_TRUE(loadResult.success);
-        IImageContainer::Ptr imageContainer1 { move(loadResult.image) };
+        IImageContainer::Ptr imageContainer1{move(loadResult.image)};
         GpuImageDesc inputDesc;
         inputDesc = gpuResourceMgr.CreateGpuImageDesc(imageContainer1->GetImageDesc());
         RenderHandleReference handle1 = gpuResourceMgr.Create(inputDesc, move(imageContainer1));
@@ -543,7 +544,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
         loadResult = imgLoaderMgr.LoadImage(
             "test://images/ImageCreationTest_16x16.jpg", IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS);
         ASSERT_TRUE(loadResult.success);
-        IImageContainer::Ptr imageContainer2 { move(loadResult.image) };
+        IImageContainer::Ptr imageContainer2{move(loadResult.image)};
         inputDesc = gpuResourceMgr.CreateGpuImageDesc(imageContainer2->GetImageDesc());
         RenderHandleReference handle2 = gpuResourceMgr.Create(inputDesc, move(imageContainer2));
 
@@ -556,12 +557,11 @@ void TestGpuResourceManager(DeviceBackendType backend)
         ASSERT_EQ(1, bufferHandles.size());
 
         ASSERT_EQ("", gpuResourceMgr.GetName(handle1));
-        ASSERT_EQ(GpuAccelerationStructureDesc {}.accelerationStructureType,
+        ASSERT_EQ(GpuAccelerationStructureDesc{}.accelerationStructureType,
             gpuResourceMgr.GetAccelerationStructureDescriptor(handle1).accelerationStructureType);
         ASSERT_EQ(
-            GpuSamplerDesc {}.engineCreationFlags, gpuResourceMgr.GetSamplerDescriptor(handle1).engineCreationFlags);
-        ASSERT_EQ(
-            GpuBufferDesc {}.engineCreationFlags, gpuResourceMgr.GetBufferDescriptor(handle1).engineCreationFlags);
+            GpuSamplerDesc{}.engineCreationFlags, gpuResourceMgr.GetSamplerDescriptor(handle1).engineCreationFlags);
+        ASSERT_EQ(GpuBufferDesc{}.engineCreationFlags, gpuResourceMgr.GetBufferDescriptor(handle1).engineCreationFlags);
 
         GpuBufferDesc bufferDesc;
         bufferDesc.byteSize = 4;
@@ -570,17 +570,17 @@ void TestGpuResourceManager(DeviceBackendType backend)
         bufferDesc.engineCreationFlags = EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
         RenderHandleReference handle3 = gpuResourceMgr.Create(bufferDesc);
 
-        ASSERT_EQ(GpuImageDesc {}.engineCreationFlags, gpuResourceMgr.GetImageDescriptor(handle3).engineCreationFlags);
+        ASSERT_EQ(GpuImageDesc{}.engineCreationFlags, gpuResourceMgr.GetImageDescriptor(handle3).engineCreationFlags);
     }
     {
         GpuBufferDesc desc;
         desc.usageFlags = 0;
         desc.memoryPropertyFlags = 0;
         desc.byteSize = 0;
-        auto handle0 = gpuResourceMgr.Create("buffer0", desc, array_view<const uint8_t> {});
+        auto handle0 = gpuResourceMgr.Create("buffer0", desc, array_view<const uint8_t>{});
         desc.usageFlags = ~0;
         desc.memoryPropertyFlags = ~0;
-        auto handle1 = gpuResourceMgr.Create("buffer1", desc, array_view<const uint8_t> {});
+        auto handle1 = gpuResourceMgr.Create("buffer1", desc, array_view<const uint8_t>{});
 
         auto rechandle0 = gpuResourceMgr.GetRawHandle(handle0.GetHandle());
         ASSERT_EQ(handle0.GetHandle().id, rechandle0.id);
@@ -633,7 +633,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
         desc.usageFlags = ~0;
         BufferImageCopy copy;
         copy.imageOffset.depth = 5u;
-        auto handle = gpuResourceMgr.Create("", desc, {}, { &copy, 1 });
+        auto handle = gpuResourceMgr.Create("", desc, {}, {&copy, 1});
         auto rechandle = gpuResourceMgr.GetRawHandle(handle.GetHandle());
         ASSERT_EQ(handle.GetHandle().id, rechandle.id);
     }
@@ -651,7 +651,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
             copy.imageExtent.width = 16u;
             copy.imageExtent.height = 16u;
             copy.imageOffset.depth = 1u;
-            auto handle = gpuResourceMgr.Create("", desc, {}, { &copy, 1 });
+            auto handle = gpuResourceMgr.Create("", desc, {}, {&copy, 1});
             auto rechandle = gpuResourceMgr.GetRawHandle(handle.GetHandle());
             ASSERT_EQ(handle.GetHandle().id, rechandle.id);
         }
@@ -661,7 +661,7 @@ void TestGpuResourceManager(DeviceBackendType backend)
             auto loadResult = imgLoaderMgr.LoadImage(
                 "test://images/ImageCreationTest_16x16.jpg", IImageLoaderManager::IMAGE_LOADER_GENERATE_MIPS);
             ASSERT_TRUE(loadResult.success);
-            IImageContainer::Ptr imageContainer1 { move(loadResult.image) };
+            IImageContainer::Ptr imageContainer1{move(loadResult.image)};
             GpuImageDesc inputDesc;
             inputDesc = gpuResourceMgr.CreateGpuImageDesc(imageContainer1->GetImageDesc());
             inputDesc.width = 32u;
@@ -672,25 +672,29 @@ void TestGpuResourceManager(DeviceBackendType backend)
     }
     {
         auto handle = gpuResourceMgr.Get(RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 1000u));
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
-        auto handle = gpuResourceMgr.Get(RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 1000u, 0u,
+        auto handle = gpuResourceMgr.Get(RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER,
+            1000u,
+            0u,
             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE));
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
         auto handle = gpuResourceMgr.Get(RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 1000u));
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
         auto handle = gpuResourceMgr.Get(RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 1000u));
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
-        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::COMPUTE_PSO, 15u, 0u,
+        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::COMPUTE_PSO,
+            15u,
+            0u,
             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         {
             GpuBufferDesc desc;
             desc.byteSize = 16u;
@@ -724,11 +728,11 @@ void TestGpuResourceManager(DeviceBackendType backend)
         desc.usageFlags = CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         auto handle = gpuResourceMgr.Create(desc, {});
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
     }
     {
-        auto handle = gpuResourceMgr.Create("", GpuImageDesc {}, IImageContainer::Ptr {});
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        auto handle = gpuResourceMgr.Create("", GpuImageDesc{}, IImageContainer::Ptr{});
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
         GpuImageDesc desc;
@@ -739,70 +743,75 @@ void TestGpuResourceManager(DeviceBackendType backend)
         desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         desc.format = BASE_FORMAT_R8G8B8A8_UNORM;
         {
-            auto handle =
-                gpuResourceMgr.Create(desc, array_view<const uint8_t> {}, array_view<const BufferImageCopy> {});
-            ASSERT_NE(RenderHandle {}, handle.GetHandle());
+            auto handle = gpuResourceMgr.Create(desc, array_view<const uint8_t>{}, array_view<const BufferImageCopy>{});
+            ASSERT_NE(RenderHandle{}, handle.GetHandle());
         }
         {
-            auto handle = gpuResourceMgr.Create(desc, array_view<const uint8_t> {});
-            ASSERT_NE(RenderHandle {}, handle.GetHandle());
+            auto handle = gpuResourceMgr.Create(desc, array_view<const uint8_t>{});
+            ASSERT_NE(RenderHandle{}, handle.GetHandle());
         }
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 0u, 15u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto bufferDesc = gpuResourceMgr.GetBufferDescriptor(handleRef);
         ASSERT_NE(0, bufferDesc.byteSize);
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 100u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto bufferDesc = gpuResourceMgr.GetBufferDescriptor(handleRef);
         ASSERT_EQ(0, bufferDesc.byteSize);
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u, 15u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto imageDesc = gpuResourceMgr.GetImageDescriptor(handleRef);
         ASSERT_NE(1, imageDesc.width);
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 100u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto imageDesc = gpuResourceMgr.GetImageDescriptor(handleRef);
         ASSERT_EQ(1, imageDesc.width);
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 0u, 15u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto samplerDesc = gpuResourceMgr.GetSamplerDescriptor(handleRef);
         ASSERT_EQ(0, samplerDesc.engineCreationFlags);
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_SAMPLER, 100u);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto samplerDesc = gpuResourceMgr.GetSamplerDescriptor(handleRef);
         ASSERT_EQ(0, samplerDesc.engineCreationFlags);
     }
     {
-        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 0u, 15u,
+        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER,
+            0u,
+            15u,
             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto accDesc = gpuResourceMgr.GetAccelerationStructureDescriptor(handleRef);
         ASSERT_EQ(CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL, accDesc.accelerationStructureType);
     }
     {
-        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 100u, 0u,
+        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER,
+            100u,
+            0u,
             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_ACCELERATION_STRUCTURE);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         auto accDesc = gpuResourceMgr.GetAccelerationStructureDescriptor(handleRef);
         ASSERT_EQ(CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL, accDesc.accelerationStructureType);
     }
     {
-        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER, 0u, 15u,
+        auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::GPU_BUFFER,
+            0u,
+            15u,
             RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_MAP_OUTSIDE_RENDERER |
                 RenderHandleInfoFlagBits::CORE_RESOURCE_HANDLE_IMMEDIATELY_CREATED);
-        RenderHandleReference handleRef { handle, {} };
+        RenderHandleReference handleRef{handle, {}};
         ASSERT_EQ(nullptr, gpuResourceMgr.MapBufferMemory(handleRef));
         gpuResourceMgr.UnmapBuffer(handleRef);
     }
@@ -841,16 +850,16 @@ void TestGpuResourceManager(DeviceBackendType backend)
         string viewName = "imgView";
         {
             auto viewHandle = gpuResourceMgr.CreateView(viewName, desc, backendDesc);
-            ASSERT_NE(RenderHandle {}, viewHandle.GetHandle());
+            ASSERT_NE(RenderHandle{}, viewHandle.GetHandle());
             ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
         }
         {
             auto viewHandle = gpuResourceMgr.CreateView(viewName, desc, backendDesc);
-            ASSERT_NE(RenderHandle {}, viewHandle.GetHandle());
+            ASSERT_NE(RenderHandle{}, viewHandle.GetHandle());
             ASSERT_EQ(RenderHandleType::GPU_IMAGE, viewHandle.GetHandleType());
         }
     }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
     {
         ((GpuResourceManager&)gpuResourceMgr).RenderBackendImmediateRemapGpuImageHandle({}, {});
         gpuResourceMgr.WaitForIdleAndDestroyGpuResources();
@@ -871,7 +880,7 @@ UNIT_TEST(SRC_GpuResourceManager, GpuResourceManagerTestVulkan, testing::ext::Te
 {
     TestGpuResourceManager(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -884,4 +893,4 @@ UNIT_TEST(SRC_GpuResourceManager, GpuResourceManagerTestOpenGL, testing::ext::Te
 {
     TestGpuResourceManager(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

@@ -52,6 +52,6 @@ inline constexpr uint64_t FNV1aHash(const char* const first, uint64_t hash = FNV
     hash = mulu64(hash, FNV_PRIME);
     return FNV1aHash(first + 1, hash);
 }
-} // namespace CompileTime
+}  // namespace CompileTime
 BASE_END_NAMESPACE()
-#endif // API_BASE_UTIL_COMPILE_TIME_HASHES_H
+#endif  // API_BASE_UTIL_COMPILE_TIME_HASHES_H

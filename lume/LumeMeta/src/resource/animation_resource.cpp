@@ -18,6 +18,7 @@
 #include <core/io/intf_filesystem_api.h>
 
 #include <meta/api/metadata_util.h>
+#include <meta/base/memfile.h>
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/serialization/intf_exporter.h>
@@ -56,7 +57,7 @@ static bool SetValuesFromTemplate(const CORE_NS::IResource::ConstPtr& templ, con
         if (!target) {
             continue;
         }
-        if (PropertyLock lock { target }) {
+        if (PropertyLock lock{target}) {
             if (lock->IsDefaultValue()) {
                 CopyToDefaultAndReset(p, *target);
             }
@@ -66,29 +67,13 @@ static bool SetValuesFromTemplate(const CORE_NS::IResource::ConstPtr& templ, con
     return false;
 }
 
-static CORE_NS::IResource::Ptr LoadTemplate(const CORE_NS::IResourceType::StorageInfo& s, CORE_NS::IResource::Ptr res)
+static void LoadTemplateDerived(const CORE_NS::IResourceType::StorageInfo& s,
+    const META_NS::IObjectResourceOptions& opts, CORE_NS::IResource::Ptr res)
 {
-    auto opts = META_NS::GetObjectRegistry()
-        .Create<META_NS::IObjectResourceOptions>(META_NS::ClassId::ObjectResourceOptions);
-    if (!opts) {
-        return res;
-    }
-    opts->Load(*s.options, s.self, s.context);
-    if (s.path.empty()) {
-        auto type = opts->GetProperty<META_NS::IObject::Ptr>("__anim");
-        if (!res && type) {
-            res = interface_pointer_cast<CORE_NS::IResource>(type->GetValue());
-        }
-        if (!res) {
-            return res;
-        }
-        auto i = interface_cast<META_NS::IDerivedFromTemplate>(res);
-        if (!i) {
-            return res;
-        }
-        auto base = opts->GetBaseResource();
+    if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
+        auto base = opts.GetBaseResource();
         if (base.IsValid()) {
-            auto r = s.self->GetResource(base, s.context);
+            auto r = s.self->GetResource({base, s.context});
             if (!r) {
                 CORE_LOG_W("Could not load base resource for %s", base.ToString().c_str());
             }
@@ -96,6 +81,23 @@ static CORE_NS::IResource::Ptr LoadTemplate(const CORE_NS::IResourceType::Storag
                 i->SetTemplateId(base);
             }
         }
+    }
+}
+
+static CORE_NS::IResource::Ptr LoadTemplate(const CORE_NS::IResourceType::StorageInfo& s, CORE_NS::IResource::Ptr res)
+{
+    auto opts = interface_cast<META_NS::IObjectResourceOptions>(s.options);
+    if (!opts) {
+        return res;
+    }
+    MemFile file(opts->GetOptionData());
+    opts->Load(file, s.self, s.context);
+    if (s.path.empty()) {
+        auto type = opts->GetProperty<META_NS::IObject::Ptr>("__anim");
+        if (!res && type) {
+            res = interface_pointer_cast<CORE_NS::IResource>(type->GetValue());
+        }
+        LoadTemplateDerived(s, *opts, res);
     }
     return res;
 }
@@ -123,27 +125,31 @@ CORE_NS::IResource::Ptr AnimationResourceType::LoadResource(const StorageInfo& s
 static void SaveTemplate(
     const CORE_NS::IResourceType::StorageInfo& s, const CORE_NS::IResource::ConstPtr& res, const ExportOptions& expOpts)
 {
-    if (auto opts = META_NS::GetObjectRegistry().Create<META_NS::IObjectResourceOptions>(
-            META_NS::ClassId::ObjectResourceOptions)) {
-        if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
-            auto resource = i->GetTemplateId();
-            if (resource.IsValid()) {
-                opts->SetBaseResource(resource);
-            }
-        }
+    auto opts = interface_pointer_cast<META_NS::IObjectResourceOptions>(s.options);
+    if (!opts || !res) {
+        return;
+    }
 
-        if (s.path.empty()) {
-            auto cp = interface_pointer_cast<META_NS::IObject>(res);
-            META_NS::IObject::Ptr p(cp, const_cast<META_NS::IObject*>(cp.get()));
-            opts->SetProperty("__anim", p);
+    if (auto i = interface_cast<META_NS::IDerivedFromTemplate>(res)) {
+        auto resource = i->GetTemplateId();
+        if (resource.IsValid()) {
+            opts->SetBaseResource(resource);
         }
+    }
 
-        // need to set the export options
-        if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
-            exporter->SetUserContext(interface_pointer_cast<IObject>(s.context));
-            exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({ 1, 0 }).SetType("ObjectResourceOptions"));
-            exporter->Export(*s.options, interface_pointer_cast<IObject>(opts), expOpts);
-        }
+    if (s.path.empty()) {
+        auto cp = interface_pointer_cast<META_NS::IObject>(res);
+        META_NS::IObject::Ptr p(cp, const_cast<META_NS::IObject*>(cp.get()));
+        opts->SetProperty("__anim", p);
+    }
+
+    // need to set the export options
+    if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
+        exporter->SetUserContext(interface_pointer_cast<IObject>(s.context));
+        exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({1, 0}).SetType("ObjectResourceOptions"));
+        MemFile file;
+        exporter->Export(file, interface_pointer_cast<IObject>(opts), expOpts);
+        opts->SetOptionData(file.Data());
     }
 }
 
@@ -165,7 +171,7 @@ bool AnimationResourceType::SaveResource(const CORE_NS::IResource::ConstPtr& p, 
         }
         if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
             exporter->SetUserContext(interface_pointer_cast<IObject>(s.context));
-            exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({ 1, 0 }).SetType("AnimationResource"));
+            exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({1, 0}).SetType("AnimationResource"));
             res = exporter->Export(*s.payload, interface_pointer_cast<IObject>(p), expOpts);
         }
     }

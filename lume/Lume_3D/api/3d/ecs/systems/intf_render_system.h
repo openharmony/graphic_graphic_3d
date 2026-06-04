@@ -32,7 +32,7 @@ CORE3D_BEGIN_NAMESPACE()
 /** IRender system */
 class IRenderSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "33ebc109-0687-48b4-8002-f129c1d800fc" };
+    static constexpr BASE_NS::Uid UID{"33ebc109-0687-48b4-8002-f129c1d800fc"};
     /** Rendering related data stores to feed data to renderer.
      */
     struct Properties {
@@ -48,7 +48,7 @@ public:
         BASE_NS::string dataStoreMaterial;
         /** Data store for morphing (passed to rendering) */
         BASE_NS::string dataStoreMorph;
-
+        BASE_NS::string dataStoreLightProbe;
         /** Data store prefix for other data stores in e.g. different plugins */
         BASE_NS::string dataStorePrefix;
     };
@@ -78,4 +78,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_IRENDER_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_IRENDER_SYSTEM_H

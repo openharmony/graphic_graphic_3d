@@ -21,18 +21,18 @@
 
 META_BEGIN_NAMESPACE()
 namespace Internal {
-template<typename Type>
+template <typename Type>
 struct EnumValue {
-    Type value {};
+    Type value{};
     META_NS::EnumValue info;
 };
-} // namespace Internal
+}  // namespace Internal
 
-template<typename, typename>
+template <typename, typename>
 struct MapAnyType;
-template<typename EnumType>
+template <typename EnumType>
 class Enum;
-template<typename EnumType>
+template <typename EnumType>
 class ArrayEnum;
 
 META_END_NAMESPACE()
@@ -58,11 +58,11 @@ META_END_NAMESPACE()
     }                                                                             \
     ;
 
-#define META_ENUM_VALUE(Value, Name, Desc) { Value, { Name, Desc } },
+#define META_ENUM_VALUE(Value, Name, Desc) {Value, {Name, Desc}},
 
 #define META_ENUM_TYPE(MyEnum)                                                  \
     META_TYPE(MyEnum)                                                           \
-    template<>                                                                  \
+    template <>                                                                 \
     struct ::META_NS::MapAnyType<MyEnum, ::META_NS::EnableSpecialisationType> { \
         using AnyType = ::META_NS::Enum<MyEnum##Metadata>;                      \
         using ArrayAnyType = ::META_NS::ArrayEnum<MyEnum##Metadata>;            \

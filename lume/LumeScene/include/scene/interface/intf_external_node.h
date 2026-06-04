@@ -19,6 +19,9 @@
 #include <scene/base/types.h>
 
 #include <core/ecs/entity.h>
+#include <core/resources/intf_resource.h>
+
+#include <meta/interface/resource/intf_resource_group_handle.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -28,14 +31,16 @@ SCENE_BEGIN_NAMESPACE()
 class IExternalNode : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IExternalNode, "33b69e97-4ffa-465d-8126-d7c54165aef6")
 public:
-    virtual CORE_NS::ResourceId GetResourceId() const = 0;
-    virtual void SetResourceId(CORE_NS::ResourceId id) = 0;
+    virtual CORE_NS::ResourceIdContext GetResourceId() const = 0;
+    virtual void SetResourceId(CORE_NS::ResourceIdContext id) = 0;
     virtual void SetAddedEntities(BASE_NS::vector<CORE_NS::Entity>) = 0;
     virtual BASE_NS::vector<CORE_NS::Entity> GetAddedEntities() const = 0;
     virtual void Activate() = 0;
     virtual void Deactivate() = 0;
-    virtual void SetSubresourceGroup(BASE_NS::string_view group) = 0;
-    virtual BASE_NS::string GetSubresourceGroup() const = 0;
+    virtual void SetSubresourceGroup(META_NS::IResourceGroupHandle::Ptr handle) = 0;
+    virtual META_NS::IResourceGroupHandle::Ptr GetSubresourceGroup() const = 0;
+    virtual void AddAssociatedResources(const BASE_NS::array_view<const CORE_NS::ResourceIdContext>) = 0;
+    virtual BASE_NS::vector<CORE_NS::ResourceIdContext> GetAssociatedResources() const = 0;
 };
 
 META_REGISTER_CLASS(ExternalNode, "b26e734e-c4ec-48bc-b845-d9feb6dd5de8", META_NS::ObjectCategoryBits::NO_CATEGORY)

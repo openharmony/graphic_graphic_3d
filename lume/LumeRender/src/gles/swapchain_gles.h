@@ -33,14 +33,14 @@ struct SwapchainCreateInfo;
 struct SwapchainImagesGLES {
     BASE_NS::vector<uint32_t> images;
 
-    uint32_t width { 0 };
-    uint32_t height { 0 };
+    uint32_t width{0};
+    uint32_t height{0};
 };
 
 struct SwapchainPlatformDataGL final {
-    uintptr_t surface; // currently EGLSurface (on GLES) or HDC (on GL/Windows)
+    uintptr_t surface;  // currently EGLSurface (on GLES) or HDC (on GL/Windows)
 #if RENDER_GL_FLIP_Y_SWAPCHAIN
-    BASE_NS::vector<uint32_t> fbos; // FBO for the swapchain.
+    BASE_NS::vector<uint32_t> fbos;  // FBO for the swapchain.
 #endif
     uint32_t swapchainImageIndex;
     SwapchainImagesGLES swapchainImages;
@@ -60,7 +60,7 @@ public:
     uint32_t GetFlags() const override;
     SurfaceTransformFlags GetSurfaceTransformFlags() const override
     {
-        return 0U; // nothing should be done
+        return 0U;  // nothing should be done
     }
     uint64_t GetSurfaceHandle() const override;
     bool IsValid() const override;
@@ -70,13 +70,13 @@ public:
 private:
     DeviceGLES& device_;
 
-    GpuImageDesc desc_ {};
-    GpuImageDesc descDepthBuffer_ {};
-    SwapchainPlatformDataGL plat_ {};
-    uint32_t flags_ { 0u };
-    bool ownsSurface_ { false };
-    bool valid_ { true };
+    GpuImageDesc desc_{};
+    GpuImageDesc descDepthBuffer_{};
+    SwapchainPlatformDataGL plat_{};
+    uint32_t flags_{0u};
+    bool ownsSurface_{false};
+    bool valid_{true};
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_SWAPCHAIN_GLES_H
+#endif  // GLES_SWAPCHAIN_GLES_H

@@ -24,7 +24,7 @@
 #include <base/math/vector.h>
 #include <base/namespace.h>
 using uint = uint32_t;
-using ivec4 = int32_t[4]; // Vector4
+using ivec4 = int32_t[4];  // Vector4
 using vec2 = BASE_NS::Math::Vec2;
 using vec3 = BASE_NS::Math::Vec3;
 using vec4 = BASE_NS::Math::Vec4;
@@ -102,9 +102,9 @@ void PreRotateSurface(inout vec2 clipXy)
 
 #else
 
-static constexpr uint32_t CORE_BACKEND_TYPE_SPEC_ID { 256U };
-static constexpr uint32_t CORE_BACKEND_TRANSFORM_OFFSET { 4U };
+static constexpr uint32_t CORE_BACKEND_TYPE_SPEC_ID{256U};
+static constexpr uint32_t CORE_BACKEND_TRANSFORM_OFFSET{4U};
 
 #endif
 
-#endif // API_RENDER_SHADERS_COMMON_CORE_COMPATIBILITY_COMMON_H
+#endif  // API_RENDER_SHADERS_COMMON_CORE_COMPATIBILITY_COMMON_H

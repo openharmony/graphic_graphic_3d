@@ -140,7 +140,7 @@ public:
     BASE_NS::string GetName() const override
     {
         if (auto cont = GetAttachmentContainer(false)) {
-            auto res = cont->FindAny({ "", TraversalType::NO_HIERARCHY, { IObjectName::UID }, false });
+            auto res = cont->FindAny({"", TraversalType::NO_HIERARCHY, {IObjectName::UID}, false});
             if (auto oname = interface_cast<IObjectName>(res)) {
                 return oname->GetName();
             }
@@ -148,7 +148,7 @@ public:
         return Super::GetName();
     }
 
-protected: // IAttach
+protected:  // IAttach
     bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) override
     {
         return interface_cast<IAttachmentContainer>(data_)->Attach(attachment, dataContext);

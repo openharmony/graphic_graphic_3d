@@ -45,7 +45,7 @@ public:
 class StartableObjectController : public IntroduceInterfaces<ObjectFwd, IStartableController, IObjectHierarchyObserver,
                                       IStartableObjectControllerInternal, ITickableController> {
     META_OBJECT(StartableObjectController, ClassId::StartableObjectController, IntroduceInterfaces)
-public: // ILifeCycle
+public:  // ILifeCycle
     bool Build(const IMetadata::Ptr& data) override;
     void Destroy() override;
 
@@ -63,7 +63,7 @@ public: // ILifeCycle
     META_IMPLEMENT_PROPERTY(META_NS::TimeSpan, TickInterval)
     META_IMPLEMENT_PROPERTY(META_NS::TraversalType, TickOrder)
 
-public: // IStartableController
+public:  // IStartableController
     bool StartAll(ControlBehavior behavior) override;
     bool StopAll(ControlBehavior behavior) override;
     BASE_NS::vector<IStartable::Ptr> GetAllStartables() const override;
@@ -72,13 +72,13 @@ public: // IStartableController
     bool SetStartableQueue(const META_NS::ITaskQueue::Ptr& startStartableQueue,
         const META_NS::ITaskQueue::Ptr& stopStartableQueue) override;
 
-public: // IObjectHierarchyObserver
+public:  // IObjectHierarchyObserver
     void SetTarget(const IObject::Ptr& root, HierarchyChangeModeValue mode) override;
     IObject::Ptr GetTarget() const override;
     BASE_NS::vector<IObject::Ptr> GetAllObserved() const override;
     META_FORWARD_EVENT(IOnHierarchyChanged, OnHierarchyChanged, observer_->EventOnHierarchyChanged)
 
-public: // ITickableController
+public:  // ITickableController
     BASE_NS::vector<ITickable::Ptr> GetTickables() const override;
     void TickAll(const TimeSpan& time) override;
     bool SetTickableQueueuId(const BASE_NS::Uid& queueId) override;
@@ -93,10 +93,10 @@ private:
     IObject::WeakPtr target_;
     IObjectHierarchyObserver::Ptr observer_;
 
-private: // IStartableObjectControllerInternal
+private:  // IStartableObjectControllerInternal
     void RunTasks(const ITaskQueue::Ptr& queue) override;
 
-private: // Task queue handling
+private:  // Task queue handling
     struct StartableOperation {
         enum Operation {
             /** Run StartHierarchy() for root_ */
@@ -118,26 +118,26 @@ private: // Task queue handling
     bool AddOperation(StartableOperation&& operation, const ITaskQueue::Ptr& queue);
     BASE_NS::unordered_map<ITaskQueue*, BASE_NS::vector<StartableOperation>> operations_;
     mutable std::shared_mutex mutex_;
-    std::size_t executingStart_ {};
+    std::size_t executingStart_{};
 
     META_NS::ITaskQueue::Ptr GetStartQueue() const;
     META_NS::ITaskQueue::Ptr GetStopQueue() const;
 
-private: // Tickables
+private:  // Tickables
     void InvalidateTickables();
     void UpdateTicker();
     mutable BASE_NS::vector<ITickable::WeakPtr> tickables_;
     mutable std::shared_mutex tickMutex_;
-    mutable bool tickablesValid_ { false };
-    TimeSpan lastTick_ { TimeSpan::Infinite() };
+    mutable bool tickablesValid_{false};
+    TimeSpan lastTick_{TimeSpan::Infinite()};
     IClock::Ptr clock_;
     BASE_NS::Uid tickQueueId_;
     ITaskQueue::Ptr tickerQueue_;
     ITaskQueue::Ptr defaultTickerQueue_;
     ITaskQueueTask::Ptr tickerTask_;
-    ITaskQueue::Token tickerToken_ {};
+    ITaskQueue::Token tickerToken_{};
 };
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_STARTABLE_OBJECT_CONTROLLER_H
+#endif  // META_SRC_STARTABLE_OBJECT_CONTROLLER_H

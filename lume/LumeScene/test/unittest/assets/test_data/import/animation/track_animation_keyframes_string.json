@@ -1,0 +1,9 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "stringKeyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": ["hello", "world"]
+	}
+}

@@ -64,22 +64,22 @@ public:
  */
 namespace DefaultEffects {
 /// @brief Bloom effect
-static constexpr META_NS::ObjectId BLOOM_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_BLOOM };
+static constexpr META_NS::ObjectId BLOOM_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_BLOOM};
 /// @brief Lens flare effect
-static constexpr META_NS::ObjectId LENS_FLARE_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_FLARE };
+static constexpr META_NS::ObjectId LENS_FLARE_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_FLARE};
 /// @brief Blur effect
-static constexpr META_NS::ObjectId BLUR_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_BLUR };
+static constexpr META_NS::ObjectId BLUR_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_BLUR};
 /// @brief Depth of field effect
-static constexpr META_NS::ObjectId DEPTH_OF_FIELD_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_DOF };
+static constexpr META_NS::ObjectId DEPTH_OF_FIELD_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_DOF};
 /// @brief FXAA effect
-static constexpr META_NS::ObjectId FXAA_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_FXAA };
+static constexpr META_NS::ObjectId FXAA_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_FXAA};
 /// @brief Motion blur effect
-static constexpr META_NS::ObjectId MOTION_BLUR_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_MOTION_BLUR };
+static constexpr META_NS::ObjectId MOTION_BLUR_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_MOTION_BLUR};
 /// @brief TAA effect
-static constexpr META_NS::ObjectId TAA_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_TAA };
+static constexpr META_NS::ObjectId TAA_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_TAA};
 /// @brief Upscale effect
-static constexpr META_NS::ObjectId UPSCALE_EFFECT_ID { RENDER_NS::UID_RENDER_POST_PROCESS_UPSCALE };
-} // namespace DefaultEffects
+static constexpr META_NS::ObjectId UPSCALE_EFFECT_ID{RENDER_NS::UID_RENDER_POST_PROCESS_UPSCALE};
+}  // namespace DefaultEffects
 
 /// A default class implementing IEffect.
 META_REGISTER_CLASS(Effect, "bdcf8bbd-df33-4ac1-8ae9-18e8ab18072c", META_NS::ObjectCategoryBits::NO_CATEGORY)
@@ -88,4 +88,4 @@ SCENE_END_NAMESPACE()
 
 META_INTERFACE_TYPE(SCENE_NS::IEffect)
 
-#endif // SCENE_INTERFACE_IEFFECT_H
+#endif  // SCENE_INTERFACE_IEFFECT_H

@@ -54,4 +54,4 @@ protected:
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_OS_IPLATFORM_H
+#endif  // API_CORE_OS_IPLATFORM_H

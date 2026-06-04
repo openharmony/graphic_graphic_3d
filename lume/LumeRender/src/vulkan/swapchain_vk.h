@@ -33,14 +33,15 @@ struct SwapchainImagesVk {
     BASE_NS::vector<VkImage> images;
     BASE_NS::vector<VkImageView> imageViews;
 
-    uint32_t width { 0 };
-    uint32_t height { 0 };
+    uint32_t width{0};
+    uint32_t height{0};
 
     BASE_NS::vector<VkSemaphore> semaphores;
+    BASE_NS::vector<VkSemaphore> presetSemaphores;
 };
 
 struct SwapchainPlatformDataVk final {
-    VkSwapchainKHR swapchain { VK_NULL_HANDLE };
+    VkSwapchainKHR swapchain{VK_NULL_HANDLE};
     SwapchainImagesVk swapchainImages;
 };
 
@@ -65,19 +66,19 @@ public:
 private:
     Device& device_;
 
-    VkSurfaceKHR surface_ {};
-    bool ownsSurface_ { false };
-    bool valid_ { true };
+    VkSurfaceKHR surface_{};
+    bool ownsSurface_{false};
+    bool valid_{true};
 
     GpuImageDesc desc_;
     GpuImageDesc descDepthBuffer_;
     SwapchainPlatformDataVk plat_;
-    uint32_t flags_ { 0u };
-    SurfaceTransformFlags surfaceTransformFlags_ { 0u };
+    uint32_t flags_{0u};
+    SurfaceTransformFlags surfaceTransformFlags_{0u};
 
     // mutable object for locked backend usage only
-    mutable uint32_t currSemaphoreIdx_ { 0U };
+    mutable uint32_t currSemaphoreIdx_{0U};
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_SWAPCHAIN_VK_H
+#endif  // VULKAN_SWAPCHAIN_VK_H

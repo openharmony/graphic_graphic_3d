@@ -23,7 +23,7 @@
 namespace OHOS::Render3D {
 class Vec3Proxy : public PropertyProxy<BASE_NS::Math::Vec3> {
 public:
-    explicit Vec3Proxy(const META_NS::Property<BASE_NS::Math::Vec3> &prop);
+    explicit Vec3Proxy(const META_NS::Property<BASE_NS::Math::Vec3>& prop);
     ~Vec3Proxy() override;
 
     float GetX() const;

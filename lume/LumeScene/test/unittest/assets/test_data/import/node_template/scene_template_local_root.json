@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "description": "scene instantiating a node template that uses /-anchored objectRef to reference a sibling inside the template",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "hostA",
+                    "source": { "type": "nodeTemplate", "url": "template_local_root.nodeTemplate" },
+                    "resourceGroup": "grpA"
+                }
+            ]
+        }
+    }
+}

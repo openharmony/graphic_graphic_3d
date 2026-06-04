@@ -56,7 +56,7 @@ RenderPassDesc::RenderArea GetImageRenderArea(
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle handle)
 {
     const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(handle);
-    return { 0U, 0U, desc.width, desc.height };
+    return {0U, 0U, desc.width, desc.height};
 }
 
 void FillTmpImageDesc(GpuImageDesc& desc)
@@ -72,7 +72,7 @@ void FillTmpImageDesc(GpuImageDesc& desc)
     desc.layerCount = 1U;
     desc.mipCount = 1U;
 }
-} // namespace
+}  // namespace
 
 void RenderNodePostProcessInterfaceUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -151,16 +151,16 @@ void RenderNodePostProcessInterfaceUtil::PreExecuteFrame()
             CORE_NS::SetPropertyValue(inputProperties, "input", biInput);
             // offer additional available inputs
             if (RenderHandleUtil::IsValid(builtInVariables_.depth)) {
-                CORE_NS::SetPropertyValue(inputProperties, "depth", BindableImage { builtInVariables_.depth });
+                CORE_NS::SetPropertyValue(inputProperties, "depth", BindableImage{builtInVariables_.depth});
             }
             if (RenderHandleUtil::IsValid(builtInVariables_.velocity)) {
-                CORE_NS::SetPropertyValue(inputProperties, "velocity", BindableImage { builtInVariables_.velocity });
+                CORE_NS::SetPropertyValue(inputProperties, "velocity", BindableImage{builtInVariables_.velocity});
             }
             if (RenderHandleUtil::IsValid(builtInVariables_.history)) {
-                CORE_NS::SetPropertyValue(inputProperties, "history", BindableImage { builtInVariables_.history });
+                CORE_NS::SetPropertyValue(inputProperties, "history", BindableImage{builtInVariables_.history});
             }
             if (RenderHandleUtil::IsValid(builtInVariables_.camera)) {
-                CORE_NS::SetPropertyValue(inputProperties, "camera", BindableBuffer { builtInVariables_.camera });
+                CORE_NS::SetPropertyValue(inputProperties, "camera", BindableBuffer{builtInVariables_.camera});
             }
 
             IPropertyHandle* outProperties = ppNode->GetRenderOutputProperties();
@@ -172,7 +172,7 @@ void RenderNodePostProcessInterfaceUtil::PreExecuteFrame()
                 CORE_NS::SetPropertyValue(outProperties, "output", biOutput);
             }
 
-            ppNode->SetRenderAreaRequest({ renderArea });
+            ppNode->SetRenderAreaRequest({renderArea});
             ppNode->PreExecuteFrame();
 
             if ((ppNode->GetExecuteFlags() == 0U)) {
@@ -281,7 +281,8 @@ void RenderNodePostProcessInterfaceUtil::ProcessPostProcessConfiguration()
 
     // if previous and current effects are the same no need to do anything.
     if ((allPostProcesses_.pipeline.postProcesses.size() == allPostProcesses_.prevPipeline.postProcesses.size()) &&
-        std::equal(allPostProcesses_.pipeline.postProcesses.cbegin(), allPostProcesses_.pipeline.postProcesses.cend(),
+        std::equal(allPostProcesses_.pipeline.postProcesses.cbegin(),
+            allPostProcesses_.pipeline.postProcesses.cend(),
             allPostProcesses_.prevPipeline.postProcesses.cbegin())) {
         return;
     }
@@ -316,17 +317,18 @@ void RenderNodePostProcessInterfaceUtil::ProcessPostProcessConfiguration()
             const auto index = size_t(pos - pp.prevPipeline.postProcesses.cbegin());
             *nodePos = BASE_NS::move(postProcessNodeInstances[index]);
         } else {
-            auto node = IRenderPostProcessNode::Ptr { ppRef.postProcess->GetInterface<IRenderPostProcessNode>() };
+            auto node = IRenderPostProcessNode::Ptr{ppRef.postProcess->GetInterface<IRenderPostProcessNode>()};
             if (!node) {
-                node = CreateInstance<IRenderPostProcessNode>(
+                node = RENDER_NS::CreateInstance<IRenderPostProcessNode>(
                     *renderClassFactory, ppRef.postProcess->GetRenderPostProcessNodeUid());
             }
             if (node) {
-                *nodePos = { ppRef.id, BASE_NS::move(node) };
-                pp.newPostProcesses = true; // flag for init and descriptor set management
+                *nodePos = {ppRef.id, BASE_NS::move(node)};
+                pp.newPostProcesses = true;  // flag for init and descriptor set management
             } else {
                 nodePos->ppNode.reset();
-                PLUGIN_LOG_ONCE_W("pp_node_not_found_" + to_string(ppRef.id), "Post process node not found (uid:%s)",
+                PLUGIN_LOG_ONCE_W("pp_node_not_found_" + to_string(ppRef.id),
+                    "Post process node not found (uid:%s)",
                     to_string(ppRef.postProcess->GetRenderPostProcessNodeUid()).c_str());
             }
         }
@@ -464,7 +466,7 @@ void RenderNodePostProcessInterfaceUtil::PrepareIntermediateTargets(RenderHandle
 
     const bool sizeChanged = (outputDesc.width != outputSize_.x) || (outputDesc.height != outputSize_.y);
     if (sizeChanged) {
-        outputSize_ = { Math::max(1U, outputDesc.width), Math::max(1U, outputDesc.height) };
+        outputSize_ = {Math::max(1U, outputDesc.width), Math::max(1U, outputDesc.height)};
     }
     if (sizeChanged || (!ti_.images[0U])) {
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -501,31 +503,4 @@ void RenderNodePostProcessInterfaceUtilImpl::SetInfo(const Info& info)
     rn_.SetInfo(info);
 }
 
-const IInterface* RenderNodePostProcessInterfaceUtilImpl::GetInterface(const Uid& uid) const
-{
-    if ((uid == IRenderNodePostProcessInterfaceUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-IInterface* RenderNodePostProcessInterfaceUtilImpl::GetInterface(const Uid& uid)
-{
-    if ((uid == IRenderNodePostProcessInterfaceUtil::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void RenderNodePostProcessInterfaceUtilImpl::Ref()
-{
-    refCount_++;
-}
-
-void RenderNodePostProcessInterfaceUtilImpl::Unref()
-{
-    if (--refCount_ == 0) {
-        delete this;
-    }
-}
 RENDER_END_NAMESPACE()

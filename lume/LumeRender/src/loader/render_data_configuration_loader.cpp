@@ -119,7 +119,8 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
     SafeGetJsonValue(jsonData, "version", err, version);
     if (version < 1.0f) {
         PLUGIN_LOG_W("version number should be 1.0 or higher for post process configuration json (version=%f name=%s)",
-            version, result.name.c_str());
+            version,
+            result.name.c_str());
     }
     if (err.empty()) {
         if (const auto iter = jsonData.find("postProcessConfiguration"); iter) {
@@ -162,7 +163,9 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadPostProcess(const json::va
             }
             if (const auto cIter = iter->find("colorConversionConfiguration"); cIter) {
                 SafeGetJsonBitfield<ColorConversionConfiguration::ConversionFunctionType>(*cIter,
-                    "conversionFunctionType", err, ppConfig.colorConversionConfiguration.conversionFunctionType);
+                    "conversionFunctionType",
+                    err,
+                    ppConfig.colorConversionConfiguration.conversionFunctionType);
             }
             if (const auto cIter = iter->find("FxaaConfiguration"); cIter) {
                 SafeGetJsonEnum(*cIter, "sharpness", err, ppConfig.fxaaConfiguration.sharpness);
@@ -189,7 +192,7 @@ IRenderDataConfigurationLoader::LoadedPostProcess LoadFromNullTerminated(const s
 
     return result;
 }
-} // namespace
+}  // namespace
 
 IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader::LoadPostProcess(
     const string_view jsonString)
@@ -253,7 +256,9 @@ IInterface* RenderDataConfigurationLoaderImpl::GetInterface(const BASE_NS::Uid& 
     return nullptr;
 }
 
-void RenderDataConfigurationLoaderImpl::Ref() {}
+void RenderDataConfigurationLoaderImpl::Ref()
+{}
 
-void RenderDataConfigurationLoaderImpl::Unref() {}
+void RenderDataConfigurationLoaderImpl::Unref()
+{}
 RENDER_END_NAMESPACE()

@@ -59,7 +59,7 @@ struct ResourcesView;
 struct Slice;
 namespace Gles {
 struct PushConstantReflection;
-} // namespace Gles
+}  // namespace Gles
 /**
 RenderBackGLES.
 OpenGLES 3.2+ render backend.
@@ -153,7 +153,7 @@ private:
         &RenderBackendGLES::RenderCommandBeginDebugMarker,
         &RenderBackendGLES::RenderCommandEndDebugMarker,
     };
-    void PrimeCache(const GraphicsState& graphicsState); // Forces the graphics state..
+    void PrimeCache(const GraphicsState& graphicsState);  // Forces the graphics state..
     void PrimeDepthStencilState(const GraphicsState& graphicsState);
     void PrimeBlendState(const GraphicsState& graphicsState);
     void DoGraphicsState(const GraphicsState& graphicsState);
@@ -172,10 +172,10 @@ private:
     void DoSubPass(uint32_t subPass);
 
     struct Managers {
-        NodeContextPsoManager* psoMgr { nullptr };
-        NodeContextPoolManager* poolMgr { nullptr };
-        NodeContextDescriptorSetManager* descriptorSetMgr { nullptr };
-        const RenderBarrierList* rbList { nullptr };
+        NodeContextPsoManager* psoMgr{nullptr};
+        NodeContextPoolManager* poolMgr{nullptr};
+        NodeContextDescriptorSetManager* descriptorSetMgr{nullptr};
+        const RenderBarrierList* rbList{nullptr};
     };
     Managers managers_;
 
@@ -183,7 +183,7 @@ private:
     GpuResourceManager& gpuResourceMgr_;
 
     struct PresentationInfo {
-        uint32_t swapchainImageIndex { ~0u };
+        uint32_t swapchainImageIndex{~0u};
     };
     PresentationInfo presentationInfo_;
 
@@ -229,31 +229,31 @@ private:
     };
     CommonBackendCpuTimers commonCpuTimers_;
 
-    std::atomic_int64_t fullGpuCounter_ { 0 };
+    std::atomic_int64_t fullGpuCounter_{0};
 #endif
     PolygonMode polygonMode_ = PolygonMode::CORE_POLYGON_MODE_FILL;
     PrimitiveTopology topology_ = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     struct ProgramState {
-        bool setPushConstants { false };
+        bool setPushConstants{false};
         struct RenderCommandPushConstant pushConstants {};
     } boundProgram_;
 
     struct {
-        uint32_t id { 0 };
-        uintptr_t offset { 0 };
-        IndexType type { CORE_INDEX_TYPE_UINT32 };
+        uint32_t id{0};
+        uintptr_t offset{0};
+        IndexType type{CORE_INDEX_TYPE_UINT32};
     } boundIndexBuffer_;
 
     void ResetState();
     void ResetBindings();
 
-    uint16_t firstSet_ { 0U };
-    uint16_t setCount_ { 0U };
-    RenderHandle descriptorSetHandles_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { {}, {}, {}, {} };
+    uint16_t firstSet_{0U};
+    uint16_t setCount_{0U};
+    RenderHandle descriptorSetHandles_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{{}, {}, {}, {}};
     struct DescriptorSetDynamicOffsets {
-        uint32_t dynamicOffsetCount { 0u };
-        uint32_t dynamicOffsets[PipelineLayoutConstants::MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT] {};
+        uint32_t dynamicOffsetCount{0u};
+        uint32_t dynamicOffsets[PipelineLayoutConstants::MAX_DYNAMIC_DESCRIPTOR_OFFSET_COUNT]{};
     };
     DescriptorSetDynamicOffsets descriptorSetDynamicOffsets_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
     BASE_NS::vector<uint32_t> dynamicOffsetIndices_;
@@ -270,6 +270,7 @@ private:
     int32_t InvalidateDepthStencil(BASE_NS::array_view<uint32_t> invalidateAttachment, const RenderPassDesc& rpd,
         const RenderPassSubpassDesc& currentSubPass);
     uint32_t ResolveMSAA(const RenderPassDesc& rpd, const RenderPassSubpassDesc& currentSubPass);
+    void ResolveMSAAMultiColor(const RenderPassDesc& rpd, const RenderPassSubpassDesc& currentSubPass);
     void UpdateBlendState(const GraphicsState& graphicsState);
     void UpdateDepthState(const GraphicsState& graphicsState);
     void UpdateStencilState(const GraphicsState& graphicsState);
@@ -308,7 +309,7 @@ private:
     ScissorDesc scissorBox_;
     ViewportDesc viewport_;
 
-    static constexpr uint32_t MAX_VERTEXINPUT_BINDINGS { 16 };
+    static constexpr uint32_t MAX_VERTEXINPUT_BINDINGS{16};
     uint32_t vertexAttribBinds_ = 0;
     struct {
         uint32_t id = 0;
@@ -316,36 +317,36 @@ private:
     } vertexAttribBindSlots_[MAX_VERTEXINPUT_BINDINGS];
 
     // attachments are cleared on first use, and marked as cleared here.
-    bool attachmentCleared_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = { false };
+    bool attachmentCleared_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {false};
     // subpass index where attachment is first used. (just for book keeping for now. clearing need is handled by
     // "attachmentCleared" )
-    uint32_t attachmentFirstUse_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = { 0xFFFFFFFF };
+    uint32_t attachmentFirstUse_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {0xFFFFFFFF};
     // subpass index where attachment is last used. (for invalidation purposes)
-    uint32_t attachmentLastUse_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = { 0 };
+    uint32_t attachmentLastUse_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {0};
 
     // will the attachment be resolved to backbuffer.. (if so flip coordinates)
-    bool resolveToBackbuffer_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = { false };
-    const GpuImageGLES* attachmentImage_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] { nullptr };
+    bool resolveToBackbuffer_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT] = {false};
+    const GpuImageGLES* attachmentImage_[PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT]{nullptr};
     bool multisampledRenderToTexture_ = false;
 
-    uint32_t blitImageSourceFbo_ { 0 };
-    uint32_t blitImageDestinationFbo_ { 0 };
-    uint32_t inRenderpass_ { 0 };
-    bool renderingToDefaultFbo_ { false };
-    bool scissorEnabled_ { false };
-    bool viewportPending_ { false };
-    bool commandListValid_ { false };
-    bool descriptorUpdate_ { false };
-    bool vertexBufferUpdate_ { false };
-    bool indexBufferUpdate_ { false };
+    uint32_t blitImageSourceFbo_{0};
+    uint32_t blitImageDestinationFbo_{0};
+    uint32_t inRenderpass_{0};
+    bool renderingToDefaultFbo_{false};
+    bool scissorEnabled_{false};
+    bool viewportPending_{false};
+    bool commandListValid_{false};
+    bool descriptorUpdate_{false};
+    bool vertexBufferUpdate_{false};
+    bool indexBufferUpdate_{false};
 
     void BufferToImageCopy(const struct RenderCommandCopyBufferImage& renderCmd);
     void ImageToBufferCopy(const struct RenderCommandCopyBufferImage& renderCmd);
 #if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)
-    bool oesBindingsChanged_ { false };
+    bool oesBindingsChanged_{false};
     BASE_NS::vector<OES_Bind> oesBinds_;
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_RENDER_BACKEND_GLES_H
+#endif  // GLES_RENDER_BACKEND_GLES_H

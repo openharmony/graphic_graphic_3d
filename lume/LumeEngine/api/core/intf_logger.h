@@ -52,7 +52,7 @@ CORE_BEGIN_NAMESPACE()
 /** Logger */
 class ILogger : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "d9c55b07-441c-4059-909b-88ebc3c07b1e" };
+    static constexpr auto UID = BASE_NS::Uid{"d9c55b07-441c-4059-909b-88ebc3c07b1e"};
 
     /** Logging level */
     enum class LogLevel {
@@ -142,4 +142,4 @@ inline constexpr BASE_NS::string_view GetName(const ILogger*)
 
 /** @} */
 CORE_END_NAMESPACE()
-#endif // API_CORE_ILOGGER_H
+#endif  // API_CORE_ILOGGER_H

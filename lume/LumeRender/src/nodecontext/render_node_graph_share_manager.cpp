@@ -28,9 +28,9 @@ using namespace BASE_NS;
 
 namespace {
 #if (RENDER_VALIDATION_ENABLED == 1)
-constexpr size_t A_BIG_TEST_NUMBER { 128U };
+constexpr size_t A_BIG_TEST_NUMBER{128U};
 #endif
-} // namespace
+}  // namespace
 
 RENDER_BEGIN_NAMESPACE()
 void RenderNodeGraphGlobalShareDataManager::BeginFrame()
@@ -51,7 +51,7 @@ void RenderNodeGraphGlobalShareDataManager::SetGlobalRenderNodeResources(
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphGlobalShareDataManager::GetGlobalRenderNodeResources(const string_view nodeName) const
+    RenderNodeGraphGlobalShareDataManager::GetGlobalRenderNodeResources(const string_view nodeName) const
 {
     if (auto iter = renderNodes_.find(nodeName); iter != renderNodes_.cend()) {
         return iter->second.resources;
@@ -88,10 +88,10 @@ void RenderNodeGraphShareDataManager::BeginFrame(RenderNodeGraphGlobalShareDataM
 #endif
     const uint32_t outputCount = static_cast<uint32_t>(Math::max(rngOutputResources_.size(), outputs.size()));
     inOut_ = {};
-    inOut_.inputView = { inOut_.inputs, inputs.size() };
-    inOut_.outputView = { inOut_.outputs, outputCount };
-    inOut_.namedInputView = { inOut_.namedInputs, inputs.size() };
-    inOut_.namedOutputView = { inOut_.namedOutputs, outputCount };
+    inOut_.inputView = {inOut_.inputs, inputs.size()};
+    inOut_.outputView = {inOut_.outputs, outputCount};
+    inOut_.namedInputView = {inOut_.namedInputs, inputs.size()};
+    inOut_.namedOutputView = {inOut_.namedOutputs, outputCount};
     for (size_t idx = 0; idx < inOut_.inputView.size(); ++idx) {
         inOut_.inputView[idx] = inputs[idx].handle;
         inOut_.namedInputView[idx] = inputs[idx];
@@ -105,8 +105,8 @@ void RenderNodeGraphShareDataManager::BeginFrame(RenderNodeGraphGlobalShareDataM
             inOut_.outputView[idx] = {};
             inOut_.namedOutputView[idx] =
                 (idx < rngOutputResources_.size())
-                    ? IRenderNodeGraphShareManager::NamedResource { rngOutputResources_[idx].name, {} }
-                    : IRenderNodeGraphShareManager::NamedResource {};
+                    ? IRenderNodeGraphShareManager::NamedResource{rngOutputResources_[idx].name, {}}
+                    : IRenderNodeGraphShareManager::NamedResource{};
         }
     }
     // NOTE: output map is not cleared
@@ -132,28 +132,30 @@ void RenderNodeGraphShareDataManager::RegisterRenderNodeOutput(
         PLUGIN_LOG_ONCE_W(
             "RegisterRenderNodeOutput_val", "RENDER_VALIDATION: outputs cannot be registered in ExecuteFrame()");
 #endif
-        return; // early out
+        return;  // early out
     }
 
     PLUGIN_ASSERT(renderNodeIdx < static_cast<uint32_t>(renderNodeResources_.size()));
     auto& rnRef = renderNodeResources_[renderNodeIdx];
     if (rnRef.outputs.size() >= MAX_RENDER_NODE_GRAPH_RES_COUNT) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_ONCE_W("RegisterRenderNodeOutput_valcount", "RENDER_VALIDATION: only %u outputs supported",
+        PLUGIN_LOG_ONCE_W("RegisterRenderNodeOutput_valcount",
+            "RENDER_VALIDATION: only %u outputs supported",
             MAX_RENDER_NODE_GRAPH_RES_COUNT);
 #endif
-        return; // early out
+        return;  // early out
     }
 
     if (RenderHandleUtil::IsValid(handle)) {
         // check if render node output is used as render graph output as well
         RegisterAsRenderNodeGraphOutput(renderNodeIdx, name, handle);
-        rnRef.outputs.push_back(IRenderNodeGraphShareManager::NamedResource { name, handle });
+        rnRef.outputs.push_back(IRenderNodeGraphShareManager::NamedResource{name, handle});
     } else {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_ONCE_W(string(rnRef.name + name) + string("_invha"),
             "RENDER_VALIDATION: invalid handle registered as render node output (name: %s) (render node name: %s)",
-            name.data(), rnRef.name.data());
+            name.data(),
+            rnRef.name.data());
 #endif
     }
 }
@@ -208,7 +210,7 @@ array_view<const RenderHandle> RenderNodeGraphShareDataManager::GetRenderNodeGra
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareDataManager::GetNamedRenderNodeGraphInputs() const
+    RenderNodeGraphShareDataManager::GetNamedRenderNodeGraphInputs() const
 {
     return inOut_.namedInputView;
 }
@@ -219,7 +221,7 @@ array_view<const RenderHandle> RenderNodeGraphShareDataManager::GetRenderNodeGra
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareDataManager::GetNamedRenderNodeGraphOutputs() const
+    RenderNodeGraphShareDataManager::GetNamedRenderNodeGraphOutputs() const
 {
     return inOut_.namedOutputView;
 }
@@ -260,19 +262,19 @@ void RenderNodeGraphShareDataManager::RegisterGlobalRenderNodeOutput(
         PLUGIN_LOG_ONCE_W(
             "RegisterGlobalRenderNodeOutput_val", "RENDER_VALIDATION: outputs cannot be registered in ExecuteFrame()");
 #endif
-        return; // early out
+        return;  // early out
     }
 
     if (rngGlobalShareDataMgr_ && (renderNodeIdx < static_cast<uint32_t>(renderNodeResources_.size()))) {
-        const IRenderNodeGraphShareManager::NamedResource namedResource { name, handle };
+        const IRenderNodeGraphShareManager::NamedResource namedResource{name, handle};
         // NOTE: global unique name
         rngGlobalShareDataMgr_->SetGlobalRenderNodeResources(
-            renderNodeResources_[renderNodeIdx].globalUniqueName, { &namedResource, 1U });
+            renderNodeResources_[renderNodeIdx].globalUniqueName, {&namedResource, 1U});
     }
 }
 
 BASE_NS::array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareDataManager::GetGlobalRenderNodeResources(const BASE_NS::string_view nodeName) const
+    RenderNodeGraphShareDataManager::GetGlobalRenderNodeResources(const BASE_NS::string_view nodeName) const
 {
     if (rngGlobalShareDataMgr_) {
         return rngGlobalShareDataMgr_->GetGlobalRenderNodeResources(nodeName);
@@ -282,7 +284,7 @@ RenderNodeGraphShareDataManager::GetGlobalRenderNodeResources(const BASE_NS::str
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareDataManager::GetNamedPrevRenderNodeGraphOutputs() const
+    RenderNodeGraphShareDataManager::GetNamedPrevRenderNodeGraphOutputs() const
 {
     if (prevRngShareDataMgr_) {
         return prevRngShareDataMgr_->GetNamedRenderNodeGraphOutputs();
@@ -315,7 +317,7 @@ array_view<const RenderHandle> RenderNodeGraphShareManager::GetRenderNodeGraphIn
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareManager::GetNamedRenderNodeGraphInputs() const
+    RenderNodeGraphShareManager::GetNamedRenderNodeGraphInputs() const
 {
     return renderNodeGraphShareDataMgr_.GetNamedRenderNodeGraphInputs();
 }
@@ -326,7 +328,7 @@ array_view<const RenderHandle> RenderNodeGraphShareManager::GetRenderNodeGraphOu
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareManager::GetNamedRenderNodeGraphOutputs() const
+    RenderNodeGraphShareManager::GetNamedRenderNodeGraphOutputs() const
 {
     return renderNodeGraphShareDataMgr_.GetNamedRenderNodeGraphOutputs();
 }
@@ -334,13 +336,13 @@ RenderNodeGraphShareManager::GetNamedRenderNodeGraphOutputs() const
 RenderHandle RenderNodeGraphShareManager::GetRenderNodeGraphInput(const uint32_t index) const
 {
     const auto& ref = renderNodeGraphShareDataMgr_.GetRenderNodeGraphInputs();
-    return (index < ref.size()) ? ref[index] : RenderHandle {};
+    return (index < ref.size()) ? ref[index] : RenderHandle{};
 }
 
 RenderHandle RenderNodeGraphShareManager::GetRenderNodeGraphOutput(const uint32_t index) const
 {
     const auto& ref = renderNodeGraphShareDataMgr_.GetRenderNodeGraphOutputs();
-    return (index < ref.size()) ? ref[index] : RenderHandle {};
+    return (index < ref.size()) ? ref[index] : RenderHandle{};
 }
 
 array_view<const RenderHandle> RenderNodeGraphShareManager::GetPrevRenderNodeGraphOutputs() const
@@ -349,7 +351,7 @@ array_view<const RenderHandle> RenderNodeGraphShareManager::GetPrevRenderNodeGra
 }
 
 array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutputs() const
+    RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutputs() const
 {
     return renderNodeGraphShareDataMgr_.GetNamedPrevRenderNodeGraphOutputs();
 }
@@ -357,7 +359,7 @@ RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutputs() const
 RenderHandle RenderNodeGraphShareManager::GetPrevRenderNodeGraphOutput(const uint32_t index) const
 {
     const auto& ref = renderNodeGraphShareDataMgr_.GetPrevRenderNodeGraphOutputs();
-    return (index < ref.size()) ? ref[index] : RenderHandle {};
+    return (index < ref.size()) ? ref[index] : RenderHandle{};
 }
 
 RenderHandle RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutput(const string_view resourceName) const
@@ -368,7 +370,7 @@ RenderHandle RenderNodeGraphShareManager::GetNamedPrevRenderNodeGraphOutput(cons
             return resRef.handle;
         }
     }
-    return RenderHandle {};
+    return RenderHandle{};
 }
 
 void RenderNodeGraphShareManager::RegisterRenderNodeOutputs(array_view<const RenderHandle> outputs)
@@ -376,7 +378,8 @@ void RenderNodeGraphShareManager::RegisterRenderNodeOutputs(array_view<const Ren
     if (outputs.size() > RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT) {
 #if (RENDER_VALIDATION_ENABLED == 1)
         PLUGIN_LOG_W("RENDER_VALIDATION: render node tries to register %u outputs (max count: %u)",
-            static_cast<uint32_t>(outputs.size()), RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT);
+            static_cast<uint32_t>(outputs.size()),
+            RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT);
 #endif
         outputs = array_view(outputs.data(), RenderNodeGraphShareDataManager::MAX_RENDER_NODE_GRAPH_RES_COUNT);
     }
@@ -395,7 +398,7 @@ RenderHandle RenderNodeGraphShareManager::GetRegisteredRenderNodeOutput(
 {
     const uint32_t rnIdx = renderNodeGraphShareDataMgr_.GetRenderNodeIndex(renderNodeName);
     const auto& ref = renderNodeGraphShareDataMgr_.GetRenderNodeOutputs(rnIdx);
-    return (index < ref.size()) ? ref[index].handle : RenderHandle {};
+    return (index < ref.size()) ? ref[index].handle : RenderHandle{};
 }
 
 RenderHandle RenderNodeGraphShareManager::GetRegisteredRenderNodeOutput(
@@ -409,14 +412,14 @@ RenderHandle RenderNodeGraphShareManager::GetRegisteredRenderNodeOutput(
             return r.handle;
         }
     }
-    return RenderHandle {};
+    return RenderHandle{};
 }
 
 RenderHandle RenderNodeGraphShareManager::GetRegisteredPrevRenderNodeOutput(const uint32_t index) const
 {
     const uint32_t rnIdx = renderNodeIdx_ - 1u;
     const auto& ref = renderNodeGraphShareDataMgr_.GetRenderNodeOutputs(rnIdx);
-    return (index < ref.size()) ? ref[index].handle : RenderHandle {};
+    return (index < ref.size()) ? ref[index].handle : RenderHandle{};
 }
 
 void RenderNodeGraphShareManager::RegisterGlobalRenderNodeOutput(
@@ -426,7 +429,7 @@ void RenderNodeGraphShareManager::RegisterGlobalRenderNodeOutput(
 }
 
 BASE_NS::array_view<const IRenderNodeGraphShareManager::NamedResource>
-RenderNodeGraphShareManager::GetRegisteredGlobalRenderNodeOutputs(const BASE_NS::string_view nodeName) const
+    RenderNodeGraphShareManager::GetRegisteredGlobalRenderNodeOutputs(const BASE_NS::string_view nodeName) const
 {
     return renderNodeGraphShareDataMgr_.GetGlobalRenderNodeResources(nodeName);
 }
@@ -447,7 +450,9 @@ CORE_NS::IInterface* RenderNodeGraphShareManager::GetInterface(const BASE_NS::Ui
     return nullptr;
 }
 
-void RenderNodeGraphShareManager::Ref() {}
+void RenderNodeGraphShareManager::Ref()
+{}
 
-void RenderNodeGraphShareManager::Unref() {}
+void RenderNodeGraphShareManager::Unref()
+{}
 RENDER_END_NAMESPACE()

@@ -48,26 +48,27 @@ struct RenderNodeCameraWeather::Settings {
 
 namespace {
 
-constexpr uint32_t MAX_MIP_COUNT { 16U };
+constexpr uint32_t MAX_MIP_COUNT{16U};
 
-constexpr Math::UVec2 TRANSMITTACE_RESOLUTION { 256U, 64U };
-constexpr Math::UVec2 MULTIPLE_SCATTERING_RESOLUTION { 32U, 32U };
-constexpr Math::UVec2 AERIAL_PERSPECTIVE_RESOLUTION { 200U * 8, 150U * 4 }; // 32 depth slices 2d atlas
-constexpr Math::UVec2 SKY_VIEW_RESOLUTION { 256U, 64U };
-constexpr Math::UVec2 CUBEMAP_RESOLUTION { 256U, 256U };
+constexpr Math::UVec2 TRANSMITTACE_RESOLUTION{256U, 64U};
+constexpr Math::UVec2 MULTIPLE_SCATTERING_RESOLUTION{32U, 32U};
+constexpr Math::UVec2 AERIAL_PERSPECTIVE_RESOLUTION{200U * 8, 150U * 4};  // 32 depth slices 2d atlas
+constexpr Math::UVec2 SKY_VIEW_RESOLUTION{256U, 64U};
+constexpr Math::UVec2 CUBEMAP_RESOLUTION{256U, 256U};
 
-constexpr ImageResourceBarrier SRC_UNDEFINED { 0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED };
-constexpr ImageResourceBarrier GENERAL { CORE_ACCESS_SHADER_WRITE_BIT, CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    CORE_IMAGE_LAYOUT_GENERAL };
-constexpr ImageResourceBarrier COMPUTE_READ { CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-constexpr ImageResourceBarrier FINAL_DST { CORE_ACCESS_SHADER_READ_BIT,
+constexpr ImageResourceBarrier SRC_UNDEFINED{0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED};
+constexpr ImageResourceBarrier GENERAL{
+    CORE_ACCESS_SHADER_WRITE_BIT, CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT, CORE_IMAGE_LAYOUT_GENERAL};
+constexpr ImageResourceBarrier COMPUTE_READ{
+    CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT, CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+constexpr ImageResourceBarrier FINAL_DST{CORE_ACCESS_SHADER_READ_BIT,
     CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 
-constexpr GpuBufferDesc UBO_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc UBO_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
 
 RenderHandleReference CreateGpuBuffers(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
@@ -82,37 +83,40 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
     const RenderNodeCameraWeather::AerialPerspectiveParams& shaderParameters)
 {
     if (void* data = gpuResourceMgr.MapBuffer(handle); data) {
-        CloneData(data, sizeof(RenderNodeCameraWeather::AerialPerspectiveParams), &shaderParameters,
+        CloneData(data,
+            sizeof(RenderNodeCameraWeather::AerialPerspectiveParams),
+            &shaderParameters,
             sizeof(RenderNodeCameraWeather::AerialPerspectiveParams));
         gpuResourceMgr.UnmapBuffer(handle);
     }
 }
 
-template<typename T>
+template <typename T>
 RenderHandleReference CreateCloudDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {
     PLUGIN_STATIC_ASSERT(sizeof(T) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, sizeof(T) });
+    return gpuResourceMgr.Create(handle,
+        GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(T)});
 }
 
-} // namespace
+}  // namespace
 
 void RenderNodeCameraWeather::UpdateAerialPerspectiveParams(const Math::Mat4X4& viewProj)
 {
     const Math::Mat4X4 invViewProj = Math::Inverse(viewProj);
 
-    const Math::Vec4 A0 = invViewProj * Math::Vec4(-1.0f, -1.0f, 0.1f, 1.0f); // Top-left
+    const Math::Vec4 A0 = invViewProj * Math::Vec4(-1.0f, -1.0f, 0.1f, 1.0f);  // Top-left
     const Math::Vec4 A1 = invViewProj * Math::Vec4(-1.0f, -1.0f, 0.9f, 1.0f);
-    const Math::Vec4 B0 = invViewProj * Math::Vec4(1.0f, -1.0f, 0.1f, 1.0f); // Top-right
+    const Math::Vec4 B0 = invViewProj * Math::Vec4(1.0f, -1.0f, 0.1f, 1.0f);  // Top-right
     const Math::Vec4 B1 = invViewProj * Math::Vec4(1.0f, -1.0f, 0.9f, 1.0f);
 
-    const Math::Vec4 C0 = invViewProj * Math::Vec4(-1.0f, 1.0f, 0.1f, 1.0f); // Bottom-left
+    const Math::Vec4 C0 = invViewProj * Math::Vec4(-1.0f, 1.0f, 0.1f, 1.0f);  // Bottom-left
     const Math::Vec4 C1 = invViewProj * Math::Vec4(-1.0f, 1.0f, 0.9f, 1.0f);
-    const Math::Vec4 D0 = invViewProj * Math::Vec4(1.0f, 1.0f, 0.1f, 1.0f); // Bottom-right
+    const Math::Vec4 D0 = invViewProj * Math::Vec4(1.0f, 1.0f, 0.1f, 1.0f);  // Bottom-right
     const Math::Vec4 D1 = invViewProj * Math::Vec4(1.0f, 1.0f, 0.9f, 1.0f);
 
     aerialPerspectiveParams_.frustumA =
@@ -137,25 +141,45 @@ void RenderNodeCameraWeather::UpdateAerialPerspectiveParams(const Math::Mat4X4& 
 
 bool RenderNodeCameraWeather::IsAtmosphericConfigChanged()
 {
+    const float skyExposure =
+        Math::max(0.0f, settings_.skyViewBrightness * currentScene_.camData.camera.environment.envMapFactor.w);
     bool result = false;
     result |= atmosphericConfigPrev_.rayleighScatteringBase != settings_.rayleighScatteringBase;
     result |= atmosphericConfigPrev_.ozoneAbsorptionBase != settings_.ozoneAbsorptionBase;
     result |= atmosphericConfigPrev_.mieAbsorptionBase != settings_.mieAbsorptionBase;
     result |= atmosphericConfigPrev_.mieScatteringBase != settings_.mieScatteringBase;
     result |= atmosphericConfigPrev_.groundColor != settings_.groundColor;
-    result |= atmosphericConfigPrev_.skyViewBrightness != settings_.skyViewBrightness;
+    result |= atmosphericConfigPrev_.skyViewBrightness != skyExposure;
 
     return result;
 }
 
 void RenderNodeCameraWeather::UpdateAtmosphericConfig()
 {
+    const float skyExposure =
+        Math::max(0.0f, settings_.skyViewBrightness * currentScene_.camData.camera.environment.envMapFactor.w);
     atmosphericConfigPrev_.rayleighScatteringBase = settings_.rayleighScatteringBase;
     atmosphericConfigPrev_.ozoneAbsorptionBase = settings_.ozoneAbsorptionBase;
     atmosphericConfigPrev_.mieAbsorptionBase = settings_.mieAbsorptionBase;
     atmosphericConfigPrev_.mieScatteringBase = settings_.mieScatteringBase;
     atmosphericConfigPrev_.groundColor = settings_.groundColor;
-    atmosphericConfigPrev_.skyViewBrightness = settings_.skyViewBrightness;
+    atmosphericConfigPrev_.skyViewBrightness = skyExposure;
+}
+
+bool RenderNodeCameraWeather::IsSkyAppearanceConfigChanged()
+{
+    bool result = false;
+    result |= skyAppearanceConfigPrev_.skySunSize != settings_.skySunSize;
+    result |= skyAppearanceConfigPrev_.skySunTint != settings_.skySunTint;
+    result |= skyAppearanceConfigPrev_.skySunOpacity != settings_.skySunOpacity;
+    return result;
+}
+
+void RenderNodeCameraWeather::UpdateSkyAppearanceConfig()
+{
+    skyAppearanceConfigPrev_.skySunSize = settings_.skySunSize;
+    skyAppearanceConfigPrev_.skySunTint = settings_.skySunTint;
+    skyAppearanceConfigPrev_.skySunOpacity = settings_.skySunOpacity;
 }
 
 void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
@@ -179,7 +203,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     if (renderNodeSceneUtil_) {
         stores_ = renderNodeSceneUtil_->GetSceneRenderDataStores(
             renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
-        dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::typeName);
+        dsWeatherName_ = renderNodeSceneUtil_->GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
         GetSceneUniformBuffers(stores_.dataStoreNameScene);
 
@@ -247,14 +271,21 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
             psoMgr.GetComputePsoHandle(cloudWeatherGenShader_, skyPipelineLayouts_.cloudWeatherGen, {});
     }
 
-    GpuImageDesc descLut { ImageType::CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
-        Format::BASE_FORMAT_B10G11R11_UFLOAT_PACK32, ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
+    GpuImageDesc descLut{ImageType::CORE_IMAGE_TYPE_2D,
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
+        Format::BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,
         ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_STORAGE_BIT,
         MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        0,                                                                        // ImageCreateFlags
-        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, // EngineImageCreationFlags
-        TRANSMITTACE_RESOLUTION.x, TRANSMITTACE_RESOLUTION.y, 1U, 1U, 1U, SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
-        {} };
+        0,                                                                         // ImageCreateFlags
+        EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,  // EngineImageCreationFlags
+        TRANSMITTACE_RESOLUTION.x,
+        TRANSMITTACE_RESOLUTION.y,
+        1U,
+        1U,
+        1U,
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,
+        {}};
 
     cubeMapMipCount = static_cast<uint32_t>(std::log2(Math::max(CUBEMAP_RESOLUTION.x, CUBEMAP_RESOLUTION.y)) - 1);
 
@@ -299,14 +330,14 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     valid_ = true;
     clear_ = true;
 
-    GpuSamplerDesc desc {};
+    GpuSamplerDesc desc{};
     desc.minFilter = Filter::CORE_FILTER_LINEAR;
     desc.mipMapMode = Filter::CORE_FILTER_NEAREST;
     desc.magFilter = Filter::CORE_FILTER_LINEAR;
     desc.enableAnisotropy = false;
     desc.maxAnisotropy = 1;
     desc.minLod = 0;
-    desc.maxLod = 10; // 10: parm
+    desc.maxLod = 10;  // 10: parm
     desc.addressModeU = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
     desc.addressModeV = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
     desc.addressModeW = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -325,7 +356,7 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     desc.addressModeW = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT;
     weatherSampler_ = gpuResourceMgr.Create(desc);
 
-    GpuImageDesc imageDesc {
+    GpuImageDesc imageDesc{
         ImageType::CORE_IMAGE_TYPE_3D,
         ImageViewType::CORE_IMAGE_VIEW_TYPE_3D,
         Format::BASE_FORMAT_R8_UINT,
@@ -343,8 +374,8 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
         {},
     };
 
-    imageDesc.width = 2048;  // 2048: parm
-    imageDesc.height = 2048; // 2048: parm
+    imageDesc.width = 2048;   // 2048: parm
+    imageDesc.height = 2048;  // 2048: parm
     imageDesc.depth = 1u;
     imageDesc.format = Format::BASE_FORMAT_R32G32B32A32_SFLOAT;
     imageDesc.imageType = ImageType::CORE_IMAGE_TYPE_2D;
@@ -393,19 +424,21 @@ void RenderNodeCameraWeather::InitNode(IRenderNodeContextManager& renderNodeCont
     isDefaultImageInUse_ = false;
     uniformBuffer_ = CreateCloudDataUniformBuffer<Settings>(gpuResourceMgr, uniformBuffer_);
 
+    defaultSamplers_.nearestHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
     defaultSamplers_.linearHandle = gpuResourceMgr.GetSamplerHandle("CORE_DEFAULT_SAMPLER_LINEAR_CLAMP");
     defaultSamplers_.cubemapHandle =
         gpuResourceMgr.GetSamplerHandle(DefaultMaterialGpuResourceConstants::CORE_DEFAULT_RADIANCE_CUBEMAP_SAMPLER);
 }
 
 struct RenderNodeCameraWeather::GlobalFrameData {
-    Math::Vec4 timings { 0.0f, 0.0f, 0.0f, 0.0f };
+    Math::Vec4 timings{0.0f, 0.0f, 0.0f, 0.0f};
 };
 
 void RenderNodeCameraWeather::PreExecuteFrame()
 {
     UpdateAtmosphericConfig();
-    prevTimeOfDay_ = settings_.timeOfDay;
+    UpdateSkyAppearanceConfig();
+    prevSunDirElevation_ = settings_.sunDirElevation;
 
     {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
@@ -422,7 +455,7 @@ void RenderNodeCameraWeather::PreExecuteFrame()
             UpdateCurrentScene(*dataStoreScene, *dataStoreCamera, *dataStoreLight);
 
             settings_ = dataStoreWeather->GetWeatherSettings();
-            cameraPos_ = Math::Inverse(currentScene_.camData.camera.matrices.view)[3]; // 3: index
+            cameraPos_ = Math::Inverse(currentScene_.camData.camera.matrices.view)[3];  // 3: index
             downscale_ = (int32_t)settings_.cloudRenderingType;
 
             auto cameras = dataStoreCamera->GetCameras();
@@ -465,85 +498,93 @@ void RenderNodeCameraWeather::ExecuteFrame(IRenderCommandList& cmdList)
     cirrusTex_ = settings_.cirrusImage;
     weatherMapTex_ = settings_.weatherMapImage;
 
-    fgds_ = RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_, stores_, cameraName_,
+    fgds_ = RenderNodeSceneUtil::GetFrameGlobalDescriptorSets(*renderNodeContextMgr_,
+        stores_,
+        cameraName_,
         RenderNodeSceneUtil::FrameGlobalDescriptorSetFlagBits::GLOBAL_SET_0);
     if (!fgds_.valid) {
         return;
     }
 
-    GlobalFrameData data {};
+    GlobalFrameData data{};
     data.timings = renderNodeContextMgr_->GetRenderNodeGraphData().renderingConfiguration.renderTimings;
 
-    const auto sHash = BASE_NS::FNV1a32Hash(reinterpret_cast<const uint8_t*>(&settings_), sizeof(settings_));
+    const float skyExposure =
+        Math::max(0.0f, settings_.skyViewBrightness * currentScene_.camData.camera.environment.envMapFactor.w);
+    Settings uniformSettings;
+    uniformSettings.params[0U].x = settings_.nightTopAmbientColor.x;
+    uniformSettings.params[0U].y = settings_.nightTopAmbientColor.y;
+    uniformSettings.params[0U].z = settings_.nightTopAmbientColor.z;
+    uniformSettings.params[0U].w = settings_.coverage;
+
+    uniformSettings.params[1U] = settings_.sunDirElevation;
+    uniformSettings.params[1U].w = settings_.cloudTopOffset;
+
+    uniformSettings.params[2U].x = settings_.earthRadius;
+    uniformSettings.params[2U].y = settings_.cloudBottomAltitude;
+    uniformSettings.params[2U].z = settings_.cloudTopAltitude;
+    uniformSettings.params[2U].w = settings_.crispiness;
+
+    uniformSettings.params[3U].x = settings_.cloudType;
+    uniformSettings.params[3U].y = settings_.nightBottomAmbientColor.x;
+    uniformSettings.params[3U].z = settings_.nightBottomAmbientColor.y;
+    uniformSettings.params[3U].w = settings_.nightBottomAmbientColor.z;
+
+    uniformSettings.params[4U].x = settings_.ambientIntensityNight;
+    uniformSettings.params[4U].y = settings_.curliness;
+    uniformSettings.params[4U].z = settings_.maxSamples;
+    uniformSettings.params[4U].w = settings_.directLightIntensityNight;
+
+    uniformSettings.params[5U].x = settings_.windSpeed;
+    uniformSettings.params[5U].y = settings_.density;
+    uniformSettings.params[5U].z = settings_.ambientIntensityDay;
+    uniformSettings.params[5U].w = settings_.softness;
+
+    uniformSettings.params[6U].x = settings_.cloudHorizonFogHeight;
+    uniformSettings.params[6U].y = settings_.weatherScale;
+    uniformSettings.params[6U].z = settings_.directIntensityDay;
+    uniformSettings.params[6U].w = settings_.horizonFogFalloff;
+
+    uniformSettings.params[7U].x = settings_.windDir.x;
+    uniformSettings.params[7U].y = settings_.windDir.y;
+    uniformSettings.params[7U].z = settings_.windDir.z;
+    uniformSettings.params[7U].w = (float)settings_.cloudOptimizationFlags;
+
+    uniformSettings.params[8U].x = settings_.dayTopAmbientColor.x;
+    uniformSettings.params[8U].y = settings_.dayTopAmbientColor.y;
+    uniformSettings.params[8U].z = settings_.dayTopAmbientColor.z;
+
+    uniformSettings.params[9U] = settings_.groundColor;
+    uniformSettings.params[9U].w = skyExposure;
+
+    uniformSettings.params[10U] = settings_.ambientColorHueSunset;
+
+    uniformSettings.params[11U] = settings_.directColorHueSunset;
+
+    uniformSettings.params[12U] = settings_.sunGlareColorDay;
+
+    uniformSettings.params[13U] = settings_.sunGlareColorSunset;
+
+    uniformSettings.params[14U] = settings_.moonGlareColor;
+
+    uniformSettings.params[15U].x = settings_.moonBaseColor.x;
+    uniformSettings.params[15U].y = settings_.moonBaseColor.y;
+    uniformSettings.params[15U].z = settings_.moonBaseColor.z;
+    uniformSettings.params[15U].w = settings_.moonBrightness;
+
+    const auto sHash =
+        BASE_NS::FNV1a32Hash(reinterpret_cast<const uint8_t*>(&uniformSettings), sizeof(uniformSettings));
     if (uniformHash_ != sHash) {
         uniformHash_ = sHash;
-        Settings uniformSettings;
-        uniformSettings.params[0U].x = settings_.nightTopAmbientColor.x;
-        uniformSettings.params[0U].y = settings_.nightTopAmbientColor.y;
-        uniformSettings.params[0U].z = settings_.nightTopAmbientColor.z;
-        uniformSettings.params[0U].w = settings_.coverage;
-
-        uniformSettings.params[1U] = settings_.sunDirElevation;
-        uniformSettings.params[1U].w = settings_.cloudTopOffset;
-
-        uniformSettings.params[2U].x = settings_.earthRadius;
-        uniformSettings.params[2U].y = settings_.cloudBottomAltitude;
-        uniformSettings.params[2U].z = settings_.cloudTopAltitude;
-        uniformSettings.params[2U].w = settings_.crispiness;
-
-        uniformSettings.params[3U].x = settings_.cloudType;
-        uniformSettings.params[3U].y = settings_.nightBottomAmbientColor.x;
-        uniformSettings.params[3U].z = settings_.nightBottomAmbientColor.y;
-        uniformSettings.params[3U].w = settings_.nightBottomAmbientColor.z;
-
-        uniformSettings.params[4U].x = settings_.ambientIntensityNight;
-        uniformSettings.params[4U].y = settings_.curliness;
-        uniformSettings.params[4U].z = settings_.maxSamples;
-        uniformSettings.params[4U].w = settings_.directLightIntensityNight;
-
-        uniformSettings.params[5U].x = settings_.windSpeed;
-        uniformSettings.params[5U].y = settings_.density;
-        uniformSettings.params[5U].z = settings_.ambientIntensityDay;
-        uniformSettings.params[5U].w = settings_.softness;
-
-        uniformSettings.params[6U].x = settings_.cloudHorizonFogHeight;
-        uniformSettings.params[6U].y = settings_.weatherScale;
-        uniformSettings.params[6U].z = settings_.directIntensityDay;
-        uniformSettings.params[6U].w = settings_.horizonFogFalloff;
-
-        uniformSettings.params[7U].x = settings_.windDir.x;
-        uniformSettings.params[7U].y = settings_.windDir.y;
-        uniformSettings.params[7U].z = settings_.windDir.z;
-        uniformSettings.params[7U].w = (float)settings_.cloudOptimizationFlags;
-
-        uniformSettings.params[8U].x = settings_.dayTopAmbientColor.x;
-        uniformSettings.params[8U].y = settings_.dayTopAmbientColor.y;
-        uniformSettings.params[8U].z = settings_.dayTopAmbientColor.z;
-
-        uniformSettings.params[9U] = settings_.groundColor;
-        uniformSettings.params[9U].w = settings_.skyViewBrightness;
-
-        uniformSettings.params[10U] = settings_.ambientColorHueSunset;
-
-        uniformSettings.params[11U] = settings_.directColorHueSunset;
-
-        uniformSettings.params[12U] = settings_.sunGlareColorDay;
-
-        uniformSettings.params[13U] = settings_.sunGlareColorSunset;
-
-        uniformSettings.params[14U] = settings_.moonGlareColor;
-
-        uniformSettings.params[15U].x = settings_.moonBaseColor.x;
-        uniformSettings.params[15U].y = settings_.moonBaseColor.y;
-        uniformSettings.params[15U].z = settings_.moonBaseColor.z;
-        uniformSettings.params[15U].w = settings_.moonBrightness;
-
         UpdateBufferData<Settings>(
             renderNodeContextMgr_->GetGpuResourceManager(), uniformBuffer_.GetHandle(), uniformSettings);
     }
 
+    const bool atmosphericConfigChanged = IsAtmosphericConfigChanged();
+    const bool skyAppearanceConfigChanged = IsSkyAppearanceConfigChanged();
+
     // Transmittance and Multiscattering lut needs to be updated when related parameters are changed
-    if (isFirstFrame || IsAtmosphericConfigChanged()) {
+    if (isFirstFrame || atmosphericConfigChanged) {
         ComputeTransmittance(cmdList);
         ComputeMultipleScattering(cmdList);
     }
@@ -552,14 +593,16 @@ void RenderNodeCameraWeather::ExecuteFrame(IRenderCommandList& cmdList)
     ComputeSkyView(cmdList);
 
     // Update cubemap when the sun position or any of the look up tables have changed
-    if (isFirstFrame || prevTimeOfDay_ != settings_.timeOfDay || IsAtmosphericConfigChanged()) {
+    if (isFirstFrame || prevSunDirElevation_ != settings_.sunDirElevation || atmosphericConfigChanged ||
+        skyAppearanceConfigChanged) {
         ComputeSkyViewCubemap(cmdList);
         ComputeSkyViewCubemapMips(cmdList);
 
         UpdateAtmosphericConfig();
-        prevTimeOfDay_ = settings_.timeOfDay;
+        UpdateSkyAppearanceConfig();
+        prevSunDirElevation_ = settings_.sunDirElevation;
         // For some reason OpenGL is cleaning the cubemap on the first iteration, so flag this after second frame
-        isFirstFrame = frameNumber < 2; // 2: parm
+        isFirstFrame = frameNumber < 2;  // 2: parm
         needsFullMipUpdate = true;
     } else if (needsFullMipUpdate) {
         ComputeSkyViewCubemap(cmdList);
@@ -601,15 +644,15 @@ void RenderNodeCameraWeather::ComputeCloudWeatherMap(
     cmdList.BindPipeline(skyPso_.cloudWeatherGen);
     skyBinder_.cloudWeatherGen->ClearBindings();
     // Inputs
-    skyBinder_.cloudWeatherGen->BindImage(0U, 0U, { weatherMapTexNew_.GetHandle() });
+    skyBinder_.cloudWeatherGen->BindImage(0U, 0U, {weatherMapTexNew_.GetHandle()});
 
     const auto descHandle0 = skyBinder_.cloudWeatherGen->GetDescriptorSetHandle(0U);
     auto bindings = skyBinder_.cloudWeatherGen->GetDescriptorSetLayoutBindingResources(0U);
     const auto descHandles = skyBinder_.cloudWeatherGen->GetDescriptorSetHandles();
 
-    PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(uint32_t) };
+    PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(uint32_t)};
     uint32_t step = 1u;
-    Math::UVec3 resolution { 2048u, 2048u, 1u };
+    Math::UVec3 resolution{2048u, 2048u, 1u};
     int localSize = 8u;
 
     cmdList.UpdateDescriptorSet(descHandle0, bindings);
@@ -625,18 +668,21 @@ void RenderNodeCameraWeather::ClearCloudTargets(RENDER_NS::IRenderCommandList& c
 
     const auto w = rextureImageDesc.width;
     const auto h = rextureImageDesc.height;
-    constexpr ImageSubresourceRange imgSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    constexpr ImageSubresourceRange imgSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
     // Initialize the cloud textures if their size was changed
     if (cloudPrevTexSize_.x != w || cloudPrevTexSize_.y != h) {
         cloudPrevTexSize_.x = w;
         cloudPrevTexSize_.y = h;
-        static constexpr auto clearColor = RENDER_NS::ClearColorValue({ 0.0f, 0.0f, 0.0f, 0.0f });
-        cmdList.ClearColorImage(cloudTexture_, clearColor, { &imgSubresourceRange, 1 });
-        cmdList.ClearColorImage(cloudTexturePrev_, clearColor, { &imgSubresourceRange, 1 });
-        cmdList.ClearColorImage(cloudTextureDepth_, clearColor, { &imgSubresourceRange, 1 });
-        cmdList.ClearColorImage(cloudTexturePrevDepth_, clearColor, { &imgSubresourceRange, 1 });
+        static constexpr auto clearColor = RENDER_NS::ClearColorValue({0.0f, 0.0f, 0.0f, 0.0f});
+        cmdList.ClearColorImage(cloudTexture_, clearColor, {&imgSubresourceRange, 1});
+        cmdList.ClearColorImage(cloudTexturePrev_, clearColor, {&imgSubresourceRange, 1});
+        cmdList.ClearColorImage(cloudTextureDepth_, clearColor, {&imgSubresourceRange, 1});
+        cmdList.ClearColorImage(cloudTexturePrevDepth_, clearColor, {&imgSubresourceRange, 1});
     }
 }
 
@@ -654,24 +700,24 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
 
     uint32_t binding = 0;
     // Inputs
-    skyBinder_.cloudVolume->BindSampler(1U, binding++, { builtInVariables_.defSampler });
+    skyBinder_.cloudVolume->BindSampler(1U, binding++, {builtInVariables_.defSampler});
     BindableImage bindable;
     bindable.handle = skyCubemapHandle_.GetHandle();
     bindable.samplerHandle = defaultSamplers_.cubemapHandle;
     skyBinder_.cloudVolume->BindImage(1U, binding++, bindable);
 
-    skyBinder_.cloudVolume->BindSampler(1U, binding++, { volumeSampler_.GetHandle() });
-    skyBinder_.cloudVolume->BindImage(1U, binding++, { lowFrequencyTex_ });
-    skyBinder_.cloudVolume->BindImage(1U, binding++, { highFrequencyTex_ });
-    skyBinder_.cloudVolume->BindImage(1U, binding++, { curlnoiseTex_ });
-    skyBinder_.cloudVolume->BindSampler(1U, binding++, { weatherSampler_.GetHandle() });
-    skyBinder_.cloudVolume->BindImage(1U, binding++, { cirrusTex_ });
+    skyBinder_.cloudVolume->BindSampler(1U, binding++, {volumeSampler_.GetHandle()});
+    skyBinder_.cloudVolume->BindImage(1U, binding++, {lowFrequencyTex_});
+    skyBinder_.cloudVolume->BindImage(1U, binding++, {highFrequencyTex_});
+    skyBinder_.cloudVolume->BindImage(1U, binding++, {curlnoiseTex_});
+    skyBinder_.cloudVolume->BindSampler(1U, binding++, {weatherSampler_.GetHandle()});
+    skyBinder_.cloudVolume->BindImage(1U, binding++, {cirrusTex_});
     if (generateCloudWeatherMap_) {
-        skyBinder_.cloudVolume->BindImage(1U, binding++, { weatherMapTexNew_.GetHandle() });
+        skyBinder_.cloudVolume->BindImage(1U, binding++, {weatherMapTexNew_.GetHandle()});
     } else {
-        skyBinder_.cloudVolume->BindImage(1U, binding++, { weatherMapTex_ });
+        skyBinder_.cloudVolume->BindImage(1U, binding++, {weatherMapTex_});
     }
-    skyBinder_.cloudVolume->BindBuffer(1U, binding, { uniformBuffer_.GetHandle() });
+    skyBinder_.cloudVolume->BindBuffer(1U, binding, {uniformBuffer_.GetHandle()});
 
     // Outputs
     BindableImage writeImg;
@@ -685,8 +731,8 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
 
     skyBinder_.cloudVolume->BindImage(2U, 0U, writeImg);
     skyBinder_.cloudVolume->BindImage(2U, 1U, historyImg);
-    skyBinder_.cloudVolume->BindImage(2U, 2U, { writeDepthImg });
-    skyBinder_.cloudVolume->BindImage(2U, 3U, { historyDepthImg });
+    skyBinder_.cloudVolume->BindImage(2U, 2U, {writeDepthImg});
+    skyBinder_.cloudVolume->BindImage(2U, 3U, {historyDepthImg});
 
     const auto descHandle1 = skyBinder_.cloudVolume->GetDescriptorSetHandle(1U);
     auto bindings = skyBinder_.cloudVolume->GetDescriptorSetLayoutBindingResources(1);
@@ -704,7 +750,7 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
     const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const auto textureImageDesc = gpuResourceMgr.GetImageDescriptor(cloudTexture_);
 
-    PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(CloudPcStruct) };
+    PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(CloudPcStruct)};
     CloudPcStruct uPc;
     uPc.params.x = data.timings.z;
     uPc.params.y = data.timings.w;
@@ -712,7 +758,7 @@ void RenderNodeCameraWeather::ComputeVolumetricCloud(
     uPc.params.w = float(textureImageDesc.height);
 
     if (textureImageDesc.width > 1u && textureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { textureImageDesc.width, textureImageDesc.height, 1 };
+        const Math::UVec3 targetSize = {textureImageDesc.width, textureImageDesc.height, 1};
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
         cmdList.PushConstant(pc, reinterpret_cast<const uint8_t*>(&uPc));
@@ -746,18 +792,17 @@ void RenderNodeCameraWeather::ComputeTransmittance(RENDER_NS::IRenderCommandList
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(bindable.handle);
 
     struct PushConstantLocalStruct {
-        Math::Vec4 rayleighScatteringBase; // .w = mieAbsorptionBase
-        Math::Vec4 ozoneAbsorptionBase;    // .w = mieScatteringBase
+        Math::Vec4 rayleighScatteringBase;  // .w = mieAbsorptionBase
+        Math::Vec4 ozoneAbsorptionBase;     // .w = mieScatteringBase
     } uPc;
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+        const Math::UVec3 targetSize = {TextureImageDesc.width, TextureImageDesc.height, 1};
 
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
-        constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT,
-            sizeof(PushConstantLocalStruct) };
+        constexpr PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(PushConstantLocalStruct)};
 
         uPc.rayleighScatteringBase = Math::Vec4(settings_.rayleighScatteringBase, settings_.mieAbsorptionBase);
         uPc.ozoneAbsorptionBase = Math::Vec4(settings_.ozoneAbsorptionBase, settings_.mieScatteringBase);
@@ -797,18 +842,17 @@ void RenderNodeCameraWeather::ComputeMultipleScattering(RENDER_NS::IRenderComman
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(bindable.handle);
 
     struct PushConstantLocalStruct {
-        Math::Vec4 rayleighScatteringBase; // .w = mieAbsorptionBase
-        Math::Vec4 ozoneAbsorptionBase;    // .w = mieScatteringBase
+        Math::Vec4 rayleighScatteringBase;  // .w = mieAbsorptionBase
+        Math::Vec4 ozoneAbsorptionBase;     // .w = mieScatteringBase
     } uPc;
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+        const Math::UVec3 targetSize = {TextureImageDesc.width, TextureImageDesc.height, 1};
 
         const uint32_t tgcX = targetSize.x;
         const uint32_t tgcY = targetSize.y;
 
-        constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT,
-            sizeof(PushConstantLocalStruct) };
+        constexpr PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(PushConstantLocalStruct)};
 
         uPc.rayleighScatteringBase = Math::Vec4(settings_.rayleighScatteringBase, settings_.mieAbsorptionBase);
         uPc.ozoneAbsorptionBase = Math::Vec4(settings_.ozoneAbsorptionBase, settings_.mieScatteringBase);
@@ -856,9 +900,9 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
 
     skyBinder_.aerialPerspectiveLut->BindImage(0, 0, aerialOut);
     skyBinder_.aerialPerspectiveLut->BindImage(0, 1, transmittanceBindable);
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable);       // 2: parm
-    skyBinder_.aerialPerspectiveLut->BindBuffer(0, 3, aerialPerspectiveBindableBuffer); // 3: parm
-    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable);                // 4: parm
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 2, multipleScatteringBindable);        // 2: parm
+    skyBinder_.aerialPerspectiveLut->BindBuffer(0, 3, aerialPerspectiveBindableBuffer);  // 3: parm
+    skyBinder_.aerialPerspectiveLut->BindImage(0, 4, shadowMapBindable);                 // 4: parm
 
     const auto descHandle = skyBinder_.aerialPerspectiveLut->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.aerialPerspectiveLut->GetDescriptorSetLayoutBindingResources(0);
@@ -868,7 +912,7 @@ void RenderNodeCameraWeather::ComputeAerialPerspective(RENDER_NS::IRenderCommand
 
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(aerialOut.handle);
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec2 targetSize = { TextureImageDesc.width, TextureImageDesc.height };
+        const Math::UVec2 targetSize = {TextureImageDesc.width, TextureImageDesc.height};
 
         const uint32_t tgcX = ((targetSize.x / 8) + 16 - 1u) / 16;
         const uint32_t tgcY = ((targetSize.y / 4) + 16 - 1u) / 16;
@@ -896,7 +940,7 @@ void RenderNodeCameraWeather::ComputeSkyView(RENDER_NS::IRenderCommandList& cmdL
 
     skyBinder_.skyViewLut->BindImage(0, 0, bindable);
     skyBinder_.skyViewLut->BindImage(0, 1, transmittanceBindable);
-    skyBinder_.skyViewLut->BindImage(0, 2, multipleScatteringBindable); // 2: parm
+    skyBinder_.skyViewLut->BindImage(0, 2, multipleScatteringBindable);  // 2: parm
 
     const auto descHandle = skyBinder_.skyViewLut->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.skyViewLut->GetDescriptorSetLayoutBindingResources(0);
@@ -908,25 +952,26 @@ void RenderNodeCameraWeather::ComputeSkyView(RENDER_NS::IRenderCommandList& cmdL
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(bindable.handle);
 
     struct PushConstantLocalStruct {
-        Math::Vec4 camPosSunElevation;     // .xyz: camera position, .w: sun elevation
-        Math::Vec4 rayleighScatteringBase; // .w = mieAbsorptionBase
-        Math::Vec4 ozoneAbsorptionBase;    // .w = mieScatteringBase
-        Math::Vec4 groundColor;            // .w = skyViewBrightness
+        Math::Vec4 camPosSunElevation;      // .xyz: camera position, .w: sun elevation
+        Math::Vec4 rayleighScatteringBase;  // .w = mieAbsorptionBase
+        Math::Vec4 ozoneAbsorptionBase;     // .w = mieScatteringBase
+        Math::Vec4 groundColor;             // .w = skyViewBrightness
     } uPc;
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+        const Math::UVec3 targetSize = {TextureImageDesc.width, TextureImageDesc.height, 1};
 
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
-        constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT,
-            sizeof(PushConstantLocalStruct) };
+        constexpr PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(PushConstantLocalStruct)};
 
         uPc.camPosSunElevation = Math::Vec4(cameraPos_, settings_.sunDirElevation.w);
         uPc.rayleighScatteringBase = Math::Vec4(settings_.rayleighScatteringBase, settings_.mieAbsorptionBase);
         uPc.ozoneAbsorptionBase = Math::Vec4(settings_.ozoneAbsorptionBase, settings_.mieScatteringBase);
-        uPc.groundColor = Math::Vec4(settings_.groundColor, settings_.skyViewBrightness);
+        const float skyExposure =
+            Math::max(0.0f, settings_.skyViewBrightness * currentScene_.camData.camera.environment.envMapFactor.w);
+        uPc.groundColor = Math::Vec4(settings_.groundColor, skyExposure);
 
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
         cmdList.Dispatch(tgcX, tgcY, 1);
@@ -946,20 +991,26 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
     cmdList.BindPipeline(skyPso_.skyCubemap);
 
     struct PushConstantStruct {
-        Math::Vec4 sunDir;              // w: elevation
-        Math::Vec4 cameraPosBrightness; // x: sky view intensity
+        Math::Vec4 sunDir;               // w: elevation
+        Math::Vec4 cameraPosBrightness;  // w: sky view brightness
+        Math::Vec4 skySunParams;         // x: size in degrees, y: opacity
+        Math::Vec4 skySunColor;          // rgb: tint
     } uPc;
 
     skyBinder_.skyCubemap->ClearBindings();
     BindableImage bindable;
     BindableImage skyViewBindable;
+    BindableImage transmittanceBindable;
     bindable.handle = skyCubemapHandle_.GetHandle();
     bindable.mip = 0;
     skyViewBindable.handle = skyViewLutHandle_.GetHandle();
     skyViewBindable.samplerHandle = defaultSamplers_.linearHandle;
+    transmittanceBindable.handle = transmittanceLutHandle_.GetHandle();
+    transmittanceBindable.samplerHandle = defaultSamplers_.linearHandle;
 
     skyBinder_.skyCubemap->BindImage(0, 0, bindable);
     skyBinder_.skyCubemap->BindImage(0, 1, skyViewBindable);
+    skyBinder_.skyCubemap->BindImage(0, 2, transmittanceBindable);
 
     const auto descHandle = skyBinder_.skyCubemap->GetDescriptorSetHandle(0);
     const auto bindings = skyBinder_.skyCubemap->GetDescriptorSetLayoutBindingResources(0);
@@ -970,17 +1021,21 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemap(RENDER_NS::IRenderCommandLis
     const auto TextureImageDesc = gpuResourceMgr.GetImageDescriptor(bindable.handle);
 
     if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-        const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+        const Math::UVec3 targetSize = {TextureImageDesc.width, TextureImageDesc.height, 1};
 
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
-        constexpr PushConstant pc { ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(PushConstantStruct) };
+        constexpr PushConstant pc{ShaderStageFlagBits::CORE_SHADER_STAGE_COMPUTE_BIT, sizeof(PushConstantStruct)};
         uPc.sunDir = settings_.sunDirElevation;
-        uPc.cameraPosBrightness = Math::Vec4(cameraPos_, settings_.skyViewBrightness);
+        const float skyExposure =
+            Math::max(0.0f, settings_.skyViewBrightness * currentScene_.camData.camera.environment.envMapFactor.w);
+        uPc.cameraPosBrightness = Math::Vec4(cameraPos_, skyExposure);
+        uPc.skySunParams = Math::Vec4(settings_.skySunSize, settings_.skySunOpacity, 0.0f, 0.0f);
+        uPc.skySunColor = Math::Vec4(settings_.skySunTint.x, settings_.skySunTint.y, settings_.skySunTint.z, 1.0f);
 
         cmdList.PushConstantData(pc, arrayviewU8(uPc));
-        cmdList.Dispatch(tgcX, tgcY, 6); // 6: parm
+        cmdList.Dispatch(tgcX, tgcY, 6);  // 6: parm
     } else {
         PLUGIN_LOG_W("RenderNodeCameraWeather: dispatchResources needed");
     }
@@ -994,10 +1049,10 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemapMips(RENDER_NS::IRenderComman
     }
     const GpuImageDesc desc =
         renderNodeContextMgr_->GetGpuResourceManager().GetImageDescriptor(skyCubemapHandle_.GetHandle());
-    Math::UVec2 currSize = { desc.width, desc.height };
+    Math::UVec2 currSize = {desc.width, desc.height};
 
-    ImageSubresourceRange imageSubresourceRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    ImageSubresourceRange imageSubresourceRange{
+        CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
     cmdList.BeginDisableAutomaticBarrierPoints();
 
@@ -1018,7 +1073,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemapMips(RENDER_NS::IRenderComman
         // Lower resolution mips can be updated less often, without sacrificing visual fidelity
         if (mipLevel != 1 && !needsFullMipUpdate) {
             if (frameNumber % (mipLevel * 2U) != 0 &&
-                frameNumber > 3U) { // OpenGL is cleaning the textures on first frame
+                frameNumber > 3U) {  // OpenGL is cleaning the textures on first frame
                 continue;
             }
             currSize.x = Math::max(1u, currSize.x / 2u);
@@ -1038,7 +1093,7 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemapMips(RENDER_NS::IRenderComman
         BindableImage bindable;
         bindable.handle = skyCubemapHandle_.GetHandle();
         bindable.mip = mipLevel - 1;
-        bindable.samplerHandle = defaultSamplers_.cubemapHandle;
+        bindable.samplerHandle = defaultSamplers_.nearestHandle;
         binder.BindImage(0U, 0U, bindable);
 
         BindableImage outputBindable;
@@ -1050,12 +1105,12 @@ void RenderNodeCameraWeather::ComputeSkyViewCubemapMips(RENDER_NS::IRenderComman
         cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(0), bindings);
         cmdList.BindDescriptorSet(0U, binder.GetDescriptorSetHandle(0));
 
-        const Math::UVec3 targetSize = { currSize.x, currSize.y, 1 };
+        const Math::UVec3 targetSize = {currSize.x, currSize.y, 1};
 
         const uint32_t tgcX = (targetSize.x + 8 - 1u) / 8;
         const uint32_t tgcY = (targetSize.y + 8 - 1u) / 8;
 
-        cmdList.Dispatch(tgcX, tgcY, 6); // 6: parm
+        cmdList.Dispatch(tgcX, tgcY, 6);  // 6: parm
     }
 
     // Final barrier: transition ALL mip levels to SHADER_READ_ONLY_OPTIMAL for graphics pipeline
@@ -1095,12 +1150,21 @@ void RenderNodeCameraWeather::UpdateCurrentScene(const IRenderDataStoreDefaultSc
         currentScene_.envId = envId;
 
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        GpuImageDesc descCubemap { CORE_IMAGE_TYPE_2D, ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE,
-            BASE_FORMAT_B10G11R11_UFLOAT_PACK32, CORE_IMAGE_TILING_OPTIMAL,
+        GpuImageDesc descCubemap{CORE_IMAGE_TYPE_2D,
+            ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE,
+            BASE_FORMAT_B10G11R11_UFLOAT_PACK32,
+            CORE_IMAGE_TILING_OPTIMAL,
             CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CORE_IMAGE_USAGE_STORAGE_BIT,
-            CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-            CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS, CUBEMAP_RESOLUTION.x, CUBEMAP_RESOLUTION.y, 1U,
-            cubeMapMipCount, 6U, CORE_SAMPLE_COUNT_1_BIT, ComponentMapping {} };
+            CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+            CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS,
+            CUBEMAP_RESOLUTION.x,
+            CUBEMAP_RESOLUTION.y,
+            1U,
+            cubeMapMipCount,
+            6U,
+            CORE_SAMPLE_COUNT_1_BIT,
+            ComponentMapping{}};
         // NOTE: the skyCubemapMipsHandle is created based on demand because it needs the environment id
         if (deviceBackendType_ != Render::DeviceBackendType::VULKAN) {
             descCubemap.format = BASE_FORMAT_R16G16B16A16_SFLOAT;

@@ -33,15 +33,15 @@ namespace {
 void Validate(const UTest::EngineResources& er)
 {
     GpuResourceManager& gpuResourceMgr = static_cast<GpuResourceManager&>(er.device->GetGpuResourceManager());
-    RenderNodeGpuResourceManager renderNodeGpuResourceMgr { gpuResourceMgr };
+    RenderNodeGpuResourceManager renderNodeGpuResourceMgr{gpuResourceMgr};
     ASSERT_EQ(&gpuResourceMgr, &renderNodeGpuResourceMgr.GetGpuResourceManager());
     {
         auto handle = renderNodeGpuResourceMgr.Get({});
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
     }
     {
         auto handle = renderNodeGpuResourceMgr.GetBufferHandle("invalidName");
-        ASSERT_EQ(RenderHandle {}, handle);
+        ASSERT_EQ(RenderHandle{}, handle);
     }
     {
         GpuBufferDesc desc;
@@ -51,7 +51,7 @@ void Validate(const UTest::EngineResources& er)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
         auto handle = renderNodeGpuResourceMgr.Create(desc);
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -62,14 +62,14 @@ void Validate(const UTest::EngineResources& er)
         ASSERT_EQ(desc.usageFlags, realDesc.usageFlags);
         desc.usageFlags = CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         auto handle1 = renderNodeGpuResourceMgr.Create(desc);
-        IGpuResourceManager::BufferHandleInfo bhInfo = { 0, CORE_BUFFER_USAGE_INDEX_BUFFER_BIT };
+        IGpuResourceManager::BufferHandleInfo bhInfo = {0, CORE_BUFFER_USAGE_INDEX_BUFFER_BIT};
         vector<RenderHandle> handles;
         renderNodeGpuResourceMgr.GetBufferHandles(bhInfo, handles);
-        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle {});
+        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle{});
         // There's already 1 default buffer with all possible usage flags, so even though we created 2 buffers, theres
         // one more
-        ASSERT_EQ(gpuResourceMgr.GetBufferCount(), 3); // 3: buffer count
-        ASSERT_EQ(handles.size(), 3);
+        ASSERT_EQ(gpuResourceMgr.GetBufferCount(), 3);  // 3: buffer count
+        ASSERT_EQ(handles.size(), 3);                   // 3: size
         ASSERT_EQ(invalidCount, 1);
     }
     {
@@ -80,13 +80,13 @@ void Validate(const UTest::EngineResources& er)
         desc.format = BASE_FORMAT_R8_UINT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         desc.usageFlags = CORE_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        uint8_t rawData[16] = { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u };
-        auto handle = renderNodeGpuResourceMgr.Create("buffer0", desc, { rawData, countof(rawData) });
+        uint8_t rawData[16] = {0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u};
+        auto handle = renderNodeGpuResourceMgr.Create("buffer0", desc, {rawData, countof(rawData)});
         {
             const auto sameHandle = gpuResourceMgr.GetOrCreate("buffer0", desc);
             ASSERT_EQ(sameHandle.GetHandle().id, handle.GetHandle().id);
         }
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_EQ("buffer0", renderNodeGpuResourceMgr.GetName(handle.GetHandle()));
         ASSERT_TRUE(gpuResourceMgr.HasBuffer("buffer0"));
         ASSERT_FALSE(gpuResourceMgr.HasImage("buffer0"));
@@ -121,7 +121,7 @@ void Validate(const UTest::EngineResources& er)
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.imageType = CORE_IMAGE_TYPE_2D;
         auto handle = renderNodeGpuResourceMgr.Create(desc);
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -135,10 +135,10 @@ void Validate(const UTest::EngineResources& er)
         ASSERT_EQ(desc.imageType, realDesc.imageType);
         desc.usageFlags = CORE_IMAGE_USAGE_STORAGE_BIT;
         auto handle1 = renderNodeGpuResourceMgr.Create(desc);
-        IGpuResourceManager::ImageHandleInfo ihInfo = { 0, CORE_IMAGE_USAGE_STORAGE_BIT };
+        IGpuResourceManager::ImageHandleInfo ihInfo = {0, CORE_IMAGE_USAGE_STORAGE_BIT};
         vector<RenderHandle> handles;
         renderNodeGpuResourceMgr.GetImageHandles(ihInfo, handles);
-        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle {});
+        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle{});
         ASSERT_EQ(gpuResourceMgr.GetImageCount(), 6);
         ASSERT_EQ(handles.size(), 6);
         ASSERT_EQ(invalidCount, 5);
@@ -154,13 +154,13 @@ void Validate(const UTest::EngineResources& er)
         desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.imageType = CORE_IMAGE_TYPE_2D;
-        uint8_t rawData[16] = { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u };
-        auto handle = renderNodeGpuResourceMgr.Create("image0", desc, { rawData, countof(rawData) });
+        uint8_t rawData[16] = {0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u};
+        auto handle = renderNodeGpuResourceMgr.Create("image0", desc, {rawData, countof(rawData)});
         {
             const auto sameHandle = gpuResourceMgr.GetOrCreate("image0", desc);
             ASSERT_EQ(sameHandle.GetHandle().id, handle.GetHandle().id);
         }
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -197,7 +197,7 @@ void Validate(const UTest::EngineResources& er)
             const auto sameHandle = gpuResourceMgr.GetOrCreate("sampler0", desc);
             ASSERT_EQ(sameHandle.GetHandle().id, handle.GetHandle().id);
         }
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -214,13 +214,13 @@ void Validate(const UTest::EngineResources& er)
         ASSERT_EQ(desc.addressModeW, realDesc.addressModeW);
         ASSERT_EQ(desc.enableAnisotropy, realDesc.enableAnisotropy);
 
-        IGpuResourceManager::SamplerHandleInfo shInfo = { 0 };
+        IGpuResourceManager::SamplerHandleInfo shInfo = {0};
         vector<RenderHandle> handles;
         renderNodeGpuResourceMgr.GetSamplerHandles(shInfo, handles);
-        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle {});
+        uint32_t invalidCount = std::count(handles.begin(), handles.end(), RenderHandle{});
         ASSERT_EQ(gpuResourceMgr.GetSamplerCount(), 8);
         ASSERT_EQ(handles.size(), 8);
-        ASSERT_EQ(invalidCount, 0); // Theres no  field to filter out samplers
+        ASSERT_EQ(invalidCount, 0);  // Theres no  field to filter out samplers
     }
     {
         GpuSamplerDesc desc;
@@ -231,7 +231,7 @@ void Validate(const UTest::EngineResources& er)
         desc.addressModeW = SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         desc.enableAnisotropy = true;
         auto handle = renderNodeGpuResourceMgr.Create(desc);
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -256,7 +256,7 @@ void Validate(const UTest::EngineResources& er)
         // device address added automatically by gpu resource mgr
         desc.bufferDesc.usageFlags |= CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -279,7 +279,7 @@ void Validate(const UTest::EngineResources& er)
                                      CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT |
                                      CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         auto handle = renderNodeGpuResourceMgr.Create("accStruct0", desc);
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -303,7 +303,7 @@ void Validate(const UTest::EngineResources& er)
                                      CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         auto bufferHandle = renderNodeGpuResourceMgr.Create(desc);
         auto handle = renderNodeGpuResourceMgr.Create(bufferHandle, desc);
-        ASSERT_NE(RenderHandle {}, handle.GetHandle());
+        ASSERT_NE(RenderHandle{}, handle.GetHandle());
         ASSERT_TRUE(renderNodeGpuResourceMgr.IsGpuBuffer(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuImage(handle.GetHandle()));
         ASSERT_FALSE(renderNodeGpuResourceMgr.IsGpuSampler(handle.GetHandle()));
@@ -329,7 +329,7 @@ void Validate(const UTest::EngineResources& er)
         ASSERT_EQ(&realCache, &cache);
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeGpuResourceManagerTest

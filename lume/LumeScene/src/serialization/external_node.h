@@ -23,6 +23,7 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 #include <meta/interface/resource/intf_owned_resource_groups.h>
+#include <meta/interface/resource/intf_resource_manager_extension.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -59,11 +60,11 @@ public:
     {
         return META_NS::ObjectFlagBits::NONE;
     }
-    CORE_NS::ResourceId GetResourceId() const override
+    CORE_NS::ResourceIdContext GetResourceId() const override
     {
         return id_;
     }
-    void SetResourceId(CORE_NS::ResourceId id) override
+    void SetResourceId(CORE_NS::ResourceIdContext id) override
     {
         id_ = id;
     }
@@ -75,54 +76,26 @@ public:
     {
         return entities_;
     }
-    void SetSubresourceGroup(BASE_NS::string_view group) override
+    void AddAssociatedResources(const BASE_NS::array_view<const CORE_NS::ResourceIdContext> list) override
     {
-        group_ = group;
+        associatedResources_.insert(associatedResources_.end(), list.begin(), list.end());
     }
-    BASE_NS::string GetSubresourceGroup() const override
+    BASE_NS::vector<CORE_NS::ResourceIdContext> GetAssociatedResources() const override
+    {
+        return associatedResources_;
+    }
+    void SetSubresourceGroup(META_NS::IResourceGroupHandle::Ptr handle) override
+    {
+        group_ = BASE_NS::move(handle);
+    }
+    META_NS::IResourceGroupHandle::Ptr GetSubresourceGroup() const override
     {
         return group_;
     }
     void Activate() override
-    {
-        if (group_.empty() || resources_.empty()) {
-            return;
-        }
-        if (SceneResourceHelper h { parent_ }) {
-            if (auto i = interface_cast<META_NS::IOwnedResourceGroups>(h.resources)) {
-                auto bundle = h.iScene->GetResourceGroups();
-                if (!bundle.GetHandle(group_)) {
-                    auto handle = i->GetGroupHandle(group_);
-                    bundle.PushGroupHandleToBack(handle);
-                    h.iScene->SetResourceGroups(BASE_NS::move(bundle));
-                }
-            }
-            size_t index = 0;
-            for (auto&& v : resources_) {
-                if (index < resourcePaths_.size()) {
-                    h.resources->AddResource(v, resourcePaths_[index++]);
-                }
-            }
-        }
-    }
+    {}
     void Deactivate() override
-    {
-        if (group_.empty()) {
-            return;
-        }
-        if (SceneResourceHelper h { parent_ }) {
-            resources_ = h.resources->GetResources(group_, h.scene);
-            resourcePaths_.clear();
-            for (auto&& r : resources_) {
-                if (auto info = h.resources->GetResourceInfo(r->GetResourceId()); info.id.IsValid()) {
-                    resourcePaths_.push_back(info.path);
-                }
-            }
-            auto bundle = h.iScene->GetResourceGroups();
-            bundle.RemoveHandle(group_);
-            h.iScene->SetResourceGroups(BASE_NS::move(bundle));
-        }
-    }
+    {}
 
     bool Attaching(const META_NS::IAttach::Ptr& target, const IObject::Ptr& dataContext) override
     {
@@ -137,12 +110,11 @@ public:
     }
 
 private:
-    CORE_NS::ResourceId id_;
+    CORE_NS::ResourceIdContext id_;
     BASE_NS::vector<CORE_NS::Entity> entities_;
     INode::WeakPtr parent_;
-    BASE_NS::vector<CORE_NS::IResource::Ptr> resources_;
-    BASE_NS::vector<BASE_NS::string> resourcePaths_;
-    BASE_NS::string group_;
+    BASE_NS::vector<CORE_NS::ResourceIdContext> associatedResources_;
+    META_NS::IResourceGroupHandle::Ptr group_;
 };
 
 SCENE_END_NAMESPACE()

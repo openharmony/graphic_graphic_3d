@@ -33,7 +33,7 @@ struct RenderLight;
 */
 class IRenderDataStoreDefaultLight : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "daa1bcf3-e1b7-4605-8c2a-01a6e6f5dbb6" };
+    static constexpr BASE_NS::Uid UID{"daa1bcf3-e1b7-4605-8c2a-01a6e6f5dbb6"};
 
     ~IRenderDataStoreDefaultLight() override = default;
 
@@ -84,34 +84,34 @@ public:
     using LightingFlags = uint32_t;
 
     struct LightCounts {
-        uint32_t directional { 0u };
-        uint32_t point { 0u };
-        uint32_t spot { 0u };
-        uint32_t rect { 0u };
+        uint32_t directional{0u};
+        uint32_t point{0u};
+        uint32_t spot{0u};
+        uint32_t rect{0u};
 
-        uint32_t dirShadow { 0u };
-        uint32_t spotShadow { 0u };
+        uint32_t dirShadow{0u};
+        uint32_t spotShadow{0u};
 
-        uint32_t shadowCount { 0u };
+        uint32_t shadowCount{0u};
     };
 
     /** Shadow types.
      */
     struct ShadowTypes {
-        ShadowType shadowType { ShadowType::PCF };
-        ShadowQuality shadowQuality { ShadowQuality::NORMAL };
-        ShadowSmoothness shadowSmoothness { ShadowSmoothness::NORMAL };
-        float vpcfRadius;
-        int32_t vpcfSampleCount;
+        ShadowType shadowType{ShadowType::PCF};
+        ShadowQuality shadowQuality{ShadowQuality::NORMAL};
+        ShadowSmoothness shadowSmoothness{ShadowSmoothness::NORMAL};
+        float vpcfRadius{5.0f};
+        uint32_t vpcfSampleCount{16u};
     };
 
     /** Shadow quality resolutions.
      */
     struct ShadowQualityResolutions {
-        BASE_NS::Math::UVec2 low { 512u, 512u };
-        BASE_NS::Math::UVec2 normal { 1024u, 1024u };
-        BASE_NS::Math::UVec2 high { 2048u, 2048u };
-        BASE_NS::Math::UVec2 ultra { 4096u, 4096u };
+        BASE_NS::Math::UVec2 low{512u, 512u};
+        BASE_NS::Math::UVec2 normal{1024u, 1024u};
+        BASE_NS::Math::UVec2 high{2048u, 2048u};
+        BASE_NS::Math::UVec2 ultra{4096u, 4096u};
     };
 
     /** Set shadow type for all shadows.
@@ -163,4 +163,4 @@ protected:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_LIGHT_H
+#endif  // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_LIGHT_H

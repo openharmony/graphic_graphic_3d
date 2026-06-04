@@ -71,21 +71,199 @@ using namespace CORE3D_NS;
 
 CORE3D_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t RESOLUTION { 512u };
+constexpr uint32_t RESOLUTION{512u};
 
 static constexpr string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 #if (CORE3D_VALIDATION_ENABLED == 1)
-static constexpr string_view RIPPLE_TEXTURE_NAME_0 { "RIPPLE_RENDER_NODE_TEXTURE_0_" };
-static constexpr string_view RIPPLE_TEXTURE_NAME_1 { "RIPPLE_RENDER_NODE_TEXTURE_1_" };
+static constexpr string_view RIPPLE_TEXTURE_NAME_0{"RIPPLE_RENDER_NODE_TEXTURE_0_"};
+static constexpr string_view RIPPLE_TEXTURE_NAME_1{"RIPPLE_RENDER_NODE_TEXTURE_1_"};
 #endif
-static constexpr string_view RIPPLE_INPUT_BUFFER_NAME { "RIPPLE_RENDER_NODE_INPUTBUFFER" };
+static constexpr string_view RIPPLE_INPUT_BUFFER_NAME{"RIPPLE_RENDER_NODE_INPUTBUFFER"};
 static constexpr uint32_t MAX_REFLECTION_CAMERAS = 16U;
-static constexpr float minCloudCoverage = 0.01f;
-static constexpr float minCloudDensity = 0.0001f;
+static constexpr float MIN_CLOUD_COVERAGE = 0.01f;
+static constexpr float MIN_CLOUD_DENSITY = 0.0001f;
+static constexpr uint32_t WEATHER_QUERY_NODE_INDEX = 1U;
 
 // We could just have variants in one shader file, but both variants would use the same renderslot so ShaderManager
 // validation complains at ShaderManager::CreateBaseShaderPathsAndHashes(...)
-static constexpr string_view CLOUD_SHADER_NAME { "3dshaders://shader/clouds/core3d_dm_fw_cloud.shader" };
+static constexpr string_view CLOUD_SHADER_NAME{"3dshaders://shader/clouds/core3d_dm_fw_cloud.shader"};
+
+bool IsEntityEffectivelyEnabled(const INodeComponentManager& nodeManager, const Entity entity)
+{
+    if (!EntityUtil::IsValid(entity)) {
+        return false;
+    }
+    if (const auto nodeHandle = nodeManager.Read(entity); nodeHandle) {
+        return nodeHandle->effectivelyEnabled;
+    }
+    return true;
+}
+
+bool IsWeatherQueryRowActive(const ComponentQuery::ResultRow& row, const INodeComponentManager& nodeManager)
+{
+    if (!row.IsValidComponentId(WEATHER_QUERY_NODE_INDEX)) {
+        return true;
+    }
+    if (const auto nodeHandle = nodeManager.Read(row.components[WEATHER_QUERY_NODE_INDEX]); nodeHandle) {
+        return nodeHandle->effectivelyEnabled;
+    }
+    return true;
+}
+
+constexpr RenderDataStoreWeather::CloudRenderingType GetCloudRenderingType(
+    const WeatherComponent::CloudRenderingType ct);
+BASE_NS::Math::Vec3 ComputeSunDir(Math::UVec3 date, float lat, float lon, float utcOffset, float localHour);
+
+const ComponentQuery::ResultRow* GetActiveRenderConfigurationWeatherRow(
+    const IRenderConfigurationComponentManager& renderConfigManager, const IEnvironmentComponentManager& envManager,
+    const INodeComponentManager& nodeManager, const ComponentQuery& weatherQuery)
+{
+    for (IComponentManager::ComponentId id = 0U; id < renderConfigManager.GetComponentCount(); ++id) {
+        const Entity renderConfigEntity = renderConfigManager.GetEntity(id);
+        if (!IsEntityEffectivelyEnabled(nodeManager, renderConfigEntity)) {
+            continue;
+        }
+        const auto renderConfigHandle = renderConfigManager.Read(id);
+        if (!renderConfigHandle) {
+            return nullptr;
+        }
+        const auto envHandle = envManager.Read(renderConfigHandle->environment);
+        if (!envHandle) {
+            return nullptr;
+        }
+        if (envHandle->background != EnvironmentComponent::Background::SKY) {
+            return nullptr;
+        }
+        const auto* row = weatherQuery.FindResultRow(envHandle->weather);
+        if (row && IsWeatherQueryRowActive(*row, nodeManager)) {
+            return row;
+        }
+        return nullptr;
+    }
+    return nullptr;
+}
+
+RenderDataStoreWeather::WeatherSettings GetDisabledWeatherSettings()
+{
+    RenderDataStoreWeather::WeatherSettings settings;
+    settings.coverage = 0.0f;
+    settings.density = 0.0f;
+    settings.sunId = INVALID_ENTITY;
+    return settings;
+}
+
+void FillWeatherSkyAndAtmosphereSettings(
+    const WeatherComponent& component, RenderDataStoreWeather::WeatherSettings& settings)
+{
+    settings.timeOfDay = component.timeOfDay;
+    settings.moonBrightness = component.moonBrightness;
+    settings.moonSize = component.moonSize;
+    settings.moonOpacity = component.moonOpacity;
+    settings.moonTint = component.moonTint;
+    settings.starsIntensity = component.starsIntensity;
+    settings.nightSkyIntensity = component.nightSkyIntensity;
+    settings.nightGlow = component.nightGlow;
+
+    settings.skyViewBrightness = component.skyViewBrightness;
+    settings.skySunSize = component.skySunSize;
+    settings.skySunTint = component.skySunTint;
+    settings.skySunOpacity = component.skySunOpacity;
+    settings.worldScale = component.worldScale;
+    settings.maxAerialPerspective = component.maxAerialPerspective;
+    settings.rayleighScatteringBase = component.rayleighScatteringBase;
+    settings.ozoneAbsorptionBase = component.ozoneAbsorptionBase;
+    settings.mieScatteringBase = component.mieScatteringBase;
+    settings.mieAbsorptionBase = component.mieAbsorptionBase;
+    settings.groundColor = Math::Vec4{component.groundColor, 0.f};
+
+    settings.windSpeed = component.windSpeed;
+    settings.density = component.density;
+    settings.cloudType = component.cloudType;
+    settings.coverage = component.coverage;
+    settings.curliness = component.curliness;
+
+    settings.windDir[0] = component.windDir.x;
+    settings.windDir[1] = component.windDir.y;
+    settings.windDir[2] = component.windDir.z;
+}
+
+void FillWeatherSunSettings(const WeatherComponent& component, ITransformComponentManager& transformationManager,
+    RenderDataStoreWeather::WeatherSettings& settings)
+{
+    const auto sunDir =
+        ComputeSunDir(component.date, component.latitude, component.longitude, component.utc, component.timeOfDay);
+    const float sunElevation = BASE_NS::Math::asin(sunDir.y);
+    settings.sunDirElevation = Math::Vec4(sunDir, sunElevation);
+
+    auto transformHandle = transformationManager.Write(component.directionalSun);
+    if (!transformHandle) {
+        return;
+    }
+    settings.sunId = component.directionalSun.id;
+    if (sunElevation > 0.0f) {
+        const vec3 sunDirection = Math::Vec3(sunDir.x, sunDir.y, sunDir.z);
+        transformHandle->rotation = Math::LookRotation(sunDirection, Math::Vec3(0.0f, 1.0f, 0.0f));
+        transformHandle->scale = Math::Vec3(1.0, 1.0, 1.0);
+    } else {
+        transformHandle->scale = Math::Vec3(0.0, 0.0, 0.0);
+    }
+}
+
+void FillWeatherCloudAndAmbientSettings(
+    const WeatherComponent& component, RenderDataStoreWeather::WeatherSettings& settings)
+{
+    settings.directIntensityDay = component.directIntensityDay;
+    settings.cloudTopOffset = component.cloudTopOffset;
+    settings.ambientIntensityDay = component.ambientIntensityDay;
+    settings.softness = component.softness;
+    settings.curliness = component.curliness;
+
+    settings.earthRadius = component.earthRadius;
+    settings.cloudBottomAltitude = component.cloudBottomAltitude;
+    settings.cloudTopAltitude = component.cloudTopAltitude;
+    settings.crispiness = component.crispiness;
+
+    settings.weatherScale = component.weatherScale;
+    settings.cloudHorizonFogHeight = component.cloudHorizonFogHeight;
+    settings.horizonFogFalloff = component.horizonFogFalloff;
+    settings.maxSamples = component.maxSamples;
+    settings.dayTopAmbientColor = component.dayTopAmbientColor;
+
+    settings.ambientColorHueSunset = component.ambientColorHueSunset;
+    settings.directColorHueSunset = component.directColorHueSunset;
+    settings.sunGlareColorDay = component.sunGlareColorDay;
+    settings.sunGlareColorSunset = component.sunGlareColorSunset;
+
+    settings.nightTopAmbientColor = component.nightTopAmbientColor;
+    settings.ambientIntensityNight = component.ambientIntensityNight;
+    settings.directLightIntensityNight = component.directLightIntensityNight;
+    settings.nightBottomAmbientColor = component.nightBottomAmbientColor;
+    settings.moonBaseColor = component.moonBaseColor;
+    settings.moonGlareColor = component.moonGlareColor;
+    settings.cloudOptimizationFlags = component.cloudOptimizationFlags;
+
+    settings.cloudRenderingType = GetCloudRenderingType(component.cloudRenderingType);
+}
+
+void FillWeatherImageHandles(const WeatherComponent& component, IRenderHandleComponentManager& renderHandleManager,
+    RenderDataStoreWeather::WeatherSettings& settings)
+{
+    settings.lowFrequencyImage = renderHandleManager.GetRenderHandle(component.lowFrequencyImage);
+    settings.highFrequencyImage = renderHandleManager.GetRenderHandle(component.highFrequencyImage);
+    settings.curlNoiseImage = renderHandleManager.GetRenderHandle(component.curlNoiseImage);
+    settings.cirrusImage = renderHandleManager.GetRenderHandle(component.cirrusImage);
+    settings.weatherMapImage = renderHandleManager.GetRenderHandle(component.weatherMapImage);
+}
+
+void FillWeatherSettingsFromComponent(const WeatherComponent& component,
+    ITransformComponentManager& transformationManager, IRenderHandleComponentManager& renderHandleManager,
+    RenderDataStoreWeather::WeatherSettings& settings)
+{
+    FillWeatherSkyAndAtmosphereSettings(component, settings);
+    FillWeatherSunSettings(component, transformationManager, settings);
+    FillWeatherCloudAndAmbientSettings(component, settings);
+    FillWeatherImageHandles(component, renderHandleManager, settings);
+}
 
 EntityReference CreateTargetGpuImage(IEcs& ecs, IGpuResourceManager& gpuResourceMgr, const Math::UVec2& size,
     const string_view name, BASE_NS::Format colorFormat)
@@ -111,6 +289,9 @@ EntityReference CreateTargetGpuImage(IEcs& ecs, IGpuResourceManager& gpuResource
         rhr = gpuResourceMgr.Create(desc);
     }
     auto handleManager = GetManager<IRenderHandleComponentManager>(ecs);
+    if (!handleManager) {
+        return {};
+    }
     return GetOrCreateEntityReference(ecs.GetEntityManager(), *handleManager, rhr);
 }
 
@@ -119,6 +300,9 @@ EntityReference CreateBuffer(
 {
     auto rhr = gpuResourceMgr.Create(name, bufferDesc);
     auto handleManager = GetManager<IRenderHandleComponentManager>(ecs);
+    if (!handleManager) {
+        return {};
+    }
     return GetOrCreateEntityReference(ecs.GetEntityManager(), *handleManager, rhr);
 }
 
@@ -132,17 +316,21 @@ WeatherSystem::RipplePlaneResources InitSimulationResources(
     // create textures for ripple simulation
     {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        mTestRes.rippleTextures[0] = CreateTargetGpuImage(ecs, gpuResourceMgr, { inResolution, inResolution },
+        mTestRes.rippleTextures[0] = CreateTargetGpuImage(ecs,
+            gpuResourceMgr,
+            {inResolution, inResolution},
             RIPPLE_TEXTURE_NAME_0 + "scene" + to_string(ecs.GetId()) + "_entity" + to_string(entity.id),
             Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
-        mTestRes.rippleTextures[1] = CreateTargetGpuImage(ecs, gpuResourceMgr, { inResolution, inResolution },
+        mTestRes.rippleTextures[1] = CreateTargetGpuImage(ecs,
+            gpuResourceMgr,
+            {inResolution, inResolution},
             RIPPLE_TEXTURE_NAME_1 + "scene" + to_string(ecs.GetId()) + "_entity" + to_string(entity.id),
             Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
 #else
         mTestRes.rippleTextures[0] = CreateTargetGpuImage(
-            ecs, gpuResourceMgr, { inResolution, inResolution }, {}, Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
+            ecs, gpuResourceMgr, {inResolution, inResolution}, {}, Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
         mTestRes.rippleTextures[1] = CreateTargetGpuImage(
-            ecs, gpuResourceMgr, { inResolution, inResolution }, {}, Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
+            ecs, gpuResourceMgr, {inResolution, inResolution}, {}, Format::BASE_FORMAT_R32G32B32A32_SFLOAT);
 #endif
 
         GpuBufferDesc inputArgsBuffer;
@@ -221,14 +409,82 @@ constexpr RenderDataStoreWeather::CloudRenderingType GetCloudRenderingType(
             return RenderDataStoreWeather::CloudRenderingType::FULL;
     }
 }
-} // namespace
+
+/*
+ * Solar position calculation using NOAA formulas
+ * Ref: https://gml.noaa.gov/grad/solcalc/calcdetails.html
+ */
+BASE_NS::Math::Vec3 ComputeSunDir(Math::UVec3 date, float lat, float lon, float utcOffset, float localHour)
+{
+    // Julian Day Number for the J2000.0 epoch (2000-01-01 12:00 TT)
+    constexpr double jdJ2000 = 2451545.0;
+    // Length of a Julian century in days
+    constexpr double daysPerJulianCentury = 36525.0;
+    // Earth rotates 1 degree every 4 minutes, used for True Solar Time and Hour Angle
+    constexpr double minutesPerDegree = 4.0;
+    constexpr double minutesPerDay = 1440.0;
+    constexpr double degToRad = Math::PI / 180.0;
+
+    // Julian Day
+    uint32_t d = Math::clamp(date.x, 1U, 31U);
+    uint32_t m = Math::clamp(date.y, 1U, 12U);
+    int32_t y = static_cast<int32_t>(date.z);
+    if (m <= 2) {
+        --y;
+        m += 12U;
+    }
+    int32_t a = y / 100;  // 100: years in a century
+    double jd = static_cast<uint32_t>(365.25 * (y + 4716U)) + static_cast<uint32_t>(30.6001 * (m + 1U)) + d +
+                (2 - a + a / 4U) - 1524.5 + (localHour - utcOffset) / 24.0;
+
+    // Declination & Equation of Time
+    double jc = (jd - jdJ2000) / daysPerJulianCentury;
+    double l0 = fmod(280.46646 + jc * 36000.76983, 360.0);
+    double mr = (357.52911 + jc * 35999.05029) * degToRad;
+    double e = 0.016708634 - jc * 0.000042037;
+    double c = sin(mr) * (1.914602 - jc * 0.004817) + sin(2 * mr) * 0.019993 + sin(3 * mr) * 0.000289;
+    double al = (l0 + c - 0.00569 - 0.00478 * sin((125.04 - 1934.136 * jc) * degToRad)) * degToRad;
+    double oc = (23.439 - jc * 0.013004) * degToRad;
+    double dc = asin(sin(oc) * sin(al));
+    double y2 = tan(oc / 2) * tan(oc / 2);
+    double l = l0 * degToRad;
+    double eot = minutesPerDegree *
+                 (y2 * sin(2.0 * l) - 2.0 * e * sin(mr) + 4.0 * e * y2 * sin(mr) * cos(2.0 * l) -
+                     0.5 * y2 * y2 * sin(4.0 * l) - 1.25 * e * e * sin(2.0 * mr)) *
+                 180.0 / Math::PI;
+
+    // Hour Angle
+    double tst = fmod((localHour - utcOffset) * 60.0 + eot + minutesPerDegree * lon, minutesPerDay);
+    if (tst < 0) {
+        tst += minutesPerDay;
+    }
+    double ha = (tst / minutesPerDegree - 180.0) * degToRad;
+    double latR = lat * degToRad;
+
+    // Elevation & Azimuth
+    double cosZ = std::clamp(sin(latR) * sin(dc) + cos(latR) * cos(dc) * cos(ha), -1.0, 1.0);
+    double sinZ = sqrt(std::max(0.0, 1.0 - cosZ * cosZ));
+    double elev = asin(cosZ);
+    double cosAz = (sinZ > 1e-6) ? std::clamp((sin(latR) * cosZ - sin(dc)) / (cos(latR) * sinZ), -1.0, 1.0) : 0.0;
+    double az = acos(cosAz);
+    if (ha > 0.0) {
+        az = 2.0 * Math::PI - az;
+    }
+    // Raw unit vec3  (-1..+1)  X=East  Y=Up  Z=North
+    return {static_cast<float>(-cos(elev) * sin(az)),
+        static_cast<float>(sin(elev)),
+        static_cast<float>(-cos(elev) * cos(az))};
+}
+}  // namespace
 
 WeatherSystem::WeatherSystem(IEcs& ecs)
-    : ecs_(ecs), materialManager_(*GetManager<IMaterialComponentManager>(ecs)),
+    : ecs_(ecs),
+      materialManager_(*GetManager<IMaterialComponentManager>(ecs)),
       meshManager_(*GetManager<IMeshComponentManager>(ecs)),
       renderMeshManager_(*GetManager<IRenderMeshComponentManager>(ecs)),
       renderHandleManager_(*GetManager<IRenderHandleComponentManager>(ecs)),
       transformationManager_(*GetManager<ITransformComponentManager>(ecs)),
+      nodeManager_(*GetManager<INodeComponentManager>(ecs)),
       renderConfigManager_(*GetManager<IRenderConfigurationComponentManager>(ecs)),
       camManager_(*GetManager<ICameraComponentManager>(ecs)),
       envManager_(*GetManager<IEnvironmentComponentManager>(ecs)),
@@ -280,18 +536,22 @@ WeatherSystem::RipplePlaneResources WeatherSystem::GetOrCreateSimulationResource
         return iter->second;
     }
     auto res = CreateSimulationResourcesForEntity(ecs_, *graphicsContext_, entity);
-    handleResources_.insert({ entity, res });
+    handleResources_.insert({entity, res});
     return res;
 }
 
 void WeatherSystem::Initialize()
 {
-    const ComponentQuery::Operation operations[] = { { rippleComponentManager_, ComponentQuery::Operation::OPTIONAL } };
+    const ComponentQuery::Operation operations[] = {{rippleComponentManager_, ComponentQuery::Operation::OPTIONAL}};
     query_.SetEcsListenersEnabled(true);
     query_.SetupQuery(rippleComponentManager_, operations);
 
+    const ComponentQuery::Operation weatherOps[] = {{nodeManager_, ComponentQuery::Operation::OPTIONAL}};
+    weatherQuery_.SetEcsListenersEnabled(true);
+    weatherQuery_.SetupQuery(weatherManager_, weatherOps, true);
+
     const ComponentQuery::Operation waterPlaneOps[] = {
-        { planarReflectionManager_, ComponentQuery::Operation::REQUIRE },
+        {planarReflectionManager_, ComponentQuery::Operation::REQUIRE},
     };
 
     waterPlaneQuery_.SetEcsListenersEnabled(false);
@@ -303,6 +563,7 @@ void WeatherSystem::Initialize()
 void WeatherSystem::Uninitialize()
 {
     query_.SetEcsListenersEnabled(false);
+    weatherQuery_.SetEcsListenersEnabled(false);
 }
 
 WeatherSystem ::~WeatherSystem()
@@ -345,7 +606,8 @@ const IPropertyHandle* WeatherSystem::GetProperties() const
     return nullptr;
 }
 
-void WeatherSystem::SetProperties(const IPropertyHandle& dataHandle) {}
+void WeatherSystem::SetProperties(const IPropertyHandle& dataHandle)
+{}
 
 const IEcs& WeatherSystem::GetECS() const
 {
@@ -374,6 +636,11 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
 
     const uint32_t weatherComponentCount = static_cast<uint32_t>(weatherManager_.GetComponentCount());
     if (weatherComponentCount == 0U) {
+        const bool weatherStateChanged = EntityUtil::IsValid(activeWeatherEntity_) || cloudWasEnabled_;
+        if (dataStoreWeather_) {
+            dataStoreWeather_->SetWeatherSettings(INVALID_ENTITY, GetDisabledWeatherSettings());
+        }
+        activeWeatherEntity_ = {};
         if (auto* nodeSystem = GetSystem<INodeSystem>(ecs_)) {
             for (const auto& e : cloudMatData_.renderMeshEntity) {
                 if (auto* node = nodeSystem->GetNode(e)) {
@@ -382,7 +649,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
             }
         }
         cloudWasEnabled_ = false;
-        return false;
+        return frameRenderingQueued || weatherStateChanged;
     }
 
     if (!dataStoreWeather_ && renderDataStoreManager_) {
@@ -392,7 +659,7 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
                 dsName = in->dataStorePrefix;
             }
         }
-        dsName += RenderDataStoreWeather::typeName;
+        dsName += RenderDataStoreWeather::TYPE_NAME;
         dataStoreWeather_ = refcnt_ptr<RenderDataStoreWeather>(
             renderDataStoreManager_->Create(RenderDataStoreWeather::UID, dsName.c_str()));
     }
@@ -401,142 +668,44 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
     }
 
     query_.Execute();
+    weatherQuery_.Execute();
 
     ProcessWaterRipples();
 
     const auto cameraComponentCount = camManager_.GetComponentCount();
     const auto planarCount = planarReflectionManager_.GetComponentCount();
+    const auto* activeWeatherRow =
+        GetActiveRenderConfigurationWeatherRow(renderConfigManager_, envManager_, nodeManager_, weatherQuery_);
+    const Entity activeWeatherEntity = activeWeatherRow ? activeWeatherRow->entity : Entity{};
     bool cloudEnabledThisFrame = false;
     bool weatherUpdated = false;
 
     if (const auto weatherGeneration = weatherManager_.GetGenerationCounter();
-        weatherGeneration_ != weatherGeneration) {
+        (weatherGeneration_ != weatherGeneration) || (activeWeatherEntity_ != activeWeatherEntity)) {
         weatherGeneration_ = weatherGeneration;
+        activeWeatherEntity_ = activeWeatherEntity;
         weatherUpdated = true;
-        RenderDataStoreWeather::WeatherSettings settings;
-        const auto weatherComponents = weatherManager_.GetComponentCount();
-        for (auto id = 0U; id < weatherComponents; ++id) {
-            auto handle = weatherManager_.Read(id);
-            if (!handle) {
-                continue;
+        auto settings = GetDisabledWeatherSettings();
+        if (activeWeatherRow) {
+            if (const auto handle = weatherManager_.Read(activeWeatherRow->components[0U]); handle) {
+                FillWeatherSettingsFromComponent(*handle, transformationManager_, renderHandleManager_, settings);
+                cloudMatData_.cloudRenderingType = settings.cloudRenderingType;
             }
-            settings.timeOfDay = handle->timeOfDay;
-            settings.moonBrightness = handle->moonBrightness;
-            settings.nightGlow = handle->nightGlow;
-
-            settings.skyViewBrightness = handle->skyViewBrightness;
-            settings.worldScale = handle->worldScale;
-            settings.maxAerialPerspective = handle->maxAerialPerspective;
-            settings.rayleighScatteringBase = handle->rayleighScatteringBase;
-            settings.ozoneAbsorptionBase = handle->ozoneAbsorptionBase;
-            settings.mieScatteringBase = handle->mieScatteringBase;
-            settings.mieAbsorptionBase = handle->mieAbsorptionBase;
-            settings.groundColor = Math::Vec4 { handle->groundColor, 0.f };
-
-            settings.windSpeed = handle->windSpeed;
-            settings.density = handle->density;
-            settings.cloudType = handle->cloudType;
-            settings.coverage = handle->coverage;
-            settings.curliness = handle->curliness;
-
-            settings.windDir[0] = handle->windDir.x;
-            settings.windDir[1] = handle->windDir.y;
-            settings.windDir[2] = handle->windDir.z; // 2: index
-
-            float timeOfDay = handle->timeOfDay;
-
-            float sunAngle = ((timeOfDay - 6.0f) / 24.0f) * 2.0f * Math::PI;
-            vec3 sunDir = Math::Vec4(cos(sunAngle), // east-west
-                sin(sunAngle),                      // up-down
-                sin(sunAngle + Math::PI * 0.25f),   // north-south, offset by 45 degrees
-                0.0);
-            sunDir = Math::Normalize(sunDir);
-            float sunElevation = Math::asin(sunDir.y);
-
-            settings.sunDirElevation = Math::Vec4(sunDir, sunElevation);
-
-            auto transformManager = GetManager<ITransformComponentManager>(ecs_);
-            auto transformHandle = transformManager->Write(handle->directionalSun);
-            if (transformHandle) {
-                settings.sunId = handle->directionalSun.id;
-                if (sunElevation > 0.0) {
-                    vec3 sunDirection = Math::Vec3(sunDir.x, sunDir.y, sunDir.z);
-                    transformHandle->rotation = Math::LookRotation(sunDirection, Math::Vec3(0.0f, 1.0f, 0.0f));
-                    transformHandle->scale = Math::Vec3(1.0, 1.0, 1.0);
-                } else {
-                    transformHandle->scale = Math::Vec3(0.0, 0.0, 0.0);
-                }
-            }
-
-            settings.directIntensityDay = handle->directIntensityDay;
-            settings.cloudTopOffset = handle->cloudTopOffset;
-            settings.ambientIntensityDay = handle->ambientIntensityDay;
-            settings.softness = handle->softness;
-            settings.curliness = handle->curliness;
-
-            settings.earthRadius = handle->earthRadius;
-            settings.cloudBottomAltitude = handle->cloudBottomAltitude;
-            settings.cloudTopAltitude = handle->cloudTopAltitude;
-            settings.crispiness = handle->crispiness;
-
-            settings.weatherScale = handle->weatherScale;
-            settings.cloudHorizonFogHeight = handle->cloudHorizonFogHeight;
-            settings.horizonFogFalloff = handle->horizonFogFalloff;
-            settings.maxSamples = handle->maxSamples;
-            settings.dayTopAmbientColor = handle->dayTopAmbientColor;
-
-            settings.ambientColorHueSunset = handle->ambientColorHueSunset;
-            settings.directColorHueSunset = handle->directColorHueSunset;
-            settings.sunGlareColorDay = handle->sunGlareColorDay;
-            settings.sunGlareColorSunset = handle->sunGlareColorSunset;
-
-            settings.nightTopAmbientColor = handle->nightTopAmbientColor;
-            settings.ambientIntensityNight = handle->ambientIntensityNight;
-            settings.directLightIntensityNight = handle->directLightIntensityNight;
-            settings.nightBottomAmbientColor = handle->nightBottomAmbientColor;
-            settings.moonBaseColor = handle->moonBaseColor;
-            settings.moonGlareColor = handle->moonGlareColor;
-            settings.cloudOptimizationFlags = handle->cloudOptimizationFlags;
-
-            settings.cloudRenderingType = GetCloudRenderingType(handle->cloudRenderingType);
-
-            // store
-            cloudMatData_.cloudRenderingType = settings.cloudRenderingType;
-
-            if (auto* rhm = GetManager<IRenderHandleComponentManager>(ecs_)) {
-                settings.lowFrequencyImage = rhm->GetRenderHandle(handle->lowFrequencyImage);
-                settings.highFrequencyImage = rhm->GetRenderHandle(handle->highFrequencyImage);
-                settings.curlNoiseImage = rhm->GetRenderHandle(handle->curlNoiseImage);
-                settings.cirrusImage = rhm->GetRenderHandle(handle->cirrusImage);
-                settings.weatherMapImage = rhm->GetRenderHandle(handle->weatherMapImage);
-            }
-
-            dataStoreWeather_->SetWeatherSettings(weatherManager_.GetEntity(id).id, settings);
         }
+        dataStoreWeather_->SetWeatherSettings(activeWeatherEntity.id, settings);
     }
 
     // first check if there are any weather components
     if (weatherManager_.GetComponentCount() > 0U) {
         // then check the usage with cameras
-        bool usesWeather { false };
-        if (const auto rcHandle = renderConfigManager_.Read(0U)) {
-            if (const auto envHandle = envManager_.Read(rcHandle->environment)) {
-                if (envHandle->weather) {
-                    usesWeather = true;
-                }
-            }
-        }
+        const bool usesWeather = (activeWeatherRow != nullptr);
 
         bool weatherHasCloudsThisFrame = false;
-        for (auto id = 0U; id < weatherComponentCount; ++id) {
-            auto handle = weatherManager_.Read(id);
-            if (!handle) {
-                continue;
-            }
+        if (const auto handle = usesWeather ? weatherManager_.Read(activeWeatherRow->components[0U])
+                                            : ScopedHandle<const WeatherComponent>{}) {
             // Skip rendering clouds if they are not visible
-            if (handle->coverage >= minCloudCoverage && handle->density >= minCloudDensity) {
+            if (handle->coverage >= MIN_CLOUD_COVERAGE && handle->density >= MIN_CLOUD_DENSITY) {
                 weatherHasCloudsThisFrame = true;
-                break;
             }
         }
 
@@ -546,14 +715,13 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         uint32_t index = 0;
         // the low 32 bits are exposed in editor for the user.
         constexpr uint64_t usedLayersMask = 0x0000000Fffffffff;
-        auto* nodeManager = GetManager<INodeComponentManager>(ecs_);
         for (IComponentManager::ComponentId cameraId = 0; cameraId < cameraComponentCount; ++cameraId) {
             const Entity cameraEntity = camManager_.GetEntity(cameraId);
-            if (auto nodeHandle = nodeManager->Read(cameraEntity); !nodeHandle || !nodeHandle->effectivelyEnabled) {
+            if (auto nodeHandle = nodeManager_.Read(cameraEntity); !nodeHandle || !nodeHandle->effectivelyEnabled) {
                 continue;
             }
             IPropertyHandle* cameraHandle = camManager_.GetData(cameraId);
-            uint64_t currentLayerMask {};
+            uint64_t currentLayerMask{};
             if (auto readCamera = ScopedHandle<const CameraComponent>(cameraHandle)) {
                 if (!(readCamera->sceneFlags & CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT)) {
                     continue;
@@ -576,11 +744,11 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
 
         for (IComponentManager::ComponentId reflectionId = 0; reflectionId < planarCount; ++reflectionId) {
             const Entity reflectionEntity = planarReflectionManager_.GetEntity(reflectionId);
-            if (auto nodeHandle = nodeManager->Read(reflectionEntity); !nodeHandle || !nodeHandle->effectivelyEnabled) {
+            if (auto nodeHandle = nodeManager_.Read(reflectionEntity); !nodeHandle || !nodeHandle->effectivelyEnabled) {
                 continue;
             }
             IPropertyHandle* reflectionHandle = planarReflectionManager_.GetData(reflectionId);
-            uint64_t currentLayerMask {};
+            uint64_t currentLayerMask{};
             if (auto readReflection = ScopedHandle<const PlanarReflectionComponent>(reflectionHandle)) {
                 if (!(readReflection->additionalFlags & PlanarReflectionComponent::FlagBits::ACTIVE_RENDER_BIT)) {
                     continue;
@@ -605,15 +773,20 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         cameraCount_ = index;
 
         // get largest camera resolution
-        Math::UVec2 maxRes { 0U, 0U };
+        Math::UVec2 maxRes{0U, 0U};
         const auto cameraCount = camManager_.GetComponentCount();
         for (IComponentManager::ComponentId id = 0; id < cameraCount; ++id) {
             ScopedHandle<const CameraComponent> handle = camManager_.Read(id);
             const CameraComponent& component = *handle;
             bool checkRes = usesWeather;
             if (!usesWeather) {
-                if (auto envHandle = envManager_.Read(component.environment); envHandle && envHandle->weather) {
-                    checkRes = true;
+                if (auto envHandle = envManager_.Read(component.environment); envHandle) {
+                    if (envHandle->background == EnvironmentComponent::Background::SKY) {
+                        if (const auto* row = weatherQuery_.FindResultRow(envHandle->weather);
+                            row && IsWeatherQueryRowActive(*row, nodeManager_)) {
+                            checkRes = true;
+                        }
+                    }
                 }
             }
             if (checkRes) {
@@ -631,6 +804,9 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         bool reflectionChanged = false;
 
         for (IComponentManager::ComponentId id = 0; id < planarCount; ++id) {
+            if (id >= screenPercentages_.size()) {
+                break;
+            }
             ScopedHandle<const PlanarReflectionComponent> handle = planarReflectionManager_.Read(id);
             const PlanarReflectionComponent& component = *handle;
             if (screenPercentages_[id] != component.screenPercentage) {
@@ -741,8 +917,8 @@ void WeatherSystem::ProcessWaterRipples()
             continue;
         }
 
-        Math::Vec3 currentPlaneCenterPos { 0.0f, 0.0f, 0.0f };
-        Math::Vec2 planeOffset { 0.0f, 0.0f };
+        Math::Vec3 currentPlaneCenterPos{0.0f, 0.0f, 0.0f};
+        Math::Vec2 planeOffset{0.0f, 0.0f};
 
         if (auto transHandle = transformationManager_.Read(planeEntity)) {
             currentPlaneCenterPos = transHandle->position;
@@ -760,7 +936,7 @@ void WeatherSystem::ProcessWaterRipples()
             planeOffset.x = Math::round(planeOffset.x * texelPerMeter.x);
             planeOffset.y = Math::round(planeOffset.y * texelPerMeter.y);
 
-            planeRes.prevPlanePos = currentPlaneCenterPos; // Update prev position for this plane
+            planeRes.prevPlanePos = currentPlaneCenterPos;  // Update prev position for this plane
         }
 
         RenderDataStoreWeather::WaterEffectData waterEffectData;
@@ -788,7 +964,8 @@ void WeatherSystem::ProcessWaterRipples()
 
         dataStoreWeather_->SetWaterEffect(waterEffectData);
 
-        const auto IntersectAabb = [this, renderContextClassRegister](const Math::Vec3& worldXYZ, Math::Vec2& inPlaneUv,
+        const auto IntersectAabb = [this, renderContextClassRegister](const Math::Vec3& worldXYZ,
+                                       Math::Vec2& inPlaneUv,
                                        const Entity& planeEntity) -> bool {
             const auto pickingUtil = CORE3D_NS::GetInstance<IPicking>(*renderContextClassRegister, UID_PICKING);
             if (!pickingUtil) {
@@ -840,13 +1017,13 @@ void WeatherSystem::ProcessWaterRipples()
             if (IntersectAabb(rippleWorldPosition, inUv, planeEntity)) {
                 const auto intersectXGrid = uint32_t((1.f - inUv.x) * RESOLUTION);
                 const auto intersectYGrid = uint32_t((1.f - inUv.y) * RESOLUTION);
-                const Math::UVec2 newPos = { intersectXGrid, intersectYGrid };
+                const Math::UVec2 newPos = {intersectXGrid, intersectYGrid};
 
-                newRippleToAdd.push_back({ entityWithRippleComponent, newPos });
+                newRippleToAdd.push_back({entityWithRippleComponent, newPos});
             }
         }
-        DefaultWaterRippleDataStruct inputArgs {};
-        inputArgs.inArgs = { 0U, planeRes.currentTextureIndex, RESOLUTION, RESOLUTION };
+        DefaultWaterRippleDataStruct inputArgs{};
+        inputArgs.inArgs = {0U, planeRes.currentTextureIndex, RESOLUTION, RESOLUTION};
 
         if (!newRippleToAdd.empty()) {
             const auto newToAdd = static_cast<uint32_t>(newRippleToAdd.size());
@@ -862,7 +1039,7 @@ void WeatherSystem::ProcessWaterRipples()
                 const auto& inputArgsBufferHandle =
                     renderHandleManager_.GetRenderHandleReference(planeRes.rippleArgsBufferHandle);
                 array_view<const uint8_t> data((const uint8_t*)&inputArgs, sizeof(DefaultWaterRippleDataStruct));
-                const BufferCopy bufferCopy { 0, 0, sizeof(DefaultWaterRippleDataStruct) };
+                const BufferCopy bufferCopy{0, 0, sizeof(DefaultWaterRippleDataStruct)};
                 rdsDefaultStaging->CopyDataToBuffer(data, inputArgsBufferHandle, bufferCopy);
             }
         }
@@ -965,6 +1142,9 @@ void WeatherSystem::DestorySimulationResources(CORE_NS::Entity planeEntity)
 void WeatherSystem::OnComponentEvent(
     EventType type, const IComponentManager& componentManager, const array_view<const Entity> entities)
 {
+    if (!renderContext_) {
+        return;
+    }
     IEntityManager& em = ecs_.GetEntityManager();
     auto& shaderManager = renderContext_->GetDevice().GetShaderManager();
 
@@ -988,7 +1168,7 @@ void WeatherSystem::OnComponentEvent(
                                     if (auto transformHandle = transformationManager_.Read(planeEntity)) {
                                         res.prevPlanePos = transformHandle->position;
                                     }
-                                    handleResources_.insert({ planeEntity, res });
+                                    handleResources_.insert({planeEntity, res});
                                 }
                             }
                         }
@@ -999,10 +1179,10 @@ void WeatherSystem::OnComponentEvent(
                             if (const Entity matEntity = GetMaterialEntity(planeEntity);
                                 EntityUtil::IsValid(matEntity)) {
                                 if (auto matHandle = materialManager_.Write(matEntity); matHandle) {
-                                    matHandle->materialShader.shader =
-                                        GetOrCreateEntityReference(em, *GetManager<IRenderHandleComponentManager>(ecs_),
-                                            shaderManager.GetShaderHandle(
-                                                "3dshaders://shader/core3d_dm_fw_reflection_plane.shader"));
+                                    matHandle->materialShader.shader = GetOrCreateEntityReference(em,
+                                        *GetManager<IRenderHandleComponentManager>(ecs_),
+                                        shaderManager.GetShaderHandle(
+                                            "3dshaders://shader/core3d_dm_fw_reflection_plane.shader"));
                                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].image = {};
                                     matHandle->textures[MaterialComponent::TextureIndex::SHEEN].sampler = {};
                                 }

@@ -69,13 +69,13 @@ bool DefineForSpec(const array_view<const ShaderSpecialization::Constant> reflec
             // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_gl_spirv.txt
             switch (c.type) {
                 default:
-                    [[fallthrough]]; // INVALID
+                    [[fallthrough]];  // INVALID
                 case ShaderSpecialization::Constant::Type::INVALID:
                     PLUGIN_ASSERT_MSG(false, "Unhandled specialization constant type");
                     break;
 
                 case ShaderSpecialization::Constant::Type::BOOL:
-                    [[fallthrough]]; // follow the same procedure as UINT32
+                    [[fallthrough]];  // follow the same procedure as UINT32
                 case ShaderSpecialization::Constant::Type::UINT32: {
                     const uint32_t value = *reinterpret_cast<uint32_t*>(offset);
                     const int len = sprintf_s(buf, sizeof(buf), "%u %uu\n", c.id, value);
@@ -151,6 +151,9 @@ string Specialize(ShaderStageFlags mask, const string_view shaderTemplate,
     defines.reserve(256);
     for (const auto& spc : data.constants) {
         if (spc.shaderStage & mask) {
+            if ((spc.offset + sizeof(uint32_t)) > data.data.size_bytes()) {
+                continue;  // bounds check: offset + element size out of range
+            }
             const uintptr_t offset = base + spc.offset;
             DefineForSpec(info, spc.id, offset, defines);
         }
@@ -158,5 +161,5 @@ string Specialize(ShaderStageFlags mask, const string_view shaderTemplate,
     // inject defines to shader source.
     return InsertDefines(shaderTemplate, defines);
 }
-} // namespace Gles
+}  // namespace Gles
 RENDER_END_NAMESPACE()

@@ -16,6 +16,8 @@
 #ifndef META_SRC_RESOURCE_OBJECT_RESOURCE_H
 #define META_SRC_RESOURCE_OBJECT_RESOURCE_H
 
+#include <mutex>
+
 #include <core/resources/intf_resource_manager.h>
 
 #include <meta/ext/implementation_macros.h>
@@ -50,25 +52,54 @@ public:
 
     void SetResourceType(const ObjectId& id) override;
 
+    BASE_NS::string GetVersion() const override
+    {
+        return {};
+    }
+
 private:
     ObjectId type_ = ClassId::ObjectResourceType.Id();
 };
 
-class ObjectResourceOptions
-    : public IntroduceInterfaces<MetaObject, META_NS::IObjectResourceOptions, META_NS::ISerializable> {
+class ObjectResourceOptions : public IntroduceInterfaces<MetaObject, IObjectResourceOptions, ISerializable> {
     META_OBJECT(ObjectResourceOptions, ClassId::ObjectResourceOptions, IntroduceInterfaces)
 public:
+    bool ApplyOptions(CORE_NS::IResource&, const CORE_NS::ResourceContextPtr& context) const override;
+    bool UpdateOptions(const CORE_NS::IResource&, const CORE_NS::ResourceContextPtr& context) override;
+    bool Merge(const IResourceOptions&) override;
+
     bool Load(CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) override;
     bool Save(
         CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr&, const CORE_NS::ResourceContextPtr&) const override;
 
+    void SetOptionData(BASE_NS::vector<uint8_t> d) override
+    {
+        std::unique_lock lock{mutex_};
+        optionsData_ = BASE_NS::move(d);
+    }
+    BASE_NS::vector<uint8_t> GetOptionData() const override
+    {
+        std::unique_lock lock{mutex_};
+        return optionsData_;
+    }
+
     void SetBaseResource(CORE_NS::ResourceId id) override
     {
+        std::unique_lock lock{mutex_};
         baseResource_ = BASE_NS::move(id);
     }
     CORE_NS::ResourceId GetBaseResource() const override
     {
+        std::unique_lock lock{mutex_};
         return baseResource_;
+    }
+
+    IResourceOptions::Ptr Clone() const override
+    {
+        auto clone = GetObjectRegistry().Create<IObjectResourceOptions>(ClassId::ObjectResourceOptions);
+        clone->SetOptionData(GetOptionData());
+        clone->SetBaseResource(GetBaseResource());
+        return clone;
     }
 
     IProperty::Ptr GetProperty(BASE_NS::string_view name) override;
@@ -78,7 +109,9 @@ public:
     META_NS::ReturnError Import(META_NS::IImportContext&) override;
 
 private:
+    mutable std::mutex mutex_;
     CORE_NS::ResourceId baseResource_;
+    BASE_NS::vector<uint8_t> optionsData_;
 };
 
 META_END_NAMESPACE()

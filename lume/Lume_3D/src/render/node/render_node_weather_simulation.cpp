@@ -117,12 +117,12 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
     }
 
     if (!RenderHandleUtil::IsValid(shader_)) {
-        return; // invalid shader
+        return;  // invalid shader
     }
 
     const auto& effectData = dataStoreWeather_->GetWaterEffectData();
     if (effectData.empty()) {
-        return; // No water planes to simulate
+        return;  // No water planes to simulate
     }
 
     const auto scene = dataStoreScene->GetScene();
@@ -131,6 +131,9 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
 
     // Loop through each water effect plane to process its simulation
     for (const auto& waterPlaneData : effectData) {
+        if (planeIndex >= MAX_WATER_PLANES) {
+            break;
+        }
         // Retrieve the specific textures, args buffer, and ping-pong index for this plane
         const RenderHandle& current_rippleTexture0 = waterPlaneData.texture0;
         const RenderHandle& current_rippleTexture1 = waterPlaneData.texture1;
@@ -152,7 +155,9 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
         if (textureImageDesc.width <= 1u || textureImageDesc.height <= 1u) {
             PLUGIN_LOG_W("RenderNodeWeatherSimulation: Invalid texture dimensions (%ux%u) for water plane %" PRIu64
                          ". Skipping simulation.",
-                textureImageDesc.width, textureImageDesc.height, waterPlaneData.id);
+                textureImageDesc.width,
+                textureImageDesc.height,
+                waterPlaneData.id);
             continue;
         }
         // --- Bindings for THIS plane's simulation ---
@@ -177,7 +182,7 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
             {
                 BindableImage bindable;
                 bindable.handle = (current_pingPongIdx == 0) ? current_rippleTexture1 : current_rippleTexture0;
-                pipelineDescriptorSetBinder->BindImage(2, bindable); // 2: parm
+                pipelineDescriptorSetBinder->BindImage(2, bindable);  // 2: parm
             }
 
             const auto descHandle = updateDescriptorSetBinder_[planeIndex]->GetDescriptorSetHandle();
@@ -190,7 +195,7 @@ void RenderNodeWeatherSimulation::ExecuteFrame(IRenderCommandList& cmdList)
         }
 
         // Push constants for THIS plane
-        BASE_NS::Math::Vec4 pc { deltaTime, 0, waterPlaneData.planeOffset.x, waterPlaneData.planeOffset.y };
+        BASE_NS::Math::Vec4 pc{deltaTime, 0, waterPlaneData.planeOffset.x, waterPlaneData.planeOffset.y};
         cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
 
         // Dispatch compute shader for THIS plane
@@ -244,7 +249,7 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
         {
             BindableImage bindable;
             bindable.handle = current_rippleTexture1;
-            pipelineDescriptorSetBinder->BindImage(2, bindable); // 2: parm
+            pipelineDescriptorSetBinder->BindImage(2, bindable);  // 2: parm
         }
 
         const auto descHandle = initDescriptorSetBinder_[slot]->GetDescriptorSetHandle();
@@ -258,7 +263,7 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
 
         // Dispatch compute shader to initialize textures for this plane
         if (TextureImageDesc.width > 1u && TextureImageDesc.height > 1u) {
-            const Math::UVec3 targetSize = { TextureImageDesc.width, TextureImageDesc.height, 1 };
+            const Math::UVec3 targetSize = {TextureImageDesc.width, TextureImageDesc.height, 1};
 
             const uint32_t tgcX = (targetSize.x + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
             const uint32_t tgcY = (targetSize.y + WATER_RIPPLE_TGS - 1u) / WATER_RIPPLE_TGS;
@@ -270,12 +275,12 @@ void RenderNodeWeatherSimulation::InitializeRippleBuffers(RENDER_NS::IRenderComm
 
         // Add a barrier immediately after initializing this plane's textures.
         {
-            constexpr GeneralBarrier src { AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
-                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-            constexpr GeneralBarrier dst { AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT |
-                                               AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+            constexpr GeneralBarrier src{AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+            constexpr GeneralBarrier dst{
+                AccessFlagBits::CORE_ACCESS_INDIRECT_COMMAND_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT,
                 PipelineStageFlagBits::CORE_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
-                    PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+                    PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
 
             cmdList.CustomMemoryBarrier(src, dst);
             cmdList.AddCustomBarrierPoint();
@@ -307,6 +312,7 @@ void RenderNodeWeatherSimulation ::ParseRenderNodeInputs()
     }
 
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
+    // inputResources_ = renderNodeUtil.CreateInputResources(jsonInputs_.resources);
     jsonInputs_.hasChangeableResourceHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.resources);
     jsonInputs_.hasChangeableDispatchHandles = renderNodeUtil.HasChangeableResources(jsonInputs_.dispatchResources);
 }

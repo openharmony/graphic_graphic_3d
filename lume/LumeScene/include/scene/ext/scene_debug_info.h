@@ -22,8 +22,8 @@ SCENE_BEGIN_NAMESPACE()
 
 class SceneDebugInfo {
 public:
-    uint32_t nodeObjectsAlive {};
-    uint32_t animationObjectsAlive {};
+    uint32_t nodeObjectsAlive{};
+    uint32_t animationObjectsAlive{};
 };
 
 SCENE_END_NAMESPACE()

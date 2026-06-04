@@ -28,7 +28,8 @@ using BASE_NS::move;
 using BASE_NS::unique_ptr;
 
 // -- TaskQueue ExecuteAsyncTask, runs TaskQueue::Execute.
-TaskQueue::ExecuteAsyncTask::ExecuteAsyncTask(TaskQueue& queue) : queue_(queue) {}
+TaskQueue::ExecuteAsyncTask::ExecuteAsyncTask(TaskQueue& queue) : queue_(queue)
+{}
 
 void TaskQueue::ExecuteAsyncTask::operator()()
 {
@@ -42,7 +43,8 @@ void TaskQueue::ExecuteAsyncTask::Destroy()
 }
 
 // -- TaskQueue
-TaskQueue::TaskQueue(const IThreadPool::Ptr& threadPool) : threadPool_(threadPool), isRunningAsync_(0) {}
+TaskQueue::TaskQueue(const IThreadPool::Ptr& threadPool) : threadPool_(threadPool), isRunningAsync_(0)
+{}
 
 TaskQueue::~TaskQueue() = default;
 
@@ -54,7 +56,7 @@ void TaskQueue::ExecuteAsync()
         BASE_NS::AtomicIncrement(&isRunningAsync_);
 
         // Execute in new thread.
-        asyncOperation_ = threadPool_->Push(IThreadPool::ITask::Ptr { new ExecuteAsyncTask(*this) });
+        asyncOperation_ = threadPool_->Push(IThreadPool::ITask::Ptr{new ExecuteAsyncTask(*this)});
     }
 }
 
@@ -67,12 +69,13 @@ void TaskQueue::Wait()
 {
     if (IsRunningAsync()) {
         asyncOperation_->Wait();
-        isRunningAsync_ = 0;
+        // AtomicDecrement in ExecuteAsyncTask has already set isRunningAsync_ to 0.
     }
 }
 
 // -- TaskQueue entry.
-TaskQueue::Entry::Entry(uint64_t identifier, IThreadPool::ITask::Ptr task) : task(move(task)), identifier(identifier) {}
+TaskQueue::Entry::Entry(uint64_t identifier, IThreadPool::ITask::Ptr task) : task(move(task)), identifier(identifier)
+{}
 
 bool TaskQueue::Entry::operator==(uint64_t rhsIdentifier) const
 {

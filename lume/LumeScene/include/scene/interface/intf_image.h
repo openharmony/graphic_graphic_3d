@@ -50,12 +50,12 @@ public:
          *        The buffer must be AHardwareBuffer in Android or OH_NativeBuffer in OHOS.
          *        Other platforms are not supported and calling this function returns false always.
          */
-        uintptr_t buffer {};
+        uintptr_t buffer{};
         /**
          * @brief Size of the buffer in pixels.
          *        Automatically detected from buffer if {}.
          */
-        BASE_NS::Math::UVec2 size {};
+        BASE_NS::Math::UVec2 size{};
     };
 
     /**

@@ -27,7 +27,7 @@
 #include <core/plugin/intf_interface.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -41,7 +41,7 @@ CORE_BEGIN_NAMESPACE()
  */
 class IThreadPool : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "5b0d3810-cbcf-418a-a2e1-5df69fde1c09" };
+    static constexpr BASE_NS::Uid UID{"5b0d3810-cbcf-418a-a2e1-5df69fde1c09"};
 
     using Ptr = BASE_NS::refcnt_ptr<IThreadPool>;
 
@@ -219,7 +219,7 @@ protected:
  */
 class ITaskQueueFactory : public IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "5b0d3810-cbcf-418a-a2e1-5df69fde1c09" };
+    static constexpr BASE_NS::Uid UID{"5b0d3810-cbcf-418a-a2e1-5df69fde1c09"};
 
     using Ptr = BASE_NS::refcnt_ptr<ITaskQueueFactory>;
 
@@ -258,4 +258,4 @@ protected:
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_THREADING_INTF_THREAD_POOL_H
+#endif  // API_CORE_THREADING_INTF_THREAD_POOL_H

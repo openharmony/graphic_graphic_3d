@@ -33,9 +33,9 @@ namespace OHOS::Render3D::KITETS {
 class LightImpl : public NodeImpl {
 private:
     std::shared_ptr<LightETS> lightETS_{nullptr};
+
 public:
     explicit LightImpl(const std::shared_ptr<LightETS> lightETS);
-    ~LightImpl();
 
     ::SceneNodes::LightType getLightType();
 
@@ -70,5 +70,5 @@ class DirectionalLightImpl : public LightImpl {
 public:
     explicit DirectionalLightImpl(const std::shared_ptr<LightETS> lightETS);
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_LIGHT_IMPL_H

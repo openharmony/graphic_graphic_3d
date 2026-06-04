@@ -45,7 +45,7 @@ class IGltf2;
  */
 class IGraphicsContext : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "c6eb95b1-8b32-40f7-8acd-7969792e574b" };
+    static constexpr auto UID = BASE_NS::Uid{"c6eb95b1-8b32-40f7-8acd-7969792e574b"};
 
     using Ptr = BASE_NS::refcnt_ptr<IGraphicsContext>;
 
@@ -68,9 +68,9 @@ public:
         using CreateInfoFlags = uint32_t;
 
         /** Creation flags */
-        CreateInfoFlags createFlags { 0 };
+        CreateInfoFlags createFlags{0};
         /** Color space flags (defaults to linear) */
-        BASE_NS::ColorSpaceFlags colorSpaceFlags { 0U };
+        BASE_NS::ColorSpaceFlags colorSpaceFlags{0U};
     };
 
     /** Initialize the context.
@@ -136,4 +136,4 @@ protected:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_IGRAPHICS_CONTEXT_H
+#endif  // API_3D_IGRAPHICS_CONTEXT_H

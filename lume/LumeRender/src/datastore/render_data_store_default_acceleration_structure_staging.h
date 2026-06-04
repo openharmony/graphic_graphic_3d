@@ -40,20 +40,20 @@ struct AsConsumeStruct {
         INSTANCE_COPY_OP = 2,
     };
     struct AsData {
-        OperationType operationType { OperationType::UNDEFINED_OP };
-        uint32_t index { 0U };
+        OperationType operationType{OperationType::UNDEFINED_OP};
+        uint32_t index{0U};
     };
 
     struct CopyTarget {
         BufferOffsetWithHandleReference bufferOffset;
-        uint32_t startIndex { 0u };
-        uint32_t count { 0u };
+        uint32_t startIndex{0u};
+        uint32_t count{0u};
     };
     struct Geom {
         AsBuildGeometryDataWithHandleReference data;
-        GeometryType geometryType { CORE_GEOMETRY_TYPE_TRIANGLES };
-        uint32_t startIndex { 0u };
-        uint32_t count { 0u };
+        GeometryType geometryType{CORE_GEOMETRY_TYPE_TRIANGLES};
+        uint32_t startIndex{0u};
+        uint32_t count{0u};
     };
 
     BASE_NS::vector<Geom> geometry;
@@ -80,8 +80,10 @@ public:
     // IRenderDataStore
     void PreRender() override;
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -136,8 +138,8 @@ private:
 
     mutable std::mutex mutex_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H
+#endif  // RENDER_DATASTORE_RENDER_DATA_STORE_DEFAULT_ACCELERATION_STRUCTURE_STAGING_H

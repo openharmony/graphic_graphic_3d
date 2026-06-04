@@ -54,7 +54,7 @@ bool ObjectContext::SetTarget(const IObject::Ptr& target)
 
 BASE_NS::vector<IProperty::ConstPtr> ObjectContext::GetOverrides() const
 {
-    return proxy_ ? proxy_->GetOverrides() : BASE_NS::vector<IProperty::ConstPtr> {};
+    return proxy_ ? proxy_->GetOverrides() : BASE_NS::vector<IProperty::ConstPtr>{};
 }
 
 IProperty::ConstPtr ObjectContext::GetOverride(BASE_NS::string_view name) const
@@ -84,13 +84,13 @@ IProperty::ConstPtr ObjectContext::GetProperty(BASE_NS::string_view name, Metada
 
 BASE_NS::vector<IProperty::Ptr> ObjectContext::GetProperties()
 {
-    return metadata_ ? metadata_->GetProperties() : BASE_NS::vector<IProperty::Ptr> {};
+    return metadata_ ? metadata_->GetProperties() : BASE_NS::vector<IProperty::Ptr>{};
 }
 
 BASE_NS::vector<IProperty::ConstPtr> ObjectContext::GetProperties() const
 {
     const IMetadata* p = metadata_;
-    return p ? p->GetProperties() : BASE_NS::vector<IProperty::ConstPtr> {};
+    return p ? p->GetProperties() : BASE_NS::vector<IProperty::ConstPtr>{};
 }
 
 void ObjectContext::AddInternalProxy(BASE_NS::string_view propertyPropertyName, BASE_NS::string_view sourcePropertyName)
@@ -100,6 +100,6 @@ void ObjectContext::AddInternalProxy(BASE_NS::string_view propertyPropertyName, 
     }
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

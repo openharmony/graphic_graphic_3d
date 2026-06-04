@@ -63,7 +63,7 @@ ENUM_TYPE_METADATA(RENDER_NS::DitherConfiguration::DitherType, ENUM_VALUE(INTERL
 
 ENUM_TYPE_METADATA(RENDER_NS::ColorConversionConfiguration::ConversionFunctionType,
     ENUM_VALUE(CONVERSION_LINEAR, "Linear"), ENUM_VALUE(CONVERSION_LINEAR_TO_SRGB, "Linear to sRGB"),
-    ENUM_VALUE(CONVERSION_MULTIPLY_WITH_ALPHA, "Multiply With Alpha"),)
+    ENUM_VALUE(CONVERSION_MULTIPLY_WITH_ALPHA, "Multiply With Alpha"), )
 
 DATA_TYPE_METADATA(RENDER_NS::TonemapConfiguration, MEMBER_PROPERTY(tonemapType, "Tonemap Type", 0),
     MEMBER_PROPERTY(exposure, "Exposure", 0))
@@ -110,11 +110,11 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 constexpr string_view COMBINED_SHADER_NAME = "rendershaders://shader/fullscreen_combined_post_process.shader";
 constexpr string_view COMBINED_LAYER_SHADER_NAME =
     "rendershaders://shader/fullscreen_combined_post_process_layer.shader";
-} // namespace
+}  // namespace
 
 RenderPostProcessCombinedNode::RenderPostProcessCombinedNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -204,13 +204,70 @@ RenderPass RenderPostProcessCombinedNode::CreateRenderPass(const RenderHandle in
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
     rp.subpassDesc.colorAttachmentIndices[0u] = 0u;
     rp.subpassStartIndex = 0u;
     return rp;
+}
+
+void RenderPostProcessCombinedNode::UpdatePso(EffectData& effect, const uint32_t enableFlags)
+{
+    currentEnableFlags_ = enableFlags;
+    combineData_.pso = {};
+    combineDataLayer_.pso = {};
+
+    const ShaderSpecialization::Constant specConstant{
+        CORE_SHADER_STAGE_FRAGMENT_BIT, 0u, ShaderSpecialization::Constant::Type::UINT32, 0u};
+    const ShaderSpecializationConstantDataView specialization{{&specConstant, 1u}, {&enableFlags, 1u}};
+
+    auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
+    const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
+    const RenderHandle graphicsStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(effect.sd.shader);
+    effect.pso = psoMgr.GetGraphicsPsoHandle(effect.sd.shader,
+        graphicsStateHandle,
+        effect.sd.pipelineLayout,
+        {},
+        specialization,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
+}
+
+void RenderPostProcessCombinedNode::BindCombineDescriptors(IRenderCommandList& cmdList)
+{
+    RenderHandle sets[2U]{};
+    DescriptorSetLayoutBindingResources resources[2U]{};
+    {
+        auto& binder = *binders_.set0;
+        binder.ClearBindings();
+        binder.BindBuffer(0u, acquiredGpuBufferData_.handle, acquiredGpuBufferData_.bindingByteOffset);
+        sets[0U] = binder.GetDescriptorSetHandle();
+        resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
+    }
+    {
+        auto& binder = *binders_.combineBinder;
+        binder.ClearBindings();
+        uint32_t binding = 0u;
+        BindableImage mainInput = nodeInputsData.input;
+        mainInput.samplerHandle = samplers_.linear;
+        binder.BindImage(binding++, mainInput);
+        auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+        if (!RenderHandleUtil::IsValid(nodeInputsData.bloomFinalTarget.handle)) {
+            nodeInputsData.bloomFinalTarget.handle =
+                gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
+        }
+        if (!RenderHandleUtil::IsValid(nodeInputsData.dirtMask.handle)) {
+            nodeInputsData.dirtMask.handle =
+                gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
+        }
+        binder.BindImage(binding++, nodeInputsData.bloomFinalTarget.handle, samplers_.linear);
+        binder.BindImage(binding++, nodeInputsData.dirtMask.handle, samplers_.linear);
+        sets[1U] = binder.GetDescriptorSetHandle();
+        resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
+    }
+    cmdList.UpdateDescriptorSets(sets, resources);
+    cmdList.BindDescriptorSets(0u, sets);
 }
 
 void RenderPostProcessCombinedNode::ExecuteFrame(IRenderCommandList& cmdList)
@@ -223,55 +280,16 @@ void RenderPostProcessCombinedNode::ExecuteFrame(IRenderCommandList& cmdList)
 
     auto& effect = effectProperties_.glOptimizedLayerCopyEnabled ? combineDataLayer_ : combineData_;
     const RenderPass renderPass = CreateRenderPass(nodeOutputsData.output.handle);
-    if (!RenderHandleUtil::IsValid(effect.pso)) {
-        auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
-        const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
-        const RenderHandle graphicsStateHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(effect.sd.shader);
-        effect.pso = psoMgr.GetGraphicsPsoHandle(effect.sd.shader, graphicsStateHandle, effect.sd.pipelineLayout, {},
-            {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    const uint32_t enableFlags = effectProperties_.postProcessConfiguration.enableFlags;
+    if (!RenderHandleUtil::IsValid(effect.pso) || enableFlags != currentEnableFlags_) {
+        UpdatePso(effect, enableFlags);
     }
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
     cmdList.BindPipeline(effect.pso);
 
-    {
-        RenderHandle sets[2U] {};
-        DescriptorSetLayoutBindingResources resources[2U] {};
-        {
-            auto& binder = *binders_.set0;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            binder.BindBuffer(binding, acquiredGpuBufferData_.handle, acquiredGpuBufferData_.bindingByteOffset);
-            sets[0U] = binder.GetDescriptorSetHandle();
-            resources[0U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        {
-            auto& binder = *binders_.combineBinder;
-            binder.ClearBindings();
-            uint32_t binding = 0u;
-            BindableImage mainInput = nodeInputsData.input;
-            mainInput.samplerHandle = samplers_.linear;
-            binder.BindImage(binding++, mainInput);
-            if (!RenderHandleUtil::IsValid(nodeInputsData.bloomFinalTarget.handle)) {
-                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-                nodeInputsData.bloomFinalTarget.handle =
-                    gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
-            }
-            if (!RenderHandleUtil::IsValid(nodeInputsData.dirtMask.handle)) {
-                auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-                nodeInputsData.dirtMask.handle =
-                    gpuResourceMgr.GetImageHandle(DefaultEngineGpuResourceConstants::CORE_DEFAULT_GPU_IMAGE);
-            }
-            binder.BindImage(binding++, nodeInputsData.bloomFinalTarget.handle, samplers_.linear);
-            binder.BindImage(binding++, nodeInputsData.dirtMask.handle, samplers_.linear);
-            sets[1U] = binder.GetDescriptorSetHandle();
-            resources[1U] = binder.GetDescriptorSetLayoutBindingResources();
-        }
-        cmdList.UpdateDescriptorSets(sets, resources);
-        cmdList.BindDescriptorSets(0u, sets);
-    }
+    BindCombineDescriptors(cmdList);
 
-    // dynamic state
     cmdList.SetDynamicStateViewport(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultViewport(renderPass));
     cmdList.SetDynamicStateScissor(renderNodeContextMgr_->GetRenderNodeUtil().CreateDefaultScissor(renderPass));
 
@@ -279,8 +297,8 @@ void RenderPostProcessCombinedNode::ExecuteFrame(IRenderCommandList& cmdList)
         const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
         const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
         const float layer = effectProperties_.glOptimizedLayerCopyEnabled ? float(nodeInputsData.input.layer) : 0.0f;
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-            { layer, 0.0f, 0.0f, 0.0f } };
+        const LocalPostProcessPushConstantStruct pc{
+            {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, {layer, 0.0f, 0.0f, 0.0f}};
         cmdList.PushConstantData(effect.sd.pipelineLayoutData.pushConstant, arrayviewU8(pc));
     }
 

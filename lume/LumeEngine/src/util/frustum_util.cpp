@@ -65,7 +65,12 @@ Frustum FrustumUtil::CreateFrustum(const Mat4X4& matrix) const
     planes[Frustum::PLANE_FAR].w = matrix[3U].w - matrix[3U].z;
 
     for (auto& plane : planes) {
-        const float rcpLength = 1.0f / Magnitude(Vec3(plane));
+        const float mag = Magnitude(Vec3(plane));
+        if (mag < 1e-7f) {  // Degenerate plane — skip normalization to avoid division by zero.
+            plane = {};
+            continue;
+        }
+        const float rcpLength = 1.0f / mag;
         plane *= rcpLength;
     }
     return frustum;
@@ -98,7 +103,9 @@ IInterface* FrustumUtil::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void FrustumUtil::Ref() {}
+void FrustumUtil::Ref()
+{}
 
-void FrustumUtil::Unref() {}
+void FrustumUtil::Unref()
+{}
 CORE_END_NAMESPACE()

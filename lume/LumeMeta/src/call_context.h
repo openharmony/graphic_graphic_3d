@@ -57,7 +57,7 @@ public:
 
 private:
     BASE_NS::vector<ArgumentNameValue> params_;
-    bool succeeded_ {};
+    bool succeeded_{};
     IAny::Ptr result_;
 };
 

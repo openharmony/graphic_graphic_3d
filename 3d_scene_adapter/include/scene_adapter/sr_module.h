@@ -42,25 +42,15 @@
 #include <string_view>
 
 namespace OHOS::Render3D {
-constexpr BASE_NS::string_view RENDER_DATA_STORE_SR_NAME { "RenderDataStoreSR" };
+constexpr BASE_NS::string_view RENDER_DATA_STORE_SR_NAME{"RenderDataStoreSR"};
 
-enum class MethodTypeSR {
-    BILINEAR = 0,
-    LUT,
-    HGSR1,
-    COUNT
-};
+enum class MethodTypeSR { BILINEAR = 0, LUT, HGSR1, COUNT };
 
-enum class QualityTypeSR {
-    LOW = 0,
-    BALANCED,
-    HIGH,
-    ULTRA
-};
+enum class QualityTypeSR { LOW = 0, BALANCED, HIGH, ULTRA };
 
 struct SRData {
     bool enable_ = false;
-    MethodTypeSR type_ { MethodTypeSR::BILINEAR };
+    MethodTypeSR type_{MethodTypeSR::BILINEAR};
     float rate_ = 1.0;
     int width_ = -1;
     int height_ = -1;
@@ -70,8 +60,7 @@ class SRModule {
 public:
     SRModule();
     void Init(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene,
-        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext,
-        BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
+        BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext, BASE_NS::shared_ptr<CORE_NS::IEngine> engine,
         BASE_NS::refcnt_ptr<CORE_NS::IEcs> ecs);
 
     static void Update(BASE_NS::shared_ptr<SCENE_NS::IInternalScene> scene);
@@ -82,7 +71,7 @@ public:
     static const SRData GetConfig();
     static void SetWindowSize(int width, int height);
     static bool Enable();
-    
+
     static RENDER_NS::RenderHandleReference CreateGpuResource(
         BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, float width, float height);
     static void AttachComponent();
@@ -95,5 +84,5 @@ private:
     inline static RENDER_NS::RenderHandleReference rngSR_;
     inline static BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderNodeGraph_;
 };
-} // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_SR_MODULE_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_SR_MODULE_H

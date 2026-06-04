@@ -20,12 +20,13 @@
 #include <base/util/uid.h>
 
 CORE3D_BEGIN_NAMESPACE()
-static constexpr BASE_NS::Uid UID_3D_PLUGIN { "8307e5b2-16ad-474a-be36-b795bdf2ade9" };
+static constexpr BASE_NS::Uid UID_3D_PLUGIN{"8307e5b2-16ad-474a-be36-b795bdf2ade9"};
 
-static constexpr BASE_NS::Uid UID_GRAPHICS_CONTEXT { "437cbd33-b012-417c-b647-a0863f51829f" };
-static constexpr BASE_NS::Uid UID_MESH_BUILDER { "7ece9671-6238-45b3-881b-fdf583181d5e" };
-static constexpr BASE_NS::Uid UID_PICKING { "85ad23ec-00bf-40a0-ae5a-dac98e3e5c04" };
-static constexpr BASE_NS::Uid UID_RENDER_NODE_SCENE_UTIL { "8cdc39e9-2c86-4cf7-a3ca-f739aee72012" };
+static constexpr BASE_NS::Uid UID_GRAPHICS_CONTEXT{"437cbd33-b012-417c-b647-a0863f51829f"};
+static constexpr BASE_NS::Uid UID_MESH_BUILDER{"7ece9671-6238-45b3-881b-fdf583181d5e"};
+static constexpr BASE_NS::Uid UID_PICKING{"85ad23ec-00bf-40a0-ae5a-dac98e3e5c04"};
+static constexpr BASE_NS::Uid UID_RENDER_NODE_SCENE_UTIL{"8cdc39e9-2c86-4cf7-a3ca-f739aee72012"};
+static constexpr BASE_NS::Uid UID_LIGHT_PROBE_BAKER{"6836EB08-6457-4A3E-906D-2307D8957A46"};
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_IMPLEMENTATION_UIDS_H
+#endif  // API_3D_IMPLEMENTATION_UIDS_H

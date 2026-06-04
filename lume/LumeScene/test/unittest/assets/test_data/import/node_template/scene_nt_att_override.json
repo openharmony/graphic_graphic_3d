@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "description": "scene overriding template attachment property via ! path",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_upd_v1_att.json"
+                    },
+                    "resourceGroup": "att-override-group",
+                    "overrides": [
+                        {
+                            "path": ".!TestAttachment.Float",
+                            "value": 99.0
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

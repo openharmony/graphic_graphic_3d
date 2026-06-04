@@ -33,7 +33,8 @@ META_REGISTER_CLASS(ValidRangeEvaluator, "bf310567-a76c-41c3-af08-81c1adf682ef",
 class ValidRangeEvaluator : public IntroduceInterfaces<MinimalObject, IModifier> {
     META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::ValidRangeEvaluator)
 public:
-    ValidRangeEvaluator(int min, int max) : min_(min), max_(max) {}
+    ValidRangeEvaluator(int min, int max) : min_(min), max_(max)
+    {}
 
     EvaluationResult ProcessOnGet(IAny& value) override
     {
@@ -79,7 +80,7 @@ UNIT_TEST(API_ModifierTest, ValidRange, testing::ext::TestSize.Level1)
     p->SetValue(6);
     EXPECT_EQ(p->GetValue(), 6);
 
-    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({ IModifier::UID }), false);
+    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({IModifier::UID}), false);
     EXPECT_EQ(mods.size(), 1);
 }
 
@@ -111,10 +112,10 @@ UNIT_TEST(API_ModifierTest, ValidRangePropertyBind, testing::ext::TestSize.Level
     source->Reset();
     EXPECT_EQ(p->GetValue(), 1);
 
-    auto vals = stack->GetValues(BASE_NS::vector<TypeId>({ IBind::UID }), false);
+    auto vals = stack->GetValues(BASE_NS::vector<TypeId>({IBind::UID}), false);
     EXPECT_EQ(vals.size(), 1);
 
-    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({ IModifier::UID }), false);
+    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({IModifier::UID}), false);
     ASSERT_EQ(mods.size(), 1);
     EXPECT_EQ(mods[0], modifier);
 
@@ -143,7 +144,8 @@ META_REGISTER_CLASS(StickyValidator, "11310567-a76c-41c3-af08-81c1adf682ef", Obj
 class StickyValidator : public IntroduceInterfaces<MinimalObject, IModifier, IStackResetable> {
     META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::StickyValidator)
 public:
-    StickyValidator(int value) : allowed_(value) {}
+    StickyValidator(int value) : allowed_(value)
+    {}
 
     EvaluationResult ProcessOnGet(IAny& value) override
     {
@@ -197,10 +199,10 @@ UNIT_TEST(API_ModifierTest, StickyValidator, testing::ext::TestSize.Level1)
 
     EXPECT_TRUE(p->IsDefaultValue());
 
-    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({ IModifier::UID }), false);
+    auto mods = stack->GetModifiers(BASE_NS::vector<TypeId>({IModifier::UID}), false);
     EXPECT_EQ(mods.size(), 1);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

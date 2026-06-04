@@ -34,7 +34,7 @@ namespace NapiApi {
 // Should the requested arg count match the provided count or do we allow partial requests.
 enum class ArgCount { EXACT, PARTIAL };
 
-template<typename... RequestedArgs>
+template <typename... RequestedArgs>
 class FunctionContext {
 public:
     FunctionContext(const napi_env env, const napi_callback_info info, ArgCount argMode = ArgCount::EXACT)
@@ -42,7 +42,7 @@ public:
         if ((!env) || (!info)) {
             return;
         }
-        napi_status status { napi_ok };
+        napi_status status{napi_ok};
         size_t providedArgCount = 0;
         status = napi_get_cb_info(env, info, &providedArgCount, nullptr, &jsThis_, &data_);
         if (status != napi_ok) {
@@ -72,9 +72,12 @@ public:
         }
     }
 
-    template<typename... Other>
+    template <typename... Other>
     FunctionContext(const FunctionContext<Other...>& other)
-        : jsThis_(other.RawThis()), data_(other.GetData()), args_(other.GetArgs()), env_(other.GetEnv()),
+        : jsThis_(other.RawThis()),
+          data_(other.GetData()),
+          args_(other.GetArgs()),
+          env_(other.GetEnv()),
           info_(other.GetInfo())
     {
         if constexpr (sizeof...(RequestedArgs) > 0) {
@@ -116,7 +119,7 @@ public:
 
     NapiApi::Object This()
     {
-        return { env_, jsThis_ };
+        return {env_, jsThis_};
     }
 
     napi_value RawThis() const
@@ -148,23 +151,23 @@ public:
         return false;
     }
 
-    template<size_t I, typename T, typename... TypesI>
+    template <size_t I, typename T, typename... TypesI>
     struct GetTypeImpl {
         using type = typename GetTypeImpl<I - 1, TypesI...>::type;
     };
 
-    template<typename T, typename... TypesI>
+    template <typename T, typename... TypesI>
     struct GetTypeImpl<0, T, TypesI...> {
         using type = T;
     };
 
     // Get a requested arg. For a truthy FunctionContext, the value will be valid; for a falsy, invalid.
-    template<size_t index>
+    template <size_t index>
     auto Arg()
     {
         static_assert(index < sizeof...(RequestedArgs), "Index out of range!");
         using Type = typename GetTypeImpl<index, RequestedArgs...>::type;
-        return NapiApi::Value<Type> { env_, Value(index) };
+        return NapiApi::Value<Type>{env_, Value(index)};
     }
 
     size_t ArgCount() const
@@ -220,7 +223,7 @@ public:
     }
 
 private:
-    template<typename First, typename... Rest>
+    template <typename First, typename... Rest>
     inline bool validate(size_t index)
     {
         napi_valuetype jstype;
@@ -244,15 +247,15 @@ private:
         return false;
     }
 
-    napi_value jsThis_ { nullptr };
-    void* data_ { nullptr };
+    napi_value jsThis_{nullptr};
+    void* data_{nullptr};
     // How many args we want to validate and access with Arg.
-    const size_t requestedArgCount_ { sizeof...(RequestedArgs) };
+    const size_t requestedArgCount_{sizeof...(RequestedArgs)};
     BASE_NS::vector<napi_value> args_;
-    NapiApi::Env env_ { nullptr };
-    napi_callback_info info_ { nullptr };
+    NapiApi::Env env_{nullptr};
+    napi_callback_info info_{nullptr};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

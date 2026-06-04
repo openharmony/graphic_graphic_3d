@@ -35,7 +35,8 @@
 SCENE_BEGIN_NAMESPACE()
 
 struct ComponentFactory : public META_NS::IntroduceInterfaces<IComponentFactory> {
-    ComponentFactory(META_NS::ClassInfo info) : info_(info) {}
+    ComponentFactory(META_NS::ClassInfo info) : info_(info)
+    {}
 
     IComponent::Ptr CreateComponent(const IEcsObject::Ptr& eobj) override
     {

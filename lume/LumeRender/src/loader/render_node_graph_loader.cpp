@@ -33,15 +33,16 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-RENDER_JSON_SERIALIZE_ENUM(GpuQueue::QueueType,
-    { { GpuQueue::QueueType::UNDEFINED, nullptr }, { GpuQueue::QueueType::GRAPHICS, "graphics" },
-        { GpuQueue::QueueType::COMPUTE, "compute" }, { GpuQueue::QueueType::TRANSFER, "transfer" } })
+RENDER_JSON_SERIALIZE_ENUM(GpuQueue::QueueType, {{GpuQueue::QueueType::UNDEFINED, nullptr},
+                                                    {GpuQueue::QueueType::GRAPHICS, "graphics"},
+                                                    {GpuQueue::QueueType::COMPUTE, "compute"},
+                                                    {GpuQueue::QueueType::TRANSFER, "transfer"}})
 
 namespace {
-constexpr size_t VERSION_SIZE { 5u };
-constexpr uint32_t VERSION_MAJOR { 22u };
-constexpr size_t MAX_OUTPUT_RESOURCE_COUNT { 32u };
-constexpr size_t MAX_RNG_RENDER_NODE_COUNT { 256u };
+constexpr size_t VERSION_SIZE{5u};
+constexpr uint32_t VERSION_MAJOR{22u};
+constexpr size_t MAX_OUTPUT_RESOURCE_COUNT{32u};
+constexpr size_t MAX_RNG_RENDER_NODE_COUNT{256u};
 
 void ParseQueueWaitSignals(
     const json::value& node, RenderNodeDesc& data, [[maybe_unused]] IRenderNodeGraphLoader::LoadResult& nodeResult)
@@ -118,8 +119,8 @@ void CompatibilityCheck(const json::value& json, RenderNodeGraphLoader::LoadResu
 {
     string ver;
     string type;
-    uint32_t verMajor { ~0u };
-    uint32_t verMinor { ~0u };
+    uint32_t verMajor{~0u};
+    uint32_t verMinor{~0u};
     if (const json::value* iter = json.find("compatibility_info"); iter) {
         SafeGetJsonValue(*iter, "version", result.error, ver);
         SafeGetJsonValue(*iter, "type", result.error, type);
@@ -167,7 +168,7 @@ vector<RenderNodeDesc> GetRenderNodeDescs(const json::value& json, string& error
 vector<RenderNodeGraphOutputResource> GetRenderNodeOutputResources(const json::value& json, string& error)
 {
     vector<RenderNodeGraphOutputResource> outputResources;
-    if (const auto nodes = json.find("renderNodeGraphOutputResources"); nodes) {
+    if (const auto nodes = json.find("renderNodeGraphOutputResources"); nodes && nodes->is_array()) {
         outputResources.reserve(nodes->array_.size());
         for (auto const& node : nodes->array_) {
             RenderNodeGraphOutputResource data;
@@ -194,7 +195,7 @@ IRenderNodeGraphLoader::LoadResult LoadFromNullTerminated(const string_view uri,
         IRenderNodeGraphLoader::LoadResult finalResult;
         CompatibilityCheck(json, finalResult);
         if (!finalResult.success) {
-            return finalResult; // compatibility check failed
+            return finalResult;  // compatibility check failed
         }
 
         string renderNodeGraphName;
@@ -219,9 +220,10 @@ IRenderNodeGraphLoader::LoadResult LoadFromNullTerminated(const string_view uri,
         return IRenderNodeGraphLoader::LoadResult("Invalid render node graph json file.");
     }
 }
-} // namespace
+}  // namespace
 
-RenderNodeGraphLoader::RenderNodeGraphLoader(IFileManager& fileManager) : fileManager_(fileManager) {}
+RenderNodeGraphLoader::RenderNodeGraphLoader(IFileManager& fileManager) : fileManager_(fileManager)
+{}
 
 RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::Load(const string_view uri)
 {

@@ -26,7 +26,7 @@ typedef uint32_t Elf64_Word;
 typedef uint64_t Elf64_Xword;
 
 struct Elf64_Ehdr {
-    ElfIdent ident = { 0x7f, 'E', 'L', 'F', ELFCLASS64, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE };
+    ElfIdent ident = {0x7f, 'E', 'L', 'F', ELFCLASS64, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE};
     Elf64_Half type;
     Elf64_Half machine;
     Elf64_Word version;
@@ -64,4 +64,4 @@ struct Elf64_Sym {
     Elf64_Xword size;
 };
 
-#endif // LUME_ELF_64_H
+#endif  // LUME_ELF_64_H

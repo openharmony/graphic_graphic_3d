@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 #include "property_proxy/ColorProxy.h"
 #include "property_proxy/EntityProxy.h"
 #include "property_proxy/ImageProxy.h"
@@ -25,7 +24,7 @@
 #include "property_proxy/PropertyProxy.h"
 
 namespace OHOS::Render3D {
-std::shared_ptr<IPropertyProxy> PropertyToProxy(const META_NS::IProperty::Ptr &prop)
+std::shared_ptr<IPropertyProxy> PropertyToProxy(const META_NS::IProperty::Ptr& prop)
 {
     if (META_NS::IsCompatibleWith<float>(prop)) {
         return std::make_shared<PropertyProxy<float>>(prop);

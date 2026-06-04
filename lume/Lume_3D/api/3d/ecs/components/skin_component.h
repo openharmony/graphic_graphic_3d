@@ -28,17 +28,17 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ISkinComponentManager, SkinComponent)
 
-    /** Entity which defines the skin /skeleton structure and initial pose.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, skin, "Skin IBMs", 0, VALUE(~0u))
+/** Entity which defines the skin /skeleton structure and initial pose.
+ */
+DEFINE_PROPERTY(CORE_NS::Entity, skin, "Skin IBMs", 0, VALUE(~0u))
 
-    /** Skin root entity that is used to calculate joint transformations.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, skinRoot, "Skin Root", 0, VALUE(~0u))
+/** Skin root entity that is used to calculate joint transformations.
+ */
+DEFINE_PROPERTY(CORE_NS::Entity, skinRoot, "Skin Root", 0, VALUE(~0u))
 
-    /** Skeleton root (if present) points to the node that is the common root of the joint entity hierarchy.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, skeleton, "Skeleton Root", 0, VALUE(~0u))
+/** Skeleton root (if present) points to the node that is the common root of the joint entity hierarchy.
+ */
+DEFINE_PROPERTY(CORE_NS::Entity, skeleton, "Skeleton Root", 0, VALUE(~0u))
 
 END_COMPONENT(ISkinComponentManager, SkinComponent, "683dddf3-6670-4bd2-827b-8e8a5484f0cf")
 #if !defined(IMPLEMENT_MANAGER)

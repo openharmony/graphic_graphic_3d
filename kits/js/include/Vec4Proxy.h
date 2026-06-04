@@ -20,14 +20,15 @@
 #include <base/math/vector.h>
 
 #include "PropertyProxy.h"
-class Vec4Proxy : public ObjectPropertyProxy {
+#include "export.h"
+class SCENE_ADDON_PUBLIC Vec4Proxy : public ObjectPropertyProxy {
 public:
     Vec4Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec4> prop);
     ~Vec4Proxy() override;
     void SetValue(NapiApi::Object obj) override;
 
 private:
-    void SetValue(const BASE_NS::Math::Vec4& v);
+    void SetNativeValue(const BASE_NS::Math::Vec4& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };

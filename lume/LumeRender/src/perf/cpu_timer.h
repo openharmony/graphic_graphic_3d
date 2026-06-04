@@ -33,9 +33,9 @@ public:
     int64_t GetMicroseconds() const noexcept;
 
 private:
-    int64_t begin_ {};
-    int64_t end_ {};
+    int64_t begin_{};
+    int64_t end_{};
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_CORE_PERF_CPU_TIMER_H
+#endif  // API_CORE_PERF_CPU_TIMER_H

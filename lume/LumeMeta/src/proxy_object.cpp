@@ -434,7 +434,7 @@ void ProxyObject::AddInternalProxy(BASE_NS::string_view propertyPropertyName, BA
         internalBindings_.erase(propertyPropertyName);
     }
 
-    internalBindings_.insert({ BASE_NS::string(propertyPropertyName), BASE_NS::string(sourcePropertyName) });
+    internalBindings_.insert({BASE_NS::string(propertyPropertyName), BASE_NS::string(sourcePropertyName)});
 
     if (proxyProperties_.contains(propertyPropertyName)) {
         proxyProperties_.erase(propertyPropertyName);
@@ -444,9 +444,9 @@ void ProxyObject::AddInternalProxy(BASE_NS::string_view propertyPropertyName, BA
         // if given property does not exist we create it when user ask for proxy property
         return;
     }
-    proxyProperties_.insert({ propertyPropertyName, DefaultValueBind(bindProperty, internalSourceProperty) });
+    proxyProperties_.insert({propertyPropertyName, DefaultValueBind(bindProperty, internalSourceProperty)});
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

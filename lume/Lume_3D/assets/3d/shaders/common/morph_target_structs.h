@@ -22,8 +22,8 @@
 #define CORE_MORPH_USE_16BIT_NOR_TAN
 
 struct MorphTargetInfoStruct {
-    uvec4 target; // contains 4 targets.
-    vec4 weight;  // contains 4 weights.
+    uvec4 target;  // contains 4 targets.
+    vec4 weight;   // contains 4 weights.
 };
 
 struct MorphInputData {
@@ -37,9 +37,9 @@ struct MorphInputData {
 };
 
 struct MorphObjectPushConstantStruct {
-    uint morphSet;         // Index to morphDataStruct.data.   start of id / weight information for submesh.
-    uint vertexCount;      // Number of vertices in submesh
-    uint morphTargetCount; // Total count of targets in targetBuffer.
-    uint activeTargets;    // Active targets (count of data in morphDataStruct.data)
+    uint morphSet;          // Index to morphDataStruct.data.   start of id / weight information for submesh.
+    uint vertexCount;       // Number of vertices in submesh
+    uint morphTargetCount;  // Total count of targets in targetBuffer.
+    uint activeTargets;     // Active targets (count of data in morphDataStruct.data)
 };
 #endif

@@ -211,7 +211,7 @@ public:
 /** @ingroup group_ecs_systems_inode */
 class INodeSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "b564d740-3d39-41e7-9add-0bdbdbdf23a8" };
+    static constexpr BASE_NS::Uid UID{"b564d740-3d39-41e7-9add-0bdbdbdf23a8"};
 
     /** Retrieve root node of the scene graph.
      */
@@ -291,4 +291,4 @@ inline constexpr BASE_NS::string_view GetName(const INodeSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_INODE_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_INODE_SYSTEM_H

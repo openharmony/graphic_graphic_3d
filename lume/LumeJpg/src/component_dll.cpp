@@ -25,7 +25,7 @@ using namespace CORE_NS;
 
 CORE_BEGIN_NAMESPACE()
 #if defined(CORE_PLUGIN) && (CORE_PLUGIN == 1)
-IPluginRegister* gPluginRegistry { nullptr };
+IPluginRegister* gPluginRegistry{nullptr};
 IPluginRegister& GetPluginRegister()
 {
     return *gPluginRegistry;
@@ -43,10 +43,10 @@ const char* GetVersionInfo()
 const char* GetVersionInfo();
 #endif
 
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo JPG_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
+static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo JPG_LOADER{
+    {CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID},
     nullptr,
-    BASE_NS::Uid { "8a8010f4-f262-412f-95d1-389348b4a6ba" },
+    BASE_NS::Uid{"8a8010f4-f262-412f-95d1-389348b4a6ba"},
     CreateImageLoaderJPG,
     IMAGE_TYPES,
 };
@@ -64,14 +64,14 @@ void UnregisterInterfaces(PluginToken token)
 {
     static_cast<IPluginRegister*>(token)->UnregisterTypeInfo(JPG_LOADER);
 }
-} // namespace JPGPlugin
+}  // namespace JPGPlugin
 
 extern "C" {
-PLUGIN_DATA(JPGPlugin) {
-    { IPlugin::UID },
+PLUGIN_DATA(JPGPlugin){
+    {IPlugin::UID},
     "JPGPlugin",
     /** Version information of the plugin. */
-    { JPGPlugin::UID_JPG_PLUGIN, JPGPlugin::GetVersionInfo },
+    {JPGPlugin::UID_JPG_PLUGIN, JPGPlugin::GetVersionInfo},
     JPGPlugin::RegisterInterfaces,
     JPGPlugin::UnregisterInterfaces,
     {},

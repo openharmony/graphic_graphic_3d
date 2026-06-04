@@ -41,7 +41,7 @@ bool CheckForDescUpdates(const GpuBufferDesc& dependencyDesc, GpuBufferDesc& des
     }
     return needsUpdate;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeCreateGpuBuffers::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -71,7 +71,7 @@ void RenderNodeCreateGpuBuffers::InitNode(IRenderNodeContextManager& renderNodeC
         }
         dependencyHandles_.push_back(dependencyHandle);
 
-        names_.push_back({ string(ref.name), string(ref.shareName) });
+        names_.push_back({string(ref.name), string(ref.shareName)});
         descs_.push_back(desc);
         resourceHandles_.push_back(gpuResourceMgr.Create(ref.name, desc));
     }

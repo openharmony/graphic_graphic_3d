@@ -23,7 +23,7 @@
 
 namespace NapiApi {
 
-template<typename T>
+template <typename T>
 void Value<T>::Init(napi_env env, Type v)
 {
     if (env == nullptr) {
@@ -57,25 +57,14 @@ void Value<T>::Init(napi_env env, Type v)
     }
 }
 
-template<typename type>
+template <typename type>
 type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
 {
     if (!value_) {
         return defaultValue;
     }
     napi_status status = napi_invalid_arg;
-    type value {};
-    if constexpr (BASE_NS::is_same_v<type, BASE_NS::string>) {
-        size_t length;
-        status = napi_get_value_string_utf8(env_, value_, nullptr, 0, &length);
-        if (status != napi_ok) {
-            // return default if failed.
-            return defaultValue;
-        }
-        value.reserve(length + 1);
-        value.resize(length);
-        status = napi_get_value_string_utf8(env_, value_, value.data(), length + 1, &length);
-    }
+    type value{};
     if constexpr (BASE_NS::is_same_v<type, bool>) {
         status = napi_get_value_bool(env_, value_, &value);
     }
@@ -128,18 +117,6 @@ type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
         status = napi_get_value_int64(env_, value_, &tmp);
         value = static_cast<uint64_t>(tmp);
     }
-    if constexpr (BASE_NS::is_same_v<type, NapiApi::Object>) {
-        status = napi_ok;
-        value = NapiApi::Object(env_, value_);
-    }
-    if constexpr (BASE_NS::is_same_v<type, NapiApi::Function>) {
-        status = napi_ok;
-        value = NapiApi::Function(env_, value_);
-    }
-    if constexpr (BASE_NS::is_same_v<type, NapiApi::Array>) {
-        status = napi_ok;
-        value = NapiApi::Array(env_, value_);
-    }
     if (status != napi_ok) {
         // return default if failed.
         return defaultValue;
@@ -147,23 +124,58 @@ type NapiApi::Value<type>::valueOrDefault(const type defaultValue)
     return value;
 }
 
-template class Value<BASE_NS::string>;
-template class Value<bool>;
-template class Value<std::optional<bool>>;
-template class Value<float>;
-template class Value<std::optional<float>>;
-template class Value<double>;
-template class Value<uint8_t>;
-template class Value<int8_t>;
-template class Value<uint16_t>;
-template class Value<int16_t>;
-template class Value<uint32_t>;
-template class Value<std::optional<uint32_t>>;
-template class Value<int32_t>;
-template class Value<int64_t>;
-template class Value<uint64_t>;
-template class Value<NapiApi::Object>;
-template class Value<NapiApi::Function>;
-template class Value<NapiApi::Array>;
+template <>
+BASE_NS::string NapiApi::Value<BASE_NS::string>::valueOrDefault(const BASE_NS::string defaultValue)
+{
+    size_t length{};
+    if (napi_get_value_string_utf8(env_, value_, nullptr, 0, &length) != napi_ok) {
+        // return default if getting length failed.
+        return defaultValue;
+    }
+    BASE_NS::string value{};
+    value.reserve(length + 1);
+    value.resize(length);
+    if (napi_get_value_string_utf8(env_, value_, value.data(), length + 1, &length) != napi_ok) {
+        return defaultValue;
+    }
+    return value;
+}
 
-} // namespace NapiApi
+template <>
+NapiApi::Array NapiApi::Value<NapiApi::Array>::valueOrDefault(const NapiApi::Array)
+{
+    return NapiApi::Array(env_, value_);
+}
+
+template <>
+NapiApi::Function NapiApi::Value<NapiApi::Function>::valueOrDefault(const NapiApi::Function)
+{
+    return NapiApi::Function(env_, value_);
+}
+
+template <>
+NapiApi::Object NapiApi::Value<NapiApi::Object>::valueOrDefault(const NapiApi::Object)
+{
+    return NapiApi::Object(env_, value_);
+}
+
+template class SCENE_ADDON_PUBLIC Value<BASE_NS::string>;
+template class SCENE_ADDON_PUBLIC Value<bool>;
+template class SCENE_ADDON_PUBLIC Value<std::optional<bool>>;
+template class SCENE_ADDON_PUBLIC Value<float>;
+template class SCENE_ADDON_PUBLIC Value<std::optional<float>>;
+template class SCENE_ADDON_PUBLIC Value<double>;
+template class SCENE_ADDON_PUBLIC Value<uint8_t>;
+template class SCENE_ADDON_PUBLIC Value<int8_t>;
+template class SCENE_ADDON_PUBLIC Value<uint16_t>;
+template class SCENE_ADDON_PUBLIC Value<int16_t>;
+template class SCENE_ADDON_PUBLIC Value<uint32_t>;
+template class SCENE_ADDON_PUBLIC Value<std::optional<uint32_t>>;
+template class SCENE_ADDON_PUBLIC Value<int32_t>;
+template class SCENE_ADDON_PUBLIC Value<int64_t>;
+template class SCENE_ADDON_PUBLIC Value<uint64_t>;
+template class SCENE_ADDON_PUBLIC Value<NapiApi::Object>;
+template class SCENE_ADDON_PUBLIC Value<NapiApi::Function>;
+template class SCENE_ADDON_PUBLIC Value<NapiApi::Array>;
+
+}  // namespace NapiApi

@@ -42,7 +42,7 @@ GpuShaderProgramVk::GpuShaderProgramVk(const GpuShaderProgramCreateData& createD
         fragShaderModule_ = static_cast<ShaderModuleVk*>(createData.fragShaderModule);
         auto& pipelineLayout = reflection_.pipelineLayout;
 
-        { // vert
+        {  // vert
             const ShaderModuleVk& mod = *vertShaderModule_;
             plat_.vert = ((const ShaderModulePlatformDataVk&)mod.GetPlatformData()).shaderModule;
             pipelineLayout = mod.GetPipelineLayout();
@@ -55,7 +55,7 @@ GpuShaderProgramVk::GpuShaderProgramVk(const GpuShaderProgramCreateData& createD
             reflection_.vertexInputDeclarationView.bindingDescriptions = vidv.bindingDescriptions;
             reflection_.vertexInputDeclarationView.attributeDescriptions = vidv.attributeDescriptions;
         }
-        { // frag
+        {  // frag
             const ShaderModuleVk& mod = *fragShaderModule_;
             plat_.frag = ((const ShaderModulePlatformDataVk&)mod.GetPlatformData()).shaderModule;
 
@@ -65,7 +65,7 @@ GpuShaderProgramVk::GpuShaderProgramVk(const GpuShaderProgramCreateData& createD
 
             const auto& reflPl = mod.GetPipelineLayout();
             // has sort inside
-            GpuProgramUtil::CombinePipelineLayouts({ &reflPl, 1u }, pipelineLayout);
+            GpuProgramUtil::CombinePipelineLayouts({&reflPl, 1u}, pipelineLayout);
         }
 
         reflection_.shaderSpecializationConstantView.constants =

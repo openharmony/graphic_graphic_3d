@@ -16,14 +16,13 @@
 #include "RenderConfigurationETS.h"
 
 namespace OHOS::Render3D {
-RenderConfigurationETS::RenderConfigurationETS(SCENE_NS::IRenderConfiguration::Ptr rc,
-    const SCENE_NS::IScene::Ptr scene): rc_(rc), scene_(scene) {}
+RenderConfigurationETS::RenderConfigurationETS(
+    SCENE_NS::IRenderConfiguration::Ptr rc, const SCENE_NS::IScene::Ptr scene)
+    : rc_(rc), scene_(scene)
+{}
 
 RenderConfigurationETS::~RenderConfigurationETS()
-{
-    rc_.reset();
-    shadowResolution_.reset();
-}
+{}
 
 META_NS::IObject::Ptr RenderConfigurationETS::GetNativeObj() const
 {
@@ -46,7 +45,7 @@ std::shared_ptr<UVec2Proxy> RenderConfigurationETS::GetShadowResolution()
     return shadowResolution_;
 }
 
-void RenderConfigurationETS::SetShadowResolution(const BASE_NS::Math::UVec2 &res)
+void RenderConfigurationETS::SetShadowResolution(const BASE_NS::Math::UVec2& res)
 {
     if (!rc_) {
         CORE_LOG_E("empty render configuration object");
@@ -74,7 +73,6 @@ void RenderConfigurationETS::SetSoftShadowConfig(const std::shared_ptr<SoftShado
     softShadowConfigETS->SetRenderConfiguration(rc_);
     softShadowConfigETS_ = std::move(softShadowConfigETS);
 }
-
 std::shared_ptr<SoftShadowConfigETS> RenderConfigurationETS::GetSoftShadowConfig()
 {
     if (!rc_) {

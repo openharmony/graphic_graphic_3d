@@ -48,7 +48,10 @@ bool AddBindings(const DescriptorSetLayout& inDescriptorSetLayout, DescriptorSet
                     PLUGIN_LOG_E(
                         "Invalid descriptor set combination with binding %u. Descriptor type %u = %u. Descriptor count "
                         "%u = %u",
-                        currBindingIndex, inBinding.descriptorType, outRef.descriptorType, inBinding.descriptorCount,
+                        currBindingIndex,
+                        inBinding.descriptorType,
+                        outRef.descriptorType,
+                        inBinding.descriptorCount,
                         outRef.descriptorCount);
                     // more error log printed in higher level with more info
                 }
@@ -83,8 +86,9 @@ void CombinePipelineLayouts(const array_view<const PipelineLayout> inPl, Pipelin
     // sort bindings inside sets
     for (DescriptorSetLayout& currSet : outPl.descriptorSetLayouts) {
         if (currSet.set != PipelineLayoutConstants::INVALID_INDEX) {
-            std::sort(currSet.bindings.begin(), currSet.bindings.end(),
-                [](auto const& lhs, auto const& rhs) { return (lhs.binding < rhs.binding); });
+            std::sort(currSet.bindings.begin(), currSet.bindings.end(), [](auto const& lhs, auto const& rhs) {
+                return (lhs.binding < rhs.binding);
+            });
         }
     }
 }
@@ -93,11 +97,11 @@ uint32_t SpecializationByteSize(ShaderSpecialization::Constant::Type type)
 {
     switch (type) {
         case RENDER_NS::ShaderSpecialization::Constant::Type::BOOL:
-            [[fallthrough]]; // follow the same procedure as FLOAT
+            [[fallthrough]];  // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::UINT32:
-            [[fallthrough]]; // follow the same procedure as FLOAT
+            [[fallthrough]];  // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::INT32:
-            [[fallthrough]]; // follow the same procedure as FLOAT
+            [[fallthrough]];  // follow the same procedure as FLOAT
         case RENDER_NS::ShaderSpecialization::Constant::Type::FLOAT:
             return 4;
         default:
@@ -116,7 +120,7 @@ void AddSpecializationConstants(const array_view<const ShaderSpecialization::Con
     }
     for (auto const& constant : inSpecializationConstants) {
         outSpecializationConstants.push_back(
-            ShaderSpecialization::Constant { constant.shaderStage, constant.id, constant.type, offset });
+            ShaderSpecialization::Constant{constant.shaderStage, constant.id, constant.type, offset});
         offset += SpecializationByteSize(constant.type);
     }
 }
@@ -287,5 +291,5 @@ uint32_t FormatByteSize(Format format)
             return 0;
     }
 }
-} // namespace GpuProgramUtil
+}  // namespace GpuProgramUtil
 RENDER_END_NAMESPACE()

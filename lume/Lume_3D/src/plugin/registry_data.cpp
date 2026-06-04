@@ -37,18 +37,18 @@ const char* GetVersionInfo();
 CORE3D_END_NAMESPACE()
 
 namespace {
-constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = { RENDER_NS::UID_RENDER_PLUGIN };
+constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = {RENDER_NS::UID_RENDER_PLUGIN};
 extern "C" {
-PLUGIN_DATA(AGP3D) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(AGP3D){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "AGP 3D (core)",
     // Version information of the plugin.
-    { CORE3D_NS::UID_3D_PLUGIN, CORE3D_NS::GetVersionInfo },
+    {CORE3D_NS::UID_3D_PLUGIN, CORE3D_NS::GetVersionInfo},
     CORE3D_NS::RegisterInterfaces3D,
     CORE3D_NS::UnregisterInterfaces3D,
-    { PLUGIN_DEPENDENCIES },
+    {PLUGIN_DEPENDENCIES},
 };
 DEFINE_STATIC_PLUGIN(AGP3D);
 }
-} // namespace
+}  // namespace

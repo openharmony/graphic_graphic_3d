@@ -34,7 +34,8 @@ using BASE_NS::unordered_map;
 using BASE_NS::vector;
 
 // -- Parallel task queue.
-ParallelTaskQueue::ParallelTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool) {}
+ParallelTaskQueue::ParallelTaskQueue(const IThreadPool::Ptr& threadPool) : TaskQueue(threadPool)
+{}
 
 ParallelTaskQueue::~ParallelTaskQueue()
 {
@@ -68,8 +69,9 @@ void ParallelTaskQueue::SubmitAfter(
 {
     if (std::all_of(
             afterIdentifiers.cbegin(), afterIdentifiers.cend(), [&tasks = tasks_](const uint64_t afterIdentifier) {
-                return std::any_of(tasks.cbegin(), tasks.cend(),
-                    [afterIdentifier](const TaskQueue::Entry& entry) { return entry.identifier == afterIdentifier; });
+                return std::any_of(tasks.cbegin(), tasks.cend(), [afterIdentifier](const TaskQueue::Entry& entry) {
+                    return entry.identifier == afterIdentifier;
+                });
             })) {
         Entry entry(taskIdentifier, std::move(task));
         entry.dependencies.insert(entry.dependencies.cend(), afterIdentifiers.begin(), afterIdentifiers.end());
@@ -105,7 +107,8 @@ void ParallelTaskQueue::Execute()
     for (auto& task : tasks_) {
         auto& deps = dependencies.emplace_back();
         for (const auto& dependency : task.dependencies) {
-            if (auto pos = std::find_if(tasks_.cbegin(), tasks_.cend(),
+            if (auto pos = std::find_if(tasks_.cbegin(),
+                    tasks_.cend(),
                     [dependency](const Entry& entry) { return entry.identifier == dependency; });
                 pos != tasks_.cend()) {
                 deps.push_back(pos->task.get());
@@ -117,7 +120,10 @@ void ParallelTaskQueue::Execute()
     // we have an IResult for every task, but we could use PushNowWait for tasks that are leafs.
     vector<CORE_NS::IThreadPool::IResult::Ptr> states;
     states.reserve(tasks_.size());
-    std::transform(std::begin(tasks_), std::end(tasks_), std::begin(dependencies), std::back_inserter(states),
+    std::transform(std::begin(tasks_),
+        std::end(tasks_),
+        std::begin(dependencies),
+        std::back_inserter(states),
         [this](TaskQueue::Entry& entry, const vector<const CORE_NS::IThreadPool::ITask*>& dependencies) {
             if (dependencies.empty()) {
                 return threadPool_->Push(BASE_NS::move(entry.task));

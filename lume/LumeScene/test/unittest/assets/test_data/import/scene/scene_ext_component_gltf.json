@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "description": "test scene with component on external gltf child node",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "gltf",
+                        "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+                    },
+                    "resourceGroup": "comp-gltf-group",
+                    "components": [
+                        {
+                            "path": ".//AnimatedCube",
+                            "name": "RenderConfigurationComponent"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

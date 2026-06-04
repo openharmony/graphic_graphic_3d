@@ -41,7 +41,7 @@ BOIDSSWARM_BEGIN_NAMESPACE()
 
 class BoidsSwarmSystem final : public IBoidsSwarmSystem, CORE_NS::IEcs::ComponentListener {
 public:
-    static constexpr BASE_NS::Uid UID { "c3d4e5f6-a7b8-4901-c234-56789012def0" };
+    static constexpr BASE_NS::Uid UID{"c3d4e5f6-a7b8-4901-c234-56789012def0"};
 
     struct BoidsSwarmFrameData {
         BASE_NS::Math::Quat rotation;
@@ -137,8 +137,8 @@ private:
         const CORE_NS::IComponentManager& componentManager,
         BASE_NS::array_view<const CORE_NS::Entity> entities) override;
 
-    bool active_ { true };
-    float velocitySmoothingFactor_ { DEFAULT_VELOCITY_SMOOTHING_FACTOR };
+    bool active_{true};
+    float velocitySmoothingFactor_{DEFAULT_VELOCITY_SMOOTHING_FACTOR};
     CORE_NS::IEcs& ecs_;
 
     IBoidsSwarmComponentManager& boidsSwarmManager_;
@@ -156,15 +156,16 @@ private:
     BASE_NS::unordered_map<CORE_NS::Entity, bool> notPlayedEntities_;
     BASE_NS::unordered_map<CORE_NS::Entity, size_t> entity2indices_;
 
-    float timeStepSec_ { DEFAULT_TIME_STEP_SEC };
-    float playSpeed_ { DEFAULT_PLAY_SPEED };
-    uint64_t accumulatedTime_ { 0 };
+    float timeStepSec_{DEFAULT_TIME_STEP_SEC};
+    float playSpeed_{DEFAULT_PLAY_SPEED};
+    uint64_t accumulatedTime_{0};
 
-    BASE_NS::Math::IVec3 axisMask_ { IBoidsSwarmSystem::DEFAULT_AXIS_MASK.x != 0 ? 1 : 0,
-        IBoidsSwarmSystem::DEFAULT_AXIS_MASK.y != 0 ? 1 : 0, IBoidsSwarmSystem::DEFAULT_AXIS_MASK.z != 0 ? 1 : 0 };
-    BASE_NS::Math::Vec3 axisMaskFloat_ { IBoidsSwarmSystem::DEFAULT_AXIS_MASK.x != 0 ? 1.f : 0.f,
+    BASE_NS::Math::IVec3 axisMask_{IBoidsSwarmSystem::DEFAULT_AXIS_MASK.x != 0 ? 1 : 0,
+        IBoidsSwarmSystem::DEFAULT_AXIS_MASK.y != 0 ? 1 : 0,
+        IBoidsSwarmSystem::DEFAULT_AXIS_MASK.z != 0 ? 1 : 0};
+    BASE_NS::Math::Vec3 axisMaskFloat_{IBoidsSwarmSystem::DEFAULT_AXIS_MASK.x != 0 ? 1.f : 0.f,
         IBoidsSwarmSystem::DEFAULT_AXIS_MASK.y != 0 ? 1.f : 0.f,
-        IBoidsSwarmSystem::DEFAULT_AXIS_MASK.z != 0 ? 1.f : 0.f };
+        IBoidsSwarmSystem::DEFAULT_AXIS_MASK.z != 0 ? 1.f : 0.f};
 
     std::mt19937 randomEngine_;
 };

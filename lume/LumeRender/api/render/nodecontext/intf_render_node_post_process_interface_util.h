@@ -36,7 +36,7 @@ class IRenderCommandList;
  */
 class IRenderNodePostProcessInterfaceUtil : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "1c811e6c-a427-4849-930b-5130da61706c" };
+    static constexpr BASE_NS::Uid UID{"1c811e6c-a427-4849-930b-5130da61706c"};
 
     using Ptr = BASE_NS::refcnt_ptr<IRenderNodePostProcessInterfaceUtil>;
 
@@ -92,4 +92,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderNodePostProcessInterf
 }
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_POST_PROCESS_INTERFACE_UTIL_H
+#endif  // API_RENDER_IRENDER_NODE_POST_PROCESS_INTERFACE_UTIL_H

@@ -17,7 +17,7 @@
 #include <vulkan/device_vk.h>
 #include <vulkan/gpu_image_vk.h>
 #include <vulkan/platform_hardware_buffer_util_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -115,11 +115,11 @@ UNIT_TEST(SRC_PlatformHardwareBufferUtil, PlatformHardwareBufferUtilTestVulkan, 
         desc.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
         desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        GpuImageVk image { device, desc };
+        GpuImageVk image{device, desc};
         auto memoryRequirements = PlatformHardwareBufferUtil::GetImageMemoryRequirements(
             deviceVk, image.GetPlatformData().image, VK_IMAGE_ASPECT_COLOR_BIT, false);
         ASSERT_LE(desc.width * desc.height * 4u, memoryRequirements.size);
     }
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

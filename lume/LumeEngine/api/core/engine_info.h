@@ -30,13 +30,13 @@ CORE_BEGIN_NAMESPACE()
 /** Version info */
 struct VersionInfo {
     /** Name, default is "no_name" */
-    BASE_NS::string name { "no_name" };
+    BASE_NS::string name{"no_name"};
     /** Major number of version */
-    uint32_t versionMajor { 0 };
+    uint32_t versionMajor{0};
     /** Minor number of version */
-    uint32_t versionMinor { 0 };
+    uint32_t versionMinor{0};
     /** Patch number of version */
-    uint32_t versionPatch { 0 };
+    uint32_t versionPatch{0};
 };
 
 /** Context info */
@@ -54,4 +54,4 @@ struct EngineCreateInfo {
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ENGINEINFO_H
+#endif  // API_CORE_ENGINEINFO_H

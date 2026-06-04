@@ -37,7 +37,7 @@ namespace UTest {
  */
 UNIT_TEST(API_AnyTest, BasicCompatibility, testing::ext::TestSize.Level1)
 {
-    Any<uint32_t> any { 1 };
+    Any<uint32_t> any{1};
     TypeId uid = UidFromType<uint32_t>();
     EXPECT_THAT(any.GetCompatibleTypes(CompatibilityDirection::BOTH), testing::UnorderedElementsAre(uid));
     EXPECT_TRUE(IsCompatible(any, uid));
@@ -56,7 +56,7 @@ UNIT_TEST(API_AnyTest, BasicCompatibility, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_AnyTest, SharedPointerCompatibility, testing::ext::TestSize.Level1)
 {
-    Any<IObject::Ptr> any { CreateTestType<IObject>() };
+    Any<IObject::Ptr> any{CreateTestType<IObject>()};
     TypeId uid = UidFromType<IObject::Ptr>();
     EXPECT_THAT(any.GetCompatibleTypes(CompatibilityDirection::BOTH),
         testing::UnorderedElementsAre(uid, SharedPtrIInterfaceId));
@@ -75,7 +75,7 @@ UNIT_TEST(API_AnyTest, SharedPointerCompatibility, testing::ext::TestSize.Level1
     EXPECT_TRUE(IsGetCompatibleWith<SharedPtrConstIInterface>(any));
     EXPECT_EQ(any.GetTypeId(), uid);
 
-    Any<IObject::ConstPtr> constAny { CreateTestType<IObject>() };
+    Any<IObject::ConstPtr> constAny{CreateTestType<IObject>()};
     EXPECT_FALSE(IsGetCompatibleWith<SharedPtrIInterface>(constAny));
     EXPECT_TRUE(IsGetCompatibleWith<SharedPtrConstIInterface>(constAny));
 }
@@ -88,7 +88,7 @@ UNIT_TEST(API_AnyTest, SharedPointerCompatibility, testing::ext::TestSize.Level1
 UNIT_TEST(API_AnyTest, WeakPointerCompatibility, testing::ext::TestSize.Level1)
 {
     IObject::Ptr p = CreateTestType<IObject>();
-    Any<IObject::WeakPtr> any { p };
+    Any<IObject::WeakPtr> any{p};
     TypeId uid = UidFromType<IObject::WeakPtr>();
     EXPECT_THAT(any.GetCompatibleTypes(CompatibilityDirection::BOTH),
         testing::UnorderedElementsAre(uid, SharedPtrIInterfaceId, WeakPtrIInterfaceId));
@@ -119,7 +119,7 @@ UNIT_TEST(API_AnyTest, WeakPointerCompatibility, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_AnyTest, GetSet, testing::ext::TestSize.Level1)
 {
-    Any<uint32_t> any { 1 };
+    Any<uint32_t> any{1};
     uint32_t v = 0;
     EXPECT_TRUE(any.GetValue(v));
     EXPECT_EQ(v, 1);
@@ -157,7 +157,7 @@ UNIT_TEST(API_AnyTest, GetSetSharedPointer, testing::ext::TestSize.Level1)
     auto p2 = CreateTestType<IObject>();
 
     {
-        Any<IObject::Ptr> any { p };
+        Any<IObject::Ptr> any{p};
         IObject::Ptr v;
         EXPECT_TRUE(any.GetValue(v));
         EXPECT_EQ(v, p);
@@ -166,7 +166,7 @@ UNIT_TEST(API_AnyTest, GetSetSharedPointer, testing::ext::TestSize.Level1)
         EXPECT_EQ(GetValue<IObject::Ptr>(any), p2);
     }
     {
-        Any<IObject::Ptr> any { p };
+        Any<IObject::Ptr> any{p};
         SharedPtrIInterface v;
         EXPECT_TRUE(any.GetValue(v));
         EXPECT_EQ(interface_pointer_cast<IObject>(v), p);
@@ -177,7 +177,7 @@ UNIT_TEST(API_AnyTest, GetSetSharedPointer, testing::ext::TestSize.Level1)
     }
     {
         auto p = CreateTestType<IObject>();
-        Any<IObject::ConstPtr> constAny { p };
+        Any<IObject::ConstPtr> constAny{p};
         SharedPtrConstIInterface v;
         EXPECT_TRUE(constAny.GetValue(v));
         EXPECT_EQ(interface_pointer_cast<IObject>(v), p);
@@ -202,7 +202,7 @@ UNIT_TEST(API_AnyTest, GetSetWeakPointer, testing::ext::TestSize.Level1)
     WeakPtrIInterface weak = interface_pointer_cast<CORE_NS::IInterface>(p2);
 
     {
-        Any<IObject::WeakPtr> any { p };
+        Any<IObject::WeakPtr> any{p};
         IObject::WeakPtr v;
         EXPECT_TRUE(any.GetValue(v));
         EXPECT_EQ(v.lock(), p);
@@ -213,7 +213,7 @@ UNIT_TEST(API_AnyTest, GetSetWeakPointer, testing::ext::TestSize.Level1)
         EXPECT_EQ(GetValue<IObject::WeakPtr>(any).lock(), p2);
     }
     {
-        Any<IObject::WeakPtr> any { p };
+        Any<IObject::WeakPtr> any{p};
         SharedPtrIInterface v;
         EXPECT_TRUE(any.GetValue(v));
         EXPECT_EQ(interface_pointer_cast<IObject>(v), p);
@@ -231,56 +231,56 @@ UNIT_TEST(API_AnyTest, PtrCopyFrom, testing::ext::TestSize.Level1)
     auto p1 = CreateTestType<IObject>();
     auto p2 = CreateTestType<IObject>();
     {
-        Any<IObject::Ptr> any { p1 };
-        Any<IObject::Ptr> source { p2 };
+        Any<IObject::Ptr> any{p1};
+        Any<IObject::Ptr> source{p2};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::Ptr>(any), p2);
     }
     {
-        Any<IObject::Ptr> any { p1 };
-        Any<SharedPtrIInterface> source { interface_pointer_cast<CORE_NS::IInterface>(p2) };
+        Any<IObject::Ptr> any{p1};
+        Any<SharedPtrIInterface> source{interface_pointer_cast<CORE_NS::IInterface>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::Ptr>(any), p2);
     }
     {
-        Any<IObject::Ptr> any { p1 };
-        Any<ITestType::Ptr> source { interface_pointer_cast<ITestType>(p2) };
+        Any<IObject::Ptr> any{p1};
+        Any<ITestType::Ptr> source{interface_pointer_cast<ITestType>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::Ptr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<IObject::Ptr> source { p2 };
+        Any<IObject::ConstPtr> any{p1};
+        Any<IObject::Ptr> source{p2};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<SharedPtrIInterface> source { interface_pointer_cast<CORE_NS::IInterface>(p2) };
+        Any<IObject::ConstPtr> any{p1};
+        Any<SharedPtrIInterface> source{interface_pointer_cast<CORE_NS::IInterface>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<ITestType::Ptr> source { interface_pointer_cast<ITestType>(p2) };
+        Any<IObject::ConstPtr> any{p1};
+        Any<ITestType::Ptr> source{interface_pointer_cast<ITestType>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<IObject::ConstPtr> source { p2 };
+        Any<IObject::ConstPtr> any{p1};
+        Any<IObject::ConstPtr> source{p2};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<SharedPtrConstIInterface> source { interface_pointer_cast<CORE_NS::IInterface>(p2) };
+        Any<IObject::ConstPtr> any{p1};
+        Any<SharedPtrConstIInterface> source{interface_pointer_cast<CORE_NS::IInterface>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
     {
-        Any<IObject::ConstPtr> any { p1 };
-        Any<ITestType::ConstPtr> source { interface_pointer_cast<ITestType>(p2) };
+        Any<IObject::ConstPtr> any{p1};
+        Any<ITestType::ConstPtr> source{interface_pointer_cast<ITestType>(p2)};
         EXPECT_TRUE(any.CopyFrom(source));
         EXPECT_EQ(GetValue<IObject::ConstPtr>(any), p2);
     }
@@ -293,7 +293,7 @@ UNIT_TEST(API_AnyTest, PtrCopyFrom, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_AnyArrayTest, BasicCompatibility, testing::ext::TestSize.Level1)
 {
-    ArrayAny<uint32_t> any { 1, 2, 3 };
+    ArrayAny<uint32_t> any{1, 2, 3};
     using Type = uint32_t[];
 
     TypeId arrayUid = ArrayUidFromType<uint32_t>();
@@ -318,13 +318,13 @@ UNIT_TEST(API_AnyArrayTest, BasicCompatibility, testing::ext::TestSize.Level1)
 UNIT_TEST(API_AnyArrayTest, GetSetTypes, testing::ext::TestSize.Level1)
 {
     static constexpr auto VALUE_COUNT = 3;
-    const uint32_t valuesArr[VALUE_COUNT] = { 1, 2, 3 };
-    const BASE_NS::vector<uint32_t> vectorArr = { 4, 5, 6 };
+    const uint32_t valuesArr[VALUE_COUNT] = {1, 2, 3};
+    const BASE_NS::vector<uint32_t> vectorArr = {4, 5, 6};
 
     auto arrayUid = UidFromType<uint32_t[]>();
     auto vectorUid = UidFromType<BASE_NS::vector<uint32_t>>();
 
-    ArrayAny<uint32_t> any { valuesArr };
+    ArrayAny<uint32_t> any{valuesArr};
 
     uint32_t values[VALUE_COUNT];
     auto valuesSize = sizeof(uint32_t) * VALUE_COUNT;
@@ -415,7 +415,7 @@ UNIT_TEST(API_AnyTest, Types, testing::ext::TestSize.Level1)
         }
         EXPECT_FALSE(clone->CopyFrom(invalid));
         if (auto array = interface_cast<IArrayAny>(any)) {
-            auto item = any->Clone({ CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM });
+            auto item = any->Clone({CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM});
             EXPECT_EQ(array->GetSize(), 0);
             EXPECT_FALSE(array->SetAnyAt(0, *item));
             EXPECT_FALSE(array->InsertAnyAt(0, invalid));
@@ -442,18 +442,18 @@ UNIT_TEST(API_AnyTest, Types, testing::ext::TestSize.Level1)
 
         EXPECT_TRUE(any->ResetValue());
         EXPECT_FALSE(any->GetTypeIdString().empty());
-        EXPECT_NE(any->GetClassId(), ObjectId {});
-        EXPECT_NE(any->GetTypeId(), TypeId {});
-        EXPECT_NE(any->GetTypeId(TypeIdRole::ARRAY), TypeId {});
-        EXPECT_NE(any->GetTypeId(TypeIdRole::ITEM), TypeId {});
-        EXPECT_NE(any->GetTypeId(TypeIdRole::CURRENT), TypeId {});
+        EXPECT_NE(any->GetClassId(), ObjectId{});
+        EXPECT_NE(any->GetTypeId(), TypeId{});
+        EXPECT_NE(any->GetTypeId(TypeIdRole::ARRAY), TypeId{});
+        EXPECT_NE(any->GetTypeId(TypeIdRole::ITEM), TypeId{});
+        EXPECT_NE(any->GetTypeId(TypeIdRole::CURRENT), TypeId{});
         // valid type, invalid ptr
         EXPECT_FALSE(any->GetData(t, nullptr, 0));
         EXPECT_FALSE(any->SetData(t, nullptr, 0));
         uint8_t d;
         // invalid type, valid ptr
-        EXPECT_FALSE(any->GetData(TypeId {}, &d, 0));
-        EXPECT_FALSE(any->SetData(TypeId {}, &d, 0));
+        EXPECT_FALSE(any->GetData(TypeId{}, &d, 0));
+        EXPECT_FALSE(any->SetData(TypeId{}, &d, 0));
         EXPECT_FALSE(any->CopyFrom(invalid));
         EXPECT_FALSE(invalidTarget->CopyFrom(*any));
     };
@@ -461,7 +461,7 @@ UNIT_TEST(API_AnyTest, Types, testing::ext::TestSize.Level1)
     auto testType = [&](const IAny::Ptr& v, CompatibilityDirection dir) {
         auto against = v->GetCompatibleTypes(dir);
         EXPECT_FALSE(against.empty());
-        bool foundCompatible {};
+        bool foundCompatible{};
         for (auto&& t : against) {
             auto anys = getAny(t);
             for (const auto& any : anys) {
@@ -512,8 +512,8 @@ UNIT_TEST(API_AnyArrayTest, GetSet, testing::ext::TestSize.Level1)
 {
     using ArrayType = BASE_NS::vector<uint32_t>;
 
-    BASE_NS::vector<uint32_t> vv { 1 };
-    ArrayAny<uint32_t> any { vv };
+    BASE_NS::vector<uint32_t> vv{1};
+    ArrayAny<uint32_t> any{vv};
     uint32_t v = 0;
     EXPECT_TRUE(any.GetValueAt(0, v));
     EXPECT_EQ(v, 1);
@@ -527,7 +527,7 @@ UNIT_TEST(API_AnyArrayTest, GetSet, testing::ext::TestSize.Level1)
     EXPECT_TRUE(any.GetValueAt(0, v));
     EXPECT_EQ(v, 42);
 
-    vv = { 1, 2 };
+    vv = {1, 2};
     EXPECT_TRUE(any.SetValue(vv));
     EXPECT_EQ(GetValue<ArrayType>(any), vv);
 
@@ -564,37 +564,22 @@ const TestTypes AnyTestData(
     TType<float> { 1.0f, 2.33333f },
     TType<double> { 3.0, -4363.12455 },
     TType<TypeId> { TypeId{"00000000-0000-0000-0000-000000000000"}, TypeId{"10000000-0000-0000-0000-000000000000"} },
-    TType<ObjectId> {
-        ObjectId{"00000000-0000-0000-0000-000000000000"},
-        ObjectId{"10000000-0000-0000-0000-000000000000"} },
-    TType<InstanceId> {
-        InstanceId{"00000000-0000-0000-0000-000000000000"},
-        InstanceId{"10000000-0000-0000-0000-000000000000"} },
-    TType<BASE_NS::Uid> {
-        BASE_NS::Uid{"00000000-0000-0000-0000-000000000000"},
-        BASE_NS::Uid{"10000000-0000-0000-0000-000000000000"} },
+    TType<ObjectId> {ObjectId{"00000000-0000-0000-0000-000000000000"}, ObjectId{"10000000-0000-0000-0000-000000000000"} },
+    TType<InstanceId> { InstanceId{"00000000-0000-0000-0000-000000000000"}, InstanceId{"10000000-0000-0000-0000-000000000000"} },
+    TType<BASE_NS::Uid> { BASE_NS::Uid{"00000000-0000-0000-0000-000000000000"}, BASE_NS::Uid{"10000000-0000-0000-0000-000000000000"} },
     TType<BASE_NS::string> { "1", "2" },
     TType<BASE_NS::Math::Vec2> { BASE_NS::Math::Vec2 { 1.3f, 5.0f },  BASE_NS::Math::Vec2 { -3.1f, 13.0f } },
     TType<BASE_NS::Math::Vec3> { BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f }, BASE_NS::Math::Vec3 { 4.f, 1.2f, 0.88f } },
-    TType<BASE_NS::Math::Vec4> {
-        BASE_NS::Math::Vec4 { 4.f, 5.f, 6.f, 7.f },
-        BASE_NS::Math::Vec4 { -0.005f, 0.13f, 13.f, 100.f } },
+    TType<BASE_NS::Math::Vec4> { BASE_NS::Math::Vec4 { 4.f, 5.f, 6.f, 7.f }, BASE_NS::Math::Vec4 { -0.005f, 0.13f, 13.f, 100.f } },
     TType<BASE_NS::Math::UVec2> { BASE_NS::Math::UVec2 { 1, 2 }, BASE_NS::Math::UVec2 { 6, 7 } },
     TType<BASE_NS::Math::UVec3> { BASE_NS::Math::UVec3 { 1, 2, 3 }, BASE_NS::Math::UVec3 { 6, 7, 8 } },
     TType<BASE_NS::Math::UVec4> { BASE_NS::Math::UVec4 { 1, 2, 3, 4 }, BASE_NS::Math::UVec4 { 6, 7, 8, 9 } },
     TType<BASE_NS::Math::IVec2> { BASE_NS::Math::IVec2 { -1, 1 }, BASE_NS::Math::IVec2 { 60, -50 } },
     TType<BASE_NS::Math::IVec3> { BASE_NS::Math::IVec3 { -1, 1, 0 }, BASE_NS::Math::IVec3 { 60, -50, 1 } },
     TType<BASE_NS::Math::IVec4> { BASE_NS::Math::IVec4 { -1, 1, 9, -50 }, BASE_NS::Math::IVec4 { 60, -50, 2, 3 } },
-    TType<BASE_NS::Math::Quat> {
-        BASE_NS::Math::Quat { 4.f, 5.f, 6.f, 7.f },
-        BASE_NS::Math::Quat { -0.005f, 0.13f, 13.f, 100.f } },
-    TType<BASE_NS::Math::Mat3X3> { BASE_NS::Math::Mat3X3 { BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f },
-                                   BASE_NS::Math::Vec3 { 4.f, 5.f, 6.f },
-                                   BASE_NS::Math::Vec3 { 7.f, 8.f, 9.f } },
-                                   BASE_NS::Math::Mat3X3 { 3.3f } },
-    TType<BASE_NS::Math::Mat4X4> {
-        BASE_NS::Math::Mat4X4 { 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f },
-        BASE_NS::Math::Mat4X4 { 2.2f } },
+    TType<BASE_NS::Math::Quat> { BASE_NS::Math::Quat { 4.f, 5.f, 6.f, 7.f }, BASE_NS::Math::Quat { -0.005f, 0.13f, 13.f, 100.f } },
+    TType<BASE_NS::Math::Mat3X3> { BASE_NS::Math::Mat3X3 { BASE_NS::Math::Vec3 { 1.f, 2.f, 3.f }, BASE_NS::Math::Vec3 { 4.f, 5.f, 6.f }, BASE_NS::Math::Vec3 { 7.f, 8.f, 9.f } }, BASE_NS::Math::Mat3X3 { 3.3f } },
+    TType<BASE_NS::Math::Mat4X4> { BASE_NS::Math::Mat4X4 { 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f }, BASE_NS::Math::Mat4X4 { 2.2f } },
     // Ptr types
     TType<SharedPtrIInterface> { SharedPtrIInterface{}, SharedPtrIInterface {} },
     TType<SharedPtrConstIInterface> { SharedPtrConstIInterface{}, SharedPtrConstIInterface {} },
@@ -624,10 +609,11 @@ const TestTypes AnyTestData(
 );
 // clang-format on
 
-template<typename Type>
+template <typename Type>
 class API_TypedAnyTest : public ::testing::Test {
 public:
-    API_TypedAnyTest() : value1_(AnyTestData.GetValue<Type>(0)), value2_(AnyTestData.GetValue<Type>(1)) {}
+    API_TypedAnyTest() : value1_(AnyTestData.GetValue<Type>(0)), value2_(AnyTestData.GetValue<Type>(1))
+    {}
 
     static constexpr bool IS_PTR_TYPE = IsSharedOrWeakPtr_v<Type>;
 
@@ -743,12 +729,12 @@ TYPED_TEST(API_TypedAnyTest, GetSetData)
     EXPECT_FALSE(any->SetData(typeId, &value1, 0));
     EXPECT_FALSE(any->SetData({}, &value1, 0));
     EXPECT_FALSE(any->SetData(typeId, &value1, dataSize + 1));
-    EXPECT_EQ(any->SetData(typeId, &value1, dataSize), AnyReturnValue { AnyReturn::SUCCESS });
-    EXPECT_EQ(any->SetData(typeId, &value1, dataSize), AnyReturnValue { AnyReturn::NOTHING_TO_DO });
+    EXPECT_EQ(any->SetData(typeId, &value1, dataSize), AnyReturnValue{AnyReturn::SUCCESS});
+    EXPECT_EQ(any->SetData(typeId, &value1, dataSize), AnyReturnValue{AnyReturn::NOTHING_TO_DO});
 
     EXPECT_TRUE(any2->SetValue(value2));
 
-    auto target = TypeParam {};
+    auto target = TypeParam{};
     EXPECT_FALSE(any->GetData({}, nullptr, 0));
     EXPECT_FALSE(any->GetData({}, &target, dataSize));
     EXPECT_FALSE(any->GetData(typeId, nullptr, dataSize));
@@ -764,16 +750,20 @@ TYPED_TEST(API_TypedAnyTest, GetSetData)
     EXPECT_TRUE(any->ResetValue());
     EXPECT_TRUE(any->CopyFrom(*any2));
 
-    auto defaultValue = TypeParam {};
+    auto defaultValue = TypeParam{};
     EXPECT_TRUE(any->SetValue(value1));
     EXPECT_TRUE(any->SetValue(value2));
     EXPECT_TRUE(any->SetValue(defaultValue));
     EXPECT_TRUE(any->SetValue(value2));
     EXPECT_TRUE(any->SetValue(defaultValue));
 
-    EXPECT_EQ(any->SetData(typeId, &defaultValue, dataSize), AnyReturnValue { AnyReturn::SUCCESS });
+    EXPECT_EQ(any->SetData(typeId, &defaultValue, dataSize), AnyReturnValue{AnyReturn::SUCCESS});
 
-    auto testArray = [&](TypeId arrayTypeId, auto& arrayAny, auto& arrayValue1, auto& arraySize, auto* arrayTarget,
+    auto testArray = [&](TypeId arrayTypeId,
+                         auto& arrayAny,
+                         auto& arrayValue1,
+                         auto& arraySize,
+                         auto* arrayTarget,
                          const auto* defaultArrayValue) {
         const bool isCArray = arrayTypeId == this->GetArrayTypeId();
         AnyReturnValue expectedSetSame =
@@ -855,16 +845,16 @@ TYPED_TEST(API_TypedAnyTest, GetSetData)
 
     ASSERT_TRUE(arrayAny) << "Array " << BASE_NS::to_string(typeId.ToUid()).c_str();
 
-    BASE_NS::vector<TypeParam> vectorValue1 = { value1 };
+    BASE_NS::vector<TypeParam> vectorValue1 = {value1};
     const auto vectorSize = sizeof(vectorValue1);
     const auto vectorTypeId = this->GetVectorTypeId();
-    BASE_NS::vector<TypeParam> defaultVectorValue {};
-    auto vectorTarget = BASE_NS::vector<TypeParam> {};
+    BASE_NS::vector<TypeParam> defaultVectorValue{};
+    auto vectorTarget = BASE_NS::vector<TypeParam>{};
     testArray(vectorTypeId, arrayAny, vectorValue1, vectorSize, &vectorTarget, &defaultVectorValue);
 
-    const TypeParam arrayValue1[] = { value1 };
+    const TypeParam arrayValue1[] = {value1};
     const auto arrayTypeId = this->GetArrayTypeId();
-    TypeParam arrayTarget[] = { {} };
+    TypeParam arrayTarget[] = {{}};
     const auto arraySize = sizeof(TypeParam);
 
     EXPECT_NE(vectorTypeId, arrayTypeId);
@@ -872,5 +862,5 @@ TYPED_TEST(API_TypedAnyTest, GetSetData)
     testArray(arrayTypeId, arrayAny, arrayValue1, arraySize, &arrayTarget[0], static_cast<TypeParam*>(nullptr));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

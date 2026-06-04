@@ -18,7 +18,9 @@
 
 #include <cstdint>
 
+#include <3d/ecs/components/light_probe_group_component.h>
 #include <3d/ecs/components/material_component.h>
+#include <3d/light_probe_types/light_probe.h>
 #include <3d/render/render_data_defines_3d.h>
 #include <base/containers/array_view.h>
 #include <base/math/matrix.h>
@@ -35,39 +37,40 @@ CORE3D_BEGIN_NAMESPACE()
 struct RenderDataDefaultMaterial {
     /** min supported roughness value. clamped to this - 1.0.
     Avoids division with zero in shader BRDF calculations and prevents "zero" size speculars. */
-    static constexpr float MIN_ROUGHNESS { 0.089f };
-    /** max supported skin matrix count */
-    static constexpr uint32_t MAX_SKIN_MATRIX_COUNT { 128u };
+    static constexpr float MIN_ROUGHNESS{0.089f};
+    /** max supported current-frame skin matrix count */
+    static constexpr uint32_t MAX_SKIN_MATRIX_COUNT{256u};
+    /** max supported current-frame skin matrix count when previous-frame skinning data is also stored*/
+    static constexpr uint32_t MAX_SKIN_MATRIX_COUNT_WITH_PREVIOUS{128u};
 
     /** Count of uvec4 variables for material uniforms (must match 3d_dm_structure_common.h)
      * Aligned for 256 bytes with indices.
      */
-    static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_COUNT { 15u };
-    static constexpr uint32_t MATERIAL_PACKED_UNIFORM_UVEC4_COUNT { 15u };
+    static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_COUNT{15u};
+    static constexpr uint32_t MATERIAL_SH_COEFFICIENTS_UNIFORM_VEC4_COUNT{9u};
+    static constexpr uint32_t MATERIAL_PACKED_UNIFORM_UVEC4_COUNT{15u};
 
     /** For experimental bindless to pack texture and sampler indices to factor data
      */
-    static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT { 12u };
-    static constexpr uint32_t MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT { 16u };
+    static constexpr uint32_t MATERIAL_FACTOR_UNIFORM_VEC4_IN_USE_COUNT{12u};
+    static constexpr uint32_t MATERIAL_FACTOR_MAT_TEX_BINDLESS_SAMPLER_SHIFT{16u};
 
     /** Count of uvec4 variables for material uniforms (must match 3d_dm_structure_common.h) */
-    static constexpr uint32_t MATERIAL_TEXTURE_COUNT { 11u };
+    static constexpr uint32_t MATERIAL_TEXTURE_COUNT{11u};
 
     /** max default material custom resources */
-    static constexpr uint32_t MAX_MATERIAL_CUSTOM_RESOURCE_COUNT { 8u };
+    static constexpr uint32_t MAX_MATERIAL_CUSTOM_RESOURCE_COUNT{8u};
 
     /** max default material custom resources */
-    static constexpr uint32_t MAX_MESH_USER_VEC4_COUNT { 8u };
+    static constexpr uint32_t MAX_MESH_USER_VEC4_COUNT{8u};
 
     /** max default material custom resources */
-    static constexpr uint32_t MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE { 256u };
+    static constexpr uint32_t MAX_MATERIAL_CUSTOM_PROPERTY_BYTE_SIZE{256u};
 
     /** default depth rendering related important flags for render material flags */
-    static constexpr uint32_t RENDER_MATERIAL_DEPTH_FLAGS {
-        RenderMaterialFlagBits::RENDER_MATERIAL_GPU_INSTANCING_BIT
-    };
+    static constexpr uint32_t RENDER_MATERIAL_DEPTH_FLAGS{RenderMaterialFlagBits::RENDER_MATERIAL_GPU_INSTANCING_BIT};
     /** default depth rendering related important flags for submesh flags */
-    static constexpr uint32_t RENDER_SUBMESH_DEPTH_FLAGS { RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT };
+    static constexpr uint32_t RENDER_SUBMESH_DEPTH_FLAGS{RenderSubmeshFlagBits::RENDER_SUBMESH_SKIN_BIT};
 
     /** Input material uniforms
      * There's no conversion happening to these, so pre-multiplications etc needs to happen prior
@@ -75,20 +78,20 @@ struct RenderDataDefaultMaterial {
     struct InputMaterialUniforms {
         // the factor values are not the same default values as in MaterialComponent
         struct TextureData {
-            BASE_NS::Math::Vec4 factor { 0.0f, 0.0f, 0.0f, 0.0f };
-            BASE_NS::Math::Vec2 translation { 0.0f, 0.0f };
-            float rotation { 0.0f };
-            BASE_NS::Math::Vec2 scale { 1.0f, 1.0f };
+            BASE_NS::Math::Vec4 factor{0.0f, 0.0f, 0.0f, 0.0f};
+            BASE_NS::Math::Vec2 translation{0.0f, 0.0f};
+            float rotation{0.0f};
+            BASE_NS::Math::Vec2 scale{1.0f, 1.0f};
         };
         TextureData textureData[MATERIAL_TEXTURE_COUNT];
         // separate values which is pushed to shader alpha cutoff
-        float alphaCutoff { 1.0f };
+        float alphaCutoff{1.0f};
         // texcoord set bits, selection for uv0 or uv1
-        uint32_t texCoordSetBits { 0u };
+        uint32_t texCoordSetBits{0u};
         // texcoord transform set bits
-        uint32_t texTransformSetBits { 0u };
+        uint32_t texTransformSetBits{0u};
         /** material id */
-        uint64_t id { 0 };
+        uint64_t id{0};
     };
 
     /** Material uniforms (NOTE: rotScaleTrans could be packed more)
@@ -115,7 +118,11 @@ struct RenderDataDefaultMaterial {
         BASE_NS::Math::Vec4 factors[MATERIAL_FACTOR_UNIFORM_VEC4_COUNT];
 
         // unpacked, .xy material id,
-        BASE_NS::Math::UVec4 indices { 0u, 0u, 0u, 0u };
+        BASE_NS::Math::UVec4 indices{0u, 0u, 0u, 0u};
+    };
+
+    struct MaterialShCoefficientsUniforms {
+        BASE_NS::Math::Vec4 shCoeficients[MATERIAL_SH_COEFFICIENTS_UNIFORM_VEC4_COUNT];
     };
 
     struct MaterialPackedUniforms {
@@ -137,7 +144,7 @@ struct RenderDataDefaultMaterial {
         BASE_NS::Math::UVec4 packed[MATERIAL_PACKED_UNIFORM_UVEC4_COUNT];
 
         // unpacked, .xy material id,
-        BASE_NS::Math::UVec4 indices { 0u, 0u, 0u, 0u };
+        BASE_NS::Math::UVec4 indices{0u, 0u, 0u, 0u};
     };
 
     /*
@@ -148,6 +155,8 @@ struct RenderDataDefaultMaterial {
         MaterialUniforms factors;
         /** Material packed transforms */
         MaterialPackedUniforms transforms;
+        /** Material light probe coefficients */
+        MaterialShCoefficientsUniforms shCoefficients;
     };
 
     /** Material handles with handle reference (used as inputs)
@@ -184,42 +193,42 @@ struct RenderDataDefaultMaterial {
         /** Depth shader */
         MaterialShaderWithHandleReference depthShader;
         /** Render extra rendering flags */
-        RenderExtraRenderingFlags extraMaterialRenderingFlags { 0u };
+        RenderExtraRenderingFlags extraMaterialRenderingFlags{0u};
         /** Render material flags, same as MaterialComponent */
-        RenderMaterialFlags renderMaterialFlags { RENDER_MATERIAL_SHADOW_RECEIVER_BIT |
-                                                  RENDER_MATERIAL_SHADOW_CASTER_BIT |
-                                                  RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT |
-                                                  RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT };
+        RenderMaterialFlags renderMaterialFlags{
+            RENDER_MATERIAL_SHADOW_RECEIVER_BIT | RENDER_MATERIAL_SHADOW_CASTER_BIT |
+            RENDER_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT | RENDER_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT |
+            RENDER_MATERIAL_LIGHT_PROBE_RECEIVER_BIT};
 
         /** Custom render slot id */
-        uint32_t customRenderSlotId { ~0u };
+        uint32_t customRenderSlotId{~0u};
 
         /** Render material type */
-        RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
+        RenderMaterialType materialType{RenderMaterialType::METALLIC_ROUGHNESS};
 
         /** Render sort layer id. Valid values are 0 - 63 */
-        uint8_t renderSortLayer { RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID };
+        uint8_t renderSortLayer{RenderSceneDataConstants::DEFAULT_RENDER_SORT_LAYER_ID};
         /** Render sort layer id. Valid values are 0 - 255 */
-        uint8_t renderSortLayerOrder { 0 };
+        uint8_t renderSortLayerOrder{0};
     };
 
     /** Submesh material flags
      */
     struct SubmeshMaterialFlags {
         /** Material type */
-        RenderMaterialType materialType { RenderMaterialType::METALLIC_ROUGHNESS };
+        RenderMaterialType materialType{RenderMaterialType::METALLIC_ROUGHNESS};
         /* Render submesh's submesh flags, dublicated here for convenience */
-        RenderSubmeshFlags submeshFlags { 0u };
+        RenderSubmeshFlags submeshFlags{0u};
         /** Extra material rendering flags */
-        RenderExtraRenderingFlags extraMaterialRenderingFlags { 0u };
+        RenderExtraRenderingFlags extraMaterialRenderingFlags{0u};
 
         /** Render material flags */
-        RenderMaterialFlags renderMaterialFlags { 0u };
+        RenderMaterialFlags renderMaterialFlags{0u};
 
-        /** 32 bit hash based on the variables above */
-        uint32_t renderHash { 0u };
+        /** 64 bit hash based on the variables above */
+        uint64_t renderHash{0u};
         /** 32 bit hash based on the variables above targeted for default depth rendering hashing */
-        uint32_t renderDepthHash { 0u };
+        uint32_t renderDepthHash{0u};
     };
 
     struct SlotMaterialData {
@@ -228,35 +237,42 @@ struct RenderDataDefaultMaterial {
         /** Custom graphics state handle or invalid handle */
         RENDER_NS::RenderHandle gfxState;
         /** Render material flags */
-        RenderMaterialFlags renderMaterialFlags { 0u };
+        RenderMaterialFlags renderMaterialFlags{0u};
         /** Combined of render materials flags hash, material idx, shader id */
-        uint32_t renderSortHash { 0u };
+        uint64_t renderSortHash{0u};
         /** Combined sort layer from render submesh */
-        uint16_t combinedRenderSortLayer { 0u };
+        uint16_t combinedRenderSortLayer{0u};
     };
 
     /** Object counts for rendering.
      */
     struct ObjectCounts {
         /** Mesh count, NOTE: is currently global */
-        uint32_t meshCount { 0u };
+        uint32_t meshCount{0u};
         /** Submesh count */
-        uint32_t submeshCount { 0u };
+        uint32_t submeshCount{0u};
         /** Skin count */
-        uint32_t skinCount { 0u };
+        uint32_t skinCount{0u};
         /** Material count (frame material count) */
-        uint32_t materialCount { 0u };
+        uint32_t materialCount{0u};
         /** Unique material count */
-        uint32_t uniqueMaterialCount { 0u };
+        uint32_t uniqueMaterialCount{0u};
+        /** LightProbe count (frame light probe data count)*/
+        uint32_t lightProbeDataCount{0u};
     };
 
     /** Per mesh skin joint matrices.
      */
     struct JointMatrixData {
         /** Matrices */
-        BASE_NS::Math::Mat4X4* data { nullptr };
-        /** Matrix count */
-        uint32_t count { 0 };
+        BASE_NS::Math::Mat4X4* data{nullptr};
+        /** Matrix count
+         * Contains current matrices and, when previousFrameOffset is non-zero, previous
+         * matrices after that offset.
+         */
+        uint32_t count{0};
+        /** Offset to previous-frame matrices in data. Zero means that only current-frame matrices are stored. */
+        uint32_t previousFrameOffset{0u};
     };
 
     /** Material custom resources.
@@ -269,7 +285,7 @@ struct RenderDataDefaultMaterial {
         RENDER_NS::RenderHandle shaderHandle;
 
         /** handle count */
-        uint32_t resourceHandleCount { 0u };
+        uint32_t resourceHandleCount{0u};
         /** invalid handles if not given */
         RENDER_NS::RenderHandle resourceHandles[MAX_MATERIAL_CUSTOM_RESOURCE_COUNT];
     };
@@ -294,7 +310,7 @@ struct RenderDataDefaultMaterial {
  */
 class IRenderDataStoreDefaultMaterial : public RENDER_NS::IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "fdd9f86b-f5fc-45da-8832-41cbd649ed49" };
+    static constexpr BASE_NS::Uid UID{"fdd9f86b-f5fc-45da-8832-41cbd649ed49"};
 
     ~IRenderDataStoreDefaultMaterial() override = default;
 
@@ -511,12 +527,12 @@ public:
      */
     virtual BASE_NS::array_view<const uint8_t> GetMaterialCustomPropertyData(const uint32_t materialIndex) const = 0;
     /** Get submesh material flags (per submesh) */
-    virtual BASE_NS::array_view<const RenderDataDefaultMaterial::SubmeshMaterialFlags>
-    GetSubmeshMaterialFlags() const = 0;
+    virtual BASE_NS::array_view<const RenderDataDefaultMaterial::SubmeshMaterialFlags> GetSubmeshMaterialFlags()
+        const = 0;
 
     /** Get custom resource handles */
-    virtual BASE_NS::array_view<const RenderDataDefaultMaterial::CustomResourceData>
-    GetCustomResourceHandles() const = 0;
+    virtual BASE_NS::array_view<const RenderDataDefaultMaterial::CustomResourceData> GetCustomResourceHandles()
+        const = 0;
 
     /** Get information about added render mesh objects.
      * @return Render frame object info.
@@ -524,7 +540,7 @@ public:
     virtual RenderFrameObjectInfo GetRenderFrameObjectInfo() const = 0;
 
     /** Generate render hash (32 bits as RenderDataDefaultMaterial::SubmeshMaterialFlags::renderHash) */
-    virtual uint32_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const = 0;
+    virtual uint64_t GenerateRenderHash(const RenderDataDefaultMaterial::SubmeshMaterialFlags& flags) const = 0;
 
     /** Add debug materials for all slot submeshes to be rendered this frame.
      * The data is automatically cleared after the rendering has been processed.
@@ -545,9 +561,16 @@ public:
         const BASE_NS::array_view<const uint8_t> customPropertyData,
         const BASE_NS::array_view<const RENDER_NS::RenderHandleReference> customBindings) = 0;
 
+    virtual void UpdateLightProbeDataByIndex(
+        const uint32_t submeshIndex, const LightProbeInterpolatedData& lightProbeInterpolatedData) = 0;
+
+    virtual BASE_NS::array_view<const LightProbeInterpolatedData> GetLightProbeData() const = 0;
+
+    virtual void UpdateSubmeshRenderMaterialFlagByIndex(uint32_t submeshIndex, RenderMaterialFlags flag) = 0;
+
 protected:
     IRenderDataStoreDefaultMaterial() = default;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_MATERIAL_H
+#endif  // API_3D_RENDER_IRENDER_DATA_STORE_DEFAULT_MATERIAL_H

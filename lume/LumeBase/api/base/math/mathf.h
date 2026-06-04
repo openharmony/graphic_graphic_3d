@@ -16,33 +16,34 @@
 #ifndef API_BASE_MATH_MATHF_H
 #define API_BASE_MATH_MATHF_H
 
+#include <climits>
 #include <cmath>
 
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
 namespace Math {
-constexpr const float BASE_EPSILON = 1.192092896e-07f; // smallest such that 1.0+FLT_EPSILON != 1.0
+constexpr const float BASE_EPSILON = 1.192092896e-07f;  // smallest such that 1.0+FLT_EPSILON != 1.0
 
 /** \addtogroup group_math_mathf
  *  @{
  */
 /** Returns Minimum value of 2 given parameter */
-template<typename T>
+template <typename T>
 constexpr inline const T& min(const T& a, const T& b) noexcept
 {
     return a < b ? a : b;
 }
 
 /** Returns Maximum value of 2 given parameter */
-template<typename T>
+template <typename T>
 constexpr inline const T& max(const T& a, const T& b) noexcept
 {
     return a > b ? a : b;
 }
 
 /** Clamps value between minimum and maximum value */
-template<typename T>
+template <typename T>
 constexpr inline const T& clamp(const T& value, const T& min, const T& max)
 {
     return (value < min) ? min : (value > max) ? max : value;
@@ -87,13 +88,15 @@ inline float ceil(float value)
 /** Returns largest integer smaller to or equal to value */
 inline int floorToInt(float value)
 {
-    return static_cast<int>(floor(value));
+    const float clamped = clamp(floor(value), static_cast<float>(INT_MIN), static_cast<float>(INT_MAX));
+    return static_cast<int>(clamped);
 }
 
 /** Returns smallest integer greater to or equal to value */
 inline int ceilToInt(float value)
 {
-    return static_cast<int>(ceil(value));
+    const float clamped = clamp(ceil(value), static_cast<float>(INT_MIN), static_cast<float>(INT_MAX));
+    return static_cast<int>(clamped);
 }
 
 /** Interpolates between floats a and b by t and t is clamped value between 0 and 1 */
@@ -189,7 +192,7 @@ static constexpr inline float sign(float value)
     return value >= 0.0f ? 1.0f : -1.0f;
 }
 /** @} */
-}; // namespace Math
+};  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_MATHF_H
+#endif  // API_BASE_MATH_MATHF_H

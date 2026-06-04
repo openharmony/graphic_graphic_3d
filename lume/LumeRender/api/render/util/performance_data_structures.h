@@ -24,33 +24,31 @@
 RENDER_BEGIN_NAMESPACE()
 struct RenderPerformanceDataConstants {
     /** Render Node counters */
-    static constexpr const BASE_NS::string_view RENDER_NODE_COUNTERS_NAME { "RenderNode" };
+    static constexpr const BASE_NS::string_view RENDER_NODE_COUNTERS_NAME{"RenderNode"};
 
     /** Triangle */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_TRIANGLE { "Backend_Count_Triangle" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_TRIANGLE{"Backend_Count_Triangle"};
     /** InstanceCount */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_INSTANCECOUNT { "Backend_Count_InstanceCount" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_INSTANCECOUNT{"Backend_Count_InstanceCount"};
     /** Draw */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_DRAW { "Backend_Count_Draw" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_DRAW{"Backend_Count_Draw"};
     /** DrawIndirect */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_DRAWINDIRECT { "Backend_Count_DrawIndirect" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_DRAWINDIRECT{"Backend_Count_DrawIndirect"};
     /** Dispatch */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_DISPATCH { "Backend_Count_Dispatch" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_DISPATCH{"Backend_Count_Dispatch"};
     /** DispatchIndirect */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_DISPATCHINDIRECT { "Backend_Count_DispatchIndirect" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_DISPATCHINDIRECT{"Backend_Count_DispatchIndirect"};
     /** BindPipeline */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_BINDPIPELINE { "Backend_Count_BindPipeline" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_BINDPIPELINE{"Backend_Count_BindPipeline"};
     /** RenderPass */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_RENDERPASS { "Backend_Count_RenderPass" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_RENDERPASS{"Backend_Count_RenderPass"};
     /** UpdateDescriptorSet */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_UPDATEDESCRIPTORSET {
-        "Backend_Count_UpdateDescriptorSet"
-    };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_UPDATEDESCRIPTORSET{"Backend_Count_UpdateDescriptorSet"};
     /** BindDescriptorSet */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_BINDDESCRIPTORSET { "Backend_Count_BindDescriptorSet" };
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_BINDDESCRIPTORSET{"Backend_Count_BindDescriptorSet"};
 
     /** Render counter list */
-    static constexpr const BASE_NS::string_view BACKEND_COUNT_LIST[] {
+    static constexpr const BASE_NS::string_view BACKEND_COUNT_LIST[]{
         BACKEND_COUNT_TRIANGLE,
         BACKEND_COUNT_INSTANCECOUNT,
         BACKEND_COUNT_DRAW,
@@ -63,19 +61,19 @@ struct RenderPerformanceDataConstants {
         BACKEND_COUNT_BINDDESCRIPTORSET,
     };
 
-    static constexpr BASE_NS::pair<BASE_NS::string_view, int64_t> BACKEND_COUNT_STRING_LIST[] {
-        { BACKEND_COUNT_TRIANGLE, 0 },
-        { BACKEND_COUNT_INSTANCECOUNT, 0 },
-        { BACKEND_COUNT_DRAW, 0 },
-        { BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { BACKEND_COUNT_DISPATCH, 0 },
-        { BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { BACKEND_COUNT_BINDPIPELINE, 0 },
-        { BACKEND_COUNT_RENDERPASS, 0 },
-        { BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
-        { BACKEND_COUNT_BINDDESCRIPTORSET, 0 },
+    static constexpr BASE_NS::pair<BASE_NS::string_view, int64_t> BACKEND_COUNT_STRING_LIST[]{
+        {BACKEND_COUNT_TRIANGLE, 0},
+        {BACKEND_COUNT_INSTANCECOUNT, 0},
+        {BACKEND_COUNT_DRAW, 0},
+        {BACKEND_COUNT_DRAWINDIRECT, 0},
+        {BACKEND_COUNT_DISPATCH, 0},
+        {BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {BACKEND_COUNT_BINDPIPELINE, 0},
+        {BACKEND_COUNT_RENDERPASS, 0},
+        {BACKEND_COUNT_UPDATEDESCRIPTORSET, 0},
+        {BACKEND_COUNT_BINDDESCRIPTORSET, 0},
     };
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_UTIL_PERFORMANCE_DATA_STRUCTURES_H
+#endif  // API_RENDER_UTIL_PERFORMANCE_DATA_STRUCTURES_H

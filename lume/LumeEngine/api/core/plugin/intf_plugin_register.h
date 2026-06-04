@@ -135,4 +135,4 @@ CORE_PUBLIC void CreatePluginRegistry(const struct PlatformCreateInfo& platformC
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PLUGIN_IPLUGIN_REGISTER_H
+#endif  // API_CORE_PLUGIN_IPLUGIN_REGISTER_H

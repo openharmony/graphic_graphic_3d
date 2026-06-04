@@ -29,20 +29,20 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IRenderMeshComponentManager, RenderMeshComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    /** Additional custom data size which is bind with render mesh structure to shader
-     * Should match api/shaders/common/3d_dm_structures_common.h DefaultMaterialSingleMeshStruct customData
-     */
-    static constexpr uint32_t RENDER_MESH_CUSTOM_DATA_VEC4_COUNT { 2u };
+/** Additional custom data size which is bind with render mesh structure to shader
+ * Should match api/shaders/common/3d_dm_structures_common.h DefaultMaterialSingleMeshStruct customData
+ */
+static constexpr uint32_t RENDER_MESH_CUSTOM_DATA_VEC4_COUNT{2u};
 #endif
-    /** Mesh entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0, )
+/** Mesh entity. */
+DEFINE_PROPERTY(CORE_NS::Entity, mesh, "Mesh", 0, )
 
-    /** Render mesh batch entity. */
-    DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render Mesh Batch", 0, )
+/** Render mesh batch entity. */
+DEFINE_PROPERTY(CORE_NS::Entity, renderMeshBatch, "Render Mesh Batch", 0, )
 
-    /** Additional per render mesh custom data for shader customization */
-    DEFINE_ARRAY_PROPERTY(BASE_NS::Math::UVec4, RENDER_MESH_CUSTOM_DATA_VEC4_COUNT, customData,
-        "Additional Shader Data", 0, ARRAY_VALUE({ 0u, 0u, 0u, 0u }))
+/** Additional per render mesh custom data for shader customization */
+DEFINE_ARRAY_PROPERTY(BASE_NS::Math::UVec4, RENDER_MESH_CUSTOM_DATA_VEC4_COUNT, customData, "Additional Shader Data", 0,
+    ARRAY_VALUE({0u, 0u, 0u, 0u}))
 END_COMPONENT(IRenderMeshComponentManager, RenderMeshComponent, "311f8817-1878-4363-a6e6-68cc2299ea8d")
 #if !defined(IMPLEMENT_MANAGER)
 CORE3D_END_NAMESPACE()

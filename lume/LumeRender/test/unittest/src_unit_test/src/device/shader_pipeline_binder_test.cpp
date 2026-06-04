@@ -34,7 +34,7 @@ using namespace RENDER_NS;
 
 namespace {
 
-template<typename T, uint32_t count>
+template <typename T, uint32_t count>
 vector<RenderHandleReference> CreateResource(IGpuResourceManager& gpuResourceMgr, const T& desc)
 {
     vector<RenderHandleReference> outRes(count);
@@ -49,10 +49,10 @@ void TestShaderPipelineBinder(const UTest::EngineResources& engine)
     auto nodeContextDescriptorSetMgr = ((Device*)engine.device)->CreateNodeContextDescriptorSetManager();
     auto shaderHandle =
         engine.device->GetShaderManager().GetShaderHandle("rendershaders://shader/ShaderPipelineBinderTest.shader");
-    ASSERT_NE(RenderHandle {}, shaderHandle.GetHandle());
+    ASSERT_NE(RenderHandle{}, shaderHandle.GetHandle());
     auto plHandle = engine.device->GetShaderManager().GetReflectionPipelineLayoutHandle(shaderHandle);
     auto pipelineLayout = engine.device->GetShaderManager().GetReflectionPipelineLayout(shaderHandle);
-    ShaderPipelineBinder binder { engine.device->GetShaderManager(), shaderHandle, pipelineLayout };
+    ShaderPipelineBinder binder{engine.device->GetShaderManager(), shaderHandle, pipelineLayout};
     ASSERT_EQ(shaderHandle.GetHandle(), binder.GetShaderHandle().GetHandle());
 
     GpuBufferDesc bufDesc;
@@ -91,8 +91,8 @@ void TestShaderPipelineBinder(const UTest::EngineResources& engine)
     binder.Bind(0, 0, samplerHandle);
     binder.Bind(0, 1, imageHandle);
     binder.Bind(0, 2, bufferHandle);
-    binder.BindImages(0, 3, { bindableImgs.data(), bindableImgs.size() });
-    binder.BindBuffers(0, 4, { bindableBufs.data(), bindableBufs.size() });
+    binder.BindImages(0, 3, {bindableImgs.data(), bindableImgs.size()});
+    binder.BindBuffers(0, 4, {bindableBufs.data(), bindableBufs.size()});
 
     ASSERT_TRUE(binder.GetBindingValidity());
 
@@ -103,19 +103,23 @@ void TestShaderPipelineBinder(const UTest::EngineResources& engine)
             {
                 BindableImageWithHandleReference bindable;
                 bindable.handle = imageHandle;
-                CORE_NS::SetPropertyValue(*bindingProperties, "uTex",
-                    CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T, bindable);
+                CORE_NS::SetPropertyValue(*bindingProperties,
+                    "uTex",
+                    CORE_NS::PropertyType::BINDABLE_IMAGE_WITH_HANDLE_REFERENCE_T,
+                    bindable);
             }
             {
                 BindableSamplerWithHandleReference bindable;
                 bindable.handle = samplerHandle;
-                CORE_NS::SetPropertyValue(*bindingProperties, "uSampler",
-                    CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T, bindable);
+                CORE_NS::SetPropertyValue(*bindingProperties,
+                    "uSampler",
+                    CORE_NS::PropertyType::BINDABLE_SAMPLER_WITH_HANDLE_REFERENCE_T,
+                    bindable);
             }
         }
         binder.Bind(0, 2, bufferHandle);
-        binder.BindImages(0, 3, { bindableImgs.data(), bindableImgs.size() });
-        binder.BindBuffers(0, 4, { bindableBufs.data(), bindableBufs.size() });
+        binder.BindImages(0, 3, {bindableImgs.data(), bindableImgs.size()});
+        binder.BindBuffers(0, 4, {bindableBufs.data(), bindableBufs.size()});
 
         ASSERT_TRUE(binder.GetBindingValidity());
         const auto resRef = binder.GetDescriptorSetLayoutBindingResources(0U);
@@ -146,15 +150,15 @@ void TestShaderPipelineBinder(const UTest::EngineResources& engine)
         }
     }
 
-    float floatData[] = { 1.f, 1.f, 1.f, 1.f, 2.f, 2.f, 2.f, 2.f };
+    float floatData[] = {1.f, 1.f, 1.f, 1.f, 2.f, 2.f, 2.f, 2.f};
     const uint8_t* byteData = reinterpret_cast<const uint8_t*>(floatData);
-    binder.SetPushConstantData({ byteData, sizeof(floatData) });
+    binder.SetPushConstantData({byteData, sizeof(floatData)});
     auto pushData = binder.GetPushConstantData();
     for (uint32_t i = 0; i < pushData.size(); ++i) {
         ASSERT_EQ(byteData[i], pushData[i]);
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ShaderPipelineBinderTest

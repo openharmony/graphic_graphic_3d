@@ -20,21 +20,22 @@
 
 namespace GeometryDefinition {
 
-PlaneJS::PlaneJS(const BASE_NS::Math::Vec2& size) : GeometryDefinition(), size_(size) {}
+PlaneJS::PlaneJS(const BASE_NS::Math::Vec2& size) : GeometryDefinition(), size_(size)
+{}
 
 void PlaneJS::Init(napi_env env, napi_value exports)
 {
     auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         napi_value thisVar = nullptr;
         napi_get_cb_info(env, info, nullptr, nullptr, &thisVar, nullptr);
-        NapiApi::Object { env, thisVar }.Set("size", NapiApi::Object(env, "Vec2", {}));
+        NapiApi::Object{env, thisVar}.Set("size", NapiApi::Object(env, "Vec2", {}));
         return thisVar;
     };
-    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::PLANE); };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env{e}.GetNumber(GeometryType::PLANE); };
 
     napi_value undefined;
     napi_get_undefined(env, &undefined);
-    const auto props = BASE_NS::vector<napi_property_descriptor> {
+    const auto props = BASE_NS::vector<napi_property_descriptor>{
         // clang-format off
         { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
         { "size",         nullptr, nullptr, nullptr, nullptr, undefined, napi_default_jsproperty, nullptr },
@@ -62,4 +63,4 @@ SCENE_NS::IMesh::Ptr PlaneJS::CreateMesh(
     return creator->CreatePlane(config, size_.x, size_.y).GetResult();
 }
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition

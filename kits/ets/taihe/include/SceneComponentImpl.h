@@ -33,7 +33,6 @@ namespace OHOS::Render3D::KITETS {
 class SceneComponentImpl {
 public:
     explicit SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneComponentETS);
-    ~SceneComponentImpl();
 
     int32_t getPropertySize();
     ::taihe::array<::taihe::string> getPropertyKeys();
@@ -44,10 +43,10 @@ public:
     void setName(::taihe::string_view name);
 
 private:
-    void SetPropertyFromSceneResource(const std::string &name, const ::SceneResources::SceneResource &sr);
-    void SetArrayPropertyFromSceneResource(const std::string &name,
-        const ::taihe::array<::SceneResources::SceneResource> &srArray);
+    void SetPropertyFromSceneResource(const std::string& name, const ::SceneResources::SceneResource& sr);
+    void SetArrayPropertyFromSceneResource(
+        const std::string& name, const ::taihe::array<::SceneResources::SceneResource>& srArray);
     std::shared_ptr<SceneComponentETS> sceneComponentETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_SCENE_COMPONENT_IMPL_H

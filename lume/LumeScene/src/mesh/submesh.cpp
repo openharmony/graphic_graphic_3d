@@ -24,7 +24,8 @@ static constexpr BASE_NS::string_view MATERIAL_PROPERTY_NAME = "Material";
 
 class MaterialConverter : public DynamicInterfacePtrEntityConverter<IMaterial> {
 public:
-    MaterialConverter(IInternalScene::Ptr scene) : DynamicInterfacePtrEntityConverter<IMaterial>(scene) {}
+    MaterialConverter(IInternalScene::Ptr scene) : DynamicInterfacePtrEntityConverter<IMaterial>(scene)
+    {}
 
 protected:
     META_NS::ObjectId GetObjectId(const CORE_NS::IEcs& ecs, const CORE_NS::Entity& e) const override
@@ -58,9 +59,9 @@ bool SubMesh::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::str
 
     if (p->GetName() == MATERIAL_PROPERTY_NAME) {
         auto ep = object_->CreateProperty(cpath).GetResult();
-        auto i = interface_cast<META_NS::IStackProperty>(p);
-        return ep && i &&
-               i->PushValue(META_NS::IValue::Ptr(new ConvertingValue<MaterialConverter>(ep, { GetInternalScene() })));
+        return PushForwardingValueInstance(ep,
+            interface_cast<META_NS::IStackProperty>(p),
+            META_NS::IValue::Ptr(new ConvertingValue<MaterialConverter>(ep, {GetInternalScene()})));
     }
     return AttachEngineProperty(p, cpath);
 }
@@ -81,15 +82,15 @@ IInternalScene::Ptr SubMesh::GetScene() const
 void SubMesh::SetMaterialOverride(const IMaterial::Ptr& material)
 {
     if (overrideMaterial_.lock() == material) {
-        return; // No change, ignore the call
+        return;  // No change, ignore the call
     }
     if (auto scene = GetScene()) {
         // Need to initialize the material property to handle original value
         auto raw = GetProperty(MATERIAL_PROPERTY_NAME, META_NS::MetadataQuery::CONSTRUCT_ON_REQUEST);
-        META_NS::PropertyLock materialProperty { raw };
+        META_NS::PropertyLock materialProperty{raw};
         if (materialProperty) {
             auto v = materialProperty->GetValueAny().Clone();
-            if (material) { // Setting override
+            if (material) {  // Setting override
                 if (overrideAny_) {
                     // Already override set, update value
                     if (auto i = META_NS::GetFirstValueFromProperty<IConvertingValue>(raw)) {
@@ -103,7 +104,7 @@ void SubMesh::SetMaterialOverride(const IMaterial::Ptr& material)
                     materialProperty->SetValueAny(META_NS::Any<IMaterial::Ptr>(material));
                     materialProperty->PushValue(v);
                 }
-            } else { // Reseting override
+            } else {  // Reseting override
                 if (overrideAny_) {
                     // Remove override from stack
                     materialProperty->RemoveValue(overrideAny_);

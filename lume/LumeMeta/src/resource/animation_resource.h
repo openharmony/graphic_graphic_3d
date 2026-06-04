@@ -38,6 +38,11 @@ public:
     bool SaveResource(const CORE_NS::IResource::ConstPtr&, const StorageInfo&) const override;
     bool ReloadResource(const StorageInfo&, const CORE_NS::IResource::Ptr&) const override;
 
+    BASE_NS::string GetVersion() const override
+    {
+        return {};
+    }
+
     void AddAnchorType(const META_NS::ObjectId& id) override
     {
         anchorTypes_.push_back(id);
@@ -50,31 +55,36 @@ private:
 class PropertyAnimationTemplateAccess : public IntroduceInterfaces<ResourceTemplateAccess, BaseObject> {
     META_OBJECT(PropertyAnimationTemplateAccess, ClassId::PropertyAnimationTemplateAccess, IntroduceInterfaces)
 public:
-    PropertyAnimationTemplateAccess() : Super(ClassId::PropertyAnimation, ClassId::AnimationResourceTemplate) {}
+    PropertyAnimationTemplateAccess() : Super(ClassId::PropertyAnimation, ClassId::AnimationResourceTemplate)
+    {}
 };
 
 class SequentialAnimationTemplateAccess : public IntroduceInterfaces<ResourceTemplateAccess, BaseObject> {
     META_OBJECT(SequentialAnimationTemplateAccess, ClassId::SequentialAnimationTemplateAccess, IntroduceInterfaces)
 public:
-    SequentialAnimationTemplateAccess() : Super(ClassId::SequentialAnimation, ClassId::AnimationResourceTemplate) {}
+    SequentialAnimationTemplateAccess() : Super(ClassId::SequentialAnimation, ClassId::AnimationResourceTemplate)
+    {}
 };
 
 class ParallelAnimationTemplateAccess : public IntroduceInterfaces<ResourceTemplateAccess, BaseObject> {
     META_OBJECT(ParallelAnimationTemplateAccess, ClassId::ParallelAnimationTemplateAccess, IntroduceInterfaces)
 public:
-    ParallelAnimationTemplateAccess() : Super(ClassId::ParallelAnimation, ClassId::AnimationResourceTemplate) {}
+    ParallelAnimationTemplateAccess() : Super(ClassId::ParallelAnimation, ClassId::AnimationResourceTemplate)
+    {}
 };
 
 class KeyframeAnimationTemplateAccess : public IntroduceInterfaces<ResourceTemplateAccess, BaseObject> {
     META_OBJECT(KeyframeAnimationTemplateAccess, ClassId::KeyframeAnimationTemplateAccess, IntroduceInterfaces)
 public:
-    KeyframeAnimationTemplateAccess() : Super(ClassId::KeyframeAnimation, ClassId::AnimationResourceTemplate) {}
+    KeyframeAnimationTemplateAccess() : Super(ClassId::KeyframeAnimation, ClassId::AnimationResourceTemplate)
+    {}
 };
 
 class TrackAnimationTemplateAccess : public IntroduceInterfaces<ResourceTemplateAccess, BaseObject> {
     META_OBJECT(TrackAnimationTemplateAccess, ClassId::TrackAnimationTemplateAccess, IntroduceInterfaces)
 public:
-    TrackAnimationTemplateAccess() : Super(ClassId::TrackAnimation, ClassId::AnimationResourceTemplate) {}
+    TrackAnimationTemplateAccess() : Super(ClassId::TrackAnimation, ClassId::AnimationResourceTemplate)
+    {}
 
     CORE_NS::IResource::Ptr CreateEmptyTemplate() const override
     {

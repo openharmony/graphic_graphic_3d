@@ -93,6 +93,7 @@ private:
      */
     bool SyncCustomProperties(BASE_NS::vector<META_NS::IEngineValue::Ptr>* synced_values) const;
     bool UpdateCustomProperties(const META_NS::IProperty::Ptr&);
+    void UpdateCustomPropertyDefaultsFromShader();
 
     void InitTextures(const META_NS::IProperty::Ptr& p);
     void InitCustoms(const META_NS::IProperty::Ptr& p);
@@ -100,7 +101,7 @@ private:
 
 private:
     IInternalMaterial::Ptr material_;
-    std::atomic<bool> metadataUpdateScheduled_ {};
+    std::atomic<bool> metadataUpdateScheduled_{};
     META_NS::PropertyChangedEventHandler shaderChanged_;
 };
 
@@ -108,7 +109,8 @@ class MaterialTemplateAccess
     : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
     META_OBJECT(MaterialTemplateAccess, ClassId::MaterialTemplateAccess, IntroduceInterfaces)
 public:
-    MaterialTemplateAccess() : Super(ClassId::Material, ClassId::MaterialResourceTemplate) {}
+    MaterialTemplateAccess() : Super(ClassId::Material, ClassId::MaterialResourceTemplate)
+    {}
 
     CORE_NS::IResource::Ptr CreateEmptyTemplate() const override;
     CORE_NS::IResource::Ptr CreateTemplateFromResource(const CORE_NS::IResource::ConstPtr& resource) const override;

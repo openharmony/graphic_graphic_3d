@@ -32,16 +32,16 @@ using namespace CORE_NS;
 
 namespace JPGPlugin {
 namespace {
-constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
+constexpr uint32_t MAX_IMAGE_EXTENT{32767U};
 constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
 
-uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
+uint8_t g_sRgbPremultiplyLookup[256u * 256u] = {0};
 std::once_flag g_sRgbPremultiplyLookupOnce;
 
 void InitializeSRGBTable()
 {
-    // Generate lookup table to premultiply sRGB encoded image in linear space and reencoding it to sRGB
-    // Formulas from https://en.wikipedia.org/wiki/SRGB
+    // Generate lookup table to premultiply sRGB encoded image in linear space and
+    // reencoding it to sRGB Formulas from https://en.wikipedia.org/wiki/SRGB
     for (uint32_t a = 0; a < 256u; a++) {
         const float alpha = static_cast<float>(a) / 255.f;
         for (uint32_t sRGB = 0; sRGB < 256u; sRGB++) {
@@ -65,7 +65,8 @@ void InitializeSRGBTable()
 bool PremultiplyAlpha(
     uint8_t* imageBytes, uint32_t width, uint32_t height, uint32_t channelCount, uint32_t bytesPerChannel, bool linear)
 {
-    // Only need to process images with color and alpha data. I.e. RGBA or grayscale + alpha.
+    // Only need to process images with color and alpha data. I.e. RGBA or
+    // grayscale + alpha.
     if (channelCount != 4u && channelCount != 2u) {
         return true;
     }
@@ -82,7 +83,7 @@ bool PremultiplyAlpha(
                     *img = static_cast<uint8_t>(*img * alpha / 0xff);
                     img++;
                 }
-                img++; // Skip over the alpha value.
+                img++;  // Skip over the alpha value.
             }
         } else {
             std::call_once(g_sRgbPremultiplyLookupOnce, InitializeSRGBTable);
@@ -116,10 +117,10 @@ bool PremultiplyAlpha(
 
 IImageLoaderManager::LoadResult ResultFailure(const string_view error)
 {
-    IImageLoaderManager::LoadResult result {
-        false,  // success
-        "",     // error[128];
-        nullptr // image;
+    IImageLoaderManager::LoadResult result{
+        false,   // success
+        "",      // error[128];
+        nullptr  // image;
     };
 
     // Copy the error string
@@ -132,19 +133,19 @@ IImageLoaderManager::LoadResult ResultFailure(const string_view error)
 
 IImageLoaderManager::LoadResult ResultSuccess(IImageContainer::Ptr image)
 {
-    return IImageLoaderManager::LoadResult {
-        true,                // success
-        "",                  // error[128];
-        BASE_NS::move(image) // image;
+    return IImageLoaderManager::LoadResult{
+        true,                 // success
+        "",                   // error[128];
+        BASE_NS::move(image)  // image;
     };
 }
 
 IImageLoaderManager::LoadAnimatedResult ResultFailureAnimated(const string_view error)
 {
-    IImageLoaderManager::LoadAnimatedResult result {
-        false,  // success
-        "",     // error[128];
-        nullptr // image;
+    IImageLoaderManager::LoadAnimatedResult result{
+        false,   // success
+        "",      // error[128];
+        nullptr  // image;
     };
 
     // Copy the error string
@@ -154,11 +155,12 @@ IImageLoaderManager::LoadAnimatedResult ResultFailureAnimated(const string_view 
 
     return result;
 }
-} // namespace
+}  // namespace
 
 class JPGImage final : public IImageContainer {
 public:
-    JPGImage() : IImageContainer(), imageDesc_(), imageBuffer_() {}
+    JPGImage() : IImageContainer(), imageDesc_(), imageBuffer_()
+    {}
 
     ~JPGImage() override = default;
 
@@ -181,7 +183,7 @@ public:
 
     static constexpr Format ResolveFormat(uint32_t loadFlags, uint32_t componentCount, bool is16bpc) noexcept
     {
-        Format format {};
+        Format format{};
         const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
 
         switch (componentCount) {
@@ -232,20 +234,20 @@ public:
             }
         }
 
-        return ImageDesc {
-            imageFlags,    // imageFlags
-            1,             // blockPixelWidth
-            1,             // blockPixelHeight
-            1,             // blockPixelDepth
-            bitsPerPixel,  // bitsPerBlock
-            imageType,     // imageType
-            imageViewType, // imageViewType
-            format,        // format
-            imageWidth,    // width
-            imageHeight,   // height
-            1,             // depth
-            mipCount,      // mipCount
-            1,             // layerCount
+        return ImageDesc{
+            imageFlags,     // imageFlags
+            1,              // blockPixelWidth
+            1,              // blockPixelHeight
+            1,              // blockPixelDepth
+            bitsPerPixel,   // bitsPerBlock
+            imageType,      // imageType
+            imageViewType,  // imageViewType
+            format,         // format
+            imageWidth,     // width
+            imageHeight,    // height
+            1,              // depth
+            mipCount,       // mipCount
+            1,              // layerCount
         };
     }
 
@@ -263,8 +265,12 @@ public:
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA) != 0) {
                 const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
-                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()), imageWidth, imageHeight,
-                    componentCount, bytesPerComponent, forceLinear);
+                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()),
+                    imageWidth,
+                    imageHeight,
+                    componentCount,
+                    bytesPerComponent,
+                    forceLinear);
             }
         }
 
@@ -276,13 +282,13 @@ public:
         image->imageBytes_ = BASE_NS::move(imageBytes);
         image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
 
-        image->imageBuffer_ = SubImageDesc {
-            0,           // uint32_t bufferOffset
-            imageWidth,  // uint32_t bufferRowLength
-            imageHeight, // uint32_t bufferImageHeight
+        image->imageBuffer_ = SubImageDesc{
+            0,            // uint32_t bufferOffset
+            imageWidth,   // uint32_t bufferRowLength
+            imageHeight,  // uint32_t bufferImageHeight
 
-            0, // uint32_t mipLevel
-            1, // uint32_t layerCount
+            0,  // uint32_t mipLevel
+            1,  // uint32_t layerCount
 
             static_cast<uint32_t>(imageWidth),
             static_cast<uint32_t>(imageHeight),
@@ -325,20 +331,28 @@ public:
         jmp_buf jmpBuffer;
         struct jpeg_decompress_struct cinfo;
         struct jpeg_error_mgr jerr;
-        // initialize the error handler and override the exit handler which calls exit(). instead we'll call longjmp to
-        // return here for cleanup.
+        // initialize the error handler and override the exit handler which calls
+        // exit(). instead we'll call longjmp to return here for cleanup.
         cinfo.err = jpeg_std_error(&jerr);
         jerr.error_exit = ErrorExit;
         cinfo.client_data = &jmpBuffer;
 
         BASE_NS::unique_ptr<uint8_t[]> image;
-        BASE_NS::unique_ptr<uint8_t* []> rows;
+        BASE_NS::unique_ptr<uint8_t*[]> rows;
+        // The unique_ptrs above are reset explicitly on the longjmp path; suppress C4611.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4611)
+#endif
         if (setjmp(jmpBuffer)) {
             jpeg_destroy_decompress(&cinfo);
             rows.reset();
             image.reset();
             return ResultFailure("Failed to load.");
         }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
         // initialize the decompress struct
         jpeg_create_decompress(&cinfo);
@@ -362,7 +376,7 @@ public:
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT) ==
                 IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT) {
                 cinfo.out_color_space = JCS_GRAYSCALE;
-            } else if (cinfo.num_components == 2 || cinfo.num_components == 3) { // 2: index  3: index
+            } else if (cinfo.num_components == 2 || cinfo.num_components == 3) {  // 2: index  3: index
                 cinfo.out_color_space = JCS_EXT_RGBA;
             }
             if (!jpeg_start_decompress(&cinfo)) {
@@ -374,22 +388,27 @@ public:
             width = cinfo.output_width;
             height = cinfo.output_height;
             channels = static_cast<uint32_t>(cinfo.output_components);
-            is16bpc = cinfo.data_precision > 8;  // 8: index
-            if (channels <= 0 || channels > 4) { // 0: invalid channel num, 4: RGBA
+            // libjpeg-turbo (JSAMPLE == uint8_t) always outputs 8-bit samples
+            // regardless of data_precision, so treat the decoded buffer as 8bpc.
+            is16bpc = false;
+            if (channels <= 0 || channels > 4) {  // 0: invalid channel num, 4: RGBA
                 jpeg_destroy_decompress(&cinfo);
                 return ResultFailure("Invalid number of color channels.");
             }
 
-            const size_t imageSize = static_cast<size_t>(width) * height * channels;
+            const size_t imageSize = static_cast<uint64_t>(width) * height * channels;
             if ((width > MAX_IMAGE_EXTENT) || (height > MAX_IMAGE_EXTENT) || (imageSize > IMG_SIZE_LIMIT_2GB)) {
                 jpeg_destroy_decompress(&cinfo);
                 return ResultFailure("Image too large.");
             }
-            // allocate space for the whole image and and array of row pointers. libjpg writes data to each row pointer.
-            // alternative would be to use a different api which writes only one row and feed it the correct address
+            // allocate space for the whole image and and array of row pointers.
+            // libjpg writes data to each row pointer. alternative would be to use a
+            // different api which writes only one row and feed it the correct address
             // every time.
             image = BASE_NS::make_unique<uint8_t[]>(imageSize);
+            // clang-format off
             rows = BASE_NS::make_unique<uint8_t* []>(height);
+            // clang-format on
             const size_t stride = static_cast<size_t>(width) * channels;
             const bool flip = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0;
             if (!FillRowPointers(rows.get(), image.get(), height, stride, flip)) {
@@ -423,6 +442,8 @@ private:
 
 class ImageLoaderJPG final : public IImageLoaderManager::IImageLoader {
 public:
+    using IImageLoaderManager::IImageLoader::Load;
+
     // Inherited via ImageManager::IImageLoader
     IImageLoaderManager::LoadResult Load(IFile& file, uint32_t loadFlags) const override
     {
@@ -451,17 +472,23 @@ public:
 
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
-        // Check for JPEG / DQT / JFIF / Exif / ICC_PROFILE tag
+        // Check for JPEG / DQT / JFIF / Exif / XMP / ICC_PROFILE / MPF / Adobe tag
         // 10：size
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
             imageFileBytes[2] == 0xff &&
-            (imageFileBytes[3] == 0xdb ||
+            (imageFileBytes[3] == 0xdb ||  // DQT
                 (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-                    imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+                    imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') ||  // JFIF
                 (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') ||  // Exif
+                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'h' && imageFileBytes[7] == 't' &&
+                    imageFileBytes[8] == 't' && imageFileBytes[9] == 'p') ||  // XMP
                 (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_') ||  // ICC_PROFILE
+                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'M' && imageFileBytes[7] == 'P' &&
+                    imageFileBytes[8] == 'F' && imageFileBytes[9] == 0) ||  // MPF
+                (imageFileBytes[3] == 0xee && imageFileBytes[6] == 'A' && imageFileBytes[7] == 'd' &&
+                    imageFileBytes[8] == 'o' && imageFileBytes[9] == 'b'))) {  // Adobe
             return true;
         }
 
@@ -494,7 +521,7 @@ protected:
 
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderJPG(CORE_NS::PluginToken)
 {
-    return IImageLoaderManager::IImageLoader::Ptr { new ImageLoaderJPG() };
+    return IImageLoaderManager::IImageLoader::Ptr{new ImageLoaderJPG()};
 }
 
-} // namespace JPGPlugin
+}  // namespace JPGPlugin

@@ -38,7 +38,7 @@ unsigned long ContainerIndex(const string_view name, size_t& pos)
 {
     const char* start = name.substr(pos).data();
     char* end = nullptr;
-    const unsigned long index = std::strtoul(start, &end, 10); // 10: base
+    const unsigned long index = std::strtoul(start, &end, 10);  // 10: base
     // check that conversion stopped at the closing square bracket
     if (!end || *end != ']') {
         return ULONG_MAX;
@@ -94,7 +94,7 @@ bool ParseIndex(const string_view name, const uintptr_t baseOffset, const Proper
 PropertyData::PropertyOffset FindProperty(
     array_view<const Property> properties, const string_view name, const uintptr_t baseOffset)
 {
-    PropertyData::PropertyOffset ret { nullptr, 0U, 0U };
+    PropertyData::PropertyOffset ret{nullptr, 0U, 0U};
 
     // trim down to name without array index or member variable.
     static constexpr string_view delimiters = ".[";
@@ -153,14 +153,14 @@ PropertyData::PropertyOffset FindProperty(
     }
     return ret;
 }
-} // namespace
+}  // namespace
 
 PropertyData::PropertyData()
 {
     Reset();
 }
 
-bool PropertyData::WLock(IPropertyHandle& handle) // no-copy direct-access (Locks the datahandle);
+bool PropertyData::WLock(IPropertyHandle& handle)  // no-copy direct-access (Locks the datahandle);
 {
     if (dataHandle_ || dataHandleW_) {
         return false;
@@ -183,10 +183,10 @@ PropertyData::PropertyOffset PropertyData::WLock(IPropertyHandle& handle, const 
         }
     }
     WUnlock(handle);
-    return { nullptr, 0U, 0U };
+    return {nullptr, 0U, 0U};
 }
 
-bool PropertyData::WUnlock(const IPropertyHandle& handle) // (releases the datahandle lock, and removes ref)
+bool PropertyData::WUnlock(const IPropertyHandle& handle)  // (releases the datahandle lock, and removes ref)
 {
     BASE_ASSERT(dataHandleW_);
     BASE_ASSERT(dataHandleW_ == dataHandle_);
@@ -201,7 +201,7 @@ bool PropertyData::WUnlock(const IPropertyHandle& handle) // (releases the datah
     return false;
 }
 
-bool PropertyData::RLock(const IPropertyHandle& handle) // no-copy direct-access (Locks the datahandle);
+bool PropertyData::RLock(const IPropertyHandle& handle)  // no-copy direct-access (Locks the datahandle);
 {
     if (dataHandle_ || dataHandleW_) {
         return false;
@@ -224,10 +224,10 @@ PropertyData::PropertyOffset PropertyData::RLock(const IPropertyHandle& handle, 
         }
     }
     RUnlock(handle);
-    return { nullptr, 0U, 0U };
+    return {nullptr, 0U, 0U};
 }
 
-bool PropertyData::RUnlock(const IPropertyHandle& handle) // (releases the datahandle lock, and removes ref)
+bool PropertyData::RUnlock(const IPropertyHandle& handle)  // (releases the datahandle lock, and removes ref)
 {
     BASE_ASSERT(dataHandle_);
     BASE_ASSERT(dataHandleW_ == nullptr);
@@ -336,6 +336,8 @@ void* PropertyData::WLock()
     return dataW_;
 }
 
-void PropertyData::RUnlock() const {}
+void PropertyData::RUnlock() const
+{}
 
-void PropertyData::WUnlock() {}
+void PropertyData::WUnlock()
+{}

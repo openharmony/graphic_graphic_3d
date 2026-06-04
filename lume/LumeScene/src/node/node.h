@@ -38,13 +38,14 @@ SCENE_BEGIN_NAMESPACE()
 class Node : public META_NS::IntroduceInterfaces<NamedSceneObject, NodeInterface, INodeImport, META_NS::IIterable,
                  META_NS::IContainer, NodeContaineable, META_NS::IMetadataOwner, INodeNotify, ILayer> {
     META_OBJECT(Node, SCENE_NS::ClassId::Node, IntroduceInterfaces)
-
+protected:
     META_BEGIN_STATIC_DATA()
     META_STATIC_FORWARDED_PROPERTY_DATA(ITransform, BASE_NS::Math::Vec3, Position)
     META_STATIC_FORWARDED_PROPERTY_DATA(ITransform, BASE_NS::Math::Quat, Rotation)
     META_STATIC_FORWARDED_PROPERTY_DATA(ITransform, BASE_NS::Math::Vec3, Scale)
     META_STATIC_FORWARDED_PROPERTY_DATA(ILayer, uint64_t, LayerMask)
     META_STATIC_FORWARDED_PROPERTY_DATA(INode, bool, Enabled)
+    SCENE_STATIC_DYNINIT_PROPERTY_DATA(INode, SCENE_NS::NodeFlags, NodeFlags, "")
     META_STATIC_EVENT_DATA(META_NS::IContainer, META_NS::IOnChildChanged, OnContainerChanged)
     META_END_STATIC_DATA()
 
@@ -53,9 +54,12 @@ class Node : public META_NS::IntroduceInterfaces<NamedSceneObject, NodeInterface
     SCENE_USE_COMPONENT_PROPERTY(BASE_NS::Math::Quat, Rotation, "TransformComponent")
     SCENE_USE_COMPONENT_PROPERTY(uint64_t, LayerMask, "LayerComponent")
     SCENE_USE_COMPONENT_PROPERTY(bool, Enabled, "NodeComponent")
+    META_IMPLEMENT_PROPERTY(SCENE_NS::NodeFlags, NodeFlags)
 
     META_IMPLEMENT_EVENT(META_NS::IOnChildChanged, OnContainerChanged)
 public:
+    bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
+
     Future<bool> IsEnabledInHierarchy() const override;
 
     BASE_NS::string GetName() const override;
@@ -68,10 +72,10 @@ public:
     Future<INode::Ptr> Clone(BASE_NS::string_view nodeName, const INode::Ptr& parent) override;
 
     Future<INode::Ptr> ImportChild(const INode::ConstPtr& node) override;
-    Future<INode::Ptr> ImportChildScene(
-        const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup) override;
+    Future<INode::Ptr> ImportChildScene(const IScene::ConstPtr& scene, const ImportOptions& options) override;
     Future<INode::Ptr> ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName) override;
-    Future<INode::Ptr> ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ) override;
+    Future<INode::Ptr> ImportTemplate(
+        const META_NS::IObjectTemplate::ConstPtr& templ, BASE_NS::string_view resourceGroup) override;
 
     bool SetEcsObject(const IEcsObject::Ptr& obj) override;
 

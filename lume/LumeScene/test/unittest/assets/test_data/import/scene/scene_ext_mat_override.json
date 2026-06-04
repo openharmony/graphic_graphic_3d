@@ -1,0 +1,30 @@
+{
+	"version": "1.0",
+	"description": "external node with material override from index",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_ext_mat_override.index",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "ext",
+					"source": {
+						"resourceId": {
+							"name": "cube"
+						}
+					},
+					"resourceGroup": "ext-grp",
+					"overrides": [
+						{
+							"path": ".//AnimatedCube.SubMeshes[0].Material",
+							"value": { "type": "objectRef", "path": "@overrideMat" }
+						}
+					]
+				}
+			]
+		}
+	}
+}

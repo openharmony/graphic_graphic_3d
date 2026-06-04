@@ -25,23 +25,29 @@ META_BEGIN_NAMESPACE()
 
 class ResourceGroupHandle : public META_NS::IntroduceInterfaces<IResourceGroupHandle> {
 public:
-    ResourceGroupHandle(const CORE_NS::IResourceManager::Ptr& context, BASE_NS::string group)
-        : context_(context), group_(BASE_NS::move(group))
+    ResourceGroupHandle(
+        const CORE_NS::IResourceManager::Ptr& context, BASE_NS::string group, CORE_NS::ResourceContextPtr rcontext)
+        : context_(context), group_(BASE_NS::move(group)), rcontext_(BASE_NS::move(rcontext))
     {}
     ~ResourceGroupHandle()
     {
-        if (auto c = context_.lock()) {
-            c->RemoveGroup(group_);
+        if (auto c = interface_pointer_cast<IResourceManagerExtension>(context_.lock())) {
+            c->RemoveGroup(group_, rcontext_);
         }
     }
     BASE_NS::string GetGroup() const override
     {
         return group_;
     }
+    CORE_NS::ResourceContextPtr GetContext() const override
+    {
+        return rcontext_.lock();
+    }
 
 private:
     BASE_NS::weak_ptr<CORE_NS::IResourceManager> context_;
     BASE_NS::string group_;
+    CORE_NS::ResourceContextWeakPtr rcontext_;
 };
 
 META_END_NAMESPACE()

@@ -32,8 +32,8 @@ public:
     virtual ISerNode::Ptr Process(ISerNode::Ptr) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::ISerTransformation)
-
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::ISerTransformation)
 
 #endif

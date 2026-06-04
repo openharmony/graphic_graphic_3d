@@ -37,13 +37,13 @@ using namespace RENDER_NS;
 #define TEST_WRITE_PNG 0
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 2, 2 };
-static constexpr Math::UVec2 TEST_OUTPUT_SIZE { 2, 2 };
+static constexpr Math::UVec2 TEST_DATA_SIZE{2, 2};
+static constexpr Math::UVec2 TEST_OUTPUT_SIZE{2, 2};
 // red | green
 // red | green
-static constexpr uint32_t TEST_IMAGE_COLOR[] = { 0xFF0000ff, 0xFF00ff00, 0xFF0000ff, 0xFF00ff00 };
-static constexpr string_view TEST_IMAGE_NAME { "TestImage" };
-static constexpr string_view TEST_BUFFER_NAME { "TestBuffer" };
+static constexpr uint32_t TEST_IMAGE_COLOR[] = {0xFF0000ff, 0xFF00ff00, 0xFF0000ff, 0xFF00ff00};
+static constexpr string_view TEST_IMAGE_NAME{"TestImage"};
+static constexpr string_view TEST_BUFFER_NAME{"TestBuffer"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 
@@ -62,9 +62,9 @@ struct TestData {
     RenderHandleReference renderNodeGraph;
     TestResources resources;
 
-    uint32_t windowWidth { 0u };
-    uint32_t windowHeight { 0u };
-    uint32_t elementByteSize { 4u };
+    uint32_t windowWidth{0u};
+    uint32_t windowHeight{0u};
+    uint32_t elementByteSize{4u};
 };
 
 TestResources CreateTestResources2(TestData& td)
@@ -93,7 +93,7 @@ TestResources CreateTestResources2(TestData& td)
     bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const vector<uint8_t> bufferDefaultData(bufferDesc.byteSize, 0);
     res.cpuCopyBufferHandle =
-        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, { bufferDefaultData });
+        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, {bufferDefaultData});
 
     res.byteArray = make_unique<ByteArray>(bufferDesc.byteSize);
 #if (TEST_CREATE_WINDOW != 1)
@@ -155,7 +155,7 @@ TestResources CreateTestResources3(TestData& td)
     bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const vector<uint8_t> bufferDefaultData(bufferDesc.byteSize, 0);
     res.cpuCopyBufferHandle =
-        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, { bufferDefaultData });
+        td.engine.device->GetGpuResourceManager().Create("TestOutputBuffer", bufferDesc, {bufferDefaultData});
 
     res.byteArray = make_unique<ByteArray>(bufferDesc.byteSize);
 #if (TEST_CREATE_WINDOW != 1)
@@ -185,17 +185,17 @@ void CreateScaledImage(TestData& td, const Math::UVec2& size)
         desc.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
         desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         desc.usageFlags = CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT;
-        desc.engineCreationFlags = CORE_ENGINE_IMAGE_CREATION_SCALE; // NOTE!
+        desc.engineCreationFlags = CORE_ENGINE_IMAGE_CREATION_SCALE;  // NOTE!
         const auto rgbDataView = array_view(
             reinterpret_cast<const uint8_t*>(TEST_IMAGE_COLOR), sizeof(uint32_t) * countof(TEST_IMAGE_COLOR));
         const auto name = TEST_IMAGE_NAME;
-        const BufferImageCopy bufferImageCopy {
-            0,                                                                        // bufferOffset
-            TEST_DATA_SIZE.x,                                                         // bufferRowLength
-            TEST_DATA_SIZE.y,                                                         // bufferImageHeight
-            { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, // imageSubresource
-            { 0, 0, 0 },                                                              // imageOffset
-            { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u },                               // imageExtent
+        const BufferImageCopy bufferImageCopy{
+            0,                                                                       // bufferOffset
+            TEST_DATA_SIZE.x,                                                        // bufferRowLength
+            TEST_DATA_SIZE.y,                                                        // bufferImageHeight
+            {RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},  // imageSubresource
+            {0, 0, 0},                                                               // imageOffset
+            {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u},                                // imageExtent
         };
         td.resources.testImageHandle = td.engine.device->GetGpuResourceManager().Create(
             name, desc, rgbDataView, array_view<const BufferImageCopy>(&bufferImageCopy, 1u));
@@ -269,8 +269,8 @@ void TickTest(TestData& td, int32_t frameCountToTick)
             }
         }
 
-        const RenderHandleReference renderNodeGraphs[] = { td.renderNodeGraph };
-        er.context->GetRenderer().RenderFrame({ renderNodeGraphs, 1u });
+        const RenderHandleReference renderNodeGraphs[] = {td.renderNodeGraph};
+        er.context->GetRenderer().RenderFrame({renderNodeGraphs, 1u});
     }
 }
 
@@ -364,19 +364,27 @@ void TestResourceManager2(DeviceBackendType backend)
         testData.renderNodeGraph =
             CreateRenderNodeGraph(*testData.engine.context, "test://renderNodeGraphGfxGpuResourceManagerTest2.rng");
     }
-    CreateScaledImage(testData, { 1u, 1u });
+    CreateScaledImage(testData, {1u, 1u});
     TickTest(testData, 1);
     ValidateData1x1(testData);
 #if (TEST_WRITE_PNG == 1)
-    test::WritePng("./GfxGpuResourceManagerTest2_1x1.png", testData.windowWidth, testData.windowHeight, 4,
-        testData.resources.dataBlob->Data(), testData.windowWidth * 4);
+    test::WritePng("./GfxGpuResourceManagerTest2_1x1.png",
+        testData.windowWidth,
+        testData.windowHeight,
+        4,
+        testData.resources.dataBlob->Data(),
+        testData.windowWidth * 4);
 #endif
-    CreateScaledImage(testData, { 4u, 4u });
+    CreateScaledImage(testData, {4u, 4u});
     TickTest(testData, 1);
     ValidateData4x4(testData);
 #if (TEST_WRITE_PNG == 1)
-    test::WritePng("./GfxGpuResourceManagerTest2_4x4.png", testData.windowWidth, testData.windowHeight, 4,
-        testData.resources.dataBlob->Data(), testData.windowWidth * 4);
+    test::WritePng("./GfxGpuResourceManagerTest2_4x4.png",
+        testData.windowWidth,
+        testData.windowHeight,
+        4,
+        testData.resources.dataBlob->Data(),
+        testData.windowWidth * 4);
 #endif
     {
         testData.renderNodeGraph = {};
@@ -400,23 +408,23 @@ void TestResourceManager3(DeviceBackendType backend)
         testData.renderNodeGraph =
             CreateRenderNodeGraph(*testData.engine.context, "test://renderNodeGraphGfxGpuResourceManagerTest2.rng");
     }
-    CreateImageTest3(testData, { 2u, 2u });
+    CreateImageTest3(testData, {2u, 2u});
     {
         refcnt_ptr<IRenderDataStoreDefaultStaging> staging =
             testData.engine.context->GetRenderDataStoreManager().GetRenderDataStore(
                 RENDER_DATA_STORE_DEFAULT_STAGING.data());
-        const BufferImageCopy bufferImageCopy {
-            0,                  // bufferOffset
-            TEST_OUTPUT_SIZE.x, // bufferRowLength
-            TEST_OUTPUT_SIZE.y, // bufferImageHeight
+        const BufferImageCopy bufferImageCopy{
+            0,                   // bufferOffset
+            TEST_OUTPUT_SIZE.x,  // bufferRowLength
+            TEST_OUTPUT_SIZE.y,  // bufferImageHeight
             {
-                CORE_IMAGE_ASPECT_COLOR_BIT,              // imageAspectFlags
-                0,                                        // mipLevel
-                0,                                        // baseArrayLayer
-                1u,                                       // layerCount
-            },                                            // imageSubresource
-            {},                                           // imageOffset
-            { TEST_OUTPUT_SIZE.x, TEST_OUTPUT_SIZE.y, 1 } // imageExtend
+                CORE_IMAGE_ASPECT_COLOR_BIT,             // imageAspectFlags
+                0,                                       // mipLevel
+                0,                                       // baseArrayLayer
+                1u,                                      // layerCount
+            },                                           // imageSubresource
+            {},                                          // imageOffset
+            {TEST_OUTPUT_SIZE.x, TEST_OUTPUT_SIZE.y, 1}  // imageExtend
         };
         staging->CopyBufferToImage(
             testData.resources.optionalGpuMapBufferHandle, testData.resources.testImageHandle, bufferImageCopy);
@@ -424,8 +432,12 @@ void TestResourceManager3(DeviceBackendType backend)
     TickTest(testData, 1);
     ValidateDataTest3(testData);
 #if (TEST_WRITE_PNG == 1)
-    test::WritePng("./GfxGpuResourceManagerTest3_4x4.png", testData.windowWidth, testData.windowHeight, 4,
-        testData.resources.dataBlob->Data(), testData.windowWidth * 4);
+    test::WritePng("./GfxGpuResourceManagerTest3_4x4.png",
+        testData.windowWidth,
+        testData.windowHeight,
+        4,
+        testData.resources.dataBlob->Data(),
+        testData.windowWidth * 4);
 #endif
     {
         testData.renderNodeGraph = {};
@@ -433,7 +445,7 @@ void TestResourceManager3(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -456,7 +468,7 @@ UNIT_TEST(API_GfxGpuResourceManagerTest3, GpuResourceManagerTestVulkan3, testing
 {
     TestResourceManager3(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -479,4 +491,4 @@ UNIT_TEST(API_GfxGpuResourceManagerTest3, GpuResourceManagerTestOpenGL3, testing
 {
     TestResourceManager3(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

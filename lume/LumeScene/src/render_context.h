@@ -16,6 +16,7 @@
 #ifndef SCENE_SRC_RENDER_CONTEXT_H
 #define SCENE_SRC_RENDER_CONTEXT_H
 
+#include <atomic>
 #include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_render_context.h>
 
@@ -35,11 +36,13 @@ public:
     META_NS::ITaskQueue::Ptr GetApplicationQueue() const override;
     CORE_NS::IResourceManager::Ptr GetResources() const override;
     Counters GetCounters() const override;
+    void AdjustScope(ScopeType types, int32_t delta) override;
+    bool IsInScope(ScopeType type) const override;
 
-protected: // IApplicationContextProvider
+protected:  // IApplicationContextProvider
     IApplicationContext::ConstPtr GetApplicationContext() const override;
 
-protected: // IApplicationContextSetter
+protected:  // IApplicationContextSetter
     void SetApplicationContext(const IApplicationContext::ConstPtr& context) override;
 
 private:
@@ -48,6 +51,7 @@ private:
     META_NS::ITaskQueue::Ptr appQ;
     CORE_NS::IResourceManager::Ptr res;
     IApplicationContext::ConstWeakPtr context_;
+    std::atomic<int32_t> sceneLoadDepth_{0};
 };
 
 SCENE_END_NAMESPACE()

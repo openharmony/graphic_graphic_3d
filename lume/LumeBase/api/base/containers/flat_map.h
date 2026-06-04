@@ -22,14 +22,14 @@
 #include <base/util/algorithm.h>
 
 BASE_BEGIN_NAMESPACE()
-template<typename KeyType, typename ValueType, typename Compare>
+template <typename KeyType, typename ValueType, typename Compare>
 class flat_map;
 
 namespace Detail {
-template<typename KeyIter, typename ValueIter, typename ValueConstIter>
+template <typename KeyIter, typename ValueIter, typename ValueConstIter>
 class Iterator {
 public:
-    template<typename T>
+    template <typename T>
     using IterReference = decltype(*BASE_NS::declval<T&>());
     using ConstIterator = Iterator<KeyIter, ValueConstIter, ValueConstIter>;
     using reference = BASE_NS::pair<IterReference<KeyIter>, IterReference<ValueIter>>;
@@ -38,7 +38,8 @@ public:
 private:
     class RefWrapper {
     public:
-        explicit RefWrapper(const reference& ref) noexcept : ref_ { ref } {}
+        explicit RefWrapper(const reference& ref) noexcept : ref_{ref}
+        {}
 
         const reference* operator->() const noexcept
         {
@@ -54,16 +55,17 @@ public:
 
     Iterator() = default;
 
-    Iterator(KeyIter key, ValueIter value) noexcept : keyIter_(BASE_NS::move(key)), valueIter_(BASE_NS::move(value)) {}
+    Iterator(KeyIter key, ValueIter value) noexcept : keyIter_(BASE_NS::move(key)), valueIter_(BASE_NS::move(value))
+    {}
 
     reference operator*() const
     {
-        return reference { *keyIter_, *valueIter_ };
+        return reference{*keyIter_, *valueIter_};
     }
 
     pointer operator->() const
     {
-        return pointer { this->operator*() };
+        return pointer{this->operator*()};
     }
 
     Iterator& operator++()
@@ -132,21 +134,21 @@ public:
         return keyIter_ != _Right.keyIter_;
     }
 
-    template<typename T = ValueConstIter, BASE_NS::enable_if_t<!BASE_NS::is_same_v<ValueIter, T>, bool> = true>
+    template <typename T = ValueConstIter, BASE_NS::enable_if_t<!BASE_NS::is_same_v<ValueIter, T>, bool> = true>
     operator Iterator<KeyIter, T, T>() const
     {
         return ConstIterator(keyIter_, valueIter_);
     }
 
 private:
-    template<typename KeyType, typename ValueType, typename Compare>
+    template <typename KeyType, typename ValueType, typename Compare>
     friend class BASE_NS::flat_map;
     KeyIter keyIter_;
     ValueIter valueIter_;
 };
-} // namespace Detail
+}  // namespace Detail
 
-template<typename KeyType, typename ValueType, typename Compare = Less<KeyType>>
+template <typename KeyType, typename ValueType, typename Compare = Less<KeyType>>
 class flat_map {
 public:
     using key_type = KeyType;
@@ -163,13 +165,14 @@ public:
 
     flat_map() = default;
 
-    template<class InputIter>
+    template <class InputIter>
     flat_map(InputIter first, InputIter last)
     {
         insert(first, last);
     }
 
-    flat_map(std::initializer_list<value_type> init) : flat_map(init.begin(), init.end()) {}
+    flat_map(std::initializer_list<value_type> init) : flat_map(init.begin(), init.end())
+    {}
 
     // Element access
     mapped_type& operator[](const key_type& key)
@@ -182,7 +185,7 @@ public:
         return try_emplace(BASE_NS::move(key)).first->second;
     }
 
-    template<typename Key>
+    template <typename Key>
     mapped_type& operator[](Key&& key)
     {
         return try_emplace(BASE_NS::forward<Key>(key)).first->second;
@@ -191,32 +194,32 @@ public:
     // Iterators
     iterator begin() noexcept
     {
-        return iterator { keys_.cbegin(), values_.begin() };
+        return iterator{keys_.cbegin(), values_.begin()};
     }
 
     const_iterator begin() const noexcept
     {
-        return const_iterator { keys_.cbegin(), values_.begin() };
+        return const_iterator{keys_.cbegin(), values_.begin()};
     }
 
     const_iterator cbegin() const noexcept
     {
-        return const_iterator { keys_.cbegin(), values_.begin() };
+        return const_iterator{keys_.cbegin(), values_.begin()};
     }
 
     iterator end() noexcept
     {
-        return iterator { keys_.cend(), values_.end() };
+        return iterator{keys_.cend(), values_.end()};
     }
 
     const_iterator end() const noexcept
     {
-        return const_iterator { keys_.cend(), values_.end() };
+        return const_iterator{keys_.cend(), values_.end()};
     }
 
     const_iterator cend() const noexcept
     {
-        return const_iterator { keys_.cend(), values_.end() };
+        return const_iterator{keys_.cend(), values_.end()};
     }
 
     // Capacity
@@ -231,33 +234,33 @@ public:
     }
 
     // Modifiers
-    template<class... Args>
+    template <class... Args>
     BASE_NS::pair<iterator, bool> emplace(Args&&... args)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         auto t = value_type(BASE_NS::forward<Args>(args)...);
         const auto pos = LowerBound(keys_.cbegin(), keys_.cend(), t.first, predicate);
         if ((pos == keys_.cend()) || predicate(t.first, *pos)) {
             const auto index = pos - keys_.cbegin();
             keys_.insert(pos, (BASE_NS::move(t.first)));
             values_.insert(values_.cbegin() + index, BASE_NS::move(t.second));
-            return { begin() + index, true };
+            return {begin() + index, true};
         }
-        return { begin() + (pos - keys_.begin()), false };
+        return {begin() + (pos - keys_.begin()), false};
     }
 
-    template<typename Key, typename... Args>
+    template <typename Key, typename... Args>
     BASE_NS::pair<iterator, bool> try_emplace(Key&& key, Args&&... args)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         const auto pos = LowerBound(keys_.cbegin(), keys_.cend(), key, predicate);
         if ((pos == keys_.cend()) || predicate(key, *pos)) {
             const auto index = pos - keys_.cbegin();
             keys_.insert(pos, key_type(BASE_NS::forward<Key>(key)));
             values_.insert(values_.cbegin() + index, mapped_type(BASE_NS::forward<Args>(args)...));
-            return { begin() + index, true };
+            return {begin() + index, true};
         }
-        return { begin() + (pos - keys_.begin()), false };
+        return {begin() + (pos - keys_.begin()), false};
     }
 
     BASE_NS::pair<iterator, bool> insert(const value_type& value)
@@ -270,7 +273,7 @@ public:
         return emplace(BASE_NS::move(value));
     }
 
-    template<class InputIt>
+    template <class InputIt>
     void insert(InputIt first, InputIt last)
     {
         for (; first != last; ++first) {
@@ -278,55 +281,55 @@ public:
         }
     }
 
-    template<class P>
+    template <class P>
     BASE_NS::pair<iterator, bool> insert(P&& x)
     {
         return emplace(BASE_NS::forward<P>(x));
     }
 
-    template<class M>
+    template <class M>
     BASE_NS::pair<iterator, bool> insert_or_assign(const key_type& key, M&& obj)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         const auto pos = LowerBound(keys_.begin(), keys_.end(), key, predicate);
         const auto index = pos - keys_.begin();
         if ((pos == keys_.end()) || predicate(key, *pos)) {
             keys_.insert(pos, key);
             values_.insert(values_.cbegin() + index, mapped_type(BASE_NS::forward<M>(obj)));
-            return { begin() + index, true };
+            return {begin() + index, true};
         }
         *(values_.begin() + index) = BASE_NS::forward<M>(obj);
-        return { begin() + index, false };
+        return {begin() + index, false};
     }
 
-    template<class M>
+    template <class M>
     BASE_NS::pair<iterator, bool> insert_or_assign(key_type&& key, M&& obj)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         const auto pos = LowerBound(keys_.begin(), keys_.end(), key, predicate);
         const auto index = pos - keys_.begin();
         if ((pos == keys_.end()) || predicate(key, *pos)) {
             keys_.insert(pos, BASE_NS::move(key));
             values_.insert(values_.cbegin() + index, mapped_type(BASE_NS::forward<M>(obj)));
-            return { begin() + index, true };
+            return {begin() + index, true};
         }
         *(values_.begin() + index) = BASE_NS::forward<M>(obj);
-        return { begin() + index, false };
+        return {begin() + index, false};
     }
 
-    template<class K, class M>
+    template <class K, class M>
     BASE_NS::pair<iterator, bool> insert_or_assign(K&& k, M&& obj)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         const auto pos = LowerBound(keys_.begin(), keys_.end(), BASE_NS::forward<K>(k), predicate);
         const auto index = pos - keys_.begin();
         if ((pos == keys_.end()) || predicate(BASE_NS::forward<K>(k), *pos)) {
             keys_.insert(pos, BASE_NS::forward<K>(k));
             values_.insert(values_.cbegin() + index, mapped_type(BASE_NS::forward<M>(obj)));
-            return { begin() + index, true };
+            return {begin() + index, true};
         }
         *(values_.begin() + index) = BASE_NS::forward<M>(obj);
-        return { begin() + index, false };
+        return {begin() + index, false};
     }
 
     iterator erase(iterator pos)
@@ -343,10 +346,10 @@ public:
         return pos;
     }
 
-    template<typename Key>
+    template <typename Key>
     size_t erase(const Key& key)
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         auto pos = LowerBound(keys_.cbegin(), keys_.cend(), key, predicate);
         if ((pos == keys_.cend()) || predicate(key, *pos)) {
             return 0u;
@@ -364,28 +367,28 @@ public:
     }
 
     // Lookup
-    template<typename Key>
+    template <typename Key>
     iterator find(const Key& key) noexcept
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         auto pos = LowerBound(keys_.cbegin(), keys_.cend(), key, predicate);
         if ((pos == keys_.cend()) || predicate(key, *pos)) {
             return end();
         }
         auto index = pos - keys_.cbegin();
-        return iterator { pos, values_.begin() + index };
+        return iterator{pos, values_.begin() + index};
     }
 
-    template<typename Key>
+    template <typename Key>
     const_iterator find(const Key& key) const noexcept
     {
-        auto predicate = Predicate {};
+        auto predicate = Predicate{};
         auto pos = LowerBound(keys_.cbegin(), keys_.cend(), key, predicate);
         if ((pos == keys_.cend()) || predicate(key, *pos)) {
             return end();
         }
         auto index = pos - keys_.cbegin();
-        return const_iterator { pos, values_.begin() + index };
+        return const_iterator{pos, values_.begin() + index};
     }
 
 private:
@@ -411,18 +414,18 @@ private:
     BASE_NS::vector<mapped_type> values_;
 };
 
-template<typename Container>
+template <typename Container>
 bool operator!=(
     const typename BASE_NS::iterator<Container>& lhs, const typename BASE_NS::const_iterator<Container>& rhs) noexcept
 {
     return lhs.ptr() != rhs.ptr();
 }
 
-template<typename Container>
+template <typename Container>
 bool operator!=(
     const typename BASE_NS::const_iterator<Container>& lhs, const typename BASE_NS::iterator<Container>& rhs) noexcept
 {
     return lhs.ptr() != rhs.ptr();
 }
 BASE_END_NAMESPACE()
-#endif // API_BASE_CONTAINERS_FLAT_MAP_H
+#endif  // API_BASE_CONTAINERS_FLAT_MAP_H

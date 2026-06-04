@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"description": "scene with a lightProbeGroup containing an empty probes array",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "lightProbeGroup",
+					"name": "probes",
+					"probes": []
+				}
+			]
+		}
+	}
+}

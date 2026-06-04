@@ -44,27 +44,29 @@ public:
     struct Counters {
         struct HandleCount {
             /// GPU buffer count
-            uint32_t bufferHandleCount {};
+            uint32_t bufferHandleCount{};
             /// GPU image count
-            uint32_t imageHandleCount {};
+            uint32_t imageHandleCount{};
             /// GPU sampler count
-            uint32_t samplerHandleCount {};
+            uint32_t samplerHandleCount{};
         };
         struct SceneInfo {
             /// Number of entities in the underlying ECS.
-            uint32_t entityCount {};
+            uint32_t entityCount{};
             /// The number of nodes in the underlying ECS for the Scene.
-            uint32_t nodeCount {};
+            uint32_t nodeCount{};
             /// The number of Node objects accessed by the user from the Scene. This number can be smaller than
             /// nodeCount if the user has only accessed some Nodes from the Scene.
-            uint32_t nodeObjectCount {};
+            uint32_t nodeObjectCount{};
+            /// Resources associated with the resource manager of the scene
+            BASE_NS::vector<CORE_NS::ResourceInfo> resources;
         };
         /// Alive scenes in this render context
         BASE_NS::vector<SceneInfo> scenes;
         /// Scene count across all render contexts
-        size_t totalSceneCount {};
+        size_t totalSceneCount{};
         /// Global resource manager resource count
-        size_t resourceCount {};
+        size_t resourceCount{};
         /// GPU handle counts
         HandleCount handles;
     };
@@ -74,28 +76,88 @@ public:
      */
     virtual Counters GetCounters() const = 0;
 
-    template<typename Func>
+    /**
+     * @brief Bit flags describing which scope counters AdjustScope() touches.
+     *
+     * Different bits have different visibility/storage characteristics:
+     *
+     * - SceneLoad is per-context and visible from any thread (atomic counter
+     *   on the context). Read by InternalScene::Uninitialize so throwaway
+     *   sub-scenes destroyed mid-load skip the empty-render flush, no matter
+     *   which thread tears them down.
+     *
+     * - ImporterDeferred is thread-local (visible only on the call stack
+     *   that pushed it). Read by image resource-type loaders to route
+     *   through LoadImageDeferred. Must NOT be visible to unrelated
+     *   threads, otherwise their GetResource calls would receive a shell
+     *   image whose pending load nobody drains.
+     */
+    enum class ScopeType : uint32_t {
+        None = 0u,
+        SceneLoad = 1u << 0,
+        ImporterDeferred = 1u << 1,
+    };
+
+    /**
+     * @brief Adjust the depth counters identified by @p types on this context
+     * by @p delta (default +1; pass -1 to leave). Multiple bits may be set;
+     * each named counter is adjusted independently. The depth is a counter,
+     * not a boolean — nested scopes stack.
+     *
+     * Prefer the Scope RAII helper below over calling this directly.
+     */
+    virtual void AdjustScope(ScopeType types, int32_t delta = 1) = 0;
+
+    /**
+     * @brief True iff the counter for @p type has depth > 0. Pass exactly one
+     * bit per query.
+     */
+    virtual bool IsInScope(ScopeType type) const = 0;
+
+    /// RAII helper for paired AdjustScope(+1) / AdjustScope(-1).
+    struct RenderContextScope {
+        Ptr ctx;
+        ScopeType types;
+        RenderContextScope(Ptr c, ScopeType t) : ctx(BASE_NS::move(c)), types(t)
+        {
+            if (ctx) {
+                ctx->AdjustScope(types, +1);
+            }
+        }
+        ~RenderContextScope()
+        {
+            if (ctx) {
+                ctx->AdjustScope(types, -1);
+            }
+        }
+        RenderContextScope(const RenderContextScope&) = delete;
+        RenderContextScope& operator=(const RenderContextScope&) = delete;
+        RenderContextScope(RenderContextScope&&) = default;
+        RenderContextScope& operator=(RenderContextScope&&) = default;
+    };
+
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
-    AddTask(Func&& func)
+        AddTask(Func&& func)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
-    AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
+        AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), queue);
     }
 
     // AddTaskFuture adds a task to the renderqueue (or other specified queue) and returns a future
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func) const
     {
         return AddTaskFuture(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::Future<META_NS::PlainType_t<decltype(func())>>(
@@ -104,13 +166,13 @@ public:
 
     // AddTaskOrRunDirectly adds a task to the renderqueue (or other specified queue) and returns a future.
     // POSSIBLY completing the future directly (if queue matches current, or the queue executes in the current thread)
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func) const
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
 
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::AddFutureTaskOrRunDirectly(queue, BASE_NS::forward<Func>(func));
@@ -118,13 +180,13 @@ public:
 
     // RunDirectlyOrInTask runs the given function synchronously.
     // (either by waiting a future from the queue or directly. if the queue or execution thread matches)
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func) const
     {
         return RunDirectlyOrInTask<Func>(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
 
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         using namespace META_NS;
@@ -166,7 +228,7 @@ public:
         }
     }
 
-    template<typename Func>
+    template <typename Func>
     void PostUserNotification(Func&& func) const
     {
         if (auto q = GetApplicationQueue()) {
@@ -176,7 +238,7 @@ public:
             }));
         }
     }
-    template<typename MyEvent, typename... Args>
+    template <typename MyEvent, typename... Args>
     void InvokeUserNotification(const META_NS::IEvent::Ptr& event, Args... args) const
     {
         return PostUserNotification([=, ev = META_NS::IEvent::WeakPtr(event)] {
@@ -188,6 +250,33 @@ public:
 };
 
 META_REGISTER_CLASS(RenderContext, "a9080232-32e7-4d59-8498-753e639524e7", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+inline IRenderContext::ScopeType operator|(IRenderContext::ScopeType a, IRenderContext::ScopeType b)
+{
+    return static_cast<IRenderContext::ScopeType>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline IRenderContext::ScopeType operator&(IRenderContext::ScopeType a, IRenderContext::ScopeType b)
+{
+    return static_cast<IRenderContext::ScopeType>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline bool Any(IRenderContext::ScopeType a)
+{
+    return static_cast<uint32_t>(a) != 0u;
+}
+
+/// Convenience: null-safe IsInScope(SceneLoad) query.
+inline bool IsSceneLoadInProgress(const IRenderContext::Ptr& context)
+{
+    return context && context->IsInScope(IRenderContext::ScopeType::SceneLoad);
+}
+
+/// Convenience: null-safe IsInScope(ImporterDeferred) query.
+inline bool IsInImporterDeferredScope(const IRenderContext::Ptr& context)
+{
+    return context && context->IsInScope(IRenderContext::ScopeType::ImporterDeferred);
+}
 
 inline META_NS::IMetadata::Ptr CreateRenderContextArg(const IRenderContext::Ptr& context)
 {

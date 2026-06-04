@@ -50,6 +50,15 @@ public:
     virtual Future<META_NS::IProperty::Ptr> CreateProperty(BASE_NS::string_view path) = 0;
     virtual Future<META_NS::IProperty::Ptr> CreateProperty(const META_NS::IEngineValue::Ptr&) = 0;
     virtual Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, const META_NS::IEngineValue::Ptr&) = 0;
+    /**
+     * @brief Resolves a property from the target metadata. Checks the static metadata for a valid mapping (if any)
+     * @param meta The metadata to search.
+     * @param name Name to find. Either the property name from static metadata or the mapped component name.
+     * @param q Query type
+     * @return The property or null if not found
+     */
+    virtual Future<META_NS::IProperty::Ptr> ResolveProperty(
+        const META_NS::IMetadata::Ptr& meta, BASE_NS::string_view name, META_NS::MetadataQuery q) = 0;
 
     virtual Future<bool> SetActive(bool active) = 0;
 };

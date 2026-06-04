@@ -16,6 +16,8 @@
 #ifndef DEVICE_GPU_BUFFER_H
 #define DEVICE_GPU_BUFFER_H
 
+#include <cstdint>
+
 #include <render/namespace.h>
 
 RENDER_BEGIN_NAMESPACE()
@@ -34,6 +36,8 @@ public:
 
     virtual const GpuBufferDesc& GetDesc() const = 0;
 
+    virtual uint64_t GetDeviceAddress() const = 0;
+
     // Map will return a pointer to the data.
     // If mapBufferingCount is bigger than 1, the pointer advances to next block with every call (ring buffer)
     virtual void* Map() = 0;
@@ -44,4 +48,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_GPU_BUFFER_H
+#endif  // DEVICE_GPU_BUFFER_H

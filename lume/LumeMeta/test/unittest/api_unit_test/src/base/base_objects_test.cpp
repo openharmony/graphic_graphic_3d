@@ -57,14 +57,16 @@ public:
         UnregisterObjectType<BaseObjectDerived>();
     }
 
-    void SetUp() override {}
-    void TearDown() override {}
+    void SetUp() override
+    {}
+    void TearDown() override
+    {}
 
 protected:
     // ClassId::BaseObject interfaces
-    const BASE_NS::vector<BASE_NS::Uid> BASE_OBJECT_INTERFACES { IObject::UID, IObjectInstance::UID, IObjectFlags::UID,
-        IDerived::UID, ILifecycle::UID, IStaticMetadata::UID };
-    const BASE_NS::vector<BASE_NS::Uid> OBJECT_INTERFACES { IMetadata::UID, IOwner::UID, IAttach::UID };
+    const BASE_NS::vector<BASE_NS::Uid> BASE_OBJECT_INTERFACES{
+        IObject::UID, IObjectInstance::UID, IObjectFlags::UID, IDerived::UID, ILifecycle::UID, IStaticMetadata::UID};
+    const BASE_NS::vector<BASE_NS::Uid> OBJECT_INTERFACES{IMetadata::UID, IOwner::UID, IAttach::UID};
 
     void CheckInterface(const IObject::ConstPtr& object, BASE_NS::Uid uid, bool implements)
     {
@@ -145,6 +147,6 @@ UNIT_TEST_F(API_BaseObjectTest, DeriveObject, testing::ext::TestSize.Level1)
     EXPECT_EQ(GetBaseClass(object), META_NS::ClassId::Object);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

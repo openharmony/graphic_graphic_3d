@@ -1,0 +1,7 @@
+{
+    "importVersion": "",
+    "resources": [
+        "project://resources_a.res",
+        "project://resources_b.res"
+    ]
+}

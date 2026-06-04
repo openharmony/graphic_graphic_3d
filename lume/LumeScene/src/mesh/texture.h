@@ -19,6 +19,7 @@
 #include <scene/ext/component.h>
 #include <scene/ext/ecs_lazy_property.h>
 #include <scene/ext/intf_create_entity.h>
+#include <scene/interface/intf_in_use.h>
 #include <scene/interface/intf_texture.h>
 
 #include <meta/ext/implementation_macros.h>
@@ -32,7 +33,7 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(Texture, "07e6dc19-57ca-4a3a-aa71-a53db9bf2e58", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 class Texture : public META_NS::IntroduceInterfaces<EcsLazyProperty, ArrayElementIndex, META_NS::INamed, ITexture,
-                    META_NS::IContainable, META_NS::IMutableContainable> {
+                    META_NS::IContainable, META_NS::IMutableContainable, IInUse> {
     META_OBJECT(Texture, ClassId::Texture, IntroduceInterfaces)
 
 public:
@@ -71,8 +72,13 @@ public:
         return META_NS::GetValue(Name());
     }
 
+public:  // IInUse
+    bool IsInUse() const override;
+    void SetInUse(bool inUse) override;
+
 private:
     META_NS::IObject::WeakPtr parent_;
+    bool inUse_{true};
 };
 
 SCENE_END_NAMESPACE()

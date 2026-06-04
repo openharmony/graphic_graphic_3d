@@ -39,7 +39,7 @@ struct Version {
     /** UID for identifying different versions of the plugin. */
     const BASE_NS::Uid uid;
     /** Function returning a free form version string. */
-    const char* (*GetVersionString)() { nullptr };
+    const char* (*GetVersionString)(){nullptr};
 };
 
 /** Type information. Base for different registrable information structures. */
@@ -50,7 +50,7 @@ struct ITypeInfo {
 /** Information needed from the plugin for managing ComponentManagers. */
 struct ComponentManagerTypeInfo : public ITypeInfo {
     /** TypeInfo UID for component manager. */
-    static constexpr BASE_NS::Uid UID { "f812e951-c860-4208-99e0-66b45841bb58" };
+    static constexpr BASE_NS::Uid UID{"f812e951-c860-4208-99e0-66b45841bb58"};
 
     using CreateComponentManagerFn = IComponentManager* (*)(IEcs&);
     using DestroyComponentManagerFn = void (*)(IComponentManager* instance);
@@ -58,7 +58,7 @@ struct ComponentManagerTypeInfo : public ITypeInfo {
     /** Unique ID of the component manager. */
     const BASE_NS::Uid uid;
     /** Name used during component manager creation to identify the type of the component manager. */
-    const char* const typeName { "" };
+    const char* const typeName{""};
     /** Pointer to function which is used to create component manager instances. */
     const CreateComponentManagerFn createManager;
     /** Pointer to function which is used to destroy component manager instances. */
@@ -68,7 +68,7 @@ struct ComponentManagerTypeInfo : public ITypeInfo {
 /** Information needed from the plugin for managing Systems. */
 struct SystemTypeInfo : public ITypeInfo {
     /** TypeInfo UID for system. */
-    static constexpr BASE_NS::Uid UID { "c476a794-9c77-4a3a-a5e4-eb2399899d37" };
+    static constexpr BASE_NS::Uid UID{"c476a794-9c77-4a3a-a5e4-eb2399899d37"};
 
     using CreateSystemFn = ISystem* (*)(IEcs&);
     using DestroySystemFn = void (*)(ISystem* instance);
@@ -76,7 +76,7 @@ struct SystemTypeInfo : public ITypeInfo {
     /** Unique ID of the system. */
     const BASE_NS::Uid uid;
     /** Name used during system creation to identify the type of the system. */
-    const char* const typeName { "" };
+    const char* const typeName{""};
     /** Pointer to function which is used to create system instances. */
     const CreateSystemFn createSystem;
     /** Pointer to function which is used to destroy system instances. */
@@ -113,7 +113,7 @@ struct InterfaceTypeInfo {
     /** Unique ID of the interface implementation. */
     const BASE_NS::Uid uid;
     /** Name used during system creation to identify the type of the interface. */
-    const char* const typeName { "" };
+    const char* const typeName{""};
     /** Pointer to function which is used to create interface instances bound to IClassFactory instance.
      * It is acceptable to return same pointer, but with a added reference count.
      */
@@ -127,7 +127,7 @@ struct InterfaceTypeInfo {
 /** Exported information from a plugin (.so/.dll). */
 struct IPlugin : public ITypeInfo {
     /** TypeInfo UID for a plugin. */
-    static constexpr BASE_NS::Uid UID { "5fc9b017-5b13-4612-81c2-5a6d6fc3d897" };
+    static constexpr BASE_NS::Uid UID{"5fc9b017-5b13-4612-81c2-5a6d6fc3d897"};
 
     /*
     Plugin lifecycle.
@@ -145,7 +145,7 @@ struct IPlugin : public ITypeInfo {
     using UnregisterInterfacesFn = void (*)(PluginToken);
 
     /** Name of this plugin. */
-    const char* const name { "" };
+    const char* const name{""};
     /** Version information of the plugin. */
     const Version version;
 
@@ -154,13 +154,13 @@ struct IPlugin : public ITypeInfo {
      * different plugin categories e.g. IEnginePlugin and IEcsPlugin when there's a dependency to a specific instance.
      * Think of this as "CreateInterfaceFactory"
      */
-    const RegisterInterfacesFn registerInterfaces { nullptr };
+    const RegisterInterfacesFn registerInterfaces{nullptr};
 
     /** Called when detaching plugin from plugin registry.
      * Is expected to unregister its own named interfaces (IInterface) from the global registry and also unregister
      * different plugin categories e.g. IEnginePlugin and IEcsPlugin when there's a dependency to a specific instance.
      */
-    const UnregisterInterfacesFn unregisterInterfaces { nullptr };
+    const UnregisterInterfacesFn unregisterInterfaces{nullptr};
 
     /** List of plugins this plugin requires. */
     const BASE_NS::array_view<const BASE_NS::Uid> pluginDependencies;
@@ -169,7 +169,7 @@ struct IPlugin : public ITypeInfo {
 /** A plugin which adds new interfaces to the engine. */
 struct IEnginePlugin : public ITypeInfo {
     /** TypeInfo UID for engine plugin. */
-    static constexpr BASE_NS::Uid UID { "a81c121b-160c-467e-8bd6-63902da85c6b" };
+    static constexpr BASE_NS::Uid UID{"a81c121b-160c-467e-8bd6-63902da85c6b"};
 
     /*
     Plugin lifecycle.
@@ -181,7 +181,7 @@ struct IEnginePlugin : public ITypeInfo {
     using DestroyPluginFn = void (*)(PluginToken);
 
     constexpr IEnginePlugin(CreatePluginFn create, DestroyPluginFn destroy)
-        : ITypeInfo { UID }, createPlugin { create }, destroyPlugin { destroy }
+        : ITypeInfo{UID}, createPlugin{create}, destroyPlugin{destroy}
     {}
 
     /** Initialize function for engine plugin.
@@ -189,39 +189,39 @@ struct IEnginePlugin : public ITypeInfo {
      * Is expected to register its own named interfaces (IInterface) which are tied to the engine instance.
      * Called when attaching to engine.
      */
-    const CreatePluginFn createPlugin { nullptr };
+    const CreatePluginFn createPlugin{nullptr};
 
     /** Deinitialize function for engine plugin.
      * Called when plugin is about to be unloaded by engine.
      * Called when detaching from engine.
      */
-    const DestroyPluginFn destroyPlugin { nullptr };
+    const DestroyPluginFn destroyPlugin{nullptr};
 };
 
 /** A plugin which adds new component managers and systems to the ECS. */
 struct IEcsPlugin : public ITypeInfo {
     /** TypeInfo UID for ECS plugin. */
-    static constexpr BASE_NS::Uid UID { "b4843032-e144-4757-a28c-03c119c3a10c" };
+    static constexpr BASE_NS::Uid UID{"b4843032-e144-4757-a28c-03c119c3a10c"};
 
     using CreatePluginFn = PluginToken (*)(IEcs&);
     using DestroyPluginFn = void (*)(PluginToken);
 
     constexpr IEcsPlugin(CreatePluginFn create, DestroyPluginFn destroy)
-        : ITypeInfo { UID }, createPlugin { create }, destroyPlugin { destroy }
+        : ITypeInfo{UID}, createPlugin{create}, destroyPlugin{destroy}
     {}
 
     /** Initialize function for ECS plugin.
      * Called when attaching to ECS.
      */
-    const CreatePluginFn createPlugin { nullptr };
+    const CreatePluginFn createPlugin{nullptr};
 
     /** Deinitialize function for ECS plugin.
      * Called when detaching from ECS.
      */
-    const DestroyPluginFn destroyPlugin { nullptr };
+    const DestroyPluginFn destroyPlugin{nullptr};
 };
 
 /** @} */
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PLUGIN_IPLUGIN_H
+#endif  // API_CORE_PLUGIN_IPLUGIN_H

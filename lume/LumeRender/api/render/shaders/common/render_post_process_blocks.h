@@ -114,10 +114,12 @@ void PostProcessWhiteBalanceBlock(in uint postProcessFlags, in vec4 whiteBalance
         vec3 balance = vec3(standardLms.x / targetLms.x, standardLms.y / targetLms.y, standardLms.z / targetLms.z);
 
         const mat3 rgbToLmsMat = mat3(vec3(3.90405e-1, 7.08416e-2, 2.31082e-2),
-            vec3(5.49941e-1, 9.63172e-1, 1.28021e-1), vec3(8.92632e-3, 1.35775e-3, 9.36245e-1));
+            vec3(5.49941e-1, 9.63172e-1, 1.28021e-1),
+            vec3(8.92632e-3, 1.35775e-3, 9.36245e-1));
 
         const mat3 lmsToRgbMat = mat3(vec3(2.85847e+0, -2.10182e-1, -4.18120e-2),
-            vec3(-1.62879e+0, 1.15820e+0, -1.18169e-1), vec3(-2.48910e-2, 3.24281e-4, 1.06867e+0));
+            vec3(-1.62879e+0, 1.15820e+0, -1.18169e-1),
+            vec3(-2.48910e-2, 3.24281e-4, 1.06867e+0));
 
         vec3 lmsColor = rgbToLmsMat * inCol;
         lmsColor *= balance;
@@ -269,4 +271,4 @@ void PostProcessBloomCombineBlock(in uint postProcessFlags, in vec4 bloomFactor,
     }
 }
 
-#endif // API_RENDER_SHADERS_COMMON_POST_PROCESS_BLOCKS_H
+#endif  // API_RENDER_SHADERS_COMMON_POST_PROCESS_BLOCKS_H

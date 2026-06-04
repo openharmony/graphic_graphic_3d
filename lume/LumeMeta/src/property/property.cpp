@@ -58,7 +58,7 @@ bool PropertyBase::IsCompatible(const TypeId& id) const
 TypeId PropertyBase::GetTypeId() const
 {
     auto p = GetData();
-    return p ? p->GetTypeId() : TypeId {};
+    return p ? p->GetTypeId() : TypeId{};
 }
 IEvent::Ptr PropertyBase::EventOnChanged(MetadataQuery q) const
 {
@@ -100,7 +100,7 @@ void PropertyBase::Lock() const
 void PropertyBase::Unlock() const
 {
     BASE_NS::shared_ptr<OnChangedEvent> invoke;
-    IOwner::WeakPtr owner {};
+    IOwner::WeakPtr owner{};
     if (--locked_ == 0 && HasPendingInvoke()) {
         invoke = onChanged_;
         SetPendingInvoke(false);
@@ -148,5 +148,5 @@ IAny::Ptr GenericProperty::GetInternalAny() const
     return data_;
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

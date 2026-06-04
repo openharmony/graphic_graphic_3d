@@ -36,7 +36,7 @@ CORE3D_BEGIN_NAMESPACE()
 /** Mesh builder interface for building meshes */
 class IMeshBuilder : public CORE_NS::IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "8d2892a4-77e5-4304-a5aa-38f866b7c788" };
+    static constexpr auto UID = BASE_NS::Uid{"8d2892a4-77e5-4304-a5aa-38f866b7c788"};
 
     using Ptr = BASE_NS::refcnt_ptr<IMeshBuilder>;
 
@@ -58,38 +58,38 @@ public:
     /** Submesh attributes */
     struct Submesh {
         /** Vertex count */
-        uint32_t vertexCount { 0 };
+        uint32_t vertexCount{0};
         /** Index count */
-        uint32_t indexCount { 0 };
+        uint32_t indexCount{0};
         /** Instance count */
-        uint32_t instanceCount { 1 };
+        uint32_t instanceCount{1};
         /** Morph target count */
-        uint32_t morphTargetCount { 0 };
+        uint32_t morphTargetCount{0};
         /** Index type */
-        RENDER_NS::IndexType indexType { RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32 };
+        RENDER_NS::IndexType indexType{RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32};
 
         /** Material */
-        CORE_NS::Entity material {};
+        CORE_NS::Entity material{};
         /** Tangents */
-        bool tangents { false };
+        bool tangents{false};
         /** Colors */
-        bool colors { false };
+        bool colors{false};
         /** Joints */
-        bool joints { false };
+        bool joints{false};
 
         /** Optional input assembly. Will be filled to Submesh */
-        RENDER_NS::GraphicsState::InputAssembly inputAssembly { false,
-            RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM };
+        RENDER_NS::GraphicsState::InputAssembly inputAssembly{
+            false, RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_MAX_ENUM};
     };
 
     /** GPU buffer create info */
     struct GpuBufferCreateInfo {
         /** Additional usage flags */
-        RENDER_NS::BufferUsageFlags usage { 0U };
+        RENDER_NS::BufferUsageFlags usage{0U};
         /** Engine creation flags */
-        RENDER_NS::EngineBufferCreationFlags engineCreation { 0U };
+        RENDER_NS::EngineBufferCreationFlags engineCreation{0U};
         /** Memory property flags */
-        RENDER_NS::MemoryPropertyFlags memoryFlags { 0U };
+        RENDER_NS::MemoryPropertyFlags memoryFlags{0U};
     };
 
     /** Prepare the builder for adding submeshes. Also resets the builder for re-use.
@@ -249,4 +249,4 @@ inline constexpr BASE_NS::string_view GetName(const IMeshBuilder*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_UTIL_IMESH_BUILDER_H
+#endif  // API_3D_UTIL_IMESH_BUILDER_H

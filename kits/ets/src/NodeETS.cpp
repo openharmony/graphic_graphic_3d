@@ -25,7 +25,7 @@
 #include "LightETS.h"
 
 namespace OHOS::Render3D {
-std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
+std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr& node)
 {
     if (auto obj = interface_cast<META_NS::IObject>(node)) {
         BASE_NS::string name{obj->GetClassName()};
@@ -40,11 +40,11 @@ std::shared_ptr<NodeETS> NodeETS::FromNative(const SCENE_NS::INode::Ptr &node)
     return std::make_shared<NodeETS>(NodeType::NODE, node);
 }
 
-NodeETS::NodeETS(const NodeType &type, const SCENE_NS::INode::Ptr &node)
+NodeETS::NodeETS(const NodeType& type, const SCENE_NS::INode::Ptr& node)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::NODE), type_(type), node_(node)
 {}
 
-NodeETS::NodeETS(const SCENE_NS::INode::Ptr &node)
+NodeETS::NodeETS(const SCENE_NS::INode::Ptr& node)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::NODE), node_(node)
 {}
 
@@ -67,15 +67,16 @@ void NodeETS::Destroy()
         if (auto scene = node->GetScene()) {
             if (remove) {
                 // fully destroy the node
-                CORE_LOG_V("@@@@@@ Removing node");
+                CORE_LOG_V("@@@@@@@ Removing node");
                 scene->RemoveNode(BASE_NS::move(node)).Wait();
+                node.reset();
             } else {
                 // just release the cache
-                CORE_LOG_V("@@@@@@ Release node");
+                CORE_LOG_V("@@@@@@@ Release node");
                 scene->ReleaseNode(BASE_NS::move(node), false).Wait();
             }
         }
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
     posProxy_.reset();
     sclProxy_.reset();
@@ -133,7 +134,7 @@ std::shared_ptr<Vec3Proxy> NodeETS::GetPosition()
     return posProxy_;
 }
 
-void NodeETS::SetPosition(const BASE_NS::Math::Vec3 &position)
+void NodeETS::SetPosition(const BASE_NS::Math::Vec3& position)
 {
     auto node = node_.lock();
     if (!node) {
@@ -157,7 +158,7 @@ std::shared_ptr<Vec3Proxy> NodeETS::GetScale()
     return sclProxy_;
 }
 
-void NodeETS::SetScale(const BASE_NS::Math::Vec3 &scale)
+void NodeETS::SetScale(const BASE_NS::Math::Vec3& scale)
 {
     auto node = node_.lock();
     if (!node) {
@@ -181,7 +182,7 @@ std::shared_ptr<QuatProxy> NodeETS::GetRotation()
     return rotProxy_;
 }
 
-void NodeETS::SetRotation(const BASE_NS::Math::Quat &rotation)
+void NodeETS::SetRotation(const BASE_NS::Math::Quat& rotation)
 {
     auto node = node_.lock();
     if (!node) {
@@ -221,6 +222,12 @@ std::string NodeETS::GetPath()
         // rootname missing from path.
         path.insert(1, rootName.c_str());
     }
+    auto cStr = path.c_str();
+    uint32_t cStrLength = strlen(cStr);
+    if (cStrLength != path.size()) {
+        CORE_LOG_E("The size of the path is not equal to cStrLength!");
+        return "";
+    }
     return path.c_str();
 }
 
@@ -239,7 +246,7 @@ std::shared_ptr<NodeETS> NodeETS::GetParent()
     }
 }
 
-std::shared_ptr<NodeETS> NodeETS::GetNodeByPath(const std::string &path)
+std::shared_ptr<NodeETS> NodeETS::GetNodeByPath(const std::string& path)
 {
     auto node = node_.lock();
     if (!node) {
@@ -351,7 +358,7 @@ void NodeETS::ClearChildren()
     }
 }
 
-void NodeETS::InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const std::shared_ptr<NodeETS> &siblingNode)
+void NodeETS::InsertChildAfter(const std::shared_ptr<NodeETS>& childNode, const std::shared_ptr<NodeETS>& siblingNode)
 {
     if (!childNode) {
         return;
@@ -379,7 +386,7 @@ void NodeETS::InsertChildAfter(const std::shared_ptr<NodeETS> &childNode, const 
     }
 }
 
-void NodeETS::AppendChild(const std::shared_ptr<NodeETS> &childNode)
+void NodeETS::AppendChild(const std::shared_ptr<NodeETS>& childNode)
 {
     if (!childNode) {
         return;
@@ -392,13 +399,16 @@ void NodeETS::AppendChild(const std::shared_ptr<NodeETS> &childNode)
     }
 }
 
-void NodeETS::RemoveChild(const std::shared_ptr<NodeETS> &childNode)
+void NodeETS::RemoveChild(const std::shared_ptr<NodeETS>& childNode)
 {
     if (!childNode) {
         return;
     }
     if (auto parent = node_.lock()) {
         SCENE_NS::INode::Ptr child = childNode->GetInternalNode();
+        if (!child) {
+            return;
+        }
         childNode->Attached(false);
         parent->RemoveChild(child).GetResult();
         child->Enabled()->SetValue(false);

@@ -58,7 +58,7 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
         if (m->HasComponent(entity)) {
             if (auto data = m->GetData(entity)) {
                 const auto meta = data->Owner()->MetaData();
-                uintptr_t texturesOffset {};
+                uintptr_t texturesOffset{};
                 for (auto& p : meta) {
                     if (p.name == "textures") {
                         texturesOffset = p.offset;
@@ -69,8 +69,17 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
                 // Incorrect .shader declarations may make them active anyway, so we must keep them
                 info.count = CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT;
                 info.slots.resize(CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT);
-                const char* const names[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE", "AO", "CLEARCOAT",
-                    "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
+                const char* const names[] = {"BASE_COLOR",
+                    "NORMAL",
+                    "MATERIAL",
+                    "EMISSIVE",
+                    "AO",
+                    "CLEARCOAT",
+                    "CLEARCOAT_ROUGHNESS",
+                    "CLEARCOAT_NORMAL",
+                    "SHEEN",
+                    "TRANSMISSION",
+                    "SPECULAR"};
                 for (int index = 0; index < CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT; index++) {
                     ActiveTextureSlotInfo::TextureSlot ts;
                     ts.name = names[index];
@@ -82,6 +91,8 @@ IInternalMaterial::ActiveTextureSlotInfo MaterialComponent::GetActiveTextureSlot
                         auto index = (p.offset - texturesOffset) / sizeof(CORE3D_NS::MaterialComponent::TextureInfo);
                         ActiveTextureSlotInfo::TextureSlot ts;
                         ts.name = p.name;
+                        // Slot can be found from shader metadata, meaning that is has been declared in the .shader file
+                        ts.active = true;
                         info.slots[index] = BASE_NS::move(ts);
                     }
                 }
@@ -95,8 +106,8 @@ bool MaterialComponent::UpdateMetadata()
 {
     auto ecso = GetEcsObject();
     auto scene = GetInternalScene();
-    META_NS::Property<CORE3D_NS::MaterialComponent::Shader> p { GetProperty(
-        "MaterialShader", META_NS::MetadataQuery::EXISTING) };
+    META_NS::Property<CORE3D_NS::MaterialComponent::Shader> p{
+        GetProperty("MaterialShader", META_NS::MetadataQuery::EXISTING)};
 
     if (!ecso || !scene || !p) {
         return false;
@@ -110,11 +121,11 @@ bool MaterialComponent::UpdateMetadata()
     auto currentShader = rhman->GetRenderHandleReference(p->GetValue().shader);
 
     auto& sman = scene->GetRenderContext().GetDevice().GetShaderManager();
-    auto frameIndex = currentShader ? sman.GetFrameIndex(currentShader) : uint64_t {};
+    auto frameIndex = currentShader ? sman.GetFrameIndex(currentShader) : uint64_t{};
 
     bool changed = cachedShader_.shader != currentShader.GetHandle() || cachedShader_.frameIndex != frameIndex;
     if (changed) {
-        cachedShader_ = { currentShader.GetHandle(), frameIndex };
+        cachedShader_ = {currentShader.GetHandle(), frameIndex};
 
         auto& ecsc = scene->GetEcsContext();
         if (auto m = static_cast<CORE3D_NS::IMaterialComponentManager*>(

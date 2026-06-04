@@ -66,8 +66,8 @@ private:
     IRenderContext& renderContext_;
 
     struct PendingRenderAccessStore {
-        uint64_t hash { 0u };
-        BASE_NS::refcnt_ptr<IRenderDataStore> renderDataStore { nullptr };
+        uint64_t hash{0u};
+        BASE_NS::refcnt_ptr<IRenderDataStore> renderDataStore{nullptr};
     };
 
     mutable std::mutex mutex_;
@@ -81,7 +81,7 @@ private:
     BASE_NS::flat_map<uint64_t, BASE_NS::refcnt_ptr<IRenderDataStore>> renderAccessStores_;
     BASE_NS::unordered_map<uint64_t, RenderDataStoreTypeInfo> factories_;
 
-    RenderDataStoreFlags renderDataStoreFlags_ { 0u };
+    RenderDataStoreFlags renderDataStoreFlags_{0u};
 };
 
 class RenderNodeRenderDataStoreManager final : public IRenderNodeRenderDataStoreManager {
@@ -100,4 +100,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_MANAGER_H
+#endif  // RENDER_DATA_STORE_RENDER_DATA_STORE_MANAGER_H

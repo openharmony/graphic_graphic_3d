@@ -29,11 +29,12 @@
 #include <render/nodecontext/intf_render_node_context_manager.h>
 #include <render/nodecontext/intf_render_node_graph_share_manager.h>
 
+#include "render/datastore/render_data_store_weather.h"
 #include "util/log.h"
 
 namespace {
 #include "3d/shaders/common/3d_dm_structures_common.h"
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -42,54 +43,54 @@ using namespace RENDER_NS;
 
 namespace {
 constexpr BASE_NS::Math::Mat4X4 ZERO_MATRIX_4X4 = {};
-constexpr BASE_NS::Math::Mat4X4 SHADOW_BIAS_MATRIX = BASE_NS::Math::Mat4X4 { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
-    0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
+constexpr BASE_NS::Math::Mat4X4 SHADOW_BIAS_MATRIX = BASE_NS::Math::Mat4X4{
+    0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f};
 constexpr BASE_NS::Math::Mat4X4 GetShadowBias(const uint32_t shadowIndex, const uint32_t shadowCount)
 {
     const float theShadowCount = static_cast<float>(Math::max(1u, shadowCount));
     const float invShadowCount = (1.0f / theShadowCount);
     const float sc = 0.5f * invShadowCount;
     const float so = invShadowCount * static_cast<float>(shadowIndex);
-    return BASE_NS::Math::Mat4X4 { sc, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, sc + so, 0.5f,
-        0.0f, 1.0f };
+    return BASE_NS::Math::Mat4X4{
+        sc, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, sc + so, 0.5f, 0.0f, 1.0f};
 }
 
-constexpr float CUBE_MAP_LOD_COEFF { 8.0f };
+constexpr float CUBE_MAP_LOD_COEFF{8.0f};
 // nine vectors which are used in spherical harmonics calculations
-constexpr BASE_NS::Math::Vec4 DEFAULT_SH_INDIRECT_COEFFICIENTS[9u] {
-    { 1.0f, 1.0f, 1.0f, 1.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
+constexpr BASE_NS::Math::Vec4 DEFAULT_SH_INDIRECT_COEFFICIENTS[9u]{
+    {1.0f, 1.0f, 1.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f, 0.0f},
 };
 
-constexpr uint32_t CUBEMAP_EXTRA_CAMERA_COUNT { 5U };
-constexpr uint32_t HALTON_SAMPLE_COUNT { 16u };
+constexpr uint32_t CUBEMAP_EXTRA_CAMERA_COUNT{5U};
+constexpr uint32_t HALTON_SAMPLE_COUNT{16u};
 Math::Vec2 GetHaltonOffset(const uint32_t haltonIndex)
 {
     // positive halton
     constexpr const Math::Vec2 halton16[] = {
-        { 0.500000f, 0.333333f }, // 00
-        { 0.250000f, 0.666667f }, // 01
-        { 0.750000f, 0.111111f }, // 02
-        { 0.125000f, 0.444444f }, // 03
-        { 0.625000f, 0.777778f }, // 04
-        { 0.375000f, 0.222222f }, // 05
-        { 0.875000f, 0.555556f }, // 06
-        { 0.062500f, 0.888889f }, // 07
-        { 0.562500f, 0.037037f }, // 08
-        { 0.312500f, 0.370370f }, // 09
-        { 0.812500f, 0.703704f }, // 10
-        { 0.187500f, 0.148148f }, // 11
-        { 0.687500f, 0.481481f }, // 12
-        { 0.437500f, 0.814815f }, // 13
-        { 0.937500f, 0.259259f }, // 14
-        { 0.031250f, 0.592593f }, // 15
+        {0.500000f, 0.333333f},  // 00
+        {0.250000f, 0.666667f},  // 01
+        {0.750000f, 0.111111f},  // 02
+        {0.125000f, 0.444444f},  // 03
+        {0.625000f, 0.777778f},  // 04
+        {0.375000f, 0.222222f},  // 05
+        {0.875000f, 0.555556f},  // 06
+        {0.062500f, 0.888889f},  // 07
+        {0.562500f, 0.037037f},  // 08
+        {0.312500f, 0.370370f},  // 09
+        {0.812500f, 0.703704f},  // 10
+        {0.187500f, 0.148148f},  // 11
+        {0.687500f, 0.481481f},  // 12
+        {0.437500f, 0.814815f},  // 13
+        {0.937500f, 0.259259f},  // 14
+        {0.031250f, 0.592593f},  // 15
     };
     return halton16[haltonIndex];
 }
@@ -100,37 +101,37 @@ void GenerateCubemapMatrices(vector<Math::Mat4X4>& matrices)
         matrices.resize(CUBEMAP_EXTRA_CAMERA_COUNT);
         // x-
         matrices[0U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * -90.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
-        matrices[0U] = Math::Scale(matrices[0U], { 1.f, 1.f, -1.f });
+        matrices[0U] = Math::Scale(matrices[0U], {1.f, 1.f, -1.f});
         // +y
         matrices[1U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * -90.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
-        matrices[1U] = Math::Scale(matrices[1U], { 1.f, 1.f, -1.f });
+        matrices[1U] = Math::Scale(matrices[1U], {1.f, 1.f, -1.f});
         // -y
         matrices[2U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 90.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
-        matrices[2U] = Math::Scale(matrices[2U], { 1.f, 1.f, -1.f });
+        matrices[2U] = Math::Scale(matrices[2U], {1.f, 1.f, -1.f});
         // +z
         matrices[3U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 180.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
-        matrices[3U] = Math::Scale(matrices[3U], { -1.f, 1.f, 1.f });
+        matrices[3U] = Math::Scale(matrices[3U], {-1.f, 1.f, 1.f});
         // -z
         matrices[4U] = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 0.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
-        matrices[4U] = Math::Scale(matrices[4U], { -1.f, 1.f, 1.f });
+        matrices[4U] = Math::Scale(matrices[4U], {-1.f, 1.f, 1.f});
     }
 }
 
 inline constexpr Math::UVec2 GetPacked64(const uint64_t value)
 {
-    return { static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff) };
+    return {static_cast<uint32_t>(value >> 32) & 0xFFFFffff, static_cast<uint32_t>(value & 0xFFFFffff)};
 }
 
 constexpr Math::UVec4 GetMultiViewCameraIndicesFunc(const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam)
 {
-    Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
+    Math::UVec4 mvIndices{0U, 0U, 0U, 0U};
     PLUGIN_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
     const uint32_t inputCount =
         Math::min(cam.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
     for (uint32_t idx = 0U; idx < inputCount; ++idx) {
         const uint64_t id = cam.multiViewCameraIds[idx];
         if (id != RenderSceneDataConstants::INVALID_ID) {
-            mvIndices[0U]++; // recalculates the count
+            mvIndices[0U]++;  // recalculates the count
             const uint32_t index = mvIndices[0U];
             const uint32_t viewIndexShift =
                 (index >= CORE_MULTI_VIEW_VIEW_INDEX_MODULO) ? CORE_MULTI_VIEW_VIEW_INDEX_SHIFT : 0U;
@@ -147,10 +148,10 @@ constexpr Math::UVec4 GetMultiViewCameraIndicesFunc(const IRenderDataStoreDefaul
 constexpr Math::UVec4 GetCubemapMultiViewCameraIndicesFunc(
     const IRenderDataStoreDefaultCamera* rds, const RenderCamera& cam, const array_view<const uint32_t> cameraIndices)
 {
-    Math::UVec4 mvIndices { 0U, 0U, 0U, 0U };
+    Math::UVec4 mvIndices{0U, 0U, 0U, 0U};
     PLUGIN_STATIC_ASSERT(RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT == 7U);
     constexpr uint32_t inputCount = CUBEMAP_EXTRA_CAMERA_COUNT;
-    mvIndices[0U] = inputCount; // multi-view camera count
+    mvIndices[0U] = inputCount;  // multi-view camera count
     // NOTE: keeps compatibility with the old code
     for (uint32_t idx = 0U; idx < inputCount; ++idx) {
         const uint32_t writeIndex = idx + 1U;
@@ -164,7 +165,16 @@ constexpr Math::UVec4 GetCubemapMultiViewCameraIndicesFunc(
     }
     return mvIndices;
 }
-} // namespace
+
+inline RenderDataStoreWeather::WeatherSettings GetWeatherSettings(
+    const IRenderNodeRenderDataStoreManager& rdsMgr, const string_view dsName)
+{
+    if (const auto* dsWeather = static_cast<RenderDataStoreWeather*>(rdsMgr.GetRenderDataStore(dsName)); dsWeather) {
+        return dsWeather->GetWeatherSettings();
+    }
+    return {};
+}
+}  // namespace
 
 void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -176,37 +186,38 @@ void RenderNodeDefaultCameras::InitNode(IRenderNodeContextManager& renderNodeCon
     const auto& renderNodeGraphData = renderNodeContextMgr_->GetRenderNodeGraphData();
     stores_ = RenderNodeSceneUtil::GetSceneRenderDataStores(
         renderNodeContextMgr, renderNodeGraphData.renderNodeGraphDataStoreName);
+    dsWeatherName_ = RenderNodeSceneUtil::GetSceneRenderDataStore(stores_, RenderDataStoreWeather::TYPE_NAME);
 
     PLUGIN_STATIC_ASSERT((sizeof(DefaultCameraMatrixStruct) % CORE_MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT) == 0);
     auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
     {
         const string bufferName =
             stores_.dataStoreNameScene.c_str() + DefaultMaterialCameraConstants::CAMERA_DATA_BUFFER_NAME;
-        camHandle_ = gpuResourceMgr.Create(
-            bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                            sizeof(DefaultCameraMatrixStruct) * CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT });
+        camHandle_ = gpuResourceMgr.Create(bufferName,
+            {CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                sizeof(DefaultCameraMatrixStruct) * CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT});
     }
     {
         const string bufferName =
             stores_.dataStoreNameScene.c_str() + DefaultMaterialSceneConstants::SCENE_ENVIRONMENT_DATA_BUFFER_NAME;
-        envHandle_ = gpuResourceMgr.Create(
-            bufferName, { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                            sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT });
+        envHandle_ = gpuResourceMgr.Create(bufferName,
+            {CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+                sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT});
     }
 
     IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
-    const RenderHandle outputs[2U] { camHandle_.GetHandle(), envHandle_.GetHandle() };
+    const RenderHandle outputs[2U]{camHandle_.GetHandle(), envHandle_.GetHandle()};
     rngShareMgr.RegisterRenderNodeOutputs(outputs);
 }
 
 void RenderNodeDefaultCameras::PreExecuteFrame()
 {
     IRenderNodeGraphShareManager& rngShareMgr = renderNodeContextMgr_->GetRenderNodeGraphShareManager();
-    const RenderHandle outputs[2U] { camHandle_.GetHandle(), envHandle_.GetHandle() };
+    const RenderHandle outputs[2U]{camHandle_.GetHandle(), envHandle_.GetHandle()};
     rngShareMgr.RegisterRenderNodeOutputs(outputs);
     // reset
     cubemapCameras_.clear();
@@ -224,6 +235,7 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
     }
     const auto& cameras = dsCamera->GetCameras();
     const auto& environments = dsCamera->GetEnvironments();
+    const RenderDataStoreWeather::WeatherSettings ws = GetWeatherSettings(renderDataStoreMgr, dsWeatherName_);
     if (cameras.empty() && environments.empty()) {
         return;
     }
@@ -240,7 +252,7 @@ void RenderNodeDefaultCameras::ExecuteFrame(IRenderCommandList& cmdList)
     jitterIndex_ = (jitterIndex_ + 1) % HALTON_SAMPLE_COUNT;
 
     if (uint8_t* data = reinterpret_cast<uint8_t*>(gpuResMgr.MapBuffer(envHandle_.GetHandle())); data) {
-        AddEnvironments(dsCamera, environments, data);
+        AddEnvironments(dsCamera, environments, data, ws);
 
         gpuResMgr.UnmapBuffer(envHandle_.GetHandle());
     }
@@ -250,9 +262,9 @@ void RenderNodeDefaultCameras::AddCameras(const IRenderDataStoreDefaultCamera* d
     const IRenderDataStoreDefaultLight* dsLight, const array_view<const RenderCamera> cameras, uint8_t* const data,
     const uint32_t cameraOffset)
 {
-    const uint32_t cameraCount = static_cast<uint32_t>(
-        Math::max(0, Math::min(static_cast<int32_t>(CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - cameraOffset),
-                         static_cast<int32_t>(cameras.size()))));
+    const uint32_t cameraCount = static_cast<uint32_t>(Math::max(0,
+        Math::min(static_cast<int32_t>(CORE_DEFAULT_MATERIAL_MAX_CAMERA_COUNT - cameraOffset),
+            static_cast<int32_t>(cameras.size()))));
     for (uint32_t idx = 0; idx < cameraCount; ++idx) {
         const auto& currCamera = cameras[idx];
         // take into account the offset to GPU cameras
@@ -287,23 +299,26 @@ void RenderNodeDefaultCameras::AddCameras(const IRenderDataStoreDefaultCamera* d
 
         const Math::UVec2 packedId = GetPacked64(currCamera.id);
         const Math::UVec2 packedLayer = GetPacked64(currCamera.layerMask);
-        dat->indices = { packedId.x, packedId.y, packedLayer.x, packedLayer.y };
+        dat->indices = {packedId.x, packedId.y, packedLayer.x, packedLayer.y};
         dat->multiViewIndices = GetMultiViewCameraIndices(dsCamera, currCamera, cameraCount);
 
         // frustum planes
         if (frustumUtil_) {
             // frustum planes created without jitter
             const Frustum frustum = frustumUtil_->CreateFrustum(jp.baseProj * view);
-            CloneData(dat->frustumPlanes, CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4), frustum.planes,
+            CloneData(dat->frustumPlanes,
+                CORE_DEFAULT_CAMERA_FRUSTUM_PLANE_COUNT * sizeof(Math::Vec4),
+                frustum.planes,
                 Frustum::PLANE_COUNT * sizeof(Math::Vec4));
         }
         // padding
-        dat->counts = { currCamera.environment.multiEnvCount,
+        dat->counts = {currCamera.environment.multiEnvCount,
             (currCamera.flags & RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT)
                 ? CORE_DEFAULT_CAMERA_ENVIRONMENT_PROJECTION
                 : 0U,
-            0U, 0U };
-        dat->pad0 = { 0U, 0U, 0U, 0U };
+            0U,
+            0U};
+        dat->pad0 = {0U, 0U, 0U, 0U};
         // for environment
         if (currCamera.flags & RenderCamera::CAMERA_FLAG_ENVIRONMENT_PROJECTION_BIT) {
             dat->envProjInv = Math::Inverse(currCamera.matrices.envProj);
@@ -341,7 +356,7 @@ BASE_NS::Math::UVec4 RenderNodeDefaultCameras::GetMultiViewCameraIndices(
             currCamera.matrices.view = cubemapMatrices_[idx] * currCamera.matrices.view;
             currCamera.matrices.viewPrevFrame = currCamera.matrices.view;
         }
-        return GetCubemapMultiViewCameraIndicesFunc(rds, cam, { camIndices, CUBEMAP_EXTRA_CAMERA_COUNT });
+        return GetCubemapMultiViewCameraIndicesFunc(rds, cam, {camIndices, CUBEMAP_EXTRA_CAMERA_COUNT});
     } else {
         return GetMultiViewCameraIndicesFunc(rds, cam);
     }
@@ -352,7 +367,7 @@ BASE_NS::Math::Mat4X4 RenderNodeDefaultCameras::ResolveViewMatrix(const RenderCa
     auto view = camera.matrices.view;
     if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
         Math::Mat4X4 temporary = Mat4Cast(Math::AngleAxis((Math::DEG2RAD * 90.0f), Math::Vec3(0.0f, 1.0f, 0.0f)));
-        temporary = Math::Scale(temporary, { 1.f, 1.f, -1.f });
+        temporary = Math::Scale(temporary, {1.f, 1.f, -1.f});
         view = temporary * view;
     }
     return view;
@@ -401,7 +416,7 @@ Math::UVec4 GetMultiEnvironmentIndices(
     const RenderCamera::Environment& env, const array_view<const RenderCamera::Environment> envs)
 {
     if (env.multiEnvCount > 0U) {
-        Math::UVec4 multiEnvIndices = { 0U, 0U, 0U, 0U };
+        Math::UVec4 multiEnvIndices = {0U, 0U, 0U, 0U};
         // the first value in multiEnvIndices is the count
         // first index is the main environment, next indices are the blend environments
         const uint32_t maxEnvCount = Math::min(env.multiEnvCount, 3U);
@@ -419,13 +434,14 @@ Math::UVec4 GetMultiEnvironmentIndices(
         }
         return multiEnvIndices;
     } else {
-        return { 0U, 0U, 0U, 0U };
+        return {0U, 0U, 0U, 0U};
     }
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCamera* dsCamera,
-    const array_view<const RenderCamera::Environment> environments, uint8_t* const data)
+    const array_view<const RenderCamera::Environment> environments, uint8_t* const data,
+    const RenderDataStoreWeather::WeatherSettings& ws)
 {
     PLUGIN_ASSERT(data);
     const auto* dataEnd = data + sizeof(DefaultMaterialEnvironmentStruct) * CORE_DEFAULT_MATERIAL_MAX_ENVIRONMENT_COUNT;
@@ -443,7 +459,7 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
             (currEnv.radianceCubemapMipCount != 0)
                 ? Math::min(CUBE_MAP_LOD_COEFF, static_cast<float>(currEnv.radianceCubemapMipCount))
                 : CUBE_MAP_LOD_COEFF;
-        DefaultMaterialEnvironmentStruct envStruct {
+        DefaultMaterialEnvironmentStruct envStruct{
             Math::Vec4((Math::Vec3(currEnv.indirectSpecularFactor) * currEnv.indirectSpecularFactor.w),
                 currEnv.indirectSpecularFactor.w),
             Math::Vec4(Math::Vec3(currEnv.indirectDiffuseFactor) * currEnv.indirectDiffuseFactor.w,
@@ -460,7 +476,10 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
             {},
             {},
             {},
-        };
+            {},
+            {},
+            {},
+            {}};
         constexpr size_t countOfSh = countof(envStruct.shIndirectCoefficients);
         if (currEnv.radianceCubemap || (currEnv.multiEnvCount > 0U)) {
             for (size_t jdx = 0; jdx < countOfSh; ++jdx) {
@@ -471,6 +490,16 @@ void RenderNodeDefaultCameras::AddEnvironments(const IRenderDataStoreDefaultCame
                 envStruct.shIndirectCoefficients[jdx] = DEFAULT_SH_INDIRECT_COEFFICIENTS[jdx];
             }
         }
+
+        envStruct.packedSun = Math::Vec4(ws.sunDirElevation, 0.0f);
+        envStruct.groundColor = ws.groundColor;
+        envStruct.packedSun.w = (currEnv.backgroundType == RenderCamera::Environment::BG_TYPE_SKY) ? 1.0f : 0.0f;
+        const float skyExposure = Math::max(0.0f, ws.skyViewBrightness * currEnv.envMapFactor.w);
+        envStruct.packedPhases = Math::Vec4(ws.timeOfDay, ws.moonBrightness, ws.nightGlow, skyExposure);
+        envStruct.skySunParams = Math::Vec4(ws.skySunSize, ws.skySunOpacity, 0.0f, 0.0f);
+        envStruct.skySunColor = Math::Vec4(ws.skySunTint.x, ws.skySunTint.y, ws.skySunTint.z, 1.0f);
+        envStruct.skyMoonNightParams = Math::Vec4(ws.moonSize, ws.moonOpacity, ws.starsIntensity, ws.nightSkyIntensity);
+        envStruct.skyMoonColor = Math::Vec4(ws.moonTint.x, ws.moonTint.y, ws.moonTint.z, 0.0f);
 
         if (!CloneData(dat, size_t(dataEnd - dat), &envStruct, sizeof(DefaultMaterialEnvironmentStruct))) {
             PLUGIN_LOG_E("environment ubo copying failed.");

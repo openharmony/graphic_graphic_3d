@@ -25,7 +25,8 @@ CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 using namespace RENDER_NS;
 
-RenderDataStoreMorph::RenderDataStoreMorph(const string_view name) : name_(name) {}
+RenderDataStoreMorph::RenderDataStoreMorph(const string_view name) : name_(name)
+{}
 
 void RenderDataStoreMorph::Init(const IRenderDataStoreMorph::ReserveSize& reserveSize)
 {

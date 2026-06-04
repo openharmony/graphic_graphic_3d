@@ -52,9 +52,9 @@ class IFuture : public CORE_NS::IInterface {
 
 public:
     enum StateType {
-        WAITING,   /// There is no result yet and Wait would block
-        COMPLETED, /// There is a result, Wait no longer blocks
-        ABANDONED  /// The underlying task was abandoned, Wait does not block and Get returns nullptr
+        WAITING,    /// There is no result yet and Wait would block
+        COMPLETED,  /// There is a result, Wait no longer blocks
+        ABANDONED   /// The underlying task was abandoned, Wait does not block and Get returns nullptr
     };
     /**
      * @brief Returns the current state of the future
@@ -83,7 +83,7 @@ public:
      * @brief Get the result and try to convert it to given type T. If type mismatch or task was abandoned,
      * returns the value given.
      */
-    template<typename T>
+    template <typename T>
     T GetResultOr(T def) const
     {
         if (auto p = GetResult()) {

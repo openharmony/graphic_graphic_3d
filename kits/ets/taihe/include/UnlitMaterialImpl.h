@@ -34,5 +34,5 @@ public:
 private:
     std::shared_ptr<MaterialETS> materialETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_UNLIT_MATERIAL_IMPL_H

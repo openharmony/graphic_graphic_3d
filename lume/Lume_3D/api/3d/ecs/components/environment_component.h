@@ -33,88 +33,87 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IEnvironmentComponentManager, EnvironmentComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum class Background : uint8_t {
-        /** Background none */
-        NONE = 0,
-        /** Background image */
-        IMAGE = 1,
-        /** Background cubemap */
-        CUBEMAP = 2,
-        /** Background equirectangular */
-        EQUIRECTANGULAR = 3,
-        /** Sky atmosphere */
-        SKY = 4,
-    };
+enum class Background : uint8_t {
+    /** Background none */
+    NONE = 0,
+    /** Background image */
+    IMAGE = 1,
+    /** Background cubemap */
+    CUBEMAP = 2,
+    /** Background equirectangular */
+    EQUIRECTANGULAR = 3,
+    /** Sky atmosphere */
+    SKY = 4,
+};
 #endif
-    /** The type of the background fill when rendering.
-     */
-    DEFINE_PROPERTY(Background, background, "Background", 0, VALUE(Background::NONE))
+/** The type of the background fill when rendering.
+ */
+DEFINE_PROPERTY(Background, background, "Background", 0, VALUE(Background::NONE))
 
-    /** Indirect diffuse factor with intensity in alpha.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::Math::Vec4, indirectDiffuseFactor, "Indirect Diffuse Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
+/** Indirect diffuse factor with intensity in alpha.
+ */
+DEFINE_PROPERTY(
+    BASE_NS::Math::Vec4, indirectDiffuseFactor, "Indirect Diffuse Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
 
-    /** Indirect specular factor with intensity in alpha.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::Math::Vec4, indirectSpecularFactor, "Indirect Specular Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
+/** Indirect specular factor with intensity in alpha.
+ */
+DEFINE_PROPERTY(
+    BASE_NS::Math::Vec4, indirectSpecularFactor, "Indirect Specular Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
 
-    /** Environment map factor with intensity in alpha.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, envMapFactor, "Environment Map Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
+/** Environment map factor with intensity in alpha.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, envMapFactor, "Environment Map Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
 
-    /** Radiance cubemap.
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, radianceCubemap, "Radiance Cubemap", 0, )
+/** Radiance cubemap.
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, radianceCubemap, "Radiance Cubemap", 0, )
 
-    /** Number of mip map levels in radiance cubemap, zero value indicates that full mip chain is available.
-     */
-    DEFINE_PROPERTY(uint32_t, radianceCubemapMipCount, "Radiance Cubemap Mip Count", 0, VALUE(0))
+/** Number of mip map levels in radiance cubemap, zero value indicates that full mip chain is available.
+ */
+DEFINE_PROPERTY(uint32_t, radianceCubemapMipCount, "Radiance Cubemap Mip Count", 0, VALUE(0))
 
-    /** Environment map. (Cubemap, Equirect, Image)
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, envMap, "Environment Map", 0, )
+/** Environment map. (Cubemap, Equirect, Image)
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, envMap, "Environment Map", 0, )
 
-    /** Mip lod level for env map sampling, allows to have blurred / gradient background for the scene.
-     */
-    DEFINE_PROPERTY(float, envMapLodLevel, "Envmap Lod Level", 0, VALUE(0.0f))
+/** Mip lod level for env map sampling, allows to have blurred / gradient background for the scene.
+ */
+DEFINE_PROPERTY(float, envMapLodLevel, "Envmap Lod Level", 0, VALUE(0.0f))
 
-    /** Irradiance lighting coefficients.
-     * Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
-     */
-    DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, 9, irradianceCoefficients, "Irradiance Coefficients", 0, ARRAY_VALUE())
+/** Irradiance lighting coefficients.
+ * Values are expected to be prescaled with 1.0 / PI for Lambertian diffuse
+ */
+DEFINE_ARRAY_PROPERTY(BASE_NS::Math::Vec3, 9, irradianceCoefficients, "Irradiance Coefficients", 0, ARRAY_VALUE())
 
-    /** IBL environment rotation.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::Math::Quat, environmentRotation, "IBL Environment Rotation", 0, ARRAY_VALUE(0.f, 0.f, 0.f, 1.f))
+/** IBL environment rotation.
+ */
+DEFINE_PROPERTY(
+    BASE_NS::Math::Quat, environmentRotation, "IBL Environment Rotation", 0, ARRAY_VALUE(0.f, 0.f, 0.f, 1.f))
 
-    /** Shader. Prefer using automatic selection if no custom shaders.
-     * Needs to match default material env layouts and specializations (api/3d/shaders/common).
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, shader, "Custom Environment Shader", 0, )
+/** Shader. Prefer using automatic selection if no custom shaders.
+ * Needs to match default material env layouts and specializations (api/3d/shaders/common).
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, shader, "Custom Environment Shader", 0, )
 
-    /** Custom material extension resources. Deprecates and prevents MaterialExtensionComponent usage.
-     * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
-     */
-    DEFINE_PROPERTY(
-        BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
+/** Custom material extension resources. Deprecates and prevents MaterialExtensionComponent usage.
+ * Are automatically bound to custom shader, custom pipeline layout custom descriptor set if they are in order.
+ */
+DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::EntityReference>, customResources, "Custom Material Extension Resources", 0, )
 
-    /** Reflection probe that is used in probing the scenery.
-     * Create one using scene util's CreateReflectionProbe for example and attach it to this slot.
-     * When this slot is not empty, the render system automatically picks it in to use.
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, reflectionProbe, "Reflection Probe", 0, )
+/** Reflection probe that is used in probing the scenery.
+ * Create one using scene util's CreateReflectionProbe for example and attach it to this slot.
+ * When this slot is not empty, the render system automatically picks it in to use.
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, reflectionProbe, "Reflection Probe", 0, )
 
-    /** Entity containing dynamic environment blender component, from where environments are pushed to camera buffers
-     * and can be blended. Controls indirect and environment lighting. If empty, no blending will happen. */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, blendEnvironments, "Blend Environments", 0, )
+/** Entity containing dynamic environment blender component, from where environments are pushed to camera buffers
+ * and can be blended. Controls indirect and environment lighting. If empty, no blending will happen. */
+DEFINE_PROPERTY(CORE_NS::EntityReference, blendEnvironments, "Blend Environments", 0, )
 
-    /** Entity for weather component
-     * One can share the same weather component with different environments (and different cameras)
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, weather, "Weather", 0, )
+/** Entity for weather component
+ * One can share the same weather component with different environments (and different cameras)
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, weather, "Weather", 0, )
 
 END_COMPONENT(IEnvironmentComponentManager, EnvironmentComponent, "a603b2e8-27f0-4c03-9538-70eaef88e3d3")
 #if !defined(IMPLEMENT_MANAGER)

@@ -32,7 +32,7 @@ string NextPropertyName()
     return string("Property" + to_string(counter++));
 }
 
-template<typename T>
+template <typename T>
 void TestPropertyType(CustomPropertyPodContainer& podContainer, const PropertyTypeDecl& propType, T data)
 {
     // Set data with SetValue(...)
@@ -42,7 +42,7 @@ void TestPropertyType(CustomPropertyPodContainer& podContainer, const PropertyTy
 
         EXPECT_EQ(propType.byteSize, sizeof(data));
 
-        const array_view<uint8_t> dataView = array_view { reinterpret_cast<uint8_t*>(&data), sizeof(T) };
+        const array_view<uint8_t> dataView = array_view{reinterpret_cast<uint8_t*>(&data), sizeof(T)};
         EXPECT_TRUE(podContainer.SetValue(name, dataView));
 
         const T& returnedData = *reinterpret_cast<const T*>(podContainer.GetValue(name).data());
@@ -51,7 +51,7 @@ void TestPropertyType(CustomPropertyPodContainer& podContainer, const PropertyTy
     // Set data alongside AddOffsetProperty(...)
     {
         const string name = NextPropertyName();
-        const array_view<uint8_t> dataView = array_view { reinterpret_cast<uint8_t*>(&data), sizeof(T) };
+        const array_view<uint8_t> dataView = array_view{reinterpret_cast<uint8_t*>(&data), sizeof(T)};
         podContainer.AddOffsetProperty(name, name, podContainer.GetByteSize(), propType, dataView);
 
         const T& returnedData = *reinterpret_cast<const T*>(podContainer.GetValue(name).data());
@@ -94,7 +94,7 @@ UNIT_TEST(SRC_PropertyUtil, PropertyUtilTest, testing::ext::TestSize.Level1)
     podContainer.Reset();
     EXPECT_EQ(podContainer.PropertyCount(), 0);
 
-    EXPECT_FALSE(podContainer.SetValue("NonExistent", array_view<uint8_t> {}));
-    EXPECT_FALSE(podContainer.SetValue(4, array_view<uint8_t> {}));
+    EXPECT_FALSE(podContainer.SetValue("NonExistent", array_view<uint8_t>{}));
+    EXPECT_FALSE(podContainer.SetValue(4, array_view<uint8_t>{}));
     EXPECT_EQ(podContainer.GetValue("NonExistent").data(), nullptr);
 }

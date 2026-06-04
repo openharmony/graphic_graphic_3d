@@ -15,6 +15,8 @@
 
 #include "render_post_process_cmaa2_node.h"
 
+#include <limits>
+
 #include <base/containers/unique_ptr.h>
 #include <core/property/property_handle_util.h>
 #include <core/property/property_types.h>
@@ -48,14 +50,14 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr string_view EDGE_DETECTION_SHADER_NAME { "rendershaders://shader/cmaa2/cmaa2_edge_detect.shader" };
-constexpr string_view PROCESS_CANDIDATES_SHADER_NAME { "rendershaders://shader/cmaa2/cmaa2_process_candidates.shader" };
-constexpr string_view DEFERRED_APPLY_SHADER_NAME { "rendershaders://shader/cmaa2/cmaa2_blend_apply.shader" };
-constexpr string_view CLEAR_NAME { "rendershaders://shader/cmaa2/cmaa2_clear.shader" };
-constexpr string_view BLIT_NAME { "rendershaders://shader/cmaa2/cmaa2_blit.shader" };
-constexpr string_view IARGS_NAME { "rendershaders://shader/cmaa2/cmaa2_indirect_args.shader" };
+constexpr string_view EDGE_DETECTION_SHADER_NAME{"rendershaders://shader/cmaa2/cmaa2_edge_detect.shader"};
+constexpr string_view PROCESS_CANDIDATES_SHADER_NAME{"rendershaders://shader/cmaa2/cmaa2_process_candidates.shader"};
+constexpr string_view DEFERRED_APPLY_SHADER_NAME{"rendershaders://shader/cmaa2/cmaa2_blend_apply.shader"};
+constexpr string_view CLEAR_NAME{"rendershaders://shader/cmaa2/cmaa2_clear.shader"};
+constexpr string_view BLIT_NAME{"rendershaders://shader/cmaa2/cmaa2_blit.shader"};
+constexpr string_view IARGS_NAME{"rendershaders://shader/cmaa2/cmaa2_indirect_args.shader"};
 
 constexpr uint32_t CMAA2_CS_INPUT_KERNEL_SIZE_X = 16u;
 constexpr uint32_t CMAA2_CS_INPUT_KERNEL_SIZE_Y = 16u;
@@ -64,16 +66,21 @@ constexpr uint32_t CMAA2_CS_OUTPUT_KERNEL_SIZE_Y = CMAA2_CS_INPUT_KERNEL_SIZE_Y 
 
 constexpr uint32_t UNIFORM_BUFFER_SIZE = 4u * sizeof(float);
 
-constexpr GpuBufferDesc UNIFORM_BUFFER_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc UNIFORM_BUFFER_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0u };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0u};
 
-constexpr GpuBufferDesc STORAGE_BUFFER_DESC { CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS, 0u };
+constexpr GpuBufferDesc STORAGE_BUFFER_DESC{CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS,
+    0u};
 
-constexpr GpuBufferDesc INDIRECT_BUFFER_DESC { CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                                   CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
-    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS, 0u };
+constexpr GpuBufferDesc INDIRECT_BUFFER_DESC{
+    CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT | CORE_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+    CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS,
+    0u};
 
 RenderHandleReference CreateUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
@@ -95,7 +102,9 @@ void UpdateUniformBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const Re
     const RenderPostProcessCmaa2Node::ShaderParameters& shaderParameters)
 {
     if (void* data = gpuResourceMgr.MapBuffer(handle); data) {
-        CloneData(data, sizeof(RenderPostProcessCmaa2Node::ShaderParameters), &shaderParameters,
+        CloneData(data,
+            sizeof(RenderPostProcessCmaa2Node::ShaderParameters),
+            &shaderParameters,
             sizeof(RenderPostProcessCmaa2Node::ShaderParameters));
         gpuResourceMgr.UnmapBuffer(handle);
     }
@@ -106,7 +115,7 @@ uint32_t DivideRoundUp(uint32_t value, uint32_t divisor)
     return (value + divisor - 1u) / divisor;
 }
 
-} // namespace
+}  // namespace
 
 RenderPostProcessCmaa2Node::RenderPostProcessCmaa2Node()
     : properties_(&propertiesData_, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -314,20 +323,23 @@ void RenderPostProcessCmaa2Node::ClearImages(IRenderCommandList& cmdList)
         return;
     }
 
-    constexpr ImageSubresourceRange imgSubresourceRange { ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    constexpr ImageSubresourceRange imgSubresourceRange{ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+        0,
+        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
     // clear blend heads
     {
         static constexpr auto clearColor =
-            RENDER_NS::ClearColorValue({ 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu });
-        cmdList.ClearColorImage(targets_.blendItemHeads.GetHandle(), clearColor, { &imgSubresourceRange, 1 });
+            RENDER_NS::ClearColorValue({0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu});
+        cmdList.ClearColorImage(targets_.blendItemHeads.GetHandle(), clearColor, {&imgSubresourceRange, 1});
     }
 
     // clear render target
     {
-        static constexpr auto clearColor = RENDER_NS::ClearColorValue({ 0.0f, 0.0f, 0.0f, 0.0f });
-        cmdList.ClearColorImage(targets_.outComp.GetHandle(), clearColor, { &imgSubresourceRange, 1 });
+        static constexpr auto clearColor = RENDER_NS::ClearColorValue({0.0f, 0.0f, 0.0f, 0.0f});
+        cmdList.ClearColorImage(targets_.outComp.GetHandle(), clearColor, {&imgSubresourceRange, 1});
     }
 }
 
@@ -348,7 +360,7 @@ void RenderPostProcessCmaa2Node::RenderEdgeDetectionPass(IRenderCommandList& cmd
 
     binder->BindBuffer(0u, uniformBuffer_.GetHandle(), 0u);
     binder->BindImage(1u, currInput_);
-    binder->BindImage(2u, BindableImage { targets_.edgeImage.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL });
+    binder->BindImage(2u, BindableImage{targets_.edgeImage.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL});
     binder->BindBuffer(3u, computeBuffers_.shapeCandidatesBuffer.GetHandle(), 0u);
     binder->BindBuffer(4u, computeBuffers_.controlBuffer.GetHandle(), 0u);
 
@@ -371,13 +383,13 @@ void RenderPostProcessCmaa2Node::RenderProcessCandidatesPass(IRenderCommandList&
     binder->ClearBindings();
 
     binder->BindImage(0u, currInput_);
-    binder->BindImage(1u, BindableImage { targets_.edgeImage.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL });
+    binder->BindImage(1u, BindableImage{targets_.edgeImage.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL});
     binder->BindBuffer(2u, computeBuffers_.shapeCandidatesBuffer.GetHandle(), 0u);
     binder->BindBuffer(3u, computeBuffers_.controlBuffer.GetHandle(), 0u);
     binder->BindBuffer(4u, computeBuffers_.blendLocationList.GetHandle(), 0u);
     binder->BindBuffer(5u, computeBuffers_.blendItemList.GetHandle(), 0u);
     binder->BindImage(
-        6u, BindableImage { targets_.blendItemHeads.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL });
+        6u, BindableImage{targets_.blendItemHeads.GetHandle(), {}, ImageLayout::CORE_IMAGE_LAYOUT_GENERAL});
 
     cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0u, binder->GetDescriptorSetHandle());
@@ -402,7 +414,7 @@ void RenderPostProcessCmaa2Node::RenderDeferredApplyPass(IRenderCommandList& cmd
     binder->BindBuffer(1u, computeBuffers_.controlBuffer.GetHandle(), 0u);
     binder->BindBuffer(2u, computeBuffers_.blendLocationList.GetHandle(), 0u);
     binder->BindBuffer(3u, computeBuffers_.blendItemList.GetHandle(), 0u);
-    binder->BindImage(4u, BindableImage { targets_.blendItemHeads.GetHandle() });
+    binder->BindImage(4u, BindableImage{targets_.blendItemHeads.GetHandle()});
 
     cmdList.UpdateDescriptorSet(binder->GetDescriptorSetHandle(), binder->GetDescriptorSetLayoutBindingResources());
     cmdList.BindDescriptorSet(0u, binder->GetDescriptorSetHandle());
@@ -467,7 +479,7 @@ RenderPass RenderPostProcessCmaa2Node::CreateRenderPass(
     rp.renderPassDesc.attachmentHandles[0u] = output;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_LOAD;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, resolution.x, resolution.y };
+    rp.renderPassDesc.renderArea = {0, 0, resolution.x, resolution.y};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -483,7 +495,7 @@ void RenderPostProcessCmaa2Node::CreateTargets(const BASE_NS::Math::UVec2 baseSi
         targets_.resolution = baseSize;
         auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
-        GpuImageDesc desc {
+        GpuImageDesc desc{
             ImageType::CORE_IMAGE_TYPE_2D,
             ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
             Format::BASE_FORMAT_R8_UINT,
@@ -519,7 +531,11 @@ void RenderPostProcessCmaa2Node::CreateBuffers(const BASE_NS::Math::UVec2 baseSi
 {
     auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
-    const uint32_t pixelCount = baseSize.x * baseSize.y;
+    const uint64_t pixelCount64 = static_cast<uint64_t>(baseSize.x) * baseSize.y;
+    if (pixelCount64 > std::numeric_limits<uint32_t>::max()) {
+        return;
+    }
+    const uint32_t pixelCount = static_cast<uint32_t>(pixelCount64);
 
     const uint32_t controlBufferSize = sizeof(ControlBufferData);
     computeBuffers_.controlBuffer =
@@ -538,7 +554,7 @@ void RenderPostProcessCmaa2Node::CreateBuffers(const BASE_NS::Math::UVec2 baseSi
 
     {
         GpuBufferDesc desc = INDIRECT_BUFFER_DESC;
-        desc.byteSize = sizeof(uint32_t) * 16u * 2u; // 16 is the minimum buffer offset
+        desc.byteSize = sizeof(uint32_t) * 16u * 2u;  // 16 is the minimum buffer offset
 
         dispatchIndirectHandle_ = gpuResourceMgr.Create(dispatchIndirectHandle_, desc);
     }
@@ -575,8 +591,12 @@ void RenderPostProcessCmaa2Node::CreatePsos()
 
     if (!RenderHandleUtil::IsValid(psos_.blit)) {
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(shaderData_.blit.shader);
-        psos_.blit = psoMgr.GetGraphicsPsoHandle(shaderData_.blit.shader, gfxHandle, shaderData_.blit.pipelineLayout,
-            {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.blit = psoMgr.GetGraphicsPsoHandle(shaderData_.blit.shader,
+            gfxHandle,
+            shaderData_.blit.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     if (!RenderHandleUtil::IsValid(psos_.deferredApplyPass)) {
@@ -632,10 +652,10 @@ void RenderPostProcessCmaa2Node::EvaluateOutputImageCreation()
         currOutput_ = nodeOutputsData_.output;
     } else {
         IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-        Math::UVec2 size { 1u, 1u };
+        Math::UVec2 size{1u, 1u};
         if (useRequestedRenderArea_) {
             const RenderPassDesc::RenderArea& area = renderAreaRequest_.area;
-            size = { area.offsetX + area.extentWidth, area.offsetY + area.extentHeight };
+            size = {area.offsetX + area.extentWidth, area.offsetY + area.extentHeight};
         }
         if ((size.x != ownOutputImageData_.width) || (size.y != ownOutputImageData_.height)) {
             GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(currInput_.handle);

@@ -29,24 +29,24 @@ namespace UTest {
 
 namespace {
 
-template<typename AnimationType>
+template <typename AnimationType>
 Animation CreateAnimation(const IProperty::WeakPtr& property);
 
-template<>
+template <>
 Animation CreateAnimation<SequentialAnimation>(const IProperty::WeakPtr& property)
 {
     return SequentialAnimation(CreateInstance(ClassId::SequentialAnimation))
         .Add(KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation)));
 }
 
-template<>
+template <>
 Animation CreateAnimation<ParallelAnimation>(const IProperty::WeakPtr& property)
 {
     return ParallelAnimation(CreateInstance(ClassId::ParallelAnimation))
         .Add(KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation)));
 }
 
-template<>
+template <>
 Animation CreateAnimation<KeyframeAnimation<float>>(const IProperty::WeakPtr& property)
 {
     KeyframeAnimation<float> animation(CreateInstance(ClassId::KeyframeAnimation));
@@ -57,9 +57,9 @@ Animation CreateAnimation<KeyframeAnimation<float>>(const IProperty::WeakPtr& pr
     return animation;
 }
 
-} // namespace
+}  // namespace
 
-template<typename AnimationType>
+template <typename AnimationType>
 class API_AnimationSeekingTest : public API_AnimationTestBase {
 public:
     API_AnimationSeekingTest()
@@ -157,5 +157,5 @@ TYPED_TEST(API_AnimationSeekingTest, SeekingToBeginningDoesNotStopAnimation)
     EXPECT_THAT(animationRunningChangeInvoke, testing::Eq(false));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

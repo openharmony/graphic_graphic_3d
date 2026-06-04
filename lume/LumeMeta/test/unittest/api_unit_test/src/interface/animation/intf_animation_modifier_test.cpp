@@ -39,7 +39,7 @@ struct TestDefinition {
     };
 };
 
-} // namespace
+}  // namespace
 
 class API_AnimationModifierTestBase : public API_AnimationTestBase,
                                       public ::testing::WithParamInterface<std::tuple<TestDefinition, int>> {
@@ -93,7 +93,7 @@ UNIT_TEST_F(API_AnimationModifierTestBase, ReverseImplicitAnimation, testing::ex
     bool finished = false;
     animation.OnFinished()->AddHandler(MakeCallback<IOnChanged>([&] { finished = true; }));
 
-    StepAnimations({ animation }, 10, [&](uint32_t frame) {
+    StepAnimations({animation}, 10, [&](uint32_t frame) {
         auto progress = animation.GetProgress();
         EXPECT_EQ(progress, frame / 10.f) << "Frame: " << frame;
 
@@ -160,7 +160,7 @@ public:
         anim->Step(GetTestClock());
         recordFrame(propsValues);
         StepAnimations(
-            { anim }, frames, millisPerFrame, [&propsValues, recordFrame](int frame) { recordFrame(propsValues); });
+            {anim}, frames, millisPerFrame, [&propsValues, recordFrame](int frame) { recordFrame(propsValues); });
 
         return propsValues;
     }
@@ -205,8 +205,8 @@ IAnimation::Ptr CreatePropertyAnimation(API_AnimationModifierTestBase& test)
 
 IAnimation::Ptr CreateTrackAnimation(API_AnimationModifierTestBase& test)
 {
-    BASE_NS::vector<float> timestamps = { 0.1f, 0.3f, 0.8f, 1.f };
-    BASE_NS::vector<float> keyframes = { 50.0f, 100.0f, 170.0f, 190.0f };
+    BASE_NS::vector<float> timestamps = {0.1f, 0.3f, 0.8f, 1.f};
+    BASE_NS::vector<float> keyframes = {50.0f, 100.0f, 170.0f, 190.0f};
     const float initialValue = 10.0f;
 
     auto property = ConstructProperty<float>("Prop", initialValue);
@@ -293,9 +293,8 @@ UNIT_TEST_P(API_ReverseAnimationModifierTest, ReversedAnimationIsPlayedBackward,
     const auto reverseFrames = CollectFrames(anim);
 
     for (decltype(forwardFrames.size()) i = 0, end = forwardFrames.size(); i < end; ++i) {
-        EXPECT_THAT(
-            reverseFrames[i], Pointwise(FloatNear(0.001),
-                                  decltype(forwardFrames[i]) { forwardFrames[i].rbegin(), forwardFrames[i].rend() }))
+        EXPECT_THAT(reverseFrames[i],
+            Pointwise(FloatNear(0.001), decltype(forwardFrames[i]){forwardFrames[i].rbegin(), forwardFrames[i].rend()}))
             << "i: " << i;
     }
 }
@@ -369,7 +368,7 @@ UNIT_TEST_P(
     uint32_t actualLoops = 0;
     auto previousProgress = GetValue(anim->Progress());
     StartOrSetPropertyValue(anim);
-    StepAnimations({ anim }, animTotalFrames, frameStepMs, [&](uint32_t frame) {
+    StepAnimations({anim}, animTotalFrames, frameStepMs, [&](uint32_t frame) {
         actualLoops = actualLoops == 0 ? 1 : actualLoops;
         const auto currentProgress = GetValue(anim->Progress());
         if (previousProgress > currentProgress) {
@@ -425,7 +424,7 @@ UNIT_TEST_P(API_LoopAnimationModifierTest, AnimationIslooping, testing::ext::Tes
         EXPECT_TRUE(GetValue(anim->Running()));
         auto previousProgress = 0.f;
 
-        StepAnimations({ anim }, frames, [&](int frame) {
+        StepAnimations({anim}, frames, [&](int frame) {
             frame = i * frames + frame;
             auto progress = GetValue(anim->Progress());
             if (i == (loopCount - 1) && frame == totalFrames) {
@@ -563,7 +562,7 @@ UNIT_TEST_P(API_SpeedAnimationModifierTest, SpeedFactorAffectsPlayback, testing:
     float previousProgress = GetValue(anim->Progress());
     EXPECT_EQ(previousProgress, 0);
 
-    StepAnimations({ anim }, 10, millisPerFrame, [millisPerFrame, &anim, &previousProgress](int frame) {
+    StepAnimations({anim}, 10, millisPerFrame, [millisPerFrame, &anim, &previousProgress](int frame) {
         float progress = GetValue(anim->Progress());
         EXPECT_GT(progress, previousProgress);
         EXPECT_NEAR(progress, frame / 10.f, 0.05);
@@ -571,7 +570,7 @@ UNIT_TEST_P(API_SpeedAnimationModifierTest, SpeedFactorAffectsPlayback, testing:
     });
 
     // Animation is stopped, it should not advance any further
-    StepAnimations({ anim }, 10, millisPerFrame, [millisPerFrame, &anim, &previousProgress](int frame) {
+    StepAnimations({anim}, 10, millisPerFrame, [millisPerFrame, &anim, &previousProgress](int frame) {
         EXPECT_FALSE(GetValue(anim->Running()));
         EXPECT_FLOAT_EQ(1.0f, GetValue(anim->Progress()));
     });
@@ -579,42 +578,42 @@ UNIT_TEST_P(API_SpeedAnimationModifierTest, SpeedFactorAffectsPlayback, testing:
 
 INSTANTIATE_TEST_SUITE_P(API_LoopAnimationModifierSuite, API_LoopAnimationModifierTest,
     testing::Combine(
-        testing::Values(TestDefinition { "Keyframe", CreateKeyFrameAnimation },
-            TestDefinition { "Track", CreateTrackAnimation }, TestDefinition { "Parallel", CreateParallelAnimation },
-            TestDefinition { "Sequential", CreateSequentialAnimation },
-            TestDefinition { "Property", CreatePropertyAnimation },
-            TestDefinition { "KeyframeSerialize", CreateKeyFrameAnimation, Serialize },
-            TestDefinition { "TrackSerialize", CreateTrackAnimation, Serialize },
-            TestDefinition { "ParallelSerialize", CreateParallelAnimation, Serialize },
-            TestDefinition { "SequentialSerialize", CreateSequentialAnimation, Serialize },
-            TestDefinition { "PropertySerialize", CreatePropertyAnimation, Serialize }),
+        testing::Values(TestDefinition{"Keyframe", CreateKeyFrameAnimation},
+            TestDefinition{"Track", CreateTrackAnimation}, TestDefinition{"Parallel", CreateParallelAnimation},
+            TestDefinition{"Sequential", CreateSequentialAnimation},
+            TestDefinition{"Property", CreatePropertyAnimation},
+            TestDefinition{"KeyframeSerialize", CreateKeyFrameAnimation, Serialize},
+            TestDefinition{"TrackSerialize", CreateTrackAnimation, Serialize},
+            TestDefinition{"ParallelSerialize", CreateParallelAnimation, Serialize},
+            TestDefinition{"SequentialSerialize", CreateSequentialAnimation, Serialize},
+            TestDefinition{"PropertySerialize", CreatePropertyAnimation, Serialize}),
         testing::Range(1, 10)),
     BuildTestName);
 
 INSTANTIATE_TEST_SUITE_P(API_SpeedAnimationModifierSuite, API_SpeedAnimationModifierTest,
     testing::Combine(
-        testing::Values(TestDefinition { "Keyframe", CreateKeyFrameAnimation },
-            TestDefinition { "Track", CreateTrackAnimation }, TestDefinition { "Parallel", CreateParallelAnimation },
-            TestDefinition { "Sequential", CreateSequentialAnimation },
-            TestDefinition { "Property", CreatePropertyAnimation },
-            TestDefinition { "KeyframeSerialize", CreateKeyFrameAnimation, Serialize },
-            TestDefinition { "TrackSerialize", CreateTrackAnimation, Serialize },
-            TestDefinition { "ParallelSerialize", CreateParallelAnimation, Serialize },
-            TestDefinition { "SequentialSerialize", CreateSequentialAnimation, Serialize },
-            TestDefinition { "PropertySerialize", CreatePropertyAnimation, Serialize }),
+        testing::Values(TestDefinition{"Keyframe", CreateKeyFrameAnimation},
+            TestDefinition{"Track", CreateTrackAnimation}, TestDefinition{"Parallel", CreateParallelAnimation},
+            TestDefinition{"Sequential", CreateSequentialAnimation},
+            TestDefinition{"Property", CreatePropertyAnimation},
+            TestDefinition{"KeyframeSerialize", CreateKeyFrameAnimation, Serialize},
+            TestDefinition{"TrackSerialize", CreateTrackAnimation, Serialize},
+            TestDefinition{"ParallelSerialize", CreateParallelAnimation, Serialize},
+            TestDefinition{"SequentialSerialize", CreateSequentialAnimation, Serialize},
+            TestDefinition{"PropertySerialize", CreatePropertyAnimation, Serialize}),
         testing::Range(-20, 20, 5)),
     BuildTestName);
 
 INSTANTIATE_TEST_SUITE_P(API_ReverseAnimationModifierSuite, API_ReverseAnimationModifierTest,
     testing::Combine(
-        testing::Values(TestDefinition { "Keyframe", CreateKeyFrameAnimation },
-            TestDefinition { "Track", CreateTrackAnimation }, TestDefinition { "Parallel", CreateParallelAnimation },
-            TestDefinition { "KeyframeSerialize", CreateKeyFrameAnimation, Serialize },
-            TestDefinition { "TrackSerialize", CreateTrackAnimation, Serialize },
-            TestDefinition { "ParallelSerialize", CreateParallelAnimation, Serialize }),
+        testing::Values(TestDefinition{"Keyframe", CreateKeyFrameAnimation},
+            TestDefinition{"Track", CreateTrackAnimation}, TestDefinition{"Parallel", CreateParallelAnimation},
+            TestDefinition{"KeyframeSerialize", CreateKeyFrameAnimation, Serialize},
+            TestDefinition{"TrackSerialize", CreateTrackAnimation, Serialize},
+            TestDefinition{"ParallelSerialize", CreateParallelAnimation, Serialize}),
         testing::Range(10, 20, 10)),
     BuildTestName);
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

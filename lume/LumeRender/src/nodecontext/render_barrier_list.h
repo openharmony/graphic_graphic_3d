@@ -36,25 +36,25 @@ RENDER_BEGIN_NAMESPACE()
 class RenderBarrierList final {
 public:
     struct BarrierPointBarrierList {
-        uint32_t count { 0u };
-        CommandBarrier* commandBarriers { nullptr };
+        uint32_t count{0u};
+        CommandBarrier* commandBarriers{nullptr};
 
         // linked when going through all barriers
-        BarrierPointBarrierList* nextBarrierPointBarrierList { nullptr };
+        BarrierPointBarrierList* nextBarrierPointBarrierList{nullptr};
     };
     struct BarrierPointBarriers {
         // indirection, usually has only one BarrierPointBarrierList
-        uint32_t barrierListCount { 0u };
-        uint32_t fullCommandBarrierCount { 0u };
+        uint32_t barrierListCount{0u};
+        uint32_t fullCommandBarrierCount{0u};
 
         // pointer to first BarrierPointBarrierList
-        BarrierPointBarrierList* firstBarrierList { nullptr };
+        BarrierPointBarrierList* firstBarrierList{nullptr};
         // pointer to last BarrierPointBarrierList
-        BarrierPointBarrierList* lastBarrierList { nullptr };
+        BarrierPointBarrierList* lastBarrierList{nullptr};
     };
 
     struct LinearAllocatorStruct {
-        uint32_t currentIndex { 0 };
+        uint32_t currentIndex{0};
         BASE_NS::vector<BASE_NS::unique_ptr<LinearAllocator>> allocators;
     };
 
@@ -79,4 +79,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE_RENDER_RENDER_BARRIER_LIST_H
+#endif  // CORE_RENDER_RENDER_BARRIER_LIST_H

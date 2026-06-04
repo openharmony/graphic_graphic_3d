@@ -277,9 +277,9 @@ void ObjectHierarchyObserver::AddImmediateChild(const HierarchyChangedInfo& info
     std::unique_lock lock(mutex_);
     if (info.index < immediateChildren_.size()) {
         immediateChildren_.insert(
-            immediateChildren_.begin() + info.index, ImmediateChild { info.object, info.objectType });
+            immediateChildren_.begin() + info.index, ImmediateChild{info.object, info.objectType});
     } else {
-        immediateChildren_.push_back(ImmediateChild { info.object, info.objectType });
+        immediateChildren_.push_back(ImmediateChild{info.object, info.objectType});
     }
 }
 
@@ -329,7 +329,7 @@ void ObjectHierarchyObserver::Subscribe(
         for (auto&& child : container->GetAll()) {
             if (keepTrackOfImmediate_ && type == HierarchyChangeObjectType::ROOT) {
                 std::unique_lock lock(mutex_);
-                immediateChildren_.push_back(ImmediateChild { child, HierarchyChangeObjectType::CHILD });
+                immediateChildren_.push_back(ImmediateChild{child, HierarchyChangeObjectType::CHILD});
             }
             Subscribe(child, HierarchyChangeObjectType::CHILD, root);
         }
@@ -338,7 +338,7 @@ void ObjectHierarchyObserver::Subscribe(
         if (auto object = GetValue(content->Content())) {
             if (keepTrackOfImmediate_ && type == HierarchyChangeObjectType::ROOT) {
                 std::unique_lock lock(mutex_);
-                immediateChildren_.push_back(ImmediateChild { object, HierarchyChangeObjectType::CONTENT });
+                immediateChildren_.push_back(ImmediateChild{object, HierarchyChangeObjectType::CONTENT});
             }
             Subscribe(object, HierarchyChangeObjectType::CONTENT, root);
         }
@@ -352,7 +352,7 @@ void ObjectHierarchyObserver::AddSubscription(
     {
         std::unique_lock lock(mutex_);
         auto* ptr = listener.get();
-        if (!subscriptions_.insert({ ptr, Subscription(object, BASE_NS::move(listener)) }).second) {
+        if (!subscriptions_.insert({ptr, Subscription(object, BASE_NS::move(listener))}).second) {
             CORE_LOG_E(
                 "Duplicate event subscription for %s:%s", object->GetClassName().data(), object->GetName().data());
         }
@@ -369,7 +369,8 @@ void ObjectHierarchyObserver::Unsubscribe(const IObject::Ptr& root)
 
     if (root->GetInterface(IIterable::UID)) {
         ForEachShared(
-            root, [this](const IObject::Ptr& object) { RemoveSubscription(object); },
+            root,
+            [this](const IObject::Ptr& object) { RemoveSubscription(object); },
             TraversalType::DEPTH_FIRST_PRE_ORDER);
     } else {
         if (const auto container = interface_cast<IContainer>(root)) {
@@ -419,7 +420,7 @@ void ObjectHierarchyObserver::NotifyOnDetach()
         for (auto&& c : ic) {
             if (auto o = c.object.lock()) {
                 // Generate pre transaction notifications (even if coming in wrong time).
-                HierarchyChangedInfo info { o, HierarchyChangeType::REMOVING, c.type, size_t(-1), nullptr };
+                HierarchyChangedInfo info{o, HierarchyChangeType::REMOVING, c.type, size_t(-1), nullptr};
                 Invoke<IOnHierarchyChanged>(META_ACCESS_EVENT(OnHierarchyChanged), info);
                 info.change = HierarchyChangeType::REMOVED;
                 Invoke<IOnHierarchyChanged>(META_ACCESS_EVENT(OnHierarchyChanged), info);
@@ -450,6 +451,6 @@ bool ObjectHierarchyObserver::Detaching(const META_NS::IAttach::Ptr& target)
     return true;
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

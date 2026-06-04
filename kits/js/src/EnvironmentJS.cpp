@@ -51,8 +51,14 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
         &EnvironmentJS::SetEnvironmentRotation>("environmentRotation"));
     // clang-format on
     napi_value func;
-    auto status = napi_define_class(env, "Environment", NAPI_AUTO_LENGTH, BaseObject::ctor<EnvironmentJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Environment",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<EnvironmentJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -77,46 +83,28 @@ void EnvironmentJS::Init(napi_env env, napi_value exports)
     exp.Set("EnvironmentBackgroundType", eType);
 }
 
-void EnvironmentJS::DisposeNative(void* scene)
+void EnvironmentJS::DisposeNative()
 {
-    if (scene == nullptr) {
-        if (!disposed_) {
-            LOG_F("EnvironmentJS::DisposeNative but argument NULL");
-        }
-        return;
-    }
     if (!disposed_) {
         LOG_V("EnvironmentJS::DisposeNative");
         disposed_ = true;
         DisposeBridge(this);
-        if (auto native = GetNativeObject<META_NS::IObject>()) {
-            DetachJsObj(native, "_JSW");
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
-        SceneJS* sceneJS { static_cast<SceneJS*>(scene) };
-        if (sceneJS) {
-            sceneJS->ReleaseStrongDispose(reinterpret_cast<uintptr_t>(&scene_));
-        }
+
+        // TODO: Here we should set scene.environment to null. Can't do it through
+        // SceneJS::SetEnvironment, since it doesn't accept null.
+
         diffuseFactor_.reset();
         specularFactor_.reset();
         environmentFactor_.reset();
-        if (auto env = interface_pointer_cast<IEnvironment>(GetNativeObject())) {
+        if (auto native = GetNativeObject()) {
+            DetachJsObj(native, "_JSW");
             UnsetNativeObject();
-
-            // if we still have javascript scene reference, detach from it.
-            // (if not, then scene has died and we are detaching already)
-            NapiApi::Object sceneJs = scene_.GetNapiObject();
-            if (sceneJs) {
-                napi_value null = nullptr;
-                napi_get_null(sceneJs.GetEnv(), &null);
-                sceneJs.Set("environment", null);
-            }
-            if (sceneJS) {
-                if (auto s = scene_.GetObject<SCENE_NS::IScene>()) {
-                    env->EnvironmentImage()->SetValue(nullptr);
-                    env->RadianceImage()->SetValue(nullptr);
-                    env.reset();
-                    s.reset();
-                }
+            if (auto env = interface_pointer_cast<IEnvironment>(native)) {
+                env->EnvironmentImage()->SetValue(nullptr);
+                env->RadianceImage()->SetValue(nullptr);
             }
         }
     }
@@ -135,7 +123,7 @@ void* EnvironmentJS::GetInstanceImpl(uint32_t id)
 void EnvironmentJS::Finalize(napi_env env)
 {
     // hmm.. do i need to do something BEFORE the object gets deleted..
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -157,7 +145,7 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
     }
 
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("EnvironmentJS",meJs);
+    AddBridge("EnvironmentJS", meJs);
     if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
         sceneJS->StrongDisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
@@ -182,7 +170,7 @@ EnvironmentJS::EnvironmentJS(napi_env e, napi_callback_info i)
 EnvironmentJS::~EnvironmentJS()
 {
     LOG_V("EnvironmentJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
@@ -239,7 +227,7 @@ napi_value EnvironmentJS::GetEnvironmentImage(NapiApi::FunctionContext<>& ctx)
 
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
         SCENE_NS::IBitmap::Ptr image = environment->EnvironmentImage()->GetValue();
-        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
+        napi_value args[] = {scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue()};
         return CreateFromNativeInstance(ctx.Env(), image, PtrType::WEAK, args).ToNapiValue();
     }
     return ctx.GetNull();
@@ -268,7 +256,7 @@ napi_value EnvironmentJS::GetRadianceImage(NapiApi::FunctionContext<>& ctx)
 
     if (auto environment = interface_cast<SCENE_NS::IEnvironment>(GetNativeObject())) {
         SCENE_NS::IBitmap::Ptr image = environment->RadianceImage()->GetValue();
-        napi_value args[] = { scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue() };
+        napi_value args[] = {scene_.GetValue(), NapiApi::Object(ctx.GetEnv()).ToNapiValue()};
         return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::WEAK, args).ToNapiValue();
     }
     return ctx.GetNull();
@@ -299,7 +287,7 @@ napi_value EnvironmentJS::GetIrradianceCoefficients(NapiApi::FunctionContext<>& 
         coeffs = environment->IrradianceCoefficients()->GetValue();
     }
     NapiApi::Env env(ctx.Env());
-    NapiApi::Array res(env, 9); // 9: parm
+    NapiApi::Array res(env, 9);  // 9: parm
     size_t index = 0;
     for (auto& v : coeffs) {
         NapiApi::Object vec(env);
@@ -317,7 +305,7 @@ void EnvironmentJS::SetIrradianceCoefficients(NapiApi::FunctionContext<NapiApi::
     }
 
     NapiApi::Array coeffJS = ctx.Arg<0>();
-    if (coeffJS.Count() != 9) { // 9: size
+    if (coeffJS.Count() != 9) {  // 9: size
         // not enough elements in array
         return;
     }
@@ -451,7 +439,7 @@ napi_value EnvironmentJS::GetEnvironmentRotation(NapiApi::FunctionContext<>& ctx
     }
     return environmentRotation_->Value();
 }
-    
+
 void EnvironmentJS::SetEnvironmentRotation(NapiApi::FunctionContext<NapiApi::Object>& ctx)
 {
     if (!validateSceneRef()) {

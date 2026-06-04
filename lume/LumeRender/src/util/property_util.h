@@ -85,12 +85,12 @@ public:
     BASE_NS::array_view<const uint8_t> GetData() const;
 
     // Uses property handle util
-    template<typename T>
+    template <typename T>
     bool SetValue(const BASE_NS::string_view propertyName, T&& propertyValue)
     {
-        CORE_NS::SetPropertyValue<T>(*this, propertyName, propertyValue);
+        return CORE_NS::SetPropertyValue<T>(*this, propertyName, propertyValue);
     }
-    template<typename T>
+    template <typename T>
     T GetValue(const BASE_NS::string_view propertyName)
     {
         return CORE_NS::GetPropertyValue<T>(*this, propertyName);
@@ -105,7 +105,7 @@ private:
     BASE_NS::vector<CORE_NS::Property> metaData_;
     BASE_NS::vector<uint8_t> data_;
 
-    size_t reservePropertyCount_ { 0 };
+    size_t reservePropertyCount_{0};
 };
 
 /*
@@ -174,17 +174,17 @@ public:
     size_t GetByteSize() const;
 
     // Uses property handle util
-    template<typename T>
+    template <typename T>
     bool SetValue(const BASE_NS::string_view propertyName, T&& propertyValue)
     {
-        CORE_NS::SetPropertyValue<T>(*this, propertyName, propertyValue);
+        return CORE_NS::SetPropertyValue<T>(*this, propertyName, propertyValue);
     }
-    template<typename T>
+    template <typename T>
     T GetValue(const BASE_NS::string_view propertyName)
     {
         return CORE_NS::GetPropertyValue<T>(*this, propertyName);
     }
-    template<typename T>
+    template <typename T>
     T GetValue(size_t index)
     {
         // the casting type needs to be known
@@ -209,7 +209,7 @@ private:
     BASE_NS::vector<Strings> metaStrings_;
     BASE_NS::vector<CORE_NS::Property> metaData_;
     BASE_NS::vector<uint8_t> data_;
-    size_t reservePropertyCount_ { 0 };
+    size_t reservePropertyCount_{0};
 };
 
 /*
@@ -225,4 +225,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_UTIL_PROPERTY_UTIL_H
+#endif  // RENDER_UTIL_PROPERTY_UTIL_H

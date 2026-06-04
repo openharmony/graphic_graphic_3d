@@ -123,7 +123,7 @@ public:
      * @brief Query modifiers attached to the animation.
      * @return A list of modifiers that implement the given interface.
      */
-    template<typename Interface = META_NS::IAnimationModifier>
+    template <typename Interface = META_NS::IAnimationModifier>
     BASE_NS::vector<typename Interface::Ptr> GetModifiers() const
     {
         return CallPtr<IAttach>([](auto& p) { return p.template GetAttachments<Interface>(); });
@@ -154,7 +154,7 @@ public:
 /**
  * @brief Typed wrapper class for objects which implement IKeyframeAnimation.
  */
-template<typename Type>
+template <typename Type>
 class KeyframeAnimation : public PropertyAnimation {
 public:
     META_INTERFACE_OBJECT(KeyframeAnimation<Type>, PropertyAnimation, IKeyframeAnimation)
@@ -185,11 +185,11 @@ public:
     }
 
 private:
-    template<typename PropertyType>
+    template <typename PropertyType>
     void SetAnyPtrProperty(const PropertyType& p, const Type& value)
     {
         if (p) {
-            if (auto pv = p->GetValue()) { // IAny::Ptr
+            if (auto pv = p->GetValue()) {  // IAny::Ptr
                 pv->SetValue(value);
             } else {
                 p->SetValue(ConstructAny<Type>(value));
@@ -201,7 +201,7 @@ private:
 /**
  * @brief Typed wrapper class for objects which implement ITrackAnimation.
  */
-template<typename T>
+template <typename T>
 class TrackAnimation : public PropertyAnimation {
 public:
     META_INTERFACE_OBJECT(TrackAnimation<T>, PropertyAnimation, ITrackAnimation)
@@ -213,7 +213,7 @@ public:
     auto Keyframes() const
     {
         auto kf = GetKeyframesProperty();
-        return kf ? kf->GetValue() : decltype(kf->GetValue()) {};
+        return kf ? kf->GetValue() : decltype(kf->GetValue()){};
     }
     /// Set ITrackAnimation::Keyframes property from a typed array.
     auto& SetKeyframes(const BASE_NS::array_view<const T> keyframes)
@@ -233,7 +233,7 @@ public:
     T GetKeyframe(size_t index) const
     {
         auto kf = GetKeyframesProperty();
-        return kf ? kf->GetValueAt(index) : T {};
+        return kf ? kf->GetValueAt(index) : T{};
     }
     /// @see ITrackAnimation::KeyframeCurves
     META_INTERFACE_OBJECT_ARRAY_PROPERTY(ICurve1D::Ptr, KeyframeCurves, KeyframeCurve)
@@ -356,10 +356,10 @@ public:
     META_INTERFACE_OBJECT(Reverse, InterfaceObject<IAnimationModifier>, IAnimationModifier)
     META_INTERFACE_OBJECT_INSTANTIATE(Reverse, ClassId::ReverseAnimationModifier)
 };
-} // namespace AnimationModifiers
+}  // namespace AnimationModifiers
 
 /// Returns a default object which implements IPropertyAnimation
-template<>
+template <>
 inline auto CreateObjectInstance<IPropertyAnimation>()
 {
     return PropertyAnimation(CreateNew);
@@ -369,7 +369,7 @@ inline auto CreateObjectInstance<IPropertyAnimation>()
  * @brief Returns a default typed animation object for given interface and type.
  * @note Supported interfaces are IKeyframeAnimation and ITrackAnimation
  */
-template<typename Interface, typename Type>
+template <typename Interface, typename Type>
 inline auto CreateObjectInstance()
 {
     constexpr auto isKeyframeAnimation = BASE_NS::is_same_v<Interface, IKeyframeAnimation>;
@@ -384,13 +384,13 @@ inline auto CreateObjectInstance()
 }
 
 /// Returns a default object which implements IKeyframeAnimation
-template<>
+template <>
 inline auto CreateObjectInstance<IParallelAnimation>()
 {
     return ParallelAnimation(CreateNew);
 }
 /// Returns a default object which implements IKeyframeAnimation
-template<>
+template <>
 inline auto CreateObjectInstance<ISequentialAnimation>()
 {
     return SequentialAnimation(CreateNew);
@@ -398,4 +398,4 @@ inline auto CreateObjectInstance<ISequentialAnimation>()
 
 META_END_NAMESPACE()
 
-#endif // META_API_ANIMATION_H
+#endif  // META_API_ANIMATION_H

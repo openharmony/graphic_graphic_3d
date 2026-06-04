@@ -63,7 +63,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -74,7 +74,7 @@ public:
     IRenderNode::ExecuteFlags GetExecuteFlags() const override;
 
     struct EffectProperties {
-        bool enabled { false };
+        bool enabled{false};
         DofConfiguration dofConfiguration;
     };
 
@@ -106,7 +106,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     BASE_NS::Math::Vec4 GetFactorDof() const;
     BASE_NS::Math::Vec4 GetFactorDof2() const;
@@ -145,23 +145,23 @@ private:
     RENDER_NS::RenderHandleReference gpuBuffer_;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
 
-    BASE_NS::Math::UVec2 outputSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 outputSize_{0U, 0U};
 
     struct TemporaryImages {
         uint32_t mipIdx = 0U;
         uint32_t mipImageCount = 0U;
         RenderHandleReference mipImages[2U];
-        uint32_t mipCount[2U] {};
+        uint32_t mipCount[2U]{};
         BASE_NS::Math::UVec2 targetSize;
 
         BindableImage GetMipImage(const RenderHandle& input)
@@ -172,11 +172,11 @@ private:
             if (input == mipImages[mipIdx].GetHandle()) {
                 mipIdx = (mipIdx + 1) % static_cast<uint32_t>(mipImageCount);
             }
-            return { mipImages[mipIdx].GetHandle() };
+            return {mipImages[mipIdx].GetHandle()};
         }
     };
     TemporaryImages ti_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_DOF_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_DOF_NODE_H

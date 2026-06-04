@@ -38,8 +38,8 @@ void MorpherJS::Init(napi_env env, napi_value exports)
     BASE_NS::vector<napi_property_descriptor> props;
 
     napi_value func;
-    auto status = napi_define_class(env, "Morpher", NAPI_AUTO_LENGTH, BaseObject::ctor<MorpherJS>(),
-        nullptr, props.size(), props.data(), &func);
+    auto status = napi_define_class(
+        env, "Morpher", NAPI_AUTO_LENGTH, BaseObject::ctor<MorpherJS>(), nullptr, props.size(), props.data(), &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -54,10 +54,10 @@ void MorpherJS::Init(napi_env env, napi_value exports)
 napi_value MorpherJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     LOG_V("MorpherJS::Dispose");
-    DisposeNative(nullptr);
+    DisposeNative();
     return {};
 }
-void MorpherJS::DisposeNative(void* scene)
+void MorpherJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -80,8 +80,8 @@ void MorpherJS::DisposeNative(void* scene)
         targets_.Reset();
         UnsetNativeObject();
 
-        if (auto* sceneJS = static_cast<SceneJS*>(scene)) {
-            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
         scene_.Reset();
     }
@@ -96,7 +96,7 @@ void* MorpherJS::GetInstanceImpl(uint32_t id)
 }
 void MorpherJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
 }
 MorpherJS::MorpherJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
@@ -106,7 +106,7 @@ MorpherJS::MorpherJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
     if (!fromJs) {
         return;
     }
-    scene_ = { NapiApi::Object(fromJs.Arg<0>()) };
+    scene_ = {NapiApi::Object(fromJs.Arg<0>())};
     NapiApi::Object node = fromJs.Arg<1>();
     const auto native = GetNativeObject();
     if (!native) {
@@ -124,7 +124,7 @@ MorpherJS::MorpherJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 MorpherJS::~MorpherJS()
 {
     LOG_V("MorpherJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
 }
 
 void MorpherJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj)

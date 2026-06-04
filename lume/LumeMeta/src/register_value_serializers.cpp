@@ -32,14 +32,14 @@ META_BEGIN_NAMESPACE()
 namespace Internal {
 
 // workaround for VC bug not being able to handle decltype(out.x) in lambda below
-template<typename T>
+template <typename T>
 static ISerNode::Ptr ExportVector(IExportFunctions& f, const T* v, size_t size)
 {
     return f.ExportToNode(ArrayAny<T>(BASE_NS::array_view<const T>(v, v + size)));
 }
 
 // workaround for VC bug not being able to handle decltype(out.x) in lambda below
-template<typename T, size_t Size>
+template <typename T, size_t Size>
 static bool ImportVector(IImportFunctions& f, const ISerNode::ConstPtr& node, T (&out)[Size])
 {
     ArrayAny<T> arr;
@@ -124,7 +124,8 @@ void RegisterValueSerializers(IObjectRegistry& registry)
         idImport);
 
     RegisterSerializer<TimeSpan>(
-        data, [](IExportFunctions& f, const auto& v) { return f.ExportToNode(Any<int64_t>(v.ToMicroseconds())); },
+        data,
+        [](IExportFunctions& f, const auto& v) { return f.ExportToNode(Any<int64_t>(v.ToMicroseconds())); },
         [](IImportFunctions& f, const ISerNode::ConstPtr& node, auto& out) {
             Any<int64_t> any;
             if (f.ImportFromNode(node, any)) {
@@ -161,5 +162,5 @@ void UnRegisterValueSerializers(IObjectRegistry& registry)
     UnregisterSerializer<BASE_NS::Math::Vec2>(data);
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

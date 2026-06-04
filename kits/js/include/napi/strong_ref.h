@@ -22,11 +22,12 @@
 #include <node_api.h>
 #endif
 
+#include "export.h"
 #include "object.h"
 
 namespace NapiApi {
 
-class StrongRef {
+class SCENE_ADDON_PUBLIC StrongRef {
 public:
     StrongRef() = default;
     StrongRef(napi_env env, napi_value obj);
@@ -50,10 +51,10 @@ public:
 
 private:
     void Ref();
-    napi_env env_ { nullptr };
-    napi_ref ref_ { nullptr };
+    napi_env env_{nullptr};
+    napi_ref ref_{nullptr};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

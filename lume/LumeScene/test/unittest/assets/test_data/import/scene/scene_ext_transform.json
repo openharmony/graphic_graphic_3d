@@ -1,0 +1,25 @@
+{
+	"version": "1.0",
+	"description": "test scene with external node and transform overrides",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "ext1",
+					"source": {
+						"type": "gltf",
+						"url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+					},
+					"resourceGroup": "ext-grp",
+					"position": [1.0, 2.0, 3.0],
+					"scale": [2.0, 2.0, 2.0],
+					"rotation": [0.0, 0.0, 0.7071068, 0.7071068]
+				}
+			]
+		}
+	}
+}

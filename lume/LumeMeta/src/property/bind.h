@@ -56,13 +56,13 @@ private:
     void Reset();
 
 private:
-    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event_ { new EventImpl<IOnChanged>("OnChanged") };
+    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event_{new EventImpl<IOnChanged>("OnChanged")};
     ICallContext::Ptr context_;
     IFunction::ConstPtr func_;
     BASE_NS::vector<INotifyOnChange::ConstWeakPtr> dependencies_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

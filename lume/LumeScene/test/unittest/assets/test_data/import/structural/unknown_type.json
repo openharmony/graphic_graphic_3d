@@ -1,0 +1,7 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "thingThatDoesNotExist",
+		"name": "test"
+	}
+}

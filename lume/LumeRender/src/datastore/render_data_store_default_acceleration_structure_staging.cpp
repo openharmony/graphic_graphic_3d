@@ -51,7 +51,8 @@ void RenderDataStoreDefaultAccelerationStructureStaging::PreRender()
 #endif
 }
 
-void RenderDataStoreDefaultAccelerationStructureStaging::PostRender() {}
+void RenderDataStoreDefaultAccelerationStructureStaging::PostRender()
+{}
 
 void RenderDataStoreDefaultAccelerationStructureStaging::Clear()
 {
@@ -86,13 +87,13 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 
         // next op
         const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
-        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+        staging_.data.push_back({AsConsumeStruct::OperationType::BUILD_OP, index});
 
         auto& prims = staging_.geomTriangles;
         const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
         prims.append(geometries.begin(), geometries.end());
-        staging_.geometry.push_back(AsConsumeStruct::Geom {
+        staging_.geometry.push_back(AsConsumeStruct::Geom{
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES,
             startIndex,
@@ -112,13 +113,13 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 
         // next op
         const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
-        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+        staging_.data.push_back({AsConsumeStruct::OperationType::BUILD_OP, index});
 
         auto& prims = staging_.geomInstances;
         const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
         prims.append(geometries.begin(), geometries.end());
-        staging_.geometry.push_back(AsConsumeStruct::Geom {
+        staging_.geometry.push_back(AsConsumeStruct::Geom{
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_INSTANCES,
             startIndex,
@@ -138,13 +139,13 @@ void RenderDataStoreDefaultAccelerationStructureStaging::BuildAccelerationStruct
 
         // next op
         const uint32_t index = static_cast<uint32_t>(staging_.geometry.size());
-        staging_.data.push_back({ AsConsumeStruct::OperationType::BUILD_OP, index });
+        staging_.data.push_back({AsConsumeStruct::OperationType::BUILD_OP, index});
 
         auto& prims = staging_.geomAabbs;
         const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(geometries.size());
         prims.append(geometries.begin(), geometries.end());
-        staging_.geometry.push_back(AsConsumeStruct::Geom {
+        staging_.geometry.push_back(AsConsumeStruct::Geom{
             buildData,
             GeometryType::CORE_GEOMETRY_TYPE_AABBS,
             startIndex,
@@ -164,13 +165,13 @@ void RenderDataStoreDefaultAccelerationStructureStaging::CopyAccelerationStructu
 
         // next op
         const uint32_t index = static_cast<uint32_t>(staging_.instanceCopyInfo.size());
-        staging_.data.push_back({ AsConsumeStruct::OperationType::INSTANCE_COPY_OP, index });
+        staging_.data.push_back({AsConsumeStruct::OperationType::INSTANCE_COPY_OP, index});
 
         auto& prims = staging_.instanceCopyData;
         const uint32_t startIndex = static_cast<uint32_t>(prims.size());
         const uint32_t count = static_cast<uint32_t>(instances.size());
         prims.append(instances.begin(), instances.end());
-        staging_.instanceCopyInfo.push_back(AsConsumeStruct::CopyTarget {
+        staging_.instanceCopyInfo.push_back(AsConsumeStruct::CopyTarget{
             dstBuffer,
             startIndex,
             count,

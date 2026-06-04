@@ -34,7 +34,7 @@ public:
 
     TonemapETS(const SCENE_NS::IPostProcess::Ptr postProc, const SCENE_NS::ITonemap::Ptr tonemap);
     // store tonemap settings from ETS
-    TonemapETS(const ToneMappingType &type, const float exposure);
+    TonemapETS(const ToneMappingType& type, const float exposure);
     ~TonemapETS();
 
     TonemapETS::ToneMappingType GetType();
@@ -76,14 +76,14 @@ public:
     }
 
 private:
-    inline SCENE_NS::TonemapType ToInternalType(const TonemapETS::ToneMappingType &type);
-    inline TonemapETS::ToneMappingType FromInternalType(const SCENE_NS::TonemapType &type);
+    inline SCENE_NS::TonemapType ToInternalType(const TonemapETS::ToneMappingType& type);
+    inline TonemapETS::ToneMappingType FromInternalType(const SCENE_NS::TonemapType& type);
 
-    ToneMappingType type_;
-    float exposure_;
+    ToneMappingType type_{DEFAULT_TYPE};
+    float exposure_{DEFAULT_EXPOSURE};
 
     SCENE_NS::IPostProcess::WeakPtr postProc_;
     SCENE_NS::ITonemap::WeakPtr tonemap_;  // tonemap object from postproc_
 };
 }  // namespace OHOS::Render3D
-#endif // OHOS_3D_TONEMAP_ETS_H
+#endif  // OHOS_3D_TONEMAP_ETS_H

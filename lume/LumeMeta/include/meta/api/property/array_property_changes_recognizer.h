@@ -23,7 +23,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename ValueType>
+template <typename ValueType>
 struct AddedValue {
     ValueType value;
     int index = 0;
@@ -44,7 +44,7 @@ struct IndexChange {
     }
 };
 
-template<typename ValueType>
+template <typename ValueType>
 struct ArrayChanges {
     BASE_NS::vector<size_t> indexesRemoved;
     BASE_NS::vector<AddedValue<ValueType>> valuesAdded;
@@ -52,7 +52,7 @@ struct ArrayChanges {
 };
 
 /// Helper to keep track of array property changes
-template<typename ValueType>
+template <typename ValueType>
 class ArrayPropertyChangesRecognizer {
 public:
     ArrayPropertyChangesRecognizer() = default;
@@ -72,7 +72,7 @@ public:
         auto newValuesVector = arrayProperty->GetValue();
         auto changes = ArrayChanges<ValueType>();
 
-        { // check for removes
+        {  // check for removes
             BASE_NS::unordered_map<ValueType, size_t> prev;
             for (size_t oldIndex = 0; oldIndex != previousValues_.size(); ++oldIndex) {
                 auto& v = previousValues_[oldIndex];
@@ -84,17 +84,17 @@ public:
             }
         }
 
-        { // check for modifications and additions
+        {  // check for modifications and additions
             BASE_NS::unordered_map<ValueType, size_t> prev;
             for (size_t newIndex = 0; newIndex < newValuesVector.size(); ++newIndex) {
                 auto& v = newValuesVector[newIndex];
                 if (auto p = FindFirstOf(previousValues_, v, prev[v]); p != NPOS) {
                     prev[v] = p + 1;
                     if (p != newIndex) {
-                        changes.positionChanged.push_back({ static_cast<int>(p), static_cast<int>(newIndex) });
+                        changes.positionChanged.push_back({static_cast<int>(p), static_cast<int>(newIndex)});
                     }
                 } else {
-                    changes.valuesAdded.push_back({ v, static_cast<int>(newIndex) });
+                    changes.valuesAdded.push_back({v, static_cast<int>(newIndex)});
                 }
             }
         }

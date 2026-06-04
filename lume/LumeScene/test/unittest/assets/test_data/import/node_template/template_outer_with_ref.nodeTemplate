@@ -1,0 +1,34 @@
+{
+    "version": "1.0",
+    "description": "outer template uses /-anchored objectRef to reference its own sibling AND nests an inner template that does the same",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "node",
+            "name": "outerRoot",
+            "children": [
+                { "type": "node", "name": "outerInner" },
+                {
+                    "type": "node",
+                    "name": "outerExt",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "OuterRefAtt" },
+                                { "name": "NodeRef", "value": { "type": "objectRef", "path": "/outerInner" } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "external",
+                    "name": "innerHost",
+                    "source": { "type": "nodeTemplate", "url": "template_inner_with_ref.nodeTemplate" },
+                    "resourceGroup": "innerGrp"
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

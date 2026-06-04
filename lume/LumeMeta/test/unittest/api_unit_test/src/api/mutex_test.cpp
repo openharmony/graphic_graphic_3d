@@ -36,13 +36,13 @@ UNIT_TEST(API_MutexTest, UniqueLock, testing::ext::TestSize.Level1)
 {
     Mutex m;
     {
-        UniqueLock l { m };
+        UniqueLock l{m};
         EXPECT_TRUE(l);
         l.Unlock();
         EXPECT_FALSE(l);
     }
     {
-        UniqueLock l { m };
+        UniqueLock l{m};
         EXPECT_TRUE(l);
         l.Unlock();
         EXPECT_FALSE(l);
@@ -50,7 +50,7 @@ UNIT_TEST(API_MutexTest, UniqueLock, testing::ext::TestSize.Level1)
         EXPECT_TRUE(l);
     }
     {
-        UniqueLock l { m };
+        UniqueLock l{m};
         EXPECT_TRUE(l);
         UniqueLock l2 = BASE_NS::move(l);
         EXPECT_FALSE(l);
@@ -61,6 +61,6 @@ UNIT_TEST(API_MutexTest, UniqueLock, testing::ext::TestSize.Level1)
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

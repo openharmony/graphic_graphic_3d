@@ -33,16 +33,23 @@ public:
     static constexpr float DEFAULT_RADIUS = 5.0f;
     static constexpr int32_t DEFAULT_COUNT = 16;
 
-    void SetDefaultShadowSampleRadius() { SetRadius(DEFAULT_RADIUS); }
-    void SetDefaultShadowSampleCount() { SetCount(DEFAULT_COUNT); }
+    void SetDefaultShadowSampleRadius()
+    {
+        SetRadius(DEFAULT_RADIUS);
+    }
+    void SetDefaultShadowSampleCount()
+    {
+        SetCount(DEFAULT_COUNT);
+    }
 
     static std::shared_ptr<PCFConfigETS> Create(
         std::optional<float> radiusOpt = std::nullopt, std::optional<int32_t> countOpt = std::nullopt)
     {
         float radius = radiusOpt.value_or(DEFAULT_RADIUS);
         int32_t count = countOpt.value_or(DEFAULT_COUNT);
+
         if (!std::isfinite(radius) || radius < 0.0f || count < 0) {
-            CORE_LOG_E("Unable to create PCFConfigETS: Invalid shadowSampleRadius or shadowSampleCount given.");
+            CORE_LOG_E("Unable to create PCFConfigETS: Invalid shadowSampleRadius or shadowSampleCount given");
             return nullptr;
         }
         return std::shared_ptr<PCFConfigETS>(new PCFConfigETS(radius, count));
@@ -61,5 +68,4 @@ private:
 };
 
 }  // namespace OHOS::Render3D::ShadowConfiguration
-
 #endif  // SHADOW_CONFIGURATION_PCF_CONFIG_ETS_H

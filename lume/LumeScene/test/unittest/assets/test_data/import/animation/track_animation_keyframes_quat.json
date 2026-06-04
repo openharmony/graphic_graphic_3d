@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "quatKeyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [
+			{ "type": "quat", "value": [0.0, 0.0, 0.0, 1.0] },
+			{ "type": "quat", "value": [0.0, 1.0, 0.0, 0.0] }
+		]
+	}
+}

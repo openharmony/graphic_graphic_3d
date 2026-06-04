@@ -73,13 +73,13 @@ public:
         /// Name of the node to find.
         BASE_NS::string_view name;
         /// Maximum number of nodes to return. If 0, return all matching nodes.
-        size_t maxCount {};
+        size_t maxCount{};
         /// Root node to start the search from. If {}, start from the scene's root node.
         INode::Ptr root;
         /// Type of the node, if not given, the system tries to deduce the node type and falls back to generic.
-        META_NS::ObjectId id {};
+        META_NS::ObjectId id{};
         /// Defines how the the hierarchy should be iterated.
-        META_NS::TraversalType traversalType { META_NS::TraversalType::FULL_HIERARCHY };
+        META_NS::TraversalType traversalType{META_NS::TraversalType::FULL_HIERARCHY};
     };
 
     /**
@@ -98,7 +98,7 @@ public:
         auto c = criteria;
         c.maxCount = 1;
         return FindNamedNodes(c).Then([](const BASE_NS::vector<INode::Ptr>& nodes) -> INode::Ptr {
-            return nodes.empty() ? INode::Ptr {} : nodes.front();
+            return nodes.empty() ? INode::Ptr{} : nodes.front();
         });
     }
 
@@ -122,7 +122,7 @@ public:
     struct RemoveObjectOptions {
         /// If true, remove the object also from resource index. In this case the resource cannot be instantiated again
         /// after removal of the target object.
-        bool removeFromResourceIndex { true };
+        bool removeFromResourceIndex{true};
     };
     /**
      * @brief Remove the object and its associated resources from the scene (the underlying ecs)
@@ -151,13 +151,13 @@ public:
         return RemoveObject(interface_pointer_cast<META_NS::IObject>(animation));
     }
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {})
     {
         return CreateNode(path, id).Then([](INode::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);
     }
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) const
     {
         return FindNode(path, id).Then([](INode::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);
@@ -165,7 +165,7 @@ public:
 
     virtual Future<META_NS::IObject::Ptr> CreateObject(META_NS::ObjectId id) = 0;
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> CreateObject(META_NS::ObjectId id)
     {
         return CreateObject(id).Then([](META_NS::IObject::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);
@@ -201,6 +201,11 @@ public:
      * @brief Get resource groups owned by this scene; the first one is the primary group
      */
     virtual ResourceGroupBundle GetResourceGroups() const = 0;
+
+    /**
+     * @brief Get resource associated with this scene
+     */
+    virtual CORE_NS::IResource::Ptr GetResource(const CORE_NS::ResourceId& res) = 0;
 };
 
 META_REGISTER_CLASS(Scene, "ef6321d7-071c-414a-bb3d-55ea6f94688e", META_NS::ObjectCategoryBits::NO_CATEGORY)

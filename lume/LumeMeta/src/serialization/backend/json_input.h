@@ -61,10 +61,10 @@ private:
 private:
     Version metaVersion_;
     SerMetadata metadata_;
-    uint32_t depth_ {};
+    uint32_t depth_{};
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 
 META_END_NAMESPACE()
 

@@ -49,7 +49,7 @@ ReturnError Dependencies::AddDependency(const IProperty::ConstPtr& prop)
                 return GenericError::SUCCESS;
             }
         }
-        deps_.push_back({ prop, depth_ });
+        deps_.push_back({prop, depth_});
     }
     return GenericError::SUCCESS;
 }
@@ -90,16 +90,16 @@ namespace {
 static thread_local Dependencies* deps = nullptr;
 std::mutex gInstanceLock;
 struct link {
-    Dependencies* data {};
-    link* next {};
+    Dependencies* data{};
+    link* next{};
 };
 link* gInstances = nullptr;
-} // namespace
+}  // namespace
 
 void __attribute__((destructor)) DependenciesCalledAtExit()
 {
     // we HOPE that no one is still trying to use anything, as full shutdown is in progress.
-    link* cur {};
+    link* cur{};
     link* next = gInstances;
     gInstances = nullptr;
     while (next) {
@@ -117,11 +117,11 @@ Dependencies& GetDeps()
 {
     if (!deps) {
         deps = new Dependencies;
-        std::unique_lock lock { gInstanceLock };
-        gInstances = new link { deps, gInstances };
+        std::unique_lock lock{gInstanceLock};
+        gInstances = new link{deps, gInstances};
     }
     return *deps;
 }
 #endif
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

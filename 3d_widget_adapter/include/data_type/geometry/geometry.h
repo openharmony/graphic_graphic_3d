@@ -22,25 +22,21 @@
 namespace OHOS::Render3D {
 class Geometry {
 public:
-    Geometry(std::string name, Vec3& position, bool castShadows = false, bool receiveShadows = false) : name_(name),
-        position_(position), castShadows_(castShadows), receiveShadows_(receiveShadows) {};
+    Geometry(std::string name, Vec3& position, bool castShadows = false, bool receiveShadows = false)
+        : name_(name), position_(position), castShadows_(castShadows), receiveShadows_(receiveShadows){};
     virtual ~Geometry() = default;
 
     virtual int32_t GetType() const = 0;
     virtual bool Equals(const Geometry& obj) const
     {
-        return GetType() == obj.GetType()
-            && GetName() == obj.GetName()
-            && CastShadows() == obj.CastShadows()
-            && ReceiveShadows() == obj.ReceiveShadows()
-            && IsEqual(obj);
+        return GetType() == obj.GetType() && GetName() == obj.GetName() && CastShadows() == obj.CastShadows() &&
+               ReceiveShadows() == obj.ReceiveShadows() && IsEqual(obj);
     }
 
     bool PositionEquals(const Geometry& obj)
     {
-        return GetPosition().GetX() == obj.GetPosition().GetX()
-            && GetPosition().GetY() == obj.GetPosition().GetY()
-            && GetPosition().GetZ() == obj.GetPosition().GetZ();
+        return GetPosition().GetX() == obj.GetPosition().GetX() && GetPosition().GetY() == obj.GetPosition().GetY() &&
+               GetPosition().GetZ() == obj.GetPosition().GetZ();
     }
 
     std::string GetName() const
@@ -69,8 +65,8 @@ protected:
 private:
     std::string name_;
     Vec3 position_;
-    bool castShadows_ { false };
-    bool receiveShadows_ { false };
+    bool castShadows_{false};
+    bool receiveShadows_{false};
 };
 
 enum GeometryType {
@@ -78,5 +74,5 @@ enum GeometryType {
     SPHARE,
     CONE,
 };
-} // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_GEOMETRY_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_GEOMETRY_H

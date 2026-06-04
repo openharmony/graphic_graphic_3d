@@ -24,10 +24,10 @@
 #define UNIT_TEST_F(TestFixtureName, TestName, TestType) HWTEST_F(TestFixtureName, TestName, TestType)
 #define UNIT_TEST_P(TestFixtureName, TestName, TestType) HWTEST_P(TestFixtureName, TestName, TestType)
 // HWTYPED_TEST, HWTYPED_TEST_P
-#else // GTest
+#else  // GTest
 #define UNIT_TEST(TestSuiteName, TestName, ...) TEST(TestSuiteName, TestName)
 #define UNIT_TEST_F(TestFixtureName, TestName, ...) TEST_F(TestFixtureName, TestName)
 #define UNIT_TEST_P(TestFixtureName, TestName, ...) TEST_P(TestFixtureName, TestName)
 #endif
 
-#endif // TEST_FRAMEWORK
+#endif  // TEST_FRAMEWORK

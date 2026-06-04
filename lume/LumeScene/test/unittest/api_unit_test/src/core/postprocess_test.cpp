@@ -39,8 +39,8 @@ public:
     }
 
     struct PP {
-        Scene scene { nullptr };
-        PostProcess pp { nullptr };
+        Scene scene{nullptr};
+        PostProcess pp{nullptr};
     };
 
     PP SetupScene()
@@ -593,6 +593,27 @@ UNIT_TEST_F(ScenePluginPostProcessTest, InvalidPostInit, testing::ext::TestSize.
     testProperty("LensFlare");
     testProperty("Upscale");
 }
-} // namespace UTest
+
+/**
+ * @tc.name: ChangeMultipleEnabled
+ * @tc.desc: Tests for Change Multiple Enabled. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(ScenePluginPostProcessTest, Name, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto pp = scene->CreateObject<IPostProcess>(ClassId::PostProcess).GetResult();
+    ASSERT_TRUE(pp);
+
+    auto name = interface_cast<META_NS::INamed>(pp);
+    ASSERT_TRUE(name);
+
+    auto prop = name->Name();
+    ASSERT_TRUE(prop);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

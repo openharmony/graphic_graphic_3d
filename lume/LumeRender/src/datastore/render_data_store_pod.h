@@ -41,11 +41,16 @@ public:
     ~RenderDataStorePod() override = default;
 
     // IRenderDataStore
-    void PreRender() override {}
-    void PostRender() override {}
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
-    void Clear() override {}
+    void PreRender() override
+    {}
+    void PostRender() override
+    {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
+    void Clear() override
+    {}
     uint32_t GetFlags() const override
     {
         return 0;
@@ -91,8 +96,8 @@ private:
     BASE_NS::vector<uint8_t> dataStore_;
 
     struct OffsetToData {
-        uint32_t index { 0 };
-        uint32_t byteSize { 0 };
+        uint32_t index{0};
+        uint32_t byteSize{0};
     };
     BASE_NS::unordered_map<BASE_NS::string, OffsetToData> nameToDataOffset_;
 
@@ -100,8 +105,8 @@ private:
 
     mutable std::mutex mutex_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_POD_H
+#endif  // RENDER_DATA_STORE_RENDER_DATA_STORE_POD_H

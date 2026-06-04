@@ -43,12 +43,17 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
     node_props.push_back(
         GetSetProperty<Object, MaterialPropertyJS, &MaterialPropertyJS::GetSampler, &MaterialPropertyJS::SetSampler>(
             "sampler"));
-    node_props.push_back(
-        MakeTROMethod<FunctionContext<>, MaterialPropertyJS, &MaterialPropertyJS::Dispose>("destroy"));
+    node_props.push_back(MakeTROMethod<FunctionContext<>, MaterialPropertyJS, &MaterialPropertyJS::Dispose>("destroy"));
 
     napi_value func;
-    auto status = napi_define_class(env, "MaterialProperty", NAPI_AUTO_LENGTH, BaseObject::ctor<MaterialPropertyJS>(),
-        nullptr, node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "MaterialProperty",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<MaterialPropertyJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -61,11 +66,11 @@ void MaterialPropertyJS::Init(napi_env env, napi_value exports)
 }
 MaterialPropertyJS::MaterialPropertyJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 {
-    AddBridge("MaterialPropertyJS",NapiApi::FunctionContext(e, i).This());
+    AddBridge("MaterialPropertyJS", NapiApi::FunctionContext(e, i).This());
 }
 MaterialPropertyJS::~MaterialPropertyJS()
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
     if (!GetNativeObject()) {
         return;
@@ -80,16 +85,16 @@ void* MaterialPropertyJS::GetInstanceImpl(uint32_t id)
 }
 napi_value MaterialPropertyJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     return {};
 }
 void MaterialPropertyJS::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
-void MaterialPropertyJS::DisposeNative(void*)
+void MaterialPropertyJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -109,7 +114,7 @@ napi_value MaterialPropertyJS::GetImage(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
     auto image = META_NS::GetValue(texture->Image());
-    napi_value args[] = { ctx.This().ToNapiValue() };
+    napi_value args[] = {ctx.This().ToNapiValue()};
     return CreateFromNativeInstance(ctx.GetEnv(), image, PtrType::STRONG, args).ToNapiValue();
 }
 
@@ -151,7 +156,7 @@ void MaterialPropertyJS::SetFactor(Scene::ITexture::Ptr texture, NapiApi::Object
         auto y = factorJS.Get<float>("y");
         auto z = factorJS.Get<float>("z");
         auto w = factorJS.Get<float>("w");
-        META_NS::SetValue(texture->Factor(), { x, y, z, w });
+        META_NS::SetValue(texture->Factor(), {x, y, z, w});
     }
 }
 
@@ -173,7 +178,7 @@ napi_value MaterialPropertyJS::GetSampler(NapiApi::FunctionContext<>& ctx)
 
     if (auto texture = GetNativeObject<ITexture>()) {
         if (auto sampler = META_NS::GetValue(texture->Sampler())) {
-            napi_value args[] = { ctx.This().ToNapiValue() };
+            napi_value args[] = {ctx.This().ToNapiValue()};
             auto object = CreateFromNativeInstance(ctx.GetEnv(), sampler, PtrType::STRONG, args);
             sampler_ = NapiApi::StrongRef(object);
             return object.ToNapiValue();
@@ -193,8 +198,8 @@ struct SamplerChangeSet {
 
     bool HasChanges() const
     {
-        return minFilter.has_value() || magFilter.has_value() || mipMapMode.has_value() ||
-               addressModeU.has_value() || addressModeV.has_value() || addressModeW.has_value();
+        return minFilter.has_value() || magFilter.has_value() || mipMapMode.has_value() || addressModeU.has_value() ||
+               addressModeV.has_value() || addressModeW.has_value();
     }
 };
 
@@ -219,7 +224,7 @@ void PopulateChanges(SamplerChangeSet& changes, NapiApi::Object& source)
         changes.addressModeW = SamplerJS::ConvertToAddressMode(source.Get<uint32_t>("addressModeW"));
     }
 }
-}
+}  // namespace
 
 void MaterialPropertyJS::SetSampler(Scene::ITexture::Ptr texture, NapiApi::Object source)
 {
@@ -235,7 +240,7 @@ void MaterialPropertyJS::SetSampler(Scene::ITexture::Ptr texture, NapiApi::Objec
     ExecSyncTask([&]() {
         // Apply given object as a changeset on top of default sampler
         if (auto resetable = interface_cast<META_NS::IResetableObject>(target)) {
-            resetable->ResetObject(); // First, reset to default state
+            resetable->ResetObject();  // First, reset to default state
         }
         // Then apply those properties that have been set in our input object
         if (changes.HasChanges()) {
@@ -258,7 +263,7 @@ void MaterialPropertyJS::SetSampler(Scene::ITexture::Ptr texture, NapiApi::Objec
                 META_NS::SetValue(target->AddressModeW(), changes.addressModeW.value());
             }
         }
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 }
 

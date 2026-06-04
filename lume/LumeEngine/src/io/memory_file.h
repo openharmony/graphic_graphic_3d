@@ -34,7 +34,8 @@ class MemoryFileStorage {
 public:
     MemoryFileStorage() = default;
     ~MemoryFileStorage() = default;
-    explicit MemoryFileStorage(ByteBuffer&& buffer) : buffer_(BASE_NS::move(buffer)) {}
+    explicit MemoryFileStorage(ByteBuffer&& buffer) : buffer_(BASE_NS::move(buffer))
+    {}
 
     const ByteBuffer& GetStorage() const
     {
@@ -87,10 +88,10 @@ protected:
     }
 
 private:
-    uint64_t index_ { 0 };
+    uint64_t index_{0};
     BASE_NS::shared_ptr<MemoryFileStorage> buffer_;
-    Mode mode_ { Mode::INVALID };
+    Mode mode_{Mode::INVALID};
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_MEMORY_FILE_H
+#endif  // CORE_IO_MEMORY_FILE_H

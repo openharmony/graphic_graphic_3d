@@ -20,7 +20,8 @@
 #include <base/math/vector.h>
 
 #include "PropertyProxy.h"
-class Vec3Proxy : public ObjectPropertyProxy {
+#include "export.h"
+class SCENE_ADDON_PUBLIC Vec3Proxy : public ObjectPropertyProxy {
 public:
     Vec3Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec3> prop);
     ~Vec3Proxy() override;
@@ -28,8 +29,9 @@ public:
 
     static BASE_NS::Math::Vec3 ToNative(NapiApi::Object vec3, bool& success);
     static NapiApi::Object ToNapiObject(BASE_NS::Math::Vec3 vec3, napi_env env);
+
 private:
-    void SetValue(const BASE_NS::Math::Vec3& v);
+    void SetNativeValue(const BASE_NS::Math::Vec3& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };

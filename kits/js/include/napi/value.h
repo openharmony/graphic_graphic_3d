@@ -25,14 +25,15 @@
 #include <base/containers/string.h>
 #include <base/containers/type_traits.h>
 
+#include "export.h"
 #include "utils.h"
 
 namespace NapiApi {
 
-template<typename type>
-class Value {
-    napi_env env_ { nullptr };
-    napi_value value_ { nullptr };
+template <typename type>
+class SCENE_ADDON_PUBLIC Value {
+    napi_env env_{nullptr};
+    napi_value value_{nullptr};
     napi_valuetype jstype = napi_undefined;
 
 public:
@@ -118,6 +119,6 @@ public:
     type valueOrDefault(const type defaultValue = {});
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

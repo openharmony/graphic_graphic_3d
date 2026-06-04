@@ -45,15 +45,15 @@ MyInstanceState::~MyInstanceState()
 {
     uint32_t res;
 #ifdef __OHOS_PLATFORM__
-// make sure that reference will be destroyed if it is held by us only
-        uint32_t result{};
-        napi_reference_ref(env_, ref_, &result);
-        if (result <=2) {
-            napi_delete_reference(env_, ref_);
-            return;
-        } else {
-           napi_reference_unref(env_, ref_, &res);
-        }
+    // make sure that reference will be destroyed if it is held by us only
+    uint32_t result{};
+    napi_reference_ref(env_, ref_, &result);
+    if (result <= 2) {  // 2: res
+        napi_delete_reference(env_, ref_);
+        return;
+    } else {
+        napi_reference_unref(env_, ref_, &res);
+    }
 #endif
     napi_reference_unref(env_, ref_, &res);
 }
@@ -101,14 +101,14 @@ public:
             cb(env, data, hint);
         }
     }
-    workaround(napi_env e, void* d, napi_finalize c, void* h) : env(e), data(d), cb(c), hint(h) {};
-    napi_finalize cb { nullptr };
-    void* hint { nullptr };
-    void* data { nullptr };
-    napi_env env { nullptr };
+    workaround(napi_env e, void* d, napi_finalize c, void* h) : env(e), data(d), cb(c), hint(h){};
+    napi_finalize cb{nullptr};
+    void* hint{nullptr};
+    void* data{nullptr};
+    napi_env env{nullptr};
 };
 BASE_NS::unordered_map<uintptr_t, workaround> workaround_data;
-}; // namespace
+};  // namespace
 #endif
 void MyInstanceState::GetInstance(napi_env env, void** data)
 {
@@ -141,7 +141,7 @@ void MyInstanceState::SetInstance(napi_env env, void* data, napi_finalize finali
         wd.hint = finalize_hint;
         return;
     }
-    workaround_data.insert({ (uintptr_t)env, { env, data, finalize_cb, finalize_hint } });
+    workaround_data.insert({(uintptr_t)env, {env, data, finalize_cb, finalize_hint}});
 #else
     napi_set_instance_data(env, data, finalize_cb, finalize_hint);
 #endif
@@ -159,8 +159,8 @@ napi_value MyInstanceState::FetchCtor(BASE_NS::string_view name)
     return exp.Get(name);
 }
 
-template<typename type>
-bool ValidateType(napi_valuetype jstype, bool isArray)
+template <typename type>
+SCENE_ADDON_PUBLIC bool ValidateType(napi_valuetype jstype, bool isArray)
 {
     /*
       napi_undefined,
@@ -283,23 +283,23 @@ bool ValidateType(napi_valuetype jstype, bool isArray)
     return false;
 }
 
-template bool ValidateType<BASE_NS::string>(napi_valuetype, bool);
-template bool ValidateType<bool>(napi_valuetype, bool);
-template bool ValidateType<std::optional<bool>>(napi_valuetype, bool);
-template bool ValidateType<float>(napi_valuetype, bool);
-template bool ValidateType<std::optional<float>>(napi_valuetype, bool);
-template bool ValidateType<double>(napi_valuetype, bool);
-template bool ValidateType<uint8_t>(napi_valuetype, bool);
-template bool ValidateType<int8_t>(napi_valuetype, bool);
-template bool ValidateType<uint16_t>(napi_valuetype, bool);
-template bool ValidateType<int16_t>(napi_valuetype, bool);
-template bool ValidateType<uint32_t>(napi_valuetype, bool);
-template bool ValidateType<std::optional<uint32_t>>(napi_valuetype, bool);
-template bool ValidateType<int32_t>(napi_valuetype, bool);
-template bool ValidateType<int64_t>(napi_valuetype, bool);
-template bool ValidateType<uint64_t>(napi_valuetype, bool);
-template bool ValidateType<NapiApi::Object>(napi_valuetype, bool);
-template bool ValidateType<NapiApi::Function>(napi_valuetype, bool);
-template bool ValidateType<NapiApi::Array>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<BASE_NS::string>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<bool>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<std::optional<bool>>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<float>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<std::optional<float>>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<double>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<uint8_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<int8_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<uint16_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<int16_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<uint32_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<std::optional<uint32_t>>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<int32_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<int64_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<uint64_t>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<NapiApi::Object>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<NapiApi::Function>(napi_valuetype, bool);
+template SCENE_ADDON_PUBLIC bool ValidateType<NapiApi::Array>(napi_valuetype, bool);
 
-} // namespace NapiApi
+}  // namespace NapiApi

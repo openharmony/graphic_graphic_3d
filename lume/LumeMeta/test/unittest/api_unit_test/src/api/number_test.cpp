@@ -51,13 +51,13 @@ UNIT_TEST(API_NumberTest, Values, testing::ext::TestSize.Level1)
     EXPECT_EQ(en.Get<MyEnum>(), MyEnum::TWO);
 }
 
-template<class T>
+template <class T>
 void GetSetNumber(const IAny::Ptr& any, T value)
 {
     auto typeId = META_NS::UidFromType<T>();
     auto size = sizeof(T);
     EXPECT_TRUE(any->SetData(typeId, &value, size));
-    T current {};
+    T current{};
     EXPECT_TRUE(any->GetData(typeId, &current, size));
     EXPECT_EQ(value, current);
 
@@ -121,7 +121,7 @@ UNIT_TEST(API_NumberTest, Functions, testing::ext::TestSize.Level1)
     auto number = META_NS::GetObjectRegistry().Create<IAny>(META_NS::ClassId::Number);
     ASSERT_TRUE(number);
 
-    auto any = META_NS::Any<IObject::Ptr>(); // Invalid type for Number
+    auto any = META_NS::Any<IObject::Ptr>();  // Invalid type for Number
 
     EXPECT_FALSE(number->SetData({}, nullptr, 0));
     EXPECT_FALSE(number->GetData({}, nullptr, 0));
@@ -135,11 +135,11 @@ UNIT_TEST(API_NumberTest, Functions, testing::ext::TestSize.Level1)
     EXPECT_TRUE(number->Clone(opt));
     opt.role = META_NS::TypeIdRole::ARRAY;
     EXPECT_FALSE(number->Clone(opt));
-    EXPECT_NE(number->GetTypeId(META_NS::TypeIdRole::ITEM), META_NS::TypeId {});
-    EXPECT_NE(number->GetTypeId(META_NS::TypeIdRole::ARRAY), META_NS::TypeId {});
+    EXPECT_NE(number->GetTypeId(META_NS::TypeIdRole::ITEM), META_NS::TypeId{});
+    EXPECT_NE(number->GetTypeId(META_NS::TypeIdRole::ARRAY), META_NS::TypeId{});
     EXPECT_FALSE(number->GetTypeIdString().empty());
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

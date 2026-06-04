@@ -26,7 +26,7 @@
 #include <core/plugin/intf_class_register.h>
 
 CORE3D_BEGIN_NAMESPACE()
-constexpr uint32_t CORE3D_PROFILER_DEFAULT_COLOR { 0xffa000 };
+constexpr uint32_t CORE3D_PROFILER_DEFAULT_COLOR{0xffa000};
 CORE_NS::IPluginRegister& GetPluginRegister();
 CORE3D_END_NAMESPACE()
 
@@ -147,7 +147,7 @@ CORE3D_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
 /** Get class instance from specified class registry */
-template<class T>
+template <class T>
 auto GetInstance(const CORE_NS::IClassRegister& registry, const BASE_NS::Uid& uid)
 {
     CORE_NS::IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
@@ -158,7 +158,7 @@ auto GetInstance(const CORE_NS::IClassRegister& registry, const BASE_NS::Uid& ui
 }
 
 /** Get class instance from specified class registry */
-template<class T>
+template <class T>
 auto GetInstance(const CORE_NS::IClassRegister* registry, const BASE_NS::Uid& uid)
 {
     if (!registry) {
@@ -168,14 +168,14 @@ auto GetInstance(const CORE_NS::IClassRegister* registry, const BASE_NS::Uid& ui
 }
 
 /** Get interface from global registry */
-template<class T>
+template <class T>
 auto GetInstance(const BASE_NS::Uid& uid)
 {
     return CORE3D_NS::GetInstance<T>(CORE3D_NS::GetPluginRegister().GetClassRegister(), uid);
 }
 
 /** Create interface from specified interface registry */
-template<class T>
+template <class T>
 auto CreateInstance(CORE_NS::IClassFactory& factory, const BASE_NS::Uid& uid)
 {
     // Create the instance
@@ -188,7 +188,7 @@ auto CreateInstance(CORE_NS::IClassFactory& factory, const BASE_NS::Uid& uid)
 
 inline CORE_NS::ILogger* GetPluginLogger()
 {
-    static CORE_NS::ILogger* gPluginGlobalLogger { nullptr };
+    static CORE_NS::ILogger* gPluginGlobalLogger{nullptr};
     if (gPluginGlobalLogger == nullptr) {
         gPluginGlobalLogger = CORE3D_NS::GetInstance<CORE_NS::ILogger>(
             CORE3D_NS::GetPluginRegister().GetClassRegister(), CORE_NS::UID_LOGGER);
@@ -243,4 +243,4 @@ inline void PluginCheckOnceReset(const BASE_NS::string_view /* id */)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_UTIL_LOG_H
+#endif  // CORE3D_UTIL_LOG_H

@@ -32,7 +32,8 @@ class ConstTypelessPropertyInterface {
 public:
     using PropertyType = const IProperty*;
 
-    explicit ConstTypelessPropertyInterface(PropertyType p) : p_(p) {}
+    explicit ConstTypelessPropertyInterface(PropertyType p) : p_(p)
+    {}
 
     BASE_NS::string GetName() const
     {
@@ -97,12 +98,12 @@ public:
         return interface_cast<IStackProperty>(p_);
     }
 
-    template<typename Interface>
+    template <typename Interface>
     BASE_NS::vector<typename Interface::Ptr> GetModifiers() const
     {
         BASE_NS::vector<typename Interface::Ptr> res;
         if (auto i = interface_cast<IStackProperty>(p_)) {
-            const TypeId view[] = { Interface::UID };
+            const TypeId view[] = {Interface::UID};
             for (auto& v : i->GetModifiers(view, true)) {
                 res.push_back(interface_pointer_cast<Interface>(v));
             }
@@ -113,7 +114,7 @@ public:
     IFunction::ConstPtr GetBind() const
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
-            const TypeId binds[] = { IBind::UID };
+            const TypeId binds[] = {IBind::UID};
             auto vec = i->GetValues(binds, false);
             if (!vec.empty()) {
                 if (auto bind = interface_cast<IBind>(vec.back())) {
@@ -132,7 +133,8 @@ class TypelessPropertyInterface : public ConstTypelessPropertyInterface {
 public:
     using PropertyType = IProperty*;
 
-    TypelessPropertyInterface(PropertyType p) : ConstTypelessPropertyInterface(p), p_(p) {}
+    TypelessPropertyInterface(PropertyType p) : ConstTypelessPropertyInterface(p), p_(p)
+    {}
 
     AnyReturnValue SetValueAny(const IAny& any)
     {
@@ -147,7 +149,7 @@ public:
         return AnyReturn::FAIL;
     }
 
-    template<typename Intf>
+    template <typename Intf>
     ReturnError PushValue(const BASE_NS::shared_ptr<Intf>& value)
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
@@ -158,7 +160,7 @@ public:
         return GenericError::FAIL;
     }
 
-    template<typename Intf>
+    template <typename Intf>
     ReturnError RemoveValue(const BASE_NS::shared_ptr<Intf>& value)
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
@@ -218,7 +220,7 @@ public:
     void ResetBind()
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
-            const TypeId binds[] = { IBind::UID };
+            const TypeId binds[] = {IBind::UID};
             auto vec = i->GetValues(binds, false);
             if (!vec.empty()) {
                 i->RemoveValue(vec.back());
@@ -262,11 +264,11 @@ protected:
     PropertyType p_;
 };
 
-template<typename Type>
+template <typename Type>
 using PropertyBaseType =
     BASE_NS::conditional_t<BASE_NS::is_const_v<Type>, ConstTypelessPropertyInterface, TypelessPropertyInterface>;
 
-template<typename Type>
+template <typename Type>
 class PropertyInterface : public PropertyBaseType<Type> {
     using Super = PropertyBaseType<Type>;
     using Super::p_;
@@ -275,11 +277,12 @@ public:
     using ValueType = BASE_NS::remove_const_t<Type>;
     using PropertyType = typename Super::PropertyType;
 
-    explicit PropertyInterface(PropertyType p) : Super(p) {}
+    explicit PropertyInterface(PropertyType p) : Super(p)
+    {}
 
     ValueType GetDefaultValue() const
     {
-        ValueType v {};
+        ValueType v{};
         this->GetDefaultValueAny().GetValue(v);
         return v;
     }
@@ -300,7 +303,7 @@ public:
 
     ValueType GetValue() const
     {
-        ValueType v {};
+        ValueType v{};
         this->GetValueAny().GetValue(v);
         return v;
     }
@@ -311,7 +314,7 @@ public:
     }
 };
 
-template<typename Type>
+template <typename Type>
 class TypedPropertyLock final : public PropertyInterface<Type> {
     using PropertyType = typename PropertyInterface<Type>::PropertyType;
     using IT = PropertyInterface<Type>;
@@ -331,9 +334,12 @@ public:
             i->Lock();
         }
     }
-    explicit TypedPropertyLock(PropertyType p) : TypedPropertyLock(NOCHECK, CanConstructFrom(p) ? p : nullptr) {}
-    explicit TypedPropertyLock(const IProperty::Ptr& p) : TypedPropertyLock(p.get()) {}
-    explicit TypedPropertyLock(const IProperty::ConstPtr& p) : TypedPropertyLock(p.get()) {}
+    explicit TypedPropertyLock(PropertyType p) : TypedPropertyLock(NOCHECK, CanConstructFrom(p) ? p : nullptr)
+    {}
+    explicit TypedPropertyLock(const IProperty::Ptr& p) : TypedPropertyLock(p.get())
+    {}
+    explicit TypedPropertyLock(const IProperty::ConstPtr& p) : TypedPropertyLock(p.get())
+    {}
     ~TypedPropertyLock()
     {
         if (auto i = interface_cast<ILockable>(this->GetProperty())) {
@@ -357,7 +363,7 @@ public:
     }
 };
 
-template<typename Property>
+template <typename Property>
 class PropertyLock final : public PropertyBaseType<Property> {
     using InterfaceType = PropertyBaseType<Property>*;
 
@@ -370,7 +376,8 @@ public:
             i->Lock();
         }
     }
-    explicit PropertyLock(BASE_NS::shared_ptr<Property> p) : PropertyLock(p.get()) {}
+    explicit PropertyLock(BASE_NS::shared_ptr<Property> p) : PropertyLock(p.get())
+    {}
     ~PropertyLock()
     {
         if (auto i = interface_cast<ILockable>(this->GetProperty())) {

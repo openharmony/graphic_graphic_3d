@@ -126,8 +126,8 @@ inline CameraSceneFlag operator|(CameraSceneFlag l, CameraSceneFlag r)
 }
 
 struct ColorFormat {
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
-    uint32_t usageFlags {};
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
+    uint32_t usageFlags{};
 };
 
 enum class CameraSampleCount : uint8_t {

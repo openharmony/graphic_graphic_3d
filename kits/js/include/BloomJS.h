@@ -14,9 +14,11 @@
  */
 #ifndef BLOOM_JS_H
 #define BLOOM_JS_H
+#include <optional>
 #include <napi_api.h>
 #include <scene/interface/intf_scene.h>
-class BloomConfiguration {
+#include "export.h"
+class SCENE_ADDON_PUBLIC BloomConfiguration {
 public:
     enum class Quality : uint32_t { LOW = 1, NORMAL = 2, HIGH = 3 };
     enum class Type : uint32_t { NORMAL = 1, HORIZONTAL = 2, VERTICAL = 3, BILATERAL = 4 };
@@ -41,37 +43,37 @@ private:
     napi_value GetAmount(NapiApi::FunctionContext<>& ctx);
     void SetAmount(NapiApi::FunctionContext<float>& ctx);
     napi_value GetThresholdSoft(NapiApi::FunctionContext<>& ctx);
-    void SetThresholdSoft(NapiApi::FunctionContext<float>& ctx);
+    void SetThresholdSoft(NapiApi::FunctionContext<std::optional<float>>& ctx);
     napi_value GetThresholdHard(NapiApi::FunctionContext<>& ctx);
-    void SetThresholdHard(NapiApi::FunctionContext<float>& ctx);
+    void SetThresholdHard(NapiApi::FunctionContext<std::optional<float>>& ctx);
 
     napi_value GetScatter(NapiApi::FunctionContext<>& ctx);
-    void SetScatter(NapiApi::FunctionContext<float>& ctx);
+    void SetScatter(NapiApi::FunctionContext<std::optional<float>>& ctx);
     napi_value GetScaleFactor(NapiApi::FunctionContext<>& ctx);
-    void SetScaleFactor(NapiApi::FunctionContext<float>& ctx);
+    void SetScaleFactor(NapiApi::FunctionContext<std::optional<float>>& ctx);
 
     napi_value GetType(NapiApi::FunctionContext<>& ctx);
     void SetType(NapiApi::FunctionContext<uint32_t>& ctx);
     napi_value GetQuality(NapiApi::FunctionContext<>& ctx);
     void SetQuality(NapiApi::FunctionContext<uint32_t>& ctx);
 
-    template<napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
+    template <napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
     static napi_value Method(napi_env env, napi_callback_info info);
 
-    template<napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
+    template <napi_value (BloomConfiguration::*F)(NapiApi::FunctionContext<>&)>
     static napi_value Getter(napi_env env, napi_callback_info info);
-    template<typename Type, void (BloomConfiguration::*F)(NapiApi::FunctionContext<Type>&)>
+    template <typename Type, void (BloomConfiguration::*F)(NapiApi::FunctionContext<Type>&)>
     static inline napi_value Setter(napi_env env, napi_callback_info info);
-    SCENE_NS::IPostProcess::Ptr postproc_; // postprocess object owning the bloom
-    SCENE_NS::IBloom::Ptr bloom_;          // bloom object from postproc_
-    napi_ref ref_ { nullptr };
-    float thresholdHard_ { 1.0f };
-    float thresholdSoft_ { 2.0f };
-    float amountCoefficient_ { 0.25f };
-    float scatter_ { 1.0f };
-    float scaleFactor_ { 1.0f };
-    BloomConfiguration::Type type_ { BloomConfiguration::Type::NORMAL };
-    BloomConfiguration::Quality quality_ { BloomConfiguration::Quality::NORMAL };
+    SCENE_NS::IPostProcess::Ptr postproc_;  // postprocess object owning the bloom
+    SCENE_NS::IBloom::Ptr bloom_;           // bloom object from postproc_
+    napi_ref ref_{nullptr};
+    float thresholdHard_{1.0f};
+    float thresholdSoft_{2.0f};
+    float amountCoefficient_{0.25f};
+    float scatter_{1.0f};
+    float scaleFactor_{1.0f};
+    BloomConfiguration::Type type_{BloomConfiguration::Type::NORMAL};
+    BloomConfiguration::Quality quality_{BloomConfiguration::Quality::NORMAL};
     SCENE_NS::EffectQualityType GetQuality(BloomConfiguration::Quality bloomQualityType);
     BloomConfiguration::Quality SetQuality(SCENE_NS::EffectQualityType bloomQualityType);
 

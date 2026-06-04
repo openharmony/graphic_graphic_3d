@@ -16,7 +16,6 @@
 #include "effect.h"
 
 #include <scene/ext/intf_internal_scene.h>
-#include <set>
 
 #include <3d/implementation_uids.h>
 #include <3d/render/intf_render_node_scene_util.h>
@@ -43,6 +42,33 @@ constexpr auto LENS_FLARE_TYPE = PROPERTYTYPE(RENDER_NS::LensFlareConfiguration)
 constexpr auto UPSCALE_TYPE = PROPERTYTYPE(RENDER_NS::UpscaleConfiguration);
 constexpr auto WHITE_BALANCE_TYPE = PROPERTYTYPE(RENDER_NS::WhiteBalanceConfiguration);
 
+// PostProcess struct property types we should traverse into even though they are known meta types.
+static constexpr uint64_t KNOWN_POST_PROCESS_TYPES[] = {BLOOM_TYPE,
+    VIGNETTE_TYPE,
+    COLOR_FRINGE_TYPE,
+    DITHER_TYPE,
+    BLUR_TYPE,
+    TONEMAP_TYPE,
+    COLOR_ADJUSTMENTS_TYPE,
+    COLOR_CONVERSION_TYPE,
+    FXAA_TYPE,
+    TAA_TYPE,
+    DOF_TYPE,
+    MOTION_BLUR_TYPE,
+    LENS_FLARE_TYPE,
+    UPSCALE_TYPE,
+    WHITE_BALANCE_TYPE};
+
+static bool IsKnownPostProcessType(uint64_t type)
+{
+    for (auto t : KNOWN_POST_PROCESS_TYPES) {
+        if (t == type) {
+            return true;
+        }
+    }
+    return false;
+}
+
 SCENE_BEGIN_NAMESPACE()
 
 bool Effect::Build(const META_NS::IMetadata::Ptr& data)
@@ -55,9 +81,11 @@ bool Effect::Build(const META_NS::IMetadata::Ptr& data)
 
 void Effect::Destroy()
 {
+    if (valueManager_) {
+        valueManager_->SetDirtyNotifier(nullptr);
+    }
     pp_.reset();
     scene_.reset();
-    syncPropertiesCallable_.reset();
     Super::Destroy();
 }
 
@@ -72,7 +100,7 @@ Future<bool> Effect::InitializeEffect(const BASE_NS::shared_ptr<IScene>& scene, 
         return {};
     }
     auto is = scene->GetInternalScene();
-    return is->AddTaskOrRunDirectly([=, self = BASE_NS::weak_ptr { GetSelf() }]() {
+    return is->AddTaskOrRunDirectly([=, self = BASE_NS::weak_ptr{GetSelf()}]() {
         auto me = self.lock();
         if (me) {
             if (pp_) {
@@ -98,6 +126,14 @@ bool Effect::CreateEffect()
         if (auto scene = scene_.lock()) {
             valueManager_ =
                 META_NS::GetObjectRegistry().Create<META_NS::IEngineValueManager>(META_NS::ClassId::EngineValueManager);
+            valueManager_->SetDirtyNotifier(META_NS::MakeCallback<META_NS::IOnChanged>(
+                [self = BASE_NS::weak_ptr(GetSelf<META_NS::IEnginePropertySync>()), sc = scene_] {
+                    if (auto me = self.lock()) {
+                        if (auto s = sc.lock()) {
+                            s->SchedulePropertyUpdate(me);
+                        }
+                    }
+                }));
             if (auto fac = scene->GetRenderContext().GetInterface<CORE_NS::IClassFactory>()) {
                 if (pp_ = CORE_NS::CreateInstance<RENDER_NS::IRenderPostProcess>(*fac, effectClassId_); pp_) {
                     PopulateProperties();
@@ -117,12 +153,6 @@ void Effect::PopulateProperties()
     META_NS::EnginePropertyHandle h;
     h.handle = pp_->GetProperties();
 
-    // List of know PostProcess property types that we should traverse into (even if they are known types by our meta
-    // system)
-    static std::set<uint64_t> knownPostProcesses = { BLOOM_TYPE, VIGNETTE_TYPE, COLOR_FRINGE_TYPE, DITHER_TYPE,
-        BLUR_TYPE, TONEMAP_TYPE, COLOR_ADJUSTMENTS_TYPE, COLOR_CONVERSION_TYPE, FXAA_TYPE, TAA_TYPE, DOF_TYPE,
-        MOTION_BLUR_TYPE, LENS_FLARE_TYPE, UPSCALE_TYPE, WHITE_BALANCE_TYPE };
-
     BASE_NS::vector<META_NS::IEngineValue::Ptr> valid;
     BASE_NS::vector<META_NS::IEngineValue::Ptr> values;
     META_NS::EngineValueOptions opt;
@@ -134,7 +164,7 @@ void Effect::PopulateProperties()
                 auto p = internal->GetPropertyParams();
                 // First check if the property type is on our list of known post process struct types (we should
                 // traverse inside it)
-                if (knownPostProcesses.find(p.property.type) == knownPostProcesses.end()) {
+                if (!IsKnownPostProcessType(p.property.type)) {
                     if (auto access =
                             META_NS::GetObjectRegistry().GetEngineData().GetInternalValueAccess(p.property.type)) {
                         valid.push_back(v);
@@ -158,24 +188,6 @@ void Effect::PopulateProperties()
     AddProperties(valid);
 }
 
-void Effect::AddPropertyUpdateHook(const META_NS::IProperty::Ptr& prop)
-{
-    if (prop) {
-        if (!syncPropertiesCallable_) {
-            syncPropertiesCallable_ = META_NS::MakeCallback<META_NS::IOnChanged>(
-                [this, self = BASE_NS::weak_ptr(GetSelf<META_NS::IEnginePropertySync>())] {
-                    if (auto me = self.lock()) {
-                        if (auto scene = scene_.lock()) {
-                            // Scene will call Effect::SyncProperties()
-                            scene->SchedulePropertyUpdate(me);
-                        }
-                    }
-                });
-        }
-        prop->OnChanged()->AddHandler(syncPropertiesCallable_);
-    }
-}
-
 void Effect::SyncProperties()
 {
     if (valueManager_) {
@@ -197,7 +209,6 @@ void Effect::AddProperties(BASE_NS::array_view<const META_NS::IEngineValue::Ptr>
             if (auto i = interface_cast<META_NS::IStackProperty>(p)) {
                 i->PushValue(v);
                 i->SetDefaultValue(v->GetValue());
-                AddPropertyUpdateHook(p);
             }
         } else {
             // Rest of the properties we just expose as is (without the possible struct name, e.g.
@@ -209,7 +220,6 @@ void Effect::AddProperties(BASE_NS::array_view<const META_NS::IEngineValue::Ptr>
                     CORE_NS::PropertySystem::PropertyTypeDeclFromType<CORE_NS::IPropertyHandle*>()) {
                     auto p = META_NS::PropertyFromEngineValue(name, v);
                     meta->AddProperty(p);
-                    AddPropertyUpdateHook(p);
                 }
             }
         }

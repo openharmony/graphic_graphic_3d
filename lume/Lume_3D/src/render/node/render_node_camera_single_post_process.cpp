@@ -47,21 +47,21 @@ using namespace RENDER_NS;
 
 CORE3D_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr uint32_t GLOBAL_POST_PROCESS_SET { 0u };
-constexpr string_view RENDER_DATA_STORE_POD_NAME { "RenderDataStorePod" };
-constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME { "RenderDataStorePostProcess" };
+constexpr uint32_t GLOBAL_POST_PROCESS_SET{0u};
+constexpr string_view RENDER_DATA_STORE_POD_NAME{"RenderDataStorePod"};
+constexpr string_view RENDER_DATA_STORE_POST_PROCESS_NAME{"RenderDataStorePostProcess"};
 
-constexpr string_view CORE_DEFAULT_GPU_IMAGE_BLACK { "CORE_DEFAULT_GPU_IMAGE" };
-constexpr string_view CORE_DEFAULT_GPU_IMAGE_WHITE { "CORE_DEFAULT_GPU_IMAGE_WHITE" };
+constexpr string_view CORE_DEFAULT_GPU_IMAGE_BLACK{"CORE_DEFAULT_GPU_IMAGE"};
+constexpr string_view CORE_DEFAULT_GPU_IMAGE_WHITE{"CORE_DEFAULT_GPU_IMAGE_WHITE"};
 
 constexpr string_view INPUT = "input";
 constexpr string_view OUTPUT = "output";
 #if (CORE3D_VALIDATION_ENABLED == 1)
-constexpr string_view POST_PROCESS_BASE_PIPELINE_LAYOUT { "renderpipelinelayouts://post_process_common.shaderpl" };
+constexpr string_view POST_PROCESS_BASE_PIPELINE_LAYOUT{"renderpipelinelayouts://post_process_common.shaderpl"};
 #endif
-constexpr string_view POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT { "3dpipelinelayouts://core3d_post_process.shaderpl" };
+constexpr string_view POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT{"3dpipelinelayouts://core3d_post_process.shaderpl"};
 
 #if (CORE3D_VALIDATION_ENABLED == 1)
 uint32_t GetPostProcessFlag(const string_view ppName)
@@ -112,11 +112,11 @@ RenderHandleReference CreatePostProcessDataUniformBuffer(
     PLUGIN_STATIC_ASSERT(sizeof(GlobalPostProcessStruct) == sizeof(RenderPostProcessConfiguration));
     PLUGIN_STATIC_ASSERT(
         sizeof(LocalPostProcessStruct) == PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
-    return gpuResourceMgr.Create(
-        handle, GpuBufferDesc { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
-                    sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct) });
+    return gpuResourceMgr.Create(handle,
+        GpuBufferDesc{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+            sizeof(GlobalPostProcessStruct) + sizeof(LocalPostProcessStruct)});
 }
 
 bool NeedsAutoBindingSet0(const RenderNodeHandles::InputResources& inputRes)
@@ -144,8 +144,8 @@ RenderNodeCameraSinglePostProcess::DefaultImagesAndSamplers GetDefaultImagesAndS
 }
 
 struct DispatchResources {
-    RenderHandle buffer {};
-    RenderHandle image {};
+    RenderHandle buffer{};
+    RenderHandle image{};
 };
 
 DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& ir)
@@ -159,7 +159,7 @@ DispatchResources GetDispatchResources(const RenderNodeHandles::InputResources& 
     }
     return dr;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -193,7 +193,7 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
         graphics_ = true;
         const RenderHandle graphicsState = shaderMgr.GetGraphicsStateHandleByShaderHandle(shader_);
         psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(
-            shader_, graphicsState, pipelineLayout_, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            shader_, graphicsState, pipelineLayout_, {}, {}, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     } else if (handleType == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) {
         graphics_ = false;
         psoHandle_ = renderNodeContextMgr.GetPsoManager().GetComputePsoHandle(shader_, pipelineLayout_, {});
@@ -217,7 +217,8 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
                 shaderMgr.GetCompatibilityFlags(baseCamPlHandle, basePlHandle);
             if ((compatibilityFlags & IShaderManager::CompatibilityFlagBits::COMPATIBLE_BIT) == 0) {
                 PLUGIN_LOG_E("RenderNode:%s uncompatible render vs 3D pipeline layout (%s)",
-                    renderNodeContextMgr_->GetName().data(), POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
+                    renderNodeContextMgr_->GetName().data(),
+                    POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
             }
         }
 #endif
@@ -225,7 +226,8 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
             shaderMgr.GetCompatibilityFlags(baseCamPlHandle, plHandle);
         if ((compatibilityFlags & IShaderManager::CompatibilityFlagBits::COMPATIBLE_BIT) == 0) {
             PLUGIN_LOG_E("RenderNode:%s uncompatible pipeline layout to %s",
-                renderNodeContextMgr_->GetName().data(), POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
+                renderNodeContextMgr_->GetName().data(),
+                POST_PROCESS_CAMERA_BASE_PIPELINE_LAYOUT.data());
         }
     }
 
@@ -235,8 +237,7 @@ void RenderNodeCameraSinglePostProcess::InitNode(IRenderNodeContextManager& rend
     if (postProcessFlag != 0) {
         valid_ = false;
         PLUGIN_LOG_W(
-            "RenderNode:%s does not execute render built-in post processes.",
-            renderNodeContextMgr_->GetName().data());
+            "RenderNode:%s does not execute render built-in post processes.", renderNodeContextMgr_->GetName().data());
     }
 #endif
     InitCreateBinders();
@@ -306,7 +307,8 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
             !RenderHandleUtil::IsValid(renderPass.renderPassDesc.attachmentHandles[0])) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_W("rp_missing_" + renderNodeContextMgr_->GetName(),
-                "RenderNode: %s, invalid attachment", renderNodeContextMgr_->GetName().data());
+                "RenderNode: %s, invalid attachment",
+                renderNodeContextMgr_->GetName().data());
 #endif
             return;
         }
@@ -314,7 +316,7 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
         dispatchResources = GetDispatchResources(dispatchResources_);
         if ((!RenderHandleUtil::IsValid(dispatchResources.buffer)) &&
             (!RenderHandleUtil::IsValid(dispatchResources.image))) {
-            return; // no way to evaluate dispatch size
+            return;  // no way to evaluate dispatch size
         }
     }
 
@@ -358,12 +360,12 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
         if (pipelineLayout_.pushConstant.byteSize > 0) {
             const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
             const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-            const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-                ppLocalConfig_.variables.factor };
+            const LocalPostProcessPushConstantStruct pc{
+                {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, ppLocalConfig_.variables.factor};
             cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
         }
 
-        cmdList.Draw(3u, 1u, 0u, 0u); // vertex count, instance count, first vertex, first instance
+        cmdList.Draw(3u, 1u, 0u, 0u);  // vertex count, instance count, first vertex, first instance
         cmdList.EndRenderPass();
     } else {
         if (RenderHandleUtil::IsValid(dispatchResources.buffer)) {
@@ -371,12 +373,12 @@ void RenderNodeCameraSinglePostProcess::ExecuteSinglePostProcess(IRenderCommandL
         } else if (RenderHandleUtil::IsValid(dispatchResources.image)) {
             const IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
             const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(dispatchResources.image);
-            const Math::UVec3 targetSize = { desc.width, desc.height, desc.depth };
+            const Math::UVec3 targetSize = {desc.width, desc.height, desc.depth};
             if (pipelineLayout_.pushConstant.byteSize > 0) {
                 const float fWidth = static_cast<float>(targetSize.x);
                 const float fHeight = static_cast<float>(targetSize.y);
-                const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight },
-                    ppLocalConfig_.variables.factor };
+                const LocalPostProcessPushConstantStruct pc{
+                    {fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, ppLocalConfig_.variables.factor};
                 cmdList.PushConstant(pipelineLayout_.pushConstant, arrayviewU8(pc).data());
             }
 
@@ -424,19 +426,20 @@ void RenderNodeCameraSinglePostProcess::UpdateSet0(IRenderCommandList& cmdList)
     auto& binder = *pipelineDescriptorSetBinder_;
     uint32_t bindingIndex = 0;
     // global
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, BindableBuffer { ubos_.postProcess.GetHandle() });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++,
-        BindableBuffer { ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct) });
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, BindableBuffer{ubos_.postProcess.GetHandle()});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET,
+        bindingIndex++,
+        BindableBuffer{ubos_.postProcess.GetHandle(), sizeof(GlobalPostProcessStruct)});
 
     // scene and camera global
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { sceneBuffers_.camera });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.generalData });
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {sceneBuffers_.camera});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.generalData});
 
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.environment });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.fog });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.light });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.postProcess });
-    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, { cameraBuffers_.lightCluster });
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.environment});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.fog});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.light});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.postProcess});
+    binder.BindBuffer(GLOBAL_POST_PROCESS_SET, bindingIndex++, {cameraBuffers_.lightCluster});
 
     // scene and camera global images
     BindableImage bi;
@@ -463,7 +466,7 @@ void RenderNodeCameraSinglePostProcess::BindDefaultResources(
         auto& binder = *pipelineDescriptorSetBinder_;
         for (const auto& ref : bindings.buffers) {
             if (!RenderHandleUtil::IsValid(ref.resource.handle)) {
-                binder.BindBuffer(set, ref.binding.binding, BindableBuffer { builtInVariables_.defBuffer });
+                binder.BindBuffer(set, ref.binding.binding, BindableBuffer{builtInVariables_.defBuffer});
             }
         }
         for (const auto& ref : bindings.images) {
@@ -476,7 +479,7 @@ void RenderNodeCameraSinglePostProcess::BindDefaultResources(
         }
         for (const auto& ref : bindings.samplers) {
             if (!RenderHandleUtil::IsValid(ref.resource.handle)) {
-                binder.BindSampler(set, ref.binding.binding, BindableSampler { builtInVariables_.defSampler });
+                binder.BindSampler(set, ref.binding.binding, BindableSampler{builtInVariables_.defSampler});
             }
         }
     }
@@ -608,8 +611,8 @@ void RenderNodeCameraSinglePostProcess::ParseRenderNodeInputs()
             renderNodeContextMgr_->GetName().data());
     }
     if (jsonInputs_.ppName.empty()) {
-        PLUGIN_LOG_W("CORE3D_VALIDATION: RenderNode %s postProcess name missing.",
-            renderNodeContextMgr_->GetName().data());
+        PLUGIN_LOG_W(
+            "CORE3D_VALIDATION: RenderNode %s postProcess name missing.", renderNodeContextMgr_->GetName().data());
     }
 #endif
 

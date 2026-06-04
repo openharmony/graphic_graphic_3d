@@ -26,7 +26,7 @@ public:
     META_OBJECT(BaseObject, META_NS::ClassId::BaseObject, META_NS::BaseObject)
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

@@ -55,7 +55,7 @@ private:
     CORE_NS::ILogger* logger_;
     CORE_NS::ILogger::LogLevel oldLevel_;
 };
-} // namespace Test
+}  // namespace Test
 
 CORE_BEGIN_NAMESPACE()
 namespace UTest {
@@ -83,20 +83,20 @@ IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
     void SetUp() override
     {
         // OHOS specific paths
-        PlatformCreateInfo info {};
+        PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
-        info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
+        info.appPluginPath = OHOS_PLATFORM_ASSETS_PATH;
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         // Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -125,9 +125,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 CORE_END_NAMESPACE()
 
-#endif // TEST_ENVIRONMENT
+#endif  // TEST_ENVIRONMENT

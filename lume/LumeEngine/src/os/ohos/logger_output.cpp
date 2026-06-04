@@ -53,9 +53,9 @@ void PrintTimeStamp(std::ostream& outputStream)
                     std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
 
     outputStream << std::put_time(std::localtime(&time), "%D %H:%M:%S.");
-    outputStream << std::right << std::setfill('0') << std::setw(3) << ms.count() << std::setfill(' '); // 3: alignment
+    outputStream << std::right << std::setfill('0') << std::setw(3) << ms.count() << std::setfill(' ');  // 3: alignment
 }
-} // namespace
+}  // namespace
 
 class LogcatOutput final : public Logger::IOutput {
 public:
@@ -114,7 +114,7 @@ protected:
 
 ILogger::IOutput::Ptr CreateLoggerConsoleOutput()
 {
-    return ILogger::IOutput::Ptr { new LogcatOutput };
+    return ILogger::IOutput::Ptr{new LogcatOutput};
 }
 
 ILogger::IOutput::Ptr CreateLoggerDebugOutput()

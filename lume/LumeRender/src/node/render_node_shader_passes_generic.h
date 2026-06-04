@@ -43,7 +43,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "2e258acc-caad-4035-9ab1-c6debca7f6fa" };
+    static constexpr BASE_NS::Uid UID{"2e258acc-caad-4035-9ab1-c6debca7f6fa"};
     static constexpr const char* TYPE_NAME = "RenderNodeShaderPassesGeneric";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -51,8 +51,8 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
-    const RenderDataStoreShaderPasses* dsShaderPasses_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
+    const RenderDataStoreShaderPasses* dsShaderPasses_{nullptr};
 
     void ProcessExecuteData();
     void ExecuteFrameGraphics(IRenderCommandList& cmdList);
@@ -73,16 +73,16 @@ private:
     };
     JsonInputs jsonInputs_;
 
-    bool valid_ { false };
+    bool valid_{false};
     struct LocalUboData {
-        uint32_t byteSize { 0U };
+        uint32_t byteSize{0U};
         RenderHandleReference handle;
 
-        uint8_t* mapData { nullptr };
-        uint32_t currentOffset { 0U };
+        uint8_t* mapData{nullptr};
+        uint32_t currentOffset{0U};
     };
     LocalUboData uboData_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_FULLSCREEN_SHADER_BINDER_GENERIC_H
+#endif  // RENDER_NODE_RENDER_NODE_FULLSCREEN_SHADER_BINDER_GENERIC_H

@@ -77,11 +77,12 @@ public:
     {}
 
     /** Copy a reference. Reference count will be increased. */
-    EntityReference(const EntityReference& other) noexcept : entity_(other.entity_), counter_(other.counter_) {}
+    EntityReference(const EntityReference& other) noexcept : entity_(other.entity_), counter_(other.counter_)
+    {}
 
     /** Move a reference. Moved from reference will be empty and reusable. */
     EntityReference(EntityReference&& other) noexcept
-        : entity_(BASE_NS::exchange(other.entity_, Entity {})), counter_(BASE_NS::exchange(other.counter_, nullptr))
+        : entity_(BASE_NS::exchange(other.entity_, Entity{})), counter_(BASE_NS::exchange(other.counter_, nullptr))
     {}
 
     /** Copy a reference. Previous reference will be released and the one aquired. */
@@ -99,7 +100,7 @@ public:
     EntityReference& operator=(EntityReference&& other) noexcept
     {
         if (&other != this) {
-            entity_ = BASE_NS::exchange(other.entity_, Entity {});
+            entity_ = BASE_NS::exchange(other.entity_, Entity{});
             counter_ = BASE_NS::exchange(other.counter_, nullptr);
         }
         return *this;
@@ -136,4 +137,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_ENTITY_REFERENCE_H
+#endif  // API_CORE_ECS_ENTITY_REFERENCE_H

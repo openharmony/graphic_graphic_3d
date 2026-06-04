@@ -39,8 +39,8 @@ OcclusionMaterial::OcclusionMaterial(napi_env e, napi_callback_info i)
     NapiApi::Object meJs(fromJs.This());
     AddBridge(CLASS_NAME, meJs);
 
-    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene... (do i need it here?)
-    NapiApi::Object args = fromJs.Arg<1>();  // other args
+    NapiApi::Object scene = fromJs.Arg<0>();  // access to owning scene... (do i need it here?)
+    NapiApi::Object args = fromJs.Arg<1>();   // other args
 
     scene_ = scene;
     if (!scene.GetNative<SCENE_NS::IScene>()) {
@@ -69,7 +69,7 @@ OcclusionMaterial::OcclusionMaterial(napi_env e, napi_callback_info i)
     meJs.Set("name", name);
 }
 
-OcclusionMaterial::~OcclusionMaterial() 
+OcclusionMaterial::~OcclusionMaterial()
 {}
 
 void OcclusionMaterial::Init(napi_env env, napi_value exports)
@@ -83,10 +83,19 @@ void OcclusionMaterial::Init(napi_env env, napi_value exports)
     node_props.emplace_back(
         TROGetProperty<uint32_t, OcclusionMaterial, &OcclusionMaterial::GetMaterialType>("materialType"));
 
-       napi_value func;
-    auto status = napi_define_class(env, OcclusionMaterial::CLASS_NAME, NAPI_AUTO_LENGTH,
-           BaseObject::ctor<OcclusionMaterial>(), nullptr,
-           node_props.size(), node_props.data(), &func);
+    napi_value func;
+    auto status = napi_define_class(env,
+        OcclusionMaterial::CLASS_NAME,
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<OcclusionMaterial>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
+    if (status != napi_ok) {
+        LOG_E("Failed to define class %s", OcclusionMaterial::CLASS_NAME);
+    }
+
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
@@ -101,7 +110,7 @@ void* OcclusionMaterial::GetInstanceImpl(uint32_t id)
     return SceneResourceImpl::GetInstanceImpl(id);
 }
 
-void OcclusionMaterial::DisposeNative(void* scn)
+void OcclusionMaterial::DisposeNative()
 {
     if (disposed_) {
         return;
@@ -111,8 +120,8 @@ void OcclusionMaterial::DisposeNative(void* scn)
         DetachJsObj(material, "_JSW");
     }
     disposed_ = true;
-    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
-        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     UnsetNativeObject();
@@ -121,7 +130,7 @@ void OcclusionMaterial::DisposeNative(void* scn)
 
 void OcclusionMaterial::Finalize(napi_env env)
 {
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }

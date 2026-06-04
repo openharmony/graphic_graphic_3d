@@ -26,7 +26,7 @@ namespace Math {
 class Vec2;
 class Vec3;
 class Vec4;
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
@@ -96,4 +96,4 @@ protected:
 };
 
 CORE3D_END_NAMESPACE()
-#endif // CORE_UTIL_MESH_UTIL_H
+#endif  // CORE_UTIL_MESH_UTIL_H

@@ -325,6 +325,15 @@ public:
     virtual GpuAccelerationStructureDesc GetAccelerationStructureDescriptor(
         const RenderHandleReference& handle) const = 0;
 
+    /** Get an address of a buffer in Gpu memory. The buffer must have been created with
+     * CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT and this address is only intended for use in shaders. CPU-side
+     * operations on the address are undefined.
+     *  @param handle Handle to buffer resource
+     *  @return Returns an address pointing to the current start of the buffer. Return value of 0 means the address is
+     * invalid.
+     */
+    virtual uint64_t GetBufferDeviceAddress(const RenderHandleReference& handle) const = 0;
+
     /** Wait for Gpu to become idle and destroy all Gpu resources of destroyed handles.
      *  Not internally synchronized. Needs to be called from render thread where renderFrame is called.
      *
@@ -469,9 +478,9 @@ public:
         using HandleInfoFlags = uint32_t;
 
         /** Information on how to fetch handles */
-        HandleInfoFlags infoFlags { 0U };
+        HandleInfoFlags infoFlags{0U};
         /** Usage flags for valid resources */
-        BufferUsageFlags usageFlags { 0U };
+        BufferUsageFlags usageFlags{0U};
     };
     /** Information on how to fetch all image handles.
      */
@@ -484,9 +493,9 @@ public:
         using HandleInfoFlags = uint32_t;
 
         /** Information on how to fetch handles */
-        HandleInfoFlags infoFlags { 0U };
+        HandleInfoFlags infoFlags{0U};
         /** Usage flags for valid resources */
-        ImageUsageFlags usageFlags { 0U };
+        ImageUsageFlags usageFlags{0U};
     };
     /** Information on how to fetch all sampler handles.
      */
@@ -499,7 +508,7 @@ public:
         using HandleInfoFlags = uint32_t;
 
         /** Information on how to fetch handles */
-        HandleInfoFlags infoFlags { 0U };
+        HandleInfoFlags infoFlags{0U};
     };
 
     /** Get GPU buffer count. Count of handles in the manager and not the valid count.
@@ -666,6 +675,15 @@ public:
      */
     virtual GpuAccelerationStructureDesc GetAccelerationStructureDescriptor(const RenderHandle& handle) const = 0;
 
+    /** Get an address of a buffer in Gpu memory. The buffer must have been created with
+     * CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT and this address is only intended for use in shaders. CPU-side
+     * operations on the address are undefined.
+     *  @param handle Handle to buffer resource
+     *  @return Returns an address pointing to the current start of the buffer. Return value of 0 means the address is
+     * invalid.
+     */
+    virtual uint64_t GetBufferDeviceAddress(const RenderHandle& handle) const = 0;
+
     /** Map buffer, Only available in render nodes.
      *  Automatically advances buffered dynamic ring buffer offset.
      *  @param handle Handle to resource
@@ -780,12 +798,12 @@ public:
         /** Handle for binding the data to shader (cannot be mapped) */
         RenderHandle handle;
         /** Binding byte offset */
-        uint32_t bindingByteOffset { 0U };
+        uint32_t bindingByteOffset{0U};
 
         /** Byte size of data for writing and binding */
-        uint32_t byteSize { 0U };
+        uint32_t byteSize{0U};
         /** Pointer to write byte size amount of data */
-        uint8_t* data { nullptr };
+        uint8_t* data{nullptr};
     };
 
     /** Reserve render time UBO buffer data section in PreExecuteFrame().
@@ -824,4 +842,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_IGPU_RESOURCE_MANAGER_H
+#endif  // API_RENDER_DEVICE_IGPU_RESOURCE_MANAGER_H

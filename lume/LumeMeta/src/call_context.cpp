@@ -81,7 +81,7 @@ bool DefaultCallContext::DefineParameter(BASE_NS::string_view name, const IAny::
     if (!name.empty() && Get(name)) {
         return false;
     }
-    params_.push_back(ArgumentNameValue { BASE_NS::string(name), value });
+    params_.push_back(ArgumentNameValue{BASE_NS::string(name), value});
     return true;
 }
 

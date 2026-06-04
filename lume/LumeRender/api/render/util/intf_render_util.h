@@ -32,18 +32,18 @@ class IRenderFrameUtil;
 struct RenderTimings {
     struct Times {
         /** Time stamp at the beginning of RenderFrame() */
-        int64_t begin { 0 };
+        int64_t begin{0};
         /** Time stamp at the end of RenderFrame() */
-        int64_t end { 0 };
+        int64_t end{0};
 
         /** Time stamp at the beginning of backend command list processing */
-        int64_t beginBackend { 0 };
+        int64_t beginBackend{0};
         /** Time stamp at the end of backend command list processing and submits */
-        int64_t endBackend { 0 };
+        int64_t endBackend{0};
         /** Time stamp at the beginning of backend presentation start */
-        int64_t beginBackendPresent { 0 };
+        int64_t beginBackendPresent{0};
         /** Time stamp at the end of backend presentation */
-        int64_t endBackendPresent { 0 };
+        int64_t endBackendPresent{0};
     };
     /** Current results after RenderFrame() has returned */
     Times frame;
@@ -54,11 +54,11 @@ struct RenderTimings {
 /** Render handle description */
 struct RenderHandleDesc {
     /** Type */
-    RenderHandleType type { RenderHandleType::UNDEFINED };
+    RenderHandleType type{RenderHandleType::UNDEFINED};
     /** Additional ID */
-    uint64_t id { 0 };
+    uint64_t id{0};
     /** Reference count for this handle as seen from the client side */
-    int32_t refCount { 0 };
+    int32_t refCount{0};
     /** Name and/or path of the resource */
     BASE_NS::string name;
     /** Additional name of the resource */
@@ -97,4 +97,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_UTIL_IRENDER_UTIL_H
+#endif  // API_RENDER_UTIL_IRENDER_UTIL_H

@@ -37,7 +37,7 @@ class IGpuResourceManager;
 class IShaderManager;
 class IRenderDataStoreManager;
 
-} // namespace RENDER_NS
+}  // namespace RENDER_NS
 
 namespace Dotfield {
 /**
@@ -65,11 +65,14 @@ public:
     void SetTime(float time) noexcept override;
 
     // IRenderDataStore
-    void PreRender() override {}
+    void PreRender() override
+    {}
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
 
     uint32_t GetFlags() const override
@@ -109,11 +112,11 @@ private:
 
     // store all dotfield gpu buffers here
     RenderDataDefaultDotfield::BufferData bufferData_;
-    float timeStep_ { 1.f };
-    float time_ { 1.f };
+    float timeStep_{1.f};
+    float time_{1.f};
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
-} // namespace Dotfield
+}  // namespace Dotfield
 
-#endif // RENDER_DATA_STORE_DEFAULT_DOTFIELD_H
+#endif  // RENDER_DATA_STORE_DEFAULT_DOTFIELD_H

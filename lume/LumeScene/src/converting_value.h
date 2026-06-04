@@ -32,12 +32,13 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(
     ConvertingValueBase, "41474a42-d7d1-4d4a-a6cd-5a53973e8f9e", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-template<typename PropertyType>
+template <typename PropertyType>
 class ConvertingValueBase : public META_NS::IntroduceInterfaces<META_NS::MinimalObject, META_NS::INotifyOnChange,
                                 META_NS::IStackResetable, META_NS::IValue, IConvertingValue, META_NS::ISerializable> {
     META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::ConvertingValueBase)
 public:
-    ConvertingValueBase(META_NS::IAny::Ptr any, PropertyType p) : any_(BASE_NS::move(any)), p_(p) {}
+    ConvertingValueBase(META_NS::IAny::Ptr any, PropertyType p) : any_(BASE_NS::move(any)), p_(p)
+    {}
 
     META_NS::ResetResult ProcessOnReset(const META_NS::IAny& value) override
     {
@@ -72,7 +73,7 @@ protected:
     PropertyType p_;
 };
 
-template<typename Converter>
+template <typename Converter>
 class ConvertingValue : public ConvertingValueBase<META_NS::Property<typename Converter::TargetType>> {
 public:
     using Super = ConvertingValueBase<META_NS::Property<typename Converter::TargetType>>;
@@ -87,7 +88,7 @@ public:
 
     META_NS::AnyReturnValue SetValue(const META_NS::IAny& any) override
     {
-        SourceType value {};
+        SourceType value{};
         auto res = any.GetValue<SourceType>(value);
         if (res) {
             auto converted = convert_.ConvertToTarget(value);
@@ -115,7 +116,7 @@ public:
 private:
     void OnResourceChanged(bool forceNotification = false) const
     {
-        SourceType value {};
+        SourceType value{};
         auto res = this->any_->template GetValue<SourceType>(value);
         if (res) {
             auto converted = convert_.ConvertToTarget(value);
@@ -150,7 +151,7 @@ private:
     mutable META_NS::EventHandler changed_;
 };
 
-template<typename Converter>
+template <typename Converter>
 class ConvertingArrayValue : public ConvertingValueBase<META_NS::ArrayProperty<typename Converter::TargetType>> {
 public:
     using Super = ConvertingValueBase<META_NS::ArrayProperty<typename Converter::TargetType>>;
@@ -165,10 +166,11 @@ public:
 
     META_NS::AnyReturnValue SetValue(const META_NS::IAny& any) override
     {
-        BASE_NS::vector<SourceType> value {};
+        BASE_NS::vector<SourceType> value{};
         auto res = any.GetValue<BASE_NS::vector<SourceType>>(value);
         if (res) {
             BASE_NS::vector<TargetType> converted;
+            converted.reserve(value.size());
             for (auto&& v : value) {
                 converted.push_back(convert_.ConvertToTarget(v));
             }
@@ -181,8 +183,10 @@ public:
     }
     const META_NS::IAny& GetValue() const override
     {
+        const auto src = this->p_->GetValue();
         BASE_NS::vector<SourceType> result;
-        for (auto&& v : this->p_->GetValue()) {
+        result.reserve(src.size());
+        for (auto&& v : src) {
             result.push_back(convert_.ConvertToSource(*this->any_, v));
         }
         this->any_->SetValue(result);

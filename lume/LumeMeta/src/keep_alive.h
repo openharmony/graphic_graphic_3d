@@ -30,8 +30,8 @@ class KeepAlive : public IntroduceInterfaces<BaseObject> {
 public:
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_KEEP_ALIVE_H
+#endif  // META_SRC_KEEP_ALIVE_H

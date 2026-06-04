@@ -1,0 +1,52 @@
+{
+    "version": "1.0",
+    "description": "scene with attachments at three levels: regular node, external root, and GLTF child",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "node",
+                    "name": "parent",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "ParentAtt" },
+                                { "name": "Float", "value": 10.0 }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "gltf",
+                        "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+                    },
+                    "resourceGroup": "multi-level-group",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "ExtAtt" },
+                                { "name": "Float", "value": 20.0 }
+                            ]
+                        },
+                        {
+                            "path": ".//AnimatedCube",
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "CubeAtt" },
+                                { "name": "Float", "value": 30.0 }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

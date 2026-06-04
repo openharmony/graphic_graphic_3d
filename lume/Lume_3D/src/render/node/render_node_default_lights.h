@@ -39,15 +39,15 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "8757af6a-adde-471f-b475-8f8c0962d8b6" };
-    static constexpr const char* const typeName = "RenderNodeDefaultLights";
+    static constexpr BASE_NS::Uid UID{"8757af6a-adde-471f-b475-8f8c0962d8b6"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultLights";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     SceneRenderDataStores stores_;
 
@@ -56,4 +56,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_LIGHTS_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_LIGHTS_H

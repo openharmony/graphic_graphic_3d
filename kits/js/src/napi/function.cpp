@@ -69,4 +69,4 @@ bool Function::IsNull()
     return (napi_null == jstype);
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

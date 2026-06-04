@@ -43,7 +43,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "b2a8e00e-9111-4074-906a-faaa9141e568" };
+    static constexpr BASE_NS::Uid UID{"b2a8e00e-9111-4074-906a-faaa9141e568"};
     static constexpr const char* TYPE_NAME = "RenderNodeMipAndLayer";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -54,7 +54,7 @@ private:
     void ExecuteGraphics(IRenderCommandList& cmdList);
     void ExecuteCompute(IRenderCommandList& cmdList);
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     struct TypePackage {
         RenderHandle psoHandle;
@@ -73,4 +73,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_MIP_AND_LAYER_H
+#endif  // RENDER_NODE_MIP_AND_LAYER_H

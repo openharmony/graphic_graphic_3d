@@ -31,7 +31,7 @@ using GetFactoryType = IObjectFactory::Ptr (*)();
  */
 struct ObjectTypeInfo : public CORE_NS::ITypeInfo {
     // NOLINTNEXTLINE(readability-identifier-naming)
-    static constexpr BASE_NS::Uid UID { "57b61777-e747-4281-9a06-a17414a07206" };
+    static constexpr BASE_NS::Uid UID{"57b61777-e747-4281-9a06-a17414a07206"};
     const GetFactoryType GetFactory = nullptr;
 };
 

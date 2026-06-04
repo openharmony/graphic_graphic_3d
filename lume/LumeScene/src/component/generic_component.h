@@ -29,9 +29,11 @@ class GenericComponent : public META_NS::IntroduceInterfaces<Component, IGeneric
 public:
     bool Build(const META_NS::IMetadata::Ptr&) override;
     BASE_NS::string GetName() const override;
+    META_NS::ObjectId GetComponentId() const override;
 
 private:
     BASE_NS::string component_;
+    META_NS::ObjectId id_;
 };
 
 SCENE_END_NAMESPACE()

@@ -28,7 +28,8 @@
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
 
-RenderDataStoreDefaultCamera::RenderDataStoreDefaultCamera(const string_view name) : name_(name) {}
+RenderDataStoreDefaultCamera::RenderDataStoreDefaultCamera(const string_view name) : name_(name)
+{}
 
 void RenderDataStoreDefaultCamera::PostRender()
 {
@@ -70,7 +71,8 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
             for (const auto& cam : cameras_) {
                 if ((camera.id == cam.id) || ((!camera.name.empty()) && (camera.name == cam.name))) {
                     PLUGIN_LOG_ONCE_W(to_string(camera.id) + camera.name,
-                        "CORE_VALIDATION: non unique camera id: %" PRIu64 " or name: %s", camera.id,
+                        "CORE_VALIDATION: non unique camera id: %" PRIu64 " or name: %s",
+                        camera.id,
                         camera.name.c_str());
                 }
             }
@@ -79,7 +81,8 @@ void RenderDataStoreDefaultCamera::AddCamera(const RenderCamera& camera)
         cameras_.push_back(camera);
     } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_ONCE_W("drop_camera_count_full", "CORE3D_VALIDATION: camera dropped (max count: %u)",
+        PLUGIN_LOG_ONCE_W("drop_camera_count_full",
+            "CORE3D_VALIDATION: camera dropped (max count: %u)",
             DefaultMaterialCameraConstants::MAX_CAMERA_COUNT);
 #endif
     }
@@ -92,7 +95,8 @@ void RenderDataStoreDefaultCamera::AddEnvironment(const RenderCamera::Environmen
         for (const auto& env : environments_) {
             if (environment.id == env.id) {
                 PLUGIN_LOG_ONCE_W("rdsdc_add_env" + to_string(environment.id),
-                    "CORE_VALIDATION: non unique camera id: %" PRIu64, env.id);
+                    "CORE_VALIDATION: non unique camera id: %" PRIu64,
+                    env.id);
             }
         }
     }

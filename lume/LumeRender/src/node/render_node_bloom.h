@@ -45,7 +45,7 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "cc25f8bd-bad6-48f9-8cb2-af24681643b6" };
+    static constexpr BASE_NS::Uid UID{"cc25f8bd-bad6-48f9-8cb2-af24681643b6"};
     static constexpr const char* TYPE_NAME = "RenderNodeBloom";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -53,7 +53,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     void CreatePostProcessInterface();
@@ -64,7 +64,7 @@ private:
         RenderNodeGraphInputs::InputResources resources;
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
-        bool hasChangeableResourceHandles { false };
+        bool hasChangeableResourceHandles{false};
     };
     JsonInputs jsonInputs_;
     RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -77,8 +77,8 @@ private:
 
     PostProcessConfiguration ppConfig_;
 
-    bool valid_ { false };
+    bool valid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_BLOOM_H
+#endif  // RENDER_NODE_RENDER_NODE_BLOOM_H

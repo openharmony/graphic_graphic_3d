@@ -46,7 +46,7 @@ vec3 GetValFromMultipleScatteringLUT(ivec2 bufferRes, vec3 pos, vec3 sunDir)
     float normalizedHeight = clamp((height - GROUND_RADIUS_KM) / (ATMOSPHERE_RADIUS_KM - GROUND_RADIUS_KM), 0.0, 1.0);
 
     vec2 uv;
-    uv.x = clamp(0.5 + 0.5 * sunCosZenithAngle, 0.0, 1.0); // 0.5: parm
+    uv.x = clamp(0.5 + 0.5 * sunCosZenithAngle, 0.0, 1.0);  // 0.5: parm
     uv.y = normalizedHeight;
 
     return texture(multipleScatteringLut, uv).rgb;
@@ -55,7 +55,7 @@ vec3 GetValFromMultipleScatteringLUT(ivec2 bufferRes, vec3 pos, vec3 sunDir)
 float GetSkyExposure(vec3 sunDir, float skyViewBrightness)
 {
     // Higher exposure when sun is low
-    float exposureBase = 20.0 * clamp(skyViewBrightness, 0.1, 10.0);
+    float exposureBase = 20.0 * clamp(skyViewBrightness, 0.0, 10.0);
     float elevationFactor = smoothstep(-0.1, 0.4, sunDir.y);
     float exposure = exposureBase * mix(2.0, 0.5, elevationFactor);
 
@@ -94,7 +94,7 @@ vec3 RaymarchScattering(vec3 viewPos, vec3 rayDir, vec3 sunDir, int numSteps, co
     // if there's a terra intercept that's closer than the atmosphere one,
     // use that instead!
     if (terraIntercept > 0.0) {
-        maxdist = terraIntercept; // confirm valid intercepts
+        maxdist = terraIntercept;  // confirm valid intercepts
         hitGround = true;
     }
 
@@ -151,4 +151,4 @@ vec3 RaymarchScattering(vec3 viewPos, vec3 rayDir, vec3 sunDir, int numSteps, co
     return lum;
 }
 
-#endif // SKY_VIEW_COMMON_H
+#endif  // SKY_VIEW_COMMON_H

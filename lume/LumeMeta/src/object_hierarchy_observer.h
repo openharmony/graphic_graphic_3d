@@ -65,10 +65,10 @@ private:
     // which would make it impossible to notify about
     IObject::Ptr content_;
 
-    ObjectHierarchyObserver* observer_ {};
+    ObjectHierarchyObserver* observer_{};
     BASE_NS::vector<EventHandler> handlers_;
-    bool containerPreTransaction_ { false };
-    bool attachmentPreTransaction_ { false };
+    bool containerPreTransaction_{false};
+    bool attachmentPreTransaction_{false};
 
     void NotifyObjectChangedOp();
     void NotifyContainerChangeOp(
@@ -92,16 +92,16 @@ public:
     META_IMPLEMENT_READONLY_PROPERTY(IObject::WeakPtr, DataContext)
     META_IMPLEMENT_READONLY_PROPERTY(IAttach::WeakPtr, AttachedTo)
 
-protected: // LifeCycle
+protected:  // LifeCycle
     bool Build(const IMetadata::Ptr&) override;
     void Destroy() override;
 
-protected: // IObjectHierarchyObserver
+protected:  // IObjectHierarchyObserver
     void SetTarget(const IObject::Ptr& root, HierarchyChangeModeValue mode) override;
     IObject::Ptr GetTarget() const override;
     BASE_NS::vector<IObject::Ptr> GetAllObserved() const override;
 
-protected: // IAttachment
+protected:  // IAttachment
     bool Attaching(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext) override;
     bool Detaching(const META_NS::IAttach::Ptr& target) override;
 
@@ -111,7 +111,7 @@ private:
     void ClearSubscriptions();
     void NotifyOnDetach();
 
-    HierarchyChangeModeValue mode_ {};
+    HierarchyChangeModeValue mode_{};
     IObject::WeakPtr root_;
 
     struct Subscription final {
@@ -135,15 +135,15 @@ private:
     BASE_NS::unordered_map<ObjectChangeListener*, Subscription> subscriptions_;
     struct ImmediateChild {
         BASE_NS::weak_ptr<IObject> object;
-        HierarchyChangeObjectType type {};
+        HierarchyChangeObjectType type{};
     };
-    bool keepTrackOfImmediate_ {};
+    bool keepTrackOfImmediate_{};
     BASE_NS::vector<ImmediateChild> immediateChildren_;
     mutable std::shared_mutex mutex_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_OBJECT_HIERARCHY_OBSERVER_H
+#endif  // META_SRC_OBJECT_HIERARCHY_OBSERVER_H

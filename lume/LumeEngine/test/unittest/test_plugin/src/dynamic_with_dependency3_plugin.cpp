@@ -26,23 +26,23 @@ namespace UTest3 {
 const char* GetVersionInfo();
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
 void UnregisterInterfaces(CORE_NS::PluginToken);
-constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = { UTest2::UID_SHARED_PLUGIN };
-} // namespace UTest3
+constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = {UTest2::UID_SHARED_PLUGIN};
+}  // namespace UTest3
 
 namespace {
 extern "C" {
-PLUGIN_DATA(CoreTestShared) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(CoreTestShared){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "Shared Test Plugin v3",
     // Version information of the plugin.
-    { UTest3::UID_SHARED_PLUGIN, UTest3::GetVersionInfo },
+    {UTest3::UID_SHARED_PLUGIN, UTest3::GetVersionInfo},
     UTest3::RegisterInterfaces,
     UTest3::UnregisterInterfaces,
-    { UTest3::PLUGIN_DEPENDENCIES },
+    {UTest3::PLUGIN_DEPENDENCIES},
 };
 }
-} // namespace
+}  // namespace
 
 namespace UTest3 {
 using namespace CORE_NS;
@@ -51,7 +51,7 @@ namespace {
 struct GlobalToken {
     IPluginRegister& pluginRegistry;
     SharedGlobalTest test;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_SHARED_GLOBAL_TEST_IMPL,
         CORE_NS::GetName<UTest::ITest>().data(),
@@ -61,7 +61,7 @@ struct GlobalToken {
         },
     };
 };
-} // namespace
+}  // namespace
 
 const char* GetVersionInfo()
 {
@@ -70,7 +70,7 @@ const char* GetVersionInfo()
 
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister& pluginRegistry)
 {
-    GlobalToken* token = new GlobalToken { pluginRegistry };
+    GlobalToken* token = new GlobalToken{pluginRegistry};
     return token;
 }
 
@@ -79,4 +79,4 @@ void UnregisterInterfaces(PluginToken token)
     GlobalToken* state = static_cast<GlobalToken*>(token);
     delete state;
 }
-} // namespace UTest3
+}  // namespace UTest3

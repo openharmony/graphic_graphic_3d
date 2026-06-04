@@ -1,0 +1,37 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": {
+                    "type": "resourceId",
+                    "name": "Bounce_template"
+                },
+                "type": "animationTemplate",
+                "path": "test://import/animation/models/animation_only_tmpl3/animations/Bounce.animation"
+            },
+            {
+                "resourceId": {
+                    "type": "resourceId",
+                    "name": "Bounce"
+                },
+                "type": "parallelAnimation",
+                "options": {
+                    "name": "Bounce",
+                    "animations": [
+                        {
+                            "type": "trackAnimation",
+                            "name": "AnimatedEmpty.Position",
+                            "derivedFrom": {
+                                "type": "resourceId",
+                                "name": "Bounce_template"
+                            },
+                            "property": "/AnimatedEmpty.Position"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

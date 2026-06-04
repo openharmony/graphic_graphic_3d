@@ -38,10 +38,10 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
     auto handle0 = renderNodeGraphMgr.Create(
         IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_DYNAMIC, desc, "renderNodeGraph0");
     renderNodeGraphMgr.HandlePendingAllocations();
-    ASSERT_NE(RenderHandle {}, handle0.GetHandle());
+    ASSERT_NE(RenderHandle{}, handle0.GetHandle());
     ASSERT_EQ(
         ((const RenderNodeGraphManager&)renderNodeGraphMgr).Get(handle0.GetHandle()).GetHandle(), handle0.GetHandle());
-    ASSERT_EQ(((const RenderNodeGraphManager&)renderNodeGraphMgr).Get(RenderHandle {}).GetHandle(), RenderHandle {});
+    ASSERT_EQ(((const RenderNodeGraphManager&)renderNodeGraphMgr).Get(RenderHandle{}).GetHandle(), RenderHandle{});
     {
         auto info = renderNodeGraphMgr.GetInfo(handle0);
         ASSERT_EQ(desc.renderNodeGraphName, info.renderNodeGraphName);
@@ -56,10 +56,10 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
     auto handle1 =
         renderNodeGraphMgr.Create(IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_DYNAMIC, desc);
     renderNodeGraphMgr.HandlePendingAllocations();
-    ASSERT_NE(RenderHandle {}, handle1.GetHandle());
+    ASSERT_NE(RenderHandle{}, handle1.GetHandle());
     auto result = renderNodeGraphMgr.LoadAndCreate(
         IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, "files://nonExistingFile.rng");
-    ASSERT_EQ(RenderHandle {}, result.GetHandle());
+    ASSERT_EQ(RenderHandle{}, result.GetHandle());
     {
         RenderNodeDesc nodeDesc;
         nodeDesc.typeName = "RenderNodeBloom";
@@ -89,9 +89,9 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
         auto info = renderNodeGraphMgr.GetInfo(handle1);
         ASSERT_EQ(2, info.nodes.size());
     }
-    RenderHandleReference inputs[] = { handle1, handle1, handle1, handle1, handle1 };
-    RenderHandleReference outputs[] = { handle1, handle1, handle1, handle1, handle1 };
-    renderNodeGraphMgr.SetRenderNodeGraphResources(handle1, { inputs, countof(inputs) }, { outputs, countof(outputs) });
+    RenderHandleReference inputs[] = {handle1, handle1, handle1, handle1, handle1};
+    RenderHandleReference outputs[] = {handle1, handle1, handle1, handle1, handle1};
+    renderNodeGraphMgr.SetRenderNodeGraphResources(handle1, {inputs, countof(inputs)}, {outputs, countof(outputs)});
     renderNodeGraphMgr.HandlePendingAllocations();
     {
         auto resources = renderNodeGraphMgr.GetRenderNodeGraphResources(handle1);
@@ -99,7 +99,7 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
         ASSERT_FALSE(resources.outputResources.empty());
     }
     {
-        auto resources = renderNodeGraphMgr.GetRenderNodeGraphResources(RenderHandleReference {});
+        auto resources = renderNodeGraphMgr.GetRenderNodeGraphResources(RenderHandleReference{});
         ASSERT_TRUE(resources.inputResources.empty());
         ASSERT_TRUE(resources.outputResources.empty());
     }
@@ -111,15 +111,15 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
     {
         auto invalidHandle = RenderHandleUtil::CreateHandle(RenderHandleType::RENDER_NODE_GRAPH, 16);
         auto handle = static_cast<const RenderNodeGraphManager&>(renderNodeGraphMgr).Get(invalidHandle);
-        ASSERT_EQ(RenderHandle {}, handle.GetHandle());
-        RenderHandleReference refHandle { invalidHandle, {} };
+        ASSERT_EQ(RenderHandle{}, handle.GetHandle());
+        RenderHandleReference refHandle{invalidHandle, {}};
         auto info = renderNodeGraphMgr.GetInfo(refHandle);
         ASSERT_EQ(0, info.nodes.size());
     }
     {
         auto handle = RenderHandleUtil::CreateHandle(RenderHandleType::RENDER_NODE_GRAPH, 0, 3);
         ASSERT_EQ(nullptr, renderNodeGraphMgr.Get(handle));
-        RenderHandleReference refHandle { handle, {} };
+        RenderHandleReference refHandle{handle, {}};
         auto info = renderNodeGraphMgr.GetInfo(refHandle);
         ASSERT_EQ(0, info.nodes.size());
         renderNodeGraphMgr.SetRenderNodeGraphResources(refHandle, {}, {});
@@ -148,11 +148,11 @@ void TestRenderGraphManager(const UTest::EngineResources& engine)
         renderNodeGraphMgr.EraseRenderNode(handle, "NonExistingNode");
         renderNodeGraphMgr.HandlePendingAllocations();
         RenderHandleReference invalidHandle;
-        renderNodeGraphMgr.SetRenderNodeGraphResources(handle, { &invalidHandle, 1 }, { &invalidHandle, 1 });
+        renderNodeGraphMgr.SetRenderNodeGraphResources(handle, {&invalidHandle, 1}, {&invalidHandle, 1});
     }
-    ASSERT_EQ(nullptr, renderNodeGraphMgr.Get(RenderHandle {}));
+    ASSERT_EQ(nullptr, renderNodeGraphMgr.Get(RenderHandle{}));
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeGraphManagerTest

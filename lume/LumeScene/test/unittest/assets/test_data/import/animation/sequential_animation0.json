@@ -1,0 +1,26 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "sequentialAnimation",
+		"name": "seqAnim",
+		"enabled": true,
+		"loop": 2,
+		"speed": 1.5,
+		"animations": [
+			{
+				"type": "trackAnimation",
+				"name": "child1",
+				"duration": 500,
+				"timestamps": [0.0, 1.0],
+				"keyframes": [0.0, 1.0]
+			},
+			{
+				"type": "trackAnimation",
+				"name": "child2",
+				"duration": 300,
+				"timestamps": [0.0, 1.0],
+				"keyframes": [1.0, 0.0]
+			}
+		]
+	}
+}

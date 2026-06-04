@@ -43,7 +43,7 @@ private:
     BASE_NS::vector<ObjectId> anchorTypes_;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

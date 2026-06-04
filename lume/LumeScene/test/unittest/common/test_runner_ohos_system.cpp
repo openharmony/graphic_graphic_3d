@@ -38,8 +38,8 @@
 #endif
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)() { nullptr };
-void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo) { nullptr };
+CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)(){nullptr};
+void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo){nullptr};
 #endif
 
 SCENE_BEGIN_NAMESPACE()
@@ -78,7 +78,6 @@ void RegisterTestFileProtocol(CORE_NS::IFileManager& fileManager)
 
     // Register protocol requeired by LumeScene plugin assets
     fileManager.RegisterPath("test_assets", applicationTestAssetsDirectory, true);
-
     fileManager.RegisterPath("project", "test_assets://project/", false);
     fileManager.RegisterPath("assets", "project://", false);
     fileManager.RegisterPath("fonts", "project://fonts/", false);
@@ -91,16 +90,16 @@ CORE_NS::IEngine::Ptr CreateEngine()
     const ::Test::LogLevelScope logLevel =
         ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_ERROR);
 
-    const CORE_NS::EngineCreateInfo engineCreateInfo { GetTestEnv()->platformCreateInfo,
+    const CORE_NS::EngineCreateInfo engineCreateInfo{GetTestEnv()->platformCreateInfo,
         // applicationVersion
         {
-            "test", // name
-            0,      // versionMajor
-            1,      // versionMinor
-            0,      // versionPatch
+            "test",  // name
+            0,       // versionMajor
+            1,       // versionMinor
+            0,       // versionPatch
         },
         // applicationContext
-        {} };
+        {}};
 
     auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
     auto engine = factory->Create(engineCreateInfo);
@@ -129,9 +128,20 @@ BASE_NS::shared_ptr<RENDER_NS::IRenderContext> CreateRenderContext(
     }
 #endif
 
+#if RENDER_HAS_GLES_BACKEND
+    RENDER_NS::BackendExtraGLES glesExtra;
+    if (backend == RENDER_NS::DeviceBackendType::OPENGLES) {
+        glesExtra.MSAASamples = 0;
+        glesExtra.depthBits = 24;
+        glesExtra.alphaBits = 8;
+        glesExtra.stencilBits = 0;
+        deviceCreateInfo.backendType = backend;
+        deviceCreateInfo.backendConfiguration = &glesExtra;
+    }
+#endif
 #if RENDER_HAS_GL_BACKEND
     RENDER_NS::BackendExtraGL glExtra;
-    if (backend == RENDER_NS::DeviceBackendType::OPENGL || backend == RENDER_NS::DeviceBackendType::OPENGLES) {
+    if (backend == RENDER_NS::DeviceBackendType::OPENGL) {
         glExtra.MSAASamples = 0;
         glExtra.depthBits = 24;
         glExtra.alphaBits = 8;
@@ -141,12 +151,12 @@ BASE_NS::shared_ptr<RENDER_NS::IRenderContext> CreateRenderContext(
     }
 #endif
 
-    const RENDER_NS::RenderCreateInfo info {
+    const RENDER_NS::RenderCreateInfo info{
         {
-            "test", // name
-            1,      // versionMajor
-            0,      // versionMinor
-            0,      // versionPatch
+            "test",  // name
+            1,       // versionMajor
+            0,       // versionMinor
+            0,       // versionPatch
         },
         deviceCreateInfo,
     };
@@ -188,8 +198,8 @@ IApplicationContext::Ptr CreateAppContext(
     auto appc = META_NS::GetObjectRegistry().Create<IApplicationContext>(ClassId::ApplicationContext);
 
     if (appc) {
-        IApplicationContext::ApplicationContextInfo info { engineTaskQueue, appTaskQueue, renderContext, resources,
-            SceneOptions {} };
+        IApplicationContext::ApplicationContextInfo info{
+            engineTaskQueue, appTaskQueue, renderContext, resources, SceneOptions{}};
 
         if (appc->Initialize(info)) {
             return appc;
@@ -203,7 +213,7 @@ IApplicationContext::Ptr CreateAppContext(
     return nullptr;
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
 testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new SCENE_NS::UTest::TestRunnerEnv);

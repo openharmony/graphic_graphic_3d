@@ -24,7 +24,8 @@ SCENE_BEGIN_NAMESPACE()
 
 class ResourceGroupBundle {
 public:
-    ResourceGroupBundle(BASE_NS::vector<META_NS::IResourceGroupHandle::Ptr> h = {}) : handles_(BASE_NS::move(h)) {}
+    ResourceGroupBundle(BASE_NS::vector<META_NS::IResourceGroupHandle::Ptr> h = {}) : handles_(BASE_NS::move(h))
+    {}
 
     bool IsValid() const
     {

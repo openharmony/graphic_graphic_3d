@@ -18,7 +18,7 @@
 #include <base/containers/array_view.h>
 #include <base/containers/iterator.h>
 #include <base/namespace.h>
-#include <core/log.h>
+#include <base/util/log.h>
 #include <core/namespace.h>
 #include <core/property/intf_property_api.h>
 #include <core/property/intf_property_handle.h>
@@ -164,7 +164,7 @@ template<typename BlockType>
 const void* PropertyApiImpl<BlockType>::RLock() const
 {
 #ifndef NDEBUG
-    CORE_ASSERT(!wLocked_);
+    BASE_ASSERT(!wLocked_);
     rLocked_++;
 #endif
     return data_.get();
@@ -174,7 +174,7 @@ template<typename BlockType>
 void PropertyApiImpl<BlockType>::RUnlock() const
 {
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ > 0);
+    BASE_ASSERT(rLocked_ > 0);
     rLocked_--;
 #endif
 }
@@ -183,7 +183,7 @@ template<typename BlockType>
 void* PropertyApiImpl<BlockType>::WLock()
 {
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ <= 1 && !wLocked_);
+    BASE_ASSERT(rLocked_ <= 1 && !wLocked_);
     wLocked_ = true;
 #endif
     return data_.get();
@@ -193,7 +193,7 @@ template<typename BlockType>
 void PropertyApiImpl<BlockType>::WUnlock()
 {
 #ifndef NDEBUG
-    CORE_ASSERT(wLocked_);
+    BASE_ASSERT(wLocked_);
     wLocked_ = false;
 #endif
     generationCount_++;

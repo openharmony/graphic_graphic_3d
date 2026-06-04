@@ -17,8 +17,7 @@
 
 namespace OHOS::Render3D {
 MaterialPropertyETS::MaterialPropertyETS(const SCENE_NS::ITexture::Ptr tex) : tex_(tex)
-{
-}
+{}
 
 MaterialPropertyETS::~MaterialPropertyETS()
 {
@@ -60,7 +59,7 @@ std::shared_ptr<Vec4Proxy> MaterialPropertyETS::GetFactor()
     return factorProxy_;
 }
 
-void MaterialPropertyETS::SetFactor(const BASE_NS::Math::Vec4 &factor)
+void MaterialPropertyETS::SetFactor(const BASE_NS::Math::Vec4& factor)
 {
     auto tex = tex_.lock();
     if (!tex) {
@@ -94,7 +93,7 @@ void MaterialPropertyETS::SetSampler(const std::shared_ptr<SamplerETS> sampler)
     }
     SCENE_NS::ISampler::Ptr nativeSampler = META_NS::GetValue(tex->Sampler());
     if (!nativeSampler) {
-        CORE_LOG_E("Failed to set sampler, target sampler is null");
+        CORE_LOG_E("Set sampler failed, target sampler is null");
         return;
     }
     ExecSyncTask([&]() {

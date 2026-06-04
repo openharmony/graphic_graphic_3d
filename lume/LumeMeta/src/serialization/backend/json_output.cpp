@@ -46,7 +46,7 @@ private:
     }
     void Visit(const INilNode&) override
     {
-        node_ = json_value::null {};
+        node_ = json_value::null{};
     }
     void Visit(const IObjectNode& n) override
     {
@@ -97,23 +97,23 @@ private:
     }
     void Visit(const IBuiltinValueNode<bool>& n) override
     {
-        node_ = json_value { n.GetValue() };
+        node_ = json_value{n.GetValue()};
     }
     void Visit(const IBuiltinValueNode<double>& n) override
     {
-        node_ = json_value { n.GetValue() };
+        node_ = json_value{n.GetValue()};
     }
     void Visit(const IBuiltinValueNode<int64_t>& n) override
     {
-        node_ = json_value { n.GetValue() };
+        node_ = json_value{n.GetValue()};
     }
     void Visit(const IBuiltinValueNode<uint64_t>& n) override
     {
-        node_ = json_value { n.GetValue() };
+        node_ = json_value{n.GetValue()};
     }
     void Visit(const IBuiltinValueNode<BASE_NS::string>& n) override
     {
-        node_ = json_value { n.GetValue() };
+        node_ = json_value{n.GetValue()};
     }
     void Visit(const IBuiltinValueNode<RefUri>& n) override
     {
@@ -165,6 +165,6 @@ BASE_NS::string JsonOutput::Process(const ISerNode::Ptr& tree)
     return CORE_NS::json::to_string(res);
 }
 
-} // namespace Serialization
+}  // namespace Serialization
 
 META_END_NAMESPACE()

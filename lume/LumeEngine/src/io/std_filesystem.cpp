@@ -23,7 +23,7 @@
 #include <filesystem>
 #define HAS_FILESYSTEM
 #endif
-#endif // defined(__has_include)
+#endif  // defined(__has_include)
 #endif
 
 #if !defined(HAS_FILESYSTEM)
@@ -62,7 +62,7 @@ std::filesystem::path U8Path(string_view str)
 }
 #endif
 
-} // namespace
+}  // namespace
 
 string StdFilesystem::ValidatePath(const string_view pathIn) const
 {
@@ -79,7 +79,7 @@ string StdFilesystem::ValidatePath(const string_view pathIn) const
         }
 #ifdef _WIN32
         // path must have drive letter, otherwise it is NOT absolute. ie. must conform to "/C:/" style
-        if ((path.length() < 4) || (path[2] != ':') || (path[3] != '/')) { // 4: size limit; 2 3: index of ':' '/'
+        if ((path.length() < 4) || (path[2] != ':') || (path[3] != '/')) {  // 4: size limit; 2 3: index of ':' '/'
             CORE_LOG_V("Corrupted path in StdFilesystem::ValidatePath. missing drive letter, or incorrect root");
             return "";
         }
@@ -136,7 +136,7 @@ IDirectory::Ptr StdFilesystem::OpenDirectory(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        return IDirectory::Ptr { StdDirectory::Open(path).release() };
+        return IDirectory::Ptr{StdDirectory::Open(path).release()};
     }
 
     return {};
@@ -146,7 +146,7 @@ IDirectory::Ptr StdFilesystem::CreateDirectory(const string_view pathIn)
 {
     auto path = ValidatePath(pathIn);
     if (!path.empty()) {
-        return IDirectory::Ptr { StdDirectory::Create(path).release() };
+        return IDirectory::Ptr{StdDirectory::Create(path).release()};
     }
 
     return {};
@@ -200,7 +200,7 @@ vector<string> StdFilesystem::GetUriPaths(const string_view) const
 StdFilesystem::StdFilesystem(string_view basePath) : basePath_(basePath)
 {
     // remove the extraneous slash
-    if (basePath_.back() == '/') {
+    if (!basePath_.empty() && basePath_.back() == '/') {
         basePath_.resize(basePath_.size() - 1);
     }
 }
@@ -235,16 +235,18 @@ IDirectory::Entry StdFilesystem::GetEntry(const string_view uriIn)
 
         auto asString = canonicalPath.u8string();
         if (std::filesystem::is_directory(status)) {
-            return { IDirectory::Entry::DIRECTORY, string { asString.data(), asString.size() },
-                static_cast<uint64_t>(time.time_since_epoch().count()) };
+            return {IDirectory::Entry::DIRECTORY,
+                string{asString.data(), asString.size()},
+                static_cast<uint64_t>(time.time_since_epoch().count())};
         }
         if (std::filesystem::is_regular_file(status)) {
-            return { IDirectory::Entry::FILE, string { asString.data(), asString.size() },
-                static_cast<uint64_t>(time.time_since_epoch().count()) };
+            return {IDirectory::Entry::FILE,
+                string{asString.data(), asString.size()},
+                static_cast<uint64_t>(time.time_since_epoch().count())};
         }
 #else
         auto path = string(uri);
-        char canonicalPath[CORE_MAX_PATH] = { 0 };
+        char canonicalPath[CORE_MAX_PATH] = {0};
 
         if (realpath(path.c_str(), canonicalPath) == nullptr) {
             return {};
@@ -255,10 +257,10 @@ IDirectory::Entry StdFilesystem::GetEntry(const string_view uriIn)
         }
 
         if ((ds.st_mode & S_IFDIR)) {
-            return { IDirectory::Entry::DIRECTORY, canonicalPath, static_cast<uint64_t>(ds.st_mtime) };
+            return {IDirectory::Entry::DIRECTORY, canonicalPath, static_cast<uint64_t>(ds.st_mtime)};
         }
         if ((ds.st_mode & S_IFREG)) {
-            return { IDirectory::Entry::FILE, canonicalPath, static_cast<uint64_t>(ds.st_mtime) };
+            return {IDirectory::Entry::FILE, canonicalPath, static_cast<uint64_t>(ds.st_mtime)};
         }
 #endif
     }

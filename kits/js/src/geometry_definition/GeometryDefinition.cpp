@@ -22,9 +22,14 @@
 #include <geometry_definition/CylinderJS.h>
 #include <napi_api.h>
 
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+#include "histogram_plugin_macros.h"
+#endif
+
 namespace GeometryDefinition {
 
-GeometryDefinition::GeometryDefinition() {}
+GeometryDefinition::GeometryDefinition()
+{}
 
 void RegisterEnums(NapiApi::Object exports)
 {
@@ -52,14 +57,29 @@ BASE_NS::unique_ptr<GeometryDefinition> GeometryDefinition::FromJs(NapiApi::Obje
     if (auto value = jsDefinition.Get<uint32_t>("geometryType"); value.IsValid()) {
         uint32_t type = value;
         if (type == GeometryType::CUSTOM) {
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+            HISTOGRAM_ENUMERATION("Arkgraphics3d.TestApigeometryType", GeometryType::CUSTOM, GeometryType::CYLINDER);
+#endif
             result = CustomJS::FromJs(jsDefinition);
         } else if (type == GeometryType::CUBE) {
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+            HISTOGRAM_ENUMERATION("Arkgraphics3d.TestApigeometryType", GeometryType::CUBE, GeometryType::CYLINDER);
+#endif
             result = CubeJS::FromJs(jsDefinition);
         } else if (type == GeometryType::PLANE) {
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+            HISTOGRAM_ENUMERATION("Arkgraphics3d.TestApigeometryType", GeometryType::PLANE, GeometryType::CYLINDER);
+#endif
             result = PlaneJS::FromJs(jsDefinition);
         } else if (type == GeometryType::SPHERE) {
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+            HISTOGRAM_ENUMERATION("Arkgraphics3d.TestApigeometryType", GeometryType::SPHERE, GeometryType::CYLINDER);
+#endif
             result = SphereJS::FromJs(jsDefinition);
         } else if (type == GeometryType::CYLINDER) {
+#ifdef HISTOGRAM_MANAGEMENT_ENABLE
+            HISTOGRAM_ENUMERATION("Arkgraphics3d.TestApigeometryType", GeometryType::CYLINDER, GeometryType::CYLINDER);
+#endif
             result = CylinderJS::FromJs(jsDefinition);
         } else {
             LOG_E("Can't create a native geometry definition: unsupported geometryType");
@@ -67,7 +87,7 @@ BASE_NS::unique_ptr<GeometryDefinition> GeometryDefinition::FromJs(NapiApi::Obje
     } else {
         LOG_E("Can't create a native geometry definition: geometryType missing");
     }
-    return BASE_NS::unique_ptr<GeometryDefinition> { result };
+    return BASE_NS::unique_ptr<GeometryDefinition>{result};
 }
 
 void GeometryDefinition::DefineClass(napi_env env, napi_value exports, BASE_NS::string_view name,
@@ -75,12 +95,12 @@ void GeometryDefinition::DefineClass(napi_env env, napi_value exports, BASE_NS::
 {
     napi_value classCtor = nullptr;
     napi_define_class(env, name.data(), NAPI_AUTO_LENGTH, ctor, nullptr, props.size(), props.data(), &classCtor);
-    NapiApi::MyInstanceState* mis {};
+    NapiApi::MyInstanceState* mis{};
     NapiApi::MyInstanceState::GetInstance(env, (void**)&mis);
     if (mis) {
         mis->StoreCtor(name, classCtor);
     }
-    NapiApi::Object { env, exports }.Set(name, classCtor);
+    NapiApi::Object{env, exports}.Set(name, classCtor);
 }
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition

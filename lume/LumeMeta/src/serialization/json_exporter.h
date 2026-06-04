@@ -36,7 +36,7 @@ private:
     Exporter exp_;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

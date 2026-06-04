@@ -33,34 +33,34 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr string_view RENDER_DATA_STORE_POST_PROCESS_TYPE_NAME { RenderDataStorePostProcess::TYPE_NAME };
-constexpr string_view RENDER_DATA_STORE_POD_NAME { RenderDataStorePod::TYPE_NAME };
+constexpr string_view RENDER_DATA_STORE_POST_PROCESS_TYPE_NAME{RenderDataStorePostProcess::TYPE_NAME};
+constexpr string_view RENDER_DATA_STORE_POD_NAME{RenderDataStorePod::TYPE_NAME};
 
 constexpr string_view CUSTOM_PROPERTIES = "customProperties";
 constexpr string_view GLOBAL_FACTOR = "globalFactor";
 constexpr string_view CUSTOM_PROPERTY_DATA = "data";
 
-constexpr uint32_t SIZE_OF_FLOAT { sizeof(float) };
-constexpr uint32_t SIZE_OF_VEC2 { sizeof(Math::Vec2) };
-constexpr uint32_t SIZE_OF_VEC3 { sizeof(Math::Vec3) };
-constexpr uint32_t SIZE_OF_VEC4 { sizeof(Math::Vec4) };
-constexpr uint32_t SIZE_OF_MAT3X3 { sizeof(Math::Mat3X3) };
-constexpr uint32_t SIZE_OF_MAT4X4 { sizeof(Math::Mat4X4) };
+constexpr uint32_t SIZE_OF_FLOAT{sizeof(float)};
+constexpr uint32_t SIZE_OF_VEC2{sizeof(Math::Vec2)};
+constexpr uint32_t SIZE_OF_VEC3{sizeof(Math::Vec3)};
+constexpr uint32_t SIZE_OF_VEC4{sizeof(Math::Vec4)};
+constexpr uint32_t SIZE_OF_MAT3X3{sizeof(Math::Mat3X3)};
+constexpr uint32_t SIZE_OF_MAT4X4{sizeof(Math::Mat4X4)};
 
-constexpr uint32_t ALIGNMENT_OF_FLOAT { sizeof(float) };
-constexpr uint32_t ALIGNMENT_OF_VEC2 { sizeof(float) * 2U };
-constexpr uint32_t ALIGNMENT_OF_VEC3 { sizeof(float) * 4U };
-constexpr uint32_t ALIGNMENT_OF_VEC4 { sizeof(float) * 4U };
-constexpr uint32_t ALIGNMENT_OF_MAT3X3 { sizeof(float) * 4U * 3U };
-constexpr uint32_t ALIGNMENT_OF_MAT4X4 { sizeof(float) * 4U * 4U };
+constexpr uint32_t ALIGNMENT_OF_FLOAT{sizeof(float)};
+constexpr uint32_t ALIGNMENT_OF_VEC2{sizeof(float) * 2U};
+constexpr uint32_t ALIGNMENT_OF_VEC3{sizeof(float) * 4U};
+constexpr uint32_t ALIGNMENT_OF_VEC4{sizeof(float) * 4U};
+constexpr uint32_t ALIGNMENT_OF_MAT3X3{sizeof(float) * 4U * 3U};
+constexpr uint32_t ALIGNMENT_OF_MAT4X4{sizeof(float) * 4U * 4U};
 
-constexpr uint32_t MAX_LOCAL_DATA_BYTE_SIZE { PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE };
-constexpr uint32_t MAX_GLOBAL_FACTOR_BYTE_SIZE { sizeof(Math::Vec4) };
+constexpr uint32_t MAX_LOCAL_DATA_BYTE_SIZE{PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE};
+constexpr uint32_t MAX_GLOBAL_FACTOR_BYTE_SIZE{sizeof(Math::Vec4)};
 
-constexpr string_view TAA_SHADER_NAME { "rendershaders://shader/fullscreen_taa.shader" };
-constexpr string_view FXAA_SHADER_NAME { "rendershaders://shader/fullscreen_fxaa.shader" };
-constexpr string_view DOF_SHADER_NAME { "rendershaders://shader/depth_of_field.shader" };
-constexpr string_view MB_SHADER_NAME { "rendershaders://shader/fullscreen_motion_blur.shader" };
+constexpr string_view TAA_SHADER_NAME{"rendershaders://shader/fullscreen_taa.shader"};
+constexpr string_view FXAA_SHADER_NAME{"rendershaders://shader/fullscreen_fxaa.shader"};
+constexpr string_view DOF_SHADER_NAME{"rendershaders://shader/depth_of_field.shader"};
+constexpr string_view MB_SHADER_NAME{"rendershaders://shader/fullscreen_motion_blur.shader"};
 
 inline constexpr uint32_t GetAlignment(uint32_t value, uint32_t align)
 {
@@ -164,7 +164,7 @@ void AppendValues(
     }
     // NOTE: does not handle invalid types
 }
-} // namespace
+}  // namespace
 
 RenderDataStorePostProcess::RenderDataStorePostProcess(const IRenderContext& renderContext, const string_view name)
     : renderContext_(renderContext), name_(name)
@@ -228,7 +228,7 @@ void RenderDataStorePostProcess::Create(
             pp.id = static_cast<uint32_t>(postProcesses.size());
             pp.name = ppName;
             pp.shader = shader;
-            pp.variables = {}; // default variables, overwritten with shader default properties
+            pp.variables = {};  // default variables, overwritten with shader default properties
             GetShaderProperties(shader, pp.variables);
             postProcesses.push_back(move(pp));
             SetGlobalFactorsImpl(postProcesses[pp.id].variables, pp.id, iter->second);
@@ -394,7 +394,8 @@ void RenderDataStorePostProcess::SetGlobalFactorsImpl(
     auto& globalFactors = ppStack.globalFactors;
     if (ppIndex < PostProcessConstants::GLOBAL_FACTOR_COUNT) {
         globalFactors.factors[ppIndex] = vars.factor;
-        globalFactors.enableFlags = (uint32_t(vars.enabled) << ppIndex);
+        globalFactors.enableFlags =
+            (globalFactors.enableFlags & ~(1u << ppIndex)) | (uint32_t(vars.enabled) << ppIndex);
     } else if (vars.userFactorIndex < PostProcessConstants::USER_GLOBAL_FACTOR_COUNT) {
         globalFactors.userFactors[vars.userFactorIndex] = vars.factor;
     }
@@ -404,13 +405,16 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     const PostProcessConfiguration& ppConfig, PostProcessStack& ppStack)
 {
     const IShaderManager& shaderMgr = renderContext_.GetDevice().GetShaderManager();
-    auto FillBuiltInData = [&](const uint32_t idx, const uint32_t factorIndex, const uint32_t userFactorIndex,
-                               const Math::Vec4& factor, const string_view shaderName) {
+    auto FillBuiltInData = [&](const uint32_t idx,
+                               const uint32_t factorIndex,
+                               const uint32_t userFactorIndex,
+                               const Math::Vec4& factor,
+                               const string_view shaderName) {
         PostProcess pp;
         pp.id = idx;
         pp.name = PostProcessConstants::POST_PROCESS_NAMES[pp.id];
         pp.factorIndex = factorIndex;
-        pp.shader = shaderName.empty() ? RenderHandleReference {} : shaderMgr.GetShaderHandle(shaderName);
+        pp.shader = shaderName.empty() ? RenderHandleReference{} : shaderMgr.GetShaderHandle(shaderName);
         auto& vars = pp.variables;
         vars.userFactorIndex = userFactorIndex;
         vars.enabled = false;
@@ -419,41 +423,69 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
         return pp;
     };
 
-    constexpr uint32_t defUserIdx { ~0u };
+    constexpr uint32_t defUserIdx{~0u};
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_TONEMAP,
-        PostProcessConstants::RENDER_TONEMAP, defUserIdx, PostProcessConversionHelper::GetFactorTonemap(ppConfig), {}));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_VIGNETTE, PostProcessConstants::RENDER_VIGNETTE, defUserIdx,
-            PostProcessConversionHelper::GetFactorVignette(ppConfig), {}));
+        PostProcessConstants::RENDER_TONEMAP,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorTonemap(ppConfig),
+        {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_VIGNETTE,
+        PostProcessConstants::RENDER_VIGNETTE,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorVignette(ppConfig),
+        {}));
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_DITHER,
-        PostProcessConstants::RENDER_DITHER, defUserIdx, PostProcessConversionHelper::GetFactorDither(ppConfig), {}));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_COLOR_CONVERSION, PostProcessConstants::RENDER_COLOR_CONVERSION,
-            defUserIdx, PostProcessConversionHelper::GetFactorColorConversion(ppConfig), {}));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_COLOR_FRINGE_BIT, PostProcessConstants::RENDER_COLOR_FRINGE_BIT,
-            defUserIdx, PostProcessConversionHelper::GetFactorFringe(ppConfig), {}));
+        PostProcessConstants::RENDER_DITHER,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorDither(ppConfig),
+        {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_COLOR_CONVERSION,
+        PostProcessConstants::RENDER_COLOR_CONVERSION,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorColorConversion(ppConfig),
+        {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_COLOR_FRINGE_BIT,
+        PostProcessConstants::RENDER_COLOR_FRINGE_BIT,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorFringe(ppConfig),
+        {}));
 
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_UPSCALER_BIT, PostProcessConstants::RENDER_UPSCALER_BIT,
-            defUserIdx, PostProcessConversionHelper::GetFactorUpscaler(ppConfig), {}));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_WHITE_BALANCE, PostProcessConstants::RENDER_WHITE_BALANCE,
-            defUserIdx, PostProcessConversionHelper::GetFactorWhiteBalance(ppConfig), {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_UPSCALER_BIT,
+        PostProcessConstants::RENDER_UPSCALER_BIT,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorUpscaler(ppConfig),
+        {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_WHITE_BALANCE,
+        PostProcessConstants::RENDER_WHITE_BALANCE,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorWhiteBalance(ppConfig),
+        {}));
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_COLOR_ADJUSTMENTS,
-        PostProcessConstants::RENDER_COLOR_ADJUSTMENTS, defUserIdx,
-        PostProcessConversionHelper::GetFactorColorAdjustments(ppConfig), {}));
+        PostProcessConstants::RENDER_COLOR_ADJUSTMENTS,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorColorAdjustments(ppConfig),
+        {}));
 
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_BLUR,
-        PostProcessConfiguration::INDEX_BLUR, defUserIdx, PostProcessConversionHelper::GetFactorBlur(ppConfig), {}));
+        PostProcessConfiguration::INDEX_BLUR,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorBlur(ppConfig),
+        {}));
     ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_BLOOM,
-        PostProcessConfiguration::INDEX_BLOOM, defUserIdx, PostProcessConversionHelper::GetFactorBloom(ppConfig), {}));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_FXAA, PostProcessConfiguration::INDEX_FXAA, defUserIdx,
-            PostProcessConversionHelper::GetFactorFxaa(ppConfig), FXAA_SHADER_NAME));
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_TAA, PostProcessConfiguration::INDEX_TAA, defUserIdx,
-            PostProcessConversionHelper::GetFactorTaa(ppConfig), TAA_SHADER_NAME));
+        PostProcessConfiguration::INDEX_BLOOM,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorBloom(ppConfig),
+        {}));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_FXAA,
+        PostProcessConfiguration::INDEX_FXAA,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorFxaa(ppConfig),
+        FXAA_SHADER_NAME));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_TAA,
+        PostProcessConfiguration::INDEX_TAA,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorTaa(ppConfig),
+        TAA_SHADER_NAME));
     {
         auto& pp = ppStack.postProcesses.emplace_back();
         pp.id = PostProcessConstants::RENDER_DOF;
@@ -466,13 +498,17 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
         auto factors = PostProcessConversionHelper::GetFactorDof(ppConfig);
         CloneData(vars.customPropertyData, sizeof(vars.customPropertyData), &factors, sizeof(factors));
         factors = PostProcessConversionHelper::GetFactorDof2(ppConfig);
-        CloneData(vars.customPropertyData + sizeof(factors), sizeof(vars.customPropertyData) - sizeof(factors),
-            &factors, sizeof(factors));
+        CloneData(vars.customPropertyData + sizeof(factors),
+            sizeof(vars.customPropertyData) - sizeof(factors),
+            &factors,
+            sizeof(factors));
     }
 
-    ppStack.postProcesses.push_back(
-        FillBuiltInData(PostProcessConstants::RENDER_MOTION_BLUR, PostProcessConstants::RENDER_MOTION_BLUR, defUserIdx,
-            PostProcessConversionHelper::GetFactorMotionBlur(ppConfig), MB_SHADER_NAME));
+    ppStack.postProcesses.push_back(FillBuiltInData(PostProcessConstants::RENDER_MOTION_BLUR,
+        PostProcessConstants::RENDER_MOTION_BLUR,
+        defUserIdx,
+        PostProcessConversionHelper::GetFactorMotionBlur(ppConfig),
+        MB_SHADER_NAME));
 
     // fill global built-in factors
     PLUGIN_ASSERT(PostProcessConstants::POST_PROCESS_COUNT == static_cast<uint32_t>(ppStack.postProcesses.size()));

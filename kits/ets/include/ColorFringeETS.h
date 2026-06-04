@@ -77,4 +77,4 @@ private:
     SCENE_NS::IColorFringe::WeakPtr colorFringe_;  // colorFringe object from postproc_
 };
 }  // namespace OHOS::Render3D
-#endif // OHOS_3D_COLOR_FRINGE_ETS_H
+#endif  // OHOS_3D_COLOR_FRINGE_ETS_H

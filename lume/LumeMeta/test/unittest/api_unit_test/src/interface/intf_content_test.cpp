@@ -17,12 +17,10 @@
 
 #include <meta/api/iteration.h>
 #include <meta/api/object.h>
-#include <meta/interface/loaders/intf_class_content_loader.h>
 
 #include "helpers/serialisation_utils.h"
 #include "helpers/test_utils.h"
 #include "helpers/testing_objects.h"
-#include "helpers/util.h"
 
 META_BEGIN_NAMESPACE()
 namespace UTest {
@@ -40,24 +38,24 @@ UNIT_TEST(API_ContentTest, Search, testing::ext::TestSize.Level1)
     co.SetContent(content);
     auto c = CreateTestContainer<IContainer>();
     c->Add(co.GetPtr());
-    EXPECT_FALSE(c->FindAny({ "Content", TraversalType::NO_HIERARCHY }));
-    EXPECT_EQ(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }), content);
-    EXPECT_EQ(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID } }), content);
-    EXPECT_EQ(c->FindAny({ "", TraversalType::DEPTH_FIRST_PRE_ORDER, { ITestType::UID } }), content);
-    EXPECT_FALSE(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER, { IContainer::UID } }));
+    EXPECT_FALSE(c->FindAny({"Content", TraversalType::NO_HIERARCHY}));
+    EXPECT_EQ(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}), content);
+    EXPECT_EQ(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID}}), content);
+    EXPECT_EQ(c->FindAny({"", TraversalType::DEPTH_FIRST_PRE_ORDER, {ITestType::UID}}), content);
+    EXPECT_FALSE(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER, {IContainer::UID}}));
 
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 2);
-    EXPECT_EQ(c->FindAll({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 1);
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 2);
+    EXPECT_EQ(c->FindAll({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 1);
 
-    EXPECT_TRUE(ContainsObjectWithName(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }), "Content"));
+    EXPECT_TRUE(ContainsObjectWithName(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}), "Content"));
 
     co.SetContentSearchable(false);
-    EXPECT_FALSE(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }));
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 1);
+    EXPECT_FALSE(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}));
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 1);
 
     co.SetContentSearchable(true);
-    EXPECT_EQ(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }), content);
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 2);
+    EXPECT_EQ(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}), content);
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 2);
 }
 
 /**
@@ -75,17 +73,17 @@ UNIT_TEST(API_ContentTest, SearchContentContainer, testing::ext::TestSize.Level1
     co.SetContent(interface_pointer_cast<IObject>(content));
     auto c = CreateTestContainer<IContainer>();
     c->Add(co.GetPtr());
-    EXPECT_FALSE(c->FindAny({ "Content", TraversalType::NO_HIERARCHY }));
-    EXPECT_EQ(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }), ccontent);
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 3);
+    EXPECT_FALSE(c->FindAny({"Content", TraversalType::NO_HIERARCHY}));
+    EXPECT_EQ(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}), ccontent);
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 3);
 
     co.SetContentSearchable(false);
-    EXPECT_FALSE(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }));
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 1);
+    EXPECT_FALSE(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}));
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 1);
 
     co.SetContentSearchable(true);
-    EXPECT_EQ(c->FindAny({ "Content", TraversalType::DEPTH_FIRST_PRE_ORDER }), ccontent);
-    EXPECT_EQ(c->FindAll({ "", TraversalType::DEPTH_FIRST_PRE_ORDER }).size(), 3);
+    EXPECT_EQ(c->FindAny({"Content", TraversalType::DEPTH_FIRST_PRE_ORDER}), ccontent);
+    EXPECT_EQ(c->FindAll({"", TraversalType::DEPTH_FIRST_PRE_ORDER}).size(), 3);
 }
 
 /**
@@ -224,7 +222,7 @@ UNIT_TEST(API_ContentTest, ObjectFlagsHierarchy, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContentTest, ContentRequiredInterfaces, testing::ext::TestSize.Level1)
 {
     ContentObject co(CreateInstance(ClassId::ContentObject));
-    EXPECT_TRUE(RequiredInterfaces(co).SetRequiredInterfaces({ ITestType::UID }));
+    EXPECT_TRUE(RequiredInterfaces(co).SetRequiredInterfaces({ITestType::UID}));
 
     auto correctType = GetObjectRegistry().Create(ClassId::TestType);
     auto wrongType = GetObjectRegistry().Create(ClassId::Object);
@@ -243,5 +241,5 @@ UNIT_TEST(API_ContentTest, ContentRequiredInterfaces, testing::ext::TestSize.Lev
     EXPECT_EQ(co.GetContent(), wrongType);
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

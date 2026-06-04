@@ -32,7 +32,7 @@ class ITransformComponentManager;
 
 class LocalMatrixSystem final : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "4de00235-c9cd-44d0-94ef-2ef9bbffa088" };
+    static constexpr BASE_NS::Uid UID{"4de00235-c9cd-44d0-94ef-2ef9bbffa088"};
 
     explicit LocalMatrixSystem(CORE_NS::IEcs& ecs);
     ~LocalMatrixSystem() override = default;
@@ -57,8 +57,8 @@ private:
     bool active_;
     CORE_NS::IEcs& ecs_;
 
-    ILocalMatrixComponentManager* localMatrixManager_ { nullptr };
-    ITransformComponentManager* transformManager_ { nullptr };
+    ILocalMatrixComponentManager* localMatrixManager_{nullptr};
+    ITransformComponentManager* transformManager_{nullptr};
 
     uint32_t transformGeneration_ = 0;
     BASE_NS::vector<uint32_t> transformComponentGenerations_;
@@ -72,4 +72,4 @@ inline constexpr BASE_NS::string_view GetName(const LocalMatrixSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ECS_LOCALMATRIXSYSTEM_H
+#endif  // CORE_ECS_LOCALMATRIXSYSTEM_H

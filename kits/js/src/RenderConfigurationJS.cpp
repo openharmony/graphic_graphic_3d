@@ -25,60 +25,46 @@
 #include "napi/value.h"
 using namespace ShadowConfiguration;
 
-static constexpr napi_type_tag RENDER_CONFIG_TAG = { SCENE_NS::IRenderConfiguration::UID.data[0],
-    SCENE_NS::IRenderConfiguration::UID.data[1] };
+static constexpr napi_type_tag RENDER_CONFIG_TAG = {
+    SCENE_NS::IRenderConfiguration::UID.data[0], SCENE_NS::IRenderConfiguration::UID.data[1]};
 
-template<typename Class>
-Class* UnwrapObject(napi_env env, const NapiApi::Object& object, const napi_type_tag& tag)
-{
-    return NapiApi::UnwrapTagged<Class>(env, object.ToNapiValue(), tag);
-}
-
-template<typename Class>
-Class* UnwrapObject(napi_env env, napi_callback_info info, const napi_type_tag& tag)
-{
-    NapiApi::FunctionContext fc(env, info);
-    if (fc && fc.This()) {
-        return UnwrapObject<Class>(fc.GetEnv(), fc.This(), tag);
-    }
-    return nullptr;
-}
-template<typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
+template <typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
 napi_value ClassMethod(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        if (auto impl = UnwrapObject<Class>(fc.GetEnv(), fc.This(), RENDER_CONFIG_TAG)) {
+        if (auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), RENDER_CONFIG_TAG)) {
             return (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 }
 
-template<typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
+template <typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
 napi_value ClassGetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        if (auto impl = UnwrapObject<Class>(fc.GetEnv(), fc.This(), RENDER_CONFIG_TAG)) {
+        if (auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), RENDER_CONFIG_TAG)) {
             return (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 }
-template<typename Class, typename Type, void (Class::*F)(NapiApi::FunctionContext<Type>&)>
+template <typename Class, typename Type, void (Class::*F)(NapiApi::FunctionContext<Type>&)>
 inline napi_value ClassSetter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext<Type> fc(env, info);
     if (fc && fc.This()) {
-        if (auto impl = UnwrapObject<Class>(fc.GetEnv(), fc.This(), RENDER_CONFIG_TAG)) {
+        if (auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), RENDER_CONFIG_TAG)) {
             (impl->*F)(fc);
         }
     }
     return fc.GetUndefined();
 };
 
-RenderConfiguration::RenderConfiguration() {}
+RenderConfiguration::RenderConfiguration()
+{}
 
 void RenderConfiguration::Detach()
 {
@@ -129,7 +115,7 @@ void RenderConfiguration::SetFrom(napi_env env, SCENE_NS::IRenderConfiguration::
 
 RenderConfiguration* RenderConfiguration::Unwrap(NapiApi::Object obj)
 {
-    return UnwrapObject<RenderConfiguration>(obj.GetEnv(), obj, RENDER_CONFIG_TAG);
+    return NapiApi::UnwrapTagged<RenderConfiguration>(obj.GetEnv(), obj.ToNapiValue(), RENDER_CONFIG_TAG);
 }
 
 napi_value RenderConfiguration::Dispose(NapiApi::FunctionContext<>& ctx)
@@ -140,7 +126,6 @@ napi_value RenderConfiguration::Dispose(NapiApi::FunctionContext<>& ctx)
 
 NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
 {
-    //  wrap it..
     auto DTOR = [](napi_env env, void* nativeObject, void* finalize) {
         RenderConfiguration* ptr = static_cast<RenderConfiguration*>(nativeObject);
         delete ptr;
@@ -150,8 +135,9 @@ NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
 
     // clang-format off
     napi_property_descriptor descs[] = {
-        { "shadowResolution", nullptr, nullptr, ClassGetter<RenderConfiguration, &RenderConfiguration::GetShadowResolution>,
-            ClassSetter<RenderConfiguration, NapiApi::Object, &RenderConfiguration::SetShadowResolution>, nullptr, napi_default_jsproperty, this },
+        { "shadowResolution", nullptr, nullptr, ClassGetter<RenderConfiguration,
+            &RenderConfiguration::GetShadowResolution>, ClassSetter<RenderConfiguration, NapiApi::Object,
+            &RenderConfiguration::SetShadowResolution>, nullptr, napi_default_jsproperty, this },
         { "softShadowConfig", nullptr, nullptr,
             ClassGetter<RenderConfiguration, &RenderConfiguration::GetShadowConfig>,
             ClassSetter<RenderConfiguration, NapiApi::Object, &RenderConfiguration::SetShadowConfig>,
@@ -162,6 +148,7 @@ NapiApi::StrongRef RenderConfiguration::Wrap(NapiApi::Object obj)
     // clang-format on
     auto wrapped = obj.ToNapiValue();
     napi_define_properties(obj.GetEnv(), wrapped, BASE_NS::countof(descs), descs);
+
     SetTo(obj);
     return NapiApi::StrongRef(obj);
 }

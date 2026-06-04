@@ -13,13 +13,16 @@
  * limitations under the License.
  */
 
+#include <scene/ext/intf_ecs_event_listener.h>
 #include <scene/ext/intf_ecs_object.h>
+#include <scene/ext/intf_engine_property_init.h>
 
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/node_component.h>
 #include <core/plugin/intf_plugin_register.h>
 
-#include "meta/interface/intf_class_registry.h"
+#include <meta/interface/intf_class_registry.h>
+
 #include "scene/scene_test.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -30,18 +33,19 @@ public:
     META_NS::IMetadata::Ptr metadata_;
 
     // Use node and name components, as they carry only a few properties.
-    CORE_NS::IComponentManager* nameManager_ { nullptr };
-    CORE_NS::IComponentManager* nodeManager_ { nullptr };
-    const BASE_NS::vector<BASE_NS::string> nodeProps_ {
-        "NodeComponent.parent",             //
-        "NodeComponent.enabled",            //
-        "NodeComponent.effectivelyEnabled", //
-        "NodeComponent.exported",           //
+    CORE_NS::IComponentManager* nameManager_{nullptr};
+    CORE_NS::IComponentManager* nodeManager_{nullptr};
+    const BASE_NS::vector<BASE_NS::string> nodeProps_{
+        "NodeComponent.parent",              //
+        "NodeComponent.enabled",             //
+        "NodeComponent.effectivelyEnabled",  //
+        "NodeComponent.exported",            //
+        "NodeComponent.flags",               //
         /*"NodeComponent.parent.id",          // by default only first level handled */
-        "NodeComponent.sceneId" //
+        "NodeComponent.sceneId"  //
     };
-    const BASE_NS::vector<BASE_NS::string> nameProps_ {
-        "NameComponent.name" //
+    const BASE_NS::vector<BASE_NS::string> nameProps_{
+        "NameComponent.name"  //
     };
 
     IEcsObject::Ptr CreateEcsObject(const BASE_NS::vector<CORE_NS::IComponentManager*>& managers) const
@@ -62,7 +66,7 @@ public:
         const auto allProps = container->GetProperties();
         EXPECT_EQ(allProps.size(), expected.size());
         for (const auto& name : expected) {
-            EXPECT_TRUE(container->GetProperty(name, META_NS::MetadataQuery::EXISTING));
+            EXPECT_TRUE(container->GetProperty(name, META_NS::MetadataQuery::EXISTING)) << name.c_str();
         }
     }
 
@@ -94,8 +98,8 @@ protected:
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesCreation, testing::ext::TestSize.Level1)
 {
     ASSERT_TRUE(CreateEcsObject({}));
-    ASSERT_TRUE(CreateEcsObject({ nameManager_ }));
-    ASSERT_TRUE(CreateEcsObject({ nodeManager_, nameManager_ }));
+    ASSERT_TRUE(CreateEcsObject({nameManager_}));
+    ASSERT_TRUE(CreateEcsObject({nodeManager_, nameManager_}));
 }
 
 /**
@@ -105,7 +109,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesCreation, testin
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesSimple, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nameManager_ });
+    auto obj = CreateEcsObject({nameManager_});
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NameComponent").GetResult());
     CheckProps(metadata_, nameProps_);
 }
@@ -129,7 +133,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesNoComponents, te
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAlreadyExisting, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nameManager_ });
+    auto obj = CreateEcsObject({nameManager_});
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NameComponent").GetResult());
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NameComponent").GetResult());
     CheckProps(metadata_, nameProps_);
@@ -142,7 +146,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAlreadyExisting,
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAccumulate, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nodeManager_, nameManager_ });
+    auto obj = CreateEcsObject({nodeManager_, nameManager_});
     CheckProps(metadata_, {});
 
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NodeComponent").GetResult());
@@ -161,7 +165,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAccumulate, test
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesBadComponentName, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nodeManager_, nameManager_ });
+    auto obj = CreateEcsObject({nodeManager_, nameManager_});
     EXPECT_FALSE(obj->AddAllProperties(metadata_, "NonExistentComponent").GetResult());
     CheckProps(metadata_, {});
 }
@@ -173,7 +177,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesBadComponentName
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAtOnce, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nodeManager_, nameManager_ });
+    auto obj = CreateEcsObject({nodeManager_, nameManager_});
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "").GetResult());
     auto expectedProps = nodeProps_;
     expectedProps.append(nameProps_.begin(), nameProps_.end());
@@ -187,7 +191,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAtOnce, testing:
  */
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, AddAllEnginePropertiesAtOnceAccumulate, testing::ext::TestSize.Level1)
 {
-    auto obj = CreateEcsObject({ nodeManager_, nameManager_ });
+    auto obj = CreateEcsObject({nodeManager_, nameManager_});
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NodeComponent").GetResult());
     auto expectedProps = nodeProps_;
     CheckProps(metadata_, expectedProps);
@@ -218,7 +222,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, ComponentDestroy, testing::ext::TestSi
 {
     auto& plug = CORE_NS::GetPluginRegister();
 
-    auto obj = CreateEcsObject({ nameManager_ });
+    auto obj = CreateEcsObject({nameManager_});
     ASSERT_TRUE(obj);
 
     EXPECT_TRUE(obj->AddAllProperties(metadata_, "NameComponent").GetResult());
@@ -232,7 +236,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, ComponentDestroy, testing::ext::TestSi
 
     // this leaves things in very bad state, only for the test
     plug.UnregisterTypeInfo(
-        CORE_NS::ComponentManagerTypeInfo { { CORE_NS::ComponentManagerTypeInfo::UID }, nameManager_->GetUid() });
+        CORE_NS::ComponentManagerTypeInfo{{CORE_NS::ComponentManagerTypeInfo::UID}, nameManager_->GetUid()});
     UpdateScene();
 
     p->SetValue("something else");
@@ -247,7 +251,7 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, ComponentDestroy, testing::ext::TestSi
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, TestAllEcsObjectAccess, testing::ext::TestSize.Level1)
 {
     auto& reg = META_NS::GetObjectRegistry();
-    const auto allAccess = reg.GetClassRegistry().GetAllTypes({ IEcsObjectAccess::UID });
+    const auto allAccess = reg.GetClassRegistry().GetAllTypes({IEcsObjectAccess::UID});
     ASSERT_FALSE(allAccess.empty());
 
     for (const auto& t : allAccess) {
@@ -274,10 +278,10 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, TestAllEcsObjectAccess, testing::ext::
 UNIT_TEST_F(API_ScenePluginEcsObjectTest, TestAllEcsObject, testing::ext::TestSize.Level1)
 {
     auto& reg = META_NS::GetObjectRegistry();
-    const auto allAccess = reg.GetClassRegistry().GetAllTypes({ IEcsObject::UID });
+    const auto allAccess = reg.GetClassRegistry().GetAllTypes({IEcsObject::UID});
     ASSERT_FALSE(allAccess.empty());
 
-    auto entityObject = CreateEcsObject({ nameManager_ });
+    auto entityObject = CreateEcsObject({nameManager_});
     ASSERT_TRUE(entityObject);
 
     auto validArgs = reg.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
@@ -307,6 +311,67 @@ UNIT_TEST_F(API_ScenePluginEcsObjectTest, TestAllEcsObject, testing::ext::TestSi
     }
 }
 
-} // namespace UTest
+/**
+ * @tc.name: InvalidState
+ * @tc.desc: Test EcsObject with an invalid state (no attached Scene).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginEcsObjectTest, InvalidState, testing::ext::TestSize.Level1)
+{
+    auto& r = META_NS::GetObjectRegistry();
+
+    auto createEcsObject = [&](CORE_NS::IEcs& ecs, const IInternalScene::Ptr& is) {
+        static constexpr META_NS::ObjectId ECS_OBJECT_CLSID(
+            "6f1d5812-ce80-4f1d-9a74-6815f3e111b0");  // ClassId::EcsObject
+        const auto entity = ecs.GetEntityManager().Create();
+        auto md = r.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
+        md->AddProperty(META_NS::ConstructProperty<IInternalScene::Ptr>("Scene", is));
+        md->AddProperty(META_NS::ConstructProperty<CORE_NS::Entity>("Entity", entity));
+        return r.Create<IEcsObject>(ECS_OBJECT_CLSID, md);
+    };
+
+    IInternalScene::WeakPtr scw;
+    IEcsObject::Ptr obj;
+    {
+        auto sc = CreateStandaloneScene();
+        ASSERT_TRUE(sc);
+        auto is = sc->GetInternalScene();
+        ASSERT_TRUE(is);
+        const auto ecs = is->GetEcsContext().GetNativeEcs();
+        ASSERT_TRUE(ecs);
+        scw = is;
+        obj = createEcsObject(*ecs, is);
+        ASSERT_TRUE(obj);
+
+        auto obj2 = createEcsObject(*ecs, is);
+        UpdateScene(sc);
+        ASSERT_TRUE(obj2);
+        // Destroy the underlying entity of obj2 directly
+        ecs->GetEntityManager().Destroy(obj2->GetEntity());
+        UpdateScene(sc);
+        // Invoke OnEntityEvent of the EcsObject whose entity was destroyed after entity destruction
+        auto evt = interface_cast<IEcsEventListener>(obj2);
+        ASSERT_TRUE(evt);
+        evt->OnEntityEvent(CORE_NS::IEcs::EntityListener::EventType::DESTROYED);
+        UpdateScene(sc);
+    }
+
+    ASSERT_FALSE(scw.lock());  // Verify that scene has been destroyed
+
+    EXPECT_FALSE(obj->SetName("name"));
+    EXPECT_TRUE(obj->GetPath().empty());
+    EXPECT_FALSE(obj->AddAllProperties({}, "").GetResult());
+    EXPECT_FALSE(obj->AttachProperty(nullptr, ""));
+    EXPECT_FALSE(obj->AttachProperty(nullptr, META_NS::IEngineValue::Ptr{}));
+    EXPECT_FALSE(obj->CreateProperty(""));
+    EXPECT_FALSE(obj->CreateProperty(META_NS::IEngineValue::Ptr{}));
+    EXPECT_FALSE(obj->SetActive(false).GetResult());
+
+    auto init = interface_cast<IEnginePropertyInit>(obj);
+    ASSERT_TRUE(init);
+    EXPECT_FALSE(init->InitDynamicProperty(META_NS::ConstructProperty<uint32_t>("Test", 10u), ""));
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

@@ -19,8 +19,8 @@
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
-const CORE_NS::IImageLoaderManager::ImageType ASTC_IMAGE_TYPES[] = { { "image/astc", "astc" } };
+const CORE_NS::IImageLoaderManager::ImageType ASTC_IMAGE_TYPES[] = {{"image/astc", "astc"}};
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderAstc(PluginToken);
 CORE_END_NAMESPACE()
 
-#endif //  CORE_IMAGE_LOADERS_IMAGE_LOADER_ASTC_H
+#endif  //  CORE_IMAGE_LOADERS_IMAGE_LOADER_ASTC_H

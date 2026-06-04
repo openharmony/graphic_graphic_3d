@@ -24,7 +24,7 @@ BASE_BEGIN_NAMESPACE()
 namespace Math {
 class Mat4X4;
 class Vec3;
-} // namespace Math
+}  // namespace Math
 struct Uid;
 BASE_END_NAMESPACE()
 
@@ -46,4 +46,4 @@ inline constexpr BASE_NS::string_view GetName(const IFrustumUtil*)
     return "IFrustumUtil";
 }
 CORE_END_NAMESPACE()
-#endif // CORE_UTIL_FRUSTUM_UTIL_H
+#endif  // CORE_UTIL_FRUSTUM_UTIL_H

@@ -41,38 +41,38 @@ class RenderNodeGpuResourceManager;
 
 struct SubmitDependencies {
     // should this command buffer signal when submitting
-    bool signalSemaphore { false };
+    bool signalSemaphore{false};
     // valid command buffer indices for wait semaphores
-    uint32_t waitSemaphoreCount { 0u };
+    uint32_t waitSemaphoreCount{0u};
     // render node indices or actual render command context indices (depending on the use context)
-    uint32_t waitSemaphoreNodeIndices[PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS] {};
+    uint32_t waitSemaphoreNodeIndices[PipelineStateConstants::MAX_RENDER_NODE_GPU_WAIT_SIGNALS]{};
     // render node graph index to wait for. Used for multi-queue ownership sync across rng
-    uint32_t waitSemaphoreRenderNodeGraphIndex { ~0U };
+    uint32_t waitSemaphoreRenderNodeGraphIndex{~0U};
     // wait for acquired swapchain image
-    bool waitForSwapchainAcquireSignal { false };
+    bool waitForSwapchainAcquireSignal{false};
 };
 
 struct RenderCommandContext {
     // if backend specific node code
-    IRenderBackendNode* renderBackendNode { nullptr };
-    RenderCommandList* renderCommandList { nullptr };
-    RenderBarrierList* renderBarrierList { nullptr };
-    NodeContextPsoManager* nodeContextPsoMgr { nullptr };
-    NodeContextDescriptorSetManager* nodeContextDescriptorSetMgr { nullptr };
-    NodeContextPoolManager* nodeContextPoolMgr { nullptr };
+    IRenderBackendNode* renderBackendNode{nullptr};
+    RenderCommandList* renderCommandList{nullptr};
+    RenderBarrierList* renderBarrierList{nullptr};
+    NodeContextPsoManager* nodeContextPsoMgr{nullptr};
+    NodeContextDescriptorSetManager* nodeContextDescriptorSetMgr{nullptr};
+    NodeContextPoolManager* nodeContextPoolMgr{nullptr};
 
-    uint32_t renderGraphRenderNodeIndex { ~0u };
+    uint32_t renderGraphRenderNodeIndex{~0u};
     SubmitDependencies submitDepencies;
 
-    BASE_NS::string_view debugName; // full node name with RNG name + node name
+    BASE_NS::string_view debugName;  // full node name with RNG name + node name
 };
 
 struct RenderCommandFrameData {
     BASE_NS::vector<RenderCommandContext> renderCommandContexts;
-    RenderFrameSync* renderFrameSync { nullptr };
-    RenderFrameUtil* renderFrameUtil { nullptr };
+    RenderFrameSync* renderFrameSync{nullptr};
+    RenderFrameUtil* renderFrameUtil{nullptr};
     // the index of the first render node in backend which needs swapchain acquired image
-    uint32_t firstSwapchainNodeIdx { ~0u };
+    uint32_t firstSwapchainNodeIdx{~0u};
 };
 
 struct RenderNodeContextData {
@@ -91,19 +91,19 @@ struct RenderNodeContextData {
     BASE_NS::unique_ptr<NodeContextPoolManager> nodeContextPoolMgr;
 
     // with dynamic render node graphs we need initilization data per render node
-    bool initialized { false };
+    bool initialized{false};
 
     // optional render backend node pointer
-    IRenderBackendNode* renderBackendNode { nullptr };
+    IRenderBackendNode* renderBackendNode{nullptr};
 };
 
 struct RenderNodeGraphShareData {
     // render node graph inputs/outputs which can be set through render node graph manager
-    static constexpr uint32_t MAX_RENDER_NODE_GRAPH_RES_COUNT { 4u };
-    IRenderNodeGraphShareManager::NamedResource inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
-    IRenderNodeGraphShareManager::NamedResource outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {} };
-    uint32_t inputCount { 0 };
-    uint32_t outputCount { 0 };
+    static constexpr uint32_t MAX_RENDER_NODE_GRAPH_RES_COUNT{4u};
+    IRenderNodeGraphShareManager::NamedResource inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}};
+    IRenderNodeGraphShareManager::NamedResource outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}};
+    uint32_t inputCount{0};
+    uint32_t outputCount{0};
 };
 
 /**
@@ -115,8 +115,8 @@ struct RenderNodeGraphNodeStore {
     struct RenderNodeData {
         BASE_NS::unique_ptr<IRenderNode, RenderNodeTypeInfo::DestroyRenderNodeFn> node;
         RenderDataConstants::RenderDataFixedString typeName;
-        RenderDataConstants::RenderDataFixedString fullName; // rng name + node name
-        RenderDataConstants::RenderDataFixedString nodeName; // node name
+        RenderDataConstants::RenderDataFixedString fullName;  // rng name + node name
+        RenderDataConstants::RenderDataFixedString nodeName;  // node name
         // NOTE: should be cleared after first init if not dev-mode
         BASE_NS::unique_ptr<RenderNodeGraphInputs> inputData;
         BASE_NS::string nodeJson;
@@ -128,8 +128,8 @@ struct RenderNodeGraphNodeStore {
 
     BASE_NS::unique_ptr<RenderNodeGraphShareDataManager> renderNodeGraphShareDataMgr;
 
-    bool initialized { false };
-    bool dynamic { false };
+    bool initialized{false};
+    bool dynamic{false};
 
     RenderDataConstants::RenderDataFixedString renderNodeGraphName;
     RenderDataConstants::RenderDataFixedString renderNodeGraphDataStoreName;
@@ -137,4 +137,4 @@ struct RenderNodeGraphNodeStore {
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__RENDER_NODE_GRAPH_NODE_STORE_H
+#endif  // CORE__RENDER__RENDER_NODE_GRAPH_NODE_STORE_H

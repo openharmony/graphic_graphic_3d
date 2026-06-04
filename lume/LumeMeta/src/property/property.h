@@ -42,7 +42,8 @@ class PropertyBase
 public:
     using OnChangedEvent = EventImpl<IOnChanged>;
 
-    PropertyBase(BASE_NS::string name) : name_(BASE_NS::move(name)) {}
+    PropertyBase(BASE_NS::string name) : name_(BASE_NS::move(name))
+    {}
 
     BASE_NS::string GetName() const override;
 
@@ -94,14 +95,14 @@ protected:
 protected:
     // this has to be recursive because of the usage pattern
     mutable std::recursive_mutex mutex_;
-    mutable uint32_t locked_ {};
-    mutable uint32_t states_ { 0b10 };
+    mutable uint32_t locked_{};
+    mutable uint32_t states_{0b10};
     const BASE_NS::string name_;
     IOwner::WeakPtr owner_;
     IProperty::WeakPtr self_;
     // lazy event, constructed when needed
     mutable BASE_NS::shared_ptr<OnChangedEvent> onChanged_;
-    mutable std::atomic<OnChangedEvent*> onChangedAtomic_ {};
+    mutable std::atomic<OnChangedEvent*> onChangedAtomic_{};
 };
 
 class GenericProperty : public IntroduceInterfaces<PropertyBase, IPropertyInternalAny> {
@@ -123,7 +124,7 @@ private:
     mutable IAny::Ptr data_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

@@ -18,11 +18,12 @@
 #include <meta/interface/intf_task_queue.h>
 
 #include "napi_api.h"
+#include "export.h"
 
 /*
  * NodeJSTaskQueue identifier
  */
-static constexpr BASE_NS::Uid JS_THREAD_DEP { "b2e8cef3-453a-4651-b564-5190f8b5190d" };
+static constexpr BASE_NS::Uid JS_THREAD_DEP{"b2e8cef3-453a-4651-b564-5190f8b5190d"};
 
 /*
  * NodeJSTaskQueue executes it's tasks in the thread where it was first initialized, which MUST have a valid napi_env.
@@ -53,7 +54,7 @@ META_REGISTER_CLASS(NodeJSTaskQueue, "66aabbba-ec01-47f8-ac68-2393cfc76a9a", MET
  *
  * NodeJSQueue is created and acquired by the SceneJS and released by SceneJS.
  */
-class INodeJSTaskQueue : public CORE_NS::IInterface {
+class SCENE_ADDON_PUBLIC INodeJSTaskQueue : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, INodeJSTaskQueue, "9d898eee-f592-410b-bf72-c8baeaa65614");
 
 public:
@@ -75,15 +76,21 @@ public:
 
     // Returns if it's safe to destroy the instance. (fully released with no tasks)
     virtual bool IsReleased() = 0;
+
+    // Final teardown of the underlying NAPI threadsafe function. Only called from
+    // DeinitNodeTaskQueue at real shutdown. Release() intentionally no longer tears
+    // these resources down so that continuations posted from other threads during
+    // fast view switching are not silently dropped.
+    virtual void Finalize() = 0;
 };
 
 // creates and registers the main nodetaskqueue instance if it doesn't exist yet. (uses provided napi_env)
 // MUST BE CALLED IN THE THREAD OWNING THE NAPI_ENV!
-META_NS::ITaskQueue::Ptr GetOrCreateNodeTaskQueue(napi_env e);
+SCENE_ADDON_PUBLIC META_NS::ITaskQueue::Ptr GetOrCreateNodeTaskQueue(napi_env e);
 
 // unregisters the main nodetaskqueue instance.
 // this SHOULD be called after no users left.
 // and the queue being fully "Released".
 // MUST BE CALLED IN THE THREAD OWNING THE NAPI_ENV!
-bool DeinitNodeTaskQueue();
+SCENE_ADDON_PUBLIC bool DeinitNodeTaskQueue();
 #endif

@@ -85,8 +85,14 @@ public:
      * used instead.
      */
     META_PROPERTY(BASE_NS::Math::UVec2, ShadowResolution)
+    /**
+     * @brief Global configuration for the variable PCF radius.
+     */
     META_PROPERTY(float, VariablePcfRadius)
-    META_PROPERTY(int32_t, VariablePcfSampleCount)
+    /**
+     * @brief Global configuration for the variable PCF sample count.
+     */
+    META_PROPERTY(uint32_t, VariablePcfSampleCount)
 };
 
 META_REGISTER_CLASS(

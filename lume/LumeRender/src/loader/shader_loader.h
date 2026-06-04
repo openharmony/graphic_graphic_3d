@@ -93,7 +93,7 @@ private:
     DeviceBackendType type_;
 
     struct ShaderModuleShaders {
-        ShaderStageFlags shaderStageFlags { 0u };
+        ShaderStageFlags shaderStageFlags{0u};
         BASE_NS::vector<BASE_NS::string> shaderNames;
     };
 #if (RENDER_DEV_ENABLED == 1)
@@ -104,4 +104,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // LOADER_SHADER_LOADER_H
+#endif  // LOADER_SHADER_LOADER_H

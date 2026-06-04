@@ -67,8 +67,8 @@ static napi_value PropProxSet(napi_env e, napi_callback_info i)
 
 napi_property_descriptor CreateArrayProxyDesc(const char* name, BASE_NS::shared_ptr<ArrayPropertyProxy> proxy)
 {
-    napi_property_descriptor desc { name, nullptr, nullptr, nullptr, nullptr, nullptr, napi_default_jsproperty,
-        static_cast<void*>(proxy.get()) };
+    napi_property_descriptor desc{
+        name, nullptr, nullptr, nullptr, nullptr, nullptr, napi_default_jsproperty, static_cast<void*>(proxy.get())};
     if (proxy) {
         desc.getter = PropProxGet;
         desc.setter = PropProxSet;

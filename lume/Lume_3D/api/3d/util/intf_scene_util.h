@@ -133,11 +133,11 @@ public:
      */
     struct MaterialShaderInfo {
         /** Alpha blend mode */
-        bool alphaBlend { false };
+        bool alphaBlend{false};
         /** Cull mode */
-        RENDER_NS::CullModeFlags cullModeFlags { RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_NONE };
+        RENDER_NS::CullModeFlags cullModeFlags{RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_NONE};
         /** Front face */
-        RENDER_NS::FrontFace frontFace { RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE };
+        RENDER_NS::FrontFace frontFace{RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE};
     };
 
     /** Returns default material shader built-in data for material component usage
@@ -242,7 +242,7 @@ public:
      * over.*/
     struct MappedEntity {
         CORE_NS::Entity entity;
-        bool overwrite {};
+        bool overwrite{};
     };
 
     /** Create a copy of all the entities in source ECS into destination ECS with mapping to existing entities.
@@ -271,4 +271,4 @@ protected:
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_UTIL_SCENE_UTIL_H
+#endif  // API_3D_UTIL_SCENE_UTIL_H

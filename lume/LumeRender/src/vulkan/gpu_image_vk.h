@@ -36,9 +36,9 @@ struct GpuImagePlatformDataViewsVk final {
 
 struct GpuImagePlatformDataConversion final {
     // Sampler conversion object, used only with immutable samplers and created sampler conversion
-    VkSampler sampler { VK_NULL_HANDLE };
+    VkSampler sampler{VK_NULL_HANDLE};
     // Sampler conversion object, used only with immutable samplers and views
-    VkSamplerYcbcrConversion samplerConversion { VK_NULL_HANDLE };
+    VkSamplerYcbcrConversion samplerConversion{VK_NULL_HANDLE};
 };
 
 class Device;
@@ -71,23 +71,23 @@ private:
     GpuImagePlatformDataConversion platConversion_;
     GpuImageDesc desc_;
     // in normal situations owns all the vulkan resources
-    bool ownsResources_ { true };
+    bool ownsResources_{true};
     // one might create a higher level view without hwbuffer
-    bool ownsImage_ { true };
-    bool ownsImageViews_ { true };
+    bool ownsImage_{true};
+    bool ownsImageViews_{true};
 
-    bool destroyImageViewBase_ { false };
+    bool destroyImageViewBase_{false};
 
     struct MemoryAllocation {
         VmaAllocation allocation;
         VmaAllocationInfo allocationInfo;
     };
-    MemoryAllocation mem_ {};
+    MemoryAllocation mem_{};
 };
 
 namespace GpuImageUtilsVk {
 VkImageAspectFlags GetImageAspectFlagsFromFormat(VkFormat format);
-} // namespace GpuImageUtilsVk
+}  // namespace GpuImageUtilsVk
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_IMAGE_VK_H
+#endif  // VULKAN_GPU_IMAGE_VK_H

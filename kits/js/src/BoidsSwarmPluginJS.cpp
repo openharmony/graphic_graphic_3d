@@ -132,7 +132,7 @@ bool SetJsValueToProperty(const META_NS::IProperty::Ptr& prop, napi_env env, nap
             auto y = obj.Get<float>("y");
             auto z = obj.Get<float>("z");
             if (x.IsValid() && y.IsValid() && z.IsValid()) {
-                BASE_NS::Math::Vec3 v { x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault() };
+                BASE_NS::Math::Vec3 v{x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault()};
                 return META_NS::SetValue(META_NS::Property<BASE_NS::Math::Vec3>(prop), v);
             }
         }
@@ -145,8 +145,7 @@ bool SetJsValueToProperty(const META_NS::IProperty::Ptr& prop, napi_env env, nap
             auto z = obj.Get<float>("z");
             auto w = obj.Get<float>("w");
             if (x.IsValid() && y.IsValid() && z.IsValid() && w.IsValid()) {
-                BASE_NS::Math::Quat q { x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault(),
-                    w.valueOrDefault() };
+                BASE_NS::Math::Quat q{x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault(), w.valueOrDefault()};
                 return META_NS::SetValue(META_NS::Property<BASE_NS::Math::Quat>(prop), q);
             }
         }
@@ -157,7 +156,7 @@ bool SetJsValueToProperty(const META_NS::IProperty::Ptr& prop, napi_env env, nap
             auto x = obj.Get<float>("x");
             auto y = obj.Get<float>("y");
             if (x.IsValid() && y.IsValid()) {
-                BASE_NS::Math::Vec2 v { x.valueOrDefault(), y.valueOrDefault() };
+                BASE_NS::Math::Vec2 v{x.valueOrDefault(), y.valueOrDefault()};
                 return META_NS::SetValue(META_NS::Property<BASE_NS::Math::Vec2>(prop), v);
             }
         }
@@ -170,8 +169,7 @@ bool SetJsValueToProperty(const META_NS::IProperty::Ptr& prop, napi_env env, nap
             auto z = obj.Get<float>("z");
             auto w = obj.Get<float>("w");
             if (x.IsValid() && y.IsValid() && z.IsValid() && w.IsValid()) {
-                BASE_NS::Math::Vec4 v { x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault(),
-                    w.valueOrDefault() };
+                BASE_NS::Math::Vec4 v{x.valueOrDefault(), y.valueOrDefault(), z.valueOrDefault(), w.valueOrDefault()};
                 return META_NS::SetValue(META_NS::Property<BASE_NS::Math::Vec4>(prop), v);
             }
         }
@@ -206,8 +204,10 @@ void SetPropertiesFromJsParams(
     napi_value jsKeys;
     auto keyStatus = napi_get_property_names(env, paramObj.ToNapiValue(), &jsKeys);
     if (keyStatus != napi_ok) {
-        LOG_E("napi_get_property_names failed (status %d) for component '%.*s'", keyStatus,
-            static_cast<int>(compName.size()), compName.data());
+        LOG_E("napi_get_property_names failed (status %d) for component '%.*s'",
+            keyStatus,
+            static_cast<int>(compName.size()),
+            compName.data());
         return;
     }
     NapiApi::Array keysArray(env, jsKeys);
@@ -224,8 +224,11 @@ void SetPropertiesFromJsParams(
         napi_value jsVal;
         auto propStatus = napi_get_named_property(env, paramObj.ToNapiValue(), key.c_str(), &jsVal);
         if (propStatus != napi_ok) {
-            LOG_E("napi_get_named_property failed (status %d) for key '%s' on component '%.*s'", propStatus,
-                key.c_str(), static_cast<int>(compName.size()), compName.data());
+            LOG_E("napi_get_named_property failed (status %d) for key '%s' on component '%.*s'",
+                propStatus,
+                key.c_str(),
+                static_cast<int>(compName.size()),
+                compName.data());
             continue;
         }
 
@@ -287,7 +290,7 @@ auto GetBoidsSystem(const SCENE_NS::IScene::Ptr& scene) -> BOIDSSWARM_NS::IBoids
     return CORE_NS::GetSystem<BOIDSSWARM_NS::IBoidsSwarmSystem>(*ecs);
 }
 
-} // namespace
+}  // namespace
 
 void BoidsSwarmWorldJS::Init(napi_env env, napi_value exports)
 {
@@ -297,53 +300,79 @@ void BoidsSwarmWorldJS::Init(napi_env env, napi_value exports)
     props.push_back(
         TROGetSetProperty<float, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::GetPlaySpeed, &BoidsSwarmWorldJS::SetPlaySpeed>(
             "playSpeed"));
-    props.push_back(TROGetSetProperty<float, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::GetTimeStepSec,
+    props.push_back(TROGetSetProperty<float,
+        BoidsSwarmWorldJS,
+        &BoidsSwarmWorldJS::GetTimeStepSec,
         &BoidsSwarmWorldJS::SetTimeStepSec>("timeStepSec"));
-    props.push_back(TROGetSetProperty<NapiApi::Object, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::GetAxisMask,
+    props.push_back(TROGetSetProperty<NapiApi::Object,
+        BoidsSwarmWorldJS,
+        &BoidsSwarmWorldJS::GetAxisMask,
         &BoidsSwarmWorldJS::SetAxisMask>("axisMask"));
-    props.push_back(TROGetSetProperty<float, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::GetVelocitySmoothingFactor,
+    props.push_back(TROGetSetProperty<float,
+        BoidsSwarmWorldJS,
+        &BoidsSwarmWorldJS::GetVelocitySmoothingFactor,
         &BoidsSwarmWorldJS::SetVelocitySmoothingFactor>("velocitySmoothingFactor"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::Play>("play"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::Pause>("pause"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<>, BoidsSwarmWorldJS, &BoidsSwarmWorldJS::Stop>("stop"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::AddBoidsSimComponent>("addBoidsSimComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::SetBoidsSimComponent>("setBoidsSimComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::AddBoidsSimGravityComponent>("addBoidsSimGravityComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::SetBoidsSimGravityComponent>("setBoidsSimGravityComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::AddBoidsSimRepulsionComponent>("addBoidsSimRepulsionComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::SetBoidsSimRepulsionComponent>("setBoidsSimRepulsionComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::GetBoidsSimComponent>("getBoidsSimComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::GetBoidsSimGravityComponent>("getBoidsSimGravityComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::GetBoidsSimRepulsionComponent>("getBoidsSimRepulsionComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::GetBoidsSimStateComponent>("getBoidsSimStateComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::RemoveBoidsSimComponent>("removeBoidsSimComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::RemoveBoidsSimGravityComponent>("removeBoidsSimGravityComponent"));
-    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>, BoidsSwarmWorldJS,
+    props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object>,
+        BoidsSwarmWorldJS,
         &BoidsSwarmWorldJS::RemoveBoidsSimRepulsionComponent>("removeBoidsSimRepulsionComponent"));
     props.push_back(MakeTROMethod<NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object, BASE_NS::string>,
-        BoidsSwarmWorldJS, &BoidsSwarmWorldJS::AddTarget>("addTarget"));
+        BoidsSwarmWorldJS,
+        &BoidsSwarmWorldJS::AddTarget>("addTarget"));
 
     napi_value func;
-    auto status = napi_define_class(env, "BoidsSimWorld", NAPI_AUTO_LENGTH, BaseObject::ctor<BoidsSwarmWorldJS>(),
-        nullptr, props.size(), props.data(), &func);
+    auto status = napi_define_class(env,
+        "BoidsSimWorld",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<BoidsSwarmWorldJS>(),
+        nullptr,
+        props.size(),
+        props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("napi_define_class failed (status %d) for BoidsSimWorld", status);
         return;
     }
 
-    NapiApi::Object { env, exports }.Set("BoidsSimWorld", func);
+    NapiApi::Object{env, exports}.Set("BoidsSimWorld", func);
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -452,7 +481,7 @@ napi_value BoidsSwarmWorldJS::GetBoidsSimStateComponent(NapiApi::FunctionContext
         return ctx.GetNull();
     }
 
-    BASE_NS::Math::Vec3 velocities[BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT] {};
+    BASE_NS::Math::Vec3 velocities[BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT]{};
     float velocityMag = 0.0f;
     bool success = false;
 
@@ -460,26 +489,26 @@ napi_value BoidsSwarmWorldJS::GetBoidsSimStateComponent(NapiApi::FunctionContext
         CORE_NS::IEcs* ecs = ecsAccess->GetEcsObject()->GetScene()->GetEcsContext().GetNativeEcs().get();
         if (!ecs) {
             LOG_E("Failed to get ECS");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         CORE_NS::Entity entity = ecsAccess->GetEcsObject()->GetEntity();
-        if (entity == CORE_NS::Entity {}) {
+        if (entity == CORE_NS::Entity{}) {
             LOG_E("Invalid entity");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto* stateMgr = static_cast<BOIDSSWARM_NS::IBoidsSwarmStateComponentManager*>(
             ecs->GetComponentManager(BOIDSSWARM_NS::IBoidsSwarmStateComponentManager::UID));
         if (stateMgr == nullptr || !stateMgr->HasComponent(entity)) {
             LOG_E("BoidsSwarmStateComponent not found on entity");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto handle = stateMgr->Read(entity);
         if (!handle) {
             LOG_E("Failed to read BoidsSwarmStateComponent");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         for (size_t i = 0; i < BOIDSSWARM_NS::BoidsSwarmStateComponent::VELOCITY_COUNT; ++i) {
@@ -487,7 +516,7 @@ napi_value BoidsSwarmWorldJS::GetBoidsSimStateComponent(NapiApi::FunctionContext
         }
         velocityMag = handle->velocityMag;
         success = true;
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 
     if (!success) {
@@ -573,32 +602,32 @@ napi_value BoidsSwarmWorldJS::AddTarget(
         CORE_NS::IEcs* ecs = nodeEcsAccess->GetEcsObject()->GetScene()->GetEcsContext().GetNativeEcs().get();
         if (!ecs) {
             LOG_E("Failed to get ECS");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         CORE_NS::Entity entity = nodeEcsAccess->GetEcsObject()->GetEntity();
         CORE_NS::Entity targetEntity = targetEcsAccess->GetEcsObject()->GetEntity();
-        if (entity == CORE_NS::Entity {} || targetEntity == CORE_NS::Entity {}) {
+        if (entity == CORE_NS::Entity{} || targetEntity == CORE_NS::Entity{}) {
             LOG_E("Invalid entity");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto* mgr = static_cast<BOIDSSWARM_NS::IBoidsSwarmComponentManager*>(
             ecs->GetComponentManager(BOIDSSWARM_NS::IBoidsSwarmComponentManager::UID));
         if (!mgr || !mgr->HasComponent(entity)) {
             LOG_E("BoidsSwarmComponent not found");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         auto handle = mgr->Write(entity);
         if (!handle) {
             LOG_E("Failed to get write handle");
-            return META_NS::IAny::Ptr {};
+            return META_NS::IAny::Ptr{};
         }
 
         ((*handle).*targetField).push_back(targetEntity);
 
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 
     return ctx.This().ToNapiValue();
@@ -877,18 +906,30 @@ void BoidsSwarmPluginJS::Init(napi_env env, napi_value exports)
     };
 
     napi_property_descriptor props[] = {
-        napi_property_descriptor { "getDefaultBoidsSimWorld", nullptr, getDefaultBoidsSimWorldFunc, nullptr, nullptr,
-            nullptr, napi_static, nullptr },
+        napi_property_descriptor{"getDefaultBoidsSimWorld",
+            nullptr,
+            getDefaultBoidsSimWorldFunc,
+            nullptr,
+            nullptr,
+            nullptr,
+            napi_static,
+            nullptr},
     };
 
     napi_value func;
-    auto status = napi_define_class(env, "BoidsSimPlugin", NAPI_AUTO_LENGTH, BaseObject::ctor<BoidsSwarmPluginJS>(),
-        nullptr, sizeof(props) / sizeof(props[0]), props, &func);
+    auto status = napi_define_class(env,
+        "BoidsSimPlugin",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<BoidsSwarmPluginJS>(),
+        nullptr,
+        sizeof(props) / sizeof(props[0]),
+        props,
+        &func);
     if (status != napi_ok) {
         LOG_E("napi_define_class failed (status %d) for BoidsSimPlugin", status);
     }
 
-    NapiApi::Object { env, exports }.Set("BoidsSimPlugin", func);
+    NapiApi::Object{env, exports}.Set("BoidsSimPlugin", func);
 
     NapiApi::MyInstanceState* mis;
     NapiApi::MyInstanceState::GetInstance(env, reinterpret_cast<void**>(&mis));
@@ -934,7 +975,6 @@ napi_value BoidsSwarmPluginJS::GetDefaultBoidsSimWorld(NapiApi::FunctionContext<
         LOG_E("Object is not a valid IScene");
         return ctx.GetNull();
     }
-
     bool systemAvailable = false;
     ExecSyncTask([scene, &systemAvailable]() -> META_NS::IAny::Ptr {
         auto* system = GetBoidsSystem(scene);
@@ -947,8 +987,8 @@ napi_value BoidsSwarmPluginJS::GetDefaultBoidsSimWorld(NapiApi::FunctionContext<
         return ctx.GetNull();
     }
 
-    napi_value dummyArg[] = { sceneObj.ToNapiValue() };
-    NapiApi::JsFuncArgs args { 1, dummyArg };
+    napi_value dummyArg[] = {sceneObj.ToNapiValue()};
+    NapiApi::JsFuncArgs args{1, dummyArg};
     NapiApi::Object result(ctx.GetEnv(), "BoidsSimWorld", args);
     return result.ToNapiValue();
 }

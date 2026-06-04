@@ -27,23 +27,23 @@ namespace TestPlugin3D {
 const char* GetVersionInfo();
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister&);
 void UnregisterInterfaces(CORE_NS::PluginToken);
-constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = { CORE3D_NS::UID_3D_PLUGIN };
-} // namespace TestPlugin3D
+constexpr BASE_NS::Uid PLUGIN_DEPENDENCIES[] = {CORE3D_NS::UID_3D_PLUGIN};
+}  // namespace TestPlugin3D
 
 namespace {
 extern "C" {
-PLUGIN_DATA(Core3DTestPlugin) {
-    { CORE_NS::IPlugin::UID },
+PLUGIN_DATA(Core3DTestPlugin){
+    {CORE_NS::IPlugin::UID},
     // name of plugin.
     "3D Test Plugin",
     // Version information of the plugin.
-    { TestPlugin3D::UID_3D_TEST_PLUGIN, TestPlugin3D::GetVersionInfo },
+    {TestPlugin3D::UID_3D_TEST_PLUGIN, TestPlugin3D::GetVersionInfo},
     TestPlugin3D::RegisterInterfaces,
     TestPlugin3D::UnregisterInterfaces,
     TestPlugin3D::PLUGIN_DEPENDENCIES,
 };
 }
-} // namespace
+}  // namespace
 
 namespace TestPlugin3D {
 using namespace CORE_NS;
@@ -53,7 +53,7 @@ namespace {
 struct GlobalToken {
     IPluginRegister& pluginRegistry;
     GlobalImpl test;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_3D_GLOBAL_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -66,7 +66,7 @@ struct GlobalToken {
 
 struct Token {
     IGraphicsContext& context;
-    InterfaceTypeInfo interfaceInfo {
+    InterfaceTypeInfo interfaceInfo{
         this,
         UID_3D_CONTEXT_TEST_IMPL,
         CORE_NS::GetName<ITest>().data(),
@@ -77,7 +77,7 @@ struct Token {
 
 PluginToken CreatePlugin(IGraphicsContext& context)
 {
-    Token* token = new Token { context };
+    Token* token = new Token{context};
 
     auto& registry = *context.GetInterface<IClassRegister>();
 
@@ -98,7 +98,7 @@ void DestroyPlugin(PluginToken token)
 }
 
 constexpr I3DPlugin TEST_PLUGIN(CreatePlugin, DestroyPlugin);
-} // namespace
+}  // namespace
 
 const char* GetVersionInfo()
 {
@@ -107,7 +107,7 @@ const char* GetVersionInfo()
 
 CORE_NS::PluginToken RegisterInterfaces(CORE_NS::IPluginRegister& pluginRegistry)
 {
-    GlobalToken* token = new GlobalToken { pluginRegistry, {} };
+    GlobalToken* token = new GlobalToken{pluginRegistry, {}};
 
     pluginRegistry.RegisterTypeInfo(TEST_PLUGIN);
     pluginRegistry.GetClassRegister().RegisterInterfaceType(token->interfaceInfo);
@@ -124,4 +124,4 @@ void UnregisterInterfaces(PluginToken token)
 
     delete state;
 }
-} // namespace TestPlugin3D
+}  // namespace TestPlugin3D

@@ -29,14 +29,14 @@ ObjectProxy::operator NapiApi::Object() const
 
 void ObjectProxy::Init(napi_env env, const BASE_NS::vector<PropertyMapping>& mappings, NapiApi::Object scene)
 {
-    auto obj = NapiApi::Object { env };
-    obj_ = NapiApi::StrongRef { obj };
+    auto obj = NapiApi::Object{env};
+    obj_ = NapiApi::StrongRef{obj};
 
     mappings_.reserve(mappings.size());
     for (auto&& m : mappings) {
         if (const auto proxy = PropertyToProxy(scene, obj, m.nativeProp)) {
             // mappings_ must never reallocate, as we pass a pointer to its contents.
-            mappings_.emplace_back(Mapping { m.jsName, proxy, m.scaleToNative, m.scaleToJs });
+            mappings_.emplace_back(Mapping{m.jsName, proxy, m.scaleToNative, m.scaleToJs});
             obj.AddProperty(ObjectProxy::CreateProxyDesc(m.jsName.data(), &mappings_.back()));
         } else {
             LOG_E("Adding a property proxy for '%s' failed", m.jsName.data());
@@ -53,7 +53,7 @@ void ObjectProxy::ReplaceObject(NapiApi::Object& replacement)
         }
     }
     UnbindObject();
-    obj_ = NapiApi::StrongRef { replacement };
+    obj_ = NapiApi::StrongRef{replacement};
     BindObject();
 }
 
@@ -73,7 +73,7 @@ void ObjectProxy::UnbindObject()
             constexpr auto n = nullptr;
             // Convert the proxied property to a raw JS value (with no native getters or setters).
             // Can't use NapiApi::Object::Set, as it would go through the proxy setter.
-            obj.AddProperty({ m.jsName.data(), n, n, n, n, value, napi_default_jsproperty, n });
+            obj.AddProperty({m.jsName.data(), n, n, n, n, value, napi_default_jsproperty, n});
         }
     }
 }
@@ -93,7 +93,7 @@ void ObjectProxy::BindObject()
 napi_property_descriptor ObjectProxy::CreateProxyDesc(const char* name, Mapping* mapping)
 {
     constexpr auto n = nullptr;
-    napi_property_descriptor desc { name, n, n, n, n, n, napi_default_jsproperty, static_cast<void*>(mapping) };
+    napi_property_descriptor desc{name, n, n, n, n, n, napi_default_jsproperty, static_cast<void*>(mapping)};
     desc.getter = PropProxyGet;
     desc.setter = PropProxySet;
     return desc;

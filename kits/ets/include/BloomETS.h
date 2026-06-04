@@ -55,10 +55,10 @@ public:
     void SetScaleFactor(float scaleFactor);
 
     BloomETS::Type GetType();
-    void SetType(const BloomETS::Type &type);
+    void SetType(const BloomETS::Type& type);
 
     BloomETS::Quality GetQuality();
-    void SetQuality(const BloomETS::Quality &quality);
+    void SetQuality(const BloomETS::Quality& quality);
 
     bool IsEnabled();
     void SetEnabled(const bool enable);
@@ -93,11 +93,11 @@ public:
     }
 
 private:
-    inline SCENE_NS::BloomType ToInternalType(const BloomETS::Type &type);
-    inline BloomETS::Type FromInternalType(const SCENE_NS::BloomType &type);
+    inline SCENE_NS::BloomType ToInternalType(const BloomETS::Type& type);
+    inline BloomETS::Type FromInternalType(const SCENE_NS::BloomType& type);
 
-    inline SCENE_NS::EffectQualityType ToInternalQuality(const BloomETS::Quality &quality);
-    inline BloomETS::Quality FromInternalQuality(const SCENE_NS::EffectQualityType &quality);
+    inline SCENE_NS::EffectQualityType ToInternalQuality(const BloomETS::Quality& quality);
+    inline BloomETS::Quality FromInternalQuality(const SCENE_NS::EffectQualityType& quality);
 
     float thresholdHard_{DEFAULT_THRESHOLD_HARD};
     float thresholdSoft_{DEFAULT_THRESHOLD_SOFT};

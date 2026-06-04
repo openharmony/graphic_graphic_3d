@@ -70,7 +70,8 @@ void SplitFilename(BASE_NS::string_view source, BASE_NS::string_view& base, BASE
 void SplitBaseFilename(BASE_NS::string_view source, BASE_NS::string_view& name, BASE_NS::string_view& extension);
 
 BASE_NS::string_view ParseDataUri(const BASE_NS::string_view in, size_t& offsetToData);
-bool DecodeDataURI(BASE_NS::vector<uint8_t>& out, BASE_NS::string_view in, size_t reqBytes, bool checkSize);
+bool DecodeDataURI(BASE_NS::vector<uint8_t>& out, BASE_NS::string_view in, size_t reqBytes, bool checkSize,
+    size_t maxBytes = static_cast<size_t>(-1));
 bool IsDataURI(BASE_NS::string_view in);
 
 // Buffer / data helpers
@@ -81,16 +82,16 @@ struct GLTFLoadDataResult {
 
     GLTFLoadDataResult& operator=(GLTFLoadDataResult&& other) noexcept;
 
-    bool success { false };
-    bool normalized { false };
+    bool success{false};
+    bool normalized{false};
     BASE_NS::string error;
 
-    ComponentType componentType { ComponentType::INVALID };
-    size_t componentByteSize { 0 };
-    size_t componentCount { 0 };
+    ComponentType componentType{ComponentType::INVALID};
+    size_t componentByteSize{0};
+    size_t componentCount{0};
 
-    size_t elementSize { 0 };
-    size_t elementCount { 0 };
+    size_t elementSize{0};
+    size_t elementCount{0};
 
     BASE_NS::vector<float> min;
     BASE_NS::vector<float> max;
@@ -99,7 +100,7 @@ struct GLTFLoadDataResult {
 };
 
 struct BufferLoadResult {
-    bool success { true };
+    bool success{true};
     BASE_NS::string error;
 };
 
@@ -127,7 +128,7 @@ UriLoadResult LoadUri(BASE_NS::string_view uri, BASE_NS::string_view mimeType, B
 
 // Load accessor data.
 GLTFLoadDataResult LoadData(Accessor const& accessor);
-} // namespace GLTF2
+}  // namespace GLTF2
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__GLTF__GLTF2_UTIL_H
+#endif  // CORE__GLTF__GLTF2_UTIL_H

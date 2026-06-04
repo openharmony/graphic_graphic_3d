@@ -1,0 +1,142 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/config/features.gni")
+import("//build/test.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+module_output_path = "graphic_3d/graphic_3d"
+
+##############################fuzztest##########################################
+config("lume3d_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_RENDER_PATH}/api",
+    "${LUME_CORE3D_PATH}/api",
+    "//foundation/graphic/graphic_3d/lume/LumeMeta/include",
+    "//foundation/graphic/graphic_3d/lume/LumeScene/include",
+  ]
+
+  if (current_os == "ohos") {
+    include_dirs += [ "${LUME_CORE_PATH}/api/platform/ohos" ]
+  }
+
+  configs = []
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-ignored-qualifiers",
+    "-Wno-unused-lambda-capture",
+    "-Wno-unused-but-set-variable",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_BUILD_2D = 0",
+    "-DCORE_BUILD_VULKAN=0",
+    "-DCORE_BUILD_GL=0",
+    "-DCORE_BUILD_GLES=1",
+    "-DCORE_DEV_ENABLED=0",
+    "-DCORE_TESTS_ENABLED=0",
+    "-DCORE_GL_DEBUG=0",
+    "-DCORE_VALIDATION_ENABLED = 0",
+    "-DCORE_VULKAN_VALIDATION_ENABLED = 0",
+    "-DCORE_EMBEDDED_ASSETS_ENABLED = 2",
+    "-DCORE_ENABLE_GPU_QUERIES=0",
+    "-DCORE_DEBUG_GPU_RESOURCE_IDS = 0",
+    "-DCORE_DEBUG_COMMAND_MARKERS_ENABLED = 0",
+    "-DCORE_DEBUG_MARKERS_ENABLED = 0",
+    "-DRENDER_HAS_GL_BACKEND=0",
+    "-DRENDER_HAS_GLES_BACKEND = 1",
+    "-DRENDER_HAS_VULKAN_BACKEND = 1",
+    "-DVK_USE_PLATFORM_ANDROID_KHR = 1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+    "-DCORE_LOG_DISABLED=0",
+    "-DCORE_DYNAMIC=1",
+  ]
+}
+
+ohos_fuzztest("Gltf2LoaderFuzzTest") {
+  module_out_path = module_output_path
+  fuzz_config_file = "//foundation/graphic/graphic_3d/lume/Lume_3D/test/fuzztest/gltf2loader_fuzzer"
+
+  include_dirs = [
+    "${LUME_CORE3D_PATH}test/fuzztest",
+  ]
+
+  sources = [
+    "gltf2loader_fuzzer.cpp",
+    # json.cpp defines JSON_IMPL, not in lume_3d_src.
+    "${LUME_CORE3D_PATH}src/util/json.cpp",
+  ]
+
+  configs = [
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+    "${LUME_CORE_PATH}:lume_component_help_config",
+    "${LUME_RENDER_PATH}:lume_render_api",
+    "${LUME_CORE3D_PATH}:lume_3d_api",
+    "${LUME_CORE3D_PATH}:lume_3d_config",
+  ]
+
+  deps = [
+    "${LUME_CORE3D_PATH}:lume_3d_src",
+    "${LUME_CORE3D_PATH}:lume_3d_rofs_obj",
+    "${LUME_CORE_PATH}/DLL:${LIB_ENGINE_CORE}",
+    "${LUME_RENDER_PATH}:${LIB_RENDER}",
+    "${LUME_PNG_PATH}:${LIB_PNG}",
+    "${LUME_JPG_PATH}:${LIB_JPG}",
+  ]
+
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
+  ]
+
+  if (RENDER_BUILD_VULKAN) {
+    external_deps += [
+      "vulkan-headers:vulkan_headers",
+      "vulkan-loader:vulkan_loader",
+    ]
+  }
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+###############################################################################
+group("fuzztest") {
+  testonly = true
+  deps = [
+    ":Gltf2LoaderFuzzTest",
+  ]
+}

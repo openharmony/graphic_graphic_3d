@@ -22,7 +22,7 @@
 namespace TestPlugin3D {
 class ITest : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "12345678-3d3d-3d3d-3d3d-deadbeef0000" };
+    static constexpr BASE_NS::Uid UID{"12345678-3d3d-3d3d-3d3d-deadbeef0000"};
     using Ptr = BASE_NS::refcnt_ptr<ITest>;
 
     enum class Type { LOCAL, GLOBAL };
@@ -38,5 +38,5 @@ inline constexpr BASE_NS::string_view GetName(const ITest*)
 {
     return "ITest";
 }
-} // namespace TestPlugin3D
-#endif // CORE3D_TEST_PLUGIN_INTF_TEST
+}  // namespace TestPlugin3D
+#endif  // CORE3D_TEST_PLUGIN_INTF_TEST

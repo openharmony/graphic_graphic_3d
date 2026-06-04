@@ -53,10 +53,13 @@ public:
     PropertyBindingDataInfo GetComputePropertyBindingInfo() const override;
 
     // IRenderDataStore
-    void PreRender() override {}
+    void PreRender() override
+    {}
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -92,11 +95,11 @@ private:
 
     struct RenderPassDataInfo {
         BASE_NS::vector<RenderPassData> rpData;
-        uint32_t alignedPropertyByteSize { 0U };
+        uint32_t alignedPropertyByteSize{0U};
     };
     struct ComputePassDataInfo {
         BASE_NS::vector<ComputePassData> cpData;
-        uint32_t alignedPropertyByteSize { 0U };
+        uint32_t alignedPropertyByteSize{0U};
     };
 
     BASE_NS::unordered_map<BASE_NS::string, RenderPassDataInfo> nameToRenderObjects_;
@@ -104,8 +107,8 @@ private:
 
     mutable std::mutex mutex_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_FULLSCREEN_SHADER_H
+#endif  // RENDER_DATA_STORE_RENDER_DATA_STORE_FULLSCREEN_SHADER_H

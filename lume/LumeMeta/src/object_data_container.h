@@ -27,7 +27,7 @@ class ObjectDataContainer : public IntroduceInterfaces<AttachmentContainer, IMet
     using Super = IntroduceInterfaces;
     META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::ObjectDataContainer)
 
-public: // IMetadata
+public:  // IMetadata
     bool AddFunction(const IFunction::Ptr&) override;
     bool RemoveFunction(const IFunction::Ptr&) override;
 
@@ -60,7 +60,7 @@ public: // IMetadata
     IEvent::Ptr GetEvent(BASE_NS::string_view name, MetadataQuery) override;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

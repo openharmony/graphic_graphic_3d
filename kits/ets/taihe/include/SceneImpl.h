@@ -25,10 +25,10 @@
 #include "SceneResources.user.hpp"
 #include "SceneNodes.user.hpp"
 
+#include "ShadowConfigurationImpl.h"
 #include "AnimationImpl.h"
 #include "SceneComponentImpl.h"
 #include "SceneResourceFactoryImpl.h"
-#include "ShadowConfigurationImpl.h"
 #include "SceneETS.h"
 
 #include "scene_adapter/intf_scene_adapter.h"
@@ -43,7 +43,7 @@ private:
     std::optional<::taihe::array<::SceneResources::Animation>> animations_;
 
 public:
-    explicit SceneImpl(const std::string &uriStr);
+    explicit SceneImpl(const std::string& uriStr);
 
     SceneImpl(const std::string &uriStr, ::SceneTH::SceneLoadParams params);
 
@@ -103,7 +103,7 @@ public:
 
 ::SceneTH::Scene loadScene(::taihe::optional_view<uintptr_t> uri);
 
-::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams params);
+::SceneTH::Scene loadSceneWithLoadParams(uintptr_t uri, ::SceneTH::SceneLoadParams const& params);
 
 ::SceneTH::Scene sceneTransferStaticImpl(uintptr_t input);
 
@@ -111,6 +111,6 @@ uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input);
 
 ::SceneTH::PCFConfig CreatePCFConfig();
 
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 
 #endif  // OHOS_3D_SCENE_IMPL_H

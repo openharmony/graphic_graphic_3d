@@ -20,8 +20,10 @@
 #include <scene/ext/ecs_lazy_property.h>
 #include <scene/ext/intf_create_entity.h>
 #include <scene/interface/intf_mesh.h>
+#include <scene/interface/resource/types.h>
 
 #include <meta/api/event_handler.h>
+#include <meta/api/resource/derived_from_template.h>
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 #include <meta/ext/resource/resource.h>
@@ -31,8 +33,8 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-class Mesh : public META_NS::IntroduceInterfaces<NamedSceneObject, IMesh, ICreateEntity, CORE_NS::IResource,
-                 IMaterialOverride> {
+class Mesh : public META_NS::IntroduceInterfaces<META_NS::DerivedFromTemplate, NamedSceneObject, IMesh, ICreateEntity,
+                 META_NS::Resource, IMaterialOverride> {
     META_OBJECT(Mesh, ClassId::Mesh, IntroduceInterfaces)
 public:
     void Destroy() override;
@@ -55,12 +57,14 @@ public:
     CORE_NS::Entity CreateEntity(const IInternalScene::Ptr& scene) override;
     bool InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path) override;
 
-public: // IResource (empty implementation as placeholder, needed to initialize API Mesh resource with IMesh::Ptr
     CORE_NS::ResourceType GetResourceType() const override
     {
-        return {};
+        return ClassId::MeshResource.Id().ToUid();
     }
-    CORE_NS::ResourceId GetResourceId() const override
+    // IDerivedFromTemplate: stamping a template id is supported (see
+    // MeshTemplate::ApplyOptions); the higher-level "create from template" /
+    // "set from template" workflow used by the legacy access path is not.
+    META_NS::ObjectId GetDefaultAccess() const override
     {
         return {};
     }

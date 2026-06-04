@@ -29,24 +29,24 @@ CORE3D_BEGIN_NAMESPACE()
 
 BEGIN_COMPONENT(IDynamicEnvironmentBlenderComponentManager, DynamicEnvironmentBlenderComponent)
 
-    /** Entities containing EnvironmentComponents that are pushed to camera buffers and can be blended.
-     *  Controls indirect and environment lighting. Currently there is a limit of 4 blend environments.
-     */
-    DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, environments, "Environments", 0, )
+/** Entities containing EnvironmentComponents that are pushed to camera buffers and can be blended.
+ *  Controls indirect and environment lighting. Currently there is a limit of 4 blend environments.
+ */
+DEFINE_PROPERTY(BASE_NS::vector<CORE_NS::Entity>, environments, "Environments", 0, )
 
-    /** Environment blend weights in a Vec4(Vector4).
-     *  Each component of the vector decides weight in the total of 100% blend (for example vec4(0.25f, 0.75f, 0, 0)
-     *  would result in environment1 having the weight of 25% and environment2 having 75%).
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, entryFactor, "Entry Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
+/** Environment blend weights in a Vec4(Vector4).
+ *  Each component of the vector decides weight in the total of 100% blend (for example vec4(0.25f, 0.75f, 0, 0)
+ *  would result in environment1 having the weight of 25% and environment2 having 75%).
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, entryFactor, "Entry Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
 
-    /** Environment blend interpolator target values as Vec4.
-     *  Each vector4 component acts as a weight (for example entry of 0.25, 0.25, 0.25, 0.25 with switch of 0.9, 0, 0, 0
-     *  would make entry of 0.9, 0.033, 0.033, 0.033)
-     *  Can also be set as full 100% (The values form full 1.0).
-     *  User is responsible for keeping the 100% value (Total not exceeding 100%).
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, switchFactor, "Switch Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
+/** Environment blend interpolator target values as Vec4.
+ *  Each vector4 component acts as a weight (for example entry of 0.25, 0.25, 0.25, 0.25 with switch of 0.9, 0, 0, 0
+ *  would make entry of 0.9, 0.033, 0.033, 0.033)
+ *  Can also be set as full 100% (The values form full 1.0).
+ *  User is responsible for keeping the 100% value (Total not exceeding 100%).
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, switchFactor, "Switch Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
 
 END_COMPONENT(IDynamicEnvironmentBlenderComponentManager, DynamicEnvironmentBlenderComponent,
     "0e1d7883-4609-427e-a05c-9aa7ad42e188")

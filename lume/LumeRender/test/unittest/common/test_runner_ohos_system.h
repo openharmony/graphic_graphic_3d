@@ -51,7 +51,7 @@
 #include <render/gles/intf_device_gles.h>
 #endif
 
-#include <native_image.h> //native window
+#include <native_image.h>  //native window
 
 namespace Test {
 // Scoped log. Previous log level is restored when the LogLevelScope object goes out of scope.
@@ -94,7 +94,8 @@ public:
     {
         CreateNativeWindow();
     }
-    void Run() {}
+    void Run()
+    {}
     void Terminate();
     OHNativeWindow* GetWindowHandle() const
     {
@@ -110,7 +111,7 @@ private:
 // Native window
 inline OHOSApp* g_ohosApp;
 
-} // namespace Test
+}  // namespace Test
 
 RENDER_BEGIN_NAMESPACE()
 
@@ -127,16 +128,16 @@ struct EngineResources {
     IRenderContext::Ptr context;
     IDevice* device;
 #if RENDER_HAS_VULKAN_BACKEND
-    DeviceBackendType backend { DeviceBackendType::VULKAN };
+    DeviceBackendType backend{DeviceBackendType::VULKAN};
 #elif RENDER_HAS_GLES_BACKEND
-    DeviceBackendType backend { DeviceBackendType::OPENGLES };
-#else // RENDER_HAS_GL_BACKEND
-    DeviceBackendType backend { DeviceBackendType::OPENGL };
+    DeviceBackendType backend{DeviceBackendType::OPENGLES};
+#else  // RENDER_HAS_GL_BACKEND
+    DeviceBackendType backend{DeviceBackendType::OPENGL};
 #endif
-    bool enableMultiQueue { false };
-    bool createWindow { false };
-    int width { 128 };
-    int height { 128 };
+    bool enableMultiQueue{false};
+    bool createWindow{false};
+    int width{128};
+    int height{128};
 };
 
 struct TestEnvironment {
@@ -177,7 +178,7 @@ CORE_NS::IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
@@ -189,13 +190,13 @@ public:
         ASSERT_TRUE(windowHandle);
 
         // OHOS specific paths
-        CORE_NS::PlatformCreateInfo info {};
+        CORE_NS::PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
         info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         // Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -211,11 +212,11 @@ public:
         // Register LumeRender static lib
         RENDER_NS::RegisterInterfaces(CORE_NS::GetPluginRegister());
         // Load shared libs
-        constexpr BASE_NS::Uid uids[] = { JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN};
 #else
         // Load shared libs
-        constexpr BASE_NS::Uid uids[] = { RENDER_NS::UID_RENDER_PLUGIN, JPGPlugin::UID_JPG_PLUGIN,
-            PNGPlugin::UID_PNG_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {
+            RENDER_NS::UID_RENDER_PLUGIN, JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN};
 #endif
 
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
@@ -242,9 +243,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 RENDER_END_NAMESPACE()
 
-#endif // TEST_ENVIRONMENT
+#endif  // TEST_ENVIRONMENT

@@ -63,7 +63,7 @@ void UpdateJointBounds(IPicking& pick, const array_view<const float>& jointBound
     const size_t jointBoundsDataSize = jointBoundsData.size();
     const size_t boundsCount = jointBoundsDataSize / 6U;
 
-    PLUGIN_ASSERT(jointBoundsData.size() % 6U == 0); // 6: should be multiple of 6
+    PLUGIN_ASSERT(jointBoundsData.size() % 6U == 0);  // 6: should be multiple of 6
     PLUGIN_ASSERT(jointMatrices.count >= boundsCount);
 
     static constexpr float maxFloat = std::numeric_limits<float>::max();
@@ -120,12 +120,12 @@ IPicking* GetPicking(IEcs& ecs)
     }
     return nullptr;
 }
-} // namespace
+}  // namespace
 
 class SkinningSystem::SkinTask final : public IThreadPool::ITask {
 public:
     SkinTask(SkinningSystem& system, array_view<const ComponentQuery::ResultRow> results)
-        : system_(system), results_(results) {};
+        : system_(system), results_(results){};
 
     void operator()() override
     {
@@ -135,7 +135,8 @@ public:
     }
 
 protected:
-    void Destroy() override {}
+    void Destroy() override
+    {}
 
 private:
     SkinningSystem& system_;
@@ -143,7 +144,10 @@ private:
 };
 
 SkinningSystem::SkinningSystem(IEcs& ecs)
-    : active_(true), ecs_(ecs), picking_(*GetPicking(ecs)), skinManager_(*GetManager<ISkinComponentManager>(ecs)),
+    : active_(true),
+      ecs_(ecs),
+      picking_(GetPicking(ecs)),
+      skinManager_(*GetManager<ISkinComponentManager>(ecs)),
       skinIbmManager_(*GetManager<ISkinIbmComponentManager>(ecs)),
       skinJointsManager_(*GetManager<ISkinJointsComponentManager>(ecs)),
       jointMatricesManager_(*GetManager<IJointMatricesComponentManager>(ecs)),
@@ -151,7 +155,8 @@ SkinningSystem::SkinningSystem(IEcs& ecs)
       worldMatrixManager_(*GetManager<IWorldMatrixComponentManager>(ecs)),
       nodeManager_(*GetManager<INodeComponentManager>(ecs)),
       renderMeshManager_(*GetManager<IRenderMeshComponentManager>(ecs)),
-      meshManager_(*GetManager<IMeshComponentManager>(ecs)), threadPool_(ecs.GetThreadPool())
+      meshManager_(*GetManager<IMeshComponentManager>(ecs)),
+      threadPool_(ecs.GetThreadPool())
 {}
 
 void SkinningSystem::SetActive(bool state)
@@ -169,10 +174,10 @@ void SkinningSystem::Initialize()
     nodeSystem_ = GetSystem<INodeSystem>(ecs_);
     {
         const ComponentQuery::Operation operations[] = {
-            { skinJointsManager_, ComponentQuery::Operation::REQUIRE },
-            { jointMatricesManager_, ComponentQuery::Operation::REQUIRE },
-            { previousJointMatricesManager_, ComponentQuery::Operation::OPTIONAL },
-            { renderMeshManager_, ComponentQuery::Operation::OPTIONAL },
+            {skinJointsManager_, ComponentQuery::Operation::REQUIRE},
+            {jointMatricesManager_, ComponentQuery::Operation::REQUIRE},
+            {previousJointMatricesManager_, ComponentQuery::Operation::OPTIONAL},
+            {renderMeshManager_, ComponentQuery::Operation::OPTIONAL},
         };
         componentQuery_.SetEcsListenersEnabled(true);
         componentQuery_.SetupQuery(skinManager_, operations);
@@ -204,7 +209,8 @@ const IPropertyHandle* SkinningSystem::GetProperties() const
     return SKINNING_SYSTEM_PROPERTIES.GetData();
 }
 
-void SkinningSystem::SetProperties(const IPropertyHandle&) {}
+void SkinningSystem::SetProperties(const IPropertyHandle&)
+{}
 
 const IEcs& SkinningSystem::GetECS() const
 {
@@ -218,7 +224,10 @@ void SkinningSystem::UpdateJointTransformations(bool isEnabled, const array_view
     auto matrices = array_view<Math::Mat4X4>(
         jointMatrices.jointMatrices, std::min(jointMatrices.count, countof(jointMatrices.jointMatrices)));
 
-    std::transform(jointEntities.begin(), jointEntities.end(), ibms.begin(), matrices.begin(),
+    std::transform(jointEntities.begin(),
+        jointEntities.end(),
+        ibms.begin(),
+        matrices.begin(),
         [&worldMatrixManager = worldMatrixManager_, skinEntityWorldInverse, isEnabled](
             auto const& jointEntity, auto const& ibm) {
             if (isEnabled) {
@@ -229,7 +238,7 @@ void SkinningSystem::UpdateJointTransformations(bool isEnabled, const array_view
                 }
             }
 
-            return Math::Mat4X4 { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
+            return Math::Mat4X4{1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f};
         });
 }
 
@@ -268,8 +277,11 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
     if (jointEntities.size() != ibmMatrices.size()) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
         auto const onceId = to_hex(row.entity.id);
-        PLUGIN_LOG_ONCE_W(onceId.c_str(), "Entity (%zu) and description (%zu) counts don't match for entity %s",
-            jointEntities.size(), ibmMatrices.size(), onceId.c_str());
+        PLUGIN_LOG_ONCE_W(onceId.c_str(),
+            "Entity (%zu) and description (%zu) counts don't match for entity %s",
+            jointEntities.size(),
+            ibmMatrices.size(),
+            onceId.c_str());
 #endif
         return;
     }
@@ -285,7 +297,9 @@ void SkinningSystem::UpdateSkin(const ComponentQuery::ResultRow& row)
             const RenderMeshComponent& renderMeshComponent = *renderMeshHandle;
             if (const auto meshHandle = meshManager_.Read(renderMeshComponent.mesh); meshHandle) {
                 auto& mesh = *meshHandle;
-                UpdateJointBounds(picking_, mesh.jointBounds, skinEntityWorld, jointMatrices);
+                if (picking_) {
+                    UpdateJointBounds(*picking_, mesh.jointBounds, skinEntityWorld, jointMatrices);
+                }
             }
         }
     }
@@ -337,7 +351,7 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
     taskResults_.reserve(tasks);
     for (size_t i = 0; i < tasks; ++i) {
         auto& task = tasks_.emplace_back(*this, array_view(queryResults.data() + i * taskSize, taskSize));
-        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr { &task }));
+        taskResults_.push_back(threadPool_->Push(IThreadPool::ITask::Ptr{&task}));
     }
 
     // Skin the tail in the main thread.
@@ -424,7 +438,8 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
         if (const auto skinIbmHandle = skinIbmManager_.Read(skinIbmEntity); skinIbmHandle) {
             if (skinIbmHandle->matrices.size() != joints.size()) {
                 PLUGIN_LOG_E("Skin bone count doesn't match the given joints (%zu, %zu)!",
-                    skinIbmHandle->matrices.size(), joints.size());
+                    skinIbmHandle->matrices.size(),
+                    joints.size());
                 return;
             }
         }

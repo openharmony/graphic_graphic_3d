@@ -24,7 +24,7 @@ public:
     QuaternionImpl(const std::shared_ptr<QuatProxy> proxy) : proxy_(proxy)
     {}
 
-    QuaternionImpl(const BASE_NS::Math::Quat &quat) : stageData_(quat)
+    QuaternionImpl(const BASE_NS::Math::Quat& quat) : stageData_(quat)
     {}
 
     ~QuaternionImpl()
@@ -105,5 +105,5 @@ private:
     // non meta property data
     BASE_NS::Math::Quat stageData_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_QUATERNION_IMPL_H

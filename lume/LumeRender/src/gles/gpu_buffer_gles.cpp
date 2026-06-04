@@ -32,10 +32,12 @@ namespace {
 #if (RENDER_PERF_ENABLED == 1)
 void RecordAllocation(const int64_t alignedByteSize)
 {
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
-        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize,
+        pdm->UpdateData("AllGpuBuffers",
+            "GPU_BUFFER",
+            alignedByteSize,
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
     }
 }
@@ -91,12 +93,14 @@ public:
 
 private:
     DeviceGLES& device_;
-    bool isActive_ { false };
+    bool isActive_{false};
 };
-} // namespace
+}  // namespace
 
 GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
-    : device_((DeviceGLES&)device), plat_({ {}, 0u, 0u, desc.byteSize, 0u, desc.byteSize }), desc_(desc),
+    : device_((DeviceGLES&)device),
+      plat_({{}, 0u, 0u, desc.byteSize, 0u, desc.byteSize}),
+      desc_(desc),
       isPersistantlyMapped_((desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
                             (desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
       // At some point see if other memory property flags should be used.
@@ -106,7 +110,7 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
     glGenBuffers(1, &plat_.buffer);
 
     // we need to handle the alignment only for mappable uniform buffers due to binding offset
-    GLint minAlignment = sizeof(float) * 4u; // NOTE: un-educated guess here.
+    GLint minAlignment = sizeof(float) * 4u;  // NOTE: un-educated guess here.
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &minAlignment);
 
     minAlignment = minAlignment > 0 ? minAlignment : 1;
@@ -115,7 +119,12 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
 
     if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER) {
         isRingBuffer_ = true;
-        plat_.alignedByteSize *= device_.GetCommandBufferingCount();
+        const uint64_t ringSize = static_cast<uint64_t>(plat_.alignedByteSize) * device_.GetCommandBufferingCount();
+        if (ringSize > UINT32_MAX) {
+            PLUGIN_LOG_W("Ring buffer size exceeds uint32_t (%llu), falling back to single buffering",
+                static_cast<unsigned long long>(ringSize));
+        }
+        plat_.alignedByteSize = (ringSize <= UINT32_MAX) ? static_cast<uint32_t>(ringSize) : plat_.alignedByteSize;
     }
 
     const auto oldBind = device_.BoundBuffer(INIT_TARGET);
@@ -127,7 +136,7 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
         glBufferStorageEXT(INIT_TARGET, static_cast<GLsizeiptr>(plat_.alignedByteSize), nullptr, flags);
         if (isPersistantlyMapped_) {
             // make the persistant mapping..
-            flags = flags & (~GL_CLIENT_STORAGE_BIT_EXT); // not valid for map buffer..
+            flags = flags & (~GL_CLIENT_STORAGE_BIT_EXT);  // not valid for map buffer..
             data_ = reinterpret_cast<uint8_t*>(
                 glMapBufferRange(INIT_TARGET, 0, static_cast<GLsizeiptr>(plat_.alignedByteSize), flags));
         }
@@ -160,7 +169,9 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
 }
 
 GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc, const GpuBufferPlatformData& plat)
-    : device_((DeviceGLES&)device), plat_(static_cast<const GpuBufferPlatformDataGL&>(plat)), desc_(desc),
+    : device_((DeviceGLES&)device),
+      plat_(static_cast<const GpuBufferPlatformDataGL&>(plat)),
+      desc_(desc),
       isPersistantlyMapped_((desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
                             (desc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
       // At some point see if other memory property flags should be used.
@@ -172,8 +183,11 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc, const Gp
     device_.BindBuffer(INIT_TARGET, plat_.buffer);
     if (plat_.eglClientBuffer && glBufferStorageExternalEXT) {
         uint32_t flags = MakeFlags(desc.memoryPropertyFlags);
-        glBufferStorageExternalEXT(INIT_TARGET, 0, plat_.alignedByteSize,
-            reinterpret_cast<GLeglClientBufferEXT>(plat_.eglClientBuffer), flags);
+        glBufferStorageExternalEXT(INIT_TARGET,
+            0,
+            plat_.alignedByteSize,
+            reinterpret_cast<GLeglClientBufferEXT>(plat_.eglClientBuffer),
+            flags);
     }
     device_.BindBuffer(INIT_TARGET, oldBind);
 }
@@ -210,6 +224,12 @@ const GpuBufferPlatformDataGL& GpuBufferGLES::GetPlatformData() const
     return plat_;
 }
 
+uint64_t GpuBufferGLES::GetDeviceAddress() const
+{
+    // GLES has no equivalent to VK_KHR_buffer_device_address; ray-tracing is Vulkan-only.
+    return 0;
+}
+
 void* GpuBufferGLES::Map()
 {
     if (!isMappable_) {
@@ -240,11 +260,15 @@ void* GpuBufferGLES::Map()
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, plat_.buffer);
         if (!isRingBuffer_) {
-            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>(plat_.alignedByteSize),
+            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER,
+                0,
+                static_cast<GLsizeiptr>(plat_.alignedByteSize),
                 GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
         } else {
-            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(plat_.currentByteOffset),
-                static_cast<GLsizeiptr>(plat_.bindMemoryByteSize), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER,
+                static_cast<GLintptr>(plat_.currentByteOffset),
+                static_cast<GLsizeiptr>(plat_.bindMemoryByteSize),
+                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
         }
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, oldBind);
     }
@@ -292,10 +316,14 @@ void* GpuBufferGLES::MapMemory()
         const auto oldBind = device_.BoundBuffer(GL_COPY_WRITE_BUFFER);
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, plat_.buffer);
         if (!isRingBuffer_) {
-            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>(plat_.alignedByteSize),
+            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER,
+                0,
+                static_cast<GLsizeiptr>(plat_.alignedByteSize),
                 GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
         } else {
-            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>(plat_.alignedByteSize),
+            ret = glMapBufferRange(GL_COPY_WRITE_BUFFER,
+                0,
+                static_cast<GLsizeiptr>(plat_.alignedByteSize),
                 GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
         }
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, oldBind);

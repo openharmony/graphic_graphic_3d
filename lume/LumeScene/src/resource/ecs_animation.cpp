@@ -15,16 +15,26 @@
 
 #include "ecs_animation.h"
 
+#include <algorithm>
 #include <scene/ext/util.h>
 
 #include <base/math/mathf.h>
 
 #include <meta/api/make_callback.h>
 #include <meta/api/util.h>
+#include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/animation/modifiers/intf_loop.h>
 #include <meta/interface/animation/modifiers/intf_speed.h>
 
 #include "../converting_value.h"
+
+// There is an incorrect usage pattern on important Open Harmony applications which we cannot modify
+// at the moment. Thus we need to maintain incorrect behavior until the applications are fixed.
+// Effectively this may mean we need to deprecate existing function and reintroduce new function that works
+// also with animation modifiers
+#if !defined(__OHOS__) && !defined(ANIMATION_SET_PROGRESS_USAGE_FIXED)
+#define ANIMATION_SET_PROGRESS_USAGE_FIXED 1
+#endif
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -71,7 +81,26 @@ bool EcsAnimation::SetEcsObject(const IEcsObject::Ptr& obj)
 void EcsAnimation::Init()
 {
     SetValue(META_ACCESS_PROPERTY(Valid), true);
+    auto loops = GetValue(props_.repeatCount);
+    if (loops > 1) {
+        CORE_LOG_W("Non-default repeat count %u not supported at initialization time", loops);
+    }
+    // The default repeatCount in AnimationComponent is 1, which means that the animation is run twice. We don't want
+    // that because the default should be "run once". Set that here
     SetValue(props_.repeatCount, 0);
+
+    // Callback for updating the combined animation speed
+    updateSpeed_ = META_NS::MakeCallbackSafe<META_NS::IOnChanged>(
+        [this](const auto& self) {
+            if (self) {
+                UpdateSpeed();
+            }
+        },
+        GetSelf());
+
+    // Initialize modifier attachments for non-default ECS values
+    InitializeModifiers();
+
     auto updateProgress = META_NS::MakeCallbackSafe<META_NS::IOnChanged>(
         [this](const auto& self) {
             if (self) {
@@ -93,6 +122,7 @@ void EcsAnimation::Init()
             }
         },
         GetSelf());
+
     timeChanged_.Subscribe(props_.time, updateProgress);
     speedChanged_.Subscribe(props_.speed, updateTotalDuration);
     repeatCountChanged_.Subscribe(props_.repeatCount, updateTotalDuration);
@@ -106,6 +136,49 @@ void EcsAnimation::Init()
     }));
     UpdateTotalDuration();
 }
+
+namespace Internal {
+template <class T>
+auto GetOrCreateModifier(const META_NS::IAttach::Ptr& attach, META_NS::ObjectId classId)
+{
+    // first = modifier, second = value indicating if the modifier already existed (false) or was created (true)
+    BASE_NS::pair<typename T::Ptr, bool> result = {nullptr, false};
+    if (attach) {
+        if (auto mfs = attach->GetAttachments<T>(); !mfs.empty()) {
+            result.first = mfs.front();
+        }
+        if (!result.first) {
+            result.first = META_NS::GetObjectRegistry().Create<T>(classId);
+            result.second = true;  // Created new object
+        }
+    }
+    return result;
+}
+
+auto GetOrCreateSpeedModifier(const META_NS::IAttach::Ptr& attach)
+{
+    return GetOrCreateModifier<META_NS::AnimationModifiers::ISpeed>(attach, META_NS::ClassId::SpeedAnimationModifier);
+}
+}  // namespace Internal
+
+void EcsAnimation::InitializeModifiers()
+{
+    const auto me = interface_pointer_cast<META_NS::IAttach>(GetSelf());
+    // Check speed
+    const auto speed = GetValue(props_.speed);
+    defaultSpeed_ = speed;  // Store original value
+    if (speed != 1.0f) {
+        const auto sm = Internal::GetOrCreateSpeedModifier(me);
+        if (sm.first) {
+            SetValue(sm.first->SpeedFactor(), speed);
+        }
+        if (sm.second) {
+            me->Attach(sm.first);
+        }
+    }
+    // No handling for loops as we need to set repeatCount to 0 initially in ECS
+}
+
 IEcsObject::Ptr EcsAnimation::GetEcsObject() const
 {
     auto acc = interface_cast<IEcsObjectAccess>(animation_);
@@ -157,6 +230,7 @@ void EcsAnimation::InternalStop()
     SetValue(META_ACCESS_PROPERTY(Running), false);
     SetProgress(0.0f);
 }
+#if defined(ANIMATION_SET_PROGRESS_USAGE_FIXED) && (ANIMATION_SET_PROGRESS_USAGE_FIXED != 0)
 void EcsAnimation::SetProgress(float progress)
 {
     progress = Base::Math::clamp01(progress);
@@ -172,6 +246,30 @@ void EcsAnimation::SetProgress(float progress)
         SetValue(META_ACCESS_PROPERTY(Progress), progress);
     }
 }
+#else
+void EcsAnimation::SetProgress(float progress)
+{
+    using META_NS::GetValue;
+    using META_NS::SetValue;
+    progress = Base::Math::clamp01(progress);
+    if (!animation_) {
+        return;
+    }
+    auto speed = GetValue(animation_->Speed());
+    if (speed < 0.0) {
+        // ECS component expects the time to be set without any modifiers
+        auto duration = GetValue(animation_->Duration());
+        progress = 1.f - progress;
+        // Our OnChanged handler for anim_->Time() will update Progress property
+        SetValue(animation_->Time(), progress * duration);
+        return;
+    }
+    // TotalDuration has higher precision than Duration, although they represent same value here
+    // some app need this high precision
+    SetValue(animation_->Time(), progress * GetValue(TotalDuration()).ToSecondsFloat());
+}
+#endif
+
 void EcsAnimation::Pause()
 {
     if (META_ACCESS_PROPERTY_VALUE(Enabled)) {
@@ -224,6 +322,47 @@ void EcsAnimation::Finish()
         META_NS::Invoke<META_NS::IOnChanged>(EventOnFinished(META_NS::MetadataQuery::EXISTING));
     }
 }
+
+void EcsAnimation::UpdateSpeed()
+{
+    float speed = speedModifiers_.empty() ? defaultSpeed_ : 1.f;
+    for (auto&& wm : speedModifiers_) {
+        if (auto m = wm.modifier.lock()) {
+            speed = m->ModifySpeed(speed);
+        }
+    }
+    SetValue(props_.speed, speed);
+}
+
+void EcsAnimation::UpdateSpeedForAttachment(const META_NS::IObject::Ptr& attachment, bool add)
+{
+    auto modifier = interface_pointer_cast<META_NS::AnimationModifiers::ISpeedModifier>(attachment);
+    if (!modifier) {
+        return;
+    }
+    const auto it = std::find_if(
+        speedModifiers_.begin(), speedModifiers_.end(), [&](const auto& m) { return m.modifier.lock() == modifier; });
+    if (add) {
+        // Attachment added
+        if (it == speedModifiers_.end()) {  // Only add to list once
+            META_NS::IEvent::Token token{};
+            if (auto sm = interface_cast<META_NS::AnimationModifiers::ISpeed>(modifier)) {
+                token = META_NS::AddOnChangedHandler(sm->SpeedFactor(), updateSpeed_);
+            }
+            speedModifiers_.push_back({modifier, token});
+        }
+    } else if (it != speedModifiers_.end()) {
+        // Attachment removed
+        if (it->token) {
+            if (auto m = interface_pointer_cast<META_NS::AnimationModifiers::ISpeed>(it->modifier)) {
+                META_NS::RemoveOnChangedHandler(m->SpeedFactor(), it->token);
+            }
+        }
+        speedModifiers_.erase(it);
+    }
+    UpdateSpeed();
+}
+
 bool EcsAnimation::Attach(const META_NS::IObject::Ptr& attachment, const META_NS::IObject::Ptr& dataContext)
 {
     bool res = Super::Attach(attachment, dataContext);
@@ -232,14 +371,10 @@ bool EcsAnimation::Attach(const META_NS::IObject::Ptr& attachment, const META_NS
             auto loopCountProperty = loop->LoopCount();
             auto value = GetValue(loopCountProperty);
             SetValue(props_.repeatCount, LoopCountConverter::ConvertToTarget(value));
-            PushPropertyValue(loopCountProperty,
-                META_NS::IValue::Ptr { new ConvertingValue<LoopCountConverter>(props_.repeatCount) });
-        } else if (auto speed = interface_pointer_cast<META_NS::AnimationModifiers::ISpeed>(attachment)) {
-            auto speedFactorProperty = speed->SpeedFactor();
-            auto value = GetValue(speedFactorProperty);
-            SetValue(props_.speed, value);
-            PushPropertyAsValue(speedFactorProperty, props_.speed);
+            PushPropertyValue(
+                loopCountProperty, META_NS::IValue::Ptr{new ConvertingValue<LoopCountConverter>(props_.repeatCount)});
         }
+        UpdateSpeedForAttachment(attachment, true);
     }
     return res;
 }
@@ -248,11 +383,10 @@ bool EcsAnimation::Detach(const META_NS::IObject::Ptr& attachment)
     if (auto loop = interface_cast<META_NS::AnimationModifiers::ILoop>(attachment)) {
         ResetValue(loop->LoopCount());
         SetValue(props_.repeatCount, 0);
-    } else if (auto speed = interface_cast<META_NS::AnimationModifiers::ISpeed>(attachment)) {
-        ResetValue(speed->SpeedFactor());
-        SetValue(props_.speed, 1.f);
     }
-    return Super::Detach(attachment);
+    auto ret = Super::Detach(attachment);
+    UpdateSpeedForAttachment(attachment, false);
+    return ret;
 }
 bool EcsAnimation::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext)
 {

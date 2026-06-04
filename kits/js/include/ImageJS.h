@@ -17,8 +17,9 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "RenderContextJS.h"
+#include "export.h"
 
-class ImageJS final : public BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC ImageJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 110;
     static void Init(napi_env env, napi_value exports);
@@ -28,12 +29,13 @@ public:
     void* GetInstanceImpl(uint32_t) override;
 
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     // JS properties
     napi_value GetWidth(NapiApi::FunctionContext<>& ctx);
     napi_value GetHeight(NapiApi::FunctionContext<>& ctx);
     napi_value GetSurfaceId(NapiApi::FunctionContext<>& ctx);
+
 private:
     BASE_NS::shared_ptr<RenderResources> resources_;
     META_NS::IObject::Ptr attachment_ = nullptr;

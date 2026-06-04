@@ -86,6 +86,6 @@ UNIT_TEST(API_PropertyInfoTest, Enum, testing::ext::TestSize.Level1)
     EXPECT_EQ(p->GetValue(), MyPropEnum::B);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

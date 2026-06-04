@@ -183,7 +183,7 @@ UNIT_TEST(API_EnumTest, CopyFrom, testing::ext::TestSize.Level1)
     EXPECT_TRUE(p->CopyFrom(v));
     EXPECT_EQ(GetValue<int64_t>(*p), 2);
 
-    Any<int64_t> any { 4 };
+    Any<int64_t> any{4};
     EXPECT_TRUE(p->CopyFrom(any));
     EXPECT_EQ(GetValue<int64_t>(*p), 4);
     EXPECT_TRUE(any.SetValue<int64_t>(5));
@@ -201,9 +201,9 @@ UNIT_TEST(API_EnumTest, CopyFrom, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_EnumTest, ArrayEnum, testing::ext::TestSize.Level1)
 {
-    ArrayEnum<MyEnumMetadata> arr { MyEnum::MyA, MyEnum::MyB, MyEnum::MyC };
+    ArrayEnum<MyEnumMetadata> arr{MyEnum::MyA, MyEnum::MyB, MyEnum::MyC};
 
-    auto any = arr.Clone({ CloneValueType::COPY_VALUE, TypeIdRole::ITEM });
+    auto any = arr.Clone({CloneValueType::COPY_VALUE, TypeIdRole::ITEM});
     ASSERT_TRUE(any);
     EXPECT_TRUE(arr.GetAnyAt(0, *any));
     EXPECT_EQ(GetValue<int64_t>(*any), 1);
@@ -277,11 +277,11 @@ UNIT_TEST(API_EnumTest, PlainEnum, testing::ext::TestSize.Level1)
 {
     auto p = ConstructProperty<PlainEnum>("test");
     ASSERT_TRUE(p);
-    Property<uint64_t> prop { p.GetProperty() };
+    Property<uint64_t> prop{p.GetProperty()};
     ASSERT_TRUE(prop);
     prop->SetValue(1);
     EXPECT_EQ(prop->GetValue(), 1);
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

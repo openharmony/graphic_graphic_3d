@@ -47,5 +47,5 @@ public:
 private:
     std::shared_ptr<MeshETS> meshETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MESH_IMPL_H

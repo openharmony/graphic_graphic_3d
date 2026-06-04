@@ -111,7 +111,7 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
     Entity reflectionPlane;
     {
         nameManager->Create(reflectionPlaneMaterial);
-        nameManager->Set(reflectionPlaneMaterial, { { "ReflectionPlaneMaterial" } });
+        nameManager->Set(reflectionPlaneMaterial, {{"ReflectionPlaneMaterial"}});
         materialManager->Create(reflectionPlaneMaterial);
         reflectionPlane =
             meshUtil.GeneratePlane(res.GetEcs(), "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
@@ -129,10 +129,14 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
     }
 
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/Environment/glTF/Environment.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/BrainStem/glTF/BrainStem.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/Environment/glTF/Environment.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/BrainStem/glTF/BrainStem.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     // Load and import all gltf files.
@@ -236,15 +240,19 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
 
         // camera  component
         {
-            cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 2.75f, 3.5f),
-                Math::AngleAxis((Math::DEG2RAD * -25.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+            cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+                Math::Vec3(0.0f, 2.75f, 3.5f),
+                Math::AngleAxis((Math::DEG2RAD * -25.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+                0.1f,
+                100.0f,
+                60.0f);
             ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
             ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
             cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
             cameraComponent->pipelineFlags |= CameraComponent::PipelineFlagBits::MSAA_BIT |
                                               CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
             cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-            cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+            cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
             cameraComponent->postProcess = postProcessEntity;
         }
 
@@ -252,16 +260,18 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
             // Create default light.
             LightComponent lc;
             lc.type = LightComponent::Type::DIRECTIONAL;
-            lc.color = { 0.96f, 1.0f, 0.98f };
+            lc.color = {0.96f, 1.0f, 0.98f};
             lc.intensity = 5.0f;
             lc.shadowEnabled = true;
-            sceneUtil.CreateLight(res.GetEcs(), lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+            sceneUtil.CreateLight(res.GetEcs(),
+                lc,
+                Math::Vec3(0.0f, 0.0f, 3.0f),
                 Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
         }
         {
             LightComponent lc;
             lc.type = LightComponent::Type::POINT;
-            lc.color = { 1.0f, 0.2f, 0.2f };
+            lc.color = {1.0f, 0.2f, 0.2f};
             lc.intensity = 2.0f;
             lc.range = 1.0f;
             lc.spotInnerAngle = 0.785398163397448f;
@@ -269,9 +279,9 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
             lc.shadowEnabled = false;
 
             TransformComponent tc;
-            tc.position = { -1.0f, 1.0f, 0.0f };
-            tc.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-            tc.scale = { 1.0f, 1.0f, 1.0f };
+            tc.position = {-1.0f, 1.0f, 0.0f};
+            tc.rotation = {0.0f, 0.0f, 0.0f, 1.0f};
+            tc.scale = {1.0f, 1.0f, 1.0f};
 
             CreateLight(res.GetEcs(), lc, tc);
         }
@@ -279,7 +289,7 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
         {
             LightComponent lc;
             lc.type = LightComponent::Type::SPOT;
-            lc.color = { 0.5f, 1.0f, 1.0f };
+            lc.color = {0.5f, 1.0f, 1.0f};
             lc.intensity = 6.0f;
             lc.range = 0.0f;
             lc.spotInnerAngle = Math::DEG2RAD * 45.0f;
@@ -287,17 +297,17 @@ void AnimationWithReflectionTest(UTest::TestResources& res)
             lc.shadowEnabled = true;
 
             TransformComponent tc;
-            tc.position = { 1.0f, 1.0f, 0.0f };
+            tc.position = {1.0f, 1.0f, 0.0f};
             tc.rotation = Math::Euler(-95.0f, 0.0f, 0.0f);
-            tc.scale = { 1.0f, 1.0f, 1.0f };
+            tc.scale = {1.0f, 1.0f, 1.0f};
 
             CreateLight(res.GetEcs(), lc, tc);
         }
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 1.0f);
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -319,7 +329,10 @@ UNIT_TEST(API_GfxTest, AnimationWithReflectionTest, testing::ext::TestSize.Level
             const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
             UTest::WritePng(
                 BASE_NS::string(appDir + string("./animationWithReflectionTestVulkan") + to_string(i) + ".png").c_str(),
-                res.GetWindowWidth(), res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(),
+                res.GetWindowWidth(),
+                res.GetWindowHeight(),
+                4,
+                res.GetByteArray()->GetData().data(),
                 res.GetWindowWidth() * 4);
         }
     }
@@ -327,4 +340,4 @@ UNIT_TEST(API_GfxTest, AnimationWithReflectionTest, testing::ext::TestSize.Level
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

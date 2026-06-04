@@ -110,4 +110,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ECS_NODESYSTEM_H
+#endif  // CORE_ECS_NODESYSTEM_H

@@ -88,7 +88,7 @@ private:
     IManualClock::Ptr clock_;
 };
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()
 
-#endif // META_TEST_ANIMATION_TEST_BASE_H
+#endif  // META_TEST_ANIMATION_TEST_BASE_H

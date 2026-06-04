@@ -18,8 +18,7 @@
 namespace OHOS::Render3D::KITETS {
 OcclusionMaterialImpl::OcclusionMaterialImpl(const std::shared_ptr<MaterialETS> mat)
     : MaterialImpl(mat), materialETS_(mat)
-{
-}
+{}
 
 OcclusionMaterialImpl::~OcclusionMaterialImpl()
 {

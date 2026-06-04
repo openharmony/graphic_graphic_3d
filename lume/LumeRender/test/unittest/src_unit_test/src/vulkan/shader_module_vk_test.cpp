@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/shader_module_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 #include <device/shader_manager.h>
@@ -77,10 +77,10 @@ UNIT_TEST(SRC_ShaderModule, ShaderModuleTestVulkan, testing::ext::TestSize.Level
         createInfo.reflectionData = refData;
         createInfo.shaderStageFlags = ShaderStageFlagBits::CORE_SHADER_STAGE_ALL;
         createInfo.spvData = spvData;
-        ShaderModuleVk shader { device, createInfo };
+        ShaderModuleVk shader{device, createInfo};
         ASSERT_EQ(ShaderStageFlagBits::CORE_SHADER_STAGE_ALL, shader.GetShaderStageFlags());
     }
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

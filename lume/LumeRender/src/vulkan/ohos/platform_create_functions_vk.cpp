@@ -32,11 +32,11 @@ VkSurfaceKHR CreateFunctionsVk::CreateSurface(VkInstance instance, Window const&
             PLUGIN_LOG_E("Missing VK_OHOS_surface extension");
             return surface;
         }
-        VkSurfaceCreateInfoOHOS const surfaceCreateInfo {
-            VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_OHOS, // sType
-            nullptr,                                    // pNext
-            0,                                          // flags
-            (OHNativeWindow*)nativeWindow.window,       // window
+        VkSurfaceCreateInfoOHOS const surfaceCreateInfo{
+            VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_OHOS,  // sType
+            nullptr,                                     // pNext
+            0,                                           // flags
+            (OHNativeWindow*)nativeWindow.window,        // window
         };
         VALIDATE_VK_RESULT(vkCreateSurfaceOHOS(instance, &surfaceCreateInfo, nullptr, &surface));
 #else

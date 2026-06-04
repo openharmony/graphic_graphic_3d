@@ -55,6 +55,6 @@ void SequentialAnimation::ChildrenChanged()
     NotifyChanged();
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

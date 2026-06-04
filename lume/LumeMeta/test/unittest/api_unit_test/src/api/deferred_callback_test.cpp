@@ -13,6 +13,9 @@
  * limitations under the License.
  */
 
+#include <chrono>
+#include <thread>
+
 #include <meta/api/deferred_callback.h>
 #include <meta/api/property/property_event_handler.h>
 #include <meta/ext/object_fwd.h>
@@ -30,14 +33,14 @@ namespace UTest {
 namespace {
 
 struct IOnTestInfo {
-    constexpr static BASE_NS::Uid UID { "3e55eee7-f0e4-4363-b4fc-65d8b3574a4e" };
-    constexpr static char const* NAME { "OnTest" };
+    constexpr static BASE_NS::Uid UID{"3e55eee7-f0e4-4363-b4fc-65d8b3574a4e"};
+    constexpr static char const* NAME{"OnTest"};
 };
 using IOnTest = SimpleEvent<IOnTestInfo, void(int)>;
 
 using Callable = SimpleEvent<IOnTestInfo, void()>::InterfaceType;
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CallWithCallable
@@ -78,6 +81,7 @@ UNIT_TEST(API_DeferredCallbackTest, CallWithEvent, testing::ext::TestSize.Level1
     auto callback = MakeDeferred<IOnTest>([&](int i) { count += i; }, q);
 
     q->ProcessTasks();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     EXPECT_EQ(count, 0);
 
     callback->Invoke(1);
@@ -85,7 +89,9 @@ UNIT_TEST(API_DeferredCallbackTest, CallWithEvent, testing::ext::TestSize.Level1
 
     EXPECT_EQ(count, 0);
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     q->ProcessTasks();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     EXPECT_EQ(count, 3);
 }
 
@@ -174,6 +180,6 @@ UNIT_TEST(API_DeferredCallbackTest, PropertyChangedHandlerId, testing::ext::Test
     META_NS::GetTaskQueueRegistry().UnregisterTaskQueue(queueId.ToUid());
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

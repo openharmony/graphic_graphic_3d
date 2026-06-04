@@ -24,6 +24,7 @@
 #include <render/intf_render_context.h>
 
 #include <scene/ext/intf_component.h>
+#include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_scene.h>
@@ -34,12 +35,12 @@
 
 #include "ImageETS.h"
 #include "SceneResourceETS.h"
-#include "property_proxy/Vec2Proxy.h"
-#include "property_proxy/Vec3Proxy.h"
-#include "property_proxy/Vec4Proxy.h"
+#include "Vec2Proxy.h"
+#include "Vec3Proxy.h"
+#include "Vec4Proxy.h"
 
 namespace OHOS::Render3D {
-SceneComponentETS::SceneComponentETS(SCENE_NS::IComponent::Ptr comp, const std::string &name) : comp_(comp), name_(name)
+SceneComponentETS::SceneComponentETS(SCENE_NS::IComponent::Ptr comp, const std::string& name) : comp_(comp), name_(name)
 {
     AddProperties();
 }
@@ -48,6 +49,7 @@ SceneComponentETS::~SceneComponentETS()
 {
     keys_.clear();
     proxies_.clear();
+    propertyPaths_.clear();
     comp_.reset();
 }
 
@@ -61,78 +63,75 @@ void SceneComponentETS::SetName(const std::string& name)
     name_ = name;
 }
 
-using GenericComponentMapping = BASE_NS::unordered_map<BASE_NS::string_view, BASE_NS::vector<BASE_NS::string_view>>;
-
-const GenericComponentMapping& GetComponentMapping()
-{
-    static const GenericComponentMapping map = []() {
-        GenericComponentMapping m;
-        m["RenderConfigurationComponent"] = { "shadowType", "shadowQuality", "shadowSmoothness", "renderingFlags" };
-        return m;
-    }();
-    return map;
-}
-
-bool ShouldExpose(BASE_NS::string_view componentName, BASE_NS::string_view propertyName)
-{
-    // Weather system uses mixed casing, we cannot exclude properties based on first char
-    if (componentName == "WeatherEffectComponent") {
-        return true;
-    }
-
-    if (!propertyName.empty() && std::isupper(propertyName[0])) {
-        // Some specific component wrappers in LumeScene expose ECS properties as LumeScene
-        // level properties (whose name starts with an upper case letter). Do not expose those
-        // to JS.
-        return false;
-    }
-
-    const auto& map = GetComponentMapping();
-    auto it = map.find(componentName);
-    if (it == map.end()) {
-        return true; // No mapping defined, expose all
-    }
-    const auto& mapping = it->second;
-    return std::find(mapping.begin(), mapping.end(), propertyName) != mapping.end();
-}
-
 void SceneComponentETS::AddProperties()
 {
-    auto compoment = comp_.lock();
-    auto meta = interface_cast<META_NS::IMetadata>(compoment);
-    if (!compoment || !meta) {
+    auto component = comp_.lock();
+    if (!component) {
         return;
     }
-    compoment->PopulateAllProperties();
+
     keys_.clear();
     proxies_.clear();
-    BASE_NS::string componentName;
-    if (auto o = interface_cast<META_NS::IObject>(compoment)) {
-        componentName = o->GetName();
-    }
-    for (auto&& p : meta->GetProperties()) {
-        if (!p) {
-            continue;
-        }
-        const auto name = SCENE_NS::PropertyName(p->GetName());
-        if (ShouldExpose(componentName, name)) {
-            if (auto proxy = PropertyToProxy(p)) {
-                proxies_.insert_or_assign(SCENE_NS::PropertyName(p->GetName()).data(), std::move(proxy));
-            }
-        }
-    }
-    keys_.reserve(proxies_.size());
-    for (auto& pair : proxies_) {
-        keys_.push_back(pair.first);
+    propertyPaths_.clear();
+
+    // Enumerate property names without creating engine value bridges
+    auto props = component->EnumerateProperties();
+    for (auto&& prop : props) {
+        auto sv = SCENE_NS::PropertyName(prop.name);
+        std::string name(sv.data(), sv.size());
+        propertyPaths_[name] = BASE_NS::move(prop.name);
+        keys_.push_back(std::move(name));
     }
 }
 
-std::shared_ptr<IPropertyProxy> SceneComponentETS::GetProperty(const std::string &key)
+std::shared_ptr<IPropertyProxy> SceneComponentETS::GetOrCreateProxy(const std::string& key)
 {
-    return proxies_[key];
+    auto proxyIt = proxies_.find(key);
+    if (proxyIt != proxies_.end()) {
+        return proxyIt->second;
+    }
+
+    auto pathIt = propertyPaths_.find(key);
+    if (pathIt == propertyPaths_.end()) {
+        return {};
+    }
+
+    auto component = comp_.lock();
+    if (!component) {
+        return {};
+    }
+
+    auto native = interface_cast<SCENE_NS::IEcsObjectAccess>(component);
+    if (!native) {
+        return {};
+    }
+
+    auto ecsObj = native->GetEcsObject();
+    if (!ecsObj) {
+        return {};
+    }
+
+    auto prop = ecsObj->CreateProperty(pathIt->second).GetResult();
+    if (!prop) {
+        return {};
+    }
+
+    // Add the property to the component's metadata
+    if (auto meta = interface_cast<META_NS::IMetadata>(component)) {
+        meta->AddProperty(prop);
+    }
+
+    auto proxy = PropertyToProxy(prop);
+    proxies_[key] = proxy;
+    return proxy;
 }
 
-void SceneComponentETS::ClearArrayProperty(const std::string &key)
+std::shared_ptr<IPropertyProxy> SceneComponentETS::GetProperty(const std::string& key)
+{
+    return GetOrCreateProxy(key);
+}
+
+void SceneComponentETS::ClearArrayProperty(const std::string& key)
 {
     // NOTE: Currently only supports clearing IImage::Ptr array properties.
     // If other SceneResource array types need to be supported in the future,
@@ -152,8 +151,9 @@ void SceneComponentETS::ClearArrayProperty(const std::string &key)
         return;
     }
     auto any = META_NS::GetInternalAny(prop);
-    CORE_LOG_E("property [%s] type [%s] is not supported yet", key.c_str(),
-               any ? any->GetTypeIdString().c_str() : "<Unknown>");
+    CORE_LOG_E("property [%s] type [%s] is not supported yet",
+        key.c_str(),
+        any ? any->GetTypeIdString().c_str() : "<Unknown>");
 }
 
 }  // namespace OHOS::Render3D

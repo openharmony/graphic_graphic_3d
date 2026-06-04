@@ -24,22 +24,24 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "PropertyProxy.h"
+#include "export.h"
 
-class BaseMaterial : public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC BaseMaterial : public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 30;
-    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2, UNLIT = 3, OCCLUSION = 4 };
+    enum MaterialType { SHADER = 1, METALLIC_ROUGHNESS = 2, UNLIT = 3, OCCLUSION = 4, UNLIT_SHADOW_ALPHA = 100 };
     enum CullMode { NONE = 0, FRONT = 1, BACK = 2 };
     enum PolygonMode { FILL = 0, LINE = 1, POINT = 2 };
     static void Init(const char* name, napi_env env, napi_value exports, napi_callback ctor,
         BASE_NS::vector<napi_property_descriptor>& props);
     static void InitEnumType(napi_env env, napi_value exports);
     void* GetInstanceImpl(uint32_t) override;
+
 protected:
     BaseMaterial(MaterialType lt);
     ~BaseMaterial() override;
 
-    void DisposeNative(BaseObject*);
+    void DisposeNative(BaseObject* tro);
 
     MaterialType materialType_;
 
@@ -77,7 +79,7 @@ private:
     std::optional<SCENE_NS::CullModeFlags> defaultCullMode_;
 };
 
-class MaterialJS final : public BaseObject, public BaseMaterial {
+class SCENE_ADDON_PUBLIC MaterialJS final : public BaseObject, public BaseMaterial {
 public:
     static constexpr uint32_t ID = 31;
     static void Init(napi_env env, napi_value exports);
@@ -90,17 +92,18 @@ public:
     // material's scene when it is bound to it.
     NapiApi::Object GetSceneObject();
     void* GetInstanceImpl(uint32_t) override;
+
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     napi_value GetColorShader(NapiApi::FunctionContext<>& ctx);
     bool EarlyExitSet(NapiApi::Object& shaderJS, SCENE_NS::IMaterial::Ptr& material);
     void SetColorShader(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
-    template<size_t Index>
+    template <size_t Index>
     napi_value GetMaterialProperty(NapiApi::FunctionContext<>& ctx);
-    template<size_t Index>
+    template <size_t Index>
     void SetMaterialProperty(NapiApi::FunctionContext<NapiApi::Object>& ctx);
 
     META_NS::IObject::Ptr shaderBind_;

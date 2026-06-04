@@ -16,18 +16,20 @@
 #ifndef SCENE_SRC_ECS_COMPONENT_RESOURCE_COMPONENT_INFO_H
 #define SCENE_SRC_ECS_COMPONENT_RESOURCE_COMPONENT_INFO_H
 
-#include <core/plugin/intf_plugin.h>
+#include <scene/interface/ecs/resource_component.h>
 
-#include "resource_component.h"
+#include <core/plugin/intf_plugin.h>
 
 SCENE_BEGIN_NAMESPACE()
 
 CORE_NS::IComponentManager* IResourceComponentManagerInstance(CORE_NS::IEcs&);
 void IResourceComponentManagerDestroy(CORE_NS::IComponentManager*);
 
-constexpr CORE_NS::ComponentManagerTypeInfo RESOURCE_COMPONENT_TYPE_INFO { { CORE_NS::ComponentManagerTypeInfo::UID },
-    IResourceComponentManager::UID, CORE_NS::GetName<IResourceComponentManager>().data(),
-    IResourceComponentManagerInstance, IResourceComponentManagerDestroy };
+constexpr CORE_NS::ComponentManagerTypeInfo RESOURCE_COMPONENT_TYPE_INFO{{CORE_NS::ComponentManagerTypeInfo::UID},
+    IResourceComponentManager::UID,
+    CORE_NS::GetName<IResourceComponentManager>().data(),
+    IResourceComponentManagerInstance,
+    IResourceComponentManagerDestroy};
 
 SCENE_END_NAMESPACE()
 

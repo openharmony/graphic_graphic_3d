@@ -27,13 +27,13 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<typename Interface>
+template <typename Interface>
 CORE_NS::Entity ConvertPtrToTarget(const typename Interface::Ptr& v)
 {
     return GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(v));
 }
 
-template<typename Interface>
+template <typename Interface>
 typename Interface::Ptr ConvertPtrToSource(
     META_NS::IAny& any, const CORE_NS::Entity& v, const IInternalScene::Ptr& scene, META_NS::ObjectId id)
 {
@@ -54,12 +54,13 @@ typename Interface::Ptr ConvertPtrToSource(
 }
 
 /// Interface pointer to entity converter with fixed Entity<->ObjectId mapping
-template<typename Interface>
+template <typename Interface>
 struct InterfacePtrEntityConverter {
     using SourceType = typename Interface::Ptr;
     using TargetType = CORE_NS::Entity;
 
-    InterfacePtrEntityConverter(IInternalScene::Ptr scene, META_NS::ObjectId id) : scene_(scene), id_(id) {}
+    InterfacePtrEntityConverter(IInternalScene::Ptr scene, META_NS::ObjectId id) : scene_(scene), id_(id)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
@@ -76,17 +77,18 @@ protected:
 };
 
 /// Interface pointer to entity converter with dynamic Entity<->ObjectId mapping
-template<typename Interface>
+template <typename Interface>
 struct DynamicInterfacePtrEntityConverter {
     using SourceType = typename Interface::Ptr;
     using TargetType = CORE_NS::Entity;
 
-    explicit DynamicInterfacePtrEntityConverter(IInternalScene::Ptr scene) : scene_(scene) {}
+    explicit DynamicInterfacePtrEntityConverter(IInternalScene::Ptr scene) : scene_(scene)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
         const auto scene = scene_.lock();
-        META_NS::ObjectId id {};
+        META_NS::ObjectId id{};
         if (scene) {
             id = GetObjectId(*(scene->GetEcsContext().GetNativeEcs()), v);
         }
@@ -105,16 +107,17 @@ protected:
     IInternalScene::WeakPtr scene_;
 };
 
-template<typename Interface>
+template <typename Interface>
 using InterfacePtrEntityValue = ConvertingValue<InterfacePtrEntityConverter<Interface>>;
 
 // render resource to entity converter
-template<typename Interface>
+template <typename Interface>
 struct RenderResourceConverter {
     using SourceType = typename Interface::Ptr;
     using TargetType = CORE_NS::EntityReference;
 
-    RenderResourceConverter(IInternalScene::Ptr scene, META_NS::ObjectId id) : scene_(scene), id_(id) {}
+    RenderResourceConverter(IInternalScene::Ptr scene, META_NS::ObjectId id) : scene_(scene), id_(id)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
@@ -143,7 +146,7 @@ protected:
     META_NS::ObjectId id_;
 };
 
-template<typename Interface>
+template <typename Interface>
 using RenderResourceValue = ConvertingValue<RenderResourceConverter<Interface>>;
 
 SCENE_END_NAMESPACE()

@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template<typename Type>
+template <typename Type>
 void AddToQueue(BASE_NS::vector<const IIterable*>& vec, const Type& t)
 {
     if constexpr (IsInterfacePtr_v<PlainType_t<Type>> || IsKindOfIInterface_v<Type>) {
@@ -31,7 +31,7 @@ void AddToQueue(BASE_NS::vector<const IIterable*>& vec, const Type& t)
     }
 }
 
-template<template<typename> class InterableCallable, typename Iterable, typename Func>
+template <template <typename> class InterableCallable, typename Iterable, typename Func>
 IterationResult BreadthFirstOrderIterate(const Iterable& i, Func& func, IterateStrategy is)
 {
     auto ite = interface_cast<IIterable>(i);
@@ -57,7 +57,7 @@ IterationResult BreadthFirstOrderIterate(const Iterable& i, Func& func, IterateS
     while (!queue.empty()) {
         auto i = queue[0];
         queue.erase(queue.begin());
-        res = i->Iterate(IterationParameters { ff, is });
+        res = i->Iterate(IterationParameters{ff, is});
         if (res.value != IterationResult::CONTINUE) {
             return res;
         }
@@ -65,7 +65,7 @@ IterationResult BreadthFirstOrderIterate(const Iterable& i, Func& func, IterateS
     return res;
 }
 
-template<template<typename> class InterableCallable, typename Iterable>
+template <template <typename> class InterableCallable, typename Iterable>
 IterationResult BreadthFirstOrderIterate(const Iterable& i, ICallable& func, IterateStrategy is)
 {
     using CallableType = InterableCallable<IObject::Ptr>;
@@ -78,7 +78,7 @@ IterationResult BreadthFirstOrderIterate(const Iterable& i, ICallable& func, Ite
     return BreadthFirstOrderIterate<InterableCallable>(i, lf, is);
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

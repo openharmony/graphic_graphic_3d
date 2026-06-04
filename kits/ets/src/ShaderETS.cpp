@@ -27,24 +27,32 @@
 
 namespace OHOS::Render3D {
 // list of default names
-constexpr const BASE_NS::string_view DEFAULT_TEXTURE_NAMES[] = {
-    "BASE_COLOR",          "NORMAL",           "MATERIAL", "EMISSIVE",      "AO",      "CLEARCOAT",
-    "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN",    "TRANSM-ISSION", "SPECULAR"};
+constexpr const BASE_NS::string_view DEFAULT_TEXTURE_NAMES[] = {"BASE_COLOR",
+    "NORMAL",
+    "MATERIAL",
+    "EMISSIVE",
+    "AO",
+    "CLEARCOAT",
+    "CLEARCOAT_ROUGHNESS",
+    "CLEARCOAT_NORMAL",
+    "SHEEN",
+    "TRANSM-ISSION",
+    "SPECULAR"};
 
-ShaderETS::ShaderETS(const SCENE_NS::IShader::Ptr &shader, const SCENE_NS::IMaterial::Ptr &material)
+ShaderETS::ShaderETS(const SCENE_NS::IShader::Ptr& shader, const SCENE_NS::IMaterial::Ptr& material)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::SHADER), shader_(shader)
 {
     BindToMaterial(material);
 }
 
-ShaderETS::ShaderETS(const SCENE_NS::IShader::Ptr &shader, const std::string &name, const std::string &uri)
+ShaderETS::ShaderETS(const SCENE_NS::IShader::Ptr& shader, const std::string& name, const std::string& uri)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::SHADER), shader_(shader)
 {
     SetName(name);
     SetUri(uri);
 }
 
-void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
+void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr& material)
 {
     keys_.clear();
     proxies_.clear();
@@ -53,8 +61,8 @@ void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
     }
     BASE_NS::vector<SCENE_NS::ITexture::Ptr> textures = material->Textures()->GetValue();
     if (!textures.empty()) {
-        int index = 0;
-        for (auto &texture : textures) {
+        size_t index = 0;
+        for (auto& texture : textures) {
             BASE_NS::string name;
             auto nn = interface_cast<META_NS::IObject>(texture);
             if (nn) {
@@ -105,7 +113,7 @@ void ShaderETS::BindToMaterial(const SCENE_NS::IMaterial::Ptr &material)
         }
     }
     keys_.reserve(proxies_.size());
-    for (const auto &pair : proxies_) {
+    for (const auto& pair : proxies_) {
         keys_.push_back(pair.first);
     }
 }
@@ -128,7 +136,7 @@ void ShaderETS::DetachFromMaterial()
     proxies_.clear();
 }
 
-std::shared_ptr<IPropertyProxy> ShaderETS::GetInput(const std::string &key)
+std::shared_ptr<IPropertyProxy> ShaderETS::GetInput(const std::string& key)
 {
     if (auto it = proxies_.find(key); it != proxies_.end()) {
         return it->second;
@@ -136,7 +144,7 @@ std::shared_ptr<IPropertyProxy> ShaderETS::GetInput(const std::string &key)
     return nullptr;
 }
 
-void ShaderETS::SetInput(const std::string &key, const std::any &value)
+void ShaderETS::SetInput(const std::string& key, const std::any& value)
 {
     auto it = proxies_.find(key);
     if (it == proxies_.end()) {

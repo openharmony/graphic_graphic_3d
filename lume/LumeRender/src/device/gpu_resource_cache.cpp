@@ -30,44 +30,44 @@ using namespace BASE_NS;
 namespace {
 RenderHandleReference CreateImage(GpuResourceManager& gpuResourceMgr, const CacheGpuImageDesc& desc)
 {
-    constexpr ImageUsageFlags USAGE_FLAGS { ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                            ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT };
-    constexpr ImageUsageFlags MSAA_USAGE_FLAGS { ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                                 ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT };
-    constexpr MemoryPropertyFlags MEMORY_FLAGS { MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
-    constexpr MemoryPropertyFlags MSAA_MEMORY_FLAGS {
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
-    };
+    constexpr ImageUsageFlags USAGE_FLAGS{
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT};
+    constexpr ImageUsageFlags MSAA_USAGE_FLAGS{ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                               ImageUsageFlagBits::CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT};
+    constexpr MemoryPropertyFlags MEMORY_FLAGS{MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
+    constexpr MemoryPropertyFlags MSAA_MEMORY_FLAGS{MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT};
     const ImageUsageFlags usageFlags =
         (desc.sampleCountFlags > SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT) ? MSAA_USAGE_FLAGS : USAGE_FLAGS;
     const MemoryPropertyFlags memoryFlags =
         (desc.sampleCountFlags > SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT) ? MSAA_MEMORY_FLAGS : MEMORY_FLAGS;
 
-    const GpuImageDesc newDesc {
-        ImageType::CORE_IMAGE_TYPE_2D,          // imageType
-        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D, // imageViewType
-        desc.format,                            // format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL, // imageTiling
-        usageFlags,                             // usageFlags
-        memoryFlags,                            // memoryPropertyFlags
-        0,                                      // createFlags
+    const GpuImageDesc newDesc{
+        ImageType::CORE_IMAGE_TYPE_2D,           // imageType
+        ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,  // imageViewType
+        desc.format,                             // format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,  // imageTiling
+        usageFlags,                              // usageFlags
+        memoryFlags,                             // memoryPropertyFlags
+        0,                                       // createFlags
         EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
-            EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS, // engineCreationFlags
-        desc.width,                                                                               // width
-        desc.height,                                                                              // height
-        1,                                                                                        // depth
-        desc.mipCount,                                                                            // mipCount
-        desc.layerCount,                                                                          // layerCount
-        desc.sampleCountFlags,                                                                    // sampleCountFlags
-        desc.componentMapping,                                                                    // componentMapping
+            EngineImageCreationFlagBits::
+                CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS,  // engineCreationFlags
+        desc.width,                                                       // width
+        desc.height,                                                      // height
+        1,                                                                // depth
+        desc.mipCount,                                                    // mipCount
+        desc.layerCount,                                                  // layerCount
+        desc.sampleCountFlags,                                            // sampleCountFlags
+        desc.componentMapping,                                            // componentMapping
     };
 
     return gpuResourceMgr.CreateShallowHandle(newDesc);
 }
-} // namespace
+}  // namespace
 
-GpuResourceCache::GpuResourceCache(GpuResourceManager& gpuResourceMgr) : gpuResourceMgr_(gpuResourceMgr) {}
+GpuResourceCache::GpuResourceCache(GpuResourceManager& gpuResourceMgr) : gpuResourceMgr_(gpuResourceMgr)
+{}
 
 GpuResourceCache::~GpuResourceCache()
 {
@@ -78,12 +78,12 @@ GpuResourceCache::~GpuResourceCache()
         uint32_t aliveCounter = 0;
         const uint32_t readIdx = 1u - writeIdx_;
         for (const auto& imagesRef : frameData_[writeIdx_].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) {  // 2: min ref count
                 aliveCounter++;
             }
         }
         for (const auto& imagesRef : frameData_[readIdx].images) {
-            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) { // 2: min ref count
+            if (imagesRef.handle && (imagesRef.handle.GetRefCount() > 2)) {  // 2: min ref count
                 aliveCounter++;
             }
         }
@@ -120,7 +120,7 @@ RenderHandleReference GpuResourceCache::ReserveGpuImageImpl(const CacheGpuImageD
     const auto lock = std::lock_guard(mutex_);
 
     auto& fd = frameData_[writeIdx_];
-    fd.images.push_back({ CreateImage(gpuResourceMgr_, desc), HashCacheGpuImageDesc(desc) });
+    fd.images.push_back({CreateImage(gpuResourceMgr_, desc), HashCacheGpuImageDesc(desc)});
     return fd.images.back().handle;
 }
 
@@ -141,8 +141,13 @@ vector<RenderHandleReference> GpuResourceCache::ReserveGpuImages(const array_vie
 CacheGpuImageDesc GpuResourceCache::GetCacheGpuImageDesc(const RenderHandleReference& gpuImageHandle) const
 {
     const GpuImageDesc desc = gpuResourceMgr_.GetImageDescriptor(gpuImageHandle);
-    return { desc.format, desc.width, desc.height, desc.mipCount, desc.layerCount, desc.sampleCountFlags,
-        desc.componentMapping };
+    return {desc.format,
+        desc.width,
+        desc.height,
+        desc.mipCount,
+        desc.layerCount,
+        desc.sampleCountFlags,
+        desc.componentMapping};
 }
 
 CacheGpuImagePair GpuResourceCache::ReserveGpuImagePair(
@@ -151,7 +156,7 @@ CacheGpuImagePair GpuResourceCache::ReserveGpuImagePair(
     // allocate both handles
     CacheGpuImageDesc secondDesc = desc;
     secondDesc.sampleCountFlags = sampleCountFlags;
-    return CacheGpuImagePair { ReserveGpuImageImpl(desc), ReserveGpuImageImpl(secondDesc) };
+    return CacheGpuImagePair{ReserveGpuImageImpl(desc), ReserveGpuImageImpl(secondDesc)};
 }
 
 void GpuResourceCache::AllocateAndRemapImages()
@@ -171,7 +176,7 @@ void GpuResourceCache::AllocateAndRemapImages()
             GpuImageDesc desc = gpuResourceMgr_.GetImageDescriptor(ref.handle);
             RenderHandleReference handle = gpuResourceMgr_.Create(desc);
             remapHandle = handle.GetHandle();
-            gpuBackedImages_.push_back({ ref.hash, frameCounter_, move(handle) });
+            gpuBackedImages_.push_back({ref.hash, frameCounter_, move(handle)});
         }
         gpuResourceMgr_.RemapGpuImageHandle(ref.handle.GetHandle(), remapHandle);
     }

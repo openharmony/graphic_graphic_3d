@@ -38,6 +38,19 @@ inline CORE_NS::IResource::Ptr CreateObjectResource(const META_NS::ObjectId& ins
     return res;
 }
 
+// workaround for now to find forwarded properties for objects
+// notice that this will instantiate all properties
+inline BASE_NS::vector<META_NS::IProperty::ConstPtr> GetAllMetaProperties(const META_NS::IMetadata& m)
+{
+    BASE_NS::vector<META_NS::IProperty::ConstPtr> res;
+    for (auto&& d : m.GetAllMetadatas(META_NS::MetadataType::PROPERTY)) {
+        if (auto p = m.GetProperty(d.name)) {
+            res.push_back(p);
+        }
+    }
+    return res;
+}
+
 class ResourceTemplateAccess : public IResourceTemplateAccess {
 public:
     ResourceTemplateAccess() = default;
@@ -63,7 +76,7 @@ public:
             auto i = interface_cast<IMetadata>(res);
             auto m = interface_cast<IMetadata>(resource);
             if (i && m) {
-                for (auto&& p : m->GetProperties()) {
+                for (auto&& p : GetAllMetaProperties(*m)) {
                     CloneToDefault(p, *i);
                 }
             }

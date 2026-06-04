@@ -96,7 +96,7 @@ UNIT_TEST(API_RenderDataStoreDefaultLight, GetAddLightTest, testing::ext::TestSi
     // Add lights
     {
         RenderLight light;
-        light.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        light.color = {1.0f, 1.0f, 1.0f, 1.0f};
         light.lightUsageFlags =
             RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT | RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT;
         light.id = 0u;
@@ -104,14 +104,14 @@ UNIT_TEST(API_RenderDataStoreDefaultLight, GetAddLightTest, testing::ext::TestSi
     }
     {
         RenderLight light;
-        light.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        light.color = {1.0f, 1.0f, 1.0f, 1.0f};
         light.lightUsageFlags = RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT | RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT;
         light.id = 1u;
         dataStoreDefaultLight->AddLight(light);
     }
     {
         RenderLight light;
-        light.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        light.color = {1.0f, 1.0f, 1.0f, 1.0f};
         light.lightUsageFlags = RenderLight::LIGHT_USAGE_POINT_LIGHT_BIT | RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT;
         light.id = 2u;
         dataStoreDefaultLight->AddLight(light);
@@ -127,7 +127,7 @@ UNIT_TEST(API_RenderDataStoreDefaultLight, GetAddLightTest, testing::ext::TestSi
     {
         for (uint32_t i = 0; i < DefaultMaterialLightingConstants::MAX_LIGHT_COUNT + 5; ++i) {
             RenderLight light;
-            light.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+            light.color = {1.0f, 1.0f, 1.0f, 1.0f};
             light.lightUsageFlags = RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT;
             dataStoreDefaultLight->AddLight(light);
         }
@@ -164,10 +164,10 @@ UNIT_TEST(API_RenderDataStoreDefaultLight, ShadowQuaityResolutionTest, testing::
     auto dataStoreDefaultLight = static_cast<IRenderDataStoreDefaultLight*>(dataStore.get());
 
     IRenderDataStoreDefaultLight::ShadowQualityResolutions resolutions;
-    resolutions.low = { 100u, 100u };
-    resolutions.normal = { 200u, 200u };
-    resolutions.high = { 300u, 300u };
-    resolutions.ultra = { 400u, 400u };
+    resolutions.low = {100u, 100u};
+    resolutions.normal = {200u, 200u};
+    resolutions.high = {300u, 300u};
+    resolutions.ultra = {400u, 400u};
     dataStoreDefaultLight->SetShadowQualityResolutions(resolutions, 0u);
 
     {

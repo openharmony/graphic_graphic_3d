@@ -59,8 +59,8 @@ layout(set = 2, binding = 0) uniform texture2D uImages[];
 layout(set = 2, binding = 1) uniform sampler uSamplers[];
 #else
 layout(set = 2, binding = 0) uniform CORE_RELAXEDP sampler2D uSampTextureBase;
-#endif // CORE3D_DM_DEPTH_BINDLESS_FRAG_LAYOUT
-#endif // CORE3D_DM_DEPTH_FRAG_LAYOUT
+#endif  // CORE3D_DM_DEPTH_BINDLESS_FRAG_LAYOUT
+#endif  // CORE3D_DM_DEPTH_FRAG_LAYOUT
 
 layout(constant_id = 0) const uint CORE_SUBMESH_FLAGS = 0;
 layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;
@@ -69,4 +69,4 @@ layout(constant_id = 1) const uint CORE_MATERIAL_FLAGS = 0;
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DEFAULT_DEPTH_VERT_LAYOUT_COMMON_H
+#endif  // SHADERS_COMMON_3D_DEFAULT_DEPTH_VERT_LAYOUT_COMMON_H

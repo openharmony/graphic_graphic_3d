@@ -1,0 +1,32 @@
+{
+    "version": "1.0",
+    "description": "attachment with objectRef property resolved via resource id containing :: in name",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "index": "scene_att_objref_resource_colon.index",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "gltf",
+                        "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+                    },
+                    "resourceGroup": "objref-res-colon-group",
+                    "attachments": [
+                        {
+                            "objectUid": "3afe351b-e2e8-441b-85f3-e3e0f0750fd1",
+                            "properties": [
+                                { "name": "Name", "value": "RefAtt" },
+                                { "name": "ObjectRef", "value": { "type": "objectRef", "path": "@my\\:\\:PP" } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

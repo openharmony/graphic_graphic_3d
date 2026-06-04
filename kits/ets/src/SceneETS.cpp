@@ -59,8 +59,8 @@ void Fixnames(SCENE_NS::IScene::Ptr scene)
         // not actual tree, but map of entities, and their children.
         BASE_NS::unordered_map<CORE_NS::Entity, BASE_NS::vector<CORE_NS::Entity>> tree;
         BASE_NS::vector<CORE_NS::Entity> roots;
-        CORE3D_NS::INodeComponentManager *cm;
-        CORE3D_NS::INameComponentManager *nm;
+        CORE3D_NS::INodeComponentManager* cm;
+        CORE3D_NS::INameComponentManager* nm;
         explicit rr(SCENE_NS::IScene::Ptr scene)
         {
             CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
@@ -152,7 +152,7 @@ SceneETS::~SceneETS()
     Destroy();
 }
 
-void SceneETS::AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr scene)
+void SceneETS::AddScene(META_NS::IObjectRegistry* obr, SCENE_NS::IScene::Ptr scene)
 {
     if (!obr) {
         return;
@@ -170,7 +170,7 @@ void SceneETS::AddScene(META_NS::IObjectRegistry *obr, SCENE_NS::IScene::Ptr sce
 
 SCENE_NS::ISceneManager::Ptr SceneETS::CreateSceneManager(BASE_NS::string_view uri)
 {
-    auto &objRegistry = META_NS::GetObjectRegistry();
+    auto& objRegistry = META_NS::GetObjectRegistry();
     auto objContext = interface_pointer_cast<META_NS::IMetadata>(objRegistry.GetDefaultObjectContext());
 
     if (uri.ends_with(".scene2")) {
@@ -179,7 +179,7 @@ SCENE_NS::ISceneManager::Ptr SceneETS::CreateSceneManager(BASE_NS::string_view u
             WIDGET_LOGE("Unable to configure file resource manager for loading scene files: render context missing");
             return {};
         }
-        auto &fileManager = renderContext->GetRenderer()->GetEngine().GetFileManager();
+        auto& fileManager = renderContext->GetRenderer()->GetEngine().GetFileManager();
         fileManager.RegisterPath("project", ExtractPathToProject(uri), true);
     }
 
@@ -217,7 +217,7 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         // LEGACY COMPATIBILITY start
         Fixnames(scene);
         // LEGACY COMPATIBILITY end
-        auto &obr = META_NS::GetObjectRegistry();
+        auto& obr = META_NS::GetObjectRegistry();
         AddScene(&obr, scene);
         scene_ = scene;
 
@@ -237,7 +237,7 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         // ai assistant: FORWARD/R16G16B16A16/MSAA     pre-loaded camera
         // hair simulation: FORWARD/R8G8B8A8_SRGB/MSAA create camera
         // soft body: FORWARD/R16G16B16A16/MSAA        create camera
-        for (auto &&c : scene->GetCameras().GetResult()) {
+        for (auto&& c : scene->GetCameras().GetResult()) {
             c->RenderingPipeline()->SetValue(SCENE_NS::CameraPipeline::FORWARD);
             c->ColorTargetCustomization()->SetValue({SCENE_NS::ColorFormat{BASE_NS::BASE_FORMAT_R16G16B16A16_SFLOAT}});
         }
@@ -270,11 +270,11 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
     }
     ExecSyncTask([this]() {
         nativeAnimations_ = scene_->GetAnimations().GetResult();
-        return META_NS::IAny::Ptr {};
+        return META_NS::IAny::Ptr{};
     });
 
     std::vector<std::shared_ptr<AnimationETS>> animationETSlist;
-    for (const auto &animationRef : nativeAnimations_) {
+    for (const auto& animationRef : nativeAnimations_) {
         // use make_unique instead in the future.
         animationETSlist.emplace_back(std::make_shared<AnimationETS>(animationRef, scene_));
     }
@@ -282,7 +282,7 @@ std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
     return animations_.value();
 }
 
-std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string &path)
+std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string& path)
 {
     std::shared_ptr<NodeETS> rootNode = GetRoot().value;
     if (!rootNode) {
@@ -317,8 +317,8 @@ std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string &path)
     return rootNode->GetNodeByPath(realPath);
 }
 
-std::shared_ptr<NodeETS> SceneETS::CloneNode(std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent,
-    const std::string &name)
+std::shared_ptr<NodeETS> SceneETS::CloneNode(
+    std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent, const std::string& name)
 {
     if (!scene_ || !node || !parent) {
         CORE_LOG_E("empty scene/node/parent");
@@ -337,7 +337,7 @@ std::shared_ptr<NodeETS> SceneETS::CloneNode(std::shared_ptr<NodeETS> node, std:
     return nullptr;
 }
 
-InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string &path)
+InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::CreateNode(const std::string& path)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<NodeETS>>(nullptr, "Invalid scene");
@@ -363,7 +363,7 @@ InvokeReturn<std::shared_ptr<NodeETS>> SceneETS::GetRoot()
 }
 
 InvokeReturn<std::shared_ptr<GeometryETS>> SceneETS::CreateGeometry(
-    const std::string &path, const std::shared_ptr<MeshResourceETS> &mr)
+    const std::string& path, const std::shared_ptr<MeshResourceETS>& mr)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<GeometryETS>>(nullptr, "Invalid scene");
@@ -381,7 +381,7 @@ InvokeReturn<std::shared_ptr<GeometryETS>> SceneETS::CreateGeometry(
     }
 }
 
-InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::string &path, uint32_t pipeline, bool msaa)
+InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::string& path, uint32_t pipeline, bool msaa)
 {
     // renderPipeline is (at the moment of writing) an undocumented param. Check the API docs and usage.
     // Remove this, if it has been added to the API. Else if it's not used anywhere, remove the implementation.
@@ -406,7 +406,7 @@ InvokeReturn<std::shared_ptr<CameraETS>> SceneETS::CreateCamera(const std::strin
 }
 
 InvokeReturn<std::shared_ptr<LightETS>> SceneETS::CreateLight(
-    const std::string &name, const std::string &path, LightETS::LightType lightType)
+    const std::string& name, const std::string& path, LightETS::LightType lightType)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<LightETS>>(nullptr, "Invalid scene");
@@ -420,8 +420,8 @@ InvokeReturn<std::shared_ptr<LightETS>> SceneETS::CreateLight(
     }
 }
 
-InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(const std::string &name, const std::string &uri,
-                                                                    const MaterialETS::MaterialType &materialType)
+InvokeReturn<std::shared_ptr<MaterialETS>> SceneETS::CreateMaterial(
+    const std::string& name, const std::string& uri, const MaterialETS::MaterialType& materialType)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<MaterialETS>>(nullptr, "Invalid scene");
@@ -458,7 +458,7 @@ InvokeReturn<std::shared_ptr<EffectETS>> SceneETS::CreateEffect(BASE_NS::string_
         return InvokeReturn<std::shared_ptr<EffectETS>>(nullptr, "Invalid effect id");
     }
 
-    if (auto effectClassId = BASE_NS::StringToUid(effectId); effectClassId != BASE_NS::Uid {}) {
+    if (auto effectClassId = BASE_NS::StringToUid(effectId); effectClassId != BASE_NS::Uid{}) {
         const auto effect =
             interface_pointer_cast<SCENE_NS::IEffect>(META_NS::GetObjectRegistry().Create(SCENE_NS::ClassId::Effect));
         if (!(effect && effect->InitializeEffect(scene_, effectClassId).GetResult())) {
@@ -470,7 +470,7 @@ InvokeReturn<std::shared_ptr<EffectETS>> SceneETS::CreateEffect(BASE_NS::string_
 }
 
 InvokeReturn<std::shared_ptr<EnvironmentETS>> SceneETS::CreateEnvironment(
-    const std::string &name, const std::string &uri)
+    const std::string& name, const std::string& uri)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<EnvironmentETS>>(nullptr, "Invalid scene");
@@ -550,8 +550,8 @@ bool SceneETS::RenderFrame(RenderParameters renderParam)
     }
 }
 
-std::shared_ptr<NodeETS> SceneETS::ImportNode(const std::string &name, std::shared_ptr<NodeETS> node,
-    std::shared_ptr<NodeETS> parent)
+std::shared_ptr<NodeETS> SceneETS::ImportNode(
+    const std::string& name, std::shared_ptr<NodeETS> node, std::shared_ptr<NodeETS> parent)
 {
     if (!scene_ || !node) {
         CORE_LOG_E("empty scene/node object");
@@ -580,8 +580,8 @@ std::shared_ptr<NodeETS> SceneETS::ImportNode(const std::string &name, std::shar
     return nullptr;
 }
 
-std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::shared_ptr<SceneETS> scene,
-    std::shared_ptr<NodeETS> parent)
+std::shared_ptr<NodeETS> SceneETS::ImportScene(
+    const std::string& name, std::shared_ptr<SceneETS> scene, std::shared_ptr<NodeETS> parent)
 {
     if (!scene_ || !scene) {
         CORE_LOG_E("empty scene/importedScene object");
@@ -596,7 +596,10 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::sha
     }
 
     if (auto import = interface_cast<SCENE_NS::INodeImport>(parentObj)) {
-        auto importedNode = import->ImportChildScene(extScene, name.c_str()).GetResult();
+        SCENE_NS::INodeImport::ImportOptions opts;
+        opts.nodeName = name.c_str();
+        opts.shareResources = false;
+        auto importedNode = import->ImportChildScene(extScene, opts).GetResult();
         ResetAnimations();
         auto nodeETS = NodeETS::FromNative(importedNode);
         nodeETS->Attached(true);
@@ -605,8 +608,8 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(const std::string &name, std::sha
     return nullptr;
 }
 
-InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::CreateComponent(std::shared_ptr<NodeETS> node,
-    const std::string &name)
+InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::CreateComponent(
+    std::shared_ptr<NodeETS> node, const std::string& name)
 {
     if (!scene_ || !node || name.empty()) {
         return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "Invalid scene or input");
@@ -631,7 +634,7 @@ void SceneETS::LoadRenderConfiguration(SCENE_NS::IScene::Ptr scene)
 }
 
 InvokeReturn<std::shared_ptr<RenderConfigurationETS>> SceneETS::CreateRenderConfiguration(
-    SCENE_NS::IRenderConfiguration::Ptr &rc)
+    SCENE_NS::IRenderConfiguration::Ptr& rc)
 {
     if (!scene_) {
         return InvokeReturn<std::shared_ptr<RenderConfigurationETS>>(nullptr, "Invalid scene");
@@ -657,8 +660,8 @@ InvokeReturn<std::shared_ptr<RenderConfigurationETS>> SceneETS::GetRenderConfigu
     return InvokeReturn<std::shared_ptr<RenderConfigurationETS>>(nullptr, "no rc in render context");
 }
 
-InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::GetComponent(std::shared_ptr<NodeETS> node,
-    const std::string &name)
+InvokeReturn<std::shared_ptr<SceneComponentETS>> SceneETS::GetComponent(
+    std::shared_ptr<NodeETS> node, const std::string& name)
 {
     if (!scene_ || !node || name.empty()) {
         return InvokeReturn<std::shared_ptr<SceneComponentETS>>(nullptr, "Invalid scene or input");

@@ -52,14 +52,14 @@ public:
 
     ReturnError Export(IExportContext& c) const override
     {
-        if (c.Context().GetUserContext() != GetSelf()) {
+        if (!c.IsTopLevelObject()) {
             return Resource::Export(c);
         }
         return Serializer(c) & AutoSerialize();
     }
 
 private:
-    template<typename Func>
+    template <typename Func>
     IterationResult IterateImpl(const Func& f) const;
 };
 
@@ -71,6 +71,10 @@ public:
     CORE_NS::IResource::Ptr LoadResource(const StorageInfo&) const override;
     bool SaveResource(const CORE_NS::IResource::ConstPtr&, const StorageInfo&) const override;
     bool ReloadResource(const StorageInfo&, const CORE_NS::IResource::Ptr&) const override;
+    BASE_NS::string GetVersion() const override
+    {
+        return {};
+    }
 };
 
 META_END_NAMESPACE()

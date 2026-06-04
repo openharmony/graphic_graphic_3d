@@ -43,7 +43,7 @@ void FillPostProcessImages(const RenderCamera& cam, const uint32_t layer,
     const array_view<const IRenderNodeGraphShareManager::NamedResource> namedResources,
     IRenderNodePostProcessInterfaceUtil::Info& info)
 {
-    RenderHandle outputHandle {};
+    RenderHandle outputHandle{};
     const bool mvLayerCam = ((layer != 0U) && (layer != PipelineStateConstants::GPU_IMAGE_ALL_LAYERS));
     if (mvLayerCam) {
         if (cam.colorTargets[0U]) {
@@ -51,7 +51,8 @@ void FillPostProcessImages(const RenderCamera& cam, const uint32_t layer,
         } else {
 #if (CORE3D_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_W(to_string(cam.id) + "FillPostProcessInterfaceImages_",
-                "Multi-view target output not found for layer (%u)", layer);
+                "Multi-view target output not found for layer (%u)",
+                layer);
 #endif
         }
     }
@@ -74,11 +75,13 @@ void FillPostProcessImages(const RenderCamera& cam, const uint32_t layer,
         }
     }
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultCameraPostProcessInterfaceController::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+
+    ParseRenderNodeInputs();
 
     rnPostProcessUtil_ = CORE_NS::CreateInstance<IRenderNodePostProcessInterfaceUtil>(
         renderNodeContextMgr_->GetRenderContext(), UID_RENDER_NODE_POST_PROCESS_INTERFACE_UTIL);

@@ -1,0 +1,33 @@
+{
+	"version": "1.0",
+	"description": "nested node template level 2",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "node",
+			"name": "level2",
+			"position": [2, 2, 2],
+			"children": [
+				{
+					"type": "external",
+					"name": "ext3",
+					"source": {
+						"type": "nodeTemplate",
+						"url": "scene23_level3.nodeTemplate"
+					},
+					"resourceGroup": "grp3",
+				"overrides": [
+					{
+						"path": ".Position",
+						"value": {
+							"type": "vec3",
+							"value": [7, 8, 9]
+						}
+					}
+				]
+				}
+			]
+		}
+	},
+	"primaryGroup": ""
+}

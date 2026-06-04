@@ -35,14 +35,14 @@ public:
     bool HasDependency(const IProperty*) const;
 
 private:
-    bool active_ {};
-    uint32_t depth_ {};
+    bool active_{};
+    uint32_t depth_{};
 
-    ReturnError state_ { GenericError::SUCCESS };
+    ReturnError state_{GenericError::SUCCESS};
 
     struct Dependancy {
         IProperty::ConstPtr property;
-        uint64_t depth {};
+        uint64_t depth{};
     };
     BASE_NS::vector<Dependancy> deps_;
     BASE_NS::vector<Dependancy> deps_branch_;
@@ -50,7 +50,7 @@ private:
 
 Dependencies& GetDeps();
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
 #endif

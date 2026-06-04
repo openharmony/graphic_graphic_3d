@@ -38,8 +38,11 @@
 #include "load_lib.h"
 #endif
 
+#include <native_image.h>  //native window
+
 namespace Test {
-// Scoped log. Previous log level is restored when the LogLevelScope object goes out of scope.
+// Scoped log. Previous log level is restored when the LogLevelScope object goes
+// out of scope.
 class LogLevelScope {
 public:
     LogLevelScope(CORE_NS::ILogger* logger, CORE_NS::ILogger::LogLevel logLevel)
@@ -63,7 +66,40 @@ private:
     CORE_NS::ILogger::LogLevel oldLevel_;
 };
 
-} // namespace Test
+class OHOSApp {
+public:
+    OHOSApp()
+    {
+        Init();
+    }
+    ~OHOSApp()
+    {
+        Terminate();
+    }
+
+    void CreateNativeWindow();
+    void Init()
+    {
+        CreateNativeWindow();
+    }
+    void Run()
+    {}
+    void Terminate();
+    OHNativeWindow* GetWindowHandle() const
+    {
+        return m_nativeWindow;
+    }
+
+private:
+    // Window
+    OHNativeWindow* m_nativeWindow;
+    OH_NativeImage* m_nativeImage;
+};
+
+// Native window
+inline OHOSApp* g_ohosApp;
+
+}  // namespace Test
 
 namespace Dotfield {
 namespace UTest {
@@ -108,21 +144,25 @@ CORE_NS::IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
-std::unique_ptr<TestContext> g_testContext {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
+std::unique_ptr<TestContext> g_testContext{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
     void SetUp() override
     {
+        // Create native window/surface
+        ::Test::g_ohosApp = new ::Test::OHOSApp();
+        auto windowHandle = ::Test::g_ohosApp->GetWindowHandle();
+
         // OHOS specific paths
-        CORE_NS::PlatformCreateInfo info {};
+        CORE_NS::PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
         info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         // Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -135,8 +175,8 @@ public:
         CORE_NS::CreatePluginRegistry(info);
 
         // Load shared libs
-        constexpr BASE_NS::Uid uids[] = { RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN,
-            Dotfield::UID_DOTFIELD_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {
+            RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN, Dotfield::UID_DOTFIELD_PLUGIN};
 
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
 
@@ -146,7 +186,13 @@ public:
 
         g_testContext = std::make_unique<TestContext>();
         g_testContext->engine = CreateEngine();
+#if RENDER_HAS_VULKAN_BACKEND
         g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::VULKAN);
+#elif RENDER_HAS_GLES_BACKEND
+        g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::OPENGLES);
+#else
+        g_testContext->renderContext = CreateContext(*g_testContext->engine, RENDER_NS::DeviceBackendType::OPENGL);
+#endif
         g_testContext->graphicsContext = CreateContext(*g_testContext->renderContext);
         g_testContext->ecs = CreateAndInitializeDefaultEcs(*g_testContext->engine);
     }
@@ -162,9 +208,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
-} // namespace Dotfield
+}  // namespace UTest
+}  // namespace Dotfield
 
-#endif // TEST_ENVIRONMENT
+#endif  // TEST_ENVIRONMENT

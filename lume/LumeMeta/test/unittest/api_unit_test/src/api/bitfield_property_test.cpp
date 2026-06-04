@@ -117,6 +117,24 @@ UNIT_TEST_F(API_BitfieldPropertyTest, SetValueOp, testing::ext::TestSize.Level1)
     EXPECT_EQ(GetValue(object_->Flags()), TestFlagBits::FLAG1 | TestFlagBits::FLAG2 | TestFlagBits::FLAG4);
 }
 
+#ifdef SCENE_TEST_EXPORT
+/**
+ * @tc.name: Serialisation
+ * @tc.desc: Tests for Serialisation. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_BitfieldPropertyTest, Serialisation, testing::ext::TestSize.Level1)
+{
+    TestSerialiser ser;
+    object_->Flags()->SetValue(TestFlagBits::FLAG4);
+    ASSERT_TRUE(ser.Export(object_));
+    ser.Dump("app://bitfield.json");
+    auto obj = ser.Import<ITestFlagsInterface>();
+    ASSERT_TRUE(obj);
+    EXPECT_EQ(obj->Flags()->GetValue(), TestFlagBits::FLAG4);
+}
+#endif
+
 UNIT_TEST(API_BitfieldTest, Or, testing::ext::TestSize.Level1)
 {
     EnumBitField<TestFlagBits> value1(TestFlagBits::FLAG1);
@@ -306,6 +324,6 @@ UNIT_TEST(API_SubBitfieldTest, SetSubBits, testing::ext::TestSize.Level1)
     EXPECT_FALSE(ext2.IsSet(ExtTestFlagBits::FLAG1));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

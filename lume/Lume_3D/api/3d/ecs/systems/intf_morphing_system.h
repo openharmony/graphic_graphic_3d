@@ -34,7 +34,7 @@ class ISceneNode;
  */
 class IMorphingSystem : public CORE_NS::ISystem {
 public:
-    static constexpr BASE_NS::Uid UID { "96c75ea1-802c-426d-8188-af4ff0887e5e" };
+    static constexpr BASE_NS::Uid UID{"96c75ea1-802c-426d-8188-af4ff0887e5e"};
     /** Properties */
     struct Properties {
         /** Data store name
@@ -60,4 +60,4 @@ inline constexpr BASE_NS::string_view GetName(const IMorphingSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_ECS_SYSTEMS_IMORPHING_SYSTEM_H
+#endif  // API_3D_ECS_SYSTEMS_IMORPHING_SYSTEM_H

@@ -52,6 +52,6 @@ private:
     std::vector<char> buffer_;
     std::vector<std::unique_ptr<IOutput>> outputs_;
 };
-} // namespace lume
+}  // namespace lume
 
-#endif // LUME_LOG_LOGGER_H
+#endif  // LUME_LOG_LOGGER_H

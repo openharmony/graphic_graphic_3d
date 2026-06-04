@@ -31,15 +31,15 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ISkinJointsComponentManager, SkinJointsComponent)
 
-    /** Number of valid entries in jointEntries array.
-     */
-    DEFINE_PROPERTY(size_t, count, "Number of Joints", 0, 0)
+/** Number of valid entries in jointEntries array.
+ */
+DEFINE_PROPERTY(size_t, count, "Number of Joints", 0, 0)
 
-    /** Entities which are part of this skin hierarchy.
-    SkinningSystem fills this and it's expected to be read-only afterwards.
-    */
-    DEFINE_ARRAY_PROPERTY(
-        CORE_NS::Entity, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointEntities, "Joint Entities", 0, ARRAY_VALUE())
+/** Entities which are part of this skin hierarchy.
+SkinningSystem fills this and it's expected to be read-only afterwards.
+*/
+DEFINE_ARRAY_PROPERTY(
+    CORE_NS::Entity, CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT, jointEntities, "Joint Entities", 0, ARRAY_VALUE())
 
 END_COMPONENT(ISkinJointsComponentManager, SkinJointsComponent, "e1a12201-a395-4579-b755-995c3c21d141")
 #if !defined(IMPLEMENT_MANAGER)

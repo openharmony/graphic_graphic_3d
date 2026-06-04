@@ -52,8 +52,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "6257f029-f747-44c7-8de9-87b41b8afd6a" };
-    static constexpr const char* typeName = "RenderNodeCameraSinglePostProcess";
+    static constexpr BASE_NS::Uid UID{"6257f029-f747-44c7-8de9-87b41b8afd6a"};
+    static constexpr const char* TYPE_NAME = "RenderNodeCameraSinglePostProcess";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -77,7 +77,7 @@ public:
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void RegisterOutputs();
     void InitCreateBinders();
@@ -100,7 +100,7 @@ private:
         BLACK = 4,
     };
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     // Json resources which might need re-fetching
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
@@ -110,17 +110,17 @@ private:
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
         BASE_NS::string ppName;
-        DefaultOutputImage defaultOutputImage { DefaultOutputImage::OUTPUT };
+        DefaultOutputImage defaultOutputImage{DefaultOutputImage::OUTPUT};
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
 
-        bool hasChangeableRenderPassHandles { false };
-        bool hasChangeableResourceHandles { false };
-        bool hasChangeableDispatchHandles { false };
+        bool hasChangeableRenderPassHandles{false};
+        bool hasChangeableResourceHandles{false};
+        bool hasChangeableDispatchHandles{false};
 
-        uint32_t inputIdx { ~0u };
-        uint32_t outputIdx { ~0u };
+        uint32_t inputIdx{~0u};
+        uint32_t outputIdx{~0u};
     };
     JsonInputs jsonInputs_;
 
@@ -146,9 +146,9 @@ private:
         RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::RenderHandle prePassColorTarget;
 
-        bool hasShadow { false };
-        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
-        IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
+        bool hasShadow{false};
+        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes{};
+        IRenderDataStoreDefaultLight::LightingFlags lightingFlags{0u};
     };
     CurrentScene currentScene_;
 
@@ -167,8 +167,8 @@ private:
     RENDER_NS::PostProcessConfiguration ppGlobalConfig_;
     RENDER_NS::IRenderDataStorePostProcess::PostProcess ppLocalConfig_;
 
-    bool graphics_ { true };
-    RENDER_NS::ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
+    bool graphics_{true};
+    RENDER_NS::ShaderThreadGroup threadGroupSize_{1u, 1u, 1u};
 
     SceneRenderDataStores stores_;
 
@@ -179,9 +179,9 @@ private:
     };
     UboHandles ubos_;
 
-    bool useAutoBindSet0_ { false };
-    bool valid_ { false };
+    bool useAutoBindSet0_{false};
+    bool valid_{false};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_RENDER__NODE__RENDER_NODE_CAMERA_SINGLE_POST_PROCESS_H
+#endif  // CORE3D_RENDER__NODE__RENDER_NODE_CAMERA_SINGLE_POST_PROCESS_H

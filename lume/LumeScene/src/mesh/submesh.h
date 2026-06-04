@@ -67,18 +67,18 @@ public:
         return event_;
     }
 
-public: // ISubMeshInternal
+public:  // ISubMeshInternal
     void SetMaterialOverride(const IMaterial::Ptr& material) override;
     IMaterial::Ptr GetMaterialOverride() const override;
 
 private:
-    BASE_NS::shared_ptr<META_NS::EventImpl<META_NS::IOnChanged>> event_ { new META_NS::EventImpl<META_NS::IOnChanged>(
-        "OnChanged") };
+    BASE_NS::shared_ptr<META_NS::EventImpl<META_NS::IOnChanged>> event_{
+        new META_NS::EventImpl<META_NS::IOnChanged>("OnChanged")};
 
     IInternalScene::Ptr GetScene() const;
 
     META_NS::IAny::Ptr overrideAny_;
-    IMaterial::WeakPtr overrideMaterial_; // Override material set to Mesh
+    IMaterial::WeakPtr overrideMaterial_;  // Override material set to Mesh
 };
 
 SCENE_END_NAMESPACE()

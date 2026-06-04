@@ -16,6 +16,7 @@
 #include "object_resource.h"
 
 #include <meta/api/metadata_util.h>
+#include <meta/base/memfile.h>
 #include <meta/ext/serialization/serializer.h>
 #include <meta/interface/intf_object_registry.h>
 #include <meta/interface/serialization/intf_exporter.h>
@@ -36,7 +37,7 @@ void ObjectResource::SetResourceType(const ObjectId& id)
 }
 ReturnError ObjectResource::Export(IExportContext& c) const
 {
-    if (SerialiseAsResourceId(c) && c.Context().GetUserContext() != GetSelf()) {
+    if (SerialiseAsResourceId(c) && !c.IsTopLevelObject()) {
         if (!type_.IsValid()) {
             CORE_LOG_W("Invalid resource type");
             return GenericError::FAIL;
@@ -63,6 +64,7 @@ CORE_NS::IResource::Ptr ObjectResourceType::LoadResource(const StorageInfo& s) c
     CORE_NS::IResource::Ptr res;
     if (s.payload) {
         if (auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter)) {
+            importer->SetUserContext(interface_pointer_cast<IObject>(s.context));
             importer->SetResourceManager(s.self);
             res = interface_pointer_cast<CORE_NS::IResource>(importer->Import(*s.payload));
             if (!res || res->GetResourceType() != type_.ToUid()) {
@@ -75,21 +77,31 @@ CORE_NS::IResource::Ptr ObjectResourceType::LoadResource(const StorageInfo& s) c
 }
 bool ObjectResourceType::SaveResource(const CORE_NS::IResource::ConstPtr& p, const StorageInfo& s) const
 {
-    bool res = true;
-    if (s.payload) {
+    auto rexport = [&](CORE_NS::IFile& sink) {
+        bool res = true;
         if (!p || p->GetResourceType() != type_.ToUid()) {
             CORE_LOG_W("Invalid resource");
             return false;
         }
         if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
-            exporter->SetUserContext(
-                interface_pointer_cast<IObject>(CORE_NS::IResource::Ptr(p, const_cast<CORE_NS::IResource*>(p.get()))));
+            exporter->SetUserContext(interface_pointer_cast<IObject>(s.context));
             exporter->SetResourceManager(s.self);
             exporter->SetMetadata(META_NS::SerMetadataValues()
-                                      .SetVersion({ 1, 0 })
+                                      .SetVersion({1, 0})
                                       .SetType("ObjectResource")
                                       .Set("sub-type", type_.ToString()));
-            res = exporter->Export(*s.payload, interface_pointer_cast<IObject>(p));
+            res = exporter->Export(sink, interface_pointer_cast<IObject>(p));
+        }
+        return res;
+    };
+    bool res = true;
+    if (s.payload) {
+        res = rexport(*s.payload);
+    } else if (s.options && p) {
+        // the options are also used to collect dependencies, if so, do a dummy save to serialise and collect
+        if (auto collect = interface_cast<META_NS::ICollectResources>(s.context)) {
+            MemFile temp;
+            res = rexport(temp);
         }
     }
     return res;
@@ -103,35 +115,61 @@ void ObjectResourceType::SetResourceType(const ObjectId& id)
     type_ = id;
 }
 
+bool ObjectResourceOptions::ApplyOptions(CORE_NS::IResource&, const CORE_NS::ResourceContextPtr& context) const
+{
+    return false;
+}
+bool ObjectResourceOptions::UpdateOptions(const CORE_NS::IResource&, const CORE_NS::ResourceContextPtr& context)
+{
+    return false;
+}
+bool ObjectResourceOptions::Merge(const IResourceOptions&)
+{
+    return false;
+}
+
 bool ObjectResourceOptions::Load(
     CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rman, const CORE_NS::ResourceContextPtr& context)
 {
     bool res = false;
-    if (auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter)) {
-        importer->SetResourceManager(rman);
-        importer->SetUserContext(interface_pointer_cast<IObject>(context));
-        if (auto obj = importer->Import(options)) {
-            if (auto oro = interface_cast<IObjectResourceOptions>(obj)) {
-                SetBaseResource(oro->GetBaseResource());
-                if (auto in = interface_cast<IMetadata>(obj)) {
-                    Clone(*in, *this);
-                    res = true;
-                }
+    auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter);
+    if (!importer) {
+        return false;
+    }
+    importer->SetResourceManager(rman);
+    importer->SetUserContext(interface_pointer_cast<IObject>(context));
+    if (auto obj = importer->Import(options)) {
+        if (auto oro = interface_cast<IObjectResourceOptions>(obj)) {
+            SetBaseResource(oro->GetBaseResource());
+            if (auto in = interface_cast<IMetadata>(obj)) {
+                GetAttachmentContainer(true)->RemoveAll();
+                META_NS::Clone(*in, *this);
+                res = true;
             }
         }
     }
     return res;
 }
 bool ObjectResourceOptions::Save(
-    CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rman, const CORE_NS::ResourceContextPtr&) const
+    CORE_NS::IFile& options, const CORE_NS::ResourceManagerPtr& rman, const CORE_NS::ResourceContextPtr& context) const
 {
-    bool res = false;
-    if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
-        exporter->SetResourceManager(rman);
-        exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({ 1, 0 }).SetType("ObjectResourceOptions"));
-        res = exporter->Export(options, GetSelf());
+    auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter);
+    if (!exporter) {
+        return false;
     }
-    return res;
+    exporter->SetResourceManager(rman);
+    exporter->SetUserContext(interface_pointer_cast<IObject>(context));
+    exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({1, 0}).SetType("ObjectResourceOptions"));
+    if (!exporter->Export(options, GetSelf())) {
+        return false;
+    }
+    if (auto collect = interface_cast<META_NS::ICollectResources>(context)) {
+        auto bres = GetBaseResource();
+        if (bres.IsValid()) {
+            collect->AddResource(CORE_NS::ResourceIdContext{bres});
+        }
+    }
+    return true;
 }
 IProperty::Ptr ObjectResourceOptions::GetProperty(BASE_NS::string_view name)
 {

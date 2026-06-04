@@ -77,7 +77,6 @@ public:
 
 private:
     const BASE_NS::string category_;
-    PerformanceDataManagerFactory& factory_;
 #if (CORE_PERF_ENABLED == 1)
     mutable std::mutex dataMutex_;
 
@@ -92,7 +91,8 @@ class PerformanceTraceLogger final : public ILogger::IOutput {
 
 private:
     friend class PerformanceDataManagerFactory;
-    explicit PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory) {}
+    explicit PerformanceTraceLogger(PerformanceDataManagerFactory* factory) : factory_(factory)
+    {}
     ~PerformanceTraceLogger() override = default;
     void Destroy() override
     {
@@ -135,4 +135,4 @@ private:
 IPerformanceTrace::Ptr CreatePerfTraceTracy(PluginToken);
 CORE_END_NAMESPACE()
 
-#endif // CORE_UTIL_PERFORMANCE_DATA_MANAGER_H
+#endif  // CORE_UTIL_PERFORMANCE_DATA_MANAGER_H

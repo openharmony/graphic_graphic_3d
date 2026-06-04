@@ -32,8 +32,8 @@ META_REGISTER_INTERFACE(IOnClassRegistrationChanged, "3a91e751-551d-44a8-b68d-7c
 META_REGISTER_INTERFACE(IOnClassRegistrationChangedCallable, "3285cc3e-f417-42d8-888d-3ed25faabfd1")
 
 struct IOnClassRegistrationChangedInfo {
-    constexpr static BASE_NS::Uid UID { META_NS::InterfaceId::IOnClassRegistrationChanged };
-    constexpr static char const* NAME { "OnClassRegistrationChanged" };
+    constexpr static BASE_NS::Uid UID{META_NS::InterfaceId::IOnClassRegistrationChanged};
+    constexpr static char const* NAME{"OnClassRegistrationChanged"};
 };
 
 /**

@@ -20,9 +20,9 @@
 #include <core/namespace.h>
 
 namespace PNGPlugin {
-static const CORE_NS::IImageLoaderManager::ImageType IMAGE_TYPES[] = { { "image/png", "png" } };
+static const CORE_NS::IImageLoaderManager::ImageType IMAGE_TYPES[] = {{"image/png", "png"}};
 
 CORE_NS::IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderPng(CORE_NS::PluginToken);
-} // namespace PNGPlugin
+}  // namespace PNGPlugin
 
-#endif //  PLUGIN_IMAGE_LOADER_PNG_H
+#endif  //  PLUGIN_IMAGE_LOADER_PNG_H

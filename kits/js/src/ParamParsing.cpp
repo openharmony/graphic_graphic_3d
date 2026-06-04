@@ -51,7 +51,7 @@ BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx)
     uint32_t resourceType = uriRawFile.Get<uint32_t>("type");
     NapiApi::Array parms = uriRawFile.Get<NapiApi::Array>("params");
 
-    if ((id == 0) && (resourceType == 30000)) { // 30000: param
+    if ((id == 0) && (resourceType == 30000)) {  // 30000: param
         // seems like a correct rawfile.
         uri = parms.Get<BASE_NS::string>(0);
     }

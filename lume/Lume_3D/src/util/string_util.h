@@ -27,7 +27,7 @@
 
 CORE3D_BEGIN_NAMESPACE()
 namespace StringUtil {
-template<class T, size_t N>
+template <class T, size_t N>
 constexpr size_t MaxStringLengthFromArray(T (&)[N])
 {
     return N - 1u;
@@ -92,7 +92,7 @@ inline BASE_NS::vector<BASE_NS::string_view> Split(
 
     return output;
 }
-} // namespace StringUtil
+}  // namespace StringUtil
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_STRING_UTIL_H
+#endif  // CORE_UTIL_STRING_UTIL_H

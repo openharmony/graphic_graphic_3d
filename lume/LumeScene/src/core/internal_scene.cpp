@@ -26,6 +26,7 @@
 #include <scene/ext/util.h>
 #include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_light.h>
+#include <scene/interface/intf_light_probe_group.h>
 #include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_scene.h>
 
@@ -34,10 +35,13 @@
 #include <render/intf_renderer.h>
 
 #include <meta/api/engine/util.h>
+#include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/intf_startable.h>
+#include <meta/interface/resource/intf_resource_manager_extension.h>
 
 #include "../component/generic_component.h"
 #include "../node/startable_handler.h"
+#include "../perf/cpu_perf_scope.h"
 #include "../resource/ecs_animation.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -57,7 +61,8 @@ InternalScene::InternalScene(const IScene::Ptr& scene, IRenderContext::Ptr conte
     graphicsContext3D_->Init();
 }
 
-InternalScene::~InternalScene() {}
+InternalScene::~InternalScene()
+{}
 
 bool InternalScene::Initialize()
 {
@@ -69,6 +74,20 @@ bool InternalScene::Initialize()
     return true;
 }
 
+void InternalScene::PostLoad()
+{
+    SCENE_CPU_PERF_SCOPE("PostLoad", "PostLoad");
+    if (graphicsContext3D_ && ecs_) {
+        // Update all world matrices once after load. This makes sure that even for disabled nodes
+        // the world matrix is correct and things like raycast work as expected.
+        if (auto ecs = ecs_->ecs) {
+            CORE3D_NS::IGraphicsContext::UpdateOptions opt;
+            opt.worldTransforms = true;
+            graphicsContext3D_->UpdateEcs(*ecs, opt);
+        }
+    }
+}
+
 SceneOptions InternalScene::GetOptions() const
 {
     return options_;
@@ -78,11 +97,10 @@ void InternalScene::Uninitialize()
 {
     CORE_LOG_D("InternalScene::Uninitialize");
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         syncs_.clear();
     }
     nodes_.clear();
-    animations_.clear();
     componentFactories_.clear();
     renderingCameras_.clear();
 
@@ -91,9 +109,19 @@ void InternalScene::Uninitialize()
     }
 
     if (const auto rctx = GetRenderContextPtr()) {
-        // Do a "empty render" to flush out the gpu resources instantly.
-        for (size_t i = 0; i < deferedRenderCount_; ++i) {
-            rctx->GetRenderer().RenderFrame({});
+        // Skip the empty-render flush while a scene load is in progress on
+        // this render context: throwaway scenes destroyed mid-import don't
+        // need prompt GPU release, and the outer scene's normal render
+        // cycle will reclaim resources after the load completes.
+        // Use GetContext() rather than renderContext_ directly: scenes
+        // created via the application-context fallback (e.g. those built
+        // by SceneImportContext::LoadExternalNode) have renderContext_ ==
+        // nullptr but still resolve a valid IRenderContext via the app ctx.
+        if (!IsSceneLoadInProgress(GetContext())) {
+            // Do a "empty render" to flush out the gpu resources instantly.
+            for (size_t i = 0; i < deferedRenderCount_; ++i) {
+                rctx->GetRenderer().RenderFrame({});
+            }
         }
     }
     context_.reset();
@@ -131,7 +159,7 @@ INode::Ptr InternalScene::CreateNode(CORE3D_NS::ISceneNode* parent, BASE_NS::str
         return nullptr;
     }
     ecs_->AddDefaultComponents(ent);
-    ecs_->SetNodeName(ent, name); // remove when reworking names for scene objects
+    ecs_->SetNodeName(ent, name);  // remove when reworking names for scene objects
     if (!ConstructNodeImpl(ent, node)) {
         ecs_->RemoveEntity(ent);
         return nullptr;
@@ -142,7 +170,7 @@ INode::Ptr InternalScene::CreateNode(CORE3D_NS::ISceneNode* parent, BASE_NS::str
 
 INode::Ptr InternalScene::CreateNode(const INode::ConstPtr& parent, BASE_NS::string_view name, META_NS::ObjectId id)
 {
-    CORE3D_NS::ISceneNode* snode {};
+    CORE3D_NS::ISceneNode* snode{};
     if (auto access = interface_cast<IEcsObjectAccess>(parent)) {
         if (auto ecso = access->GetEcsObject()) {
             auto entity = ecso->GetEntity();
@@ -177,7 +205,7 @@ META_NS::IObject::Ptr InternalScene::FindResource(CORE_NS::Entity ent) const
     if (auto c = GetContext()) {
         if (auto r = c->GetResources()) {
             if (auto v = ecs_->resourceComponentManager->Read(ent)) {
-                return interface_pointer_cast<META_NS::IObject>(r->GetResource(v->resourceId, scene_.lock()));
+                return interface_pointer_cast<META_NS::IObject>(r->GetResource({v->resourceId, scene_.lock()}));
             }
         }
     }
@@ -235,7 +263,7 @@ META_NS::IObject::Ptr InternalScene::CreateObject(META_NS::ObjectId id, CORE_NS:
 
 META_NS::IObject::Ptr InternalScene::CreateObject(META_NS::ObjectId id, const CORE_NS::ResourceId& rid) const
 {
-    return CreatePlainObject(id, ecs_->resourceComponentManager->GetEntityWithResource(rid), rid);
+    return CreatePlainObject(id, ecs_->resourceComponentManager->GetEntity(rid), rid);
 }
 
 INode::Ptr InternalScene::ConstructNodeImpl(CORE_NS::Entity ent, INode::Ptr node) const
@@ -267,6 +295,9 @@ META_NS::ObjectId InternalScene::DeducePrimaryNodeType(CORE_NS::Entity ent) cons
     }
     if (ecs_->lightComponentManager->HasComponent(ent)) {
         return ClassId::LightNode;
+    }
+    if (ecs_->lightProbeComponentManager && ecs_->lightProbeComponentManager->HasComponent(ent)) {
+        return ClassId::LightProbeGroupNode;
     }
     if (ecs_->renderMeshComponentManager->HasComponent(ent)) {
         return ClassId::MeshNode;
@@ -336,7 +367,6 @@ IComponent::Ptr InternalScene::CreateComponent(
     }
     auto& r = META_NS::GetObjectRegistry();
     IComponent::Ptr comp;
-    ;
     if (createEcsComponent) {
         if (auto entity = ecsObject->GetEntity(); CORE_NS::EntityUtil::IsValid(entity)) {
             if (!m->HasComponent(entity)) {
@@ -349,6 +379,7 @@ IComponent::Ptr InternalScene::CreateComponent(
     } else {
         auto md = r.Create<META_NS::IMetadata>(META_NS::ClassId::Object);
         md->AddProperty(META_NS::ConstructProperty<BASE_NS::string>("Component", BASE_NS::string(m->GetName())));
+        md->AddProperty(META_NS::ConstructProperty<META_NS::ObjectId>("ComponentId", META_NS::ObjectId(m->GetUid())));
         comp = r.Create<IComponent>(ClassId::GenericComponent, md);
         if (auto acc = interface_cast<IEcsObjectAccess>(comp)) {
             if (!acc->SetEcsObject(ecsObject)) {
@@ -375,6 +406,7 @@ void InternalScene::AttachComponents(
     for (auto m : managers) {
         if (!attachments->FindByName(m->GetName())) {
             if (auto comp = CreateComponent(m, ecsObject, false)) {
+                META_NS::SetObjectFlags(comp, META_NS::ObjectFlagBits::NATIVE, true);
                 att->Attach(comp);
             } else {
                 CORE_LOG_E("Failed to construct component for '%s'", BASE_NS::string(m->GetName()).c_str());
@@ -413,59 +445,71 @@ INode::Ptr InternalScene::FindNode(BASE_NS::string_view path, META_NS::ObjectId 
     return nullptr;
 }
 
+bool InternalScene::AppendFoundNode(
+    CORE_NS::Entity entity, META_NS::ObjectId id, size_t maxCount, BASE_NS::vector<INode::Ptr>& nodes) const
+{
+    const auto it = nodes_.find(entity);
+    if (auto node = it == nodes_.end() ? ConstructNode(entity, id) : it->second; node) {
+        nodes.emplace_back(BASE_NS::move(node));
+    }
+    return maxCount && nodes.size() == maxCount;
+}
+
+bool InternalScene::FindNodesBfs(const CORE3D_NS::ISceneNode& root, BASE_NS::string_view name, size_t maxCount,
+    META_NS::ObjectId id, BASE_NS::vector<INode::Ptr>& nodes) const
+{
+    const auto rootChildren = root.GetChildren();
+    BASE_NS::vector<CORE3D_NS::ISceneNode*> queue{rootChildren.begin(), rootChildren.end()};
+    while (!queue.empty()) {
+        const auto child = queue.front();
+        queue.erase(queue.begin());
+        if (child) {
+            if (child->GetName() == name && AppendFoundNode(child->GetEntity(), id, maxCount, nodes)) {
+                return true;
+            }
+            if (const auto cc = child->GetChildren(); !cc.empty()) {
+                queue.insert(queue.end(), cc.begin(), cc.end());
+            }
+        }
+    }
+    return false;
+}
+
+void InternalScene::FindNodesDfs(const CORE3D_NS::ISceneNode& root, BASE_NS::string_view name, size_t maxCount,
+    META_NS::ObjectId id, BASE_NS::vector<INode::Ptr>& nodes) const
+{
+    for (auto&& child : root.GetChildren()) {
+        if (child) {
+            auto found = FindNodes(
+                child->GetEntity(), name, maxCount - nodes.size(), id, META_NS::TraversalType::FULL_HIERARCHY);
+            if (!found.empty()) {
+                nodes.insert(nodes.end(), found.begin(), found.end());
+            }
+        }
+        if (maxCount && nodes.size() >= maxCount) {
+            break;
+        }
+    }
+}
+
 BASE_NS::vector<INode::Ptr> InternalScene::FindNodes(CORE_NS::Entity root, BASE_NS::string_view name, size_t maxCount,
     META_NS::ObjectId id, META_NS::TraversalType traversalType) const
 {
     BASE_NS::vector<INode::Ptr> nodes;
-    // Return true if maxCount reached
-    auto addNode = [&](CORE_NS::Entity entity) -> bool {
-        auto it = nodes_.find(entity);
-        if (auto node = it == nodes_.end() ? ConstructNode(entity, id) : it->second; node) {
-            nodes.emplace_back(BASE_NS::move(node));
-        }
-        return maxCount && nodes.size() == maxCount;
-    };
-
-    if (ecs_) {
-        if (const auto node = ecs_->GetNode(root)) {
-            if (node->GetName() == name) {
-                if (addNode(root)) {
-                    return nodes;
-                }
-            }
-            if (traversalType == META_NS::TraversalType::BREADTH_FIRST_ORDER) {
-                const auto children = node->GetChildren();
-                BASE_NS::vector<CORE3D_NS::ISceneNode*> queue = { children.begin(), children.end() };
-                while (!queue.empty()) {
-                    const auto child = queue.front();
-                    queue.erase(queue.begin());
-                    if (child) {
-                        if (child->GetName() == name) {
-                            if (addNode(child->GetEntity())) {
-                                return nodes;
-                            }
-                        }
-                        if (const auto cc = child->GetChildren(); !children.empty()) {
-                            queue.insert(queue.end(), cc.begin(), cc.end());
-                        }
-                    }
-                }
-            } else {
-                // depth-first
-                for (auto&& child : node->GetChildren()) {
-                    if (child) {
-                        if (auto found =
-                                FindNodes(child->GetEntity(), name, maxCount - nodes.size(), id, traversalType);
-                            !found.empty()) {
-                            nodes.insert(nodes.end(), found.begin(), found.end());
-                        }
-                    }
-                    if (maxCount && nodes.size() >= maxCount) {
-                        break;
-                    }
-                }
-            }
-        }
+    if (!ecs_) {
+        return nodes;
+    }
+    const auto node = ecs_->GetNode(root);
+    if (!node) {
+        return nodes;
+    }
+    if (node->GetName() == name && AppendFoundNode(root, id, maxCount, nodes)) {
+        return nodes;
+    }
+    if (traversalType == META_NS::TraversalType::BREADTH_FIRST_ORDER) {
+        FindNodesBfs(*node, name, maxCount, id, nodes);
+    } else {
+        FindNodesDfs(*node, name, maxCount, id, nodes);
     }
     return nodes;
 }
@@ -529,7 +573,7 @@ INode::Ptr InternalScene::ReleaseCached(NodesType::iterator it)
 
 uint32_t InternalScene::ReleaseChildNodes(const IEcsObject::Ptr& eobj)
 {
-    uint32_t res {};
+    uint32_t res{};
     if (auto n = ecs_->GetNode(eobj->GetEntity())) {
         for (auto&& c : n->GetChildren()) {
             auto it = nodes_.find(c->GetEntity());
@@ -568,6 +612,9 @@ uint32_t InternalScene::ReleaseNode(INode::Ptr&& node, bool recursive)
         }
         node.reset();
         if (eobj) {
+            // Flush this object's pending API->ECS writes before removal, otherwise
+            // its entry in syncs_ becomes a stale WeakPtr and the writes are dropped.
+            SyncPropertiesForObject(eobj);
             auto it = nodes_.find(eobj->GetEntity());
             if (it != nodes_.end()) {
                 // are we the only owner?
@@ -601,10 +648,39 @@ static IExternalNode::Ptr GetExternalNodeAttachment(const INode::Ptr& node)
     return nullptr;
 }
 
-static BASE_NS::vector<CORE_NS::Entity> GetAddedEntities(const INode::Ptr& node)
+void InternalScene::RemoveExternalNode(const IExternalNode::Ptr& ext, bool /*removeFromIndex*/)
 {
-    auto p = GetExternalNodeAttachment(node);
-    return p ? p->GetAddedEntities() : BASE_NS::vector<CORE_NS::Entity> {};
+    if (!ext) {
+        return;
+    }
+    auto handle = ext->GetSubresourceGroup();
+    // remove the handle which is in the ext
+    ext->SetSubresourceGroup({});
+
+    CORE_NS::IResourceManager::Ptr resources;
+    if (auto c = GetContext()) {
+        resources = c->GetResources();
+    }
+    auto& m = ecs_->GetNativeEcs()->GetEntityManager();
+
+    for (auto ent : ext->GetAddedEntities()) {
+        if (resources) {
+            if (auto v = ecs_->resourceComponentManager->Read(ent)) {
+                resources->RemoveResource({v->resourceId, scene_.lock()});
+            }
+        }
+        ecs_->RemoveEntity(ent);
+    }
+
+    // just removing resources in resource manager does not remove the entities
+    auto extResources = interface_cast<META_NS::IResourceManagerExtension>(resources);
+    if (extResources && handle && handle.use_count() == 1) {
+        for (auto&& r : resources->GetResourceInfos({CORE_NS::MatchingResourceId(handle->GetGroup())}, scene_.lock())) {
+            if (auto ent = ecs_->resourceComponentManager->GetEntity(r.id); CORE_NS::EntityUtil::IsValid(ent)) {
+                ecs_->RemoveEntity(ent);
+            }
+        }
+    }
 }
 
 bool InternalScene::RemoveEntity(
@@ -613,13 +689,12 @@ bool InternalScene::RemoveEntity(
     if (!(ecs_ && CORE_NS::EntityUtil::IsValid(entity))) {
         return false;
     }
-    animations_.erase(entity);
     if (resources) {
         if (auto v = ecs_->resourceComponentManager->Read(entity)) {
             if (removeFromIndex) {
-                resources->RemoveResource(v->resourceId);
+                resources->RemoveResource({v->resourceId, scene_.lock()});
             } else {
-                resources->PurgeResource(v->resourceId);
+                resources->PurgeResource({v->resourceId, scene_.lock()});
             }
         }
     }
@@ -632,43 +707,43 @@ bool InternalScene::RemoveObject(META_NS::IObject::Ptr&& object, bool removeFrom
         object.reset();
         return RemoveNode(BASE_NS::move(node), removeFromIndex);
     }
-    bool res = false;
-    if (auto entity = GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(object));
-        CORE_NS::EntityUtil::IsValid(entity)) {
-        res = RemoveEntity(GetResourceManager(this), entity, removeFromIndex);
+    auto acc = interface_cast<IEcsObjectAccess>(object);
+    if (!acc) {
+        return false;
     }
-    return res;
+    auto eobj = acc->GetEcsObject();
+    if (!eobj) {
+        return false;
+    }
+    auto entity = eobj->GetEntity();
+    if (auto r = GetResourceManager(this)) {
+        if (auto v = ecs_->resourceComponentManager->Read(entity)) {
+            if (removeFromIndex) {
+                r->RemoveResource({v->resourceId, scene_.lock()});
+            } else {
+                r->PurgeResource({v->resourceId, scene_.lock()});
+            }
+        }
+    }
+    return ecs_->RemoveEntity(entity);
 }
 
 bool InternalScene::RemoveNode(INode::Ptr&& node, bool removeFromIndex)
 {
+    if (auto notify = interface_cast<INodeNotify>(node)) {
+        // Notify state change before doing any other changes to node
+        notify->OnNodeActiveStateChanged(INodeNotify::NodeActiteStateInfo::DEACTIVATING);
+    }
     if (auto acc = interface_cast<IEcsObjectAccess>(node)) {
-        BASE_NS::vector<CORE_NS::Entity> added;
-        if (auto ext = GetExternalNodeAttachment(node)) {
-            auto sg = ext->GetSubresourceGroup();
-            if (!sg.empty()) {
-                auto bundle = GetResourceGroups();
-                bundle.RemoveHandle(sg);
-                SetResourceGroups(BASE_NS::move(bundle));
-            }
-            added = ext->GetAddedEntities();
-        }
-        const auto decents = ecs_->GetNodeDescendants(GetEcsObjectEntity(acc));
-        for (auto&& ent : decents) {
-            if (auto it = nodes_.find(ent); it != nodes_.end()) {
-                ReleaseCached(it);
-            }
-            ecs_->RemoveEntity(ent);
-            for (auto it = added.begin(); it != added.end(); ++it) {
-                if (*it == ent) {
-                    added.erase(it);
-                    break;
+        if (auto eobj = acc->GetEcsObject()) {
+            auto decents = ecs_->GetNodeDescendants(eobj->GetEntity());
+            for (auto&& ent : decents) {
+                if (auto it = nodes_.find(ent); it != nodes_.end()) {
+                    auto n = ReleaseCached(it);
+                    RemoveExternalNode(GetExternalNodeAttachment(n), removeFromIndex);
                 }
+                ecs_->RemoveEntity(ent);
             }
-        }
-        const auto resources = GetResourceManager(this);
-        for (auto it = added.begin(); it != added.end(); ++it) {
-            RemoveEntity(resources, *it, removeFromIndex);
         }
         return true;
     }
@@ -740,11 +815,9 @@ void InternalScene::SetNodeActive(const INode::Ptr& child, bool active)
     if (auto ecsobj = interface_pointer_cast<IEcsObjectAccess>(child)) {
         SetEntityActive(ecsobj->GetEcsObject(), active);
     }
+    // q: do we still need this?
     auto ext = GetExternalNodeAttachment(child);
     if (ext) {
-        for (auto&& v : ext->GetAddedEntities()) {
-            ecs_->ecs->GetEntityManager().SetActive(v, active);
-        }
         if (active) {
             ext->Activate();
         } else {
@@ -753,8 +826,7 @@ void InternalScene::SetNodeActive(const INode::Ptr& child, bool active)
     }
 }
 
-void InternalScene::ProcessCustomRenderNodeGraph(
-    BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
+void InternalScene::ProcessCustomRenderNodeGraph(BASE_NS::vector<RENDER_NS::RenderHandleReference>& customRenderHandles,
     BASE_NS::array_view<const RENDER_NS::RenderHandleReference>& renderHandles)
 {
     if (customRenderNodeGraph_.size() == 0) {
@@ -764,20 +836,18 @@ void InternalScene::ProcessCustomRenderNodeGraph(
 
     switch (modificationMode_) {
         case RenderNodeGraphModificationMode::PREPEND:
-            customRenderHandles.insert(customRenderHandles.begin(),
-                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
-            customRenderHandles.insert(customRenderHandles.end(),
-                renderHandles.begin(), renderHandles.end());
+            customRenderHandles.insert(
+                customRenderHandles.begin(), customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            customRenderHandles.insert(customRenderHandles.end(), renderHandles.begin(), renderHandles.end());
             break;
         case RenderNodeGraphModificationMode::APPEND:
-            customRenderHandles.insert(customRenderHandles.begin(),
-                renderHandles.begin(), renderHandles.end());
-            customRenderHandles.insert(customRenderHandles.end(),
-                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            customRenderHandles.insert(customRenderHandles.begin(), renderHandles.begin(), renderHandles.end());
+            customRenderHandles.insert(
+                customRenderHandles.end(), customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
             break;
         case RenderNodeGraphModificationMode::REPLACE:
-            customRenderHandles.insert(customRenderHandles.begin(),
-                customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
+            customRenderHandles.insert(
+                customRenderHandles.begin(), customRenderNodeGraph_.begin(), customRenderNodeGraph_.end());
             break;
         default:
             return;
@@ -874,7 +944,7 @@ BASE_NS::shared_ptr<IScene> InternalScene::GetScene() const
 
 void InternalScene::SchedulePropertyUpdate(const META_NS::IEnginePropertySync::Ptr& obj)
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     syncs_[obj.get()] = obj;
 }
 
@@ -883,12 +953,30 @@ void InternalScene::SyncProperties()
     UpdateSyncProperties(false);
 }
 
+void InternalScene::SyncPropertiesForObject(const IEcsObject::Ptr& eobj)
+{
+    auto sync = interface_pointer_cast<META_NS::IEnginePropertySync>(eobj);
+    if (!sync) {
+        return;
+    }
+    bool wasPending = false;
+    {
+        std::unique_lock lock{mutex_};
+        wasPending = syncs_.erase(sync.get()) > 0;
+    }
+    if (wasPending) {
+        // TO_ENGINE write-through only; ProcessEvents stays in the Update() path.
+        sync->SyncProperties();
+    }
+}
+
 bool InternalScene::UpdateSyncProperties(bool resetPending)
 {
+    SCENE_CPU_PERF_SCOPE("Scene", "UpdateSyncProperties");
     bool pending = false;
     BASE_NS::unordered_map<void*, META_NS::IEnginePropertySync::WeakPtr> syncs;
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         syncs = BASE_NS::move(syncs_);
         pending = pendingRender_;
         if (resetPending) {
@@ -908,12 +996,13 @@ bool InternalScene::UpdateSyncProperties(bool resetPending)
 
 void InternalScene::Update(const UpdateInfo& info)
 {
+    SCENE_CPU_PERF_SCOPE("Scene", "Update");
     using namespace std::chrono;
     bool pending;
     if (info.syncProperties) {
         pending = UpdateSyncProperties(true);
     } else {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         pending = pendingRender_;
         pendingRender_ = false;
     }
@@ -921,7 +1010,7 @@ void InternalScene::Update(const UpdateInfo& info)
     // process potential modified events from property synchronisation
     ecs_->ecs->ProcessEvents();
 
-    uint64_t currentTime {};
+    uint64_t currentTime{};
 
     if (info.clock) {
         currentTime = static_cast<uint64_t>(info.clock->GetTime().ToMicroseconds());
@@ -936,7 +1025,7 @@ void InternalScene::Update(const UpdateInfo& info)
     auto deltaTime = currentTime - previousFrameTime_;
     constexpr auto limitHz = duration_cast<microseconds>(duration<float, std::ratio<1, 15u>>(1)).count();
     if (deltaTime > limitHz) {
-        deltaTime = limitHz; // clamp the time step to no longer than 15hz.
+        deltaTime = limitHz;  // clamp the time step to no longer than 15hz.
     }
     previousFrameTime_ = currentTime;
     const uint64_t totalTime = currentTime - firstTime_;
@@ -948,7 +1037,6 @@ void InternalScene::Update(const UpdateInfo& info)
 
     if ((needsRender && mode_ != RenderMode::MANUAL) || pending) {
         auto renderHandles = graphicsContext3D_->GetRenderNodeGraphs(*ecs_->ecs);
-
         BASE_NS::vector<RENDER_NS::RenderHandleReference> customRenderHandles;
         ProcessCustomRenderNodeGraph(customRenderHandles, renderHandles);
 
@@ -998,35 +1086,58 @@ BASE_NS::vector<ICamera::Ptr> InternalScene::GetCameras() const
 
 BASE_NS::vector<META_NS::IAnimation::Ptr> InternalScene::GetAnimations() const
 {
-    BASE_NS::vector<META_NS::IAnimation::Ptr> ret;
+    auto context = GetContext();
+    if (!context) {
+        return {};
+    }
+    auto resources = context->GetResources();
+    if (!resources) {
+        return {};
+    }
 
-    for (size_t i = 0; i != ecs_->animationComponentManager->GetComponentCount(); ++i) {
-        auto ent = ecs_->animationComponentManager->GetEntity(i);
-        if (ecs_->ecs->GetEntityManager().IsAlive(ent)) {
-            if (META_NS::IAnimation::Ptr anim = FindAnimation(ent)) {
-                animations_[ent] = anim;
-                ret.push_back(anim);
-            } else {
-                CORE_LOG_W("Failed to create EcsAnimation object");
+    BASE_NS::vector<META_NS::IAnimation::Ptr> animations;
+    auto infos = resources->GetResourceInfos(scene_.lock());
+    for (auto&& info : infos) {
+        if (info.type == SCENE_NS::ClassId::AnimationResource.Id().ToUid() ||
+            info.type == META_NS::ClassId::AnimationResource.Id().ToUid()) {
+            if (auto anim = interface_pointer_cast<META_NS::IAnimation>(resources->GetResource({info.id, scene_}))) {
+                animations.push_back(anim);
             }
         }
     }
 
-    return ret;
+    auto getEcsObject = [](const auto& anim) {
+        auto ecsAcc = interface_cast<IEcsObjectAccess>(anim);
+        return ecsAcc ? ecsAcc->GetEcsObject() : IEcsObject::Ptr{};
+    };
+
+    BASE_NS::vector<META_NS::IAnimation::Ptr> ecsOrderedAnimations;
+    for (size_t i = 0; i != ecs_->animationComponentManager->GetComponentCount(); ++i) {
+        auto ent = ecs_->animationComponentManager->GetEntity(i);
+        for (auto&& anim : animations) {
+            if (auto obj = getEcsObject(anim); obj && obj->GetEntity() == ent) {
+                ecsOrderedAnimations.push_back(BASE_NS::move(anim));
+                break;
+            }
+        }
+    }
+    for (auto&& anim : animations) {
+        if (anim) {
+            ecsOrderedAnimations.push_back(BASE_NS::move(anim));
+        }
+    }
+
+    return ecsOrderedAnimations;
 }
 
 META_NS::IAnimation::Ptr InternalScene::FindAnimation(CORE_NS::Entity ent, bool queryResource) const
 {
     META_NS::IAnimation::Ptr anim;
-    if (auto it = animations_.find(ent); it != animations_.end()) {
-        anim = it->second.lock();
-    }
-    if (!anim) {
-        if (queryResource) {
-            anim = interface_pointer_cast<META_NS::IAnimation>(CreateObject(ClassId::EcsAnimation, ent));
-        } else {
-            anim = interface_pointer_cast<META_NS::IAnimation>(CreatePlainObject(ClassId::EcsAnimation, ent, {}));
-        }
+
+    if (queryResource) {
+        anim = interface_pointer_cast<META_NS::IAnimation>(CreateObject(ClassId::EcsAnimation, ent));
+    } else {
+        anim = interface_pointer_cast<META_NS::IAnimation>(CreatePlainObject(ClassId::EcsAnimation, ent, {}));
     }
     return anim;
 }
@@ -1037,6 +1148,20 @@ META_NS::IAnimation::Ptr InternalScene::FindAnimation(CORE_NS::Entity ent) const
 }
 
 META_NS::IAnimation::Ptr InternalScene::FindAnimation(const CORE_NS::ResourceId& id) const
+{
+    auto context = GetContext();
+    if (!context) {
+        return nullptr;
+    }
+    auto resources = context->GetResources();
+    if (!resources) {
+        return nullptr;
+    }
+
+    return interface_pointer_cast<META_NS::IAnimation>(resources->GetResource({id, scene_}));
+}
+
+META_NS::IAnimation::Ptr InternalScene::ConstructAnimation(const CORE_NS::ResourceId& id) const
 {
     META_NS::IAnimation::Ptr anim;
     for (size_t i = 0; !anim && i != ecs_->animationComponentManager->GetComponentCount(); ++i) {
@@ -1077,7 +1202,7 @@ bool InternalScene::SyncProperty(const META_NS::IProperty::ConstPtr& p, META_NS:
             value = GetEngineValueFromProperty(i->GetTargetProperty());
         }
     }
-    META_NS::InterfaceUniqueLock valueLock { value };
+    META_NS::InterfaceUniqueLock valueLock{value};
     return value && value->Sync(dir);
 }
 
@@ -1113,12 +1238,12 @@ RenderMode InternalScene::GetRenderMode() const
 }
 void InternalScene::RenderFrame()
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     pendingRender_ = true;
 }
 bool InternalScene::HasPendingRender() const
 {
-    std::unique_lock lock { mutex_ };
+    std::unique_lock lock{mutex_};
     return pendingRender_;
 }
 
@@ -1133,9 +1258,17 @@ NodeHits InternalScene::MapHitResults(
         }
     }
 
+    auto shouldAdd = [&](const CORE3D_NS::RayCastResult& rr) -> bool {
+        const auto& node = rr.node;
+        if (node && (!n || n->IsAncestorOf(*node))) {
+            return options.hitOptions == RayCastOptions::HIT_ENABLED ? node->GetEffectivelyEnabled() : true;
+        }
+        return false;
+    };
+
     for (auto&& v : res) {
-        NodeHit h;
-        if (v.node && (!n || n->IsAncestorOf(*v.node))) {
+        if (shouldAdd(v)) {
+            NodeHit h;
             h.node = FindNode(v.node->GetEntity(), {});
             h.distance = v.distance;
             h.distanceToCenter = v.centerDistance;
@@ -1149,11 +1282,12 @@ NodeHits InternalScene::MapHitResults(
 void AddPickResult(BASE_NS::vector<CORE3D_NS::RayCastResult>& target, BASE_NS::vector<CORE3D_NS::RayCastResult>&& vec)
 {
     if (!vec.empty()) {
-        bool sort = !target.empty(); // Only sort if adding to non-empty list
+        bool sort = !target.empty();  // Only sort if adding to non-empty list
         target.append(vec.begin(), vec.end());
         if (sort) {
-            std::sort(target.begin(), target.end(),
-                [](const auto& lhs, const auto& rhs) { return (lhs.distance < rhs.distance); });
+            std::sort(target.begin(), target.end(), [](const auto& lhs, const auto& rhs) {
+                return (lhs.distance < rhs.distance);
+            });
         }
     }
 }
@@ -1164,7 +1298,7 @@ NodeHits InternalScene::CastRay(
     BASE_NS::vector<CORE3D_NS::RayCastResult> result;
     for (auto&& picking : ecs_->GetPicking()) {
         if (picking) {
-            AddPickResult(result, BASE_NS::move(picking->RayCast(*ecs_->ecs, pos, dir, options.layerMask)));
+            AddPickResult(result, picking->RayCast(*ecs_->ecs, pos, dir, options.layerMask));
         }
     }
     return MapHitResults(result, options);
@@ -1175,8 +1309,7 @@ NodeHits InternalScene::CastRay(
     BASE_NS::vector<CORE3D_NS::RayCastResult> result;
     for (auto&& picking : ecs_->GetPicking()) {
         if (picking) {
-            AddPickResult(result,
-                BASE_NS::move(picking->RayCastFromCamera(*ecs_->ecs, entity->GetEntity(), pos, options.layerMask)));
+            AddPickResult(result, picking->RayCastFromCamera(*ecs_->ecs, entity->GetEntity(), pos, options.layerMask));
         }
     }
     return MapHitResults(result, options);
@@ -1185,7 +1318,7 @@ BASE_NS::Math::Vec3 InternalScene::ScreenPositionToWorld(
     const IEcsObject::ConstPtr& entity, const BASE_NS::Math::Vec3& pos) const
 {
     BASE_NS::Math::Vec3 result;
-    if (ecs_->picking) { // Only use the default picking
+    if (ecs_->picking) {  // Only use the default picking
         result = ecs_->picking->ScreenToWorld(*ecs_->ecs, entity->GetEntity(), pos);
     }
     return result;
@@ -1194,7 +1327,7 @@ BASE_NS::Math::Vec3 InternalScene::WorldPositionToScreen(
     const IEcsObject::ConstPtr& entity, const BASE_NS::Math::Vec3& pos) const
 {
     BASE_NS::Math::Vec3 result;
-    if (ecs_->picking) { // Only use the default picking
+    if (ecs_->picking) {  // Only use the default picking
         result = ecs_->picking->WorldToScreen(*ecs_->ecs, entity->GetEntity(), pos);
     }
     return result;
@@ -1241,6 +1374,7 @@ BASE_NS::vector<INode::Ptr> InternalScene::GetNodes() const
 
 void InternalScene::StartAllStartables(META_NS::IStartableController::ControlBehavior behavior)
 {
+    SCENE_CPU_PERF_SCOPE("Startable", "StartAllStartables");
     if (options_.enableStartables) {
         if (auto me = self_.lock()) {
             for (auto&& n : GetNodes()) {
@@ -1262,13 +1396,13 @@ void InternalScene::StopAllStartables(META_NS::IStartableController::ControlBeha
 
 ResourceGroupBundle InternalScene::GetResourceGroups() const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return groups_;
 }
 
 void InternalScene::SetResourceGroups(ResourceGroupBundle b)
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     groups_ = BASE_NS::move(b);
 }
 
@@ -1281,16 +1415,32 @@ SceneDebugInfo InternalScene::GetDebugInfo() const
             CORE_LOG_D("node: '%s'", i->Name()->GetValue().c_str());
         }
     }
-    for (auto&& a : animations_) {
-        if (!a.second.expired()) {
-            ++info.animationObjectsAlive;
+
+    auto context = GetContext();
+    if (!context) {
+        return info;
+    }
+    auto resources = context->GetResources();
+    auto resext = interface_cast<META_NS::IResourceManagerExtension>(resources);
+    if (!resources || !resext) {
+        return info;
+    }
+
+    auto infos = resources->GetResourceInfos(scene_.lock());
+    for (auto&& i : infos) {
+        if (i.type == SCENE_NS::ClassId::AnimationResource.Id().ToUid() ||
+            i.type == META_NS::ClassId::AnimationResource.Id().ToUid()) {
+            if (resext->GetResource({i.id, scene_}).object) {
+                ++info.animationObjectsAlive;
+            }
         }
     }
+
     return info;
 }
 
-void InternalScene::ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
-    const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng)
+void InternalScene::ModifyCustomRenderNodeGraph(
+    const RenderNodeGraphModificationMode mode, const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng)
 {
     modificationMode_ = mode;
     customRenderNodeGraph_ = rng;

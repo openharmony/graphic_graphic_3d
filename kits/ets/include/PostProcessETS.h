@@ -28,9 +28,9 @@
 namespace OHOS::Render3D {
 class PostProcessETS {
 public:
-    static std::shared_ptr<PostProcessETS> FromJS(
-        const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom,
-        const std::shared_ptr<VignetteETS> vignette, const std::shared_ptr<ColorFringeETS> colorFringe);
+    static std::shared_ptr<PostProcessETS> FromJS(const std::shared_ptr<TonemapETS> tonemap,
+        const std::shared_ptr<BloomETS> bloom, const std::shared_ptr<VignetteETS> vignette,
+        const std::shared_ptr<ColorFringeETS> colorFringe);
     PostProcessETS(const SCENE_NS::ICamera::Ptr camera, const SCENE_NS::IPostProcess::Ptr pp);
     // store post process settings from ETS
     PostProcessETS(const std::shared_ptr<TonemapETS> tonemap, const std::shared_ptr<BloomETS> bloom,
@@ -79,7 +79,7 @@ public:
     }
 
 private:
-    SCENE_NS::ICamera::WeakPtr camera_{nullptr};     // weak ref to owning camera.
+    SCENE_NS::ICamera::WeakPtr camera_{nullptr};  // weak ref to owning camera.
     SCENE_NS::IPostProcess::WeakPtr postProc_{nullptr};
 
     std::shared_ptr<TonemapETS> tonemap_;

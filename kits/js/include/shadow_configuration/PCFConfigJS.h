@@ -17,15 +17,12 @@
 #define SHADOW_CONFIGURATION_PCF_CONFIG_JS_H
 
 #include "shadow_configuration/ShadowConfiguration.h"
-#include <napi_api.h>
 #include <optional>
 
 namespace ShadowConfiguration {
 
 class PCFConfigJS : public SoftShadowConfigJS {
 public:
-    // UUID: 4968bb0f-0127-4986-a3d2-93711e24b2f4
-    static constexpr napi_type_tag TYPE_TAG { 0x4968BB0F01274986ULL, 0xA3D293711E24B2F4ULL };
     ~PCFConfigJS() override = default;
     static SoftShadowConfigJS* FromJs(NapiApi::Object& jsPCFConfig);
     SCENE_NS::IRenderConfiguration::Ptr GetRenderConfiguration() const override;
@@ -38,11 +35,11 @@ public:
 
 private:
     explicit PCFConfigJS(float radius, int32_t count);
-    float radius_ { DEFAULT_RADIUS };
-    int32_t count_ { DEFAULT_COUNT };
+    float radius_{DEFAULT_RADIUS};
+    int32_t count_{DEFAULT_COUNT};
 
-    bool isRadiusUndefined_ {false};
-    bool isCountUndefined_ {false};
+    bool isRadiusUndefined_{false};
+    bool isCountUndefined_{false};
 
     napi_value GetType(NapiApi::FunctionContext<>& ctx);
     napi_value GetRadius(NapiApi::FunctionContext<>& ctx);
@@ -55,6 +52,6 @@ private:
     void SetCount(int32_t count);
 };
 
-} // namespace ShadowConfiguration
+}  // namespace ShadowConfiguration
 
 #endif

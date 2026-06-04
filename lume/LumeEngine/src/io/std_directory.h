@@ -57,4 +57,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_STD_DIRECTORY_H
+#endif  // CORE_IO_STD_DIRECTORY_H

@@ -47,6 +47,6 @@ protected:
 private:
 };
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition
 
 #endif

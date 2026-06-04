@@ -24,7 +24,7 @@
  * @brief Implement plain reference counting (see IInterface).
  */
 #define META_IMPLEMENT_REF_COUNT_NO_ONDESTROY()        \
-    int32_t refcnt_ { 0 };                             \
+    int32_t refcnt_{0};                                \
     void Ref() override                                \
     {                                                  \
         BASE_NS::AtomicIncrement(&refcnt_);            \
@@ -91,33 +91,33 @@ constexpr const InterfaceInfo ToInterfaceInfoImpl(const InterfaceInfo& info, BAS
 }
 constexpr const InterfaceInfo ToInterfaceInfoImpl(TypeId uid, BASE_NS::string_view name)
 {
-    return InterfaceInfo { uid, name };
+    return InterfaceInfo{uid, name};
 }
 constexpr const InterfaceInfo ToInterfaceInfoImpl(const char (&str)[37], BASE_NS::string_view name)
 {
-    return InterfaceInfo { TypeId { str }, name };
+    return InterfaceInfo{TypeId{str}, name};
 }
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()
 
-#define META_INTERFACE3(basename, name, intf_name)                                                         \
-public:                                                                                                    \
-    using base = basename;                                                                                 \
-    using base::GetInterface;                                                                              \
-    /* NOLINTNEXTLINE(readability-identifier-naming) */                                                    \
-    constexpr static const META_NS::InterfaceInfo INTERFACE_INFO { META_NS::Internal::ToInterfaceInfoImpl( \
-        intf_name, #name) };                                                                               \
-    constexpr static const BASE_NS::Uid UID { intf_name };                                                 \
-    static_assert(META_NS::IsValidUid(UID), "invalid UID");                                                \
-    using Ptr = BASE_NS::shared_ptr<name>;                                                                 \
-    using ConstPtr = BASE_NS::shared_ptr<const name>;                                                      \
-    using WeakPtr = BASE_NS::weak_ptr<name>;                                                               \
-    using ConstWeakPtr = BASE_NS::weak_ptr<const name>;                                                    \
-                                                                                                           \
-protected:                                                                                                 \
-    name() noexcept = default;                                                                             \
-    ~name() override = default;                                                                            \
-    META_NO_COPY_MOVE(name)                                                                                \
+#define META_INTERFACE3(basename, name, intf_name)                 \
+public:                                                            \
+    using base = basename;                                         \
+    using base::GetInterface;                                      \
+    /* NOLINTNEXTLINE(readability-identifier-naming) */            \
+    constexpr static const META_NS::InterfaceInfo INTERFACE_INFO{  \
+        META_NS::Internal::ToInterfaceInfoImpl(intf_name, #name)}; \
+    constexpr static const BASE_NS::Uid UID{intf_name};            \
+    static_assert(META_NS::IsValidUid(UID), "invalid UID");        \
+    using Ptr = BASE_NS::shared_ptr<name>;                         \
+    using ConstPtr = BASE_NS::shared_ptr<const name>;              \
+    using WeakPtr = BASE_NS::weak_ptr<name>;                       \
+    using ConstWeakPtr = BASE_NS::weak_ptr<const name>;            \
+                                                                   \
+protected:                                                         \
+    name() noexcept = default;                                     \
+    ~name() override = default;                                    \
+    META_NO_COPY_MOVE(name)                                        \
 private:
 
 #define META_INTERFACE2(basename, name) META_INTERFACE3(basename, name, InterfaceId::name)

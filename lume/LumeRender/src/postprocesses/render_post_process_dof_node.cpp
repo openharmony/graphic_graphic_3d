@@ -68,13 +68,14 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 constexpr string_view DOF_BLUR_SHADER_NAME = "rendershaders://shader/depth_of_field_blur.shader";
 constexpr string_view DOF_SHADER_NAME = "rendershaders://shader/depth_of_field.shader";
 constexpr int32_t BUFFER_SIZE_IN_BYTES = sizeof(RenderPostProcessDofNode::DofConfig);
-constexpr GpuBufferDesc UBO_DESC { CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+constexpr GpuBufferDesc UBO_DESC{CORE_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     (CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER, 0U };
+    CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,
+    0U};
 
 RenderHandleReference CreateGpuBuffers(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
@@ -89,7 +90,9 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
     const RenderPostProcessDofNode::DofConfig& shaderParameters)
 {
     if (void* data = gpuResourceMgr.MapBuffer(handle); data) {
-        CloneData(data, sizeof(RenderPostProcessDofNode::DofConfig), &shaderParameters,
+        CloneData(data,
+            sizeof(RenderPostProcessDofNode::DofConfig),
+            &shaderParameters,
             sizeof(RenderPostProcessDofNode::DofConfig));
         gpuResourceMgr.UnmapBuffer(handle);
     }
@@ -107,7 +110,7 @@ void FillTmpImageDesc(GpuImageDesc& desc)
     desc.layerCount = 1U;
     desc.mipCount = 1U;
 }
-} // namespace
+}  // namespace
 
 RenderPostProcessDofNode::RenderPostProcessDofNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -148,7 +151,7 @@ void RenderPostProcessDofNode::InitNode(IRenderNodeContextManager& renderNodeCon
     auto* renderClassFactory = renderNodeContextMgr_->GetRenderContext().GetInterface<IClassFactory>();
     if (renderClassFactory) {
         auto CreatePostProcessInterface = [&](const auto uid, auto& ppNode) {
-            ppNode = CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
+            ppNode = RENDER_NS::CreateInstance<IRenderPostProcessNode>(*renderClassFactory, uid);
         };
 
         CreatePostProcessInterface(RenderPostProcessBlurNode::UID, ppRenderNearBlurInterface_.postProcessNode);
@@ -222,7 +225,8 @@ void RenderPostProcessDofNode::PreExecuteFrame()
     }
     if ((!ti_.mipImages[0U]) || mipCountChanged || sizeChanged) {
 #if (RENDER_VALIDATION_ENABLED == 1)
-        PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary mip image re-created (size:%ux%u)", outputDesc.width,
+        PLUGIN_LOG_I("RENDER_VALIDATION: post process temporary mip image re-created (size:%ux%u)",
+            outputDesc.width,
             outputDesc.height);
 #endif
         GpuImageDesc tmpDesc = outputDesc;
@@ -241,7 +245,7 @@ void RenderPostProcessDofNode::PreExecuteFrame()
         auto& ppNode = static_cast<RenderPostProcessBlurNode&>(*ppRenderNearBlurInterface_.postProcessNode);
         ppNode.propertiesData.enabled = true;
         ppNode.propertiesData.blurConfiguration.maxMipLevel =
-            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.nearBlur));
+            static_cast<uint32_t>(Math::ceil(effectProperties_.dofConfiguration.nearBlur));
 
         ppNode.nodeInputsData.input.handle = ti_.mipImages[0U].GetHandle();
         ppNode.PreExecuteFrame();
@@ -252,7 +256,7 @@ void RenderPostProcessDofNode::PreExecuteFrame()
         auto& ppNode = static_cast<RenderPostProcessBlurNode&>(*ppRenderFarBlurInterface_.postProcessNode);
         ppNode.propertiesData.enabled = true;
         ppNode.propertiesData.blurConfiguration.maxMipLevel =
-            static_cast<uint32_t>(Math::round(effectProperties_.dofConfiguration.farBlur));
+            static_cast<uint32_t>(Math::ceil(effectProperties_.dofConfiguration.farBlur));
 
         ppNode.nodeInputsData.input.handle = ti_.mipImages[1U].GetHandle();
         ppNode.PreExecuteFrame();
@@ -268,7 +272,7 @@ RenderPass RenderPostProcessDofNode::CreateRenderPass(const RenderHandle input)
     rp.renderPassDesc.attachmentHandles[0u] = input;
     rp.renderPassDesc.attachments[0u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp.renderPassDesc.attachments[0u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-    rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+    rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
     rp.renderPassDesc.subpassCount = 1u;
     rp.subpassDesc.colorAttachmentCount = 1u;
@@ -286,13 +290,15 @@ BASE_NS::Math::Vec4 RenderPostProcessDofNode::GetFactorDof() const
     const float nearTransitionStart = (focusStart - effectProperties_.dofConfiguration.nearTransitionRange);
     const float farTransitionEnd = (focusEnd + effectProperties_.dofConfiguration.farTransitionRange);
 
-    return { nearTransitionStart, focusStart, focusEnd, farTransitionEnd };
+    return {nearTransitionStart, focusStart, focusEnd, farTransitionEnd};
 }
 
 BASE_NS::Math::Vec4 RenderPostProcessDofNode::GetFactorDof2() const
 {
-    return { effectProperties_.dofConfiguration.nearBlur - 1, effectProperties_.dofConfiguration.farBlur - 1,
-        effectProperties_.dofConfiguration.nearPlane, effectProperties_.dofConfiguration.farPlane };
+    return {effectProperties_.dofConfiguration.nearBlur - 1,
+        effectProperties_.dofConfiguration.farBlur - 1,
+        effectProperties_.dofConfiguration.nearPlane,
+        effectProperties_.dofConfiguration.farPlane};
 }
 
 void RenderPostProcessDofNode::ExecuteFrame(IRenderCommandList& cmdList)
@@ -316,8 +322,12 @@ void RenderPostProcessDofNode::ExecuteFrame(IRenderCommandList& cmdList)
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(dofShaderData_.shader);
-        psos_.dofPso = psoMgr.GetGraphicsPsoHandle(dofShaderData_.shader, gfxHandle, dofShaderData_.pipelineLayout, {},
-            {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.dofPso = psoMgr.GetGraphicsPsoHandle(dofShaderData_.shader,
+            gfxHandle,
+            dofShaderData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
@@ -344,7 +354,7 @@ void RenderPostProcessDofNode::ExecuteFrame(IRenderCommandList& cmdList)
     if (dofShaderData_.pipelineLayoutData.pushConstant.byteSize > 0U) {
         const float fWidth = static_cast<float>(renderPass.renderPassDesc.renderArea.extentWidth);
         const float fHeight = static_cast<float>(renderPass.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
+        const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, {}};
         cmdList.PushConstantData(dofShaderData_.pipelineLayoutData.pushConstant, arrayviewU8(pc));
     }
 
@@ -371,7 +381,7 @@ void RenderPostProcessDofNode::ExecuteDofBlur(IRenderCommandList& cmdList)
         rp.renderPassDesc.attachmentHandles[1u] = ti_.mipImages[1U].GetHandle();
         rp.renderPassDesc.attachments[1u].loadOp = AttachmentLoadOp::CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
         rp.renderPassDesc.attachments[1u].storeOp = AttachmentStoreOp::CORE_ATTACHMENT_STORE_OP_STORE;
-        rp.renderPassDesc.renderArea = { 0, 0, desc.width, desc.height };
+        rp.renderPassDesc.renderArea = {0, 0, desc.width, desc.height};
 
         rp.renderPassDesc.subpassCount = 1u;
         rp.subpassDesc.colorAttachmentCount = 2u;
@@ -383,8 +393,12 @@ void RenderPostProcessDofNode::ExecuteDofBlur(IRenderCommandList& cmdList)
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
         const auto& shaderMgr = renderNodeContextMgr_->GetShaderManager();
         const RenderHandle gfxHandle = shaderMgr.GetGraphicsStateHandleByShaderHandle(dofBlurShaderData_.shader);
-        psos_.dofBlurPso = psoMgr.GetGraphicsPsoHandle(dofBlurShaderData_.shader, gfxHandle,
-            dofBlurShaderData_.pipelineLayout, {}, {}, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+        psos_.dofBlurPso = psoMgr.GetGraphicsPsoHandle(dofBlurShaderData_.shader,
+            gfxHandle,
+            dofBlurShaderData_.pipelineLayout,
+            {},
+            {},
+            {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
     }
     cmdList.BeginRenderPass(rp.renderPassDesc, rp.subpassStartIndex, rp.subpassDesc);
     cmdList.BindPipeline(psos_.dofBlurPso);
@@ -413,7 +427,7 @@ void RenderPostProcessDofNode::ExecuteDofBlur(IRenderCommandList& cmdList)
     {
         const float fWidth = static_cast<float>(rp.renderPassDesc.renderArea.extentWidth);
         const float fHeight = static_cast<float>(rp.renderPassDesc.renderArea.extentHeight);
-        const LocalPostProcessPushConstantStruct pc { { fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight }, {} };
+        const LocalPostProcessPushConstantStruct pc{{fWidth, fHeight, 1.0f / fWidth, 1.0f / fHeight}, {}};
         cmdList.PushConstantData(dofBlurShaderData_.pipelineLayoutData.pushConstant, arrayviewU8(pc));
     }
 

@@ -331,7 +331,7 @@ static inline constexpr Vec4 Lerp(const Vec4& v1, const Vec4& v2, float t)
     return Vec4(v1.x + (v2.x - v1.x) * t, v1.y + (v2.y - v1.y) * t, v1.z + (v2.z - v1.z) * t, v1.w + (v2.w - v1.w) * t);
 }
 
-template<typename T>
+template <typename T>
 static inline constexpr T Clamp(const T& v, const T& min, const T& max)
 {
     constexpr bool IS_VEC_TYPE =
@@ -350,7 +350,7 @@ static inline constexpr T Clamp(const T& v, const T& min, const T& max)
 }
 
 /** @} */
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_VECTOR_UTIL_H
+#endif  // API_BASE_MATH_VECTOR_UTIL_H

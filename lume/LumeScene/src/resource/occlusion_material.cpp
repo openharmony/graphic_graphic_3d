@@ -26,7 +26,7 @@ SCENE_BEGIN_NAMESPACE()
 
 CORE_NS::Entity OcclusionMaterial::CreateEntity(const IInternalScene::Ptr& scene)
 {
-    CORE_NS::Entity entity {};
+    CORE_NS::Entity entity{};
     if (scene) {
         const auto ecs = scene->GetEcsContext().GetNativeEcs();
         if (ecs) {

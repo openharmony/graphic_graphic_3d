@@ -24,7 +24,8 @@ using BASE_NS::vector;
 
 SequentialImpl::~SequentialImpl() = default;
 
-SequentialImpl::SequentialImpl(const IThreadPool::Ptr& threads) : queue_(threads) {}
+SequentialImpl::SequentialImpl(const IThreadPool::Ptr& threads) : queue_(threads)
+{}
 
 void SequentialImpl::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {

@@ -141,5 +141,5 @@ UNIT_TEST_F(API_SequentialAnimationTest, SeekingSequentialAnimationAndPause, tes
     EXPECT_THAT(progress75Property2Value, testing::Eq(0.5F));
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

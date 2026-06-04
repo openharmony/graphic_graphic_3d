@@ -44,7 +44,7 @@ using namespace CORE_NS;
 using namespace CORE3D_NS;
 using namespace RENDER_NS;
 
-namespace {} // namespace
+namespace {}  // namespace
 
 /**
  * @tc.name: baseShaders
@@ -72,7 +72,7 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, baseShaders, testing::ext::TestSize.L
         MaterialComponent::Shader materialShader;
         MaterialComponent::Shader depthShader;
 
-        ISceneUtil::MaterialShaderInfo info {};
+        ISceneUtil::MaterialShaderInfo info{};
         sceneUtil.GetDefaultMaterialShaderData(*ecs, info, materialShader, depthShader);
 
         ASSERT_TRUE(materialShader.shader);
@@ -94,7 +94,8 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, baseShaders, testing::ext::TestSize.L
         }
     }
     // variations
-    auto CheckValues = [&](const ISceneUtil::MaterialShaderInfo& info, MaterialComponent::Shader& materialShader,
+    auto CheckValues = [&](const ISceneUtil::MaterialShaderInfo& info,
+                           MaterialComponent::Shader& materialShader,
                            MaterialComponent::Shader& depthShader) {
         sceneUtil.GetDefaultMaterialShaderData(*ecs, info, materialShader, depthShader);
         ASSERT_TRUE(materialShader.shader);
@@ -123,32 +124,40 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, baseShaders, testing::ext::TestSize.L
     {
         MaterialComponent::Shader materialShader;
         MaterialComponent::Shader depthShader;
-        CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                        RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
-            materialShader, depthShader);
+        CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                        RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                        RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE},
+            materialShader,
+            depthShader);
     }
     {
         MaterialComponent::Shader materialShader;
         MaterialComponent::Shader depthShader;
-        CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                        RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
-            materialShader, depthShader);
+        CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                        RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                        RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE},
+            materialShader,
+            depthShader);
     }
 
     // blend
     {
         MaterialComponent::Shader materialShader;
         MaterialComponent::Shader depthShader;
-        CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                        RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
-            materialShader, depthShader);
+        CheckValues(ISceneUtil::MaterialShaderInfo{true,
+                        RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                        RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE},
+            materialShader,
+            depthShader);
     }
     {
         MaterialComponent::Shader materialShader;
         MaterialComponent::Shader depthShader;
-        CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                        RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
-            materialShader, depthShader);
+        CheckValues(ISceneUtil::MaterialShaderInfo{true,
+                        RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                        RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE},
+            materialShader,
+            depthShader);
     }
 }
 
@@ -176,7 +185,7 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, byRenderSlot, testing::ext::TestSize.
     MaterialComponent::Shader shader;
     // default values
     {
-        ISceneUtil::MaterialShaderInfo info {};
+        ISceneUtil::MaterialShaderInfo info{};
         sceneUtil.GetDefaultMaterialShaderData(
             *ecs, info, DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE, shader);
 
@@ -200,26 +209,32 @@ UNIT_TEST(API_GpuTest_DefaultMaterialTest, byRenderSlot, testing::ext::TestSize.
         }
     };
     // opaque
-    CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
-    CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_OPAQUE);
 
     // translucent
-    CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{true,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
-    CheckValues(ISceneUtil::MaterialShaderInfo { true, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{true,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_FORWARD_TRANSLUCENT);
 
     // shadow
-    CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_COUNTER_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH);
-    CheckValues(ISceneUtil::MaterialShaderInfo { false, RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
-                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE },
+    CheckValues(ISceneUtil::MaterialShaderInfo{false,
+                    RENDER_NS::CullModeFlagBits::CORE_CULL_MODE_BACK_BIT,
+                    RENDER_NS::FrontFace::CORE_FRONT_FACE_CLOCKWISE},
         DefaultMaterialShaderConstants::RENDER_SLOT_DEPTH);
 }

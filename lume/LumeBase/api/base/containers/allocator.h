@@ -17,7 +17,7 @@
 #define API_BASE_CONTAINERS_ALLOCATOR_H
 
 #include <cstdint>
-#include <cstdlib> // malloc, free
+#include <cstdlib>  // malloc, free
 #include <securec.h>
 
 #include <base/namespace.h>
@@ -26,9 +26,9 @@
 BASE_BEGIN_NAMESPACE()
 struct allocator {
     using size_type = size_t;
-    void* instance { nullptr };
-    void* (*alloc)(void* instance, size_type size) { nullptr };
-    void (*free)(void* instance, void* ptr) { nullptr };
+    void* instance{nullptr};
+    void* (*alloc)(void* instance, size_type size){nullptr};
+    void (*free)(void* instance, void* ptr){nullptr};
 };
 
 inline bool CloneData(void* const dst, const size_t dstSize, const void* const src, const size_t srcSize)
@@ -74,11 +74,11 @@ inline bool ClearToValue(void* dst, size_t dstSize, uint8_t val, size_t count)
 
 inline allocator& default_allocator()
 {
-    static allocator DefaultAllocInstance { nullptr,
+    static allocator DefaultAllocInstance{nullptr,
         [](void* /* instance */, allocator::size_type size) -> void* { return ::malloc(size); },
-        [](void* /* instance */, void* aPtr) { ::free(aPtr); } };
+        [](void* /* instance */, void* aPtr) { ::free(aPtr); }};
     return DefaultAllocInstance;
 }
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_ALLOCATOR_H
+#endif  // API_BASE_CONTAINERS_ALLOCATOR_H

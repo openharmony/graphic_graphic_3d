@@ -37,11 +37,16 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 RenderNodeContextManager::RenderNodeContextManager(const CreateInfo& createInfo)
-    : renderContext_(createInfo.renderContext), renderNodeGraphData_(createInfo.renderNodeGraphData),
+    : renderContext_(createInfo.renderContext),
+      renderNodeGraphData_(createInfo.renderNodeGraphData),
       renderNodeGraphInputs_(createInfo.renderNodeGraphInputs),
-      fullName_(renderNodeGraphData_.renderNodeGraphName + createInfo.name), nodeName_(createInfo.name),
-      nodeJson_(createInfo.nodeJson), renderNodeGraphShareDataMgr_(createInfo.renderNodeGraphShareDataMgr),
-      descriptorSetMgr_(createInfo.descriptorSetMgr), psoMgr_(createInfo.psoMgr), renderCommandList_(createInfo.cmdList)
+      fullName_(renderNodeGraphData_.renderNodeGraphName + createInfo.name),
+      nodeName_(createInfo.name),
+      nodeJson_(createInfo.nodeJson),
+      renderNodeGraphShareDataMgr_(createInfo.renderNodeGraphShareDataMgr),
+      descriptorSetMgr_(createInfo.descriptorSetMgr),
+      psoMgr_(createInfo.psoMgr),
+      renderCommandList_(createInfo.cmdList)
 {
     IDevice& dev = createInfo.renderContext.GetDevice();
     renderNodeGpuResourceMgr_ = make_unique<RenderNodeGpuResourceManager>(
@@ -51,13 +56,13 @@ RenderNodeContextManager::RenderNodeContextManager(const CreateInfo& createInfo)
         (RenderDataStoreManager&)renderContext_.GetRenderDataStoreManager());
     renderNodeUtil_ = make_unique<RenderNodeUtil>(*this);
     renderNodeGraphShareMgr_ = make_unique<RenderNodeGraphShareManager>(renderNodeGraphShareDataMgr_);
-    renderNodeParserUtil_ = make_unique<RenderNodeParserUtil>(RenderNodeParserUtil::CreateInfo {});
+    renderNodeParserUtil_ = make_unique<RenderNodeParserUtil>(RenderNodeParserUtil::CreateInfo{});
 
     // there are only build-in render node context interfaces
-    contextInterfaces_.push_back({ RenderNodeContextManager::UID, this });
-    contextInterfaces_.push_back({ RenderCommandList::UID, &renderCommandList_ });
-    contextInterfaces_.push_back({ RenderNodeGraphShareManager::UID, renderNodeGraphShareMgr_.get() });
-    contextInterfaces_.push_back({ RenderNodeParserUtil::UID, renderNodeParserUtil_.get() });
+    contextInterfaces_.push_back({RenderNodeContextManager::UID, this});
+    contextInterfaces_.push_back({RenderCommandList::UID, &renderCommandList_});
+    contextInterfaces_.push_back({RenderNodeGraphShareManager::UID, renderNodeGraphShareMgr_.get()});
+    contextInterfaces_.push_back({RenderNodeParserUtil::UID, renderNodeParserUtil_.get()});
 }
 
 RenderNodeContextManager::~RenderNodeContextManager() = default;
@@ -74,12 +79,11 @@ void RenderNodeContextManager::BeginFrame(const uint32_t renderNodeIdx, const Pe
         constexpr double uToMsDiv = 1000.0;
         constexpr double uToSDiv = 1000000.0;
         const float deltaTime = static_cast<float>(
-            static_cast<double>(frameTimings.deltaTimeUs) / uToMsDiv); // real delta time used for scene as well
+            static_cast<double>(frameTimings.deltaTimeUs) / uToMsDiv);  // real delta time used for scene as well
         const float totalTime = static_cast<float>(static_cast<double>(frameTimings.totalTimeUs) / uToSDiv);
-        const uint32_t frameIndex =
-            static_cast<uint32_t>((frameTimings.frameIndex % std::numeric_limits<uint32_t>::max()));
+        const uint32_t frameIndex = static_cast<uint32_t>(frameTimings.frameIndex);
         auto& timings = renderNodeGraphData_.renderingConfiguration.renderTimings;
-        timings = { deltaTime, deltaTime, totalTime, *reinterpret_cast<const float*>(&frameIndex) };
+        timings = {deltaTime, deltaTime, totalTime, *reinterpret_cast<const float*>(&frameIndex)};
     }
 }
 
@@ -184,7 +188,9 @@ CORE_NS::IInterface* RenderNodeContextManager::GetInterface(const BASE_NS::Uid& 
     return nullptr;
 }
 
-void RenderNodeContextManager::Ref() {}
+void RenderNodeContextManager::Ref()
+{}
 
-void RenderNodeContextManager::Unref() {}
+void RenderNodeContextManager::Unref()
+{}
 RENDER_END_NAMESPACE()

@@ -36,16 +36,16 @@ HardwareBufferProperties QueryHwBufferFormatProperties(const DeviceVk& deviceVk,
 
     OH_NativeBuffer* nativeBuffer = static_cast<OH_NativeBuffer*>(reinterpret_cast<void*>(hwBuffer));
     if (nativeBuffer && extFunctions.vkGetNativeBufferPropertiesOHOS && extFunctions.vkGetMemoryNativeBufferOHOS) {
-        VkNativeBufferFormatPropertiesOHOS bufferFormatProperties {};
+        VkNativeBufferFormatPropertiesOHOS bufferFormatProperties{};
         bufferFormatProperties.sType = VK_STRUCTURE_TYPE_NATIVE_BUFFER_FORMAT_PROPERTIES_OHOS;
 
-        VkNativeBufferPropertiesOHOS bufferProperties {};
+        VkNativeBufferPropertiesOHOS bufferProperties{};
         bufferProperties.sType = VK_STRUCTURE_TYPE_NATIVE_BUFFER_PROPERTIES_OHOS;
         bufferProperties.pNext = &bufferFormatProperties;
 
-        VALIDATE_VK_RESULT(extFunctions.vkGetNativeBufferPropertiesOHOS(device, // device
-            nativeBuffer,                                                       // buffer
-            &bufferProperties));                                                // pProperties
+        VALIDATE_VK_RESULT(extFunctions.vkGetNativeBufferPropertiesOHOS(device,  // device
+            nativeBuffer,                                                        // buffer
+            &bufferProperties));                                                 // pProperties
 
         PLUGIN_ASSERT_MSG(bufferProperties.allocationSize > 0, "ohos native buffer allocation size is zero");
         PLUGIN_ASSERT_MSG(bufferFormatProperties.externalFormat != 0, "ohos native buffer externalFormat cannot be 0");
@@ -78,27 +78,27 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     }
     VkImageCreateInfo imageCreateInfo = GetHwBufferImageCreateInfo(validDesc);
 
-    VkExternalFormatOHOS externalFormat {
-        VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS, // sType
-        nullptr,                                // pNext
-        hwBufferProperties.externalFormat,      // externalFormat
+    VkExternalFormatOHOS externalFormat{
+        VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_OHOS,  // sType
+        nullptr,                                 // pNext
+        hwBufferProperties.externalFormat,       // externalFormat
     };
-    VkExternalMemoryImageCreateInfo externalMemoryImageCreateInfo {
-        VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,        // sType
-        nullptr,                                                    // pNext
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OH_NATIVE_BUFFER_BIT_OHOS, // handleTypes
+    VkExternalMemoryImageCreateInfo externalMemoryImageCreateInfo{
+        VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,         // sType
+        nullptr,                                                     // pNext
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OHOS_NATIVE_BUFFER_BIT_OHOS,  // handleTypes
     };
     imageCreateInfo.pNext = &externalMemoryImageCreateInfo;
-    if (useExternalFormat) { // chain external format
+    if (useExternalFormat) {  // chain external format
         externalMemoryImageCreateInfo.pNext = &externalFormat;
     }
 
     const DevicePlatformDataVk& platData = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
     VkDevice device = platData.device;
-    VALIDATE_VK_RESULT(vkCreateImage(device, // device
-        &imageCreateInfo,                    // pCreateInfo
-        nullptr,                             // pAllocator
-        &hwBufferImage.image));              // pImage
+    VALIDATE_VK_RESULT(vkCreateImage(device,  // device
+        &imageCreateInfo,                     // pCreateInfo
+        nullptr,                              // pAllocator
+        &hwBufferImage.image));               // pImage
 
     // some older version of validation layers required calling vkGetImageMemoryRequirements before
     // vkAllocateMemory. with at least 1.3.224.1 it's an error to call vkGetImageMemoryRequirements:
@@ -108,37 +108,38 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
     // get memory type index based on
     const uint32_t memoryTypeIndex =
         GetMemoryTypeIndex(platData.physicalDeviceProperties.physicalDeviceMemoryProperties,
-            hwBufferProperties.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VkMemoryAllocateInfo memoryAllocateInfo {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-        nullptr,                                // pNext
-        hwBufferProperties.allocationSize,      // allocationSize
-        memoryTypeIndex,                        // memoryTypeIndex
+            hwBufferProperties.memoryTypeBits,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VkMemoryAllocateInfo memoryAllocateInfo{
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,  // sType
+        nullptr,                                 // pNext
+        hwBufferProperties.allocationSize,       // allocationSize
+        memoryTypeIndex,                         // memoryTypeIndex
     };
 
     OH_NativeBuffer* nativeBuffer = static_cast<OH_NativeBuffer*>(reinterpret_cast<void*>(hwBuffer));
     PLUGIN_ASSERT(nativeBuffer);
-    VkMemoryDedicatedAllocateInfo dedicatedMemoryAllocateInfo {
-        VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO, // sType;
-        nullptr,                                          // pNext
-        hwBufferImage.image,                              // image
-        VK_NULL_HANDLE,                                   // buffer
+    VkMemoryDedicatedAllocateInfo dedicatedMemoryAllocateInfo{
+        VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,  // sType;
+        nullptr,                                           // pNext
+        hwBufferImage.image,                               // image
+        VK_NULL_HANDLE,                                    // buffer
     };
-    VkImportNativeBufferInfoOHOS importHardwareBufferInfo {
-        VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS, // sType
-        &dedicatedMemoryAllocateInfo,                     // pNext
-        nativeBuffer,                                     // buffer
+    VkImportNativeBufferInfoOHOS importHardwareBufferInfo{
+        VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS,  // sType
+        &dedicatedMemoryAllocateInfo,                      // pNext
+        nativeBuffer,                                      // buffer
     };
     memoryAllocateInfo.pNext = &importHardwareBufferInfo;
 
-    VALIDATE_VK_RESULT(vkAllocateMemory(device,  // device
-        &memoryAllocateInfo,                     // pAllocateInfo
-        nullptr,                                 // pAllocator
-        &hwBufferImage.deviceMemory));           // pMemory
-    VALIDATE_VK_RESULT(vkBindImageMemory(device, // device
-        hwBufferImage.image,                     // image
-        hwBufferImage.deviceMemory,              // memory
-        0));                                     // memoryOffset
+    VALIDATE_VK_RESULT(vkAllocateMemory(device,   // device
+        &memoryAllocateInfo,                      // pAllocateInfo
+        nullptr,                                  // pAllocator
+        &hwBufferImage.deviceMemory));            // pMemory
+    VALIDATE_VK_RESULT(vkBindImageMemory(device,  // device
+        hwBufferImage.image,                      // image
+        hwBufferImage.deviceMemory,               // memory
+        0));                                      // memoryOffset
 
     return hwBufferImage;
 }
@@ -146,62 +147,63 @@ HardwareBufferImage CreateHwPlatformImage(const DeviceVk& deviceVk, const Hardwa
 HardwareBufferBuffer CreateHwPlatformBuffer(const DeviceVk& deviceVk,
     const HardwareBufferProperties& hwBufferProperties, const GpuBufferDesc& desc, uintptr_t hwBuffer)
 {
-    constexpr VkBufferCreateFlags bufferCreateFlags { 0 };
+    constexpr VkBufferCreateFlags bufferCreateFlags{0};
 
-    VkBufferCreateInfo bufferCreateInfo {
-        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,     // sType
-        nullptr,                                  // pNext
-        bufferCreateFlags,                        // flags
-        hwBufferProperties.allocationSize,        // size
-        desc.usageFlags,                          // usage
-        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, // sharingMode
-        0,                                        // queueFamilyIndexCount
-        nullptr,                                  // pQueueFamilyIndices
+    VkBufferCreateInfo bufferCreateInfo{
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,      // sType
+        nullptr,                                   // pNext
+        bufferCreateFlags,                         // flags
+        hwBufferProperties.allocationSize,         // size
+        desc.usageFlags,                           // usage
+        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,  // sharingMode
+        0,                                         // queueFamilyIndexCount
+        nullptr,                                   // pQueueFamilyIndices
     };
-    VkExternalMemoryBufferCreateInfo externalMemoryBufferCreateInfo {
-        VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,               // sType
-        nullptr,                                                            // pNext
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID, // handleTypes
+    VkExternalMemoryBufferCreateInfo externalMemoryBufferCreateInfo{
+        VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,                // sType
+        nullptr,                                                             // pNext
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,  // handleTypes
     };
     bufferCreateInfo.pNext = &externalMemoryBufferCreateInfo;
 
     const auto& platData = (const DevicePlatformDataVk&)deviceVk.GetPlatformData();
     VkDevice device = platData.device;
-    HardwareBufferBuffer hwBufferBuffer { VK_NULL_HANDLE, VK_NULL_HANDLE };
-    VALIDATE_VK_RESULT(vkCreateBuffer(device, // device
-        &bufferCreateInfo,                    // pCreateInfo
-        nullptr,                              // pAllocator
-        &hwBufferBuffer.buffer));             // pImage
+    HardwareBufferBuffer hwBufferBuffer{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VALIDATE_VK_RESULT(vkCreateBuffer(device,  // device
+        &bufferCreateInfo,                     // pCreateInfo
+        nullptr,                               // pAllocator
+        &hwBufferBuffer.buffer));              // pImage
     // get memory type index based on
     const uint32_t memoryTypeIndex =
         GetMemoryTypeIndex(platData.physicalDeviceProperties.physicalDeviceMemoryProperties,
-            hwBufferProperties.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VkMemoryAllocateInfo memoryAllocateInfo {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-        nullptr,                                // pNext
-        hwBufferProperties.allocationSize,      // allocationSize
-        memoryTypeIndex,                        // memoryTypeIndex
+            hwBufferProperties.memoryTypeBits,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VkMemoryAllocateInfo memoryAllocateInfo{
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,  // sType
+        nullptr,                                 // pNext
+        hwBufferProperties.allocationSize,       // allocationSize
+        memoryTypeIndex,                         // memoryTypeIndex
     };
 
     OH_NativeBuffer* nativeBuffer = static_cast<OH_NativeBuffer*>(reinterpret_cast<void*>(hwBuffer));
     PLUGIN_ASSERT(nativeBuffer);
 
-    VkImportNativeBufferInfoOHOS importHardwareBufferInfo {
-        VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS, // sType
-        nullptr,                                          // pNext
-        nativeBuffer,                                     // buffer
+    VkImportNativeBufferInfoOHOS importHardwareBufferInfo{
+        VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS,  // sType
+        nullptr,                                           // pNext
+        nativeBuffer,                                      // buffer
     };
     memoryAllocateInfo.pNext = &importHardwareBufferInfo;
 
-    VALIDATE_VK_RESULT(vkAllocateMemory(device,   // device
-        &memoryAllocateInfo,                      // pAllocateInfo
-        nullptr,                                  // pAllocator
-        &hwBufferBuffer.deviceMemory));           // pMemory
-    VALIDATE_VK_RESULT(vkBindBufferMemory(device, // device
-        hwBufferBuffer.buffer,                    // image
-        hwBufferBuffer.deviceMemory,              // memory
-        0));                                      // memoryOffset
+    VALIDATE_VK_RESULT(vkAllocateMemory(device,    // device
+        &memoryAllocateInfo,                       // pAllocateInfo
+        nullptr,                                   // pAllocator
+        &hwBufferBuffer.deviceMemory));            // pMemory
+    VALIDATE_VK_RESULT(vkBindBufferMemory(device,  // device
+        hwBufferBuffer.buffer,                     // image
+        hwBufferBuffer.deviceMemory,               // memory
+        0));                                       // memoryOffset
     return hwBufferBuffer;
 }
-} // namespace PlatformHardwareBufferUtil
+}  // namespace PlatformHardwareBufferUtil
 RENDER_END_NAMESPACE()

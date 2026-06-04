@@ -61,7 +61,8 @@ class EnvironmentTemplateAccess
     : public META_NS::IntroduceInterfaces<META_NS::ResourceTemplateAccess, META_NS::BaseObject> {
     META_OBJECT(EnvironmentTemplateAccess, ClassId::EnvironmentTemplateAccess, IntroduceInterfaces)
 public:
-    EnvironmentTemplateAccess() : Super(ClassId::Environment, ClassId::EnvironmentResourceTemplate) {}
+    EnvironmentTemplateAccess() : Super(ClassId::Environment, ClassId::EnvironmentResourceTemplate)
+    {}
 };
 
 SCENE_END_NAMESPACE()

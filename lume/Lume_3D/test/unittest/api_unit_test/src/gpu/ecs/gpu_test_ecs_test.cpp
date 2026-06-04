@@ -157,12 +157,12 @@ public:
     }
 
 private:
-    size_t mAddedEntities { 0 };
-    size_t mRemovedEntities { 0 };
+    size_t mAddedEntities{0};
+    size_t mRemovedEntities{0};
     std::map<const IComponentManager*, size_t> mAddedComponents;
     std::map<const IComponentManager*, size_t> mRemovedComponents;
     std::map<const IComponentManager*, size_t> mUpdatedComponents;
-}; // namespace
+};  // namespace
 
 /**
  * @tc.name: listenerTest
@@ -264,4 +264,4 @@ UNIT_TEST(API_GpuTest_EcsTest, listenerTest, testing::ext::TestSize.Level1)
     ecs->RemoveListener(static_cast<IEcs::EntityListener&>(listener));
     ecs->RemoveListener(static_cast<IEcs::ComponentListener&>(listener));
 }
-} // namespace
+}  // namespace

@@ -36,7 +36,7 @@
 #include <render/resource_handle.h>
 
 #include "device/gpu_program.h"
-#include "device/gpu_resource_handle_util.h" // for hash<RenderHandle>
+#include "device/gpu_resource_handle_util.h"  // for hash<RenderHandle>
 #include "device/shader_reflection_data.h"
 
 CORE_BEGIN_NAMESPACE()
@@ -47,14 +47,14 @@ class Device;
 class ShaderModule;
 class ShaderLoader;
 
-constexpr const uint32_t INVALID_SM_INDEX { ~0u };
+constexpr const uint32_t INVALID_SM_INDEX{~0u};
 
 struct ComputeShaderCreateData {
     BASE_NS::string_view path;
-    uint32_t renderSlotId { INVALID_SM_INDEX };
-    uint32_t categoryId { INVALID_SM_INDEX };
-    uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-    uint32_t shaderModuleIndex { INVALID_SM_INDEX };
+    uint32_t renderSlotId{INVALID_SM_INDEX};
+    uint32_t categoryId{INVALID_SM_INDEX};
+    uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+    uint32_t shaderModuleIndex{INVALID_SM_INDEX};
 
     BASE_NS::string_view shaderFileStr;
     BASE_NS::string_view materialMetadata;
@@ -62,14 +62,14 @@ struct ComputeShaderCreateData {
 
 struct ShaderCreateData {
     BASE_NS::string_view path;
-    uint32_t renderSlotId { INVALID_SM_INDEX };
-    uint32_t categoryId { INVALID_SM_INDEX };
-    uint32_t vertexInputDeclarationIndex { INVALID_SM_INDEX };
-    uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-    uint32_t graphicsStateIndex { INVALID_SM_INDEX };
+    uint32_t renderSlotId{INVALID_SM_INDEX};
+    uint32_t categoryId{INVALID_SM_INDEX};
+    uint32_t vertexInputDeclarationIndex{INVALID_SM_INDEX};
+    uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+    uint32_t graphicsStateIndex{INVALID_SM_INDEX};
 
-    uint32_t vertShaderModuleIndex { INVALID_SM_INDEX };
-    uint32_t fragShaderModuleIndex { INVALID_SM_INDEX };
+    uint32_t vertShaderModuleIndex{INVALID_SM_INDEX};
+    uint32_t fragShaderModuleIndex{INVALID_SM_INDEX};
 
     BASE_NS::string_view shaderFileStr;
     BASE_NS::string_view materialMetadata;
@@ -113,14 +113,14 @@ public:
     };
 
 private:
-    std::atomic<int32_t> refcnt_ { 0 };
+    std::atomic<int32_t> refcnt_{0};
 };
 
 /* ShaderManager implementation.
 Not internally synchronized. */
 class ShaderManager final : public IShaderManager {
 public:
-    static constexpr uint32_t MAX_DEFAULT_NAME_LENGTH { 128 };
+    static constexpr uint32_t MAX_DEFAULT_NAME_LENGTH{128};
 
     explicit ShaderManager(Device& device);
     ~ShaderManager() override;
@@ -278,7 +278,7 @@ public:
     void SetFileManager(CORE_NS::IFileManager& fileMgr);
 
     struct FrameReloadedShaders {
-        uint64_t frameIndex { 0 };
+        uint64_t frameIndex{0};
         BASE_NS::vector<RenderHandle> shadersForBackend;
     };
     uint64_t GetLastReloadedShaderFrameIndex() const;
@@ -292,15 +292,15 @@ public:
     struct ComputeMappings {
         struct Data {
             RenderHandleReference rhr;
-            RenderHandle ownBaseShaderHandle; // link to own uri for all variants
-            RenderHandle addBaseShaderHandle; // link to separate base shader where it will add its variant
+            RenderHandle ownBaseShaderHandle;  // link to own uri for all variants
+            RenderHandle addBaseShaderHandle;  // link to separate base shader where it will add its variant
 
-            uint32_t renderSlotId { INVALID_SM_INDEX };
-            uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-            uint32_t reflectionPipelineLayoutIndex { INVALID_SM_INDEX };
-            uint32_t categoryId { INVALID_SM_INDEX };
+            uint32_t renderSlotId{INVALID_SM_INDEX};
+            uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+            uint32_t reflectionPipelineLayoutIndex{INVALID_SM_INDEX};
+            uint32_t categoryId{INVALID_SM_INDEX};
 
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
         };
         BASE_NS::vector<Data> clientData;
         BASE_NS::vector<ShaderNameData> nameData;
@@ -308,30 +308,30 @@ public:
     struct GraphicsMappings {
         struct Data {
             RenderHandleReference rhr;
-            RenderHandle ownBaseShaderHandle; // link to own uri for all variants
-            RenderHandle addBaseShaderHandle; // link to separate base shader where it will add its variant
+            RenderHandle ownBaseShaderHandle;  // link to own uri for all variants
+            RenderHandle addBaseShaderHandle;  // link to separate base shader where it will add its variant
 
-            uint32_t renderSlotId { INVALID_SM_INDEX };
-            uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-            uint32_t reflectionPipelineLayoutIndex { INVALID_SM_INDEX };
+            uint32_t renderSlotId{INVALID_SM_INDEX};
+            uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+            uint32_t reflectionPipelineLayoutIndex{INVALID_SM_INDEX};
 
-            uint32_t vertexInputDeclarationIndex { INVALID_SM_INDEX };
-            uint32_t graphicsStateIndex { INVALID_SM_INDEX };
+            uint32_t vertexInputDeclarationIndex{INVALID_SM_INDEX};
+            uint32_t graphicsStateIndex{INVALID_SM_INDEX};
 
-            uint32_t categoryId { INVALID_SM_INDEX };
+            uint32_t categoryId{INVALID_SM_INDEX};
 
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
         };
         BASE_NS::vector<Data> clientData;
         BASE_NS::vector<ShaderNameData> nameData;
     };
     struct GraphicsStateData {
         struct Indices {
-            uint64_t hash { 0 };
-            uint32_t renderSlotId { INVALID_SM_INDEX };
-            uint32_t baseVariantIndex { INVALID_SM_INDEX };
+            uint64_t hash{0};
+            uint32_t renderSlotId{INVALID_SM_INDEX};
+            uint32_t baseVariantIndex{INVALID_SM_INDEX};
             // forced state flags
-            GraphicsStateFlags stateFlags { 0u };
+            GraphicsStateFlags stateFlags{0u};
         };
         BASE_NS::vector<RenderHandleReference> rhr;
         BASE_NS::vector<GraphicsState> graphicsStates;
@@ -345,7 +345,7 @@ public:
 
 private:
     Device& device_;
-    CORE_NS::IFileManager* fileMgr_ { nullptr }; // engine file manager to be used with shader loading from API
+    CORE_NS::IFileManager* fileMgr_{nullptr};  // engine file manager to be used with shader loading from API
     BASE_NS::unique_ptr<ShaderLoader> shaderLoader_;
 
     // for all shaders, names are unique
@@ -356,10 +356,10 @@ private:
     GraphicsMappings shaderMappings_;
 
     struct ClientDataIndices {
-        uint32_t renderSlotIndex { INVALID_SM_INDEX };
-        uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-        uint32_t reflectionPipelineLayoutIndex { INVALID_SM_INDEX };
-        uint32_t categoryIndex { INVALID_SM_INDEX };
+        uint32_t renderSlotIndex{INVALID_SM_INDEX};
+        uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+        uint32_t reflectionPipelineLayoutIndex{INVALID_SM_INDEX};
+        uint32_t categoryIndex{INVALID_SM_INDEX};
     };
     RenderHandle CreateClientData(BASE_NS::string_view path, RenderHandleType type, const ClientDataIndices& cdi);
 
@@ -386,18 +386,18 @@ private:
 
     struct ComputeShaderData {
         BASE_NS::unique_ptr<GpuComputeProgram> gsp;
-        uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-        uint32_t compModuleIndex { INVALID_SM_INDEX };
+        uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+        uint32_t compModuleIndex{INVALID_SM_INDEX};
     };
     BASE_NS::vector<ComputeShaderData> computeShaders_;
 
     struct ShaderData {
         BASE_NS::unique_ptr<GpuShaderProgram> gsp;
-        uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-        uint32_t vertexInputDeclIndex { INVALID_SM_INDEX };
+        uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+        uint32_t vertexInputDeclIndex{INVALID_SM_INDEX};
 
-        uint32_t vertModuleIndex { INVALID_SM_INDEX };
-        uint32_t fragModuleIndex { INVALID_SM_INDEX };
+        uint32_t vertModuleIndex{INVALID_SM_INDEX};
+        uint32_t fragModuleIndex{INVALID_SM_INDEX};
     };
     BASE_NS::vector<ShaderData> shaders_;
 
@@ -415,15 +415,15 @@ private:
 
     struct ComputeShaderAllocs {
         RenderHandle handle;
-        uint32_t computeModuleIndex { INVALID_SM_INDEX };
-        uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
+        uint32_t computeModuleIndex{INVALID_SM_INDEX};
+        uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
     };
     struct ShaderAllocs {
         RenderHandle handle;
-        uint32_t vertModuleIndex { INVALID_SM_INDEX };
-        uint32_t fragModuleIndex { INVALID_SM_INDEX };
-        uint32_t pipelineLayoutIndex { INVALID_SM_INDEX };
-        uint32_t vertexInputDeclIndex { INVALID_SM_INDEX };
+        uint32_t vertModuleIndex{INVALID_SM_INDEX};
+        uint32_t fragModuleIndex{INVALID_SM_INDEX};
+        uint32_t pipelineLayoutIndex{INVALID_SM_INDEX};
+        uint32_t vertexInputDeclIndex{INVALID_SM_INDEX};
     };
     struct Allocs {
         // client handle, object
@@ -443,15 +443,15 @@ private:
 
     struct DeferredDestructions {
         struct Module {
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
             BASE_NS::unique_ptr<ShaderModule> shaderModule;
         };
         struct ComputeProgram {
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
             BASE_NS::unique_ptr<GpuComputeProgram> computeProgram;
         };
         struct ShaderProgram {
-            uint64_t frameIndex { 0 };
+            uint64_t frameIndex{0};
             BASE_NS::unique_ptr<GpuShaderProgram> shaderProgram;
         };
         BASE_NS::vector<Module> shaderModules;
@@ -504,7 +504,7 @@ private:
     // we need to store all shaders always, if some of node contexts are not running
     // NOTE: this should be improved with separate pipeline cache
     BASE_NS::vector<FrameReloadedShaders> reloadedShadersForBackend_;
-    uint64_t lastReloadedShadersFrameIndex_ { 0 };
+    uint64_t lastReloadedShadersFrameIndex_{0};
 };
 
 class RenderNodeShaderManager final : public IRenderNodeShaderManager {
@@ -569,4 +569,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_SHADER_MANAGER_H
+#endif  // DEVICE_SHADER_MANAGER_H

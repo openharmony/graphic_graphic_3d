@@ -16,7 +16,7 @@
 #include "property_proxy/Vec2Proxy.h"
 
 namespace OHOS::Render3D {
-Vec2Proxy::Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2> &prop) : PropertyProxy<BASE_NS::Math::Vec2>(prop)
+Vec2Proxy::Vec2Proxy(const META_NS::Property<BASE_NS::Math::Vec2>& prop) : PropertyProxy<BASE_NS::Math::Vec2>(prop)
 {}
 
 Vec2Proxy::~Vec2Proxy()
@@ -58,7 +58,7 @@ void Vec2Proxy::SetY(const float y)
     META_NS::SetValue(prop, value);
 }
 
-UVec2Proxy::UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2> &prop) : PropertyProxy<BASE_NS::Math::UVec2>(prop)
+UVec2Proxy::UVec2Proxy(const META_NS::Property<BASE_NS::Math::UVec2>& prop) : PropertyProxy<BASE_NS::Math::UVec2>(prop)
 {}
 
 UVec2Proxy::~UVec2Proxy()

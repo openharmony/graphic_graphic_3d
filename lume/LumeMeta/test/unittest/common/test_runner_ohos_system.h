@@ -62,7 +62,7 @@ private:
     CORE_NS::ILogger* logger_;
     CORE_NS::ILogger::LogLevel oldLevel_;
 };
-} // namespace Test
+}  // namespace Test
 
 META_BEGIN_NAMESPACE()
 namespace UTest {
@@ -89,19 +89,19 @@ CORE_NS::IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
     void SetUp() override
     {
-        CORE_NS::PlatformCreateInfo info {};
+        CORE_NS::PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
         info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
         //  Load engine lib
-        m_engineLib.Load("/system/lib64/libAGPDLL.z.so");
+        m_engineLib.Load(OHOS_PLATFORM_CORE_PATH "libAGPDLL.z.so");
         CORE_ASSERT(m_engineLib.IsLoaded());
 
         // Load functions
@@ -113,7 +113,7 @@ public:
 
         CORE_NS::CreatePluginRegistry(info);
 
-        constexpr BASE_NS::Uid uids[] { META_NS::META_OBJECT_PLUGIN_UID };
+        constexpr BASE_NS::Uid uids[]{META_NS::META_OBJECT_PLUGIN_UID};
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
 
         g_testEnv = std::make_unique<TestEnvironment>();
@@ -136,9 +136,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()
 
-#endif // META_TEST_RUNNER
+#endif  // META_TEST_RUNNER

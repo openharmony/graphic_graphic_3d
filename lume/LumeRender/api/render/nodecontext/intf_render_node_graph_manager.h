@@ -72,7 +72,7 @@ struct RenderNodeDescInfo {
     /** Name of render node instance */
     RenderDataConstants::RenderDataFixedString nodeName;
     /** Specific flags for node to change state (e.g. enable / disable) */
-    uint32_t flags { 0u };
+    uint32_t flags{0u};
 };
 
 /** Render node graph descriptor */
@@ -267,10 +267,11 @@ public:
     /** Describes result of the loading operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(const BASE_NS::string& error) : success(false), error(error) {}
+        explicit LoadResult(const BASE_NS::string& error) : success(false), error(error)
+        {}
 
         /** Indicates, whether the parsing operation is successful. */
-        bool success { true };
+        bool success{true};
 
         /** In case of parsing error, contains the description of the error. */
         BASE_NS::string error;
@@ -299,4 +300,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_GRAPH_MANAGER_H
+#endif  // API_RENDER_IRENDER_NODE_GRAPH_MANAGER_H

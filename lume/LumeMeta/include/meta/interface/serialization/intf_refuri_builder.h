@@ -42,9 +42,19 @@ public:
     virtual void AddAnchorType(const ObjectId& id) = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IRefUriBuilder)
-META_INTERFACE_TYPE(META_NS::IRefUriBuilderAnchorType)
+/**
+ * @brief Interface to get indirect anchor object for export user context
+ */
+class IGetAnchorObject : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IGetAnchorObject, "52c5211e-0666-4af6-936b-c0632eaf4780")
+public:
+    virtual IObject::ConstPtr GetAnchorObject() const = 0;
+};
 
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IRefUriBuilder)
+META_INTERFACE_TYPE(META_NS::IRefUriBuilderAnchorType)
+META_INTERFACE_TYPE(META_NS::IGetAnchorObject)
 
 #endif

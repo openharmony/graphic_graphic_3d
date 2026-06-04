@@ -92,4 +92,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_ECS_ISYSTEM_H
+#endif  // API_CORE_ECS_ISYSTEM_H

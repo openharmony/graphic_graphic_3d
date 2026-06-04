@@ -26,14 +26,11 @@
 
 namespace OHOS::Render3D::KITETS {
 LayerMaskImpl::LayerMaskImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
-{
-}
+{}
 
 LayerMaskImpl::~LayerMaskImpl()
 {
-    if (nodeETS_) {
-        nodeETS_.reset();
-    }
+    nodeETS_.reset();
 }
 
 bool LayerMaskImpl::getEnabled(const int32_t index)
@@ -52,14 +49,11 @@ void LayerMaskImpl::setEnabled(int32_t index, bool enabled)
 }
 
 NodeContainerImpl::NodeContainerImpl(const std::shared_ptr<NodeETS> nodeETS) : nodeETS_(nodeETS)
-{
-}
+{}
 
 NodeContainerImpl::~NodeContainerImpl()
 {
-    if (nodeETS_) {
-        nodeETS_.reset();
-    }
+    nodeETS_.reset();
 }
 
 void NodeContainerImpl::append(::SceneNodes::weak::Node item)
@@ -87,7 +81,7 @@ void NodeContainerImpl::append(::SceneNodes::weak::Node item)
     nodeETS_->AppendChild(itemNode);
 }
 
-void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const &sibling)
+void NodeContainerImpl::insertAfter(::SceneNodes::weak::Node item, ::SceneNodes::NodeOrNull const& sibling)
 {
     if (!nodeETS_) {
         WIDGET_LOGE("NodeContainerImpl::insertAfter() nodeETS_ is nullptr");
@@ -179,7 +173,7 @@ int32_t NodeContainerImpl::count()
     return 0;
 }
 
-::SceneNodes::VariousNodesOrNull NodeImpl::MakeVariousNodesOrNull(const std::shared_ptr<NodeETS> &node)
+::SceneNodes::VariousNodesOrNull NodeImpl::MakeVariousNodesOrNull(const std::shared_ptr<NodeETS>& node)
 {
     if (!node) {
         return SceneNodes::VariousNodesOrNull::make_nValue();
@@ -200,7 +194,7 @@ int32_t NodeContainerImpl::count()
     }
 }
 
-::SceneNodes::VariousNodes NodeImpl::MakeVariousNodes(const std::shared_ptr<NodeETS> &node)
+::SceneNodes::VariousNodes NodeImpl::MakeVariousNodes(const std::shared_ptr<NodeETS>& node)
 {
     NodeETS::NodeType type = node->GetNodeType();
     switch (type) {
@@ -220,8 +214,7 @@ int32_t NodeContainerImpl::count()
 
 NodeImpl::NodeImpl(const std::shared_ptr<NodeETS> nodeETS)
     : SceneResourceImpl(SceneResources::SceneResourceType::key_t::NODE, nodeETS), nodeETS_(nodeETS)
-{
-}
+{}
 
 NodeImpl::~NodeImpl()
 {
@@ -233,7 +226,7 @@ NodeImpl::~NodeImpl()
     if (nodeETS_) {
         return taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(nodeETS_->GetPosition());
     }
-    return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
+    return SceneTypes::Vec3({nullptr, nullptr});
 }
 
 void NodeImpl::setPosition(::SceneTypes::weak::Vec3 pos)
@@ -248,7 +241,7 @@ void NodeImpl::setPosition(::SceneTypes::weak::Vec3 pos)
     if (nodeETS_) {
         return taihe::make_holder<QuaternionImpl, SceneTypes::Quaternion>(nodeETS_->GetRotation());
     }
-    return ::taihe::make_holder<QuaternionImpl, SceneTypes::Quaternion>(BASE_NS::Math::Quat(0.0, 0.0, 0.0, 1.0));
+    return SceneTypes::Quaternion({nullptr, nullptr});
 }
 
 void NodeImpl::setRotation(::SceneTypes::weak::Quaternion rotate)
@@ -263,7 +256,7 @@ void NodeImpl::setRotation(::SceneTypes::weak::Quaternion rotate)
     if (nodeETS_) {
         return taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(nodeETS_->GetScale());
     }
-    return ::taihe::make_holder<Vec3Impl, SceneTypes::Vec3>(BASE_NS::Math::ZERO_VEC3);
+    return SceneTypes::Vec3({nullptr, nullptr});
 }
 
 void NodeImpl::setScale(::SceneTypes::weak::Vec3 scale)
@@ -346,18 +339,17 @@ void NodeImpl::destroy()
 {
     WIDGET_LOGI("nodeTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
-    void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
-        nativePtr == nullptr) {
+    void* nativePtr = nullptr;
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("nodeTransferStaticImpl failed during arkts_esvalue_unwrap.");
-        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
+        return SceneNodes::Node({nullptr, nullptr});
     }
 
-    TrueRootObject *tro = static_cast<TrueRootObject *>(nativePtr);
+    TrueRootObject* tro = reinterpret_cast<TrueRootObject*>(nativePtr);
     SCENE_NS::INode::Ptr nodePtr = tro->GetNativeObject<SCENE_NS::INode>();
     if (nodePtr == nullptr) {
         WIDGET_LOGE("nodeTransferStaticImpl failed during GetNativeObject.");
-        return ::taihe::make_holder<NodeImpl, SceneNodes::Node>(nullptr);
+        return SceneNodes::Node({nullptr, nullptr});
     }
     auto node = NodeETS::FromNative(nodePtr);
     NodeETS::NodeType type = node->GetNodeType();

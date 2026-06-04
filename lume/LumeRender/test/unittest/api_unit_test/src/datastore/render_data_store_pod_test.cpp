@@ -54,12 +54,12 @@ void Validate(const UTest::EngineResources& er)
         ppConf.taaConfiguration.quality = TaaConfiguration::Quality::HIGH;
         ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView);
 
         // Create again to trigger set with updated values
         ppConf.bloomConfiguration.useCompute = false;
-        const array_view<const uint8_t> dataView2 = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView2 = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         dataStorePod->CreatePod("PostProcessConfiguration", "PostProcessConfiguration", dataView2);
     }
     {
@@ -99,7 +99,7 @@ void Validate(const UTest::EngineResources& er)
     // Destruction is deferred
     ASSERT_TRUE(er.context->GetRenderDataStoreManager().GetRenderDataStore("PostProcessDataStore"));
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderDataStorePodTest

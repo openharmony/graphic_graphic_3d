@@ -37,10 +37,10 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 
 namespace {
-static constexpr string_view VERTEX_BUFFER_NAME { "VertexBuffer" };
-static constexpr string_view INDEX_BUFFER_32_NAME { "IndexBuffer32" };
-static constexpr string_view INDEX_BUFFER_16_NAME { "IndexBuffer16" };
-} // namespace
+static constexpr string_view VERTEX_BUFFER_NAME{"VertexBuffer"};
+static constexpr string_view INDEX_BUFFER_32_NAME{"IndexBuffer32"};
+static constexpr string_view INDEX_BUFFER_16_NAME{"IndexBuffer16"};
+}  // namespace
 
 void RenderNodeDrawIndexed::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -55,18 +55,23 @@ void RenderNodeDrawIndexed::InitNode(IRenderNodeContextManager& renderNodeContex
 
     IShaderManager& shaderMgr = renderNodeContextMgr.GetRenderContext().GetDevice().GetShaderManager();
     auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/RenderCommandListTest.shader");
-    constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-    const ShaderSpecializationConstantDataView specialization { {}, {} };
+    constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+    const ShaderSpecializationConstantDataView specialization{{}, {}};
     const RenderHandle graphicsState =
         renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shaderHandle.GetHandle());
     const auto& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
     auto pipelineLayout = renderNodeUtil.CreatePipelineLayout(shaderHandle.GetHandle());
     const auto& inputLayout = shaderMgr.GetReflectionVertexInputDeclaration(shaderHandle);
-    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(), graphicsState,
-        pipelineLayout, inputLayout, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+    psoHandle_ = renderNodeContextMgr.GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+        graphicsState,
+        pipelineLayout,
+        inputLayout,
+        specialization,
+        {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
 }
 
-void RenderNodeDrawIndexed::PreExecuteFrame() {}
+void RenderNodeDrawIndexed::PreExecuteFrame()
+{}
 
 void RenderNodeDrawIndexed::ExecuteFrame(IRenderCommandList& cmdList)
 {
@@ -80,13 +85,12 @@ void RenderNodeDrawIndexed::ExecuteFrame(IRenderCommandList& cmdList)
     const ScissorDesc scissorDesc = renderNodeUtil.CreateDefaultScissor(renderPass);
 
     cmdList.BeginRenderPass(renderPass.renderPassDesc, renderPass.subpassStartIndex, renderPass.subpassDesc);
-#if NDEBUG
     if (count_ >= 1) {
         IShaderManager& shaderMgr = renderNodeContextMgr_->GetRenderContext().GetDevice().GetShaderManager();
         auto shaderHandle = shaderMgr.GetShaderHandle("rendershaders://shader/RenderCommandListTest.shader");
-        constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT,
-            CORE_DYNAMIC_STATE_ENUM_SCISSOR };
-        const ShaderSpecializationConstantDataView specialization { {}, {} };
+        constexpr DynamicStateEnum DYNAMIC_STATES[] = {
+            CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
+        const ShaderSpecializationConstantDataView specialization{{}, {}};
         const RenderHandle graphicsStateHandle =
             renderNodeContextMgr_->GetShaderManager().GetGraphicsStateHandleByShaderHandle(shaderHandle.GetHandle());
 
@@ -215,26 +219,24 @@ void RenderNodeDrawIndexed::ExecuteFrame(IRenderCommandList& cmdList)
             psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(
                 shaderHandle.GetHandle(), graphicsState, pipelineLayout, inputLayout, specialization, {});
         } else {
-            psoHandle_ =
-                renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(), graphicsState,
-                    pipelineLayout, inputLayout, specialization, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            psoHandle_ = renderNodeContextMgr_->GetPsoManager().GetGraphicsPsoHandle(shaderHandle.GetHandle(),
+                graphicsState,
+                pipelineLayout,
+                inputLayout,
+                specialization,
+                {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
     }
-#endif // NDEBUG
     cmdList.BindPipeline(psoHandle_);
 
-#if NDEBUG
     if (count_ != 1) {
-#endif
         cmdList.SetDynamicStateViewport(viewportDesc);
         cmdList.SetDynamicStateScissor(scissorDesc);
-#if NDEBUG
     }
-#endif
 
     VertexBuffer vbo;
     vbo.bufferHandle = vertexBufferHandle_;
-    cmdList.BindVertexBuffers({ &vbo, 1 });
+    cmdList.BindVertexBuffers({&vbo, 1});
 
     IndexBuffer ibo;
     if (count_ % 2 == 0) {

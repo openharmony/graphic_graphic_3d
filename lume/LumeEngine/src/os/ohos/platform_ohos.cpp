@@ -47,14 +47,17 @@ BASE_NS::string PlatformOHOS::RegisterDefaultPaths(IFileManager& fileManager) co
     const BASE_NS::string moduleName = plat_.moduleName;
     auto resManager = plat_.resourceManager;
     fileManager.RegisterFilesystem(
-        "OhosRawFile", IFilesystem::Ptr { new Core::OhosFilesystem(hapPath, bundleName, moduleName, resManager) });
-    CORE_LOG_I("Registered hapFilesystem by Platform: 'hapPath:%s bundleName:%s moduleName:%s'", hapPath.c_str(),
-        bundleName.c_str(), moduleName.c_str());
+        "OhosRawFile", IFilesystem::Ptr{new Core::OhosFilesystem(hapPath, bundleName, moduleName, resManager)});
+    CORE_LOG_I("Registered hapFilesystem by Platform: 'hapPath:%s bundleName:%s moduleName:%s'",
+        hapPath.c_str(),
+        bundleName.c_str(),
+        moduleName.c_str());
     const BASE_NS::string coreDirectory = "file://" + plat_.coreRootPath;
     return coreDirectory;
 }
 
-PlatformOHOS::~PlatformOHOS() {}
+PlatformOHOS::~PlatformOHOS()
+{}
 
 void PlatformOHOS::RegisterPluginLocations(IPluginRegister& registry)
 {

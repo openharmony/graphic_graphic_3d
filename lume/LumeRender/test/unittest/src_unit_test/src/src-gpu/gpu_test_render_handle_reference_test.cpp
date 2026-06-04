@@ -95,9 +95,9 @@ UNIT_TEST(SRC_GpuResourceHandleUtil, GpuResourceHandleUtilTest, testing::ext::Te
     RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::GPU_IMAGE, 0u, invalidIndex, 0u, 0u);
     RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, invalidIndex, 0u);
     RenderHandleUtil::CreateEngineResourceHandle(RenderHandleType::GPU_IMAGE, invalidIndex, 0u);
-    ASSERT_NE(RenderHandle {}, RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::GPU_IMAGE, 0u, 0u, 0u));
-    ASSERT_NE(RenderHandle {}, RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::GPU_IMAGE, 0u, 0u, 0u, 0u));
-    ASSERT_NE(RenderHandle {}, RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u, 0u));
-    ASSERT_NE(EngineResourceHandle {}.id,
+    ASSERT_NE(RenderHandle{}, RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::GPU_IMAGE, 0u, 0u, 0u));
+    ASSERT_NE(RenderHandle{}, RenderHandleUtil::CreateGpuResourceHandle(RenderHandleType::GPU_IMAGE, 0u, 0u, 0u, 0u));
+    ASSERT_NE(RenderHandle{}, RenderHandleUtil::CreateHandle(RenderHandleType::GPU_IMAGE, 0u, 0u));
+    ASSERT_NE(EngineResourceHandle{}.id,
         RenderHandleUtil::CreateEngineResourceHandle(RenderHandleType::GPU_IMAGE, 0u, 0u).id);
 }

@@ -49,4 +49,4 @@ public:
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_SHADER_MODULE_H
+#endif  // DEVICE_SHADER_MODULE_H

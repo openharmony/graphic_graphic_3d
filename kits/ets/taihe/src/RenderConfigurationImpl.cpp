@@ -14,15 +14,16 @@
  */
 
 #include "RenderConfigurationImpl.h"
-#include "ShadowConfigurationImpl.h"
 #include "Vec2Impl.h"
 #include "Utils.h"
+
+#include "ShadowConfigurationImpl.h"
 #include "shadow_configuration/PCFConfigETS.h"
 
 namespace OHOS::Render3D::KITETS {
 using namespace ShadowConfiguration;
-RenderConfigurationImpl::RenderConfigurationImpl(const std::shared_ptr<RenderConfigurationETS> rcETS)
-    : rcETS_(rcETS)
+
+RenderConfigurationImpl::RenderConfigurationImpl(const std::shared_ptr<RenderConfigurationETS> rcETS) : rcETS_(rcETS)
 {
     WIDGET_LOGD("RenderConfigurationImpl ++");
 }
@@ -56,7 +57,7 @@ void RenderConfigurationImpl::setShadowResolution(::taihe::optional_view<::Scene
             auto x = static_cast<uint32_t>(res->getX());
             auto y = static_cast<uint32_t>(res->getY());
             if (x > 0 && y > 0) {
-                resolution_ = { x, y };
+                resolution_ = {x, y};
                 rcETS_->SetShadowResolution(resolution_);
             } else {
                 WIDGET_LOGE("Invalid resolution value: input resolution should be positive integers");
@@ -88,7 +89,6 @@ void RenderConfigurationImpl::setShadowResolution(::taihe::optional_view<::Scene
             return std::nullopt;
     }
 }
-
 void RenderConfigurationImpl::setSoftShadowConfig(
     ::taihe::optional_view<::SceneTH::SoftShadowConfigType> softShadowConfig)
 {
@@ -102,9 +102,9 @@ void RenderConfigurationImpl::setSoftShadowConfig(
     }
     auto shadowConfigUnion = softShadowConfig.value();
     if (shadowConfigUnion.holds_pcf()) {
-        const SceneTH::PCFConfig &pcfConfig = shadowConfigUnion.get_pcf_ref();
+        const SceneTH::PCFConfig& pcfConfig = shadowConfigUnion.get_pcf_ref();
         int64_t implRawPtr = pcfConfig->getPCFConfigImpl();
-        PCFConfigImpl *implPtr = reinterpret_cast<PCFConfigImpl *>(implRawPtr);
+        PCFConfigImpl* implPtr = reinterpret_cast<PCFConfigImpl*>(implRawPtr);
         std::shared_ptr<PCFConfigETS> pcfConfigETS = implPtr->getPCFConfigETS();
 
         if (!pcfConfigETS) {

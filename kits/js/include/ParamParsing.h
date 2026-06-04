@@ -17,6 +17,7 @@
 #define PARAM_PARSING_H
 
 #include <napi_api.h>
+#include "export.h"
 
 #include <base/containers/string.h>
 
@@ -25,35 +26,34 @@
  * @param sceneNodeParameters a JS object that fulfills the SceneNodeParameters interface.
  * @return If the path member is set, return that. Otherwise return the name member.
  */
-BASE_NS::string ExtractNodePath(NapiApi::Object sceneNodeParameters);
+SCENE_ADDON_PUBLIC BASE_NS::string ExtractNodePath(NapiApi::Object sceneNodeParameters);
 
 /**
  * @brief Extract name from SceneNodeParameters args.
  * @param sceneNodeParameters a JS object that fulfills the SceneNodeParameters interface.
  * @return The name member.
  */
-BASE_NS::string ExtractName(NapiApi::Object sceneNodeParameters);
+SCENE_ADDON_PUBLIC BASE_NS::string ExtractName(NapiApi::Object sceneNodeParameters);
 
 /**
  * @brief Extract URI from a Resource arg.
  * @param resource a JS object that fulfills the Resource interface.
  * @return The URI or an empty string if no URI is found.
  */
-BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx);
+SCENE_ADDON_PUBLIC BASE_NS::string ExtractUri(NapiApi::FunctionContext<>& ctx);
 
 /**
  * @brief Extract URI from a Resource arg.
  * @param resource a JS object that fulfills the Resource interface.
  * @return The URI or an empty string if no URI is found.
  */
-BASE_NS::string ExtractUri(NapiApi::Object resource);
+SCENE_ADDON_PUBLIC BASE_NS::string ExtractUri(NapiApi::Object resource);
 
 /**
  * @brief Extract URI from a Resource arg.
  * @param resource a JS object that fulfills the Resource interface.
  * @return The URI or an empty string if no URI is found.
  */
-BASE_NS::string ExtractUri(BASE_NS::string uri);
-
+SCENE_ADDON_PUBLIC BASE_NS::string ExtractUri(BASE_NS::string uri);
 
 #endif

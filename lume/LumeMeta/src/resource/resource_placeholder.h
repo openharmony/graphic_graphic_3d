@@ -29,7 +29,8 @@ META_BEGIN_NAMESPACE()
 class ResourcePlaceholder : public IntroduceInterfaces<BaseObject, ISerializable, CORE_NS::ISetResourceId> {
     META_OBJECT(ResourcePlaceholder, ClassId::ResourcePlaceholder, IntroduceInterfaces)
 public:
-    explicit ResourcePlaceholder(CORE_NS::ResourceId id = {}) : rid_(BASE_NS::move(id)) {}
+    explicit ResourcePlaceholder(CORE_NS::ResourceId id = {}) : rid_(BASE_NS::move(id))
+    {}
 
     ReturnError Export(IExportContext& c) const override
     {
@@ -41,7 +42,11 @@ public:
         if (s & NamedValue("resourceId.name", rid_.name) & NamedValue("resourceId.group", rid_.group)) {
             if (auto ri = interface_cast<IResourceConsumer>(c.Context())) {
                 if (auto rman = ri->GetResourceManager()) {
-                    if (auto res = rman->GetResource(rid_, c.UserContext())) {
+                    if (auto res = rman->GetResource({rid_, c.UserContext()})) {
+                        return c.SubstituteThis(interface_pointer_cast<IObject>(res));
+                    }
+                    // hack; try without context if nothing found with context first
+                    if (auto res = rman->GetResource(CORE_NS::ResourceIdContext{rid_})) {
                         return c.SubstituteThis(interface_pointer_cast<IObject>(res));
                     }
                 } else {
@@ -49,12 +54,12 @@ public:
                 }
             }
         }
-        CORE_LOG_W("Failed to import resource");
+        CORE_LOG_W("Failed to import resource: %s", rid_.ToString().c_str());
         return GenericError::FAIL;
     }
-    void SetResourceId(CORE_NS::ResourceId id) override
+    void SetResourceId(CORE_NS::ResourceIdContext id) override
     {
-        rid_ = BASE_NS::move(id);
+        rid_ = BASE_NS::move(id.id);
     }
 
 private:

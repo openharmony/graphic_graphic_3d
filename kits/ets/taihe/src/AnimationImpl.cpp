@@ -44,37 +44,21 @@ void AnimationImpl::destroy()
 
 bool AnimationImpl::getEnabled()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in getEnabled");
-        return false;
-    }
     return animationETS_->GetEnabled();
 }
 
 void AnimationImpl::setEnabled(bool enabled)
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in setEnabled");
-        return;
-    }
     animationETS_->SetEnabled(enabled);
 }
 
 ::taihe::optional<double> AnimationImpl::getSpeed()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in getSpeed");
-        return std::nullopt;
-    }
     return taihe::optional<double>(std::in_place, animationETS_->GetSpeed());
 }
 
 void AnimationImpl::setSpeed(::taihe::optional_view<double> speed)
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in setSpeed");
-        return;
-    }
     if (speed.has_value()) {
         animationETS_->SetSpeed(speed.value());
     } else {
@@ -84,37 +68,21 @@ void AnimationImpl::setSpeed(::taihe::optional_view<double> speed)
 
 double AnimationImpl::getDuration()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in getDuration");
-        return 0.0;
-    }
     return static_cast<double>(animationETS_->GetDuration());
 }
 
 bool AnimationImpl::getRunning()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in getRunning");
-        return false;
-    }
     return animationETS_->GetRunning();
 }
 
 double AnimationImpl::getProgress()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in getProgress");
-        return 0.0;
-    }
     return static_cast<double>(animationETS_->GetProgress());
 }
 
 void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::CallbackUndefinedType const &)> callback)
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in onStarted");
-        return;
-    }
     animationETS_->OnStarted(
         [callback = ::taihe::callback<void(SceneResources::CallbackUndefinedType const &)>(callback)]() {
             if (callback.is_error()) {
@@ -128,10 +96,6 @@ void AnimationImpl::onStarted(::taihe::callback_view<void(SceneResources::Callba
 
 void AnimationImpl::onFinishedInner(::taihe::callback_view<void()> callback)
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in onFinishedInner");
-        return;
-    }
     animationETS_->OnFinished([callback = ::taihe::callback<void()>(callback)]() {
         if (callback.is_error()) {
             WIDGET_LOGE("Animation onFinished callback error");
@@ -143,55 +107,31 @@ void AnimationImpl::onFinishedInner(::taihe::callback_view<void()> callback)
 
 void AnimationImpl::pause()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in pause");
-        return;
-    }
     animationETS_->Pause();
 }
 
 void AnimationImpl::restart()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in restart");
-        return;
-    }
     animationETS_->Restart();
 }
 
 void AnimationImpl::seek(double position)
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in seek");
-        return;
-    }
     animationETS_->Seek(static_cast<float>(position));
 }
 
 void AnimationImpl::start()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in start");
-        return;
-    }
     animationETS_->Start();
 }
 
 void AnimationImpl::stop()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in stop");
-        return;
-    }
     animationETS_->Stop();
 }
 
 void AnimationImpl::finish()
 {
-    if (!animationETS_) {
-        WIDGET_LOGE("Animation internal is null in finish");
-        return;
-    }
     animationETS_->Finish();
 }
 
@@ -209,33 +149,23 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
 {
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr, &TrueRootObject::TYPE_TAG) ||
-        nativePtr == nullptr) {
-        WIDGET_LOGE("animationTransferStaticImpl failed during arkts_esvalue_unwrap.");
-        return ::taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(nullptr);
+    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+        TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during arkts_esvalue_unwrap.");
     }
 
-    auto animationJS =
-        static_cast<AnimationJS *>(static_cast<TrueRootObject *>(nativePtr)->GetInstanceImpl(AnimationJS::ID));
-    if (!animationJS) {
-        WIDGET_LOGE("animationTransferStaticImpl failed during GetInstanceImpl.");
-        return ::taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(nullptr);
-    }
-    META_NS::IAnimation::Ptr anim = animationJS->GetNativeObject<META_NS::IAnimation>();
+    AnimationJS *tro = reinterpret_cast<AnimationJS *>(nativePtr);
+    META_NS::IAnimation::Ptr anim = tro->GetNativeObject<META_NS::IAnimation>();
     if (anim == nullptr) {
-        WIDGET_LOGE("animationTransferStaticImpl failed during GetNativeObject.");
-        return ::taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(nullptr);
+        TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during GetNativeObject.");
     }
 
-    NapiApi::Object sceneJs = animationJS->GetSceneWeakRef().GetNapiObject();
+    NapiApi::Object sceneJs = tro->GetSceneWeakRef().GetNapiObject();
     if (!sceneJs) {
-        WIDGET_LOGE("animationTransferStaticImpl failed during GetSceneWeakRef.");
-        return ::taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(nullptr);
+        TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during GetSceneWeakRef.");
     }
     SCENE_NS::IScene::Ptr scene = sceneJs.GetNative<SCENE_NS::IScene>();
     if (!scene) {
-        WIDGET_LOGE("animationTransferStaticImpl Invalid scene.");
-        return ::taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(nullptr);
+        TH_THROW(std::runtime_error, "animationTransferStaticImpl Invalid scene.");
     }
 
     return taihe::make_holder<AnimationImpl, ::SceneResources::Animation>(std::make_shared<AnimationETS>(anim, scene));

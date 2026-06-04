@@ -89,9 +89,9 @@ UNIT_TEST_F(API_ScenePluginNewNodeTypeTest, Test, testing::ext::TestSize.Level1)
     nn->Prop()->SetValue(2);
     EXPECT_EQ(nn->Prop()->GetValue(), 2);
 
-    nn->AnotherScale()->SetValue({ 1, 2, 3 });
+    nn->AnotherScale()->SetValue({1, 2, 3});
     UpdateScene();
-    EXPECT_EQ(node->Scale()->GetValue(), (BASE_NS::Math::Vec3 { 1, 2, 3 }));
+    EXPECT_EQ(node->Scale()->GetValue(), (BASE_NS::Math::Vec3{1, 2, 3}));
     EXPECT_EQ(node->Scale()->GetValue(), nn->AnotherScale()->GetValue());
 }
 
@@ -105,6 +105,6 @@ UNIT_TEST_F(API_ScenePluginNewNodeTypeTest, NewNodeTypeMetadata, testing::ext::T
     TestNodeMetadata(GetSceneManager(), ClassId::NewNodeType);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

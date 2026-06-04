@@ -28,8 +28,14 @@ void NodeJS::Init(napi_env env, napi_value exports)
     NodeImpl::GetPropertyDescs(node_props);
 
     napi_value func;
-    auto status = napi_define_class(env, "Node", NAPI_AUTO_LENGTH, BaseObject::ctor<NodeJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "Node",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<NodeJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -76,7 +82,7 @@ NodeJS::NodeJS(napi_env e, napi_callback_info i) : BaseObject(e, i), NodeImpl(No
         return;
     }
 
-    auto sceneNodeParameters = NapiApi::Object { fromJs.Arg<1>() };
+    auto sceneNodeParameters = NapiApi::Object{fromJs.Arg<1>()};
     if (const auto name = ExtractName(sceneNodeParameters); !name.empty()) {
         fromJs.This().Set("name", name);
     }
@@ -97,18 +103,18 @@ void* NodeJS::GetInstanceImpl(uint32_t id)
     return BaseObject::GetInstanceImpl(id);
 }
 
-void NodeJS::DisposeNative(void* sc)
+void NodeJS::DisposeNative()
 {
     if (!disposed_) {
         LOG_V("NodeJS::DisposeNative");
         disposed_ = true;
         DisposeBridge(this);
         if (auto node = GetNativeObject<META_NS::IObject>()) {
-            DetachJsObj(node,"_JSW");
+            DetachJsObj(node, "_JSW");
         }
 
-        if (auto* sceneJS = static_cast<SceneJS*>(sc)) {
-            sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+        if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+            sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         CleanupNode(this, IsAttached());
@@ -118,6 +124,6 @@ void NodeJS::DisposeNative(void* sc)
 void NodeJS::Finalize(napi_env env)
 {
     FinalizeBridge(this);
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
 }

@@ -65,7 +65,7 @@ public:
         return onUnregistered_;
     }
 
-public: // IClassRegistry
+public:  // IClassRegistry
     BASE_NS::vector<IClassInfo::ConstPtr> GetAllTypes(
         const BASE_NS::vector<BASE_NS::Uid>& interfaceUids, bool strict, bool excludeDeprecated) const override;
 
@@ -78,4 +78,4 @@ private:
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_CLASS_REGISTRY_H
+#endif  // META_SRC_CLASS_REGISTRY_H

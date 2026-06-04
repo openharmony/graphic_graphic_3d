@@ -43,7 +43,9 @@ static inline Quat FromEulerRad(const Vec3& euler)
     const float cr = Math::cos(roll * 0.5f);
     const float sr = Math::sin(roll * 0.5f);
 
-    return Quat(cy * cp * sr - sy * sp * cr, sy * cp * sr + cy * sp * cr, sy * cp * cr - cy * sp * sr,
+    return Quat(cy * cp * sr - sy * sp * cr,
+        sy * cp * sr + cy * sp * cr,
+        sy * cp * cr - cy * sp * sr,
         cy * cp * cr + sy * sp * sr);
 }
 
@@ -111,30 +113,48 @@ static inline Quat LookRotation(Vec3 forward, Vec3 up)
     const float m20 = forward.x;
     const float m21 = forward.y;
     const float m22 = forward.z;
-
-    // discard values less than epsilon
-    const auto discardEpsilon = [](const float value) { return value < Math::EPSILON ? 0.f : value; };
-
-    // based on https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
-    // Because quaternions cannot represent a reflection component, the matrix must be special orthogonal. For a special
-    // orthogonal matrix, 1 + trace is always positive. The case switch is not needed, just do sqrt() on the 4 trace
-    // variants and you are done:
-    const float w = Math::sqrt(discardEpsilon(1.f + m00 + m11 + m22)) * 0.5f;
-    float x = Math::sqrt(discardEpsilon(1.f + m00 - m11 - m22)) * 0.5f;
-    float y = Math::sqrt(discardEpsilon(1.f - m00 + m11 - m22)) * 0.5f;
-    float z = Math::sqrt(discardEpsilon(1.f - m00 - m11 + m22)) * 0.5f;
-
-    // Recover signs
-    x = std::copysign(x, m12 - m21);
-    y = std::copysign(y, m20 - m02);
-    z = std::copysign(z, m01 - m10);
-
-    return { x, y, z, w };
+    Quat q;
+    float num;
+    const float t = (m00 + m11) + m22;
+    if (t > 0.0f) {
+        num = t + 1.0f;
+        q.x = (m12 - m21);
+        q.y = (m20 - m02);
+        q.z = (m01 - m10);
+        q.w = num;
+    } else if ((m00 >= m11) && (m00 >= m22)) {
+        num = ((1.0f + m00) - m11) - m22;
+        q.x = num;
+        q.y = (m01 + m10);
+        q.z = (m02 + m20);
+        q.w = (m12 - m21);
+    } else if (m11 > m22) {
+        num = ((1.0f + m11) - m00) - m22;
+        q.x = (m10 + m01);
+        q.y = num;
+        q.z = (m21 + m12);
+        q.w = (m20 - m02);
+    } else {
+        num = ((1.0f + m22) - m00) - m11;
+        q.x = (m20 + m02);
+        q.y = (m21 + m12);
+        q.z = num;
+        q.w = (m01 - m10);
+    }
+    num = (0.5f / Math::sqrt(num));
+    q.x *= num;
+    q.y *= num;
+    q.z *= num;
+    q.w *= num;
+    return q;
 }
 
 /** Normalize single (degree) angle */
-static inline constexpr float NormalizeAngle(float angle)
+static inline float NormalizeAngle(float angle)
 {
+    if (!std::isfinite(angle)) {
+        return 0.0f;
+    }
     while (angle > 360.0f) {
         angle -= 360.0f;
     }
@@ -145,35 +165,11 @@ static inline constexpr float NormalizeAngle(float angle)
 }
 
 /** Normalize vector3 angles (degree) */
-static inline constexpr Vec3 NormalizeAngles(Vec3 angles)
+static inline Vec3 NormalizeAngles(Vec3 angles)
 {
     angles.x = NormalizeAngle(angles.x);
     angles.y = NormalizeAngle(angles.y);
     angles.z = NormalizeAngle(angles.z);
-    return angles;
-}
-
-/** Normalize single (radian) angle to [-π, π] */
-static inline constexpr float NormalizeAngleRad(float angle)
-{
-    if (!std::isfinite(angle)) {
-        return 0.0f;
-    }
-    while (angle > Math::PI) {
-        angle -= 2.0f * Math::PI;
-    }
-    while (angle < -Math::PI) {
-        angle += 2.0f * Math::PI;
-    }
-    return angle;
-}
-
-/** Normalize vector3 angles (radians) to [-π, π] */
-static inline constexpr Vec3 NormalizeAnglesRad(Vec3 angles)
-{
-    angles.x = NormalizeAngleRad(angles.x);
-    angles.y = NormalizeAngleRad(angles.y);
-    angles.z = NormalizeAngleRad(angles.z);
     return angles;
 }
 
@@ -270,19 +266,25 @@ inline constexpr Quat Slerp(Quat const& x, Quat const& y, float a)
     // A Fast and Accurate Estimate for SLERP
     // sin(a * angle) / sin(angle) and sin((1-a) * angle) / sin(angle) are approximated with Chebyshev Polynomials
     constexpr float mu = 1.85298109240830f;
-    constexpr float u[8] = // 1 / [i(2i + 1)] for i >= 1
-        { 1.f / (1 * 3), 1.f / (2 * 5), 1.f / (3 * 7), 1.f / (4 * 9), 1.f / (5 * 11), 1.f / (6 * 13), 1.f / (7 * 15),
-            mu / (8 * 17) };
-    constexpr float v[8] = // i / (2i + 1) for i >= 1
-        { 1.f / 3, 2.f / 5, 3.f / 7, 4.f / 9, 5.f / 11, 6.f / 13, 7.f / 15, mu * 8.f / 17 };
+    constexpr float u[8] =  // 1 / [i(2i + 1)] for i >= 1
+        {1.f / (1 * 3),
+            1.f / (2 * 5),
+            1.f / (3 * 7),
+            1.f / (4 * 9),
+            1.f / (5 * 11),
+            1.f / (6 * 13),
+            1.f / (7 * 15),
+            mu / (8 * 17)};
+    constexpr float v[8] =  // i / (2i + 1) for i >= 1
+        {1.f / 3, 2.f / 5, 3.f / 7, 4.f / 9, 5.f / 11, 6.f / 13, 7.f / 15, mu * 8.f / 17};
 
-    const float xm1 = cosTheta - 1; // in [-1, 0]
+    const float xm1 = cosTheta - 1;  // in [-1, 0]
     const float d = 1 - a;
     const float sqrA = a * a;
     const float sqrD = d * d;
     // bA[] stores a-related values, bD[] stores (1 - a)-related values
-    float bA[8] {};
-    float bD[8] {};
+    float bA[8]{};
+    float bD[8]{};
     for (int i = 7; i >= 0; --i) {
         bA[i] = (u[i] * sqrA - v[i]) * xm1;
         bD[i] = (u[i] * sqrD - v[i]) * xm1;
@@ -296,7 +298,7 @@ inline constexpr Quat Slerp(Quat const& x, Quat const& y, float a)
     return (coeff2 * x) + (coeff1 * z);
 }
 /** @} */
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_QUATERNION_UTIL_H
+#endif  // API_BASE_MATH_QUATERNION_UTIL_H

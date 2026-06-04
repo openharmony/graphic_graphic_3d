@@ -37,11 +37,18 @@
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
-template<class RenderNodeType>
+template <class RenderNodeType>
 RenderNodeTypeInfo FillRenderNodeType()
 {
-    return { { RenderNodeTypeInfo::UID }, RenderNodeType::UID, RenderNodeType::TYPE_NAME, RenderNodeType::Create,
-        RenderNodeType::Destroy, RenderNodeType::BACKEND_FLAGS, RenderNodeType::CLASS_TYPE, {}, {} };
+    return {{RenderNodeTypeInfo::UID},
+        RenderNodeType::UID,
+        RenderNodeType::TYPE_NAME,
+        RenderNodeType::Create,
+        RenderNodeType::Destroy,
+        RenderNodeType::BACKEND_FLAGS,
+        RenderNodeType::CLASS_TYPE,
+        {},
+        {}};
 }
 
 void RegisterCoreRenderNodes(RenderNodeManager& renderNodeManager)

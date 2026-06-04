@@ -41,7 +41,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreRenderPostProcesses : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "ae33858f-31f9-4c8b-9386-5d542a9ee018" };
+    static constexpr BASE_NS::Uid UID{"ae33858f-31f9-4c8b-9386-5d542a9ee018"};
 
     struct PostProcessData {
         /** Unique id for the post process effect
@@ -49,7 +49,7 @@ public:
          * There can multiple post processes with the same post process with different id
          * There can be multiple post processes with the same post process with the same id
          */
-        uint64_t id { ~0ULL };
+        uint64_t id{~0ULL};
         /** Post process effect interface pointer
          */
         IRenderPostProcess::Ptr postProcess;
@@ -79,4 +79,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_RENDER_POST_PROCESSES_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_RENDER_POST_PROCESSES_H

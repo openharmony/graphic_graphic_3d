@@ -15,20 +15,22 @@
 
 #ifndef PROPERTY_PROXY_H
 #define PROPERTY_PROXY_H
-#include <meta/interface/intf_event.h>
-#include <meta/interface/intf_task_queue.h>
-#include <meta/interface/property/property.h>
-#include <meta/interface/property/property_events.h>
-#include <meta/api/util.h>
 #include <napi_api.h>
-
 #include <scene/interface/intf_image.h>
 #include <scene/interface/intf_shader.h>
+
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
 #include <base/containers/vector.h>
 
-class PropertyProxy {
+#include <meta/api/util.h>
+#include <meta/interface/intf_event.h>
+#include <meta/interface/intf_task_queue.h>
+#include <meta/interface/property/property.h>
+#include <meta/interface/property/property_events.h>
+#include "export.h"
+
+class SCENE_ADDON_PUBLIC PropertyProxy {
 public:
     explicit PropertyProxy(META_NS::IProperty::Ptr prop);
     virtual ~PropertyProxy();
@@ -40,24 +42,28 @@ public:
 
     virtual void SetExtra(const BASE_NS::shared_ptr<CORE_NS::IInterface>);
     virtual const BASE_NS::shared_ptr<CORE_NS::IInterface> GetExtra() const noexcept;
+
 protected:
     /// Returns a Property<Type> instance from underlying property
-    template<typename Type>
+    template <typename Type>
     META_NS::Property<Type> GetProperty() const
     {
         return META_NS::Property<Type>(prop_.lock());
     }
     /// Returns the underlying property ptr
     META_NS::IProperty::Ptr GetPropertyPtr() const noexcept;
+
 private:
     BASE_NS::weak_ptr<CORE_NS::IInterface> extra_;
     META_NS::IProperty::WeakPtr prop_;
 };
 
-class ObjectPropertyProxy : public PropertyProxy {
+class SCENE_ADDON_PUBLIC ObjectPropertyProxy : public PropertyProxy {
 public:
     explicit ObjectPropertyProxy(META_NS::IProperty::Ptr prop);
     ~ObjectPropertyProxy();
+    ObjectPropertyProxy(ObjectPropertyProxy const&) = delete;
+    ObjectPropertyProxy const& operator=(ObjectPropertyProxy const&) = delete;
     void Reset() override;
     // copy data from jsobject
     void SetValue(NapiApi::FunctionContext<>& info) override;
@@ -73,7 +79,7 @@ public:
     void Destroy();
     NapiApi::StrongRef obj_;
 
-    class MemberProxy {
+    class SCENE_ADDON_PUBLIC MemberProxy {
     public:
         MemberProxy(ObjectPropertyProxy* p, BASE_NS::string m);
         ~MemberProxy();
@@ -89,7 +95,7 @@ public:
     BASE_NS::vector<BASE_NS::unique_ptr<MemberProxy>> accessors_;
 };
 
-class EntityProxy : public PropertyProxy {
+class SCENE_ADDON_PUBLIC EntityProxy : public PropertyProxy {
 public:
     EntityProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<CORE_NS::Entity> prop);
     ~EntityProxy() override;
@@ -98,14 +104,14 @@ public:
 protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
-    void SetValue(const CORE_NS::Entity v);
+    void SetNativeValue(const CORE_NS::Entity v);
     NapiApi::StrongRef obj_;
     NapiApi::WeakObjectRef scene_;
     CORE_NS::EntityReference entityReference_;
     NapiApi::StrongRef shader_;
 };
 
-class ImageProxy : public PropertyProxy {
+class SCENE_ADDON_PUBLIC ImageProxy : public PropertyProxy {
 public:
     ImageProxy(NapiApi::Object scn, NapiApi::Object obj, META_NS::Property<SCENE_NS::IImage::Ptr> prop);
     ~ImageProxy() override;
@@ -114,15 +120,16 @@ public:
 protected:
     napi_value Value() override;
     void SetValue(NapiApi::FunctionContext<>& info) override;
-    void SetValue(const SCENE_NS::IImage::Ptr& v);
+    void SetNativeValue(const SCENE_NS::IImage::Ptr& v);
     NapiApi::StrongRef obj_;
     NapiApi::WeakObjectRef scene_;
 };
 
-template<typename Type>
-class TypeProxy : public PropertyProxy {
+template <typename Type>
+class SCENE_ADDON_PUBLIC TypeProxy : public PropertyProxy {
 public:
-    TypeProxy(NapiApi::Object obj, META_NS::Property<Type> prop) : PropertyProxy(prop), obj_(obj) {}
+    TypeProxy(NapiApi::Object obj, META_NS::Property<Type> prop) : PropertyProxy(prop), obj_(obj)
+    {}
     ~TypeProxy() override
     {
         Reset();
@@ -151,13 +158,15 @@ protected:
     }
     void SetValue(NapiApi::FunctionContext<>& info) override
     {
-        NapiApi::FunctionContext<Type> data { info };
+        NapiApi::FunctionContext<Type> data{info};
         if (data) {
             Type value = data.template Arg<0>();
             META_NS::SetValue(GetProperty<Type>(), value);
+        } else {
+            GetProperty<Type>()->Reset();
         }
     }
-    void SetValue(const Type& v)
+    void SetNativeValue(const Type& v)
     {
         META_NS::SetValue(GetProperty<Type>(), v);
     }
@@ -166,11 +175,9 @@ private:
     NapiApi::StrongRef obj_;
 };
 
-
-BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
-
+SCENE_ADDON_PUBLIC BASE_NS::shared_ptr<PropertyProxy> PropertyToProxy(
     NapiApi::Object scene, NapiApi::Object obj, const META_NS::IProperty::Ptr& t);
 
-napi_property_descriptor CreateProxyDesc(const char* name, BASE_NS::shared_ptr<PropertyProxy> proxy);
+SCENE_ADDON_PUBLIC napi_property_descriptor CreateProxyDesc(const char* name, BASE_NS::shared_ptr<PropertyProxy> proxy);
 
 #endif

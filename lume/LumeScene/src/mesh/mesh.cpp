@@ -79,6 +79,13 @@ IEcsObject::Ptr Mesh::GetMeshEcsObject() const
 
 bool Mesh::SetEcsObject(const IEcsObject::Ptr& obj)
 {
+    // Re-wiring to a different entity (resource-manager-driven flow:
+    // SceneResourceTypeBase first creates an empty Mesh, then MeshTemplate::
+    // ApplyOptions swaps in the entity produced by IMeshBuilder) invalidates
+    // any prior IInternalMesh wrapper, which was bound to the previous entity.
+    if (mesh_ && obj != GetEcsObject()) {
+        SetInternalMesh({});
+    }
     if (Super::SetEcsObject(obj)) {
         if (auto att = GetSelf<META_NS::IAttach>()) {
             if (auto attc = att->GetAttachmentContainer(false)) {

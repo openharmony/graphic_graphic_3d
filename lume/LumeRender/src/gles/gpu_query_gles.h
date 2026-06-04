@@ -40,11 +40,11 @@ public:
     const GpuQueryPlatformData& GetPlatformData() const override;
 
 private:
-    uint32_t queryIndex_ { 0 };
+    uint32_t queryIndex_{0};
     BASE_NS::vector<GpuQueryPlatformDataGLES> plats_;
     GpuQueryDesc desc_;
 };
 BASE_NS::unique_ptr<GpuQuery> CreateGpuQueryGLES(Device& device, const GpuQueryDesc& desc);
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_QUERY_GLES_H
+#endif  // VULKAN_GPU_QUERY_GLES_H

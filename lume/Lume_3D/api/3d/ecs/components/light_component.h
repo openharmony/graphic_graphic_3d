@@ -28,82 +28,82 @@ CORE3D_BEGIN_NAMESPACE()
 
 BEGIN_COMPONENT(ILightComponentManager, LightComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum class Type : uint8_t { DIRECTIONAL = 0, POINT = 1, SPOT = 2, RECT = 3 };
+enum class Type : uint8_t { DIRECTIONAL = 0, POINT = 1, SPOT = 2, RECT = 3 };
 
-    /** Rect area light */
-    struct RectLight {
-        /** Width of the light */
-        float width { 1.0f };
-        /** Height of the light */
-        float height { 1.0f };
-        /** Is the light two-sided */
-        bool twoSided { false };
-    };
+/** Rect area light */
+struct RectLight {
+    /** Width of the light */
+    float width{1.0f};
+    /** Height of the light */
+    float height{1.0f};
+    /** Is the light two-sided */
+    bool twoSided{false};
+};
 #endif
 
-    /** Type of the light.
-     */
-    DEFINE_PROPERTY(Type, type, "Type", 0, VALUE(Type::DIRECTIONAL))
+/** Type of the light.
+ */
+DEFINE_PROPERTY(Type, type, "Type", 0, VALUE(Type::DIRECTIONAL))
 
-    /** Diffuse color of the light. Values from 0.0 to 1.0
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, color, "Color", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f))
+/** Diffuse color of the light. Values from 0.0 to 1.0
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, color, "Color", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f))
 
-    /** Intensity of the light.
-     */
-    DEFINE_PROPERTY(float, intensity, "Intensity", 0, VALUE(1.0f))
+/** Intensity of the light.
+ */
+DEFINE_PROPERTY(float, intensity, "Intensity", 0, VALUE(1.0f))
 
-    /** Range, distance cutoff for points and spots.
-     * Safe range is calculated automatically if the value is default (0.0)
-     * Do not modify if one wants the default bahaviour
-     */
-    DEFINE_PROPERTY(float, range, "Range", 0, VALUE(0.0f))
+/** Range, distance cutoff for points and spots.
+ * Safe range is calculated automatically if the value is default (0.0)
+ * Do not modify if one wants the default bahaviour
+ */
+DEFINE_PROPERTY(float, range, "Range", 0, VALUE(0.0f))
 
-    /** Near plane distance from the light source.
-     */
-    DEFINE_PROPERTY(float, nearPlane, "Shadow Near Plane", 0, VALUE(0.5f))
+/** Near plane distance from the light source.
+ */
+DEFINE_PROPERTY(float, nearPlane, "Shadow Near Plane", 0, VALUE(0.5f))
 
-    /** Spotlight inner angle.
-     */
-    DEFINE_PROPERTY(float, spotInnerAngle, "Spot Cone Inner Angle", 0, VALUE(0.0f))
+/** Spotlight inner angle.
+ */
+DEFINE_PROPERTY(float, spotInnerAngle, "Spot Cone Inner Angle", 0, VALUE(0.0f))
 
-    /** Spotlight outer angle.
-     */
-    DEFINE_PROPERTY(float, spotOuterAngle, "Spot Cone Outer Angle", 0, VALUE(0.78539816339f))
+/** Spotlight outer angle.
+ */
+DEFINE_PROPERTY(float, spotOuterAngle, "Spot Cone Outer Angle", 0, VALUE(0.78539816339f))
 
-    /** Shadow strength.
-     */
-    DEFINE_PROPERTY(float, shadowStrength, "Shadow Strength", 0, VALUE(1.0f))
+/** Shadow strength.
+ */
+DEFINE_PROPERTY(float, shadowStrength, "Shadow Strength", 0, VALUE(1.0f))
 
-    /** Shadow depth bias.
-     */
-    DEFINE_PROPERTY(float, shadowDepthBias, "Shadow Depth Bias", 0, VALUE(0.005f))
+/** Shadow depth bias.
+ */
+DEFINE_PROPERTY(float, shadowDepthBias, "Shadow Depth Bias", 0, VALUE(0.005f))
 
-    /** Shadow normal bias.
-     */
-    DEFINE_PROPERTY(float, shadowNormalBias, "Shadow Normal Bias", 0, VALUE(0.025f))
+/** Shadow normal bias.
+ */
+DEFINE_PROPERTY(float, shadowNormalBias, "Shadow Normal Bias", 0, VALUE(0.025f))
 
-    /** Shadow enabled.
-     */
-    DEFINE_PROPERTY(bool, shadowEnabled, "Shadow Enabled", 0, VALUE(false))
+/** Shadow enabled.
+ */
+DEFINE_PROPERTY(bool, shadowEnabled, "Shadow Enabled", 0, VALUE(false))
 
-    /** Additional factor for e.g. shader customization.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, additionalFactor, "Additional Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
+/** Additional factor for e.g. shader customization.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, additionalFactor, "Additional Factor", 0, ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
 
-    /** Defines a layer mask which affects lighting of layer objects. Default is all layer mask, and then the
-     * light affects objects on all layers. */
-    DEFINE_BITFIELD_PROPERTY(uint64_t, lightLayerMask, "Light Layer Mask", PropertyFlags::IS_BITFIELD,
-        VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
+/** Defines a layer mask which affects lighting of layer objects. Default is all layer mask, and then the
+ * light affects objects on all layers. */
+DEFINE_BITFIELD_PROPERTY(uint64_t, lightLayerMask, "Light Layer Mask", PropertyFlags::IS_BITFIELD,
+    VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
 
-    /** Defines a layer mask which affects shadow camera's rendering. Default is all layer mask, and then the
-     * shadow camera renders objects from all layers. */
-    DEFINE_BITFIELD_PROPERTY(uint64_t, shadowLayerMask, "Shadow Layer Mask", PropertyFlags::IS_BITFIELD,
-        VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
+/** Defines a layer mask which affects shadow camera's rendering. Default is all layer mask, and then the
+ * shadow camera renders objects from all layers. */
+DEFINE_BITFIELD_PROPERTY(uint64_t, shadowLayerMask, "Shadow Layer Mask", PropertyFlags::IS_BITFIELD,
+    VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
 
-    /** Rect area light parameters
-     */
-    DEFINE_PROPERTY(RectLight, rectLight, "Area light parameters", 0, )
+/** Rect area light parameters
+ */
+DEFINE_PROPERTY(RectLight, rectLight, "Area light parameters", 0, )
 
 END_COMPONENT(ILightComponentManager, LightComponent, "8047c9cd-4e83-45b3-91d9-dd32d643f0c8")
 #if !defined(IMPLEMENT_MANAGER)

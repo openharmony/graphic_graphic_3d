@@ -23,8 +23,10 @@
 #include "UnlitShadowAlphaImpl.h"
 
 namespace OHOS::Render3D::KITETS {
-class PBRMaterialImpl : public MetallicRoughnessMaterialImpl, public ShaderMaterialImpl, public UnlitMaterialImpl,
-    public UnlitShadowAlphaImpl {
+class PBRMaterialImpl : public MetallicRoughnessMaterialImpl,
+                        public ShaderMaterialImpl,
+                        public UnlitMaterialImpl,
+                        public UnlitShadowAlphaImpl {
 public:
     PBRMaterialImpl(const std::shared_ptr<MaterialETS> mat);
     virtual ~PBRMaterialImpl();

@@ -102,14 +102,14 @@ public:
         GetObjectRegistry().DisposeObject(instanceId_);
     }
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr GetSelf() const
     {
         return interface_pointer_cast<Interface>(GetSelf());
     }
 
     // this allows to use the same macros for base objects too
-    inline static const nullptr_t STATIC_METADATA {};
+    inline static const nullptr_t STATIC_METADATA{};
     static const StaticObjectMetadata* StaticMetadata()
     {
         return nullptr;
@@ -122,7 +122,7 @@ public:
 private:
     InstanceId instanceId_;
     IObjectInstance::WeakPtr me_;
-    ObjectFlagBitsValue flags_ { ObjectFlagBits::DEFAULT_FLAGS };
+    ObjectFlagBitsValue flags_{ObjectFlagBits::DEFAULT_FLAGS};
 };
 
 META_END_NAMESPACE()

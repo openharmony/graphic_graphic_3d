@@ -20,7 +20,6 @@ void main(void)
     } else {
         outColor = pbrBasic();
     }
-
     if (CORE_POST_PROCESS_FLAGS > 0) {
         vec2 fragUv;
         CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);

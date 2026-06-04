@@ -39,6 +39,6 @@ namespace LoggerUtils {
 BASE_NS::string_view GetFilename(BASE_NS::string_view path);
 /* Print time stamp to stream */
 void PrintTimeStamp(std::ostream& outputStream);
-} // namespace LoggerUtils
+}  // namespace LoggerUtils
 
-#endif // CORE_LOG_LOGGER_OUTPUT_H
+#endif  // CORE_LOG_LOGGER_OUTPUT_H

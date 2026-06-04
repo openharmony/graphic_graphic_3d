@@ -111,7 +111,7 @@ bool TrackAnimationState::ValidateValues()
     }
     if (!trackStart_) {
         if (auto size = keyframeArray_->GetSize()) {
-            if (trackStart_ = keyframeArray_->Clone({ CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM }); trackStart_) {
+            if (trackStart_ = keyframeArray_->Clone({CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM}); trackStart_) {
                 trackEnd_ = trackStart_->Clone(false);
                 keyframeArray_->GetAnyAt(0, *trackStart_);
                 keyframeArray_->GetAnyAt(size - 1, *trackEnd_);
@@ -168,7 +168,7 @@ BASE_NS::pair<uint32_t, float> TrackAnimationState::UpdateIndex(float progress)
 {
     uint32_t index = static_cast<uint32_t>(currentIndex_);
     if (IsInCurrentRange(progress)) {
-        return { index, GetCurrentTrackProgress(progress) };
+        return {index, GetCurrentTrackProgress(progress)};
     }
 
     const auto size = keyframeArray_ ? keyframeArray_->GetSize() : 0;
@@ -201,7 +201,7 @@ BASE_NS::pair<uint32_t, float> TrackAnimationState::UpdateIndex(float progress)
             }
         }
     }
-    return { index, GetCurrentTrackProgress(progress) };
+    return {index, GetCurrentTrackProgress(progress)};
 }
 
 void TrackAnimationState::SetPrePostFrameValues(float progress)
@@ -265,6 +265,6 @@ float TrackAnimationState::GetCurrentTrackProgress(float progress) const noexcep
     return 1.f / currentTrackRange * (rangeProgress - currentRangeStartTs_);
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

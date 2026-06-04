@@ -24,10 +24,12 @@
 
 #include <meta/interface/intf_object.h>
 
+#include "export.h"
+
 namespace NapiApi {
 class Object;
 struct JsFuncArgs;
-} // namespace NapiApi
+}  // namespace NapiApi
 
 // Which type of a pointer to use for storing a reference to a native object.
 enum class PtrType { WEAK, STRONG };
@@ -36,22 +38,31 @@ enum class PtrType { WEAK, STRONG };
  * @brief Provide access to a native IObject that backs a JS object. Optionally make the IObject reference strong so
  *        that the lifetime is controlled by JS. For example, scene is kept strongly and objects owned by scene weakly.
  */
-class TrueRootObject {
+class SCENE_ADDON_PUBLIC TrueRootObject {
 public:
     static constexpr uint32_t ID = 0xCAFED00D;
 
-    // UUID: 0fa71476-38a9-43eb-b1f0-fe2beaeee8fb
-    static constexpr napi_type_tag TYPE_TAG { 0x0FA7147638A943EBULL, 0xB1F0FE2BEAEEE8FBULL };
+    static constexpr napi_type_tag TYPE_TAG{0x0FA7147638A943EBULL, 0xB1F0FE2BEAEEE8FBULL};
 
     TrueRootObject() = delete;
     TrueRootObject(napi_env env, napi_callback_info info);
 
     virtual void* GetInstanceImpl(uint32_t id);
-    virtual void DisposeNative(void*) = 0;
+
+    /** @deprecated */
+    virtual void DisposeNative(void*)
+    {}
+    // implement compatibility to old method (for now)
+    // to be changed to pure virtual method once the references for old method
+    // have been updated
+    virtual void DisposeNative()
+    {
+        DisposeNative(nullptr);
+    }
 
     virtual bool IsStrong() const;
     virtual META_NS::IObject::Ptr GetNativeObject() const;
-    template<typename Type>
+    template <typename Type>
     auto GetNativeObject() const
     {
         return interface_pointer_cast<Type>(GetNativeObject());

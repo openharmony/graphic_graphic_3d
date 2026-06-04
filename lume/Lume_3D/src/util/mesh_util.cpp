@@ -66,32 +66,62 @@ constexpr Math::Vec2 PLANE_UV[6u] = {
     Math::Vec2(0.0f, 1.0f),
 };
 
-constexpr uint16_t PLANE_IND[] = { 0u, 1u, 2u, 3u, 4u, 5u };
+constexpr uint16_t PLANE_IND[] = {0u, 1u, 2u, 3u, 4u, 5u};
 
 constexpr Math::Vec3 CUBE_POS[8u] = {
-    Math::Vec3(-0.5f, -0.5f, -0.5f), //
-    Math::Vec3(0.5f, -0.5f, -0.5f),  //
-    Math::Vec3(0.5f, 0.5f, -0.5f),   //
-    Math::Vec3(-0.5f, 0.5f, -0.5f),  //
-    Math::Vec3(-0.5f, -0.5f, 0.5f),  //
-    Math::Vec3(0.5f, -0.5f, 0.5f),   //
-    Math::Vec3(0.5f, 0.5f, 0.5f),    //
-    Math::Vec3(-0.5f, 0.5f, 0.5f)    //
+    Math::Vec3(-0.5f, -0.5f, -0.5f),  //
+    Math::Vec3(0.5f, -0.5f, -0.5f),   //
+    Math::Vec3(0.5f, 0.5f, -0.5f),    //
+    Math::Vec3(-0.5f, 0.5f, -0.5f),   //
+    Math::Vec3(-0.5f, -0.5f, 0.5f),   //
+    Math::Vec3(0.5f, -0.5f, 0.5f),    //
+    Math::Vec3(0.5f, 0.5f, 0.5f),     //
+    Math::Vec3(-0.5f, 0.5f, 0.5f)     //
 };
 
-constexpr Math::Vec2 CUBE_UV[4u] = { Math::Vec2(1.0f, 1.0f), Math::Vec2(0.0f, 1.0f), Math::Vec2(0.0f, 0.0f),
-    Math::Vec2(1.0f, 0.0f) };
+constexpr Math::Vec2 CUBE_UV[4u] = {
+    Math::Vec2(1.0f, 1.0f), Math::Vec2(0.0f, 1.0f), Math::Vec2(0.0f, 0.0f), Math::Vec2(1.0f, 0.0f)};
 
 constexpr uint16_t CUBE_INDICES[6u * 6u] = {
-    0, 3, 1, 3, 2, 1, //
-    1, 2, 5, 2, 6, 5, //
-    5, 6, 4, 6, 7, 4, //
-    4, 7, 0, 7, 3, 0, //
-    3, 7, 2, 7, 6, 2, //
-    4, 0, 5, 0, 1, 5  //
+    0,
+    3,
+    1,
+    3,
+    2,
+    1,  //
+    1,
+    2,
+    5,
+    2,
+    6,
+    5,  //
+    5,
+    6,
+    4,
+    6,
+    7,
+    4,  //
+    4,
+    7,
+    0,
+    7,
+    3,
+    0,  //
+    3,
+    7,
+    2,
+    7,
+    6,
+    2,  //
+    4,
+    0,
+    5,
+    0,
+    1,
+    5  //
 };
 
-constexpr uint32_t CUBE_UV_INDICES[6u] = { 0, 3, 1, 3, 2, 1 };
+constexpr uint32_t CUBE_UV_INDICES[6u] = {0, 3, 1, 3, 2, 1};
 
 constexpr uint32_t CYLINDER_MIN_SEGMENTS = 3u;
 constexpr uint32_t SPHERE_MIN_RINGS = 2u;
@@ -106,13 +136,13 @@ constexpr uint32_t MESH_MAX_SECTORS = 4096u;
 
 constexpr float CYLINDER_CAP_UV_RADIUS = 0.24f;
 
-constexpr Math::Vec2 CYLINDER_CAP_UV_CENTER[2u] = { Math::Vec2(0.25f, 0.25f), Math::Vec2(0.75f, 0.25f) };
+constexpr Math::Vec2 CYLINDER_CAP_UV_CENTER[2u] = {Math::Vec2(0.25f, 0.25f), Math::Vec2(0.75f, 0.25f)};
 
-constexpr uint16_t CYLINDER_SIDE_INDICES[6u] = { 0, 1, 3, 0, 3, 2 };
+constexpr uint16_t CYLINDER_SIDE_INDICES[6u] = {0, 1, 3, 0, 3, 2};
 
 constexpr float TWO_PI = Math::PI * 2.0f;
 
-template<typename IndexType>
+template <typename IndexType>
 struct Geometry {
     vector<Math::Vec3>& vertices;
     vector<Math::Vec3>& normals;
@@ -133,7 +163,8 @@ bool ValidatePlaneMeshParameters(float width, float depth)
 
     PLUGIN_LOG_E("GeneratePlaneMesh failed: invalid parameters (width=%f, depth=%f). "
                  "Width and depth must be finite and > 0.",
-        width, depth);
+        width,
+        depth);
     return false;
 }
 
@@ -145,7 +176,9 @@ bool ValidateCubeMeshParameters(float width, float height, float depth)
 
     PLUGIN_LOG_E("GenerateCubeMesh failed: invalid parameters (width=%f, height=%f, depth=%f). "
                  "All dimensions must be finite and > 0.",
-        width, height, depth);
+        width,
+        height,
+        depth);
     return false;
 }
 
@@ -158,7 +191,13 @@ bool ValidateSphereMeshParameters(float radius, uint32_t rings, uint32_t sectors
 
     PLUGIN_LOG_E("GenerateSphereMesh failed: invalid parameters (radius=%f, rings=%u, sectors=%u). "
                  "Radius must be finite and > 0, rings in [%u, %u], sectors in [%u, %u].",
-        radius, rings, sectors, SPHERE_MIN_RINGS, MESH_MAX_SECTORS, SPHERE_MIN_SECTORS, MESH_MAX_SECTORS);
+        radius,
+        rings,
+        sectors,
+        SPHERE_MIN_RINGS,
+        MESH_MAX_SECTORS,
+        SPHERE_MIN_SECTORS,
+        MESH_MAX_SECTORS);
     return false;
 }
 
@@ -171,7 +210,11 @@ bool ValidateConeMeshParameters(float radius, float length, uint32_t sectors)
 
     PLUGIN_LOG_E("GenerateConeMesh failed: invalid parameters (radius=%f, length=%f, sectors=%u). "
                  "Radius and length must be finite and > 0, sectors in [%u, %u].",
-        radius, length, sectors, CONE_MIN_SECTORS, MESH_MAX_SECTORS);
+        radius,
+        length,
+        sectors,
+        CONE_MIN_SECTORS,
+        MESH_MAX_SECTORS);
     return false;
 }
 
@@ -186,8 +229,14 @@ bool ValidateTorusMeshParameters(float majorRadius, float minorRadius, uint32_t 
     PLUGIN_LOG_E("GenerateTorusMesh failed: invalid parameters "
                  "(majorRadius=%f, minorRadius=%f, majorSectors=%u, minorSectors=%u). "
                  "Radii must be finite and > 0, majorSectors in [%u, %u], minorSectors in [%u, %u].",
-        majorRadius, minorRadius, majorSectors, minorSectors, TORUS_MIN_MAJOR_SECTORS, MESH_MAX_SECTORS,
-        TORUS_MIN_MINOR_SECTORS, MESH_MAX_SECTORS);
+        majorRadius,
+        minorRadius,
+        majorSectors,
+        minorSectors,
+        TORUS_MIN_MAJOR_SECTORS,
+        MESH_MAX_SECTORS,
+        TORUS_MIN_MINOR_SECTORS,
+        MESH_MAX_SECTORS);
     return false;
 }
 
@@ -200,7 +249,11 @@ bool ValidateCylinderMeshParameters(float radius, float height, uint32_t segment
 
     PLUGIN_LOG_E("GenerateCylinderMesh failed: invalid parameters (radius=%f, height=%f, segmentCount=%u). "
                  "Radius and height must be finite and > 0, segmentCount in [%u, %u].",
-        radius, height, segmentCount, CYLINDER_MIN_SEGMENTS, MESH_MAX_SECTORS);
+        radius,
+        height,
+        segmentCount,
+        CYLINDER_MIN_SEGMENTS,
+        MESH_MAX_SECTORS);
     return false;
 }
 
@@ -410,7 +463,8 @@ void GenerateTorusGeometry(
     const size_t maxVertexCount = static_cast<size_t>(majorSectors) * static_cast<size_t>(minorSectors);
     if (maxVertexCount > SIZE_MAX / 6u || maxVertexCount > UINT32_MAX) {
         PLUGIN_LOG_E("GenerateTorusMesh failed: vertex count overflow (majorSectors=%u, minorSectors=%u).",
-            majorSectors, minorSectors);
+            majorSectors,
+            minorSectors);
         return;
     }
     const size_t maxIndexCount = maxVertexCount * 6u;
@@ -426,7 +480,7 @@ void GenerateTorusGeometry(
     uint32_t currentVertexIndex = 0;
     for (uint32_t ring = 0; ring < majorSectors; ring++) {
         const float majorRadians = static_cast<float>(ring) * majorStep;
-        const auto rotation = Math::AngleAxis(majorRadians, { 0.0f, 1.0f, 0.0f });
+        const auto rotation = Math::AngleAxis(majorRadians, {0.0f, 1.0f, 0.0f});
         const auto tubeCenter = rotation * translation;
         const float tx = 1.0f - Math::abs(majorRadians / TWO_PI * 2.0f - 1.0f);
 
@@ -474,7 +528,7 @@ void GenerateCylinderCaps(float radius, float height, uint32_t segments, Geometr
         vertices.emplace_back(sa * radius, -halfHeight, ca * radius);
         normals.emplace_back(0.f, 1.f, 0.f);
         normals.emplace_back(0.f, -1.f, 0.f);
-        const Math::Vec2 uv { sa, ca };
+        const Math::Vec2 uv{sa, ca};
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[0]);
         uvs.emplace_back(uv * CYLINDER_CAP_UV_RADIUS + CYLINDER_CAP_UV_CENTER[1]);
     }
@@ -554,15 +608,15 @@ struct VertexBufferData {
 
 void FillBuilder(IMeshBuilder& builder, const VertexBufferData& vertexBuffers, IMeshBuilder::DataBuffer indices)
 {
-    IMeshBuilder::DataBuffer dummy {};
+    IMeshBuilder::DataBuffer dummy{};
     builder.SetVertexData(
         0, vertexBuffers.positions, vertexBuffers.normals, vertexBuffers.uvs, dummy, vertexBuffers.tangents, dummy);
     builder.CalculateAABB(0, vertexBuffers.positions);
     builder.SetIndexData(0, indices);
 }
-} // namespace
+}  // namespace
 
-template<typename IndexType>
+template <typename IndexType>
 void CalculateTangentBitangent(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec3> outTan, array_view<Math::Vec3> outBitan)
@@ -598,12 +652,12 @@ void CalculateTangentBitangent(const array_view<const IndexType>& indices,
         const auto e1 = v2 - v1;
         const auto e2 = v3 - v1;
 
-        const Math::Vec3 sdir { (e1 * st2.y - e2 * st1.y) * r };
+        const Math::Vec3 sdir{(e1 * st2.y - e2 * st1.y) * r};
         outTan[aa] += sdir;
         outTan[bb] += sdir;
         outTan[cc] += sdir;
 
-        const Math::Vec3 tdir { (e2 * st1.x - e1 * st2.x) * r };
+        const Math::Vec3 tdir{(e2 * st1.x - e1 * st2.x) * r};
 
         outBitan[aa] += tdir;
         outBitan[bb] += tdir;
@@ -613,7 +667,7 @@ void CalculateTangentBitangent(const array_view<const IndexType>& indices,
 void CalculateFinalTangent(array_view<const Math::Vec3> normals, array_view<const Math::Vec3> tan,
     array_view<const Math::Vec3> bitan, array_view<Math::Vec4> outTangents)
 {
-    const size_t count = std::min({ normals.size(), tan.size(), bitan.size(), outTangents.size() });
+    const size_t count = std::min({normals.size(), tan.size(), bitan.size(), outTangents.size()});
     for (size_t i = 0; i < count; i++) {
         const Math::Vec3& n = normals[i];
         const Math::Vec3& t = tan[i];
@@ -623,7 +677,7 @@ void CalculateFinalTangent(array_view<const Math::Vec3> normals, array_view<cons
     }
 }
 
-template<typename IndexType>
+template <typename IndexType>
 void CalculateTangentImpl(const array_view<const IndexType>& indices, const array_view<const Math::Vec3>& positions,
     const array_view<const Math::Vec3>& normals, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec4>& outTangents)
@@ -633,14 +687,14 @@ void CalculateTangentImpl(const array_view<const IndexType>& indices, const arra
     }
 
     // http://www.terathon.com/code/tangent.html
-    vector<Math::Vec3> tan(positions.size(), { 0, 0, 0 });
-    vector<Math::Vec3> bitan(positions.size(), { 0, 0, 0 });
+    vector<Math::Vec3> tan(positions.size(), {0, 0, 0});
+    vector<Math::Vec3> bitan(positions.size(), {0, 0, 0});
 
     CalculateTangentBitangent(indices, positions, uvs, tan, bitan);
     CalculateFinalTangent(normals, tan, bitan, outTangents);
 }
 
-template<typename IndexType>
+template <typename IndexType>
 void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
     const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
@@ -649,8 +703,8 @@ void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
         return;
     }
     // http://www.terathon.com/code/tangent.html
-    vector<Math::Vec3> tan(positions.size(), { 0, 0, 0 });
-    vector<Math::Vec3> bitan(positions.size(), { 0, 0, 0 });
+    vector<Math::Vec3> tan(positions.size(), {0, 0, 0});
+    vector<Math::Vec3> bitan(positions.size(), {0, 0, 0});
 
     CalculateTangentBitangent(array_view(indices.data(), 3U), positions, uvs, tan, bitan);
 
@@ -697,7 +751,7 @@ void MeshUtil::CalculateTangents(const array_view<const uint8_t>& indices,
     }
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
 {
     Format format = BASE_FORMAT_UNDEFINED;
@@ -712,20 +766,20 @@ constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexce
     } else if constexpr (is_same_v<T, uint32_t>) {
         format = BASE_FORMAT_R32_UINT;
     }
-    return IMeshBuilder::DataBuffer { format, sizeof(T),
-        { reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T) } };
+    return IMeshBuilder::DataBuffer{
+        format, sizeof(T), {reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T)}};
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr inline IMeshBuilder::DataBuffer FillData(const T (&c)[N]) noexcept
 {
     return FillData(array_view(c, N));
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
 {
-    return FillData(array_view<const T> { c });
+    return FillData(array_view<const T>{c});
 }
 
 Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Entity material, float width, float depth)
@@ -753,8 +807,12 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
         constexpr auto normalsView = array_view(PLANE_NORM);
         constexpr auto uvsView = array_view(PLANE_UV);
 
-        CalculateTangents(indicesView, positionsView, normalsView, uvsView,
-            PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, tangents);
+        CalculateTangents(indicesView,
+            positionsView,
+            normalsView,
+            uvsView,
+            PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            tangents);
     }
 
     auto builder = InitializeBuilder(MakeSubmesh(material, 6u, 6u, CORE_INDEX_TYPE_UINT16));
@@ -762,7 +820,7 @@ Entity MeshUtil::GeneratePlaneMesh(const IEcs& ecs, const string_view name, Enti
         return {};
     }
     FillBuilder(
-        *builder, { FillData(pos), FillData(PLANE_NORM), FillData(PLANE_UV), FillData(tangents) }, FillData(PLANE_IND));
+        *builder, {FillData(pos), FillData(PLANE_NORM), FillData(PLANE_UV), FillData(tangents)}, FillData(PLANE_IND));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -777,7 +835,7 @@ Entity MeshUtil::GenerateSphereMesh(
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
     vector<uint32_t> indices;
-    GenerateSphereGeometry(radius, rings, sectors, { vertices, normals, uvs, indices });
+    GenerateSphereGeometry(radius, rings, sectors, {vertices, normals, uvs, indices});
 
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(
@@ -790,7 +848,7 @@ Entity MeshUtil::GenerateSphereMesh(
         return {};
     }
     FillBuilder(
-        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
+        *builder, {FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents)}, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -805,7 +863,7 @@ Entity MeshUtil::GenerateConeMesh(
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
     vector<uint32_t> indices;
-    GenerateConeGeometry(radius, length, sectors, { vertices, normals, uvs, indices });
+    GenerateConeGeometry(radius, length, sectors, {vertices, normals, uvs, indices});
 
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(
@@ -818,7 +876,7 @@ Entity MeshUtil::GenerateConeMesh(
         return {};
     }
     FillBuilder(
-        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
+        *builder, {FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents)}, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -833,7 +891,7 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
     vector<uint32_t> indices;
-    GenerateTorusGeometry(majorRadius, minorRadius, majorSectors, minorSectors, { vertices, normals, uvs, indices });
+    GenerateTorusGeometry(majorRadius, minorRadius, majorSectors, minorSectors, {vertices, normals, uvs, indices});
 
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(
@@ -846,7 +904,7 @@ Entity MeshUtil::GenerateTorusMesh(const IEcs& ecs, const string_view name, Enti
         return {};
     }
     FillBuilder(
-        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
+        *builder, {FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents)}, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -861,7 +919,7 @@ Entity MeshUtil::GenerateCubeMesh(
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
     vector<uint16_t> indices;
-    GenerateCubeGeometry(width, height, depth, { positions, normals, uvs, indices });
+    GenerateCubeGeometry(width, height, depth, {positions, normals, uvs, indices});
 
     vector<Math::Vec4> tangents(positions.size());
     CalculateTangents(
@@ -873,7 +931,7 @@ Entity MeshUtil::GenerateCubeMesh(
         return {};
     }
     FillBuilder(
-        *builder, { FillData(positions), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
+        *builder, {FillData(positions), FillData(normals), FillData(uvs), FillData(tangents)}, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -888,7 +946,7 @@ CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS
     vector<Math::Vec3> normals;
     vector<Math::Vec2> uvs;
     vector<uint32_t> indices;
-    GenerateCylinderGeometry(radius, height, segmentCount, { vertices, normals, uvs, indices });
+    GenerateCylinderGeometry(radius, height, segmentCount, {vertices, normals, uvs, indices});
 
     vector<Math::Vec4> tangents(vertices.size());
     CalculateTangents(
@@ -901,7 +959,7 @@ CORE_NS::Entity MeshUtil::GenerateCylinderMesh(const CORE_NS::IEcs& ecs, BASE_NS
         return {};
     }
     FillBuilder(
-        *builder, { FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents) }, FillData(indices));
+        *builder, {FillData(vertices), FillData(normals), FillData(uvs), FillData(tangents)}, FillData(indices));
     return CreateMesh(ecs, *builder, name);
 }
 
@@ -912,7 +970,7 @@ Entity MeshUtil::GenerateEntity(const IEcs& ecs, const string_view name, Entity 
 
     ISceneNode* node = nodesystem->CreateNode();
     if (!node) {
-        return Entity {};
+        return Entity{};
     }
 
     node->SetName(name);
@@ -931,7 +989,7 @@ Entity MeshUtil::GenerateCube(
     const IEcs& ecs, const string_view name, Entity material, float width, float height, float depth)
 {
     const Entity meshHandle = GenerateCubeMesh(ecs, name, material, width, height, depth);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -940,7 +998,7 @@ Entity MeshUtil::GenerateCube(
 Entity MeshUtil::GeneratePlane(const IEcs& ecs, const string_view name, Entity material, float width, float depth)
 {
     const Entity meshHandle = GeneratePlaneMesh(ecs, name, material, width, depth);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -950,7 +1008,7 @@ Entity MeshUtil::GenerateSphere(
     const IEcs& ecs, const string_view name, Entity material, float radius, uint32_t rings, uint32_t sectors)
 {
     const Entity meshHandle = GenerateSphereMesh(ecs, name, material, radius, rings, sectors);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -960,7 +1018,7 @@ Entity MeshUtil::GenerateCone(
     const IEcs& ecs, const string_view name, Entity material, float radius, float length, uint32_t sectors)
 {
     const Entity meshHandle = GenerateConeMesh(ecs, name, material, radius, length, sectors);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -971,7 +1029,7 @@ Entity MeshUtil::GenerateTorus(const IEcs& ecs, const string_view name, Entity m
 {
     const Entity meshHandle =
         GenerateTorusMesh(ecs, name, material, majorRadius, minorRadius, majorSectors, minorSectors);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -981,7 +1039,7 @@ Entity MeshUtil::GenerateCylinder(
     const IEcs& ecs, const string_view name, Entity material, float radius, float height, uint32_t segmentCount)
 {
     const Entity meshHandle = GenerateCylinderMesh(ecs, name, material, radius, height, segmentCount);
-    if (meshHandle == Entity {}) {
+    if (meshHandle == Entity{}) {
         return {};
     }
     return GenerateEntity(ecs, name, meshHandle);
@@ -1013,11 +1071,12 @@ Entity MeshUtil::CreateMesh(const IEcs& ecs, const IMeshBuilder& builder, const 
 {
     auto meshEntity = builder.CreateMesh(const_cast<IEcs&>(ecs));
     if (!name.empty()) {
-        GetManager<IUriComponentManager>(ecs)->Set(meshEntity, { string(name) });
-        GetManager<INameComponentManager>(ecs)->Set(meshEntity, { string(name) });
+        GetManager<IUriComponentManager>(ecs)->Set(meshEntity, {string(name)});
+        GetManager<INameComponentManager>(ecs)->Set(meshEntity, {string(name)});
     }
     return meshEntity;
 }
 
-MeshUtil::MeshUtil(IClassFactory& factory) : factory_(factory) {}
+MeshUtil::MeshUtil(IClassFactory& factory) : factory_(factory)
+{}
 CORE3D_END_NAMESPACE()

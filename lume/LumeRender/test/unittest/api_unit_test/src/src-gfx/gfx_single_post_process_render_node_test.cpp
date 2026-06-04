@@ -39,14 +39,14 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 512u, 512u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{512u, 512u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(uint16_t);
 uint16_t imageData[IMAGE_SIZE];
 float testDataTonemapper[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -99,15 +99,15 @@ array_view<const uint8_t> CreateImageDataView(string type)
             for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
                 if (i < TEST_DATA_SIZE.x / 2) {
                     float value = 15.f;
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value); // R
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value); // G
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value); // B
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value);  // R
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value);  // G
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value);  // B
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
                 } else {
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f); // R
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f); // G
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f); // B
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
                 }
             }
         }
@@ -119,21 +119,21 @@ array_view<const uint8_t> CreateImageDataView(string type)
         }
         UTest::SaveHdrImage("SinglePostProcessBloomTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
         delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     } else if (type == "Blur") {
         for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
             for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
                 constexpr float value = 15.f;
                 if (i < TEST_DATA_SIZE.x / 2 && (i + j) % 2 == 0) {
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value); // R
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value);  // R
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);   // G
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);   // B
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
                 } else {
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value); // G
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
-                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);   // R
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value);  // G
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);   // B
+                    imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
                 }
             }
         }
@@ -145,7 +145,7 @@ array_view<const uint8_t> CreateImageDataView(string type)
         }
         UTest::SaveHdrImage("SinglePostProcessBlurTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
         delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     } else if (type == "PbrTonemapper") {
         float w = float(TEST_DATA_SIZE.x);
         float h = float(TEST_DATA_SIZE.y);
@@ -158,10 +158,10 @@ array_view<const uint8_t> CreateImageDataView(string type)
                 float g = y / h;
                 float b = (x / w + y / h) / 2.0f;
 
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);    // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);    // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);    // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(r);     // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(g);     // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(b);     // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
 
                 // Fill the validation test image
                 Math::Vec3 newRgb = RunPbrTonemapper(Math::Vec3(r, g, b));
@@ -179,9 +179,9 @@ array_view<const uint8_t> CreateImageDataView(string type)
         }
         UTest::SaveHdrImage("SinglePostProcessPbrTonemapperInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
         delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     }
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute, string type)
@@ -236,7 +236,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute, s
         ppConf.taaConfiguration.quality = TaaConfiguration::Quality::HIGH;
         ppConf.taaConfiguration.sharpness = TaaConfiguration::Sharpness::SHARP;
 
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         if (type == "Bloom") {
             dataStorePod->CreatePod("RenderDataStorePod", "PostProcessConfiguration", dataView);
         } else {
@@ -256,7 +256,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute, s
             } else if (type == "normal_blur" || type == "vertical_blur" || type == "horizontal_blur") {
                 dataStorePostProcess->Create("PostProcessConfiguration", "render_blur", {});
                 dataStorePostProcess->Set("PostProcessConfiguration", "render_blur", variables);
-            } else { // Used for both CustomShader and PbrTonemap shader
+            } else {  // Used for both CustomShader and PbrTonemap shader
                 dataStorePostProcess->Create("PostProcessConfiguration", "render_custom", {});
                 dataStorePostProcess->Set("PostProcessConfiguration", "render_custom", variables);
             }
@@ -312,12 +312,12 @@ void TickTest(TestData& td, int32_t frameCountToTick)
         }
 
         er.engine->TickFrame();
-        const RenderHandleReference inputs[] = { tr.inputImageHandle0 };
+        const RenderHandleReference inputs[] = {tr.inputImageHandle0};
         er.context->GetRenderNodeGraphManager().SetRenderNodeGraphResources(
-            tr.renderNodeGraph, { inputs, countof(inputs) }, {});
+            tr.renderNodeGraph, {inputs, countof(inputs)}, {});
 
         if (idx == 0) {
-            er.context->GetRenderer().RenderDeferred({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderDeferred({&tr.renderNodeGraph, 1u});
             er.context->GetRenderer().RenderDeferredFrame();
         } else {
             er.context->GetRenderer().RenderFrame({});
@@ -399,7 +399,7 @@ void ValidateBloom(const TestData& td, bool useCompute)
     }
     UTest::SaveHdrImage(GetBloomFileName(td.engine, useCompute), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             float R = UTest::FromHDR(BASE_NS::Math::F16ToF32(outputImageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u]));
@@ -435,7 +435,7 @@ void ValidateBlur(const TestData& td)
     }
     UTest::SaveHdrImage(GetBlurFileName(td.engine), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
 }
 
 void ValidateCustomShader(const TestData& td)
@@ -450,7 +450,7 @@ void ValidateCustomShader(const TestData& td)
     }
     UTest::SaveHdrImage(GetCustomShaderFileName(td.engine), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             constexpr size_t stride = TEST_DATA_SIZE.y;
@@ -475,7 +475,7 @@ void ValidatePbrTonemapperShader(const TestData& td)
     }
     UTest::SaveHdrImage(GetPbrTonemapperShaderFileName(td.engine), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             float R = BASE_NS::Math::F16ToF32(outputImageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u]);
@@ -573,7 +573,7 @@ void TestPbrTonemapperShader(DeviceBackendType backend)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -645,7 +645,7 @@ UNIT_TEST(API_GfxSinglePostProcessRenderNode, SinglePostProcessRenderNodePbrTone
 {
     TestPbrTonemapperShader(DeviceBackendType::VULKAN);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -658,24 +658,18 @@ UNIT_TEST(
 {
     TestBloom(UTest::GetOpenGLBackend(), false);
 }
-#ifdef DISABLED_TESTS_ON
+#ifndef __OHOS__
 /**
  * @tc.name: SinglePostProcessRenderNodeComputeBloomTestOpenGL
  * @tc.desc: Tests for a single bloom post process using compute in OpenGL.
  * @tc.type: FUNC
  */
-#ifdef __OHOS__
-// Harmony OS compute bloom with GLES fail. Fails because the threshold is exceeded.
-UNIT_TEST(API_GfxSinglePostProcessRenderNode, DISABLED_SinglePostProcessRenderNodeComputeBloomTestOpenGL,
-    testing::ext::TestSize.Level1)
-#else
 UNIT_TEST(API_GfxSinglePostProcessRenderNode, SinglePostProcessRenderNodeComputeBloomTestOpenGL,
     testing::ext::TestSize.Level1)
-#endif // __OHOS__
 {
     TestBloom(UTest::GetOpenGLBackend(), true);
 }
-#endif // DISABLED_TESTS_ON
+#endif  // __OHOS__
 /**
  * @tc.name: SinglePostProcessRenderNodeBlurTestOpenGL
  * @tc.desc: Tests for a single normal blur post process in OpenGL.
@@ -725,4 +719,4 @@ UNIT_TEST(API_GfxSinglePostProcessRenderNode, SinglePostProcessRenderNodePbrTone
 {
     TestPbrTonemapperShader(UTest::GetOpenGLBackend());
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

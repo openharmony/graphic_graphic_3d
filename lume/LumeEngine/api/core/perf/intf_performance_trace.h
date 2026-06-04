@@ -34,10 +34,10 @@ CORE_BEGIN_NAMESPACE()
 class IPerformanceTrace : public IInterface {
 public:
     using Ptr = BASE_NS::refcnt_ptr<IPerformanceTrace>;
-    static constexpr auto UID = BASE_NS::Uid { "18fc4522-29a3-4887-a2cf-0e170587edf9" };
-    static constexpr auto TRACY_UID = BASE_NS::Uid { "1FC3A1DE-A352-4A7C-A2E0-C1FE208DABD4" };
-    static constexpr auto ATRACE_UID = BASE_NS::Uid { "392C7588-86D5-47B9-963F-96412E439B9F" };
-    static constexpr auto HITRACE_UID = BASE_NS::Uid { "8d051c51-eaa4-47a1-be68-f923350bb3a8" };
+    static constexpr auto UID = BASE_NS::Uid{"18fc4522-29a3-4887-a2cf-0e170587edf9"};
+    static constexpr auto TRACY_UID = BASE_NS::Uid{"1FC3A1DE-A352-4A7C-A2E0-C1FE208DABD4"};
+    static constexpr auto ATRACE_UID = BASE_NS::Uid{"392C7588-86D5-47B9-963F-96412E439B9F"};
+    static constexpr auto HITRACE_UID = BASE_NS::Uid{"8d051c51-eaa4-47a1-be68-f923350bb3a8"};
 
     IPerformanceTrace(const IPerformanceTrace&) = delete;
     IPerformanceTrace& operator=(const IPerformanceTrace&) = delete;
@@ -76,7 +76,7 @@ inline constexpr BASE_NS::string_view GetName(const IPerformanceTrace*)
 /** Information needed from the plugin for managing PerformanceTrace instances. */
 struct PerformanceTraceTypeInfo : public ITypeInfo {
     /** TypeInfo UID for performance trace type info. */
-    static constexpr BASE_NS::Uid UID { "fafc3bbb-b176-475c-b9bc-dd77cbd9e317" };
+    static constexpr BASE_NS::Uid UID{"fafc3bbb-b176-475c-b9bc-dd77cbd9e317"};
 
     using CreateLoaderFn = IPerformanceTrace::Ptr (*)(PluginToken);
     /* Token passed to creation (e.g. plugin specific data). */
@@ -88,4 +88,4 @@ struct PerformanceTraceTypeInfo : public ITypeInfo {
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PERF_INTF_PERFORMANCE_TRACE_H
+#endif  // API_CORE_PERF_INTF_PERFORMANCE_TRACE_H

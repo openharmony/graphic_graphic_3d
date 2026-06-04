@@ -64,7 +64,7 @@ namespace {
 static Storage gStorage;
 }
 
-template<size_t VALUE>
+template <size_t VALUE>
 void function()
 {
     gStorage.store(VALUE);
@@ -97,14 +97,13 @@ UNIT_TEST(SRC_TaskQueueTest, testExecutionOrder, testing::ext::TestSize.Level1)
     gStorage.checkValidity(5);
 }
 
-#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: testHierarchy
  * @tc.desc: Tests for Test Hierarchy. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_TaskQueueTest, DISABLED_testHierarchy, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_TaskQueueTest, testHierarchy, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: testHierarchy
@@ -164,7 +163,7 @@ UNIT_TEST(SRC_TaskQueueTest, testHierarchy, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Test Parallel With Dependencies. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_TaskQueueTest, DISABLED_testParallelWithDependencies, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_TaskQueueTest, testParallelWithDependencies, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: testParallelWithDependencies
@@ -194,7 +193,7 @@ UNIT_TEST(SRC_TaskQueueTest, testParallelWithDependencies, testing::ext::TestSiz
     mainQueue.SubmitAfter(1, 2, FunctionTask::Create([]() { gStorage.store(2); }));
 
     // Store number 3 after reset and storing number 2.
-    constexpr const uint64_t afterIds[] = { 2, 0 };
+    constexpr const uint64_t afterIds[] = {2, 0};
     mainQueue.SubmitAfter(afterIds, 3, FunctionTask::Create([]() { gStorage.store(3); }));
 
     // Execute (async) and wait for completion.
@@ -210,7 +209,7 @@ UNIT_TEST(SRC_TaskQueueTest, testParallelWithDependencies, testing::ext::TestSiz
  * @tc.desc: Tests for Test Blocking. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_TaskQueueTest, DISABLED_testBlocking, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_TaskQueueTest, testBlocking, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: testBlocking
@@ -260,7 +259,6 @@ UNIT_TEST(SRC_TaskQueueTest, testBlocking, testing::ext::TestSize.Level1)
 
     gStorage.checkValidity(7);
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: testPrematureDestruction
@@ -363,7 +361,7 @@ UNIT_TEST(SRC_TaskQueueTest, testDispatcherAsync, testing::ext::TestSize.Level1)
 
     // Test other taskqueue
 
-    const uint64_t afters[3] = { 9, 10, 11 };
+    const uint64_t afters[3] = {9, 10, 11};
     BASE_NS::array_view<const uint64_t> afterIds(afters);
     BASE_NS::array_view<const uint64_t> nullAfters;
 
@@ -416,7 +414,7 @@ UNIT_TEST(SRC_TaskQueueTest, testSequentialMethods, testing::ext::TestSize.Level
 
     auto seq = factory->CreateSequentialTaskQueue(threadPool);
     EXPECT_TRUE(seq != nullptr);
-    SequentialTaskQueue sq { threadPool };
+    SequentialTaskQueue sq{threadPool};
     sq.Remove(1);
     sq.Submit(1, FunctionTask::Create([]() { gStorage.store(1); }));
     sq.Remove(1);
@@ -464,15 +462,13 @@ UNIT_TEST(SRC_TaskQueueTest, testDispatcherOverMultipleFrames, testing::ext::Tes
 
     gStorage.checkValidity(10);
 }
-
-#ifdef DISABLED_TESTS_ON
 #if defined(__OHOS__) && !defined(__OHOS_PLATFORM__)
 /**
  * @tc.name: multithreadIo
  * @tc.desc: Tests for Multithread Io. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_TaskQueueTest, DISABLED_multithreadIo, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_TaskQueueTest, multithreadIo, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: multithreadIo
@@ -527,7 +523,7 @@ UNIT_TEST(SRC_TaskQueueTest, multithreadIo, testing::ext::TestSize.Level1)
  * @tc.desc: Tests for Test Thread Pool. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(SRC_TaskQueueTest, DISABLED_testThreadPool, testing::ext::TestSize.Level1)
+UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
 #else
 /**
  * @tc.name: testThreadPool
@@ -554,7 +550,7 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
             wait(50);
         });
         auto task1Ptr = task1.get();
-        const CORE_NS::IThreadPool::ITask* deps0[] = { resetTaskPtr };
+        const CORE_NS::IThreadPool::ITask* deps0[] = {resetTaskPtr};
         threadPool->PushNoWait(BASE_NS::move(task1), deps0);
 
         auto task2 = FunctionTask::Create([]() {
@@ -567,7 +563,7 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
         // one more task which should start after the above tasks.
         auto task3 = FunctionTask::Create([]() { gStorage.store(3); });
         auto task3Ptr = task3.get();
-        const CORE_NS::IThreadPool::ITask* deps12[] = { task1Ptr, task2Ptr };
+        const CORE_NS::IThreadPool::ITask* deps12[] = {task1Ptr, task2Ptr};
         auto result = threadPool->Push(BASE_NS::move(task3), deps12);
 
         // assuming tasks were created fast enough the last task isn't ready until we wait.
@@ -594,7 +590,7 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
 
         // two tasks which should wait for the reset task.
         auto task1Ptr = task1.get();
-        const CORE_NS::IThreadPool::ITask* deps0[] = { resetTaskPtr };
+        const CORE_NS::IThreadPool::ITask* deps0[] = {resetTaskPtr};
         threadPool->PushNoWait(BASE_NS::move(task1), deps0);
 
         auto task2Ptr = task2.get();
@@ -602,7 +598,7 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
 
         // one more task which should start after the above tasks.
         auto task3Ptr = task3.get();
-        const CORE_NS::IThreadPool::ITask* deps12[] = { task1Ptr, task2Ptr };
+        const CORE_NS::IThreadPool::ITask* deps12[] = {task1Ptr, task2Ptr};
         auto result = threadPool->Push(BASE_NS::move(task3), deps12);
 
         // assuming tasks were created fast enough the last task isn't ready until we wait.
@@ -614,4 +610,3 @@ UNIT_TEST(SRC_TaskQueueTest, testThreadPool, testing::ext::TestSize.Level1)
         EXPECT_EQ(gStorage.data[2], 3);
     }
 }
-#endif // DISABLED_TESTS_ON

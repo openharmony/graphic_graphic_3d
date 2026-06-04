@@ -16,6 +16,7 @@
 #ifndef CORE_LOG_LOGGER_H
 #define CORE_LOG_LOGGER_H
 
+#include <atomic>
 #include <cstdarg>
 #include <mutex>
 #include <set>
@@ -69,14 +70,16 @@ public:
     void Unref() override;
 
 private:
-    LogLevel logLevel_ = LogLevel::LOG_VERBOSE;
+    std::atomic<LogLevel> logLevel_ = LogLevel::LOG_VERBOSE;
     std::mutex loggerMutex_;
 
     BASE_NS::vector<char> buffer_;
+    uint64_t nextOutputId_ = 1;
     BASE_NS::vector<IOutput::Ptr> outputs_;
-    std::set<BASE_NS::string> registeredOnce_; // Global set of ids used by the CORE_ONCE macro.
+    BASE_NS::vector<uint64_t> outputIds_;
+    std::set<BASE_NS::string> registeredOnce_;  // Global set of ids used by the CORE_ONCE macro.
     std::mutex onceMutex_;
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_LOG_LOGGER_H
+#endif  // CORE_LOG_LOGGER_H

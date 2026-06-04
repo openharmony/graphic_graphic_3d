@@ -28,7 +28,7 @@ class NodeContaineable : public META_NS::IContainable {
     virtual META_NS::IObject::Ptr GetParent(ContainableTag) const = 0;
     META_NS::IObject::Ptr GetParent() const override
     {
-        return GetParent(ContainableTag {});
+        return GetParent(ContainableTag{});
     }
 };
 
@@ -37,7 +37,7 @@ class NodeInterface : public INode {
     virtual Future<INode::Ptr> GetParent(NodeTag) const = 0;
     Future<INode::Ptr> GetParent() const override
     {
-        return GetParent(NodeTag {});
+        return GetParent(NodeTag{});
     }
 };
 

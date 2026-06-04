@@ -30,8 +30,7 @@
 
 namespace OHOS::Render3D {
 constexpr uint32_t RES_TYPE_EXT_ENGINE_SET_QOS = 10028;
-GraphicsTask::Message::Message(const std::function<Task>& task)
-    : task_(std::move(task))
+GraphicsTask::Message::Message(const std::function<Task>& task) : task_(std::move(task))
 {}
 
 GraphicsTask::Message::Message(GraphicsTask::Message&& msg)
@@ -129,7 +128,7 @@ void GraphicsTask::Start()
         WIDGET_LOGI("set engine child thread qos %s", ret == 0 ? "success" : "failed");
         auto tid = syscall(SYS_gettid);
         if (tid > 0) {
-            std::unordered_map<std::string, std::string> mapPayload {
+            std::unordered_map<std::string, std::string> mapPayload{
                 {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
             WIDGET_LOGI("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
             OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
@@ -160,11 +159,10 @@ void GraphicsTask::EngineThread()
 
     auto tid = syscall(SYS_gettid);
     if (tid > 0) {
-        std::unordered_map<std::string, std::string> mapPayload {
-            { "pid", std::to_string(getpid()) }, { "tid", std::to_string(tid)}};
+        std::unordered_map<std::string, std::string> mapPayload{
+            {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
         WIDGET_LOGI("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
-        OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
-            RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
+        OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
     }
 
     WIDGET_LOGD("GraphicsTask::EngineThread execute exit");
@@ -175,4 +173,4 @@ void GraphicsTask::SetName()
     WIDGET_LOGD("GraphicsTask::SetName start");
     prctl(PR_SET_NAME, "Engine Service Lume", 0, 0, 0);
 }
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

@@ -32,7 +32,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
 {
     BASE_NS::unique_ptr<GpuImage> image;
     PLUGIN_ASSERT(IsActive());
-    GpuImagePlatformDataGL data {};
+    GpuImagePlatformDataGL data{};
 #if RENDER_HAS_GLES_BACKEND
     if (backendType_ == DeviceBackendType::OPENGLES) {
         const ImageDescGLES& tmp = (const ImageDescGLES&)platformData;
@@ -44,7 +44,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
         data.internalFormat = tmp.internalFormat;
         data.eglImage = tmp.eglImage;
         data.hwBuffer = tmp.platformHwBuffer;
-        data.swizzle = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+        data.swizzle = {GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
 
         if (!data.hwBuffer) {
             image = CreateGpuImageView(desc, data);
@@ -53,7 +53,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
             auto nativeWindowBufferPtr = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(nativeBufferPtr);
 
             const auto dsp = static_cast<const DevicePlatformDataGLES&>(eglState_.GetPlatformData()).display;
-            static constexpr EGLint attrs[] = { EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE };
+            static constexpr EGLint attrs[] = {EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE};
             const auto eglImage =
                 eglCreateImageKHR(dsp, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, nativeWindowBufferPtr, attrs);
             if (!eglImage) {
@@ -81,7 +81,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
         data.dataType = tmp.dataType;
         data.format = tmp.format;
         data.internalFormat = tmp.internalFormat;
-        data.swizzle = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+        data.swizzle = {GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
         image = CreateGpuImageView(desc, data);
     }
 #endif
@@ -110,7 +110,7 @@ BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecific
         }
 
         const GpuBufferDesc finalDesc = GetBufferDescFromHwBufferDesc(tmp.platformHwBuffer);
-        GpuBufferPlatformDataGL platformData {};
+        GpuBufferPlatformDataGL platformData{};
         platformData.alignedBindByteSize = finalDesc.byteSize;
         platformData.alignedByteSize = finalDesc.byteSize;
         platformData.bindMemoryByteSize = finalDesc.byteSize;

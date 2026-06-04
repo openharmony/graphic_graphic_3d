@@ -108,7 +108,7 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreatePlaneMesh, testing::ext::TestSize.Lev
     ASSERT_TRUE(mc);
     auto m = mc->CreatePlane({}, 10, 5).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 
@@ -160,31 +160,32 @@ void API_ScenePluginMeshTest::TestMeshNodeCreation(
  */
 UNIT_TEST_F(API_ScenePluginMeshTest, CreateMeshWithOptions, testing::ext::TestSize.Level1)
 {
-    TestMeshNodeCreation(
-        [](const auto& mc, const auto& material) { return mc->CreatePlane({ "plane", material }, 10, 5).GetResult(); });
-
     TestMeshNodeCreation([](const auto& mc, const auto& material) {
-        return mc->CreateCube({ "cube", material }, 10, 10, 5).GetResult();
+        return mc->CreatePlane({"plane", material}, 10, 5).GetResult();
     });
 
     TestMeshNodeCreation([](const auto& mc, const auto& material) {
-        return mc->CreateSphere({ "sphere", material }, 10, 5, 5).GetResult();
+        return mc->CreateCube({"cube", material}, 10, 10, 5).GetResult();
     });
 
     TestMeshNodeCreation([](const auto& mc, const auto& material) {
-        return mc->CreateCone({ "cone", material }, 10, 5, 5).GetResult();
+        return mc->CreateSphere({"sphere", material}, 10, 5, 5).GetResult();
     });
 
     TestMeshNodeCreation([](const auto& mc, const auto& material) {
-        return mc->CreateCylinder({ "cylinder", material }, 10, 6, 5).GetResult();
+        return mc->CreateCone({"cone", material}, 10, 5, 5).GetResult();
+    });
+
+    TestMeshNodeCreation([](const auto& mc, const auto& material) {
+        return mc->CreateCylinder({"cylinder", material}, 10, 6, 5).GetResult();
     });
 
     TestMeshNodeCreation([](const auto& mc, const auto& material) {
         CustomMeshData data;
-        data.vertices = { { -1, -1, -1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
-        data.indices = { 0, 1, 2, 2, 1, 3 };
+        data.vertices = {{-1, -1, -1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        data.indices = {0, 1, 2, 2, 1, 3};
 
-        return mc->Create({ "custom", material }, data).GetResult();
+        return mc->Create({"custom", material}, data).GetResult();
     });
 }
 
@@ -199,7 +200,7 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreateCubeMesh, testing::ext::TestSize.Leve
     ASSERT_TRUE(mc);
     auto m = mc->CreateCube({}, 10, 10, 5).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 /**
@@ -213,7 +214,7 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreateSpherMesh, testing::ext::TestSize.Lev
     ASSERT_TRUE(mc);
     auto m = mc->CreateSphere({}, 10, 5, 5).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 
@@ -228,7 +229,7 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreateConeMesh, testing::ext::TestSize.Leve
     ASSERT_TRUE(mc);
     auto m = mc->CreateCone({}, 10, 5, 5).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 
@@ -243,12 +244,12 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreateCustomMesh, testing::ext::TestSize.Le
     ASSERT_TRUE(mc);
 
     CustomMeshData data;
-    data.vertices = { { -1, -1, -1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
-    data.indices = { 0, 1, 2, 2, 1, 3 };
+    data.vertices = {{-1, -1, -1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    data.indices = {0, 1, 2, 2, 1, 3};
 
     auto m = mc->Create({}, data).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 
@@ -263,7 +264,7 @@ UNIT_TEST_F(API_ScenePluginMeshTest, CreateCylinderMesh, testing::ext::TestSize.
     ASSERT_TRUE(mc);
     auto m = mc->CreateCylinder({}, 1, 1, 25).GetResult();
     ASSERT_TRUE(m);
-    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 {}));
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
     EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
 }
 
@@ -282,8 +283,8 @@ UNIT_TEST_F(API_ScenePluginMeshTest, SubMesh, testing::ext::TestSize.Level1)
     AddSubMesh(mesh);
     auto submesh = mesh->SubMeshes()->GetValueAt(0);
     ASSERT_TRUE(submesh);
-    submesh->AABBMin()->SetValue({ -1, -1, -1 });
-    submesh->AABBMax()->SetValue({ 1, 1, 1 });
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
     auto mat1 = CreateMaterial();
     submesh->Material()->SetValue(mat1);
     EXPECT_EQ(submesh->Material()->GetValue(), mat1);
@@ -313,11 +314,11 @@ UNIT_TEST_F(API_ScenePluginMeshTest, AddSubMesh, testing::ext::TestSize.Level1)
     AddSubMesh(mesh);
     auto submesh = mesh->SubMeshes()->GetValueAt(0);
     ASSERT_TRUE(submesh);
-    submesh->AABBMin()->SetValue({ -1, -1, -1 });
-    submesh->AABBMax()->SetValue({ 1, 1, 1 });
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
     UpdateScene();
-    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { -1, -1, -1 }));
-    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 1, 1, 1 }));
+    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1, -1, -1}));
+    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1, 1, 1}));
 
     EXPECT_EQ(mesh->SubMeshes()->GetValue().size(), 1);
     AddSubMesh(mesh);
@@ -325,23 +326,163 @@ UNIT_TEST_F(API_ScenePluginMeshTest, AddSubMesh, testing::ext::TestSize.Level1)
     AddSubMeshToFront(mesh);
     EXPECT_EQ(mesh->SubMeshes()->GetValue().size(), 3);
     EXPECT_EQ(submesh, mesh->SubMeshes()->GetValueAt(0));
-    EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
-    EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
+    EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
+    EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
     {
         auto submesh = mesh->SubMeshes()->GetValueAt(0);
         ASSERT_TRUE(submesh);
-        EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
-        EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 0, 0, 0 }));
+        EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
+        EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{0, 0, 0}));
     }
     {
         auto submesh = mesh->SubMeshes()->GetValueAt(1);
         ASSERT_TRUE(submesh);
-        EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { -1, -1, -1 }));
-        EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 1, 1, 1 }));
+        EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1, -1, -1}));
+        EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1, 1, 1}));
     }
     ClearSubMeshes(mesh);
     EXPECT_EQ(mesh->SubMeshes()->GetValue().size(), 0);
 }
 
-} // namespace UTest
+/**
+ * @tc.name: CustomMeshDataFull
+ * @tc.desc: Test Create with full CustomMeshData (normals, uvs, colors).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, CustomMeshDataFull, testing::ext::TestSize.Level1)
+{
+    auto mc = scene->CreateObject<ICreateMesh>(ClassId::MeshCreator).GetResult();
+    ASSERT_TRUE(mc);
+
+    CustomMeshData data;
+    data.vertices = {{-1, -1, 0}, {1, -1, 0}, {0, 1, 0}, {0, 0, 1}};
+    data.indices = {0, 1, 2, 2, 1, 3};
+    data.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+    data.uvs = {{0, 0}, {1, 0}, {0.5f, 1}, {0.5f, 0.5f}};
+    data.colors = {{1, 0, 0, 1}, {0, 1, 0, 1}, {0, 0, 1, 1}, {1, 1, 1, 1}};
+
+    auto m = mc->Create({}, data).GetResult();
+    ASSERT_TRUE(m);
+    EXPECT_NE(m->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{}));
+    EXPECT_TRUE(!m->SubMeshes()->GetValue().empty());
+}
+
+/**
+ * @tc.name: MaterialOverrideOnMesh
+ * @tc.desc: Test IMaterialOverride::SetMaterialOverride/GetMaterialOverride on mesh.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, MaterialOverrideOnMesh, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto n = scene->FindNode<IMesh>("///AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    // Force SubMeshes initialization
+    auto subs = n->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto meshAcc = interface_cast<IMeshAccess>(n);
+    ASSERT_TRUE(meshAcc);
+    auto innerMesh = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(innerMesh);
+
+    // Get IMaterialOverride interface from inner Mesh object
+    auto overrideIf = interface_cast<IMaterialOverride>(innerMesh);
+    ASSERT_TRUE(overrideIf);
+
+    // Initially no override
+    EXPECT_FALSE(overrideIf->GetMaterialOverride());
+
+    // Set override material
+    auto overrideMat = CreateMaterial();
+    overrideMat->AlphaCutoff()->SetValue(9.876f);
+    overrideIf->SetMaterialOverride(overrideMat);
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), overrideMat);
+
+    // Reset override
+    overrideIf->SetMaterialOverride(nullptr);
+    EXPECT_FALSE(overrideIf->GetMaterialOverride());
+}
+
+/**
+ * @tc.name: RecalculateAABBOnSubmeshChange
+ * @tc.desc: Test AABB propagation from submesh changes to mesh level.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, RecalculateAABBOnSubmeshChange, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//aabbTest", ClassId::MeshNode).GetResult();
+    ASSERT_TRUE(node);
+    auto mesh = interface_pointer_cast<IMesh>(node);
+    ASSERT_TRUE(mesh);
+
+    // Add 2 submeshes with different AABBs
+    AddSubMesh(mesh);
+    AddSubMesh(mesh);
+
+    auto sub0 = mesh->SubMeshes()->GetValueAt(0);
+    auto sub1 = mesh->SubMeshes()->GetValueAt(1);
+    ASSERT_TRUE(sub0);
+    ASSERT_TRUE(sub1);
+
+    sub0->AABBMin()->SetValue({-1, -1, -1});
+    sub0->AABBMax()->SetValue({1, 1, 1});
+    sub1->AABBMin()->SetValue({-2, 0, 0});
+    sub1->AABBMax()->SetValue({0, 2, 2});
+    UpdateScene();
+
+    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-2, -1, -1}));
+    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1, 2, 2}));
+
+    // Change one submesh's AABB and verify mesh-level AABB updates
+    sub1->AABBMin()->SetValue({0, 0, 0});
+    sub1->AABBMax()->SetValue({3, 3, 3});
+    UpdateScene();
+
+    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1, -1, -1}));
+    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{3, 3, 3}));
+}
+
+/**
+ * @tc.name: DestroyMeshWithOverride
+ * @tc.desc: Test Mesh::Destroy cleanup with submeshes and material override.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, DestroyMeshWithOverride, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto n = scene->FindNode<IMesh>("///AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    // Force SubMeshes initialization
+    auto subs = n->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto meshAcc = interface_cast<IMeshAccess>(n);
+    ASSERT_TRUE(meshAcc);
+    auto innerMesh = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(innerMesh);
+
+    auto overrideMat = CreateMaterial();
+    auto overrideIf = interface_cast<IMaterialOverride>(innerMesh);
+    ASSERT_TRUE(overrideIf);
+    overrideIf->SetMaterialOverride(overrideMat);
+    UpdateScene();
+
+    // Remove node — triggers Destroy on the inner mesh with override and submeshes
+    auto node = interface_pointer_cast<INode>(n);
+    n.reset();
+    EXPECT_TRUE(scene->RemoveNode(BASE_NS::move(node)).GetResult());
+    UpdateScene();
+}
+
+}  // namespace UTest
 SCENE_END_NAMESPACE()

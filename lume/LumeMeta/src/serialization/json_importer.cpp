@@ -26,7 +26,8 @@
 META_BEGIN_NAMESPACE()
 namespace Serialization {
 
-JsonImporter::JsonImporter() : transformations_ { CreateShared<MetaMigrateV1>() } {}
+JsonImporter::JsonImporter() : transformations_{CreateShared<MetaMigrateV1>()}
+{}
 
 IObject::Ptr JsonImporter::Import(const ISerNode::ConstPtr& tree, ImportOptions opts)
 {
@@ -114,5 +115,5 @@ void JsonImporter::ResolveDeferred()
 {
     imp_.ResolveDeferred();
 }
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()

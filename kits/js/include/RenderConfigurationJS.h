@@ -18,8 +18,9 @@
 #include <napi_api.h>
 #include <scene/interface/intf_scene.h>
 #include "Vec2Proxy.h"
+#include "export.h"
 
-class RenderConfiguration {
+class SCENE_ADDON_PUBLIC RenderConfiguration {
 public:
     RenderConfiguration();
     ~RenderConfiguration();
@@ -47,4 +48,4 @@ private:
     NapiApi::StrongRef softShadowConfigJs_;
 };
 
-#endif // RENDER_CONFIGURATION_JS_H
+#endif  // RENDER_CONFIGURATION_JS_H

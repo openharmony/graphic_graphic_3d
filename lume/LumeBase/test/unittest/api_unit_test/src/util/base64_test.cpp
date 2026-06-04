@@ -30,13 +30,17 @@ constexpr const BASE_NS::string_view DATA[] = {
     "light w",
 };
 
-constexpr const BASE_NS::string_view BASE64[] = { "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu",
-    "bGlnaHQgd29yay4=", "bGlnaHQgd29yaw==", "bGlnaHQgd29y", "bGlnaHQgd28=", "bGlnaHQgdw==" };
+constexpr const BASE_NS::string_view BASE64[] = {"TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu",
+    "bGlnaHQgd29yay4=",
+    "bGlnaHQgd29yaw==",
+    "bGlnaHQgd29y",
+    "bGlnaHQgd28=",
+    "bGlnaHQgdw=="};
 
-constexpr const BASE_NS::string_view BAD_DATA[] = { "bad   input" };
+constexpr const BASE_NS::string_view BAD_DATA[] = {"bad   input"};
 
 constexpr const BASE_NS::string_view BAD_BASE64[] = {
-    "YmFkICAgaW5wdXQ=    " // bad ending
+    "YmFkICAgaW5wdXQ=    "  // bad ending
 };
 
 /**
@@ -90,5 +94,93 @@ UNIT_TEST(API_UnitTest_Base64, Decode, testing::ext::TestSize.Level1)
                 }
             }
         }
+    }
+}
+
+/**
+ * @tc.name: EmptyInput
+ * @tc.desc: VULN-051 regression — Base64Decode with empty input must not crash or produce output.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_UnitTest_Base64, EmptyInput, testing::ext::TestSize.Level1)
+{
+    auto result = BASE_NS::Base64Decode(BASE_NS::string_view{});
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: AllPaddingInput
+ * @tc.desc: VULN-051 regression — CountPadding must not decrement the iterator past the start of an
+ *           all-padding string, which would be undefined behaviour.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_UnitTest_Base64, AllPaddingInput, testing::ext::TestSize.Level1)
+{
+    auto result = BASE_NS::Base64Decode(BASE_NS::string_view{"===="});
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: DecodeNonEmpty
+ * @tc.desc: VULN-031 regression — loop counter must not go negative for non-empty input strings,
+ *           which could cause the loop body to execute with an out-of-range index.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_UnitTest_Base64, DecodeNonEmpty, testing::ext::TestSize.Level1)
+{
+    BASE_NS::string encoded(100u, 'A');
+    auto result = BASE_NS::Base64Decode(BASE_NS::string_view{encoded});
+    EXPECT_FALSE(result.empty());
+}
+
+/**
+ * @tc.name: DecodeNonPadded
+ * @tc.desc: Non-padded base64 input (length not a multiple of 4) must decode correctly
+ *           without out-of-bounds writes. Tests the remainder-byte handling path.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_UnitTest_Base64, DecodeNonPadded, testing::ext::TestSize.Level1)
+{
+    // "light wor" padded   = "bGlnaHQgd29y"   (12 chars, 0 remainder)
+    // "light wor" unpadded = "bGlnaHQgd29y"   (same, multiple of 4 — no remainder)
+    // "light wo"  padded   = "bGlnaHQgd28="   (12 chars, 1 pad byte)
+    // "light wo"  unpadded = "bGlnaHQgd28"    (11 chars, 3 remainder)
+    // "light w"   padded   = "bGlnaHQgdw=="   (12 chars, 2 pad bytes)
+    // "light w"   unpadded = "bGlnaHQgdw"     (10 chars, 2 remainder)
+
+    // 2-byte remainder (strip both '=' from "bGlnaHQgdw==")
+    {
+        const BASE_NS::string_view input = "bGlnaHQgdw";  // "light w"
+        const BASE_NS::string_view expected = "light w";
+        auto decoded = BASE_NS::Base64Decode(input);
+        BASE_NS::string_view result(static_cast<const char*>(static_cast<const void*>(decoded.data())), decoded.size());
+        EXPECT_EQ(expected, result);
+    }
+
+    // 3-byte remainder (strip single '=' from "bGlnaHQgd28=")
+    {
+        const BASE_NS::string_view input = "bGlnaHQgd28";  // "light wo"
+        const BASE_NS::string_view expected = "light wo";
+        auto decoded = BASE_NS::Base64Decode(input);
+        BASE_NS::string_view result(static_cast<const char*>(static_cast<const void*>(decoded.data())), decoded.size());
+        EXPECT_EQ(expected, result);
+    }
+
+    // Minimal 2-char input (no full quartets, only remainder)
+    {
+        const BASE_NS::string_view input = "YQ";  // "a"
+        const BASE_NS::string_view expected = "a";
+        auto decoded = BASE_NS::Base64Decode(input);
+        BASE_NS::string_view result(static_cast<const char*>(static_cast<const void*>(decoded.data())), decoded.size());
+        EXPECT_EQ(expected, result);
+    }
+
+    // Minimal 3-char input (no full quartets, only remainder)
+    {
+        const BASE_NS::string_view input = "YWI";  // "ab"
+        const BASE_NS::string_view expected = "ab";
+        auto decoded = BASE_NS::Base64Decode(input);
+        BASE_NS::string_view result(static_cast<const char*>(static_cast<const void*>(decoded.data())), decoded.size());
+        EXPECT_EQ(expected, result);
     }
 }

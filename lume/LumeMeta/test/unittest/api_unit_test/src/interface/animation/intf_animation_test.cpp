@@ -50,8 +50,8 @@ protected:
     }
 
 private:
-    size_t startedCalled_ {};
-    size_t finishedCalled_ {};
+    size_t startedCalled_{};
+    size_t finishedCalled_{};
 };
 
 /**
@@ -212,13 +212,12 @@ UNIT_TEST_F(API_AnimationTest, KeyframeAnimationSerialization, testing::ext::Tes
     EXPECT_FALSE(ani->Running()->GetValue());
 }
 
-#ifdef DISABLED_TESTS_ON
 /**
  * @tc.name: ImplicitAnimation
  * @tc.desc: Tests for Implicit Animation. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_AnimationTest, DISABLED_ImplicitAnimation, testing::ext::TestSize.Level1)
+UNIT_TEST_F(API_AnimationTest, ImplicitAnimation, testing::ext::TestSize.Level1)
 {
     auto p = ConstructProperty<int>("test");
     auto pani = CreateAnimation(ClassId::PropertyAnimation);
@@ -269,7 +268,7 @@ UNIT_TEST_F(API_AnimationTest, DISABLED_ImplicitAnimation, testing::ext::TestSiz
 
     this->RunFrames(11, [&](uint32_t frame) {
         auto f = frame - 1;
-        EXPECT_FLOAT_EQ(11 - frame, p->GetValue()) << "Frame: " << frame;
+        EXPECT_EQ(11 - frame, p->GetValue()) << "Frame: " << frame;
         EXPECT_EQ(ani->Running()->GetValue(), f < 10) << "Frame: " << frame;
         EXPECT_FLOAT_EQ(ani->Progress()->GetValue(), f / 10.f) << "Frame: " << frame;
     });
@@ -290,7 +289,6 @@ UNIT_TEST_F(API_AnimationTest, DISABLED_ImplicitAnimation, testing::ext::TestSiz
     EXPECT_EQ(GetStartedCalledCount(), 2);
     EXPECT_EQ(GetFinishedCalledCount(), 2);
 }
-#endif // DISABLED_TESTS_ON
 
 /**
  * @tc.name: ImplicitAnimationNoEvaluate
@@ -493,6 +491,6 @@ UNIT_TEST_F(API_AnimationTest, ImplicitAnimationOnChanged, testing::ext::TestSiz
     EXPECT_TRUE(count >= 10);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

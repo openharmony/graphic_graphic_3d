@@ -38,7 +38,7 @@ public:
 
     ~LinearAllocator() = default;
 
-    template<typename T>
+    template <typename T>
     T* Allocate()
     {
         return static_cast<T*>(Allocate(sizeof(T), alignof(T)));
@@ -86,13 +86,13 @@ public:
     }
 
 private:
-    size_t const size_ { 0 };
+    size_t const size_{0};
     size_t const alignment_ = 1;
-    size_t free_ { 0 };
+    size_t free_{0};
 
     BASE_NS::unique_ptr<uint8_t[]> data_;
-    void* current_ { nullptr };
+    void* current_{nullptr};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_UTIL_LINEAR_ALLOCATOR_H
+#endif  // CORE_UTIL_LINEAR_ALLOCATOR_H

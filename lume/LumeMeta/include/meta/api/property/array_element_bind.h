@@ -29,7 +29,7 @@ public:
         if (auto i = interface_cast<IPropertyInternalAny>(p)) {
             if (auto&& any = i->GetInternalAny()) {
                 if (any->IsArray()) {
-                    value_ = any->Clone({ CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM });
+                    value_ = any->Clone({CloneValueType::DEFAULT_VALUE, TypeIdRole::ITEM});
                 }
             }
         }
@@ -82,11 +82,11 @@ public:
     }
 
 private:
-    std::atomic<bool> settingValue_ {};
-    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event_ { new EventImpl<IOnChanged>("OnChanged") };
+    std::atomic<bool> settingValue_{};
+    BASE_NS::shared_ptr<EventImpl<IOnChanged>> event_{new EventImpl<IOnChanged>("OnChanged")};
     IProperty::WeakPtr p_;
     IAny::Ptr value_;
-    std::size_t index_ {};
+    std::size_t index_{};
 };
 
 /// Bind property to single element of array property

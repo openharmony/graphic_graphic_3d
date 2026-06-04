@@ -29,17 +29,17 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(ITransformComponentManager, TransformComponent)
 
-    /** Position of the transform relative to the parent object.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, position, "Position", 0, ARRAY_VALUE(0.f, 0.f, 0.f))
+/** Position of the transform relative to the parent object.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, position, "Position", 0, ARRAY_VALUE(0.f, 0.f, 0.f))
 
-    /** Rotation of the transform relative to the parent object.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Quat, rotation, "Rotation", 0, ARRAY_VALUE(0.f, 0.f, 0.f, 1.f))
+/** Rotation of the transform relative to the parent object.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Quat, rotation, "Rotation", 0, ARRAY_VALUE(0.f, 0.f, 0.f, 1.f))
 
-    /** Scale of the transform relative to the parent object.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec3, scale, "Scale", 0, ARRAY_VALUE(1.f, 1.f, 1.f))
+/** Scale of the transform relative to the parent object.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec3, scale, "Scale", 0, ARRAY_VALUE(1.f, 1.f, 1.f))
 
 END_COMPONENT(ITransformComponentManager, TransformComponent, "07786a48-a52b-4425-8229-8c0d955dc4cd")
 #if !defined(IMPLEMENT_MANAGER)

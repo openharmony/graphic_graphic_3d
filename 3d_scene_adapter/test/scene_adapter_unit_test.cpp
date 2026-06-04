@@ -25,18 +25,21 @@ using namespace testing;
 using namespace testing::ext;
 
 namespace OHOS::Render3D {
-static constexpr BASE_NS::Uid ENGINE_THREAD { "2070e705-d061-40e4-bfb7-90fad2c280af" };
+static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
 
 class SceneAdapterUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
+    static void SetUpTestCase()
+    {}
     static void TearDownTestCase()
     {
         SceneAdapter::ShutdownPluginRegistry();
     }
 
-    void SetUp() {}
-    void TearDown() {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 class SceneAdapterTester : public SceneAdapter {
@@ -56,18 +59,16 @@ bool SceneAdapterTester::GetReceiveBuffer()
 }
 
 namespace {
-static WindowChangeInfo g_windowChangeInfo {
-    .offsetX = 0.0,
+static WindowChangeInfo g_windowChangeInfo{.offsetX = 0.0,
     .offsetY = 0.0,
     .width = 1080.0,
     .height = 1920.0,
     .scale = 1.0,
     .widthScale = 0.6,
     .heightScale = 0.6,
-    .recreateWindow =false,
+    .recreateWindow = false,
     .surfaceType = SurfaceType::SURFACE_WINDOW,
-    .transformType = 0
-};
+    .transformType = 0};
 
 static constexpr float EPSILON = 0.0001f;
 
@@ -245,7 +246,7 @@ HWTEST_F(SceneAdapterUT, RenderFrame001, TestSize.Level1)
     auto adapter = std::make_unique<SceneAdapterTester>();
     bool ret = adapter->LoadPluginsAndInit();
     ASSERT_EQ(ret, true);
-    
+
     adapter->RenderFrame();
     adapter->RenderFrame(true);
 
@@ -306,20 +307,18 @@ HWTEST_F(SceneAdapterUT, NeedsRepaint001, TestSize.Level1)
     ASSERT_EQ(needsRepaint, false);
 }
 
-static int32_t  g_fd = 0;
+static int32_t g_fd = 0;
 
 void MyCallBack(int32_t fd)
 {
     g_fd = fd;
 }
 
-static SurfaceBufferInfo g_surfaceBufferInfo {
-    .sfBuffer_ = nullptr,
+static SurfaceBufferInfo g_surfaceBufferInfo{.sfBuffer_ = nullptr,
     .acquireFence_ = OHOS::SyncFence::INVALID_FENCE,
-    .transformMatrix_ = { 16, 1.0 },
+    .transformMatrix_ = {16, 1.0},
     .needsTrans_ = true,
-    .fn_ = MyCallBack
-};
+    .fn_ = MyCallBack};
 
 /**
  * @tc.name: AcquireImage001
@@ -663,14 +662,14 @@ HWTEST_F(SceneAdapterUT, CreateEmptyScene002, TestSize.Level1)
         auto sceneObj1 = adapter->GetSceneObj();
         EXPECT_NE(sceneObj1, nullptr);
     }
-    
+
     // Second call should replace the previous scene
     adapter->CreateEmptyScene();
     {
         auto sceneObj2 = adapter->GetSceneObj();
         EXPECT_NE(sceneObj2, nullptr);
     }
-    
+
     adapter->Deinit();
     adapter->DeinitRenderThread();
 }
@@ -985,9 +984,7 @@ HWTEST_F(SceneAdapterUT, AcquireImage004, TestSize.Level1)
         adapter->AcquireImage(bufferInfo);
     }
 
-    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() {
-        return META_NS::IAny::Ptr{};
-    });
+    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() { return META_NS::IAny::Ptr{}; });
     META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddWaitableTask(syncCB)->Wait();
 
     adapter->Deinit();
@@ -1020,13 +1017,11 @@ HWTEST_F(SceneAdapterUT, AcquireImage005, TestSize.Level1)
         adapter->AcquireImage(bufferInfo);
     }
 
-    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() {
-        return META_NS::IAny::Ptr{};
-    });
+    auto syncCB = META_NS::MakeCallback<META_NS::ITaskQueueWaitableTask>([]() { return META_NS::IAny::Ptr{}; });
     META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD)->AddWaitableTask(syncCB)->Wait();
 
     adapter->Deinit();
     adapter->DeinitRenderThread();
 }
-} // namespace
-} // namespace OHOS::Render3D
+}  // namespace
+}  // namespace OHOS::Render3D

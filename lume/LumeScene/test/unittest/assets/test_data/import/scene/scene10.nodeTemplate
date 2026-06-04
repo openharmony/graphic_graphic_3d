@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"description": "test scene with external hierarchy using url",
+	"data": {
+		"type": "nodeTemplate",				
+		"node":	{
+			"type": "node",
+			"name": "test"			
+		}
+	},
+	"primaryGroup": ""
+}

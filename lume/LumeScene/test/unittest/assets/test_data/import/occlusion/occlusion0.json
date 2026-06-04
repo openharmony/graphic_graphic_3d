@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "occlusionMaterial",
+		"alphaCutoff": 0.5,
+		"lightingFlags": [
+			"shadowCaster"
+		]
+	}
+}

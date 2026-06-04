@@ -187,7 +187,7 @@ public:
     void BindBuffer(uint32_t target, uint32_t buffer);
     void BindBufferRange(uint32_t target, uint32_t binding, uint32_t buffer, uint64_t offset, uint64_t size);
     void BindSampler(uint32_t textureUnit, uint32_t sampler);
-    void BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture); // target = GL_TEXTURE_2D et al.
+    void BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture);  // target = GL_TEXTURE_2D et al.
     void BindImageTexture(uint32_t unit, uint32_t texture, uint32_t level, bool layered, uint32_t layer,
         uint32_t access, uint32_t format);
     void BindFrameBuffer(uint32_t fbo);
@@ -218,7 +218,7 @@ public:
     void DeleteVertexArray(uint32_t vao);
     void DeleteFrameBuffer(uint32_t fbo);
 
-    void SetActiveTextureUnit(uint32_t textureUnit); // hide this.
+    void SetActiveTextureUnit(uint32_t textureUnit);  // hide this.
     void SetMipLevels(
         const unsigned int textureUnit, const uint32_t baseLevel, const uint32_t maxLevel, const uint32_t type);
     // swizzles for textures
@@ -270,7 +270,7 @@ private:
         QUERY_BUFFER,
         TRANSFORM_FEEDBACK_BUFFER,
         ARRAY_BUFFER,
-        ELEMENT_ARRAY_BUFFER, // stored in VAO state...
+        ELEMENT_ARRAY_BUFFER,  // stored in VAO state...
         TEXTURE_BUFFER,
 #endif
         MAX_BUFFER_TARGET_ID
@@ -289,12 +289,12 @@ private:
         MAX_TEXTURE_TARGET_ID
     };
 
-    static constexpr uint32_t READ_ONLY { 0x88B8 }; /* GL_READ_ONLY */
-    static constexpr uint32_t R32UI { 0x8236 };     /* GL_R32UI */
-    static constexpr uint32_t MAX_TEXTURE_UNITS { 16 };
-    static constexpr uint32_t MAX_SAMPLERS { 16 };
-    static constexpr uint32_t MAX_BOUND_IMAGE { 16 };
-    static constexpr uint32_t MAX_BINDING_VALUE { 16 };
+    static constexpr uint32_t READ_ONLY{0x88B8}; /* GL_READ_ONLY */
+    static constexpr uint32_t R32UI{0x8236};     /* GL_R32UI */
+    static constexpr uint32_t MAX_TEXTURE_UNITS{16};
+    static constexpr uint32_t MAX_SAMPLERS{16};
+    static constexpr uint32_t MAX_BOUND_IMAGE{16};
+    static constexpr uint32_t MAX_BINDING_VALUE{16};
 
     // Cleanup cache state when deleting objects.
     void UnBindTexture(uint32_t texture);
@@ -306,17 +306,17 @@ private:
 
     BASE_NS::vector<BASE_NS::string_view> extensions_;
     BASE_NS::vector<ImageFormat> supportedFormats_;
-    bool supportsBinaryShaders_ { false };
-    bool supportsBinaryPrograms_ { false };
+    bool supportsBinaryShaders_{false};
+    bool supportsBinaryPrograms_{false};
 
     enum { VERTEX_CACHE = 0, FRAGMENT_CACHE = 1, COMPUTE_CACHE = 2, MAX_CACHES };
     struct ShaderCache {
-        size_t hit { 0 };
-        size_t miss { 0 };
+        size_t hit{0};
+        size_t miss{0};
         struct Entry {
-            uint32_t shader { 0 };
-            uint64_t hash { 0 }; // hash of generated GLSL
-            uint32_t refCount { 0 };
+            uint32_t shader{0};
+            uint64_t hash{0};  // hash of generated GLSL
+            uint32_t refCount{0};
         };
         BASE_NS::vector<Entry> cache;
     };
@@ -326,18 +326,18 @@ private:
     void ReleaseShader(uint32_t type, uint32_t shader);
 
     struct ProgramCache {
-        uint32_t program { 0 };
-        uint32_t vertShader { 0 };
-        uint32_t fragShader { 0 };
-        uint32_t compShader { 0 };
-        uint64_t hashVert { 0 };
-        uint64_t hashFrag { 0 };
-        uint64_t hashComp { 0 };
-        uint32_t refCount { 0 };
+        uint32_t program{0};
+        uint32_t vertShader{0};
+        uint32_t fragShader{0};
+        uint32_t compShader{0};
+        uint64_t hashVert{0};
+        uint64_t hashFrag{0};
+        uint64_t hashComp{0};
+        uint32_t refCount{0};
     };
     BASE_NS::vector<ProgramCache> programs_;
-    size_t pCacheHit_ { 0 };
-    size_t pCacheMiss_ { 0 };
+    size_t pCacheHit_{0};
+    size_t pCacheMiss_{0};
 
 #if RENDER_HAS_GL_BACKEND
 #if _WIN32
@@ -350,62 +350,62 @@ private:
 #if RENDER_HAS_GLES_BACKEND
     const DeviceBackendType backendType_ = DeviceBackendType::OPENGLES;
     EGLHelpers::EGLState eglState_;
-    BackendConfigGLES backendConfig_ { {}, false };
+    BackendConfigGLES backendConfig_{{}, false};
 #endif
     mutable std::recursive_mutex activeMutex_;
     static thread_local bool isActiveInThread_;
-    uint32_t isActive_ { 0 };
-    bool isRenderbackendRunning_ { false };
+    uint32_t isActive_{0};
+    bool isRenderbackendRunning_{false};
     BASE_NS::unique_ptr<LowLevelDeviceGLES> lowLevelDevice_;
     // GL State cache..
     // cache.
-    uint32_t activeTextureUnit_ = { 0 };
-    uint32_t boundSampler_[MAX_SAMPLERS] = { 0 };
+    uint32_t activeTextureUnit_ = {0};
+    uint32_t boundSampler_[MAX_SAMPLERS] = {0};
 
     struct {
-        bool bound { false };
-        uint32_t texture { 0 };
-        uint32_t level { 0 };
-        bool layered { false };
-        uint32_t layer { 0 };
-        uint32_t access { READ_ONLY };
-        uint32_t format { R32UI };
-    } boundImage_[MAX_BOUND_IMAGE] = { {} };
+        bool bound{false};
+        uint32_t texture{0};
+        uint32_t level{0};
+        bool layered{false};
+        uint32_t layer{0};
+        uint32_t access{READ_ONLY};
+        uint32_t format{R32UI};
+    } boundImage_[MAX_BOUND_IMAGE] = {{}};
 
-    uint32_t boundTexture_[MAX_TEXTURE_UNITS][MAX_TEXTURE_TARGET_ID] = { { 0 } }; // [textureunit][target type]
+    uint32_t boundTexture_[MAX_TEXTURE_UNITS][MAX_TEXTURE_TARGET_ID] = {{0}};  // [textureunit][target type]
 
     struct BufferCache {
-        bool cached { false };
-        uint32_t buffer { 0 };
-        uint64_t offset { 0 };
-        uint64_t size { 0 };
+        bool cached{false};
+        uint32_t buffer{0};
+        uint64_t offset{0};
+        uint64_t size{0};
     };
     // Cache for GL_ATOMIC_COUNTER_BUFFER, GL_TRANSFORM_FEEDBACK_BUFFER, GL_UNIFORM_BUFFER, or GL_SHADER_STORAGE_BUFFER
     // bindings.
-    BufferCache boundBuffers_[MAX_BUFFER_BIND_ID][MAX_BINDING_VALUE] = { {} };
+    BufferCache boundBuffers_[MAX_BUFFER_BIND_ID][MAX_BINDING_VALUE] = {{}};
 
     // bufferBound_ caches GL_PIXEL_UNPACK_BUFFER / GL_COPY_READ_BUFFER / GL_COPY_WRITE_BUFFER (and other generic
     // bindings)
     struct {
-        bool bound { false };
-        uint32_t buffer { 0 };
+        bool bound{false};
+        uint32_t buffer{0};
     } bufferBound_[MAX_BUFFER_TARGET_ID];
-    uint32_t boundReadFbo_ { 0 };
-    uint32_t boundWriteFbo_ { 0 };
-    uint32_t boundVao_ { 0 };
-    uint32_t boundProgram_ { 0 };
+    uint32_t boundReadFbo_{0};
+    uint32_t boundWriteFbo_{0};
+    uint32_t boundVao_{0};
+    uint32_t boundProgram_{0};
     struct VAOState {
-        uint32_t vao { 0 }; // GL name for object.
+        uint32_t vao{0};  // GL name for object.
         struct {
-            bool bound { false };
-            uint32_t buffer { 0 };
+            bool bound{false};
+            uint32_t buffer{0};
         } elementBuffer;
         struct {
-            bool bound { false };
-            uint32_t buffer { 0 };
-            intptr_t offset { 0 };
-            intptr_t stride { 0 };
-            uint32_t divisor { 0 };
+            bool bound{false};
+            uint32_t buffer{0};
+            intptr_t offset{0};
+            intptr_t stride{0};
+            uint32_t divisor{0};
         } vertexBufferBinds[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
     };
     BASE_NS::vector<VAOState> vaoStates_;
@@ -450,4 +450,4 @@ BASE_NS::unique_ptr<Device> CreateDeviceGLES(RenderContext& renderContext);
 #endif
 RENDER_END_NAMESPACE()
 
-#endif // GLES_DEVICE_GLES_H
+#endif  // GLES_DEVICE_GLES_H

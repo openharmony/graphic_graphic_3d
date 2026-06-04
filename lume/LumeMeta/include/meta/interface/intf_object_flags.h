@@ -99,7 +99,7 @@ public:
  * @param value The ObjectFlagBitsValue to set.
  * @param isSet If true, the bits should be set. If false, bits should be unset.
  */
-template<typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
+template <typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
 void SetObjectFlags(const T& object, ObjectFlagBitsValue value, bool isSet)
 {
     if (auto objectFlagsPtr = interface_cast<IObjectFlags>(object)) {
@@ -108,14 +108,14 @@ void SetObjectFlags(const T& object, ObjectFlagBitsValue value, bool isSet)
     }
 }
 
-template<typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
+template <typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
 ObjectFlagBitsValue GetObjectFlags(const T& object)
 {
     const auto objectFlagsPtr = interface_cast<IObjectFlags>(object);
     return objectFlagsPtr ? objectFlagsPtr->GetObjectFlags() : ObjectFlagBitsValue(ObjectFlagBits::NONE);
 }
 
-template<typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
+template <typename T, typename = BASE_NS::enable_if<IsKindOfPointer_v<T>>>
 bool IsFlagSet(const T& object, ObjectFlagBitsValue value)
 {
     if (auto objectFlagsPtr = interface_cast<IObjectFlags>(object)) {
@@ -131,4 +131,4 @@ META_TYPE(META_NS::IObjectFlags::WeakPtr);
 META_TYPE(META_NS::IObjectFlags::ConstPtr);
 META_TYPE(META_NS::IObjectFlags::ConstWeakPtr);
 
-#endif // META_INTERFACE_IOBJECT_FLAGS_H
+#endif  // META_INTERFACE_IOBJECT_FLAGS_H

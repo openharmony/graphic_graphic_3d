@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"description": "test scene with bloom dirtMaskImage reference",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene_bloom1.index",
+		"rootNode": {
+			"type": "node",
+			"name": "root"
+		}
+	}
+}

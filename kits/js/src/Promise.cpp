@@ -30,7 +30,7 @@ napi_value Promise::Resolve(napi_value result)
 napi_value Promise::Reject(const BASE_NS::string& reason)
 {
     LOG_E("%s", reason.c_str());
-    return Settle(NapiApi::Env { env_ }.GetString(reason), Action::REJECT);
+    return Settle(NapiApi::Env{env_}.GetString(reason), Action::REJECT);
 }
 
 napi_value Promise::Settle(napi_value result, Action action)
@@ -60,21 +60,26 @@ napi_value Promise::Settle(napi_value result, Action action)
     napi_value resourceName = nullptr;
     napi_create_string_latin1(env_, "PromiseAsync", NAPI_AUTO_LENGTH, &resourceName);
     if (auto status = napi_create_async_work(
-        env_, nullptr, resourceName, [](napi_env env, void* data) {},
-        [](napi_env env, napi_status status, void* data) {
-            tmp* ctx = (tmp*)data;
-            napi_value result;
-            napi_get_reference_value(env, ctx->ref, &result);
-            if (ctx->action == Action::RESOLVE) {
-                napi_resolve_deferred(env, ctx->def, result);
-            } else {
-                napi_reject_deferred(env, ctx->def, result);
-            }
-            napi_delete_async_work(env, ctx->asyncWork);
-            napi_delete_reference(env, ctx->ref);
-            delete ctx;
-        },
-        (void*)ctx, &ctx->asyncWork); status != napi_ok) {
+            env_,
+            nullptr,
+            resourceName,
+            [](napi_env env, void* data) {},
+            [](napi_env env, napi_status status, void* data) {
+                tmp* ctx = (tmp*)data;
+                napi_value result;
+                napi_get_reference_value(env, ctx->ref, &result);
+                if (ctx->action == Action::RESOLVE) {
+                    napi_resolve_deferred(env, ctx->def, result);
+                } else {
+                    napi_reject_deferred(env, ctx->def, result);
+                }
+                napi_delete_async_work(env, ctx->asyncWork);
+                napi_delete_reference(env, ctx->ref);
+                delete ctx;
+            },
+            (void*)ctx,
+            &ctx->asyncWork);
+        status != napi_ok) {
         napi_delete_reference(env_, ctx->ref);
         delete ctx;
     } else if (auto status = napi_queue_async_work(env_, ctx->asyncWork); status != napi_ok) {

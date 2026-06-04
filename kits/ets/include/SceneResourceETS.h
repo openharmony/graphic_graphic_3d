@@ -74,16 +74,16 @@ public:
 
     SceneResourceType GetResourceType();
     virtual std::string GetName() const;
-    void SetName(const std::string &name);
+    void SetName(const std::string& name);
     std::string GetUri() const;
     virtual void Destroy() = 0;
 
 protected:
-    void SetUri(const std::string &uri);
+    void SetUri(const std::string& uri);
 
 protected:
     SceneResourceType type_;
-    std::string name_; // Cache for name if object does not support naming
+    std::string name_;  // Cache for name if object does not support naming
     std::string uri_;
 };
 }  // namespace OHOS::Render3D

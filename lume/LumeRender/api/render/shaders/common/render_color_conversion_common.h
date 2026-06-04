@@ -262,13 +262,14 @@ vec3 ColorGrading(vec3 color, float colorTemperature, vec3 colorTemperatureStren
     float colorTemperatureBrightnessNormalization, vec3 presaturation, vec3 gain, vec3 lift, vec3 gamma)
 {
     // Calculate original brightness using luminance coefficients
-    float originalBrightness = dot(color, vec3(0.2126, 0.7152, 0.0722)); // For srgb colors
+    float originalBrightness = dot(color, vec3(0.2126, 0.7152, 0.0722));  // For srgb colors
     // Adjust color based on color temperature and strength
     color = mix(color, color * KelvinToRgb(colorTemperature), colorTemperatureStrength);
     // Calculate new brightness after temperature adjustment
     float newBrightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
     // Normalize brightness to maintain consistency
-    color *= mix(1.0, (newBrightness > 1e-6) ? (originalBrightness / newBrightness) : 1.0,
+    color *= mix(1.0,
+        (newBrightness > 1e-6) ? (originalBrightness / newBrightness) : 1.0,
         colorTemperatureBrightnessNormalization);
     // Adjust saturation by mixing with grayscale value
     color = mix(vec3(dot(color, vec3(0.2126, 0.7152, 0.0722))), color, presaturation);
@@ -276,4 +277,4 @@ vec3 ColorGrading(vec3 color, float colorTemperature, vec3 colorTemperatureStren
     return pow((gain * 2.0) * (color + (((lift * 2.0) - vec3(1.0)) * (vec3(1.0) - color))), vec3(0.5) / gamma);
 }
 
-#endif // API_RENDER_SHADERS_COMMON_CORE_COLOR_CONVERSION_COMMON_H
+#endif  // API_RENDER_SHADERS_COMMON_CORE_COLOR_CONVERSION_COMMON_H

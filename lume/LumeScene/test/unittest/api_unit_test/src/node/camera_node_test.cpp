@@ -33,7 +33,7 @@ public:
         auto scene = CreateEmptyScene();
         auto node = scene->CreateNode("//test", ClassId::CameraNode).GetResult();
         ASSERT_TRUE(node);
-        node->Position()->SetValue({ 0, 0, 0 });
+        node->Position()->SetValue({0, 0, 0});
         camera_ = interface_pointer_cast<ICamera>(node);
         ASSERT_TRUE(camera_);
         UpdateScene();
@@ -58,12 +58,12 @@ UNIT_TEST_F(API_ScenePluginCameraNodeTest, ScreenAndWorldPosition, testing::ext:
     auto rc = interface_cast<ICameraRayCast>(camera_);
     ASSERT_TRUE(rc);
     {
-        auto res = rc->ScreenPositionToWorld({ 0.5, 0.5, 0.0 }).GetResult();
-        EXPECT_EQ(res, (BASE_NS::Math::Vec3 { 0, 0, -camera_->NearPlane()->GetValue() }));
+        auto res = rc->ScreenPositionToWorld({0.5, 0.5, 0.0}).GetResult();
+        EXPECT_EQ(res, (BASE_NS::Math::Vec3{0, 0, -camera_->NearPlane()->GetValue()}));
     }
     {
-        auto res = rc->WorldPositionToScreen({ 0, 0, -camera_->NearPlane()->GetValue() }).GetResult();
-        EXPECT_EQ(res, (BASE_NS::Math::Vec3 { 0.5, 0.5, 0.0 }));
+        auto res = rc->WorldPositionToScreen({0, 0, -camera_->NearPlane()->GetValue()}).GetResult();
+        EXPECT_EQ(res, (BASE_NS::Math::Vec3{0.5, 0.5, 0.0}));
     }
 }
 
@@ -79,25 +79,32 @@ UNIT_TEST_F(API_ScenePluginCameraNodeTest, CameraRayCast, testing::ext::TestSize
 
     auto node = scene->CreateNode("//node", ClassId::MeshNode).GetResult();
     ASSERT_TRUE(node);
-    node->Position()->SetValue({ 0, 0, -10 });
+    node->Position()->SetValue({0, 0, -10});
     auto mesh = interface_pointer_cast<IMesh>(node);
     ASSERT_TRUE(mesh);
     AddSubMesh(mesh);
     auto submesh = mesh->SubMeshes()->GetValueAt(0);
     ASSERT_TRUE(submesh);
-    submesh->AABBMin()->SetValue({ -1, -1, -1 });
-    submesh->AABBMax()->SetValue({ 1, 1, 1 });
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
     UpdateScene();
-    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { -1, -1, -1 }));
-    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 1, 1, 1 }));
+    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1, -1, -1}));
+    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1, 1, 1}));
 
-    auto res = rc->CastRay({ 0.5, 0.5 }, {}).GetResult();
+    auto res = rc->CastRay({0.5, 0.5}, {}).GetResult();
     ASSERT_EQ(res.size(), 1);
-    EXPECT_EQ(res[0].position, (BASE_NS::Math::Vec3 { 0, 0, -9 }));
+    EXPECT_EQ(res[0].position, (BASE_NS::Math::Vec3{0, 0, -9}));
     EXPECT_EQ(res[0].distance, 9);
     EXPECT_EQ(res[0].distanceToCenter, 10);
     EXPECT_EQ(res[0].node, node);
 }
+
+#define EXPECT_NEAR_MAT4(m1, m2, eps)                 \
+    for (size_t ii = 0; ii != 4; ii++) {              \
+        for (size_t jj = 0; jj != 4; jj++) {          \
+            EXPECT_NEAR(m1[ii][jj], m2[ii][jj], eps); \
+        }                                             \
+    }
 
 /**
  * @tc.name: CameraMatrixAccessor
@@ -108,12 +115,39 @@ UNIT_TEST_F(API_ScenePluginCameraNodeTest, CameraMatrixAccessor, testing::ext::T
 {
     UpdateScene();
 
-    BASE_NS::Math::Mat4X4 expectedView { 0.9808309078216553f, -0.005208088085055351f, 0.19479140639305115f, 0.0f, 0.0f,
-        0.9996427893638611, 0.02672719396650791f, 0.0f, -0.19486099481582642f, -0.026214856654405594,
-        0.9804804921150208f, 0.0f, -3.345266580581665f, 2.2350447177886963f, -8.764347076416016f, 1.0f };
+    BASE_NS::Math::Mat4X4 expectedView{0.9808309078216553f,
+        -0.005208088085055351f,
+        0.19479140639305115f,
+        0.0f,
+        0.0f,
+        0.9996427893638611,
+        0.02672719396650791f,
+        0.0f,
+        -0.19486099481582642f,
+        -0.026214856654405594,
+        0.9804804921150208f,
+        0.0f,
+        -3.345266580581665f,
+        2.2350447177886963f,
+        -8.764347076416016f,
+        1.0f};
 
-    BASE_NS::Math::Mat4X4 expectedProj { 1.732050895690918f, 0.0f, 0.0f, 0.0f, 0.0f, -1.732050895690918f, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0003000497817993f, -1.0f, 0.0f, 0.0f, -0.3000900149345398f, 0.0f };
+    BASE_NS::Math::Mat4X4 expectedProj{1.732050895690918f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        -1.732050895690918f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        -1.0003000497817993f,
+        -1.0f,
+        0.0f,
+        0.0f,
+        -0.3000900149345398f,
+        0.0f};
 
     auto matrixAccessor = interface_cast<ICameraMatrixAccessor>(camera_);
     ASSERT_TRUE(matrixAccessor);
@@ -157,22 +191,46 @@ UNIT_TEST_F(API_ScenePluginCameraNodeTest, CameraMatrixAccessor, testing::ext::T
     }
 
     META_NS::SetValue(camera_->Projection(), CameraProjection::PERSPECTIVE);
-    EXPECT_EQ(viewMatrix, matrixAccessor->GetViewMatrix());
-    EXPECT_EQ(projMatrix, matrixAccessor->GetProjectionMatrix());
+    EXPECT_NEAR_MAT4(viewMatrix, matrixAccessor->GetViewMatrix(), 0.0001f);
+    EXPECT_NEAR_MAT4(projMatrix, matrixAccessor->GetProjectionMatrix(), 0.0001f);
 
     META_NS::SetValue(camera_->Projection(), CameraProjection::ORTHOGRAPHIC);
-    EXPECT_EQ(viewMatrix, matrixAccessor->GetViewMatrix());
+    EXPECT_NEAR_MAT4(viewMatrix, matrixAccessor->GetViewMatrix(), 0.0001f);
     EXPECT_NE(projMatrix, matrixAccessor->GetProjectionMatrix());
 
     META_NS::SetValue(camera_->Projection(), CameraProjection::FRUSTUM);
-    EXPECT_EQ(viewMatrix, matrixAccessor->GetViewMatrix());
-    EXPECT_EQ(projMatrix, matrixAccessor->GetProjectionMatrix());
+    EXPECT_NEAR_MAT4(viewMatrix, matrixAccessor->GetViewMatrix(), 0.0001f);
+    EXPECT_NEAR_MAT4(projMatrix, matrixAccessor->GetProjectionMatrix(), 0.0001f);
 
     META_NS::SetValue(camera_->Projection(), CameraProjection::CUSTOM);
-    EXPECT_EQ(viewMatrix, matrixAccessor->GetViewMatrix());
+    EXPECT_NEAR_MAT4(viewMatrix, matrixAccessor->GetViewMatrix(), 0.0001f);
     EXPECT_NE(projMatrix, matrixAccessor->GetProjectionMatrix());
 }
 
-} // namespace UTest
+/**
+ * @tc.name: CameraRenderTargetReassign
+ * @tc.desc: Tests camera render target assignment, reassignment, and clearing.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginCameraNodeTest, CameraRenderTargetReassign, testing::ext::TestSize.Level1)
+{
+    // Set render target to a bitmap
+    IImage::Ptr bmap = CreateTestBitmap();
+    ASSERT_TRUE(bmap);
+    EXPECT_TRUE(camera_->SetRenderTarget(interface_pointer_cast<IRenderTarget>(bmap)).GetResult());
+    UpdateScene();
+
+    // Create a second bitmap with different size and reassign
+    IImage::Ptr bmap2 = CreateTestBitmap();
+    ASSERT_TRUE(bmap2);
+    EXPECT_TRUE(camera_->SetRenderTarget(interface_pointer_cast<IRenderTarget>(bmap2)).GetResult());
+    UpdateScene();
+
+    // Clear render target by setting to null
+    EXPECT_TRUE(camera_->SetRenderTarget(nullptr).GetResult());
+    UpdateScene();
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

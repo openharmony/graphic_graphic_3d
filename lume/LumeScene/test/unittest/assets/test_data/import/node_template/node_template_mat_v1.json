@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "description": "node template v1: material with alphaCutoff override",
+    "data": {
+        "type": "nodeTemplate",
+        "primaryGroup": "mat-group",
+        "index": "node_template_mat_v1_index.json",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "mat-group"
+        }
+    }
+}

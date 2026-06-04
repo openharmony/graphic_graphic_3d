@@ -23,15 +23,16 @@
 
 namespace GeometryDefinition {
 
-CustomJS::CustomJS() : GeometryDefinition() {}
+CustomJS::CustomJS() : GeometryDefinition()
+{}
 
 void CustomJS::Init(napi_env env, napi_value exports)
 {
     auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         napi_value self;
         napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
-        auto selfObj = NapiApi::Object { env, self };
-        for (auto&& propertyName : { "vertices", "indices", "normals", "uvs", "colors" }) {
+        auto selfObj = NapiApi::Object{env, self};
+        for (auto&& propertyName : {"vertices", "indices", "normals", "uvs", "colors"}) {
             napi_value array;
             napi_create_array(env, &array);
             const auto arrayObj = NapiApi::Object(env, array);
@@ -40,12 +41,12 @@ void CustomJS::Init(napi_env env, napi_value exports)
         return self;
     };
 
-    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::CUSTOM); };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env{e}.GetNumber(GeometryType::CUSTOM); };
     napi_value topology;
     napi_create_uint32(env, PrimitiveTopology::TRIANGLE_LIST, &topology);
     napi_value undefined;
     napi_get_undefined(env, &undefined);
-    const auto props = BASE_NS::vector<napi_property_descriptor> {
+    const auto props = BASE_NS::vector<napi_property_descriptor>{
         // clang-format off
         { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
         { "topology",     nullptr, nullptr, nullptr, nullptr, topology,  napi_default_jsproperty, nullptr },
@@ -99,7 +100,7 @@ GeometryDefinition* CustomJS::FromJs(NapiApi::Object jsDefinition)
 SCENE_NS::IMesh::Ptr CustomJS::CreateMesh(
     const SCENE_NS::ICreateMesh::Ptr& creator, const SCENE_NS::MeshConfig& config) const
 {
-    const auto meshData = SCENE_NS::CustomMeshData { GetTopology(), vertices_, indices_, normals_, uvs_, colors_ };
+    const auto meshData = SCENE_NS::CustomMeshData{GetTopology(), vertices_, indices_, normals_, uvs_, colors_};
     return creator->Create(config, meshData).GetResult();
 }
 
@@ -125,11 +126,11 @@ bool CustomJS::SetTopology(NapiApi::Object& jsDefinition)
     return false;
 }
 
-template<typename ItemType>
+template <typename ItemType>
 bool CustomJS::ArrayToNative(NapiApi::Object& obj, const BASE_NS::string& arrayName, BASE_NS::vector<ItemType>& target)
 {
     NapiApi::Array jsArray = obj.Get<NapiApi::Array>(arrayName);
-    auto newItems = BASE_NS::vector<ItemType> {};
+    auto newItems = BASE_NS::vector<ItemType>{};
     const auto length = jsArray.Count();
     newItems.reserve(length);
     for (auto i = 0; i < length; i++) {
@@ -138,7 +139,7 @@ bool CustomJS::ArrayToNative(NapiApi::Object& obj, const BASE_NS::string& arrayN
             LOG_E("Invalid array given to CustomGeometry");
             return false;
         }
-        auto conversionOk { false };
+        auto conversionOk{false};
         newItems.emplace_back(ToNative<ItemType>(obj.GetEnv(), jsItem, conversionOk));
         if (!conversionOk) {
             LOG_E("Invalid array given to CustomGeometry");
@@ -149,31 +150,31 @@ bool CustomJS::ArrayToNative(NapiApi::Object& obj, const BASE_NS::string& arrayN
     return true;
 }
 
-template<>
+template <>
 uint32_t CustomJS::ToNative(napi_env env, napi_value jsItem, bool& conversionOk)
 {
-    auto tmpSigned = int64_t {};
+    auto tmpSigned = int64_t{};
     conversionOk = (napi_get_value_int64(env, jsItem, &tmpSigned) == napi_ok);
     conversionOk &= 0 <= tmpSigned && tmpSigned <= UINT32_MAX;
     return static_cast<uint32_t>(tmpSigned);
 }
 
-template<>
+template <>
 BASE_NS::Math::Vec2 CustomJS::ToNative(napi_env env, napi_value jsItem, bool& conversionOk)
 {
-    return Vec2Proxy::ToNative(NapiApi::Object { env, jsItem }, conversionOk);
+    return Vec2Proxy::ToNative(NapiApi::Object{env, jsItem}, conversionOk);
 }
 
-template<>
+template <>
 BASE_NS::Math::Vec3 CustomJS::ToNative(napi_env env, napi_value jsItem, bool& conversionOk)
 {
-    return Vec3Proxy::ToNative(NapiApi::Object { env, jsItem }, conversionOk);
+    return Vec3Proxy::ToNative(NapiApi::Object{env, jsItem}, conversionOk);
 }
 
-template<>
+template <>
 BASE_NS::Color CustomJS::ToNative(napi_env env, napi_value jsItem, bool& conversionOk)
 {
-    return ColorProxy::ToNative(NapiApi::Object { env, jsItem }, conversionOk);
+    return ColorProxy::ToNative(NapiApi::Object{env, jsItem}, conversionOk);
 }
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition

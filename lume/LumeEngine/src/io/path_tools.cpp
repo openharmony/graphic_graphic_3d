@@ -94,6 +94,9 @@ string NormalizePath(string_view path)
                 break;
             }
         } else if (sub == ".") {
+            if (pos == string_view::npos) {
+                break;
+            }
             path = path.substr(pos);
             continue;
         } else {
@@ -160,29 +163,32 @@ string GetCurrentDirectory()
 void SplitPath(string_view pathIn, string_view& drive, string_view& path, string_view& filename, string_view& ext)
 {
     drive = path = filename = ext = {};
-    if (pathIn[0] == '/') {
+    if (pathIn.empty()) {
+        return;
+    }
+    if (pathIn[0U] == '/') {
         // see if there is a drive after
-        if (pathIn[2] == ':') { // 2: index of ':'
+        if (pathIn.size() >= 3U && pathIn[2U] == ':') {  // 2: index of ':'
             // yes.
             // remove the first '/' to help later parsing
             pathIn = pathIn.substr(1);
         }
     }
     // extract the drive
-    if (pathIn[1] == ':') {
-        drive = pathIn.substr(0, 1);
-        pathIn = pathIn.substr(2); // 2: remove the drive part
+    if (pathIn.size() >= 2U && pathIn[1U] == ':') {
+        drive = pathIn.substr(0U, 1U);
+        pathIn = pathIn.substr(2U);  // 2: remove the drive part
     }
     auto lastSlash = pathIn.find_last_of('/');
     if (lastSlash != string_view::npos) {
-        filename = pathIn.substr(lastSlash + 1);
-        path = pathIn.substr(0, lastSlash + 1);
+        filename = pathIn.substr(lastSlash + 1U);
+        path = pathIn.substr(0, lastSlash + 1U);
     } else {
         filename = pathIn;
     }
     auto lastDot = filename.find_last_of('.');
     if (lastDot != string_view::npos) {
-        ext = filename.substr(lastDot + 1);
+        ext = filename.substr(lastDot + 1U);
         filename = filename.substr(0, lastDot);
     }
 }

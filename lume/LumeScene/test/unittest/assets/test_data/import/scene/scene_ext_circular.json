@@ -1,0 +1,22 @@
+{
+	"version": "1.0",
+	"description": "test scene with circular external node reference",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "ext-circular",
+					"source": {
+						"type": "nodeTemplate",
+						"url": "scene_ext_circular.nodeTemplate"
+					},
+					"resourceGroup": "circ-grp"
+				}
+			]
+		}
+	}
+}

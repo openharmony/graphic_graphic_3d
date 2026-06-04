@@ -37,11 +37,11 @@ UNIT_TEST(API_SpinLockTest, LockUnlock, testing::ext::TestSize.Level1)
     bool value = false;
 
     l.Lock();
-    std::thread t { [&] {
+    std::thread t{[&] {
         l.Lock();
         value = true;
         l.Unlock();
-    } };
+    }};
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     l.Unlock();
     if (t.joinable()) {
@@ -62,7 +62,7 @@ UNIT_TEST(API_SpinLockTest, MultiLockUnlock, testing::ext::TestSize.Level1)
 
     std::vector<std::thread> threads;
     for (int i = 0; i != 5; ++i) {
-        threads.push_back(std::thread { [&] {
+        threads.push_back(std::thread{[&] {
             int v = 0;
             while (v < 100) {
                 l.Lock();
@@ -70,7 +70,7 @@ UNIT_TEST(API_SpinLockTest, MultiLockUnlock, testing::ext::TestSize.Level1)
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 l.Unlock();
             }
-        } });
+        }});
     }
     for (auto&& t : threads) {
         if (t.joinable()) {
@@ -80,5 +80,5 @@ UNIT_TEST(API_SpinLockTest, MultiLockUnlock, testing::ext::TestSize.Level1)
     EXPECT_TRUE(value >= 100);
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

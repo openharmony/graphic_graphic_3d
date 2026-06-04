@@ -28,12 +28,12 @@
 namespace OHOS::Render3D {
 class ShaderETS : public SceneResourceETS {
 public:
-    ShaderETS(const SCENE_NS::IShader::Ptr &shader, const SCENE_NS::IMaterial::Ptr &material);
-    ShaderETS(const SCENE_NS::IShader::Ptr &shader, const std::string &name, const std::string &uri);
+    ShaderETS(const SCENE_NS::IShader::Ptr& shader, const SCENE_NS::IMaterial::Ptr& material);
+    ShaderETS(const SCENE_NS::IShader::Ptr& shader, const std::string& name, const std::string& uri);
     ~ShaderETS();
     void Destroy() override;
 
-    void BindToMaterial(const SCENE_NS::IMaterial::Ptr &material);
+    void BindToMaterial(const SCENE_NS::IMaterial::Ptr& material);
     void DetachFromMaterial();
 
     int32_t GetInputsSize() const
@@ -46,8 +46,8 @@ public:
         return keys_;
     }
 
-    std::shared_ptr<IPropertyProxy> GetInput(const std::string &key);
-    void SetInput(const std::string &key, const std::any &value);
+    std::shared_ptr<IPropertyProxy> GetInput(const std::string& key);
+    void SetInput(const std::string& key, const std::any& value);
 
     META_NS::IObject::Ptr GetNativeObj() const override;
     SCENE_NS::IShader::Ptr GetNativeShader() const

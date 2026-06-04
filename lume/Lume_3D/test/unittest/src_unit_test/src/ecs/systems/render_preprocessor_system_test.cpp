@@ -57,7 +57,7 @@ Entity CreateSolidColorMaterial(IEcs& ecs, Math::Vec4 color)
     }
     return entity;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderPreprocessorSystemTest
@@ -84,9 +84,9 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, RenderPreprocessorSystemTest, testing
 
     RenderPreprocessorSystem* rpSystem = static_cast<RenderPreprocessorSystem*>(irpSystem);
 
-    Entity materialEntity = CreateSolidColorMaterial(*ecs, Math::Vec4 { 1.0f, 1.0f, 1.0f, 1.0f });
+    Entity materialEntity = CreateSolidColorMaterial(*ecs, Math::Vec4{1.0f, 1.0f, 1.0f, 1.0f});
     Entity cube = graphicsContext->GetMeshUtil().GenerateCube(*ecs, "myCube", materialEntity, 1.0f, 1.0f, 1.0f);
-    Entity additionalMaterial = CreateSolidColorMaterial(*ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f });
+    Entity additionalMaterial = CreateSolidColorMaterial(*ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f});
 
     auto meshManager = GetManager<IMeshComponentManager>(*ecs);
     auto renderMeshManager = GetManager<IRenderMeshComponentManager>(*ecs);
@@ -123,7 +123,7 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, MeshBatch, testing::ext::TestSize.Lev
     ASSERT_NE(nullptr, inodeSystem);
     inodeSystem->SetActive(true);
 
-    Entity materialEntity = CreateSolidColorMaterial(*ecs, Math::Vec4 { 1.0f, 1.0f, 1.0f, 1.0f });
+    Entity materialEntity = CreateSolidColorMaterial(*ecs, Math::Vec4{1.0f, 1.0f, 1.0f, 1.0f});
     Entity cube = graphicsContext->GetMeshUtil().GenerateCube(*ecs, "myCube", materialEntity, 1.0f, 1.0f, 1.0f);
     auto renderMeshBatchManager = GetManager<IRenderMeshBatchComponentManager>(*ecs);
     renderMeshBatchManager->Create(cube);
@@ -134,7 +134,7 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, MeshBatch, testing::ext::TestSize.Lev
     ISceneNode* node = nullptr;
     for (auto i = 0U; i < 3U; ++i) {
         node = inodeSystem->CreateNode();
-        node->SetPosition({ static_cast<float>(i) + 1.5f, 0.0f, 0.0f });
+        node->SetPosition({static_cast<float>(i) + 1.5f, 0.0f, 0.0f});
         renderMeshManager->Create(node->GetEntity());
         if (auto handle = renderMeshManager->Write(node->GetEntity())) {
             handle->mesh = cubeMesh;
@@ -144,7 +144,7 @@ UNIT_TEST(SRC_EcsRenderPreprocessorSystem, MeshBatch, testing::ext::TestSize.Lev
     ecs->ProcessEvents();
     ecs->Update(1u, 1u);
 
-    const Entity cloneMaterial = CreateSolidColorMaterial(*ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f });
+    const Entity cloneMaterial = CreateSolidColorMaterial(*ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f});
     IMaterialComponentManager* materialManager = GetManager<IMaterialComponentManager>(*ecs);
     if (auto materialHandle = materialManager->Write(cloneMaterial); materialHandle) {
         materialHandle->materialLightingFlags &= ~MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT;

@@ -16,13 +16,15 @@
 #include "SceneComponentJS.h"
 
 #include <algorithm>
-
+#include <cctype>
+#include <meta/api/engine/util.h>
 #include <meta/api/make_callback.h>
 #include <meta/interface/intf_metadata.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 #include <meta/interface/property/property_events.h>
 #include <scene/ext/intf_component.h>
+#include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_node.h>
 #include <scene/interface/intf_scene.h>
@@ -31,8 +33,6 @@
 
 #include "JsObjectCache.h"
 #include "SceneJS.h"
-
-#include <cctype>
 
 using namespace SCENE_NS;
 
@@ -43,8 +43,14 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
     BASE_NS::vector<napi_property_descriptor> props;
 
     napi_value func;
-    auto status = napi_define_class(env, "SceneComponent", NAPI_AUTO_LENGTH, BaseObject::ctor<SceneComponentJS>(),
-        nullptr, props.size(), props.data(), &func);
+    auto status = napi_define_class(env,
+        "SceneComponent",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<SceneComponentJS>(),
+        nullptr,
+        props.size(),
+        props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -59,10 +65,10 @@ void SceneComponentJS::Init(napi_env env, napi_value exports)
 napi_value SceneComponentJS::Dispose(NapiApi::FunctionContext<>& ctx)
 {
     LOG_V("SceneComponentJS::Dispose");
-    DisposeNative(nullptr);
+    DisposeNative();
     return {};
 }
-void SceneComponentJS::DisposeNative(void*)
+void SceneComponentJS::DisposeNative()
 {
     if (!disposed_) {
         disposed_ = true;
@@ -74,10 +80,10 @@ void SceneComponentJS::DisposeNative(void*)
 
         if (!jsProps_.IsEmpty()) {
             NapiApi::Object inp = jsProps_.GetObject();
-            for (auto&& v : proxies_) {
-                inp.DeleteProperty(v.first);
+            for (auto&& v : lazyProps_) {
+                inp.DeleteProperty(v->name);
             }
-            proxies_.clear();
+            lazyProps_.clear();
         }
         jsProps_.Reset();
 
@@ -96,7 +102,7 @@ void* SceneComponentJS::GetInstanceImpl(uint32_t id)
 }
 void SceneComponentJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
 }
 SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
@@ -106,7 +112,7 @@ SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObjec
     if (!fromJs) {
         return;
     }
-    scene_ = { NapiApi::Object(fromJs.Arg<0>()) };
+    scene_ = {NapiApi::Object(fromJs.Arg<0>())};
     NapiApi::Object node = fromJs.Arg<1>();
     const auto native = GetNativeObject();
     if (!native) {
@@ -124,7 +130,7 @@ SceneComponentJS::SceneComponentJS(napi_env e, napi_callback_info i) : BaseObjec
 SceneComponentJS::~SceneComponentJS()
 {
     LOG_V("SceneComponentJS --");
-    DisposeNative(nullptr);
+    DisposeNative();
 }
 
 using GenericComponentMapping = BASE_NS::unordered_map<BASE_NS::string_view, BASE_NS::vector<BASE_NS::string_view>>;
@@ -133,7 +139,7 @@ const GenericComponentMapping& GetComponentMapping()
 {
     static const GenericComponentMapping map = []() {
         GenericComponentMapping m;
-        m["RenderConfigurationComponent"] = { "shadowType", "shadowQuality", "shadowSmoothness", "renderingFlags" };
+        m["RenderConfigurationComponent"] = {"shadowType", "shadowQuality", "shadowSmoothness", "renderingFlags"};
         return m;
     }();
     return map;
@@ -156,20 +162,73 @@ bool ShouldExposeToJS(BASE_NS::string_view componentName, BASE_NS::string_view p
     const auto& map = GetComponentMapping();
     auto it = map.find(componentName);
     if (it == map.end()) {
-        return true; // No mapping defined, expose all
+        return true;  // No mapping defined, expose all
     }
     const auto& mapping = it->second;
     return std::find(mapping.begin(), mapping.end(), propertyName) != mapping.end();
 }
 
+static napi_value LazyPropGet(napi_env e, napi_callback_info i)
+{
+    NapiApi::FunctionContext<> info(e, i);
+    auto lp = static_cast<SceneComponentJS::LazyProperty*>(info.GetData());
+    auto proxy = lp ? lp->GetOrCreateProxy() : nullptr;
+    return proxy ? proxy->Value() : info.GetUndefined();
+}
+
+static napi_value LazyPropSet(napi_env e, napi_callback_info i)
+{
+    NapiApi::FunctionContext<> info(e, i);
+    auto lp = static_cast<SceneComponentJS::LazyProperty*>(info.GetData());
+    auto proxy = lp ? lp->GetOrCreateProxy() : nullptr;
+    if (proxy) {
+        proxy->SetValue(info);
+    }
+    return info.GetUndefined();
+}
+
+bool SceneComponentJS::LazyProperty::IsValid() const
+{
+    return owner && !owner->scene_.IsEmpty() && !owner->jsProps_.IsEmpty();
+}
+
+PropertyProxy* SceneComponentJS::LazyProperty::GetOrCreateProxy()
+{
+    if (proxy) {
+        return proxy.get();
+    }
+    if (!IsValid()) {
+        return {};
+    }
+    auto native = owner->GetNativeObject<SCENE_NS::IEcsObjectAccess>();
+    auto meta = interface_cast<META_NS::IMetadata>(native);
+    if (!meta) {
+        return {};
+    }
+    // GetProperty resolves engine paths (e.g. "CameraComponent.zFar") to static properties
+    // (e.g. "FarPlane") via Component's overridden GetProperty.
+    auto prop = meta->GetProperty(fullPath);
+    // Fallback for generic ECS components without LumeScene static property mappings:
+    // create and register the property so it participates in the sync cycle.
+    if (!prop) {
+        auto ecsObj = native->GetEcsObject();
+        prop = ecsObj ? ecsObj->CreateProperty(fullPath).GetResult() : nullptr;
+        if (prop) {
+            meta->AddProperty(prop);
+        }
+    }
+    if (prop) {
+        proxy = PropertyToProxy(owner->scene_.GetNapiObject(), owner->jsProps_.GetObject(), prop);
+    }
+    return proxy.get();
+}
+
 void SceneComponentJS::AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj)
 {
     auto comp = interface_cast<SCENE_NS::IComponent>(obj);
-    auto meta = interface_cast<META_NS::IMetadata>(obj);
-    if (!comp || !meta) {
+    if (!comp) {
         return;
     }
-    comp->PopulateAllProperties();
 
     NapiApi::Object jsProps(meJs.GetEnv());
     BASE_NS::vector<napi_property_descriptor> napi_descs;
@@ -177,15 +236,28 @@ void SceneComponentJS::AddProperties(NapiApi::Object meJs, const META_NS::IObjec
     if (auto o = interface_cast<META_NS::IObject>(comp)) {
         componentName = o->GetName();
     }
-    for (auto&& p : meta->GetProperties()) {
-        if (p) {
-            const auto name = BASE_NS::string(SCENE_NS::PropertyName(p->GetName()));
-            if (ShouldExposeToJS(componentName, name)) {
-                if (auto proxy = PropertyToProxy(scene_.GetNapiObject(), jsProps, p)) {
-                    auto res = proxies_.insert_or_assign(name, proxy);
-                    napi_descs.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxy)));
-                }
-            }
+
+    // Enumerate property names from component metadata without creating engine value bridges
+    auto props = comp->EnumerateProperties();
+    for (auto&& prop : props) {
+        const auto name = BASE_NS::string(SCENE_NS::PropertyName(prop.name));
+        if (ShouldExposeToJS(componentName, name)) {
+            auto lp = BASE_NS::make_unique<LazyProperty>();
+            lp->owner = this;
+            lp->name = name;
+            lp->fullPath = BASE_NS::move(prop.name);
+            auto* lpPtr = lp.get();
+            lazyProps_.push_back(BASE_NS::move(lp));
+
+            napi_property_descriptor desc{lpPtr->name.c_str(),
+                nullptr,
+                nullptr,
+                LazyPropGet,
+                LazyPropSet,
+                nullptr,
+                napi_default_jsproperty,
+                static_cast<void*>(lpPtr)};
+            napi_descs.push_back(desc);
         }
     }
 

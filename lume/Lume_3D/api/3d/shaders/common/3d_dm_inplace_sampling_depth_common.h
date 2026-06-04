@@ -87,4 +87,4 @@ float GetUnpackAlphaCutoff(const uint instanceIdx)
     return uMaterialData.material[instanceIdx].factors[CORE_MATERIAL_FACTOR_ADDITIONAL_IDX].x;
 }
 
-#endif // SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_DEPTH_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_INPLANE_SAMPLING_DEPTH_COMMON_H

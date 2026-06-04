@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
-import("//build/ohos/ace/ace.gni")
 import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 
 config("lume3d_config") {

@@ -1,0 +1,10 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "myAnim",
+		"enabled": false,
+		"loop": 3,
+		"speed": 2.5
+	}
+}

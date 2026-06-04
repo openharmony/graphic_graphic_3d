@@ -70,6 +70,6 @@ INSTANTIATE_TEST_SUITE_P(API_EasingCurveTest, API_EasingCurveTest,
         ClassId::InOutElasticEasingCurve, ClassId::InBounceEasingCurve, ClassId::OutBounceEasingCurve,
         ClassId::InOutBounceEasingCurve, ClassId::StepStartEasingCurve, ClassId::StepEndEasingCurve));
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

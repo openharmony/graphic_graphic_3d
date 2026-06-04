@@ -43,7 +43,7 @@ public:
     using Ptr = BASE_NS::refcnt_ptr<RenderPostProcessUpscaleNode>;
 
     struct EffectProperties {
-        bool enabled { false };
+        bool enabled{false};
         UpscaleConfiguration upscaleConfiguration;
     };
 
@@ -70,7 +70,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -98,7 +98,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void RenderGradientPass(RENDER_NS::IRenderCommandList& cmdList);
     void RenderStructureTensorPass(RENDER_NS::IRenderCommandList& cmdList);
@@ -109,11 +109,11 @@ private:
     RenderPass CreateRenderPass(const RenderHandle output, const BASE_NS::Math::UVec2& resolution) const;
     void CheckDescriptorSetNeed();
 
-    BASE_NS::Math::UVec2 baseSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 baseSize_{0U, 0U};
 
     struct Targets {
-        BASE_NS::Math::UVec2 inputResolution { 0U, 0U };
-        BASE_NS::Math::UVec2 outputResolution { 0U, 0U };
+        BASE_NS::Math::UVec2 inputResolution{0U, 0U};
+        BASE_NS::Math::UVec2 outputResolution{0U, 0U};
 
         RenderHandleReference gradientTexture;
 
@@ -146,25 +146,25 @@ private:
     RenderNodeCopyUtil renderCopyOutput_;
 
     struct UpscalerPushConstant {
-        BASE_NS::Math::Vec4 inputSize { 0.0f, 0.0f, 0.0f, 0.0f };  // 1/width, 1/height, width, height
-        BASE_NS::Math::Vec4 outputSize { 0.0f, 0.0f, 0.0f, 0.0f }; // output width, height, 1/width, 1/height
-        float smoothScale { 1.0f };
+        BASE_NS::Math::Vec4 inputSize{0.0f, 0.0f, 0.0f, 0.0f};   // 1/width, 1/height, width, height
+        BASE_NS::Math::Vec4 outputSize{0.0f, 0.0f, 0.0f, 0.0f};  // output width, height, 1/width, 1/height
+        float smoothScale{1.0f};
 
-        float structureSensitivity { 1.0f };
-        float edgeSharpness { 2.0f };
+        float structureSensitivity{1.0f};
+        float edgeSharpness{2.0f};
 
-        float padding { 0.0f };
+        float padding{0.0f};
     };
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
-    bool valid_ { false };
+    bool valid_{false};
     EffectProperties effectProperties_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POSTPROCESS_UPSCALE_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POSTPROCESS_UPSCALE_NODE_H

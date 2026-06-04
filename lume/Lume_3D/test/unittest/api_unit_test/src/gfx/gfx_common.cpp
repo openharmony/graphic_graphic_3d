@@ -122,7 +122,7 @@ void TestResources::TakeImageData()
     imageHandle_ = renderContext_->GetDevice().GetGpuResourceManager().Create("TestOutputImage", imageDesc);
 
     GpuBufferDesc bufferDesc;
-    bufferDesc.byteSize = windowWidth_ * windowHeight_ * 4; // 4: parm
+    bufferDesc.byteSize = windowWidth_ * windowHeight_ * 4;  // 4: parm
     bufferDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_DYNAMIC_BARRIERS;
     bufferDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
     bufferDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT | CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -155,11 +155,9 @@ void TestResources::SetBackendExtra(DeviceCreateInfo& deviceCreateInfo)
 #endif
 #if RENDER_HAS_GLES_BACKEND
     if (testBackend_ == DeviceBackendType::OPENGLES) {
-        constexpr uint32_t defaultDepthBits = 24;
-        constexpr uint32_t defaultAlphaBits = 8;
         glesExtra_.MSAASamples = 0;
-        glesExtra_.depthBits = defaultDepthBits;
-        glesExtra_.alphaBits = defaultAlphaBits;
+        glesExtra_.depthBits = 24;
+        glesExtra_.alphaBits = 8;
         glesExtra_.stencilBits = 0;
         deviceCreateInfo.backendType = DeviceBackendType::OPENGLES;
         deviceCreateInfo.backendConfiguration = &glesExtra_;
@@ -177,7 +175,7 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
 {
 #if RENDER_HAS_VULKAN_BACKEND && defined(VK_USE_PLATFORM_WIN32_KHR)
     if (testBackend_ == DeviceBackendType::VULKAN) {
-        VkSurfaceKHR surface { VK_NULL_HANDLE };
+        VkSurfaceKHR surface{VK_NULL_HANDLE};
         const DevicePlatformDataVk& plat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
         VkWin32SurfaceCreateInfoKHR sci;
         sci.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -219,7 +217,7 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
 #if defined(__ANDROID__)
         if (testBackend_ == DeviceBackendType::VULKAN) {
         VkResult result;
-        VkSurfaceKHR surface { VK_NULL_HANDLE };
+        VkSurfaceKHR surface{VK_NULL_HANDLE};
         const RENDER_NS::DevicePlatformDataVk& plat =
             static_cast<const RENDER_NS::DevicePlatformDataVk&>(device.GetPlatformData());
 
@@ -230,9 +228,8 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
             return;
         }
 
-        auto const surfaceCreateInfo =
-            VkAndroidSurfaceCreateInfoKHR { VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR, nullptr, 0,
-                ::Test::g_androidApp->GetWindowHandle() };
+        auto const surfaceCreateInfo = VkAndroidSurfaceCreateInfoKHR{
+            VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR, nullptr, 0, ::Test::g_androidApp->GetWindowHandle()};
 
         result = vkCreateAndroidSurfaceKHR(plat.instance, &surfaceCreateInfo, nullptr, &surface);
         if (result != VK_SUCCESS) {
@@ -263,7 +260,7 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
         EGLConfig config = data.config;
 
         bool hasSRGB = true;
-        if ((data.majorVersion > 1) || ((data.majorVersion == 1) && (data.minorVersion > 4))) { // 4: parm
+        if ((data.majorVersion > 1) || ((data.majorVersion == 1) && (data.minorVersion > 4))) {  // 4: parm
             COLOR_SPACE = EGL_GL_COLORSPACE;
             COLOR_SPACE_SRGB = EGL_GL_COLORSPACE_SRGB;
             COLOR_SPACE_LINEAR = EGL_GL_COLORSPACE_LINEAR;
@@ -276,7 +273,7 @@ void TestResources::SetBackendSurface(SwapchainCreateInfo& swapchainCreateInfo, 
         }
 
         if (hasSRGB) {
-            const EGLint attribs[] = { COLOR_SPACE, COLOR_SPACE_SRGB, EGL_NONE };
+            const EGLint attribs[] = {COLOR_SPACE, COLOR_SPACE_SRGB, EGL_NONE};
             eglSurface = eglCreateWindowSurface(data.display, config, window, attribs);
             if (eglSurface == EGL_NO_SURFACE) {
                 // okay fallback to whatever colorformat
@@ -318,7 +315,7 @@ void TestResources::LiftTestUp(int viewportSizeX, int viewportSizeY)
 
     device = &renderContext_->GetDevice();
     if constexpr (WITH_SWAPCHAIN) {
-        SwapchainCreateInfo swapchainCreateInfo {};
+        SwapchainCreateInfo swapchainCreateInfo{};
 #if defined(__OHOS__)
         swapchainCreateInfo.window.window = reinterpret_cast<uintptr_t>(::Test::g_ohosApp->GetWindowHandle());
         ASSERT_NE(::Test::g_ohosApp->GetWindowHandle(), nullptr);
@@ -390,7 +387,33 @@ void TestResources::TickTest(int frameCountToTick)
             }
         }
 
-        const RenderHandleReference rngs[] = { renderNodeGraph_ };
+        const RenderHandleReference rngs[] = {renderNodeGraph_};
+        renderContext_->GetRenderer().RenderFrame(array_view(rngs, 1));
+    }
+}
+
+void TestResources::TickTest(int frameCountToTick, uint64_t deltaTimeUs)
+{
+    uint64_t totalTimeUs = 0;
+    // Tick for frameCountToTick frames and collect imaging for comparison
+    for (int i = 0; i < frameCountToTick; i++) {
+        totalTimeUs += deltaTimeUs;
+        auto* ecs = ecs_.get();
+        ecs_->ProcessEvents();
+        ecs_->Update(totalTimeUs, deltaTimeUs);
+        ecs_->ProcessEvents();
+
+        if (i == frameCountToTick - 1) {
+            if (dataStoreDataCopy_) {
+                IRenderDataStoreDefaultGpuResourceDataCopy::GpuResourceDataCopy dataCopy;
+                dataCopy.copyType = IRenderDataStoreDefaultGpuResourceDataCopy::CopyType::WAIT_FOR_IDLE;
+                dataCopy.gpuHandle = bufferHandle_;
+                dataCopy.byteArray = byteArray_.get();
+                dataStoreDataCopy_->AddCopyOperation(dataCopy);
+            }
+        }
+
+        const RenderHandleReference rngs[] = {renderNodeGraph_};
         renderContext_->GetRenderer().RenderFrame(array_view(rngs, 1));
     }
 }
@@ -539,5 +562,5 @@ Entity CreateSolidColorMaterial(IEcs& ecs, Math::Vec4 color)
     return entity;
 }
 
-} // namespace UTest
+}  // namespace UTest
 CORE3D_END_NAMESPACE()

@@ -1,0 +1,44 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name": "custom-shader"
+				},
+				"type": "shader",
+				"path": "test_assets://shaders/Custom.shader"
+			},
+			{
+				"resourceId": {
+					"name": "mat-custom-slot"
+				},
+				"type": "customMaterial",
+				"options": {
+					"materialShader": {
+						"name": "custom-shader"
+					},
+					"textures": {
+						"Albedo": {
+							"factor": [
+								0.11,
+								0.22,
+								0.33,
+								0.44
+							]
+						},
+						"baseColor": {
+							"factor": [
+								0.99,
+								0.99,
+								0.99,
+								0.99
+							]
+						}
+					}
+				}
+			}
+		]
+	}
+}

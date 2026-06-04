@@ -34,7 +34,7 @@
 namespace {
 constexpr BASE_NS::string_view TEST_PLUGIN_NAME = "3D Test Plugin";
 
-constexpr BASE_NS::Uid UNKNOWN_UID { "c0ffee00-600d-1234-1234-deadbeef0bad" };
+constexpr BASE_NS::Uid UNKNOWN_UID{"c0ffee00-600d-1234-1234-deadbeef0bad"};
 
 class TypeInfoListener final : public CORE_NS::IPluginRegister::ITypeInfoListener {
 public:
@@ -53,7 +53,9 @@ public:
             typeInfos_.clear();
         }
         type_ = type;
-        std::transform(typeInfos.begin(), typeInfos.end(), std::back_inserter(typeInfos_),
+        std::transform(typeInfos.begin(),
+            typeInfos.end(),
+            std::back_inserter(typeInfos_),
             [](const CORE_NS::ITypeInfo* const typeInfo) {
                 CORE_LOG_D("%s", BASE_NS::to_string(typeInfo->typeUid).data());
                 return typeInfo->typeUid;
@@ -63,7 +65,7 @@ public:
     EventType type_;
     BASE_NS::vector<BASE_NS::Uid> typeInfos_;
 };
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: GetPlugins
@@ -74,11 +76,11 @@ UNIT_TEST(API_PluginTest, GetPlugins, testing::ext::TestSize.Level1)
 {
     CORE_NS::IPluginRegister& pluginRegister = CORE_NS::GetPluginRegister();
 
-    constexpr BASE_NS::Uid uids[] = { TestPlugin3D::UID_3D_TEST_PLUGIN };
+    constexpr BASE_NS::Uid uids[] = {TestPlugin3D::UID_3D_TEST_PLUGIN};
     ASSERT_TRUE(pluginRegister.LoadPlugins(uids));
 
     const BASE_NS::array_view<const CORE_NS::IPlugin* const> plugins = pluginRegister.GetPlugins();
-    EXPECT_GE(plugins.size(), 3U); // expect to find test plugin and it's dependencies 3d and render
+    EXPECT_GE(plugins.size(), 3U);  // expect to find test plugin and it's dependencies 3d and render
     bool foundTestPlugin = false;
     for (auto&& plugin : plugins) {
         ASSERT_TRUE(plugin);
@@ -100,7 +102,7 @@ UNIT_TEST(API_PluginTest, GetTypeInfos, testing::ext::TestSize.Level1)
 {
     CORE_NS::IPluginRegister& pluginRegister = CORE_NS::GetPluginRegister();
 
-    constexpr BASE_NS::Uid uids[] = { TestPlugin3D::UID_3D_TEST_PLUGIN };
+    constexpr BASE_NS::Uid uids[] = {TestPlugin3D::UID_3D_TEST_PLUGIN};
     pluginRegister.LoadPlugins(uids);
 
     BASE_NS::array_view<const CORE_NS::ITypeInfo* const> typeInfos =
@@ -114,7 +116,7 @@ UNIT_TEST(API_PluginTest, GetTypeInfos, testing::ext::TestSize.Level1)
         EXPECT_TRUE(plugin3d->destroyPlugin);
     }
 
-    pluginRegister.UnloadPlugins({ uids });
+    pluginRegister.UnloadPlugins({uids});
 }
 
 /**
@@ -129,7 +131,7 @@ UNIT_TEST(API_PluginTest, globalInterfaces, testing::ext::TestSize.Level1)
 
     const auto interfaceCount = globalClassRegister.GetInterfaceMetadata().size();
     {
-        constexpr BASE_NS::Uid uids[] = { TestPlugin3D::UID_3D_TEST_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {TestPlugin3D::UID_3D_TEST_PLUGIN};
         ASSERT_TRUE(pluginRegister.LoadPlugins(uids));
 
         const CORE_NS::InterfaceTypeInfo& info =
@@ -148,7 +150,7 @@ UNIT_TEST(API_PluginTest, globalInterfaces, testing::ext::TestSize.Level1)
             CORE_NS::GetInstance<TestPlugin3D::ITest>(TestPlugin3D::UID_3D_GLOBAL_TEST_IMPL);
         EXPECT_TRUE(sharedGlobal);
         EXPECT_EQ(sharedGlobal->GetType(), TestPlugin3D::GlobalImpl().GetType());
-        pluginRegister.UnloadPlugins({ uids });
+        pluginRegister.UnloadPlugins({uids});
     }
     EXPECT_EQ(globalClassRegister.GetInterfaceMetadata().size(), interfaceCount);
 }
@@ -180,7 +182,7 @@ UNIT_TEST(API_PluginTest, pluginInterfaces, testing::ext::TestSize.Level1)
 
     TypeInfoListener listener(pluginRegister);
 
-    constexpr BASE_NS::Uid uids[] = { TestPlugin3D::UID_3D_TEST_PLUGIN };
+    constexpr BASE_NS::Uid uids[] = {TestPlugin3D::UID_3D_TEST_PLUGIN};
     ASSERT_TRUE(pluginRegister.LoadPlugins(uids));
     EXPECT_EQ(listener.type_, CORE_NS::IPluginRegister::ITypeInfoListener::EventType::ADDED);
     EXPECT_EQ(listener.typeInfos_.size(), 1U);

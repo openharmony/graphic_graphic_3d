@@ -28,7 +28,7 @@ class ColorFringeSettingsImpl {
     friend class PostProcessSettingsImpl;
 
 public:
-    static std::shared_ptr<ColorFringeETS> CreateInternal(const ScenePostProcessSettings::ColorFringeSettings &data);
+    static std::shared_ptr<ColorFringeETS> CreateInternal(const ScenePostProcessSettings::ColorFringeSettings& data);
 
     ColorFringeSettingsImpl(const std::shared_ptr<ColorFringeETS> colorFringeETS);
     ~ColorFringeSettingsImpl();
@@ -38,5 +38,5 @@ public:
 private:
     std::shared_ptr<ColorFringeETS> colorFringeETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_COLOR_FRINGE_SETTINGS_IMPL_H

@@ -64,10 +64,10 @@ private:
     DeviceGLES& device_;
 
     BASE_NS::unique_ptr<GpuShaderProgramGLES> specialized_;
-    PipelineStateObjectPlatformDataGL plat_ {};
+    PipelineStateObjectPlatformDataGL plat_{};
 
     mutable BASE_NS::unordered_map<BASE_NS::string, BASE_NS::unique_ptr<GpuShaderProgramGLES>>
-        oesPrograms_; // generated dynamically.
+        oesPrograms_;  // generated dynamically.
 };
 
 class ComputePipelineStateObjectGLES final : public ComputePipelineStateObject {
@@ -81,9 +81,9 @@ public:
 private:
     DeviceGLES& device_;
 
-    BASE_NS::unique_ptr<GpuComputeProgramGLES> specialized_ { nullptr };
-    PipelineStateObjectPlatformDataGL plat_ {};
+    BASE_NS::unique_ptr<GpuComputeProgramGLES> specialized_{nullptr};
+    PipelineStateObjectPlatformDataGL plat_{};
 };
 RENDER_END_NAMESPACE()
 
-#endif // GLES_PIPELINE_STATE_OBJECT_GLES_H
+#endif  // GLES_PIPELINE_STATE_OBJECT_GLES_H

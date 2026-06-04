@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -82,7 +82,7 @@ public:
         ScenePluginTest::TearDown();
     }
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr Import(BASE_NS::string_view file, META_NS::SharedPtrIInterface userContext = nullptr)
     {
         if (auto f = GetTestEnv()->engine->GetFileManager().OpenFile(file)) {
@@ -105,8 +105,9 @@ private:
  */
 UNIT_TEST_F(API_SceneSerCompatTest, EnvironmentCompatibility, testing::ext::TestSize.Level1)
 {
-    ASSERT_EQ(resources->Import("test://compatibility/env/env_test.resources"), CORE_NS::IResourceManager::Result::OK);
-
+    // this is bit hacky, load first the index without context and then loading the scene resource will load it with
+    // context
+    ASSERT_EQ(resources->Import("test://compatibility/env/env_test.res"), CORE_NS::IResourceManager::Result::OK);
     auto scene = Import<IScene>("test://compatibility/env/env_test.json");
     ASSERT_TRUE(scene);
 
@@ -132,7 +133,7 @@ UNIT_TEST_F(API_SceneSerCompatTest, SceneNodeSer, testing::ext::TestSize.Level1)
     ASSERT_EQ(
         resources->Import("test://compatibility/scene_ser/test.resources"), CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("app://test.scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"app://test.scene"}));
     ASSERT_TRUE(scene);
 }
 
@@ -146,9 +147,9 @@ UNIT_TEST_F(API_SceneSerCompatTest, ExternalNodeCompatibility, testing::ext::Tes
     ASSERT_EQ(resources->Import("test://compatibility/external_node/ext_node.resources"),
         CORE_NS::IResourceManager::Result::OK);
 
-    auto scene = interface_pointer_cast<IScene>(resources->GetResource("scene"));
+    auto scene = interface_pointer_cast<IScene>(resources->GetResource(CORE_NS::ResourceIdContext{"scene"}));
     ASSERT_TRUE(scene);
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()

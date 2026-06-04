@@ -1,0 +1,23 @@
+{
+    "version": "1.0",
+    "description": "scene whose own index defines testMat in mat-group, and which also imports node_template_mat_v1.json (whose template index also defines testMat in mat-group). Exercises scene+template index overlap on the same resource id.",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "index": "scene_nt_mat_overlap.index",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_mat_v1.json"
+                    },
+                    "resourceGroup": "mat-group"
+                }
+            ]
+        }
+    }
+}

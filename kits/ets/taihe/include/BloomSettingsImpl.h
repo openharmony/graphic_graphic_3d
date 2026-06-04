@@ -28,7 +28,7 @@ class BloomSettingsImpl {
     friend class PostProcessSettingsImpl;
 
 public:
-    static std::shared_ptr<BloomETS> CreateInternal(const ScenePostProcessSettings::BloomSettings &data);
+    static std::shared_ptr<BloomETS> CreateInternal(const ScenePostProcessSettings::BloomSettings& data);
 
     BloomSettingsImpl(const std::shared_ptr<BloomETS> bloomETS);
     ~BloomSettingsImpl();
@@ -44,5 +44,5 @@ public:
 private:
     std::shared_ptr<BloomETS> bloomETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_BLOOM_SETTINGS_IMPL_H

@@ -24,7 +24,7 @@ public:
     Vec3Impl(const std::shared_ptr<Vec3Proxy> proxy) : proxy_(proxy)
     {}
 
-    Vec3Impl(const BASE_NS::Math::Vec3 &data) : stageData_(data)
+    Vec3Impl(const BASE_NS::Math::Vec3& data) : stageData_(data)
     {}
 
     ~Vec3Impl()
@@ -88,5 +88,5 @@ private:
     // non meta property data
     BASE_NS::Math::Vec3 stageData_ = BASE_NS::Math::ZERO_VEC3;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_VEC3_IMPL_H

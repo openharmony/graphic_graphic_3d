@@ -24,7 +24,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename Func>
+template <typename Func>
 IAny::Ptr InvokeWaitableTaskFunction(Func&& func)
 {
     using Result = BASE_NS::remove_reference_t<decltype(func())>;
@@ -39,10 +39,11 @@ IAny::Ptr InvokeWaitableTaskFunction(Func&& func)
 /**
  * @brief Implementation of waitable task for task queues (see ITaskQueue::AddWaitableTask)
  */
-template<typename Func>
+template <typename Func>
 class QueueWaitableTask : public IntroduceInterfaces<ITaskQueueWaitableTask> {
 public:
-    QueueWaitableTask(Func func) : func_(BASE_NS::move(func)) {}
+    QueueWaitableTask(Func func) : func_(BASE_NS::move(func))
+    {}
 
     IAny::Ptr Invoke() override
     {
@@ -56,7 +57,7 @@ private:
 /**
  * @brief Create waitable task from callable entity (e.g. lambda).
  */
-template<typename Func>
+template <typename Func>
 ITaskQueueWaitableTask::Ptr CreateWaitableTask(Func func)
 {
     return ITaskQueueWaitableTask::Ptr(new QueueWaitableTask(BASE_NS::move(func)));

@@ -24,7 +24,8 @@ using BASE_NS::vector;
 
 ParallelImpl::~ParallelImpl() = default;
 
-ParallelImpl::ParallelImpl(const IThreadPool::Ptr& threads) : queue_(threads) {}
+ParallelImpl::ParallelImpl(const IThreadPool::Ptr& threads) : queue_(threads)
+{}
 
 void ParallelImpl::Submit(uint64_t taskIdentifier, IThreadPool::ITask::Ptr&& task)
 {

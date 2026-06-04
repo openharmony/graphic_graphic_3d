@@ -45,7 +45,7 @@ class DynamicEnvironmentBlenderComponentManager final
     BEGIN_PROPERTY(DynamicEnvironmentBlenderComponent, ComponentMetadata)
 #include <3d/ecs/components/dynamic_environment_blender_component.h>
     END_PROPERTY();
-    const array_view<const Property> componentMetaData_ { ComponentMetadata, countof(ComponentMetadata) };
+    const array_view<const Property> componentMetaData_{ComponentMetadata, countof(ComponentMetadata)};
 
 public:
     explicit DynamicEnvironmentBlenderComponentManager(IEcs& ecs)

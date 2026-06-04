@@ -67,7 +67,7 @@ static EntityReference LoadImage(IImageLoaderManager& imageManager, const string
     auto result =
         imageManager.LoadImage(uri, mips ? IImageLoaderManager::ImageLoaderFlags::IMAGE_LOADER_GENERATE_MIPS : 0);
     if (!result.success || !result.image) {
-        return EntityReference {};
+        return EntityReference{};
     }
     CORE_ASSERT(result.success);
     GpuImageDesc gpuImageDesc = gpuResourceMgr.CreateGpuImageDesc(result.image->GetImageDesc());
@@ -127,8 +127,12 @@ void TickTest(UTest::TestResources& res, int frameCountToTick)
     if (byteArray) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
         const char* backendName = res.GetDeviceBackendType() == DeviceBackendType::VULKAN ? "Vulkan" : "OpenGL";
-        UTest::WritePng(BASE_NS::string(appDir + "/cloud" + backendName + ".png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, byteArray->GetData().data(), res.GetWindowWidth() * 4); // 4: parm
+        UTest::WritePng(BASE_NS::string(appDir + "/cloud" + backendName + ".png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            byteArray->GetData().data(),
+            res.GetWindowWidth() * 4);  // 4: parm
     }
 }
 
@@ -162,19 +166,23 @@ void CloudTest(UTest::TestResources& res)
     // camera component
     Entity cameraEntity;
     {
-        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(), Math::Vec3(0.0f, 2.75f, 3.5f),
-            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)), 0.1f, 100.0f, 60.0f);
+        cameraEntity = sceneUtil.CreateCamera(res.GetEcs(),
+            Math::Vec3(0.0f, 2.75f, 3.5f),
+            Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
+            0.1f,
+            100.0f,
+            60.0f);
         ICameraComponentManager* cameraManager = GetManager<ICameraComponentManager>(res.GetEcs());
         ScopedHandle<CameraComponent> cameraComponent = cameraManager->Write(cameraEntity);
         cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
         cameraComponent->pipelineFlags |=
             CameraComponent::PipelineFlagBits::MSAA_BIT | CameraComponent::PipelineFlagBits::ALLOW_COLOR_PRE_PASS_BIT;
         cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->clearColorValue = { 1.0f, 0.0f, 0.0f, 1.0f };
+        cameraComponent->clearColorValue = {1.0f, 0.0f, 0.0f, 1.0f};
         cameraComponent->layerMask = 0xFFFFFFFF;
     }
     sceneUtil.UpdateCameraViewport(
-        res.GetEcs(), cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 90.0f, 1.0f);
+        res.GetEcs(), cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
 
     // render configuration component
     {
@@ -193,7 +201,7 @@ void CloudTest(UTest::TestResources& res)
             EnvironmentComponent& envComponent = *envDataHandle;
             envComponent.indirectDiffuseFactor.w = 0.5f;
             envComponent.indirectSpecularFactor.w = 0.5f;
-            envComponent.envMapFactor.w = 0.5f;
+            envComponent.envMapFactor.w = 1.0f;
             envComponent.background = EnvironmentComponent::Background::SKY;
             envComponent.weather = em.GetReferenceCounted(sceneRoot);
         }
@@ -204,13 +212,13 @@ void CloudTest(UTest::TestResources& res)
     Entity reflectionPlane;
     {
         nameManager->Create(reflectionPlaneMaterial);
-        nameManager->Set(reflectionPlaneMaterial, { { "ReflectionPlaneMaterial" } });
+        nameManager->Set(reflectionPlaneMaterial, {{"ReflectionPlaneMaterial"}});
         materialManager->Create(reflectionPlaneMaterial);
         reflectionPlane =
             meshUtil.GeneratePlane(res.GetEcs(), "ReflectionPlane", reflectionPlaneMaterial, 10.0f, 10.0f);
         if (ISceneNode* node = nodeSystem->GetNode(reflectionPlane); node) {
             node->SetPosition(Math::Vec3(0.0f, 0.0f, 0.0f));
-            node->SetScale(Math::Vec3(10, 0.01f, 10)); // 10: parm
+            node->SetScale(Math::Vec3(10, 0.01f, 10));  // 10: parm
         }
         sceneUtil.CreateReflectionPlaneComponent(res.GetEcs(), reflectionPlane);
         if (auto materialHandle = materialManager->Write(reflectionPlaneMaterial); materialHandle) {
@@ -224,8 +232,10 @@ void CloudTest(UTest::TestResources& res)
 
     // Gltf model
     const vector<UTest::GltfImportInfo> files = {
-        { "test://gltf/BrainStem/glTF/BrainStem.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+        {"test://gltf/BrainStem/glTF/BrainStem.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     CORE3D_NS::ISceneNode* model;
@@ -258,9 +268,9 @@ void CloudTest(UTest::TestResources& res)
             }
             res.AppendResources(gltfImportResult.data);
             model = nodeSystem->GetNode(importedSceneEntity);
-            Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
+            Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
             model->SetName(info.filename);
-            model->SetPosition(Math::Vec3 { 0.0f, 0.0f, 0.0f });
+            model->SetPosition(Math::Vec3{0.0f, 0.0f, 0.0f});
             model->SetRotation(rot);
 
             if (auto* wrm = GetManager<IWaterRippleComponentManager>(ecs); wrm) {
@@ -292,6 +302,10 @@ void CloudTest(UTest::TestResources& res)
             LoadImage(imageManager, "test://image/weather/curlNoise.png", gpuResourceMgr, *handleManager, false);
         handle->coverage = 0.3f;
         handle->windSpeed = 0.0f;
+        handle->utc = 0.0f;
+        handle->date = {1u, 1u, 2026u};  // day=1, month=1, year=2026
+        handle->latitude = -58.24f;
+        handle->longitude = 0.89f;
     }
 }
-} // namespace Cloud
+}  // namespace Cloud

@@ -33,15 +33,16 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataConfigurationLoader : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "dca91e7e-1b03-47a8-a09e-2dbd99acaa9d" };
+    static constexpr BASE_NS::Uid UID{"dca91e7e-1b03-47a8-a09e-2dbd99acaa9d"};
 
     /** Describes result of the parsing operation. */
     struct LoadResult {
         LoadResult() = default;
-        explicit LoadResult(BASE_NS::string_view error) : success(false), error(error) {}
+        explicit LoadResult(BASE_NS::string_view error) : success(false), error(error)
+        {}
 
         /** Indicates, whether the parsing operation is successful. */
-        bool success { true };
+        bool success{true};
 
         /** In case of parsing error, contains the description of the error. */
         BASE_NS::string error;
@@ -71,4 +72,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderDataConfigurationLoad
 }
 RENDER_END_NAMESPACE()
 
-#endif // LOADER_RENDER_DATA_CONFIGURATION_LOADER_H
+#endif  // LOADER_RENDER_DATA_CONFIGURATION_LOADER_H

@@ -29,4 +29,4 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
-#endif // API_BASE_MATH_WARNING_DISABLE_HEADING_H
+#endif  // API_BASE_MATH_WARNING_DISABLE_HEADING_H

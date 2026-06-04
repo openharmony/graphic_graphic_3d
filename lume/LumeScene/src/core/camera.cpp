@@ -45,7 +45,7 @@ bool UpdateCameraRenderTarget(const IEcsObject::Ptr& camera, const IRenderTarget
         if (target) {
             if (ent = HandleFromRenderResource(camera->GetScene(), target->GetRenderHandle()); ent) {
                 size = META_NS::GetValue(target->Size());
-                targets = { ent };
+                targets = {ent};
             }
         }
         // First read handle

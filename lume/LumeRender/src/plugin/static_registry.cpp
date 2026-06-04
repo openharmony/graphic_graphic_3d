@@ -14,12 +14,26 @@
  */
 
 #include <core/namespace.h>
+#include <render/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
 class IPluginRegister;
 CORE_END_NAMESPACE()
 
-extern "C" void InitRegistry(CORE_NS::IPluginRegister&)
+namespace {
+CORE_NS::IPluginRegister* gPluginRegistry{nullptr};
+}  // namespace
+
+RENDER_BEGIN_NAMESPACE()
+CORE_NS::IPluginRegister& GetPluginRegister()
 {
-    // Initializing static plugin. (registry is available directly, nothing to do here.)
+    return *gPluginRegistry;
+}
+RENDER_END_NAMESPACE()
+
+extern "C" void InitRegistry(CORE_NS::IPluginRegister& pluginRegistry)
+{
+    // Initializing dynamic plugin.
+    // Pluginregistry access via the provided registry instance which is saved here.
+    gPluginRegistry = &pluginRegistry;
 }

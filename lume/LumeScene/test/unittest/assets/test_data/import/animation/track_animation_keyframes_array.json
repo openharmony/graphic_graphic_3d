@@ -1,0 +1,9 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "arrayKeyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [[1, 2], [3, 4]]
+	}
+}

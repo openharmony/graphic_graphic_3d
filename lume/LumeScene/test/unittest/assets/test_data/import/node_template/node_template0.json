@@ -1,0 +1,33 @@
+{
+    "version": "1.0",
+    "description": "node template with external GLTF and position/scale overrides",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "ext-group",
+            "overrides": [
+                {
+                    "path": ".//AnimatedCube.Position",
+                    "value": {
+                        "type": "vec3",
+                        "value": [1.0, 2.0, 3.0]
+                    }
+                },
+                {
+                    "path": ".//AnimatedCube.Scale",
+                    "value": {
+                        "type": "vec3",
+                        "value": [4.0, 5.0, 6.0]
+                    }
+                }
+            ]
+        }
+    },
+    "primaryGroup": ""
+}

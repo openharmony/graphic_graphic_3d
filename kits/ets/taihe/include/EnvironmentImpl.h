@@ -39,6 +39,7 @@ namespace OHOS::Render3D::KITETS {
 class EnvironmentImpl : public SceneResourceImpl {
 private:
     std::shared_ptr<EnvironmentETS> envETS_{nullptr};
+
 public:
     explicit EnvironmentImpl(const std::shared_ptr<EnvironmentETS> envETS);
     ~EnvironmentImpl();
@@ -70,5 +71,5 @@ public:
     ::taihe::optional<::SceneTypes::Quaternion> getEnvironmentRotation();
     void setEnvironmentRotation(::taihe::optional_view<::SceneTypes::Quaternion> rotation);
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_ENVIRONMENT_IMPL_H

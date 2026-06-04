@@ -64,7 +64,7 @@ protected:
     /**
      * @brief Called when the behavior is being detached from a target.
      */
-    virtual void OnDetach() {};
+    virtual void OnDetach(){};
     /**
      * @brief Called after the behavior has been successfully attached, and the runtime state of the framework is such
      *        that the behavior should start any processing.
@@ -78,7 +78,8 @@ protected:
     /**
      * @brief Called when the behavior should stop any ongoing tasks.
      */
-    virtual void OnStop() {}
+    virtual void OnStop()
+    {}
     /**
      * @brief Returns a strong reference to the target object.
      */
@@ -96,7 +97,7 @@ protected:
     /**
      * @brief Templated helper for GetObject, returning the target object casted to given type.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr GetObject() const
     {
         return interface_pointer_cast<T>(object_);
@@ -104,13 +105,13 @@ protected:
     /**
      * @brief Templated helper for GetObject, returning the context object casted to given type.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr GetContext() const
     {
         return interface_pointer_cast<T>(context_);
     }
 
-private: // META_NS::AttachmentFwd
+private:  // META_NS::AttachmentFwd
     /** Private implementation of AttachmentFwd::AttachTo, handle properties and call the Attach of derived
      * implementation */
     bool AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext) override
@@ -181,7 +182,7 @@ private:
     META_NS::IObject::WeakPtr context_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 /**
  * @brief The Behavior class is a helper class for implementing custom behaviors.
@@ -196,9 +197,9 @@ private:
  *        };
  * @endcode
  */
-template<class... Interfaces>
+template <class... Interfaces>
 class Behavior : public IntroduceInterfaces<Internal::BehaviorBase, Interfaces...> {};
 
 META_END_NAMESPACE()
 
-#endif // META_EXT_BEHAVIOR_H
+#endif  // META_EXT_BEHAVIOR_H

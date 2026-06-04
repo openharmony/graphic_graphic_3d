@@ -1,0 +1,55 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "resourceIndex",
+		"index": [
+			{
+				"resourceId": {
+					"name": "optShader"
+				},
+				"type": "shader",
+				"path": "test://shaders/test.shader"
+			},
+			{
+				"resourceId": {
+					"name": "optImage"
+				},
+				"type": "image",
+				"path": "test://images/logo.png",
+				"options": {}
+			},
+			{
+				"resourceId": {
+					"name": "optMat"
+				},
+				"type": "customMaterial",
+				"options": {
+					"materialShader": {
+						"name": "optShader"
+					},
+					"depthShader": {
+						"name": "optShader"
+					},
+					"options": {
+						"cullMode": "back",
+						"polygonMode": "line",
+						"blend": true
+					},
+					"textures": {
+						"baseColor": {
+							"image": {
+								"name": "optImage"
+							},
+							"factor": [
+								1.0,
+								0.5,
+								0.25,
+								1.0
+							]
+						}
+					}
+				}
+			}
+		]
+	}
+}

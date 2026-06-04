@@ -41,9 +41,12 @@ public:
     ~RenderDataStoreDefaultGpuResourceDataCopy() override = default;
 
     // IRenderDataStore
-    void PreRender() override {}
-    void PostRender() override {}
-    void PreRenderBackend() override {}
+    void PreRender() override
+    {}
+    void PostRender() override
+    {}
+    void PreRenderBackend() override
+    {}
     // Do copy operation in end frame.
     void PostRenderBackend() override;
     void Clear() override;
@@ -87,10 +90,10 @@ private:
     mutable std::mutex mutex_;
 
     BASE_NS::vector<GpuResourceDataCopy> copyData_;
-    bool waitForIdle_ { false };
+    bool waitForIdle_{false};
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
+#endif  // RENDER_DATA_STORE_RENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H

@@ -42,7 +42,7 @@ public:
     }
 
     EventHandler(EventHandler&& other) noexcept
-        : event_ { BASE_NS::move(other.event_) }, token_ { BASE_NS::exchange(other.token_, {}) }
+        : event_{BASE_NS::move(other.event_)}, token_{BASE_NS::exchange(other.token_, {})}
     {}
 
     EventHandler& operator=(EventHandler&& other) noexcept
@@ -55,14 +55,14 @@ public:
         return *this;
     }
 
-    template<typename EventType>
+    template <typename EventType>
     EventHandler(const Event<EventType>& event, const typename EventType::InterfaceTypePtr& func,
         const ITaskQueue::Ptr& queue = nullptr)
     {
         Subscribe(event, func, queue);
     }
 
-    template<typename EventType>
+    template <typename EventType>
     EventHandler(
         const Event<EventType>& event, const typename EventType::InterfaceTypePtr& func, const BASE_NS::Uid& queueId)
     {
@@ -74,14 +74,14 @@ public:
         TypelessSubscribe(event, func);
     }
 
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     EventHandler(const Event<EventType>& event, Func func, const ITaskQueue::Ptr& queue = nullptr)
     {
         Subscribe(event, BASE_NS::move(func), queue);
     }
 
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     EventHandler(
         const Event<EventType>& event, const typename EventType::InterfaceTypePtr& func, const BASE_NS::Uid& queueId)
@@ -124,7 +124,7 @@ public:
      * @oaram queue Optional queue where 'func' is invoked, if null, invoked directly.
      * @return True if the successfully subscribed.
      */
-    template<typename EventType>
+    template <typename EventType>
     bool Subscribe(const Event<EventType>& event, const typename EventType::InterfaceTypePtr& func,
         const ITaskQueue::Ptr& queue = nullptr)
     {
@@ -142,7 +142,7 @@ public:
      * @param queueId Queue id where 'func' is invoked. Fails if no such queue exists.
      * @return True if the successfully subscribed.
      */
-    template<typename EventType>
+    template <typename EventType>
     bool Subscribe(
         const Event<EventType>& event, const typename EventType::InterfaceTypePtr& func, const BASE_NS::Uid& queueId)
     {
@@ -157,7 +157,7 @@ public:
     /**
      * @brief Subscribe to an event. See above Subscribe function for parameters
      */
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const Event<EventType>& event, Func func, const ITaskQueue::Ptr& queue = nullptr)
     {
@@ -167,7 +167,7 @@ public:
     /**
      * @brief Subscribe to an event. See above Subscribe function for parameters
      */
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const Event<EventType>& event, Func func, const BASE_NS::Uid& queueId)
     {
@@ -177,7 +177,7 @@ public:
     /**
      * @brief Subscribe to an event. See above Subscribe function for parameters
      */
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const BASE_NS::shared_ptr<IEvent>& event, Func func, const ITaskQueue::Ptr& queue = nullptr)
     {
@@ -188,7 +188,7 @@ public:
     /**
      * @brief Subscribe to an event. See above Subscribe function for parameters
      */
-    template<typename EventType, typename Func,
+    template <typename EventType, typename Func,
         typename = EnableIfCanInvokeWithArguments<Func, typename EventType::FunctionType>>
     bool Subscribe(const BASE_NS::shared_ptr<IEvent>& event, Func func, const BASE_NS::Uid& queueId)
     {
@@ -210,7 +210,7 @@ public:
 
 protected:
     IEvent::WeakPtr event_;
-    IEvent::Token token_ {};
+    IEvent::Token token_{};
 };
 
 META_END_NAMESPACE()

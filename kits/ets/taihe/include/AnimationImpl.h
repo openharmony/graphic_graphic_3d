@@ -69,5 +69,5 @@ public:
 private:
     std::shared_ptr<AnimationETS> animationETS_{nullptr};
 };
-} // namespace OHOS::Render3D::KITETS
-#endif // OHOS_3D_ANIMATION_IMPL_H
+}  // namespace OHOS::Render3D::KITETS
+#endif  // OHOS_3D_ANIMATION_IMPL_H

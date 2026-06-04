@@ -23,10 +23,10 @@
 #include "intf_test.h"
 
 namespace TestPlugin3D {
-constexpr BASE_NS::Uid UID_3D_TEST_PLUGIN { "12345678-3d3d-3d3d-3d3d-deadbeef0020" };
+constexpr BASE_NS::Uid UID_3D_TEST_PLUGIN{"12345678-3d3d-3d3d-3d3d-deadbeef0020"};
 
-constexpr BASE_NS::Uid UID_3D_GLOBAL_TEST_IMPL { "12345678-3d3d-3d3d-3d3d-deadbeef0021" };
-constexpr BASE_NS::Uid UID_3D_CONTEXT_TEST_IMPL { "12345678-3d3d-3d3d-3d3d-deadbeef0022" };
+constexpr BASE_NS::Uid UID_3D_GLOBAL_TEST_IMPL{"12345678-3d3d-3d3d-3d3d-deadbeef0021"};
+constexpr BASE_NS::Uid UID_3D_CONTEXT_TEST_IMPL{"12345678-3d3d-3d3d-3d3d-deadbeef0022"};
 
 class Test : public ITest {
 public:
@@ -62,7 +62,7 @@ public:
     }
 
 private:
-    std::atomic<int32_t> refcnt_ { 0 };
+    std::atomic<int32_t> refcnt_{0};
 };
 
 class ContextImpl final : public Test {
@@ -84,5 +84,5 @@ public:
         return Type::GLOBAL;
     }
 };
-} // namespace TestPlugin3D
-#endif // CORE3D_TEST_PLUGIN_UIDS
+}  // namespace TestPlugin3D
+#endif  // CORE3D_TEST_PLUGIN_UIDS

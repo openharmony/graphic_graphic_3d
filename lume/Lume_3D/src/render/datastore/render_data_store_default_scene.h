@@ -40,11 +40,14 @@ public:
     ~RenderDataStoreDefaultScene() override = default;
 
     // IRenderDataStore
-    void PreRender() override {}
+    void PreRender() override
+    {}
     // Reset and start indexing from the beginning. i.e. frame boundary reset.
     void PostRender() override;
-    void PreRenderBackend() override {}
-    void PostRenderBackend() override {}
+    void PreRenderBackend() override
+    {}
+    void PostRenderBackend() override
+    {}
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -52,7 +55,7 @@ public:
     }
     BASE_NS::string_view GetTypeName() const override
     {
-        return typeName;
+        return TYPE_NAME;
     }
 
     BASE_NS::string_view GetName() const override
@@ -75,7 +78,7 @@ public:
     RenderScene GetScene() const override;
 
     // for plugin / factory interface
-    static constexpr const char* const typeName = "RenderDataStoreDefaultScene";
+    static constexpr const char* const TYPE_NAME = "RenderDataStoreDefaultScene";
     static BASE_NS::refcnt_ptr<IRenderDataStore> Create(RENDER_NS::IRenderContext& renderContext, const char* name);
 
 private:
@@ -83,10 +86,10 @@ private:
 
     BASE_NS::vector<RenderScene> scenes_;
     BASE_NS::unordered_map<BASE_NS::string, size_t> nameToScene_;
-    uint32_t nextId { 0u };
+    uint32_t nextId{0u};
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_SCENE_H
+#endif  // CORE__RENDER__NODE_DATA__RENDER_DATA_STORE_DEFAULT_SCENE_H

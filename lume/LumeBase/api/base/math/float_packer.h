@@ -45,25 +45,25 @@ inline uint16_t F32ToF16(float val)
     union {
         float f;
         uint32_t ui;
-    } f32 { val };
+    } f32{val};
 
-    uint32_t noSign = f32.ui & 0x7fffffff;     // Non-sign bits
-    uint32_t sign = f32.ui & 0x80000000;       // Sign bit
-    uint32_t exponent = f32.ui & F32_INFINITY; // Exponent
+    uint32_t noSign = f32.ui & 0x7fffffff;      // Non-sign bits
+    uint32_t sign = f32.ui & 0x80000000;        // Sign bit
+    uint32_t exponent = f32.ui & F32_INFINITY;  // Exponent
 
-    noSign >>= F16_MANTISSA_SHIFT; // Align mantissa on MSB
-    sign >>= F16_SIGN_SHIFT;       // Shift sign bit into position
+    noSign >>= F16_MANTISSA_SHIFT;  // Align mantissa on MSB
+    sign >>= F16_SIGN_SHIFT;        // Shift sign bit into position
 
     // 16bit bias = 15, 32bit bias = 127
     // (-127 + 15) << 10 = (-112) << 10 = -0x1c000
-    noSign -= 0x1c000; // Adjust bias
+    noSign -= 0x1c000;  // Adjust bias
 
     // 16bit min exponent = -14, 32bit bias 127
     // (-14 + 127) << 23 = 0x38800000
-    noSign = (exponent < 0x38800000) ? 0 : noSign; // Flush-to-zero
+    noSign = (exponent < 0x38800000) ? 0 : noSign;  // Flush-to-zero
     // 16bit max exponent = 15, 32bit bias 127
     // (15 + 127) << 23 = 0x47000000
-    noSign = (exponent > 0x47000000) ? F16_INFINITY : noSign; // Clamp-to-inf
+    noSign = (exponent > 0x47000000) ? F16_INFINITY : noSign;  // Clamp-to-inf
 
     // Re-insert sign bit
     return static_cast<uint16_t>(noSign | sign);
@@ -78,21 +78,21 @@ inline float F16ToF32(uint16_t val)
         uint32_t ui;
     } f32;
 
-    uint32_t noSign = val & 0x7fffU;        // Non-sign bits
-    uint32_t sign = val & 0x8000U;          // Sign bit
-    uint32_t exponent = val & F16_INFINITY; // Exponent
+    uint32_t noSign = val & 0x7fffU;         // Non-sign bits
+    uint32_t sign = val & 0x8000U;           // Sign bit
+    uint32_t exponent = val & F16_INFINITY;  // Exponent
 
-    noSign <<= F16_MANTISSA_SHIFT; // Align mantissa on MSB
-    sign <<= F16_SIGN_SHIFT;       // Shift sign bit into position
+    noSign <<= F16_MANTISSA_SHIFT;  // Align mantissa on MSB
+    sign <<= F16_SIGN_SHIFT;        // Shift sign bit into position
 
     // 16bit bias = 15, 32bit bias = 127
     // (-15 + 127) << 23 = 0x38000000
-    noSign += 0x38000000; // Adjust bias
+    noSign += 0x38000000;  // Adjust bias
 
-    noSign = (exponent == 0 ? 0 : noSign);                       // Denormals-as-zero
-    noSign = (exponent == F16_INFINITY ? F32_INFINITY : noSign); // Clamp-to-inf
+    noSign = (exponent == 0 ? 0 : noSign);                        // Denormals-as-zero
+    noSign = (exponent == F16_INFINITY ? F32_INFINITY : noSign);  // Clamp-to-inf
 
-    f32.ui = noSign | sign; // Re-insert sign bit
+    f32.ui = noSign | sign;  // Re-insert sign bit
 
     return f32.f;
 }
@@ -118,7 +118,7 @@ inline Vec2 UnpackUnorm2X16(uint32_t p)
     const union {
         uint32_t in;
         uint16_t out[2];
-    } u { p };
+    } u{p};
 
     return Vec2(u.out[0] * 1.5259021896696421759365224689097e-5f, u.out[1] * 1.5259021896696421759365224689097e-5f);
 }
@@ -145,7 +145,7 @@ inline Vec2 UnpackSnorm2X16(uint32_t p)
     const union {
         uint32_t in;
         int16_t out[2];
-    } u { p };
+    } u{p};
 
     return Vec2(clamp(u.out[0] * 3.0518509475997192297128208258309e-5f, -1.0f, 1.0f),
         clamp(u.out[1] * 3.0518509475997192297128208258309e-5f, -1.0f, 1.0f));
@@ -158,7 +158,7 @@ inline uint32_t PackHalf2X16(const Vec2& v)
     const union {
         uint16_t in[2];
         uint32_t out;
-    } u { { F32ToF16(v.x), F32ToF16(v.y) } };
+    } u{{F32ToF16(v.x), F32ToF16(v.y)}};
 
     return u.out;
 }
@@ -170,12 +170,12 @@ inline Vec2 UnpackHalf2X16(uint32_t v)
     const union {
         uint32_t in;
         uint16_t out[2];
-    } u { v };
+    } u{v};
 
     return Vec2(F16ToF32(u.out[0]), F16ToF32(u.out[1]));
 }
 /** @} */
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_FLOAT_PACKER_H
+#endif  // API_BASE_MATH_FLOAT_PACKER_H

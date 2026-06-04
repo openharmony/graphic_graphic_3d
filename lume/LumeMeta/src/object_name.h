@@ -48,7 +48,7 @@ public:
 private:
     BASE_NS::string name_;
 };
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

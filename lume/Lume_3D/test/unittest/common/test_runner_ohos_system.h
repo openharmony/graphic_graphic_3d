@@ -52,7 +52,7 @@
 #include <render/gles/intf_device_gles.h>
 #endif
 
-#include <native_image.h> //native window
+#include <native_image.h>  //native window
 
 namespace Test {
 // Scoped log. Previous log level is restored when the LogLevelScope object goes out of scope.
@@ -95,7 +95,8 @@ public:
     {
         CreateNativeWindow();
     }
-    void Run() {}
+    void Run()
+    {}
     void Terminate();
     OHNativeWindow* GetWindowHandle() const
     {
@@ -111,7 +112,7 @@ private:
 // Native window
 inline OHOSApp* g_ohosApp;
 
-} // namespace Test
+}  // namespace Test
 
 CORE3D_BEGIN_NAMESPACE()
 
@@ -168,9 +169,9 @@ CORE_NS::IFileManager::Ptr CreateFileManager()
     return fileManager;
 }
 
-std::unique_ptr<TestEnvironment> g_testEnv {};
-std::unique_ptr<TestContext> g_testContext {};
-std::weak_ptr<TestConfiguration> g_testConfig {};
+std::unique_ptr<TestEnvironment> g_testEnv{};
+std::unique_ptr<TestContext> g_testContext{};
+std::weak_ptr<TestConfiguration> g_testConfig{};
 
 class TestRunnerEnv : public ::testing::Environment {
 public:
@@ -181,7 +182,7 @@ public:
         auto windowHandle = ::Test::g_ohosApp->GetWindowHandle();
 
         // OHOS specific paths
-        CORE_NS::PlatformCreateInfo info {};
+        CORE_NS::PlatformCreateInfo info{};
         info.coreRootPath = OHOS_PLATFORM_CORE_PATH;
         info.appPluginPath = OHOS_PLATFORM_PLUGINS_PATH;
 
@@ -201,16 +202,18 @@ public:
 
 #if defined(CORE3D_STATIC_LIB)
         // Load shared libs (Render)
-        ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins({ RENDER_NS::UID_RENDER_PLUGIN }));
+        ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins({RENDER_NS::UID_RENDER_PLUGIN}));
 
         // Register Lume3D static lib
         CORE3D_NS::RegisterInterfaces3D(CORE_NS::GetPluginRegister());
         // Load shared libs
-        constexpr BASE_NS::Uid uids[] = { JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN};
 #else
         // Load shared libs
-        constexpr BASE_NS::Uid uids[] = { RENDER_NS::UID_RENDER_PLUGIN, CORE3D_NS::UID_3D_PLUGIN,
-            JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN };
+        constexpr BASE_NS::Uid uids[] = {RENDER_NS::UID_RENDER_PLUGIN,
+            CORE3D_NS::UID_3D_PLUGIN,
+            JPGPlugin::UID_JPG_PLUGIN,
+            PNGPlugin::UID_PNG_PLUGIN};
 #endif
 
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
@@ -243,9 +246,9 @@ private:
     Test::DynamicLibrary m_engineLib;
 #endif
 };
-} // namespace
+}  // namespace
 
-} // namespace UTest
+}  // namespace UTest
 CORE3D_END_NAMESPACE()
 
-#endif // TEST_ENVIRONMENT
+#endif  // TEST_ENVIRONMENT

@@ -262,7 +262,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeIteration, testing::ext::TestSize.Level
                 res.push_back(obj);
                 return true;
             },
-            META_NS::IterateStrategy { META_NS::TraversalType::NO_HIERARCHY });
+            META_NS::IterateStrategy{META_NS::TraversalType::NO_HIERARCHY});
 
         ASSERT_EQ(res.size(), 2);
         EXPECT_EQ(res[0], interface_pointer_cast<META_NS::IObject>(node));
@@ -276,7 +276,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeIteration, testing::ext::TestSize.Level
                 res.push_back(obj);
                 return true;
             },
-            META_NS::IterateStrategy { META_NS::TraversalType::FULL_HIERARCHY });
+            META_NS::IterateStrategy{META_NS::TraversalType::FULL_HIERARCHY});
 
         ASSERT_EQ(res.size(), 4);
         EXPECT_THAT(res, Contains(interface_pointer_cast<META_NS::IObject>(node)));
@@ -301,7 +301,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeIteration, testing::ext::TestSize.Level
                 res.push_back(obj);
                 return true;
             },
-            META_NS::IterateStrategy { META_NS::TraversalType::FULL_HIERARCHY });
+            META_NS::IterateStrategy{META_NS::TraversalType::FULL_HIERARCHY});
 
         node = scene->FindNode("//test").GetResult();
         child1 = scene->FindNode("//child").GetResult();
@@ -350,8 +350,11 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEvents, testing::ext::TestSiz
         node->RemoveChild(child1).Wait();
         WaitForUserQueue();
         ASSERT_EQ(changes.size(), 1);
-        auto expected = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::REMOVED,
-            interface_pointer_cast<META_NS::IObject>(child1), nodeCont, 0, size_t(-1) };
+        auto expected = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::REMOVED,
+            interface_pointer_cast<META_NS::IObject>(child1),
+            nodeCont,
+            0,
+            size_t(-1)};
         EXPECT_TRUE(changes[0] == expected);
         changes.clear();
     }
@@ -359,8 +362,11 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEvents, testing::ext::TestSiz
         auto child3 = scene->CreateNode("//test/child3").GetResult();
         WaitForUserQueue();
         ASSERT_EQ(changes.size(), 1);
-        auto expected = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::ADDED,
-            interface_pointer_cast<META_NS::IObject>(child3), nodeCont, size_t(-1), 1 };
+        auto expected = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::ADDED,
+            interface_pointer_cast<META_NS::IObject>(child3),
+            nodeCont,
+            size_t(-1),
+            1};
         EXPECT_TRUE(changes[0] == expected);
         changes.clear();
     }
@@ -368,8 +374,11 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEvents, testing::ext::TestSiz
         node->AddChild(child1, 1).Wait();
         WaitForUserQueue();
         ASSERT_EQ(changes.size(), 1);
-        auto expected = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::ADDED,
-            interface_pointer_cast<META_NS::IObject>(child1), nodeCont, size_t(-1), 1 };
+        auto expected = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::ADDED,
+            interface_pointer_cast<META_NS::IObject>(child1),
+            nodeCont,
+            size_t(-1),
+            1};
         EXPECT_TRUE(changes[0] == expected);
         changes.clear();
     }
@@ -408,8 +417,11 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEventsImportScene, testing::e
 
     WaitForUserQueue();
     ASSERT_EQ(changes.size(), 1);
-    auto expected = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::ADDED,
-        interface_pointer_cast<META_NS::IObject>(newNode), nodeCont, size_t(-1), 0 };
+    auto expected = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::ADDED,
+        interface_pointer_cast<META_NS::IObject>(newNode),
+        nodeCont,
+        size_t(-1),
+        0};
     EXPECT_TRUE(changes[0] == expected);
 }
 
@@ -439,8 +451,11 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEventsImportNode, testing::ex
 
     WaitForUserQueue();
     ASSERT_EQ(changes.size(), 1);
-    auto expected = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::ADDED,
-        interface_pointer_cast<META_NS::IObject>(newNode), nodeCont, size_t(-1), 0 };
+    auto expected = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::ADDED,
+        interface_pointer_cast<META_NS::IObject>(newNode),
+        nodeCont,
+        size_t(-1),
+        0};
     EXPECT_TRUE(changes[0] == expected);
 }
 
@@ -474,14 +489,20 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerEventsReparent, testing::ext:
         node->AddChild(child).Wait();
         WaitForUserQueue();
         ASSERT_EQ(nodeChanges.size(), 1);
-        auto expected1 = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::ADDED,
-            interface_pointer_cast<META_NS::IObject>(child), nodeCont, size_t(-1), 0 };
+        auto expected1 = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::ADDED,
+            interface_pointer_cast<META_NS::IObject>(child),
+            nodeCont,
+            size_t(-1),
+            0};
         EXPECT_TRUE(nodeChanges[0] == expected1);
         nodeChanges.clear();
 
         ASSERT_EQ(rootChanges.size(), 1);
-        auto expected2 = META_NS::ChildChangedInfo { META_NS::ContainerChangeType::REMOVED,
-            interface_pointer_cast<META_NS::IObject>(child), rootCont, 1, size_t(-1) };
+        auto expected2 = META_NS::ChildChangedInfo{META_NS::ContainerChangeType::REMOVED,
+            interface_pointer_cast<META_NS::IObject>(child),
+            rootCont,
+            1,
+            size_t(-1)};
         EXPECT_TRUE(rootChanges[0] == expected2);
         rootChanges.clear();
     }
@@ -524,12 +545,12 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerBasic, testing::ext::TestSize
     EXPECT_EQ(child1Containable->GetParent(), interface_pointer_cast<META_NS::IObject>(node));
 
     EXPECT_THAT(nodeCont->FindAll({}), ElementsAre(obj1, obj2, obj2Obj));
-    EXPECT_THAT(nodeCont->FindAll({ "child" }), ElementsAre(obj2Obj));
-    EXPECT_THAT(nodeCont->FindAll({ "", META_NS::TraversalType::NO_HIERARCHY }), ElementsAre(obj1, obj2));
+    EXPECT_THAT(nodeCont->FindAll({"child"}), ElementsAre(obj2Obj));
+    EXPECT_THAT(nodeCont->FindAll({"", META_NS::TraversalType::NO_HIERARCHY}), ElementsAre(obj1, obj2));
 
     EXPECT_EQ(nodeCont->FindAny({}), obj1);
-    EXPECT_EQ(nodeCont->FindAny({ "child" }), obj2Obj);
-    EXPECT_EQ(nodeCont->FindAny({ "child", META_NS::TraversalType::NO_HIERARCHY }), nullptr);
+    EXPECT_EQ(nodeCont->FindAny({"child"}), obj2Obj);
+    EXPECT_EQ(nodeCont->FindAny({"child", META_NS::TraversalType::NO_HIERARCHY}), nullptr);
 
     EXPECT_TRUE(nodeCont->Remove(obj1));
     EXPECT_THAT(nodeCont->GetAll(), ElementsAre(obj2));
@@ -631,22 +652,22 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerRemoveImportScene, testing::e
 
     {
         auto groups = iScene->GetResourceGroups();
-        ASSERT_EQ(groups.GetAllHandles().size(), 2);
+        ASSERT_EQ(groups.GetAllHandles().size(), 1);
         EXPECT_TRUE(groups.GetHandle("Scene"));
-        EXPECT_TRUE(groups.GetHandle("Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
     }
 
     EXPECT_TRUE(scene->FindNode("//test/some").GetResult());
     EXPECT_TRUE(
         resources
-            ->GetResourceInfo({ "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" })
+            ->GetResourceInfo({{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene})
             .id.IsValid());
 
     nodeCont->Remove(interface_pointer_cast<META_NS::IObject>(newNode));
     EXPECT_FALSE(scene->FindNode("//test/some").GetResult());
-    EXPECT_FALSE(
+    // removing child does not remove resources
+    EXPECT_TRUE(
         resources
-            ->GetResourceInfo({ "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" })
+            ->GetResourceInfo({{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene})
             .id.IsValid());
 
     {
@@ -659,15 +680,14 @@ UNIT_TEST_F(API_ScenePluginNodeTest, NodeContrainerRemoveImportScene, testing::e
 
     {
         auto groups = iScene->GetResourceGroups();
-        ASSERT_EQ(groups.GetAllHandles().size(), 2);
+        ASSERT_EQ(groups.GetAllHandles().size(), 1);
         EXPECT_TRUE(groups.GetHandle("Scene"));
-        EXPECT_TRUE(groups.GetHandle("Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
     }
 
     EXPECT_TRUE(scene->FindNode("//test/some").GetResult());
     EXPECT_TRUE(
         resources
-            ->GetResourceInfo({ "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" })
+            ->GetResourceInfo({{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene})
             .id.IsValid());
 }
 
@@ -695,7 +715,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, LayerMaskOfGltfScene, testing::ext::TestSiz
 UNIT_TEST_F(API_ScenePluginNodeTest, InvalidNode, testing::ext::TestSize.Level1)
 {
     auto& reg = META_NS::GetObjectRegistry();
-    const auto allNodes = reg.GetClassRegistry().GetAllTypes({ INode::UID });
+    const auto allNodes = reg.GetClassRegistry().GetAllTypes({INode::UID});
     ASSERT_FALSE(allNodes.empty());
 
     for (const auto& t : allNodes) {
@@ -718,10 +738,10 @@ UNIT_TEST_F(API_ScenePluginNodeTest, InvalidNode, testing::ext::TestSize.Level1)
         EXPECT_FALSE(container->Add({}));
         EXPECT_FALSE(container->Insert(0, {}));
         EXPECT_FALSE(container->Remove(0));
-        EXPECT_FALSE(container->Remove(META_NS::IObject::Ptr {}));
+        EXPECT_FALSE(container->Remove(META_NS::IObject::Ptr{}));
         EXPECT_FALSE(container->Move(0, 1));
-        EXPECT_FALSE(container->Move(META_NS::IObject::Ptr {}, 1));
-        EXPECT_FALSE(container->Replace(META_NS::IObject::Ptr {}, META_NS::IObject::Ptr {}, true));
+        EXPECT_FALSE(container->Move(META_NS::IObject::Ptr{}, 1));
+        EXPECT_FALSE(container->Replace(META_NS::IObject::Ptr{}, META_NS::IObject::Ptr{}, true));
         container->RemoveAll();
         EXPECT_FALSE(container->IsAncestorOf({}));
     }
@@ -750,36 +770,36 @@ UNIT_TEST_F(API_ScenePluginNodeTest, UniqueName, testing::ext::TestSize.Level1)
         return node->GetUniqueChildName(name).GetResult();
     };
 
-    EXPECT_EQ(getUniqueName(node, ""), "");                     // Already unique
-    EXPECT_EQ(getUniqueName(node, "child1"), "child1");         // Already unique
-    EXPECT_EQ(getUniqueName(node, "child"), "child (1)");       // 'child' used, expect 'child (1)'
-    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (1)");   // 'child (2)' taken, but child (1) is not
-    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (1)"); // 'child (2)' taken, but child (1) is not
-    EXPECT_EQ(getUniqueName(node, "(2)"), "(1)");               // '(2)' used, expect '(1)'
-    EXPECT_EQ(getUniqueName(node, "(1)"), "(1)");               // '(1)' is already unique
-    EXPECT_EQ(getUniqueName(node, "child 1)"), "child 1) (1)"); // 'child 1)' is already unique
-    EXPECT_EQ(getUniqueName(node, "child 2)"), "child 2)");     // 'child 2)' is already unique
+    EXPECT_EQ(getUniqueName(node, ""), "");                      // Already unique
+    EXPECT_EQ(getUniqueName(node, "child1"), "child1");          // Already unique
+    EXPECT_EQ(getUniqueName(node, "child"), "child (1)");        // 'child' used, expect 'child (1)'
+    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (1)");    // 'child (2)' taken, but child (1) is not
+    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (1)");  // 'child (2)' taken, but child (1) is not
+    EXPECT_EQ(getUniqueName(node, "(2)"), "(1)");                // '(2)' used, expect '(1)'
+    EXPECT_EQ(getUniqueName(node, "(1)"), "(1)");                // '(1)' is already unique
+    EXPECT_EQ(getUniqueName(node, "child 1)"), "child 1) (1)");  // 'child 1)' is already unique
+    EXPECT_EQ(getUniqueName(node, "child 2)"), "child 2)");      // 'child 2)' is already unique
     // 'child(1)' is in use but no ' ' between name and postfix so (1) should be added
     EXPECT_EQ(getUniqueName(node, "child(1)"), "child(1) (1)");
 
     auto child1 =
-        scene->CreateNode("//test/child (1)").GetResult(); // Take 'child (1)' into use, slot 5 is the first free
+        scene->CreateNode("//test/child (1)").GetResult();  // Take 'child (1)' into use, slot 5 is the first free
     ASSERT_TRUE(child1);
-    EXPECT_EQ(getUniqueName(node, "child"), "child (5)");       // 'child' used, expect 'child (5)'
-    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (5)");   // 'child (2)' taken, but child (5) is not
-    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (5)"); // 'child (2)' taken, but child (5) is not
+    EXPECT_EQ(getUniqueName(node, "child"), "child (5)");        // 'child' used, expect 'child (5)'
+    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (5)");    // 'child (2)' taken, but child (5) is not
+    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (5)");  // 'child (2)' taken, but child (5) is not
 
     META_NS::SetValue(child1->Enabled(), false);
     UpdateScene();
-    EXPECT_EQ(getUniqueName(node, "child"), "child (5)");       // 'child' used, expect 'child (5)'
-    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (5)");   // 'child (2)' taken, but child (5) is not
-    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (5)"); // 'child (2)' taken, but child (5) is not
+    EXPECT_EQ(getUniqueName(node, "child"), "child (5)");        // 'child' used, expect 'child (5)'
+    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (5)");    // 'child (2)' taken, but child (5) is not
+    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (5)");  // 'child (2)' taken, but child (5) is not
 
-    EXPECT_TRUE(node->RemoveChild(child1).GetResult()); // Free Child (1) slot
+    EXPECT_TRUE(node->RemoveChild(child1).GetResult());  // Free Child (1) slot
     UpdateScene();
-    EXPECT_EQ(getUniqueName(node, "child"), "child (1)");       // 'child' used, expect 'child (1)'
-    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (1)");   // 'child (2)' taken, but child (1) is not
-    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (1)"); // 'child (2)' taken, but child (1) is not
+    EXPECT_EQ(getUniqueName(node, "child"), "child (1)");        // 'child' used, expect 'child (1)'
+    EXPECT_EQ(getUniqueName(node, "child (2)"), "child (1)");    // 'child (2)' taken, but child (1) is not
+    EXPECT_EQ(getUniqueName(node, "child (100)"), "child (1)");  // 'child (2)' taken, but child (1) is not
 }
 
 /**
@@ -807,12 +827,7 @@ UNIT_TEST_F(API_ScenePluginNodeTest, UniqueNameInvalidEntity, testing::ext::Test
 
     auto internal = scene->GetInternalScene();
     ASSERT_TRUE(internal);
-    EXPECT_EQ(internal->GetUniqueName("child", CORE_NS::Entity {}), "child");
-}
-
-void ExpectResource(CORE_NS::IResourceManager::Ptr resources, CORE_NS::ResourceId id)
-{
-    EXPECT_TRUE(resources->GetResourceInfo(id).id.IsValid());
+    EXPECT_EQ(internal->GetUniqueName("child", CORE_NS::Entity{}), "child");
 }
 
 void API_ScenePluginNodeTest::CloneNodeTest(
@@ -847,16 +862,17 @@ void API_ScenePluginNodeTest::CloneNodeTest(
 
     CompareTrees(otherNode, cube->GetRootNode().GetResult(), true);
 
-    BASE_NS::vector<CORE_NS::MatchingResourceId> res {
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
+    BASE_NS::vector<CORE_NS::MatchingResourceId> res{
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf")}};
 
-    auto infos = GetResourceManager(cube)->GetResourceInfos(res);
+    auto infos = GetResourceManager(cube)->GetResourceInfos(res, cube);
     ASSERT_TRUE(!infos.empty());
 
     ExpectAtleastResources(GetResourceManager(scene),
-        ChangeGroup(AddToResourceName(infos, " (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
+        scene,
+        ChangeGroup(AddToResourceName(infos, " (1)"), "test_assets://AnimatedCube/AnimatedCube.gltf"));
 }
 
 /**
@@ -969,20 +985,20 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneNodeTwice, testing::ext::TestSize.Leve
     CompareTrees(scene->FindNode("//test/other").GetResult(), cube->GetRootNode().GetResult(), true);
     CompareTrees(scene->FindNode("//test/hihaa").GetResult(), cube->GetRootNode().GetResult(), true);
 
-    BASE_NS::vector<CORE_NS::MatchingResourceId> res {
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
+    BASE_NS::vector<CORE_NS::MatchingResourceId> res{
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf")}};
 
-    auto infos = GetResourceManager(cube)->GetResourceInfos(res);
+    auto infos = GetResourceManager(cube)->GetResourceInfos(res, cube);
     ASSERT_TRUE(!infos.empty());
 
-    auto res1 = ChangeGroup(AddToResourceName(infos, " (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf");
-    auto res2 = ChangeGroup(AddToResourceName(infos, " (1) (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf");
+    auto res1 = ChangeGroup(AddToResourceName(infos, " (1)"), "test_assets://AnimatedCube/AnimatedCube.gltf");
+    auto res2 = ChangeGroup(AddToResourceName(infos, " (1) (1)"), "test_assets://AnimatedCube/AnimatedCube.gltf");
     auto allRes = res1;
     allRes.insert(allRes.end(), res2.begin(), res2.end());
 
-    ExpectAtleastResources(GetResourceManager(scene), allRes);
+    ExpectAtleastResources(GetResourceManager(scene), scene, allRes);
 }
 
 /**
@@ -1005,16 +1021,15 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneRoot, testing::ext::TestSize.Level1)
 
     CompareTrees(otherNode, root, true);
 
-    BASE_NS::vector<CORE_NS::MatchingResourceId> res {
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") }
-    };
+    BASE_NS::vector<CORE_NS::MatchingResourceId> res{
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf")}};
 
-    auto infos = GetResourceManager(cube)->GetResourceInfos(res);
+    auto infos = GetResourceManager(cube)->GetResourceInfos(res, cube);
     ASSERT_TRUE(!infos.empty());
 
-    ExpectAtleastResources(GetResourceManager(cube), AddToResourceName(infos, " (1)"));
+    ExpectAtleastResources(GetResourceManager(cube), cube, AddToResourceName(infos, " (1)"));
 
     EXPECT_TRUE(root->AddChild(otherNode).GetResult());
     EXPECT_EQ(root, otherNode->GetParent().GetResult());
@@ -1047,18 +1062,40 @@ UNIT_TEST_F(API_ScenePluginNodeTest, CloneConflictingName, testing::ext::TestSiz
 
     CompareTrees(otherNode, cube->GetRootNode().GetResult(), true);
 
-    BASE_NS::vector<CORE_NS::MatchingResourceId> res {
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf") },
-        { CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf") } };
+    BASE_NS::vector<CORE_NS::MatchingResourceId> res{
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf")},
+        {CORE_NS::ResourceId("AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf")}};
 
-    auto infos = GetResourceManager(cube)->GetResourceInfos(res);
+    auto infos = GetResourceManager(cube)->GetResourceInfos(res, cube);
     ASSERT_TRUE(!infos.empty());
 
     ExpectAtleastResources(GetResourceManager(scene),
-        ChangeGroup(AddToResourceName(infos, " (1)"), "Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
+        scene,
+        ChangeGroup(AddToResourceName(infos, " (1)"), "test_assets://AnimatedCube/AnimatedCube.gltf"));
 }
 
-} // namespace UTest
+/**
+ * @tc.name: ImportInvalid
+ * @tc.desc: Test failure cases for node/scene import.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginNodeTest, ImportInvalid, testing::ext::TestSize.Level1)
+{
+    auto scene1 = CreateStandaloneScene();
+    auto node1 = scene1->CreateNode("//aaa").GetResult();
+    auto node11 = scene1->CreateNode("//ccc").GetResult();
+    auto scene2 = CreateStandaloneScene();
+    auto node2 = scene2->CreateNode("//bbb").GetResult();
+    auto import = interface_cast<INodeImport>(node1);
+    ASSERT_TRUE(import);
+    EXPECT_FALSE(import->ImportChild(node11).GetResult());  // Already in scene
+    EXPECT_TRUE(import->ImportChild(node2).GetResult());
+
+    INodeImport::ImportOptions opt;
+    EXPECT_FALSE(import->ImportChildScene(nullptr, opt).GetResult());
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

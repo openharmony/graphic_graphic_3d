@@ -209,13 +209,13 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_RepeatCount, testing::ex
 
     if (auto scopedHandle = animationManager->Write(entity); scopedHandle) {
         // Test finite repeat counts
-        scopedHandle->repeatCount = 0; // Play once
+        scopedHandle->repeatCount = 0;  // Play once
         EXPECT_EQ(0u, scopedHandle->repeatCount);
 
-        scopedHandle->repeatCount = 1; // Repeat once
+        scopedHandle->repeatCount = 1;  // Repeat once
         EXPECT_EQ(1u, scopedHandle->repeatCount);
 
-        scopedHandle->repeatCount = 10; // Repeat 10 times
+        scopedHandle->repeatCount = 10;  // Repeat 10 times
         EXPECT_EQ(10u, scopedHandle->repeatCount);
 
         // Test infinite repeat
@@ -290,7 +290,7 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_Duration, testing::ext::
         scopedHandle->duration = 1.0f;
         EXPECT_FLOAT_EQ(1.0f, scopedHandle->duration);
 
-        scopedHandle->duration = 60.0f; // 1 minute
+        scopedHandle->duration = 60.0f;  // 1 minute
         EXPECT_FLOAT_EQ(60.0f, scopedHandle->duration);
     }
 
@@ -564,8 +564,8 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_MultipleEntities, testin
         entities.push_back(entity);
 
         if (auto scopedHandle = animationManager->Write(entity); scopedHandle) {
-            scopedHandle->state = (i % 2 == 0) ? AnimationComponent::PlaybackState::PLAY :
-                                                 AnimationComponent::PlaybackState::PAUSE;
+            scopedHandle->state =
+                (i % 2 == 0) ? AnimationComponent::PlaybackState::PLAY : AnimationComponent::PlaybackState::PAUSE;
             scopedHandle->speed = static_cast<float>(i + 1) * 0.5f;
             scopedHandle->repeatCount = i + 1;
         }
@@ -573,8 +573,8 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_MultipleEntities, testin
 
     for (uint32_t i = 0; i < entityCount; ++i) {
         if (auto scopedHandle = animationManager->Read(entities[i]); scopedHandle) {
-            auto expectedState = (i % 2 == 0) ? AnimationComponent::PlaybackState::PLAY :
-                                                AnimationComponent::PlaybackState::PAUSE;
+            auto expectedState =
+                (i % 2 == 0) ? AnimationComponent::PlaybackState::PLAY : AnimationComponent::PlaybackState::PAUSE;
             EXPECT_EQ(expectedState, scopedHandle->state);
             EXPECT_FLOAT_EQ(static_cast<float>(i + 1) * 0.5f, scopedHandle->speed);
             EXPECT_EQ(static_cast<uint32_t>(i + 1), scopedHandle->repeatCount);
@@ -608,18 +608,18 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_ReadWriteConsistency, te
 
     for (int i = 0; i < iterations; ++i) {
         if (auto scopedHandle = animationManager->Write(entity); scopedHandle) {
-            scopedHandle->state = (i % 3 == 0) ? AnimationComponent::PlaybackState::STOP :
-                                 (i % 3 == 1) ? AnimationComponent::PlaybackState::PLAY :
-                                                AnimationComponent::PlaybackState::PAUSE;
+            scopedHandle->state = (i % 3 == 0)   ? AnimationComponent::PlaybackState::STOP
+                                  : (i % 3 == 1) ? AnimationComponent::PlaybackState::PLAY
+                                                 : AnimationComponent::PlaybackState::PAUSE;
             scopedHandle->repeatCount = (i + 1) * 2;
             scopedHandle->speed = static_cast<float>(i + 1) * 0.25f;
             scopedHandle->weight = 0.5f + static_cast<float>(i) * 0.1f;
         }
 
         if (auto scopedHandle = animationManager->Read(entity); scopedHandle) {
-            auto expectedState = (i % 3 == 0) ? AnimationComponent::PlaybackState::STOP :
-                                 (i % 3 == 1) ? AnimationComponent::PlaybackState::PLAY :
-                                                AnimationComponent::PlaybackState::PAUSE;
+            auto expectedState = (i % 3 == 0)   ? AnimationComponent::PlaybackState::STOP
+                                 : (i % 3 == 1) ? AnimationComponent::PlaybackState::PLAY
+                                                : AnimationComponent::PlaybackState::PAUSE;
             EXPECT_EQ(expectedState, scopedHandle->state);
             EXPECT_EQ(static_cast<uint32_t>((i + 1) * 2), scopedHandle->repeatCount);
             EXPECT_FLOAT_EQ(static_cast<float>(i + 1) * 0.25f, scopedHandle->speed);
@@ -653,12 +653,12 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_Blending_Weight, testing
 
     if (auto scopedHandle1 = animationManager->Write(anim1); scopedHandle1) {
         scopedHandle1->state = AnimationComponent::PlaybackState::PLAY;
-        scopedHandle1->weight = 0.7f; // 70% influence
+        scopedHandle1->weight = 0.7f;  // 70% influence
     }
 
     if (auto scopedHandle2 = animationManager->Write(anim2); scopedHandle2) {
         scopedHandle2->state = AnimationComponent::PlaybackState::PLAY;
-        scopedHandle2->weight = 0.3f; // 30% influence
+        scopedHandle2->weight = 0.3f;  // 30% influence
     }
 
     if (auto scopedHandle1 = animationManager->Read(anim1); scopedHandle1) {
@@ -727,13 +727,13 @@ UNIT_TEST(SRC_EcsAnimationComponent, AnimationComponent_ReversePlayback, testing
 
     if (auto scopedHandle = animationManager->Write(entity); scopedHandle) {
         scopedHandle->state = AnimationComponent::PlaybackState::PLAY;
-        scopedHandle->speed = -1.0f; // Normal reverse speed
+        scopedHandle->speed = -1.0f;  // Normal reverse speed
         EXPECT_FLOAT_EQ(-1.0f, scopedHandle->speed);
 
-        scopedHandle->speed = -2.0f; // 2x reverse speed
+        scopedHandle->speed = -2.0f;  // 2x reverse speed
         EXPECT_FLOAT_EQ(-2.0f, scopedHandle->speed);
 
-        scopedHandle->speed = -0.5f; // Half reverse speed
+        scopedHandle->speed = -0.5f;  // Half reverse speed
         EXPECT_FLOAT_EQ(-0.5f, scopedHandle->speed);
     }
 

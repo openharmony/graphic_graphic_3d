@@ -58,32 +58,31 @@ class IRenderBackendNode;
 
 struct CommandBufferSubmitter {
     struct CommandBuffer {
-        VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
-        VkSemaphore semaphore { VK_NULL_HANDLE };
+        VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
+        VkSemaphore semaphore{VK_NULL_HANDLE};
 
         // not submitted, executed in primary command buffer
-        VkCommandBuffer secondaryCommandBuffer { VK_NULL_HANDLE };
+        VkCommandBuffer secondaryCommandBuffer{VK_NULL_HANDLE};
     };
 
-    VkSemaphore presentationWaitSemaphore { VK_NULL_HANDLE };
     BASE_NS::vector<CommandBuffer> commandBuffers;
 };
 
 #if (RENDER_PERF_ENABLED == 1)
 struct PerfCounters {
-    uint32_t drawCount { 0u };
-    uint32_t drawIndirectCount { 0u };
-    uint32_t dispatchCount { 0u };
-    uint32_t dispatchIndirectCount { 0u };
+    uint32_t drawCount{0u};
+    uint32_t drawIndirectCount{0u};
+    uint32_t dispatchCount{0u};
+    uint32_t dispatchIndirectCount{0u};
 
-    uint32_t bindPipelineCount { 0u };
-    uint32_t renderPassCount { 0u };
+    uint32_t bindPipelineCount{0u};
+    uint32_t renderPassCount{0u};
 
-    uint32_t updateDescriptorSetCount { 0u };
-    uint32_t bindDescriptorSetCount { 0u };
+    uint32_t updateDescriptorSetCount{0u};
+    uint32_t bindDescriptorSetCount{0u};
 
-    uint32_t triangleCount { 0u };
-    uint32_t instanceCount { 0u };
+    uint32_t triangleCount{0u};
+    uint32_t instanceCount{0u};
 };
 #else
 struct PerfCounters {};
@@ -105,24 +104,24 @@ public:
     void Present(const RenderBackendBackBufferConfiguration& backBufferConfig) override;
 
     struct StateCache {
-        const RenderCommandBeginRenderPass* renderCommandBeginRenderPass { nullptr };
+        const RenderCommandBeginRenderPass* renderCommandBeginRenderPass{nullptr};
         LowLevelRenderPassDataVk lowLevelRenderPassData;
         LowLevelPipelineLayoutDataVk lowLevelPipelineLayoutData;
-        bool primaryRenderPass { false };      // related to secondary command buffers
-        bool secondaryCommandBuffer { false }; // related to secondary command buffers
-        bool validCommandList { true };
-        bool validBindings { true };
+        bool primaryRenderPass{false};       // related to secondary command buffers
+        bool secondaryCommandBuffer{false};  // related to secondary command buffers
+        bool validCommandList{true};
+        bool validBindings{true};
 
-        IRenderBackendNode* backendNode { nullptr };
+        IRenderBackendNode* backendNode{nullptr};
 
         // matching pso handle to pipeline layout
         RenderHandle psoHandle;
-        VkPipeline pipeline { VK_NULL_HANDLE };
-        VkPipelineLayout pipelineLayout { VK_NULL_HANDLE };
+        VkPipeline pipeline{VK_NULL_HANDLE};
+        VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
         // has bitmask for immutable samplers with special handling needed resources
         // every descriptor set uses 16 bits (for max descriptor set bindings)
-        uint64_t pipelineDescSetHash { 0u };
+        uint64_t pipelineDescSetHash{0u};
 
 #if (RENDER_PERF_ENABLED == 1)
         mutable PerfCounters perfCounters;
@@ -131,23 +130,23 @@ public:
 
 private:
     struct MultiRenderCommandListDesc {
-        RenderCommandContext* baseContext { nullptr };
+        RenderCommandContext* baseContext{nullptr};
 
-        uint32_t multiRenderCommandListIndex { 0 };
-        uint32_t multiRenderCommandListCount { 0 };
-        bool secondaryCommandBuffer { false };
-        bool multiRenderNodeCmdList { false };
+        uint32_t multiRenderCommandListIndex{0};
+        uint32_t multiRenderCommandListCount{0};
+        bool secondaryCommandBuffer{false};
+        bool multiRenderNodeCmdList{false};
     };
 
     struct DebugNames {
         BASE_NS::string_view renderCommandListName;
-        BASE_NS::string_view renderCommandBufferName; // multi-renderpass has the first render command list name
+        BASE_NS::string_view renderCommandBufferName;  // multi-renderpass has the first render command list name
     };
 
     // called once in the beginning of rendering to acquire and setup possible swapchain
     void AcquirePresentationInfo(
         RenderCommandFrameData& renderCommandFrameData, const RenderBackendBackBufferConfiguration& backBufferConfig);
-
+    bool Present();
     void UpdateGlobalDescriptorSets();
 
     void RenderProcessCommandLists(
@@ -271,25 +270,26 @@ private:
     Device& device_;
     DeviceVk& deviceVk_;
     GpuResourceManager& gpuResourceMgr_;
-    CORE_NS::ITaskQueue* const queue_ { nullptr };
+    CORE_NS::ITaskQueue* const queue_{nullptr};
 
     CommandBufferSubmitter commandBufferSubmitter_;
 
     struct PresentationInfo {
-        bool useSwapchain { false };
-        bool validAcquire { false };
-        uint32_t swapchainImageIndex { ~0u };
-        VkSemaphore swapchainSemaphore { VK_NULL_HANDLE };
-        bool presentationLayoutChangeNeeded { false };
-        uint32_t renderNodeCommandListIndex { ~0u };
+        bool useSwapchain{false};
+        bool validAcquire{false};
+        uint32_t swapchainImageIndex{~0u};
+        VkSemaphore swapchainSemaphore{VK_NULL_HANDLE};
+        VkSemaphore presentSemaphore{VK_NULL_HANDLE};
+        bool presentationLayoutChangeNeeded{false};
+        uint32_t renderNodeCommandListIndex{~0u};
         GpuResourceState renderGraphProcessedState;
-        ImageLayout imageLayout { ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED };
-        VkImage swapchainImage { VK_NULL_HANDLE };
-        VkSwapchainKHR swapchain { VK_NULL_HANDLE };
-        PerfCounters performanceCounters {};
+        ImageLayout imageLayout{ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED};
+        VkImage swapchainImage{VK_NULL_HANDLE};
+        VkSwapchainKHR swapchain{VK_NULL_HANDLE};
+        PerfCounters performanceCounters{};
     };
     struct PresentationData {
-        bool present { true };
+        bool present{true};
         BASE_NS::vector<PresentationInfo> infos;
     };
     PresentationData presentationData_;
@@ -315,18 +315,18 @@ private:
         EngineResourceHandle gpuHandle;
         CpuTimer cpuTimer;
 
-        uint32_t gpuBufferOffset { 0 };
+        uint32_t gpuBufferOffset{0};
 
         PerfCounters perfCounters;
     };
     BASE_NS::unordered_map<BASE_NS::string, PerfDataSet> timers_;
 #if (RENDER_GPU_TIMESTAMP_QUERIES_ENABLED == 1)
     struct PerfGpuTimerData {
-        uint32_t fullByteSize { 0 };
-        uint32_t frameByteSize { 0 };
-        uint32_t currentOffset { 0 };
+        uint32_t fullByteSize{0};
+        uint32_t frameByteSize{0};
+        uint32_t currentOffset{0};
         BASE_NS::unique_ptr<GpuBuffer> gpuBuffer;
-        void* mappedData { nullptr };
+        void* mappedData{nullptr};
 
         std::atomic_int64_t fullGpuCounter = 0;
     };
@@ -344,4 +344,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_RENDER_BACKEND_VK_H
+#endif  // VULKAN_RENDER_BACKEND_VK_H

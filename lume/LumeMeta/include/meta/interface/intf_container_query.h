@@ -38,7 +38,7 @@ public:
          *  If the list is empty, all known containers are returned. */
         BASE_NS::vector<BASE_NS::Uid> uids;
         /** Maximum number of results to return. If 0, no limit will be enforced. */
-        size_t maxCount {};
+        size_t maxCount{};
     };
     /**
      * @brief Returns a list of containers the object is aware of that are compatible
@@ -53,32 +53,32 @@ public:
      */
     BASE_NS::vector<IContainer::Ptr> FindAllContainers(const BASE_NS::vector<BASE_NS::Uid>& uids) const
     {
-        return FindAllContainers(ContainerFindOptions { uids, 0 });
+        return FindAllContainers(ContainerFindOptions{uids, 0});
     }
     /**
      * @brief Returns all containers which the object is aware of.
      */
     BASE_NS::vector<IContainer::Ptr> FindAllContainers() const
     {
-        return FindAllContainers(ContainerFindOptions {});
+        return FindAllContainers(ContainerFindOptions{});
     }
     /**
      * @brief Returns the matching containers for a given type.
      */
-    template<class T>
+    template <class T>
     BASE_NS::vector<IContainer::Ptr> FindAllContainers() const
     {
         static_assert(IsKindOfIInterface_v<T*>, "Type must be derived from IInterface");
-        return FindAllContainers({ { T::UID }, 0 });
+        return FindAllContainers({{T::UID}, 0});
     }
     /**
      * @brief Returns the first matching container for a given interface.
      */
-    template<class T>
+    template <class T>
     IContainer::Ptr FindAnyContainer() const
     {
         static_assert(IsKindOfIInterface_v<T*>, "Type must be derived from IInterface");
-        if (auto c = FindAllContainers({ { T::UID }, 1 }); !c.empty()) {
+        if (auto c = FindAllContainers({{T::UID}, 1}); !c.empty()) {
             return c.front();
         }
         return {};
@@ -87,4 +87,4 @@ public:
 
 META_END_NAMESPACE()
 
-#endif // META_INTERFACE_ICONTAINER_QUERY_H
+#endif  // META_INTERFACE_ICONTAINER_QUERY_H

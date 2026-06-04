@@ -1,0 +1,112 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeDrawWithDebugMarker",
+            "nodeName": "OITPass0",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITAccImage"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITRevImage"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 3,
+                "subpass": {
+                    "subpassFlags": "merge_bit",
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "OITPass1",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITAccImage"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITRevImage"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 3,
+                "subpass": {
+                    "subpassFlags": "merge_bit",
+                    "colorAttachmentIndices": [0, 1]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "OITPass2",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITAccImage"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OITRevImage"
+                    }
+                ],
+                "subpassIndex": 2,
+                "subpassCount": 3,
+                "subpass": {
+                    "subpassFlags": "merge_bit",
+                    "colorAttachmentIndices": [0, 1]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDraw",
+            "nodeName": "OITComposite",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "name": "OutputImage"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": [0]
+                }
+            }
+        }
+    ]
+}

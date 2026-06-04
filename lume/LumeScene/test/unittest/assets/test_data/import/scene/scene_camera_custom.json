@@ -1,0 +1,26 @@
+{
+	"version": "1.0",
+	"description": "test scene with custom projection camera node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "camera",
+					"name": "test",
+					"projection": "custom",
+					"customProjectionMatrix": [
+						[1.0, 0.0, 0.0, 0.0],
+						[0.0, 2.0, 0.0, 0.0],
+						[0.0, 0.0, -1.0, -0.2],
+						[0.0, 0.0, -1.0, 0.0]
+					],
+					"nearPlane": 0.1,
+					"farPlane": 100.0
+				}
+			]
+		}
+	}
+}

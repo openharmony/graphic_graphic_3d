@@ -48,7 +48,8 @@ IFile::Mode MemoryFile::GetMode() const
     return mode_;
 }
 
-void MemoryFile::Close() {}
+void MemoryFile::Close()
+{}
 
 uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 {
@@ -62,7 +63,9 @@ uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 
     if (toRead > 0) {
         if (toRead <= SIZE_MAX) {
-            if (CloneData(buffer, static_cast<size_t>(count), &(buffer_->GetStorage().data()[index_]),
+            if (CloneData(buffer,
+                    static_cast<size_t>(count),
+                    &(buffer_->GetStorage().data()[index_]),
                     static_cast<size_t>(toRead))) {
                 index_ += toRead;
             }
@@ -78,8 +81,16 @@ uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 uint64_t MemoryFile::Write(const void* buffer, uint64_t count)
 {
     if (mode_ == Mode::READ_WRITE) {
-        buffer_->Resize(size_t(count));
-        return buffer_->Write(0, buffer, count);
+        const uint64_t requiredSize = index_ + count;
+        if (requiredSize < index_ || requiredSize > SIZE_MAX) {
+            return 0;
+        }
+        if (requiredSize > buffer_->Size()) {
+            buffer_->Resize(static_cast<size_t>(requiredSize));
+        }
+        const uint64_t written = buffer_->Write(index_, buffer, count);
+        index_ += written;
+        return written;
     }
     return {};
 }
@@ -88,6 +99,9 @@ uint64_t MemoryFile::Append(const void* buffer, uint64_t count, uint64_t /*chunk
 {
     if (mode_ == Mode::READ_WRITE) {
         auto exSize = buffer_->Size();
+        if (count > SIZE_MAX - exSize) {
+            return 0;
+        }
         buffer_->Resize(exSize + count);
         return buffer_->Write(exSize, buffer, count);
     }

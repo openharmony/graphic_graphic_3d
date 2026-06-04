@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "description": "scene instantiates outer template which itself instantiates inner template; each template's /-anchored refs must resolve to its own local root",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "outerHost",
+                    "source": { "type": "nodeTemplate", "url": "template_outer_with_ref.nodeTemplate" },
+                    "resourceGroup": "outerGrp"
+                }
+            ]
+        }
+    }
+}

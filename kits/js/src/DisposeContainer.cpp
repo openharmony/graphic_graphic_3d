@@ -22,29 +22,31 @@ void DestroyNapiObject(NapiApi::Object obj, napi_value& scene)
     if (obj) {
         NapiApi::Function func = obj.Get<NapiApi::Function>("destroy");
         if (func) {
-            func.Invoke(obj, { scene });
+            func.Invoke(obj, {scene});
         }
     }
 }
 
-template<typename T>
+template <typename T>
 void DisposeFromList(BASE_NS::unordered_map<uintptr_t, T>& disposables, uintptr_t token, napi_value* scene)
 {
     auto it = disposables.find(token);
     if (it != disposables.end()) {
+        auto key = it->first;
         auto object = it->second.GetObject();
         it->second.Reset();
+        // Erase from disposables map first, then destroy the object
+        disposables.erase(key);
         if (scene) {
             DestroyNapiObject(object, *scene);
         }
-        disposables.erase(it->first);
     }
 }
-} // end anon ns
+}  // namespace
 
 void DisposeContainer::DisposeHook(uintptr_t token, NapiApi::Object obj)
 {
-    disposables_[token] = { obj };
+    disposables_[token] = {obj};
 }
 
 void DisposeContainer::ReleaseDispose(uintptr_t token)
@@ -62,18 +64,20 @@ void DisposeContainer::ReleaseStrongDispose(uintptr_t token)
     ::DisposeFromList<NapiApi::StrongRef>(strongDisposables_, token, nullptr);
 }
 
-void DisposeContainer::Dispose(napi_env e, BASE_NS::array_view<const uintptr_t> strongs,
-    BASE_NS::array_view<const uintptr_t> weaks, SceneJS* sc)
+void DisposeContainer::Dispose(
+    napi_env e, BASE_NS::array_view<const uintptr_t> strongs, BASE_NS::array_view<const uintptr_t> weaks, SceneJS* sc)
 {
     LOG_V("Mass Dispose %zu %zu", strongs.size(), weaks.size());
     NapiApi::Object scen(e);
     napi_value tmp;
     napi_create_external(
-        e, static_cast<void*>(sc),
+        e,
+        static_cast<void*>(sc),
         [](napi_env env, void* data, void* finalize_hint) {
             // do nothing.
         },
-        nullptr, &tmp);
+        nullptr,
+        &tmp);
     scen.Set("SceneJS", tmp);
     napi_value scene = scen.ToNapiValue();
     bool disposedSelected = false;

@@ -81,9 +81,9 @@ static inline constexpr Mat4X4 Transpose(const Mat4X4& m)
 static inline constexpr Mat3X3 PostScale(const Mat3X3& mat, const Vec2& vec)
 {
     Mat3X3 result;
-    result.x = { mat.x.x * vec.x, mat.x.y * vec.y, mat.x.z };
-    result.y = { mat.y.x * vec.x, mat.y.y * vec.y, mat.y.z };
-    result.z = { mat.z.x * vec.x, mat.z.y * vec.y, mat.z.z };
+    result.x = {mat.x.x * vec.x, mat.x.y * vec.y, mat.x.z};
+    result.y = {mat.y.x * vec.x, mat.y.y * vec.y, mat.y.z};
+    result.z = {mat.z.x * vec.x, mat.z.y * vec.y, mat.z.z};
     return result;
 }
 
@@ -91,10 +91,10 @@ static inline constexpr Mat3X3 PostScale(const Mat3X3& mat, const Vec2& vec)
 static inline constexpr Mat4X4 PostScale(const Mat4X4& mat, const Vec3& vec)
 {
     Mat4X4 result;
-    result.x = { mat.x.x * vec.x, mat.x.y * vec.y, mat.x.z * vec.z, mat.x.w };
-    result.y = { mat.y.x * vec.x, mat.y.y * vec.y, mat.y.z * vec.z, mat.y.w };
-    result.z = { mat.z.x * vec.x, mat.z.y * vec.y, mat.z.z * vec.z, mat.z.w };
-    result.w = { mat.w.x * vec.x, mat.w.y * vec.y, mat.w.z * vec.z, mat.w.w };
+    result.x = {mat.x.x * vec.x, mat.x.y * vec.y, mat.x.z * vec.z, mat.x.w};
+    result.y = {mat.y.x * vec.x, mat.y.y * vec.y, mat.y.z * vec.z, mat.y.w};
+    result.z = {mat.z.x * vec.x, mat.z.y * vec.y, mat.z.z * vec.z, mat.z.w};
+    result.w = {mat.w.x * vec.x, mat.w.y * vec.y, mat.w.z * vec.z, mat.w.w};
     return result;
 }
 
@@ -236,10 +236,10 @@ static inline constexpr Mat3X3 Mat3Cast(const Quat& quaternion)
 static inline constexpr Mat4X4 DimensionalShift(const Mat3X3& mat)
 {
     Mat4X4 result;
-    result.x = { mat.x.x, mat.x.y, 0, mat.x.z };
-    result.y = { mat.y.x, mat.y.y, 0, mat.y.z };
-    result.z = { 0, 0, 1, 0 };
-    result.w = { mat.z.x, mat.z.y, 0, mat.z.z };
+    result.x = {mat.x.x, mat.x.y, 0, mat.x.z};
+    result.y = {mat.y.x, mat.y.y, 0, mat.y.z};
+    result.z = {0, 0, 1, 0};
+    result.w = {mat.z.x, mat.z.y, 0, mat.z.z};
     return result;
 }
 
@@ -451,15 +451,17 @@ static inline constexpr Mat4X4 Inverse(const Mat4X4& mat4X4)
 /** Inner product */
 inline constexpr Vec4 operator*(const Mat4X4& m, const Vec4& v)
 {
-    return { v.x * m.x.x + v.y * m.y.x + v.z * m.z.x + v.w * m.w.x,
-        v.x * m.x.y + v.y * m.y.y + v.z * m.z.y + v.w * m.w.y, v.x * m.x.z + v.y * m.y.z + v.z * m.z.z + v.w * m.w.z,
-        v.x * m.x.w + v.y * m.y.w + v.z * m.z.w + v.w * m.w.w };
+    return {v.x * m.x.x + v.y * m.y.x + v.z * m.z.x + v.w * m.w.x,
+        v.x * m.x.y + v.y * m.y.y + v.z * m.z.y + v.w * m.w.y,
+        v.x * m.x.z + v.y * m.y.z + v.z * m.z.z + v.w * m.w.z,
+        v.x * m.x.w + v.y * m.y.w + v.z * m.z.w + v.w * m.w.w};
 }
 
 inline constexpr Vec3 operator*(const Mat3X3& m, const Vec3& v)
 {
-    return { v.x * m.x.x + v.y * m.y.x + v.z * m.z.x, v.x * m.x.y + v.y * m.y.y + v.z * m.z.y,
-        v.x * m.x.z + v.y * m.y.z + v.z * m.z.z };
+    return {v.x * m.x.x + v.y * m.y.x + v.z * m.z.x,
+        v.x * m.x.y + v.y * m.y.y + v.z * m.z.y,
+        v.x * m.x.z + v.y * m.y.z + v.z * m.z.z};
 }
 
 /** Creates matrix for left handed symmetric perspective view frustum, near and far clip planes correspond to z
@@ -812,12 +814,12 @@ static inline bool Decompose(
     if (trace > 0.0f) {
         root = sqrt(trace + 1.0f);
         orientation.w = 0.5f * root;
-        root = 0.5f / root; // root cannot be zero as it's square root of at least 1
+        root = 0.5f / root;  // root cannot be zero as it's square root of at least 1
         orientation.x = root * (row[1].z - row[2].y);
         orientation.y = root * (row[2].x - row[0].z);
         orientation.z = root * (row[0].y - row[1].x);
-    } else { // End if > 0
-        constexpr const unsigned next[3] = { 1U, 2U, 0U };
+    } else {  // End if > 0
+        constexpr const unsigned next[3] = {1U, 2U, 0U};
         i = 0U;
         if (row[1].y > row[0].x) {
             i = 1U;
@@ -835,7 +837,7 @@ static inline bool Decompose(
         orientation[j] = root * (row[i][j] + row[j][i]);
         orientation[k] = root * (row[i][k] + row[k][i]);
         orientation.w = root * (row[j][k] - row[k][j]);
-    } // End if <= 0
+    }  // End if <= 0
 
     return true;
 }
@@ -889,12 +891,12 @@ static inline bool Decompose(Mat4X4 const& modelMatrix, Vec3& scale, Quat& orien
     if (trace > 0.0f) {
         root = sqrt(trace + 1.0f);
         orientation.w = 0.5f * root;
-        root = 0.5f / root; // root cannot be zero as it's square root of at least 1
+        root = 0.5f / root;  // root cannot be zero as it's square root of at least 1
         orientation.x = root * (row[1].z - row[2].y);
         orientation.y = root * (row[2].x - row[0].z);
         orientation.z = root * (row[0].y - row[1].x);
-    } else { // End if > 0
-        constexpr const unsigned next[3] = { 1U, 2U, 0U };
+    } else {  // End if > 0
+        constexpr const unsigned next[3] = {1U, 2U, 0U};
         i = 0U;
         if (row[1].y > row[0].x) {
             i = 1U;
@@ -912,7 +914,7 @@ static inline bool Decompose(Mat4X4 const& modelMatrix, Vec3& scale, Quat& orien
         orientation[j] = root * (row[i][j] + row[j][i]);
         orientation[k] = root * (row[i][k] + row[k][i]);
         orientation.w = root * (row[j][k] - row[k][j]);
-    } // End if <= 0
+    }  // End if <= 0
 
     return true;
 }
@@ -1032,7 +1034,7 @@ static inline Vec3 EigenvalueDecompositionAnalytical(const Mat3X3& m)
             roots.x = y1 - a / 3.0f;
             roots.y = y2 - a / 3.0f;
         }
-    } else // D < 0.0f, Distinct real roots
+    } else  // D < 0.0f, Distinct real roots
     {
         const float r = Math::sqrt(-((p * p * p) / 27.0f));
         // const float theta = Math::acos(-(q / (2.0f * Math::sqrt(r))));
@@ -1061,29 +1063,29 @@ static inline Mat4X4 OuterProduct(const Vec4& u, const Vec4& v)
     // [02] [06] [10] [14]
     // [03] [07] [11] [15]
     return Mat4X4(
-        Vec4 {
-            u.x * v.x, // m[0]
-            u.y * v.x, // m[1]
-            u.z * v.x, // m[2]
-            u.w * v.x  // m[3]
+        Vec4{
+            u.x * v.x,  // m[0]
+            u.y * v.x,  // m[1]
+            u.z * v.x,  // m[2]
+            u.w * v.x   // m[3]
         },
-        Vec4 {
-            u.x * v.y, // m[4]
-            u.y * v.y, // m[5]
-            u.z * v.y, // m[6]
-            u.w * v.y  // m[7]
+        Vec4{
+            u.x * v.y,  // m[4]
+            u.y * v.y,  // m[5]
+            u.z * v.y,  // m[6]
+            u.w * v.y   // m[7]
         },
-        Vec4 {
-            u.x * v.z, // m[8]
-            u.y * v.z, // m[9]
-            u.z * v.z, // m[10]
-            u.w * v.z  // m[11]
+        Vec4{
+            u.x * v.z,  // m[8]
+            u.y * v.z,  // m[9]
+            u.z * v.z,  // m[10]
+            u.w * v.z   // m[11]
         },
-        Vec4 {
-            u.x * v.w, // m[12]
-            u.y * v.w, // m[13]
-            u.z * v.w, // m[14]
-            u.w * v.w  // m[15]
+        Vec4{
+            u.x * v.w,  // m[12]
+            u.y * v.w,  // m[13]
+            u.z * v.w,  // m[14]
+            u.w * v.w   // m[15]
         });
 }
 
@@ -1096,25 +1098,25 @@ static inline Mat3X3 OuterProduct(const Vec3& u, const Vec3& v)
     // [2] [5] [8]
 
     return Mat3X3(
-        Vec3 {
-            u.x * v.x, // [0]
-            u.y * v.x, // [1]
-            u.z * v.x, // [2]
+        Vec3{
+            u.x * v.x,  // [0]
+            u.y * v.x,  // [1]
+            u.z * v.x,  // [2]
         },
-        Vec3 {
-            u.x * v.y, // [3]
-            u.y * v.y, // [4]
-            u.z * v.y, // [5]
+        Vec3{
+            u.x * v.y,  // [3]
+            u.y * v.y,  // [4]
+            u.z * v.y,  // [5]
         },
-        Vec3 {
-            u.x * v.z, // [6]
-            u.y * v.z, // [7]
-            u.z * v.z  // [8]
+        Vec3{
+            u.x * v.z,  // [6]
+            u.y * v.z,  // [7]
+            u.z * v.z   // [8]
         });
 }
 
 /** @} */
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_MATRIX_UTIL_H
+#endif  // API_BASE_MATH_MATRIX_UTIL_H

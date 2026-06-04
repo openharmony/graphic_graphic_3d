@@ -27,10 +27,10 @@ CORE3D_BEGIN_NAMESPACE()
 #endif
 /** Component for giving weights to morph targets. */
 BEGIN_COMPONENT(IMorphComponentManager, MorphComponent)
-    /** Name of each morph target. */
-    DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::string>, morphNames, "", PropertyFlags::IS_HIDDEN, )
-    /** Weight of each morph target. The */
-    DEFINE_PROPERTY(BASE_NS::vector<float>, morphWeights, "@morphNames[*]", PropertyFlags::IS_SLIDER, )
+/** Name of each morph target. */
+DEFINE_PROPERTY(BASE_NS::vector<BASE_NS::string>, morphNames, "", PropertyFlags::IS_HIDDEN, )
+/** Weight of each morph target. The */
+DEFINE_PROPERTY(BASE_NS::vector<float>, morphWeights, "@morphNames[*]", PropertyFlags::IS_SLIDER, )
 END_COMPONENT(IMorphComponentManager, MorphComponent, "46f1ddb9-053d-4f54-aaea-ddfca075294f")
 
 #if !defined(IMPLEMENT_MANAGER)

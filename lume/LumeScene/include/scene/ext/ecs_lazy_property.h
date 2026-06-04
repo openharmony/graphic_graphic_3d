@@ -44,7 +44,7 @@ public:
     }
     CORE_NS::Entity GetEntity() const
     {
-        return object_ ? object_->GetEntity() : CORE_NS::Entity {};
+        return object_ ? object_->GetEntity() : CORE_NS::Entity{};
     }
 
 protected:
@@ -58,7 +58,7 @@ protected:
     }
     META_NS::IProperty::Ptr CreateProperty(BASE_NS::string_view path)
     {
-        return object_ ? object_->CreateProperty(path).GetResult() : META_NS::IProperty::Ptr {};
+        return object_ ? object_->CreateProperty(path).GetResult() : META_NS::IProperty::Ptr{};
     }
 
 protected:
@@ -86,6 +86,20 @@ public:
         return META_NS::GetValue(Name());
     }
 };
+
+/**
+ * @brief A helper function to IEcsLazyProperty::InitDynamicProperty implementation for pushing a value converter into a
+ *        forwarding property's stack.
+ * @param ep The owning property.
+ * @param sp The stack property instance to push the value into.
+ * @param value The value to push.
+ * @return True if successful, false otherwise.
+ */
+inline bool PushForwardingValueInstance(
+    const META_NS::IProperty::Ptr& ep, META_NS::IStackProperty* sp, const META_NS::IValue::Ptr& value) noexcept
+{
+    return ep && sp && sp->PushValue(value);
+}
 
 SCENE_END_NAMESPACE()
 

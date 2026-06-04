@@ -23,7 +23,7 @@
 #include "threading/task_queue.h"
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -68,4 +68,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_THREADING_SEQUENTIAL_TASK_QUEUE_H
+#endif  // CORE_THREADING_SEQUENTIAL_TASK_QUEUE_H

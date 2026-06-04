@@ -1,0 +1,17 @@
+{
+	"version": "1.0",
+	"description": "node template that references itself as an external node (circular)",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "external",
+			"name": "self",
+			"source": {
+				"type": "nodeTemplate",
+				"url": "scene_ext_circular.nodeTemplate"
+			},
+			"resourceGroup": "self-grp"
+		}
+	},
+	"primaryGroup": ""
+}

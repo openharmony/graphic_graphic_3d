@@ -46,8 +46,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "46144344-29f8-4fc1-913a-ed5f6f2e20d0" };
-    static constexpr const char* typeName = "RenderNodeDefaultCameraController";
+    static constexpr BASE_NS::Uid UID{"46144344-29f8-4fc1-913a-ed5f6f2e20d0"};
+    static constexpr const char* TYPE_NAME = "RenderNodeDefaultCameraController";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -64,6 +64,8 @@ public:
         RENDER_NS::GpuImageDesc history;
         RENDER_NS::GpuImageDesc baseColor;
         RENDER_NS::GpuImageDesc material;
+
+        BASE_NS::vector<RENDER_NS::RenderDataConstants::RenderDataFixedString> customTargets;
     };
 
     struct CreatedTargets {
@@ -90,23 +92,23 @@ public:
     };
 
     struct CameraResourceSetup {
-        BASE_NS::Math::UVec2 outResolution { 0u, 0u };
-        BASE_NS::Math::UVec2 renResolution { 0u, 0u };
+        BASE_NS::Math::UVec2 outResolution{0u, 0u};
+        BASE_NS::Math::UVec2 renResolution{0u, 0u};
 
-        RenderCamera::Flags camFlags { 0u };
-        RenderCamera::RenderPipelineType pipelineType { RenderCamera::RenderPipelineType::FORWARD };
+        RenderCamera::Flags camFlags{0u};
+        RenderCamera::RenderPipelineType pipelineType{RenderCamera::RenderPipelineType::FORWARD};
 
         RENDER_NS::RenderHandle colorTarget;
         RENDER_NS::RenderHandle depthTarget;
 
-        uint32_t historyFlipFrame { 0 };
+        uint32_t historyFlipFrame{0};
 
-        RENDER_NS::DeviceBackendType backendType { RENDER_NS::DeviceBackendType::VULKAN };
+        RENDER_NS::DeviceBackendType backendType{RENDER_NS::DeviceBackendType::VULKAN};
 
         ImageDescs inputImageDescs;
 
-        bool isMultiview { false };
-        RENDER_NS::SampleCountFlags sampleCountFlags { RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT };
+        bool isMultiview{false};
+        RENDER_NS::SampleCountFlags sampleCountFlags{RENDER_NS::SampleCountFlagBits::CORE_SAMPLE_COUNT_4_BIT};
     };
     struct ShadowBuffers {
         RENDER_NS::RenderHandle depthHandle;
@@ -117,12 +119,12 @@ public:
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
     };
     JsonInputs jsonInputs_;
 
@@ -155,11 +157,11 @@ private:
         RENDER_NS::RenderHandle cameraEnvRadianceHandle;
         RENDER_NS::RenderHandle prePassColorTarget;
 
-        uint32_t cameraIdx { 0 };
-        BASE_NS::Math::Vec4 sceneTimingData { 0.0f, 0.0f, 0.0f, 0.0f };
+        uint32_t cameraIdx{0};
+        BASE_NS::Math::Vec4 sceneTimingData{0.0f, 0.0f, 0.0f, 0.0f};
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
         BASE_NS::string customCamRngName;
     };
     struct ConfigurationNames {
@@ -207,8 +209,8 @@ private:
 
     CameraResourceSetup camRes_;
     BASE_NS::Math::UVec2 prevCameraResolution_;
-    BASE_NS::Format prevColorFormat_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
-    BASE_NS::Format prevDepthFormat_ { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format prevColorFormat_{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
+    BASE_NS::Format prevDepthFormat_{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
 
     float screenPercentage_;
     UboHandles uboHandles_;
@@ -218,8 +220,8 @@ private:
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
 
-    bool rtEnabled_ { false };
+    bool rtEnabled_{false};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_CAMERA_CONTROLLER_H

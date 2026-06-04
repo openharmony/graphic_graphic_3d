@@ -16,9 +16,9 @@
 #include "dir.h"
 
 #if defined(_WIN32) && (_WIN32)
-#include <windows.h>
 #include <cstring>
 #include <string>
+#include <windows.h>
 struct DIR {
     HANDLE handle;
     WIN32_FIND_DATAA data;
@@ -57,11 +57,14 @@ struct dirent* readdir(DIR* d)
 }
 void closedir(DIR* d)
 {
-    FindClose(d->handle);
+    if (d) {
+        FindClose(d->handle);
+        delete d;
+    }
 }
 #else
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <dirent.h>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #endif

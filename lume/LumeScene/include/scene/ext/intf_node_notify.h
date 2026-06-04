@@ -31,8 +31,8 @@ public:
     virtual void OnChildChanged(META_NS::ContainerChangeType type, const INode::Ptr& child, size_t index) = 0;
     /// Node activity state change state
     enum class NodeActiteStateInfo : uint8_t {
-        ACTIVATED,    ///< The node was activated
-        DEACTIVATING, ///< The node is going to be deactivated
+        ACTIVATED,     ///< The node was activated
+        DEACTIVATING,  ///< The node is going to be deactivated
     };
     /// Called by the framework when node node activity state is changing
     virtual void OnNodeActiveStateChanged(NodeActiteStateInfo state) = 0;

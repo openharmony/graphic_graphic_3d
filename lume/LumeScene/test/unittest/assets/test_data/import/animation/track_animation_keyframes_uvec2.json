@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "uvec2Keyframes",
+		"timestamps": [0.0, 1.0],
+		"keyframes": [
+			{ "type": "uvec2", "value": [10, 20] },
+			{ "type": "uvec2", "value": [30, 40] }
+		]
+	}
+}

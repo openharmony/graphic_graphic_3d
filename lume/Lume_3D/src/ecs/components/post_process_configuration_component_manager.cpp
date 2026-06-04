@@ -57,7 +57,7 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE { PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE };
+constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE{PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE};
 constexpr string_view CUSTOM_PROPERTIES = "customProperties";
 constexpr string_view CUSTOM_PROPERTY_DATA = "data";
 constexpr string_view NAME = "name";
@@ -111,7 +111,7 @@ void UpdateCustomPropertyMetadata(const json::value& customProperties, CustomPro
         }
     }
 }
-} // namespace
+}  // namespace
 
 class PostProcessConfigurationComponentManager final : public IPostProcessConfigurationComponentManager,
                                                        public IPropertyApi {
@@ -175,8 +175,7 @@ private:
     BEGIN_PROPERTY(PostProcessConfigurationComponent, componentProperties_)
 #include <3d/ecs/components/post_process_configuration_component.h>
     END_PROPERTY();
-    static constexpr array_view<const Property> componentMetaData_ { componentProperties_,
-        countof(componentProperties_) };
+    static constexpr array_view<const Property> componentMetaData_{componentProperties_, countof(componentProperties_)};
 
     bool IsMatchingHandle(const IPropertyHandle& handle);
 
@@ -238,13 +237,13 @@ private:
 
         void UpdateMetadata();
 
-        PostProcessConfigurationComponentManager* manager_ { nullptr };
+        PostProcessConfigurationComponentManager* manager_{nullptr};
         Entity entity_;
-        uint32_t generation_ { 0u };
-        bool dirty_ { false };
+        uint32_t generation_{0u};
+        bool dirty_{false};
 #ifndef NDEBUG
-        mutable std::atomic_int32_t rLocked_ { 0 };
-        mutable bool wLocked_ { false };
+        mutable std::atomic_int32_t rLocked_{0};
+        mutable bool wLocked_{false};
 #endif
         PostProcessConfigurationComponent data_;
 
@@ -256,11 +255,11 @@ private:
     };
 
     IEcs& ecs_;
-    IRenderHandleComponentManager* renderHandleManager_ { nullptr };
-    IShaderManager* shaderManager_ { nullptr };
+    IRenderHandleComponentManager* renderHandleManager_{nullptr};
+    IShaderManager* shaderManager_{nullptr};
 
-    uint32_t generationCounter_ { 0u };
-    uint32_t modifiedFlags_ { 0u };
+    uint32_t generationCounter_{0u};
+    uint32_t modifiedFlags_{0u};
     unordered_map<Entity, ComponentId> entityComponent_;
     vector<ComponentHandle> components_;
     BASE_NS::vector<Entity> added_;
@@ -404,7 +403,7 @@ void PostProcessConfigurationComponentManager::Create(Entity entity)
 {
     if (CORE_NS::EntityUtil::IsValid(entity)) {
         if (auto it = entityComponent_.find(entity); it == entityComponent_.end()) {
-            entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            entityComponent_.insert({entity, static_cast<ComponentId>(components_.size())});
             const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity);
             if (components_.capacity() != oldCapacity) {
@@ -433,7 +432,7 @@ bool PostProcessConfigurationComponentManager::Destroy(Entity entity)
 {
     if (CORE_NS::EntityUtil::IsValid(entity)) {
         if (auto it = entityComponent_.find(entity); it != entityComponent_.end()) {
-            components_[it->second].entity_ = {}; // invalid entity. (marks it as ready for re-use)
+            components_[it->second].entity_ = {};  // invalid entity. (marks it as ready for re-use)
             entityComponent_.erase(it);
             removed_.push_back(entity);
             modifiedFlags_ |= CORE_NS::CORE_COMPONENT_MANAGER_COMPONENT_REMOVED_BIT;
@@ -501,7 +500,7 @@ vector<Entity> PostProcessConfigurationComponentManager::GetUpdatedComponents()
     vector<Entity> updated;
     if (modifiedFlags_ & MODIFIED) {
         modifiedFlags_ &= ~MODIFIED;
-        updated.reserve(components_.size() / 2); // 2: half
+        updated.reserve(components_.size() / 2);  // 2: half
         for (auto& handle : components_) {
             if (handle.dirty_) {
                 handle.dirty_ = false;
@@ -613,7 +612,7 @@ PostProcessConfigurationComponent PostProcessConfigurationComponentManager::Get(
     if (auto handle = Read(index); handle) {
         return *handle;
     }
-    return PostProcessConfigurationComponent {};
+    return PostProcessConfigurationComponent{};
 }
 
 PostProcessConfigurationComponent PostProcessConfigurationComponentManager::Get(Entity entity) const
@@ -621,7 +620,7 @@ PostProcessConfigurationComponent PostProcessConfigurationComponentManager::Get(
     if (auto handle = Read(entity); handle) {
         return *handle;
     }
-    return PostProcessConfigurationComponent {};
+    return PostProcessConfigurationComponent{};
 }
 
 void PostProcessConfigurationComponentManager::Set(ComponentId index, const PostProcessConfigurationComponent& data)
@@ -637,7 +636,7 @@ void PostProcessConfigurationComponentManager::Set(Entity entity, const PostProc
         if (auto handle = Write(entity); handle) {
             *handle = data;
         } else {
-            entityComponent_.insert({ entity, static_cast<ComponentId>(components_.size()) });
+            entityComponent_.insert({entity, static_cast<ComponentId>(components_.size())});
             const auto oldCapacity = components_.capacity();
             auto& component = components_.emplace_back(this, entity, data);
             if (components_.capacity() != oldCapacity) {
@@ -661,23 +660,23 @@ void PostProcessConfigurationComponentManager::Set(Entity entity, const PostProc
 ScopedHandle<const PostProcessConfigurationComponent> PostProcessConfigurationComponentManager::Read(
     ComponentId index) const
 {
-    return ScopedHandle<const PostProcessConfigurationComponent> { GetData(index) };
+    return ScopedHandle<const PostProcessConfigurationComponent>{GetData(index)};
 }
 
 ScopedHandle<const PostProcessConfigurationComponent> PostProcessConfigurationComponentManager::Read(
     Entity entity) const
 {
-    return ScopedHandle<const PostProcessConfigurationComponent> { GetData(entity) };
+    return ScopedHandle<const PostProcessConfigurationComponent>{GetData(entity)};
 }
 
 ScopedHandle<PostProcessConfigurationComponent> PostProcessConfigurationComponentManager::Write(ComponentId index)
 {
-    return ScopedHandle<PostProcessConfigurationComponent> { GetData(index) };
+    return ScopedHandle<PostProcessConfigurationComponent>{GetData(index)};
 }
 
 ScopedHandle<PostProcessConfigurationComponent> PostProcessConfigurationComponentManager::Write(Entity entity)
 {
-    return ScopedHandle<PostProcessConfigurationComponent> { GetData(entity) };
+    return ScopedHandle<PostProcessConfigurationComponent>{GetData(entity)};
 }
 
 // Internal
@@ -713,11 +712,16 @@ PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(
 {}
 
 PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(ComponentHandle&& other) noexcept
-    : manager_(other.manager_), entity_(exchange(other.entity_, {})), generation_(exchange(other.generation_, 0u)),
+    : manager_(other.manager_),
+      entity_(exchange(other.entity_, {})),
+      generation_(exchange(other.generation_, 0u)),
 #ifndef NDEBUG
-      rLocked_(other.rLocked_.exchange(0)), wLocked_(exchange(other.wLocked_, false)),
+      rLocked_(other.rLocked_.exchange(0)),
+      wLocked_(exchange(other.wLocked_, false)),
 #endif
-      data_(exchange(other.data_, {})), customProperties_(exchange(other.customProperties_, {})), propertySignal_(*this)
+      data_(exchange(other.data_, {})),
+      customProperties_(exchange(other.customProperties_, {})),
+      propertySignal_(*this)
 {
     for (auto& properties : customProperties_) {
         if (properties) {
@@ -728,7 +732,7 @@ PostProcessConfigurationComponentManager::ComponentHandle::ComponentHandle(Compo
 WARNING_SCOPE_END();
 
 typename PostProcessConfigurationComponentManager::ComponentHandle&
-PostProcessConfigurationComponentManager::ComponentHandle::operator=(ComponentHandle&& other) noexcept
+    PostProcessConfigurationComponentManager::ComponentHandle::operator=(ComponentHandle&& other) noexcept
 {
     if (this != &other) {
         PLUGIN_ASSERT(manager_ == other.manager_);

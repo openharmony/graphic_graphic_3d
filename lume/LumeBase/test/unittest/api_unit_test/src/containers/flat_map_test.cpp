@@ -21,7 +21,7 @@
 
 using namespace BASE_NS;
 
-template<typename T>
+template <typename T>
 struct Node {
     T x, y, z;
     // Constructor
@@ -81,11 +81,11 @@ UNIT_TEST(API_ContainersFlatMap, Initialization, testing::ext::TestSize.Level1)
 
     auto string_int = flat_map<string, int>();
     string_int["First"] = 10;
-    string_int.insert({ "Second", 456 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"Second", 456});
+    string_int.insert({"Third", 0});
     const string cKey = "Key";
     const int cValue = 987;
-    const pair<string, int> cPair = { cKey, cValue };
+    const pair<string, int> cPair = {cKey, cValue};
     string_int.insert(cPair);
     ASSERT_EQ(string_int["First"], 10);
     ASSERT_EQ(string_int["Second"], 456);
@@ -94,19 +94,19 @@ UNIT_TEST(API_ContainersFlatMap, Initialization, testing::ext::TestSize.Level1)
     ASSERT_EQ(string_int[cKey], cValue);
 
     auto int_string = flat_map<int, string>();
-    int_string.insert({ 10, "First" });
-    int_string.insert({ 456, "Second" });
+    int_string.insert({10, "First"});
+    int_string.insert({456, "Second"});
     ASSERT_EQ(int_string[10], "First");
     ASSERT_EQ(int_string[456], "Second");
 
     auto int_char = flat_map<int, char>();
-    int_char.insert({ 10, 'a' });
-    int_char.insert({ 456, 'b' });
+    int_char.insert({10, 'a'});
+    int_char.insert({456, 'b'});
     ASSERT_EQ(int_char[10], 'a');
     ASSERT_EQ(int_char[456], 'b');
 
     auto int_node = flat_map<int, Node<float>>();
-    int_node.insert({ 1, Node(5.f, 10.f, 20.f) });
+    int_node.insert({1, Node(5.f, 10.f, 20.f)});
     ASSERT_EQ(int_node[1].x, 5.f);
     ASSERT_EQ(int_node[1].y, 10.f);
     ASSERT_EQ(int_node[1].z, 20.f);
@@ -119,15 +119,15 @@ UNIT_TEST(API_ContainersFlatMap, Initialization, testing::ext::TestSize.Level1)
  */
 UNIT_TEST(API_ContainersFlatMap, InitializerList, testing::ext::TestSize.Level1)
 {
-    flat_map<int, int> int_int({ { 1, 10 }, { 2, 20 }, { 3, 30 } });
+    flat_map<int, int> int_int({{1, 10}, {2, 20}, {3, 30}});
     ASSERT_EQ(int_int[1], 10);
     ASSERT_EQ(int_int[2], 20);
     ASSERT_EQ(int_int[3], 30);
-    flat_map<string, int> string_int({ { "First", 10 }, { "Second", 20 }, { "Third", 30 } });
+    flat_map<string, int> string_int({{"First", 10}, {"Second", 20}, {"Third", 30}});
     ASSERT_EQ(string_int["First"], 10);
     ASSERT_EQ(string_int["Second"], 20);
     ASSERT_EQ(string_int["Third"], 30);
-    string_int = { { "A", 1 }, { "B", 2 }, { "C", 3 } };
+    string_int = {{"A", 1}, {"B", 2}, {"C", 3}};
     ASSERT_EQ(string_int["A"], 1);
     ASSERT_EQ(string_int["B"], 2);
     ASSERT_EQ(string_int["C"], 3);
@@ -178,9 +178,9 @@ UNIT_TEST(API_ContainersFlatMap, PointerActions, testing::ext::TestSize.Level1)
     ASSERT_EQ(p2->begin(), p[1].begin());
     ASSERT_EQ(p2->end(), p[1].end());
     ASSERT_EQ(p[0][42], p[1][42]);
-    ASSERT_NE(p[0].begin(), p[1].begin()); // copy
-    ASSERT_EQ(p[2].begin(), p[2].end());   // empty
-    ASSERT_EQ(p[2].cbegin(), p[2].cend()); // empty
+    ASSERT_NE(p[0].begin(), p[1].begin());  // copy
+    ASSERT_EQ(p[2].begin(), p[2].end());    // empty
+    ASSERT_EQ(p[2].cbegin(), p[2].cend());  // empty
     delete[] p;
 }
 
@@ -193,16 +193,16 @@ UNIT_TEST(API_ContainersFlatMap, Capacity, testing::ext::TestSize.Level1)
 {
     // Size
     auto int_int = flat_map<int, int>();
-    int_int.insert({ 10, 20 });
-    int_int.insert({ 10, 30 });
-    int_int.insert({ 10, 40 });
+    int_int.insert({10, 20});
+    int_int.insert({10, 30});
+    int_int.insert({10, 40});
     ASSERT_TRUE(int_int.size() == 1);
     ASSERT_EQ(int_int[10], 20);
 
     auto string_int = flat_map<string, int>();
-    string_int.insert({ "One", 20 });
-    string_int.insert({ "ONE", 30 });
-    string_int.insert({ "one", 40 });
+    string_int.insert({"One", 20});
+    string_int.insert({"ONE", 30});
+    string_int.insert({"one", 40});
     ASSERT_TRUE(string_int.size() == 3);
 
     // Empty
@@ -219,15 +219,15 @@ UNIT_TEST(API_ContainersFlatMap, Iterators, testing::ext::TestSize.Level1)
 {
     // Test iterator
     auto string_int = flat_map<string, int>();
-    string_int.insert({ "First", 10 });
-    string_int.insert({ "Second", 500 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"First", 10});
+    string_int.insert({"Second", 500});
+    string_int.insert({"Third", 0});
 
     // Values to match the order of unordered map (assigned hash values)
     vector<pair<string, int>> keyValVec;
-    keyValVec.push_back({ "First", 10 });
-    keyValVec.push_back({ "Second", 500 });
-    keyValVec.push_back({ "Third", 0 });
+    keyValVec.push_back({"First", 10});
+    keyValVec.push_back({"Second", 500});
+    keyValVec.push_back({"Third", 0});
 
     // Iterator pointing to begining of map
     flat_map<string, int>::iterator it = string_int.begin();
@@ -268,14 +268,14 @@ UNIT_TEST(API_ContainersFlatMap, Modifiers, testing::ext::TestSize.Level1)
 {
     auto original = flat_map<int, int>();
     // Insert
-    original.insert({ 15, 0 });
-    original.insert({ 20, 15 });
-    original.insert({ 70, 77 });
+    original.insert({15, 0});
+    original.insert({20, 15});
+    original.insert({70, 77});
     ASSERT_EQ(original[15], 0);
     ASSERT_EQ(original[20], 15);
     ASSERT_EQ(original[70], 77);
     // Assign value to a key that already exists using "insert"
-    ASSERT_NO_FATAL_FAILURE(original.insert({ 70, 80 }));
+    ASSERT_NO_FATAL_FAILURE(original.insert({70, 80}));
     // Confirm no value change for already existing key
     ASSERT_EQ(original[70], 77);
 
@@ -334,8 +334,8 @@ UNIT_TEST(API_ContainersFlatMap, Modifiers, testing::ext::TestSize.Level1)
     ASSERT_EQ(original.size(), 2);
 
     // Add more elements
-    original.insert({ 44, -80 });
-    original.insert({ 55, 80 });
+    original.insert({44, -80});
+    original.insert({55, 80});
     ASSERT_EQ(original.size(), 4);
 
     // Extract
@@ -369,9 +369,9 @@ UNIT_TEST(API_ContainersFlatMap, Modifiers, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersFlatMap, Lookup, testing::ext::TestSize.Level1)
 {
     auto string_int = flat_map<string, int>();
-    string_int.insert({ "First", 10 });
-    string_int.insert({ "Second", 456 });
-    string_int.insert({ "Third", 0 });
+    string_int.insert({"First", 10});
+    string_int.insert({"Second", 456});
+    string_int.insert({"Third", 0});
 
     // Find
     flat_map<string, int>::const_iterator got = string_int.find("Second");
@@ -396,60 +396,6 @@ UNIT_TEST(API_ContainersFlatMap, Lookup, testing::ext::TestSize.Level1)
 #endif
 }
 
-#ifdef DISABLED_TESTS_ON
-/**
- * @tc.name: ExtractInsertBug
- * @tc.desc: Tests for Extract Insert Bug. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_ContainersFlatMap, DISABLED_ExtractInsertBug, testing::ext::TestSize.Level1)
-{
-#if 0
-    auto original = flat_map<int, int>();
-    original.insert({ 20, 15 });
-
-    // This is a bit brittle and will break if implementation changes. Find a key which will have the same bucket index
-    // as 20.
-    auto bucketIndex = [](int key) {
-        constexpr auto DEFAULT_SHIFT_AMOUNT = 4U;
-        constexpr uint64_t GOLDEN_RATIO_64 = 0x9E3779B97F4A7C15ull;
-        constexpr uint64_t shift = 64u - DEFAULT_SHIFT_AMOUNT;
-        uint64_t h = hash(key);
-        h ^= h >> shift;
-        return static_cast<uint32_t>(((GOLDEN_RATIO_64 * h) >> shift));
-    };
-    const auto index20 = bucketIndex(20);
-    int key = 0;
-    for (uint32_t index = bucketIndex(key); index != index20; index = bucketIndex(++key))
-        ;
-
-    original.insert({ key, 81 });
-
-    // Extract
-    auto currentNodeHandle = original.extract(20);
-    ASSERT_FALSE(currentNodeHandle.empty());
-
-    // Clear
-    original.clear();
-    ASSERT_EQ(original.size(), 0);
-
-    // Add node
-    ASSERT_TRUE(original.insert(move(currentNodeHandle)).inserted);
-    ASSERT_EQ(original.size(), 1);
-
-    // Bug check: If the same bucket had multiple entries and one was extracted it's prev/next pointers were not
-    // cleared. Due to the dangling prev pointer the second extract would update an invalid address to null and the
-    // bucket would still point to the node. Inserting the node would find a match with the key and the node wasn't
-    // added and there was a size mismatch.
-    currentNodeHandle = original.extract(20);
-    ASSERT_EQ(original.size(), 0);
-    ASSERT_FALSE(currentNodeHandle.empty());
-    ASSERT_TRUE(original.insert(move(currentNodeHandle)).inserted);
-    ASSERT_EQ(original.size(), 1);
-#endif
-}
-#endif // DISABLED_TESTS_ON
-
 /**
  * @tc.name: ExtractInsertBug2
  * @tc.desc: Tests for Extract Insert Bug2. [AUTO-GENERATED]
@@ -469,70 +415,7 @@ UNIT_TEST(API_ContainersFlatMap, ExtractInsertBug2, testing::ext::TestSize.Level
     map.erase(id2);
     map.erase(id1);
 
-    ASSERT_TRUE(map.find(id1) == map.end()); // Should not be in the map.
-    ASSERT_TRUE(map.find(id2) == map.end()); // Should not be in the map.
-    ASSERT_TRUE(map.find(id3) != map.end()); // Should still be in the map.
-}
-
-// Improves coverage but takes calculation time. OpenCppCoverage works terable with it.
-
-#ifdef DISABLED_TESTS_ON
-/**
- * @tc.name: HashPolicy
- * @tc.desc: Tests for Hash Policy. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_ContainersFlatMap, DISABLED_HashPolicy, testing::ext::TestSize.Level1)
-{
-#if 0
-    // Reserve
-    auto originalReserve = flat_map<int, int>();
-    auto originalNoReserve = flat_map<int, int>();
-    const int count = 1000000;
-    double durationReserve = 0;
-    double durationNoReserve = 0;
-
-    // Reserve - no rehash
-    originalReserve.reserve(count);
-
-    // Measure performance (with pre memory allocation)
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for (int i = 0; i < count; ++i) {
-            originalReserve.insert({ i, i % 2 });
-        }
-
-        // Get ending timepoint
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        durationReserve = static_cast<double>(duration.count()) * 1e-6;
-    }
-
-    // Measure performance (without pre memory allocation)
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        for (int i = 0; i < count; ++i) {
-            originalNoReserve.insert({ i, i % 2 });
-        }
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        durationNoReserve = static_cast<double>(duration.count()) * 1e-6;
-    }
-
-    printf("Reserve - Time measured: %.6f seconds.\n", durationReserve);
-    printf("No reserve - Time measured : %.6f seconds.\n", durationNoReserve);
-
-    ASSERT_TRUE(durationReserve <= durationNoReserve);
-#endif
-}
-#endif // DISABLED_TESTS_ON
-
-/**
- * @tc.name: StringView
- * @tc.desc: Tests for String View. [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST(API_ContainersFlatMap, StringView, testing::ext::TestSize.Level1)
-{
+    ASSERT_TRUE(map.find(id1) == map.end());  // Should not be in the map.
+    ASSERT_TRUE(map.find(id2) == map.end());  // Should not be in the map.
+    ASSERT_TRUE(map.find(id3) != map.end());  // Should still be in the map.
 }

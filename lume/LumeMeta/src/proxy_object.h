@@ -39,7 +39,7 @@ public:
     ~ProxyObject() override;
     META_NO_COPY_MOVE(ProxyObject)
 
-public: // ILifecycle
+public:  // ILifecycle
     bool Build(const IMetadata::Ptr& data) override;
 
     META_BEGIN_STATIC_DATA()
@@ -49,7 +49,7 @@ public: // ILifecycle
     META_IMPLEMENT_PROPERTY(ProxyModeBitsValue, Mode)
     META_IMPLEMENT_PROPERTY(bool, Dynamic)
 
-public: // IMetadata
+public:  // IMetadata
     using IMetadata::GetProperty;
     IProperty::Ptr GetProperty(BASE_NS::string_view name, MetadataQuery) override;
     IProperty::ConstPtr GetProperty(BASE_NS::string_view name, MetadataQuery) const override;
@@ -58,7 +58,7 @@ public: // IMetadata
     BASE_NS::vector<IProperty::Ptr> GetProperties() override;
     BASE_NS::vector<IProperty::ConstPtr> GetProperties() const override;
 
-public: // IProxyObject
+public:  // IProxyObject
     const IObject::Ptr GetTarget() const override;
     bool SetTarget(const IObject::Ptr& target) override;
     BASE_NS::vector<IProperty::ConstPtr> GetOverrides() const override;
@@ -93,11 +93,11 @@ private:
     EventHandler targetRemovedListener_;
     EventHandler metaAdded_;
     EventHandler metaRemoved_;
-    bool updating_ {};
-    META_NS::IMetadata* meta_ {};
+    bool updating_{};
+    META_NS::IMetadata* meta_{};
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 

@@ -21,8 +21,8 @@ class IPluginRegister;
 CORE_END_NAMESPACE()
 
 namespace {
-CORE_NS::IPluginRegister* gPluginRegistry { nullptr };
-} // namespace
+CORE_NS::IPluginRegister* gPluginRegistry{nullptr};
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 CORE_NS::IPluginRegister& GetPluginRegister()
@@ -30,14 +30,6 @@ CORE_NS::IPluginRegister& GetPluginRegister()
     return *gPluginRegistry;
 }
 CORE3D_END_NAMESPACE()
-
-// Bridge for engine headers that reference CORE_NS::GetPluginRegister().
-CORE_BEGIN_NAMESPACE()
-IPluginRegister& GetPluginRegister()
-{
-    return CORE3D_NS::GetPluginRegister();
-}
-CORE_END_NAMESPACE()
 
 extern "C" void InitRegistry(CORE_NS::IPluginRegister& pluginRegistry)
 {

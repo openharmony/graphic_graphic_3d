@@ -32,7 +32,7 @@ class ToneMappingSettingsImpl {
     friend class PostProcessSettingsImpl;
 
 public:
-    static std::shared_ptr<TonemapETS> CreateInternal(const ScenePostProcessSettings::ToneMappingSettings &data);
+    static std::shared_ptr<TonemapETS> CreateInternal(const ScenePostProcessSettings::ToneMappingSettings& data);
 
     ToneMappingSettingsImpl(const std::shared_ptr<TonemapETS> tonemapETS);
     ~ToneMappingSettingsImpl();
@@ -44,5 +44,5 @@ public:
 private:
     std::shared_ptr<TonemapETS> tonemapETS_;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_TONE_MAPPING_SETTINGS_IMPL_H

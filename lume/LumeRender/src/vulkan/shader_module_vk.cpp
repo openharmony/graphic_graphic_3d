@@ -35,25 +35,25 @@ namespace {
 VkShaderModule CreateShaderModule(const VkDevice device, array_view<const uint8_t> data)
 {
     PLUGIN_ASSERT(!data.empty());
-    VkShaderModule shaderModule { VK_NULL_HANDLE };
+    VkShaderModule shaderModule{VK_NULL_HANDLE};
 
-    constexpr VkShaderModuleCreateFlags shaderModuleCreateFlags { 0 };
-    const VkShaderModuleCreateInfo shaderModuleCreateInfo {
-        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,   // sType
-        nullptr,                                       // pNext
-        shaderModuleCreateFlags,                       // flags
-        static_cast<uint32_t>(data.size()),            // codeSize
-        reinterpret_cast<const uint32_t*>(data.data()) // pCode
+    constexpr VkShaderModuleCreateFlags shaderModuleCreateFlags{0};
+    const VkShaderModuleCreateInfo shaderModuleCreateInfo{
+        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,    // sType
+        nullptr,                                        // pNext
+        shaderModuleCreateFlags,                        // flags
+        static_cast<uint32_t>(data.size()),             // codeSize
+        reinterpret_cast<const uint32_t*>(data.data())  // pCode
     };
 
-    VALIDATE_VK_RESULT(vkCreateShaderModule(device, // device
-        &shaderModuleCreateInfo,                    // pCreateInfo
-        nullptr,                                    // pAllocator
-        &shaderModule));                            // pShaderModule
+    VALIDATE_VK_RESULT(vkCreateShaderModule(device,  // device
+        &shaderModuleCreateInfo,                     // pCreateInfo
+        nullptr,                                     // pAllocator
+        &shaderModule));                             // pShaderModule
 
     return shaderModule;
 }
-} // namespace
+}  // namespace
 
 ShaderModuleVk::ShaderModuleVk(Device& device, const ShaderModuleCreateInfo& createInfo)
     : device_(device), shaderStageFlags_(createInfo.shaderStageFlags)
@@ -108,9 +108,9 @@ ShaderModuleVk::~ShaderModuleVk()
 {
     const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;
     if (plat_.shaderModule != VK_NULL_HANDLE) {
-        vkDestroyShaderModule(device, // device
-            plat_.shaderModule,       // shaderModule
-            nullptr);                 // pAllocator
+        vkDestroyShaderModule(device,  // device
+            plat_.shaderModule,        // shaderModule
+            nullptr);                  // pAllocator
     }
 }
 

@@ -42,11 +42,11 @@ void OHOSApp::Terminate()
     OH_NativeImage_Destroy(&m_nativeImage);
 }
 
-} // namespace Test
+}  // namespace Test
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)() { nullptr };
-void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo) { nullptr };
+CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)(){nullptr};
+void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo){nullptr};
 #endif
 
 CORE3D_BEGIN_NAMESPACE()
@@ -103,16 +103,16 @@ CORE_NS::IEngine::Ptr CreateEngine()
     const ::Test::LogLevelScope logLevel =
         ::Test::LogLevelScope(CORE_NS::GetLogger(), CORE_NS::ILogger::LogLevel::LOG_ERROR);
 
-    const CORE_NS::EngineCreateInfo engineCreateInfo { GetTestEnv()->platformCreateInfo,
+    const CORE_NS::EngineCreateInfo engineCreateInfo{GetTestEnv()->platformCreateInfo,
         // applicationVersion
         {
-            "test", // name
-            0,      // versionMajor
-            1,      // versionMinor
-            0,      // versionPatch
+            "test",  // name
+            0,       // versionMajor
+            1,       // versionMinor
+            0,       // versionPatch
         },
         // applicationContext
-        {} };
+        {}};
 
     auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
     auto engine = factory->Create(engineCreateInfo);
@@ -141,11 +141,9 @@ RENDER_NS::IRenderContext::Ptr CreateContext(CORE_NS::IEngine& engine, const REN
 #if RENDER_HAS_GLES_BACKEND
     RENDER_NS::BackendExtraGLES glesExtra;
     if (backend == RENDER_NS::DeviceBackendType::OPENGLES) {
-        constexpr uint32_t defaultDepthBits = 24;
-        constexpr uint32_t defaultAlphaBits = 8;
         glesExtra.MSAASamples = 0;
-        glesExtra.depthBits = defaultDepthBits;
-        glesExtra.alphaBits = defaultAlphaBits;
+        glesExtra.depthBits = 24;
+        glesExtra.alphaBits = 8;
         glesExtra.stencilBits = 0;
         deviceCreateInfo.backendType = backend;
         deviceCreateInfo.backendConfiguration = &glesExtra;
@@ -154,23 +152,21 @@ RENDER_NS::IRenderContext::Ptr CreateContext(CORE_NS::IEngine& engine, const REN
 #if RENDER_HAS_GL_BACKEND
     RENDER_NS::BackendExtraGL glExtra;
     if (backend == RENDER_NS::DeviceBackendType::OPENGL) {
-        constexpr uint32_t defaultDepthBits = 24;
-        constexpr uint32_t defaultAlphaBits = 8;
         glExtra.MSAASamples = 0;
-        glExtra.depthBits = defaultDepthBits;
-        glExtra.alphaBits = defaultAlphaBits;
+        glExtra.depthBits = 24;
+        glExtra.alphaBits = 8;
         glExtra.stencilBits = 0;
         deviceCreateInfo.backendType = backend;
         deviceCreateInfo.backendConfiguration = &glExtra;
     }
 #endif
 
-    const RENDER_NS::RenderCreateInfo info {
+    const RENDER_NS::RenderCreateInfo info{
         {
-            "3d_test", // name
-            1,         // versionMajor
-            0,         // versionMinor
-            0,         // versionPatch
+            "3d_test",  // name
+            1,          // versionMajor
+            0,          // versionMinor
+            0,          // versionPatch
         },
         deviceCreateInfo,
     };
@@ -265,12 +261,16 @@ void WritePng(
     const BASE_NS::string& fileName, uint32_t x, uint32_t y, uint32_t comp, const void* data, uint32_t strideBytes)
 {
 #if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
-    stbi_write_png(fileName.c_str(), static_cast<int32_t>(x), static_cast<int32_t>(y), static_cast<int32_t>(comp), data,
+    stbi_write_png(fileName.c_str(),
+        static_cast<int32_t>(x),
+        static_cast<int32_t>(y),
+        static_cast<int32_t>(comp),
+        data,
         static_cast<int32_t>(strideBytes));
 #endif
 }
 
-} // namespace UTest
+}  // namespace UTest
 CORE3D_END_NAMESPACE()
 
 testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new CORE3D_NS::UTest::TestRunnerEnv);

@@ -51,10 +51,10 @@ public:
         BLUR_SHADER_TYPE_RGBA_ALPHA_WEIGHT = 8,
     };
     struct EffectProperties {
-        bool enabled { false };
+        bool enabled{false};
         BlurConfiguration blurConfiguration;
-        uint32_t blurShaderType { BlurShaderType::BLUR_SHADER_TYPE_RGBA };
-        uint32_t blurShaderScaleType { BlurShaderType::BLUR_SHADER_TYPE_DOWNSCALE_RGBA };
+        uint32_t blurShaderType{BlurShaderType::BLUR_SHADER_TYPE_RGBA};
+        uint32_t blurShaderScaleType{BlurShaderType::BLUR_SHADER_TYPE_DOWNSCALE_RGBA};
     };
 
     RenderPostProcessBlurNode();
@@ -80,7 +80,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -108,11 +108,11 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     struct ImageData {
-        BASE_NS::Math::UVec2 size { 0U, 0U };
-        uint32_t mipCount { 0U };
+        BASE_NS::Math::UVec2 size{0U, 0U};
+        uint32_t mipCount{0U};
         RenderHandleReference handle;
         RenderHandle rawHandle;
         RenderHandleReference handleExt;
@@ -133,7 +133,7 @@ private:
     };
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     struct PipelineData {
         IShaderManager::GraphicsShaderData gsd;
@@ -148,13 +148,13 @@ private:
     BindableImage defaultInput_;
 
     DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 
     BASE_NS::vector<IDescriptorSetBinder::Ptr> binders_;
 
     EffectProperties effectProperties_;
-    bool mipsBlur { true };
+    bool mipsBlur_{true};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_RENDER_POST_PROCESS_RENDER_POST_PROCESS_BLUR_NODE_H
+#endif  // RENDER_RENDER_POST_PROCESS_RENDER_POST_PROCESS_BLUR_NODE_H

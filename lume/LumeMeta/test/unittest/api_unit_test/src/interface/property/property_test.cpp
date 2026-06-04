@@ -35,9 +35,9 @@ META_BEGIN_NAMESPACE()
 
 namespace {
 struct TestType {
-    int i {};
+    int i{};
 };
-} // namespace
+}  // namespace
 
 META_TYPE(TestType);
 
@@ -304,7 +304,7 @@ UNIT_TEST(API_PropertyTest, LambdaBindWithDependency, testing::ext::TestSize.Lev
     auto source = ConstructProperty<int>("source");
     source->SetValue(2);
     EXPECT_TRUE(p->SetBind(CreateBindFunction([&] { return source->GetValue(); }),
-        (BASE_NS::vector<INotifyOnChange::ConstPtr> { source.GetProperty() })));
+        (BASE_NS::vector<INotifyOnChange::ConstPtr>{source.GetProperty()})));
     EXPECT_EQ(p->GetValue(), 2);
     source->SetValue(4);
     EXPECT_EQ(p->GetValue(), 4);
@@ -470,7 +470,7 @@ UNIT_TEST(API_PropertyTest, UserType, testing::ext::TestSize.Level1)
 {
     auto p = ConstructProperty<TestType>("test");
     EXPECT_EQ(p->GetValue().i, 0);
-    EXPECT_TRUE(p->SetValue(TestType { 1 }));
+    EXPECT_TRUE(p->SetValue(TestType{1}));
     EXPECT_EQ(p->GetValue().i, 1);
 }
 
@@ -489,12 +489,12 @@ UNIT_TEST(API_PropertyTest, BindingMultiDep, testing::ext::TestSize.Level1)
     p3->SetValue(2);
 
     EXPECT_TRUE(p1->SetBind(CreateBindFunction([&p3] { return p3->GetValue(); }),
-        (BASE_NS::vector<INotifyOnChange::ConstPtr> { p3.GetProperty() })));
+        (BASE_NS::vector<INotifyOnChange::ConstPtr>{p3.GetProperty()})));
     EXPECT_TRUE(p2->SetBind(CreateBindFunction([&p3] { return p3->GetValue(); }),
-        (BASE_NS::vector<INotifyOnChange::ConstPtr> { p3.GetProperty() })));
+        (BASE_NS::vector<INotifyOnChange::ConstPtr>{p3.GetProperty()})));
 
     EXPECT_TRUE(p4->SetBind(CreateBindFunction([&p1, &p2] { return p1->GetValue() + p2->GetValue(); }),
-        (BASE_NS::vector<INotifyOnChange::ConstPtr> { p1.GetProperty(), p2.GetProperty() })));
+        (BASE_NS::vector<INotifyOnChange::ConstPtr>{p1.GetProperty(), p2.GetProperty()})));
 
     EXPECT_EQ(p4->GetValue(), 4);
     p3->SetValue(3);
@@ -515,7 +515,7 @@ UNIT_TEST(API_PropertyTest, ObjectFlags, testing::ext::TestSize.Level1)
     auto test = CreateTestType();
     EXPECT_TRUE(IsFlagSet(test->First().GetProperty(), DEFAULT_PROPERTY_FLAGS));
     EXPECT_TRUE(IsFlagSet(
-        test->Second().GetProperty(), ObjectFlagBitsValue { ObjectFlagBits::INTERNAL } | ObjectFlagBits::NATIVE));
+        test->Second().GetProperty(), ObjectFlagBitsValue{ObjectFlagBits::INTERNAL} | ObjectFlagBits::NATIVE));
 }
 
 /**
@@ -663,13 +663,13 @@ UNIT_TEST(API_PropertyTest, MultiOnChangedWithSameHandle, testing::ext::TestSize
     auto p = ConstructProperty<int>("test");
 
     int count = 0;
-    EXPECT_TRUE(p->OnChanged()->AddHandler(MakeCallback<IOnChanged>([&] { ++count; }), uintptr_t(1)));
+    EXPECT_TRUE(AddOnChangedHandler(p, MakeCallback<IOnChanged>([&] { ++count; }), uintptr_t(1)));
     EXPECT_TRUE(p->OnChanged()->AddHandler(MakeCallback<IOnChanged>([&] { ++count; }), uintptr_t(1)));
 
     p->SetValue(1);
     EXPECT_EQ(count, 1);
 
-    EXPECT_TRUE(p->OnChanged()->RemoveHandler(uintptr_t(1)));
+    EXPECT_TRUE(RemoveOnChangedHandler(p, uintptr_t(1)));
 
     p->SetValue(2);
     EXPECT_EQ(count, 2);
@@ -705,8 +705,8 @@ class PropertyOwnerTest final
     }
 
 public:
-    bool changed_ {};
-    bool indirect_ {};
+    bool changed_{};
+    bool indirect_{};
 };
 
 /**
@@ -786,34 +786,34 @@ UNIT_TEST(API_PropertyTest, ValidPropertyLock, testing::ext::TestSize.Level1)
 {
     {
         auto p = ConstructProperty<int>("p").GetProperty();
-        PropertyLock lock { p };
+        PropertyLock lock{p};
         EXPECT_TRUE(lock);
         EXPECT_TRUE(lock.IsValid());
         EXPECT_TRUE(lock.GetProperty());
 
-        TypedPropertyLock<int> typedLock { p };
+        TypedPropertyLock<int> typedLock{p};
         EXPECT_TRUE(typedLock);
         EXPECT_TRUE(typedLock.IsValid());
         EXPECT_TRUE(typedLock.GetProperty());
 
-        TypedPropertyLock<float> bad { p };
+        TypedPropertyLock<float> bad{p};
         EXPECT_FALSE(bad);
         EXPECT_FALSE(bad.IsValid());
         EXPECT_FALSE(bad.GetProperty());
     }
     {
         auto p = ConstructArrayProperty<int>("p").GetProperty();
-        PropertyLock lock { p };
+        PropertyLock lock{p};
         EXPECT_TRUE(lock);
         EXPECT_TRUE(lock.IsValid());
         EXPECT_TRUE(lock.GetProperty());
 
-        TypedPropertyLock<int> typedLock { p };
+        TypedPropertyLock<int> typedLock{p};
         EXPECT_FALSE(typedLock);
         EXPECT_FALSE(typedLock.IsValid());
         EXPECT_FALSE(typedLock.GetProperty());
 
-        TypedPropertyLock<float> bad { p };
+        TypedPropertyLock<float> bad{p};
         EXPECT_FALSE(bad);
         EXPECT_FALSE(bad.IsValid());
         EXPECT_FALSE(bad.GetProperty());
@@ -941,6 +941,6 @@ UNIT_TEST(API_PropertyTest, EvaluateAndStore, testing::ext::TestSize.Level1)
     EXPECT_EQ(GetValue<uint32_t>(v->GetValue()), 4);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

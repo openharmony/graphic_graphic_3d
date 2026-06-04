@@ -35,7 +35,7 @@ using namespace BASE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace GpuResourceUtil {
 namespace {
-constexpr bool LOG_PRINT_GPU_BUFFER_ADDRESS { false };
+constexpr bool LOG_PRINT_GPU_BUFFER_ADDRESS{false};
 }
 
 void CopyGpuBufferVk(GpuBuffer& buffer, ByteArray& byteArray)
@@ -54,8 +54,8 @@ void DebugObjectNameVk(
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(device.GetPlatformData());
     const auto& funcPtrs = (static_cast<const DeviceVk&>(device)).GetDebugFunctionUtilities();
     if (castedHandle && funcPtrs.vkSetDebugUtilsObjectNameEXT) {
-        const VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-            objectType, castedHandle, name.data() };
+        const VkDebugUtilsObjectNameInfoEXT info{
+            VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, objectType, castedHandle, name.data()};
         funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &info);
     }
 }
@@ -67,8 +67,11 @@ void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const str
     if (funcPtrs.vkSetDebugUtilsObjectNameEXT) {
         const GpuBufferPlatformDataVk& plat = (static_cast<const GpuBufferVk&>(buffer)).GetPlatformData();
         if (plat.buffer) {
-            const VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-                VK_OBJECT_TYPE_BUFFER, VulkanHandleCast<uint64_t>(plat.buffer), name.data() };
+            const VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_BUFFER,
+                VulkanHandleCast<uint64_t>(plat.buffer),
+                name.data()};
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &info);
             if constexpr (LOG_PRINT_GPU_BUFFER_ADDRESS) {
 #if (RENDER_VULKAN_RT_ENABLED == 1)
@@ -76,7 +79,8 @@ void DebugBufferNameVk(const IDevice& device, const GpuBuffer& buffer, const str
                     (static_cast<const GpuBufferVk&>(buffer)).GetPlatformDataAccelerationStructure();
                 PLUGIN_LOG_I("GPU BUFFER: %s:", name.data());
                 if (platAccel.accelerationStructure) {
-                    PLUGIN_LOG_I("deviceAddress: %" PRIx64 " accelDeviceAddress: %" PRIx64, plat.deviceAddress,
+                    PLUGIN_LOG_I("deviceAddress: %" PRIx64 " accelDeviceAddress: %" PRIx64,
+                        plat.deviceAddress,
                         platAccel.deviceAddress);
                 } else {
                     PLUGIN_LOG_I("deviceAddress: %" PRIx64, plat.deviceAddress);
@@ -94,18 +98,27 @@ void DebugImageNameVk(const IDevice& device, const GpuImage& image, const string
     if (funcPtrs.vkSetDebugUtilsObjectNameEXT) {
         const auto& plat = static_cast<const GpuImagePlatformDataVk&>(image.GetBasePlatformData());
         if (plat.image) {
-            const VkDebugUtilsObjectNameInfoEXT img { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-                VK_OBJECT_TYPE_IMAGE, VulkanHandleCast<uint64_t>(plat.image), name.data() };
+            const VkDebugUtilsObjectNameInfoEXT img{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_IMAGE,
+                VulkanHandleCast<uint64_t>(plat.image),
+                name.data()};
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &img);
         }
         if (plat.imageView) {
-            const VkDebugUtilsObjectNameInfoEXT view { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-                VK_OBJECT_TYPE_IMAGE_VIEW, VulkanHandleCast<uint64_t>(plat.imageView), name.data() };
+            const VkDebugUtilsObjectNameInfoEXT view{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_IMAGE_VIEW,
+                VulkanHandleCast<uint64_t>(plat.imageView),
+                name.data()};
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &view);
         }
         if (plat.imageViewBase) {
-            const VkDebugUtilsObjectNameInfoEXT viewBase { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-                VK_OBJECT_TYPE_IMAGE_VIEW, VulkanHandleCast<uint64_t>(plat.imageViewBase), name.data() };
+            const VkDebugUtilsObjectNameInfoEXT viewBase{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_IMAGE_VIEW,
+                VulkanHandleCast<uint64_t>(plat.imageViewBase),
+                name.data()};
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &viewBase);
         }
     }
@@ -118,11 +131,14 @@ void DebugSamplerNameVk(const IDevice& device, const GpuSampler& sampler, const 
     if (funcPtrs.vkSetDebugUtilsObjectNameEXT) {
         const GpuSamplerPlatformDataVk& plat = (static_cast<const GpuSamplerVk&>(sampler)).GetPlatformData();
         if (plat.sampler) {
-            const VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr,
-                VK_OBJECT_TYPE_SAMPLER, VulkanHandleCast<uint64_t>(plat.sampler), name.data() };
+            const VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_SAMPLER,
+                VulkanHandleCast<uint64_t>(plat.sampler),
+                name.data()};
             funcPtrs.vkSetDebugUtilsObjectNameEXT(devicePlat.device, &info);
         }
     }
 }
-} // namespace GpuResourceUtil
+}  // namespace GpuResourceUtil
 RENDER_END_NAMESPACE()

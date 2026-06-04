@@ -41,7 +41,7 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "9942031e-c80c-4d38-ae08-65555592b4df" };
+    static constexpr BASE_NS::Uid UID{"9942031e-c80c-4d38-ae08-65555592b4df"};
     static constexpr const char* TYPE_NAME = "RenderNodeCreateGpuImages";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -49,16 +49,16 @@ public:
     static void Destroy(IRenderNode* instance);
 
     struct DependencyList {
-        bool format { false };
-        bool size { false };
-        bool mipCount { false };
-        bool layerCount { false };
-        bool sampleCount { false };
-        float sizeScale { 1.0f };
+        bool format{false};
+        bool size{false};
+        bool mipCount{false};
+        bool layerCount{false};
+        bool sampleCount{false};
+        float sizeScale{1.0f};
     };
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     Size2D GetClampedShadingRateTexelSize(const Size2D& shadingRateTexelSize);
@@ -77,7 +77,7 @@ private:
     BASE_NS::vector<RenderHandleReference> resourceHandles_;
     struct ClearImage {
         RenderHandle handle;
-        ClearColorValue value {};
+        ClearColorValue value{};
     };
     BASE_NS::vector<ClearImage> clearImages_;
 
@@ -87,4 +87,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_CREATE_GPU_IMAGES_H
+#endif  // RENDER_NODE_RENDER_NODE_CREATE_GPU_IMAGES_H

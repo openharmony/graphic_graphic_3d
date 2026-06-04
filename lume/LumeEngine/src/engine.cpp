@@ -91,7 +91,7 @@ inline constexpr uint32_t GetThreadPoolThreadCount(const uint32_t numberOfHwCore
     // reduce the thread count for default ECS thread pool
     return numberOfHwCores / 2U;
 }
-} // namespace
+}  // namespace
 
 WARNING_SCOPE_START(W_THIS_USED_BASE_INITIALIZER_LIST)
 Engine::Engine(EngineCreateInfo const& createInfo) : platform_(Platform::Create(createInfo.platformCreateInfo))
@@ -132,22 +132,23 @@ CORE_NS::IEcs* IEcsInstance(IClassFactory&, const IThreadPool::Ptr&, uint64_t ec
 
 IEcs::Ptr Engine::CreateEcs()
 {
-    // construct a secondary ecs instance.
-    if (auto threadFactory = CORE_NS::GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY); threadFactory) {
-        auto threadPool = threadFactory->CreateThreadPool(GetThreadPoolThreadCount(threadFactory->GetNumberOfCores()));
-        // start from zero
-        const int32_t counter = BASE_NS::AtomicIncrement(&ecsCounter_) - 1;
-        return IEcs::Ptr { IEcsInstance(*this, threadPool, uint64_t(counter)) };
+    if (!threadPool_) {
+        if (auto threadFactory = CORE_NS::GetInstance<ITaskQueueFactory>(UID_TASK_QUEUE_FACTORY); threadFactory) {
+            threadPool_ = threadFactory->CreateThreadPool(GetThreadPoolThreadCount(threadFactory->GetNumberOfCores()));
+        }
     }
+    // start from zero
+    const int32_t counter = BASE_NS::AtomicIncrement(&ecsCounter_) - 1;
+    return IEcs::Ptr{IEcsInstance(*this, threadPool_, uint64_t(counter))};
 
-    return IEcs::Ptr {};
+    return IEcs::Ptr{};
 }
 
 IEcs::Ptr Engine::CreateEcs(IThreadPool& threadPool)
 {
     // start from zero
     const int32_t counter = BASE_NS::AtomicIncrement(&ecsCounter_) - 1;
-    return IEcs::Ptr { IEcsInstance(*this, IThreadPool::Ptr { &threadPool }, uint64_t(counter)) };
+    return IEcs::Ptr{IEcsInstance(*this, IThreadPool::Ptr{&threadPool}, uint64_t(counter))};
 }
 
 void Engine::Init()
@@ -195,14 +196,14 @@ void Engine::LoadPlugins()
     for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(IEnginePlugin::UID)) {
         if (auto enginePlugin = static_cast<const IEnginePlugin*>(info); enginePlugin && enginePlugin->createPlugin) {
             auto token = enginePlugin->createPlugin(*this);
-            plugins_.push_back({ token, enginePlugin });
+            plugins_.push_back({token, enginePlugin});
         }
     }
 }
 
 bool Engine::TickFrame()
 {
-    return TickFrame({ nullptr, size_t(0) });
+    return TickFrame({nullptr, size_t(0)});
 }
 
 bool Engine::TickFrame(const array_view<IEcs*>& ecsInputs)
@@ -211,13 +212,13 @@ bool Engine::TickFrame(const array_view<IEcs*>& ecsInputs)
     const auto currentTime =
         static_cast<uint64_t>(duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count());
 
-    if (firstTime_ == ~0u) {
+    if (firstTime_ == ~uint64_t(0)) {
         previousFrameTime_ = firstTime_ = currentTime;
     }
     deltaTime_ = currentTime - previousFrameTime_;
     constexpr auto limitHz = duration_cast<microseconds>(duration<float, std::ratio<1, 15u>>(1)).count();
     if (deltaTime_ > limitHz) {
-        deltaTime_ = limitHz; // clamp the time step to no longer than 15hz.
+        deltaTime_ = limitHz;  // clamp the time step to no longer than 15hz.
     }
     previousFrameTime_ = currentTime;
 
@@ -261,13 +262,15 @@ IFileManager& Engine::GetFileManager()
 
 EngineTime Engine::GetEngineTime() const
 {
-    return { previousFrameTime_ - firstTime_, deltaTime_ };
+    return {previousFrameTime_ - firstTime_, deltaTime_};
 }
 
 void Engine::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     // keep interfaceTypeInfos_ sorted according to UIDs
-    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+    const auto pos = std::upper_bound(interfaceTypeInfos_.cbegin(),
+        interfaceTypeInfos_.cend(),
+        interfaceInfo.uid,
         [](Uid value, const InterfaceTypeInfo* element) { return value < element->uid; });
     interfaceTypeInfos_.insert(pos, &interfaceInfo);
 }
@@ -275,7 +278,9 @@ void Engine::RegisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 void Engine::UnregisterInterfaceType(const InterfaceTypeInfo& interfaceInfo)
 {
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), interfaceInfo.uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            interfaceInfo.uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == interfaceInfo.uid) {
             interfaceTypeInfos_.erase(pos);
@@ -290,10 +295,12 @@ array_view<const InterfaceTypeInfo* const> Engine::GetInterfaceMetadata() const
 
 const InterfaceTypeInfo& Engine::GetInterfaceMetadata(const Uid& uid) const
 {
-    static constexpr InterfaceTypeInfo invalidType {};
+    static constexpr InterfaceTypeInfo invalidType{};
 
     if (!interfaceTypeInfos_.empty()) {
-        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(), interfaceTypeInfos_.cend(), uid,
+        const auto pos = std::lower_bound(interfaceTypeInfos_.cbegin(),
+            interfaceTypeInfos_.cend(),
+            uid,
             [](const InterfaceTypeInfo* element, Uid value) { return element->uid < value; });
         if ((pos != interfaceTypeInfos_.cend()) && (*pos)->uid == uid) {
             return *(*pos);
@@ -315,7 +322,7 @@ IInterface::Ptr Engine::CreateInstance(const Uid& uid)
 {
     const auto& data = GetInterfaceMetadata(uid);
     if (data.createInterface) {
-        return IInterface::Ptr { data.createInterface(*this, data.token) };
+        return IInterface::Ptr{data.createInterface(*this, data.token)};
     }
     return {};
 }
@@ -342,12 +349,13 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == IEnginePlugin::UID && static_cast<const IEnginePlugin*>(info)->createPlugin) {
                 auto enginePlugin = static_cast<const IEnginePlugin*>(info);
-                if (std::none_of(plugins_.begin(), plugins_.end(),
+                if (std::none_of(plugins_.begin(),
+                        plugins_.end(),
                         [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
                             return pluginData.second == enginePlugin;
                         })) {
                     auto token = enginePlugin->createPlugin(*this);
-                    plugins_.push_back({ token, enginePlugin });
+                    plugins_.push_back({token, enginePlugin});
                 }
             }
         }
@@ -357,7 +365,8 @@ void Engine::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> 
                 continue;
             }
             auto enginePlugin = static_cast<const IEnginePlugin*>(info);
-            if (auto pos = std::find_if(plugins_.cbegin(), plugins_.cend(),
+            if (auto pos = std::find_if(plugins_.cbegin(),
+                    plugins_.cend(),
                     [enginePlugin](const pair<PluginToken, const IEnginePlugin*>& pluginData) {
                         return pluginData.second == enginePlugin;
                     });
@@ -384,7 +393,7 @@ bool Engine::IsDebugBuild()
 IEngine::Ptr CreateEngine(EngineCreateInfo const& createInfo)
 {
     auto engine = new Engine(createInfo);
-    return IEngine::Ptr { engine };
+    return IEngine::Ptr{engine};
 }
 
 const IPlatform& Engine::GetPlatform() const

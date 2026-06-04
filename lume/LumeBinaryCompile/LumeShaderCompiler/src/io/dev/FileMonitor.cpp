@@ -57,9 +57,12 @@ std::string ResolveAbsolutePath(std::string_view path, bool isDirectory)
     if (auto resolvedPath = std::filesystem::canonical(std::filesystem::u8path(path), error); !error) {
         absolutePath = resolvedPath.u8string();
     }
-#elif defined(USE_WIN32)
+#else
+    // path may not be null-terminated; materialize once for all C APIs below.
+    const std::string pathStr(path);
+#if defined(USE_WIN32)
     char resolvedPath[_MAX_PATH] = {};
-    auto ret = GetFullPathNameA(path.data(), sizeof(resolvedPath), resolvedPath, nullptr);
+    auto ret = GetFullPathNameA(pathStr.c_str(), sizeof(resolvedPath), resolvedPath, nullptr);
     if (ret < sizeof(resolvedPath)) {
         WIN32_FIND_DATAA data;
         HANDLE handle = FindFirstFileA(resolvedPath, &data);
@@ -70,7 +73,7 @@ std::string ResolveAbsolutePath(std::string_view path, bool isDirectory)
     }
 #elif defined(__MINGW32__) || defined(__MINGW64__)
     char resolvedPath[_MAX_PATH] = {};
-    if (_fullpath(resolvedPath, path.data(), _MAX_PATH) != nullptr) {
+    if (_fullpath(resolvedPath, pathStr.c_str(), _MAX_PATH) != nullptr) {
         if (isDirectory) {
             auto handle = opendir(resolvedPath);
             if (handle) {
@@ -87,9 +90,10 @@ std::string ResolveAbsolutePath(std::string_view path, bool isDirectory)
     }
 #else
     char resolvedPath[PATH_MAX];
-    if (realpath(path.data(), resolvedPath) != nullptr) {
+    if (realpath(pathStr.c_str(), resolvedPath) != nullptr) {
         absolutePath = resolvedPath;
     }
+#endif
 #endif
 
     FormatPath(absolutePath, isDirectory);
@@ -107,7 +111,7 @@ std::optional<Collection> GatherFilesAndDirectories(std::string_view path)
     Collection collection;
 #ifdef HAS_FILESYSTEM
     std::error_code error;
-    for (auto const& entry : std::filesystem::directory_iterator{ std::filesystem::u8path(path), error }) {
+    for (auto const& entry : std::filesystem::directory_iterator{std::filesystem::u8path(path), error}) {
         if (entry.is_directory()) {
             collection.directories.push_back(entry.path().filename().u8string());
         } else if (entry.is_regular_file()) {
@@ -137,7 +141,8 @@ std::optional<Collection> GatherFilesAndDirectories(std::string_view path)
 
     FindClose(handle);
 #else
-    DIR* handle = opendir(path.data());
+    std::string pathStr(path);
+    DIR* handle = opendir(pathStr.c_str());
     if (!handle) {
         // Unable to open directory.
         return std::nullopt;
@@ -164,7 +169,8 @@ std::optional<Collection> GatherFilesAndDirectories(std::string_view path)
     return collection;
 }
 
-void RecursivelyCollectAllFiles(const std::string_view path, std::vector<std::string>& aFiles) // NOLINT(*-no-recursion)
+void RecursivelyCollectAllFiles(
+    const std::string_view path, std::vector<std::string>& aFiles)  // NOLINT(*-no-recursion)
 {
     const auto filesAndDirs = GatherFilesAndDirectories(path);
     if (!filesAndDirs) {
@@ -193,7 +199,7 @@ void RecursivelyCollectAllFiles(const std::string_view path, std::vector<std::st
         }
     }
 }
-} // namespace
+}  // namespace
 
 bool FileMonitor::AddPath(const std::string_view path)
 {
@@ -285,14 +291,14 @@ bool FileMonitor::RemoveFile(const std::string& path)
 bool FileMonitor::IsWatchingDirectory(std::string_view path) const
 {
     return std::any_of(mDirectories.begin(), mDirectories.end(), [&path](const auto& ref) {
-        return path.find(ref) != std::string::npos; // Already watching this directory or it's parent.
+        return path.find(ref) != std::string::npos;  // Already watching this directory or it's parent.
     });
 }
 
 bool FileMonitor::IsWatchingSubDirectory(std::string_view path)
 {
     return std::any_of(mDirectories.begin(), mDirectories.end(), [&path](const auto& ref) {
-        return ref.find(path) != std::string::npos; // Already watching subdirectory of given directory.
+        return ref.find(path) != std::string::npos;  // Already watching subdirectory of given directory.
     });
 }
 
@@ -368,4 +374,4 @@ std::vector<std::string> FileMonitor::GetMonitoredFiles() const
     }
     return files;
 }
-} // namespace ige
+}  // namespace ige

@@ -46,7 +46,7 @@ public:
         // destroy task when mutex is not locked
         ITaskQueueTask::Ptr removed;
         if (token != nullptr) {
-            std::unique_lock lock { mutex_ };
+            std::unique_lock lock{mutex_};
             if (token == execToken_) {
                 // Currently executing task is requested to cancel.
                 // Tasks are temporarily removed from the queue while execution, so the currently running task is not in
@@ -91,7 +91,7 @@ public:
 
     Token AddTaskImpl(ITaskQueueTask::Ptr p, const TimeSpan& delay, const TimeSpan& excTime)
     {
-        Token ret { p.get() };
+        Token ret{p.get()};
 
         if (auto i = interface_cast<ITaskScheduleInfo>(p)) {
             i->SetQueueAndToken(self_.lock(), ret);
@@ -104,14 +104,14 @@ public:
             if (tasks_.front().executeTime >= excTime) {
                 tasks_.emplace_back(delay, excTime, BASE_NS::move(p));
             } else {
-                tasks_.insert(tasks_.begin(), { delay, excTime, BASE_NS::move(p) });
+                tasks_.insert(tasks_.begin(), {delay, excTime, BASE_NS::move(p)});
             }
         } else {
             bool found = false;
             for (auto it = tasks_.begin(); it != tasks_.end(); ++it) {
                 if (it->executeTime <= excTime) {
                     // task in list should execute after us, so insert there.
-                    tasks_.insert(it, { delay, excTime, BASE_NS::move(p) });
+                    tasks_.insert(it, {delay, excTime, BASE_NS::move(p)});
                     found = true;
                     break;
                 }
@@ -127,7 +127,7 @@ public:
     Token AddTask(ITaskQueueTask::Ptr p, const TimeSpan& delay, const TimeSpan& excTime)
     {
         if (p) {
-            std::unique_lock lock { mutex_ };
+            std::unique_lock lock{mutex_};
             return AddTaskImpl(BASE_NS::move(p), delay, excTime);
         }
         return nullptr;
@@ -202,32 +202,33 @@ public:
 
     void Close()
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         terminate_ = true;
         tasks_.clear();
     }
 
     struct Task {
         Task() = default;
-        Task(TimeSpan d, TimeSpan e, const ITaskQueueTask::Ptr& p) : delay(d), executeTime(e), operation(p) {}
+        Task(TimeSpan d, TimeSpan e, const ITaskQueueTask::Ptr& p) : delay(d), executeTime(e), operation(p)
+        {}
 
         TimeSpan delay;
         TimeSpan executeTime;
-        ITaskQueueTask::Ptr operation { nullptr };
+        ITaskQueueTask::Ptr operation{nullptr};
     };
 
 protected:
     std::mutex mutex_;
 
-    ITaskQueueExtend* extend_ { this };
-    bool terminate_ {};
+    ITaskQueueExtend* extend_{this};
+    bool terminate_{};
     std::thread::id execThread_;
     // currently running task..
-    Token execToken_ { nullptr };
+    Token execToken_{nullptr};
     std::deque<Task> tasks_;
     BASE_NS::vector<Task> rearm_;
     ITaskQueue::WeakPtr self_;
-    bool currentlyExecutingRemoved {};
+    bool currentlyExecutingRemoved{};
 };
 
 META_END_NAMESPACE()

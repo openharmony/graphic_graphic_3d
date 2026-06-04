@@ -33,7 +33,7 @@ void* SubMeshJS::GetInstanceImpl(uint32_t id)
     }
     return BaseObject::GetInstanceImpl(id);
 }
-void SubMeshJS::DisposeNative(void* scn)
+void SubMeshJS::DisposeNative()
 {
     if (disposed_) {
         return;
@@ -41,12 +41,12 @@ void SubMeshJS::DisposeNative(void* scn)
     disposed_ = true;
     DisposeBridge(this);
     if (auto submesh = GetNativeObject<META_NS::IObject>()) {
-        DetachJsObj(submesh,"_JSW");
+        DetachJsObj(submesh, "_JSW");
     }
 
     LOG_V("SubMeshJS::DisposeNative");
-    if (auto* sceneJS = static_cast<SceneJS*>(scn)) {
-        sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
+    if (auto sceneJs = scene_.GetJsWrapper<SceneJS>()) {
+        sceneJs->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
     }
 
     aabbMin_.reset();
@@ -58,7 +58,7 @@ void SubMeshJS::DisposeNative(void* scn)
 
 void SubMeshJS::Finalize(napi_env env)
 {
-    DisposeNative(scene_.GetJsWrapper<SceneJS>());
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -69,7 +69,7 @@ napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
     if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
-        SceneJS* ptr { nullptr };
+        SceneJS* ptr{nullptr};
         NapiApi::FunctionContext<NapiApi::Object> args(ctx);
         if (args) {
             if (NapiApi::Object obj = args.Arg<0>()) {
@@ -81,7 +81,7 @@ napi_value SubMeshJS::Dispose(NapiApi::FunctionContext<>& ctx)
         if (!ptr) {
             ptr = scene_.GetJsWrapper<SceneJS>();
         }
-        instance->DisposeNative(ptr);
+        instance->DisposeNative();
     }
     return ctx.GetUndefined();
 }
@@ -98,8 +98,14 @@ void SubMeshJS::Init(napi_env env, napi_value exports)
     node_props.push_back(MakeTROMethod<FunctionContext<>, SubMeshJS, &SubMeshJS::Dispose>("destroy"));
 
     napi_value func;
-    auto status = napi_define_class(env, "SubMesh", NAPI_AUTO_LENGTH, BaseObject::ctor<SubMeshJS>(), nullptr,
-        node_props.size(), node_props.data(), &func);
+    auto status = napi_define_class(env,
+        "SubMesh",
+        NAPI_AUTO_LENGTH,
+        BaseObject::ctor<SubMeshJS>(),
+        nullptr,
+        node_props.size(),
+        node_props.data(),
+        &func);
     if (status != napi_ok) {
         LOG_E("export class failed in %s", __func__);
     }
@@ -123,13 +129,13 @@ SubMeshJS::SubMeshJS(napi_env e, napi_callback_info i) : BaseObject(e, i)
 
     scene_ = scene;
     parentMesh_ = fromJs.Arg<1>().valueOrDefault();
-    indexInParent_ = fromJs.Arg<2>().valueOrDefault(); // 2: arg num
+    indexInParent_ = fromJs.Arg<2>().valueOrDefault();  // 2: arg num
     if (!scene.GetNative<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }
     // add the dispose hook to scene. (so that the geometry node is disposed when scene is disposed)
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("SubMeshJS",meJs);
+    AddBridge("SubMeshJS", meJs);
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
         sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
     }
@@ -154,15 +160,15 @@ napi_value SubMeshJS::GetAABB(NapiApi::FunctionContext<>& ctx)
     NapiApi::Object res(env);
 
     NapiApi::Object min(env);
-    min.Set("x", NapiApi::Value<float> { env, aabmin.x });
-    min.Set("y", NapiApi::Value<float> { env, aabmin.y });
-    min.Set("z", NapiApi::Value<float> { env, aabmin.z });
+    min.Set("x", NapiApi::Value<float>{env, aabmin.x});
+    min.Set("y", NapiApi::Value<float>{env, aabmin.y});
+    min.Set("z", NapiApi::Value<float>{env, aabmin.z});
     res.Set("aabbMin", min);
 
     NapiApi::Object max(env);
-    max.Set("x", NapiApi::Value<float> { env, aabmax.x });
-    max.Set("y", NapiApi::Value<float> { env, aabmax.y });
-    max.Set("z", NapiApi::Value<float> { env, aabmax.z });
+    max.Set("x", NapiApi::Value<float>{env, aabmax.x});
+    max.Set("y", NapiApi::Value<float>{env, aabmax.y});
+    max.Set("z", NapiApi::Value<float>{env, aabmax.z});
     res.Set("aabbMax", max);
     return res.ToNapiValue();
 }
@@ -194,7 +200,7 @@ napi_value SubMeshJS::GetMaterial(NapiApi::FunctionContext<>& ctx)
 
     NapiApi::Env env(ctx.Env());
     NapiApi::Object argJS(env);
-    napi_value args[] = { scene_.GetValue(), argJS.ToNapiValue() };
+    napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
     if (!scene_.GetObject<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
     }

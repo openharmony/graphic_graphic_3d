@@ -1,0 +1,16 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "postProcess",
+		"tonemap": {
+			"enabled": true,
+			"type": "filmic",
+			"exposure": 2.0
+		},
+		"upscale": {
+			"enabled": false,
+			"smoothScale": 0.8,
+			"ratio": 2.0
+		}
+	}
+}

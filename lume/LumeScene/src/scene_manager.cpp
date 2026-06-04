@@ -27,8 +27,11 @@
 #include <scene/interface/intf_scene_manager.h>
 #include <scene/interface/intf_shader.h>
 #include <scene/interface/resource/types.h>
+#include <scene/interface/serialization/intf_metadata_importer.h>
+#include <scene/interface/serialization/intf_scene_file_loader.h>
 
 #include <core/intf_engine.h>
+#include <core/json/json.h>
 #include <render/intf_render_context.h>
 
 #include <meta/api/task_queue.h>
@@ -37,34 +40,62 @@
 #include <meta/interface/resource/intf_object_resource.h>
 
 #include "asset/asset_object.h"
-#include "resource/resource_types.h"
+#include "perf/cpu_perf_scope.h"
 #include "resource/util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
+static constexpr auto DEFAULT_PROJECT_RESOURCE_GROUP_URI = "project://default_resources.res";
+static constexpr auto PROJECT_JSON_URI = "project://project.json";
+// Version string in project.json that selects the new JSON scene importer.
+// Anything else (including a missing project.json) routes to the legacy path.
+static constexpr auto JSON_IMPORTER_V1_VERSION = "JsonImporter v1";
+
+struct ProjectInfo {
+    BASE_NS::string importVersion;
+    BASE_NS::vector<BASE_NS::string> resourceUris;
+};
+
+static bool HasDefaultResourceGroup(const CORE_NS::IResourceManager::Ptr& resources);
+static ProjectInfo ReadProjectInfo(const CORE_NS::IResourceManager::Ptr& resources);
+static BASE_NS::vector<BASE_NS::string> BuildSceneLoaderIndices(
+    const CORE_NS::IResourceManager::Ptr& resources, BASE_NS::vector<BASE_NS::string> projectUris);
+static IScene::Ptr LoadJsonImporterScene(
+    const IRenderContext::Ptr& renderContext, BASE_NS::string_view path, BASE_NS::vector<BASE_NS::string> resourceUris);
+
+bool SceneManager::UseDefaultContext()
+{
+    auto app = GetDefaultApplicationContext();
+    if (!app) {
+        return true;
+    }
+    CORE_LOG_D("Using default context for scene manager");
+    context_ = app->GetRenderContext();
+    if (!context_) {
+        CORE_LOG_W("No default context set");
+        return false;
+    }
+    // use opts from app context if we are using it
+    opts_ = app->GetDefaultSceneOptions();
+    return true;
+}
+
 bool SceneManager::Build(const META_NS::IMetadata::Ptr& d)
 {
-    bool res = Super::Build(d);
-    if (res) {
-        if (d) {
-            context_ = GetInterfaceBuildArg<IRenderContext>(d, "RenderContext");
-            opts_ = GetBuildArg<SceneOptions>(d, "Options");
-        }
-        if (!context_) {
-            if (auto app = GetDefaultApplicationContext()) {
-                CORE_LOG_D("Using default context for scene manager");
-                context_ = GetDefaultApplicationContext()->GetRenderContext();
-                if (!context_) {
-                    CORE_LOG_W("No default context set");
-                    return false;
-                }
-                // use opts from app context if we are using it
-                opts_ = app->GetDefaultSceneOptions();
-            }
-        }
-        RegisterResourceTypes(context_, opts_);
+    if (!Super::Build(d)) {
+        return false;
     }
-    return res;
+    if (d) {
+        context_ = GetInterfaceBuildArg<IRenderContext>(d, "RenderContext");
+        opts_ = GetBuildArg<SceneOptions>(d, "Options");
+    }
+    if (!context_ && !UseDefaultContext()) {
+        return false;
+    }
+    if (auto importer = META_NS::GetObjectRegistry().Create<IMetadataImporter>(ClassId::MetadataImporter)) {
+        importer->RegisterResourceTypes(context_, opts_);
+    }
+    return true;
 }
 
 META_NS::IMetadata::Ptr SceneManager::CreateContext(SceneOptions opts) const
@@ -90,7 +121,7 @@ Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
             auto iScene = scene->GetInternalScene();
             if (auto c = iScene->GetContext()) {
                 if (auto res = c->GetResources()) {
-                    auto group = UniqueGroupName(res, "Scene");
+                    auto group = UniqueGroupName(res, "Scene", scene);
                     SetPrimaryGroupOnly(scene, group);
                 }
             }
@@ -100,7 +131,7 @@ Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
             }
             CORE_LOG_E("Failed to create root node");
         }
-        return SCENE_NS::IScene::Ptr {};
+        return SCENE_NS::IScene::Ptr{};
     });
 }
 
@@ -143,6 +174,15 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     size_t offset = opts.dataOffset;
     return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri), renderContext = context_,
                                               args = CreateContext(BASE_NS::move(opts)), createRes, rid, offset] {
+        // Bracket the entire user-facing load (gltf branch + editor-scene
+        // branch) so that any throwaway sub-scenes created during this call
+        // — including nested CreateScene invocations from gltf-scene
+        // resource loaders — observe the SceneLoad scope and skip the
+        // empty-render flush in their Uninitialize. We do NOT push
+        // ImporterDeferred here: that is the importer parse phase's
+        // responsibility (per-thread, narrow), and routing deferred loads
+        // outside an importer drain would leak shell images.
+        IRenderContext::RenderContextScope sceneLoadScope(renderContext, IRenderContext::ScopeType::SceneLoad);
         IScene::Ptr result;
         const auto pathLowerCase = path.toLower();
         if (pathLowerCase.ends_with(".gltf") || pathLowerCase.ends_with(".glb") || pathLowerCase.ends_with(".mp4")) {
@@ -150,42 +190,129 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
             if (result) {
                 result = Load(result, path, createRes, rid, offset);
             }
-        } else {
-            // Try loading as an editor scene with resources
-            if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {
-                // Rely on an implementation detail: If the path is already registered, it can be re-registered.
-                // Unregistering will remove only the re-registered path and leave the original.
-                result = LoadSceneWithIndex(renderContext, path);
-                SetProjectPath(renderContext, path, ProjectPathAction::UNREGISTER);
+        } else if (SetProjectPath(renderContext, path, ProjectPathAction::REGISTER)) {
+            // project.json's "importVersion" string selects the importer:
+            //   "JsonImporter v1" -> new JSON scene importer
+            //   anything else (or no project.json at all) -> legacy path
+            auto info = ReadProjectInfo(renderContext->GetResources());
+            if (info.importVersion == JSON_IMPORTER_V1_VERSION) {
+                result = LoadJsonImporterScene(renderContext, path, BASE_NS::move(info.resourceUris));
+            } else {
+                result = LoadSceneWithIndex(renderContext, path, BASE_NS::move(info.resourceUris));
             }
-            if (!result) {
-                // Always returning at least an empty scene (Preserve how this function  worked previously)
-                result = META_NS::GetObjectRegistry().Create<IScene>(SCENE_NS::ClassId::Scene, args);
-            }
+            SetProjectPath(renderContext, path, ProjectPathAction::UNREGISTER);
         }
         return result;
     });
 }
 
-void SceneManager::LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources)
+static bool HasDefaultResourceGroup(const CORE_NS::IResourceManager::Ptr& resources)
 {
-    static constexpr auto DEFAULT_PROJECT_RESOURCE_GROUP_URI = "project://default_resources.res";
-    bool foundDefault = false;
-    for (auto&& group : resources->GetResourceGroups()) {
-        // The project default resource group has no name
+    if (!resources) {
+        return false;
+    }
+    for (auto&& group : resources->GetResourceGroups(nullptr)) {
         if (group.empty()) {
-            foundDefault = true;
-            break;
+            return true;
         }
     }
-    if (!foundDefault) {
+    return false;
+}
+
+void SceneManager::LoadDefaultResourcesIfNeeded(const CORE_NS::IResourceManager::Ptr& resources)
+{
+    SCENE_CPU_PERF_SCOPE("LoadScene", "LoadDefaultResources");
+    if (!HasDefaultResourceGroup(resources)) {
         // Did not find unnamed (default) resource group, load default resource file
         resources->Import(DEFAULT_PROJECT_RESOURCE_GROUP_URI);
     }
 }
 
-IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context, BASE_NS::string_view uri)
+static ProjectInfo ReadProjectInfo(const CORE_NS::IResourceManager::Ptr& resources)
 {
+    ProjectInfo info;
+    if (!resources) {
+        return info;
+    }
+    auto fileManager = resources->GetFileManager();
+    if (!fileManager) {
+        return info;
+    }
+    auto file = fileManager->OpenFile(PROJECT_JSON_URI);
+    if (!file) {
+        return info;
+    }
+    const uint64_t byteLength = file->GetLength();
+    BASE_NS::string raw(static_cast<size_t>(byteLength), BASE_NS::string::value_type());
+    if (file->Read(raw.data(), byteLength) != byteLength) {
+        CORE_LOG_W("Failed to read project.json");
+        return info;
+    }
+    const auto json = CORE_NS::json::parse(raw.c_str());
+    if (!json) {
+        CORE_LOG_W("Failed to parse project.json");
+        return info;
+    }
+    if (const auto* importVersion = json.find("importVersion"); importVersion && importVersion->is_string()) {
+        info.importVersion = CORE_NS::json::unescape(importVersion->string_);
+        CORE_LOG_D("project.json importVersion: '%s'", info.importVersion.c_str());
+    }
+    const auto* resourcesArray = json.find("resources");
+    if (!resourcesArray || !resourcesArray->is_array()) {
+        return info;
+    }
+    info.resourceUris.reserve(resourcesArray->array_.size());
+    for (const auto& entry : resourcesArray->array_) {
+        if (entry.is_string()) {
+            info.resourceUris.push_back(BASE_NS::string{entry.string_});
+        }
+    }
+    return info;
+}
+
+static BASE_NS::vector<BASE_NS::string> BuildSceneLoaderIndices(
+    const CORE_NS::IResourceManager::Ptr& resources, BASE_NS::vector<BASE_NS::string> projectUris)
+{
+    BASE_NS::vector<BASE_NS::string> indices;
+    if (HasDefaultResourceGroup(resources)) {
+        return indices;
+    }
+    indices = BASE_NS::move(projectUris);
+    if (indices.empty()) {
+        indices.push_back(DEFAULT_PROJECT_RESOURCE_GROUP_URI);
+    }
+    return indices;
+}
+
+static IScene::Ptr LoadJsonImporterScene(
+    const IRenderContext::Ptr& renderContext, BASE_NS::string_view path, BASE_NS::vector<BASE_NS::string> resourceUris)
+{
+    auto loader = META_NS::GetObjectRegistry().Create<ISceneFileLoader>(ClassId::SceneFileLoader);
+    if (!loader) {
+        return {};
+    }
+    auto indices = BuildSceneLoaderIndices(renderContext->GetResources(), BASE_NS::move(resourceUris));
+    return loader->LoadScene(renderContext, path, indices);
+}
+
+bool SceneManager::LoadProjectResources(
+    const CORE_NS::IResourceManager::Ptr& resources, const BASE_NS::vector<BASE_NS::string>& resourceUris)
+{
+    SCENE_CPU_PERF_SCOPE("LoadScene", "LoadProjectResources");
+    if (resourceUris.empty()) {
+        return false;
+    }
+    for (const auto& uri : resourceUris) {
+        CORE_LOG_D("Importing project resource: '%s'", uri.c_str());
+        resources->Import(uri);
+    }
+    return true;
+}
+
+IScene::Ptr SceneManager::LoadSceneWithIndex(
+    const IRenderContext::Ptr& context, BASE_NS::string_view uri, BASE_NS::vector<BASE_NS::string> resourceUris)
+{
+    SCENE_CPU_PERF_SCOPE("LoadScene", uri);
     if (!context) {
         return {};
     }
@@ -195,21 +322,21 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
     }
 
     // Make sure that project default resource group has been loaded
-    LoadDefaultResourcesIfNeeded(resources);
-
-    const auto index = GuessIndexFilePath(uri);
-    auto ires = resources->Import(index);
-    if (ires != CORE_NS::IResourceManager::Result::OK) {
-        CORE_LOG_E("Failed to load resource index: %s [%d]", index.c_str(), int(ires));
-        return {};
+    if (!HasDefaultResourceGroup(resources)) {
+        if (!LoadProjectResources(resources, resourceUris)) {
+            LoadDefaultResourcesIfNeeded(resources);
+        }
     }
-    CORE_NS::ResourceId rid { BASE_NS::string(uri) };
+
+    CORE_NS::ResourceIdContext rid{BASE_NS::string(uri)};
     // see if the scene is resource in the index, if not, add it
-    if (!resources->GetResourceInfo(rid).id.IsValid()) {
+    bool missingSceneRid = !resources->GetResourceInfo(rid).id.IsValid();
+    if (missingSceneRid) {
         resources->AddResource(rid, ClassId::SceneResource.Id().ToUid(), uri);
     }
     auto result = interface_pointer_cast<IScene>(resources->GetResource(rid));
     if (result) {
+        SCENE_CPU_PERF_SCOPE("LoadScene", "PostLoadTrim");
         auto root = result->GetRootNode().GetResult();
         if (auto i = result->GetInternalScene()) {
             // make sure all changes to ecs are applied before trimming the objects
@@ -220,9 +347,12 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
             for (auto&& g : groups.GetAllHandles()) {
                 auto name = g->GetGroup();
                 CORE_LOG_D("Purging resource group '%s'", name.c_str());
-                resources->PurgeGroup(name);
+                resources->PurgeGroup(name, result);
             }
         }
+    }
+    if (missingSceneRid) {
+        resources->RemoveResource(rid);
     }
     return result;
 }
@@ -230,6 +360,9 @@ IScene::Ptr SceneManager::LoadSceneWithIndex(const IRenderContext::Ptr& context,
 bool SceneManager::SetProjectPath(
     const IRenderContext::Ptr& renderContext, BASE_NS::string_view uri, ProjectPathAction action)
 {
+    if (uri.starts_with("project:")) {
+        return true;
+    }
     if (renderContext) {
         if (const auto renderer = renderContext->GetRenderer()) {
             auto& fileManager = renderer->GetEngine().GetFileManager();
@@ -255,7 +388,7 @@ BASE_NS::string SceneManager::GuessIndexFilePath(BASE_NS::string_view uri)
 BASE_NS::string SceneManager::GuessProjectPath(BASE_NS::string_view uri)
 {
     const auto secondToLastSlashPos = uri.find_last_of('/', uri.find_last_of('/') - 1);
-    return BASE_NS::string { uri.substr(0, secondToLastSlashPos) };
+    return BASE_NS::string{uri.substr(0, secondToLastSlashPos)};
 }
 
 SCENE_END_NAMESPACE()

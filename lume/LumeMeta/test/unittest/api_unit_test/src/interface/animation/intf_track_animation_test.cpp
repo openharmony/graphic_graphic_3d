@@ -53,7 +53,7 @@ public:
         return count_;
     }
 
-    int count_ {};
+    int count_{};
 };
 
 class API_TrackAnimationTest : public API_AnimationTestBase {
@@ -69,10 +69,9 @@ protected:
 UNIT_TEST_F(API_TrackAnimationTest, TrackAnimation, testing::ext::TestSize.Level1)
 {
     RegisterObjectType<KeyframeHandler>();
-    static BASE_NS::vector<float> timestamps = { 0.1f, 0.3f, 0.8f, 1.f };
-    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 50, 30, 0 }, { 100, 80, 0 }, { 170, 150, 0 },
-        { 500, 500, 0 } };
-    static BASE_NS::Math::Vec3 initialValue = { 10, 10, 0 };
+    static BASE_NS::vector<float> timestamps = {0.1f, 0.3f, 0.8f, 1.f};
+    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{50, 30, 0}, {100, 80, 0}, {170, 150, 0}, {500, 500, 0}};
+    static BASE_NS::Math::Vec3 initialValue = {10, 10, 0};
 
     BASE_NS::vector<ITestKeyframeHandler::Ptr> handlerObjects;
     BASE_NS::vector<IFunction::Ptr> handlers;
@@ -102,7 +101,7 @@ UNIT_TEST_F(API_TrackAnimationTest, TrackAnimation, testing::ext::TestSize.Level
     uint32_t steps = 0;
 
     // Each step steps by 10ms, so 100 steps should cover the whole 1000ms animation
-    this->StepAnimations({ animation }, 100, [&](uint32_t frame) {
+    this->StepAnimations({animation}, 100, [&](uint32_t frame) {
         const auto progress = animation.GetProgress();
         const auto value = GetValue(property);
         if (progress < timestamps[0]) {
@@ -138,7 +137,7 @@ UNIT_TEST_F(API_TrackAnimationTest, TrackAnimation, testing::ext::TestSize.Level
                 EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << "Frame: " << frame;
             } else {
                 // Should not end up here
-                FAIL(); // << "Frame: " << frame;
+                FAIL();  // << "Frame: " << frame;
             }
 
             for (int i = 0; i < 3; ++i) {
@@ -171,7 +170,7 @@ UNIT_TEST_F(API_TrackAnimationTest, TrackAnimation, testing::ext::TestSize.Level
 
     EXPECT_TRUE(animation.GetRunning());
     EXPECT_EQ(animation.GetProgress(), 0.f);
-    EXPECT_EQ(value, GetValue(property)); // Value should not change as our first keyframe is at 0.1
+    EXPECT_EQ(value, GetValue(property));  // Value should not change as our first keyframe is at 0.1
 
     // Jump past the end
     IncrementClockTime(TimeSpan::Milliseconds(2000));
@@ -183,9 +182,9 @@ UNIT_TEST_F(API_TrackAnimationTest, TrackAnimation, testing::ext::TestSize.Level
     UnregisterObjectType<KeyframeHandler>();
 }
 
-static BASE_NS::vector<float> trackTimestamps = { 0.1f, 0.5f, 1.f };
-static BASE_NS::vector<BASE_NS::Math::Vec3> trackKeyframes = { { 50, 30, 0 }, { 170, 150, 0 }, { 500, 500, 0 } };
-static BASE_NS::Math::Vec3 trackInitialValue = { 10, 10, 0 };
+static BASE_NS::vector<float> trackTimestamps = {0.1f, 0.5f, 1.f};
+static BASE_NS::vector<BASE_NS::Math::Vec3> trackKeyframes = {{50, 30, 0}, {170, 150, 0}, {500, 500, 0}};
+static BASE_NS::Math::Vec3 trackInitialValue = {10, 10, 0};
 
 /**
  * @tc.name: AddKeyframe
@@ -195,7 +194,7 @@ static BASE_NS::Math::Vec3 trackInitialValue = { 10, 10, 0 };
 UNIT_TEST_F(API_TrackAnimationTest, AddKeyframe, testing::ext::TestSize.Level1)
 {
     auto property = ConstructProperty<BASE_NS::Math::Vec3>("Prop", trackInitialValue);
-    auto added = ConstructProperty<BASE_NS::Math::Vec3>("Prop", { 100, 80, 0 });
+    auto added = ConstructProperty<BASE_NS::Math::Vec3>("Prop", {100, 80, 0});
     auto addedValue = added->GetValueAny().Clone(true);
 
     META_NS::TrackAnimation<BASE_NS::Math::Vec3> animation(CreateInstance(META_NS::ClassId::TrackAnimation));
@@ -211,15 +210,15 @@ UNIT_TEST_F(API_TrackAnimationTest, AddKeyframe, testing::ext::TestSize.Level1)
     animation.Step(this->GetTestClock());
     EXPECT_TRUE(animation.GetRunning());
 
-    StepAnimations({ animation }, 1, 200, [&animation](uint32_t frame) {
-        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << frame; // 1st keyframe
+    StepAnimations({animation}, 1, 200, [&animation](uint32_t frame) {
+        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << frame;  // 1st keyframe
     });
 
     // Add a keyframe that is in the middle of the current and next keyframe
     EXPECT_EQ(animation.AddKeyframe(0.3, addedValue), 1);
 
-    StepAnimations({ animation }, 1, 100, [&animation, &property, &added](uint32_t frame) {
-        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 1); // 2nd keyframe that we just added
+    StepAnimations({animation}, 1, 100, [&animation, &property, &added](uint32_t frame) {
+        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 1);  // 2nd keyframe that we just added
         EXPECT_EQ(GetValue(property), GetValue(added));
     });
 }
@@ -232,7 +231,7 @@ UNIT_TEST_F(API_TrackAnimationTest, AddKeyframe, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_TrackAnimationTest, AddKeyframes, testing::ext::TestSize.Level1)
 {
     auto property = ConstructProperty<BASE_NS::Math::Vec3>("Prop", trackInitialValue);
-    auto added = ConstructProperty<BASE_NS::Math::Vec3>("Prop", { 100, 80, 0 });
+    auto added = ConstructProperty<BASE_NS::Math::Vec3>("Prop", {100, 80, 0});
 
     META_NS::TrackAnimation<BASE_NS::Math::Vec3> animation(CreateInstance(META_NS::ClassId::TrackAnimation));
     animation.SetProperty(property).SetDuration(TimeSpan::Milliseconds(1000));
@@ -256,7 +255,7 @@ UNIT_TEST_F(API_TrackAnimationTest, AddKeyframes, testing::ext::TestSize.Level1)
     EXPECT_EQ(animation.Keyframes().size(), trackKeyframes.size());
     EXPECT_EQ(animation.GetTimestamps().size(), trackTimestamps.size());
 
-    StepAnimations({ animation }, 3, 359, [&animation, &property, &added](uint32_t frame) {
+    StepAnimations({animation}, 3, 359, [&animation, &property, &added](uint32_t frame) {
         EXPECT_EQ(animation.GetCurrentKeyframeIndex(), frame - 1) << frame;
     });
 }
@@ -279,8 +278,8 @@ UNIT_TEST_F(API_TrackAnimationTest, RemoveKeyframe, testing::ext::TestSize.Level
     animation.Step(this->GetTestClock());
     EXPECT_TRUE(animation.GetRunning());
 
-    StepAnimations({ animation }, 1, 300, [&animation](uint32_t frame) {
-        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << frame; // 1st keyframe
+    StepAnimations({animation}, 1, 300, [&animation](uint32_t frame) {
+        EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << frame;  // 1st keyframe
     });
 
     EXPECT_TRUE(animation.RemoveKeyframe(1));
@@ -288,7 +287,7 @@ UNIT_TEST_F(API_TrackAnimationTest, RemoveKeyframe, testing::ext::TestSize.Level
     EXPECT_EQ(animation.Keyframes().size(), trackKeyframes.size() - 1);
     EXPECT_EQ(animation.GetTimestamps().size(), trackTimestamps.size() - 1);
 
-    StepAnimations({ animation }, 1, 300, [&animation](uint32_t frame) {
+    StepAnimations({animation}, 1, 300, [&animation](uint32_t frame) {
         // Originally this would have moved to second keyframe, but since we removed it
         // we should still be in the first keyframe
         EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 0) << frame;
@@ -326,10 +325,9 @@ UNIT_TEST_F(API_TrackAnimationTest, RemoveAllKeyframes, testing::ext::TestSize.L
 UNIT_TEST_F(API_TrackAnimationTest, HandlerTest, testing::ext::TestSize.Level1)
 {
     RegisterObjectType<KeyframeHandler>();
-    static BASE_NS::vector<float> timestamps = { 0.0f, 0.3f, 0.8f, 1.f };
-    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 50, 30, 0 }, { 100, 80, 0 }, { 170, 150, 0 },
-        { 500, 500, 0 } };
-    static BASE_NS::Math::Vec3 initialValue = { 10, 10, 0 };
+    static BASE_NS::vector<float> timestamps = {0.0f, 0.3f, 0.8f, 1.f};
+    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{50, 30, 0}, {100, 80, 0}, {170, 150, 0}, {500, 500, 0}};
+    static BASE_NS::Math::Vec3 initialValue = {10, 10, 0};
 
     BASE_NS::vector<ITestKeyframeHandler::Ptr> handlerObjects;
     BASE_NS::vector<IFunction::Ptr> handlers;
@@ -357,7 +355,7 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest, testing::ext::TestSize.Level1)
     BASE_NS::Math::Vec3 previous = initialValue;
 
     // Each step steps by 10ms, so 100 steps should cover the whole 1000ms animation
-    this->StepAnimations({ animation }, 100, [&](uint32_t frame) {});
+    this->StepAnimations({animation}, 100, [&](uint32_t frame) {});
 
     EXPECT_EQ(animation.GetProgress(), 1.f);
     EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 3);
@@ -375,10 +373,9 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_TrackAnimationTest, HandlerTest2, testing::ext::TestSize.Level1)
 {
     RegisterObjectType<KeyframeHandler>();
-    static BASE_NS::vector<float> timestamps = { 0.3f, 0.4f, 0.6f, 0.7f };
-    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 50, 30, 0 }, { 100, 80, 0 }, { 170, 150, 0 },
-        { 500, 500, 0 } };
-    static BASE_NS::Math::Vec3 initialValue = { 10, 10, 0 };
+    static BASE_NS::vector<float> timestamps = {0.3f, 0.4f, 0.6f, 0.7f};
+    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{50, 30, 0}, {100, 80, 0}, {170, 150, 0}, {500, 500, 0}};
+    static BASE_NS::Math::Vec3 initialValue = {10, 10, 0};
 
     BASE_NS::vector<ITestKeyframeHandler::Ptr> handlerObjects;
     BASE_NS::vector<IFunction::Ptr> handlers;
@@ -404,7 +401,7 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest2, testing::ext::TestSize.Level1)
     animation.Step(this->GetTestClock());
     EXPECT_TRUE(animation.GetRunning());
     // Each step steps by 10ms, so 100 steps should cover the whole 1000ms animation
-    this->StepAnimations({ animation }, 100, [&](uint32_t frame) {});
+    this->StepAnimations({animation}, 100, [&](uint32_t frame) {});
 
     EXPECT_EQ(animation.GetProgress(), 1.f);
     EXPECT_EQ(animation.GetCurrentKeyframeIndex(), ITrackAnimation::INVALID_INDEX);
@@ -422,10 +419,9 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest2, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_TrackAnimationTest, HandlerTest3, testing::ext::TestSize.Level1)
 {
     RegisterObjectType<KeyframeHandler>();
-    static BASE_NS::vector<float> timestamps = { 0.0f, 0.4f, 0.6f, 1.0f };
-    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 50, 30, 0 }, { 100, 80, 0 }, { 170, 150, 0 },
-        { 500, 500, 0 } };
-    static BASE_NS::Math::Vec3 initialValue = { 10, 10, 0 };
+    static BASE_NS::vector<float> timestamps = {0.0f, 0.4f, 0.6f, 1.0f};
+    static BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{50, 30, 0}, {100, 80, 0}, {170, 150, 0}, {500, 500, 0}};
+    static BASE_NS::Math::Vec3 initialValue = {10, 10, 0};
 
     BASE_NS::vector<ITestKeyframeHandler::Ptr> handlerObjects;
     BASE_NS::vector<IFunction::Ptr> handlers;
@@ -455,7 +451,7 @@ UNIT_TEST_F(API_TrackAnimationTest, HandlerTest3, testing::ext::TestSize.Level1)
     EXPECT_TRUE(animation.GetRunning());
     // Each step steps by 10ms, so 300 steps should cover the whole 1000ms animation 3 times
     this->StepAnimations(
-        { animation }, 302, [&](uint32_t frame) {});
+        {animation}, 302, [&](uint32_t frame) {});  // TODO figure out why we need 2 extra frames, 300 should be enough
 
     EXPECT_EQ(animation.GetProgress(), 1.f);
     EXPECT_EQ(animation.GetCurrentKeyframeIndex(), 3);
@@ -477,12 +473,12 @@ UNIT_TEST_F(API_TrackAnimationTest, KeyframeCurves, testing::ext::TestSize.Level
 {
     constexpr auto keyframeCount = 4;
     constexpr auto animationMs = 1000;
-    BASE_NS::vector<float> timestamps = { 0.0f, 0.4f, 0.6f, 1.0f };
-    BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = { { 50, 30, 0 }, { 100, 80, 0 }, { 170, 150, 0 },
-        { 500, 500, 0 } };
-    BASE_NS::Math::Vec3 initialValue = { 10, 10, 0 };
-    BASE_NS::vector<ICurve1D::Ptr> curves = { CreateObjectInstance<ICurve1D>(META_NS::ClassId::InOutCubicEasingCurve),
-        nullptr, CreateObjectInstance<ICurve1D>(META_NS::ClassId::OutBackEasingCurve) };
+    BASE_NS::vector<float> timestamps = {0.0f, 0.4f, 0.6f, 1.0f};
+    BASE_NS::vector<BASE_NS::Math::Vec3> keyframes = {{50, 30, 0}, {100, 80, 0}, {170, 150, 0}, {500, 500, 0}};
+    BASE_NS::Math::Vec3 initialValue = {10, 10, 0};
+    BASE_NS::vector<ICurve1D::Ptr> curves = {CreateObjectInstance<ICurve1D>(META_NS::ClassId::InOutCubicEasingCurve),
+        nullptr,
+        CreateObjectInstance<ICurve1D>(META_NS::ClassId::OutBackEasingCurve)};
     constexpr auto propertyName = "PropToAnimate";
 
     auto property = ConstructProperty<BASE_NS::Math::Vec3>(propertyName, initialValue);
@@ -503,7 +499,8 @@ UNIT_TEST_F(API_TrackAnimationTest, KeyframeCurves, testing::ext::TestSize.Level
     const float step = animationMs / 100.f;
 
     auto checkFrame = [&](const Property<BASE_NS::Math::Vec3>& animated,
-                          const META_NS::TrackAnimation<BASE_NS::Math::Vec3>& checkAnim, uint32_t frame) {
+                          const META_NS::TrackAnimation<BASE_NS::Math::Vec3>& checkAnim,
+                          uint32_t frame) {
         auto linearProgress = (frame * step) / animationMs;
         uint32_t keyframe = 0;
         // Find keyframe were supposed to be in
@@ -531,7 +528,7 @@ UNIT_TEST_F(API_TrackAnimationTest, KeyframeCurves, testing::ext::TestSize.Level
     };
 
     // Run the animation we just created, checking that every frame proceeds according to expected keyframe/curve
-    this->StepAnimations({ animation }, 100, step, [&](uint32_t frame) { checkFrame(property, animation, frame); });
+    this->StepAnimations({animation}, 100, step, [&](uint32_t frame) { checkFrame(property, animation, frame); });
 
     // Export&import our animation, run it again and check that also imported animation works as expected
     TestSerialiser serializer;
@@ -547,7 +544,7 @@ UNIT_TEST_F(API_TrackAnimationTest, KeyframeCurves, testing::ext::TestSize.Level
     imported.Step(this->GetTestClock());
     EXPECT_TRUE(imported.GetRunning());
 
-    this->StepAnimations({ imported }, 100, step, [&](uint32_t frame) { checkFrame(importedProp, imported, frame); });
+    this->StepAnimations({imported}, 100, step, [&](uint32_t frame) { checkFrame(importedProp, imported, frame); });
     Metadata(imported).RemoveProperty(importedProp);
 
     Metadata(animation).RemoveProperty(property);
@@ -578,7 +575,7 @@ UNIT_TEST_F(API_TrackAnimationTest, PropertyOnChanged, testing::ext::TestSize.Le
     ASSERT_EQ(TimeSpan::Seconds(1.0f), animation.GetTotalDuration());
 
     animation.Start();
-    StepAnimations({ animation }, 102, [&animation, &property](uint32_t frame) {
+    StepAnimations({animation}, 102, [&animation, &property](uint32_t frame) {
 
     });
     EXPECT_FALSE(animation.GetRunning());
@@ -594,8 +591,8 @@ UNIT_TEST_F(API_TrackAnimationTest, SeekingPaused, testing::ext::TestSize.Level1
 {
     auto property = ConstructProperty<int>("Prop");
 
-    static BASE_NS::vector<float> trackTimestamps = { 0.0f, 1.f };
-    static BASE_NS::vector<int> trackKeyframes = { 0, 10 };
+    static BASE_NS::vector<float> trackTimestamps = {0.0f, 1.f};
+    static BASE_NS::vector<int> trackKeyframes = {0, 10};
     auto animation = META_NS::TrackAnimation<int>(CreateInstance(META_NS::ClassId::TrackAnimation))
                          .SetKeyframes(trackKeyframes)
                          .SetTimestamps(trackTimestamps)
@@ -606,7 +603,7 @@ UNIT_TEST_F(API_TrackAnimationTest, SeekingPaused, testing::ext::TestSize.Level1
     ASSERT_EQ(TimeSpan::Seconds(1.0f), animation.GetTotalDuration());
 
     animation.Start();
-    StepAnimations({ animation }, 10, [](uint32_t frame) {});
+    StepAnimations({animation}, 10, [](uint32_t frame) {});
     animation.Stop();
     animation.Pause();
 
@@ -617,12 +614,12 @@ UNIT_TEST_F(API_TrackAnimationTest, SeekingPaused, testing::ext::TestSize.Level1
     }));
 
     // should do nothing
-    StepAnimations({ animation }, 10, [](uint32_t frame) {});
+    StepAnimations({animation}, 10, [](uint32_t frame) {});
 
     animation.Seek(0.1f);
 
     // should do nothing
-    StepAnimations({ animation }, 10, [](uint32_t frame) {});
+    StepAnimations({animation}, 10, [](uint32_t frame) {});
 
     EXPECT_EQ(property->GetValue(), 1);
     EXPECT_EQ(count, 1);
@@ -641,8 +638,8 @@ UNIT_TEST_F(API_TrackAnimationTest, SeekingPaused, testing::ext::TestSize.Level1
  */
 UNIT_TEST_F(API_TrackAnimationTest, BeyondLastFrame, testing::ext::TestSize.Level1)
 {
-    static BASE_NS::vector<float> timestamps = { 0.5f, 0.6f, 0.7f };
-    static BASE_NS::vector<uint32_t> keyframes = { 5, 7, 10 };
+    static BASE_NS::vector<float> timestamps = {0.5f, 0.6f, 0.7f};
+    static BASE_NS::vector<uint32_t> keyframes = {5, 7, 10};
 
     auto property = ConstructProperty<uint32_t>("Prop");
 
@@ -662,7 +659,7 @@ UNIT_TEST_F(API_TrackAnimationTest, BeyondLastFrame, testing::ext::TestSize.Leve
     animation.Start();
     animation.Step(this->GetTestClock());
     EXPECT_TRUE(animation.GetRunning());
-    this->StepAnimations({ animation }, 3, [&](uint32_t frame) {});
+    this->StepAnimations({animation}, 3, [&](uint32_t frame) {});
 
     EXPECT_EQ(animation.GetProgress(), 1.f);
     EXPECT_EQ(property->GetValue(), 10);
@@ -676,6 +673,6 @@ UNIT_TEST_F(API_TrackAnimationTest, BeyondLastFrame, testing::ext::TestSize.Leve
     EXPECT_EQ(property->GetValue(), 10);
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

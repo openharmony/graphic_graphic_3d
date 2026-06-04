@@ -16,6 +16,7 @@
 #include "mesh_builder.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <optional>
 #include <securec.h>
 
@@ -49,7 +50,7 @@
 
 namespace {
 #include "3d/shaders/common/morph_target_structs.h"
-} // namespace
+}  // namespace
 
 CORE3D_BEGIN_NAMESPACE()
 using namespace BASE_NS;
@@ -57,18 +58,17 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
-constexpr IMeshBuilder::GpuBufferCreateInfo DEFAULT_BUFFER_CREATE_INFO { 0U,
+constexpr IMeshBuilder::GpuBufferCreateInfo DEFAULT_BUFFER_CREATE_INFO{0U,
     EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
         EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER,
     MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT};
 
-constexpr BufferUsageFlags RT_BUFFER_USAGE_FLAGS {
+constexpr BufferUsageFlags RT_BUFFER_USAGE_FLAGS{
     BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT |
-    BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-};
+    BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT};
 
-constexpr uint32_t BUFFER_ALIGN = 0x100; // on Nvidia = 0x20, on Mali and Intel = 0x10, SBO on Mali = 0x100
+constexpr uint32_t BUFFER_ALIGN = 0x100;  // on Nvidia = 0x20, on Mali and Intel = 0x10, SBO on Mali = 0x100
 constexpr auto POSITION_FORMAT = BASE_FORMAT_R32G32B32_SFLOAT;
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
 constexpr auto NORMAL_FORMAT = BASE_FORMAT_R16G16B16_SFLOAT;
@@ -86,13 +86,13 @@ constexpr auto RG = 2;
 constexpr auto RGB = 3;
 constexpr auto RGBA = 4;
 
-template<typename Container>
+template <typename Container>
 using ContainerValueType = typename remove_reference_t<Container>::value_type;
 
-template<typename Container>
+template <typename Container>
 constexpr const auto SIZE_OF_VALUE_TYPE_V = sizeof(ContainerValueType<Container>);
 
-constexpr inline size_t Align(size_t value, size_t align) noexcept
+constexpr size_t Align(size_t value, size_t align) noexcept
 {
     if (align == 0U) {
         return value;
@@ -149,7 +149,7 @@ struct OutputBuffer {
     BASE_NS::Math::Vec4 defaultValue;
 };
 
-template<typename T, size_t N, size_t M>
+template <typename T, size_t N, size_t M>
 inline void GatherMin(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
@@ -157,7 +157,7 @@ inline void GatherMin(T (&minimum)[N], const T (&value)[M]) noexcept
     }
 }
 
-template<typename T, size_t N, size_t M>
+template <typename T, size_t N, size_t M>
 inline void GatherMax(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
@@ -166,7 +166,7 @@ inline void GatherMax(T (&minimum)[N], const T (&value)[M]) noexcept
 }
 
 // floating point to signed normalized integer
-template<typename T, typename = enable_if_t<is_signed_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Snorm(float v) noexcept
 {
     const float round = v >= 0.f ? +.5f : -.5f;
@@ -175,14 +175,14 @@ constexpr inline T Snorm(float v) noexcept
 }
 
 // signed normalized integer to floating point
-template<typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
 constexpr inline float Snorm(T v) noexcept
 {
     return static_cast<float>(v) / static_cast<float>(std::numeric_limits<T>::max());
 }
 
 // floating point to unsigned normalized integer
-template<typename T, typename = enable_if_t<is_unsigned_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T>>>
 constexpr inline T Unorm(float v) noexcept
 {
     v = v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
@@ -190,14 +190,14 @@ constexpr inline T Unorm(float v) noexcept
 }
 
 // unsigned normalized integer to floating point
-template<typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
 constexpr inline float Unorm(T v) noexcept
 {
     return static_cast<float>(v) / static_cast<float>(std::numeric_limits<T>::max());
 }
 
 // floating point to signed integer
-template<typename T, typename = enable_if_t<is_signed_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Sint(float v) noexcept
 {
     const float round = v >= 0.f ? +.5f : -.5f;
@@ -208,14 +208,14 @@ constexpr inline T Sint(float v) noexcept
 }
 
 // signed integer to floating point
-template<typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
 constexpr inline float Sint(T v) noexcept
 {
     return static_cast<float>(v);
 }
 
 // floating point to unsigned integer
-template<typename T, typename = enable_if_t<is_unsigned_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T>>>
 constexpr inline T Uint(float v) noexcept
 {
     constexpr auto h = static_cast<float>(std::numeric_limits<T>::max());
@@ -224,14 +224,14 @@ constexpr inline T Uint(float v) noexcept
 }
 
 // unsigned integer to floating point
-template<typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
 constexpr inline float Uint(T v) noexcept
 {
     return static_cast<float>(v);
 }
 
 // helpers for ingeter - integer conversions
-template<typename T, typename U>
+template <typename T, typename U>
 struct IntegerNorm {
     using InType = T;
     using OutType = U;
@@ -249,7 +249,7 @@ struct IntegerNorm {
     }
 };
 
-template<typename T, typename U>
+template <typename T, typename U>
 struct IntegerToInt {
     using InType = T;
     using OutType = U;
@@ -260,7 +260,7 @@ struct IntegerToInt {
     }
 };
 
-template<typename Converter, size_t components>
+template <typename Converter, size_t components>
 void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
@@ -274,7 +274,7 @@ void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t sr
 }
 
 // helpers for type T - float - type U conversions
-template<typename T>
+template <typename T>
 struct Norm {
     using Type = T;
 
@@ -297,7 +297,7 @@ struct Norm {
     }
 };
 
-template<typename T>
+template <typename T>
 struct Int {
     using Type = T;
 
@@ -320,7 +320,7 @@ struct Int {
     }
 };
 
-template<typename T>
+template <typename T>
 struct Float {
     using Type = T;
 
@@ -345,7 +345,7 @@ struct Float {
     }
 };
 
-template<typename SourceFn, typename DestFn, size_t components>
+template <typename SourceFn, typename DestFn, size_t components>
 void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
@@ -358,57 +358,57 @@ void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t sr
     }
 }
 
-template<typename SourceFn>
+template <typename SourceFn>
 float From(const uint8_t* src) noexcept
 {
     return SourceFn::From(reinterpret_cast<const typename SourceFn::Type*>(src)[R]);
 }
 
-template<typename DestFn>
+template <typename DestFn>
 void To(uint8_t* dst, float f) noexcept
 {
     reinterpret_cast<typename DestFn::Type*>(dst)[R] = DestFn::To(f);
 }
 
 static constexpr const FormatProperties DATA_FORMATS[] = {
-    { 0, 0, BASE_FORMAT_UNDEFINED, false, false, nullptr, nullptr },
+    {0, 0, BASE_FORMAT_UNDEFINED, false, false, nullptr, nullptr},
 
-    { 1, 1, BASE_FORMAT_R8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>> },
-    { 1, 1, BASE_FORMAT_R8_SNORM, true, true, From<Norm<int8_t>>, To<Norm<int8_t>> },
-    { 1, 1, BASE_FORMAT_R8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>> },
+    {1, 1, BASE_FORMAT_R8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>>},
+    {1, 1, BASE_FORMAT_R8_SNORM, true, true, From<Norm<int8_t>>, To<Norm<int8_t>>},
+    {1, 1, BASE_FORMAT_R8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>>},
 
-    { 3, 1, BASE_FORMAT_R8G8B8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> },
+    {3, 1, BASE_FORMAT_R8G8B8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>>},
 
-    { 4, 1, BASE_FORMAT_R8G8B8A8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>> },
-    { 4, 1, BASE_FORMAT_R8G8B8A8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>> },
-    { 4, 1, BASE_FORMAT_R8G8B8A8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>> },
+    {4, 1, BASE_FORMAT_R8G8B8A8_UNORM, true, false, From<Norm<uint8_t>>, To<Norm<uint8_t>>},
+    {4, 1, BASE_FORMAT_R8G8B8A8_SNORM, true, false, From<Norm<int8_t>>, To<Norm<int8_t>>},
+    {4, 1, BASE_FORMAT_R8G8B8A8_UINT, false, false, From<Int<uint8_t>>, To<Int<uint8_t>>},
 
-    { 1, 2, BASE_FORMAT_R16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> },
+    {1, 2, BASE_FORMAT_R16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>>},
 
-    { 2, 2, BASE_FORMAT_R16G16_UNORM, true, false, From<Norm<uint16_t>>, To<Norm<uint16_t>> },
-    { 2, 2, BASE_FORMAT_R16G16_UINT, false, true, From<Int<uint16_t>>, To<Int<uint16_t>> },
-    { 2, 2, BASE_FORMAT_R16G16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
+    {2, 2, BASE_FORMAT_R16G16_UNORM, true, false, From<Norm<uint16_t>>, To<Norm<uint16_t>>},
+    {2, 2, BASE_FORMAT_R16G16_UINT, false, true, From<Int<uint16_t>>, To<Int<uint16_t>>},
+    {2, 2, BASE_FORMAT_R16G16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>>},
 
-    { 3, 2, BASE_FORMAT_R16G16B16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>> },
-    { 3, 2, BASE_FORMAT_R16G16B16_UINT, true, true, From<Int<uint16_t>>, To<Int<uint16_t>> },
-    { 3, 2, BASE_FORMAT_R16G16B16_SINT, true, true, From<Int<int16_t>>, To<Int<int16_t>> },
-    { 3, 2, BASE_FORMAT_R16G16B16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
+    {3, 2, BASE_FORMAT_R16G16B16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>>},
+    {3, 2, BASE_FORMAT_R16G16B16_UINT, true, true, From<Int<uint16_t>>, To<Int<uint16_t>>},
+    {3, 2, BASE_FORMAT_R16G16B16_SINT, true, true, From<Int<int16_t>>, To<Int<int16_t>>},
+    {3, 2, BASE_FORMAT_R16G16B16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>>},
 
-    { 4, 2, BASE_FORMAT_R16G16B16A16_UNORM, true, true, From<Norm<uint16_t>>, To<Norm<uint16_t>> },
-    { 4, 2, BASE_FORMAT_R16G16B16A16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>> },
-    { 4, 2, BASE_FORMAT_R16G16B16A16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>> },
-    { 4, 2, BASE_FORMAT_R16G16B16A16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>> },
+    {4, 2, BASE_FORMAT_R16G16B16A16_UNORM, true, true, From<Norm<uint16_t>>, To<Norm<uint16_t>>},
+    {4, 2, BASE_FORMAT_R16G16B16A16_SNORM, true, true, From<Norm<int16_t>>, To<Norm<int16_t>>},
+    {4, 2, BASE_FORMAT_R16G16B16A16_UINT, false, false, From<Int<uint16_t>>, To<Int<uint16_t>>},
+    {4, 2, BASE_FORMAT_R16G16B16A16_SFLOAT, false, true, From<Float<uint16_t>>, To<Float<uint16_t>>},
 
-    { 1, 4, BASE_FORMAT_R32_UINT, false, false, From<Int<uint32_t>>, To<Int<uint32_t>> },
+    {1, 4, BASE_FORMAT_R32_UINT, false, false, From<Int<uint32_t>>, To<Int<uint32_t>>},
 
-    { 2, 4, BASE_FORMAT_R32G32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
+    {2, 4, BASE_FORMAT_R32G32_SFLOAT, false, true, From<Float<float>>, To<Float<float>>},
 
-    { 3, 4, BASE_FORMAT_R32G32B32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
+    {3, 4, BASE_FORMAT_R32G32B32_SFLOAT, false, true, From<Float<float>>, To<Float<float>>},
 
-    { 4, 4, BASE_FORMAT_R32G32B32A32_SFLOAT, false, true, From<Float<float>>, To<Float<float>> },
+    {4, 4, BASE_FORMAT_R32G32B32A32_SFLOAT, false, true, From<Float<float>>, To<Float<float>>},
 };
 
-template<class It, class T, class Pred>
+template <class It, class T, class Pred>
 constexpr It LowerBound(It first, const It last, const T& val, Pred pred) noexcept
 {
     auto count = std::distance(first, last);
@@ -429,10 +429,13 @@ constexpr It LowerBound(It first, const It last, const T& val, Pred pred) noexce
 constexpr const FormatProperties& GetFormatSpec(Format format) noexcept
 {
 #if defined(__cpp_lib_constexpr_algorithms) && (__cpp_lib_constexpr_algorithms >= 201806L)
-    static_assert(std::is_sorted(std::begin(DATA_FORMATS), std::end(DATA_FORMATS),
+    static_assert(std::is_sorted(std::begin(DATA_FORMATS),
+        std::end(DATA_FORMATS),
         [](const FormatProperties& lhs, const FormatProperties& rhs) { return lhs.format < rhs.format; }));
 #endif
-    if (auto pos = LowerBound(std::begin(DATA_FORMATS), std::end(DATA_FORMATS), format,
+    if (auto pos = LowerBound(std::begin(DATA_FORMATS),
+            std::end(DATA_FORMATS),
+            format,
             [](const FormatProperties& element, Format value) { return element.format < value; });
         (pos != std::end(DATA_FORMATS)) && (pos->format == format)) {
         return *pos;
@@ -479,7 +482,12 @@ GpuBufferDesc GetVertexBufferDesc(size_t byteSize, IMeshBuilder::GpuBufferCreate
                                    ? additionalFlags.memoryFlags
                                    : MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    desc.byteSize = (uint32_t)byteSize;
+    if (byteSize > std::numeric_limits<uint32_t>::max()) {
+        PLUGIN_LOG_E("Buffer size exceeds uint32_t limit");
+        desc.byteSize = 0;
+    } else {
+        desc.byteSize = static_cast<uint32_t>(byteSize);
+    }
 
     return desc;
 }
@@ -516,8 +524,7 @@ void StageToBuffers(IRenderContext& renderContext, size_t vertexDataSize, size_t
     static constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
     auto staging = refcnt_ptr<IRenderDataStoreDefaultStaging>(
         renderContext.GetRenderDataStoreManager().GetRenderDataStore(RENDER_DATA_STORE_DEFAULT_STAGING.data()));
-    BufferCopy copyData { 0U, 0U,
-        static_cast<uint32_t>(vertexDataSize + indexDataSize + jointDataSize + targetDataSize) };
+    BufferCopy copyData{0U, 0U, static_cast<uint32_t>(vertexDataSize + indexDataSize + jointDataSize + targetDataSize)};
     if (copyData.size) {
         staging->CopyBufferToBuffer(stagingBuffer, handles.vertexBuffer, copyData);
     }
@@ -548,6 +555,14 @@ void FillSubmeshBuffers(array_view<MeshComponent::Submesh> submeshes, const Mesh
             submesh.bufferAccess[MeshComponent::Submesh::DM_VB_JOI].buffer = bufferEntities.vertexBuffer;
             submesh.bufferAccess[MeshComponent::Submesh::DM_VB_JOW].buffer = bufferEntities.vertexBuffer;
         }
+
+        // For interleaved layouts, bufferAccess is indexed by binding (not attribute). Ensure slots that have valid
+        // byteSize and buffer entity, as the above attribute assignments may not cover all bindings.
+        for (auto& acc : submesh.bufferAccess) {
+            if (acc.byteSize > 0 && acc.byteSize < MeshComponent::Submesh::MAX_BUFFER_ACCESS_BYTE_SIZE && !acc.buffer) {
+                acc.buffer = bufferEntities.vertexBuffer;
+            }
+        }
     }
 }
 
@@ -569,27 +584,27 @@ struct Conversion {
 };
 
 constexpr Conversion CONVERSIONS[] = {
-    { BASE_FORMAT_R8_UINT, BASE_FORMAT_R16_UINT, Convert<IntegerToInt<uint8_t, uint16_t>, 1U> },
-    { BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R16G16B16A16_SNORM, Convert<IntegerNorm<int8_t, int16_t>, RGB> },
-    { BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R16G16B16_SFLOAT, Convert<Norm<int8_t>, Float<uint16_t>, RGB> },
-    { BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int8_t>, Float<float>, RGB> },
-    { BASE_FORMAT_R8G8B8A8_SNORM, BASE_FORMAT_R16G16B16A16_SNORM, Convert<IntegerNorm<int8_t, int16_t>, RGBA> },
-    { BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16_SFLOAT, Convert<Norm<uint16_t>, Float<uint16_t>, RG> },
-    { BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16_SFLOAT, Convert<Int<uint16_t>, Float<uint16_t>, RG> },
-    { BASE_FORMAT_R16G16_SFLOAT, BASE_FORMAT_R32G32_SFLOAT, Convert<Float<uint16_t>, Float<float>, RG> },
-    { BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB> },
-    { BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Int<uint16_t>, Float<float>, RGB> },
-    { BASE_FORMAT_R16G16B16A16_UNORM, BASE_FORMAT_R8G8B8A8_UNORM, Convert<IntegerNorm<uint16_t, uint8_t>, RGBA> },
-    { BASE_FORMAT_R16G16B16A16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB> },
-    { BASE_FORMAT_R16G16B16A16_UINT, BASE_FORMAT_R8G8B8A8_UINT, Convert<IntegerToInt<uint16_t, uint8_t>, RGBA> },
-    { BASE_FORMAT_R16G16B16A16_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<uint16_t>, Norm<int16_t>, RGBA> },
-    { BASE_FORMAT_R32_UINT, BASE_FORMAT_R16_UINT, Convert<IntegerToInt<uint32_t, uint16_t>, 1U> },
-    { BASE_FORMAT_R32G32_SFLOAT, BASE_FORMAT_R16G16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RG> },
-    { BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R16G16B16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RGB> },
-    { BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<float>, Norm<int16_t>, RGB> },
-    { BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R8G8B8A8_UNORM, Convert<Float<float>, Norm<uint8_t>, RGBA> },
-    { BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<float>, Norm<int16_t>, RGBA> },
-    { BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R16G16B16A16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RGBA> },
+    {BASE_FORMAT_R8_UINT, BASE_FORMAT_R16_UINT, Convert<IntegerToInt<uint8_t, uint16_t>, 1U>},
+    {BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R16G16B16A16_SNORM, Convert<IntegerNorm<int8_t, int16_t>, RGB>},
+    {BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R16G16B16_SFLOAT, Convert<Norm<int8_t>, Float<uint16_t>, RGB>},
+    {BASE_FORMAT_R8G8B8_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int8_t>, Float<float>, RGB>},
+    {BASE_FORMAT_R8G8B8A8_SNORM, BASE_FORMAT_R16G16B16A16_SNORM, Convert<IntegerNorm<int8_t, int16_t>, RGBA>},
+    {BASE_FORMAT_R16G16_UNORM, BASE_FORMAT_R16G16_SFLOAT, Convert<Norm<uint16_t>, Float<uint16_t>, RG>},
+    {BASE_FORMAT_R16G16_UINT, BASE_FORMAT_R16G16_SFLOAT, Convert<Int<uint16_t>, Float<uint16_t>, RG>},
+    {BASE_FORMAT_R16G16_SFLOAT, BASE_FORMAT_R32G32_SFLOAT, Convert<Float<uint16_t>, Float<float>, RG>},
+    {BASE_FORMAT_R16G16B16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB>},
+    {BASE_FORMAT_R16G16B16_UINT, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Int<uint16_t>, Float<float>, RGB>},
+    {BASE_FORMAT_R16G16B16A16_UNORM, BASE_FORMAT_R8G8B8A8_UNORM, Convert<IntegerNorm<uint16_t, uint8_t>, RGBA>},
+    {BASE_FORMAT_R16G16B16A16_SNORM, BASE_FORMAT_R32G32B32_SFLOAT, Convert<Norm<int16_t>, Float<float>, RGB>},
+    {BASE_FORMAT_R16G16B16A16_UINT, BASE_FORMAT_R8G8B8A8_UINT, Convert<IntegerToInt<uint16_t, uint8_t>, RGBA>},
+    {BASE_FORMAT_R16G16B16A16_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<uint16_t>, Norm<int16_t>, RGBA>},
+    {BASE_FORMAT_R32_UINT, BASE_FORMAT_R16_UINT, Convert<IntegerToInt<uint32_t, uint16_t>, 1U>},
+    {BASE_FORMAT_R32G32_SFLOAT, BASE_FORMAT_R16G16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RG>},
+    {BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R16G16B16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RGB>},
+    {BASE_FORMAT_R32G32B32_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<float>, Norm<int16_t>, RGB>},
+    {BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R8G8B8A8_UNORM, Convert<Float<float>, Norm<uint8_t>, RGBA>},
+    {BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R16G16B16A16_SNORM, Convert<Float<float>, Norm<int16_t>, RGBA>},
+    {BASE_FORMAT_R32G32B32A32_SFLOAT, BASE_FORMAT_R16G16B16A16_SFLOAT, Convert<Float<float>, Float<uint16_t>, RGBA>},
 };
 
 void GenericConversion(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t count,
@@ -674,7 +689,8 @@ void Fill(OutputBuffer& dstData, const MeshBuilder::DataBuffer& srcData, size_t 
     } else {
         // must convert between formats
         // attempt to inline commonly used conversions
-        auto pos = std::find_if(std::begin(CONVERSIONS), std::end(CONVERSIONS),
+        auto pos = std::find_if(std::begin(CONVERSIONS),
+            std::end(CONVERSIONS),
             [src = srcData.format, dst = dstData.format](const Conversion& conversion) {
                 return (conversion.srcFormat == src) && (conversion.dstFormat == dst);
             });
@@ -709,9 +725,13 @@ constexpr uint32_t GetPrimitiveTopologyAdvanceCount(const PrimitiveTopology pt) 
     }
 }
 
-template<typename T>
-inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norPtr, T aa, T bb) noexcept
+template <typename T>
+inline void CalculateAndAddFaceNormal(
+    const Math::Vec3* posPtr, Math::Vec3* norPtr, uint32_t vertexCount, T aa, T bb) noexcept
 {
+    if (aa >= vertexCount || bb >= vertexCount) {
+        return;
+    }
     const auto& pos1 = posPtr[aa];
     const auto& pos2 = posPtr[bb];
     const auto faceNorm = Math::Normalize(pos2 - pos1);
@@ -719,9 +739,13 @@ inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norP
     norPtr[bb] += faceNorm;
 }
 
-template<typename T>
-inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norPtr, T aa, T bb, T cc) noexcept
+template <typename T>
+inline void CalculateAndAddFaceNormal(
+    const Math::Vec3* posPtr, Math::Vec3* norPtr, uint32_t vertexCount, T aa, T bb, T cc) noexcept
 {
+    if (aa >= vertexCount || bb >= vertexCount || cc >= vertexCount) {
+        return;
+    }
     const auto& pos1 = posPtr[aa];
     const auto& pos2 = posPtr[bb];
     const auto& pos3 = posPtr[cc];
@@ -731,9 +755,9 @@ inline void CalculateAndAddFaceNormal(const Math::Vec3* posPtr, Math::Vec3* norP
     norPtr[cc] += faceNorm;
 }
 
-template<typename T>
-void SmoothNormal(
-    const PrimitiveTopology pt, array_view<const T> indices, const Math::Vec3* posPtr, Math::Vec3* norPtr) noexcept
+template <typename T>
+void SmoothNormal(const PrimitiveTopology pt, array_view<const T> indices, const Math::Vec3* posPtr, Math::Vec3* norPtr,
+    uint32_t vertexCount) noexcept
 {
     const uint32_t ac = GetPrimitiveTopologyAdvanceCount(pt);
     // not processed for e.g. points with count of 1
@@ -748,7 +772,7 @@ void SmoothNormal(
         for (auto i = 0U; i < indices.size(); i += 2U) {
             const auto aa = indices[i];
             const auto bb = indices[i + 1];
-            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb);
+            CalculateAndAddFaceNormal(posPtr, norPtr, vertexCount, aa, bb);
         }
     } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) && ((indices.size() % 3U) == 0U)) {
 #if (CORE3D_VALIDATION_ENABLED == 1)
@@ -758,11 +782,11 @@ void SmoothNormal(
             const auto aa = indices[i];
             const auto bb = indices[i + 1U];
             const auto cc = indices[i + 2U];
-            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb, cc);
+            CalculateAndAddFaceNormal(posPtr, norPtr, vertexCount, aa, bb, cc);
         }
     } else if ((pt == CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP) && (indices.size() > 2U)) {
         // calculate normal for the first triangle.
-        CalculateAndAddFaceNormal(posPtr, norPtr, indices[0U], indices[1U], indices[2U]);
+        CalculateAndAddFaceNormal(posPtr, norPtr, vertexCount, indices[0U], indices[1U], indices[2U]);
 
         // each additional index forms a new triangle with the previous two indices.
         for (auto i = 2U; i < indices.size(); ++i) {
@@ -770,7 +794,7 @@ void SmoothNormal(
             const auto aa = (i % 2U) ? indices[i - 1U] : indices[i - 2U];
             const auto bb = (i % 2U) ? indices[i - 2U] : indices[i - 1U];
             const auto cc = indices[i];
-            CalculateAndAddFaceNormal(posPtr, norPtr, aa, bb, cc);
+            CalculateAndAddFaceNormal(posPtr, norPtr, vertexCount, aa, bb, cc);
         }
     }
 #if (CORE3D_VALIDATION_ENABLED == 1)
@@ -840,11 +864,11 @@ void GenerateDefaultNormals(vector<uint8_t>& generatedNormals, const IMeshBuilde
         if (indices.stride == sizeof(uint16_t)) {
             auto view = array_view(
                 reinterpret_cast<const uint16_t*>(indices.buffer.data()), indices.buffer.size() / indices.stride);
-            SmoothNormal(primitiveTopology, view, posPtr, norPtr);
+            SmoothNormal(primitiveTopology, view, posPtr, norPtr, vertexCount);
         } else if (indices.stride == sizeof(uint32_t)) {
             auto view = array_view(
                 reinterpret_cast<const uint32_t*>(indices.buffer.data()), indices.buffer.size() / indices.stride);
-            SmoothNormal(primitiveTopology, view, posPtr, norPtr);
+            SmoothNormal(primitiveTopology, view, posPtr, norPtr, vertexCount);
         }
         for (auto& nor : array_view(norPtr, vertexCount)) {
             nor = Math::Normalize(nor);
@@ -942,12 +966,15 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         submesh.morphTargets[trg].offset = targetOffset;
         const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
         auto target = startTarget;
+        const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
+        if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes()) {
+            break;
+        }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
-            // for each vertex in target check that position, normal and tangent deltas are non-zero.
             const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);
             auto pos = *reinterpret_cast<const Math::Vec3*>(
                 targetPositions.buffer.data() + targetPositions.stride * vertexIndex);
-            const auto zeroDelta = (pos == Math::Vec3 {});
+            const auto zeroDelta = (pos == Math::Vec3{});
             // store offset for each non-zero
             *index++ = zeroDelta ? UINT32_MAX : ((targetOffset - baseOffset) / sizeof(MorphInputData));
             if (zeroDelta) {
@@ -977,14 +1004,18 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         submesh.morphTargets[trg].offset = targetOffset;
         const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
         auto target = startTarget;
+        const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
+        if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
+            lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes()) {
+            break;
+        }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
-            // for each vertex in target check that position and normal deltas are non-zero.
             const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);
             auto pos = *reinterpret_cast<const Math::Vec3*>(
                 targetPositions.buffer.data() + targetPositions.stride * vertexIndex);
             auto nor =
                 *reinterpret_cast<const Math::Vec3*>(targetNormals.buffer.data() + targetNormals.stride * vertexIndex);
-            const auto zeroDelta = (pos == Math::Vec3 {} && nor == Math::Vec3 {});
+            const auto zeroDelta = (pos == Math::Vec3{} && nor == Math::Vec3{});
             // store offset for each non-zero
             *index++ = zeroDelta ? UINT32_MAX : ((targetOffset - baseOffset) / sizeof(MorphInputData));
             if (zeroDelta) {
@@ -994,8 +1025,8 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
 
             target->pos = Math::Vec4(pos, static_cast<float>(vertex));
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-            target->nortan.x = Math::PackHalf2X16({ nor.x, nor.y });
-            target->nortan.y = Math::PackHalf2X16({ nor.z, 0.f });
+            target->nortan.x = Math::PackHalf2X16({nor.x, nor.y});
+            target->nortan.y = Math::PackHalf2X16({nor.z, 0.f});
 #else
             target->nor = Math::Vec4(nor, 0.f);
 #endif
@@ -1021,8 +1052,13 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         submesh.morphTargets[trg].offset = targetOffset;
         const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
         auto target = startTarget;
+        const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
+        if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
+            lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes() ||
+            lastElementPos * targetTangents.stride > targetTangents.buffer.size_bytes()) {
+            break;
+        }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
-            // for each vertex in target check that position, normal and tangent deltas are non-zero.
             const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);
             auto pos = *reinterpret_cast<const Math::Vec3*>(
                 targetPositions.buffer.data() + targetPositions.stride * vertexIndex);
@@ -1030,7 +1066,7 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
                 *reinterpret_cast<const Math::Vec3*>(targetNormals.buffer.data() + targetNormals.stride * vertexIndex);
             auto tan = *reinterpret_cast<const Math::Vec3*>(
                 targetTangents.buffer.data() + targetTangents.stride * vertexIndex);
-            const auto zeroDelta = (pos == Math::Vec3 {} && nor == Math::Vec3 {} && tan == Math::Vec3 {});
+            const auto zeroDelta = (pos == Math::Vec3{} && nor == Math::Vec3{} && tan == Math::Vec3{});
             // store offset for each non-zero
             *index++ = zeroDelta ? UINT32_MAX : ((targetOffset - baseOffset) / sizeof(MorphInputData));
             if (zeroDelta) {
@@ -1040,10 +1076,10 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
             target->pos = Math::Vec4(pos, static_cast<float>(vertex));
 
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-            target->nortan.x = Math::PackHalf2X16({ nor.x, nor.y });
-            target->nortan.y = Math::PackHalf2X16({ nor.z, 0.f });
-            target->nortan.z = Math::PackHalf2X16({ tan.x, tan.y });
-            target->nortan.w = Math::PackHalf2X16({ tan.z, 0.f });
+            target->nortan.x = Math::PackHalf2X16({nor.x, nor.y});
+            target->nortan.y = Math::PackHalf2X16({nor.z, 0.f});
+            target->nortan.z = Math::PackHalf2X16({tan.x, tan.y});
+            target->nortan.w = Math::PackHalf2X16({tan.z, 0.f});
 #else
             target->nor = Math::Vec4(nor, 0.f);
             target->tan = Math::Vec4(tan, 0.f);
@@ -1056,7 +1092,7 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         submesh.morphTargets[trg].byteSize = byteSize;
     }
 }
-} // namespace
+}  // namespace
 
 MeshBuilder::MeshBuilder(IRenderContext& renderContext) : renderContext_(renderContext)
 {
@@ -1070,10 +1106,24 @@ MeshBuilder::MeshBuilder(IRenderContext& renderContext) : renderContext_(renderC
     }
 }
 
+MeshBuilder::~MeshBuilder()
+{
+    if (!vertexPtr_ && !stagingPtr_) {
+        return;
+    }
+    auto& gpuResourceManager = renderContext_.GetDevice().GetGpuResourceManager();
+    if (vertexPtr_) {
+        gpuResourceManager.UnmapBuffer(bufferHandles_.vertexBuffer);
+    }
+    if (stagingPtr_) {
+        gpuResourceManager.UnmapBuffer(stagingBuffer_);
+    }
+}
+
 // Public interface from IMeshBuilder
 void MeshBuilder::Initialize(const VertexInputDeclarationView& vertexInputDeclaration, size_t submeshCount)
 {
-    Initialize(Configuration { vertexInputDeclaration, submeshCount, 0U });
+    Initialize(Configuration{vertexInputDeclaration, submeshCount, 0U});
 }
 
 void MeshBuilder::Initialize(const IMeshBuilder::Configuration& config)
@@ -1111,11 +1161,16 @@ void MeshBuilder::Initialize(const IMeshBuilder::Configuration& config)
 
 void MeshBuilder::AddSubmesh(const Submesh& info)
 {
-    submeshInfos_.push_back(SubmeshExt { info, {}, {}, {} });
+    submeshInfos_.push_back(SubmeshExt{info, {}, {}, {}});
 }
 
 const MeshBuilder::Submesh& MeshBuilder::GetSubmesh(size_t index) const
 {
+    if (submeshInfos_.empty() || index >= submeshInfos_.size()) {
+        PLUGIN_ASSERT_MSG(false, "GetSubmesh: index out of range");
+        static const Submesh defaultSubmesh{};
+        return defaultSubmesh;
+    }
     return submeshInfos_[index].info;
 }
 
@@ -1126,14 +1181,14 @@ void MeshBuilder::Allocate()
     bufferSizes.jointBuffer = Align(bufferSizes.jointBuffer, BUFFER_ALIGN);
     bufferSizes.morphVertexData = Align(bufferSizes.morphVertexData, BUFFER_ALIGN);
 
-    indexCount_ = (uint32_t)bufferSizes.indexBuffer / sizeof(uint32_t);
+    indexCount_ = static_cast<uint32_t>(bufferSizes.indexBuffer / sizeof(uint32_t));
 
-    uint32_t vertexBufferSizeInBytes = 0;
+    size_t vertexBufferSizeInBytes = 0;
 
     // Set binding offsets.
     for (auto const& bindingDesc : vertexInputDeclaration_.bindingDescriptions) {
         for (auto& submesh : submeshInfos_) {
-            submesh.vertexBindingOffset[bindingDesc.binding] = vertexBufferSizeInBytes;
+            submesh.vertexBindingOffset[bindingDesc.binding] = static_cast<uint32_t>(vertexBufferSizeInBytes);
             vertexBufferSizeInBytes += submesh.vertexBindingByteSize[bindingDesc.binding];
         }
     }
@@ -1163,8 +1218,12 @@ void MeshBuilder::Allocate()
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
-        gpuBufferDesc.byteSize =
-            static_cast<uint32_t>(vertexDataSize_ + indexDataSize_ + jointDataSize_ + targetDataSize_);
+        const uint64_t totalStagingSize = vertexDataSize_ + indexDataSize_ + jointDataSize_ + targetDataSize_;
+        if (totalStagingSize > UINT32_MAX) {
+            PLUGIN_LOG_E("MeshBuilder: staging buffer size exceeds uint32_t limit");
+            return;
+        }
+        gpuBufferDesc.byteSize = static_cast<uint32_t>(totalStagingSize);
         if (gpuBufferDesc.byteSize) {
             stagingBuffer_ = gpuResourceManager.Create(gpuBufferDesc);
             stagingPtr_ = static_cast<uint8_t*>(gpuResourceManager.MapBufferMemory(stagingBuffer_));
@@ -1174,7 +1233,7 @@ void MeshBuilder::Allocate()
 
 MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
 {
-    BufferSizesInBytes bufferSizes {};
+    BufferSizesInBytes bufferSizes{};
 
     const size_t jointIndexSizeInBytes =
         GetVertexAttributeByteSize(MeshComponent::Submesh::DM_VB_JOI, vertexInputDeclaration_);
@@ -1186,13 +1245,24 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
         submesh.vertexBindingByteSize.resize(vertexInputDeclaration_.bindingDescriptions.size());
         submesh.vertexBindingOffset.resize(vertexInputDeclaration_.bindingDescriptions.size());
         for (auto const& bindingDesc : vertexInputDeclaration_.bindingDescriptions) {
-            submesh.vertexBindingByteSize[bindingDesc.binding] =
-                static_cast<uint32_t>(Align(bindingDesc.stride * submesh.info.vertexCount, BUFFER_ALIGN));
+            const size_t bindingSize =
+                Align(static_cast<size_t>(bindingDesc.stride) * submesh.info.vertexCount, BUFFER_ALIGN);
+            if (bindingSize > UINT32_MAX) {
+                PLUGIN_LOG_E("Vertex binding size exceeds uint32_t");
+                continue;
+            }
+            submesh.vertexBindingByteSize[bindingDesc.binding] = static_cast<uint32_t>(bindingSize);
         }
 
-        submesh.indexBufferOffset = (uint32_t)Align(bufferSizes.indexBuffer, BUFFER_ALIGN);
-        submesh.jointBufferOffset = (uint32_t)Align(bufferSizes.jointBuffer, BUFFER_ALIGN);
-        submesh.morphTargetBufferOffset = (uint32_t)Align(bufferSizes.morphVertexData, BUFFER_ALIGN);
+        const size_t alignedIndex = Align(bufferSizes.indexBuffer, BUFFER_ALIGN);
+        const size_t alignedJoint = Align(bufferSizes.jointBuffer, BUFFER_ALIGN);
+        const size_t alignedMorph = Align(bufferSizes.morphVertexData, BUFFER_ALIGN);
+        if (alignedIndex > UINT32_MAX || alignedJoint > UINT32_MAX || alignedMorph > UINT32_MAX) {
+            continue;
+        }
+        submesh.indexBufferOffset = static_cast<uint32_t>(alignedIndex);
+        submesh.jointBufferOffset = static_cast<uint32_t>(alignedJoint);
+        submesh.morphTargetBufferOffset = static_cast<uint32_t>(alignedMorph);
 
         if (submesh.info.indexType == CORE_INDEX_TYPE_UINT16) {
             bufferSizes.indexBuffer = submesh.indexBufferOffset + (submesh.info.indexCount * sizeof(uint16_t));
@@ -1209,14 +1279,19 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
         }
 
         if (submesh.info.morphTargetCount > 0) {
-            submesh.morphTargets.resize(submesh.info.morphTargetCount);
-            // vertexCount * uint32_t * morphTargetCount, index/indexOffset to sparse target data
-            // vertexCount * MorphInputData, base data
-            // vertexCount * MorphInputData * morphTargetCount, target data
-            const uint32_t indexSize = (uint32_t)Align(
-                submesh.info.vertexCount * submesh.info.morphTargetCount * sizeof(uint32_t), BUFFER_ALIGN);
-            const uint32_t targetSize = (uint32_t)Align(
-                submesh.info.vertexCount * sizeof(MorphInputData) * (submesh.info.morphTargetCount + 1u), BUFFER_ALIGN);
+            // Verify that morph size calculations do not overflow uint32_t (used for buffer offsets).
+            const uint32_t vc = submesh.info.vertexCount;
+            const uint32_t mc = submesh.info.morphTargetCount;
+            constexpr uint32_t u32max = std::numeric_limits<uint32_t>::max();
+            constexpr uint32_t indexElem = uint32_t(sizeof(uint32_t));
+            constexpr uint32_t targetElem = uint32_t(sizeof(MorphInputData));
+            if ((mc == u32max) || (vc > (u32max / indexElem / mc)) || (vc > (u32max / targetElem / (mc + 1u)))) {
+                submesh.info.morphTargetCount = 0;
+                continue;
+            }
+            submesh.morphTargets.resize(mc);
+            const size_t indexSize = Align(vc * mc * indexElem, BUFFER_ALIGN);
+            const size_t targetSize = Align(vc * targetElem * (mc + 1u), BUFFER_ALIGN);
             bufferSizes.morphVertexData = submesh.morphTargetBufferOffset + indexSize + targetSize;
         }
 
@@ -1251,8 +1326,10 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
             if (normals.buffer.empty() || generateTangents) {
                 auto offset = vertexData_.size();
                 vertexData_.resize(offset + sizeof(Math::Vec3) * submeshDesc.vertexCount);
-                OutputBuffer dst { BASE_FORMAT_R32G32B32_SFLOAT, sizeof(Math::Vec3),
-                    { vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount } };
+                OutputBuffer dst{BASE_FORMAT_R32G32B32_SFLOAT,
+                    sizeof(Math::Vec3),
+                    {vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount},
+                    {}};
                 Fill(dst, positions, submeshDesc.vertexCount);
                 submesh.positionOffset = static_cast<int32_t>(offset);
                 submesh.positionSize = sizeof(Math::Vec3) * submeshDesc.vertexCount;
@@ -1267,8 +1344,10 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
             if (generateTangents) {
                 auto offset = vertexData_.size();
                 vertexData_.resize(offset + sizeof(Math::Vec3) * submeshDesc.vertexCount);
-                OutputBuffer dst { BASE_FORMAT_R32G32B32_SFLOAT, sizeof(Math::Vec3),
-                    { vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount }, {} };
+                OutputBuffer dst{BASE_FORMAT_R32G32B32_SFLOAT,
+                    sizeof(Math::Vec3),
+                    {vertexData_.data() + offset, sizeof(Math::Vec3) * submeshDesc.vertexCount},
+                    {}};
                 Fill(dst, normals, submeshDesc.vertexCount);
                 submesh.normalOffset = static_cast<int32_t>(offset);
                 submesh.normalSize = sizeof(Math::Vec3) * submeshDesc.vertexCount;
@@ -1283,8 +1362,10 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
             if (generateTangents) {
                 auto offset = vertexData_.size();
                 vertexData_.resize(offset + sizeof(Math::Vec2) * submeshDesc.vertexCount);
-                OutputBuffer dst { BASE_FORMAT_R32G32_SFLOAT, sizeof(Math::Vec2),
-                    { vertexData_.data() + offset, sizeof(Math::Vec2) * submeshDesc.vertexCount }, {} };
+                OutputBuffer dst{BASE_FORMAT_R32G32_SFLOAT,
+                    sizeof(Math::Vec2),
+                    {vertexData_.data() + offset, sizeof(Math::Vec2) * submeshDesc.vertexCount},
+                    {}};
                 Fill(dst, texcoords0, submeshDesc.vertexCount);
                 submesh.uvOffset = static_cast<int32_t>(offset);
                 submesh.uvSize = sizeof(Math::Vec2) * submeshDesc.vertexCount;
@@ -1314,11 +1395,70 @@ void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions
         // Process vertex colors.
         if (!colors.buffer.empty() && submesh.info.colors) {
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_COL];
-            if (WriteData(colors, submesh, MeshComponent::Submesh::DM_VB_COL, acc.offset, acc.byteSize, buffer,
-                Math::Vec4(1.f))) {
+            if (WriteData(colors,
+                    submesh,
+                    MeshComponent::Submesh::DM_VB_COL,
+                    acc.offset,
+                    acc.byteSize,
+                    buffer,
+                    Math::Vec4(1.f))) {
                 submeshDesc.flags |= MeshComponent::Submesh::FlagBits::VERTEX_COLORS_BIT;
             }
         }
+
+        // When the vertex input declaration uses interleaved layouts, bufferAccess[location] stores per-attribute
+        // offsets (binding base + attribute offset). As renderer indexes vertexBuffers[] by binding, so
+        // bufferAccess[binding] must hold the base offset. Remap when any attribute's binding differs from its
+        // location.
+        RemapBufferAccessToBindings(submeshIndex);
+    }
+}
+
+void MeshBuilder::RemapBufferAccessToBindings(size_t submeshIndex)
+{
+    // Check if any attribute's binding differs from its location (interleaved case).
+    bool needsRemap = false;
+    for (const auto& attrDesc : vertexInputDeclaration_.attributeDescriptions) {
+        if (attrDesc.location < MeshComponent::Submesh::BUFFER_COUNT && attrDesc.binding != attrDesc.location) {
+            needsRemap = true;
+            break;
+        }
+    }
+    if (!needsRemap) {
+        return;
+    }
+
+    // Morph targets require per-attribute (location-indexed) bufferAccess because the morph compute shader outputs to
+    // separate POS/NOR/TAN SSBOs. Skip binding remap.
+    if (submeshInfos_[submeshIndex].info.morphTargetCount > 0) {
+        PLUGIN_LOG_ONCE_W("meshbuilder_interleaved_morph",
+            "MeshBuilder: interleaved vertex layout ignored for submesh %" PRIu64
+            " — incompatible with morph targets (morphTargetCount=%u)",
+            static_cast<uint64_t>(submeshIndex),
+            submeshInfos_[submeshIndex].info.morphTargetCount);
+        return;
+    }
+
+    const SubmeshExt& submesh = submeshInfos_[submeshIndex];
+    MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
+
+    // Clear all bufferAccess offsets/sizes — will repopulate per-binding.
+    for (auto& acc : submeshDesc.bufferAccess) {
+        acc.offset = 0;
+        acc.byteSize = 0;
+    }
+
+    // Populate bufferAccess[binding] with the binding's base offset and total byte size.
+    for (const auto& bindDesc : vertexInputDeclaration_.bindingDescriptions) {
+        if (bindDesc.binding >= MeshComponent::Submesh::BUFFER_COUNT) {
+            continue;
+        }
+        if (submesh.vertexBindingByteSize[bindDesc.binding] == 0) {
+            continue;
+        }
+        auto& acc = submeshDesc.bufferAccess[bindDesc.binding];
+        acc.offset = submesh.vertexBindingOffset[bindDesc.binding];
+        acc.byteSize = submesh.info.vertexCount * bindDesc.stride;
     }
 }
 
@@ -1338,9 +1478,9 @@ void MeshBuilder::SetIndexData(size_t submeshIndex, const DataBuffer& indices)
 
         OutputBuffer output = [](RENDER_NS::IndexType indexType) {
             if (indexType == IndexType::CORE_INDEX_TYPE_UINT16) {
-                return OutputBuffer { BASE_FORMAT_R16_UINT, sizeof(uint16_t), {}, {} };
+                return OutputBuffer{BASE_FORMAT_R16_UINT, sizeof(uint16_t), {}, {}};
             }
-            return OutputBuffer { BASE_FORMAT_R32_UINT, sizeof(uint32_t), {}, {} };
+            return OutputBuffer{BASE_FORMAT_R32_UINT, sizeof(uint32_t), {}, {}};
         }(submesh.info.indexType);
         const auto bufferSize = output.stride * indexCount;
         submeshDesc.indexBuffer.byteSize = bufferSize;
@@ -1353,10 +1493,10 @@ void MeshBuilder::SetIndexData(size_t submeshIndex, const DataBuffer& indices)
             submesh.indexOffset = static_cast<int32_t>(offset);
             submesh.indexSize = bufferSize;
             indexData_.resize(offset + bufferSize);
-            output.buffer = { indexData_.data() + offset, bufferSize };
+            output.buffer = {indexData_.data() + offset, bufferSize};
         } else {
             // Convert directly to the staging buffer.
-            output.buffer = { buffer + bufferOffset, bufferSize };
+            output.buffer = {buffer + bufferOffset, bufferSize};
         }
 
         Fill(output, indices, indexCount);
@@ -1385,10 +1525,13 @@ void MeshBuilder::SetJointData(
                 auto& jointIndexAcc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_JOI];
                 jointIndexAcc.offset = static_cast<uint32_t>(
                     indexDataSize_ + vertexDataSize_ + Align(submesh.jointBufferOffset, BUFFER_ALIGN));
-                jointIndexAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
+                jointIndexAcc.byteSize =
+                    static_cast<uint32_t>(static_cast<size_t>(bindingDesc->stride) * submesh.info.vertexCount);
 
-                OutputBuffer dstData { indexAttributeDesc->format, bindingDesc->stride,
-                    { buffer + jointIndexAcc.offset, jointIndexAcc.byteSize }, {} };
+                OutputBuffer dstData{indexAttributeDesc->format,
+                    bindingDesc->stride,
+                    {buffer + jointIndexAcc.offset, jointIndexAcc.byteSize},
+                    {}};
                 Fill(dstData, jointData, submesh.info.vertexCount);
             }
         }
@@ -1403,10 +1546,13 @@ void MeshBuilder::SetJointData(
                 auto& jointWeightAcc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_JOW];
                 // index aligned offset + index bytesize -> aligned to offset
                 jointWeightAcc.offset = (uint32_t)Align(jointIndexAcc.offset + jointIndexAcc.byteSize, BUFFER_ALIGN);
-                jointWeightAcc.byteSize = (uint32_t)bindingDesc->stride * submesh.info.vertexCount;
+                jointWeightAcc.byteSize =
+                    static_cast<uint32_t>(static_cast<size_t>(bindingDesc->stride) * submesh.info.vertexCount);
 
-                OutputBuffer dstData { weightAttributeDesc->format, bindingDesc->stride,
-                    { buffer + jointWeightAcc.offset, jointWeightAcc.byteSize }, {} };
+                OutputBuffer dstData{weightAttributeDesc->format,
+                    bindingDesc->stride,
+                    {buffer + jointWeightAcc.offset, jointWeightAcc.byteSize},
+                    {}};
                 Fill(dstData, weightData, submesh.info.vertexCount);
             }
         }
@@ -1421,86 +1567,101 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
 {
     // Submesh info for this submesh.
     SubmeshExt& submesh = submeshInfos_[submeshIndex];
-    if (submesh.info.morphTargetCount > 0) {
-        auto buffer = (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) ? vertexPtr_ : stagingPtr_;
-        if (buffer) {
-            // Vertex data | index data | joint data | *morph data*
-            const auto bufferOffset = static_cast<uint32_t>(vertexDataSize_ + indexDataSize_ + jointDataSize_);
-
-            // Offset to morph index data is previous offset + size (or zero for the first submesh)
-            uint32_t indexOffset = 0U;
-            if (submeshIndex) {
-                indexOffset += static_cast<uint32_t>(Align(submeshInfos_[submeshIndex - 1u].morphTargetBufferOffset +
-                                                               submeshInfos_[submeshIndex - 1u].morphTargetBufferSize,
-                    BUFFER_ALIGN));
-            }
-            submesh.morphTargetBufferOffset = indexOffset;
-
-            indexOffset += bufferOffset;
-
-            // 32bit index/offset for each vertex in each morph target
-            const uint32_t indexSize = sizeof(uint32_t) * submesh.info.vertexCount;
-            const uint32_t totalIndexSize =
-                static_cast<uint32_t>(Align(indexSize * submesh.info.morphTargetCount, BUFFER_ALIGN));
-
-            // Data struct (pos, nor, tan) for each vertex. total amount is target size for each target data and one
-            // base data
-            const uint32_t targetSize = submesh.info.vertexCount * sizeof(MorphInputData);
-
-            // Base data starts after index data
-            const uint32_t baseOffset = indexOffset + totalIndexSize;
-            {
-                OutputBuffer dstData { POSITION_FORMAT, sizeof(MorphInputData), { buffer + baseOffset, targetSize },
-                    {} };
-                Fill(dstData, basePositions, submesh.info.vertexCount);
-            }
-
-            if (!baseNormals.buffer.empty()) {
-#if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-                OutputBuffer dstData { NORMAL_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nortan), targetSize }, {} };
-#else
-                OutputBuffer dstData { NORMAL_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nor), targetSize }, {} };
-#endif
-                Fill(dstData, baseNormals, submesh.info.vertexCount);
-            }
-            if (!baseTangents.buffer.empty()) {
-#if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-                OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize }, {} };
-#else
-                OutputBuffer dstData { TANGENT_FORMAT, sizeof(MorphInputData),
-                    { buffer + baseOffset + offsetof(MorphInputData, tan), targetSize }, {} };
-#endif
-                Fill(dstData, baseTangents, submesh.info.vertexCount);
-            }
-            // Gather non-zero deltas.
-            if (targetNormals.buffer.empty() && targetTangents.buffer.empty()) {
-                GatherDeltasP(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions);
-            } else if (!targetNormals.buffer.empty() && targetTangents.buffer.empty()) {
-                GatherDeltasPN(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetNormals);
-            } else if (targetNormals.buffer.empty() && !targetTangents.buffer.empty()) {
-                GatherDeltasPT(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetTangents);
-            } else {
-                GatherDeltasPNT(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetNormals,
-                    targetTangents);
-            }
-
-            // Actual buffer size based on the offset and size of the last morph target.
-            submesh.morphTargetBufferSize = submesh.morphTargets[submesh.info.morphTargetCount - 1].offset -
-                                            indexOffset +
-                                            submesh.morphTargets[submesh.info.morphTargetCount - 1].byteSize;
-
-            // Clamp to actual size which might be less than what was asked for before gathering the non-zero deltas.
-            targetDataSize_ = submesh.morphTargetBufferOffset + submesh.morphTargetBufferSize;
-
-            MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
-            submeshDesc.morphTargetBuffer.offset = submesh.morphTargetBufferOffset + bufferOffset;
-            submeshDesc.morphTargetBuffer.byteSize = submesh.morphTargetBufferSize;
-            submeshDesc.morphTargetCount = static_cast<uint32_t>(submesh.morphTargets.size());
-        }
+    if (!submesh.info.morphTargetCount) {
+        return;
     }
+    auto buffer = (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) ? vertexPtr_ : stagingPtr_;
+    if (!buffer) {
+        return;
+    }
+    // Vertex data | index data | joint data | *morph data*
+    const auto bufferOffset = static_cast<uint32_t>(vertexDataSize_ + indexDataSize_ + jointDataSize_);
+
+    // Offset to morph index data is previous offset + size (or zero for the first submesh)
+    uint32_t indexOffset = 0U;
+    if (submeshIndex) {
+        indexOffset += static_cast<uint32_t>(Align(submeshInfos_[submeshIndex - 1u].morphTargetBufferOffset +
+                                                       submeshInfos_[submeshIndex - 1u].morphTargetBufferSize,
+            BUFFER_ALIGN));
+    }
+    submesh.morphTargetBufferOffset = indexOffset;
+
+    indexOffset += bufferOffset;
+
+    // 32bit index/offset for each vertex in each morph target
+    const uint32_t vc = submesh.info.vertexCount;
+    const uint32_t mc = submesh.info.morphTargetCount;
+    constexpr uint32_t u32max = std::numeric_limits<uint32_t>::max();
+    constexpr uint32_t indexElem = uint32_t(sizeof(uint32_t));
+    constexpr uint32_t targetElem = uint32_t(sizeof(MorphInputData));
+    if ((mc == u32max) || (vc > (u32max / indexElem / mc)) || (vc > (u32max / targetElem / (mc + 1u)))) {
+        return;
+    }
+    const uint32_t indexSize = indexElem * vc;
+    const uint32_t totalIndexSize = static_cast<uint32_t>(Align(indexSize * mc, BUFFER_ALIGN));
+
+    // Data struct (pos, nor, tan) for each vertex. total amount is target size for each target data and one
+    // base data
+    const uint32_t targetSize = vc * targetElem;
+
+    // Base data starts after index data
+    const uint32_t baseOffset = indexOffset + totalIndexSize;
+    {
+        OutputBuffer dstData{POSITION_FORMAT, sizeof(MorphInputData), {buffer + baseOffset, targetSize}, {}};
+        Fill(dstData, basePositions, submesh.info.vertexCount);
+    }
+
+    if (!baseNormals.buffer.empty()) {
+#if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
+        OutputBuffer dstData{NORMAL_FORMAT,
+            sizeof(MorphInputData),
+            {buffer + baseOffset + offsetof(MorphInputData, nortan), targetSize},
+            {}};
+#else
+        OutputBuffer dstData{NORMAL_FORMAT,
+            sizeof(MorphInputData),
+            {buffer + baseOffset + offsetof(MorphInputData, nor), targetSize},
+            {}};
+#endif
+        Fill(dstData, baseNormals, submesh.info.vertexCount);
+    }
+    if (!baseTangents.buffer.empty()) {
+#if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
+        OutputBuffer dstData{TANGENT_FORMAT,
+            sizeof(MorphInputData),
+            {buffer + baseOffset + offsetof(MorphInputData, nortan) + 8U, targetSize},
+            {}};
+#else
+        OutputBuffer dstData{TANGENT_FORMAT,
+            sizeof(MorphInputData),
+            {buffer + baseOffset + offsetof(MorphInputData, tan), targetSize},
+            {}};
+#endif
+        Fill(dstData, baseTangents, submesh.info.vertexCount);
+    }
+    // Gather non-zero deltas.
+    if (targetNormals.buffer.empty() && targetTangents.buffer.empty()) {
+        GatherDeltasP(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions);
+    } else if (!targetNormals.buffer.empty() && targetTangents.buffer.empty()) {
+        GatherDeltasPN(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetNormals);
+    } else if (targetNormals.buffer.empty() && !targetTangents.buffer.empty()) {
+        GatherDeltasPT(submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetTangents);
+    } else {
+        GatherDeltasPNT(
+            submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetNormals, targetTangents);
+    }
+
+    // Actual buffer size based on the offset and size of the last morph target.
+    submesh.morphTargetBufferSize = submesh.morphTargets[submesh.info.morphTargetCount - 1].offset - indexOffset +
+                                    submesh.morphTargets[submesh.info.morphTargetCount - 1].byteSize;
+
+    // Clamp to actual size which might be less than what was asked for before gathering the non-zero deltas.
+    targetDataSize_ = submesh.morphTargetBufferOffset + submesh.morphTargetBufferSize;
+
+    MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
+    submeshDesc.morphTargetBuffer.offset = submesh.morphTargetBufferOffset + bufferOffset;
+    submeshDesc.morphTargetBuffer.byteSize = submesh.morphTargetBufferSize;
+    submeshDesc.morphTargetCount = static_cast<uint32_t>(submesh.morphTargets.size());
 }
 
 void MeshBuilder::SetAABB(size_t submeshIndex, const Math::Vec3& min, const Math::Vec3& max)
@@ -1526,17 +1687,17 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
     constexpr float maxLimits = std::numeric_limits<float>::max();
     constexpr float minLimits = -std::numeric_limits<float>::max();
 
-    Math::Vec3 finalMinimum = { maxLimits, maxLimits, maxLimits };
-    Math::Vec3 finalMaximum = { minLimits, minLimits, minLimits };
+    Math::Vec3 finalMinimum = {maxLimits, maxLimits, maxLimits};
+    Math::Vec3 finalMaximum = {minLimits, minLimits, minLimits};
 
     auto srcPtr = positions.buffer.data();
     switch (posFormat.format) {
         case BASE_FORMAT_R16G16_UNORM: {
-            uint16_t minimum[RG] { std::numeric_limits<uint16_t>::max() };
-            uint16_t maximum[RG] { std::numeric_limits<uint16_t>::lowest() };
+            uint16_t minimum[RG]{std::numeric_limits<uint16_t>::max()};
+            uint16_t maximum[RG]{std::numeric_limits<uint16_t>::lowest()};
             while (count--) {
-                uint16_t value[RG] = { reinterpret_cast<const uint16_t*>(srcPtr)[R],
-                    reinterpret_cast<const uint16_t*>(srcPtr)[G] };
+                uint16_t value[RG] = {
+                    reinterpret_cast<const uint16_t*>(srcPtr)[R], reinterpret_cast<const uint16_t*>(srcPtr)[G]};
                 srcPtr += positions.stride;
                 GatherMin(minimum, value);
                 GatherMax(maximum, value);
@@ -1552,11 +1713,12 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
         } break;
 
         case BASE_FORMAT_R8G8B8_SNORM: {
-            int8_t minimum[RGB] { std::numeric_limits<int8_t>::max() };
-            int8_t maximum[RGB] { std::numeric_limits<int8_t>::lowest() };
+            int8_t minimum[RGB]{std::numeric_limits<int8_t>::max()};
+            int8_t maximum[RGB]{std::numeric_limits<int8_t>::lowest()};
             while (count--) {
-                int8_t value[RGB] = { reinterpret_cast<const int8_t*>(srcPtr)[R],
-                    reinterpret_cast<const int8_t*>(srcPtr)[G], reinterpret_cast<const int8_t*>(srcPtr)[B] };
+                int8_t value[RGB] = {reinterpret_cast<const int8_t*>(srcPtr)[R],
+                    reinterpret_cast<const int8_t*>(srcPtr)[G],
+                    reinterpret_cast<const int8_t*>(srcPtr)[B]};
                 srcPtr += positions.stride;
                 GatherMin(minimum, value);
                 GatherMax(maximum, value);
@@ -1571,11 +1733,12 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
 
         case BASE_FORMAT_R16G16B16_UINT:
         case BASE_FORMAT_R16G16B16A16_UINT: {
-            uint16_t minimum[RGB] { std::numeric_limits<uint16_t>::max() };
-            uint16_t maximum[RGB] { std::numeric_limits<uint16_t>::lowest() };
+            uint16_t minimum[RGB]{std::numeric_limits<uint16_t>::max()};
+            uint16_t maximum[RGB]{std::numeric_limits<uint16_t>::lowest()};
             while (count--) {
-                uint16_t value[RGB] = { reinterpret_cast<const uint16_t*>(srcPtr)[R],
-                    reinterpret_cast<const uint16_t*>(srcPtr)[G], reinterpret_cast<const uint16_t*>(srcPtr)[B] };
+                uint16_t value[RGB] = {reinterpret_cast<const uint16_t*>(srcPtr)[R],
+                    reinterpret_cast<const uint16_t*>(srcPtr)[G],
+                    reinterpret_cast<const uint16_t*>(srcPtr)[B]};
                 srcPtr += positions.stride;
                 GatherMin(minimum, value);
                 GatherMax(maximum, value);
@@ -1590,8 +1753,8 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
 
         case BASE_FORMAT_R32G32_SFLOAT: {
             while (count--) {
-                float value[RG] = { reinterpret_cast<const float*>(srcPtr)[R],
-                    reinterpret_cast<const float*>(srcPtr)[G] };
+                float value[RG] = {
+                    reinterpret_cast<const float*>(srcPtr)[R], reinterpret_cast<const float*>(srcPtr)[G]};
                 srcPtr += positions.stride;
                 GatherMin(finalMinimum.data, value);
                 GatherMax(finalMaximum.data, value);
@@ -1601,8 +1764,9 @@ void MeshBuilder::CalculateAABB(size_t submeshIndex, const DataBuffer& positions
         case BASE_FORMAT_R32G32B32_SFLOAT:
         case BASE_FORMAT_R32G32B32A32_SFLOAT: {
             while (count--) {
-                float value[RGB] = { reinterpret_cast<const float*>(srcPtr)[R],
-                    reinterpret_cast<const float*>(srcPtr)[G], reinterpret_cast<const float*>(srcPtr)[B] };
+                float value[RGB] = {reinterpret_cast<const float*>(srcPtr)[R],
+                    reinterpret_cast<const float*>(srcPtr)[G],
+                    reinterpret_cast<const float*>(srcPtr)[B]};
                 srcPtr += positions.stride;
                 GatherMin(finalMinimum.data, value);
                 GatherMax(finalMaximum.data, value);
@@ -1675,7 +1839,12 @@ void MeshBuilder::CreateGpuResources(const GpuBufferCreateInfo& createInfo)
         bufferHandles_ =
             CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, ci);
 
-        StageToBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, bufferHandles_,
+        StageToBuffers(renderContext_,
+            vertexDataSize_,
+            indexDataSize_,
+            jointDataSize_,
+            targetDataSize_,
+            bufferHandles_,
             stagingBuffer_);
     }
 }
@@ -1683,6 +1852,11 @@ void MeshBuilder::CreateGpuResources(const GpuBufferCreateInfo& createInfo)
 void MeshBuilder::CreateGpuResources()
 {
     CreateGpuResources({});
+}
+
+void MeshBuilder::FinalizeCpuData() const
+{
+    GenerateMissingAttributes();
 }
 
 Entity MeshBuilder::CreateMesh(IEcs& ecs) const
@@ -1737,34 +1911,6 @@ Entity MeshBuilder::CreateMesh(IEcs& ecs, Entity meshEntity) const
     return meshEntity;
 }
 
-const IInterface* MeshBuilder::GetInterface(const Uid& uid) const
-{
-    if ((uid == IMeshBuilder::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-IInterface* MeshBuilder::GetInterface(const Uid& uid)
-{
-    if ((uid == IMeshBuilder::UID) || (uid == IInterface::UID)) {
-        return this;
-    }
-    return nullptr;
-}
-
-void MeshBuilder::Ref()
-{
-    refCount_++;
-}
-
-void MeshBuilder::Unref()
-{
-    if (--refCount_ == 0) {
-        delete this;
-    }
-}
-
 void MeshBuilder::EnablePrimitiveRestart(size_t index)
 {
     if (index < submeshInfos_.size()) {
@@ -1796,7 +1942,12 @@ MeshBuilder::BufferEntities MeshBuilder::CreateBuffers(IEcs& ecs) const
         handles =
             CreateGpuBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, ci);
         if (!(flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER)) {
-            StageToBuffers(renderContext_, vertexDataSize_, indexDataSize_, jointDataSize_, targetDataSize_, handles,
+            StageToBuffers(renderContext_,
+                vertexDataSize_,
+                indexDataSize_,
+                jointDataSize_,
+                targetDataSize_,
+                handles,
                 stagingBuffer_);
         }
     }
@@ -1840,40 +1991,44 @@ void MeshBuilder::GenerateMissingAttributes() const
                             (submesh.hasNormals ? 0U : submesh.info.vertexCount * sizeof(Math::Vec3)) +
                             (submesh.hasUv0 ? 0U : submesh.info.vertexCount * sizeof(Math::Vec2)));
 
-        const DataBuffer indexData {
+        const DataBuffer indexData{
             (submesh.info.indexType == IndexType::CORE_INDEX_TYPE_UINT16) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R32_UINT,
             static_cast<uint32_t>(
                 (submesh.info.indexType == IndexType::CORE_INDEX_TYPE_UINT16) ? sizeof(uint16_t) : sizeof(uint32_t)),
-            { indexData_.data() + submesh.indexOffset, submesh.indexSize }
-        };
+            {indexData_.data() + submesh.indexOffset, submesh.indexSize}};
 
-        const DataBuffer positionData { BASE_FORMAT_R32G32B32_SFLOAT, sizeof(Math::Vec3),
-            { vertexData_.data() + submesh.positionOffset, submesh.positionSize } };
+        const DataBuffer positionData{BASE_FORMAT_R32G32B32_SFLOAT,
+            sizeof(Math::Vec3),
+            {vertexData_.data() + submesh.positionOffset, submesh.positionSize}};
 
-        DataBuffer normalData { BASE_FORMAT_R32G32B32_SFLOAT, sizeof(Math::Vec3),
-            { vertexData_.data() + submesh.normalOffset, submesh.normalSize } };
+        DataBuffer normalData{BASE_FORMAT_R32G32B32_SFLOAT,
+            sizeof(Math::Vec3),
+            {vertexData_.data() + submesh.normalOffset, submesh.normalSize}};
 
         if (!submesh.hasNormals) {
             const auto offset = vertexData_.size();
-            GenerateDefaultNormals(vertexData_, indexData, positionData, submesh.info.vertexCount,
+            GenerateDefaultNormals(vertexData_,
+                indexData,
+                positionData,
+                submesh.info.vertexCount,
                 submesh.info.inputAssembly.primitiveTopology);
             submesh.normalOffset = static_cast<int32_t>(offset);
             submesh.normalSize = static_cast<uint32_t>(vertexData_.size() - offset);
-            normalData.buffer = { vertexData_.data() + submesh.normalOffset, submesh.normalSize };
+            normalData.buffer = {vertexData_.data() + submesh.normalOffset, submesh.normalSize};
 
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_NOR];
             WriteData(normalData, submesh, MeshComponent::Submesh::DM_VB_NOR, acc.offset, acc.byteSize, buffer);
             submesh.hasNormals = true;
         }
 
-        DataBuffer uvData { BASE_FORMAT_R32G32_SFLOAT, sizeof(Math::Vec2),
-            { vertexData_.data() + submesh.uvOffset, submesh.uvSize } };
+        DataBuffer uvData{
+            BASE_FORMAT_R32G32_SFLOAT, sizeof(Math::Vec2), {vertexData_.data() + submesh.uvOffset, submesh.uvSize}};
         if (!submesh.hasUv0) {
             const auto offset = vertexData_.size();
             GenerateDefaultUvs(vertexData_, submesh.info.vertexCount);
             submesh.uvOffset = static_cast<int32_t>(offset);
             submesh.uvSize = static_cast<uint32_t>(vertexData_.size() - offset);
-            uvData.buffer = { vertexData_.data() + submesh.uvOffset, submesh.uvSize };
+            uvData.buffer = {vertexData_.data() + submesh.uvOffset, submesh.uvSize};
 
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_UV0];
             WriteData(uvData, submesh, MeshComponent::Submesh::DM_VB_UV0, acc.offset, acc.byteSize, buffer);
@@ -1883,8 +2038,14 @@ void MeshBuilder::GenerateMissingAttributes() const
         if (submesh.info.tangents && !submesh.hasTangents) {
             DataBuffer tangentData;
             vector<uint8_t> generatedTangents;
-            GenerateDefaultTangents(tangentData, generatedTangents, indexData, positionData, normalData, uvData,
-                submesh.info.inputAssembly.primitiveTopology, submesh.info.vertexCount);
+            GenerateDefaultTangents(tangentData,
+                generatedTangents,
+                indexData,
+                positionData,
+                normalData,
+                uvData,
+                submesh.info.inputAssembly.primitiveTopology,
+                submesh.info.vertexCount);
 
             auto& acc = submeshDesc.bufferAccess[MeshComponent::Submesh::DM_VB_TAN];
             if (WriteData(tangentData, submesh, MeshComponent::Submesh::DM_VB_TAN, acc.offset, acc.byteSize, buffer)) {
@@ -1981,8 +2142,8 @@ void MeshBuilder::GatherDeltasPN(SubmeshExt& submesh, uint8_t* dst, uint32_t bas
 
                 target->pos = Math::Vec4(pos, static_cast<float>(vertex));
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-                target->nortan.x = Math::PackHalf2X16({ nor.data[R], nor.data[G] });
-                target->nortan.y = Math::PackHalf2X16({ nor.data[B], 0.f });
+                target->nortan.x = Math::PackHalf2X16({nor.data[R], nor.data[G]});
+                target->nortan.y = Math::PackHalf2X16({nor.data[B], 0.f});
 #else
                 target->nor = Math::Vec4(nor.data[R], nor.data[G], nor.data[B], 0.f);
 #endif
@@ -2052,10 +2213,10 @@ void MeshBuilder::GatherDeltasPNT(SubmeshExt& submesh, uint8_t* dst, uint32_t ba
 
                 target->pos = Math::Vec4(pos, static_cast<float>(vertex));
 #if defined(CORE_MORPH_USE_PACKED_NOR_TAN)
-                target->nortan.x = Math::PackHalf2X16({ nor.data[R], nor.data[G] });
-                target->nortan.y = Math::PackHalf2X16({ nor.data[B], 0.f });
-                target->nortan.z = Math::PackHalf2X16({ tan.data[R], tan.data[G] });
-                target->nortan.w = Math::PackHalf2X16({ tan.data[B], 0.f });
+                target->nortan.x = Math::PackHalf2X16({nor.data[R], nor.data[G]});
+                target->nortan.y = Math::PackHalf2X16({nor.data[B], 0.f});
+                target->nortan.z = Math::PackHalf2X16({tan.data[R], tan.data[G]});
+                target->nortan.w = Math::PackHalf2X16({tan.data[B], 0.f});
 #else
                 target->nor = Math::Vec4(nor.data[R], nor.data[G], nor.data[B], 0.f);
                 target->tan = Math::Vec4(tan.data[R], tan.data[G], tan.data[B], 0.f);
@@ -2135,7 +2296,7 @@ void MeshBuilder::CalculateJointBounds(
         constexpr float floatMin = std::numeric_limits<float>::lowest();
         constexpr float floatMax = std::numeric_limits<float>::max();
 
-        constexpr const Bounds minMax = { { floatMax, floatMax, floatMax }, { floatMin, floatMin, floatMin } };
+        constexpr const Bounds minMax = {{floatMax, floatMax, floatMax}, {floatMin, floatMin, floatMin}};
         jointBoundsData_.resize(newSize, minMax);
     }
 
@@ -2172,7 +2333,7 @@ void MeshBuilder::CalculateJointBounds(
 bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh, uint32_t attributeLocation,
     uint32_t& byteOffset, uint32_t& byteSize, uint8_t* dst) const
 {
-    return WriteData(srcData, submesh, attributeLocation, byteOffset, byteSize, dst, Math::Vec4 {});
+    return WriteData(srcData, submesh, attributeLocation, byteOffset, byteSize, dst, Math::Vec4{});
 }
 
 bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh, uint32_t attributeLocation,
@@ -2186,9 +2347,13 @@ bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh
             bindingDesc) {
             // this offset and size should be aligned
             byteOffset = submesh.vertexBindingOffset[bindingDesc->binding] + attributeDesc->offset;
-            byteSize = submesh.info.vertexCount * bindingDesc->stride;
-            OutputBuffer dstData { attributeDesc->format, bindingDesc->stride, { dst + byteOffset, byteSize },
-                defaultValue };
+            const uint64_t byteSizeWide = static_cast<uint64_t>(submesh.info.vertexCount) * bindingDesc->stride;
+            if (byteSizeWide > UINT32_MAX) {
+                return false;
+            }
+            byteSize = static_cast<uint32_t>(byteSizeWide);
+            OutputBuffer dstData{
+                attributeDesc->format, bindingDesc->stride, {dst + byteOffset, byteSize}, defaultValue};
             Fill(dstData, srcData, submesh.info.vertexCount);
             return true;
         }

@@ -17,10 +17,15 @@
 // clang-format off
 #include <core/property_tools/core_metadata.inl>
 // clang-format on
+#include <scene/api/resource.h>
 #include <scene/ext/intf_ecs_object_access.h>
+#include <scene/interface/intf_create_mesh.h>
+#include <scene/interface/intf_in_use.h>
 #include <scene/interface/intf_material.h>
+#include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_shader.h>
 #include <scene/interface/intf_texture.h>
+#include <scene/interface/resource/types.h>
 
 #include <3d/ecs/components/material_component.h>
 #include <3d/ecs/components/render_handle_component.h>
@@ -36,7 +41,9 @@
 #include <core/property/property_handle_util.h>
 
 #include <meta/api/event_handler.h>
+#include <meta/api/resource/resource_template_access.h>
 #include <meta/interface/intf_named.h>
+#include <meta/interface/resource/intf_resource.h>
 
 #include "scene/scene_test.h"
 
@@ -52,7 +59,7 @@ public:
     {
         auto ret = BASE_NS::vector<MaterialComponent::TextureInfo>();
         for (int i = 0; i < MaterialComponent::TextureIndex::TEXTURE_COUNT; ++i) {
-            auto texture = MaterialComponent::TextureInfo {};
+            auto texture = MaterialComponent::TextureInfo{};
             texture.factor.data[0] = MAGIC_VALUE + i;
             ret.emplace_back(texture);
         }
@@ -91,7 +98,7 @@ public:
         }
         return false;
     }
-    const float MAGIC_VALUE { 1.2345f };
+    const float MAGIC_VALUE{1.2345f};
 };
 
 /**
@@ -107,7 +114,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, DynamicProperties, testing::ext::TestSi
     auto material = CreateMaterial();
     auto metadata = interface_cast<META_NS::IMetadata>(material);
     ASSERT_TRUE(metadata);
-    for (auto&& propName : { "MaterialShader", "DepthShader" }) {
+    for (auto&& propName : {"MaterialShader", "DepthShader"}) {
         auto prop = metadata->GetProperty<IShader::Ptr>(propName);
         ASSERT_TRUE(prop);
         auto shader = prop->GetValue();
@@ -202,7 +209,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, ShaderConverterToSourceType, testing::e
         renderRes->GetRenderHandle().GetHandle(), rmanager->GetRenderHandleReference(nativeShader.shader).GetHandle());
     EXPECT_TRUE(graphicsState->GetGraphicsState());
 
-    manager->Create(entity); // Replace the existing component with an empty new one.
+    manager->Create(entity);  // Replace the existing component with an empty new one.
     scene->GetInternalScene()->Update();
     shader = material->MaterialShader()->GetValue();
     EXPECT_TRUE(shader);
@@ -213,7 +220,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, ShaderConverterToSourceType, testing::e
  * @tc.desc: Tests for Get Value Shader Changed. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST_F(API_ScenePluginMaterialTest, DISABLED_GetValueShaderChanged, testing::ext::TestSize.Level1)
+UNIT_TEST_F(API_ScenePluginMaterialTest, GetValueShaderChanged, testing::ext::TestSize.Level1)
 {
     CreateEmptyScene();
 
@@ -299,8 +306,17 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, ShaderChanged, testing::ext::TestSize.L
     EXPECT_FALSE(CORE_NS::EntityUtil::IsValid(nativeComponent->materialShader.graphicsState));
 }
 
-const char* const TEXTURE_NAMES[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE", "AO", "CLEARCOAT",
-    "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
+const char* const TEXTURE_NAMES[] = {"BASE_COLOR",
+    "NORMAL",
+    "MATERIAL",
+    "EMISSIVE",
+    "AO",
+    "CLEARCOAT",
+    "CLEARCOAT_ROUGHNESS",
+    "CLEARCOAT_NORMAL",
+    "SHEEN",
+    "TRANSMISSION",
+    "SPECULAR"};
 
 /**
  * @tc.name: ConstructTextures
@@ -460,7 +476,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, RenderSort, testing::ext::TestSize.Leve
     CreateEmptyScene();
     auto material = CreateMaterial();
     ASSERT_TRUE(material);
-    material->RenderSort()->SetValue({ 1, 2 });
+    material->RenderSort()->SetValue({1, 2});
     UpdateScene();
     auto res = material->RenderSort()->GetValue();
     EXPECT_EQ(res.renderSortLayer, 1);
@@ -540,7 +556,9 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, CustomProperties, testing::ext::TestSiz
         ASSERT_TRUE(meta);
         EXPECT_EQ(meta->GetProperties().size(), 0);
     }
-    material->MaterialShader()->SetValue(man->LoadShader("test_assets://shaders/test.shader").GetResult());
+    auto sh = man->LoadShader("test_assets://shaders/test.shader").GetResult();
+    ASSERT_TRUE(sh);
+    material->MaterialShader()->SetValue(sh);
     UpdateScene();
     WaitForUserQueue();
     {
@@ -549,10 +567,10 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, CustomProperties, testing::ext::TestSiz
         EXPECT_EQ(meta->GetProperties().size(), 4);
         auto p1 = meta->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4 { 0.1, 0.2, 0.3, 0.4 }));
+        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4{0.1, 0.2, 0.3, 0.4}));
         auto p2 = meta->GetProperty<BASE_NS::Math::UVec4>("uv4_");
         ASSERT_TRUE(p2);
-        EXPECT_EQ(p2->GetValue(), (BASE_NS::Math::UVec4 { 3, 4, 5, 6 }));
+        EXPECT_EQ(p2->GetValue(), (BASE_NS::Math::UVec4{3, 4, 5, 6}));
         auto p3 = meta->GetProperty<float>("f_");
         ASSERT_TRUE(p3);
         EXPECT_EQ(p3->GetValue(), 1.0);
@@ -568,9 +586,9 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, CustomProperties, testing::ext::TestSiz
         EXPECT_EQ(meta->GetProperties().size(), 1);
         auto p1 = meta->GetProperty<BASE_NS::Math::Vec4>("AlbedoFactor");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4 { 1, 1, 0, 1 }));
+        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4{1, 1, 0, 1}));
 
-        p1->SetValue(BASE_NS::Math::Vec4 { 2, 2, 2, 2 });
+        p1->SetValue(BASE_NS::Math::Vec4{2, 2, 2, 2});
     }
     UpdateScene();
     WaitForUserQueue();
@@ -579,7 +597,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, CustomProperties, testing::ext::TestSiz
         EXPECT_EQ(meta->GetProperties().size(), 1);
         auto p1 = meta->GetProperty<BASE_NS::Math::Vec4>("AlbedoFactor");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4 { 2, 2, 2, 2 }));
+        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4{2, 2, 2, 2}));
     }
     {
         auto ecsObject = interface_cast<IEcsObjectAccess>(material)->GetEcsObject();
@@ -590,7 +608,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, CustomProperties, testing::ext::TestSiz
         ASSERT_TRUE(nativeComponent->customProperties);
 
         EXPECT_EQ(CORE_NS::GetPropertyValue<BASE_NS::Math::Vec4>(*nativeComponent->customProperties, "AlbedoFactor"),
-            (BASE_NS::Math::Vec4 { 2, 2, 2, 2 }));
+            (BASE_NS::Math::Vec4{2, 2, 2, 2}));
     }
 }
 
@@ -610,7 +628,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, SetCustomProperties, testing::ext::Test
     ASSERT_TRUE(meta);
     EXPECT_EQ(meta->GetProperties().size(), 0);
 
-    auto p1 = meta->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec4>("v4_", { 1.0, 1.0, 1.0, 1.0 }));
+    auto p1 = meta->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec4>("v4_", {1.0, 1.0, 1.0, 1.0}));
     UpdateScene();
     WaitForUserQueue();
 
@@ -622,7 +640,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, SetCustomProperties, testing::ext::Test
         ASSERT_TRUE(meta);
         auto p1 = meta->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4 { 1.0, 1.0, 1.0, 1.0 }));
+        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4{1.0, 1.0, 1.0, 1.0}));
     }
     material->MaterialShader()->SetValue(man->LoadShader("test_assets://shaders/test.shader").GetResult());
     UpdateScene();
@@ -632,7 +650,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, SetCustomProperties, testing::ext::Test
         ASSERT_TRUE(meta);
         auto p1 = meta->GetProperty<BASE_NS::Math::Vec4>("v4_");
         ASSERT_TRUE(p1);
-        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4 { 1.0, 1.0, 1.0, 1.0 }));
+        EXPECT_EQ(p1->GetValue(), (BASE_NS::Math::Vec4{1.0, 1.0, 1.0, 1.0}));
     }
 }
 
@@ -697,7 +715,7 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, DeadlockingMaterialSetValue, testing::e
 
     for (size_t i = 0; i != 1000; ++i) {
         scene->GetInternalScene()->RunDirectlyOrInTask([&] {
-            META_NS::PropertyLock l { prop };
+            META_NS::PropertyLock l{prop};
             prop->NotifyChange();
         });
         if (i % 2) {
@@ -874,5 +892,327 @@ UNIT_TEST_F(API_ScenePluginMaterialTest, MaterialConversion, testing::ext::TestS
     }
 }
 
-} // namespace UTest
+/**
+ * @tc.name: MaterialActiveSlots
+ * @tc.desc: Test texture slot usage info propagation from .shader file.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, MaterialActiveSlots, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    const auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+
+    auto tex = material->Textures()->GetValue();
+
+    auto checkTextures = [&](BASE_NS::vector<uint32_t> used = {}) {
+        for (auto i = 0; i < tex.size(); i++) {
+            auto use = interface_cast<IInUse>(tex[i]);
+            ASSERT_TRUE(use);
+            EXPECT_EQ(use->IsInUse(),
+                used.empty() ||
+                    std::find_if(used.begin(), used.end(), [&](const auto& idx) { return idx == i; }) != used.end())
+                << "Index: " << i;
+        }
+    };
+
+    EXPECT_EQ(tex.size(), CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT);
+    // Default shader has all slots
+    checkTextures();
+    auto man = scene->CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager).GetResult();
+    ASSERT_TRUE(man);
+    auto custom = man->LoadShader("test_assets://shaders/Custom.shader").GetResult();
+    ASSERT_TRUE(custom);
+    SetValue(material->MaterialShader(), custom);
+    UpdateScene();
+    // Custom.shader only defines texture slot 0
+    checkTextures({0u});
+    EXPECT_TRUE(Material(material).GetMaterialPropertyAt(0).IsInUse());
+    EXPECT_FALSE(Material(material).GetMaterialPropertyAt(1).IsInUse());
+    auto test = man->LoadShader("test_assets://shaders/test.shader").GetResult();
+    ASSERT_TRUE(test);
+    SetValue(material->MaterialShader(), test);
+    UpdateScene();
+    // test.shader defines all texture slots
+    checkTextures();
+    // Switch back to Custom.shader
+    SetValue(material->MaterialShader(), custom);
+    UpdateScene();
+    checkTextures({0u});
+    // Reset to default shader with all slots
+    ResetValue(material->MaterialShader());
+    checkTextures();
+}
+
+/**
+ * @tc.name: OcclusionMaterialProperties
+ * @tc.desc: Tests OcclusionMaterial property defaults and read-only behavior.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, OcclusionMaterialProperties, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto material = CreateMaterial(ClassId::OcclusionMaterial);
+    ASSERT_TRUE(material);
+
+    // Type should default to OCCLUSION
+    EXPECT_EQ(material->Type()->GetValue(), MaterialType::OCCLUSION);
+
+    // AlphaCutoff property is accessible
+    auto alphaCutoff = material->AlphaCutoff()->GetValue();
+    (void)alphaCutoff;
+
+    // MaterialShader and DepthShader default to null
+    EXPECT_FALSE(material->MaterialShader()->GetValue());
+    EXPECT_FALSE(material->DepthShader()->GetValue());
+
+    // RenderSort property is accessible
+    auto rs = material->RenderSort()->GetValue();
+    (void)rs;
+
+    // LightingFlags property is accessible
+    auto flags = material->LightingFlags()->GetValue();
+    (void)flags;
+
+    // GetCustomProperties returns empty
+    auto gotCustomProps = material->GetCustomProperties();
+    EXPECT_FALSE(gotCustomProps);
+
+    // GetCustomProperty returns empty for any name
+    auto gotProp = material->GetCustomProperty("nonexistent");
+    EXPECT_FALSE(gotProp);
+}
+
+/**
+ * @tc.name: TextureProperties
+ * @tc.desc: Test texture transform properties (Translation, Rotation, Scale) and Image access.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, TextureProperties, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+
+    auto textures = material->Textures()->GetValue();
+    ASSERT_GT(textures.size(), 0);
+
+    auto tex = textures[0];
+    ASSERT_TRUE(tex);
+
+    // Read default values for transform properties
+    auto defaultTranslation = tex->Translation()->GetValue();
+    auto defaultRotation = tex->Rotation()->GetValue();
+    auto defaultScale = tex->Scale()->GetValue();
+    (void)defaultTranslation;
+    (void)defaultRotation;
+    (void)defaultScale;
+
+    // Set non-default transform values
+    tex->Translation()->SetValue({0.5f, 0.25f});
+    tex->Rotation()->SetValue(1.57f);
+    tex->Scale()->SetValue({2.0f, 3.0f});
+    UpdateScene();
+
+    // Verify round-trip
+    EXPECT_EQ(tex->Translation()->GetValue(), (BASE_NS::Math::Vec2{0.5f, 0.25f}));
+    EXPECT_NEAR(tex->Rotation()->GetValue(), 1.57f, 0.001f);
+    EXPECT_EQ(tex->Scale()->GetValue(), (BASE_NS::Math::Vec2{2.0f, 3.0f}));
+
+    // Exercise Image property access
+    auto image = tex->Image()->GetValue();
+    (void)image;
+
+    // Set an image
+    auto bitmap = CreateTestBitmap();
+    ASSERT_TRUE(bitmap);
+    tex->Image()->SetValue(bitmap);
+    UpdateScene();
+    auto readImage = tex->Image()->GetValue();
+    EXPECT_TRUE(readImage);
+}
+
+/**
+ * @tc.name: SamplerProperties
+ * @tc.desc: Test sampler property access and modification on texture.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, SamplerProperties, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+
+    auto textures = material->Textures()->GetValue();
+    ASSERT_GT(textures.size(), 0);
+
+    auto sampler = textures[0]->Sampler()->GetValue();
+    ASSERT_TRUE(sampler);
+
+    // Read default sampler properties
+    auto magFilter = sampler->MagFilter()->GetValue();
+    auto minFilter = sampler->MinFilter()->GetValue();
+    auto mipMapMode = sampler->MipMapMode()->GetValue();
+    auto addressU = sampler->AddressModeU()->GetValue();
+    auto addressV = sampler->AddressModeV()->GetValue();
+    auto addressW = sampler->AddressModeW()->GetValue();
+    (void)magFilter;
+    (void)minFilter;
+    (void)mipMapMode;
+    (void)addressU;
+    (void)addressV;
+    (void)addressW;
+
+    // Set multiple sampler properties to non-default values
+    sampler->MagFilter()->SetValue(SamplerFilter::NEAREST);
+    sampler->AddressModeU()->SetValue(SamplerAddressMode::CLAMP_TO_EDGE);
+    sampler->AddressModeV()->SetValue(SamplerAddressMode::MIRRORED_REPEAT);
+    UpdateScene();
+
+    // Verify round-trip
+    EXPECT_EQ(sampler->MagFilter()->GetValue(), SamplerFilter::NEAREST);
+    EXPECT_EQ(sampler->AddressModeU()->GetValue(), SamplerAddressMode::CLAMP_TO_EDGE);
+    EXPECT_EQ(sampler->AddressModeV()->GetValue(), SamplerAddressMode::MIRRORED_REPEAT);
+}
+
+/**
+ * @tc.name: SamplerSetSameOverrideNoOp
+ * @tc.desc: Test that setting the same material override twice is a no-op.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, SamplerSetSameOverrideNoOp, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://AnimatedCube/AnimatedCube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto n = scene->FindNode<IMesh>("///AnimatedCube").GetResult();
+    ASSERT_TRUE(n);
+
+    // Access SubMeshes on the MeshNode to force initialization
+    auto subs = n->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto meshAcc = interface_cast<IMeshAccess>(n);
+    ASSERT_TRUE(meshAcc);
+    auto innerMesh = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(innerMesh);
+
+    auto overrideMat = CreateMaterial();
+    overrideMat->AlphaCutoff()->SetValue(5.5f);
+
+    auto overrideIf = interface_cast<IMaterialOverride>(innerMesh);
+    ASSERT_TRUE(overrideIf);
+
+    // Set override first time
+    overrideIf->SetMaterialOverride(overrideMat);
+    UpdateScene();
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), overrideMat);
+
+    // Set same override again (should be no-op via early return in submesh)
+    overrideIf->SetMaterialOverride(overrideMat);
+    UpdateScene();
+    EXPECT_EQ(overrideIf->GetMaterialOverride(), overrideMat);
+}
+
+/**
+ * @tc.name: OcclusionMaterialShadowCaster
+ * @tc.desc: Test that OcclusionMaterial clears SHADOW_CASTER_BIT in ECS materialLightingFlags.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, OcclusionMaterialShadowCaster, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    auto material = CreateMaterial(ClassId::OcclusionMaterial);
+    ASSERT_TRUE(material);
+
+    UpdateScene();
+    auto entity = GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(material));
+    ASSERT_TRUE(CORE_NS::EntityUtil::IsValid(entity));
+
+    auto internal = scene->GetInternalScene();
+    auto& ecs = *internal->GetEcsContext().GetNativeEcs();
+    auto mcm = CORE_NS::GetManager<CORE3D_NS::IMaterialComponentManager>(ecs);
+    ASSERT_TRUE(mcm);
+    auto rh = mcm->Read(entity);
+    ASSERT_TRUE(rh);
+
+    // Verify SHADOW_CASTER_BIT is cleared
+    EXPECT_EQ(rh->materialLightingFlags & CORE3D_NS::MaterialComponent::LightingFlagBits::SHADOW_CASTER_BIT, 0u);
+    // Verify other default flags are still set
+    EXPECT_NE(rh->materialLightingFlags & CORE3D_NS::MaterialComponent::LightingFlagBits::SHADOW_RECEIVER_BIT, 0u);
+    EXPECT_NE(
+        rh->materialLightingFlags & CORE3D_NS::MaterialComponent::LightingFlagBits::PUNCTUAL_LIGHT_RECEIVER_BIT, 0u);
+}
+
+/**
+ * @tc.name: OcclusionMaterialTemplateSuccess
+ * @tc.desc: Test SetValuesFromTemplate success path with non-matching template type.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, OcclusionMaterialTemplateSuccess, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+
+    // Create OcclusionMaterialTemplateAccess
+    auto access =
+        META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::OcclusionMaterialTemplateAccess);
+    ASSERT_TRUE(access);
+
+    // Create a regular Material template (type = MaterialResourceTemplate, != OcclusionMaterialResourceTemplate)
+    auto matAccess =
+        META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::MaterialTemplateAccess);
+    ASSERT_TRUE(matAccess);
+    auto templ = matAccess->CreateEmptyTemplate();
+    ASSERT_TRUE(templ);
+
+    // Create an OcclusionMaterial resource
+    auto material = scene->CreateObject<IMaterial>(ClassId::OcclusionMaterial).GetResult();
+    ASSERT_TRUE(material);
+    auto materialRes = interface_pointer_cast<CORE_NS::IResource>(material);
+    ASSERT_TRUE(materialRes);
+
+    // Set a resource ID on the template so we can verify it gets applied
+    if (auto r = interface_cast<CORE_NS::ISetResourceId>(templ)) {
+        r->SetResourceId(CORE_NS::ResourceIdContext{"app://test_occlusion_template.resource"});
+    }
+
+    // SetValuesFromTemplate should succeed (template type != OcclusionMaterialResourceTemplate)
+    EXPECT_TRUE(access->SetValuesFromTemplate(templ, materialRes));
+
+    // Verify template ID was set on the resource
+    auto derived = interface_cast<META_NS::IDerivedFromTemplate>(material);
+    ASSERT_TRUE(derived);
+    EXPECT_EQ(derived->GetTemplateId(), CORE_NS::ResourceId{"app://test_occlusion_template.resource"});
+}
+
+/**
+ * @tc.name: OcclusionMaterialTemplateFailure
+ * @tc.desc: Test SetValuesFromTemplate failure path with matching template type.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMaterialTest, OcclusionMaterialTemplateFailure, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+
+    // Create OcclusionMaterialTemplateAccess
+    auto access =
+        META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::OcclusionMaterialTemplateAccess);
+    ASSERT_TRUE(access);
+
+    // Create an OcclusionMaterial template (type = OcclusionMaterialResourceTemplate, matches templateType_)
+    auto templ = access->CreateEmptyTemplate();
+    ASSERT_TRUE(templ);
+
+    // Create an OcclusionMaterial resource
+    auto material = scene->CreateObject<IMaterial>(ClassId::OcclusionMaterial).GetResult();
+    ASSERT_TRUE(material);
+    auto materialRes = interface_pointer_cast<CORE_NS::IResource>(material);
+    ASSERT_TRUE(materialRes);
+
+    // SetValuesFromTemplate should fail (template type == OcclusionMaterialResourceTemplate)
+    EXPECT_FALSE(access->SetValuesFromTemplate(templ, materialRes));
+}
+
+}  // namespace UTest
 SCENE_END_NAMESPACE()

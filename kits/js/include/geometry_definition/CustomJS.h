@@ -47,20 +47,20 @@ private:
     SCENE_NS::PrimitiveTopology GetTopology() const;
 
     bool SetTopology(NapiApi::Object& jsDefinition);
-    PrimitiveTopology topology_ { PrimitiveTopology::TRIANGLE_LIST };
+    PrimitiveTopology topology_{PrimitiveTopology::TRIANGLE_LIST};
     BASE_NS::vector<BASE_NS::Math::Vec3> vertices_;
     BASE_NS::vector<uint32_t> indices_;
     BASE_NS::vector<BASE_NS::Math::Vec3> normals_;
     BASE_NS::vector<BASE_NS::Math::Vec2> uvs_;
     BASE_NS::vector<BASE_NS::Color> colors_;
 
-    template<typename ItemType>
+    template <typename ItemType>
     static bool ArrayToNative(
         NapiApi::Object& obj, const BASE_NS::string& arrayName, BASE_NS::vector<ItemType>& target);
-    template<typename ItemType>
+    template <typename ItemType>
     static ItemType ToNative(napi_env env, napi_value jsItem, bool& conversionOk);
 };
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition
 
 #endif

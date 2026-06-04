@@ -19,8 +19,9 @@
 
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
+#include "export.h"
 
-class ThreadSafeCallback {
+class SCENE_ADDON_PUBLIC ThreadSafeCallback {
 public:
     // can be called from any thread.
     void Release()
@@ -49,8 +50,17 @@ protected:
         napi_status status;
         napi_value name;
         napi_create_string_latin1(env, n, NAPI_AUTO_LENGTH, &name);
-        status = napi_create_threadsafe_function(env, nullptr, nullptr, name, 0, 1, this, &ThreadSafeCallback::Final,
-            this, &ThreadSafeCallback::Call, &termfun);
+        status = napi_create_threadsafe_function(env,
+            nullptr,
+            nullptr,
+            name,
+            0,
+            1,
+            this,
+            &ThreadSafeCallback::Final,
+            this,
+            &ThreadSafeCallback::Call,
+            &termfun);
     }
     static void Call(napi_env env, napi_value js_callback, void* context, void* inData)
     {
@@ -68,10 +78,10 @@ protected:
         // Called by final on JS thread.
         Release();
     }
-    napi_threadsafe_function termfun {nullptr};
+    napi_threadsafe_function termfun{nullptr};
 };
 
-class AnimationJS final : public BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC AnimationJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 70;
     static void Init(napi_env env, napi_value exports);
@@ -99,18 +109,18 @@ private:
     napi_value Stop(NapiApi::FunctionContext<>& ctx);
     napi_value Finish(NapiApi::FunctionContext<>& ctx);
 
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
-    META_NS::IEvent::Token OnFinishedToken_ {0};
-    META_NS::IEvent::Token OnStartedToken_ {0};
+    META_NS::IEvent::Token OnFinishedToken_{0};
+    META_NS::IEvent::Token OnStartedToken_{0};
 
     // we don't own these two, the lifetime is controlled by napi_threadsafe_function
-    ThreadSafeCallback* OnStartedCB_ {nullptr};
-    ThreadSafeCallback* OnFinishedCB_ {nullptr};
+    ThreadSafeCallback* OnStartedCB_{nullptr};
+    ThreadSafeCallback* OnFinishedCB_{nullptr};
     META_NS::AnimationModifiers::ISpeed::Ptr speedModifier_;
 #define USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED 0
-#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED==1)
+#if defined(USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED) && (USE_ANIMATION_STATE_COMPONENT_ON_COMPLETED == 1)
     META_NS::IProperty::Ptr completed_;
 #endif
     META_NS::Event<META_NS::IEvent> OnCompletedEvent_;

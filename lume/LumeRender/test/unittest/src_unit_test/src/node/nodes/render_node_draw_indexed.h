@@ -42,7 +42,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "ffd14aa7-af45-4dda-a2aa-4f97e9c0c4a9" };
+    static constexpr BASE_NS::Uid UID{"ffd14aa7-af45-4dda-a2aa-4f97e9c0c4a9"};
     static constexpr const char* TYPE_NAME = "RenderNodeDrawIndexed";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -50,7 +50,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
 
@@ -61,9 +61,9 @@ private:
     RenderHandle indexBuffer32Handle_;
     RenderHandle indexBuffer16Handle_;
 
-    bool valid_ { false };
-    uint32_t count_ { 0 };
+    bool valid_{false};
+    uint32_t count_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_DRAW_INDEXED_H
+#endif  // RENDER_NODE_DRAW_INDEXED_H

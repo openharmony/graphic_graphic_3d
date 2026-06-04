@@ -37,35 +37,35 @@ namespace {
 // 16 samplers and 16 textures = 256 combinations
 // this is actually not enugh. since there can be 32 sampled images (16 in vertex and 16 in fragment) + 32 samplers (16
 // in vertex and 16 in fragment)
-constexpr uint32_t MAX_FINAL_BIND_MAP_A { 16 };
-constexpr uint32_t MAX_FINAL_BIND_MAP_B { 16 };
-constexpr uint32_t MAX_FINAL_BINDS { MAX_FINAL_BIND_MAP_A * MAX_FINAL_BIND_MAP_B };
+constexpr uint32_t MAX_FINAL_BIND_MAP_A{16};
+constexpr uint32_t MAX_FINAL_BIND_MAP_B{16};
+constexpr uint32_t MAX_FINAL_BINDS{MAX_FINAL_BIND_MAP_A * MAX_FINAL_BIND_MAP_B};
 
 struct BindMaps {
-    uint8_t maxImageBinding { 0 };   // next free imagetexture unit
-    uint8_t maxUniformBinding { 0 }; // next free uniform block binding
-    uint8_t maxStorageBinding { 0 }; // next free storege buffer binding
+    uint8_t maxImageBinding{0};    // next free imagetexture unit
+    uint8_t maxUniformBinding{0};  // next free uniform block binding
+    uint8_t maxStorageBinding{0};  // next free storege buffer binding
 
-    uint8_t maxSamplerBinding { 0 }; // next sampler binding
-    uint8_t maxTextureBinding { 0 }; // next texture binding
-    uint8_t maxFinalBinding {
-        0
-    }; // "real" last combined sampler binding (last generated combination + maxCSamplerBinding)
+    uint8_t maxSamplerBinding{0};  // next sampler binding
+    uint8_t maxTextureBinding{0};  // next texture binding
+    uint8_t maxFinalBinding{
+        0};  // "real" last combined sampler binding (last generated combination + maxCSamplerBinding)
 
-    uint8_t map[Gles::ResourceLimits::MAX_BINDS] { 0 }; // mapping from set/binding -> "unit/binding"
-    uint8_t finalMap[MAX_FINAL_BINDS] { 0 }; // mapping from sampler/texture combination -> texture sampler unit
+    uint8_t map[Gles::ResourceLimits::MAX_BINDS]{0};  // mapping from set/binding -> "unit/binding"
+    uint8_t finalMap[MAX_FINAL_BINDS]{0};  // mapping from sampler/texture combination -> texture sampler unit
     vector<Gles::PushConstantReflection> pushConstants;
 };
 
 void ProcessPushConstants(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    const GLenum uniformProperties[] = {flag, GL_LOCATION};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (auto& info : plat.infos) {
         // check for duplicates.. (there can be dupes since vertex and fragment both can use the same constant..)
-        if (auto pos = std::find_if(map.pushConstants.begin(), map.pushConstants.end(),
+        if (auto pos = std::find_if(map.pushConstants.begin(),
+                map.pushConstants.end(),
                 [&name = info.name](auto& info2) { return info2.name == name; });
             pos != map.pushConstants.end()) {
             pos->stage |= info.stage;
@@ -87,9 +87,9 @@ void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 {
 #if defined(RENDER_VALIDATION_ENABLED) && (RENDER_VALIDATION_ENABLED)
     GLsizei len;
-    const GLenum blockProperties[] = { flag, GL_BUFFER_BINDING };
+    const GLenum blockProperties[] = {flag, GL_BUFFER_BINDING};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(blockProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.sbSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -111,9 +111,9 @@ void ProcessStorageBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum blockProperties[] = { flag, GL_BUFFER_BINDING };
+    const GLenum blockProperties[] = {flag, GL_BUFFER_BINDING};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(blockProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.ubSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -167,9 +167,9 @@ void ProcessUniformBlocks(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessImageTextures(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, const BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    const GLenum uniformProperties[] = {flag, GL_LOCATION};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.ciSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -191,9 +191,9 @@ void ProcessImageTextures(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum props[] = { flag, GL_LOCATION };
+    const GLenum props[] = {flag, GL_LOCATION};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(props));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.combSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -227,9 +227,9 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
 void ProcessSubPassInputs(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniformProperties[] = { flag, GL_LOCATION };
+    const GLenum uniformProperties[] = {flag, GL_LOCATION};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.siSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -251,9 +251,9 @@ void ProcessSubPassInputs(GLuint program, const ShaderModulePlatformDataGLES& pl
 void ProcessSamplers(GLuint program, const ShaderModulePlatformDataGLES& plat, GLenum flag, BindMaps& map)
 {
     GLsizei len;
-    const GLenum uniformProperties[] = { flag, GL_LOCATION, GL_ARRAY_SIZE };
+    const GLenum uniformProperties[] = {flag, GL_LOCATION, GL_ARRAY_SIZE};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(uniformProperties));
-    GLint inUse[propertyCount] { 0 };
+    GLint inUse[propertyCount]{0};
     for (const auto& t : plat.cbSets) {
         PLUGIN_ASSERT(t.iSet < Gles::ResourceLimits::MAX_SETS);
         PLUGIN_ASSERT(t.iBind < Gles::ResourceLimits::MAX_BIND_IN_SET);
@@ -316,7 +316,7 @@ struct binder {
     vector<size_t>& bindingIndices;
 };
 
-template<typename T, size_t N, typename TypeOfOther>
+template <typename T, size_t N, typename TypeOfOther>
 void FixBindings(T (&types)[N], binder& map, const TypeOfOther& sbSets, string& source)
 {
     // SetValue does inplace replacements so the string's data addess is constant and a string_view can be used while
@@ -325,7 +325,8 @@ void FixBindings(T (&types)[N], binder& map, const TypeOfOther& sbSets, string& 
     auto view = string_view(source);
     // remove patched bindings so they are not considered for other type/name combinations.
     auto& indices = map.bindingIndices;
-    indices.erase(std::remove_if(indices.begin(), indices.end(),
+    indices.erase(std::remove_if(indices.begin(),
+                      indices.end(),
                       [&view, &types, &sbSets, &map, data](const size_t bindingI) {
                           for (const auto& type : types) {
                               const auto eol = view.find('\n', bindingI);
@@ -363,11 +364,25 @@ void FixBindings(T (&types)[N], binder& map, const TypeOfOther& sbSets, string& 
         indices.cend());
 }
 
-constexpr const string_view SSBO_KEYS[] = { " buffer " };
-constexpr const string_view IMAGE_KEYS[] = { " image2D ", " iimage2D ", " uimage2D ", " image2DArray ",
-    " iimage2DArray ", " uimage2DArray ", " image3D ", " iimage3D ", " uimage3D ", " imageCube ", " iimageCube ",
-    " uimageCube ", " imageCubeArray ", " iimageCubeArray ", " uimageCubeArray ", " imageBuffer ", " iimageBuffer ",
-    " uimageBuffer " };
+constexpr const string_view SSBO_KEYS[] = {" buffer "};
+constexpr const string_view IMAGE_KEYS[] = {" image2D ",
+    " iimage2D ",
+    " uimage2D ",
+    " image2DArray ",
+    " iimage2DArray ",
+    " uimage2DArray ",
+    " image3D ",
+    " iimage3D ",
+    " uimage3D ",
+    " imageCube ",
+    " iimageCube ",
+    " uimageCube ",
+    " imageCubeArray ",
+    " iimageCubeArray ",
+    " uimageCubeArray ",
+    " imageBuffer ",
+    " iimageBuffer ",
+    " uimageBuffer "};
 constexpr const string_view SPECIAL_BINDING = "binding = 11";
 
 void PostProcessSource(BindMaps& map, const ShaderModulePlatformDataGLES& modPlat, string& source)
@@ -392,11 +407,11 @@ void PostProcessSource(BindMaps& map, const ShaderModulePlatformDataGLES& modPla
     }
     if (!bindings.empty()) {
         if (!modPlat.sbSets.empty()) {
-            binder storageBindings { map.maxStorageBinding, map.map, bindings };
+            binder storageBindings{map.maxStorageBinding, map.map, bindings};
             FixBindings(SSBO_KEYS, storageBindings, modPlat.sbSets, source);
         }
         if (!modPlat.ciSets.empty()) {
-            binder imageBindings { map.maxImageBinding, map.map, bindings };
+            binder imageBindings{map.maxImageBinding, map.map, bindings};
             FixBindings(IMAGE_KEYS, imageBindings, modPlat.ciSets, source);
         }
         // after patching the list should be empty
@@ -560,9 +575,10 @@ void PatchMultiview(uint32_t views, string& vertSource)
         }
     }
 }
-} // namespace
+}  // namespace
 
-GpuShaderProgramGLES::GpuShaderProgramGLES(Device& device) : GpuShaderProgram(), device_((DeviceGLES&)device) {}
+GpuShaderProgramGLES::GpuShaderProgramGLES(Device& device) : GpuShaderProgram(), device_((DeviceGLES&)device)
+{}
 
 GpuShaderProgramGLES::~GpuShaderProgramGLES()
 {
@@ -591,7 +607,7 @@ GpuShaderProgramGLES::GpuShaderProgramGLES(Device& device, const GpuShaderProgra
         // frag
         const auto& reflPl = plat_.fragShaderModule_->GetPipelineLayout();
         // has sort inside
-        GpuProgramUtil::CombinePipelineLayouts({ &reflPl, 1u }, pipelineLayout);
+        GpuProgramUtil::CombinePipelineLayouts({&reflPl, 1u}, pipelineLayout);
 
         const auto& fsscv = plat_.fragShaderModule_->GetSpecilization();
         // has sort inside
@@ -605,7 +621,7 @@ void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
     GLint inputs;
     uint32_t inputLocations[Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES];
     enum propertyIndices { LOCATION = 0, VERTEX_REF = 1, FRAGMENT_REF = 2, MAX_INDEX };
-    constexpr GLenum inputProps[] = { GL_LOCATION, GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER };
+    constexpr GLenum inputProps[] = {GL_LOCATION, GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER};
     constexpr auto propertyCount = static_cast<GLsizei>(countof(inputProps));
     static_assert(propertyCount == MAX_INDEX);
     GLint values[propertyCount];
@@ -614,8 +630,14 @@ void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
     uint32_t inputsInUse = 0;
     for (GLint i = 0; i < inputs; i++) {
         GLsizei wrote;
-        glGetProgramResourceiv(program, GL_PROGRAM_INPUT, static_cast<GLuint>(i), propertyCount, inputProps,
-            propertyCount, &wrote, values);
+        glGetProgramResourceiv(program,
+            GL_PROGRAM_INPUT,
+            static_cast<GLuint>(i),
+            propertyCount,
+            inputProps,
+            propertyCount,
+            &wrote,
+            values);
         if ((values[LOCATION] != Gles::INVALID_LOCATION) &&
             ((values[VERTEX_REF] == GL_TRUE) || (values[FRAGMENT_REF] == GL_TRUE))) {
             inputLocations[inputsInUse] = static_cast<uint32_t>((values[LOCATION]));
@@ -658,8 +680,8 @@ unique_ptr<GpuShaderProgramGLES> GpuShaderProgramGLES::Specialize(const ShaderSp
     const array_view<const OES_Bind>& oesBinds, uint32_t views) const
 {
     PLUGIN_ASSERT(device_.IsActive());
-    unique_ptr<GpuShaderProgramGLES> ret { new GpuShaderProgramGLES(device_) };
-    ret->specializedWith = { specData.data.begin(), specData.data.end() };
+    unique_ptr<GpuShaderProgramGLES> ret{new GpuShaderProgramGLES(device_)};
+    ret->specializedWith = {specData.data.begin(), specData.data.end()};
     ret->plat_.vertShaderModule_ = plat_.vertShaderModule_;
     ret->plat_.fragShaderModule_ = plat_.fragShaderModule_;
     ret->reflection_ = reflection_;
@@ -667,7 +689,7 @@ unique_ptr<GpuShaderProgramGLES> GpuShaderProgramGLES::Specialize(const ShaderSp
     ret->reflection_.shaderSpecializationConstantView.constants = ret->constants_;
 
     // Special handling for shader storage blocks and images...
-    BindMaps map {};
+    BindMaps map{};
 
     if (!(plat_.vertShaderModule_ && plat_.fragShaderModule_)) {
         PLUGIN_LOG_E("Invalid shader module");
@@ -741,7 +763,8 @@ const ShaderReflection& GpuShaderProgramGLES::GetReflection() const
     return reflection_;
 }
 
-GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device) : GpuComputeProgram(), device_((DeviceGLES&)device) {}
+GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device) : GpuComputeProgram(), device_((DeviceGLES&)device)
+{}
 
 GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device, const GpuComputeProgramCreateData& createData)
     : GpuComputeProgram(), device_((DeviceGLES&)device)
@@ -758,8 +781,9 @@ GpuComputeProgramGLES::GpuComputeProgramGLES(Device& device, const GpuComputePro
         constants_ = vector<ShaderSpecialization::Constant>(constants.cbegin().ptr(), constants.cend().ptr());
         // sorted based on offset due to offset mapping with shader combinations
         // NOTE: id and name indexing
-        std::sort(constants_.begin(), constants_.end(),
-            [](const auto& lhs, const auto& rhs) { return (lhs.offset < rhs.offset); });
+        std::sort(constants_.begin(), constants_.end(), [](const auto& lhs, const auto& rhs) {
+            return (lhs.offset < rhs.offset);
+        });
         reflection_.shaderSpecializationConstantView.constants = constants_;
     }
 }
@@ -786,13 +810,13 @@ unique_ptr<GpuComputeProgramGLES> GpuComputeProgramGLES::Specialize(
     const ShaderSpecializationConstantDataView& specData) const
 {
     PLUGIN_ASSERT(device_.IsActive());
-    unique_ptr<GpuComputeProgramGLES> ret { new GpuComputeProgramGLES(device_) };
+    unique_ptr<GpuComputeProgramGLES> ret{new GpuComputeProgramGLES(device_)};
     ret->plat_.module_ = plat_.module_;
     ret->reflection_ = reflection_;
     ret->constants_ = constants_;
     ret->reflection_.shaderSpecializationConstantView.constants = ret->constants_;
     // Special handling for shader storage blocks and images...
-    BindMaps map {};
+    BindMaps map{};
 
     if (!plat_.module_) {
         PLUGIN_LOG_E("Invalid shader module");

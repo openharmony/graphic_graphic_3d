@@ -37,7 +37,7 @@ void TestShaderLoader(const UTest::EngineResources& engine)
 {
     IFileManager& fileMgr = engine.engine->GetFileManager();
     ShaderManager& shaderMgr = static_cast<ShaderManager&>(engine.device->GetShaderManager());
-    ShaderLoader shaderLoader { fileMgr, shaderMgr, engine.backend };
+    ShaderLoader shaderLoader{fileMgr, shaderMgr, engine.backend};
     {
         IShaderManager::ShaderFilePathDesc desc;
         desc.pipelineLayoutPath = "nonExistingPath";
@@ -47,7 +47,7 @@ void TestShaderLoader(const UTest::EngineResources& engine)
         shaderLoader.Load(desc);
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ShaderLoaderTest

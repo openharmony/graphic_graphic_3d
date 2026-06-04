@@ -38,7 +38,7 @@ SCENE_BEGIN_NAMESPACE()
 class Scene;
 
 #define SCENE_RESOURCE_FACTORY_CREATE_NODE(NodeName, NodeType, ClassId) \
-    template<const AsyncCallType& CallType = Sync>                      \
+    template <const AsyncCallType& CallType = Sync>                     \
     auto Create##NodeName(BASE_NS::string_view path)                    \
     {                                                                   \
         return CallCreateNode<NodeType, CallType>(path, ClassId);       \
@@ -49,8 +49,10 @@ class Scene;
  */
 struct SceneResourceParameters {
     SceneResourceParameters() = default;
-    SceneResourceParameters(BASE_NS::string_view path) : path(path) {}
-    SceneResourceParameters(const char* path) : path(path) {}
+    SceneResourceParameters(BASE_NS::string_view path) : path(path)
+    {}
+    SceneResourceParameters(const char* path) : path(path)
+    {}
     /// Path to load the resource from. Depending on resource type this parameter may be ignored.
     BASE_NS::string path;
 };
@@ -60,7 +62,7 @@ struct SceneResourceParameters {
  */
 struct MaterialResourceParameters : public SceneResourceParameters {
     /// Type of the material
-    MaterialType type { MaterialType::METALLIC_ROUGHNESS };
+    MaterialType type{MaterialType::METALLIC_ROUGHNESS};
 };
 
 /**
@@ -68,7 +70,7 @@ struct MaterialResourceParameters : public SceneResourceParameters {
  */
 struct EffectResourceParameters : public SceneResourceParameters {
     /// Class id of the underlying render effect.
-    META_NS::ObjectId effectClassId {};
+    META_NS::ObjectId effectClassId{};
 };
 
 /**
@@ -78,7 +80,7 @@ struct EffectResourceParameters : public SceneResourceParameters {
 class RenderContextResourceFactory {
 public:
     RenderContextResourceFactory() = delete;
-    RenderContextResourceFactory(const IScene::Ptr& scene) : scene_(scene) {};
+    RenderContextResourceFactory(const IScene::Ptr& scene) : scene_(scene){};
     virtual ~RenderContextResourceFactory() = default;
     META_DEFAULT_COPY_MOVE(RenderContextResourceFactory)
     operator bool() const noexcept
@@ -116,7 +118,7 @@ public:
         auto f = CallScene([&](auto& scene) {
             return scene.template CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager)
                 .Then([params](const IRenderResourceManager::Ptr& manager) {
-                    return manager ? manager->LoadShader(params.path).GetResult() : IShader::Ptr {};
+                    return manager ? manager->LoadShader(params.path).GetResult() : IShader::Ptr{};
                 });
         });
         return Internal::UnwrapFuture<CallType, Shader>(BASE_NS::move(f));
@@ -127,24 +129,24 @@ public:
         auto f = CallScene([&](auto& scene) {
             return scene.template CreateObject<IRenderResourceManager>(ClassId::RenderResourceManager)
                 .Then([params](const IRenderResourceManager::Ptr& manager) {
-                    return manager ? manager->LoadImage(params.path).GetResult() : IImage::Ptr {};
+                    return manager ? manager->LoadImage(params.path).GetResult() : IImage::Ptr{};
                 });
         });
         return Internal::UnwrapFuture<CallType, Image>(BASE_NS::move(f));
     }
 
 protected:
-    template<class Type, const META_NS::AsyncCallType& CallType>
+    template <class Type, const META_NS::AsyncCallType& CallType>
     auto CallCreateResource(const SceneResourceParameters& params, META_NS::ObjectId id)
     {
         auto f = CallScene([&](auto& scene) { return scene.CreateObject(id); });
         return Internal::UnwrapFuture<CallType, Type>(BASE_NS::move(f));
     }
-    template<typename Fn>
+    template <typename Fn>
     auto CallScene(Fn&& fn) const
     {
         auto scene = scene_.lock();
-        return scene ? fn(*scene) : decltype(fn(*scene)) {};
+        return scene ? fn(*scene) : decltype(fn(*scene)){};
     }
     auto GetScene() const
     {
@@ -161,7 +163,7 @@ private:
 class SceneResourceFactory : public RenderContextResourceFactory {
 public:
     SceneResourceFactory() = delete;
-    SceneResourceFactory(const IScene::Ptr& scene) : RenderContextResourceFactory(scene) {};
+    SceneResourceFactory(const IScene::Ptr& scene) : RenderContextResourceFactory(scene){};
     virtual ~SceneResourceFactory() = default;
     META_DEFAULT_COPY_MOVE(SceneResourceFactory)
     /// Creates a new empty node with given parameters.
@@ -198,12 +200,12 @@ public:
         auto f = p ? p->InitializeEffect(GetScene(), params.effectClassId).Then([p](bool success) {
             return success ? p : nullptr;
         })
-                   : Future<IEffect::Ptr> {};
+                   : Future<IEffect::Ptr>{};
         return Internal::UnwrapFuture<CallType, Effect>(BASE_NS::move(f));
     }
 
 private:
-    template<class Type, const META_NS::AsyncCallType& CallType>
+    template <class Type, const META_NS::AsyncCallType& CallType>
     auto CallCreateNode(const SceneResourceParameters& params, META_NS::ObjectId id)
     {
         auto f = CallScene([&](auto& scene) { return scene.CreateNode(params.path, id); });
@@ -225,7 +227,7 @@ public:
      * @brief Returns a component property with given name.
      * @param name Name of the component property to return.
      */
-    template<typename Type>
+    template <typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);
@@ -238,7 +240,7 @@ public:
      * @note  Equivalent to calling component.GetProperty<BASE_NS::vector<Type>>(name)
      * @param name Name of the component property to return.
      */
-    template<typename Type>
+    template <typename Type>
     auto GetArrayProperty(BASE_NS::string_view name) const
     {
         return GetProperty<BASE_NS::vector<Type>>(name);
@@ -258,7 +260,8 @@ class Scene : public META_NS::Object {
 public:
     META_INTERFACE_OBJECT(Scene, META_NS::Object, IScene)
     /// Initialize a Scene object from a Node.
-    explicit Scene(const Node& node) : META_NS::Object(node.GetScene()) {}
+    explicit Scene(const Node& node) : META_NS::Object(node.GetScene())
+    {}
     /**
      * @brief Load a Scene from a file.
      * @param uri The uri to load the scene from.
@@ -458,4 +461,4 @@ public:
 
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_API_SCENE_H
+#endif  // SCENE_API_SCENE_H

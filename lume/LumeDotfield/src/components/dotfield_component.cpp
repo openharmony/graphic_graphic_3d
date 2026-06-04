@@ -62,4 +62,4 @@ void IDotfieldComponentManagerDestroy(CORE_NS::IComponentManager* instance)
 {
     delete static_cast<DotfieldComponentManager*>(instance);
 }
-} // namespace Dotfield
+}  // namespace Dotfield

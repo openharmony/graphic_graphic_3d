@@ -63,7 +63,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -74,8 +74,8 @@ public:
     IRenderNode::ExecuteFlags GetExecuteFlags() const override;
 
     struct EffectProperties {
-        bool enabled { false };
-        BASE_NS::Math::Vec4 targetSize { 0.0f, 0.0f, 0.0f, 0.0f };
+        bool enabled{false};
+        BASE_NS::Math::Vec4 targetSize{0.0f, 0.0f, 0.0f, 0.0f};
         FxaaConfiguration fxaaConfiguration;
     };
 
@@ -100,7 +100,7 @@ public:
 private:
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderPass CreateRenderPass(const RenderHandle input) const;
     BASE_NS::Math::Vec4 GetFactorFxaa() const;
@@ -113,16 +113,16 @@ private:
     RenderHandle samplerHandle_;
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
+    bool useRequestedRenderArea_{false};
 
     CORE_NS::PropertyApiImpl<NodeInputs> inputProperties_;
     CORE_NS::PropertyApiImpl<NodeOutputs> outputProperties_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool valid_ { false };
+    bool valid_{false};
 
     EffectProperties effectProperties_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_POSTPROCESS_RENDER_POST_PROCESS_FXAA_NODE_H
+#endif  // RENDER_POSTPROCESS_RENDER_POST_PROCESS_FXAA_NODE_H

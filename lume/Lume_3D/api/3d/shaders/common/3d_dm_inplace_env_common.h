@@ -139,4 +139,4 @@ void InplaceEnvironmentBlock(in uint environmentType, in uint cameraIdx, in vec2
 
 #endif
 
-#endif // SHADERS_COMMON_3D_DM_INPLACE_ENV_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_INPLACE_ENV_COMMON_H

@@ -36,7 +36,7 @@ class ContainerBase
 public:
     void SetImplementingIContainer(IObject*, IContainer*);
 
-public: // IContainer
+public:  // IContainer
     using typename IContainer::SizeType;
 
     IObject::Ptr FindAnyImpl(const META_NS::IContainer::FindOptions& options, bool isFlat) const;
@@ -59,16 +59,16 @@ public: // IContainer
     bool SetRequiredInterfaces(const BASE_NS::vector<TypeId>& interfaces) override;
     BASE_NS::vector<TypeId> GetRequiredInterfaces() const override;
 
-public: // ILockable
+public:  // ILockable
     void LockShared() const override;
     void UnlockShared() const override;
     void Lock() const override;
     void Unlock() const override;
 
-public: // IContainerProxyParent
+public:  // IContainerProxyParent
     bool SetProxyParent(const IContainer::Ptr& parent) override;
 
-public: // IIterable
+public:  // IIterable
     IterationResult Iterate(const IterationParameters& params) override;
     IterationResult Iterate(const IterationParameters& params) const override;
 
@@ -81,13 +81,13 @@ protected:
 
 protected:
     mutable std::shared_mutex mutex_;
-    IObject* me_ {};
-    IContainer* impl_ {};
-    IContainer::WeakPtr parent_; // Proxy parent (or me_ if not set)
+    IObject* me_{};
+    IContainer* impl_{};
+    IContainer::WeakPtr parent_;  // Proxy parent (or me_ if not set)
     BASE_NS::vector<IObject::Ptr> children_;
     BASE_NS::vector<TypeId> required_;
 };
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_OBJECT_CONTAINER_H
+#endif  // META_SRC_OBJECT_CONTAINER_H

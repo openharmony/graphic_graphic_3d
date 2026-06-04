@@ -42,12 +42,12 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStorePostProcess : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "329a8427-4c0f-48ab-b9fa-3f9bc6dfbcbd" };
+    static constexpr BASE_NS::Uid UID{"329a8427-4c0f-48ab-b9fa-3f9bc6dfbcbd"};
 
     /** Values map to render_data_store_render_pods.h */
     struct GlobalFactors {
         /** Enabled flags */
-        uint32_t enableFlags { 0u };
+        uint32_t enableFlags{0u};
 
         /** User post process factors which are automatically mapped and can be used easily anywhere in the pipeline */
         BASE_NS::Math::Vec4 factors[PostProcessConstants::GLOBAL_FACTOR_COUNT];
@@ -60,23 +60,23 @@ public:
         /* Name for the post process (flags and data fetched with this) e.g. "custom_tonemap" */
         BASE_NS::fixed_string<64u> name;
         /*  Id, created when post process created */
-        uint32_t id { ~0u };
+        uint32_t id{~0u};
         /* Factor index to fetch user factors from GlobalPostProcess struct */
-        uint32_t factorIndex { ~0u };
+        uint32_t factorIndex{~0u};
         /* Default shader handle for the post process */
-        RenderHandleReference shader {};
+        RenderHandleReference shader{};
 
         struct Variables {
             /* Factor index to fetch user factors from GlobalPostProcess struct */
-            uint32_t userFactorIndex { ~0u };
+            uint32_t userFactorIndex{~0u};
             /* Factor which can be mapped to various parts of the pipeline with GlobalPostProcess struct */
-            BASE_NS::Math::Vec4 factor { 0.0f, 0.0f, 0.0f, 0.0f };
+            BASE_NS::Math::Vec4 factor{0.0f, 0.0f, 0.0f, 0.0f};
             /* Factors which are mapped with LocalPostProcess struct. Byte data to pass data without conversions */
-            uint8_t customPropertyData[PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE] {};
+            uint8_t customPropertyData[PostProcessConstants::USER_LOCAL_FACTOR_BYTE_SIZE]{};
             /* Is the post process enabled */
-            bool enabled { false };
+            bool enabled{false};
             /* Additional flags */
-            uint32_t flags { 0u };
+            uint32_t flags{0u};
         };
         Variables variables;
     };
@@ -160,4 +160,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_FULLSCREEN_SHADER_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_FULLSCREEN_SHADER_H

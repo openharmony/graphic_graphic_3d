@@ -16,13 +16,16 @@
 #ifndef EFFECTJS_H
 #define EFFECTJS_H
 
-#include "BaseObjectJS.h"
-#include "PropertyProxy.h"
-
-#include <base/containers/unordered_map.h>
 #include <scene/interface/intf_effect.h>
 
-class EffectsContainerJS {
+#include <base/containers/unordered_map.h>
+
+#include "BaseObjectJS.h"
+#include "PropertyProxy.h"
+#include "SceneResourceImpl.h"
+#include "export.h"
+
+class SCENE_ADDON_PUBLIC EffectsContainerJS {
 public:
     static void Init(napi_env env, napi_value exports);
     EffectsContainerJS(napi_env, napi_callback_info);
@@ -42,7 +45,7 @@ private:
     NapiApi::WeakObjectRef scene_;
 };
 
-class EffectJS : public BaseObject {
+class SCENE_ADDON_PUBLIC EffectJS : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 1024;
     static void Init(napi_env env, napi_value exports);
@@ -55,17 +58,15 @@ public:
     napi_value GetEnabled(NapiApi::FunctionContext<>& ctx);
     void SetEnabled(NapiApi::FunctionContext<bool>& ctx);
     napi_value GetEffectId(NapiApi::FunctionContext<>& ctx);
-
     napi_value GetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx);
     napi_value SetEffectProperty(NapiApi::FunctionContext<BASE_NS::string>& ctx);
+
 private:
     SCENE_NS::IEffect::Ptr GetEffect(NapiApi::Object o) const;
-    napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void *) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
     void AddProperties(NapiApi::Object meJs, const META_NS::IObject::Ptr& obj);
-    NapiApi::WeakObjectRef scene_;
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<PropertyProxy>> proxies_;
 };
 #endif

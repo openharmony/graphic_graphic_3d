@@ -96,5 +96,5 @@ void API_AnimationTestBase::StepAnimations(const std::vector<IAnimation::Ptr> an
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

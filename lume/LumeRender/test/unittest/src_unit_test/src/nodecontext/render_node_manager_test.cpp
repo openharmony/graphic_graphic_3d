@@ -36,16 +36,16 @@ public:
     RenderNodeDummy() = default;
     ~RenderNodeDummy() override = default;
 
-    void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override {};
-    void PreExecuteFrame() override {};
-    void ExecuteFrame(IRenderCommandList& cmdList) override {};
+    void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override{};
+    void PreExecuteFrame() override{};
+    void ExecuteFrame(IRenderCommandList& cmdList) override{};
     ExecuteFlags GetExecuteFlags() const override
     {
         return 0U;
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "dc5da6ef-0214-4275-b7a3-c68421e76313" };
+    static constexpr BASE_NS::Uid UID{"dc5da6ef-0214-4275-b7a3-c68421e76313"};
     static constexpr const char* TYPE_NAME = "RenderNodeDummy";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -68,16 +68,16 @@ public:
     RenderNodeDummy2() = default;
     ~RenderNodeDummy2() override = default;
 
-    void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override {};
-    void PreExecuteFrame() override {};
-    void ExecuteFrame(IRenderCommandList& cmdList) override {};
+    void InitNode(IRenderNodeContextManager& renderNodeContextMgr) override{};
+    void PreExecuteFrame() override{};
+    void ExecuteFrame(IRenderCommandList& cmdList) override{};
     ExecuteFlags GetExecuteFlags() const override
     {
         return 0U;
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "8e85e0d0-4617-42c1-8e5e-5a125c33de12" };
+    static constexpr BASE_NS::Uid UID{"8e85e0d0-4617-42c1-8e5e-5a125c33de12"};
     static constexpr const char* TYPE_NAME = "RenderNodeDummy2";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -100,9 +100,13 @@ void TestRenderNodeManager(const UTest::EngineResources& engine)
     RenderNodeGraphManager& renderNodeGraphMgr =
         static_cast<RenderNodeGraphManager&>(engine.context->GetRenderNodeGraphManager());
     RenderNodeManager& renderNodeMgr = renderNodeGraphMgr.GetRenderNodeManager();
-    RenderNodeTypeInfo info { { RenderNodeTypeInfo::UID }, RenderNodeDummy::UID, RenderNodeDummy::TYPE_NAME,
-        RenderNodeDummy::Create, RenderNodeDummy::Destroy, RenderNodeDummy::BACKEND_FLAGS,
-        RenderNodeDummy::CLASS_TYPE };
+    RenderNodeTypeInfo info{{RenderNodeTypeInfo::UID},
+        RenderNodeDummy::UID,
+        RenderNodeDummy::TYPE_NAME,
+        RenderNodeDummy::Create,
+        RenderNodeDummy::Destroy,
+        RenderNodeDummy::BACKEND_FLAGS,
+        RenderNodeDummy::CLASS_TYPE};
     renderNodeMgr.AddRenderNodeFactory(info);
     {
         auto flags = renderNodeMgr.GetRenderNodeTypeInfoFlags("RenderNodeDummy");
@@ -138,22 +142,30 @@ void TestRenderNodeManager(const UTest::EngineResources& engine)
 void TestRenderNodeGraphPatching(const UTest::EngineResources& engine)
 {
     auto& renderNodeGraphMgr = engine.context->GetRenderNodeGraphManager();
-    static constexpr RenderNodeTypeInfo info { { RenderNodeTypeInfo::UID }, RenderNodeDummy::UID,
-        RenderNodeDummy::TYPE_NAME, RenderNodeDummy::Create, RenderNodeDummy::Destroy, RenderNodeDummy::BACKEND_FLAGS,
-        RenderNodeDummy::CLASS_TYPE };
-    static constexpr RenderNodeTypeInfo info2 { { RenderNodeTypeInfo::UID }, RenderNodeDummy2::UID,
-        RenderNodeDummy2::TYPE_NAME, RenderNodeDummy2::Create, RenderNodeDummy2::Destroy,
-        RenderNodeDummy2::BACKEND_FLAGS, RenderNodeDummy2::CLASS_TYPE };
+    static constexpr RenderNodeTypeInfo info{{RenderNodeTypeInfo::UID},
+        RenderNodeDummy::UID,
+        RenderNodeDummy::TYPE_NAME,
+        RenderNodeDummy::Create,
+        RenderNodeDummy::Destroy,
+        RenderNodeDummy::BACKEND_FLAGS,
+        RenderNodeDummy::CLASS_TYPE};
+    static constexpr RenderNodeTypeInfo info2{{RenderNodeTypeInfo::UID},
+        RenderNodeDummy2::UID,
+        RenderNodeDummy2::TYPE_NAME,
+        RenderNodeDummy2::Create,
+        RenderNodeDummy2::Destroy,
+        RenderNodeDummy2::BACKEND_FLAGS,
+        RenderNodeDummy2::CLASS_TYPE};
     CORE_NS::GetPluginRegister().RegisterTypeInfo(info);
     CORE_NS::GetPluginRegister().RegisterTypeInfo(info2);
 
-    RenderNodeGraphDesc rngDesc { "TestGraph", "TestGraphDataStore", "", {}, {} };
-    rngDesc.nodes.push_back(RenderNodeDesc { RenderNodeDummy::TYPE_NAME, "MyFirstDummyNode", {}, {} });
-    rngDesc.nodes.push_back(RenderNodeDesc { RenderNodeDummy::TYPE_NAME, "MySecondDummyNode", {}, {} });
+    RenderNodeGraphDesc rngDesc{"TestGraph", "TestGraphDataStore", "", {}, {}};
+    rngDesc.nodes.push_back(RenderNodeDesc{RenderNodeDummy::TYPE_NAME, "MyFirstDummyNode", {}, {}});
+    rngDesc.nodes.push_back(RenderNodeDesc{RenderNodeDummy::TYPE_NAME, "MySecondDummyNode", {}, {}});
 
-    const auto insertDesc = RenderNodeDesc { RenderNodeDummy2::TYPE_NAME, "MyDummyNode2", {}, {} };
-    RenderNodeDependency dependencies[] = { RenderNodeDependency {
-        "RenderNodeDummy", RenderNodeDependency ::Position::AFTER_FIRST } };
+    const auto insertDesc = RenderNodeDesc{RenderNodeDummy2::TYPE_NAME, "MyDummyNode2", {}, {}};
+    RenderNodeDependency dependencies[] = {
+        RenderNodeDependency{"RenderNodeDummy", RenderNodeDependency ::Position::AFTER_FIRST}};
     {
         renderNodeGraphMgr.AddRenderNodeInsertion(insertDesc, dependencies);
         auto patchedRngDesc = renderNodeGraphMgr.PatchRenderNodeGraph(rngDesc);
@@ -193,7 +205,7 @@ void TestRenderNodeGraphPatching(const UTest::EngineResources& engine)
     CORE_NS::GetPluginRegister().UnregisterTypeInfo(info2);
     CORE_NS::GetPluginRegister().UnregisterTypeInfo(info);
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeManagerTest

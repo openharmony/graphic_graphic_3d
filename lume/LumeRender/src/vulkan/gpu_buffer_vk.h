@@ -29,11 +29,11 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct GpuAccelerationStructurePlatformDataVk final {
-    VkBuffer buffer { VK_NULL_HANDLE };
-    uint32_t byteSize { 0u };
-    uint64_t deviceAddress { 0 };
+    VkBuffer buffer{VK_NULL_HANDLE};
+    uint32_t byteSize{0u};
+    uint64_t deviceAddress{0};
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    VkAccelerationStructureKHR accelerationStructure { VK_NULL_HANDLE };
+    VkAccelerationStructureKHR accelerationStructure{VK_NULL_HANDLE};
 #endif
 };
 
@@ -49,6 +49,7 @@ public:
     const GpuBufferPlatformDataVk& GetPlatformData() const;
     const GpuAccelerationStructureDesc& GetDescAccelerationStructure() const;
     const GpuAccelerationStructurePlatformDataVk& GetPlatformDataAccelerationStructure() const;
+    uint64_t GetDeviceAddress() const override;
 
     void* Map() override;
     void* MapMemory() override;
@@ -68,24 +69,24 @@ private:
     GpuAccelerationStructurePlatformDataVk platAccel_;
     GpuAccelerationStructureDesc descAccel_;
 
-    bool isPersistantlyMapped_ { false };
-    bool isMappable_ { false };
-    bool isRingBuffer_ { false };
-    bool isAccelerationStructure_ { false };
-    uint32_t bufferingCount_ { 1u };
+    bool isPersistantlyMapped_{false};
+    bool isMappable_{false};
+    bool isRingBuffer_{false};
+    bool isAccelerationStructure_{false};
+    uint32_t bufferingCount_{1u};
 
     // in normal situations owns all the vulkan resources
-    bool ownsResources_ { true };
+    bool ownsResources_{true};
 
     // debug assert usage only
-    mutable bool isMapped_ { false };
+    mutable bool isMapped_{false};
 
     struct MemoryAllocation {
         VmaAllocation allocation;
         VmaAllocationInfo allocationInfo;
     };
-    MemoryAllocation mem_ {};
+    MemoryAllocation mem_{};
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_GPU_BUFFER_VK_H
+#endif  // VULKAN_GPU_BUFFER_VK_H

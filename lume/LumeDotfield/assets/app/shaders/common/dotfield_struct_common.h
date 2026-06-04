@@ -31,4 +31,4 @@ struct DotfieldMaterialPushConstantStruct {
     mat4 worldMatrix;
 };
 
-#endif // SHADERS__COMMON__DOTFIELD_SIMULATION_COMMON_H
+#endif  // SHADERS__COMMON__DOTFIELD_SIMULATION_COMMON_H

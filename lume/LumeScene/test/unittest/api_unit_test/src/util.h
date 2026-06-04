@@ -78,7 +78,7 @@ inline bool CopyFile(CORE_NS::IFileManager& manager, BASE_NS::string_view source
     return true;
 }
 
-} // namespace UTest
+}  // namespace UTest
 SCENE_END_NAMESPACE()
 
-#endif // SCENE_TEST_UTIL
+#endif  // SCENE_TEST_UTIL

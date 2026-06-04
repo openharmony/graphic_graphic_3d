@@ -163,7 +163,7 @@ bool AttachmentContainer::Detach(const IObject::Ptr& attachment)
 
 BASE_NS::vector<IObject::Ptr> AttachmentContainer::GetAttachments(const BASE_NS::vector<TypeId>& uids, bool strict)
 {
-    return Super::FindAll({ "", TraversalType::NO_HIERARCHY, uids, strict });
+    return Super::FindAll({"", TraversalType::NO_HIERARCHY, uids, strict});
 }
 
 void AttachmentContainer::RemoveAllAttachments()

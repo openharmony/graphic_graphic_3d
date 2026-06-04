@@ -63,14 +63,14 @@ IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path, const IFile
             if (storage) {
                 auto file = BASE_NS::make_unique<OhosFile>(resManager_);
                 file->UpdateStorage(storage);
-                return IFile::Ptr { file.release() };
+                return IFile::Ptr{file.release()};
             }
         }
         if (!path.empty()) {
             auto file = BASE_NS::make_unique<OhosFile>(resManager_);
             auto storage = file->Open(path.data());
             ohosFiles_[path] = std::move(storage);
-            return IFile::Ptr { file.release() };
+            return IFile::Ptr{file.release()};
         }
     }
     return IFile::Ptr();
@@ -78,7 +78,7 @@ IFile::Ptr OhosFilesystem::OpenFile(const BASE_NS::string_view path, const IFile
 
 OhosFilesystem::OhosFilesystem(const BASE_NS::string_view hapPath, const BASE_NS::string_view bundleName,
     const BASE_NS::string_view moduleName, std::shared_ptr<OHOS::Global::Resource::ResourceManager> resourceManager)
-    : hapInfo_({ hapPath, bundleName, moduleName, resourceManager })
+    : hapInfo_({hapPath, bundleName, moduleName, resourceManager})
 {
     resManager_ = BASE_NS::refcnt_ptr<OhosResMgr>(new OhosResMgr(hapInfo_));
     resManager_->UpdateResManager(hapInfo_);
@@ -120,7 +120,7 @@ IDirectory::Ptr OhosFilesystem::OpenDirectory(BASE_NS::string_view pathIn)
     auto path = ValidatePath(pathIn);
     auto directory = BASE_NS::make_unique<OhosFileDirectory>(resManager_);
     if (directory->Open(path.data())) {
-        return IDirectory::Ptr { directory.release() };
+        return IDirectory::Ptr{directory.release()};
     }
     return IDirectory::Ptr();
 }

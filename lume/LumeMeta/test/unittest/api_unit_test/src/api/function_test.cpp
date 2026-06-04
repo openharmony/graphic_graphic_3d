@@ -74,12 +74,12 @@ public:
     }
 
 public:
-    bool myFuncCalled_ {};
-    int myFunc2Called_ {};
-    bool onStartCalled_ {};
+    bool myFuncCalled_{};
+    int myFunc2Called_{};
+    bool onStartCalled_{};
 };
 
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: EventConnect
@@ -256,6 +256,6 @@ UNIT_TEST(API_FunctionTest, Serialization, testing::ext::TestSize.Level1)
     UnregisterObjectType<TestType>();
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

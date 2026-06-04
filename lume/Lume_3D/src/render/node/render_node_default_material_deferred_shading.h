@@ -48,8 +48,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "2abdac7a-de6c-4e82-b562-665a0553fc55" };
-    static constexpr const char* const typeName = "RenderNodeDefaultMaterialDeferredShading";
+    static constexpr BASE_NS::Uid UID{"2abdac7a-de6c-4e82-b562-665a0553fc55"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultMaterialDeferredShading";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -80,7 +80,7 @@ public:
         RENDER_NS::RenderHandle vsmSamplerHandle;
     };
     struct AllShaderData {
-        uint64_t psoHash { 0 };
+        uint64_t psoHash{0};
 
         RENDER_NS::RenderHandle psoHandle;
         RENDER_NS::RenderHandle shaderHandle;
@@ -90,7 +90,7 @@ public:
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     void RenderData(RENDER_NS::IRenderCommandList& cmdList);
@@ -107,21 +107,21 @@ private:
     void CreateDescriptorSets();
     void EvaluateFogBits();
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
         BASE_NS::string ppName;
         RENDER_NS::RenderNodeGraphInputs::InputResources resources;
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
 
-        uint32_t nodeFlags { 0u };
-        uint32_t renderSlotId { 0u };
+        uint32_t nodeFlags{0u};
+        uint32_t renderSlotId{0u};
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
-        bool hasChangeableRenderPassHandles { false };
-        bool hasChangeableResourceHandles { false };
+        bool hasChangeableRenderPassHandles{false};
+        bool hasChangeableResourceHandles{false};
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -149,8 +149,8 @@ private:
         RENDER_NS::IDescriptorSetBinder::Ptr set1;
 
         // user inputs (not built-in)
-        bool hasUserSet2 { false };
-        bool hasUserSet3 { false };
+        bool hasUserSet2{false};
+        bool hasUserSet3{false};
         RENDER_NS::IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder;
     };
     DescriptorSets allDescriptorSets_;
@@ -164,10 +164,10 @@ private:
 
         RENDER_NS::RenderHandle prePassColorTarget;
 
-        bool hasShadow { false };
-        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
-        IRenderDataStoreDefaultLight::LightingFlags lightingFlags { 0u };
-        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
+        bool hasShadow{false};
+        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes{};
+        IRenderDataStoreDefaultLight::LightingFlags lightingFlags{0u};
+        RenderCamera::ShaderFlags cameraShaderFlags{0u};  // evaluated based on camera and scene flags
     };
     CurrentScene currentScene_;
 
@@ -179,8 +179,8 @@ private:
     RENDER_NS::PostProcessConfiguration ppGlobalConfig_;
     RENDER_NS::IRenderDataStorePostProcess::PostProcess ppLocalConfig_;
 
-    bool valid_ { false };
+    bool valid_{false};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_DEFERRED_SHADING_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_MATERIAL_DEFERRED_SHADING_H

@@ -29,7 +29,8 @@ META_BEGIN_NAMESPACE()
  */
 class TimeSpan final {
 public:
-    constexpr TimeSpan() : value_(0) {}
+    constexpr TimeSpan() : value_(0)
+    {}
 
     ~TimeSpan() = default;
 
@@ -293,7 +294,8 @@ public:
     }
 
 private:
-    explicit constexpr TimeSpan(int64_t microseconds) : value_(microseconds) {}
+    explicit constexpr TimeSpan(int64_t microseconds) : value_(microseconds)
+    {}
 
     static constexpr int64_t Round(float in) noexcept
     {
@@ -326,7 +328,7 @@ constexpr TimeSpan operator"" _us(unsigned long long microseconds)
 {
     return TimeSpan::Microseconds(static_cast<int64_t>(microseconds));
 }
-} // namespace TimeSpanLiterals
+}  // namespace TimeSpanLiterals
 
 META_END_NAMESPACE()
 

@@ -1,0 +1,134 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "renderNodeGraphOutputResources": [
+        {
+            "name": "output",
+            "nodeName": "CORE3D_RN_CAM_CTRL"
+        }
+    ],
+    "nodes": [
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "CORE3D_RN_CAM_CTRL",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d32_sfloat",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "color",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "history",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeDefaultLightProbes",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_LIGHT_PROBES",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "nodeFlags": 5,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "clearDepth": [ 1.0, 0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "storeOp": "store",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "subpassFlags": "merge_bit",
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeLightProbesEnv",
+            "nodeName": "CORE3D_RN_CAM_DM_E_LIGHT_PROBES",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_REFLECTION_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_ENV",
+            "shaderMultiviewRenderSlot": "CORE3D_RS_DM_ENV_MV",
+            "nodeFlags": 5,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "load",
+                        "storeOp": "dont_care",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "depth",
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
+                    },
+                    {
+                        "loadOp": "load",
+                        "storeOp": "store",
+                        "resourceLocation": "from_named_render_node_output",
+                        "name": "color",
+                        "nodeName": "CORE3D_RN_CAM_CTRL"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 1,
+                "subpass": {
+                    "subpassFlags": "merge_bit",
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1 ]
+                }
+            }
+        }
+    ]
+}

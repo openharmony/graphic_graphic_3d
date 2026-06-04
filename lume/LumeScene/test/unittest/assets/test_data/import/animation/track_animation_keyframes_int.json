@@ -1,0 +1,9 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "trackAnimation",
+		"name": "intKeyframes",
+		"timestamps": [0.0, 0.5, 1.0],
+		"keyframes": [10, -20, 30]
+	}
+}

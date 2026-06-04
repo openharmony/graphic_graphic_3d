@@ -37,7 +37,7 @@ bool RenderResource::Build(const META_NS::IMetadata::Ptr& d)
 
 RENDER_NS::RenderHandleReference RenderResource::GetRenderHandle() const
 {
-    std::shared_lock lock { mutex_ };
+    std::shared_lock lock{mutex_};
     return handle_;
 }
 

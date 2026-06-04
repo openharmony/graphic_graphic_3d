@@ -67,20 +67,20 @@ CORE_END_NAMESPACE()
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr DynamicStateEnum DYNAMIC_STATES[] = { CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR };
+constexpr DynamicStateEnum DYNAMIC_STATES[] = {CORE_DYNAMIC_STATE_ENUM_VIEWPORT, CORE_DYNAMIC_STATE_ENUM_SCISSOR};
 
-constexpr string_view SHADER_NAME { "rendershaders://shader/fullscreen_blur.shader" };
-constexpr uint32_t MAX_MIP_COUNT { 16U };
-constexpr uint32_t MAX_PASS_PER_LEVEL_COUNT { 3U };
+constexpr string_view SHADER_NAME{"rendershaders://shader/fullscreen_blur.shader"};
+constexpr uint32_t MAX_MIP_COUNT{16U};
+constexpr uint32_t MAX_PASS_PER_LEVEL_COUNT{3U};
 constexpr uint32_t MAX_BINDER_COUNT = MAX_MIP_COUNT * MAX_PASS_PER_LEVEL_COUNT;
 
 RenderPassDesc::RenderArea GetImageRenderArea(
     const IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandle handle)
 {
     const GpuImageDesc desc = gpuResourceMgr.GetImageDescriptor(handle);
-    return { 0U, 0U, desc.width, desc.height };
+    return {0U, 0U, desc.width, desc.height};
 }
-} // namespace
+}  // namespace
 
 RenderPostProcessBlurNode::RenderPostProcessBlurNode()
     : properties_(&propertiesData, PropertyType::DataType<EffectProperties>::MetaDataFromType()),
@@ -155,7 +155,7 @@ void RenderPostProcessBlurNode::PreExecuteFrame()
         const bool valid = EvaluateInOut();
         if (valid) {
             EvaluateTemporaryTargets();
-            mipsBlur =
+            mipsBlur_ =
                 (inputImgData_.mipCount > 1U) && ((nodeInputsData.input.handle == nodeOutputsData.output.handle) ||
                                                      ((effectProperties_.blurConfiguration.maxMipLevel != 0U) &&
                                                          (effectProperties_.blurConfiguration.filterSize == 1.0f)));
@@ -205,7 +205,7 @@ void RenderPostProcessBlurNode::ExecuteFrame(IRenderCommandList& cmdList)
 
     RenderPass renderPass;
     renderPass.renderPassDesc.attachmentCount = 1;
-    renderPass.renderPassDesc.renderArea = { 0, 0, imageArea.extentWidth, imageArea.extentHeight };
+    renderPass.renderPassDesc.renderArea = {0, 0, imageArea.extentWidth, imageArea.extentHeight};
     renderPass.renderPassDesc.subpassCount = 1;
     renderPass.renderPassDesc.attachments[0].loadOp = CORE_ATTACHMENT_LOAD_OP_DONT_CARE;
     renderPass.renderPassDesc.attachments[0].storeOp = CORE_ATTACHMENT_STORE_OP_STORE;
@@ -220,19 +220,19 @@ void RenderPostProcessBlurNode::ExecuteFrame(IRenderCommandList& cmdList)
         auto& psoMgr = renderNodeContextMgr_->GetPsoManager();
         const ShaderSpecializationConstantView sscv = shaderMgr.GetReflectionSpecialization(pipelineData_.gsd.shader);
         {
-            const uint32_t specializationFlags[] = { effectProperties_.blurShaderScaleType };
-            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
-            pipelineData_.psoScale = psoMgr.GetGraphicsPsoHandle(
-                pipelineData_.gsd, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            const uint32_t specializationFlags[] = {effectProperties_.blurShaderScaleType};
+            const ShaderSpecializationConstantDataView specDataView{sscv.constants, specializationFlags};
+            pipelineData_.psoScale =
+                psoMgr.GetGraphicsPsoHandle(pipelineData_.gsd, specDataView, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
         {
-            const uint32_t specializationFlags[] = { effectProperties_.blurShaderType };
-            const ShaderSpecializationConstantDataView specDataView { sscv.constants, specializationFlags };
-            pipelineData_.psoBlur = psoMgr.GetGraphicsPsoHandle(
-                pipelineData_.gsd, specDataView, { DYNAMIC_STATES, countof(DYNAMIC_STATES) });
+            const uint32_t specializationFlags[] = {effectProperties_.blurShaderType};
+            const ShaderSpecializationConstantDataView specDataView{sscv.constants, specializationFlags};
+            pipelineData_.psoBlur =
+                psoMgr.GetGraphicsPsoHandle(pipelineData_.gsd, specDataView, {DYNAMIC_STATES, countof(DYNAMIC_STATES)});
         }
     }
-    if (mipsBlur) {
+    if (mipsBlur_) {
         if (effectProperties_.blurConfiguration.blurType == BlurConfiguration::BlurType::TYPE_NORMAL) {
             RenderGaussian(cmdList, renderPass);
         } else {
@@ -247,25 +247,24 @@ void RenderPostProcessBlurNode::ExecuteFrame(IRenderCommandList& cmdList)
 namespace {
 constexpr bool USE_CUSTOM_BARRIERS = true;
 
-constexpr ImageResourceBarrier SRC_UNDEFINED { 0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED };
-constexpr ImageResourceBarrier COL_ATTACHMENT { CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-constexpr ImageResourceBarrier SHDR_READ { CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+constexpr ImageResourceBarrier SRC_UNDEFINED{0, CORE_PIPELINE_STAGE_TOP_OF_PIPE_BIT, CORE_IMAGE_LAYOUT_UNDEFINED};
+constexpr ImageResourceBarrier COL_ATTACHMENT{CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+constexpr ImageResourceBarrier SHDR_READ{
+    CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 // transition the final mip level to read only as well
-constexpr ImageResourceBarrier FINAL_SRC { CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+constexpr ImageResourceBarrier FINAL_SRC{CORE_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
     CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | CORE_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-constexpr ImageResourceBarrier FINAL_DST { CORE_ACCESS_SHADER_READ_BIT,
-    CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT, // first possible shader read stage
-    CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-} // namespace
+    CORE_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+constexpr ImageResourceBarrier FINAL_DST{
+    CORE_ACCESS_SHADER_READ_BIT, CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, CORE_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+}  // namespace
 
 namespace {
 void DownscaleBarrier(IRenderCommandList& cmdList, const RenderHandle image, const uint32_t mipLevel)
 {
-    ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    ImageSubresourceRange imgRange{CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     imgRange.baseMipLevel = mipLevel;
     cmdList.CustomImageBarrier(image, SRC_UNDEFINED, COL_ATTACHMENT, imgRange);
     const uint32_t inputMipLevel = mipLevel - 1u;
@@ -281,8 +280,7 @@ void DownscaleBarrier(IRenderCommandList& cmdList, const RenderHandle image, con
 void BlurHorizontalBarrier(
     IRenderCommandList& cmdList, const RenderHandle realImage, const uint32_t mipLevel, const RenderHandle tmpImage)
 {
-    ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    ImageSubresourceRange imgRange{CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     imgRange.baseMipLevel = mipLevel;
     cmdList.CustomImageBarrier(realImage, COL_ATTACHMENT, SHDR_READ, imgRange);
     imgRange.baseMipLevel = mipLevel - 1;
@@ -293,8 +291,7 @@ void BlurHorizontalBarrier(
 void BlurVerticalBarrier(
     IRenderCommandList& cmdList, const RenderHandle realImage, const uint32_t mipLevel, const RenderHandle tmpImage)
 {
-    ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    ImageSubresourceRange imgRange{CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
     imgRange.baseMipLevel = mipLevel;
     cmdList.CustomImageBarrier(realImage, SHDR_READ, COL_ATTACHMENT, imgRange);
     imgRange.baseMipLevel = mipLevel - 1;
@@ -319,7 +316,7 @@ void BlurPass(const ConstDrawInput& di, IDescriptorSetBinder& binder, const Rend
 
     binder.ClearBindings();
     binder.BindSampler(0, di.sampler);
-    binder.BindImage(1u, { image, inputMipLevel });
+    binder.BindImage(1u, {image, inputMipLevel});
     di.cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
     di.cmdList.BindDescriptorSet(0, binder.GetDescriptorSetHandle());
 
@@ -327,7 +324,7 @@ void BlurPass(const ConstDrawInput& di, IDescriptorSetBinder& binder, const Rend
     di.cmdList.Draw(3u, 1u, 0u, 0u);
     di.cmdList.EndRenderPass();
 }
-} // namespace
+}  // namespace
 
 void RenderPostProcessBlurNode::RenderDirectionalBlur(IRenderCommandList& cmdList, const RenderPass& renderPassBase)
 {
@@ -336,36 +333,35 @@ void RenderPostProcessBlurNode::RenderDirectionalBlur(IRenderCommandList& cmdLis
         cmdList.BeginDisableAutomaticBarrierPoints();
     }
     const vec4 factor = (effectProperties_.blurConfiguration.blurType == BlurConfiguration::BlurType::TYPE_HORIZONTAL)
-                            ? vec4 { 1.0f, 0.0f, 0.0f, 0.0f }
-                            : vec4 { 0.0f, 1.0f, 0.0f, 0.0f };
+                            ? vec4{1.0f, 0.0f, 0.0f, 0.0f}
+                            : vec4{0.0f, 1.0f, 0.0f, 0.0f};
 
     // with every mip, first we do a downscale
     // then a single horizontal/vertical blur
-    LocalPostProcessPushConstantStruct pc { { 1.0f, 0.0f, 0.0f, 0.0f }, factor };
+    LocalPostProcessPushConstantStruct pc{{1.0f, 0.0f, 0.0f, 0.0f}, factor};
     uint32_t descIdx = 0U;
     const uint32_t blurCount = Math::min(effectProperties_.blurConfiguration.maxMipLevel, inputImgData_.mipCount);
-    const ConstDrawInput di { cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc,
-        defaultInput_.samplerHandle };
-    ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0,
-        PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+    const ConstDrawInput di{
+        cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc, defaultInput_.samplerHandle};
+    ImageSubresourceRange imgRange{CORE_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
 
     const RenderHandle handle0 = inputImgData_.rawHandle;
     const RenderHandle handle1 = tmpImgTargets_.rawHandle;
     for (uint32_t idx = 1U; idx < blurCount; ++idx) {
         const uint32_t mip = idx;
 
-        const Math::UVec2 size = { Math::max(1u, inputImgData_.size.x >> mip),
-            Math::max(1u, inputImgData_.size.y >> mip) };
-        const Math::Vec2 fSize = { static_cast<float>(size.x), static_cast<float>(size.y) };
-        const Math::Vec4 texSizeInvTexSize { fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y };
-        pc = { texSizeInvTexSize, factor };
+        const Math::UVec2 size = {
+            Math::max(1u, inputImgData_.size.x >> mip), Math::max(1u, inputImgData_.size.y >> mip)};
+        const Math::Vec2 fSize = {static_cast<float>(size.x), static_cast<float>(size.y)};
+        const Math::Vec4 texSizeInvTexSize{fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y};
+        pc = {texSizeInvTexSize, factor};
 
-        renderPass.renderPassDesc.renderArea = { 0, 0, size.x, size.y };
+        renderPass.renderPassDesc.renderArea = {0, 0, size.x, size.y};
         renderPass.renderPassDesc.attachmentHandles[0] = handle0;
         renderPass.renderPassDesc.attachments[0].mipLevel = mip;
 
-        cmdList.SetDynamicStateViewport({ 0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f });
-        cmdList.SetDynamicStateScissor({ 0, 0, size.x, size.y });
+        cmdList.SetDynamicStateViewport({0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f});
+        cmdList.SetDynamicStateScissor({0, 0, size.x, size.y});
 
         // downscale
         if constexpr (USE_CUSTOM_BARRIERS) {
@@ -421,28 +417,28 @@ void RenderPostProcessBlurNode::RenderGaussian(IRenderCommandList& cmdList, cons
 
     // with every mip, first we do a downscale
     // then a single horizontal and a single vertical blur
-    LocalPostProcessPushConstantStruct pc { { 1.0f, 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } };
+    LocalPostProcessPushConstantStruct pc{{1.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.0f}};
     uint32_t descIdx = 0U;
     const uint32_t blurCount = Math::min(effectProperties_.blurConfiguration.maxMipLevel, inputImgData_.mipCount);
-    const ConstDrawInput di { cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc,
-        defaultInput_.samplerHandle };
+    const ConstDrawInput di{
+        cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc, defaultInput_.samplerHandle};
     const RenderHandle handle0 = inputImgData_.rawHandle;
     const RenderHandle handle1 = tmpImgTargets_.rawHandle;
     for (uint32_t idx = 1U; idx < blurCount; ++idx) {
         const uint32_t mip = idx;
 
-        const Math::UVec2 size = { Math::max(1u, inputImgData_.size.x >> mip),
-            Math::max(1u, inputImgData_.size.y >> mip) };
-        const Math::Vec2 fSize = { static_cast<float>(size.x), static_cast<float>(size.y) };
-        const Math::Vec4 texSizeInvTexSize { fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y };
-        pc = { texSizeInvTexSize, { 1.0f, 0.0f, 0.0f, 0.0f } };
+        const Math::UVec2 size = {
+            Math::max(1u, inputImgData_.size.x >> mip), Math::max(1u, inputImgData_.size.y >> mip)};
+        const Math::Vec2 fSize = {static_cast<float>(size.x), static_cast<float>(size.y)};
+        const Math::Vec4 texSizeInvTexSize{fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y};
+        pc = {texSizeInvTexSize, {1.0f, 0.0f, 0.0f, 0.0f}};
 
-        renderPass.renderPassDesc.renderArea = { 0, 0, size.x, size.y };
+        renderPass.renderPassDesc.renderArea = {0, 0, size.x, size.y};
         renderPass.renderPassDesc.attachmentHandles[0] = handle0;
         renderPass.renderPassDesc.attachments[0].mipLevel = mip;
 
-        cmdList.SetDynamicStateViewport({ 0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f });
-        cmdList.SetDynamicStateScissor({ 0, 0, size.x, size.y });
+        cmdList.SetDynamicStateViewport({0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f});
+        cmdList.SetDynamicStateScissor({0, 0, size.x, size.y});
 
         // downscale
         if constexpr (USE_CUSTOM_BARRIERS) {
@@ -466,7 +462,7 @@ void RenderPostProcessBlurNode::RenderGaussian(IRenderCommandList& cmdList, cons
 
         renderPass.renderPassDesc.attachmentHandles[0] = handle0;
         renderPass.renderPassDesc.attachments[0].mipLevel = mip;
-        pc.factor = { 0.0f, 1.0f, 0.0f, 0.0f };
+        pc.factor = {0.0f, 1.0f, 0.0f, 0.0f};
         BlurPass(di, *binders_[descIdx++], pipelineData_.psoBlur, handle1, mip - 1);
     }
 
@@ -474,14 +470,17 @@ void RenderPostProcessBlurNode::RenderGaussian(IRenderCommandList& cmdList, cons
         if (inputImgData_.mipCount > 1u) {
             // transition the final used mip level
             if (blurCount > 0) {
-                const ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, blurCount - 1, 1, 0,
-                    PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+                const ImageSubresourceRange imgRange{
+                    CORE_IMAGE_ASPECT_COLOR_BIT, blurCount - 1, 1, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
                 cmdList.CustomImageBarrier(handle0, FINAL_SRC, FINAL_DST, imgRange);
             }
             if (blurCount < inputImgData_.mipCount) {
                 // transition the final levels which might be in undefined state
-                const ImageSubresourceRange imgRange { CORE_IMAGE_ASPECT_COLOR_BIT, blurCount,
-                    inputImgData_.mipCount - blurCount, 0, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS };
+                const ImageSubresourceRange imgRange{CORE_IMAGE_ASPECT_COLOR_BIT,
+                    blurCount,
+                    inputImgData_.mipCount - blurCount,
+                    0,
+                    PipelineStateConstants::GPU_IMAGE_ALL_LAYERS};
                 cmdList.CustomImageBarrier(handle0, SRC_UNDEFINED, FINAL_DST, imgRange);
             }
         }
@@ -501,50 +500,50 @@ void RenderPostProcessBlurNode::RenderData(IRenderCommandList& cmdList, const Re
 
     // with every mip, first we do a downscale
     // then a single horizontal and a single vertical blur
-    LocalPostProcessPushConstantStruct pc { { 1.0f, 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } };
+    LocalPostProcessPushConstantStruct pc{{1.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.0f}};
     uint32_t descIdx = 0U;
     const uint32_t blurCount =
         Math::min(static_cast<uint32_t>(effectProperties_.blurConfiguration.filterSize), MAX_MIP_COUNT);
-    const ConstDrawInput di { cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc,
-        defaultInput_.samplerHandle };
+    const ConstDrawInput di{
+        cmdList, renderPass, pipelineData_.gsd.pipelineLayoutData.pushConstant, pc, defaultInput_.samplerHandle};
     const RenderHandle inputHandle = inputImgData_.rawHandle;
     const RenderHandle handle0 = tmpImgTargets_.rawHandle;
     const RenderHandle handle1 = tmpImgTargets_.rawHandleExt;
     // first downscale -> then ping pong
     {
-        const Math::UVec2 size = { inputImgData_.size.x / 2U, inputImgData_.size.y / 2U };
-        const Math::Vec2 fSize = { static_cast<float>(size.x), static_cast<float>(size.y) };
-        const Math::Vec4 texSizeInvTexSize { fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y };
-        pc = { texSizeInvTexSize, { 1.0f, 0.0f, 0.0f, 0.0f } };
+        const Math::UVec2 size = {inputImgData_.size.x / 2U, inputImgData_.size.y / 2U};
+        const Math::Vec2 fSize = {static_cast<float>(size.x), static_cast<float>(size.y)};
+        const Math::Vec4 texSizeInvTexSize{fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y};
+        pc = {texSizeInvTexSize, {1.0f, 0.0f, 0.0f, 0.0f}};
 
-        renderPass.renderPassDesc.renderArea = { 0, 0, size.x, size.y };
+        renderPass.renderPassDesc.renderArea = {0, 0, size.x, size.y};
 
-        cmdList.SetDynamicStateViewport({ 0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f });
-        cmdList.SetDynamicStateScissor({ 0, 0, size.x, size.y });
+        cmdList.SetDynamicStateViewport({0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f});
+        cmdList.SetDynamicStateScissor({0, 0, size.x, size.y});
 
         renderPass.renderPassDesc.attachmentHandles[0] = handle0;
         BlurPass(di, *binders_[descIdx++], pipelineData_.psoScale, inputHandle, 0U);
     }
 
     // output will be handle0
-    const Math::UVec2 size = { inputImgData_.size.x / 2U, inputImgData_.size.y / 2U };
-    const Math::Vec2 fSize = { static_cast<float>(size.x), static_cast<float>(size.y) };
-    const Math::Vec4 texSizeInvTexSize { fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y };
-    pc = { texSizeInvTexSize, { 1.0f, 0.0f, 0.0f, 0.0f } };
-    renderPass.renderPassDesc.renderArea = { 0, 0, size.x, size.y };
+    const Math::UVec2 size = {inputImgData_.size.x / 2U, inputImgData_.size.y / 2U};
+    const Math::Vec2 fSize = {static_cast<float>(size.x), static_cast<float>(size.y)};
+    const Math::Vec4 texSizeInvTexSize{fSize.x * 1.0f, fSize.y * 1.0f, 1.0f / fSize.x, 1.0f / fSize.y};
+    pc = {texSizeInvTexSize, {1.0f, 0.0f, 0.0f, 0.0f}};
+    renderPass.renderPassDesc.renderArea = {0, 0, size.x, size.y};
 
-    cmdList.SetDynamicStateViewport({ 0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f });
-    cmdList.SetDynamicStateScissor({ 0, 0, size.x, size.y });
+    cmdList.SetDynamicStateViewport({0.0f, 0.0f, fSize.x, fSize.y, 0.0f, 1.0f});
+    cmdList.SetDynamicStateScissor({0, 0, size.x, size.y});
 
     for (uint32_t idx = 0U; idx < blurCount; ++idx) {
         // horizontal (from real image to temp)
-        pc.factor = { 1.0f, 0.0f, 0.0f, 0.0f };
+        pc.factor = {1.0f, 0.0f, 0.0f, 0.0f};
         renderPass.renderPassDesc.attachmentHandles[0] = handle1;
         BlurPass(di, *binders_[descIdx++], pipelineData_.psoBlur, handle0, 0U);
 
         // vertical
         renderPass.renderPassDesc.attachmentHandles[0] = handle0;
-        pc.factor = { 0.0f, 1.0f, 0.0f, 0.0f };
+        pc.factor = {0.0f, 1.0f, 0.0f, 0.0f};
         BlurPass(di, *binders_[descIdx++], pipelineData_.psoBlur, handle1, 0U);
     }
 
@@ -571,7 +570,7 @@ bool RenderPostProcessBlurNode::EvaluateInOut()
 void RenderPostProcessBlurNode::CheckDescriptorSetNeed()
 {
     if (binders_.empty()) {
-        constexpr uint32_t set { 0U };
+        constexpr uint32_t set{0U};
         binders_.clear();
         binders_.resize(MAX_BINDER_COUNT);
 
@@ -588,12 +587,13 @@ void RenderPostProcessBlurNode::EvaluateTemporaryTargets()
 {
     IRenderNodeGpuResourceManager& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const GpuImageDesc inDesc = gpuResourceMgr.GetImageDescriptor(nodeInputsData.input.handle);
-    inputImgData_.size = { inDesc.width, inDesc.height };
+    inputImgData_.size = {inDesc.width, inDesc.height};
+    const bool mipCountChanged = inDesc.mipCount != inputImgData_.mipCount;
     inputImgData_.mipCount = inDesc.mipCount;
     Math::UVec2 texSize = inputImgData_.size / 2U;
     texSize.x = Math::max(1u, texSize.x);
     texSize.y = Math::max(1u, texSize.y);
-    if (texSize.x != tmpImgTargets_.size.x || texSize.y != tmpImgTargets_.size.y) {
+    if (texSize.x != tmpImgTargets_.size.x || texSize.y != tmpImgTargets_.size.y || mipCountChanged) {
         const bool needsTwoTargets =
             ((inDesc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0) ||
             (inputImgData_.mipCount <= 1U);
@@ -601,7 +601,7 @@ void RenderPostProcessBlurNode::EvaluateTemporaryTargets()
         constexpr ImageUsageFlags usageFlags = ImageUsageFlagBits::CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                                ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT |
                                                ImageUsageFlagBits::CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-        const GpuImageDesc desc {
+        const GpuImageDesc desc{
             ImageType::CORE_IMAGE_TYPE_2D,
             ImageViewType::CORE_IMAGE_VIEW_TYPE_2D,
             inDesc.format,

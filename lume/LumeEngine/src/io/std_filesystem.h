@@ -64,4 +64,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_STD_FILESYSTEM_H
+#endif  // CORE_IO_STD_FILESYSTEM_H

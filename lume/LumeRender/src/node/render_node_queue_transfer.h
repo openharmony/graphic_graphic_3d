@@ -46,7 +46,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "22a56820-befb-4e12-83ee-3cad3f685b0a" };
+    static constexpr BASE_NS::Uid UID{"22a56820-befb-4e12-83ee-3cad3f685b0a"};
     static constexpr const char* TYPE_NAME = "CORE_RN_QUEUE_TRANSFER";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -57,4 +57,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_QUEUE_TRANSFER_H
+#endif  // RENDER_NODE_RENDER_NODE_QUEUE_TRANSFER_H

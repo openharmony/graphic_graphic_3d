@@ -36,44 +36,6 @@
         },
         {
           "header": {
-            "header_base": "//foundation/graphic/graphic_3d/3d_widget_adapter/include",
-            "header_files": [
-              "graphics_manager_common.h",
-              "graphics_task.h",
-              "i_engine.h",
-              "offscreen_context_helper.h",
-              "widget_adapter.h",
-              "texture_info.h",
-              "custom/custom_render_descriptor.h",
-              "custom/shader_input_buffer.h",
-              "data_type/constants.h",
-              "data_type/gltf_animation.h",
-              "data_type/pointer_event.h",
-              "data_type/vec3.h",
-              "data_type/geometry/cone.h",
-              "data_type/geometry/cube.h",
-              "data_type/geometry/geometry.h",
-              "data_type/geometry/sphere.h",
-              "ohos/3d_widget_adapter_log.h",
-              "ohos/graphics_manager.h",
-              "ohos/platform_data.h",
-              "ohos/texture_layer.h"
-            ]
-          },
-          "name": "//foundation/graphic/graphic_3d/3d_widget_adapter:3dWidgetAdapterInterface"
-        },
-        {
-          "header": {
-            "header_base": "//foundation/graphic/graphic_3d/3d_scene_adapter/include",
-            "header_files": [
-              "scene_adpater/scene_adapter.h",
-              "scene_adpater/scene_bridge.h"
-            ]
-          },
-          "name": "//foundation/graphic/graphic_3d/3d_scene_adapter:sceneAdapterInterface"
-        },
-        {
-          "header": {
             "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper",
             "header_files": [
               "ComponentTools/base_manager.h",
@@ -352,47 +314,23 @@
         {
           "header": {
             "header_base": "//foundation/graphic/graphic_3d/lume/LumeMeta/include",
-            "header_files": [
-            ]
+            "header_files": []
           },
           "name": "//foundation/graphic/graphic_3d/lume/LumeMeta:AGPMetaApi"
         },
         {
           "header": {
             "header_base": "//foundation/graphic/graphic_3d/lume/LumeScene/include",
-            "header_files": [
-            ]
+            "header_files": []
           },
           "name": "//foundation/graphic/graphic_3d/lume/LumeScene:AGPSceneApi"
         },
         {
           "header": {
             "header_base": "//foundation/graphic/graphic_3d/kits/js/include",
-            "header_files": [
-            ]
+            "header_files": []
           },
           "name": "//foundation/graphic/graphic_3d/kits/js:libKitHelper"
-        },
-        {
-          "name": "//foundation/graphic/graphic_3d/lume/LumeEngine:libComponentHelper",
-          "header": {
-          "header_files": [
-            "ComponentTools/base_manager.h",
-            "ComponentTools/component_query.h"
-           ],
-           "header_base": "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper"
-          }
-        },
-        {
-          "header": {
-            "header_base": "//foundation/graphic/graphic_3d/kits/ets",
-            "header_files": [
-            ]
-          },
-          "name": "//foundation/graphic/graphic_3d/kits/ets:scene_ani"
-        },
-        {
-          "name": "//foundation/graphic/graphic_3d/kits/ets:copy_scene"
         }
       ],
       "sub_component": [
@@ -408,15 +346,34 @@
         "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset",
         "//foundation/graphic/graphic_3d/lume/LumeEngine/ecshelper:libAGPEcshelper",
         "//foundation/graphic/graphic_3d/lume/LumeMeta:libPluginMetaObject",
+        "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginLumeSceneImporter",
+        "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginLumeSceneMetadataImporter",
         "//foundation/graphic/graphic_3d/lume/LumeScene:libPluginSceneWidget",
         "//foundation/graphic/graphic_3d/kits/js:libscene",
         "//foundation/graphic/graphic_3d/kits/ets:graphics_3d_taihe",
         "//foundation/graphic/graphic_3d/camera_preview_plugin:libPluginCamPreview",
-        "//foundation/graphic/graphic_3d/lume/LumeBoidsSwarm:libPluginBoidsSwarm"
+        "//foundation/graphic/graphic_3d/lume/LumeDotfield:libPluginDotfield",
+        "//foundation/graphic/graphic_3d/lume/LumeBoidsSwarm:libPluginBoidsSwarm",
+        "//foundation/graphic/graphic_3d/lume/LumeMRT:libPluginMRT"
       ],
       "test": [
         "//foundation/graphic/graphic_3d/3d_widget_adapter/test:unittest",
-        "//foundation/graphic/graphic_3d/lume/LumeBase/test/unittest:unittest"
+        "//foundation/graphic/graphic_3d/lume/LumeBase/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumePng/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeJpg/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeDotfield/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeBoidsSwarm/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeEngine/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeRender/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/Lume_3D/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeMeta/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/unittest:unittest",
+        "//foundation/graphic/graphic_3d/lume/Lume_3D/test/fuzztest/gltf2loader_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeEngine/test/fuzztest/json_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeEngine/test/fuzztest/image_loader_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/gltf_load_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/json_parse_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/property_path_fuzzer:fuzztest"
       ]
     },
     "deps": {
@@ -426,7 +383,6 @@
         "graphic_2d",
         "graphic_surface",
         "hitrace",
-        "icu",
         "init",
         "input",
         "ipc",
@@ -442,11 +398,11 @@
         "vulkan-loader",
         "vulkan-headers",
         "skia",
-        "vma",
         "freetype",
         "zlib",
         "runtime_core",
-        "meshoptimizer"
+        "meshoptimizer",
+        "api_metrics"
       ],
       "third_party": []
     },

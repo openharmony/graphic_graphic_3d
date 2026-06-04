@@ -64,7 +64,8 @@ IPropertyHandle* LocalMatrixSystem::GetProperties()
     return nullptr;
 }
 
-void LocalMatrixSystem::SetProperties(const IPropertyHandle&) {}
+void LocalMatrixSystem::SetProperties(const IPropertyHandle&)
+{}
 
 const IEcs& LocalMatrixSystem::GetECS() const
 {
@@ -74,7 +75,7 @@ const IEcs& LocalMatrixSystem::GetECS() const
 void LocalMatrixSystem::Initialize()
 {
     const ComponentQuery::Operation operations[] = {
-        { *localMatrixManager_, ComponentQuery::Operation::REQUIRE },
+        {*localMatrixManager_, ComponentQuery::Operation::REQUIRE},
     };
     componentQuery_.SetEcsListenersEnabled(true);
     componentQuery_.SetupQuery(*transformManager_, operations);
@@ -100,6 +101,9 @@ bool LocalMatrixSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
 
     for (const auto& row : componentQuery_.GetResults()) {
         const auto transformComponentId = row.components[0];
+        if (transformComponentId >= transformComponentGenerations_.size()) {
+            continue;
+        }
 
         // Resolve component generation.
         uint32_t currentComponentGenerationId = transformManager_->GetComponentGeneration(transformComponentId);

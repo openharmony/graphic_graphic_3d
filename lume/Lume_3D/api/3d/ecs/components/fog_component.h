@@ -29,57 +29,57 @@ CORE3D_BEGIN_NAMESPACE()
 /** Fog component can be used to configure per camera scene fogging.
  */
 BEGIN_COMPONENT(IFogComponentManager, FogComponent)
-    /** Global density factor. Fog layer's thickness.
-     */
-    DEFINE_PROPERTY(float, density, "Density Factor", 0, VALUE(0.005f))
+/** Global density factor. Fog layer's thickness.
+ */
+DEFINE_PROPERTY(float, density, "Density Factor", 0, VALUE(0.005f))
 
-    /** Height density factor. Controls how the density increases as height decreases. Smaller values for larger
-     * transition.
-     */
-    DEFINE_PROPERTY(float, heightFalloff, "Height Falloff", 0, VALUE(1.0f))
+/** Height density factor. Controls how the density increases as height decreases. Smaller values for larger
+ * transition.
+ */
+DEFINE_PROPERTY(float, heightFalloff, "Height Falloff", 0, VALUE(1.0f))
 
-    /** Offset to "ground" plane. Y value in world space.
-     */
-    DEFINE_PROPERTY(float, heightFogOffset, "Height Offset (to ground plane)", 0, VALUE(0.0f))
+/** Offset to "ground" plane. Y value in world space.
+ */
+DEFINE_PROPERTY(float, heightFogOffset, "Height Offset (to ground plane)", 0, VALUE(0.0f))
 
-    /** Second layer. Density of the second layer. Value of 0 will disable the second layer.
-     */
-    DEFINE_PROPERTY(float, layerDensity, "Second Layer Density", 0, VALUE(0.04f))
+/** Second layer. Density of the second layer. Value of 0 will disable the second layer.
+ */
+DEFINE_PROPERTY(float, layerDensity, "Second Layer Density", 0, VALUE(0.04f))
 
-    /** Second layer. Height density factor.
-     */
-    DEFINE_PROPERTY(float, layerHeightFalloff, "Second Layer Height Falloff", 0, VALUE(1.0f))
+/** Second layer. Height density factor.
+ */
+DEFINE_PROPERTY(float, layerHeightFalloff, "Second Layer Height Falloff", 0, VALUE(1.0f))
 
-    /** Second layer. Offset to "ground" plane.
-     */
-    DEFINE_PROPERTY(float, layerHeightFogOffset, "Second Layer Height Offset", 0, VALUE(0.0f))
+/** Second layer. Offset to "ground" plane.
+ */
+DEFINE_PROPERTY(float, layerHeightFogOffset, "Second Layer Height Offset", 0, VALUE(0.0f))
 
-    /** Start distance of the fog from the camera.
-     */
-    DEFINE_PROPERTY(float, startDistance, "Start Distance From Camera", 0, VALUE(1.0f))
+/** Start distance of the fog from the camera.
+ */
+DEFINE_PROPERTY(float, startDistance, "Start Distance From Camera", 0, VALUE(1.0f))
 
-    /** Scene objects past this distance will not have fog applied. Some skyboxes, environments might have baked fog.
-     * Negative value applies fog to everything.
-     */
-    DEFINE_PROPERTY(float, cuttoffDistance, "Cutoff Distance", 0, VALUE(-1.0f))
+/** Scene objects past this distance will not have fog applied. Some skyboxes, environments might have baked fog.
+ * Negative value applies fog to everything.
+ */
+DEFINE_PROPERTY(float, cuttoffDistance, "Cutoff Distance", 0, VALUE(-1.0f))
 
-    /** The opacity limit of both layers of the the fog. 1.0 is fully opaque. 0.0 is invisible, no fog at all.
-     */
-    DEFINE_PROPERTY(float, maxOpacity, "Maximum Opacity", 0, VALUE(0.2f))
+/** The opacity limit of both layers of the the fog. 1.0 is fully opaque. 0.0 is invisible, no fog at all.
+ */
+DEFINE_PROPERTY(float, maxOpacity, "Maximum Opacity", 0, VALUE(0.2f))
 
-    /** Primary color of the fog. The w-value is multiplier.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, inscatteringColor, "Fog Primary Color (Intensity In Alpha)", 0,
-        ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
+/** Primary color of the fog. The w-value is multiplier.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, inscatteringColor, "Fog Primary Color (Intensity In Alpha)", 0,
+    ARRAY_VALUE(1.0f, 1.0f, 1.0f, 1.0f))
 
-    /** Environment map factor with intensity in alpha.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, envMapFactor, "Environment Map Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 0.1f))
+/** Environment map factor with intensity in alpha.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, envMapFactor, "Environment Map Factor", 0, ARRAY_VALUE(1.0f, 1.0f, 1.0f, 0.1f))
 
-    /** Additional factor for e.g. shader customization.
-     */
-    DEFINE_PROPERTY(BASE_NS::Math::Vec4, additionalFactor, "Additional Factor For Customization", 0,
-        ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
+/** Additional factor for e.g. shader customization.
+ */
+DEFINE_PROPERTY(BASE_NS::Math::Vec4, additionalFactor, "Additional Factor For Customization", 0,
+    ARRAY_VALUE(0.0f, 0.0f, 0.0f, 0.0f))
 
 END_COMPONENT(IFogComponentManager, FogComponent, "7a5faa64-7e5e-4ec6-90c5-e7ce24eee7b1")
 #if !defined(IMPLEMENT_MANAGER)

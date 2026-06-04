@@ -1,0 +1,18 @@
+{
+	"version": "1.0",
+	"description": "test scene with geometry node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "geometry",
+					"name": "test",
+					"position": [1.0, 2.0, 3.0]
+				}
+			]
+		}
+	}
+}

@@ -29,7 +29,7 @@
 CORE_BEGIN_NAMESPACE()
 struct Property;
 
-template<typename BlockType>
+template <typename BlockType>
 class PropertyApiImpl : public IPropertyApi, protected IPropertyHandle {
 public:
     PropertyApiImpl();
@@ -58,16 +58,16 @@ protected:
     uint64_t Type() const override;
 
 private:
-    const IPropertyApi* owner_ { nullptr };
-    BASE_NS::unique_ptr<BlockType, void (*)(BlockType*)> data_ { nullptr };
+    const IPropertyApi* owner_{nullptr};
+    BASE_NS::unique_ptr<BlockType, void (*)(BlockType*)> data_{nullptr};
     BASE_NS::array_view<const Property> componentMetadata_;
-    uint64_t typeHash_ { 0 };
-    uint32_t generationCount_ { 0 };
+    uint64_t typeHash_{0};
+    uint32_t generationCount_{0};
 #ifndef NDEBUG
-    mutable uint32_t rLocked_ { 0 };
-    mutable bool wLocked_ { false };
+    mutable uint32_t rLocked_{0};
+    mutable bool wLocked_{false};
 #endif
 };
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PROPERTY_TOOLS_PROPERTY_API_IMPL_H
+#endif  // API_CORE_PROPERTY_TOOLS_PROPERTY_API_IMPL_H

@@ -27,7 +27,7 @@ namespace UTest {
 
 class API_ScenePluginLightComponentTest : public ScenePluginComponentTest<CORE3D_NS::ILightComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestILightPropertyGetters(T* light)
     {
         EXPECT_TRUE(light->Color());
@@ -65,7 +65,7 @@ UNIT_TEST_F(API_ScenePluginLightComponentTest, Members, testing::ext::TestSize.L
     auto node = scene->CreateNode("//test", ClassId::LightNode).GetResult();
     SetComponent(node, "LightComponent");
 
-    TestEngineProperty<BASE_NS::Color>("Color", { 0.5, 0.6, 0.7, 0.0 }, nativeComponent.color);
+    TestEngineProperty<BASE_NS::Color>("Color", {0.5, 0.6, 0.7, 0.0}, nativeComponent.color);
     TestEngineProperty<float>("Intensity", 0.5, nativeComponent.intensity);
     TestEngineProperty<float>("NearPlane", 1.2345f, nativeComponent.nearPlane);
     TestEngineProperty<bool>("ShadowEnabled", true, nativeComponent.shadowEnabled);
@@ -75,7 +75,7 @@ UNIT_TEST_F(API_ScenePluginLightComponentTest, Members, testing::ext::TestSize.L
     TestEngineProperty<float>("SpotInnerAngle", 0.5, nativeComponent.spotInnerAngle);
     TestEngineProperty<float>("SpotOuterAngle", 0.5, nativeComponent.spotOuterAngle);
     TestEngineProperty<LightType>("Type", LightType::SPOT, nativeComponent.type);
-    TestEngineProperty<BASE_NS::Math::Vec4>("AdditionalFactor", { 0.5, 1, 2, 0.6 }, nativeComponent.additionalFactor);
+    TestEngineProperty<BASE_NS::Math::Vec4>("AdditionalFactor", {0.5, 1, 2, 0.6}, nativeComponent.additionalFactor);
     TestEngineProperty<uint64_t>("LightLayerMask", 4, nativeComponent.lightLayerMask);
     TestEngineProperty<uint64_t>("ShadowLayerMask", 128, nativeComponent.shadowLayerMask);
 }
@@ -97,6 +97,6 @@ UNIT_TEST_F(API_ScenePluginLightComponentTest, Functions, testing::ext::TestSize
     TestILightFunctions(interface_cast<ILight>(object));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

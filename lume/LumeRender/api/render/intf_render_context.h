@@ -47,13 +47,13 @@ enum class RenderResultCode : uint32_t {
  */
 struct VersionInfo {
     /** Name, default is "no_name" */
-    BASE_NS::string name { "no_name" };
+    BASE_NS::string name{"no_name"};
     /** Major number of version */
-    uint32_t versionMajor { 0 };
+    uint32_t versionMajor{0};
     /** Minor number of version */
-    uint32_t versionMinor { 0 };
+    uint32_t versionMinor{0};
     /** Patch number of version */
-    uint32_t versionPatch { 0 };
+    uint32_t versionPatch{0};
 };
 
 /**
@@ -76,15 +76,15 @@ struct RenderCreateInfo {
         /** Coefficient to hardware registered number of cores
          * With 1.0f and maxCount { ~0U }, the maximum number of core tasks are in use
          */
-        float threadCountCoefficient { 0.5f };
+        float threadCountCoefficient{0.5f};
         /** Minimum count of threads in the thread pool.
          * The renderer should have at least 4 threads to parallelize correctly.
          */
-        uint32_t minCount { 4U };
+        uint32_t minCount{4U};
         /** Maximum count of threads in the thread pool.
          * The renderer thread count should not exceed the expected task count.
          */
-        uint32_t maxCount { ~0U };
+        uint32_t maxCount{~0U};
     };
 
     /** Application version info */
@@ -92,11 +92,11 @@ struct RenderCreateInfo {
     /** Device create info */
     DeviceCreateInfo deviceCreateInfo;
     /** Creation flags */
-    CreateInfoFlags createFlags { 0U };
+    CreateInfoFlags createFlags{0U};
     /** Threadpool create info */
     ThreadPoolCreateInfo threadPoolCreateInfo;
     /** Color space flags (defaults to linear) */
-    BASE_NS::ColorSpaceFlags colorSpaceFlags { 0U };
+    BASE_NS::ColorSpaceFlags colorSpaceFlags{0U};
 };
 
 /**
@@ -105,7 +105,7 @@ struct RenderCreateInfo {
  */
 class IRenderContext : public CORE_NS::IClassFactory {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "c8d8650b-efac-4e04-8e66-e12b35d2749e" };
+    static constexpr auto UID = BASE_NS::Uid{"c8d8650b-efac-4e04-8e66-e12b35d2749e"};
     using Ptr = BASE_NS::refcnt_ptr<IRenderContext>;
 
     /** Init, create device for render use.
@@ -148,4 +148,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderContext*)
 }
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_CONTEXT_H
+#endif  // API_RENDER_IRENDER_CONTEXT_H

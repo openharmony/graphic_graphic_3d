@@ -34,10 +34,10 @@
 #include "3d_widget_adapter_log.h"
 #include "scene_adapter/scene_adapter.h"
 
-ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
+ANI_EXPORT ani_status ANI_Constructor(ani_vm* vm, uint32_t* result)
 {
     WIDGET_LOGI("Scene ANI_Constructor");
-    ani_env *env;
+    ani_env* env;
     if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {
         WIDGET_LOGE("vm->GetEnv error");
         return ANI_ERROR;

@@ -33,7 +33,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 class IRenderDataStoreDefaultGpuResourceDataCopy : public IRenderDataStore {
 public:
-    static constexpr BASE_NS::Uid UID { "f3ce24fd-a624-4b8f-9013-006fc5fd8760" };
+    static constexpr BASE_NS::Uid UID{"f3ce24fd-a624-4b8f-9013-006fc5fd8760"};
 
     /* The type of the copy */
     enum class CopyType : uint8_t {
@@ -45,11 +45,11 @@ public:
 
     struct GpuResourceDataCopy {
         /* The type of the copy */
-        CopyType copyType { CopyType::UNDEFINED };
+        CopyType copyType{CopyType::UNDEFINED};
         /* GPU resource handle that will be copied. */
         RenderHandleReference gpuHandle;
         /* Byte array where to copy. */
-        BASE_NS::ByteArray* byteArray { nullptr };
+        BASE_NS::ByteArray* byteArray{nullptr};
     };
 
     /** Copy data to buffer on GPU through staging GPU buffer.
@@ -65,4 +65,4 @@ protected:
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H
+#endif  // API_RENDER_IRENDER_DATA_STORE_DEFAULT_GPU_RESOURCE_DATA_COPY_H

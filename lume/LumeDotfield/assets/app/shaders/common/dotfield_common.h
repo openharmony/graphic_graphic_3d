@@ -29,4 +29,4 @@ constexpr uint32_t DOTFIELD_MAX_COUNT = 1024u * 128u;
 constexpr uint32_t DOTFIELD_EFFECT_MAX_COUNT = 16u;
 #endif
 
-#endif // SHADERS__COMMON__DOTFIELD_COMMON_H
+#endif  // SHADERS__COMMON__DOTFIELD_COMMON_H

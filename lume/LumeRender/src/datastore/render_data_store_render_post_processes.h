@@ -42,10 +42,10 @@ public:
     void AddData(BASE_NS::string_view name, BASE_NS::array_view<const PostProcessData> data) override;
     PostProcessPipeline GetData(BASE_NS::string_view name) const override;
 
-    void PreRender() override {};
+    void PreRender() override{};
     void PostRender() override;
-    void PreRenderBackend() override {};
-    void PostRenderBackend() override {};
+    void PreRenderBackend() override{};
+    void PostRenderBackend() override{};
     void Clear() override;
     uint32_t GetFlags() const override
     {
@@ -84,8 +84,8 @@ private:
 
     mutable std::mutex mutex_;
 
-    std::atomic_int32_t refcnt_ { 0 };
+    std::atomic_int32_t refcnt_{0};
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_DATA_STORE_RENDER_POST_PROCESSES_H
+#endif  // RENDER_DATA_STORE_RENDER_POST_PROCESSES_H

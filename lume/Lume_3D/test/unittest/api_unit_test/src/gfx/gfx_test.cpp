@@ -112,7 +112,7 @@ void CheckRenderNodeCounters(
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -130,22 +130,26 @@ UNIT_TEST(API_GfxTest, HelloWorldTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDIr = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDIr + "/hello.png").c_str(), res.GetWindowWidth(), res.GetWindowHeight(), 4,
-            res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDIr + "/hello.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     // evaluate performance data counters
-    static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 279 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 10 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 10 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 5 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 3 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 11 },
+    static constexpr IPerformanceDataManager::CounterPair defaultCounts[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 279},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 10},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 10},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 5},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 3},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 11},
     };
     IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
         defaultCounts, defaultCounts + countof(defaultCounts));
@@ -168,25 +172,17 @@ UNIT_TEST(API_GfxTest, CloudTestVulkan, testing::ext::TestSize.Level1)
     Cloud::TickTest(res, 10u);
 
     // evaluate performance data counters
-    static constexpr int64_t expectedTriangles = 370299;
-    static constexpr int64_t expectedInstances = 152;
-    static constexpr int64_t expectedDraws = 152;
-    static constexpr int64_t expectedDispatches = 4;
-    static constexpr int64_t expectedPipelines = 25;
-    static constexpr int64_t expectedRenderPasses = 31;
-    static constexpr int64_t expectedDescriptorUpdates = 4;
-    static constexpr int64_t expectedDescriptorBinds = 158;
-    static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatches },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, expectedPipelines },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, expectedDescriptorUpdates },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, expectedDescriptorBinds },
+    static constexpr IPerformanceDataManager::CounterPair defaultCounts[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 370299},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 4},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 25},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 31},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 4},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 158},
     };
     IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
         defaultCounts, defaultCounts + countof(defaultCounts));
@@ -194,7 +190,7 @@ UNIT_TEST(API_GfxTest, CloudTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND
 /**
@@ -211,42 +207,36 @@ UNIT_TEST(API_GfxTest, CloudTestOpenGL, testing::ext::TestSize.Level1)
     Cloud::TickTest(res, 10u);
 
     // evaluate performance data counters
-    static constexpr int64_t expectedTriangles = 370299;
-    static constexpr int64_t expectedInstances = 152;
-    static constexpr int64_t expectedDraws = 152;
-    static constexpr int64_t expectedDispatchesGl = 4;
-    static constexpr int64_t expectedDispatchesGles = 2;
-    static constexpr int64_t expectedRenderPasses = 31;
-    static constexpr IPerformanceDataManager::CounterPair defaultCountsGl[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatchesGl },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0 },
+    static constexpr IPerformanceDataManager::CounterPair defaultCountsGl[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 370299},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 4},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 31},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0},
     };
-    static constexpr IPerformanceDataManager::CounterPair defaultCountsGles[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, expectedTriangles },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, expectedInstances },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, expectedDraws },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, expectedDispatchesGles },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, expectedRenderPasses },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0 },
+    static constexpr IPerformanceDataManager::CounterPair defaultCountsGles[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 370299},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 152},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 2},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 31},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 0},
     };
     CheckRenderNodeCounters(IPerformanceDataManager::ConstCounterPairView(
         (UTest::GetOpenGLBackend() == DeviceBackendType::OPENGL) ? defaultCountsGl : defaultCountsGles));
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_GL_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -263,22 +253,26 @@ UNIT_TEST(API_GfxTest, CullingTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/3d_culling.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/3d_culling.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     // evaluate performance data counters
-    static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 469290 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 78 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 78 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 9 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 15 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 15 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 78 },
+    static constexpr IPerformanceDataManager::CounterPair defaultCounts[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 469290},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 78},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 78},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 9},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 15},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 15},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 78},
     };
     IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
         defaultCounts, defaultCounts + countof(defaultCounts));
@@ -286,7 +280,7 @@ UNIT_TEST(API_GfxTest, CullingTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #ifndef __OHOS_PLATFORM__
 /**
@@ -299,7 +293,7 @@ UNIT_TEST(API_GfxTest, PerformanceCountersEnabledTest, testing::ext::TestSize.Le
     EXPECT_TRUE(CORE_PERF_ENABLED);
     EXPECT_TRUE(RENDER_PERF_ENABLED);
 }
-#endif // __OHOS_PLATFORM__
+#endif  // __OHOS_PLATFORM__
 
 namespace {
 enum class PostProcessType { POST_PROCESS_COMPONENT, POST_PROCESS_EFFECT_COMPONENT };
@@ -310,11 +304,15 @@ render only n number of frames of it for validation.
 void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProcessType)
 {
     // glTF scene and model loading
-    const vector<UTest::GltfImportInfo> gltfFiles {
-        { "test://gltf/Environment/glTF/Environment.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/FlightHelmet/FlightHelmet.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+    const vector<UTest::GltfImportInfo> gltfFiles{
+        {"test://gltf/Environment/glTF/Environment.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/FlightHelmet/FlightHelmet.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     auto& ecs = res.GetEcs();
@@ -370,8 +368,8 @@ void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProc
     auto nodeSystem = GetSystem<INodeSystem>(ecs);
 
     ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-    Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
-    model->SetPosition(Math::Vec3 { 0.0f, 0.1f, 0.0f });
+    Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
+    model->SetPosition(Math::Vec3{0.0f, 0.1f, 0.0f});
     model->SetRotation(rot);
     switch (postProcessType) {
         case PostProcessType::POST_PROCESS_COMPONENT: {
@@ -389,12 +387,14 @@ void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProc
                 auto combined = CreateInstance<IRenderPostProcess>(
                     *renderClassFactory, RENDER_NS::UID_RENDER_POST_PROCESS_COMBINED);
                 CORE_NS::SetPropertyValue(combined->GetProperties(), "enabled", true);
-                CORE_NS::SetPropertyValue(combined->GetProperties(), "postProcessConfiguration.enableFlags",
+                CORE_NS::SetPropertyValue(combined->GetProperties(),
+                    "postProcessConfiguration.enableFlags",
                     uint32_t(PostProcessConfiguration::ENABLE_TONEMAP_BIT));
                 auto taa =
                     CreateInstance<IRenderPostProcess>(*renderClassFactory, RENDER_NS::UID_RENDER_POST_PROCESS_TAA);
                 CORE_NS::SetPropertyValue(taa->GetProperties(), "enabled", true);
-                CORE_NS::SetPropertyValue(taa->GetProperties(), "postProcessConfiguration.enableFlags",
+                CORE_NS::SetPropertyValue(taa->GetProperties(),
+                    "postProcessConfiguration.enableFlags",
                     uint32_t(PostProcessConfiguration::ENABLE_TONEMAP_BIT));
 
                 auto postprocessEffectMgr = GetManager<IPostProcessEffectComponentManager>(ecs);
@@ -419,7 +419,7 @@ void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProc
             CameraComponent::PipelineFlagBits::JITTER_BIT | CameraComponent::PipelineFlagBits::VELOCITY_OUTPUT_BIT;
         cameraHandle->postProcess = sceneEntity;
     }
-    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() });
+    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()});
 
     renderConfig.environment = sceneEntity;
     renderConfig.renderingFlags |= RenderConfigurationComponent::SceneRenderingFlagBits::CREATE_RNGS_BIT;
@@ -428,16 +428,18 @@ void glTFmodelDrawTest(UTest::TestResources& res, const PostProcessType postProc
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.96f, 1.0f, 0.98f };
+        lc.color = {0.96f, 1.0f, 0.98f};
         lc.intensity = 2.8f;
         lc.shadowEnabled = true;
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
     renderConfigMgr->Set(sceneEntity, renderConfig);
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -454,8 +456,12 @@ UNIT_TEST(API_GfxTest, glTFmodelDrawTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltf.png").c_str(), res.GetWindowWidth(), res.GetWindowHeight(), 4,
-            res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltf.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
@@ -479,13 +485,17 @@ UNIT_TEST(API_GfxTest, glTFmodelDrawBindlessTestVulkan, testing::ext::TestSize.L
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltfBindless.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltfBindless.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: glTFmodelDrawTestOpenGL
@@ -501,8 +511,12 @@ UNIT_TEST(API_GfxTest, glTFmodelDrawTestOpenGL, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltfOpenGL.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltfOpenGL.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
@@ -512,11 +526,15 @@ namespace {
 void glTFmodelDrawTest2(UTest::TestResources& res)
 {
     // glTF scene and model loading
-    const vector<UTest::GltfImportInfo> gltfFiles {
-        { "test://gltf/Environment/glTF/Environment.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/TransmissionTest/TransmissionTest.glb", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+    const vector<UTest::GltfImportInfo> gltfFiles{
+        {"test://gltf/Environment/glTF/Environment.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/TransmissionTest/TransmissionTest.glb",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     auto& ecs = res.GetEcs();
@@ -564,8 +582,8 @@ void glTFmodelDrawTest2(UTest::TestResources& res)
     auto nodeSystem = GetSystem<INodeSystem>(ecs);
 
     ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-    Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
-    model->SetPosition(Math::Vec3 { 0.0f, 0.1f, 0.0f });
+    Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
+    model->SetPosition(Math::Vec3{0.0f, 0.1f, 0.0f});
     model->SetRotation(rot);
 
     // post process component
@@ -580,7 +598,7 @@ void glTFmodelDrawTest2(UTest::TestResources& res)
 
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.0f, 0.8f), {}, 0.1f, 100.0f, 60.0f);
-    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() });
+    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()});
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -598,16 +616,18 @@ void glTFmodelDrawTest2(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.96f, 1.0f, 0.98f };
+        lc.color = {0.96f, 1.0f, 0.98f};
         lc.intensity = 2.8f;
         lc.shadowEnabled = true;
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
     renderConfigMgr->Set(sceneEntity, renderConfig);
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -624,13 +644,17 @@ UNIT_TEST(API_GfxTest2, glTFmodelDrawTest2Vulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltf2.png").c_str(), res.GetWindowWidth(), res.GetWindowHeight(), 4,
-            res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltf2.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: glTFmodelDrawTest2OpenGL
@@ -646,8 +670,12 @@ UNIT_TEST(API_GfxTest2, glTFmodelDrawTest2OpenGL, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltf2OpenGL.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltf2OpenGL.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
@@ -657,12 +685,15 @@ namespace {
 void glTFmodelDrawTest3(UTest::TestResources& res)
 {
     // glTF scene and model loading
-    const vector<UTest::GltfImportInfo> gltfFiles {
-        { "test://gltf/Environment/glTF/Environment.gltf", UTest::GltfImportInfo::AnimateImportedScene,
-            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
-        { "test://gltf/TextureTransformMultiTest/TextureTransformMultiTest.glb",
-            UTest::GltfImportInfo::AnimateImportedScene, CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
-            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL },
+    const vector<UTest::GltfImportInfo> gltfFiles{
+        {"test://gltf/Environment/glTF/Environment.gltf",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
+        {"test://gltf/TextureTransformMultiTest/TextureTransformMultiTest.glb",
+            UTest::GltfImportInfo::AnimateImportedScene,
+            CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL,
+            CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL},
     };
 
     auto& ecs = res.GetEcs();
@@ -711,8 +742,8 @@ void glTFmodelDrawTest3(UTest::TestResources& res)
     auto nodeSystem = GetSystem<INodeSystem>(ecs);
 
     ISceneNode* model = nodeSystem->GetNode(importedSceneEntity);
-    Math::Quat rot = Math::FromEulerRad(Math::Vec3 { 0.f, 0.f, 0.f });
-    model->SetPosition(Math::Vec3 { 0.0f, 0.1f, 0.0f });
+    Math::Quat rot = Math::FromEulerRad(Math::Vec3{0.f, 0.f, 0.f});
+    model->SetPosition(Math::Vec3{0.0f, 0.1f, 0.0f});
     model->SetRotation(rot);
 
     // post process component
@@ -727,7 +758,7 @@ void glTFmodelDrawTest3(UTest::TestResources& res)
 
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 0.1f, 100.0f, 75.0f);
-    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() });
+    sceneUtil.UpdateCameraViewport(ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()});
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -742,11 +773,13 @@ void glTFmodelDrawTest3(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -758,12 +791,12 @@ void glTFmodelDrawTest3(UTest::TestResources& res)
         {
             auto& meshUtil = res.GetGraphicsContext().GetMeshUtil();
             auto node = nodeSystem->GetNode(meshUtil.GeneratePlane(ecs, "plane", {}, 5.0f, 5.0f));
-            node->SetPosition({ 0.0f, -2.0f, 0.0f });
+            node->SetPosition({0.0f, -2.0f, 0.0f});
             node->SetParent(*scene);
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -780,20 +813,25 @@ UNIT_TEST(API_GfxTest3, glTFmodelDrawTest3Vulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/gltf3.png").c_str(), res.GetWindowWidth(), res.GetWindowHeight(), 4,
-            res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/gltf3.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: Random
  * @tc.desc: Tests for Random. [AUTO-GENERATED]
  * @tc.type: FUNC
  */
-UNIT_TEST(API_GfxTest, Random, testing::ext::TestSize.Level1) {}
+UNIT_TEST(API_GfxTest, Random, testing::ext::TestSize.Level1)
+{}
 
 namespace {
 void NearFarClipTest(UTest::TestResources& res, CameraComponent::Projection projection)
@@ -842,7 +880,7 @@ void NearFarClipTest(UTest::TestResources& res, CameraComponent::Projection proj
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -858,11 +896,13 @@ void NearFarClipTest(UTest::TestResources& res, CameraComponent::Projection proj
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -874,61 +914,82 @@ void NearFarClipTest(UTest::TestResources& res, CameraComponent::Projection proj
         auto& meshUtil = res.GetGraphicsContext().GetMeshUtil();
         {
             // Red cube is partially visible because of far plane clip
-            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "cube0",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f }), 1.0f, 1.0f, 1.0f));
-            node->SetPosition({ -3.0f, -2.0f, -96.5f });
-            node->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs,
+                "cube0",
+                UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f}),
+                1.0f,
+                1.0f,
+                1.0f));
+            node->SetPosition({-3.0f, -2.0f, -96.5f});
+            node->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
             node->SetParent(*scene);
         }
         {
             // Green cube is visible
-            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Green cube",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 0.0f, 1.0f, 0.0f, 1.0f }), 1.0f, 1.0f, 1.0f));
-            node->SetPosition({ -1.0f, -2.0f, -5.0f });
-            node->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs,
+                "Green cube",
+                UTest::CreateSolidColorMaterial(ecs, Math::Vec4{0.0f, 1.0f, 0.0f, 1.0f}),
+                1.0f,
+                1.0f,
+                1.0f));
+            node->SetPosition({-1.0f, -2.0f, -5.0f});
+            node->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
             node->SetParent(*scene);
         }
         {
             // Blue cube is not visible because of near plane clip
-            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Blue cube",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 0.0f, 0.0f, 1.0f, 1.0f }), 1.0f, 1.0f, 1.0f));
-            node->SetPosition({ -1.0f, 1.0f, 3.0f });
-            node->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+            auto node = nodeSystem->GetNode(meshUtil.GenerateCube(ecs,
+                "Blue cube",
+                UTest::CreateSolidColorMaterial(ecs, Math::Vec4{0.0f, 0.0f, 1.0f, 1.0f}),
+                1.0f,
+                1.0f,
+                1.0f));
+            node->SetPosition({-1.0f, 1.0f, 3.0f});
+            node->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
             node->SetParent(*scene);
         }
         {
             // Cone is visible
-            auto node = nodeSystem->GetNode(meshUtil.GenerateCone(ecs, "Cone",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 1.0f, 1.0f, 1.0f }), 1.0f, 2.0f, 16));
-            node->SetPosition({ 1.0f, 0.0f, -4.0f });
-            node->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+            auto node = nodeSystem->GetNode(meshUtil.GenerateCone(
+                ecs, "Cone", UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 1.0f, 1.0f, 1.0f}), 1.0f, 2.0f, 16));
+            node->SetPosition({1.0f, 0.0f, -4.0f});
+            node->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
             node->SetParent(*scene);
         }
         {
             // Torus is visible
-            auto node = nodeSystem->GetNode(meshUtil.GenerateTorus(ecs, "Torus",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 1.0f, 0.0f, 1.0f }), 1.0f, 0.2f, 16, 16));
-            node->SetPosition({ 1.0f, 3.0f, -4.0f });
-            node->SetRotation(Math::FromEulerRad(Math::Vec3 { 1.4f, 5.2f, 0.14f }));
+            auto node = nodeSystem->GetNode(meshUtil.GenerateTorus(ecs,
+                "Torus",
+                UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 1.0f, 0.0f, 1.0f}),
+                1.0f,
+                0.2f,
+                16,
+                16));
+            node->SetPosition({1.0f, 3.0f, -4.0f});
+            node->SetRotation(Math::FromEulerRad(Math::Vec3{1.4f, 5.2f, 0.14f}));
             node->SetParent(*scene);
         }
         {
             // Sphere is visible
-            auto node = nodeSystem->GetNode(meshUtil.GenerateSphere(ecs, "Sphere",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.0f, 1.0f, 1.0f }), 1.0f, 16, 16));
-            node->SetPosition({ -1.0f, 3.0f, -4.0f });
+            auto node = nodeSystem->GetNode(meshUtil.GenerateSphere(
+                ecs, "Sphere", UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.0f, 1.0f, 1.0f}), 1.0f, 16, 16));
+            node->SetPosition({-1.0f, 3.0f, -4.0f});
             node->SetParent(*scene);
         }
         {
             // Cylinder is visible
-            auto node = nodeSystem->GetNode(meshUtil.GenerateCylinder(ecs, "Cylinder",
-                UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 0.0f, 1.0f, 1.0f, 1.0f }), 1.0f, 2.0f, 16));
-            node->SetPosition({ -3.0f, -1.5f, -4.0f });
+            auto node = nodeSystem->GetNode(meshUtil.GenerateCylinder(ecs,
+                "Cylinder",
+                UTest::CreateSolidColorMaterial(ecs, Math::Vec4{0.0f, 1.0f, 1.0f, 1.0f}),
+                1.0f,
+                2.0f,
+                16));
+            node->SetPosition({-3.0f, -1.5f, -4.0f});
             node->SetParent(*scene);
         }
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -945,8 +1006,12 @@ UNIT_TEST(API_GfxTest, perspectiveNearFarClipTestVulkan, testing::ext::TestSize.
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/perspectiveNearFarClipTestVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/perspectiveNearFarClipTestVulkan.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
@@ -967,13 +1032,16 @@ UNIT_TEST(API_GfxTest, orthographicNearFarClipTestVulkan, testing::ext::TestSize
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
         UTest::WritePng(BASE_NS::string(appDir + "/orthographicNearFarClipTestVulkan.png").c_str(),
-            res.GetWindowWidth(), res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
             res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 void CreateBatch(IEcs& ecs, ISceneNode* node)
@@ -1110,7 +1178,7 @@ void CubeBatchTest(UTest::TestResources& res)
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -1130,16 +1198,18 @@ void CubeBatchTest(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f / 8.f, 1.0f / 8.f, 8.0f / 8.f };
+        lc.color = {0.5f / 8.f, 1.0f / 8.f, 8.0f / 8.f};
         lc.intensity = 8.0f;
         lc.shadowEnabled = false;
         lc.lightLayerMask = LayerFlagBits::CORE_LAYER_FLAG_BIT_00;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
 
         lc.type = LightComponent::Type::POINT;
-        lc.color = { 1.0f, 0.9f, 0.0f };
+        lc.color = {1.0f, 0.9f, 0.0f};
         lc.intensity = 400.0f;
         lc.shadowEnabled = false;
         lc.lightLayerMask = LayerFlagBits::CORE_LAYER_FLAG_BIT_01;
@@ -1157,7 +1227,7 @@ void CubeBatchTest(UTest::TestResources& res)
         constexpr const uint32_t cubeGridWidth = 5u;
         constexpr const uint32_t cubeGridHeight = 5u;
 
-        Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.5f, 0.5f, 1.0f });
+        Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.5f, 0.5f, 1.0f});
         auto materialManager = GetManager<IMaterialComponentManager>(res.GetEcs());
         if (auto matHandle = materialManager->Write(material); matHandle) {
             matHandle->materialShader.shader =
@@ -1174,8 +1244,7 @@ void CubeBatchTest(UTest::TestResources& res)
         for (uint32_t i = 0; i < cubeGridWidth; ++i) {
             for (uint32_t j = 0; j < cubeGridHeight; ++j) {
                 auto node = nodeSystem->CloneNode(*cube, true);
-                node->SetPosition(
-                    { -3.0f + static_cast<float>(j) * 1.3f, -2.0f, -5.5f + static_cast<float>(i) * 1.3f });
+                node->SetPosition({-3.0f + static_cast<float>(j) * 1.3f, -2.0f, -5.5f + static_cast<float>(i) * 1.3f});
                 node->SetParent(*scene);
 
                 if (i <= (cubeGridWidth / 2U)) {
@@ -1196,7 +1265,7 @@ void CubeBatchTest(UTest::TestResources& res)
         cube->SetEnabled(false);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -1213,22 +1282,26 @@ UNIT_TEST(API_GfxTest, cubeBatchTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/cubeBatchTestVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/cubeBatchTestVulkan.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     // evaluate performance data counters
-    static constexpr IPerformanceDataManager::CounterPair defaultCounts[] {
-        { RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 918 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 27 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 3 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 3 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 2 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 4 },
-        { RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 3 },
+    static constexpr IPerformanceDataManager::CounterPair defaultCounts[]{
+        {RenderPerformanceDataConstants::BACKEND_COUNT_TRIANGLE, 918},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_INSTANCECOUNT, 27},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAW, 3},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DRAWINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCH, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_DISPATCHINDIRECT, 0},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDPIPELINE, 3},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_RENDERPASS, 2},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_UPDATEDESCRIPTORSET, 4},
+        {RenderPerformanceDataConstants::BACKEND_COUNT_BINDDESCRIPTORSET, 3},
     };
     IPerformanceDataManager::ConstCounterPairView defaultCountsVec(
         defaultCounts, defaultCounts + countof(defaultCounts));
@@ -1236,33 +1309,63 @@ UNIT_TEST(API_GfxTest, cubeBatchTestVulkan, testing::ext::TestSize.Level1)
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 constexpr Math::Vec3 CUBE_POS[8u] = {
-    Math::Vec3(-0.5f, -0.5f, -0.5f), //
-    Math::Vec3(0.5f, -0.5f, -0.5f),  //
-    Math::Vec3(0.5f, 0.5f, -0.5f),   //
-    Math::Vec3(-0.5f, 0.5f, -0.5f),  //
-    Math::Vec3(-0.5f, -0.5f, 0.5f),  //
-    Math::Vec3(0.5f, -0.5f, 0.5f),   //
-    Math::Vec3(0.5f, 0.5f, 0.5f),    //
-    Math::Vec3(-0.5f, 0.5f, 0.5f)    //
+    Math::Vec3(-0.5f, -0.5f, -0.5f),  //
+    Math::Vec3(0.5f, -0.5f, -0.5f),   //
+    Math::Vec3(0.5f, 0.5f, -0.5f),    //
+    Math::Vec3(-0.5f, 0.5f, -0.5f),   //
+    Math::Vec3(-0.5f, -0.5f, 0.5f),   //
+    Math::Vec3(0.5f, -0.5f, 0.5f),    //
+    Math::Vec3(0.5f, 0.5f, 0.5f),     //
+    Math::Vec3(-0.5f, 0.5f, 0.5f)     //
 };
 
-constexpr Math::Vec2 CUBE_UV[4u] = { Math::Vec2(1.0f, 1.0f), Math::Vec2(0.0f, 1.0f), Math::Vec2(0.0f, 0.0f),
-    Math::Vec2(1.0f, 0.0f) };
+constexpr Math::Vec2 CUBE_UV[4u] = {
+    Math::Vec2(1.0f, 1.0f), Math::Vec2(0.0f, 1.0f), Math::Vec2(0.0f, 0.0f), Math::Vec2(1.0f, 0.0f)};
 
 constexpr uint16_t CUBE_INDICES[6u * 6u] = {
-    0, 3, 1, 3, 2, 1, //
-    1, 2, 5, 2, 6, 5, //
-    5, 6, 4, 6, 7, 4, //
-    4, 7, 0, 7, 3, 0, //
-    3, 7, 2, 7, 6, 2, //
-    4, 0, 5, 0, 1, 5  //
+    0,
+    3,
+    1,
+    3,
+    2,
+    1,  //
+    1,
+    2,
+    5,
+    2,
+    6,
+    5,  //
+    5,
+    6,
+    4,
+    6,
+    7,
+    4,  //
+    4,
+    7,
+    0,
+    7,
+    3,
+    0,  //
+    3,
+    7,
+    2,
+    7,
+    6,
+    2,  //
+    4,
+    0,
+    5,
+    0,
+    1,
+    5  //
 };
 
-constexpr uint32_t CUBE_UV_INDICES[6u] = { 0, 3, 1, 3, 2, 1 };
+constexpr uint32_t CUBE_UV_INDICES[6u] = {0, 3, 1, 3, 2, 1};
 
 void GenerateCubeGeometry(vector<Math::Vec3>& vertices, vector<Math::Vec3>& normals, vector<Math::Vec2>& uvs,
     vector<uint16_t>& indices, bool displace)
@@ -1286,13 +1389,13 @@ void GenerateCubeGeometry(vector<Math::Vec3>& vertices, vector<Math::Vec3>& norm
 
         if (displace) {
             if (CUBE_INDICES[vertexIndex + 0u] == 6u) {
-                v0 *= Math::Vec3 { 3.0f, 3.0f, 3.0f };
+                v0 *= Math::Vec3{3.0f, 3.0f, 3.0f};
             }
             if (CUBE_INDICES[vertexIndex + 1u] == 6u) {
-                v1 *= Math::Vec3 { 3.0f, 3.0f, 3.0f };
+                v1 *= Math::Vec3{3.0f, 3.0f, 3.0f};
             }
             if (CUBE_INDICES[vertexIndex + 2u] == 6u) {
-                v2 *= Math::Vec3 { 3.0f, 3.0f, 3.0f };
+                v2 *= Math::Vec3{3.0f, 3.0f, 3.0f};
             }
         }
 
@@ -1323,8 +1426,8 @@ void CalculateTangents(const array_view<const uint16_t>& indices, const array_vi
     // http://www.terathon.com/code/tangent.html
     vector<Math::Vec3> tan1;
     vector<Math::Vec3> tan2;
-    tan1.resize(positions.size(), { 0, 0, 0 });
-    tan2.resize(positions.size(), { 0, 0, 0 });
+    tan1.resize(positions.size(), {0, 0, 0});
+    tan2.resize(positions.size(), {0, 0, 0});
 
     for (size_t i = 0; i < indices.size(); i += 3u) {
         const uint16_t aa = indices[i + 0u];
@@ -1356,8 +1459,8 @@ void CalculateTangents(const array_view<const uint16_t>& indices, const array_vi
             d = Math::EPSILON;
         }
         const float r = 1.0f / d;
-        const Math::Vec3 sdir { (t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r };
-        const Math::Vec3 tdir { (s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r };
+        const Math::Vec3 sdir{(t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r};
+        const Math::Vec3 tdir{(s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r};
 
         tan1[aa] += sdir;
         tan1[bb] += sdir;
@@ -1382,7 +1485,7 @@ void CalculateTangents(const array_view<const uint16_t>& indices, const array_vi
     }
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
 {
     Format format = BASE_FORMAT_UNDEFINED;
@@ -1397,20 +1500,20 @@ constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexce
     } else if constexpr (is_same_v<T, uint32_t>) {
         format = BASE_FORMAT_R32_UINT;
     }
-    return IMeshBuilder::DataBuffer { format, sizeof(T),
-        { reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T) } };
+    return IMeshBuilder::DataBuffer{
+        format, sizeof(T), {reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T)}};
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
 {
-    return FillData(array_view<const T> { c });
+    return FillData(array_view<const T>{c});
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr inline IMeshBuilder::DataBuffer FillData(const T (&c)[N]) noexcept
 {
-    return FillData(array_view<const T> { c, N });
+    return FillData(array_view<const T>{c, N});
 }
 
 void MeshBuilderTest(UTest::TestResources& res)
@@ -1468,7 +1571,7 @@ void MeshBuilderTest(UTest::TestResources& res)
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity); camHandle) {
         camHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
@@ -1488,11 +1591,13 @@ void MeshBuilderTest(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -1512,7 +1617,7 @@ void MeshBuilderTest(UTest::TestResources& res)
 
         IMeshBuilder::Submesh submesh;
         submesh.morphTargetCount = 1u;
-        submesh.material = UTest::CreateSolidColorMaterial(res.GetEcs(), Math::Vec4 { 0.0f, 1.0f, 0.0f, 1.0f });
+        submesh.material = UTest::CreateSolidColorMaterial(res.GetEcs(), Math::Vec4{0.0f, 1.0f, 0.0f, 1.0f});
         auto materialManager = GetManager<IMaterialComponentManager>(res.GetEcs());
         if (auto matHandle = materialManager->Write(submesh.material); matHandle) {
             matHandle->materialShader.shader =
@@ -1532,7 +1637,7 @@ void MeshBuilderTest(UTest::TestResources& res)
         vector<uint16_t> indices;
         GenerateCubeGeometry(vertices, normals, uvs, indices, false);
         vector<Math::Vec4> tangents(vertices.size());
-        array_view<Math::Vec4> tangentsView { tangents };
+        array_view<Math::Vec4> tangentsView{tangents};
         CalculateTangents(indices, vertices, normals, uvs, tangentsView);
         meshBuilder->SetVertexData(
             0u, FillData(vertices), FillData(normals), FillData(uvs), {}, FillData(tangents), {});
@@ -1545,15 +1650,20 @@ void MeshBuilderTest(UTest::TestResources& res)
         vector<uint16_t> targetIndices;
         GenerateCubeGeometry(targetVertices, targetNormals, targetUvs, targetIndices, true);
         vector<Math::Vec4> targetTangentsVec4(vertices.size());
-        array_view<Math::Vec4> targetTangentsView { targetTangentsVec4 };
+        array_view<Math::Vec4> targetTangentsView{targetTangentsVec4};
         CalculateTangents(targetIndices, targetVertices, targetNormals, targetUvs, targetTangentsView);
         vector<Math::Vec3> targetTangents;
         for (Math::Vec4 tangent : targetTangentsVec4) {
-            targetTangents.push_back(Math::Vec3 { tangent });
+            targetTangents.push_back(Math::Vec3{tangent});
         }
 
-        meshBuilder->SetMorphTargetData(0u, FillData(vertices), FillData(normals), FillData(tangents),
-            FillData(targetVertices), FillData(targetNormals), FillData(targetTangents));
+        meshBuilder->SetMorphTargetData(0u,
+            FillData(vertices),
+            FillData(normals),
+            FillData(tangents),
+            FillData(targetVertices),
+            FillData(targetNormals),
+            FillData(targetTangents));
 
         EXPECT_EQ(1u, meshBuilder->GetSubmeshes().size());
         EXPECT_EQ(0u, meshBuilder->GetJointBoundsData().size());
@@ -1576,8 +1686,8 @@ void MeshBuilderTest(UTest::TestResources& res)
             scopedHandle->mesh = meshEntity;
         }
 
-        node->SetPosition({ -1.0f, -1.0f, -5.5f });
-        node->SetRotation(Math::FromEulerRad(Math::Vec3 { Math::DEG2RAD * 20.0f, Math::DEG2RAD * 30.0f, 0.0f }));
+        node->SetPosition({-1.0f, -1.0f, -5.5f});
+        node->SetRotation(Math::FromEulerRad(Math::Vec3{Math::DEG2RAD * 20.0f, Math::DEG2RAD * 30.0f, 0.0f}));
 
         IMorphComponentManager* morphManager = GetManager<IMorphComponentManager>(ecs);
         morphManager->Create(node->GetEntity());
@@ -1588,19 +1698,19 @@ void MeshBuilderTest(UTest::TestResources& res)
 
         // Create two quads, first with triangle list and then with triangle strip
         constexpr Math::Vec3 quadVertices[] = {
-            { 0.f, 0.f, 0.f },
-            { 1.f, 0.f, 0.f },
-            { 0.f, 1.f, 0.f },
-            { 1.f, 1.f, 0.f },
+            {0.f, 0.f, 0.f},
+            {1.f, 0.f, 0.f},
+            {0.f, 1.f, 0.f},
+            {1.f, 1.f, 0.f},
         };
         constexpr Math::Vec2 quadUvs[] = {
-            { 0.f, 0.f },
-            { 1.f, 0.f },
-            { 0.f, 1.f },
-            { 1.f, 1.f },
+            {0.f, 0.f},
+            {1.f, 0.f},
+            {0.f, 1.f},
+            {1.f, 1.f},
         };
-        constexpr uint16_t quadIndicesTriangleList[] = { 0U, 1U, 2U, 1U, 3U, 2U };
-        constexpr uint16_t quadIndicesTriangleStrip[] = { 0U, 1U, 2U, 3U };
+        constexpr uint16_t quadIndicesTriangleList[] = {0U, 1U, 2U, 1U, 3U, 2U};
+        constexpr uint16_t quadIndicesTriangleStrip[] = {0U, 1U, 2U, 3U};
 
         meshBuilder->Initialize(vertexInputDeclaration, 1U);
         submesh.vertexCount = BASE_NS::countof(quadVertices);
@@ -1619,7 +1729,7 @@ void MeshBuilderTest(UTest::TestResources& res)
         if (auto scopedHandle = renderMeshManager->Write(node->GetEntity()); scopedHandle) {
             scopedHandle->mesh = quadMeshEntity;
         }
-        node->SetPosition({ -3.0f, 1.0f, -0.5f });
+        node->SetPosition({-3.0f, 1.0f, -0.5f});
 
         meshBuilder->Initialize(vertexInputDeclaration, 1U);
         submesh.vertexCount = BASE_NS::countof(quadVertices);
@@ -1627,7 +1737,7 @@ void MeshBuilderTest(UTest::TestResources& res)
         submesh.morphTargetCount = 0U;
         submesh.inputAssembly.primitiveTopology = PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         // Triangle strip requires a different graphics states so create a new material with correct values
-        submesh.material = UTest::CreateSolidColorMaterial(res.GetEcs(), Math::Vec4 { 0.0f, 1.0f, 0.0f, 1.0f });
+        submesh.material = UTest::CreateSolidColorMaterial(res.GetEcs(), Math::Vec4{0.0f, 1.0f, 0.0f, 1.0f});
 
         // different states for material and depth shader
         auto materialGraphicsStateEntity = res.GetEcs().GetEntityManager().CreateReferenceCounted();
@@ -1678,10 +1788,10 @@ void MeshBuilderTest(UTest::TestResources& res)
         if (auto scopedHandle = renderMeshManager->Write(node->GetEntity()); scopedHandle) {
             scopedHandle->mesh = quadMeshEntity;
         }
-        node->SetPosition({ -3.0f, -0.10f, -0.50f });
+        node->SetPosition({-3.0f, -0.10f, -0.50f});
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -1698,17 +1808,21 @@ UNIT_TEST(API_GfxTest, meshBuilderTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/meshBuilderTestVulkan.png").c_str(), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/meshBuilderTestVulkan.png").c_str(),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
-constexpr string_view CAMERA_0_NAME { "MultiViewSampleCamera0" };
-constexpr string_view CAMERA_1_NAME { "MultiViewSampleCamera1" };
+constexpr string_view CAMERA_0_NAME{"MultiViewSampleCamera0"};
+constexpr string_view CAMERA_1_NAME{"MultiViewSampleCamera1"};
 
 RenderHandleReference CreateTargetGpuImage(
     IGpuResourceManager& gpuResourceMgr, const Math::UVec2& size, const string_view& name)
@@ -1717,7 +1831,7 @@ RenderHandleReference CreateTargetGpuImage(
     desc.width = size.x;
     desc.height = size.y;
     desc.depth = 1;
-    desc.layerCount = 1U; // this is the final output
+    desc.layerCount = 1U;  // this is the final output
     desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
     desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     desc.usageFlags =
@@ -1777,15 +1891,15 @@ void NegativeScale(UTest::TestResources& res)
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     IEntityManager& em = ecs.GetEntityManager();
     auto renderHandleManager = GetManager<IRenderHandleComponentManager>(ecs);
-    const Math::UVec2 imageSize = { res.GetWindowWidth() / 2U, res.GetWindowHeight() };
+    const Math::UVec2 imageSize = {res.GetWindowWidth() / 2U, res.GetWindowHeight()};
 
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     Entity cameraEntity1 = sceneUtil.CreateCamera(ecs, Math::Vec3(0.5f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
 
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity1, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity1, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
 
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity)) {
@@ -1820,11 +1934,13 @@ void NegativeScale(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -1836,20 +1952,20 @@ void NegativeScale(UTest::TestResources& res)
         constexpr const uint32_t cubeGridWidth = 5u;
         constexpr const uint32_t cubeGridHeight = 5u;
 
-        const Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f });
+        const Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f});
 
         auto cube = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Cube", material, 1.0f, 1.0f, 1.0f));
-        cube->SetPosition({ 1.f, 0.f, 0.f });
+        cube->SetPosition({1.f, 0.f, 0.f});
         cube->SetParent(*scene);
 
         // clone the cube and invert the geometry with a negative scaling factor.
         auto node = nodeSystem->CloneNode(*cube, true);
-        node->SetPosition({ -1.f, 0.f, 0.f });
-        node->SetScale({ -1.f, -1.f, -1.f });
+        node->SetPosition({-1.f, 0.f, 0.f});
+        node->SetScale({-1.f, -1.f, -1.f});
         node->SetParent(*scene);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -1866,13 +1982,17 @@ UNIT_TEST(API_GfxTest, negativeScaleTestVulkan, testing::ext::TestSize.Level1)
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/negativeScaleTestVulkan.png"), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/negativeScaleTestVulkan.png"),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 namespace {
 void OcclusionMaterial(UTest::TestResources& res)
@@ -1941,11 +2061,11 @@ void OcclusionMaterial(UTest::TestResources& res)
     const auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
     IEntityManager& em = ecs.GetEntityManager();
     auto renderHandleManager = GetManager<IRenderHandleComponentManager>(ecs);
-    const Math::UVec2 imageSize = { res.GetWindowWidth() / 2U, res.GetWindowHeight() };
+    const Math::UVec2 imageSize = {res.GetWindowWidth() / 2U, res.GetWindowHeight()};
 
     Entity cameraEntity = sceneUtil.CreateCamera(ecs, Math::Vec3(0.0f, 0.5f, 4.0f), {}, 2.0f, 100.0f, 75.0f);
     sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, { res.GetWindowWidth(), res.GetWindowHeight() }, true, Math::DEG2RAD * 75.0f, 10.0f);
+        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 75.0f, 10.0f);
 
     auto cameraMgr = GetManager<ICameraComponentManager>(ecs);
     if (auto camHandle = cameraMgr->Write(cameraEntity)) {
@@ -1960,11 +2080,13 @@ void OcclusionMaterial(UTest::TestResources& res)
     if (GetManager<ILightComponentManager>(ecs)->GetComponentCount() == 0) {
         LightComponent lc;
         lc.type = LightComponent::Type::DIRECTIONAL;
-        lc.color = { 0.5f, 1.0f, 8.0f };
+        lc.color = {0.5f, 1.0f, 8.0f};
         lc.intensity = 4.0f;
         lc.shadowEnabled = true;
 
-        sceneUtil.CreateLight(ecs, lc, Math::Vec3(0.0f, 0.0f, 3.0f),
+        sceneUtil.CreateLight(ecs,
+            lc,
+            Math::Vec3(0.0f, 0.0f, 3.0f),
             Math::AngleAxis((Math::DEG2RAD * -45.0f), Math::Vec3(1.0f, 0.0f, 0.0f)));
     }
 
@@ -1973,26 +2095,26 @@ void OcclusionMaterial(UTest::TestResources& res)
         auto scene = nodeSystem->GetNode(sceneEntity);
         auto& meshUtil = res.GetGraphicsContext().GetMeshUtil();
 
-        const Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 1.0f, 0.0f, 0.0f, 1.0f });
+        const Entity material = UTest::CreateSolidColorMaterial(ecs, Math::Vec4{1.0f, 0.0f, 0.0f, 1.0f});
         auto cube = nodeSystem->GetNode(meshUtil.GenerateCube(ecs, "Cube", material, 1.0f, 1.0f, 1.0f));
-        cube->SetPosition({ 0.5f, 0.f, 0.f });
+        cube->SetPosition({0.5f, 0.f, 0.f});
         cube->SetScale(Math::Vec3(2.f));
         cube->SetRotation(Math::FromEulerRad(Math::Vec3(25.f * Math::DEG2RAD, 45.f * Math::DEG2RAD, 0.f)));
         cube->SetParent(*scene);
 
-        const Entity occlusionMaterial = UTest::CreateSolidColorMaterial(ecs, Math::Vec4 { 0.0f, 1.0f, 0.0f, 1.0f });
+        const Entity occlusionMaterial = UTest::CreateSolidColorMaterial(ecs, Math::Vec4{0.0f, 1.0f, 0.0f, 1.0f});
         if (auto materialHandle = GetManager<IMaterialComponentManager>(ecs)->Write(occlusionMaterial)) {
             materialHandle->type = MaterialComponent::Type::OCCLUSION;
             materialHandle->materialLightingFlags = 0U;
         }
         auto torus = nodeSystem->GetNode(meshUtil.GenerateTorus(ecs, "Torus", occlusionMaterial, 0.5f, 0.1f, 32U, 32U));
-        torus->SetPosition({ 0.5f, 0.f, 0.f });
+        torus->SetPosition({0.5f, 0.f, 0.f});
         torus->SetScale(Math::Vec3(2.f));
         torus->SetRotation(Math::FromEulerRad(Math::Vec3(25.f * Math::DEG2RAD, 45.f * Math::DEG2RAD, 0.f)));
         torus->SetParent(*scene);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -2009,13 +2131,17 @@ UNIT_TEST(API_GfxTest, occlusionMaterialTestVulkan, testing::ext::TestSize.Level
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/occlusionMaterialTestVulkan.png"), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/occlusionMaterialTestVulkan.png"),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 /**
  * @tc.name: occlusionMaterialTestOpenGL
@@ -2031,8 +2157,12 @@ UNIT_TEST(API_GfxTest, occlusionMaterialTestOpenGL, testing::ext::TestSize.Level
 
     if (res.GetByteArray()) {
         const BASE_NS::string appDir = res.GetEngine().GetFileManager().GetEntry("app://").name;
-        UTest::WritePng(BASE_NS::string(appDir + "/occlusionMaterialTestOpenGL.png"), res.GetWindowWidth(),
-            res.GetWindowHeight(), 4, res.GetByteArray()->GetData().data(), res.GetWindowWidth() * 4);
+        UTest::WritePng(BASE_NS::string(appDir + "/occlusionMaterialTestOpenGL.png"),
+            res.GetWindowWidth(),
+            res.GetWindowHeight(),
+            4,
+            res.GetByteArray()->GetData().data(),
+            res.GetWindowWidth() * 4);
     }
 
     res.ShutdownTest();

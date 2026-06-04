@@ -60,7 +60,7 @@ public:
 private:
     // Then continuation support
     struct ContinuationData {
-        bool runInline {};
+        bool runInline{};
         ITaskQueue::WeakPtr queue;
         BASE_NS::shared_ptr<ContinuationQueueTask> continuation;
     };
@@ -72,9 +72,9 @@ private:
     mutable std::mutex mutex_;
     mutable std::condition_variable cond_;
     IAny::Ptr result_;
-    StateType state_ { IFuture::WAITING };
+    StateType state_{IFuture::WAITING};
     ITaskQueue::WeakPtr queue_;
-    ITaskQueue::Token token_ {};
+    ITaskQueue::Token token_{};
     BASE_NS::vector<ContinuationData> continuations_;
 };
 
@@ -97,7 +97,8 @@ private:
 
 class ContinuationQueueTask : public IntroduceInterfaces<ITaskQueueTask> {
 public:
-    explicit ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task)) {}
+    explicit ContinuationQueueTask(IFutureContinuation::Ptr task) : task_(BASE_NS::move(task))
+    {}
 
     void SetParam(IAny::Ptr arg)
     {

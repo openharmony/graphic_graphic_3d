@@ -1,0 +1,22 @@
+{
+	"version": "1.0",
+	"description": "test scene with external node using invalid source type",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "bad",
+					"source": {
+						"type": "invalid",
+						"url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+					},
+					"resourceGroup": "grp"
+				}
+			]
+		}
+	}
+}

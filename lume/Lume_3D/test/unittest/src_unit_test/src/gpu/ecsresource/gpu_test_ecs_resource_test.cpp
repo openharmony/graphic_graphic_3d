@@ -57,7 +57,7 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {
@@ -77,7 +77,7 @@ Entity LookupResourceByUri(
     return {};
 }
 
-template<typename Container, typename Pred>
+template <typename Container, typename Pred>
 bool any_of(const Container& c, Pred&& p)
 {
     return std::any_of(std::begin(c), std::end(c), std::forward<Pred>(p));
@@ -97,8 +97,10 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testMeshResource, testing::ext::TestSize.Lev
     auto ecs = testContext->ecs;
 
     auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
-    constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, IMeshComponentManager::UID,
-        INameComponentManager::UID, IUriComponentManager::UID };
+    constexpr Uid requiredManagers[] = {IRenderHandleComponentManager::UID,
+        IMeshComponentManager::UID,
+        INameComponentManager::UID,
+        IUriComponentManager::UID};
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -124,7 +126,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testMeshResource, testing::ext::TestSize.Lev
     EXPECT_FALSE(ecs->GetEntityManager().IsAlive(meshEntity));
 
     // Ensure it is gone.
-    ASSERT_EQ(LookupResourceByUri("cube", *uriManager, *meshManager), Entity {});
+    ASSERT_EQ(LookupResourceByUri("cube", *uriManager, *meshManager), Entity{});
 }
 
 /**
@@ -143,8 +145,8 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
     auto ecs = testContext->ecs;
 
     auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
-    constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, INameComponentManager::UID,
-        IUriComponentManager::UID };
+    constexpr Uid requiredManagers[] = {
+        IRenderHandleComponentManager::UID, INameComponentManager::UID, IUriComponentManager::UID};
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -168,22 +170,22 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
     auto& gpuResourceManager = renderContext->GetDevice().GetGpuResourceManager();
 
     const auto& imageDesc = result.image->GetImageDesc();
-    GpuImageDesc gpuDesc {
-        static_cast<RENDER_NS::ImageType>(imageDesc.imageType),           // imageType
-        static_cast<RENDER_NS::ImageViewType>(imageDesc.imageViewType),   //  imageViewType
-        imageDesc.format,                                                 //  format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                           //  imageTiling
-        CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT, //  usageFlags
-        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                            //  memoryPropertyFlags
-        0,                                                                //  createFlags
-        0,                                                                //  engineCreationFlags
-        imageDesc.width,                                                  //  width
-        imageDesc.height,                                                 //  height
-        imageDesc.depth,                                                  //  depth
-        imageDesc.mipCount,                                               //  mipCount
-        imageDesc.layerCount,                                             //  layerCount
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                     //  sampleCountFlags
-        {},                                                               //  componentMapping
+    GpuImageDesc gpuDesc{
+        static_cast<RENDER_NS::ImageType>(imageDesc.imageType),            // imageType
+        static_cast<RENDER_NS::ImageViewType>(imageDesc.imageViewType),    //  imageViewType
+        imageDesc.format,                                                  //  format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                            //  imageTiling
+        CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT,  //  usageFlags
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                             //  memoryPropertyFlags
+        0,                                                                 //  createFlags
+        0,                                                                 //  engineCreationFlags
+        imageDesc.width,                                                   //  width
+        imageDesc.height,                                                  //  height
+        imageDesc.depth,                                                   //  depth
+        imageDesc.mipCount,                                                //  mipCount
+        imageDesc.layerCount,                                              //  layerCount
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                      //  sampleCountFlags
+        {},                                                                //  componentMapping
     };
     if (imageDesc.imageFlags & IImageContainer::ImageFlags::FLAGS_CUBEMAP_BIT) {
         gpuDesc.createFlags |= ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -194,13 +196,13 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
     }
 
     const Entity imageEntity = ecs->GetEntityManager().Create();
-    gpuHandleManager->Set(imageEntity, { gpuResourceManager.Create(gpuDesc, move(result.image)) });
-    uriManager->Set(imageEntity, { string(imageUri) });
+    gpuHandleManager->Set(imageEntity, {gpuResourceManager.Create(gpuDesc, move(result.image))});
+    uriManager->Set(imageEntity, {string(imageUri)});
 
     ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), imageEntity);
 
     RenderHandle const gpuImageHandle = gpuHandleManager->Get(imageEntity).reference.GetHandle();
-    ASSERT_NE(gpuImageHandle, RenderHandle {});
+    ASSERT_NE(gpuImageHandle, RenderHandle{});
     {
         auto const gpuImageDesc = gpuResourceManager.GetImageDescriptor(gpuResourceManager.Get(gpuImageHandle));
         ASSERT_EQ(gpuImageDesc.height, imageContainerDesc.width);
@@ -215,7 +217,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResource, testing::ext::TestSiz
     ecs->Update(0, 0);
 
     // Ensure it is gone.
-    ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), Entity {});
+    ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), Entity{});
 }
 
 /**
@@ -234,8 +236,8 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
     auto ecs = testContext->ecs;
 
     auto components = CORE3D_NS::GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
-    constexpr Uid requiredManagers[] = { IRenderHandleComponentManager::UID, INameComponentManager::UID,
-        IUriComponentManager::UID };
+    constexpr Uid requiredManagers[] = {
+        IRenderHandleComponentManager::UID, INameComponentManager::UID, IUriComponentManager::UID};
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -258,22 +260,22 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
     auto& gpuResourceManager = renderContext->GetDevice().GetGpuResourceManager();
 
     const auto& imageDesc = result.image->GetImageDesc();
-    GpuImageDesc gpuDesc {
-        static_cast<RENDER_NS::ImageType>(imageDesc.imageType),           // imageType
-        static_cast<RENDER_NS::ImageViewType>(imageDesc.imageViewType),   //  imageViewType
-        imageDesc.format,                                                 //  format
-        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                           //  imageTiling
-        CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT, //  usageFlags
-        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                            //  memoryPropertyFlags
-        0,                                                                //  createFlags
-        0,                                                                //  engineCreationFlags
-        imageDesc.width,                                                  //  width
-        imageDesc.height,                                                 //  height
-        imageDesc.depth,                                                  //  depth
-        imageDesc.mipCount,                                               //  mipCount
-        imageDesc.layerCount,                                             //  layerCount
-        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                     //  sampleCountFlags
-        {},                                                               //  componentMapping
+    GpuImageDesc gpuDesc{
+        static_cast<RENDER_NS::ImageType>(imageDesc.imageType),            // imageType
+        static_cast<RENDER_NS::ImageViewType>(imageDesc.imageViewType),    //  imageViewType
+        imageDesc.format,                                                  //  format
+        ImageTiling::CORE_IMAGE_TILING_OPTIMAL,                            //  imageTiling
+        CORE_IMAGE_USAGE_SAMPLED_BIT | CORE_IMAGE_USAGE_TRANSFER_DST_BIT,  //  usageFlags
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                             //  memoryPropertyFlags
+        0,                                                                 //  createFlags
+        0,                                                                 //  engineCreationFlags
+        imageDesc.width,                                                   //  width
+        imageDesc.height,                                                  //  height
+        imageDesc.depth,                                                   //  depth
+        imageDesc.mipCount,                                                //  mipCount
+        imageDesc.layerCount,                                              //  layerCount
+        SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT,                      //  sampleCountFlags
+        {},                                                                //  componentMapping
     };
     if (imageDesc.imageFlags & IImageContainer::ImageFlags::FLAGS_CUBEMAP_BIT) {
         gpuDesc.createFlags |= ImageCreateFlagBits::CORE_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -284,13 +286,13 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
     }
 
     const Entity imageEntity = ecs->GetEntityManager().Create();
-    gpuHandleManager->Set(imageEntity, { gpuResourceManager.Create(gpuDesc, move(result.image)) });
-    uriManager->Set(imageEntity, { string(imageUri) });
+    gpuHandleManager->Set(imageEntity, {gpuResourceManager.Create(gpuDesc, move(result.image))});
+    uriManager->Set(imageEntity, {string(imageUri)});
 
     ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), imageEntity);
 
     RenderHandle const gpuImageHandle = gpuHandleManager->Get(imageEntity).reference.GetHandle();
-    ASSERT_NE(gpuImageHandle, RenderHandle {});
+    ASSERT_NE(gpuImageHandle, RenderHandle{});
     {
         auto const gpuImageDesc = gpuResourceManager.GetImageDescriptor(gpuResourceManager.Get(gpuImageHandle));
         ASSERT_EQ(gpuImageDesc.height, imageContainerDesc.width);
@@ -304,7 +306,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testGpuHandleResourceWeak, testing::ext::Tes
     ecs->ProcessEvents();
 
     // Ensure it is gone.
-    ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), Entity {});
+    ASSERT_EQ(LookupResourceByUri(imageUri, *uriManager, *gpuHandleManager), Entity{});
     RenderHandleReference gpuImageHandleRef = gpuResourceManager.Get(gpuImageHandle);
     gpuImageHandleRef = {};
 }
@@ -379,7 +381,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
         {
             animationInputManager->Create(timeStamps);
             auto timeLineHandle = animationInputManager->Write(timeStamps);
-            constexpr float timeStampValues[] = { 0.f, 1.f, 2.f };
+            constexpr float timeStampValues[] = {0.f, 1.f, 2.f};
             timeLineHandle->timestamps.insert(
                 timeLineHandle->timestamps.begin(), std::begin(timeStampValues), std::end(timeStampValues));
         }
@@ -389,17 +391,17 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
             auto positionsHandle = animationOutputManager->Write(positions);
             positionsHandle->type = PropertyType::VEC3_T;
             constexpr Math::Vec3 positionValues[] = {
-                { -2.f, 0.f, 0.f },
-                { 0.f, 0.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {-2.f, 0.f, 0.f},
+                {0.f, 0.f, 0.f},
+                {2.f, 0.f, 0.f},
 
-                { 0.f, 1.f, 0.f },
-                { 0.f, 1.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {0.f, 1.f, 0.f},
+                {0.f, 1.f, 0.f},
+                {2.f, 0.f, 0.f},
 
-                { 2.f, 0.f, 0.f },
-                { 0.f, 0.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {2.f, 0.f, 0.f},
+                {0.f, 0.f, 0.f},
+                {2.f, 0.f, 0.f},
             };
             auto& data = positionsHandle->data;
             data.resize(sizeof(positionValues));
@@ -415,7 +417,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
             animationTrackManager->Create(invalidComponentTrack);
             auto trackHandle = animationTrackManager->Write(invalidComponentTrack);
             trackHandle->target = target;
-            trackHandle->component = Uid { "12345678-1234-1234-1234-123456789012" };
+            trackHandle->component = Uid{"12345678-1234-1234-1234-123456789012"};
         }
         const auto missingComponentTrack = em.CreateReferenceCounted();
         {
@@ -457,8 +459,12 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
         {
             animationManager->Create(animation);
             const auto animationHandle = animationManager->Write(animation);
-            const EntityReference tracks[] = { emptyTrack, invalidComponentTrack, missingComponentTrack,
-                invalidPropertyTrack, emptyInputTrack, emptyOutputTrack };
+            const EntityReference tracks[] = {emptyTrack,
+                invalidComponentTrack,
+                missingComponentTrack,
+                invalidPropertyTrack,
+                emptyInputTrack,
+                emptyOutputTrack};
             animationHandle->tracks.reserve(countof(tracks));
             for (const auto& track : tracks) {
                 animationHandle->tracks.emplace_back(track);
@@ -478,7 +484,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
         {
             animationInputManager->Create(timeStamps);
             auto timeLineHandle = animationInputManager->Write(timeStamps);
-            constexpr float timeStampValues[] = { 0.f, 1.f, 2.f };
+            constexpr float timeStampValues[] = {0.f, 1.f, 2.f};
             timeLineHandle->timestamps.insert(
                 timeLineHandle->timestamps.begin(), std::begin(timeStampValues), std::end(timeStampValues));
         }
@@ -488,17 +494,17 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
             auto positionsHandle = animationOutputManager->Write(positions);
             positionsHandle->type = PropertyType::VEC3_T;
             constexpr Math::Vec3 positionValues[] = {
-                { -2.f, 0.f, 0.f },
-                { 0.f, 0.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {-2.f, 0.f, 0.f},
+                {0.f, 0.f, 0.f},
+                {2.f, 0.f, 0.f},
 
-                { 0.f, 1.f, 0.f },
-                { 0.f, 1.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {0.f, 1.f, 0.f},
+                {0.f, 1.f, 0.f},
+                {2.f, 0.f, 0.f},
 
-                { 2.f, 0.f, 0.f },
-                { 0.f, 0.f, 0.f },
-                { 2.f, 0.f, 0.f },
+                {2.f, 0.f, 0.f},
+                {0.f, 0.f, 0.f},
+                {2.f, 0.f, 0.f},
             };
             auto& data = positionsHandle->data;
             data.resize(sizeof(positionValues));
@@ -519,7 +525,7 @@ UNIT_TEST(SRC_GpuTest_ResourceTest, testAnimationResource, testing::ext::TestSiz
         {
             animationManager->Create(animation);
             const auto animationHandle = animationManager->Write(animation);
-            const EntityReference tracks[] = { positionTrack };
+            const EntityReference tracks[] = {positionTrack};
             animationHandle->tracks.reserve(countof(tracks));
             for (const auto& track : tracks) {
                 animationHandle->tracks.emplace_back(track);

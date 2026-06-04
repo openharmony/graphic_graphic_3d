@@ -24,8 +24,9 @@
 #include "SceneResourceImpl.h"
 
 #include <variant>
+#include "export.h"
 
-class ShaderJS final : BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC ShaderJS final : BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 40;
     static void Init(napi_env env, napi_value exports);
@@ -33,8 +34,9 @@ public:
     ~ShaderJS() override;
     void* GetInstanceImpl(uint32_t) override;
     void DetachFromMaterial(NapiApi::Object me);
+
 private:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
     SCENE_NS::IMaterial::Ptr PrepareBind(NapiApi::Object& inputs, NapiApi::Object& material, NapiApi::Object& meJs);
     void SetDefaults(NapiApi::Object& inputs, NapiApi::Object& material, SCENE_NS::IMaterial::Ptr& mat,
@@ -44,11 +46,11 @@ private:
     void UnbindInputs(NapiApi::Object meJs);
     napi_value GetInputs(NapiApi::FunctionContext<>& ctx);
     napi_value SetInputs(NapiApi::FunctionContext<NapiApi::Object>& ctx);
-    using InputValueType = std::variant<std::monostate, BASE_NS::Math::Vec4, BASE_NS::Math::Vec3,
-                                        BASE_NS::Math::Vec2, float, SCENE_NS::IImage::Ptr>;
+    using InputValueType = std::variant<std::monostate, BASE_NS::Math::Vec4, BASE_NS::Math::Vec3, BASE_NS::Math::Vec2,
+        float, SCENE_NS::IImage::Ptr>;
     void SetInput(BASE_NS::string_view key, InputValueType& value);
     void InitInputs(NapiApi::Object meJs, NapiApi::Object);
-    template<class type>
+    template <class type>
     static InputValueType ParseInputs(NapiApi::Object& obj, BASE_NS::string_view key);
 
     bool isInputsReflValid_ = {};
@@ -57,4 +59,4 @@ private:
     BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<PropertyProxy>> proxies_;
 };
 
-#endif // _SHADER_JS_H
+#endif  // _SHADER_JS_H

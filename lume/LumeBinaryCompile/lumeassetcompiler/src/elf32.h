@@ -26,7 +26,7 @@ using Elf32_Half = uint16_t;
 using Elf32_Word = uint32_t;
 
 struct Elf32_Ehdr {
-    ElfIdent ident = { 0x7f, 'E', 'L', 'F', ELFCLASS32, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE };
+    ElfIdent ident = {0x7f, 'E', 'L', 'F', ELFCLASS32, ELFDATA2LSB, EV_CURRENT, ELFOSABI_NONE};
     Elf32_Half type;
     Elf32_Half machine;
     Elf32_Word version;
@@ -64,4 +64,4 @@ struct Elf32_Sym {
     Elf32_Half shndx;
 };
 
-#endif // LUME_ELF_32_H
+#endif  // LUME_ELF_32_H

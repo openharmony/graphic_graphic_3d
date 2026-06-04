@@ -42,15 +42,15 @@ unique_ptr<IRenderNode, RenderNodeTypeInfo::DestroyRenderNodeFn> RenderNodeManag
     const char* nodeType)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
-        return { pos->second.createNode(), pos->second.destroyNode };
+        return {pos->second.createNode(), pos->second.destroyNode};
     }
-    return { nullptr, nullptr };
+    return {nullptr, nullptr};
 }
 
 RenderNodeManager::RenderNodeTypeInfoFlags RenderNodeManager::GetRenderNodeTypeInfoFlags(const char* nodeType)
 {
     if (auto const pos = factories_.find(nodeType); pos != factories_.end()) {
-        return { pos->second.renderNodeBackendFlags, pos->second.renderNodeClassType };
+        return {pos->second.renderNodeBackendFlags, pos->second.renderNodeClassType};
     }
     return {};
 }
@@ -58,7 +58,7 @@ RenderNodeManager::RenderNodeTypeInfoFlags RenderNodeManager::GetRenderNodeTypeI
 void RenderNodeManager::AddRenderNodeFactory(const RenderNodeTypeInfo& typeInfo)
 {
     if (typeInfo.createNode && typeInfo.destroyNode) {
-        factories_.insert({ typeInfo.typeName, typeInfo });
+        factories_.insert({typeInfo.typeName, typeInfo});
     } else {
         PLUGIN_LOG_E("RenderNodeTypeInfo must provide non-null function pointers");
         PLUGIN_ASSERT(typeInfo.createNode && "createNode cannot be null");

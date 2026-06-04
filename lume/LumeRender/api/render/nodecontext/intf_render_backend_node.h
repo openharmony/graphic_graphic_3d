@@ -37,13 +37,15 @@ public:
     IRenderBackendNode(const IRenderBackendNode&) = delete;
     IRenderBackendNode& operator=(const IRenderBackendNode&) = delete;
 
+    /** Legacy const-state path. Pure virtual — every subclass must implement.
+     *  The recordingState passed in is read-only; the backend records the work
+     *  into its own command buffer / equivalent (e.g. Vulkan vkCmd*). */
     virtual void ExecuteBackendFrame(
         const ILowLevelDevice& device, const RenderBackendRecordingState& recordingState) = 0;
-
 protected:
     IRenderBackendNode() = default;
     virtual ~IRenderBackendNode() = default;
 };
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_BACKEND_NODE_H
+#endif  // API_RENDER_IRENDER_BACKEND_NODE_H

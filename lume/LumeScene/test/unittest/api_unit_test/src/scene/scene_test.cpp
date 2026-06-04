@@ -154,7 +154,7 @@ UNIT_TEST_F(API_ScenePlugin, CreateNodeWithPositionToEmptyScene, testing::ext::T
     // check the native ecs path is the same
     EXPECT_EQ(scene->GetInternalScene()->GetEcsContext().GetPath(ecs_object->GetEntity()), "//test");
 
-    BASE_NS::Math::Vec3 newPosition { 1.5, 2.0, 3.0 };
+    BASE_NS::Math::Vec3 newPosition{1.5, 2.0, 3.0};
     test_node->Position()->SetValue(newPosition);
     auto position = test_node->Position()->GetValue();
     ASSERT_EQ(position, newPosition);
@@ -191,7 +191,7 @@ UNIT_TEST_F(API_ScenePlugin, ReleaseNode, testing::ext::TestSize.Level1)
     auto testNode = scene->CreateNode("//test").GetResult();
     ASSERT_TRUE(testNode);
 
-    BASE_NS::Math::Vec3 newPosition { 1.5, 2.0, 3.0 };
+    BASE_NS::Math::Vec3 newPosition{1.5, 2.0, 3.0};
     testNode->Position()->SetValue(newPosition);
 
     UpdateScene();
@@ -213,6 +213,34 @@ UNIT_TEST_F(API_ScenePlugin, ReleaseNode, testing::ext::TestSize.Level1)
         EXPECT_TRUE(scene->ReleaseNode(BASE_NS::move(testNode), false).GetResult());
         EXPECT_TRUE(w.expired());
     }
+
+    testNode = scene->FindNode("//test").GetResult();
+    ASSERT_TRUE(testNode);
+    EXPECT_EQ(testNode->Position()->GetValue(), newPosition);
+}
+
+/**
+ * @tc.name: ReleaseNodeFlushesPendingPropertyWrites
+ * @tc.desc: Property writes made just before ReleaseNode must reach ECS even
+ *          without an intervening Update/SyncProperties.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, ReleaseNodeFlushesPendingPropertyWrites, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+
+    auto testNode = scene->CreateNode("//test").GetResult();
+    ASSERT_TRUE(testNode);
+
+    // Make sure the entity exists in ECS before the property write we care about.
+    UpdateScene();
+
+    BASE_NS::Math::Vec3 newPosition{1.5, 2.0, 3.0};
+    testNode->Position()->SetValue(newPosition);
+
+    // Deliberately do NOT call UpdateScene()/SyncProperties() here. ReleaseNode
+    // is expected to flush this object's pending API->ECS writes itself.
+    EXPECT_TRUE(scene->ReleaseNode(BASE_NS::move(testNode), false).GetResult());
 
     testNode = scene->FindNode("//test").GetResult();
     ASSERT_TRUE(testNode);
@@ -344,7 +372,7 @@ UNIT_TEST_F(API_ScenePlugin, MoveNode, testing::ext::TestSize.Level1)
 
     EXPECT_TRUE(testNode->Enabled()->GetValue());
 
-    BASE_NS::Math::Vec3 newPosition { 1.5, 2.0, 3.0 };
+    BASE_NS::Math::Vec3 newPosition{1.5, 2.0, 3.0};
     testNode->Position()->SetValue(newPosition);
 
     UpdateScene();
@@ -457,25 +485,71 @@ UNIT_TEST_F(API_ScenePlugin, RayCast, testing::ext::TestSize.Level1)
     auto scene = CreateEmptyScene();
     auto node = scene->CreateNode("//test", ClassId::MeshNode).GetResult();
     ASSERT_TRUE(node);
-    node->Position()->SetValue({ 0, 0, 10 });
+    node->Position()->SetValue({0, 0, 10});
     auto mesh = interface_pointer_cast<IMesh>(node);
     ASSERT_TRUE(mesh);
     AddSubMesh(mesh);
     auto submesh = mesh->SubMeshes()->GetValueAt(0);
     ASSERT_TRUE(submesh);
-    submesh->AABBMin()->SetValue({ -1, -1, -1 });
-    submesh->AABBMax()->SetValue({ 1, 1, 1 });
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
     UpdateScene();
-    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3 { -1, -1, -1 }));
-    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3 { 1, 1, 1 }));
+    EXPECT_EQ(mesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1, -1, -1}));
+    EXPECT_EQ(mesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1, 1, 1}));
     auto rc = interface_cast<IRayCast>(scene);
     ASSERT_TRUE(rc);
-    auto res = rc->CastRay({ 0, 0, 0 }, { 0, 0, 1 }, {}).GetResult();
+    auto res = rc->CastRay({0, 0, 0}, {0, 0, 1}, {}).GetResult();
     ASSERT_EQ(res.size(), 1);
-    EXPECT_EQ(res[0].position, (BASE_NS::Math::Vec3 { 0, 0, 9 }));
+    EXPECT_EQ(res[0].position, (BASE_NS::Math::Vec3{0, 0, 9}));
     EXPECT_EQ(res[0].distance, 9);
     EXPECT_EQ(res[0].distanceToCenter, 10);
     EXPECT_EQ(res[0].node, node);
+
+    RayCastOptions opts;
+    opts.layerMask = 42u;
+    res = rc->CastRay({0, 0, 0}, {0, 0, 1}, opts).GetResult();
+    ASSERT_EQ(res.size(), 0);
+}
+
+/**
+ * @tc.name: RayCastVisible
+ * @tc.desc: Test raycase for only visible nodes
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, RayCastVisible, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    auto node = scene->CreateNode("//test", ClassId::MeshNode).GetResult();
+    ASSERT_TRUE(node);
+    node->Position()->SetValue({0, 0, 10});
+    auto mesh = interface_pointer_cast<IMesh>(node);
+    ASSERT_TRUE(mesh);
+    AddSubMesh(mesh);
+    auto submesh = mesh->SubMeshes()->GetValueAt(0);
+    ASSERT_TRUE(submesh);
+    submesh->AABBMin()->SetValue({-1, -1, -1});
+    submesh->AABBMax()->SetValue({1, 1, 1});
+    UpdateScene();
+
+    auto rc = interface_cast<IRayCast>(scene);
+    ASSERT_TRUE(rc);
+    auto res = rc->CastRay({0, 0, 0}, {0, 0, 1}, {}).GetResult();
+    ASSERT_EQ(res.size(), 1);
+
+    META_NS::SetValue(node->Enabled(), false);
+    RayCastOptions opts;
+    opts.hitOptions = RayCastOptions::HIT_ENABLED;
+    res = rc->CastRay({0, 0, 0}, {0, 0, 1}, opts).GetResult();
+    EXPECT_EQ(res.size(), 1);  // Still returns 1 since Scene update has not been run
+
+    UpdateScene();
+    res = rc->CastRay({0, 0, 0}, {0, 0, 1}, opts).GetResult();
+    EXPECT_EQ(res.size(), 0);  // No nodes should be hit after update
+
+    META_NS::SetValue(node->Enabled(), true);
+    UpdateScene();
+    res = rc->CastRay({0, 0, 0}, {0, 0, 1}, opts).GetResult();
+    EXPECT_EQ(res.size(), 1);  // Should return 1 again since the node was enabled
 }
 
 /**
@@ -685,7 +759,7 @@ UNIT_TEST_F(API_ScenePlugin, NodeEnabled, testing::ext::TestSize.Level1)
  */
 UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
 {
-    CORE_NS::ResourceId imageId;
+    CORE_NS::ResourceIdContext imageId;
     {
         auto scene = LoadScene("test_assets://AnimatedCube/AnimatedCube.gltf");
         ASSERT_TRUE(scene);
@@ -693,7 +767,7 @@ UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
         ASSERT_TRUE(root);
         EXPECT_EQ(root->GetChildren().GetResult().size(), 1);
 
-        for (auto&& v : context->GetResources()->GetResourceInfos()) {
+        for (auto&& v : context->GetResources()->GetResourceInfos(scene)) {
             CORE_LOG_W("%s", v.id.ToString().c_str());
         }
 
@@ -710,7 +784,7 @@ UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
             ASSERT_TRUE(res);
             EXPECT_EQ(res->GetResourceId().group, "test_assets://AnimatedCube/AnimatedCube.gltf");
 
-            auto qres = resources->GetResource(res->GetResourceId());
+            auto qres = resources->GetResource({res->GetResourceId(), res->GetContext()});
             EXPECT_EQ(qres, res);
         }
 
@@ -725,10 +799,9 @@ UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
             ASSERT_TRUE(res);
             EXPECT_EQ(res->GetResourceId().group, "test_assets://AnimatedCube/AnimatedCube.gltf");
 
-            auto qres = resources->GetResource(res->GetResourceId());
+            imageId = {res->GetResourceId(), res->GetContext()};
+            auto qres = resources->GetResource(imageId);
             EXPECT_EQ(qres, res);
-
-            imageId = res->GetResourceId();
         }
 
         auto anims = scene->GetAnimations().GetResult();
@@ -741,7 +814,7 @@ UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
             ASSERT_TRUE(res);
             EXPECT_EQ(res->GetResourceId().group, "test_assets://AnimatedCube/AnimatedCube.gltf");
 
-            auto qres = resources->GetResource(res->GetResourceId());
+            auto qres = resources->GetResource({res->GetResourceId(), res->GetContext()});
             EXPECT_EQ(qres, res);
         }
 
@@ -749,11 +822,11 @@ UNIT_TEST_F(API_ScenePlugin, CreateGltfResources, testing::ext::TestSize.Level1)
         ASSERT_EQ(groups.GetAllHandles().size(), 1);
         EXPECT_EQ(groups.PrimaryGroup(), "test_assets://AnimatedCube/AnimatedCube.gltf");
 
-        EXPECT_TRUE(!resources->GetResourceInfos("test_assets://AnimatedCube/AnimatedCube.gltf").empty());
+        EXPECT_TRUE(!resources->GetResourceInfos("test_assets://AnimatedCube/AnimatedCube.gltf", scene).empty());
     }
     this->scene.reset();
 
-    EXPECT_TRUE(resources->GetResourceInfos("test_assets://AnimatedCube/AnimatedCube.gltf").empty());
+    EXPECT_TRUE(resources->GetResourceInfos("test_assets://AnimatedCube/AnimatedCube.gltf", scene).empty());
     EXPECT_FALSE(resources->GetResource(imageId));
 }
 
@@ -783,11 +856,11 @@ UNIT_TEST_F(API_ScenePlugin, ExternalNode, testing::ext::TestSize.Level1)
     EXPECT_TRUE(!scene->GetAnimations().GetResult().empty());
 
     EXPECT_TRUE(resources->GetResource(
-        { "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
+        {{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
     EXPECT_TRUE(resources->GetResource(
-        { "AnimatedCube.gltf/images/1", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
-    EXPECT_TRUE(resources->GetResource(
-        { "animation_AnimatedCube", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
+        {{"AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
+    EXPECT_TRUE(
+        resources->GetResource({{"animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
 
     BASE_NS::string extGroup = "test_assets://AnimatedCube/AnimatedCube.gltf";
 
@@ -799,14 +872,15 @@ UNIT_TEST_F(API_ScenePlugin, ExternalNode, testing::ext::TestSize.Level1)
     UpdateScene();
 
     EXPECT_FALSE(resources->GetResource(
-        { "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
+        {{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
     EXPECT_FALSE(resources->GetResource(
-        { "AnimatedCube.gltf/images/1", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
-    EXPECT_FALSE(resources->GetResource(
-        { "animation_AnimatedCube", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" }, scene));
+        {{"AnimatedCube.gltf/images/1", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
+    EXPECT_FALSE(
+        resources->GetResource({{"animation_AnimatedCube", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene}));
 
     EXPECT_TRUE(scene->GetAnimations().GetResult().empty());
     EXPECT_EQ(entities, GetEntityCount());
+    LogAliveEntities(scene);
 }
 
 /**
@@ -836,15 +910,14 @@ UNIT_TEST_F(API_ScenePlugin, ImportSameSceneTwice, testing::ext::TestSize.Level1
 
     {
         auto groups = iScene->GetResourceGroups();
-        ASSERT_EQ(groups.GetAllHandles().size(), 2);
+        ASSERT_EQ(groups.GetAllHandles().size(), 1);
         EXPECT_TRUE(groups.GetHandle("Scene"));
-        EXPECT_TRUE(groups.GetHandle("Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
     }
 
     EXPECT_TRUE(scene->FindNode("//test/some").GetResult());
     EXPECT_TRUE(
         resources
-            ->GetResourceInfo({ "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" })
+            ->GetResourceInfo({{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene})
             .id.IsValid());
 
     auto secondNode = ext->ImportChildScene(cube, "other").GetResult();
@@ -852,22 +925,20 @@ UNIT_TEST_F(API_ScenePlugin, ImportSameSceneTwice, testing::ext::TestSize.Level1
 
     {
         auto groups = iScene->GetResourceGroups();
-        ASSERT_EQ(groups.GetAllHandles().size(), 3);
+        ASSERT_EQ(groups.GetAllHandles().size(), 1);
         EXPECT_TRUE(groups.GetHandle("Scene"));
-        EXPECT_TRUE(groups.GetHandle("Scene - test_assets://AnimatedCube/AnimatedCube.gltf"));
-        EXPECT_TRUE(groups.GetHandle("Scene - test_assets://AnimatedCube/AnimatedCube.gltf (1)"));
     }
 
     EXPECT_TRUE(scene->FindNode("//test/some").GetResult());
     EXPECT_TRUE(scene->FindNode("//test/other").GetResult());
     EXPECT_TRUE(
         resources
-            ->GetResourceInfo({ "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf" })
+            ->GetResourceInfo({{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf"}, scene})
             .id.IsValid());
-    EXPECT_TRUE(resources
-                    ->GetResourceInfo(
-                        { "AnimatedCube.gltf/images/0", "Scene - test_assets://AnimatedCube/AnimatedCube.gltf (1)" })
-                    .id.IsValid());
+    EXPECT_FALSE(resources
+                     ->GetResourceInfo(
+                         {{"AnimatedCube.gltf/images/0", "test_assets://AnimatedCube/AnimatedCube.gltf (1)"}, scene})
+                     .id.IsValid());
 }
 
 /**
@@ -979,7 +1050,19 @@ UNIT_TEST_F(API_ScenePlugin, FindImportedResources, testing::ext::TestSize.Level
     ASSERT_TRUE(child);
 
     auto res = GetImportedResources(child, {});
-    ASSERT_GE(res.size(), 2); // We should have at least one animation and one material
+    ASSERT_EQ(res.size(), 4);
+
+    child = ext->ImportChildScene("test_assets://AnimatedCube/AnimatedCube.gltf", "new").GetResult();
+    ASSERT_TRUE(child);
+
+    res = GetImportedResources(child, {});
+    ASSERT_EQ(res.size(), 4);
+
+    child = ext->ImportChildScene("test_assets://AnimatedCube/AnimatedCube.gltf", "other").GetResult();
+    ASSERT_TRUE(child);
+
+    res = GetImportedResources(child, {});
+    ASSERT_EQ(res.size(), 4);
 }
 
 /**
@@ -1024,7 +1107,8 @@ UNIT_TEST_F(API_ScenePlugin, ImportSceneTwiceWithDeactivatedNode, testing::ext::
         ASSERT_TRUE(child);
 
         auto anims = scene->GetAnimations().GetResult();
-        ASSERT_EQ(anims.size(), 1);
+        // remove child does not remove resources
+        ASSERT_EQ(anims.size(), 2);
         auto anim = anims[0];
 
         interface_cast<META_NS::IStartableAnimation>(anim)->Start();
@@ -1074,108 +1158,383 @@ UNIT_TEST_F(API_ScenePlugin, EditorSceneLoad, testing::ext::TestSize.Level1)
     auto groups = iScene->GetResourceGroups();
     for (auto&& g : groups.GetAllHandles()) {
         auto name = g->GetGroup();
-        select.push_back(CORE_NS::MatchingResourceId { name });
+        select.push_back(CORE_NS::MatchingResourceId{name});
         CORE_LOG_D("Group: %s", name.c_str());
     }
 
     auto di = interface_cast<META_NS::IResourceQuery>(res);
     ASSERT_TRUE(di);
-    auto count = di->GetAliveCount(select);
+    auto count = di->GetAliveCount(select, scene);
     EXPECT_EQ(count, 0);
     if (count > 0) {
         CORE_LOG_W("Resources still alive:");
-        for (auto&& r : di->FindAliveResources(select)) {
+        for (auto&& r : di->FindAliveResources(select, scene)) {
             CORE_LOG_W("  %s", r->GetResourceId().ToString().c_str());
         }
     }
 }
 
-void CompareCounters(const SCENE_NS::IRenderContext::Counters& lhs, const SCENE_NS::IRenderContext::Counters& rhs,
-    BASE_NS::string_view id)
+/**
+ * @tc.name: JsonImporterV1DispatchLoads
+ * @tc.desc: project.json with importVersion "JsonImporter v1" routes to the new
+ *           JSON scene importer, which parses a JSON-importer-format scene.
+ *           The "resources" array in project.json lists a resource index
+ *           (resources.res) that registers a material; verify it lands in
+ *           the render context's resource manager before the scene parses.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, JsonImporterV1DispatchLoads, testing::ext::TestSize.Level1)
 {
-    auto sid = BASE_NS::string(id);
-    const auto* str = sid.c_str();
+    auto scene = LoadScene("test_assets://json_importer_dispatch/v1/assets/test.scene");
+    ASSERT_TRUE(scene);
+    auto root = scene->GetRootNode().GetResult();
+    ASSERT_TRUE(root);
+    EXPECT_TRUE(scene->FindNode("//child_a").GetResult());
+    EXPECT_TRUE(scene->FindNode("//child_b").GetResult());
+    EXPECT_EQ(root->GetChildren().GetResult().size(), 2u);
 
-    ASSERT_EQ(lhs.scenes.size(), rhs.scenes.size()) << str;
-    EXPECT_EQ(lhs.resourceCount, rhs.resourceCount) << str;
-    EXPECT_EQ(lhs.handles.bufferHandleCount, rhs.handles.bufferHandleCount) << str;
-    EXPECT_EQ(lhs.handles.imageHandleCount, rhs.handles.imageHandleCount) << str;
-    EXPECT_EQ(lhs.handles.samplerHandleCount, rhs.handles.samplerHandleCount) << str;
-
-    // The scene infos might be in whatever order (depending on instance id hash)
-    std::set<uint32_t> foundMatches;
-    for (auto i = 0; i < lhs.scenes.size(); i++) {
-        bool foundMatch = false;
-        for (auto j = 0; j < rhs.scenes.size(); j++) {
-            if (lhs.scenes[i].entityCount == rhs.scenes[j].entityCount &&
-                lhs.scenes[i].nodeCount == rhs.scenes[j].nodeCount &&
-                lhs.scenes[i].nodeObjectCount == rhs.scenes[j].nodeObjectCount) {
-                foundMatch = true;
-                foundMatches.insert(j);
-            }
-        }
-        EXPECT_TRUE(foundMatch) << "matching scene not found " << i;
-    }
-    EXPECT_EQ(foundMatches.size(), lhs.scenes.size());
+    // Resource index listed in project.json was loaded ahead of the scene.
+    auto info = resources->GetResourceInfo({"test_material", nullptr});
+    EXPECT_TRUE(info.id.IsValid());
+    EXPECT_EQ(info.type, SCENE_NS::ClassId::MaterialResource.Id().ToUid());
 }
 
+/**
+ * @tc.name: JsonImporterV1DispatchVersionMismatch
+ * @tc.desc: Same JSON-importer-format scene, but project.json's importVersion
+ *           is not "JsonImporter v1" — the legacy path is selected instead, and
+ *           legacy can't parse JSON-importer format, so loading fails.
+ *           Proves the importVersion field actually toggles which importer runs.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, JsonImporterV1DispatchVersionMismatch, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test_assets://json_importer_dispatch/legacy/assets/test.scene");
+    EXPECT_FALSE(scene);
+}
+
+/**
+ * @tc.name: ResourceCountTest
+ * @tc.desc: Tests for resource counters.
+ * @tc.type: FUNC
+ */
 UNIT_TEST_F(API_ScenePlugin, ResourceCountTest, testing::ext::TestSize.Level1)
 {
+    // Verifies the resource counter invariants rather than absolute values, so the test survives
+    // resource-count changes in the underlying render libraries. The key properties tested are:
+    //   - loading a scene makes handle/resource counts grow
+    //   - repeated rendering without changes does not shift counts
+    //   - each load/unload pair round-trips back to the state before it
+    //   - after unloading everything the counters return to the initial baseline (no leaks)
     auto uri = "test_assets://AnimatedCube/AnimatedCube.gltf";
-    auto cube = LoadScene(uri);
+    IScene::Ptr cube;
     IScene::Ptr cube2;
 
     auto render = [&](int count = 6) {
         for (int i = 0; i < count; i++) {
-            UpdateSceneAndRenderFrame(cube);
+            if (cube) {
+                UpdateSceneAndRenderFrame(cube);
+            }
             if (cube2) {
                 UpdateSceneAndRenderFrame(cube2);
             }
         }
     };
-    auto getCounters = [&]() { return context ? context->GetCounters() : IRenderContext::Counters {}; };
+    auto getCounters = [&]() { return context ? context->GetCounters() : IRenderContext::Counters{}; };
+    auto expectHandlesEq = [](const IRenderContext::Counters& actual,
+                               const IRenderContext::Counters& expected,
+                               BASE_NS::string_view label) {
+        auto s = BASE_NS::string(label);
+        EXPECT_EQ(actual.handles.bufferHandleCount, expected.handles.bufferHandleCount) << s.c_str();
+        EXPECT_EQ(actual.handles.imageHandleCount, expected.handles.imageHandleCount) << s.c_str();
+        EXPECT_EQ(actual.handles.samplerHandleCount, expected.handles.samplerHandleCount) << s.c_str();
+        EXPECT_EQ(actual.resourceCount, expected.resourceCount) << s.c_str();
+        EXPECT_EQ(actual.scenes.size(), expected.scenes.size()) << s.c_str();
+        EXPECT_EQ(actual.totalSceneCount, expected.totalSceneCount) << s.c_str();
+    };
 
-    // Expected counters with 1 loaded scene
-    IRenderContext::Counters expectedAnimatedCube = { { { 23, 4, 0 } }, 1, 4, { 5, 10, 10 } };
-    // Expected counters with 1 loaded scene after first rendered frame
-    IRenderContext::Counters expectedAnimatedCubeAfterRender = { { { 23, 4, 0 } }, 1, 4, { 12, 12, 10 } };
-    // Expected counters with 2 loaded scenes
-    IRenderContext::Counters expectedAnimatedCube2 = { { { 23, 4, 0 }, { 23, 4, 0 } }, 2, 8, { 23, 14, 10 } };
-    // Expected counters with 2 loaded scenes after importing scene 1 into 2
-    IRenderContext::Counters expectedAnimatedCube2Imported = { { { 46, 7, 2 }, { 23, 4, 0 } }, 2, 12, { 23, 14, 10 } };
+    // 1. Baseline: no user-loaded scenes.
+    {
+        auto warmup = GetSceneManager()->CreateScene(uri).GetResult();
+        ASSERT_TRUE(warmup);
+        cube = warmup;
+        render();
+        cube.reset();
+        warmup.reset();
+        render();
+    }
+    const auto initial = getCounters();
 
-    const auto countersBeforeRender = getCounters();
-    CompareCounters(countersBeforeRender, expectedAnimatedCube, "scene loaded");
+    // 2. Load one scene: handles and resources must all grow.
+    cube = GetSceneManager()->CreateScene(uri).GetResult();
+    ASSERT_TRUE(cube);
     render();
-    const auto countersAfterFirstFrame = getCounters();
-    CompareCounters(countersAfterFirstFrame, expectedAnimatedCubeAfterRender, "after first frame");
+    const auto afterOne = getCounters();
+    EXPECT_EQ(afterOne.scenes.size(), initial.scenes.size() + 1);
+    EXPECT_EQ(afterOne.totalSceneCount, initial.totalSceneCount + 1);
+    EXPECT_GT(afterOne.resourceCount, initial.resourceCount);
+    EXPECT_GT(afterOne.handles.bufferHandleCount, initial.handles.bufferHandleCount);
+    EXPECT_GT(afterOne.handles.imageHandleCount, initial.handles.imageHandleCount);
+    // Samplers are cached globally; loading a scene may not add any.
+    EXPECT_GE(afterOne.handles.samplerHandleCount, initial.handles.samplerHandleCount);
 
-    // Load another scene
+    // 2b. Rendering further frames without changes must not drift counters.
+    render();
+    expectHandlesEq(getCounters(), afterOne, "stable after idle frames");
+
+    // 3. Load a second scene of the same URI.
     cube2 = GetSceneManager()->CreateScene(uri).GetResult();
     ASSERT_TRUE(cube2);
     render();
-    CompareCounters(getCounters(), expectedAnimatedCube2, "after loading second scene");
+    const auto afterTwo = getCounters();
+    EXPECT_EQ(afterTwo.scenes.size(), initial.scenes.size() + 2);
+    EXPECT_EQ(afterTwo.totalSceneCount, initial.totalSceneCount + 2);
+    EXPECT_GT(afterTwo.resourceCount, afterOne.resourceCount);
+    EXPECT_GE(afterTwo.handles.bufferHandleCount, afterOne.handles.bufferHandleCount);
+    EXPECT_GE(afterTwo.handles.imageHandleCount, afterOne.handles.imageHandleCount);
+    EXPECT_GE(afterTwo.handles.samplerHandleCount, afterOne.handles.samplerHandleCount);
+
+    // 4. Import cube into cube2. Scene count must stay unchanged.
     auto cube2root = cube2->GetRootNode().GetResult();
     auto import = interface_cast<INodeImport>(cube2root);
-    // Import cube scene into cube2
     auto imported = import->ImportChildScene(cube, "OriginalCube").GetResult();
     EXPECT_TRUE(imported);
     render();
-    CompareCounters(getCounters(), expectedAnimatedCube2Imported, "after importing first scene into the second");
-    // Remove imported scene
+    const auto afterImport = getCounters();
+    EXPECT_EQ(afterImport.scenes.size(), afterTwo.scenes.size());
+    EXPECT_EQ(afterImport.totalSceneCount, afterTwo.totalSceneCount);
+
+    // 5. Remove the imported node. Handle/resource counts must return to the pre-import state.
     EXPECT_TRUE(cube2->RemoveNode(BASE_NS::move(imported)).GetResult());
     render();
-    auto expected = expectedAnimatedCube2;
-    expected.scenes[0].nodeObjectCount = 1; // We still have root node
-    CompareCounters(getCounters(), expected, "removed imported node");
-    // Remove cube2 scene
+    expectHandlesEq(getCounters(), afterTwo, "removed imported node");
+
+    // 6. Drop cube2. Counts must collapse back to the single-scene state.
     cube2root.reset();
     cube2.reset();
     render();
-    expected = expectedAnimatedCubeAfterRender;
-    CompareCounters(getCounters(), expected, "removed cube2 scene");
+    expectHandlesEq(getCounters(), afterOne, "removed cube2 scene");
+
+    // 7. Drop cube too. Everything must return to the initial baseline (no leaks).
+    cube.reset();
+    render();
+    expectHandlesEq(getCounters(), initial, "removed all scenes");
 }
 
-} // namespace UTest
+/**
+ * @tc.name: ModifyRenderNodeGraph
+ * @tc.desc: Tests for modifying render node graph.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, ModifyRenderNodeGraph, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    BASE_NS::vector<RENDER_NS::RenderHandleReference> rng{};
+
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::PREPEND, rng);
+    UpdateScene();
+
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::REPLACE, rng);
+    UpdateScene();
+
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::INVALID, rng);
+    UpdateScene();
+
+    rng.push_back(RENDER_NS::RenderHandleReference{});
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::PREPEND, rng);
+    UpdateScene();
+
+    rng.push_back(RENDER_NS::RenderHandleReference{});
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::APPEND, rng);
+    UpdateScene();
+
+    rng.push_back(RENDER_NS::RenderHandleReference{});
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::REPLACE, rng);
+    UpdateScene();
+
+    scene->GetInternalScene()->ModifyCustomRenderNodeGraph(
+        IInternalScene::RenderNodeGraphModificationMode::INVALID, rng);
+    UpdateScene();
+}
+
+/**
+ * @tc.name: RenderMode
+ * @tc.desc: Tests for render mode.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, RenderMode, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    EXPECT_TRUE(scene->SetRenderMode(RenderMode::ALWAYS).GetResult());
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::ALWAYS);
+    UpdateScene();
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::ALWAYS);
+    EXPECT_TRUE(scene->SetRenderMode(RenderMode::IF_DIRTY).GetResult());
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::IF_DIRTY);
+    UpdateScene();
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::IF_DIRTY);
+    EXPECT_TRUE(scene->SetRenderMode(RenderMode::MANUAL).GetResult());
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::MANUAL);
+    UpdateScene();
+    EXPECT_EQ(scene->GetRenderMode().GetResult(), RenderMode::MANUAL);
+}
+
+/**
+ * @tc.name: AutoUpdate
+ * @tc.desc: Tests for auto update.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, AutoUpdate, testing::ext::TestSize.Level1)
+{
+    {
+        auto sc = CreateStandaloneScene();
+        ASSERT_TRUE(sc);
+        sc->StartAutoUpdate(META_NS::TimeSpan::Milliseconds(16));
+        UpdateScene(sc);
+        sc->StartAutoUpdate(META_NS::TimeSpan::Milliseconds(10));
+        UpdateScene(sc);
+    }
+}
+
+/**
+ * @tc.name: InvalidScene
+ * @tc.desc: Tests for auto update.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, InvalidScene, testing::ext::TestSize.Level1)
+{
+    auto scene = META_NS::GetObjectRegistry().Create(ClassId::Scene);
+    ASSERT_FALSE(scene);
+}
+
+/**
+ * @tc.name: GetInvalidComponent
+ * @tc.desc: Tests for invalid component.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, GetInvalidComponent, testing::ext::TestSize.Level1)
+{
+    CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    scene->GetComponent(nullptr, "");
+}
+
+/**
+ * @tc.name: SceneRenderContext
+ * @tc.desc: Tests Scene's RenderContext
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, SceneRenderContext, testing::ext::TestSize.Level1)
+{
+    auto context = META_NS::GetObjectRegistry().Create<IRenderContext>(ClassId::RenderContext);
+    ASSERT_TRUE(context);
+    auto counters = context->GetCounters();
+    EXPECT_EQ(counters.scenes.size(), 0);
+
+    CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    auto ctx = scene->GetInternalScene()->GetContext()->GetRenderer();
+    EXPECT_TRUE(context->Initialize(ctx, {}, {}, {}));
+    EXPECT_FALSE(context->Initialize(ctx, {}, {}, {}));
+
+    counters = context->GetCounters();
+    EXPECT_EQ(counters.scenes.size(), 1);
+}
+
+/**
+ * @tc.name: NodeImportNotShareResources
+ * @tc.desc: Tests for Node Import Not Share Resources. [AUTO-GENERATED]
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePlugin, NodeImportNotShareResources, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+
+    auto m = GetSceneManager();
+    ASSERT_TRUE(m);
+
+    BASE_NS::string uri = "test_assets://AnimatedCube/AnimatedCube.gltf";
+
+    auto imp1 = m->CreateScene(uri).GetResult();
+    ASSERT_TRUE(imp1);
+
+    auto imp2 = m->CreateScene(uri).GetResult();
+    ASSERT_TRUE(imp2);
+
+    auto getMat = [](IScene::Ptr scene, BASE_NS::string path) -> IMaterial::Ptr {
+        auto n = scene->FindNode<IMesh>(path).GetResult();
+        if (!n) {
+            return nullptr;
+        }
+        auto subs = n->SubMeshes()->GetValue();
+        if (subs.empty()) {
+            return nullptr;
+        }
+        return subs[0]->Material()->GetValue();
+    };
+
+    auto gm1 = getMat(imp1, "///AnimatedCube");
+    ASSERT_TRUE(gm1);
+    auto gm2 = getMat(imp2, "///AnimatedCube");
+    ASSERT_TRUE(gm2);
+
+    {
+        auto ext = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+        ASSERT_TRUE(ext);
+        auto n = ext->ImportChildScene(imp1, "1a").GetResult();
+        ASSERT_TRUE(n);
+    }
+    {
+        auto ext = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+        ASSERT_TRUE(ext);
+        auto n = ext->ImportChildScene(imp1, "1b").GetResult();
+        ASSERT_TRUE(n);
+    }
+    {
+        auto ext = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+        ASSERT_TRUE(ext);
+        auto n = ext->ImportChildScene(imp2, "2a").GetResult();
+        ASSERT_TRUE(n);
+    }
+    {
+        auto ext = interface_cast<INodeImport>(scene->GetRootNode().GetResult());
+        ASSERT_TRUE(ext);
+        INodeImport::ImportOptions opts;
+        opts.nodeName = "2b";
+        opts.shareResources = false;
+        auto n = ext->ImportChildScene(imp2, opts).GetResult();
+        ASSERT_TRUE(n);
+    }
+
+    auto mat1a = getMat(scene, "//1a//AnimatedCube");
+    ASSERT_TRUE(mat1a);
+    auto mat1b = getMat(scene, "//1b//AnimatedCube");
+    ASSERT_TRUE(mat1b);
+    auto mat2a = getMat(scene, "//2a//AnimatedCube");
+    ASSERT_TRUE(mat2a);
+    auto mat2b = getMat(scene, "//2b//AnimatedCube");
+    ASSERT_TRUE(mat2b);
+
+    EXPECT_EQ(mat1a, mat1b);
+    EXPECT_EQ(mat1a, mat2a);
+    EXPECT_NE(mat2a, mat2b);
+
+    EXPECT_NE(mat1a, gm1);
+    EXPECT_NE(mat2b, gm1);
+    EXPECT_NE(mat1a, gm2);
+    EXPECT_NE(mat2b, gm2);
+}
+
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

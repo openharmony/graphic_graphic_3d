@@ -45,7 +45,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "82fbcb54-5762-499f-a039-b3862b316f33" };
+    static constexpr BASE_NS::Uid UID{"82fbcb54-5762-499f-a039-b3862b316f33"};
     static constexpr const char* TYPE_NAME = "CORE_RN_COMBINED_POST_PROCESS";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -53,10 +53,10 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     RenderNodePostProcessUtil rnPostProcessUtil_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_NODE_COMBINED_POST_PROCESS_H
+#endif  // RENDER_NODE_RENDER_NODE_COMBINED_POST_PROCESS_H

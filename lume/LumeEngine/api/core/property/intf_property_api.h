@@ -67,4 +67,4 @@ protected:
     IPropertyApi& operator=(const IPropertyApi&) = delete;
 };
 CORE_END_NAMESPACE()
-#endif // API_CORE_PROPERTY_IPROPERTY_API_H
+#endif  // API_CORE_PROPERTY_IPROPERTY_API_H

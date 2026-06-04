@@ -31,52 +31,52 @@ CORE3D_BEGIN_NAMESPACE()
  */
 BEGIN_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent)
 #if !defined(IMPLEMENT_MANAGER)
-    enum FlagBits : uint8_t {
-        /** Disables the reflection, does not affect the plane rendering. */
-        ACTIVE_RENDER_BIT = (1 << 0),
-        /** Enable MSAA. */
-        MSAA_BIT = (1 << 2),
-        /** Enable water reflection plane. */
-        WATER_BIT = (1 << 3)
-    };
-    /** Container for planar reflection flag bits */
-    using Flags = uint8_t;
+enum FlagBits : uint8_t {
+    /** Disables the reflection, does not affect the plane rendering. */
+    ACTIVE_RENDER_BIT = (1 << 0),
+    /** Enable MSAA. */
+    MSAA_BIT = (1 << 2),
+    /** Enable water reflection plane. */
+    WATER_BIT = (1 << 3)
+};
+/** Container for planar reflection flag bits */
+using Flags = uint8_t;
 #endif
 
-    /** Downsample percentage (relative to render resolution), affects reflection quality.
-     */
-    DEFINE_PROPERTY(float, screenPercentage, "Downsample Percentage", 0, 0.5f)
+/** Downsample percentage (relative to render resolution), affects reflection quality.
+ */
+DEFINE_PROPERTY(float, screenPercentage, "Downsample Percentage", 0, 0.5f)
 
-    /** Quick access to current render target resolution.
-     */
-    DEFINE_ARRAY_PROPERTY(uint32_t, 2, renderTargetResolution, "Render Target Resolution", 0, ARRAY_VALUE(0, 0))
+/** Quick access to current render target resolution.
+ */
+DEFINE_ARRAY_PROPERTY(uint32_t, 2, renderTargetResolution, "Render Target Resolution", 0, ARRAY_VALUE(0, 0))
 
-    /** Reflection output render target.
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0, )
+/** Reflection output render target.
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, colorRenderTarget, "Render Output Target", 0, )
 
-    /** Reflection pass depth render target.
-     */
-    DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0, )
+/** Reflection pass depth render target.
+ */
+DEFINE_PROPERTY(CORE_NS::EntityReference, depthRenderTarget, "Depth Output Target", 0, )
 
-    /** Clip offset to reflection plane.
-     */
-    DEFINE_PROPERTY(float, clipOffset, "Reflection Clip Offset", 0, VALUE(0.0f))
+/** Clip offset to reflection plane.
+ */
+DEFINE_PROPERTY(float, clipOffset, "Reflection Clip Offset", 0, VALUE(0.0f))
 
-    /** Additional flags for reflection processing.
-     */
-    DEFINE_BITFIELD_PROPERTY(Flags, additionalFlags, "Flags", PropertyFlags::IS_BITFIELD,
-        VALUE(FlagBits::ACTIVE_RENDER_BIT), PlanarReflectionComponent::FlagBits)
+/** Additional flags for reflection processing.
+ */
+DEFINE_BITFIELD_PROPERTY(Flags, additionalFlags, "Flags", PropertyFlags::IS_BITFIELD,
+    VALUE(FlagBits::ACTIVE_RENDER_BIT), PlanarReflectionComponent::FlagBits)
 
-    /** Defines a layer mask which affects reflection camera's rendering. Default is all layer mask when the
-     * reflection camera renders objects from all layers. */
-    DEFINE_BITFIELD_PROPERTY(uint64_t, layerMask, "Layer Mask", PropertyFlags::IS_BITFIELD,
-        VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
+/** Defines a layer mask which affects reflection camera's rendering. Default is all layer mask when the
+ * reflection camera renders objects from all layers. */
+DEFINE_BITFIELD_PROPERTY(
+    uint64_t, layerMask, "Layer Mask", PropertyFlags::IS_BITFIELD, VALUE(LayerConstants::ALL_LAYER_MASK), LayerFlagBits)
 
-    /** Entity containing a PostProcessComponent that is applied to the rendered reflection. If not defined the
-     * camera will use default CORE3D_POST_PROCESS_REFLECTION_CAM configuration.
-     */
-    DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0, )
+/** Entity containing a PostProcessComponent that is applied to the rendered reflection. If not defined the
+ * camera will use default CORE3D_POST_PROCESS_REFLECTION_CAM configuration.
+ */
+DEFINE_PROPERTY(CORE_NS::Entity, postProcess, "Post process", 0, )
 
 END_COMPONENT(IPlanarReflectionComponentManager, PlanarReflectionComponent, "5081ccf4-2013-43c1-b9bb-23041e73ac6d")
 #if !defined(IMPLEMENT_MANAGER)

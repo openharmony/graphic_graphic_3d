@@ -111,5 +111,5 @@ UNIT_TEST(API_VersionTest, InvalidString, testing::ext::TestSize.Level1)
     EXPECT_EQ(Version("-1.24"), Version());
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

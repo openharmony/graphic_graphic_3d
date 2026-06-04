@@ -48,16 +48,15 @@ void ShaderJS::Init(napi_env env, napi_value exports)
 #undef NAPI_API_JS_NAME
 }
 
-ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
-    : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::SHADER)
+ShaderJS::ShaderJS(napi_env e, napi_callback_info i) : BaseObject(e, i), SceneResourceImpl(SceneResourceImpl::SHADER)
 {
     LUME_TRACE_FUNC()
     NapiApi::FunctionContext<NapiApi::Object, NapiApi::Object> fromJs(e, i);
     NapiApi::Object meJs(fromJs.This());
-    AddBridge("ShaderJS",meJs);
-    NapiApi::Object scene = fromJs.Arg<0>(); // access to owning scene...
-    NapiApi::Object args = fromJs.Arg<1>();  // other args
-    scene_ = { scene };
+    AddBridge("ShaderJS", meJs);
+    NapiApi::Object scene = fromJs.Arg<0>();  // access to owning scene...
+    NapiApi::Object args = fromJs.Arg<1>();   // other args
+    scene_ = {scene};
 
     if (const auto sceneJS = scene.GetJsWrapper<SceneJS>()) {
         sceneJS->DisposeHook(reinterpret_cast<uintptr_t>(&scene_), meJs);
@@ -67,7 +66,7 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
         LOG_F("Trying to construct ShaderJS instance without a valid scene or rendercontext");
     }
 
-    NapiApi::Object material = args.Get<NapiApi::Object>("Material"); // see if we SHOULD be bound to a material.
+    NapiApi::Object material = args.Get<NapiApi::Object>("Material");  // see if we SHOULD be bound to a material.
     if (material) {
         BindToMaterial(meJs, material);
     }
@@ -86,7 +85,8 @@ ShaderJS::ShaderJS(napi_env e, napi_callback_info i)
     meJs.Set("name", name);
 }
 
-NapiApi::Object GetRenderContext(NapiApi::Object scene) {
+NapiApi::Object GetRenderContext(NapiApi::Object scene)
+{
     if (scene) {
         NapiApi::Function func = scene.Get<NapiApi::Function>("getRenderContext");
         if (func) {
@@ -96,8 +96,8 @@ NapiApi::Object GetRenderContext(NapiApi::Object scene) {
     return NapiApi::Object{};
 }
 
-SCENE_NS::IMaterial::Ptr ShaderJS::PrepareBind(NapiApi::Object& inputs, NapiApi::Object& material,
-    NapiApi::Object& meJs)
+SCENE_NS::IMaterial::Ptr ShaderJS::PrepareBind(
+    NapiApi::Object& inputs, NapiApi::Object& material, NapiApi::Object& meJs)
 {
     LUME_TRACE_FUNC()
     // unbind existing inputs.
@@ -126,18 +126,18 @@ SCENE_NS::IMaterial::Ptr ShaderJS::PrepareBind(NapiApi::Object& inputs, NapiApi:
     return mat;
 }
 
-void ShaderJS::SetDefaults(NapiApi::Object &inputs, NapiApi::Object &material, SCENE_NS::IMaterial::Ptr &mat,
-    BASE_NS::vector<napi_property_descriptor> &inputProps, META_NS::IMetadata::Ptr customProperties)
+void ShaderJS::SetDefaults(NapiApi::Object& inputs, NapiApi::Object& material, SCENE_NS::IMaterial::Ptr& mat,
+    BASE_NS::vector<napi_property_descriptor>& inputProps, META_NS::IMetadata::Ptr customProperties)
 {
     LUME_TRACE_FUNC()
-    auto proxt = BASE_NS::shared_ptr { new TypeProxy<float>(inputs, mat->AlphaCutoff()) };
+    auto proxt = BASE_NS::shared_ptr{new TypeProxy<float>(inputs, mat->AlphaCutoff())};
     if (proxt) {
         auto res = proxies_.insert_or_assign(mat->AlphaCutoff()->GetName(), proxt);
         inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), BASE_NS::move(proxt)));
     }
     if (customProperties) {
         BASE_NS::shared_ptr<CORE_NS::IInterface> intsc;
-        auto materialJs = material.GetJsWrapper<MaterialJS>(); // this was initially checked (!= null)
+        auto materialJs = material.GetJsWrapper<MaterialJS>();  // this was initially checked (!= null)
         if (!materialJs) {
             return;
         }
@@ -195,7 +195,7 @@ void ShaderJS::BindToMaterial(NapiApi::Object meJs, NapiApi::Object material)
 ShaderJS::~ShaderJS()
 {
     LUME_TRACE_FUNC()
-    DisposeNative(nullptr);
+    DisposeNative();
     DestroyBridge(this);
 }
 
@@ -220,7 +220,7 @@ void ShaderJS::UnbindInputs(NapiApi::Object meJs)
             auto it = proxies_.begin();
             // removes hooks for meta property & jsproperty.
             auto ret = inp.DeleteProperty(it->first);
-            LOG_V("#### Release %s %zu %d", it->first.c_str(), proxies_.size(), ret);
+            LOG_V("Release %s %zu %d", it->first.c_str(), proxies_.size(), ret);
             // destroy the proxy.
             proxies_.erase(it);
         }
@@ -231,7 +231,7 @@ void ShaderJS::UnbindInputs(NapiApi::Object meJs)
     }
     isInputsReflValid_ = false;
 }
-void ShaderJS::DisposeNative(void* in)
+void ShaderJS::DisposeNative()
 {
     LUME_TRACE_FUNC()
     if (!disposed_) {
@@ -249,15 +249,11 @@ void ShaderJS::DisposeNative(void* in)
             obj.Set("colorShader", e.GetUndefined());
         }
         material_.Reset();
-        if (auto* sceneJS = static_cast<SceneJS*>(in)) {
+        if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
             sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-        } else {
-            if (const auto sceneJS = scene_.GetJsWrapper<SceneJS>()) {
-                sceneJS->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
-            if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
-                renderContextJs->GetResources()->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
-            }
+        }
+        if (const auto renderContextJs = scene_.GetJsWrapper<RenderContextJS>()) {
+            renderContextJs->GetResources()->ReleaseDispose(reinterpret_cast<uintptr_t>(&scene_));
         }
 
         scene_.Reset();
@@ -266,7 +262,7 @@ void ShaderJS::DisposeNative(void* in)
 void ShaderJS::Finalize(napi_env env)
 {
     LUME_TRACE_FUNC()
-    DisposeNative(nullptr);
+    DisposeNative();
     BaseObject::Finalize(env);
     FinalizeBridge(this);
 }
@@ -283,12 +279,12 @@ void ShaderJS::DetachFromMaterial(NapiApi::Object meJs)
     UnbindInputs(meJs);
 }
 
-template<class type>
+template <class type>
 ShaderJS::InputValueType ShaderJS::ParseInputs(NapiApi::Object& obj, BASE_NS::string_view key)
 {
     auto v = obj.Get<type>(key);
     if (v.IsUndefinedOrNull()) {
-        return InputValueType {};
+        return InputValueType{};
     }
     if constexpr (BASE_NS::is_same_v<type, NapiApi::Object>) {
         // parse object
@@ -299,11 +295,11 @@ ShaderJS::InputValueType ShaderJS::ParseInputs(NapiApi::Object& obj, BASE_NS::st
         auto w = jsValue.Get<float>("w");
         if (x.IsValid() || y.IsValid() || z.IsValid() || w.IsValid()) {
             if (w.IsValid()) {
-                return BASE_NS::Math::Vec4 { x, y, z, w };
+                return BASE_NS::Math::Vec4{x, y, z, w};
             } else if (z.IsValid()) {
-                return BASE_NS::Math::Vec3 { x, y, z };
+                return BASE_NS::Math::Vec3{x, y, z};
             } else {
-                return BASE_NS::Math::Vec2 { x, y };
+                return BASE_NS::Math::Vec2{x, y};
             }
         } else {
             return jsValue.GetNative<SCENE_NS::IImage>();
@@ -341,12 +337,14 @@ void ShaderJS::SetInput(BASE_NS::string_view key, InputValueType& value)
     META_NS::IMetadata::Ptr customProperties = mat->GetCustomProperties();
     for (auto& prop : customProperties->GetProperties()) {
         if (key == prop->GetName()) {
-            std::visit([&prop](auto&& arg) {
-                using Type = std::decay_t<decltype(arg)>;
-                if constexpr (!BASE_NS::is_same_v<Type, std::monostate>) {
-                    META_NS::Property<Type>(prop)->SetValue(arg);
-                }
-            }, value);
+            std::visit(
+                [&prop](auto&& arg) {
+                    using Type = std::decay_t<decltype(arg)>;
+                    if constexpr (!BASE_NS::is_same_v<Type, std::monostate>) {
+                        META_NS::Property<Type>(prop)->SetValue(arg);
+                    }
+                },
+                value);
             return;
         }
     }
@@ -378,7 +376,6 @@ void ShaderJS::SetInput(BASE_NS::string_view key, InputValueType& value)
         mat->AlphaCutoff()->SetValue(*ptr);
         return;
     }
-
 }
 
 napi_value ShaderJS::SetInputs(NapiApi::FunctionContext<NapiApi::Object>& ctx)
@@ -393,7 +390,7 @@ napi_value ShaderJS::SetInputs(NapiApi::FunctionContext<NapiApi::Object>& ctx)
     NapiApi::Object meJs(ctx.This());
 
     for (size_t i = 0; i < propertyLength; ++i) {
-        auto key = NapiApi::Value<BASE_NS::string> { obj.GetEnv(), propertyNames.Get_value(i) }.valueOrDefault();
+        auto key = NapiApi::Value<BASE_NS::string>{obj.GetEnv(), propertyNames.Get_value(i)}.valueOrDefault();
         if (!obj.Has(key)) {
             continue;
         }
@@ -432,7 +429,7 @@ void ShaderJS::InitInputs(NapiApi::Object meJs, NapiApi::Object material)
     NapiApi::Object inputs(meJs.GetEnv());
     napi_env e = inputs.GetEnv();
     if (auto mat = PrepareBind(inputs, material, meJs)) {
-	    auto materialJs = material.GetJsWrapper<MaterialJS>();
+        auto materialJs = material.GetJsWrapper<MaterialJS>();
         BASE_NS::vector<napi_property_descriptor> inputProps;
         META_NS::IMetadata::Ptr customProperties = mat->GetCustomProperties();
         BASE_NS::vector<SCENE_NS::ITexture::Ptr> Textures = mat->Textures()->GetValue();
@@ -441,26 +438,35 @@ void ShaderJS::InitInputs(NapiApi::Object meJs, NapiApi::Object material)
             sceneObject = materialJs->GetSceneObject();
         }
         if (!Textures.empty() && sceneObject) {
-            static constexpr BASE_NS::string_view default_names[] = { "BASE_COLOR", "NORMAL", "MATERIAL", "EMISSIVE",
-             "AO", "CLEARCOAT", "CLEARCOAT_ROUGHNESS", "CLEARCOAT_NORMAL", "SHEEN", "TRANSMISSION", "SPECULAR" };
-            proxies_.reserve(Textures.size() * 4);
-            inputProps.reserve(Textures.size() * 4);
+            static constexpr BASE_NS::string_view default_names[] = {"BASE_COLOR",
+                "NORMAL",
+                "MATERIAL",
+                "EMISSIVE",
+                "AO",
+                "CLEARCOAT",
+                "CLEARCOAT_ROUGHNESS",
+                "CLEARCOAT_NORMAL",
+                "SHEEN",
+                "TRANSMISSION",
+                "SPECULAR"};
+            proxies_.reserve(Textures.size() * 4);    // 4: len
+            inputProps.reserve(Textures.size() * 4);  // 4: len
             for (size_t index = 0; index < Textures.size(); index++) {
                 auto& t = Textures[index];
                 auto nn = interface_cast<META_NS::IObject>(t);
-                BASE_NS::string name = nn ?
-                    nn->GetName() : BASE_NS::string("TextureInfo_").append(BASE_NS::to_string(index));
+                BASE_NS::string name =
+                    nn ? nn->GetName() : BASE_NS::string("TextureInfo_").append(BASE_NS::to_string(index));
                 const auto factorProp = t->Factor();
                 const auto imageProp = t->Image();
                 const auto imageBase = UNDS + imageProp->GetName();
                 const auto factorBase = UNDS + factorProp->GetName();
                 const BASE_NS::string factorName = name.empty() ? "" : name + factorBase;
-                auto factorProxy = BASE_NS::shared_ptr { new Vec4Proxy(e, factorProp) };
+                auto factorProxy = BASE_NS::shared_ptr{new Vec4Proxy(e, factorProp)};
                 if (factorProxy) {
                     const auto& res = proxies_.insert_or_assign(factorName, factorProxy);
                     inputProps.push_back(CreateProxyDesc(res.first->first.c_str(), factorProxy));
                 }
-                auto imageProxy = BASE_NS::shared_ptr { new ImageProxy(sceneObject, inputs, imageProp) };
+                auto imageProxy = BASE_NS::shared_ptr{new ImageProxy(sceneObject, inputs, imageProp)};
                 const BASE_NS::string imageName = name.empty() ? "" : name + imageBase;
                 if (imageProxy) {
                     const auto& res = proxies_.insert_or_assign(imageName, imageProxy);

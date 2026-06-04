@@ -60,7 +60,7 @@ bool ObjectTemplate::SetContent(const IObject::Ptr& content)
     return true;
 }
 
-template<typename Func>
+template <typename Func>
 IterationResult ObjectTemplate::IterateImpl(const Func& f) const
 {
     if (!f) {
@@ -97,14 +97,17 @@ CORE_NS::IResource::Ptr ObjectTemplateType::LoadResource(const StorageInfo& s) c
 {
     CORE_NS::IResource::Ptr res;
     if (s.payload) {
-        if (auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter)) {
-            importer->SetResourceManager(s.self);
-            auto obj = interface_pointer_cast<CORE_NS::IResource>(importer->Import(*s.payload));
-            if (auto i = interface_cast<CORE_NS::ISetResourceId>(obj)) {
-                i->SetResourceId(s.id);
-            }
-            res = interface_pointer_cast<CORE_NS::IResource>(obj);
+        auto importer = GetObjectRegistry().Create<IFileImporter>(META_NS::ClassId::JsonImporter);
+        if (!importer) {
+            return nullptr;
         }
+        importer->SetUserContext(interface_pointer_cast<IObject>(s.context));
+        importer->SetResourceManager(s.self);
+        auto obj = interface_pointer_cast<CORE_NS::IResource>(importer->Import(*s.payload));
+        if (auto i = interface_cast<CORE_NS::ISetResourceId>(obj)) {
+            i->SetResourceId(CORE_NS::ResourceIdContext{s.id, s.context});
+        }
+        res = interface_pointer_cast<CORE_NS::IResource>(obj);
     }
     return res;
 }
@@ -113,10 +116,9 @@ bool ObjectTemplateType::SaveResource(const CORE_NS::IResource::ConstPtr& p, con
     bool res = true;
     if (s.payload) {
         if (auto exporter = GetObjectRegistry().Create<IFileExporter>(META_NS::ClassId::JsonExporter)) {
-            exporter->SetUserContext(
-                interface_pointer_cast<IObject>(CORE_NS::IResource::Ptr(p, const_cast<CORE_NS::IResource*>(p.get()))));
+            exporter->SetUserContext(interface_pointer_cast<IObject>(s.context));
             exporter->SetResourceManager(s.self);
-            exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({ 1, 0 }).SetType("ObjectTemplate"));
+            exporter->SetMetadata(META_NS::SerMetadataValues().SetVersion({1, 0}).SetType("ObjectTemplate"));
             res = exporter->Export(*s.payload, interface_pointer_cast<IObject>(p));
         }
     }

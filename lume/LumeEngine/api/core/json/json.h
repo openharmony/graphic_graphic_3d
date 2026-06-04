@@ -25,14 +25,13 @@
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
-#include <core/log.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
 namespace json {
 using readonly_string_t = BASE_NS::string_view;
 using writable_string_t = BASE_NS::string;
-template<typename T>
+template <typename T>
 using array_t = BASE_NS::vector<T>;
 
 /** Type of a JSON value. */
@@ -56,7 +55,7 @@ struct readonly_tag {};
  * JSON string. */
 struct writable_tag {};
 
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 struct value_t;
 
 /** JSON structure which contains read-only strings. The source JSON string must be kept alive until the parsing
@@ -71,17 +70,17 @@ using standalone_value = value_t<writable_tag>;
  * @param data JSON as a null terminated string.
  * @return Parsed JSON structure.
  */
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 value_t<T> parse(const char* data);
 
 /** Converts a JSON structure into a string.
  * @param value JSON structure.
  * @return JSON as string.
  */
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 BASE_NS::string to_string(const value_t<T>& value);
 
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 void to_string(BASE_NS::string& out, const value_t<T>& value);
 
 BASE_NS::string unescape(BASE_NS::string_view str);
@@ -93,7 +92,7 @@ BASE_NS::string escape(BASE_NS::string_view str);
 void escape(BASE_NS::string& out, BASE_NS::string_view str);
 
 /** JSON value. */
-template<typename Tag>
+template <typename Tag>
 struct value_t {
     /** Type used for JSON strings and JSON object keys. */
     using string =
@@ -104,7 +103,8 @@ struct value_t {
 
     /** Type used for key-value pairs inside JSON objects. */
     struct pair {
-        pair(string&& k, value_t&& v) : key(BASE_NS::forward<string>(k)), value(BASE_NS::forward<value_t>(v)) {}
+        pair(string&& k, value_t&& v) : key(BASE_NS::forward<string>(k)), value(BASE_NS::forward<value_t>(v))
+        {}
         string key;
         value_t value;
     };
@@ -116,7 +116,7 @@ struct value_t {
     using array = array_t<value_t>;
 
     /** Type of this JSON value. */
-    type type { type::uninitialized };
+    type type{type::uninitialized};
     union {
         object object_;
         array array_;
@@ -127,17 +127,22 @@ struct value_t {
         bool boolean_;
     };
 
-    value_t() noexcept : type { type::uninitialized } {}
+    value_t() noexcept : type{type::uninitialized}
+    {}
 
-    value_t(object&& value) noexcept : type { type::object }, object_(BASE_NS::move(value)) {}
+    value_t(object&& value) noexcept : type{type::object}, object_(BASE_NS::move(value))
+    {}
 
-    value_t(array&& value) noexcept : type { type::array }, array_(BASE_NS::move(value)) {}
+    value_t(array&& value) noexcept : type{type::array}, array_(BASE_NS::move(value))
+    {}
 
-    value_t(string value) noexcept : type { type::string }, string_(BASE_NS::move(value)) {}
+    value_t(string value) noexcept : type{type::string}, string_(BASE_NS::move(value))
+    {}
 
-    value_t(const char* value) noexcept : value_t(string(value)) {}
+    value_t(const char* value) noexcept : value_t(string(value))
+    {}
 
-    template<typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
+    template <typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
     value_t(Number value) noexcept
     {
         if constexpr (BASE_NS::is_same_v<Number, bool>) {
@@ -155,10 +160,11 @@ struct value_t {
         }
     }
 
-    value_t(null /* value */) noexcept : type { type::null } {}
+    value_t(null /* value */) noexcept : type{type::null}
+    {}
 
-    template<typename Value>
-    value_t(const array_t<Value>& values) noexcept : type { type::array }, array_()
+    template <typename Value>
+    value_t(const array_t<Value>& values) noexcept : type{type::array}, array_()
     {
         array_.reserve(values.size());
         for (const auto& value : values) {
@@ -166,8 +172,8 @@ struct value_t {
         }
     }
 
-    template<typename Value, size_t N>
-    value_t(Value (&value)[N]) : type { type::array }, array_()
+    template <typename Value, size_t N>
+    value_t(Value (&value)[N]) : type{type::array}, array_()
     {
         array_.reserve(N);
         for (size_t i = 0; i < N; ++i) {
@@ -185,6 +191,53 @@ struct value_t {
                 break;
             case type::array:
                 new (&array_) array(other.array_);
+                break;
+            case type::string:
+                new (&string_) string(other.string_);
+                break;
+            case type::floating_point:
+                float_ = other.float_;
+                break;
+            case type::signed_int:
+                signed_ = other.signed_;
+                break;
+            case type::unsigned_int:
+                unsigned_ = other.unsigned_;
+                break;
+            case type::boolean:
+                boolean_ = other.boolean_;
+                break;
+            case type::null:
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Cross-tag deep-copy constructor: convert between readonly and standalone (writable) values
+     * without going through to_string + re-parse. Single tree walk; numeric/bool/null leaves are
+     * POD-copied, string leaves convert via the string member type (string_view <-> string).
+     * Use this to materialize a readonly value (whose strings reference an external buffer) into
+     * a standalone_value that owns its strings, when the source buffer will outlive the result. */
+    template <typename OtherTag, BASE_NS::enable_if_t<!BASE_NS::is_same_v<OtherTag, Tag>, bool> = true>
+    explicit value_t(const value_t<OtherTag>& other) : type(other.type)
+    {
+        switch (type) {
+            case type::uninitialized:
+                break;
+            case type::object:
+                new (&object_) object();
+                object_.reserve(other.object_.size());
+                for (const auto& kv : other.object_) {
+                    object_.emplace_back(string(kv.key), value_t(kv.value));
+                }
+                break;
+            case type::array:
+                new (&array_) array();
+                array_.reserve(other.array_.size());
+                for (const auto& v : other.array_) {
+                    array_.emplace_back(value_t(v));
+                }
                 break;
             case type::string:
                 new (&string_) string(other.string_);
@@ -262,7 +315,7 @@ struct value_t {
         return *this;
     }
 
-    template<typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
+    template <typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
     value_t& operator=(Number value)
     {
         cleanup();
@@ -282,7 +335,7 @@ struct value_t {
         return *this;
     }
 
-    value_t(value_t&& rhs) noexcept : type { BASE_NS::exchange(rhs.type, type::uninitialized) }
+    value_t(value_t&& rhs) noexcept : type{BASE_NS::exchange(rhs.type, type::uninitialized)}
     {
         switch (type) {
             case type::uninitialized:
@@ -353,7 +406,7 @@ struct value_t {
         return *this;
     }
 
-    template<typename OtherT>
+    template <typename OtherT>
     operator value_t<OtherT>() const
     {
         value_t<OtherT> other;
@@ -410,7 +463,7 @@ struct value_t {
 #if _MSC_VER
 #pragma warning(pop)
 #endif
-    template<typename T>
+    template <typename T>
     inline void destroy(T& t)
     {
         t.~T();
@@ -505,7 +558,7 @@ struct value_t {
         return true;
     }
 
-    template<typename T>
+    template <typename T>
     T as_number() const
     {
         switch (type) {
@@ -540,13 +593,13 @@ struct value_t {
                     return t.value;
                 }
             }
-            object_.emplace_back(value_t<Tag>::string(key), value_t<Tag> {});
+            object_.emplace_back(value_t<Tag>::string(key), value_t<Tag>{});
             return object_.back().value;
         }
         return *this;
     }
 };
-} // namespace json
+}  // namespace json
 CORE_END_NAMESPACE()
 
 #ifdef JSON_IMPL
@@ -592,7 +645,7 @@ inline const char* trim(const char* data)
 }
 
 // values
-template<typename T>
+template <typename T>
 const char* parse_string(const char* data, value_t<T>& res)
 {
     const char* start = data;
@@ -617,7 +670,7 @@ const char* parse_string(const char* data, value_t<T>& res)
                 return data;
             }
         } else if (*data == '"') {
-            res = value_t<T> { typename value_t<T>::string { start, static_cast<size_t>(data - start) } };
+            res = value_t<T>{typename value_t<T>::string{start, static_cast<size_t>(data - start)}};
             return data + 1;
         } else if (static_cast<unsigned char>(*data) < 0x20) {
             // unescaped control
@@ -627,7 +680,7 @@ const char* parse_string(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 const char* parse_number(const char* data, value_t<T>& res)
 {
     bool negative = false;
@@ -713,12 +766,12 @@ const char* parse_number(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 const char* parse_boolean(const char* data, value_t<T>& res)
 {
     if (*data == 't') {
         ++data;
-        const char rue[] = { 'r', 'u', 'e' };
+        const char rue[] = {'r', 'u', 'e'};
         for (unsigned i = 0u; i < sizeof(rue); ++i) {
             if (data[i] == 0 || data[i] != rue[i]) {
                 // non-string starting with 't' but != "true"
@@ -730,7 +783,7 @@ const char* parse_boolean(const char* data, value_t<T>& res)
         data += sizeof(rue);
     } else if (*data == 'f') {
         ++data;
-        const char alse[] = { 'a', 'l', 's', 'e' };
+        const char alse[] = {'a', 'l', 's', 'e'};
         for (unsigned i = 0u; i < sizeof(alse); ++i) {
             if (data[i] == 0 || data[i] != alse[i]) {
                 // non-string starting with 'f' but != "false"
@@ -746,19 +799,19 @@ const char* parse_boolean(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 const char* parse_null(const char* data, value_t<T>& res)
 {
     if (*data == 'n') {
         ++data;
-        const char ull[] = { 'u', 'l', 'l' };
+        const char ull[] = {'u', 'l', 'l'};
         for (unsigned i = 0u; i < sizeof(ull); ++i) {
             if (data[i] == 0 || data[i] != ull[i]) {
                 // non-string starting with 'n' but != "null"
                 return data;
             }
         }
-        res = value_t<T>(typename value_t<T>::null {});
+        res = value_t<T>(typename value_t<T>::null{});
         data += sizeof(ull);
     } else {
         // invalid json
@@ -767,7 +820,7 @@ const char* parse_null(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 void add(value_t<T>& v, value_t<T>&& value)
 {
     switch (v.type) {
@@ -790,9 +843,9 @@ void add(value_t<T>& v, value_t<T>&& value)
             break;
     }
 }
-} // namespace
+}  // namespace
 
-template<typename T>
+template <typename T>
 value_t<T> parse(const char* data)
 {
     if (!data) {
@@ -815,7 +868,7 @@ value_t<T> parse(const char* data)
             if (*data == '}') {
                 data = trim(data + 1);
                 // handle empty object.
-                add(stack.back(), jsonValue(typename jsonValue::object {}));
+                add(stack.back(), jsonValue(typename jsonValue::object{}));
                 acceptValue = false;
             } else if (*data == '"') {
                 // try to read the key
@@ -827,9 +880,12 @@ value_t<T> parse(const char* data)
                     return {};
                 }
                 data = trim(data + 1);
+                if (stack.size() > 255U) {  // 255: stack size limit
+                    return {};
+                }
                 // push the object with key and missing value on the stack and hope to find a value next
-                stack.emplace_back(typename jsonValue::object {})
-                    .object_.emplace_back(BASE_NS::move(key.string_), jsonValue {});
+                stack.emplace_back(typename jsonValue::object{})
+                    .object_.emplace_back(BASE_NS::move(key.string_), jsonValue{});
                 acceptValue = true;
             } else {
                 // missing start of key or end of object
@@ -865,11 +921,14 @@ value_t<T> parse(const char* data)
             if (*data == ']') {
                 data = trim(data + 1);
                 // handle empty array.
-                add(stack.back(), jsonValue(typename jsonValue::array {}));
+                add(stack.back(), jsonValue(typename jsonValue::array{}));
                 acceptValue = false;
             } else {
+                if (stack.size() > 255U) {  // 255: stack size limit
+                    return {};
+                }
                 // push the empty array on the stack and hope to find values
-                stack.push_back(typename jsonValue::array {});
+                stack.push_back(typename jsonValue::array{});
                 acceptValue = true;
             }
         } else if (*data == ']') {
@@ -911,7 +970,7 @@ value_t<T> parse(const char* data)
                     return {};
                 }
                 data = trim(data + 1);
-                stack.back().object_.emplace_back(BASE_NS::move(key.string_), jsonValue {});
+                stack.back().object_.emplace_back(BASE_NS::move(key.string_), jsonValue{});
                 acceptValue = true;
             } else if (!acceptValue && stack.back().type == type::array) {
                 data = trim(data + 1);
@@ -978,7 +1037,7 @@ template value parse(const char*);
 template standalone_value parse(const char*);
 // end of parser
 namespace {
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::string& string)
 {
     out += '"';
@@ -986,7 +1045,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::string& string)
     out += '"';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::object& object)
 {
     out += '{';
@@ -1002,7 +1061,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::object& object)
     out += '}';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::array& array)
 {
     out += '[';
@@ -1016,7 +1075,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::array& array)
     out += ']';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const double floatingPoint)
 {
     constexpr const char* FLOATING_FORMAT_STR = "%.17g";
@@ -1030,13 +1089,15 @@ void append(BASE_NS::string& out, const double floatingPoint)
         int ret = snprintf_s(
             out.data() + oldSize, newSize + 1 - oldSize, static_cast<size_t>(size), FLOATING_FORMAT_STR, floatingPoint);
         if (ret < 0) {
+#ifdef CORE_LOG_E
             CORE_LOG_E("append snprintf_s failed");
+#endif
         }
     }
 }
-} // namespace
+}  // namespace
 
-template<typename T>
+template <typename T>
 BASE_NS::string to_string(const value_t<T>& value)
 {
     BASE_NS::string out;
@@ -1044,7 +1105,7 @@ BASE_NS::string to_string(const value_t<T>& value)
     return out;
 }
 
-template<typename T>
+template <typename T>
 void to_string(BASE_NS::string& out, const value_t<T>& value)
 {
     switch (value.type) {
@@ -1103,12 +1164,12 @@ int codepoint(BASE_NS::string_view str)
     int code = 0;
     for (size_t u = 0U; u < 4U; ++u) {
         const char chr = str[u];
-        code <<= 4; // Shift by the size of a single hex character
+        code <<= 4;  // Shift by the size of a single hex character
         code += BASE_NS::HexToDec(chr);
     }
     return code;
 }
-} // namespace
+}  // namespace
 
 BASE_NS::string unescape(BASE_NS::string_view str)
 {
@@ -1129,23 +1190,23 @@ void unescape(BASE_NS::string& out, BASE_NS::string_view str)
             chr = str[i];
             ++i;
             if (chr == '"') {
-                out += '"'; // Quotation mark
+                out += '"';  // Quotation mark
             } else if (chr == '\\') {
-                out += '\\'; // Reverse solidus
+                out += '\\';  // Reverse solidus
             } else if (chr == '/') {
-                out += '/'; // Solidus.. we do unescape this..
+                out += '/';  // Solidus.. we do unescape this..
             } else if (chr == 'b') {
-                out += '\b'; // Backspace
+                out += '\b';  // Backspace
             } else if (chr == 'f') {
-                out += '\f'; // Formfeed
+                out += '\f';  // Formfeed
             } else if (chr == 'n') {
-                out += '\n'; // Linefeed
+                out += '\n';  // Linefeed
             } else if (chr == 'r') {
-                out += '\r'; // Carriage return
+                out += '\r';  // Carriage return
             } else if (chr == 't') {
-                out += '\t';           // Horizontal tab
-            } else if (chr == 'u') {   // Unicode character
-                if ((i + 4U) <= end) { // Expecting 4 hexadecimal values
+                out += '\t';            // Horizontal tab
+            } else if (chr == 'u') {    // Unicode character
+                if ((i + 4U) <= end) {  // Expecting 4 hexadecimal values
                     // Read the Unicode code point.
                     int code = codepoint(str.substr(i, 4U));
                     i += 4U;
@@ -1207,21 +1268,21 @@ void escape(BASE_NS::string& out, BASE_NS::string_view str)
         auto chr = static_cast<uint8_t>(str[i]);
         ++i;
         if (chr == '"') {
-            out += "\\\""; // Quotation mark
+            out += "\\\"";  // Quotation mark
         } else if (chr == '\\') {
-            out += "\\\\"; // Reverse solidus
+            out += "\\\\";  // Reverse solidus
         } else if (chr == '\b') {
-            out += "\\b"; // Backspace
+            out += "\\b";  // Backspace
         } else if (chr == '\f') {
-            out += "\\f"; // Formfeed
+            out += "\\f";  // Formfeed
         } else if (chr == '\n') {
-            out += "\\n"; // Linefeed
+            out += "\\n";  // Linefeed
         } else if (chr == '\r') {
-            out += "\\r"; // Carriage return
+            out += "\\r";  // Carriage return
         } else if (chr == '\t') {
-            out += "\\t"; // Horizontal tab
+            out += "\\t";  // Horizontal tab
         } else if (chr < 0x80) {
-            out += static_cast<BASE_NS::string::value_type>(chr); // 1-byte characters: 0xxxxxxx (ASCII)
+            out += static_cast<BASE_NS::string::value_type>(chr);  // 1-byte characters: 0xxxxxxx (ASCII)
         } else {
             // Unicode
             unsigned code = 0U;
@@ -1275,8 +1336,8 @@ void escape(BASE_NS::string& out, BASE_NS::string_view str)
         }
     }
 }
-} // namespace json
+}  // namespace json
 CORE_END_NAMESPACE()
-#endif // JSON_IMPL
+#endif  // JSON_IMPL
 
-#endif // !API_CORE_JSON_JSON_H
+#endif  // !API_CORE_JSON_JSON_H

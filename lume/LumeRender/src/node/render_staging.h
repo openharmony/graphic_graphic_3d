@@ -45,8 +45,8 @@ public:
 
     struct StagingMappedBuffer {
         RenderHandle handle;
-        uint8_t* mappedData { nullptr };
-        uint32_t byteSize { 0U };
+        uint8_t* mappedData{nullptr};
+        uint32_t byteSize{0U};
     };
 
     void CopyHostToStaging(
@@ -65,19 +65,23 @@ public:
         const StagingImageClearConsumeStruct& imageClearData);
 
 private:
-    BASE_NS::pair<BufferResourceBarrier, BufferResourceBarrier> GetBufferPostTransferBarrier(const RenderHandle handle);
+    void ClearImagesGles(IRenderCommandList& cmdList, const IRenderNodeGpuResourceManager& gpuResourceMgr,
+        const StagingImageClearConsumeStruct& imageClearData);
 
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    BASE_NS::pair<BufferResourceBarrier, BufferResourceBarrier> GetBufferPostTransferBarrier(const RenderHandle handle);
+    ImageResourceBarrier GetImagePostTransferDstBarrier(const RenderHandle handle);
+
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     // GLES cannot directly use graphics API clear commands
     // we still want to do CPU-GPU copy in multi-threaded way, so render front-end is used
     struct AddionalCopyBuffer {
         RenderHandleReference handle;
-        uint32_t byteSize { 0u };
-        uint32_t byteOffset { 0u };
+        uint32_t byteSize{0u};
+        uint32_t byteOffset{0u};
     };
     AddionalCopyBuffer additionalCopyBuffer_;
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODE_RENDER_STAGING_H
+#endif  // RENDER_NODE_RENDER_STAGING_H

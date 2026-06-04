@@ -42,7 +42,7 @@ public:
     };
 
     LightETS(
-        const SCENE_NS::ILight::Ptr light, LightType lightType, const std::string &name, const std::string &uri = "");
+        const SCENE_NS::ILight::Ptr light, LightType lightType, const std::string& name, const std::string& uri = "");
     // construct from existed light
     LightETS(const SCENE_NS::ILight::Ptr light);
     ~LightETS() override;
@@ -50,7 +50,7 @@ public:
     LightType GetLightType();
 
     std::shared_ptr<ColorProxy> GetColor();
-    void SetColor(const BASE_NS::Color &color);
+    void SetColor(const BASE_NS::Color& color);
 
     float GetIntensity();
     void SetIntensity(float intensity);

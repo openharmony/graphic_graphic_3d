@@ -46,6 +46,8 @@ class IInternalSceneCore : public CORE_NS::IInterface {
 public:
     virtual bool Initialize() = 0;
     virtual void Uninitialize() = 0;
+    /// Call after scene import.
+    virtual void PostLoad() = 0;
 
     virtual void RegisterComponent(const BASE_NS::Uid&, const BASE_NS::shared_ptr<IComponentFactory>&) = 0;
     virtual void UnregisterComponent(const BASE_NS::Uid&) = 0;
@@ -61,8 +63,8 @@ public:
     virtual void SchedulePropertyUpdate(const META_NS::IEnginePropertySync::Ptr& obj) = 0;
     virtual void SyncProperties() = 0;
     struct UpdateInfo {
-        bool syncProperties { true }; /// If true, synchronize properties between ECS
-        META_NS::IClock::Ptr clock;   /// Optional clock to use for ECS update
+        bool syncProperties{true};   /// If true, synchronize properties between ECS
+        META_NS::IClock::Ptr clock;  /// Optional clock to use for ECS update
     };
     virtual void Update(const UpdateInfo& info) = 0;
     /// Updates using an internal clock. Update(const UpdateInfo& info) is preferred.
@@ -76,60 +78,60 @@ public:
     virtual void SetResourceGroups(ResourceGroupBundle) = 0;
 
 public:
-    template<typename Func>
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
-    AddTask(Func&& func)
+        AddTask(Func&& func)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
-    AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
+        AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), queue);
     }
 
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func) const
     {
         return AddTaskFuture(BASE_NS::forward<Func>(func), GetContext()->GetRenderQueue());
     }
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::Future<META_NS::PlainType_t<decltype(func())>>(
             queue->AddWaitableTask(META_NS::CreateWaitableTask(BASE_NS::move(func))));
     }
 
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func)
     {
         return GetContext()->AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return GetContext()->AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), queue);
     }
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func)
     {
         return GetContext()->RunDirectlyOrInTask(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return GetContext()->RunDirectlyOrInTask(BASE_NS::forward<Func>(func), queue);
     }
 
-    template<typename Func>
+    template <typename Func>
     void PostUserNotification(Func&& func)
     {
         GetContext()->PostUserNotification(BASE_NS::forward<Func>(func));
     }
-    template<typename MyEvent, typename... Args>
+    template <typename MyEvent, typename... Args>
     void InvokeUserNotification(const META_NS::IEvent::Ptr& event, Args... args)
     {
         GetContext()->InvokeUserNotification<MyEvent>(event, BASE_NS::move(args)...);
@@ -141,16 +143,12 @@ class SceneDebugInfo;
 class IInternalScene : public IInternalSceneCore {
     META_INTERFACE(IInternalSceneCore, IInternalScene, "24c69cfe-1d25-4546-a5cb-b63c2262065e")
 public:
-    enum class RenderNodeGraphModificationMode {
-        PREPEND,
- 	    APPEND,
- 	    REPLACE
-    };
+    enum class RenderNodeGraphModificationMode { PREPEND, APPEND, REPLACE, INVALID };
     /// Create object, if the entity is invalid, new one is created
     virtual META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, CORE_NS::Entity) const = 0;
     META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id) const
     {
-        return CreateObject(id, CORE_NS::Entity {});
+        return CreateObject(id, CORE_NS::Entity{});
     }
     virtual META_NS::IObject::Ptr CreateObject(META_NS::ObjectId id, const CORE_NS::ResourceId&) const = 0;
 
@@ -184,6 +182,7 @@ public:
     virtual BASE_NS::vector<META_NS::IAnimation::Ptr> GetAnimations() const = 0;
     virtual META_NS::IAnimation::Ptr FindAnimation(CORE_NS::Entity ent) const = 0;
     virtual META_NS::IAnimation::Ptr FindAnimation(const CORE_NS::ResourceId&) const = 0;
+    virtual META_NS::IAnimation::Ptr ConstructAnimation(const CORE_NS::ResourceId&) const = 0;
 
     virtual void AddRenderingCamera(const IInternalCamera::Ptr& camera) = 0;
     virtual void RemoveRenderingCamera(const IInternalCamera::Ptr& camera) = 0;
@@ -191,8 +190,8 @@ public:
     virtual bool SetRenderMode(RenderMode) = 0;
     virtual RenderMode GetRenderMode() const = 0;
 
-    virtual void ModifyCustomRenderNodeGraph(const RenderNodeGraphModificationMode mode,
-        const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng) = 0;
+    virtual void ModifyCustomRenderNodeGraph(
+        const RenderNodeGraphModificationMode mode, const BASE_NS::vector<RENDER_NS::RenderHandleReference>& rng) = 0;
     virtual void RenderFrame() = 0;
     virtual bool HasPendingRender() const = 0;
 

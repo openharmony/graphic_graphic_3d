@@ -20,6 +20,7 @@
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/property/array_property.h>
 #include <meta/interface/property/property.h>
+#include <meta/interface/property/property_events.h>
 
 META_BEGIN_NAMESPACE()
 
@@ -32,17 +33,17 @@ struct EngineValueOptions {
     /// prefix that is added before the name (plus '.')
     BASE_NS::string namePrefix;
     /// optional output vector to put all matching values
-    BASE_NS::vector<IEngineValue::Ptr>* values {};
+    BASE_NS::vector<IEngineValue::Ptr>* values{};
     /**
      * @brief Push value directly to engine when set, if this is enabled,
      *        the values can only be set in the engine task queue thread
      **/
-    bool pushValuesDirectlyToEngine {};
+    bool pushValuesDirectlyToEngine{};
     /**
      * @brief If true, also recursively handle known struct types. E.g. Vec4 would be expanded into x, y, z, and w
      * properties.
      */
-    bool recurseKnownStructs {};
+    bool recurseKnownStructs{};
 };
 
 /**
@@ -58,11 +59,29 @@ public:
     virtual void SetNotificationQueue(const ITaskQueue::WeakPtr&) = 0;
 
     /**
-     * @brief Synchronise engine values with core engine
-     *        Allows to specify direction to synchronise to.
+     * @brief Set a callable that is invoked when an engine value becomes dirty.
+     *        This allows the owner to schedule a TO_ENGINE sync without per-property OnChanged handlers.
+     */
+    virtual void SetDirtyNotifier(const IOnChanged::InterfaceTypePtr& notifier) = 0;
+
+    /**
+     * @brief Called internally by engine values when they become dirty.
+     *        Invokes the notifier set via SetDirtyNotifier.
+     */
+    virtual void NotifyDirty() = 0;
+
+    /**
+     * @brief Synchronise engine values with core engine.
+     *        When componentManager is non-null, only values belonging to that manager are synced.
      * @note  This must be called in correct thread because it touches the core engine
      */
-    virtual bool Sync(EngineSyncDirection) = 0;
+    virtual bool Sync(EngineSyncDirection dir, const CORE_NS::IComponentManager* componentManager) = 0;
+
+    /** @brief Convenience overload that syncs all values. */
+    bool Sync(EngineSyncDirection dir)
+    {
+        return Sync(dir, nullptr);
+    }
 
     /// Add engine values from the handle
     virtual bool ConstructValues(EnginePropertyHandle handle, EngineValueOptions) = 0;
@@ -88,14 +107,16 @@ public:
     virtual BASE_NS::vector<IProperty::Ptr> ConstructAllProperties() const = 0;
     /// Get all engine values
     virtual BASE_NS::vector<IEngineValue::Ptr> GetAllEngineValues() const = 0;
+    /// Check if any engine values exist
+    virtual bool HasValues() const = 0;
     /// Construct property from engine value with given name
-    template<typename Type>
+    template <typename Type>
     Property<Type> ConstructProperty(BASE_NS::string_view name)
     {
         return Property<Type>(ConstructProperty(name));
     }
     /// Construct array property from engine value with given name
-    template<typename Type>
+    template <typename Type>
     ArrayProperty<Type> ConstructArrayProperty(BASE_NS::string_view name)
     {
         return ArrayProperty<Type>(ConstructProperty(name));
@@ -116,7 +137,8 @@ public:
     virtual void SyncProperties() = 0;
 };
 
-META_INTERFACE_TYPE(META_NS::IEngineValueManager)
 META_END_NAMESPACE()
+
+META_INTERFACE_TYPE(META_NS::IEngineValueManager)
 
 #endif

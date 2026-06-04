@@ -38,10 +38,10 @@ class IPerformanceTrace;
 class IPerformanceDataManager : public IInterface {
 public:
     using Ptr = BASE_NS::refcnt_ptr<IPerformanceDataManager>;
-    static constexpr auto UID = BASE_NS::Uid { "aedc8e81-10ce-4c77-8fde-c238100a36ec" };
+    static constexpr auto UID = BASE_NS::Uid{"aedc8e81-10ce-4c77-8fde-c238100a36ec"};
 
-    static constexpr uint32_t TIMING_DATA_POOL_SIZE { 64u };
-    static constexpr uint32_t TIMING_DATA_NAME_LENGTH { 64u };
+    static constexpr uint32_t TIMING_DATA_POOL_SIZE{64u};
+    static constexpr uint32_t TIMING_DATA_NAME_LENGTH{64u};
 
     struct PerformanceTimingData {
         enum class DataType : uint8_t {
@@ -54,25 +54,25 @@ public:
         };
 
         /** Latest value. */
-        int64_t currentTime { 0 };
+        int64_t currentTime{0};
         /** Largest value. */
-        int64_t maxTime { 0 };
+        int64_t maxTime{0};
         /** Smallest value. */
-        int64_t minTime { 0 };
+        int64_t minTime{0};
         /** Average of the last TIMING_DATA_POOL_SIZE values. */
-        int64_t averageTime { 0 };
+        int64_t averageTime{0};
         /** Sum of the valus. */
-        int64_t totalTime { 0 };
+        int64_t totalTime{0};
         /** Max sum of total time values. (Might be used with negative values) */
-        int64_t maxTotalTime { 0 };
+        int64_t maxTotalTime{0};
         /** Number of times the data has been updated. */
-        int64_t counter { 0 };
+        int64_t counter{0};
         /** Array containing the last TIMING_DATA_POOL_SIZE values. */
-        int64_t timings[TIMING_DATA_POOL_SIZE] { 0 };
+        int64_t timings[TIMING_DATA_POOL_SIZE]{0};
         /** Array containing the last TIMING_DATA_POOL_SIZE average values. */
-        int64_t averageTimings[TIMING_DATA_POOL_SIZE] { 0 };
+        int64_t averageTimings[TIMING_DATA_POOL_SIZE]{0};
         /** Type of the values. */
-        DataType type { DataType::MICROSECONDS };
+        DataType type{DataType::MICROSECONDS};
     };
 
     using NameToPerformanceMap =
@@ -164,7 +164,7 @@ public:
 
     struct ComparisonData {
         /** Zero means valid */
-        uint32_t flags { 0U };
+        uint32_t flags{0U};
         /** Listed error counters with lhs - rhs value
          * The vector is empty when the flags are zero
          */
@@ -188,7 +188,7 @@ inline constexpr BASE_NS::string_view GetName(const IPerformanceDataManager*)
 
 class IPerformanceDataManagerFactory : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "58d60acd-a2d2-4f76-a9bb-5cf0a82ccd4f" };
+    static constexpr auto UID = BASE_NS::Uid{"58d60acd-a2d2-4f76-a9bb-5cf0a82ccd4f"};
 
     /** Get a performance data manager instance for a named category. The category can be any freeformed string.
      * @param category Name of the category.
@@ -210,4 +210,4 @@ inline constexpr BASE_NS::string_view GetName(const IPerformanceDataManagerFacto
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_PERF_INTF_PERFORMANCE_DATA_MANAGER_H
+#endif  // API_CORE_PERF_INTF_PERFORMANCE_DATA_MANAGER_H

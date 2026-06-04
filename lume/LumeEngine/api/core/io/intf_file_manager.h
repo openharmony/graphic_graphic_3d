@@ -37,7 +37,7 @@ CORE_BEGIN_NAMESPACE()
  */
 class IFileManager : public IInterface {
 public:
-    static constexpr auto UID = BASE_NS::Uid { "0bf64638-a403-426d-9563-85d35bc3d3c1" };
+    static constexpr auto UID = BASE_NS::Uid{"0bf64638-a403-426d-9563-85d35bc3d3c1"};
 
     using Ptr = BASE_NS::refcnt_ptr<IFileManager>;
 
@@ -171,4 +171,4 @@ inline constexpr BASE_NS::string_view GetName(const IFileManager*)
 }
 CORE_END_NAMESPACE()
 
-#endif // API_CORE_IO_IFILE_MANAGER_H
+#endif  // API_CORE_IO_IFILE_MANAGER_H

@@ -75,7 +75,7 @@ private:
     bool active_;
     CORE_NS::IEcs& ecs_;
 
-    IPicking& picking_;
+    IPicking* picking_ = nullptr;
 
     ISkinComponentManager& skinManager_;
     ISkinIbmComponentManager& skinIbmManager_;
@@ -90,8 +90,8 @@ private:
 
     CORE_NS::ComponentQuery componentQuery_;
 
-    uint32_t worldMatrixGeneration_ { 0 };
-    uint32_t jointMatricesGeneration_ { 0 };
+    uint32_t worldMatrixGeneration_{0};
+    uint32_t jointMatricesGeneration_{0};
     CORE_NS::PropertyApiImpl<void> SKINNING_SYSTEM_PROPERTIES;
 
     CORE_NS::IThreadPool::Ptr threadPool_;
@@ -101,4 +101,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ECS_SKINNINGSYSTEM_H
+#endif  // CORE_ECS_SKINNINGSYSTEM_H

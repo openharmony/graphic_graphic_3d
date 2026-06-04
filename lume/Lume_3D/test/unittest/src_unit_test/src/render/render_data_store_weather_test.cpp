@@ -61,25 +61,30 @@ UNIT_TEST(SRC_RenderDataStoreWeather, SetGetWeatherTest, testing::ext::TestSize.
 
     // Create modified settings with different values
     RenderDataStoreWeather::WeatherSettings testSettings;
-    testSettings.timeOfDay = 8.5f;                        // Changed from default 12.0f
-    testSettings.moonBrightness = 0.8f;                   // Changed from default 0.2f
-    testSettings.nightGlow = 0.1f;                        // Changed from default 0.025f
-    testSettings.skyViewBrightness = 0.9f;                // Changed from default 0.7f
-    testSettings.groundColor = { 0.1f, 0.2f, 0.4f, 0.f }; // Changed from default vec3(0.3f)
-    testSettings.windSpeed = 2000.0f;                     // Changed from default 1000.0f
-    testSettings.coverage = 0.6f;                         // Changed from default 0.3f
-    testSettings.density = 0.9f;                          // Changed from default 0.7f
-    testSettings.cloudBottomAltitude = 3000.0f;           // Changed from default 2000.0f
+    testSettings.timeOfDay = 8.5f;                       // Changed from default 12.0f
+    testSettings.moonBrightness = 0.8f;                  // Changed from default 0.2f
+    testSettings.moonSize = 4.5f;                        // Changed from default 2.3f
+    testSettings.moonOpacity = 0.35f;                    // Changed from default 1.0f
+    testSettings.moonTint = {0.4f, 0.5f, 0.8f};          // Changed from default {0.8f, 0.8f, 0.85f}
+    testSettings.starsIntensity = 1.7f;                  // Changed from default 1.0f
+    testSettings.nightSkyIntensity = 0.6f;               // Changed from default 1.0f
+    testSettings.nightGlow = 0.1f;                       // Changed from default 0.025f
+    testSettings.skyViewBrightness = 0.9f;               // Changed from default 0.7f
+    testSettings.groundColor = {0.1f, 0.2f, 0.4f, 0.f};  // Changed from default vec3(0.3f)
+    testSettings.windSpeed = 2000.0f;                    // Changed from default 1000.0f
+    testSettings.coverage = 0.6f;                        // Changed from default 0.3f
+    testSettings.density = 0.9f;                         // Changed from default 0.7f
+    testSettings.cloudBottomAltitude = 3000.0f;          // Changed from default 2000.0f
     testSettings.cloudTopAltitude = 10000.0f;
-    testSettings.cloudRenderingType = RenderDataStoreWeather::CloudRenderingType::FULL; // Changed from REPROJECTED
+    testSettings.cloudRenderingType = RenderDataStoreWeather::CloudRenderingType::FULL;  // Changed from REPROJECTED
 
-    testSettings.rayleighScatteringBase = { 10.0f, 20.0f,
-        40.0f }; // Default rayleighScatteringBase = { 5.802f, 13.558f, 33.1f }
-    testSettings.ozoneAbsorptionBase = { 10.0f, 20.0f,
-        40.0f };                                 // Default ozoneAbsorptionBase = { 0.650f, 1.881f, 0.085f  }
-    testSettings.mieAbsorptionBase = { 13.37 };  // Default mieAbsorptionBase = { 3.996f }
-    testSettings.mieScatteringBase = { 42.21 };  // Default mieScatteringBase = { 4.4f }
-    testSettings.windDir = { 0.5f, 1.0f, 0.5f }; // Default windDir = { 1.0f, 0.0f, 1.0f }
+    testSettings.rayleighScatteringBase = {
+        10.0f, 20.0f, 40.0f};  // Default rayleighScatteringBase = { 5.802f, 13.558f, 33.1f }
+    testSettings.ozoneAbsorptionBase = {
+        10.0f, 20.0f, 40.0f};                   // Default ozoneAbsorptionBase = { 0.650f, 1.881f, 0.085f  }
+    testSettings.mieAbsorptionBase = {13.37};   // Default mieAbsorptionBase = { 3.996f }
+    testSettings.mieScatteringBase = {42.21};   // Default mieScatteringBase = { 4.4f }
+    testSettings.windDir = {0.5f, 1.0f, 0.5f};  // Default windDir = { 1.0f, 0.0f, 1.0f }
 
     uint64_t testId = 12345;
 
@@ -90,6 +95,13 @@ UNIT_TEST(SRC_RenderDataStoreWeather, SetGetWeatherTest, testing::ext::TestSize.
     // Verify the retrieved settings match the test settings (not defaults)
     EXPECT_FLOAT_EQ(retrievedSettings.timeOfDay, testSettings.timeOfDay);
     EXPECT_FLOAT_EQ(retrievedSettings.moonBrightness, testSettings.moonBrightness);
+    EXPECT_FLOAT_EQ(retrievedSettings.moonSize, testSettings.moonSize);
+    EXPECT_FLOAT_EQ(retrievedSettings.moonOpacity, testSettings.moonOpacity);
+    EXPECT_FLOAT_EQ(retrievedSettings.moonTint.x, testSettings.moonTint.x);
+    EXPECT_FLOAT_EQ(retrievedSettings.moonTint.y, testSettings.moonTint.y);
+    EXPECT_FLOAT_EQ(retrievedSettings.moonTint.z, testSettings.moonTint.z);
+    EXPECT_FLOAT_EQ(retrievedSettings.starsIntensity, testSettings.starsIntensity);
+    EXPECT_FLOAT_EQ(retrievedSettings.nightSkyIntensity, testSettings.nightSkyIntensity);
     EXPECT_FLOAT_EQ(retrievedSettings.nightGlow, testSettings.nightGlow);
     EXPECT_FLOAT_EQ(retrievedSettings.skyViewBrightness, testSettings.skyViewBrightness);
     EXPECT_FLOAT_EQ(retrievedSettings.windSpeed, testSettings.windSpeed);
@@ -119,6 +131,13 @@ UNIT_TEST(SRC_RenderDataStoreWeather, SetGetWeatherTest, testing::ext::TestSize.
     // Verify they are different from defaults
     EXPECT_NE(retrievedSettings.timeOfDay, defaultSettings.timeOfDay);
     EXPECT_NE(retrievedSettings.moonBrightness, defaultSettings.moonBrightness);
+    EXPECT_NE(retrievedSettings.moonSize, defaultSettings.moonSize);
+    EXPECT_NE(retrievedSettings.moonOpacity, defaultSettings.moonOpacity);
+    EXPECT_NE(retrievedSettings.moonTint.x, defaultSettings.moonTint.x);
+    EXPECT_NE(retrievedSettings.moonTint.y, defaultSettings.moonTint.y);
+    EXPECT_NE(retrievedSettings.moonTint.z, defaultSettings.moonTint.z);
+    EXPECT_NE(retrievedSettings.starsIntensity, defaultSettings.starsIntensity);
+    EXPECT_NE(retrievedSettings.nightSkyIntensity, defaultSettings.nightSkyIntensity);
     EXPECT_NE(retrievedSettings.nightGlow, defaultSettings.nightGlow);
     EXPECT_NE(retrievedSettings.skyViewBrightness, defaultSettings.skyViewBrightness);
     EXPECT_NE(retrievedSettings.windSpeed, defaultSettings.windSpeed);

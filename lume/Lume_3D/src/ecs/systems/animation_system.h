@@ -113,11 +113,11 @@ private:
     struct TrackValues {
         InitialTransformComponent initial;
         InitialTransformComponent result;
-        float timePosition { 0.f };
-        float weight { 0.f };
-        TrackState state { TrackState::STOPPED };
-        bool forward { true };
-        bool updated { false };
+        float timePosition{0.f};
+        float weight{0.f};
+        TrackState state{TrackState::STOPPED};
+        bool forward{true};
+        bool updated{false};
     };
 
     class InitTask;
@@ -150,7 +150,7 @@ private:
 
     CORE_NS::IEcs& ecs_;
     bool active_ = true;
-    Properties systemProperties_ { 128U };
+    Properties systemProperties_{128U};
     CORE_NS::PropertyApiImpl<Properties> systemPropertyApi_;
 
     BASE_NS::vector<BASE_NS::unique_ptr<AnimationPlayback>> animations_;
@@ -165,8 +165,8 @@ private:
 
     CORE_NS::ComponentQuery trackQuery_;
     CORE_NS::ComponentQuery animationQuery_;
-    uint32_t stateGeneration_ {};
-    uint32_t animationGeneration_ {};
+    uint32_t stateGeneration_{};
+    uint32_t animationGeneration_{};
 
     BASE_NS::vector<uint32_t> animationOrder_;
     BASE_NS::vector<uint32_t> trackOrder_;
@@ -174,21 +174,21 @@ private:
 
     CORE_NS::IThreadPool::Ptr threadPool_;
 
-    size_t taskSize_ { 0U };
-    size_t tasks_ { 0U };
-    size_t remaining_ { 0U };
+    size_t taskSize_{0U};
+    size_t tasks_{0U};
+    size_t remaining_{0U};
 
-    uint64_t taskId_ { 0U };
+    uint64_t taskId_{0U};
 
     BASE_NS::vector<CORE_NS::IThreadPool::IResult::Ptr> taskResults_;
 
     BASE_NS::vector<InitTask> initTasks_;
-    uint64_t initTaskStart_ { 0U };
+    uint64_t initTaskStart_{0U};
 
     BASE_NS::vector<FrameIndexTask> frameIndexTasks_;
 
     BASE_NS::vector<AnimateTask> animTasks_;
-    uint64_t animTaskStart_ { 0U };
+    uint64_t animTaskStart_{0U};
 
     BASE_NS::vector<TrackValues> trackValues_;
     BASE_NS::vector<FrameData> frameIndices_;
@@ -203,4 +203,4 @@ inline constexpr BASE_NS::string_view GetName(const IAnimationSystem*)
 }
 CORE3D_END_NAMESPACE()
 
-#endif // CORE_ECS_ANIMATIONSYSTEM_H
+#endif  // CORE_ECS_ANIMATIONSYSTEM_H

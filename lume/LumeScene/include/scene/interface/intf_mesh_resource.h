@@ -18,21 +18,4 @@
 
 #include <scene/base/types.h>
 
-SCENE_BEGIN_NAMESPACE()
-
-/**
- * @brief Hold GPU resources for meshes-to-be-created.
- * @note Nothing implement yet. This is a placeholder interface.
- */
-class IMeshResource : public CORE_NS::IInterface {
-    META_INTERFACE(CORE_NS::IInterface, IMeshResource, "dfaaac5a-337c-4bbe-8aa6-3f09827419c2")
-public:
-};
-
-META_REGISTER_CLASS(MeshResource, "82a96082-5089-4778-be70-dfb8b36fbb75", META_NS::ObjectCategoryBits::NO_CATEGORY)
-
-SCENE_END_NAMESPACE()
-
-META_INTERFACE_TYPE(SCENE_NS::IMeshResource)
-
 #endif

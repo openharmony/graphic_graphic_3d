@@ -26,7 +26,7 @@
 #define CORE_BEGIN_NAMESPACE() namespace Core {
 #endif
 #ifndef CORE_END_NAMESPACE
-#define CORE_END_NAMESPACE() } // namespace Core
+#define CORE_END_NAMESPACE() }  // namespace Core
 #endif
 
-#endif // API_CORE_NAMESPACE_H
+#endif  // API_CORE_NAMESPACE_H

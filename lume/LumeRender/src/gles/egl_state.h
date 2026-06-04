@@ -31,7 +31,7 @@ struct DevicePlatformData;
 
 namespace GlesImplementation {
 struct SurfaceInfo;
-} // namespace GlesImplementation
+}  // namespace GlesImplementation
 
 namespace EGLHelpers {
 class EGLState {
@@ -64,17 +64,17 @@ public:
 
 protected:
     bool VerifyVersion();
-    bool hasColorSpaceExt_ { false };
-    bool hasConfiglessExt_ { false };
-    bool hasSurfacelessExt_ { false };
+    bool hasColorSpaceExt_{false};
+    bool hasConfiglessExt_{false};
+    bool hasSurfacelessExt_{false};
     void HandleExtensions();
     void FillSurfaceInfo(EGLDisplay display, EGLSurface surface, EGLint configId, EGLConfig config,
         GlesImplementation::SurfaceInfo& res) const;
     void PlatformInitialize();
-    BASE_NS::string cextensions_;                          // list of client extensions (null terminated strings)
-    BASE_NS::vector<BASE_NS::string_view> cextensionList_; // pointers to cextensions_
-    BASE_NS::string dextensions_;                          // list of display extensions (null terminated strings)
-    BASE_NS::vector<BASE_NS::string_view> dextensionList_; // pointers to dextensions_
+    BASE_NS::string cextensions_;                           // list of client extensions (null terminated strings)
+    BASE_NS::vector<BASE_NS::string_view> cextensionList_;  // pointers to cextensions_
+    BASE_NS::string dextensions_;                           // list of display extensions (null terminated strings)
+    BASE_NS::vector<BASE_NS::string_view> dextensionList_;  // pointers to dextensions_
 
     DevicePlatformDataGLES plat_;
     struct ContextState {
@@ -97,7 +97,7 @@ protected:
     void CreateContext(const BackendExtraGLES*);
     bool IsVersionGreaterOrEqual(uint32_t major, uint32_t minor) const;
 };
-} // namespace EGLHelpers
+}  // namespace EGLHelpers
 RENDER_END_NAMESPACE()
 #endif
-#endif // GLES_EGL_STATE_H
+#endif  // GLES_EGL_STATE_H

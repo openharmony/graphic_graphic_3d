@@ -20,6 +20,7 @@
 
 #include "bloom.h"
 #include "blur.h"
+#include "color_adjustments.h"
 #include "color_conversion.h"
 #include "color_fringe.h"
 #include "dof.h"
@@ -27,7 +28,6 @@
 #include "lens_flare.h"
 #include "motion_blur.h"
 #include "taa.h"
-#include "color_adjustments.h"
 #include "tonemap.h"
 #include "upscale.h"
 #include "util.h"
@@ -54,10 +54,13 @@ CORE_NS::Entity PostProcess::CreateEntity(const IInternalScene::Ptr& scene)
 }
 bool PostProcess::SetEcsObject(const IEcsObject::Ptr& obj)
 {
-    auto p = META_NS::GetObjectRegistry().Create<IInternalPostProcess>(ClassId::PostProcessComponent);
-    if (auto acc = interface_cast<IEcsObjectAccess>(p)) {
-        if (acc->SetEcsObject(obj)) {
-            pp_ = p;
+    auto ret = Super::SetEcsObject(obj);
+    if (ret) {
+        auto p = META_NS::GetObjectRegistry().Create<IInternalPostProcess>(ClassId::PostProcessComponent);
+        if (auto acc = interface_cast<IEcsObjectAccess>(p)) {
+            if (acc->SetEcsObject(obj)) {
+                pp_ = p;
+            }
         }
     }
     return pp_ != nullptr;
@@ -87,7 +90,7 @@ META_NS::IObject::Ptr PostProcess::CreateEffect(
     return object;
 }
 
-template<typename T>
+template <typename T>
 bool PostProcess::InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id)
 {
     using PropertyType = typename T::Ptr;

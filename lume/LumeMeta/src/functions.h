@@ -26,7 +26,7 @@ META_BEGIN_NAMESPACE()
 
 class SettableFunction : public IntroduceInterfaces<BaseObject, ISettableFunction, ISerializable> {
     META_OBJECT(SettableFunction, ClassId::SettableFunction, IntroduceInterfaces)
-public: // IFunction
+public:  // IFunction
     BASE_NS::string GetName() const override;
     IObject::ConstPtr GetDestination() const override;
     void Invoke(const ICallContext::Ptr& context) const override;
@@ -46,7 +46,7 @@ private:
 
 class PropertyFunction : public IntroduceInterfaces<BaseObject, IPropertyFunction, ISerializable, IImportFinalize> {
     META_OBJECT(PropertyFunction, ClassId::PropertyFunction, IntroduceInterfaces)
-public: // IFunction
+public:  // IFunction
     BASE_NS::string GetName() const override;
     IObject::ConstPtr GetDestination() const override;
     void Invoke(const ICallContext::Ptr& context) const override;

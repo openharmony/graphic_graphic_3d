@@ -42,7 +42,7 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "ea17a490-c3b7-453a-851f-79a20e324159" };
+    static constexpr BASE_NS::Uid UID{"ea17a490-c3b7-453a-851f-79a20e324159"};
     static constexpr const char* TYPE_NAME = "RenderNodeFullscreenGeneric";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -50,7 +50,7 @@ public:
     static void Destroy(IRenderNode* instance);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     RenderHandle GetPsoHandle();
@@ -63,8 +63,8 @@ private:
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
         RenderNodeGraphInputs::RenderDataStore renderDataStoreSpecialization;
 
-        bool hasChangeableRenderPassHandles { false };
-        bool hasChangeableResourceHandles { false };
+        bool hasChangeableRenderPassHandles{false};
+        bool hasChangeableResourceHandles{false};
     };
     JsonInputs jsonInputs_;
 
@@ -77,10 +77,10 @@ private:
     PipelineData pipelineData_;
 
     // data store push constant
-    bool useDataStorePushConstant_ { false };
+    bool useDataStorePushConstant_{false};
 
     // data store shader specialization
-    bool useDataStoreShaderSpecialization_ { false };
+    bool useDataStoreShaderSpecialization_{false};
     struct ShaderSpecilizationData {
         BASE_NS::vector<ShaderSpecialization::Constant> constants;
         BASE_NS::vector<uint32_t> data;
@@ -91,4 +91,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_FULLSCREEN_GENERIC_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_FULLSCREEN_GENERIC_H

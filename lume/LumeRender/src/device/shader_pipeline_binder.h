@@ -92,31 +92,31 @@ public:
     void BindPropertyBindings();
 
     struct CustomPropertyData {
-        uint32_t set { ~0U };
-        uint32_t binding { ~0U };
+        uint32_t set{~0U};
+        uint32_t binding{~0U};
 
         BASE_NS::unique_ptr<CustomPropertyPodContainer> properties;
-        CORE_NS::IPropertyHandle* handle { nullptr };
+        CORE_NS::IPropertyHandle* handle{nullptr};
     };
     struct BindingPropertyData {
         struct SetAndBinding {
-            uint32_t set { ~0U };
-            uint32_t binding { ~0U };
+            uint32_t set{~0U};
+            uint32_t binding{~0U};
         };
 
         BASE_NS::unique_ptr<ShaderPipelineBinderPropertyBindingSignal> bindingSignal;
 
         BASE_NS::unique_ptr<CustomPropertyBindingContainer> properties;
-        CORE_NS::IPropertyHandle* handle { nullptr };
+        CORE_NS::IPropertyHandle* handle{nullptr};
         BASE_NS::vector<SetAndBinding> setAndBindings;
     };
 
     struct BindableBinding {
-        uint32_t binding { ~0U };
-        uint32_t descriptorCount { ~0U };
-        uint32_t resIdx { ~0U };
-        uint32_t arrayoffset { ~0U };
-        RenderHandleType type { RenderHandleType::UNDEFINED };
+        uint32_t binding{~0U};
+        uint32_t descriptorCount{~0U};
+        uint32_t resIdx{~0U};
+        uint32_t arrayoffset{~0U};
+        RenderHandleType type{RenderHandleType::UNDEFINED};
     };
 
 protected:
@@ -129,12 +129,12 @@ private:
 
     IShaderManager& shaderMgr_;
 
-    std::atomic<int32_t> refcnt_ { 0 };
+    std::atomic<int32_t> refcnt_{0};
 
     RenderHandleReference shader_;
     PipelineLayout pipelineLayout_;
 
-    RenderHandleType renderHandleType_ { RenderHandleType::UNDEFINED };
+    RenderHandleType renderHandleType_{RenderHandleType::UNDEFINED};
 
     DispatchCommand dispatchCommand_;
     DrawCommand drawCommand_;
@@ -151,8 +151,8 @@ private:
 
         BASE_NS::vector<BindableBinding> bindings;
 
-        uint8_t bindingToIndex[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT] { 16, 16, 16, 16, 16, 16, 16,
-            16, 16, 16, 16, 16, 16, 16, 16, 16 };
+        uint8_t bindingToIndex[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT]{
+            16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
     };
     BASE_NS::vector<DescriptorSetResources> descriptorSetResources_;
 
@@ -164,8 +164,8 @@ private:
     // real binder object which can be re-used immediately during rendering
     IPipelineDescriptorSetBinder::Ptr pipelineDescriptorSetBinder_;
     // set -> actual vector index
-    uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { ~0u, ~0u, ~0u, ~0u };
+    uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{~0u, ~0u, ~0u, ~0u};
 };
 RENDER_END_NAMESPACE()
 
-#endif // DEVICE_SHADER_PIPELINE_BINDER_H
+#endif  // DEVICE_SHADER_PIPELINE_BINDER_H

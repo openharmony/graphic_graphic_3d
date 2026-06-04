@@ -314,27 +314,27 @@ using EngineAccelerationStructureCreationFlags = uint32_t;
 /** GPU buffer descriptor */
 struct GpuBufferDesc {
     /** Usage flags */
-    BufferUsageFlags usageFlags { 0 };
+    BufferUsageFlags usageFlags{0};
     /** Memory property flags */
-    MemoryPropertyFlags memoryPropertyFlags { 0 };
+    MemoryPropertyFlags memoryPropertyFlags{0};
     /** Engine creation flags */
-    EngineBufferCreationFlags engineCreationFlags { 0 };
+    EngineBufferCreationFlags engineCreationFlags{0};
     /** Byte size */
-    uint32_t byteSize { 0 };
+    uint32_t byteSize{0};
     /** View format (for texel buffer view) */
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
 };
 
 /** RGBA component mapping */
 struct ComponentMapping {
     /* Swizzle for red */
-    ComponentSwizzle r { CORE_COMPONENT_SWIZZLE_IDENTITY };
+    ComponentSwizzle r{CORE_COMPONENT_SWIZZLE_IDENTITY};
     /* Swizzle for green */
-    ComponentSwizzle g { CORE_COMPONENT_SWIZZLE_IDENTITY };
+    ComponentSwizzle g{CORE_COMPONENT_SWIZZLE_IDENTITY};
     /* Swizzle for blue */
-    ComponentSwizzle b { CORE_COMPONENT_SWIZZLE_IDENTITY };
+    ComponentSwizzle b{CORE_COMPONENT_SWIZZLE_IDENTITY};
     /* Swizzle for alpha */
-    ComponentSwizzle a { CORE_COMPONENT_SWIZZLE_IDENTITY };
+    ComponentSwizzle a{CORE_COMPONENT_SWIZZLE_IDENTITY};
 };
 
 /**
@@ -354,38 +354,38 @@ struct ComponentMapping {
 /** GPU image descriptor */
 struct GpuImageDesc {
     /** Image type */
-    ImageType imageType { ImageType::CORE_IMAGE_TYPE_2D };
+    ImageType imageType{ImageType::CORE_IMAGE_TYPE_2D};
     /** Image view type */
-    ImageViewType imageViewType { ImageViewType::CORE_IMAGE_VIEW_TYPE_2D };
+    ImageViewType imageViewType{ImageViewType::CORE_IMAGE_VIEW_TYPE_2D};
     /** Format */
-    BASE_NS::Format format { BASE_NS::Format::BASE_FORMAT_UNDEFINED };
+    BASE_NS::Format format{BASE_NS::Format::BASE_FORMAT_UNDEFINED};
     /** Image tiling */
-    ImageTiling imageTiling { ImageTiling::CORE_IMAGE_TILING_OPTIMAL };
+    ImageTiling imageTiling{ImageTiling::CORE_IMAGE_TILING_OPTIMAL};
     /** Usage tiling */
-    ImageUsageFlags usageFlags { 0 };
+    ImageUsageFlags usageFlags{0};
     /** Memory property flags */
-    MemoryPropertyFlags memoryPropertyFlags { 0 };
+    MemoryPropertyFlags memoryPropertyFlags{0};
 
     /** Create flags */
-    ImageCreateFlags createFlags { 0 };
+    ImageCreateFlags createFlags{0};
 
     /** Engine creation flags */
-    EngineImageCreationFlags engineCreationFlags { 0 };
+    EngineImageCreationFlags engineCreationFlags{0};
 
     /** Width */
-    uint32_t width { 1u };
+    uint32_t width{1u};
     /** Height */
-    uint32_t height { 1u };
+    uint32_t height{1u};
     /** Depth */
-    uint32_t depth { 1u };
+    uint32_t depth{1u};
 
     /** Mip count */
-    uint32_t mipCount { 1u };
+    uint32_t mipCount{1u};
     /** Layer count */
-    uint32_t layerCount { 1u };
+    uint32_t layerCount{1u};
 
     /** Sample count flags */
-    SampleCountFlags sampleCountFlags { SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT };
+    SampleCountFlags sampleCountFlags{SampleCountFlagBits::CORE_SAMPLE_COUNT_1_BIT};
 
     /** RGBA component mapping */
     ComponentMapping componentMapping;
@@ -394,57 +394,56 @@ struct GpuImageDesc {
 /** GPU sampler descriptor */
 struct GpuSamplerDesc {
     /** Magnification filter */
-    Filter magFilter { Filter::CORE_FILTER_NEAREST };
+    Filter magFilter{Filter::CORE_FILTER_NEAREST};
     /** Minification filter */
-    Filter minFilter { Filter::CORE_FILTER_NEAREST };
+    Filter minFilter{Filter::CORE_FILTER_NEAREST};
     /** Mip map filter mode */
-    Filter mipMapMode { Filter::CORE_FILTER_NEAREST };
+    Filter mipMapMode{Filter::CORE_FILTER_NEAREST};
 
     /** Address mode U */
-    SamplerAddressMode addressModeU { SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT };
+    SamplerAddressMode addressModeU{SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT};
     /** Address mode V */
-    SamplerAddressMode addressModeV { SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT };
+    SamplerAddressMode addressModeV{SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT};
     /** Address mode W */
-    SamplerAddressMode addressModeW { SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT };
+    SamplerAddressMode addressModeW{SamplerAddressMode::CORE_SAMPLER_ADDRESS_MODE_REPEAT};
 
     /** Engine creation flags */
-    EngineSamplerCreationFlags engineCreationFlags { 0 };
+    EngineSamplerCreationFlags engineCreationFlags{0};
 
     /** Mip lod bias */
-    float mipLodBias { 0.0f };
+    float mipLodBias{0.0f};
 
     /** Enable anisotropy */
-    bool enableAnisotropy { false };
+    bool enableAnisotropy{false};
     /** Max anisotropy */
-    float maxAnisotropy { 1.0f };
+    float maxAnisotropy{1.0f};
 
     /** Enable compare operation */
-    bool enableCompareOp { false };
+    bool enableCompareOp{false};
     /** Compare operation */
-    CompareOp compareOp { CompareOp::CORE_COMPARE_OP_NEVER };
+    CompareOp compareOp{CompareOp::CORE_COMPARE_OP_NEVER};
 
     /** Minimum lod */
-    float minLod { 0.0f };
+    float minLod{0.0f};
     /** Maximum lod */
-    float maxLod { 0.0f };
+    float maxLod{0.0f};
 
     /** Border color */
-    BorderColor borderColor { BorderColor::CORE_BORDER_COLOR_FLOAT_OPAQUE_BLACK };
+    BorderColor borderColor{BorderColor::CORE_BORDER_COLOR_FLOAT_OPAQUE_BLACK};
 
     /** Enable unnormalized coordinates */
-    bool enableUnnormalizedCoordinates { false };
+    bool enableUnnormalizedCoordinates{false};
 };
 
 /** GPU acceleration structure descriptor */
 struct GpuAccelerationStructureDesc {
     /* Acceleration structure type */
-    AccelerationStructureType accelerationStructureType {
-        AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL
-    };
+    AccelerationStructureType accelerationStructureType{
+        AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL};
     /* Buffer desc which holds the buffer info */
     GpuBufferDesc bufferDesc;
 };
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_GPU_RESOURCE_DESC_H
+#endif  // API_RENDER_DEVICE_GPU_RESOURCE_DESC_H

@@ -26,10 +26,14 @@ namespace OHOS::Render3D {
 
 class GraphicsManagerUT : public ::testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-    void SetUp() {}
-    void TearDown() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
+    void SetUp()
+    {}
+    void TearDown()
+    {}
 };
 
 /**
@@ -165,4 +169,4 @@ HWTEST_F(GraphicsManagerUT, GetPlatformData002, TestSize.Level1)
     EXPECT_EQ(data.hapInfo_.moduleName_, hapInfo.moduleName_);
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

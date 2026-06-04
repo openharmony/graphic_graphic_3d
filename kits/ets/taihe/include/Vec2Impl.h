@@ -24,7 +24,7 @@ public:
     Vec2Impl(const std::shared_ptr<Vec2Proxy> proxy) : proxy_(proxy)
     {}
 
-    Vec2Impl(const BASE_NS::Math::Vec2 &data) : stageData_(data)
+    Vec2Impl(const BASE_NS::Math::Vec2& data) : stageData_(data)
     {}
 
     ~Vec2Impl()
@@ -77,7 +77,7 @@ public:
     UVec2Impl(const std::shared_ptr<UVec2Proxy> proxy) : proxy_(proxy)
     {}
 
-    UVec2Impl(const BASE_NS::Math::UVec2 &data) : stageData_(data)
+    UVec2Impl(const BASE_NS::Math::UVec2& data) : stageData_(data)
     {}
 
     ~UVec2Impl()
@@ -124,5 +124,5 @@ private:
     // non meta property data
     BASE_NS::Math::UVec2 stageData_ = BASE_NS::Math::ZERO_UVEC2;
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_VEC2_IMPL_H

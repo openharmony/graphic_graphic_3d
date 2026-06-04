@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include <base/containers/string.h>
+#include <core/plugin/intf_interface_helper.h>
 #include <render/datastore/intf_render_data_store_render_post_processes.h>
 #include <render/device/pipeline_state_desc.h>
 #include <render/namespace.h>
@@ -51,7 +52,7 @@ public:
     void SetInfo(const IRenderNodePostProcessInterfaceUtil::Info& info);
 
 private:
-    IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void ParseRenderNodeInputs();
     void UpdateImageData();
@@ -71,18 +72,18 @@ private:
         RenderNodeGraphInputs::InputResources resources;
         RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
-        DefaultInOutImage defaultOutputImage { DefaultInOutImage::OUTPUT };
-        DefaultInOutImage defaultInputImage { DefaultInOutImage::INPUT };
+        DefaultInOutImage defaultOutputImage{DefaultInOutImage::OUTPUT};
+        DefaultInOutImage defaultInputImage{DefaultInOutImage::INPUT};
 
-        uint32_t inputIdx { ~0u };
-        uint32_t depthIndex { ~0u };
-        uint32_t velocityIndex { ~0u };
-        uint32_t historyIndex { ~0u };
-        uint32_t historyNextIndex { ~0u };
+        uint32_t inputIdx{~0u};
+        uint32_t depthIndex{~0u};
+        uint32_t velocityIndex{~0u};
+        uint32_t historyIndex{~0u};
+        uint32_t historyNextIndex{~0u};
 
-        uint32_t outputIdx { ~0u };
+        uint32_t outputIdx{~0u};
 
-        uint32_t cameraIdx { ~0u };
+        uint32_t cameraIdx{~0u};
     };
     JsonInputs jsonInputs_;
 
@@ -108,10 +109,10 @@ private:
 
     RenderNodeHandles::InputResources inputResources_;
     RenderNodeCopyUtil renderCopy_;
-    bool copyInitNeeded_ { true };
+    bool copyInitNeeded_{true};
 
     struct PostProcessPipelineNode {
-        uint64_t id { ~0ULL };
+        uint64_t id{~0ULL};
         IRenderPostProcessNode::Ptr ppNode;
     };
     struct AllPostProcesses {
@@ -123,12 +124,12 @@ private:
         IRenderDataStoreRenderPostProcesses::PostProcessPipeline prevPipeline;
 
         // keep track for new post processes
-        bool newPostProcesses { false };
+        bool newPostProcesses{false};
     };
     AllPostProcesses allPostProcesses_;
-    bool valid_ { false };
+    bool valid_{false};
 
-    BASE_NS::Math::UVec2 outputSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 outputSize_{0U, 0U};
     struct TemporaryImages {
         uint32_t idx = 0U;
         uint32_t imageCount = 0U;
@@ -142,7 +143,7 @@ private:
             if (input == images[idx].GetHandle()) {
                 idx = (idx + 1) % static_cast<uint32_t>(imageCount);
             }
-            return { images[idx].GetHandle() };
+            return {images[idx].GetHandle()};
         }
     };
     TemporaryImages ti_;
@@ -151,7 +152,8 @@ private:
     BASE_NS::string dataStoreFullName_;
 };
 
-class RenderNodePostProcessInterfaceUtilImpl final : public IRenderNodePostProcessInterfaceUtil {
+class RenderNodePostProcessInterfaceUtilImpl final
+    : public CORE_NS::IInterfaceHelper<IRenderNodePostProcessInterfaceUtil> {
 public:
     RenderNodePostProcessInterfaceUtilImpl() = default;
     ~RenderNodePostProcessInterfaceUtilImpl() override = default;
@@ -162,17 +164,9 @@ public:
 
     void SetInfo(const Info& info) override;
 
-    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
-    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
-
-    void Ref() override;
-    void Unref() override;
-
 private:
     RenderNodePostProcessInterfaceUtil rn_;
-
-    uint32_t refCount_ { 0U };
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODECONTEXT_RENDER_NODE_POST_PROCESS_INTERFACE_UTIL_H
+#endif  // RENDER_NODECONTEXT_RENDER_NODE_POST_PROCESS_INTERFACE_UTIL_H

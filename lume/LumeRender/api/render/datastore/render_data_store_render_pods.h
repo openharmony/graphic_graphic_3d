@@ -32,7 +32,7 @@ RENDER_BEGIN_NAMESPACE()
  */
 struct NodeGraphBackBufferConfiguration {
     /** Max back buffer name length */
-    static constexpr uint32_t CORE_MAX_BACK_BUFFER_NAME_LENGTH { 128 };
+    static constexpr uint32_t CORE_MAX_BACK_BUFFER_NAME_LENGTH{128};
 
     /** Back buffer type */
     enum class BackBufferType : uint32_t {
@@ -51,7 +51,7 @@ struct NodeGraphBackBufferConfiguration {
     char backBufferName[CORE_MAX_BACK_BUFFER_NAME_LENGTH];
 
     /** Back buffer type */
-    BackBufferType backBufferType = { BackBufferType::UNDEFINED };
+    BackBufferType backBufferType = {BackBufferType::UNDEFINED};
 
     /** Handle to the final target.
      * If backBufferType is SWAPCHAIN this handle is not used.
@@ -62,10 +62,10 @@ struct NodeGraphBackBufferConfiguration {
     RenderHandle gpuBufferHandle;
 
     /** Present */
-    bool present { false };
+    bool present{false};
 
     /** Binary semaphore for signaling end of frame, i.e. when rendered to back buffer */
-    uint64_t gpuSemaphoreHandle { 0 };
+    uint64_t gpuSemaphoreHandle{0};
 };
 
 /** Post process name constants. */
@@ -107,7 +107,7 @@ struct PostProcessConstants {
     };
 
     /** Render built-in post process names */
-    static constexpr BASE_NS::string_view POST_PROCESS_NAMES[POST_PROCESS_INDICES::POST_PROCESS_COUNT] {
+    static constexpr BASE_NS::string_view POST_PROCESS_NAMES[POST_PROCESS_INDICES::POST_PROCESS_COUNT]{
         "render_tonemap",
         "render_vignette",
         "render_dither",
@@ -125,21 +125,21 @@ struct PostProcessConstants {
     };
 
     /** First available post process id for user custom effects */
-    static constexpr uint32_t FIRST_USER_POST_PROCESS_ID { 16u };
+    static constexpr uint32_t FIRST_USER_POST_PROCESS_ID{16u};
     /** Last available post process id for user custom effects */
-    static constexpr uint32_t LAST_USER_POST_PROCESS_ID { 31u };
+    static constexpr uint32_t LAST_USER_POST_PROCESS_ID{31u};
 
     /** Global post process factor count */
-    static constexpr uint32_t GLOBAL_FACTOR_COUNT { POST_PROCESS_INDICES::POST_PROCESS_COUNT };
+    static constexpr uint32_t GLOBAL_FACTOR_COUNT{POST_PROCESS_INDICES::POST_PROCESS_COUNT};
     /** User global post process factor count */
-    static constexpr uint32_t USER_GLOBAL_FACTOR_COUNT { 16u };
+    static constexpr uint32_t USER_GLOBAL_FACTOR_COUNT{16u};
 
     /** User factor index for ColorAdjustments filterColor */
-    static constexpr uint32_t USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR { 0u };
+    static constexpr uint32_t USER_INDEX_COLOR_ADJUSTMENTS_FILTER_COLOR{0u};
     /** User local post process factor count */
-    static constexpr uint32_t USER_LOCAL_FACTOR_COUNT { USER_GLOBAL_FACTOR_COUNT };
+    static constexpr uint32_t USER_LOCAL_FACTOR_COUNT{USER_GLOBAL_FACTOR_COUNT};
     /** User local post process factor byte size */
-    static constexpr uint32_t USER_LOCAL_FACTOR_BYTE_SIZE { 256u };
+    static constexpr uint32_t USER_LOCAL_FACTOR_BYTE_SIZE{256u};
 };
 
 /** Bloom post process configuration. */
@@ -166,46 +166,46 @@ struct BloomConfiguration {
     };
 
     /** Bloom type */
-    BloomType bloomType { BloomType::TYPE_NORMAL };
+    BloomType bloomType{BloomType::TYPE_NORMAL};
     /** Bloom quality type */
-    BloomQualityType bloomQualityType { BloomQualityType::QUALITY_TYPE_NORMAL };
+    BloomQualityType bloomQualityType{BloomQualityType::QUALITY_TYPE_NORMAL};
 
     /** Threshold hard (Default: 1.0f) */
-    float thresholdHard { 1.0f };
+    float thresholdHard{1.0f};
     /** Threshold soft (Default: 2.0f) */
-    float thresholdSoft { 2.0f };
+    float thresholdSoft{2.0f};
     /** Coefficient amount */
-    float amountCoefficient { 0.25f };
+    float amountCoefficient{0.25f};
     /** Dirt mask coefficient */
-    float dirtMaskCoefficient { 0.0f };
+    float dirtMaskCoefficient{0.0f};
     /** Scatter (amount of bloom spread). (1.0 full spread / default) */
-    float scatter { 1.0f };
+    float scatter{1.0f};
     /** Scaling factor. Controls the amount of scaling and bloom spread
      * Reduces the downscale and upscale steps
      * Values 0 - 1. Value of 0.5 halves the scale steps
      */
-    float scaleFactor { 1.0f };
+    float scaleFactor{1.0f};
 
     /** Optional dirt mask image handle */
-    RenderHandle dirtMaskImage {};
+    RenderHandle dirtMaskImage{};
     /** Use compute dispatches for bloom */
-    bool useCompute { false };
+    bool useCompute{false};
 };
 
 /** Vignette post process configuration. */
 struct VignetteConfiguration {
     /** Coefficient (Default: 0.5f) */
-    float coefficient { 0.5f };
+    float coefficient{0.5f};
     /** Power (Default: 0.4f) */
-    float power { 0.4f };
+    float power{0.4f};
 };
 
 /** Color fringe post process configuration. */
 struct ColorFringeConfiguration {
     /** Deprecated: use distanceCoefficient */
-    float coefficient { 1.0f };
+    float coefficient{1.0f};
     /** Distance coefficient */
-    float distanceCoefficient { 2.0f };
+    float distanceCoefficient{2.0f};
 };
 
 /** Dither post process configuration. */
@@ -221,10 +221,10 @@ struct DitherConfiguration {
     };
 
     /* Dither type */
-    DitherType ditherType { DitherType::INTERLEAVED_NOISE };
+    DitherType ditherType{DitherType::INTERLEAVED_NOISE};
 
     /* Amount coefficient */
-    float amountCoefficient { 1.0f / 255.0f };
+    float amountCoefficient{1.0f / 255.0f};
 };
 
 struct BlurConfiguration {
@@ -248,15 +248,15 @@ struct BlurConfiguration {
     };
 
     /** Blur type */
-    BlurType blurType { BlurType::TYPE_NORMAL };
+    BlurType blurType{BlurType::TYPE_NORMAL};
     /** Blur quality type */
-    BlurQualityType blurQualityType { BlurQualityType::QUALITY_TYPE_NORMAL };
+    BlurQualityType blurQualityType{BlurQualityType::QUALITY_TYPE_NORMAL};
     /** Blur desired filter size in pixels. Might not be exact. */
-    float filterSize { 1.0f };
+    float filterSize{1.0f};
     /** Limit the number of mip levels to blur, if mips are available. With this one could only blur to first (few)
      * mips. Value - 1 mip levels will be blurred i.e. 2 = mip 0 is the original, mip 1 is blurred.
      */
-    uint32_t maxMipLevel { ~0u };
+    uint32_t maxMipLevel{~0u};
 };
 
 /** Tonemap configuration. */
@@ -274,35 +274,35 @@ struct TonemapConfiguration {
     };
 
     /** Tonemap type */
-    TonemapType tonemapType { TonemapType::TONEMAP_ACES };
+    TonemapType tonemapType{TonemapType::TONEMAP_ACES};
     /** Exposure */
-    float exposure { 0.7f };
+    float exposure{0.7f};
 };
 
 /** White balance configuration. */
 struct WhiteBalanceConfiguration {
     /** Temperature */
-    float temperature { 0.0f };
+    float temperature{0.0f};
     /** Tint */
-    float tint { 0.0f };
+    float tint{0.0f};
 };
 
 /** Color adjustments configuration. */
 struct ColorAdjustmentsConfiguration {
     /** Color filter (RGBA, RGB used for filter, Alpha reserved) */
-    BASE_NS::Math::Vec4 filterColor { 1.0f, 1.0f, 1.0f, 1.0f };
+    BASE_NS::Math::Vec4 filterColor{1.0f, 1.0f, 1.0f, 1.0f};
 
     /** Hue shift in degrees (0-360) */
-    float hueShift { 0.0f };
+    float hueShift{0.0f};
 
     /** Saturation (0.0 = grayscale, 1.0 = original) */
-    float saturation { 1.0f };
+    float saturation{1.0f};
 
     /** Brightness adjustment (-1.0 to 1.0, 0 = original) */
-    float brightness { 0.0f };
+    float brightness{0.0f};
 
     /** Contrast (0.0 = grayscale, 1.0 = original) */
-    float contrast { 1.0f };
+    float contrast{1.0f};
 };
 
 /** Opto-electronic conversion functions. */
@@ -319,7 +319,7 @@ struct ColorConversionConfiguration {
     using ColorConversionFlags = uint32_t;
 
     /** Conversion function type flags */
-    ColorConversionFlags conversionFunctionType { ConversionFunctionType::CONVERSION_LINEAR };
+    ColorConversionFlags conversionFunctionType{ConversionFunctionType::CONVERSION_LINEAR};
 };
 
 /** Fxaa Antialiasing configuration. */
@@ -328,9 +328,9 @@ struct FxaaConfiguration {
     enum class Quality { LOW = 0, MEDIUM = 1, HIGH = 2 };
 
     /** Edge sharpness. */
-    Sharpness sharpness { Sharpness::SHARP };
+    Sharpness sharpness{Sharpness::SHARP};
     /** Overall edge quality. */
-    Quality quality { Quality::MEDIUM };
+    Quality quality{Quality::MEDIUM};
 };
 
 /** Taa Antialiasing configuration. */
@@ -339,17 +339,17 @@ struct TaaConfiguration {
     enum class Quality { LOW = 0, MEDIUM = 1, HIGH = 2 };
 
     /** Edge sharpness. */
-    Sharpness sharpness { Sharpness::SHARP };
+    Sharpness sharpness{Sharpness::SHARP};
     /** Overall edge quality. */
-    Quality quality { Quality::MEDIUM };
+    Quality quality{Quality::MEDIUM};
     /** Whether to use bicubic sampling. */
-    bool useBicubic { false };
+    bool useBicubic{false};
     /** Whether to use mean-variance clipping of the history color. */
-    bool useVarianceClipping { true };
+    bool useVarianceClipping{true};
     /** Whether to use yCoCG filtering. */
-    bool useyCoCG { true };
+    bool useyCoCG{true};
     /** If set to true, do not use bicubic filtering for edges. */
-    bool ignoreBicubicEdges { true };
+    bool ignoreBicubicEdges{true};
 };
 
 /** Depth of field configuration.
@@ -361,21 +361,21 @@ struct TaaConfiguration {
  */
 struct DofConfiguration {
     /** Distance to point of focus. */
-    float focusPoint { 3.f };
+    float focusPoint{3.f};
     /** Range around focusPoint which is in focus. */
-    float focusRange { 1.f };
+    float focusRange{1.f};
     /** Range before focusRange where the view transitions from blurred to focused. */
-    float nearTransitionRange { 1.f };
+    float nearTransitionRange{1.f};
     /** Range after focusRange where the view transitions from focused to blurred. */
-    float farTransitionRange { 1.f };
+    float farTransitionRange{1.f};
     /** Blur level used close to the viewer. */
-    float nearBlur { 2.f };
+    float nearBlur{2.f};
     /** Blur level used far away from the viewer. */
-    float farBlur { 2.f };
+    float farBlur{2.f};
     /** View near plane. */
-    float nearPlane { 0.1f };
+    float nearPlane{0.1f};
     /** View far plane. */
-    float farPlane { 1000.f };
+    float farPlane{1000.f};
 };
 
 /** Motion blur configuration.
@@ -387,13 +387,13 @@ struct MotionBlurConfiguration {
     enum class Quality : uint32_t { LOW = 0U, MEDIUM = 1U, HIGH = 2U };
 
     /** Sharpness. */
-    Sharpness sharpness { Sharpness::SHARP };
+    Sharpness sharpness{Sharpness::SHARP};
     /** Quality. */
-    Quality quality { Quality::HIGH };
+    Quality quality{Quality::HIGH};
     /** Alpha blending. 1.0 -> fully motion blur sample. */
-    float alpha { 1.0f };
+    float alpha{1.0f};
     /** Velocity coefficient. */
-    float velocityCoefficient { 1.0f };
+    float velocityCoefficient{1.0f};
 };
 
 /** Lens flare configuration.
@@ -403,24 +403,24 @@ struct LensFlareConfiguration {
     enum class Quality : uint32_t { LOW = 0U, MEDIUM = 1U, HIGH = 2U };
 
     /** Quality. */
-    Quality quality { Quality::HIGH };
+    Quality quality{Quality::HIGH};
     /** Intensity of the effect. */
-    float intensity { 1.0f };
+    float intensity{1.0f};
     /** Flare position */
-    BASE_NS::Math::Vec3 flarePosition { 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec3 flarePosition{0.0f, 0.0f, 0.0f};
 };
 
 /** Upscale configuration.
  */
 struct UpscaleConfiguration {
     /** Upscaling ratio. */
-    float ratio { 1.0f };
+    float ratio{1.0f};
     /** Gradient smoothing scale. */
-    float smoothScale { 1.0f };
+    float smoothScale{1.0f};
     /** Upscaling sensitivity to structure changes. */
-    float structureSensitivity { 1.0f };
+    float structureSensitivity{1.0f};
     /** Upscaled edge sharpness. */
-    float edgeSharpness { 2.0f };
+    float edgeSharpness{2.0f};
 };
 
 /** Post process configuration POD. */
@@ -483,7 +483,7 @@ struct PostProcessConfiguration {
         INDEX_FACTOR_COUNT = 15,
     };
     /** Enabled flags */
-    PostProcessEnableFlags enableFlags { 0u };
+    PostProcessEnableFlags enableFlags{0u};
 
     /** Tonemap configuration */
     TonemapConfiguration tonemapConfiguration;
@@ -530,9 +530,9 @@ struct PostProcessConfiguration {
 /** Render post process configuration (must match render_post_process_structs_common.h */
 struct RenderPostProcessConfiguration {
     /* Single uvec4 for flags .x has post process specialization flags */
-    BASE_NS::Math::UVec4 flags { 0, 0, 0, 0 };
+    BASE_NS::Math::UVec4 flags{0, 0, 0, 0};
     // .x = delta time (ms), .y = tick delta time (ms), .z = tick total time (s), .w = frame index (as uint)
-    BASE_NS::Math::Vec4 renderTimings { 0.0f, 0.0f, 0.0f, 0.0f };
+    BASE_NS::Math::Vec4 renderTimings{0.0f, 0.0f, 0.0f, 0.0f};
     /* All built-in post process factors */
     BASE_NS::Math::Vec4 factors[PostProcessConstants::GLOBAL_FACTOR_COUNT];
 
@@ -543,19 +543,19 @@ struct RenderPostProcessConfiguration {
 /** Default render pod store for shader specialization */
 struct ShaderSpecializationRenderPod {
     /* Max supported specialization constants */
-    static constexpr uint32_t MAX_SPECIALIZATION_CONSTANT_COUNT { 8u };
+    static constexpr uint32_t MAX_SPECIALIZATION_CONSTANT_COUNT{8u};
     /* Constant flags are mapped in order, use constant_id 0, 1.. in shaders.
      * Do not leave unused constant ids.
      */
     struct ConstantFlags {
         /** Value */
-        uint32_t value { 0u };
+        uint32_t value{0u};
     };
 
     /** Count of constants */
-    uint32_t specializationConstantCount { 0u };
+    uint32_t specializationConstantCount{0u};
     /** Specialization data */
-    ConstantFlags specializationFlags[MAX_SPECIALIZATION_CONSTANT_COUNT] {};
+    ConstantFlags specializationFlags[MAX_SPECIALIZATION_CONSTANT_COUNT]{};
 };
 /** @} */
 RENDER_END_NAMESPACE()
@@ -594,4 +594,4 @@ DECLARE_PROPERTY_TYPE(RENDER_NS::MotionBlurConfiguration::Sharpness);
 DECLARE_PROPERTY_TYPE(RENDER_NS::MotionBlurConfiguration::Quality);
 DECLARE_PROPERTY_TYPE(RENDER_NS::LensFlareConfiguration::Quality);
 CORE_END_NAMESPACE()
-#endif // API_RENDER_RENDER_DATA_STORE_RENDER_PODS_H
+#endif  // API_RENDER_RENDER_DATA_STORE_RENDER_PODS_H

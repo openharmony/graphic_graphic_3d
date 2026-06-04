@@ -20,7 +20,8 @@
 #include <base/math/vector.h>
 
 #include "PropertyProxy.h"
-class Vec2Proxy : public ObjectPropertyProxy {
+#include "export.h"
+class SCENE_ADDON_PUBLIC Vec2Proxy : public ObjectPropertyProxy {
 public:
     Vec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::Vec2> prop);
     ~Vec2Proxy() override;
@@ -30,13 +31,13 @@ public:
     static NapiApi::Object ToNapiObject(BASE_NS::Math::Vec2 vec2, napi_env env);
 
 private:
-    void SetValue(const BASE_NS::Math::Vec2& v);
+    void SetNativeValue(const BASE_NS::Math::Vec2& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };
 
 // UVec2 also maps to Vec2 on JS side
-class UVec2Proxy : public ObjectPropertyProxy {
+class SCENE_ADDON_PUBLIC UVec2Proxy : public ObjectPropertyProxy {
 public:
     UVec2Proxy(napi_env env, META_NS::Property<BASE_NS::Math::UVec2> prop);
     ~UVec2Proxy() override;
@@ -48,7 +49,7 @@ public:
     using ObjectPropertyProxy::GetPropertyPtr;
 
 private:
-    void SetValue(const BASE_NS::Math::UVec2& v);
+    void SetNativeValue(const BASE_NS::Math::UVec2& v);
     void SetMemberValue(NapiApi::FunctionContext<>& info, BASE_NS::string_view memb) override;
     napi_value GetMemberValue(const NapiApi::Env info, BASE_NS::string_view memb) override;
 };

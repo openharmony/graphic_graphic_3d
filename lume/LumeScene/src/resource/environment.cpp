@@ -17,7 +17,8 @@
 #include <3d/ecs/components/environment_component.h>
 #include <core/ecs/intf_entity_manager.h>
 
-#include <meta/interface/resource/intf_object_resource.h>
+#include <meta/api/metadata_util.h>
+#include <meta/interface/intf_metadata.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -26,7 +27,7 @@ CORE_NS::Entity Environment::CreateEntity(const IInternalScene::Ptr& scene)
     auto& ecs = scene->GetEcsContext();
     auto envm = ecs.FindComponent<CORE3D_NS::EnvironmentComponent>();
     if (!envm) {
-        return CORE_NS::Entity {};
+        return CORE_NS::Entity{};
     }
     auto ent = ecs.GetNativeEcs()->GetEntityManager().Create();
     envm->Create(ent);

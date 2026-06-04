@@ -66,7 +66,7 @@ public:
     }
     BASE_NS::array_view<const uint8_t> GetData() const override
     {
-        return { reinterpret_cast<const uint8_t*>(&propertiesData_), sizeof(EffectProperties) };
+        return {reinterpret_cast<const uint8_t*>(&propertiesData_), sizeof(EffectProperties)};
     }
 
     // from IRenderPostProcessNode
@@ -81,15 +81,15 @@ public:
     void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override;
 
     struct ShaderParameters {
-        float resX { 0.0f };
-        float resY { 0.0f };
-        float time { 0.0f };
-        float hasValidNormalTex { 0.0f };
+        float resX{0.0f};
+        float resY{0.0f};
+        float time{0.0f};
+        float hasValidNormalTex{0.0f};
 
-        float radius { 0.5f };
-        float bias { 0.025f };
-        float intensity { 1.5f };
-        float contrast { 1.6f };
+        float radius{0.5f};
+        float bias{0.025f};
+        float intensity{1.5f};
+        float contrast{1.6f};
     };
 
     struct NodeInputs {
@@ -103,15 +103,15 @@ public:
     };
 
     struct EffectProperties {
-        bool enabled { true };
-        float radius { 0.5f };
-        float intensity { 1.0f };
-        float bias { 0.025f };
-        float contrast { 1.2f };
+        bool enabled{true};
+        float radius{0.5f};
+        float intensity{1.0f};
+        float bias{0.025f};
+        float contrast{1.2f};
     };
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
     RENDER_NS::IRenderPostProcess::Ptr postProcess_;
 
     void EvaluateOutputImageCreation();
@@ -127,8 +127,8 @@ private:
     void RenderAreaNoisePass(RENDER_NS::IRenderCommandList& cmdList);
 
     RenderAreaRequest renderAreaRequest_;
-    bool useRequestedRenderArea_ { false };
-    bool velocityNormalIsValid_ { false };
+    bool useRequestedRenderArea_{false};
+    bool velocityNormalIsValid_{false};
 
     EffectProperties propertiesData_;
     CORE_NS::PropertyApiImpl<EffectProperties> properties_;
@@ -161,9 +161,9 @@ private:
     ShaderParameters shaderParameters_;
 
     struct Targets {
-        BASE_NS::Math::UVec2 inputResolution { 0U, 0U };
-        BASE_NS::Math::UVec2 outputResolution { 0U, 0U };
-        BASE_NS::Math::UVec2 ssaoResolution { 0U, 0U };
+        BASE_NS::Math::UVec2 inputResolution{0U, 0U};
+        BASE_NS::Math::UVec2 outputResolution{0U, 0U};
+        BASE_NS::Math::UVec2 ssaoResolution{0U, 0U};
 
         RENDER_NS::RenderHandleReference halfResDepth;
         RENDER_NS::RenderHandleReference halfResColor;
@@ -172,7 +172,7 @@ private:
     };
     Targets targets_;
 
-    BASE_NS::Math::UVec2 baseSize_ { 0U, 0U };
+    BASE_NS::Math::UVec2 baseSize_{0U, 0U};
 
     NodeInputs nodeInputsData_;
     NodeOutputs nodeOutputsData_;
@@ -190,16 +190,16 @@ private:
     RENDER_NS::RenderHandle cameraUbo_;
 
     struct OwnOutputImageData {
-        uint32_t width { 0U };
-        uint32_t height { 0U };
+        uint32_t width{0U};
+        uint32_t height{0U};
         RENDER_NS::RenderHandleReference handle;
     };
     OwnOutputImageData ownOutputImageData_;
 
     RENDER_NS::DescriptorCounts descriptorCounts_;
-    bool enabled_ { false };
-    bool valid_ { false };
+    bool enabled_{false};
+    bool valid_{false};
 };
 RENDER_END_NAMESPACE()
 
-#endif // APP__SRC__RENDER_POST_PROCESS_SSAO_NODE_H
+#endif  // APP__SRC__RENDER_POST_PROCESS_SSAO_NODE_H

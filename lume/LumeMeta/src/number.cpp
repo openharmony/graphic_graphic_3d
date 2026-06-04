@@ -19,10 +19,10 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template<typename T>
+template <typename T>
 struct Type {};
 
-template<typename T>
+template <typename T>
 static Number::VariantType MapToVariant(const T& v)
 {
     if constexpr (std::numeric_limits<T>::is_integer) {
@@ -35,19 +35,21 @@ static Number::VariantType MapToVariant(const T& v)
 }
 
 struct CompType {
-    template<typename T>
+    template <typename T>
     constexpr CompType(Type<T>)
-        : uid(UidFromType<T>()), size(sizeof(T)), load([](const void* data) {
+        : uid(UidFromType<T>()),
+          size(sizeof(T)),
+          load([](const void* data) {
               T v = *static_cast<const T*>(data);
               return MapToVariant(v);
           }),
           save([](Number::VariantType var, void* data) {
-              T v {};
+              T v{};
               std::visit([&](const auto& arg) { v = static_cast<T>(arg); }, var);
               *static_cast<T*>(data) = v;
           }),
           loadAny([](const IAny& any, Number::VariantType& var) {
-              T v {};
+              T v{};
               bool res = any.GetValue(v);
               if (res) {
                   var = MapToVariant(v);
@@ -113,7 +115,8 @@ static const CompType* FindCompatible(const IAny& any)
     return nullptr;
 }
 
-Number::Number(VariantType v) : value_(v) {}
+Number::Number(VariantType v) : value_(v)
+{}
 const BASE_NS::array_view<const TypeId> Number::GetCompatibleTypes(CompatibilityDirection dir) const
 {
     static BASE_NS::vector<TypeId> types = CompatibleTypes();
@@ -154,7 +157,7 @@ IAny::Ptr Number::Clone(const AnyCloneOptions& options) const
         CORE_LOG_E("Number: cloning into an array not supported.");
         return {};
     }
-    return IAny::Ptr(new Number(options.value == CloneValueType::COPY_VALUE ? value_ : VariantType {}));
+    return IAny::Ptr(new Number(options.value == CloneValueType::COPY_VALUE ? value_ : VariantType{}));
 }
 TypeId Number::GetTypeId(TypeIdRole role) const
 {
@@ -169,5 +172,5 @@ BASE_NS::string Number::GetTypeIdString() const
     return std::visit([&](auto arg) { return MetaType<decltype(arg)>::name; }, value_);
 }
 
-} // namespace Internal
+}  // namespace Internal
 META_END_NAMESPACE()

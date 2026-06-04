@@ -29,7 +29,8 @@ struct RenderHandleImageConverter {
     using SourceType = IImage::Ptr;
     using TargetType = RENDER_NS::RenderHandle;
 
-    RenderHandleImageConverter(IInternalScene::Ptr scene) : scene_(scene) {}
+    RenderHandleImageConverter(IInternalScene::Ptr scene) : scene_(scene)
+    {}
 
     SourceType ConvertToSource(META_NS::IAny& any, const TargetType& v) const
     {
@@ -66,7 +67,7 @@ struct RenderHandleImageConverter {
 
     IInternalScene::WeakPtr scene_;
 };
-} // namespace
+}  // namespace
 
 bool Bloom::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
 {
@@ -75,8 +76,9 @@ bool Bloom::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::strin
     }
     if (p->GetName() == "DirtMaskImage") {
         auto ep = CreateProperty(GetPropertyPath(path));
-        return ep && PushPropertyValue(p, META_NS::IValue::Ptr { new ConvertingValue<RenderHandleImageConverter>(
-                                              ep, { GetInternalScene() }) });
+        return ep &&
+               PushPropertyValue(
+                   p, META_NS::IValue::Ptr{new ConvertingValue<RenderHandleImageConverter>(ep, {GetInternalScene()})});
     }
     return PostProcessEffect::InitDynamicProperty(p, path);
 }

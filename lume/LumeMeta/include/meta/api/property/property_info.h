@@ -43,7 +43,7 @@ public:
     }
 
 private:
-    IInfo::ConstPtr info_ {};
+    IInfo::ConstPtr info_{};
 };
 
 /// Helper to access constant enum info for property
@@ -67,12 +67,13 @@ public:
     }
 
 private:
-    IEnum::ConstPtr info_ {};
+    IEnum::ConstPtr info_{};
 };
 
 class EnumInfoAccess {
 public:
-    EnumInfoAccess(IProperty* p, IAny* any) : p_(p), any_(any), lock_(p) {}
+    EnumInfoAccess(IProperty* p, IAny* any) : p_(p), any_(any), lock_(p)
+    {}
 
     ~EnumInfoAccess()
     {
@@ -109,7 +110,7 @@ public:
 
     EnumInfoAccess operator->()
     {
-        return EnumInfoAccess { p_.get(), any_.get() };
+        return EnumInfoAccess{p_.get(), any_.get()};
     }
 
 private:

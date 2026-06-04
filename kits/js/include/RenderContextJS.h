@@ -28,6 +28,7 @@
 
 #include "BaseObjectJS.h"
 #include "DisposeContainer.h"
+#include "export.h"
 
 struct GlobalResources;
 
@@ -35,7 +36,7 @@ struct SceneLoadParams {
     size_t offset = 0;
 };
 
-class RenderResources {
+class SCENE_ADDON_PUBLIC RenderResources {
 public:
     RenderResources(napi_env env);
     ~RenderResources();
@@ -46,8 +47,8 @@ public:
     void StrongDisposeHook(uintptr_t token, NapiApi::Object);
     void ReleaseStrongDispose(uintptr_t token);
 
-    void Dispose(napi_env env, BASE_NS::array_view<const uintptr_t> strongs,
-        BASE_NS::array_view<const uintptr_t> weaks, SceneJS* sc);
+    void Dispose(napi_env env, BASE_NS::array_view<const uintptr_t> strongs, BASE_NS::array_view<const uintptr_t> weaks,
+        SceneJS* sc);
 
     void StoreBitmap(BASE_NS::string_view uri, SCENE_NS::IBitmap::Ptr bitmap);
     SCENE_NS::IBitmap::Ptr FetchBitmap(BASE_NS::string_view uri);
@@ -59,7 +60,7 @@ private:
     DisposeContainer disposeContainer_;
 };
 
-class RenderContextJS final : public BaseObject {
+class SCENE_ADDON_PUBLIC RenderContextJS final : public BaseObject {
 public:
     static constexpr uint32_t ID = 201;
     static void Init(napi_env env, napi_value exports);
@@ -75,9 +76,9 @@ public:
 
 private:
     napi_value Dispose(NapiApi::FunctionContext<>& ctx);
-    void DisposeNative(void* id) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
-    bool InitRenderManager();
+    void InitRenderManager();
 
 public:
     napi_value GetResourceFactory(NapiApi::FunctionContext<>& ctx);
@@ -95,8 +96,6 @@ public:
     napi_value RegisterResourcePath(NapiApi::FunctionContext<BASE_NS::string, BASE_NS::string>& ctx);
 
 private:
-    napi_value CreateSceneCommon(napi_env env, BASE_NS::string uri, const SceneLoadParams& params);
-
     CORE_NS::Mutex mutex_;
     napi_env env_;
     SCENE_NS::IRenderResourceManager::Ptr renderManager_;
@@ -104,4 +103,4 @@ private:
     mutable BASE_NS::shared_ptr<RenderResources> resources_;
 };
 
-#endif // RENDERCONTEXTJS_H
+#endif  // RENDERCONTEXTJS_H

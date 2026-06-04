@@ -46,7 +46,7 @@ protected:
     bool AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext) override;
     bool DetachFrom(const META_NS::IAttach::Ptr& target) override;
 
-private: // IAnimationController
+private:  // IAnimationController
     BASE_NS::vector<IAnimation::WeakPtr> GetAnimations() const override;
     BASE_NS::vector<IAnimation::WeakPtr> GetRunning() const override;
     bool AddAnimation(const IAnimation::Ptr& animation) override;
@@ -63,9 +63,9 @@ private:
     void UpdateAnimations();
     void UpdateRunningHandler(const IAnimation::Ptr& animation, bool addHandler);
 
-    IOnChanged::InterfaceTypePtr updateCallback_;             // UpdateAnimations() callback
-    mutable BASE_NS::vector<IAnimation::WeakPtr> animations_; // All animations
-    mutable BASE_NS::vector<IAnimation::WeakPtr> running_;    // Currently running animations
+    IOnChanged::InterfaceTypePtr updateCallback_;              // UpdateAnimations() callback
+    mutable BASE_NS::vector<IAnimation::WeakPtr> animations_;  // All animations
+    mutable BASE_NS::vector<IAnimation::WeakPtr> running_;     // Currently running animations
     mutable std::shared_mutex mutex_;
 };
 

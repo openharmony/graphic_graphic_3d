@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 
 /// Export enum using its underlying type
-template<typename Value>
+template <typename Value>
 ISerNode::Ptr EnumExport(IExportFunctions& f, const Value& v)
 {
     using Type = BASE_NS::underlying_type_t<BASE_NS::remove_const_t<BASE_NS::remove_reference_t<decltype(v)>>>;
@@ -29,7 +29,7 @@ ISerNode::Ptr EnumExport(IExportFunctions& f, const Value& v)
 }
 
 /// Import enum using its underlying type
-template<typename Value>
+template <typename Value>
 bool EnumImport(IImportFunctions& f, const ISerNode::ConstPtr& node, Value& out)
 {
     using Plain = BASE_NS::remove_const_t<BASE_NS::remove_reference_t<decltype(out)>>;
@@ -43,7 +43,7 @@ bool EnumImport(IImportFunctions& f, const ISerNode::ConstPtr& node, Value& out)
 }
 
 /// Get value from integer or unsigned integer nodes as given type
-template<typename Type>
+template <typename Type>
 bool ExtractInteger(const ISerNode::ConstPtr& node, Type& out)
 {
     if (auto n = interface_cast<IIntNode>(node)) {
@@ -58,7 +58,7 @@ bool ExtractInteger(const ISerNode::ConstPtr& node, Type& out)
 }
 
 /// Get value from integers, floating point or boolean nodes as given type
-template<typename Type>
+template <typename Type>
 bool ExtractNumber(const ISerNode::ConstPtr& node, Type& out)
 {
     if (ExtractInteger(node, out)) {

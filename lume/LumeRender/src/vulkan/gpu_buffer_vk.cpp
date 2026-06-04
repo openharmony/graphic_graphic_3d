@@ -40,6 +40,9 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t GetAlignedByteSize(const uint32_t byteSize, const uint32_t alignment)
 {
+    if (byteSize > UINT32_MAX - alignment) {
+        return UINT32_MAX;
+    }
     return (byteSize + alignment - 1) & (~(alignment - 1));
 }
 
@@ -57,7 +60,7 @@ constexpr uint32_t GetMemoryMapAlignment(const VkPhysicalDeviceLimits& limits)
 
 GpuResourceMemoryVk GetPlatMemory(const VmaAllocationInfo& allocationInfo, const VkMemoryPropertyFlags flags)
 {
-    return GpuResourceMemoryVk {
+    return GpuResourceMemoryVk{
         allocationInfo.deviceMemory,
         allocationInfo.offset,
         allocationInfo.size,
@@ -67,40 +70,44 @@ GpuResourceMemoryVk GetPlatMemory(const VmaAllocationInfo& allocationInfo, const
     };
 }
 
-#if (RENDER_VULKAN_RT_ENABLED == 1)
-inline uint64_t GetBufferDeviceAddress(const VkDevice device, const VkBuffer buffer)
+inline uint64_t GetBufferDeviceAddress(
+    const VkDevice device, const VkBuffer buffer, PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddress)
 {
-    const VkBufferDeviceAddressInfo addressInfo {
-        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // sType
-        nullptr,                                      // pNext
-        buffer,                                       // buffer
+    const VkBufferDeviceAddressInfo addressInfo{
+        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,  // sType
+        nullptr,                                       // pNext
+        buffer,                                        // buffer
     };
     return vkGetBufferDeviceAddress(device, &addressInfo);
 }
-#endif
 
 #if (RENDER_PERF_ENABLED == 1)
 void RecordAllocation(
     PlatformGpuMemoryAllocator& gpuMemAllocator, const GpuBufferDesc& desc, const int64_t alignedByteSize)
 {
-    if (auto* inst = CORE_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
+    if (auto* inst = RENDER_NS::GetInstance<CORE_NS::IPerformanceDataManagerFactory>(CORE_NS::UID_PERFORMANCE_FACTORY);
         inst) {
         CORE_NS::IPerformanceDataManager* pdm = inst->Get("Memory");
 
-        pdm->UpdateData("AllGpuBuffers", "GPU_BUFFER", alignedByteSize,
+        pdm->UpdateData("AllGpuBuffers",
+            "GPU_BUFFER",
+            alignedByteSize,
             CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
         const string poolDebugName = gpuMemAllocator.GetBufferPoolDebugName(desc);
         if (!poolDebugName.empty()) {
-            pdm->UpdateData(poolDebugName, "GPU_BUFFER", alignedByteSize,
+            pdm->UpdateData(poolDebugName,
+                "GPU_BUFFER",
+                alignedByteSize,
                 CORE_NS::IPerformanceDataManager::PerformanceTimingData::DataType::BYTES);
         }
     }
 }
 #endif
-} // namespace
+}  // namespace
 
 GpuBufferVk::GpuBufferVk(Device& device, const GpuBufferDesc& desc)
-    : device_(device), desc_(desc),
+    : device_(device),
+      desc_(desc),
       isPersistantlyMapped_(
           (desc.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
           (desc.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
@@ -111,12 +118,15 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuBufferDesc& desc)
 }
 
 GpuBufferVk::GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& desc)
-    : device_(device), desc_(desc.bufferDesc), descAccel_(desc),
+    : device_(device),
+      desc_(desc.bufferDesc),
+      descAccel_(desc),
       isPersistantlyMapped_(
           (desc_.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
           (desc_.memoryPropertyFlags & MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)),
       isRingBuffer_(desc_.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER),
-      isAccelerationStructure_(true), bufferingCount_(isRingBuffer_ ? device_.GetCommandBufferingCount() : 1u)
+      isAccelerationStructure_(true),
+      bufferingCount_(isRingBuffer_ ? device_.GetCommandBufferingCount() : 1u)
 {
     CreateBufferImpl();
 
@@ -128,15 +138,15 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& des
     constexpr VkFlags createFlags = 0;
     const VkAccelerationStructureTypeKHR accelerationStructureType =
         static_cast<VkAccelerationStructureTypeKHR>(descAccel_.accelerationStructureType);
-    VkAccelerationStructureCreateInfoKHR createInfo {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR, // sType
-        nullptr,                                                  // pNext
-        createFlags,                                              // createFlags
-        plat_.buffer,                                             // buffer
-        0,                                                        // offset
-        (VkDeviceSize)platAccel_.byteSize,                        // size
-        accelerationStructureType,                                // type
-        0,                                                        // deviceAddress
+    VkAccelerationStructureCreateInfoKHR createInfo{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,  // sType
+        nullptr,                                                   // pNext
+        createFlags,                                               // createFlags
+        plat_.buffer,                                              // buffer
+        0,                                                         // offset
+        (VkDeviceSize)platAccel_.byteSize,                         // size
+        accelerationStructureType,                                 // type
+        0,                                                         // deviceAddress
     };
 
     const DeviceVk& deviceVk = (const DeviceVk&)device_;
@@ -145,19 +155,19 @@ GpuBufferVk::GpuBufferVk(Device& device, const GpuAccelerationStructureDesc& des
 
     const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
     if (extFunctions.vkCreateAccelerationStructureKHR && extFunctions.vkGetAccelerationStructureDeviceAddressKHR) {
-        VALIDATE_VK_RESULT(extFunctions.vkCreateAccelerationStructureKHR(vkDevice, // device
-            &createInfo,                                                           // pCreateInfo
-            nullptr,                                                               // pAllocator
-            &platAccel_.accelerationStructure));                                   // pAccelerationStructure
+        VALIDATE_VK_RESULT(extFunctions.vkCreateAccelerationStructureKHR(vkDevice,  // device
+            &createInfo,                                                            // pCreateInfo
+            nullptr,                                                                // pAllocator
+            &platAccel_.accelerationStructure));                                    // pAccelerationStructure
 
         if (platAccel_.accelerationStructure) {
-            const VkAccelerationStructureDeviceAddressInfoKHR addressInfo {
-                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // sType
-                nullptr,                                                          // pNext
-                platAccel_.accelerationStructure,                                 // accelerationStructure
+            const VkAccelerationStructureDeviceAddressInfoKHR addressInfo{
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,  // sType
+                nullptr,                                                           // pNext
+                platAccel_.accelerationStructure,                                  // accelerationStructure
             };
-            platAccel_.deviceAddress = extFunctions.vkGetAccelerationStructureDeviceAddressKHR(vkDevice, // device
-                &addressInfo);                                                                           // pInfo
+            platAccel_.deviceAddress = extFunctions.vkGetAccelerationStructureDeviceAddressKHR(vkDevice,  // device
+                &addressInfo);                                                                            // pInfo
         }
     }
 #endif
@@ -184,9 +194,9 @@ GpuBufferVk::~GpuBufferVk()
         const DeviceVk& deviceVk = (const DeviceVk&)device_;
         const DeviceVk::ExtFunctions& extFunctions = deviceVk.GetExtFunctions();
         if (extFunctions.vkDestroyAccelerationStructureKHR) {
-            extFunctions.vkDestroyAccelerationStructureKHR(device, // device
-                platAccel_.accelerationStructure,                  // accelerationStructure
-                nullptr);                                          // pAllocator
+            extFunctions.vkDestroyAccelerationStructureKHR(device,  // device
+                platAccel_.accelerationStructure,                   // accelerationStructure
+                nullptr);                                           // pAllocator
         }
     }
 #endif
@@ -224,18 +234,25 @@ void GpuBufferVk::CreateBufferImpl()
     const uint32_t minBufferAlignment = GetMinBufferAlignment(limits);
     const uint32_t minMapAlignment = (isRingBuffer_ || isPersistantlyMapped_) ? GetMemoryMapAlignment(limits) : 1u;
     plat_.bindMemoryByteSize = GetAlignedByteSize(desc_.byteSize, Math::max(minBufferAlignment, minMapAlignment));
-    plat_.fullByteSize = plat_.bindMemoryByteSize * bufferingCount_;
+    const uint64_t fullSize = static_cast<uint64_t>(plat_.bindMemoryByteSize) * bufferingCount_;
+    if (fullSize > UINT32_MAX) {
+        PLUGIN_LOG_W("Ring buffer size exceeds uint32_t (%llu), falling back to single buffering",
+            static_cast<unsigned long long>(fullSize));
+    }
+    plat_.fullByteSize = (fullSize <= UINT32_MAX) ? static_cast<uint32_t>(fullSize) : plat_.bindMemoryByteSize;
     plat_.currentByteOffset = 0;
     plat_.usage = static_cast<VkBufferUsageFlags>(desc_.usageFlags);
 
     AllocateMemory(requiredFlags, preferredFlags);
 
-#if (RENDER_VULKAN_RT_ENABLED == 1)
     if (plat_.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
-        const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
-        plat_.deviceAddress = GetBufferDeviceAddress(devicePlat.device, plat_.buffer);
+        const DeviceVk::ExtFunctions& extFunctions = static_cast<DeviceVk&>(device_).GetExtFunctions();
+        if (extFunctions.vkGetBufferDeviceAddressKHR) {
+            const DevicePlatformDataVk& devicePlat = (const DevicePlatformDataVk&)device_.GetPlatformData();
+            plat_.deviceAddress =
+                GetBufferDeviceAddress(devicePlat.device, plat_.buffer, extFunctions.vkGetBufferDeviceAddressKHR);
+        }
     }
-#endif
 
     if (PlatformGpuMemoryAllocator* gpuMemAllocator = device_.GetPlatformGpuMemoryAllocator(); gpuMemAllocator) {
         const auto memFlags =
@@ -271,6 +288,11 @@ const GpuAccelerationStructurePlatformDataVk& GpuBufferVk::GetPlatformDataAccele
     return platAccel_;
 }
 
+uint64_t GpuBufferVk::GetDeviceAddress() const
+{
+    return plat_.deviceAddress + plat_.currentByteOffset;
+}
+
 void* GpuBufferVk::Map()
 {
     if (!isMappable_) {
@@ -287,7 +309,7 @@ void* GpuBufferVk::Map()
         plat_.currentByteOffset = (plat_.currentByteOffset + plat_.bindMemoryByteSize) % plat_.fullByteSize;
     }
 
-    void* data { nullptr };
+    void* data{nullptr};
     if (isPersistantlyMapped_) {
         if (mem_.allocationInfo.pMappedData) {
             data = reinterpret_cast<uint8_t*>(mem_.allocationInfo.pMappedData) + plat_.currentByteOffset;
@@ -313,7 +335,7 @@ void* GpuBufferVk::MapMemory()
     }
     isMapped_ = true;
 
-    void* data { nullptr };
+    void* data{nullptr};
     if (isPersistantlyMapped_) {
         data = mem_.allocationInfo.pMappedData;
     } else {
@@ -346,19 +368,19 @@ void GpuBufferVk::Unmap() const
 
 void GpuBufferVk::AllocateMemory(const VkMemoryPropertyFlags requiredFlags, const VkMemoryPropertyFlags preferredFlags)
 {
-    constexpr VkBufferCreateFlags bufferCreateFlags { 0 };
-    const VkBufferCreateInfo bufferCreateInfo {
-        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,     // sType
-        nullptr,                                  // pNext
-        bufferCreateFlags,                        // flags
-        (VkDeviceSize)plat_.fullByteSize,         // size
-        plat_.usage,                              // usage
-        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, // sharingMode
-        0,                                        // queueFamilyIndexCount
-        nullptr,                                  // pQueueFamilyIndices
+    constexpr VkBufferCreateFlags bufferCreateFlags{0};
+    const VkBufferCreateInfo bufferCreateInfo{
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,      // sType
+        nullptr,                                   // pNext
+        bufferCreateFlags,                         // flags
+        (VkDeviceSize)plat_.fullByteSize,          // size
+        plat_.usage,                               // usage
+        VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,  // sharingMode
+        0,                                         // queueFamilyIndexCount
+        nullptr,                                   // pQueueFamilyIndices
     };
 
-    VmaAllocationCreateFlags allocationCreateFlags { 0 };
+    VmaAllocationCreateFlags allocationCreateFlags{0};
     if (isPersistantlyMapped_) {
         allocationCreateFlags |= static_cast<VmaAllocationCreateFlags>(
             VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT
@@ -378,20 +400,20 @@ void GpuBufferVk::AllocateMemory(const VkMemoryPropertyFlags requiredFlags, cons
     if (gpuMemAllocator) {
         // can be null handle -> default allocator
         const VmaPool customPool = gpuMemAllocator->GetBufferPool(desc_);
-        const VmaAllocationCreateInfo allocationCreateInfo {
-            allocationCreateFlags, // flags
+        const VmaAllocationCreateInfo allocationCreateInfo{
+            allocationCreateFlags,  // flags
 #ifdef USE_NEW_VMA
-            VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO, // usage
+            VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO,  // usage
 #else
-            VmaMemoryUsage::VMA_MEMORY_USAGE_UNKNOWN, // usage
+            VmaMemoryUsage::VMA_MEMORY_USAGE_UNKNOWN,  // usage
 #endif
-            requiredFlags,  // requiredFlags
-            preferredFlags, // preferredFlags
-            0,              // memoryTypeBits
-            customPool,     // pool
-            nullptr,        // pUserData
+            requiredFlags,   // requiredFlags
+            preferredFlags,  // preferredFlags
+            0,               // memoryTypeBits
+            customPool,      // pool
+            nullptr,         // pUserData
 #ifdef USE_NEW_VMA
-            0.f, // priority
+            0.f,  // priority
 #endif
         };
 

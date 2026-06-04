@@ -47,5 +47,5 @@ public:
 };
 
 BASE_NS::shared_ptr<IOffScreenScene> GetOffscreenSceneInstance();
-} // namespace OHOS::Render3D
-#endif // OHOS_RENDER_3D_INTF_OFFSCREEN_SCENE_H
+}  // namespace OHOS::Render3D
+#endif  // OHOS_RENDER_3D_INTF_OFFSCREEN_SCENE_H

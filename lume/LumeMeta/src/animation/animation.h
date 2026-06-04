@@ -35,7 +35,7 @@ namespace Internal {
 /**
  * @brief A base class which can be used by generic animation implementations.
  */
-template<class BaseAnimationInterface>
+template <class BaseAnimationInterface>
 class BaseAnimationFwd
     : public IntroduceInterfaces<DerivedFromTemplate, MetaObject, BaseAnimationInterface, INotifyOnChange, IAttachment,
           IContainable, IMutableContainable, IAnimationInternal, Resource> {
@@ -68,13 +68,13 @@ protected:
         return Serializer(c) & AutoSerialize();
     }
 
-protected: // IObject
+protected:  // IObject
     BASE_NS::string GetName() const override
     {
         return META_ACCESS_PROPERTY_VALUE(Name);
     }
 
-protected: // ILifecycle
+protected:  // ILifecycle
     bool Build(const IMetadata::Ptr& data) override
     {
         if (Super::Build(data)) {
@@ -91,19 +91,19 @@ protected: // ILifecycle
 
     virtual AnimationState::AnimationStateParams GetParams() = 0;
 
-protected: // IContainable
+protected:  // IContainable
     IObject::Ptr GetParent() const override
     {
         return parent_.lock();
     }
 
-protected: // IMutableContainable
+protected:  // IMutableContainable
     void SetParent(const IObject::Ptr& parent) override
     {
         parent_ = parent;
     }
 
-protected: // IAttach
+protected:  // IAttach
     bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) override
     {
         return GetState().Attach(attachment, dataContext);
@@ -113,7 +113,7 @@ protected: // IAttach
         return GetState().Detach(attachment);
     }
 
-protected: // IAnimationInternal
+protected:  // IAnimationInternal
     void ResetClock() override
     {
         GetState().ResetClock();
@@ -133,7 +133,7 @@ protected: // IAnimationInternal
         Evaluate();
     }
 
-protected: // IAttachment
+protected:  // IAttachment
     bool Attaching(const IAttach::Ptr& target, const IObject::Ptr& dataContext) override
     {
         SetValue(META_ACCESS_PROPERTY(AttachedTo), target);
@@ -147,13 +147,13 @@ protected: // IAttachment
         return true;
     }
 
-protected: // IAnimation
+protected:  // IAnimation
     void Step(const IClock::ConstPtr& clock) override
     {
         GetState().Step(clock);
     }
 
-protected: // INotifyOnChange
+protected:  // INotifyOnChange
     void NotifyChanged()
     {
         Invoke<IOnChanged>(EventOnChanged(MetadataQuery::EXISTING));
@@ -198,13 +198,13 @@ private:
     IObject::WeakPtr parent_;
 };
 
-template<class BaseAnimationInterface>
+template <class BaseAnimationInterface>
 class BaseStartableAnimationFwd
     : public IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>, IStartableAnimation> {
     using Super = IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>, IStartableAnimation>;
     using Super::GetState;
 
-protected: // IStartableAnimation
+protected:  // IStartableAnimation
     void Pause() override
     {
         GetState().Pause();
@@ -234,7 +234,7 @@ protected: // IStartableAnimation
 /**
  * @brief A base class which can be used by animation container implementations.
  */
-template<class BaseAnimationInterface>
+template <class BaseAnimationInterface>
 class BaseAnimationContainerFwd : public IntroduceInterfaces<BaseStartableAnimationFwd<BaseAnimationInterface>,
                                       IContainer, ILockable, IIterable, IImportFinalize> {
     static_assert(BASE_NS::is_convertible_v<BaseAnimationInterface*, IStaggeredAnimation*>,
@@ -243,7 +243,7 @@ class BaseAnimationContainerFwd : public IntroduceInterfaces<BaseStartableAnimat
         IIterable, IImportFinalize>;
     using IContainer::SizeType;
 
-public: // ILockable
+public:  // ILockable
     void Lock() const override
     {
         if (auto lockable = interface_cast<ILockable>(&GetContainer())) {
@@ -278,7 +278,7 @@ protected:
         return GenericError::SUCCESS;
     }
 
-public: // IIterable
+public:  // IIterable
     IterationResult Iterate(const IterationParameters& params) override
     {
         auto iterable = interface_cast<IIterable>(&GetContainer());
@@ -290,7 +290,7 @@ public: // IIterable
         return iterable ? iterable->Iterate(params) : IterationResult::FAILED;
     }
 
-public: // IContainer
+public:  // IContainer
     bool Add(const IObject::Ptr& object) override
     {
         return GetContainer().Add(object);
@@ -354,7 +354,7 @@ public: // IContainer
 
     META_FORWARD_EVENT(IEvent, OnContainerChanged, GetContainer().EventOnContainerChanged)
 
-protected: // IStaggeredAnimation
+protected:  // IStaggeredAnimation
     void AddAnimation(const IAnimation::Ptr& animation) override
     {
         GetContainer().Add(animation);
@@ -376,7 +376,7 @@ protected:
 /**
  * @brief A base class which can be used by property animation implementations.
  */
-template<class BaseAnimationInterface>
+template <class BaseAnimationInterface>
 class BasePropertyAnimationFwd : public IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>,
                                      IPropertyAnimation, IModifier, IImportFinalize> {
     static_assert(BASE_NS::is_convertible_v<BaseAnimationInterface*, ITimedAnimation*>,
@@ -390,7 +390,7 @@ protected:
     BasePropertyAnimationFwd() = default;
     ~BasePropertyAnimationFwd() override = default;
 
-protected: // ILifecycle
+protected:  // ILifecycle
     bool Build(const IMetadata::Ptr& data) override
     {
         if (Super::Build(data)) {
@@ -409,7 +409,7 @@ public:
     META_IMPLEMENT_PROPERTY(IProperty::WeakPtr, Property)
     META_IMPLEMENT_PROPERTY(TimeSpan, Duration)
 
-protected: // IModifier
+protected:  // IModifier
     EvaluationResult ProcessOnGet(IAny& value) override
     {
         return EvaluationResult::EVAL_CONTINUE;
@@ -421,7 +421,7 @@ protected: // IModifier
     bool IsCompatible(const TypeId& id) const override
     {
         if (auto p = GetTargetProperty()) {
-            PropertyLock lock { p.property };
+            PropertyLock lock{p.property};
             return META_NS::IsCompatible(lock->GetValueAny(), id);
         }
         return false;
@@ -433,8 +433,8 @@ protected:
     {
         GetState().UpdateTotalDuration();
         auto p = GetTargetProperty();
-        PropertyLock lock { p.property };
-        GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
+        PropertyLock lock{p.property};
+        GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId{});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         return GenericError::SUCCESS;
     }
@@ -453,8 +453,8 @@ protected:
     void PropertyChanged()
     {
         auto p = GetTargetProperty();
-        PropertyLock lock { p.property };
-        this->GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId {});
+        PropertyLock lock{p.property};
+        this->GetState().SetInterpolator(lock ? lock->GetTypeId() : TypeId{});
         SetValue(Super::META_ACCESS_PROPERTY(Valid), p);
         OnPropertyChanged(p, property_.lock());
         property_ = p.stack;
@@ -465,7 +465,7 @@ protected:
     TargetProperty GetTargetProperty() const noexcept
     {
         auto p = META_ACCESS_PROPERTY_VALUE(Property).lock();
-        return { p, interface_pointer_cast<IStackProperty>(p) };
+        return {p, interface_pointer_cast<IStackProperty>(p)};
     }
 
 private:
@@ -475,7 +475,7 @@ private:
 /**
  * @brief A base class which can be used by property animation implementations.
  */
-template<class BaseAnimationInterface>
+template <class BaseAnimationInterface>
 class PropertyAnimationFwd : public BasePropertyAnimationFwd<BaseAnimationInterface> {
     using Super = BasePropertyAnimationFwd<BaseAnimationInterface>;
 
@@ -494,8 +494,8 @@ private:
     Internal::PropertyAnimationState state_;
 };
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_H
+#endif  // META_SRC_ANIMATION_H

@@ -21,7 +21,6 @@
 #include <scene/ext/intf_engine_property_init.h>
 #include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/scene_property.h>
-#include <shared_mutex>
 
 #include <core/ecs/intf_ecs.h>
 
@@ -53,18 +52,18 @@ public:
     Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, BASE_NS::string_view path) override;
     Future<META_NS::IProperty::Ptr> CreateProperty(BASE_NS::string_view path) override;
 
+    Future<META_NS::IProperty::Ptr> ResolveProperty(
+        const META_NS::IMetadata::Ptr& meta, BASE_NS::string_view name, META_NS::MetadataQuery q) override;
     Future<META_NS::IProperty::Ptr> CreateProperty(const META_NS::IEngineValue::Ptr&) override;
-    virtual Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, const META_NS::IEngineValue::Ptr&) override;
+    Future<bool> AttachProperty(const META_NS::IProperty::Ptr&, const META_NS::IEngineValue::Ptr&) override;
 
-public: // call in engine thread
+public:  // call in engine thread
     bool Build(const META_NS::IMetadata::Ptr& d) override;
     void SyncProperties() override;
     BASE_NS::string GetPath() const override;
     bool SetName(const BASE_NS::string& name) override;
 
 protected:
-    void AddPropertyUpdateHook(const META_NS::IProperty::Ptr& p);
-
     void OnEntityEvent(CORE_NS::IEcs::EntityListener::EventType type) override;
     void OnComponentEvent(
         CORE_NS::IEcs::ComponentListener::EventType type, const CORE_NS::IComponentManager& component) override;
@@ -73,8 +72,6 @@ protected:
     bool AddEngineProperty(META_NS::IMetadata& object, const META_NS::IEngineValue::Ptr& v);
     void AddAllComponentProperties(META_NS::IMetadata& object);
     void AddAllProperties(META_NS::IMetadata& object, CORE_NS::IComponentManager*);
-    bool AddAllNamedComponentProperties(META_NS::IMetadata& object, BASE_NS::string_view cv);
-    CORE_NS::IComponentManager* FindUnregisteredComponentByName(BASE_NS::string_view name) const;
 
     bool AttachEnginePropertyImpl(
         META_NS::EnginePropertyHandle, const BASE_NS::string&, const META_NS::IProperty::Ptr&, BASE_NS::string_view);
@@ -84,11 +81,13 @@ protected:
 
     Future<bool> SetActive(bool active) override;
 
+    bool HandleAddAllProperties(const META_NS::IMetadata::Ptr& object, const BASE_NS::string& component);
+    bool HandleComponentProperties(const META_NS::IMetadata::Ptr& object, const BASE_NS::string& component);
+
 private:
     IInternalScene::WeakPtr scene_;
     CORE_NS::Entity entity_;
     META_NS::IEngineValueManager::Ptr valueManager_;
-    META_NS::IOnChanged::InterfaceTypePtr syncPropertiesCallable_;
 };
 
 SCENE_END_NAMESPACE()

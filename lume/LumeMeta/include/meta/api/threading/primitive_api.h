@@ -28,7 +28,8 @@ inline const SyncApi& GetSyncApi()
 
 struct ThreadId {
     ThreadId() = default;
-    ThreadId(NativeThreadHandle handle) : handle_(handle) {}
+    ThreadId(NativeThreadHandle handle) : handle_(handle)
+    {}
 
     bool operator==(const ThreadId& tid) const
     {
@@ -41,12 +42,12 @@ struct ThreadId {
     }
 
 private:
-    NativeThreadHandle handle_ {};
+    NativeThreadHandle handle_{};
 };
 
 inline ThreadId CurrentThreadId()
 {
-    return ThreadId { GetSyncApi().getThreadId() };
+    return ThreadId{GetSyncApi().getThreadId()};
 }
 
 CORE_END_NAMESPACE()

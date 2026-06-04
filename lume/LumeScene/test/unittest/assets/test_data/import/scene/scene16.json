@@ -1,0 +1,23 @@
+{
+	"version": "1.0",
+	"description": "test scene with spot light node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{
+					"type": "light",
+					"name": "test",
+					"lightType": "spot",
+					"color": [0.8, 0.8, 1.0, 0.0],
+					"intensity": 5.0,
+					"range": 10.0,
+					"spotInnerAngle": 0.3,
+					"spotOuterAngle": 0.6
+				}
+			]
+		}
+	}
+}

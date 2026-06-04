@@ -16,7 +16,7 @@
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 #include <gles/gpu_program_gles.h>
 #include <gles/shader_module_gles.h>
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 
 #include <device/device.h>
 #include <device/shader_manager.h>
@@ -114,16 +114,16 @@ UNIT_TEST(SRC_GpuProgram, GpuProgramTestOpenGL, testing::ext::TestSize.Level1)
         GpuShaderProgramCreateData createData;
         createData.vertShaderModule = vertShader.get();
         createData.fragShaderModule = fragShader.get();
-        GpuShaderProgramGLES shader { device, createData };
+        GpuShaderProgramGLES shader{device, createData};
         ASSERT_EQ(vertShader.get(), shader.GetPlatformData().vertShaderModule_);
         ASSERT_EQ(fragShader.get(), shader.GetPlatformData().fragShaderModule_);
         OES_Bind bind;
         bind.bind = 2u;
         bind.set = 0u;
-        auto patch = shader.OesPatch({ &bind, 1 }, 1);
+        auto patch = shader.OesPatch({&bind, 1}, 1);
         ASSERT_NE(nullptr, patch);
     }
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

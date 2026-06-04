@@ -28,7 +28,7 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T1, class T2>
+template <class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
 
@@ -72,19 +72,19 @@ private:
             INACTIVE = 2,
             // Entity is destroyed and waiting for GC
             DEAD = 3,
-        } state { State::FREE };
-        uint32_t generation { 0U };
+        } state{State::FREE};
+        uint32_t generation{0U};
         BASE_NS::refcnt_ptr<EntityReferenceCounter> counter;
     };
     BASE_NS::vector<EntityState> entities_;
     BASE_NS::vector<Entity> removedList_;
     BASE_NS::vector<uint32_t> freeList_;
     BASE_NS::vector<BASE_NS::pair<Entity, IEntityManager::EventType>> eventList_;
-    uint32_t generationCounter_ { 0 };
+    uint32_t generationCounter_{0};
 
     class IteratorImpl final : public Iterator {
-        const EntityManager* owner_ { nullptr };
-        uint32_t index_ { 0 };
+        const EntityManager* owner_{nullptr};
+        uint32_t index_{0};
         IteratorType type_;
 
     public:
@@ -99,4 +99,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_ECS_ENTITY_MANAGER_H
+#endif  // CORE_ECS_ENTITY_MANAGER_H

@@ -62,7 +62,7 @@ string FileManager::FixPath(string_view pathIn) const
         // might still be absolute (if it has drive letter)
         if ((path.size() > 1) && (path[1] == ':')) {
             // seems to start with drive letter so, it must be absolute?
-            if (path.size() == 2) { // 2: path size
+            if (path.size() == 2) {  // 2: path size
                 // has only drive letter? consider it as root of drive then
                 return protocol + ":///" + path + "/";
             }
@@ -72,11 +72,11 @@ string FileManager::FixPath(string_view pathIn) const
         return protocol + "://" + NormalizePath(basePath_ + path);
     }
     // Even if it's "absolute" it might still be missing the drive letter.
-    if ((path.size() < 3) || (path[2] != ':')) { // 3: path size limit; 2: the third letter
+    if ((path.size() < 3) || (path[2] != ':')) {  // 3: path size limit; 2: the third letter
         // seems to be missing the drive letter.
-        return protocol + "://" + NormalizePath(basePath_.substr(0, 3) + path); // 3: substring size
+        return protocol + "://" + NormalizePath(basePath_.substr(0, 3) + path);  // 3: substring size
     }
-    if (path.size() == 3) { // 3: path size
+    if (path.size() == 3) {  // 3: path size
         // has only drive letter? consider it as root of drive then
         return protocol + "://" + path + "/";
     }
@@ -90,7 +90,8 @@ string FileManager::FixPath(string_view pathIn) const
 #endif
 }
 
-FileManager::FileManager() : basePath_(GetCurrentDirectory()) {}
+FileManager::FileManager() : basePath_(GetCurrentDirectory())
+{}
 
 IFile::Ptr FileManager::OpenFile(const string_view uriIn)
 {
@@ -364,14 +365,15 @@ bool FileManager::RegisterPath(const string_view protocol, const string_view uri
     if (itp != filesystems_.end()) {
         // Okay there is a protocol handler already, we can't add paths to non-proxy protocols.
         CORE_LOG_W("Tried to register a path to non-proxy filesystem. protocol [%s] uriIn [%s]",
-            string(protocol).c_str(), string(uriIn).c_str());
+            string(protocol).c_str(),
+            string(uriIn).c_str());
         return false;
     }
 
     // Create new proxy protocol handler.
     auto pfs = make_unique<ProxyFilesystem>(*this, uri);
     proxyFilesystems_[protocol] = pfs.get();
-    RegisterFilesystem(protocol, IFilesystem::Ptr { pfs.release() });
+    RegisterFilesystem(protocol, IFilesystem::Ptr{pfs.release()});
     return true;
 }
 
@@ -396,6 +398,6 @@ IFilesystem* FileManager::GetFilesystem(const string_view protocol) const
 
 IFilesystem::Ptr FileManager::CreateROFilesystem(const void* const data, uint64_t size)
 {
-    return IFilesystem::Ptr { new RoFileSystem(data, static_cast<size_t>(size)) };
+    return IFilesystem::Ptr{new RoFileSystem(data, static_cast<size_t>(size))};
 }
 CORE_END_NAMESPACE()

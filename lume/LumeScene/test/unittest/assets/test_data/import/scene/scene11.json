@@ -1,0 +1,31 @@
+{
+	"version": "1.0",
+	"description": "test scene with light node",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode":	{
+			"type": "node",
+			"children": [
+				{
+					"type": "light",
+					"name": "test",
+					"lightType": "point",
+					"color": [0.5, 0.5, 0, 0],
+					"intensity": 1,
+					"nearPlane": 0.8,
+					"range": 0.1,
+					"additionalFactor": [1,2,3,4],
+					"lightLayerMask": 77,
+					"shadow": {
+						"enabled": true,
+						"strength": 0.6,
+						"depthBias": 0.1,
+						"normalBias": 0.2,
+						"layerMask": 44
+					}
+				}
+			]
+		}
+	}
+}

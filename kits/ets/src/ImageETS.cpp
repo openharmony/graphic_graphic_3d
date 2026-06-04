@@ -25,7 +25,7 @@
 #include <scene_adapter/intf_surface_stream.h>
 
 namespace OHOS::Render3D {
-ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_NS::IBitmap::Ptr bitmap)
+ImageETS::ImageETS(const std::string& name, const std::string& uri, const SCENE_NS::IBitmap::Ptr bitmap)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(bitmap)
 {
     SetName(name);
@@ -53,7 +53,7 @@ ImageETS::ImageETS(const std::string &name, const std::string &uri, const SCENE_
     }
 }
 
-ImageETS::ImageETS(const SCENE_NS::IImage::Ptr &image)
+ImageETS::ImageETS(const SCENE_NS::IImage::Ptr& image)
     : SceneResourceETS(SceneResourceETS::SceneResourceType::IMAGE), bitmap_(image)
 {
     resources_ = RenderContextETS::GetInstance().GetResources();

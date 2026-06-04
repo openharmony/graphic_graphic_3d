@@ -1,0 +1,82 @@
+{
+	"version": "1.0",
+	"data": {
+		"type": "postProcess",
+		"tonemap": {
+			"enabled": true,
+			"type": "aces",
+			"exposure": 1.5
+		},
+		"bloom": {
+			"enabled": true,
+			"type": "normal",
+			"quality": "high",
+			"thresholdHard": 0.8,
+			"thresholdSoft": 0.3,
+			"amountCoefficient": 0.5,
+			"scatter": 0.7
+		},
+		"blur": {
+			"enabled": true,
+			"type": "horizontal",
+			"quality": "low",
+			"filterSize": 2.5,
+			"maxMipmapLevel": 3
+		},
+		"motionBlur": {
+			"enabled": true,
+			"quality": "normal",
+			"sharpness": "medium",
+			"alpha": 0.6,
+			"velocityCoefficient": 1.2
+		},
+		"colorConversion": {
+			"enabled": true,
+			"function": "linearToSrgb",
+			"multiplyWithAlpha": true
+		},
+		"colorFringe": {
+			"enabled": true,
+			"distanceCoefficient": 0.3
+		},
+		"depthOfField": {
+			"enabled": true,
+			"focusPoint": 5.0,
+			"focusRange": 2.0,
+			"nearTransitionRange": 1.0,
+			"farTransitionRange": 1.5,
+			"nearBlur": 0.8,
+			"farBlur": 0.9,
+			"nearPlane": 0.1,
+			"farPlane": 100.0
+		},
+		"fxaa": {
+			"enabled": true,
+			"quality": "high",
+			"sharpness": "sharp"
+		},
+		"taa": {
+			"enabled": true,
+			"quality": "normal",
+			"sharpness": "soft"
+		},
+		"vignette": {
+			"enabled": true,
+			"coefficient": 0.4,
+			"power": 2.0
+		},
+		"lensFlare": {
+			"enabled": true,
+			"quality": "low",
+			"intensity": 0.7,
+			"flarePosition": [0.1, 0.2, 0.3]
+		},
+		"upscale": {
+			"enabled": true,
+			"smoothScale": 0.5,
+			"structureSensitivity": 0.3,
+			"edgeSharpness": 0.8,
+			"ratio": 1.5
+		}
+	}
+}

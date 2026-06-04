@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
+#include <limits>
 #if defined(__OHOS_PLATFORM__)
 #include <dlfcn.h>
 #endif
@@ -39,6 +40,7 @@ using namespace CORE_NS;
 namespace GLTF2 {
 namespace {
 using ByteBuffer = vector<uint8_t>;
+constexpr size_t MAX_BUFFER_SIZE = 512u * 1024u * 1024u;
 
 vector<uint8_t> Read(const uint8_t* src, uint32_t componentByteSize, uint32_t componentCount, uint32_t elementSize,
     size_t byteStride, uint32_t count)
@@ -74,7 +76,7 @@ vector<uint8_t> Read(Accessor const& accessor)
     // Import should be reworked so that instead of a task which loads all buffers there would be tasks for bufferViews.
     // this would allow progressing tasks depending on which part of a buffer has been loaded instead of waiting for the
     // whole buffer.
-    if (accessor.bufferView->meshoptCompression.buffer &&
+    if (accessor.bufferView && accessor.bufferView->meshoptCompression.buffer &&
         !accessor.bufferView->meshoptCompression.buffer->data.empty()) {
 #if defined(__OHOS_PLATFORM__)
         // Open the dynamic meshopt library.
@@ -106,12 +108,18 @@ vector<uint8_t> Read(Accessor const& accessor)
         auto& meshoptCompression = accessor.bufferView->meshoptCompression;
         meshoptCompression.dataLock.Lock();
         if (meshoptCompression.data.empty()) {
+            // meshoptCompression.byteOffset + byteLength validated against buffer->byteLength in
+            // ParseMeshoptCompression (gltf2_loader.cpp). ReadBufferFile guarantees buffer->data.size() >=
+            // buffer->byteLength.
             meshoptCompression.data.resize(accessor.bufferView->byteLength);
             const uint8_t* compressed = meshoptCompression.buffer->data.data() + meshoptCompression.byteOffset;
             uint8_t* decompressed = meshoptCompression.data.data();
             if (meshoptCompression.mode == CompressionMode::ATTRIBUTES) {
-                const auto ret = meshopt_decodeVertexBuffer(decompressed, meshoptCompression.count,
-                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                const auto ret = meshopt_decodeVertexBuffer(decompressed,
+                    meshoptCompression.count,
+                    meshoptCompression.byteStride,
+                    compressed,
+                    meshoptCompression.byteLength);
                 if (ret) {
                     PLUGIN_LOG_E("meshopt_decodeVertexBuffer %d", ret);
                     meshoptCompression.data.clear();
@@ -125,8 +133,11 @@ vector<uint8_t> Read(Accessor const& accessor)
                 }
             } else {
                 // mode 1 (TRIANGLES) for triangle list, mode 2 (INDICES) for other topologies,
-                const auto ret = meshopt_decodeIndexBuffer(decompressed, meshoptCompression.count,
-                    meshoptCompression.byteStride, compressed, meshoptCompression.byteLength);
+                const auto ret = meshopt_decodeIndexBuffer(decompressed,
+                    meshoptCompression.count,
+                    meshoptCompression.byteStride,
+                    compressed,
+                    meshoptCompression.byteLength);
                 if (ret) {
                     PLUGIN_LOG_E("meshopt_decodeIndexBuffer %d", ret);
                     meshoptCompression.data.clear();
@@ -136,15 +147,27 @@ vector<uint8_t> Read(Accessor const& accessor)
         meshoptCompression.dataLock.Unlock();
         vector<uint8_t> data;
         if (!meshoptCompression.data.empty()) {
-            const auto total = (count * elementSize);
+            // accessor.byteOffset + count * elementSize fits within bufferView->byteLength by ValidateAccessor
+            // (gltf2_loader.cpp). meshoptCompression.data is sized to bufferView->byteLength above.
+            // Additional defense-in-depth: verify stride-aware bounds against actual decompressed size.
+            const size_t total = static_cast<size_t>(count) * elementSize;
             data.resize(total);
             // copy accessor.count elements from accessor.byteOffset taking stride into account.
             const size_t byteStride = meshoptCompression.byteStride;
+            const size_t decompressedSize = meshoptCompression.data.size();
+            const size_t srcRequired =
+                (byteStride > 0 && byteStride != elementSize && count > 0)
+                    ? accessor.byteOffset + static_cast<size_t>(count - 1) * byteStride + elementSize
+                    : accessor.byteOffset + total;
+            if (srcRequired > decompressedSize) {
+                PLUGIN_LOG_E("meshopt accessor out of source bounds");
+#if defined(__OHOS_PLATFORM__)
+                dlclose(handle);
+#endif
+                return {};
+            }
             const uint8_t* src = accessor.bufferView->meshoptCompression.data.data() + accessor.byteOffset;
             uint8_t* dst = data.data();
-            if (data.size() < (accessor.byteOffset + total)) {
-                data.resize(total);
-            }
             if ((elementSize == byteStride) || (byteStride == 0)) {
                 std::copy(src, src + total, dst);
             } else {
@@ -161,7 +184,11 @@ vector<uint8_t> Read(Accessor const& accessor)
         return data;
     }
 #endif
-    if (!accessor.bufferView->data) {
+    if (!accessor.bufferView || !accessor.bufferView->data) {
+        return {};
+    }
+
+    if (!accessor.bufferView->buffer) {
         return {};
     }
 
@@ -191,7 +218,7 @@ vector<uint8_t> Read(Accessor const& accessor)
     return Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
 }
 
-template<class T>
+template <class T>
 bool CopySparseElements(
     ByteBuffer& destination, const ByteBuffer& source, const ByteBuffer& indices, uint32_t elementSize, size_t count)
 {
@@ -207,7 +234,7 @@ bool CopySparseElements(
 
     const size_t destinationElementCount = destination.size() / elementSizeInBytes;
     for (size_t i = 0u; i < count; ++i) {
-        T sparseIndex {};
+        T sparseIndex{};
         if (!CloneData(&sparseIndex, sizeof(T), indices.data() + (i * sizeof(T)), sizeof(T))) {
             PLUGIN_LOG_E("Failed to read sparse index.");
             return false;
@@ -220,8 +247,10 @@ bool CopySparseElements(
 
         const size_t sourceOffset = i * elementSizeInBytes;
         const size_t destinationOffset = destinationIndex * elementSizeInBytes;
-        if (!CloneData(destination.data() + destinationOffset, destination.size() - destinationOffset,
-            source.data() + sourceOffset, elementSizeInBytes)) {
+        if (!CloneData(destination.data() + destinationOffset,
+                destination.size() - destinationOffset,
+                source.data() + sourceOffset,
+                elementSizeInBytes)) {
             PLUGIN_LOG_E("Copying of sparseElements failed.");
             return false;
         }
@@ -235,14 +264,14 @@ BufferLoadResult ResolveBufferSource(Data const& data, Buffer const& buffer, str
     if (buffer.uri.size()) {
         uri = buffer.uri;
         offset = 0u;
-        return BufferLoadResult {};
+        return BufferLoadResult{};
     }
     if (data.defaultResourcesOffset >= 0) {
         uri = data.defaultResources;
         offset = static_cast<uint32_t>(data.defaultResourcesOffset);
-        return BufferLoadResult {};
+        return BufferLoadResult{};
     }
-    return BufferLoadResult { false, "Failed to open buffer: " + buffer.uri + '\n' };
+    return BufferLoadResult{false, "Failed to open buffer: " + buffer.uri + '\n'};
 }
 
 // Resolves a relative URI against a base directory path using RFC 3986 §5.2 dot-removal.
@@ -264,7 +293,7 @@ string ResolveUri(string_view base, string_view uri)
         }
         pos = slash + 1u;
     }
-    const size_t floor = segments.size(); // cannot pop below this
+    const size_t floor = segments.size();  // cannot pop below this
     string result;
 
     // Process URI segments (RFC 3986 §5.2.4 remove-dot-segments).
@@ -276,7 +305,7 @@ string ResolveUri(string_view base, string_view uri)
 
         if (seg == "..") {
             if (segments.size() <= floor) {
-                return result; // would escape the base directory
+                return result;  // would escape the base directory
             }
             segments.pop_back();
         } else if (!seg.empty() && seg != ".") {
@@ -314,34 +343,32 @@ IFile* OpenBufferFile(Data const& data, IFileManager& fileManager, const string_
 BufferLoadResult ReadBufferFile(Buffer& buffer, IFile& file, const uint32_t offset)
 {
     if (!file.Seek(offset)) {
-        return BufferLoadResult { false, "Failed to seek buffer: " + buffer.uri + '\n' };
+        return BufferLoadResult{false, "Failed to seek buffer: " + buffer.uri + '\n'};
     }
 
     const auto length = file.GetLength();
     const auto position = file.GetPosition();
     if (position > length) {
-        return BufferLoadResult { false, "Failed to read buffer: " + buffer.uri + '\n' };
+        return BufferLoadResult{false, "Failed to read buffer: " + buffer.uri + '\n'};
     }
     const auto remaining = length - position;
     if (remaining < buffer.byteLength) {
-        PLUGIN_LOG_W("Buffer size %zu larger than file size (%" PRIu64 " remaining).", buffer.byteLength, remaining);
-        buffer.byteLength = static_cast<size_t>(remaining);
+        return BufferLoadResult{false, "Buffer larger than file: " + buffer.uri + '\n'};
     }
-
     buffer.data.resize(buffer.byteLength);
     if (file.Read(buffer.data.data(), buffer.byteLength) != buffer.byteLength) {
-        return BufferLoadResult { false, "Failed to read buffer: " + buffer.uri + '\n' };
+        return BufferLoadResult{false, "Failed to read buffer: " + buffer.uri + '\n'};
     }
-    return BufferLoadResult {};
+    return BufferLoadResult{};
 }
 
 BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& fileManager)
 {
     if (IsDataURI(buffer.uri)) {
-        if (!DecodeDataURI(buffer.data, buffer.uri, buffer.byteLength, true)) {
-            return BufferLoadResult { false, "Failed to decode data uri: " + buffer.uri + '\n' };
+        if (!DecodeDataURI(buffer.data, buffer.uri, buffer.byteLength, true, MAX_BUFFER_SIZE)) {
+            return BufferLoadResult{false, "Failed to decode data uri: " + buffer.uri + '\n'};
         }
-        return BufferLoadResult {};
+        return BufferLoadResult{};
     }
 
     uint32_t offset = 0u;
@@ -354,7 +381,7 @@ BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& file
     IFile::Ptr file;
     IFile* filePtr = OpenBufferFile(data, fileManager, uri, file);
     if (!filePtr) {
-        return BufferLoadResult { false, "Failed open uri: " + buffer.uri + '\n' };
+        return BufferLoadResult{false, "Failed open uri: " + buffer.uri + '\n'};
     }
 
     return ReadBufferFile(buffer, *filePtr, offset);
@@ -377,6 +404,11 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
     auto const& sparseIndicesBufferView = accessor.sparse.indices.bufferView;
     vector<uint8_t> sparseIndicesData;
     if (sparseIndicesBufferView->buffer && sparseIndicesBufferView->data) {
+        if (accessor.sparse.indices.byteOffset >= sparseIndicesBufferView->byteLength) {
+            result.error += "sparse indices byteOffset out of range\n";
+            result.success = false;
+            return;
+        }
         const uint8_t* src = sparseIndicesBufferView->data + accessor.sparse.indices.byteOffset;
 
         auto const componentCount = 1u;
@@ -394,6 +426,11 @@ void LoadSparseAccessor(Accessor const& accessor, GLTFLoadDataResult& result)
 
     auto const& sparseValuesBufferView = accessor.sparse.values.bufferView;
     if (sparseValuesBufferView->buffer && sparseValuesBufferView->data) {
+        if (accessor.sparse.values.byteOffset >= sparseValuesBufferView->byteLength) {
+            result.error += "sparse values byteOffset out of range\n";
+            result.success = false;
+            return;
+        }
         vector<uint8_t> sourceData;
 
         const uint8_t* src = sparseValuesBufferView->data + accessor.sparse.values.byteOffset;
@@ -461,7 +498,7 @@ bool ReadUriToVector(
     }
     return false;
 }
-} // namespace
+}  // namespace
 
 // Helper functions to access GLTF2 data
 bool GetAttributeType(const string_view dataType, AttributeBase& out)
@@ -473,7 +510,7 @@ bool GetAttributeType(const string_view dataType, AttributeBase& out)
         return false;
     }
 
-    AttributeBase attribute { AttributeType::INVALID, 0U };
+    AttributeBase attribute{AttributeType::INVALID, 0U};
     /*
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, and WEIGHTS_0
     */
@@ -488,28 +525,28 @@ bool GetAttributeType(const string_view dataType, AttributeBase& out)
         attribute.index = 0u;
 
         if (size > 9u) {
-            attribute.index = (unsigned int)(data[9u] - '0'); // NOTE: check if size is over 10 => index more than 9
+            attribute.index = (unsigned int)(data[9u] - '0');  // NOTE: check if size is over 10 => index more than 9
         }
     } else if (dataType.starts_with("COLOR_")) {
         attribute.type = AttributeType::COLOR;
         attribute.index = 0u;
 
         if (size > 6u) {
-            attribute.index = (unsigned int)(data[6u] - '0'); // NOTE: check if size is over 7 => index more than 9
+            attribute.index = (unsigned int)(data[6u] - '0');  // NOTE: check if size is over 7 => index more than 9
         }
     } else if (dataType.starts_with("JOINTS_")) {
         attribute.type = AttributeType::JOINTS;
         attribute.index = 0u;
 
         if (size > 7u) {
-            attribute.index = (unsigned int)(data[7u] - '0'); // NOTE: check if size is over 8 => index more than 9
+            attribute.index = (unsigned int)(data[7u] - '0');  // NOTE: check if size is over 8 => index more than 9
         }
     } else if (dataType.starts_with("WEIGHTS_")) {
         attribute.type = AttributeType::WEIGHTS;
         attribute.index = 0u;
 
         if (size > 8u) {
-            attribute.index = (unsigned int)(data[8u] - '0'); // NOTE: check if size is over 9 => index more than 9
+            attribute.index = (unsigned int)(data[8u] - '0');  // NOTE: check if size is over 9 => index more than 9
         }
     } else {
         return false;
@@ -538,7 +575,7 @@ bool GetMimeType(const string_view type, MimeType& out)
     } else if (type == "image/vnd-ms.dds") {
         out = MimeType::DDS;
     } else if (type == "application/octet-stream") {
-        out = MimeType::KTX; // Probably it's a KTX file, bundled by using an external application.
+        out = MimeType::KTX;  // Probably it's a KTX file, bundled by using an external application.
     }
     return out != MimeType::INVALID;
 }
@@ -579,16 +616,16 @@ bool GetCameraType(const string_view type, CameraType& out)
 
 bool GetAlphaMode(const string_view dataType, AlphaMode& out)
 {
-    out = AlphaMode::OPAQUE;
+    out = AlphaMode::OPAQUE_ALPHA;
 
     bool result = true;
 
     if (dataType == "BLEND") {
-        out = AlphaMode::BLEND;
+        out = AlphaMode::BLEND_ALPHA;
     } else if (dataType == "MASK") {
-        out = AlphaMode::MASK;
+        out = AlphaMode::MASK_ALPHA;
     } else if (dataType == "OPAQUE") {
-        out = AlphaMode::OPAQUE;
+        out = AlphaMode::OPAQUE_ALPHA;
     } else {
         result = false;
     }
@@ -633,13 +670,13 @@ bool GetAnimationPath(string_view path, AnimationPath& out)
 }
 
 namespace {
-constexpr string_view ATTRIBUTE_TYPES[] = { "NORMAL", "POSITION", "TANGENT" };
-constexpr string_view TEXCOORD_ATTRIBUTES[] = { "TEXCOORD_0", "TEXCOORD_1", "TEXCOORD_2", "TEXCOORD_3", "TEXCOORD_4" };
-constexpr string_view COLOR_ATTRIBUTES[] = { "COLOR_0", "COLOR_1", "COLOR_2", "COLOR_3", "COLOR_4" };
-constexpr string_view JOINTS_ATTRIBUTES[] = { "JOINTS_0", "JOINTS_1", "JOINTS_2", "JOINTS_3", "JOINTS_4" };
-constexpr string_view WEIGHTS_ATTRIBUTES[] = { "WEIGHTS_0", "WEIGHTS_1", "WEIGHTS_2", "WEIGHTS_3", "WEIGHTS_4" };
+constexpr string_view ATTRIBUTE_TYPES[] = {"NORMAL", "POSITION", "TANGENT"};
+constexpr string_view TEXCOORD_ATTRIBUTES[] = {"TEXCOORD_0", "TEXCOORD_1", "TEXCOORD_2", "TEXCOORD_3", "TEXCOORD_4"};
+constexpr string_view COLOR_ATTRIBUTES[] = {"COLOR_0", "COLOR_1", "COLOR_2", "COLOR_3", "COLOR_4"};
+constexpr string_view JOINTS_ATTRIBUTES[] = {"JOINTS_0", "JOINTS_1", "JOINTS_2", "JOINTS_3", "JOINTS_4"};
+constexpr string_view WEIGHTS_ATTRIBUTES[] = {"WEIGHTS_0", "WEIGHTS_1", "WEIGHTS_2", "WEIGHTS_3", "WEIGHTS_4"};
 constexpr string_view ATTRIBUTE_INVALID = "INVALID";
-} // namespace
+}  // namespace
 
 string_view GetAttributeType(AttributeBase dataType)
 {
@@ -766,11 +803,11 @@ string_view GetLightType(LightType type)
 string_view GetAlphaMode(AlphaMode aMode)
 {
     switch (aMode) {
-        case AlphaMode::BLEND:
+        case AlphaMode::BLEND_ALPHA:
             return "BLEND";
-        case AlphaMode::MASK:
+        case AlphaMode::MASK_ALPHA:
             return "MASK";
-        case AlphaMode::OPAQUE:
+        case AlphaMode::OPAQUE_ALPHA:
         default:
             return "OPAQUE";
     }
@@ -782,9 +819,9 @@ string_view GetAnimationInterpolation(AnimationInterpolation interpolation)
         case AnimationInterpolation::STEP:
             return "STEP";
         default:
-            [[fallthrough]]; // follow the same procedure as LINEAR
+            [[fallthrough]];  // follow the same procedure as LINEAR
         case AnimationInterpolation::INVALID:
-            [[fallthrough]]; // follow the same procedure as LINEAR
+            [[fallthrough]];  // follow the same procedure as LINEAR
         case AnimationInterpolation::LINEAR:
             return "LINEAR";
         case AnimationInterpolation::SPLINE:
@@ -796,7 +833,7 @@ string_view GetAnimationPath(AnimationPath path)
 {
     switch (path) {
         default:
-            [[fallthrough]]; // follow the same procedure as INVALID
+            [[fallthrough]];  // follow the same procedure as INVALID
         case AnimationPath::INVALID:
             PLUGIN_LOG_W("invalid animation path %d", static_cast<int>(path));
             return "translation";
@@ -910,66 +947,71 @@ struct AttributeValidationErrors {
     string_view componentTypeError;
 };
 
-constexpr const DataType NORMAL_DATA_TYPES[] = { DataType::VEC3 };
-constexpr const ComponentType NORMAL_COMPONENT_TYPES[] = { ComponentType::FLOAT };
-constexpr const DataType POSITION_DATA_TYPES[] = { DataType::VEC3 };
-constexpr const ComponentType POSITION_COMPONENT_TYPES[] = { ComponentType::FLOAT };
-constexpr const DataType TANGENT_DATA_TYPES[] = { DataType::VEC4 };
-constexpr const ComponentType TANGENT_COMPONENT_TYPES[] = { ComponentType::FLOAT };
-constexpr const DataType TEXCOORD_DATA_TYPES[] = { DataType::VEC2 };
-constexpr const ComponentType TEXCOORD_COMPONENT_TYPES[] = { ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE,
-    ComponentType::UNSIGNED_SHORT };
-constexpr const DataType COLOR_DATA_TYPES[] = { DataType::VEC3, DataType::VEC4 };
-constexpr const ComponentType COLOR_COMPONENT_TYPES[] = { ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE,
-    ComponentType::UNSIGNED_SHORT };
-constexpr const DataType JOINTS_DATA_TYPES[] = { DataType::VEC4 };
-constexpr const ComponentType JOINTS_COMPONENT_TYPES[] = { ComponentType::UNSIGNED_BYTE,
-    ComponentType::UNSIGNED_SHORT };
-constexpr const DataType WEIGHTS_DATA_TYPES[] = { DataType::VEC4 };
-constexpr const ComponentType WEIGHTS_COMPONENT_TYPES[] = { ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE,
-    ComponentType::UNSIGNED_SHORT };
+constexpr const DataType NORMAL_DATA_TYPES[] = {DataType::VEC3};
+constexpr const ComponentType NORMAL_COMPONENT_TYPES[] = {ComponentType::FLOAT};
+constexpr const DataType POSITION_DATA_TYPES[] = {DataType::VEC3};
+constexpr const ComponentType POSITION_COMPONENT_TYPES[] = {ComponentType::FLOAT};
+constexpr const DataType TANGENT_DATA_TYPES[] = {DataType::VEC4};
+constexpr const ComponentType TANGENT_COMPONENT_TYPES[] = {ComponentType::FLOAT};
+constexpr const DataType TEXCOORD_DATA_TYPES[] = {DataType::VEC2};
+constexpr const ComponentType TEXCOORD_COMPONENT_TYPES[] = {
+    ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE, ComponentType::UNSIGNED_SHORT};
+constexpr const DataType COLOR_DATA_TYPES[] = {DataType::VEC3, DataType::VEC4};
+constexpr const ComponentType COLOR_COMPONENT_TYPES[] = {
+    ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE, ComponentType::UNSIGNED_SHORT};
+constexpr const DataType JOINTS_DATA_TYPES[] = {DataType::VEC4};
+constexpr const ComponentType JOINTS_COMPONENT_TYPES[] = {ComponentType::UNSIGNED_BYTE, ComponentType::UNSIGNED_SHORT};
+constexpr const DataType WEIGHTS_DATA_TYPES[] = {DataType::VEC4};
+constexpr const ComponentType WEIGHTS_COMPONENT_TYPES[] = {
+    ComponentType::FLOAT, ComponentType::UNSIGNED_BYTE, ComponentType::UNSIGNED_SHORT};
 
 constexpr const AttributeValidation ATTRIBUTE_VALIDATION[] = {
-    { NORMAL_DATA_TYPES, NORMAL_COMPONENT_TYPES },
-    { POSITION_DATA_TYPES, POSITION_COMPONENT_TYPES },
-    { TANGENT_DATA_TYPES, TANGENT_COMPONENT_TYPES },
-    { TEXCOORD_DATA_TYPES, TEXCOORD_COMPONENT_TYPES },
-    { COLOR_DATA_TYPES, COLOR_COMPONENT_TYPES },
-    { JOINTS_DATA_TYPES, JOINTS_COMPONENT_TYPES },
-    { WEIGHTS_DATA_TYPES, WEIGHTS_COMPONENT_TYPES },
+    {NORMAL_DATA_TYPES, NORMAL_COMPONENT_TYPES},
+    {POSITION_DATA_TYPES, POSITION_COMPONENT_TYPES},
+    {TANGENT_DATA_TYPES, TANGENT_COMPONENT_TYPES},
+    {TEXCOORD_DATA_TYPES, TEXCOORD_COMPONENT_TYPES},
+    {COLOR_DATA_TYPES, COLOR_COMPONENT_TYPES},
+    {JOINTS_DATA_TYPES, JOINTS_COMPONENT_TYPES},
+    {WEIGHTS_DATA_TYPES, WEIGHTS_COMPONENT_TYPES},
 };
 
 #if defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
-constexpr const ComponentType NORMAL_COMPONENT_TYPES_Q[] = { ComponentType::BYTE, ComponentType::SHORT,
-    ComponentType::FLOAT };
-constexpr const ComponentType POSITION_COMPONENT_TYPES_Q[] = { ComponentType::BYTE, ComponentType::UNSIGNED_BYTE,
-    ComponentType::SHORT, ComponentType::UNSIGNED_SHORT, ComponentType::FLOAT };
-constexpr const ComponentType TANGENT_COMPONENT_TYPES_Q[] = { ComponentType::BYTE, ComponentType::SHORT,
-    ComponentType::FLOAT };
-constexpr const ComponentType TEXCOORD_COMPONENT_TYPES_Q[] = { ComponentType::BYTE, ComponentType::UNSIGNED_BYTE,
-    ComponentType::SHORT, ComponentType::UNSIGNED_SHORT, ComponentType::FLOAT };
+constexpr const ComponentType NORMAL_COMPONENT_TYPES_Q[] = {
+    ComponentType::BYTE, ComponentType::SHORT, ComponentType::FLOAT};
+constexpr const ComponentType POSITION_COMPONENT_TYPES_Q[] = {ComponentType::BYTE,
+    ComponentType::UNSIGNED_BYTE,
+    ComponentType::SHORT,
+    ComponentType::UNSIGNED_SHORT,
+    ComponentType::FLOAT};
+constexpr const ComponentType TANGENT_COMPONENT_TYPES_Q[] = {
+    ComponentType::BYTE, ComponentType::SHORT, ComponentType::FLOAT};
+constexpr const ComponentType TEXCOORD_COMPONENT_TYPES_Q[] = {ComponentType::BYTE,
+    ComponentType::UNSIGNED_BYTE,
+    ComponentType::SHORT,
+    ComponentType::UNSIGNED_SHORT,
+    ComponentType::FLOAT};
 
 constexpr const AttributeValidation ATTRIBUTE_VALIDATION_Q[] = {
-    { NORMAL_DATA_TYPES, NORMAL_COMPONENT_TYPES_Q },
-    { POSITION_DATA_TYPES, POSITION_COMPONENT_TYPES_Q },
-    { TANGENT_DATA_TYPES, TANGENT_COMPONENT_TYPES_Q },
-    { TEXCOORD_DATA_TYPES, TEXCOORD_COMPONENT_TYPES_Q },
-    { COLOR_DATA_TYPES, COLOR_COMPONENT_TYPES },
-    { JOINTS_DATA_TYPES, JOINTS_COMPONENT_TYPES },
-    { WEIGHTS_DATA_TYPES, WEIGHTS_COMPONENT_TYPES },
+    {NORMAL_DATA_TYPES, NORMAL_COMPONENT_TYPES_Q},
+    {POSITION_DATA_TYPES, POSITION_COMPONENT_TYPES_Q},
+    {TANGENT_DATA_TYPES, TANGENT_COMPONENT_TYPES_Q},
+    {TEXCOORD_DATA_TYPES, TEXCOORD_COMPONENT_TYPES_Q},
+    {COLOR_DATA_TYPES, COLOR_COMPONENT_TYPES},
+    {JOINTS_DATA_TYPES, JOINTS_COMPONENT_TYPES},
+    {WEIGHTS_DATA_TYPES, WEIGHTS_COMPONENT_TYPES},
 };
 #endif
 
 constexpr const AttributeValidationErrors ATTRIBUTE_VALIDATION_ERRORS[] = {
-    { "NORMAL accessor must use VEC3.", "NORMAL accessor must use FLOAT." },
-    { "POSITION accessor must use VEC3.", "POSITION accessor must use FLOAT." },
-    { "TANGENT accessor must use VEC4.", "TANGENT accessor must use FLOAT." },
-    { "TEXCOORD accessor must use VEC2.", "TEXCOORD accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT." },
-    { "COLOR accessor must use VEC3 or VEC4.", "COLOR accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT." },
-    { "JOINTS accessor must use VEC4.", "JOINTS accessor must use UNSIGNED_BYTE or UNSIGNED_SHORT." },
-    { "WEIGHTS accessor must use VEC4.", "WEIGHTS accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT." },
+    {"NORMAL accessor must use VEC3.", "NORMAL accessor must use FLOAT."},
+    {"POSITION accessor must use VEC3.", "POSITION accessor must use FLOAT."},
+    {"TANGENT accessor must use VEC4.", "TANGENT accessor must use FLOAT."},
+    {"TEXCOORD accessor must use VEC2.", "TEXCOORD accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT."},
+    {"COLOR accessor must use VEC3 or VEC4.", "COLOR accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT."},
+    {"JOINTS accessor must use VEC4.", "JOINTS accessor must use UNSIGNED_BYTE or UNSIGNED_SHORT."},
+    {"WEIGHTS accessor must use VEC4.", "WEIGHTS accessor must use FLOAT, UNSIGNED_BYTE, or UNSIGNED_SHORT."},
 };
-} // namespace
+}  // namespace
 
 string_view ValidatePrimitiveAttribute(
     AttributeType attribute, DataType accessorType, ComponentType accessorComponentType)
@@ -977,10 +1019,12 @@ string_view ValidatePrimitiveAttribute(
     const auto attributeIndex = static_cast<size_t>(attribute);
     if (attributeIndex < countof(ATTRIBUTE_VALIDATION)) {
         auto& validation = ATTRIBUTE_VALIDATION[attributeIndex];
-        if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
+        if (std::none_of(validation.dataTypes.begin(),
+                validation.dataTypes.end(),
                 [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
-        } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
+        } else if (std::none_of(validation.componentTypes.begin(),
+                       validation.componentTypes.end(),
                        [accessorComponentType](
                            const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
@@ -1041,10 +1085,12 @@ string_view ValidatePrimitiveAttributeQuatization(
     const auto attributeIndex = static_cast<size_t>(attribute);
     if (attributeIndex < countof(ATTRIBUTE_VALIDATION_Q)) {
         auto& validation = ATTRIBUTE_VALIDATION_Q[attributeIndex];
-        if (std::none_of(validation.dataTypes.begin(), validation.dataTypes.end(),
+        if (std::none_of(validation.dataTypes.begin(),
+                validation.dataTypes.end(),
                 [accessorType](const DataType& validType) { return validType == accessorType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].dataTypeError;
-        } else if (std::none_of(validation.componentTypes.begin(), validation.componentTypes.end(),
+        } else if (std::none_of(validation.componentTypes.begin(),
+                       validation.componentTypes.end(),
                        [accessorComponentType](
                            const ComponentType& validType) { return validType == accessorComponentType; })) {
             return ATTRIBUTE_VALIDATION_ERRORS[attributeIndex].componentTypeError;
@@ -1135,18 +1181,18 @@ string_view ParseDataUri(const string_view in, size_t& offsetToData)
     // see: https://en.wikipedia.org/wiki/Data_URI_scheme
     auto const scheme = in.substr(0u, 5u);
     if (scheme != "data:") {
-        return {}; // scheme is not data:
+        return {};  // scheme is not data:
     }
     auto pos = in.find(",");
     if (pos == string_view::npos) {
-        return {}; // no start of data.
+        return {};  // no start of data.
     }
     auto const mediaType = in.substr(5u, pos - 5u);
     offsetToData = pos + 1u;
     pos = mediaType.find_last_of(
-        ';'); // technically media-type could contain parameters. but the last parameter should be base64 here
+        ';');  // technically media-type could contain parameters. but the last parameter should be base64 here
     if (pos == string_view::npos) {
-        return {}; // no encoding defined.
+        return {};  // no encoding defined.
     }
     auto const encoding = mediaType.substr(pos + 1u);
     if (encoding != "base64") {
@@ -1156,10 +1202,10 @@ string_view ParseDataUri(const string_view in, size_t& offsetToData)
     // NOTE: 0 to pos would return media-type without the base64 encoding option. (which leaves all the optional
     // parameters to be handled by user)
     pos = mediaType.find_first_of(';');
-    return mediaType.substr(0u, pos); // NOTE: return media-type without any of the parameters.
+    return mediaType.substr(0u, pos);  // NOTE: return media-type without any of the parameters.
 }
 
-bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool checkSize)
+bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool checkSize, size_t maxBytes)
 {
     size_t offsetToData = 0U;
     out.clear();
@@ -1167,9 +1213,27 @@ bool DecodeDataURI(vector<uint8_t>& out, string_view in, size_t reqBytes, bool c
         return false;
     }
     in.remove_prefix(offsetToData);
+
+    if (checkSize && reqBytes > maxBytes) {
+        return false;
+    }
+    const size_t encodedSize = in.size();
+    if (encodedSize > (std::numeric_limits<size_t>::max() - 3u)) {
+        return false;
+    }
+    const size_t quartets = (encodedSize + 3u) / 4u;
+    if (quartets > (std::numeric_limits<size_t>::max() / 3u)) {
+        return false;
+    }
+    if ((quartets * 3u) > maxBytes) {
+        return false;
+    }
     out = BASE_NS::Base64Decode(in);
 
     if (out.empty()) {
+        return false;
+    }
+    if (out.size() > maxBytes) {
         return false;
     }
 
@@ -1212,10 +1276,17 @@ bool IsDataURI(const string_view in)
 
 // Buffer / data helpers
 GLTFLoadDataResult::GLTFLoadDataResult(GLTFLoadDataResult&& other) noexcept
-    : success(other.success), normalized(other.normalized), error(move(other.error)),
-      componentType(other.componentType), componentByteSize(other.componentByteSize),
-      componentCount(other.componentCount), elementSize(other.elementSize), elementCount(other.elementCount),
-      min(move(other.min)), max(move(other.max)), data(move(other.data))
+    : success(other.success),
+      normalized(other.normalized),
+      error(move(other.error)),
+      componentType(other.componentType),
+      componentByteSize(other.componentByteSize),
+      componentCount(other.componentCount),
+      elementSize(other.elementSize),
+      elementCount(other.elementCount),
+      min(move(other.min)),
+      max(move(other.max)),
+      data(move(other.data))
 {}
 
 GLTFLoadDataResult& GLTFLoadDataResult::operator=(GLTFLoadDataResult&& other) noexcept
@@ -1259,7 +1330,8 @@ BufferLoadResult LoadBuffers(const Data* data, IFileManager& fileManager)
         }
     }
 
-    // Set up bufferview data pointers.
+    // Set up bufferview data pointers. BufferView bounds (byteOffset + byteLength <= buffer->byteLength)
+    // are validated at parse time. ReadBufferFile guarantees buffer->data.size() >= buffer->byteLength.
     for (const auto& view : data->bufferViews) {
         if (view && view->buffer && (view->byteOffset < view->buffer->data.size())) {
             view->data = &(view->buffer->data[view->byteOffset]);
@@ -1284,8 +1356,7 @@ UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType,
         if (!isValidMimeType) {
             return URI_LOAD_FAILED_INVALID_MIME_TYPE;
         }
-        DecodeDataURI(outData, uri, 0u, false);
-        if (outData.empty()) {
+        if (!DecodeDataURI(outData, uri, 0u, false, MAX_BUFFER_SIZE)) {
             return URI_LOAD_FAILED_TO_DECODE_BASE64;
         }
     } else {
@@ -1300,7 +1371,7 @@ UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType,
     return URI_LOAD_SUCCESS;
 }
 
-template<typename SrcFormat>
+template <typename SrcFormat>
 vector<float> Normalize(array_view<const float> src)
 {
     vector<float> result(src.size());
@@ -1381,6 +1452,10 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
 
         result.data.swap(fileData);
     } else {
+        if (result.elementCount > 0 && result.elementSize > std::numeric_limits<size_t>::max() / result.elementCount) {
+            result.success = false;
+            return result;
+        }
         result.data.resize(result.elementSize * result.elementCount);
     }
     if (accessor.sparse.count) {
@@ -1391,7 +1466,8 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
 }
 
 // class Data from GLTFData.h
-Data::Data(IFileManager& fileManager) : fileManager_(fileManager) {}
+Data::Data(IFileManager& fileManager) : fileManager_(fileManager)
+{}
 
 bool Data::LoadBuffers()
 {
@@ -1442,6 +1518,17 @@ vector<string> Data::GetExternalFileUris()
 #endif
 
     return result;
+}
+
+const GltfData& Data::GetData() const
+{
+    return *this;
+}
+
+IGLTFData::AccessorData Data::ReadAccessorData(const GLTF2::Accessor& accessor) const
+{
+    auto result = GLTF2::LoadData(accessor);
+    return {result.success, BASE_NS::move(result.data)};
 }
 
 size_t Data::GetDefaultSceneIndex() const
@@ -1505,7 +1592,8 @@ void Data::Destroy()
 }
 
 // class SceneData from GLTFData.h
-SceneData::SceneData(unique_ptr<GLTF2::Data> data) : data_(BASE_NS::move(data)) {}
+SceneData::SceneData(unique_ptr<GLTF2::Data> data) : data_(BASE_NS::move(data))
+{}
 
 const GLTF2::Data* SceneData::GetData() const
 {
@@ -1552,14 +1640,15 @@ IInterface* SceneData::GetInterface(const BASE_NS::Uid& uid)
 
 void SceneData::Ref()
 {
-    ++refcnt_;
+    BASE_NS::AtomicIncrementRelaxed(&refcnt_);
 }
 
 void SceneData::Unref()
 {
-    if (--refcnt_ == 0) {
+    if (BASE_NS::AtomicDecrementRelease(&refcnt_) == 0) {
+        BASE_NS::AtomicFenceAcquire();
         delete this;
     }
 }
-} // namespace GLTF2
+}  // namespace GLTF2
 CORE3D_END_NAMESPACE()

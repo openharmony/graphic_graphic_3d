@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "description": "scene overriding child attachment property via chained path",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_att_child.json"
+                    },
+                    "resourceGroup": "child-att-override-group",
+                    "overrides": [
+                        {
+                            "path": ".//AnimatedCube!ChildAtt.Float",
+                            "value": 55.0
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -48,7 +48,7 @@ constexpr RenderHandleType GetRenderHandleType(const DescriptorType dt)
 
 constexpr PipelineStageFlags GetPipelineStageFlags(const ShaderStageFlags shaderStageFlags)
 {
-    PipelineStageFlags pipelineStageFlags { 0 };
+    PipelineStageFlags pipelineStageFlags{0};
     if (shaderStageFlags & ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT) {
         pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT;
     }
@@ -81,7 +81,7 @@ constexpr AccessFlags GetAccessFlags(const DescriptorType dt)
         return CORE_ACCESS_SHADER_READ_BIT;
     }
 }
-} // namespace DescriptorSetBinderUtil
+}  // namespace DescriptorSetBinderUtil
 
 /** DescriptorSetBinder.
  */
@@ -141,12 +141,12 @@ private:
 
     // accesses array with binding number and retuns index;
     PLUGIN_STATIC_ASSERT(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT == 16u);
-    uint8_t bindingToIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT] { 16, 16, 16, 16, 16, 16, 16, 16,
-        16, 16, 16, 16, 16, 16, 16, 16 };
-    uint32_t maxBindingCount_ { 0u };
+    uint8_t bindingToIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT]{
+        16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
+    uint32_t maxBindingCount_{0u};
 
-    uint32_t descriptorBindingMask_ { 0 };
-    uint32_t bindingMask_ { 0 };
+    uint32_t descriptorBindingMask_{0};
+    uint32_t bindingMask_{0};
 };
 
 /** PipelineDescriptorSetBinder.
@@ -198,7 +198,7 @@ private:
         BASE_NS::array_view<const DescriptorSetLayoutBindings> descriptorSetsLayoutBindings, bool validHandles);
 
     // set -> actual vector index
-    uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT] { ~0u, ~0u, ~0u, ~0u };
+    uint32_t setToBinderIndex_[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{~0u, ~0u, ~0u, ~0u};
 
     BASE_NS::vector<DescriptorSetBinder> descriptorSetBinders_;
 
@@ -207,4 +207,4 @@ private:
 };
 RENDER_END_NAMESPACE()
 
-#endif // RENDER_NODECONTEXT_PIPELINE_DESCRIPTOR_SET_BINDER_H
+#endif  // RENDER_NODECONTEXT_PIPELINE_DESCRIPTOR_SET_BINDER_H

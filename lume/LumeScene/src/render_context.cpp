@@ -15,13 +15,16 @@
 
 #include "render_context.h"
 
+#include <scene/ext/intf_ecs_context.h>
+#include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/scene_debug_info.h>
+#include <scene/ext/scene_utils.h>
+
 #include <3d/ecs/systems/intf_node_system.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/intf_renderer.h>
 
-#include "scene/ext/intf_ecs_context.h"
-#include "scene/ext/intf_internal_scene.h"
-#include "scene/ext/scene_debug_info.h"
+#include <meta/interface/resource/intf_resource_query.h>
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -70,7 +73,7 @@ uint32_t GetEntityCount(CORE_NS::IEcs& ecs)
     if (!it || it->Compare(em.End())) {
         return 0;
     }
-    uint32_t count {};
+    uint32_t count{};
     do {
         count++;
     } while (it->Next());
@@ -83,7 +86,7 @@ uint32_t GetChildCount(CORE3D_NS::ISceneNode* root)
     if (!root) {
         return 0;
     }
-    uint32_t count { 1 }; // the node itself
+    uint32_t count{1};  // the node itself
     for (auto child : root->GetChildren()) {
         count += GetChildCount(child);
     }
@@ -93,7 +96,7 @@ uint32_t GetChildCount(CORE3D_NS::ISceneNode* root)
 /// Return entity count of ecs
 uint32_t GetNodeCount(CORE_NS::IEcs& ecs)
 {
-    uint32_t count {};
+    uint32_t count{};
     auto ns = CORE_NS::GetSystem<CORE3D_NS::INodeSystem>(ecs);
     if (ns) {
         count = GetChildCount(&ns->GetRootNode());
@@ -116,6 +119,47 @@ IRenderContext::Counters::SceneInfo GetSceneInfo(IInternalScene& scene)
     return info;
 }
 
+BASE_NS::vector<CORE_NS::ResourceInfo> GetResourceInfos(const IScene::Ptr& is)
+{
+    auto resourceManager = GetResourceManager(is);
+    return resourceManager ? resourceManager->GetResourceInfos(is) : BASE_NS::vector<CORE_NS::ResourceInfo>{};
+}
+
+namespace {
+// ImporterDeferred scope is thread-local: only the call stack that pushed
+// it should see it. Stored as a file-static thread_local accessed via the
+// IRenderContext methods. Keeping the storage outside of any per-context
+// member is correct here — the deferred-load pending queue
+// (RenderResourceManager::WaitAllPendingLoads) is also process-wide, so
+// having the routing flag share that scope is consistent.
+int32_t& ImporterDeferredDepthTLS()
+{
+    static thread_local int32_t depth = 0;
+    return depth;
+}
+}  // namespace
+
+void RenderContext::AdjustScope(ScopeType types, int32_t delta)
+{
+    if (Any(types & ScopeType::SceneLoad)) {
+        sceneLoadDepth_.fetch_add(delta, std::memory_order_acq_rel);
+    }
+    if (Any(types & ScopeType::ImporterDeferred)) {
+        ImporterDeferredDepthTLS() += delta;
+    }
+}
+
+bool RenderContext::IsInScope(ScopeType type) const
+{
+    if (type == ScopeType::SceneLoad) {
+        return sceneLoadDepth_.load(std::memory_order_acquire) > 0;
+    }
+    if (type == ScopeType::ImporterDeferred) {
+        return ImporterDeferredDepthTLS() > 0;
+    }
+    return false;
+}
+
 IRenderContext::Counters RenderContext::GetCounters() const
 {
     IRenderContext::Counters counters;
@@ -123,13 +167,14 @@ IRenderContext::Counters RenderContext::GetCounters() const
         // Find all ClassId::Scene instances
         for (const auto& instance : META_NS::GetObjectRegistry().GetAllObjectInstances()) {
             // Only require that the object implements IScene
-            const auto scene = interface_cast<IScene>(instance);
+            const auto scene = interface_pointer_cast<IScene>(instance);
             if (scene) {
                 counters.totalSceneCount++;
                 const auto internal = scene->GetInternalScene();
                 if (internal) {
                     if (rcontext.get() == &internal->GetRenderContext()) {
-                        counters.scenes.emplace_back(BASE_NS::move(GetSceneInfo(*internal)));
+                        auto& si = counters.scenes.emplace_back(BASE_NS::move(GetSceneInfo(*internal)));
+                        si.resources = BASE_NS::move(GetResourceInfos(scene));
                     }
                 }
             }
@@ -142,7 +187,9 @@ IRenderContext::Counters RenderContext::GetCounters() const
             counters.handles.samplerHandleCount = man.GetSamplerHandles().size();
         }
         // Get resource count
-        counters.resourceCount = res ? res->GetResourceInfos().size() : 0;
+        if (auto qi = interface_cast<META_NS::IResourceQuery>(res)) {
+            counters.resourceCount = qi->GetResourceCount();
+        }
     });
     return counters;
 }

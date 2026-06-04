@@ -42,8 +42,8 @@ public:
     ExecuteFlags GetExecuteFlags() const override;
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "8e5bd3ad-f95b-4c47-9cf2-a9d908aa7c72" };
-    static constexpr const char* const typeName = "RenderNodeMorph";
+    static constexpr BASE_NS::Uid UID{"8e5bd3ad-f95b-4c47-9cf2-a9d908aa7c72"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeMorph";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -54,19 +54,19 @@ private:
     void ComputeMorphs(
         RENDER_NS::IRenderCommandList& cmdList, BASE_NS::array_view<const RenderDataMorph::Submesh> submeshes);
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     SceneRenderDataStores stores_;
 
-    uint32_t maxObjectCount_ { 0 };
-    uint32_t maxStructCount_ { 0 };
-    uint32_t bufferSize_ { 0 };
+    uint32_t maxObjectCount_{0};
+    uint32_t maxStructCount_{0};
+    uint32_t bufferSize_{0};
     RENDER_NS::RenderHandleReference morphTargetBufferHandle_;
 
     RENDER_NS::RenderHandle psoHandle_;
 
     RENDER_NS::PipelineLayout pipelineLayout_;
-    RENDER_NS::ShaderThreadGroup threadGroupSize_ { 1u, 1u, 1u };
+    RENDER_NS::ShaderThreadGroup threadGroupSize_{1u, 1u, 1u};
 
     struct AllDescriptorSets {
         RENDER_NS::IDescriptorSetBinder::Ptr params;
@@ -75,8 +75,8 @@ private:
     };
     AllDescriptorSets allDescriptorSets_;
 
-    bool hasExecuteData_ { false };
+    bool hasExecuteData_{false};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_MORPH_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_MORPH_H

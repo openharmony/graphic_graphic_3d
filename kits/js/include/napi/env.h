@@ -24,9 +24,11 @@
 
 #include <base/containers/string.h>
 
+#include "export.h"
+
 namespace NapiApi {
 
-class Env {
+class SCENE_ADDON_PUBLIC Env {
 public:
     Env() = default;
     explicit Env(napi_env env);
@@ -47,9 +49,9 @@ public:
     napi_value GetNumber(double value) const;
 
 private:
-    napi_env env_ { nullptr };
+    napi_env env_{nullptr};
 };
 
-} // namespace NapiApi
+}  // namespace NapiApi
 
 #endif

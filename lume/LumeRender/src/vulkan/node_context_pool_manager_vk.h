@@ -36,31 +36,31 @@ struct RenderCommandBeginRenderPass;
 struct LowLevelCommandBufferVk {
     // more semaphores for rotation, e.g for cases where swapchain is used and does not acquire the next index normally
     // the amount is excessive, but basically would need different semaphores per swapchain if not having extra
-    static constexpr uint32_t SEMAPHORE_BUFFERING_COUNT { 3U };
+    static constexpr uint32_t SEMAPHORE_BUFFERING_COUNT{3U};
 
-    VkCommandBuffer commandBuffer { VK_NULL_HANDLE };
-    VkSemaphore semaphores[SEMAPHORE_BUFFERING_COUNT] { VK_NULL_HANDLE, VK_NULL_HANDLE };
-    uint32_t semaphoreIdx { 0U };
+    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
+    VkSemaphore semaphores[SEMAPHORE_BUFFERING_COUNT]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    uint32_t semaphoreIdx{0U};
 };
 
 struct ContextCommandPoolVk {
     // every command buffer is taken from the single pool and pre-allocated
-    VkCommandPool commandPool { VK_NULL_HANDLE };
+    VkCommandPool commandPool{VK_NULL_HANDLE};
     LowLevelCommandBufferVk commandBuffer;
 };
 
 struct ContextFramebufferCacheVk {
     struct CacheValues {
-        uint64_t frameUseIndex { 0 };
-        VkFramebuffer frameBuffer { VK_NULL_HANDLE };
+        uint64_t frameUseIndex{0};
+        VkFramebuffer frameBuffer{VK_NULL_HANDLE};
     };
     BASE_NS::unordered_map<uint64_t, CacheValues> hashToElement;
 };
 
 struct ContextRenderPassCacheVk {
     struct CacheValues {
-        uint64_t frameUseIndex { 0 };
-        VkRenderPass renderPass { VK_NULL_HANDLE };
+        uint64_t frameUseIndex{0};
+        VkRenderPass renderPass{VK_NULL_HANDLE};
     };
     BASE_NS::unordered_map<uint64_t, CacheValues> hashToElement;
 };
@@ -82,9 +82,9 @@ public:
 private:
     Device& device_;
     GpuResourceManager& gpuResourceMgr_;
-    const GpuQueue gpuQueue_ {};
+    const GpuQueue gpuQueue_{};
 
-    uint32_t bufferingIndex_ { 0 };
+    uint32_t bufferingIndex_{0};
 
     BASE_NS::vector<ContextCommandPoolVk> commandPools_;
     BASE_NS::vector<ContextCommandPoolVk> commandSecondaryPools_;
@@ -95,13 +95,13 @@ private:
 #if ((RENDER_VALIDATION_ENABLED == 1) || (RENDER_VULKAN_VALIDATION_ENABLED == 1))
     void SetValidationDebugName(BASE_NS::string_view debugName) override;
     BASE_NS::string debugName_;
-    bool firstFrame_ { true };
+    bool firstFrame_{true};
 #endif
 #if (RENDER_VALIDATION_ENABLED == 1)
-    uint64_t frameIndexFront_ { 0 };
-    uint64_t frameIndexBack_ { 0 };
+    uint64_t frameIndexFront_{0};
+    uint64_t frameIndexBack_{0};
 #endif
 };
 RENDER_END_NAMESPACE()
 
-#endif // VULKAN_NODE_CONTEXT_POOL_MANAGER_VK_H
+#endif  // VULKAN_NODE_CONTEXT_POOL_MANAGER_VK_H

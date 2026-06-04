@@ -28,7 +28,7 @@ class IGraphicsContext;
 /** A plugin which adds 3D related interfaces. */
 struct I3DPlugin : public CORE_NS::ITypeInfo {
     /** TypeInfo UID for 3D plugin. */
-    static constexpr BASE_NS::Uid UID { "2835609d-04c8-4e0a-820a-0571232c3134" };
+    static constexpr BASE_NS::Uid UID{"2835609d-04c8-4e0a-820a-0571232c3134"};
 
     /*
     Plugin lifecycle.
@@ -40,7 +40,7 @@ struct I3DPlugin : public CORE_NS::ITypeInfo {
     using DestroyPluginFn = void (*)(CORE_NS::PluginToken);
 
     constexpr I3DPlugin(CreatePluginFn create, DestroyPluginFn destroy)
-        : ITypeInfo { UID }, createPlugin { create }, destroyPlugin { destroy }
+        : ITypeInfo{UID}, createPlugin{create}, destroyPlugin{destroy}
     {}
 
     /** Initialize function for 3D plugin.
@@ -48,15 +48,15 @@ struct I3DPlugin : public CORE_NS::ITypeInfo {
      * Is expected to register its own named interfaces (IInterface) which are tied to the context instance.
      * Called when attaching to graphics context.
      */
-    const CreatePluginFn createPlugin { nullptr };
+    const CreatePluginFn createPlugin{nullptr};
 
     /** Deinitialize function for 3D plugin.
      * Called when plugin is about to be unloaded by context.
      * Called when detaching from graphics context.
      */
-    const DestroyPluginFn destroyPlugin { nullptr };
+    const DestroyPluginFn destroyPlugin{nullptr};
 };
 /** @} */
 CORE3D_END_NAMESPACE()
 
-#endif // API_3D_IPLUGIN_H
+#endif  // API_3D_IPLUGIN_H

@@ -19,8 +19,8 @@
 #include <core/log.h>
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)() { nullptr };
-void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo) { nullptr };
+CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)(){nullptr};
+void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo){nullptr};
 #endif
 
 CORE_BEGIN_NAMESPACE()
@@ -66,17 +66,17 @@ IEngine::Ptr CreateEngine()
     // Show only errors because we don't want to clutter the test output.
     const ::Test::LogLevelScope logLevel = ::Test::LogLevelScope(GetLogger(), ILogger::LogLevel::LOG_ERROR);
 
-    const EngineCreateInfo engineCreateInfo {
+    const EngineCreateInfo engineCreateInfo{
         GetTestEnv()->platformCreateInfo,
         {
-            "test", // name
-            0,      // versionMajor
-            1,      // versionMinor
-            0,      // versionPatch
-        },          // applicationVersion
-        {}          // applicationContext
+            "test",  // name
+            0,       // versionMajor
+            1,       // versionMinor
+            0,       // versionPatch
+        },           // applicationVersion
+        {}           // applicationContext
     };
-    auto factory = IEngineFactory::Ptr { GetInstance<IEngineFactory>(UID_ENGINE_FACTORY) };
+    auto factory = IEngineFactory::Ptr{GetInstance<IEngineFactory>(UID_ENGINE_FACTORY)};
     auto engine = factory->Create(engineCreateInfo);
 
     RegisterPaths(*engine);
@@ -86,7 +86,7 @@ IEngine::Ptr CreateEngine()
     return engine;
 }
 
-} // namespace UTest
+}  // namespace UTest
 CORE_END_NAMESPACE()
 
 testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new CORE_NS::UTest::TestRunnerEnv);

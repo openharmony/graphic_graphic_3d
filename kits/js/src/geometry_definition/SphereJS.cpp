@@ -28,13 +28,13 @@ void SphereJS::Init(napi_env env, napi_value exports)
     auto ctor = [](napi_env env, napi_callback_info info) -> napi_value {
         return NapiApi::FunctionContext(env, info).This().ToNapiValue();
     };
-    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env { e }.GetNumber(GeometryType::SPHERE); };
+    auto getType = [](napi_env e, napi_callback_info) { return NapiApi::Env{e}.GetNumber(GeometryType::SPHERE); };
 
     napi_value zeroFloat = nullptr;
     napi_value zeroInt = nullptr;
     napi_create_double(env, 0.0, &zeroFloat);
     napi_create_uint32(env, 0, &zeroInt);
-    const auto props = BASE_NS::vector<napi_property_descriptor> {
+    const auto props = BASE_NS::vector<napi_property_descriptor>{
         // clang-format off
         { "geometryType", nullptr, nullptr, getType, nullptr, nullptr,   napi_default_jsproperty, nullptr },
         { "radius",       nullptr, nullptr, nullptr, nullptr, zeroFloat, napi_default_jsproperty, nullptr },
@@ -65,4 +65,4 @@ SCENE_NS::IMesh::Ptr SphereJS::CreateMesh(
     return creator->CreateSphere(config, radius_, segmentCount_, segmentCount_).GetResult();
 }
 
-} // namespace GeometryDefinition
+}  // namespace GeometryDefinition

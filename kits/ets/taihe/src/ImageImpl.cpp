@@ -26,26 +26,26 @@
 #include <meta/interface/property/construct_property.h>
 
 namespace OHOS::Render3D::KITETS {
-::SceneResources::Image ImageImpl::createImageFromTH(SceneTH::SceneResourceParameters const &params)
+::SceneResources::Image ImageImpl::createImageFromTH(SceneTH::SceneResourceParameters const& params)
 {
     const std::string name = ExtractResourceName(params);
     const std::string uri = ExtractUri(params.uri).c_str();
     auto imageETS = RenderContextETS::GetInstance().CreateImage(name, uri);
     if (uri.empty() || name.empty() || !imageETS) {
         ::taihe::set_error("Invalid scene resource Image parameters given");
-        return ::taihe::make_holder<ImageImpl, SceneResources::Image>(nullptr);
+        return SceneResources::Image({nullptr, nullptr});
     }
     return taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
 }
 
-::SceneResources::ImageStream ImageImpl::createImageStreamFromTH(SceneTH::SceneResourceParameters const &params)
+::SceneResources::ImageStream ImageImpl::createImageStreamFromTH(SceneTH::SceneResourceParameters const& params)
 {
     const std::string name = ExtractResourceName(params);
     const std::string uri = "Internal://SurfaceStream_";
     auto imageStreamETS = RenderContextETS::GetInstance().CreateImageStream(name, uri);
     if (uri.empty() || name.empty() || !imageStreamETS) {
         ::taihe::set_error("Invalid scene resource ImageStream parameters given");
-        return ::taihe::make_holder<ImageImpl, SceneResources::ImageStream>(nullptr);
+        return SceneResources::ImageStream({nullptr, nullptr});
     }
     return taihe::make_holder<ImageImpl, ::SceneResources::ImageStream>(imageStreamETS);
 }

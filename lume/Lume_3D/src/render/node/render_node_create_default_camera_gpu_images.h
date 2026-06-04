@@ -34,7 +34,7 @@ public:
 
     void InitNode(RENDER_NS::IRenderNodeContextManager& renderNodeContextMgr) override;
     void PreExecuteFrame() override;
-    void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override {};
+    void ExecuteFrame(RENDER_NS::IRenderCommandList& cmdList) override{};
     ExecuteFlags GetExecuteFlags() const override
     {
         // no work in execute
@@ -42,8 +42,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "c694a5bd-c6f6-4167-9b61-cf481632c171" };
-    static constexpr const char* typeName = "RenderNodeCreateDefaultCameraGpuImages";
+    static constexpr BASE_NS::Uid UID{"c694a5bd-c6f6-4167-9b61-cf481632c171"};
+    static constexpr const char* TYPE_NAME = "RenderNodeCreateDefaultCameraGpuImages";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -53,14 +53,14 @@ private:
     void ParseRenderNodeInputs();
     void UpdateRenderTargets();
 
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         BASE_NS::vector<RENDER_NS::RenderNodeGraphInputs::RenderNodeGraphGpuImageDesc> gpuImageDescs;
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
+        uint64_t customCameraId{INVALID_CAM_ID};
     };
     JsonInputs jsonInputs_;
 
@@ -71,4 +71,4 @@ private:
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_CREATE_DEFAULT_CAMERA_GPU_IMAGES_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_CREATE_DEFAULT_CAMERA_GPU_IMAGES_H

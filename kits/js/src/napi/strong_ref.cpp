@@ -161,4 +161,4 @@ void StrongRef::Ref()
     napi_status stat = napi_reference_ref(env_, ref_, &cnt);
 }
 
-} // namespace NapiApi
+}  // namespace NapiApi

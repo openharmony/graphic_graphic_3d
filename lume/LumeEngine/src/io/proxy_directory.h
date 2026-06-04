@@ -43,4 +43,4 @@ private:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_IO_PROXY_DIRECTORY_H
+#endif  // CORE_IO_PROXY_DIRECTORY_H

@@ -94,16 +94,16 @@ public:
     BASE_NS::array_view<const IRenderNodeGraphShareManager::NamedResource> GetGlobalRenderNodeResources(
         const BASE_NS::string_view nodeName) const;
 
-    static constexpr uint32_t MAX_RENDER_NODE_GRAPH_RES_COUNT { 8u };
+    static constexpr uint32_t MAX_RENDER_NODE_GRAPH_RES_COUNT{8u};
 
 private:
     // render node graph specified outputs
     const BASE_NS::vector<RenderNodeGraphOutputResource> rngOutputResources_;
     // indices to render nodes
-    uint32_t outputMap_[MAX_RENDER_NODE_GRAPH_RES_COUNT] { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
+    uint32_t outputMap_[MAX_RENDER_NODE_GRAPH_RES_COUNT]{~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u};
 
-    RenderNodeGraphGlobalShareDataManager* rngGlobalShareDataMgr_ { nullptr };
-    const RenderNodeGraphShareDataManager* prevRngShareDataMgr_ { nullptr };
+    RenderNodeGraphGlobalShareDataManager* rngGlobalShareDataMgr_{nullptr};
+    const RenderNodeGraphShareDataManager* prevRngShareDataMgr_{nullptr};
 
     // checks if should be registered as render node output
     void RegisterAsRenderNodeGraphOutput(
@@ -111,10 +111,10 @@ private:
 
     struct GraphInputOutput {
         PLUGIN_STATIC_ASSERT(MAX_RENDER_NODE_GRAPH_RES_COUNT == 8u);
-        RenderHandle inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {}, {}, {}, {}, {} };
-        IRenderNodeGraphShareManager::NamedResource namedInputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] {};
-        RenderHandle outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] { {}, {}, {}, {}, {}, {}, {}, {} };
-        IRenderNodeGraphShareManager::NamedResource namedOutputs[MAX_RENDER_NODE_GRAPH_RES_COUNT] {};
+        RenderHandle inputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}, {}, {}, {}, {}};
+        IRenderNodeGraphShareManager::NamedResource namedInputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{};
+        RenderHandle outputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{{}, {}, {}, {}, {}, {}, {}, {}};
+        IRenderNodeGraphShareManager::NamedResource namedOutputs[MAX_RENDER_NODE_GRAPH_RES_COUNT]{};
         BASE_NS::array_view<RenderHandle> inputView;
         BASE_NS::array_view<IRenderNodeGraphShareManager::NamedResource> namedInputView;
         BASE_NS::array_view<RenderHandle> outputView;
@@ -132,7 +132,7 @@ private:
     // per render node registered inputs/outputs
     BASE_NS::vector<RenderNodeResources> renderNodeResources_;
 
-    bool lockedAccess_ { false };
+    bool lockedAccess_{false};
 };
 
 /**
@@ -181,8 +181,8 @@ private:
     RenderNodeGraphShareDataManager& renderNodeGraphShareDataMgr_;
 
     // render node index within a render node graph
-    uint32_t renderNodeIdx_ { 0u };
+    uint32_t renderNodeIdx_{0u};
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__RENDER_NODE_GRAPH_SHARE_MANAGER_H
+#endif  // CORE__RENDER__RENDER_NODE_GRAPH_SHARE_MANAGER_H

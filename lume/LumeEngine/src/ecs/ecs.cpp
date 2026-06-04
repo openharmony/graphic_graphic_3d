@@ -135,23 +135,23 @@ protected:
     vector<ComponentListener*> componentListeners_;
     unordered_map<IComponentManager*, vector<ComponentListener*>> componentManagerListeners_;
 
-    bool initialized_ { false };
-    bool needRender_ { false };
-    bool renderRequested_ { false };
-    bool processingEvents_ { false };
-    RenderMode renderMode_ { RENDER_ALWAYS };
+    bool initialized_{false};
+    bool needRender_{false};
+    bool renderRequested_{false};
+    bool processingEvents_{false};
+    RenderMode renderMode_{RENDER_ALWAYS};
 
     IClassFactory& pluginRegistry_;
 
     vector<pair<PluginToken, const IEcsPlugin*>> plugins_;
-    float timeScale_ { 1.f };
-    int32_t refcnt_ { 0 };
+    float timeScale_{1.f};
+    int32_t refcnt_{0};
 
-    uint64_t ecsId_ { 0xFFFFFFFFffffffff };
+    uint64_t ecsId_{0xFFFFFFFFffffffff};
     EntityManager entityManager_;
 };
 
-template<typename ListType, typename ValueType>
+template <typename ListType, typename ValueType>
 auto Find(ListType& list, const ValueType& value)
 {
     return std::find(list.begin(), list.end(), value);
@@ -191,7 +191,7 @@ void ProcessEntityListeners(const array_view<const pair<Entity, IEntityManager::
     }
 }
 
-template<class TypeInfo>
+template <class TypeInfo>
 const TypeInfo* FindTypeInfo(const Uid& uid, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -208,7 +208,7 @@ bool GatherComponents(vector<const ComponentManagerTypeInfo*>& componentManagerI
 {
     // Ensure we have all components required by this system.
     for (const auto& dependencyUid : componentDependencies) {
-        if (dependencyUid == Uid {}) {
+        if (dependencyUid == Uid{}) {
             continue;
         }
         const auto* componentTypeInfo = FindTypeInfo<ComponentManagerTypeInfo>(dependencyUid, componentMetadata);
@@ -253,7 +253,7 @@ pair<vector<const SystemTypeInfo*>, vector<const ComponentManagerTypeInfo*>> Get
         // At least component managers should be available so add to list.
         systemInfos.push_back(systemTypeInfo);
     }
-    return { BASE_NS::move(systemInfos), BASE_NS::move(componentManagerInfos) };
+    return {BASE_NS::move(systemInfos), BASE_NS::move(componentManagerInfos)};
 }
 
 void OrderSystems(vector<const SystemTypeInfo*>& systemInfos)
@@ -262,7 +262,7 @@ void OrderSystems(vector<const SystemTypeInfo*>& systemInfos)
     auto begin = systemInfos.begin();
     auto end = systemInfos.end();
     for (auto it = begin; it != end;) {
-        if ((*it)->afterSystem == Uid {}) {
+        if ((*it)->afterSystem == Uid{}) {
             ++it;
             continue;
         }
@@ -277,7 +277,7 @@ void OrderSystems(vector<const SystemTypeInfo*>& systemInfos)
 
     // Order systems based optional beforeSystem UIDs.
     for (auto it = begin; it != end;) {
-        if ((*it)->beforeSystem == Uid {}) {
+        if ((*it)->beforeSystem == Uid{}) {
             ++it;
             continue;
         }
@@ -361,7 +361,7 @@ IComponentManager* Ecs::CreateComponentManager(const ComponentManagerTypeInfo& c
         } else {
             manager = componentManagerTypeInfo.createManager(*this);
             if (manager) {
-                managers_.insert({ componentManagerTypeInfo.uid, manager });
+                managers_.insert({componentManagerTypeInfo.uid, manager});
                 managerOrder_.emplace_back(manager, componentManagerTypeInfo.destroyManager);
             }
         }
@@ -388,7 +388,7 @@ ISystem* Ecs::CreateSystem(const SystemTypeInfo& systemInfo)
         return system;
     }
 
-    systems_.insert({ systemInfo.uid, system });
+    systems_.insert({systemInfo.uid, system});
     systemOrder_.emplace_back(system, systemInfo.destroySystem);
 
     if (initialized_) {
@@ -404,7 +404,7 @@ Ecs::Ecs(IClassFactory& registry, const IThreadPool::Ptr& threadPool, const uint
     for (auto info : CORE_NS::GetPluginRegister().GetTypeInfos(IEcsPlugin::UID)) {
         if (auto ecsPlugin = static_cast<const IEcsPlugin*>(info); ecsPlugin && ecsPlugin->createPlugin) {
             auto token = ecsPlugin->createPlugin(*this);
-            plugins_.push_back({ token, ecsPlugin });
+            plugins_.push_back({token, ecsPlugin});
         }
     }
     GetPluginRegister().AddListener(*this);
@@ -533,9 +533,12 @@ void Ecs::ProcessComponentEvents(
         vector<Entity> affectedEntities = (*m.*getter)();
         if (!removedEntities.empty()) {
             affectedEntities.erase(
-                std::remove_if(affectedEntities.begin(), affectedEntities.end(),
+                std::remove_if(affectedEntities.begin(),
+                    affectedEntities.end(),
                     [removedEntities](const Entity& entity) {
-                        const auto pos = std::lower_bound(removedEntities.cbegin(), removedEntities.cend(), entity,
+                        const auto pos = std::lower_bound(removedEntities.cbegin(),
+                            removedEntities.cend(),
+                            entity,
                             [](const Entity& entity, const Entity& removed) { return entity < removed; });
                         return ((pos != removedEntities.cend()) && entity >= *pos);
                     }),
@@ -641,7 +644,7 @@ void Ecs::Initialize()
                 CORE_LOG_E("Failed to create system.");
                 continue;
             }
-            systems_.insert({ systemInfo->uid, system });
+            systems_.insert({systemInfo->uid, system});
             systemOrder_.emplace_back(system, systemInfo->destroySystem);
         }
     }
@@ -664,7 +667,7 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
     }
 
     // Update all systems.
-    delta = static_cast<uint64_t>(static_cast<float>(delta) * timeScale_);
+    delta = static_cast<uint64_t>(static_cast<double>(delta) * timeScale_);
     for (auto& s : systemOrder_) {
         CORE_CPU_PERF_SCOPE("CORE", "SystemUpdate", s->GetName(), CORE_PROFILER_DEFAULT_COLOR);
         if (s->Update(frameRenderingQueued, time, delta)) {
@@ -753,11 +756,12 @@ void Ecs::Unref() noexcept
     }
 }
 
-template<typename Container>
+template <typename Container>
 inline auto RemoveUid(Container& container, const Uid& uid)
 {
-    container.erase(std::remove_if(container.begin(), container.end(),
-                        [&uid](const auto& thing) { return thing->GetUid() == uid; }),
+    container.erase(
+        std::remove_if(
+            container.begin(), container.end(), [&uid](const auto& thing) { return thing->GetUid() == uid; }),
         container.cend());
 }
 
@@ -769,12 +773,18 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
         for (const auto* info : typeInfos) {
             if (info && info->typeUid == IEcsPlugin::UID) {
                 const auto ecsPlugin = static_cast<const IEcsPlugin*>(info);
-                ecsPlugin->createPlugin(*this);
+                if (ecsPlugin->createPlugin) {
+                    auto token = ecsPlugin->createPlugin(*this);
+                    plugins_.push_back({token, ecsPlugin});
+                }
             }
         }
     } else if (type == EventType::REMOVED) {
         for (const auto* info : typeInfos) {
-            if (info && info->typeUid == SystemTypeInfo::UID) {
+            if (!info) {
+                continue;
+            }
+            if (info->typeUid == SystemTypeInfo::UID) {
                 const auto systemInfo = static_cast<const SystemTypeInfo*>(info);
                 // for systems Untinitialize should be called before destroying the instance
                 if (const auto pos = systems_.find(systemInfo->uid); pos != systems_.cend()) {
@@ -782,7 +792,7 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
                     systems_.erase(pos);
                 }
                 RemoveUid(systemOrder_, systemInfo->uid);
-            } else if (info && info->typeUid == ComponentManagerTypeInfo::UID) {
+            } else if (info->typeUid == ComponentManagerTypeInfo::UID) {
                 const auto managerInfo = static_cast<const ComponentManagerTypeInfo*>(info);
                 // BaseManager expects that the component list is empty when it's destroyed. might be also
                 // nice to notify all the listeners that the components are being destroyed.
@@ -792,6 +802,14 @@ void Ecs::OnTypeInfoEvent(EventType type, array_view<const ITypeInfo* const> typ
                     managers_.erase(pos);
                 }
                 RemoveUid(managerOrder_, managerInfo->uid);
+            } else if (info->typeUid == IEcsPlugin::UID) {
+                const auto ecsPlugin = static_cast<const IEcsPlugin*>(info);
+                plugins_.erase(std::remove_if(plugins_.begin(),
+                                   plugins_.end(),
+                                   [ecsPlugin](const pair<PluginToken, const IEcsPlugin*>& plugin) {
+                                       return plugin.second == ecsPlugin;
+                                   }),
+                    plugins_.cend());
             }
         }
     }
@@ -831,7 +849,7 @@ void Ecs::CleanupComponentManager(IComponentManager& manager)
     // garbage collection will remove dead entries from the list and BaseManager is happy.
     manager.Gc();
 }
-} // namespace
+}  // namespace
 
 IEcs* IEcsInstance(IClassFactory& registry, const IThreadPool::Ptr& threadPool, const uint64_t ecsId)
 {

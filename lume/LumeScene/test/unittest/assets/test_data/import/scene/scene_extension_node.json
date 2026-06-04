@@ -1,0 +1,30 @@
+{
+    "version": "1.0",
+    "description": "scene with an extensionNode using MeshNode UID, exercising transform, name, properties and children",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "4e5561d1-0313-4922-b91a-816f388efbbf",
+                    "position": [1.0, 2.0, 3.0],
+                    "scale": [2.0, 2.0, 2.0],
+                    "properties": [
+                        { "name": "Enabled", "value": false }
+                    ],
+                    "children": [
+                        {
+                            "type": "node",
+                            "name": "leaf"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

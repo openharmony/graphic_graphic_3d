@@ -25,7 +25,7 @@ namespace OHOS::Render3D::KITETS {
         return ::taihe::make_holder<ShaderImpl, ::SceneResources::Shader>(shader.value);
     } else {
         ::taihe::set_error(shader.error);
-        return ::taihe::make_holder<ShaderImpl, ::SceneResources::Shader>(nullptr);
+        return ::SceneResources::Shader({nullptr, nullptr});
     }
 }
 

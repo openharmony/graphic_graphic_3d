@@ -29,21 +29,22 @@ class EtsTest : public ::testing::Test {
 public:
     void SetUp() override;
     void TearDown() override;
+
 private:
     void LoadEngineLib();
-    void LoadPlugins(const CORE_NS::PlatformCreateInfo &platformCreateInfo);
-    void CreateEngine(const CORE_NS::PlatformCreateInfo &platformCreateInfo);
+    void LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
+    void CreateEngine(const CORE_NS::PlatformCreateInfo& platformCreateInfo);
     void CreateRenderContext();
     void CreateGraphicsContext();
     void CreateApplicationContext();
 
-    void *libHandle_;
+    void* libHandle_;
     CORE_NS::IEngine::Ptr engine_;
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_;
     CORE3D_NS::IGraphicsContext::Ptr graphicsContext3D_;
     SCENE_NS::IApplicationContext::Ptr applicationContext_;
 };
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D
 
-#endif // OHOS_3D_ETS_TEST_H
+#endif  // OHOS_3D_ETS_TEST_H

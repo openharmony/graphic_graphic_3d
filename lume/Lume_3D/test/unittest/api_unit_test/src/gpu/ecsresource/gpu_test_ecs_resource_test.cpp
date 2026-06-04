@@ -53,7 +53,7 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {
@@ -73,7 +73,7 @@ Entity LookupResourceByUri(
     return {};
 }
 
-template<typename Container, typename Pred>
+template <typename Container, typename Pred>
 bool any_of(const Container& c, Pred&& p)
 {
     return std::any_of(std::begin(c), std::end(c), std::forward<Pred>(p));
@@ -87,7 +87,7 @@ struct PropertyValue {
     {
         return (handle) && (info);
     }
-    template<typename Type>
+    template <typename Type>
     Type& get() const
     {
         return *static_cast<Type*>(const_cast<void*>(offset));
@@ -99,7 +99,7 @@ PropertyValue GetPropertyValue(const PropertyValue value, const string_view name
     if ((value.handle) && (value.info) && (!value.info->metaData.memberProperties.empty())) {
         for (const auto& prop : value.info->metaData.memberProperties) {
             if (prop.name == name) {
-                return { value.handle, static_cast<const uint8_t*>(value.offset) + (uintptr_t)prop.offset, &prop };
+                return {value.handle, static_cast<const uint8_t*>(value.offset) + (uintptr_t)prop.offset, &prop};
             }
         }
     }
@@ -111,8 +111,9 @@ PropertyValue GetPropertyArray(const PropertyValue value, size_t index)
     if ((value.handle) && (value.info) && (value.info->type.isArray) && (value.info->metaData.containerMethods)) {
         if (index < value.info->count) {
             auto size = value.info->size / value.info->count;
-            return { value.handle, static_cast<const uint8_t*>(value.offset) + index * size,
-                &value.info->metaData.containerMethods->property };
+            return {value.handle,
+                static_cast<const uint8_t*>(value.offset) + index * size,
+                &value.info->metaData.containerMethods->property};
         }
     }
     return {};
@@ -123,7 +124,7 @@ PropertyValue GetProperty(const IPropertyHandle* handle, const string_view name,
     auto* api = handle->Owner();
     for (const auto& prop : api->MetaData()) {
         if (prop.name == name) {
-            return { handle, static_cast<const uint8_t*>(offset) + prop.offset, &prop };
+            return {handle, static_cast<const uint8_t*>(offset) + prop.offset, &prop};
         }
     }
     return {};
@@ -143,8 +144,8 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialResource, testing::ext::TestSize
     auto ecs = testContext->ecs;
 
     auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
-    constexpr Uid requiredManagers[] = { IMaterialComponentManager::UID, INameComponentManager::UID,
-        IUriComponentManager::UID };
+    constexpr Uid requiredManagers[] = {
+        IMaterialComponentManager::UID, INameComponentManager::UID, IUriComponentManager::UID};
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -157,8 +158,8 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialResource, testing::ext::TestSize
     auto uriManager = GetManager<IUriComponentManager>(*ecs);
     auto materialEntity = ecs->GetEntityManager().Create();
     materialManager->Create(materialEntity);
-    uriManager->Set(materialEntity, { string("test://material") });
-    nameManager->Set(materialEntity, { string("material") });
+    uriManager->Set(materialEntity, {string("test://material")});
+    nameManager->Set(materialEntity, {string("material")});
 
     {
         // Manipulate values directly.
@@ -183,21 +184,21 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialResource, testing::ext::TestSize
         // first find "textures" array
         auto textureArray = GetProperty(data, "textures", offset);
         if (textureArray) {
-            ASSERT_TRUE(textureArray.info->type.name == "MaterialComponent::TextureInfo"); // Can verify by name also
+            ASSERT_TRUE(textureArray.info->type.name == "MaterialComponent::TextureInfo");  // Can verify by name also
             ASSERT_TRUE((textureArray.info->type ==
-                         PROPERTYTYPE_ARRAY(MaterialComponent::TextureInfo))); // must be a "TextureInfo"
-            ASSERT_TRUE(textureArray.info->type.isArray);                      // must be an array
+                         PROPERTYTYPE_ARRAY(MaterialComponent::TextureInfo)));  // must be a "TextureInfo"
+            ASSERT_TRUE(textureArray.info->type.isArray);                       // must be an array
             // get the correct element from the array
             auto info = GetPropertyArray(textureArray, MaterialComponent::TextureIndex::MATERIAL);
             if (info) {
-                ASSERT_TRUE(info.info->type.name == "MaterialComponent::TextureInfo"); // Can verify by name also
+                ASSERT_TRUE(info.info->type.name == "MaterialComponent::TextureInfo");  // Can verify by name also
                 ASSERT_TRUE(
-                    (info.info->type == PROPERTYTYPE(MaterialComponent::TextureInfo))); // must be a "TextureInfo"
+                    (info.info->type == PROPERTYTYPE(MaterialComponent::TextureInfo)));  // must be a "TextureInfo"
                 // find the "factor" property
                 auto value = GetPropertyValue(info, "factor");
                 if (value) {
                     // modify it.
-                    ASSERT_TRUE((value.info->type == PROPERTYTYPE(BASE_NS::Math::Vec4))); // must be a "Vec4"
+                    ASSERT_TRUE((value.info->type == PROPERTYTYPE(BASE_NS::Math::Vec4)));  // must be a "Vec4"
                     value.get<Math::Vec4>()[MaterialComponent::MetallicRoughnessChannel::METALLIC] = 0.5f;
                 }
             }
@@ -218,18 +219,18 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialResource, testing::ext::TestSize
         auto offset = data->RLock();
         auto textureArray = GetProperty(data, "textures", offset);
         if (textureArray) {
-            ASSERT_TRUE(textureArray.info->type.isArray); // must be an array
+            ASSERT_TRUE(textureArray.info->type.isArray);  // must be an array
             // get the correct element from the array
             auto info = GetPropertyArray(textureArray, MaterialComponent::TextureIndex::MATERIAL);
             if (info) {
                 ASSERT_TRUE(info.info->type.name == "MaterialComponent::TextureInfo");
                 ASSERT_TRUE(
-                    (info.info->type == PROPERTYTYPE(MaterialComponent::TextureInfo))); // must be a "TextureInfo"
+                    (info.info->type == PROPERTYTYPE(MaterialComponent::TextureInfo)));  // must be a "TextureInfo"
                 // find the "factor" property
                 auto value = GetPropertyValue(info, "factor");
                 if (value) {
                     // modify it.
-                    ASSERT_TRUE((value.info->type == PROPERTYTYPE(BASE_NS::Math::Vec4))); // must be a "Vec4"
+                    ASSERT_TRUE((value.info->type == PROPERTYTYPE(BASE_NS::Math::Vec4)));  // must be a "Vec4"
                     MetallicFactor = value.get<Math::Vec4>()[MaterialComponent::MetallicRoughnessChannel::METALLIC];
                     RoughnessFactor = value.get<Math::Vec4>()[MaterialComponent::MetallicRoughnessChannel::ROUGHNESS];
                 }
@@ -259,7 +260,7 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialResource, testing::ext::TestSize
     ecs->GetEntityManager().Destroy(materialEntity);
 
     // Ensure it is gone.
-    ASSERT_EQ(LookupResourceByUri("test://material", *uriManager, *materialManager), Entity {});
+    ASSERT_EQ(LookupResourceByUri("test://material", *uriManager, *materialManager), Entity{});
 }
 
 /**
@@ -276,8 +277,10 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialCustomProperties, testing::ext::
     auto ecs = testContext->ecs;
 
     auto components = GetPluginRegister().GetTypeInfos(ComponentManagerTypeInfo::UID);
-    constexpr Uid requiredManagers[] = { IMaterialComponentManager::UID, INameComponentManager::UID,
-        IUriComponentManager::UID, IRenderHandleComponentManager::UID };
+    constexpr Uid requiredManagers[] = {IMaterialComponentManager::UID,
+        INameComponentManager::UID,
+        IUriComponentManager::UID,
+        IRenderHandleComponentManager::UID};
     for (const auto component : components) {
         const auto info = static_cast<const ComponentManagerTypeInfo*>(component);
         if (any_of(requiredManagers, [currentUid = info->uid](const auto& uid) { return uid == currentUid; })) {
@@ -302,8 +305,8 @@ UNIT_TEST(API_GpuTest_ResourceTest, testMaterialCustomProperties, testing::ext::
     };
     auto materialEntity = ecs->GetEntityManager().Create();
     materialManager->Create(materialEntity);
-    uriManager->Set(materialEntity, { string("test://material") });
-    nameManager->Set(materialEntity, { string("material") });
+    uriManager->Set(materialEntity, {string("test://material")});
+    nameManager->Set(materialEntity, {string("material")});
     {
         auto data = materialManager->GetData(materialEntity);
         EXPECT_FALSE(ScopedHandle<const MaterialComponent>(data)->customProperties);
@@ -459,7 +462,7 @@ UNIT_TEST(API_GpuTest_ResourceTest, testAnimationRetargeting, testing::ext::Test
         sceneUtil.RetargetSkinAnimation(*ecs, modelNode2->GetEntity(), modelNode1->GetEntity(), playback->GetEntity());
     ASSERT_TRUE(playback2);
 
-    IEcs* ecsArray[] = { ecs.get() };
+    IEcs* ecsArray[] = {ecs.get()};
     engine->TickFrame(ecsArray);
 }
 
@@ -479,7 +482,7 @@ UNIT_TEST(API_GpuTest_ResourceTest, loadAndImportScene, testing::ext::TestSize.L
     auto renderContext = testContext->renderContext;
     auto graphicsContext = testContext->graphicsContext;
     auto ecs = testContext->ecs;
-    IEcs* ecsArray[] = { ecs.get() };
+    IEcs* ecsArray[] = {ecs.get()};
 
     auto initialEntities = 0;
     for (const auto& e : ecs->GetEntityManager()) {

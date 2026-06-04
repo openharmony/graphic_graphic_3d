@@ -21,7 +21,7 @@
 
 namespace OHOS::Render3D::KITETS {
 std::shared_ptr<ColorFringeETS> ColorFringeSettingsImpl::CreateInternal(
-    const ScenePostProcessSettings::ColorFringeSettings &data)
+    const ScenePostProcessSettings::ColorFringeSettings& data)
 {
     float intensity;
     if (data->getIntensity().has_value()) {
@@ -46,7 +46,7 @@ ColorFringeSettingsImpl::~ColorFringeSettingsImpl()
     if (colorFringeETS_) {
         return taihe::optional<double>(std::in_place, colorFringeETS_->GetIntensity());
     } else {
-        return taihe::optional<double>(std::in_place, 0.0);
+        return taihe::optional<double>(std::in_place, 0.0F);
     }
 }
 
@@ -60,4 +60,4 @@ void ColorFringeSettingsImpl::setIntensity(::taihe::optional_view<double> intens
         }
     }
 }
-}  // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS

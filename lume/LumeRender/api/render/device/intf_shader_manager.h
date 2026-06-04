@@ -87,7 +87,7 @@ public:
         /* Shader module path */
         BASE_NS::string_view path;
         /* Shader stage flags */
-        ShaderStageFlags shaderStageFlags { 0u };
+        ShaderStageFlags shaderStageFlags{0u};
     };
     struct ComputeShaderCreateInfo {
         /* Path, used as a name */
@@ -98,9 +98,9 @@ public:
         /* Optional pipeline layout handle */
         RenderHandle pipelineLayout;
         /* Optional render slot mask */
-        uint32_t renderSlotId { ~0u };
+        uint32_t renderSlotId{~0u};
         /* Optional category id */
-        uint32_t categoryId { ~0u };
+        uint32_t categoryId{~0u};
     };
     struct ShaderCreateInfo {
         /* Path, used as a name */
@@ -115,9 +115,9 @@ public:
         /* Optional vertex input declaration handle */
         RenderHandle vertexInputDeclaration;
         /* Optional render slot mask */
-        uint32_t renderSlotId { ~0u };
+        uint32_t renderSlotId{~0u};
         /* Optional category id */
-        uint32_t categoryId { ~0u };
+        uint32_t categoryId{~0u};
     };
     struct PipelineLayoutCreateInfo {
         /* Path, used as a name */
@@ -125,9 +125,9 @@ public:
         /* Reference to pipeline layout */
         PipelineLayout pipelineLayout;
         /* Render slot id */
-        uint32_t renderSlotId { ~0U };
+        uint32_t renderSlotId{~0U};
         /* Render slot id */
-        bool renderSlotDefault { false };
+        bool renderSlotDefault{false};
     };
     struct GraphicsStateCreateInfo {
         /* Path, used as a name */
@@ -145,9 +145,9 @@ public:
         /* Base graphics state variant name */
         BASE_NS::string_view baseVariant;
         /* Forced graphics state flags */
-        GraphicsStateFlags stateFlags { 0u };
+        GraphicsStateFlags stateFlags{0u};
         /* Render slot default */
-        bool renderSlotDefault { false };
+        bool renderSlotDefault{false};
     };
     struct VertexInputDeclarationCreateInfo {
         /* Path, used as a name */
@@ -155,9 +155,9 @@ public:
         /* Vertex input declaration view */
         VertexInputDeclarationView vertexInputDeclarationView;
         /* Render slot id */
-        uint32_t renderSlotId { ~0U };
+        uint32_t renderSlotId{~0U};
         /* Render slot default */
-        bool renderSlotDefault { false };
+        bool renderSlotDefault{false};
     };
     /* Id Description which can be fetched for handle */
     struct IdDesc {
@@ -172,12 +172,12 @@ public:
         /* Render slot id */
         BASE_NS::string renderSlot;
         /* Frame index when the shader was loaded. (Can be used as a "timestamp" for caching) */
-        uint64_t frameIndex { 0 };
+        uint64_t frameIndex{0};
     };
     /* Render slot data. Used for default render slot data handles */
     struct RenderSlotData {
         /** Render slot ID */
-        uint32_t renderSlotId { ~0u };
+        uint32_t renderSlotId{~0u};
         /** Shader handle */
         RENDER_NS::RenderHandleReference shader;
         /** Graphics state handle */
@@ -207,13 +207,13 @@ public:
         BASE_NS::string baseShaderState;
         BASE_NS::string baseVariantName;
 
-        GraphicsStateFlags stateFlags { 0U };
-        bool renderSlotDefaultState { false };
+        GraphicsStateFlags stateFlags{0U};
+        bool renderSlotDefaultState{false};
     };
 
     /** Describes a single shader variant. */
     struct ShaderVariant {
-        bool renderSlotDefaultShader { false };
+        bool renderSlotDefaultShader{false};
         BASE_NS::string variantName;
         BASE_NS::string displayName;
 
@@ -231,7 +231,7 @@ public:
         BASE_NS::string shaderFileStr;
         BASE_NS::string materialMetadata;
 
-        GraphicsStateFlags stateFlags { 0U };
+        GraphicsStateFlags stateFlags{0U};
 
         /** Own base shader uri */
         BASE_NS::string ownBaseShader;
@@ -242,7 +242,7 @@ public:
     struct ShaderOutWriteResult {
         /* error message, if any exists */
         BASE_NS::string error;
-        bool success { false };
+        bool success{false};
         /* the shader as json string */
         BASE_NS::string result;
     };
@@ -979,4 +979,4 @@ protected:
 /** @} */
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_DEVICE_ISHADER_MANAGER_H
+#endif  // API_RENDER_DEVICE_ISHADER_MANAGER_H

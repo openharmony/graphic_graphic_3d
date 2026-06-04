@@ -137,7 +137,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimationTest, testing::ext::TestSize.Level1)
     }
 
     Entity targetEntity = ecs->GetEntityManager().Create();
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     EXPECT_EQ(59.0f, playback->GetDuration());
     EXPECT_EQ(60.0f, playback->GetAnimationLength());
@@ -187,7 +187,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateFloatTest, testing::ext::TestSize.Level
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::FLOAT_T;
-        constexpr float values[] = { 0.0f, 5.0f };
+        constexpr float values[] = {0.0f, 5.0f};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -224,7 +224,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateFloatTest, testing::ext::TestSize.Level
         scopedHandle->tracks.push_back(track);
     }
 
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 
@@ -266,7 +266,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateVec2Test, testing::ext::TestSize.Level1
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::VEC2_T;
-        constexpr Math::Vec2 values[] = { { 0.0f, 0.0f }, { 5.0f, 5.0f } };
+        constexpr Math::Vec2 values[] = {{0.0f, 0.0f}, {5.0f, 5.0f}};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -303,7 +303,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateVec2Test, testing::ext::TestSize.Level1
         scopedHandle->tracks.push_back(track);
     }
 
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 
@@ -346,7 +346,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateVec3Test, testing::ext::TestSize.Level1
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::VEC3_T;
-        constexpr Math::Vec3 values[] = { { 0.0f, 0.0f, 0.0f }, { 5.0f, 5.0f, 5.0f } };
+        constexpr Math::Vec3 values[] = {{0.0f, 0.0f, 0.0f}, {5.0f, 5.0f, 5.0f}};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -383,7 +383,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateVec3Test, testing::ext::TestSize.Level1
         scopedHandle->tracks.push_back(track);
     }
 
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 
@@ -427,7 +427,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateBackwardsTest, testing::ext::TestSize.L
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::VEC4_T;
-        constexpr Math::Vec4 values[] = { { 2.0f, 2.0f, 2.0f, 2.0f }, { 5.0f, 5.0f, 5.0f, 5.0f } };
+        constexpr Math::Vec4 values[] = {{2.0f, 2.0f, 2.0f, 2.0f}, {5.0f, 5.0f, 5.0f, 5.0f}};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -465,7 +465,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateBackwardsTest, testing::ext::TestSize.L
         scopedHandle->tracks.push_back(track);
     }
 
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 
@@ -510,7 +510,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateArrayTest, testing::ext::TestSize.Level
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::FLOAT_VECTOR_T;
-        constexpr float values[] = { 0.0f, 0.0f, 0.0f, 5.0f, 5.0f, 5.0f };
+        constexpr float values[] = {0.0f, 0.0f, 0.0f, 5.0f, 5.0f, 5.0f};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -562,7 +562,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateArrayTest, testing::ext::TestSize.Level
     }
 
     IAnimationPlayback* playback =
-        animationSystem->CreatePlayback(animation, { targetEntities, countof(targetEntities) });
+        animationSystem->CreatePlayback(animation, {targetEntities, countof(targetEntities)});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 
@@ -622,7 +622,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimationTasksTest, testing::ext::TestSize.Lev
         animationOutputManager->Create(keyFrameData);
         if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
             scopedHandle->type = PropertyType::FLOAT_T;
-            constexpr float values[] = { 0.0f, 5.0f };
+            constexpr float values[] = {0.0f, 5.0f};
             scopedHandle->data.resize(sizeof(values));
             CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
         }
@@ -659,7 +659,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimationTasksTest, testing::ext::TestSize.Lev
             scopedHandle->tracks.push_back(track);
         }
 
-        IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+        IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
         ASSERT_NE(nullptr, playback);
     }
     ecs->ProcessEvents();
@@ -706,7 +706,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateStateTest, testing::ext::TestSize.Level
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::FLOAT_T;
-        constexpr float values[] = { 0.0f, 5.0f };
+        constexpr float values[] = {0.0f, 5.0f};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -773,7 +773,7 @@ CORE_NS::EntityReference CreateShader(CORE_NS::IEcs& ecs, RENDER_NS::IRenderCont
     uriManager->Write(shader)->uri = uri;
     return shader;
 }
-} // namespace
+}  // namespace
 /**
  * @tc.name: AnimateCustomPropertyTest
  * @tc.desc: Tests for Animate Custom Property Test. [AUTO-GENERATED]
@@ -803,7 +803,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateCustomPropertyTest, testing::ext::TestS
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::FLOAT_T;
-        constexpr float values[] = { 0.0f, 5.0f };
+        constexpr float values[] = {0.0f, 5.0f};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -843,7 +843,7 @@ UNIT_TEST(API_EcsAnimationSystem, AnimateCustomPropertyTest, testing::ext::TestS
         scopedHandle->tracks.push_back(track);
     }
 
-    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, { &targetEntity, 1 });
+    IAnimationPlayback* playback = animationSystem->CreatePlayback(animation, {&targetEntity, 1});
     ASSERT_NE(nullptr, playback);
     ecs->ProcessEvents();
 

@@ -28,7 +28,6 @@
 #include <meta/interface/intf_task_queue.h>
 
 #include "core/internal_scene.h"
-#include "resource/types/scene_type.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -102,6 +101,7 @@ public:
         const BASE_NS::Math::Vec3& pos, const BASE_NS::Math::Vec3& dir, const RayCastOptions& options) const override;
 
     ResourceGroupBundle GetResourceGroups() const override;
+    CORE_NS::IResource::Ptr GetResource(const CORE_NS::ResourceId& res) override;
 
 public:
     IInternalScene::Ptr GetInternalScene() const override;
@@ -114,7 +114,7 @@ private:
 
 private:
     IInternalScene::Ptr internal_;
-    META_NS::ITaskQueue::Token updateTask_ {};
+    META_NS::ITaskQueue::Token updateTask_{};
 };
 
 SCENE_END_NAMESPACE()

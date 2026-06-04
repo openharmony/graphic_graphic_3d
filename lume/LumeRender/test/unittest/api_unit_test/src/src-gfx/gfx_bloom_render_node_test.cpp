@@ -37,14 +37,14 @@ using CORE_NS::IEngine;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr Math::UVec2 TEST_DATA_SIZE { 512u, 512u };
+static constexpr Math::UVec2 TEST_DATA_SIZE{512u, 512u};
 static constexpr size_t IMAGE_SIZE = TEST_DATA_SIZE.x * TEST_DATA_SIZE.y * 4u;
 static constexpr size_t NUM_BYTES = IMAGE_SIZE * sizeof(uint16_t);
 uint16_t imageData[IMAGE_SIZE];
-static constexpr string_view INPUT_IMAGE_NAME_0 { "InputImage0" };
-static constexpr string_view COPY_BUFFER_NAME_0 { "CopyBuffer0" };
+static constexpr string_view INPUT_IMAGE_NAME_0{"InputImage0"};
+static constexpr string_view COPY_BUFFER_NAME_0{"CopyBuffer0"};
 // NOTE: created in render node graph
-static constexpr string_view OUTPUT_IMAGE_NAME_0 { "OutputImage0" };
+static constexpr string_view OUTPUT_IMAGE_NAME_0{"OutputImage0"};
 
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_STAGING = "RenderDataStoreDefaultStaging";
 constexpr const string_view RENDER_DATA_STORE_DEFAULT_RESOURCE_DATA_COPY = "RenderDataStoreDefaultGpuResourceDataCopy";
@@ -71,15 +71,15 @@ array_view<const uint8_t> CreateImageDataView()
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             if (i < TEST_DATA_SIZE.x / 2) {
                 float value = 15.f;
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value); // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value); // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value); // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(value);  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(value);  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(value);  // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);   // A
             } else {
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f); // R
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f); // G
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f); // B
-                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f); // A
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u] = BASE_NS::Math::F32ToF16(0.0f);  // R
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 1u] = BASE_NS::Math::F32ToF16(0.0f);  // G
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 2u] = BASE_NS::Math::F32ToF16(0.0f);  // B
+                imageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 3u] = BASE_NS::Math::F32ToF16(1.0f);  // A
             }
         }
     }
@@ -93,8 +93,8 @@ array_view<const uint8_t> CreateImageDataView()
     // Read the file: hdc file recv /data/app/el2/100/base/com.huawei.render_api_test_runner/haps/entry/files/{FILE}.png
     UTest::SaveHdrImage("BloomTestInput.png", TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
-    return array_view<const uint8_t> { reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData) };
+#endif  // RENDER_SAVE_TEST_IMAGES
+    return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
 TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute)
@@ -134,7 +134,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute)
         ppConf.enableFlags = PostProcessConfiguration::ENABLE_BLOOM_BIT;
         ppConf.bloomConfiguration.bloomQualityType = BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL;
         ppConf.bloomConfiguration.useCompute = useCompute;
-        const array_view<const uint8_t> dataView = { reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf) };
+        const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         res.dataStorePod->CreatePod("PostProcessConfiguration", "BloomConfiguration", dataView);
     }
     // Render node graph
@@ -172,9 +172,9 @@ void TickTest(TestData& td, int32_t frameCountToTick)
                 bufferImageCopy.bufferRowLength = TEST_DATA_SIZE.x;
                 bufferImageCopy.bufferImageHeight = TEST_DATA_SIZE.y;
                 bufferImageCopy.imageSubresource =
-                    ImageSubresourceLayers { RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-                bufferImageCopy.imageOffset = { 0, 0, 0 };
-                bufferImageCopy.imageExtent = { TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u };
+                    ImageSubresourceLayers{RENDER_NS::ImageAspectFlagBits::CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u};
+                bufferImageCopy.imageOffset = {0, 0, 0};
+                bufferImageCopy.imageExtent = {TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, 1u};
 
                 IGpuResourceManager& gpuResourceMgr = er.context->GetDevice().GetGpuResourceManager();
                 const RenderHandleReference outputImageHandle0 = gpuResourceMgr.GetImageHandle(OUTPUT_IMAGE_NAME_0);
@@ -204,7 +204,7 @@ void TickTest(TestData& td, int32_t frameCountToTick)
 
         er.engine->TickFrame();
         if (idx == 0) {
-            er.context->GetRenderer().RenderDeferred({ &tr.renderNodeGraph, 1u });
+            er.context->GetRenderer().RenderDeferred({&tr.renderNodeGraph, 1u});
             er.context->GetRenderer().RenderDeferredFrame();
         } else {
             er.context->GetRenderer().RenderFrame({});
@@ -249,7 +249,7 @@ void ValidateDataTest(const TestData& td, bool useCompute)
     }
     UTest::SaveHdrImage(GetFileName(td.engine, useCompute), TEST_DATA_SIZE.x, TEST_DATA_SIZE.y, floatData);
     delete[] floatData;
-#endif // RENDER_SAVE_TEST_IMAGES
+#endif  // RENDER_SAVE_TEST_IMAGES
     for (size_t i = 0; i < TEST_DATA_SIZE.x; ++i) {
         for (size_t j = 0; j < TEST_DATA_SIZE.y; ++j) {
             float R = UTest::FromHDR(BASE_NS::Math::F16ToF32(outputImageData[i * TEST_DATA_SIZE.y * 4u + j * 4u + 0u]));
@@ -291,7 +291,7 @@ void TestBloomRenderNode(DeviceBackendType backend, bool useCompute)
         DestroyEngine(testData.engine);
     }
 }
-} // namespace
+}  // namespace
 
 #if RENDER_HAS_VULKAN_BACKEND
 /**
@@ -312,7 +312,7 @@ UNIT_TEST(API_GfxBloomRenderNodeTest, ComputeBloomRenderNodeTestVulkan, testing:
 {
     TestBloomRenderNode(DeviceBackendType::VULKAN, true);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #if RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
 /**
@@ -324,20 +324,17 @@ UNIT_TEST(API_GfxBloomRenderNodeTest, GfxBloomRenderNodeTestOpenGL, testing::ext
 {
     TestBloomRenderNode(UTest::GetOpenGLBackend(), false);
 }
-#ifdef DISABLED_TESTS_ON
+
+#ifndef __OHOS__
+// Harmony OS compute bloom with GLES fail. Fails because the threshold is exceeded.
 /**
  * @tc.name: ComputeBloomRenderNodeTestOpenGL
  * @tc.desc: Tests for the bloom post process to work correctly on the OpenGL backend using a compute shader.
  * @tc.type: FUNC
  */
-#ifdef __OHOS__
-// Harmony OS compute bloom with GLES fail. Fails because the threshold is exceeded.
-UNIT_TEST(API_GfxBloomRenderNodeTest, DISABLED_ComputeBloomRenderNodeTestOpenGL, testing::ext::TestSize.Level1)
-#else
 UNIT_TEST(API_GfxBloomRenderNodeTest, ComputeBloomRenderNodeTestOpenGL, testing::ext::TestSize.Level1)
-#endif // __OHOS__
 {
     TestBloomRenderNode(UTest::GetOpenGLBackend(), true);
 }
-#endif // DISABLED_TESTS_ON
-#endif // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND
+#endif  // __OHOS__
+#endif  // RENDER_HAS_GL_BACKEND || RENDER_HAS_GLES_BACKEND

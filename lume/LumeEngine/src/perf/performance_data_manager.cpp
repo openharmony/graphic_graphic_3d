@@ -86,12 +86,12 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
             // new value
             auto& ref = iter->second.data[name];
             ref = {
-                microSeconds, // currentTime
-                microSeconds, // maxTime
-                microSeconds, // minTime
-                microSeconds, // averageTime
-                microSeconds, // totalTime
-                1,            // counter
+                microSeconds,  // currentTime
+                microSeconds,  // maxTime
+                microSeconds,  // minTime
+                microSeconds,  // averageTime
+                microSeconds,  // totalTime
+                1,             // counter
             };
             ref.type = type;
             std::fill_n(ref.timings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
@@ -101,12 +101,12 @@ void UpdateTimingData(const string_view subCategory, const string_view name, con
         // new subcategory and new value
         auto& ref = dataSet[subCategory].data[name];
         ref = {
-            microSeconds, // currentTime
-            microSeconds, // maxTime
-            microSeconds, // minTime
-            microSeconds, // averageTime
-            microSeconds, // totalTime
-            1,            // counter
+            microSeconds,  // currentTime
+            microSeconds,  // maxTime
+            microSeconds,  // minTime
+            microSeconds,  // averageTime
+            microSeconds,  // totalTime
+            1,             // counter
         };
         ref.type = type;
         std::fill_n(ref.timings, IPerformanceDataManager::TIMING_DATA_POOL_SIZE, microSeconds);
@@ -127,13 +127,13 @@ vector<IPerformanceDataManager::PerformanceData> GetTimingData(const Performance
     }
     return data;
 }
-#endif // CORE_PERF_ENABLED
-} // namespace
+#endif  // CORE_PERF_ENABLED
+}  // namespace
 
 PerformanceDataManager::~PerformanceDataManager() = default;
 
-PerformanceDataManager::PerformanceDataManager(const string_view category, PerformanceDataManagerFactory& factory)
-    : category_(category), factory_(factory)
+PerformanceDataManager::PerformanceDataManager(const string_view category, PerformanceDataManagerFactory& /*factory*/)
+    : category_(category)
 {}
 
 string_view PerformanceDataManager::GetCategory() const
@@ -235,7 +235,7 @@ IPerformanceDataManager::ComparisonData PerformanceDataManager::CompareCounters(
                 cd.flags |= 1U;
             } else if (currLhs.second != currRhs.second) {
                 cd.flags |= 1U;
-                cd.errorCounters.push_back(pair { currLhs.first, currLhs.second - currRhs.second });
+                cd.errorCounters.push_back(pair{currLhs.first, currLhs.second - currRhs.second});
             }
         }
     }
@@ -256,8 +256,13 @@ void PerformanceDataManager::DumpToLog() const
     for (const auto& typeRef : data_) {
         for (const auto& perfRef : typeRef.second.data) {
             const int64_t counter = BASE_NS::Math::max(perfRef.second.counter, int64_t(1));
-            CORE_LOG_I(formatData.data(), perfRef.second.totalTime / counter, perfRef.second.minTime,
-                perfRef.second.maxTime, perfRef.second.totalTime, perfRef.second.counter, typeRef.first.c_str(),
+            CORE_LOG_I(formatData.data(),
+                perfRef.second.totalTime / counter,
+                perfRef.second.minTime,
+                perfRef.second.maxTime,
+                perfRef.second.totalTime,
+                perfRef.second.counter,
+                typeRef.first.c_str(),
                 perfRef.first.c_str());
         }
     }
@@ -281,24 +286,28 @@ IInterface* PerformanceDataManager::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void PerformanceDataManager::Ref() {}
+void PerformanceDataManager::Ref()
+{}
 
-void PerformanceDataManager::Unref() {}
+void PerformanceDataManager::Unref()
+{}
 
-PerformanceDataManagerFactory::PerformanceDataManagerFactory(IPluginRegister& registry) {}
+PerformanceDataManagerFactory::PerformanceDataManagerFactory(IPluginRegister& registry)
+{}
 
 void PerformanceDataManagerFactory::SetPerformanceTrace(
     [[maybe_unused]] const Uid& uid, [[maybe_unused]] IPerformanceTrace::Ptr&& trace)
 {
 #if (CORE_PERF_ENABLED == 1)
-    perfTraces_.push_back({ uid, BASE_NS::move(trace) });
+    perfTraces_.push_back({uid, BASE_NS::move(trace)});
 #endif
 }
 
 void PerformanceDataManagerFactory::RemovePerformanceTrace([[maybe_unused]] const BASE_NS::Uid& uid)
 {
 #if (CORE_PERF_ENABLED == 1)
-    perfTraces_.erase(std::remove_if(perfTraces_.begin(), perfTraces_.end(),
+    perfTraces_.erase(std::remove_if(perfTraces_.begin(),
+                          perfTraces_.end(),
                           [uid](const RegisteredPerformanceTrace& info) { return info.uid == uid; }),
         perfTraces_.cend());
 #endif
@@ -318,7 +327,7 @@ IPerformanceDataManager* PerformanceDataManagerFactory::Get([[maybe_unused]] con
     if (auto pos = managers_.find(category); pos != managers_.end()) {
         return pos->second.get();
     }
-    auto inserted = managers_.insert({ category, make_unique<PerformanceDataManager>(category, *this) });
+    auto inserted = managers_.insert({category, make_unique<PerformanceDataManager>(category, *this)});
     return inserted.first->second.get();
 #else
     return {};
@@ -357,17 +366,19 @@ IInterface* PerformanceDataManagerFactory::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void PerformanceDataManagerFactory::Ref() {}
+void PerformanceDataManagerFactory::Ref()
+{}
 
-void PerformanceDataManagerFactory::Unref() {}
+void PerformanceDataManagerFactory::Unref()
+{}
 
 ILogger::IOutput::Ptr PerformanceDataManagerFactory::GetLogger()
 {
-    return ILogger::IOutput::Ptr { new PerformanceTraceLogger(this) };
+    return ILogger::IOutput::Ptr{new PerformanceTraceLogger(this)};
 }
 
 BASE_NS::array_view<const PerformanceDataManagerFactory::RegisteredPerformanceTrace>
-PerformanceDataManagerFactory::GetPerformanceTraces() const
+    PerformanceDataManagerFactory::GetPerformanceTraces() const
 {
     return BASE_NS::array_view(perfTraces_.data(), perfTraces_.size());
 }

@@ -22,7 +22,7 @@
 META_BEGIN_INTERNAL_NAMESPACE()
 
 class Container : public ContainerBase {
-public: // IContainer
+public:  // IContainer
     IObject::Ptr FindAny(const META_NS::IContainer::FindOptions& options) const override;
     BASE_NS::vector<IObject::Ptr> FindAll(const META_NS::IContainer::FindOptions& options) const override;
     bool Add(const META_NS::IObject::Ptr& object) override;
@@ -36,4 +36,4 @@ private:
 
 META_END_INTERNAL_NAMESPACE()
 
-#endif // META_SRC_OBJECT_CONTAINER_H
+#endif  // META_SRC_OBJECT_CONTAINER_H

@@ -72,7 +72,7 @@ Entity CreateJoint(IEcs& ecs, const string_view name)
     }
     return joint;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: ShareSkinTest
@@ -118,7 +118,7 @@ UNIT_TEST(API_SceneUtil, ShareSkinTest, testing::ext::TestSize.Level1)
     }
 
     // Share to invalid entity should do nothing
-    sceneUtil.ShareSkin(*ecs, Entity {}, sourceEntity);
+    sceneUtil.ShareSkin(*ecs, Entity{}, sourceEntity);
     if (auto scopedHandle = skinJointsManager->Read(sourceEntity); scopedHandle) {
         EXPECT_EQ(3, scopedHandle->count);
         EXPECT_EQ(joint0, scopedHandle->jointEntities[0]);
@@ -127,7 +127,7 @@ UNIT_TEST(API_SceneUtil, ShareSkinTest, testing::ext::TestSize.Level1)
     }
 
     // Share from invalid entity should do nothing
-    sceneUtil.ShareSkin(*ecs, targetEntity, Entity {});
+    sceneUtil.ShareSkin(*ecs, targetEntity, Entity{});
     if (auto scopedHandle = skinJointsManager->Read(targetEntity); scopedHandle) {
         EXPECT_EQ(3, scopedHandle->count);
         EXPECT_EQ(joint3, scopedHandle->jointEntities[0]);
@@ -140,7 +140,7 @@ UNIT_TEST(API_SceneUtil, ShareSkinTest, testing::ext::TestSize.Level1)
     if (auto scopedHandle = skinJointsManager->Read(targetEntity); scopedHandle) {
         EXPECT_EQ(3, scopedHandle->count);
         EXPECT_EQ(joint2, scopedHandle->jointEntities[0]);
-        EXPECT_EQ(Entity {}, scopedHandle->jointEntities[1]);
+        EXPECT_EQ(Entity{}, scopedHandle->jointEntities[1]);
         EXPECT_EQ(joint0, scopedHandle->jointEntities[2]);
     }
 }
@@ -161,7 +161,7 @@ Entity CreateAnimation(IEcs& ecs, Entity entity)
     animationOutputManager->Create(keyFrameData);
     if (auto scopedHandle = animationOutputManager->Write(keyFrameData); scopedHandle) {
         scopedHandle->type = PropertyType::VEC3_T;
-        constexpr Math::Vec3 values[] = { { 0.0f, 0.0f, 0.0f }, { 5.0f, 5.0f, 5.0f } };
+        constexpr Math::Vec3 values[] = {{0.0f, 0.0f, 0.0f}, {5.0f, 5.0f, 5.0f}};
         scopedHandle->data.resize(sizeof(values));
         CloneData(scopedHandle->data.data(), scopedHandle->data.size(), values, sizeof(values));
     }
@@ -207,12 +207,12 @@ Entity CreateAnimation(IEcs& ecs, Entity entity)
     }
 
     IAnimationPlayback* playback =
-        animationSystem->CreatePlayback(animation, { targetEntities.data(), targetEntities.size() });
+        animationSystem->CreatePlayback(animation, {targetEntities.data(), targetEntities.size()});
     EXPECT_TRUE(playback);
     ecs.ProcessEvents();
     return animation;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RetargetSkinAnimationTest
@@ -340,7 +340,10 @@ UNIT_TEST(API_SceneUtil, CameraLookAt, testing::ext::TestSize.Level1)
     for (auto& node : nodes) {
         node = nodeSystem->CreateNode();
     }
-    std::transform(std::begin(nodes) + 1, std::end(nodes), std::begin(nodes), std::begin(nodes) + 1,
+    std::transform(std::begin(nodes) + 1,
+        std::end(nodes),
+        std::begin(nodes),
+        std::begin(nodes) + 1,
         [](ISceneNode* node, ISceneNode* parent) {
             node->SetParent(*parent);
             node->SetPosition(Math::Vec3(1.f, 0.f, 0.f));
@@ -404,7 +407,7 @@ size_t GetEntityCount(IEcs& ecs)
 
     return entityCount;
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CloneEcsSimple
@@ -487,8 +490,9 @@ UNIT_TEST(API_SceneUtil, CloneEcs, testing::ext::TestSize.Level1)
             auto children2 = scene2Node->GetChildren();
             for (auto child : children) {
                 auto name = child->GetName();
-                auto pos = std::find_if(children2.cbegin(), children2.cend(),
-                    [&name](const auto& node) { return node->GetName() == name; });
+                auto pos = std::find_if(children2.cbegin(), children2.cend(), [&name](const auto& node) {
+                    return node->GetName() == name;
+                });
                 EXPECT_NE(pos, children2.cend());
                 if (pos != children2.cend()) {
                     stack.push_back(child);
@@ -508,7 +512,7 @@ UNIT_TEST(API_SceneUtil, CloneEcs, testing::ext::TestSize.Level1)
         const auto sceneClone = graphicsContext->GetSceneUtil().Clone(*ecs2, {}, *ecs, sceneEnity);
 
         BASE_NS::unordered_map<CORE_NS::Entity, ISceneUtil::MappedEntity> mapping;
-        mapping[sceneEnity] = { sceneClone.node };
+        mapping[sceneEnity] = {sceneClone.node};
 
         const auto partialClone = graphicsContext->GetSceneUtil().Clone(*ecs2, *ecs, mapping);
 
@@ -537,8 +541,9 @@ UNIT_TEST(API_SceneUtil, CloneEcs, testing::ext::TestSize.Level1)
             auto children2 = scene2Node->GetChildren();
             for (auto child : children) {
                 auto name = child->GetName();
-                auto pos = std::find_if(children2.cbegin(), children2.cend(),
-                    [&name](const auto& node) { return node->GetName() == name; });
+                auto pos = std::find_if(children2.cbegin(), children2.cend(), [&name](const auto& node) {
+                    return node->GetName() == name;
+                });
                 EXPECT_NE(pos, children2.cend());
                 if (pos != children2.cend()) {
                     stack.push_back(child);
@@ -554,7 +559,7 @@ UNIT_TEST(API_SceneUtil, CloneEcs, testing::ext::TestSize.Level1)
         auto entity = entityManager.Create();
 
         BASE_NS::unordered_map<CORE_NS::Entity, ISceneUtil::MappedEntity> mapping;
-        mapping[sceneEnity] = { entity, true };
+        mapping[sceneEnity] = {entity, true};
 
         const auto partialClone = graphicsContext->GetSceneUtil().Clone(*ecs2, *ecs, mapping);
 
@@ -583,8 +588,9 @@ UNIT_TEST(API_SceneUtil, CloneEcs, testing::ext::TestSize.Level1)
             auto children2 = scene2Node->GetChildren();
             for (auto child : children) {
                 auto name = child->GetName();
-                auto pos = std::find_if(children2.cbegin(), children2.cend(),
-                    [&name](const auto& node) { return node->GetName() == name; });
+                auto pos = std::find_if(children2.cbegin(), children2.cend(), [&name](const auto& node) {
+                    return node->GetName() == name;
+                });
                 EXPECT_NE(pos, children2.cend());
                 if (pos != children2.cend()) {
                     stack.push_back(child);
@@ -661,10 +667,10 @@ BASE_NS::pair<CORE_NS::EntityReference, CORE_NS::EntityReference> CreateShader(
     renderHandleManager->Write(shader)->reference = shaderHandle;
     renderHandleManager->Write(state)->reference = stateHandle;
 
-    return { shader, state };
+    return {shader, state};
 }
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {
@@ -682,7 +688,7 @@ Entity LookupResourceByUri(
     }
     return {};
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: CloneMaterialWithCustomShader
@@ -786,20 +792,19 @@ UNIT_TEST(API_SceneUtil, SphereInsideCameraFrustum, testing::ext::TestSize.Level
     auto ecs = engine->CreateEcs();
     ecs->Initialize();
     // valid entity but missng managers
-    EXPECT_FALSE(
-        sceneUtil.IsSphereInsideCameraFrustum(*ecs, ecs->GetEntityManager().Create(), { -5.f, 0.f, 0.f }, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, ecs->GetEntityManager().Create(), {-5.f, 0.f, 0.f}, 0.5));
 
     ecs = testContext->ecs;
     // invalid entity
-    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, {}, { -5.f, 0.f, 0.f }, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, {}, {-5.f, 0.f, 0.f}, 0.5));
 
-    Entity cameraEntity = sceneUtil.CreateCamera(*ecs, {}, { 0.f, 0.f, 0.f, 1.f }, 0.1f, 20.f, 45.f);
-    sceneUtil.CameraLookAt(*ecs, cameraEntity, { 10.f, 10.f, -10.f }, { 0.f, 0.f, 0.f }, { 0.f, 1.f, 0.f });
+    Entity cameraEntity = sceneUtil.CreateCamera(*ecs, {}, {0.f, 0.f, 0.f, 1.f}, 0.1f, 20.f, 45.f);
+    sceneUtil.CameraLookAt(*ecs, cameraEntity, {10.f, 10.f, -10.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f});
     Math::Vec3 center;
 
-    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, { -5.f, 0.f, 0.f }, 0.5));
-    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, { 10.f, 0.f, 0.f }, 0.5));
-    EXPECT_TRUE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, { 0.f, 0.f, 0.f }, 0.5));
-    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, { 0.f, 10.f, 0.f }, 0.5));
-    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, { 0.f, -10.f, 0.f }, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, {-5.f, 0.f, 0.f}, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, {10.f, 0.f, 0.f}, 0.5));
+    EXPECT_TRUE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, {0.f, 0.f, 0.f}, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, {0.f, 10.f, 0.f}, 0.5));
+    EXPECT_FALSE(sceneUtil.IsSphereInsideCameraFrustum(*ecs, cameraEntity, {0.f, -10.f, 0.f}, 0.5));
 }

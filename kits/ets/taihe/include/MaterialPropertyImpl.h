@@ -37,7 +37,7 @@ public:
     void setImage(::SceneResources::ImageOrNull const& img);
 
     ::SceneTypes::Vec4 getFactor();
-    void setFactor(::SceneTypes::weak::Vec4 const &factor);
+    void setFactor(::SceneTypes::weak::Vec4 const& factor);
 
     ::taihe::optional<::SceneResources::Sampler> getSampler();
     void setSampler(::taihe::optional_view<::SceneResources::Sampler> sampler);
@@ -56,5 +56,5 @@ private:
     std::shared_ptr<MaterialPropertyETS> materialPropertyETS_{nullptr};
     ::SceneResources::Sampler sampler_{{nullptr, nullptr}};
 };
-} // namespace OHOS::Render3D::KITETS
+}  // namespace OHOS::Render3D::KITETS
 #endif  // OHOS_3D_MATERIAL_PROPERTY_IMPL_H

@@ -63,26 +63,26 @@ using namespace CORE3D_NS;
 namespace {
 class ImportListener final : public IGLTF2Importer::Listener {
 public:
-    void OnImportStarted() override {};
+    void OnImportStarted() override{};
     void OnImportFinished() override
     {
         done = true;
     };
-    void OnImportProgressed(size_t taskIndex, size_t taskCount) override {};
+    void OnImportProgressed(size_t taskIndex, size_t taskCount) override{};
     bool IsDone()
     {
         return done;
     }
 
 private:
-    bool done { false };
+    bool done{false};
 };
 GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, Entity& root)
 {
     auto gltf = gltf2.LoadGLTF(filename);
     if (gltf.success) {
         auto importer = gltf2.CreateGLTF2Importer(ecs);
-        ImportListener listener {};
+        ImportListener listener{};
         importer->ImportGLTFAsync(*gltf.data, CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, &listener);
         while (!importer->Execute(0)) {
         }
@@ -91,7 +91,11 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
         GLTFImportResult result = importer->GetResult();
         EXPECT_TRUE(result.success);
         if (result.success) {
-            root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(), *gltf.data, result.data, ecs, {},
+            root = gltf2.ImportGltfScene(gltf.data->GetDefaultSceneIndex(),
+                *gltf.data,
+                result.data,
+                ecs,
+                {},
                 CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL);
             EXPECT_TRUE(EntityUtil::IsValid(root));
             GetManager<IRenderConfigurationComponentManager>(ecs)->Create(root);
@@ -105,7 +109,7 @@ GLTFImportResult LoadAndImport(string_view filename, Gltf2& gltf2, IEcs& ecs, En
     error.error = gltf.error;
     return error;
 }
-} // namespace
+}  // namespace
 
 #ifdef NDEBUG
 /**
@@ -140,7 +144,7 @@ UNIT_TEST(SRC_GLTFImporterTest, ImportCustomGLTFTest, testing::ext::TestSize.Lev
 
     delete gltf2;
 }
-#endif // NDEBUG
+#endif  // NDEBUG
 
 /**
  * @tc.name: ImportSparseAccessorTest
@@ -191,8 +195,8 @@ UNIT_TEST(SRC_GLTFImporterTest, InvalidImageTest, testing::ext::TestSize.Level1)
     auto gltf2 = new Gltf2(*graphicsContext);
     auto importer = gltf2->CreateGLTF2Importer(*ecs);
 
-    GLTF2::Data data { engine->GetFileManager() };
-    data.images.push_back(unique_ptr<GLTF2::Image> { new GLTF2::Image {} });
+    GLTF2::Data data{engine->GetFileManager()};
+    data.images.push_back(unique_ptr<GLTF2::Image>{new GLTF2::Image{}});
 
     // invalid image shouldn't fail, but still report an error message.
     {
@@ -237,8 +241,8 @@ UNIT_TEST(SRC_GLTFImporterTest, InvalidMeshTest, testing::ext::TestSize.Level1)
     accessor.bufferView = &bufferView;
 
     {
-        GLTF2::Data data { engine->GetFileManager() };
-        data.meshes.push_back(unique_ptr<GLTF2::Mesh> { new GLTF2::Mesh {} });
+        GLTF2::Data data{engine->GetFileManager()};
+        data.meshes.push_back(unique_ptr<GLTF2::Mesh>{new GLTF2::Mesh{}});
 
         data.meshes[0]->primitives.resize(1);
         data.meshes[0]->primitives[0].attributes.resize(1);
@@ -252,8 +256,8 @@ UNIT_TEST(SRC_GLTFImporterTest, InvalidMeshTest, testing::ext::TestSize.Level1)
     }
 
     {
-        GLTF2::Data data { engine->GetFileManager() };
-        data.meshes.push_back(unique_ptr<GLTF2::Mesh> { new GLTF2::Mesh {} });
+        GLTF2::Data data{engine->GetFileManager()};
+        data.meshes.push_back(unique_ptr<GLTF2::Mesh>{new GLTF2::Mesh{}});
 
         data.meshes[0]->primitives.resize(1);
         data.meshes[0]->primitives[0].indices = &accessor;
@@ -264,8 +268,8 @@ UNIT_TEST(SRC_GLTFImporterTest, InvalidMeshTest, testing::ext::TestSize.Level1)
     }
 
     {
-        GLTF2::Data data { engine->GetFileManager() };
-        data.meshes.push_back(unique_ptr<GLTF2::Mesh> { new GLTF2::Mesh {} });
+        GLTF2::Data data{engine->GetFileManager()};
+        data.meshes.push_back(unique_ptr<GLTF2::Mesh>{new GLTF2::Mesh{}});
 
         importer->ImportGLTF(data, CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL);
         GLTFImportResult result = importer->GetResult();
@@ -274,7 +278,7 @@ UNIT_TEST(SRC_GLTFImporterTest, InvalidMeshTest, testing::ext::TestSize.Level1)
 
     delete gltf2;
 }
-#endif // NDEBUG
+#endif  // NDEBUG
 
 /**
  * @tc.name: ImportMeshoptTest

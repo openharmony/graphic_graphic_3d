@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <core/log.h>
+#include <base/util/log.h>
 #ifndef NDEBUG
 #include <base/containers/atomics.h>
 #endif
@@ -428,7 +428,7 @@ ScopedHandle<ComponentType> BaseManager<ComponentType, BaseClass>::Write(CORE_NS
 template<typename ComponentType, typename BaseClass>
 void BaseManager<ComponentType, BaseClass>::Updated(CORE_NS::Entity entity)
 {
-    CORE_ASSERT_MSG(EntityUtil::IsValid(entity), "Invalid ComponentId, bound to INVALID_ENTITY");
+    BASE_ASSERT_MSG(EntityUtil::IsValid(entity), "Invalid ComponentId, bound to INVALID_ENTITY");
     modifiedFlags_ |= CORE_COMPONENT_MANAGER_COMPONENT_UPDATED_BIT | MODIFIED;
     ++generationCounter_;
 }
@@ -452,7 +452,7 @@ BaseManager<ComponentType, BaseClass>::BaseManager(
 template<typename ComponentType, typename BaseClass>
 BaseManager<ComponentType, BaseClass>::~BaseManager()
 {
-    CORE_ASSERT(GetComponentCount() == 0);
+    BASE_ASSERT(GetComponentCount() == 0);
 }
 
 template<typename ComponentType, typename BaseClass>
@@ -484,13 +484,13 @@ template<typename ComponentType, typename BaseClass>
 BaseManager<ComponentType, BaseClass>::BaseComponentHandle::BaseComponentHandle(BaseComponentHandle&& other) noexcept
     :
 #ifndef NDEBUG
-    rLocked_(BASE_NS::exchange(other.rLocked_, 0U)), wLocked_(BASE_NS::exchange(other.wLocked_, false)),
+      rLocked_(BASE_NS::exchange(other.rLocked_, 0U)), wLocked_(BASE_NS::exchange(other.wLocked_, false)),
 #endif
-    manager_(other.manager_), generation_(BASE_NS::exchange(other.generation_, 0U)),
-    entity_(BASE_NS::exchange(other.entity_, {})), data_(BASE_NS::exchange(other.data_, {}))
+      manager_(other.manager_), generation_(BASE_NS::exchange(other.generation_, 0U)),
+      entity_(BASE_NS::exchange(other.entity_, {})), data_(BASE_NS::exchange(other.data_, {}))
 {
 #ifndef NDEBUG
-    CORE_ASSERT((rLocked_ == 0U) && !wLocked_);
+    BASE_ASSERT((rLocked_ == 0U) && !wLocked_);
 #endif
 }
 
@@ -499,9 +499,9 @@ typename BaseManager<ComponentType, BaseClass>::BaseComponentHandle&
 BaseManager<ComponentType, BaseClass>::BaseComponentHandle::operator=(BaseComponentHandle&& other) noexcept
 {
     if (this != &other) {
-        CORE_ASSERT(manager_ == other.manager_);
+        BASE_ASSERT(manager_ == other.manager_);
 #ifndef NDEBUG
-        CORE_ASSERT((other.rLocked_ == 0U) && !other.wLocked_);
+        BASE_ASSERT((other.rLocked_ == 0U) && !other.wLocked_);
         rLocked_ = BASE_NS::exchange(other.rLocked_, 0U);
         wLocked_ = BASE_NS::exchange(other.wLocked_, false);
 #endif
@@ -527,9 +527,9 @@ size_t BaseManager<ComponentType, BaseClass>::BaseComponentHandle::Size() const
 template<typename ComponentType, typename BaseClass>
 const void* BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RLock() const
 {
-    CORE_ASSERT(manager_);
+    BASE_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(!wLocked_);
+    BASE_ASSERT(!wLocked_);
     BASE_NS::AtomicIncrementRelaxed(&rLocked_);
 #endif
     return &data_;
@@ -538,9 +538,9 @@ const void* BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RLock() 
 template<typename ComponentType, typename BaseClass>
 void BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RUnlock() const
 {
-    CORE_ASSERT(manager_);
+    BASE_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ > 0U);
+    BASE_ASSERT(rLocked_ > 0U);
     BASE_NS::AtomicDecrementRelaxed(&rLocked_);
 #endif
 }
@@ -548,9 +548,9 @@ void BaseManager<ComponentType, BaseClass>::BaseComponentHandle::RUnlock() const
 template<typename ComponentType, typename BaseClass>
 void* BaseManager<ComponentType, BaseClass>::BaseComponentHandle::WLock()
 {
-    CORE_ASSERT(manager_);
+    BASE_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(rLocked_ <= 1U && !wLocked_);
+    BASE_ASSERT(rLocked_ <= 1U && !wLocked_);
     wLocked_ = true;
 #endif
     return &data_;
@@ -559,9 +559,9 @@ void* BaseManager<ComponentType, BaseClass>::BaseComponentHandle::WLock()
 template<typename ComponentType, typename BaseClass>
 void BaseManager<ComponentType, BaseClass>::BaseComponentHandle::WUnlock()
 {
-    CORE_ASSERT(manager_);
+    BASE_ASSERT(manager_);
 #ifndef NDEBUG
-    CORE_ASSERT(wLocked_);
+    BASE_ASSERT(wLocked_);
     wLocked_ = false;
 #endif
     // update generation etc..

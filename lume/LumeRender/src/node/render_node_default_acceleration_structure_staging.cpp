@@ -35,30 +35,23 @@
 #include "vulkan/gpu_buffer_vk.h"
 #endif
 
+#include "util/align_util.h"
 #include "util/log.h"
 
 using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t Align(uint32_t value, uint32_t align)
-{
-    if (value == 0) {
-        return 0;
-    }
-    return ((value + align) / align) * align;
-}
-
 vector<AsGeometryTrianglesData> ConvertAsGeometryTrianglesData(
     const array_view<const AsGeometryTrianglesDataWithHandleReference> input)
 {
     vector<AsGeometryTrianglesData> output;
     output.reserve(input.size());
     for (const auto& ref : input) {
-        output.push_back(
-            AsGeometryTrianglesData { ref.info, { ref.vertexData.handle.GetHandle(), ref.vertexData.offset },
-                { ref.indexData.handle.GetHandle(), ref.indexData.offset },
-                { ref.transformData.handle.GetHandle(), ref.transformData.offset } });
+        output.push_back(AsGeometryTrianglesData{ref.info,
+            {ref.vertexData.handle.GetHandle(), ref.vertexData.offset},
+            {ref.indexData.handle.GetHandle(), ref.indexData.offset},
+            {ref.transformData.handle.GetHandle(), ref.transformData.offset}});
     }
     return output;
 }
@@ -69,7 +62,7 @@ vector<AsGeometryAabbsData> ConvertAsGeometryAabbsData(
     vector<AsGeometryAabbsData> output;
     output.reserve(input.size());
     for (const auto& ref : input) {
-        output.push_back(AsGeometryAabbsData { ref.info, { ref.data.handle.GetHandle(), ref.data.offset } });
+        output.push_back(AsGeometryAabbsData{ref.info, {ref.data.handle.GetHandle(), ref.data.offset}});
     }
     return output;
 }
@@ -80,11 +73,11 @@ vector<AsGeometryInstancesData> ConvertAsGeometryInstancesData(
     vector<AsGeometryInstancesData> output;
     output.reserve(input.size());
     for (const auto& ref : input) {
-        output.push_back(AsGeometryInstancesData { ref.info, { ref.data.handle.GetHandle(), ref.data.offset } });
+        output.push_back(AsGeometryInstancesData{ref.info, {ref.data.handle.GetHandle(), ref.data.offset}});
     }
     return output;
 }
-} // namespace
+}  // namespace
 
 void RenderNodeDefaultAccelerationStructureStaging::InitNode(IRenderNodeContextManager& renderNodeContextMgr)
 {
@@ -142,24 +135,26 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
         const uint32_t startIndex = geomRef.startIndex;
         const uint32_t count = geomRef.count;
         PLUGIN_ASSERT(frameScratchOffsetIndex_ < static_cast<uint32_t>(scratchOffsetHelper_.size()));
-        const BufferOffset bufferOffset { rawScratchBuffer_, scratchOffsetHelper_[frameScratchOffsetIndex_] };
-        frameScratchOffsetIndex_++; // advance
-        AsBuildGeometryData geometry { { geomRef.data.info }, geomRef.data.srcAccelerationStructure.GetHandle(),
-            geomRef.data.dstAccelerationStructure.GetHandle(), bufferOffset };
+        const BufferOffset bufferOffset{rawScratchBuffer_, scratchOffsetHelper_[frameScratchOffsetIndex_]};
+        frameScratchOffsetIndex_++;  // advance
+        AsBuildGeometryData geometry{{geomRef.data.info},
+            geomRef.data.srcAccelerationStructure.GetHandle(),
+            geomRef.data.dstAccelerationStructure.GetHandle(),
+            bufferOffset};
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
             (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
             const auto& ref = triangles[startIndex];
-            const vector<AsGeometryTrianglesData> info = ConvertAsGeometryTrianglesData({ &ref, count });
+            const vector<AsGeometryTrianglesData> info = ConvertAsGeometryTrianglesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, info, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
                    (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
             const auto& ref = aabbs[startIndex];
-            const vector<AsGeometryAabbsData> info = ConvertAsGeometryAabbsData({ &ref, count });
+            const vector<AsGeometryAabbsData> info = ConvertAsGeometryAabbsData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, info, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
                    (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
             const auto& ref = instances[startIndex];
-            const vector<AsGeometryInstancesData> info = ConvertAsGeometryInstancesData({ &ref, count });
+            const vector<AsGeometryInstancesData> info = ConvertAsGeometryInstancesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, {}, info);
         }
     }
@@ -192,7 +187,7 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceD
             dstRef.accelerationStructure = srcRef.accelerationStructure.GetHandle();
         }
         cmdList.CopyAccelerationStructureInstances(
-            { dataRef.bufferOffset.handle.GetHandle(), dataRef.bufferOffset.offset }, asInstanceHelper_);
+            {dataRef.bufferOffset.handle.GetHandle(), dataRef.bufferOffset.offset}, asInstanceHelper_);
     }
 #endif
 #endif
@@ -228,17 +223,17 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
             (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
             const auto& triRef = triangles[startIndex];
-            GetInfos(array_view { &triRef, count }, triInfos);
+            GetInfos(array_view{&triRef, count}, triInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, triInfos, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
                    (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
             const auto& aabbRef = aabbs[startIndex];
-            GetInfos(array_view { &aabbRef, count }, aabbInfos);
+            GetInfos(array_view{&aabbRef, count}, aabbInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, aabbInfos, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
                    (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
             const auto& instanceRef = instances[startIndex];
-            GetInfos(array_view { &instanceRef, count }, instanceInfos);
+            GetInfos(array_view{&instanceRef, count}, instanceInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, {}, instanceInfos);
         }
 
@@ -248,13 +243,13 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
     }
     if (frameScratchSize > 0) {
         // allocate scratch
-        const GpuBufferDesc scratchDesc {
+        const GpuBufferDesc scratchDesc{
             BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT, // usageFlags
-            CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                         // memoryPropertyFlags
-            0U,                                                            // engineCreationFlags
-            frameScratchSize,                                              // byteSize
-            BASE_NS::Format::BASE_FORMAT_UNDEFINED,                        // format
+                BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
+            CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
+            0U,                                                             // engineCreationFlags
+            frameScratchSize,                                               // byteSize
+            BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
         };
 #if (RENDER_VALIDATION_ENABLED == 1)
         scratchBuffer_ =

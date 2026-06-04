@@ -19,4 +19,4 @@
 #include <cstdint>
 std::uint32_t platform_ntohl(std::uint32_t a);
 std::uint32_t platform_htonl(std::uint32_t a);
-#endif // __PLATFORM_H__
+#endif  // __PLATFORM_H__

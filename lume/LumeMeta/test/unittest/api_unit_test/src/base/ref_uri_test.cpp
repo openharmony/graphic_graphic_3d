@@ -35,14 +35,14 @@ UNIT_TEST(API_RefUriTest, DefaultAndUidConstruction, testing::ext::TestSize.Leve
     EXPECT_TRUE(empty.IsValid());
     EXPECT_TRUE(!empty.ReferencesProperty());
     EXPECT_TRUE(empty.ReferencesObject());
-    EXPECT_EQ(empty.BaseObjectUid(), BASE_NS::Uid {});
+    EXPECT_EQ(empty.BaseObjectUid(), BASE_NS::Uid{});
     EXPECT_TRUE(!empty.StartsFromRoot());
     EXPECT_EQ(empty.RelativeUri(), empty);
     EXPECT_EQ(empty.ReferencedName(), "");
     EXPECT_EQ(empty.ToString(), "ref:/");
 
-    BASE_NS::Uid uid { "f80a3984-7ac7-4400-8e17-13937cc11d39" };
-    RefUri u1 { uid };
+    BASE_NS::Uid uid{"f80a3984-7ac7-4400-8e17-13937cc11d39"};
+    RefUri u1{uid};
     EXPECT_TRUE(!u1.IsEmpty());
     EXPECT_TRUE(u1.IsValid());
     EXPECT_TRUE(!u1.ReferencesProperty());
@@ -53,21 +53,21 @@ UNIT_TEST(API_RefUriTest, DefaultAndUidConstruction, testing::ext::TestSize.Leve
     EXPECT_EQ(u1.ReferencedName(), "");
     EXPECT_EQ(u1.ToString(), "ref:f80a3984-7ac7-4400-8e17-13937cc11d39/");
 
-    RefUri u2 { uid, "/test/path" };
+    RefUri u2{uid, "/test/path"};
     EXPECT_TRUE(!u2.IsEmpty());
     EXPECT_TRUE(u2.IsValid());
     EXPECT_TRUE(!u2.ReferencesProperty());
     EXPECT_TRUE(u2.ReferencesObject());
     EXPECT_EQ(u2.BaseObjectUid(), uid);
     EXPECT_TRUE(!u2.StartsFromRoot());
-    EXPECT_EQ(u2.RelativeUri(), RefUri { "ref:/test/path" });
+    EXPECT_EQ(u2.RelativeUri(), RefUri{"ref:/test/path"});
     EXPECT_EQ(u2.ReferencedName(), "path");
     EXPECT_EQ(u2.ToString(), "ref:f80a3984-7ac7-4400-8e17-13937cc11d39/test/path");
     EXPECT_EQ(u2.TakeFirstNode().name, "test");
     EXPECT_EQ(u2.TakeFirstNode().name, "path");
     EXPECT_EQ(u2, u1);
 
-    RefUri u3 { uid, "//test/path" };
+    RefUri u3{uid, "//test/path"};
     EXPECT_TRUE(u3.StartsFromRoot());
     EXPECT_EQ(u3.ToString(), "ref:f80a3984-7ac7-4400-8e17-13937cc11d39//test/path");
     u3.SetStartsFromRoot(false);
@@ -81,7 +81,7 @@ UNIT_TEST(API_RefUriTest, DefaultAndUidConstruction, testing::ext::TestSize.Leve
  */
 UNIT_TEST(API_RefUriTest, StringConstruction, testing::ext::TestSize.Level1)
 {
-    EXPECT_EQ(RefUri { "ref:/" }, RefUri {});
+    EXPECT_EQ(RefUri{"ref:/"}, RefUri{});
     EXPECT_FALSE(RefUri("").IsValid());
     EXPECT_FALSE(RefUri("/some/path").IsValid());
     EXPECT_FALSE(RefUri("ref:///").IsValid());
@@ -89,14 +89,14 @@ UNIT_TEST(API_RefUriTest, StringConstruction, testing::ext::TestSize.Level1)
     EXPECT_FALSE(RefUri("ref:7ac7-4400-8e17-13937cc11d39").IsValid());
     EXPECT_FALSE(RefUri("ref:f80a3984-7ac7-4400-8e17-13937cc11d39///").IsValid());
     {
-        RefUri u { "ref://" };
+        RefUri u{"ref://"};
         EXPECT_TRUE(u.IsValid());
         EXPECT_TRUE(!u.IsEmpty());
         EXPECT_EQ(u.ToString(), "ref://");
         EXPECT_TRUE(u.StartsFromRoot());
     }
     {
-        RefUri u { "ref://this/and/$that" };
+        RefUri u{"ref://this/and/$that"};
         EXPECT_TRUE(u.IsValid());
         EXPECT_TRUE(!u.IsEmpty());
         EXPECT_EQ(u.ToString(), "ref://this/and/$that");
@@ -117,10 +117,10 @@ UNIT_TEST(API_RefUriTest, StringConstruction, testing::ext::TestSize.Level1)
         }
     }
     {
-        RefUri u { "ref:f80a3984-7ac7-4400-8e17-13937cc11d39/hips/$hops/haps" };
+        RefUri u{"ref:f80a3984-7ac7-4400-8e17-13937cc11d39/hips/$hops/haps"};
         EXPECT_TRUE(u.IsValid());
         EXPECT_TRUE(!u.IsEmpty());
-        EXPECT_EQ(u.BaseObjectUid(), BASE_NS::Uid { "f80a3984-7ac7-4400-8e17-13937cc11d39" });
+        EXPECT_EQ(u.BaseObjectUid(), BASE_NS::Uid{"f80a3984-7ac7-4400-8e17-13937cc11d39"});
         EXPECT_EQ(u.ToString(), "ref:f80a3984-7ac7-4400-8e17-13937cc11d39/hips/$hops/haps");
         EXPECT_TRUE(!u.StartsFromRoot());
         EXPECT_TRUE(!u.ReferencesProperty());
@@ -139,7 +139,7 @@ UNIT_TEST(API_RefUriTest, StringConstruction, testing::ext::TestSize.Level1)
         }
     }
     {
-        RefUri u { "ref://this/!and/@/$that" };
+        RefUri u{"ref://this/!and/@/$that"};
         EXPECT_TRUE(u.IsValid());
         EXPECT_TRUE(!u.IsEmpty());
         EXPECT_EQ(u.ToString(), "ref://this/!and/@/$that");
@@ -178,9 +178,9 @@ UNIT_TEST(API_RefUriTest, StringConstruction, testing::ext::TestSize.Level1)
 UNIT_TEST(API_RefUriTest, Setters, testing::ext::TestSize.Level1)
 {
     {
-        RefUri u { "ref:f80a3984-7ac7-4400-8e17-13937cc11d39/hips/$hops/haps" };
+        RefUri u{"ref:f80a3984-7ac7-4400-8e17-13937cc11d39/hips/$hops/haps"};
         EXPECT_TRUE(u.IsValid());
-        BASE_NS::Uid uid { "1ae79e0c-2701-4f19-8553-fb2dd22f6eba" };
+        BASE_NS::Uid uid{"1ae79e0c-2701-4f19-8553-fb2dd22f6eba"};
         u.SetBaseObjectUid(uid);
         EXPECT_EQ(u.ToString(), "ref:1ae79e0c-2701-4f19-8553-fb2dd22f6eba/hips/$hops/haps");
         u.SetStartsFromRoot(true);
@@ -228,7 +228,7 @@ UNIT_TEST(API_RefUriTest, Escaping, testing::ext::TestSize.Level1)
 UNIT_TEST(API_RefUriTest, Context, testing::ext::TestSize.Level1)
 {
     {
-        RefUri u { "ref:/@Context" };
+        RefUri u{"ref:/@Context"};
         EXPECT_TRUE(u.IsValid());
         EXPECT_TRUE(!u.IsEmpty());
         EXPECT_EQ(u.ToString(), "ref:/@Context");
@@ -249,7 +249,7 @@ UNIT_TEST(API_RefUriTest, Context, testing::ext::TestSize.Level1)
         EXPECT_EQ(u, RefUri::ContextUri());
     }
     {
-        RefUri u { "ref:1ae79e0c-2701-4f19-8553-fb2dd22f6eba/@Context/$Theme/$Prop" };
+        RefUri u{"ref:1ae79e0c-2701-4f19-8553-fb2dd22f6eba/@Context/$Theme/$Prop"};
         EXPECT_EQ(u.ToString(), "ref:1ae79e0c-2701-4f19-8553-fb2dd22f6eba/@Context/$Theme/$Prop");
     }
 }
@@ -443,7 +443,7 @@ UNIT_TEST(API_RefUriTest, Subscripting, testing::ext::TestSize.Level1)
     auto obj = CreateInstance(META_NS::ClassId::Object);
     auto att = CreateTestType();
     att->SetName("test");
-    att->MyObjectArray()->SetValue({ nullptr, interface_pointer_cast<IObject>(aobj), nullptr });
+    att->MyObjectArray()->SetValue({nullptr, interface_pointer_cast<IObject>(aobj), nullptr});
 
     auto i = interface_cast<IAttach>(obj);
     ASSERT_TRUE(i);
@@ -456,5 +456,5 @@ UNIT_TEST(API_RefUriTest, Subscripting, testing::ext::TestSize.Level1)
     }
 }
 
-} // namespace UTest
+}  // namespace UTest
 META_END_NAMESPACE()

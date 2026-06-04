@@ -20,11 +20,11 @@
 #include <base/containers/type_traits.h>
 #include <base/containers/vector.h>
 #include <base/namespace.h>
+#include <base/util/log.h>
 #include <core/ecs/entity.h>
 #include <core/ecs/intf_component_manager.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/ecs/intf_entity_manager.h>
-#include <core/log.h>
 #include <core/namespace.h>
 
 CORE_BEGIN_NAMESPACE()
@@ -65,7 +65,7 @@ void ComponentQuery::SetupQuery(
     operationMethods_.push_back(Operation::REQUIRE);
     for (auto& operation : operations) {
         managers_.push_back(const_cast<IComponentManager*>(&operation.target));
-        CORE_ASSERT(managers_.back());
+        BASE_ASSERT(managers_.back());
         operationMethods_.push_back(operation.method);
     }
 
@@ -165,7 +165,7 @@ bool ComponentQuery::IsValid() const
 
 array_view<const ComponentQuery::ResultRow> ComponentQuery::GetResults() const
 {
-    return { result_.data(), result_.size() };
+    return {result_.data(), result_.size()};
 }
 
 const ComponentQuery::ResultRow* ComponentQuery::FindResultRow(Entity entity) const

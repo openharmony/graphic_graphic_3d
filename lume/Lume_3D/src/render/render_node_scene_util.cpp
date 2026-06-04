@@ -45,31 +45,33 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 
 namespace {
-static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
 
 inline bool operator<(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 {
+    // Sorting is always ascending by sortLayerKey. For equal sortLayerKeys sortKey (material/ depth) defines the
+    // order.
     if (lhs.sortLayerKey < rhs.sortLayerKey) {
         return true;
     } else if (lhs.sortLayerKey == rhs.sortLayerKey) {
         return (lhs.sortKey < rhs.sortKey);
-    } else {
-        return false;
     }
+    return false;
 }
 
 inline bool operator>(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
 {
+    // Sorting is always ascending by sortLayerKey. For equal sortLayerKeys sortKey (material/ depth) defines the
+    // order.
     if (lhs.sortLayerKey < rhs.sortLayerKey) {
         return true;
     } else if (lhs.sortLayerKey == rhs.sortLayerKey) {
         return (lhs.sortKey > rhs.sortKey);
-    } else {
-        return false;
     }
+    return false;
 }
 
-template<class T>
+template <class T>
 struct Less {
     constexpr bool operator()(const T& lhs, const T& rhs) const
     {
@@ -77,7 +79,7 @@ struct Less {
     }
 };
 
-template<class T>
+template <class T>
 struct Greater {
     constexpr bool operator()(const T& lhs, const T& rhs) const
     {
@@ -94,8 +96,8 @@ void UpdateRenderArea(const Math::Vec4& scissor, RenderPassDesc::RenderArea& ren
 
         const float offsetX = (fWidth * scissor.x);
         const float offsetY = (fHeight * scissor.y);
-        const float extentWidth = (fWidth * scissor.z);
-        const float extentHeight = (fHeight * scissor.w);
+        const float extentWidth = std::max(0.0f, fWidth * scissor.z);
+        const float extentHeight = std::max(0.0f, fHeight * scissor.w);
 
         renderArea = {
             static_cast<int32_t>(offsetX),
@@ -157,7 +159,7 @@ void UpdateCameraFlags(const RenderCamera& camera, RenderPass& renderPass)
             const uint32_t layerCount = camera.multiViewCameraCount + 1U;
             renderPass.subpassDesc.viewMask = (1U << layerCount) - 1U;
         } else if (camera.flags & RenderCamera::CAMERA_FLAG_CUBEMAP_BIT) {
-            renderPass.subpassDesc.viewMask = 0x3F; // all cubemap layers
+            renderPass.subpassDesc.viewMask = 0x3F;  // all cubemap layers
         }
     }
 }
@@ -183,13 +185,15 @@ bool IsObjectCulled(IFrustumUtil& frustumUtil, const Frustum& camFrustum, const 
 inline constexpr RenderSlotCullType GetRenderSlotBaseCullType(
     const RenderSlotCullType cullType, const RenderCamera& camera)
 {
-    if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUBEMAP_BIT) {
+    // Multi-direction cameras pick the view per draw; single-frustum cull would drop faces 1..5.
+    constexpr uint32_t bypassFrustumCullFlags = RenderCamera::CameraFlagBits::CAMERA_FLAG_CUBEMAP_BIT |
+                                                RenderCamera::CameraFlagBits::CAMERA_FLAG_LIGHT_PROBE_BAKE_BIT;
+    if (camera.flags & bypassFrustumCullFlags) {
         return RenderSlotCullType::NONE;
-    } else {
-        return cullType;
     }
+    return cullType;
 }
-} // namespace
+}  // namespace
 
 SceneRenderDataStores RenderNodeSceneUtil::GetSceneRenderDataStores(
     const IRenderNodeContextManager& renderNodeContextMgr, const string_view sceneDataStoreName)
@@ -208,6 +212,8 @@ SceneRenderDataStores RenderNodeSceneUtil::GetSceneRenderDataStores(
         stores.dataStoreNameLight =
             rs.dataStoreNameLight.empty() ? "RenderDataStoreDefaultLight" : rs.dataStoreNameLight;
         stores.dataStoreNameMorph = rs.dataStoreNameMorph.empty() ? "RenderDataStoreMorph" : rs.dataStoreNameMorph;
+        stores.dataStoreNameLightProbe =
+            rs.dataStoreNameLightProbe.empty() ? "RenderDataStoreLightProbe" : rs.dataStoreNameLightProbe;
         stores.dataStoreNamePrefix = rs.dataStoreNamePrefix;
     }
     return stores;
@@ -228,7 +234,7 @@ ViewportDesc RenderNodeSceneUtil::CreateViewportFromCamera(const RenderCamera& c
     const float extentWidth = (fRenderResX * camera.viewport.z);
     const float extentHeight = (fRenderResY * camera.viewport.w);
 
-    return ViewportDesc {
+    return ViewportDesc{
         offsetX,
         offsetY,
         extentWidth,
@@ -248,7 +254,7 @@ ScissorDesc RenderNodeSceneUtil::CreateScissorFromCamera(const RenderCamera& cam
     const float extentWidth = (fRenderResX * camera.scissor.z);
     const float extentHeight = (fRenderResY * camera.scissor.w);
 
-    return ScissorDesc {
+    return ScissorDesc{
         static_cast<int32_t>(offsetX),
         static_cast<int32_t>(offsetY),
         static_cast<uint32_t>(extentWidth),
@@ -258,7 +264,7 @@ ScissorDesc RenderNodeSceneUtil::CreateScissorFromCamera(const RenderCamera& cam
 
 void RenderNodeSceneUtil::UpdateRenderPassFromCamera(const RenderCamera& camera, RenderPass& renderPass)
 {
-    renderPass.renderPassDesc.renderArea = { 0, 0, camera.renderResolution.x, camera.renderResolution.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, camera.renderResolution.x, camera.renderResolution.y};
     if (camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT) {
         UpdateCustomCameraTargets(camera, renderPass);
     }
@@ -270,7 +276,7 @@ void RenderNodeSceneUtil::UpdateRenderPassFromCamera(const RenderCamera& camera,
 void RenderNodeSceneUtil::UpdateRenderPassFromCustomCamera(
     const RenderCamera& camera, const bool isNamedCamera, RenderPass& renderPass)
 {
-    renderPass.renderPassDesc.renderArea = { 0, 0, camera.renderResolution.x, camera.renderResolution.y };
+    renderPass.renderPassDesc.renderArea = {0, 0, camera.renderResolution.x, camera.renderResolution.y};
     // NOTE: legacy support is only taken into account when isNamedCamera flag is true
     if ((camera.flags & RenderCamera::CameraFlagBits::CAMERA_FLAG_CUSTOM_TARGETS_BIT) && isNamedCamera) {
         UpdateCustomCameraTargets(camera, renderPass);
@@ -296,10 +302,10 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
     // shader, materialIndex, meshId, and depth
 
     double camSortCoefficient = 1000.0;
-    Math::Mat4X4 camView { Math::IDENTITY_4X4 };
-    uint64_t camLayerMask { RenderSceneDataConstants::INVALID_ID };
-    uint32_t camLevel { 0U };
-    uint32_t camReflection { 0U };
+    Math::Mat4X4 camView{Math::IDENTITY_4X4};
+    uint64_t camLayerMask{RenderSceneDataConstants::INVALID_ID};
+    uint32_t camLevel{0U};
+    uint32_t camReflection{0U};
     Frustum camFrustum;
     bool reflectionCamera = false;
     const auto& cameras = dataStoreCamera.GetCameras();
@@ -374,8 +380,11 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
                 // High 32bits for depth, Low 32bits for render sort hash
                 sortKey = (sortKey << sDepthShift) | ((uint64_t)slotSubmeshMatData[idx].renderSortHash & sRenderMask);
             }
-            refSubmeshIndices.push_back(SlotSubmeshIndex { (uint32_t)submeshIndex,
-                submeshMatData.combinedRenderSortLayer, sortKey, submeshMatData.shader, submeshMatData.gfxState });
+            refSubmeshIndices.push_back(SlotSubmeshIndex{(uint32_t)submeshIndex,
+                submeshMatData.combinedRenderSortLayer,
+                sortKey,
+                submeshMatData.shader,
+                submeshMatData.gfxState});
         }
     }
 
@@ -403,7 +412,7 @@ void RenderNodeSceneUtil::GetRenderSlotSubmeshes(const IRenderDataStoreDefaultCa
 
             for (auto& mesh : refSubmeshIndices) {
                 uint32_t meshRenderHash = static_cast<uint32_t>((mesh.sortKey >> sRenderShift) & sRenderMask);
-                uint32_t meshDepth = static_cast<uint32_t>(mesh.sortKey & 0xffffffff); // Unpack low 32Bits for depth
+                uint32_t meshDepth = static_cast<uint32_t>(mesh.sortKey & 0xffffffff);  // Unpack low 32Bits for depth
 
                 if ((meshRenderHash != group->renderSortHash) || (mesh.sortLayerKey != group->sortLayerKey)) {
                     // Create new group
@@ -548,7 +557,7 @@ SceneCameraImageHandles RenderNodeSceneUtil::GetSceneCameraImageHandles(
     }
 
     // In case validation layer is not enabled, developer can check from logs here
-    for (const auto& handle : { handles.radianceCubemap }) {
+    for (const auto& handle : {handles.radianceCubemap}) {
         auto desc = gpuMgr.GetImageDescriptor(handle);
         if (desc.imageViewType == ImageViewType::CORE_IMAGE_VIEW_TYPE_CUBE ||
             desc.imageViewType == ImageViewType::CORE_IMAGE_VIEW_TYPE_2D_ARRAY ||
@@ -581,7 +590,7 @@ SceneRenderCameraData RenderNodeSceneUtil::GetSceneCameraData(const IRenderDataS
     }
 
     if (const auto cameras = dataStoreCamera.GetCameras(); cameraIdx < (uint32_t)cameras.size()) {
-        return { cameraIdx, flags, cameras[cameraIdx] };
+        return {cameraIdx, flags, cameras[cameraIdx]};
     } else {
         const auto tmpName = to_string(cameraId) + "RenderNodeSceneUtil::GetSceneCamere";
         PLUGIN_LOG_ONCE_W(tmpName, "Render camera not found  (id:%" PRIx64 " name:%s", cameraId, cameraName.data());
@@ -737,7 +746,9 @@ IInterface* RenderNodeSceneUtilImpl::GetInterface(const Uid& uid)
     return nullptr;
 }
 
-void RenderNodeSceneUtilImpl::Ref() {}
+void RenderNodeSceneUtilImpl::Ref()
+{}
 
-void RenderNodeSceneUtilImpl::Unref() {}
+void RenderNodeSceneUtilImpl::Unref()
+{}
 CORE3D_END_NAMESPACE()

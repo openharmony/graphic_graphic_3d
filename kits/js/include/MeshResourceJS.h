@@ -21,8 +21,9 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "geometry_definition/GeometryDefinition.h"
+#include "export.h"
 
-class MeshResourceJS final : public BaseObject, public SceneResourceImpl {
+class SCENE_ADDON_PUBLIC MeshResourceJS final : public BaseObject, public SceneResourceImpl {
 public:
     static constexpr uint32_t ID = 140;
 
@@ -37,7 +38,7 @@ public:
 
 private:
     void Finalize(napi_env env) override;
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     // This is a temporary solution. When IMeshResource is implemented, this can be removed.
     BASE_NS::unique_ptr<GeometryDefinition::GeometryDefinition> geometryDefinition_;
 };

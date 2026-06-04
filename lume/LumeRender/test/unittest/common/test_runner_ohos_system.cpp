@@ -37,11 +37,11 @@ void OHOSApp::Terminate()
     OH_NativeImage_Destroy(&m_nativeImage);
 }
 
-} // namespace Test
+}  // namespace Test
 
 #if defined(CORE_DYNAMIC) && (CORE_DYNAMIC == 1)
-CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)() { nullptr };
-void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo) { nullptr };
+CORE_NS::IPluginRegister& (*CORE_NS::GetPluginRegister)(){nullptr};
+void (*CORE_NS::CreatePluginRegistry)(const struct CORE_NS::PlatformCreateInfo& platformCreateInfo){nullptr};
 #endif
 
 RENDER_BEGIN_NAMESPACE()
@@ -52,7 +52,7 @@ DeviceBackendType GetOpenGLBackend()
 {
 #if RENDER_HAS_GLES_BACKEND
     return DeviceBackendType::OPENGLES;
-#else // RENDER_HAS_GL_BACKEND
+#else  // RENDER_HAS_GL_BACKEND
     return DeviceBackendType::OPENGL;
 #endif
 }
@@ -136,7 +136,7 @@ static EGLConfig TryPattern(EGLDisplay dpy, const BackbufferReq& req, int r, int
     BASE_NS::vector<EGLint> at;
     Add(at, EGL_SURFACE_TYPE, EGL_WINDOW_BIT | EGL_PBUFFER_BIT);
     Add(at, EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-    Add(at, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT); // or ES2 fallback if needed
+    Add(at, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT);  // or ES2 fallback if needed
 
     Add(at, EGL_RED_SIZE, r);
     Add(at, EGL_GREEN_SIZE, g);
@@ -218,15 +218,15 @@ void CreateEngineSetup(EngineResources& er)
         // skip
     }
 
-    const CORE_NS::EngineCreateInfo engineCreateInfo { GetTestEnv()->platformCreateInfo,
+    const CORE_NS::EngineCreateInfo engineCreateInfo{GetTestEnv()->platformCreateInfo,
         {
-            "lume_test", // name
-            1,           // versionMajor
-            0,           // versionMinor
-            0,           // versionPatch
+            "lume_test",  // name
+            1,            // versionMajor
+            0,            // versionMinor
+            0,            // versionPatch
         },
         // applicationContext
-        {} };
+        {}};
 
     auto factory = CORE_NS::GetInstance<CORE_NS::IEngineFactory>(CORE_NS::UID_ENGINE_FACTORY);
     er.engine = factory->Create(engineCreateInfo);
@@ -275,12 +275,12 @@ void CreateEngineSetup(EngineResources& er)
         }
 #endif
 
-        const RenderCreateInfo info {
+        const RenderCreateInfo info{
             {
-                "lume_test", // name
-                1,           // versionMajor
-                0,           // versionMinor
-                0,           // versionPatch
+                "lume_test",  // name
+                1,            // versionMajor
+                0,            // versionMinor
+                0,            // versionPatch
             },
             deviceCreateInfo,
         };
@@ -318,7 +318,11 @@ void WritePng(
     const BASE_NS::string& fileName, uint32_t x, uint32_t y, uint32_t comp, const void* data, uint32_t strideBytes)
 {
 #if defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
-    stbi_write_png(fileName.c_str(), static_cast<int32_t>(x), static_cast<int32_t>(y), static_cast<int32_t>(comp), data,
+    stbi_write_png(fileName.c_str(),
+        static_cast<int32_t>(x),
+        static_cast<int32_t>(y),
+        static_cast<int32_t>(comp),
+        data,
         static_cast<int32_t>(strideBytes));
 #endif
 }
@@ -393,7 +397,7 @@ void PrintDeviceInfo(EngineResources& er)
 #endif
 }
 
-} // namespace UTest
+}  // namespace UTest
 RENDER_END_NAMESPACE()
 
 testing::Environment* const env = ::testing::AddGlobalTestEnvironment(new RENDER_NS::UTest::TestRunnerEnv);

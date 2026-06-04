@@ -48,7 +48,7 @@ bool StartableObjectController::Build(const IMetadata::Ptr& data)
     CORE_ASSERT(defaultTickerQueue_);
     tickerTask_ = META_NS::MakeCallback<ITaskQueueTask>([this]() {
         TickAll(clock_->GetTime());
-        return true; // Recurring
+        return true;  // Recurring
     });
     CORE_ASSERT(tickerTask_);
 
@@ -120,7 +120,7 @@ BASE_NS::vector<IObject::Ptr> StartableObjectController::GetAllObserved() const
 META_NS::ITaskQueue::Ptr StartableObjectController::GetStartQueue() const
 {
     auto queue = startQueue_.lock();
-    if (!queue && startQueueId_ != BASE_NS::Uid {}) {
+    if (!queue && startQueueId_ != BASE_NS::Uid{}) {
         queue = META_NS::GetTaskQueueRegistry().GetTaskQueue(startQueueId_);
         if (!queue) {
             CORE_LOG_W("Cannot get task queue '%s', tasks will be run synchronously",
@@ -133,7 +133,7 @@ META_NS::ITaskQueue::Ptr StartableObjectController::GetStartQueue() const
 META_NS::ITaskQueue::Ptr StartableObjectController::GetStopQueue() const
 {
     auto queue = stopQueue_.lock();
-    if (!queue && stopQueueId_ != BASE_NS::Uid {}) {
+    if (!queue && stopQueueId_ != BASE_NS::Uid{}) {
         queue = META_NS::GetTaskQueueRegistry().GetTaskQueue(stopQueueId_);
         if (!queue) {
             CORE_LOG_W("Cannot get task queue '%s', tasks will be run synchronously",
@@ -147,7 +147,7 @@ META_NS::ITaskQueue::Ptr StartableObjectController::GetStopQueue() const
 bool StartableObjectController::StartAll(ControlBehavior behavior)
 {
     if (const auto root = target_.lock()) {
-        return AddOperation({ StartableOperation::START, target_ }, GetStartQueue());
+        return AddOperation({StartableOperation::START, target_}, GetStartQueue());
     }
     return false;
 }
@@ -155,12 +155,12 @@ bool StartableObjectController::StartAll(ControlBehavior behavior)
 bool StartableObjectController::StopAll(ControlBehavior behavior)
 {
     if (auto root = target_.lock()) {
-        return AddOperation({ StartableOperation::STOP, target_ }, GetStopQueue());
+        return AddOperation({StartableOperation::STOP, target_}, GetStopQueue());
     }
     return false;
 }
 
-template<class T, class Callback>
+template <class T, class Callback>
 void IterateChildren(const BASE_NS::vector<T>& children, bool reverse, Callback&& callback)
 {
     if (reverse) {
@@ -174,7 +174,7 @@ void IterateChildren(const BASE_NS::vector<T>& children, bool reverse, Callback&
     }
 }
 
-template<class Callback>
+template <class Callback>
 void IterateHierarchy(const IObject::Ptr& root, bool reverse, Callback&& callback)
 {
     if (const auto container = interface_cast<IContainer>(root)) {
@@ -187,7 +187,7 @@ void IterateHierarchy(const IObject::Ptr& root, bool reverse, Callback&& callbac
     }
 }
 
-template<class ObjectType, class Callback>
+template <class ObjectType, class Callback>
 void IterateAttachments(const IObject::Ptr& object, bool reverse, Callback&& callback)
 {
     if (const auto attach = interface_cast<IAttach>(object)) {
@@ -197,13 +197,13 @@ void IterateAttachments(const IObject::Ptr& object, bool reverse, Callback&& cal
     }
 }
 
-template<class Callback>
+template <class Callback>
 void IterateStartables(const IObject::Ptr& object, bool reverse, Callback&& callback)
 {
     IterateAttachments<IStartable, Callback>(object, reverse, BASE_NS::forward<Callback>(callback));
 }
 
-template<class Callback>
+template <class Callback>
 void IterateTickables(const IObject::Ptr& object, TraversalType order, Callback&& callback)
 {
     if (!object) {
@@ -234,9 +234,9 @@ void StartableObjectController::HierarchyChanged(const HierarchyChangedInfo& inf
             // Any hierarchy change (add/remove/move) invalidates the tick order
             InvalidateTickables();
             if (info.change == HierarchyChangeType::ADDED) {
-                AddOperation({ StartableOperation::START, info.object }, GetStartQueue());
+                AddOperation({StartableOperation::START, info.object}, GetStartQueue());
             } else if (info.change == HierarchyChangeType::REMOVING) {
-                AddOperation({ StartableOperation::STOP, info.object }, GetStopQueue());
+                AddOperation({StartableOperation::STOP, info.object}, GetStopQueue());
             }
         }
     }
@@ -370,8 +370,9 @@ bool StartableObjectController::ProcessOps(const ITaskQueue::Ptr& queue)
         return true;
     }
 
-    auto task = [q = ITaskQueue::WeakPtr { queue }, internal = IStartableObjectControllerInternal::WeakPtr {
-                                                        GetSelf<IStartableObjectControllerInternal>() }]() {
+    auto task = [q = ITaskQueue::WeakPtr{queue},
+                    internal =
+                        IStartableObjectControllerInternal::WeakPtr{GetSelf<IStartableObjectControllerInternal>()}]() {
         auto me = internal.lock();
         if (me) {
             me->RunTasks(q.lock());
@@ -441,8 +442,8 @@ BASE_NS::vector<ITickable::Ptr> StartableObjectController::GetTickables() const
 
 void StartableObjectController::UpdateTicker()
 {
-    auto queue = tickQueueId_ != BASE_NS::Uid {} ? META_NS::GetTaskQueueRegistry().GetTaskQueue(tickQueueId_)
-                                                 : defaultTickerQueue_;
+    auto queue = tickQueueId_ != BASE_NS::Uid{} ? META_NS::GetTaskQueueRegistry().GetTaskQueue(tickQueueId_)
+                                                : defaultTickerQueue_;
     if (tickerQueue_ && tickerToken_) {
         tickerQueue_->CancelTask(tickerToken_);
         tickerToken_ = {};

@@ -28,7 +28,7 @@ namespace Internal {
 // ContainerChangeListener
 
 ContainerChangeListener::ContainerChangeListener(const IContainer::Ptr& container)
-    : changed_ { 0, {} }, container_(container)
+    : changed_{0, {}}, container_(container)
 {}
 
 ContainerChangeListener::~ContainerChangeListener()
@@ -60,7 +60,7 @@ bool ContainerChangeListener::Subscribe(const IOnChildChanged::InterfaceTypePtr&
 {
     Unsubscribe();
     if (const auto container = container_.lock()) {
-        changed_ = { container->OnContainerChanged()->AddHandler(onChanged), onChanged };
+        changed_ = {container->OnContainerChanged()->AddHandler(onChanged), onChanged};
         return changed_.first;
     }
     return false;
@@ -138,6 +138,6 @@ void ContainerObserver::Unsubscribe(const IContainer::Ptr& base)
     }
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

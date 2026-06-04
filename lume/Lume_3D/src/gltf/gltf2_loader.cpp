@@ -23,6 +23,7 @@
 #include <optional>
 #include <securec.h>
 
+#include <base/containers/atomics.h>
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -59,6 +60,8 @@ using namespace CORE_NS;
 
 namespace GLTF2 {
 namespace {
+constexpr uint32_t MAX_ACCESSOR_COUNT = (1u << 24u);
+
 const string_view SUPPORTED_EXTENSIONS[] = {
 #if defined(GLTF2_EXTENSION_IGFX_COMPRESSED)
     "IGFX_compressed",
@@ -145,7 +148,7 @@ void DecodeUri(string& uri)
     }
 }
 
-template<typename EnumType, typename InputType>
+template <typename EnumType, typename InputType>
 bool RangedEnumCast(LoadResult& loadResult, EnumType& out, InputType input)
 {
     if (input >= static_cast<int>(EnumType::BEGIN) && input < static_cast<int>(EnumType::COUNT)) {
@@ -156,7 +159,7 @@ bool RangedEnumCast(LoadResult& loadResult, EnumType& out, InputType input)
     RETURN_WITH_ERROR(loadResult, "Invalid enum cast");
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, Parser parser)
 {
     if (!jsonObject.is_object()) {
@@ -166,7 +169,7 @@ bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, Parser p
     return parser(loadResult, jsonObject);
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     if (auto it = jsonObject.find(name); it) {
@@ -176,7 +179,7 @@ bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, const st
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachInArray(LoadResult& loadResult, const json::value& jsonArray, Parser parser)
 {
     if (!jsonArray.is_array()) {
@@ -192,7 +195,7 @@ bool ForEachInArray(LoadResult& loadResult, const json::value& jsonArray, Parser
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachInArray(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     if (auto it = jsonObject.find(name); it) {
@@ -202,22 +205,24 @@ bool ForEachInArray(LoadResult& loadResult, const json::value& jsonObject, const
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachObjectInArray(LoadResult& loadResult, const json::value& jsonObject, Parser parser)
 {
     return ForEachInArray(loadResult, jsonObject, [parser](LoadResult& loadResult, const json::value& item) -> bool {
-        return ParseObject(loadResult, item,
-            [parser](LoadResult& loadResult, const json::value& item) -> bool { return parser(loadResult, item); });
+        return ParseObject(loadResult, item, [parser](LoadResult& loadResult, const json::value& item) -> bool {
+            return parser(loadResult, item);
+        });
     });
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachObjectInArray(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     return ForEachInArray(
         loadResult, jsonObject, name, [parser](LoadResult& loadResult, const json::value& item) -> bool {
-            return ParseObject(loadResult, item,
-                [parser](LoadResult& loadResult, const json::value& item) -> bool { return parser(loadResult, item); });
+            return ParseObject(loadResult, item, [parser](LoadResult& loadResult, const json::value& item) -> bool {
+                return parser(loadResult, item);
+            });
         });
 }
 
@@ -241,21 +246,28 @@ bool ParseOptionalString(LoadResult& loadResult, string& out, const json::value&
     return true;
 }
 
-template<typename Number>
+template <typename Number>
 void ConvertStringToValue(const string_view str, Number& value)
 {
 #if defined(__OHOS__) || defined(__linux__) || defined(__APPLE__)
     if constexpr (std::is_integral_v<Number>) {
-        std::from_chars(str.data(), str.data() + str.size(), value);
+        const auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+        if (result.ec != std::errc{}) {
+            value = Number{};
+        }
     } else {
+        // str is a view into the glTF JSON string which is null terminated.
         value = strtof(str.data(), nullptr);
     }
 #else
-    std::from_chars(str.data(), str.data() + str.size(), value);
+    const auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+    if (result.ec != std::errc{}) {
+        value = Number{};
+    }
 #endif
 }
 
-template<typename T>
+template <typename T>
 bool ParseOptionalNumber(
     LoadResult& loadResult, T& out, const json::value& jsonObject, const string_view name, T defaultValue)
 {
@@ -293,7 +305,7 @@ bool ParseOptionalBoolean(
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool ParseOptionalNumberArray(LoadResult& loadResult, vector<T>& out, const json::value& jsonObject,
     const string_view name, vector<T> defaultValue, uint32_t minSize = 0,
     uint32_t maxSize = std::numeric_limits<int>::max())
@@ -325,7 +337,7 @@ bool ParseOptionalNumberArray(LoadResult& loadResult, vector<T>& out, const json
 }
 
 /** Tries to parse a Core::Math object (e.g. Vec4, Quat, and Mat4X4) from json. */
-template<typename T>
+template <typename T>
 bool ParseOptionalMath(
     LoadResult& loadResult, T& out, const json::value& jsonObject, const string_view name, T defaultValue)
 {
@@ -432,7 +444,7 @@ std::optional<int> BufferViewByteOffset(
     LoadResult& loadResult, const json::value& jsonData, std::optional<Buffer*> buffer, std::optional<int> byteLength)
 {
     int offset;
-    if (!ParseOptionalNumber<int>(loadResult, offset, jsonData, "byteOffset", 0)) { // "default": 0
+    if (!ParseOptionalNumber<int>(loadResult, offset, jsonData, "byteOffset", 0)) {  // "default": 0
         return std::nullopt;
     } else if (offset < 0) {
         SetError(loadResult, "bufferView.byteOffset isn't valid offset");
@@ -518,14 +530,14 @@ CompressionMode GetModeMeshoptCompression(
         // When mode is "TRIANGLES", count must be divisible by 3
         // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
         // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if ((count % 3U == 0) && ((byteStride == 2) || (byteStride == 4)) && // 2: parm 4: parm
+        if ((count % 3U == 0) && ((byteStride == 2) || (byteStride == 4)) &&  // 2: parm 4: parm
             (filter == CompressionFilter::NONE)) {
             ret = CompressionMode::TRIANGLES;
         }
     } else if (mode == "INDICES") {
         // When mode is "TRIANGLES" or "INDICES", byteStride must be equal to 2 or 4
         // When mode is "TRIANGLES" or "INDICES", filter must be equal to "NONE" or omitted
-        if (((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) { // 2: parm 4: parm
+        if (((byteStride == 2) || (byteStride == 4)) && (filter == CompressionFilter::NONE)) {  // 2: parm 4: parm
             ret = CompressionMode::INDICES;
         }
     }
@@ -616,7 +628,9 @@ bool ParseBufferView(LoadResult& loadResult, const json::value& jsonData)
 #if defined(GLTF2_EXTENSION_EXT_MESHOPT_COMPRESSION)
         const auto meshOptCompressionParser = [bufferView = view.get()](
                                                   LoadResult& loadResult, const json::value& extensions) -> bool {
-            return ParseObject(loadResult, extensions, "EXT_meshopt_compression",
+            return ParseObject(loadResult,
+                extensions,
+                "EXT_meshopt_compression",
                 [bufferView](LoadResult& loadResult, const json::value& meshOptCompression) {
                     return ParseMeshoptCompression(loadResult, meshOptCompression, bufferView);
                 });
@@ -667,6 +681,17 @@ std::optional<uint32_t> AccessorCount(LoadResult& loadResult, const json::value&
         return std::nullopt;
     } else if (count < 1) {
         SetError(loadResult, "Accessor.count is invalid");
+        return std::nullopt;
+    } else if (static_cast<uint32_t>(count) > MAX_ACCESSOR_COUNT) {
+        SetError(loadResult, "Accessor.count exceeds maximum supported value");
+        return std::nullopt;
+    }
+    // Accessor element count governs how many typed elements (floats, indices, etc.) are read from a buffer. 16M
+    // elements x 64 bytes (Mat4x4) = 1 GB. The primary purpose of this cap is to guard against 32-bit size_t overflow
+    // in elementCount * elementSize arithmetic on 32-bit targets.
+    constexpr int maxAccessorElementCount = 16 * 1024 * 1024;
+    if (count > maxAccessorElementCount) {
+        SetError(loadResult, "accessor.count exceeds maximum allowed element count");
         return std::nullopt;
     }
     return count;
@@ -873,7 +898,7 @@ bool ValidateAccessor(LoadResult& loadResult, ComponentType componentType, uint3
     return true;
 }
 
-template<typename T>
+template <typename T>
 array_view<const T> GetView(const std::optional<vector<T>>& potential)
 {
     if (potential.has_value()) {
@@ -899,8 +924,13 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
     const auto maxView = GetView(max);
 
     bool result = true;
-    if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), count.value_or(0U),
-            datatype.value_or(DataType::INVALID), bufferView.value_or(nullptr), byteOffset.value_or(0U), minView,
+    if (!ValidateAccessor(loadResult,
+            componentType.value_or(ComponentType::INVALID),
+            count.value_or(0U),
+            datatype.value_or(DataType::INVALID),
+            bufferView.value_or(nullptr),
+            byteOffset.value_or(0U),
+            minView,
             maxView)) {
         result = false;
     }
@@ -914,9 +944,14 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
             SetError(loadResult, "Accessor.sparse.indices.bufferView must not define byteStride");
             return false;
         }
-        if (!ValidateAccessor(loadResult, sparseRef.indices.componentType, sparseRef.count, DataType::SCALAR,
-                sparseRef.indices.bufferView, sparseRef.indices.byteOffset, array_view<const float> {},
-                array_view<const float> {})) {
+        if (!ValidateAccessor(loadResult,
+                sparseRef.indices.componentType,
+                sparseRef.count,
+                DataType::SCALAR,
+                sparseRef.indices.bufferView,
+                sparseRef.indices.byteOffset,
+                array_view<const float>{},
+                array_view<const float>{})) {
             SetError(loadResult, "Accessor.sparse.indices is invalid");
             return false;
         }
@@ -924,8 +959,13 @@ bool ParseAccessor(LoadResult& loadResult, const json::value& jsonData)
             SetError(loadResult, "Accessor.sparse.values.bufferView must not define byteStride");
             return false;
         }
-        if (!ValidateAccessor(loadResult, componentType.value_or(ComponentType::INVALID), sparseRef.count,
-                datatype.value_or(DataType::INVALID), sparseRef.values.bufferView, sparseRef.values.byteOffset, minView,
+        if (!ValidateAccessor(loadResult,
+                componentType.value_or(ComponentType::INVALID),
+                sparseRef.count,
+                datatype.value_or(DataType::INVALID),
+                sparseRef.values.bufferView,
+                sparseRef.values.byteOffset,
+                minView,
                 maxView)) {
             SetError(loadResult, "Accessor.sparse.values is invalid");
             return false;
@@ -966,9 +1006,11 @@ bool ParseTextureInfo(LoadResult& loadResult, TextureInfo& info, const json::val
     }
 #if defined(GLTF2_EXTENSION_KHR_TEXTURE_TRANSFORM)
     const auto textureTransformParser = [&info](LoadResult& loadResult, const json::value& extensions) -> bool {
-        return ParseObject(loadResult, extensions, "KHR_texture_transform",
+        return ParseObject(loadResult,
+            extensions,
+            "KHR_texture_transform",
             [&info](LoadResult& loadResult, const json::value& textureTransform) {
-                if (!ParseOptionalMath(loadResult, info.transform.offset, textureTransform, "offset", { 0.0f, 0.0f })) {
+                if (!ParseOptionalMath(loadResult, info.transform.offset, textureTransform, "offset", {0.0f, 0.0f})) {
                     return false;
                 }
 
@@ -976,7 +1018,7 @@ bool ParseTextureInfo(LoadResult& loadResult, TextureInfo& info, const json::val
                     return false;
                 }
 
-                if (!ParseOptionalMath(loadResult, info.transform.scale, textureTransform, "scale", { 1.0f, 1.0f })) {
+                if (!ParseOptionalMath(loadResult, info.transform.scale, textureTransform, "scale", {1.0f, 1.0f})) {
                     return false;
                 }
 
@@ -997,32 +1039,45 @@ bool ParseTextureInfo(LoadResult& loadResult, TextureInfo& info, const json::val
 bool ParseMetallicRoughness(LoadResult& loadResult, const json::value& jsonData, MetallicRoughness& metallicRoughness)
 {
     if (auto roughnessJson = jsonData.find("pbrMetallicRoughness"); roughnessJson) {
-        if (!ParseOptionalMath(loadResult, metallicRoughness.baseColorFactor, *roughnessJson, "baseColorFactor",
+        if (!ParseOptionalMath(loadResult,
+                metallicRoughness.baseColorFactor,
+                *roughnessJson,
+                "baseColorFactor",
                 metallicRoughness.baseColorFactor)) {
             return false;
         }
 
-        if (!ParseObject(loadResult, *roughnessJson, "baseColorTexture",
+        if (!ParseObject(loadResult,
+                *roughnessJson,
+                "baseColorTexture",
                 [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
                     return ParseTextureInfo(loadResult, metallicRoughness.baseColorTexture, baseJson);
                 })) {
             return false;
         }
 
-        if (!ParseObject(loadResult, *roughnessJson, "metallicRoughnessTexture",
+        if (!ParseObject(loadResult,
+                *roughnessJson,
+                "metallicRoughnessTexture",
                 [&metallicRoughness](LoadResult& loadResult, const json::value& baseJson) -> bool {
                     return ParseTextureInfo(loadResult, metallicRoughness.metallicRoughnessTexture, baseJson);
                 })) {
             return false;
         }
 
-        if (!ParseOptionalNumber<float>(loadResult, metallicRoughness.metallicFactor, *roughnessJson, "metallicFactor",
+        if (!ParseOptionalNumber<float>(loadResult,
+                metallicRoughness.metallicFactor,
+                *roughnessJson,
+                "metallicFactor",
                 metallicRoughness.metallicFactor)) {
             return false;
         }
 
-        if (!ParseOptionalNumber<float>(loadResult, metallicRoughness.roughnessFactor, *roughnessJson,
-                "roughnessFactor", metallicRoughness.roughnessFactor)) {
+        if (!ParseOptionalNumber<float>(loadResult,
+                metallicRoughness.roughnessFactor,
+                *roughnessJson,
+                "roughnessFactor",
+                metallicRoughness.roughnessFactor)) {
             return false;
         }
     }
@@ -1258,7 +1313,10 @@ bool ParseMaterialExtras(LoadResult& loadResult, const json::value& jsonData, Ma
                 return false;
             }
 
-            if (!ParseOptionalNumber<float>(loadResult, material.clearcoat.roughness, materialJson, "roughness",
+            if (!ParseOptionalNumber<float>(loadResult,
+                    material.clearcoat.roughness,
+                    materialJson,
+                    "roughness",
                     material.clearcoat.roughness)) {
                 return false;
             }
@@ -1353,7 +1411,10 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
     if (auto specGlossJson = jsonData.find("KHR_materials_pbrSpecularGlossiness"); specGlossJson) {
         material.type = Material::Type::SpecularGlossiness;
 
-        if (!ParseOptionalMath(loadResult, material.specularGlossiness.diffuseFactor, *specGlossJson, "diffuseFactor",
+        if (!ParseOptionalMath(loadResult,
+                material.specularGlossiness.diffuseFactor,
+                *specGlossJson,
+                "diffuseFactor",
                 material.specularGlossiness.diffuseFactor)) {
             return false;
         }
@@ -1365,7 +1426,10 @@ bool ParseKhrMaterialsPbrSpecularGlossiness(LoadResult& loadResult, const json::
             return false;
         }
 
-        if (!ParseOptionalMath(loadResult, material.specularGlossiness.specularFactor, *specGlossJson, "specularFactor",
+        if (!ParseOptionalMath(loadResult,
+                material.specularGlossiness.specularFactor,
+                *specGlossJson,
+                "specularFactor",
                 material.specularGlossiness.specularFactor)) {
             return false;
         }
@@ -1645,8 +1709,9 @@ bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, Me
                 }
             }
         }
-        if (std::none_of(meshPrimitive.attributes.begin(), meshPrimitive.attributes.end(),
-                [](const Attribute& attr) { return attr.attribute.type == AttributeType::POSITION; })) {
+        if (std::none_of(meshPrimitive.attributes.begin(), meshPrimitive.attributes.end(), [](const Attribute& attr) {
+                return attr.attribute.type == AttributeType::POSITION;
+            })) {
             RETURN_WITH_ERROR(loadResult, "Primitive must have POSITION attribute.");
         }
     } else {
@@ -1658,7 +1723,9 @@ bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, Me
 bool PrimitiveTargets(
     LoadResult& loadResult, const json::value& jsonData, MeshPrimitive& meshPrimitive, bool compressed)
 {
-    return ForEachInArray(loadResult, jsonData, "targets",
+    return ForEachInArray(loadResult,
+        jsonData,
+        "targets",
         [&meshPrimitive, compressed](LoadResult& loadResult, const json::value& target) -> bool {
             MorphTarget mTarget;
 #ifdef GLTF2_EXTENSION_IGFX_COMPRESSED
@@ -1684,7 +1751,8 @@ bool PrimitiveTargets(
                             if (loadResult.data->quantization) {
                                 auto const extendedValidationResult =
                                     ValidateMorphTargetAttributeQuantization(attribute.attribute.type,
-                                        attribute.accessor->type, attribute.accessor->componentType);
+                                        attribute.accessor->type,
+                                        attribute.accessor->componentType);
                                 if (!extendedValidationResult.empty()) {
                                     RETURN_WITH_ERROR(loadResult, extendedValidationResult);
                                 }
@@ -1770,7 +1838,9 @@ bool ParsePrimitive(LoadResult& loadResult, vector<MeshPrimitive>& primitives, c
 bool MeshExtras(LoadResult& loadResult, const json::value& jsonData, array_view<MeshPrimitive> primitives)
 {
     size_t index = 0;
-    return ForEachInArray(loadResult, jsonData, "targetNames",
+    return ForEachInArray(loadResult,
+        jsonData,
+        "targetNames",
         [&primitives, &index](LoadResult& loadResult, const json::value& targetName) -> bool {
             if (!targetName.is_string()) {
                 RETURN_WITH_ERROR(loadResult, "mesh.extras.targetNames should be an array of strings");
@@ -1856,13 +1926,13 @@ bool CameraPerspective(
     if (!ParseOptionalNumber<float>(loadResult, perspective.aspect, jsonData, "aspectRatio", -1.f)) {
         return false;
     }
-    if (!ParseOptionalNumber<float>(loadResult, perspective.yfov, jsonData, "yfov", -1.f)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, perspective.yfov, jsonData, "yfov", -1.f)) {  // required
         return false;
     }
     if (!ParseOptionalNumber<float>(loadResult, perspective.zfar, jsonData, "zfar", -1.f)) {
         return false;
     }
-    if (!ParseOptionalNumber<float>(loadResult, perspective.znear, jsonData, "znear", -1.f)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, perspective.znear, jsonData, "znear", -1.f)) {  // required
         return false;
     }
     if (perspective.yfov < 0 || perspective.znear < 0) {
@@ -1874,16 +1944,16 @@ bool CameraPerspective(
 
 bool CameraOrthographic(LoadResult& loadResult, const json::value& jsonData, Camera::Attributes::Ortho& ortho)
 {
-    if (!ParseOptionalNumber<float>(loadResult, ortho.xmag, jsonData, "xmag", 0)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, ortho.xmag, jsonData, "xmag", 0)) {  // required
         return false;
     }
-    if (!ParseOptionalNumber<float>(loadResult, ortho.ymag, jsonData, "ymag", 0)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, ortho.ymag, jsonData, "ymag", 0)) {  // required
         return false;
     }
-    if (!ParseOptionalNumber<float>(loadResult, ortho.zfar, jsonData, "zfar", -1.f)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, ortho.zfar, jsonData, "zfar", -1.f)) {  // required
         return false;
     }
-    if (!ParseOptionalNumber<float>(loadResult, ortho.znear, jsonData, "znear", -1.f)) { // required
+    if (!ParseOptionalNumber<float>(loadResult, ortho.znear, jsonData, "znear", -1.f)) {  // required
         return false;
     }
     if (ortho.zfar < 0 || ortho.znear < 0 || ortho.xmag == 0 || ortho.ymag == 0) {
@@ -2050,12 +2120,13 @@ bool ImageBasedLightIrradianceCoefficients(
         ImageBasedLight::LightingCoeff coeff;
         if (mipLevelJson.is_array()) {
             coeff.reserve(mipLevelJson.array_.size());
-            std::transform(mipLevelJson.array_.begin(), mipLevelJson.array_.end(), std::back_inserter(coeff),
+            std::transform(mipLevelJson.array_.begin(),
+                mipLevelJson.array_.end(),
+                std::back_inserter(coeff),
                 [](const json::value& item) { return item.is_number() ? item.as_number<float>() : 0.f; });
         }
 
-        constexpr size_t requiredCoefficientCount = 3u;
-        if (coeff.size() != requiredCoefficientCount) {
+        if (coeff.size() != 3u) {
             return false;
         }
 
@@ -2087,7 +2158,9 @@ bool ImageBasedLightSpecularImages(
         static constexpr size_t requiredLevels = 6U;
         if (mipLevelJson.is_array() && (mipLevelJson.array_.size() == requiredLevels)) {
             mipLevel.reserve(mipLevelJson.array_.size());
-            std::transform(mipLevelJson.array_.begin(), mipLevelJson.array_.end(), std::back_inserter(mipLevel),
+            std::transform(mipLevelJson.array_.begin(),
+                mipLevelJson.array_.end(),
+                std::back_inserter(mipLevel),
                 [](const json::value& item) {
                     return item.is_number() ? item.as_number<size_t>() : GLTF_INVALID_INDEX;
                 });
@@ -2095,7 +2168,8 @@ bool ImageBasedLightSpecularImages(
         if (mipLevel.size() != requiredLevels) {
             return false;
         }
-        if (std::any_of(mipLevel.cbegin(), mipLevel.cend(),
+        if (std::any_of(mipLevel.cbegin(),
+                mipLevel.cend(),
                 [images = loadResult.data->images.size()](const size_t& index) { return index >= images; })) {
             return false;
         }
@@ -2220,7 +2294,7 @@ struct ExtensionData {
 
 std::optional<ExtensionData> NodeExtensions(LoadResult& loadResult, const json::value& jsonData, Node& node)
 {
-    ExtensionData data { GLTF_INVALID_INDEX, false };
+    ExtensionData data{GLTF_INVALID_INDEX, false};
 
     const auto parseExtensions = [&data, &node](LoadResult& loadResult, const json::value& extensions) -> bool {
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS)
@@ -2441,7 +2515,9 @@ bool SceneExtensions(LoadResult& loadResult, const json::value& jsonData, Scene&
     const auto parseExtensions = [&scene](LoadResult& loadResult, const json::value& extensions) -> bool {
         size_t lightIndex = GLTF_INVALID_INDEX;
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS)
-        if (!ParseObject(loadResult, extensions, "KHR_lights",
+        if (!ParseObject(loadResult,
+                extensions,
+                "KHR_lights",
                 [&lightIndex](LoadResult& loadResult, const json::value& light) -> bool {
                     return ParseOptionalNumber<size_t>(loadResult, lightIndex, light, "light", GLTF_INVALID_INDEX);
                 })) {
@@ -2450,7 +2526,9 @@ bool SceneExtensions(LoadResult& loadResult, const json::value& jsonData, Scene&
 #endif
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
         if (lightIndex == GLTF_INVALID_INDEX) {
-            if (!ParseObject(loadResult, extensions, "KHR_lights_pbr",
+            if (!ParseObject(loadResult,
+                    extensions,
+                    "KHR_lights_pbr",
                     [&lightIndex](LoadResult& loadResult, const json::value& light) -> bool {
                         if (!ParseOptionalNumber<size_t>(loadResult, lightIndex, light, "light", GLTF_INVALID_INDEX)) {
                             return false;
@@ -2465,7 +2543,9 @@ bool SceneExtensions(LoadResult& loadResult, const json::value& jsonData, Scene&
 #endif
 
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
-        if (!ParseObject(loadResult, extensions, "EXT_lights_image_based",
+        if (!ParseObject(loadResult,
+                extensions,
+                "EXT_lights_image_based",
                 [&scene](LoadResult& loadResult, const json::value& light) -> bool {
                     return ParseOptionalNumber<size_t>(
                         loadResult, scene.imageBasedLightIndex, light, "light", GLTF_INVALID_INDEX);
@@ -2542,8 +2622,9 @@ bool SceneContainsNode(Scene const& scene, Node const& node)
 
 Scene* SceneContainingNode(vector<unique_ptr<Scene>> const& scenes, Node const& node)
 {
-    auto const pos = std::find_if(scenes.begin(), scenes.end(),
-        [nodePtr = &node](auto const& scene) { return SceneContainsNode(*scene, *nodePtr); });
+    auto const pos = std::find_if(scenes.begin(), scenes.end(), [nodePtr = &node](auto const& scene) {
+        return SceneContainsNode(*scene, *nodePtr);
+    });
     if (pos != scenes.end()) {
         return pos->get();
     }
@@ -2599,7 +2680,8 @@ bool ParseSkin(LoadResult& loadResult, const json::value& jsonData)
     }
 
     if (joints.size() > CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT) {
-        PLUGIN_LOG_W("Number of joints (%zu) more than current limit (%u)", joints.size(),
+        PLUGIN_LOG_W("Number of joints (%zu) more than current limit (%u)",
+            joints.size(),
             CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
     }
 
@@ -2638,7 +2720,8 @@ void FinalizeGltfContent(LoadResult& loadResult)
 
                 // Fix all textures to reference the first image.
                 for (TextureContainer::iterator textureIt = loadResult.data->textures.begin();
-                     textureIt != loadResult.data->textures.end(); ++textureIt) {
+                     textureIt != loadResult.data->textures.end();
+                     ++textureIt) {
                     if ((*textureIt)->image == loadResult.data->images[lookupImageIndex].get()) {
                         (*textureIt)->image = loadResult.data->images[imageIndex].get();
                     }
@@ -2654,7 +2737,8 @@ void FinalizeGltfContent(LoadResult& loadResult)
 
         if (hasDuplicate) {
             PLUGIN_LOG_D("Optimizing out duplicate image from glTF: %s/images/%zu",
-                loadResult.data->defaultResources.c_str(), imageIndex);
+                loadResult.data->defaultResources.c_str(),
+                imageIndex);
         }
     }
 }
@@ -2766,7 +2850,10 @@ bool AnimationChannels(LoadResult& loadResult, const json::value& jsonData, Anim
 bool ParseAnimation(LoadResult& loadResult, const json::value& jsonData)
 {
     auto animation = make_unique<Animation>();
-    if (!ParseOptionalString(loadResult, animation->name, jsonData, "name",
+    if (!ParseOptionalString(loadResult,
+            animation->name,
+            jsonData,
+            "name",
             "animation_" + to_string(loadResult.data->animations.size()))) {
         return false;
     }
@@ -2872,7 +2959,9 @@ bool GltfExtension(LoadResult& loadResult, const json::value& jsonData)
         bool result = true;
 
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS)
-        if (!ParseObject(loadResult, extensions, "KHR_lights_punctual",
+        if (!ParseObject(loadResult,
+                extensions,
+                "KHR_lights_punctual",
                 [](LoadResult& loadResult, const json::value& khrLights) {
                     return ForEachObjectInArray(loadResult, khrLights, "lights", ParseKHRLight);
                 })) {
@@ -2882,7 +2971,9 @@ bool GltfExtension(LoadResult& loadResult, const json::value& jsonData)
 #if defined(GLTF2_EXTENSION_KHR_LIGHTS_PBR)
         loadResult.data->pbrLightOffset = static_cast<uint32_t>(loadResult.data->lights.size());
 
-        if (!ParseObject(loadResult, extensions, "KHR_lights_pbr",
+        if (!ParseObject(loadResult,
+                extensions,
+                "KHR_lights_pbr",
                 [](LoadResult& loadResult, const json::value& khrLights) -> bool {
                     return ForEachObjectInArray(loadResult, khrLights, "lights", ParseKHRLight);
                 })) {
@@ -2896,7 +2987,7 @@ bool GltfExtension(LoadResult& loadResult, const json::value& jsonData)
                     string thumbnailUri;
                     if (ParseOptionalString(loadResult, thumbnailUri, jsonData, "sceneThumbnail", "")) {
                         DecodeUri(thumbnailUri);
-                        loadResult.data->thumbnails.push_back(Assets::Thumbnail { move(thumbnailUri), {}, {} });
+                        loadResult.data->thumbnails.push_back(GltfData::Thumbnail{move(thumbnailUri), {}, {}});
                     } else {
                         return false;
                     }
@@ -2907,7 +2998,9 @@ bool GltfExtension(LoadResult& loadResult, const json::value& jsonData)
 #endif
 
 #if defined(GLTF2_EXTENSION_EXT_LIGHTS_IMAGE_BASED)
-        if (!ParseObject(loadResult, extensions, "EXT_lights_image_based",
+        if (!ParseObject(loadResult,
+                extensions,
+                "EXT_lights_image_based",
                 [](LoadResult& loadResult, const json::value& imageBasedLights) -> bool {
                     return ForEachObjectInArray(loadResult, imageBasedLights, "lights", ParseImageBasedLight);
                 })) {
@@ -2954,8 +3047,9 @@ bool ParseGLTF(LoadResult& loadResult, const json::value& jsonData)
     result = FinalizeNodes(loadResult) && result;
     result = ForEachObjectInArray(loadResult, jsonData, "scenes", ParseScene) && result;
 
-    if (!std::all_of(loadResult.data->skins.begin(), loadResult.data->skins.end(),
-            [&loadResult](auto const& skin) { return JointsInSameScene(*skin, loadResult); })) {
+    if (!std::all_of(loadResult.data->skins.begin(), loadResult.data->skins.end(), [&loadResult](auto const& skin) {
+            return JointsInSameScene(*skin, loadResult);
+        })) {
         return false;
     }
 
@@ -2993,8 +3087,7 @@ bool ReadGLBHeader(LoadResult& loadResult, IFile& file, GLBHeader& header)
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: GLB header definition for size is larger than file size");
     }
     loadResult.data->size = header.length;
-    constexpr uint32_t glbVersion = 2;
-    if (header.version != glbVersion) {
+    if (header.version != 2) {
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected GLB version 2");
     }
     return true;
@@ -3012,7 +3105,7 @@ bool ReadJsonChunk(LoadResult& loadResult, IFile& file, const uint64_t headerLen
     const uint64_t chunkJsonLength = static_cast<uint64_t>(chunkJson.chunkLength);
     const uint64_t maxJsonChunkLength = headerLength - sizeof(GLBHeader) - sizeof(GLBChunk);
     if (chunkJson.chunkType != static_cast<uint32_t>(ChunkType::JSON) || chunkJson.chunkLength == 0 ||
-        (chunkJson.chunkLength % sizeof(uint32_t)) || chunkJsonLength > maxJsonChunkLength) {
+        (chunkJson.chunkLength % 4) || chunkJsonLength > maxJsonChunkLength) {
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: expected JSON chunk");
     }
     return true;
@@ -3020,9 +3113,9 @@ bool ReadJsonChunk(LoadResult& loadResult, IFile& file, const uint64_t headerLen
 
 bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength, size_t offset)
 {
-    constexpr uint64_t glbDataOffsetPrefix = sizeof(GLBHeader) + (2u * sizeof(GLBChunk));
-    const uint64_t dataOffset = glbDataOffsetPrefix + chunkJsonLength;
-    if (dataOffset < glbDataOffsetPrefix || dataOffset > headerLength || dataOffset > loadResult.data->size ||
+    constexpr uint64_t GLB_DATA_OFFSET_PREFIX = sizeof(GLBHeader) + (2u * sizeof(GLBChunk));
+    const uint64_t dataOffset = GLB_DATA_OFFSET_PREFIX + chunkJsonLength;
+    if (dataOffset < GLB_DATA_OFFSET_PREFIX || dataOffset > headerLength || dataOffset > loadResult.data->size ||
         dataOffset > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: data part offset is out of file");
     }
@@ -3098,7 +3191,7 @@ bool LoadGLB(LoadResult& loadResult, IFile& file, size_t offset)
 
     return ParseGLTF(loadResult, o);
 }
-} // namespace
+}  // namespace
 
 // Internal loading function.
 LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
@@ -3141,8 +3234,9 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t off
     SplitBaseFilename(baseName, baseNameNoExt, extensionView);
 
     string extension(extensionView.size(), '\0');
-    std::transform(extensionView.begin(), extensionView.end(), extension.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(extensionView.begin(), extensionView.end(), extension.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
 
     if (offset != 0) {
         file->Seek(offset);
@@ -3172,7 +3266,7 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     // if the buffer starts with a GLB header assume GLB, otherwise glTF with embedded data.
     const char* ext = ".gltf";
     if (data.size() >= (sizeof(GLBHeader) + sizeof(GLBChunk))) {
-        GLBHeader header {};
+        GLBHeader header{};
         memcpy_s(&header, sizeof(header), data.data(), sizeof(GLBHeader));
         if (header.magic == GLTF_MAGIC) {
             ext = ".glb";
@@ -3180,7 +3274,8 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     }
 
     // wrap the buffer in a temporary file
-    auto const tmpFileName = "memory://" + to_string((uintptr_t)data.data()) + ext;
+    static volatile int32_t counter{0};
+    auto const tmpFileName = "memory://" + to_string(BASE_NS::AtomicIncrement(&counter)) + ext;
     {
         auto tmpFile = fileManager.CreateFile(tmpFileName);
         if (!tmpFile) {
@@ -3202,5 +3297,5 @@ LoadResult LoadGLTF(IFileManager& fileManager, array_view<uint8_t const> data)
     fileManager.DeleteFile(tmpFileName);
     return result;
 }
-} // namespace GLTF2
+}  // namespace GLTF2
 CORE3D_END_NAMESPACE()

@@ -41,7 +41,7 @@ namespace UTest {
 
 class API_ScenePluginMaterialComponentTest : public ScenePluginComponentTest<CORE3D_NS::IMaterialComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestIMaterialPropertyGetters(T* mat)
     {
         EXPECT_TRUE(mat->Type());
@@ -94,7 +94,7 @@ UNIT_TEST_F(API_ScenePluginMaterialComponentTest, Members, testing::ext::TestSiz
     {
         auto prop = GetProperty<CORE3D_NS::MaterialComponent::RenderSort>("RenderSort");
         ASSERT_TRUE(prop);
-        prop->SetValue({ 1, 2 });
+        prop->SetValue({1, 2});
         UpdateComponentMembers();
         EXPECT_EQ(nativeComponent.renderSort.renderSortLayer, 1);
         EXPECT_EQ(nativeComponent.renderSort.renderSortLayerOrder, 2);
@@ -108,7 +108,7 @@ UNIT_TEST_F(API_ScenePluginMaterialComponentTest, Members, testing::ext::TestSiz
     auto propHandle = materialManager->GetData(entity);
     TestEngineProperty<CORE_NS::IPropertyHandle*>("CustomProperties", propHandle, nativeComponent.customProperties);
 
-    for (const BASE_NS::string_view propName : { "MaterialShader", "DepthShader" }) {
+    for (const BASE_NS::string_view propName : {"MaterialShader", "DepthShader"}) {
         auto prop = GetProperty<MaterialComponent::Shader>(propName);
         prop->SetValue(CreateMaterialComponentShader());
         UpdateComponentMembers();
@@ -119,7 +119,7 @@ UNIT_TEST_F(API_ScenePluginMaterialComponentTest, Members, testing::ext::TestSiz
         auto prop = GetArrayProperty<MaterialComponent::TextureInfo>("Textures");
         MaterialComponent::TextureInfo textures[MaterialComponent::TextureIndex::TEXTURE_COUNT];
         for (int i = 0; i < MaterialComponent::TextureIndex::TEXTURE_COUNT; ++i) {
-            textures[i] = MaterialComponent::TextureInfo { {}, {}, { 1.0f + 0.01f * i, 0.0f, 0.0f, 0.0f }, {} };
+            textures[i] = MaterialComponent::TextureInfo{{}, {}, {1.0f + 0.01f * i, 0.0f, 0.0f, 0.0f}, {}};
         }
         prop->SetValue(textures);
         UpdateComponentMembers();
@@ -131,7 +131,7 @@ UNIT_TEST_F(API_ScenePluginMaterialComponentTest, Members, testing::ext::TestSiz
     }
     {
         auto prop = GetArrayProperty<CORE_NS::EntityReference>("CustomResources");
-        CORE_NS::EntityReference references[2] = { em.CreateReferenceCounted(), em.CreateReferenceCounted() };
+        CORE_NS::EntityReference references[2] = {em.CreateReferenceCounted(), em.CreateReferenceCounted()};
         prop->SetValue(references);
         UpdateComponentMembers();
         const auto values = prop->GetValue();
@@ -156,6 +156,6 @@ UNIT_TEST_F(API_ScenePluginMaterialComponentTest, Functions, testing::ext::TestS
     TestIMaterialFunctions(interface_cast<IMaterial>(material));
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 SCENE_END_NAMESPACE()

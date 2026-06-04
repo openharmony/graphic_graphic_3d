@@ -46,8 +46,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "6722cfd9-ff0c-4b8c-bdc1-1ecbd9ae11e1" };
-    static constexpr const char* typeName = "RenderNodeWeatherSimulation";
+    static constexpr BASE_NS::Uid UID{"6722cfd9-ff0c-4b8c-bdc1-1ecbd9ae11e1"};
+    static constexpr const char* TYPE_NAME = "RenderNodeWeatherSimulation";
     static constexpr RENDER_NS::IRenderNode::BackendFlags BACKEND_FLAGS =
         IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr RENDER_NS::IRenderNode::ClassType CLASS_TYPE = RENDER_NS::IRenderNode::ClassType::CLASS_TYPE_NODE;
@@ -56,7 +56,7 @@ public:
 
 private:
     static constexpr uint32_t MAX_WATER_PLANES = 16U;
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     void InitializeRippleBuffers(RENDER_NS::IRenderCommandList& cmdList,
         const RenderDataStoreWeather::WaterEffectData& waterPlaneData, uint32_t slot);
@@ -70,8 +70,8 @@ private:
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStoreSpecialization;
 
-        bool hasChangeableResourceHandles { false };
-        bool hasChangeableDispatchHandles { false };
+        bool hasChangeableResourceHandles{false};
+        bool hasChangeableDispatchHandles{false};
     };
     JsonInputs jsonInputs_;
 
@@ -88,8 +88,8 @@ private:
 
     RENDER_NS::RenderHandle defaultMaterialSam_;
 
-    RenderDataStoreWeather* dataStoreWeather_ { nullptr };
+    RenderDataStoreWeather* dataStoreWeather_{nullptr};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE3D_NODE_RENDER_NODE_WEATHER_SIMULATION_H
+#endif  // CORE3D_NODE_RENDER_NODE_WEATHER_SIMULATION_H

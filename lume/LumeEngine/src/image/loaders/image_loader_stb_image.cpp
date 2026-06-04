@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 
 //
 // Enabling only formats that are actually used.
@@ -97,7 +98,7 @@ void FreeStbImageBytes(void* imageBytes)
     stbi_image_free(imageBytes);
 }
 
-uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
+uint8_t g_sRgbPremultiplyLookup[256u * 256u] = {0};
 
 void InitializeSRGBTable()
 {
@@ -131,6 +132,10 @@ bool PremultiplyAlpha(
         return true;
     }
 
+    if (static_cast<uint64_t>(width) * height > UINT32_MAX) {
+        return false;
+    }
+
     const uint32_t pixelCount = width * height;
 
     if (bytesPerChannel == 1) {
@@ -143,12 +148,11 @@ bool PremultiplyAlpha(
                     *img = static_cast<uint8_t>(*img * alpha / 0xff);
                     img++;
                 }
-                img++; // Skip over the alpha value.
+                img++;  // Skip over the alpha value.
             }
         } else {
-            if (g_sRgbPremultiplyLookup[256u * 256u - 1] == 0) {
-                InitializeSRGBTable();
-            }
+            static std::once_flag sRgbTableInitFlag;
+            std::call_once(sRgbTableInitFlag, InitializeSRGBTable);
             uint8_t* img = imageBytes;
             for (uint32_t i = 0; i < pixelCount; i++) {
                 uint8_t* p = &g_sRgbPremultiplyLookup[img[channelCount - 1] * 256u];
@@ -178,11 +182,12 @@ bool PremultiplyAlpha(
 }
 
 using StbImagePtr = unique_ptr<void, decltype(&FreeStbImageBytes)>;
-} // namespace
+}  // namespace
 
 class StbImage final : public IImageContainer {
 public:
-    StbImage() : IImageContainer(), imageDesc_(), imageBuffer_() {}
+    StbImage() : IImageContainer(), imageDesc_(), imageBuffer_()
+    {}
 
     using Ptr = BASE_NS::unique_ptr<StbImage, Deleter>;
 
@@ -193,17 +198,17 @@ public:
 
     array_view<const uint8_t> GetData() const override
     {
-        return { static_cast<const uint8_t*>(imageBytes_.get()), imageBytesLength_ };
+        return {static_cast<const uint8_t*>(imageBytes_.get()), imageBytesLength_};
     }
 
     array_view<const SubImageDesc> GetBufferImageCopies() const override
     {
-        return { &imageBuffer_, 1 };
+        return {&imageBuffer_, 1};
     }
 
     static constexpr Format ResolveFormat(uint32_t loadFlags, uint32_t componentCount, bool is16bpc)
     {
-        Format format {};
+        Format format{};
         const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
 
         switch (componentCount) {
@@ -252,23 +257,23 @@ public:
             }
         }
 
-        return ImageDesc {
-            imageFlags,   // imageFlags
-            1,            // blockPixelWidth
-            1,            // blockPixelHeight
-            1,            // blockPixelDepth
-            bitsPerPixel, // bitsPerBlock
+        return ImageDesc{
+            imageFlags,    // imageFlags
+            1,             // blockPixelWidth
+            1,             // blockPixelHeight
+            1,             // blockPixelDepth
+            bitsPerPixel,  // bitsPerBlock
 
-            imageType,     // imageType
-            imageViewType, // imageViewType
-            format,        // format
+            imageType,      // imageType
+            imageViewType,  // imageViewType
+            format,         // format
 
-            static_cast<uint32_t>(imageWidth),  // width
-            static_cast<uint32_t>(imageHeight), // height
-            1,                                  // depth
+            static_cast<uint32_t>(imageWidth),   // width
+            static_cast<uint32_t>(imageHeight),  // height
+            1,                                   // depth
 
-            mipCount, // mipCount
-            1,        // layerCount
+            mipCount,  // mipCount
+            1,         // layerCount
         };
     }
 
@@ -286,8 +291,12 @@ public:
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA) != 0) {
                 const uint32_t bytesPerChannel = is16bpc ? 2u : 1u;
                 const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
-                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()), imageWidth, imageHeight,
-                    componentCount, bytesPerChannel, forceLinear);
+                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()),
+                    imageWidth,
+                    imageHeight,
+                    componentCount,
+                    bytesPerChannel,
+                    forceLinear);
             }
         }
 
@@ -308,13 +317,13 @@ public:
         }
         image->imageBytesLength_ = static_cast<uint32_t>(totalBytes);
 
-        image->imageBuffer_ = SubImageDesc {
-            0,           // uint32_t bufferOffset
-            imageWidth,  // uint32_t bufferRowLength
-            imageHeight, // uint32_t bufferImageHeight
+        image->imageBuffer_ = SubImageDesc{
+            0,            // uint32_t bufferOffset
+            imageWidth,   // uint32_t bufferRowLength
+            imageHeight,  // uint32_t bufferImageHeight
 
-            0, // uint32_t mipLevel
-            1, // uint32_t layerCount
+            0,  // uint32_t mipLevel
+            1,  // uint32_t layerCount
 
             static_cast<uint32_t>(imageWidth),
             static_cast<uint32_t>(imageHeight),
@@ -345,13 +354,21 @@ public:
 
         // Load the image byte data.
         if (info.is16bpc) {
-            auto image = stbi_load_16_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size()),
-                &info.width, &info.height, &info.componentCount, requestedComponentCount);
-            imageBytes = { image, FreeStbImageBytes };
+            auto image = stbi_load_16_from_memory(imageFileBytes.data(),
+                static_cast<int>(imageFileBytes.size()),
+                &info.width,
+                &info.height,
+                &info.componentCount,
+                requestedComponentCount);
+            imageBytes = {image, FreeStbImageBytes};
         } else {
-            auto image = stbi_load_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size()),
-                &info.width, &info.height, &info.componentCount, requestedComponentCount);
-            imageBytes = { image, FreeStbImageBytes };
+            auto image = stbi_load_from_memory(imageFileBytes.data(),
+                static_cast<int>(imageFileBytes.size()),
+                &info.width,
+                &info.height,
+                &info.componentCount,
+                requestedComponentCount);
+            imageBytes = {image, FreeStbImageBytes};
         }
 
         if (requestedComponentCount != 0) {
@@ -369,10 +386,13 @@ public:
 
         // Load the image info without decoding the image data
         // (Just to check what the image format is so we can convert if necessary).
-        Info info {};
+        Info info{};
 
-        const int result = stbi_info_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size()),
-            &info.width, &info.height, &info.componentCount);
+        const int result = stbi_info_from_memory(imageFileBytes.data(),
+            static_cast<int>(imageFileBytes.size()),
+            &info.width,
+            &info.height,
+            &info.componentCount);
 
         info.is16bpc =
             (stbi_is_16_bit_from_memory(imageFileBytes.data(), static_cast<int>(imageFileBytes.size())) != 0);
@@ -395,7 +415,7 @@ public:
                     stbi__vertical_flip(imageBytes.get(), info.width, info.height, info.componentCount);
                 }
             } else {
-                imageBytes = { nullptr, FreeStbImageBytes };
+                imageBytes = {nullptr, FreeStbImageBytes};
             }
         }
 
@@ -408,8 +428,12 @@ public:
         }
 
         // Success. Populate the image info and image data object.
-        return CreateImage(CORE_NS::move(imageBytes), static_cast<uint32_t>(info.width),
-            static_cast<uint32_t>(info.height), static_cast<uint32_t>(info.componentCount), loadFlags, info.is16bpc);
+        return CreateImage(CORE_NS::move(imageBytes),
+            static_cast<uint32_t>(info.width),
+            static_cast<uint32_t>(info.height),
+            static_cast<uint32_t>(info.componentCount),
+            loadFlags,
+            info.is16bpc);
     }
 
 protected:
@@ -428,6 +452,8 @@ private:
 
 class ImageLoaderStbImage final : public ImageLoaderManager::IImageLoader {
 public:
+    using ImageLoaderManager::IImageLoader::Load;
+
     // Inherited via ImageManager::IImageLoader
     ImageLoaderManager::LoadResult Load(IFile& file, uint32_t loadFlags) const override
     {
@@ -473,15 +499,22 @@ public:
             return true;
         }
 
-        // Check for JPEG / JFIF / Exif / ICC_PROFILE tag
+        // Check for JPEG / DQT / JFIF / Exif / XMP / ICC_PROFILE / MPF / Adobe tag
         if ((imageFileBytes.size() >= 10) && imageFileBytes[0] == 0xff && imageFileBytes[1] == 0xd8 &&
             imageFileBytes[2] == 0xff &&
-            ((imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
-                 imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') || // JFIF
+            (imageFileBytes[3] == 0xdb ||  // DQT
+                (imageFileBytes[3] == 0xe0 && imageFileBytes[6] == 'J' && imageFileBytes[7] == 'F' &&
+                    imageFileBytes[8] == 'I' && imageFileBytes[9] == 'F') ||  // JFIF
                 (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'E' && imageFileBytes[7] == 'x' &&
-                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') || // Exif
+                    imageFileBytes[8] == 'i' && imageFileBytes[9] == 'f') ||  // Exif
+                (imageFileBytes[3] == 0xe1 && imageFileBytes[6] == 'h' && imageFileBytes[7] == 't' &&
+                    imageFileBytes[8] == 't' && imageFileBytes[9] == 'p') ||  // XMP
                 (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'I' && imageFileBytes[7] == 'C' &&
-                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_'))) { // ICC_PROFILE
+                    imageFileBytes[8] == 'C' && imageFileBytes[9] == '_') ||  // ICC_PROFILE
+                (imageFileBytes[3] == 0xe2 && imageFileBytes[6] == 'M' && imageFileBytes[7] == 'P' &&
+                    imageFileBytes[8] == 'F' && imageFileBytes[9] == 0) ||  // MPF
+                (imageFileBytes[3] == 0xee && imageFileBytes[6] == 'A' && imageFileBytes[7] == 'd' &&
+                    imageFileBytes[8] == 'o' && imageFileBytes[9] == 'b'))) {  // Adobe
             return true;
         }
 
@@ -502,7 +535,7 @@ public:
 
     vector<IImageLoaderManager::ImageType> GetSupportedTypes() const override
     {
-        return { std::begin(STB_IMAGE_TYPES), std::end(STB_IMAGE_TYPES) };
+        return {std::begin(STB_IMAGE_TYPES), std::end(STB_IMAGE_TYPES)};
     }
 
 protected:
@@ -514,7 +547,7 @@ protected:
 
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderStbImage(PluginToken)
 {
-    return ImageLoaderManager::IImageLoader::Ptr { new ImageLoaderStbImage() };
+    return ImageLoaderManager::IImageLoader::Ptr{new ImageLoaderStbImage()};
 }
 CORE_END_NAMESPACE()
-#endif // defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)
+#endif  // defined(USE_STB_IMAGE) && (USE_STB_IMAGE == 1)

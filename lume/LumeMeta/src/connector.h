@@ -39,7 +39,7 @@ public:
     ReturnError Import(IImportContext&) override;
 
 private:
-    IEvent::Token handle_ {};
+    IEvent::Token handle_{};
     RefUri uri_;
     IMetadata::WeakPtr source_;
     BASE_NS::string eventName_;

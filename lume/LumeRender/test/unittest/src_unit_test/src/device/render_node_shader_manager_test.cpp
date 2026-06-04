@@ -30,22 +30,22 @@ namespace {
 void Validate(const UTest::EngineResources& er)
 {
     ShaderManager& shaderMgr = static_cast<ShaderManager&>(er.context->GetDevice().GetShaderManager());
-    RenderNodeShaderManager renderNodeShaderMgr { shaderMgr };
+    RenderNodeShaderManager renderNodeShaderMgr{shaderMgr};
     {
         auto shaderHandle1 =
             renderNodeShaderMgr.GetShaderHandle("rendershaders://shader/RenderNodeShaderManagerTest.shader");
         auto pipelineLayout1 = shaderMgr.GetReflectionPipelineLayoutRef(shaderHandle1);
-        IShaderManager::PipelineLayoutCreateInfo createInfo1 { "pl1", pipelineLayout1 };
+        IShaderManager::PipelineLayoutCreateInfo createInfo1{"pl1", pipelineLayout1};
         auto plHandle1 = shaderMgr.CreatePipelineLayout(createInfo1);
         auto shaderHandle2 =
             renderNodeShaderMgr.GetShaderHandle("rendershaders://shader/RenderNodeShaderManagerTest2.shader");
         auto pipelineLayout2 = shaderMgr.GetReflectionPipelineLayoutRef(shaderHandle2);
-        IShaderManager::PipelineLayoutCreateInfo createInfo2 { "pl2", pipelineLayout2 };
+        IShaderManager::PipelineLayoutCreateInfo createInfo2{"pl2", pipelineLayout2};
         auto plHandle2 = shaderMgr.CreatePipelineLayout(createInfo2);
         auto shaderHandle3 =
             renderNodeShaderMgr.GetShaderHandle("rendershaders://shader/RenderNodeShaderManagerTest3.shader");
         auto pipelineLayout3 = shaderMgr.GetReflectionPipelineLayoutRef(shaderHandle3);
-        IShaderManager::PipelineLayoutCreateInfo createInfo3 { "pl3", pipelineLayout3 };
+        IShaderManager::PipelineLayoutCreateInfo createInfo3{"pl3", pipelineLayout3};
         auto plHandle3 = shaderMgr.CreatePipelineLayout(createInfo3);
         {
             auto flags = renderNodeShaderMgr.GetCompatibilityFlags(plHandle1.GetHandle(), plHandle2.GetHandle());
@@ -60,11 +60,11 @@ void Validate(const UTest::EngineResources& er)
         IShaderManager::ShaderCreateInfo info;
         info.pipelineLayout = plHandle1.GetHandle();
         info.path = "newShader";
-        IShaderManager::ShaderModulePath shaderPaths[2] = {{"rendershaders://shader/fullscreen_triangle.vert.spv",
-                                                            ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT},
-                                                           {"rendershaders://shader/ShaderPipelineBinderTest.frag.spv",
-                                                            ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT}};
-        info.shaderPaths = { shaderPaths, 2 };
+        IShaderManager::ShaderModulePath shaderPaths[2] = {
+            {"rendershaders://shader/fullscreen_triangle.vert.spv", ShaderStageFlagBits::CORE_SHADER_STAGE_VERTEX_BIT},
+            {"rendershaders://shader/ShaderPipelineBinderTest.frag.spv",
+                ShaderStageFlagBits::CORE_SHADER_STAGE_FRAGMENT_BIT}};
+        info.shaderPaths = {shaderPaths, 2};
         auto newShaderHandle = shaderMgr.CreateShader(info);
         ASSERT_TRUE(renderNodeShaderMgr.IsValid(newShaderHandle.GetHandle()));
         ASSERT_TRUE(renderNodeShaderMgr.IsShader(newShaderHandle.GetHandle()));
@@ -89,7 +89,7 @@ void Validate(const UTest::EngineResources& er)
         }
         {
             auto plHandle = renderNodeShaderMgr.GetReflectionPipelineLayoutHandle(shaderHandle3);
-            ASSERT_NE(RenderHandle {}, plHandle);
+            ASSERT_NE(RenderHandle{}, plHandle);
         }
         {
             auto plHandle = renderNodeShaderMgr.GetPipelineLayoutHandle("pl1");
@@ -102,11 +102,11 @@ void Validate(const UTest::EngineResources& er)
         {
             auto vidHandle =
                 renderNodeShaderMgr.GetVertexInputDeclarationHandleByShaderHandle(newShaderHandle.GetHandle());
-            ASSERT_EQ(RenderHandle {}, vidHandle);
+            ASSERT_EQ(RenderHandle{}, vidHandle);
         }
         {
             auto vidHandle = renderNodeShaderMgr.GetVertexInputDeclarationHandle("nonExistingVid");
-            ASSERT_EQ(RenderHandle {}, vidHandle);
+            ASSERT_EQ(RenderHandle{}, vidHandle);
         }
         {
             auto shaders = renderNodeShaderMgr.GetShaders({}, 0);
@@ -129,10 +129,10 @@ void Validate(const UTest::EngineResources& er)
         }
         {
             auto shaderHandle = renderNodeShaderMgr.GetShaderHandle({}, 0u);
-            ASSERT_EQ(RenderHandle {}, shaderHandle);
+            ASSERT_EQ(RenderHandle{}, shaderHandle);
         }
         {
-            auto slotId = renderNodeShaderMgr.GetRenderSlotId(RenderHandle {});
+            auto slotId = renderNodeShaderMgr.GetRenderSlotId(RenderHandle{});
             ASSERT_EQ(~0u, slotId);
         }
         {
@@ -141,29 +141,29 @@ void Validate(const UTest::EngineResources& er)
         }
         {
             auto stateHandle = renderNodeShaderMgr.GetGraphicsStateHandle("");
-            ASSERT_EQ(RenderHandle {}, stateHandle);
+            ASSERT_EQ(RenderHandle{}, stateHandle);
         }
         {
             auto stateHandle = renderNodeShaderMgr.GetGraphicsStateHandle("", "");
-            ASSERT_EQ(RenderHandle {}, stateHandle);
+            ASSERT_EQ(RenderHandle{}, stateHandle);
         }
         {
             auto stateHandle = renderNodeShaderMgr.GetGraphicsStateHandle({}, ~0u);
-            ASSERT_EQ(RenderHandle {}, stateHandle);
+            ASSERT_EQ(RenderHandle{}, stateHandle);
         }
         {
             auto slotData = renderNodeShaderMgr.GetRenderSlotData(~0u);
             ASSERT_EQ(~0u, slotData.renderSlotId);
-            ASSERT_EQ(RenderHandle {}, slotData.shader.GetHandle());
-            ASSERT_EQ(RenderHandle {}, slotData.graphicsState.GetHandle());
+            ASSERT_EQ(RenderHandle{}, slotData.shader.GetHandle());
+            ASSERT_EQ(RenderHandle{}, slotData.graphicsState.GetHandle());
         }
         {
             auto stateHandle = renderNodeShaderMgr.GetGraphicsStateHandleByHash(~0u);
-            ASSERT_EQ(RenderHandle {}, stateHandle);
+            ASSERT_EQ(RenderHandle{}, stateHandle);
         }
     }
 }
-} // namespace
+}  // namespace
 
 /**
  * @tc.name: RenderNodeShaderManagerTest

@@ -47,10 +47,10 @@ ImageLoaderManager::ImageLoaderManager(IFileManager& fileManager) : fileManager_
         if (typeInfo && (typeInfo->typeUid == IImageLoaderManager::ImageLoaderTypeInfo::UID)) {
             const auto* imageLoaderInfo = static_cast<const IImageLoaderManager::ImageLoaderTypeInfo*>(typeInfo);
             if (imageLoaderInfo->createLoader &&
-                std::none_of(imageLoaders_.cbegin(), imageLoaders_.cend(),
+                std::none_of(imageLoaders_.cbegin(),
+                    imageLoaders_.cend(),
                     [&uid = imageLoaderInfo->uid](const RegisteredImageLoader& loader) { return loader.uid == uid; })) {
-                imageLoaders_.push_back(
-                    { imageLoaderInfo->uid, imageLoaderInfo->createLoader(imageLoaderInfo->token) });
+                imageLoaders_.push_back({imageLoaderInfo->uid, imageLoaderInfo->createLoader(imageLoaderInfo->token)});
             }
         }
     }
@@ -71,7 +71,7 @@ void ImageLoaderManager::RegisterImageLoader(IImageLoader::Ptr imageLoader)
 
     // NOTE: We just add the registered unique pointers to a vector. The vector is not really used for anything else.
     // And the loaders cannot be currently unregistered.
-    imageLoaders_.push_back({ {}, move(imageLoader) });
+    imageLoaders_.push_back({{}, move(imageLoader)});
 }
 
 ImageLoaderManager::LoadResult ImageLoaderManager::LoadImage(const string_view uri, uint32_t loadFlags)
@@ -210,10 +210,10 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::LoadAnimatedImage(
 
 ImageLoaderManager::LoadResult ImageLoaderManager::ResultFailure(const string_view error)
 {
-    LoadResult result {
-        false,  // if success
-        "",     // array error[128];
-        nullptr // the image;
+    LoadResult result{
+        false,   // if success
+        "",      // array error[128];
+        nullptr  // the image;
     };
 
     // Copy the error string
@@ -226,19 +226,19 @@ ImageLoaderManager::LoadResult ImageLoaderManager::ResultFailure(const string_vi
 
 ImageLoaderManager::LoadResult ImageLoaderManager::ResultSuccess(IImageContainer::Ptr image)
 {
-    return LoadResult {
-        true,       // if success
-        "",         // array error[128];
-        move(image) // the image;
+    return LoadResult{
+        true,        // if success
+        "",          // array error[128];
+        move(image)  // the image;
     };
 }
 
 ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::ResultFailureAnimated(const string_view error)
 {
-    LoadAnimatedResult result {
-        false,  // if success
-        "",     // array error[128];
-        nullptr // the image;
+    LoadAnimatedResult result{
+        false,   // if success
+        "",      // array error[128];
+        nullptr  // the image;
     };
 
     // Copy the error string
@@ -251,10 +251,10 @@ ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::ResultFailureAnimated
 
 ImageLoaderManager::LoadAnimatedResult ImageLoaderManager::ResultSuccessAnimated(IAnimatedImage::Ptr image)
 {
-    return LoadAnimatedResult {
-        true,       // if success
-        "",         // array error[128];
-        move(image) // the image;
+    return LoadAnimatedResult{
+        true,        // if success
+        "",          // array error[128];
+        move(image)  // the image;
     };
 }
 
@@ -279,14 +279,16 @@ void ImageLoaderManager::OnTypeInfoEvent(EventType type, array_view<const ITypeI
             const auto* imageLoaderInfo = static_cast<const IImageLoaderManager::ImageLoaderTypeInfo*>(typeInfo);
             if (type == EventType::ADDED) {
                 if (imageLoaderInfo->createLoader &&
-                    std::none_of(imageLoaders_.cbegin(), imageLoaders_.cend(),
+                    std::none_of(imageLoaders_.cbegin(),
+                        imageLoaders_.cend(),
                         [&uid = imageLoaderInfo->uid](
                             const RegisteredImageLoader& loader) { return loader.uid == uid; })) {
                     imageLoaders_.push_back(
-                        { imageLoaderInfo->uid, imageLoaderInfo->createLoader(imageLoaderInfo->token) });
+                        {imageLoaderInfo->uid, imageLoaderInfo->createLoader(imageLoaderInfo->token)});
                 }
             } else if (type == EventType::REMOVED) {
-                imageLoaders_.erase(std::remove_if(imageLoaders_.begin(), imageLoaders_.end(),
+                imageLoaders_.erase(std::remove_if(imageLoaders_.begin(),
+                                        imageLoaders_.end(),
                                         [&uid = imageLoaderInfo->uid](
                                             const RegisteredImageLoader& loader) { return loader.uid == uid; }),
                     imageLoaders_.cend());

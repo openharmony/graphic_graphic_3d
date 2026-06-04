@@ -21,7 +21,14 @@
 #include <deque>
 #include <thread>
 
-// need notice
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+#include <qos.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+#include "res_sched_client.h"
+#endif
+
 #include <base/containers/array_view.h>
 #include <base/containers/atomics.h>
 #include <base/containers/iterator.h>
@@ -50,7 +57,9 @@ using BASE_NS::unique_ptr;
 using BASE_NS::Math::max;
 
 namespace {
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
 constexpr uint32_t RES_TYPE_EXT_ENGINE_SET_QOS = 10028;
+#endif
 
 #ifdef PLATFORM_HAS_JAVA
 /** RAII class for handling thread setup/release. */
@@ -76,9 +85,9 @@ public:
     {
         javaVm_->DetachCurrentThread();
     }
-    JavaVM* javaVm_ { nullptr };
+    JavaVM* javaVm_{nullptr};
 };
-#endif // PLATFORM_HAS_JAVA
+#endif  // PLATFORM_HAS_JAVA
 
 // -- TaskResult, returned by ThreadPool::Push and can be waited on.
 class TaskResult final : public IThreadPool::IResult {
@@ -110,10 +119,11 @@ public:
     private:
         mutable std::mutex mutex_;
         std::condition_variable cv_;
-        bool done_ { false };
+        bool done_{false};
     };
 
-    explicit TaskResult(BASE_NS::shared_ptr<State>&& future) : future_(BASE_NS::move(future)) {}
+    explicit TaskResult(BASE_NS::shared_ptr<State>&& future) : future_(BASE_NS::move(future))
+    {}
 
     void Wait() final
     {
@@ -176,7 +186,7 @@ public:
                 taskState->Done();
             }
         }
-        return IResult::Ptr { new TaskResult(BASE_NS::move(taskState)) };
+        return IResult::Ptr{new TaskResult(BASE_NS::move(taskState))};
     }
 
     IResult::Ptr Push(ITask::Ptr task, BASE_NS::array_view<const ITask* const> dependencies) override
@@ -192,7 +202,8 @@ public:
                 {
                     std::lock_guard lock(mutex_);
                     for (const ITask* dep : dependencies) {
-                        if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                        if (auto pos = std::find_if(q_.cbegin(),
+                                q_.cend(),
                                 [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                             pos != q_.cend()) {
                             deps.push_back(*pos);
@@ -206,7 +217,7 @@ public:
                 taskState->Done();
             }
         }
-        return IResult::Ptr { new TaskResult(BASE_NS::move(taskState)) };
+        return IResult::Ptr{new TaskResult(BASE_NS::move(taskState))};
     }
 
     void PushNoWait(ITask::Ptr task) override
@@ -230,8 +241,9 @@ public:
             {
                 std::lock_guard lock(mutex_);
                 for (const ITask* dep : dependencies) {
-                    if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
-                        [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
+                    if (auto pos = std::find_if(q_.cbegin(),
+                            q_.cend(),
+                            [dep](const BASE_NS::shared_ptr<Task>& task) { return task && (*task == dep); });
                         pos != q_.cend()) {
                         deps.push_back(*pos);
                     }
@@ -293,7 +305,7 @@ private:
         ITask::Ptr function_;
         BASE_NS::shared_ptr<TaskResult::State> state_;
         BASE_NS::vector<BASE_NS::weak_ptr<Task>> dependencies_;
-        bool running_ { false };
+        bool running_{false};
 
         ~Task() = default;
         Task() = default;
@@ -301,7 +313,8 @@ private:
         Task(ITask::Ptr&& function, BASE_NS::shared_ptr<TaskResult::State> state,
             BASE_NS::vector<BASE_NS::weak_ptr<Task>>&& dependencies)
             : function_(BASE_NS::move(function)),
-              state_(BASE_NS::move(state)), dependencies_ { BASE_NS::move(dependencies) }
+              state_(BASE_NS::move(state)),
+              dependencies_{BASE_NS::move(dependencies)}
         {
             CORE_ASSERT(this->function_ && this->state_);
         }
@@ -318,7 +331,7 @@ private:
         }
 
         Task(ITask::Ptr&& function, BASE_NS::vector<BASE_NS::weak_ptr<Task>>&& dependencies)
-            : function_(BASE_NS::move(function)), dependencies_ { BASE_NS::move(dependencies) }
+            : function_(BASE_NS::move(function)), dependencies_{BASE_NS::move(dependencies)}
         {
             CORE_ASSERT(this->function_);
         }
@@ -344,10 +357,11 @@ private:
         // Task can run if it's not already running and there are no dependencies, or all the dependencies are ready.
         inline bool CanRun() const
         {
-            return !running_ &&
-                   (dependencies_.empty() ||
-                       std::all_of(std::begin(dependencies_), std::end(dependencies_),
-                           [](const BASE_NS::weak_ptr<Task>& dependency) { return dependency.expired(); }));
+            return !running_ && (dependencies_.empty() || std::all_of(std::begin(dependencies_),
+                                                              std::end(dependencies_),
+                                                              [](const BASE_NS::weak_ptr<Task>& dependency) {
+                                                                  return dependency.expired();
+                                                              }));
         }
     };
 
@@ -406,6 +420,19 @@ private:
         JavaThreadContext javaContext;
 #endif
 
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+        int ret = OHOS::QOS::SetThreadQos(OHOS::QOS::QosLevel::QOS_USER_INTERACTIVE);
+        CORE_LOG_I("set engine child thread qos %s", ret == 0 ? "success" : "failed");
+        auto tid = syscall(SYS_gettid);
+        if (tid > 0) {
+            std::unordered_map<std::string, std::string> mapPayload{
+                {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
+            CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
+            OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
+                RES_TYPE_EXT_ENGINE_SET_QOS, 1, mapPayload);
+        }
+#endif
+
         while (true) {
             // Function to process.
             BASE_NS::shared_ptr<Task> task;
@@ -420,7 +447,13 @@ private:
             }
             // If there was no task it means we are stopping and thread can exit.
             if (!task) {
-            // need notice
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+                std::unordered_map<std::string, std::string> mapPayload{
+                    {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
+                CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
+                OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
+                    RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
+#endif
                 return;
             }
 
@@ -434,7 +467,8 @@ private:
                 std::lock_guard lock(mutex_);
                 // After running the task remove it from the queue. Any dependent tasks will see their weak_ptr expire
                 // idicating that the dependency has been completed.
-                if (auto pos = std::find_if(q_.cbegin(), q_.cend(),
+                if (auto pos = std::find_if(q_.cbegin(),
+                        q_.cend(),
                         [&task](const BASE_NS::shared_ptr<Task>& queuedTask) { return queuedTask == task; });
                     pos != q_.cend()) {
                     q_.erase(pos);
@@ -442,15 +476,17 @@ private:
                 task.reset();
 
                 // Get next function.
-                if (auto pos = std::find_if(std::begin(q_), std::end(q_),
+                if (auto pos = std::find_if(std::begin(q_),
+                        std::end(q_),
                         [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); });
                     pos != std::end(q_)) {
                     task = *pos;
                     task->running_ = true;
                     // Check if there are more runnable tasks and notify workers as needed.
                     auto runnable = std::min(static_cast<ptrdiff_t>(threadCount_),
-                        std::count_if(pos + 1, std::end(q_),
-                            [](const BASE_NS::shared_ptr<Task>& task) { return (task) && (task->CanRun()); }));
+                        std::count_if(pos + 1, std::end(q_), [](const BASE_NS::shared_ptr<Task>& task) {
+                            return (task) && (task->CanRun());
+                        }));
                     while (runnable--) {
                         cv_.notify_one();
                     }
@@ -459,18 +495,18 @@ private:
         }
     }
 
-    size_t threadCount_ { 0 };
+    size_t threadCount_{0};
     unique_ptr<ThreadContext[]> threads_;
 
     std::deque<BASE_NS::shared_ptr<Task>> q_;
 
-    bool isDone_ { false };
+    bool isDone_{false};
 
     std::mutex mutex_;
     std::condition_variable cv_;
-    int32_t refcnt_ { 0 };
+    int32_t refcnt_{0};
 };
-} // namespace
+}  // namespace
 
 uint32_t TaskQueueFactory::GetNumberOfCores() const
 {
@@ -485,22 +521,22 @@ uint32_t TaskQueueFactory::GetNumberOfCores() const
 
 IThreadPool::Ptr TaskQueueFactory::CreateThreadPool(const uint32_t threadCount) const
 {
-    return IThreadPool::Ptr { new ThreadPool(threadCount) };
+    return IThreadPool::Ptr{new ThreadPool(threadCount)};
 }
 
 IDispatcherTaskQueue::Ptr TaskQueueFactory::CreateDispatcherTaskQueue(const IThreadPool::Ptr& threadPool) const
 {
-    return IDispatcherTaskQueue::Ptr { make_unique<DispatcherImpl>(threadPool).release() };
+    return IDispatcherTaskQueue::Ptr{make_unique<DispatcherImpl>(threadPool).release()};
 }
 
 IParallelTaskQueue::Ptr TaskQueueFactory::CreateParallelTaskQueue(const IThreadPool::Ptr& threadPool) const
 {
-    return IParallelTaskQueue::Ptr { make_unique<ParallelImpl>(threadPool).release() };
+    return IParallelTaskQueue::Ptr{make_unique<ParallelImpl>(threadPool).release()};
 }
 
 ISequentialTaskQueue::Ptr TaskQueueFactory::CreateSequentialTaskQueue(const IThreadPool::Ptr& threadPool) const
 {
-    return ISequentialTaskQueue::Ptr { make_unique<SequentialImpl>(threadPool).release() };
+    return ISequentialTaskQueue::Ptr{make_unique<SequentialImpl>(threadPool).release()};
 }
 
 // IInterface
@@ -520,7 +556,9 @@ IInterface* TaskQueueFactory::GetInterface(const BASE_NS::Uid& uid)
     return nullptr;
 }
 
-void TaskQueueFactory::Ref() {}
+void TaskQueueFactory::Ref()
+{}
 
-void TaskQueueFactory::Unref() {}
+void TaskQueueFactory::Unref()
+{}
 CORE_END_NAMESPACE()

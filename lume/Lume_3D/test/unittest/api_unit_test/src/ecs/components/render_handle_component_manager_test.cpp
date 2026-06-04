@@ -54,10 +54,10 @@ UNIT_TEST(API_EcsRenderHandleComponent, GetRenderHandleTest, testing::ext::TestS
     auto componentManager = static_cast<IComponentManager*>(renderHandleManager);
     EXPECT_EQ("RenderHandleComponent", componentManager->GetName());
 
-    EXPECT_EQ(RenderHandle {}, renderHandleManager->GetRenderHandle(Entity {}));
-    EXPECT_EQ(RenderHandle {}, renderHandleManager->GetRenderHandle(~0u));
-    EXPECT_EQ(RenderHandle {}, renderHandleManager->GetRenderHandleReference(Entity {}).GetHandle());
-    EXPECT_EQ(RenderHandle {}, renderHandleManager->GetRenderHandleReference(~0u).GetHandle());
+    EXPECT_EQ(RenderHandle{}, renderHandleManager->GetRenderHandle(Entity{}));
+    EXPECT_EQ(RenderHandle{}, renderHandleManager->GetRenderHandle(~0u));
+    EXPECT_EQ(RenderHandle{}, renderHandleManager->GetRenderHandleReference(Entity{}).GetHandle());
+    EXPECT_EQ(RenderHandle{}, renderHandleManager->GetRenderHandleReference(~0u).GetHandle());
 
     GpuBufferDesc desc;
     desc.byteSize = 16u;

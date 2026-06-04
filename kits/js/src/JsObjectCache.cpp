@@ -34,7 +34,7 @@
  */
 class JSWrapperState : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "2ef39765-91f2-46c4-b85f-7cad40dd3bcd" };
+    static constexpr BASE_NS::Uid UID{"2ef39765-91f2-46c4-b85f-7cad40dd3bcd"};
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
     IInterface* GetInterface(const BASE_NS::Uid& uid) override;
     void Ref() override;
@@ -47,14 +47,14 @@ private:
     static void Call(napi_env env, napi_value js_callback, void* context, void* inData);
     static void Final(napi_env env, void* finalize_data, void* finalize_hint);
     BASE_NS::string name_;
-    volatile int32_t count_ { 0 };
-    napi_env env_ { nullptr };
-    napi_ref ref_ { nullptr };
+    volatile int32_t count_{0};
+    napi_env env_{nullptr};
+    napi_ref ref_{nullptr};
 #if JSW_USE_TSF
-    napi_threadsafe_function termfun { nullptr };
+    napi_threadsafe_function termfun{nullptr};
     struct fun_parm {
-        napi_ref ref { nullptr };
-        napi_threadsafe_function termfun { nullptr };
+        napi_ref ref{nullptr};
+        napi_threadsafe_function termfun{nullptr};
     };
 #else
     static bool DeleteReference(napi_ref);
@@ -124,7 +124,7 @@ void JSWrapperState::Call(napi_env env, napi_value js_callback, void* context, v
     status = napi_release_threadsafe_function(ref->termfun, napi_threadsafe_function_release_mode::napi_tsfn_release);
     delete ref;
 }
-void JSWrapperState::Final(napi_env env, void* finalize_data, void* context) {};
+void JSWrapperState::Final(napi_env env, void* finalize_data, void* context){};
 #else
 
 bool JSWrapperState::DeleteReference(napi_ref ref)
@@ -153,7 +153,7 @@ bool JSWrapperState::DeleteReference(napi_ref ref)
         napi_reference_ref(env, ref, &result);
 #endif
         napi_status status = napi_delete_reference(env, ref);
-        p->Release(); // we don't need it anymore so release it.
+        p->Release();  // we don't need it anymore so release it.
     }
     return false;
 }
@@ -165,7 +165,7 @@ JSWrapperState::~JSWrapperState()
     napi_status status;
     // trigger the threadsafe function, so that the javascript "weak reference" will be destroyed.
     status = napi_call_threadsafe_function(
-        termfun, new fun_parm { ref_, termfun }, napi_threadsafe_function_call_mode::napi_tsfn_blocking);
+        termfun, new fun_parm{ref_, termfun}, napi_threadsafe_function_call_mode::napi_tsfn_blocking);
 #else
     auto tq = META_NS::GetTaskQueueRegistry().GetTaskQueue(JS_THREAD_DEP);
     auto curQueue = META_NS::GetTaskQueueRegistry().GetCurrentTaskQueue();
@@ -192,7 +192,7 @@ NapiApi::Object JSWrapperState::GetObject()
     napi_status status;
     napi_value value;
     status = napi_get_reference_value(env_, ref_, &value);
-    return { env_, value };
+    return {env_, value};
 }
 
 NapiApi::Object FetchJsObj(const META_NS::IObject::Ptr& obj, BASE_NS::string_view name)
@@ -263,16 +263,15 @@ NapiApi::Object StoreJsObj(const META_NS::IObject::Ptr& obj, const NapiApi::Obje
     }
     napi_value val;
     napi_get_null(jsobj.GetEnv(), &val);
-    return { jsobj.GetEnv(), val };
+    return {jsobj.GetEnv(), val};
 }
 
-#if !defined(ENABLE_DIAGNOSTICS) || (ENABLE_DIAGNOSTICS==0)
+#if !defined(ENABLE_DIAGNOSTICS) || (ENABLE_DIAGNOSTICS == 0)
 bool LogInterface(const META_NS::IObject::Ptr& v, META_NS::Property<META_NS::SharedPtrIInterface>& p,
     const BASE_NS::string& classname, META_NS::IObject* objInterface)
 {
     if (p) {
-        LOG_F("jsobj: %s %s (strong count %u) (has JSW)", classname.c_str(), v->GetName().c_str(),
-            v.use_count());
+        LOG_F("jsobj: %s %s (strong count %u) (has JSW)", classname.c_str(), v->GetName().c_str(), v.use_count());
         if (auto val = interface_cast<JSWrapperState>(p->GetValue())) {
             if (auto ref = val->GetObject()) {
                 LOG_F("\tJS object still alive.");
@@ -281,8 +280,7 @@ bool LogInterface(const META_NS::IObject::Ptr& v, META_NS::Property<META_NS::Sha
                     if (!nat) {
                         LOG_F("\tand is wrapped but has no native object.");
                     } else {
-                        if (interface_cast<CORE_NS::IInterface>(nat) !=
-                            interface_cast<CORE_NS::IInterface>(v)) {
+                        if (interface_cast<CORE_NS::IInterface>(nat) != interface_cast<CORE_NS::IInterface>(v)) {
                             LOG_F("\t** JS OBJECT POINTS TO DIFFERENT NATIVE OBJECT! **");
                             if (auto m = tro->GetNativeObject()) {
                                 auto ji = interface_cast<META_NS::IObject>(m);
@@ -293,14 +291,16 @@ bool LogInterface(const META_NS::IObject::Ptr& v, META_NS::Property<META_NS::Sha
                                     }
                                     LOG_F("but the _JSW points to another object?: %s %s (strong count %u) "
                                           "strong: %d",
-                                         classname.c_str(), m->GetName().c_str(), m.use_count(),
-                                         tro->IsStrong());
+                                        classname.c_str(),
+                                        m->GetName().c_str(),
+                                        m.use_count(),
+                                        tro->IsStrong());
                                 }
                             }
                         } else {
                             LOG_F("\t and correctly links to this native object.");
                         }
-                   }
+                    }
                 } else {
                     LOG_F("\t.. but is unwrapped (null tro).");
                 }
@@ -313,7 +313,7 @@ bool LogInterface(const META_NS::IObject::Ptr& v, META_NS::Property<META_NS::Sha
     return false;
 }
 
-void DebugNativesHavingJS()
+SCENE_ADDON_PUBLIC void DebugNativesHavingJS()
 {
     LOG_F("Dump MetaObjects");
     for (auto&& v : META_NS::GetObjectRegistry().GetAllObjectInstances()) {
@@ -331,8 +331,7 @@ void DebugNativesHavingJS()
                 p = i->GetProperty<META_NS::SharedPtrIInterface>("_JSWMorpher", META_NS::MetadataQuery::EXISTING);
             }
             if (!LogInterface(v, p, classname, objInterface)) {
-                LOG_F("obj: %s %s (strong count %u)", classname.c_str(), v->GetName().c_str(),
-                    v.use_count());
+                LOG_F("obj: %s %s (strong count %u)", classname.c_str(), v->GetName().c_str(), v.use_count());
             }
         }
     }
@@ -383,11 +382,11 @@ void DumpBridges()
         uint32_t zom = 0;
     };
     std::map<BASE_NS::string, StateCount> counts;
-    const char* state[] = { "undefined", "created", "disposed", "finalized" };
+    const char* state[] = {"undefined", "created", "disposed", "finalized"};
     for (auto& t : gBridges) {
         const void* ptr = t.first;
         const auto& b = t.second;
-        bool isAlive = b.weak.GetNapiObject(); //<META_NS::IObject>().get() != nullptr;
+        bool isAlive = b.weak.GetNapiObject();  //<META_NS::IObject>().get() != nullptr;
 
         if (b.state == bridgeState::disposed) {
             counts[b.type].disp++;
@@ -404,7 +403,7 @@ void DumpBridges()
             oth++;
         }
     }
-    LOG_F("#### Dump Objects");
+    LOG_F("Dump Objects");
     LOG_F("Zombie: %d Disposed:%d LiveOnes:%d  oth:%d", zom, disp, liv, oth);
     for (auto t : counts) {
         LOG_F("%20s live: %4d disposed: %4d zombie: %4d", t.first.c_str(), t.second.live, t.second.disp, t.second.zom);
@@ -420,15 +419,15 @@ struct Nod {
 namespace {
 std::map<void*, bool> added;
 std::vector<Nod> sorted;
-std::map<void*, std::vector<META_NS::IObject::Ptr>> parents;
+std::map<void*, std::vector<META_NS::IObject::Ptr> > parents;
 std::map<META_NS::IObject*, META_NS::IObject::Ptr> tmp;
-}
+}  // namespace
 
-void add(BASE_NS::string ind, std::vector<Nod>& sorted, std::map<void*, std::vector<META_NS::IObject::Ptr>>& parents,
+void add(BASE_NS::string ind, std::vector<Nod>& sorted, std::map<void*, std::vector<META_NS::IObject::Ptr> >& parents,
     META_NS::IObject::Ptr obj)
 {
     if (obj) {
-        sorted.push_back({ ind, obj });
+        sorted.push_back({ind, obj});
     }
     for (const auto& p : parents[obj.get()]) {
         add(ind + " ", sorted, parents, p);
@@ -576,7 +575,7 @@ void DebugNativesHavingJS()
         if (IsAdded(v))
             continue;
         BASE_NS::shared_ptr<META_NS::IObject> own;
-        own = v->Resolve(META_NS::RefUri { BASE_NS::string_view("ref:/../") });
+        own = v->Resolve(META_NS::RefUri{BASE_NS::string_view("ref:/../")});
         if (!own) {
             if (auto n = interface_cast<SCENE_NS::INode>(v)) {
                 own = interface_pointer_cast<META_NS::IObject>(n->GetScene());

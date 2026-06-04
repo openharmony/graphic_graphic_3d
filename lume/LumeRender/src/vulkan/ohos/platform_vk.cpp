@@ -21,21 +21,15 @@ using BASE_NS::string_view;
 using BASE_NS::unordered_map;
 using BASE_NS::vector;
 namespace {
-static constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY { VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY_CAPABILITIES {
-    VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME
-};
-static constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2 {
-    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
-};
-static constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION {
-    VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME
-};
-static constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
-static constexpr string_view DEVICE_EXTENSION_OPENHARMONY_EXTERNAL_MEMORY_OHOS_NATIVE_BUFFER {
-    VK_OHOS_NATIVE_BUFFER_EXTENSION_NAME
-};
-} // namespace
+static constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY_CAPABILITIES{
+    VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN{VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_OPENHARMONY_EXTERNAL_MEMORY_OHOS_NATIVE_BUFFER{
+    VK_OHOS_NATIVE_BUFFER_EXTENSION_NAME};
+}  // namespace
 
 void GetPlatformDeviceExtensions(vector<string_view>& extensions)
 {
@@ -50,7 +44,7 @@ void GetPlatformDeviceExtensions(vector<string_view>& extensions)
 PlatformDeviceExtensions GetEnabledPlatformDeviceExtensions(
     const unordered_map<string, uint32_t>& enabledDeviceExtensions)
 {
-    return PlatformDeviceExtensions { enabledDeviceExtensions.contains(
-        DEVICE_EXTENSION_OPENHARMONY_EXTERNAL_MEMORY_OHOS_NATIVE_BUFFER) };
+    return PlatformDeviceExtensions{
+        enabledDeviceExtensions.contains(DEVICE_EXTENSION_OPENHARMONY_EXTERNAL_MEMORY_OHOS_NATIVE_BUFFER)};
 }
 RENDER_END_NAMESPACE()

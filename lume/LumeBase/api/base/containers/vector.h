@@ -36,8 +36,8 @@ allocators are partially done.
 #define BASE_VECTOR_HAS_INITIALIZE_LIST
 
 #include <cassert>
-#include <cstddef> // size_t, ptrdiff_t
-#include <cstdint> // uint8_t
+#include <cstddef>  // size_t, ptrdiff_t
+#include <cstdint>  // uint8_t
 
 #ifdef STANDALONE_BASE_VECTOR
 // STANDALONE has no dependencies to other engine parts.
@@ -48,8 +48,8 @@ allocators are partially done.
 #ifdef USE_NEW_AND_INITIALIZE_LIST_HEADERS
 // Due to a mistake in c++ standards (in my opinion), we need to include these headers to get placement new and
 // initializer_list support.
-#include <initializer_list> // std::initializer list
-#include <new>              // placement new
+#include <initializer_list>  // std::initializer list
+#include <new>               // placement new
 #else
 // Fully declaring the placement new and std::intializer_list ourselves works, and pulls no extra headers.
 void* operator new(size_t size, void* ptr) noexcept
@@ -61,7 +61,7 @@ void* operator new[](size_t size, void* ptr) noexcept
     return ptr;
 }
 namespace std {
-template<class E>
+template <class E>
 class initializer_list {
 public:
     using value_type = E;
@@ -70,7 +70,8 @@ public:
     using size_type = size_t;
     using iterator = const E*;
     using const_iterator = const E*;
-    constexpr initializer_list() noexcept : _First(nullptr), _Last(nullptr) {}
+    constexpr initializer_list() noexcept : _First(nullptr), _Last(nullptr)
+    {}
 
     constexpr initializer_list(const E* _First_arg, const E* _Last_arg) noexcept : _First(_First_arg), _Last(_Last_arg)
     {}
@@ -97,18 +98,18 @@ private:
     const E *_First, *_Last;
 };
 // initializer list range access
-template<class E>
+template <class E>
 constexpr const E* begin(initializer_list<E> il) noexcept
 {
     return (il.begin());
 }
 
-template<class E>
+template <class E>
 constexpr const E* end(initializer_list<E> il) noexcept
 {
     return (il.end());
 }
-} // namespace std
+}  // namespace std
 #endif
 #endif
 #endif
@@ -130,9 +131,9 @@ static constexpr bool EXCEPTION_GUARANTEE = false;
 // Enable/Disable memory poisoning. (could be useful for debug purposes)
 static constexpr bool BASE_CONTAINERS_ENABLE_POISON = false;
 static constexpr const uint8_t POISON = 0xCD;
-} // namespace
+}  // namespace
 
-template<typename T>
+template <typename T>
 class vector {
 public:
     using value_type = T;
@@ -176,9 +177,11 @@ public:
         return allocator_.get();
     }
 
-    explicit vector(allocator& alloc) noexcept : allocator_(alloc) {}
+    explicit vector(allocator& alloc) noexcept : allocator_(alloc)
+    {}
 
-    vector() noexcept : allocator_(default_allocator()) {}
+    vector() noexcept : allocator_(default_allocator())
+    {}
 
     vector(size_t size) : allocator_(default_allocator())
     {
@@ -220,8 +223,7 @@ public:
         other.data_ = nullptr;
     }
 
-    template<class InputIt,
-        enable_if_t<is_same<remove_const_t<typename InputIt::value_type>, value_type>::value, int> = 0>
+    template <class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
     vector(InputIt first, InputIt last) : allocator_(default_allocator())
     {
         const auto size = static_cast<size_type>(last - first);
@@ -282,7 +284,7 @@ public:
                 init_copy(data_, other.data_, other.size_);
             } else {
                 // use existing storage
-                size_t tocopy = size_; // can copy to this many slots.
+                size_t tocopy = size_;  // can copy to this many slots.
                 size_t tocreate = other.size_;
                 size_t todestroy = 0;
                 if (size_ > other.size_) {
@@ -567,10 +569,10 @@ public:
             pointer begin = data_;
             pointer insrt = begin + p;
             pointer end = begin + size_;
-            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p));  // move old objects from before pos
             pointer next = init_move(res, &value, 1);
-            init_move(next, insrt, size_ - p);       // move old objects from after pos
-            destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
+            init_move(next, insrt, size_ - p);        // move old objects from after pos
+            destroy(iterator(begin), iterator(end));  // Destroy the moved from items..
             // free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -580,7 +582,7 @@ public:
                 init_move(res, &value, 1);
             } else {
                 reverse_move(end().ptr() - 1, res, end().ptr());
-                *res = BASE_NS::move(value); // move in the new item.
+                *res = BASE_NS::move(value);  // move in the new item.
             }
         }
         size_++;
@@ -597,10 +599,10 @@ public:
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Use new storage.
-            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p));  // move old objects from before pos
             pointer next = init_copy(res, &value, 1);
-            init_move(next, insrt, size_ - p);       // move old objects from after pos
-            destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
+            init_move(next, insrt, size_ - p);        // move old objects from after pos
+            destroy(iterator(begin), iterator(end));  // Destroy the moved from items..
             // free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -610,7 +612,7 @@ public:
                 init_copy(res, &value, 1);
             } else {
                 reverse_move(end().ptr() - 1, res, end().ptr());
-                *res = value; // copy in the new item. (could inplace initialize?)
+                *res = value;  // copy in the new item. (could inplace initialize?)
             }
         }
         size_++;
@@ -631,10 +633,10 @@ public:
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Use new storage.
-            res = init_move(tmp, begin, static_cast<size_type>(p)); // move old objects from before pos
+            res = init_move(tmp, begin, static_cast<size_type>(p));  // move old objects from before pos
             pointer next = init_fill(res, count, value);
-            init_move(next, insrt, size_ - p);       // move old objects from after pos
-            destroy(iterator(begin), iterator(end)); // Destroy the moved from items..
+            init_move(next, insrt, size_ - p);        // move old objects from after pos
+            destroy(iterator(begin), iterator(end));  // Destroy the moved from items..
             // free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -659,7 +661,7 @@ public:
         return insert_impl(pos, first, last);
     }
 
-    template<class InputIt>
+    template <class InputIt>
     iterator insert(const_iterator pos, InputIt first, InputIt last)
     {
         return insert_impl(pos, first, last);
@@ -674,8 +676,8 @@ public:
         if (tmp != data_) {
             pointer begin = data_;
             size_type size = size_;
-            init_move(tmp, begin, size);                      // Move old objects
-            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            init_move(tmp, begin, size);                       // Move old objects
+            destroy(iterator(begin), iterator(begin + size));  // Destroy the moved from items..
             // Free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -684,8 +686,7 @@ public:
         size_ += count;
     }
 
-    template<class InputIt,
-        enable_if_t<is_same<remove_const_t<typename InputIt::value_type>, value_type>::value, int> = 0>
+    template <class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
     void append(InputIt first, InputIt last)
     {
         if (first == last) {
@@ -700,13 +701,13 @@ public:
         if (tmp != data_) {
             pointer begin = data_;
             size_type size = size_;
-            init_move(tmp, begin, size);                      // Move old objects
-            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            init_move(tmp, begin, size);                       // Move old objects
+            destroy(iterator(begin), iterator(begin + size));  // Destroy the moved from items..
             // Free old storage
             allocator_.free(data_);
             data_ = tmp;
         }
-        init_copy(tmp + size_, first, last); // Copy the new objects
+        init_copy(tmp + size_, first, last);  // Copy the new objects
         size_ = newSize;
     }
 
@@ -724,13 +725,13 @@ public:
         if (tmp != data_) {
             pointer begin = data_;
             size_type size = size_;
-            init_move(tmp, begin, size);                      // Move old objects
-            destroy(iterator(begin), iterator(begin + size)); // Destroy the moved from items..
+            init_move(tmp, begin, size);                       // Move old objects
+            destroy(iterator(begin), iterator(begin + size));  // Destroy the moved from items..
             // Free old storage
             allocator_.free(data_);
             data_ = tmp;
         }
-        init_copy(tmp + size_, first, static_cast<size_type>(cnt)); // Copy the new objects
+        init_copy(tmp + size_, first, static_cast<size_type>(cnt));  // Copy the new objects
         size_ = newSize;
     }
 
@@ -769,7 +770,7 @@ public:
         return iterator((pointer)first.ptr());
     }
 
-    template<class... Args>
+    template <class... Args>
     iterator emplace(const_iterator pos, Args&&... args)
     {
         const difference_type p = pos - begin();
@@ -780,11 +781,11 @@ public:
             pointer insrt = bgin + p;
             pointer ed = end().ptr();
             // Use new storage.
-            res = init_move(tmp, bgin, static_cast<size_type>(p)); // move old objects from before pos
+            res = init_move(tmp, bgin, static_cast<size_type>(p));  // move old objects from before pos
             pointer next = res + 1;
             ::new (res) T(forward<Args>(args)...);
-            init_move(next, insrt, size_ - p);     // move old objects from after pos
-            destroy(iterator(bgin), iterator(ed)); // Destroy the moved from items..
+            init_move(next, insrt, size_ - p);      // move old objects from after pos
+            destroy(iterator(bgin), iterator(ed));  // Destroy the moved from items..
             // free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -802,7 +803,7 @@ public:
         return iterator(res);
     }
 
-    template<class... Args>
+    template <class... Args>
     reference emplace_back(Args&&... args)
     {
         pointer tmp = allocate_if_needed(size_ + 1U);
@@ -839,7 +840,7 @@ public:
 
     void clear()
     {
-        destroy(begin(), end()); // destroy old objects
+        destroy(begin(), end());  // destroy old objects
         size_ = 0;
     }
 
@@ -915,7 +916,7 @@ protected:
 
     // helpers for initialized memory
     // helper for range insert which may or may not need to convert values
-    template<class InputIt>
+    template <class InputIt>
     void copy(pointer pos, InputIt first, InputIt last)
     {
         if (first == last) {
@@ -952,7 +953,7 @@ protected:
         }
     }
 
-    void move(pointer first, const_pointer last, pointer d_first) // last>first
+    void move(pointer first, const_pointer last, pointer d_first)  // last>first
     {
         if (first == last) {
             return;
@@ -1037,10 +1038,10 @@ protected:
         } else if constexpr (noExceptMove || exceptMove) {
             // move constructor...
             uninitialized_move(src, src + size, dst);
-        } else if constexpr (copyable) { // is_copy_constructable (ie. can construct from "const value_type&")
+        } else if constexpr (copyable) {  // is_copy_constructable (ie. can construct from "const value_type&")
             // copy constructor..
             uninitialized_copy(src, src + size, dst);
-        } else if constexpr (noCopyExceptMove) { // is_move_constructable
+        } else if constexpr (noCopyExceptMove) {  // is_move_constructable
             // use move constructor even if it could throw.. (no copy constructor)
             uninitialized_move(src, src + size, dst);
         } else {
@@ -1103,7 +1104,7 @@ protected:
     }
 
     // helper for range insert which may or may not need to convert values
-    template<class InputIt>
+    template <class InputIt>
     pointer init_copy(pointer pos, InputIt first, InputIt last)
     {
         BASE_ASSERT(last >= first);
@@ -1140,7 +1141,7 @@ protected:
     pointer allocate_if_needed(size_t newSize)
     {
         if (newSize > capacity_) {
-            size_type newCapacity = capacity_ * 2u; // double the capacity
+            size_type newCapacity = capacity_ * 2u;  // double the capacity
             if (newCapacity < newSize) {
                 newCapacity = newSize;
             }
@@ -1153,7 +1154,7 @@ protected:
     pointer setup_storage(size_t count)
     {
         pointer tmp = data_;
-        if (count > capacity_) { // if requested capacity is greater than the current one..
+        if (count > capacity_) {  // if requested capacity is greater than the current one..
             // .. allocate new storage.
             tmp = (pointer)allocator_.alloc(count * sizeof(value_type));
             BASE_ASSERT_MSG(tmp, "vector memory allocation failed.");
@@ -1171,7 +1172,7 @@ protected:
             if (tmp && todo > 0) {
                 // Move old items to new storage.
                 init_move(tmp, data_, todo);
-                destroy(begin(), begin() + static_cast<difference_type>(todo)); // Destroy the moved from items..
+                destroy(begin(), begin() + static_cast<difference_type>(todo));  // Destroy the moved from items..
             }
             // free old storage
             allocator_.free(data_);
@@ -1180,7 +1181,7 @@ protected:
         }
     }
 
-    template<class InputIt>
+    template <class InputIt>
     iterator insert_impl(const_iterator pos, InputIt first, InputIt last)
     {
         if (first == last) {
@@ -1196,10 +1197,10 @@ protected:
             pointer insrt = begin + p;
             pointer end = begin + size_;
             // Fill new storage
-            res = init_move(tmp, begin, static_cast<size_type>(p));    // move old objects from before pos
-            pointer next = init_copy(res, first, last);                // copy new objects
-            init_move(next, insrt, static_cast<size_type>(size_ - p)); // move old objects from after pos
-            destroy(iterator(begin), iterator(end));                   // Destroy the moved from items..
+            res = init_move(tmp, begin, static_cast<size_type>(p));     // move old objects from before pos
+            pointer next = init_copy(res, first, last);                 // copy new objects
+            init_move(next, insrt, static_cast<size_type>(size_ - p));  // move old objects from after pos
+            destroy(iterator(begin), iterator(end));                    // Destroy the moved from items..
             // Free old storage
             allocator_.free(data_);
             data_ = tmp;
@@ -1223,32 +1224,33 @@ protected:
         return iterator(res);
     }
 
-    template<typename Iterator, typename = void>
+    template <typename Iterator, typename = void>
     struct has_iterator_category : BASE_NS::false_type {
         using category = void;
     };
 
-    template<typename Iterator>
+    template <typename Iterator>
     struct has_iterator_category<Iterator, void_t<typename Iterator::iterator_category>> : BASE_NS::true_type {
         using category = typename Iterator::iterator_category;
     };
 
-    template<typename Iterator>
+    template <typename Iterator>
     using ptr_fn = decltype(BASE_NS::declval<Iterator>().ptr());
 
-    template<typename Iterator, typename = void>
+    template <typename Iterator, typename = void>
     struct has_ptr_method : BASE_NS::false_type {};
 
-    template<typename Iterator>
+    template <typename Iterator>
     struct has_ptr_method<Iterator, BASE_NS::void_t<ptr_fn<Iterator>>> : BASE_NS::true_type {};
 
-    size_type size_ {}, capacity_ {};
-    pointer data_ {};
+    size_type size_{}, capacity_{};
+    pointer data_{};
 
     // Wrapper to create a "re-seatable" reference.
     class Wrapper {
     public:
-        inline Wrapper(allocator& a) : allocator_(&a) {}
+        inline Wrapper(allocator& a) : allocator_(&a)
+        {}
 
         inline Wrapper& operator=(allocator& a)
         {
@@ -1284,9 +1286,9 @@ protected:
         }
 
     private:
-        allocator* allocator_ { nullptr };
+        allocator* allocator_{nullptr};
     } allocator_;
 };
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_VECTOR_H
+#endif  // API_BASE_CONTAINERS_VECTOR_H

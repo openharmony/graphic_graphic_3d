@@ -25,7 +25,7 @@ using namespace CORE_NS;
 
 CORE_BEGIN_NAMESPACE()
 #if defined(CORE_PLUGIN) && (CORE_PLUGIN == 1)
-IPluginRegister* gPluginRegistry { nullptr };
+IPluginRegister* gPluginRegistry{nullptr};
 IPluginRegister& GetPluginRegister()
 {
     return *gPluginRegistry;
@@ -43,10 +43,10 @@ const char* GetVersionInfo()
 const char* GetVersionInfo();
 #endif
 
-static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo PNG_LOADER {
-    { CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID },
+static constexpr CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo PNG_LOADER{
+    {CORE_NS::IImageLoaderManager::ImageLoaderTypeInfo::UID},
     nullptr,
-    BASE_NS::Uid { "41c1b7d1-e8a6-4aee-851b-c84de689a984" },
+    BASE_NS::Uid{"41c1b7d1-e8a6-4aee-851b-c84de689a984"},
     CreateImageLoaderPng,
     IMAGE_TYPES,
 };
@@ -64,14 +64,14 @@ void UnregisterInterfaces(PluginToken token)
 {
     static_cast<IPluginRegister*>(token)->UnregisterTypeInfo(PNG_LOADER);
 }
-} // namespace PNGPlugin
+}  // namespace PNGPlugin
 
 extern "C" {
-PLUGIN_DATA(PngPlugin) {
-    { IPlugin::UID },
+PLUGIN_DATA(PngPlugin){
+    {IPlugin::UID},
     "PNGPlugin",
     /** Version information of the plugin. */
-    { PNGPlugin::UID_PNG_PLUGIN, PNGPlugin::GetVersionInfo },
+    {PNGPlugin::UID_PNG_PLUGIN, PNGPlugin::GetVersionInfo},
     PNGPlugin::RegisterInterfaces,
     PNGPlugin::UnregisterInterfaces,
     {},

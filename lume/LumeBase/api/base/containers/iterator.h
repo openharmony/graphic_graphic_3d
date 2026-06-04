@@ -30,14 +30,14 @@
 
 BASE_BEGIN_NAMESPACE()
 #ifdef BASE_STD_COMPATIBILITY
-using random_access_iterator_tag = std::random_access_iterator_tag; // yeah. we need this for std compatibility.
+using random_access_iterator_tag = std::random_access_iterator_tag;  // yeah. we need this for std compatibility.
 #else
 struct random_access_iterator_tag {};
 #endif
 
 // Iterators are somewhat simplified from c++11 with a hint of c++17...
 // but they are fully trivial..
-template<class T>
+template <class T>
 class const_iterator {
 public:
     using base_container = T;
@@ -49,8 +49,10 @@ public:
     using pointer = typename T::const_pointer;
     using reference = typename T::const_reference;
     constexpr const_iterator() noexcept = default;
-    constexpr explicit const_iterator(const pointer ptr) noexcept : it_ { ptr } {}
-    constexpr const_iterator(const base_iterator& other) noexcept : it_ { other.ptr() } {}
+    constexpr explicit const_iterator(const pointer ptr) noexcept : it_{ptr}
+    {}
+    constexpr const_iterator(const base_iterator& other) noexcept : it_{other.ptr()}
+    {}
     constexpr const_iterator& operator++() noexcept
     {
         ++it_;
@@ -136,7 +138,7 @@ protected:
     pointer it_;
 };
 
-template<class T>
+template <class T>
 class iterator {
 public:
     using base_container = T;
@@ -148,7 +150,8 @@ public:
     using pointer = typename T::pointer;
     using reference = typename T::reference;
     constexpr iterator() noexcept = default;
-    constexpr explicit iterator(const pointer ptr) noexcept : it_ { ptr } {}
+    constexpr explicit iterator(const pointer ptr) noexcept : it_{ptr}
+    {}
     constexpr iterator& operator++() noexcept
     {
         ++it_;
@@ -245,7 +248,7 @@ protected:
     pointer it_;
 };
 
-template<typename Iter>
+template <typename Iter>
 class reverse_iterator {
 public:
     using base_container = typename Iter::base_container;
@@ -260,12 +263,13 @@ public:
     using reference = typename Iter::reference;
 
     constexpr reverse_iterator() = default;
-    constexpr explicit reverse_iterator(iterator_type it) noexcept : it_(it) {}
+    constexpr explicit reverse_iterator(iterator_type it) noexcept : it_(it)
+    {}
     constexpr reverse_iterator(const reverse_iterator& other) noexcept = default;
     constexpr reverse_iterator& operator=(const reverse_iterator& other) noexcept = default;
     constexpr reverse_iterator(reverse_iterator&& other) noexcept = default;
     constexpr reverse_iterator& operator=(reverse_iterator&& other) noexcept = default;
-    template<class U>
+    template <class U>
     constexpr reverse_iterator& operator=(const reverse_iterator<U>& other)
     {
         it_ = other.base();
@@ -360,7 +364,7 @@ private:
     Iter it_;
 };
 
-template<class Iter>
+template <class Iter>
 class move_iterator {
 public:
     using iterator_type = Iter;
@@ -373,14 +377,15 @@ public:
     /** constructs a new iterator adaptor */
     constexpr move_iterator() = default;
 
-    constexpr explicit move_iterator(iterator_type x) : current_(x) {}
+    constexpr explicit move_iterator(iterator_type x) : current_(x)
+    {}
 
-    template<class U>
+    template <class U>
     constexpr move_iterator(const move_iterator<U>& other) : current_(other.current)
     {}
 
     /** assigns another iterator */
-    template<class U>
+    template <class U>
     constexpr move_iterator& operator=(const move_iterator<U>& other)
     {
         current_ = other.current;
@@ -461,59 +466,59 @@ private:
     Iter current_;
 };
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator==(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() == rhs.base();
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator!=(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() != rhs.base();
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator<(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() < rhs.base();
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator<=(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() <= rhs.base();
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator>(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() > rhs.base();
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr bool operator>=(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
 {
     return lhs.base() >= rhs.base();
 }
 
-template<class Iter>
+template <class Iter>
 constexpr move_iterator<Iter> operator+(typename move_iterator<Iter>::difference_type n, const move_iterator<Iter>& it)
 {
     return move_iterator(it.base() + n);
 }
 
-template<class Iterator1, class Iterator2>
+template <class Iterator1, class Iterator2>
 constexpr auto operator-(const move_iterator<Iterator1>& lhs, const move_iterator<Iterator2>& rhs)
     -> decltype(lhs.base() - rhs.base())
 {
     return lhs.base() - rhs.base();
 }
-template<class Iter>
+template <class Iter>
 constexpr move_iterator<Iter> make_move_iterator(Iter i)
 {
-    return move_iterator<Iter> { i };
+    return move_iterator<Iter>{i};
 }
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_CONTAINERS_ITERATOR_H
+#endif  // API_BASE_CONTAINERS_ITERATOR_H

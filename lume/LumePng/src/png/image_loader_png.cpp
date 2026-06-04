@@ -35,15 +35,15 @@ using namespace CORE_NS;
 
 namespace PNGPlugin {
 namespace {
-constexpr uint32_t MAX_IMAGE_EXTENT { 32767U };
+constexpr uint32_t MAX_IMAGE_EXTENT{32767U};
 constexpr int IMG_SIZE_LIMIT_2GB = std::numeric_limits<int>::max();
-uint8_t g_sRgbPremultiplyLookup[256u * 256u] = { 0 };
+uint8_t g_sRgbPremultiplyLookup[256u * 256u] = {0};
 std::once_flag g_sRgbPremultiplyLookupOnce;
 
 void InitializeSRGBTable()
 {
-    // Generate lookup table to premultiply sRGB encoded image in linear space and reencoding it to sRGB
-    // Formulas from https://en.wikipedia.org/wiki/SRGB
+    // Generate lookup table to premultiply sRGB encoded image in linear space and
+    // reencoding it to sRGB Formulas from https://en.wikipedia.org/wiki/SRGB
     for (uint32_t a = 0; a < 256u; a++) {
         const float alpha = static_cast<float>(a) / 255.f;
         for (uint32_t sRGB = 0; sRGB < 256u; sRGB++) {
@@ -67,29 +67,30 @@ void InitializeSRGBTable()
 bool PremultiplyAlpha(
     uint8_t* imageBytes, uint32_t width, uint32_t height, uint32_t channelCount, uint32_t bytesPerChannel, bool linear)
 {
-    // Only need to process images with color and alpha data. I.e. RGBA or grayscale + alpha.
+    // Only need to process images with color and alpha data. I.e. RGBA or
+    // grayscale + alpha.
     if (channelCount != 4u && channelCount != 2u) {
         return true;
     }
 
-    const uint32_t pixelCount = width * height;
+    const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
 
     if (bytesPerChannel == 1) {
         if (linear) {
             uint8_t* img = imageBytes;
-            for (uint32_t i = 0; i < pixelCount; i++) {
+            for (uint64_t i = 0; i < pixelCount; i++) {
                 // We know the alpha value is always last.
                 uint32_t alpha = img[channelCount - 1];
                 for (uint32_t j = 0; j < channelCount - 1; j++) {
                     *img = static_cast<uint8_t>(*img * alpha / 0xff);
                     img++;
                 }
-                img++; // Skip over the alpha value.
+                img++;  // Skip over the alpha value.
             }
         } else {
             std::call_once(g_sRgbPremultiplyLookupOnce, InitializeSRGBTable);
             uint8_t* img = imageBytes;
-            for (uint32_t i = 0; i < pixelCount; i++) {
+            for (uint64_t i = 0; i < pixelCount; i++) {
                 uint8_t* p = &g_sRgbPremultiplyLookup[img[channelCount - 1] * 256u];
                 for (uint32_t j = 0; j < channelCount - 1; j++) {
                     *img = p[*img];
@@ -101,7 +102,7 @@ bool PremultiplyAlpha(
     } else if (bytesPerChannel == 2u) {
         // Same for 16 bits per channel images.
         uint16_t* img = reinterpret_cast<uint16_t*>(imageBytes);
-        for (uint32_t i = 0; i < pixelCount; i++) {
+        for (uint64_t i = 0; i < pixelCount; i++) {
             uint32_t alpha = img[channelCount - 1];
             for (uint32_t j = 0; j < channelCount - 1; j++) {
                 *img = static_cast<uint16_t>(*img * alpha / 0xffff);
@@ -116,14 +117,15 @@ bool PremultiplyAlpha(
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool MulOverflow(T a, T b, T* res)
 {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_mul_overflow(a, b, res);
 #else
     if constexpr (std::is_unsigned_v<T>) {
-        // Division-based check: correct for all unsigned widths, no widening needed.
+        // Division-based check: correct for all unsigned widths, no widening
+        // needed.
         if (a != 0 && b > std::numeric_limits<T>::max() / a) {
             return true;
         }
@@ -137,7 +139,8 @@ bool MulOverflow(T a, T b, T* res)
         }
         static constexpr T tMax = std::numeric_limits<T>::max();
         using U = std::make_unsigned_t<T>;
-        // Safe absolute value: modular unsigned negation handles T::min() without UB.
+        // Safe absolute value: modular unsigned negation handles T::min() without
+        // UB.
         U abs_a = (a < 0) ? -static_cast<U>(a) : static_cast<U>(a);
         U abs_b = (b < 0) ? -static_cast<U>(b) : static_cast<U>(b);
         if ((a > 0) == (b > 0)) {
@@ -146,7 +149,8 @@ bool MulOverflow(T a, T b, T* res)
                 return true;
             }
         } else if (abs_b > (static_cast<U>(tMax) + 1U) / abs_a) {
-            // Opposite sign: product is negative, |product| must be <= |tMin| = tMax+1.
+            // Opposite sign: product is negative, |product| must be <= |tMin| =
+            // tMax+1.
             return true;
         }
         *res = a * b;
@@ -155,7 +159,7 @@ bool MulOverflow(T a, T b, T* res)
 #endif
 }
 
-template<typename T>
+template <typename T>
 bool SafeMultiplyInt(T& result, std::initializer_list<T> nums)
 {
     if (!std::is_integral_v<T> || std::is_same_v<T, bool> || nums.begin() == nums.end()) {
@@ -181,10 +185,10 @@ bool SafeMultiplyInt(T& result, std::initializer_list<T> nums)
 
 IImageLoaderManager::LoadResult ResultFailure(const string_view error)
 {
-    IImageLoaderManager::LoadResult result {
-        false,  // success
-        "",     // error[128];
-        nullptr // image;
+    IImageLoaderManager::LoadResult result{
+        false,   // success
+        "",      // error[128];
+        nullptr  // image;
     };
 
     // Copy the error string
@@ -197,19 +201,19 @@ IImageLoaderManager::LoadResult ResultFailure(const string_view error)
 
 IImageLoaderManager::LoadResult ResultSuccess(IImageContainer::Ptr image)
 {
-    return IImageLoaderManager::LoadResult {
-        true,                // success
-        "",                  // error[128];
-        BASE_NS::move(image) // image;
+    return IImageLoaderManager::LoadResult{
+        true,                 // success
+        "",                   // error[128];
+        BASE_NS::move(image)  // image;
     };
 }
 
 IImageLoaderManager::LoadAnimatedResult ResultFailureAnimated(const string_view error)
 {
-    IImageLoaderManager::LoadAnimatedResult result {
-        false,  // success
-        "",     // error[128];
-        nullptr // image;
+    IImageLoaderManager::LoadAnimatedResult result{
+        false,   // success
+        "",      // error[128];
+        nullptr  // image;
     };
 
     // Copy the error string
@@ -219,11 +223,12 @@ IImageLoaderManager::LoadAnimatedResult ResultFailureAnimated(const string_view 
 
     return result;
 }
-} // namespace
+}  // namespace
 
 class PNGImage final : public IImageContainer {
 public:
-    PNGImage() : IImageContainer(), imageDesc_(), imageBuffer_() {}
+    PNGImage() : IImageContainer(), imageDesc_(), imageBuffer_()
+    {}
 
     ~PNGImage() override = default;
 
@@ -246,7 +251,7 @@ public:
 
     static constexpr Format ResolveFormat(uint32_t loadFlags, uint32_t componentCount, bool is16bpc) noexcept
     {
-        Format format {};
+        Format format{};
         const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
 
         switch (componentCount) {
@@ -297,20 +302,20 @@ public:
             }
         }
 
-        return ImageDesc {
-            imageFlags,    // imageFlags
-            1,             // blockPixelWidth
-            1,             // blockPixelHeight
-            1,             // blockPixelDepth
-            bitsPerPixel,  // bitsPerBlock
-            imageType,     // imageType
-            imageViewType, // imageViewType
-            format,        // format
-            imageWidth,    // width
-            imageHeight,   // height
-            1,             // depth
-            mipCount,      // mipCount
-            1,             // layerCount
+        return ImageDesc{
+            imageFlags,     // imageFlags
+            1,              // blockPixelWidth
+            1,              // blockPixelHeight
+            1,              // blockPixelDepth
+            bitsPerPixel,   // bitsPerBlock
+            imageType,      // imageType
+            imageViewType,  // imageViewType
+            format,         // format
+            imageWidth,     // width
+            imageHeight,    // height
+            1,              // depth
+            mipCount,       // mipCount
+            1,              // layerCount
         };
     }
 
@@ -329,99 +334,105 @@ public:
     };
 
     struct Texture3DCopyInfo {
-        uint8_t* dstBytes;
-        const uint8_t* srcBytes;
-        uint32_t srcWidth;
-        uint32_t srcHeight;
-        uint32_t sliceWidth;
-        uint32_t sliceHeight;
-        uint32_t tileCountX;
-        uint32_t depth;
-        uint32_t pixelSize;
-        uint32_t tileSize;
-        uint32_t totalSize;
+        uint32_t oldImageWidth = 0;
+        uint32_t oldImageHeight = 0;
+        uint32_t tileCountX = 0;
+        uint32_t sizeOfPixelInBytes = 0;
+        uint32_t totalSizeOfOneTile = 0;
+        uint32_t imageSizeInBytes = 0;
     };
 
-    static bool Copy3DTexturePixel(const Texture3DCopyInfo& ci, uint32_t x, uint32_t y)
+    static bool Copy3DTextureBytes(uint8_t* sorted3dBytes, const uint8_t* orgimageBytes,
+        const Texture3DCopyInfo& copyInfo, const Texture3DLoadInfo& loadInfo)
     {
-        if (ci.sliceWidth == 0 || ci.sliceHeight == 0) {
-            return false;
-        }
-        const uint32_t currentTileX = x / ci.sliceWidth;
-        const uint32_t currentTileY = y / ci.sliceHeight;
-        const uint32_t currentSlice = currentTileY * ci.tileCountX + currentTileX;
-        if (currentSlice >= ci.depth) {
-            return false;
-        }
-        const size_t inTileOffset =
-            (static_cast<size_t>(y % ci.sliceHeight) * ci.sliceWidth + (x % ci.sliceWidth)) * ci.pixelSize;
-        const size_t destOffset = static_cast<size_t>(currentSlice) * ci.tileSize + inTileOffset;
-        if (destOffset + ci.pixelSize > ci.totalSize) {
-            return false;
-        }
-        memcpy_s(&ci.dstBytes[destOffset], ci.pixelSize,
-            &ci.srcBytes[((y * ci.srcWidth) + x) * ci.pixelSize], ci.pixelSize);
-        return true;
-    }
-
-    static bool Copy3DTextureBytes(const Texture3DCopyInfo& ci)
-    {
-        for (uint32_t y = 0; y < ci.srcHeight; ++y) {
-            for (uint32_t x = 0; x < ci.srcWidth; ++x) {
-                if (!Copy3DTexturePixel(ci, x, y)) {
+        for (uint32_t y = 0; y < copyInfo.oldImageHeight; ++y) {
+            for (uint32_t x = 0; x < copyInfo.oldImageWidth; ++x) {
+                const uint32_t currentTileX = x / loadInfo.sliceWidth;
+                const uint32_t currentTileY = y / loadInfo.sliceHeight;
+                const uint32_t currentSlice = currentTileY * copyInfo.tileCountX + currentTileX;
+                if (currentSlice >= loadInfo.depth) {
                     return false;
                 }
+                const size_t inTileOffset =
+                    (static_cast<size_t>(y % loadInfo.sliceHeight) * loadInfo.sliceWidth + (x % loadInfo.sliceWidth)) *
+                    copyInfo.sizeOfPixelInBytes;
+                const size_t destOffset =
+                    static_cast<size_t>(currentSlice) * copyInfo.totalSizeOfOneTile + inTileOffset;
+                if (destOffset + copyInfo.sizeOfPixelInBytes > copyInfo.imageSizeInBytes) {
+                    return false;
+                }
+                memcpy_s(&sorted3dBytes[destOffset],
+                    copyInfo.sizeOfPixelInBytes,
+                    &orgimageBytes[((y * copyInfo.oldImageWidth) + x) * copyInfo.sizeOfPixelInBytes],
+                    copyInfo.sizeOfPixelInBytes);
             }
         }
         return true;
     }
 
-    static bool Handle3DTexture(
-        PNGImage* image, BASE_NS::unique_ptr<uint8_t[]>& imageBytes, const Texture3DLoadInfo& loadInfo,
-        uint32_t bitsPerPixel)
+    static bool Handle3DTexture(PNGImage* image, BASE_NS::unique_ptr<uint8_t[]>& imageBytes,
+        const Texture3DLoadInfo& info, uint32_t bitsPerPixel)
     {
         constexpr uint32_t bitsPerByte = 8;
         const uint32_t sizeOfPixelInBytes = bitsPerPixel / bitsPerByte;
-        if (loadInfo.sliceWidth == 0 || loadInfo.sliceHeight == 0 || sizeOfPixelInBytes == 0) {
+        if (info.sliceWidth == 0 || info.sliceHeight == 0 || sizeOfPixelInBytes == 0) {
             return false;
         }
         const uint32_t oldImageWidth = image->imageDesc_.width;
         const uint32_t oldImageHeight = image->imageDesc_.height;
-        if ((oldImageWidth % loadInfo.sliceWidth) != 0 || (oldImageHeight % loadInfo.sliceHeight) != 0) {
+        if ((oldImageWidth % info.sliceWidth) != 0 || (oldImageHeight % info.sliceHeight) != 0) {
             return false;
         }
-        const uint32_t tileCountX = oldImageWidth / loadInfo.sliceWidth;
-        const uint32_t tileCountY = oldImageHeight / loadInfo.sliceHeight;
+        const uint32_t tileCountX = oldImageWidth / info.sliceWidth;
+        const uint32_t tileCountY = oldImageHeight / info.sliceHeight;
         uint32_t expectedDepth;
         if (tileCountX == 0 || tileCountY == 0 || MulOverflow(tileCountX, tileCountY, &expectedDepth) ||
-            expectedDepth != loadInfo.depth) {
+            expectedDepth != info.depth) {
             return false;
         }
+        const uint8_t* orgimageBytes = reinterpret_cast<uint8_t*>(imageBytes.get());
         uint32_t imageSizeInBytes;
         uint32_t totalSizeOfOneTile;
         if (!SafeMultiplyInt(imageSizeInBytes, {oldImageWidth, oldImageHeight, sizeOfPixelInBytes}) ||
-            !SafeMultiplyInt(
-                totalSizeOfOneTile, {loadInfo.sliceHeight, loadInfo.sliceWidth, sizeOfPixelInBytes})) {
+            !SafeMultiplyInt(totalSizeOfOneTile, {info.sliceHeight, info.sliceWidth, sizeOfPixelInBytes})) {
             return false;
         }
+        const Texture3DCopyInfo copyInfo{
+            oldImageWidth, oldImageHeight, tileCountX, sizeOfPixelInBytes, totalSizeOfOneTile, imageSizeInBytes};
         uint8_t* sorted3dBytes = new (std::nothrow) uint8_t[imageSizeInBytes];
         if (!sorted3dBytes) {
             return false;
         }
-        const Texture3DCopyInfo copyInfo { sorted3dBytes, reinterpret_cast<uint8_t*>(imageBytes.get()),
-            oldImageWidth, oldImageHeight, loadInfo.sliceWidth, loadInfo.sliceHeight,
-            tileCountX, loadInfo.depth, sizeOfPixelInBytes, totalSizeOfOneTile, imageSizeInBytes };
-        if (!Copy3DTextureBytes(copyInfo)) {
+        if (!Copy3DTextureBytes(sorted3dBytes, orgimageBytes, copyInfo, info)) {
             delete[] sorted3dBytes;
             return false;
         }
         image->imageBytes_.reset(sorted3dBytes);
-        image->imageDesc_.width = loadInfo.sliceWidth;
-        image->imageDesc_.height = loadInfo.sliceHeight;
-        image->imageDesc_.depth = loadInfo.depth;
+        image->imageDesc_.width = info.sliceWidth;
+        image->imageDesc_.height = info.sliceHeight;
+        image->imageDesc_.depth = info.depth;
         image->imageDesc_.imageViewType = IImageContainer::ImageViewType::VIEW_TYPE_3D;
         image->imageDesc_.imageType = IImageContainer::ImageType::TYPE_3D;
         return true;
+    }
+
+    static void FillImageBuffer(PNGImage& image, uint32_t sliceWidth, uint32_t sliceHeight, uint32_t depth) noexcept
+    {
+        image.imageBuffer_.resize(depth);
+        for (uint32_t i = 0; i < depth; ++i) {
+            image.imageBuffer_[i] = SubImageDesc{
+                0,            // uint32_t bufferOffset
+                sliceWidth,   // uint32_t bufferRowLength
+                sliceHeight,  // uint32_t bufferImageHeight
+
+                0,  // uint32_t mipLevel
+                1,  // uint32_t layerCount
+
+                sliceWidth,
+                sliceHeight,
+                depth,
+            };
+        }
     }
 
     static IImageLoaderManager::LoadResult CreateImage(BASE_NS::unique_ptr<uint8_t[]> imageBytes, uint32_t imageWidth,
@@ -438,8 +449,12 @@ public:
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA) != 0) {
                 const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
-                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()), imageWidth, imageHeight,
-                    componentCount, bytesPerComponent, forceLinear);
+                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()),
+                    imageWidth,
+                    imageHeight,
+                    componentCount,
+                    bytesPerComponent,
+                    forceLinear);
             }
         }
 
@@ -449,21 +464,17 @@ public:
         image->imageDesc_ =
             ResolveImageDesc(format, imageWidth, imageHeight, bitsPerPixel, generateMips, isPremultiplied);
         image->imageBytes_ = BASE_NS::move(imageBytes);
-        image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
+        size_t imageBytesLength = 0;
+        if (!SafeMultiplyInt(imageBytesLength,
+                {static_cast<size_t>(imageWidth),
+                    static_cast<size_t>(imageHeight),
+                    static_cast<size_t>(componentCount),
+                    static_cast<size_t>(bytesPerComponent)})) {
+            return ResultFailure("Image too large.");
+        }
+        image->imageBytesLength_ = imageBytesLength;
 
-        image->imageBuffer_.resize(1);
-        image->imageBuffer_.front() = SubImageDesc {
-            0,           // uint32_t bufferOffset
-            imageWidth,  // uint32_t bufferRowLength
-            imageHeight, // uint32_t bufferImageHeight
-
-            0, // uint32_t mipLevel
-            1, // uint32_t layerCount
-
-            static_cast<uint32_t>(imageWidth),
-            static_cast<uint32_t>(imageHeight),
-            1,
-        };
+        FillImageBuffer(*image, imageWidth, imageHeight, 1);
 
         return ResultSuccess(BASE_NS::move(image));
     }
@@ -483,8 +494,12 @@ public:
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA) != 0) {
                 const bool forceLinear = (loadFlags & IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT) != 0;
-                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()), imageWidth, imageHeight,
-                    componentCount, bytesPerComponent, forceLinear);
+                isPremultiplied = PremultiplyAlpha(static_cast<uint8_t*>(imageBytes.get()),
+                    imageWidth,
+                    imageHeight,
+                    componentCount,
+                    bytesPerComponent,
+                    forceLinear);
             }
         }
 
@@ -496,37 +511,31 @@ public:
 
         // Handling 3d textures
         if (depth > 1) {
-            const Texture3DLoadInfo loadInfo { sliceWidth, sliceHeight, depth };
-            if (!Handle3DTexture(image.get(), imageBytes, loadInfo, bitsPerPixel)) {
+            const Texture3DLoadInfo tex3dInfo{sliceWidth, sliceHeight, depth};
+            if (!Handle3DTexture(image.get(), imageBytes, tex3dInfo, bitsPerPixel)) {
                 return ResultFailure("Loading 3D texture failed.");
             }
-            // imageBytes_ was already set inside Handle3DTexture via reset(sorted3dBytes)
+            // imageBytes_ was already set inside Handle3DTexture via
+            // reset(sorted3dBytes)
         } else {
             image->imageBytes_ = BASE_NS::move(imageBytes);
         }
 
-        image->imageBytesLength_ = imageWidth * imageHeight * componentCount * bytesPerComponent;
-
-        image->imageBuffer_.resize(depth);
+        size_t imageBytesLength = 0;
+        if (!SafeMultiplyInt(imageBytesLength,
+                {static_cast<size_t>(imageWidth),
+                    static_cast<size_t>(imageHeight),
+                    static_cast<size_t>(componentCount),
+                    static_cast<size_t>(bytesPerComponent)})) {
+            return ResultFailure("Image too large.");
+        }
+        image->imageBytesLength_ = imageBytesLength;
 
         if (depth == 1) {
             sliceWidth = imageWidth;
             sliceHeight = imageHeight;
         }
-        for (uint32_t i = 0; i < depth; i++) {
-            image->imageBuffer_[i] = SubImageDesc {
-                0,           // uint32_t bufferOffset
-                sliceWidth,  // uint32_t bufferRowLength
-                sliceHeight, // uint32_t bufferImageHeight
-
-                0, // uint32_t mipLevel
-                1, // uint32_t layerCount
-
-                static_cast<uint32_t>(sliceWidth),
-                static_cast<uint32_t>(sliceHeight),
-                depth,
-            };
-        }
+        FillImageBuffer(*image, sliceWidth, sliceHeight, depth);
 
         return ResultSuccess(BASE_NS::move(image));
     }
@@ -540,7 +549,7 @@ public:
 
         // convert gray scale to RGB if needed
         if ((colorType & (PNG_COLOR_MASK_PALETTE | PNG_COLOR_MASK_COLOR)) == 0) {
-            if (bitDepth < 8) { // 8: depth
+            if (bitDepth < 8) {  // 8: depth
                 png_set_expand_gray_1_2_4_to_8(pngPtr);
             } else if (!forceGray) {
                 png_set_gray_to_rgb(pngPtr);
@@ -552,14 +561,15 @@ public:
         }
         // limit RGB to 8 bit
         if (colorType & PNG_COLOR_MASK_COLOR) {
-            if (bitDepth > 8) { // 8: depth
+            if (bitDepth > 8) {  // 8: depth
                 png_set_scale_16(pngPtr);
             }
         }
         if (forceGray) {
             // conversion to gray scale requested
             if (colorType & PNG_COLOR_MASK_COLOR) {
-                png_set_rgb_to_gray(pngPtr, 1, 0.299, 0.587); // 0.299、0.587: Specifications
+                png_set_rgb_to_gray(pngPtr, 1, 0.299,
+                    0.587);  // 0.299、0.587: Specifications
             }
             if (colorType & PNG_COLOR_MASK_ALPHA) {
                 png_set_strip_alpha(pngPtr);
@@ -606,10 +616,10 @@ public:
 
     static void UpdateDecodedImageInfo(png_structp png, png_infop info, DecodedPngImage& decoded) noexcept
     {
-        constexpr uint32_t bitDepth16bpc = 16u;
         decoded.width = png_get_image_width(png, info);
         decoded.height = png_get_image_height(png, info);
         decoded.channels = png_get_channels(png, info);
+        constexpr uint32_t bitDepth16bpc = 16u;
         decoded.is16bpc = png_get_bit_depth(png, info) == bitDepth16bpc;
     }
 
@@ -617,7 +627,7 @@ public:
     {
         constexpr uint32_t bytesPerComponent16bpc = 2u;
         const uint32_t bytesPerComponent = decoded.is16bpc ? bytesPerComponent16bpc : 1u;
-        return SafeMultiplyInt(imageSize, { decoded.width, decoded.height, decoded.channels, bytesPerComponent }) &&
+        return SafeMultiplyInt(imageSize, {decoded.width, decoded.height, decoded.channels, bytesPerComponent}) &&
                decoded.width <= MAX_IMAGE_EXTENT && decoded.height <= MAX_IMAGE_EXTENT &&
                imageSize <= IMG_SIZE_LIMIT_2GB;
     }
@@ -638,7 +648,9 @@ public:
     }
 
     static string_view DecodePixelData(png_structp png, png_infop info, uint32_t loadFlags, DecodedPngImage& decoded,
+        // clang-format off
         BASE_NS::unique_ptr<png_byte* []>& rows) noexcept
+    // clang-format on
     {
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) != 0) {
             return {};
@@ -657,8 +669,13 @@ public:
         const uint32_t bytesPerComponent = decoded.is16bpc ? bytesPerComponent16bpc : 1u;
         const uint32_t rowSizeInBytes = decoded.width * decoded.channels * bytesPerComponent;
         decoded.image = BASE_NS::make_unique<uint8_t[]>(imageSize);
+        // clang-format off
         rows = BASE_NS::make_unique<png_byte* []>(decoded.height);
-        InitializeRowPointers(rows.get(), decoded.image.get(), rowSizeInBytes, decoded.height,
+        // clang-format on
+        InitializeRowPointers(rows.get(),
+            decoded.image.get(),
+            rowSizeInBytes,
+            decoded.height,
             (loadFlags & IImageLoaderManager::IMAGE_LOADER_FLIP_VERTICALLY_BIT) != 0);
         png_read_image(png, rows.get());
         png_read_end(png, info);
@@ -676,13 +693,23 @@ public:
         if (!CreatePngReadStructs(png, info)) {
             return "Initialization failed.";
         }
-        BASE_NS::unique_ptr<png_byte* []> rows;
+        BASE_NS::unique_ptr<png_byte*[]> rows;
+        // rows/decoded.image are reset explicitly on the longjmp path; suppress C4611.
+        // libpng's png_jmpbuf macro passes longjmp through an extern "C" callback; suppress C5039.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4611)
+#pragma warning(disable : 5039)
+#endif
         if (setjmp(png_jmpbuf(png))) {
             rows.reset();
             decoded.image.reset();
             png_destroy_read_struct(&png, &info, nullptr);
             return "Decoding failed.";
         }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
         png_set_read_fn(png, &imageFileBytes, ReadData);
         png_read_info(png, info);
         UpdateDecodedImageInfo(png, info, decoded);
@@ -733,8 +760,15 @@ public:
         if (!layoutError.empty()) {
             return ResultFailure(layoutError);
         }
-        return CreateImage(BASE_NS::move(decoded.image), decoded.width, decoded.height, decoded.channels, loadFlags,
-            decoded.is16bpc, info.sliceWidth, info.sliceHeight, info.depth);
+        return CreateImage(BASE_NS::move(decoded.image),
+            decoded.width,
+            decoded.height,
+            decoded.channels,
+            loadFlags,
+            decoded.is16bpc,
+            info.sliceWidth,
+            info.sliceHeight,
+            info.depth);
     }
 
 protected:
@@ -800,6 +834,9 @@ public:
 
     bool CanLoad(array_view<const uint8_t> imageFileBytes) const override
     {
+        if (imageFileBytes.empty()) {
+            return false;
+        }
         // Check for PNG
         return png_sig_cmp(imageFileBytes.data(), 0, imageFileBytes.size()) == 0;
     }
@@ -830,7 +867,7 @@ protected:
 
 IImageLoaderManager::IImageLoader::Ptr CreateImageLoaderPng(CORE_NS::PluginToken)
 {
-    return IImageLoaderManager::IImageLoader::Ptr { new ImageLoaderPng() };
+    return IImageLoaderManager::IImageLoader::Ptr{new ImageLoaderPng()};
 }
 
-} // namespace PNGPlugin
+}  // namespace PNGPlugin

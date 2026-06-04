@@ -32,7 +32,7 @@ float RectangleSolidAngle(vec3 p, vec3 v0, vec3 v1, vec3 v2, vec3 v3)
     float g2 = acos(dot(-n2, n3));
     float g3 = acos(dot(-n3, n0));
 
-    return g0 + g1 + g2 + g3 - 2. * M_PI; // 2.: scale
+    return g0 + g1 + g2 + g3 - 2. * M_PI;  // 2.: scale
 }
 
 float TracePlane(vec3 o, vec3 d, vec3 planeOrigin, vec3 planeNormal)
@@ -100,4 +100,4 @@ vec3 CalculateRectAreaLight(uint lightIdx, vec3 diff, vec3 spec, vec3 N, vec3 V,
     return result;
 }
 
-#endif // SHADERS_COMMON_3D_DM_AREA_LIGHTING_COMMON_H
+#endif  // SHADERS_COMMON_3D_DM_AREA_LIGHTING_COMMON_H

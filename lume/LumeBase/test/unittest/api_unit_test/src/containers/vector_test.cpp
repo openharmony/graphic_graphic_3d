@@ -28,7 +28,7 @@ class CustomAllocator {
 public:
     // simple linear allocator.
     uint8_t buf[42 * sizeof(uint32_t)];
-    size_t pos { 0 };
+    size_t pos{0};
     void reset()
     {
         pos = 0;
@@ -54,13 +54,17 @@ public:
     };
 } aca;
 
-BASE_NS::allocator ca { &aca, CustomAllocator::alloc, CustomAllocator::free };
+BASE_NS::allocator ca{&aca, CustomAllocator::alloc, CustomAllocator::free};
 
 struct Thing {
-    constexpr Thing(int v) : i(v) {}
-    ~Thing() {}
-    constexpr Thing(const Thing& o) : i(o.i) {}
-    constexpr Thing(Thing&& o) noexcept : i(o.i) {}
+    constexpr Thing(int v) : i(v)
+    {}
+    ~Thing()
+    {}
+    constexpr Thing(const Thing& o) : i(o.i)
+    {}
+    constexpr Thing(Thing&& o) noexcept : i(o.i)
+    {}
     constexpr Thing& operator=(const Thing& o)
     {
         i = o.i;
@@ -77,9 +81,9 @@ struct Thing {
     }
     int i;
 };
-} // namespace
+}  // namespace
 
-template<typename T>
+template <typename T>
 class protectedVectorTest : public BASE_NS::vector<T> {
 public:
     using value_type = T;
@@ -122,7 +126,7 @@ public:
         return BASE_NS::vector<T>::uninitialized_move(first, last, d_first);
     }
 
-    template<class InputIt>
+    template <class InputIt>
     void wrap_copy(pointer pos, InputIt first, InputIt last)
     {
         return BASE_NS::vector<T>::copy(pos, first, last);
@@ -148,7 +152,7 @@ public:
         return BASE_NS::vector<T>::init_copy(dst, src, size);
     }
 
-    template<class InputIt>
+    template <class InputIt>
     iterator wrap_insert_impl(const_iterator pos, InputIt first, InputIt last)
     {
         return BASE_NS::vector<T>::insert_impl(pos, first, last);
@@ -247,7 +251,7 @@ UNIT_TEST(API_ContainersVector, CustomAllocator, testing::ext::TestSize.Level1)
 
     // BASE_NS::vector<uint32_t> duh2(duh); Currently uses the same allocator.. which might not be correct? (in this
     // test it's an issue :)
-    BASE_NS::vector<uint32_t> duh2; // default constructor uses default_allocator.
+    BASE_NS::vector<uint32_t> duh2;  // default constructor uses default_allocator.
     duh2 = duh;
     ASSERT_EQ(duh2.size(), 5U);
     ASSERT_GE(duh2.capacity(), 5U);
@@ -316,7 +320,7 @@ UNIT_TEST(API_ContainersVector, DefaultAllocator, testing::ext::TestSize.Level1)
     ASSERT_EQ(duh[1], 12);
     ASSERT_EQ(duh[2], 0);
 
-    BASE_NS::vector<uint32_t> duh2(duh); // default constructor uses default_allocator.
+    BASE_NS::vector<uint32_t> duh2(duh);  // default constructor uses default_allocator.
     ASSERT_EQ(duh2.size(), 5U);
     ASSERT_GE(duh2.capacity(), 5U);
     ASSERT_EQ(duh2[0], 4);
@@ -375,7 +379,7 @@ UNIT_TEST(API_ConteinersVector, insert, testing::ext::TestSize.Level1)
     ASSERT_EQ(duh.size(), 7U);
     ASSERT_EQ(duh[0], VALUE2);
     ASSERT_EQ(duh[1], VALUE2);
-    duh.insert(duh.end(), 2, VALUE2); // 2 values at end are the same ?
+    duh.insert(duh.end(), 2, VALUE2);  // 2 values at end are the same ?
     ASSERT_EQ(duh.size(), 9U);
     ASSERT_EQ(duh[7], VALUE2);
     ASSERT_EQ(duh[8], VALUE2);
@@ -457,11 +461,11 @@ UNIT_TEST(API_ContainersVector, insert_and_convert_vector_element_type, testing:
     // the following is valid. due to class b providing the conversion operator.
     class a {
     public:
-        int val { 42 };
+        int val{42};
     };
     class b {
     public:
-        int val { 6 };
+        int val{6};
         operator a() const
         {
             a tmp;
@@ -474,7 +478,6 @@ UNIT_TEST(API_ContainersVector, insert_and_convert_vector_element_type, testing:
     as.resize(3);
     bs.resize(3);
     as.insert(as.end(), bs.begin(), bs.end());
-
     ASSERT_TRUE(as[0].val == 42);
     ASSERT_TRUE(as[1].val == 42);
     ASSERT_TRUE(as[2].val == 42);
@@ -490,7 +493,7 @@ UNIT_TEST(API_ContainersVector, insert_and_convert_vector_element_type, testing:
  */
 UNIT_TEST(API_ContainersVector, insert_pointer_iterators, testing::ext::TestSize.Level1)
 {
-    int data[] = { 135, 32, 1 };
+    int data[] = {135, 32, 1};
     BASE_NS::vector<int> int_vec;
     int_vec.insert(int_vec.end(), &data[0], &data[0] + BASE_NS::countof(data));
 
@@ -508,7 +511,7 @@ UNIT_TEST(API_ContainersVector, insert_pointer_iterators, testing::ext::TestSize
 UNIT_TEST(API_ContainersVector, insert_array_view_iterators, testing::ext::TestSize.Level1)
 {
     {
-        int data[] = { 135, 32, 1 };
+        int data[] = {135, 32, 1};
         BASE_NS::array_view<int> int_av(&data[0], BASE_NS::countof(data));
         BASE_NS::vector<int> int_vec;
         int_vec.insert(int_vec.end(), int_av.begin(), int_av.end());
@@ -518,11 +521,11 @@ UNIT_TEST(API_ContainersVector, insert_array_view_iterators, testing::ext::TestS
         ASSERT_TRUE(int_vec[2] == data[2]);
     }
     {
-        int data[] = { 135, 32, 1 };
+        int data[] = {135, 32, 1};
         BASE_NS::array_view<int> int_av(&data[0], BASE_NS::countof(data));
         BASE_NS::vector<int> int_vec;
         int_vec.insert(
-            int_vec.end(), int_av.cbegin(), int_av.cend()); // no difference, InputIt array_view::const_iterator
+            int_vec.end(), int_av.cbegin(), int_av.cend());  // no difference, InputIt array_view::const_iterator
         ASSERT_TRUE(int_vec.size() == BASE_NS::countof(data));
         ASSERT_TRUE(int_vec[0] == data[0]);
         ASSERT_TRUE(int_vec[1] == data[1]);
@@ -598,7 +601,7 @@ UNIT_TEST(API_ContainersVector, append, testing::ext::TestSize.Level1)
 
     // append(begin, end)
     {
-        static constexpr uint32_t VALUES[] = { 0U, 1U, 2U, 3U };
+        static constexpr uint32_t VALUES[] = {0U, 1U, 2U, 3U};
 
         BASE_NS::vector<uint32_t> duh(BASE_NS::default_allocator());
         duh.append(std::begin(VALUES), std::end(VALUES));
@@ -641,7 +644,7 @@ UNIT_TEST(API_ContainersVector, Default, testing::ext::TestSize.Level1)
     vector<vector<int>> vecVec;
 }
 
-template<typename T>
+template <typename T>
 T* Allocate(BASE_NS::vector<T> vec, int size)
 {
     // Allocate space for size(s) elements
@@ -713,7 +716,7 @@ UNIT_TEST(API_ContainersVector, Initialization, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersVector, InitialzationByPointers, testing::ext::TestSize.Level1)
 {
     {
-        vector<int> data = { 1, 2, 3 };
+        vector<int> data = {1, 2, 3};
         vector<int> vecInt = vector(&(*data.begin()), &(*data.end()));
         ASSERT_TRUE(vecInt.size() == data.size());
         ASSERT_TRUE(vecInt[0] == data[0]);
@@ -721,7 +724,7 @@ UNIT_TEST(API_ContainersVector, InitialzationByPointers, testing::ext::TestSize.
         ASSERT_TRUE(vecInt[2] == data[2]);
     }
     {
-        vector<int> data = { 1, 2, 3 };
+        vector<int> data = {1, 2, 3};
         vector<int> vecInt = vector<int>(data.begin(), data.end());
         ASSERT_TRUE(vecInt.size() == data.size());
         ASSERT_TRUE(vecInt[0] == data[0]);
@@ -766,7 +769,7 @@ UNIT_TEST(API_ContainersVector, SetAllocators, testing::ext::TestSize.Level1)
 UNIT_TEST(API_ContainersVector, InitialzationByList, testing::ext::TestSize.Level1)
 {
     vector<int> vecBase;
-    vecBase = { 1, 2, 3, 4 };
+    vecBase = {1, 2, 3, 4};
     vector<int> vec = vecBase;
     vector<int> vec2;
     ASSERT_EQ(vecBase[0], vec[0]);
@@ -774,23 +777,23 @@ UNIT_TEST(API_ContainersVector, InitialzationByList, testing::ext::TestSize.Leve
     ASSERT_EQ(vecBase[2], vec[2]);
     ASSERT_EQ(vecBase[3], vec[3]);
 
-    vec2 = static_cast<vector<int>&&>(vec); // without erase
+    vec2 = static_cast<vector<int>&&>(vec);  // without erase
     ASSERT_EQ(vecBase[0], vec2[0]);
     ASSERT_EQ(vecBase[1], vec2[1]);
     ASSERT_EQ(vecBase[2], vec2[2]);
     ASSERT_EQ(vecBase[3], vec2[3]);
     ASSERT_EQ(vec.size(), 0);
 
-    vec2 = { 0, 0, 0 };
+    vec2 = {0, 0, 0};
     ASSERT_NE(vecBase[0], vec2[0]);
     ASSERT_NE(vecBase[1], vec2[1]);
     ASSERT_NE(vecBase[2], vec2[2]);
 
-    vec2 = static_cast<vector<int>&&>(vec); // with erase but from already empty
+    vec2 = static_cast<vector<int>&&>(vec);  // with erase but from already empty
     ASSERT_EQ(vec2.size(), 0);
 
     vec = vecBase;
-    vec2 = static_cast<vector<int>&&>(vec); // with erase but from already empty
+    vec2 = static_cast<vector<int>&&>(vec);  // with erase but from already empty
     ASSERT_EQ(vecBase[0], vec2[0]);
     ASSERT_EQ(vecBase[1], vec2[1]);
     ASSERT_EQ(vecBase[2], vec2[2]);
@@ -898,7 +901,7 @@ UNIT_TEST(API_ContainersVector, ElementAccess, testing::ext::TestSize.Level1)
         ASSERT_EQ(p[1], 5);
     }
     {
-        const vector<int> vecInt = { 2, 5 };
+        const vector<int> vecInt = {2, 5};
 
         // At
         ASSERT_EQ(vecInt.at(0), 2);
@@ -932,25 +935,25 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
     protectedVectorTest<uint32_t> classInstanceU32;
     {
         vector<int> vecInt;
-        vecInt.resize(0); // allocate 0 memory
+        vecInt.resize(0);  // allocate 0 memory
         classInstance.wrap_uninitialized_default_construct(vecInt.begin().ptr(), vecInt.begin().ptr());
         ASSERT_EQ(vecInt.size(), 0);
     }
     {
         vector<int> vecInt;
-        vecInt.resize(2); // allocate some memory for int without value
+        vecInt.resize(2);  // allocate some memory for int without value
         classInstance.wrap_uninitialized_default_construct(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr());
         ASSERT_EQ(vecInt.size(), 2);
         ASSERT_EQ(vecInt[0], 0);
         ASSERT_EQ(vecInt[1], 0);
     }
     {
-        vector<int> vecInt; // allocate 0 memory
+        vector<int> vecInt;  // allocate 0 memory
         vecInt.resize(0);
         classInstance.wrap_uninitialized_value_construct(vecInt.begin().ptr(), vecInt.begin().ptr());
     }
     {
-        vector<int> vecInt; // allocate some memory for int with default value
+        vector<int> vecInt;  // allocate some memory for int with default value
         vecInt.resize(2);
         classInstance.wrap_uninitialized_value_construct(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr());
         ASSERT_EQ(vecInt.size(), 2);
@@ -958,15 +961,15 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecInt[1], 0);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
-        vector<int> vecInt; // allocate 0 memory
+        vector<int> vecBase = {1, 2, 3};
+        vector<int> vecInt;  // allocate 0 memory
         vecInt.resize(0);
         classInstance.wrap_uninitialized_copy(vecInt.begin().ptr(), vecInt.begin().ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 0);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
-        vector<int> vecInt; // allocate some memory for int with values from vecBase
+        vector<int> vecBase = {1, 2, 3};
+        vector<int> vecInt;  // allocate some memory for int with values from vecBase
         vecInt.resize(2);
         classInstance.wrap_uninitialized_copy(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 2);
@@ -974,8 +977,8 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecInt[1], vecBase[1]);
     }
     {
-        vector<uint32_t> vecBase = { 1, 2, 3 };
-        vector<uint32_t> vecInt; // allocate some memory for int with values from vecBase
+        vector<uint32_t> vecBase = {1, 2, 3};
+        vector<uint32_t> vecInt;  // allocate some memory for int with values from vecBase
         vecInt.resize(2);
         classInstanceU32.wrap_uninitialized_copy(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 2);
@@ -983,17 +986,17 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecInt[1], vecBase[1]);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
+        vector<int> vecBase = {1, 2, 3};
         vector<int>::const_reference& a = vecBase.front();
-        vector<int> vecInt; // allocate 0 memory
+        vector<int> vecInt;  // allocate 0 memory
         vecInt.resize(0);
         classInstance.wrap_uninitialized_fill(vecInt.begin().ptr(), vecInt.begin().ptr(), a);
         ASSERT_EQ(vecInt.size(), 0);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
+        vector<int> vecBase = {1, 2, 3};
         vector<int>::const_reference& a = vecBase.front();
-        vector<int> vecInt; // unitialize some memory with vecBase[0]
+        vector<int> vecInt;  // unitialize some memory with vecBase[0]
         vecInt.resize(2);
         classInstance.wrap_uninitialized_fill(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), a);
         ASSERT_EQ(vecInt.size(), 2);
@@ -1001,9 +1004,9 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecInt[1], vecBase[0]);
     }
     {
-        vector<uint32_t> vecBase = { 1, 2, 3 };
+        vector<uint32_t> vecBase = {1, 2, 3};
         vector<uint32_t>::const_reference& a = vecBase.front();
-        vector<uint32_t> vecInt; // unitialize some memory with vecBase[0]
+        vector<uint32_t> vecInt;  // unitialize some memory with vecBase[0]
         vecInt.resize(2);
         classInstanceU32.wrap_uninitialized_fill(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), a);
         ASSERT_EQ(vecInt.size(), 2);
@@ -1011,15 +1014,15 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecInt[1], vecBase[0]);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
-        vector<int> vecInt; // allocate 0 memory
+        vector<int> vecBase = {1, 2, 3};
+        vector<int> vecInt;  // allocate 0 memory
         vecInt.resize(0);
         classInstance.wrap_uninitialized_move(vecInt.begin().ptr(), vecInt.begin().ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 0);
     }
     {
-        vector<int> vecBase = { 1, 2, 3 };
-        vector<int> vecInt; // allocate some memory for int with values from vecBase[2]
+        vector<int> vecBase = {1, 2, 3};
+        vector<int> vecInt;  // allocate some memory for int with values from vecBase[2]
         vecInt.resize(2);
         classInstance.wrap_uninitialized_move(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 2);
@@ -1030,8 +1033,8 @@ UNIT_TEST(API_ContainersVector, ProtectedUninitializedMemory, testing::ext::Test
         ASSERT_EQ(vecBase[2], 3);
     }
     {
-        vector<uint32_t> vecBase = { 1, 2, 3 };
-        vector<uint32_t> vecInt; // allocate some memory for int with values from vecBase[2]
+        vector<uint32_t> vecBase = {1, 2, 3};
+        vector<uint32_t> vecInt;  // allocate some memory for int with values from vecBase[2]
         vecInt.resize(2);
         classInstanceU32.wrap_uninitialized_move(vecInt.begin().ptr(), (vecInt.begin() + 2).ptr(), &(*vecBase.begin()));
         ASSERT_EQ(vecInt.size(), 2);
@@ -1055,9 +1058,9 @@ UNIT_TEST(API_ContainersVector, ProtectedInitializedMemory, testing::ext::TestSi
 
     // move values, not references
     {
-        vector<int> vecInt = { 1, 2, 3 };
-        vector<int> vecInt2 = { 3, 2, 1 };
-        vector<uint32_t> vecUint = { 99U, 88U, 77U };
+        vector<int> vecInt = {1, 2, 3};
+        vector<int> vecInt2 = {3, 2, 1};
+        vector<uint32_t> vecUint = {99U, 88U, 77U};
 
         classInstance.wrap_copy(&(*vecInt2.begin()), vecInt.begin().ptr(), vecInt.begin().ptr());
         ASSERT_EQ(vecInt2[0], 3);
@@ -1101,8 +1104,8 @@ UNIT_TEST(API_ContainersVector, ProtectedInitializedMemory, testing::ext::TestSi
 
     // move values, not references
     {
-        vector<int> vecInt = { 1, 2, 3 };
-        vector<int> vecInt2 = { 3, 2, 1 };
+        vector<int> vecInt = {1, 2, 3};
+        vector<int> vecInt2 = {3, 2, 1};
 
         classInstance.wrap_move(vecInt.begin().ptr(), vecInt.begin().ptr(), &(*vecInt2.begin()));
         ASSERT_EQ(vecInt2[0], 3);
@@ -1127,8 +1130,8 @@ UNIT_TEST(API_ContainersVector, ProtectedInitializedMemory, testing::ext::TestSi
     }
 
     {
-        vector<uint32_t> vecInt = { 1, 2, 3 };
-        vector<uint32_t> vecInt2 = { 3, 2, 1 };
+        vector<uint32_t> vecInt = {1, 2, 3};
+        vector<uint32_t> vecInt2 = {3, 2, 1};
 
         classInstanceU32.wrap_move(vecInt.begin().ptr(), vecInt.begin().ptr(), &(*vecInt2.begin()));
         ASSERT_EQ(vecInt2[0], 3);
@@ -1207,7 +1210,7 @@ UNIT_TEST(API_ContainersVector, ProtectedPointerMemoryActions, testing::ext::Tes
 
     {
         vector<int> vecInt;
-        vector<int> vecInt2 = { 1, 2, 3 };
+        vector<int> vecInt2 = {1, 2, 3};
         int* p;
 
         vecInt.resize(0);
@@ -1237,9 +1240,9 @@ UNIT_TEST(API_ContainersVector, ProtectedPointerMemoryActions, testing::ext::Tes
     }
 
     {
-        vector<int> vecInt = { 1, 2, 3 };
-        vector<uint32_t> vecUint = { 99U, 88U, 77U };
-        iterator<vector<int>> pInt; // here pointer to beginning, not end.
+        vector<int> vecInt = {1, 2, 3};
+        vector<uint32_t> vecUint = {99U, 88U, 77U};
+        iterator<vector<int>> pInt;  // here pointer to beginning, not end.
 
         classInstance.resize(0);
         pInt = classInstance.wrap_insert_impl<int*>(classInstance.begin(), vecInt.begin().ptr(), vecInt.begin().ptr());
@@ -1276,8 +1279,8 @@ UNIT_TEST(API_ContainersVector, ProtectedPointerMemoryActions, testing::ext::Tes
  */
 UNIT_TEST(API_ContainersVector, Iterators, testing::ext::TestSize.Level1)
 {
-    int vec[5] = { 1, 2, 4, 8, 16 };
-    vector<int> vecInt { 1, 2, 4, 8, 16 };
+    int vec[5] = {1, 2, 4, 8, 16};
+    vector<int> vecInt{1, 2, 4, 8, 16};
 
     // Iterator begin, end
     int index = 0;
@@ -1363,8 +1366,8 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to smaller (will allocate and copy construct)
     {
-        vector<int> vecA = { 1 };
-        vector<int> vecB = { 2, 3, 4 };
+        vector<int> vecA = {1};
+        vector<int> vecB = {2, 3, 4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_EQ(vecA.size(), 3U);
@@ -1372,9 +1375,9 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to smaller, but with extra capacity (will copy assign and copy construct)
     {
-        vector<int> vecA = { 1, 2 };
+        vector<int> vecA = {1, 2};
         vecA.reserve(16);
-        vector<int> vecB = { 3, 4, 5 };
+        vector<int> vecB = {3, 4, 5};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_TRUE(std::equal(vecA.begin(), vecA.end(), vecB.begin()));
@@ -1382,8 +1385,8 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to larger (will allocate and copy construct)
     {
-        vector<int> vecA = { 1, 2, 3 };
-        vector<int> vecB = { 4 };
+        vector<int> vecA = {1, 2, 3};
+        vector<int> vecB = {4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_TRUE(std::equal(vecA.begin(), vecA.end(), vecB.begin()));
@@ -1391,9 +1394,9 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to larger but with bigger capacity (will copy assign and destroy elements)
     {
-        vector<int> vecA = { 1, 2, 3 };
+        vector<int> vecA = {1, 2, 3};
         vecA.reserve(16);
-        vector<int> vecB = { 4 };
+        vector<int> vecB = {4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_TRUE(std::equal(vecA.begin(), vecA.end(), vecB.begin()));
@@ -1409,8 +1412,8 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to smaller (will allocate and copy construct)
     {
-        vector<Thing> vecA = { 1 };
-        vector<Thing> vecB = { 2, 3, 4 };
+        vector<Thing> vecA = {1};
+        vector<Thing> vecB = {2, 3, 4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_EQ(vecA.size(), 3U);
@@ -1418,9 +1421,9 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to smaller, but with extra capacity (will copy assign and copy construct)
     {
-        vector<Thing> vecA = { 1, 2 };
+        vector<Thing> vecA = {1, 2};
         vecA.reserve(16);
-        vector<Thing> vecB = { 3, 4, 5 };
+        vector<Thing> vecB = {3, 4, 5};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_EQ(vecA.size(), 3U);
@@ -1428,8 +1431,8 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to larger (will allocate and copy construct)
     {
-        vector<Thing> vecA = { 1, 2, 3 };
-        vector<Thing> vecB = { 4 };
+        vector<Thing> vecA = {1, 2, 3};
+        vector<Thing> vecB = {4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_EQ(vecA.size(), 1U);
@@ -1437,9 +1440,9 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
     // assign to larger but with bigger capacity (will copy assign and destroy elements)
     {
-        vector<Thing> vecA = { 1, 2, 3 };
+        vector<Thing> vecA = {1, 2, 3};
         vecA.reserve(16);
-        vector<Thing> vecB = { 4 };
+        vector<Thing> vecB = {4};
         vecA = vecB;
         EXPECT_EQ(vecA.size(), vecB.size());
         EXPECT_EQ(vecA.size(), 1U);
@@ -1447,11 +1450,12 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
 }
 
-template<typename T>
+template <typename T>
 struct Foo {
     int n;
     T x;
-    Foo(int val1, T val2) : n(val1), x(val2) {}
+    Foo(int val1, T val2) : n(val1), x(val2)
+    {}
 };
 
 /**
@@ -1462,7 +1466,7 @@ struct Foo {
 UNIT_TEST(API_ContainersVector, Modifiers, testing::ext::TestSize.Level1)
 {
     vector<Foo<float>> vFoo;
-    vector<int> vecInt { 1, 2, 4, 8, 16 };
+    vector<int> vecInt{1, 2, 4, 8, 16};
 
     // Push back
     vecInt.push_back(32);

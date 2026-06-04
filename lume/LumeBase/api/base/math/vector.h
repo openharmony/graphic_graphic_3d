@@ -59,14 +59,18 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr Vec2() noexcept : data {} {}
+    inline constexpr Vec2() noexcept : data{}
+    {}
     /** Constructor for using single float as input for all components, marked explicit to avoid implicit conversion
      * from float to vector. For example Normalize(1.0f) would be illegal. */
-    inline constexpr explicit Vec2(float value) noexcept : x(value), y(value) {}
+    inline constexpr explicit Vec2(float value) noexcept : x(value), y(value)
+    {}
     /** Constructor for using floats as input */
-    inline constexpr Vec2(float xParameter, float yParameter) noexcept : x(xParameter), y(yParameter) {}
+    inline constexpr Vec2(float xParameter, float yParameter) noexcept : x(xParameter), y(yParameter)
+    {}
     /** Constructor for using array of floats as input */
-    inline constexpr Vec2(const float parameter[2]) noexcept : x(parameter[0]), y(parameter[1]) {}
+    inline constexpr Vec2(const float parameter[2]) noexcept : x(parameter[0]), y(parameter[1])
+    {}
 
     /** Add operator */
     inline constexpr Vec2 operator+(const Vec2& v2) const
@@ -418,9 +422,11 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr UVec2() : data {} {}
+    inline constexpr UVec2() : data{}
+    {}
     /** Constructor for using two uint32_t's as input */
-    inline constexpr UVec2(uint32_t xParameter, uint32_t yParameter) : x(xParameter), y(yParameter) {}
+    inline constexpr UVec2(uint32_t xParameter, uint32_t yParameter) : x(xParameter), y(yParameter)
+    {}
 
     /** Add operator */
     inline constexpr UVec2 operator+(const UVec2& v2) const
@@ -559,7 +565,7 @@ public:
 // Assert that UVec2 is the same as 2 uint32_t's
 static_assert(sizeof(UVec2) == 2 * sizeof(uint32_t));
 
-static constexpr UVec2 ZERO_UVEC2(0, 0);
+static constexpr UVec2 ZERO_UVEC2(0U, 0U);
 
 /** @ingroup group_math_vector */
 /** Unsigned integer vector3 presentation */
@@ -576,9 +582,11 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr UVec3() : data {} {}
+    inline constexpr UVec3() : data{}
+    {}
     /** Constructor for using three uint32_t's as input */
-    inline constexpr UVec3(uint32_t x, uint32_t y, uint32_t z) : x(x), y(y), z(z) {}
+    inline constexpr UVec3(uint32_t x, uint32_t y, uint32_t z) : x(x), y(y), z(z)
+    {}
 
     /** Subscript operator */
     constexpr uint32_t& operator[](size_t index)
@@ -635,9 +643,11 @@ public:
     };
     // Constructors
     /** Default constructor */
-    inline constexpr UVec4() : data {} {}
+    inline constexpr UVec4() : data{}
+    {}
     /** Constructor for using four uint32_t's as input */
-    inline constexpr UVec4(uint32_t x, uint32_t y, uint32_t z, uint32_t w) : x(x), y(y), z(z), w(w) {}
+    inline constexpr UVec4(uint32_t x, uint32_t y, uint32_t z, uint32_t w) : x(x), y(y), z(z), w(w)
+    {}
 
     /** Subscript operator */
     constexpr uint32_t& operator[](size_t index)
@@ -707,9 +717,11 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr IVec2() : data {} {}
+    inline constexpr IVec2() : data{}
+    {}
     /** Constructor for using two int32_t's as input */
-    inline constexpr IVec2(int32_t xParameter, int32_t yParameter) : x(xParameter), y(yParameter) {}
+    inline constexpr IVec2(int32_t xParameter, int32_t yParameter) : x(xParameter), y(yParameter)
+    {}
     ~IVec2() = default;
 
     /** Add operator */
@@ -866,9 +878,11 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr IVec3() : data {} {}
+    inline constexpr IVec3() : data{}
+    {}
     /** Constructor for using three int32_t's as input */
-    inline constexpr IVec3(int32_t x, int32_t y, int32_t z) : x(x), y(y), z(z) {}
+    inline constexpr IVec3(int32_t x, int32_t y, int32_t z) : x(x), y(y), z(z)
+    {}
     ~IVec3() = default;
 
     /** Subscript operator */
@@ -926,9 +940,11 @@ public:
     };
     // Constructors
     /** Default constructor */
-    inline constexpr IVec4() : data {} {}
+    inline constexpr IVec4() : data{}
+    {}
     /** Constructor for using four int32_t's as input */
-    inline constexpr IVec4(int32_t x, int32_t y, int32_t z, int32_t w) : x(x), y(y), z(z), w(w) {}
+    inline constexpr IVec4(int32_t x, int32_t y, int32_t z, int32_t w) : x(x), y(y), z(z), w(w)
+    {}
     ~IVec4() = default;
 
     /** Subscript operator */
@@ -984,14 +1000,19 @@ constexpr const float& Vec3::operator[](size_t index) const
 }
 
 // Constructors
-inline constexpr Vec3::Vec3() noexcept : data {} {}
-inline constexpr Vec3::Vec3(float value) noexcept : x(value), y(value), z(value) {}
+inline constexpr Vec3::Vec3() noexcept : data{}
+{}
+inline constexpr Vec3::Vec3(float value) noexcept : x(value), y(value), z(value)
+{}
 inline constexpr Vec3::Vec3(float xParameter, float yParameter, float zParameter) noexcept
     : x(xParameter), y(yParameter), z(zParameter)
 {}
-inline constexpr Vec3::Vec3(const float d[]) noexcept : x(d[0]), y(d[1]), z(d[2]) {}
-inline constexpr Vec3::Vec3(const Vec2& vec, float zParameter) noexcept : x(vec.x), y(vec.y), z(zParameter) {}
-inline constexpr Vec3::Vec3(const Vec4& vec) noexcept : x(vec.x), y(vec.y), z(vec.z) {}
+inline constexpr Vec3::Vec3(const float d[]) noexcept : x(d[0]), y(d[1]), z(d[2])
+{}
+inline constexpr Vec3::Vec3(const Vec2& vec, float zParameter) noexcept : x(vec.x), y(vec.y), z(zParameter)
+{}
+inline constexpr Vec3::Vec3(const Vec4& vec) noexcept : x(vec.x), y(vec.y), z(vec.z)
+{}
 
 // Vec3 to Vec3 operations
 // Add
@@ -1145,13 +1166,17 @@ constexpr const float& Vec4::operator[](size_t index) const
 static constexpr Vec3 ZERO_VEC3(0.0f, 0.0f, 0.0f);
 
 // Constructors
-inline constexpr Vec4::Vec4() noexcept : data {} {}
-inline constexpr Vec4::Vec4(float value) noexcept : x(value), y(value), z(value), w(value) {}
+inline constexpr Vec4::Vec4() noexcept : data{}
+{}
+inline constexpr Vec4::Vec4(float value) noexcept : x(value), y(value), z(value), w(value)
+{}
 inline constexpr Vec4::Vec4(float xParameter, float yParameter, float zParameter, float wParameter) noexcept
     : x(xParameter), y(yParameter), z(zParameter), w(wParameter)
 {}
-inline constexpr Vec4::Vec4(const float d[4]) noexcept : x(d[0]), y(d[1]), z(d[2]), w(d[3]) {}
-inline constexpr Vec4::Vec4(const Vec3& vec, float w) noexcept : x(vec.x), y(vec.y), z(vec.z), w(w) {}
+inline constexpr Vec4::Vec4(const float d[4]) noexcept : x(d[0]), y(d[1]), z(d[2]), w(d[3])
+{}
+inline constexpr Vec4::Vec4(const Vec3& vec, float w) noexcept : x(vec.x), y(vec.y), z(vec.z), w(w)
+{}
 inline constexpr Vec4::Vec4(const Vec2& vec, float zParameter, float wParameter) noexcept
     : x(vec.x), y(vec.y), z(zParameter), w(wParameter)
 {}
@@ -1305,7 +1330,7 @@ constexpr bool Vec4::operator!=(const Vec4& rhs) const
 static constexpr Vec4 ZERO_VEC4(0.0f, 0.0f, 0.0f, 0.0f);
 
 #include <base/math/disable_warning_4201_footer.h>
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_VECTOR_H
+#endif  // API_BASE_MATH_VECTOR_H

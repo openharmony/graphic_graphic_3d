@@ -70,8 +70,8 @@ META_DECLARE_EASING_CURVE(StepEnd)
 
 #undef META_DECLARE_EASING_CURVE
 
-} // namespace Easing
-} // namespace Curves
+}  // namespace Easing
+}  // namespace Curves
 
 META_END_NAMESPACE()
 

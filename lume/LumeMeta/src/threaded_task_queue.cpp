@@ -17,23 +17,31 @@
 #include <mutex>
 #include <thread>
 
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+#include <qos.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+#include "res_sched_client.h"
+#endif
+
 #include <base/containers/vector.h>
 
 #include <meta/base/interface_macros.h>
 #include <meta/base/namespace.h>
+#include <meta/ext/object.h>
 #include <meta/interface/intf_task_queue.h>
 #include <meta/interface/intf_task_queue_registry.h>
 
 #include "future.h"
-#include "object.h"
 #include "task_queue.h"
 
 META_BEGIN_NAMESPACE()
 
 constexpr uint32_t RES_TYPE_EXT_ENGINE_SET_QOS = 10028;
 
-class ThreadedTaskQueue :
-    public IntroduceInterfaces<MetaObject, IThreadedTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
+class ThreadedTaskQueue
+    : public IntroduceInterfaces<MetaObject, IThreadedTaskQueue, ITaskQueueThreadInfo, TaskQueueImpl> {
     META_OBJECT(ThreadedTaskQueue, ClassId::ThreadedTaskQueue, IntroduceInterfaces)
 public:
     using Token = ITaskQueue::Token;
@@ -48,7 +56,7 @@ public:
 
     uint64_t CurrentThread() const
     {
-        return std::hash<std::thread::id> {}(std::this_thread::get_id());
+        return std::hash<std::thread::id>{}(std::this_thread::get_id());
     }
     bool CurrentThreadIsExecutionThread() const override
     {
@@ -128,8 +136,22 @@ public:
 
     void ProcessTasks()
     {
-        std::unique_lock lock { mutex_ };
+        std::unique_lock lock{mutex_};
         execThread_ = std::this_thread::get_id();
+
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+        int ret = OHOS::QOS::SetThreadQos(OHOS::QOS::QosLevel::QOS_USER_INTERACTIVE);
+        CORE_LOG_I("set engine child thread qos %s", ret == 0 ? "success" : "failed");
+        auto tid = syscall(SYS_gettid);
+        if (tid > 0) {
+            std::unordered_map<std::string, std::string> mapPayload{
+                {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
+            CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
+            OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(
+                RES_TYPE_EXT_ENGINE_SET_QOS, 1, mapPayload);
+        }
+#endif
+
         while (!terminate_) {
             if (!tasks_.empty()) {
                 TimeSpan delta = tasks_.back().executeTime - Time();
@@ -145,10 +167,17 @@ public:
             auto curTime = Time();
             TaskQueueImpl::ProcessTasks(lock, curTime);
         }
+
+#if defined(__OHOS_PLATFORM__) && !defined(BUILD_PUBLIC_VERSION)
+        std::unordered_map<std::string, std::string> mapPayload{
+            {"pid", std::to_string(getpid())}, {"tid", std::to_string(tid)}};
+        CORE_LOG_I("ReportEngineResType %s %s", mapPayload["pid"].c_str(), mapPayload["tid"].c_str());
+        OHOS::ResourceSchedule::ResSchedClient::GetInstance().ReportData(RES_TYPE_EXT_ENGINE_SET_QOS, 0, mapPayload);
+#endif
     }
 
 private:
-    uint64_t threadId_ { 0 };
+    uint64_t threadId_{0};
     std::condition_variable addCondition_;
     std::thread thread_;
 };
@@ -160,6 +189,6 @@ IObjectFactory::Ptr GetThreadedTaskQueueFactory()
     return ThreadedTaskQueue::GetFactory();
 }
 
-} // namespace Internal
+}  // namespace Internal
 
 META_END_NAMESPACE()

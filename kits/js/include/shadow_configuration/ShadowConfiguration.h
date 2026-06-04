@@ -24,12 +24,13 @@ namespace ShadowConfiguration {
 enum class ShadowAlgorithmType : uint32_t { PCF = 0 };
 void RegisterEnums(NapiApi::Object exports);
 
-template<typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
+template <typename Class, napi_value (Class::*F)(NapiApi::FunctionContext<>&)>
 napi_value Getter(napi_env env, napi_callback_info info)
 {
     NapiApi::FunctionContext fc(env, info);
     if (fc && fc.This()) {
-        auto impl = NapiApi::UnwrapTagged<Class>(fc.GetEnv(), fc.This().ToNapiValue(), Class::TYPE_TAG);
+        Class* impl = nullptr;
+        napi_unwrap(fc.GetEnv(), fc.This().ToNapiValue(), (void**)&impl);
         if (impl) {
             return (impl->*F)(fc);
         }
@@ -43,7 +44,7 @@ napi_value GenericSetter(napi_env env, napi_callback_info info)
     napi_value undefined = nullptr;
     napi_get_undefined(env, &undefined);
     size_t argc = 1;
-    napi_value args[1] = { nullptr };
+    napi_value args[1] = {nullptr};
     napi_value jsThis = nullptr;
     napi_get_cb_info(env, info, &argc, args, &jsThis, nullptr);
     Class* impl = nullptr;
@@ -82,6 +83,6 @@ protected:
     SCENE_NS::IRenderConfiguration::WeakPtr renderConfiguration_;
 };
 
-} // namespace ShadowConfiguration
+}  // namespace ShadowConfiguration
 
 #endif

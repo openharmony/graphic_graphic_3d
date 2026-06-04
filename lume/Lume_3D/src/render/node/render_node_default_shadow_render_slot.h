@@ -53,20 +53,20 @@ public:
         RENDER_NS::RenderHandleReference depthHandle;
         RENDER_NS::RenderHandleReference vsmColorHandle;
 
-        BASE_NS::Format depthFormat { BASE_NS::Format::BASE_FORMAT_D16_UNORM };
-        BASE_NS::Format colorFormat { BASE_NS::Format::BASE_FORMAT_R16G16_UNORM };
+        BASE_NS::Format depthFormat{BASE_NS::Format::BASE_FORMAT_D16_UNORM};
+        BASE_NS::Format colorFormat{BASE_NS::Format::BASE_FORMAT_R16G16_UNORM};
 
         // full size of atlas
-        uint32_t width { 2u };
-        uint32_t height { 2u };
+        uint32_t width{2u};
+        uint32_t height{2u};
 
-        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes {};
+        IRenderDataStoreDefaultLight::ShadowTypes shadowTypes{};
     };
 
     struct ShaderStateData {
         RENDER_NS::RenderHandle shader;
         RENDER_NS::RenderHandle gfxState;
-        uint64_t hash { 0 };
+        uint64_t hash{0};
         RENDER_NS::RenderHandle defaultShader;
         RENDER_NS::RenderHandle defaultShaderState;
     };
@@ -77,19 +77,19 @@ public:
 
     struct PsoCreationValue {
         RENDER_NS::RenderHandle psoHandle;
-        bool hasImageData { false };
+        bool hasImageData{false};
     };
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "ce5b861e-09a0-4dfa-84f1-c1a9986f1fdf" };
-    static constexpr const char* const typeName = "RenderNodeDefaultShadowRenderSlot";
+    static constexpr BASE_NS::Uid UID{"ce5b861e-09a0-4dfa-84f1-c1a9986f1fdf"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultShadowRenderSlot";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
     static void Destroy(IRenderNode* instance);
 
 private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     struct UboHandles {
         RENDER_NS::RenderHandleReference generalData;
@@ -118,22 +118,22 @@ private:
         const RenderSubmeshFlags submeshFlags);
 
     struct JsonInputs {
-        RENDER_NS::RenderSlotSortType sortType { RENDER_NS::RenderSlotSortType::NONE };
-        RENDER_NS::RenderSlotCullType cullType { RENDER_NS::RenderSlotCullType::NONE };
+        RENDER_NS::RenderSlotSortType sortType{RENDER_NS::RenderSlotSortType::NONE};
+        RENDER_NS::RenderSlotCullType cullType{RENDER_NS::RenderSlotCullType::NONE};
 
-        uint32_t nodeFlags { 0u };
-        uint32_t renderSlotId { 0u };
-        uint32_t renderSlotVsmId { 0u };
+        uint32_t nodeFlags{0u};
+        uint32_t renderSlotId{0u};
+        uint32_t renderSlotVsmId{0u};
     };
     JsonInputs jsonInputs_;
 
     struct CurrentScene {
-        BASE_NS::Math::UVec2 res { 0u, 0u };
+        BASE_NS::Math::UVec2 res{0u, 0u};
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
-        BASE_NS::Math::Vec4 sceneTimingData { 0.0f, 0.0f, 0.0f, 0.0f };
+        BASE_NS::Math::Vec4 sceneTimingData{0.0f, 0.0f, 0.0f, 0.0f};
 
-        uint32_t renderSlotId { ~0u };
+        uint32_t renderSlotId{~0u};
     };
     CurrentScene currentScene_;
 
@@ -152,14 +152,14 @@ private:
         RENDER_NS::RenderHandle shaderHandle;
         RENDER_NS::RenderHandle psoHandle;
         RENDER_NS::RenderHandle stateHandle;
-        bool hasSet2Images { false };
+        bool hasSet2Images{false};
     };
     struct AllShaderData {
         BASE_NS::vector<PerShaderData> perShaderData;
         // shader hash, per shader data index
         BASE_NS::unordered_map<uint64_t, uint32_t> shaderIdToData;
 
-        bool slotHasShaders { false };
+        bool slotHasShaders{false};
         RENDER_NS::RenderHandle defaultPlHandle;
         RENDER_NS::RenderHandle defaultVidHandle;
         RENDER_NS::PipelineLayout defaultPipelineLayout;
@@ -174,10 +174,10 @@ private:
     RENDER_NS::RenderPass renderPass_;
     BASE_NS::vector<SlotSubmeshIndex> sortedSlotSubmeshes_;
 
-    bool validShadowNode_ { true };
-    bool bindlessEnabled_ { false };
-    uint32_t shadowCount_ { 0U };
+    bool validShadowNode_{true};
+    bool bindlessEnabled_{false};
+    uint32_t shadowCount_{0U};
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_SHADOW_RENDER_SLOT_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_SHADOW_RENDER_SLOT_H

@@ -30,10 +30,10 @@ class FunctionTask final : public IThreadPool::ITask {
 public:
     static Ptr Create(std::function<void()>&& func)
     {
-        return Ptr { new FunctionTask(std::move(func)) };
+        return Ptr{new FunctionTask(std::move(func))};
     }
 
-    explicit FunctionTask(std::function<void()>&& func) : func_(std::move(func)) {};
+    explicit FunctionTask(std::function<void()>&& func) : func_(std::move(func)){};
 
     void operator()() override
     {
@@ -116,7 +116,7 @@ protected:
         bool operator==(const Entry& other) const;
 
         IThreadPool::ITask::Ptr task;
-        uint64_t identifier {};
+        uint64_t identifier{};
         BASE_NS::vector<uint64_t> dependencies;
     };
 
@@ -126,4 +126,4 @@ protected:
 };
 CORE_END_NAMESPACE()
 
-#endif // CORE_THREADING_TASK_QUEUE_H
+#endif  // CORE_THREADING_TASK_QUEUE_H

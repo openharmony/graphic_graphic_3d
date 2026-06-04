@@ -53,28 +53,28 @@ using namespace BASE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr string_view DEVICE_EXTENSION_SWAPCHAIN { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_SWAPCHAIN{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 // promoted to 1.2, requires VK_KHR_create_renderpass2
-constexpr string_view DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE { VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME };
-constexpr string_view DEVICE_EXTENSION_CREATE_RENDERPASS2 { VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE{VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME};
+constexpr string_view DEVICE_EXTENSION_CREATE_RENDERPASS2{VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME};
 
-constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY { VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME };
-constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2 { VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME };
-constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION { VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME };
-constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN { VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
-constexpr string_view DEVICE_EXTENSION_MULTIVIEW { VK_KHR_MULTIVIEW_EXTENSION_NAME };
+constexpr string_view DEVICE_EXTENSION_EXTERNAL_MEMORY{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME};
+constexpr string_view DEVICE_EXTENSION_GET_MEMORY_REQUIREMENTS2{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME};
+constexpr string_view DEVICE_EXTENSION_SAMPLER_YCBCR_CONVERSION{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME};
+constexpr string_view DEVICE_EXTENSION_QUEUE_FAMILY_FOREIGN{VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME};
+constexpr string_view DEVICE_EXTENSION_MULTIVIEW{VK_KHR_MULTIVIEW_EXTENSION_NAME};
 constexpr string_view DEVICE_EXTENSION_MAINTENANCE4 = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
 constexpr string_view DEVICE_EXTENSION_DESCRIPTOR_INDEXING = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
 constexpr string_view DEVICE_EXTENSION_PORTABILITY_SUBSET = "VK_KHR_portability_subset";
 
 struct ChainWrapper {
-    void** ppNextFeatures { nullptr };
-    void** ppNextProperties { nullptr };
+    void** ppNextFeatures{nullptr};
+    void** ppNextProperties{nullptr};
 };
 
 struct PhysicalDeviceYcbcrStructsVk {
-    VkPhysicalDeviceSamplerYcbcrConversionFeatures ycbcrConversionFeatures {};
+    VkPhysicalDeviceSamplerYcbcrConversionFeatures ycbcrConversionFeatures{};
 };
 
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
@@ -84,9 +84,18 @@ struct PhysicalDeviceFragmentShadingRateStructsVk {
 };
 #endif
 
+struct PhysicalDeviceBufferDeviceAddressVk {
+    VkPhysicalDeviceBufferDeviceAddressFeatures physicalDeviceBufferDeviceAddressFeatures;
+};
+
+struct PhysicalDeviceShaderFp16Int8Vk {
+    VkPhysicalDeviceScalarBlockLayoutFeatures physicalDeviceScalarBlockFeatures;
+    VkPhysicalDevice16BitStorageFeatures physicalDevice16BitStorageFeatures;
+    VkPhysicalDeviceFloat16Int8FeaturesKHR physicalDeviceFloat16Int8Features;
+};
+
 #if (RENDER_VULKAN_RT_ENABLED == 1)
 struct PhysicalDeviceRayTracingStructsVk {
-    VkPhysicalDeviceBufferDeviceAddressFeatures physicalDeviceBufferDeviceAddressFeatures;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR physicalDeviceRayTracingPipelineFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR physicalDeviceAccelerationStructureFeatures;
     VkPhysicalDeviceRayQueryFeaturesKHR physicalDeviceRayQueryFeatures;
@@ -104,11 +113,13 @@ struct PhysicalDeviceDesciptorIndexingStructsVk {
 };
 
 struct PhysicalDeviceMaintenance4Vk {
-    VkPhysicalDeviceMaintenance4Features maintenance4Features {};
+    VkPhysicalDeviceMaintenance4Features maintenance4Features{};
 };
 
 struct ChainObjects {
     unique_ptr<PhysicalDeviceYcbcrStructsVk> ycbcr;
+    unique_ptr<PhysicalDeviceBufferDeviceAddressVk> bda;
+    unique_ptr<PhysicalDeviceShaderFp16Int8Vk> fp16i8;
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     unique_ptr<PhysicalDeviceRayTracingStructsVk> rt;
 #endif
@@ -123,25 +134,25 @@ struct ChainObjects {
 // fragment shading rate
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
 // VK_KHR_fragment_shading_rate, requires VK_KHR_create_renderpass2, requires VK_KHR_get_physical_device_properties2
-static constexpr string_view DEVICE_EXTENSION_FRAGMENT_SHADING_RATE { VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME };
+static constexpr string_view DEVICE_EXTENSION_FRAGMENT_SHADING_RATE{VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME};
 
 void GetPhysicalDeviceFragmentShadingRateStructs(ChainObjects& co, ChainWrapper& cw)
 {
     co.fsr = make_unique<PhysicalDeviceFragmentShadingRateStructsVk>();
     auto& fsr = co.fsr;
     fsr->physicalDeviceFragmentShadingRateFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR, // sType
-        nullptr,                                                              // pNext
-        VK_FALSE,                                                             // pipelineFragmentShadingRate
-        VK_FALSE,                                                             // primitiveFragmentShadingRate
-        VK_FALSE,                                                             // attachmentFragmentShadingRate
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR,  // sType
+        nullptr,                                                               // pNext
+        VK_FALSE,                                                              // pipelineFragmentShadingRate
+        VK_FALSE,                                                              // primitiveFragmentShadingRate
+        VK_FALSE,                                                              // attachmentFragmentShadingRate
     };
     *cw.ppNextFeatures = &fsr->physicalDeviceFragmentShadingRateFeatures;
     cw.ppNextFeatures = &fsr->physicalDeviceFragmentShadingRateFeatures.pNext;
 
     fsr->physicalDeviceFragmentShadingRateProperties = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR, // sType
-        nullptr,                                                                // pNext
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR,  // sType
+        nullptr,                                                                 // pNext
     };
     *cw.ppNextProperties = &fsr->physicalDeviceFragmentShadingRateProperties;
     cw.ppNextProperties = &fsr->physicalDeviceFragmentShadingRateProperties.pNext;
@@ -153,20 +164,20 @@ void GetPhysicalDeviceMultiviewFeaturesStructs(ChainObjects& co, ChainWrapper& c
     co.mv = make_unique<PhysicalDeviceMultiviewStructsVk>();
     auto& mv = co.mv;
     mv->physicalDeviceMultiviewFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR, // sType
-        nullptr,                                                  // pNext
-        VK_FALSE,                                                 // multiview
-        VK_FALSE,                                                 // multiviewGeometryShader
-        VK_FALSE,                                                 // multiviewTessellationShader
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,  // sType
+        nullptr,                                                   // pNext
+        VK_FALSE,                                                  // multiview
+        VK_FALSE,                                                  // multiviewGeometryShader
+        VK_FALSE,                                                  // multiviewTessellationShader
     };
     *cw.ppNextFeatures = &mv->physicalDeviceMultiviewFeatures;
     cw.ppNextFeatures = &mv->physicalDeviceMultiviewFeatures.pNext;
 
     mv->physicalDeviceMultiviewProperties = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR, // sType
-        nullptr,                                                    // pNext
-        0,                                                          // maxMultiviewViewCount
-        0,                                                          // maxMultiviewInstanceIndex
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR,  // sType
+        nullptr,                                                     // pNext
+        0,                                                           // maxMultiviewViewCount
+        0,                                                           // maxMultiviewInstanceIndex
     };
     *cw.ppNextProperties = &mv->physicalDeviceMultiviewProperties;
     cw.ppNextProperties = &mv->physicalDeviceMultiviewProperties.pNext;
@@ -177,58 +188,58 @@ void GetPhysicalDeviceDescriptorIndexingFeaturesStructs(ChainObjects& co, ChainW
     co.di = make_unique<PhysicalDeviceDesciptorIndexingStructsVk>();
     auto& di = co.di;
     di->physicalDeviceDescriptorIndexingFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, // sType
-        nullptr,                                                        // pNext
-        VK_FALSE,                                                       // shaderInputAttachmentArrayDynamicIndexing
-        VK_FALSE,                                                       // shaderUniformTexelBufferArrayDynamicIndexing
-        VK_FALSE,                                                       // shaderStorageTexelBufferArrayDynamicIndexing
-        VK_FALSE,                                                       // shaderUniformBufferArrayNonUniformIndexing
-        VK_FALSE,                                                       // shaderSampledImageArrayNonUniformIndexing
-        VK_FALSE,                                                       // shaderStorageBufferArrayNonUniformIndexing
-        VK_FALSE,                                                       // shaderStorageImageArrayNonUniformIndexing
-        VK_FALSE,                                                       // shaderInputAttachmentArrayNonUniformIndexing
-        VK_FALSE, // shaderUniformTexelBufferArrayNonUniformIndexing
-        VK_FALSE, // shaderStorageTexelBufferArrayNonUniformIndexing
-        VK_FALSE, // descriptorBindingUniformBufferUpdateAfterBind
-        VK_FALSE, // descriptorBindingSampledImageUpdateAfterBind
-        VK_FALSE, // descriptorBindingStorageImageUpdateAfterBind
-        VK_FALSE, // descriptorBindingStorageBufferUpdateAfterBind
-        VK_FALSE, // descriptorBindingUniformTexelBufferUpdateAfterBind
-        VK_FALSE, // descriptorBindingStorageTexelBufferUpdateAfterBind
-        VK_FALSE, // descriptorBindingUpdateUnusedWhilePending
-        VK_FALSE, // descriptorBindingPartiallyBound
-        VK_FALSE, // descriptorBindingVariableDescriptorCount
-        VK_FALSE, // runtimeDescriptorArray
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,  // sType
+        nullptr,                                                         // pNext
+        VK_FALSE,                                                        // shaderInputAttachmentArrayDynamicIndexing
+        VK_FALSE,                                                        // shaderUniformTexelBufferArrayDynamicIndexing
+        VK_FALSE,                                                        // shaderStorageTexelBufferArrayDynamicIndexing
+        VK_FALSE,                                                        // shaderUniformBufferArrayNonUniformIndexing
+        VK_FALSE,                                                        // shaderSampledImageArrayNonUniformIndexing
+        VK_FALSE,                                                        // shaderStorageBufferArrayNonUniformIndexing
+        VK_FALSE,                                                        // shaderStorageImageArrayNonUniformIndexing
+        VK_FALSE,                                                        // shaderInputAttachmentArrayNonUniformIndexing
+        VK_FALSE,  // shaderUniformTexelBufferArrayNonUniformIndexing
+        VK_FALSE,  // shaderStorageTexelBufferArrayNonUniformIndexing
+        VK_FALSE,  // descriptorBindingUniformBufferUpdateAfterBind
+        VK_FALSE,  // descriptorBindingSampledImageUpdateAfterBind
+        VK_FALSE,  // descriptorBindingStorageImageUpdateAfterBind
+        VK_FALSE,  // descriptorBindingStorageBufferUpdateAfterBind
+        VK_FALSE,  // descriptorBindingUniformTexelBufferUpdateAfterBind
+        VK_FALSE,  // descriptorBindingStorageTexelBufferUpdateAfterBind
+        VK_FALSE,  // descriptorBindingUpdateUnusedWhilePending
+        VK_FALSE,  // descriptorBindingPartiallyBound
+        VK_FALSE,  // descriptorBindingVariableDescriptorCount
+        VK_FALSE,  // runtimeDescriptorArray
     };
     *cw.ppNextFeatures = &di->physicalDeviceDescriptorIndexingFeatures;
     cw.ppNextFeatures = &di->physicalDeviceDescriptorIndexingFeatures.pNext;
 
     di->physicalDeviceDescriptorIndexingProperties = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES, // sType
-        nullptr,                                                          // pNext
-        0U,                                                               // maxUpdateAfterBindDescriptorsInAllPools
-        VK_FALSE, // shaderUniformBufferArrayNonUniformIndexingNative
-        VK_FALSE, // shaderSampledImageArrayNonUniformIndexingNative
-        VK_FALSE, // shaderStorageBufferArrayNonUniformIndexingNative
-        VK_FALSE, // shaderStorageImageArrayNonUniformIndexingNative
-        VK_FALSE, // shaderInputAttachmentArrayNonUniformIndexingNative
-        VK_FALSE, // robustBufferAccessUpdateAfterBind
-        VK_FALSE, // quadDivergentImplicitLod
-        0U,       // maxPerStageDescriptorUpdateAfterBindSamplers
-        0U,       // maxPerStageDescriptorUpdateAfterBindUniformBuffers
-        0U,       // maxPerStageDescriptorUpdateAfterBindStorageBuffers
-        0U,       // maxPerStageDescriptorUpdateAfterBindSampledImages
-        0U,       // maxPerStageDescriptorUpdateAfterBindStorageImages
-        0U,       // maxPerStageDescriptorUpdateAfterBindInputAttachments
-        0U,       // maxPerStageUpdateAfterBindResources
-        0U,       // maxDescriptorSetUpdateAfterBindSamplers
-        0U,       // maxDescriptorSetUpdateAfterBindUniformBuffers
-        0U,       // maxDescriptorSetUpdateAfterBindUniformBuffersDynamic
-        0U,       // maxDescriptorSetUpdateAfterBindStorageBuffers
-        0U,       // maxDescriptorSetUpdateAfterBindStorageBuffersDynamic
-        0U,       // maxDescriptorSetUpdateAfterBindSampledImages
-        0U,       // maxDescriptorSetUpdateAfterBindStorageImages
-        0U,       // maxDescriptorSetUpdateAfterBindInputAttachments
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES,  // sType
+        nullptr,                                                           // pNext
+        0U,                                                                // maxUpdateAfterBindDescriptorsInAllPools
+        VK_FALSE,  // shaderUniformBufferArrayNonUniformIndexingNative
+        VK_FALSE,  // shaderSampledImageArrayNonUniformIndexingNative
+        VK_FALSE,  // shaderStorageBufferArrayNonUniformIndexingNative
+        VK_FALSE,  // shaderStorageImageArrayNonUniformIndexingNative
+        VK_FALSE,  // shaderInputAttachmentArrayNonUniformIndexingNative
+        VK_FALSE,  // robustBufferAccessUpdateAfterBind
+        VK_FALSE,  // quadDivergentImplicitLod
+        0U,        // maxPerStageDescriptorUpdateAfterBindSamplers
+        0U,        // maxPerStageDescriptorUpdateAfterBindUniformBuffers
+        0U,        // maxPerStageDescriptorUpdateAfterBindStorageBuffers
+        0U,        // maxPerStageDescriptorUpdateAfterBindSampledImages
+        0U,        // maxPerStageDescriptorUpdateAfterBindStorageImages
+        0U,        // maxPerStageDescriptorUpdateAfterBindInputAttachments
+        0U,        // maxPerStageUpdateAfterBindResources
+        0U,        // maxDescriptorSetUpdateAfterBindSamplers
+        0U,        // maxDescriptorSetUpdateAfterBindUniformBuffers
+        0U,        // maxDescriptorSetUpdateAfterBindUniformBuffersDynamic
+        0U,        // maxDescriptorSetUpdateAfterBindStorageBuffers
+        0U,        // maxDescriptorSetUpdateAfterBindStorageBuffersDynamic
+        0U,        // maxDescriptorSetUpdateAfterBindSampledImages
+        0U,        // maxDescriptorSetUpdateAfterBindStorageImages
+        0U,        // maxDescriptorSetUpdateAfterBindInputAttachments
     };
     *cw.ppNextProperties = &di->physicalDeviceDescriptorIndexingProperties;
     cw.ppNextProperties = &di->physicalDeviceDescriptorIndexingProperties.pNext;
@@ -241,25 +252,25 @@ void FillAsBuildGeometryTriangles(const AsBuildGeometryInfo& geometry,
     vector<uint32_t>& maxPrimitiveCounts, uint32_t& arrayIndex)
 {
     for (const auto& ref : info) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_TRIANGLES_KHR,     // geometryType
-            {},                                                    // geometry;
-            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,  // sType
+            nullptr,                                                // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_TRIANGLES_KHR,      // geometryType
+            {},                                                     // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                  // flags
         };
-        geometryData[arrayIndex].geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR, // sType
-            nullptr,                                                              // pNext
-            VkFormat(ref.vertexFormat),                                           // vertexFormat
-            {},                                                                   // vertexData
-            VkDeviceSize(ref.vertexStride),                                       // vertexStride
-            ref.maxVertex,                                                        // maxVertex
-            VkIndexType(ref.indexType),                                           // indexType
-            {},                                                                   // indexData
-            {},                                                                   // transformData
+        geometryData[arrayIndex].geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,  // sType
+            nullptr,                                                               // pNext
+            VkFormat(ref.vertexFormat),                                            // vertexFormat
+            {},                                                                    // vertexData
+            VkDeviceSize(ref.vertexStride),                                        // vertexStride
+            ref.maxVertex,                                                         // maxVertex
+            VkIndexType(ref.indexType),                                            // indexType
+            {},                                                                    // indexData
+            {},                                                                    // transformData
         };
-        maxPrimitiveCounts[arrayIndex] = ref.indexCount / 3u; // triangles;
+        maxPrimitiveCounts[arrayIndex] = ref.indexCount / 3u;  // triangles;
         arrayIndex++;
     }
 }
@@ -269,18 +280,18 @@ void FillAsBuildGeometryAabbs(const AsBuildGeometryInfo& geometry, const array_v
     uint32_t& arrayIndex)
 {
     for (const auto& ref : info) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_AABBS_KHR,         // geometryType
-            {},                                                    // geometry;
-            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,  // sType
+            nullptr,                                                // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_AABBS_KHR,          // geometryType
+            {},                                                     // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                  // flags
         };
-        geometryData[arrayIndex].geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR, // sType
-            nullptr,                                                          // pNext
-            {},                                                               // data
-            ref.stride,                                                       // stride
+        geometryData[arrayIndex].geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,  // sType
+            nullptr,                                                           // pNext
+            {},                                                                // data
+            ref.stride,                                                        // stride
         };
         maxPrimitiveCounts[arrayIndex] = 1U;
         arrayIndex++;
@@ -292,18 +303,18 @@ void FillAsBuildGeometryInstances(const AsBuildGeometryInfo& geometry,
     vector<uint32_t>& maxPrimitiveCounts, uint32_t& arrayIndex)
 {
     for (const auto& ref : info) {
-        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR, // sType
-            nullptr,                                               // pNext
-            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_INSTANCES_KHR,     // geometryType
-            {},                                                    // geometry;
-            VkGeometryFlagsKHR(ref.geometryFlags),                 // flags
+        geometryData[arrayIndex] = VkAccelerationStructureGeometryKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,  // sType
+            nullptr,                                                // pNext
+            VkGeometryTypeKHR::VK_GEOMETRY_TYPE_INSTANCES_KHR,      // geometryType
+            {},                                                     // geometry;
+            VkGeometryFlagsKHR(ref.geometryFlags),                  // flags
         };
-        geometryData[arrayIndex].geometry.instances = VkAccelerationStructureGeometryInstancesDataKHR {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR, // sType
-            nullptr,                                                              // pNext
-            ref.arrayOfPointers,                                                  // arrayOfPointers
-            {},                                                                   // data
+        geometryData[arrayIndex].geometry.instances = VkAccelerationStructureGeometryInstancesDataKHR{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,  // sType
+            nullptr,                                                               // pNext
+            ref.arrayOfPointers,                                                   // arrayOfPointers
+            {},                                                                    // data
         };
         maxPrimitiveCounts[arrayIndex] = ref.primitiveCount;
         arrayIndex++;
@@ -314,85 +325,126 @@ AsBuildSizes GetAsBuildGeometryCombine(const VkDevice device, const DeviceVk::Ex
     const AsBuildGeometryInfo& geometry, const array_view<VkAccelerationStructureGeometryKHR> geometryData,
     const array_view<uint32_t> maxPrimitiveCounts, const uint32_t arrayIndex)
 {
-    const VkAccelerationStructureBuildGeometryInfoKHR geometryInfoVk {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR, // sType
-        nullptr,                                                          // pNext
-        VkAccelerationStructureTypeKHR(geometry.type),                    // type
-        VkBuildAccelerationStructureFlagsKHR(geometry.flags),             // flags
-        VkBuildAccelerationStructureModeKHR(geometry.mode),               // mode
-        VK_NULL_HANDLE,                                                   // srcAccelerationStructure
-        VK_NULL_HANDLE,                                                   // dstAccelerationStructure
-        arrayIndex,                                                       // geometryCount
-        geometryData.data(),                                              // pGeometries
-        nullptr,                                                          // ppGeometries
-        {},                                                               // scratchData
+    const VkAccelerationStructureBuildGeometryInfoKHR geometryInfoVk{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,  // sType
+        nullptr,                                                           // pNext
+        VkAccelerationStructureTypeKHR(geometry.type),                     // type
+        VkBuildAccelerationStructureFlagsKHR(geometry.flags),              // flags
+        VkBuildAccelerationStructureModeKHR(geometry.mode),                // mode
+        VK_NULL_HANDLE,                                                    // srcAccelerationStructure
+        VK_NULL_HANDLE,                                                    // dstAccelerationStructure
+        arrayIndex,                                                        // geometryCount
+        geometryData.data(),                                               // pGeometries
+        nullptr,                                                           // ppGeometries
+        {},                                                                // scratchData
     };
 
-    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // sType
-        nullptr,                                                       // pNext
-        0,                                                             // accelerationStructureSize
-        0,                                                             // updateScratchSize
-        0,                                                             // buildScratchSize
+    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,  // sType
+        nullptr,                                                        // pNext
+        0,                                                              // accelerationStructureSize
+        0,                                                              // updateScratchSize
+        0,                                                              // buildScratchSize
     };
     if ((arrayIndex > 0) && extFunctions.vkGetAccelerationStructureBuildSizesKHR) {
-        extFunctions.vkGetAccelerationStructureBuildSizesKHR(device, // device
-            VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,         // buildType,
-            &geometryInfoVk,                                         // pBuildInfo
-            maxPrimitiveCounts.data(),                               // pMaxPrimitiveCounts
-            &buildSizesInfo);                                        // pSizeInfo
+        extFunctions.vkGetAccelerationStructureBuildSizesKHR(device,  // device
+            VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,          // buildType,
+            &geometryInfoVk,                                          // pBuildInfo
+            maxPrimitiveCounts.data(),                                // pMaxPrimitiveCounts
+            &buildSizesInfo);                                         // pSizeInfo
     }
 
-    return AsBuildSizes {
+    return AsBuildSizes{
         static_cast<uint32_t>(buildSizesInfo.accelerationStructureSize),
         static_cast<uint32_t>(buildSizesInfo.updateScratchSize),
         static_cast<uint32_t>(buildSizesInfo.buildScratchSize),
     };
 }
 
-static constexpr string_view DEVICE_EXTENSION_ACCELERATION_STRUCTURE { "VK_KHR_acceleration_structure" };
-static constexpr string_view DEVICE_EXTENSION_RAY_QUERY { "VK_KHR_ray_query" };
-static constexpr string_view DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS { "VK_KHR_deferred_host_operations" };
-static constexpr string_view DEVICE_EXTENSION_RAY_TRACING_PIPELINE { "VK_KHR_ray_tracing_pipeline" };
-static constexpr string_view DEVICE_EXTENSION_PIPELINE_LIBRARY { "VK_KHR_pipeline_library" };
+static constexpr string_view DEVICE_EXTENSION_ACCELERATION_STRUCTURE{"VK_KHR_acceleration_structure"};
+static constexpr string_view DEVICE_EXTENSION_RAY_QUERY{"VK_KHR_ray_query"};
+static constexpr string_view DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS{"VK_KHR_deferred_host_operations"};
+static constexpr string_view DEVICE_EXTENSION_RAY_TRACING_PIPELINE{"VK_KHR_ray_tracing_pipeline"};
+static constexpr string_view DEVICE_EXTENSION_PIPELINE_LIBRARY{"VK_KHR_pipeline_library"};
+#endif
 
+static constexpr string_view DEVICE_EXTENSION_BUFFER_DEVICE_ADDRESS{VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_16_BIT_STORAGE{VK_KHR_16BIT_STORAGE_EXTENSION_NAME};
+static constexpr string_view DEVICE_EXTENSION_F16_INT8_BIT_ARITHMETIC{VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME};
+
+void GetPhysicalDeviceBufferDeviceAddressStructs(ChainObjects& co, ChainWrapper& cw)
+{
+    co.bda = make_unique<PhysicalDeviceBufferDeviceAddressVk>();
+    auto& bda = co.bda;
+    bda->physicalDeviceBufferDeviceAddressFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,  // sType
+        nullptr,                                                           // pNext
+        VK_TRUE,                                                           // bufferDeviceAddress
+        VK_FALSE,                                                          // bufferDeviceAddressCaptureReplay
+        VK_FALSE,                                                          // bufferDeviceAddressMultiDevice
+    };
+    *cw.ppNextFeatures = &bda->physicalDeviceBufferDeviceAddressFeatures;
+    cw.ppNextFeatures = &bda->physicalDeviceBufferDeviceAddressFeatures.pNext;
+}
+
+void GetPhysicalDeviceShaderFp16Int8Structs(ChainObjects& co, ChainWrapper& cw)
+{
+    co.fp16i8 = make_unique<PhysicalDeviceShaderFp16Int8Vk>();
+    auto& fp = co.fp16i8;
+    fp->physicalDeviceScalarBlockFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,  // sType
+        nullptr,                                                         // pNext
+        VK_TRUE,                                                         // scalarBlockLayout
+    };
+    fp->physicalDevice16BitStorageFeatures = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,  // sType
+        &fp->physicalDeviceScalarBlockFeatures,                    // pNext
+        VK_TRUE,                                                   // storageBuffer16BitAccess
+        VK_FALSE,                                                  // uniformAndStorageBuffer16BitAccess
+        VK_FALSE,                                                  // storagePushConstant16
+        VK_FALSE,                                                  // storageInputOutput16
+    };
+    fp->physicalDeviceFloat16Int8Features = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR,  // sType
+        &fp->physicalDevice16BitStorageFeatures,                      // pNext
+        VK_TRUE,                                                      // shaderFloat16
+        VK_FALSE,                                                     // shaderInt8
+    };
+    *cw.ppNextFeatures = &fp->physicalDeviceFloat16Int8Features;
+    cw.ppNextFeatures = &fp->physicalDeviceScalarBlockFeatures.pNext;
+}
+
+#if (RENDER_VULKAN_RT_ENABLED == 1)
 void GetPhysicalDeviceRayTracingStructs(ChainObjects& co, ChainWrapper& cw)
 {
     co.rt = make_unique<PhysicalDeviceRayTracingStructsVk>();
     auto& rt = co.rt;
-    rt->physicalDeviceBufferDeviceAddressFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, // sType
-        nullptr,                                                          // pNext
-        VK_FALSE,                                                         // bufferDeviceAddress;
-        VK_FALSE,                                                         // bufferDeviceAddressCaptureReplay
-        VK_FALSE,                                                         // bufferDeviceAddressMultiDevice
-    };
     rt->physicalDeviceRayTracingPipelineFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, // sType
-        &rt->physicalDeviceBufferDeviceAddressFeatures,                      // pNext
-        VK_FALSE,                                                            // rayTracingPipeline;
-        VK_FALSE, // rayTracingPipelineShaderGroupHandleCaptureReplay;
-        VK_FALSE, // rayTracingPipelineShaderGroupHandleCaptureReplayMixed;
-        VK_FALSE, // rayTracingPipelineTraceRaysIndirect;
-        VK_FALSE, // rayTraversalPrimitiveCulling;
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,  // sType
+        nullptr,                                                              // pNext
+        VK_FALSE,                                                             // rayTracingPipeline;
+        VK_FALSE,  // rayTracingPipelineShaderGroupHandleCaptureReplay;
+        VK_FALSE,  // rayTracingPipelineShaderGroupHandleCaptureReplayMixed;
+        VK_FALSE,  // rayTracingPipelineTraceRaysIndirect;
+        VK_FALSE,  // rayTraversalPrimitiveCulling;
     };
     rt->physicalDeviceAccelerationStructureFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, // sType
-        &rt->physicalDeviceRayTracingPipelineFeatures,                         // pNext
-        VK_FALSE,                                                              // accelerationStructure;
-        VK_FALSE,                                                              // accelerationStructureCaptureReplay
-        VK_FALSE,                                                              // accelerationStructureIndirectBuild
-        VK_FALSE,                                                              // accelerationStructureHostCommands
-        VK_FALSE, // descriptorBindingAccelerationStructureUpdateAfterBind
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,  // sType
+        &rt->physicalDeviceRayTracingPipelineFeatures,                          // pNext
+        VK_FALSE,                                                               // accelerationStructure;
+        VK_FALSE,                                                               // accelerationStructureCaptureReplay
+        VK_FALSE,                                                               // accelerationStructureIndirectBuild
+        VK_FALSE,                                                               // accelerationStructureHostCommands
+        VK_FALSE,  // descriptorBindingAccelerationStructureUpdateAfterBind
     };
     rt->physicalDeviceRayQueryFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR, // sType
-        &rt->physicalDeviceAccelerationStructureFeatures,         // pNext
-        true,                                                     // rayQuery
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,  // sType
+        &rt->physicalDeviceAccelerationStructureFeatures,          // pNext
+        VK_TRUE,                                                   // rayQuery
     };
 
     *cw.ppNextFeatures = &rt->physicalDeviceRayQueryFeatures;
-    cw.ppNextFeatures = &rt->physicalDeviceBufferDeviceAddressFeatures.pNext;
+    cw.ppNextFeatures = &rt->physicalDeviceRayTracingPipelineFeatures.pNext;
 }
 #endif
 
@@ -401,9 +453,9 @@ void GetPhysicalDeviceYcbcrStructs(ChainObjects& co, ChainWrapper& cw)
     co.ycbcr = make_unique<PhysicalDeviceYcbcrStructsVk>();
     auto& ycbcr = co.ycbcr;
     ycbcr->ycbcrConversionFeatures = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES, // sType
-        nullptr,                                                             // pNext
-        VK_FALSE,                                                            // samplerYcbcrConversion
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES,  // sType
+        nullptr,                                                              // pNext
+        VK_FALSE,                                                             // samplerYcbcrConversion
     };
 
     *cw.ppNextFeatures = &ycbcr->ycbcrConversionFeatures;
@@ -429,23 +481,23 @@ void GetPhysicalDeviceMaintenance4Structs(ChainObjects& co, ChainWrapper& cw)
     co.maintenance4 = make_unique<PhysicalDeviceMaintenance4Vk>();
     auto& m4 = co.maintenance4;
     m4->maintenance4Features = {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES, // sType
-        nullptr,                                                  // pNext
-        true,                                                     // maintenance4
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES,  // sType
+        nullptr,                                                   // pNext
+        true,                                                      // maintenance4
     };
 
     *cw.ppNextFeatures = &m4->maintenance4Features;
     cw.ppNextFeatures = &m4->maintenance4Features.pNext;
 }
 
-constexpr uint32_t MIN_ALLOCATION_BLOCK_SIZE { 4u * 1024u * 1024u };
-constexpr uint32_t MAX_ALLOCATION_BLOCK_SIZE { 1024u * 1024u * 1024u };
-constexpr const QueueProperties DEFAULT_QUEUE {
-    VK_QUEUE_GRAPHICS_BIT, // requiredFlags
-    0,                     // negativeFlags
-    1,                     // count
-    1.0f,                  // priority
-    true,                  // canPresent
+constexpr uint32_t MIN_ALLOCATION_BLOCK_SIZE{4u * 1024u * 1024u};
+constexpr uint32_t MAX_ALLOCATION_BLOCK_SIZE{1024u * 1024u * 1024u};
+constexpr const QueueProperties DEFAULT_QUEUE{
+    VK_QUEUE_GRAPHICS_BIT,  // requiredFlags
+    0,                      // negativeFlags
+    1,                      // count
+    1.0f,                   // priority
+    true,                   // canPresent
 };
 
 PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
@@ -483,7 +535,7 @@ PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
             0u,
             // if linear allocator is used, depending clients usage pattern, memory can be easily wasted.
             false,
-            { move(desc) },
+            {move(desc)},
         });
     }
     // dynamic uniform ring buffers
@@ -498,7 +550,7 @@ PlatformGpuMemoryAllocator::GpuMemoryAllocatorCreateInfo GetAllocatorCreateInfo(
             PlatformGpuMemoryAllocator::MemoryAllocatorResourceType::GPU_BUFFER,
             dynamicUboByteSize,
             false,
-            { move(desc) },
+            {move(desc)},
         });
     }
 
@@ -560,24 +612,27 @@ void EmplaceDeviceQueue(
 
     for (uint32_t idx = 0; idx < aQueueInfo.queueCount; ++idx) {
         VkQueue queue = VK_NULL_HANDLE;
-        vkGetDeviceQueue(device,         // device
-            aQueueInfo.queueFamilyIndex, // queueFamilyIndex
-            idx,                         // queueIndex
-            &queue);                     // pQueue
-        aLowLevelQueues.push_back(LowLevelGpuQueueVk { queue, aQueueInfo });
+        vkGetDeviceQueue(device,          // device
+            aQueueInfo.queueFamilyIndex,  // queueFamilyIndex
+            idx,                          // queueIndex
+            &queue);                      // pQueue
+        aLowLevelQueues.push_back(LowLevelGpuQueueVk{queue, aQueueInfo});
     }
 }
 
 void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatformInternalDataVk& dataInternal)
 {
-    constexpr uint32_t DEPTH_FORMAT_COUNT { 5 };
-    constexpr Format DEPTH_FORMATS[DEPTH_FORMAT_COUNT] = { BASE_FORMAT_D24_UNORM_S8_UINT, BASE_FORMAT_D32_SFLOAT,
-        BASE_FORMAT_D16_UNORM, BASE_FORMAT_X8_D24_UNORM_PACK32, BASE_FORMAT_D16_UNORM_S8_UINT };
+    constexpr uint32_t DEPTH_FORMAT_COUNT{5};
+    constexpr Format DEPTH_FORMATS[DEPTH_FORMAT_COUNT] = {BASE_FORMAT_D24_UNORM_S8_UINT,
+        BASE_FORMAT_D32_SFLOAT,
+        BASE_FORMAT_D16_UNORM,
+        BASE_FORMAT_X8_D24_UNORM_PACK32,
+        BASE_FORMAT_D16_UNORM_S8_UINT};
     for (const Format& format : DEPTH_FORMATS) {
         VkFormatProperties formatProperties;
-        vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice, // physicalDevice
-            (VkFormat)format,                                          // format
-            &formatProperties);                                        // pFormatProperties
+        vkGetPhysicalDeviceFormatProperties(devicePlat.physicalDevice,  // physicalDevice
+            (VkFormat)format,                                           // format
+            &formatProperties);                                         // pFormatProperties
         const VkFormatFeatureFlags optimalTilingFeatureFlags = formatProperties.optimalTilingFeatures;
         if (optimalTilingFeatureFlags & VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             dataInternal.supportedDepthFormats.push_back(format);
@@ -588,11 +643,14 @@ void CheckValidDepthFormats(const DevicePlatformDataVk& devicePlat, DevicePlatfo
 vector<string_view> GetPreferredDeviceExtensions(
     const BackendExtraVk* backendExtra, const uint32_t rcFlags, DevicePlatformDataVk& plat)
 {
-    vector<string_view> extensions { DEVICE_EXTENSION_SWAPCHAIN };
+    vector<string_view> extensions{DEVICE_EXTENSION_SWAPCHAIN};
     extensions.push_back(DEVICE_EXTENSION_CREATE_RENDERPASS2);
     extensions.push_back(DEVICE_EXTENSION_DEPTH_STENCIL_RESOLVE);
     extensions.push_back(DEVICE_EXTENSION_MAINTENANCE4);
     GetPlatformDeviceExtensions(extensions);
+    extensions.push_back(DEVICE_EXTENSION_BUFFER_DEVICE_ADDRESS);
+    extensions.push_back(DEVICE_EXTENSION_16_BIT_STORAGE);
+    extensions.push_back(DEVICE_EXTENSION_F16_INT8_BIT_ARITHMETIC);
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
     extensions.push_back(DEVICE_EXTENSION_FRAGMENT_SHADING_RATE);
 #endif
@@ -605,10 +663,10 @@ vector<string_view> GetPreferredDeviceExtensions(
         extensions.push_back(DEVICE_EXTENSION_DEFERRED_HOST_OPERATIONS);
     }
 #endif
-    if (plat.deviceApiMinor >= 1) { // enable only for 1.1+
+    if (plat.deviceApiMinor >= 1) {  // enable only for 1.1+
         extensions.push_back(DEVICE_EXTENSION_MULTIVIEW);
     }
-    if (plat.deviceApiMinor >= 2) { // enable only for 1.2+
+    if (plat.deviceApiMinor >= 2) {  // enable only for 1.2+
         extensions.push_back(DEVICE_EXTENSION_DESCRIPTOR_INDEXING);
     }
     if (backendExtra) {
@@ -649,14 +707,11 @@ CommonDeviceProperties GetCommonDevicePropertiesFunc(const ChainObjects& co)
         const auto& fsrVk = co.fsr->physicalDeviceFragmentShadingRateProperties;
         cdp.fragmentShadingRateProperties.minFragmentShadingRateAttachmentTexelSize = {
             fsrVk.minFragmentShadingRateAttachmentTexelSize.width,
-            fsrVk.minFragmentShadingRateAttachmentTexelSize.height
-        };
+            fsrVk.minFragmentShadingRateAttachmentTexelSize.height};
         cdp.fragmentShadingRateProperties.maxFragmentShadingRateAttachmentTexelSize = {
             fsrVk.maxFragmentShadingRateAttachmentTexelSize.width,
-            fsrVk.maxFragmentShadingRateAttachmentTexelSize.height
-        };
-        cdp.fragmentShadingRateProperties.maxFragmentSize = { fsrVk.maxFragmentSize.width,
-            fsrVk.maxFragmentSize.height };
+            fsrVk.maxFragmentShadingRateAttachmentTexelSize.height};
+        cdp.fragmentShadingRateProperties.maxFragmentSize = {fsrVk.maxFragmentSize.width, fsrVk.maxFragmentSize.height};
     }
 #endif
     return cdp;
@@ -701,10 +756,10 @@ void PreparePhysicalDeviceFeaturesForEnabling(const BackendExtraVk* backendExtra
 FormatProperties FillDeviceFormatSupport(VkPhysicalDevice physicalDevice, const Format format)
 {
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, // physicalDevice
-        (VkFormat)format,                               // format
-        &formatProperties);                             // pFormatProperties
-    return FormatProperties {
+    vkGetPhysicalDeviceFormatProperties(physicalDevice,  // physicalDevice
+        (VkFormat)format,                                // format
+        &formatProperties);                              // pFormatProperties
+    return FormatProperties{
         (FormatFeatureFlags)formatProperties.linearTilingFeatures,
         (FormatFeatureFlags)formatProperties.optimalTilingFeatures,
         (FormatFeatureFlags)formatProperties.bufferFeatures,
@@ -731,29 +786,29 @@ void FillFormatSupport(VkPhysicalDevice physicalDevice, vector<FormatProperties>
 
 void CreateDefaultVulkanObjects(VkDevice device, DeviceVk::DefaultVulkanObjects& dvo)
 {
-    constexpr VkDescriptorSetLayoutCreateInfo EMPTY_LAYOUT_INFO {
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, // sType
-        nullptr,                                             // pNext
-        0U,                                                  // flags
-        0U,                                                  // bindingCount
-        nullptr,                                             // pBindings
+    constexpr VkDescriptorSetLayoutCreateInfo EMPTY_LAYOUT_INFO{
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,  // sType
+        nullptr,                                              // pNext
+        0U,                                                   // flags
+        0U,                                                   // bindingCount
+        nullptr,                                              // pBindings
     };
 
     PLUGIN_ASSERT(!dvo.emptyDescriptorSetLayout);
-    VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device, // device
-        &EMPTY_LAYOUT_INFO,                                // pCreateInfo
-        nullptr,                                           // pAllocator
-        &dvo.emptyDescriptorSetLayout));                   // pSetLayout
+    VALIDATE_VK_RESULT(vkCreateDescriptorSetLayout(device,  // device
+        &EMPTY_LAYOUT_INFO,                                 // pCreateInfo
+        nullptr,                                            // pAllocator
+        &dvo.emptyDescriptorSetLayout));                    // pSetLayout
 }
 void DestroyDefaultVulkanObjects(VkDevice vkDevice, DeviceVk::DefaultVulkanObjects& dvo)
 {
     if (dvo.emptyDescriptorSetLayout) {
-        vkDestroyDescriptorSetLayout(vkDevice, // device
-            dvo.emptyDescriptorSetLayout,      // descriptorSetLayout
-            nullptr);                          // pAllocator
+        vkDestroyDescriptorSetLayout(vkDevice,  // device
+            dvo.emptyDescriptorSetLayout,       // descriptorSetLayout
+            nullptr);                           // pAllocator
     }
 }
-} // namespace
+}  // namespace
 
 DeviceVk::DeviceVk(RenderContext& renderContext)
     : Device(renderContext), rcFlags_(renderContext.GetCreateInfo().createFlags)
@@ -826,7 +881,7 @@ DeviceVk::DeviceVk(RenderContext& renderContext)
 
     SetDeviceStatus(true);
 
-    const GpuResourceManager::CreateInfo grmCreateInfo {
+    const GpuResourceManager::CreateInfo grmCreateInfo{
         GpuResourceManager::GPU_RESOURCE_MANAGER_OPTIMIZE_STAGING_MEMORY,
     };
     gpuResourceMgr_ = make_unique<GpuResourceManager>(*this, grmCreateInfo);
@@ -869,9 +924,9 @@ void DeviceVk::CreateInstance()
 {
     RENDER_CPU_PERF_SCOPE("CreateInstance", "");
     const auto instanceWrapper = (plat_.instance == VK_NULL_HANDLE)
-                                    ? CreateFunctionsVk::CreateInstance(VersionInfo{"core_renderer", 0, 1, 0},
-                                    VersionInfo{"core_renderer_app", 0, 1, 0})
-                                    : CreateFunctionsVk::GetWrapper(plat_.instance);
+                                     ? CreateFunctionsVk::CreateInstance(VersionInfo{"core_renderer", 0, 1, 0},
+                                           VersionInfo{"core_renderer_app", 0, 1, 0})
+                                     : CreateFunctionsVk::GetWrapper(plat_.instance);
 
     plat_.instance = instanceWrapper.instance;
     // update with physical device creation
@@ -936,21 +991,28 @@ void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<Low
     ChainObjects chainObjects;
 
     VkPhysicalDeviceFeatures2* physicalDeviceFeatures2Ptr = nullptr;
-    VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, // sType
-        nullptr,                                      // pNext
-        {},                                           // features
+    VkPhysicalDeviceFeatures2 physicalDeviceFeatures2{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,  // sType
+        nullptr,                                       // pNext
+        {},                                            // features
     };
     chainWrapper.ppNextFeatures = &physicalDeviceFeatures2.pNext;
 
-    VkPhysicalDeviceProperties2 physicalDeviceProperties2 {
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, // sType
-        nullptr,                                        // pNext
-        {},                                             // properties
+    VkPhysicalDeviceProperties2 physicalDeviceProperties2{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,  // sType
+        nullptr,                                         // pNext
+        {},                                              // properties
     };
     chainWrapper.ppNextProperties = &physicalDeviceProperties2.pNext;
 
     GetPhysicalDeviceYcbcrStructs(chainObjects, chainWrapper);
+    if (CreateFunctionsVk::HasExtension(plat_.physicalDeviceExtensions, DEVICE_EXTENSION_BUFFER_DEVICE_ADDRESS)) {
+        GetPhysicalDeviceBufferDeviceAddressStructs(chainObjects, chainWrapper);
+    }
+    if (CreateFunctionsVk::HasExtension(plat_.physicalDeviceExtensions, DEVICE_EXTENSION_16_BIT_STORAGE) &&
+        CreateFunctionsVk::HasExtension(plat_.physicalDeviceExtensions, DEVICE_EXTENSION_F16_INT8_BIT_ARITHMETIC)) {
+        GetPhysicalDeviceShaderFp16Int8Structs(chainObjects, chainWrapper);
+    }
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     if (rcFlags_ & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) {
         GetPhysicalDeviceRayTracingStructs(chainObjects, chainWrapper);
@@ -961,10 +1023,10 @@ void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<Low
         GetPhysicalDeviceFragmentShadingRateStructs(chainObjects, chainWrapper);
     }
 #endif
-    if (plat_.deviceApiMinor >= 1) { // enable only for 1.1 + for now
+    if (plat_.deviceApiMinor >= 1) {  // enable only for 1.1 + for now
         GetPhysicalDeviceMultiviewFeaturesStructs(chainObjects, chainWrapper);
     }
-    if (plat_.deviceApiMinor >= 2) { // enable only for 1.2 + for now
+    if (plat_.deviceApiMinor >= 2) {  // enable only for 1.2 + for now
         GetPhysicalDeviceDescriptorIndexingFeaturesStructs(chainObjects, chainWrapper);
     }
     if (CreateFunctionsVk::HasExtension(plat_.physicalDeviceExtensions, DEVICE_EXTENSION_MAINTENANCE4)) {
@@ -989,9 +1051,13 @@ void DeviceVk::CreateDevice(const BackendExtraVk* backendExtra, const vector<Low
         physicalDeviceFeatures2.features = plat_.enabledPhysicalDeviceFeatures;
         physicalDeviceFeatures2Ptr = &physicalDeviceFeatures2;
     }
-    const DeviceWrapper deviceWrapper =
-        CreateFunctionsVk::CreateDevice(plat_.instance, plat_.physicalDevice, plat_.physicalDeviceExtensions,
-            plat_.enabledPhysicalDeviceFeatures, physicalDeviceFeatures2Ptr, availableQueues, preferredExtensions);
+    const DeviceWrapper deviceWrapper = CreateFunctionsVk::CreateDevice(plat_.instance,
+        plat_.physicalDevice,
+        plat_.physicalDeviceExtensions,
+        plat_.enabledPhysicalDeviceFeatures,
+        physicalDeviceFeatures2Ptr,
+        availableQueues,
+        preferredExtensions);
     plat_.device = deviceWrapper.device;
     for (const auto& ref : deviceWrapper.extensions) {
         extensions_[ref] = 1u;
@@ -1013,12 +1079,12 @@ vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* back
     const auto& extra = *backendConfiguration;
     if (extra.enableMultiQueue) {
         // Dedicated compute queue
-        queueProperties.push_back(QueueProperties {
-            VK_QUEUE_COMPUTE_BIT,  // requiredFlags
-            VK_QUEUE_GRAPHICS_BIT, // negativeFlags
-            1,                     // count
-            1.0f,                  // priority
-            false,                 // canPresent
+        queueProperties.push_back(QueueProperties{
+            VK_QUEUE_COMPUTE_BIT,   // requiredFlags
+            VK_QUEUE_GRAPHICS_BIT,  // negativeFlags
+            1,                      // count
+            1.0f,                   // priority
+            false,                  // canPresent
         });
         PLUGIN_LOG_I("trying to enable gpu multi-queue, with queue count: %u", (uint32_t)queueProperties.size());
     }
@@ -1034,7 +1100,7 @@ vector<QueueProperties> DeviceVk::CheckExternalConfig(const BackendExtraVk* back
         if (extra.extensions.physicalDeviceFeaturesToEnable) {
             plat_.enabledPhysicalDeviceFeatures = extra.extensions.physicalDeviceFeaturesToEnable->features;
         }
-        ownInstanceAndDevice_ = false; // everything given from the application
+        ownInstanceAndDevice_ = false;  // everything given from the application
 
         const auto myDevice = plat_.physicalDevice;
         auto& myProperties = plat_.physicalDeviceProperties;
@@ -1120,7 +1186,7 @@ AsBuildSizes DeviceVk::GetAccelerationStructureBuildSizes(const AsBuildGeometryI
 
     return GetAsBuildGeometryCombine(device, extFunctions_, geometry, geometryData, maxPrimitiveCounts, arrayIndex);
 #else
-    return AsBuildSizes { 0, 0, 0 };
+    return AsBuildSizes{0, 0, 0};
 #endif
 }
 
@@ -1130,7 +1196,8 @@ unique_ptr<Swapchain> DeviceVk::CreateDeviceSwapchain(const SwapchainCreateInfo&
     return make_unique<SwapchainVk>(*this, swapchainCreateInfo);
 }
 
-void DeviceVk::DestroyDeviceSwapchain() {}
+void DeviceVk::DestroyDeviceSwapchain()
+{}
 
 PlatformGpuMemoryAllocator* DeviceVk::GetPlatformGpuMemoryAllocator()
 {
@@ -1139,18 +1206,20 @@ PlatformGpuMemoryAllocator* DeviceVk::GetPlatformGpuMemoryAllocator()
 
 GpuQueue DeviceVk::GetValidGpuQueue(const GpuQueue& gpuQueue) const
 {
-    const auto getSpecificQueue = [](const uint32_t queueIndex, const GpuQueue::QueueType queueType,
-                                      const vector<LowLevelGpuQueueVk>& specificQueues, const GpuQueue& defaultQueue) {
+    const auto getSpecificQueue = [](const uint32_t queueIndex,
+                                      const GpuQueue::QueueType queueType,
+                                      const vector<LowLevelGpuQueueVk>& specificQueues,
+                                      const GpuQueue& defaultQueue) {
         const auto queueCount = (uint32_t)specificQueues.size();
         if (queueIndex < queueCount) {
-            return GpuQueue { queueType, queueIndex };
+            return GpuQueue{queueType, queueIndex};
         } else if (queueCount > 0) {
-            return GpuQueue { queueType, 0 };
+            return GpuQueue{queueType, 0};
         }
         return defaultQueue;
     };
 
-    static GpuQueue defaultQueue { GpuQueue::QueueType::GRAPHICS, 0 };
+    static GpuQueue defaultQueue{GpuQueue::QueueType::GRAPHICS, 0};
     if (gpuQueue.type == GpuQueue::QueueType::COMPUTE) {
         return getSpecificQueue(
             gpuQueue.index, GpuQueue::QueueType::COMPUTE, lowLevelGpuQueues_.computeQueues, defaultQueue);
@@ -1223,7 +1292,8 @@ LowLevelGpuQueueVk DeviceVk::GetGpuQueue(const GpuQueue& gpuQueue) const
     // 1. tries to return the typed queue with given index
     // 2. tries to return the typed queue with an index 0
     // 3. returns the default queue
-    const auto getSpecificQueue = [](const uint32_t queueIndex, const vector<LowLevelGpuQueueVk>& specificQueues,
+    const auto getSpecificQueue = [](const uint32_t queueIndex,
+                                      const vector<LowLevelGpuQueueVk>& specificQueues,
                                       const LowLevelGpuQueueVk& defaultQueue) {
         const auto queueCount = (uint32_t)specificQueues.size();
         if (queueIndex < queueCount) {
@@ -1248,7 +1318,7 @@ LowLevelGpuQueueVk DeviceVk::GetGpuQueue(const GpuQueue& gpuQueue) const
 LowLevelGpuQueueVk DeviceVk::GetPresentationGpuQueue() const
 {
     // NOTE: expected presentation
-    return GetGpuQueue(GpuQueue { GpuQueue::QueueType::GRAPHICS, 0 });
+    return GetGpuQueue(GpuQueue{GpuQueue::QueueType::GRAPHICS, 0});
 }
 
 vector<LowLevelGpuQueueVk> DeviceVk::GetLowLevelGpuQueues() const
@@ -1267,16 +1337,18 @@ void DeviceVk::WaitForIdle()
     if (plat_.device) {
         if (!isRenderbackendRunning_) {
             PLUGIN_LOG_D("Device - WaitForIdle");
-            vkDeviceWaitIdle(plat_.device); // device
+            vkDeviceWaitIdle(plat_.device);  // device
         } else {
             PLUGIN_LOG_E("Device WaitForIdle can only called when render backend is not running");
         }
     }
 }
 
-void DeviceVk::Activate() {}
+void DeviceVk::Activate()
+{}
 
-void DeviceVk::Deactivate() {}
+void DeviceVk::Deactivate()
+{}
 
 bool DeviceVk::AllowThreadedProcessing() const
 {
@@ -1437,9 +1509,17 @@ unique_ptr<GraphicsPipelineStateObject> DeviceVk::CreateGraphicsPipelineStateObj
     RENDER_CPU_PERF_SCOPE("CreateGraphicsPipelineStateObject", "");
     PLUGIN_ASSERT(renderPassData);
     PLUGIN_ASSERT(pipelineLayoutData);
-    return make_unique<GraphicsPipelineStateObjectVk>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassSubpassDescs, subpassIndex,
-        *renderPassData, *pipelineLayoutData);
+    return make_unique<GraphicsPipelineStateObjectVk>(*this,
+        gpuProgram,
+        graphicsState,
+        pipelineLayout,
+        vertexInputDeclaration,
+        specializationConstants,
+        dynamicStates,
+        renderPassSubpassDescs,
+        subpassIndex,
+        *renderPassData,
+        *pipelineLayoutData);
 }
 
 unique_ptr<ComputePipelineStateObject> DeviceVk::CreateComputePipelineStateObject(const GpuComputeProgram& gpuProgram,
@@ -1530,6 +1610,12 @@ void DeviceVk::CreateExtFunctions()
             (PFN_vkCmdSetFragmentShadingRateKHR)vkGetInstanceProcAddr(plat_.instance, "vkCmdSetFragmentShadingRateKHR");
     }
 #endif
+
+    extFunctions_.vkGetBufferDeviceAddressKHR =
+        (PFN_vkGetBufferDeviceAddressKHR)(void*)vkGetInstanceProcAddr(plat_.instance, "vkGetBufferDeviceAddressKHR");
+    if (!extFunctions_.vkGetBufferDeviceAddressKHR) {
+        PLUGIN_LOG_E("vkGetInstanceProcAddr failed for vkGetBufferDeviceAddressKHR");
+    }
 
 #if (RENDER_VULKAN_RT_ENABLED == 1)
     if (rcFlags_ & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) {

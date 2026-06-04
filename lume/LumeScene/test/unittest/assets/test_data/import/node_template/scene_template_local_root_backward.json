@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "description": "scene instantiating a node template with backward /-anchored objectRef (target declared after referencer)",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "hostA",
+                    "source": { "type": "nodeTemplate", "url": "template_local_root_backward.nodeTemplate" },
+                    "resourceGroup": "grpA"
+                }
+            ]
+        }
+    }
+}

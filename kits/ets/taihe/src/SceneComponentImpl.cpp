@@ -28,11 +28,8 @@
 namespace OHOS::Render3D::KITETS {
 SceneComponentImpl::SceneComponentImpl(std::shared_ptr<SceneComponentETS> sceneComponentETS)
     : sceneComponentETS_(sceneComponentETS)
-{}
-
-SceneComponentImpl::~SceneComponentImpl()
 {
-    sceneComponentETS_.reset();
+    WIDGET_LOGD("SceneComponentImpl ctor");
 }
 
 ::taihe::string SceneComponentImpl::getName()
@@ -140,7 +137,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<BASE_NS::string>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<BASE_NS::string>>(propProxy);
         std::vector<::taihe::string> vec;
-        for (auto &s : proxy->GetValue()) {
+        for (auto& s : proxy->GetValue()) {
             vec.emplace_back(s.c_str());
         }
         ::taihe::array<::taihe::string> result{vec};
@@ -150,7 +147,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<bool>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<bool>>(propProxy);
         std::vector<int> vec;  // do not use std::vector<bool>
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.emplace_back(v);
         }
         ::taihe::array<bool> result{vec.data(), vec.size()};
@@ -160,7 +157,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<int32_t>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<int32_t>>(propProxy);
         std::vector<int32_t> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.emplace_back(v);
         }
         ::taihe::array<int32_t> result{vec};
@@ -170,7 +167,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<float>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<float>>(propProxy);
         std::vector<double> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.emplace_back(v);
         }
         ::taihe::array<double> result{vec};
@@ -180,7 +177,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<BASE_NS::Math::Vec2>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<BASE_NS::Math::Vec2>>(propProxy);
         std::vector<::SceneTypes::Vec2> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.push_back(::taihe::make_holder<Vec2Impl, ::SceneTypes::Vec2>(v));
         }
         ::taihe::array<::SceneTypes::Vec2> result{vec};
@@ -190,7 +187,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<BASE_NS::Math::Vec3>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<BASE_NS::Math::Vec3>>(propProxy);
         std::vector<::SceneTypes::Vec3> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.push_back(::taihe::make_holder<Vec3Impl, ::SceneTypes::Vec3>(v));
         }
         ::taihe::array<::SceneTypes::Vec3> result{vec};
@@ -200,7 +197,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<BASE_NS::Math::Vec4>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<BASE_NS::Math::Vec4>>(propProxy);
         std::vector<::SceneTypes::Vec4> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             vec.push_back(::taihe::make_holder<Vec4Impl, ::SceneTypes::Vec4>(v));
         }
         ::taihe::array<::SceneTypes::Vec4> result{vec};
@@ -210,7 +207,7 @@ int32_t SceneComponentImpl::getPropertySize()
     if (META_NS::IsCompatibleWith<BASE_NS::vector<SCENE_NS::IImage::Ptr>>(prop)) {
         auto proxy = static_pointer_cast<ArrayPropertyProxy<SCENE_NS::IImage::Ptr>>(propProxy);
         std::vector<::SceneResources::SceneResource> vec;
-        for (auto &v : proxy->GetValue()) {
+        for (auto& v : proxy->GetValue()) {
             std::shared_ptr<ImageETS> imageETS = std::make_shared<ImageETS>(v);
             auto imageTH = ::taihe::make_holder<ImageImpl, ::SceneResources::Image>(imageETS);
             vec.push_back(static_cast<::SceneResources::SceneResource>(imageTH));
@@ -224,15 +221,15 @@ int32_t SceneComponentImpl::getPropertySize()
     return std::nullopt;
 }
 
-void SceneComponentImpl::SetPropertyFromSceneResource(const std::string &name,
-                                                      const ::SceneResources::SceneResource &sr)
+void SceneComponentImpl::SetPropertyFromSceneResource(
+    const std::string& name, const ::SceneResources::SceneResource& sr)
 {
     taihe::optional<int64_t> srOp = sr->getImpl();
     if (!srOp) {
         WIDGET_LOGE("taihe optional does not hold impl");
         return;
     }
-    SceneResourceImpl *srImpl = reinterpret_cast<SceneResourceImpl *>(srOp.value());
+    SceneResourceImpl* srImpl = reinterpret_cast<SceneResourceImpl*>(srOp.value());
     if (!srImpl) {
         WIDGET_LOGE("failed to set impl from taihe");
         return;
@@ -252,7 +249,7 @@ void SceneComponentImpl::SetPropertyFromSceneResource(const std::string &name,
         case ::SceneResources::SceneResourceType::key_t::SHADER:
             break;
         case ::SceneResources::SceneResourceType::key_t::IMAGE: {
-            std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl *>(srImpl)->getInternalImage();
+            std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl*>(srImpl)->getInternalImage();
             sceneComponentETS_->SetProperty(name, imgETS->GetNativeImage());
             break;
         }
@@ -266,7 +263,7 @@ void SceneComponentImpl::SetPropertyFromSceneResource(const std::string &name,
 
 namespace {
 std::optional<BASE_NS::vector<SCENE_NS::IImage::Ptr>> BuildImageArray(
-    const ::taihe::array<::SceneResources::SceneResource> &srArray)
+    const ::taihe::array<::SceneResources::SceneResource>& srArray)
 {
     BASE_NS::vector<SCENE_NS::IImage::Ptr> arr;
     for (size_t i = 0; i < srArray.size(); ++i) {
@@ -276,7 +273,7 @@ std::optional<BASE_NS::vector<SCENE_NS::IImage::Ptr>> BuildImageArray(
             arr.push_back(nullptr);
             continue;
         }
-        SceneResourceImpl *srImpl = reinterpret_cast<SceneResourceImpl *>(srOp.value());
+        SceneResourceImpl* srImpl = reinterpret_cast<SceneResourceImpl*>(srOp.value());
         if (!srImpl) {
             WIDGET_LOGE("failed to set impl from taihe at index %{public}zu", i);
             arr.push_back(nullptr);
@@ -287,15 +284,15 @@ std::optional<BASE_NS::vector<SCENE_NS::IImage::Ptr>> BuildImageArray(
             WIDGET_LOGE("array element at index %{public}zu is not IMAGE type", i);
             return std::nullopt;
         }
-        std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl *>(srImpl)->getInternalImage();
+        std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl*>(srImpl)->getInternalImage();
         arr.push_back(imgETS->GetNativeImage());
     }
     return arr;
 }
-}
+}  // namespace
 
 void SceneComponentImpl::SetArrayPropertyFromSceneResource(
-    const std::string &name, const ::taihe::array<::SceneResources::SceneResource> &srArray)
+    const std::string& name, const ::taihe::array<::SceneResources::SceneResource>& srArray)
 {
     if (srArray.size() == 0) {
         sceneComponentETS_->ClearArrayProperty(name);
@@ -315,7 +312,7 @@ void SceneComponentImpl::SetArrayPropertyFromSceneResource(
     }
 }
 
-void SceneComponentImpl::setComponentProperty(::taihe::string_view key, ::SceneTH::ComponentPropertyType const &value)
+void SceneComponentImpl::setComponentProperty(::taihe::string_view key, ::SceneTH::ComponentPropertyType const& value)
 {
     if (!sceneComponentETS_) {
         WIDGET_LOGE("empty SceneComponentETS");
@@ -339,49 +336,49 @@ void SceneComponentImpl::setComponentProperty(::taihe::string_view key, ::SceneT
         sceneComponentETS_->SetProperty(name, BASE_NS::Math::Vec3(vec3->getX(), vec3->getY(), vec3->getZ()));
     } else if (value.holds_t_vec4()) {
         ::SceneTypes::Vec4 vec4 = value.get_t_vec4_ref();
-        sceneComponentETS_->SetProperty(name,
-                                        BASE_NS::Math::Vec4(vec4->getX(), vec4->getY(), vec4->getZ(), vec4->getW()));
+        sceneComponentETS_->SetProperty(
+            name, BASE_NS::Math::Vec4(vec4->getX(), vec4->getY(), vec4->getZ(), vec4->getW()));
     } else if (value.holds_t_scene_resource()) {
         SetPropertyFromSceneResource(name, value.get_t_scene_resource_ref());
     } else if (value.holds_t_string_arr()) {
         BASE_NS::vector<BASE_NS::string> arr;
-        for (auto &v : value.get_t_string_arr_ref()) {
+        for (auto& v : value.get_t_string_arr_ref()) {
             arr.emplace_back(v.c_str());
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_bool_arr()) {
         BASE_NS::vector<bool> arr;
-        for (auto &v : value.get_t_bool_arr_ref()) {
+        for (auto& v : value.get_t_bool_arr_ref()) {
             arr.emplace_back(v);
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_i32_arr()) {
         BASE_NS::vector<int> arr;
-        for (auto &v : value.get_t_i32_arr_ref()) {
+        for (auto& v : value.get_t_i32_arr_ref()) {
             arr.emplace_back(v);
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_f64_arr()) {
         BASE_NS::vector<float> arr;
-        for (auto &v : value.get_t_f64_arr_ref()) {
+        for (auto& v : value.get_t_f64_arr_ref()) {
             arr.emplace_back(v);
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_vec2_arr()) {
         BASE_NS::vector<BASE_NS::Math::Vec2> arr;
-        for (auto &v : value.get_t_vec2_arr_ref()) {
+        for (auto& v : value.get_t_vec2_arr_ref()) {
             arr.emplace_back(v->getX(), v->getY());
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_vec3_arr()) {
         BASE_NS::vector<BASE_NS::Math::Vec3> arr;
-        for (auto &v : value.get_t_vec3_arr_ref()) {
+        for (auto& v : value.get_t_vec3_arr_ref()) {
             arr.emplace_back(v->getX(), v->getY(), v->getZ());
         }
         sceneComponentETS_->SetArrayProperty(name, arr);
     } else if (value.holds_t_vec4_arr()) {
         BASE_NS::vector<BASE_NS::Math::Vec4> arr;
-        for (auto &v : value.get_t_vec4_arr_ref()) {
+        for (auto& v : value.get_t_vec4_arr_ref()) {
             arr.emplace_back(v->getX(), v->getY(), v->getZ(), v->getW());
         }
         sceneComponentETS_->SetArrayProperty(name, arr);

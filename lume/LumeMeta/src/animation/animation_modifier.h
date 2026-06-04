@@ -37,7 +37,7 @@ public:
         return true;
     }
 
-public: // IAnimationModifier
+public:  // IAnimationModifier
     bool ProcessOnGetDuration(IAnimationModifier::DurationData& duration) const override
     {
         return true;
@@ -50,4 +50,4 @@ public: // IAnimationModifier
 
 META_END_NAMESPACE()
 
-#endif // META_SRC_ANIMATION_MODIFIER_H
+#endif  // META_SRC_ANIMATION_MODIFIER_H

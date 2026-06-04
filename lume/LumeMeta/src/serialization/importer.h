@@ -36,8 +36,10 @@ namespace Serialization {
 class Importer : public IntroduceInterfaces<BaseObject, IImporter, IImportFunctions, IResourceConsumer> {
     META_OBJECT(Importer, ClassId::Importer, IntroduceInterfaces)
 public:
-    Importer() : registry_(GetObjectRegistry()), globalData_(registry_.GetGlobalSerializationData()) {}
-    explicit Importer(IObjectRegistry& reg, IGlobalSerializationData& data) : registry_(reg), globalData_(data) {}
+    Importer() : registry_(GetObjectRegistry()), globalData_(registry_.GetGlobalSerializationData())
+    {}
+    explicit Importer(IObjectRegistry& reg, IGlobalSerializationData& data) : registry_(reg), globalData_(data)
+    {}
 
     IObject::Ptr Import(const ISerNode::ConstPtr& tree, ImportOptions opts) override;
     BASE_NS::unordered_map<InstanceId, InstanceId> GetInstanceIdMapping() const override;
@@ -143,7 +145,7 @@ private:
     BASE_NS::string name_;
 };
 
-} // namespace Serialization
+}  // namespace Serialization
 META_END_NAMESPACE()
 
 #endif

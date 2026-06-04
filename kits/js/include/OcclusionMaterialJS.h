@@ -18,8 +18,9 @@
 #include "BaseObjectJS.h"
 #include "SceneResourceImpl.h"
 #include "PropertyProxy.h"
+#include "export.h"
 
-class OcclusionMaterial : public SceneResourceImpl, public BaseObject {
+class SCENE_ADDON_PUBLIC OcclusionMaterial : public SceneResourceImpl, public BaseObject {
 public:
     static constexpr auto CLASS_NAME = "OcclusionMaterial";
     static constexpr uint32_t ID = 32;
@@ -31,11 +32,11 @@ public:
     void* GetInstanceImpl(uint32_t) override;
 
 protected:
-    void DisposeNative(void*) override;
+    void DisposeNative() override;
     void Finalize(napi_env env) override;
 
 private:
     napi_value GetMaterialType(NapiApi::FunctionContext<>& ctx);
 };
 
-#endif // OCCLUSION_MATERIAL_JS_H
+#endif  // OCCLUSION_MATERIAL_JS_H

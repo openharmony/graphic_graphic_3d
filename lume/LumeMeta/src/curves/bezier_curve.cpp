@@ -110,7 +110,7 @@ float CubicBezierEasingCurve::GetLinearX(float t) const noexcept
     return tt;
 }
 
-} // namespace Easing
-} // namespace Curves
+}  // namespace Easing
+}  // namespace Curves
 
 META_END_NAMESPACE()

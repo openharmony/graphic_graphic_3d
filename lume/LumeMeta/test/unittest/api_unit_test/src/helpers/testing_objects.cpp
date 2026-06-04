@@ -85,8 +85,8 @@ public:
     }
 
 private:
-    uint32_t attachCount_ {};
-    uint32_t detachCount_ {};
+    uint32_t attachCount_{};
+    uint32_t detachCount_{};
 };
 
 class TestStartable : public IntroduceInterfaces<META_NS::AttachmentFwd, META_NS::UTest::ITestStartable,
@@ -146,7 +146,7 @@ public:
         META_ACCESS_PROPERTY(Name)->SetValue(name);
     }
 
-public: // ITestStartable
+public:  // ITestStartable
     void StartRecording() override
     {
         recording_ = true;
@@ -162,7 +162,7 @@ public: // ITestStartable
         return ops_;
     }
 
-public: // ITickable
+public:  // ITickable
     void Tick(const TimeSpan& time, const TimeSpan& sinceLastTick) override
     {
         lastTick_ = time;
@@ -177,7 +177,7 @@ public: // ITickable
         return lastTick_;
     }
 
-public: // IStartable
+public:  // IStartable
     META_IMPLEMENT_PROPERTY(META_NS::StartBehavior, StartableMode)
     META_IMPLEMENT_READONLY_PROPERTY(META_NS::StartableState, StartableState)
 
@@ -202,11 +202,11 @@ public: // IStartable
     }
 
 private:
-    bool recording_ { false };
+    bool recording_{false};
     BASE_NS::vector<ITestStartable::Operation> ops_;
-    uint32_t attachCount_ {};
-    uint32_t detachCount_ {};
-    TimeSpan lastTick_ { TimeSpan::Infinite() };
+    uint32_t attachCount_{};
+    uint32_t detachCount_{};
+    TimeSpan lastTick_{TimeSpan::Infinite()};
 };
 
 class EmbeddedTestType : public IntroduceInterfaces<ObjectFwd, IEmbeddedTestType> {
@@ -244,7 +244,7 @@ public:
     META_STATIC_PROPERTY_DATA(ITestType, string, Name)
 
     META_STATIC_ARRAY_PROPERTY_DATA(ITestType, int, MyIntArray)
-    META_STATIC_ARRAY_PROPERTY_DATA(ITestType, int, MyConstIntArray, (BASE_NS::vector<int> { 1, 2, 3, 4, 5 }))
+    META_STATIC_ARRAY_PROPERTY_DATA(ITestType, int, MyConstIntArray, (BASE_NS::vector<int>{1, 2, 3, 4, 5}))
 
     META_STATIC_ARRAY_PROPERTY_DATA(ITestType, IObject::Ptr, MyObjectArray)
 
@@ -376,7 +376,7 @@ public:
 
 private:
     IObject::WeakPtr parent_;
-    int increment_ {};
+    int increment_{};
 };
 
 class TestContainer : public TestContainerFwd {
@@ -404,7 +404,8 @@ public:
 
     META_IMPLEMENT_EVENT(IOnChanged, OnChanged)
 
-    TestString(BASE_NS::string s = "") : str_(s) {}
+    TestString(BASE_NS::string s = "") : str_(s)
+    {}
 
     BASE_NS::string GetString() const override
     {
@@ -421,7 +422,7 @@ public:
     // virtual ObjectId GetClassId() const;
     const BASE_NS::array_view<const TypeId> GetCompatibleTypes(CompatibilityDirection) const override
     {
-        static const TypeId arr[] = { TYPE_ID, UidFromType<BASE_NS::string>() };
+        static const TypeId arr[] = {TYPE_ID, UidFromType<BASE_NS::string>()};
         return arr;
     }
     AnyReturnValue GetData(const TypeId& id, void* data, size_t size) const override
@@ -521,7 +522,7 @@ public:
     META_IMPLEMENT_PROPERTY(META_VALUE_PTR(ITestString, ClassId::TestString), String)
 };
 
-} // namespace
+}  // namespace
 
 class MyTestTypeInterpolator : public META_NS::Interpolator<MyComparableTestType> {
     META_OBJECT(MyTestTypeInterpolator, ClassId::MyTestTypeInterpolator, Interpolator, ClassId::BaseObject)
@@ -538,7 +539,7 @@ static void RegisterComparableTestTypeSerialiser()
             return n;
         },
         [](auto&, const ISerNode::ConstPtr& node, MyComparableTestType& out) {
-            float v {};
+            float v{};
             if (ExtractNumber(node, v)) {
                 out.i = v;
                 return true;
@@ -585,7 +586,7 @@ static void RegisterMyTestTypeSerialiser()
             if (auto obj = interface_cast<IObjectNode>(node)) {
                 if (auto m = interface_cast<IMapNode>(obj->GetMembers())) {
                     auto vnode = m->FindNode("value");
-                    int64_t v {};
+                    int64_t v{};
                     if (ExtractNumber(vnode, v)) {
                         out.i = v;
                         return true;
@@ -706,6 +707,6 @@ std::ostream& operator<<(std::ostream& os, const META_NS::UTest::ITestStartable:
     return os;
 }
 
-} // namespace UTest
+}  // namespace UTest
 
 META_END_NAMESPACE()

@@ -15,11 +15,15 @@
 
 #include "node.h"
 
+#include <algorithm>
 #include <scene/ext/intf_ecs_context.h>
+#include <scene/ext/scene_utils.h>
 #include <scene/ext/util.h>
 #include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_external_node.h>
 #include <scene/interface/intf_scene_manager.h>
+#include <scene/interface/resource/intf_exported_node.h>
+#include <scene/interface/resource/types.h>
 
 #include <base/math/matrix_util.h>
 
@@ -27,9 +31,44 @@
 #include <meta/base/interface_utils.h>
 #include <meta/interface/resource/intf_owned_resource_groups.h>
 
+#include "../component/node_component.h"
+#include "../converting_value.h"
 #include "../core/ecs.h"
+#include "../resource/util.h"
 
 SCENE_BEGIN_NAMESPACE()
+
+namespace {
+struct NodeFlagsConverter {
+    using SourceType = SCENE_NS::NodeFlags;
+    using TargetType = uint32_t;
+
+    SourceType ConvertToSource(META_NS::IAny&, const TargetType& v) const
+    {
+        return static_cast<SourceType>(v);
+    }
+    TargetType ConvertToTarget(const SourceType& v) const
+    {
+        return static_cast<TargetType>(v);
+    }
+};
+}  // namespace
+
+bool Node::InitDynamicProperty(const META_NS::IProperty::Ptr& p, BASE_NS::string_view path)
+{
+    if (p && p->GetName() == "NodeFlags") {
+        if (auto att = GetSelf<META_NS::IAttach>()) {
+            META_NS::Property<uint32_t> ep{GetComponentProperty(att.get(), "NodeComponent", "NodeFlags")};
+            if (ep) {
+                return PushForwardingValueInstance(ep,
+                    interface_cast<META_NS::IStackProperty>(p),
+                    META_NS::IValue::Ptr(new ConvertingValue<NodeFlagsConverter>(ep)));
+            }
+        }
+        return false;
+    }
+    return Super::InitDynamicProperty(p, path);
+}
 
 bool Node::Build(const META_NS::IMetadata::Ptr& d)
 {
@@ -56,8 +95,8 @@ IScene::Ptr Node::GetScene() const
 Future<INode::Ptr> Node::GetParent(NodeTag) const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=] {
-            auto ent = s->GetEcsContext().GetParent(GetEntity());
+        return s->AddTaskOrRunDirectly([s, myEnt = GetEntity()] {
+            auto ent = s->GetEcsContext().GetParent(myEnt);
             return CORE_NS::EntityUtil::IsValid(ent) ? s->FindNode(ent, {}) : nullptr;
         });
     }
@@ -103,7 +142,9 @@ bool Node::Detach(const IObject::Ptr& attachment)
 Future<BASE_NS::vector<INode::Ptr>> Node::GetChildren() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=] { return s->GetChildren(object_); });
+        return s->AddTaskOrRunDirectly([this, s, weak = BASE_NS::weak_ptr{GetSelf()}] {
+            return weak.lock() ? s->GetChildren(object_) : BASE_NS::vector<INode::Ptr>{};
+        });
     }
     return {};
 }
@@ -111,14 +152,18 @@ Future<BASE_NS::vector<INode::Ptr>> Node::GetChildren() const
 Future<bool> Node::RemoveChild(const INode::Ptr& child)
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=] { return s->RemoveChild(object_, child); });
+        return s->AddTaskOrRunDirectly([this, s, child, weak = BASE_NS::weak_ptr{GetSelf()}] {
+            return weak.lock() ? s->RemoveChild(object_, child) : false;
+        });
     }
     return {};
 }
 Future<bool> Node::AddChild(const INode::Ptr& child, size_t index)
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=] { return s->AddChild(object_, child, index); });
+        return s->AddTaskOrRunDirectly([this, s, child, index, weak = BASE_NS::weak_ptr{GetSelf()}] {
+            return weak.lock() ? s->AddChild(object_, child, index) : false;
+        });
     }
     return {};
 }
@@ -130,27 +175,32 @@ Future<INode::Ptr> Node::Clone(BASE_NS::string_view nodeName, const INode::Ptr& 
         return {};
     }
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=, name = BASE_NS::string(nodeName)]() mutable {
-            s->SyncProperties();
-
-            IEcsObject::Ptr parentObj = nullptr;
-            if (auto i = interface_cast<IEcsObjectAccess>(parent)) {
-                parentObj = i->GetEcsObject();
-            }
-            if (name.empty()) {
-                auto p = parent ? parent : GetParent().GetResult();
-                if (p) {
-                    name = p->GetUniqueChildName(GetName()).GetResult();
+        return s->AddTaskOrRunDirectly(
+            [this, s, parent, weak = BASE_NS::weak_ptr{GetSelf()}, name = BASE_NS::string(nodeName)]() mutable {
+                auto self = weak.lock();
+                if (!self) {
+                    return INode::Ptr{};
                 }
-            }
-            auto res = CloneAsChild(*object_, parentObj);
-            auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
-            if (auto named = interface_cast<META_NS::INamed>(node)) {
-                named->Name()->SetValue(name);
-                SyncPropertyDirect(s, named->Name()).GetResult();
-            }
-            return node;
-        });
+                s->SyncProperties();
+
+                IEcsObject::Ptr parentObj = nullptr;
+                if (auto i = interface_cast<IEcsObjectAccess>(parent)) {
+                    parentObj = i->GetEcsObject();
+                }
+                if (name.empty()) {
+                    auto p = parent ? parent : GetParent().GetResult();
+                    if (p) {
+                        name = p->GetUniqueChildName(GetName()).GetResult();
+                    }
+                }
+                auto res = CloneAsChild(*object_, parentObj);
+                auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+                if (auto named = interface_cast<META_NS::INamed>(node)) {
+                    named->Name()->SetValue(name);
+                    SyncPropertyDirect(s, named->Name()).GetResult();
+                }
+                return node;
+            });
     }
     return {};
 }
@@ -161,7 +211,9 @@ BASE_NS::string Node::GetName() const
 Future<BASE_NS::string> Node::GetPath() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=] { return object_->GetPath(); });
+        return s->AddTaskOrRunDirectly([this, weak = BASE_NS::weak_ptr{GetSelf()}] {
+            return weak.lock() ? object_->GetPath() : BASE_NS::string{};
+        });
     }
     return {};
 }
@@ -184,17 +236,19 @@ static CORE_NS::IResourceManager::Ptr GetResources(INode& node)
     return nullptr;
 }
 
-static void AddExternalNodeAttachment(
-    INode& node, BASE_NS::vector<CORE_NS::Entity> entities, const CORE_NS::ResourceId& id, BASE_NS::string_view group)
+static IExternalNode::Ptr AddExternalNodeAttachment(INode& node, BASE_NS::vector<CORE_NS::Entity> entities,
+    const CORE_NS::ResourceIdContext& id, META_NS::IResourceGroupHandle::Ptr handle)
 {
-    if (auto ext = META_NS::GetObjectRegistry().Create<IExternalNode>(ClassId::ExternalNode)) {
+    IExternalNode::Ptr ext = META_NS::GetObjectRegistry().Create<IExternalNode>(ClassId::ExternalNode);
+    if (ext) {
         if (auto att = interface_cast<META_NS::IAttach>(&node)) {
             ext->SetResourceId(id);
             ext->SetAddedEntities(BASE_NS::move(entities));
-            ext->SetSubresourceGroup(group);
+            ext->SetSubresourceGroup(BASE_NS::move(handle));
             att->Attach(ext);
         }
     }
+    return ext;
 }
 
 Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
@@ -212,12 +266,19 @@ Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
     }
     if (eobj) {
         if (auto s = GetInternalScene()) {
-            return s->AddTaskOrRunDirectly([=] {
+            return s->AddTaskOrRunDirectly([this, s, eobj, node, weak = BASE_NS::weak_ptr{GetSelf()}] {
+                auto self = weak.lock();
+                if (!self) {
+                    return INode::Ptr{};
+                }
                 auto res = CopyExternalAsChild(*object_, *eobj);
                 auto n = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
                 if (n && s->GetOptions().createResources) {
                     if (auto resource = interface_pointer_cast<CORE_NS::IResource>(node->GetScene())) {
-                        AddExternalNodeAttachment(*n, BASE_NS::move(res.newEntities), resource->GetResourceId(), "");
+                        AddExternalNodeAttachment(*n,
+                            BASE_NS::move(res.newEntities),
+                            {resource->GetResourceId(), resource->GetContext()},
+                            {});
                     }
                 }
                 return n;
@@ -227,90 +288,183 @@ Future<INode::Ptr> Node::ImportChild(const INode::ConstPtr& node)
     return {};
 }
 
-Future<INode::Ptr> Node::ImportChildScene(
-    const IScene::ConstPtr& scene, BASE_NS::string_view nodeName, BASE_NS::string_view resourceGroup)
+static META_NS::IResourceGroupHandle::Ptr GetSubGroup(const IInternalScene::Ptr& s, const BASE_NS::string& group)
+{
+    META_NS::IResourceGroupHandle::Ptr handle;
+    if (auto c = s->GetContext()) {
+        if (auto i = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
+            handle = i->GetGroupHandle(group, s->GetScene());
+        }
+    }
+    return handle;
+}
+
+BASE_NS::string HandleName(const INode::Ptr& node, IInternalScene& scene, BASE_NS::string_view name,
+    INodeImport::ImportOptions::NamingBehavior behavior)
+{
+    BASE_NS::string renamed(name);
+    switch (behavior) {
+        case INodeImport::ImportOptions::NamingBehavior::ENFORCE_UNIQUE_NAME:
+            renamed = scene.GetUniqueName(name, GetEcsObjectEntity(interface_cast<IEcsObjectAccess>(node)));
+            break;
+        case Scene::INodeImport::ImportOptions::NamingBehavior::REMOVE_EXISTING:
+            if (!name.empty() && scene.RemoveNamedChild(node, renamed)) {
+                CORE_LOG_W("Removed existing duplicate node when importing '%s'", renamed.c_str());
+            }
+            break;
+        case INodeImport::ImportOptions::NamingBehavior::NAME_AS_IS:
+            [[fallthrough]];
+        default:
+            break;
+    }
+    return renamed;
+}
+
+Future<INode::Ptr> Node::ImportChildScene(const IScene::ConstPtr& scene, const ImportOptions& options)
 {
     if (scene == GetScene()) {
         CORE_LOG_E("Cannot import scene into itself.");
         return {};
     }
     auto s = GetInternalScene();
-    if (s && scene) {
-        return s->AddTaskOrRunDirectly([=, name = BASE_NS::string(nodeName), rgroup = BASE_NS::string(resourceGroup)] {
-            if (s->RemoveNamedChild(GetSelf<INode>(), name)) {
-                CORE_LOG_W("Removed existing duplicate node when importing '%s'", name.c_str());
-            }
-            auto res = CopyExternalAsChild(*object_, *scene, rgroup);
-            auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
-            if (auto named = interface_cast<META_NS::INamed>(node)) {
-                named->Name()->SetValue(name);
-                SyncPropertyDirect(s, named->Name()).GetResult();
-            }
-            if (node && s->GetOptions().createResources) {
-                META_NS::IResourceGroupHandle::Ptr handle;
-                if (!res.resourceGroup.empty()) {
-                    if (auto c = s->GetContext()) {
-                        if (auto i = interface_pointer_cast<META_NS::IOwnedResourceGroups>(c->GetResources())) {
-                            handle = i->GetGroupHandle(res.resourceGroup);
-                            auto bundle = s->GetResourceGroups();
-                            if (!bundle.GetHandle(res.resourceGroup)) {
-                                bundle.PushGroupHandleToBack(handle);
-                                s->SetResourceGroups(BASE_NS::move(bundle));
-                            }
-                        }
-                    }
-                }
-                if (auto resource = interface_pointer_cast<CORE_NS::IResource>(scene)) {
-                    AddExternalNodeAttachment(
-                        *node, BASE_NS::move(res.newEntities), resource->GetResourceId(), res.resourceGroup);
-                }
-            }
-            return node;
-        });
+    if (!s || !scene) {
+        return {};
     }
-    return {};
+    BASE_NS::string name(options.nodeName);
+    BASE_NS::string resourceGroup(options.resourceGroup);
+    auto namingBehavior = options.namingBehavior;
+    auto shareResources = options.shareResources;
+
+    return s->AddTaskOrRunDirectly([this,
+                                       s,
+                                       scene,
+                                       name,
+                                       resourceGroup,
+                                       namingBehavior,
+                                       shareResources,
+                                       weak = BASE_NS::weak_ptr{GetSelf()}]() mutable {
+        auto self = weak.lock();
+        if (!self) {
+            return INode::Ptr{};
+        }
+        name = HandleName(GetSelf<INode>(), *s, name, namingBehavior);
+        auto res = CopyExternalAsChild(*object_, *scene, resourceGroup, shareResources);
+        auto node = CORE_NS::EntityUtil::IsValid(res.entity) ? s->FindNode(res.entity, {}) : nullptr;
+        if (auto named = interface_cast<META_NS::INamed>(node)) {
+            named->Name()->SetValue(name);
+            SyncPropertyDirect(s, named->Name()).GetResult();
+        }
+        if (node && s->GetOptions().createResources) {
+            auto handle = GetSubGroup(s, res.resourceGroup);
+            if (auto resource = interface_pointer_cast<CORE_NS::IResource>(scene)) {
+                if (auto ext = AddExternalNodeAttachment(*node,
+                        BASE_NS::move(res.newEntities),
+                        {resource->GetResourceId(), resource->GetContext()},
+                        handle)) {
+                    ext->AddAssociatedResources(res.associatedResources);
+                }
+            }
+        }
+        return node;
+    });
 }
 
 Future<INode::Ptr> Node::ImportChildScene(BASE_NS::string_view uri, BASE_NS::string_view nodeName)
 {
-    if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=, uri = BASE_NS::string(uri), name = BASE_NS::string(nodeName)] {
+    auto s = GetInternalScene();
+    if (!s) {
+        return {};
+    }
+    return s->AddTaskOrRunDirectly(
+        [this, s, weak = BASE_NS::weak_ptr{GetSelf()}, uri = BASE_NS::string(uri), name = BASE_NS::string(nodeName)] {
+            auto self = weak.lock();
+            if (!self) {
+                return INode::Ptr{};
+            }
             if (auto provider = interface_cast<IApplicationContextProvider>(s)) {
                 if (auto appContext = provider->GetApplicationContext()) {
                     if (auto manager = appContext->GetSceneManager()) {
                         auto scene = manager->CreateScene(uri, s->GetOptions()).GetResult();
-                        return ImportChildScene(scene, name, "").GetResult();
+                        INodeImport::ImportOptions options;
+                        options.nodeName = name;
+                        options.namingBehavior = INodeImport::ImportOptions::NamingBehavior::NAME_AS_IS;
+                        return ImportChildScene(scene, options).GetResult();
                     }
                 }
             }
-            return INode::Ptr {};
+            return INode::Ptr{};
         });
-    }
-    return {};
 }
 
-Future<INode::Ptr> Node::ImportTemplate(const META_NS::IObjectTemplate::ConstPtr& templ)
+static void AddNodeTemplateExternalNode(const IInternalScene::Ptr& s, INodeImportResult& nodeRes,
+    const META_NS::IObjectTemplate::ConstPtr& templ, const BASE_NS::string& group)
 {
-    if (templ) {
-        if (auto s = GetInternalScene()) {
-            return s->AddTaskOrRunDirectly([=] {
-                auto node = interface_pointer_cast<INode>(
-                    templ->Instantiate(interface_pointer_cast<CORE_NS::IInterface>(GetSelf())));
-                if (node && s->GetOptions().createResources) {
-                    if (auto res = interface_pointer_cast<CORE_NS::IResource>(templ)) {
-                        // entities?
-                        // group handling?
-                        AddExternalNodeAttachment(*node, {}, res->GetResourceId(), {});
-                    }
-                }
-                return node;
-            });
-        }
+    auto res = interface_pointer_cast<CORE_NS::IResource>(templ);
+    if (!res) {
+        return;
     }
-    return {};
+    auto handle = GetSubGroup(s, group);
+    BASE_NS::vector<CORE_NS::Entity> entities;
+    if (auto resuMan = static_cast<IResourceComponentManager*>(s->GetEcsContext().FindComponent<ResourceComponent>())) {
+        for (auto&& r : nodeRes.GetNewResourcesImported()) {
+            auto ent = resuMan->GetEntity(r.id);
+            if (CORE_NS::EntityUtil::IsValid(ent)) {
+                entities.push_back(ent);
+            }
+        }
+        auto groupEnts = resuMan->GetEntities({CORE_NS::MatchingResourceId{group}});
+        entities.insert(entities.begin(), groupEnts.begin(), groupEnts.end());
+    }
+    if (auto ext = AddExternalNodeAttachment(
+            *nodeRes.GetNode(), entities, {res->GetResourceId(), res->GetContext()}, handle)) {
+        ext->AddAssociatedResources(nodeRes.GetAssociatedResources());
+    }
 }
 
-template<typename Func>
+Future<INode::Ptr> Node::ImportTemplate(
+    const META_NS::IObjectTemplate::ConstPtr& templ, BASE_NS::string_view resourceGroup)
+{
+    auto s = GetInternalScene();
+    if (!templ || !s) {
+        return {};
+    }
+    return s->AddTaskOrRunDirectly(
+        [s, templ, weak = BASE_NS::weak_ptr{GetSelf()}, rg = BASE_NS::string(resourceGroup)] {
+            auto self = weak.lock();
+            if (!self) {
+                return INode::Ptr{};
+            }
+            BASE_NS::string group = rg;
+            if (group.empty()) {
+                if (auto res = interface_pointer_cast<CORE_NS::IResource>(templ)) {
+                    group = res->GetResourceId().name;
+                } else {
+                    group = "Node Template";
+                }
+            }
+
+            CORE_LOG_D("template import group: %s", group.c_str());
+            INodeImportResult::Ptr nodeRes;
+
+            auto ntcontext = META_NS::GetObjectRegistry().Create<INodeTemplateContext>(ClassId::NodeTemplateContext);
+            if (!ntcontext) {
+                CORE_LOG_W("Invalid state");
+                return INode::Ptr{};
+            }
+            ntcontext->SetTargetNode(interface_pointer_cast<INode>(self));
+            ntcontext->SetGroup(group);
+
+            nodeRes = interface_pointer_cast<INodeImportResult>(templ->Instantiate(ntcontext));
+
+            bool isValid = nodeRes && nodeRes->GetNode();
+            if (isValid && s->GetOptions().createResources) {
+                AddNodeTemplateExternalNode(s, *nodeRes, templ, group);
+            }
+            return isValid ? nodeRes->GetNode() : nullptr;
+        });
+}
+
+template <typename Func>
 static META_NS::IterationResult IterateImpl(const BASE_NS::vector<INode::Ptr>& cont, const Func& func)
 {
     for (auto&& child : cont) {
@@ -375,7 +529,7 @@ BASE_NS::vector<META_NS::IObject::Ptr> Node::FindAll(const FindOptions& options)
             }
             return true;
         },
-        META_NS::IterateStrategy { options.behavior, META_NS::LockType::SHARED_LOCK });
+        META_NS::IterateStrategy{options.behavior, META_NS::LockType::SHARED_LOCK});
     return res;
 }
 META_NS::IObject::Ptr Node::FindAny(const FindOptions& options) const
@@ -389,12 +543,12 @@ META_NS::IObject::Ptr Node::FindAny(const FindOptions& options) const
             }
             return !res;
         },
-        META_NS::IterateStrategy { options.behavior, META_NS::LockType::SHARED_LOCK });
+        META_NS::IterateStrategy{options.behavior, META_NS::LockType::SHARED_LOCK});
     return res;
 }
 META_NS::IObject::Ptr Node::FindByName(BASE_NS::string_view name) const
 {
-    return FindAny({ BASE_NS::string(name), META_NS::TraversalType::NO_HIERARCHY });
+    return FindAny({BASE_NS::string(name), META_NS::TraversalType::NO_HIERARCHY});
 }
 bool Node::Add(const META_NS::IObject::Ptr& object)
 {
@@ -501,7 +655,7 @@ META_NS::IObject::Ptr Node::GetParent(ContainableTag) const
 {
     META_NS::IObject::Ptr res;
     if (auto s = GetInternalScene()) {
-        res = interface_pointer_cast<META_NS::IObject>(GetParent(NodeTag {}).GetResult());
+        res = interface_pointer_cast<META_NS::IObject>(GetParent(NodeTag{}).GetResult());
         if (!res && GetEntity() == s->GetEcsContext().GetRootEntity()) {
             res = interface_pointer_cast<META_NS::IObject>(GetScene());
         }
@@ -524,8 +678,8 @@ void Node::OnChildChanged(META_NS::ContainerChangeType type, const INode::Ptr& c
 {
     if (auto event = GetEvent("OnContainerChanged", META_NS::MetadataQuery::EXISTING)) {
         if (auto s = GetInternalScene()) {
-            META_NS::ChildChangedInfo info { type, interface_pointer_cast<META_NS::IObject>(child),
-                GetSelf<META_NS::IContainer>() };
+            META_NS::ChildChangedInfo info{
+                type, interface_pointer_cast<META_NS::IObject>(child), GetSelf<META_NS::IContainer>()};
             if (type == META_NS::ContainerChangeType::ADDED) {
                 info.to = index;
             }
@@ -556,7 +710,7 @@ void Node::OnNodeActiveStateChanged(NodeActiteStateInfo state)
 Future<bool> Node::IsEnabledInHierarchy() const
 {
     if (auto s = GetInternalScene()) {
-        return s->AddTaskOrRunDirectly([=, ent = GetEntity()] {
+        return s->AddTaskOrRunDirectly([s, ent = GetEntity()] {
             auto& ecs = s->GetEcsContext();
             if (auto c =
                     static_cast<CORE3D_NS::INodeComponentManager*>(ecs.FindComponent<CORE3D_NS::NodeComponent>())) {

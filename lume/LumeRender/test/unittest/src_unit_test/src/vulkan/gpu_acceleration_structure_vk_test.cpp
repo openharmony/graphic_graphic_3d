@@ -15,7 +15,7 @@
 
 #if RENDER_HAS_VULKAN_BACKEND
 #include <vulkan/gpu_buffer_vk.h>
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND
 
 #include <device/device.h>
 
@@ -52,7 +52,7 @@ UNIT_TEST(SRC_GpuAccelerationStructure, GpuAccelerationStructureTestVulkan, test
             CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT | CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         desc.bufferDesc.usageFlags = CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT;
         desc.accelerationStructureType = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_GENERIC;
-        GpuBufferVk accBuffer { device, desc };
+        GpuBufferVk accBuffer{device, desc};
         auto realDesc = accBuffer.GetDescAccelerationStructure();
         ASSERT_EQ(desc.bufferDesc.byteSize, realDesc.bufferDesc.byteSize);
         ASSERT_EQ(desc.bufferDesc.engineCreationFlags, realDesc.bufferDesc.engineCreationFlags);
@@ -63,9 +63,9 @@ UNIT_TEST(SRC_GpuAccelerationStructure, GpuAccelerationStructureTestVulkan, test
         auto platDesc = accBuffer.GetPlatformData();
 #if (RENDER_VULKAN_RT_ENABLED)
         // These are not the same thing, needs better documentation
-#endif // RENDER_VULKAN_RT_ENABLED
+#endif  // RENDER_VULKAN_RT_ENABLED
     }
     device.Deactivate();
     UTest::DestroyEngine(engine);
 }
-#endif // RENDER_HAS_VULKAN_BACKEND
+#endif  // RENDER_HAS_VULKAN_BACKEND

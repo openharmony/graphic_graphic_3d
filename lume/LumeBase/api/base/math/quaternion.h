@@ -54,7 +54,8 @@ public:
 
     // Constructors
     /** Default constructor */
-    inline constexpr Quat() noexcept : data {} {}
+    inline constexpr Quat() noexcept : data{}
+    {}
 
     /** Constructor for floats */
     inline constexpr Quat(float xParameter, float yParameter, float zParameter, float wParameter) noexcept
@@ -62,16 +63,18 @@ public:
     {}
 
     /** Constructor for float array */
-    inline constexpr Quat(const float d[]) noexcept : x(d[0]), y(d[1]), z(d[2]), w(d[3]) {}
+    inline constexpr Quat(const float d[]) noexcept : x(d[0]), y(d[1]), z(d[2]), w(d[3])
+    {}
 
     // Quaternion to quaternion operations
     /** Multiply quaternion by quaternion */
     inline constexpr Quat operator*(const Quat& quat) const
     {
         return Quat(w * quat.x + x * quat.w + y * quat.z - z * quat.y,
-            w * quat.y + y * quat.w + z * quat.x - x * quat.z, w * quat.z + z * quat.w + x * quat.y - y * quat.x,
+            w * quat.y + y * quat.w + z * quat.x - x * quat.z,
+            w * quat.z + z * quat.w + x * quat.y - y * quat.x,
             w * quat.w - x * quat.x - y * quat.y - z * quat.z);
-    } // Add
+    }  // Add
 
     /** Divide quaternion by float */
     inline constexpr Quat operator/(float d) const
@@ -117,7 +120,7 @@ public:
 static_assert(sizeof(Quat) == 4 * sizeof(float));
 
 #include <base/math/disable_warning_4201_footer.h>
-} // namespace Math
+}  // namespace Math
 BASE_END_NAMESPACE()
 
-#endif // API_BASE_MATH_QUATERNION_H
+#endif  // API_BASE_MATH_QUATERNION_H

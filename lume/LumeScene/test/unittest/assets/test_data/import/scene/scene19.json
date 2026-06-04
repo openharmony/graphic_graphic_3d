@@ -1,0 +1,30 @@
+{
+	"version": "1.0",
+	"description": "test scene with external hierarchy using resource id and overridden material properties",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"index": "scene8.index",
+		"rootNode":	{
+			"type": "node",
+			"children": [
+				{
+					"type": "external",
+					"name": "test",
+					"source": {
+						"resourceId": {
+							"name": "cube"
+						}
+					},
+					"resourceGroup": "cube-group",
+					"overrides": [
+						{
+							"path": ".//AnimatedCube.SubMeshes[0].Material.AlphaCutoff",
+							"value": 0.5
+						}
+					]
+				}
+			]
+		}
+	}
+}

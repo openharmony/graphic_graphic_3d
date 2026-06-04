@@ -32,7 +32,7 @@ CORE3D_BEGIN_NAMESPACE()
 class IRenderDataStoreDefaultCamera;
 class IRenderDataStoreDefaultScene;
 
-class RenderNodeDefaultEnv final : public RENDER_NS::IRenderNode {
+class RenderNodeDefaultEnv : public RENDER_NS::IRenderNode {
 public:
     explicit RenderNodeDefaultEnv() = default;
     ~RenderNodeDefaultEnv() override = default;
@@ -46,8 +46,8 @@ public:
     }
 
     // for plugin / factory interface
-    static constexpr BASE_NS::Uid UID { "e3bc29b2-c1d0-4322-a41a-449354fd5a42" };
-    static constexpr const char* const typeName = "RenderNodeDefaultEnv";
+    static constexpr BASE_NS::Uid UID{"e3bc29b2-c1d0-4322-a41a-449354fd5a42"};
+    static constexpr const char* const TYPE_NAME = "RenderNodeDefaultEnv";
     static constexpr IRenderNode::BackendFlags BACKEND_FLAGS = IRenderNode::BackendFlagBits::BACKEND_FLAG_BITS_DEFAULT;
     static constexpr IRenderNode::ClassType CLASS_TYPE = IRenderNode::ClassType::CLASS_TYPE_NODE;
     static IRenderNode* Create();
@@ -58,16 +58,16 @@ public:
         RENDER_NS::RenderHandle texHandle;
     };
 
-private:
-    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_ { nullptr };
+protected:
+    RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     struct ShaderData {
         RENDER_NS::RenderHandle pso;
         RENDER_NS::RenderHandle shader;
         RENDER_NS::RenderHandle state;
         // typically set 3 (with old compatibility might be the set 1)
-        bool customSet { false };
-        uint32_t customSetIndex { ~0U };
+        bool customSet{false};
+        uint32_t customSetIndex{~0U};
 
         RENDER_NS::RenderHandle pl;
         RENDER_NS::PipelineLayout plData;
@@ -88,19 +88,19 @@ private:
     void ResetRenderSlotData(const bool enableMultiview);
     void EvaluateFogBits();
 
-    static constexpr uint64_t INVALID_CAM_ID { 0xFFFFFFFFffffffff };
+    static constexpr uint64_t INVALID_CAM_ID{0xFFFFFFFFffffffff};
     struct JsonInputs {
         RENDER_NS::RenderNodeGraphInputs::RenderDataStore renderDataStore;
 
         BASE_NS::string customCameraName;
-        uint64_t customCameraId { INVALID_CAM_ID };
-        uint32_t nodeFlags { 0u };
+        uint64_t customCameraId{INVALID_CAM_ID};
+        uint32_t nodeFlags{0u};
 
         RENDER_NS::RenderNodeGraphInputs::InputRenderPass renderPass;
-        bool hasChangeableRenderPassHandles { false };
+        bool hasChangeableRenderPassHandles{false};
 
-        uint32_t renderSlotId { ~0u };
-        uint32_t shaderRenderSlotMultiviewId { ~0u };
+        uint32_t renderSlotId{~0u};
+        uint32_t shaderRenderSlotMultiviewId{~0u};
     };
     JsonInputs jsonInputs_;
     RENDER_NS::RenderNodeHandles::InputRenderPass inputRenderPass_;
@@ -109,19 +109,19 @@ private:
 
     RENDER_NS::RenderHandle cubemapSampler;
 
-    RenderCamera::Environment::BackgroundType currentBgType_ { RenderCamera::Environment::BG_TYPE_NONE };
-    RenderCamera::ShaderFlags currentCameraShaderFlags_ { 0U };
+    RenderCamera::Environment::BackgroundType currentBgType_{RenderCamera::Environment::BG_TYPE_NONE};
+    RenderCamera::ShaderFlags currentCameraShaderFlags_{0U};
 
     RENDER_NS::IDescriptorSetBinder::Ptr builtInSet3_;
 
-    bool enableMultiView_ { false };
+    bool enableMultiView_{false};
 
     struct CurrentScene {
         SceneRenderCameraData camData;
         RENDER_NS::ViewportDesc viewportDesc;
         RENDER_NS::ScissorDesc scissorDesc;
 
-        RenderCamera::ShaderFlags cameraShaderFlags { 0u }; // evaluated based on camera and scene flags
+        RenderCamera::ShaderFlags cameraShaderFlags{0u};  // evaluated based on camera and scene flags
     };
     CurrentScene currentScene_;
     DefaultImages defaultImages_;
@@ -134,10 +134,10 @@ private:
     RENDER_NS::RenderPass renderPass_;
     // the base default render node graph from RNG setup
     RENDER_NS::RenderPass rngRenderPass_;
-    bool fsrEnabled_ { false };
+    bool fsrEnabled_{false};
 
     RENDER_NS::RenderPostProcessConfiguration currentRenderPPConfiguration_;
 };
 CORE3D_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_ENV_H
+#endif  // CORE__RENDER__NODE__RENDER_NODE_DEFAULT_ENV_H

@@ -36,7 +36,7 @@ using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
-constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE { 256U };
+constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE{256U};
 constexpr string_view CUSTOM_PROPERTIES = "customProperties";
 constexpr string_view CUSTOM_BINDING_PROPERTIES = "customBindingProperties";
 constexpr string_view BINDING_PROPERTIES = "bindingProperties";
@@ -123,8 +123,8 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                                 string_view name;
                                 string_view displayName;
                                 string_view type;
-                                uint32_t set { ~0U };
-                                uint32_t binding { ~0U };
+                                uint32_t set{~0U};
+                                uint32_t binding{~0U};
                                 for (const auto& dataObject : dataValue.object_) {
                                     if (dataObject.key == NAME && dataObject.value.is_string()) {
                                         name = dataObject.value.string_;
@@ -141,7 +141,7 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                                 }
                                 set = Math::min(set, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
                                 binding = Math::min(binding, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
-                                setAndBindings.push_back({ set, binding });
+                                setAndBindings.push_back({set, binding});
                                 const PropertyTypeDecl typeDecl =
                                     CustomPropertyBindingHelper::GetPropertyTypeDeclaration(type);
                                 const size_t align = CustomPropertyBindingHelper::GetPropertyTypeAlignment(typeDecl);
@@ -166,14 +166,14 @@ IPipelineDescriptorSetBinder::Ptr CreatePipelineDescriptorSetBinder(const Pipeli
     DescriptorSetLayoutBindings descriptorSetLayoutBindings[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT];
     for (uint32_t idx = 0; idx < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++idx) {
         if (pipelineLayout.descriptorSetLayouts[idx].set < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-            descriptorSetLayoutBindings[idx] = { pipelineLayout.descriptorSetLayouts[idx].bindings };
+            descriptorSetLayoutBindings[idx] = {pipelineLayout.descriptorSetLayouts[idx].bindings};
         }
     }
     // pass max amount to binder, it will check validity of sets and their set indices
-    return IPipelineDescriptorSetBinder::Ptr { new PipelineDescriptorSetBinder(
-        pipelineLayout, descriptorSetLayoutBindings) };
+    return IPipelineDescriptorSetBinder::Ptr{
+        new PipelineDescriptorSetBinder(pipelineLayout, descriptorSetLayoutBindings)};
 }
-} // namespace
+}  // namespace
 
 ShaderPipelineBinderPropertyBindingSignal::ShaderPipelineBinderPropertyBindingSignal(
     ShaderPipelineBinder& shaderPipelineBinder)
@@ -282,18 +282,23 @@ void ShaderPipelineBinder::EvaluateCustomPropertyBindings()
                 if (bindingRef.binding != plBindingRef.binding) {
                     PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
                                  "layout (set: %u, bindingIdx %u != bindingIdx %u)",
-                        setIdx, bindingRef.binding, plBindingRef.binding);
+                        setIdx,
+                        bindingRef.binding,
+                        plBindingRef.binding);
                 }
                 if (bindingRef.type != plDescType) {
                     PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding missmatch to pipeline "
                                  "layout (set: %u, binding: %u)",
-                        setIdx, bindingRef.binding);
+                        setIdx,
+                        bindingRef.binding);
                 }
             }
         } else {
             PLUGIN_LOG_W("RENDER_VALIDATION: Binding property descriptor set binding count missmatch."
                          "(set: %u, bindings: %u != bindings: %u",
-                setIdx, static_cast<uint32_t>(descRef.bindings.size()), static_cast<uint32_t>(plSet.bindings.size()));
+                setIdx,
+                static_cast<uint32_t>(descRef.bindings.size()),
+                static_cast<uint32_t>(plSet.bindings.size()));
         }
     }
 #endif
@@ -344,13 +349,17 @@ void ShaderPipelineBinder::Bind(const uint32_t set, const uint32_t binding, cons
 {
     const RenderHandleType type = handle.GetHandleType();
     if (type == RenderHandleType::GPU_BUFFER) {
-        BindBuffer(set, binding, { handle, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE });
+        BindBuffer(set, binding, {handle, 0u, PipelineStateConstants::GPU_BUFFER_WHOLE_SIZE});
     } else if (type == RenderHandleType::GPU_IMAGE) {
-        BindImage(set, binding,
-            { handle, PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS, PipelineStateConstants::GPU_IMAGE_ALL_LAYERS,
-                ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, {} });
+        BindImage(set,
+            binding,
+            {handle,
+                PipelineStateConstants::GPU_IMAGE_ALL_MIP_LEVELS,
+                PipelineStateConstants::GPU_IMAGE_ALL_LAYERS,
+                ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED,
+                {}});
     } else if (type == RenderHandleType::GPU_SAMPLER) {
-        BindSampler(set, binding, { handle });
+        BindSampler(set, binding, {handle});
     }
 }
 
@@ -389,7 +398,7 @@ void ShaderPipelineBinder::BindBuffer(
                 }
             }
             if (validBinding && pipelineDescriptorSetBinder_) {
-                const BindableBuffer bindable {
+                const BindableBuffer bindable{
                     resource.handle.GetHandle(),
                     resource.byteOffset,
                     resource.byteSize,
@@ -427,7 +436,7 @@ void ShaderPipelineBinder::BindBuffers(
                 bindables.resize(resources.size());
                 for (size_t idx = 0; idx < resources.size(); ++idx) {
                     const auto& rRef = resources[idx];
-                    bindables[idx] = BindableBuffer { rRef.handle.GetHandle(), rRef.byteOffset, rRef.byteSize };
+                    bindables[idx] = BindableBuffer{rRef.handle.GetHandle(), rRef.byteOffset, rRef.byteSize};
                 }
                 pipelineDescriptorSetBinder_->BindBuffers(set, binding, bindables);
             }
@@ -455,7 +464,7 @@ void ShaderPipelineBinder::BindImage(
                 }
             }
             if (validBinding && pipelineDescriptorSetBinder_) {
-                const BindableImage bindable {
+                const BindableImage bindable{
                     resource.handle.GetHandle(),
                     resource.mip,
                     resource.layer,
@@ -495,8 +504,11 @@ void ShaderPipelineBinder::BindImages(
                 bindables.resize(resources.size());
                 for (size_t idx = 0; idx < resources.size(); ++idx) {
                     const auto& rRef = resources[idx];
-                    bindables[idx] = BindableImage { rRef.handle.GetHandle(), rRef.mip, rRef.layer,
-                        ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED, rRef.samplerHandle.GetHandle() };
+                    bindables[idx] = BindableImage{rRef.handle.GetHandle(),
+                        rRef.mip,
+                        rRef.layer,
+                        ImageLayout::CORE_IMAGE_LAYOUT_UNDEFINED,
+                        rRef.samplerHandle.GetHandle()};
                 }
                 pipelineDescriptorSetBinder_->BindImages(set, binding, bindables);
             }
@@ -524,7 +536,7 @@ void ShaderPipelineBinder::BindSampler(
                 }
             }
             if (validBinding && pipelineDescriptorSetBinder_) {
-                const BindableSampler bindable {
+                const BindableSampler bindable{
                     resource.handle.GetHandle(),
                 };
                 pipelineDescriptorSetBinder_->BindSampler(set, binding, bindable);
@@ -560,7 +572,7 @@ void ShaderPipelineBinder::BindSamplers(
                 bindables.resize(resources.size());
                 for (size_t idx = 0; idx < resources.size(); ++idx) {
                     const auto& rRef = resources[idx];
-                    bindables[idx] = BindableSampler { rRef.handle.GetHandle() };
+                    bindables[idx] = BindableSampler{rRef.handle.GetHandle()};
                 }
                 pipelineDescriptorSetBinder_->BindSamplers(set, binding, bindables);
             }
@@ -653,7 +665,7 @@ IShaderPipelineBinder::PropertyBindingView ShaderPipelineBinder::GetPropertyBind
     cpbv.set = customPropertyData_.set;
     cpbv.binding = customPropertyData_.binding;
     cpbv.data =
-        (customPropertyData_.properties) ? customPropertyData_.properties->GetData() : array_view<const uint8_t> {};
+        (customPropertyData_.properties) ? customPropertyData_.properties->GetData() : array_view<const uint8_t>{};
     return cpbv;
 }
 

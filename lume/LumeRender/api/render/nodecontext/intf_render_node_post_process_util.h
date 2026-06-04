@@ -36,7 +36,7 @@ class IRenderCommandList;
  */
 class IRenderNodePostProcessUtil : public CORE_NS::IInterface {
 public:
-    static constexpr BASE_NS::Uid UID { "84057a3c-0e0f-4752-84af-55591f746ceb" };
+    static constexpr BASE_NS::Uid UID{"84057a3c-0e0f-4752-84af-55591f746ceb"};
 
     using Ptr = BASE_NS::refcnt_ptr<IRenderNodePostProcessUtil>;
 
@@ -68,7 +68,7 @@ public:
 
     struct PostProcessInfo {
         /** Parse render node resource inputs */
-        bool parseRenderNodeInputs { true };
+        bool parseRenderNodeInputs{true};
         /** Input image data */
         ImageData imageData;
     };
@@ -99,4 +99,4 @@ inline constexpr BASE_NS::string_view GetName(const IRenderNodePostProcessUtil*)
 }
 RENDER_END_NAMESPACE()
 
-#endif // API_RENDER_IRENDER_NODE_POST_PROCESS_UTIL_H
+#endif  // API_RENDER_IRENDER_NODE_POST_PROCESS_UTIL_H

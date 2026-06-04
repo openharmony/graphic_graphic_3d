@@ -104,7 +104,7 @@ napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
     if (TrueRootObject* instance = ctx.This().GetRoot()) {
         // see if we have "scenejs" as ext (prefer one given as argument)
         napi_status stat;
-        void* ptr { nullptr };
+        void* ptr{nullptr};
         userDisposed_ = true;
         NapiApi::FunctionContext<NapiApi::Object> args(ctx);
         if (args) {
@@ -118,7 +118,7 @@ napi_value SceneResourceImpl::Dispose(NapiApi::FunctionContext<>& ctx)
         if (!ptr) {
             ptr = scene_.GetJsWrapper<SceneJS>();
         }
-        instance->DisposeNative(ptr);
+        instance->DisposeNative();
     }
     scene_.Reset();
     uri_.Reset();
@@ -131,7 +131,7 @@ napi_value SceneResourceImpl::GetObjectType(NapiApi::FunctionContext<>& ctx)
         return ctx.GetUndefined();
     }
 
-    uint32_t type = -1; // return -1 if the resource does not exist anymore
+    uint32_t type = -1;  // return -1 if the resource does not exist anymore
     if (ctx.This().GetNative()) {
         type = type_;
     }
@@ -153,10 +153,10 @@ napi_value SceneResourceImpl::GetName(NapiApi::FunctionContext<>& ctx)
     }
     if (name.empty()) {
         if (!name_.empty()) {
-            name = name_; // Use cached if we didn't get anything from underlying object
+            name = name_;  // Use cached if we didn't get anything from underlying object
         } else {
             if (native) {
-                native->GetName(); // Last resort, this can give object id as name
+                native->GetName();  // Last resort, this can give object id as name
             }
         }
     }
@@ -197,7 +197,7 @@ napi_value SceneResourceImpl::GetUri(NapiApi::FunctionContext<>& ctx)
 void SceneResourceImpl::SetUri(NapiApi::Object& args)
 {
     if (!validateSceneRef() || !args.Get("uri")) {
-        CORE_LOG_W("### cannot get uri");
+        CORE_LOG_W("cannot get uri");
         return;
     }
     NapiApi::Object resType = args.Get<NapiApi::Object>("uri");
@@ -212,7 +212,7 @@ void SceneResourceImpl::SetUri(NapiApi::Object& args)
             return;
         }
     }
-    LOG_V("#### uri: '%s' uriRes: '%s'", uri.c_str(), uriType.c_str() );
+    LOG_V("uri: '%s' uriRes: '%s'", uri.c_str(), uriType.c_str());
 
     if (!resType) {
         // raw string then.. make it  "resource" / "rawfile" if possible.
@@ -222,9 +222,9 @@ void SceneResourceImpl::SetUri(NapiApi::Object& args)
             napi_value global;
             napi_get_global(env, &global);
             NapiApi::Object g(env, global);
-            BASE_NS::string noschema(uri.substr(14)); // 14: length
+            BASE_NS::string noschema(uri.substr(14));  // 14: length
             napi_value arg = env.GetString(noschema);
-            napi_value res = g.Invoke("$rawfile", { arg });
+            napi_value res = g.Invoke("$rawfile", {arg});
             SetUri(NapiApi::StrongRef(env, res));
         }
     } else {
