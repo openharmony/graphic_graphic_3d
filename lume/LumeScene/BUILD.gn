@@ -239,7 +239,11 @@ ohos_source_set("lume_scenewidget_src") {
     "${LUME_META_PATH}:libPluginMetaObject",
   ]
 
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+    "egl:libEGL",
+ 	  "opengles:libGLES"
+  ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [

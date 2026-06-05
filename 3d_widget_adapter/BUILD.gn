@@ -192,6 +192,8 @@ ohos_source_set("widget_adapter_source") {
       "napi:ace_napi",
       "qos_manager:qos",
       "resource_schedule_service:ressched_client",
+      "egl:libEGL",
+ 	    "opengles:libGLES",
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]

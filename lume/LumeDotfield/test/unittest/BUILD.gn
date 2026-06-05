@@ -95,6 +95,8 @@ ohos_unittest("lume_dotfield_api_test") {
     "googletest:gtest",
     "graphic_surface:surface",
     "graphic_2d:libnative_image", # Handle HOS window
+    "egl:libEGL",
+ 	  "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {
