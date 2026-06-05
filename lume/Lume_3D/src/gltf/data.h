@@ -53,7 +53,7 @@ public:
     CORE_NS::IFile::Ptr memoryFile_;
 
     // Internal-only fields not in the public GltfData struct.
-    int32_t defaultResourcesOffset = -1;
+    int64_t defaultResourcesOffset = -1;
     size_t size{0};
 #ifdef GLTF2_EXTENSION_KHR_LIGHTS_PBR
     uint32_t pbrLightOffset{0};

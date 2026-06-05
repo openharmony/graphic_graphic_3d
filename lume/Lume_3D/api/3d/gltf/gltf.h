@@ -354,7 +354,7 @@ public:
      *  If parsing fails GLTFLoadResult::success will be false and GLTFLoadResult::error will give more details on the
      *  failure.
      */
-    virtual GLTFLoadResult LoadGLTF(BASE_NS::string_view uri, size_t offset) = 0;
+    virtual GLTFLoadResult LoadGLTF(BASE_NS::string_view uri, int64_t offset) = 0;
 
     /** Load GLTF data from memory.
      *  @param data Contents of a GLB or a glTF file with embedded data.

@@ -44,7 +44,7 @@ Gltf2::Gltf2(IFileManager& fileManager) : fileManager_(fileManager)
 {}
 
 // Internal helper.
-GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
+GLTFLoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, int64_t offset)
 {
     auto loadResult = GLTF2::LoadGLTF(fileManager, uri, offset);
     GLTFLoadResult result;
@@ -66,7 +66,7 @@ GLTFLoadResult Gltf2::LoadGLTF(const string_view uri)
     return CORE3D_NS::LoadGLTF(fileManager_, uri);
 }
 
-GLTFLoadResult Gltf2::LoadGLTF(const string_view uri, size_t offset)
+GLTFLoadResult Gltf2::LoadGLTF(const string_view uri, int64_t offset)
 {
     return CORE3D_NS::LoadGLTF(fileManager_, uri, offset);
 }
@@ -136,7 +136,7 @@ ISceneLoader::Result Gltf2::Load(string_view uri)
     return Load(uri, 0);
 }
 
-ISceneLoader::Result Gltf2::Load(string_view uri, size_t offset)
+ISceneLoader::Result Gltf2::Load(string_view uri, int64_t offset)
 {
     ISceneLoader::Result sceneResult;
     auto loadResult = GLTF2::LoadGLTF(fileManager_, uri, offset);

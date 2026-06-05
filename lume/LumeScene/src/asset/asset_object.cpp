@@ -205,7 +205,7 @@ void UpdateAnimationTrackTargets(
 }  // namespace
 
 bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool createResources,
-    const CORE_NS::ResourceId& rid, size_t offset)
+    const CORE_NS::ResourceId& rid, int64_t offset)
 {
     auto scene = sc->GetInternalScene();
     auto& ecs = scene->GetEcsContext();

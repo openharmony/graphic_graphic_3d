@@ -33,7 +33,7 @@
 struct GlobalResources;
 
 struct SceneLoadParams {
-    size_t offset = 0;
+    int64_t offset = 0;
 };
 
 class SCENE_ADDON_PUBLIC RenderResources {

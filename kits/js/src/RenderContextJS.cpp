@@ -838,14 +838,16 @@ static const char* ParseSceneLoadParams(NapiApi::FunctionContext<>& ctx, napi_en
         if (val < 0.0) {
             return "offset must not be negative";
         }
-        if (val != static_cast<double>(static_cast<uint64_t>(val))) {
+
+        if (val != static_cast<double>(static_cast<int64_t>(val))) {
             return "offset must be an integer, got a float";
         }
-        if (val > static_cast<double>(SIZE_MAX)) {
-            return "offset exceeds size_t range";
+
+        if (val > static_cast<double>(std::numeric_limits<int64_t>::max())) {
+            return "offset exceeds int64_t range";
         }
 
-        param.offset = static_cast<size_t>(val);
+        param.offset = static_cast<int64_t>(val);
     }
 
     return nullptr;
