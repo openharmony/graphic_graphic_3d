@@ -187,7 +187,7 @@ ohos_unittest("AGPOffscreenRenderUnitTest") {
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
     "egl:libEGL",
- 	  "opengles:libGLES",
+    "opengles:libGLES",
   ]
   
   part_name = "graphic_3d"
@@ -363,7 +363,7 @@ ohos_unittest("SurfaceStreamUnitTest") {
     "graphic_2d:libnative_image", # Handle HOS window
     "hilog:libhilog",
     "egl:libEGL",
- 	  "opengles:libGLES",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {

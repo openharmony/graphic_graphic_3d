@@ -376,7 +376,7 @@ ohos_source_set("lume_render_src") {
       "graphic_2d:EGL",
       "graphic_2d:GLESv3",
       "egl:libEGL",
- 	    "opengles:libGLES",
+      "opengles:libGLES",
     ]
   }
   if (RENDER_BUILD_VULKAN) {

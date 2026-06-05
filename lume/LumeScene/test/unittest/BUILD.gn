@@ -149,7 +149,7 @@ ohos_unittest("lume_scene_api_test") {
     "graphic_surface:surface",
     "graphic_2d:libnative_image", # Handle HOS window
     "egl:libEGL",
- 	  "opengles:libGLES",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {
