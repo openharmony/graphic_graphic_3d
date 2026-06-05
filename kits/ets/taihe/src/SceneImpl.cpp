@@ -151,14 +151,14 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
         return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
     }
 
-    if (val != static_cast<double>(static_cast<uint64_t>(val))) {
+    if (val != static_cast<double>(static_cast<int64_t>(val))) {
         WIDGET_LOGE("offset must be an integer, got a float");
         uriStr.insert(0, "file://");
         return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
     }
 
-    if (val > static_cast<double>(SIZE_MAX)) {
-        WIDGET_LOGE("offset exceeds uint32 range");
+    if (val > static_cast<double>(std::numeric_limits<int64_t>::max())) {
+        WIDGET_LOGE("offset exceeds int64 range");
         uriStr.insert(0, "file://");
         return taihe::make_holder<SceneImpl, ::SceneTH::Scene>(uriStr, params);
     }

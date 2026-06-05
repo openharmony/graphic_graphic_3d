@@ -53,7 +53,7 @@ public:
      * @return Null scene pointer if creation failed
      * @note Supports 2 types of .scene files. First tries with older loader. If that fails, then newer one with index
      */
-    Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, size_t offset) override;
+    Future<IScene::Ptr> CreateScene(BASE_NS::string_view uri, int64_t offset) override;
     /**
      * @brief Load scene from a file. Multiple formats are supported
      * @param uri Location of the scene file, for example file://myscene.gltf or file://myscene.scene

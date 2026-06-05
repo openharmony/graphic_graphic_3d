@@ -259,7 +259,7 @@ bool CopySparseElements(
     return true;
 }
 
-BufferLoadResult ResolveBufferSource(Data const& data, Buffer const& buffer, string_view& uri, uint32_t& offset)
+BufferLoadResult ResolveBufferSource(Data const& data, Buffer const& buffer, string_view& uri, uint64_t& offset)
 {
     if (buffer.uri.size()) {
         uri = buffer.uri;
@@ -268,7 +268,7 @@ BufferLoadResult ResolveBufferSource(Data const& data, Buffer const& buffer, str
     }
     if (data.defaultResourcesOffset >= 0) {
         uri = data.defaultResources;
-        offset = static_cast<uint32_t>(data.defaultResourcesOffset);
+        offset = static_cast<uint64_t>(data.defaultResourcesOffset);
         return BufferLoadResult{};
     }
     return BufferLoadResult{false, "Failed to open buffer: " + buffer.uri + '\n'};
@@ -340,7 +340,7 @@ IFile* OpenBufferFile(Data const& data, IFileManager& fileManager, const string_
     return file.get();
 }
 
-BufferLoadResult ReadBufferFile(Buffer& buffer, IFile& file, const uint32_t offset)
+BufferLoadResult ReadBufferFile(Buffer& buffer, IFile& file, const uint64_t offset)
 {
     if (!file.Seek(offset)) {
         return BufferLoadResult{false, "Failed to seek buffer: " + buffer.uri + '\n'};
@@ -371,7 +371,7 @@ BufferLoadResult LoadBuffer(Data const& data, Buffer& buffer, IFileManager& file
         return BufferLoadResult{};
     }
 
-    uint32_t offset = 0u;
+    uint64_t offset = 0u;
     string_view uri;
     const auto sourceResult = ResolveBufferSource(data, buffer, uri, offset);
     if (!sourceResult.success) {

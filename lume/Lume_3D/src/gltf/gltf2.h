@@ -43,7 +43,7 @@ public:
 
     // IGltf2
     GLTFLoadResult LoadGLTF(BASE_NS::string_view uri) override;
-    GLTFLoadResult LoadGLTF(BASE_NS::string_view uri, size_t offset) override;
+    GLTFLoadResult LoadGLTF(BASE_NS::string_view uri, int64_t offset) override;
     GLTFLoadResult LoadGLTF(BASE_NS::array_view<uint8_t const> data) override;
     bool SaveGLTF(CORE_NS::IEcs& ecs, BASE_NS::string_view uri) override;
     IGLTF2Importer::Ptr CreateGLTF2Importer(CORE_NS::IEcs& ecs) override;
@@ -57,7 +57,7 @@ public:
 
     // ISceneLoader
     Result Load(BASE_NS::string_view uri) override;
-    Result Load(BASE_NS::string_view uri, size_t offset) override;
+    Result Load(BASE_NS::string_view uri, int64_t offset) override;
     ISceneImporter::Ptr CreateSceneImporter(CORE_NS::IEcs& ecs) override;
     ISceneImporter::Ptr CreateSceneImporter(CORE_NS::IEcs& ecs, CORE_NS::IThreadPool& pool) override;
     BASE_NS::array_view<const BASE_NS::string_view> GetSupportedExtensions() const override;

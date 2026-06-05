@@ -53,7 +53,7 @@ public:
     };
 
     struct SceneLoadParams {
-        size_t offset = 0;
+        int64_t offset = 0;
     };
 
 public:

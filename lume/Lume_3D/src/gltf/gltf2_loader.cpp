@@ -3111,21 +3111,17 @@ bool ReadJsonChunk(LoadResult& loadResult, IFile& file, const uint64_t headerLen
     return true;
 }
 
-bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength, size_t offset)
+bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength, int64_t offset)
 {
     constexpr uint64_t GLB_DATA_OFFSET_PREFIX = sizeof(GLBHeader) + (2u * sizeof(GLBChunk));
     const uint64_t dataOffset = GLB_DATA_OFFSET_PREFIX + chunkJsonLength;
     if (dataOffset < GLB_DATA_OFFSET_PREFIX || dataOffset > headerLength || dataOffset > loadResult.data->size ||
-        dataOffset > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
+        dataOffset > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
+        offset > std::numeric_limits<int64_t>::max() - static_cast<int64_t>(dataOffset)) {
         RETURN_WITH_ERROR(loadResult, "Parsing GLTF failed: data part offset is out of file");
     }
-    loadResult.data->defaultResourcesOffset = static_cast<int32_t>(dataOffset) + offset;
+    loadResult.data->defaultResourcesOffset = static_cast<int64_t>(dataOffset) + offset;
     return true;
-}
-
-bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength)
-{
-    return SetDataOffset(loadResult, headerLength, chunkJsonLength, 0);
 }
 
 bool ReadJsonChunkData(LoadResult& loadResult, IFile& file, const uint32_t chunkLength, string& jsonString)
@@ -3161,7 +3157,7 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
     ParseGLTF(loadResult, jsonObject);
 }
 
-bool LoadGLB(LoadResult& loadResult, IFile& file, size_t offset)
+bool LoadGLB(LoadResult& loadResult, IFile& file, int64_t offset)
 {
     GLBHeader header;
     if (!ReadGLBHeader(loadResult, file, header)) {
@@ -3194,8 +3190,13 @@ bool LoadGLB(LoadResult& loadResult, IFile& file, size_t offset)
 }  // namespace
 
 // Internal loading function.
-LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t offset)
+LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, int64_t offset)
 {
+    if (offset < 0) {
+        PLUGIN_LOG_D("Error loading '%s', offset is negative", string(uri).data());
+        return LoadResult("Offset must not be negative");
+    }
+
     LoadResult result;
 
     CORE_CPU_PERF_SCOPE("CORE3D", "LoadGLTF()", uri, CORE3D_PROFILER_DEFAULT_COLOR);
@@ -3206,7 +3207,7 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t off
         return LoadResult("Failed to open file.");
     }
 
-    const size_t fileTotalLength = static_cast<size_t>(file->GetLength());
+    const uint64_t fileTotalLength = file->GetLength();
 
     if (fileTotalLength > SIZE_MAX) {
         PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
@@ -3239,7 +3240,7 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, size_t off
     });
 
     if (offset != 0) {
-        file->Seek(offset);
+        file->Seek(static_cast<uint64_t>(offset));
     }
 
     if (extension == "gltf" || extension == "glt") {

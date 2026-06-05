@@ -284,7 +284,7 @@ public:
      * parsing fails LoadResult::result will be a non-zero, loader specific error code and LoadResult::error will give
      * more details on the failure.
      */
-    virtual Result Load(BASE_NS::string_view uri, size_t offset) = 0;
+    virtual Result Load(BASE_NS::string_view uri, int64_t offset) = 0;
 
     /** Create an importer that builds 3D resources and scenes from loaded scene data.
      *  The importer will create a thread pool where import task are executed.

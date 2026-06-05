@@ -136,7 +136,7 @@ Future<IScene::Ptr> SceneManager::CreateScene(SceneOptions opts)
 }
 
 static IScene::Ptr Load(const IScene::Ptr& scene, BASE_NS::string_view uri, bool createResources,
-    const CORE_NS::ResourceId& rid, size_t offset)
+    const CORE_NS::ResourceId& rid, int64_t offset)
 {
     CORE_LOG_I("Loading scene: '%s'", BASE_NS::string(uri).c_str());
     if (auto assets = META_NS::GetObjectRegistry().Create<IAssetObject>(ClassId::AssetObject)) {
@@ -155,7 +155,7 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri)
     return CreateScene(uri, opts_);
 }
 
-Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, size_t offset)
+Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, int64_t offset)
 {
     opts_.dataOffset = offset;
     return CreateScene(uri, opts_);
@@ -171,7 +171,7 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     }
     bool createRes = opts.createResources;
     CORE_NS::ResourceId rid = opts.resourceId;
-    size_t offset = opts.dataOffset;
+    int64_t offset = opts.dataOffset;
     return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri), renderContext = context_,
                                               args = CreateContext(BASE_NS::move(opts)), createRes, rid, offset] {
         // Bracket the entire user-facing load (gltf branch + editor-scene
