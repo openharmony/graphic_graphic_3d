@@ -153,7 +153,7 @@ ohos_source_set("scene_adapter_source") {
     "runtime_core:ani",
     "runtime_core:ani_helpers",
     "egl:libEGL",
- 	  "opengles:libGLES"
+    "opengles:libGLES"
   ]
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 
