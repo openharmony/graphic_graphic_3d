@@ -94,7 +94,7 @@ ohos_unittest("SceneAdapterUnitTest") {
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
     "egl:libEGL",
- 	  "opengles:libGLES",
+    "opengles:libGLES",
   ]
   
   part_name = "graphic_3d"
