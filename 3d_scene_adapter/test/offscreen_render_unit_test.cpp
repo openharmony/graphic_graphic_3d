@@ -212,16 +212,19 @@ HWTEST_F(OffscreenRenderUT, CameraConfig, TestSize.Level1)
     bool ret2 = offScreenScene->SetCameraConfigs(p);
     EXPECT_FALSE(ret2);
     offScreenScene->CreateCamera(p);
-    EXPECT_NE(offScreenScene->GetCamera(), nullptr);
-    auto far1 = offScreenScene->GetCamera()->FarPlane()->GetValue();
+    auto camera = offScreenScene->GetCamera();
+    ASSERT_NE(camera, nullptr);
+    auto far1 = camera->FarPlane()->GetValue();
 
     OffscreenCameraConfigs p2;
     p2.intrinsics_.far_ = 10000;
     offScreenScene->SetCameraConfigs(p2);
-    auto far2 = offScreenScene->GetCamera()->FarPlane()->GetValue();
+    auto far2 = camera->FarPlane()->GetValue();
     EXPECT_NE(far1, far2);
 
-    bool ret3 = offScreenScene->EngineTickFrame(offScreenScene->GetEcs());
+    auto ecs = offScreenScene->GetEcs();
+    ASSERT_NE(ecs, nullptr);
+    bool ret3 = offScreenScene->EngineTickFrame(ecs);
     EXPECT_TRUE(ret3);
 }
 
@@ -375,7 +378,7 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneSetCameraConfigs002, TestSize.Level1)
 
     // Verify camera properties were updated
     auto camera = offScreenScene->GetCamera();
-    EXPECT_NE(camera, nullptr);
+    ASSERT_NE(camera, nullptr);
     EXPECT_EQ(camera->FoV()->GetValue(), 0.8f);
     EXPECT_EQ(camera->NearPlane()->GetValue(), 0.2f);
     EXPECT_EQ(camera->FarPlane()->GetValue(), 200.0f);
@@ -616,10 +619,12 @@ HWTEST_F(OffscreenRenderUT, OffscreenSceneCreateCameraDifferentConfigs, TestSize
     EXPECT_TRUE(ret);
 
     auto camera = offScreenScene->GetCamera();
-    EXPECT_NE(camera, nullptr);
+    ASSERT_NE(camera, nullptr);
 
     // Verify camera was created with correct properties
-    auto pos = interface_pointer_cast<SCENE_NS::INode>(camera)->Position()->GetValue();
+    auto node = interface_pointer_cast<SCENE_NS::INode>(camera);
+    ASSERT_NE(node, nullptr);
+    auto pos = node->Position()->GetValue();
     EXPECT_LT(std::fabs(pos.x - 5.0f), Rosen::EPSILON);
     EXPECT_LT(std::fabs(pos.y - 10.0f), Rosen::EPSILON);
     EXPECT_LT(std::fabs(pos.z - 15.0f), Rosen::EPSILON);
