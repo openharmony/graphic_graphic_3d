@@ -16,6 +16,11 @@
 #include "device/device.h"
 
 RENDER_BEGIN_NAMESPACE()
+bool IsSrgbColorSpace(uint32_t colorSpace)
+{
+    return false;
+}
+
 GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer)
 {
     return {};

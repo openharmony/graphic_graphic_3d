@@ -928,6 +928,7 @@ bool EGLState::CreateContext(DeviceCreateInfo const& createInfo)
     HandleExtensions();
 
     plat_.hasColorSpaceExt = hasColorSpaceExt_ = HasExtension("EGL_KHR_gl_colorspace");
+    plat_.hasImageColorSpaceExt = HasExtension("EGL_EXT_image_gl_colorspace");
     hasConfiglessExt_ = HasExtension("EGL_KHR_no_config_context");
     hasSurfacelessExt_ = HasExtension("EGL_KHR_surfaceless_context");
     // we need a config for the context..

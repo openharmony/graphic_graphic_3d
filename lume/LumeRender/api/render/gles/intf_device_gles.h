@@ -180,6 +180,8 @@ struct DevicePlatformDataGLES : DevicePlatformData {
     uint32_t minorVersion{0};
     /** Does EGL have EGL_KHR_gl_colorspace **/
     bool hasColorSpaceExt{false};
+    /** Does EGL have EGL_EXT_image_gl_colorspace **/
+    bool hasImageColorSpaceExt{false};
     /** Context created by us, also destroy it */
     bool contextCreated{false};
     /** Call eglInitialize/eglTerminate or not */
