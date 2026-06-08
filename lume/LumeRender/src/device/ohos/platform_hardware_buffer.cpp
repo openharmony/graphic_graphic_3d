@@ -73,6 +73,17 @@ BASE_NS::Format GetCoreFormatFromNativeBufferFormat(uint32_t nativeBufferFormat)
 }
 }  // namespace
 
+bool IsSrgbColorSpace(uint32_t colorSpace)
+{
+    // transfunc for OH_COLORSPACE_P3_FULL and OH_COLORSPACE_P3_LIMIT is TRANSFUNC_SRGB
+    // so when using eglCreateImageKHR, attrib_list should be set to include
+    // EGL_GL_COLORSPACE_SRGB(_KHR) attribute for sRGB conversion.
+    return (colorSpace == OH_COLORSPACE_SRGB_FULL) || (colorSpace == OH_COLORSPACE_P3_FULL) ||
+           (colorSpace == OH_COLORSPACE_SRGB_LIMIT) || (colorSpace == OH_COLORSPACE_P3_LIMIT) ||
+           (colorSpace == OH_COLORSPACE_DISPLAY_BT2020_SRGB) || (colorSpace == OH_COLORSPACE_DISPLAY_P3_SRGB) ||
+           (colorSpace == OH_COLORSPACE_DISPLAY_SRGB);
+}
+
 GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer)
 {
     auto* aHwBuffer = reinterpret_cast<OH_NativeBuffer*>(platformHwBuffer);
@@ -80,15 +91,13 @@ GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer)
     OH_NativeBuffer_GetConfig(aHwBuffer, &config);
     OH_NativeBuffer_ColorSpace colorSpace = OH_COLORSPACE_NONE;
     if (const auto ret = OH_NativeBuffer_GetColorSpace(aHwBuffer, &colorSpace); ret != 0) {
-        PLUGIN_LOG_I("Could not get NativeBuffer color space. (%d)", ret);
-    } else {
-        PLUGIN_LOG_I("NativeBuffer color space %d.", colorSpace);
+        PLUGIN_LOG_W("Could not get NativeBuffer color space. (%d)", ret);
     }
     ImageViewType imageViewType = ImageViewType::CORE_IMAGE_VIEW_TYPE_2D;
     ImageCreateFlags createFlags = 0;
 
     BASE_NS::Format format = GetCoreFormatFromNativeBufferFormat(config.format);
-    if ((colorSpace == OH_COLORSPACE_SRGB_FULL) || (colorSpace == OH_COLORSPACE_DISPLAY_SRGB)) {
+    if (IsSrgbColorSpace(colorSpace)) {
         if (format == BASE_NS::Format::BASE_FORMAT_R8G8B8A8_UNORM) {
             format = BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB;
         } else if (format == BASE_NS::Format::BASE_FORMAT_R8G8B8_UNORM) {

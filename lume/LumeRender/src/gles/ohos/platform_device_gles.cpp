@@ -15,16 +15,67 @@
 
 #if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
 #include <external_window.h>
+#include <surface/native_buffer.h>
 #else
 #include <native_window/external_window.h>
+#include <native_buffer/native_buffer.h>
 #endif
 
+#include "device/device.h"
 #include "gles/device_gles.h"
 #include "gles/egl_functions.h"
 #include "gles/gl_functions.h"
 #include "gles/gpu_buffer_gles.h"
 #include "gles/gpu_image_gles.h"
 #include "util/log.h"
+namespace {
+static constexpr uint32_t MAX_EGL_IMAGE_ATTRIBS = 5;
+bool IsImageColorspaceSupported(const Render::DevicePlatformDataGLES& plat)
+{
+    // Check if EGL supports sRGB color space for image:
+    // 1. Either EGL is > 1.5 or EGL_KHR_gl_colorspace extension is supported.
+    // 2. EGL_EXT_image_gl_colorspace extension is supported.
+    if (plat.majorVersion > 1u || (plat.majorVersion == 1u && plat.minorVersion >= 5u)) {
+        // EGL 1.5 or newer -> no need to check the EGL_KHR_gl_colorspace extension.
+        return plat.hasImageColorSpaceExt;
+    }
+    // Check if the sRGB color space extension for image is supported.
+    return plat.hasColorSpaceExt && plat.hasImageColorSpaceExt;
+}
+
+EGLImage CreateImage(
+    const Render::DevicePlatformDataGLES& platData, OHNativeWindowBuffer* nativeWindowBufferPtr, bool isSRGB) noexcept
+{
+    // Check if sRGB colorspace is supported by EGL.
+    const bool isImageColorspaceSupported = IsImageColorspaceSupported(platData);
+
+    // https://registry.khronos.org/EGL/extensions/EXT/EGL_EXT_image_gl_colorspace.txt
+    // This extension relaxes the restriction that only the eglCreate*Surface
+    // functions can accept the EGL_GL_COLORSPACE attribute. With this change,
+    // eglCreateImage can also accept this attribute.
+    EGLint attribs[MAX_EGL_IMAGE_ATTRIBS];
+    int idx = 0;
+    attribs[idx++] = EGL_IMAGE_PRESERVED_KHR;
+    attribs[idx++] = EGL_TRUE;
+    if (isImageColorspaceSupported) {
+        // Check if EGL is > 1.5.
+        if (platData.majorVersion > 1u || (platData.majorVersion == 1u && platData.minorVersion >= 5u)) {
+            attribs[idx++] = EGL_GL_COLORSPACE;
+            attribs[idx++] = isSRGB ? EGL_GL_COLORSPACE_SRGB : EGL_GL_COLORSPACE_LINEAR;
+        } else if (platData.hasColorSpaceExt) {
+            attribs[idx++] = EGL_GL_COLORSPACE_KHR;
+            attribs[idx++] = isSRGB ? EGL_GL_COLORSPACE_SRGB_KHR : EGL_GL_COLORSPACE_LINEAR_KHR;
+        }
+    } else {
+        PLUGIN_LOG_W("EGL does not support sRGB color space for image.");
+    }
+    attribs[idx++] = EGL_NONE;
+
+    const auto eglImage =
+        eglCreateImageKHR(platData.display, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, nativeWindowBufferPtr, attribs);
+    return eglImage;
+}
+}  // namespace
 
 RENDER_BEGIN_NAMESPACE()
 BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
@@ -52,10 +103,13 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
             auto* nativeBufferPtr = reinterpret_cast<OH_NativeBuffer*>(tmp.platformHwBuffer);
             auto nativeWindowBufferPtr = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(nativeBufferPtr);
 
-            const auto dsp = static_cast<const DevicePlatformDataGLES&>(eglState_.GetPlatformData()).display;
-            static constexpr EGLint attrs[] = {EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE};
-            const auto eglImage =
-                eglCreateImageKHR(dsp, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, nativeWindowBufferPtr, attrs);
+            const auto& platData = static_cast<const DevicePlatformDataGLES&>(eglState_.GetPlatformData());
+            OH_NativeBuffer_ColorSpace colorSpace = OH_COLORSPACE_NONE;
+            if (const auto ret = OH_NativeBuffer_GetColorSpace(nativeBufferPtr, &colorSpace); ret != 0) {
+                PLUGIN_LOG_W("Could not get NativeBuffer color space. (%d)", ret);
+            }
+            const bool isSrgbColorSpace = IsSrgbColorSpace(colorSpace);
+            const auto eglImage = CreateImage(platData, nativeWindowBufferPtr, isSrgbColorSpace);
             if (!eglImage) {
                 PLUGIN_LOG_E("eglCreateImageKHR failed %d", eglGetError());
                 OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
@@ -67,7 +121,7 @@ BASE_NS::unique_ptr<GpuImage> DeviceGLES::CreateGpuImageView(
             data.eglImage = reinterpret_cast<uintptr_t>(eglImage);
             image = CreateGpuImageView(finalDesc, data);
 
-            eglDestroyImageKHR(dsp, eglImage);
+            eglDestroyImageKHR(platData.display, eglImage);
             OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
         }
     }

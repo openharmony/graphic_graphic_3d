@@ -280,6 +280,7 @@ protected:
 };
 
 // Plaform specific helper
+bool IsSrgbColorSpace(uint32_t colorSpace);
 GpuImageDesc GetImageDescFromHwBufferDesc(uintptr_t platformHwBuffer);
 GpuBufferDesc GetBufferDescFromHwBufferDesc(uintptr_t platformHwBuffer);
 RENDER_END_NAMESPACE()
