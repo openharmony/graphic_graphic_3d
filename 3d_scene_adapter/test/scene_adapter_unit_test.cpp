@@ -637,7 +637,7 @@ HWTEST_F(SceneAdapterUT, CreateEmptyScene001, TestSize.Level1)
 
         // After CreateEmptyScene, GetEcs should return non-null
         auto ecs = adapter->GetEcs();
-        ASSERT_NE(ecs, nullptr);
+        EXPECT_NE(ecs, nullptr);
     }
 
     adapter->Deinit();
@@ -925,7 +925,7 @@ HWTEST_F(SceneAdapterUT, GetEcsWithCreateEmptyScene001, TestSize.Level1)
     adapter->CreateEmptyScene();
     {
         auto ecs2 = adapter->GetEcs();
-        ASSERT_NE(ecs2, nullptr);
+        EXPECT_NE(ecs2, nullptr);
     }
 
     adapter->Deinit();
