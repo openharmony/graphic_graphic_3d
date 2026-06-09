@@ -263,8 +263,9 @@ bool SceneAdapter::FGInitialize()
         return false;
     }
 
-    RETURN_FALSE_IF_NULL(sceneWidgetObj_);
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto sceneObj = GetSceneObj();
+    RETURN_FALSE_IF_NULL(sceneObj);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
     RETURN_FALSE_IF_NULL(scene);
     auto internalScene = scene->GetInternalScene();
     RETURN_FALSE_IF_NULL(internalScene);
@@ -298,8 +299,9 @@ bool SceneAdapter::SRInitialize()
         return false;
     }
 
-    RETURN_FALSE_IF_NULL(sceneWidgetObj_);
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto sceneObj = GetSceneObj();
+    RETURN_FALSE_IF_NULL(sceneObj);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
     RETURN_FALSE_IF_NULL(scene);
     auto internalScene = scene->GetInternalScene();
     RETURN_FALSE_IF_NULL(internalScene);
@@ -521,7 +523,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
 void SceneAdapter::SetSceneObj(META_NS::IObject::Ptr pt)
 {
     WIDGET_LOGD("SceneAdapterImpl::SetSceneObj");
-    sceneWidgetObj_ = pt;
+    externalSceneObject_ = pt;
 }
 
 std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
@@ -635,7 +637,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 #ifdef __SR_MODULE__
         // create offscreen render target for super resolution plugin
         if (auto rc = engineInstance_.renderContext_; SRModule::Enable() && rc) {
-            if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
+            if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj())) {
                 PropSync();
                 const auto& sr = SRModule::InitConfig(scene->GetInternalScene(), rc);
                 auto const width = textureInfo.width_ * textureInfo.widthScale_;
@@ -668,7 +670,7 @@ void SceneAdapter::OnWindowChange(const WindowChangeInfo& windowChangeInfo)
 #endif
         }
 
-        if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_)) {
+        if (auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj())) {
             auto cams = scene->GetCameras().GetResult();
             if (!cams.empty()) {
                 for (auto c : cams) {
@@ -764,7 +766,7 @@ void SceneAdapter::ShutdownPluginRegistry()
 
 void SceneAdapter::PropSync()
 {
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj());
     if (!scene) {
         return;
     }
@@ -780,8 +782,9 @@ void SceneAdapter::RenderFunction()
     WIDGET_SCOPED_TRACE("SceneAdapter::RenderFunction");
     auto rc = engineInstance_.renderContext_;
     RETURN_IF_NULL(rc);
-    RETURN_IF_NULL(sceneWidgetObj_);
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto sceneObj = GetSceneObj();
+    RETURN_IF_NULL(sceneObj);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
     RETURN_IF_NULL(scene);
     BASE_NS::vector<SCENE_NS::ICamera::Ptr> disabledCameras;
     auto cams = scene->GetCameras().GetResult();
@@ -969,7 +972,7 @@ void SceneAdapter::Deinit()
 
         if (bitmap_) {
             bitmap_.reset();
-            auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj());
             if (!scene) {
                 return META_NS::IAny::Ptr{};
             }
@@ -986,7 +989,7 @@ void SceneAdapter::Deinit()
     });
     engineThread->AddWaitableTask(func)->Wait();
 
-    sceneWidgetObj_.reset();
+    ownedSceneObject_.reset();
     singleFrameAsync_.reset();
     singleFrameSync_.reset();
     propSyncSync_.reset();
@@ -1079,7 +1082,7 @@ RENDER_NS::RenderHandleReference CreateOESTextureHandle(CORE_NS::IEcs::Ptr ecs,
 void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
 {
     WIDGET_LOGI("Init resource for camera view");
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj());
     RETURN_IF_NULL(scene);
     auto internalScene = scene->GetInternalScene();
     RETURN_IF_NULL(internalScene);
@@ -1168,7 +1171,7 @@ void SceneAdapter::InitEnvironmentResource(const uint32_t bufferSize)
 
 void SceneAdapter::UpdateSurfaceBuffer()
 {
-    auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneWidgetObj_);
+    auto scene = interface_pointer_cast<SCENE_NS::IScene>(GetSceneObj());
     RETURN_IF_NULL(scene);
     auto internalScene = scene->GetInternalScene();
     RETURN_IF_NULL(internalScene);
@@ -1254,7 +1257,8 @@ void SceneAdapter::CreateEmptyScene()
         duh->AddValue(interface_pointer_cast<CORE_NS::IInterface>(scene));
         // SceneETS::AddScene function end
 
-        this->SetSceneObj(interface_pointer_cast<META_NS::IObject>(scene));
+        auto sceneObj = interface_pointer_cast<META_NS::IObject>(scene);
+        ownedSceneObject_ = sceneObj;
     };
     auto engineQ = META_NS::GetTaskQueueRegistry().GetTaskQueue(ENGINE_THREAD);
 
