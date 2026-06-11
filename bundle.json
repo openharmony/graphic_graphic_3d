@@ -404,7 +404,9 @@
         "meshoptimizer",
         "api_metrics",
         "egl",
-        "opengles"
+        "opengles",
+        "form_fwk",
+        "ability_base"
       ],
       "third_party": []
     },
