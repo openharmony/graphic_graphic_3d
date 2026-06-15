@@ -236,7 +236,6 @@ ohos_source_set("lume_scenewidget_src") {
 
   deps = [
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
-    "${LUME_META_PATH}:libPluginMetaObject",
   ]
 
   external_deps = [ "c_utils:utils" ]
@@ -357,7 +356,6 @@ ohos_source_set("lume_scene_metadata_importer_src") {
 
   deps = [
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
-    "${LUME_META_PATH}:libPluginMetaObject",
   ]
 
   external_deps = [ "c_utils:utils" ]
@@ -496,7 +494,6 @@ ohos_source_set("lume_scene_importer_src") {
 
   deps = [
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
-    "${LUME_META_PATH}:libPluginMetaObject",
   ]
 
   external_deps = [ "c_utils:utils" ]
