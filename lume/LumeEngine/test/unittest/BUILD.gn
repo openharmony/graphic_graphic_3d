@@ -279,7 +279,8 @@ ohos_unittest("lume_engine_src_test") {
     "hilog:libhilog",
     "googletest:gtest",
     "googletest:gmock",
-    "resource_management:global_resmgr"
+    "resource_management:global_resmgr",
+    "icu:shared_icuuc"
   ]
 
   # Deps

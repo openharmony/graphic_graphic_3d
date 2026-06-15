@@ -383,6 +383,7 @@
         "graphic_2d",
         "graphic_surface",
         "hitrace",
+        "icu",
         "init",
         "input",
         "ipc",
