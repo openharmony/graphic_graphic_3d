@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,10 +16,9 @@
 #ifndef TAIHE_ERROR_UTIL_H
 #define TAIHE_ERROR_UTIL_H
 
-#include <cstdio>
+#include <cstdarg>
 #include <string>
-#include <utility>
-#include "kits/js/include/napi_error_util.h"
+#include <napi_error_util.h>
 #include "taihe/runtime.hpp"
 #include "3d_widget_adapter_log.h"
 
@@ -27,19 +26,18 @@ namespace OHOS::Render3D::KITETS {
 
 using ErrorCode = NapiErrorUtil::Code;
 
-template<typename... Args>
-inline void SetBusinessError(ErrorCode code, const char* fmt, Args&&... args)
+FORMAT_FUNC(2, 3)
+inline void SetBusinessError(ErrorCode code, const char* fmt, ...)
 {
     if (!fmt) {
         WIDGET_LOGW("SetBusinessError: fmt is null");
-        taihe::set_business_error(static_cast<int32_t>(code), nullptr);
+        taihe::set_business_error(static_cast<int32_t>(code), NapiErrorUtil::ToString(code));
         return;
     }
-    int size = std::snprintf(nullptr, 0, fmt, std::forward<Args>(args)...);
-    if (size < 0) return;
-
-    std::string buf(size + 1, '\0');
-    std::snprintf(buf.data(), buf.size(), fmt, std::forward<Args>(args)...);
+    va_list ap;
+    va_start(ap, fmt);
+    std::string buf = NapiErrorUtil::FormatStringV(fmt, ap);
+    va_end(ap);
     taihe::set_business_error(static_cast<int32_t>(code), buf.c_str());
 }
 

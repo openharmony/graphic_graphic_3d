@@ -19,6 +19,7 @@
 #include <Vec2Proxy.h>
 #include <Vec3Proxy.h>
 #include <napi_api.h>
+#include <napi_error_util.h>
 #include <scene/interface/intf_create_mesh.h>
 
 namespace GeometryDefinition {
@@ -89,6 +90,14 @@ GeometryDefinition* CustomJS::FromJs(NapiApi::Object jsDefinition)
         && ArrayToNative(jsDefinition, "colors",   newObj->colors_)
         // clang-format on
     ) {
+        const auto vertexCount = static_cast<uint32_t>(newObj->vertices_.size());
+        for (const auto idx : newObj->indices_) {
+            if (idx >= vertexCount) {
+                delete newObj;
+                LOG_E("index %u out of range (vertex count %u)", idx, vertexCount);
+                return {};
+            }
+        }
         return newObj;
     } else {
         delete newObj;

@@ -132,6 +132,7 @@ ohos_source_set("napi_source") {
       "src/MeshJS.cpp",
       "src/MeshResourceJS.cpp",
       "src/MorpherJS.cpp",
+      "src/napi_error_util.cpp",
       "src/napi/array.cpp",
       "src/napi/env.cpp",
       "src/napi/function.cpp",

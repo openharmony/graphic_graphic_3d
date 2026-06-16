@@ -15,6 +15,7 @@
 
 #include "ANIUtils.h"
 #include "MeshResourceImpl.h"
+#include "TaiheErrorUtil.h"
 #include "geometry_definition/GeometryDefinition.h"
 
 #ifdef __SCENE_ADAPTER__
@@ -39,8 +40,23 @@ BASE_NS::unique_ptr<Geometry::CustomETS> MeshResourceImpl::MakeCustomETS(
     auto vertices = ArrayToVector<SceneTypes::Vec3, BASE_NS::Math::Vec3>(customGeometry->getVertices(),
         [](const SceneTypes::Vec3 &a) { return BASE_NS::Math::Vec3(a->getX(), a->getY(), a->getZ()); });
 
-    auto indices = ArrayToVector<int32_t, uint32_t>(
-        customGeometry->getIndices(), [](const int32_t a) { return static_cast<uint32_t>(a); });
+    const auto vertexCount = static_cast<uint32_t>(vertices.size());
+    const auto indicesOpt = customGeometry->getIndices();
+    BASE_NS::vector<uint32_t> indices;
+    if (indicesOpt.has_value()) {
+        const auto &indicesArray = indicesOpt.value();
+        indices.resize(indicesArray.size());
+        for (size_t i = 0; i < indicesArray.size(); ++i) {
+            const uint32_t idx = static_cast<uint32_t>(indicesArray[i]);
+            if (idx >= vertexCount) {
+                SetBusinessError(ErrorCode::INVALID_ARGUMENTS,
+                    "Invalid index in CustomGeometry: index %d out of range [0, %u)",
+                    static_cast<int32_t>(idx), vertexCount);
+                return nullptr;
+            }
+            indices[i] = idx;
+        }
+    }
 
     auto normals = ArrayToVector<SceneTypes::Vec3, BASE_NS::Math::Vec3>(customGeometry->getNormals(),
         [](const SceneTypes::Vec3 &a) { return BASE_NS::Math::Vec3(a->getX(), a->getY(), a->getZ()); });
@@ -60,6 +76,9 @@ SceneResources::MeshResource MeshResourceImpl::Create(
     if (geometry.holds_custom()) {
         const SceneTypes::CustomGeometry &customGeometry = geometry.get_custom_ref();
         gd = MakeCustomETS(customGeometry);
+        if (!gd) {
+            return ::taihe::make_holder<MeshResourceImpl, SceneResources::MeshResource>(nullptr);
+        }
     } else if (geometry.holds_cube()) {
         const SceneTypes::CubeGeometry &cubeGeometry = geometry.get_cube_ref();
         SceneTypes::Vec3 size = cubeGeometry->getSize();
@@ -82,10 +101,10 @@ SceneResources::MeshResource MeshResourceImpl::Create(
         if (radius > 0 && height > 0 && segmentCount >= CYLINDER_MIN_SEGMENTS) {
             gd = BASE_NS::make_unique<Geometry::CylinderETS>(radius, height, segmentCount);
         } else {
-            taihe::set_error("Unable to create CylinderETS: Invalid parameters given");
+            SetBusinessError(ErrorCode::INVALID_ARGUMENTS, "Unable to create CylinderETS: Invalid parameters given");
         }
     } else {
-        taihe::set_error("Unknown type of GeometryDefinition");
+        SetBusinessError(ErrorCode::INVALID_ARGUMENTS, "Unknown type of GeometryDefinition");
         return SceneResources::MeshResource({nullptr, nullptr});
     }
     const std::string name(params.name);
