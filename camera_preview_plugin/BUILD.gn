@@ -102,7 +102,7 @@ lume_rofs("CAM_PREVIEW_ROFS") {
     output_obj = "${CAM_PREVIEW_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" || target_cpu == "x86_64") {
     output_obj = "${CAM_PREVIEW_ROFS}_x64.o"
   }
 
@@ -142,7 +142,7 @@ source_set("campreview_rofs_obj") {
     output_obj = "${CAM_PREVIEW_ROFS}_x32.o"
   }
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" || target_cpu == "x86_64") {
     output_obj = "${CAM_PREVIEW_ROFS}_x64.o"
   }
 
