@@ -154,9 +154,6 @@ ohos_source_set("scene_adapter_source") {
     "runtime_core:ani_helpers",
     "egl:libEGL",
     "opengles:libGLES",
-    "window_manager:libwmutil",
-    "ability_base:configuration",
-    "form_fwk:form_manager"
   ]
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 
