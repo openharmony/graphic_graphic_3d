@@ -48,6 +48,7 @@ ohos_fuzztest("JsonFuzzTest") {
   external_deps = [
     "c_utils:utils",
     "hilog:libhilog",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"

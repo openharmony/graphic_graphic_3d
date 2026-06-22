@@ -494,6 +494,7 @@ ohos_source_set("lume_render_src") {
     "graphic_surface:surface",
     "hitrace:hitrace_meter",
     "skia:skia_canvaskit",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"

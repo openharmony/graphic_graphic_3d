@@ -37,7 +37,10 @@ ohos_source_set("lume_3d_plugin_src") {
     "${LUME_RENDER_PATH}:lume_render_api",
   ]
 
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
+  ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
