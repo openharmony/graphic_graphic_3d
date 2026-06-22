@@ -95,7 +95,10 @@ public:
     CORE_NS::IEcs::Ptr GetEcs();
     virtual META_NS::IObject::Ptr GetSceneObj()
     {
-        return sceneWidgetObj_;
+        if (ownedSceneObject_) {
+            return ownedSceneObject_;
+        }
+        return externalSceneObject_.lock();
     }
 
 protected:
@@ -110,7 +113,8 @@ protected:
     int32_t CreateFenceFD(const RENDER_NS::IRenderFrameUtil::SignalData& signalData, RENDER_NS::IDevice& device);
     void PropSync();
 
-    META_NS::IObject::Ptr sceneWidgetObj_;
+    META_NS::IObject::WeakPtr externalSceneObject_;
+    META_NS::IObject::Ptr ownedSceneObject_;
 
     RENDER_NS::RenderHandleReference swapchainHandle_;
     RENDER_NS::RenderHandleReference camTransBufferHandle_;
