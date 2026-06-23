@@ -407,8 +407,7 @@
         "opengles",
         "window_manager",
         "form_fwk",
-        "ability_base",
-        "googletest"
+        "ability_base"
       ],
       "third_party": []
     },
