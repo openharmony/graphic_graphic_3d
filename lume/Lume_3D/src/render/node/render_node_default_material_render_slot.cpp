@@ -77,7 +77,7 @@ constexpr uint32_t UBO_BIND_OFFSET_ALIGNMENT{PipelineLayoutConstants::MIN_UBO_BI
 // 0F00 0000 0000 0000 Submesh
 static constexpr uint64_t RENDER_HASH_FLAGS_MASK{0xFFFFFffffULL};
 static constexpr uint64_t LIGHTING_FLAGS_SHIFT{36ULL};
-static constexpr uint64_t LIGHTING_FLAGS_MASK{0xFULL << LIGHTING_FLAGS_SHIFT};
+static constexpr uint64_t LIGHTING_FLAGS_MASK{0xFFULL << LIGHTING_FLAGS_SHIFT};
 static constexpr uint64_t POST_PROCESS_FLAGS_SHIFT{44ULL};
 static constexpr uint64_t POST_PROCESS_FLAGS_MASK{0xFULL << POST_PROCESS_FLAGS_SHIFT};
 static constexpr uint64_t CAMERA_FLAGS_SHIFT{48ULL};
