@@ -403,7 +403,12 @@
         "zlib",
         "runtime_core",
         "meshoptimizer",
-        "api_metrics"
+        "api_metrics",
+        "egl",
+        "opengles",
+        "window_manager",
+        "form_fwk",
+        "ability_base"
       ],
       "third_party": []
     },

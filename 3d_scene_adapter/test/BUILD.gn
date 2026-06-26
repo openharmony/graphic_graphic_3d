@@ -93,6 +93,8 @@ ohos_unittest("SceneAdapterUnitTest") {
     "input:libmmi-client",
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
   
   part_name = "graphic_3d"
@@ -184,6 +186,8 @@ ohos_unittest("AGPOffscreenRenderUnitTest") {
     "input:libmmi-client",
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
   
   part_name = "graphic_3d"
@@ -358,6 +362,8 @@ ohos_unittest("SurfaceStreamUnitTest") {
     "graphic_surface:sync_fence",
     "graphic_2d:libnative_image", # Handle HOS window
     "hilog:libhilog",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {

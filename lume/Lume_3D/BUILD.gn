@@ -248,6 +248,7 @@ ohos_source_set("lume_3d_src") {
 
   external_deps = [
     "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
   ]
 
   if (!LUME_OHOS_BUILD) {

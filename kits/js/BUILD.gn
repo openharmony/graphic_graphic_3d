@@ -193,6 +193,8 @@ ohos_source_set("napi_source") {
     "hitrace:hitrace_meter",
     "init:libbegetutil",
     "napi:ace_napi",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   if (histogram_management_enable) {
@@ -250,6 +252,8 @@ ohos_source_set("napi_entry") {
     "hilog:libhilog",
     "hitrace:hitrace_meter",
     "napi:ace_napi",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   part_name = "graphic_3d"

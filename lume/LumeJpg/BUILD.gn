@@ -40,6 +40,7 @@ ohos_source_set("lume_jpg_src") {
   external_deps = [
     "c_utils:utils",
     "libjpeg-turbo:turbojpeg",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"

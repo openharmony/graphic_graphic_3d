@@ -276,6 +276,8 @@ taihe_shared_library("scene_ani") {
     "ability_runtime:napi_common",
     "runtime_core:ani_helpers",
     "napi:ace_napi",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   configs = [

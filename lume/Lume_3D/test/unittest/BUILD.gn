@@ -155,11 +155,11 @@ ohos_unittest("lume_3d_api_test") {
   # External deps
   external_deps = [
     "bounds_checking_function:libsec_shared",
-    "googletest:gmock",
-    "googletest:gtest",
     "c_utils:utils",
     "graphic_surface:surface",
     "graphic_2d:libnative_image", # Handle HOS window
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {
@@ -276,6 +276,8 @@ ohos_unittest("lume_3d_src_test") {
     "c_utils:utils",
     "graphic_surface:surface",
     "graphic_2d:libnative_image", # Handle HOS window
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {

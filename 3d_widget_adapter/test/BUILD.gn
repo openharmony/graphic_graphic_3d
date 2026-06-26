@@ -30,6 +30,8 @@ ohos_unittest("3d_widget_adpater_test") {
     "graphic_2d:EGL",
     "graphic_2d:GLESv3",
     "hilog:libhilog",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   defines = [ "USE_ACE_SKIA" ]

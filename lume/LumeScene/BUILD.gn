@@ -238,7 +238,12 @@ ohos_source_set("lume_scenewidget_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
   ]
 
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+    "egl:libEGL",
+    "opengles:libGLES",
+    "bounds_checking_function:libsec_shared",
+  ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [
@@ -358,7 +363,10 @@ ohos_source_set("lume_scene_metadata_importer_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
   ]
 
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
+  ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [ "vulkan-headers:vulkan_headers" ]
@@ -496,7 +504,10 @@ ohos_source_set("lume_scene_importer_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
   ]
 
-  external_deps = [ "c_utils:utils" ]
+  external_deps = [
+    "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
+  ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [ "vulkan-headers:vulkan_headers" ]
