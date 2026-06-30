@@ -16,8 +16,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include <ani.h>
-#include "scene_adapter/scene_bridge_ani.h"
+#include "scene_adapter/scene_bridge_ani_loader.h"
 #include "3d_widget_adapter_log.h"
 
 using namespace testing;
@@ -45,10 +44,10 @@ public:
 HWTEST_F(SceneBridgeAniUT, UnwrapSceneFromAni001, TestSize.Level1)
 {
     WIDGET_LOGD("UnwrapSceneFromAni001");
-    ani_env* env = nullptr;
-    ani_object value = nullptr;
+    void* env = nullptr;
+    void* value = nullptr;
 
-    auto result = SceneBridgeAni::UnwrapSceneFromAni(env, value);
+    auto result = SceneBridgeAniLoader::GetInstance().UnwrapSceneFromAni(env, value);
     EXPECT_EQ(result, nullptr);
 }
 
@@ -60,11 +59,10 @@ HWTEST_F(SceneBridgeAniUT, UnwrapSceneFromAni001, TestSize.Level1)
 HWTEST_F(SceneBridgeAniUT, UnwrapSceneFromAni002, TestSize.Level1)
 {
     WIDGET_LOGD("UnwrapSceneFromAni002");
-    ani_env* env = nullptr;
-    ani_object value = reinterpret_cast<ani_object>(0x1);
+    void* env = nullptr;
+    void* value = reinterpret_cast<void*>(0x1);
 
-    // Should return nullptr when env is null
-    auto result = SceneBridgeAni::UnwrapSceneFromAni(env, value);
+    auto result = SceneBridgeAniLoader::GetInstance().UnwrapSceneFromAni(env, value);
     EXPECT_EQ(result, nullptr);
 }
 
