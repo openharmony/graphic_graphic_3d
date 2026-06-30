@@ -544,7 +544,7 @@ std::shared_ptr<TextureLayer> SceneAdapter::CreateTextureLayer()
 
 bool SceneAdapter::LoadPluginsAndInit()
 {
-    LockCompositor();  // an APP_FREEZE here, so add lock just in case, but suspect others' error
+    std::lock_guard<std::mutex> lock(mute);  // an APP_FREEZE here, so add lock just in case, but suspect others' error
     WIDGET_LOGI("scene adapter loadPlugins");
 
     if (hapInfo_.hapPath_ == "") {
@@ -564,19 +564,16 @@ bool SceneAdapter::LoadPluginsAndInit()
 #undef TO_STRING
 #undef PLATFORM_PATH_NAME
     if (!LoadPlugins(platformCreateInfo)) {
-        UnlockCompositor();
         engineInitSuccessful_ = false;
         return false;
     }
 
     if (!InitEngine(platformCreateInfo)) {
-        UnlockCompositor();
         engineInitSuccessful_ = false;
         return false;
     }
 
     CreateRenderFunction();
-    UnlockCompositor();
     engineInitSuccessful_ = true;
     return true;
 }

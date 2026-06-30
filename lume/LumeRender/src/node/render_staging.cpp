@@ -794,11 +794,11 @@ ImageResourceBarrier RenderStaging::GetImagePostTransferDstBarrier(const RenderH
                                   PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                   PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT) {
-        dst.pipelineStageFlags |= shaderStages;
+        dst.pipelineStageFlags |= static_cast<PipelineStageFlags>(shaderStages);
         dst.accessFlags |= AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT;
     }
     if (desc.usageFlags & ImageUsageFlagBits::CORE_IMAGE_USAGE_STORAGE_BIT) {
-        dst.pipelineStageFlags |= shaderStages;
+        dst.pipelineStageFlags |= static_cast<PipelineStageFlags>(shaderStages);
         dst.accessFlags |= AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT;
         dst.imageLayout = ImageLayout::CORE_IMAGE_LAYOUT_GENERAL;
     }
