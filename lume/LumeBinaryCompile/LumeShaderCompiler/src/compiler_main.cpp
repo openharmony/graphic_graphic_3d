@@ -1830,7 +1830,7 @@ void WriteMetaFile(const std::filesystem::path& outputMetaFilename, const std::f
         meta << std::filesystem::absolute(itt.first).u8string() << ':'
              << (static_cast<std::uint64_t>(
                     std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
-                            .count()) ^
+                        .count()) ^
                     mask)
              << '\n';
     }
