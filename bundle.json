@@ -341,6 +341,7 @@
         "//foundation/graphic/graphic_3d/lume/Lume_3D:libAGP3D",
         "//foundation/graphic/graphic_3d/lume/LumePng:libPluginAGPPng",
         "//foundation/graphic/graphic_3d/lume/LumeJpg:libPluginAGPJpg",
+        "//foundation/graphic/graphic_3d/3d_scene_adapter:scene_bridge_ani",
         "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
         "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/LumeShaderCompiler:binary_compile_shader",
         "//foundation/graphic/graphic_3d/lume/LumeBinaryCompile/lumeassetcompiler:binary_compile_asset",

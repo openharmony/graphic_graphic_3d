@@ -18,7 +18,8 @@
 
 #include <memory>
 
-#include <ani.h>
+typedef struct __ani_env ani_env;
+typedef class __ani_object *ani_object;
 
 #include "scene_adapter/intf_scene_adapter.h"
 

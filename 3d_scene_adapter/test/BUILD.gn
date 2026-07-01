@@ -208,6 +208,7 @@ ohos_unittest("SceneBridgeAniUnitTest") {
   sources = [ "scene_bridge_ani_unit_test.cpp" ]
 
   deps = [
+    "//foundation/graphic/graphic_3d/3d_scene_adapter:scene_bridge_ani",
     "//foundation/graphic/graphic_3d/3d_widget_adapter:lib3dWidgetAdapter",
     "//foundation/graphic/graphic_3d/lume/LumeScene:AGPSceneApi"
   ]
@@ -244,8 +245,6 @@ ohos_unittest("SceneBridgeUnitTest") {
   external_deps = [
     "hilog:libhilog",
     "napi:ace_napi",
-    "runtime_core:ani",
-    "runtime_core:ani_helpers",
   ]
   
   part_name = "graphic_3d"

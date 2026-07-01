@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include <ani.h>
 #include <ani_signature_builder.h>
 
 #include "3d_widget_adapter_log.h"
@@ -59,5 +60,10 @@ void* SceneBridgeAni::UnwrapSceneFromAni(ani_env* env, ani_object value)
     }
     WIDGET_LOGD("ace_lume get scene success");
     return sceneAdapter;
+}
+
+extern "C" __attribute__((visibility("default"))) void* OHOS_Render3D_UnwrapSceneFromAni(void* env, void* value)
+{
+    return SceneBridgeAni::UnwrapSceneFromAni(reinterpret_cast<ani_env*>(env), reinterpret_cast<ani_object>(value));
 }
 } // namespace OHOS::Render3D

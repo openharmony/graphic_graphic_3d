@@ -107,7 +107,7 @@ ohos_source_set("scene_adapter_source") {
   sources = [
     "src/scene_adapter.cpp",
     "src/scene_bridge.cpp",
-    "src/scene_bridge_ani.cpp",
+    "src/scene_bridge_ani_loader.cpp",
     "src/offscreen_scene.cpp",
     "src/surface_stream.cpp",
     "src/mrt_depth_adapter.cpp",
@@ -150,8 +150,6 @@ ohos_source_set("scene_adapter_source") {
     "ipc:ipc_single",
     "napi:ace_napi",
     "vulkan-headers:vulkan_headers",
-    "runtime_core:ani",
-    "runtime_core:ani_helpers",
     "egl:libEGL",
     "opengles:libGLES",
     "window_manager:libwmutil",
@@ -191,6 +189,31 @@ ohos_static_library("scene_adapter_static") {
     ":scene_adapter_config",
     ":lume3d_config",
   ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+ohos_shared_library("scene_bridge_ani") {
+  sources = [ "src/scene_bridge_ani.cpp" ]
+
+  include_dirs = [
+    "include",
+    "../3d_widget_adapter/core/include",
+  ]
+
+  configs = [
+    ":lume3d_config",
+    "../3d_widget_adapter:widget_adapter_config",
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "runtime_core:ani",
+    "runtime_core:ani_helpers",
+  ]
+
+  deps = [ ":sceneAdapterInterface" ]
 
   part_name = "graphic_3d"
   subsystem_name = "graphic"
