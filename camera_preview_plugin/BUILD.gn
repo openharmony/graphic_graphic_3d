@@ -151,6 +151,8 @@ source_set("campreview_rofs_obj") {
 }
 
 ohos_source_set("campreview_src") {
+  branch_protector_ret = "pac_ret"
+
   sources = [ "src/component_dll.cpp" ]
   include_dirs = [ "api" ]
 
@@ -178,6 +180,8 @@ ohos_source_set("campreview_src") {
 }
 
 ohos_static_library("libCamPreview") {
+  branch_protector_ret = "pac_ret"
+
   public_deps = [
     ":campreview_src",
     "${LUME_CORE_PATH}:lume_component_help_src",
@@ -191,6 +195,8 @@ ohos_static_library("libCamPreview") {
 }
 
 ohos_shared_library(LIB_CAM_PREVIEW) {
+  branch_protector_ret = "pac_ret"
+
   public_deps = [ ":libCamPreview" ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"

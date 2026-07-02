@@ -68,6 +68,8 @@ config("lume_mrt_config") {
 }
 
 ohos_source_set("lume_mrt_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_mrt_api",
     ":lume_mrt_config",
@@ -181,6 +183,8 @@ source_set("lume_mrt_rofs_obj") {
 }
 
 ohos_static_library("libMRT") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":lume_mrt_src", ]
 
   if (MRT_EMBEDDED_ASSETS_ENABLED) {
@@ -198,6 +202,8 @@ config("lume_mrt_plugin_config") {
 }
 
 ohos_source_set("lume_mrt_src_plugin") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
   ]
 
@@ -214,6 +220,8 @@ ohos_source_set("lume_mrt_src_plugin") {
 }
 
 ohos_shared_library("libPluginMRT") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":libMRT",
     ":lume_mrt_src_plugin"

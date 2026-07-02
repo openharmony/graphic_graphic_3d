@@ -23,6 +23,8 @@ config("lume_engine_ecshelper_config") {
 }
 
 ohos_source_set("lume_engine_ecshelper") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "${LUME_CORE_PATH}/api/core/property_tools/property_data.cpp",
     "ComponentTools/base_manager.h",
@@ -50,6 +52,8 @@ ohos_source_set("lume_engine_ecshelper") {
 #ohos_shared_library("libAGPDLL") {
 #ohos_shared_library(${LIB_ENGINE_CORE}) {
 ohos_static_library("libAGPEcshelper") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":lume_engine_ecshelper" ]
 
   part_name = "graphic_3d"

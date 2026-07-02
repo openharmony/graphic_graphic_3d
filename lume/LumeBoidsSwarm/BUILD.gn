@@ -49,6 +49,8 @@ config("lume_boids_swarm_api") {
 }
 
 ohos_source_set("lume_boids_swarm_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_boids_swarm_config",
     ":lume_boids_swarm_api",
@@ -83,6 +85,8 @@ ohos_source_set("lume_boids_swarm_src") {
 }
 
 ohos_shared_library("PluginBoidsSwarmApi") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_boids_swarm_api",
   ]
@@ -92,6 +96,8 @@ ohos_shared_library("PluginBoidsSwarmApi") {
 }
 
 ohos_shared_library("libPluginBoidsSwarm") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_boids_swarm_src",
   ]

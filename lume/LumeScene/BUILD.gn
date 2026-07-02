@@ -58,6 +58,8 @@ config("lume_scenewidget_config") {
 }
 
 ohos_source_set("lume_scenewidget_src") {
+  branch_protector_ret = "pac_ret"
+
   configs = [
     ":lume_scenewidget_config",
     "${LUME_RENDER_PATH}:lume_render_api",
@@ -277,6 +279,8 @@ config("lume_scene_api_config") {
 }
 
 ohos_shared_library("AGPSceneApi") {
+  branch_protector_ret = "pac_ret"
+
  public_configs = [
    ":lume_scene_api_config",
  ]
@@ -285,6 +289,8 @@ ohos_shared_library("AGPSceneApi") {
 }
 
 ohos_shared_library("libPluginSceneWidget") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_scenewidget_src",
   ]
@@ -300,6 +306,8 @@ config("lume_scene_metadata_importer_config") {
 }
 
 ohos_source_set("lume_scene_metadata_importer_src") {
+  branch_protector_ret = "pac_ret"
+
   configs = [
     ":lume_scenewidget_config",
     ":lume_scene_metadata_importer_config",
@@ -383,6 +391,8 @@ ohos_source_set("lume_scene_metadata_importer_src") {
 }
 
 ohos_shared_library("libPluginLumeSceneMetadataImporter") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":lume_scene_metadata_importer_src" ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"
@@ -396,6 +406,8 @@ config("lume_scene_importer_config") {
 }
 
 ohos_source_set("lume_scene_importer_src") {
+  branch_protector_ret = "pac_ret"
+
   configs = [
     ":lume_scenewidget_config",
     ":lume_scene_importer_config",
@@ -524,6 +536,8 @@ ohos_source_set("lume_scene_importer_src") {
 }
 
 ohos_shared_library("libPluginLumeSceneImporter") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":lume_scene_importer_src" ]
   relative_install_dir = "graphics3d"
   part_name = "graphic_3d"

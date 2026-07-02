@@ -18,6 +18,8 @@ config("lume_engine_dll") {
 }
 
 ohos_source_set("lume_engine_dynamic_src") {
+  branch_protector_ret = "pac_ret"
+
   sources = [ "src/exports.cpp" ]
 
   configs = [
@@ -29,6 +31,8 @@ ohos_source_set("lume_engine_dynamic_src") {
 #ohos_shared_library("libAGPDLL") {
 #ohos_shared_library(${LIB_ENGINE_CORE}) {
 ohos_shared_library(LIB_ENGINE_CORE) {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_engine_dynamic_src",
     "${LUME_CORE_PATH}:libAGPEngine",

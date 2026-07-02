@@ -28,6 +28,8 @@ config("lume_jpg_config") {
 }
 
 ohos_source_set("lume_jpg_src") {
+  branch_protector_ret = "pac_ret"
+
   configs = [
     ":lume_jpg_config",
     ":lume_jpg_api",
@@ -48,6 +50,8 @@ ohos_source_set("lume_jpg_src") {
 }
 
 ohos_static_library("libJpgStatic") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":lume_jpg_src" ]
   part_name = "graphic_3d"
   subsystem_name = "graphic"
@@ -58,6 +62,8 @@ config("lume_plugin_jpg_config") {
 }
 
 ohos_source_set("lume_plugin_jpg_src") {
+  branch_protector_ret = "pac_ret"
+
   sources = [ "src/component_dll.cpp" ]
 
   configs = [
@@ -75,6 +81,8 @@ ohos_source_set("lume_plugin_jpg_src") {
 }
 
 ohos_shared_library(LIB_JPG) {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":libJpgStatic",
     ":lume_plugin_jpg_src",

@@ -70,6 +70,8 @@ config("lume_3d_config") {
 }
 
 ohos_source_set("lume_3d_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_3d_config",
     ":lume_3d_api",
@@ -355,6 +357,8 @@ source_set("lume_3d_rofs_obj") {
 }
 
 ohos_shared_library("AGP3DApi") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_3d_api",
   ]
@@ -364,6 +368,8 @@ ohos_shared_library("AGP3DApi") {
 }
 
 ohos_static_library("libAGP3D") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_3d_src",
   ]

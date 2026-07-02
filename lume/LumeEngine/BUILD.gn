@@ -163,6 +163,8 @@ config("lume_engine_config") {
 }
 
 ohos_source_set("lume_engine_src") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
       "src/ecs/ecs.cpp",
       "src/ecs/entity_manager.cpp",
@@ -365,6 +367,8 @@ source_set("lume_engine_rofs_obj") {
 }
 
 ohos_static_library("libAGPEngine") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_engine_src",
     ":lume_engine_rofs_obj"
@@ -386,6 +390,8 @@ config("lume_component_help_config") {
 }
 
 ohos_shared_library("AGPBaseApi") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_base_api"
   ]
@@ -395,6 +401,8 @@ ohos_shared_library("AGPBaseApi") {
 }
 
 ohos_shared_library("AGPEngineApi") {
+  branch_protector_ret = "pac_ret"
+
     public_configs = [
     ":lume_engine_api"
   ]
@@ -404,6 +412,8 @@ ohos_shared_library("AGPEngineApi") {
 }
 
 ohos_shared_library("AGPEcshelperApi") {
+  branch_protector_ret = "pac_ret"
+
     public_configs = [
     ":lume_component_help_config"
   ]
@@ -413,6 +423,8 @@ ohos_shared_library("AGPEcshelperApi") {
 }
 
 ohos_source_set("lume_component_help_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_component_help_config",
     ":lume_base_api",
@@ -435,6 +447,8 @@ ohos_source_set("lume_component_help_src") {
 }
 
 ohos_static_library("libComponentHelper") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_default",
     ":lume_component_help_config",
