@@ -266,8 +266,8 @@ static void CopyEntryFieldsByName(
     }
 }
 
-// Resolve the destination slot index for a source texture entry. Two source
-// shapes are supported:
+// Resolve the destination slot index for a source texture entry.
+// Two source shapes are supported.
 
 //  - A *live* IMaterial source: its Textures array is fixed-size, indexed by
 //    MaterialComponent::TextureIndex. Each entry's Name follows the

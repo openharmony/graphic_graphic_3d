@@ -405,7 +405,7 @@ void RenderDataStorePostProcess::FillDefaultPostProcessData(
     const PostProcessConfiguration& ppConfig, PostProcessStack& ppStack)
 {
     const IShaderManager& shaderMgr = renderContext_.GetDevice().GetShaderManager();
-    auto FillBuiltInData = [&](const uint32_t idx,
+    auto FillBuiltInData = [&shaderMgr](const uint32_t idx,
                                const uint32_t factorIndex,
                                const uint32_t userFactorIndex,
                                const Math::Vec4& factor,

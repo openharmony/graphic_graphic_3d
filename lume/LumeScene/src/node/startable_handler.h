@@ -30,7 +30,7 @@ public:
     };
 
     StartableHandler() = delete;
-    StartableHandler(const INode::Ptr& node) : node_(node)
+    explicit StartableHandler(const INode::Ptr& node) : node_(node)
     {}
     virtual ~StartableHandler() = default;
     bool Start(const META_NS::IObject::Ptr& attachment, StartType type);

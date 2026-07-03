@@ -203,9 +203,7 @@ RenderHandleReference CreateLightProbeBakeRenderNodeGraph(IRenderNodeGraphManage
         IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, desc, {}, sceneDataStoreName);
 }
 
-//////////
 // LightProbeBaker system
-//////////
 
 LightProbeBakerSystem::LightProbeBakerSystem(IEcs& ecs)
     : ecs_(ecs),

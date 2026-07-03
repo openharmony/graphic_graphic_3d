@@ -42,7 +42,7 @@ class PropertyBase
 public:
     using OnChangedEvent = EventImpl<IOnChanged>;
 
-    PropertyBase(BASE_NS::string name) : name_(BASE_NS::move(name))
+    explicit PropertyBase(BASE_NS::string name) : name_(BASE_NS::move(name))
     {}
 
     BASE_NS::string GetName() const override;

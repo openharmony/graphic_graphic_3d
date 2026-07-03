@@ -329,12 +329,7 @@ vec4 pbrBasic()
                    CORE_MATERIAL_LIGHT_PROBE_RECEIVER_BIT) {
             // light probe
             irradiance = GetLightProbeShCoefficients(shadingData.N, uLightProbeDataIndexData.lightProbeDataIndex);
-#if 0
-            CORE_RELAXEDP float occlusion =
-            GetLightProbeOcclusion(shadingData.N, uLightProbeDataIndexData.lightProbeDataIndex);
-#else
             CORE_RELAXEDP float occlusion = 1.0f;
-#endif
             irradiance *= occlusion * shadingData.diffuseColor;
         } else {
             // get only the environment sample

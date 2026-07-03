@@ -1419,8 +1419,8 @@ LightProbeVolumeOpt GetLightProbesVolumeFromMainCamera(IEntityManager& entityMgr
     // camera so scenes without an explicit main camera still get light probe SH evaluated.
     Entity mainCameraEntity{INVALID_ENTITY};
     Entity firstActiveCameraEntity{INVALID_ENTITY};
-    uint64_t mainCameraLayerMask = 0ull;
-    uint64_t firstActiveCameraLayerMask = 0ull;
+    uint64_t mainCameraLayerMask = 0ULL;
+    uint64_t firstActiveCameraLayerMask = 0ULL;
     for (IComponentManager::ComponentId id = 0; id < cameraMgr->GetComponentCount(); ++id) {
         if (auto camera = cameraMgr->Read(id); camera) {
             const bool active = (camera->sceneFlags & CameraComponent::SceneFlagBits::ACTIVE_RENDER_BIT) != 0;
@@ -1465,9 +1465,9 @@ LightProbeVolumeOpt GetLightProbesVolumeFromMainCamera(IEntityManager& entityMgr
             }
         }
 
-        uint64_t layerMask = 0ull;
+        uint64_t layerMask = 0ULL;
         if (GetEntityLayerMask(*layerMgr, entity, layerMask)) {
-            if ((layerMask & mainCameraLayerMask) == 0ull) {
+            if ((layerMask & mainCameraLayerMask) == 0ULL) {
                 continue;
             }
         }

@@ -1793,15 +1793,17 @@ void RenderBackendVk::RenderCommand(const RenderCommandBlitImage& renderCmd, con
 
         const VkImageBlit imageBlit{
             srcSubresourceLayers,  // srcSubresource
-            {{(int32_t)ib.srcOffsets[0].width, (int32_t)ib.srcOffsets[0].height, (int32_t)ib.srcOffsets[0].depth},
-                {(int32_t)ib.srcOffsets[1].width,
-                    (int32_t)ib.srcOffsets[1].height,
-                    (int32_t)ib.srcOffsets[1].depth}},  // srcOffsets[2]
+            {{static_cast<int32_t>(ib.srcOffsets[0].width), static_cast<int32_t>(ib.srcOffsets[0].height),
+            static_cast<int32_t>(ib.srcOffsets[0].depth)},
+                {static_cast<int32_t>(ib.srcOffsets[1].width),
+                    static_cast<int32_t>(ib.srcOffsets[1].height),
+                    static_cast<int32_t>(ib.srcOffsets[1].depth)}},  // srcOffsets[2]
             dstSubresourceLayers,                       // dstSubresource
-            {{(int32_t)ib.dstOffsets[0].width, (int32_t)ib.dstOffsets[0].height, (int32_t)ib.dstOffsets[0].depth},
-                {(int32_t)ib.dstOffsets[1].width,
-                    (int32_t)ib.dstOffsets[1].height,
-                    (int32_t)ib.dstOffsets[1].depth}},  // dstOffsets[2]
+            {{static_cast<int32_t>(ib.dstOffsets[0].width), static_cast<int32_t>(int32_t)ib.dstOffsets[0].height,
+            static_cast<int32_t>(ib.dstOffsets[0].depth)},
+                {static_cast<int32_t>(ib.dstOffsets[1].width),
+                    static_cast<int32_t>(ib.dstOffsets[1].height),
+                    static_cast<int32_t>(ib.dstOffsets[1].depth)}},  // dstOffsets[2]
         };
 
         vkCmdBlitImage(cmdBuf.commandBuffer,          // commandBuffer

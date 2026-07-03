@@ -117,13 +117,13 @@ private:
         void* additionalRpSegs = nullptr,
         void* outRpSegsOnly = nullptr);
     void FlushTransferBatch(void* wctx);
-    void FlushGraphicsBatch(void* wctx);
+    void FlushGraphicsBatch(void* wctxPtr);
     void AddTransferDstImage(void* wctx, MlnResource res, MlnResourceView view);
     void AddTransferDstBuffer(void* wctx, MlnResource res);
-    void HandleBeginRenderPass(const void* refPtr, void* wctx);
-    void HandleDraw(const void* refPtr, void* wctx);
-    void HandleTransferOp(const void* refPtr, void* wctx);
-    void HandleExecuteBackendFrame(const void* refPtr, void* wctx);
+    void HandleBeginRenderPass(const void* refPtr, void* wctxPtr);
+    void HandleDraw(const void* refPtr, void* wctxPtr);
+    void HandleTransferOp(const void* refPtr, void* wctxPtr);
+    void HandleExecuteBackendFrame(const void* refPtr, void* wctxPtr);
     bool HandleStateCommand(const void* refPtr, void* statePtr, void* currentRPPtr,
         uint32_t currentSubpassIndex, NodeContextPsoManager& psoMgr,
         NodeContextDescriptorSetManager& descriptorSetMgr);
@@ -131,10 +131,8 @@ private:
     // rpSegs containing DrawCallGroup snapshots for primary ctx to lazy-merge.
     // Placeholder: body filled in Step 7b when the main loop switches to walker.
     // outRpSegsOnly: void* to BASE_NS::vector<RenderPassSegment>*
-    void WalkSecondaryCtx(
-        RenderCommandContext& renderCommandCtx,
-        void* outRpSegsOnly,
-        void* pendingFrame = nullptr);  // [OPT] PendingDestroyFrame* for ogDirectBuild OG tracking
+    void WalkSecondaryCtx(RenderCommandContext& renderCommandCtx, void* outRpSegsOnlyVoid,
+        void* pendingFrameVoid = nullptr);  // [OPT] PendingDestroyFrame* for ogDirectBuild OG tracking
     // [REFAC Step 7b] Primary ctx walker — full per-cmd-list processing.
     // Body filled in Step 7b by physically renaming RenderSingleCommandList →
     // WalkPrimaryCtx (mechanical move, three-phase architecture preserved).

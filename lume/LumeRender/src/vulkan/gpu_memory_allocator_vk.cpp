@@ -281,7 +281,7 @@ void PlatformGpuMemoryAllocator::CreateBuffer(const VkBufferCreateInfo& bufferCr
         if (result != VK_SUCCESS) {
             PLUGIN_LOG_E(
                 "VKResult not VK_SUCCESS in buffer memory allocation(result : %i), (allocation bytesize : %" PRIu64 ")",
-                (int32_t)result,
+                static_cast<int32_t>(result),
                 bufferCreateInfo.size);
         }
     }
@@ -338,7 +338,7 @@ void PlatformGpuMemoryAllocator::CreateImage(const VkImageCreateInfo& imageCreat
     }
     if (result != VK_SUCCESS) {
         PLUGIN_LOG_E("VKResult not VK_SUCCESS in image memory allocation(result : %i) (bytesize : %" PRIu64 ")",
-            (int32_t)result,
+            static_cast<int32_t>(result),
             allocationInfo.size);
     }
 

@@ -109,7 +109,7 @@
     extern IComponentManager* type##Instance(IEcs&);                                                         \
     extern void type##Destroy(IComponentManager*);                                                           \
     namespace {                                                                                              \
-    static constexpr auto name = ComponentManagerTypeInfo{                                                   \
+    static constexpr auto (name) = ComponentManagerTypeInfo{                                                 \
         {ComponentManagerTypeInfo::UID}, type::UID, CORE_NS::GetName<type>().data(), MANAGER_FACTORY(type)}; \
     }
 
@@ -117,7 +117,7 @@
     extern ISystem* type##Instance(IEcs&);                                \
     extern void type##Destroy(ISystem*);                                  \
     namespace {                                                           \
-    static constexpr auto name = SystemTypeInfo{{SystemTypeInfo::UID},    \
+    static constexpr auto (name) = SystemTypeInfo{{SystemTypeInfo::UID},  \
         type::UID,                                                        \
         CORE_NS::GetName<type>().data(),                                  \
         SYSTEM_FACTORY(type),                                             \

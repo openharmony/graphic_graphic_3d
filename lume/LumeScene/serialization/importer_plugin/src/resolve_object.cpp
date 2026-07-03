@@ -58,7 +58,7 @@ BASE_NS::string_view::size_type FindUnescapedDoubleColon(BASE_NS::string_view st
 }
 
 struct ObjectResolver {
-    ObjectResolver(ImportContext& context) : context_(context)
+    explicit ObjectResolver(ImportContext& context) : context_(context)
     {}
 
     BASE_NS::string_view::size_type FindFirstSeparator(BASE_NS::string_view path)
