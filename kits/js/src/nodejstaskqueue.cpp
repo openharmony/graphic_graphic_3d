@@ -516,7 +516,7 @@ Token NodeJSTaskQueue::AddTask(ITaskQueueTask::Ptr p, const TimeSpan& delay, con
         LOG_E("NodeJSTaskQueue::AddTask DROPPED task: RescheduleTimer failed "
               "(refcnt=%u, scheduled=%d) - .Then continuation will never run",
             refcnt_,
-            (int)scheduled_);
+            static_cast<int>(scheduled_));
         result = {nullptr};
     }
     return result;
