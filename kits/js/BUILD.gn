@@ -106,6 +106,8 @@ config("napi_config") {
 }
 
 ohos_source_set("napi_source") {
+  branch_protector_ret = "pac_ret"
+
     sources = [
       "src/AnimationJS.cpp",
       "src/ArrayPropertyProxy.cpp",
@@ -218,6 +220,8 @@ group("napiInterface") {
 }
 
 ohos_shared_library("libKitHelper") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":napi_source" ]
   public_configs = [ ":napi_config", "../../3d_scene_adapter:scene_adapter_config", "../../3d_widget_adapter:widget_adapter_config" ]
   part_name = "graphic_3d"
@@ -226,6 +230,8 @@ ohos_shared_library("libKitHelper") {
 }
 
 ohos_source_set("napi_entry") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "src/native_module_export.cpp",
   ]
@@ -261,6 +267,8 @@ ohos_source_set("napi_entry") {
 }
 
 ohos_shared_library("libscene") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":napi_entry" ]
   external_deps = [ "hilog:libhilog" ]
   public_configs = [ ":napi_config" ]

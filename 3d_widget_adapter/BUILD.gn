@@ -115,6 +115,8 @@ config("widget_adapter_config") {
 }
 
 ohos_source_set("widget_adapter_source") {
+  branch_protector_ret = "pac_ret"
+
   defines = [
     "CORE_HAS_GLES_BACKEND=1",
     "CORE_HAS_VULKAN_BACKEND=1",
@@ -256,6 +258,8 @@ group("3dWidgetAdapterInterface") {
 }
 
 ohos_shared_library("lib3dWidgetAdapter") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":widget_adapter_source",
     "../3d_scene_adapter:scene_adapter_static",

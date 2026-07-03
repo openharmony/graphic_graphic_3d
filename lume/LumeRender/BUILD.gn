@@ -135,6 +135,8 @@ config("lume_render_config") {
 }
 
 ohos_source_set("lume_render_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [ 
     ":lume_render_config",
   ]
@@ -587,6 +589,8 @@ source_set("lume_render_rofs_obj") {
 }
 
 ohos_source_set("lume_render_src_plugin") {
+  branch_protector_ret = "pac_ret"
+
   defines = [
     "CORE_PLUGIN=1"
   ]
@@ -600,6 +604,8 @@ ohos_source_set("lume_render_src_plugin") {
 }
 
 ohos_shared_library(LIB_RENDER) {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_render_src",
     ":lume_render_src_plugin",
@@ -611,6 +617,8 @@ ohos_shared_library(LIB_RENDER) {
 }
 
 ohos_shared_library("AGPRenderApi") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_render_api",
   ]

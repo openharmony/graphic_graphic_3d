@@ -22,6 +22,8 @@ config("lume_3d_plugin_config") {
 }
 
 ohos_source_set("lume_3d_plugin_src") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "../src/plugin/dynamic_plugin.cpp",
     "../src/plugin/dynamic_registry.cpp",
@@ -46,6 +48,8 @@ ohos_source_set("lume_3d_plugin_src") {
 }
 
 ohos_shared_library(LIB_CORE3D) {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_3d_plugin_src",
     "${LUME_CORE3D_PATH}:libAGP3D",

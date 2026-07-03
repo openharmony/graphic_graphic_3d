@@ -53,6 +53,8 @@ config("lume_metaobject_config") {
 }
 
 ohos_source_set("lume_metaobject_src") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_metaobject_config",
     "${LUME_RENDER_PATH}:lume_render_api",
@@ -214,6 +216,8 @@ config("lume_meta_api_config") {
 }
 
 ohos_shared_library("AGPMetaApi") {
+  branch_protector_ret = "pac_ret"
+
   public_configs = [
     ":lume_meta_api_config",
   ]
@@ -223,6 +227,8 @@ ohos_shared_library("AGPMetaApi") {
 }
 
 ohos_static_library("libMetaObject") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":lume_metaobject_src",
   ]
@@ -231,6 +237,8 @@ ohos_static_library("libMetaObject") {
 }
 
 ohos_shared_library("libPluginMetaObject") {
+  branch_protector_ret = "pac_ret"
+
   deps = [
     ":libMetaObject",
   ]

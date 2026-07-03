@@ -104,6 +104,8 @@ group("sceneAdapterInterface") {
 
 
 ohos_source_set("scene_adapter_source") {
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "src/scene_adapter.cpp",
     "src/scene_bridge.cpp",
@@ -183,6 +185,8 @@ ohos_source_set("scene_adapter_source") {
 }
 
 ohos_static_library("scene_adapter_static") {
+  branch_protector_ret = "pac_ret"
+
   deps = [ ":scene_adapter_source" ]
 
   public_configs = [
