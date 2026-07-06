@@ -48,6 +48,8 @@ ohos_unittest("lume_png_src_test") {
     "googletest:gtest",
     "googletest:gmock",
     "libpng:libpng",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   defines = [

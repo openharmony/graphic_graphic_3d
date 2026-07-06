@@ -100,7 +100,9 @@ ohos_unittest("lume_engine_api_test") {
   external_deps = [
     "bounds_checking_function:libsec_shared",
     "googletest:gmock",
-    "googletest:gtest"
+    "googletest:gtest",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   # Deps
@@ -280,7 +282,9 @@ ohos_unittest("lume_engine_src_test") {
     "googletest:gtest",
     "googletest:gmock",
     "resource_management:global_resmgr",
-    "icu:shared_icuuc"
+    "icu:shared_icuuc",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   # Deps
