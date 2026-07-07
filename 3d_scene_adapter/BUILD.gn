@@ -156,7 +156,8 @@ ohos_source_set("scene_adapter_source") {
     "opengles:libGLES",
     "window_manager:libwmutil",
     "ability_base:configuration",
-    "form_fwk:form_manager"
+    "form_fwk:form_manager",
+    "node:node_header_notice"
   ]
   defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
 

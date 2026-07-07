@@ -45,7 +45,7 @@ class MapNode : public IntroduceInterfaces<BaseObject, IMapNode> {
     META_OBJECT(MapNode, ClassId::MapNode, IntroduceInterfaces)
 public:
     MapNode() = default;
-    MapNode(BASE_NS::vector<NamedNode> elements) : elements(BASE_NS::move(elements))
+    explicit MapNode(BASE_NS::vector<NamedNode> elements) : elements(BASE_NS::move(elements))
     {}
 
     BASE_NS::vector<NamedNode> GetMembers() const override
@@ -81,7 +81,7 @@ class ArrayNode : public IntroduceInterfaces<BaseObject, IArrayNode> {
     META_OBJECT(ArrayNode, ClassId::ArrayNode, IntroduceInterfaces)
 public:
     ArrayNode() = default;
-    ArrayNode(BASE_NS::vector<ISerNode::Ptr> elements) : elements(BASE_NS::move(elements))
+    explicit ArrayNode(BASE_NS::vector<ISerNode::Ptr> elements) : elements(BASE_NS::move(elements))
     {}
 
     BASE_NS::vector<ISerNode::Ptr> GetMembers() const override
@@ -214,7 +214,7 @@ public:
     using InterfaceType = IBuiltinValueNode<Type>;
 
     BuiltinValueNode() = default;
-    BuiltinValueNode(const Type& v) : value(v)
+    explicit BuiltinValueNode(const Type& v) : value(v)
     {}
 
     Type GetValue() const override

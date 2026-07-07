@@ -197,6 +197,7 @@ ohos_source_set("napi_source") {
     "napi:ace_napi",
     "egl:libEGL",
     "opengles:libGLES",
+    "node:node_header_notice"
   ]
 
   if (histogram_management_enable) {
@@ -260,6 +261,7 @@ ohos_source_set("napi_entry") {
     "napi:ace_napi",
     "egl:libEGL",
     "opengles:libGLES",
+    "node:node_header_notice"
   ]
 
   part_name = "graphic_3d"

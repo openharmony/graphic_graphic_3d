@@ -340,9 +340,9 @@ void ExtentRenderMaterialFlagsForComplexity(const RenderMaterialType materialTyp
 inline constexpr uint64_t HashSubmeshMaterials(const RenderMaterialType materialType,
     const RenderMaterialFlags materialFlags, const RenderSubmeshFlags submeshFlags)
 {
-    return (((uint64_t)materialType << MATERIAL_TYPE_SHIFT) & MATERIAL_TYPE_MASK) |
+    return ((static_cast<uint64_t>(materialType) << MATERIAL_TYPE_SHIFT) & MATERIAL_TYPE_MASK) |
            ((materialFlags << MATERIAL_FLAGS_SHIFT) & MATERIAL_FLAGS_MASK) |
-           ((uint64_t)submeshFlags & SUBMESH_FLAGS_MASK);
+           (static_cast<uint64_t>(submeshFlags) & SUBMESH_FLAGS_MASK);
 }
 
 inline constexpr void PatchRenderMaterialSortLayers(

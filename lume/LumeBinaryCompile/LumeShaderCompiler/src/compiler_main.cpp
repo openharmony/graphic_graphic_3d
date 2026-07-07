@@ -1819,16 +1819,18 @@ void WriteMetaFile(const std::filesystem::path& outputMetaFilename, const std::f
     // store the unix epoch with simple xor of the compile mask for later
     // comparision
     meta << inputFilenamePath.u8string() << ':'
-         << (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
-                    .count() ^
+         << (static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
+                        .count()) ^
                 mask)
          << '\n';
 
     for (const auto& itt : includes) {
         meta << std::filesystem::absolute(itt.first).u8string() << ':'
-             << (std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
-                        .count() ^
+             << (static_cast<std::uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
+                        .count()) ^
                     mask)
              << '\n';
     }

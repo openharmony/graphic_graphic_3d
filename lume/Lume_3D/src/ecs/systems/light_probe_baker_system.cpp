@@ -203,9 +203,7 @@ RenderHandleReference CreateLightProbeBakeRenderNodeGraph(IRenderNodeGraphManage
         IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, desc, {}, sceneDataStoreName);
 }
 
-//////////
 // LightProbeBaker system
-//////////
 
 LightProbeBakerSystem::LightProbeBakerSystem(IEcs& ecs)
     : ecs_(ecs),
@@ -221,7 +219,9 @@ LightProbeBakerSystem::LightProbeBakerSystem(IEcs& ecs)
     if (IEngine* engine = ecs_.GetClassFactory().GetInterface<IEngine>()) {
         if (auto* engineClassRegister = engine->GetInterface<IClassRegister>()) {
             renderContext_ = CORE3D_NS::GetInstance<IRenderContext>(*engineClassRegister, UID_RENDER_CONTEXT);
-            gpuResourceMgr_ = &renderContext_->GetDevice().GetGpuResourceManager();
+            if (renderContext_) {
+                gpuResourceMgr_ = &renderContext_->GetDevice().GetGpuResourceManager();
+            }
         }
     }
 }

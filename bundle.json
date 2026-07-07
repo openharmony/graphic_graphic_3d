@@ -409,7 +409,8 @@
         "opengles",
         "window_manager",
         "form_fwk",
-        "ability_base"
+        "ability_base",
+        "node"
       ],
       "third_party": []
     },

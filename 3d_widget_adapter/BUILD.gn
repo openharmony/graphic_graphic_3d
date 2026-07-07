@@ -198,7 +198,8 @@ ohos_source_set("widget_adapter_source") {
       "egl:libEGL",
       "opengles:libGLES",
       "window_manager:libwmutil",
-      "form_fwk:form_manager"
+      "form_fwk:form_manager",
+      "node:node_header_notice"
     ]
 
     defines += [ "LIB_ENGINE_CORE=${LIB_ENGINE_CORE}.z" ]
