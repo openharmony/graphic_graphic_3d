@@ -94,7 +94,9 @@ ohos_unittest("lume_boids_swarm_api_test") {
   external_deps = [
     "bounds_checking_function:libsec_shared",
     "googletest:gmock",
-    "googletest:gtest"
+    "googletest:gtest",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   if (RENDER_BUILD_GLES) {

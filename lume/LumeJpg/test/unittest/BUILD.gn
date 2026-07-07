@@ -48,6 +48,8 @@ ohos_unittest("lume_jpg_src_test") {
     "googletest:gtest",
     "googletest:gmock",
     "libjpeg-turbo:turbojpeg",
+    "egl:libEGL",
+    "opengles:libGLES",
   ]
 
   defines = [
