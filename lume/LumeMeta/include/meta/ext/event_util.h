@@ -19,7 +19,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename MyEvent, typename MyObj, typename... Args>
+template<typename MyEvent, typename MyObj, typename... Args>
 inline auto InvokeByName(const MyObj& obj, BASE_NS::string_view name, Args&&... args)
 {
     if (auto i = interface_cast<IMetadata>(obj)) {

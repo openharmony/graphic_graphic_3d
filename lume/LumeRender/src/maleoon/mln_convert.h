@@ -54,7 +54,7 @@ inline FormatProperties FromMlnFormatProperties(const MlnGpuFormatProperties& ml
     props.linearTilingFeatures = FromMlnFormatFeatureFlags(mlnProps.linearTilingFeatures);
     props.optimalTilingFeatures = FromMlnFormatFeatureFlags(mlnProps.optimalTilingFeatures);
     props.bufferFeatures = FromMlnFormatFeatureFlags(mlnProps.bufferFeatures);
-    props.bytesPerPixel = 0u; // Maleoon doesn't provide this; caller should compute if needed
+    props.bytesPerPixel = 0u;  // Maleoon doesn't provide this; caller should compute if needed
     return props;
 }
 
@@ -115,7 +115,7 @@ inline MlnSampleCountFlags ToMlnSampleCountFlags(SampleCountFlags flags)
 // Resolve mode flags (CORE and MLN enums have different bit positions)
 inline MlnResolveModeFlagBits ToMlnResolveMode(ResolveModeFlags flags)
 {
-    if (flags == 0) { // CORE_RESOLVE_MODE_NONE
+    if (flags == 0) {  // CORE_RESOLVE_MODE_NONE
         return MLN_RESOLVE_MODE_NONE;
     }
     // CORE: SAMPLE_ZERO=1, AVERAGE=2, MIN=4, MAX=8
@@ -172,8 +172,7 @@ inline MlnImageAspectFlags ToMlnImageAspectFlags(uint32_t flags)
 }
 
 // Shader stage flags: Lume VERTEX=0x01,FRAGMENT=0x10,COMPUTE=0x20; MLN VERTEX=0x01,FRAGMENT=0x02,COMPUTE=0x04
-inline MlnShaderStageFlagBits ToMlnShaderStageFlagBits(
-    ShaderStageFlags flags)
+inline MlnShaderStageFlagBits ToMlnShaderStageFlagBits(ShaderStageFlags flags)
 {
     MlnShaderStageFlagBits result = static_cast<MlnShaderStageFlagBits>(0);
     if (flags & CORE_SHADER_STAGE_VERTEX_BIT) {
@@ -241,4 +240,4 @@ inline MlnDynamicStateType ToMlnDynamicStateType(DynamicStateEnum state)
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_MLN_CONVERT_H
+#endif  // MALEOON_MLN_CONVERT_H

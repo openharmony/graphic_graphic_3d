@@ -83,7 +83,7 @@ struct Thing {
 };
 }  // namespace
 
-template <typename T>
+template<typename T>
 class protectedVectorTest : public BASE_NS::vector<T> {
 public:
     using value_type = T;
@@ -126,7 +126,7 @@ public:
         return BASE_NS::vector<T>::uninitialized_move(first, last, d_first);
     }
 
-    template <class InputIt>
+    template<class InputIt>
     void wrap_copy(pointer pos, InputIt first, InputIt last)
     {
         return BASE_NS::vector<T>::copy(pos, first, last);
@@ -152,7 +152,7 @@ public:
         return BASE_NS::vector<T>::init_copy(dst, src, size);
     }
 
-    template <class InputIt>
+    template<class InputIt>
     iterator wrap_insert_impl(const_iterator pos, InputIt first, InputIt last)
     {
         return BASE_NS::vector<T>::insert_impl(pos, first, last);
@@ -644,7 +644,7 @@ UNIT_TEST(API_ContainersVector, Default, testing::ext::TestSize.Level1)
     vector<vector<int>> vecVec;
 }
 
-template <typename T>
+template<typename T>
 T* Allocate(BASE_NS::vector<T> vec, int size)
 {
     // Allocate space for size(s) elements
@@ -1450,7 +1450,7 @@ UNIT_TEST(API_ContainersVector, Assign, testing::ext::TestSize.Level1)
     }
 }
 
-template <typename T>
+template<typename T>
 struct Foo {
     int n;
     T x;

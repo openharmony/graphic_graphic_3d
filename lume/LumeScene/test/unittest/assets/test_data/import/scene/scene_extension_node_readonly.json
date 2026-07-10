@@ -1,0 +1,29 @@
+{
+    "version": "1.0",
+    "description": "extensionNode whose read-only object property is imported via a nested 'properties' array",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "cc1810e9-cc75-4c4e-871f-9d035a2ab7b2",
+                    "properties": [
+                        {
+                            "name": "Config",
+                            "value": {
+                                "properties": [
+                                    { "name": "Setting", "value": 42 }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

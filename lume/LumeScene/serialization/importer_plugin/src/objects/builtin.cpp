@@ -17,6 +17,7 @@
 
 #include <meta/base/meta_types.h>
 #include <meta/ext/minimal_object.h>
+#include <meta/interface/detail/any.h>
 #include <meta/interface/resource/intf_resource.h>
 
 #include "../import_helpers.h"
@@ -24,7 +25,7 @@
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
-template <typename Type>
+template<typename Type>
 class BuiltinContainerImpl : public META_NS::IntroduceInterfaces<META_NS::MinimalObject, IBuiltinContainer> {
     META_NS::ObjectId GetClassId() const override
     {
@@ -48,6 +49,11 @@ public:
         return out.SetValue(object_);
     }
 
+    META_NS::IAny::Ptr GetAny() const override
+    {
+        return META_NS::ConstructAny<Type>(object_);
+    }
+
 private:
     Type object_;
 };
@@ -64,6 +70,9 @@ ImportResult ImportResourceId::Import(ImportContext& context)
     CORE_NS::ResourceId rid(name, group);
     if (!rid.IsValid()) {
         return ImportResult{context.CreateDiagnostics("Invalid resourceId")};
+    }
+    if (auto overr = context.FindResourceGroupOverride(group)) {
+        rid.group = *overr;
     }
     return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<CORE_NS::ResourceId>>(BASE_NS::move(rid))};
 }
@@ -162,6 +171,102 @@ ImportResult ImportUVec2::Import(ImportContext& context)
         return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::UVec2>>(*val.value)};
     }
     return ImportResult{context.CreateDiagnostics("Invalid uvec2, value missing")};
+}
+
+ImportResult ImportUVec3::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "uvec3")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptUVec3(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::UVec3>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid uvec3, value missing")};
+}
+
+ImportResult ImportUVec4::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "uvec4")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptUVec4(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::UVec4>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid uvec4, value missing")};
+}
+
+ImportResult ImportIVec2::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "ivec2")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptIVec2(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::IVec2>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid ivec2, value missing")};
+}
+
+ImportResult ImportIVec3::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "ivec3")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptIVec3(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::IVec3>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid ivec3, value missing")};
+}
+
+ImportResult ImportIVec4::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "ivec4")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptIVec4(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<BASE_NS::Math::IVec4>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid ivec4, value missing")};
+}
+
+ImportResult ImportTimeSpan::Import(ImportContext& context)
+{
+    if (auto err = context.RequireString("type", "timeSpan")) {
+        return ImportResult{err};
+    }
+
+    ErrorHandler h(context);
+    if (auto val = GetOptTimeSpan(context, "value"); h.HandleOptValue(val)) {
+        if (val.error) {
+            return ImportResult{val.error};
+        }
+        return ImportResult{BASE_NS::make_shared<BuiltinContainerImpl<META_NS::TimeSpan>>(*val.value)};
+    }
+    return ImportResult{context.CreateDiagnostics("Invalid timeSpan, value missing")};
 }
 
 ImportResult ImportMat4x4::Import(ImportContext& context)

@@ -31,6 +31,11 @@
 #include <meta/interface/resource/intf_resource.h>
 
 #include "scene/scene_test.h"
+#if defined(UNIT_TESTS_USE_HCPPTEST)
+#include "test_runner_ohos_system.h"
+#else
+#include "test_runner.h"
+#endif
 
 using CORE3D_NS::MaterialComponent;
 
@@ -49,8 +54,11 @@ public:
         meta.AddProperty(META_NS::ConstructProperty<MaterialType>("Type").GetProperty());
         meta.AddProperty(META_NS::ConstructProperty<float>("AlphaCutoff").GetProperty());
         meta.AddProperty(META_NS::ConstructProperty<LightingFlags>("LightingFlags").GetProperty());
-        meta.AddProperty(META_NS::ConstructProperty<IShader::Ptr>("MaterialShader").GetProperty());
-        meta.AddProperty(META_NS::ConstructProperty<IShader::Ptr>("DepthShader").GetProperty());
+        // Resource refs on templates are stored as CORE_NS::ResourceId; the apply path
+        // resolves them against the scene's rman and binds the typed pointer on the
+        // live IMaterial.
+        meta.AddProperty(META_NS::ConstructProperty<CORE_NS::ResourceId>("MaterialShader").GetProperty());
+        meta.AddProperty(META_NS::ConstructProperty<CORE_NS::ResourceId>("DepthShader").GetProperty());
         meta.AddProperty(META_NS::ConstructProperty<RenderSort>("RenderSort").GetProperty());
     }
 
@@ -73,7 +81,9 @@ public:
         auto obj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
         if (auto m = interface_cast<META_NS::IMetadata>(obj.get())) {
             m->AddProperty(META_NS::ConstructProperty<BASE_NS::string>("Name").GetProperty());
-            m->AddProperty(META_NS::ConstructProperty<IImage::Ptr>("Image").GetProperty());
+            // Texture-slot Image is stored on the template as CORE_NS::ResourceId; the
+            // apply path resolves and binds the typed IImage::Ptr on the live ITexture.
+            m->AddProperty(META_NS::ConstructProperty<CORE_NS::ResourceId>("Image").GetProperty());
             m->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec4>("Factor").GetProperty());
             m->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec2>("Translation").GetProperty());
             m->AddProperty(META_NS::ConstructProperty<float>("Rotation").GetProperty());
@@ -160,9 +170,9 @@ UNIT_TEST_F(MaterialTemplateTest, PropertiesAccessible, testing::ext::TestSize.L
     auto tmpl = CreateFullTemplate();
     ASSERT_TRUE(tmpl);
 
-    auto named = interface_cast<META_NS::INamed>(tmpl.GetPtr().get());
-    ASSERT_TRUE(named);
-    EXPECT_TRUE(named->Name());
+    ASSERT_TRUE(tmpl.Name());
+    META_NS::SetValue(tmpl.Name(), BASE_NS::string("TestMaterial"));
+    EXPECT_EQ(META_NS::GetValue(tmpl.Name()), "TestMaterial");
 
     EXPECT_TRUE(tmpl.Type());
     EXPECT_TRUE(tmpl.AlphaCutoff());
@@ -263,10 +273,7 @@ UNIT_TEST_F(MaterialTemplateTest, PropertiesDefaultNotSet, testing::ext::TestSiz
     auto tmpl = CreateFullTemplate();
     ASSERT_TRUE(tmpl);
 
-    auto named = interface_cast<META_NS::INamed>(tmpl.GetPtr().get());
-    ASSERT_TRUE(named);
-    EXPECT_FALSE(META_NS::IsValueSet(*named->Name().GetProperty()));
-
+    EXPECT_FALSE(META_NS::IsValueSet(*tmpl.Name().GetProperty()));
     EXPECT_FALSE(META_NS::IsValueSet(*tmpl.AlphaCutoff().GetProperty()));
     EXPECT_FALSE(META_NS::IsValueSet(*tmpl.Type().GetProperty()));
     EXPECT_FALSE(META_NS::IsValueSet(*tmpl.LightingFlags().GetProperty()));
@@ -357,6 +364,10 @@ UNIT_TEST_F(MaterialTemplateTest, ApplyToMaterial, testing::ext::TestSize.Level1
     UpdateScene();
 
     EXPECT_FLOAT_EQ(META_NS::GetValue(material->AlphaCutoff()), testAlpha);
+    // Characterization: non-template-context ApplyOptions lands set values as OVERRIDES.
+    // This pins the ApplyOptions path so the upcoming standalone-ApplyTo defaults change
+    // cannot leak into it. Must stay true.
+    EXPECT_TRUE(material->AlphaCutoff().GetProperty()->IsValueSet());
 }
 
 /**
@@ -658,6 +669,132 @@ UNIT_TEST_F(MaterialTemplateTest, SetTemplateContextPromotesValues, testing::ext
 }
 
 /**
+ * @tc.name: SetTemplateContextPromotesResourceRef
+ * @tc.desc: A template's resolved ResourceId reference (MaterialShader) must land on the
+ *          live material's typed-pointer property as a default — IsValueSet stays false —
+ *          when the template is applied in template context. Guards the resource-ref
+ *          branch of the template-context invariant alongside scalar properties.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, SetTemplateContextPromotesResourceRef, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    resources->SetFileManager(CORE_NS::IFileManager::Ptr(&GetTestEnv()->engine->GetFileManager()));
+
+    auto renderman =
+        META_NS::GetObjectRegistry().Create<IRenderResourceManager>(ClassId::RenderResourceManager, params);
+    ASSERT_TRUE(renderman);
+    auto shader = renderman->LoadShader("test://shaders/test.shader").GetResult();
+    ASSERT_TRUE(shader);
+    CORE_NS::ResourceIdContext shaderId{"shader"};
+    if (auto i = interface_cast<CORE_NS::ISetResourceId>(shader)) {
+        i->SetResourceId(shaderId);
+    }
+    ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(shader)));
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto tmplMeta = interface_cast<META_NS::IMetadata>(tmpl.GetPtr().get());
+    ASSERT_TRUE(tmplMeta);
+    auto shaderIdProp = tmplMeta->GetProperty<CORE_NS::ResourceId>("MaterialShader");
+    ASSERT_TRUE(shaderIdProp);
+    META_NS::SetValue(shaderIdProp, shaderId.id);
+
+    auto options = interface_cast<CORE_NS::IResourceOptions>(tmpl.GetPtr().get());
+    ASSERT_TRUE(options);
+    auto cloneOpts = options->Clone();
+    ASSERT_TRUE(cloneOpts);
+    auto cloneTc = interface_cast<ITemplateOptions>(cloneOpts.get());
+    ASSERT_TRUE(cloneTc);
+    cloneTc->SetTemplateContext(true);
+
+    auto resource = interface_cast<CORE_NS::IResource>(material.get());
+    ASSERT_TRUE(resource);
+    EXPECT_TRUE(cloneOpts->ApplyOptions(*resource, scene));
+    UpdateScene();
+
+    auto materialShader = material->MaterialShader();
+    ASSERT_TRUE(materialShader);
+    auto resolved = META_NS::GetValue(materialShader);
+    EXPECT_EQ(interface_pointer_cast<CORE_NS::IResource>(resolved), interface_pointer_cast<CORE_NS::IResource>(shader));
+    EXPECT_EQ(materialShader->GetDefaultValue(), resolved);
+    EXPECT_FALSE(materialShader.GetProperty()->IsValueSet());
+}
+
+/**
+ * @tc.name: SetTemplateContextPromotesTextureSlotScalars
+ * @tc.desc: Scalar properties on a template's texture entry (Factor, Translation, Rotation,
+ *          Scale) must land on the live material's matching texture slot as defaults —
+ *          IsValueSet stays false, GetDefaultValue equals the template value — when the
+ *          template is applied in template context.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, SetTemplateContextPromotesTextureSlotScalars, testing::ext::TestSize.Level1)
+{
+    constexpr BASE_NS::Math::Vec4 FACTOR{0.25f, 0.5f, 0.75f, 1.0f};
+    constexpr BASE_NS::Math::Vec2 TRANSLATION{0.1f, 0.2f};
+    constexpr float ROTATION = 1.5f;
+    constexpr BASE_NS::Math::Vec2 SCALE{2.0f, 3.0f};
+
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto baseColorEntry = tmpl.Textures().GetValueAt(0);
+    ASSERT_TRUE(baseColorEntry);
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR);
+    META_NS::SetValue(baseColorEntry.Translation(), TRANSLATION);
+    META_NS::SetValue(baseColorEntry.Rotation(), ROTATION);
+    META_NS::SetValue(baseColorEntry.Scale(), SCALE);
+
+    auto options = interface_cast<CORE_NS::IResourceOptions>(tmpl.GetPtr().get());
+    ASSERT_TRUE(options);
+    auto cloneOpts = options->Clone();
+    ASSERT_TRUE(cloneOpts);
+    auto cloneTc = interface_cast<ITemplateOptions>(cloneOpts.get());
+    ASSERT_TRUE(cloneTc);
+    cloneTc->SetTemplateContext(true);
+
+    auto resource = interface_cast<CORE_NS::IResource>(material.get());
+    ASSERT_TRUE(resource);
+    EXPECT_TRUE(cloneOpts->ApplyOptions(*resource, scene));
+    UpdateScene();
+
+    auto liveTextures = material->Textures();
+    ASSERT_TRUE(liveTextures);
+    auto baseColorSlot = liveTextures->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Translation()), TRANSLATION);
+    EXPECT_EQ(baseColorSlot->Translation()->GetDefaultValue(), TRANSLATION);
+    EXPECT_FALSE(baseColorSlot->Translation()->IsValueSet());
+
+    EXPECT_FLOAT_EQ(META_NS::GetValue(baseColorSlot->Rotation()), ROTATION);
+    EXPECT_FLOAT_EQ(baseColorSlot->Rotation()->GetDefaultValue(), ROTATION);
+    EXPECT_FALSE(baseColorSlot->Rotation()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Scale()), SCALE);
+    EXPECT_EQ(baseColorSlot->Scale()->GetDefaultValue(), SCALE);
+    EXPECT_FALSE(baseColorSlot->Scale()->IsValueSet());
+}
+
+/**
  * @tc.name: MergePropagatesBaseResource
  * @tc.desc: Merge propagates a valid baseResource_ from source to destination.
  * @tc.type: FUNC
@@ -785,6 +922,293 @@ UNIT_TEST_F(MaterialTemplateTest, ApplyToViaInterface, testing::ext::TestSize.Le
     UpdateScene();
 
     EXPECT_FLOAT_EQ(META_NS::GetValue(material->AlphaCutoff()), 0.42f);
+}
+
+/**
+ * @tc.name: ApplyToResolvesResourceRef
+ * @tc.desc: IResourceTemplate::ApplyTo resolves a ResourceId reference (MaterialShader)
+ *          against the target material's owning scene, binding the typed shader pointer on
+ *          the live material. ApplyTo carries no context parameter, so it must derive the
+ *          apply context from the target object itself.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, ApplyToResolvesResourceRef, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    resources->SetFileManager(CORE_NS::IFileManager::Ptr(&GetTestEnv()->engine->GetFileManager()));
+
+    auto renderman =
+        META_NS::GetObjectRegistry().Create<IRenderResourceManager>(ClassId::RenderResourceManager, params);
+    ASSERT_TRUE(renderman);
+    auto shader = renderman->LoadShader("test://shaders/test.shader").GetResult();
+    ASSERT_TRUE(shader);
+    CORE_NS::ResourceIdContext shaderId{"shader"};
+    if (auto i = interface_cast<CORE_NS::ISetResourceId>(shader)) {
+        i->SetResourceId(shaderId);
+    }
+    ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(shader)));
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto tmplMeta = interface_cast<META_NS::IMetadata>(tmpl.GetPtr().get());
+    ASSERT_TRUE(tmplMeta);
+    auto shaderIdProp = tmplMeta->GetProperty<CORE_NS::ResourceId>("MaterialShader");
+    ASSERT_TRUE(shaderIdProp);
+    META_NS::SetValue(shaderIdProp, shaderId.id);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    auto materialShader = material->MaterialShader();
+    ASSERT_TRUE(materialShader);
+    auto resolved = META_NS::GetValue(materialShader);
+    EXPECT_EQ(interface_pointer_cast<CORE_NS::IResource>(resolved), interface_pointer_cast<CORE_NS::IResource>(shader));
+    // ApplyTo uses asDefault=true, so the resolved shader binds to the default slot.
+    EXPECT_FALSE(materialShader.GetProperty()->IsValueSet());
+}
+
+/**
+ * @tc.name: ApplyToResolvesSceneScopedResourceRef
+ * @tc.desc: IResourceTemplate::ApplyTo resolves a ResourceId reference against a resource
+ *          registered under the target scene's context — exercising the context-qualified
+ *          rm->GetResource({id, context}) path in ResolveResourceId (the importer registers
+ *          scene resources this way). A scene-scoped resource is invisible to the context-less
+ *          fallback, so success proves the scene context derived from the target material is
+ *          the same IScene instance resources are keyed under.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, ApplyToResolvesSceneScopedResourceRef, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+    resources->SetFileManager(CORE_NS::IFileManager::Ptr(&GetTestEnv()->engine->GetFileManager()));
+
+    // Register a shader keyed to THIS scene's context — only reachable via {id, scene}.
+    CORE_NS::ResourceIdContext sceneShaderId{
+        CORE_NS::ResourceId{"scene-shader"}, interface_pointer_cast<CORE_NS::IInterface>(scene)};
+    ASSERT_TRUE(
+        resources->AddResource(sceneShaderId, ClassId::ShaderResource.Id().ToUid(), "test://shaders/test.shader"));
+
+    // The context-less fallback must MISS a scene-scoped resource, so a successful resolution
+    // below can only come through the context-qualified GetResource({id, context}) lookup.
+    EXPECT_FALSE(resources->GetResource(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"scene-shader"}}));
+    auto expected = resources->GetResource(sceneShaderId);
+    ASSERT_TRUE(expected);
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto tmplMeta = interface_cast<META_NS::IMetadata>(tmpl.GetPtr().get());
+    ASSERT_TRUE(tmplMeta);
+    auto shaderIdProp = tmplMeta->GetProperty<CORE_NS::ResourceId>("MaterialShader");
+    ASSERT_TRUE(shaderIdProp);
+    META_NS::SetValue(shaderIdProp, sceneShaderId.id);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    auto materialShader = material->MaterialShader();
+    ASSERT_TRUE(materialShader);
+    auto resolved = META_NS::GetValue(materialShader);
+    EXPECT_EQ(interface_pointer_cast<CORE_NS::IResource>(resolved), expected);
+}
+
+/**
+ * @tc.name: ApplyToPromotesTopLevelScalarsToDefaults
+ * @tc.desc: IResourceTemplate::ApplyTo writes top-level scalar properties (AlphaCutoff,
+ *          LightingFlags) onto the live material as DEFAULTS: IsValueSet stays false and
+ *          GetDefaultValue equals the template value. Pins the direct ApplyTo path for the
+ *          material-level metadata copy (not just texture slots / refs).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, ApplyToPromotesTopLevelScalarsToDefaults, testing::ext::TestSize.Level1)
+{
+    constexpr float ALPHA = 0.42f;
+    constexpr LightingFlags FLAGS = LightingFlags::SHADOW_RECEIVER_BIT;
+
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    META_NS::SetValue(tmpl.AlphaCutoff(), ALPHA);
+    META_NS::SetValue(tmpl.LightingFlags(), FLAGS);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    EXPECT_FLOAT_EQ(META_NS::GetValue(material->AlphaCutoff()), ALPHA);
+    EXPECT_FLOAT_EQ(material->AlphaCutoff()->GetDefaultValue(), ALPHA);
+    EXPECT_FALSE(material->AlphaCutoff().GetProperty()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(material->LightingFlags()), FLAGS);
+    EXPECT_EQ(material->LightingFlags()->GetDefaultValue(), FLAGS);
+    EXPECT_FALSE(material->LightingFlags().GetProperty()->IsValueSet());
+}
+
+/**
+ * @tc.name: ApplyToPromotesTextureSlotScalarsToDefaults
+ * @tc.desc: IResourceTemplate::ApplyTo writes template texture-slot scalars (Factor,
+ *          Translation, Rotation, Scale) onto the live material's slot as DEFAULTS:
+ *          IsValueSet stays false and GetDefaultValue equals the template value. Pins the
+ *          direct ApplyTo path (asDefault=true), distinct from the ApplyOptions +
+ *          SetTemplateContext path covered by SetTemplateContextPromotesTextureSlotScalars.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, ApplyToPromotesTextureSlotScalarsToDefaults, testing::ext::TestSize.Level1)
+{
+    constexpr BASE_NS::Math::Vec4 FACTOR{0.25f, 0.5f, 0.75f, 1.0f};
+    constexpr BASE_NS::Math::Vec2 TRANSLATION{0.1f, 0.2f};
+    constexpr float ROTATION = 1.5f;
+    constexpr BASE_NS::Math::Vec2 SCALE{2.0f, 3.0f};
+
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto baseColorEntry = tmpl.Textures().GetValueAt(0);
+    ASSERT_TRUE(baseColorEntry);
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR);
+    META_NS::SetValue(baseColorEntry.Translation(), TRANSLATION);
+    META_NS::SetValue(baseColorEntry.Rotation(), ROTATION);
+    META_NS::SetValue(baseColorEntry.Scale(), SCALE);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    auto liveTextures = material->Textures();
+    ASSERT_TRUE(liveTextures);
+    auto baseColorSlot = liveTextures->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Translation()), TRANSLATION);
+    EXPECT_EQ(baseColorSlot->Translation()->GetDefaultValue(), TRANSLATION);
+    EXPECT_FALSE(baseColorSlot->Translation()->IsValueSet());
+
+    EXPECT_FLOAT_EQ(META_NS::GetValue(baseColorSlot->Rotation()), ROTATION);
+    EXPECT_FLOAT_EQ(baseColorSlot->Rotation()->GetDefaultValue(), ROTATION);
+    EXPECT_FALSE(baseColorSlot->Rotation()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Scale()), SCALE);
+    EXPECT_EQ(baseColorSlot->Scale()->GetDefaultValue(), SCALE);
+    EXPECT_FALSE(baseColorSlot->Scale()->IsValueSet());
+}
+
+/**
+ * @tc.name: ApplyToReapplyUpdatesTextureFactorDefaults
+ * @tc.desc: Applying a material template's texture Factor lands it as the slot's DEFAULT; re-apply
+ *          after changing the template updates the default (IsValueSet stays false). Once the user
+ *          explicitly sets the Factor (override), re-apply updates the DEFAULT but preserves the
+ *          user's value. After the user resets the property, it follows the default again, and a
+ *          further template change + re-apply updates both the default and the effective value.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(MaterialTemplateTest, ApplyToReapplyUpdatesTextureFactorDefaults, testing::ext::TestSize.Level1)
+{
+    constexpr BASE_NS::Math::Vec4 FACTOR1{0.1f, 0.2f, 0.3f, 0.4f};
+    constexpr BASE_NS::Math::Vec4 FACTOR2{0.9f, 0.8f, 0.7f, 0.6f};
+    constexpr BASE_NS::Math::Vec4 FACTOR3{0.15f, 0.25f, 0.35f, 0.45f};
+    constexpr BASE_NS::Math::Vec4 FACTOR4{0.55f, 0.65f, 0.75f, 0.85f};
+    constexpr BASE_NS::Math::Vec4 USER_VALUE{1.0f, 0.5f, 0.25f, 0.125f};
+
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto material = CreateMaterial();
+    ASSERT_TRUE(material);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto baseColorEntry = tmpl.Textures().GetValueAt(0);
+    ASSERT_TRUE(baseColorEntry);
+
+    // First apply: template Factor lands as the live slot's default.
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR1);
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    auto baseColorSlot = material->Textures()->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR1);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR1);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+
+    // Change the template's Factor and re-apply: the default updates again, still not an override.
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR2);
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    baseColorSlot = material->Textures()->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR2);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR2);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+
+    // User explicitly overrides the slot's Factor.
+    META_NS::SetValue(baseColorSlot->Factor(), USER_VALUE);
+    UpdateScene();
+    EXPECT_TRUE(baseColorSlot->Factor()->IsValueSet());
+
+    // Change the template's Factor and re-apply: the DEFAULT tracks the new template value, but
+    // the user's explicit override survives.
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR3);
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    baseColorSlot = material->Textures()->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR3);
+    EXPECT_TRUE(baseColorSlot->Factor()->IsValueSet());
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), USER_VALUE);
+
+    // User resets the property: it now follows the default (the last applied template value).
+    baseColorSlot->Factor().GetProperty()->ResetValue();
+    UpdateScene();
+
+    baseColorSlot = material->Textures()->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR3);
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR3);
+
+    // Change the template once more and re-apply: with no override, both the default and the
+    // effective value follow the new template value.
+    META_NS::SetValue(baseColorEntry.Factor(), FACTOR4);
+    EXPECT_TRUE(tmpl.ApplyTo(*material));
+    UpdateScene();
+
+    baseColorSlot = material->Textures()->GetValue()[0];
+    ASSERT_TRUE(baseColorSlot);
+    EXPECT_EQ(baseColorSlot->Factor()->GetDefaultValue(), FACTOR4);
+    EXPECT_FALSE(baseColorSlot->Factor()->IsValueSet());
+    EXPECT_EQ(META_NS::GetValue(baseColorSlot->Factor()), FACTOR4);
 }
 
 /**

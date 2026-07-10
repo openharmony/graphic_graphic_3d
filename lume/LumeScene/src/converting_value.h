@@ -32,7 +32,7 @@ SCENE_BEGIN_NAMESPACE()
 META_REGISTER_CLASS(
     ConvertingValueBase, "41474a42-d7d1-4d4a-a6cd-5a53973e8f9e", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-template <typename PropertyType>
+template<typename PropertyType>
 class ConvertingValueBase : public META_NS::IntroduceInterfaces<META_NS::MinimalObject, META_NS::INotifyOnChange,
                                 META_NS::IStackResetable, META_NS::IValue, IConvertingValue, META_NS::ISerializable> {
     META_IMPLEMENT_OBJECT_TYPE_INTERFACE(ClassId::ConvertingValueBase)
@@ -73,7 +73,7 @@ protected:
     PropertyType p_;
 };
 
-template <typename Converter>
+template<typename Converter>
 class ConvertingValue : public ConvertingValueBase<META_NS::Property<typename Converter::TargetType>> {
 public:
     using Super = ConvertingValueBase<META_NS::Property<typename Converter::TargetType>>;
@@ -151,7 +151,7 @@ private:
     mutable META_NS::EventHandler changed_;
 };
 
-template <typename Converter>
+template<typename Converter>
 class ConvertingArrayValue : public ConvertingValueBase<META_NS::ArrayProperty<typename Converter::TargetType>> {
 public:
     using Super = ConvertingValueBase<META_NS::ArrayProperty<typename Converter::TargetType>>;

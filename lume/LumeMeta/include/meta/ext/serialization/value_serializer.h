@@ -28,7 +28,7 @@
 META_BEGIN_NAMESPACE()
 
 /// Helper class to use export/import functions to construct value serializer
-template <typename Type, typename ExportFunc, typename ImportFunc>
+template<typename Type, typename ExportFunc, typename ImportFunc>
 struct ValueSerializer : IntroduceInterfaces<IValueSerializer> {
     ValueSerializer(ExportFunc e, ImportFunc i) : export_(BASE_NS::move(e)), import_(BASE_NS::move(i))
     {}
@@ -55,26 +55,26 @@ private:
     ImportFunc import_;
 };
 
-template <typename Type, typename Export, typename Import>
+template<typename Type, typename Export, typename Import>
 void RegisterSerializer(IGlobalSerializationData& data, Export e, Import i)
 {
     data.RegisterValueSerializer(
         CreateShared<ValueSerializer<Type, Export, Import>>(BASE_NS::move(e), BASE_NS::move(i)));
 }
 
-template <typename Type, typename Export, typename Import>
+template<typename Type, typename Export, typename Import>
 void RegisterSerializer(Export e, Import i)
 {
     RegisterSerializer<Type>(GetObjectRegistry().GetGlobalSerializationData(), BASE_NS::move(e), BASE_NS::move(i));
 }
 
-template <typename Type>
+template<typename Type>
 void UnregisterSerializer(IGlobalSerializationData& data)
 {
     data.UnregisterValueSerializer(UidFromType<Type>());
 }
 
-template <typename Type>
+template<typename Type>
 void UnregisterSerializer()
 {
     UnregisterSerializer<Type>(GetObjectRegistry().GetGlobalSerializationData());

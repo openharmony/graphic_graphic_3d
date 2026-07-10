@@ -82,7 +82,7 @@ public:
         ScenePluginTest::TearDown();
     }
 
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Import(BASE_NS::string_view file, META_NS::SharedPtrIInterface userContext = nullptr)
     {
         if (auto f = GetTestEnv()->engine->GetFileManager().OpenFile(file)) {

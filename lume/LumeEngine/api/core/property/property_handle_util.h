@@ -29,7 +29,7 @@
 #include <core/property_tools/property_data.h>
 
 CORE_BEGIN_NAMESPACE()
-template <typename T, typename PropertyHandle>
+template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(
     PropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType)
 {
@@ -48,7 +48,7 @@ ScopedHandle<T> MakeScopedHandle(
     return {};
 }
 
-template <typename T>
+template<typename T>
 bool SetPropertyValue(
     IPropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType, T&& propertyValue)
 {
@@ -60,7 +60,7 @@ bool SetPropertyValue(
     return false;
 }
 
-template <typename T>
+template<typename T>
 T GetPropertyValue(
     const IPropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType)
 {
@@ -76,7 +76,7 @@ T GetPropertyValue(
  * @param offset Byte offset to the property value form the begining of the handles RLock/ Wlock address.
  * @return ScopedHandle, which may be invalid locking the handle failed.
  */
-template <typename T, typename PropertyHandle>
+template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, uintptr_t offset)
 {
     auto scoped = ScopedHandle<T>(handle);
@@ -91,7 +91,7 @@ ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, uintptr_t offset)
  * @param offset Byte offset to the property value form the begining of the handles RLock/ Wlock address.
  * @return ScopedHandle, which may be invalid locking the handle failed.
  */
-template <typename T, typename PropertyHandle>
+template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, uintptr_t offset)
 {
     auto scoped = ScopedHandle<T>(handle);
@@ -106,7 +106,7 @@ ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, uintptr_t offset)
  * @param propertyName Name of the property to set.
  * @return ScopedHandle, which may be invalid if name and type did not match any property.
  */
-template <typename T, typename PropertyHandle>
+template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, BASE_NS::string_view propertyName)
 {
     using BaseT = BASE_NS::remove_const_t<BASE_NS::remove_reference_t<BASE_NS::remove_extent_t<T>>>;
@@ -119,7 +119,7 @@ ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, BASE_NS::string_view pr
  * @param propertyName Name of the property to set.
  * @return ScopedHandle, which may be invalid if name and type did not match any property.
  */
-template <typename T, typename PropertyHandle>
+template<typename T, typename PropertyHandle>
 ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, BASE_NS::string_view propertyName)
 {
     if (handle) {
@@ -134,7 +134,7 @@ ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, BASE_NS::string_view pr
  * @param propertyValue Value to assign to the property.
  * @return True name and type matched a property, otherwise false.
  */
-template <typename T>
+template<typename T>
 bool SetPropertyValue(IPropertyHandle& handle, BASE_NS::string_view propertyName, T&& propertyValue)
 {
     using BaseT = BASE_NS::remove_const_t<BASE_NS::remove_reference_t<BASE_NS::remove_extent_t<T>>>;
@@ -148,7 +148,7 @@ bool SetPropertyValue(IPropertyHandle& handle, BASE_NS::string_view propertyName
  * @param propertyValue Value to assign to the property.
  * @return True name and type matched a property, otherwise false.
  */
-template <typename T>
+template<typename T>
 bool SetPropertyValue(IPropertyHandle* handle, BASE_NS::string_view propertyName, T&& propertyValue)
 {
     if (handle) {
@@ -162,7 +162,7 @@ bool SetPropertyValue(IPropertyHandle* handle, BASE_NS::string_view propertyName
  * @param propertyName Name of the property to query.
  * @return Value of the property or a default constructed value if name and type did not match any property.
  */
-template <typename T>
+template<typename T>
 T GetPropertyValue(const IPropertyHandle& handle, BASE_NS::string_view propertyName)
 {
     static constexpr auto propertyType = PropertySystem::PropertyTypeDeclFromType<T, BASE_NS::is_array_t<T>>();
@@ -174,7 +174,7 @@ T GetPropertyValue(const IPropertyHandle& handle, BASE_NS::string_view propertyN
  * @param propertyName Name of the property to query.
  * @return Value of the property or a default constructed value if name and type did not match any property.
  */
-template <typename T>
+template<typename T>
 T GetPropertyValue(const IPropertyHandle* handle, BASE_NS::string_view propertyName)
 {
     if (handle) {

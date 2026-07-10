@@ -84,7 +84,7 @@ namespace json2 {
 ///
 using readonly_string_t = BASE_NS::string_view;
 using writable_string_t = BASE_NS::string;
-template <typename T>
+template<typename T>
 using array_t = BASE_NS::vector<T>;
 
 /// Type of a JSON value.
@@ -108,7 +108,7 @@ struct readonly_tag {};
 /// JSON string.
 struct writable_tag {};
 
-template <typename T = readonly_tag>
+template<typename T = readonly_tag>
 struct value_t;
 
 /// JSON structure which contains read-only strings. The source JSON string must be kept alive until the parsing
@@ -120,24 +120,24 @@ using view = value_t<readonly_tag>;
 using value = value_t<writable_tag>;
 
 /// Returns true iff T is a valid tag (either `readonly_tag` or `writable_tag`).
-template <typename T>
+template<typename T>
 constexpr bool is_valid_tag_v = BASE_NS::is_same_v<T, readonly_tag> || BASE_NS::is_same_v<T, writable_tag>;
 
 /// Parses 'data' and returns JSON structure. the value::type will be 'uninitialized' if parsing failed.
 ///
 /// @param data JSON as a null-terminated string.
 /// @return Parsed JSON structure.
-template <typename T = readonly_tag, typename = BASE_NS::enable_if_t<is_valid_tag_v<T>>>
+template<typename T = readonly_tag, typename = BASE_NS::enable_if_t<is_valid_tag_v<T>>>
 [[nodiscard]] value_t<T> parse(BASE_NS::string_view data);
 
 /// Converts a JSON structure into a string.
 ///
 /// @param value JSON structure.
 /// @return JSON as string.
-template <typename T = readonly_tag>
+template<typename T = readonly_tag>
 [[nodiscard]] BASE_NS::string to_string(const value_t<T>& value);
 
-template <typename T = readonly_tag>
+template<typename T = readonly_tag>
 void to_string(BASE_NS::string& out, const value_t<T>& value);
 
 namespace Detail {
@@ -156,11 +156,11 @@ void escape(BASE_NS::string& out, BASE_NS::string_view str);
 }  // namespace Detail
 
 /// Either string or string_view depending on whether we are using a JSON view or value.
-template <typename Tag>
+template<typename Tag>
 using conditionally_writable_string_t =
     typename BASE_NS::conditional_t<BASE_NS::is_same_v<Tag, writable_tag>, writable_string_t, readonly_string_t>;
 
-template <typename Tag>
+template<typename Tag>
 class escaped_string_template {
 public:
     conditionally_writable_string_t<Tag> escaped;
@@ -187,7 +187,7 @@ public:
     }
 
     /// Implicit conversion between readable and writable escaped strings.
-    template <typename OtherTag>
+    template<typename OtherTag>
     operator escaped_string_template<OtherTag>() const
     {
         return escaped_string_template<OtherTag>(conditionally_writable_string_t<OtherTag>(escaped));
@@ -204,7 +204,7 @@ public:
 /// Compares two escaped strings for equality, irrespective of their storage.
 ///
 /// Note: This method is not unicode-aware, strings are compared based on their byte representation.
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 [[nodiscard]] bool operator==(const escaped_string_template<Tag1>& lhs, const escaped_string_template<Tag2>& rhs)
 {
     return lhs.escaped == rhs.escaped;
@@ -213,7 +213,7 @@ template <typename Tag1, typename Tag2>
 /// Compares two escaped strings for non-equality, irrespective of their storage.
 ///
 /// Note: This method is not unicode-aware, strings are compared based on their byte representation.
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 [[nodiscard]] bool operator!=(const escaped_string_template<Tag1>& lhs, const escaped_string_template<Tag2>& rhs)
 {
     return !(lhs == rhs);
@@ -235,7 +235,7 @@ escaped_string operator""_escaped_value(const char*, std::size_t);
 }  // namespace literals
 
 /// JSON value.
-template <typename Tag>
+template<typename Tag>
 struct value_t {
     /// A type which is `json::escaped_string_view` for the readonly JSON views and `json::escaped_string` for
     /// standalone values.
@@ -279,7 +279,7 @@ struct value_t {
     using array_t = array_t<value_t>;
 
     /// Readable and writable value_t's are good friends.
-    template <typename Tag2>
+    template<typename Tag2>
     friend struct value_t;
 
 private:
@@ -319,7 +319,7 @@ private:
     {}
 
     /// Constructs a JSON value from a number.
-    template <typename Number,
+    template<typename Number,
         typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number> && !BASE_NS::is_same_v<Number, bool>>>
     explicit value_t(Number value, passkey key) noexcept;
 
@@ -350,11 +350,11 @@ public:
     [[nodiscard]] static value_t escaped_string(conditionally_writable_string_t<Tag>&& escaped) noexcept;
     [[nodiscard]] static value_t escaped_string(const conditionally_writable_string_t<Tag>&) = delete;
     /// Constructs a JSON string value from an already escaped string literal.
-    template <size_t N>
+    template<size_t N>
     [[nodiscard]] static value_t escaped_string(const char escaped[N]);  // NOLINT(*-avoid-c-arrays)
 
     /// Constructs a JSON number value.
-    template <typename Number, typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>>>
+    template<typename Number, typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>>>
     [[nodiscard]] static value_t number(Number value) noexcept;
 
     /// Constructs an empty JSON array value.
@@ -384,7 +384,7 @@ public:
 
     // Helper overloads for detecting attempts for illegal implicit conversions:
 
-    template <typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>>>
+    template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>>>
     value_t(T) = delete;                                       // Use factory method ::number(...) instead.
     value_t(bool) = delete;                                    // Use factory method ::boolean(...) instead.
     value_t(BASE_NS::string_view) = delete;                    // Use factory method ::string(...) instead.
@@ -410,7 +410,7 @@ public:
     ~value_t();
 
     /// Conversion between writable/readable JSON values.
-    template <typename OtherTag>
+    template<typename OtherTag>
     explicit operator value_t<OtherTag>() const
     {
         value_t<OtherTag> other;
@@ -455,7 +455,7 @@ public:
         return other;
     }
 
-    template <typename T>
+    template<typename T>
     void destroy(T& object)
     {
         object.~T();
@@ -554,7 +554,7 @@ public:
     /// The numeric value of this JSON value, converted to the requested type.
     ///
     /// Precondition: the value's underlying type is numeric (floating_point, signed_int, or unsigned_int).
-    template <typename T>
+    template<typename T>
     [[nodiscard]] T as_number() const noexcept
     {
         switch (type_) {
@@ -717,7 +717,7 @@ public:
     /// If the key does not exist, a new uninitialized value is created at that key.
     ///
     /// Precondition: The value refers to an object.
-    template <typename T = Tag, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, writable_tag>>>
+    template<typename T = Tag, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, writable_tag>>>
     [[nodiscard]] value_t& operator[](const BASE_NS::string_view& key) &
     {
         return operator[](escape(key));
@@ -728,7 +728,7 @@ public:
     /// If the key does not exist, a new uninitialized value is created at that key.
     ///
     /// Precondition: The value refers to an object.
-    template <typename T = Tag, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, writable_tag>>>
+    template<typename T = Tag, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, writable_tag>>>
     [[nodiscard]] value_t& operator[](const escaped_string_view& escapedKey) &
     {
         // Note: This method cannot work safely on read-only views because we need to be able to insert a string key
@@ -745,8 +745,8 @@ public:
         return object_.back().value;
     }
 };
-template <typename Tag>
-template <typename Number, typename>
+template<typename Tag>
+template<typename Number, typename>
 value_t<Tag>::value_t(Number value, passkey key) noexcept
 {
     if constexpr (BASE_NS::is_floating_point_v<Number>) {
@@ -760,75 +760,75 @@ value_t<Tag>::value_t(Number value, passkey key) noexcept
         unsigned_ = static_cast<uint64_t>(value);
     }
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::boolean(bool value) noexcept
 {
     return value_t(value, passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::string(BASE_NS::string_view unescaped) noexcept
 {
     static_assert(BASE_NS::is_same_v<Tag, writable_tag>);
     return value_t(escaped_string::from_unescaped(unescaped), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::escaped_string(escaped_string_t&& escaped) noexcept
 {
     return value_t(BASE_NS::move(escaped), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::escaped_string(conditionally_writable_string_t<Tag>&& escaped) noexcept
 {
     return value_t(escaped_string_t(BASE_NS::move(escaped)), passkey());
 }
-template <typename Tag>
-template <size_t N>
+template<typename Tag>
+template<size_t N>
 value_t<Tag> value_t<Tag>::escaped_string(const char escaped[N])  // NOLINT(*-avoid-c-arrays)
 {
     return value_t(conditionally_writable_string_t<Tag>(escaped, BASE_NS::constexpr_strlen(escaped)));
 }
-template <typename Tag>
-template <typename Number, typename>
+template<typename Tag>
+template<typename Number, typename>
 value_t<Tag> value_t<Tag>::number(Number value) noexcept
 {
     return value_t(value, passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::array(array_t&& value) noexcept
 {
     return value_t(BASE_NS::move(value), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::array() noexcept
 {
     return value_t(array_t(), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::object(object_t&& value) noexcept
 {
     return value_t(BASE_NS::move(value), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::object() noexcept
 {
     return value_t(object_t(), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::null() noexcept
 {
     return value_t(null_t(), passkey());
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::uninitialized() noexcept
 {
     return value_t();
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag> value_t<Tag>::parse(const BASE_NS::string_view jsonString) noexcept
 {
     return json2::parse<Tag>(jsonString);
 }
-template <typename Tag>
+template<typename Tag>
 BASE_NS::string value_t<Tag>::to_string() const
 {
     return CORE_NS::json2::to_string<Tag>(*this);
@@ -838,7 +838,7 @@ BASE_NS::string value_t<Tag>::to_string() const
 #pragma warning(push)
 #pragma warning(disable : 4583)  // Suppress warning that members' destructors are not called implcitly.
 #endif                           // We are calling them in cleanup explicitly.
-template <typename Tag>
+template<typename Tag>
 value_t<Tag>::value_t(const value_t& other) : type_(other.type_)
 {
     switch (type_) {
@@ -872,7 +872,7 @@ value_t<Tag>::value_t(const value_t& other) : type_(other.type_)
             break;
     }
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag>& value_t<Tag>::operator=(  // NOLINT(*-oop54-cpp) - We did implement self-assignment correctly.
     const value_t& other)
 {
@@ -912,7 +912,7 @@ value_t<Tag>& value_t<Tag>::operator=(  // NOLINT(*-oop54-cpp) - We did implemen
     }
     return *this;
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag>::value_t(value_t&& rhs) noexcept : type_{BASE_NS::exchange(rhs.type_, type::uninitialized)}
 {
     switch (type_) {
@@ -946,7 +946,7 @@ value_t<Tag>::value_t(value_t&& rhs) noexcept : type_{BASE_NS::exchange(rhs.type
             break;
     }
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag>& value_t<Tag>::operator=(value_t&& rhs) noexcept
 {
     if (this != &rhs) {
@@ -985,7 +985,7 @@ value_t<Tag>& value_t<Tag>::operator=(value_t&& rhs) noexcept
     }
     return *this;
 }
-template <typename Tag>
+template<typename Tag>
 value_t<Tag>::~value_t()
 {
     cleanup();
@@ -1000,11 +1000,11 @@ value_t<Tag>::~value_t()
 /// Note: This method is not unicode-aware, strings are compared based on their byte representation.
 ///
 /// Complexity: O(n^2) if the values are objects, where n is the number of key-value pairs in the largest object.
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 [[nodiscard]] bool operator==(const value_t<Tag1>& lhs, const value_t<Tag2>& rhs);
 
 /// Checks if two JSON values are not equal, irrespective of object key orderings.
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 [[nodiscard]] bool operator!=(const value_t<Tag1>& lhs, const value_t<Tag2>& rhs);
 
 // Explicitly require these to be instantiated in the implementation file.
@@ -1078,7 +1078,7 @@ constexpr auto UNISTART_STR = BASE_NS::string_view("\\u");
 /// Parses a string literal into `res`, returning the string view of the remainder of the parseable string.
 ///
 /// Expects data to start after the opening "
-template <typename Tag>
+template<typename Tag>
 [[nodiscard]] BASE_NS::string_view parse_string(BASE_NS::string_view data, value_t<Tag>& res)
 {
     const auto start = data;
@@ -1125,7 +1125,7 @@ template <typename Tag>
     return data;
 }
 
-template <typename Tag>
+template<typename Tag>
 [[nodiscard]] BASE_NS::string_view parse_number(BASE_NS::string_view data, value_t<Tag>& res)
 {
     CORE_ASSERT_MSG(!data.empty() && (IsDigit(data.front()) || IsSign(data.front())),
@@ -1232,7 +1232,7 @@ template <typename Tag>
     return data;
 }
 
-template <typename T>
+template<typename T>
 void add(value_t<T>& v, value_t<T>&& value)
 {
     switch (v.type()) {
@@ -1258,7 +1258,7 @@ void add(value_t<T>& v, value_t<T>&& value)
 
 }  // namespace
 
-template <typename T, typename>
+template<typename T, typename>
 [[nodiscard]] value_t<T> parse(BASE_NS::string_view data)
 {
     using jsonValue = value_t<T>;
@@ -1479,7 +1479,7 @@ template value parse(BASE_NS::string_view);
 // end of parser
 namespace {
 /// Requires `escapedString` to be already escaped.
-template <typename T>
+template<typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::escaped_string_t& escapedString)
 {
     out += '"';
@@ -1487,7 +1487,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::escaped_string_t& e
     out += '"';
 }
 
-template <typename T>
+template<typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::object_t& object)
 {
     out += '{';
@@ -1503,7 +1503,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::object_t& object)
     out += '}';
 }
 
-template <typename T>
+template<typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::array_t& array)
 {
     out += '[';
@@ -1517,7 +1517,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::array_t& array)
     out += ']';
 }
 
-template <typename T>
+template<typename T>
 void append(BASE_NS::string& out, const double floatingPoint)
 {
     constexpr const char* FLOATING_FORMAT_STR = "%.17g";
@@ -1534,7 +1534,7 @@ void append(BASE_NS::string& out, const double floatingPoint)
 }
 }  // namespace
 
-template <typename T>
+template<typename T>
 BASE_NS::string to_string(const value_t<T>& value)
 {
     BASE_NS::string out;
@@ -1542,7 +1542,7 @@ BASE_NS::string to_string(const value_t<T>& value)
     return out;
 }
 
-template <typename T>
+template<typename T>
 void to_string(BASE_NS::string& out, const value_t<T>& value)
 {
     switch (value.type()) {
@@ -1785,7 +1785,7 @@ escaped_string operator""_escaped_value(const char* str, const std::size_t lengt
 }  // namespace literals
 
 // Definition of the template operator== for JSON values.
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 bool operator==(const value_t<Tag1>& lhs, const value_t<Tag2>& rhs)
 {
     if (lhs.type() != rhs.type()) {
@@ -1845,7 +1845,7 @@ bool operator==(const value_t<Tag1>& lhs, const value_t<Tag2>& rhs)
     }
 }
 
-template <typename Tag1, typename Tag2>
+template<typename Tag1, typename Tag2>
 bool operator!=(const value_t<Tag1>& lhs, const value_t<Tag2>& rhs)
 {
     return !(lhs == rhs);

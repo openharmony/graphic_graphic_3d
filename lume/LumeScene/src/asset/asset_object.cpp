@@ -46,7 +46,7 @@ struct ResourcesCreator {
     CORE3D_NS::INameComponentManager* nameMan{};
     CORE_NS::IResourceManager::Ptr resources;
 
-    ResourcesCreator(const IScene::Ptr& sc, BASE_NS::string_view uri, const CORE3D_NS::IGLTF2Importer::Ptr& importer,
+    ResourcesCreator(const IScene::Ptr& sc, BASE_NS::string_view uri, const CORE3D_NS::GLTFResourceData& resourceData,
         const CORE_NS::ResourceId& rid)
         : scene(sc)
     {
@@ -76,8 +76,8 @@ struct ResourcesCreator {
         }
         CORE_LOG_D("Loading gltf resources to group: %s", group.c_str());
 
-        CreateImageResources(importer->GetResult().data.images);
-        CreateMaterialResources(importer->GetResult().data.materials);
+        CreateImageResources(resourceData.images);
+        CreateMaterialResources(resourceData.materials);
         CreateAnimationResources();
 
         iScene->SetResourceGroups(StringToResourceGroupBundle(scene, {group}));
@@ -221,17 +221,22 @@ bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool cre
     }
 
     ecs_ = ecs.GetNativeEcs();
-    importer_ = gltf.CreateGLTF2Importer(*ecs_);
-    if (!importer_) {
+    auto importer = gltf.CreateGLTF2Importer(*ecs_);
+    if (!importer) {
         CORE_LOG_E("Creating glTF importer failed");
         return false;
     }
-    importer_->ImportGLTF(*gltfLoadResult.data, CORE3D_NS::CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL);
-    const auto& gltfImportResult = importer_->GetResult();
+    importer->ImportGLTF(*gltfLoadResult.data, CORE3D_NS::CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL);
+    const auto& gltfImportResult = importer->GetResult();
     if (!gltfImportResult.success) {
         CORE_LOG_E("Importing of '%s' failed: %s", BASE_NS::string(uri).c_str(), gltfImportResult.error.c_str());
         return false;
     }
+
+    // Anchor the imported resource entities for the lifetime of this asset. From here on we use
+    // importedResources_ instead of the importer, so the importer (and its CPU-side glTF parse
+    // data) can be released when Load returns.
+    importedResources_ = gltfImportResult.data;
 
     // Loading and importing of glTF was done successfully. Fill the collection with all the gltf entities.
     const auto rootEntity = ImportSceneFromGltf(*gltfLoadResult.data, {});
@@ -240,7 +245,7 @@ bool AssetObject::Load(const IScene::Ptr& sc, BASE_NS::string_view uri, bool cre
     }
 
     if (createResources) {
-        ResourcesCreator c(sc, uri, importer_, rid);
+        ResourcesCreator c(sc, uri, importedResources_, rid);
     }
 
     if (!ecs.CreateUnnamedRootNode()) {
@@ -262,7 +267,7 @@ CORE_NS::Entity AssetObject::ImportSceneFromGltf(const CORE3D_NS::IGLTFData& glt
         sceneIndex = 0;
     }
 
-    const CORE3D_NS::GLTFResourceData& resourceData = importer_->GetResult().data;
+    const CORE3D_NS::GLTFResourceData& resourceData = importedResources_;
     CORE_NS::Entity importedSceneEntity{};
     if (sceneIndex != CORE3D_NS::CORE_GLTF_INVALID_INDEX) {
         CORE3D_NS::GltfSceneImportFlags importFlags = CORE3D_NS::CORE_GLTF_IMPORT_COMPONENT_FLAG_BITS_ALL;

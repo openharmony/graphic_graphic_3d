@@ -62,7 +62,7 @@ bool operator<=(const BASE_NS::Math::Vec2& lhs, const BASE_NS::Math::Vec2& rhs);
 namespace META_NS {
 std::ostream& operator<<(std::ostream& os, const META_NS::TimeSpan& vec);
 
-template <typename Type>
+template<typename Type>
 bool ContainsObjectWithName(const BASE_NS::vector<Type>& vec, const BASE_NS::string& name)
 {
     for (auto c : vec) {
@@ -77,10 +77,10 @@ bool ContainsObjectWithName(const BASE_NS::vector<Type>& vec, const BASE_NS::str
 
 namespace UTest {
 
-template <typename T>
+template<typename T>
 bool IsEqual(const BASE_NS::vector<T>& a, const BASE_NS::vector<T>& b);
 
-template <class A>
+template<class A>
 inline bool IsEqual(const A& a, const A& b)
 {
     if constexpr (BASE_NS::is_floating_point_v<A>) {
@@ -201,7 +201,7 @@ inline bool IsEqual(IProperty::Ptr a, IProperty::Ptr b)
            as->GetModifiers({}, false).size() == bs->GetModifiers({}, false).size();
 }
 
-template <typename T>
+template<typename T>
 inline bool IsEqual(const BASE_NS::vector<T>& a, const BASE_NS::vector<T>& b)
 {
     if (a.size() != b.size()) {

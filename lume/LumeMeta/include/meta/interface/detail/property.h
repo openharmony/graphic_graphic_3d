@@ -98,7 +98,7 @@ public:
         return interface_cast<IStackProperty>(p_);
     }
 
-    template <typename Interface>
+    template<typename Interface>
     BASE_NS::vector<typename Interface::Ptr> GetModifiers() const
     {
         BASE_NS::vector<typename Interface::Ptr> res;
@@ -149,7 +149,7 @@ public:
         return AnyReturn::FAIL;
     }
 
-    template <typename Intf>
+    template<typename Intf>
     ReturnError PushValue(const BASE_NS::shared_ptr<Intf>& value)
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
@@ -160,7 +160,7 @@ public:
         return GenericError::FAIL;
     }
 
-    template <typename Intf>
+    template<typename Intf>
     ReturnError RemoveValue(const BASE_NS::shared_ptr<Intf>& value)
     {
         if (auto i = interface_cast<IStackProperty>(p_)) {
@@ -264,11 +264,11 @@ protected:
     PropertyType p_;
 };
 
-template <typename Type>
+template<typename Type>
 using PropertyBaseType =
     BASE_NS::conditional_t<BASE_NS::is_const_v<Type>, ConstTypelessPropertyInterface, TypelessPropertyInterface>;
 
-template <typename Type>
+template<typename Type>
 class PropertyInterface : public PropertyBaseType<Type> {
     using Super = PropertyBaseType<Type>;
     using Super::p_;
@@ -314,7 +314,7 @@ public:
     }
 };
 
-template <typename Type>
+template<typename Type>
 class TypedPropertyLock final : public PropertyInterface<Type> {
     using PropertyType = typename PropertyInterface<Type>::PropertyType;
     using IT = PropertyInterface<Type>;
@@ -363,7 +363,7 @@ public:
     }
 };
 
-template <typename Property>
+template<typename Property>
 class PropertyLock final : public PropertyBaseType<Property> {
     using InterfaceType = PropertyBaseType<Property>*;
 

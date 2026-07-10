@@ -40,6 +40,8 @@
 #include <scene/interface/resource/image_info.h>
 #include <scene_importer/interface/intf_importer.h>
 
+#include <core/intf_engine.h>
+
 #include <gmock/gmock.h>
 
 #include <meta/api/util.h>
@@ -50,11 +52,13 @@
 #include <meta/interface/curves/intf_curve_1d.h>
 #include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_metadata.h>
+#include <meta/interface/intf_named.h>
 #include <meta/interface/resource/intf_resource.h>
 #include <meta/interface/resource/intf_resource_manager_extension.h>
 
 #include "import_test_helpers.h"
 #include "scene/scene_test.h"
+#include "util.h"
 
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
@@ -79,7 +83,7 @@ public:
         return res.object;
     }
 
-    template <typename T>
+    template<typename T>
     T GetProp(META_NS::IMetadata* meta, BASE_NS::string_view name, T def = {})
     {
         EXPECT_TRUE(meta);
@@ -117,6 +121,7 @@ UNIT_TEST_F(API_ResourceImportTest, ImportMaterial0, testing::ext::TestSize.Leve
     auto meta = interface_cast<META_NS::IMetadata>(obj);
     ASSERT_TRUE(meta);
 
+    EXPECT_EQ(GetProp<BASE_NS::string>(meta, "Name"), "MyMaterial");
     EXPECT_EQ(GetProp<SCENE_NS::MaterialType>(meta, "Type"), SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
     EXPECT_FLOAT_EQ(GetProp<float>(meta, "AlphaCutoff"), 0.5f);
     EXPECT_EQ(GetProp<SCENE_NS::LightingFlags>(meta, "LightingFlags"), static_cast<SCENE_NS::LightingFlags>(2));
@@ -176,6 +181,7 @@ UNIT_TEST_F(API_ResourceImportTest, ImportEnvironment0, testing::ext::TestSize.L
     auto meta = interface_cast<META_NS::IMetadata>(obj);
     ASSERT_TRUE(meta);
 
+    EXPECT_EQ(GetProp<BASE_NS::string>(meta, "Name"), "MyEnvironment");
     EXPECT_EQ(GetProp<SCENE_NS::EnvBackgroundType>(meta, "Background"), SCENE_NS::EnvBackgroundType::CUBEMAP);
     EXPECT_EQ(GetProp<BASE_NS::Math::Vec4>(meta, "IndirectDiffuseFactor"), BASE_NS::Math::Vec4(0.1f, 0.2f, 0.3f, 1.0f));
     EXPECT_EQ(
@@ -204,6 +210,7 @@ UNIT_TEST_F(API_ResourceImportTest, ImportImage0, testing::ext::TestSize.Level1)
     auto meta = interface_cast<META_NS::IMetadata>(obj);
     ASSERT_TRUE(meta);
 
+    EXPECT_EQ(GetProp<BASE_NS::string>(meta, "Name"), "MyImage");
     auto info = GetProp<SCENE_NS::ImageLoadInfo>(meta, "ImageLoadInfo");
     EXPECT_EQ(info.loadFlags, SCENE_NS::ImageLoadFlags::GENERATE_MIPS | SCENE_NS::ImageLoadFlags::FORCE_SRGB_BIT);
     EXPECT_EQ(info.info.usageFlags, SCENE_NS::ImageUsageFlag::SAMPLED_BIT | SCENE_NS::ImageUsageFlag::TRANSFER_DST_BIT);
@@ -278,6 +285,10 @@ UNIT_TEST_F(API_ResourceImportTest, ImportMesh0, testing::ext::TestSize.Level1)
     ASSERT_TRUE(obj);
     auto meshTemplate = interface_pointer_cast<SCENE_NS::IMeshTemplate>(obj);
     ASSERT_TRUE(meshTemplate);
+
+    auto meta = interface_cast<META_NS::IMetadata>(obj);
+    ASSERT_TRUE(meta);
+    EXPECT_EQ(GetProp<BASE_NS::string>(meta, "Name"), "MyMesh");
 }
 
 /**
@@ -371,6 +382,38 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexDerivedMeshFromTemplate, testing:
     auto mesh2 =
         interface_pointer_cast<SCENE_NS::IMesh>(rman->GetResource({CORE_NS::ResourceId("triangle-mesh"), scene}));
     EXPECT_EQ(mesh, mesh2);
+}
+
+/**
+ * @tc.name: ImportedMeshSubmeshAABBMatchesJson
+ * @tc.desc: After importing a mesh via the JSON importer, the submesh
+ *          AABBMin/AABBMax match the values declared in triangle.json's
+ *          "aabb" block, and remain the property's default value (loader did
+ *          not stamp them as user-modified).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, ImportedMeshSubmeshAABBMatchesJson, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto rman = ImportIndexIntoScene("test://import/index/index_mesh.json", scene);
+    ASSERT_TRUE(rman);
+
+    auto meshRes = rman->GetResource({CORE_NS::ResourceId("triangle-mesh"), scene});
+    ASSERT_TRUE(meshRes);
+    auto mesh = interface_pointer_cast<SCENE_NS::IMesh>(meshRes);
+    ASSERT_TRUE(mesh);
+
+    auto subs = mesh->SubMeshes()->GetValue();
+    ASSERT_EQ(subs.size(), 1u);
+    auto submesh = subs[0];
+    ASSERT_TRUE(submesh);
+
+    EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-1.0f, -1.0f, 0.0f}));
+    EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{1.0f, 1.0f, 0.0f}));
+    EXPECT_TRUE(submesh->AABBMin()->IsDefaultValue());
+    EXPECT_TRUE(submesh->AABBMax()->IsDefaultValue());
 }
 
 /**
@@ -550,6 +593,8 @@ UNIT_TEST_F(API_ResourceImportTest, ImportPostProcess0, testing::ext::TestSize.L
     ASSERT_TRUE(obj);
     auto meta = interface_cast<META_NS::IMetadata>(obj);
     ASSERT_TRUE(meta);
+
+    EXPECT_EQ(GetProp<BASE_NS::string>(meta, "Name"), "MyPostProcess");
 
     // Tonemap sub-effect
     auto tonemapObj = GetProp<META_NS::IObject::Ptr>(meta, "Tonemap");
@@ -1012,6 +1057,41 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexDerivedFromEnvironmentValues, tes
 }
 
 /**
+ * @tc.name: ImportIndexDerivedEnvironmentOverridesReachECS
+ * @tc.desc: A derived environment that overrides engine-bound scalar properties on
+ *           top of a base environment sees both layers reflected on the live
+ *           property — `META_NS::GetValue` routes through the engine value, so a
+ *           correct read implies the value has been synced to ECS. Exercises the
+ *           template-context apply path where base defaults land first and the
+ *           derived layer must replace them without losing engine-side sync.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, ImportIndexDerivedEnvironmentOverridesReachECS, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    SCENE_IMP_NS::ImportParameters params;
+    params.scene = scene;
+    auto res = imp->Import("test://import/index/index_env_derived_override.json", params);
+    ASSERT_TRUE(res);
+    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(res.object);
+    ASSERT_TRUE(rman);
+
+    auto env = interface_pointer_cast<IEnvironment>(rman->GetResource({CORE_NS::ResourceId("derived-env"), scene}));
+    ASSERT_TRUE(env);
+
+    // Inherited from base-env (environment0.json) — base layer reaches the live property.
+    EXPECT_EQ(META_NS::GetValue(env->Background()), SCENE_NS::EnvBackgroundType::CUBEMAP);
+    EXPECT_EQ(META_NS::GetValue(env->RadianceCubemapMipCount()), 5u);
+    EXPECT_EQ(META_NS::GetValue(env->IndirectSpecularFactor()), BASE_NS::Math::Vec4(0.4f, 0.5f, 0.6f, 1.0f));
+
+    // Overridden by derived-env — the derived layer must propagate to the engine value.
+    EXPECT_FLOAT_EQ(META_NS::GetValue(env->EnvironmentMapLodLevel()), 4.5f);
+    EXPECT_EQ(META_NS::GetValue(env->IndirectDiffuseFactor()), BASE_NS::Math::Vec4(0.7f, 0.8f, 0.9f, 1.0f));
+}
+
+/**
  * @tc.name: ImportIndexMaterialOptions
  * @tc.desc: Material in index with inline options gets those options applied
  * @tc.type: FUNC
@@ -1065,6 +1145,13 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexEnvironmentOptions, testing::ext:
     EXPECT_EQ(META_NS::GetValue(env->IndirectSpecularFactor()), BASE_NS::Math::Vec4(0.4f, 0.5f, 0.6f, 1.0f));
     EXPECT_EQ(META_NS::GetValue(env->EnvMapFactor()), BASE_NS::Math::Vec4(1.0f, 1.0f, 1.0f, 0.5f));
     EXPECT_FLOAT_EQ(META_NS::GetValue(env->EnvironmentMapLodLevel()), 2.5f);
+    EXPECT_EQ(META_NS::GetValue(env->EnvironmentRotation()), BASE_NS::Math::Quat(0.0f, 0.0f, 0.0f, 1.0f));
+
+    auto coeffs = env->IrradianceCoefficients()->GetValue();
+    ASSERT_EQ(coeffs.size(), 3u);
+    EXPECT_EQ(coeffs[0], BASE_NS::Math::Vec3(1.0f, 0.0f, 0.0f));
+    EXPECT_EQ(coeffs[1], BASE_NS::Math::Vec3(0.0f, 1.0f, 0.0f));
+    EXPECT_EQ(coeffs[2], BASE_NS::Math::Vec3(0.0f, 0.0f, 1.0f));
 }
 
 /**
@@ -1224,6 +1311,36 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexDerivedFromOcclusionMaterial, tes
 }
 
 /**
+ * @tc.name: ImportIndexResourceInstanceNames
+ * @tc.desc: A resource's "name" field propagates from the imported JSON all the
+ *           way to the live resource instance — every resource type that
+ *           implements META_NS::INamed exposes the imported name via GetResource.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, ImportIndexResourceInstanceNames, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto rman = ImportIndexIntoScene("test://import/index/index_resource_names.json", scene);
+    ASSERT_TRUE(rman);
+
+    auto checkName = [&](const char* id, const char* expected) {
+        auto resource = rman->GetResource({CORE_NS::ResourceId(id), scene});
+        ASSERT_TRUE(resource);
+        auto named = interface_cast<META_NS::INamed>(resource);
+        ASSERT_TRUE(named);
+        EXPECT_EQ(named->Name()->GetValue(), expected);
+    };
+
+    checkName("named-material", "InstanceMaterialName");
+    checkName("named-environment", "InstanceEnvironmentName");
+    checkName("named-image", "InstanceImageName");
+    checkName("named-postprocess", "InstancePostProcessName");
+    checkName("named-mesh", "InstanceMeshName");
+}
+
+/**
  * @tc.name: ImportIndexShaderLoad
  * @tc.desc: Shader in index referenced by path loads as IShader (no inline options)
  * @tc.type: FUNC
@@ -1237,6 +1354,63 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexShaderLoad, testing::ext::TestSiz
 
     auto shader = interface_pointer_cast<IShader>(rman->GetResource({CORE_NS::ResourceId("test-shader"), nullptr}));
     ASSERT_TRUE(shader);
+}
+
+/**
+ * @tc.name: ImportIndexShaderInstanceName
+ * @tc.desc: A shader entry's "name" field is applied to the loaded shader's
+ *           META_NS::INamed::Name; entries without a name leave Name empty.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, ImportIndexShaderInstanceName, testing::ext::TestSize.Level1)
+{
+    auto res = imp->Import("test://import/index/index_shader_name.json", {});
+    ASSERT_TRUE(res);
+    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(res.object);
+    ASSERT_TRUE(rman);
+
+    auto named = rman->GetResource({CORE_NS::ResourceId("named-shader"), nullptr});
+    ASSERT_TRUE(named);
+    auto namedIfc = interface_cast<META_NS::INamed>(named);
+    ASSERT_TRUE(namedIfc);
+    EXPECT_EQ(namedIfc->Name()->GetValue(), "InstanceShaderName");
+
+    auto unnamed = rman->GetResource({CORE_NS::ResourceId("unnamed-shader"), nullptr});
+    ASSERT_TRUE(unnamed);
+    auto unnamedIfc = interface_cast<META_NS::INamed>(unnamed);
+    ASSERT_TRUE(unnamedIfc);
+    EXPECT_TRUE(unnamedIfc->Name()->GetValue().empty());
+}
+
+/**
+ * @tc.name: ImportIndexNameOverridesOptionsName
+ * @tc.desc: When an index entry sets a top-level "name", it overrides any
+ *           options/template-derived name on the live resource. When no
+ *           top-level name is set, the options/template name is preserved.
+ *           Covers material (SceneResourceTypeBase), environment (same base),
+ *           and image (custom LoadResource path).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, ImportIndexNameOverridesOptionsName, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto rman = ImportIndexIntoScene("test://import/index/index_index_name_priority.json", scene);
+    ASSERT_TRUE(rman);
+
+    auto checkName = [&](const char* id, const char* expected) {
+        auto resource = rman->GetResource({CORE_NS::ResourceId(id), scene});
+        ASSERT_TRUE(resource);
+        auto named = interface_cast<META_NS::INamed>(resource);
+        ASSERT_TRUE(named);
+        EXPECT_EQ(named->Name()->GetValue(), expected);
+    };
+
+    checkName("mat-index-wins", "IndexMatName");
+    checkName("mat-options-fallback", "OptionsMatName");
+    checkName("env-index-wins", "IndexEnvName");
+    checkName("image-index-wins", "IndexImageName");
 }
 
 /**
@@ -2117,6 +2291,87 @@ UNIT_TEST_F(API_ResourceImportTest, GltfAnimationReloadViaResourceManager, testi
     auto startable = interface_cast<META_NS::IStartableAnimation>(reloadedAnim);
     ASSERT_TRUE(startable);
 }
+
+#if !defined(__ANDROID__) && !defined(__OHOS__)
+/**
+ * @tc.name: MaterialTemplateFileReloadViaRemoveAddAndReload
+ * @tc.desc: Picking up edits to a material template file at runtime works via the
+ *           "remove + re-add + ReloadResource(dependent)" sequence. ResolveBaseResource
+ *           re-looks up the template by id at apply-time, so re-registering the template
+ *           with the same id makes the next ApplyOptions pull the freshly-parsed file.
+ *
+ *           Negative cross-check: calling ReloadResource(material) alone (without
+ *           removing+re-adding the template) does NOT pick up the new file content,
+ *           because SceneResourceTemplateTypeBase::ReloadResource re-applies the cached
+ *           options object rather than re-importing from the file payload.
+ *
+ *           Test fixtures live under test/unittest/assets/test_data/material_reload/.
+ *           Rebuild after editing fixtures so the build tree copy is refreshed.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ResourceImportTest, MaterialTemplateFileReloadViaRemoveAddAndReload, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto& fm = context->GetRenderer()->GetEngine().GetFileManager();
+    constexpr BASE_NS::string_view kLive = "file://material_reload/template.json";
+    if (fm.FileExists(kLive)) {
+        ASSERT_TRUE(fm.DeleteFile(kLive));
+    }
+    ASSERT_TRUE(CopyFile(fm, "test://material_reload/template_v1.json", kLive));
+
+    SCENE_IMP_NS::ImportParameters params;
+    params.scene = scene;
+    auto importResult = imp->Import("test://material_reload/index.json", params);
+    ASSERT_TRUE(importResult);
+    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(importResult.object);
+    ASSERT_TRUE(rman);
+
+    auto mat = interface_pointer_cast<IMaterial>(rman->GetResource({CORE_NS::ResourceId("derived"), scene}));
+    ASSERT_TRUE(mat);
+    EXPECT_FLOAT_EQ(mat->AlphaCutoff()->GetValue(), 0.5f);
+    {
+        auto rs = mat->RenderSort()->GetValue();
+        EXPECT_EQ(rs.renderSortLayer, 3);
+        EXPECT_EQ(rs.renderSortLayerOrder, 1);
+    }
+
+    ASSERT_TRUE(fm.DeleteFile(kLive));
+    ASSERT_TRUE(CopyFile(fm, "test://material_reload/template_v2.json", kLive));
+
+    auto matRes = interface_pointer_cast<CORE_NS::IResource>(mat);
+    ASSERT_TRUE(matRes);
+    EXPECT_TRUE(rman->ReloadResource(matRes));
+    EXPECT_FLOAT_EQ(mat->AlphaCutoff()->GetValue(), 0.5f);
+    {
+        auto rs = mat->RenderSort()->GetValue();
+        EXPECT_EQ(rs.renderSortLayer, 3);
+        EXPECT_EQ(rs.renderSortLayerOrder, 1);
+    }
+
+    auto extRes = interface_cast<META_NS::IResourceManagerExtension>(rman);
+    ASSERT_TRUE(extRes);
+    ASSERT_TRUE(rman->RemoveResource(CORE_NS::ResourceIdContext{CORE_NS::ResourceId("tmpl"), scene}));
+    // Use the extension interface so the registration carries the same version
+    // ("JsonSchemaImport") as the index handler used originally — otherwise the
+    // type lookup falls back to a generic ObjectResourceType.
+    META_NS::ResourceData tmplData;
+    tmplData.version = "JsonSchemaImport";
+    tmplData.id = CORE_NS::ResourceId("tmpl");
+    tmplData.type = ClassId::MaterialResourceTemplate.Id().ToUid();
+    tmplData.path = kLive;
+    ASSERT_TRUE(extRes->AddResource(BASE_NS::move(tmplData), scene));
+
+    EXPECT_TRUE(rman->ReloadResource(matRes));
+    EXPECT_FLOAT_EQ(mat->AlphaCutoff()->GetValue(), 0.25f);
+    {
+        auto rs = mat->RenderSort()->GetValue();
+        EXPECT_EQ(rs.renderSortLayer, 7);
+        EXPECT_EQ(rs.renderSortLayerOrder, 2);
+    }
+}
+#endif
 
 /**
  * @tc.name: GltfAnimationWithOptionsFromIndex
@@ -3362,19 +3617,23 @@ UNIT_TEST_F(API_ResourceImportTest, NestedContainerAnimationRuns, testing::ext::
 
 /**
  * @tc.name: ImportIndexDeferredMissingImage
- * @tc.desc: Deferred image resolution fails when referenced resource does not exist
+ * @tc.desc: Image references in an index are stored as lazy refs and resolved at apply time
+ *           against the scene's resource manager. A reference to a non-existent image does
+ *           not fail the import — the property simply stays unbound on the live resource and
+ *           a warning is logged when the resource is later instantiated.
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ResourceImportTest, ImportIndexDeferredMissingImage, testing::ext::TestSize.Level1)
 {
     auto res = imp->Import("test://import/index/index_deferred_missing_image.json", {});
-    EXPECT_FALSE(res);
-    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Failed to resolve image resource");
+    EXPECT_TRUE(res);
 }
 
 /**
  * @tc.name: ImportIndexDeferredMissingImageContinue
- * @tc.desc: Deferred image resolution error is accumulated in continue-on-error mode
+ * @tc.desc: Continue-on-error mode: lazy image refs do not produce an error diagnostic at
+ *           import time (resolution happens at apply time, which is a warning, not a fatal
+ *           error).
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ResourceImportTest, ImportIndexDeferredMissingImageContinue, testing::ext::TestSize.Level1)
@@ -3385,31 +3644,34 @@ UNIT_TEST_F(API_ResourceImportTest, ImportIndexDeferredMissingImageContinue, tes
     ASSERT_TRUE(impContinue->Initialize(context, {{}, true}));
     auto res = impContinue->Import("test://import/index/index_deferred_missing_image.json", {});
     EXPECT_TRUE(res);
-    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Failed to resolve image resource");
 }
 
 /**
  * @tc.name: ImportIndexDeferredMissingShader
- * @tc.desc: Deferred shader resolution fails when referenced resource does not exist
+ * @tc.desc: Material shader references in the index are stored as lazy resource refs and
+ *           resolved at apply time. A reference to a non-existent shader does not fail the
+ *           import — the property simply stays unbound on the live material; a warning is
+ *           logged when apply runs.
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ResourceImportTest, ImportIndexDeferredMissingShader, testing::ext::TestSize.Level1)
 {
     auto res = imp->Import("test://import/index/index_deferred_missing_shader.json", {});
-    EXPECT_FALSE(res);
-    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Failed to resolve shader resource");
+    EXPECT_TRUE(res);
 }
 
 /**
  * @tc.name: ImportIndexDeferredWrongType
- * @tc.desc: Deferred image resolution fails when referenced resource is a shader, not an image
+ * @tc.desc: Type-mismatched lazy refs (an image field referencing a shader id) do not fail
+ *           the import. Resolution happens at apply time: the resource is found but the
+ *           interface_pointer_cast to the expected type returns null, the destination stays
+ *           unbound, and a warning is logged.
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_ResourceImportTest, ImportIndexDeferredWrongType, testing::ext::TestSize.Level1)
 {
     auto res = imp->Import("test://import/index/index_deferred_wrong_type.json", {});
-    EXPECT_FALSE(res);
-    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Resource is not an image");
+    EXPECT_TRUE(res);
 }
 
 /**
@@ -3467,7 +3729,7 @@ UNIT_TEST_F(API_ResourceImportTest, ImportMaterialLightingFlags, testing::ext::T
 
     auto matAll = interface_pointer_cast<IMaterial>(rman->GetResource({CORE_NS::ResourceId("mat-all-flags"), scene}));
     ASSERT_TRUE(matAll);
-    EXPECT_EQ(META_NS::GetValue(matAll->LightingFlags()), static_cast<SCENE_NS::LightingFlags>(15));
+    EXPECT_EQ(META_NS::GetValue(matAll->LightingFlags()), static_cast<SCENE_NS::LightingFlags>(63));
 
     auto matNone = interface_pointer_cast<IMaterial>(rman->GetResource({CORE_NS::ResourceId("mat-no-flags"), scene}));
     ASSERT_TRUE(matNone);

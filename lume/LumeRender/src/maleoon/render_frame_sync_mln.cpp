@@ -79,14 +79,15 @@ void RenderFrameSyncMln::WaitForFrameFence()
         waitDesc.timelineCount = 1;
         waitDesc.timelines = &fence.timeline;
         waitDesc.values = &fence.value;
-        constexpr uint64_t WAIT_TIMEOUT_NS = 5000000000ULL; // 5 seconds
+        constexpr uint64_t WAIT_TIMEOUT_NS = 5000000000ULL;  // 5 seconds
         MlnStatus waitResult = MlnWaitForTimelines(deviceMln.GetMlnDevice(), &waitDesc, WAIT_TIMEOUT_NS);
         if (waitResult == MLN_STATUS_TIMEOUT) {
-            MLN_LOG_ERR("WaitForFrameFence: TIMEOUT after 5s (timeline=%p, value=%llu) — possible GPU hang",
-                reinterpret_cast<void*>(fence.timeline), static_cast<unsigned long long>(fence.value));
+            MLN_LOG_ERR("WaitForFrameFence: TIMEOUT after 5s (value=%llu) — possible GPU hang",
+                static_cast<unsigned long long>(fence.value));
         } else if (waitResult != MLN_STATUS_SUCCESS) {
-            MLN_LOG_ERR("WaitForFrameFence: FAILED (status=%d, timeline=%p, value=%llu)", static_cast<int>(waitResult),
-                reinterpret_cast<void*>(fence.timeline), static_cast<unsigned long long>(fence.value));
+            MLN_LOG_ERR("WaitForFrameFence: FAILED (status=%d, value=%llu)",
+                static_cast<int>(waitResult),
+                static_cast<unsigned long long>(fence.value));
         }
     }
     fence.signalled = true;
@@ -115,7 +116,7 @@ void RenderFrameSyncMln::MarkFrameSubmitted(uint64_t signalValue)
     }
     auto& fence = frameFences_[bufferingIndex_];
     fence.value = signalValue;
-    fence.signalled = false; // GPU work pending — WaitForFrameFence will now actually wait
+    fence.signalled = false;  // GPU work pending — WaitForFrameFence will now actually wait
 }
 
 RENDER_END_NAMESPACE()

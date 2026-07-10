@@ -41,7 +41,7 @@ public:
      * @brief Returns a effect property with given name.
      * @param name Name of the effect property to return.
      */
-    template <typename Type>
+    template<typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);

@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "description": "scene loads node_template_mat_shader; the template's index defines both a shader and a material that references it via materialShader/depthShader",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_mat_shader.json"
+                    },
+                    "resourceGroup": "ntg"
+                }
+            ]
+        }
+    }
+}

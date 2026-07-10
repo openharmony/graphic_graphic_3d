@@ -15,15 +15,66 @@
 
 #include "node.h"
 
+#include <scene/interface/intf_layer.h>
+
 #include <meta/api/util.h>
 #include <meta/interface/intf_attach.h>
 
 #include "../import_helpers.h"
 #include "attachment.h"
 #include "external_node.h"
+#include "flag_tables.h"
 #include "property.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
+
+namespace {
+IDiagnostics::Ptr ImportNodeFlags(ImportContext& context, const SCENE_NS::INode::Ptr& node)
+{
+    auto flags = context.GetOptArray("nodeFlags");
+    if (flags.empty()) {
+        return nullptr;
+    }
+    ErrorHandler h(context);
+    auto bits = static_cast<SCENE_NS::NodeFlags>(0);
+    if (auto err = ImportFlagsFromArray(context, flags, NODE_FLAGS_TABLE, "nodeFlags", bits); h.Handle(err)) {
+        return err;
+    }
+    SetValue(context, node->NodeFlags(), bits);
+    return h;
+}
+
+}  // namespace
+
+IDiagnostics::Ptr ImportNodeBase::ImportLayerMask(ImportContext& context, const SCENE_NS::INode::Ptr& node)
+{
+    ErrorHandler h(context);
+    auto value = GetOptUInt(context, "layerMask");
+    if (!h.HandleOptValue(value)) {
+        return h;
+    }
+    if (value.error) {
+        return value.error;
+    }
+    if (auto layer = interface_cast<SCENE_NS::ILayer>(node)) {
+        SetValue(context, layer->LayerMask(), value.GetValue());
+    }
+    return h;
+}
+
+IDiagnostics::Ptr ImportNodeBase::ImportEnabled(ImportContext& context, const SCENE_NS::INode::Ptr& node)
+{
+    ErrorHandler h(context);
+    auto value = GetOptBool(context, "enabled");
+    if (!h.HandleOptValue(value)) {
+        return h;
+    }
+    if (value.error) {
+        return value.error;
+    }
+    SetValue(context, node->Enabled(), value.GetValue());
+    return h;
+}
 
 IDiagnostics::Ptr ImportNodeBase::ImportTransform(ImportContext& context, const SCENE_NS::INode::Ptr& node)
 {
@@ -97,7 +148,11 @@ IDiagnostics::Ptr ImportNodeBase::ImportComponent(ImportContext& context, const 
     if (context.IsTemplateContext()) {
         META_NS::SetObjectFlags(component, IMPORTED_FROM_TEMPLATE_BIT, true);
     }
-    if (auto err = ImportProperties(context, *interface_pointer_cast<META_NS::IObject>(component)); h.Handle(err)) {
+    auto componentObj = interface_pointer_cast<META_NS::IObject>(component);
+    if (!componentObj) {
+        return context.CreateDiagnostics("Component does not implement IObject");
+    }
+    if (auto err = ImportProperties(context, *componentObj); h.Handle(err)) {
         return err;
     }
     return h;
@@ -117,18 +172,34 @@ IDiagnostics::Ptr ImportNodeBase::ImportComponents(ImportContext& context, const
     return h;
 }
 
-IDiagnostics::Ptr ImportNodeBase::ImportNodeCommon(ImportContext& context, const SCENE_NS::INode::Ptr& node)
+IDiagnostics::Ptr ImportNodeBase::ImportNodeAttributes(ImportContext& context, const SCENE_NS::INode::Ptr& node)
 {
     ErrorHandler h(context);
     if (auto err = ImportTransform(context, node); h.Handle(err)) {
         return err;
     }
-
     if (auto err = ImportComponents(context, node); h.Handle(err)) {
         return err;
     }
-
+    if (auto err = ImportNodeFlags(context, node); h.Handle(err)) {
+        return err;
+    }
+    if (auto err = ImportLayerMask(context, node); h.Handle(err)) {
+        return err;
+    }
+    if (auto err = ImportEnabled(context, node); h.Handle(err)) {
+        return err;
+    }
     if (auto err = ImportAttachments(context, interface_pointer_cast<META_NS::IObject>(node)); h.Handle(err)) {
+        return err;
+    }
+    return h;
+}
+
+IDiagnostics::Ptr ImportNodeBase::ImportNodeCommon(ImportContext& context, const SCENE_NS::INode::Ptr& node)
+{
+    ErrorHandler h(context);
+    if (auto err = ImportNodeAttributes(context, node); h.Handle(err)) {
         return err;
     }
 

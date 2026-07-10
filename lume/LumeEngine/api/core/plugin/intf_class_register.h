@@ -55,7 +55,7 @@ protected:
 };
 
 /** Get class instance from specified class registry */
-template <class T>
+template<class T>
 auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
 {
     IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
@@ -66,7 +66,7 @@ auto GetInstance(const IClassRegister& registry, const BASE_NS::Uid& uid)
 }
 
 /** Get class instance from specified class registry */
-template <class T>
+template<class T>
 auto GetInstance(const IClassRegister* registry, const BASE_NS::Uid& uid)
 {
     if (!registry) {
@@ -76,7 +76,7 @@ auto GetInstance(const IClassRegister* registry, const BASE_NS::Uid& uid)
 }
 
 /** Get interface from global registry */
-template <class T>
+template<class T>
 auto GetInstance(const BASE_NS::Uid& uid)
 {
     return GetInstance<T>(CORE_NS::GetPluginRegister().GetClassRegister(), uid);

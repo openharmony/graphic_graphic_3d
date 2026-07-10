@@ -136,14 +136,14 @@ public:
         RenderContextScope& operator=(RenderContextScope&&) = default;
     };
 
-    template <typename Func>
+    template<typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
         AddTask(Func&& func)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template <typename Func>
+    template<typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
         AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
@@ -152,12 +152,12 @@ public:
     }
 
     // AddTaskFuture adds a task to the renderqueue (or other specified queue) and returns a future
-    template <typename Func>
+    template<typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func) const
     {
         return AddTaskFuture(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
-    template <typename Func>
+    template<typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::Future<META_NS::PlainType_t<decltype(func())>>(
@@ -166,13 +166,13 @@ public:
 
     // AddTaskOrRunDirectly adds a task to the renderqueue (or other specified queue) and returns a future.
     // POSSIBLY completing the future directly (if queue matches current, or the queue executes in the current thread)
-    template <typename Func>
+    template<typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func) const
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
 
-    template <typename Func>
+    template<typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::AddFutureTaskOrRunDirectly(queue, BASE_NS::forward<Func>(func));
@@ -180,13 +180,13 @@ public:
 
     // RunDirectlyOrInTask runs the given function synchronously.
     // (either by waiting a future from the queue or directly. if the queue or execution thread matches)
-    template <typename Func>
+    template<typename Func>
     auto RunDirectlyOrInTask(Func&& func) const
     {
         return RunDirectlyOrInTask<Func>(BASE_NS::forward<Func>(func), GetRenderQueue());
     }
 
-    template <typename Func>
+    template<typename Func>
     auto RunDirectlyOrInTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         using namespace META_NS;
@@ -228,7 +228,7 @@ public:
         }
     }
 
-    template <typename Func>
+    template<typename Func>
     void PostUserNotification(Func&& func) const
     {
         if (auto q = GetApplicationQueue()) {
@@ -238,7 +238,7 @@ public:
             }));
         }
     }
-    template <typename MyEvent, typename... Args>
+    template<typename MyEvent, typename... Args>
     void InvokeUserNotification(const META_NS::IEvent::Ptr& event, Args... args) const
     {
         return PostUserNotification([=, ev = META_NS::IEvent::WeakPtr(event)] {

@@ -22,7 +22,7 @@
 
 BASE_BEGIN_NAMESPACE()
 
-template <typename container>
+template<typename container>
 class IGenericIterator {
 public:
     using Val = typename container::IteratorValue;
@@ -48,7 +48,7 @@ protected:
     virtual ~IGenericIterator() = default;
 };
 
-template <typename Type>
+template<typename Type>
 class IIterator {
 public:
     IIterator() = default;

@@ -112,7 +112,7 @@ public:
 
     /** Get render node context interfaces by UID with interface type cast
      */
-    template <typename InterfaceType>
+    template<typename InterfaceType>
     InterfaceType* GetRenderNodeContextInterface()
     {
         return static_cast<InterfaceType*>(GetRenderNodeContextInterface(InterfaceType::UID));

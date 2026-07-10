@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template <template <typename> class InterableCallable, typename Iterable, typename Func>
+template<template<typename> class InterableCallable, typename Iterable, typename Func>
 IterationResult DepthFirstOrderIterate(const Iterable& i, Func& func, IterateStrategy is)
 {
     auto ite = interface_cast<IIterable>(i);
@@ -49,7 +49,7 @@ IterationResult DepthFirstOrderIterate(const Iterable& i, Func& func, IterateStr
     return ite->Iterate(IterationParameters{ff, is});
 }
 
-template <template <typename> class InterableCallable, typename Iterable>
+template<template<typename> class InterableCallable, typename Iterable>
 IterationResult DepthFirstOrderIterate(const Iterable& i, ICallable& func, IterateStrategy is)
 {
     using CallableType = InterableCallable<IObject::Ptr>;

@@ -92,7 +92,7 @@ protected:
 /**
  * @brief The FindCache class is a helper class for caching the results of a FindAny/FindAll operation on an IContainer.
  */
-template <class Type>
+template<class Type>
 class FindCache : public FindCacheBase {
 public:
     FindCache() = default;

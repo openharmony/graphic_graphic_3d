@@ -33,7 +33,7 @@
 #include <core/threading/intf_thread_pool.h>
 
 BASE_BEGIN_NAMESPACE()
-template <class Key, class T>
+template<class Key, class T>
 class unordered_map;
 BASE_END_NAMESPACE()
 
@@ -125,9 +125,9 @@ private:
     friend class Gltf2;
 
     struct ImporterTask;
-    template <typename T>
+    template<typename T>
     struct GatheredDataTask;
-    template <typename Component>
+    template<typename Component>
     struct ComponentTaskData;
     struct AnimationTaskData;
 
@@ -144,10 +144,10 @@ private:
     void PrepareAnimationTasks();
     void PrepareSkinTasks();
     void PrepareMeshTasks();
-    template <typename T>
+    template<typename T>
     GatheredDataTask<T>* PrepareAnimationInputTask(BASE_NS::unordered_map<GLTF2::Accessor*, GatheredDataTask<T>*>&,
         const GLTF2::AnimationTrack&, IAnimationInputComponentManager*);
-    template <typename T>
+    template<typename T>
     GatheredDataTask<T>* PrepareAnimationOutputTask(BASE_NS::unordered_map<GLTF2::Accessor*, GatheredDataTask<T>*>&,
         const GLTF2::AnimationTrack&, IAnimationOutputComponentManager*);
     void QueueImage(size_t i, BASE_NS::string&& uri, BASE_NS::string&& name);

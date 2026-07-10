@@ -7,7 +7,6 @@
 				"resourceId": {
 					"name": "run-anim"
 				},
-				"name": "running meta anim",
 				"type": "trackAnimation",
 				"options": {
 					"name": "runAnim",
@@ -20,7 +19,6 @@
 				"resourceId": {
 					"name": "timed-track-anim"
 				},
-				"name": "timed track anim",
 				"type": "trackAnimation",
 				"options": {
 					"name": "timedTrack",

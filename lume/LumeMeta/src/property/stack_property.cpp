@@ -28,7 +28,7 @@ namespace Internal {
 
 namespace {
 
-template <typename T>
+template<typename T>
 void SubscribeOnChanged(const T& obj, StackProperty& self, const ICallable::Ptr& legacyCb)
 {
     if (auto d = interface_cast<INotifyOnChangeDirect>(obj)) {
@@ -38,7 +38,7 @@ void SubscribeOnChanged(const T& obj, StackProperty& self, const ICallable::Ptr&
     }
 }
 
-template <typename T>
+template<typename T>
 void UnsubscribeOnChanged(const T& obj, StackProperty& self, const ICallable::Ptr& legacyCb, bool reenable = false)
 {
     if (auto d = interface_cast<INotifyOnChangeDirect>(obj)) {
@@ -418,7 +418,7 @@ void StackProperty::NotifyChange() const
     requiresEvaluation_ = true;
     CallOnChanged(evaluating_);
 }
-template <typename Vec>
+template<typename Vec>
 bool StackProperty::ProcessResetables(Vec& vec)
 {
     for (int i = int(vec.size()) - 1; i >= 0; --i) {

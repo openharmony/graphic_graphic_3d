@@ -30,6 +30,11 @@ CORE_NS::ResourceType ObjectTemplate::GetResourceType() const
     return ClassId::ObjectTemplate.Id().ToUid();
 }
 
+BASE_NS::string ObjectTemplate::GetName() const
+{
+    return GetValue(Name());
+}
+
 IObject::Ptr ObjectTemplate::Instantiate(const SharedPtrIInterface& context) const
 {
     IObject::Ptr res;
@@ -60,7 +65,7 @@ bool ObjectTemplate::SetContent(const IObject::Ptr& content)
     return true;
 }
 
-template <typename Func>
+template<typename Func>
 IterationResult ObjectTemplate::IterateImpl(const Func& f) const
 {
     if (!f) {

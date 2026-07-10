@@ -143,14 +143,14 @@ PROPERTY_LIST(
 constexpr PropertyTypeDecl PROPERTY_HANDLE_PTR_T = PROPERTYTYPE(CORE_NS::IPropertyHandle*);
 
 // values contain in-tangent, spline vertex, out-tangent.
-template <typename T>
+template<typename T>
 struct SplineValues {
     T inTangent;
     T splineVertex;
     T outTangent;
 };
 
-template <typename To, typename From>
+template<typename To, typename From>
 inline To Cast(From* from)
 {
     if constexpr (is_const_v<remove_pointer_t<From>>) {
@@ -160,7 +160,7 @@ inline To Cast(From* from)
     }
 }
 
-template <typename To, typename From>
+template<typename To, typename From>
 inline To Cast(From& from)
 {
     if constexpr (is_const_v<remove_reference_t<From>>) {
@@ -170,7 +170,7 @@ inline To Cast(From& from)
     }
 }
 
-template <typename To, typename From>
+template<typename To, typename From>
 static inline To Get(From&& from)
 {
     if constexpr (is_same_v<remove_const_t<remove_reference_t<To>>, float>) {
@@ -187,7 +187,7 @@ static inline To Get(From&& from)
     }
 }
 
-template <class T>
+template<class T>
 T Step(const T& start, const T& end, float offset)
 {
     return (offset > 0.5f) ? end : start;
@@ -253,14 +253,14 @@ void Assign(const PropertyTypeDecl& type, uint8_t* dst, const InitialTransformCo
     }
 }
 
-template <typename T>
+template<typename T>
 inline void Mult(uint8_t* dst, const T& src)
 {
     auto* dstType = Cast<T*>(dst);
     *dstType = src * *dstType;
 }
 
-template <typename T>
+template<typename T>
 inline void Add(uint8_t* dst, const T src)
 {
     auto* dstType = Cast<T*>(dst);
@@ -321,7 +321,7 @@ struct AnimationKeyDataOffsets {
     size_t endKeyOffset;
 };
 
-template <typename T>
+template<typename T>
 void Interpolate(const AnimationSystem::InterpolationData& interpolation, array_view<const uint8_t> frameValues,
     const InitialTransformComponent& initialValue, InitialTransformComponent& animatedValue)
 {
@@ -359,7 +359,7 @@ void Interpolate(const AnimationSystem::InterpolationData& interpolation, array_
     }
 }
 
-template <>
+template<>
 void Interpolate<Math::Quat>(const AnimationSystem::InterpolationData& interpolation,
     array_view<const uint8_t> frameValues, const InitialTransformComponent& initialValue,
     InitialTransformComponent& animatedValue)

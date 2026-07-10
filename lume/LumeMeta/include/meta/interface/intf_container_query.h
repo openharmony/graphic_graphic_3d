@@ -65,7 +65,7 @@ public:
     /**
      * @brief Returns the matching containers for a given type.
      */
-    template <class T>
+    template<class T>
     BASE_NS::vector<IContainer::Ptr> FindAllContainers() const
     {
         static_assert(IsKindOfIInterface_v<T*>, "Type must be derived from IInterface");
@@ -74,7 +74,7 @@ public:
     /**
      * @brief Returns the first matching container for a given interface.
      */
-    template <class T>
+    template<class T>
     IContainer::Ptr FindAnyContainer() const
     {
         static_assert(IsKindOfIInterface_v<T*>, "Type must be derived from IInterface");

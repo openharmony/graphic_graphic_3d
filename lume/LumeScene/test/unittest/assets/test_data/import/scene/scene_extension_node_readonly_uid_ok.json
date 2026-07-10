@@ -1,0 +1,30 @@
+{
+    "version": "1.0",
+    "description": "Read-only object property import with documented matching objectUid",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "cc1810e9-cc75-4c4e-871f-9d035a2ab7b2",
+                    "properties": [
+                        {
+                            "name": "Config",
+                            "value": {
+                                "objectUid": "f63c754c-d8c7-4dcc-8577-132452322bc2",
+                                "properties": [
+                                    { "name": "Setting", "value": 42 }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -38,7 +38,7 @@ class Device;
 class GpuSampler;
 class GpuResourceCache;
 class GpuResourceManagerBase;
-template <typename ResourceType, typename CreateInfoType>
+template<typename ResourceType, typename CreateInfoType>
 class GpuResourceManagerTyped;
 struct GpuImagePlatformData;
 
@@ -344,17 +344,17 @@ public:
     GpuImage* GetImage(const RenderHandle& gpuHandle) const;
     GpuSampler* GetSampler(const RenderHandle& gpuHandle) const;
 
-    template <typename T>
+    template<typename T>
     T* GetBuffer(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetBuffer(handle));
     }
-    template <typename T>
+    template<typename T>
     T* GetImage(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetImage(handle));
     }
-    template <typename T>
+    template<typename T>
     T* GetSampler(const RenderHandle& handle) const
     {
         return static_cast<T*>(GetSampler(handle));

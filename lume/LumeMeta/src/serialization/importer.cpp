@@ -327,7 +327,7 @@ ReturnError Importer::ImportIContainer(const ISerNode::ConstPtr& node, IContaine
     return GenericError::SUCCESS;
 }
 
-template <typename... Builtins>
+template<typename... Builtins>
 static ReturnError ImportSingleBuiltinValue(TypeList<Builtins...>, const ISerNode::ConstPtr& n, IAny& value)
 {
     AnyReturnValue res = AnyReturn::FAIL;

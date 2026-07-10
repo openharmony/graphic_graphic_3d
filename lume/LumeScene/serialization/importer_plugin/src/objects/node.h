@@ -25,9 +25,12 @@ public:
     ImportResult ImportNode(ImportContext& context, BASE_NS::string_view type);
 
     IDiagnostics::Ptr ImportNodeCommon(ImportContext& context, const SCENE_NS::INode::Ptr& node);
+    IDiagnostics::Ptr ImportNodeAttributes(ImportContext& context, const SCENE_NS::INode::Ptr& node);
     IDiagnostics::Ptr ImportTransform(ImportContext& context, const SCENE_NS::INode::Ptr& node);
     static IDiagnostics::Ptr ImportComponent(ImportContext& context, const SCENE_NS::INode::Ptr& node);
     IDiagnostics::Ptr ImportComponents(ImportContext& context, const SCENE_NS::INode::Ptr& node);
+    static IDiagnostics::Ptr ImportLayerMask(ImportContext& context, const SCENE_NS::INode::Ptr& node);
+    static IDiagnostics::Ptr ImportEnabled(ImportContext& context, const SCENE_NS::INode::Ptr& node);
 
     virtual SCENE_NS::INode::Ptr ConstructNode(
         ImportContext& context, const SCENE_NS::IScene::Ptr& scene, const BASE_NS::string& name) = 0;

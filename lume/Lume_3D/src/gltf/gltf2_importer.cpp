@@ -96,7 +96,7 @@ constexpr string_view BASE_COLOR_FLAGS{"BaseColorFlags"};
 constexpr string_view MIPMAPS_FLAG{"MipmapsFlag"};
 
 // Helper class for running lambda as a ThreadPool task.
-template <typename Fn>
+template<typename Fn>
 class FunctionTask final : public IThreadPool::ITask {
 public:
     explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)){};
@@ -116,13 +116,13 @@ private:
     Fn func_;
 };
 
-template <typename Fn>
+template<typename Fn>
 inline IThreadPool::ITask::Ptr CreateFunctionTask(Fn&& func)
 {
     return IThreadPool::ITask::Ptr{new FunctionTask<Fn>(BASE_NS::move(func))};
 }
 
-template <class T>
+template<class T>
 size_t FindIndex(const vector<unique_ptr<T>>& container, T const* item)
 {
     for (size_t i = 0; i < container.size(); ++i) {
@@ -529,7 +529,7 @@ void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f
     data.data = move(converted);
 }
 
-template <typename T>
+template<typename T>
 void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, bool& primitiveRestart)
 {
     const auto elementCount = Math::min(indices.elementCount, indices.data.size_in_bytes() / sizeof(T));
@@ -945,7 +945,9 @@ GatherMeshDataResult GatherMeshData(const GLTF2::Mesh& mesh, const GLTFImportRes
     // Feed primitive data for builder.
     ProcessPrimitives(result, flags, mesh.primitives);
 
-    if (result.meshBuilder->GetVertexCount() && !(flags & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS)) {
+    // A failed primitive leaves attribute offsets unset; skip resource creation to avoid an OOB read.
+    if (result.success && result.meshBuilder->GetVertexCount() &&
+        !(flags & CORE_GLTF_IMPORT_RESOURCE_MESH_CPU_ACCESS)) {
         result.meshBuilder->CreateGpuResources();
     }
 
@@ -1410,7 +1412,7 @@ AnimationTrackComponent::Interpolation ConvertAnimationInterpolation(GLTF2::Anim
     return AnimationTrackComponent::Interpolation::LINEAR;
 }
 
-template <class T>
+template<class T>
 void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vector<T>& destination)
 {
     destination.resize(animationFrameDataResult.elementCount);
@@ -1440,7 +1442,7 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
     }
 }
 
-template <>
+template<>
 void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vector<bool>& destination)
 {
     destination.resize(animationFrameDataResult.elementCount);
@@ -1476,7 +1478,7 @@ bool BuildAnimationInput(GLTF2::Data const& data, IFileManager& fileManager, GLT
     return animationInputDataResult.success;
 }
 
-template <typename ReadType>
+template<typename ReadType>
 void AppendAnimationOutputData(uint64_t outputTypeHash, const GLTF2::GLTFLoadDataResult& animationOutputDataResult,
     AnimationOutputComponent& outputComponent)
 {
@@ -2795,12 +2797,12 @@ private:
     ImporterTask& task_;
 };
 
-template <class T>
+template<class T>
 struct GLTF2Importer::GatheredDataTask : GLTF2Importer::ImporterTask {
     T data;
 };
 
-template <typename Component>
+template<typename Component>
 struct GLTF2Importer::ComponentTaskData {
     EntityReference entity;
     Component component;
@@ -4083,7 +4085,7 @@ void GLTF2Importer::PrepareMeshTasks()
     }
 }
 
-template <>
+template<>
 GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationInputComponent>>*
     GLTF2Importer::PrepareAnimationInputTask(
         unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationInputComponent>>*>& inputs,
@@ -4111,7 +4113,7 @@ GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationInputC
     return result;
 }
 
-template <>
+template<>
 GLTF2Importer::GatheredDataTask<GLTF2Importer::ComponentTaskData<AnimationOutputComponent>>*
     GLTF2Importer::PrepareAnimationOutputTask(
         unordered_map<Accessor*, GatheredDataTask<ComponentTaskData<AnimationOutputComponent>>*>& outputs,

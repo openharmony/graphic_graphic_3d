@@ -1,0 +1,24 @@
+{
+    "version": "1.0",
+    "description": "outer template; instantiation must remap the group on a typed-resourceId override value via FindResourceGroupOverride",
+    "data": {
+        "type": "nodeTemplate",
+        "primaryGroup": "tmpl-group",
+        "index": "node_template_resid_override_index.json",
+        "node": {
+            "type": "external",
+            "source": { "type": "nodeTemplate", "url": "node_template_mesh.json" },
+            "resourceGroup": "ext-grp",
+            "overrides": [
+                {
+                    "path": ".SubMeshes[0].Material",
+                    "value": {
+                        "type": "resourceId",
+                        "name": "overrideMat",
+                        "group": "tmpl-group"
+                    }
+                }
+            ]
+        }
+    }
+}

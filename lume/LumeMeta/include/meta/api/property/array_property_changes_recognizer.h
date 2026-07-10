@@ -23,7 +23,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename ValueType>
+template<typename ValueType>
 struct AddedValue {
     ValueType value;
     int index = 0;
@@ -44,7 +44,7 @@ struct IndexChange {
     }
 };
 
-template <typename ValueType>
+template<typename ValueType>
 struct ArrayChanges {
     BASE_NS::vector<size_t> indexesRemoved;
     BASE_NS::vector<AddedValue<ValueType>> valuesAdded;
@@ -52,7 +52,7 @@ struct ArrayChanges {
 };
 
 /// Helper to keep track of array property changes
-template <typename ValueType>
+template<typename ValueType>
 class ArrayPropertyChangesRecognizer {
 public:
     ArrayPropertyChangesRecognizer() = default;

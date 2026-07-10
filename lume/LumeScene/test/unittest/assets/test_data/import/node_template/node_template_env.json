@@ -1,0 +1,12 @@
+{
+    "version": "1.0",
+    "description": "node template whose index defines images and an environment referencing them via radianceImage and environmentImage; exercises lazy image-ref resolution at apply time on an Environment resource",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "node_template_env_index.json",
+        "node": {
+            "type": "node",
+            "name": "stub"
+        }
+    }
+}

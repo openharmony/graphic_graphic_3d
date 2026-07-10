@@ -37,19 +37,19 @@ struct RenderSize {
     {}
 };
 
-template <typename T>
+template<typename T>
 uint8_t* begin(T& s)
 {
     return reinterpret_cast<uint8_t*>(&s);
 }
 
-template <typename T>
+template<typename T>
 const uint8_t* cbegin(const T& s)
 {
     return reinterpret_cast<const uint8_t*>(&s);
 }
 
-template <typename T>
+template<typename T>
 const uint8_t* cend(const T& s)
 {
     return reinterpret_cast<const uint8_t*>(&s) + sizeof(s);
@@ -105,7 +105,7 @@ struct ComputeShaderData : public CommonShaderData {
     RENDER_NS::ShaderThreadGroup threadGroupSize;
 };
 
-template <typename T>
+template<typename T>
 struct PushContant {
     const T& pc;
     operator BASE_NS::array_view<const uint8_t>() const
@@ -114,7 +114,7 @@ struct PushContant {
     }
 };
 
-template <typename T, class U = Pass>
+template<typename T, class U = Pass>
 struct BlurParams {
     const CommonShaderData& shader;
     RENDER_NS::IDescriptorSetBinder& binder;
@@ -138,7 +138,7 @@ protected:
     virtual ~RenderNodeMixin() = default;
 };
 
-template <typename T>
+template<typename T>
 void UpdateBufferData(
     const RENDER_NS::IRenderNodeGpuResourceManager& gpuResourceMgr, RENDER_NS::RenderHandle handle, const T& settings)
 {

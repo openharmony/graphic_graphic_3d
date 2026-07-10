@@ -21,7 +21,7 @@
 
 using namespace BASE_NS;
 
-template <typename T>
+template<typename T>
 struct Node {
     T x, y, z;
     // Constructor

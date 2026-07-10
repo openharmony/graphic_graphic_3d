@@ -135,19 +135,19 @@ bool operator==(const CORE_NS::LibPlugin& libPlugin, const BASE_NS::Uid& rhs) no
 {
     return GetUid(libPlugin) == rhs;
 }
-template <typename Container, typename Predicate>
+template<typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
 {
     return std::find_if(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));
 }
 
-template <typename Container, typename Predicate>
+template<typename Container, typename Predicate>
 inline bool NoneOf(const Container& container, Predicate&& predicate)
 {
     return std::none_of(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));
 }
 
-template <typename Container, typename Predicate>
+template<typename Container, typename Predicate>
 inline bool AllOf(const Container& container, Predicate&& predicate)
 {
     return std::all_of(container.cbegin(), container.cend(), BASE_NS::forward<Predicate>(predicate));

@@ -34,6 +34,7 @@
 #include "loaders/gltf_scene_type.h"
 #include "loaders/image_type.h"
 #include "loaders/material_type.h"
+#include "loaders/mesh_type.h"
 #include "loaders/node_template_type.h"
 #include "loaders/postprocess_type.h"
 #include "loaders/scene_type.h"
@@ -58,7 +59,7 @@ using namespace CORE_NS;
 
 // Single source of truth for the object types this plugin registers.
 // RegisterAll / UnregisterAll both iterate the list left-to-right.
-template <typename... Types>
+template<typename... Types>
 struct TypeList {
     static void RegisterAll()
     {
@@ -72,10 +73,10 @@ struct TypeList {
 
 using PluginTypes = TypeList<Diagnostics, Importer, SceneFileLoader, NodeTemplatePayload, NodeTemplateInstantiator,
     GltfAnimationResourceType, MetaAnimationResourceType, EnvironmentResourceType, GltfSceneResourceType,
-    ImageResourceType, MaterialResourceType, OcclusionMaterialResourceType, NodeTemplateResourceType,
-    PostProcessResourceType, SceneResourceType, ShaderResourceType, MaterialTemplateResourceType,
-    OcclusionMaterialTemplateResourceType, PostProcessTemplateResourceType, AnimationTemplateResourceType,
-    EnvironmentTemplateResourceType>;
+    ImageResourceType, MaterialResourceType, MeshResourceType, MeshResourceTemplateType, OcclusionMaterialResourceType,
+    NodeTemplateResourceType, PostProcessResourceType, SceneResourceType, ShaderResourceType,
+    MaterialTemplateResourceType, OcclusionMaterialTemplateResourceType, PostProcessTemplateResourceType,
+    AnimationTemplateResourceType, EnvironmentTemplateResourceType>;
 
 static PluginToken RegisterInterfaces(IPluginRegister& pluginRegistry)
 {

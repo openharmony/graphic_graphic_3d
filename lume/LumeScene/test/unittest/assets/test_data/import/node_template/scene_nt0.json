@@ -9,7 +9,6 @@
             "children": [
                 {
                     "type": "external",
-                    "name": "ext-instance",
                     "source": {
                         "type": "nodeTemplate",
                         "url": "node_template0.json"

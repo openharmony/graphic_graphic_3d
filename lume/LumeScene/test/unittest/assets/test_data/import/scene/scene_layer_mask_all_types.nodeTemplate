@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"description": "minimal nodeTemplate for layerMask all-types test",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "node",
+			"name": "extroot"
+		}
+	},
+	"primaryGroup": ""
+}

@@ -29,21 +29,21 @@ constexpr const float BASE_EPSILON = 1.192092896e-07f;  // smallest such that 1.
  *  @{
  */
 /** Returns Minimum value of 2 given parameter */
-template <typename T>
+template<typename T>
 constexpr inline const T& min(const T& a, const T& b) noexcept
 {
     return a < b ? a : b;
 }
 
 /** Returns Maximum value of 2 given parameter */
-template <typename T>
+template<typename T>
 constexpr inline const T& max(const T& a, const T& b) noexcept
 {
     return a > b ? a : b;
 }
 
 /** Clamps value between minimum and maximum value */
-template <typename T>
+template<typename T>
 constexpr inline const T& clamp(const T& value, const T& min, const T& max)
 {
     return (value < min) ? min : (value > max) ? max : value;

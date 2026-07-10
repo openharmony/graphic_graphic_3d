@@ -24,7 +24,7 @@
 SCENE_BEGIN_NAMESPACE()
 namespace {
 
-template <typename T>
+template<typename T>
 void SetPropertyDefault(const META_NS::IProperty::Ptr& prop, T value)
 {
     META_NS::Property<T> typed{prop};
@@ -34,7 +34,7 @@ void SetPropertyDefault(const META_NS::IProperty::Ptr& prop, T value)
     }
 }
 
-template <typename VecType, typename ElementType, size_t N>
+template<typename VecType, typename ElementType, size_t N>
 VecType VecFromJson(const CORE_NS::json::value& value)
 {
     VecType result{};

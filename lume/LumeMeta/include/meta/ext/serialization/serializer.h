@@ -22,7 +22,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename Type>
+template<typename Type>
 struct NamedValue {
     NamedValue(BASE_NS::string_view name, Type& v) : name(name), value(v)
     {}
@@ -31,7 +31,7 @@ struct NamedValue {
     Type& value;
 };
 
-template <typename Type>
+template<typename Type>
 NamedValue(BASE_NS::string_view name, const Type& v) -> NamedValue<const Type>;
 
 struct AutoSerializeTag {};
@@ -68,7 +68,7 @@ public:
     ExportSerializer(IExportContext& context) : context_(context)
     {}
 
-    template <typename Type>
+    template<typename Type>
     ExportSerializer& operator&(const NamedValue<Type>& nv)
     {
         if (state_) {
@@ -82,7 +82,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ExportSerializer& operator&(const NamedValue<Property<Type>>& nv)
     {
         if (auto p = interface_pointer_cast<IObject>(nv.value.GetProperty())) {
@@ -93,7 +93,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ExportSerializer& operator&(const NamedValue<const Property<Type>>& nv)
     {
         if (auto p = interface_pointer_cast<IObject>(nv.value.GetProperty())) {
@@ -104,7 +104,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ExportSerializer& operator&(const NamedValue<const BASE_NS::weak_ptr<Type>>& nv)
     {
         if (state_) {
@@ -131,7 +131,7 @@ public:
     ImportSerializer(IImportContext& context) : context_(context)
     {}
 
-    template <typename Type>
+    template<typename Type>
     ImportSerializer& operator&(const NamedValue<Type>& nv)
     {
         if (state_) {
@@ -148,7 +148,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ImportSerializer& operator&(const NamedValue<Property<Type>>& nv)
     {
         if (auto p = interface_pointer_cast<IObject>(nv.value.GetProperty())) {
@@ -159,7 +159,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ImportSerializer& operator&(const NamedValue<const Property<Type>>& nv)
     {
         if (auto p = interface_pointer_cast<IObject>(nv.value.GetProperty())) {
@@ -170,7 +170,7 @@ public:
         return *this;
     }
 
-    template <typename Type>
+    template<typename Type>
     ImportSerializer& operator&(const NamedValue<BASE_NS::weak_ptr<Type>>& nv)
     {
         if (state_) {
@@ -196,19 +196,19 @@ private:
 };
 
 /// Helper to use same names and syntax for export and import
-template <typename Context>
+template<typename Context>
 class Serializer {
     Serializer(Context& c);
 };
 
-template <>
+template<>
 class Serializer<IImportContext> : public ImportSerializer {
 public:
     Serializer(IImportContext& c) : ImportSerializer(c)
     {}
 };
 
-template <>
+template<>
 class Serializer<IExportContext> : public ExportSerializer {
 public:
     Serializer(IExportContext& c) : ExportSerializer(c)

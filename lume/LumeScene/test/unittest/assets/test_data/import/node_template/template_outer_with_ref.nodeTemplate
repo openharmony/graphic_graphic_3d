@@ -23,7 +23,6 @@
                 },
                 {
                     "type": "external",
-                    "name": "innerHost",
                     "source": { "type": "nodeTemplate", "url": "template_inner_with_ref.nodeTemplate" },
                     "resourceGroup": "innerGrp"
                 }

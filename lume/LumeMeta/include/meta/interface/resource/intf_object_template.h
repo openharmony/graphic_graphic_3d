@@ -41,7 +41,7 @@ public:
     virtual IObject::Ptr Instantiate(const SharedPtrIInterface& context) const = 0;
     virtual META_NS::IObject::Ptr Update(IObject& inst, const SharedPtrIInterface& context) const = 0;
 
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Instantiate(const SharedPtrIInterface& context) const
     {
         return interface_pointer_cast<Interface>(Instantiate(context));

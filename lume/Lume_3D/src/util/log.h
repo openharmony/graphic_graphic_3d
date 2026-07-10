@@ -147,7 +147,7 @@ CORE3D_END_NAMESPACE()
 
 CORE3D_BEGIN_NAMESPACE()
 /** Get class instance from specified class registry */
-template <class T>
+template<class T>
 auto GetInstance(const CORE_NS::IClassRegister& registry, const BASE_NS::Uid& uid)
 {
     CORE_NS::IInterface* instance = static_cast<T*>(registry.GetInstance(uid));
@@ -158,7 +158,7 @@ auto GetInstance(const CORE_NS::IClassRegister& registry, const BASE_NS::Uid& ui
 }
 
 /** Get class instance from specified class registry */
-template <class T>
+template<class T>
 auto GetInstance(const CORE_NS::IClassRegister* registry, const BASE_NS::Uid& uid)
 {
     if (!registry) {
@@ -168,14 +168,14 @@ auto GetInstance(const CORE_NS::IClassRegister* registry, const BASE_NS::Uid& ui
 }
 
 /** Get interface from global registry */
-template <class T>
+template<class T>
 auto GetInstance(const BASE_NS::Uid& uid)
 {
     return CORE3D_NS::GetInstance<T>(CORE3D_NS::GetPluginRegister().GetClassRegister(), uid);
 }
 
 /** Create interface from specified interface registry */
-template <class T>
+template<class T>
 auto CreateInstance(CORE_NS::IClassFactory& factory, const BASE_NS::Uid& uid)
 {
     // Create the instance

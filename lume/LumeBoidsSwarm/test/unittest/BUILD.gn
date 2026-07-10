@@ -20,8 +20,10 @@ import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
 module_output_path = "graphic_3d/graphic_3d/lume/LumeBoidsSwarm"
 
 # Options
-RENDER_BUILD_GLES = true
-RENDER_BUILD_VULKAN = true
+# RENDER_BUILD_GLES / RENDER_BUILD_VULKAN come from lume_config.gni (imported
+# above). Do NOT force them here: 32-bit ARM (rk3568/Mali) has no Vulkan driver,
+# so lume_config disables Vulkan for target_cpu=="arm". Forcing it on made the
+# test pick the Vulkan backend at runtime -> null device -> SIGSEGV in SetUp.
 
 #
 # LumeBoidsSwarm API test config

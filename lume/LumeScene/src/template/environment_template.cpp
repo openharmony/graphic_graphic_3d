@@ -22,4 +22,17 @@ bool EnvironmentTemplate::ValidateResourceType(const CORE_NS::IResource& res) co
     return interface_cast<IEnvironment>(&res) != nullptr;
 }
 
+bool EnvironmentTemplate::ApplyToTarget(META_NS::IObject& target, bool asDefault) const
+{
+    if (!ResourceTemplateBase::ApplyToTarget(target, asDefault)) {
+        return false;
+    }
+    // Base apply only copies plain properties; resolve image refs (RadianceImage,
+    // EnvironmentImage) against the context derived from the live target so a standalone
+    // ApplyTo binds them like ApplyOptions does. Standalone (asDefault) routes refs to the
+    // default slot; the ApplyOptions flow keeps templateContext_ (idempotent with its :752 pass).
+    ResolveRefsFromTarget(target, asDefault || templateContext_);
+    return true;
+}
+
 SCENE_END_NAMESPACE()

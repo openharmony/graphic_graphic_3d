@@ -39,7 +39,7 @@
 
 using namespace BASE_NS;
 
-template <>
+template<>
 inline uint64_t BASE_NS::hash(const RENDER_NS::InsertionKey& v)
 {
     return BASE_NS::Hash(v.typeName, v.nodeName);

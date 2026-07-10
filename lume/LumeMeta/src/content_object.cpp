@@ -116,7 +116,7 @@ public:
         return !object || CheckInterfaces(object, requiredInterfaces_, true);
     }
 
-    template <typename Func>
+    template<typename Func>
     IterationResult IterateImpl(const Func& f) const
     {
         if (!f) {

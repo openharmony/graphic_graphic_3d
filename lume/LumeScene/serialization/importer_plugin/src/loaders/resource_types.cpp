@@ -40,6 +40,9 @@ void RegisterResourceTypes(const IImporter::Ptr& importer, const CORE_NS::IResou
     res->AddResourceType(META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::ShaderLoader, params));
     res->AddResourceType(
         META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::EnvironmentLoader, params));
+    res->AddResourceType(META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::MeshLoader, params));
+    res->AddResourceType(
+        META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::MeshTemplateLoader, params));
     res->AddResourceType(META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::MaterialLoader, params));
     res->AddResourceType(
         META_NS::GetObjectRegistry().Create<CORE_NS::IResourceType>(ClassId::OcclusionMaterialLoader, params));

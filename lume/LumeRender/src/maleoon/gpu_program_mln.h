@@ -28,10 +28,10 @@ RENDER_BEGIN_NAMESPACE()
 
 struct GpuShaderProgramPlatformDataMln {
     // New API: no MlnShader handles. Store SPIR-V pointers for inline MlnShaderDescriptor.
-    const uint32_t* vertSpvSource { nullptr };
-    size_t vertSpvSourceSize { 0 };
-    const uint32_t* fragSpvSource { nullptr };
-    size_t fragSpvSourceSize { 0 };
+    const uint32_t* vertSpvSource{nullptr};
+    size_t vertSpvSourceSize{0};
+    const uint32_t* fragSpvSource{nullptr};
+    size_t fragSpvSourceSize{0};
 };
 
 class GpuShaderProgramMln final : public GpuShaderProgram {
@@ -43,8 +43,8 @@ public:
     const GpuShaderProgramPlatformDataMln& GetPlatformData() const;
 
 private:
-    ShaderModuleMln* vertShaderModule_ { nullptr };
-    ShaderModuleMln* fragShaderModule_ { nullptr };
+    ShaderModuleMln* vertShaderModule_{nullptr};
+    ShaderModuleMln* fragShaderModule_{nullptr};
     GpuShaderProgramPlatformDataMln plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
     ShaderReflection reflection_;
@@ -52,8 +52,8 @@ private:
 
 struct GpuComputeProgramPlatformDataMln {
     // New API: no MlnShader handle. Store SPIR-V pointer for inline MlnShaderDescriptor.
-    const uint32_t* compSpvSource { nullptr };
-    size_t compSpvSourceSize { 0 };
+    const uint32_t* compSpvSource{nullptr};
+    size_t compSpvSourceSize{0};
 };
 
 class GpuComputeProgramMln final : public GpuComputeProgram {
@@ -65,7 +65,7 @@ public:
     const GpuComputeProgramPlatformDataMln& GetPlatformData() const;
 
 private:
-    ShaderModuleMln* shaderModule_ { nullptr };
+    ShaderModuleMln* shaderModule_{nullptr};
     GpuComputeProgramPlatformDataMln plat_;
     BASE_NS::vector<ShaderSpecialization::Constant> constants_;
     ComputeShaderReflection reflection_;
@@ -73,4 +73,4 @@ private:
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_GPU_PROGRAM_MLN_H
+#endif  // MALEOON_GPU_PROGRAM_MLN_H

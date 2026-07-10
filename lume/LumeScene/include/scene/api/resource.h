@@ -186,14 +186,14 @@ public:
     }
     /// Returns a named custom property with given type. Null if property does not exist or given type is not compatible
     /// with the property value.
-    template <typename Type>
+    template<typename Type>
     auto GetCustomProperty(BASE_NS::string_view name) const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomProperty<Type>(name));
     }
     /// Returns a named custom array property with given type. Null if property does not exist or given type is not
     /// compatible with the property value.
-    template <typename Type>
+    template<typename Type>
     META_NS::ArrayProperty<Type> GetCustomArrayProperty(BASE_NS::string_view name) const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetCustomArrayProperty<Type>(name));

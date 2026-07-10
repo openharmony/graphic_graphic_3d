@@ -36,10 +36,7 @@ void main(void)
     vec2 fragUv;
     CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
 
-    // specialization for post process
-    if (CORE_POST_PROCESS_FLAGS > 0) {
-        InplacePostProcess(fragUv, outColor);
-    }
+    // do not need post process
 
     outDepth = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }

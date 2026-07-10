@@ -27,7 +27,7 @@ namespace UTest {
 
 class API_ScenePluginNodeComponentTest : public ScenePluginComponentTest<CORE3D_NS::INodeComponentManager> {
 protected:
-    template <class T>
+    template<class T>
     void TestINodePropertyGetters(T* node)
     {
         EXPECT_TRUE(node->Enabled());

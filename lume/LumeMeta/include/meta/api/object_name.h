@@ -25,7 +25,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename Interface, typename = BASE_NS::enable_if<IsKindOfPointer_v<Interface>>>
+template<typename Interface, typename = BASE_NS::enable_if<IsKindOfPointer_v<Interface>>>
 BASE_NS::string GetName(const Interface& obj)
 {
     if (auto o = interface_pointer_cast<IObject>(obj)) {
@@ -49,7 +49,7 @@ inline IObjectName::Ptr GetObjectNameAttachment(const IAttach::ConstPtr& att)
     return nullptr;
 }
 
-template <typename Interface, typename = BASE_NS::enable_if<IsKindOfPointer_v<Interface>>>
+template<typename Interface, typename = BASE_NS::enable_if<IsKindOfPointer_v<Interface>>>
 bool SetName(const Interface& obj, BASE_NS::string_view name)
 {
     if (auto named = interface_pointer_cast<INamed>(obj)) {

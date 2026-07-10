@@ -1,0 +1,21 @@
+{
+    "version": "1.0",
+    "description": "scene loading a node template with no user property overrides",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template0.json"
+                    },
+                    "resourceGroup": "ext-group"
+                }
+            ]
+        }
+    }
+}

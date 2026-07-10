@@ -171,7 +171,7 @@ struct Reader {
         return value;
     }
 };
-template <typename ShaderBase>
+template<typename ShaderBase>
 void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInfo)
 {
     me.pipelineLayout_ = createInfo.reflectionData.GetPipelineLayout();
@@ -226,7 +226,7 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
         static_cast<const char*>(static_cast<const void*>(createInfo.spvData.data())), createInfo.spvData.size());
 }
 
-template <typename ShaderBase>
+template<typename ShaderBase>
 string SpecializeShaderModule(const ShaderBase& base, const ShaderSpecializationConstantDataView& specData)
 {
     return Gles::Specialize(base.shaderStageFlags_, base.source_, base.constants_, specData);

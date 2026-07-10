@@ -68,7 +68,7 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t FORMAT_PROPERTY_COUNT =
     DeviceFormatSupportConstants::LINEAR_FORMAT_MAX_COUNT + DeviceFormatSupportConstants::ADDITIONAL_FORMAT_MAX_COUNT;
-} // namespace
+}  // namespace
 
 // ============================================================================
 // DeviceMln
@@ -126,6 +126,7 @@ DeviceMln::~DeviceMln()
     swapchains_.clear();
     gpuResourceMgr_.reset();
     shaderMgr_.reset();
+    renderBackendMln_ = nullptr;
 
     if (mlnProgramCache_) {
         MlnDestroyProgramCache(mlnDevice_, mlnProgramCache_);
@@ -167,13 +168,15 @@ void DeviceMln::InitMaleoonDevice()
         int nullDeviceTested = 0;
         void* nullDeviceResult = nullptr;
         int coreResolved = 0, coreTotal = 0;
-        mlnLoaderGetProbeInfo(&coreMissing, &fnCreateDevice, &fnGetDeviceProcAddr, &bootstrapEntry, &nullDeviceTested,
-            &nullDeviceResult, &coreResolved, &coreTotal);
-        MLN_LOG_INIT(
-            "Probe: loaderOk=%d coreMissing=%d MlnCreateDevice=%p "
-            "GetDeviceProcAddr=%p bootstrap=%p",
-            static_cast<int>(loaderOk), coreMissing, fnCreateDevice, fnGetDeviceProcAddr, bootstrapEntry);
-        MLN_LOG_INIT("Probe D2: nullDeviceTested=%d nullDeviceResult=%p", nullDeviceTested, nullDeviceResult);
+        mlnLoaderGetProbeInfo(&coreMissing,
+            &fnCreateDevice,
+            &fnGetDeviceProcAddr,
+            &bootstrapEntry,
+            &nullDeviceTested,
+            &nullDeviceResult,
+            &coreResolved,
+            &coreTotal);
+        MLN_LOG_INIT("Probe D2: nullDeviceTested=%d", nullDeviceTested);
         MLN_LOG_INIT("Probe resolve: %d/%d core functions resolved", coreResolved, coreTotal);
     }
 
@@ -213,16 +216,19 @@ void DeviceMln::InitMaleoonDevice()
         MLN_LOG_ERR("DeviceMln: MlnCreateDevice failed");
         return;
     }
-    MLN_LOG_INIT("DeviceMln: MlnCreateDevice OK (device=%p)", reinterpret_cast<void*>(mlnDevice_));
+    MLN_LOG_INIT("DeviceMln: MlnCreateDevice OK");
 
     // Phase 2: resolve all remaining core functions via MlnGetDeviceProcAddr(device, name)
-    MLN_LOG_INIT("Phase 2: BEGIN mlnLoaderResolveWithDevice(device=%p)", reinterpret_cast<void*>(mlnDevice_));
+    MLN_LOG_INIT("Phase 2: BEGIN mlnLoaderResolveWithDevice");
     const bool phase2Ok = mlnLoaderResolveWithDevice(mlnDevice_);
     {
         int coreMissing = -1;
         int coreResolved = 0, coreTotal = 0;
         mlnLoaderGetProbeInfo(&coreMissing, nullptr, nullptr, nullptr, nullptr, nullptr, &coreResolved, &coreTotal);
-        MLN_LOG_INIT("Phase 2: %d/%d core resolved, coreMissing=%d, result=%d", coreResolved, coreTotal, coreMissing,
+        MLN_LOG_INIT("Phase 2: %d/%d core resolved, coreMissing=%d, result=%d",
+            coreResolved,
+            coreTotal,
+            coreMissing,
             static_cast<int>(phase2Ok));
     }
     if (!phase2Ok) {
@@ -233,7 +239,7 @@ void DeviceMln::InitMaleoonDevice()
     }
 
     // Phase 3: resolve 11 swapchain functions via MlnGetDeviceProcAddr(device, name)
-    MLN_LOG_INIT("Phase 3: BEGIN mlnLoaderResolveSwapchainWithDevice(device=%p)", reinterpret_cast<void*>(mlnDevice_));
+    MLN_LOG_INIT("Phase 3: BEGIN mlnLoaderResolveSwapchainWithDevice");
     const bool phase3Ok = mlnLoaderResolveSwapchainWithDevice(mlnDevice_);
     MLN_LOG_INIT("Phase 3: result=%d", static_cast<int>(phase3Ok));
     if (!phase3Ok) {
@@ -262,7 +268,8 @@ void DeviceMln::InitMaleoonDevice()
 
     // Log device configuration (for build verification)
     const auto& devConfig = GetDeviceConfiguration();
-    MLN_LOG_INIT("DeviceMln: CONFIG bufferingCount=%u, swapchainImageCount=%u", devConfig.bufferingCount,
+    MLN_LOG_INIT("DeviceMln: CONFIG bufferingCount=%u, swapchainImageCount=%u",
+        devConfig.bufferingCount,
         devConfig.swapchainImageCount);
 }
 
@@ -286,7 +293,8 @@ void DeviceMln::QueryFormatProperties()
 
     // Query additional format range
     for (uint32_t i = DeviceFormatSupportConstants::ADDITIONAL_FORMAT_START_NUMBER;
-         i <= DeviceFormatSupportConstants::ADDITIONAL_FORMAT_END_NUMBER; ++i) {
+         i <= DeviceFormatSupportConstants::ADDITIONAL_FORMAT_END_NUMBER;
+         ++i) {
         MlnGpuFormatProperties mlnProps{};
         MlnFormat mlnFmt = static_cast<MlnFormat>(i);
         if (MlnGetGpuFormatProperties(mlnDevice_, mlnFmt, &mlnProps) == MLN_STATUS_SUCCESS) {
@@ -310,7 +318,8 @@ void DeviceMln::QueryFormatProperties()
             } else if (fp.bytesPerPixel > 0u || GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(i)) > 0u) {
                 // Only log formats that have a known byte size (skip unused/reserved indices)
                 ++queryFail;
-                MLN_LOG_ERR("FORMAT UNSUPPORTED AT INIT: idx=%u bpp=%u driver returned features=0", i,
+                MLN_LOG_ERR("FORMAT UNSUPPORTED AT INIT: idx=%u bpp=%u driver returned features=0",
+                    i,
                     GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(i)));
             }
         }
@@ -345,9 +354,8 @@ FormatProperties DeviceMln::GetFormatProperties(Format format) const
         }
     }
     if (formatIdx != 0u && props.optimalTilingFeatures == 0u) {
-        MLN_LOG_ERR(
-            "FORMAT UNSUPPORTED AT RUNTIME: format=%u requested but features=0 — "
-            "driver does not support this format",
+        MLN_LOG_ERR("FORMAT UNSUPPORTED AT RUNTIME: format=%u requested but features=0 — "
+                    "driver does not support this format",
             formatIdx);
     }
     return props;
@@ -379,7 +387,7 @@ AsBuildSizes DeviceMln::GetAccelerationStructureBuildSizes(const AsBuildGeometry
         g.geometry.triangles.vertexStride = tri.vertexStride;
         g.geometry.triangles.maxVertex = tri.maxVertex;
         g.geometry.triangles.indexType = static_cast<MlnIndexType>(tri.indexType);
-        g.geometry.triangles.vertexData = 0; // not needed for size query
+        g.geometry.triangles.vertexData = 0;  // not needed for size query
         g.geometry.triangles.indexData = 0;
         g.geometry.triangles.transformData = 0;
         // primitiveCount = indexCount / 3 for triangles (or maxVertex / 3 if no indices)
@@ -396,7 +404,7 @@ AsBuildSizes DeviceMln::GetAccelerationStructureBuildSizes(const AsBuildGeometry
         g.geometry.aabbs.extensions = nullptr;
         g.geometry.aabbs.stride = aabb.stride;
         g.geometry.aabbs.data = 0;
-        maxPrimitiveCounts[idx] = 1; // single AABB per geometry entry
+        maxPrimitiveCounts[idx] = 1;  // single AABB per geometry entry
         idx++;
     }
     for (const auto& inst : instances) {
@@ -477,8 +485,9 @@ unique_ptr<Swapchain> DeviceMln::CreateDeviceSwapchain(const SwapchainCreateInfo
 void DeviceMln::DestroyDeviceSwapchain()
 {
     MLN_LOG_INIT("DeviceMln::DestroyDeviceSwapchain");
-    // The Swapchain is owned by the base Device class and destroyed via unique_ptr.
-    // No additional cleanup needed here.
+    if (renderBackendMln_) {
+        renderBackendMln_->ClearCaches();
+    }
 }
 
 void DeviceMln::Activate()
@@ -589,10 +598,7 @@ vector<unique_ptr<GpuImage>> DeviceMln::CreateGpuImageViews(const Swapchain& swa
     vector<unique_ptr<GpuImage>> gpuImages(swapchainPlat.images.size());
     MLN_LOG_INIT("DeviceMln::CreateGpuImageViews: wrapping %zu swapchain images", swapchainPlat.images.size());
     for (size_t idx = 0; idx < gpuImages.size(); ++idx) {
-        MLN_LOG_INIT("DeviceMln::CreateGpuImageViews: image[%zu] resource=%p, view=%p", idx,
-            reinterpret_cast<void*>(swapchainPlat.images[idx]),
-            reinterpret_cast<void*>(
-                idx < swapchainPlat.imageViews.size() ? swapchainPlat.imageViews[idx] : MLN_NULL_HANDLE));
+        MLN_LOG_INIT("DeviceMln::CreateGpuImageViews: image[%zu]", idx);
         GpuImagePlatformDataMln gpuImagePlat;
         gpuImagePlat.resource = swapchainPlat.images[idx];
         if (idx < swapchainPlat.imageViews.size()) {
@@ -602,7 +608,9 @@ vector<unique_ptr<GpuImage>> DeviceMln::CreateGpuImageViews(const Swapchain& swa
         MLN_LOG_INIT("DeviceMln::CreateGpuImageViews: image[%zu] wrapped OK", idx);
     }
     MLN_LOG_INIT("DeviceMln::CreateGpuImageViews: created %u swapchain image views (%ux%u)",
-        static_cast<uint32_t>(gpuImages.size()), desc.width, desc.height);
+        static_cast<uint32_t>(gpuImages.size()),
+        desc.width,
+        desc.height);
     return gpuImages;
 }
 
@@ -618,7 +626,9 @@ unique_ptr<RenderFrameSync> DeviceMln::CreateRenderFrameSync()
 
 unique_ptr<RenderBackend> DeviceMln::CreateRenderBackend(GpuResourceManager& gpuResourceMgr, CORE_NS::ITaskQueue* queue)
 {
-    return make_unique<RenderBackendMln>(*this, gpuResourceMgr, queue);
+    auto backend = make_unique<RenderBackendMln>(*this, gpuResourceMgr, queue);
+    renderBackendMln_ = backend.get();
+    return backend;
 }
 
 unique_ptr<ShaderModule> DeviceMln::CreateShaderModule(const ShaderModuleCreateInfo& data)
@@ -660,9 +670,17 @@ unique_ptr<GraphicsPipelineStateObject> DeviceMln::CreateGraphicsPipelineStateOb
     const array_view<const RenderPassSubpassDesc>& renderPassSubpassDescs, uint32_t subpassIndex,
     const LowLevelRenderPassData* renderPassData, const LowLevelPipelineLayoutData* pipelineLayoutData)
 {
-    return make_unique<GraphicsPipelineStateObjectMln>(*this, gpuProgram, graphicsState, pipelineLayout,
-        vertexInputDeclaration, specializationConstants, dynamicStates, renderPassSubpassDescs, subpassIndex,
-        renderPassData, pipelineLayoutData);
+    return make_unique<GraphicsPipelineStateObjectMln>(*this,
+        gpuProgram,
+        graphicsState,
+        pipelineLayout,
+        vertexInputDeclaration,
+        specializationConstants,
+        dynamicStates,
+        renderPassSubpassDescs,
+        subpassIndex,
+        renderPassData,
+        pipelineLayoutData);
 }
 
 unique_ptr<ComputePipelineStateObject> DeviceMln::CreateComputePipelineStateObject(const GpuComputeProgram& gpuProgram,

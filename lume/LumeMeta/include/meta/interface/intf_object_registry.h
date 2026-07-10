@@ -127,7 +127,7 @@ public:
     /**
      * @brief A helper template for calling RegisterObjectType on a type which defines IObjectFactory::Ptr GetFactory().
      */
-    template <class T>
+    template<class T>
     constexpr void RegisterObjectType()
     {
         RegisterObjectType(T::GetFactory());
@@ -136,7 +136,7 @@ public:
      * @brief A helper template for calling UnregisterObjectType on a type which defines IObjectFactory::Ptr
      * GetFactory().
      */
-    template <class T>
+    template<class T>
     constexpr void UnregisterObjectType()
     {
         UnregisterObjectType(T::GetFactory());
@@ -280,7 +280,7 @@ public:
     virtual BASE_NS::shared_ptr<IObjectContext> GetDefaultObjectContext() const = 0;
 
     // Templated helper method, Creates object by UID and returns the requested Interface (if available)
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Create(ObjectId uid) const
     {
         auto p = Create(uid);
@@ -289,7 +289,7 @@ public:
         }
         return nullptr;
     }
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Create(ObjectId uid, BASE_NS::shared_ptr<IMetadata> data) const
     {
         auto p = Create(META_NS::ClassInfo{uid}, data);
@@ -298,7 +298,7 @@ public:
         }
         return nullptr;
     }
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Create(ObjectId uid, InstanceId instanceid) const
     {
         auto p = Create(uid, instanceid);
@@ -307,7 +307,7 @@ public:
         }
         return nullptr;
     }
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Create(ObjectId uid, const CreateInfo& createInfo) const
     {
         auto p = Create(uid, createInfo);
@@ -417,7 +417,7 @@ inline BASE_NS::shared_ptr<IObjectContext> GetDefaultObjectContext()
 /**
  * @brief Registers Type to the default object registry.
  */
-template <typename Type>
+template<typename Type>
 constexpr void RegisterObjectType()
 {
     META_NS::GetObjectRegistry().RegisterObjectType<Type>();
@@ -426,7 +426,7 @@ constexpr void RegisterObjectType()
 /**
  * @brief Unregisters Type from default object registry.
  */
-template <typename Type>
+template<typename Type>
 constexpr void UnregisterObjectType()
 {
     META_NS::GetObjectRegistry().UnregisterObjectType<Type>();

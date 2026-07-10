@@ -71,7 +71,7 @@ inline bool operator>(const SlotSubmeshIndex& lhs, const SlotSubmeshIndex& rhs)
     return false;
 }
 
-template <class T>
+template<class T>
 struct Less {
     constexpr bool operator()(const T& lhs, const T& rhs) const
     {
@@ -79,7 +79,7 @@ struct Less {
     }
 };
 
-template <class T>
+template<class T>
 struct Greater {
     constexpr bool operator()(const T& lhs, const T& rhs) const
     {

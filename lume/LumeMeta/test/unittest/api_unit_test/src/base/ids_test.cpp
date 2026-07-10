@@ -22,7 +22,7 @@
 META_BEGIN_NAMESPACE()
 namespace UTest {
 
-template <typename Id>
+template<typename Id>
 void IdTest()
 {
     Id id1;

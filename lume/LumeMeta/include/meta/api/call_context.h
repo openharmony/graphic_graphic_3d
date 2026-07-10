@@ -29,7 +29,7 @@ META_BEGIN_NAMESPACE()
  * @param value to set, type must match with the defined parameter type.
  * @return True on success.
  */
-template <typename Type>
+template<typename Type>
 bool Set(const ICallContext::Ptr& context, BASE_NS::string_view name, const Type& value)
 {
     return context->Set(name, Any<Type>(value));
@@ -40,7 +40,7 @@ bool Set(const ICallContext::Ptr& context, BASE_NS::string_view name, const Type
  * @param context Call context where the result is set
  * @param value to set, type must match with the defined result type.
  */
-template <typename Type>
+template<typename Type>
 bool SetResult(const ICallContext::Ptr& context, const Type& value)
 {
     return context->SetResult(Any<Type>(value));
@@ -50,7 +50,7 @@ bool SetResult(const ICallContext::Ptr& context, const Type& value)
  * @brief Set void result value
  * @param context Call context where the result is set
  */
-template <typename Type = void, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<Type, void>>>
+template<typename Type = void, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<Type, void>>>
 bool SetResult(const ICallContext::Ptr& context)
 {
     return context->SetResult();
@@ -62,7 +62,7 @@ bool SetResult(const ICallContext::Ptr& context)
  * @param Name of the defined parameter, the type must match.
  * @return Pointer to contained value if successful, otherwise null.
  */
-template <typename Type>
+template<typename Type>
 Expected<Type, GenericError> Get(const ICallContext::Ptr& context, BASE_NS::string_view name)
 {
     if (auto any = context->Get(name)) {
@@ -81,7 +81,7 @@ Expected<Type, GenericError> Get(const ICallContext::Ptr& context, BASE_NS::stri
  * Note: One should first use ICallContext Success function to see if the call was
  *       successful before querying for value.
  */
-template <typename Type>
+template<typename Type>
 Expected<Type, GenericError> GetResult(const ICallContext::Ptr& context)
 {
     if (auto any = context->GetResult()) {
@@ -99,7 +99,7 @@ Expected<Type, GenericError> GetResult(const ICallContext::Ptr& context)
  * @param name Name of the parameter.
  * @param value Type and default value of the parameter.
  */
-template <typename Type>
+template<typename Type>
 bool DefineParameter(const ICallContext::Ptr& context, BASE_NS::string_view name, const Type& value = {})
 {
     return context->DefineParameter(name, IAny::Ptr(new Any<Type>(value)));
@@ -110,7 +110,7 @@ bool DefineParameter(const ICallContext::Ptr& context, BASE_NS::string_view name
  * @param context Call context for define result type
  * @value Type of the result, the value is ignored if SetResult is used.
  */
-template <typename Type>
+template<typename Type>
 bool DefineResult(const ICallContext::Ptr& context, const Type& value)
 {
     return context->DefineResult(IAny::Ptr(new Any<Type>(value)));
@@ -119,7 +119,7 @@ bool DefineResult(const ICallContext::Ptr& context, const Type& value)
 /**
  * @brief Define result type in call context
  */
-template <typename Type>
+template<typename Type>
 bool DefineResult(const ICallContext::Ptr& context)
 {
     if constexpr (BASE_NS::is_same_v<Type, void>) {
@@ -133,7 +133,7 @@ bool DefineResult(const ICallContext::Ptr& context)
 /**
  * @brief Set values for call context, used for setting parameters for meta function calls.
  */
-template <typename... Args, size_t... Index>
+template<typename... Args, size_t... Index>
 bool SetContextValues(
     const ICallContext::Ptr& context, IndexSequence<Index...>, const BASE_NS::array_view<BASE_NS::string_view>& names)
 {
@@ -146,7 +146,7 @@ bool SetContextValues(
  * @param Args Types of the meta function parameters.
  * @param names Names of the meta function parameters.
  */
-template <typename Ret, typename... Args>
+template<typename Ret, typename... Args>
 ICallContext::Ptr CreateCallContextImpl(const BASE_NS::array_view<BASE_NS::string_view>& names)
 {
     if (sizeof...(Args) != names.size()) {
@@ -168,7 +168,7 @@ ICallContext::Ptr CreateCallContextImpl(const BASE_NS::array_view<BASE_NS::strin
 /**
  * @brief Create call context for meta function calls by deducing types from member function.
  */
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 ICallContext::Ptr CreateCallContext(Ret (Obj::*)(Args...), const BASE_NS::array_view<BASE_NS::string_view>& names)
 {
     return CreateCallContextImpl<Ret, Args...>(names);
@@ -177,20 +177,20 @@ ICallContext::Ptr CreateCallContext(Ret (Obj::*)(Args...), const BASE_NS::array_
 /**
  * @brief Create call context for meta function calls by deducing types from member function.
  */
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 ICallContext::Ptr CreateCallContext(Ret (Obj::*)(Args...) const, const BASE_NS::array_view<BASE_NS::string_view>& names)
 {
     return CreateCallContextImpl<Ret, Args...>(names);
 }
 
 // convert array of string views to array view and ignore the first one (workaround for empty arrays)
-template <size_t S>
+template<size_t S>
 BASE_NS::array_view<BASE_NS::string_view> ParamNameToView(BASE_NS::string_view (&arr)[S])
 {
     return BASE_NS::array_view<BASE_NS::string_view>(arr + 1, arr + S);
 }
 
-template <typename T, bool Ref = BASE_NS::is_same_v<T, PlainType_t<T>&>>
+template<typename T, bool Ref = BASE_NS::is_same_v<T, PlainType_t<T>&>>
 struct CallArg {
     using Type = PlainType_t<T>;
     explicit CallArg(IAny::Ptr any) : any_(any)
@@ -208,7 +208,7 @@ private:
     IAny::Ptr any_;
 };
 
-template <typename T>
+template<typename T>
 struct CallArg<T, true> {
     using Type = PlainType_t<T>;
     explicit CallArg(IAny::Ptr any) : any_(any)
@@ -232,9 +232,9 @@ private:
     mutable Type t_;
 };
 
-template <typename Ret, typename... Args>
+template<typename Ret, typename... Args>
 struct CallFunctionImpl {
-    template <typename Func, size_t... Index>
+    template<typename Func, size_t... Index>
     static bool Call(
         const ICallContext::Ptr& context, Func func, BASE_NS::array_view<IAny::Ptr> argView, IndexSequence<Index...>)
     {
@@ -254,7 +254,7 @@ struct CallFunctionImpl {
         }(CallArg<Args>(argView[Index])...);
     }
 
-    template <typename Func, size_t... Index>
+    template<typename Func, size_t... Index>
     static bool Call(const ICallContext::Ptr& context, Func func, IndexSequence<Index...> ind)
     {
         auto params = context->GetParameters();
@@ -270,7 +270,7 @@ struct CallFunctionImpl {
         }
     }
 
-    template <typename Func, size_t... Index>
+    template<typename Func, size_t... Index>
     static bool Call(const ICallContext::Ptr& context, Func func,
         const BASE_NS::array_view<BASE_NS::string_view>& names, IndexSequence<Index...> ind)
     {
@@ -294,19 +294,19 @@ struct CallFunctionImpl {
  * @param obj Target object to call function for.
  * @param func Member function to call.
  */
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 bool CallFunction(const ICallContext::Ptr& context, Obj* obj, Ret (Obj::*func)(Args...))
 {
     return CallFunctionImpl<Ret, Args...>::Call(
         context, [&](Args... args) { return (obj->*func)(args...); }, MakeIndexSequenceFor<Args...>());
 }
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 bool CallFunction(const ICallContext::Ptr& context, const Obj* obj, Ret (Obj::*func)(Args...) const)
 {
     return CallFunctionImpl<Ret, Args...>::Call(
         context, [&](Args... args) { return (obj->*func)(args...); }, MakeIndexSequenceFor<Args...>());
 }
-template <typename Func>
+template<typename Func>
 bool CallFunction(const ICallContext::Ptr& context, Func func)
 {
     return CallFunction(context, &func, &Func::operator());
@@ -318,14 +318,14 @@ bool CallFunction(const ICallContext::Ptr& context, Func func)
  * @param obj Target object to call function for.
  * @param func Member function to call.
  */
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 bool CallFunction(const ICallContext::Ptr& context, Obj* obj, Ret (Obj::*func)(Args...),
     const BASE_NS::array_view<BASE_NS::string_view>& names)
 {
     return CallFunctionImpl<Ret, Args...>::Call(
         context, [&](Args... args) { return (obj->*func)(args...); }, names, MakeIndexSequenceFor<Args...>());
 }
-template <typename Obj, typename Ret, typename... Args>
+template<typename Obj, typename Ret, typename... Args>
 bool CallFunction(const ICallContext::Ptr& context, const Obj* obj, Ret (Obj::*func)(Args...) const,
     const BASE_NS::array_view<BASE_NS::string_view>& names)
 {

@@ -58,11 +58,11 @@ private:
     GpuImagePlatformDataMln plat_;
     GpuImagePlatformDataViewsMln platViews_;
 
-    bool ownsResources_ { true };
-    bool ownsImage_ { true };
-    bool ownsImageViews_ { true };
+    bool ownsResources_{true};
+    bool ownsImage_{true};
+    bool ownsImageViews_{true};
 };
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_GPU_IMAGE_MLN_H
+#endif  // MALEOON_GPU_IMAGE_MLN_H

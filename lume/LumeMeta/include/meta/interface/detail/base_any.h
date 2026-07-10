@@ -25,7 +25,7 @@ META_BEGIN_NAMESPACE()
 constexpr char BUILTIN_ANY_TAG[] = "BuiltAny";
 constexpr char BUILTIN_ARRAY_ANY_TAG[] = "ArrayAny";
 
-template <typename Type>
+template<typename Type>
 class BaseTypedAny : public IntroduceInterfaces<IAny, IValue> {
 public:
     static constexpr TypeId TYPE_ID = UidFromType<Type>();
@@ -167,7 +167,7 @@ private:
     }
 };
 
-template <typename T, bool Compare = HasEqualOperator_v<T>>
+template<typename T, bool Compare = HasEqualOperator_v<T>>
 struct DefaultCompare {
     static constexpr bool Equal(const T& v1, const T& v2)
     {
@@ -178,14 +178,14 @@ struct DefaultCompare {
         }
     }
 
-    template <typename NewType>
+    template<typename NewType>
     using Rebind = DefaultCompare<NewType>;
 };
 
 /**
  * @brief Default IAny implementation which supports a single type.
  */
-template <typename Type, typename Compare = DefaultCompare<Type>>
+template<typename Type, typename Compare = DefaultCompare<Type>>
 class Any : public BaseTypedAny<Type> {
     using Super = BaseTypedAny<Type>;
 
@@ -224,7 +224,7 @@ private:
     Type value_;
 };
 
-template <typename Type>
+template<typename Type>
 class BaseTypedArrayAny : public IntroduceInterfaces<IArrayAny, IValue> {
 public:
     static constexpr TypeId VECTOR_TYPE_ID = UidFromType<BASE_NS::vector<Type>>();
@@ -346,7 +346,7 @@ private:
 /**
  * @brief Default IArrayAny implementation which supports a single type.
  */
-template <typename Type, typename Compare = DefaultCompare<BASE_NS::vector<Type>>>
+template<typename Type, typename Compare = DefaultCompare<BASE_NS::vector<Type>>>
 class ArrayAny : public BaseTypedArrayAny<Type> {
     using Super = BaseTypedArrayAny<Type>;
 
@@ -466,7 +466,7 @@ protected:
     ArrayType value_;
 };
 
-template <class Type, class Compare>
+template<class Type, class Compare>
 IAny::Ptr Any<Type, Compare>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {
@@ -475,7 +475,7 @@ IAny::Ptr Any<Type, Compare>::Clone(const AnyCloneOptions& options) const
     return IAny::Ptr(new Any{options.value == CloneValueType::COPY_VALUE ? value_ : Type{}});
 }
 
-template <class Type, class Compare>
+template<class Type, class Compare>
 IAny::Ptr ArrayAny<Type, Compare>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ITEM) {

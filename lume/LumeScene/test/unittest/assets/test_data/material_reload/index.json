@@ -1,0 +1,26 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": {
+                    "name": "tmpl"
+                },
+                "type": "metallicRoughnessMaterialTemplate",
+                "path": "file://material_reload/template.json"
+            },
+            {
+                "resourceId": {
+                    "name": "derived"
+                },
+                "type": "metallicRoughnessMaterial",
+                "options": {
+                    "derivedFrom": {
+                        "name": "tmpl"
+                    }
+                }
+            }
+        ]
+    }
+}

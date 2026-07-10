@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "description": "node template whose root is a geometry node carrying a mesh",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "node_template_mesh_index.json",
+        "node": {
+            "type": "geometry",
+            "name": "meshNode",
+            "mesh": { "name": "tri-mesh" }
+        }
+    }
+}

@@ -20,8 +20,11 @@
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
-ImportResult ResolveObject(
-    ImportContext&, const META_NS::IObject::Ptr& base, BASE_NS::string_view path, bool onlyChildren = false);
+/// Resolve `path` against `base`. When `parent` is non-null and the path
+/// terminates at a property, `*parent` receives the object on which the
+/// terminal property was looked up (the wrapper for forwarded properties).
+ImportResult ResolveObject(ImportContext&, const META_NS::IObject::Ptr& base, BASE_NS::string_view path,
+    bool onlyChildren = false, META_NS::IObject::Ptr* parent = nullptr);
 
 SCENE_IMP_END_NAMESPACE()
 

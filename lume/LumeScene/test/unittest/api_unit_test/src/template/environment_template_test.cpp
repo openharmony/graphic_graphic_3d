@@ -27,6 +27,9 @@
 #include <meta/interface/property/construct_property.h>
 #include <meta/interface/resource/intf_resource.h>
 
+#include <core/resources/intf_resource.h>
+#include <core/resources/intf_resource_manager.h>
+
 #include "scene/scene_test.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -92,6 +95,7 @@ UNIT_TEST_F(EnvironmentTemplateTest, PropertiesAccessible, testing::ext::TestSiz
     auto tmpl = CreateFullTemplate();
     ASSERT_TRUE(tmpl);
 
+    EXPECT_TRUE(tmpl.Name());
     EXPECT_TRUE(tmpl.Background());
     EXPECT_TRUE(tmpl.IndirectDiffuseFactor());
     EXPECT_TRUE(tmpl.IndirectSpecularFactor());
@@ -134,6 +138,11 @@ UNIT_TEST_F(EnvironmentTemplateTest, NameProperty, testing::ext::TestSize.Level1
     EXPECT_TRUE(META_NS::IsValueSet(*named->Name().GetProperty()));
     EXPECT_EQ(META_NS::GetValue(named->Name()), "TestEnv");
     EXPECT_EQ(obj->GetName(), "TestEnv");
+
+    // The API wrapper exposes the same Name property.
+    EnvironmentTemplate tmpl(obj);
+    ASSERT_TRUE(tmpl.Name());
+    EXPECT_EQ(META_NS::GetValue(tmpl.Name()), "TestEnv");
 }
 
 /**
@@ -180,6 +189,9 @@ UNIT_TEST_F(EnvironmentTemplateTest, ApplyToEnvironment, testing::ext::TestSize.
     UpdateScene();
 
     EXPECT_FLOAT_EQ(META_NS::GetValue(env->EnvironmentMapLodLevel()), testLod);
+    // Characterization: non-template-context ApplyOptions lands set values as OVERRIDES.
+    // Pins the ApplyOptions path against the upcoming standalone-ApplyTo defaults change.
+    EXPECT_TRUE(env->EnvironmentMapLodLevel().GetProperty()->IsValueSet());
 }
 
 /**
@@ -266,6 +278,93 @@ UNIT_TEST_F(EnvironmentTemplateTest, ApplyToViaInterface, testing::ext::TestSize
     UpdateScene();
 
     EXPECT_FLOAT_EQ(META_NS::GetValue(env->EnvironmentMapLodLevel()), 1.5f);
+}
+
+/**
+ * @tc.name: ApplyToPromotesScalarsToDefaults
+ * @tc.desc: IResourceTemplate::ApplyTo writes template scalars (EnvironmentMapLodLevel, a Vec4
+ *          factor) onto the live environment as DEFAULTS: IsValueSet stays false and
+ *          GetDefaultValue equals the template value. Pins the standalone ApplyTo path.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(EnvironmentTemplateTest, ApplyToPromotesScalarsToDefaults, testing::ext::TestSize.Level1)
+{
+    constexpr float LOD = 2.5f;
+    constexpr BASE_NS::Math::Vec4 FACTOR{0.1f, 0.2f, 0.3f, 0.4f};
+
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
+    ASSERT_TRUE(env);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    META_NS::SetValue(tmpl.EnvironmentMapLodLevel(), LOD);
+    META_NS::SetValue(tmpl.IndirectDiffuseFactor(), FACTOR);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*env));
+    UpdateScene();
+
+    EXPECT_FLOAT_EQ(META_NS::GetValue(env->EnvironmentMapLodLevel()), LOD);
+    EXPECT_FLOAT_EQ(env->EnvironmentMapLodLevel()->GetDefaultValue(), LOD);
+    EXPECT_FALSE(env->EnvironmentMapLodLevel().GetProperty()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(env->IndirectDiffuseFactor()), FACTOR);
+    EXPECT_EQ(env->IndirectDiffuseFactor()->GetDefaultValue(), FACTOR);
+    EXPECT_FALSE(env->IndirectDiffuseFactor().GetProperty()->IsValueSet());
+}
+
+/**
+ * @tc.name: ApplyToResolvesSceneScopedRadianceImage
+ * @tc.desc: IResourceTemplate::ApplyTo resolves an image ResourceId (RadianceImage) against a
+ *          resource registered under the target scene's context — exercising the
+ *          context-qualified rm->GetResource({id, context}) path from a standalone ApplyTo
+ *          (no explicit context). The scene-scoped image is invisible to the context-less
+ *          fallback, so success proves the derived scene context matches the registration.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(EnvironmentTemplateTest, ApplyToResolvesSceneScopedRadianceImage, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
+    ASSERT_TRUE(env);
+    UpdateScene();
+
+    auto image = CreateTestBitmap();
+    ASSERT_TRUE(image);
+    CORE_NS::ResourceIdContext imgId{
+        CORE_NS::ResourceId{"env-image"}, interface_pointer_cast<CORE_NS::IInterface>(scene)};
+    auto setId = interface_cast<CORE_NS::ISetResourceId>(image);
+    ASSERT_TRUE(setId);
+    setId->SetResourceId(imgId);
+    ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(image)));
+
+    // The context-less fallback must MISS a scene-scoped resource.
+    EXPECT_FALSE(resources->GetResource(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"env-image"}}));
+    auto expected = resources->GetResource(imgId);
+    ASSERT_TRUE(expected);
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto meta = interface_cast<META_NS::IMetadata>(tmpl.GetPtr().get());
+    ASSERT_TRUE(meta);
+    meta->AddProperty(META_NS::ConstructProperty<CORE_NS::ResourceId>("RadianceImage").GetProperty());
+    auto radianceProp = meta->GetProperty<CORE_NS::ResourceId>("RadianceImage");
+    ASSERT_TRUE(radianceProp);
+    META_NS::SetValue(radianceProp, imgId.id);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*env));
+    UpdateScene();
+
+    auto resolved = META_NS::GetValue(env->RadianceImage());
+    ASSERT_TRUE(resolved);
+    EXPECT_EQ(interface_pointer_cast<CORE_NS::IResource>(resolved), expected);
 }
 
 /**

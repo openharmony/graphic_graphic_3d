@@ -35,7 +35,7 @@ using Internal::MakeIterationConstCallable;
  * @param traversal Control how to iterate over elements
  * @return True if the iteration did not fail
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool ForEachUnique(
     const BASE_NS::shared_ptr<Iterable>& c, Func&& func, TraversalType traversal = TraversalType::NO_HIERARCHY)
 {
@@ -56,7 +56,7 @@ bool ForEachUnique(
  * @param traversal Control how to iterate over elements
  * @return True if the iteration did not fail
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool ForEachShared(
     const BASE_NS::shared_ptr<Iterable>& c, Func&& func, TraversalType traversal = TraversalType::NO_HIERARCHY)
 {
@@ -78,7 +78,7 @@ bool ForEachShared(
  * @param traversal Control how to iterate over elements
  * @return True if the iteration was stopped (this usually indicates the user function returned false)
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool IterateUnique(
     const BASE_NS::shared_ptr<Iterable>& c, Func&& func, TraversalType traversal = TraversalType::NO_HIERARCHY)
 {
@@ -95,7 +95,7 @@ bool IterateUnique(
  * @param traversal Control how to iterate over elements
  * @return True if the iteration was stopped (this usually indicates the user function returned false)
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool IterateShared(
     const BASE_NS::shared_ptr<Iterable>& c, Func&& func, TraversalType traversal = TraversalType::NO_HIERARCHY)
 {
@@ -112,7 +112,7 @@ bool IterateShared(
  * @param is Strategy how to iterate over elements
  * @return True if the iteration was stopped (this usually indicates the user function returned false)
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool Iterate(const BASE_NS::shared_ptr<Iterable>& c, Func&& func, IterateStrategy is)
 {
     return Internal::Iterate(c, BASE_NS::forward<Func>(func), is).value == IterationResult::STOP;
@@ -127,7 +127,7 @@ bool Iterate(const BASE_NS::shared_ptr<Iterable>& c, Func&& func, IterateStrateg
  * @param is Strategy how to iterate over elements
  * @return True if the iteration was stopped (this usually indicates the user function returned false)
  */
-template <typename Iterable, typename Func>
+template<typename Iterable, typename Func>
 bool ConstIterate(const BASE_NS::shared_ptr<Iterable>& c, Func&& func, IterateStrategy is)
 {
     return Internal::ConstIterate(c, BASE_NS::forward<Func>(func), is).value == IterationResult::STOP;

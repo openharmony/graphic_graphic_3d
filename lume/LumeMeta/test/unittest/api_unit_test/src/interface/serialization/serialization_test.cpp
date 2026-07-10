@@ -44,7 +44,7 @@ namespace UTest {
 
 // ----------- Basic Serialisation of Types -------------
 
-template <typename Type>
+template<typename Type>
 class IBasicSerType : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IBasicSerType<Type>, MakeUid<Type>("BasicSer"))
 
@@ -55,11 +55,11 @@ public:
     virtual void SetVector(BASE_NS::vector<Type>) = 0;
 };
 
-template <typename Type>
+template<typename Type>
 inline constexpr ClassInfo BASIC_SER_TYPE_INFO{
     MakeUid<Type>("BasicTyp"), "BasicType", ObjectCategoryBits::NO_CATEGORY, false};
 
-template <typename Type>
+template<typename Type>
 struct BasicSerType : public IntroduceInterfaces<BaseObjectFwd, IBasicSerType<Type>, ISerializable> {
     using Intro = IntroduceInterfaces<BaseObjectFwd, IBasicSerType<Type>, ISerializable>;
     META_OBJECT(BasicSerType<Type>, BASIC_SER_TYPE_INFO<Type>, Intro)
@@ -137,7 +137,7 @@ const TestTypes BasicTestData(
 
 // clang-format on
 
-template <typename T>
+template<typename T>
 class API_BasicSerialisationTest : public ::testing::Test {
 public:
     using Type = T;

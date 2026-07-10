@@ -54,7 +54,7 @@ protected:  // IAttachmentContainer
     void RemoveAllAttachments() override;
     IObject::Ptr FindByName(const BASE_NS::string& name) const override;
 
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr GetOwner() const
     {
         return interface_pointer_cast<Interface>(owner_);
@@ -62,7 +62,7 @@ protected:  // IAttachmentContainer
 
     bool DetachFromOld(const IAttach::Ptr& me, const IObject::Ptr& attachment, bool& mine);
     bool InternalAttach(const IObject::Ptr& attachment);
-    template <typename T>
+    template<typename T>
     bool InternalAttach(const T& obj)
     {
         return InternalAttach(interface_pointer_cast<IObject>(obj));

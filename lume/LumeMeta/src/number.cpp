@@ -19,10 +19,10 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template <typename T>
+template<typename T>
 struct Type {};
 
-template <typename T>
+template<typename T>
 static Number::VariantType MapToVariant(const T& v)
 {
     if constexpr (std::numeric_limits<T>::is_integer) {
@@ -35,7 +35,7 @@ static Number::VariantType MapToVariant(const T& v)
 }
 
 struct CompType {
-    template <typename T>
+    template<typename T>
     constexpr CompType(Type<T>)
         : uid(UidFromType<T>()),
           size(sizeof(T)),

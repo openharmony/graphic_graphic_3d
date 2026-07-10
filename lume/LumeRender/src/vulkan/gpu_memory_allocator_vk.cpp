@@ -42,14 +42,12 @@
 #undef VMA_NOT_NULL
 #define VMA_NOT_NULL
 #endif
+#if defined(__OHOS_PLATFORM__)
+// VMA implementation is provided by the vma:vma component on the gn/OHOS build.
+#include "vk_mem_alloc.h"
+#else
+// CMake build compiles the VMA implementation here from the bundled 3rdparty copy.
 #define VMA_IMPLEMENTATION
-#if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
-#ifdef USE_M133_SKIA
-#include <third_party/externals/vulkanmemoryallocator/include/vk_mem_alloc.h>
-#else
-#include <third_party/vulkanmemoryallocator/include/vk_mem_alloc.h>
-#endif
-#else
 #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #endif
 #ifdef _MSC_VER
@@ -77,7 +75,7 @@
 
 using namespace BASE_NS;
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GpuBufferDesc& desc)
 {
     const uint64_t importantEngineCreationFlags =
@@ -91,7 +89,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GpuBufferDesc& desc)
     return seed;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GpuImageDesc& desc)
 {
     const uint64_t importantImageUsageFlags =

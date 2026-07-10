@@ -22,7 +22,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename T>
+template<typename T>
 using EnableIfBasicType =
     BASE_NS::enable_if_t<!IsSharedOrWeakPtr_v<T> && !BASE_NS::is_convertible_v<BASE_NS::remove_const_t<T&>, IAny&>>;
 
@@ -33,7 +33,7 @@ public:
     Number() : number_(META_NS::GetObjectRegistry().Create<IAny>(META_NS::ClassId::Number))
     {}
 
-    template <typename T, typename = EnableIfBasicType<T>>
+    template<typename T, typename = EnableIfBasicType<T>>
     Number(T t) : Number()
     {
         if constexpr (is_enum_v<T>) {
@@ -53,7 +53,7 @@ public:
         number_->CopyFrom(any);
     }
 
-    template <typename T, typename = EnableIfBasicType<T>>
+    template<typename T, typename = EnableIfBasicType<T>>
     Number& operator=(T t)
     {
         if constexpr (is_enum_v<T>) {
@@ -76,7 +76,7 @@ public:
         return *this;
     }
 
-    template <typename T>
+    template<typename T>
     T Get() const
     {
         T t;

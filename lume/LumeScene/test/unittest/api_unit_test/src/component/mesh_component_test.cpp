@@ -30,7 +30,7 @@ namespace UTest {
 
 class API_ScenePluginMeshComponentTest : public ScenePluginComponentTest<CORE3D_NS::IMeshComponentManager> {
 protected:
-    template <class T>
+    template<class T>
     void TestIMeshPropertyGetters(T* mesh)
     {
         EXPECT_TRUE(mesh->AABBMin());

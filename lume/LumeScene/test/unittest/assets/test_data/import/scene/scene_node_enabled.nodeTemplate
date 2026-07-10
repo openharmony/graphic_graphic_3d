@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"description": "minimal nodeTemplate for enabled external-node test",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "node",
+			"name": "extdisabled"
+		}
+	},
+	"primaryGroup": ""
+}

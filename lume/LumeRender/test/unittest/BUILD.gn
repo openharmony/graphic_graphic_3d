@@ -133,7 +133,7 @@ lume_rofs("lume_render_test_rofs")
   base_name = RENDER_TEST_ROFS
   script = "${LUME_CORE_PATH}/tools/CompilerAsset.sh"
   copy_path = "${target_gen_dir}/assets"
-  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles;.frag;.vert;.comp;\""
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gles;.frag;.vert;.comp;\""
   compileShader_deps = [
     ":lume_render_compile_test_shaders",
     ":lume_render_compile_vulkan_test_shaders",
@@ -432,7 +432,7 @@ ohos_unittest("lume_render_src_test") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
-      "skia:skia_canvaskit", # vk mem allocator
+      "vma:vma",
     ]
   }
   

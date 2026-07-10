@@ -1,0 +1,236 @@
+{
+  "compatibility_info": {
+  "version": "22.00",
+  "type": "rendernodegraph"
+  },
+  "nodes": [
+      {
+          "typeName": "RenderNodeDefaultCameras",
+          "nodeName": "RenderNodeCameras"
+      },
+      {
+          "typeName": "RenderNodeDefaultLights",
+          "nodeName": "RenderNodeLights"
+      },
+      {
+          "typeName": "RenderNodeDefaultMaterialObjects",
+          "nodeName": "RenderNodeDefaultMaterialObjects"
+      },
+      {
+          "typeName": "RenderNodeMorph",
+          "nodeName": "MorphNode",
+          "queue": {
+              "type": "graphics",
+              "index": 0
+          }
+      },
+      {
+          "typeName": "RenderNodeFullscreenGeneric",
+          "nodeName": "RenderNodeComposeMask",
+          "queue": {
+              "type": "graphics",
+              "index": 0
+          },
+          "renderDataStoreShaderSpecialization": {
+              "dataStoreName": "RenderDataStorePod",
+              "typeName": "ShaderSpecializationRenderPod",
+              "configurationName": "ShaderSpecializationConfig"
+          },
+          "shader": "shaders://shader/VolumeCloud.shader",
+          "renderPass": {
+              "attachments": [
+                  {
+                      "loadOp": "dont_care",
+                      "storeOp": "store",
+                      "name": "CORE_DEFAULT_BACKBUFFER"
+                  }
+              ],
+              "subpassIndex": 0,
+              "subpassCount": 1,
+              "subpass": {
+                  "colorAttachmentIndices": [ 0 ]
+              }
+          },
+          "resources": {
+              "buffers": [
+                  {
+                      "set": 0,
+                      "binding": 0,
+                      "optionalOffset": 0,
+                      "resourceLocation": "from_named_render_node_output",
+                      "resourceIndex": 0,
+                      "nodeName": "RenderNodeCameras"
+                  },
+                  {
+                      "set": 0,
+                      "binding": 1,
+                      "optionalOffset": 0,
+                      "name": "INPUT_BUFFER"
+                  },
+                  {
+                      "set": 0,
+                      "binding": 2,
+                      "optionalOffset": 0,
+                      "name": "RESOLUTION_BUFFER"
+                  }
+              ],
+              "samplers": [
+                  {
+                      "set": 1,
+                      "binding": 0,
+                      "name": "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT"
+                  }
+              ],
+              "images": [
+                  {
+                      "set": 1,
+                      "binding": 1,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_0"
+                  },
+                  {
+                      "set": 1,
+                      "binding": 2,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_1"
+                  },
+                  {
+                      "set": 1,
+                      "binding": 4,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_2"
+                  },
+                  {
+                      "set": 1,
+                      "binding": 6,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_3"
+                  },
+                  {
+                      "set": 1,
+                      "binding": 7,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_4"
+                  },
+                  {
+                      "set": 1,
+                      "binding": 8,
+                      "optionalOffset": 0,
+                      "name": "IMAGE_5"
+                  }
+              ]
+          }
+      },
+
+      {
+          "typeName": "RenderNodeDefaultMaterialRenderSlot",
+          "nodeName": "RenderNodePbrRenderSlotOpaque",
+          "renderDataStore": {
+              "dataStoreName": "RenderDataStorePod",
+              "typeName": "RenderDataStorePod",
+              "configurationName": "PostProcessCore"
+          },
+          "queue": {
+              "type": "graphics",
+              "index": 0
+          },
+          "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
+          "renderSlotSortType": "front_to_back",
+          "renderSlotCullType": "view_frustum_cull",
+          "nodeFlags": 1,
+          "renderPass": {
+              "attachments": [
+                  {
+                      "loadOp": "clear",
+                      "storeOp": "dont_care",
+                      "clearDepth": [ 1.0, 0 ],
+                      "name": "CORE_DEFAULT_BACKBUFFER_DEPTH"
+                  },
+                  {
+                      "loadOp": "load",
+                      "storeOp": "store",
+                      "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                      "name": "CORE_DEFAULT_BACKBUFFER"
+                  }
+              ],
+              "subpassIndex": 0,
+              "subpassCount": 3,
+              "subpass": {
+                  "depthAttachmentIndex": 0,
+                  "colorAttachmentIndices": [ 1 ]
+              }
+          }
+      },
+      {
+          "typeName": "RenderNodeDefaultEnv",
+          "nodeName": "RenderNodeFullscreenEnv",
+          "renderDataStore": {
+              "dataStoreName": "RenderDataStorePod",
+              "typeName": "RenderDataStorePod",
+              "configurationName": "PostProcessCore"
+          },
+          "queue": {
+              "type": "graphics",
+              "index": 0
+          },
+          "nodeFlags": 1,
+          "renderPass": {
+              "attachments": [
+                  {
+                      "loadOp": "load",
+                      "storeOp": "dont_care",
+                      "name": "CORE_DEFAULT_BACKBUFFER_DEPTH"
+                  },
+                  {
+                      "loadOp": "load",
+                      "storeOp": "store",
+                      "name": "CORE_DEFAULT_BACKBUFFER"
+                  }
+              ],
+              "subpassIndex": 1,
+              "subpassCount": 3,
+              "subpass": {
+                  "depthAttachmentIndex": 0,
+                  "colorAttachmentIndices": [ 1 ]
+              }
+          }
+      },
+      {
+          "typeName": "RenderNodeDefaultMaterialRenderSlot",
+          "nodeName": "RenderNodePbrRenderSlotTranslucent",
+          "renderDataStore": {
+              "dataStoreName": "RenderDataStorePod",
+              "typeName": "RenderDataStorePod",
+              "configurationName": "PostProcessCore"
+          },
+          "queue": {
+              "type": "graphics",
+              "index": 0
+          },
+          "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
+          "renderSlotSortType": "back_to_front",
+          "renderSlotCullType": "view_frustum_cull",
+          "nodeFlags": 1,
+          "renderPass": {
+              "attachments": [
+                  {
+                      "loadOp": "load",
+                      "storeOp": "dont_care",
+                      "name": "CORE_DEFAULT_BACKBUFFER_DEPTH"
+                  },
+                  {
+                      "loadOp": "load",
+                      "storeOp": "store",
+                      "name": "CORE_DEFAULT_BACKBUFFER"
+                  }
+              ],
+              "subpassIndex": 2,
+              "subpassCount": 3,
+              "subpass": {
+                  "depthAttachmentIndex": 0,
+                  "colorAttachmentIndices": [ 1 ]
+              }
+          }
+      }
+  ]
+}

@@ -8,7 +8,6 @@
             "children": [
                 {
                     "type": "external",
-                    "name": "hostX",
                     "source": { "type": "nodeTemplate", "url": "template_with_index_anim.nodeTemplate" },
                     "resourceGroup": "templAnimGrp"
                 }

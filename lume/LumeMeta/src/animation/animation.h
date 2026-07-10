@@ -35,7 +35,7 @@ namespace Internal {
 /**
  * @brief A base class which can be used by generic animation implementations.
  */
-template <class BaseAnimationInterface>
+template<class BaseAnimationInterface>
 class BaseAnimationFwd
     : public IntroduceInterfaces<DerivedFromTemplate, MetaObject, BaseAnimationInterface, INotifyOnChange, IAttachment,
           IContainable, IMutableContainable, IAnimationInternal, Resource> {
@@ -198,7 +198,7 @@ private:
     IObject::WeakPtr parent_;
 };
 
-template <class BaseAnimationInterface>
+template<class BaseAnimationInterface>
 class BaseStartableAnimationFwd
     : public IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>, IStartableAnimation> {
     using Super = IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>, IStartableAnimation>;
@@ -234,7 +234,7 @@ protected:  // IStartableAnimation
 /**
  * @brief A base class which can be used by animation container implementations.
  */
-template <class BaseAnimationInterface>
+template<class BaseAnimationInterface>
 class BaseAnimationContainerFwd : public IntroduceInterfaces<BaseStartableAnimationFwd<BaseAnimationInterface>,
                                       IContainer, ILockable, IIterable, IImportFinalize> {
     static_assert(BASE_NS::is_convertible_v<BaseAnimationInterface*, IStaggeredAnimation*>,
@@ -376,7 +376,7 @@ protected:
 /**
  * @brief A base class which can be used by property animation implementations.
  */
-template <class BaseAnimationInterface>
+template<class BaseAnimationInterface>
 class BasePropertyAnimationFwd : public IntroduceInterfaces<BaseAnimationFwd<BaseAnimationInterface>,
                                      IPropertyAnimation, IModifier, IImportFinalize> {
     static_assert(BASE_NS::is_convertible_v<BaseAnimationInterface*, ITimedAnimation*>,
@@ -475,7 +475,7 @@ private:
 /**
  * @brief A base class which can be used by property animation implementations.
  */
-template <class BaseAnimationInterface>
+template<class BaseAnimationInterface>
 class PropertyAnimationFwd : public BasePropertyAnimationFwd<BaseAnimationInterface> {
     using Super = BasePropertyAnimationFwd<BaseAnimationInterface>;
 

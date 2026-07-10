@@ -46,7 +46,7 @@ protected:
         ASSERT_NE(t1_, nullptr);
     }
 
-    template <class A, class T>
+    template<class A, class T>
     void SetProperties(A& target, const IProperty::Ptr& property, T from, T to, TimeSpan duration)
     {
         target.SetProperty(property);

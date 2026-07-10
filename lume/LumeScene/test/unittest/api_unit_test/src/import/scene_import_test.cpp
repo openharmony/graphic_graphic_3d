@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+#include <scene/ext/intf_internal_scene.h>
+#include <scene/ext/node_fwd.h>
 #include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_camera.h>
 #include <scene/interface/intf_environment.h>
@@ -56,7 +58,7 @@ public:
         ASSERT_TRUE(imp->Initialize(context, {}));
     }
 
-    template <typename Inter>
+    template<typename Inter>
     typename Inter::Ptr Load(BASE_NS::string_view path);
     IScene::Ptr LoadTestScene(BASE_NS::string_view path);
 
@@ -78,7 +80,7 @@ static size_t GetNodeCount(const IScene::Ptr& s)
     return GetNodeCount(s->GetRootNode().GetResult());
 }
 
-template <typename Inter>
+template<typename Inter>
 typename Inter::Ptr API_SceneImportTest::Load(BASE_NS::string_view path)
 {
     auto res = imp->Import(path, {});
@@ -452,6 +454,87 @@ UNIT_TEST_F(API_SceneImportTest, ImportScene11, testing::ext::TestSize.Level1)
 }
 
 /**
+ * @tc.name: ImportNodeLayerMask
+ * @tc.desc: Verifies node-level layerMask is parsed from JSON and applied via ILayer
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportNodeLayerMask, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/scene/scene_node_layer_mask.json");
+    ASSERT_TRUE(scene);
+
+    auto tagged = interface_pointer_cast<ILayer>(scene->FindNode("//tagged").GetResult());
+    ASSERT_TRUE(tagged);
+    EXPECT_EQ(META_NS::GetValue(tagged->LayerMask()), uint64_t(0x12345678));
+
+    auto all = interface_pointer_cast<ILayer>(scene->FindNode("//all").GetResult());
+    ASSERT_TRUE(all);
+    EXPECT_EQ(META_NS::GetValue(all->LayerMask()), ALL_LAYER_MASK);
+
+    auto untagged = interface_pointer_cast<ILayer>(scene->FindNode("//untagged").GetResult());
+    ASSERT_TRUE(untagged);
+    EXPECT_EQ(META_NS::GetValue(untagged->LayerMask()), DEFAULT_LAYER_MASK);
+}
+
+/**
+ * @tc.name: ImportNodeLayerMaskAllNodeTypes
+ * @tc.desc: Every supported child node type honors a JSON-declared layerMask
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportNodeLayerMaskAllNodeTypes, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/scene/scene_layer_mask_all_types.json");
+    ASSERT_TRUE(scene);
+
+    auto root = interface_pointer_cast<ILayer>(scene->GetRootNode().GetResult());
+    ASSERT_TRUE(root);
+    EXPECT_EQ(META_NS::GetValue(root->LayerMask()), uint64_t(1));
+
+    const std::pair<const char*, uint64_t> expected[] = {
+        {"//plain", 2},
+        {"//light", 4},
+        {"//camera", 8},
+        {"//mesh", 16},
+        {"//ext", 32},
+        {"//probes", 64},
+        {"//extroot", 128},
+    };
+    for (auto&& [path, mask] : expected) {
+        auto layer = interface_pointer_cast<ILayer>(scene->FindNode(path).GetResult());
+        ASSERT_TRUE(layer) << "node not found or not ILayer: " << path;
+        EXPECT_EQ(META_NS::GetValue(layer->LayerMask()), mask) << "mismatched mask for " << path;
+    }
+}
+
+/**
+ * @tc.name: ImportNodeEnabled
+ * @tc.desc: Verifies node-level "enabled" is parsed from JSON and applied to INode::Enabled,
+ *           including the external-node code path which doesn't go through ImportNodeCommon.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportNodeEnabled, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/scene/scene_node_enabled.json");
+    ASSERT_TRUE(scene);
+
+    auto on = scene->FindNode("//on").GetResult();
+    ASSERT_TRUE(on);
+    EXPECT_TRUE(META_NS::GetValue(on->Enabled()));
+
+    auto off = scene->FindNode("//off").GetResult();
+    ASSERT_TRUE(off);
+    EXPECT_FALSE(META_NS::GetValue(off->Enabled()));
+
+    auto def = scene->FindNode("//default").GetResult();
+    ASSERT_TRUE(def);
+    EXPECT_TRUE(META_NS::GetValue(def->Enabled()));
+
+    auto ext = scene->FindNode("//extdisabled").GetResult();
+    ASSERT_TRUE(ext);
+    EXPECT_FALSE(META_NS::GetValue(ext->Enabled()));
+}
+
+/**
  * @tc.name: ImportScene13
  * @tc.desc: Tests for ImportScene [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -608,7 +691,7 @@ UNIT_TEST_F(API_SceneImportTest, ImportScene20, testing::ext::TestSize.Level1)
 
 /**
  * @tc.name: ImportScene21
- * @tc.desc: Tests for ImportScene with camera inline postProcess
+ * @tc.desc: Tests for ImportScene with camera postProcess resourceId (with tonemap+bloom)
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_SceneImportTest, ImportScene21, testing::ext::TestSize.Level1)
@@ -634,7 +717,7 @@ UNIT_TEST_F(API_SceneImportTest, ImportScene21, testing::ext::TestSize.Level1)
 
 /**
  * @tc.name: ImportScene22
- * @tc.desc: Tests for ImportScene with camera postProcess objectRef
+ * @tc.desc: Tests for ImportScene with camera postProcess resourceId (with tonemap+vignette)
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_SceneImportTest, ImportScene22, testing::ext::TestSize.Level1)
@@ -1218,6 +1301,87 @@ UNIT_TEST_F(API_SceneImportTest, ImportExternalNodeMaterialOverride, testing::ex
 }
 
 /**
+ * @tc.name: ImportExternalNodeTemplateMeshMaterialOverride
+ * @tc.desc: External node sourced from a JSON nodeTemplate that carries a mesh; the loading
+ *           scene sets that mesh's submesh material through the external node's overrides array.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExternalNodeTemplateMeshMaterialOverride, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/node_template/scene_ext_mesh_mat_override.json");
+    ASSERT_TRUE(scene);
+
+    // External entry has no "name" field, so the template's own root node ("meshNode") is
+    // adopted as-is and sits directly under the scene root.
+    auto mesh = scene->FindNode<IMesh>("//meshNode").GetResult();
+    ASSERT_TRUE(mesh);
+
+    auto subs = mesh->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto mat = subs[0]->Material()->GetValue();
+    ASSERT_TRUE(mat);
+    EXPECT_FLOAT_EQ(mat->AlphaCutoff()->GetValue(), 0.75f);
+
+    // The override must set the submesh to the *specific* "overrideMat" resource — not a
+    // coincidentally matching default. Compare pointer identity.
+    auto rman = GetResourceManager(scene);
+    ASSERT_TRUE(rman);
+    auto overrideMat = interface_pointer_cast<IMaterial>(rman->GetResource({"overrideMat", scene}));
+    ASSERT_TRUE(overrideMat);
+    EXPECT_EQ(mat, overrideMat);
+}
+
+/**
+ * @tc.name: ImportExternalNodeTemplateRenamesRoot
+ * @tc.desc: When an external node sourced from a nodeTemplate provides a "name", that name
+ *           replaces the template's own root-node name on instantiation.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExternalNodeTemplateRenamesRoot, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/node_template/scene_ext_rename_root.json");
+    ASSERT_TRUE(scene);
+
+    auto renamed = scene->FindNode<IMesh>("//myRenamedRoot").GetResult();
+    ASSERT_TRUE(renamed);
+
+    // The template-authored name must no longer be findable since the root was renamed.
+    auto original = scene->FindNode("//meshNode").GetResult();
+    EXPECT_FALSE(original);
+}
+
+/**
+ * @tc.name: ImportExternalNodeTemplateMeshMaterialOverrideByResourceId
+ * @tc.desc: A submesh material override whose value is a resourceId-typed object resolves the
+ *           id through the resource manager and sets the live material (same outcome as the
+ *           objectRef form).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(
+    API_SceneImportTest, ImportExternalNodeTemplateMeshMaterialOverrideByResourceId, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadTestScene("test://import/node_template/scene_ext_mesh_mat_override_resid.json");
+    ASSERT_TRUE(scene);
+
+    auto mesh = scene->FindNode<IMesh>("//meshNode").GetResult();
+    ASSERT_TRUE(mesh);
+
+    auto subs = mesh->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+
+    auto mat = subs[0]->Material()->GetValue();
+    ASSERT_TRUE(mat);
+    EXPECT_FLOAT_EQ(mat->AlphaCutoff()->GetValue(), 0.75f);
+
+    auto rman = GetResourceManager(scene);
+    ASSERT_TRUE(rman);
+    auto overrideMat = interface_pointer_cast<IMaterial>(rman->GetResource({"overrideMat", scene}));
+    ASSERT_TRUE(overrideMat);
+    EXPECT_EQ(mat, overrideMat);
+}
+
+/**
  * @tc.name: ImportExternalNodeComponentGltf
  * @tc.desc: Component added to a child node of an external gltf hierarchy via path
  * @tc.type: FUNC
@@ -1287,6 +1451,193 @@ UNIT_TEST_F(API_SceneImportTest, ImportExtensionNodeUnknownNodeUid, testing::ext
 
 namespace {
 
+// A modifiable sub-object reached through a read-only object property.
+class IExtConfig : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IExtConfig, "543cc147-f0d5-4b3c-99d8-4cf64f3127e0")
+public:
+    META_PROPERTY(int, Setting)
+};
+
+META_REGISTER_CLASS(ExtConfig, "f63c754c-d8c7-4dcc-8577-132452322bc2", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+class ExtConfig : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IExtConfig> {
+    META_OBJECT(ExtConfig, ClassId::ExtConfig, IntroduceInterfaces)
+public:
+    META_BEGIN_STATIC_DATA()
+    META_STATIC_PROPERTY_DATA(IExtConfig, int, Setting)
+    META_END_STATIC_DATA()
+
+    META_IMPLEMENT_PROPERTY(int, Setting)
+};
+
+// An extension node type whose read-only Config property points to a modifiable object,
+// mirroring the IScene::RenderConfiguration pattern.
+class IExtNodeConfig : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IExtNodeConfig, "8e63fb8e-6e33-4c9f-a477-d5a1bd29f32f")
+public:
+    META_READONLY_PROPERTY(META_NS::IObject::Ptr, Config)
+};
+
+META_REGISTER_CLASS(ExtNodeWithConfig, "cc1810e9-cc75-4c4e-871f-9d035a2ab7b2", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+class ExtNodeWithConfig : public META_NS::IntroduceInterfaces<NodeFwd, IExtNodeConfig> {
+    META_OBJECT(ExtNodeWithConfig, ClassId::ExtNodeWithConfig, IntroduceInterfaces)
+public:
+    META_BEGIN_STATIC_DATA()
+    META_STATIC_PROPERTY_DATA(IExtNodeConfig, META_NS::IObject::Ptr, Config)
+    META_END_STATIC_DATA()
+
+    META_IMPLEMENT_READONLY_PROPERTY(META_NS::IObject::Ptr, Config)
+
+    bool Build(const META_NS::IMetadata::Ptr& d) override
+    {
+        if (!Super::Build(d)) {
+            return false;
+        }
+        Config()->SetValue(META_NS::GetObjectRegistry().Create(ClassId::ExtConfig));
+        return true;
+    }
+};
+
+}  // namespace
+
+/**
+ * @tc.name: ImportExtensionNodeReadOnlyProperty
+ * @tc.desc: A property entry targeting an extension node's read-only object property recurses
+ *           into the object it already points to and imports the nested properties in place.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExtensionNodeReadOnlyProperty, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<ExtConfig>();
+    META_NS::RegisterObjectType<ExtNodeWithConfig>();
+
+    auto scene = LoadTestScene("test://import/scene/scene_extension_node_readonly.json");
+    ASSERT_TRUE(scene);
+
+    auto ext = interface_pointer_cast<IExtNodeConfig>(scene->FindNode("//ext").GetResult());
+    ASSERT_TRUE(ext);
+
+    auto config = interface_pointer_cast<IExtConfig>(META_NS::GetValue(ext->Config()));
+    ASSERT_TRUE(config);
+    EXPECT_EQ(META_NS::GetValue(config->Setting()), 42);
+
+    META_NS::UnregisterObjectType<ExtNodeWithConfig>();
+    META_NS::UnregisterObjectType<ExtConfig>();
+}
+
+/**
+ * @tc.name: ImportExtensionNodeReadOnlyPropertyDocumentedUidOk
+ * @tc.desc: An "objectUid" in the read-only modify-in-place site is accepted as documentation
+ *           when it matches the live object's class id.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExtensionNodeReadOnlyPropertyDocumentedUidOk, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<ExtConfig>();
+    META_NS::RegisterObjectType<ExtNodeWithConfig>();
+
+    auto scene = LoadTestScene("test://import/scene/scene_extension_node_readonly_uid_ok.json");
+    ASSERT_TRUE(scene);
+
+    auto ext = interface_pointer_cast<IExtNodeConfig>(scene->FindNode("//ext").GetResult());
+    ASSERT_TRUE(ext);
+
+    auto config = interface_pointer_cast<IExtConfig>(META_NS::GetValue(ext->Config()));
+    ASSERT_TRUE(config);
+    EXPECT_EQ(META_NS::GetValue(config->Setting()), 42);
+
+    META_NS::UnregisterObjectType<ExtNodeWithConfig>();
+    META_NS::UnregisterObjectType<ExtConfig>();
+}
+
+/**
+ * @tc.name: ImportExtensionNodeReadOnlyPropertyDocumentedUidMismatch
+ * @tc.desc: A documented "objectUid" that doesn't match the live object's class id is rejected.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(
+    API_SceneImportTest, ImportExtensionNodeReadOnlyPropertyDocumentedUidMismatch, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<ExtConfig>();
+    META_NS::RegisterObjectType<ExtNodeWithConfig>();
+
+    auto res = imp->Import("test://import/scene/scene_extension_node_readonly_uid_mismatch.json", {});
+    EXPECT_FALSE(res);
+    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "does not match live object class");
+
+    META_NS::UnregisterObjectType<ExtNodeWithConfig>();
+    META_NS::UnregisterObjectType<ExtConfig>();
+}
+
+/**
+ * @tc.name: ImportExtensionNodeReadOnlyPropertyOverride
+ * @tc.desc: An external-node 'overrides' entry targeting a read-only object property by path
+ *           recurses into the live object and applies the nested 'properties'.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExtensionNodeReadOnlyPropertyOverride, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<ExtConfig>();
+    META_NS::RegisterObjectType<ExtNodeWithConfig>();
+
+    auto scene = LoadTestScene("test://import/scene/scene_extension_node_readonly_override.json");
+    ASSERT_TRUE(scene);
+
+    auto ext = interface_pointer_cast<IExtNodeConfig>(scene->FindNode("//ext").GetResult());
+    ASSERT_TRUE(ext);
+
+    auto config = interface_pointer_cast<IExtConfig>(META_NS::GetValue(ext->Config()));
+    ASSERT_TRUE(config);
+    EXPECT_EQ(META_NS::GetValue(config->Setting()), 77);
+
+    META_NS::UnregisterObjectType<ExtNodeWithConfig>();
+    META_NS::UnregisterObjectType<ExtConfig>();
+}
+
+namespace {
+
+// Extension node with a read-only builtin (vec3) property — used to prove that read-only
+// builtins are rejected (there are no sub-properties to recurse into).
+class IExtNodeReadOnlyBuiltin : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, IExtNodeReadOnlyBuiltin, "8c5d6efa-2e63-4d4e-9d24-04a3b2f1a002")
+public:
+    META_READONLY_PROPERTY(BASE_NS::Math::Vec3, Origin)
+};
+
+META_REGISTER_CLASS(
+    ExtNodeWithReadOnlyBuiltin, "cb14c0a3-3c2a-43a6-9f7b-3d3c7c2c7301", META_NS::ObjectCategoryBits::NO_CATEGORY)
+
+class ExtNodeWithReadOnlyBuiltin : public META_NS::IntroduceInterfaces<NodeFwd, IExtNodeReadOnlyBuiltin> {
+    META_OBJECT(ExtNodeWithReadOnlyBuiltin, ClassId::ExtNodeWithReadOnlyBuiltin, IntroduceInterfaces)
+public:
+    META_BEGIN_STATIC_DATA()
+    META_STATIC_PROPERTY_DATA(IExtNodeReadOnlyBuiltin, BASE_NS::Math::Vec3, Origin)
+    META_END_STATIC_DATA()
+
+    META_IMPLEMENT_READONLY_PROPERTY(BASE_NS::Math::Vec3, Origin)
+};
+
+}  // namespace
+
+/**
+ * @tc.name: ImportExtensionNodeReadOnlyBuiltinRejected
+ * @tc.desc: A read-only builtin (scalar) property cannot be modified through import — diagnostic.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportExtensionNodeReadOnlyBuiltinRejected, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<ExtNodeWithReadOnlyBuiltin>();
+
+    auto res = imp->Import("test://import/scene/scene_extension_node_readonly_builtin.json", {});
+    EXPECT_FALSE(res);
+    EXPECT_DIAGNOSTIC_CONTAINS(res.error, "non-object type");
+
+    META_NS::UnregisterObjectType<ExtNodeWithReadOnlyBuiltin>();
+}
+
+namespace {
+
 class IBuiltinTypesAttachment : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, IBuiltinTypesAttachment, "e7a1c3b5-4d2f-48e6-9f0a-1b3c5d7e9f01")
 public:
@@ -1294,13 +1645,20 @@ public:
     META_PROPERTY(BASE_NS::Color, Color)
     META_PROPERTY(BASE_NS::Math::Quat, Quat)
     META_PROPERTY(BASE_NS::Math::UVec2, UVec2)
+    META_PROPERTY(BASE_NS::Math::UVec3, UVec3)
+    META_PROPERTY(BASE_NS::Math::UVec4, UVec4)
+    META_PROPERTY(BASE_NS::Math::IVec2, IVec2)
+    META_PROPERTY(BASE_NS::Math::IVec3, IVec3)
+    META_PROPERTY(BASE_NS::Math::IVec4, IVec4)
     META_PROPERTY(BASE_NS::Math::Mat4X4, Mat4x4)
+    META_PROPERTY(META_NS::TimeSpan, Duration)
 };
 
 META_REGISTER_CLASS(
     BuiltinTypesAttachment, "e7a1c3b5-4d2f-48e6-9f0a-1b3c5d7e9f01", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
-class BuiltinTypesAttachment : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IBuiltinTypesAttachment> {
+class BuiltinTypesAttachment
+    : public META_NS::IntroduceInterfaces<META_NS::MetaObject, IBuiltinTypesAttachment, META_NS::INamed> {
     META_OBJECT(BuiltinTypesAttachment, ClassId::BuiltinTypesAttachment, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
@@ -1308,14 +1666,33 @@ public:
     META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Color, Color)
     META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::Quat, Quat)
     META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::UVec2, UVec2)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::UVec3, UVec3)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::UVec4, UVec4)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::IVec2, IVec2)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::IVec3, IVec3)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::IVec4, IVec4)
     META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, BASE_NS::Math::Mat4X4, Mat4x4)
+    META_STATIC_PROPERTY_DATA(IBuiltinTypesAttachment, META_NS::TimeSpan, Duration)
+    META_STATIC_PROPERTY_DATA(META_NS::INamed, BASE_NS::string, Name)
     META_END_STATIC_DATA()
 
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Vec4, Vec4)
     META_IMPLEMENT_PROPERTY(BASE_NS::Color, Color)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Quat, Quat)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec2, UVec2)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec3, UVec3)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::UVec4, UVec4)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::IVec2, IVec2)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::IVec3, IVec3)
+    META_IMPLEMENT_PROPERTY(BASE_NS::Math::IVec4, IVec4)
     META_IMPLEMENT_PROPERTY(BASE_NS::Math::Mat4X4, Mat4x4)
+    META_IMPLEMENT_PROPERTY(META_NS::TimeSpan, Duration)
+    META_IMPLEMENT_PROPERTY(BASE_NS::string, Name)
+
+    BASE_NS::string GetName() const override
+    {
+        return META_NS::GetValue(Name());
+    }
 };
 }  // namespace
 
@@ -1338,6 +1715,12 @@ UNIT_TEST_F(API_SceneImportTest, ImportSceneBuiltinTypes, testing::ext::TestSize
     EXPECT_EQ(obj->Color()->GetValue(), BASE_NS::Color(0.1f, 0.2f, 0.3f, 1.0f));
     EXPECT_EQ(obj->Quat()->GetValue(), BASE_NS::Math::Quat(0, 0, 0, 1));
     EXPECT_EQ(obj->UVec2()->GetValue(), BASE_NS::Math::UVec2(100, 200));
+    EXPECT_EQ(obj->UVec3()->GetValue(), BASE_NS::Math::UVec3(10, 20, 30));
+    EXPECT_EQ(obj->UVec4()->GetValue(), BASE_NS::Math::UVec4(11, 22, 33, 44));
+    EXPECT_EQ(obj->IVec2()->GetValue(), BASE_NS::Math::IVec2(-1, 2));
+    EXPECT_EQ(obj->IVec3()->GetValue(), BASE_NS::Math::IVec3(-1, 2, -3));
+    EXPECT_EQ(obj->IVec4()->GetValue(), BASE_NS::Math::IVec4(-1, 2, -3, 4));
+    EXPECT_EQ(obj->Duration()->GetValue(), META_NS::TimeSpan::Milliseconds(1500));
 
     BASE_NS::Math::Mat4X4 expectedMat{};
     expectedMat[0][0] = 2.f;
@@ -1345,6 +1728,31 @@ UNIT_TEST_F(API_SceneImportTest, ImportSceneBuiltinTypes, testing::ext::TestSize
     expectedMat[2][2] = 4.f;
     expectedMat[3][3] = 1.f;
     EXPECT_EQ(obj->Mat4x4()->GetValue(), expectedMat);
+    META_NS::UnregisterObjectType<BuiltinTypesAttachment>();
+}
+
+/**
+ * @tc.name: ImportSceneBuiltinTypesExternalOverride
+ * @tc.desc: Verifies that the new builtin types (UVec3, UVec4, IVec2, IVec3, IVec4, TimeSpan)
+ *          can be supplied as typed-value overrides on an external node.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportSceneBuiltinTypesExternalOverride, testing::ext::TestSize.Level1)
+{
+    META_NS::RegisterObjectType<BuiltinTypesAttachment>();
+    auto scene = LoadTestScene("test://import/scene/scene_builtin_types_ext_override.json");
+    ASSERT_TRUE(scene);
+    auto node = scene->FindNode("//builtinHost").GetResult();
+    ASSERT_TRUE(node);
+    auto atts = interface_cast<META_NS::IAttach>(node)->GetAttachments<IBuiltinTypesAttachment>();
+    ASSERT_EQ(atts.size(), 1);
+    auto obj = atts[0];
+    EXPECT_EQ(obj->UVec3()->GetValue(), BASE_NS::Math::UVec3(7, 8, 9));
+    EXPECT_EQ(obj->UVec4()->GetValue(), BASE_NS::Math::UVec4(1, 2, 3, 4));
+    EXPECT_EQ(obj->IVec2()->GetValue(), BASE_NS::Math::IVec2(-5, 6));
+    EXPECT_EQ(obj->IVec3()->GetValue(), BASE_NS::Math::IVec3(-5, 6, -7));
+    EXPECT_EQ(obj->IVec4()->GetValue(), BASE_NS::Math::IVec4(-5, 6, -7, 8));
+    EXPECT_EQ(obj->Duration()->GetValue(), META_NS::TimeSpan::Milliseconds(2500));
     META_NS::UnregisterObjectType<BuiltinTypesAttachment>();
 }
 
@@ -1436,6 +1844,33 @@ UNIT_TEST_F(API_SceneImportTest, ImportStructuralUnknownType, testing::ext::Test
     EXPECT_FALSE(res);
     EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Requested unknown object type");
     EXPECT_DIAGNOSTIC_CONTAINS(res.error, "thingThatDoesNotExist");
+}
+
+/**
+ * @tc.name: ImportSceneUsesStaticConfigOptions
+ * @tc.desc: SceneOptions passed via ImportOptions to Importer::Initialize must be applied
+ *           when the JSON importer creates the scene.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneImportTest, ImportSceneUsesStaticConfigOptions, testing::ext::TestSize.Level1)
+{
+    auto imp2 = META_NS::GetObjectRegistry().Create<SCENE_IMP_NS::IImporter>(SCENE_IMP_NS::ClassId::Importer);
+    ASSERT_TRUE(imp2);
+    SCENE_IMP_NS::ImportOptions opts;
+    opts.scene.enableStartables = false;
+    opts.scene.createResources = false;
+    ASSERT_TRUE(imp2->Initialize(context, opts));
+
+    auto res = imp2->Import("test://import/scene/scene0.json", {});
+    ASSERT_TRUE(res) << PrintErrors(res.error).c_str();
+    auto scene = interface_pointer_cast<IScene>(res.object);
+    ASSERT_TRUE(scene);
+
+    auto internal = scene->GetInternalScene();
+    ASSERT_TRUE(internal);
+    const auto applied = internal->GetOptions();
+    EXPECT_FALSE(applied.enableStartables);
+    EXPECT_FALSE(applied.createResources);
 }
 
 }  // namespace UTest

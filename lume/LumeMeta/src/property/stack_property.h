@@ -94,7 +94,7 @@ protected:
     void CleanUp();
     void SubscribePendingCallbacks();
 
-    template <typename Vec>
+    template<typename Vec>
     bool ProcessResetables(Vec& vec);
 
     ObjectId GetClassId() const override

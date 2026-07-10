@@ -28,7 +28,7 @@ class IObject;
 
 // NOLINTBEGIN(readability-identifier-naming)
 /** Is type IObject::Ptr */
-template <class Type>
+template<class Type>
 constexpr bool IsIObjectPtr_v = BASE_NS::is_same_v<BASE_NS::remove_const_t<Type>, BASE_NS::shared_ptr<IObject>>;
 // NOLINTEND(readability-identifier-naming)
 

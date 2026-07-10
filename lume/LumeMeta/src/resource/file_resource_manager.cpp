@@ -26,8 +26,10 @@
 #include <base/util/base64_encode.h>
 #include <core/io/intf_filesystem_api.h>
 
+#include <meta/api/util.h>
 #include <meta/base/memfile.h>
 #include <meta/ext/minimal_object.h>
+#include <meta/interface/intf_named.h>
 #include <meta/interface/resource/intf_resource.h>
 
 #include "file_resource_manager.h"
@@ -603,9 +605,23 @@ namespace {
 struct ResourceLoadInfo {
     CORE_NS::IResourceType::ConstPtr type;
     BASE_NS::string path;
+    BASE_NS::string name;
     CORE_NS::IResourceOptions::Ptr options;
     CORE_NS::IFileManager::Ptr fileManager;
 };
+
+// If the resource record carries a non-empty name (e.g. set from a resource
+// index entry), copy it onto the loaded resource's INamed::Name so the index
+// name takes precedence over any options/template-derived name.
+void ApplyName(const BASE_NS::string& name, const CORE_NS::IResource::Ptr& res)
+{
+    if (name.empty() || !res) {
+        return;
+    }
+    if (auto named = interface_cast<META_NS::INamed>(res)) {
+        META_NS::SetValue(named->Name(), name);
+    }
+}
 
 CORE_NS::IResource::Ptr LoadResourceWithType(
     const CORE_NS::ResourceIdContext& ric, const ResourceLoadInfo& info, const CORE_NS::IResourceManager::Ptr& self)
@@ -645,6 +661,7 @@ CORE_NS::IResource::Ptr FileResourceManager::ConstructResource(const CORE_NS::Re
             if (tit != types_.end()) {
                 info.type = tit->second;
                 info.path = res->path;
+                info.name = res->name;
                 info.options = res->options;
                 info.fileManager = fileManager_;
             }
@@ -654,6 +671,7 @@ CORE_NS::IResource::Ptr FileResourceManager::ConstructResource(const CORE_NS::Re
     CORE_NS::IResource::Ptr resObj;
     if (res && info.type) {
         resObj = LoadResourceWithType(ric, info, GetSelf<IResourceManager>());
+        ApplyName(info.name, resObj);
     }
 
     if (res && resObj) {
@@ -746,13 +764,14 @@ public:
     ResourceContextPtr context;
 };
 
-void FileResourceManager::UpdateOptionsData(
-    const BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ResourceData>>& data,
-    const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection, const IObject::Ptr& depsContext)
+void FileResourceManager::CollectMatching(
+    const BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ResourceData>>& group,
+    const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection,
+    BASE_NS::vector<BASE_NS::shared_ptr<ResourceData>>& matched) const
 {
-    for (auto&& v : data) {
+    for (auto&& v : group) {
         if (IsResourceMatch(selection, v.second->id)) {
-            UpdateOptions(*v.second, depsContext);
+            matched.push_back(v.second);
         }
     }
 }
@@ -762,28 +781,42 @@ BASE_NS::vector<CORE_NS::ResourceIdContext> FileResourceManager::UpdateOptionsDa
 {
     DependencyCollector deps{context};
     IObject::Ptr depsContext(&deps, [](auto) {});
-    std::unique_lock lock{mutex_};
-    for (auto&& v : selection) {
+    BASE_NS::vector<BASE_NS::shared_ptr<ResourceData>> matched;
+    {
+        std::unique_lock lock{mutex_};
         for (auto&& g : resources_) {
             if (IsCorrectContext(g.first, context)) {
-                UpdateOptionsData(g.second, selection, depsContext);
+                CollectMatching(g.second, selection, matched);
             }
         }
+    }
+    for (auto&& r : matched) {
+        UpdateOptions(*r, depsContext);
     }
     return deps.resources;
 }
 BASE_NS::vector<CORE_NS::ResourceIdContext> FileResourceManager::UpdateOptionsData(
     const BASE_NS::array_view<const CORE_NS::ResourceIdContext>& res)
 {
-    BASE_NS::vector<CORE_NS::ResourceIdContext> list;
-    std::unique_lock lock{mutex_};
-    for (auto&& v : res) {
-        if (auto r = FindResource(v)) {
-            DependencyCollector deps{v.context.lock()};
-            IObject::Ptr depsContext(&deps, [](auto) {});
-            UpdateOptions(*r, depsContext);
-            list.insert(list.end(), deps.resources.begin(), deps.resources.end());
+    struct Matched {
+        BASE_NS::shared_ptr<ResourceData> data;
+        ResourceContextPtr context;
+    };
+    BASE_NS::vector<Matched> matched;
+    {
+        std::unique_lock lock{mutex_};
+        for (auto&& v : res) {
+            if (auto r = FindResource(v)) {
+                matched.push_back({r, v.context.lock()});
+            }
         }
+    }
+    BASE_NS::vector<CORE_NS::ResourceIdContext> list;
+    for (auto&& m : matched) {
+        DependencyCollector deps{m.context};
+        IObject::Ptr depsContext(&deps, [](auto) {});
+        UpdateOptions(*m.data, depsContext);
+        list.insert(list.end(), deps.resources.begin(), deps.resources.end());
     }
     return list;
 }
@@ -793,6 +826,7 @@ bool FileResourceManager::ReapplyOptions(
     CORE_NS::IFile::Ptr f;
     CORE_NS::IResourceOptions::Ptr options;
     BASE_NS::string path;
+    BASE_NS::string name;
     CORE_NS::IResourceType::Ptr type;
     auto id = resource->GetResourceId();
     {
@@ -810,6 +844,7 @@ bool FileResourceManager::ReapplyOptions(
         }
         type = it->second;
         path = res->path;
+        name = res->name;
         if (!path.empty()) {
             f = fileManager_->OpenFile(path);
             if (!f) {
@@ -820,7 +855,11 @@ bool FileResourceManager::ReapplyOptions(
         options = res->options;
     }
     CORE_NS::IResourceType::StorageInfo info{options, f.get(), id, path, GetSelf<IResourceManager>(), context};
-    return type->ReloadResource(info, resource);
+    bool ok = type->ReloadResource(info, resource);
+    if (ok) {
+        ApplyName(name, resource);
+    }
+    return ok;
 }
 
 BASE_NS::vector<ResourceData> FileResourceManager::GetResources(

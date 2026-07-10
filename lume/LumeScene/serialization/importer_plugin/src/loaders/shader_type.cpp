@@ -19,6 +19,7 @@
 
 #include <render/device/intf_device.h>
 
+#include <meta/interface/intf_event.h>
 #include <meta/interface/resource/intf_dynamic_resource.h>
 
 #include "../config.h"

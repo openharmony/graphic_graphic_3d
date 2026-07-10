@@ -1,0 +1,22 @@
+{
+    "version": "1.0",
+    "description": "scene loads node_template_pp; the template's index defines an image and a postProcess whose bloom dirtMaskImage references it",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "children": [
+                {
+                    "type": "external",
+                    "name": "ext",
+                    "source": {
+                        "type": "nodeTemplate",
+                        "url": "node_template_pp.json"
+                    },
+                    "resourceGroup": "ntg"
+                }
+            ]
+        }
+    }
+}

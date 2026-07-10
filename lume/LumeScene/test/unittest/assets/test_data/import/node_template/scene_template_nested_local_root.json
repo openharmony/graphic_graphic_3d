@@ -9,7 +9,6 @@
             "children": [
                 {
                     "type": "external",
-                    "name": "outerHost",
                     "source": { "type": "nodeTemplate", "url": "template_outer_with_ref.nodeTemplate" },
                     "resourceGroup": "outerGrp"
                 }

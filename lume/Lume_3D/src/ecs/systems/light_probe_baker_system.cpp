@@ -83,7 +83,7 @@ constexpr uint32_t LIGHT_PROBE_BAKE_ITERATIONS = 2u;
 
 // Size of sub_view is clamped to end of view.
 // Offset is not clamped, and size can be zero.
-template <typename T>
+template<typename T>
 array_view<T> sub_view(array_view<T> view, uint32_t offset, uint32_t size)
 {
     if (view.empty()) {
@@ -102,7 +102,7 @@ array_view<T> sub_view(array_view<T> view, uint32_t offset, uint32_t size)
     return array_view<T>(view.data() + offset, size);
 }
 
-template <typename T>
+template<typename T>
 array_view<T> sub_view(vector<T>& view, uint32_t offset, uint32_t size)
 {
     return sub_view(array_view<T>(view.data(), view.size()), offset, size);

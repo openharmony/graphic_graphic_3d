@@ -23,7 +23,7 @@
 SCENE_IMP_BEGIN_NAMESPACE()
 
 /// IAny that stores Type but supports Get/Set via all CompatType... through static_cast.
-template <typename Type, typename... CompatType>
+template<typename Type, typename... CompatType>
 class NumericAny : public META_NS::MultiTypeAny<Type, META_NS::StaticCastConv, CompatType...> {
 public:
     explicit NumericAny(Type v = {}) : value_(v)

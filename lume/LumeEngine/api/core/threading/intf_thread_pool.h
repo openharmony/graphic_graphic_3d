@@ -27,7 +27,7 @@
 #include <core/plugin/intf_interface.h>
 
 BASE_BEGIN_NAMESPACE()
-template <class T>
+template<class T>
 class array_view;
 BASE_END_NAMESPACE()
 

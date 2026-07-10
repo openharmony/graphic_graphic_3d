@@ -1,0 +1,12 @@
+{
+    "version": "1.0",
+    "data": {
+        "type": "metallicRoughnessMaterial",
+        "name": "ReloadTmpl",
+        "alphaCutoff": 0.25,
+        "renderSort": {
+            "layer": 7,
+            "order": 2
+        }
+    }
+}

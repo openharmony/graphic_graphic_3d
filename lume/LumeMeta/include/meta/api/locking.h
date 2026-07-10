@@ -38,7 +38,7 @@ public:
     }
     explicit InterfaceLock(LockType type, const CORE_NS::IInterface& t) : InterfaceLock(type, &t)
     {}
-    template <typename Type>
+    template<typename Type>
     explicit InterfaceLock(LockType type, const BASE_NS::shared_ptr<Type>& t) : InterfaceLock(type, t.get())
     {}
 
@@ -91,7 +91,7 @@ public:
     }
     explicit InterfaceUniqueLock(const CORE_NS::IInterface& t) : InterfaceUniqueLock(&t)
     {}
-    template <typename Type>
+    template<typename Type>
     explicit InterfaceUniqueLock(const BASE_NS::shared_ptr<Type>& t) : InterfaceUniqueLock(t.get())
     {}
 
@@ -138,7 +138,7 @@ public:
     }
     explicit InterfaceSharedLock(const CORE_NS::IInterface& t) : InterfaceSharedLock(&t)
     {}
-    template <typename Type>
+    template<typename Type>
     explicit InterfaceSharedLock(const BASE_NS::shared_ptr<Type>& t) : InterfaceSharedLock(t.get())
     {}
 

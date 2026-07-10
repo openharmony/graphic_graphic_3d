@@ -32,7 +32,7 @@ META_BEGIN_NAMESPACE()
  *
  *        AttachmentFwd handles attachment target and IAttachment::AttachedTo automatically.
  */
-template <class BaseInterface>
+template<class BaseInterface>
 class AttachmentBaseFwd : public IntroduceInterfaces<ObjectFwd, BaseInterface> {
     using MyBase = IntroduceInterfaces<ObjectFwd, BaseInterface>;
     META_OBJECT_NO_CLASSINFO(AttachmentBaseFwd, MyBase)

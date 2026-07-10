@@ -38,7 +38,7 @@ public:
         return META_NS::GetObjectRegistry().Create<META_NS::IObject>(ClassId::AnimationTemplate);
     }
 
-    template <typename T>
+    template<typename T>
     static void AddSetProperty(META_NS::IMetadata& meta, BASE_NS::string_view name, const T& value)
     {
         auto prop = META_NS::ConstructProperty<T>(name);

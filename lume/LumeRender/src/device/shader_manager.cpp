@@ -54,7 +54,7 @@ union FloatAsUint32 {
     uint32_t ui;
 };
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::InputAssembly& inputAssembly)
 {
     uint64_t hash = 0;
@@ -63,7 +63,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::InputAssembly& inputAssem
     return hash;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::RasterizationState& state)
 {
     uint64_t hash = 0;
@@ -75,7 +75,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::RasterizationState& state
     return hash;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::DepthStencilState& state)
 {
     uint64_t hash = 0;
@@ -86,7 +86,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::DepthStencilState& state)
     return hash;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::ColorBlendState::Attachment& state)
 {
     uint64_t hash = 0;
@@ -104,7 +104,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::ColorBlendState::Attachme
     return hash;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::ColorBlendState& state)
 {
     uint64_t hash = 0;
@@ -124,7 +124,7 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState::ColorBlendState& state)
     return hash;
 }
 
-template <>
+template<>
 uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState& state)
 {
     const uint64_t iaHash = hash(state.inputAssembly);

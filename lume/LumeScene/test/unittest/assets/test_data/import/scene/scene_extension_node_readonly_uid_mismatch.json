@@ -1,0 +1,30 @@
+{
+    "version": "1.0",
+    "description": "Read-only object property import where the documented objectUid does not match the live class",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "cc1810e9-cc75-4c4e-871f-9d035a2ab7b2",
+                    "properties": [
+                        {
+                            "name": "Config",
+                            "value": {
+                                "objectUid": "11111111-2222-3333-4444-555555555555",
+                                "properties": [
+                                    { "name": "Setting", "value": 42 }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

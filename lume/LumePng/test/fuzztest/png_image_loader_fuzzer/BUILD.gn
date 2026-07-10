@@ -1,0 +1,105 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/config/features.gni")
+import("//build/test.gni")
+import("//foundation/graphic/graphic_3d/lume/lume_config.gni")
+
+module_output_path = "graphic_3d/graphic_3d"
+
+##############################fuzztest##########################################
+config("lume_png_fuzz_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "${LUME_BASE_PATH}/api",
+    "${LUME_CORE_PATH}/api",
+    "${LUME_PNG_PATH}/src",
+  ]
+
+  cflags = [
+    "-Wall",
+    "-fexceptions",
+    "-Wno-sign-compare",
+    "-Wno-unused-variable",
+    "-Wno-unused-private-field",
+    "-Wno-implicit-fallthrough",
+    "-Wno-reorder",
+    "-Wno-unused-function",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-ignored-qualifiers",
+
+    "-DCORE_PUBLIC=__attribute__((visibility(\"default\")))",
+    "-DCORE_DYNAMIC=1",
+    "-DCORE_LOG_NO_DEBUG=0",
+    "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
+    "-DCORE_LOG_TO_CONSOLE",
+
+    # Force-include the fuzz prelude into every TU: no-ops CORE_LOG_* and
+    # CORE_ASSERT so the harness can't be killed by a stray defensive assert.
+    # Matches LumeJpg/LumeEngine fuzzers' pattern.
+    "-include",
+    rebase_path(
+        "//foundation/graphic/graphic_3d/lume/LumePng/test/fuzztest/fuzz_prelude.h",
+        root_build_dir),
+  ]
+}
+
+ohos_fuzztest("PngImageLoaderFuzzTest") {
+  module_out_path = module_output_path
+  fuzz_config_file =
+      "//foundation/graphic/graphic_3d/lume/LumePng/test/fuzztest/png_image_loader_fuzzer"
+
+  include_dirs = [
+    "${LUME_PNG_PATH}/test/fuzztest",
+  ]
+
+  sources = [
+    "png_image_loader_fuzzer.cpp",
+    # Compile the loader source directly so PNGPlugin::CreateImageLoaderPng is
+    # reachable without depending on the hidden-visibility shared lib.
+    "${LUME_PNG_PATH}/src/png/image_loader_png.cpp",
+  ]
+
+  configs = [
+    ":lume_png_fuzz_config",
+    "${LUME_BASE_PATH}:lume_base_api_config",
+    "${LUME_CORE_PATH}:lume_engine_api",
+  ]
+
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
+
+  external_deps = [
+    "hilog:libhilog",
+    "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
+    "libpng:libpng",
+    "zlib:libz",
+  ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
+}
+
+###############################################################################
+group("fuzztest") {
+  testonly = true
+  deps = [
+    ":PngImageLoaderFuzzTest",
+  ]
+}

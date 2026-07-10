@@ -30,7 +30,7 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 
-template <typename ComponentManager>
+template<typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {

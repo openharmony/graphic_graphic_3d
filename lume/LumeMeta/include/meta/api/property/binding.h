@@ -70,7 +70,7 @@ protected:
  *        to use the Binding class, TypedBinding is mostly helpful for cleaner syntax when defining
  *        bindings with a lambda function.
  */
-template <class Type>
+template<class Type>
 class TypedBinding : public Binding {
 public:
     using PropertyType = Property<BASE_NS::remove_const_t<Type>>;
@@ -85,7 +85,7 @@ public:
     explicit TypedBinding(const PropertyType& source) noexcept : Binding(source)
     {}
 
-    template <class Callback, typename = EnableIfBindFunction<Callback>>
+    template<class Callback, typename = EnableIfBindFunction<Callback>>
     explicit TypedBinding(Callback&& callback) : Binding(META_NS::CreateBindFunction(BASE_NS::move(callback)))
     {}
 };

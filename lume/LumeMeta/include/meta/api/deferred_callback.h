@@ -26,7 +26,7 @@ META_BEGIN_NAMESPACE();
 /**
  * @brief Implementation of ITaskQueueTask for deferred calls.
  */
-template <typename Func>
+template<typename Func>
 class QueueTask : public IntroduceInterfaces<ITaskQueueTask> {
     META_INTERFACE(IntroduceInterfaces<ITaskQueueTask>, QueueTask, "426c3d10-89e5-4cf7-a314-a5155ede1595")
 
@@ -44,15 +44,15 @@ private:
     Func func_;
 };
 
-template <typename Func, typename Interface, typename Signature = typename Interface::FunctionType>
+template<typename Func, typename Interface, typename Signature = typename Interface::FunctionType>
 class DeferredCallable;
 
 /**
  * @brief Implementation of callable for deferred calls.
  */
-template <typename Func, typename Interface, typename... Args>
+template<typename Func, typename Interface, typename... Args>
 class DeferredCallable<Func, Interface, void(Args...)> : public IntroduceInterfaces<Interface> {
-    template <typename F>
+    template<typename F>
     struct ControlBlock {
         ControlBlock(F f) : func_(BASE_NS::move(f))
         {}
@@ -101,7 +101,7 @@ private:
  * @param func Callable entity which is invoked.
  * @param queue Task queue that the call is posted to.
  */
-template <typename CallableInterface, typename Func,
+template<typename CallableInterface, typename Func,
     typename = EnableIfCanInvokeWithArguments<Func, typename CallableInterface::FunctionType>>
 auto MakeDeferred(Func func, const ITaskQueue::Ptr& queue)
 {

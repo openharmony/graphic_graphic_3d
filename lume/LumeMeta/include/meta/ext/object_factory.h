@@ -65,7 +65,7 @@ private:
     META_NS::ClassInfo info_;
 };
 
-template <typename FinalClass>
+template<typename FinalClass>
 class PlainObjectFactory : public ObjectFactory {
 public:
     PlainObjectFactory(const META_NS::ClassInfo& info) : ObjectFactory(info)
@@ -84,7 +84,7 @@ public:
  * @brief The DefaultObjectFactory class implements the default object factory used
  *        by ObjectFwd and such. hash
  */
-template <typename FinalClass>
+template<typename FinalClass>
 class DefaultObjectFactory final : public PlainObjectFactory<FinalClass> {
 public:
     DefaultObjectFactory(const META_NS::ClassInfo& info) : PlainObjectFactory<FinalClass>(info)

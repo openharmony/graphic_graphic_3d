@@ -511,6 +511,8 @@ void FillRenderCameraBaseFromCameraComponent(const IRenderHandleComponentManager
     const uint32_t maxMvCount = Math::min(
         RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT, static_cast<uint32_t>(cc.multiViewCameras.size()));
     renderCamera.multiViewCameraHash = 0U;
+    // Reset the count too; a pre-pass camera inherits the base by value and would otherwise overflow.
+    renderCamera.multiViewCameraCount = 0U;
     for (uint32_t idx = 0; idx < maxMvCount; ++idx) {
         const auto& mvRef = cc.multiViewCameras[idx];
         if (auto otherCamera = cameraMgr.Read(mvRef)) {
@@ -1757,7 +1759,7 @@ void RenderSystem::Initialize()
         IRenderDataStoreManager& rdsMgr = renderContext_->GetRenderDataStoreManager();
         if (auto dsPod = refcnt_ptr<IRenderDataStorePod>(rdsMgr.GetRenderDataStore(POD_DATA_STORE_NAME))) {
             auto podData = dsPod->Get(DefaultMaterialCameraConstants::CAMERA_REFLECTION_POST_PROCESS_PREFIX_NAME);
-            if (!podData.empty()) {
+            if (podData.size() >= sizeof(PostProcessConfiguration)) {
                 const auto& config = reinterpret_cast<const PostProcessConfiguration&>(podData[0U]);
                 reflectionMaxMipBlur_ = Math::min(
                     config.blurConfiguration.maxMipLevel, DefaultMaterialCameraConstants::REFLECTION_PLANE_MIP_COUNT);

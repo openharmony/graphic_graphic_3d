@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#if defined(__OHOS__) && defined(__OHOS_PLATFORM__)
+#if defined(__OHOS_PLATFORM__)
 #include <external_window.h>
 #include <surface/native_buffer.h>
 #else

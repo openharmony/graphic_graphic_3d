@@ -57,11 +57,7 @@ static bool SetValuesFromTemplate(const CORE_NS::IResource::ConstPtr& templ, con
         if (!target) {
             continue;
         }
-        if (PropertyLock lock{target}) {
-            if (lock->IsDefaultValue()) {
-                CopyToDefaultAndReset(p, *target);
-            }
-        }
+        CopyToDefault(p, *target);
         return true;
     }
     return false;
