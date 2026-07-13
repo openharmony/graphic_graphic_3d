@@ -1162,7 +1162,6 @@ UNIT_TEST_F(API_BoidsSwarmSystemTest, BoidsSwarmComponent22, testing::ext::TestS
  * @tc.desc: Verify boundingSphereRadius round-trip.
  * @tc.type: FUNC
  */
-// TODO: re-enable once BoidsSwarmComponent gains a boundingSphereRadius field.
 // The component currently has no such property on this branch.
 #if 0
 UNIT_TEST_F(API_BoidsSwarmSystemTest, BoidsSwarmComponent23, testing::ext::TestSize.Level1)

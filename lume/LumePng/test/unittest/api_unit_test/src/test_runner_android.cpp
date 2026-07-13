@@ -91,7 +91,6 @@ void AndroidApp::Terminate()
         m_state->activity->vm->DetachCurrentThread();
 
         // NOTE: return doesn't completely exit the program!?
-        // return;
         exit(m_testData.result);
     } else {
         // Release the native window

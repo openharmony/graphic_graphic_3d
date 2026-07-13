@@ -655,7 +655,6 @@ RenderHandleReference Device::CreateSwapchainImpl(
     {
         vector<unique_ptr<GpuImage>> swapchainGpuImages = CreateGpuImageViews(*swapchainData.swapchain);
         const auto swapchainImageCount = static_cast<uint32_t>(swapchainGpuImages.size());
-
         if ((swapchainImageCount == 0U) || (swapchainImageCount > InternalSwapchainData::MAX_IMAGE_VIEW_COUNT)) {
             PLUGIN_LOG_E("Swapchain image count (%u) outside supported range [1, %u]",
                 swapchainImageCount,

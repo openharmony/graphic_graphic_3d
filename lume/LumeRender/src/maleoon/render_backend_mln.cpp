@@ -3465,7 +3465,6 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     tdgDesc.objectGroups = &transferOG;
 
     MlnDataGraph transferDG = MlnCreateTransferDataGraph(mlnDevice, &tdgDesc);
-
     if (!transferDG) {
         return;
     }
@@ -6348,7 +6347,6 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
         }
     }
     MlnDataGraph dataGraph = MlnCreateGraphicsDataGraph(mlnDevice, &dgDesc);
-
     // [MILESTONE-5] Post-DG creation — survived this rpSeg
     if (dataGraph) {
         if (g_mlnLog.graph) {

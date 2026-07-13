@@ -332,10 +332,10 @@ UNIT_TEST(SRC_GLTFSecurityTest, IndicesMustBeUnsignedScalar, testing::ext::TestS
 {
     auto& files = UTest::GetTestContext()->engine->GetFileManager();
     constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
-                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
-                                 R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},)"
-                                 R"({"bufferView":0,"componentType":5125,"count":3,"type":"SCALAR"}],)"
-                                 R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}]})";
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},)"
+                                R"({"bufferView":0,"componentType":5125,"count":3,"type":"SCALAR"}],)"
+                                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}]})";
     // indices accessor componentType FLOAT (5126) is not a valid index type.
     constexpr string_view bad = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
@@ -360,11 +360,11 @@ UNIT_TEST(SRC_GLTFSecurityTest, SkinInverseBindMatricesMustBeMat4Float, testing:
     auto& files = UTest::GetTestContext()->engine->GetFileManager();
     // accessor 0: MAT4 FLOAT count 2 (valid IBM for 2 joints); accessor 1: SCALAR FLOAT count 2 (invalid).
     constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
-                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
-                                 R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"},)"
-                                 R"({"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"}],)"
-                                 R"("nodes":[{},{}],"scenes":[{"nodes":[0,1]}],)"
-                                 R"("skins":[{"joints":[0,1],"inverseBindMatrices":0}]})";
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"}],)"
+                                R"("nodes":[{},{}],"scenes":[{"nodes":[0,1]}],)"
+                                R"("skins":[{"joints":[0,1],"inverseBindMatrices":0}]})";
     // inverseBindMatrices points at the SCALAR accessor — not a MAT4, must be rejected.
     constexpr string_view badType = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
                                     R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
@@ -374,10 +374,10 @@ UNIT_TEST(SRC_GLTFSecurityTest, SkinInverseBindMatricesMustBeMat4Float, testing:
                                     R"("skins":[{"joints":[0,1],"inverseBindMatrices":1}]})";
     // MAT4 accessor but count (2) does not match joint count (1) — must be rejected.
     constexpr string_view badCount = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
-                                     R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
-                                     R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"}],)"
-                                     R"("nodes":[{},{}],"scenes":[{"nodes":[0]}],)"
-                                     R"("skins":[{"joints":[0],"inverseBindMatrices":0}]})";
+                                    R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                    R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"}],)"
+                                    R"("nodes":[{},{}],"scenes":[{"nodes":[0]}],)"
+                                    R"("skins":[{"joints":[0],"inverseBindMatrices":0}]})";
     EXPECT_TRUE(LoadsOk(files, good));
     EXPECT_FALSE(LoadsOk(files, badType));
     EXPECT_FALSE(LoadsOk(files, badCount));
@@ -393,11 +393,11 @@ UNIT_TEST(SRC_GLTFSecurityTest, AnimationSamplerInputRequired, testing::ext::Tes
 {
     auto& files = UTest::GetTestContext()->engine->GetFileManager();
     constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
-                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
-                                 R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"},)"
-                                 R"({"bufferView":0,"componentType":5126,"count":2,"type":"VEC3"}],"nodes":[{}],)"
-                                 R"("animations":[{"samplers":[{"input":0,"output":1,"interpolation":"LINEAR"}],)"
-                                 R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":2,"type":"VEC3"}],"nodes":[{}],)"
+                                R"("animations":[{"samplers":[{"input":0,"output":1,"interpolation":"LINEAR"}],)"
+                                R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
     // sampler has no "input".
     constexpr string_view bad = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
