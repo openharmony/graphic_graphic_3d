@@ -411,7 +411,8 @@
         "window_manager",
         "form_fwk",
         "ability_base",
-        "node"
+        "node",
+        "taihe_ffi_gen"
       ],
       "third_party": []
     },
