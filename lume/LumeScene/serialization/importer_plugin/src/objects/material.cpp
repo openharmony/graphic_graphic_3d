@@ -36,21 +36,7 @@
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
-namespace {
-// clang-format off
-static constexpr NamedValue<SCENE_NS::MaterialType> MATERIAL_TYPE_TABLE[] = {
-    { "metallicRoughness",  SCENE_NS::MaterialType::METALLIC_ROUGHNESS },
-    { "specularGlossiness", SCENE_NS::MaterialType::SPECULAR_GLOSSINESS },
-    { "unlit",              SCENE_NS::MaterialType::UNLIT },
-    { "unlitShadowAlpha",   SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA },
-    { "custom",             SCENE_NS::MaterialType::CUSTOM },
-    { "customComplex",      SCENE_NS::MaterialType::CUSTOM_COMPLEX },
-    { "occlusion",          SCENE_NS::MaterialType::OCCLUSION },
-};
-// clang-format on
-}  // namespace
-
-template <typename EnumType, size_t N>
+template<typename EnumType, size_t N>
 static IDiagnostics::Ptr ImportEnumToProperty(ImportContext& context, BASE_NS::string_view jsonName,
     const META_NS::IProperty::Ptr& prop, const NamedValue<EnumType> (&table)[N])
 {
@@ -90,14 +76,6 @@ static IDiagnostics::Ptr ImportFlagsToProperty(
 static IDiagnostics::Ptr ImportMaterialScalars(ImportContext& context, META_NS::IMetadata& meta)
 {
     ErrorHandler h(context);
-    if (!context.GetOptValue("materialType").is_null()) {
-        auto prop = META_NS::ConstructProperty<SCENE_NS::MaterialType>("Type");
-        if (auto err = ImportEnumToProperty(context, "materialType", prop.GetProperty(), MATERIAL_TYPE_TABLE);
-            h.Handle(err)) {
-            return err;
-        }
-        meta.AddProperty(prop.GetProperty());
-    }
     if (auto value = GetOptFloat(context, "alphaCutoff"); h.HandleOptValue(value)) {
         if (value.error) {
             return value.error;
@@ -118,121 +96,99 @@ static IDiagnostics::Ptr ImportMaterialScalars(ImportContext& context, META_NS::
 
 static IDiagnostics::Ptr ImportRenderSortToTemplate(ImportContext& context, META_NS::IMetadata& meta)
 {
-    auto sortObj = context.GetOptObject("renderSort");
-    if (sortObj.empty()) {
-        return nullptr;
+    auto sort = ImportOptRenderSort(context);
+    if (sort.error) {
+        return sort.error;
     }
-    auto sortContext = context.CreateContext(BASE_NS::move(sortObj));
-    ErrorHandler h(context);
-    SCENE_NS::RenderSort renderSort{};
-    if (auto value = GetOptUInt(sortContext, "layer"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        renderSort.renderSortLayer = static_cast<uint8_t>(value.GetValue());
+    if (sort.value) {
+        auto prop = META_NS::ConstructProperty<SCENE_NS::RenderSort>("RenderSort");
+        META_NS::SetValue<SCENE_NS::RenderSort>(prop.GetProperty(), *sort.value);
+        meta.AddProperty(prop.GetProperty());
     }
-    if (auto value = GetOptUInt(sortContext, "order"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        renderSort.renderSortLayerOrder = static_cast<uint8_t>(value.GetValue());
-    }
-    auto prop = META_NS::ConstructProperty<SCENE_NS::RenderSort>("RenderSort");
-    META_NS::SetValue<SCENE_NS::RenderSort>(prop.GetProperty(), renderSort);
-    meta.AddProperty(prop.GetProperty());
-    return h;
-}
-
-struct DeferredResourceContext {
-    ImportContextParameters params;
-    SCENE_NS::IRenderContext::Ptr renderContext;
-    BASE_NS::string filename;
-    BASE_NS::vector<ErrorInfo> trace;
-
-    IDiagnostics::Ptr CreateError(BASE_NS::string_view message) const
-    {
-        return MakeSimpleError(BASE_NS::string(message), filename, trace);
-    }
-};
-
-static DeferredResourceContext MakeDeferredResourceContext(ImportContext& context)
-{
-    return {context.GetImportParameters(),
-        context.GetRenderContext(),
-        context.GetImportParameters().filename,
-        context.GetTrace()};
-}
-
-static IDiagnostics::Ptr DeferShaderToProperty(
-    ImportContext& context, BASE_NS::string_view jsonName, const META_NS::IProperty::Ptr& prop)
-{
-    ErrorHandler h(context);
-    if (auto rid = GetOptResourceId(context, jsonName); h.HandleOptValue(rid)) {
-        if (rid.error) {
-            return rid.error;
-        }
-        auto resourceId = rid.GetValue();
-        auto dc = MakeDeferredResourceContext(context);
-        context.AddDeferredAction(ImportContext::DeferTier::Resource, [prop, resourceId, dc]() -> IDiagnostics::Ptr {
-            auto resource = ResolveDeferredResource(dc.params, dc.renderContext, resourceId);
-            if (!resource) {
-                return dc.CreateError("Failed to resolve shader resource: " + resourceId.ToString());
-            }
-            auto shader = interface_pointer_cast<SCENE_NS::IShader>(resource);
-            if (!shader) {
-                return dc.CreateError("Resource is not a shader: " + resourceId.ToString());
-            }
-            META_NS::SetValue<SCENE_NS::IShader::Ptr>(prop, shader);
-            return nullptr;
-        });
-    }
-    return h;
-}
-
-static IDiagnostics::Ptr DeferImageToProperty(
-    ImportContext& context, BASE_NS::string_view jsonName, const META_NS::IProperty::Ptr& prop)
-{
-    ErrorHandler h(context);
-    if (auto rid = GetOptResourceId(context, jsonName); h.HandleOptValue(rid)) {
-        if (rid.error) {
-            return rid.error;
-        }
-        auto resourceId = rid.GetValue();
-        auto dc = MakeDeferredResourceContext(context);
-        context.AddDeferredAction(ImportContext::DeferTier::Resource, [prop, resourceId, dc]() -> IDiagnostics::Ptr {
-            auto resource = ResolveDeferredResource(dc.params, dc.renderContext, resourceId);
-            if (!resource) {
-                return dc.CreateError("Failed to resolve image resource: " + resourceId.ToString());
-            }
-            auto image = interface_pointer_cast<SCENE_NS::IImage>(resource);
-            if (!image) {
-                return dc.CreateError("Resource is not an image: " + resourceId.ToString());
-            }
-            META_NS::SetValue<SCENE_NS::IImage::Ptr>(prop, image);
-            return nullptr;
-        });
-    }
-    return h;
+    return nullptr;
 }
 
 static IDiagnostics::Ptr ImportMaterialShaders(ImportContext& context, META_NS::IMetadata& meta)
 {
     ErrorHandler h(context);
     if (!context.GetOptValue("materialShader").is_null()) {
-        auto prop = META_NS::ConstructProperty<SCENE_NS::IShader::Ptr>("MaterialShader");
-        if (auto err = DeferShaderToProperty(context, "materialShader", prop.GetProperty()); h.Handle(err)) {
+        if (auto err = AddResourceIdProperty(context, meta, "materialShader", "MaterialShader"); h.Handle(err)) {
             return err;
         }
-        meta.AddProperty(prop.GetProperty());
     }
     if (!context.GetOptValue("depthShader").is_null()) {
-        auto prop = META_NS::ConstructProperty<SCENE_NS::IShader::Ptr>("DepthShader");
-        if (auto err = DeferShaderToProperty(context, "depthShader", prop.GetProperty()); h.Handle(err)) {
+        if (auto err = AddResourceIdProperty(context, meta, "depthShader", "DepthShader"); h.Handle(err)) {
             return err;
         }
-        meta.AddProperty(prop.GetProperty());
     }
     return h;
+}
+
+// Build a fresh, empty per-texture sub-object. Properties are added only when the
+// JSON entry actually carries the corresponding field.
+static META_NS::IObject::Ptr CreateEmptyTextureEntry()
+{
+    return META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
+}
+
+static IDiagnostics::Ptr ImportTextureScalars(ImportContext& context, META_NS::IMetadata& meta)
+{
+    ErrorHandler h(context);
+    if (auto value = GetOptVec4(context, "factor"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty<BASE_NS::Math::Vec4>(meta, "Factor", value.GetValue());
+    }
+    if (auto value = GetOptVec2(context, "translation"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty<BASE_NS::Math::Vec2>(meta, "Translation", value.GetValue());
+    }
+    if (auto value = GetOptFloat(context, "rotation"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty<float>(meta, "Rotation", value.GetValue());
+    }
+    if (auto value = GetOptVec2(context, "scale"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty<BASE_NS::Math::Vec2>(meta, "Scale", value.GetValue());
+    }
+    return h;
+}
+
+static IDiagnostics::Ptr ImportTextureImage(ImportContext& context, META_NS::IMetadata& meta)
+{
+    if (!context.GetOptValue("image")) {
+        return nullptr;
+    }
+    ErrorHandler h(context);
+    // Store the resource id as a ResourceId-typed property; apply resolves against the
+    // scene's resource manager. Resolution at apply time lets the override see resources
+    // that don't exist yet at index-load time (e.g. a gltf-derived image that the node
+    // template's own external child will register at instantiation).
+    if (auto err = AddResourceIdProperty(context, meta, "image", "Image"); h.Handle(err)) {
+        return err;
+    }
+    return h;
+}
+
+// Adds an enum property only when the JSON field is present, preserving
+// sparseness so the apply step never touches members the JSON didn't declare.
+template<typename EnumType, size_t N>
+static IDiagnostics::Ptr ImportEnumPropertyIfPresent(ImportContext& context, BASE_NS::string_view jsonName,
+    META_NS::IMetadata& meta, BASE_NS::string_view propName, const NamedValue<EnumType> (&table)[N])
+{
+    if (!context.GetOptValue(jsonName)) {
+        return nullptr;
+    }
+    auto prop = META_NS::ConstructProperty<EnumType>(propName);
+    meta.AddProperty(prop.GetProperty());
+    return ImportEnumToProperty(context, jsonName, prop.GetProperty(), table);
 }
 
 static IDiagnostics::Ptr ImportSamplerToTemplate(ImportContext& context, META_NS::IMetadata& sampler)
@@ -243,164 +199,143 @@ static IDiagnostics::Ptr ImportSamplerToTemplate(ImportContext& context, META_NS
     }
     auto sc = context.CreateContext(BASE_NS::move(samplerObj));
     ErrorHandler h(context);
-    auto getProp = [&sampler](BASE_NS::string_view name) { return sampler.GetProperty(name); };
-    if (auto err = ImportEnumToProperty(sc, "magFilter", getProp("MagFilter"), SAMPLER_FILTER_TABLE); h.Handle(err)) {
-        return err;
-    }
-    if (auto err = ImportEnumToProperty(sc, "minFilter", getProp("MinFilter"), SAMPLER_FILTER_TABLE); h.Handle(err)) {
-        return err;
-    }
-    if (auto err = ImportEnumToProperty(sc, "mipMapMode", getProp("MipMapMode"), SAMPLER_FILTER_TABLE); h.Handle(err)) {
-        return err;
-    }
-    if (auto err = ImportEnumToProperty(sc, "addressModeU", getProp("AddressModeU"), SAMPLER_ADDRESS_MODE_TABLE);
+    if (auto err = ImportEnumPropertyIfPresent(sc, "magFilter", sampler, "MagFilter", SAMPLER_FILTER_TABLE);
         h.Handle(err)) {
         return err;
     }
-    if (auto err = ImportEnumToProperty(sc, "addressModeV", getProp("AddressModeV"), SAMPLER_ADDRESS_MODE_TABLE);
+    if (auto err = ImportEnumPropertyIfPresent(sc, "minFilter", sampler, "MinFilter", SAMPLER_FILTER_TABLE);
         h.Handle(err)) {
         return err;
     }
-    return ImportEnumToProperty(sc, "addressModeW", getProp("AddressModeW"), SAMPLER_ADDRESS_MODE_TABLE);
+    if (auto err = ImportEnumPropertyIfPresent(sc, "mipMapMode", sampler, "MipMapMode", SAMPLER_FILTER_TABLE);
+        h.Handle(err)) {
+        return err;
+    }
+    if (auto err = ImportEnumPropertyIfPresent(sc, "addressModeU", sampler, "AddressModeU", SAMPLER_ADDRESS_MODE_TABLE);
+        h.Handle(err)) {
+        return err;
+    }
+    if (auto err = ImportEnumPropertyIfPresent(sc, "addressModeV", sampler, "AddressModeV", SAMPLER_ADDRESS_MODE_TABLE);
+        h.Handle(err)) {
+        return err;
+    }
+    return ImportEnumPropertyIfPresent(sc, "addressModeW", sampler, "AddressModeW", SAMPLER_ADDRESS_MODE_TABLE);
 }
 
-static IDiagnostics::Ptr ImportTextureScalars(ImportContext& context, META_NS::IMetadata& meta)
+static IDiagnostics::Ptr ImportTextureSamplerEntry(ImportContext& context, META_NS::IMetadata& meta)
 {
+    if (!context.GetOptValue("sampler")) {
+        return nullptr;
+    }
     ErrorHandler h(context);
-    if (auto value = GetOptString(context, "name"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        if (auto prop = meta.GetProperty<BASE_NS::string>("Name")) {
-            META_NS::SetValue(prop, value.GetValue());
-        }
+    auto samplerObj = CreateEmptyTextureEntry();
+    auto samplerMeta = interface_cast<META_NS::IMetadata>(samplerObj);
+    if (!samplerMeta) {
+        return nullptr;
     }
-    if (auto value = GetOptVec4(context, "factor"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        META_NS::SetValue(meta.GetProperty<BASE_NS::Math::Vec4>("Factor"), value.GetValue());
+    if (auto err = ImportSamplerToTemplate(context, *samplerMeta); h.Handle(err)) {
+        return err;
     }
-    if (auto value = GetOptVec2(context, "translation"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        META_NS::SetValue(meta.GetProperty<BASE_NS::Math::Vec2>("Translation"), value.GetValue());
-    }
-    if (auto value = GetOptFloat(context, "rotation"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        META_NS::SetValue(meta.GetProperty<float>("Rotation"), value.GetValue());
-    }
-    if (auto value = GetOptVec2(context, "scale"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        META_NS::SetValue(meta.GetProperty<BASE_NS::Math::Vec2>("Scale"), value.GetValue());
-    }
+    auto prop = META_NS::ConstructProperty<META_NS::IObject::Ptr>("Sampler", samplerObj);
+    meta.AddProperty(prop.GetProperty());
     return h;
 }
 
-static IDiagnostics::Ptr ImportTextureToTemplate(ImportContext& context, META_NS::IMetadata& meta)
+static IDiagnostics::Ptr ImportTextureEntryFields(ImportContext& context, META_NS::IMetadata& meta)
 {
     ErrorHandler h(context);
     if (auto err = ImportTextureScalars(context, meta); h.Handle(err)) {
         return err;
     }
-    if (auto imageProp = meta.GetProperty("Image")) {
-        if (auto err = DeferImageToProperty(context, "image", imageProp); h.Handle(err)) {
-            return err;
-        }
+    if (auto err = ImportTextureImage(context, meta); h.Handle(err)) {
+        return err;
     }
-    if (auto samplerMeta = META_NS::GetPointer<META_NS::IMetadata>(meta.GetProperty("Sampler"))) {
-        if (auto err = ImportSamplerToTemplate(context, *samplerMeta); h.Handle(err)) {
+    if (auto err = ImportTextureSamplerEntry(context, meta); h.Handle(err)) {
+        return err;
+    }
+    return h;
+}
+
+static IDiagnostics::Ptr AppendNamedTextureEntry(ImportContext& context, META_NS::IMetadata& materialMeta,
+    BASE_NS::string_view slotName, const CORE_NS::json::value& entryJson)
+{
+    if (!entryJson.is_object()) {
+        return context.CreateDiagnostics(
+            BASE_NS::string("Invalid textures entry for slot '") + slotName + "': expected object");
+    }
+    auto entry = CreateEmptyTextureEntry();
+    auto entryMeta = interface_cast<META_NS::IMetadata>(entry);
+    if (!entryMeta) {
+        return nullptr;
+    }
+    AddSetProperty<BASE_NS::string>(*entryMeta, "Name", BASE_NS::string(slotName));
+
+    auto entryContext = context.CreateContext(entryJson);
+    ErrorHandler h(context);
+    if (auto err = ImportTextureEntryFields(entryContext, *entryMeta); h.Handle(err)) {
+        return err;
+    }
+
+    auto textures = materialMeta.GetArrayProperty<META_NS::IObject::Ptr>("Textures", META_NS::MetadataQuery::EXISTING);
+    if (!textures) {
+        BASE_NS::vector<META_NS::IObject::Ptr> empty;
+        auto prop = META_NS::ConstructArrayProperty<META_NS::IObject::Ptr>("Textures", empty);
+        materialMeta.AddProperty(prop.GetProperty());
+        textures = materialMeta.GetArrayProperty<META_NS::IObject::Ptr>("Textures", META_NS::MetadataQuery::EXISTING);
+    }
+    if (textures) {
+        textures->AddValue(entry);
+    }
+    return h;
+}
+
+static IDiagnostics::Ptr ImportTexturesToTemplate(ImportContext& context, META_NS::IMetadata& meta)
+{
+    auto obj = context.GetOptObject("textures");
+    if (obj.empty()) {
+        return nullptr;
+    }
+    ErrorHandler h(context);
+    for (const auto& pair : obj) {
+        BASE_NS::string slotName(pair.key);
+        if (auto err = AppendNamedTextureEntry(context, meta, slotName, pair.value); h.Handle(err)) {
             return err;
         }
     }
     return h;
 }
 
-static IDiagnostics::Ptr ImportTextureEntry(
-    ImportContext& context, const CORE_NS::json::value& entry, const META_NS::IObject::Ptr& tex)
+// Per-material graphics state. Stored as a sparse "Options" sub-object (only
+// fields present in JSON get a property); applied to the material's bound
+// shader at apply time.
+static IDiagnostics::Ptr ImportMaterialOptions(ImportContext& context, META_NS::IMetadata& meta)
 {
-    if (!entry.is_object()) {
-        return context.CreateDiagnostics("Invalid textures entry: expected object");
-    }
-    if (!tex) {
+    auto optionsObj = context.GetOptObject("options");
+    if (optionsObj.empty()) {
         return nullptr;
     }
-    auto texMeta = interface_cast<META_NS::IMetadata>(tex.get());
-    if (!texMeta) {
-        return nullptr;
-    }
-    auto texContext = context.CreateContext(entry);
-    return ImportTextureToTemplate(texContext, *texMeta);
-}
-
-static META_NS::IObject::Ptr CreateTemplateSampler()
-{
+    auto oc = context.CreateContext(BASE_NS::move(optionsObj));
     auto obj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
-    if (auto meta = interface_cast<META_NS::IMetadata>(obj.get())) {
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerFilter>("MagFilter").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerFilter>("MinFilter").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerFilter>("MipMapMode").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerAddressMode>("AddressModeU").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerAddressMode>("AddressModeV").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::SamplerAddressMode>("AddressModeW").GetProperty());
-    }
-    return obj;
-}
-
-static META_NS::IObject::Ptr CreateTemplateTexture()
-{
-    auto obj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
-    if (auto meta = interface_cast<META_NS::IMetadata>(obj.get())) {
-        meta->AddProperty(META_NS::ConstructProperty<BASE_NS::string>("Name").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<SCENE_NS::IImage::Ptr>("Image").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec4>("Factor").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec2>("Translation").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<float>("Rotation").GetProperty());
-        meta->AddProperty(META_NS::ConstructProperty<BASE_NS::Math::Vec2>("Scale").GetProperty());
-        auto sampler = CreateTemplateSampler();
-        meta->AddProperty(META_NS::ConstructProperty<META_NS::IObject::Ptr>("Sampler", sampler).GetProperty());
-    }
-    return obj;
-}
-
-static void EnsureTexturesProperty(META_NS::IMetadata& meta)
-{
-    if (meta.GetProperty("Textures")) {
-        return;
-    }
-    constexpr size_t textureCount = CORE3D_NS::MaterialComponent::TextureIndex::TEXTURE_COUNT;
-    BASE_NS::vector<META_NS::IObject::Ptr> textures;
-    textures.reserve(textureCount);
-    for (size_t ix = 0; ix < textureCount; ++ix) {
-        textures.push_back(CreateTemplateTexture());
-    }
-    auto prop = META_NS::ConstructArrayProperty<META_NS::IObject::Ptr>("Textures", textures);
-    meta.AddProperty(prop.GetProperty());
-}
-
-static IDiagnostics::Ptr ImportTexturesToTemplate(ImportContext& context, META_NS::IMetadata& meta)
-{
-    auto arr = context.GetOptArray("textures");
-    if (arr.empty()) {
-        return nullptr;
-    }
-    EnsureTexturesProperty(meta);
-    auto textures = meta.GetArrayProperty<META_NS::IObject::Ptr>("Textures", META_NS::MetadataQuery::EXISTING);
-    if (!textures) {
-        return nullptr;
+    auto optMeta = interface_cast<META_NS::IMetadata>(obj);
+    if (!optMeta) {
+        return context.CreateDiagnostics("Failed to create material options object");
     }
     ErrorHandler h(context);
-    const size_t count = arr.size();
-    for (size_t i = 0; i < count && i < textures->GetSize(); ++i) {
-        if (auto err = ImportTextureEntry(context, arr[i], textures->GetValueAt(i)); h.Handle(err)) {
-            return err;
-        }
+    if (auto err = ImportEnumPropertyIfPresent(oc, "cullMode", *optMeta, "CullMode", CULL_MODE_TABLE); h.Handle(err)) {
+        return err;
     }
+    if (auto err = ImportEnumPropertyIfPresent(oc, "polygonMode", *optMeta, "PolygonMode", POLYGON_MODE_TABLE);
+        h.Handle(err)) {
+        return err;
+    }
+    if (auto value = GetOptBool(oc, "blend"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty(*optMeta, "Blend", value.GetValue());
+    }
+    auto prop = META_NS::ConstructProperty<META_NS::IObject::Ptr>("Options", obj);
+    meta.AddProperty(prop.GetProperty());
     return h;
 }
 
@@ -411,12 +346,19 @@ ImportResult ImportMaterial::Import(ImportContext& context)
     if (!obj) {
         return ImportResult{context.CreateDiagnostics("Failed to create material template")};
     }
-    auto meta = interface_cast<META_NS::IMetadata>(obj.get());
+    auto meta = interface_cast<META_NS::IMetadata>(obj);
     if (!meta) {
         return ImportResult{context.CreateDiagnostics("Material template has no metadata")};
     }
 
+    auto typeProp = META_NS::ConstructProperty<SCENE_NS::MaterialType>("Type");
+    META_NS::SetValue<SCENE_NS::MaterialType>(typeProp.GetProperty(), materialType_);
+    meta->AddProperty(typeProp.GetProperty());
+
     ErrorHandler h(context);
+    if (auto err = ImportResourceName(context, *meta); h.Handle(err)) {
+        return ImportResult{err};
+    }
     if (auto err = ImportMaterialScalars(context, *meta); h.Handle(err)) {
         return ImportResult{err};
     }
@@ -427,6 +369,9 @@ ImportResult ImportMaterial::Import(ImportContext& context)
         return ImportResult{err};
     }
     if (auto err = ImportTexturesToTemplate(context, *meta); h.Handle(err)) {
+        return ImportResult{err};
+    }
+    if (auto err = ImportMaterialOptions(context, *meta); h.Handle(err)) {
         return ImportResult{err};
     }
 

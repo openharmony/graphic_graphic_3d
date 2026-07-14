@@ -630,17 +630,42 @@ RenderHandleReference Device::CreateSwapchainImpl(
         swapchains_.push_back({});
     }
     auto& swapchainData = swapchains_[swapchainIdx];
+    auto updateDefaultPod = [this]() {
+        const bool validDefault =
+            defaultSwapchainHandle_ && (GetSwapchain(defaultSwapchainHandle_.GetHandle()) != nullptr);
+        if (!validDefault) {
+            defaultSwapchainHandle_ = {};
+        }
+        ConfigureDefaultSwapchainPod(renderContext_, validDefault);
+    };
     swapchainData = {};
     swapchainData.swapchain = CreateDeviceSwapchain(swapchainCreateInfo);
     if ((!swapchainData.swapchain) || (!swapchainData.swapchain->IsValid())) {
+        const bool hasSwapchain = static_cast<bool>(swapchainData.swapchain);
+        swapchains_.erase(swapchains_.cbegin() + swapchainIdx);
+        if (hasSwapchain) {
+            DestroyDeviceSwapchain();
+        }
         Deactivate();
-        ConfigureDefaultSwapchainPod(renderContext_, false);
+        updateDefaultPod();
         PLUGIN_LOG_E("Invalid swapchain created and cannot be used");
         return {};
     }
 
     {
         vector<unique_ptr<GpuImage>> swapchainGpuImages = CreateGpuImageViews(*swapchainData.swapchain);
+        const auto swapchainImageCount = static_cast<uint32_t>(swapchainGpuImages.size());
+        if ((swapchainImageCount == 0U) || (swapchainImageCount > InternalSwapchainData::MAX_IMAGE_VIEW_COUNT)) {
+            PLUGIN_LOG_E("Swapchain image count (%u) outside supported range [1, %u]",
+                swapchainImageCount,
+                InternalSwapchainData::MAX_IMAGE_VIEW_COUNT);
+            swapchainGpuImages.clear();
+            swapchains_.erase(swapchains_.cbegin() + swapchainIdx);
+            DestroyDeviceSwapchain();
+            Deactivate();
+            updateDefaultPod();
+            return {};
+        }
         Deactivate();
 
         // create shallow handle with handle in the name
@@ -654,9 +679,8 @@ RenderHandleReference Device::CreateSwapchainImpl(
                              to_hex(swapchainData.swapchain->GetSurfaceHandle()) + '_';
         swapchainData.remappableSwapchainImage =
             gpuResourceMgr_->CreateSwapchainImage(finalReplaceHandle, name, shallowDesc);
-        PLUGIN_ASSERT(SwapchainData::MAX_IMAGE_VIEW_COUNT >= static_cast<uint32_t>(swapchainGpuImages.size()));
-        swapchainData.imageViewCount = static_cast<uint32_t>(swapchainGpuImages.size());
-        for (uint32_t idx = 0; idx < swapchainGpuImages.size(); ++idx) {
+        swapchainData.imageViewCount = swapchainImageCount;
+        for (uint32_t idx = 0; idx < swapchainImageCount; ++idx) {
             const auto& ref = swapchainGpuImages[idx];
             swapchainData.imageViews[idx] = gpuResourceMgr_->CreateView(
                 swapchainData.name + to_string(idx), ref->GetDesc(), ref->GetBasePlatformData());

@@ -65,14 +65,14 @@ public:
     virtual BASE_NS::vector<uint8_t> GetOptionData() const = 0;
 
     virtual IProperty::Ptr GetProperty(BASE_NS::string_view name) = 0;
-    template <typename T>
+    template<typename T>
     Property<T> GetProperty(BASE_NS::string_view name)
     {
         return Property<T>(GetProperty(name));
     }
 
     virtual void SetProperty(const IProperty::Ptr&) = 0;
-    template <typename T>
+    template<typename T>
     void SetProperty(BASE_NS::string_view name, const T& value)
     {
         SetProperty(ConstructProperty<T>(name, value));

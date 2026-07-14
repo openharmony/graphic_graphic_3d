@@ -29,11 +29,11 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct LowLevelGlobalDescriptorSetMln {
-    MlnBindingLayout bindingLayout { MLN_NULL_HANDLE };
-    static constexpr uint32_t MAX_BUFFERING_COUNT { DeviceConstants::MAX_BUFFERING_COUNT };
-    MlnBindingSet bufferingSet[MAX_BUFFERING_COUNT] {};
+    MlnBindingLayout bindingLayout{MLN_NULL_HANDLE};
+    static constexpr uint32_t MAX_BUFFERING_COUNT{DeviceConstants::MAX_BUFFERING_COUNT};
+    MlnBindingSet bufferingSet[MAX_BUFFERING_COUNT]{};
     // Ensure all buffering sets receive initial writes.
-    uint32_t dirtyFramesRemaining { 0 };
+    uint32_t dirtyFramesRemaining{0};
 };
 
 /**
@@ -58,8 +58,8 @@ public:
     MlnBindingSet GetMlnBindingSet(const RenderHandle& handle) const;
 
 private:
-    MlnDevice mlnDevice_ { MLN_NULL_HANDLE };
-    uint32_t bufferingCount_ { 0 };
+    MlnDevice mlnDevice_{MLN_NULL_HANDLE};
+    uint32_t bufferingCount_{0};
 
     // GPU-side storage parallel to descriptorSets_ in base class
     BASE_NS::vector<BASE_NS::vector<LowLevelGlobalDescriptorSetMln>> gpuDescriptorSets_;
@@ -67,4 +67,4 @@ private:
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_DESCRIPTOR_SET_MANAGER_MLN_H
+#endif  // MALEOON_DESCRIPTOR_SET_MANAGER_MLN_H

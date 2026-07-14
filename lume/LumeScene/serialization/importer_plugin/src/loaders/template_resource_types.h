@@ -42,6 +42,17 @@ public:
     {}
 };
 
+// Mesh template: SceneResourceTemplateTypeBase loads the .mesh + .bin pair
+// through ImportMesh, producing a MeshTemplate carrying descriptor + binary
+// data. No GPU build happens here — that is deferred to the live-mesh load
+// driven by MeshResourceType (loaders/mesh_type.h).
+class MeshResourceTemplateType : public META_NS::IntroduceInterfaces<SceneResourceTemplateTypeBase> {
+    META_OBJECT(MeshResourceTemplateType, ClassId::MeshTemplateLoader, IntroduceInterfaces)
+public:
+    MeshResourceTemplateType() : Super(SCENE_NS::ClassId::MeshResourceTemplate)
+    {}
+};
+
 class OcclusionMaterialTemplateResourceType : public META_NS::IntroduceInterfaces<SceneResourceTemplateTypeBase> {
     META_OBJECT(OcclusionMaterialTemplateResourceType, ClassId::OcclusionMaterialTemplateLoader, IntroduceInterfaces)
 public:

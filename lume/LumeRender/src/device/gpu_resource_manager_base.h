@@ -42,7 +42,7 @@ protected:
     virtual void DestroyImmediate(uint32_t index) = 0;
 };
 
-template <typename ResourceType, typename CreateInfoType>
+template<typename ResourceType, typename CreateInfoType>
 class GpuResourceManagerTyped final : GpuResourceManagerBase {
 public:
     explicit GpuResourceManagerTyped(Device& device);
@@ -69,7 +69,7 @@ protected:
     void DestroyImmediate(uint32_t index) override;
 
     // create new, send old to pending deallocations if replacing
-    template <typename AdditionalInfoType>
+    template<typename AdditionalInfoType>
     void Create(uint32_t index, const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource,
         bool useAdditionalDesc, const AdditionalInfoType& additionalDesc);
 

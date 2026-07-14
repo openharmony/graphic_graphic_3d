@@ -25,7 +25,7 @@
 #include <core/plugin/intf_interface.h>
 
 BASE_BEGIN_NAMESPACE()
-template <typename T>
+template<typename T>
 class vector;
 BASE_END_NAMESPACE()
 

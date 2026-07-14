@@ -7,7 +7,6 @@
 				"resourceId": {
 					"name": "curve-anim"
 				},
-				"name": "anim with curve",
 				"type": "keyframeAnimation",
 				"options": {
 					"name": "curveAnim",

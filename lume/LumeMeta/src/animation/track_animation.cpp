@@ -221,6 +221,10 @@ size_t TrackAnimation::AddKeyframe(float timestamp, const IAny::ConstPtr& value)
     auto index = GetState().AddKeyframe(timestamp, value);
     if (index != ITrackAnimation::INVALID_INDEX) {
         keyframes_->NotifyChange();
+        if (GetState().IsPaused()) {
+            // Paused tracks are not stepped, so re-evaluate now to apply the new keyframe value.
+            Evaluate();
+        }
     }
     return index;
 }

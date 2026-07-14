@@ -23,7 +23,7 @@
 
 BASE_BEGIN_NAMESPACE()
 namespace Internals {
-template <typename U, typename T>
+template<typename U, typename T>
 using EnableIfPointerConvertible = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<U*, T*>>;
 
 class ControlBlock {
@@ -99,7 +99,7 @@ protected:
     ptr_base& operator=(ptr_base&&) = default;
 };
 
-template <typename Type>
+template<typename Type>
 class PtrCountedBase : public ptr_base {
 public:
     // NOLINTNEXTLINE(readability-identifier-naming) to keep std like syntax
@@ -134,14 +134,14 @@ protected:
     Type* pointer_{};
     ControlBlock* control_{};
 
-    template <typename>
+    template<typename>
     friend class PtrCountedBase;
 };
 
-template <typename T>
+template<typename T>
 using DefaultDeleterType = void (*)(T*);
 
-template <typename T>
+template<typename T>
 class StorageBlock final : public ControlBlock {
 public:
     explicit StorageBlock(T* ptr) : ptr_{ptr}
@@ -163,7 +163,7 @@ private:
     T* ptr_{nullptr};
 };
 
-template <typename T, typename Deleter = DefaultDeleterType<T>>
+template<typename T, typename Deleter = DefaultDeleterType<T>>
 class StorageBlockWithDeleter final : public ControlBlock {
 public:
     StorageBlockWithDeleter(T* ptr, Deleter deleter) : ptr_{ptr}, deleter_{BASE_NS::move(deleter)}
@@ -186,7 +186,7 @@ private:
     Deleter deleter_;
 };
 
-template <typename T>
+template<typename T>
 class RefCountedObjectStorageBlock final : public ControlBlock {
 public:
     using deletableType = BASE_NS::remove_const_t<T>;

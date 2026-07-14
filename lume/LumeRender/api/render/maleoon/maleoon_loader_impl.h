@@ -119,9 +119,9 @@ static char s_lbuf[256];
 // Internal state
 // ============================================================================
 
-static void* s_coreLib = nullptr;        // libmaleoon_loader.so (unified) or libhvgr.so/libmaleoon_v300.so (split)
-static void* s_swapLib = nullptr;        // libswapchain.so (only used in split mode, nullptr in unified mode)
-static bool s_unifiedLoaderMode = false; // true when using libmaleoon_loader.so (skip Phase 1b)
+static void* s_coreLib = nullptr;         // libmaleoon_loader.so (unified) or libhvgr.so/libmaleoon_v300.so (split)
+static void* s_swapLib = nullptr;         // libswapchain.so (only used in split mode, nullptr in unified mode)
+static bool s_unifiedLoaderMode = false;  // true when using libmaleoon_loader.so (skip Phase 1b)
 
 // Bootstrap entries from core .so
 static PFN_MlnGetDeviceProcAddr s_bootstrapGetDeviceProcAddr = nullptr;
@@ -323,7 +323,7 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
     // When using the unified loader, Phase 1b is skipped entirely — all functions
     // (core + swapchain) resolve through the loader's MlnGetDeviceProcAddr.
     static const char* loaderCandidates[] = {
-        "libmaleoon.so", // HAP bundle (preferred)
+        "libmaleoon.so",  // HAP bundle (preferred)
         "/system/lib64/libmaleoon.so",
         "/vendor/lib64/libmaleoon.so",
         "/vendor/lib64/passthrough/libmaleoon.so",
@@ -340,7 +340,8 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
 
         auto fnGetProc = (PFN_MlnGetDeviceProcAddr)GetSym(lib, "MlnGetDeviceProcAddr");
         auto fnCreate = (PFN_MlnCreateDevice)GetSym(lib, "MlnCreateDevice");
-        LLOG("[MaleoonLoader] Phase 1a(unified): MlnCreateDevice=%p  MlnGetDeviceProcAddr=%p", (void*)fnCreate,
+        LLOG("[MaleoonLoader] Phase 1a(unified): MlnCreateDevice=%p  MlnGetDeviceProcAddr=%p",
+            (void*)fnCreate,
             (void*)fnGetProc);
 
         if (!fnCreate && fnGetProc) {
@@ -366,8 +367,8 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
         LLOG("[MaleoonLoader] Phase 1a(unified): no loader found, trying SPLIT mode");
         static const char* coreCandidates[] = {
             "/vendor/lib64/passthrough/libmaleoon_v300.so",
-            "libhvgr.so",         // bundle fallback (SONAME=libhvgr)
-            "libmaleoon_v300.so", // bundle fallback
+            "libhvgr.so",          // bundle fallback (SONAME=libhvgr)
+            "libmaleoon_v300.so",  // bundle fallback
         };
         const char* corePath = nullptr;
         for (auto* path : coreCandidates) {
@@ -381,7 +382,8 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
 
             auto fnGetProc = (PFN_MlnGetDeviceProcAddr)GetSym(lib, "MlnGetDeviceProcAddr");
             auto fnCreate = (PFN_MlnCreateDevice)GetSym(lib, "MlnCreateDevice");
-            LLOG("[MaleoonLoader] Phase 1a(split): MlnCreateDevice=%p  MlnGetDeviceProcAddr=%p", (void*)fnCreate,
+            LLOG("[MaleoonLoader] Phase 1a(split): MlnCreateDevice=%p  MlnGetDeviceProcAddr=%p",
+                (void*)fnCreate,
                 (void*)fnGetProc);
 
             if (!fnCreate && fnGetProc) {
@@ -419,9 +421,10 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
         LLOG("[MaleoonLoader] Phase 1b: SKIPPED (unified loader mode)");
     } else {
         static const char* swapCandidates[] = {
-            "/system/lib64/libswapchain.so", "/vendor/lib64/libswapchain.so",
+            "/system/lib64/libswapchain.so",
+            "/vendor/lib64/libswapchain.so",
             "/system/lib64/chipset-pub-sdk/libswapchain.so",
-            "libswapchain.so", // fallback: bare name → HAP bundle or default search
+            "libswapchain.so",  // fallback: bare name → HAP bundle or default search
         };
         const char* swapSource = nullptr;
         for (auto* swapPath : swapCandidates) {
@@ -437,7 +440,8 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderInit(const char* /*corePath*/, const
         }
         if (s_swapLib) {
             s_swapGetDeviceProcAddr = (PFN_MlnGetDeviceProcAddr)GetSym(s_swapLib, "MlnGetDeviceProcAddr");
-            LLOG("[MaleoonLoader] Phase 1b: OK via '%s', swap MlnGetDeviceProcAddr=%p", swapSource,
+            LLOG("[MaleoonLoader] Phase 1b: OK via '%s', swap MlnGetDeviceProcAddr=%p",
+                swapSource,
                 (void*)s_swapGetDeviceProcAddr);
         } else {
             LLOG("[MaleoonLoader] Phase 1b: ALL swapchain candidates FAILED (swapchain may fail later)");
@@ -762,7 +766,10 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveWithDevice(MlnDevice device)
             }
             Dl_info info;
             if (dladdr(addr, &info) && info.dli_fname) {
-                LLOG("[MaleoonLoader] DLADDR: %-40s = %p [%s + 0x%lx]", name, addr, info.dli_fname,
+                LLOG("[MaleoonLoader] DLADDR: %-40s = %p [%s + 0x%lx]",
+                    name,
+                    addr,
+                    info.dli_fname,
                     (unsigned long)((char*)addr - (char*)info.dli_fbase));
             } else {
                 LLOG("[MaleoonLoader] DLADDR: %-40s = %p [dladdr failed]", name, addr);
@@ -795,9 +802,8 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveWithDevice(MlnDevice device)
         // MlnQueueSubmit=0x790248, MlnCreateGraphicsObjectGroup=0x78c2dc,
         // MlnCreateSchedulingGraph=0x794b28, MlnCreateBindingLayout=0x793b58
         // If AGP shows DIFFERENT offsets or DIFFERENT .so, dispatch is wrong.
-        LLOG(
-            "[MaleoonLoader] DLADDR: Probe ref offsets (libmaleoon_v300.so): "
-            "QueueSubmit=0x790248 GraphicsOG=0x78c2dc SG=0x794b28 BL=0x793b58");
+        LLOG("[MaleoonLoader] DLADDR: Probe ref offsets (libmaleoon_v300.so): "
+             "QueueSubmit=0x790248 GraphicsOG=0x78c2dc SG=0x794b28 BL=0x793b58");
     }
 #endif
     // ---- end dladdr diagnostic ----
@@ -873,9 +879,13 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
         s_swapProcEnabled = false;
 #endif
 
-    LLOG("[MaleoonLoader] Phase 3: device=%p  mode=%s  swapLib=%p  swapProc=%p(%s)  coreProc=%p", (void*)device,
-        s_unifiedLoaderMode ? "UNIFIED" : "SPLIT", s_swapLib, (void*)s_swapGetDeviceProcAddr,
-        s_swapProcEnabled ? "enabled(default)" : "disabled(env)", (void*)s_bootstrapGetDeviceProcAddr);
+    LLOG("[MaleoonLoader] Phase 3: device=%p  mode=%s  swapLib=%p  swapProc=%p(%s)  coreProc=%p",
+        (void*)device,
+        s_unifiedLoaderMode ? "UNIFIED" : "SPLIT",
+        s_swapLib,
+        (void*)s_swapGetDeviceProcAddr,
+        s_swapProcEnabled ? "enabled(default)" : "disabled(env)",
+        (void*)s_bootstrapGetDeviceProcAddr);
 
     int scTotal = 0, nLoader = 0, nDlsym = 0, nCore = 0, nSwap = 0, nNull = 0;
     char p3buf[160];
@@ -967,10 +977,15 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
         LLOG("[MaleoonLoader] P3 CRITICAL: MlnCreateDisplaySurface");
     }
 
-    LLOG(
-        "[MaleoonLoader] Phase 3 summary: total=%d, loader=%d, dlsym=%d, core=%d, swap=%d, null=%d, "
-        "critical_missing=%d",
-        scTotal, nLoader, nDlsym, nCore, nSwap, nNull, scMissing);
+    LLOG("[MaleoonLoader] Phase 3 summary: total=%d, loader=%d, dlsym=%d, core=%d, swap=%d, null=%d, "
+         "critical_missing=%d",
+        scTotal,
+        nLoader,
+        nDlsym,
+        nCore,
+        nSwap,
+        nNull,
+        scMissing);
 
 #ifndef _WIN32
     // dladdr for Phase 3 rendering-stage function (MlnCreateRenderTarget)
@@ -978,7 +993,9 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
         Dl_info info;
         void* rt = (void*)s_MlnCreateRenderTarget;
         if (rt && dladdr(rt, &info) && info.dli_fname) {
-            LLOG("[MaleoonLoader] DLADDR-P3: MlnCreateRenderTarget = %p [%s + 0x%lx]", rt, info.dli_fname,
+            LLOG("[MaleoonLoader] DLADDR-P3: MlnCreateRenderTarget = %p [%s + 0x%lx]",
+                rt,
+                info.dli_fname,
                 (unsigned long)((char*)rt - (char*)info.dli_fbase));
         } else {
             LLOG("[MaleoonLoader] DLADDR-P3: MlnCreateRenderTarget = %p [%s]", rt, rt ? "dladdr failed" : "null");
@@ -1006,7 +1023,7 @@ MLN_LOADER_EXPORT void MLNAPI_CALL mlnLoaderGetProbeInfo(int* outCoreMissing, vo
     if (outBootstrapEntry)
         *outBootstrapEntry = s_probeBootstrapEntry;
     if (outNullDeviceTested)
-        *outNullDeviceTested = 0; // not applicable for sandbox bundle
+        *outNullDeviceTested = 0;  // not applicable for sandbox bundle
     if (outNullDeviceResult)
         *outNullDeviceResult = nullptr;
     if (outCoreResolved)
@@ -1676,4 +1693,4 @@ MLN_LOADER_EXPORT MlnStatus MLNAPI_CALL MlnCheckAccelerationStructureCompatibili
     return s_MlnCheckAccelerationStructureCompatibility(device, version, compatibility);
 }
 
-#endif // API_RENDER_MALEOON_MALEOON_LOADER_IMPL_H
+#endif  // API_RENDER_MALEOON_MALEOON_LOADER_IMPL_H

@@ -55,7 +55,7 @@ const TestTypes InterpolationTestData(
     TType<BASE_NS::Math::Mat4X4> { BASE_NS::Math::Mat4X4 { 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f }, BASE_NS::Math::Mat4X4 { 2.2f } });
 // clang-format on
 
-template <typename Type>
+template<typename Type>
 class API_InterpolatorTest : public ::testing::Test {
 public:
     API_InterpolatorTest()

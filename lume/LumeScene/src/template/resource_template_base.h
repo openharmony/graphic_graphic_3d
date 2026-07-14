@@ -39,9 +39,20 @@ public:
     virtual void SetPromoted(bool promoted) = 0;
 };
 
+// Internal, parameterized apply. The public IResourceTemplate::ApplyTo wraps this with
+// asDefault=true (standalone path: template values become defaults on the live instance), while the
+// ApplyOptions / ApplyBaseResource flow calls it with asDefault=false to preserve the historical
+// override semantics. Exposed as an interface so ApplyBaseResource can thread asDefault through a
+// base template reached only via IResourceTemplate.
+class ITemplateApplyTarget : public CORE_NS::IInterface {
+    META_INTERFACE(CORE_NS::IInterface, ITemplateApplyTarget, "f4c1a9e6-2b7d-4e83-9a5c-1d8f0b3e6c27")
+public:
+    virtual bool ApplyToTarget(META_NS::IObject& target, bool asDefault) const = 0;
+};
+
 class ResourceTemplateBase : public META_NS::IntroduceInterfaces<META_NS::MetaObject, META_NS::INamed, ITemplateOptions,
                                  META_NS::IDerivedResourceOptions, META_NS::Resource, META_NS::IMetadataOwner,
-                                 IPromotableTemplate, IResourceTemplate> {
+                                 IPromotableTemplate, ITemplateApplyTarget, IResourceTemplate> {
 public:
     BASE_NS::string GetName() const override;
 
@@ -79,9 +90,13 @@ protected:
     bool Merge(const CORE_NS::IResourceOptions& options) override;
     CORE_NS::IResourceOptions::Ptr Clone() const override;
 
-    // IResourceTemplate
+    // IResourceTemplate — thin wrapper that applies in standalone (defaults) mode.
     bool ApplyTo(META_NS::IObject& target) const override;
     bool CopyFrom(const META_NS::IObject& source, bool onlySetValues = true) override;
+
+    // ITemplateApplyTarget — the real apply. `asDefault` selects default-slot vs override semantics.
+    // Subclasses override this (not ApplyTo) to add type-specific behaviour.
+    bool ApplyToTarget(META_NS::IObject& target, bool asDefault) const override;
 
     // --- Pure virtuals for derived classes ---
 
@@ -128,8 +143,15 @@ protected:
     void StampTemplateId(CORE_NS::IResource& res) const;
     void MarkImportedFromTemplate(META_NS::IMetadata& resMeta) const;
 
+    // Resolve this template's resource-id refs onto `target` using the context derived from
+    // the live target object (GetApplyContextFromObject) — for standalone ApplyTo paths that
+    // carry no explicit context. `asDefault` routes the bind to the default slot. The standalone
+    // wrapper passes true; the ApplyOptions flow passes templateContext_ so that when ApplyOptions
+    // later re-resolves with its explicit context (also templateContext_), the passes are idempotent.
+    void ResolveRefsFromTarget(META_NS::IObject& target, bool asDefault) const;
+
     // Helper available to derived classes
-    template <typename T>
+    template<typename T>
     META_NS::Property<T> PropertyByName(BASE_NS::string_view name)
     {
         META_NS::IMetadata& meta = *this;

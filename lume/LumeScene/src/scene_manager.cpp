@@ -172,8 +172,12 @@ Future<IScene::Ptr> SceneManager::CreateScene(BASE_NS::string_view uri, SceneOpt
     bool createRes = opts.createResources;
     CORE_NS::ResourceId rid = opts.resourceId;
     int64_t offset = opts.dataOffset;
-    return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri), renderContext = context_,
-                                              args = CreateContext(BASE_NS::move(opts)), createRes, rid, offset] {
+    return context_->AddTaskOrRunDirectly([path = BASE_NS::string(uri),
+                                              renderContext = context_,
+                                              args = CreateContext(BASE_NS::move(opts)),
+                                              createRes,
+                                              rid,
+                                              offset] {
         // Bracket the entire user-facing load (gltf branch + editor-scene
         // branch) so that any throwaway sub-scenes created during this call
         // — including nested CreateScene invocations from gltf-scene

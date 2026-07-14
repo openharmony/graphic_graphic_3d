@@ -64,7 +64,7 @@ namespace {
 static Storage gStorage;
 }
 
-template <size_t VALUE>
+template<size_t VALUE>
 void function()
 {
     gStorage.store(VALUE);

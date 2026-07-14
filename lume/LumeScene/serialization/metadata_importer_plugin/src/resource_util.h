@@ -21,6 +21,7 @@
 #include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/resource/intf_resource_context.h>
+#include <scene/interface/template/intf_template_options.h>
 
 #include <core/resources/intf_resource_manager.h>
 
@@ -32,8 +33,6 @@
 #include "serialization_util.h"
 
 SCENE_BEGIN_NAMESPACE()
-
-constexpr uint64_t IMPORTED_FROM_TEMPLATE_BIT = 128;
 
 inline CORE_NS::ResourceIdContext UniqueResourceName(
     const CORE_NS::IResourceManager::Ptr& resources, const CORE_NS::ResourceIdContext& id)
@@ -74,21 +73,9 @@ BASE_NS::vector<CORE_NS::ResourceId> GetAlreadyExistingResources(
     const BASE_NS::array_view<const CORE_NS::ResourceInfo>& infos, CORE_NS::IResourceManager::Ptr& dest,
     const CORE_NS::ResourceContextPtr& context);
 
-inline void CopyResourceInfos(const BASE_NS::array_view<const CORE_NS::ResourceInfo>& infos,
+void CopyResourceInfos(const BASE_NS::array_view<const CORE_NS::ResourceInfo>& infos,
     META_NS::IResourceManagerExtension& destExt, const CORE_NS::ResourceContextPtr& context,
-    BASE_NS::vector<CORE_NS::ResourceId>& out)
-{
-    for (auto&& i : infos) {
-        META_NS::ResourceData d{i};
-        d.options = i.options->Clone();
-        auto destI = destExt.GetResources({i.id}, context);
-        if (!destI.empty()) {
-            out.push_back(destI.front().id);
-            d.object = destI.front().object;
-        }
-        destExt.AddResources({d}, context);
-    }
-}
+    BASE_NS::vector<CORE_NS::ResourceId>& out);
 
 inline BASE_NS::vector<CORE_NS::ResourceId> CopyResourceInfos(
     const BASE_NS::array_view<const CORE_NS::ResourceInfo>& infos, CORE_NS::IResourceManager::Ptr& dest,

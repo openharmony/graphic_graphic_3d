@@ -25,30 +25,30 @@ META_BEGIN_NAMESPACE()
 
 struct ValuePtrBase {};
 
-template <typename Type, const META_NS::ClassInfo& ClassInfo>
+template<typename Type, const META_NS::ClassInfo& ClassInfo>
 struct ValuePtrInstance : ValuePtrBase {
     static constexpr ObjectId ID = ClassInfo.Id();
     using TypePtr = typename Type::Ptr;
     static_assert(IsInterfacePtr_v<TypePtr>, "Invalid type for ValuePtr");
 };
 
-template <typename Type>
+template<typename Type>
 struct ValuePtrImpl {
-    template <const META_NS::ClassInfo& ClassInfo>
+    template<const META_NS::ClassInfo& ClassInfo>
     using Instance = ValuePtrInstance<Type, ClassInfo>;
 };
-template <typename Type, const META_NS::ClassInfo& ClassInfo>
+template<typename Type, const META_NS::ClassInfo& ClassInfo>
 using ValuePtr = ValuePtrInstance<Type, ClassInfo>;
 
-template <typename T>
+template<typename T>
 struct PropertyType {
     using Type = T;
 };
-template <typename T, const META_NS::ClassInfo& ClassInfo>
+template<typename T, const META_NS::ClassInfo& ClassInfo>
 struct PropertyType<ValuePtr<T, ClassInfo>> {
     using Type = typename ValuePtr<T, ClassInfo>::TypePtr;
 };
-template <typename T>
+template<typename T>
 using PropertyType_v = typename PropertyType<T>::Type;  // NOLINT(readability-identifier-naming)
 
 /**
@@ -59,7 +59,7 @@ using PropertyType_v = typename PropertyType<T>::Type;  // NOLINT(readability-id
  * @param flags Object flags for the property
  * @return Typed property
  */
-template <typename T>
+template<typename T>
 Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, const T& value = {},
     ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {
@@ -79,7 +79,7 @@ Property<T> ConstructProperty(IObjectRegistry& obr, BASE_NS::string_view name, c
  * @param flags Object flags for the property
  * @return Typed property
  */
-template <typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_convertible_v<T*, ValuePtrBase*>>>
+template<typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_convertible_v<T*, ValuePtrBase*>>>
 Property<T> ConstructProperty(
     BASE_NS::string_view name, const T& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {
@@ -93,7 +93,7 @@ Property<T> ConstructProperty(
  * @param flags Object flags for the property
  * @return Typed property
  */
-template <typename T, typename Param = typename T::TypePtr>
+template<typename T, typename Param = typename T::TypePtr>
 Property<typename T::TypePtr> ConstructProperty(
     BASE_NS::string_view name, const Param& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {
@@ -122,7 +122,7 @@ Property<typename T::TypePtr> ConstructProperty(
  * @param flags Object flags for the property
  * @return Typed property
  */
-template <typename T>
+template<typename T>
 Property<PropertyType_v<T>> ConstructPropertyAny(
     BASE_NS::string_view name, const IAny& value, ObjectFlagBitsValue flags = ObjectFlagBits::SERIALIZE)
 {
@@ -154,17 +154,17 @@ inline IProperty::Ptr ConstructPropertyAny(
 }
 
 // helpers to handle default values with Value Ptr stuff
-template <typename T>
+template<typename T>
 IAny::Ptr ConstructAnyHelper(T&& value)
 {
     return ConstructAny(BASE_NS::forward<T>(value));
 }
-template <typename T>
+template<typename T>
 IAny::Ptr ConstructAnyHelper(PropertyType_v<T> value)
 {
     return ConstructAny<PropertyType_v<T>>(BASE_NS::move(value));
 }
-template <typename T, typename Param, typename = typename T::TypePtr>
+template<typename T, typename Param, typename = typename T::TypePtr>
 IAny::Ptr ConstructAnyHelper(Param&& value)
 {
     return ConstructAny(BASE_NS::forward<Param>(value));

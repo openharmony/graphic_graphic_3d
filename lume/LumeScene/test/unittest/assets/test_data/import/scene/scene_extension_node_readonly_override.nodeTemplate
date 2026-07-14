@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "description": "nodeTemplate wrapping an extensionNode with a read-only Config property",
+    "data": {
+        "type": "nodeTemplate",
+        "node": {
+            "type": "extensionNode",
+            "name": "ext",
+            "nodeUid": "cc1810e9-cc75-4c4e-871f-9d035a2ab7b2"
+        }
+    },
+    "primaryGroup": ""
+}

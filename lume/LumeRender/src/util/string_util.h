@@ -29,7 +29,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 namespace StringUtil {
-template <class T, size_t N>
+template<class T, size_t N>
 constexpr size_t MaxStringLengthFromArray(T (&)[N])
 {
     return N - 1u;

@@ -152,7 +152,7 @@ struct MlnRenderState {
     // Descriptor set bindings (tracked but MlnBindingSet resolved separately)
     MlnBindingSet bindingSets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
     uint32_t firstSet{0};
-    uint32_t endSet{0}; // exclusive upper bound (firstSet + count)
+    uint32_t endSet{0};  // exclusive upper bound (firstSet + count)
     // Per-set dynamic offsets: accumulated across multiple BIND_DESCRIPTOR_SETS calls.
     // Flattened in set order at snapshot time for the ObjectGroup.
     struct PerSetDynOffsets {
@@ -170,9 +170,13 @@ struct MlnRenderState {
     // Per-set storage so a partial rebind of a single set replaces only that set's
     // entries, leaving other already-bound sets intact.
     struct PerSetStorageOutputs {
-        BASE_NS::vector<MlnPassNodeResourceDescriptor> entries;
+        static constexpr uint32_t MAX_ENTRIES = 8;
+        MlnPassNodeResourceDescriptor entries[MAX_ENTRIES]{};
+        uint32_t count{0};
     };
     PerSetStorageOutputs perSetStorage[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
+
+    bool isComputeContext{false};
 
     // Push constant data
     uint8_t pushConstantData[PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE]{};
@@ -207,9 +211,7 @@ struct MlnRenderState {
 // A single draw call group (one ObjectGroup)
 struct DrawCallGroup {
     MlnProgram program{MLN_NULL_HANDLE};
-    // [SDK] programInterface removed from Mln*ObjectGroupDescriptor; no longer needed
-    // in per-draw snapshot. Program creation (PSO side) still uses it, but OG path does not.
-    PipelineStateObjectPlatformDataMln psoPlat{}; // Cached PSO state for stateSet
+    const GraphicsPipelineStateObjectMln* graphicsPso{nullptr};
 
     MlnResource vertexBuffers[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT]{};
     MlnDeviceSize vertexBufferOffsets[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT]{};
@@ -344,17 +346,6 @@ struct PendingRenderPass {
     vector<MlnObjectGroup> objectGroups;
 };
 
-// Shared context for streaming walker.
-// Threaded through Walk*/Handle*/Build* helpers instead of passing
-// dozens of individual parameters. Fields added incrementally in Steps 6/7a.
-struct StreamingCtx {
-    // Placeholder — fields added in Step 6 (Handle*) and Step 7a (WalkPrimaryCtx).
-    // Keeping empty now so Step 1 compile check stays isolated.
-    uint8_t placeholder{0};
-};
-
-// Moved from local scope so
-// BuildTransferDg can reference it via void* parameter. No semantic change.
 struct TransferDstImage {
     MlnResource resource{MLN_NULL_HANDLE};
     MlnResourceView resourceView{MLN_NULL_HANDLE};
@@ -371,17 +362,17 @@ struct PrimaryWalkerState {
     uint32_t& curStreamSubpass;
     vector<TransferOp>& curTransferOps;
     vector<TransferDstImage>& curTransferDsts;
-    vector<MlnResource>& curTransferDstBuffers; // dst buffers for current transfer batch
+    vector<MlnResource>& curTransferDstBuffers;  // dst buffers for current transfer batch
     uint32_t& streamingRpSegIdx;
-    void* pendingFrame{nullptr};     // PendingDestroyFrame*
-    void* outDataGraphs{nullptr};    // vector<MlnDataGraph>*
-    void* outDgResources{nullptr};   // vector<DataGraphResourceInfo>*
-    void* additionalRpSegs{nullptr}; // vector<RenderPassSegment>*
-    void* psoMgr{nullptr};           // NodeContextPsoManager*
+    void* pendingFrame{nullptr};      // PendingDestroyFrame*
+    void* outDataGraphs{nullptr};     // vector<MlnDataGraph>*
+    void* outDgResources{nullptr};    // vector<DataGraphResourceInfo>*
+    void* additionalRpSegs{nullptr};  // vector<RenderPassSegment>*
+    void* psoMgr{nullptr};            // NodeContextPsoManager*
     // Default-init to nullptr so a future init-list bug (e.g. missing element) still
     // leaves backendNode safe to test with `if (w.backendNode)` rather than a stack
     // garbage pointer that crashes inside HandleExecuteBackendFrame.
-    void* backendNode{nullptr}; // IRenderBackendNode* (for EXECUTE_BACKEND_FRAME_POSITION legacy path)
+    void* backendNode{nullptr};  // IRenderBackendNode* (for EXECUTE_BACKEND_FRAME_POSITION legacy path)
 };
 
 // ResolveGraphicsPsoForCurrentRp — deferred PSO lookup at RP time.
@@ -405,8 +396,10 @@ inline bool ResolveGraphicsPsoForCurrentRp(const RenderHandle psoHandle, RenderP
         rs.graphicsPso = static_cast<const GraphicsPipelineStateObjectMln*>(pso);
         return true;
     }
-    MLN_LOG_ERR("deferred graphics PSO lookup FAILED (subpass=%u, psoHandle idx=%u, gen=%u)", subpassIndex,
-        RenderHandleUtil::GetIndexPart(psoHandle), RenderHandleUtil::GetGenerationIndexPart(psoHandle));
+    MLN_LOG_ERR("deferred graphics PSO lookup FAILED (subpass=%u, psoHandle idx=%u, gen=%u)",
+        subpassIndex,
+        RenderHandleUtil::GetIndexPart(psoHandle),
+        RenderHandleUtil::GetGenerationIndexPart(psoHandle));
     return false;
 }
 
@@ -446,7 +439,11 @@ inline void MergeStitchedRpSegs(
             if (g_mlnLog.graph) {
                 MLN_LOG_GRAPH(
                     "Phase1.5: MERGED stitched rpSeg[%zu] (draws=%zu OGs=%zu) into rpSeg[%zu] (now draws=%zu OGs=%zu)",
-                    i, curr.drawGroups.size(), curr.secondaryOGHandles.size(), i - 1, prev.drawGroups.size(),
+                    i,
+                    curr.drawGroups.size(),
+                    curr.secondaryOGHandles.size(),
+                    i - 1,
+                    prev.drawGroups.size(),
                     prev.secondaryOGHandles.size());
             }
             renderPassSegments.erase(renderPassSegments.begin() + static_cast<ptrdiff_t>(i));
@@ -495,18 +492,12 @@ void SnapshotStateToDrawGroup(DrawCallGroup& group, const MlnRenderState& state)
 
     group.firstSet = state.firstSet;
     group.bindingSetCount = (state.endSet > state.firstSet) ? (state.endSet - state.firstSet) : 0;
-    for (uint32_t i = 0; i < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++i) {
+    for (uint32_t i = state.firstSet; i < state.endSet; ++i) {
         group.bindingSets[i] = state.bindingSets[i];
     }
-    // Flatten per-set dynamic offsets in set order for the ObjectGroup
     group.bindingSetDynamicOffsetCount = 0;
     for (uint32_t s = state.firstSet; s < state.endSet; ++s) {
         const auto& setDyn = state.perSetDynOffsets[s];
-        if (g_mlnLog.graph && setDyn.count > 0) {
-            MLN_LOG_GRAPH("Snapshot set=%u count=%u offsets=[%u,%u,%u,%u]", s, setDyn.count,
-                (setDyn.count > 0) ? setDyn.offsets[0] : 0, (setDyn.count > 1) ? setDyn.offsets[1] : 0,
-                (setDyn.count > 2) ? setDyn.offsets[2] : 0, (setDyn.count > 3) ? setDyn.offsets[3] : 0);
-        }
         for (uint32_t d = 0; d < setDyn.count; ++d) {
             if (group.bindingSetDynamicOffsetCount < MAX_TOTAL_DYNAMIC_OFFSETS) {
                 group.bindingSetDynamicOffsets[group.bindingSetDynamicOffsetCount++] = setDyn.offsets[d];
@@ -517,7 +508,9 @@ void SnapshotStateToDrawGroup(DrawCallGroup& group, const MlnRenderState& state)
     group.pushConstantOffset = state.pushConstantOffset;
     group.pushConstantSize = state.pushConstantSize;
     if (state.pushConstantSize > 0) {
-        if (memcpy_s(group.pushConstantData, sizeof(group.pushConstantData), state.pushConstantData,
+        if (memcpy_s(group.pushConstantData,
+                sizeof(group.pushConstantData),
+                state.pushConstantData,
                 state.pushConstantSize) != 0) {
             group.pushConstantSize = 0;
         }
@@ -535,9 +528,10 @@ void SnapshotStateToDrawGroup(DrawCallGroup& group, const MlnRenderState& state)
     group.depthBiasClamp = state.depthBiasClamp;
     group.depthBiasSlopeFactor = state.depthBiasSlopeFactor;
     group.hasBlendConstants = state.hasBlendConstants;
-    for (uint32_t i = 0; i < 4u; ++i) {
-        group.blendConstants[i] = state.blendConstants[i];
-    }
+    group.blendConstants[0] = state.blendConstants[0];
+    group.blendConstants[1] = state.blendConstants[1];
+    group.blendConstants[2] = state.blendConstants[2];
+    group.blendConstants[3] = state.blendConstants[3];
     group.hasDepthBounds = state.hasDepthBounds;
     group.minDepthBounds = state.minDepthBounds;
     group.maxDepthBounds = state.maxDepthBounds;
@@ -554,10 +548,9 @@ void SnapshotStateToComputeGroup(ComputeDispatchGroup& group, const MlnRenderSta
 {
     group.firstSet = state.firstSet;
     group.bindingSetCount = (state.endSet > state.firstSet) ? (state.endSet - state.firstSet) : 0;
-    for (uint32_t i = 0; i < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT; ++i) {
+    for (uint32_t i = state.firstSet; i < state.endSet; ++i) {
         group.bindingSets[i] = state.bindingSets[i];
     }
-    // Flatten per-set dynamic offsets in set order for the ObjectGroup
     group.bindingSetDynamicOffsetCount = 0;
     for (uint32_t s = state.firstSet; s < state.endSet; ++s) {
         const auto& setDyn = state.perSetDynOffsets[s];
@@ -571,7 +564,9 @@ void SnapshotStateToComputeGroup(ComputeDispatchGroup& group, const MlnRenderSta
     group.pushConstantOffset = state.pushConstantOffset;
     group.pushConstantSize = state.pushConstantSize;
     if (state.pushConstantSize > 0) {
-        if (memcpy_s(group.pushConstantData, sizeof(group.pushConstantData), state.pushConstantData,
+        if (memcpy_s(group.pushConstantData,
+                sizeof(group.pushConstantData),
+                state.pushConstantData,
                 state.pushConstantSize) != 0) {
             group.pushConstantSize = 0;
         }
@@ -582,8 +577,8 @@ void SnapshotStateToComputeGroup(ComputeDispatchGroup& group, const MlnRenderSta
     group.storageOutputs.clear();
     for (uint32_t s = state.firstSet; s < state.endSet; ++s) {
         const auto& storage = state.perSetStorage[s];
-        for (const auto& e : storage.entries) {
-            group.storageOutputs.push_back(e);
+        for (uint32_t i = 0; i < storage.count; ++i) {
+            group.storageOutputs.push_back(storage.entries[i]);
         }
     }
 }
@@ -598,19 +593,25 @@ uint64_t HashRenderTargetConfig(const BASE_NS::vector<MlnAttachmentDescriptor>& 
     BASE_NS::HashCombine(h, static_cast<uint64_t>(areaW), static_cast<uint64_t>(areaH));
     BASE_NS::HashCombine(h, static_cast<uint64_t>(colors.size()));
     for (const auto& c : colors) {
-        BASE_NS::HashCombine(h, reinterpret_cast<uint64_t>(c.imageResourceView),
-            reinterpret_cast<uint64_t>(c.resolveResourceView), static_cast<uint64_t>(c.loadOp),
+        BASE_NS::HashCombine(h,
+            reinterpret_cast<uint64_t>(c.imageResourceView),
+            reinterpret_cast<uint64_t>(c.resolveResourceView),
+            static_cast<uint64_t>(c.loadOp),
             static_cast<uint64_t>(c.storeOp));
         // OPT #9: include clearValue in hash to avoid stale clear color on cache hit
         if (c.loadOp == MLN_ATTACHMENT_LOAD_OP_CLEAR) {
-            BASE_NS::HashCombine(h, static_cast<uint64_t>(c.clearValue.color.u[0]),
-                static_cast<uint64_t>(c.clearValue.color.u[1]), static_cast<uint64_t>(c.clearValue.color.u[2]),
+            BASE_NS::HashCombine(h,
+                static_cast<uint64_t>(c.clearValue.color.u[0]),
+                static_cast<uint64_t>(c.clearValue.color.u[1]),
+                static_cast<uint64_t>(c.clearValue.color.u[2]),
                 static_cast<uint64_t>(c.clearValue.color.u[3]));
         }
     }
     if (hasDepth) {
-        BASE_NS::HashCombine(h, reinterpret_cast<uint64_t>(depthAtt.imageResourceView),
-            reinterpret_cast<uint64_t>(depthAtt.resolveResourceView), static_cast<uint64_t>(depthAtt.loadOp),
+        BASE_NS::HashCombine(h,
+            reinterpret_cast<uint64_t>(depthAtt.imageResourceView),
+            reinterpret_cast<uint64_t>(depthAtt.resolveResourceView),
+            static_cast<uint64_t>(depthAtt.loadOp),
             static_cast<uint64_t>(depthAtt.storeOp));
         if (depthAtt.loadOp == MLN_ATTACHMENT_LOAD_OP_CLEAR) {
             uint64_t cv = 0;
@@ -621,8 +622,10 @@ uint64_t HashRenderTargetConfig(const BASE_NS::vector<MlnAttachmentDescriptor>& 
         }
     }
     if (hasStencil) {
-        BASE_NS::HashCombine(h, reinterpret_cast<uint64_t>(stencilAtt.imageResourceView),
-            static_cast<uint64_t>(stencilAtt.loadOp), static_cast<uint64_t>(stencilAtt.storeOp));
+        BASE_NS::HashCombine(h,
+            reinterpret_cast<uint64_t>(stencilAtt.imageResourceView),
+            static_cast<uint64_t>(stencilAtt.loadOp),
+            static_cast<uint64_t>(stencilAtt.storeOp));
         if (stencilAtt.loadOp == MLN_ATTACHMENT_LOAD_OP_CLEAR) {
             uint64_t cv = 0;
             if (memcpy_s(&cv, sizeof(cv), &stencilAtt.clearValue.depthStencil, sizeof(cv)) != EOK) {
@@ -634,34 +637,14 @@ uint64_t HashRenderTargetConfig(const BASE_NS::vector<MlnAttachmentDescriptor>& 
     return h;
 }
 
-// ---- OG Update binary-search debug: bitmask controls which properties go through Update ----
-// bit=1 → dynamic (updated via MlnUpdateGraphicsObjectGroup on cache hit)
-// Hash the static (frame-invariant) part of a PSO for OG cache key.
-uint64_t HashPsoStaticState(const PipelineStateObjectPlatformDataMln& pso)
-{
-    uint64_t h = 0;
-    BASE_NS::HashCombine(h, static_cast<uint64_t>(pso.topology), static_cast<uint64_t>(pso.cullMode),
-        static_cast<uint64_t>(pso.frontFace), static_cast<uint64_t>(pso.depthTestEnable),
-        static_cast<uint64_t>(pso.depthWriteEnable), static_cast<uint64_t>(pso.depthCompareOp),
-        static_cast<uint64_t>(pso.stencilTestEnable), static_cast<uint64_t>(pso.rasterizerDiscardEnable));
-    return h;
-}
-
-// Hash the OG identity for cache lookup.
-// Includes: program, PSO static state, draw type, VB count.
-// WORKAROUND: Vertex buffer handles+offsets are also hashed (treated as static identity) because
-// MlnUpdateGraphicsObjectGroup does not correctly apply VERTEX_BUFFERS modifier updates.
-// This was confirmed via binary-search debugging (OG_UPDATE_BITS): only the VB modifier causes
-// black-screen when updated dynamically; all other 11 modifier types work correctly.
-// Impact: VB changes cause hash miss → fresh Create, but VB is typically frame-invariant for
-// static meshes, so the extra miss rate is negligible in practice.
 uint64_t HashOGIdentity(const DrawCallGroup& dg)
 {
     uint64_t h = 0;
-    // [SDK] programInterface removed from OG descriptor — hash only by program.
     BASE_NS::HashCombine(h, reinterpret_cast<uint64_t>(dg.program));
-    BASE_NS::HashCombine(h, HashPsoStaticState(dg.psoPlat));
-    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.isIndexed), static_cast<uint64_t>(dg.isIndirect),
+    BASE_NS::HashCombine(h, dg.graphicsPso->GetPlatformData().staticStateHash);
+    BASE_NS::HashCombine(h,
+        static_cast<uint64_t>(dg.isIndexed),
+        static_cast<uint64_t>(dg.isIndirect),
         static_cast<uint64_t>(dg.vertexBufferCount));
 
     // VB hashed as static identity (driver workaround — Update VB modifier is broken)
@@ -673,23 +656,417 @@ uint64_t HashOGIdentity(const DrawCallGroup& dg)
     return h;
 }
 
+// Modifier mask bit definitions — shared with UpdateCachedOG/UpdateCachedOGFromDG.
+constexpr uint16_t MOD_BINDING_SETS = 1u << 0;
+constexpr uint16_t MOD_DYNAMIC_OFFSETS = 1u << 1;
+constexpr uint16_t MOD_PUSH_CONSTANTS = 1u << 2;
+constexpr uint16_t MOD_INDEX_BUFFER = 1u << 3;
+constexpr uint16_t MOD_COMMAND = 1u << 4;
+constexpr uint16_t MOD_VIEWPORT = 1u << 5;
+constexpr uint16_t MOD_SCISSOR = 1u << 6;
+constexpr uint16_t MOD_DEPTH_BIAS = 1u << 7;
+constexpr uint16_t MOD_BLEND_CONSTANTS = 1u << 8;
+constexpr uint16_t MOD_DEPTH_BOUNDS = 1u << 9;
+constexpr uint16_t MOD_STENCIL_COMPARE_MASK = 1u << 10;
+constexpr uint16_t MOD_STENCIL_WRITE_MASK = 1u << 11;
+constexpr uint16_t MOD_STENCIL_REFERENCE = 1u << 12;
+
+uint16_t ComputeModifierMask(const DrawCallGroup& dg)
+{
+    uint16_t mask = 0;
+    if (dg.bindingSetCount > 0) {
+        const uint32_t maxSetCount = PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT;
+        const uint32_t drawSetStart = dg.firstSet;
+        const uint32_t requestedDrawSetEnd = drawSetStart + dg.bindingSetCount;
+        const uint32_t drawSetEnd = (requestedDrawSetEnd > maxSetCount) ? maxSetCount : requestedDrawSetEnd;
+        const bool hasInvalid = (requestedDrawSetEnd > maxSetCount) || (drawSetStart >= maxSetCount);
+        if (!hasInvalid && drawSetEnd > drawSetStart) {
+            mask |= MOD_BINDING_SETS;
+            if (dg.bindingSetDynamicOffsetCount > 0) {
+                mask |= MOD_DYNAMIC_OFFSETS;
+            }
+        }
+    }
+    if (dg.pushConstantSize > 0) {
+        mask |= MOD_PUSH_CONSTANTS;
+    }
+    if (dg.indexBuffer) {
+        mask |= MOD_INDEX_BUFFER;
+    }
+    mask |= MOD_COMMAND;
+    mask |= MOD_VIEWPORT;
+    mask |= MOD_SCISSOR;
+    if (dg.hasDepthBias) {
+        mask |= MOD_DEPTH_BIAS;
+    }
+    if (dg.hasBlendConstants) {
+        mask |= MOD_BLEND_CONSTANTS;
+    }
+    if (dg.hasDepthBounds) {
+        mask |= MOD_DEPTH_BOUNDS;
+    }
+    if (dg.hasStencilState) {
+        mask |= MOD_STENCIL_COMPARE_MASK;
+        mask |= MOD_STENCIL_WRITE_MASK;
+        mask |= MOD_STENCIL_REFERENCE;
+    }
+    return mask;
+}
+
+// Comprehensive fingerprint of ALL OG state for 3-slot full-reuse matching.
+// VB not included: already in HashOGIdentity, VB change → pool miss → create new OG.
+// Must include everything else that the OG contains so that matching fingerprint =
+// safe to skip MlnUpdateGraphicsObjectGroup entirely.
+uint64_t ComputeOGContentFingerprint(const DrawCallGroup& dg)
+{
+    uint64_t h = 0;
+
+    // Binding set handles (MlnBindingSet — stable within same slot due to DS buffering)
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.firstSet), static_cast<uint64_t>(dg.bindingSetCount));
+    for (uint32_t i = dg.firstSet; i < dg.firstSet + dg.bindingSetCount; ++i) {
+        BASE_NS::HashCombine(h, reinterpret_cast<uint64_t>(dg.bindingSets[i]));
+    }
+
+    // Dynamic offsets
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.bindingSetDynamicOffsetCount));
+    for (uint32_t i = 0; i < dg.bindingSetDynamicOffsetCount; ++i) {
+        BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.bindingSetDynamicOffsets[i]));
+    }
+
+    // Push constants
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.pushConstantSize));
+    if (dg.pushConstantSize > 0) {
+        const uint32_t* pcWords = reinterpret_cast<const uint32_t*>(dg.pushConstantData);
+        const uint32_t wordCount = dg.pushConstantSize / sizeof(uint32_t);
+        for (uint32_t i = 0; i < wordCount; ++i) {
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(pcWords[i]));
+        }
+        const uint32_t rem = dg.pushConstantSize % sizeof(uint32_t);
+        if (rem > 0) {
+            uint32_t lastWord = 0;
+            memcpy_s(&lastWord, sizeof(lastWord), &dg.pushConstantData[wordCount * sizeof(uint32_t)], rem);
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(lastWord));
+        }
+    }
+
+    // Index buffer
+    BASE_NS::HashCombine(
+        h, reinterpret_cast<uint64_t>(dg.indexBuffer), dg.indexBufferOffset, static_cast<uint64_t>(dg.indexType));
+
+    // Draw command
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.isIndexed), static_cast<uint64_t>(dg.isIndirect));
+    if (dg.isIndirect) {
+        BASE_NS::HashCombine(h,
+            reinterpret_cast<uint64_t>(dg.drawIndirectCmd.bufferResource),
+            dg.drawIndirectCmd.offset,
+            dg.drawIndirectCmd.drawCount,
+            dg.drawIndirectCmd.stride);
+    } else if (dg.isIndexed) {
+        BASE_NS::HashCombine(h,
+            dg.drawIndexedCmd.indexCount,
+            dg.drawIndexedCmd.instanceCount,
+            dg.drawIndexedCmd.firstIndex,
+            dg.drawIndexedCmd.vertexOffset,
+            dg.drawIndexedCmd.firstInstance);
+    } else {
+        BASE_NS::HashCombine(
+            h, dg.drawCmd.vertexCount, dg.drawCmd.instanceCount, dg.drawCmd.firstVertex, dg.drawCmd.firstInstance);
+    }
+
+    // Viewport / Scissor
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.hasViewport));
+    if (dg.hasViewport) {
+        uint32_t vpBits[6];
+        memcpy_s(vpBits, sizeof(vpBits), &dg.viewport, sizeof(vpBits));
+        for (uint32_t i = 0; i < 6; ++i) {
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(vpBits[i]));
+        }
+    }
+    BASE_NS::HashCombine(h, static_cast<uint64_t>(dg.hasScissor));
+    if (dg.hasScissor) {
+        BASE_NS::HashCombine(h,
+            static_cast<uint64_t>(dg.scissor.origin.x),
+            static_cast<uint64_t>(dg.scissor.origin.y),
+            static_cast<uint64_t>(dg.scissor.size.width),
+            static_cast<uint64_t>(dg.scissor.size.height));
+    }
+
+    // Dynamic states
+    BASE_NS::HashCombine(h,
+        static_cast<uint64_t>(dg.hasDepthBias),
+        static_cast<uint64_t>(dg.hasBlendConstants),
+        static_cast<uint64_t>(dg.hasDepthBounds),
+        static_cast<uint64_t>(dg.hasStencilState));
+    if (dg.hasDepthBias) {
+        uint32_t dbBits[3];
+        memcpy_s(dbBits, sizeof(dbBits), &dg.depthBiasConstantFactor, sizeof(dbBits));
+        for (uint32_t i = 0; i < 3; ++i) {
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(dbBits[i]));
+        }
+    }
+    if (dg.hasBlendConstants) {
+        uint32_t bcBits[4];
+        memcpy_s(bcBits, sizeof(bcBits), dg.blendConstants, sizeof(bcBits));
+        for (uint32_t i = 0; i < 4; ++i) {
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(bcBits[i]));
+        }
+    }
+    if (dg.hasDepthBounds) {
+        uint32_t bndBits[2];
+        memcpy_s(bndBits, sizeof(bndBits), &dg.minDepthBounds, sizeof(bndBits));
+        for (uint32_t i = 0; i < 2; ++i) {
+            BASE_NS::HashCombine(h, static_cast<uint64_t>(bndBits[i]));
+        }
+    }
+    if (dg.hasStencilState) {
+        BASE_NS::HashCombine(h,
+            dg.stencilFrontCompareMask,
+            dg.stencilFrontWriteMask,
+            dg.stencilFrontReference,
+            dg.stencilBackCompareMask,
+            dg.stencilBackWriteMask,
+            dg.stencilBackReference);
+    }
+
+    return h;
+}
+
+// Lightweight variant of UpdateCachedOG that builds minimal descriptors directly from
+// DrawCallGroup + RenderPassDesc. Compares modifier mask against lastModifierMask
+// to skip unchanged modifiers.
+bool UpdateCachedOGFromDG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const DrawCallGroup& dg,
+    const RenderPassDesc& rpDesc, uint16_t lastModifierMask, uint16_t& newModifierMask)
+{
+    newModifierMask = ComputeModifierMask(dg);
+
+    const uint16_t changedMask = newModifierMask & ~lastModifierMask;
+    constexpr uint16_t alwaysSendMask =
+        MOD_BINDING_SETS | MOD_VIEWPORT | MOD_SCISSOR | MOD_COMMAND | MOD_PUSH_CONSTANTS | MOD_INDEX_BUFFER;
+    uint16_t sendMask = changedMask | (newModifierMask & alwaysSendMask);
+
+    if (sendMask == 0) {
+        return true;
+    }
+
+    MlnResourceBindingSets resBS;
+    MlnBindingSetsDynamicOffsets dynOffsetsDesc;
+    MlnProgramConstants pc;
+    MlnResourceProgramConstants resPC;
+    MlnResourceIndexBuffer resIB;
+    MlnViewportDynamicState vpState;
+    MlnViewport fallbackViewport;
+    MlnScissorDynamicState scState;
+    MlnRect2D fallbackScissor;
+    MlnDepthBiasDynamicState depthBiasState;
+    MlnDepthBoundsDynamicState depthBoundsState;
+    MlnStencilCompareMaskDynamicState stencilCompareMask;
+    MlnStencilWriteMaskDynamicState stencilWriteMask;
+    MlnStencilReferenceDynamicState stencilReference;
+
+    constexpr uint32_t MAX_MODIFIER_CONTENTS = 13;
+    MlnGraphicsObjectGroupModifierContent contents[MAX_MODIFIER_CONTENTS];
+    uint32_t contentCount = 0;
+
+    if (sendMask & MOD_BINDING_SETS) {
+        const uint32_t maxSetCount = PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT;
+        const uint32_t drawSetStart = dg.firstSet;
+        const uint32_t requestedDrawSetEnd = drawSetStart + dg.bindingSetCount;
+        const uint32_t drawSetEnd = (requestedDrawSetEnd > maxSetCount) ? maxSetCount : requestedDrawSetEnd;
+        const bool hasInvalid = (requestedDrawSetEnd > maxSetCount) || (drawSetStart >= maxSetCount);
+        if (!hasInvalid && drawSetEnd > drawSetStart) {
+            resBS.firstSet = drawSetStart;
+            resBS.bindingSetCount = drawSetEnd - drawSetStart;
+            resBS.bindingSets = &dg.bindingSets[drawSetStart];
+            resBS.dynamicOffsetCount = dg.bindingSetDynamicOffsetCount;
+            resBS.dynamicOffsets = (dg.bindingSetDynamicOffsetCount > 0) ? dg.bindingSetDynamicOffsets : nullptr;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_BINDING_SETS;
+            c.data.bindingSet = &resBS;
+        }
+    }
+
+    if (sendMask & MOD_DYNAMIC_OFFSETS) {
+        if (dg.bindingSetDynamicOffsetCount > 0) {
+            dynOffsetsDesc.firstSet = dg.firstSet;
+            dynOffsetsDesc.dynamicOffsetCount = dg.bindingSetDynamicOffsetCount;
+            dynOffsetsDesc.dynamicOffsets = dg.bindingSetDynamicOffsets;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_BINDING_SETS_DYNAMIC_OFFSETS;
+            c.data.dynamicOffsets = &dynOffsetsDesc;
+        }
+    }
+
+    if (sendMask & MOD_PUSH_CONSTANTS) {
+        if (dg.pushConstantSize > 0) {
+            pc.offset = 0;
+            pc.size = dg.pushConstantSize;
+            pc.values = dg.pushConstantData;
+            resPC.programConstantCount = 1;
+            resPC.programConstants = &pc;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_PROGRAM_CONSTANTS;
+            c.data.programConstant = &resPC;
+        }
+    }
+
+    if (sendMask & MOD_INDEX_BUFFER) {
+        if (dg.indexBuffer) {
+            resIB.bufferResource = dg.indexBuffer;
+            resIB.offset = dg.indexBufferOffset;
+            resIB.size = 0;
+            resIB.indexType = dg.indexType;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_INDEX_BUFFER;
+            c.data.indexBuffer = &resIB;
+        }
+    }
+
+    if (sendMask & MOD_COMMAND) {
+        auto& c = contents[contentCount++];
+        c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_COMMAND;
+        if (dg.isIndirect) {
+            c.data.drawIndirect = &dg.drawIndirectCmd;
+        } else if (dg.isIndexed) {
+            c.data.drawIndexed = &dg.drawIndexedCmd;
+        } else {
+            c.data.draw = &dg.drawCmd;
+        }
+    }
+
+    if (sendMask & MOD_VIEWPORT) {
+        vpState.firstViewport = 0;
+        vpState.viewportCount = 1;
+        if (dg.hasViewport) {
+            vpState.viewports = &dg.viewport;
+        } else {
+            fallbackViewport = {0.0f,
+                0.0f,
+                static_cast<float>(rpDesc.renderArea.extentWidth),
+                static_cast<float>(rpDesc.renderArea.extentHeight),
+                0.0f,
+                1.0f};
+            vpState.viewports = &fallbackViewport;
+        }
+        auto& c = contents[contentCount++];
+        c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_VIEWPORT;
+        c.data.viewport = &vpState;
+    }
+
+    if (sendMask & MOD_SCISSOR) {
+        scState.firstScissor = 0;
+        scState.scissorCount = 1;
+        if (dg.hasScissor) {
+            scState.scissors = &dg.scissor;
+        } else {
+            fallbackScissor.origin = {0, 0};
+            fallbackScissor.size = {rpDesc.renderArea.extentWidth, rpDesc.renderArea.extentHeight};
+            scState.scissors = &fallbackScissor;
+        }
+        auto& c = contents[contentCount++];
+        c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_SCISSOR;
+        c.data.scissor = &scState;
+    }
+
+    if (sendMask & MOD_DEPTH_BIAS) {
+        if (dg.hasDepthBias) {
+            depthBiasState.depthBiasConstantFactor = dg.depthBiasConstantFactor;
+            depthBiasState.depthBiasClamp = dg.depthBiasClamp;
+            depthBiasState.depthBiasSlopeFactor = dg.depthBiasSlopeFactor;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_DEPTH_BIAS;
+            c.data.depthBias = &depthBiasState;
+        }
+    }
+
+    if (sendMask & MOD_BLEND_CONSTANTS) {
+        if (dg.hasBlendConstants) {
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_BLEND_CONSTANTS;
+            c.data.blendConstants[0] = dg.blendConstants[0];
+            c.data.blendConstants[1] = dg.blendConstants[1];
+            c.data.blendConstants[2] = dg.blendConstants[2];
+            c.data.blendConstants[3] = dg.blendConstants[3];
+        }
+    }
+
+    if (sendMask & MOD_DEPTH_BOUNDS) {
+        if (dg.hasDepthBounds) {
+            depthBoundsState.minDepthBounds = dg.minDepthBounds;
+            depthBoundsState.maxDepthBounds = dg.maxDepthBounds;
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_DEPTH_BOUNDS;
+            c.data.depthBound = &depthBoundsState;
+        }
+    }
+
+    if (dg.hasStencilState) {
+        if (sendMask & MOD_STENCIL_COMPARE_MASK) {
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_STENCIL_COMPARE_MASK;
+            c.data.stencilCompareMask = &stencilCompareMask;
+        }
+        if (sendMask & MOD_STENCIL_WRITE_MASK) {
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_STENCIL_WRITE_MASK;
+            c.data.stencilWriteMask = &stencilWriteMask;
+        }
+        if (sendMask & MOD_STENCIL_REFERENCE) {
+            auto& c = contents[contentCount++];
+            c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_STENCIL_REFERENCE;
+            c.data.stencilReference = &stencilReference;
+        }
+    }
+
+    if (contentCount == 0) {
+        return true;
+    }
+
+    MlnGraphicsObjectGroupModifier modifiers[MAX_MODIFIER_CONTENTS];
+    for (uint32_t i = 0; i < contentCount; ++i) {
+        modifiers[i].extensionCount = 0;
+        modifiers[i].extensions = nullptr;
+        modifiers[i].commandIndex = 0;
+        modifiers[i].contentCount = 1;
+        modifiers[i].contents = &contents[i];
+    }
+
+    MlnGraphicsObjectGroupUpdateDescriptor updateDesc;
+    updateDesc.extensionCount = 0;
+    updateDesc.extensions = nullptr;
+    updateDesc.flags = static_cast<MlnGraphicsObjectGroupUpdateDescriptorFlags>(0);
+    updateDesc.modifierCount = contentCount;
+    updateDesc.modifiers = modifiers;
+
+    MlnStatus st = MlnUpdateGraphicsObjectGroup(mlnDevice, cachedOG, &updateDesc);
+    return (st == MLN_STATUS_SUCCESS);
+}
+
 // Build MlnGraphicsObjectGroupUpdateDescriptor from a DrawCallGroup to update a cached OG.
 // Updates all dynamic state EXCEPT vertex buffers.
 // WORKAROUND: VERTEX_BUFFERS modifier is excluded because MlnUpdateGraphicsObjectGroup does not
 // correctly apply VB updates (confirmed via binary-search: only VB modifier causes black-screen).
 // VB identity is hashed in HashOGIdentity instead, so VB changes trigger cache miss → fresh Create.
-// Returns true on success.
+// Compares current modifier mask against lastModifierMask to skip unchanged modifiers.
+// Returns true on success, writes new modifier mask to newModifierMask.
 bool UpdateCachedOG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const DrawCallGroup& dg,
     const MlnResourceVertexBuffers& resVB, const MlnResourceIndexBuffer& resIB, const MlnResourceBindingSets& resBS,
     const MlnResourceProgramConstants& resPC, const MlnViewportDynamicState& vpState,
     const MlnScissorDynamicState& scState, const MlnDepthBiasDynamicState& depthBiasState,
     const MlnDepthBoundsDynamicState& depthBoundsState, const MlnStencilCompareMaskDynamicState& stencilCompareMask,
-    const MlnStencilWriteMaskDynamicState& stencilWriteMask, const MlnStencilReferenceDynamicState& stencilReference)
+    const MlnStencilWriteMaskDynamicState& stencilWriteMask, const MlnStencilReferenceDynamicState& stencilReference,
+    uint16_t lastModifierMask, uint16_t& newModifierMask)
 {
-    // Max modifiers: bindings(1) + dynOffsets(1) + pushConst(1) + IB(1) + command(1)
-    //   + viewport(1) + scissor(1) + depthBias(1) + blendConst(1) + depthBounds(1)
-    //   + stencilCmp(1) + stencilWrite(1) + stencilRef(1) = 13
-    // NOTE: VB modifier intentionally excluded (driver bug workaround)
+    newModifierMask = ComputeModifierMask(dg);
+
+    const uint16_t alwaysSendMask = MOD_BINDING_SETS | MOD_DYNAMIC_OFFSETS | MOD_VIEWPORT | MOD_SCISSOR | MOD_COMMAND |
+                                    MOD_PUSH_CONSTANTS | MOD_INDEX_BUFFER;
+    const uint16_t changedMask = newModifierMask & ~lastModifierMask;
+    const uint16_t sendMask = changedMask | (newModifierMask & alwaysSendMask);
+
+    if (sendMask == 0) {
+        return true;
+    }
+
     constexpr uint32_t MAX_MODIFIER_CONTENTS = 13;
     MlnGraphicsObjectGroupModifierContent contents[MAX_MODIFIER_CONTENTS]{};
     uint32_t contentCount = 0;
@@ -802,7 +1179,7 @@ bool UpdateCachedOG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const DrawCall
     }
 
     if (contentCount == 0) {
-        return true; // nothing to update
+        return true;  // nothing to update
     }
 
     // Each content needs its own MlnGraphicsObjectGroupModifier entry.
@@ -811,7 +1188,7 @@ bool UpdateCachedOG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const DrawCall
     for (uint32_t i = 0; i < contentCount; ++i) {
         modifiers[i].extensionCount = 0;
         modifiers[i].extensions = nullptr;
-        modifiers[i].commandIndex = 0; // single-command OG
+        modifiers[i].commandIndex = 0;  // single-command OG
         modifiers[i].contentCount = 1;
         modifiers[i].contents = &contents[i];
     }
@@ -827,7 +1204,7 @@ bool UpdateCachedOG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const DrawCall
     return (st == MLN_STATUS_SUCCESS);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // Helper class for running std::function as a ThreadPool task (same pattern as Vulkan backend).
 class MlnFunctionTask final : public CORE_NS::IThreadPool::ITask {
@@ -837,7 +1214,8 @@ public:
         return Ptr{new MlnFunctionTask(BASE_NS::move(func))};
     }
 
-    explicit MlnFunctionTask(std::function<void()> func) : func_(BASE_NS::move(func)) {}
+    explicit MlnFunctionTask(std::function<void()> func) : func_(BASE_NS::move(func))
+    {}
 
     void operator()() override
     {
@@ -937,11 +1315,13 @@ RenderBackendMln::~RenderBackendMln()
     }
     renderTargetCache_.clear();
 
-    // Destroy all cached ObjectGroups (pool-based)
+    // Destroy all cached ObjectGroups (pool-based, 3-slot)
     for (auto& kv : ogPools_) {
-        for (auto& entry : kv.second.entries) {
-            if (entry.objectGroup) {
-                MlnDestroyObjectGroup(deviceMln_.GetMlnDevice(), entry.objectGroup);
+        for (uint32_t si = 0; si < 6u; ++si) {
+            for (auto& entry : kv.second.slots[si].entries) {
+                if (entry.objectGroup) {
+                    MlnDestroyObjectGroup(deviceMln_.GetMlnDevice(), entry.objectGroup);
+                }
             }
         }
     }
@@ -980,105 +1360,119 @@ void RenderBackendMln::EvictStaleRenderTargets()
     }
 }
 
+void RenderBackendMln::ClearCaches()
+{
+    MlnDevice mlnDevice = deviceMln_.GetMlnDevice();
+    {
+        std::lock_guard<std::mutex> lock(renderTargetCacheMutex_);
+        for (auto& entry : renderTargetCache_) {
+            if (entry.second.renderTarget) {
+                MlnDestroyRenderTarget(mlnDevice, entry.second.renderTarget);
+            }
+        }
+        renderTargetCache_.clear();
+    }
+    {
+        const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
+        for (auto& kv : ogPools_) {
+            for (uint32_t si = 0; si < 6u; ++si) {
+                for (auto& entry : kv.second.slots[si].entries) {
+                    if (entry.objectGroup) {
+                        MlnDestroyObjectGroup(mlnDevice, entry.objectGroup);
+                    }
+                }
+                for (auto& entry : kv.second.slots[si].pendingEntries) {
+                    if (entry.objectGroup) {
+                        MlnDestroyObjectGroup(mlnDevice, entry.objectGroup);
+                    }
+                }
+            }
+        }
+        ogPools_.clear();
+        ogTotalCount_ = 0;
+    }
+}
+
 void RenderBackendMln::ResetOGPoolCounters()
 {
+    const uint32_t currentSlot = device_.GetFrameCount() % device_.GetCommandBufferingCount();
     const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
     for (auto& kv : ogPools_) {
+        auto& slot = kv.second.slots[currentSlot];
         if (g_mlnLog.ogPendingStage) {
-            // Merge pendingEntries (OGs created last frame, now submitted) into entries.
-            for (auto& pe : kv.second.pendingEntries) {
-                kv.second.entries.push_back(pe);
+            for (auto& pe : slot.pendingEntries) {
+                slot.entries.push_back(pe);
             }
-            kv.second.pendingEntries.clear();
+            slot.pendingEntries.clear();
         }
-        kv.second.frameAllocIndex = 0;
+        slot.frameAllocIndex = 0;
     }
 }
 
 void RenderBackendMln::EvictStaleOGs()
 {
-    // Evict individual OG entries not used for bufferingCount+2 frames.
-    // Also remove empty pools and trim pool tails that exceed this frame's usage.
     constexpr uint64_t ADDITIONAL_FRAMES = 2u;
     const uint64_t frameCount = device_.GetFrameCount();
     const auto minAge = device_.GetCommandBufferingCount() + ADDITIONAL_FRAMES;
     const auto ageLimit = (frameCount < minAge) ? 0u : (frameCount - minAge);
+    const uint32_t slotCount = device_.GetCommandBufferingCount();
 
     MlnDevice mlnDevice = deviceMln_.GetMlnDevice();
     const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
 
-    // Helper: drain a pool's pendingEntries before erasing the pool itself.
-    // Under the normal call order (ResetOGPoolCounters runs BEFORE EvictStaleOGs),
-    // every pool entering this function already has pendingEntries empty — merged
-    // into entries by ResetOGPoolCounters. But some worker/secondary paths may
-    // push into pendingEntries concurrently, and the order guarantee could be
-    // broken by future refactors; this helper ensures a clean driver-side tear-
-    // down whenever a pool with non-empty pendingEntries really does get erased.
-    auto drainPending = [this, mlnDevice](OGPool& pool) {
-        for (auto& pe : pool.pendingEntries) {
+    auto drainSlotPending = [&mlnDevice, this](OGSlot& slot) {
+        for (auto& pe : slot.pendingEntries) {
             if (pe.objectGroup) {
                 MlnDestroyObjectGroup(mlnDevice, pe.objectGroup);
                 ogTotalCount_--;
             }
         }
-        pool.pendingEntries.clear();
+        slot.pendingEntries.clear();
     };
 
     for (auto poolIt = ogPools_.begin(); poolIt != ogPools_.end();) {
-        auto& entries = poolIt->second.entries;
-        auto& pending = poolIt->second.pendingEntries;
-        // Trim stale entries from the tail (entries beyond this frame's usage)
-        while (!entries.empty() && entries.back().lastFrameUsed < ageLimit) {
-            if (entries.back().objectGroup) {
-                MlnDestroyObjectGroup(mlnDevice, entries.back().objectGroup);
-                ogTotalCount_--;
+        bool anyEntries = false;
+        for (uint32_t si = 0; si < slotCount; ++si) {
+            auto& entries = poolIt->second.slots[si].entries;
+            auto& pending = poolIt->second.slots[si].pendingEntries;
+            while (!entries.empty() && entries.back().lastFrameUsed < ageLimit) {
+                if (entries.back().objectGroup) {
+                    MlnDestroyObjectGroup(mlnDevice, entries.back().objectGroup);
+                    ogTotalCount_--;
+                }
+                entries.pop_back();
             }
-            entries.pop_back();
+            if (!entries.empty() || !pending.empty()) {
+                anyEntries = true;
+            }
         }
-        // Only erase a pool when BOTH entries AND pendingEntries are empty.
-        // In the normal path pending is already empty here (merged by
-        // ResetOGPoolCounters just before us), so this degenerates to the
-        // historical `entries.empty()` check. The extra `pending.empty()` guard
-        // is a defensive invariant — if a worker produced OGs after the merge
-        // or the call order regresses, we still won't orphan staged OGs.
-        if (entries.empty() && pending.empty()) {
+        if (!anyEntries) {
             poolIt = ogPools_.erase(poolIt);
         } else {
             ++poolIt;
         }
     }
 
-    // Hard cap: if total OG count exceeds limit, evict oldest entries globally
-    while (ogTotalCount_ > OG_CACHE_MAX_TOTAL) {
-        // Find the pool with the oldest tail entry
-        uint64_t oldestFrame = UINT64_MAX;
-        decltype(ogPools_)::iterator oldestPool = ogPools_.end();
-        for (auto it = ogPools_.begin(); it != ogPools_.end(); ++it) {
-            if (!it->second.entries.empty()) {
-                uint64_t tailFrame = it->second.entries.back().lastFrameUsed;
-                if (tailFrame < oldestFrame) {
-                    oldestFrame = tailFrame;
-                    oldestPool = it;
+    // Per-slot eviction: each slot independently limited to OG_CACHE_MAX_PER_SLOT
+    for (auto poolIt = ogPools_.begin(); poolIt != ogPools_.end();) {
+        bool poolEmpty = true;
+        for (uint32_t si = 0; si < slotCount; ++si) {
+            auto& entries = poolIt->second.slots[si].entries;
+            while (entries.size() > OG_CACHE_MAX_PER_SLOT) {
+                if (entries.back().objectGroup) {
+                    MlnDestroyObjectGroup(mlnDevice, entries.back().objectGroup);
+                    ogTotalCount_--;
                 }
+                entries.pop_back();
+            }
+            if (!entries.empty() || !poolIt->second.slots[si].pendingEntries.empty()) {
+                poolEmpty = false;
             }
         }
-        if (oldestPool == ogPools_.end()) {
-            break;
-        }
-        auto& entries = oldestPool->second.entries;
-        if (entries.back().objectGroup) {
-            MlnDestroyObjectGroup(mlnDevice, entries.back().objectGroup);
-        }
-        entries.pop_back();
-        ogTotalCount_--;
-        // Same invariant as above: only erase a pool when BOTH vectors are empty.
-        // If hard-cap trimmed entries to empty but pendingEntries still holds
-        // staged OGs, drain them properly before erase to avoid leak.
-        if (entries.empty() && oldestPool->second.pendingEntries.empty()) {
-            ogPools_.erase(oldestPool);
-        } else if (entries.empty()) {
-            drainPending(oldestPool->second);
-            ogPools_.erase(oldestPool);
+        if (poolEmpty) {
+            poolIt = ogPools_.erase(poolIt);
+        } else {
+            ++poolIt;
         }
     }
 }
@@ -1128,17 +1522,20 @@ void RenderBackendMln::ReclaimCompletedFrames()
         waitDesc.timelineCount = 1;
         waitDesc.timelines = &submitTimeline_;
         waitDesc.values = &oldest.timelineValue;
-        constexpr uint64_t RECLAIM_WAIT_TIMEOUT_NS = 5000000000ULL; // 5 seconds
+        constexpr uint64_t RECLAIM_WAIT_TIMEOUT_NS = 5000000000ULL;  // 5 seconds
         MlnStatus waitResult = MlnWaitForTimelines(mlnDevice, &waitDesc, RECLAIM_WAIT_TIMEOUT_NS);
         if (waitResult == MLN_STATUS_TIMEOUT) {
-            MLN_LOG_ERR(
-                "ReclaimCompletedFrames: TIMEOUT 5s waiting for frame (timelineValue=%llu) — "
-                "force-destroying %zu SGs, %zu DGs, %zu OGs, %zu RTs",
-                static_cast<unsigned long long>(oldest.timelineValue), oldest.schedulingGraphs.size(),
-                oldest.dataGraphs.size(), oldest.objectGroups.size(), oldest.renderTargets.size());
+            MLN_LOG_ERR("ReclaimCompletedFrames: TIMEOUT 5s waiting for frame (timelineValue=%llu) — "
+                        "force-destroying %zu SGs, %zu DGs, %zu OGs, %zu RTs",
+                static_cast<unsigned long long>(oldest.timelineValue),
+                oldest.schedulingGraphs.size(),
+                oldest.dataGraphs.size(),
+                oldest.objectGroups.size(),
+                oldest.renderTargets.size());
         } else if (waitResult != MLN_STATUS_SUCCESS) {
             MLN_LOG_ERR("ReclaimCompletedFrames: wait FAILED (status=%d, timelineValue=%llu)",
-                static_cast<int>(waitResult), static_cast<unsigned long long>(oldest.timelineValue));
+                static_cast<int>(waitResult),
+                static_cast<unsigned long long>(oldest.timelineValue));
         }
         for (auto& sg : oldest.schedulingGraphs) {
             MlnDestroySchedulingGraph(mlnDevice, sg);
@@ -1197,7 +1594,8 @@ void RenderBackendMln::Present(const RenderBackendBackBufferConfiguration& backB
 {
     if (g_mlnLog.frame) {
         MLN_LOG_FRAME("RenderBackendMln::Present (presentData=%d, infos=%zu, timelineVal=%llu)",
-            presentationData_.present ? 1 : 0, presentationData_.infos.size(),
+            presentationData_.present ? 1 : 0,
+            presentationData_.infos.size(),
             static_cast<unsigned long long>(submitTimelineValue_));
     }
     if (!presentationData_.present) {
@@ -1226,7 +1624,8 @@ void RenderBackendMln::Present(const RenderBackendBackBufferConfiguration& backB
         const uint64_t presentWaitValue = frameDidSubmit_ ? submitTimelineValue_ : 0;
         MlnStatus result = swapchainMln.Present(info.swapchainImageIndex, presentWaitTimeline, presentWaitValue);
         if (result == MLN_STATUS_SUCCESS) {
-            MLN_LOG_FRAME("Present OK (imgIdx=%u, waitTimeline=%llu)", info.swapchainImageIndex,
+            MLN_LOG_FRAME("Present OK (imgIdx=%u, waitTimeline=%llu)",
+                info.swapchainImageIndex,
                 static_cast<unsigned long long>(submitTimelineValue_));
         } else {
             MLN_LOG_ERR("Present FAILED (imgIdx=%u, status=%d)", info.swapchainImageIndex, static_cast<int>(result));
@@ -1347,8 +1746,11 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                     RenderSingleCommandList(ctx, localFrame, perCmdResults[i].dataGraphs, perCmdResults[i].dgResources);
                     perCmdResults[i].objectGroups = BASE_NS::move(localFrame.objectGroups);
                     perCmdResults[i].renderTargets = BASE_NS::move(localFrame.renderTargets);
-                    MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu", g_debugFrameCount, i,
-                        perCmdResults[i].dataGraphs.size(), perCmdResults[i].objectGroups.size());
+                    MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu",
+                        g_debugFrameCount,
+                        i,
+                        perCmdResults[i].dataGraphs.size(),
+                        perCmdResults[i].objectGroups.size());
                 }));
                 ++i;
             } else {
@@ -1382,20 +1784,29 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
 
                         // Step 2: Primary ctx Phase1+2 with merged rpSegs (reuse groupFrame)
                         auto& primaryCtx = renderCommandFrameData.renderCommandContexts[i];
-                        MLN_LOG_FRAME("TASK-START frame=%u ctx[%u] (primary, +%zu rpSegs, parallel)", g_debugFrameCount,
-                            i, collectedRpSegs.size());
-                        RenderSingleCommandList(primaryCtx, groupFrame, perCmdResults[i].dataGraphs,
-                            perCmdResults[i].dgResources, collectedRpSegs.empty() ? nullptr : &collectedRpSegs,
+                        MLN_LOG_FRAME("TASK-START frame=%u ctx[%u] (primary, +%zu rpSegs, parallel)",
+                            g_debugFrameCount,
+                            i,
+                            collectedRpSegs.size());
+                        RenderSingleCommandList(primaryCtx,
+                            groupFrame,
+                            perCmdResults[i].dataGraphs,
+                            perCmdResults[i].dgResources,
+                            collectedRpSegs.empty() ? nullptr : &collectedRpSegs,
                             nullptr);
                         perCmdResults[i].objectGroups = BASE_NS::move(groupFrame.objectGroups);
                         perCmdResults[i].renderTargets = BASE_NS::move(groupFrame.renderTargets);
-                        MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu", g_debugFrameCount, i,
-                            perCmdResults[i].dataGraphs.size(), perCmdResults[i].objectGroups.size());
+                        MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu",
+                            g_debugFrameCount,
+                            i,
+                            perCmdResults[i].dataGraphs.size(),
+                            perCmdResults[i].objectGroups.size());
                     }));
                 i = groupEnd;
             }
         }
-        MLN_LOG_FRAME("MILESTONE-5.5 frame=%u PRE-Execute: %llu tasks submitted", g_debugFrameCount,
+        MLN_LOG_FRAME("MILESTONE-5.5 frame=%u PRE-Execute: %llu tasks submitted",
+            g_debugFrameCount,
             static_cast<unsigned long long>(taskId));
         queue_->Execute();
         queue_->Clear();
@@ -1425,8 +1836,11 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                     firstCtx, localFrame, perCmdResults[i].dataGraphs, perCmdResults[i].dgResources);
                 perCmdResults[i].objectGroups = BASE_NS::move(localFrame.objectGroups);
                 perCmdResults[i].renderTargets = BASE_NS::move(localFrame.renderTargets);
-                MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu", g_debugFrameCount, i,
-                    perCmdResults[i].dataGraphs.size(), perCmdResults[i].objectGroups.size());
+                MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu",
+                    g_debugFrameCount,
+                    i,
+                    perCmdResults[i].dataGraphs.size(),
+                    perCmdResults[i].objectGroups.size());
                 ++i;
             } else {
                 // Multi-ctx group (rcCount > 1): all ctx's share one logical render pass.
@@ -1435,8 +1849,12 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 // run Phase 1 only to collect drawGroups, primary ctx merges and creates
                 // one DG. secondaryCmdLists flag differentiates VK secondary cmdBuf path
                 // vs shared primary cmdBuf path, but both produce one RP in Vulkan.
-                MLN_LOG_FRAME("CTX-GROUP frame=%u ctx[%u..%u] subpassCount=%u secondaryCmdLists=%d", g_debugFrameCount,
-                    i, groupEnd - 1, rcCount, mrpData.secondaryCmdLists ? 1 : 0);
+                MLN_LOG_FRAME("CTX-GROUP frame=%u ctx[%u..%u] subpassCount=%u secondaryCmdLists=%d",
+                    g_debugFrameCount,
+                    i,
+                    groupEnd - 1,
+                    rcCount,
+                    mrpData.secondaryCmdLists ? 1 : 0);
 
                 // [OPT] Share ONE groupFrame across secondaries + primary so OGs
                 // created by secondaries (via ogDirectBuild) are tracked for deferred
@@ -1454,7 +1872,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                     vector<RenderPassSegment> rpSegs;
                     vector<MlnDataGraph> dummyDGs;
                     vector<DataGraphResourceInfo> dummyRes;
-                    RenderSingleCommandList(ctx, groupFrame, dummyDGs, dummyRes, nullptr, &rpSegs); // Phase 1 only
+                    RenderSingleCommandList(ctx, groupFrame, dummyDGs, dummyRes, nullptr, &rpSegs);  // Phase 1 only
                     for (auto& seg : rpSegs) {
                         collectedRpSegs.push_back(BASE_NS::move(seg));
                     }
@@ -1463,14 +1881,23 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 }
 
                 // Step 2: First ctx runs full Phase 1 + Phase 2 with merged rpSegs (reuse groupFrame)
-                MLN_LOG_FRAME("TASK-START frame=%u ctx[%u] (primary, +%zu additional rpSegs)", g_debugFrameCount, i,
+                MLN_LOG_FRAME("TASK-START frame=%u ctx[%u] (primary, +%zu additional rpSegs)",
+                    g_debugFrameCount,
+                    i,
                     collectedRpSegs.size());
-                RenderSingleCommandList(firstCtx, groupFrame, perCmdResults[i].dataGraphs, perCmdResults[i].dgResources,
-                    collectedRpSegs.empty() ? nullptr : &collectedRpSegs, nullptr);
+                RenderSingleCommandList(firstCtx,
+                    groupFrame,
+                    perCmdResults[i].dataGraphs,
+                    perCmdResults[i].dgResources,
+                    collectedRpSegs.empty() ? nullptr : &collectedRpSegs,
+                    nullptr);
                 perCmdResults[i].objectGroups = BASE_NS::move(groupFrame.objectGroups);
                 perCmdResults[i].renderTargets = BASE_NS::move(groupFrame.renderTargets);
-                MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu", g_debugFrameCount, i,
-                    perCmdResults[i].dataGraphs.size(), perCmdResults[i].objectGroups.size());
+                MLN_LOG_FRAME("TASK-END frame=%u ctx[%u] DGs=%zu OGs=%zu",
+                    g_debugFrameCount,
+                    i,
+                    perCmdResults[i].dataGraphs.size(),
+                    perCmdResults[i].objectGroups.size());
 
                 i = groupEnd;
             }
@@ -1495,14 +1922,19 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
 
     // [MILESTONE-6] Phase 3 entry — all RenderSingleCommandList done, results merged
     MLN_LOG_FRAME("MILESTONE-6 frame=%u PHASE3-ENTRY: DGs=%zu OGs=%zu RTs=%zu pendingFrames=%zu rtCache=%zu",
-        g_debugFrameCount, allDataGraphs.size(), pendingFrame.objectGroups.size(), pendingFrame.renderTargets.size(),
-        pendingDestroyFrames_.size(), renderTargetCache_.size());
+        g_debugFrameCount,
+        allDataGraphs.size(),
+        pendingFrame.objectGroups.size(),
+        pendingFrame.renderTargets.size(),
+        pendingDestroyFrames_.size(),
+        renderTargetCache_.size());
 
     // Nothing to submit — clean up any OGs/RTs that were created but produced no DGs
     if (allDataGraphs.empty()) {
         if (!pendingFrame.objectGroups.empty() || !pendingFrame.renderTargets.empty()) {
             MLN_LOG_ERR("RenderAllCommandLists: no DataGraphs but %zu OGs + %zu RTs leaked — destroying",
-                pendingFrame.objectGroups.size(), pendingFrame.renderTargets.size());
+                pendingFrame.objectGroups.size(),
+                pendingFrame.renderTargets.size());
             for (auto& og : pendingFrame.objectGroups) {
                 MlnDestroyObjectGroup(mlnDevice, og);
             }
@@ -1540,13 +1972,44 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
 
     const uint32_t dgCount = static_cast<uint32_t>(allDataGraphs.size());
 
+    // Select consumer dstStage based on producer-consumer type combination.
+    // dstStage = the pipeline stage where the consumer starts reading the producer's output.
+    //   Graphics->Graphics: consumer reads textures (shadow maps) at FRAGMENT_SHADER
+    //   */Transfer->Graphics: consumer may read vertex buffers at VERTEX_INPUT, textures at FRAGMENT_SHADER,
+    //     use ALL_GRAPHICS_BIT (conservative but correct)
+    //   Graphics->*: consumer is Compute/Transfer, use their own srcStage as dstStage
+    //   other->other: use consumer's srcStage (already correct)
+    auto selectDstStage = [](MlnProgramStageFlags producerStage,
+                              MlnProgramStageFlags consumerStage) -> MlnProgramStageFlags {
+        bool producerIsGraphics = (producerStage & MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) ||
+                                  (producerStage & MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT);
+        bool consumerIsGraphics = (consumerStage & MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) ||
+                                  (consumerStage & MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT);
+
+        if (producerIsGraphics && consumerIsGraphics) {
+            // Graphics->Graphics: consumer reads textures at FRAGMENT_SHADER
+            return static_cast<MlnProgramStageFlags>(MLN_PROGRAM_STAGE_FRAGMENT_SHADER_BIT);
+        }
+        if (consumerIsGraphics) {
+            // Transfer/Compute->Graphics: consumer may read vertex buffers, keep ALL_GRAPHICS
+            return static_cast<MlnProgramStageFlags>(MLN_PROGRAM_STAGE_ALL_GRAPHICS_BIT);
+        }
+        // Graphics->Compute/Transfer or other: use consumer's srcStage
+        return consumerStage;
+    };
+
     // Build passNode descriptors with output resources and sequential dependencies
     vector<uint64_t> passIds(dgCount);
-    vector<MlnPassNodeDependencyDescriptor> depDescs(dgCount); // [i] = dependency for passNode[i]
+    vector<MlnPassNodeDependencyDescriptor> depDescs(dgCount);  // [i] = dependency for passNode[i]
     vector<MlnPassNodeDescriptor> passNodes(dgCount);
+    static uint64_t basePassid = 1u;
 
     for (uint32_t i = 0; i < dgCount; ++i) {
-        passIds[i] = static_cast<uint64_t>(i + 1); // passIds: 1, 2, 3, ...
+        uint64_t lastPassid = 0;
+        if (i == 0 && basePassid != 1) {
+            lastPassid = basePassid;
+        }
+        passIds[i] = ++basePassid;
 
         MlnPassNodeDescriptor& pn = passNodes[i];
         pn.extensionCount = 0;
@@ -1576,13 +2039,13 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
             MlnPassNodeDependencyDescriptor& dep = depDescs[i];
             dep.extensionCount = 0;
             dep.extensions = nullptr;
-            dep.passId = passIds[i - 1]; // depend on previous pass
+            dep.passId = passIds[i - 1];  // depend on previous pass
             dep.depResourceCount = allDgResources[i - 1].outputCount;
             dep.depResources = allDgResources[i - 1].outputs;
             // [REFAC Step 8a] producer's output stage / consumer's input stage approx
             dep.srcStage = allDgResources[i - 1].srcStage;
-            dep.dstStage =
-                (i < allDgResources.size()) ? allDgResources[i].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+            dep.dstStage = selectDstStage(allDgResources[i - 1].srcStage,
+                (i < allDgResources.size()) ? allDgResources[i].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT);
             dep.filterMargin = 0;
             pn.depCount = 1;
             pn.depPasses = &depDescs[i];
@@ -1598,14 +2061,29 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
             // [REFAC Step 8a] precise stage masks (same as above branch)
             dep.srcStage =
                 ((i - 1) < allDgResources.size()) ? allDgResources[i - 1].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
-            dep.dstStage =
-                (i < allDgResources.size()) ? allDgResources[i].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+            dep.dstStage = selectDstStage(
+                ((i - 1) < allDgResources.size()) ? allDgResources[i - 1].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT,
+                (i < allDgResources.size()) ? allDgResources[i].srcStage : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT);
             dep.filterMargin = 0;
             pn.depCount = 1;
             pn.depPasses = &depDescs[i];
         } else {
-            pn.depCount = 0;
-            pn.depPasses = nullptr;
+            if (i == 0) {
+                MLN_LOG_FRAME("MILESTONE-7 lastPassid=%llu", static_cast<unsigned long long>(lastPassid));
+                MlnPassNodeDependencyDescriptor& dep = depDescs[i];
+                dep.extensionCount = 0;
+                dep.extensions = nullptr;
+                dep.passId = lastPassid;  // depend on previous pass
+                // [REFAC Step 8a] producer's output stage / consumer's input stage approx
+                dep.srcStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+                dep.dstStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+                dep.filterMargin = 0;
+                pn.depCount = 1;
+                pn.depPasses = &depDescs[i];
+            } else {
+                pn.depCount = 0;
+                pn.depPasses = nullptr;
+            }
         }
     }
 
@@ -1613,9 +2091,12 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
     MLN_LOG_FRAME("MILESTONE-7 frame=%u PRE-CreateSG: passNodes=%u", g_debugFrameCount, dgCount);
     for (uint32_t i = 0; i < dgCount; ++i) {
         const auto& pn = passNodes[i];
-        MLN_LOG_GRAPH("  passNode[%u]: frame=%u passId=%llu outputCount=%u depCount=%u DG=%p", i, g_debugFrameCount,
-            static_cast<unsigned long long>(pn.passId), pn.outputCount, pn.depCount,
-            reinterpret_cast<void*>(allDataGraphs[i]));
+        MLN_LOG_GRAPH("  passNode[%u]: frame=%u passId=%llu outputCount=%u depCount=%u",
+            i,
+            g_debugFrameCount,
+            static_cast<unsigned long long>(pn.passId),
+            pn.outputCount,
+            pn.depCount);
     }
 
     // Create single SchedulingGraph
@@ -1740,7 +2221,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 }
             }
             if (pos > 0 && buf[pos - 1] == '|') {
-                buf[pos - 1] = '\0'; // trim trailing '|'
+                buf[pos - 1] = '\0';  // trim trailing '|'
             } else if (pos == 0) {
                 (void)snprintf_s(buf, bufLen, bufLen - 1, "0x%x", static_cast<uint32_t>(f));
             }
@@ -1762,13 +2243,6 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 totalGraphicsDGs++;
             }
         }
-
-        MLN_LOG_FRAME(
-            "[CREATE-SG] frame=%u SG=%p | DGs=%u (transfer=%u compute=%u graphics=%u) | OGs=%u | RTs=%u | "
-            "timeline=%llu",
-            g_debugFrameCount, reinterpret_cast<void*>(sg), dgCount, totalTransferDGs, totalComputeDGs,
-            totalGraphicsDGs, totalOGs, totalRTs, static_cast<unsigned long long>(submitTimelineValue_));
-
         for (uint32_t i = 0; i < dgCount; ++i) {
             const auto& pn = passNodes[i];
             const char* type = "UNKNOWN";
@@ -1792,20 +2266,12 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 stageFlagsStr(pn.depPasses[0].srcStage, srcBuf, sizeof(srcBuf));
                 stageFlagsStr(pn.depPasses[0].dstStage, dstBuf, sizeof(dstBuf));
             }
-
-            MLN_LOG_FRAME(
-                "[CREATE-SG]   DG[%u] passId=%llu type=%-8s DG=%p RT=%p | outputs=%u | dep={passId=%llu resCount=%u "
-                "src=[%s] dst=[%s]}",
-                i, static_cast<unsigned long long>(pn.passId), type, reinterpret_cast<void*>(allDataGraphs[i]),
-                reinterpret_cast<void*>(rt), pn.outputCount, static_cast<unsigned long long>(depPassId), depResCount,
-                srcBuf, dstBuf);
-
             // Output resources detail
             for (uint32_t oi = 0; oi < pn.outputCount && oi < MAX_DG_OUTPUT_RESOURCES; ++oi) {
                 const auto& res = allDgResources[i].outputs[oi];
-                MLN_LOG_FRAME("[CREATE-SG]     output[%u]: type=%u resource=%p view=%p storeOp=%u", oi,
-                    static_cast<uint32_t>(res.type), reinterpret_cast<void*>(res.bufferResource),
-                    reinterpret_cast<void*>(res.imageResourceView),
+                MLN_LOG_FRAME("[CREATE-SG]     output[%u]: type=%u storeOp=%u",
+                    oi,
+                    static_cast<uint32_t>(res.type),
                     static_cast<uint32_t>(allDgResources[i].storeOps[oi]));
             }
         }
@@ -1816,7 +2282,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
             int cpos = 0;
             for (uint32_t i = 0; i < dgCount && i < allDgResources.size(); ++i) {
                 const char* t = dgTypeName(allDgResources[i].srcStage);
-                char shortType = t[0]; // T/C/G/U
+                char shortType = t[0];  // T/C/G/U
                 if (i > 0) {
                     const int n =
                         snprintf_s(chainBuf + cpos, sizeof(chainBuf) - cpos, sizeof(chainBuf) - cpos - 1, " -> ");
@@ -1838,7 +2304,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
             }
             MLN_LOG_FRAME("[CREATE-SG]   chain: %s", chainBuf);
         }
-    } // if (g_mlnLog.frame) — CREATE-SG dump
+    }  // if (g_mlnLog.frame) — CREATE-SG dump
 
     // Single submit with all DataGraphs
     MlnSchedulingGraphSubmitDescriptor sgSubmitDesc{};
@@ -1896,7 +2362,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
     uint32_t waitCount = 0;
     if (acquireTimeline_ && presentationData_.present && dgCount > 0) {
         acquireWaitDesc.timeline = acquireTimeline_;
-        acquireWaitDesc.value = 0; // binary timeline: value ignored by driver
+        acquireWaitDesc.value = 0;  // binary timeline: value ignored by driver
 
 #if ACQUIRE_WAIT_MODE == 1
         // Mode 1: Partial wait — only the FIRST pass that writes swapchain image waits.
@@ -1937,8 +2403,11 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
             acquireWaitDesc.passIds = passIds.data();
             acquireWaitDesc.stageMasks = stageMasks.data();
         }
-        MLN_LOG_ERR("[TIMELINE] PARTIAL-WAIT: frame=%u firstSwapPass=%llu found=%d dgCount=%u", g_debugFrameCount,
-            static_cast<unsigned long long>(firstSwapPassId), foundSwapPass ? 1 : 0, dgCount);
+        MLN_LOG_ERR("[TIMELINE] PARTIAL-WAIT: frame=%u firstSwapPass=%llu found=%d dgCount=%u",
+            g_debugFrameCount,
+            static_cast<unsigned long long>(firstSwapPassId),
+            foundSwapPass ? 1 : 0,
+            dgCount);
 
 #elif ACQUIRE_WAIT_MODE == 2
         // Mode 2: Full wait — all passes wait for acquire.
@@ -1971,13 +2440,18 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
     submitDesc.signalTimelines = signalDescs;
 
     // [MILESTONE-8] Pre-QueueSubmit — SG created, about to submit
-    MLN_LOG_FRAME("MILESTONE-8 frame=%u PRE-QueueSubmit: SG=%p DGs=%u timeline=%llu signalCount=%u", g_debugFrameCount,
-        reinterpret_cast<void*>(sg), dgCount, static_cast<unsigned long long>(submitTimelineValue_), signalCount);
+    MLN_LOG_FRAME("MILESTONE-8 frame=%u PRE-QueueSubmit: DGs=%u timeline=%llu signalCount=%u",
+        g_debugFrameCount,
+        dgCount,
+        static_cast<unsigned long long>(submitTimelineValue_),
+        signalCount);
 
     MlnStatus result = MlnQueueSubmit(deviceMln_.GetMlnQueue(), &submitDesc);
     if (result != MLN_STATUS_SUCCESS) {
         MLN_LOG_ERR("Phase3 frame=%u: MlnQueueSubmit FAILED (status=%d, DGs=%u) — destroying objects immediately",
-            g_debugFrameCount, static_cast<int>(result), dgCount);
+            g_debugFrameCount,
+            static_cast<int>(result),
+            dgCount);
         // Submit failed — timeline will never signal this value.
         // Destroy objects immediately to avoid deadlock in ReclaimCompletedFrames.
         for (auto& sg2 : pendingFrame.schedulingGraphs) {
@@ -1992,14 +2466,16 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
         for (auto& rt2 : pendingFrame.renderTargets) {
             MlnDestroyRenderTarget(mlnDevice, rt2);
         }
-        submitTimelineValue_--; // revert since signal never happened
+        submitTimelineValue_--;  // revert since signal never happened
         // MarkFrameSubmitted is only called on successful submit (above), so no deadlock risk.
         return;
     }
 
     // [MILESTONE-9] Post-QueueSubmit — survived submit
-    MLN_LOG_FRAME("MILESTONE-9 frame=%u POST-QueueSubmit: status=%d timeline=%llu", g_debugFrameCount,
-        static_cast<int>(result), static_cast<unsigned long long>(submitTimelineValue_));
+    MLN_LOG_FRAME("MILESTONE-9 frame=%u POST-QueueSubmit: status=%d timeline=%llu",
+        g_debugFrameCount,
+        static_cast<int>(result),
+        static_cast<unsigned long long>(submitTimelineValue_));
 
     // Mark frameSync fence at the exact point of successful submit — mirrors Vulkan's
     // FrameFenceIsSignalled() inside RenderProcessSubmitCommandLists.
@@ -2028,8 +2504,7 @@ void RenderBackendMln::EnsureDefaultImageResourceView()
         const GpuBufferMln* defaultBuf = gpuResourceMgr_.GetBuffer<GpuBufferMln>(defaultBufHandle.GetHandle());
         if (defaultBuf && defaultBuf->GetPlatformData().resource) {
             defaultBufferResource_ = defaultBuf->GetPlatformData().resource;
-            MLN_LOG_GRAPH("Recovered missing default buffer resource from CORE_DEFAULT_GPU_BUFFER: %p",
-                reinterpret_cast<void*>(defaultBufferResource_));
+            MLN_LOG_GRAPH("Recovered missing default buffer resource from CORE_DEFAULT_GPU_BUFFER");
             return;
         }
     }
@@ -2040,8 +2515,7 @@ void RenderBackendMln::EnsureDefaultImageResourceView()
     if (defaultImg && defaultImg->GetPlatformData().resourceView && defaultImg->GetPlatformData().resource) {
         defaultImageResourceView_ = defaultImg->GetPlatformData().resourceView;
         defaultBufferResource_ = defaultImg->GetPlatformData().resource;
-        MLN_LOG_GRAPH("Default fallback handles cached from CORE_DEFAULT_GPU_IMAGE: imgView=%p bufRes=%p",
-            reinterpret_cast<void*>(defaultImageResourceView_), reinterpret_cast<void*>(defaultBufferResource_));
+        MLN_LOG_GRAPH("Default fallback handles cached from CORE_DEFAULT_GPU_IMAGE");
         return;
     }
 
@@ -2053,14 +2527,11 @@ void RenderBackendMln::EnsureDefaultImageResourceView()
         if (defaultBuf && defaultBuf->GetPlatformData().resource) {
             defaultImageResourceView_ = defaultImg->GetPlatformData().resourceView;
             defaultBufferResource_ = defaultBuf->GetPlatformData().resource;
-            MLN_LOG_GRAPH("Default fallback handles cached from image+buffer: imgView=%p bufRes=%p",
-                reinterpret_cast<void*>(defaultImageResourceView_), reinterpret_cast<void*>(defaultBufferResource_));
             return;
         }
     }
 
-    MLN_LOG_GRAPH("Default fallback handles unavailable: imgView=%p bufRes=%p",
-        reinterpret_cast<void*>(defaultImageResourceView_), reinterpret_cast<void*>(defaultBufferResource_));
+    MLN_LOG_GRAPH("Default fallback handles unavailable");
 }
 
 void RenderBackendMln::EnsureEmptyBindingSet()
@@ -2079,10 +2550,9 @@ void RenderBackendMln::EnsureEmptyBindingSet()
         emptyBindingSet_ = MlnCreateBindingSet(mlnDevice, emptyBindingLayout_, 0);
     }
     if (emptyBindingSet_) {
-        MLN_LOG_INIT("Empty binding set created for DG-Error fix: layout=%p, set=%p",
-            reinterpret_cast<void*>(emptyBindingLayout_), reinterpret_cast<void*>(emptyBindingSet_));
+        MLN_LOG_INIT("Empty binding set created for DG-Error fix");
     } else {
-        MLN_LOG_GRAPH("Failed to create empty binding set (layout=%p)", reinterpret_cast<void*>(emptyBindingLayout_));
+        MLN_LOG_GRAPH("Failed to create empty binding set");
     }
 }
 
@@ -2099,8 +2569,11 @@ void RenderBackendMln::WriteDescriptorSetBindings(
     const uint32_t samplerResCount = static_cast<uint32_t>(bindingResources.samplers.size());
 
     if (g_mlnLog.graph) {
-        MLN_LOG_GRAPH("WriteDS-BEGIN: frame=%u bindingSet=%p bufs=%u imgs=%u samps=%u", g_debugFrameCount,
-            reinterpret_cast<void*>(bindingSet), bufferResCount, imageResCount, samplerResCount);
+        MLN_LOG_GRAPH("WriteDS-BEGIN: frame=%u bufs=%u imgs=%u samps=%u",
+            g_debugFrameCount,
+            bufferResCount,
+            imageResCount,
+            samplerResCount);
     }
 
     // OPT #3: Batch all descriptor writes and submit in a single MlnUpdateBindingSets call.
@@ -2123,7 +2596,10 @@ void RenderBackendMln::WriteDescriptorSetBindings(
         const uint64_t requiredEntries = static_cast<uint64_t>(arrayOffset) + descriptorCount - 1u;
         if ((descriptorCount > 1u) && (requiredEntries > bufferResCount)) {
             MLN_LOG_GRAPH("UpdateDescriptorSets: buffer binding %u array out of range (offset=%u, count=%u, size=%u)",
-                ref.binding.binding, arrayOffset, descriptorCount, bufferResCount);
+                ref.binding.binding,
+                arrayOffset,
+                descriptorCount,
+                bufferResCount);
             continue;
         }
 
@@ -2162,7 +2638,7 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                     batchCount = 0;
                 }
             }
-            continue; // skip the normal buffer path below
+            continue;  // skip the normal buffer path below
         }
 
         for (uint32_t idx = 0; idx < descriptorCount; ++idx) {
@@ -2201,13 +2677,17 @@ void RenderBackendMln::WriteDescriptorSetBindings(
             write.inlineUniformDescriptor = nullptr;
 
             if (g_mlnLog.graph) {
-                MLN_LOG_GRAPH(
-                    "WriteDS: frame=%u dstBinding=%u type=%u buf=%p offset=%llu range=%llu "
-                    "(mapOff=%u, appOff=%u, rawByteSize=%u, bindMemSz=%u)",
-                    g_debugFrameCount, ref.binding.binding, static_cast<uint32_t>(ref.binding.descriptorType),
-                    reinterpret_cast<void*>(platBuffer.resource), static_cast<unsigned long long>(byteOffset),
-                    static_cast<unsigned long long>(bufferRange), platBuffer.currentByteOffset, bRes.byteOffset,
-                    bRes.byteSize, platBuffer.bindMemoryByteSize);
+                MLN_LOG_GRAPH("WriteDS: frame=%u dstBinding=%u type=%u offset=%llu range=%llu "
+                              "(mapOff=%u, appOff=%u, rawByteSize=%u, bindMemSz=%u)",
+                    g_debugFrameCount,
+                    ref.binding.binding,
+                    static_cast<uint32_t>(ref.binding.descriptorType),
+                    static_cast<unsigned long long>(byteOffset),
+                    static_cast<unsigned long long>(bufferRange),
+                    platBuffer.currentByteOffset,
+                    bRes.byteOffset,
+                    bRes.byteSize,
+                    platBuffer.bindMemoryByteSize);
                 // Comprehensive buffer content dump for black-screen diagnosis
                 if (platBuffer.mappedData && bufferRange >= 16) {
                     const uint8_t* base = static_cast<const uint8_t*>(platBuffer.mappedData) + byteOffset;
@@ -2220,21 +2700,43 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                         // uvec4 indices (0), vec4 firstLayer (16), vec4 secondLayer (32),
                         // vec4 baseFactors (48), vec4 inscatteringColor (64), vec4 envMapFactor (80),
                         // vec4 additionalFactor (96)
-                        MLN_LOG_GRAPH(
-                            "WriteDS-FOG bind=3: indices=[0x%08x,0x%08x,0x%08x,0x%08x] "
-                            "firstLayer=[%.4f,%.4f,%.4f,%.4f]",
-                            u[0], u[1], u[2], u[3], f[4], f[5], f[6], f[7]);
+                        MLN_LOG_GRAPH("WriteDS-FOG bind=3: indices=[0x%08x,0x%08x,0x%08x,0x%08x] "
+                                      "firstLayer=[%.4f,%.4f,%.4f,%.4f]",
+                            u[0],
+                            u[1],
+                            u[2],
+                            u[3],
+                            f[4],
+                            f[5],
+                            f[6],
+                            f[7]);
                         if (bufferRange >= 64) {
-                            MLN_LOG_GRAPH(
-                                "WriteDS-FOG bind=3: secondLayer=[%.4f,%.4f,%.4f,%.4f] "
-                                "baseFactors=[%.4f,%.4f,%.4f,%.4f]",
-                                f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15]);
+                            MLN_LOG_GRAPH("WriteDS-FOG bind=3: secondLayer=[%.4f,%.4f,%.4f,%.4f] "
+                                          "baseFactors=[%.4f,%.4f,%.4f,%.4f]",
+                                f[8],
+                                f[9],
+                                f[10],
+                                f[11],
+                                f[12],
+                                f[13],
+                                f[14],
+                                f[15]);
                         }
                         if (bufferRange >= 112) {
-                            MLN_LOG_GRAPH(
-                                "WriteDS-FOG bind=3: inscatterColor=[%.4f,%.4f,%.4f,%.4f] "
-                                "envMapFac=[%.4f,%.4f,%.4f,%.4f] addlFac=[%.4f,%.4f,%.4f,%.4f]",
-                                f[16], f[17], f[18], f[19], f[20], f[21], f[22], f[23], f[24], f[25], f[26], f[27]);
+                            MLN_LOG_GRAPH("WriteDS-FOG bind=3: inscatterColor=[%.4f,%.4f,%.4f,%.4f] "
+                                          "envMapFac=[%.4f,%.4f,%.4f,%.4f] addlFac=[%.4f,%.4f,%.4f,%.4f]",
+                                f[16],
+                                f[17],
+                                f[18],
+                                f[19],
+                                f[20],
+                                f[21],
+                                f[22],
+                                f[23],
+                                f[24],
+                                f[25],
+                                f[26],
+                                f[27]);
                         }
                         // Check for NaN in any of the 28 floats
                         bool hasNaN = false;
@@ -2242,43 +2744,84 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                             if (f[fi] != f[fi]) {
                                 hasNaN = true;
                                 break;
-                            } // NaN != NaN
+                            }  // NaN != NaN
                         }
                         if (hasNaN) {
                             MLN_LOG_GRAPH("WriteDS-FOG bind=3: *** NaN DETECTED in fog UBO ***");
                         }
                     } else if (binding == 4u) {
                         // DefaultMaterialLightStruct: dirBeginIdx, dirCount, ptBeginIdx, ptCount, ...
-                        MLN_LOG_GRAPH(
-                            "WriteDS-LIGHT bind=4: dirBeginIdx=%u dirCount=%u ptBeginIdx=%u ptCount=%u "
-                            "spotBeginIdx=%u spotCount=%u range=%llu",
-                            u[0], u[1], u[2], u[3], u[4], u[5], static_cast<unsigned long long>(bufferRange));
+                        MLN_LOG_GRAPH("WriteDS-LIGHT bind=4: dirBeginIdx=%u dirCount=%u ptBeginIdx=%u ptCount=%u "
+                                      "spotBeginIdx=%u spotCount=%u range=%llu",
+                            u[0],
+                            u[1],
+                            u[2],
+                            u[3],
+                            u[4],
+                            u[5],
+                            static_cast<unsigned long long>(bufferRange));
                         const uint32_t totalLights = u[1] + u[3] + u[5];
                         if (totalLights > 0 && bufferRange >= 224) {
-                            const float* lc = f + 24; // light[0] at offset 96 bytes
-                            MLN_LOG_GRAPH(
-                                "WriteDS-LIGHT light[0] pos=[%.2f,%.2f,%.2f,%.2f] "
-                                "dir=[%.2f,%.2f,%.2f,%.2f] color=[%.2f,%.2f,%.2f,%.2f]",
-                                lc[0], lc[1], lc[2], lc[3], lc[4], lc[5], lc[6], lc[7], lc[8], lc[9], lc[10], lc[11]);
+                            const float* lc = f + 24;  // light[0] at offset 96 bytes
+                            MLN_LOG_GRAPH("WriteDS-LIGHT light[0] pos=[%.2f,%.2f,%.2f,%.2f] "
+                                          "dir=[%.2f,%.2f,%.2f,%.2f] color=[%.2f,%.2f,%.2f,%.2f]",
+                                lc[0],
+                                lc[1],
+                                lc[2],
+                                lc[3],
+                                lc[4],
+                                lc[5],
+                                lc[6],
+                                lc[7],
+                                lc[8],
+                                lc[9],
+                                lc[10],
+                                lc[11]);
                         }
                     } else if (binding == 2u) {
-                        MLN_LOG_GRAPH(
-                            "WriteDS-ENV bind=2: indirSpec=[%.4f,%.4f,%.4f,%.4f] "
-                            "indirDiff=[%.4f,%.4f,%.4f,%.4f] envMap=[%.4f,%.4f,%.4f,%.4f]",
-                            f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9], f[10], f[11]);
+                        MLN_LOG_GRAPH("WriteDS-ENV bind=2: indirSpec=[%.4f,%.4f,%.4f,%.4f] "
+                                      "indirDiff=[%.4f,%.4f,%.4f,%.4f] envMap=[%.4f,%.4f,%.4f,%.4f]",
+                            f[0],
+                            f[1],
+                            f[2],
+                            f[3],
+                            f[4],
+                            f[5],
+                            f[6],
+                            f[7],
+                            f[8],
+                            f[9],
+                            f[10],
+                            f[11]);
                     } else if (binding == 5u) {
                         // GlobalPostProcessStruct (512 bytes):
                         // uvec4 flags (0), vec4 renderTimings (16), vec4 factors[14] (32..255), vec4 userFactors[16]
                         // (256..511)
-                        MLN_LOG_GRAPH(
-                            "WriteDS-POSTPROC bind=5: flags=[0x%08x,0x%08x,0x%08x,0x%08x] "
-                            "renderTimings=[%.4f,%.4f,%.4f,%.4f]",
-                            u[0], u[1], u[2], u[3], f[4], f[5], f[6], f[7]);
+                        MLN_LOG_GRAPH("WriteDS-POSTPROC bind=5: flags=[0x%08x,0x%08x,0x%08x,0x%08x] "
+                                      "renderTimings=[%.4f,%.4f,%.4f,%.4f]",
+                            u[0],
+                            u[1],
+                            u[2],
+                            u[3],
+                            f[4],
+                            f[5],
+                            f[6],
+                            f[7]);
                         if (bufferRange >= 80) {
-                            MLN_LOG_GRAPH(
-                                "WriteDS-POSTPROC bind=5: factors[0]=[%.4f,%.4f,%.4f,%.4f] "
-                                "factors[1]=[%.4f,%.4f,%.4f,%.4f] factors[2]=[%.4f,%.4f,%.4f,%.4f]",
-                                f[8], f[9], f[10], f[11], f[12], f[13], f[14], f[15], f[16], f[17], f[18], f[19]);
+                            MLN_LOG_GRAPH("WriteDS-POSTPROC bind=5: factors[0]=[%.4f,%.4f,%.4f,%.4f] "
+                                          "factors[1]=[%.4f,%.4f,%.4f,%.4f] factors[2]=[%.4f,%.4f,%.4f,%.4f]",
+                                f[8],
+                                f[9],
+                                f[10],
+                                f[11],
+                                f[12],
+                                f[13],
+                                f[14],
+                                f[15],
+                                f[16],
+                                f[17],
+                                f[18],
+                                f[19]);
                         }
                         // Check if entire buffer is zero
                         bool allZero = true;
@@ -2301,7 +2844,7 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                         const uint32_t checkClusters =
                             (bufferRange >= 1024) ? 16u : static_cast<uint32_t>(bufferRange / 64);
                         for (uint32_t ci = 0; ci < checkClusters; ++ci) {
-                            uint32_t clusterCount = u[ci * 16]; // 64 bytes / 4 = 16 uint32s per cluster
+                            uint32_t clusterCount = u[ci * 16];  // 64 bytes / 4 = 16 uint32s per cluster
                             if (clusterCount > 0) {
                                 ++nonZeroClusters;
                             }
@@ -2309,16 +2852,31 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                                 maxCount = clusterCount;
                             }
                         }
-                        MLN_LOG_GRAPH(
-                            "WriteDS-CLUSTER bind=6: first %u clusters: %u non-zero, maxCount=%u, "
-                            "totalRange=%llu",
-                            checkClusters, nonZeroClusters, maxCount, static_cast<unsigned long long>(bufferRange));
+                        MLN_LOG_GRAPH("WriteDS-CLUSTER bind=6: first %u clusters: %u non-zero, maxCount=%u, "
+                                      "totalRange=%llu",
+                            checkClusters,
+                            nonZeroClusters,
+                            maxCount,
+                            static_cast<unsigned long long>(bufferRange));
                         // Dump raw first 64 bytes (cluster[0])
-                        MLN_LOG_GRAPH(
-                            "WriteDS-CLUSTER bind=6: cluster[0] raw: [%u, %u, %u, %u, %u, %u, %u, %u, "
-                            "%u, %u, %u, %u, %u, %u, %u, %u]",
-                            u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10], u[11], u[12], u[13],
-                            u[14], u[15]);
+                        MLN_LOG_GRAPH("WriteDS-CLUSTER bind=6: cluster[0] raw: [%u, %u, %u, %u, %u, %u, %u, %u, "
+                                      "%u, %u, %u, %u, %u, %u, %u, %u]",
+                            u[0],
+                            u[1],
+                            u[2],
+                            u[3],
+                            u[4],
+                            u[5],
+                            u[6],
+                            u[7],
+                            u[8],
+                            u[9],
+                            u[10],
+                            u[11],
+                            u[12],
+                            u[13],
+                            u[14],
+                            u[15]);
                         // Also check if ENTIRE buffer is zero (sample every 4KB)
                         bool allZero = true;
                         for (uint32_t bi = 0; bi < bufferRange / 4; bi += 1024) {
@@ -2333,8 +2891,14 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                     } else {
                         // Generic dump for other bindings (0=camera, 1=viewport, etc.)
                         MLN_LOG_GRAPH("WriteDS-DUMP bind=%u: [%.4f, %.4f, %.4f, %.4f] [%.4f, %.4f, %.4f, %.4f]",
-                            binding, f[0], f[1], f[2], f[3], (bufferRange >= 32) ? f[4] : 0.f,
-                            (bufferRange >= 32) ? f[5] : 0.f, (bufferRange >= 32) ? f[6] : 0.f,
+                            binding,
+                            f[0],
+                            f[1],
+                            f[2],
+                            f[3],
+                            (bufferRange >= 32) ? f[4] : 0.f,
+                            (bufferRange >= 32) ? f[5] : 0.f,
+                            (bufferRange >= 32) ? f[6] : 0.f,
                             (bufferRange >= 32) ? f[7] : 0.f);
                     }
                 }
@@ -2370,7 +2934,10 @@ void RenderBackendMln::WriteDescriptorSetBindings(
         const uint64_t requiredEntries = static_cast<uint64_t>(arrayOffset) + descriptorCount - 1u;
         if ((descriptorCount > 1u) && (requiredEntries > imageResCount)) {
             MLN_LOG_GRAPH("UpdateDescriptorSets: image binding %u array out of range (offset=%u, count=%u, size=%u)",
-                ref.binding.binding, arrayOffset, descriptorCount, imageResCount);
+                ref.binding.binding,
+                arrayOffset,
+                descriptorCount,
+                imageResCount);
             continue;
         }
         for (uint32_t idx = 0; idx < descriptorCount; ++idx) {
@@ -2412,7 +2979,8 @@ void RenderBackendMln::WriteDescriptorSetBindings(
                 imgDesc.imageResourceView = defaultImageResourceView_;
             } else {
                 MLN_LOG_ERR("UpdateDescriptorSets: null image at binding %u[%u], no default, skipping",
-                    ref.binding.binding, idx);
+                    ref.binding.binding,
+                    idx);
                 continue;
             }
 
@@ -2436,18 +3004,6 @@ void RenderBackendMln::WriteDescriptorSetBindings(
 
             // Fetch image info for debug cache + logging
             const GpuImageDesc imgDescInfo = imgPtr ? gpuResourceMgr_.GetImageDescriptor(iRes.handle) : GpuImageDesc{};
-            if (g_mlnLog.graph) {
-                const auto imgName = gpuResourceMgr_.GetName(iRes.handle);
-                const MlnResource imgResource = imgPtr ? imgPtr->GetPlatformData().resource : MLN_NULL_HANDLE;
-                MLN_LOG_GRAPH(
-                    "WriteDS-IMG: dstBinding=%u type=%u imgResource=%p imgView=%p sampler=%p "
-                    "imgLayout=%u imgSize=%ux%u imgFmt=%u isDefault=%d name='%s'",
-                    ref.binding.binding, static_cast<uint32_t>(ref.binding.descriptorType),
-                    reinterpret_cast<void*>(imgResource), reinterpret_cast<void*>(imgDesc.imageResourceView),
-                    reinterpret_cast<void*>(imgDesc.sampler), static_cast<uint32_t>(imgDesc.imageLayout),
-                    imgDescInfo.width, imgDescInfo.height, static_cast<uint32_t>(imgDescInfo.format),
-                    (imgDesc.imageResourceView == defaultImageResourceView_) ? 1 : 0, imgName.c_str());
-            }
             // Cache for OG dump (only when graph logging enabled)
             if (g_mlnLog.graph) {
                 BindingDebugEntry dbgEntry{};
@@ -2482,7 +3038,10 @@ void RenderBackendMln::WriteDescriptorSetBindings(
         const uint64_t requiredEntries = static_cast<uint64_t>(arrayOffset) + descriptorCount - 1u;
         if ((descriptorCount > 1u) && (requiredEntries > samplerResCount)) {
             MLN_LOG_GRAPH("UpdateDescriptorSets: sampler binding %u array out of range (offset=%u, count=%u, size=%u)",
-                ref.binding.binding, arrayOffset, descriptorCount, samplerResCount);
+                ref.binding.binding,
+                arrayOffset,
+                descriptorCount,
+                samplerResCount);
             continue;
         }
         if (!defaultImageResourceView_) {
@@ -2516,8 +3075,7 @@ void RenderBackendMln::WriteDescriptorSetBindings(
             write.inlineUniformDescriptor = nullptr;
 
             if (g_mlnLog.graph) {
-                MLN_LOG_GRAPH("WriteDS-SAMP: dstBinding=%u sampler=%p", ref.binding.binding,
-                    reinterpret_cast<void*>(imgDesc.sampler));
+                MLN_LOG_GRAPH("WriteDS-SAMP: dstBinding=%u", ref.binding.binding);
             }
             // Cache for OG dump (only when graph logging enabled)
             if (g_mlnLog.graph) {
@@ -2676,6 +3234,10 @@ void RenderBackendMln::WalkSecondaryCtx(
                 for (auto& psd : state.perSetDynOffsets) {
                     psd.count = 0;
                 }
+                for (auto& ps : state.perSetStorage) {
+                    ps.count = 0;
+                }
+                state.isComputeContext = false;
                 state.vertexBufferCount = 0;
                 state.indexBuffer = MLN_NULL_HANDLE;
                 state.pushConstantSize = 0;
@@ -2705,9 +3267,8 @@ void RenderBackendMln::WalkSecondaryCtx(
                     }
                 } else {
                     DrawCallGroup group{};
-                    const auto& psoPlat = state.graphicsPso->GetPlatformData();
-                    group.psoPlat = psoPlat;
-                    group.program = psoPlat.program;
+                    group.graphicsPso = state.graphicsPso;
+                    group.program = state.graphicsPso->GetPlatformData().program;
                     group.subpassIndex = currentSubpassIndex;
                     SnapshotStateToDrawGroup(group, state);
                     if (cmd.drawType == DrawType::DRAW_INDEXED) {
@@ -2748,9 +3309,8 @@ void RenderBackendMln::WalkSecondaryCtx(
                     if (!buf)
                         break;
                     DrawCallGroup group{};
-                    const auto& psoPlat = state.graphicsPso->GetPlatformData();
-                    group.psoPlat = psoPlat;
-                    group.program = psoPlat.program;
+                    group.graphicsPso = state.graphicsPso;
+                    group.program = state.graphicsPso->GetPlatformData().program;
                     group.subpassIndex = currentSubpassIndex;
                     SnapshotStateToDrawGroup(group, state);
                     group.isIndirect = true;
@@ -2811,8 +3371,10 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     const auto& transferDstBuffers =
         transferDstBuffersVec ? *static_cast<const vector<MlnResource>*>(transferDstBuffersVec) : kEmptyBufferList;
 
-    MLN_LOG_TRANS("BuildTransferDg entry: ops=%zu dstImgs=%zu dstBufs=%zu", transferOps.size(),
-        transferDstImages.size(), transferDstBuffers.size());
+    MLN_LOG_TRANS("BuildTransferDg entry: ops=%zu dstImgs=%zu dstBufs=%zu",
+        transferOps.size(),
+        transferDstImages.size(),
+        transferDstBuffers.size());
 
     if (transferOps.empty()) {
         return;
@@ -2885,8 +3447,10 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     MlnObjectGroup transferOG = MlnCreateTransferObjectGroup(mlnDevice, &togDesc);
 
     if (g_mlnLog.trans) {
-        MLN_LOG_TRANS("Phase2 frame=%u: MlnCreateTransferObjectGroup (ops=%u) -> %s", g_debugFrameCount,
-            static_cast<uint32_t>(transferOps.size()), transferOG ? "OK" : "FAIL");
+        MLN_LOG_TRANS("Phase2 frame=%u: MlnCreateTransferObjectGroup (ops=%u) -> %s",
+            g_debugFrameCount,
+            static_cast<uint32_t>(transferOps.size()),
+            transferOG ? "OK" : "FAIL");
     }
     if (!transferOG) {
         return;
@@ -2901,11 +3465,6 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     tdgDesc.objectGroups = &transferOG;
 
     MlnDataGraph transferDG = MlnCreateTransferDataGraph(mlnDevice, &tdgDesc);
-
-    if (g_mlnLog.trans) {
-        MLN_LOG_TRANS("Phase2 frame=%u: MlnCreateTransferDataGraph OG=%p -> %s", g_debugFrameCount,
-            reinterpret_cast<void*>(transferOG), transferDG ? "OK" : "FAIL");
-    }
     if (!transferDG) {
         return;
     }
@@ -2937,17 +3496,6 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
         res.bufferResource = transferDstBuffers[bi];
         dgResInfo.storeOps[idx] = MLN_ATTACHMENT_STORE_OP_STORE;
     }
-    if (g_mlnLog.trans) {
-        MLN_LOG_TRANS("Phase2 frame=%u: TransferDG output resources: %u total (%zu images, %zu buffers)",
-            g_debugFrameCount, dgResInfo.outputCount, transferDstImages.size(), transferDstBuffers.size());
-        for (uint32_t di = 0; di < dgResInfo.outputCount; ++di) {
-            MLN_LOG_TRANS("  transferDst[%u]: type=%u resource=%p view=%p", di,
-                static_cast<uint32_t>(dgResInfo.outputs[di].type),
-                reinterpret_cast<void*>(dgResInfo.outputs[di].bufferResource),
-                reinterpret_cast<void*>(dgResInfo.outputs[di].imageResourceView));
-        }
-    }
-
     // [REFAC §8.7] Stage mask precision: transfer DG writes at ALL_TRANSFER
     // stage. dstStage stays ALL_COMMANDS (conservative); Phase 3 will use
     // the consumer's srcStage to tighten passNode dependencies in Step 8.
@@ -3068,17 +3616,25 @@ void RenderBackendMln::BuildComputeDg(const void* computeDispatchGroupPtr, Pendi
 
     if (g_mlnLog.comp) {
         if (cg.isIndirect) {
-            MLN_LOG_COMP(
-                "Phase2 frame=%u: MlnCreateComputeObjectGroup INDIRECT (buf=%p offset=%llu, bindings=%u, dyn=%u, "
-                "pc=%u) -> %s",
-                g_debugFrameCount, reinterpret_cast<void*>(cg.indirectBuffer),
-                static_cast<unsigned long long>(cg.indirectOffset), cg.bindingSetCount, cg.bindingSetDynamicOffsetCount,
-                cg.pushConstantSize, computeOG ? "OK" : "FAIL");
+            MLN_LOG_COMP("Phase2 frame=%u: MlnCreateComputeObjectGroup INDIRECT (offset=%llu, bindings=%u, dyn=%u, "
+                         "pc=%u) -> %s",
+                g_debugFrameCount,
+                static_cast<unsigned long long>(cg.indirectOffset),
+                cg.bindingSetCount,
+                cg.bindingSetDynamicOffsetCount,
+                cg.pushConstantSize,
+                computeOG ? "OK" : "FAIL");
         } else {
             MLN_LOG_COMP(
                 "Phase2 frame=%u: MlnCreateComputeObjectGroup (dispatch=%ux%ux%u, bindings=%u, dyn=%u, pc=%u) -> %s",
-                g_debugFrameCount, cg.groupCountX, cg.groupCountY, cg.groupCountZ, cg.bindingSetCount,
-                cg.bindingSetDynamicOffsetCount, cg.pushConstantSize, computeOG ? "OK" : "FAIL");
+                g_debugFrameCount,
+                cg.groupCountX,
+                cg.groupCountY,
+                cg.groupCountZ,
+                cg.bindingSetCount,
+                cg.bindingSetDynamicOffsetCount,
+                cg.pushConstantSize,
+                computeOG ? "OK" : "FAIL");
         }
     }
     if (!computeOG) {
@@ -3132,8 +3688,10 @@ void RenderBackendMln::BuildComputeDg(const void* computeDispatchGroupPtr, Pendi
     dgResInfo.srcStage = MLN_PROGRAM_STAGE_COMPUTE_SHADER_BIT;
     dgResInfo.dstStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
     if (g_mlnLog.comp) {
-        MLN_LOG_COMP("Phase2 frame=%u: ComputeDG outputs=%u (from %zu storage bindings)", g_debugFrameCount,
-            dgResInfo.outputCount, cg.storageOutputs.size());
+        MLN_LOG_COMP("Phase2 frame=%u: ComputeDG outputs=%u (from %zu storage bindings)",
+            g_debugFrameCount,
+            dgResInfo.outputCount,
+            cg.storageOutputs.size());
     }
     outDgResources.push_back(dgResInfo);
 }
@@ -3336,9 +3894,13 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
     const uint32_t colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size());
 
     // Create or reuse MlnRenderTarget via cache (mirrors Vulkan FramebufferCache)
-    const uint64_t rtHash =
-        HashRenderTargetConfig(colorAttachments, hasDepth, hasDepth ? *depthAttachment : MlnAttachmentDescriptor{},
-            hasStencil, hasStencil ? *stencilAttachment : MlnAttachmentDescriptor{}, areaWidth, areaHeight);
+    const uint64_t rtHash = HashRenderTargetConfig(colorAttachments,
+        hasDepth,
+        hasDepth ? *depthAttachment : MlnAttachmentDescriptor{},
+        hasStencil,
+        hasStencil ? *stencilAttachment : MlnAttachmentDescriptor{},
+        areaWidth,
+        areaHeight);
 
     MlnRenderTarget renderTarget = MLN_NULL_HANDLE;
     const uint64_t frameCount = device_.GetFrameCount();
@@ -3366,22 +3928,29 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
         rtDesc.stencil = stencilAttachment;
 
         // [MILESTONE-2] Pre-RT creation — if crash after this but before MILESTONE-3, it's in MlnCreateRenderTarget
-        MLN_LOG_FRAME(
-            "MILESTONE-2 frame=%u PRE-CreateRT: area=%ux%u colors=%u depth=%d stencil=%d "
-            "layerCount=%u viewMask=%u rtHash=0x%llx",
-            g_debugFrameCount, rtDesc.renderArea.size.width, rtDesc.renderArea.size.height, rtDesc.colorCount,
-            hasDepth ? 1 : 0, hasStencil ? 1 : 0, rtDesc.layerCount, rtDesc.viewMask,
+        MLN_LOG_FRAME("MILESTONE-2 frame=%u PRE-CreateRT: area=%ux%u colors=%u depth=%d stencil=%d "
+                      "layerCount=%u viewMask=%u rtHash=0x%llx",
+            g_debugFrameCount,
+            rtDesc.renderArea.size.width,
+            rtDesc.renderArea.size.height,
+            rtDesc.colorCount,
+            hasDepth ? 1 : 0,
+            hasStencil ? 1 : 0,
+            rtDesc.layerCount,
+            rtDesc.viewMask,
             static_cast<unsigned long long>(rtHash));
         for (uint32_t ci = 0; ci < colorAttachmentCount && ci < colorAttachments.size(); ++ci) {
-            MLN_LOG_GRAPH("  RT-color[%u]: frame=%u view=%p loadOp=%u storeOp=%u", ci, g_debugFrameCount,
-                reinterpret_cast<void*>(colorAttachments[ci].imageResourceView),
+            MLN_LOG_GRAPH("  RT-color[%u]: frame=%u loadOp=%u storeOp=%u",
+                ci,
+                g_debugFrameCount,
                 static_cast<uint32_t>(colorAttachments[ci].loadOp),
                 static_cast<uint32_t>(colorAttachments[ci].storeOp));
         }
         if (hasDepth) {
-            MLN_LOG_GRAPH("  RT-depth: frame=%u view=%p loadOp=%u storeOp=%u", g_debugFrameCount,
-                reinterpret_cast<void*>(depthAttachment->imageResourceView),
-                static_cast<uint32_t>(depthAttachment->loadOp), static_cast<uint32_t>(depthAttachment->storeOp));
+            MLN_LOG_GRAPH("  RT-depth: frame=%u loadOp=%u storeOp=%u",
+                g_debugFrameCount,
+                static_cast<uint32_t>(depthAttachment->loadOp),
+                static_cast<uint32_t>(depthAttachment->storeOp));
         }
 
         renderTarget = MlnCreateRenderTarget(mlnDevice, &rtDesc);
@@ -3402,7 +3971,12 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
     if (!renderTarget) {
         MLN_LOG_GRAPH(
             "Phase2 frame=%u: MlnCreateRenderTarget FAILED (subpass=%u, area=%ux%u, colors=%u, depth=%d, stencil=%d)",
-            g_debugFrameCount, diagSubpassIndex, areaWidth, areaHeight, colorAttachmentCount, hasDepth ? 1 : 0,
+            g_debugFrameCount,
+            diagSubpassIndex,
+            areaWidth,
+            areaHeight,
+            colorAttachmentCount,
+            hasDepth ? 1 : 0,
             hasStencil ? 1 : 0);
         return MLN_NULL_HANDLE;
     }
@@ -3410,22 +3984,34 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
         MLN_LOG_GRAPH(
             "Phase2 frame=%u: MlnCreateRenderTarget OK (subpass=%u, beginType=%u, area=%ux%u, colors=%u, depth=%d, "
             "stencil=%d, draws=%zu)",
-            g_debugFrameCount, diagSubpassIndex, diagBeginType, areaWidth, areaHeight, colorAttachmentCount,
-            hasDepth ? 1 : 0, hasStencil ? 1 : 0, diagDrawCount);
+            g_debugFrameCount,
+            diagSubpassIndex,
+            diagBeginType,
+            areaWidth,
+            areaHeight,
+            colorAttachmentCount,
+            hasDepth ? 1 : 0,
+            hasStencil ? 1 : 0,
+            diagDrawCount);
         // Dump color attachment details (loadOp, storeOp, clearColor)
         for (uint32_t ci = 0; ci < colorAttachmentCount && ci < colorAttachments.size(); ++ci) {
             const auto& ca = colorAttachments[ci];
-            MLN_LOG_GRAPH(
-                "Phase2 frame=%u: RT color[%u] view=%p loadOp=%u storeOp=%u "
-                "clear=(%.3f,%.3f,%.3f,%.3f)",
-                g_debugFrameCount, ci, reinterpret_cast<void*>(ca.imageResourceView), static_cast<uint32_t>(ca.loadOp),
-                static_cast<uint32_t>(ca.storeOp), ca.clearValue.color.f[0], ca.clearValue.color.f[1],
-                ca.clearValue.color.f[2], ca.clearValue.color.f[3]);
+            MLN_LOG_GRAPH("Phase2 frame=%u: RT color[%u] loadOp=%u storeOp=%u "
+                          "clear=(%.3f,%.3f,%.3f,%.3f)",
+                g_debugFrameCount,
+                ci,
+                static_cast<uint32_t>(ca.loadOp),
+                static_cast<uint32_t>(ca.storeOp),
+                ca.clearValue.color.f[0],
+                ca.clearValue.color.f[1],
+                ca.clearValue.color.f[2],
+                ca.clearValue.color.f[3]);
         }
         if (hasDepth) {
-            MLN_LOG_GRAPH("Phase2 frame=%u: RT depth view=%p loadOp=%u storeOp=%u clearDepth=%.3f", g_debugFrameCount,
-                reinterpret_cast<void*>(depthAttachment->imageResourceView),
-                static_cast<uint32_t>(depthAttachment->loadOp), static_cast<uint32_t>(depthAttachment->storeOp),
+            MLN_LOG_GRAPH("Phase2 frame=%u: RT depth loadOp=%u storeOp=%u clearDepth=%.3f",
+                g_debugFrameCount,
+                static_cast<uint32_t>(depthAttachment->loadOp),
+                static_cast<uint32_t>(depthAttachment->storeOp),
                 depthAttachment->clearValue.depthStencil.depth);
         }
     }
@@ -3446,7 +4032,16 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
 // members: device_, ogPools_, ogPoolsMutex_, ogTotalCount_, bsDebugCache_.
 // ============================================================================
 void RenderBackendMln::BuildOGFromState(
-    const void* inputsPtr, PendingDestroyFrame& pendingFrame, vector<MlnObjectGroup>& objectGroups)
+    const void* inputsPtr, PendingDestroyFrame& pendingFrame, vector<MlnObjectGroup>& outObjectGroups)
+{
+    MlnObjectGroup og = MLN_NULL_HANDLE;
+    BuildOGFromState(inputsPtr, pendingFrame, &og);
+    if (og) {
+        outObjectGroups.push_back(og);
+    }
+}
+
+void RenderBackendMln::BuildOGFromState(const void* inputsPtr, PendingDestroyFrame& pendingFrame, MlnObjectGroup* outOG)
 {
     const auto& in = *static_cast<const BuildOGInputs*>(inputsPtr);
     const DrawCallGroup& dg = *in.dg;
@@ -3478,9 +4073,8 @@ void RenderBackendMln::BuildOGFromState(
     if (g_mlnLog.graph) {
         MLN_LOG_GRAPH(
             "====== MlnCreateGraphicsObjectGroup (frame=%llu) ======", static_cast<unsigned long long>(frameCount));
-        MLN_LOG_GRAPH("  ogDesc: extCount=%u flags=0x%x program=%p cmdCount=%u inheritance=%p", ogDesc.extensionCount,
-            ogDesc.flags, reinterpret_cast<void*>(ogDesc.program), ogDesc.commandCount,
-            reinterpret_cast<void*>(ogDesc.inheritance));
+        MLN_LOG_GRAPH(
+            "  ogDesc: extCount=%u flags=0x%x cmdCount=%u", ogDesc.extensionCount, ogDesc.flags, ogDesc.commandCount);
 
         // -- ResourceSet --
         if (ogDesc.resourceSet) {
@@ -3494,8 +4088,8 @@ void RenderBackendMln::BuildOGFromState(
                 const auto* vb = rs->resourceVertexBuffers;
                 MLN_LOG_GRAPH("      VB: firstBinding=%u bindingCount=%u", vb->firstBinding, vb->bindingCount);
                 for (uint32_t vi = 0; vi < vb->bindingCount; ++vi) {
-                    MLN_LOG_GRAPH("        VB[%u]: res=%p offset=%llu size=%llu stride=%llu", vi,
-                        vb->bufferResources ? reinterpret_cast<void*>(vb->bufferResources[vi]) : nullptr,
+                    MLN_LOG_GRAPH("        VB[%u]: offset=%llu size=%llu stride=%llu",
+                        vi,
                         vb->offsets ? static_cast<unsigned long long>(vb->offsets[vi]) : 0ULL,
                         vb->sizes ? static_cast<unsigned long long>(vb->sizes[vi]) : 0ULL,
                         vb->strides ? static_cast<unsigned long long>(vb->strides[vi]) : 0ULL);
@@ -3506,20 +4100,23 @@ void RenderBackendMln::BuildOGFromState(
             // IndexBuffer
             if (rs->resourceIndexBuffer) {
                 const auto* ib = rs->resourceIndexBuffer;
-                MLN_LOG_GRAPH("      IB: res=%p offset=%llu size=%llu indexType=%u",
-                    reinterpret_cast<void*>(ib->bufferResource), static_cast<unsigned long long>(ib->offset),
-                    static_cast<unsigned long long>(ib->size), static_cast<uint32_t>(ib->indexType));
+                MLN_LOG_GRAPH("      IB: offset=%llu size=%llu indexType=%u",
+                    static_cast<unsigned long long>(ib->offset),
+                    static_cast<unsigned long long>(ib->size),
+                    static_cast<uint32_t>(ib->indexType));
             } else {
                 MLN_LOG_GRAPH("      IB: nullptr");
             }
             // BindingSets
             if (rs->resourceBindingSets) {
                 const auto* bs = rs->resourceBindingSets;
-                MLN_LOG_GRAPH("      BS: firstSet=%u setCount=%u dynOffsetCount=%u", bs->firstSet, bs->bindingSetCount,
+                MLN_LOG_GRAPH("      BS: firstSet=%u setCount=%u dynOffsetCount=%u",
+                    bs->firstSet,
+                    bs->bindingSetCount,
                     bs->dynamicOffsetCount);
                 for (uint32_t bsi = 0; bsi < bs->bindingSetCount; ++bsi) {
                     MlnBindingSet bsHandle = bs->bindingSets ? bs->bindingSets[bsi] : MLN_NULL_HANDLE;
-                    MLN_LOG_GRAPH("        BS[%u]=%p", bsi, reinterpret_cast<void*>(bsHandle));
+                    MLN_LOG_GRAPH("        BS[%u]", bsi);
                     // Look up cached binding resource details
                     auto cacheIt = bsDebugCache_.find(reinterpret_cast<uintptr_t>(bsHandle));
                     if (cacheIt != bsDebugCache_.end()) {
@@ -3557,18 +4154,23 @@ void RenderBackendMln::BuildOGFromState(
                                     break;
                             }
                             if (e.bindingType >= 6 && e.bindingType <= 9) {
-                                MLN_LOG_GRAPH("          b[%u][%u] %s buf=%p off=%llu range=%llu", e.binding,
-                                    e.arrayIndex, typeName, reinterpret_cast<void*>(e.bufResource),
+                                MLN_LOG_GRAPH("          b[%u][%u] %s off=%llu range=%llu",
+                                    e.binding,
+                                    e.arrayIndex,
+                                    typeName,
                                     static_cast<unsigned long long>(e.bufOffset),
                                     static_cast<unsigned long long>(e.bufRange));
                             } else if ((e.bindingType >= 1 && e.bindingType <= 3) || e.bindingType == 10) {
-                                MLN_LOG_GRAPH("          b[%u][%u] %s view=%p samp=%p layout=%u %ux%u fmt=%u",
-                                    e.binding, e.arrayIndex, typeName, reinterpret_cast<void*>(e.imgView),
-                                    reinterpret_cast<void*>(e.imgSampler), e.imgLayout, e.imgWidth, e.imgHeight,
+                                MLN_LOG_GRAPH("          b[%u][%u] %s layout=%u %ux%u fmt=%u",
+                                    e.binding,
+                                    e.arrayIndex,
+                                    typeName,
+                                    e.imgLayout,
+                                    e.imgWidth,
+                                    e.imgHeight,
                                     e.imgFormat);
                             } else if (e.bindingType == 0) {
-                                MLN_LOG_GRAPH("          b[%u][%u] SAMPLER samp=%p", e.binding, e.arrayIndex,
-                                    reinterpret_cast<void*>(e.sampler));
+                                MLN_LOG_GRAPH("          b[%u][%u] SAMPLER", e.binding, e.arrayIndex);
                             }
                         }
                     } else {
@@ -3587,8 +4189,7 @@ void RenderBackendMln::BuildOGFromState(
                 MLN_LOG_GRAPH("      PC: count=%u", rpc->programConstantCount);
                 for (uint32_t pci = 0; pci < rpc->programConstantCount; ++pci) {
                     const auto& pcEntry = rpc->programConstants[pci];
-                    MLN_LOG_GRAPH("        PC[%u]: offset=%u size=%u values=%p", pci, pcEntry.offset, pcEntry.size,
-                        pcEntry.values);
+                    MLN_LOG_GRAPH("        PC[%u]: offset=%u size=%u", pci, pcEntry.offset, pcEntry.size);
                     if (pcEntry.values && pcEntry.size > 0) {
                         const uint8_t* data = static_cast<const uint8_t*>(pcEntry.values);
                         char hexBuf[200] = {};
@@ -3614,11 +4215,16 @@ void RenderBackendMln::BuildOGFromState(
         // -- StateSet --
         if (ogDesc.stateSet) {
             const auto* ss = ogDesc.stateSet;
-            MLN_LOG_GRAPH(
-                "    stateSet: flags=0x%x lineWidth=%.3f blend=(%.3f,%.3f,%.3f,%.3f) "
-                "topology=%u primRestart=%u",
-                ss->flags, ss->lineWidth, ss->blendConstants[0], ss->blendConstants[1], ss->blendConstants[2],
-                ss->blendConstants[3], static_cast<uint32_t>(ss->topology), ss->primitiveRestartEnable);
+            MLN_LOG_GRAPH("    stateSet: flags=0x%x lineWidth=%.3f blend=(%.3f,%.3f,%.3f,%.3f) "
+                          "topology=%u primRestart=%u",
+                ss->flags,
+                ss->lineWidth,
+                ss->blendConstants[0],
+                ss->blendConstants[1],
+                ss->blendConstants[2],
+                ss->blendConstants[3],
+                static_cast<uint32_t>(ss->topology),
+                ss->primitiveRestartEnable);
             // DynamicState
             if (ss->dynamicState) {
                 const auto* ds = ss->dynamicState;
@@ -3636,8 +4242,14 @@ void RenderBackendMln::BuildOGFromState(
                 MLN_LOG_GRAPH("      viewport: first=%u count=%u", vp->firstViewport, vp->viewportCount);
                 for (uint32_t vpi = 0; vpi < vp->viewportCount; ++vpi) {
                     const auto& v = vp->viewports[vpi];
-                    MLN_LOG_GRAPH("        vp[%u]: x=%.1f y=%.1f w=%.1f h=%.1f minD=%.3f maxD=%.3f", vpi, v.x, v.y,
-                        v.width, v.height, v.minDepth, v.maxDepth);
+                    MLN_LOG_GRAPH("        vp[%u]: x=%.1f y=%.1f w=%.1f h=%.1f minD=%.3f maxD=%.3f",
+                        vpi,
+                        v.x,
+                        v.y,
+                        v.width,
+                        v.height,
+                        v.minDepth,
+                        v.maxDepth);
                 }
             } else {
                 MLN_LOG_GRAPH("      viewport: nullptr");
@@ -3648,7 +4260,11 @@ void RenderBackendMln::BuildOGFromState(
                 MLN_LOG_GRAPH("      scissor: first=%u count=%u", sc->firstScissor, sc->scissorCount);
                 for (uint32_t sci = 0; sci < sc->scissorCount; ++sci) {
                     const auto& s = sc->scissors[sci];
-                    MLN_LOG_GRAPH("        sc[%u]: x=%d y=%d w=%u h=%u", sci, s.origin.x, s.origin.y, s.size.width,
+                    MLN_LOG_GRAPH("        sc[%u]: x=%d y=%d w=%u h=%u",
+                        sci,
+                        s.origin.x,
+                        s.origin.y,
+                        s.size.width,
                         s.size.height);
                 }
             } else {
@@ -3657,17 +4273,20 @@ void RenderBackendMln::BuildOGFromState(
             // DepthBias
             if (ss->depthBias) {
                 MLN_LOG_GRAPH("      depthBias: constFactor=%.6f clamp=%.6f slopeFactor=%.6f",
-                    ss->depthBias->depthBiasConstantFactor, ss->depthBias->depthBiasClamp,
+                    ss->depthBias->depthBiasConstantFactor,
+                    ss->depthBias->depthBiasClamp,
                     ss->depthBias->depthBiasSlopeFactor);
             }
             // DepthBounds
             if (ss->depthBounds) {
-                MLN_LOG_GRAPH("      depthBounds: min=%.6f max=%.6f", ss->depthBounds->minDepthBounds,
+                MLN_LOG_GRAPH("      depthBounds: min=%.6f max=%.6f",
+                    ss->depthBounds->minDepthBounds,
                     ss->depthBounds->maxDepthBounds);
             }
             // Stencil
             if (ss->compareMask) {
-                MLN_LOG_GRAPH("      stencilCompareMask: face=0x%x mask=0x%x", ss->compareMask->faceMask,
+                MLN_LOG_GRAPH("      stencilCompareMask: face=0x%x mask=0x%x",
+                    ss->compareMask->faceMask,
                     ss->compareMask->compareMask);
             }
             if (ss->writeMask) {
@@ -3685,72 +4304,68 @@ void RenderBackendMln::BuildOGFromState(
         // -- Commands --
         if (ogDesc.commands) {
             const auto* cmd = &ogDesc.commands[0];
-            MLN_LOG_GRAPH("    cmd[0]: extCount=%u flags=0x%x resourceSet=%p stateSet=%p", cmd->extensionCount,
-                cmd->flags, reinterpret_cast<void*>(cmd->resourceSet), reinterpret_cast<void*>(cmd->stateSet));
+            MLN_LOG_GRAPH("    cmd[0]: extCount=%u flags=0x%x", cmd->extensionCount, cmd->flags);
             if (cmd->command) {
                 const auto* gc = cmd->command;
                 if (gc->type == MLN_GRAPHICS_COMMAND_TYPE_DRAW && gc->data.draw) {
                     MLN_LOG_GRAPH("      DRAW: vtxCount=%u instCount=%u firstVtx=%u firstInst=%u",
-                        gc->data.draw->vertexCount, gc->data.draw->instanceCount, gc->data.draw->firstVertex,
+                        gc->data.draw->vertexCount,
+                        gc->data.draw->instanceCount,
+                        gc->data.draw->firstVertex,
                         gc->data.draw->firstInstance);
                 } else if (gc->type == MLN_GRAPHICS_COMMAND_TYPE_DRAW_INDEXED && gc->data.drawIndexed) {
-                    MLN_LOG_GRAPH(
-                        "      DRAW_INDEXED: idxCount=%u instCount=%u firstIdx=%u "
-                        "vtxOffset=%u firstInst=%u",
-                        gc->data.drawIndexed->indexCount, gc->data.drawIndexed->instanceCount,
-                        gc->data.drawIndexed->firstIndex, gc->data.drawIndexed->vertexOffset,
+                    MLN_LOG_GRAPH("      DRAW_INDEXED: idxCount=%u instCount=%u firstIdx=%u "
+                                  "vtxOffset=%u firstInst=%u",
+                        gc->data.drawIndexed->indexCount,
+                        gc->data.drawIndexed->instanceCount,
+                        gc->data.drawIndexed->firstIndex,
+                        gc->data.drawIndexed->vertexOffset,
                         gc->data.drawIndexed->firstInstance);
                 } else if (gc->type == MLN_GRAPHICS_COMMAND_TYPE_DRAW_INDIRECT && gc->data.drawIndirect) {
-                    MLN_LOG_GRAPH("      DRAW_INDIRECT: buf=%p offset=%llu drawCount=%u stride=%u",
-                        reinterpret_cast<void*>(gc->data.drawIndirect->bufferResource),
+                    MLN_LOG_GRAPH("      DRAW_INDIRECT: offset=%llu drawCount=%u stride=%u",
                         static_cast<unsigned long long>(gc->data.drawIndirect->offset),
-                        gc->data.drawIndirect->drawCount, gc->data.drawIndirect->stride);
+                        gc->data.drawIndirect->drawCount,
+                        gc->data.drawIndirect->stride);
                 } else {
                     MLN_LOG_ERR("      command.type=%u (unknown or null data)", static_cast<uint32_t>(gc->type));
                 }
             }
         }
         MLN_LOG_GRAPH("====== END ======");
-    } // end if (g_mlnLog.graph) OG PARAM DUMP
+    }  // end if (g_mlnLog.graph) OG PARAM DUMP
 
     objGroup = MlnCreateGraphicsObjectGroup(mlnDevice, &ogDesc);
     if (objGroup) {
-        objectGroups.push_back(objGroup);
+        *outOG = objGroup;
         pendingFrame.objectGroups.push_back(objGroup);
-        MLN_LOG_GRAPH("RESULT: objGroup=%p OK", reinterpret_cast<void*>(objGroup));
+        MLN_LOG_GRAPH("RESULT: objGroup OK");
     } else {
-        MLN_LOG_GRAPH("RESULT: SKIP/FAIL (program=%p)", reinterpret_cast<void*>(dg.program));
+        MLN_LOG_GRAPH("RESULT: SKIP/FAIL");
     }
 
 #elif OG_CACHE_MODE == 1
-    // Mode 1: Pool cache with destroy+recreate (avoids MlnUpdateGraphicsObjectGroup)
-    // On cache hit: destroy the old OG, create a new one in its place.
-    // Still benefits from stable pool sizing (no vector realloc after warm-up).
+    // Mode 1: Pool cache with destroy+recreate (3-slot design)
+    const uint32_t currentSlot = frameCount % device_.GetCommandBufferingCount();
     bool cacheHit = false;
     {
         const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
-        auto& pool = ogPools_[ogHash];
-        const uint32_t idx = pool.frameAllocIndex++;
-
-        if (idx < static_cast<uint32_t>(pool.entries.size())) {
-            // Destroy old OG and replace with a fresh one
-            if (pool.entries[idx].objectGroup) {
-                MlnDestroyObjectGroup(mlnDevice, pool.entries[idx].objectGroup);
+        auto& slot = ogPools_[ogHash].slots[currentSlot];
+        const uint32_t idx = slot.frameAllocIndex++;
+        if (idx < static_cast<uint32_t>(slot.entries.size())) {
+            if (slot.entries[idx].objectGroup) {
+                MlnDestroyObjectGroup(mlnDevice, slot.entries[idx].objectGroup);
             }
-            pool.entries[idx].objectGroup = MLN_NULL_HANDLE;
-            pool.entries[idx].lastFrameUsed = frameCount;
-            cacheHit = true; // slot exists, just needs a fresh OG
+            slot.entries[idx].objectGroup = MLN_NULL_HANDLE;
+            slot.entries[idx].lastFrameUsed = frameCount;
+            cacheHit = true;  // slot exists, just needs a fresh OG
         }
     }
 
-    // Create fresh OG (both cache hit with destroyed slot and cache miss)
     MlnGraphicsObjectGroupDescriptor ogDesc{};
     ogDesc.extensionCount = 0;
     ogDesc.extensions = nullptr;
     ogDesc.flags = 0;
     ogDesc.program = dg.program;
-    // [SDK] MlnGraphicsObjectGroupDescriptor removed `interface` field;
-    // programInterface is now implicit from program binding.
     ogDesc.resourceSet = resourceSetPtr;
     ogDesc.stateSet = &stateSet;
     ogDesc.commandCount = 1;
@@ -3758,54 +4373,82 @@ void RenderBackendMln::BuildOGFromState(
 
     objGroup = MlnCreateGraphicsObjectGroup(mlnDevice, &ogDesc);
     if (objGroup) {
-        objectGroups.push_back(objGroup);
+        *outOG = objGroup;
         const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
         if (cacheHit) {
-            // Replace the destroyed slot's handle
-            auto& pool = ogPools_[ogHash];
-            // Find the slot we just cleared (frameAllocIndex was already incremented)
-            const uint32_t idx = pool.frameAllocIndex - 1;
-            if (idx < static_cast<uint32_t>(pool.entries.size())) {
-                pool.entries[idx].objectGroup = objGroup;
+            auto& slot = ogPools_[ogHash].slots[currentSlot];
+            const uint32_t idx = slot.frameAllocIndex - 1;
+            if (idx < static_cast<uint32_t>(slot.entries.size())) {
+                slot.entries[idx].objectGroup = objGroup;
             }
         } else {
-            // Cache miss: stage to pendingEntries (when enabled) to ensure OG is
-            // submitted before reuse; or directly to entries (when disabled).
-            if (g_mlnLog.ogPendingStage) {
-                ogPools_[ogHash].pendingEntries.push_back({frameCount, objGroup});
-            } else {
-                ogPools_[ogHash].entries.push_back({frameCount, objGroup});
+            {
+                OGPoolEntry e;
+                e.lastFrameUsed = frameCount;
+                e.objectGroup = objGroup;
+                auto& slot = ogPools_[ogHash].slots[currentSlot];
+                if (g_mlnLog.ogPendingStage) {
+                    slot.pendingEntries.push_back(e);
+                } else {
+                    slot.entries.push_back(e);
+                }
             }
             ogTotalCount_++;
         }
     } else {
-
         MLN_LOG_ERR("Phase2 frame=%u: MlnCreateGraphicsObjectGroup FAILED", g_debugFrameCount);
     }
 
 #else
-    // Mode 2: Pool cache with MlnUpdateGraphicsObjectGroup (full optimization)
+    // Mode 2: Pool cache with MlnUpdateGraphicsObjectGroup (3-slot design).
+    // Each buffering slot maintains its own OG pool. Frame N and Frame N+bufferingCount
+    // use the same slot, same MlnBindingSet handles → OGs can be fully reused with zero update.
+    const uint32_t currentSlot = frameCount % device_.GetCommandBufferingCount();
+    const uint64_t contentFp = ComputeOGContentFingerprint(dg);
     bool cacheHit = false;
+    uint16_t lastMask = 0;
+    OGPoolEntry* entryPtr = nullptr;
     {
         const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
-        auto& pool = ogPools_[ogHash];
-        const uint32_t idx = pool.frameAllocIndex++;
-
-        if (idx < static_cast<uint32_t>(pool.entries.size())) {
-            pool.entries[idx].lastFrameUsed = frameCount;
-            objGroup = pool.entries[idx].objectGroup;
+        auto& slot = ogPools_[ogHash].slots[currentSlot];
+        const uint32_t idx = slot.frameAllocIndex++;
+        if (idx < static_cast<uint32_t>(slot.entries.size())) {
+            entryPtr = &slot.entries[idx];
+            entryPtr->lastFrameUsed = frameCount;
+            objGroup = entryPtr->objectGroup;
+            lastMask = entryPtr->lastModifierMask;
             cacheHit = true;
+
+            if (contentFp == entryPtr->contentFingerprint) {
+                *outOG = objGroup;
+                return;
+            }
         }
     }
 
     if (cacheHit) {
-        bool updateOk = UpdateCachedOG(mlnDevice, objGroup, dg, *in.resVB, *in.resIB, *in.resBS, *in.resPC, *in.vpState,
-            *in.scState, *in.depthBiasState, *in.depthBoundsState, *in.stencilCompareMask, *in.stencilWriteMask,
-            *in.stencilReference);
+        uint16_t newMask = 0;
+        bool updateOk = UpdateCachedOG(mlnDevice,
+            objGroup,
+            dg,
+            *in.resVB,
+            *in.resIB,
+            *in.resBS,
+            *in.resPC,
+            *in.vpState,
+            *in.scState,
+            *in.depthBiasState,
+            *in.depthBoundsState,
+            *in.stencilCompareMask,
+            *in.stencilWriteMask,
+            *in.stencilReference,
+            lastMask,
+            newMask);
         if (updateOk) {
-            objectGroups.push_back(objGroup);
+            entryPtr->lastModifierMask = newMask;
+            entryPtr->contentFingerprint = contentFp;
+            *outOG = objGroup;
         } else {
-            MLN_LOG_ERR("Phase2: OG pool update FAILED, falling back to create");
             cacheHit = false;
         }
     }
@@ -3814,13 +4457,8 @@ void RenderBackendMln::BuildOGFromState(
         MlnGraphicsObjectGroupDescriptor ogDesc{};
         ogDesc.extensionCount = 0;
         ogDesc.extensions = nullptr;
-        // PERSISTENT_BIT: tells driver this OG will be reused via
-        // MlnUpdateGraphicsObjectGroup. Without it, driver may treat OG
-        // as one-shot and release internal mutable state after DG consumption,
-        // making subsequent Update calls silently no-op.
         ogDesc.flags = MLN_GRAPHICS_OBJECT_GROUP_DESCRIPTOR_PERSISTENT_BIT;
         ogDesc.program = dg.program;
-        // [SDK] interface field removed (same as Mode 0 above).
         ogDesc.resourceSet = resourceSetPtr;
         ogDesc.stateSet = &stateSet;
         ogDesc.commandCount = 1;
@@ -3828,21 +4466,27 @@ void RenderBackendMln::BuildOGFromState(
 
         objGroup = MlnCreateGraphicsObjectGroup(mlnDevice, &ogDesc);
         if (objGroup) {
-            objectGroups.push_back(objGroup);
+            *outOG = objGroup;
             const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
-            // Cache miss: stage to pendingEntries (when enabled) to ensure OG is
-            // submitted before reuse; or directly to entries (when disabled).
-            if (g_mlnLog.ogPendingStage) {
-                ogPools_[ogHash].pendingEntries.push_back({frameCount, objGroup});
-            } else {
-                ogPools_[ogHash].entries.push_back({frameCount, objGroup});
+            {
+                OGPoolEntry e;
+                e.lastFrameUsed = frameCount;
+                e.lastModifierMask = ComputeModifierMask(dg);
+                e.objectGroup = objGroup;
+                e.contentFingerprint = contentFp;
+                auto& slot = ogPools_[ogHash].slots[currentSlot];
+                if (g_mlnLog.ogPendingStage) {
+                    slot.pendingEntries.push_back(e);
+                } else {
+                    slot.entries.push_back(e);
+                }
             }
             ogTotalCount_++;
         } else {
             MLN_LOG_ERR("Phase2 frame=%u: MlnCreateGraphicsObjectGroup FAILED", g_debugFrameCount);
         }
     }
-#endif // OG_CACHE_MODE
+#endif  // OG_CACHE_MODE
 }
 
 // Walker helpers — converted from lambdas so Handle* can call them.
@@ -3938,6 +4582,10 @@ void RenderBackendMln::HandleBeginRenderPass(const void* refPtr, void* wctxPtr)
     for (auto& psd : w.state.perSetDynOffsets) {
         psd.count = 0;
     }
+    for (auto& ps : w.state.perSetStorage) {
+        ps.count = 0;
+    }
+    w.state.isComputeContext = false;
     w.state.vertexBufferCount = 0;
     w.state.indexBuffer = MLN_NULL_HANDLE;
     w.state.indexBufferOffset = 0;
@@ -3975,7 +4623,7 @@ void RenderBackendMln::HandleDraw(const void* refPtr, void* wctxPtr)
         if (ref.type == RenderCommandType::DRAW) {
             const auto& cmd = *static_cast<const RenderCommandDraw*>(ref.rc);
             og = BuildOGFromDrawCommand(&w.state, &cmd, w.currentRP, w.currentSubpassIndex, pendingFrame);
-        } else { // DRAW_INDIRECT
+        } else {  // DRAW_INDIRECT
             const auto& cmd = *static_cast<const RenderCommandDrawIndirect*>(ref.rc);
             og = BuildOGFromDrawIndirectCommand(&w.state, &cmd, w.currentRP, w.currentSubpassIndex, pendingFrame);
         }
@@ -3987,9 +4635,8 @@ void RenderBackendMln::HandleDraw(const void* refPtr, void* wctxPtr)
     }
 
     DrawCallGroup group{};
-    const auto& psoPlat = w.state.graphicsPso->GetPlatformData();
-    group.psoPlat = psoPlat;
-    group.program = psoPlat.program;
+    group.graphicsPso = w.state.graphicsPso;
+    group.program = w.state.graphicsPso->GetPlatformData().program;
     group.subpassIndex = w.currentSubpassIndex;
     SnapshotStateToDrawGroup(group, w.state);
 
@@ -4009,7 +4656,7 @@ void RenderBackendMln::HandleDraw(const void* refPtr, void* wctxPtr)
             group.drawCmd.firstVertex = cmd.firstVertex;
             group.drawCmd.firstInstance = cmd.firstInstance;
         }
-    } else { // DRAW_INDIRECT
+    } else {  // DRAW_INDIRECT
         const auto& cmd = *static_cast<const RenderCommandDrawIndirect*>(ref.rc);
         const auto* buf = gpuResourceMgr_.GetBuffer<GpuBufferMln>(cmd.argsHandle);
         if (!buf) {
@@ -4041,10 +4688,11 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             const auto* srcBuf = gpuResourceMgr_.GetBuffer<GpuBufferMln>(cmd.srcHandle);
             const auto* dstBuf = gpuResourceMgr_.GetBuffer<GpuBufferMln>(cmd.dstHandle);
             if (g_mlnLog.trans) {
-                MLN_LOG_TRANS("Phase1 frame=%u: COPY_BUFFER src=%p dst=%p size=%u srcOff=%u dstOff=%u",
-                    g_debugFrameCount, srcBuf ? reinterpret_cast<void*>(srcBuf->GetPlatformData().resource) : nullptr,
-                    dstBuf ? reinterpret_cast<void*>(dstBuf->GetPlatformData().resource) : nullptr, cmd.bufferCopy.size,
-                    cmd.bufferCopy.srcOffset, cmd.bufferCopy.dstOffset);
+                MLN_LOG_TRANS("Phase1 frame=%u: COPY_BUFFER size=%u srcOff=%u dstOff=%u",
+                    g_debugFrameCount,
+                    cmd.bufferCopy.size,
+                    cmd.bufferCopy.srcOffset,
+                    cmd.bufferCopy.dstOffset);
             }
             if (srcBuf && dstBuf && cmd.bufferCopy.size > 0) {
                 TransferOp op{};
@@ -4096,26 +4744,13 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 const auto bufName = gpuResourceMgr_.GetName(
                     (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE) ? cmd.srcHandle
                                                                                               : cmd.dstHandle);
-                MLN_LOG_TRANS(
-                    "Phase1 frame=%u: COPY_BUFFER_IMAGE type=%s buf=%p img=%p imgSize=%ux%u imgFmt=%u "
-                    "bufOff=%u extent=%ux%u mip=%u layer=%u layerCount=%u aspect=0x%x "
-                    "imgName='%s' bufName='%s'",
-                    g_debugFrameCount,
-                    (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE) ? "B2I" : "I2B",
-                    gpuBuffer ? reinterpret_cast<void*>(gpuBuffer->GetPlatformData().resource) : nullptr,
-                    gpuImage ? reinterpret_cast<void*>(gpuImage->GetPlatformData().resource) : nullptr, imgDesc.width,
-                    imgDesc.height, static_cast<uint32_t>(imgDesc.format), cmd.bufferImageCopy.bufferOffset,
-                    cmd.bufferImageCopy.imageExtent.width, cmd.bufferImageCopy.imageExtent.height,
-                    cmd.bufferImageCopy.imageSubresource.mipLevel, cmd.bufferImageCopy.imageSubresource.baseArrayLayer,
-                    cmd.bufferImageCopy.imageSubresource.layerCount,
-                    cmd.bufferImageCopy.imageSubresource.imageAspectFlags, imgName.c_str(), bufName.c_str());
                 // Dump staging buffer content for B2I to verify texture data is non-zero
                 if (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE && gpuBuffer &&
                     gpuBuffer->GetPlatformData().mappedData) {
                     const uint8_t* stagingData = static_cast<const uint8_t*>(gpuBuffer->GetPlatformData().mappedData) +
                                                  cmd.bufferImageCopy.bufferOffset;
                     const uint32_t texelBytes = cmd.bufferImageCopy.imageExtent.width *
-                                                cmd.bufferImageCopy.imageExtent.height * 4; // assume RGBA8
+                                                cmd.bufferImageCopy.imageExtent.height * 4;  // assume RGBA8
                     // Check if staging data is all zeros
                     bool allZero = true;
                     const uint32_t checkBytes = (texelBytes < 64) ? texelBytes : 64;
@@ -4129,10 +4764,25 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                     MLN_LOG_TRANS(
                         "Phase1 frame=%u: B2I-DATA: first 16 bytes=[%02x %02x %02x %02x  %02x %02x %02x %02x  "
                         "%02x %02x %02x %02x  %02x %02x %02x %02x] allZero=%d texelBytes=%u",
-                        g_debugFrameCount, stagingData[0], stagingData[1], stagingData[2], stagingData[3],
-                        stagingData[4], stagingData[5], stagingData[6], stagingData[7], stagingData[8], stagingData[9],
-                        stagingData[10], stagingData[11], stagingData[12], stagingData[13], stagingData[14],
-                        stagingData[15], allZero ? 1 : 0, texelBytes);
+                        g_debugFrameCount,
+                        stagingData[0],
+                        stagingData[1],
+                        stagingData[2],
+                        stagingData[3],
+                        stagingData[4],
+                        stagingData[5],
+                        stagingData[6],
+                        stagingData[7],
+                        stagingData[8],
+                        stagingData[9],
+                        stagingData[10],
+                        stagingData[11],
+                        stagingData[12],
+                        stagingData[13],
+                        stagingData[14],
+                        stagingData[15],
+                        allZero ? 1 : 0,
+                        texelBytes);
                 }
             }
             if (gpuBuffer && gpuImage) {
@@ -4155,7 +4805,8 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                         ? gpuImage->GetDesc().layerCount
                         : bic.imageSubresource.layerCount;
                 op.bufferImageRegion.imageOrigin = {static_cast<int32_t>(bic.imageOffset.width),
-                    static_cast<int32_t>(bic.imageOffset.height), static_cast<int32_t>(bic.imageOffset.depth)};
+                    static_cast<int32_t>(bic.imageOffset.height),
+                    static_cast<int32_t>(bic.imageOffset.depth)};
                 op.bufferImageRegion.imageSize = {bic.imageExtent.width, bic.imageExtent.height, bic.imageExtent.depth};
 
                 if (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE) {
@@ -4205,8 +4856,13 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 const GpuImageDesc dstDesc = gpuResourceMgr_.GetImageDescriptor(cmd.dstHandle);
                 if (g_mlnLog.graph) {
                     MLN_LOG_GRAPH("Phase1 frame=%u: COPY_IMAGE src(%ux%u,fmt=%u) -> dst(%ux%u,fmt=%u)",
-                        g_debugFrameCount, srcDesc.width, srcDesc.height, static_cast<uint32_t>(srcDesc.format),
-                        dstDesc.width, dstDesc.height, static_cast<uint32_t>(dstDesc.format));
+                        g_debugFrameCount,
+                        srcDesc.width,
+                        srcDesc.height,
+                        static_cast<uint32_t>(srcDesc.format),
+                        dstDesc.width,
+                        dstDesc.height,
+                        static_cast<uint32_t>(dstDesc.format));
                 }
             }
             if (srcImg && dstImg) {
@@ -4262,12 +4918,14 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 const GpuImageDesc srcDesc = gpuResourceMgr_.GetImageDescriptor(cmd.srcHandle);
                 const GpuImageDesc dstDesc = gpuResourceMgr_.GetImageDescriptor(cmd.dstHandle);
                 if (g_mlnLog.trans) {
-                    MLN_LOG_TRANS(
-                        "Phase1 frame=%u: BLIT_IMAGE src(%ux%u,fmt=%u) -> dst(%ux%u,fmt=%u), srcMln=%p, dstMln=%p",
-                        g_debugFrameCount, srcDesc.width, srcDesc.height, static_cast<uint32_t>(srcDesc.format),
-                        dstDesc.width, dstDesc.height, static_cast<uint32_t>(dstDesc.format),
-                        srcImg ? reinterpret_cast<void*>(srcImg->GetPlatformData().resource) : nullptr,
-                        dstImg ? reinterpret_cast<void*>(dstImg->GetPlatformData().resource) : nullptr);
+                    MLN_LOG_TRANS("Phase1 frame=%u: BLIT_IMAGE src(%ux%u,fmt=%u) -> dst(%ux%u,fmt=%u)",
+                        g_debugFrameCount,
+                        srcDesc.width,
+                        srcDesc.height,
+                        static_cast<uint32_t>(srcDesc.format),
+                        dstDesc.width,
+                        dstDesc.height,
+                        static_cast<uint32_t>(dstDesc.format));
                 }
             }
             if (srcImg && dstImg) {
@@ -4286,9 +4944,11 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                         ? srcImg->GetDesc().layerCount
                         : ((ib.srcSubresource.layerCount == 0) ? 1 : ib.srcSubresource.layerCount);
                 op.blitRegion.srcOrigins[0] = {static_cast<int32_t>(ib.srcOffsets[0].width),
-                    static_cast<int32_t>(ib.srcOffsets[0].height), static_cast<int32_t>(ib.srcOffsets[0].depth)};
+                    static_cast<int32_t>(ib.srcOffsets[0].height),
+                    static_cast<int32_t>(ib.srcOffsets[0].depth)};
                 op.blitRegion.srcOrigins[1] = {static_cast<int32_t>(ib.srcOffsets[1].width),
-                    static_cast<int32_t>(ib.srcOffsets[1].height), static_cast<int32_t>(ib.srcOffsets[1].depth)};
+                    static_cast<int32_t>(ib.srcOffsets[1].height),
+                    static_cast<int32_t>(ib.srcOffsets[1].depth)};
                 op.blitRegion.dstSubresource.aspectMask =
                     static_cast<MlnImageAspectFlags>(ib.dstSubresource.imageAspectFlags);
                 op.blitRegion.dstSubresource.mipLevel = ib.dstSubresource.mipLevel;
@@ -4298,9 +4958,11 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                         ? dstImg->GetDesc().layerCount
                         : ((ib.dstSubresource.layerCount == 0) ? 1 : ib.dstSubresource.layerCount);
                 op.blitRegion.dstOrigins[0] = {static_cast<int32_t>(ib.dstOffsets[0].width),
-                    static_cast<int32_t>(ib.dstOffsets[0].height), static_cast<int32_t>(ib.dstOffsets[0].depth)};
+                    static_cast<int32_t>(ib.dstOffsets[0].height),
+                    static_cast<int32_t>(ib.dstOffsets[0].depth)};
                 op.blitRegion.dstOrigins[1] = {static_cast<int32_t>(ib.dstOffsets[1].width),
-                    static_cast<int32_t>(ib.dstOffsets[1].height), static_cast<int32_t>(ib.dstOffsets[1].depth)};
+                    static_cast<int32_t>(ib.dstOffsets[1].height),
+                    static_cast<int32_t>(ib.dstOffsets[1].depth)};
 
                 op.blitImage.extensionCount = 0;
                 op.blitImage.extensions = nullptr;
@@ -4371,9 +5033,13 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 w.curTransferOps.push_back(BASE_NS::move(op));
             }
             if (g_mlnLog.trans) {
-                MLN_LOG_TRANS("Phase1 frame=%u: CLEAR_COLOR_IMAGE img=%p ranges=%zu color=(%g,%g,%g,%g)",
-                    g_debugFrameCount, reinterpret_cast<void*>(dstPlat.resource), cmd.ranges.size(),
-                    cmd.color.float32[0], cmd.color.float32[1], cmd.color.float32[2], cmd.color.float32[3]);
+                MLN_LOG_TRANS("Phase1 frame=%u: ranges=%zu color=(%g,%g,%g,%g)",
+                    g_debugFrameCount,
+                    cmd.ranges.size(),
+                    cmd.color.float32[0],
+                    cmd.color.float32[1],
+                    cmd.color.float32[2],
+                    cmd.color.float32[3]);
             }
             break;
         }
@@ -4432,13 +5098,12 @@ void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctxP
     DispatchType dispatched = DispatchType::None;
 
     if (cmd.command) {
-        MLN_LOG_FRAME(
-            "EXECUTE_BACKEND_FRAME: invoking command callback (cmd.command=%p)", static_cast<const void*>(cmd.command));
+        MLN_LOG_FRAME("EXECUTE_BACKEND_FRAME: invoking command callback");
         // Non-const arguments → overload resolution selects the mutable overload.
         cmd.command->ExecuteBackendCommand(lowLevelDevice, recordingState);
         dispatched = DispatchType::Command;
     } else if (w.backendNode) {
-        MLN_LOG_FRAME("EXECUTE_BACKEND_FRAME: invoking backend node (backendNode=%p)", w.backendNode);
+        MLN_LOG_FRAME("EXECUTE_BACKEND_FRAME: invoking backend node");
         auto* backendNode = static_cast<IRenderBackendNode*>(w.backendNode);
         backendNode->ExecuteBackendFrame(lowLevelDevice, recordingState);
         dispatched = DispatchType::BackendNode;
@@ -4454,25 +5119,21 @@ void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctxP
     const size_t dgCountAfter = outDGs.size();
     if (dgCountAfter == dgCountBefore) {
         if (dispatched == DispatchType::Command) {
-            MLN_LOG_ERR(
-                "EXECUTE_BACKEND_FRAME: IRenderBackendCommand subclass "
-                "(cmd.command=%p) did not push any MlnDataGraph — likely missing "
-                "an override of the mutable ExecuteBackendCommand overload "
-                "(ILowLevelDevice&, RenderBackendRecordingState&). To support "
-                "Maleoon, override the mutable overload, cast the args to the "
-                "Maleoon-typed variants, and push DGs into "
-                "recordingState.outDataGraphs.",
-                static_cast<const void*>(cmd.command));
+            MLN_LOG_ERR("EXECUTE_BACKEND_FRAME: IRenderBackendCommand subclass "
+                        "did not push any MlnDataGraph — likely missing "
+                        "an override of the mutable ExecuteBackendCommand overload "
+                        "(ILowLevelDevice&, RenderBackendRecordingState&). To support "
+                        "Maleoon, override the mutable overload, cast the args to the "
+                        "Maleoon-typed variants, and push DGs into "
+                        "recordingState.outDataGraphs.");
         } else if (dispatched == DispatchType::BackendNode) {
-            MLN_LOG_ERR(
-                "EXECUTE_BACKEND_FRAME: IRenderBackendNode subclass "
-                "(backendNode=%p) did not push any MlnDataGraph — likely missing "
-                "an override of the mutable ExecuteBackendFrame overload "
-                "(const ILowLevelDevice&, RenderBackendRecordingState&). To support "
-                "Maleoon, override the mutable overload, cast the args to the "
-                "Maleoon-typed variants, and push DGs into "
-                "recordingState.outDataGraphs.",
-                w.backendNode);
+            MLN_LOG_ERR("EXECUTE_BACKEND_FRAME: IRenderBackendNode subclass "
+                        "did not push any MlnDataGraph — likely missing "
+                        "an override of the mutable ExecuteBackendFrame overload "
+                        "(const ILowLevelDevice&, RenderBackendRecordingState&). To support "
+                        "Maleoon, override the mutable overload, cast the args to the "
+                        "Maleoon-typed variants, and push DGs into "
+                        "recordingState.outDataGraphs.");
         }
         return;
     }
@@ -4483,17 +5144,16 @@ void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctxP
     if (outRes.size() < dgCountAfter) {
         const size_t missing = dgCountAfter - outRes.size();
         for (size_t i = 0; i < missing; ++i) {
-            DataGraphResourceInfo info{}; // outputCount=0, srcStage=ALL_COMMANDS_BIT
+            DataGraphResourceInfo info{};  // outputCount=0, srcStage=ALL_COMMANDS_BIT
             outRes.push_back(info);
         }
-        MLN_LOG_GRAPH(
-            "EXECUTE_BACKEND: auto-synced %zu DataGraphResourceInfo "
-            "defaults for %zu backend-added DGs",
-            missing, dgCountAfter - dgCountBefore);
+        MLN_LOG_GRAPH("EXECUTE_BACKEND: auto-synced %zu DataGraphResourceInfo "
+                      "defaults for %zu backend-added DGs",
+            missing,
+            dgCountAfter - dgCountBefore);
     } else {
-        MLN_LOG_FRAME(
-            "EXECUTE_BACKEND: produced %zu DG(s); outDgResources already "
-            "populated by backend",
+        MLN_LOG_FRAME("EXECUTE_BACKEND: produced %zu DG(s); outDgResources already "
+                      "populated by backend",
             dgCountAfter - dgCountBefore);
     }
 }
@@ -4543,15 +5203,17 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
             state.graphicsPso = nullptr;
             state.computePso = nullptr;
             if (cmd.pipelineBindPoint == PipelineBindPoint::CORE_PIPELINE_BIND_POINT_GRAPHICS) {
+                state.isComputeContext = false;
                 state.graphicsPsoHandle = cmd.psoHandle;
                 state.hasGraphicsPsoHandle = true;
                 if (currentRP && currentRP->beginCmd) {
                     if (!ResolveGraphicsPsoForCurrentRp(cmd.psoHandle, currentRP, currentSubpassIndex, state, psoMgr)) {
 
-                        MLN_LOG_ERR(
-                            "Phase1 frame=%u: BIND_PIPELINE graphics PSO lookup FAILED "
-                            "(subpass=%u, psoHandle idx=%u, gen=%u)",
-                            g_debugFrameCount, currentSubpassIndex, RenderHandleUtil::GetIndexPart(cmd.psoHandle),
+                        MLN_LOG_ERR("Phase1 frame=%u: BIND_PIPELINE graphics PSO lookup FAILED "
+                                    "(subpass=%u, psoHandle idx=%u, gen=%u)",
+                            g_debugFrameCount,
+                            currentSubpassIndex,
+                            RenderHandleUtil::GetIndexPart(cmd.psoHandle),
                             RenderHandleUtil::GetGenerationIndexPart(cmd.psoHandle));
                     }
                 } else {
@@ -4563,21 +5225,11 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                     }
                 }
             } else {
+                state.isComputeContext = true;
                 const auto* pso = psoMgr.GetComputePso(cmd.psoHandle, nullptr);
                 if (pso) {
                     state.computePso = static_cast<const ComputePipelineStateObjectMln*>(pso);
                 }
-            }
-            if (g_mlnLog.graph) {
-                MLN_LOG_GRAPH("Phase1 frame=%u: BIND_PIPELINE type=%s program=%p psoHandle=(%u,%u)", g_debugFrameCount,
-                    (cmd.pipelineBindPoint == PipelineBindPoint::CORE_PIPELINE_BIND_POINT_GRAPHICS) ? "GFX" : "COMPUTE",
-                    (cmd.pipelineBindPoint == PipelineBindPoint::CORE_PIPELINE_BIND_POINT_GRAPHICS)
-                        ? (state.graphicsPso ? reinterpret_cast<void*>(state.graphicsPso->GetPlatformData().program)
-                                             : nullptr)
-                        : (state.computePso ? reinterpret_cast<void*>(state.computePso->GetPlatformData().program)
-                                            : nullptr),
-                    RenderHandleUtil::GetIndexPart(cmd.psoHandle),
-                    RenderHandleUtil::GetGenerationIndexPart(cmd.psoHandle));
             }
             break;
         }
@@ -4611,8 +5263,8 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                 MLN_LOG_GRAPH(
                     "Phase1 frame=%u: BIND_VERTEX_BUFFERS count=%u", g_debugFrameCount, state.vertexBufferCount);
                 for (uint32_t vi = 0; vi < state.vertexBufferCount; ++vi) {
-                    MLN_LOG_GRAPH("  VB[%u]: resource=%p offset=%llu size=%llu", vi,
-                        reinterpret_cast<void*>(state.vertexBuffers[vi]),
+                    MLN_LOG_GRAPH("  VB[%u]: offset=%llu size=%llu",
+                        vi,
                         static_cast<unsigned long long>(state.vertexBufferOffsets[vi]),
                         static_cast<unsigned long long>(state.vertexBufferSizes[vi]));
                 }
@@ -4630,9 +5282,10 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                       : MLN_INDEX_TYPE_UINT32;
             }
             if (g_mlnLog.graph) {
-                MLN_LOG_GRAPH("Phase1 frame=%u: BIND_INDEX_BUFFER buf=%p offset=%llu type=%u", g_debugFrameCount,
-                    reinterpret_cast<void*>(state.indexBuffer),
-                    static_cast<unsigned long long>(state.indexBufferOffset), static_cast<uint32_t>(state.indexType));
+                MLN_LOG_GRAPH("Phase1 frame=%u: offset=%llu type=%u",
+                    g_debugFrameCount,
+                    static_cast<unsigned long long>(state.indexBufferOffset),
+                    static_cast<uint32_t>(state.indexType));
             }
             break;
         }
@@ -4664,7 +5317,11 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
             if (g_mlnLog.graph) {
                 MLN_LOG_GRAPH(
                     "Phase1 frame=%u: BUG12FIX BIND_DS: cmd.firstSet=%u cmd.setCount=%u -> accumulated range [%u, %u)",
-                    g_debugFrameCount, cmd.firstSet, cmd.setCount, state.firstSet, state.endSet);
+                    g_debugFrameCount,
+                    cmd.firstSet,
+                    cmd.setCount,
+                    state.firstSet,
+                    state.endSet);
             }
             // Resolve descriptor set handles to MlnBindingSet objects
             {
@@ -4698,11 +5355,10 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                         // bindings and stash them in state.perSetStorage[idx]. Used by
                         // BuildComputeDg to populate compute DG outputs so SG can declare
                         // proper compute → consumer memory dependencies.
-                        // Conservative: any STORAGE_* binding is treated as a potential
-                        // output (shader access flags are not visible at this layer).
-                        {
+                        // Only needed for compute context — graphics draws never use storage outputs.
+                        if (state.isComputeContext) {
                             auto& setStorage = state.perSetStorage[idx];
-                            setStorage.entries.clear();
+                            setStorage.count = 0;
                             if (state.bindingSets[idx]) {
                                 const auto bindRes = dsMgr.GetCpuDescriptorSetData(dsHandle);
                                 for (const auto& rb : bindRes.buffers) {
@@ -4721,13 +5377,14 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                         const auto* bufPtr = gpuResourceMgr_.GetBuffer<GpuBufferMln>(bRes.handle);
                                         if (!bufPtr || !bufPtr->GetPlatformData().resource)
                                             continue;
-                                        MlnPassNodeResourceDescriptor rd{};
-                                        rd.extensionCount = 0;
-                                        rd.extensions = nullptr;
-                                        rd.type = MLN_PASS_NODE_RESOURCE_TYPE_BUFFER;
-                                        rd.imageResourceView = MLN_NULL_HANDLE;
-                                        rd.bufferResource = bufPtr->GetPlatformData().resource;
-                                        setStorage.entries.push_back(rd);
+                                        if (setStorage.count < MlnRenderState::PerSetStorageOutputs::MAX_ENTRIES) {
+                                            auto& rd = setStorage.entries[setStorage.count++];
+                                            rd.extensionCount = 0;
+                                            rd.extensions = nullptr;
+                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_BUFFER;
+                                            rd.imageResourceView = MLN_NULL_HANDLE;
+                                            rd.bufferResource = bufPtr->GetPlatformData().resource;
+                                        }
                                     }
                                 }
                                 for (const auto& ri : bindRes.images) {
@@ -4745,13 +5402,14 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                         if (!imgPtr || !imgPtr->GetPlatformData().resource)
                                             continue;
                                         const auto& imgPlat = imgPtr->GetPlatformData();
-                                        MlnPassNodeResourceDescriptor rd{};
-                                        rd.extensionCount = 0;
-                                        rd.extensions = nullptr;
-                                        rd.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
-                                        rd.imageResourceView = imgPlat.resourceView;
-                                        rd.bufferResource = imgPlat.resource;
-                                        setStorage.entries.push_back(rd);
+                                        if (setStorage.count < MlnRenderState::PerSetStorageOutputs::MAX_ENTRIES) {
+                                            auto& rd = setStorage.entries[setStorage.count++];
+                                            rd.extensionCount = 0;
+                                            rd.extensions = nullptr;
+                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
+                                            rd.imageResourceView = imgPlat.resourceView;
+                                            rd.bufferResource = imgPlat.resource;
+                                        }
                                     }
                                 }
                             }
@@ -4867,31 +5525,33 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                 if (dynRef.dynamicOffsets && di < dynRef.dynamicOffsetCount) {
                                     byteOffset = dynRef.dynamicOffsets[di];
                                 }
-                                // Vulkan-style overflow validation: if dynamic offset + ring buffer
-                                // frame offset exceeds total buffer size, clamp to 0.
-                                const GpuBufferMln* dynBuf =
-                                    gpuResourceMgr_.GetBuffer<const GpuBufferMln>(dod.resources[di]);
-                                if (dynBuf) {
-                                    const auto& bufData = dynBuf->GetPlatformData();
-                                    if (bufData.fullByteSize < byteOffset + bufData.currentByteOffset) {
-                                        if (g_mlnLog.graph) {
-                                            MLN_LOG_GRAPH(
-                                                "BIND_DS dynOffset overflow: set=%u di=%u "
-                                                "byteOffset=%u + currentByteOffset=%u > fullByteSize=%u, "
-                                                "clamping to 0",
-                                                idx, di, byteOffset, bufData.currentByteOffset, bufData.fullByteSize);
+                                if (g_mlnLog.graph) {
+                                    const GpuBufferMln* dynBuf =
+                                        gpuResourceMgr_.GetBuffer<const GpuBufferMln>(dod.resources[di]);
+                                    if (dynBuf) {
+                                        const auto& bufData = dynBuf->GetPlatformData();
+                                        if (bufData.fullByteSize < byteOffset + bufData.currentByteOffset) {
+                                            MLN_LOG_GRAPH("BIND_DS dynOffset overflow: set=%u di=%u "
+                                                          "byteOffset=%u + currentByteOffset=%u > fullByteSize=%u, "
+                                                          "clamping to 0",
+                                                idx,
+                                                di,
+                                                byteOffset,
+                                                bufData.currentByteOffset,
+                                                bufData.fullByteSize);
+                                            byteOffset = 0u;
                                         }
-                                        byteOffset = 0u;
                                     }
                                 }
                                 setDyn.offsets[di] = byteOffset;
                             }
                             setDyn.count = fillCount;
                             if (dynRef.dynamicOffsetCount != dodResCount) {
-                                MLN_LOG_GRAPH(
-                                    "BIND_DS dynOffset count mismatch set=%u: "
-                                    "layout expects %u, cmd provides %u (padded with 0)",
-                                    idx, dodResCount, dynRef.dynamicOffsetCount);
+                                MLN_LOG_GRAPH("BIND_DS dynOffset count mismatch set=%u: "
+                                              "layout expects %u, cmd provides %u (padded with 0)",
+                                    idx,
+                                    dodResCount,
+                                    dynRef.dynamicOffsetCount);
                             }
                         }
                     }
@@ -4905,8 +5565,9 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                 const uint32_t offset = 0;
                 const uint32_t size = cmd.pushConstant.byteSize;
                 if (offset + size <= sizeof(state.pushConstantData)) {
-                    if (memcpy_s(state.pushConstantData + offset, sizeof(state.pushConstantData) - offset, cmd.data,
-                            size) == 0) {
+                    if (memcpy_s(
+                            state.pushConstantData + offset, sizeof(state.pushConstantData) - offset, cmd.data, size) ==
+                        0) {
                         state.pushConstantOffset = offset;
                         if (offset + size > state.pushConstantSize) {
                             state.pushConstantSize = offset + size;
@@ -4919,17 +5580,40 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                     const uint32_t dwords = size / 4;
                     if (dwords >= 8) {
                         // PostProcessTonemapStruct or similar: dump as float + hex
-                        MLN_LOG_GRAPH(
-                            "Phase1 frame=%u: PUSH_CONSTANT: size=%u "
-                            "f=[%.4f,%.4f,%.4f,%.4f, %.4f,%.4f,%.4f,%.4f] "
-                            "u=[0x%08x,0x%08x,0x%08x,0x%08x, 0x%08x,0x%08x,0x%08x,0x%08x]",
-                            g_debugFrameCount, size, pcf[0], pcf[1], pcf[2], pcf[3], pcf[4], pcf[5], pcf[6], pcf[7],
-                            pcu[0], pcu[1], pcu[2], pcu[3], pcu[4], pcu[5], pcu[6], pcu[7]);
+                        MLN_LOG_GRAPH("Phase1 frame=%u: PUSH_CONSTANT: size=%u "
+                                      "f=[%.4f,%.4f,%.4f,%.4f, %.4f,%.4f,%.4f,%.4f] "
+                                      "u=[0x%08x,0x%08x,0x%08x,0x%08x, 0x%08x,0x%08x,0x%08x,0x%08x]",
+                            g_debugFrameCount,
+                            size,
+                            pcf[0],
+                            pcf[1],
+                            pcf[2],
+                            pcf[3],
+                            pcf[4],
+                            pcf[5],
+                            pcf[6],
+                            pcf[7],
+                            pcu[0],
+                            pcu[1],
+                            pcu[2],
+                            pcu[3],
+                            pcu[4],
+                            pcu[5],
+                            pcu[6],
+                            pcu[7]);
                     } else if (dwords >= 4) {
-                        MLN_LOG_GRAPH(
-                            "Phase1 frame=%u: PUSH_CONSTANT: size=%u f=[%.4f,%.4f,%.4f,%.4f] "
-                            "u=[0x%08x,0x%08x,0x%08x,0x%08x]",
-                            g_debugFrameCount, size, pcf[0], pcf[1], pcf[2], pcf[3], pcu[0], pcu[1], pcu[2], pcu[3]);
+                        MLN_LOG_GRAPH("Phase1 frame=%u: PUSH_CONSTANT: size=%u f=[%.4f,%.4f,%.4f,%.4f] "
+                                      "u=[0x%08x,0x%08x,0x%08x,0x%08x]",
+                            g_debugFrameCount,
+                            size,
+                            pcf[0],
+                            pcf[1],
+                            pcf[2],
+                            pcf[3],
+                            pcu[0],
+                            pcu[1],
+                            pcu[2],
+                            pcu[3]);
                     } else {
                         MLN_LOG_GRAPH(
                             "Phase1 frame=%u: PUSH_CONSTANT: size=%u u[0]=0x%08x", g_debugFrameCount, size, pcu[0]);
@@ -5053,6 +5737,16 @@ void RenderBackendMln::BuildOGsFromDrawGroups(const void* rpSegPtr, uint32_t act
 // and BuildOGFromDraw*Command (streaming/secondary direct-build path, stack-only).
 void RenderBackendMln::BuildSingleOGFromDrawGroup(const void* dgPtr, const void* rpDescPtr,
     PendingDestroyFrame& pendingFrame, vector<MlnObjectGroup>& outObjectGroups)
+{
+    MlnObjectGroup og = MLN_NULL_HANDLE;
+    BuildSingleOGFromDrawGroup(dgPtr, rpDescPtr, pendingFrame, &og);
+    if (og) {
+        outObjectGroups.push_back(og);
+    }
+}
+
+void RenderBackendMln::BuildSingleOGFromDrawGroup(
+    const void* dgPtr, const void* rpDescPtr, PendingDestroyFrame& pendingFrame, MlnObjectGroup* outOG)
 {
     const auto& dg = *static_cast<const DrawCallGroup*>(dgPtr);
     const auto& rpDesc = *static_cast<const RenderPassDesc*>(rpDescPtr);
@@ -5189,8 +5883,9 @@ void RenderBackendMln::BuildSingleOGFromDrawGroup(const void* dgPtr, const void*
         MlnRect2D fallbackScissor{};
         MlnStateSetDescriptor stateSet{};
         MlnDynamicState dynState{};
-        dynState.dynamicStateCount = dg.psoPlat.dynamicStateCount;
-        dynState.dynamicStateTypes = dg.psoPlat.dynamicStateTypes;
+        const auto& psoPlat = dg.graphicsPso->GetPlatformData();
+        dynState.dynamicStateCount = psoPlat.dynamicStateCount;
+        dynState.dynamicStateTypes = psoPlat.dynamicStateTypes;
         stateSet.dynamicState = &dynState;
 
         vpState.firstViewport = 0;
@@ -5198,8 +5893,12 @@ void RenderBackendMln::BuildSingleOGFromDrawGroup(const void* dgPtr, const void*
         if (dg.hasViewport) {
             vpState.viewports = &dg.viewport;
         } else {
-            fallbackViewport = {0.0f, 0.0f, static_cast<float>(rpDesc.renderArea.extentWidth),
-                static_cast<float>(rpDesc.renderArea.extentHeight), 0.0f, 1.0f};
+            fallbackViewport = {0.0f,
+                0.0f,
+                static_cast<float>(rpDesc.renderArea.extentWidth),
+                static_cast<float>(rpDesc.renderArea.extentHeight),
+                0.0f,
+                1.0f};
             vpState.viewports = &fallbackViewport;
         }
         stateSet.viewport = &vpState;
@@ -5262,7 +5961,7 @@ void RenderBackendMln::BuildSingleOGFromDrawGroup(const void* dgPtr, const void*
         ogInputs.stencilCompareMask = &stencilCompareMask;
         ogInputs.stencilWriteMask = &stencilWriteMask;
         ogInputs.stencilReference = &stencilReference;
-        BuildOGFromState(&ogInputs, pendingFrame, outObjectGroups);
+        BuildOGFromState(&ogInputs, pendingFrame, outOG);
     }
 }
 
@@ -5284,9 +5983,8 @@ MlnObjectGroup RenderBackendMln::BuildOGFromDrawCommand(const void* statePtr, co
     if (!psoPlat.program)
         return MLN_NULL_HANDLE;
 
-    // Stack-only DrawCallGroup — zero heap alloc per draw.
     DrawCallGroup dg{};
-    dg.psoPlat = psoPlat;
+    dg.graphicsPso = state.graphicsPso;
     dg.program = psoPlat.program;
     dg.subpassIndex = subpassIndex;
     SnapshotStateToDrawGroup(dg, state);
@@ -5305,10 +6003,9 @@ MlnObjectGroup RenderBackendMln::BuildOGFromDrawCommand(const void* statePtr, co
         dg.drawCmd.firstInstance = cmd.firstInstance;
     }
 
-    vector<MlnObjectGroup> outOGs;
-    outOGs.reserve(1);
-    BuildSingleOGFromDrawGroup(&dg, &rpSeg.beginCmd->renderPassDesc, pendingFrame, outOGs);
-    return outOGs.empty() ? MLN_NULL_HANDLE : outOGs[0];
+    MlnObjectGroup outOG = MLN_NULL_HANDLE;
+    BuildSingleOGFromDrawGroup(&dg, &rpSeg.beginCmd->renderPassDesc, pendingFrame, &outOG);
+    return outOG;
 }
 
 MlnObjectGroup RenderBackendMln::BuildOGFromDrawIndirectCommand(const void* statePtr, const void* cmdPtr,
@@ -5328,7 +6025,7 @@ MlnObjectGroup RenderBackendMln::BuildOGFromDrawIndirectCommand(const void* stat
         return MLN_NULL_HANDLE;
 
     DrawCallGroup dg{};
-    dg.psoPlat = psoPlat;
+    dg.graphicsPso = state.graphicsPso;
     dg.program = psoPlat.program;
     dg.subpassIndex = subpassIndex;
     SnapshotStateToDrawGroup(dg, state);
@@ -5338,10 +6035,9 @@ MlnObjectGroup RenderBackendMln::BuildOGFromDrawIndirectCommand(const void* stat
     dg.drawIndirectCmd.drawCount = cmd.drawCount;
     dg.drawIndirectCmd.stride = cmd.stride;
 
-    vector<MlnObjectGroup> outOGs;
-    outOGs.reserve(1);
-    BuildSingleOGFromDrawGroup(&dg, &rpSeg.beginCmd->renderPassDesc, pendingFrame, outOGs);
-    return outOGs.empty() ? MLN_NULL_HANDLE : outOGs[0];
+    MlnObjectGroup outOG = MLN_NULL_HANDLE;
+    BuildSingleOGFromDrawGroup(&dg, &rpSeg.beginCmd->renderPassDesc, pendingFrame, &outOG);
+    return outOG;
 }
 
 // BuildGraphicsDg — builds one graphics DataGraph from pre-built OGs + render pass descriptor.
@@ -5357,8 +6053,13 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
     const MlnDevice mlnDevice = deviceMln_.GetMlnDevice();
     const auto& rpDesc = beginCmd->renderPassDesc;
     const auto& subpasses = beginCmd->subpasses;
-    MLN_LOG_GRAPH("Phase2 frame=%u: rpSeg[%u] area=%ux%u OGs=%zu subpasses=%zu attCnt=%u", g_debugFrameCount, rpSegIdx,
-        rpDesc.renderArea.extentWidth, rpDesc.renderArea.extentHeight, objectGroups.size(), subpasses.size(),
+    MLN_LOG_GRAPH("Phase2 frame=%u: rpSeg[%u] area=%ux%u OGs=%zu subpasses=%zu attCnt=%u",
+        g_debugFrameCount,
+        rpSegIdx,
+        rpDesc.renderArea.extentWidth,
+        rpDesc.renderArea.extentHeight,
+        objectGroups.size(),
+        subpasses.size(),
         rpDesc.attachmentCount);
     if (subpasses.empty()) {
         return;
@@ -5372,25 +6073,40 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
     const auto& sp = subpasses[activeSubpassIndex];
 
     // [MILESTONE-1] rpSeg entry — if crash after this but before MILESTONE-2, it's in attachment setup
-    MLN_LOG_FRAME(
-        "MILESTONE-1 frame=%u rpSeg[%u]: subpass=%u colorAtt=%u depthAttIdx=%u "
-        "OGs=%zu area=%ux%u attCnt=%u isSubpassBegin=%d",
-        g_debugFrameCount, rpSegIdx, activeSubpassIndex, sp.colorAttachmentCount, sp.depthAttachmentIndex,
-        objectGroups.size(), rpDesc.renderArea.extentWidth, rpDesc.renderArea.extentHeight, rpDesc.attachmentCount,
+    MLN_LOG_FRAME("MILESTONE-1 frame=%u rpSeg[%u]: subpass=%u colorAtt=%u depthAttIdx=%u "
+                  "OGs=%zu area=%ux%u attCnt=%u isSubpassBegin=%d",
+        g_debugFrameCount,
+        rpSegIdx,
+        activeSubpassIndex,
+        sp.colorAttachmentCount,
+        sp.depthAttachmentIndex,
+        objectGroups.size(),
+        rpDesc.renderArea.extentWidth,
+        rpDesc.renderArea.extentHeight,
+        rpDesc.attachmentCount,
         isSubpassBegin ? 1 : 0);
 
     // Log subpass structure for debugging
     if (g_mlnLog.graph) {
         MLN_LOG_GRAPH(
             "Phase2 frame=%u: subpass[%u]: colorAttCount=%u, depthAttIdx=%u, depthAttCount=%u, inputAttCount=%u",
-            g_debugFrameCount, activeSubpassIndex, sp.colorAttachmentCount, sp.depthAttachmentIndex,
-            sp.depthAttachmentCount, sp.inputAttachmentCount);
+            g_debugFrameCount,
+            activeSubpassIndex,
+            sp.colorAttachmentCount,
+            sp.depthAttachmentIndex,
+            sp.depthAttachmentCount,
+            sp.inputAttachmentCount);
         for (uint32_t ci = 0; ci < sp.colorAttachmentCount; ++ci) {
             const uint32_t cAttIdx = sp.colorAttachmentIndices[ci];
             if (cAttIdx < rpDesc.attachmentCount) {
                 const GpuImageDesc cImgDesc = gpuResourceMgr_.GetImageDescriptor(rpDesc.attachmentHandles[cAttIdx]);
-                MLN_LOG_GRAPH("Phase2 frame=%u:   color[%u]: attachIdx=%u, fmt=%u, %ux%u", g_debugFrameCount, ci,
-                    cAttIdx, static_cast<uint32_t>(cImgDesc.format), cImgDesc.width, cImgDesc.height);
+                MLN_LOG_GRAPH("Phase2 frame=%u:   color[%u]: attachIdx=%u, fmt=%u, %ux%u",
+                    g_debugFrameCount,
+                    ci,
+                    cAttIdx,
+                    static_cast<uint32_t>(cImgDesc.format),
+                    cImgDesc.width,
+                    cImgDesc.height);
             }
         }
     }
@@ -5466,11 +6182,19 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
                 const GpuImageDesc cImgDesc2 = gpuResourceMgr_.GetImageDescriptor(rpDesc.attachmentHandles[attIdx]);
                 MLN_LOG_GRAPH(
                     "Phase2 frame=%u: color[%u] rpAttIdx=%u fmt=%u %ux%u clear=(%.3f,%.3f,%.3f,%.3f) loadOp=%u "
-                    "storeOp=%u imgRes=%p resolve=%p",
-                    g_debugFrameCount, i, attIdx, static_cast<uint32_t>(cImgDesc2.format), cImgDesc2.width,
-                    cImgDesc2.height, att.clearValue.color.f[0], att.clearValue.color.f[1], att.clearValue.color.f[2],
-                    att.clearValue.color.f[3], static_cast<uint32_t>(att.loadOp), static_cast<uint32_t>(att.storeOp),
-                    reinterpret_cast<void*>(att.imageResourceView), reinterpret_cast<void*>(att.resolveResourceView));
+                    "storeOp=%u",
+                    g_debugFrameCount,
+                    i,
+                    attIdx,
+                    static_cast<uint32_t>(cImgDesc2.format),
+                    cImgDesc2.width,
+                    cImgDesc2.height,
+                    att.clearValue.color.f[0],
+                    att.clearValue.color.f[1],
+                    att.clearValue.color.f[2],
+                    att.clearValue.color.f[3],
+                    static_cast<uint32_t>(att.loadOp),
+                    static_cast<uint32_t>(att.storeOp));
             }
         }
     }
@@ -5536,8 +6260,10 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
 
                 if (g_mlnLog.graph) {
                     MLN_LOG_GRAPH("Phase2 frame=%u: depth clear=%.4f, stencilClear=%u, loadOp=%u, storeOp=%u, fmt=%u",
-                        g_debugFrameCount, depthAttachment.clearValue.depthStencil.depth,
-                        depthAttachment.clearValue.depthStencil.stencil, static_cast<uint32_t>(depthAttachment.loadOp),
+                        g_debugFrameCount,
+                        depthAttachment.clearValue.depthStencil.depth,
+                        depthAttachment.clearValue.depthStencil.stencil,
+                        static_cast<uint32_t>(depthAttachment.loadOp),
                         static_cast<uint32_t>(depthAttachment.storeOp),
                         static_cast<uint32_t>(
                             gpuResourceMgr_.GetImageDescriptor(rpDesc.attachmentHandles[sp.depthAttachmentIndex])
@@ -5581,22 +6307,25 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
     }
 
     // [REFAC Step 5a] RT creation/cache moved to BuildRenderTarget helper.
-    MlnRenderTarget renderTarget = BuildRenderTarget(colorAttachments, hasDepth ? &depthAttachment : nullptr,
-        hasStencil ? &stencilAttachment : nullptr, rpDesc.renderArea.extentWidth, rpDesc.renderArea.extentHeight,
-        activeSubpassIndex, static_cast<uint32_t>(beginCmd->beginType), objectGroups.size());
+    MlnRenderTarget renderTarget = BuildRenderTarget(colorAttachments,
+        hasDepth ? &depthAttachment : nullptr,
+        hasStencil ? &stencilAttachment : nullptr,
+        rpDesc.renderArea.extentWidth,
+        rpDesc.renderArea.extentHeight,
+        activeSubpassIndex,
+        static_cast<uint32_t>(beginCmd->beginType),
+        objectGroups.size());
     if (!renderTarget) {
         return;
     }
     // RT is owned by renderTargetCache_, NOT by pendingFrame.
     // (pendingFrame.renderTargets is now only used for non-cached RTs, if any.)
 
-    MLN_LOG_FRAME("MILESTONE-3 frame=%u POST-CreateRT: RT=%p OGs=%zu", g_debugFrameCount,
-        reinterpret_cast<void*>(renderTarget), objectGroups.size());
+    MLN_LOG_FRAME("MILESTONE-3 frame=%u POST-CreateRT: OGs=%zu", g_debugFrameCount, objectGroups.size());
     // OG creation loop moved to BuildOGsFromDrawGroups; objectGroups passed in pre-built.
 
     // [MILESTONE-4] Pre-DG creation
-    MLN_LOG_FRAME("MILESTONE-4 frame=%u PRE-CreateDG: OGs=%zu RT=%p", g_debugFrameCount, objectGroups.size(),
-        reinterpret_cast<void*>(renderTarget));
+    MLN_LOG_FRAME("MILESTONE-4 frame=%u PRE-CreateDG: OGs=%zu", g_debugFrameCount, objectGroups.size());
 
     // Create DataGraph - even with 0 OGs, the render target's loadOp=CLEAR
     // still executes, which is needed for clear-only render passes.
@@ -5609,22 +6338,22 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
     dgDesc.renderTarget = renderTarget;
 
     if (g_mlnLog.graph) {
-        MLN_LOG_GRAPH("Phase2 frame=%u: PRE-MlnCreateGraphicsDataGraph (subpass=%u, OGs=%u, RT=%p)", g_debugFrameCount,
-            activeSubpassIndex, static_cast<uint32_t>(objectGroups.size()), reinterpret_cast<void*>(renderTarget));
+        MLN_LOG_GRAPH("Phase2 frame=%u: PRE-MlnCreateGraphicsDataGraph (subpass=%u, OGs=%u)",
+            g_debugFrameCount,
+            activeSubpassIndex,
+            static_cast<uint32_t>(objectGroups.size()));
         for (uint32_t ogi = 0; ogi < objectGroups.size(); ++ogi) {
-            MLN_LOG_GRAPH("Phase2:   OG[%u]=%p", ogi, reinterpret_cast<void*>(objectGroups[ogi]));
+            MLN_LOG_GRAPH("Phase2:   OG[%u]", ogi);
         }
     }
     MlnDataGraph dataGraph = MlnCreateGraphicsDataGraph(mlnDevice, &dgDesc);
-
     // [MILESTONE-5] Post-DG creation — survived this rpSeg
-    MLN_LOG_FRAME("MILESTONE-5 frame=%u POST-CreateDG: DG=%p OGs=%zu RT=%p", g_debugFrameCount,
-        reinterpret_cast<void*>(dataGraph), objectGroups.size(), reinterpret_cast<void*>(renderTarget));
-
     if (dataGraph) {
         if (g_mlnLog.graph) {
-            MLN_LOG_GRAPH("Phase2 frame=%u: MlnCreateGraphicsDataGraph OK (subpass=%u, OGs=%u)", g_debugFrameCount,
-                activeSubpassIndex, static_cast<uint32_t>(objectGroups.size()));
+            MLN_LOG_GRAPH("Phase2 frame=%u: MlnCreateGraphicsDataGraph OK (subpass=%u, OGs=%u)",
+                g_debugFrameCount,
+                activeSubpassIndex,
+                static_cast<uint32_t>(objectGroups.size()));
         }
         // BLOOM_EXEC: Log ALL DataGraphs to diagnose bloom.
         {
@@ -5637,8 +6366,14 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
                 }
             }
             MLN_LOG_GRAPH("Phase2 frame=%u: DG area=%ux%u fmt=%u colors=%u depthIdx=%u attCnt=%u OGs=%zu",
-                g_debugFrameCount, rpDesc.renderArea.extentWidth, rpDesc.renderArea.extentHeight, colorFmt,
-                sp.colorAttachmentCount, sp.depthAttachmentIndex, rpDesc.attachmentCount, objectGroups.size());
+                g_debugFrameCount,
+                rpDesc.renderArea.extentWidth,
+                rpDesc.renderArea.extentHeight,
+                colorFmt,
+                sp.colorAttachmentCount,
+                sp.depthAttachmentIndex,
+                rpDesc.attachmentCount,
+                objectGroups.size());
         }
         dataGraphs.push_back(dataGraph);
 
@@ -5659,7 +6394,7 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
             auto& res = dgResInfo.outputs[idx];
             res.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
             res.imageResourceView = colorAttachments[ci].imageResourceView;
-            res.bufferResource = img->GetPlatformData().resource; // real image MlnResource
+            res.bufferResource = img->GetPlatformData().resource;  // real image MlnResource
             dgResInfo.storeOps[idx] = colorAttachments[ci].storeOp;
         }
         if (hasDepth && depthAttachment.imageResourceView && sp.depthAttachmentIndex < rpDesc.attachmentCount &&
@@ -5671,18 +6406,20 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
                 auto& res = dgResInfo.outputs[idx];
                 res.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
                 res.imageResourceView = depthAttachment.imageResourceView;
-                res.bufferResource = depthImg->GetPlatformData().resource; // real depth MlnResource
+                res.bufferResource = depthImg->GetPlatformData().resource;  // real depth MlnResource
                 dgResInfo.storeOps[idx] = depthAttachment.storeOp;
             }
         }
         dgResInfo.renderTarget = renderTarget;
         // [REFAC §8.7] Stage mask: graphics DG writes at ALL_GRAPHICS stage.
-        dgResInfo.srcStage = MLN_PROGRAM_STAGE_ALL_GRAPHICS_BIT;
+        dgResInfo.srcStage = MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT;
         dgResInfo.dstStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
         dgResources.push_back(dgResInfo);
     } else {
-        MLN_LOG_ERR("Phase2 frame=%u: MlnCreateGraphicsDataGraph FAILED (subpass=%u, OGs=%u)", g_debugFrameCount,
-            activeSubpassIndex, static_cast<uint32_t>(objectGroups.size()));
+        MLN_LOG_ERR("Phase2 frame=%u: MlnCreateGraphicsDataGraph FAILED (subpass=%u, OGs=%u)",
+            g_debugFrameCount,
+            activeSubpassIndex,
+            static_cast<uint32_t>(objectGroups.size()));
     }
 }
 
@@ -5721,12 +6458,17 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
     }
 
     if (g_mlnLog.graph) {
-        MLN_LOG_GRAPH("RenderBackendMln::RenderSingleCommandList frame=%u (cmdCount=%zu)", g_debugFrameCount,
+        MLN_LOG_GRAPH("RenderBackendMln::RenderSingleCommandList frame=%u (cmdCount=%zu)",
+            g_debugFrameCount,
             renderCommands.size());
         const auto mrp = cmdList.GetMultiRenderCommandListData();
         MLN_LOG_GRAPH(
             "RenderSingleCommandList frame=%u meta: subpassCount=%u, rpBeginIdx=%u, rpEndIdx=%u, secondaryCmdLists=%d",
-            g_debugFrameCount, mrp.subpassCount, mrp.rpBeginCmdIndex, mrp.rpEndCmdIndex, mrp.secondaryCmdLists ? 1 : 0);
+            g_debugFrameCount,
+            mrp.subpassCount,
+            mrp.rpBeginCmdIndex,
+            mrp.rpEndCmdIndex,
+            mrp.secondaryCmdLists ? 1 : 0);
     }
 
     static_cast<NodeContextDescriptorSetManagerMln&>(descriptorSetMgr).BeginBackendFrame();
@@ -5755,18 +6497,32 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
 
     // Streaming walker state — builds DGs inline in command order (§2.1 fix).
     OpenSegment openSeg = OpenSegment::NONE;
-    RenderPassSegment curRP{};           // current open graphics segment (still needed for currentRP pointer + 3-phase)
-    vector<MlnObjectGroup> curStreamOGs; // streaming: OGs built at DRAW time (§4.2 DrawCallGroup elimination)
-    uint32_t curStreamSubpass = 0;       // streaming: active subpass for current RP
-    vector<TransferOp> curTransferOps;   // current open transfer batch
-    vector<TransferDstImage> curTransferDsts;  // dst images for current batch
-    vector<MlnResource> curTransferDstBuffers; // dst buffers for current batch
-    uint32_t streamingRpSegIdx = 0;            // diagnostic counter for BuildGraphicsDg
+    RenderPassSegment curRP{};  // current open graphics segment (still needed for currentRP pointer + 3-phase)
+    vector<MlnObjectGroup> curStreamOGs;        // streaming: OGs built at DRAW time (§4.2 DrawCallGroup elimination)
+    uint32_t curStreamSubpass = 0;              // streaming: active subpass for current RP
+    vector<TransferOp> curTransferOps;          // current open transfer batch
+    vector<TransferDstImage> curTransferDsts;   // dst images for current batch
+    vector<MlnResource> curTransferDstBuffers;  // dst buffers for current batch
+    uint32_t streamingRpSegIdx = 0;             // diagnostic counter for BuildGraphicsDg
 
     // Walker state bundle for Handle* member functions
-    PrimaryWalkerState wctx{state, currentRP, currentSubpassIndex, openSeg, curRP, curStreamOGs, curStreamSubpass,
-        curTransferOps, curTransferDsts, curTransferDstBuffers, streamingRpSegIdx, &pendingFrame, &outDataGraphs,
-        &outDgResources, additionalRpSegs, &psoMgr, renderCommandCtx.renderBackendNode};
+    PrimaryWalkerState wctx{state,
+        currentRP,
+        currentSubpassIndex,
+        openSeg,
+        curRP,
+        curStreamOGs,
+        curStreamSubpass,
+        curTransferOps,
+        curTransferDsts,
+        curTransferDstBuffers,
+        streamingRpSegIdx,
+        &pendingFrame,
+        &outDataGraphs,
+        &outDgResources,
+        additionalRpSegs,
+        &psoMgr,
+        renderCommandCtx.renderBackendNode};
 
     // resolveGraphicsPsoForCurrentRp: moved to anonymous-namespace static helper
     // (ResolveGraphicsPsoForCurrentRp) so HandleStateCommand and WalkSecondaryCtx can share it.
@@ -5838,8 +6594,11 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                 cg.groupCountZ = cmd.groupCountZ;
 
                 if (g_mlnLog.comp) {
-                    MLN_LOG_COMP("Phase1 frame=%u: DISPATCH program=%p groupCount=(%u,%u,%u)", g_debugFrameCount,
-                        reinterpret_cast<void*>(cg.program), cmd.groupCountX, cmd.groupCountY, cmd.groupCountZ);
+                    MLN_LOG_COMP("Phase1 frame=%u: DISPATCH groupCount=(%u,%u,%u)",
+                        g_debugFrameCount,
+                        cmd.groupCountX,
+                        cmd.groupCountY,
+                        cmd.groupCountZ);
                 }
 
                 // Streaming: build compute DG immediately (in command order).
@@ -5955,17 +6714,19 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                                             AddTransferDstImage(&wctx, plat.resource, plat.resourceView);
                                         }
                                     } else if (g_mlnLog.graph && srcLayout != dstLayout) {
-                                        MLN_LOG_GRAPH(
-                                            "BARRIER_POINT: skipping image transition %u->%u "
-                                            "(openSeg=%u, attachment/transfer-internal/non-transfer)",
-                                            (uint32_t)srcLayout, (uint32_t)dstLayout, (uint32_t)wctx.openSeg);
+                                        MLN_LOG_GRAPH("BARRIER_POINT: skipping image transition %u->%u "
+                                                      "(openSeg=%u, attachment/transfer-internal/non-transfer)",
+                                            (uint32_t)srcLayout,
+                                            (uint32_t)dstLayout,
+                                            (uint32_t)wctx.openSeg);
                                     }
                                 } else if (handleType == RenderHandleType::GPU_BUFFER) {
                                     const auto srcAccess = cb.src.accessFlags;
                                     const auto dstAccess = cb.dst.accessFlags;
                                     if (g_mlnLog.trans) {
                                         MLN_LOG_TRANS("BARRIER buf: srcAccess=0x%x dstAccess=0x%x handle=0x%llx",
-                                            (uint32_t)srcAccess, (uint32_t)dstAccess,
+                                            (uint32_t)srcAccess,
+                                            (uint32_t)dstAccess,
                                             static_cast<unsigned long long>(cb.resourceHandle.id));
                                     }
                                     constexpr uint32_t kTransferWriteBit =
@@ -5992,10 +6753,10 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                                     // observed so future scenarios that rely on stronger
                                     // memory barriers can be diagnosed.
                                     if (g_mlnLog.graph) {
-                                        MLN_LOG_GRAPH(
-                                            "BARRIER memory/unknown: handleType=%u "
-                                            "srcAccess=0x%x dstAccess=0x%x — relying on SG passNode chain",
-                                            (uint32_t)handleType, (uint32_t)cb.src.accessFlags,
+                                        MLN_LOG_GRAPH("BARRIER memory/unknown: handleType=%u "
+                                                      "srcAccess=0x%x dstAccess=0x%x — relying on SG passNode chain",
+                                            (uint32_t)handleType,
+                                            (uint32_t)cb.src.accessFlags,
                                             (uint32_t)cb.dst.accessFlags);
                                     }
                                 }
@@ -6089,7 +6850,8 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                     }
                 } else {
                     MLN_LOG_GRAPH("Phase1: NEXT_SUBPASS out of range (current=%u, subpassCount=%u)",
-                        currentSubpassIndex, static_cast<uint32_t>(currentRP->beginCmd->subpasses.size()));
+                        currentSubpassIndex,
+                        static_cast<uint32_t>(currentRP->beginCmd->subpasses.size()));
                 }
                 break;
             case RenderCommandType::EXECUTE_BACKEND_FRAME_POSITION: {
@@ -6133,8 +6895,10 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
     FlushTransferBatch(&wctx);
     FlushGraphicsBatch(&wctx);
     if (g_mlnLog.graph) {
-        MLN_LOG_GRAPH("Phase2 frame=%u: streaming walker emitted %zu DGs (rpSegIdx=%u)", g_debugFrameCount,
-            outDataGraphs.size(), streamingRpSegIdx);
+        MLN_LOG_GRAPH("Phase2 frame=%u: streaming walker emitted %zu DGs (rpSegIdx=%u)",
+            g_debugFrameCount,
+            outDataGraphs.size(),
+            streamingRpSegIdx);
     }
 }
 

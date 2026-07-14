@@ -15,10 +15,12 @@
 
 #include "external_node.h"
 
+#include <scene/ext/intf_internal_scene.h>
 #include <scene/ext/scene_utils.h>
 #include <scene/interface/intf_application_context.h>
 #include <scene/interface/intf_node_import.h>
 
+#include <meta/interface/intf_named.h>
 #include <meta/interface/resource/intf_resource.h>
 
 #include "../import_helpers.h"
@@ -59,19 +61,20 @@ static IDiagnostics::Ptr ImportPropertiesWithPath(ImportContext& context, const 
     for (auto&& p : props) {
         auto ncont = context.CreateContext(p);
         auto path = ncont.GetOptString("path");
-        auto res = ResolveObject(context, base, path, true);
+        META_NS::IObject::Ptr parent;
+        auto res = ResolveObject(context, base, path, true, &parent);
         if (res.error && h.Handle(res.error)) {
             return res.error;
         }
-        auto prop = interface_cast<META_NS::IProperty>(res.object);
-        if (!prop) {
+        auto prop = interface_pointer_cast<META_NS::IProperty>(res.object);
+        if (!prop || !parent) {
             CORE_LOG_E("Override not pointing to property: %s", path.c_str());
             if (h.Handle(context.CreateDiagnostics("Override not pointing to property"))) {
                 return h;
             }
         }
-        if (prop) {
-            if (auto err = ImportProperty(ncont, *prop); h.Handle(err)) {
+        if (prop && parent) {
+            if (auto err = ImportProperty(ncont, *parent, prop); h.Handle(err)) {
                 return err;
             }
         }
@@ -279,6 +282,22 @@ SCENE_NS::INode::Ptr ImportExternalNode::ConstructNode(
     return nullptr;
 }
 
+static void SetExternalNodeName(const SCENE_NS::INode::Ptr& node, const BASE_NS::string& name)
+{
+    auto named = interface_cast<META_NS::INamed>(node);
+    if (!named) {
+        return;
+    }
+    META_NS::SetValue(named->Name(), name);
+    auto scene = node->GetScene();
+    if (!scene) {
+        return;
+    }
+    if (auto is = scene->GetInternalScene()) {
+        SyncPropertyDirect(is, named->Name()).GetResult();
+    }
+}
+
 ImportResult ImportExternalNode::Import(ImportContext& context)
 {
     auto scene = context.GetImportParameters().scene;
@@ -294,7 +313,17 @@ ImportResult ImportExternalNode::Import(ImportContext& context)
     auto res = ImportExternal(context, name);
     if (res) {
         ErrorHandler h(context);
-        if (auto err = ImportTransform(context, interface_pointer_cast<SCENE_NS::INode>(res.object)); h.Handle(err)) {
+        auto node = interface_pointer_cast<SCENE_NS::INode>(res.object);
+        if (node && !name.empty()) {
+            SetExternalNodeName(node, name);
+        }
+        if (auto err = ImportTransform(context, node); h.Handle(err)) {
+            return ImportResult{err};
+        }
+        if (auto err = ImportNodeBase::ImportLayerMask(context, node); h.Handle(err)) {
+            return ImportResult{err};
+        }
+        if (auto err = ImportNodeBase::ImportEnabled(context, node); h.Handle(err)) {
             return ImportResult{err};
         }
         if (!res.error) {

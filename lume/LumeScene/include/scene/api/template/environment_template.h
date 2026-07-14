@@ -59,13 +59,17 @@ public:
         return env;
     }
 
-    template <typename Type>
+    template<typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);
         return meta.GetProperty<Type>(name);
     }
 
+    auto Name() const
+    {
+        return GetProperty<BASE_NS::string>("Name");
+    }
     auto Background() const
     {
         return GetProperty<EnvBackgroundType>("Background");
@@ -82,9 +86,12 @@ public:
     {
         return GetProperty<BASE_NS::Math::Vec4>("EnvMapFactor");
     }
+    /// Image refs are stored on the template as CORE_NS::ResourceId. The apply path
+    /// resolves them against the scene's resource manager and binds the resolved
+    /// IImage::Ptr onto the live IEnvironment.
     auto RadianceImage() const
     {
-        return GetProperty<IImage::Ptr>("RadianceImage");
+        return GetProperty<CORE_NS::ResourceId>("RadianceImage");
     }
     auto RadianceCubemapMipCount() const
     {
@@ -92,7 +99,7 @@ public:
     }
     auto EnvironmentImage() const
     {
-        return GetProperty<IImage::Ptr>("EnvironmentImage");
+        return GetProperty<CORE_NS::ResourceId>("EnvironmentImage");
     }
     auto EnvironmentMapLodLevel() const
     {

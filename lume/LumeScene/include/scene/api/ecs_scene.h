@@ -48,7 +48,7 @@ public:
      * @param fn The function to execute.
      * @return A future object that can be waited on for task completion and result.
      */
-    template <typename Fn>
+    template<typename Fn>
     auto AddEcsThreadTask(Fn&& fn)
     {
         auto is = META_INTERFACE_OBJECT_CALL_PTR(GetInternalScene());
@@ -62,7 +62,7 @@ public:
      * @param fn The function to execute.
      * @return A future object that can be waited on for task completion and result.
      */
-    template <typename Fn>
+    template<typename Fn>
     auto AddApplicationThreadTask(Fn&& fn)
     {
         auto is = META_INTERFACE_OBJECT_CALL_PTR(GetInternalScene());
@@ -72,7 +72,7 @@ public:
     }
 
 private:
-    template <typename Fn>
+    template<typename Fn>
     auto AddTask(const IInternalScene::Ptr& is, Fn&& fn, const META_NS::ITaskQueue::Ptr& queue)
     {
         return is ? is->AddTaskOrRunDirectly(BASE_NS::forward<Fn>(fn), queue)

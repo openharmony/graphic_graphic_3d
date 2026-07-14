@@ -22,78 +22,78 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename... Types>
+template<typename... Types>
 struct TypeList {};
 
-template <bool B>
+template<bool B>
 struct BoolWrap {
     constexpr static bool value = B;  // NOLINT(readability-identifier-naming)
 };
 
 // same concept as https://en.cppreference.com/w/cpp/experimental/is_detected but simplified for our needs
-template <typename Void, template <class...> class Op, typename... Args>
+template<typename Void, template<class...> class Op, typename... Args>
 struct IsDetected {
     static constexpr bool value = false;  // NOLINT(readability-identifier-naming)
     using type = BoolWrap<false>;
 };
 
-template <template <class...> class Op, typename... Args>
+template<template<class...> class Op, typename... Args>
 struct IsDetected<decltype(BASE_NS::declval<Op<Args...>>(), void()), Op, Args...> {
     static constexpr bool value = true;  // NOLINT(readability-identifier-naming)
     using type = Op<Args...>;
 };
 
-template <template <class...> class Op, typename... Args>
+template<template<class...> class Op, typename... Args>
 constexpr bool IsDetected_v = IsDetected<void, Op, Args...>::value;  // NOLINT(readability-identifier-naming)
 
 // NOLINTBEGIN(readability-identifier-naming)
-template <template <class...> class Op, typename... Args>
+template<template<class...> class Op, typename... Args>
 constexpr bool IsDetectedWithValue_v = IsDetected<void, Op, Args...>::type::value;
 // NOLINTEND(readability-identifier-naming)
 
-template <typename T>
+template<typename T>
 using PlainType_t = BASE_NS::remove_const_t<BASE_NS::remove_reference_t<T>>;  // NOLINT(readability-identifier-naming)
 
-template <size_t... Ints>
+template<size_t... Ints>
 struct IndexSequence {};
 
-template <size_t Size, size_t... Ints>
+template<size_t Size, size_t... Ints>
 struct MakeIndexSequenceImpl {
     using type = typename MakeIndexSequenceImpl<Size - 1, Size - 1, Ints...>::type;
 };
 
-template <size_t... Ints>
+template<size_t... Ints>
 struct MakeIndexSequenceImpl<0, Ints...> {
     using type = IndexSequence<Ints...>;
 };
 
-template <typename... Args>
+template<typename... Args>
 using MakeIndexSequenceFor = typename MakeIndexSequenceImpl<sizeof...(Args)>::type;
 
-template <size_t Size>
+template<size_t Size>
 using MakeIndexSequence = typename MakeIndexSequenceImpl<Size>::type;
 
-template <typename Type>
+template<typename Type>
 struct NonDeduced {
     using type = Type;
 };
-template <typename Type>
+template<typename Type>
 using NonDeduced_t = typename NonDeduced<Type>::type;
 
-template <typename T>
+template<typename T>
 constexpr bool is_enum_v = __is_enum(T);  // NOLINT(readability-identifier-naming)
 
-template <typename T, bool = is_enum_v<T>>
+template<typename T, bool = is_enum_v<T>>
 struct RealType {
     using type = T;
 };
 
-template <typename T>
+template<typename T>
 struct RealType<T, true> {
     using type = BASE_NS::underlying_type_t<T>;
 };
 
-template <typename T>
+template<typename T>
 using RealType_t = typename RealType<T>::type;  // NOLINT(readability-identifier-naming)
 
 META_END_NAMESPACE()

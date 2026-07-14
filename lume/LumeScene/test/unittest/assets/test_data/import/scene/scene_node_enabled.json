@@ -1,0 +1,23 @@
+{
+	"version": "1.0",
+	"description": "test scene exercising node-level enabled (INode::Enabled)",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"children": [
+				{ "type": "node", "name": "on", "enabled": true },
+				{ "type": "node", "name": "off", "enabled": false },
+				{ "type": "node", "name": "default" },
+				{
+					"type": "external",
+					"name": "extdisabled",
+					"source": { "type": "nodeTemplate", "url": "scene_node_enabled.nodeTemplate" },
+					"resourceGroup": "node-enabled",
+					"enabled": false
+				}
+			]
+		}
+	}
+}

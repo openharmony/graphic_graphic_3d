@@ -162,7 +162,7 @@ inline constexpr bool operator!=(const Uid& lhs, const Uid& rhs)
     return !(lhs == rhs);
 }
 
-template <>
+template<>
 inline uint64_t hash(const Uid& value)
 {
     return Hash(value.data[0], value.data[1]);

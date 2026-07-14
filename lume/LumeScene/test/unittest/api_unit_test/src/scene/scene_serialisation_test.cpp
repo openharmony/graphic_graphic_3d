@@ -89,7 +89,7 @@ public:
         ScenePluginTest::TearDown();
     }
 
-    template <typename Obj>
+    template<typename Obj>
     bool Export(const Obj& obj, BASE_NS::string_view file)
     {
         auto exporter = META_NS::GetObjectRegistry().Create<META_NS::IFileExporter>(META_NS::ClassId::JsonExporter);
@@ -97,7 +97,7 @@ public:
         auto f = GetTestEnv()->engine->GetFileManager().CreateFile(file);
         return exporter->Export(*f, interface_pointer_cast<META_NS::IObject>(obj));
     }
-    template <typename Interface>
+    template<typename Interface>
     typename Interface::Ptr Import(BASE_NS::string_view file, META_NS::SharedPtrIInterface userContext = nullptr)
     {
         if (auto f = GetTestEnv()->engine->GetFileManager().OpenFile(file)) {
@@ -138,7 +138,7 @@ public:
         return shader;
     }
 
-    template <typename Res>
+    template<typename Res>
     bool CreateAndSetTemplate(const META_NS::ClassInfo& acc, const CORE_NS::ResourceIdContext& id, const Res& resource)
     {
         if (auto res = interface_pointer_cast<CORE_NS::IResource>(resource)) {
@@ -155,7 +155,7 @@ public:
         }
         return false;
     }
-    template <typename Res>
+    template<typename Res>
     bool SetTemplate(const META_NS::ClassInfo& acc, const CORE_NS::IResource::Ptr& templ, const Res& resource)
     {
         if (auto res = interface_pointer_cast<CORE_NS::IResource>(resource)) {
@@ -686,8 +686,6 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateEnvironmentResource, testing::ext:
     auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
     ASSERT_TRUE(env);
 
-    env->RadianceCubemapMipCount()->SetValue(1);
-
     auto res = resources->GetResource(CORE_NS::ResourceIdContext{"app://create_env.resource", scene});
     ASSERT_TRUE(res);
     ASSERT_TRUE(SetTemplate(ClassId::EnvironmentTemplateAccess, res, env));
@@ -695,6 +693,40 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateEnvironmentResource, testing::ext:
     EXPECT_EQ(env->RadianceCubemapMipCount()->GetValue(), 69);
     EXPECT_TRUE(env->RadianceImage()->GetValue());
     EXPECT_TRUE(env->EnvironmentImage()->GetValue());
+}
+
+/**
+ * @tc.name: EnvironmentTemplatePreservesOverride
+ * @tc.desc: Applying an environment template updates the default but keeps an explicit user override.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, EnvironmentTemplatePreservesOverride, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+
+    auto res = META_NS::CreateObjectResource(ClassId::Environment, ClassId::EnvironmentResourceTemplate);
+    ASSERT_TRUE(res);
+    {
+        auto m = interface_cast<META_NS::IMetadata>(res);
+        ASSERT_TRUE(m);
+        auto p = m->GetProperty<uint32_t>("RadianceCubemapMipCount", META_NS::MetadataQuery::EXISTING);
+        ASSERT_TRUE(p);
+        p->SetValue(69);
+    }
+
+    auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
+    ASSERT_TRUE(env);
+
+    // Explicit user override set before the template is applied.
+    env->RadianceCubemapMipCount()->SetValue(1);
+
+    ASSERT_TRUE(SetTemplate(ClassId::EnvironmentTemplateAccess, interface_pointer_cast<CORE_NS::IResource>(res), env));
+
+    // The override stays as the effective value; only the default slot is updated.
+    EXPECT_EQ(env->RadianceCubemapMipCount()->GetValue(), 1);
+    EXPECT_FALSE(env->RadianceCubemapMipCount()->IsDefaultValue());
+    env->RadianceCubemapMipCount()->ResetValue();
+    EXPECT_EQ(env->RadianceCubemapMipCount()->GetValue(), 69);
 }
 
 /**
@@ -1240,6 +1272,59 @@ UNIT_TEST_F(API_SceneSerialisationTest, CreateMaterialResource, testing::ext::Te
 
     ASSERT_TRUE(SetTemplate(ClassId::MaterialTemplateAccess, res, mat));
     EXPECT_EQ(mat->AlphaCutoff()->GetValue(), 2.0);
+}
+
+/**
+ * @tc.name: MaterialTemplatePreservesOverride
+ * @tc.desc: Applying a material template updates defaults but keeps explicit user overrides,
+ *           for both scalar properties and per-texture-slot factors.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_SceneSerialisationTest, MaterialTemplatePreservesOverride, testing::ext::TestSize.Level1)
+{
+    const BASE_NS::Math::Vec4 templateFactor{0.1f, 0.2f, 0.3f, 0.4f};
+    const BASE_NS::Math::Vec4 overrideFactor{0.9f, 0.9f, 0.9f, 0.9f};
+
+    auto scene = CreateEmptyScene();
+
+    auto access =
+        META_NS::GetObjectRegistry().Create<META_NS::IResourceTemplateAccess>(ClassId::MaterialTemplateAccess);
+    ASSERT_TRUE(access);
+
+    // Build the template from a live source material so the Textures array is populated.
+    auto srcMat = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
+    ASSERT_TRUE(srcMat);
+    srcMat->AlphaCutoff()->SetValue(2.0f);
+    {
+        auto st = srcMat->Textures()->GetValueAt(0);
+        ASSERT_TRUE(st);
+        st->Factor()->SetValue(templateFactor);
+    }
+    auto templ = access->CreateTemplateFromResource(interface_pointer_cast<CORE_NS::IResource>(srcMat));
+    ASSERT_TRUE(templ);
+
+    auto mat = scene->CreateObject<IMaterial>(ClassId::Material).GetResult();
+    ASSERT_TRUE(mat);
+
+    // Explicit user overrides set before the template is applied.
+    mat->AlphaCutoff()->SetValue(0.25f);
+    auto tex = mat->Textures()->GetValueAt(0);
+    ASSERT_TRUE(tex);
+    tex->Factor()->SetValue(overrideFactor);
+
+    ASSERT_TRUE(SetTemplate(ClassId::MaterialTemplateAccess, templ, mat));
+
+    // Scalar override is preserved; only the default slot is updated.
+    EXPECT_EQ(mat->AlphaCutoff()->GetValue(), 0.25f);
+    EXPECT_FALSE(mat->AlphaCutoff()->IsDefaultValue());
+    mat->AlphaCutoff()->ResetValue();
+    EXPECT_EQ(mat->AlphaCutoff()->GetValue(), 2.0f);
+
+    // Texture-slot factor override is preserved; only the default slot is updated.
+    EXPECT_EQ(tex->Factor()->GetValue(), overrideFactor);
+    EXPECT_FALSE(tex->Factor()->IsDefaultValue());
+    tex->Factor()->ResetValue();
+    EXPECT_EQ(tex->Factor()->GetValue(), templateFactor);
 }
 
 /**

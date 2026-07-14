@@ -30,7 +30,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename EventType>
+template<typename EventType>
 struct EventImplTraits {
     static bool IsCompatibleInterface(const ICallable::Ptr& c)
     {
@@ -39,7 +39,7 @@ struct EventImplTraits {
         }
         return c->GetInterface(EventType::UID) != nullptr || c->GetInterface(IOnChanged::UID) != nullptr;
     }
-    template <typename... Args>
+    template<typename... Args>
     static void Call(const ICallable::Ptr& p, Args&... args)
     {
         if (const auto f = interface_pointer_cast<IFunction>(p)) {
@@ -64,7 +64,7 @@ struct EventImplTraits {
     }
 };
 
-template <typename BaseClass, typename signature = typename BaseClass::FunctionType>
+template<typename BaseClass, typename signature = typename BaseClass::FunctionType>
 class EventImpl;
 
 class GenericEvent {
@@ -206,7 +206,7 @@ protected:
     mutable CORE_NS::ThreadId threadId_;
 };
 
-template <typename BaseClass, typename R, typename... ARG>
+template<typename BaseClass, typename R, typename... ARG>
 class EventImpl<BaseClass, R(ARG...)> final : public IntroduceInterfaces<BaseClass, IObject, IEvent, ICloneable>,
                                               public GenericEvent {
     static_assert(BASE_NS::is_void_v<R>, "EventHandler callable must return void");

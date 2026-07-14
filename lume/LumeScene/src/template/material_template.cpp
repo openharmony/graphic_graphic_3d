@@ -19,6 +19,7 @@
 #include <scene/interface/intf_texture.h>
 
 #include <core/log.h>
+#include <core/resources/intf_resource.h>
 
 #include <meta/api/metadata_util.h>
 #include <meta/api/util.h>
@@ -82,6 +83,43 @@ static void CopyOrClone(const META_NS::IProperty::ConstPtr& src, META_NS::IMetad
     }
 }
 
+// Capture a typed resource-pointer source property (e.g. IShader::Ptr on a live IMaterial)
+// as a ResourceId on the template's metadata. Templates carry resource refs as ids — the
+// apply path resolves them against the live scene's rman.
+static void CaptureRefAsId(const META_NS::IProperty::ConstPtr& src, META_NS::IMetadata& dst)
+{
+    if (!src) {
+        return;
+    }
+    auto resource = META_NS::GetPointer<CORE_NS::IResource>(src);
+    if (!resource) {
+        return;
+    }
+    auto id = resource->GetResourceId();
+    if (!id.IsValid()) {
+        return;
+    }
+    if (auto existing = dst.GetProperty<CORE_NS::ResourceId>(src->GetName(), META_NS::MetadataQuery::EXISTING)) {
+        META_NS::SetValue(existing, id);
+        return;
+    }
+    auto idProp = META_NS::ConstructProperty<CORE_NS::ResourceId>(src->GetName());
+    META_NS::SetValue<CORE_NS::ResourceId>(idProp.GetProperty(), id);
+    dst.AddProperty(idProp.GetProperty());
+}
+
+// CaptureLiveTextureEntry's per-property fallthrough: when the source property holds a
+// resource pointer (e.g. ITexture::Image as IImage::Ptr), record its id on the template
+// entry instead of cloning the typed property; otherwise plain CopyOrClone.
+static void CopyOrCaptureEntryField(const META_NS::IProperty::ConstPtr& src, META_NS::IMetadata& dst, CopyMode mode)
+{
+    if (src && META_NS::GetPointer<CORE_NS::IResource>(src)) {
+        CaptureRefAsId(src, dst);
+    } else {
+        CopyOrClone(src, dst, mode);
+    }
+}
+
 // Build a sparse template entry mirroring a live texture: only properties that
 // are actually set on the live side are propagated. Returns an empty Ptr if
 // the live entry has no name (an inactive slot we shouldn't capture).
@@ -104,7 +142,7 @@ static META_NS::IObject::Ptr CaptureLiveTextureEntry(const META_NS::IMetadata& s
     entryMeta->AddProperty(entryName.GetProperty());
     for (auto&& prop : srcMeta.GetProperties()) {
         if (prop && prop->GetName() != "Name") {
-            CopyOrClone(prop, *entryMeta, mode);
+            CopyOrCaptureEntryField(prop, *entryMeta, mode);
         }
     }
     return entry;
@@ -140,8 +178,8 @@ bool MaterialTemplate::CopyFromMaterial(const IMaterial& material, bool onlySetV
     CopyOrClone(material.Type(), dstMeta, mode);
     CopyOrClone(material.AlphaCutoff(), dstMeta, mode);
     CopyOrClone(material.LightingFlags(), dstMeta, mode);
-    CopyOrClone(material.MaterialShader(), dstMeta, mode);
-    CopyOrClone(material.DepthShader(), dstMeta, mode);
+    CaptureRefAsId(material.MaterialShader(), dstMeta);
+    CaptureRefAsId(material.DepthShader(), dstMeta);
     CopyOrClone(material.RenderSort(), dstMeta, mode);
 
     InitTextures();
@@ -233,6 +271,16 @@ static int FindSlotByName(const IInternalMaterial::ActiveTextureSlotInfo& tsi, B
     return -1;
 }
 
+// Bundles the recurring copy-semantics parameters threaded through the texture/metadata
+// apply helpers, replacing the former (mode, asBaseDefaults, asDefault, context) tuple.
+struct CopyParams {
+public:
+    CopyMode mode{CopyMode::OVERRIDES_ONLY};
+    bool asBaseDefaults{};
+    bool asDefault{};
+    CORE_NS::ResourceContextPtr context;
+};
+
 // Copy only properties that the source actually carries onto the destination
 // slot's metadata. Never touches destination properties the source didn't
 // provide.
@@ -244,25 +292,82 @@ static int FindSlotByName(const IInternalMaterial::ActiveTextureSlotInfo& tsi, B
 //    *default* slot (resetting any prior override on dst) — mirrors
 //    CopyToDefaultMaybeDeep, the primitive used by the non-texture base path.
 
-// Sub-object properties (e.g. Sampler) recurse with the same semantics so the
-// live receiver's identity and readonly-ness are preserved.
-static void CopyEntryFieldsByName(
-    const META_NS::IMetadata& srcEntry, META_NS::IMetadata& dstSlot, CopyMode mode, bool asBaseDefaults)
+static void CopyEntryFieldsByName(const META_NS::IMetadata& srcEntry, META_NS::IMetadata& dstSlot, const CopyParams& p);
+
+// Case (a): resolve a ResourceId-typed srcProp against the apply context's resource
+// manager and assign the resolved pointer to the live slot's typed property.
+static void CopyResourceIdField(
+    const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dstSlot, const CopyParams& p)
+{
+    if (!p.context) {
+        return;
+    }
+    const auto name = srcProp->GetName();
+    auto dstProp = dstSlot.GetProperty(name);
+    if (!dstProp) {
+        return;
+    }
+    auto typedSrc = META_NS::Property<const CORE_NS::ResourceId>(srcProp);
+    if (!typedSrc) {
+        return;
+    }
+    if (auto resource = ResolveResourceId(META_NS::GetValue(typedSrc), name, p.context)) {
+        AssignTypedResource(dstProp, resource, p.asDefault);
+    }
+}
+
+// Cases (b)-(d): resource-typed values (swap wholesale), owned sub-objects (recurse),
+// and plain scalars (CopyToDefaultMaybeDeep or CopyProperty per mode).
+static void CopyPlainOrSubField(
+    const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dstSlot, const CopyParams& p)
+{
+    const auto name = srcProp->GetName();
+    const bool isName = name == "Name";
+    auto dstProp = isName ? nullptr : dstSlot.GetProperty(name);
+    auto srcSub = META_NS::GetPointer<META_NS::IMetadata>(srcProp);
+    auto dstSub = META_NS::GetPointer<META_NS::IMetadata>(dstProp);
+    const bool srcIsResource = interface_pointer_cast<CORE_NS::IResource>(srcSub) != nullptr;
+    if (srcIsResource && dstProp) {
+        META_NS::CopyValue(srcProp, *dstProp);
+    } else if (srcSub && dstSub) {
+        CopyEntryFieldsByName(*srcSub, *dstSub, p);
+    } else if (dstProp) {
+        if (p.asBaseDefaults) {
+            CopyToDefaultMaybeDeep(dstSlot, srcProp);
+        } else {
+            CopyProperty(srcProp, *dstProp, p.mode);
+        }
+    }
+}
+
+// Copy one srcProp from a texture entry onto its dstSlot counterpart. Handles, in order:
+// (a) ResourceId-typed values (e.g. template's `Image: ResourceId`) — resolve against the
+//     apply context's resource manager and assign to the live slot's typed pointer. When
+//     `asDefault` is true the resolved pointer lands on the destination's default slot so
+//     the template-context invariant (template-supplied values are defaults on the live
+//     instance) extends to resolved refs.
+// (b) Resource-typed values (IImage::Ptr etc., e.g. when src is a live ITexture being
+//     captured) — swap the destination's pointer wholesale. Cannot use CopyProperty here
+//     because the source's IsValueSet flag is unreliable for values installed
+//     post-construction.
+// (c) Owned sub-objects (e.g. Sampler) — recurse with the same semantics.
+// (d) Plain scalars — CopyToDefaultMaybeDeep when `asBaseDefaults` or `asDefault` is set
+//     (template-supplied values manifest on the slot's default), otherwise CopyProperty
+//     with the requested copy mode.
+static void CopyOneEntryField(
+    const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dstSlot, const CopyParams& p)
+{
+    if (IsResourceIdProperty(srcProp)) {
+        CopyResourceIdField(srcProp, dstSlot, p);
+        return;
+    }
+    CopyPlainOrSubField(srcProp, dstSlot, p);
+}
+
+static void CopyEntryFieldsByName(const META_NS::IMetadata& srcEntry, META_NS::IMetadata& dstSlot, const CopyParams& p)
 {
     for (auto&& srcProp : srcEntry.GetProperties()) {
-        const bool isName = srcProp && srcProp->GetName() == "Name";
-        auto dstProp = (srcProp && !isName) ? dstSlot.GetProperty(srcProp->GetName()) : nullptr;
-        auto srcSub = META_NS::GetPointer<META_NS::IMetadata>(srcProp);
-        auto dstSub = META_NS::GetPointer<META_NS::IMetadata>(dstProp);
-        if (srcSub && dstSub) {
-            CopyEntryFieldsByName(*srcSub, *dstSub, mode, asBaseDefaults);
-        } else if (dstProp) {
-            if (asBaseDefaults) {
-                CopyToDefaultMaybeDeep(dstSlot, srcProp);
-            } else {
-                CopyProperty(srcProp, *dstProp, mode);
-            }
-        }
+        CopyOneEntryField(srcProp, dstSlot, p);
     }
 }
 
@@ -291,15 +396,29 @@ static int ResolveSlotIndex(size_t srcIndex, bool srcIsPositional, const META_NS
 // Apply one source entry to the destination slot at `slotIx` (no-op if the
 // index is out of range or the destination doesn't carry metadata).
 static void ApplyEntryToSlot(const META_NS::IMetadata& srcEntry,
-    const META_NS::ArrayProperty<const ITexture::Ptr>& dstArr, int slotIx, CopyMode mode, bool asBaseDefaults)
+    const META_NS::ArrayProperty<const ITexture::Ptr>& dstArr, int slotIx, const CopyParams& p)
 {
     if (slotIx < 0 || slotIx >= static_cast<int>(dstArr->GetSize())) {
         return;
     }
     auto dstSlotMeta = interface_cast<META_NS::IMetadata>(dstArr->GetValueAt(slotIx));
     if (dstSlotMeta) {
-        CopyEntryFieldsByName(srcEntry, *dstSlotMeta, mode, asBaseDefaults);
+        CopyEntryFieldsByName(srcEntry, *dstSlotMeta, p);
     }
+}
+
+// Resolve the destination slot index for source entry `i`, warning when the entry's
+// name maps to no shader-declared slot (returns -1, which ApplyEntryToSlot no-ops on).
+static int ResolveEntrySlot(size_t i, bool srcIsPositional, const META_NS::IMetadata& srcEntry,
+    const IInternalMaterial::ActiveTextureSlotInfo& tsi)
+{
+    BASE_NS::string lookupName;
+    const int slotIx = ResolveSlotIndex(i, srcIsPositional, srcEntry, tsi, lookupName);
+    if (slotIx < 0) {
+        CORE_LOG_W(
+            "Material texture slot '%s' not declared by shader", lookupName.empty() ? "<unnamed>" : lookupName.c_str());
+    }
+    return slotIx;
 }
 
 // Apply a source Textures array onto a live IMaterial's fixed Textures slots.
@@ -311,7 +430,7 @@ static void ApplyEntryToSlot(const META_NS::IMetadata& srcEntry,
 // MaterialTemplate (`IObject::Ptr` array) or a live IMaterial (`ITexture::Ptr`
 // array) without separate code paths.
 static void ApplyTextureData(const META_NS::IMetadata& src, IMaterial& material,
-    const IInternalMaterial::ActiveTextureSlotInfo& tsi, CopyMode mode, bool asBaseDefaults)
+    const IInternalMaterial::ActiveTextureSlotInfo& tsi, const CopyParams& p)
 {
     auto srcProp = src.GetProperty("Textures", META_NS::MetadataQuery::EXISTING);
     if (!srcProp) {
@@ -330,14 +449,8 @@ static void ApplyTextureData(const META_NS::IMetadata& src, IMaterial& material,
     for (size_t i = 0; i < count; ++i) {
         auto srcEntryMeta = GetArrayElementMetadata(*srcArr, i);
         if (srcEntryMeta) {
-            BASE_NS::string lookupName;
-            const int slotIx = ResolveSlotIndex(i, srcIsPositional, *srcEntryMeta, tsi, lookupName);
-            if (slotIx < 0) {
-                CORE_LOG_W("Material texture slot '%s' not declared by shader",
-                    lookupName.empty() ? "<unnamed>" : lookupName.c_str());
-            } else {
-                ApplyEntryToSlot(*srcEntryMeta, dstArr, slotIx, mode, asBaseDefaults);
-            }
+            const int slotIx = ResolveEntrySlot(i, srcIsPositional, *srcEntryMeta, tsi);
+            ApplyEntryToSlot(*srcEntryMeta, dstArr, slotIx, p);
         }
     }
 }
@@ -384,24 +497,26 @@ static void ApplyMaterialOptions(const META_NS::IMetadata& src, IMaterial& mater
     }
 }
 
-// Apply this template's content (or any other source's content) to a live
-// IMaterial: generic per-property copy with `Textures` peeled out, plus a
-// name-resolved texture apply against the bound shader's slot info.
-
-// Used by both the OVERRIDES pass (ApplyTo) and the WITH_DEFAULTS passes
-// (ApplyOptions, with the base resource's metadata or this template's own).
-static void ApplyMaterialMetadata(
-    const META_NS::IMetadata& src, META_NS::IObject& target, CopyMode mode, bool baseStyle)
+// Copy the generic (non-material-specific) metadata from src onto dst, then bind any
+// ResourceId-typed refs (MaterialShader, DepthShader, ...) onto dst's typed pointers.
+// The copy passes skip Textures/Options (applied separately); ResolveResourceIdRefs
+// resolves refs against the live scene's resource manager. `p.asDefault` routes the bind
+// to the destination's default slot so template-context apply preserves the
+// "template values are defaults" invariant for resource refs too.
+static void CopyGenericMetadata(const META_NS::IMetadata& src, META_NS::IMetadata& dstMeta, const CopyParams& p)
 {
-    auto dstMeta = interface_cast<META_NS::IMetadata>(&target);
-    if (!dstMeta) {
-        return;
-    }
-    if (baseStyle) {
-        CopyBaseDefaultsExceptTextures(src, *dstMeta);
+    if (p.asBaseDefaults) {
+        CopyBaseDefaultsExceptTextures(src, dstMeta);
     } else {
-        CopyMetadataExcept(src, *dstMeta, mode, {"Textures", "Options"});
+        CopyMetadataExcept(src, dstMeta, p.mode, {"Textures", "Options"});
     }
+    ResolveResourceIdRefs(src, dstMeta, p.context, p.asDefault);
+}
+
+// Apply the material-only portion of a source onto a live target: graphics-state
+// Options onto the bound shader, then name-routed textures against the shader's slots.
+static void ApplyMaterialSpecific(const META_NS::IMetadata& src, META_NS::IObject& target, const CopyParams& p)
+{
     auto material = interface_cast<IMaterial>(&target);
     if (!material) {
         return;
@@ -416,12 +531,37 @@ static void ApplyMaterialMetadata(
         return;
     }
     auto tsi = internal->GetActiveTextureSlotInfo();
-    ApplyTextureData(src, *material, tsi, mode, baseStyle);
+    ApplyTextureData(src, *material, tsi, p);
 }
 
-bool MaterialTemplate::ApplyTo(META_NS::IObject& target) const
+// Apply this template's content (or any other source's content) to a live
+// IMaterial: generic per-property copy with `Textures` peeled out, plus a
+// name-resolved texture apply against the bound shader's slot info.
+
+// Used by both the OVERRIDES pass (ApplyTo) and the WITH_DEFAULTS passes
+// (ApplyOptions, with the base resource's metadata or this template's own).
+static void ApplyMaterialMetadata(const META_NS::IMetadata& src, META_NS::IObject& target, const CopyParams& p)
 {
-    ApplyMaterialMetadata(*this, target, CopyMode::OVERRIDES_ONLY, /*baseStyle=*/false);
+    auto dstMeta = interface_cast<META_NS::IMetadata>(&target);
+    if (!dstMeta) {
+        return;
+    }
+    CopyGenericMetadata(src, *dstMeta, p);
+    ApplyMaterialSpecific(src, target, p);
+}
+
+bool MaterialTemplate::ApplyToTarget(META_NS::IObject& target, bool asDefault) const
+{
+    // `asDefault` selects the apply semantics end-to-end. Standalone (true): top-level scalars
+    // (SET_AS_DEFAULTS), texture-slot scalars and resource refs all land as defaults on the live
+    // material. ApplyOptions / ApplyBaseResource flow (false): OVERRIDES_ONLY scalars and override
+    // ref/texture binds — the historical behaviour (an earlier standalone-only fix accidentally
+    // forced asDefault=true here, which leaked defaults into the base-resource apply path).
+    const CopyParams params{asDefault ? CopyMode::SET_AS_DEFAULTS : CopyMode::OVERRIDES_ONLY,
+        /*asBaseDefaults=*/false,
+        /*asDefault=*/asDefault,
+        GetApplyContextFromObject(target)};
+    ApplyMaterialMetadata(*this, target, params);
     return true;
 }
 
@@ -436,23 +576,29 @@ bool MaterialTemplate::ApplyOptions(CORE_NS::IResource& res, const CORE_NS::Reso
     }
     if (baseResource_.IsValid()) {
         ApplyBaseResource(
-            res, ResolveBaseResource(context), [](META_NS::IObject& target, const META_NS::IMetadata& base) {
-                ApplyMaterialMetadata(base, target, CopyMode::WITH_DEFAULTS, /*baseStyle=*/true);
+            res, ResolveBaseResource(context), [&context](META_NS::IObject& target, const META_NS::IMetadata& base) {
+                ApplyMaterialMetadata(
+                    base, target, {CopyMode::WITH_DEFAULTS, /*asBaseDefaults=*/true, /*asDefault=*/true, context});
             });
     }
     StampTemplateId(res);
     auto resMeta = interface_cast<META_NS::IMetadata>(&res);
     if (templateContext_ && !baseResource_.IsValid() && resMeta) {
-        ApplyMaterialMetadata(*this, *resObj, CopyMode::WITH_DEFAULTS, /*baseStyle=*/false);
+        ApplyMaterialMetadata(
+            *this, *resObj, {CopyMode::WITH_DEFAULTS, /*asBaseDefaults=*/false, /*asDefault=*/true, context});
     }
-    bool applied = ApplyTo(*resObj);
-    if (applied && templateContext_ && resMeta) {
+    // ApplyTo is called via the IObjectTemplate interface with no context, so we invoke the
+    // internal apply directly to thread the apply-time resource manager through.
+    ApplyMaterialMetadata(
+        *this, *resObj, {CopyMode::OVERRIDES_ONLY, /*asBaseDefaults=*/false, /*asDefault=*/templateContext_, context});
+    if (templateContext_ && resMeta) {
         if (baseResource_.IsValid()) {
-            ApplyMaterialMetadata(*this, *resObj, CopyMode::WITH_DEFAULTS, /*baseStyle=*/false);
+            ApplyMaterialMetadata(
+                *this, *resObj, {CopyMode::WITH_DEFAULTS, /*asBaseDefaults=*/false, /*asDefault=*/true, context});
         }
         MarkImportedFromTemplate(*resMeta);
     }
-    return applied;
+    return true;
 }
 
 SCENE_END_NAMESPACE()

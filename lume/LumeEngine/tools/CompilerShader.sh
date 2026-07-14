@@ -24,11 +24,26 @@ INCLUDE_PATH=$5
 DEST_GEN_PATH=$1
 ASSETS_PATH=$2
 
+VULKAN_ARG=""
+VKONLY_ARG=""
 RENDER_INCLUDE_PATH=""
 
-if [ $# -eq 6 ];
-then
-    RENDER_INCLUDE_PATH=$6
+if [[ "$5" == "--vulkan" ]] && [[ $# -ge 6 ]]; then
+    VULKAN_ARG="--vulkan"
+    VULKAN_VER="$6"
+    if [[ "$6" == "1.1" ]] || [[ "$6" == "1.2" ]] || [[ "$6" == "1.3" ]]; then
+        VKONLY_ARG="--vkonly"
+    fi
+    if [[ $# -ge 8 ]]; then
+        RENDER_INCLUDE_PATH="$8"
+    fi
+elif [[ "$5" == "--vkonly" ]] && [[ $# -ge 6 ]]; then
+    VKONLY_ARG="--vkonly"
+    if [[ $# -ge 6 ]] && [[ -n "$6" ]]; then
+        RENDER_INCLUDE_PATH="$6"
+    fi
+elif [[ $# -ge 5 ]] && [[ -n "$5" ]]; then
+    RENDER_INCLUDE_PATH="$5"
 fi
 
 compile_shader()
@@ -48,11 +63,20 @@ compile_shader()
          echo "lume engine shader compiler not exist"
     fi
 
+    COMPILER_ARGS="--optimize"
+    if [[ -n "$VULKAN_ARG" ]]; then
+        COMPILER_ARGS="$COMPILER_ARGS $VULKAN_ARG $VULKAN_VER"
+    fi
+    if [[ -n "$VKONLY_ARG" ]]; then
+        COMPILER_ARGS="$COMPILER_ARGS $VKONLY_ARG"
+    fi
+    COMPILER_ARGS="$COMPILER_ARGS --source $SHADER_PATH"
+
     if [ -z "$RENDER_INCLUDE_PATH" ];
     then
-        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/LumeRender/api/
+        $TEST_TOOL_PATH/LumeShaderCompiler $COMPILER_ARGS --include $PROJECT_ROOT/LumeRender/api/
     else
-        $TEST_TOOL_PATH/LumeShaderCompiler --optimize --source $SHADER_PATH --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
+        $TEST_TOOL_PATH/LumeShaderCompiler $COMPILER_ARGS --include $PROJECT_ROOT/Lume_3D/api/ --include $PROJECT_ROOT/LumeRender/api/
     fi
 }
 

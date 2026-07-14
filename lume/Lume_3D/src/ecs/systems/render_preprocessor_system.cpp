@@ -60,7 +60,7 @@ static constexpr string_view DEFAULT_DS_MATERIAL_NAME{"RenderDataStoreDefaultMat
 static constexpr string_view DEFAULT_DS_LIGHT_PROBE_NAME{"RenderDataStoreLightProbe"};
 static constexpr string_view DEFAULT_DS_MORPH_NAME{"RenderDataStoreMorph"};
 
-template <typename DataStoreType>
+template<typename DataStoreType>
 inline auto CreateIfNeeded(
     IRenderDataStoreManager& manager, refcnt_ptr<DataStoreType>& dataStore, string_view dataStoreName)
 {

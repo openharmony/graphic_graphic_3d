@@ -28,10 +28,10 @@
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
-template <class T>
+template<class T>
 class unordered_map_iterator;
 
-template <class T>
+template<class T>
 class const_unordered_map_iterator;
 
 #ifdef BASE_STD_COMPATIBILITY
@@ -40,7 +40,7 @@ using forward_iterator_tag = std::forward_iterator_tag;  // yeah. we need this f
 struct forward_iterator_tag {};
 #endif
 
-template <class T>
+template<class T>
 class const_unordered_map_iterator {
 public:
     using base_container = T;
@@ -103,7 +103,7 @@ protected:
     const node_type* it_{nullptr};
 };
 
-template <class T>
+template<class T>
 class unordered_map_iterator {
 public:
     using base_container = T;
@@ -174,7 +174,7 @@ protected:
     node_type* it_{nullptr};
 };
 
-template <class data_type>
+template<class data_type>
 struct node_handle {
     using key_type = typename data_type::value_type::first_type;
     using mapped_type = typename data_type::value_type::second_type;
@@ -282,7 +282,7 @@ private:
     } allocator_;
 };
 
-template <class Key, class T>
+template<class Key, class T>
 class unordered_map_base {
     constexpr static uint32_t DEFAULT_SHIFT_AMOUNT = 4U;  // 1<<4 (16) initial buckets, seems to match ms stl.
     constexpr uint32_t get_sa(size_t const count, uint32_t const sa)
@@ -503,7 +503,7 @@ public:
         nh.pointer = nullptr;
         return insert_return_type{iterator{*this, create_entry(ind, nl)}, true, BASE_NS::move(nh)};
     }
-    template <class M>
+    template<class M>
     pair<iterator, bool> insert_or_assign(const key_type& key, M&& value)
     {
         const auto ind = index(key);
@@ -664,7 +664,7 @@ protected:
         return create_entry(ind, allocate(BASE_NS::forward<value_type>(v)));
     }
 
-    template <class... Args>
+    template<class... Args>
     list_node* allocate(Args&&... args)
     {
         auto alloc = buckets_.getAllocator();
@@ -707,7 +707,7 @@ protected:
         size_++;
         return buckets_[ind];
     }
-    template <class k>
+    template<class k>
     list_node* get_entry(uint32_t index, const k& key) const
     {
         if (index >= buckets_.size()) {
@@ -731,7 +731,7 @@ protected:
     // and to map the hash to 0 - buckets_.size() range.
     // see:
     // https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/
-    template <class k>
+    template<class k>
     uint32_t index(const k& key) const
     {
         if (shift_amount_) {
@@ -744,7 +744,7 @@ protected:
         return 0u;
     }
 
-    template <class k>
+    template<class k>
     list_node* detach_entry(const k& key)
     {
         const auto ind = index(key);
@@ -803,13 +803,13 @@ protected:
     }
 };
 
-template <class Key, class T>
+template<class Key, class T>
 class unordered_map : public unordered_map_base<Key, T> {
 public:
     using unordered_map_base<Key, T>::unordered_map_base;
 };
 
-template <class T>
+template<class T>
 class unordered_map<BASE_NS::string, T> : public unordered_map_base<BASE_NS::string, T> {
     // Specialization of unordered_map with string key but
     // accepts string_view as key in certain basic operations..
@@ -883,7 +883,7 @@ public:
         return {base::make_iterator(entry), true};
     }
 
-    template <class M>
+    template<class M>
     pair<typename base::iterator, bool> insert_or_assign(const string_view& key, M&& value)
     {
         const auto ind = base::index(key);

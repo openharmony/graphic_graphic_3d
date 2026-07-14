@@ -1,0 +1,18 @@
+{
+    "version": "1.0",
+    "description": "node template that loads a gltf and overrides the gltf-defined material (AnimatedCube) via its own index",
+    "data": {
+        "type": "nodeTemplate",
+        "primaryGroup": "mat-group",
+        "index": "node_template_gltf_mat_override_index.json",
+        "node": {
+            "type": "external",
+            "name": "ext",
+            "source": {
+                "type": "gltf",
+                "url": "test_assets://AnimatedCube/AnimatedCube.gltf"
+            },
+            "resourceGroup": "mat-group"
+        }
+    }
+}

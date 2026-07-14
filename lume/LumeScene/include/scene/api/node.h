@@ -34,7 +34,7 @@
 SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
-template <const META_NS::AsyncCallType& CallType, typename SyncReturnType, typename FutureType>
+template<const META_NS::AsyncCallType& CallType, typename SyncReturnType, typename FutureType>
 constexpr auto UnwrapFuture(FutureType&& f)
 {
     if constexpr (CallType.async) {
@@ -43,7 +43,7 @@ constexpr auto UnwrapFuture(FutureType&& f)
         return SyncReturnType(f.GetResult());
     }
 }
-template <typename Type>
+template<typename Type>
 bool CheckName(const Type& target, BASE_NS::string_view name) noexcept
 {
     if constexpr (BASE_NS::is_same_v<Type, META_NS::IObject::Ptr>) {
@@ -53,7 +53,7 @@ bool CheckName(const Type& target, BASE_NS::string_view name) noexcept
         return o && o->GetName() == name;
     }
 }
-template <typename Result, typename Input>
+template<typename Result, typename Input>
 BASE_NS::shared_ptr<Result> FindFromContainer(
     const BASE_NS::vector<BASE_NS::shared_ptr<Input>>& container, BASE_NS::string_view name) noexcept
 {

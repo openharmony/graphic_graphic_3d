@@ -38,7 +38,7 @@ using namespace RENDER_NS;
 using namespace CORE3D_NS;
 
 namespace {
-template <typename ComponentType, typename ManagerType>
+template<typename ComponentType, typename ManagerType>
 void BaseManagerCreateTest(BASE_NS::string componentName)
 {
     UTest::TestContext* testContext = UTest::GetTestContext();
@@ -76,7 +76,7 @@ void BaseManagerCreateTest(BASE_NS::string componentName)
     }
 }
 
-template <typename ComponentType, typename ManagerType>
+template<typename ComponentType, typename ManagerType>
 void BaseManagerIPropertyApiTest(BASE_NS::string componentName)
 {
     UTest::TestContext* testContext = UTest::GetTestContext();

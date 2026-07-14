@@ -37,14 +37,14 @@ inline BASE_NS::shared_ptr<const CORE_NS::IInterface> GetConstPointerAt(
 }
 
 /// Get interface pointer from an array any in given location, or nullptr if not compatible
-template <typename Interface>
+template<typename Interface>
 inline BASE_NS::shared_ptr<Interface> GetPointerAt(IArrayAny::IndexType index, const IProperty::ConstPtr& p)
 {
     return interface_pointer_cast<Interface>(GetPointerAt(index, p));
 }
 
 /// Get interface pointer from an array any in given location, or nullptr if not compatible
-template <typename Interface>
+template<typename Interface>
 inline BASE_NS::shared_ptr<Interface> GetConstPointerAt(IArrayAny::IndexType index, const IProperty::ConstPtr& p)
 {
     return interface_pointer_cast<Interface>(GetConstPointerAt(index, p));
@@ -79,7 +79,7 @@ inline bool SetPointerAt(
 }
 
 /// Set interface pointer to an array property in given location, or nullptr if not compatible
-template <typename Interface>
+template<typename Interface>
 inline bool SetPointerAt(IArrayAny::IndexType index, const IProperty::Ptr& p, const BASE_NS::shared_ptr<Interface>& ptr)
 {
     return SetPointerAt(index, p, interface_pointer_cast<CORE_NS::IInterface>(ptr));

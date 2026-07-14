@@ -62,10 +62,10 @@ constexpr int PROFILER_DISABLED = 0;
 constexpr uint32_t CORE_PROFILER_DEFAULT_COLOR{0xff0000};
 
 // Use template specialisation to handle two code paths for enabled and disabled
-template <int>
+template<int>
 inline auto* GetTracer();
 
-template <>
+template<>
 inline auto* GetTracer<PROFILER_ENABLED>()
 {
     static IPerformanceTrace* tracer{nullptr};
@@ -77,7 +77,7 @@ inline auto* GetTracer<PROFILER_ENABLED>()
 
     return tracer;
 }
-template <>
+template<>
 inline auto* GetTracer<PROFILER_DISABLED>()
 {
     static NullIPerformanceTrace tracer;
@@ -85,10 +85,10 @@ inline auto* GetTracer<PROFILER_DISABLED>()
 }
 
 // Use template specialisation to handle two code paths for enabled and disabled
-template <int>
+template<int>
 class CpuPerfScopeI;
 
-template <>
+template<>
 class CpuPerfScopeI<PROFILER_DISABLED> final {
 public:
     inline CpuPerfScopeI(const BASE_NS::string_view category, const BASE_NS::string_view subCategory,
@@ -98,7 +98,7 @@ public:
     {}
 };
 
-template <>
+template<>
 class CpuPerfScopeI<PROFILER_ENABLED> final {
 public:
     CpuPerfScopeI(const BASE_NS::string_view category, const BASE_NS::string_view subCategory,
@@ -140,10 +140,10 @@ protected:
 };
 using CpuPerfScope = CpuPerfScopeI<PROFILER_ENABLED>;
 
-template <int N>
+template<int N>
 struct PerformanceTraceSubsystem;
 
-template <>
+template<>
 struct PerformanceTraceSubsystem<1> {
     static constexpr bool IsEnabled()
     {
@@ -153,7 +153,7 @@ struct PerformanceTraceSubsystem<1> {
 
 using PROFILER_SUBSYSTEM_DEFAULT = PerformanceTraceSubsystem<1>;
 
-template <int N>
+template<int N>
 struct PerformanceTraceSeverity {
     static constexpr bool IsEnabled()
     {
@@ -168,14 +168,14 @@ struct PerformanceTraceSeverity {
 using PROFILER_DEFAULT = PerformanceTraceSeverity<1000>;  // 1000: severity level
 using PROFILER_TRACE = PerformanceTraceSeverity<2000>;    // 2000: severity level
 
-template <int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
+template<int z = 0, typename x = PROFILER_SUBSYSTEM_DEFAULT, typename y = PROFILER_DEFAULT>
 inline constexpr bool PerformanceTraceEnabled()
 {
     constexpr bool a = x::IsEnabled() && y::IsEnabled() ? true : false;
     return a;
 }
 
-template <>
+template<>
 inline constexpr bool PerformanceTraceEnabled<0, void, void>()
 {
     return PerformanceTraceEnabled<0, PROFILER_SUBSYSTEM_DEFAULT, PROFILER_DEFAULT>();

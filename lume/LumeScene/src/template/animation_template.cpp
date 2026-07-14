@@ -287,7 +287,7 @@ META_NS::IAnimation::Ptr AnimationTemplate::CreateAnimation() const
     return LoadAnimationFromTemplate(meta);
 }
 
-bool AnimationTemplate::ApplyTo(META_NS::IObject& target) const
+bool AnimationTemplate::ApplyToTarget(META_NS::IObject& target, bool /*asDefault*/) const
 {
     auto anim = interface_cast<META_NS::IAnimation>(&target);
     if (!anim) {

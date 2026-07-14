@@ -123,7 +123,7 @@ public:
      * @brief Query modifiers attached to the animation.
      * @return A list of modifiers that implement the given interface.
      */
-    template <typename Interface = META_NS::IAnimationModifier>
+    template<typename Interface = META_NS::IAnimationModifier>
     BASE_NS::vector<typename Interface::Ptr> GetModifiers() const
     {
         return CallPtr<IAttach>([](auto& p) { return p.template GetAttachments<Interface>(); });
@@ -154,7 +154,7 @@ public:
 /**
  * @brief Typed wrapper class for objects which implement IKeyframeAnimation.
  */
-template <typename Type>
+template<typename Type>
 class KeyframeAnimation : public PropertyAnimation {
 public:
     META_INTERFACE_OBJECT(KeyframeAnimation<Type>, PropertyAnimation, IKeyframeAnimation)
@@ -185,7 +185,7 @@ public:
     }
 
 private:
-    template <typename PropertyType>
+    template<typename PropertyType>
     void SetAnyPtrProperty(const PropertyType& p, const Type& value)
     {
         if (p) {
@@ -201,7 +201,7 @@ private:
 /**
  * @brief Typed wrapper class for objects which implement ITrackAnimation.
  */
-template <typename T>
+template<typename T>
 class TrackAnimation : public PropertyAnimation {
 public:
     META_INTERFACE_OBJECT(TrackAnimation<T>, PropertyAnimation, ITrackAnimation)
@@ -359,7 +359,7 @@ public:
 }  // namespace AnimationModifiers
 
 /// Returns a default object which implements IPropertyAnimation
-template <>
+template<>
 inline auto CreateObjectInstance<IPropertyAnimation>()
 {
     return PropertyAnimation(CreateNew);
@@ -369,7 +369,7 @@ inline auto CreateObjectInstance<IPropertyAnimation>()
  * @brief Returns a default typed animation object for given interface and type.
  * @note Supported interfaces are IKeyframeAnimation and ITrackAnimation
  */
-template <typename Interface, typename Type>
+template<typename Interface, typename Type>
 inline auto CreateObjectInstance()
 {
     constexpr auto isKeyframeAnimation = BASE_NS::is_same_v<Interface, IKeyframeAnimation>;
@@ -384,13 +384,13 @@ inline auto CreateObjectInstance()
 }
 
 /// Returns a default object which implements IKeyframeAnimation
-template <>
+template<>
 inline auto CreateObjectInstance<IParallelAnimation>()
 {
     return ParallelAnimation(CreateNew);
 }
 /// Returns a default object which implements IKeyframeAnimation
-template <>
+template<>
 inline auto CreateObjectInstance<ISequentialAnimation>()
 {
     return SequentialAnimation(CreateNew);

@@ -1,0 +1,56 @@
+# libFuzzer dictionary for the JPEG / JFIF byte format.
+# Each entry teaches the mutator that this byte string is "interesting" so it
+# can be inserted/overlaid as an atomic unit instead of being discovered by
+# random bit-flipping. Dramatically shortens the time to reach jpeg_start_decompress
+# and the wrapper's size / channel guards.
+#
+# Markers come from JPEG (ITU T.81) Table B.1; APP segment magics are JFIF / Exif /
+# Adobe / MPF / ICC_PROFILE / XMP, which the loader's CanLoad sniffs.
+
+# Frame structure markers
+soi="\xFF\xD8"
+eoi="\xFF\xD9"
+sof0="\xFF\xC0"
+sof1="\xFF\xC1"
+sof2="\xFF\xC2"
+sof3="\xFF\xC3"
+dht="\xFF\xC4"
+sof5="\xFF\xC5"
+sof6="\xFF\xC6"
+sof7="\xFF\xC7"
+sof9="\xFF\xC9"
+sof10="\xFF\xCA"
+sof11="\xFF\xCB"
+dac="\xFF\xCC"
+sof13="\xFF\xCD"
+sof14="\xFF\xCE"
+sof15="\xFF\xCF"
+sos="\xFF\xDA"
+dqt="\xFF\xDB"
+dnl="\xFF\xDC"
+dri="\xFF\xDD"
+com="\xFF\xFE"
+
+# Restart markers
+rst0="\xFF\xD0"
+rst7="\xFF\xD7"
+
+# APP segments matched by CanLoad
+app0_jfif="\xFF\xE0\x00\x10JFIF\x00"
+app0_jfxx="\xFF\xE0\x00\x10JFXX\x00"
+app1_exif="\xFF\xE1\x00\x00Exif\x00\x00"
+app1_xmp="\xFF\xE1\x00\x00http://ns.adobe.com/xap/1.0/\x00"
+app2_icc="\xFF\xE2\x00\x00ICC_PROFILE\x00"
+app2_mpf="\xFF\xE2\x00\x00MPF\x00"
+app14_adobe="\xFF\xEE\x00\x0EAdobe"
+
+# Minimal valid baseline JPEG frame opener so the mutator can splice a full SOI+APP0 prefix.
+jfif_header="\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+
+# Component identifiers / sampling factors used inside SOF0.
+comp_y="\x01\x11\x00"
+comp_cb="\x02\x11\x01"
+comp_cr="\x03\x11\x01"
+
+# Common SOS scan-descriptor start (1 component, baseline).
+sos_1c="\x00\x08\x01\x01\x00\x00\x3F\x00"

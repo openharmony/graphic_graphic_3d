@@ -25,16 +25,16 @@
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template <class CharT, size_t maxSize>
+template<class CharT, size_t maxSize>
 class basic_fixed_string;
 
-template <size_t maxSize>
+template<size_t maxSize>
 using fixed_string = BASE_NS::basic_fixed_string<char, maxSize>;
 
-template <size_t maxSize>
+template<size_t maxSize>
 using fixed_wstring = BASE_NS::basic_fixed_string<wchar_t, maxSize>;
 
-template <class CharT, size_t maxSize>
+template<class CharT, size_t maxSize>
 class basic_fixed_string {
 public:
     using string_view = basic_string_view<CharT>;
@@ -54,13 +54,13 @@ public:
         initialize({a.data_, a.len_});
     }
 
-    template <size_t N>
+    template<size_t N>
     constexpr basic_fixed_string(const basic_fixed_string<CharT, N>& a) noexcept
     {
         initialize({a.data(), a.size()});
     }
 
-    template <size_t N>
+    template<size_t N>
     constexpr basic_fixed_string(const CharT (&a)[N])
     {
         initialize({a, N - 1});
@@ -84,17 +84,17 @@ public:
     constexpr basic_fixed_string(const size_t size) noexcept : len_((size < maxSize) ? size : maxSize)
     {}
 
-    template <typename T, typename = void>
+    template<typename T, typename = void>
     struct HasData : false_type {};
-    template <typename T>
+    template<typename T>
     struct HasData<T, void_t<decltype(declval<T>().data())>> : true_type {};
-    template <typename T, typename = void>
+    template<typename T, typename = void>
     struct HasSize : false_type {};
-    template <typename T>
+    template<typename T>
     struct HasSize<T, void_t<decltype(declval<T>().size())>> : true_type {};
-    template <typename T>
+    template<typename T>
     using HasDataAndSize = enable_if_t<(HasData<T>::value && HasSize<T>::value)>;
-    template <class StringT, class = HasDataAndSize<StringT>>
+    template<class StringT, class = HasDataAndSize<StringT>>
     constexpr explicit basic_fixed_string(const StringT& s) noexcept;
 
     constexpr bool empty() const noexcept
@@ -129,14 +129,14 @@ public:
         return *this;
     }
 
-    template <size_t N>
+    template<size_t N>
     constexpr basic_fixed_string& operator=(const basic_fixed_string<CharT, N>& a) noexcept
     {
         initialize({a.data(), a.size()});
         return *this;
     }
 
-    template <size_t N>
+    template<size_t N>
     constexpr basic_fixed_string& operator=(basic_fixed_string<CharT, N>&& a) noexcept
     {
         initialize({a.data(), a.size()});
@@ -326,16 +326,16 @@ protected:
     CharT data_[maxSize + 1]{0};
 };
 
-template <class CharT, size_t maxSize>
-template <class StringT, class>
+template<class CharT, size_t maxSize>
+template<class StringT, class>
 constexpr basic_fixed_string<CharT, maxSize>::basic_fixed_string(const StringT& s) noexcept
 {
     initialize({s.data(), s.length()});
 }
-template <class CharT, size_t N>
+template<class CharT, size_t N>
 basic_fixed_string(const CharT (&)[N]) -> basic_fixed_string<CharT, N - 1>;
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr basic_fixed_string<CharT, M + N> operator+(
     const basic_fixed_string<CharT, M>& lhs, const basic_fixed_string<CharT, N>& rhs) noexcept
 {
@@ -344,7 +344,7 @@ constexpr basic_fixed_string<CharT, M + N> operator+(
     return res;
 }
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr basic_fixed_string<CharT, M + N> operator+(
     const CharT (&lhs)[M], const basic_fixed_string<CharT, N>& rhs) noexcept
 {
@@ -353,7 +353,7 @@ constexpr basic_fixed_string<CharT, M + N> operator+(
     return res;
 }
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr basic_fixed_string<CharT, M + N> operator+(
     const basic_fixed_string<CharT, M>& lhs, const CharT (&rhs)[N]) noexcept
 {
@@ -362,7 +362,7 @@ constexpr basic_fixed_string<CharT, M + N> operator+(
     return res;
 }
 
-template <class CharT, size_t N>
+template<class CharT, size_t N>
 constexpr basic_fixed_string<CharT, 1 + N> operator+(CharT lhs, const basic_fixed_string<CharT, N>& rhs) noexcept
 {
     basic_fixed_string<CharT, 1 + N> res(string_view(&lhs, 1));
@@ -370,67 +370,67 @@ constexpr basic_fixed_string<CharT, 1 + N> operator+(CharT lhs, const basic_fixe
     return res;
 }
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr bool operator==(const basic_fixed_string<CharT, M>& lhs, const basic_fixed_string<CharT, N>& rhs) noexcept
 {
     return string_view(lhs) == string_view(rhs);
 }
 
-template <class CharT, size_t M, int = 1>
+template<class CharT, size_t M, int = 1>
 constexpr bool operator==(
     const basic_fixed_string<CharT, M>& lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return string_view(lhs) == rhs;
 }
 
-template <class CharT, size_t M, int = 2>
+template<class CharT, size_t M, int = 2>
 constexpr bool operator==(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_fixed_string<CharT, M>& rhs) noexcept
 {
     return lhs == string_view(rhs);
 }
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr bool operator!=(const basic_fixed_string<CharT, M>& lhs, const basic_fixed_string<CharT, N>& rhs) noexcept
 {
     return string_view(lhs) != string_view(rhs);
 }
 
-template <class CharT, size_t M, int = 1>
+template<class CharT, size_t M, int = 1>
 constexpr bool operator!=(
     const basic_fixed_string<CharT, M>& lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return string_view(lhs) != rhs;
 }
 
-template <class CharT, size_t M, int = 2>
+template<class CharT, size_t M, int = 2>
 constexpr bool operator!=(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_fixed_string<CharT, M>& rhs) noexcept
 {
     return lhs != string_view(rhs);
 }
 
-template <class CharT, size_t M, size_t N>
+template<class CharT, size_t M, size_t N>
 constexpr bool operator<(const basic_fixed_string<CharT, M>& lhs, const basic_fixed_string<CharT, N>& rhs) noexcept
 {
     return string_view(lhs) < string_view(rhs);
 }
 
-template <class CharT, size_t M, int = 1>
+template<class CharT, size_t M, int = 1>
 constexpr bool operator<(
     const basic_fixed_string<CharT, M>& lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return string_view(lhs) < rhs;
 }
 
-template <class CharT, size_t M, int = 2>
+template<class CharT, size_t M, int = 2>
 constexpr bool operator<(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_fixed_string<CharT, M>& rhs) noexcept
 {
     return lhs < string_view(rhs);
 }
 
-template <typename Number, typename = enable_if_t<is_integral_v<Number>>>
+template<typename Number, typename = enable_if_t<is_integral_v<Number>>>
 constexpr fixed_string<21u> to_string(Number num)
 {
     fixed_string<21u> str;
@@ -462,7 +462,7 @@ constexpr fixed_string<21u> to_string(Number num)
     return str;
 }
 
-template <typename Number, typename = enable_if_t<is_integral_v<Number>>>
+template<typename Number, typename = enable_if_t<is_integral_v<Number>>>
 constexpr fixed_string<21u> to_hex(Number num)
 {
     fixed_string<21u> str;
@@ -495,7 +495,7 @@ constexpr fixed_string<21u> to_hex(Number num)
     return str;
 }
 
-template <size_t maxSize>
+template<size_t maxSize>
 inline uint64_t hash(const fixed_string<maxSize>& value)
 {
     return BASE_NS::FNV1aHash(value.data(), value.size());

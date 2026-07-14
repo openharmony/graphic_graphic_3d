@@ -312,3 +312,118 @@ UNIT_TEST(SRC_GLTFSecurityTest, DeepNodeHierarchyImport, testing::ext::TestSize.
     ASSERT_TRUE(childNodeHandle);
     EXPECT_EQ(rootNodeEntity, childNodeHandle->parent);
 }
+
+namespace {
+// Parses raw glTF JSON bytes and returns whether the parse succeeded.
+bool LoadsOk(IFileManager& files, string_view json)
+{
+    return GLTF2::LoadGLTF(files, array_view<uint8_t const>(reinterpret_cast<uint8_t const*>(json.data()), json.size()))
+        .success;
+}
+}  // namespace
+
+/**
+ * @tc.name: IndicesMustBeUnsignedScalar
+ * @tc.desc: Per glTF 2.0 spec, a primitive indices accessor must be SCALAR with an unsigned integer
+ *           component type; other types must be rejected at parse.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, IndicesMustBeUnsignedScalar, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+    constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},)"
+                                R"({"bufferView":0,"componentType":5125,"count":3,"type":"SCALAR"}],)"
+                                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}]})";
+    // indices accessor componentType FLOAT (5126) is not a valid index type.
+    constexpr string_view bad = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":3,"type":"SCALAR"}],)"
+                                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}]})";
+    EXPECT_TRUE(LoadsOk(files, good));
+    EXPECT_FALSE(LoadsOk(files, bad));
+}
+
+/**
+ * @tc.name: SkinInverseBindMatricesMustBeMat4Float
+ * @tc.desc: Per glTF 2.0 spec a skin's inverseBindMatrices accessor must be a FLOAT MAT4 with one matrix
+ *           per joint. BuildSkinIbmComponent casts the loaded bytes to Math::Mat4X4 and appends
+ *           elementCount of them, so a SCALAR/FLOAT accessor (4 bytes/element) would over-read 64 bytes
+ *           per element. A non-MAT4 accessor, or a count that does not match the joint count, must be
+ *           rejected at parse.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, SkinInverseBindMatricesMustBeMat4Float, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+    // accessor 0: MAT4 FLOAT count 2 (valid IBM for 2 joints); accessor 1: SCALAR FLOAT count 2 (invalid).
+    constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"}],)"
+                                R"("nodes":[{},{}],"scenes":[{"nodes":[0,1]}],)"
+                                R"("skins":[{"joints":[0,1],"inverseBindMatrices":0}]})";
+    // inverseBindMatrices points at the SCALAR accessor — not a MAT4, must be rejected.
+    constexpr string_view badType = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                    R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                    R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"},)"
+                                    R"({"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"}],)"
+                                    R"("nodes":[{},{}],"scenes":[{"nodes":[0,1]}],)"
+                                    R"("skins":[{"joints":[0,1],"inverseBindMatrices":1}]})";
+    // MAT4 accessor but count (2) does not match joint count (1) — must be rejected.
+    constexpr string_view badCount = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                    R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                    R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"MAT4"}],)"
+                                    R"("nodes":[{},{}],"scenes":[{"nodes":[0]}],)"
+                                    R"("skins":[{"joints":[0],"inverseBindMatrices":0}]})";
+    EXPECT_TRUE(LoadsOk(files, good));
+    EXPECT_FALSE(LoadsOk(files, badType));
+    EXPECT_FALSE(LoadsOk(files, badCount));
+}
+
+/**
+ * @tc.name: AnimationSamplerInputRequired
+ * @tc.desc: Per glTF 2.0 spec, an animation sampler input accessor is required; a sampler missing it
+ *           must be rejected at parse.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, AnimationSamplerInputRequired, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+    constexpr string_view good = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":2,"type":"VEC3"}],"nodes":[{}],)"
+                                R"("animations":[{"samplers":[{"input":0,"output":1,"interpolation":"LINEAR"}],)"
+                                R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
+    // sampler has no "input".
+    constexpr string_view bad = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":2,"type":"VEC3"}],"nodes":[{}],)"
+                                R"("animations":[{"samplers":[{"output":1,"interpolation":"LINEAR"}],)"
+                                R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
+    EXPECT_TRUE(LoadsOk(files, good));
+    EXPECT_FALSE(LoadsOk(files, bad));
+}
+
+/**
+ * @tc.name: AnimationOutputCountMustMatchInput
+ * @tc.desc: Per glTF 2.0 spec, for non-CUBICSPLINE interpolation the sampler output frame count must equal
+ *           the input keyframe count; a mismatch must be rejected at parse.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, AnimationOutputCountMustMatchInput, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+    // LINEAR translation with input count 2 but output count 3.
+    constexpr string_view bad = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                R"("accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"SCALAR"},)"
+                                R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],"nodes":[{}],)"
+                                R"("animations":[{"samplers":[{"input":0,"output":1,"interpolation":"LINEAR"}],)"
+                                R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
+    EXPECT_FALSE(LoadsOk(files, bad));
+}

@@ -30,12 +30,12 @@ RENDER_BEGIN_NAMESPACE()
 class Device;
 
 struct SwapchainPlatformDataMln {
-    MlnDisplaySurface displaySurface { MLN_NULL_HANDLE };
-    MlnSwapchain swapchain { MLN_NULL_HANDLE };
+    MlnDisplaySurface displaySurface{MLN_NULL_HANDLE};
+    MlnSwapchain swapchain{MLN_NULL_HANDLE};
     BASE_NS::vector<MlnResource> images;
     BASE_NS::vector<MlnResourceView> imageViews;
-    uint32_t imageCount { 0 };
-    uint32_t currentImageIndex { 0 };
+    uint32_t imageCount{0};
+    uint32_t currentImageIndex{0};
 };
 
 class SwapchainMln final : public Swapchain {
@@ -52,10 +52,9 @@ public:
 
     const SwapchainPlatformDataMln& GetPlatformData() const;
 
-    MlnStatus AcquireNextImage(uint32_t& imageIndex,
-        MlnTimeline signalTimeline = MLN_NULL_HANDLE, uint64_t signalValue = 0);
-    MlnStatus Present(uint32_t imageIndex,
-        MlnTimeline waitTimeline = MLN_NULL_HANDLE, uint64_t waitValue = 0);
+    MlnStatus AcquireNextImage(
+        uint32_t& imageIndex, MlnTimeline signalTimeline = MLN_NULL_HANDLE, uint64_t signalValue = 0);
+    MlnStatus Present(uint32_t imageIndex, MlnTimeline waitTimeline = MLN_NULL_HANDLE, uint64_t waitValue = 0);
 
 private:
     void CreateDisplaySurface(const SwapchainCreateInfo& createInfo);
@@ -66,12 +65,12 @@ private:
     GpuImageDesc desc_;
     GpuImageDesc descDepthBuffer_;
     SwapchainPlatformDataMln plat_;
-    uint32_t flags_ { 0u };
-    SurfaceTransformFlags surfaceTransformFlags_ { 0u };
-    uint64_t surfaceHandle_ { 0u };
-    bool valid_ { false };
+    uint32_t flags_{0u};
+    SurfaceTransformFlags surfaceTransformFlags_{0u};
+    uint64_t surfaceHandle_{0u};
+    bool valid_{false};
 };
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_SWAPCHAIN_MLN_H
+#endif  // MALEOON_SWAPCHAIN_MLN_H

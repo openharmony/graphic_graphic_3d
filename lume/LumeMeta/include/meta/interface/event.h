@@ -23,9 +23,9 @@
 META_BEGIN_NAMESPACE()
 class IEvent;
 class ICallable;
-template <typename EventT>
+template<typename EventT>
 class Event;
-template <>
+template<>
 class Event<IEvent> {
 public:
     using EventType = IEvent;
@@ -58,7 +58,7 @@ public:
 protected:
     BASE_NS::shared_ptr<IEvent> event_;
 };
-template <typename EventT>
+template<typename EventT>
 class Event : public Event<IEvent> {
 public:
     using Event<IEvent>::Event;

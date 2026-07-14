@@ -22,11 +22,11 @@
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template <class T>
+template<class T>
 struct default_delete {
     constexpr default_delete() noexcept = default;
 
-    template <class U>
+    template<class U>
     default_delete(const default_delete<U>& /* d */) noexcept
     {}
 
@@ -36,7 +36,7 @@ struct default_delete {
         delete ptr;
     }
 
-    template <class U>
+    template<class U>
     void operator()(U* ptr) const
     {
         static_assert(sizeof(U), "can't delete an incomplete type");
@@ -44,11 +44,11 @@ struct default_delete {
     }
 };
 
-template <class T>
+template<class T>
 struct default_delete<T[]> {
     constexpr default_delete() noexcept = default;
 
-    template <class U>
+    template<class U>
     default_delete(const default_delete<U[]>& /* d */) noexcept
     {}
 
@@ -58,7 +58,7 @@ struct default_delete<T[]> {
         delete[] ptr;
     }
 
-    template <class U>
+    template<class U>
     void operator()(U* ptr) const
     {
         static_assert(sizeof(U), "can't delete an incomplete type");
@@ -66,7 +66,7 @@ struct default_delete<T[]> {
     }
 };
 
-template <class T, class D = default_delete<T>>
+template<class T, class D = default_delete<T>>
 class unique_ptr {
 public:
     using pointer = BASE_NS::remove_reference_t<T>*;
@@ -82,39 +82,39 @@ public:
     {}
 
     // D is non-reference
-    template <class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
+    template<class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
     unique_ptr(pointer p, const D& deleter) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
-    template <class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
+    template<class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
     unique_ptr(pointer p, BASE_NS::remove_reference_t<D>&& deleter) noexcept
         : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
 
     // D is lvalue-reference "A&"
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && !BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, D& deleter) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && !BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, BASE_NS::remove_reference_t<D>&& deleter) = delete;
 
     // D is lvalue-reference "const A&"
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, const D& deleter) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, const BASE_NS::remove_reference_t<D>&& deleter) = delete;
 
     // if E is a reference type, this deleter is copy constructed from u's deleter
-    template <class U, class E, enable_if_t<!is_array_v<U> && is_reference_v<E>, int> = 0>
+    template<class U, class E, enable_if_t<!is_array_v<U> && is_reference_v<E>, int> = 0>
     unique_ptr(unique_ptr<U, E>&& u) noexcept : ptr_(u.release()), deleter_(u.get_deleter())
     {}
 
     // if E is a non-reference type, this D is move constructed from u's D
-    template <class U, class E, enable_if_t<!is_array_v<U> && !is_reference_v<E>, int> = 0>
+    template<class U, class E, enable_if_t<!is_array_v<U> && !is_reference_v<E>, int> = 0>
     unique_ptr(unique_ptr<U, E>&& u) noexcept : ptr_(u.release()), deleter_(BASE_NS::move(u.get_deleter()))
     {}
 
@@ -168,7 +168,7 @@ public:
         return *this;
     }
 
-    template <class U, class E>
+    template<class U, class E>
     unique_ptr& operator=(unique_ptr<U, E>&& r) noexcept
     {
         reset(r.release());
@@ -209,7 +209,7 @@ protected:
     D deleter_;
 };
 
-template <class T, class D>
+template<class T, class D>
 class unique_ptr<T[], D> {
 public:
     using pointer = BASE_NS::remove_reference_t<T>*;
@@ -225,44 +225,44 @@ public:
     explicit unique_ptr(pointer p) noexcept : ptr_(p)
     {}
 
-    template <class U>
+    template<class U>
     explicit unique_ptr(U p) noexcept : ptr_(p)
     {}
 
     // D is non-reference
-    template <class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
+    template<class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
     unique_ptr(pointer p, const D& d) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(d)>(d))
     {}
-    template <class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
+    template<class dt = D, enable_if_t<!is_reference_v<dt>, int> = 0>
     unique_ptr(pointer p, BASE_NS::remove_reference_t<D>&& d) noexcept
         : ptr_(p), deleter_(BASE_NS::forward<decltype(d)>(d))
     {}
 
     // D is lvalue-reference "A&"
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && !BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, D& deleter) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && !BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, BASE_NS::remove_reference_t<D>&& deleter) = delete;
 
     // D is lvalue-reference "const A&"
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, const D& deleter) noexcept : ptr_(p), deleter_(BASE_NS::forward<decltype(deleter)>(deleter))
     {}
-    template <class d = D, class dt = BASE_NS::remove_reference_t<D>,
+    template<class d = D, class dt = BASE_NS::remove_reference_t<D>,
         BASE_NS::enable_if_t<(BASE_NS::is_lvalue_reference_v<d> && BASE_NS::is_const_v<dt>), int> = 0>
     unique_ptr(pointer p, const BASE_NS::remove_reference_t<D>&& deleter) = delete;
 
     // if E is a reference type, this deleter is copy constructed from u's deleter
-    template <class U, class E, enable_if_t<is_array_v<U> && is_reference_v<E>, int> = 0>
+    template<class U, class E, enable_if_t<is_array_v<U> && is_reference_v<E>, int> = 0>
     unique_ptr(unique_ptr<U, E>&& u) noexcept : ptr_(u.release()), deleter_(u.get_deleter())
     {}
 
     // if E is a non-reference type, this D is move constructed from u's D
-    template <class U, class E, enable_if_t<is_array_v<U> && !is_reference_v<E>, int> = 0>
+    template<class U, class E, enable_if_t<is_array_v<U> && !is_reference_v<E>, int> = 0>
     unique_ptr(unique_ptr<U, E>&& u) noexcept : ptr_(u.release()), deleter_(BASE_NS::move(u.get_deleter()))
     {}
 
@@ -295,7 +295,7 @@ public:
         return res;
     }
 
-    template <class U>
+    template<class U>
     void reset(U ptr) noexcept
     {
         pointer old_ptr = ptr_;
@@ -323,7 +323,7 @@ public:
         return *this;
     }
 
-    template <class U, class E>
+    template<class U, class E>
 
     unique_ptr& operator=(unique_ptr<U, E>&& r) noexcept
     {
@@ -362,55 +362,55 @@ protected:
 };
 
 // equality comparisons
-template <class T1, class D1, class T2, class D2>
+template<class T1, class D1, class T2, class D2>
 bool operator==(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y)
 {
     return x.get() == y.get();
 }
-template <class T1, class D1>
+template<class T1, class D1>
 bool operator==(const unique_ptr<T1, D1>& x, nullptr_t)
 {
     return x.get() == nullptr;
 }
-template <class T1, class D1>
+template<class T1, class D1>
 bool operator==(nullptr_t, const unique_ptr<T1, D1>& x)
 {
     return x.get() == nullptr;
 }
 
 // in-equality comparisons
-template <class T1, class D1, class T2, class D2>
+template<class T1, class D1, class T2, class D2>
 bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y)
 {
     return x.get() != y.get();
 }
-template <class T1, class D1>
+template<class T1, class D1>
 bool operator!=(const unique_ptr<T1, D1>& x, nullptr_t)
 {
     return x.get() != nullptr;
 }
-template <class T1, class D1>
+template<class T1, class D1>
 bool operator!=(nullptr_t, const unique_ptr<T1, D1>& x)
 {
     return x.get() != nullptr;
 }
 
 // non-array types
-template <class T, class... Args, BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>, int> = 0>
+template<class T, class... Args, BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>, int> = 0>
 unique_ptr<T> make_unique(Args&&... args)
 {
     return unique_ptr<T>(new T(BASE_NS::forward<Args>(args)...));
 }
 
 // arrays with unknown bound
-template <class T, BASE_NS::enable_if_t<BASE_NS::is_array_v<T> && BASE_NS::extent_v<T> == 0, int> = 0>
+template<class T, BASE_NS::enable_if_t<BASE_NS::is_array_v<T> && BASE_NS::extent_v<T> == 0, int> = 0>
 unique_ptr<T> make_unique(size_t size)
 {
     return unique_ptr<T>(new typename BASE_NS::remove_extent_t<T>[size]());
 }
 
 // arrays with known bound. (not-allowed)
-template <class T, class... Args, BASE_NS::enable_if_t<BASE_NS::is_array_v<T> && BASE_NS::extent_v<T> != 0, int> = 0>
+template<class T, class... Args, BASE_NS::enable_if_t<BASE_NS::is_array_v<T> && BASE_NS::extent_v<T> != 0, int> = 0>
 void make_unique(Args&&... args) = delete;
 BASE_END_NAMESPACE()
 
@@ -419,7 +419,7 @@ BASE_END_NAMESPACE()
 ///
 /// If `p` is not a null pointer value and does not actually point to a BaseT class subobject of an object of type
 /// Derived, the behavior is undefined.
-template <typename Derived, typename BaseT>
+template<typename Derived, typename BaseT>
 BASE_NS::unique_ptr<Derived> static_pointer_cast(BASE_NS::unique_ptr<BaseT>&& p)
 {
     return BASE_NS::unique_ptr<Derived>(static_cast<Derived*>(p.release()));

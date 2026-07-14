@@ -14,6 +14,7 @@
  */
 
 #include <functional>
+#include <meta/interface/intf_metadata.h>
 #include <scene/ext/intf_ecs_object_access.h>
 #include <scene/interface/intf_create_mesh.h>
 #include <scene/interface/intf_mesh.h>
@@ -482,6 +483,78 @@ UNIT_TEST_F(API_ScenePluginMeshTest, DestroyMeshWithOverride, testing::ext::Test
     n.reset();
     EXPECT_TRUE(scene->RemoveNode(BASE_NS::move(node)).GetResult());
     UpdateScene();
+}
+
+/**
+ * @tc.name: SubmeshAABBFromGltfMatchesAccessor
+ * @tc.desc: After loading a mesh from a GLTF via the scene manager, the submesh
+ *          AABBMin/AABBMax reflect the GLTF POSITION accessor bounds, and
+ *          remain the property's default value (loader did not stamp them as
+ *          user-modified).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, SubmeshAABBFromGltfMatchesAccessor, testing::ext::TestSize.Level1)
+{
+    auto scene = LoadScene("test://models/cube.gltf");
+    ASSERT_TRUE(scene);
+    UpdateScene();
+
+    auto cubeNode = scene->FindNamedNode({"Cube"}).GetResult();
+    ASSERT_TRUE(cubeNode);
+    auto cubeMesh = interface_pointer_cast<IMesh>(cubeNode);
+    ASSERT_TRUE(cubeMesh);
+
+    auto subs = cubeMesh->SubMeshes()->GetValue();
+    ASSERT_FALSE(subs.empty());
+    auto submesh = subs[0];
+    ASSERT_TRUE(submesh);
+
+    EXPECT_EQ(submesh->AABBMin()->GetValue(), (BASE_NS::Math::Vec3{-0.5f, -0.5f, -0.5f}));
+    EXPECT_EQ(submesh->AABBMax()->GetValue(), (BASE_NS::Math::Vec3{0.5f, 0.5f, 0.5f}));
+    EXPECT_TRUE(submesh->AABBMin()->IsDefaultValue());
+    EXPECT_TRUE(submesh->AABBMax()->IsDefaultValue());
+}
+
+/**
+ * @tc.name: AABBReadOnlyMetadata
+ * @tc.desc: IMetadata reports IMesh AABBMin/AABBMax as readonly, ISubMesh as writable.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_ScenePluginMeshTest, AABBReadOnlyMetadata, testing::ext::TestSize.Level1)
+{
+    auto nodeMeta = interface_cast<META_NS::IMetadata>(mesh_);
+    ASSERT_TRUE(nodeMeta);
+    auto nodeMin = nodeMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMin");
+    auto nodeMax = nodeMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMax");
+    ASSERT_TRUE(nodeMin.IsValid());
+    ASSERT_TRUE(nodeMax.IsValid());
+    EXPECT_TRUE(nodeMin.readOnly);
+    EXPECT_TRUE(nodeMax.readOnly);
+
+    auto meshAcc = interface_cast<IMeshAccess>(mesh_);
+    ASSERT_TRUE(meshAcc);
+    auto inner = meshAcc->GetMesh().GetResult();
+    ASSERT_TRUE(inner);
+    auto innerMeta = interface_cast<META_NS::IMetadata>(inner);
+    ASSERT_TRUE(innerMeta);
+    auto innerMin = innerMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMin");
+    auto innerMax = innerMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMax");
+    ASSERT_TRUE(innerMin.IsValid());
+    ASSERT_TRUE(innerMax.IsValid());
+    EXPECT_TRUE(innerMin.readOnly);
+    EXPECT_TRUE(innerMax.readOnly);
+
+    AddSubMesh(mesh_);
+    auto sub = mesh_->SubMeshes()->GetValueAt(0);
+    ASSERT_TRUE(sub);
+    auto subMeta = interface_cast<META_NS::IMetadata>(sub);
+    ASSERT_TRUE(subMeta);
+    auto subMin = subMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMin");
+    auto subMax = subMeta->GetMetadata(META_NS::MetadataType::PROPERTY, "AABBMax");
+    ASSERT_TRUE(subMin.IsValid());
+    ASSERT_TRUE(subMax.IsValid());
+    EXPECT_FALSE(subMin.readOnly);
+    EXPECT_FALSE(subMax.readOnly);
 }
 
 }  // namespace UTest

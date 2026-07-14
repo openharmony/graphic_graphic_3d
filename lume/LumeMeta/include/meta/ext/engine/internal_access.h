@@ -27,19 +27,19 @@
 META_BEGIN_NAMESPACE()
 
 namespace Internal {
-template <typename T>
+template<typename T>
 struct IsArray {
     static constexpr const bool VALUE = false;
     using ItemType = T;
 };
 
-template <typename T>
+template<typename T>
 struct IsArray<BASE_NS::vector<T>> {
     static constexpr const bool VALUE = true;
     using ItemType = T;
 };
 
-template <typename Type, typename... CompatType>
+template<typename Type, typename... CompatType>
 IAny::Ptr ConstructCoreAny(const CORE_NS::Property& p)
 {
     if constexpr (Internal::IsArray<Type>::VALUE) {
@@ -58,7 +58,7 @@ IAny::Ptr ConstructCoreAny(const CORE_NS::Property& p)
 }  // namespace Internal
 
 /// Class that encapsulates the reading and writing to the core property and the any type used
-template <typename Type, typename AccessType = Type>
+template<typename Type, typename AccessType = Type>
 class EngineInternalValueAccess : public IntroduceInterfaces<IEngineInternalValueAccess> {
 public:
     IAny::Ptr CreateAny(const CORE_NS::Property& p) const override
@@ -82,7 +82,7 @@ public:
     {
         return MetaType<Type>::coreType == type;
     }
-    template <typename T>
+    template<typename T>
     static T* CalcLocation(T* data, const EnginePropertyParams& params)
     {
         uintptr_t offset = uintptr_t(data) + params.Offset();
@@ -127,7 +127,7 @@ public:
 };
 
 /// Class that encapsulates the reading and writing to the core array property and the any type used
-template <typename Type>
+template<typename Type>
 class EngineInternalArrayValueAccess : public IntroduceInterfaces<IEngineInternalValueAccess> {
 public:
     using InternalType = BASE_NS::vector<Type>;

@@ -35,7 +35,7 @@ public:
     META_INTERFACE_OBJECT(ImageTemplate, META_NS::Object, CORE_NS::IResourceOptions)
     META_INTERFACE_OBJECT_INSTANTIATE(ImageTemplate, ::SCENE_NS::ClassId::ImageTemplate)
 
-    template <typename Type>
+    template<typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);

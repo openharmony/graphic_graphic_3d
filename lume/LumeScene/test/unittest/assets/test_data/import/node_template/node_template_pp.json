@@ -1,0 +1,12 @@
+{
+    "version": "1.0",
+    "description": "node template whose index defines an image and a postProcess (with bloom) whose dirtMaskImage references that image; exercises lazy image-ref resolution on a nested sub-object (PostProcess.Bloom.DirtMaskImage)",
+    "data": {
+        "type": "nodeTemplate",
+        "index": "node_template_pp_index.json",
+        "node": {
+            "type": "node",
+            "name": "stub"
+        }
+    }
+}

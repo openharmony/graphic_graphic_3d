@@ -26,6 +26,9 @@
 #include <meta/interface/property/construct_property.h>
 #include <meta/interface/resource/intf_resource.h>
 
+#include <core/resources/intf_resource.h>
+#include <core/resources/intf_resource_manager.h>
+
 #include "scene/scene_test.h"
 
 SCENE_BEGIN_NAMESPACE()
@@ -43,7 +46,7 @@ public:
         return META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
     }
 
-    template <typename T>
+    template<typename T>
     static void AddSetProperty(META_NS::IMetadata& meta, BASE_NS::string_view name, const T& value)
     {
         auto prop = META_NS::ConstructProperty<T>(name);
@@ -154,6 +157,11 @@ UNIT_TEST_F(PostProcessTemplateTest, NameProperty, testing::ext::TestSize.Level1
     EXPECT_TRUE(META_NS::IsValueSet(*named->Name().GetProperty()));
     EXPECT_EQ(META_NS::GetValue(named->Name()), "TestPP");
     EXPECT_EQ(obj->GetName(), "TestPP");
+
+    // The API wrapper exposes the same Name property.
+    PostProcessTemplate tmpl(obj);
+    ASSERT_TRUE(tmpl.Name());
+    EXPECT_EQ(META_NS::GetValue(tmpl.Name()), "TestPP");
 }
 
 /**
@@ -186,6 +194,9 @@ UNIT_TEST_F(PostProcessTemplateTest, ApplyToPostProcess, testing::ext::TestSize.
     EXPECT_EQ(META_NS::GetValue(tonemap->Enabled()), true);
     EXPECT_EQ(META_NS::GetValue(tonemap->Type()), TonemapType::ACES);
     EXPECT_FLOAT_EQ(META_NS::GetValue(tonemap->Exposure()), 1.5f);
+    // Characterization: non-template-context ApplyOptions lands set values as OVERRIDES.
+    // Pins the ApplyOptions path against the upcoming standalone-ApplyTo defaults change.
+    EXPECT_TRUE(tonemap->Exposure().GetProperty()->IsValueSet());
 }
 
 /**
@@ -281,6 +292,100 @@ UNIT_TEST_F(PostProcessTemplateTest, ApplyToViaInterface, testing::ext::TestSize
     auto tonemap = META_NS::GetValue(pp->Tonemap());
     ASSERT_TRUE(tonemap);
     EXPECT_FLOAT_EQ(META_NS::GetValue(tonemap->Exposure()), 1.5f);
+}
+
+/**
+ * @tc.name: ApplyToPromotesScalarsToDefaults
+ * @tc.desc: PostProcessTemplate::ApplyTo writes template effect scalars (the nested
+ *          Tonemap sub-object's Enabled / Exposure) onto the live postprocess as DEFAULTS:
+ *          IsValueSet stays false and GetDefaultValue equals the template value. Pins the
+ *          standalone ApplyTo path for nested sub-object scalars.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(PostProcessTemplateTest, ApplyToPromotesScalarsToDefaults, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto pp = CreatePostProcess(scene);
+    ASSERT_TRUE(pp);
+    UpdateScene();
+
+    auto tmpl = CreateFullTemplate();  // carries a Tonemap effect with Enabled=true, Exposure=1.5
+    ASSERT_TRUE(tmpl);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*pp));
+    UpdateScene();
+
+    auto tonemap = META_NS::GetValue(pp->Tonemap());
+    ASSERT_TRUE(tonemap);
+
+    EXPECT_FLOAT_EQ(META_NS::GetValue(tonemap->Exposure()), 1.5f);
+    EXPECT_FLOAT_EQ(tonemap->Exposure()->GetDefaultValue(), 1.5f);
+    EXPECT_FALSE(tonemap->Exposure().GetProperty()->IsValueSet());
+
+    EXPECT_EQ(META_NS::GetValue(tonemap->Enabled()), true);
+    EXPECT_FALSE(tonemap->Enabled().GetProperty()->IsValueSet());
+}
+
+/**
+ * @tc.name: ApplyToResolvesSceneScopedBloomDirtMask
+ * @tc.desc: PostProcessTemplate::ApplyTo resolves a nested image ResourceId (Bloom's
+ *          DirtMaskImage) against a resource registered under the target scene's context,
+ *          from a standalone ApplyTo (no explicit context). Exercises both the
+ *          context-qualified rm->GetResource({id, context}) lookup and ResolveResourceIdRefs'
+ *          sub-object recursion. The scene-scoped image is invisible to the context-less
+ *          fallback, so success proves the derived scene context matches the registration.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(PostProcessTemplateTest, ApplyToResolvesSceneScopedBloomDirtMask, testing::ext::TestSize.Level1)
+{
+    ScenePluginTest::SetUp();
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto pp = CreatePostProcess(scene);
+    ASSERT_TRUE(pp);
+    UpdateScene();
+
+    auto image = CreateTestBitmap();
+    ASSERT_TRUE(image);
+    CORE_NS::ResourceIdContext imgId{
+        CORE_NS::ResourceId{"pp-dirt-mask"}, interface_pointer_cast<CORE_NS::IInterface>(scene)};
+    auto setId = interface_cast<CORE_NS::ISetResourceId>(image);
+    ASSERT_TRUE(setId);
+    setId->SetResourceId(imgId);
+    ASSERT_TRUE(resources->AddResource(interface_pointer_cast<CORE_NS::IResource>(image)));
+
+    // The context-less fallback must MISS a scene-scoped resource.
+    EXPECT_FALSE(resources->GetResource(CORE_NS::ResourceIdContext{CORE_NS::ResourceId{"pp-dirt-mask"}}));
+    auto expected = resources->GetResource(imgId);
+    ASSERT_TRUE(expected);
+
+    auto tmpl = CreateFullTemplate();
+    ASSERT_TRUE(tmpl);
+    auto tmplMeta = interface_cast<META_NS::IMetadata>(tmpl.GetPtr().get());
+    ASSERT_TRUE(tmplMeta);
+
+    // A Bloom sub-object carrying a DirtMaskImage ResourceId.
+    auto bloom = CreateEffectSubObject();
+    auto bloomMeta = interface_cast<META_NS::IMetadata>(bloom.get());
+    ASSERT_TRUE(bloomMeta);
+    bloomMeta->AddProperty(META_NS::ConstructProperty<CORE_NS::ResourceId>("DirtMaskImage").GetProperty());
+    auto dirtProp = bloomMeta->GetProperty<CORE_NS::ResourceId>("DirtMaskImage");
+    ASSERT_TRUE(dirtProp);
+    META_NS::SetValue(dirtProp, imgId.id);
+    AddSetProperty(*tmplMeta, "Bloom", bloom);
+
+    EXPECT_TRUE(tmpl.ApplyTo(*pp));
+    UpdateScene();
+
+    auto bloomLive = META_NS::GetValue(pp->Bloom());
+    ASSERT_TRUE(bloomLive);
+    auto resolved = META_NS::GetValue(bloomLive->DirtMaskImage());
+    ASSERT_TRUE(resolved);
+    EXPECT_EQ(interface_pointer_cast<CORE_NS::IResource>(resolved), expected);
 }
 
 /**

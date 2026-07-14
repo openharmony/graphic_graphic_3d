@@ -29,9 +29,9 @@ class Device;
 // Platform data for acceleration structure resources.
 // Mirrors GpuAccelerationStructurePlatformDataVk (gpu_buffer_vk.h).
 struct GpuAccelerationStructurePlatformDataMln {
-    uint32_t byteSize { 0u };
-    uint64_t deviceAddress { 0 }; // AS device address from MlnGetAccelerationStructureDeviceAddress
-    MlnAccelerationStructure accelerationStructure { MLN_NULL_HANDLE };
+    uint32_t byteSize{0u};
+    uint64_t deviceAddress{0};  // AS device address from MlnGetAccelerationStructureDeviceAddress
+    MlnAccelerationStructure accelerationStructure{MLN_NULL_HANDLE};
 };
 
 class GpuBufferMln final : public GpuBuffer {
@@ -49,7 +49,10 @@ public:
     const GpuBufferPlatformDataMln& GetPlatformData() const;
     const GpuAccelerationStructurePlatformDataMln& GetPlatformDataAccelerationStructure() const;
 
-    bool IsAccelerationStructure() const { return isAccelerationStructure_; }
+    bool IsAccelerationStructure() const
+    {
+        return isAccelerationStructure_;
+    }
 
 private:
     void CreateBuffer();
@@ -61,18 +64,18 @@ private:
     GpuBufferPlatformDataMln plat_;
 
     // Acceleration structure state (B-plan: lazy init)
-    bool isAccelerationStructure_ { false };
+    bool isAccelerationStructure_{false};
     GpuAccelerationStructureDesc descAccel_;
     GpuAccelerationStructurePlatformDataMln platAccel_;
 
-    bool isMappable_ { false };
-    bool isPersistentlyMapped_ { false };
-    bool isRingBuffer_ { false };
-    bool ownsResources_ { true };
-    mutable bool isMapped_ { false };
-    uint32_t bufferingCount_ { 1u };
+    bool isMappable_{false};
+    bool isPersistentlyMapped_{false};
+    bool isRingBuffer_{false};
+    bool ownsResources_{true};
+    mutable bool isMapped_{false};
+    uint32_t bufferingCount_{1u};
 };
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_GPU_BUFFER_MLN_H
+#endif  // MALEOON_GPU_BUFFER_MLN_H

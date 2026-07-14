@@ -1,0 +1,27 @@
+{
+	"version": "1.0",
+	"description": "layerMask is honored by every supported child node type",
+	"data": {
+		"type": "scene",
+		"name": "test",
+		"rootNode": {
+			"type": "node",
+			"name": "root",
+			"layerMask": 1,
+			"children": [
+				{ "type": "node", "name": "plain", "layerMask": 2 },
+				{ "type": "light", "name": "light", "lightType": "point", "layerMask": 4 },
+				{ "type": "camera", "name": "camera", "projection": "perspective", "fov": 60.0, "aspectRatio": 1.5, "nearPlane": 0.1, "farPlane": 100.0, "layerMask": 8 },
+				{ "type": "geometry", "name": "mesh", "layerMask": 16 },
+				{ "type": "extensionNode", "name": "ext", "nodeUid": "4e5561d1-0313-4922-b91a-816f388efbbf", "layerMask": 32 },
+				{ "type": "lightProbeGroup", "name": "probes", "probes": [], "layerMask": 64 },
+				{
+					"type": "external",
+					"source": { "type": "nodeTemplate", "url": "scene_layer_mask_all_types.nodeTemplate" },
+					"resourceGroup": "lm-all-types",
+					"layerMask": 128
+				}
+			]
+		}
+	}
+}

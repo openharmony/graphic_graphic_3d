@@ -37,7 +37,7 @@ struct Property;
 
 // BaseClass should inherit IComponentManager AND should follow the basic form of component managers
 // (this will be enforced later)
-template <typename ComponentType, typename BaseClass>
+template<typename ComponentType, typename BaseClass>
 class BaseManager : public BaseClass, public IPropertyApi {
     using ComponentId = IComponentManager::ComponentId;
 

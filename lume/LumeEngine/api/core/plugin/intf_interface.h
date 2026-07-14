@@ -36,13 +36,13 @@ public:
     virtual const IInterface* GetInterface(const BASE_NS::Uid& uid) const = 0;
     virtual IInterface* GetInterface(const BASE_NS::Uid& uid) = 0;
 
-    template <typename InterfaceType>
+    template<typename InterfaceType>
     const InterfaceType* GetInterface() const
     {
         return static_cast<const InterfaceType*>(GetInterface(InterfaceType::UID));
     }
 
-    template <typename InterfaceType>
+    template<typename InterfaceType>
     InterfaceType* GetInterface()
     {
         return static_cast<InterfaceType*>(GetInterface(InterfaceType::UID));
@@ -65,7 +65,7 @@ protected:
 CORE_END_NAMESPACE()
 
 // NOLINTBEGIN(readability-identifier-naming) to keep std like syntax
-template <class U, class T>
+template<class U, class T>
 BASE_NS::shared_ptr<U> interface_pointer_cast(const BASE_NS::shared_ptr<T>& ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
@@ -81,7 +81,7 @@ BASE_NS::shared_ptr<U> interface_pointer_cast(const BASE_NS::shared_ptr<T>& ptr)
     return {};
 }
 
-template <class U, class T>
+template<class U, class T>
 BASE_NS::shared_ptr<const U> interface_pointer_cast(const BASE_NS::shared_ptr<const T>& ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
@@ -98,19 +98,19 @@ BASE_NS::shared_ptr<const U> interface_pointer_cast(const BASE_NS::shared_ptr<co
     return {};
 }
 
-template <class U, class T>
+template<class U, class T>
 BASE_NS::shared_ptr<U> interface_pointer_cast(const BASE_NS::weak_ptr<T>& weak)
 {
     return interface_pointer_cast<U>(weak.lock());
 }
 
-template <class U, class T>
+template<class U, class T>
 BASE_NS::shared_ptr<const U> interface_pointer_cast(const BASE_NS::weak_ptr<const T>& weak)
 {
     return interface_pointer_cast<const U>(weak.lock());
 }
 
-template <class U, class T>
+template<class U, class T>
 U* interface_cast(const BASE_NS::shared_ptr<T>& ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
@@ -126,7 +126,7 @@ U* interface_cast(const BASE_NS::shared_ptr<T>& ptr)
     return {};
 }
 
-template <class U, class T>
+template<class U, class T>
 const U* interface_cast(const BASE_NS::shared_ptr<const T>& ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, T>, "T is not an IInterface");
@@ -142,7 +142,7 @@ const U* interface_cast(const BASE_NS::shared_ptr<const T>& ptr)
     return {};
 }
 
-template <class U>
+template<class U>
 U* interface_cast(CORE_NS::IInterface* ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");
@@ -152,7 +152,7 @@ U* interface_cast(CORE_NS::IInterface* ptr)
     return {};
 }
 
-template <class U>
+template<class U>
 const U* interface_cast(const CORE_NS::IInterface* ptr)
 {
     static_assert(BASE_NS::is_base_of_v<CORE_NS::IInterface, U>, "U is not an IInterface");

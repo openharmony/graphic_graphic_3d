@@ -38,7 +38,7 @@ enum GenericError : int16_t {
  *        an expected value of type Type, or an unexpected value of type Error.
  * @Notice Expected is never valueless.
  */
-template <typename Type, typename Error>
+template<typename Type, typename Error>
 class Expected {
 public:
     /* NOLINTNEXTLINE(*-explicit-constructor) */
@@ -110,7 +110,7 @@ private:
 };
 
 /// Expected specialisation for GenericError to present success or error value
-template <>
+template<>
 class Expected<void, GenericError> {
 public:
     constexpr Expected() = default;
@@ -136,7 +136,7 @@ private:
 using ReturnError = Expected<void, GenericError>;
 
 /// Helper template to map enum return codes to success when positive
-template <typename Enum>
+template<typename Enum>
 class ReturnValue {
 public:
     /* NOLINTNEXTLINE(*-explicit-constructor) */

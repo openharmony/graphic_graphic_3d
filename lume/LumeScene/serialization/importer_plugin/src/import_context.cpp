@@ -18,7 +18,10 @@
 
 #include <core/json/json.h>
 
+#include <meta/interface/resource/intf_resource.h>
+
 #include "diagnostics.h"
+#include "import_helpers.h"
 #include "perf/cpu_perf_scope.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
@@ -181,7 +184,20 @@ ImportResult ImportContext::ImportSubType(BASE_NS::string_view type)
         CORE_LOG_E("Requested unknown object type: %s", t.c_str());
         return ImportResult{CreateDiagnostics("Requested unknown object type: " + t)};
     }
-    return it->second->Import(*this);
+    auto result = it->second->Import(*this);
+    // Centralize parse-time derivedFrom registration: any IDerivedResourceOptions result
+    // gets its baseResource set here, regardless of whether it came from a top-level
+    // index entry or an inline child. Actual base loading is still lazy at
+    // ApplyOptions/LoadBaseResource time (top-level), or eager via per-handler logic
+    // (inline children) — unifying that is a separate change.
+    if (result.object) {
+        if (auto derived = interface_pointer_cast<META_NS::IDerivedResourceOptions>(result.object)) {
+            if (auto rid = GetOptResourceId(*this, "derivedFrom"); rid.value && rid.value->IsValid()) {
+                derived->SetBaseResource(*rid.value);
+            }
+        }
+    }
+    return result;
 }
 
 ImportContext ImportContext::CreateContext(CORE_NS::json::value json)

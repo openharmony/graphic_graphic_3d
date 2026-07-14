@@ -18,19 +18,19 @@
 
 // supported since c++20 see https://en.cppreference.com/w/cpp/container/array/to_array
 #if (defined(__cpp_lib_to_array) && __cpp_lib_to_array < 201907L) || __cplusplus < 202002L
-#include <cstdint>
 #include <array>
+#include <cstdint>
 #include <type_traits>
 
 namespace detail {
-template <class T, std::size_t N, std::size_t... I>
+template<class T, std::size_t N, std::size_t... I>
 constexpr std::array<std::remove_cv_t<T>, N> to_array_impl(T (&a)[N], std::index_sequence<I...>)
 {
     return {{a[I]...}};
 }
 }  // namespace detail
 
-template <class T, std::size_t N>
+template<class T, std::size_t N>
 constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&a)[N])
 {
     return detail::to_array_impl(a, std::make_index_sequence<N>{});

@@ -1,0 +1,14 @@
+{
+    "version": "1.0",
+    "description": "resource index exposing a JSON node template as a managed resource",
+    "data": {
+        "type": "resourceIndex",
+        "index": [
+            {
+                "resourceId": { "name": "ext-node-template" },
+                "type": "nodeTemplate",
+                "path": "test://import/node_template/node_template0.json"
+            }
+        ]
+    }
+}

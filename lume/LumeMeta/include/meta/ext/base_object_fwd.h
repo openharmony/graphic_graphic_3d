@@ -66,12 +66,12 @@ public:
     {
         return Super::GetInterface(uid);
     }
-    template <typename Type>
+    template<typename Type>
     constexpr Type* GetInterface() noexcept
     {
         return static_cast<Type*>(Super::StaticGetInterface(Type::UID));
     }
-    template <typename Type>
+    template<typename Type>
     constexpr const Type* GetInterface() const noexcept
     {
         auto* me = const_cast<BaseObjectFwd*>(this);
@@ -172,14 +172,14 @@ protected:
         return object_;
     }
 
-    template <typename Type>
+    template<typename Type>
     constexpr Type* GetBaseAs()
     {
         auto* t = object_->GetInterface<Type>();
         CORE_ASSERT_MSG(t, "Invalid interface %s for base", BASE_NS::to_string(Type::UID).c_str());
         return t;
     }
-    template <typename Type>
+    template<typename Type>
     constexpr const Type* GetBaseAs() const
     {
         return const_cast<BaseObjectFwd*>(this)->GetBaseAs<Type>();

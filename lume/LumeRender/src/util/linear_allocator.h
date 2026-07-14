@@ -38,7 +38,7 @@ public:
 
     ~LinearAllocator() = default;
 
-    template <typename T>
+    template<typename T>
     T* Allocate()
     {
         return static_cast<T*>(Allocate(sizeof(T), alignof(T)));

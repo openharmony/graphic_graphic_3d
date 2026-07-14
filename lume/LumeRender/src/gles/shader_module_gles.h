@@ -83,9 +83,9 @@ private:
 
     BASE_NS::string source_;
     BASE_NS::vector<Gles::SpecConstantInfo> specInfo_;
-    template <typename ShaderBase>
+    template<typename ShaderBase>
     friend void ProcessShaderModule(ShaderBase&, const ShaderModuleCreateInfo&);
-    template <typename ShaderBase>
+    template<typename ShaderBase>
     friend BASE_NS::string SpecializeShaderModule(const ShaderBase&, const ShaderSpecializationConstantDataView&);
 };
 RENDER_END_NAMESPACE()

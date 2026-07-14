@@ -64,6 +64,13 @@ AnyReturnValue EngineValue::Sync(EngineSyncDirection dir)
         }
         return params_.handle.Handle() ? AnyReturn::NOTHING_TO_DO : AnyReturn::FAIL;
     }
+    // Reached when dir == FROM_ENGINE (the AUTO && !VALUE_CHANGED case is also fine to skip).
+    // If a local write is pending, do not overwrite it from the engine — let the next
+    // TO_ENGINE / AUTO dirty pass flush it. Otherwise a concurrent local SetValue racing
+    // an unrelated MODIFIED event on the same component manager can be silently lost.
+    if (flags_.IsSet(ValueFlags::VALUE_CHANGED)) {
+        return AnyReturn::NOTHING_TO_DO;
+    }
     auto res = access_->SyncFromEngine(params_, *value_);
     bool firstSync = !flags_.IsSet(ValueFlags::INITIALIZED);
     flags_.Set(ValueFlags::INITIALIZED);

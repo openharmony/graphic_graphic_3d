@@ -21,7 +21,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename Type>
+template<typename Type>
 class Property {
 public:
     using ValueType = BASE_NS::remove_const_t<Type>;
@@ -32,7 +32,7 @@ public:
     Property(nullptr_t)
     {}
 
-    template <typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
+    template<typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
     Property(BASE_NS::shared_ptr<Prop> p) : p_(BASE_NS::move(p))
     {
         if (p_ && !p_->IsCompatible(UidFromType<ValueType>())) {
@@ -40,11 +40,11 @@ public:
             p_ = nullptr;
         }
     }
-    template <typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
+    template<typename Prop, typename = BASE_NS::enable_if_t<BASE_NS::is_convertible_v<Prop*, PropertyInterfaceType*>>>
     Property(NoCheckT, BASE_NS::shared_ptr<Prop> p) : p_(p)
     {}
 
-    template <typename PType,
+    template<typename PType,
         typename = BASE_NS::enable_if_t<BASE_NS::is_const_v<Type> && BASE_NS::is_same_v<PType, ValueType>>>
     Property(const Property<PType>& p) : Property(p.GetProperty())
     {}
@@ -104,16 +104,16 @@ private:
     PropertyType p_;
 };
 
-template <typename T>
+template<typename T>
 using ConstProperty = Property<const T>;
 
-template <typename T>
+template<typename T>
 inline bool operator==(const Property<T>& l, const Property<T>& r)
 {
     return l.GetProperty() == r.GetProperty();
 }
 
-template <typename T>
+template<typename T>
 inline bool operator!=(const Property<T>& l, const Property<T>& r)
 {
     return !(l == r);
@@ -123,14 +123,14 @@ META_END_NAMESPACE()
 
 // NOLINTBEGIN(readability-identifier-naming) to keep std like syntax
 
-template <typename T, typename S>
+template<typename T, typename S>
 BASE_NS::shared_ptr<T> interface_pointer_cast(const META_NS::Property<S>& p)
 {
     static_assert(META_NS::HasGetInterfaceMethod_v<T>, "T::GetInterface not defined");
     return interface_pointer_cast<T>(p.GetProperty());
 }
 
-template <typename T, typename S>
+template<typename T, typename S>
 T* interface_cast(const META_NS::Property<S>& p)
 {
     static_assert(META_NS::HasGetInterfaceMethod_v<T>, "T::GetInterface not defined");

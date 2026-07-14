@@ -31,7 +31,7 @@
             "renderSlot": "CORE3D_RS_DM_FW_OPAQUE",
             "vert": "3dshaders://shader/core3d_dm_fw.vert.spv",
             "frag": "mrtshaders://shader/mrt_dm_fw.frag.spv",
-            "vertexInputDeclaration": "3dvertexinputdeclarations://core3d_dm_fw.shadervid",
+            "vertexInputDeclaration": "mrtvertexinputdeclarations://mrt_high_precision_uv.shadervid",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_fw.shaderpl",
             "state": {
                 "rasterizationState": {
@@ -67,7 +67,7 @@
             "renderSlot": "CORE3D_RS_DM_FW_TRANSLUCENT",
             "vert": "3dshaders://shader/core3d_dm_fw.vert.spv",
             "frag": "mrtshaders://shader/mrt_dm_fw.frag.spv",
-            "vertexInputDeclaration": "3dvertexinputdeclarations://core3d_dm_fw.shadervid",
+            "vertexInputDeclaration": "mrtvertexinputdeclarations://mrt_high_precision_uv.shadervid",
             "pipelineLayout": "3dpipelinelayouts://core3d_dm_fw.shaderpl",
             "state": {
                 "rasterizationState": {

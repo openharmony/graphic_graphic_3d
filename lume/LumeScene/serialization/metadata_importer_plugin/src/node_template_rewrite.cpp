@@ -131,7 +131,7 @@ public:
         node = META_NS::GetObjectRegistry().Create<META_NS::INilNode>(META_NS::ClassId::NilNode);
     }
 
-    template <typename NodeType, typename Type>
+    template<typename NodeType, typename Type>
     void SetNode(META_NS::ObjectId id, const Type& v)
     {
         auto nn = META_NS::GetObjectRegistry().Create<NodeType>(id);

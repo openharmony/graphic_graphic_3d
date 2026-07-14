@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template <typename Type>
+template<typename Type>
 void AddToQueue(BASE_NS::vector<const IIterable*>& vec, const Type& t)
 {
     if constexpr (IsInterfacePtr_v<PlainType_t<Type>> || IsKindOfIInterface_v<Type>) {
@@ -31,7 +31,7 @@ void AddToQueue(BASE_NS::vector<const IIterable*>& vec, const Type& t)
     }
 }
 
-template <template <typename> class InterableCallable, typename Iterable, typename Func>
+template<template<typename> class InterableCallable, typename Iterable, typename Func>
 IterationResult BreadthFirstOrderIterate(const Iterable& i, Func& func, IterateStrategy is)
 {
     auto ite = interface_cast<IIterable>(i);
@@ -65,7 +65,7 @@ IterationResult BreadthFirstOrderIterate(const Iterable& i, Func& func, IterateS
     return res;
 }
 
-template <template <typename> class InterableCallable, typename Iterable>
+template<template<typename> class InterableCallable, typename Iterable>
 IterationResult BreadthFirstOrderIterate(const Iterable& i, ICallable& func, IterateStrategy is)
 {
     using CallableType = InterableCallable<IObject::Ptr>;

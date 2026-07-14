@@ -80,10 +80,10 @@ inline bool IsValid(const Entity entity)
 CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template <typename T>
+template<typename T>
 uint64_t hash(const T&);
 
-template <>
+template<>
 inline uint64_t hash(const CORE_NS::Entity& value)
 {
     return value.id;

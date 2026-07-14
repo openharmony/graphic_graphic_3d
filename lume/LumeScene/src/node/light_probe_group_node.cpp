@@ -38,7 +38,7 @@ CORE_NS::Entity LightProbeGroupNode::CreateEntity(const IInternalScene::Ptr& sce
 }
 
 namespace Internal {
-template <class Fn>
+template<class Fn>
 auto CallLightProbeComponentMananer(const IInternalScene::Ptr& is, CORE_NS::Entity entity, Fn&& fn)
 {
     CORE3D_NS::ILightProbeGroupComponentManager* m{};

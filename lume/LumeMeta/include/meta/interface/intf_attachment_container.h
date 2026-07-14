@@ -51,7 +51,7 @@ public:
     {
         return Attach(attachment, {});
     }
-    template <class T>
+    template<class T>
     bool Attach(const T& object)
     {
         return Attach(interface_pointer_cast<IObject>(object), {});
@@ -60,7 +60,7 @@ public:
      * @brief See IAttach::Attach()
      */
     virtual bool Attach(const IObject::Ptr& attachment, const IObject::Ptr& dataContext) = 0;
-    template <class T, class U>
+    template<class T, class U>
     bool Attach(const T& object, const U& dataContext)
     {
         return Attach(interface_pointer_cast<IObject>(object), interface_pointer_cast<IObject>(dataContext));
@@ -75,7 +75,7 @@ public:
      * @return True if the operation succeeded. False otherwise.
      */
     virtual bool Attach(IContainer::SizeType pos, const IObject::Ptr& attachment, const IObject::Ptr& dataContext) = 0;
-    template <class T, class U>
+    template<class T, class U>
     bool Attach(IContainer::SizeType pos, const T& object, const U& dataContext)
     {
         return Attach(pos, interface_pointer_cast<IObject>(object), interface_pointer_cast<IObject>(dataContext));
@@ -84,7 +84,7 @@ public:
      * @brief See IAttach::Detach()
      */
     virtual bool Detach(const IObject::Ptr& attachment) = 0;
-    template <class T>
+    template<class T>
     bool Detach(const T& object)
     {
         return Detach(interface_pointer_cast<IObject>(object));
@@ -96,7 +96,7 @@ public:
     {
         return GetAttachments({}, false);
     }
-    template <class T>
+    template<class T>
     BASE_NS::vector<typename T::Ptr> GetAttachments()
     {
         return PtrArrayCast<T>(GetAttachments({}, false));

@@ -31,6 +31,7 @@
 #include "objects/light_node.h"
 #include "objects/light_probe_group_node.h"
 #include "objects/material.h"
+#include "objects/mesh.h"
 #include "objects/node.h"
 #include "objects/node_template.h"
 #include "objects/postprocess.h"
@@ -47,7 +48,14 @@ static void RegisterTopTypes(StaticImporterConfig& config)
     config.topTypes["scene"] = BASE_NS::make_unique<ImportScene>();
     config.topTypes["resourceIndex"] = BASE_NS::make_unique<ImportIndex>();
     config.topTypes["nodeTemplate"] = BASE_NS::make_unique<ImportNodeTemplate>();
-    config.topTypes["material"] = BASE_NS::make_unique<ImportMaterial>();
+    config.topTypes["metallicRoughnessMaterial"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
+    config.topTypes["unlitMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT);
+    config.topTypes["unlitShadowAlphaMaterial"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
+    config.topTypes["customMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::CUSTOM);
+    config.topTypes["occlusionMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::OCCLUSION);
+    config.topTypes["mesh"] = BASE_NS::make_unique<ImportMesh>();
     config.topTypes["environment"] = BASE_NS::make_unique<ImportEnvironment>();
     config.topTypes["image"] = BASE_NS::make_unique<ImportImage>();
     config.topTypes["postProcess"] = BASE_NS::make_unique<ImportPostProcess>();
@@ -77,10 +85,23 @@ static void RegisterNodeAndAnimationSubTypes(StaticImporterConfig& config)
 
 static void RegisterResourceSubTypes(StaticImporterConfig& config)
 {
-    config.subTypes["material"] = BASE_NS::make_unique<ImportMaterial>();
-    config.subTypes["materialTemplate"] = BASE_NS::make_unique<ImportMaterial>();
-    config.subTypes["occlusionMaterial"] = BASE_NS::make_unique<ImportMaterial>();
-    config.subTypes["occlusionMaterialTemplate"] = BASE_NS::make_unique<ImportMaterial>();
+    config.subTypes["metallicRoughnessMaterial"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
+    config.subTypes["metallicRoughnessMaterialTemplate"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::METALLIC_ROUGHNESS);
+    config.subTypes["unlitMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT);
+    config.subTypes["unlitMaterialTemplate"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT);
+    config.subTypes["unlitShadowAlphaMaterial"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
+    config.subTypes["unlitShadowAlphaMaterialTemplate"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::UNLIT_SHADOW_ALPHA);
+    config.subTypes["customMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::CUSTOM);
+    config.subTypes["customMaterialTemplate"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::CUSTOM);
+    config.subTypes["occlusionMaterial"] = BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::OCCLUSION);
+    config.subTypes["occlusionMaterialTemplate"] =
+        BASE_NS::make_unique<ImportMaterial>(SCENE_NS::MaterialType::OCCLUSION);
+    config.subTypes["mesh"] = BASE_NS::make_unique<ImportMesh>();
+    config.subTypes["meshTemplate"] = BASE_NS::make_unique<ImportMesh>();
     config.subTypes["environment"] = BASE_NS::make_unique<ImportEnvironment>();
     config.subTypes["environmentTemplate"] = BASE_NS::make_unique<ImportEnvironment>();
     config.subTypes["image"] = BASE_NS::make_unique<ImportImage>();
@@ -98,7 +119,13 @@ static void RegisterBuiltinSubTypes(StaticImporterConfig& config)
     config.subTypes["color"] = BASE_NS::make_unique<ImportColor>();
     config.subTypes["quat"] = BASE_NS::make_unique<ImportQuat>();
     config.subTypes["uvec2"] = BASE_NS::make_unique<ImportUVec2>();
+    config.subTypes["uvec3"] = BASE_NS::make_unique<ImportUVec3>();
+    config.subTypes["uvec4"] = BASE_NS::make_unique<ImportUVec4>();
+    config.subTypes["ivec2"] = BASE_NS::make_unique<ImportIVec2>();
+    config.subTypes["ivec3"] = BASE_NS::make_unique<ImportIVec3>();
+    config.subTypes["ivec4"] = BASE_NS::make_unique<ImportIVec4>();
     config.subTypes["mat4x4"] = BASE_NS::make_unique<ImportMat4x4>();
+    config.subTypes["timeSpan"] = BASE_NS::make_unique<ImportTimeSpan>();
     config.subTypes["objectRef"] = BASE_NS::make_unique<ImportObjectRef>();
 }
 

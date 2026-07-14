@@ -81,14 +81,14 @@ inline const StaticMetadata* FindStaticMetadata(
     return base ? FindStaticMetadata(*base, name, type) : nullptr;
 }
 
-template <typename Interface>
+template<typename Interface>
 struct MetadataObject {
     typename Interface::Ptr object{};
     bool isForward{};
 };
 
 /// Construct entity from given metadata
-template <typename Interface>
+template<typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(const IOwner::Ptr& self, const StaticMetadata& pm)
 {
     auto res = pm.create(self, pm);
@@ -100,7 +100,7 @@ MetadataObject<Interface> ConstructFromMetadata(const IOwner::Ptr& self, const S
 }
 
 /// Find and construct entity with given criteria starting search from static metadata
-template <typename Interface>
+template<typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(
     const IOwner::Ptr& self, const StaticObjectMetadata& sm, BASE_NS::string_view name, MetadataType type)
 {
@@ -111,7 +111,7 @@ MetadataObject<Interface> ConstructFromMetadata(
 }
 
 /// Find and construct entity with given criteria for object
-template <typename Interface>
+template<typename Interface>
 MetadataObject<Interface> ConstructFromMetadata(const IOwner::Ptr& self, BASE_NS::string_view name, MetadataType type)
 {
     if (auto s = interface_cast<IStaticMetadata>(self)) {

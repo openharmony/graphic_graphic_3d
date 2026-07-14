@@ -123,6 +123,7 @@ ohos_source_set("lume_scenewidget_src") {
     "src/mesh/mesh.h",
     "src/mesh/mesh_creator.cpp",
     "src/mesh/mesh_creator.h",
+    "src/mesh/mesh_resource.h",
     "src/mesh/sampler.cpp",
     "src/mesh/sampler.h",
     "src/mesh/submesh.cpp",
@@ -243,8 +244,7 @@ ohos_source_set("lume_scenewidget_src") {
   external_deps = [
     "c_utils:utils",
     "egl:libEGL",
-    "opengles:libGLES",
-    "bounds_checking_function:libsec_shared",
+    "opengles:libGLES"
   ]
 
   if (RENDER_BUILD_VULKAN) {
@@ -371,10 +371,7 @@ ohos_source_set("lume_scene_metadata_importer_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
   ]
 
-  external_deps = [
-    "c_utils:utils",
-    "bounds_checking_function:libsec_shared",
-  ]
+  external_deps = [ "c_utils:utils" ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [ "vulkan-headers:vulkan_headers" ]
@@ -478,6 +475,8 @@ ohos_source_set("lume_scene_importer_src") {
     "serialization/importer_plugin/src/objects/light_probe_group_node.h",
     "serialization/importer_plugin/src/objects/material.cpp",
     "serialization/importer_plugin/src/objects/material.h",
+    "serialization/importer_plugin/src/objects/mesh.cpp",
+    "serialization/importer_plugin/src/objects/mesh.h",
     "serialization/importer_plugin/src/objects/node.cpp",
     "serialization/importer_plugin/src/objects/node.h",
     "serialization/importer_plugin/src/objects/node_template.cpp",
@@ -516,10 +515,7 @@ ohos_source_set("lume_scene_importer_src") {
     "${LUME_CORE_PATH}/ecshelper:libAGPEcshelper",
   ]
 
-  external_deps = [
-    "c_utils:utils",
-    "bounds_checking_function:libsec_shared",
-  ]
+  external_deps = [ "c_utils:utils" ]
 
   if (RENDER_BUILD_VULKAN) {
     external_deps += [ "vulkan-headers:vulkan_headers" ]

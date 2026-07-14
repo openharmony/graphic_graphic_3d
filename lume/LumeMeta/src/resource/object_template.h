@@ -21,21 +21,24 @@
 #include <meta/ext/implementation_macros.h>
 #include <meta/ext/object.h>
 #include <meta/ext/resource/resource.h>
+#include <meta/interface/intf_named.h>
 #include <meta/interface/resource/intf_object_template.h>
 #include <meta/interface/serialization/intf_export_context.h>
 #include <meta/interface/serialization/intf_serializable.h>
 
 META_BEGIN_NAMESPACE()
 
-class ObjectTemplate : public IntroduceInterfaces<MetaObject, Resource, IObjectTemplate, IIterable> {
+class ObjectTemplate : public IntroduceInterfaces<MetaObject, INamed, Resource, IObjectTemplate, IIterable> {
     META_OBJECT(ObjectTemplate, ClassId::ObjectTemplate, IntroduceInterfaces)
 public:
     META_BEGIN_STATIC_DATA()
+    META_STATIC_PROPERTY_DATA(INamed, BASE_NS::string, Name)
     META_STATIC_PROPERTY_DATA(IContent, IObject::Ptr, Content)
     META_STATIC_PROPERTY_DATA(IContent, bool, ContentSearchable)
     META_STATIC_PROPERTY_DATA(IObjectTemplate, ObjectId, Instantiator)
     META_END_STATIC_DATA()
 
+    META_IMPLEMENT_PROPERTY(BASE_NS::string, Name)
     META_IMPLEMENT_READONLY_PROPERTY(IObject::Ptr, Content)
     META_IMPLEMENT_PROPERTY(bool, ContentSearchable)
     META_IMPLEMENT_PROPERTY(ObjectId, Instantiator)
@@ -50,6 +53,8 @@ public:
 
     CORE_NS::ResourceType GetResourceType() const override;
 
+    BASE_NS::string GetName() const override;
+
     ReturnError Export(IExportContext& c) const override
     {
         if (!c.IsTopLevelObject()) {
@@ -59,7 +64,7 @@ public:
     }
 
 private:
-    template <typename Func>
+    template<typename Func>
     IterationResult IterateImpl(const Func& f) const;
 };
 

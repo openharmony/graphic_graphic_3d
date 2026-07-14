@@ -35,7 +35,7 @@ using namespace CORE_NS;
 using namespace CORE3D_NS;
 
 namespace {
-template <typename ComponentManager>
+template<typename ComponentManager>
 void EnsureComponentManager(IEcs& ecs)
 {
     if (GetManager<ComponentManager>(ecs)) {

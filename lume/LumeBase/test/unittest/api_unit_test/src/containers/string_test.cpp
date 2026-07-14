@@ -909,7 +909,7 @@ UNIT_TEST(API_ContainersString, NonMemberAppend, testing::ext::TestSize.Level1)
     NonMemberAppend(LONG_STRING, SHORT_STRING);
     NonMemberAppend(LONG_STRING, LONG_STRING);
 }
-template <typename AllT>
+template<typename AllT>
 void CustomAllocatorAppend(const char* initialValue, const char* appendValue, BASE_NS::allocator alloc,
     AllT* customAllocator, bool expectedResult = true)
 {
@@ -1008,7 +1008,7 @@ UNIT_TEST(API_ContainersString, Resize, testing::ext::TestSize.Level1)
     Compare(testString, BASE_NS::string_view("", 0));
 }
 
-template <typename Lhs, typename Rhs>
+template<typename Lhs, typename Rhs>
 void CompareTest(Lhs lhs, Rhs rhs)
 {
     EXPECT_TRUE(lhs == lhs);

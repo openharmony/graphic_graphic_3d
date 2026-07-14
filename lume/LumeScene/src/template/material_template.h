@@ -50,7 +50,7 @@ protected:
     bool CopyFromTyped(const META_NS::IObject& source, bool onlySetValues) override;
     void CloneSubObjects(const META_NS::IMetadata& srcMeta, META_NS::IMetadata& cloneMeta) const override;
     bool ApplyOptions(CORE_NS::IResource& res, const CORE_NS::ResourceContextPtr& context) const override;
-    bool ApplyTo(META_NS::IObject& target) const override;
+    bool ApplyToTarget(META_NS::IObject& target, bool asDefault) const override;
 
 private:
     bool CopyFromMaterial(const IMaterial& material, bool onlySetValues);
@@ -66,14 +66,6 @@ private:
     auto LightingFlags()
     {
         return PropertyByName<SCENE_NS::LightingFlags>("LightingFlags");
-    }
-    auto MaterialShader()
-    {
-        return PropertyByName<IShader::Ptr>("MaterialShader");
-    }
-    auto DepthShader()
-    {
-        return PropertyByName<IShader::Ptr>("DepthShader");
     }
     auto RenderSort()
     {

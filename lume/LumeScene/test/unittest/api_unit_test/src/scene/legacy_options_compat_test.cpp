@@ -23,9 +23,12 @@
 
 #include <scene/api/resource_utils.h>
 #include <scene/ext/intf_render_resource.h>
+#include <scene/interface/intf_environment.h>
 #include <scene/interface/intf_material.h>
+#include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_scene.h>
 #include <scene/interface/intf_scene_manager.h>
+#include <scene/interface/postprocess/intf_bloom.h>
 #include <scene/interface/resource/intf_render_resource_manager.h>
 #include <scene/interface/resource/types.h>
 #include <scene/interface/template/intf_resource_template.h>
@@ -252,9 +255,98 @@ UNIT_TEST_F(API_LegacyOptionsCompatTest, CreateTemplateForMaterialResource, test
     auto flags = meta->GetProperty<LightingFlags>("LightingFlags");
     ASSERT_TRUE(flags);
     EXPECT_EQ(flags->GetValue(), LightingFlags::SHADOW_CASTER_BIT);
-    auto sh = meta->GetProperty<IShader::Ptr>("MaterialShader");
+    // Templates carry resource refs as ResourceId, not as typed pointers; the apply path
+    // resolves them against the live scene's resource manager.
+    auto sh = meta->GetProperty<CORE_NS::ResourceId>("MaterialShader");
     ASSERT_TRUE(sh);
-    EXPECT_EQ(sh->GetValue(), shader);
+    auto shRes = interface_pointer_cast<CORE_NS::IResource>(shader);
+    ASSERT_TRUE(shRes);
+    EXPECT_EQ(sh->GetValue(), shRes->GetResourceId());
+}
+
+/**
+ * @tc.name: CreateTemplateForEnvironmentResource
+ * @tc.desc: CreateTemplateForResource builds an EnvironmentTemplate whose RadianceImage and
+ *           EnvironmentImage are captured as CORE_NS::ResourceId, read off the bound live
+ *           IImage's GetResourceId(). Exercises the generic CopyOnePropertyExcept capture
+ *           path (EnvironmentTemplate has no CopyFromTyped override).
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_LegacyOptionsCompatTest, CreateTemplateForEnvironmentResource, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto bitmap = CreateTestBitmap();
+    ASSERT_TRUE(bitmap);
+    const auto imgId = interface_cast<CORE_NS::IResource>(bitmap.get())->GetResourceId();
+    ASSERT_TRUE(imgId.IsValid());
+
+    auto env = scene->CreateObject<IEnvironment>(ClassId::Environment).GetResult();
+    ASSERT_TRUE(env);
+    env->RadianceImage()->SetValue(bitmap);
+    env->EnvironmentImage()->SetValue(bitmap);
+
+    auto res = interface_pointer_cast<CORE_NS::IResource>(env);
+    ASSERT_TRUE(res);
+
+    auto templ = CreateTemplateForResource(res);
+    ASSERT_TRUE(templ);
+
+    auto meta = interface_cast<META_NS::IMetadata>(templ);
+    ASSERT_TRUE(meta);
+    auto radId = meta->GetProperty<CORE_NS::ResourceId>("RadianceImage");
+    ASSERT_TRUE(radId);
+    EXPECT_EQ(radId->GetValue(), imgId);
+    auto envId = meta->GetProperty<CORE_NS::ResourceId>("EnvironmentImage");
+    ASSERT_TRUE(envId);
+    EXPECT_EQ(envId->GetValue(), imgId);
+}
+
+/**
+ * @tc.name: CreateTemplateForPostProcessResource
+ * @tc.desc: CreateTemplateForResource builds a PostProcessTemplate whose Bloom sub-object
+ *           is captured as a fresh sub-object on the template (not a shared pointer back
+ *           into the live IPostProcess), and the sub-object's DirtMaskImage resource ref
+ *           is captured as CORE_NS::ResourceId. Exercises CopyOnePropertyExcept's owned-
+ *           sub-object capture branch and its recursive descent.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_LegacyOptionsCompatTest, CreateTemplateForPostProcessResource, testing::ext::TestSize.Level1)
+{
+    auto scene = CreateEmptyScene();
+    ASSERT_TRUE(scene);
+
+    auto bitmap = CreateTestBitmap();
+    ASSERT_TRUE(bitmap);
+    const auto imgId = interface_cast<CORE_NS::IResource>(bitmap.get())->GetResourceId();
+    ASSERT_TRUE(imgId.IsValid());
+
+    auto pp = scene->CreateObject<IPostProcess>(ClassId::PostProcess).GetResult();
+    ASSERT_TRUE(pp);
+    auto bloom = META_NS::GetValue(pp->Bloom());
+    ASSERT_TRUE(bloom);
+    bloom->Enabled()->SetValue(true);
+    bloom->DirtMaskImage()->SetValue(bitmap);
+
+    auto res = interface_pointer_cast<CORE_NS::IResource>(pp);
+    ASSERT_TRUE(res);
+
+    auto templ = CreateTemplateForResource(res);
+    ASSERT_TRUE(templ);
+
+    auto meta = interface_cast<META_NS::IMetadata>(templ);
+    ASSERT_TRUE(meta);
+    auto bloomProp = meta->GetProperty<META_NS::IObject::Ptr>("Bloom");
+    ASSERT_TRUE(bloomProp);
+    auto bloomSub = META_NS::GetPointer<META_NS::IMetadata>(bloomProp);
+    ASSERT_TRUE(bloomSub);
+    // The captured template owns a fresh sub-object — not a shared pointer back into the
+    // live IBloom — so the captured Bloom should NOT also implement IBloom.
+    EXPECT_FALSE(interface_cast<IBloom>(bloomSub.get()));
+    auto dirtId = bloomSub->GetProperty<CORE_NS::ResourceId>("DirtMaskImage");
+    ASSERT_TRUE(dirtId);
+    EXPECT_EQ(dirtId->GetValue(), imgId);
 }
 
 /**

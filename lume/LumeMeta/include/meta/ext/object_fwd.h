@@ -30,12 +30,12 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename T>
+template<typename T>
 inline T DefaultResult()
 {
     return T{};
 }
-template <>
+template<>
 inline void DefaultResult<void>()
 {}
 #define META_IMPL_CALL_BASE(Interface, Function)                \

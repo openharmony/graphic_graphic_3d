@@ -15,6 +15,7 @@
 
 #include "attachment.h"
 
+#include <meta/api/object_name.h>
 #include <meta/api/util.h>
 #include <meta/interface/intf_attach.h>
 
@@ -45,6 +46,15 @@ IDiagnostics::Ptr ImportAttachment(ImportContext& context, const META_NS::IObjec
     }
     if (context.IsTemplateContext()) {
         META_NS::SetObjectFlags(obj, IMPORTED_FROM_TEMPLATE_BIT, true);
+    }
+    auto name = GetOptString(context, "name");
+    if (h.HandleOptValue(name)) {
+        if (name.error) {
+            return name.error;
+        }
+    }
+    if (name.value) {
+        META_NS::SetName(obj, *name.value);
     }
     if (auto err = ImportProperties(context, *obj); h.Handle(err)) {
         return err;

@@ -152,7 +152,14 @@ struct ObjectResolver {
             CORE_LOG_W("No such property for object [%s]", name.c_str());
             return ImportResult{context_.CreateDiagnostics("No such property for object [" + name + "]")};
         }
-        if (!path.empty()) {
+        if (path.empty()) {
+            // Terminal property: surface the wrapper this property was looked
+            // up on so callers can do correct readonly checks on forwarded
+            // properties.
+            if (parent_) {
+                *parent_ = obj;
+            }
+        } else {
             // if the path is not empty we try to take the object in the property to continue
             auto res = GetIObjectFromProperty(p, index);
             if (!res) {
@@ -316,16 +323,24 @@ struct ObjectResolver {
         return ResolveRecursive(obj, path);
     }
 
+    void SetParentOut(META_NS::IObject::Ptr* parent)
+    {
+        parent_ = parent;
+    }
+
 private:
     ImportContext& context_;
+    META_NS::IObject::Ptr* parent_{};
 };
 }  // namespace
 
-ImportResult ResolveObject(
-    ImportContext& context, const META_NS::IObject::Ptr& base, BASE_NS::string_view path, bool onlyChildren)
+ImportResult ResolveObject(ImportContext& context, const META_NS::IObject::Ptr& base, BASE_NS::string_view path,
+    bool onlyChildren, META_NS::IObject::Ptr* parent)
 {
     SCENE_IMP_CPU_PERF_SCOPE("Import", "ResolveObject");
-    auto res = ObjectResolver(context).Resolve(base, path, onlyChildren);
+    ObjectResolver resolver(context);
+    resolver.SetParentOut(parent);
+    auto res = resolver.Resolve(base, path, onlyChildren);
     if (res.error) {
         CORE_LOG_W("Resolving object failed (%s)", BASE_NS::string(path).c_str());
     }

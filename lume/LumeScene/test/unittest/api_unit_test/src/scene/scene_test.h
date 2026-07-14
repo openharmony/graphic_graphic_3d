@@ -51,7 +51,7 @@ META_TYPE(CORE3D_NS::MeshComponent::Submesh)
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
 
-template <typename Type>
+template<typename Type>
 Type ReadValueFromEngine(const META_NS::EnginePropertyParams& params)
 {
     Type res{};
@@ -142,13 +142,13 @@ public:
         }
     }
 
-    template <typename Type>
+    template<typename Type>
     void CheckNativePropertyValue(META_NS::IProperty::ConstPtr p, const Type& v)
     {
         CheckNativePropertyValue<Type>(p, v, [](const Type& a, const Type& b) { return a == b; });
     }
 
-    template <typename Type>
+    template<typename Type>
     void CheckNativePropertyValue(
         META_NS::IProperty::ConstPtr p, const Type& v, std::function<bool(const Type&, const Type&)> isEqual)
     {

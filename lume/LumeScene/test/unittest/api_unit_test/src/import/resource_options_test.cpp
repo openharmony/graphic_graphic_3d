@@ -204,6 +204,15 @@ UNIT_TEST_F(API_ResourceOptionsTest, DerivedFromWithPropertyOverride, testing::e
 
     // Overridden by derived options
     EXPECT_FLOAT_EQ(META_NS::GetValue(mat->AlphaCutoff()), 0.75f);
+
+    // Characterization of the derivedFrom apply (ApplyBaseResource -> baseTmpl->ApplyTo at
+    // resource_template_base.cpp:673). Captures CURRENT behaviour: these values land as OVERRIDES,
+    // not defaults. Pins this path so the upcoming standalone-ApplyTo defaults change cannot alter
+    // the ApplyOptions/derivedFrom behaviour (the fix must route :673 through asDefault=false).
+    // Must stay true.
+    EXPECT_TRUE(mat->Type().GetProperty()->IsValueSet());
+    EXPECT_TRUE(mat->LightingFlags().GetProperty()->IsValueSet());
+    EXPECT_TRUE(mat->AlphaCutoff().GetProperty()->IsValueSet());
 }
 
 // ---------------------------------------------------------------------------

@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template <typename Enum, size_t... Index>
+template<typename Enum, size_t... Index>
 BASE_NS::array_view<const META_NS::EnumValue> GetValues(const EnumValue<Enum>* const values, IndexSequence<Index...>)
 {
     static const META_NS::EnumValue arr[]{values[Index].info...};
@@ -30,10 +30,10 @@ BASE_NS::array_view<const META_NS::EnumValue> GetValues(const EnumValue<Enum>* c
 
 }  // namespace Internal
 
-template <typename T>
+template<typename T>
 using EnumCompatType = BASE_NS::conditional_t<BASE_NS::is_unsigned_v<BASE_NS::underlying_type_t<T>>, uint64_t, int64_t>;
 
-template <typename Type>
+template<typename Type>
 class EnumBase : public MultiTypeAny<Type, StaticCastConv, EnumCompatType<Type>> {
 public:
     explicit EnumBase(Type v = {})
@@ -61,7 +61,7 @@ private:
     Type value_{};
 };
 
-template <typename Type>
+template<typename Type>
 class ArrayEnumBase : public ArrayMultiTypeAnyBase<Type> {
     using Super = ArrayMultiTypeAnyBase<Type>;
 
@@ -83,7 +83,7 @@ public:
     }
 };
 
-template <typename Type>
+template<typename Type>
 IAny::Ptr EnumBase<Type>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {
@@ -92,7 +92,7 @@ IAny::Ptr EnumBase<Type>::Clone(const AnyCloneOptions& options) const
     return IAny::Ptr(new EnumBase{options.value == CloneValueType::COPY_VALUE ? this->value_ : Type{}});
 }
 
-template <typename EnumType>
+template<typename EnumType>
 class Enum : public IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum> {
 public:
     using Super = IntroduceInterfaces<EnumBase<typename EnumType::Type>, IEnum>;
@@ -189,7 +189,7 @@ private:
     Type value_{EnumType::DEFAULT_VALUE};
 };
 
-template <typename EnumType>
+template<typename EnumType>
 class ArrayEnum : public ArrayEnumBase<typename EnumType::Type> {
     using Type = typename EnumType::Type;
     using Super = ArrayEnumBase<Type>;
@@ -212,7 +212,7 @@ public:
     }
 };
 
-template <typename EnumType>
+template<typename EnumType>
 IAny::Ptr Enum<EnumType>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {

@@ -41,9 +41,9 @@ public:
 private:
     Device& device_;
     GpuResourceManager& gpuResourceMgr_;
-    uint32_t bufferingIndex_ { 0 };
+    uint32_t bufferingIndex_{0};
 };
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_NODE_CONTEXT_POOL_MANAGER_MLN_H
+#endif  // MALEOON_NODE_CONTEXT_POOL_MANAGER_MLN_H

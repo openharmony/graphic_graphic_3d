@@ -91,7 +91,7 @@ public:
 /**
  * @brief Callable interface for IIterable
  */
-template <typename Type>
+template<typename Type>
 class IIterableCallable : public ICallable {
     META_INTERFACE(ICallable, IIterableCallable, UidFromType<Type>())
 public:
@@ -102,7 +102,7 @@ public:
 /**
  * @brief Callable interface for IIterable with const reference
  */
-template <typename Type>
+template<typename Type>
 class IIterableConstCallable : public ICallable {
     META_INTERFACE(ICallable, IIterableConstCallable, UidFromType<Type>())
 public:

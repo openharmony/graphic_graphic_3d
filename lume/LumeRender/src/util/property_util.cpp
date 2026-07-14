@@ -388,7 +388,7 @@ size_t CustomPropertyPodHelper::GetPropertyTypeAlignment(const PropertyTypeDecl&
     return align;
 }
 
-template <typename T>
+template<typename T>
 inline void SafeFromJsonValue(const json::value* value, T& val)
 {
     if (value) {
@@ -472,7 +472,7 @@ void CustomPropertyPodHelper::SetCustomPropertyBlobValue(const PropertyTypeDecl&
 
 // bindings
 
-template <typename T>
+template<typename T>
 inline void DestroyHelper(T& t)
 {
     {

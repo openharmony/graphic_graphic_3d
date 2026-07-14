@@ -27,7 +27,7 @@ namespace UTest {
 
 class API_ScenePluginLightComponentTest : public ScenePluginComponentTest<CORE3D_NS::ILightComponentManager> {
 protected:
-    template <class T>
+    template<class T>
     void TestILightPropertyGetters(T* light)
     {
         EXPECT_TRUE(light->Color());

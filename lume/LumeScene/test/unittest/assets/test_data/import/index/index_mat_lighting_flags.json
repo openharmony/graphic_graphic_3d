@@ -13,7 +13,9 @@
 						"shadowReceiver",
 						"shadowCaster",
 						"punctualLightReceiver",
-						"indirectLightReceiver"
+						"indirectLightReceiver",
+						"indirectIrradianceLightReceiver",
+						"lightProbeReceiver"
 					]
 				}
 			},

@@ -30,7 +30,7 @@ SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template <typename PPInterface, uint32_t PPBit>
+template<typename PPInterface, uint32_t PPBit>
 class PostProcessEffect : public META_NS::IntroduceInterfaces<EcsLazyProperty, IPPEffectInit, META_NS::IContainable,
                               META_NS::IMutableContainable, PPInterface> {
 public:

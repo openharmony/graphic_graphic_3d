@@ -241,7 +241,7 @@ struct StringTable {
     }
 };
 
-template <typename T>
+template<typename T>
 void FillCoffHead(T& obj, bool x64)
 {
     // fill coff header.
@@ -254,7 +254,7 @@ void FillCoffHead(T& obj, bool x64)
     obj.coffHead.characteristics = 0;  // if x86 use IMAGE_FILE_32BIT_MACHINE ?
 }
 
-template <typename T>
+template<typename T>
 size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
 {
     if (!x64) {
@@ -278,7 +278,7 @@ size_t FillCoffSymbtable(T& obj, StringTable& stringtable, bool x64)
     return stringTableSize;
 }
 
-template <typename T>
+template<typename T>
 void FillCoffSectionAndSymtable(
     T& obj, size_t stringTableSize, const size_t sizeOfSection, const std::string& secname, bool x64)
 {
@@ -375,7 +375,7 @@ struct Elf64Bit {
     Elf64_Sym symbs[3];
 };
 
-template <class Type>
+template<class Type>
 void FillElfHead(Type& o, uint8_t arch)
 {
     o.head.type = ET_REL;
@@ -388,7 +388,7 @@ void FillElfHead(Type& o, uint8_t arch)
     o.head.shstrndx = 1;
 }
 
-template <class Type>
+template<class Type>
 bool FillElfSectionAndSymbtable(Type& o, uint8_t arch, StringTable& stringtable, size_t sizeOfData)
 {
     o.symbs[2].name = stringtable.AddString(g_dataName);
@@ -416,7 +416,7 @@ bool FillElfSectionAndSymbtable(Type& o, uint8_t arch, StringTable& stringtable,
     return true;
 }
 
-template <class Type>
+template<class Type>
 bool FillElfSection(Type& o, uint8_t arch, const std::string& secname, StringTable& stringtable, size_t sizeOfSection)
 {
     std::string tmp = ".rodata.";
@@ -439,7 +439,7 @@ bool FillElfSection(Type& o, uint8_t arch, const std::string& secname, StringTab
     return true;
 }
 
-template <class Type>
+template<class Type>
 bool WriteElf(uint8_t arch, const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data)
 {
     if (sizeOfData > SIZE_MAX - sizeof(uint64_t)) {
@@ -672,7 +672,7 @@ bool WritePadding(size_t count, FILE* f)
     return !ferror(f);
 }
 
-template <typename T1>
+template<typename T1>
 bool MachoWriteArchitechtureData(size_t padding, size_t sizeOfSection, size_t sectionAlign, const std::string& dataName,
     const std::string& sizeName, const void* data, const T1& sect, const MachHeader64& header, FILE* e)
 {
@@ -701,7 +701,7 @@ bool MachoWriteArchitechtureData(size_t padding, size_t sizeOfSection, size_t se
     return true;
 }
 
-template <typename T1>
+template<typename T1>
 bool MachoWriteFile(const std::string& fname, const T1& sect, const MachoPaddingInfo& slices,
     const std::string& dataName, const std::string& sizeName, const void* data, size_t endPadding, size_t sectionAlign,
     size_t sizeOfSection)
@@ -751,7 +751,8 @@ size_t CalculateAlignment(std::size_t& fpos, uint32_t aligment)
 bool WriteMacho(const std::string& fname, const std::string& secname, size_t sizeOfData, const void* data)
 {
     // The fat slices need to be page aligned (to 16k pages), 16k alignment = 2^14
-    constexpr uint32_t fatAlignmentPowerOfTwo = 14, fatAlignment = 1 << fatAlignmentPowerOfTwo;
+    constexpr uint32_t fatAlignmentPowerOfTwo = 14;
+    constexpr uint32_t fatAlignment = 1 << fatAlignmentPowerOfTwo;
 
     Macho sect;
     sect.fathdr = MachoHeader();
@@ -763,11 +764,13 @@ bool WriteMacho(const std::string& fname, const std::string& secname, size_t siz
     }
     size_t fpos = 0, sizeOfSection = sizeOfData + sizeof(uint64_t);
 
-    sect.x64Header = MachoX64Header(), sect.arm64Header = MachoARM64Header();
+    sect.x64Header = MachoX64Header();
+    sect.arm64Header = MachoARM64Header();
     sect.dataSeg = MachoSegmentCommand64(sizeOfSection);
     sect.dataSect = MachoDataSection(sizeOfSection);
 
-    std::string dataName = PrefixUnderscore(g_dataName), sizeName = PrefixUnderscore(g_sizeName);
+    std::string dataName = PrefixUnderscore(g_dataName);
+    std::string sizeName = PrefixUnderscore(g_sizeName);
 
     uint32_t string_size =
         static_cast<uint32_t>(dataName.size() + sizeName.size() + 3);  // prepending plus two terminating nulls

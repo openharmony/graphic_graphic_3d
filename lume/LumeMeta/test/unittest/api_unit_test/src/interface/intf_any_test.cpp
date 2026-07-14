@@ -609,7 +609,7 @@ const TestTypes AnyTestData(
 );
 // clang-format on
 
-template <typename Type>
+template<typename Type>
 class API_TypedAnyTest : public ::testing::Test {
 public:
     API_TypedAnyTest() : value1_(AnyTestData.GetValue<Type>(0)), value2_(AnyTestData.GetValue<Type>(1))

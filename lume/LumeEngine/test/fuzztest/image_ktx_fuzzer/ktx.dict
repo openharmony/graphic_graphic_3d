@@ -1,0 +1,24 @@
+# KTX libFuzzer dictionary: file magic, endianness markers, and common glInternalFormat enums.
+
+# 12-byte KTX 1.1 identifier
+ident="\xABKTX 11\xBB\x0D\x0A\x1A\x0A"
+
+# Endianness markers (little / big endian)
+endian_le="\x01\x02\x03\x04"
+endian_be="\x04\x03\x02\x01"
+
+# ASTC glInternalFormat enums (little-endian uint32)
+astc_4x4="\xB0\x93\x00\x00"
+astc_6x6="\xB4\x93\x00\x00"
+astc_8x8="\xB7\x93\x00\x00"
+astc_12x12="\xBD\x93\x00\x00"
+astc_srgb_4x4="\xD0\x93\x00\x00"
+
+# ETC2 / EAC enums
+etc2_rgb="\x70\x9d\x00\x00"
+etc2_rgba="\x78\x9d\x00\x00"
+eac_r11="\x70\x9c\x00\x00"
+
+# Uncompressed RGBA8 / SRGB8_ALPHA8
+rgba8="\x58\x80\x00\x00"
+srgb8_alpha8="\x43\x8c\x00\x00"

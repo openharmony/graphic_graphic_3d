@@ -29,7 +29,7 @@
 CORE_BEGIN_NAMESPACE()
 struct Property;
 
-template <typename BlockType>
+template<typename BlockType>
 class PropertyApiImpl : public IPropertyApi, protected IPropertyHandle {
 public:
     PropertyApiImpl();

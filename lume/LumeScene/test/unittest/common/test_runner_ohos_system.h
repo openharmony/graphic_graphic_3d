@@ -18,6 +18,8 @@
 
 #include <jpg/implementation_uids.h>
 #include <png/implementation_uids.h>
+#include <scene_importer/plugin.h>
+#include <scene_metadata_importer/plugin.h>
 #include <scene/base/namespace.h>
 #include <scene/interface/intf_application_context.h>
 
@@ -136,7 +138,9 @@ public:
 
         CORE_NS::CreatePluginRegistry(info);
 
-        constexpr BASE_NS::Uid uids[]{JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN, SCENE_NS::UID_SCENE_PLUGIN};
+        constexpr BASE_NS::Uid uids[]{JPGPlugin::UID_JPG_PLUGIN, PNGPlugin::UID_PNG_PLUGIN,
+            SCENE_IMP_NS::UID_SCENE_IMPORTER_PLUGIN, SCENE_MIMP_NS::UID_SCENE_METADATA_IMPORTER_PLUGIN,
+            SCENE_NS::UID_SCENE_PLUGIN};
         ASSERT_TRUE(CORE_NS::GetPluginRegister().LoadPlugins(uids));
 
         g_testEnv = std::make_unique<TestEnvironment>();

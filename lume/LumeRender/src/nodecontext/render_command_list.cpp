@@ -320,7 +320,7 @@ void* AllocateRenderData(
     return rc;
 }
 
-template <typename T>
+template<typename T>
 T* AllocateRenderData(RenderCommandList::LinearAllocatorStruct& allocator, uint32_t count)
 {
     if (count > SIZE_MAX / sizeof(T)) {
@@ -329,13 +329,13 @@ T* AllocateRenderData(RenderCommandList::LinearAllocatorStruct& allocator, uint3
     return static_cast<T*>(AllocateRenderData(allocator, std::alignment_of<T>::value, sizeof(T) * count));
 }
 
-template <typename T>
+template<typename T>
 T* AllocateRenderCommand(RenderCommandList::LinearAllocatorStruct& allocator)
 {
     return static_cast<T*>(AllocateRenderData(allocator, std::alignment_of<T>::value, sizeof(T)));
 }
 
-template <typename T>
+template<typename T>
 bool CopyGeometryArray(RenderCommandList::LinearAllocatorStruct& allocator, const array_view<const T> src, T*& outData,
     array_view<T>& outView)
 {
@@ -1217,6 +1217,18 @@ bool RenderCommandList::ProcessDepthAttachments(const RenderPassDesc& renderPass
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
     bool valid = true;
+    if (subpassRef.depthAttachmentCount > 1u) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: depth attachment count must be 0 or 1.");
+#endif
+        valid = false;
+    }
+    if (subpassRef.depthResolveAttachmentCount > 1u) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: depth resolve attachment count must be 0 or 1.");
+#endif
+        valid = false;
+    }
     if (subpassRef.depthAttachmentCount == 1) {
         const uint32_t attachmentIndex = subpassRef.depthAttachmentIndex;
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
@@ -1268,6 +1280,12 @@ bool RenderCommandList::ProcessFragmentShadingRateAttachments(const RenderPassDe
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
     bool valid = true;
+    if (subpassRef.fragmentShadingRateAttachmentCount > 1u) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+        PLUGIN_LOG_E("RENDER_VALIDATION: fragment shading rate attachment count must be 0 or 1.");
+#endif
+        valid = false;
+    }
     if (subpassRef.fragmentShadingRateAttachmentCount == 1) {
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
         const uint32_t attachmentIndex = subpassRef.fragmentShadingRateAttachmentIndex;

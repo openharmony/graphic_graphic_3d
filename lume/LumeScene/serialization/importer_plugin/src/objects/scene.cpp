@@ -45,7 +45,7 @@ static SCENE_NS::IScene::Ptr ConstructScene(ImportContext& context, const BASE_N
     }
     SCENE_NS::IScene::Ptr scene;
     if (m) {
-        scene = m->CreateScene().GetResult();
+        scene = m->CreateScene(context.GetConfig().staticConfig.options.scene).GetResult();
         if (auto named = interface_cast<META_NS::INamed>(scene)) {
             named->Name()->SetValue(name);
         }

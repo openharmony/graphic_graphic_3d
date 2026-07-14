@@ -30,7 +30,7 @@ GpuSemaphoreMln::GpuSemaphoreMln(Device& device) : device_(device)
     MLN_LOG_INIT("GpuSemaphoreMln: creating timeline semaphore");
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
 
-    MlnTimelineDescriptor timelineDesc {};
+    MlnTimelineDescriptor timelineDesc{};
     timelineDesc.extensionCount = 0;
     timelineDesc.extensions = nullptr;
     timelineDesc.flags = 0;

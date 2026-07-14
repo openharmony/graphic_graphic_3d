@@ -24,7 +24,7 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template <typename Manager>
+template<typename Manager>
 bool AddComponent(INode::Ptr node)
 {
     auto acc = interface_cast<IEcsObjectAccess>(node);

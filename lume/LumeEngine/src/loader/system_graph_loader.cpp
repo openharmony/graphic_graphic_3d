@@ -63,7 +63,7 @@ namespace {
 constexpr size_t VERSION_SIZE{5u};
 constexpr uint32_t VERSION_MAJOR{22u};
 
-template <class TYPEINFO>
+template<class TYPEINFO>
 const TYPEINFO* FindTypeInfo(const string_view name, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -75,7 +75,7 @@ const TYPEINFO* FindTypeInfo(const string_view name, const array_view<const ITyp
     return nullptr;
 }
 
-template <class TYPEINFO>
+template<class TYPEINFO>
 const TYPEINFO* FindTypeInfo(const Uid& uid, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -91,7 +91,7 @@ struct PropertyValue {
     const IPropertyHandle* handle;
     void* offset;
     const Property* info;
-    template <typename Type>
+    template<typename Type>
     Type& Get() const
     {
         return *static_cast<Type*>(offset);
@@ -99,7 +99,7 @@ struct PropertyValue {
 };
 
 // For primitive types..
-template <typename ElementType>
+template<typename ElementType>
 void ReadArrayPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     ElementType* output = &propertyData.Get<ElementType>();
@@ -119,7 +119,7 @@ void ReadArrayPropertyValue(const json::value& jsonData, const PropertyValue& pr
 }
 
 // Specialization for char types (strings).. (null terminate the arrays)
-template <>
+template<>
 void ReadArrayPropertyValue<char>(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     char* output = &propertyData.Get<char>();
@@ -134,7 +134,7 @@ void ReadArrayPropertyValue<char>(const json::value& jsonData, const PropertyVal
     }
 }
 
-template <class HandleType>
+template<class HandleType>
 void ReadHandlePropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& error)
 {
     decltype(HandleType::id) result;
@@ -144,7 +144,7 @@ void ReadHandlePropertyValue(const json::value& jsonData, const PropertyValue& p
     }
 }
 
-template <class VecType, size_t n>
+template<class VecType, size_t n>
 void ReadVecPropertyValue(const json::value& jsonData, const PropertyValue& propertyData, string& /* error */)
 {
     if (auto const array = jsonData.find(propertyData.info->name); array) {

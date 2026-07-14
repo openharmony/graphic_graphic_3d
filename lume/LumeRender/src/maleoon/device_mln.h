@@ -61,6 +61,7 @@ struct PipelineLayout;
 struct ShaderModuleCreateInfo;
 
 class LowLevelDeviceMln;
+class RenderBackendMln;
 
 class DeviceMln final : public Device {
 public:
@@ -137,10 +138,22 @@ public:
     BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphore() override;
     BASE_NS::unique_ptr<GpuSemaphore> CreateGpuSemaphoreView(uint64_t handle) override;
 
-    const MlnDevice& GetMlnDevice() const { return mlnDevice_; }
-    const MlnQueue& GetMlnQueue() const { return mlnQueue_; }
-    MlnProgramCache GetMlnProgramCache() const { return mlnProgramCache_; }
-    const MlnGpuMemoryProperties& GetCachedMemoryProperties() const { return cachedMemoryProps_; }
+    const MlnDevice& GetMlnDevice() const
+    {
+        return mlnDevice_;
+    }
+    const MlnQueue& GetMlnQueue() const
+    {
+        return mlnQueue_;
+    }
+    MlnProgramCache GetMlnProgramCache() const
+    {
+        return mlnProgramCache_;
+    }
+    const MlnGpuMemoryProperties& GetCachedMemoryProperties() const
+    {
+        return cachedMemoryProps_;
+    }
 
 private:
     void InitMaleoonDevice();
@@ -150,10 +163,11 @@ private:
     BASE_NS::unique_ptr<LowLevelDeviceMln> lowLevelDevice_;
     BASE_NS::vector<FormatProperties> formatProperties_;
 
-    MlnDevice mlnDevice_ { MLN_NULL_HANDLE };
-    MlnQueue mlnQueue_ { MLN_NULL_HANDLE };
-    MlnProgramCache mlnProgramCache_ { MLN_NULL_HANDLE };
-    MlnGpuMemoryProperties cachedMemoryProps_ {};  // OPT #5: cached at init, avoid per-resource query
+    MlnDevice mlnDevice_{MLN_NULL_HANDLE};
+    MlnQueue mlnQueue_{MLN_NULL_HANDLE};
+    MlnProgramCache mlnProgramCache_{MLN_NULL_HANDLE};
+    MlnGpuMemoryProperties cachedMemoryProps_{};  // OPT #5: cached at init, avoid per-resource query
+    RenderBackendMln* renderBackendMln_{nullptr};
 };
 
 BASE_NS::unique_ptr<Device> CreateDeviceMln(RenderContext& renderContext);
@@ -178,4 +192,4 @@ private:
 
 RENDER_END_NAMESPACE()
 
-#endif // MALEOON_DEVICE_MLN_H
+#endif  // MALEOON_DEVICE_MLN_H

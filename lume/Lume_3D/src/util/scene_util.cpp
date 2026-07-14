@@ -958,7 +958,7 @@ constexpr uint64_t TYPES[] = {CORE_NS::PropertyType::BOOL_T,
     CORE_NS::PropertyType::FLOAT_VECTOR_T,
     CORE_NS::PropertyType::MAT4X4_VECTOR_T};
 
-template <typename EntityHandler, typename EntityReferenceHandler>
+template<typename EntityHandler, typename EntityReferenceHandler>
 void FindEntities(const CORE_NS::Property& property, uintptr_t offset, EntityHandler&& entityFunc,
     EntityReferenceHandler&& entityRefFunc)
 {

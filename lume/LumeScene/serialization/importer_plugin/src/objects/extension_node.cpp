@@ -39,8 +39,7 @@ ImportResult ImportExtensionNode::Import(ImportContext& context)
     auto res = ImportNode(context, "extensionNode");
     if (res) {
         ErrorHandler h(context);
-        if (auto err = ImportProperties(context, *interface_pointer_cast<META_NS::IObject>(res.object));
-            h.Handle(err)) {
+        if (auto err = ImportProperties(context, *res.object); h.Handle(err)) {
             return ImportResult{err};
         }
         MergeDiagnostics(res.error, static_cast<IDiagnostics::Ptr>(h));

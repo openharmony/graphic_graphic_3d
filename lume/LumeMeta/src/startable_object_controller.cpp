@@ -160,7 +160,7 @@ bool StartableObjectController::StopAll(ControlBehavior behavior)
     return false;
 }
 
-template <class T, class Callback>
+template<class T, class Callback>
 void IterateChildren(const BASE_NS::vector<T>& children, bool reverse, Callback&& callback)
 {
     if (reverse) {
@@ -174,7 +174,7 @@ void IterateChildren(const BASE_NS::vector<T>& children, bool reverse, Callback&
     }
 }
 
-template <class Callback>
+template<class Callback>
 void IterateHierarchy(const IObject::Ptr& root, bool reverse, Callback&& callback)
 {
     if (const auto container = interface_cast<IContainer>(root)) {
@@ -187,7 +187,7 @@ void IterateHierarchy(const IObject::Ptr& root, bool reverse, Callback&& callbac
     }
 }
 
-template <class ObjectType, class Callback>
+template<class ObjectType, class Callback>
 void IterateAttachments(const IObject::Ptr& object, bool reverse, Callback&& callback)
 {
     if (const auto attach = interface_cast<IAttach>(object)) {
@@ -197,13 +197,13 @@ void IterateAttachments(const IObject::Ptr& object, bool reverse, Callback&& cal
     }
 }
 
-template <class Callback>
+template<class Callback>
 void IterateStartables(const IObject::Ptr& object, bool reverse, Callback&& callback)
 {
     IterateAttachments<IStartable, Callback>(object, reverse, BASE_NS::forward<Callback>(callback));
 }
 
-template <class Callback>
+template<class Callback>
 void IterateTickables(const IObject::Ptr& object, TraversalType order, Callback&& callback)
 {
     if (!object) {

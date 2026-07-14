@@ -16,7 +16,7 @@
 #ifndef META_SRC_SERIALIZATION_BACKEND_JSON_INPUT_H
 #define META_SRC_SERIALIZATION_BACKEND_JSON_INPUT_H
 
-#include <core/json/json.h>
+#include <core/json/json2.h>
 
 #include <meta/base/namespace.h>
 #include <meta/interface/builtin_objects.h>
@@ -27,9 +27,6 @@
 META_BEGIN_NAMESPACE()
 
 namespace Serialization {
-
-namespace json = CORE_NS::json;
-using json_value = CORE_NS::json::standalone_value;
 
 class JsonInput : public IntroduceInterfaces<BaseObject, ISerInput> {
     META_OBJECT(JsonInput, ClassId::JsonInput, IntroduceInterfaces)
@@ -43,12 +40,12 @@ public:
 
     ISerNode::Ptr Process(BASE_NS::string_view data) override;
 
-    ISerNode::Ptr ImportRef(const json::value& ref);
-    ISerNode::Ptr ImportObject(const json::value& value);
-    ISerNode::Ptr ImportArray(const json::value::array& arr);
-    ISerNode::Ptr Import(const json::value& value);
-    bool ReadMetadata(const json::value& value);
-    ISerNode::Ptr ImportRootObject(const json::value& value);
+    ISerNode::Ptr ImportRef(const CORE_NS::json2::view& ref);
+    ISerNode::Ptr ImportObject(const CORE_NS::json2::view& value);
+    ISerNode::Ptr ImportArray(const CORE_NS::json2::view::array_t& arr);
+    ISerNode::Ptr Import(const CORE_NS::json2::view& value);
+    bool ReadMetadata(const CORE_NS::json2::view& value);
+    ISerNode::Ptr ImportRootObject(const CORE_NS::json2::view& value);
 
     Version GetVersion() const
     {

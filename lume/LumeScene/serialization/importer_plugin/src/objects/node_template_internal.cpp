@@ -72,7 +72,9 @@ public:
     {
         for (auto&& i : infos) {
             META_NS::ResourceData d{i};
-            d.options = i.options->Clone();
+            if (i.options) {
+                d.options = i.options->Clone();
+            }
             auto destI = destExt.GetResources({i.id}, context);
             if (!destI.empty()) {
                 out.push_back(destI.front().id);
@@ -216,11 +218,64 @@ public:
         return result;
     }
 
-    // Resolve a single animation resource's PropertyPath against the
-    // template's instantiated content root and write the resulting
-    // IProperty::WeakPtr to the per-instance options metadata. Skips entries
-    // that have no PropertyPath, no scene-side options yet, or already-set
-    // Property (defensive).
+    // Resolve a single PropertyPath stored in `meta` against `contentRoot`. Used both
+    // for top-level animation options and for inline child animation meta walked
+    // recursively below. Skips when no PropertyPath, when Property is already set, or
+    // when the path can't be resolved.
+    void ResolvePropertyPathInMeta(
+        META_NS::IMetadata& meta, const SCENE_NS::IScene::Ptr& scene, const META_NS::IObject::Ptr& contentRoot)
+    {
+        auto path = META_NS::GetValue<BASE_NS::string>(&meta, "PropertyPath");
+        if (path.empty()) {
+            return;
+        }
+        if (auto existing = meta.GetProperty<META_NS::IProperty::WeakPtr>("Property", META_NS::MetadataQuery::EXISTING);
+            existing && META_NS::GetValue(existing).lock()) {
+            return;
+        }
+        ImportContextParameters params;
+        params.scene = scene;
+        params.object = contentRoot;
+        params.importRoot = contentRoot;
+        ImportContext ctx(importer_.GetConfig(), params, CORE_NS::json::value{});
+        auto result = ResolveObject(ctx, contentRoot, path);
+        if (!result) {
+            return;
+        }
+        if (auto resolved = interface_pointer_cast<META_NS::IProperty>(result.object)) {
+            AddSetProperty(meta, "Property", META_NS::IProperty::WeakPtr(resolved));
+        }
+    }
+
+    // Walk a parent animation's inline children recursively and resolve PropertyPath
+    // fields at every level. Handles arbitrary container nesting (e.g. sequential
+    // -> parallel -> track). Bounded by MAX_ANIMATION_NESTING_DEPTH so a pathological
+    // JSON payload can't blow the stack.
+    static constexpr int MAX_ANIMATION_NESTING_DEPTH = 32;
+    void ResolveInlineAnimationChildren(META_NS::IMetadata& parentMeta, const SCENE_NS::IScene::Ptr& scene,
+        const META_NS::IObject::Ptr& contentRoot, int depth = 0)
+    {
+        if (depth >= MAX_ANIMATION_NESTING_DEPTH) {
+            CORE_LOG_W("ResolveInlineAnimationChildren: max nesting depth (%d) reached, stopping recursion",
+                MAX_ANIMATION_NESTING_DEPTH);
+            return;
+        }
+        auto childrenProp =
+            parentMeta.GetArrayProperty<META_NS::IObject::Ptr>("Animations", META_NS::MetadataQuery::EXISTING);
+        if (!childrenProp) {
+            return;
+        }
+        for (auto&& child : childrenProp->GetValue()) {
+            if (auto childMeta = interface_cast<META_NS::IMetadata>(child)) {
+                ResolvePropertyPathInMeta(*childMeta, scene, contentRoot);
+                ResolveInlineAnimationChildren(*childMeta, scene, contentRoot, depth + 1);
+            }
+        }
+    }
+
+    // Resolve a single animation resource's PropertyPath (top-level + inline children)
+    // against the template's instantiated content root. Skips entries with no
+    // scene-side options.
     void ResolveAnimationOption(const CORE_NS::ResourceInfo& src, BASE_NS::string_view oldGroup,
         BASE_NS::string_view newGroup, const SCENE_NS::IScene::Ptr& scene, const META_NS::IObject::Ptr& contentRoot)
     {
@@ -238,27 +293,8 @@ public:
         if (!meta) {
             return;
         }
-        auto path = META_NS::GetValue<BASE_NS::string>(meta, "PropertyPath");
-        if (path.empty()) {
-            return;
-        }
-        if (auto existing =
-                meta->GetProperty<META_NS::IProperty::WeakPtr>("Property", META_NS::MetadataQuery::EXISTING);
-            existing && META_NS::GetValue(existing).lock()) {
-            return;
-        }
-        ImportContextParameters params;
-        params.scene = scene;
-        params.object = contentRoot;
-        params.importRoot = contentRoot;
-        ImportContext ctx(importer_.GetConfig(), params, CORE_NS::json::value{});
-        auto result = ResolveObject(ctx, contentRoot, path);
-        if (!result) {
-            return;
-        }
-        if (auto resolved = interface_pointer_cast<META_NS::IProperty>(result.object)) {
-            AddSetProperty(*meta, "Property", META_NS::IProperty::WeakPtr(resolved));
-        }
+        ResolvePropertyPathInMeta(*meta, scene, contentRoot);
+        ResolveInlineAnimationChildren(*meta, scene, contentRoot);
     }
 
     // After the template content is built we know the content root, so options

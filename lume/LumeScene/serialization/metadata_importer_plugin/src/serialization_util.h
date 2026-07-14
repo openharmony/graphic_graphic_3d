@@ -82,7 +82,7 @@ inline BASE_NS::string UnescapeSerName(BASE_NS::string_view str)
     return res;
 }
 
-template <typename Obj>
+template<typename Obj>
 bool SerialiseAttachment(const Obj& obj)
 {
     return META_NS::IsFlagSet(obj, META_NS::ObjectFlagBits::SERIALIZE) && !interface_cast<META_NS::IEvent>(obj) &&

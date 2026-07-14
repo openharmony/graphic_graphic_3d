@@ -34,7 +34,7 @@ using namespace RENDER_NS;
 
 namespace {
 
-template <typename T, uint32_t count>
+template<typename T, uint32_t count>
 vector<RenderHandleReference> CreateResource(IGpuResourceManager& gpuResourceMgr, const T& desc)
 {
     vector<RenderHandleReference> outRes(count);

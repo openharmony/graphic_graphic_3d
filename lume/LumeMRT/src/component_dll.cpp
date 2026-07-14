@@ -69,7 +69,7 @@ void MRTSystemDestroy(ISystem*);
 
 const char* GetVersionInfo()
 {
-    return "GIT_TAG: 2026.0x.0x GIT_REVISION: xxx GIT_BRANCH: xxx";
+    return "GIT_TAG: 2026.04.17 GIT_REVISION: I3aa5e2278795fe8e0f59d01662637ed8af56ce2c GIT_BRANCH: release";
 }
 
 namespace {
@@ -121,7 +121,7 @@ PluginToken Initialize(IRenderContext& context)
     if (factory) {
         fm.RegisterFilesystem(FILE, factory->CreateStdFileSystem("file://"));
     } else {
-        CORE_LOG_E("WeatherEffectSystem get fileSystem failed");
+        CORE_LOG_E("MRT get fileSystem failed");
     }
     // And register it under the needed proxy protocols.
     fm.RegisterPath(SHADERS, SHADER_PATH, false);

@@ -81,7 +81,7 @@ inline BASE_NS::shared_ptr<CORE_NS::IInterface> CreateFunctionConstructorObject(
 
 }  // namespace Internal
 
-template <typename Type>
+template<typename Type>
 IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue* def, ObjectFlagBitsValue flags)
 {
     flags |= ObjectFlagBits::NATIVE;
@@ -95,7 +95,7 @@ IProperty::Ptr CreatePropertyImpl(BASE_NS::string_view name, Internal::MetaValue
     }
 }
 
-template <typename Type, uint64_t Flags>
+template<typename Type, uint64_t Flags>
 Internal::MetadataCtor* CreatePropertyConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
@@ -105,7 +105,7 @@ Internal::MetadataCtor* CreatePropertyConstructor()
     };
 }
 
-template <typename Type>
+template<typename Type>
 Internal::MetadataCtor* CreateEventConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
@@ -113,7 +113,7 @@ Internal::MetadataCtor* CreateEventConstructor()
     };
 }
 
-template <typename Interface, auto MemFun>
+template<typename Interface, auto MemFun>
 Internal::MetadataCtor* CreateFunctionConstructor()
 {
     return [](const BASE_NS::shared_ptr<IOwner>& owner, const StaticMetadata& d) {
@@ -123,7 +123,7 @@ Internal::MetadataCtor* CreateFunctionConstructor()
     };
 }
 
-template <size_t Size>
+template<size_t Size>
 constexpr size_t MetadataArraySize(const StaticMetadata (&)[Size])
 {
     return Size;
@@ -148,7 +148,7 @@ constexpr StaticObjectMetadata CreateStaticMetadataObject(const ClassInfo* class
         classInfo, baseclass, aggregate, baseDataSame ? nullptr : metadata, baseDataSame ? 0 : size};
 }
 
-template <typename Type, typename Base, typename Data>
+template<typename Type, typename Base, typename Data>
 inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticObjectMetadata* base,
     const ClassInfo* classInfo, const StaticObjectMetadata* aggregate)
 {
@@ -156,13 +156,13 @@ inline StaticObjectMetadata CreateStaticMetadata(const Data& data, const StaticO
     return CreateStaticMetadataObject(classInfo, base, aggregate, data, size);
 }
 
-template <typename T>
+template<typename T>
 inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<META_NS::IProperty> (T::*)(), int)
 {
     return 0;
 }
 
-template <typename T>
+template<typename T>
 inline uint8_t GetPropertySMDFlags(BASE_NS::shared_ptr<const META_NS::IProperty> (T::*)() const, short)
 {
     return static_cast<uint8_t>(Internal::PropertyFlag::READONLY);

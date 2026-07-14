@@ -170,24 +170,24 @@ public:
 
     // templated helper for named property fetching. handles typing etc.
     // returns null if not found or type is not matching.
-    template <typename ValueType>
+    template<typename ValueType>
     Property<ValueType> GetProperty(BASE_NS::string_view name, MetadataQuery req = MetadataQuery::CONSTRUCT_ON_REQUEST)
     {
         return GetProperty(name, req);
     }
-    template <typename ValueType>
+    template<typename ValueType>
     Property<const ValueType> GetProperty(
         BASE_NS::string_view name, MetadataQuery req = MetadataQuery::CONSTRUCT_ON_REQUEST) const
     {
         return GetProperty(name, req);
     }
-    template <typename ValueType>
+    template<typename ValueType>
     ArrayProperty<ValueType> GetArrayProperty(
         BASE_NS::string_view name, MetadataQuery req = MetadataQuery::CONSTRUCT_ON_REQUEST)
     {
         return GetProperty(name, req);
     }
-    template <typename ValueType>
+    template<typename ValueType>
     ArrayProperty<const ValueType> GetArrayProperty(
         BASE_NS::string_view name, MetadataQuery req = MetadataQuery::CONSTRUCT_ON_REQUEST) const
     {
@@ -195,7 +195,7 @@ public:
     }
 };
 
-template <typename ValueType>
+template<typename ValueType>
 constexpr auto GetValue(const META_NS::IMetadata* meta, BASE_NS::string_view name, ValueType defaultValue = {}) noexcept
 {
     if (meta) {
@@ -206,7 +206,7 @@ constexpr auto GetValue(const META_NS::IMetadata* meta, BASE_NS::string_view nam
     return BASE_NS::move(defaultValue);
 }
 
-template <typename ValueType, typename Interface,
+template<typename ValueType, typename Interface,
     typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<BASE_NS::remove_const_t<Interface>*>>>
 constexpr auto GetValue(
     const BASE_NS::shared_ptr<Interface>& intf, BASE_NS::string_view name, ValueType defaultValue = {}) noexcept
@@ -214,7 +214,7 @@ constexpr auto GetValue(
     return GetValue<ValueType>(interface_cast<IMetadata>(intf), name, defaultValue);
 }
 
-template <typename ValueType, typename Interface,
+template<typename ValueType, typename Interface,
     typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<BASE_NS::remove_const_t<Interface>*>>>
 constexpr auto GetValue(
     const BASE_NS::weak_ptr<Interface>& intf, BASE_NS::string_view name, ValueType defaultValue = {}) noexcept
@@ -222,7 +222,7 @@ constexpr auto GetValue(
     return GetValue<ValueType>(interface_pointer_cast<IMetadata>(intf), name, defaultValue);
 }
 
-template <typename ValueType>
+template<typename ValueType>
 constexpr bool SetValue(META_NS::IMetadata* meta, BASE_NS::string_view name, const ValueType& value) noexcept
 {
     if (meta) {
@@ -233,14 +233,14 @@ constexpr bool SetValue(META_NS::IMetadata* meta, BASE_NS::string_view name, con
     return false;
 }
 
-template <typename ValueType, typename Interface, typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<Interface*>>>
+template<typename ValueType, typename Interface, typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<Interface*>>>
 constexpr auto SetValue(
     const BASE_NS::shared_ptr<Interface>& intf, BASE_NS::string_view name, const ValueType& value) noexcept
 {
     return SetValue(interface_cast<IMetadata>(intf), name, value);
 }
 
-template <typename ValueType, typename Interface, typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<Interface*>>>
+template<typename ValueType, typename Interface, typename = BASE_NS::enable_if_t<IsKindOfIInterface_v<Interface*>>>
 constexpr bool SetValue(
     const BASE_NS::weak_ptr<Interface>& intf, BASE_NS::string_view name, const ValueType& value) noexcept
 {

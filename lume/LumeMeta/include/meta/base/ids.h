@@ -23,7 +23,7 @@
 
 META_BEGIN_NAMESPACE()
 
-template <typename>
+template<typename>
 class IdBase {
 public:
     constexpr IdBase(const BASE_NS::Uid& id = {}) noexcept : id_(id)
@@ -91,14 +91,14 @@ META_TYPE(META_NS::ObjectId);
 META_TYPE(META_NS::InstanceId);
 
 /// Get type id for Type
-template <typename Type>
+template<typename Type>
 inline constexpr TypeId GetTypeId()
 {
     return UidFromType<Type>();
 }
 
 /// Get type id for array with element Type
-template <typename Type>
+template<typename Type>
 inline constexpr TypeId GetArrayTypeId()
 {
     return ArrayUidFromType<Type>();
@@ -108,17 +108,17 @@ META_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
 
-template <>
+template<>
 inline uint64_t hash(const META_NS::TypeId& value)  // NOLINT(readability-inconsistent-declaration-parameter-name)
 {
     return hash(value.ToUid());
 }
-template <>
+template<>
 inline uint64_t hash(const META_NS::ObjectId& value)  // NOLINT(readability-inconsistent-declaration-parameter-name)
 {
     return hash(value.ToUid());
 }
-template <>
+template<>
 inline uint64_t hash(const META_NS::InstanceId& value)  // NOLINT(readability-inconsistent-declaration-parameter-name)
 {
     return hash(value.ToUid());

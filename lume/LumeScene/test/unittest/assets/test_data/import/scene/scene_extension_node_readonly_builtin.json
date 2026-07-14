@@ -1,0 +1,25 @@
+{
+    "version": "1.0",
+    "description": "Read-only builtin property (vec3) cannot be modified through import",
+    "data": {
+        "type": "scene",
+        "name": "test",
+        "rootNode": {
+            "type": "node",
+            "name": "root",
+            "children": [
+                {
+                    "type": "extensionNode",
+                    "name": "ext",
+                    "nodeUid": "cb14c0a3-3c2a-43a6-9f7b-3d3c7c2c7301",
+                    "properties": [
+                        {
+                            "name": "Origin",
+                            "value": { "type": "vec3", "values": [1.0, 2.0, 3.0] }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

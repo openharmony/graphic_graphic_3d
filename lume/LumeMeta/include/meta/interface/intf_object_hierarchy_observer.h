@@ -123,7 +123,7 @@ public:
     /**
      * @brief Returns all currently monitored objects which implement a given interface.
      */
-    template <class T>
+    template<class T>
     BASE_NS::vector<typename T::Ptr> GetAllObserved() const
     {
         return PtrArrayCast<T>(GetAllObserved());

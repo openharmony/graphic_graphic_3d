@@ -142,7 +142,7 @@ constexpr uint16_t CYLINDER_SIDE_INDICES[6u] = {0, 1, 3, 0, 3, 2};
 
 constexpr float TWO_PI = Math::PI * 2.0f;
 
-template <typename IndexType>
+template<typename IndexType>
 struct Geometry {
     vector<Math::Vec3>& vertices;
     vector<Math::Vec3>& normals;
@@ -616,7 +616,7 @@ void FillBuilder(IMeshBuilder& builder, const VertexBufferData& vertexBuffers, I
 }
 }  // namespace
 
-template <typename IndexType>
+template<typename IndexType>
 void CalculateTangentBitangent(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec3> outTan, array_view<Math::Vec3> outBitan)
@@ -677,7 +677,7 @@ void CalculateFinalTangent(array_view<const Math::Vec3> normals, array_view<cons
     }
 }
 
-template <typename IndexType>
+template<typename IndexType>
 void CalculateTangentImpl(const array_view<const IndexType>& indices, const array_view<const Math::Vec3>& positions,
     const array_view<const Math::Vec3>& normals, const array_view<const Math::Vec2>& uvs,
     array_view<Math::Vec4>& outTangents)
@@ -694,7 +694,7 @@ void CalculateTangentImpl(const array_view<const IndexType>& indices, const arra
     CalculateFinalTangent(normals, tan, bitan, outTangents);
 }
 
-template <typename IndexType>
+template<typename IndexType>
 void CalculateTangentImplStrip(const array_view<const IndexType>& indices,
     const array_view<const Math::Vec3>& positions, const array_view<const Math::Vec3>& normals,
     const array_view<const Math::Vec2>& uvs, array_view<Math::Vec4> outTangents)
@@ -751,7 +751,7 @@ void MeshUtil::CalculateTangents(const array_view<const uint8_t>& indices,
     }
 }
 
-template <typename T>
+template<typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
 {
     Format format = BASE_FORMAT_UNDEFINED;
@@ -770,13 +770,13 @@ constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexce
         format, sizeof(T), {reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T)}};
 }
 
-template <typename T, size_t N>
+template<typename T, size_t N>
 constexpr inline IMeshBuilder::DataBuffer FillData(const T (&c)[N]) noexcept
 {
     return FillData(array_view(c, N));
 }
 
-template <typename T>
+template<typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
 {
     return FillData(array_view<const T>{c});

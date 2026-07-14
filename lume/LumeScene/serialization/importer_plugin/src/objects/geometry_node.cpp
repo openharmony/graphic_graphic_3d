@@ -17,6 +17,10 @@
 
 #include <scene/interface/intf_mesh.h>
 
+#include <core/log.h>
+
+#include "../import_helpers.h"
+
 SCENE_IMP_BEGIN_NAMESPACE()
 
 SCENE_NS::INode::Ptr ImportGeometryNode::ConstructNode(
@@ -31,7 +35,30 @@ SCENE_NS::INode::Ptr ImportGeometryNode::ConstructNode(
 
 ImportResult ImportGeometryNode::Import(ImportContext& context)
 {
-    return ImportNode(context, "geometry");
+    auto result = ImportNode(context, "geometry");
+    if (!result) {
+        return result;
+    }
+
+    auto meshId = GetOptResourceId(context, "mesh");
+    if (!meshId.value) {
+        // Geometry node without a mesh reference is valid (placeholder node).
+        return result;
+    }
+    // The resource manager builds the live IMesh on demand via
+    // MeshTemplate::ApplyOptions; per-submesh materials are already wired by
+    // the apply step, so the geometry node only needs to plug the IMesh in.
+    auto meshRes = ResolveDeferredResource(context.GetImportParameters(), context.GetRenderContext(), *meshId.value);
+    auto mesh = interface_pointer_cast<SCENE_NS::IMesh>(meshRes);
+    if (!mesh) {
+        CORE_LOG_W("Geometry node mesh '%s' did not resolve to an IMesh", meshId.value->ToString().c_str());
+        return result;
+    }
+    auto node = interface_pointer_cast<SCENE_NS::INode>(result.object);
+    if (auto meshNode = interface_cast<SCENE_NS::IMeshAccess>(node)) {
+        meshNode->SetMesh(mesh);
+    }
+    return result;
 }
 
 SCENE_IMP_END_NAMESPACE()

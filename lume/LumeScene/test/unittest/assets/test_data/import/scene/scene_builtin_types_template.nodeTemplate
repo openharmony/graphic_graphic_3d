@@ -1,0 +1,47 @@
+{
+	"version": "1.0",
+	"description": "nodeTemplate carrying a node with the BuiltinTypesAttachment (default values)",
+	"data": {
+		"type": "nodeTemplate",
+		"node": {
+			"type": "node",
+			"name": "builtinHost",
+			"attachments": [
+				{
+					"objectUid": "e7a1c3b5-4d2f-48e6-9f0a-1b3c5d7e9f01",
+					"properties": [
+						{
+							"name": "Name",
+							"value": "BuiltinAtt"
+						},
+						{
+							"name": "UVec3",
+							"value": { "type": "uvec3", "value": [0, 0, 0] }
+						},
+						{
+							"name": "UVec4",
+							"value": { "type": "uvec4", "value": [0, 0, 0, 0] }
+						},
+						{
+							"name": "IVec2",
+							"value": { "type": "ivec2", "value": [0, 0] }
+						},
+						{
+							"name": "IVec3",
+							"value": { "type": "ivec3", "value": [0, 0, 0] }
+						},
+						{
+							"name": "IVec4",
+							"value": { "type": "ivec4", "value": [0, 0, 0, 0] }
+						},
+						{
+							"name": "Duration",
+							"value": { "type": "timeSpan", "value": 0 }
+						}
+					]
+				}
+			]
+		}
+	},
+	"primaryGroup": ""
+}

@@ -34,7 +34,7 @@ using namespace TimeSpanLiterals;
 
 namespace {
 
-template <typename Func>
+template<typename Func>
 class Task : public IntroduceInterfaces<ITaskQueueTask> {
     META_INTERFACE(IntroduceInterfaces<ITaskQueueTask>, Task, "20779859-b4c9-426d-92f1-9143520e6917")
 
@@ -65,19 +65,19 @@ public:
         }
     }
 
-    template <typename Func>
+    template<typename Func>
     ITaskQueue::Token AddTask(Func func)
     {
         return this->queue->AddTask(ITaskQueueTask::Ptr(new Task<Func>(func)));
     }
 
-    template <typename Func>
+    template<typename Func>
     ITaskQueue::Token AddTask(Func func, TimeSpan span)
     {
         return this->queue->AddTask(ITaskQueueTask::Ptr(new Task<Func>(func)), span);
     }
 
-    template <typename Func>
+    template<typename Func>
     bool TimedWait(size_t timeout, Func func)
     {
         bool ret = false;
