@@ -35,12 +35,11 @@
 #include <surface_utils.h>
 
 namespace OHOS::Render3D {
-constexpr uint32_t SURFACE_QUEUE_SIZE = 5;
 
 class SurfaceStream final : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, ISurfaceStream>,
                             public OHOS::IBufferConsumerListenerClazz {
     META_OBJECT(SurfaceStream, ClassId::SurfaceStream, IntroduceInterfaces)
-    ~SurfaceStream();
+    ~SurfaceStream() override;
 
 protected:
     void OnBufferAvailable() override;
@@ -54,31 +53,33 @@ private:
     bool Init();
     void Deinit();
 
-    void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
+    void ProcessBufferAvailable();
 
-    void CacheSurfaceBuffer(
-        const OHOS::sptr<OHOS::IConsumerSurface>& consumerSurface, OHOS::sptr<OHOS::SurfaceBuffer> surfaceBuffer);
+    void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
 
     void SetHeight(uint32_t height) override
     {
-        height_ = height;
+        height_.store(height, std::memory_order_relaxed);
     }
+
     uint32_t GetHeight() const override
     {
-        return height_;
+        return height_.load(std::memory_order_relaxed);
     }
+
     void SetWidth(uint32_t width) override
     {
-        width_ = width;
+        width_.store(width, std::memory_order_relaxed);
     }
+
     uint32_t GetWidth() const override
     {
-        return width_;
+        return width_.load(std::memory_order_relaxed);
     }
 
     uint64_t GetSurfaceId() const override
     {
-        return surfaceId_;
+        return surfaceId_.load(std::memory_order_relaxed);
     }
 
 private:
@@ -88,10 +89,9 @@ private:
     META_NS::ITaskQueue::Ptr engineQueue_ = nullptr;
     std::mutex renderResourceMutex_;
     SCENE_NS::IRenderResource::WeakPtr renderResource_ = nullptr;
-    uint64_t surfaceId_ = 0;
-    std::atomic<uint32_t> width_ = 0;
-    std::atomic<uint32_t> height_ = 0;
-    uint32_t queueSize_ = SURFACE_QUEUE_SIZE;
+    std::atomic<uint64_t> surfaceId_{0};
+    std::atomic<uint32_t> width_{0};
+    std::atomic<uint32_t> height_{0};
     std::mutex consumerSurfaceMutex_;
     OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_ = nullptr;
     OHOS::sptr<OHOS::Surface> producerSurface_ = nullptr;
