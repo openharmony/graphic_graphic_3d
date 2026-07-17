@@ -203,6 +203,7 @@ napi_value SubMeshJS::GetMaterial(NapiApi::FunctionContext<>& ctx)
     napi_value args[] = {scene_.GetValue(), argJS.ToNapiValue()};
     if (!scene_.GetObject<SCENE_NS::IScene>()) {
         LOG_F("INVALID SCENE!");
+        return ctx.GetUndefined();
     }
     return CreateFromNativeInstance(env, material, PtrType::WEAK, args).ToNapiValue();
 }
