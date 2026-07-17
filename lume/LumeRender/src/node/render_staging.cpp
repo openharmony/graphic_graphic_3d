@@ -202,8 +202,8 @@ void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IR
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), bufferImageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), bufferImageCopies.size() - beginIndex);
         const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             // barriers are only done for dynamic resources automatically (e.g. when copying to same image multiple
@@ -262,8 +262,8 @@ void CopyImagesToBuffersImpl(IRenderCommandList& cmdList, const vector<StagingCo
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), bufferImageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), bufferImageCopies.size() - beginIndex);
         const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             cmdList.CopyImageToBuffer(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
@@ -278,8 +278,8 @@ void CopyImagesToImagesImpl(
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(imageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(imageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), imageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), imageCopies.size() - beginIndex);
         const auto copies = array_view(imageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             cmdList.CopyImageToImage(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
@@ -643,7 +643,7 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
             if (ref.invalidOperation) {
                 continue;
             }
-            if (ref.beginIndex + ref.count > bufferCopies.size()) {
+            if (static_cast<size_t>(ref.beginIndex) + ref.count > bufferCopies.size()) {
                 continue;
             }
             const auto copies = array_view(bufferCopies.data() + ref.beginIndex, ref.count);
@@ -747,7 +747,7 @@ void RenderStaging::ClearImagesGles(IRenderCommandList& cmdList, const IRenderNo
             continue;
         }
         const uint32_t imgByteSize = static_cast<uint32_t>(imgByteSize64);
-        if ((additionalCopyBuffer_.byteOffset + imgByteSize) > additionalCopyBuffer_.byteSize) {
+        if ((static_cast<uint64_t>(additionalCopyBuffer_.byteOffset) + imgByteSize) > additionalCopyBuffer_.byteSize) {
             continue;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)

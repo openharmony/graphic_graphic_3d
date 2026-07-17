@@ -644,6 +644,14 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
     PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
 #endif
+    if (loadDataResult.componentType != GLTF2::ComponentType::FLOAT) {
+        PLUGIN_LOG_E("Morph target component type mismatch");
+        return;
+    }
+    if (loadDataResult.componentCount != 3U) {
+        PLUGIN_LOG_E("Morph target component count mismatch");
+        return;
+    }
     if (loadDataResult.elementCount != importInfo.vertexCount) {
         PLUGIN_LOG_E("Morph target element count mismatch");
         return;
@@ -658,7 +666,12 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
         }
     } else {
         finalDataResult = move(loadDataResult);
-        finalDataResult.data.reserve(finalDataResult.data.size() * targets);
+        // Guard against size_t overflow in the reserve size before multiplying (the product is only
+        // a reservation hint; on overflow we skip reserving and let later appends reallocate).
+        const size_t oneTargetSize = finalDataResult.data.size();
+        if (targets == 0U || oneTargetSize <= std::numeric_limits<size_t>::max() / targets) {
+            finalDataResult.data.reserve(oneTargetSize * targets);
+        }
     }
 }
 

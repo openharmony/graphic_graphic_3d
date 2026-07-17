@@ -142,17 +142,17 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
             geomRef.data.dstAccelerationStructure.GetHandle(),
             bufferOffset};
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
-            (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
+            (static_cast<uint64_t>(startIndex) + count <= triangles.size())) {
             const auto& ref = triangles[startIndex];
             const vector<AsGeometryTrianglesData> info = ConvertAsGeometryTrianglesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, info, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
-                   (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= aabbs.size())) {
             const auto& ref = aabbs[startIndex];
             const vector<AsGeometryAabbsData> info = ConvertAsGeometryAabbsData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, info, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
-                   (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= instances.size())) {
             const auto& ref = instances[startIndex];
             const vector<AsGeometryInstancesData> info = ConvertAsGeometryInstancesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, {}, info);
@@ -171,7 +171,7 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceD
         if ((!dataRef.bufferOffset.handle) || (dataRef.count == 0)) {
             return;
         }
-        if (dataRef.startIndex + dataRef.count > static_cast<uint32_t>(fullData.instanceCopyData.size())) {
+        if (static_cast<uint64_t>(dataRef.startIndex) + dataRef.count > fullData.instanceCopyData.size()) {
             return;
         }
 
@@ -221,17 +221,17 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
         const uint32_t count = geomRef.count;
         AsBuildSizes asbs;
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
-            (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
+            (static_cast<uint64_t>(startIndex) + count <= triangles.size())) {
             const auto& triRef = triangles[startIndex];
             GetInfos(array_view{&triRef, count}, triInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, triInfos, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
-                   (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= aabbs.size())) {
             const auto& aabbRef = aabbs[startIndex];
             GetInfos(array_view{&aabbRef, count}, aabbInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, aabbInfos, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
-                   (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= instances.size())) {
             const auto& instanceRef = instances[startIndex];
             GetInfos(array_view{&instanceRef, count}, instanceInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, {}, instanceInfos);

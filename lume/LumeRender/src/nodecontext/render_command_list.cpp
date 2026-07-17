@@ -2158,8 +2158,13 @@ void RenderCommandList::ValidateRenderPass(const RenderPassDesc& renderPassDesc)
 #endif
         stateData_.validCommandList = false;
     }
-    // validate render pass attachments
-    for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
+    // validate render pass attachments (attachmentHandles is a fixed MAX_RENDER_PASS_ATTACHMENT_COUNT array)
+    if (renderPassDesc.attachmentCount > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        stateData_.validCommandList = false;
+    }
+    const uint32_t attachmentCount =
+        Math::min(renderPassDesc.attachmentCount, PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < attachmentCount; ++idx) {
         if (!RenderHandleUtil::IsValid(renderPassDesc.attachmentHandles[idx])) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_ValidateRenderPass_attachments_",
