@@ -39,7 +39,7 @@ namespace OHOS::Render3D {
 class SurfaceStream final : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, ISurfaceStream>,
                             public OHOS::IBufferConsumerListenerClazz {
     META_OBJECT(SurfaceStream, ClassId::SurfaceStream, IntroduceInterfaces)
-    ~SurfaceStream() override;
+    ~SurfaceStream();
 
 protected:
     void OnBufferAvailable() override;
