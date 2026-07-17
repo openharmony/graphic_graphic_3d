@@ -60,6 +60,7 @@ namespace OHOS::Render3D {
 namespace {
 static constexpr uint32_t WAIT_FENCE_TIME = 5000;
 static constexpr uint32_t MAX_BUFFER_SIZE = 3;
+static constexpr uint32_t MAX_IMAGE_EXTENT = 32768U;
 
 OH_NativeBuffer_ColorSpace ConvertColorGamutToColorSpace(OHOS::GraphicColorGamut colorGamut)
 {
@@ -103,9 +104,12 @@ bool SurfaceStream::Build(const META_NS::IMetadata::Ptr& metadata)
     context = SCENE_NS::GetInterfaceBuildArg<SCENE_NS::IRenderContext>(metadata, "RenderContext");
     if (context) {
         engineQueue_ = context->GetRenderQueue();
-        renderContext_ = context->GetRenderer();
-        if (renderContext_) {
-            backendType_ = renderContext_->GetDevice().GetBackendType();
+        {
+            std::lock_guard<std::mutex> lock(renderContextMutex_);
+            renderContext_ = context->GetRenderer();
+            if (renderContext_) {
+                backendType_ = renderContext_->GetDevice().GetBackendType();
+            }
         }
         return true;
     }
@@ -121,29 +125,40 @@ bool SurfaceStream::Build(const META_NS::IMetadata::Ptr& metadata)
         return false;
     }
     engineQueue_ = context->GetRenderQueue();
-    renderContext_ = context->GetRenderer();
-    if (renderContext_) {
-        backendType_ = renderContext_->GetDevice().GetBackendType();
+    {
+        std::lock_guard<std::mutex> lock(renderContextMutex_);
+        renderContext_ = context->GetRenderer();
+        if (renderContext_) {
+            backendType_ = renderContext_->GetDevice().GetBackendType();
+        }
     }
     return true;
 }
 
 bool SurfaceStream::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS::IObject::Ptr& dataContext)
 {
-    if (auto sp = renderResource_.lock()) {
-        CORE_LOG_E("render resource already attached.");
-        return false;
-    }
+    {
+        std::lock_guard<std::mutex> lock(renderResourceMutex_);
+        if (auto sp = renderResource_.lock()) {
+            CORE_LOG_E("render resource already attached.");
+            return false;
+        }
 
-    auto bitmap = interface_cast<SCENE_NS::IBitmap>(target);
-    if (bitmap == nullptr) {
-        CORE_LOG_E("Incorrect type bitmap is null");
-        return false;
-    }
-    renderResource_ = interface_pointer_cast<SCENE_NS::IRenderResource>(target);
-    if (auto sp = renderResource_.lock(); !sp) {
-        CORE_LOG_E("render resource attach failed");
-        return false;
+        if (target == nullptr) {
+            CORE_LOG_E("target is null");
+            return false;
+        }
+
+        auto bitmap = interface_cast<SCENE_NS::IBitmap>(target);
+        if (bitmap == nullptr) {
+            CORE_LOG_E("Incorrect type bitmap is null");
+            return false;
+        }
+        renderResource_ = interface_pointer_cast<SCENE_NS::IRenderResource>(target);
+        if (auto sp = renderResource_.lock(); !sp) {
+            CORE_LOG_E("render resource attach failed");
+            return false;
+        }
     }
 
     auto ret = Init();
@@ -157,18 +172,22 @@ bool SurfaceStream::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS:
 
 bool SurfaceStream::DetachFrom(const META_NS::IAttach::Ptr& target)
 {
-    if (interface_pointer_cast<IAttach>(renderResource_) != interface_pointer_cast<IAttach>(target)) {
-        CORE_LOG_E("Invalid input parameter, incorrect type");
-        return false;
+    {
+        std::lock_guard<std::mutex> lock(renderResourceMutex_);
+        if (interface_pointer_cast<IAttach>(renderResource_) != interface_pointer_cast<IAttach>(target)) {
+            CORE_LOG_E("Invalid input parameter, incorrect type");
+            return false;
+        }
+        renderResource_ = nullptr;
     }
 
     Deinit();
-    renderResource_ = nullptr;
     return true;
 }
 
 bool SurfaceStream::Init()
 {
+    std::lock_guard<std::mutex> lock(consumerSurfaceMutex_);
     consumerSurface_ = OHOS::IConsumerSurface::Create("IumeSurfaceConsumer");
     if (consumerSurface_ == nullptr) {
         CORE_LOG_E("create surface consumer failed");
@@ -195,6 +214,7 @@ bool SurfaceStream::Init()
 
 void SurfaceStream::Deinit()
 {
+    std::lock_guard<std::mutex> lock(consumerSurfaceMutex_);
     if (consumerSurface_) {
         consumerSurface_->UnregisterConsumerListener();
     }
@@ -212,17 +232,23 @@ void SurfaceStream::Deinit()
 void SurfaceStream::OnBufferAvailable()
 {
     META_NS::AddFutureTaskOrRunDirectly(engineQueue_, [this]() {
-        if (consumerSurface_ == nullptr) {
-            CORE_LOG_E("invalid consumer surface");
-            return;
+        OHOS::sptr<OHOS::IConsumerSurface> localConsumerSurface = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(consumerSurfaceMutex_);
+            if (consumerSurface_ == nullptr) {
+                CORE_LOG_E("invalid consumer surface");
+                return;
+            }
+            localConsumerSurface = consumerSurface_;
         }
 
         OHOS::sptr<OHOS::SurfaceBuffer> acquireSurfaceBuffer = nullptr;
         OHOS::sptr<OHOS::SyncFence> acquireFence = OHOS::SyncFence::INVALID_FENCE;
         int64_t timestamp = 0;
         OHOS::Rect damage = {0, 0, 0, 0};
-        auto success = consumerSurface_->AcquireBuffer(acquireSurfaceBuffer, acquireFence, timestamp, damage);
-        if ((success != OHOS::SURFACE_ERROR_OK) || acquireSurfaceBuffer == nullptr || !acquireFence->IsValid()) {
+        auto success = localConsumerSurface->AcquireBuffer(acquireSurfaceBuffer, acquireFence, timestamp, damage);
+        if ((success != OHOS::SURFACE_ERROR_OK) || acquireSurfaceBuffer == nullptr ||
+            acquireFence == nullptr || !acquireFence->IsValid()) {
             CORE_LOG_E("consumer surface acquire surface buffer failed: %d", success);
             return;
         }
@@ -232,38 +258,73 @@ void SurfaceStream::OnBufferAvailable()
         OH_NativeBuffer* nativeBuffer = acquireSurfaceBuffer->SurfaceBufferToNativeBuffer();
         if (nativeBuffer == nullptr) {
             CORE_LOG_E("surface buffer to native buffer failed");
-            consumerSurface_->ReleaseBuffer(acquireSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
+            localConsumerSurface->ReleaseBuffer(acquireSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
             return;
         }
         width_ = acquireSurfaceBuffer->GetSurfaceBufferWidth();
         height_ = acquireSurfaceBuffer->GetSurfaceBufferHeight();
-        UpdateView(nativeBuffer, width_, height_, acquireSurfaceBuffer->GetSurfaceBufferColorGamut());
 
-        {
-            std::lock_guard<std::mutex> lock(surfaceBufferCacheMutex_);
-            if (surfaceBufferCache_.size() >= MAX_BUFFER_SIZE) {
-                auto oldSurfaceBuffer = surfaceBufferCache_.front();
-                surfaceBufferCache_.pop();
-                if (oldSurfaceBuffer) {
-                    consumerSurface_->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
+        [&]() {
+            struct ReleaseGuard {
+                OHOS::sptr<OHOS::IConsumerSurface> surface = nullptr;
+                OHOS::sptr<OHOS::SurfaceBuffer> buffer = nullptr;
+                bool shouldRelease = true;
+                ~ReleaseGuard()
+                {
+                    if (shouldRelease && surface && buffer) {
+                        surface->ReleaseBuffer(buffer, OHOS::SyncFence::INVALID_FENCE);
+                    }
                 }
-            }
-            surfaceBufferCache_.push(std::move(acquireSurfaceBuffer));
-        }
+            } guard { localConsumerSurface, acquireSurfaceBuffer };
+
+            UpdateView(nativeBuffer, width_, height_, acquireSurfaceBuffer->GetSurfaceBufferColorGamut());
+
+            guard.shouldRelease = false;
+            CacheSurfaceBuffer(localConsumerSurface, std::move(acquireSurfaceBuffer));
+        } ();
     }).Wait();
+}
+
+void SurfaceStream::CacheSurfaceBuffer(
+    const OHOS::sptr<OHOS::IConsumerSurface>& consumerSurface, OHOS::sptr<OHOS::SurfaceBuffer> surfaceBuffer)
+{
+    if (consumerSurface == nullptr || surfaceBuffer == nullptr) {
+        CORE_LOG_E("invalid consumer surface or surface buffer");
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(surfaceBufferCacheMutex_);
+    if (surfaceBufferCache_.size() >= MAX_BUFFER_SIZE) {
+        auto oldSurfaceBuffer = surfaceBufferCache_.front();
+        surfaceBufferCache_.pop();
+        if (oldSurfaceBuffer) {
+            consumerSurface->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
+        }
+    }
+    surfaceBufferCache_.push(std::move(surfaceBuffer));
 }
 
 void SurfaceStream::UpdateView(
     OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut)
 {
-    if (renderContext_ == nullptr) {
-        CORE_LOG_E("invalid render context");
+    if (buffer == nullptr || width == 0 || height == 0 || width > MAX_IMAGE_EXTENT || height > MAX_IMAGE_EXTENT) {
+        CORE_LOG_E("invalid native buffer or width(%u) or height(%u)", width, height);
         return;
+    }
+
+    BASE_NS::shared_ptr<RENDER_NS::IRenderContext> localRenderContext = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(renderContextMutex_);
+        if (renderContext_ == nullptr) {
+            CORE_LOG_E("invalid render context");
+            return;
+        }
+        localRenderContext = renderContext_;
     }
 
     auto colorSpace = ConvertColorGamutToColorSpace(colorGamut);
     OH_NativeBuffer_SetColorSpace(buffer, colorSpace);
-    auto& device = renderContext_->GetDevice();
+    auto& device = localRenderContext->GetDevice();
     auto& grm = device.GetGpuResourceManager();
     RENDER_NS::GpuImageDesc imageDesc{};
     imageDesc.usageFlags = RENDER_NS::ImageUsageFlagBits::CORE_IMAGE_USAGE_SAMPLED_BIT;
@@ -287,12 +348,15 @@ void SurfaceStream::UpdateView(
         handle = grm.CreateView(frameId, imageDesc, glImageDesc);
     }
 
+    std::lock_guard<std::mutex> lock(renderResourceMutex_);
     auto bitmap = renderResource_.lock();
     if (bitmap == nullptr) {
         CORE_LOG_E("bitmap is nullptr");
         return;
     }
-    bitmap->SetRenderHandle(handle);
+    if (handle) {
+        bitmap->SetRenderHandle(handle);
+    }
 }
 
 SurfaceStream::~SurfaceStream()
@@ -305,6 +369,8 @@ SurfaceStream::~SurfaceStream()
             if (oldSurfaceBuffer == nullptr) {
                 continue;
             }
+
+            std::lock_guard<std::mutex> lock(consumerSurfaceMutex_);
             if (consumerSurface_) {
                 consumerSurface_->ReleaseBuffer(oldSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
             }
@@ -312,8 +378,16 @@ SurfaceStream::~SurfaceStream()
     }
 
     Deinit();
-    renderResource_ = nullptr;
-    renderContext_ = nullptr;
+
+    {
+        std::lock_guard<std::mutex> lock(renderResourceMutex_);
+        renderResource_ = nullptr;
+    }
+    {
+        std::lock_guard<std::mutex> lock(renderContextMutex_);
+        renderContext_ = nullptr;
+    }
+
     engineQueue_ = nullptr;
 }
 

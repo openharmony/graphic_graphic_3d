@@ -56,6 +56,9 @@ private:
 
     void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
 
+    void CacheSurfaceBuffer(
+        const OHOS::sptr<OHOS::IConsumerSurface>& consumerSurface, OHOS::sptr<OHOS::SurfaceBuffer> surfaceBuffer);
+
     void SetHeight(uint32_t height) override
     {
         height_ = height;
@@ -80,13 +83,16 @@ private:
 
 private:
     RENDER_NS::DeviceBackendType backendType_ = RENDER_NS::DeviceBackendType::VULKAN;
+    std::mutex renderContextMutex_;
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> renderContext_ = nullptr;
     META_NS::ITaskQueue::Ptr engineQueue_ = nullptr;
+    std::mutex renderResourceMutex_;
     SCENE_NS::IRenderResource::WeakPtr renderResource_ = nullptr;
     uint64_t surfaceId_ = 0;
-    uint32_t width_ = 0;
-    uint32_t height_ = 0;
+    std::atomic<uint32_t> width_ = 0;
+    std::atomic<uint32_t> height_ = 0;
     uint32_t queueSize_ = SURFACE_QUEUE_SIZE;
+    std::mutex consumerSurfaceMutex_;
     OHOS::sptr<OHOS::IConsumerSurface> consumerSurface_ = nullptr;
     OHOS::sptr<OHOS::Surface> producerSurface_ = nullptr;
     std::atomic<uint64_t> frameIndex_{0};
